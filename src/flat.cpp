@@ -13,6 +13,10 @@
 #include "defs.h"
 #include "sift_db.h"
 
+// If apple, use Accelerate
+#include <Accelerate/Accelerate.h>
+
+
 bool verbose = false;
 bool debug = false;
 
@@ -93,18 +97,20 @@ int main(int argc, char *argv[]) {
     sift_db<float> q(q_file, args["--dim"].asLong());
     sift_db<int> g(g_file, 100);
 
+
+    size_t k = args["--k"].asLong();
+    std::vector<std::vector<size_t>> top_k(q.size(), std::vector<size_t>(k, 0UL));
+
     /** Matrix-matrix multiplication
      *
      * @todo Use BLAS DGEMM
      */
-    size_t k = args["--k"].asLong();
     std::cout << args["--order"].asString() << std::endl;
     if (args["--order"].asString() == "vq") {
       if (verbose) {
         std::cout << "Using vq ordering" << std::endl;
       }
-      std::vector<std::vector<size_t>> top_k(q.size(), std::vector<size_t>(k, 0UL));
-      
+
       /**
        * For each query
        */
@@ -148,7 +154,6 @@ int main(int argc, char *argv[]) {
         std::cout << "Using qv ordering" << std::endl;
       }
       std::vector<std::vector<float>> scores(q.size(), std::vector<float>(size(db), 0.0f));
-      std::vector<std::vector<size_t>> top_k(q.size(), std::vector<size_t>(k, 0UL));
 
       /**
        * For each database vector
@@ -189,6 +194,90 @@ int main(int argc, char *argv[]) {
           std::cout << std::endl;
         }
       }
+    } else if (args["--order"].asString() == "gemm") {
+      if (verbose) {
+        std::cout << "Using gemm ordering" << std::endl;
+      }
+
+      /**
+       * scores is nsamples X nq
+       * db is dimension X nsamples
+       * q is vsize X dimension
+       * scores <- db^T * q
+       */
+      std::vector<std::span<float>> scores(size(q));
+      std::vector<float> _score_data(size(q) * size(db));
+      size_t N = size(db);
+      // Each score[j] is a column of the score matrix
+      for (size_t j = 0; j < size(q); ++j) {
+        scores[j] = std::span<float>(_score_data.data() + j * N, N);
+      }
+/*
+      func cblas_dgemm(
+              _ __Order: CBLAS_ORDER,
+                _ __TransA: CBLAS_TRANSPOSE,
+                _ __TransB: CBLAS_TRANSPOSE,
+                _ __M: Int32,
+                _ __N: Int32,
+                _ __K: Int32,
+                _ __alpha: Double,
+                _ __A: UnsafePointer<Double>!,
+                _ __lda: Int32,
+                _ __B: UnsafePointer<Double>!,
+                _ __ldb: Int32,
+                _ __beta: Double,
+                _ __C: UnsafeMutablePointer<Double>!,
+                _ __ldc: Int32
+              )
+*/
+      cblas_sgemm(
+          CblasColMajor,
+          CblasTrans,
+          CblasNoTrans,
+          (int32_t) size(db),    // number of samples
+          (int32_t) size(q),     // number of q vectors -- columns of B
+          (int32_t) size(q[0]),  // dimension of vectors
+          1.0,
+          db[0].data(),
+          (int32_t) size(db[0]),
+          q[0].data(),
+          (int32_t) size(q[0]),
+          0.0,
+          _score_data.data(),
+          (int32_t) size(db));
+
+      /**
+       * For each score vector
+       */
+      for (size_t j = 0; j < q.size(); ++j) {
+        std::vector<size_t> index(size(db));
+        std::iota(begin(index), end(index), 0);
+
+        std::nth_element(begin(index), begin(index) + k, end(index), [&](auto a, auto b) {
+          return scores[j][a] < scores[j][b];
+        });
+        std::copy(begin(index), begin(index) + k, top_k[j].begin());
+
+        std::sort(top_k[j].begin(), top_k[j].end(), [&](auto a, auto b) {
+          return scores[j][a] < scores[j][b];
+        });
+
+        if (!std::equal(top_k[j].begin(), top_k[j].end(), g[j].begin(), [&](auto a, auto b) {
+              return scores[j][a] == scores[j][b];
+            })) {
+          std::cout << "Query " << j << " is incorrect" << std::endl;
+          for (size_t i = 0; i < k; ++i) {
+            std::cout << "  (" << top_k[j][i] << " " << scores[j][top_k[j][i]] << ") ";
+          }
+          std::cout << std::endl;
+          for (size_t i = 0; i < k; ++i) {
+            std::cout << "  (" << g[j][i] << " " << scores[j][g[j][i]] << ") ";
+          }
+          std::cout << std::endl;
+          std::cout << std::endl;
+        }
+      }
+
 
     } else {
       std::cout << "Unknown ordering: " << args["--order"].asString() << std::endl;

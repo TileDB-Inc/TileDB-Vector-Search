@@ -47,6 +47,14 @@ endif()
 # Control compiler-specific flags.
 include(CompilerFlags)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # include macOS-specific flags for native BLAS
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -framework Accelerate")
+else()
+    # include flags for other operating systems BLAS
+    find_package(MKL REQUIRED)
+endif()
+
 include(Docopt)
 add_subdirectory(src)
 add_subdirectory(src/test)
