@@ -3,6 +3,7 @@
 //
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <numeric>
 #include <string>
@@ -93,8 +94,9 @@ int main(int argc, char *argv[]) {
       std::cout << "db_file and q_file must be different" << std::endl;
       return 1;
     }
-    sift_db<float> db(db_file, args["--dim"].asLong());
-    sift_db<float> q(q_file, args["--dim"].asLong());
+    size_t dimension = args["--dim"].asLong();
+    sift_db<float> db(db_file, dimension);
+    sift_db<float> q(q_file, dimension);
     sift_db<int> g(g_file, 100);
 
 
@@ -207,11 +209,17 @@ int main(int argc, char *argv[]) {
        */
       std::vector<std::span<float>> scores(size(q));
       std::vector<float> _score_data(size(q) * size(db));
-      size_t N = size(db);
+      size_t M = size(db);
+      size_t N = size(q);
+      size_t K = size(db[0]);
+      assert(size(db[0]) == size(q[0]));
+      assert(size(db[0]) == dimension);
+
       // Each score[j] is a column of the score matrix
       for (size_t j = 0; j < size(q); ++j) {
         scores[j] = std::span<float>(_score_data.data() + j * N, N);
       }
+#if 0
 /*
       func cblas_dgemm(
               _ __Order: CBLAS_ORDER,
@@ -230,22 +238,91 @@ int main(int argc, char *argv[]) {
                 _ __ldc: Int32
               )
 */
+
+      /**
+       * Augh -- this is not L2 distance!
+       */
       cblas_sgemm(
           CblasColMajor,
-          CblasTrans,
-          CblasNoTrans,
-          (int32_t) size(db),    // number of samples
-          (int32_t) size(q),     // number of q vectors -- columns of B
-          (int32_t) size(q[0]),  // dimension of vectors
+          CblasTrans,         // db^T
+          CblasNoTrans,       // q
+          (int32_t) M,        // number of samples
+          (int32_t) N,        // number of queries
+          (int32_t) K,        // dimension of vectors
           1.0,
-          db[0].data(),
-          (int32_t) size(db[0]),
-          q[0].data(),
-          (int32_t) size(q[0]),
+          db[0].data(),       // A: K x M -> A^T: M x K
+          K,
+          q[0].data(),        // B: K x N
+          K,
           0.0,
-          _score_data.data(),
-          (int32_t) size(db));
+          _score_data.data(), // C: M x N
+          M);
+#else
+      std::vector<float> alpha(M, 0.0f);
+      std::vector<float> beta(N, 0.0f);
 
+      col_sum(db, alpha, [](auto a) { return a * a; });
+      col_sum(q, beta, [](auto a) { return a * a; });
+
+      for (size_t j = 0; j < N; ++j) {
+        std::fill(begin(scores[j]), end(scores[j]), beta[j]);
+      }
+
+      for (size_t i = 0; i < M; ++i) {
+        for (size_t j = 0; j < N; ++j) {
+          scores[j][i] += alpha[i];
+        }
+      }
+      cblas_sgemm(
+              CblasColMajor,
+              CblasTrans,  // db^T
+              CblasNoTrans,// q
+              (int32_t) M, // number of samples
+              (int32_t) N, // number of queries
+              (int32_t) K, // dimension of vectors
+              -2.0,
+              db[0].data(),// A: K x M -> A^T: M x K
+              K,
+              q[0].data(),// B: K x N
+              K,
+              1.0,
+              _score_data.data(),// C: M x N
+              M);
+
+      for (size_t j = 0; j < N; ++j) {
+        for (size_t i = 0; i < M; ++i) {
+          double a = scores[j][i];
+          double b = sqrt(a);
+          double c = sqrt(scores[j][i]);
+          scores[j][i] = std::sqrtf(scores[j][i]);
+          assert(scores[j][i] * scores[j][i] == a);
+        }
+      }
+
+#if 0
+
+# Create two matrices
+      A = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+      B = np.array([[2, 3, 4], [5, 6, 7], [8, 9, 10]])
+
+# Compute L2 norms
+      A_norm = np.linalg.norm(A, axis=1)
+      B_norm = np.linalg.norm(B, axis=1)
+
+# Compute outer product between L2 norms
+      outer_product = np.outer(A_norm**2, np.ones(B.shape[0])) + np.outer(np.ones(A.shape[0]), B_norm**2)
+
+# Transpose matrix B
+      B_T = np.transpose(B)
+
+# Compute dot product using GEMM
+      dot_product = np.dot(A, B_T)
+
+# Compute L2 similarity
+      l2_similarity = np.sqrt(outer_product - 2 * dot_product)
+#endif
+
+#endif
       /**
        * For each score vector
        */

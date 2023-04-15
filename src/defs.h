@@ -34,4 +34,16 @@ auto cosine(V const& a, V const& b) {
   return sum / std::sqrt(a2 * b2);
 }
 
+template <class M, class V, class Function>
+auto col_sum(const M& m, V& v, Function f) {
+  auto aa = m.size();
+  auto bb = m[0].size();
+
+  for (size_t j = 0; j < m.size(); ++j) {
+    for (size_t i = 0; i < m[j].size(); ++i) {
+      v[j] += f(m[j][i]);
+    }
+  }
+}
+
 #endif//TDB_DEFS_H
