@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
 
       // Each score[j] is a column of the score matrix
       for (size_t j = 0; j < size(q); ++j) {
-        scores[j] = std::span<float>(_score_data.data() + j * N, N);
+        scores[j] = std::span<float>(_score_data.data() + j * M, M);
       }
 #if 0
 /*
@@ -265,12 +265,8 @@ int main(int argc, char *argv[]) {
       col_sum(q, beta, [](auto a) { return a * a; });
 
       for (size_t j = 0; j < N; ++j) {
-        std::fill(begin(scores[j]), end(scores[j]), beta[j]);
-      }
-
-      for (size_t j = 0; j < N; ++j) {
         for (size_t i = 0; i < M; ++i) {
-          scores[j][i] += alpha[i];
+          scores[j][i] += alpha[i] + beta[j];
         }
       }
       cblas_sgemm(

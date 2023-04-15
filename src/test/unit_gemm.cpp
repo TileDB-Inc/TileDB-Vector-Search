@@ -176,14 +176,11 @@ TEST_CASE("gemm: row major test", "[sgemm]") {
     CHECK(A_span[0][1] == 2.0);
     CHECK(A_span[0][2] == 3.0);
 
-    col_sum(A_span, alpha, [](float x) { return x*x; });
-    col_sum(B_span, beta, [](float x) { return x*x; });
-    CHECK(alpha[0] == 14.0);
-    CHECK(alpha[1] == 77.0);
-
-    CHECK(beta[0] == 194.0);
-    CHECK(beta[1] == 365.0);
-
+    /****************************************************************
+     *
+     *  Compute L2 distance between each column of A and each column of B
+     *
+     *****************************************************************/
     for (size_t i = 0; i < 2; ++i) {
       for (size_t j = 0; j < 2; ++j) {
         L2_span[j][i] = L2(B_span[j], A_span[i]);
@@ -193,5 +190,36 @@ TEST_CASE("gemm: row major test", "[sgemm]") {
     CHECK(std::abs(L2_span[1][0] - 15.5884) < .0001);
     CHECK(std::abs(L2_span[0][1] -  5.1961) < .0001);
     CHECK(std::abs(L2_span[1][1] - 10.3923) < .0001);
+
+    /****************************************************************
+     *
+     *  Use gemm to compute L2 distances between columns of A and B
+     *
+     *****************************************************************/
+
+    col_sum(A_span, alpha, [](float x) { return x*x; });
+    col_sum(B_span, beta, [](float x) { return x*x; });
+    CHECK(alpha[0] == 14.0);
+    CHECK(alpha[1] == 77.0);
+
+    CHECK(beta[0] == 194.0);
+    CHECK(beta[1] == 365.0);
+
+    for (size_t j = 0; j < 2; ++j) {
+      for (size_t i = 0; i < 2; ++i) {
+        C_span[j][i] = alpha[i] + beta[j];
+      }
+    }
+
+    cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, 2, 2, 3, -2.0, &A[0], 3, &B[0], 3, 1.0, &C[0], 2);
+    for (size_t j = 0; j < 2; ++j) {
+      for (size_t i = 0; i < 2; ++i) {
+        C_span[j][i] = sqrt(C_span[j][i]);
+      }
+    }
+    CHECK(std::abs(C_span[0][0] - 10.3923) < .0001);
+    CHECK(std::abs(C_span[1][0] - 15.5884) < .0001);
+    CHECK(std::abs(C_span[0][1] -  5.1961) < .0001);
+    CHECK(std::abs(C_span[1][1] - 10.3923) < .0001);
   }
 }
