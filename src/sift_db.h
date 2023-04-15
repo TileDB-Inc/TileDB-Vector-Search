@@ -15,56 +15,9 @@
 #include <vector>
 #include <unistd.h>
 
-/*
-We use three different file formats:
-  • The vector files are stored in .bvecs or .fvecs format,
-  • The groundtruth file in is .ivecs format.
-
-.bvecs, .fvecs and .ivecs vector file formats:
-
-The vectors are stored in raw little endian.
-Each vector takes 4+d*4 bytes for .fvecs and .ivecs formats, and 4+d bytes for .bvecs formats,
-where d is the dimensionality of the vector, as shown below.
-
- field 	 field type 	 description
-d	int	the vector dimension
-components	(unsigned char|float | int)*d	the vector components
-
-
-The only difference between .bvecs, .fvecs and .ivecs files is the base type for the
-vector components, which is unsigned char, float or int, respectively.
-
-In the Input/Output section below, we provide two functions to read such files in matlab.
-
-Details and Download
-
-MD5 sums are available here.
-
-Vector set	Download	descriptor	dimension	   nb base
-   vectors	nb query
-vectors	  nb learn
-  vectors	file
-format
-ANN_SIFT10K	 siftsmall.tar.gz   (5.1MB) 	 SIFT (1)	   128 	       10,000	   100	     25,000	fvecs
-ANN_SIFT1M	 sift.tar.gz   (161MB)	 SIFT (1)	   128	    1,000,000	10,000	    100,000	fvecs
-ANN_GIST1M	 gist.tar.gz   (2.6GB)	 GIST (2) 	   960	    1,000,000	 1,000	    500,000	fvecs
-ANN_SIFT1B	 Base set   (92 GB)
- Learning set
-   (9.1 GB)
- Query set
-   (964 KB)
- Groundtruth
-   (512 MB)	 SIFT (3) 	   128	1,000,000,000	10,000	100,000,000	bvecs
-
-(1) SIFT descriptors, Mikolajczyk implementation of Hessian-affine detector
-(2) GIST descriptors, INRIA C implementation
-(3) SIFT descriptors Lowe's implementation (DoG)
-
- file size = (4+d*4) * N bytes
-*/
-
-// siftsmall_base.fvecs		siftsmall_groundtruth.ivecs	siftsmall_learn.fvecs		siftsmall_query.fvecs
-
+/**
+ * See http://corpus-texmex.irisa.fr for file format
+ */
 
 template <class T>
 class sift_db : public std::vector<std::span<T>> {

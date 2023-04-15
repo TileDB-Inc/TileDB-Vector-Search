@@ -1,11 +1,14 @@
 
 include(Catch2)
+
 add_executable(unit_sift_db unit_sift_db.cpp)
 target_link_libraries(unit_sift_db PRIVATE Catch2::Catch2WithMain)
 
 add_executable(unit_defs unit_defs.cpp)
 target_link_libraries(unit_defs PRIVATE Catch2::Catch2WithMain)
 
+add_executable(unit_gemm unit_gemm.cpp)
+target_link_libraries(unit_gemm PRIVATE Catch2::Catch2WithMain)
 
 set (SIFT_DIR ${CMAKE_SOURCE_DIR}/external/data/siftsmall)
 

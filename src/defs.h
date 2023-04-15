@@ -35,12 +35,12 @@ auto cosine(V const& a, V const& b) {
 }
 
 template <class M, class V, class Function>
-auto col_sum(const M& m, V& v, Function f) {
-  auto aa = m.size();
-  auto bb = m[0].size();
+auto col_sum(const M& m, V& v, Function f = [](auto x) { return x; }) {
+  auto aa = size(m);
+  auto bb = size(m[0]);
 
-  for (size_t j = 0; j < m.size(); ++j) {
-    for (size_t i = 0; i < m[j].size(); ++i) {
+  for (size_t j = 0; j < size(m); ++j) {
+    for (size_t i = 0; i < size(m[j]); ++i) {
       v[j] += f(m[j][i]);
     }
   }
