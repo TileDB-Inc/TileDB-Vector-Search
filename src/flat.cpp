@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <execution>
 #include <iostream>
 #include <numeric>
 #include <string>
@@ -16,7 +17,11 @@
 #include "timer.h"
 
 // If apple, use Accelerate
+#ifdef __APPLE__
 #include <Accelerate/Accelerate.h>
+#else
+#include <mkl_cblas.h>
+#endif
 
 
 bool verbose = false;
@@ -116,11 +121,19 @@ int main(int argc, char *argv[]) {
         std::cout << "Using vq ordering" << std::endl;
       }
 
-      std::vector<size_t> index(size(db));
+      { life_timer _{"Everything"};
+#pragma omp parallel 
+{
+      std::vector<size_t> i_index(size(db));
       std::vector<float> scores(size(db));
       /**
        * For each query
        */
+
+      std::iota(begin(i_index), end(i_index), 0);
+      std::vector<size_t> index(size(db));
+
+#pragma omp for
       for (size_t j = 0; j < size(q); ++j) {
 
         /**
@@ -129,9 +142,13 @@ int main(int argc, char *argv[]) {
         for (size_t i = 0; i < size(db); ++i) {
           scores[i] = L2(q[j], db[i]);
         }
+
+	std::copy(std::execution::seq, begin(i_index), end(i_index), begin(index));
         get_top_k(scores, top_k[j], index, k);
         verify_top_k(scores, top_k[j], g[j], k, j);
       }
+    }
+ }
     } else if (args["--order"].asString() == "qv") {
       if (verbose) {
         std::cout << "Using qv ordering" << std::endl;
@@ -144,6 +161,7 @@ int main(int argc, char *argv[]) {
         /**
          * For each database vector
          */
+#pragma omp parallel for
         for (size_t i = 0; i < size(db); ++i) {
           /**
           * Compare with each query
@@ -160,14 +178,22 @@ int main(int argc, char *argv[]) {
       {
         life_timer _{"Get top k"};
 
-        std::vector<size_t> index(size(db));
+#pragma omp parallel
+	{
+        std::vector<size_t> i_index(size(db));
+	std::iota(begin(i_index), end(i_index), 0);
+	std::vector<size_t> index(size(db));
+#pragma omp for
         for (size_t j = 0; j < size(q); ++j) {
+	  std::copy(begin(i_index), end(i_index), begin(index));
           get_top_k(scores[j], top_k[j], index, k);
         }
+      }
       }
 
       {
         life_timer _{"Checking results"};
+#pragma omp parallel for
         for (size_t j = 0; j < size(q); ++j) {
           verify_top_k(scores[j], top_k[j], g[j], k, j);
         }
@@ -201,16 +227,35 @@ int main(int argc, char *argv[]) {
       std::vector<float> beta(N, 0.0f);
 
       {
-        life_timer _{"L2 comparisons"};
+        life_timer _{"L2 comparison colsum"};
 
         col_sum(db, alpha, [](auto a) { return a * a; });
         col_sum(q, beta, [](auto a) { return a * a; });
 
+      }
+      {
+        life_timer _{"L2 comparison outer product"}; // todo: BLAS
+
+#if 0
         for (size_t j = 0; j < N; ++j) {
           for (size_t i = 0; i < M; ++i) {
             scores[j][i] += alpha[i] + beta[j];
           }
         }
+#else
+	//void cblas_sger (const CBLAS_LAYOUT Layout, const MKL_INT m, const MKL_INT n, const float alpha, const float *x, const MKL_INT incx, const float *y, const MKL_INT incy, float *a, const MKL_INT lda);
+	// A += alpha * x * transpose(y)
+	std::vector<float> alpha_ones(N, 1.0f);
+	std::vector<float> beta_ones(M, 1.0f);
+	// scores[j][i] = alpha[i];
+	// scores[j][i] = beta[j]
+	cblas_sger(CblasColMajor, M, N, 1.0, &alpha[0], 1, &alpha_ones[0], 1, _score_data.data(), M);
+	cblas_sger(CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, _score_data.data(), M);
+
+#endif
+      }
+      {
+        life_timer _{"L2 comparison dgemm"};
         cblas_sgemm(
                 CblasColMajor,
                 CblasTrans,  // db^T
@@ -226,25 +271,46 @@ int main(int argc, char *argv[]) {
                 1.0,
                 _score_data.data(),// C: M x N
                 M);
-
+      }
+      {
+        life_timer _{"L2 comparison finish"};
+#if 0
         for (size_t j = 0; j < N; ++j) {
           for (size_t i = 0; i < M; ++i) {
-            scores[j][i] = std::sqrtf(scores[j][i]);
+            scores[j][i] = std::sqrt(scores[j][i]);
           }
         }
+#else
+	//	for (size_t k = 0; k <M*N; ++k) {
+	//	  _scores_data[k] = sqrt(_scores_data[k]);
+	//	}
+	std::for_each(std::execution::par_unseq, begin(_score_data), end(_score_data), [](auto&& x) {
+	    x = sqrt(x);
+	  });
+#endif
       }
 
       {
         life_timer _{"Get top k"};
 
-        std::vector<size_t> index(size(db));
-        for (size_t j = 0; j < size(q); ++j) {
-          get_top_k(scores[j], top_k[j], index, k);
-        }
+	std::vector<size_t> i_index(size(db));
+	std::iota(begin(i_index), end(i_index), 0);
+
+#pragma omp parallel 
+	{
+	  std::vector<size_t> index(size(db));
+
+#pragma omp for
+	  for (size_t j = 0; j < size(q); ++j) {
+	    std::copy(std::execution::seq, begin(i_index), end(i_index), begin(index));
+	    get_top_k(scores[j], top_k[j], index, k);
+	  }
+	}
       }
 
       {
         life_timer _{"Checking results"};
+#pragma parallel omp for
         for (size_t j = 0; j < size(q); ++j) {
           verify_top_k(scores[j], top_k[j], g[j], k, j);
         }

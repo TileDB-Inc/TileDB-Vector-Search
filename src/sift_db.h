@@ -6,6 +6,7 @@
 #define TDB_SIFT_DB_H
 
 
+#include <cassert>
 #include <fcntl.h>
 #include <filesystem>
 #include <sys/mman.h>

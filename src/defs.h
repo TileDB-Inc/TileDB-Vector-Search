@@ -7,6 +7,7 @@
 
 #include <span>
 #include <cmath>
+#include <execution>
 
 template <class T>
 using Vector = std::span<T>;
@@ -48,20 +49,19 @@ auto col_sum(const M& m, V& v, Function f = [](auto x) { return x; }) {
 
 template <class V, class L, class I>
 auto get_top_k(V const& scores, L & top_k, I & index, size_t k) {
-  std::iota(begin(index), end(index), 0);
-  std::nth_element(begin(index), begin(index) + k, end(index), [&](auto a, auto b) {
+  std::nth_element(std::execution::seq, begin(index), begin(index) + k, end(index), [&](auto a, auto b) {
     return scores[a] < scores[b];
   });
-  std::copy(begin(index), begin(index) + k, begin(top_k));
+  std::copy(std::execution::seq, begin(index), begin(index) + k, begin(top_k));
 
-  std::sort(begin(top_k), end(top_k), [&](auto a, auto b) {
+  std::sort(std::execution::seq, begin(top_k), end(top_k), [&](auto a, auto b) {
     return scores[a] < scores[b];
   });
 }
 
 template <class V, class L, class I>
 auto verify_top_k(V const& scores, L const& top_k, I const& g, size_t k, size_t qno) {
-  if (!std::equal(begin(top_k), end(top_k), g.begin(), [&](auto a, auto b) {
+  if (!std::equal(std::execution::par_unseq, begin(top_k), end(top_k), g.begin(), [&](auto a, auto b) {
     return scores[a] == scores[b];
   })) {
     std::cout << "Query " << qno << " is incorrect" << std::endl;
