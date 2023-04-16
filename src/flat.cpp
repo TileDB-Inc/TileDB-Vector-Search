@@ -13,6 +13,7 @@
 
 #include "defs.h"
 #include "sift_db.h"
+#include "timer.h"
 
 // If apple, use Accelerate
 #include <Accelerate/Accelerate.h>
@@ -95,17 +96,19 @@ int main(int argc, char *argv[]) {
       return 1;
     }
     size_t dimension = args["--dim"].asLong();
+
+
+    ms_timer load_time{"Load database, query, and ground truth"};
     sift_db<float> db(db_file, dimension);
     sift_db<float> q(q_file, dimension);
     sift_db<int> g(g_file, 100);
-
+    load_time.stop();
+    std::cout << load_time << std::endl;
 
     size_t k = args["--k"].asLong();
-    std::vector<std::vector<size_t>> top_k(q.size(), std::vector<size_t>(k, 0UL));
+    std::vector<std::vector<size_t>> top_k(size(q), std::vector<size_t>(k, 0UL));
 
     /** Matrix-matrix multiplication
-     *
-     * @todo Use BLAS DGEMM
      */
     std::cout << args["--order"].asString() << std::endl;
     if (args["--order"].asString() == "vq") {
@@ -113,13 +116,12 @@ int main(int argc, char *argv[]) {
         std::cout << "Using vq ordering" << std::endl;
       }
 
+      std::vector<size_t> index(size(db));
+      std::vector<float> scores(size(db));
       /**
        * For each query
        */
-      for (size_t j = 0; j < q.size(); ++j) {
-        std::vector<size_t> index(size(db));
-        std::iota(begin(index), end(index), 0);
-        std::vector<float> scores(size(db));
+      for (size_t j = 0; j < size(q); ++j) {
 
         /**
          * Compare with each database vector
@@ -127,75 +129,50 @@ int main(int argc, char *argv[]) {
         for (size_t i = 0; i < size(db); ++i) {
           scores[i] = L2(q[j], db[i]);
         }
-        std::nth_element(begin(index), begin(index) + k, end(index), [&](auto a, auto b) {
-          return scores[a] < scores[b];
-        });
-        std::copy(begin(index), begin(index) + k, begin(top_k[j]));
-
-        std::sort(begin(top_k[j]), end(top_k[j]), [&](auto a, auto b) {
-          return scores[a] < scores[b];
-        });
-
-        if (!std::equal(top_k[j].begin(), top_k[j].end(), g[j].begin(), [&](auto a, auto b) {
-              return scores[a] == scores[b];
-            })) {
-          std::cout << "Query " << j << " is incorrect" << std::endl;
-          for (size_t i = 0; i < k; ++i) {
-            std::cout << "  (" << top_k[j][i] << " " << scores[top_k[j][i]] << ") ";
-          }
-          std::cout << std::endl;
-          for (size_t i = 0; i < k; ++i) {
-            std::cout << "  (" << g[j][i] << " " << scores[g[j][i]] << ") ";
-          }
-          std::cout << std::endl;
-          std::cout << std::endl;
-        }
+        get_top_k(scores, top_k[j], index, k);
+        verify_top_k(scores, top_k[j], g[j], k, j);
       }
     } else if (args["--order"].asString() == "qv") {
       if (verbose) {
         std::cout << "Using qv ordering" << std::endl;
       }
-      std::vector<std::vector<float>> scores(q.size(), std::vector<float>(size(db), 0.0f));
+      std::vector<std::vector<float>> scores(size(q), std::vector<float>(size(db), 0.0f));
+
+      {
+        life_timer _{"L2 comparisons"};
+
+        /**
+         * For each database vector
+         */
+        for (size_t i = 0; i < size(db); ++i) {
+          /**
+          * Compare with each query
+          */
+          for (size_t j = 0; j < size(q); ++j) {
+            scores[j][i] = L2(q[j], db[i]);
+          }
+        }
+      }
 
       /**
-       * For each database vector
+       * For each query, get indices of top k
        */
-      for (size_t i = 0; i < size(db); ++i) {
-        /**
-         * Compare with each query
-         */
-        for (size_t j = 0; j < q.size(); ++j) {
-          scores[j][i] = L2(q[j], db[i]);
-        }
-      }
-      for (size_t j = 0; j < q.size(); ++j) {
+      {
+        life_timer _{"Get top k"};
+
         std::vector<size_t> index(size(db));
-        std::iota(begin(index), end(index), 0);
-
-        std::nth_element(begin(index), begin(index) + k, end(index), [&](auto a, auto b) {
-          return scores[j][a] < scores[j][b];
-        });
-        std::copy(begin(index), begin(index) + k, top_k[j].begin());
-
-        std::sort(top_k[j].begin(), top_k[j].end(), [&](auto a, auto b) {
-          return scores[j][a] < scores[j][b];
-        });
-
-        if (!std::equal(top_k[j].begin(), top_k[j].end(), g[j].begin(), [&](auto a, auto b) {
-              return scores[j][a] == scores[j][b];
-            })) {
-          std::cout << "Query " << j << " is incorrect" << std::endl;
-          for (size_t i = 0; i < k; ++i) {
-            std::cout << "  (" << top_k[j][i] << " " << scores[j][top_k[j][i]] << ") ";
-          }
-          std::cout << std::endl;
-          for (size_t i = 0; i < k; ++i) {
-            std::cout << "  (" << g[j][i] << " " << scores[j][g[j][i]] << ") ";
-          }
-          std::cout << std::endl;
-          std::cout << std::endl;
+        for (size_t j = 0; j < size(q); ++j) {
+          get_top_k(scores[j], top_k[j], index, k);
         }
       }
+
+      {
+        life_timer _{"Checking results"};
+        for (size_t j = 0; j < size(q); ++j) {
+          verify_top_k(scores[j], top_k[j], g[j], k, j);
+        }
+      }
+
     } else if (args["--order"].asString() == "gemm") {
       if (verbose) {
         std::cout << "Using gemm ordering" << std::endl;
@@ -219,139 +196,59 @@ int main(int argc, char *argv[]) {
       for (size_t j = 0; j < size(q); ++j) {
         scores[j] = std::span<float>(_score_data.data() + j * M, M);
       }
-#if 0
-/*
-      func cblas_dgemm(
-              _ __Order: CBLAS_ORDER,
-                _ __TransA: CBLAS_TRANSPOSE,
-                _ __TransB: CBLAS_TRANSPOSE,
-                _ __M: Int32,
-                _ __N: Int32,
-                _ __K: Int32,
-                _ __alpha: Double,
-                _ __A: UnsafePointer<Double>!,
-                _ __lda: Int32,
-                _ __B: UnsafePointer<Double>!,
-                _ __ldb: Int32,
-                _ __beta: Double,
-                _ __C: UnsafeMutablePointer<Double>!,
-                _ __ldc: Int32
-              )
-*/
 
-      /**
-       * Augh -- this is not L2 distance!
-       */
-      cblas_sgemm(
-          CblasColMajor,
-          CblasTrans,         // db^T
-          CblasNoTrans,       // q
-          (int32_t) M,        // number of samples
-          (int32_t) N,        // number of queries
-          (int32_t) K,        // dimension of vectors
-          1.0,
-          db[0].data(),       // A: K x M -> A^T: M x K
-          K,
-          q[0].data(),        // B: K x N
-          K,
-          0.0,
-          _score_data.data(), // C: M x N
-          M);
-#else
       std::vector<float> alpha(M, 0.0f);
       std::vector<float> beta(N, 0.0f);
 
-      col_sum(db, alpha, [](auto a) { return a * a; });
-      col_sum(q, beta, [](auto a) { return a * a; });
+      {
+        life_timer _{"L2 comparisons"};
 
-      for (size_t j = 0; j < N; ++j) {
-        for (size_t i = 0; i < M; ++i) {
-          scores[j][i] += alpha[i] + beta[j];
+        col_sum(db, alpha, [](auto a) { return a * a; });
+        col_sum(q, beta, [](auto a) { return a * a; });
+
+        for (size_t j = 0; j < N; ++j) {
+          for (size_t i = 0; i < M; ++i) {
+            scores[j][i] += alpha[i] + beta[j];
+          }
+        }
+        cblas_sgemm(
+                CblasColMajor,
+                CblasTrans,  // db^T
+                CblasNoTrans,// q
+                (int32_t) M, // number of samples
+                (int32_t) N, // number of queries
+                (int32_t) K, // dimension of vectors
+                -2.0,
+                db[0].data(),// A: K x M -> A^T: M x K
+                K,
+                q[0].data(),// B: K x N
+                K,
+                1.0,
+                _score_data.data(),// C: M x N
+                M);
+
+        for (size_t j = 0; j < N; ++j) {
+          for (size_t i = 0; i < M; ++i) {
+            scores[j][i] = std::sqrtf(scores[j][i]);
+          }
         }
       }
-      cblas_sgemm(
-              CblasColMajor,
-              CblasTrans,  // db^T
-              CblasNoTrans,// q
-              (int32_t) M, // number of samples
-              (int32_t) N, // number of queries
-              (int32_t) K, // dimension of vectors
-              -2.0,
-              db[0].data(),// A: K x M -> A^T: M x K
-              K,
-              q[0].data(),// B: K x N
-              K,
-              1.0,
-              _score_data.data(),// C: M x N
-              M);
 
-      for (size_t j = 0; j < N; ++j) {
-        for (size_t i = 0; i < M; ++i) {
-          double a = scores[j][i];
-          double b = sqrt(a);
-          double c = sqrt(scores[j][i]);
-          scores[j][i] = std::sqrtf(scores[j][i]);
-          //assert(scores[j][i] * scores[j][i] == a);
-        }
-      }
+      {
+        life_timer _{"Get top k"};
 
-#if 0
-
-# Create two matrices
-      A = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-      B = np.array([[2, 3, 4], [5, 6, 7], [8, 9, 10]])
-
-# Compute L2 norms
-      A_norm = np.linalg.norm(A, axis=1)
-      B_norm = np.linalg.norm(B, axis=1)
-
-# Compute outer product between L2 norms
-      outer_product = np.outer(A_norm**2, np.ones(B.shape[0])) + np.outer(np.ones(A.shape[0]), B_norm**2)
-
-# Transpose matrix B
-      B_T = np.transpose(B)
-
-# Compute dot product using GEMM
-      dot_product = np.dot(A, B_T)
-
-# Compute L2 similarity
-      l2_similarity = np.sqrt(outer_product - 2 * dot_product)
-#endif
-
-#endif
-      /**
-       * For each score vector
-       */
-      for (size_t j = 0; j < q.size(); ++j) {
         std::vector<size_t> index(size(db));
-        std::iota(begin(index), end(index), 0);
-
-        std::nth_element(begin(index), begin(index) + k, end(index), [&](auto a, auto b) {
-          return scores[j][a] < scores[j][b];
-        });
-        std::copy(begin(index), begin(index) + k, top_k[j].begin());
-
-        std::sort(top_k[j].begin(), top_k[j].end(), [&](auto a, auto b) {
-          return scores[j][a] < scores[j][b];
-        });
-
-        if (!std::equal(top_k[j].begin(), top_k[j].end(), g[j].begin(), [&](auto a, auto b) {
-              return scores[j][a] == scores[j][b];
-            })) {
-          std::cout << "Query " << j << " is incorrect" << std::endl;
-          for (size_t i = 0; i < k; ++i) {
-            std::cout << "  (" << top_k[j][i] << " " << scores[j][top_k[j][i]] << ") ";
-          }
-          std::cout << std::endl;
-          for (size_t i = 0; i < k; ++i) {
-            std::cout << "  (" << g[j][i] << " " << scores[j][g[j][i]] << ") ";
-          }
-          std::cout << std::endl;
-          std::cout << std::endl;
+        for (size_t j = 0; j < size(q); ++j) {
+          get_top_k(scores[j], top_k[j], index, k);
         }
       }
 
-
+      {
+        life_timer _{"Checking results"};
+        for (size_t j = 0; j < size(q); ++j) {
+          verify_top_k(scores[j], top_k[j], g[j], k, j);
+        }
+      }
     } else {
       std::cout << "Unknown ordering: " << args["--order"].asString() << std::endl;
       return 1;
