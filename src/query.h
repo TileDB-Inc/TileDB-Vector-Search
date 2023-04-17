@@ -8,6 +8,7 @@
 #include "defs.h"
 #include "timer.h"
 
+#include <cassert>
 #include <cmath>
 #include <iostream>
 #include <memory>
