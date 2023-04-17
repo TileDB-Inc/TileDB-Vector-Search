@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.22)
 
 # The cmake options don't seem to really work
 if ("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
@@ -52,8 +52,18 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -framework Accelerate")
 else()
     # include flags for other operating systems BLAS
-    find_package(MKL REQUIRED)
+    find_package(MKL CONFIG REQUIRED)
 endif()
+
+# find_package(OpenMP REQUIRED)
+include(FindOpenMP)
+
+find_package(Threads REQUIRED)
+find_package(TBB REQUIRED)
+
+add_library(flat_tbb INTERFACE)
+target_compile_definitions(flat_tbb INTERFACE EXECUTION_POLICY)
+target_link_libraries(flat_tbb INTERFACE TBB::tbb Threads::Threads OpenMP::OpenMP_CXX)
 
 include(Docopt)
 add_subdirectory(src)

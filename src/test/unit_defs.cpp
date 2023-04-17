@@ -3,6 +3,7 @@
 //
 
 #include <catch2/catch.hpp>
+#include <set>
 #include <vector>
 #include "../defs.h"
 
@@ -43,4 +44,44 @@ TEST_CASE("defs: vector test", "[defs]") {
     CHECK(b[2] == (49 + 64 + 81));
     CHECK(b[3] == (100 + 121 + 144));
   }
+}
+
+TEST_CASE("defs: std::set", "[defs]") {
+  std::set<int> a;
+
+  SECTION("insert in ascending order") {
+    for (auto &&i: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
+      a.insert(i);
+    }
+  }
+  SECTION("insert in descending order") {
+    for (auto &&i: {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
+      a.insert(i);
+    }
+  }
+  CHECK(a.size() == 10);
+  CHECK(a.count(0) == 1);
+  CHECK(*begin(a) == 0);
+  CHECK(*rbegin(a) == 9);
+}
+
+TEST_CASE("defs: fixed_min_set", "[defs]") {
+  fixed_min_set<int> a(5);
+
+  SECTION("insert in ascending order") {
+    for (auto &&i: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
+      a.insert(i);
+    }
+  }
+
+  SECTION("insert in descending order") {
+    for (auto &&i: {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
+      a.insert(i);
+    }
+  }
+  CHECK(a.size() == 5);
+  CHECK(a.count(0) == 1);
+  CHECK(*begin(a) == 0);
+  CHECK(*rbegin(a) == 4);
+
 }
