@@ -180,7 +180,7 @@ int main(int argc, char *argv[]) {
             std::transform(scores.begin(), scores.end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
             // @todo: verify against ground truth
             std::sort(begin(top_k[j]), end(top_k[j]));
-            std::sort(begin(g[j]), begin(g[j])+k);
+            std::sort(begin(g[j]), begin(g[j]) + k);
             verify_top_k(top_k[j], g[j], k, j);
           }
         }
@@ -188,11 +188,12 @@ int main(int argc, char *argv[]) {
     } else if (args["--order"].asString() == "qv") {
       if (verbose) {
         std::cout << "Using qv ordering" << std::endl;
+        if (hardway) {
+          std::cout << "Doing it the hard way" << std::endl;
+        }
       }
-      std::vector<std::vector<float>> scores(size(q), std::vector<float>(size(db), 0.0f));
-
-      {
-        life_timer _{"L2 comparisons"};
+      if (hardway) {
+        std::vector<std::vector<float>> scores(size(q), std::vector<float>(size(db), 0.0f));
 
         /**
          * For each database vector
@@ -206,32 +207,75 @@ int main(int argc, char *argv[]) {
             scores[j][i] = L2(q[j], db[i]);
           }
         }
-      }
 
-      /**
+        /**
        * For each query, get indices of top k
        */
-      {
-        life_timer _{"Get top k"};
+        {
+          life_timer _{"Get top k"};
 
 #pragma omp parallel
-        {
-          std::vector<int> i_index(size(db));
-          std::iota(begin(i_index), end(i_index), 0);
-          std::vector<int> index(size(db));
+          {
+            std::vector<int> i_index(size(db));
+            std::iota(begin(i_index), end(i_index), 0);
+            std::vector<int> index(size(db));
 #pragma omp for
-          for (size_t j = 0; j < size(q); ++j) {
-            std::copy(begin(i_index), end(i_index), begin(index));
-            get_top_k(scores[j], top_k[j], index, k);
+            for (size_t j = 0; j < size(q); ++j) {
+              std::copy(begin(i_index), end(i_index), begin(index));
+              get_top_k(scores[j], top_k[j], index, k);
+            }
           }
         }
-      }
 
-      {
-        life_timer _{"Checking results"};
+        {
+          life_timer _{"Checking results"};
 #pragma omp parallel for
-        for (size_t j = 0; j < size(q); ++j) {
-          verify_top_k(scores[j], top_k[j], g[j], k, j);
+          for (size_t j = 0; j < size(q); ++j) {
+            verify_top_k(scores[j], top_k[j], g[j], k, j);
+          }
+        }
+      } else {
+        using element = std::pair<float, int>;
+        std::vector<fixed_min_set<element>> scores(size(q), fixed_min_set<element>(k));
+
+        /**
+         * For each database vector
+         */
+#pragma omp parallel for
+        for (size_t i = 0; i < size(db); ++i) {
+          /**
+          * Compare with each query
+          */
+          for (size_t j = 0; j < size(q); ++j) {
+            auto score = L2(q[j], db[i]);
+            scores[j].insert(element{score, i});
+          }
+        }
+
+        /**
+       * For each query, get indices of top k
+       */
+        {
+          life_timer _{"Get top k"};
+
+#pragma omp parallel
+          {
+#pragma omp for
+            for (size_t j = 0; j < size(q); ++j) {
+              std::transform(scores[j].begin(), scores[j].end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
+              // @todo: verify against ground truth
+              std::sort(begin(top_k[j]), end(top_k[j]));
+            }
+          }
+        }
+
+        {
+          life_timer _{"Checking results"};
+#pragma omp parallel for
+          for (size_t j = 0; j < size(q); ++j) {
+            std::sort(begin(g[j]), begin(g[j]) + k);
+            verify_top_k(top_k[j], g[j], k, j);
+          }
         }
       }
     } else if (args["--order"].asString() == "gemm") {
