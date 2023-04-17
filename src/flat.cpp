@@ -6,6 +6,7 @@
 #include <cmath>
 // #include <execution>
 #include <iostream>
+#include <memory>
 #include <numeric>
 #include <string>
 #include <vector>
@@ -195,6 +196,9 @@ int main(int argc, char *argv[]) {
       if (hardway) {
         std::vector<std::vector<float>> scores(size(q), std::vector<float>(size(db), 0.0f));
 
+      {
+        life_timer _{"L2 comparison"};
+
         /**
          * For each database vector
          */
@@ -207,6 +211,7 @@ int main(int argc, char *argv[]) {
             scores[j][i] = L2(q[j], db[i]);
           }
         }
+      }
 
         /**
        * For each query, get indices of top k
@@ -236,21 +241,31 @@ int main(int argc, char *argv[]) {
         }
       } else {
         using element = std::pair<float, int>;
+	if (verbose) {
+	  std::cout << "Doing it the set way" << std::endl;
+	}
+
         std::vector<fixed_min_set<element>> scores(size(q), fixed_min_set<element>(k));
+
+      {
+        life_timer _{"L2 comparison"};// todo: BLAS
 
         /**
          * For each database vector
          */
-#pragma omp parallel for
         for (size_t i = 0; i < size(db); ++i) {
           /**
           * Compare with each query
           */
+	  // Can't decompose over i as scores are shared across is
+#pragma omp parallel for
+
           for (size_t j = 0; j < size(q); ++j) {
             auto score = L2(q[j], db[i]);
             scores[j].insert(element{score, i});
           }
         }
+      }
 
         /**
        * For each query, get indices of top k
@@ -283,6 +298,9 @@ int main(int argc, char *argv[]) {
         std::cout << "Using gemm ordering" << std::endl;
       }
 
+      ms_timer init_time("Allocating score array");
+      init_time.start();
+
       /**
        * scores is nsamples X nq
        * db is dimension X nsamples
@@ -290,7 +308,16 @@ int main(int argc, char *argv[]) {
        * scores <- db^T * q
        */
       std::vector<std::span<float>> scores(size(q));
+
+#if 0
       std::vector<float> _score_data(size(q) * size(db));
+#else
+      auto buf = std::make_unique_for_overwrite<float[]>(size(q)*size(db));
+      std::span<float> _score_data {buf.get(), size(q)*size(db)};
+#endif
+      init_time.stop();
+      std::cout << init_time << std::endl;
+
       size_t M = size(db);
       size_t N = size(q);
       size_t K = size(db[0]);
@@ -299,7 +326,7 @@ int main(int argc, char *argv[]) {
 
       // Each score[j] is a column of the score matrix
       for (size_t j = 0; j < size(q); ++j) {
-        scores[j] = std::span<float>(_score_data.data() + j * M, M);
+        scores[j] = std::span<float>(&_score_data[0] + j * M, M);
       }
 
       std::vector<float> alpha(M, 0.0f);
@@ -327,8 +354,8 @@ int main(int argc, char *argv[]) {
         std::vector<float> beta_ones(M, 1.0f);
         // scores[j][i] = alpha[i];
         // scores[j][i] = beta[j]
-        cblas_sger(CblasColMajor, M, N, 1.0, &alpha[0], 1, &alpha_ones[0], 1, _score_data.data(), M);
-        cblas_sger(CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, _score_data.data(), M);
+        cblas_sger(CblasColMajor, M, N, 1.0, &alpha[0], 1, &alpha_ones[0], 1, &_score_data[0], M);
+        cblas_sger(CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, &_score_data[0], M);
 
 #endif
       }
@@ -347,12 +374,13 @@ int main(int argc, char *argv[]) {
                 q[0].data(),// B: K x N
                 K,
                 1.0,
-                _score_data.data(),// C: M x N
+                &_score_data[0],// C: M x N
                 M);
       }
       {
         life_timer _{"L2 comparison finish"};
-#if 0
+#if 1
+#pragma omp parallel for
         for (size_t j = 0; j < N; ++j) {
           for (size_t i = 0; i < M; ++i) {
             scores[j][i] = std::sqrt(scores[j][i]);
@@ -376,11 +404,14 @@ int main(int argc, char *argv[]) {
 
 #pragma omp parallel
         {
-          std::vector<int> index(size(db));
+          // std::vector<int> index(size(db));
+	  auto buf = std::make_unique_for_overwrite<int[]>(size(db));
+	  std::span<int> index {buf.get(), size(db)};
 
 #pragma omp for
           for (size_t j = 0; j < size(q); ++j) {
-            std::copy(/*std::execution::seq,*/ begin(i_index), end(i_index), begin(index));
+	    //            std::copy(/*std::execution::seq,*/ begin(i_index), end(i_index), begin(index));
+	    std::iota(begin(index), end(index), 0);
             get_top_k(scores[j], top_k[j], index, k);
           }
         }
