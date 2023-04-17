@@ -211,7 +211,7 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
   std::cout << init_time << std::endl;
 #ifdef __APPLE__
   std::cout << "Apple clang does not yet support make_unique_for_overwrite" << std::endl;
-  std::cout << "so this is about 3X slower than it should be" << std::endl;
+  std::cout << "This time would not be seen in libraries supporting make_unique_for_overwrite" << std::endl;
 #endif
 
   size_t M = size(db);
@@ -229,24 +229,24 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
     scores[j] = std::span<float>(_score_data.data() + j * M, M);
   }
 
-  // It may save some time to do this first
+  // It seems to save a fair amount of time to do the gemm first then the outer products
   {
     life_timer _{"L2 comparison (gemm)"};
 
     cblas_sgemm(
             CblasColMajor,
-            CblasTrans,  // db^T
-            CblasNoTrans,// q
-            (int32_t) M, // number of samples
-            (int32_t) N, // number of queries
-            (int32_t) K, // dimension of vectors
+            CblasTrans,   // db^T
+            CblasNoTrans, // q
+            (int32_t) M,  // number of samples
+            (int32_t) N,  // number of queries
+            (int32_t) K,  // dimension of vectors
             -2.0,
-            db[0].data(),// A: K x M -> A^T: M x K
+            db[0].data(), // A: K x M -> A^T: M x K
             K,
-            q[0].data(),// B: K x N
+            q[0].data(),  // B: K x N
             K,
-            0.0,
-            _score_data.data(),// C: M x N
+            0.0,          // Overwrite the (uninitialized) target with the matrix product
+            _score_data.data(), // C: M x N
             M);
   }
 
@@ -307,6 +307,7 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
 
   {
     life_timer _{"Checking results"};
+
 #pragma omp parallel for
     for (size_t j = 0; j < size(q); ++j) {
       verify_top_k(scores[j], top_k[j], g[j], k, j);
