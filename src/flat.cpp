@@ -16,7 +16,9 @@
 #include "timer.h"
 
 // If apple, use Accelerate
+#ifdef __APPLE__
 #include <Accelerate/Accelerate.h>
+#endif
 
 
 bool verbose = false;
