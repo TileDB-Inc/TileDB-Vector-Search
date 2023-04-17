@@ -1,5 +1,5 @@
 
-add_executable(flat flat.cpp)
+add_executable(flat flat.cpp query.h)
 
 # Define a target and set some compile options
 # target_compile_options(flat PRIVATE -Wall -Wextra -pedantic)
