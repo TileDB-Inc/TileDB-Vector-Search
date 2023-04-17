@@ -9,7 +9,9 @@
 #include <cmath>
 #include <iostream>
 // #include <execution>
+#include <memory>
 #include <queue>
+#include <set>
 
 template <class T>
 using Vector = std::span<T>;
@@ -80,16 +82,16 @@ auto verify_top_k(V const& scores, L const& top_k, I const& g, size_t k, size_t 
 }
 
 
-template <class T>
-struct fixed_min_set : public std::set<T> {
-  using base = std::set<T>;
+template <class T, class Compare = std::less<T>, class Allocator = std::allocator<T>>
+struct fixed_min_set : public std::set<T, Compare, Allocator> {
+  using base = std::set<T, Compare, Allocator>;
   using base::base;
 
   size_t max_size{0};
   T max_value{std::numeric_limits<T>::max()};
 
-  explicit fixed_min_set(size_t n) : max_size{n} {
-  }
+  explicit fixed_min_set(size_t k) : max_size{k} {}
+  fixed_min_set(size_t k, const Compare& comp) : base(comp), max_size{k} {}
 
   void insert(T const& x) {
     if (this->size() == max_size && x > max_value) {

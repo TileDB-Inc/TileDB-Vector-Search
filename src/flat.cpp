@@ -31,7 +31,7 @@ static constexpr const char USAGE[] =
         R"(flat: feature vector search with flat index.
   Usage:
       tdb (-h | --help)
-      tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) (--g_file FILE | --g_uri URI) [--dim D] [--k NN] [--L2 | --cosine] [--order ORDER] [-d | -v]
+      tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) (--g_file FILE | --g_uri URI) [--dim D] [--k NN] [--L2 | --cosine] [--order ORDER] [--hardway] [-d | -v]
 
   Options:
       -h, --help            show this screen
@@ -46,6 +46,7 @@ static constexpr const char USAGE[] =
       --L2                  use L2 distance (Euclidean)
       --cosine              use cosine distance [default]
       --order ORDER         which ordering to do comparisons [default: qv]
+      --hardway             use hard way to compute distances [default: false]
       -d, --debug           run in debug mode [default: false]
       -v, --verbose         run in verbose mode [default: false]
 )";
@@ -61,6 +62,7 @@ int main(int argc, char *argv[]) {
 
   debug = args["--debug"].asBool();
   verbose = args["--verbose"].asBool();
+  auto hardway = args["--hardway"].asBool();
 
   std::string db_file{};
   std::string db_uri{};
@@ -123,36 +125,61 @@ int main(int argc, char *argv[]) {
     if (args["--order"].asString() == "vq") {
       if (verbose) {
         std::cout << "Using vq ordering" << std::endl;
+        if (hardway) {
+          std::cout << "Doing it the hard way" << std::endl;
+        }
       }
-
-      { life_timer _{"Everything"};
-#pragma omp parallel 
-{
-      std::vector<int> i_index(size(db));
-      std::vector<float> scores(size(db));
-      /**
+      if (hardway) {
+        {
+          life_timer _{"Everything"};
+#pragma omp parallel
+          {
+            std::vector<int> i_index(size(db));
+            std::vector<float> scores(size(db));
+            /**
        * For each query
        */
 
-      std::iota(begin(i_index), end(i_index), 0);
-      std::vector<int> index(size(db));
+            std::iota(begin(i_index), end(i_index), 0);
+            std::vector<int> index(size(db));
 
 #pragma omp for
-      for (size_t j = 0; j < size(q); ++j) {
+            for (size_t j = 0; j < size(q); ++j) {
 
-        /**
+              /**
          * Compare with each database vector
          */
-        for (size_t i = 0; i < size(db); ++i) {
-          scores[i] = L2(q[j], db[i]);
-        }
+              for (size_t i = 0; i < size(db); ++i) {
+                scores[i] = L2(q[j], db[i]);
+              }
 
-	std::copy(/*std::execution::seq,*/ begin(i_index), end(i_index), begin(index));
-        get_top_k(scores, top_k[j], index, k);
-        verify_top_k(scores, top_k[j], g[j], k, j);
+              std::copy(/*std::execution::seq,*/ begin(i_index), end(i_index), begin(index));
+              get_top_k(scores, top_k[j], index, k);
+              verify_top_k(scores, top_k[j], g[j], k, j);
+            }
+          }
+        }
+      } else {
+        using element = std::pair<float, int>;
+        life_timer _{"Everything"};
+#pragma omp parallel
+        {
+          fixed_min_set<element> scores(k);
+
+#pragma omp for
+          for (size_t j = 0; j < size(q); ++j) {
+
+            /**
+         * Compare with each database vector
+         */
+            for (size_t i = 0; i < size(db); ++i) {
+              auto score = L2(q[j], db[i]);
+              scores.insert(element{score, i});
+            }
+            std::transform(scores.begin(), scores.end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
+          }
+        }
       }
-    }
- }
     } else if (args["--order"].asString() == "qv") {
       if (verbose) {
         std::cout << "Using qv ordering" << std::endl;
@@ -183,16 +210,16 @@ int main(int argc, char *argv[]) {
         life_timer _{"Get top k"};
 
 #pragma omp parallel
-	{
-        std::vector<int> i_index(size(db));
-	std::iota(begin(i_index), end(i_index), 0);
-	std::vector<int> index(size(db));
+        {
+          std::vector<int> i_index(size(db));
+          std::iota(begin(i_index), end(i_index), 0);
+          std::vector<int> index(size(db));
 #pragma omp for
-        for (size_t j = 0; j < size(q); ++j) {
-	  std::copy(begin(i_index), end(i_index), begin(index));
-          get_top_k(scores[j], top_k[j], index, k);
+          for (size_t j = 0; j < size(q); ++j) {
+            std::copy(begin(i_index), end(i_index), begin(index));
+            get_top_k(scores[j], top_k[j], index, k);
+          }
         }
-      }
       }
 
       {
@@ -202,7 +229,6 @@ int main(int argc, char *argv[]) {
           verify_top_k(scores[j], top_k[j], g[j], k, j);
         }
       }
-
     } else if (args["--order"].asString() == "gemm") {
       if (verbose) {
         std::cout << "Using gemm ordering" << std::endl;
@@ -235,10 +261,9 @@ int main(int argc, char *argv[]) {
 
         col_sum(db, alpha, [](auto a) { return a * a; });
         col_sum(q, beta, [](auto a) { return a * a; });
-
       }
       {
-        life_timer _{"L2 comparison outer product"}; // todo: BLAS
+        life_timer _{"L2 comparison outer product"};// todo: BLAS
 
 #if 0
         for (size_t j = 0; j < N; ++j) {
@@ -247,14 +272,14 @@ int main(int argc, char *argv[]) {
           }
         }
 #else
-	//void cblas_sger (const CBLAS_LAYOUT Layout, const MKL_INT m, const MKL_INT n, const float alpha, const float *x, const MKL_INT incx, const float *y, const MKL_INT incy, float *a, const MKL_INT lda);
-	// A += alpha * x * transpose(y)
-	std::vector<float> alpha_ones(N, 1.0f);
-	std::vector<float> beta_ones(M, 1.0f);
-	// scores[j][i] = alpha[i];
-	// scores[j][i] = beta[j]
-	cblas_sger(CblasColMajor, M, N, 1.0, &alpha[0], 1, &alpha_ones[0], 1, _score_data.data(), M);
-	cblas_sger(CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, _score_data.data(), M);
+        //void cblas_sger (const CBLAS_LAYOUT Layout, const MKL_INT m, const MKL_INT n, const float alpha, const float *x, const MKL_INT incx, const float *y, const MKL_INT incy, float *a, const MKL_INT lda);
+        // A += alpha * x * transpose(y)
+        std::vector<float> alpha_ones(N, 1.0f);
+        std::vector<float> beta_ones(M, 1.0f);
+        // scores[j][i] = alpha[i];
+        // scores[j][i] = beta[j]
+        cblas_sger(CblasColMajor, M, N, 1.0, &alpha[0], 1, &alpha_ones[0], 1, _score_data.data(), M);
+        cblas_sger(CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, _score_data.data(), M);
 
 #endif
       }
@@ -285,31 +310,31 @@ int main(int argc, char *argv[]) {
           }
         }
 #else
-	//	for (size_t k = 0; k <M*N; ++k) {
-	//	  _scores_data[k] = sqrt(_scores_data[k]);
-	//	}
-	std::for_each(/*std::execution::par_unseq,*/ begin(_score_data), end(_score_data), [](auto&& x) {
-	    x = sqrt(x);
-	  });
+        //	for (size_t k = 0; k <M*N; ++k) {
+        //	  _scores_data[k] = sqrt(_scores_data[k]);
+        //	}
+        std::for_each(/*std::execution::par_unseq,*/ begin(_score_data), end(_score_data), [](auto &&x) {
+          x = sqrt(x);
+        });
 #endif
       }
 
       {
         life_timer _{"Get top k"};
 
-	std::vector<int> i_index(size(db));
-	std::iota(begin(i_index), end(i_index), 0);
+        std::vector<int> i_index(size(db));
+        std::iota(begin(i_index), end(i_index), 0);
 
-#pragma omp parallel 
-	{
-	  std::vector<int> index(size(db));
+#pragma omp parallel
+        {
+          std::vector<int> index(size(db));
 
 #pragma omp for
-	  for (size_t j = 0; j < size(q); ++j) {
-	    std::copy(/*std::execution::seq,*/ begin(i_index), end(i_index), begin(index));
-	    get_top_k(scores[j], top_k[j], index, k);
-	  }
-	}
+          for (size_t j = 0; j < size(q); ++j) {
+            std::copy(/*std::execution::seq,*/ begin(i_index), end(i_index), begin(index));
+            get_top_k(scores[j], top_k[j], index, k);
+          }
+        }
       }
 
       {

@@ -65,6 +65,25 @@ TEST_CASE("defs: std::set", "[defs]") {
   CHECK(*rbegin(a) == 9);
 }
 
+TEST_CASE("defs: std::set with pairs", "[defs]") {
+  using element = std::pair<float, int>;
+  std::set<element> a;
+
+  SECTION("insert in ascending order") {
+    for (auto &&i: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
+      a.insert({10-i, i});
+    }
+  }
+  SECTION("insert in descending order") {
+    for (auto &&i: {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
+      a.insert({10+i, i});
+    }
+  }
+  CHECK(a.size() == 10);
+  CHECK(*begin(a) == element{10, 0});
+  CHECK(*rbegin(a) == element{9, 1});
+}
+
 TEST_CASE("defs: fixed_min_set", "[defs]") {
   fixed_min_set<int> a(5);
 
