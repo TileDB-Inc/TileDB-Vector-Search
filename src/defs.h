@@ -106,14 +106,14 @@ struct fixed_min_set : public std::set<T, Compare, Allocator> {
   fixed_min_set(size_t k, const Compare& comp) : base(comp), max_size{k} {}
 
   void insert(T const& x) {
-    if (this->size() == max_size && x > max_value) {
-      return;
-    }
+//    if (base::size() == max_size && x > max_value) {
+//      return;
+//    }
     base::insert(x);
     if (base::size() == max_size + 1) {
       base::erase(std::prev(base::end()));
     }
-    max_value = *base::rbegin();
+//    max_value = *base::rbegin();
   }
 };
 

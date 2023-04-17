@@ -164,11 +164,12 @@ int main(int argc, char *argv[]) {
         life_timer _{"Everything easy way"};
 #pragma omp parallel
         {
-          fixed_min_set<element> scores(k);
+
 
 #pragma omp for
           for (size_t j = 0; j < size(q); ++j) {
 
+            fixed_min_set<element> scores(k);
             /**
          * Compare with each database vector
          */
@@ -178,6 +179,7 @@ int main(int argc, char *argv[]) {
             }
             std::transform(scores.begin(), scores.end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
             // @todo: verify against ground truth
+            std::sort(begin(top_k[j]), end(top_k[j]));
             std::sort(begin(g[j]), begin(g[j])+k);
             verify_top_k(top_k[j], g[j], k, j);
           }
