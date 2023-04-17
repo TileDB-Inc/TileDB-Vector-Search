@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
       }
       if (hardway) {
         {
-          life_timer _{"Everything"};
+          life_timer _{"Everything hard way"};
 #pragma omp parallel
           {
             std::vector<int> i_index(size(db));
@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
         }
       } else {
         using element = std::pair<float, int>;
-        life_timer _{"Everything"};
+        life_timer _{"Everything easy way"};
 #pragma omp parallel
         {
           fixed_min_set<element> scores(k);
@@ -177,6 +177,9 @@ int main(int argc, char *argv[]) {
               scores.insert(element{score, i});
             }
             std::transform(scores.begin(), scores.end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
+            // @todo: verify against ground truth
+            std::sort(begin(g[j]), begin(g[j])+k);
+            verify_top_k(top_k[j], g[j], k, j);
           }
         }
       }

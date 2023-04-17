@@ -81,6 +81,18 @@ auto verify_top_k(V const& scores, L const& top_k, I const& g, size_t k, size_t 
   }
 }
 
+template <class L, class I>
+auto verify_top_k(L const& top_k, I const& g, size_t k, size_t qno) {
+  if (!std::equal(/*std::execution::seq,*/ begin(top_k), end(top_k), g.begin())) {
+    std::cout << "Query " << qno << " is incorrect" << std::endl;
+    for (size_t i = 0; i < 10; ++i) {
+      std::cout << "  (" << top_k[i] << " " << g[i] <<")";
+    }
+    std::cout << std::endl;
+  }
+}
+
+
 
 template <class T, class Compare = std::less<T>, class Allocator = std::allocator<T>>
 struct fixed_min_set : public std::set<T, Compare, Allocator> {
