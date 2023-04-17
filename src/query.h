@@ -10,6 +10,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <memory>
 #include <numeric>
 #include <span>
 #include <vector>
@@ -195,18 +196,58 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
        * q is vsize X dimension
        * scores <- db^T * q
        */
+  ms_timer init_time("Allocating score array");
+  init_time.start();
+
   std::vector<std::span<float>> scores(size(q));
+
+#if __APPLE__
   std::vector<float> _score_data(size(q) * size(db));
+#else
+  auto buf = std::make_unique_for_overwrite<float[]>(size(q)*size(db));
+  std::span<float> _score_data {buf.get(), size(q)*size(db)};
+#endif
+  init_time.stop();
+  std::cout << init_time << std::endl;
+#ifdef __APPLE__
+  std::cout << "Apple clang does not yet support make_unique_for_overwrite" << std::endl;
+  std::cout << "so this is about 3X slower than it should be" << std::endl;
+#endif
+
   size_t M = size(db);
   size_t N = size(q);
   size_t K = size(db[0]);
   assert(size(db[0]) == size(q[0]));
 
-  // scores[j][i] = alpha[i] + beta[j] - 2 * db[i] * q[j]
+  /**
+   * Compute the score matrix, based on (a - b)^2 = a^2 + b^2 - 2ab
+   * scores[j][i] = alpha[i] + beta[j] - 2 * db[i] * q[j]
+   */
 
   // Each score[j] is a column of the score matrix
   for (size_t j = 0; j < size(q); ++j) {
     scores[j] = std::span<float>(_score_data.data() + j * M, M);
+  }
+
+  // It may save some time to do this first
+  {
+    life_timer _{"L2 comparison (gemm)"};
+
+    cblas_sgemm(
+            CblasColMajor,
+            CblasTrans,  // db^T
+            CblasNoTrans,// q
+            (int32_t) M, // number of samples
+            (int32_t) N, // number of queries
+            (int32_t) K, // dimension of vectors
+            -2.0,
+            db[0].data(),// A: K x M -> A^T: M x K
+            K,
+            q[0].data(),// B: K x N
+            K,
+            0.0,
+            _score_data.data(),// C: M x N
+            M);
   }
 
   std::vector<float> alpha(M, 0.0f);
@@ -231,31 +272,19 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
   }
 
   {
-    life_timer _{"L2 comparison (gemm)"};
-
-    cblas_sgemm(
-            CblasColMajor,
-            CblasTrans,  // db^T
-            CblasNoTrans,// q
-            (int32_t) M, // number of samples
-            (int32_t) N, // number of queries
-            (int32_t) K, // dimension of vectors
-            -2.0,
-            db[0].data(),// A: K x M -> A^T: M x K
-            K,
-            q[0].data(),// B: K x N
-            K,
-            1.0,
-            _score_data.data(),// C: M x N
-            M);
-  }
-  {
     life_timer _{"L2 comparison finish"};
 
+#if 0
     // APPLE clang does not support std execution policies
     std::for_each(/*std::execution::par_unseq,*/ begin(_score_data), end(_score_data), [](auto &&x) {
       x = sqrt(x);
     });
+#else
+#pragma omp parallel for
+    for (size_t i = 0; i < size(_score_data); ++i) {
+      _score_data[i] = sqrt(_score_data[i]);
+    }
+#endif
   }
 
   {
