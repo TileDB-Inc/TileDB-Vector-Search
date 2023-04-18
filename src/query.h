@@ -156,9 +156,12 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
 
   {
     life_timer _{"L2 distance"};
-#pragma omp parallel for
+
     // For each database vector
     for (size_t i = 0; i < size(db); ++i) {
+
+      // Can't parallelize outer loop b/c there is only one scores vector
+#pragma omp parallel for
 
       // Compare with each query
       for (size_t j = 0; j < size(q); ++j) {
