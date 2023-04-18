@@ -108,11 +108,10 @@ void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
   ms_timer init_time("Allocating score array");
   init_time.start();
 
-  std::vector<std::span<float>> scores(size(q));
-
 #if __APPLE__
   std::vector<std::vector<float>> scores(size(q), std::vector<float>(size(db), 0.0f));
 #else
+  std::vector<std::span<float>> scores(size(q));
   auto buf = std::make_unique_for_overwrite<float[]>(size(q)*size(db));
   std::span<float> _score_data {buf.get(), size(q)*size(db)};
   // Each score[j] is a column of the score matrix
