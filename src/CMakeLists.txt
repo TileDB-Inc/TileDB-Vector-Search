@@ -1,5 +1,6 @@
 
-add_executable(flat flat.cpp query.h)
+add_executable(flat flat.cpp query.h defs.h sift_db.h timer.h)
+add_executable(ingest sift_db.h timer.h)
 
 # Define a target and set some compile options
 # target_compile_options(flat PRIVATE -Wall -Wextra -pedantic)
@@ -12,19 +13,18 @@ endif()
 
 target_link_libraries(flat PUBLIC docopt)
 
+#
+# Some debugging code
+#
 # Get the compile options for flat
-get_target_property(TargetCompileOptions flat COMPILE_OPTIONS)
+# get_target_property(TargetCompileOptions flat COMPILE_OPTIONS)
 
 # Print the compile options
-message("Compile options for flat:")
-foreach(Option ${TargetCompileOptions})
-    message("  ${Option}")
-endforeach()
+# message("Compile options for flat:")
+# foreach(Option ${TargetCompileOptions})
+#     message("  ${Option}")
+# endforeach()
 
-message (STATUS ${MKL_THREAD_LIB})
-message (STATUS ${INTERFACE_COMPILE_OPTIONS})
-message (STATUS ${INTERFACE_INCLUDE_DIRECTORIES})
-
-
-
-# target_link_libraries(flat docopt)
+# message (STATUS ${MKL_THREAD_LIB})
+# message (STATUS ${INTERFACE_COMPILE_OPTIONS})
+# message (STATUS ${INTERFACE_INCLUDE_DIRECTORIES})
