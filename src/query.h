@@ -73,7 +73,7 @@ void query_qv_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
 
 template <class DB, class Q, class G, class TK>
 void query_qv_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
-  life_timer _{"Total time (eq set way)"};
+  life_timer _{"Total time (qv set way)"};
 
   using element = std::pair<float, int>;
 
@@ -105,7 +105,29 @@ template <class DB, class Q, class G, class TK>
 void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
   life_timer _{"Total time (vq loop nesting, hard way)"};
 
+  ms_timer init_time("Allocating score array");
+  init_time.start();
+
+  std::vector<std::span<float>> scores(size(q));
+
+#if __APPLE__
   std::vector<std::vector<float>> scores(size(q), std::vector<float>(size(db), 0.0f));
+#else
+  auto buf = std::make_unique_for_overwrite<float[]>(size(q)*size(db));
+  std::span<float> _score_data {buf.get(), size(q)*size(db)};
+  // Each score[j] is a column of the score matrix
+  for (size_t j = 0; j < size(q); ++j) {
+    scores[j] = std::span<float>(_score_data.data() + j * size(db), size(db));
+  }
+#endif
+
+  init_time.stop();
+  std::cout << init_time << std::endl;
+
+#ifdef __APPLE__
+  std::cout << "Apple clang does not yet support make_unique_for_overwrite" << std::endl;
+  std::cout << "so this is about 3X slower than it should be" << std::endl;
+#endif
 
   {
     life_timer _{"L2 distance"};
@@ -193,7 +215,7 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
 
 template <class DB, class Q, class G, class TK>
 void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway) {
-
+  life_timer _{"Total time gemm"};
   /**
        * scores is nsamples X nq
        * db is dimension X nsamples
