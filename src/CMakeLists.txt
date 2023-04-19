@@ -1,6 +1,5 @@
 
 add_executable(flat flat.cpp query.h defs.h sift_db.h timer.h)
-add_executable(ingest sift_db.h timer.h)
 
 # Define a target and set some compile options
 # target_compile_options(flat PRIVATE -Wall -Wextra -pedantic)
@@ -12,6 +11,12 @@ if (NOT APPLE)
 endif()
 
 target_link_libraries(flat PUBLIC docopt)
+
+add_executable(ingest ingest.cpp sift_db.h timer.h)
+target_include_directories(ingest PUBLIC
+    /Users/lums/Contrib/dist/include
+)
+target_link_libraries(ingest PUBLIC docopt)
 
 #
 # Some debugging code
