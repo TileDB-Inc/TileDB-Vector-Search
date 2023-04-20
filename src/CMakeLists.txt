@@ -1,5 +1,5 @@
 
-add_executable(flat flat.cpp query.h defs.h sift_db.h timer.h)
+add_executable(flat flat.cpp query.h defs.h sift_db.h timer.h sift_array.h)
 
 # Define a target and set some compile options
 # target_compile_options(flat PRIVATE -Wall -Wextra -pedantic)

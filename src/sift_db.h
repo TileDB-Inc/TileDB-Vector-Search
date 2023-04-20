@@ -61,7 +61,6 @@ public:
       this->emplace_back(std::span<T>{data_ptr, dimension});
       data_ptr += dimension;
       sift_ptr += dimension;
-
     }
 
     munmap(mapped_ptr, mapped_size);

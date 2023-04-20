@@ -93,12 +93,14 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  size_t dimension = args["--dim"].asLong();
+  size_t k = args["--k"].asLong();
+
   if (!db_file.empty() && !q_file.empty() && !g_file.empty()) {
     if (db_file == q_file) {
       std::cout << "db_file and q_file must be different" << std::endl;
       return 1;
     }
-    size_t dimension = args["--dim"].asLong();
 
     ms_timer load_time{"Load database, query, and ground truth"};
     sift_db<float> db(db_file, dimension);
@@ -109,9 +111,7 @@ int main(int argc, char *argv[]) {
 
     assert(size(db[0]) == dimension);
 
-    size_t k = args["--k"].asLong();
     std::vector<std::vector<int>> top_k(size(q), std::vector<int>(k, 0));
-
     std::cout << "Using " << args["--order"].asString() << std::endl;
 
     /**
@@ -142,5 +142,15 @@ int main(int argc, char *argv[]) {
       std::cout << "Unknown ordering: " << args["--order"].asString() << std::endl;
       return 1;
     }
+  } else if (!db_uri.empty() && !q_uri.empty() && !g_uri.empty()) {
+    if (db_uri == q_uri) {
+      std::cout << "db_uri and q_uri must be different" << std::endl;
+      return 1;
+    }
+  } else {
+    std::cout << "Must specify either --db_file, --q_file, and --g_file or "
+                 "--db_uri, --q_uri, and --g_uri"
+              << std::endl;
+    return 1;
   }
 }

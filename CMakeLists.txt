@@ -67,4 +67,4 @@ target_link_libraries(flat_tbb INTERFACE TBB::tbb Threads::Threads OpenMP::OpenM
 
 include(Docopt)
 add_subdirectory(src)
-#add_subdirectory(src/test)
+add_subdirectory(src/test)
