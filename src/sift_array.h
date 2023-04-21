@@ -21,7 +21,10 @@ template <class T>
 class sift_array : public std::vector<std::span<T>> {
 
   using Base = std::vector<std::span<T>>;
-  tiledb::Context ctx_;
+
+  std::map<std::string, std::string> init_ {{ "vfs.s3.region", "us-west-2" }};
+  tiledb::Config config_ {init_};
+  tiledb::Context ctx_ {config_};
 
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
@@ -36,15 +39,14 @@ class sift_array : public std::vector<std::span<T>> {
 
   public:
   sift_array(const std::string& array_name)
-    : ctx_(tiledb::Config())
-  , array_(ctx_, array_name, TILEDB_READ)
-  , schema_(array_.schema())
-  , domain_(schema_.domain())
-  , rows_(domain_.dimension("rows"))
-  , cols_(domain_.dimension("cols"))
-  , dim_num_(domain_.ndim())
-  , num_rows_(rows_.domain<int32_t>().second - rows_.domain<int32_t>().first + 1)
-  , num_cols_(cols_.domain<int32_t>().second - cols_.domain<int32_t>().first + 1)
+          : array_(ctx_, array_name, TILEDB_READ)
+          , schema_(array_.schema())
+          , domain_(schema_.domain())
+          , rows_(domain_.dimension("rows"))
+          , cols_(domain_.dimension("cols"))
+          , dim_num_(domain_.ndim())
+          , num_rows_(rows_.domain<int32_t>().second - rows_.domain<int32_t>().first + 1)
+          , num_cols_(cols_.domain<int32_t>().second - cols_.domain<int32_t>().first + 1)
 
 #ifndef __APPLE__
   , data_ {std::make_unique_for_overwrite<T[]>(num_rows_ * num_cols_)}
@@ -53,6 +55,8 @@ class sift_array : public std::vector<std::span<T>> {
   , data_ {new T[num_rows_ * num_cols_]}
 #endif
   {
+    ctx_.set_tag("vfs.s3.region", "us-west-2");
+
     this->resize(num_cols_);
 
     for (size_t j = 0; j < num_cols_; ++j) {
