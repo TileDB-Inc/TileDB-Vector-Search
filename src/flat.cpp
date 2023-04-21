@@ -16,6 +16,7 @@
 #include "defs.h"
 #include "query.h"
 #include "sift_db.h"
+#include "sift_array.h"
 #include "timer.h"
 
 
@@ -147,6 +148,48 @@ int main(int argc, char *argv[]) {
       std::cout << "db_uri and q_uri must be different" << std::endl;
       return 1;
     }
+
+    ms_timer load_time{"Load database, query, and ground truth arrays"};
+    sift_array<float> db(db_uri);
+    sift_array<float> q(q_uri);
+    sift_array<int> g(g_uri);
+    load_time.stop();
+    std::cout << load_time << std::endl;
+
+    assert(size(db[0]) == dimension);
+
+    std::vector<std::vector<int>> top_k(size(q), std::vector<int>(k, 0));
+    std::cout << "Using " << args["--order"].asString() << std::endl;
+
+    /**
+     * vq: for each vector in the database, compare with each query vector
+     */
+    if (args["--order"].asString() == "vq") {
+      if (verbose) {
+        std::cout << "Using vq loop nesting for query" << std::endl;
+        if (hardway) {
+          std::cout << "Doing it the hard way" << std::endl;
+        }
+      }
+      query_vq(db, q, g, top_k, k, hardway);
+    } else if (args["--order"].asString() == "qv") {
+      if (verbose) {
+        std::cout << "Using qv nesting for query" << std::endl;
+        if (hardway) {
+          std::cout << "Doing it the hard way" << std::endl;
+        }
+      }
+      query_qv(db, q, g, top_k, k, hardway);
+    } else if (args["--order"].asString() == "gemm") {
+      if (verbose) {
+        std::cout << "Using gemm for query" << std::endl;
+      }
+      query_gemm(db, q, g, top_k, k, hardway);
+    } else {
+      std::cout << "Unknown ordering: " << args["--order"].asString() << std::endl;
+      return 1;
+    }
+
   } else {
     std::cout << "Must specify either --db_file, --q_file, and --g_file or "
                  "--db_uri, --q_uri, and --g_uri"
