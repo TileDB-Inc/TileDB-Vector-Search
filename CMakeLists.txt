@@ -66,5 +66,14 @@ target_compile_definitions(flat_tbb INTERFACE EXECUTION_POLICY)
 target_link_libraries(flat_tbb INTERFACE TBB::tbb Threads::Threads OpenMP::OpenMP_CXX)
 
 include(Docopt)
+
+set(CMAKE_PREFIX_PATH "/Users/lums/Contrib/dist;{CMAKE_PREFIX_PATH}")
+
+find_package(tiledb REQUIRED)
+
+if (tiledb_FOUND)
+    message(STATUS "Found TileDB")
+endif()
+
 add_subdirectory(src)
 add_subdirectory(src/test)

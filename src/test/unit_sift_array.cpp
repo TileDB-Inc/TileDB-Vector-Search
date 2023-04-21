@@ -4,26 +4,26 @@
 #include <catch2/catch.hpp>
 #include "../sift_array.h"
 
-TEST_CASE("sift_db: test test", "[sift_db]") {
+TEST_CASE("sift_array: test test", "[sift_db]") {
   REQUIRE(true);
 }
 
-TEST_CASE("sift_db: test exceptions", "[sift_db]") {
+TEST_CASE("sift_array: test exceptions", "[sift_array]") {
   SECTION("file does not exist") {
-    REQUIRE_THROWS_WITH(sift_db<float>("no_such_file", 128), "file no_such_file does not exist");
-  }
-  SECTION("wrong dimension") {
-    REQUIRE_THROWS_WITH(sift_db<float>("siftsmall/siftsmall_base.fvecs", 17), "dimension mismatch: 128 != 17");
+    REQUIRE_THROWS_WITH(sift_array<float>("no_such_file"), "[TileDB::Array] Error: Cannot open array; Array does not exist.");
   }
 }
 
-TEST_CASE("sift_db: open files", "[sift_db]") {
-  auto base = sift_db<float>("siftsmall/siftsmall_base.fvecs", 128);
-  REQUIRE(base.size() == 10'000);
+TEST_CASE("sift_array: open files", "[sift_array]") {
+  auto base = sift_array<float>("arrays/siftsmall_base");
+  std::cout << "a" << std::endl;
+  CHECK(base.size() == 10'000);
 
-  auto query = sift_db<float>("siftsmall/siftsmall_query.fvecs", 128);
-  REQUIRE(query.size() == 100);
+  auto query = sift_array<float>("arrays/siftsmall_query");
+  std::cout << "b" << std::endl;
+  CHECK(query.size() == 100);
 
-  auto truth = sift_db<float>("siftsmall/siftsmall_groundtruth.ivecs", 100);
-  REQUIRE(truth.size() == 100);
+  auto truth = sift_array<int>("arrays/siftsmall_groundtruth");
+  std::cout << "c" << std::endl;
+  CHECK(truth.size() == 100);
 }

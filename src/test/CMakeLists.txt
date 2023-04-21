@@ -2,7 +2,7 @@
 include(Catch2)
 
 add_executable(unit_sift_array unit_sift_array.cpp)
-target_link_libraries(unit_sift_array PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(unit_sift_array PRIVATE Catch2::Catch2WithMain TileDB::tiledb_shared)
 
 add_executable(unit_sift_db unit_sift_db.cpp)
 target_link_libraries(unit_sift_db PRIVATE Catch2::Catch2WithMain)
