@@ -14,13 +14,16 @@
 #include <memory>
 #include <numeric>
 #include <span>
+
+#include <future>
+
 #include <vector>
 
 // If apple, use Accelerate
 #ifdef __APPLE__
 #include <Accelerate/Accelerate.h>
 #else
-#include <cblas.h>
+#include <mkl_cblas.h>
 #endif
 
 
@@ -46,7 +49,7 @@ template <class DB, class Q, class G, class TK>
 void query_qv_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
   life_timer _{"Total time (vq hard way)"};
 
-#pragma omp parallel
+  // #pragma omp parallel
   {
     std::vector<int> i_index(size(db));
     std::vector<float> scores(size(db));
@@ -54,7 +57,7 @@ void query_qv_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
     std::iota(begin(i_index), end(i_index), 0);
     std::vector<int> index(size(db));
 
-#pragma omp for
+    // #pragma omp for
     // For each query
     for (size_t j = 0; j < size(q); ++j) {
 
@@ -77,7 +80,7 @@ void query_qv_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
 
   using element = std::pair<float, int>;
 
-#pragma omp parallel for
+  // #pragma omp parallel for
   // For each query vector
   for (size_t j = 0; j < size(q); ++j) {
 
@@ -131,7 +134,7 @@ void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
   {
     life_timer _{"L2 distance"};
 
-#pragma omp parallel for
+    // #pragma omp parallel for
     // For each database vector
     for (size_t i = 0; i < size(db); ++i) {
 
@@ -145,12 +148,12 @@ void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
   {
     life_timer _{"Get top k"};
 
-#pragma omp parallel
+    // #pragma omp parallel
     {
       std::vector<int> i_index(size(db));
       std::iota(begin(i_index), end(i_index), 0);
       std::vector<int> index(size(db));
-#pragma omp for
+      // #pragma omp for
       for (size_t j = 0; j < size(q); ++j) {
         std::copy(begin(i_index), end(i_index), begin(index));
         get_top_k(scores[j], top_k[j], index, k);
@@ -161,7 +164,7 @@ void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
   {
     life_timer _{"Checking results"};
 
-#pragma omp parallel for
+    // #pragma omp parallel for
     for (size_t j = 0; j < size(q); ++j) {
       verify_top_k(scores[j], top_k[j], g[j], k, j);
     }
@@ -182,7 +185,7 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
     for (size_t i = 0; i < size(db); ++i) {
 
       // Can't parallelize outer loop b/c there is only one scores vector
-#pragma omp parallel for
+      // #pragma omp parallel for
 
       // Compare with each query
       for (size_t j = 0; j < size(q); ++j) {
@@ -195,7 +198,7 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
   {
     life_timer _{"Get top k"};
 
-#pragma omp parallel for
+    // #pragma omp parallel for
     for (size_t j = 0; j < size(q); ++j) {
       std::transform(scores[j].begin(), scores[j].end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
       std::sort(begin(top_k[j]), end(top_k[j]));
@@ -204,7 +207,7 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
 
   {
     life_timer _{"Checking results"};
-#pragma omp parallel for
+    // #pragma omp parallel for
     for (size_t j = 0; j < size(q); ++j) {
       std::sort(begin(g[j]), begin(g[j]) + k);
       verify_top_k(top_k[j], g[j], k, j);
@@ -305,10 +308,35 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
       x = sqrt(x);
     });
 #else
-#pragma omp parallel for
+    // #pragma omp parallel for
+
+#if 1
+    size_t block_size = (size(_score_data) + 64 -1) / 64;
+
+    std::vector<std::future<void>> futs;
+    futs.reserve(64);
+    for (size_t n = 0; n < 64; ++n) {
+      
+      size_t start = n*block_size;
+      size_t stop = std::min<size_t>((n+1)*block_size, size(_score_data));
+      
+      futs.emplace_back(std::async(std::launch::async, [start, stop, &_score_data]() {
+	for (size_t i = start; i < stop; ++i) {
+	  _score_data[i] = sqrt(_score_data[i]);
+	}
+      }));
+    }      
+    for (size_t n = 0; n < 64; ++n) {
+      futs[n].get();
+    }
+
+#else
     for (size_t i = 0; i < size(_score_data); ++i) {
       _score_data[i] = sqrt(_score_data[i]);
     }
+#endif
+
+
 #endif
   }
 
@@ -318,22 +346,59 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
     std::vector<int> i_index(size(db));
     std::iota(begin(i_index), end(i_index), 0);
 
-#pragma omp parallel
+#if 1
+
+    size_t q_block_size = (size(q) + 64 -1) / 64;
+    size_t db_block_size = (size(db) + 64 -1) / 64;
+
+    std::vector<std::future<void>> futs;
+    futs.reserve(64);
+    for (size_t n = 0; n < 64; ++n) {
+      
+
+
+      size_t q_start = n*q_block_size;
+      size_t q_stop = std::min<size_t>((n+1)*q_block_size, size(q));
+
+      size_t db_start = n*db_block_size;
+      size_t db_stop = std::min<size_t>((n+1)*db_block_size, size(db));
+      
+      futs.emplace_back(std::async(std::launch::async, [q_start, q_stop, &i_index, &scores, &top_k, k, &db]() {
+  
+	std::vector<int> index(size(db));
+
+	for (size_t j = q_start; j < q_stop; ++j) {
+
+	  std::copy(/*std::execution::seq,*/ begin(i_index), end(i_index), begin(index));
+
+	  get_top_k(scores[j], top_k[j], index, k);
+	}
+      }));
+    }      
+    for (size_t n = 0; n < 64; ++n) {
+      futs[n].get();
+    }
+  }
+
+#else
+
+  // #pragma omp parallel
     {
       std::vector<int> index(size(db));
 
-#pragma omp for
+      // #pragma omp for
       for (size_t j = 0; j < size(q); ++j) {
         std::copy(/*std::execution::seq,*/ begin(i_index), end(i_index), begin(index));
         get_top_k(scores[j], top_k[j], index, k);
       }
     }
   }
+#endif
 
   {
     life_timer _{"Checking results"};
 
-#pragma omp parallel for
+    // #pragma omp parallel for
     for (size_t j = 0; j < size(q); ++j) {
       verify_top_k(scores[j], top_k[j], g[j], k, j);
     }
