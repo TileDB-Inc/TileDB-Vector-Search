@@ -3,15 +3,15 @@
 //
 
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <span>
 #include <vector>
 #include "../defs.h"
 
 // If apple, use Accelerate
+#ifdef __APPLE__
 #include <Accelerate/Accelerate.h>
-
-#if 0
+#else
 // If not apple, use OpenBLAS
 #include <cblas.h>
 #endif
@@ -36,7 +36,7 @@
 */
 
 TEST_CASE("gemm: test test", "[gemm]") {
-  float a;
+  float a{0};
   cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 1, 1, 1, 1.0, &a, 1, &a, 1, 1.0, &a, 1);
 }
 

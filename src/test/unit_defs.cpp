@@ -2,7 +2,7 @@
 // Created by Andrew Lumsdaine on 4/14/23.
 //
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <set>
 #include <vector>
 #include "../defs.h"

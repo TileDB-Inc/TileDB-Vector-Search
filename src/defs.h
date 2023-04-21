@@ -19,7 +19,7 @@ using Vector = std::span<T>;
 template <class V>
 auto L2(V const& a, V const& b) {
   typename V::value_type sum {0};
-  for (auto i = 0; i < a.size(); ++i) {
+  for (decltype(a.size()) i = 0; i < a.size(); ++i) {
     auto diff = a[i] - b[i];
     sum += diff * diff;
   }

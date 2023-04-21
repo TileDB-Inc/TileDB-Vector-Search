@@ -20,7 +20,7 @@
 #ifdef __APPLE__
 #include <Accelerate/Accelerate.h>
 #else
-#include <mkl_cblas.h>
+#include <cblas.h>
 #endif
 
 

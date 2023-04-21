@@ -2,7 +2,7 @@
 // Created by Andrew Lumsdaine on 4/12/23.
 //
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include "../sift_db.h"
 
 TEST_CASE("sift_db: test test", "[sift_db]") {

@@ -34,6 +34,7 @@ public:
       throw std::runtime_error("file " + bin_file + " does not exist");
     }
     auto file_size = std::filesystem::file_size(bin_file);
+
     auto num_vectors = file_size / (4 + dimension * sizeof(T));
 
     auto fd = open(bin_file.c_str(), O_RDONLY);
@@ -43,7 +44,7 @@ public:
     size_t mapped_size = s.st_size;
     assert(s.st_size == file_size);
 
-    T *mapped_ptr = (T*)mmap(0, mapped_size, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0);
+    T *mapped_ptr = reinterpret_cast<T*>(mmap(0, mapped_size, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0));
     if ((long)mapped_ptr == -1) {
       throw std::runtime_error("mmap failed");
     }
@@ -53,7 +54,7 @@ public:
     auto sift_ptr = mapped_ptr;
 
     for (size_t k = 0; k < num_vectors; ++k) {
-      auto dim = *reinterpret_cast<int*>(sift_ptr++);
+      decltype(dimension) dim = *reinterpret_cast<int*>(sift_ptr++);
       if (dim != dimension) {
         throw std::runtime_error("dimension mismatch: " + std::to_string(dim) + " != " + std::to_string(dimension));
       }

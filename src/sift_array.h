@@ -35,7 +35,7 @@ class sift_array : public std::vector<std::span<T>> {
   int32_t num_rows_;
   int32_t num_cols_;
 
-  std::unique_ptr<T> data_;
+  std::unique_ptr<T[]> data_;
 
   public:
   sift_array(const std::string& array_name)
@@ -49,7 +49,7 @@ class sift_array : public std::vector<std::span<T>> {
           , num_cols_(cols_.domain<int32_t>().second - cols_.domain<int32_t>().first + 1)
 
 #ifndef __APPLE__
-  , data_ {std::make_unique_for_overwrite<T[]>(num_rows_ * num_cols_)}
+	  , data_ { std::make_unique_for_overwrite<T[]>(num_rows_ * num_cols_) }
 #else
   //, data_ {std::make_unique<T[]>(new T[num_rows_ * num_cols_])}
   , data_ {new T[num_rows_ * num_cols_]}
@@ -59,7 +59,7 @@ class sift_array : public std::vector<std::span<T>> {
 
     this->resize(num_cols_);
 
-    for (size_t j = 0; j < num_cols_; ++j) {
+    for (decltype(num_cols_) j = 0; j < num_cols_; ++j) {
       Base::operator[](j) = std::span<T>(data_.get() + j * num_rows_, num_rows_);
     }
 
