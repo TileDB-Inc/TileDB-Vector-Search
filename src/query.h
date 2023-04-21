@@ -28,25 +28,25 @@
 
 
 template <class DB, class Q, class G, class TK>
-void query_qv(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway) {
+void query_qv(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway, size_t nthreads) {
   if (hardway) {
-    query_qv_hw(db, q, g, top_k, k);
+    query_qv_hw(db, q, g, top_k, k, nthreads);
   } else {
-    query_qv_ew(db, q, g, top_k, k);
+    query_qv_ew(db, q, g, top_k, k, nthreads);
   }
 }
 
 template <class DB, class Q, class G, class TK>
-void query_vq(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway) {
+void query_vq(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway, size_t nthreads) {
   if (hardway) {
-    query_vq_hw(db, q, g, top_k, k);
+    query_vq_hw(db, q, g, top_k, k, nthreads);
   } else {
-    query_vq_ew(db, q, g, top_k, k);
+    query_vq_ew(db, q, g, top_k, k, nthreads);
   }
 }
 
 template <class DB, class Q, class G, class TK>
-void query_qv_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
+void query_qv_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t nthreads) {
   life_timer _{"Total time (vq hard way)"};
 
   // #pragma omp parallel
@@ -75,7 +75,7 @@ void query_qv_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
 }
 
 template <class DB, class Q, class G, class TK>
-void query_qv_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
+void query_qv_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t nthreads) {
   life_timer _{"Total time (qv set way)"};
 
   using element = std::pair<float, int>;
@@ -105,7 +105,7 @@ void query_qv_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
 
 
 template <class DB, class Q, class G, class TK>
-void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
+void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t nthreads) {
   life_timer _{"Total time (vq loop nesting, hard way)"};
 
   ms_timer init_time("Allocating score array");
@@ -172,7 +172,7 @@ void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
 }
 
 template <class DB, class Q, class G, class TK>
-void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
+void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t nthreads) {
   life_timer _{"Total time (vq loop nesting, set way)"};
 
   using element = std::pair<float, int>;
@@ -216,7 +216,7 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k) {
 }
 
 template <class DB, class Q, class G, class TK>
-void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway) {
+void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway, size_t nthreads) {
   life_timer _{"Total time gemm"};
   /**
        * scores is nsamples X nq
@@ -311,11 +311,11 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
     // #pragma omp parallel for
 
 #if 1
-    size_t block_size = (size(_score_data) + 64 -1) / 64;
+    size_t block_size = (size(_score_data) + nthreads -1) / nthreads;
 
     std::vector<std::future<void>> futs;
-    futs.reserve(64);
-    for (size_t n = 0; n < 64; ++n) {
+    futs.reserve(nthreads);
+    for (size_t n = 0; n < nthreads; ++n) {
       
       size_t start = n*block_size;
       size_t stop = std::min<size_t>((n+1)*block_size, size(_score_data));
@@ -326,7 +326,7 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
 	}
       }));
     }      
-    for (size_t n = 0; n < 64; ++n) {
+    for (size_t n = 0; n < nthreads; ++n) {
       futs[n].get();
     }
 
@@ -348,15 +348,13 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
 
 #if 1
 
-    size_t q_block_size = (size(q) + 64 -1) / 64;
-    size_t db_block_size = (size(db) + 64 -1) / 64;
+    size_t q_block_size = (size(q) + nthreads -1) / nthreads;
+    size_t db_block_size = (size(db) + nthreads -1) / nthreads;
 
     std::vector<std::future<void>> futs;
-    futs.reserve(64);
-    for (size_t n = 0; n < 64; ++n) {
+    futs.reserve(nthreads);
+    for (size_t n = 0; n < nthreads; ++n) {
       
-
-
       size_t q_start = n*q_block_size;
       size_t q_stop = std::min<size_t>((n+1)*q_block_size, size(q));
 
@@ -375,7 +373,7 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
 	}
       }));
     }      
-    for (size_t n = 0; n < 64; ++n) {
+    for (size_t n = 0; n < nthreads; ++n) {
       futs[n].get();
     }
   }

@@ -28,7 +28,7 @@ static constexpr const char USAGE[] =
         R"(flat: feature vector search with flat index.
   Usage:
       tdb (-h | --help)
-      tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) (--g_file FILE | --g_uri URI) [--dim D] [--k NN] [--L2 | --cosine] [--order ORDER] [--hardway] [-d | -v]
+      tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) (--g_file FILE | --g_uri URI) [--dim D] [--k NN] [--L2 | --cosine] [--order ORDER] [--hardway] [--nthreads N] [-d | -v]
 
   Options:
       -h, --help            show this screen
@@ -44,6 +44,7 @@ static constexpr const char USAGE[] =
       --cosine              use cosine distance [default]
       --order ORDER         which ordering to do comparisons [default: qv]
       --hardway             use hard way to compute distances [default: false]
+      --nthreads N          number of threads to use in parallel loops [default: 8]
       -d, --debug           run in debug mode [default: false]
       -v, --verbose         run in verbose mode [default: false]
 )";
@@ -96,6 +97,7 @@ int main(int argc, char *argv[]) {
 
   size_t dimension = args["--dim"].asLong();
   size_t k = args["--k"].asLong();
+  size_t nthreads = args["--nthreads"].asLong();
 
   if (!db_file.empty() && !q_file.empty() && !g_file.empty()) {
     if (db_file == q_file) {
@@ -125,7 +127,7 @@ int main(int argc, char *argv[]) {
           std::cout << "Doing it the hard way" << std::endl;
         }
       }
-      query_vq(db, q, g, top_k, k, hardway);
+      query_vq(db, q, g, top_k, k, hardway, nthreads);
     } else if (args["--order"].asString() == "qv") {
       if (verbose) {
         std::cout << "Using qv nesting for query" << std::endl;
@@ -133,12 +135,12 @@ int main(int argc, char *argv[]) {
           std::cout << "Doing it the hard way" << std::endl;
         }
       }
-      query_qv(db, q, g, top_k, k, hardway);
+      query_qv(db, q, g, top_k, k, hardway, nthreads);
     } else if (args["--order"].asString() == "gemm") {
       if (verbose) {
         std::cout << "Using gemm for query" << std::endl;
       }
-      query_gemm(db, q, g, top_k, k, hardway);
+      query_gemm(db, q, g, top_k, k, hardway, nthreads);
     } else {
       std::cout << "Unknown ordering: " << args["--order"].asString() << std::endl;
       return 1;
@@ -171,7 +173,7 @@ int main(int argc, char *argv[]) {
           std::cout << "Doing it the hard way" << std::endl;
         }
       }
-      query_vq(db, q, g, top_k, k, hardway);
+      query_vq(db, q, g, top_k, k, hardway, nthreads);
     } else if (args["--order"].asString() == "qv") {
       if (verbose) {
         std::cout << "Using qv nesting for query" << std::endl;
@@ -179,12 +181,12 @@ int main(int argc, char *argv[]) {
           std::cout << "Doing it the hard way" << std::endl;
         }
       }
-      query_qv(db, q, g, top_k, k, hardway);
+      query_qv(db, q, g, top_k, k, hardway, nthreads);
     } else if (args["--order"].asString() == "gemm") {
       if (verbose) {
         std::cout << "Using gemm for query" << std::endl;
       }
-      query_gemm(db, q, g, top_k, k, hardway);
+      query_gemm(db, q, g, top_k, k, hardway, nthreads);
     } else {
       std::cout << "Unknown ordering: " << args["--order"].asString() << std::endl;
       return 1;
