@@ -5,6 +5,8 @@
 #ifndef TDB_QUERY_H
 #define TDB_QUERY_H
 
+
+
 #include "defs.h"
 #include "timer.h"
 
@@ -28,7 +30,7 @@
 
 
 template <class DB, class Q, class G, class TK>
-void query_qv(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway, size_t nthreads) {
+void query_qv(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway, int nthreads) {
   if (hardway) {
     query_qv_hw(db, q, g, top_k, k, nthreads);
   } else {
@@ -37,7 +39,7 @@ void query_qv(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardwa
 }
 
 template <class DB, class Q, class G, class TK>
-void query_vq(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway, size_t nthreads) {
+void query_vq(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway, int nthreads) {
   if (hardway) {
     query_vq_hw(db, q, g, top_k, k, nthreads);
   } else {
@@ -46,30 +48,31 @@ void query_vq(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardwa
 }
 
 template <class DB, class Q, class G, class TK>
-void query_qv_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t nthreads) {
+void query_qv_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, int nthreads) {
   life_timer _{"Total time (vq hard way)"};
 
   std::vector<int> i_index(size(db));
   std::iota(begin(i_index), end(i_index), 0);
 
-  size_t q_block_size = (size(q) + nthreads -1) / nthreads;
+  int size_db = size(db);
+  int q_block_size = (size(q) + nthreads -1) / nthreads;
   std::vector<std::future<void>> futs;
   futs.reserve(nthreads);
   
-  for (size_t n = 0; n < nthreads; ++n) {
+  for (int n = 0; n < nthreads; ++n) {
     
-    size_t q_start = n*q_block_size;
-    size_t q_stop = std::min<size_t>((n+1)*q_block_size, size(q));
+    int q_start = n*q_block_size;
+    int q_stop = std::min<int>((n+1)*q_block_size, size(q));
     
-    futs.emplace_back(std::async(std::launch::async, [&db, &q, &g, q_start, q_stop, &i_index, &top_k, k]() {
+    futs.emplace_back(std::async(std::launch::async, [&db, &q, &g, q_start, q_stop, size_db, &i_index, &top_k, k]() {
       std::vector<int> index(size(db));
       std::vector<float> scores(size(db));
 
       // For each query
-      for (size_t j = q_start; j < q_stop; ++j) {
+      for (int j = q_start; j < q_stop; ++j) {
 
 	// Compare with each database vector
-	for (size_t i = 0; i < size(db); ++i) {
+	for (int i = 0; i < size_db; ++i) {
 	  scores[i] = L2(q[j], db[i]);
 	}
 
@@ -81,13 +84,13 @@ void query_qv_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t n
     }));
   }
 
-  for (size_t n = 0; n < nthreads; ++n) {
+  for (int n = 0; n < nthreads; ++n) {
     futs[n].get();
   }
 }
 
 template <class DB, class Q, class G, class TK>
-void query_qv_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t nthreads) {
+void query_qv_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, int nthreads) {
   life_timer _{"Total time (qv set way)"};
 
   using element = std::pair<float, int>;
@@ -95,25 +98,26 @@ void query_qv_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t n
   std::vector<int> i_index(size(db));
   std::iota(begin(i_index), end(i_index), 0);
 
-  size_t q_block_size = (size(q) + nthreads -1) / nthreads;
+  int size_db = size(db);
+  int q_block_size = (size(q) + nthreads -1) / nthreads;
   std::vector<std::future<void>> futs;
   futs.reserve(nthreads);
   
-  for (size_t n = 0; n < nthreads; ++n) {
+  for (int n = 0; n < nthreads; ++n) {
     
-    size_t q_start = n*q_block_size;
-    size_t q_stop = std::min<size_t>((n+1)*q_block_size, size(q));
+    int q_start = n*q_block_size;
+    int q_stop = std::min<int>((n+1)*q_block_size, size(q));
     
-    futs.emplace_back(std::async(std::launch::async, [&db, &q, &g, q_start, q_stop, &i_index, &top_k, k]() {
+    futs.emplace_back(std::async(std::launch::async, [&db, &q, &g, q_start, q_stop, size_db, &i_index, &top_k, k]() {
 
       // For each query vector
-      for (size_t j = q_start; j < q_stop; ++j) {
+      for (int j = q_start; j < q_stop; ++j) {
 
 	// Create a set of the top k scores
 	fixed_min_set<element> scores(k);
 
 	// Compare with each database vector
-	for (size_t i = 0; i < size(db); ++i) {
+	for (int i = 0; i < size_db; ++i) {
 	  auto score = L2(q[j], db[i]);
 	  scores.insert(element{score, i});
 	}
@@ -128,26 +132,29 @@ void query_qv_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t n
       }
     }));
   }
-  for (size_t n = 0; n < nthreads; ++n) {
+  for (int n = 0; n < nthreads; ++n) {
     futs[n].get();
   }
 }
 
 template <class DB, class Q, class G, class TK>
-void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t nthreads) {
+void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, int nthreads) {
   life_timer _{"Total time (vq loop nesting, hard way)"};
 
   ms_timer init_time("Allocating score array");
   init_time.start();
 
 #if __APPLE__
-  std::vector<std::vector<float>> scores(size(q), std::vector<float>(size(db), 0.0f));
+  // std::vector<std::vector<float>> scores(size(q), std::vector<float>(size(db), 0.0f));
+  auto buf = std::make_unique<float[]>(new T[size(q)*size(db)]);
+  std::span<float> _score_data {buf.get(), size(q)*size(db)};
 #else
   std::vector<std::span<float>> scores(size(q));
   auto buf = std::make_unique_for_overwrite<float[]>(size(q)*size(db));
   std::span<float> _score_data {buf.get(), size(q)*size(db)};
   // Each score[j] is a column of the score matrix
-  for (size_t j = 0; j < size(q); ++j) {
+  int size_q = size(q);
+  for (int j = 0; j < size_q; ++j) {
     scores[j] = std::span<float>(_score_data.data() + j * size(db), size(db));
   }
 #endif
@@ -163,28 +170,29 @@ void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t n
   {
     life_timer _{"L2 distance"};
 
-    size_t db_block_size = (size(db) + nthreads - 1) / nthreads;
+    int size_q = size(q);
+    int db_block_size = (size(db) + nthreads - 1) / nthreads;
     std::vector<std::future<void>> futs;
     futs.reserve(nthreads);
   
-    for (size_t n = 0; n < nthreads; ++n) {
+    for (int n = 0; n < nthreads; ++n) {
     
-      size_t db_start = n*db_block_size;
-      size_t db_stop = std::min<size_t>((n+1)*db_block_size, size(db));
+      int db_start = n*db_block_size;
+      int db_stop = std::min<int>((n+1)*db_block_size, size(db));
     
-      futs.emplace_back(std::async(std::launch::async, [&db, &q, db_start, db_stop, &scores]() {
+      futs.emplace_back(std::async(std::launch::async, [&db, &q, db_start, db_stop, size_q, &scores]() {
 
 	// For each database vector
-	for (size_t i = db_start; i < db_stop; ++i) {
+	for (int i = db_start; i < db_stop; ++i) {
 
 	  // Compare with each query
-	  for (size_t j = 0; j < size(q); ++j) {
+	  for (int j = 0; j < size_q; ++j) {
 	    scores[j][i] = L2(q[j], db[i]);
 	  }
 	}
       }));
     }
-    for (size_t n = 0; n < nthreads; ++n) {
+    for (int n = 0; n < nthreads; ++n) {
       futs[n].get();
     }
   }
@@ -195,14 +203,14 @@ void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t n
     life_timer _{"Checking results"};
 
     // #pragma omp parallel for
-    for (size_t j = 0; j < size(q); ++j) {
+    for (int j = 0; j < size_q; ++j) {
       verify_top_k(scores[j], top_k[j], g[j], k, j);
     }
   }
 }
 
 template <class DB, class Q, class G, class TK>
-void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t nthreads) {
+void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, int nthreads) {
   life_timer _{"Total time (vq loop nesting, set way)"};
 
   using element = std::pair<float, int>;
@@ -211,35 +219,40 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t n
   {
     life_timer _{"L2 distance"};
 
+    int size_q = size(q);
+    int size_db = size(db);
+
     // For each database vector
-    for (size_t i = 0; i < size(db); ++i) {
+    for (int i = 0; i < size_db; ++i) {
 
 #if 0
       // Can't parallelize outer loop b/c there is only one scores vector
+      // Don't parallelize each inner loop -- thread explosion
 
-      size_t q_block_size = (size(q) + nthreads -1) / nthreads;
+      int q_block_size = (size(q) + nthreads -1) / nthreads;
       std::vector<std::future<void>> futs;
       futs.reserve(nthreads);
     
-      for (size_t n = 0; n < nthreads; ++n) {
+      for (int n = 0; n < nthreads; ++n) {
 	
-	size_t q_start = n*q_block_size;
-	size_t q_stop = std::min<size_t>((n+1)*q_block_size, size(q));
+	int q_start = n*q_block_size;
+	int q_stop = std::min<int>((n+1)*q_block_size, size(q));
       
 	futs.emplace_back(std::async(std::launch::async, [&scores, &g, &db, &q, i, q_start, q_stop, &top_k, k]() {
 
 	  // Compare with each query
-	  for (size_t j = q_start; j < q_stop; ++j) {
+	  for (int j = q_start; j < q_stop; ++j) {
 	    auto score = L2(q[j], db[i]);
 	    scores[j].insert(element{score, i});
 	  }
 	}));
       }
-      for (size_t n = 0; n < nthreads; ++n) {
+      for (int n = 0; n < nthreads; ++n) {
 	futs[n].get();
       }
 #else
-      for (size_t j = 0; j < size(q); ++j) {
+
+      for (int j = 0; j < size_q; ++j) {
 	auto score = L2(q[j], db[i]);
 	scores[j].insert(element{score, i});
       }
@@ -251,19 +264,19 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t n
   {
     life_timer _{"Get top k and check results"};
 
-    size_t q_block_size = (size(q) + nthreads -1) / nthreads;
+    int q_block_size = (size(q) + nthreads -1) / nthreads;
     std::vector<std::future<void>> futs;
     futs.reserve(nthreads);
     
-    for (size_t n = 0; n < nthreads; ++n) {
+    for (int n = 0; n < nthreads; ++n) {
       
-      size_t q_start = n*q_block_size;
-      size_t q_stop = std::min<size_t>((n+1)*q_block_size, size(q));
+      int q_start = n*q_block_size;
+      int q_stop = std::min<int>((n+1)*q_block_size, size(q));
       
       futs.emplace_back(std::async(std::launch::async, [&scores, &g, q_start, q_stop, &top_k, k]() {
 	
 	// For each query
-	for (size_t j = q_start; j < q_stop; ++j) {
+	for (int j = q_start; j < q_stop; ++j) {
 	  
 	  std::transform(scores[j].begin(), scores[j].end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
 	  std::sort(begin(top_k[j]), end(top_k[j]));
@@ -273,28 +286,33 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t n
 	}
       }));
     }
-    for (size_t n = 0; n < nthreads; ++n) {
+    for (int n = 0; n < nthreads; ++n) {
       futs[n].get();
     }
   }
 }
 
+
+
 template <class DB, class Q, class G, class TK>
-void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway, size_t nthreads) {
+void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway, int nthreads) {
   life_timer _{"Total time gemm"};
   /**
-       * scores is nsamples X nq
-       * db is dimension X nsamples
-       * q is vsize X dimension
-       * scores <- db^T * q
-       */
+   * scores is nsamples X nq
+   * db is dimension X nsamples
+   * q is vsize X dimension
+   * scores <- db^T * q
+   */
+
   ms_timer init_time("Allocating score array");
   init_time.start();
 
   std::vector<std::span<float>> scores(size(q));
 
 #if __APPLE__
-  std::vector<float> _score_data(size(q) * size(db));
+  //  std::vector<float> _score_data(size(q) * size(db));
+  auto buf = std::make_unique<float[]>(new T[size(q)*size(db)]);
+  std::span<float> _score_data {buf.get(), size(q)*size(db)};
 #else
   auto buf = std::make_unique_for_overwrite<float[]>(size(q)*size(db));
   std::span<float> _score_data {buf.get(), size(q)*size(db)};
@@ -306,9 +324,10 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
   std::cout << "This time would not be seen in libraries supporting make_unique_for_overwrite" << std::endl;
 #endif
 
-  size_t M = size(db);
-  size_t N = size(q);
-  size_t K = size(db[0]);
+
+  int M = size(db);
+  int N = size(q);
+  int K = size(db[0]);
   assert(size(db[0]) == size(q[0]));
 
   /**
@@ -317,7 +336,8 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
    */
 
   // Each score[j] is a column of the score matrix
-  for (size_t j = 0; j < size(q); ++j) {
+  int size_q = size(q);
+  for (int j = 0; j < size_q; ++j) {
     scores[j] = std::span<float>(_score_data.data() + j * M, M);
   }
 
@@ -342,6 +362,9 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
             M);
   }
 
+
+
+
   std::vector<float> alpha(M, 0.0f);
   std::vector<float> beta(N, 0.0f);
 
@@ -352,6 +375,7 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
     col_sum(q, beta, [](auto a) { return a * a; });
   }
 
+
   {
     life_timer _{"L2 comparison outer product"};
 
@@ -359,9 +383,32 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
     std::vector<float> alpha_ones(N, 1.0f);
     std::vector<float> beta_ones(M, 1.0f);
 
+    // This should be more parallelizable -- but seems to be completely memory-bound
+#if 1
     cblas_sger(CblasColMajor, M, N, 1.0, &alpha[0], 1, &alpha_ones[0], 1, _score_data.data(), M);
     cblas_sger(CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, _score_data.data(), M);
+#else
+    size_t block_size = (N + nthreads - 1) / nthreads;
+
+    std::vector<std::future<void>> futs;
+    futs.reserve(nthreads);
+    for (size_t n = 0; n < nthreads; ++n) {
+      
+      size_t start = n*block_size;
+      size_t stop = std::min<size_t>((n+1)*block_size, N);
+      
+      futs.emplace_back(std::async(std::launch::async, [start, stop, &_score_data, M, N, block_size, &alpha, &beta, &alpha_ones, &beta_ones, n]() {
+	cblas_sger(CblasColMajor, M, stop-start/*N*/, 1.0, &alpha[0], 1, &alpha_ones[start], 1, _score_data.data() + M*start, M);
+	cblas_sger(CblasColMajor, M, stop-start/*N*/, 1.0, &beta_ones[0], 1, &beta[start], 1, _score_data.data() + M*start, M);
+      }));
+    }
+
+    for (int n = 0; n < nthreads; ++n) {
+      futs[n].get();
+    }
+#endif
   }
+
 
   {
     life_timer _{"L2 comparison finish"};
@@ -377,12 +424,14 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
       size_t stop = std::min<size_t>((n+1)*block_size, size(_score_data));
       
       futs.emplace_back(std::async(std::launch::async, [start, stop, &_score_data]() {
+
 	for (size_t i = start; i < stop; ++i) {
 	  _score_data[i] = sqrt(_score_data[i]);
 	}
       }));
     }      
-    for (size_t n = 0; n < nthreads; ++n) {
+
+    for (int n = 0; n < nthreads; ++n) {
       futs[n].get();
     }
   }
@@ -393,10 +442,11 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
     life_timer _{"Checking results"};
 
     // #pragma omp parallel for
-    for (size_t j = 0; j < size(q); ++j) {
+    for (int j = 0; j < size_q; ++j) {
       verify_top_k(scores[j], top_k[j], g[j], k, j);
     }
   }
 }
+
 
 #endif//TDB_QUERY_H
