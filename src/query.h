@@ -49,28 +49,40 @@ template <class DB, class Q, class G, class TK>
 void query_qv_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t nthreads) {
   life_timer _{"Total time (vq hard way)"};
 
-  // #pragma omp parallel
-  {
-    std::vector<int> i_index(size(db));
-    std::vector<float> scores(size(db));
+  std::vector<int> i_index(size(db));
+  std::iota(begin(i_index), end(i_index), 0);
 
-    std::iota(begin(i_index), end(i_index), 0);
-    std::vector<int> index(size(db));
+  size_t q_block_size = (size(q) + nthreads -1) / nthreads;
+  std::vector<std::future<void>> futs;
+  futs.reserve(nthreads);
+  
+  for (size_t n = 0; n < nthreads; ++n) {
+    
+    size_t q_start = n*q_block_size;
+    size_t q_stop = std::min<size_t>((n+1)*q_block_size, size(q));
+    
+    futs.emplace_back(std::async(std::launch::async, [&db, &q, &g, q_start, q_stop, &i_index, &top_k, k]() {
+      std::vector<int> index(size(db));
+      std::vector<float> scores(size(db));
 
-    // #pragma omp for
-    // For each query
-    for (size_t j = 0; j < size(q); ++j) {
+      // For each query
+      for (size_t j = q_start; j < q_stop; ++j) {
 
-      // Compare with each database vector
-      for (size_t i = 0; i < size(db); ++i) {
-        scores[i] = L2(q[j], db[i]);
+	// Compare with each database vector
+	for (size_t i = 0; i < size(db); ++i) {
+	  scores[i] = L2(q[j], db[i]);
+	}
+
+	// std::copy(begin(i_index), end(i_index), begin(index));
+	std::iota(begin(index), end(index), 0);
+	get_top_k(scores, top_k[j], index, k);
+	verify_top_k(scores, top_k[j], g[j], k, j);
       }
+    }));
+  }
 
-      // APPLE clang does not support execution policies
-      std::copy(/*std::execution::seq,*/ begin(i_index), end(i_index), begin(index));
-      get_top_k(scores, top_k[j], index, k);
-      verify_top_k(scores, top_k[j], g[j], k, j);
-    }
+  for (size_t n = 0; n < nthreads; ++n) {
+    futs[n].get();
   }
 }
 
@@ -80,29 +92,46 @@ void query_qv_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t n
 
   using element = std::pair<float, int>;
 
-  // #pragma omp parallel for
-  // For each query vector
-  for (size_t j = 0; j < size(q); ++j) {
+  std::vector<int> i_index(size(db));
+  std::iota(begin(i_index), end(i_index), 0);
 
-    // Create a set of the top k scores
-    fixed_min_set<element> scores(k);
+  size_t q_block_size = (size(q) + nthreads -1) / nthreads;
+  std::vector<std::future<void>> futs;
+  futs.reserve(nthreads);
+  
+  for (size_t n = 0; n < nthreads; ++n) {
+    
+    size_t q_start = n*q_block_size;
+    size_t q_stop = std::min<size_t>((n+1)*q_block_size, size(q));
+    
+    futs.emplace_back(std::async(std::launch::async, [&db, &q, &g, q_start, q_stop, &i_index, &top_k, k]() {
 
-    // Compare with each database vector
-    for (size_t i = 0; i < size(db); ++i) {
-      auto score = L2(q[j], db[i]);
-      scores.insert(element{score, i});
-    }
+      // For each query vector
+      for (size_t j = q_start; j < q_stop; ++j) {
 
-    // Copy indexes into top_k
-    std::transform(scores.begin(), scores.end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
+	// Create a set of the top k scores
+	fixed_min_set<element> scores(k);
 
-    // Try to break ties by sorting the top k
-    std::sort(begin(top_k[j]), end(top_k[j]));
-    std::sort(begin(g[j]), begin(g[j]) + k);
-    verify_top_k(top_k[j], g[j], k, j);
+	// Compare with each database vector
+	for (size_t i = 0; i < size(db); ++i) {
+	  auto score = L2(q[j], db[i]);
+	  scores.insert(element{score, i});
+	}
+
+	// Copy indexes into top_k
+	std::transform(scores.begin(), scores.end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
+
+	// Try to break ties by sorting the top k
+	std::sort(begin(top_k[j]), end(top_k[j]));
+	std::sort(begin(g[j]), begin(g[j]) + k);
+	verify_top_k(top_k[j], g[j], k, j);
+      }
+    }));
+  }
+  for (size_t n = 0; n < nthreads; ++n) {
+    futs[n].get();
   }
 }
-
 
 template <class DB, class Q, class G, class TK>
 void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t nthreads) {
@@ -134,32 +163,33 @@ void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t n
   {
     life_timer _{"L2 distance"};
 
-    // #pragma omp parallel for
-    // For each database vector
-    for (size_t i = 0; i < size(db); ++i) {
+    size_t db_block_size = (size(db) + nthreads - 1) / nthreads;
+    std::vector<std::future<void>> futs;
+    futs.reserve(nthreads);
+  
+    for (size_t n = 0; n < nthreads; ++n) {
+    
+      size_t db_start = n*db_block_size;
+      size_t db_stop = std::min<size_t>((n+1)*db_block_size, size(db));
+    
+      futs.emplace_back(std::async(std::launch::async, [&db, &q, db_start, db_stop, &scores]() {
 
-      // Compare with each query
-      for (size_t j = 0; j < size(q); ++j) {
-        scores[j][i] = L2(q[j], db[i]);
-      }
+	// For each database vector
+	for (size_t i = db_start; i < db_stop; ++i) {
+
+	  // Compare with each query
+	  for (size_t j = 0; j < size(q); ++j) {
+	    scores[j][i] = L2(q[j], db[i]);
+	  }
+	}
+      }));
+    }
+    for (size_t n = 0; n < nthreads; ++n) {
+      futs[n].get();
     }
   }
 
-  {
-    life_timer _{"Get top k"};
-
-    // #pragma omp parallel
-    {
-      std::vector<int> i_index(size(db));
-      std::iota(begin(i_index), end(i_index), 0);
-      std::vector<int> index(size(db));
-      // #pragma omp for
-      for (size_t j = 0; j < size(q); ++j) {
-        std::copy(begin(i_index), end(i_index), begin(index));
-        get_top_k(scores[j], top_k[j], index, k);
-      }
-    }
-  }
+  get_top_k(scores, top_k, k, size(q), size(db), nthreads);
 
   {
     life_timer _{"Checking results"};
@@ -185,32 +215,58 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t n
     for (size_t i = 0; i < size(db); ++i) {
 
       // Can't parallelize outer loop b/c there is only one scores vector
-      // #pragma omp parallel for
 
-      // Compare with each query
-      for (size_t j = 0; j < size(q); ++j) {
-        auto score = L2(q[j], db[i]);
-        scores[j].insert(element{score, i});
+      size_t q_block_size = (size(q) + nthreads -1) / nthreads;
+      std::vector<std::future<void>> futs;
+      futs.reserve(nthreads);
+    
+      for (size_t n = 0; n < nthreads; ++n) {
+	
+	size_t q_start = n*q_block_size;
+	size_t q_stop = std::min<size_t>((n+1)*q_block_size, size(q));
+      
+	futs.emplace_back(std::async(std::launch::async, [&scores, &g, &db, &q, i, q_start, q_stop, &top_k, k]() {
+
+	  // Compare with each query
+	  for (size_t j = q_start; j < q_stop; ++j) {
+	    auto score = L2(q[j], db[i]);
+	    scores[j].insert(element{score, i});
+	  }
+	}));
+      }
+      for (size_t n = 0; n < nthreads; ++n) {
+	futs[n].get();
       }
     }
   }
 
   {
-    life_timer _{"Get top k"};
+    life_timer _{"Get top k and check results"};
 
-    // #pragma omp parallel for
-    for (size_t j = 0; j < size(q); ++j) {
-      std::transform(scores[j].begin(), scores[j].end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
-      std::sort(begin(top_k[j]), end(top_k[j]));
+    size_t q_block_size = (size(q) + nthreads -1) / nthreads;
+    std::vector<std::future<void>> futs;
+    futs.reserve(nthreads);
+    
+    for (size_t n = 0; n < nthreads; ++n) {
+      
+      size_t q_start = n*q_block_size;
+      size_t q_stop = std::min<size_t>((n+1)*q_block_size, size(q));
+      
+      futs.emplace_back(std::async(std::launch::async, [&scores, &g, q_start, q_stop, &top_k, k]() {
+	
+	// For each query
+	for (size_t j = q_start; j < q_stop; ++j) {
+	  
+	  std::transform(scores[j].begin(), scores[j].end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
+	  std::sort(begin(top_k[j]), end(top_k[j]));
+	  
+	  std::sort(begin(g[j]), begin(g[j]) + k);
+	  verify_top_k(top_k[j], g[j], k, j);
+	}
+      }));
     }
-  }
-
-  {
-    life_timer _{"Checking results"};
-    // #pragma omp parallel for
-    for (size_t j = 0; j < size(q); ++j) {
-      std::sort(begin(g[j]), begin(g[j]) + k);
-      verify_top_k(top_k[j], g[j], k, j);
+    for (size_t n = 0; n < nthreads; ++n) {
+      futs[n].get();
     }
   }
 }
@@ -301,17 +357,9 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
 
   {
     life_timer _{"L2 comparison finish"};
+    // sqrt_score_data(_score_data, nthreads);
 
-#if 0
-    // APPLE clang does not support std execution policies
-    std::for_each(/*std::execution::par_unseq,*/ begin(_score_data), end(_score_data), [](auto &&x) {
-      x = sqrt(x);
-    });
-#else
-    // #pragma omp parallel for
-
-#if 1
-    size_t block_size = (size(_score_data) + nthreads -1) / nthreads;
+    size_t block_size = (size(_score_data) + nthreads - 1) / nthreads;
 
     std::vector<std::future<void>> futs;
     futs.reserve(nthreads);
@@ -329,69 +377,9 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
     for (size_t n = 0; n < nthreads; ++n) {
       futs[n].get();
     }
-
-#else
-    for (size_t i = 0; i < size(_score_data); ++i) {
-      _score_data[i] = sqrt(_score_data[i]);
-    }
-#endif
-
-
-#endif
   }
 
-  {
-    life_timer _{"Get top k"};
-
-    std::vector<int> i_index(size(db));
-    std::iota(begin(i_index), end(i_index), 0);
-
-#if 1
-
-    size_t q_block_size = (size(q) + nthreads -1) / nthreads;
-    size_t db_block_size = (size(db) + nthreads -1) / nthreads;
-
-    std::vector<std::future<void>> futs;
-    futs.reserve(nthreads);
-    for (size_t n = 0; n < nthreads; ++n) {
-      
-      size_t q_start = n*q_block_size;
-      size_t q_stop = std::min<size_t>((n+1)*q_block_size, size(q));
-
-      size_t db_start = n*db_block_size;
-      size_t db_stop = std::min<size_t>((n+1)*db_block_size, size(db));
-      
-      futs.emplace_back(std::async(std::launch::async, [q_start, q_stop, &i_index, &scores, &top_k, k, &db]() {
-  
-	std::vector<int> index(size(db));
-
-	for (size_t j = q_start; j < q_stop; ++j) {
-
-	  std::copy(/*std::execution::seq,*/ begin(i_index), end(i_index), begin(index));
-
-	  get_top_k(scores[j], top_k[j], index, k);
-	}
-      }));
-    }      
-    for (size_t n = 0; n < nthreads; ++n) {
-      futs[n].get();
-    }
-  }
-
-#else
-
-  // #pragma omp parallel
-    {
-      std::vector<int> index(size(db));
-
-      // #pragma omp for
-      for (size_t j = 0; j < size(q); ++j) {
-        std::copy(/*std::execution::seq,*/ begin(i_index), end(i_index), begin(index));
-        get_top_k(scores[j], top_k[j], index, k);
-      }
-    }
-  }
-#endif
+  get_top_k(scores, top_k, k, size(q), size(db), nthreads);
 
   {
     life_timer _{"Checking results"};

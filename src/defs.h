@@ -7,11 +7,14 @@
 
 #include <span>
 #include <cmath>
+#include <future>
 #include <iostream>
 // #include <execution>
 #include <memory>
 #include <queue>
 #include <set>
+
+#include "timer.h"
 
 template <class T>
 using Vector = std::span<T>;
@@ -53,19 +56,19 @@ auto col_sum(const M& m, V& v, Function f = [](auto x) { return x; }) {
 
 template <class V, class L, class I>
 auto get_top_k(V const& scores, L & top_k, I & index, size_t k) {
-  std::nth_element(/*std::execution::seq,*/ begin(index), begin(index) + k, end(index), [&](auto a, auto b) {
+  std::nth_element(begin(index), begin(index) + k, end(index), [&](auto a, auto b) {
     return scores[a] < scores[b];
   });
-  std::copy(/*std::execution::seq,*/ begin(index), begin(index) + k, begin(top_k));
+  std::copy(begin(index), begin(index) + k, begin(top_k));
 
-  std::sort(/*std::execution::seq,*/ begin(top_k), end(top_k), [&](auto a, auto b) {
+  std::sort(begin(top_k), end(top_k), [&](auto a, auto b) {
     return scores[a] < scores[b];
   });
 }
 
 template <class V, class L, class I>
 auto verify_top_k(V const& scores, L const& top_k, I const& g, size_t k, size_t qno) {
-  if (!std::equal(/*std::execution::seq,*/ begin(top_k), end(top_k), g.begin(), [&](auto a, auto b) {
+  if (!std::equal(begin(top_k), end(top_k), g.begin(), [&](auto a, auto b) {
     return scores[a] == scores[b];
   })) {
     std::cout << "Query " << qno << " is incorrect" << std::endl;
@@ -83,7 +86,7 @@ auto verify_top_k(V const& scores, L const& top_k, I const& g, size_t k, size_t 
 
 template <class L, class I>
 auto verify_top_k(L const& top_k, I const& g, size_t k, size_t qno) {
-  if (!std::equal(/*std::execution::seq,*/ begin(top_k), end(top_k), g.begin())) {
+  if (!std::equal(begin(top_k), end(top_k), g.begin())) {
     std::cout << "Query " << qno << " is incorrect" << std::endl;
     for (size_t i = 0; i < 10; ++i) {
       std::cout << "  (" << top_k[i] << " " << g[i] <<")";
@@ -100,44 +103,48 @@ struct fixed_min_set : public std::set<T, Compare, Allocator> {
   using base::base;
 
   size_t max_size{0};
-  T max_value{std::numeric_limits<T>::max()};
 
   explicit fixed_min_set(size_t k) : max_size{k} {}
   fixed_min_set(size_t k, const Compare& comp) : base(comp), max_size{k} {}
 
   void insert(T const& x) {
-//    if (base::size() == max_size && x > max_value) {
-//      return;
-//    }
     base::insert(x);
     if (base::size() == max_size + 1) {
       base::erase(std::prev(base::end()));
     }
-//    max_value = *base::rbegin();
   }
 };
 
-#if 0
-template <class T>
-struct fixed_min_queue : std::priority_queue<T, std::vector<T>, std::greater<T>> {
-  using base = std::priority_queue<T, std::vector<T>, std::greater<T>>;
-  using base::base;
 
-  size_t max_size{0};
-  T max_value{0};
-  T* max_ptr{nullptr};
+template <class S, class T>
+void get_top_k(const S& scores, T& top_k, size_t k, size_t size_q, size_t size_db, size_t nthreads) {
+  life_timer _{"Get top k"};
 
-  explicit fixed_min_queue(size_t n) : base(), max_size{n} {
-    base::c.reserve(n);
+  std::vector<int> i_index(size_db);
+  std::iota(begin(i_index), end(i_index), 0);
+  
+  size_t q_block_size = (size_q + nthreads -1) / nthreads;
+  std::vector<std::future<void>> futs;
+  futs.reserve(nthreads);
+  
+  for (size_t n = 0; n < nthreads; ++n) {
+    
+    size_t q_start = n*q_block_size;
+    size_t q_stop = std::min<size_t>((n+1)*q_block_size, size_q);
+    
+    futs.emplace_back(std::async(std::launch::async, [q_start, q_stop, &i_index, &scores, &top_k, k, size_db]() {
+      
+      std::vector<int> index(size_db);
+      
+      for (size_t j = q_start; j < q_stop; ++j) {
+	std::copy(begin(i_index), end(i_index), begin(index));
+	get_top_k(scores[j], top_k[j], index, k);
+      }
+    }));
+  }      
+  for (size_t n = 0; n < nthreads; ++n) {
+    futs[n].get();
   }
-
-  void push(T const& x) {
-    if (x > max_value) {
-      return;
-    }
-    this->push(x);
-  }
-};
-#endif
+}
 
 #endif//TDB_DEFS_H
