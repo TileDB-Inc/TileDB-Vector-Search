@@ -214,6 +214,7 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t n
     // For each database vector
     for (size_t i = 0; i < size(db); ++i) {
 
+#if 0
       // Can't parallelize outer loop b/c there is only one scores vector
 
       size_t q_block_size = (size(q) + nthreads -1) / nthreads;
@@ -237,6 +238,13 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, size_t n
       for (size_t n = 0; n < nthreads; ++n) {
 	futs[n].get();
       }
+#else
+      for (size_t j = 0; j < size(q); ++j) {
+	auto score = L2(q[j], db[i]);
+	scores[j].insert(element{score, i});
+      }
+
+#endif
     }
   }
 
