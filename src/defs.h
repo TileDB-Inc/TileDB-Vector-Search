@@ -147,7 +147,7 @@ void get_top_k(const S& scores, T& top_k, int k, int size_q, int size_db, int nt
     int q_start = n*q_block_size;
     int q_stop = std::min<int>((n+1)*q_block_size, size_q);
     
-    futs.emplace_back(std::async(std::launch::async, [q_start, q_stop, &i_index, &scores, &top_k, k, size_db]() {
+    futs.emplace_back(std::async(std::launch::async, [q_start, q_stop, &scores, &top_k, k, size_db]() {
       
       std::vector<int> index(size_db);
       

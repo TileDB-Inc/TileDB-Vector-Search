@@ -81,7 +81,7 @@ endif()
 
 include(Docopt)
 
-set(CMAKE_PREFIX_PATH "/home/lums/dist;{CMAKE_PREFIX_PATH}")
+set(CMAKE_PREFIX_PATH "/Users/lums/Contrib/dist;{CMAKE_PREFIX_PATH}")
 
 find_package(TileDB REQUIRED)
 
