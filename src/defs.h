@@ -53,9 +53,11 @@ auto col_sum(const M& m, V& v, Function f = [](auto& x) -> const auto &{ return 
   int size_m0 = size(m[0]);
 
   for (int j = 0; j < size_m; ++j) {
+    decltype(v[0]) vj = v[j];
     for (int i = 0; i < size_m0; ++i) {
-      v[j] += f(m[j][i]);
+      vj += f(m[j][i]);
     }
+    v[j] = vj;
   }
 }
 

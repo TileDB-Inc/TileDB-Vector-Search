@@ -68,7 +68,7 @@ public:
 std::ostream& operator<<(std::ostream& os, const seconds_timer& t) {
   std::string name = t.name();
   if (t.name() != "") {
-    os << "(" << t.name() << ") ";
+    os << "# [ " + t.name() + " ]: ";
   }
   os << t.elapsed() << " sec";
   return os;
@@ -77,7 +77,7 @@ std::ostream& operator<<(std::ostream& os, const seconds_timer& t) {
 std::ostream& operator<<(std::ostream& os, const ms_timer& t) {
   std::string name = t.name();
   if (t.name() != "") {
-    os << "(" << t.name() << ") ";
+    os << "# [ " + t.name() + " ]: ";
   }
 
   os << t.elapsed() << " ms";
@@ -87,7 +87,7 @@ std::ostream& operator<<(std::ostream& os, const ms_timer& t) {
 std::ostream& operator<<(std::ostream& os, const us_timer& t) {
   std::string name = t.name();
   if (t.name() != "") {
-    os << "(" << t.name() << ") ";
+    os << "# [ " + t.name() + " ]: ";
   }
   os << t.elapsed() << " us";
   return os;

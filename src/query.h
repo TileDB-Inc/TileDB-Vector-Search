@@ -293,9 +293,8 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, int nthr
 }
 
 
-
 template <class DB, class Q, class G, class TK>
-void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway, int nthreads) {
+void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hardway, size_t nthreads) {
   life_timer _{"Total time gemm"};
   /**
    * scores is nsamples X nq
@@ -371,7 +370,7 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
   {
     life_timer _{"L2 comparison colsum"};
 
-    col_sum(db, alpha, [](auto a) { return a * a; });
+    col_sum(db, alpha, [](auto a) { return a * a; });  // @todo optimize somehow
     col_sum(q, beta, [](auto a) { return a * a; });
   }
 
@@ -431,7 +430,7 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
       }));
     }      
 
-    for (int n = 0; n < nthreads; ++n) {
+    for (size_t n = 0; n < nthreads; ++n) {
       futs[n].get();
     }
   }

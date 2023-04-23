@@ -28,16 +28,28 @@ class sift_db : public std::vector<std::span<T>> {
   std::vector<T> data_;
 
 public:
-  sift_db(const std::string& bin_file, size_t dimension) {
+  sift_db(const std::string& bin_file, size_t subset = 0) {
 
     if (!std::filesystem::exists(bin_file)) {
       throw std::runtime_error("file " + bin_file + " does not exist");
     }
     auto file_size = std::filesystem::file_size(bin_file);
 
-    auto num_vectors = file_size / (4 + dimension * sizeof(T));
-
     auto fd = open(bin_file.c_str(), O_RDONLY);
+    if (fd == -1) {
+      throw std::runtime_error("could not open " + bin_file);
+    }
+
+    uint32_t dimension{0};
+    auto num_read = read(fd, &dimension, 4);
+    lseek(fd, 0, SEEK_SET);
+
+    auto max_vectors = file_size / (4 + dimension * sizeof(T));
+    if (subset > max_vectors) {
+      throw std::runtime_error("specified subset is too large " + std::to_string(subset) + " > " + std::to_string(max_vectors));
+    }
+    
+    auto num_vectors = subset == 0 ? max_vectors : subset;
 
     struct stat s;
     fstat(fd, &s);
@@ -48,12 +60,18 @@ public:
     if ((long)mapped_ptr == -1) {
       throw std::runtime_error("mmap failed");
     }
+
+    // @todo use unique_ptr for overwrite
     data_.resize(num_vectors * dimension);
 
     auto data_ptr = data_.data();
     auto sift_ptr = mapped_ptr;
 
+
+    // Perform strided read 
     for (size_t k = 0; k < num_vectors; ++k) {
+
+      // Check for consistency of dimensions
       decltype(dimension) dim = *reinterpret_cast<int*>(sift_ptr++);
       if (dim != dimension) {
         throw std::runtime_error("dimension mismatch: " + std::to_string(dim) + " != " + std::to_string(dimension));

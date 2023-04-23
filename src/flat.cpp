@@ -28,7 +28,8 @@ static constexpr const char USAGE[] =
         R"(flat: feature vector search with flat index.
   Usage:
       tdb (-h | --help)
-      tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) (--g_file FILE | --g_uri URI) [--dim D] [--k NN] [--L2 | --cosine] [--order ORDER] [--hardway] [--nthreads N] [-d | -v]
+      tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) (--g_file FILE | --g_uri URI) 
+          [--k NN] [--L2 | --cosine] [--order ORDER] [--hardway] [--nthreads N] [--nqueries N] [--ndb N] [-d | -v]
 
   Options:
       -h, --help            show this screen
@@ -38,13 +39,14 @@ static constexpr const char USAGE[] =
       --q_uri URI           query URI with feature vectors to search for
       --g_file FILE         ground truth file
       --g_uri URI           ground true URI
-      --dim D               dimension of feature vectors [default: 128]
       --k NN                number of nearest neighbors to find [default: 10]
       --L2                  use L2 distance (Euclidean)
       --cosine              use cosine distance [default]
       --order ORDER         which ordering to do comparisons [default: qv]
       --hardway             use hard way to compute distances [default: false]
       --nthreads N          number of threads to use in parallel loops [default: 8]
+      --nqueries N          size of queries subset to compare (0 = all) [default: 0]
+      --ndb N               size of vectors subset to compare (0 = all) [default: 0]
       -d, --debug           run in debug mode [default: false]
       -v, --verbose         run in verbose mode [default: false]
 )";
@@ -95,10 +97,14 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  size_t dimension = args["--dim"].asLong();
   size_t k = args["--k"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
+  size_t nqueries = args["--nqueries"].asLong();
+  size_t ndb = args["--ndb"].asLong();
 
+  // @todo verify only if debug is set?
+  // @todo mix and match files and uris?  (Ultimately only want uris.)
+  // @todo other types of input besides sift files
   if (!db_file.empty() && !q_file.empty() && !g_file.empty()) {
     if (db_file == q_file) {
       std::cout << "db_file and q_file must be different" << std::endl;
@@ -106,13 +112,15 @@ int main(int argc, char *argv[]) {
     }
 
     ms_timer load_time{"Load database, query, and ground truth"};
-    sift_db<float> db(db_file, dimension);
-    sift_db<float> q(q_file, dimension);
-    sift_db<int> g(g_file, 100);
+    sift_db<float> db(db_file, ndb);
+    sift_db<float> q(q_file, nqueries);
+    sift_db<int> g(g_file, nqueries);
     load_time.stop();
     std::cout << load_time << std::endl;
 
-    assert(size(db[0]) == dimension);
+    if(!(size(db[0]) == size(q[0]))) {
+      throw std::runtime_error("vector sizes do not match " + std::to_string(size(db[0])) + ", " + std::to_string(size(q[0])) + ", " + std::to_string(size(g[0])));
+    }
 
     std::vector<std::vector<int>> top_k(size(q), std::vector<int>(k, 0));
     std::cout << "Using " << args["--order"].asString() << std::endl;
@@ -150,15 +158,18 @@ int main(int argc, char *argv[]) {
       std::cout << "db_uri and q_uri must be different" << std::endl;
       return 1;
     }
+    // @todo other formats for arrays?
 
     ms_timer load_time{"Load database, query, and ground truth arrays"};
-    sift_array<float> db(db_uri);
-    sift_array<float> q(q_uri);
-    sift_array<int> g(g_uri);
+    sift_array<float> db(db_uri, ndb);
+    sift_array<float> q(q_uri, nqueries);
+    sift_array<int> g(g_uri, nqueries);
     load_time.stop();
     std::cout << load_time << std::endl;
 
-    assert(size(db[0]) == dimension);
+    if(!(size(db[0]) == size(q[0]))) {
+      throw std::runtime_error("vector sizes do not match " + std::to_string(size(db[0])) + ", " + std::to_string(size(q[0])) + ", " + std::to_string(size(g[0])));
+    }
 
     std::vector<std::vector<int>> top_k(size(q), std::vector<int>(k, 0));
     std::cout << "Using " << args["--order"].asString() << std::endl;

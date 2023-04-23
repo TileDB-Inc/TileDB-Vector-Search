@@ -38,7 +38,7 @@ class sift_array : public std::vector<std::span<T>> {
   std::unique_ptr<T[]> data_;
 
   public:
-  sift_array(const std::string& array_name)
+  sift_array(const std::string& array_name, size_t subset = 0)
           : array_(ctx_, array_name, TILEDB_READ)
           , schema_(array_.schema())
           , domain_(schema_.domain())
@@ -46,7 +46,7 @@ class sift_array : public std::vector<std::span<T>> {
           , cols_(domain_.dimension("cols"))
           , dim_num_(domain_.ndim())
           , num_rows_(rows_.domain<int32_t>().second - rows_.domain<int32_t>().first + 1)
-          , num_cols_(cols_.domain<int32_t>().second - cols_.domain<int32_t>().first + 1)
+          , num_cols_(subset == 0 ? (cols_.domain<int32_t>().second - cols_.domain<int32_t>().first + 1) : subset)
 
 #ifndef __APPLE__
 	  , data_ { std::make_unique_for_overwrite<T[]>(num_rows_ * num_cols_) }
