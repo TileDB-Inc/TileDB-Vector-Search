@@ -1,13 +1,22 @@
 # feature-vector-prototype
-Directory for prototyping feature vector / similarity search
+Directory for prototyping feature vector / similarity search.  The main program is
+called `flat` which does an exhaustive vector-by-vector comparison between a given 
+set of vectors and a given set of query vectors. 
 
 ## Very basic steps
 
-
 ### Running flat
 
-The `flat` program is a basic program that reads the texmex sift feature vector data, 
-performs either L2 (default) or cosine similarity and checks the result against the ground truth.
+The `flat` program is a basic program that reads the texmex sift feature vector data, either
+from at TileDB array or from a file.
+It performs either L2 (default) or cosine similarity and checks the result against 
+a given ground truth.  If the computed results do not match the ground truth, the
+differences are reported on the console.  **Note** A correct computation is not
+unique.  That is, multiple vectors may return the same results, i.e., there may
+be ties.  Thus the index values computed by `flat` may differ from the supplied 
+ground truth.  You should examine any printed errors on the output for evidence 
+of ties.  Most methods in `flat` seem to process ties in the same order as
+the ground truth, so this only comes up in one or two cases.
 
 ```
 flat: feature vector search with flat index.
@@ -44,6 +53,28 @@ flat: feature vector search with flat index.
   cd build
   cmake .. -DCMAKE_BUILD_TYPE=Release
 ```
+**Note:** `flat` builds against `libtiledb`.  You will need to point your `cmake` to that
+by editing (or overriding) the `CMAKE_PREFIX_PATH` variable.  Currently, a path to where
+I put my local build is hard-coded in.  Someone with better `cmake`-fu should make this
+more friendly.  If your build has problems finding the right `libtiledb`, you should edit
+that to point to the right place.
+
+**Node:** If you are going to use S3 as a source for TileDB array input, your `libtiledb`
+should be built with S3 support.
+
+
+### About the datasets
+
+`flat` is set up to run with the sift reference arrays available on `http://corpus-texmex.irisa.fr`
+and complete info about those arrays can be found there.  The basic characteristics of
+the problems are:
+
+| Vector Set  | name      | dimension | nb base       | nb query | nb learn     | format  |
+|-------------|-----------|-----------|---------------|----------|--------------|---------|
+| ANN_SIFT10K | siftsmall | 128       | 10,000	       | 100	  | 25,000	     | fvecs   |
+| ANN_SIFT1M  | sift      | 128	   | 1,000,000	   | 10,000	  | 100,000	     | fvecs   |
+| ANN_GIST1M  | gist      | 960       | 1,000,000	   | 1,000	  | 500,000      | 	fvecs  |
+|  ANN_SIFT1B | sift1b    | 128	   | 1,000,000,000 | 10,000	  | 100,000,000	 | bvecs   |
 
 
 ### Run `flat` with TileDB arrays
@@ -51,14 +82,23 @@ flat: feature vector search with flat index.
 Basic invocation of flat requires specifying at least the base set of vectors, the query vectors, and
 the ground truth vectors.  Other options 
 
-Example:
+Example, run with small sized data set
+```bash
+% ./src/flat --db_uri s3://tiledb-lums/sift/siftsmall_base       \
+             --q_uri s3://tiledb-lums/sift/siftsmall_query       \
+	     --g_uri s3://tiledb-lums/sift/siftsmall_groundtruth \
+             --order gemm
+```
+
+
+Example, run with medium sized data set.
 ```bash
 % ./src/flat --db_uri s3://tiledb-lums/sift/sift_base       \
              --q_uri s3://tiledb-lums/sift/sift_query       \
 	     --g_uri s3://tiledb-lums/sift/sift_groundtruth \
              --order gemm
 ```
-This invokes flat on the medium sized array stored in S3, using the gemm-based method for comparison.
+
 
 Output
 ```text
@@ -88,7 +128,47 @@ of this TBD.)
 specifies how many threads to use.  In environments where `gemm` is
 provided by MKL, the `OMP_NUM_THREADS` or `MKL_NUM_THREADS` option
 will set the number of threads to be used by `gemm`.  The default
-in both cases is the number of available hardware threads.
+in both cases is the number of available hardware threads.  **Note:**
+This problem is largely memory-bound.  Threading will help, but
+you should not expect linear speedup.
+
+The `--nqueries` option specifies how many of the query vectors to
+use.  The default is to use all of them.  Setting this to a
+smaller number can be useful for testing and will also allow
+the medium dataset to fit into memory of a desktop machine.
+
+The `--ndb` option specifies how much of the data set to
+use.  Note that when using this that the computed result will
+almost surely differ from the ground truth because all
+potential neighbors have not been considered.  This may be more 
+useful as a performance testing mechanism (e.g.) but we
+would need to silence error reporting (perhaps simply by
+not supplying a ground truth file/array).
+
+The `--k` option specifies how many neighbors to keep (i.e.,
+for "top k").
+
+The `--hardway` option specifies how to collect the top k
+data.  If this option is set, A complete set of scores is
+computed and then filtered for the top k vectors.  If 
+the value is not set, a heap is used to filter the scores
+on the fly.  This only affects the `qv` and `vq` options.
+The `gemm` option computes all scores.
+
+The `-v` and `-d` options turn on verbosity and debugging,
+respectively.  (There is not currently a large amount
+of output for this.)
+
+### Observations
+
+The `gemm` approach appears to be by far the fastest, and is
+about a factor of four faster than the open source `faiss` 
+project for the flat L2 query.
+
+For the other approaches, different parameter values may result
+in different performance.  Significant experimentation would need
+to be done to find those, however, and it isn't clear that the
+performance of `gemm` could be matched at any rate. 
 
 
 ### Get file data (optional)
@@ -101,6 +181,13 @@ in both cases is the number of available hardware threads.
   wget ftp://ftp.irisa.fr/local/texmex/corpus/sift.tar.gz
   tar zxf sift.tar.gz
 ```
+
+### Ingesting the data
+The python notebook `python/ingest_eq.ipynb` was used to
+convert the original data files to TileDB arrays in S3.  **Important:**
+Do not re-run this unless you change the paths to avoid
+overwriting the existing arrays.
+
 
 ### Run `flat` with local files
 
@@ -133,9 +220,15 @@ The memory and CPU requirements for the 1B dataset become prohibitive and probab
 
 ## Main TODO items
 
-* **Use MKL or OpenBLAS to compute similarities.**  Not more than a day to implement.  Will need to make MKL and/or OpenBLAS an external package when the prototype code is merged into core.
-* ***Implement similarity search on TileDB arrays** (accessed via `--db_uri`, &c.  Should not take more than a day (if used as an external program calling into libtiledb).
-* **Use streaming approach to handle arrays/files that won't fit in local memory of one machine.**  This could be done before moving into core or afterwords.  It is probably better to do this with the prototype.  This shouldn't take more than two days.
-* **Move prototype into core as a query.** If I can work with Luc this shouldn't take more than a week (and would not take up anywhere close to a week for Luc).  This shouldn't take more than a week, depending on how fancy we want to be.  Probably need to add a day or two to deal with designing the API.
-* **Use parallel/distributed approach** to handle arrays/files that won't fit in local memory of one machine.  This is doable if we want to just parallelize an application using libtiledb.  However, if we want to do the similarity search "in the cloud" it might be better to orchestrate the distributed computation at the Python task graph level.
+(**Note:** We can now say that TileDB can be used for similarity search.)
 
+* **Use OpenBLAS instead of MKL for gemm** and incorporate into the build process.  This should take less than a day.
+* **Implement parallelism using task graph** This should not be too difficult, a couple of days, as the `std::async` parallelism is similar to very basic task graph usage.
+* **Optimize get_top_k** For some reason, the `get_top_k` function is extremely slow and appears to be compute bound rahter than memory bound. It should have a different implementation.  The current bottleneck is `std::nth_element`, which puts the top k elements at the beginning of the score vector.  Scanning the score vector with a heap might be faster. 
+* **Move prototype into core as a query.** If I can work with Luc this shouldn't take more than a week (and would not take up anywhere close to a week for Luc).  This shouldn't take more than a week, depending on how fancy we want to be.  Probably need to add a day or two to deal with designing the API.
+* **Use streaming approach to handle arrays/files that won't fit in local memory of one machine.**  This could be done before moving into core or afterwords.  It is probably better to do this with the prototype.  This shouldn't take more than two days.
+* **Use parallel/distributed approach** to handle arrays/files that won't fit in local memory of one machine.  This is doable if we want to just parallelize an application using libtiledb.  However, if we want to do the similarity search "in the cloud" it might be better to orchestrate the distributed computation at the Python task graph level.
+* **Improve performance with better blocking for memory use** In conjunction with reorganizing for out-of-core operation, we should also arrange the in-memory computation to make better use of the memory hierarchy.
+* **Finish implementation of cosine similarity** This should be fairly straightforward to implement. However, we have not ground truth to verify it with the sift benchmark dataset.
+* **Make ground truth comparison an optional argument**
+* **Perform ground truth comparison only when requested**
