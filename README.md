@@ -7,13 +7,13 @@ set of vectors and a given set of query vectors.
 
 ### Running flat
 
-The `flat` program is a basic program that reads the texmex sift feature vector data, either
-from at TileDB array or from a file.
-It performs either L2 (default) or cosine similarity and checks the result against 
+The `flat` program is a basic program that reads the "texmex" sift feature vector data, either
+from a TileDB array or from a file.
+The program performs either L2 (default) or (TBD) cosine similarity and checks the result against 
 a given ground truth.  If the computed results do not match the ground truth, the
 differences are reported on the console.  **Note** A correct computation is not
 unique.  That is, multiple vectors may return the same results, i.e., there may
-be ties.  Thus the index values computed by `flat` may differ from the supplied 
+be ties.  Thus, the index values computed by `flat` may differ from the supplied 
 ground truth.  You should examine any printed errors on the output for evidence 
 of ties.  Most methods in `flat` seem to process ties in the same order as
 the ground truth, so this only comes up in one or two cases.
@@ -51,13 +51,44 @@ flat: feature vector search with flat index.
   cd < project root >
   mkdir build
   cd build
-  cmake .. -DCMAKE_BUILD_TYPE=Release
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DTileDB_DIR=/path/to/TileDB/cmake
 ```
-**Note:** `flat` builds against `libtiledb`.  You will need to point your `cmake` to that
-by editing (or overriding) the `CMAKE_PREFIX_PATH` variable.  Currently, a path to where
-I put my local build is hard-coded in.  Someone with better `cmake`-fu should make this
-more friendly.  If your build has problems finding the right `libtiledb`, you should edit
-that to point to the right place.
+**Note:** `flat` builds against `libtiledb`.  You will need to point your `cmake` to the directory that has the cmake configuration files.  That is, if the `libtiledb` you want to use is in `/usr/local/tiledb/lib/libtiledb.so` then you would set `TileDB_DIR` to `/usr/local/tiledb/lib/cmake`
+```
+  % cmake .. -DTileDB_DIR=/usr/local/tiledb/lib/cmake
+```
+
+Note that the following also appears to work.  You can set `TileDB_DIR` to the value of `CMAKE_INSTALL_PREFIX` that was used when building and installing `libtiledb`.  That is, if you built `libtiledb` with
+```
+  % cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/tiledb
+```
+Then if you set `TileDB_DIR` to `/usr/local/tiledb`
+```
+  % cmake .. -DTileDB_DIR=/usr/local/tiledb
+```
+the `fetch_content` call in `CMakeLists.txt` will also find the TileDB `cmake` configuration files.
+To check if the right path will be searched, look for the output line 
+```
+-- TileDB include directories are <>
+```
+This will tell you the path that will be used when building `flat`.  If it isn't the path you are expecting, e.g., if it is the system defaults when you expected something else, check the path you used when invoking `cmake`.
+
+**If you don't specify a value for `TileDB_DIR`** the system default will be used.  That is, you do not have to specify a value for `TileDB_DIR` if the system defaults are good enough.  
+
+`flat` does require a fairly recent version of `libtiledb`.  If you get compilation errors along the lines of 
+```
+In file included from /home/user/feature-vector-prototype/src/test/unit_sift_array.cpp:5:
+/home/user/feature-vector-prototype/src/test/../sift_array.h:67:21: error: expected ';' after expression
+    tiledb::Subarray subarray(ctx_, array_);
+                    ^
+                    ;
+/home/user/feature-vector-prototype/src/test/../sift_array.h:67:13: error: no member named 'Subarray' in namespace 'tiledb'
+    tiledb::Subarray subarray(ctx_, array_);
+    ~~~~~~~~^
+/home/user/feature-vector-prototype/src/test/../sift_array.h:68:5: error: use of undeclared identifier 'subarray'
+    subarray.set_subarray(subarray_vals);
+```
+then you likely need a more recent version of `libtiledb`.  To fix this, first try updating your instaleld version of `libtiledb` by invoking the appropriate "upgrade" or "update" command associated with your package manager (if you installed `libtiledb` using a package manager).  Otherwise, obtain an up-to-date version of `libtiledb` from the TileDB github repository at `https://github.com/TileDB-Inc/TileDB` and build and install that per the instructions there.  
 
 **Node:** If you are going to use S3 as a source for TileDB array input, your `libtiledb`
 should be built with S3 support.

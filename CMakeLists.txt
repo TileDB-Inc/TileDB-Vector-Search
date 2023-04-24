@@ -78,15 +78,22 @@ else()
 
 endif()
 
-
 include(Docopt)
 
-set(CMAKE_PREFIX_PATH "/Users/lums/Contrib/dist;{CMAKE_PREFIX_PATH}")
+if (DEFINED TileDB_DIR)
+    set(CMAKE_PREFIX_PATH "${TileDB_DIR};{CMAKE_PREFIX_PATH}")
+    message(STATUS "TileDB_DIR is set to ${TileDB_DIR} -- find_package will search there first.")
+else()
+    message(STATUS "TileDB_DIR is not set -- find_package will use default search path.")
+endif()
 
 find_package(TileDB REQUIRED)
 
 if (TileDB_FOUND)
     message(STATUS "Found TileDB")
+    get_target_property(_TDB_INCLUDES TileDB::tiledb_shared INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "TileDB include directories are ${_TDB_INCLUDES}")
+
 endif()
 
 add_subdirectory(src)
