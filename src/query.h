@@ -64,7 +64,8 @@ void query_qv_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, int nthr
     int q_start = n*q_block_size;
     int q_stop = std::min<int>((n+1)*q_block_size, size(q));
     
-    futs.emplace_back(std::async(std::launch::async, [&db, &q, &g, q_start, q_stop, size_db, &i_index, &top_k, k]() {
+    futs.emplace_back(std::async(std::launch::async, [&db, &q, &g, q_start, q_stop, size_db, &top_k, k]() {
+
       std::vector<int> index(size(db));
       std::vector<float> scores(size(db));
 
@@ -108,7 +109,7 @@ void query_qv_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, int nthr
     int q_start = n*q_block_size;
     int q_stop = std::min<int>((n+1)*q_block_size, size(q));
     
-    futs.emplace_back(std::async(std::launch::async, [&db, &q, &g, q_start, q_stop, size_db, &i_index, &top_k, k]() {
+    futs.emplace_back(std::async(std::launch::async, [&db, &q, &g, q_start, q_stop, size_db, &top_k, k]() {
 
       // For each query vector
       for (int j = q_start; j < q_stop; ++j) {
@@ -123,7 +124,7 @@ void query_qv_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, int nthr
 	}
 
 	// Copy indexes into top_k
-	std::transform(scores.begin(), scores.end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
+	std::transform(scores.c().begin(), scores.c().end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
 
 	// Try to break ties by sorting the top k
 	std::sort(begin(top_k[j]), end(top_k[j]));
@@ -146,18 +147,20 @@ void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, int nthr
 
 #if __APPLE__
   // std::vector<std::vector<float>> scores(size(q), std::vector<float>(size(db), 0.0f));
-  auto buf = std::make_unique<float[]>(new T[size(q)*size(db)]);
+  auto buf = std::make_unique<float[]>(size(q)*size(db));
   std::span<float> _score_data {buf.get(), size(q)*size(db)};
 #else
-  std::vector<std::span<float>> scores(size(q));
   auto buf = std::make_unique_for_overwrite<float[]>(size(q)*size(db));
   std::span<float> _score_data {buf.get(), size(q)*size(db)};
+#endif
+
+  std::vector<std::span<float>> scores(size(q));
+
   // Each score[j] is a column of the score matrix
   int size_q = size(q);
   for (int j = 0; j < size_q; ++j) {
     scores[j] = std::span<float>(_score_data.data() + j * size(db), size(db));
   }
-#endif
 
   init_time.stop();
   std::cout << init_time << std::endl;
@@ -278,7 +281,7 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, int nthr
 	// For each query
 	for (int j = q_start; j < q_stop; ++j) {
 	  
-	  std::transform(scores[j].begin(), scores[j].end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
+	  std::transform(scores[j].c().begin(), scores[j].c().end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
 	  std::sort(begin(top_k[j]), end(top_k[j]));
 	  
 	  std::sort(begin(g[j]), begin(g[j]) + k);
@@ -310,7 +313,6 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
 
 #if __APPLE__
   //  std::vector<float> _score_data(size(q) * size(db));
-  auto buf = std::make_unique<float[]>(new T[size(q)*size(db)]);
   std::span<float> _score_data {buf.get(), size(q)*size(db)};
 #else
   auto buf = std::make_unique_for_overwrite<float[]>(size(q)*size(db));
@@ -322,7 +324,6 @@ void query_gemm(const DB& db, const Q&q, const G& g, TK& top_k, int k, bool hard
   std::cout << "Apple clang does not yet support make_unique_for_overwrite" << std::endl;
   std::cout << "This time would not be seen in libraries supporting make_unique_for_overwrite" << std::endl;
 #endif
-
 
   int M = size(db);
   int N = size(q);

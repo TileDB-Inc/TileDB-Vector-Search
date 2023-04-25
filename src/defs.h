@@ -14,6 +14,7 @@
 #include <memory>
 #include <queue>
 #include <set>
+#include <type_traits>
 
 #include "timer.h"
 
@@ -93,6 +94,7 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
 
 
 
+#if 0
 template <class T, class Compare = std::less<T>, class Allocator = std::allocator<T>>
 struct fixed_min_set : public std::set<T, Compare, Allocator> {
   using base = std::set<T, Compare, Allocator>;
@@ -124,6 +126,7 @@ struct fixed_min_set : public std::set<T, Compare, Allocator> {
 };
 
 
+
 template <class T, class U, class Compare = std::less<std::pair<T,U>>, class Allocator = std::allocator<std::pair<T,U>>>
 struct fixed_min_set_pair : public std::set<std::pair<T, U>, Compare, Allocator> {
   using base = std::set<std::pair<T, U>, Compare, Allocator>;
@@ -153,11 +156,113 @@ struct fixed_min_set_pair : public std::set<std::pair<T, U>, Compare, Allocator>
     }
   }
 };
+#endif
+
+/*
+template<
+    class T,
+    class Container = std::vector<T>,
+    class Compare = std::less<typename Container::value_type>
+> class priority_queue;
+ */
+
+
+template <class T, class Container = std::vector<T>,
+	  class Compare = std::less<typename Container::value_type>>
+  struct fixed_min_set : public std::priority_queue<T, Container, Compare>
+{
+  using base = std::priority_queue<T, Container, Compare>;
+  using base::base;
+
+  unsigned max_size{0};
+
+  explicit fixed_min_set(unsigned k) : max_size{k} { }
+  fixed_min_set(unsigned k, const Compare& comp) : base(comp), max_size{k} {}
+
+  template <class Iter>
+  fixed_min_set(unsigned k, Iter begin, Iter end, const Compare& comp = Compare()) : base(begin, end, comp), max_size{k} {}
+
+  template <class Iter>
+  fixed_min_set(unsigned k, Iter begin, Iter end, const Compare& comp, Container&& c) : base(begin, end, comp, c), max_size{k} {}
+
+
+  bool at_max_size_ { false };
+  T max_value_ {std::numeric_limits<T>::max()};
+
+  void insert(T const& x) {
+    if (at_max_size_) {
+      if (base::comp(x, max_value_)) {
+	base::push(x);
+
+	base::pop();
+	max_value_ = base::top();
+	//      std::cout << "2 Pushing " << x.first << ", " << x.second << ", top is " << max_value_.first << ", " << max_value_.second <<std::endl;
+
+      }
+    } else {
+      base::push(x);
+
+      max_value_ = base::top();
+
+      //      std::cout << "1 Pushing " << x.first << ", " << x.second << ", top is " << max_value_.first << ", " << max_value_.second <<std::endl;
+
+      if (max_size == base::size()) {
+	at_max_size_ = true;
+      }
+    }
+  }
+  auto& c() { return base::c; }
+};
+
+template <class I>
+fixed_min_set(size_t, I, I) -> fixed_min_set<typename I::value_type>;
+
+
+template <class T, class U, class Container = std::vector<std::pair<T,U>>,
+	  class Compare = std::less<typename Container::value_type>>
+  struct fixed_min_set_pair : public std::priority_queue<std::pair<T, U>, Container, Compare>
+{
+  using base = std::priority_queue<std::pair<T, U>, Container, Compare>;
+  using base::base;
+
+  unsigned max_size{0};
+
+  explicit fixed_min_set_pair(unsigned k) : max_size{k} { }
+  fixed_min_set_pair(unsigned k, const Compare& comp) : base(comp), max_size{k} {}
+
+  bool at_max_size_ { false };
+  std::pair<T, U> max_value_ {std::numeric_limits<T>::max(), std::numeric_limits<U>::max()};
+
+  void insert(std::pair<T,U> const& x) {
+    if (at_max_size_) {
+      if (base::comp(x, max_value_)) {
+	base::push(x);
+
+	base::pop();
+	max_value_ = base::top();
+	//      std::cout << "2 Pushing " << x.first << ", " << x.second << ", top is " << max_value_.first << ", " << max_value_.second <<std::endl;
+
+      }
+    } else {
+      base::push(x);
+
+      max_value_ = base::top();
+
+      //      std::cout << "1 Pushing " << x.first << ", " << x.second << ", top is " << max_value_.first << ", " << max_value_.second <<std::endl;
+
+      if (max_size == base::size()) {
+	at_max_size_ = true;
+      }
+    }
+  }
+
+  auto& c() { return base::c; }
+};
 
 
 template <class V, class L, class I>
 auto get_top_k(V const& scores, L & top_k, I & index, int k) {
-#if 1
+#if 0
   std::nth_element(begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) {
     return scores[a] < scores[b];
   });
@@ -176,11 +281,14 @@ auto get_top_k(V const& scores, L & top_k, I & index, int k) {
   for (size_t j = 0; j < scores_size; ++j) {
     min_k.insert(element{scores[j], index[j]});
   }
-  // Copy indexes into top_k
-  std::transform(min_k.begin(), min_k.end(), top_k.begin(), ([](auto &e) { return e.second; }));
 
-  // Try to break ties by sorting the top k
-  std::sort(begin(top_k), end(top_k));
+  std::sort(begin(min_k.c()), end(min_k.c()));
+
+  // Copy indexes into top_k
+  std::transform(min_k.c().begin(), min_k.c().end(), begin(top_k), ([](auto &e) { return e.second; }));
+
+  // Try to break ties by sorting the top k -- only works if we also sort g
+  // std::sort(begin(top_k), end(top_k));
 
 #endif
 }
@@ -202,7 +310,7 @@ void get_top_k(const S& scores, T& top_k, int k, int size_q, int size_db, int nt
     int q_start = n*q_block_size;
     int q_stop = std::min<int>((n+1)*q_block_size, size_q);
     
-    futs.emplace_back(std::async(std::launch::async, [q_start, q_stop, &i_index, &scores, &top_k, k, size_db]() {
+    futs.emplace_back(std::async(std::launch::async, [q_start, q_stop, &scores, &top_k, k, size_db]() {
       
       std::vector<int> index(size_db);
       

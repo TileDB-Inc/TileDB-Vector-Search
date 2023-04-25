@@ -9,6 +9,7 @@
 #include <memory>
 #include <numeric>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <docopt.h>
@@ -42,9 +43,9 @@ static constexpr const char USAGE[] =
       --k NN                number of nearest neighbors to find [default: 10]
       --L2                  use L2 distance (Euclidean)
       --cosine              use cosine distance [default]
-      --order ORDER         which ordering to do comparisons [default: qv]
+      --order ORDER         which ordering to do comparisons [default: gemm]
       --hardway             use hard way to compute distances [default: false]
-      --nthreads N          number of threads to use in parallel loops [default: 8]
+      --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
       --nqueries N          size of queries subset to compare (0 = all) [default: 0]
       --ndb N               size of vectors subset to compare (0 = all) [default: 0]
       -d, --debug           run in debug mode [default: false]
@@ -101,6 +102,10 @@ int main(int argc, char *argv[]) {
   size_t nthreads = args["--nthreads"].asLong();
   size_t nqueries = args["--nqueries"].asLong();
   size_t ndb = args["--ndb"].asLong();
+
+  if (nthreads == 0) {
+    nthreads = std::thread::hardware_concurrency();
+  }
 
   // @todo verify only if debug is set?
   // @todo mix and match files and uris?  (Ultimately only want uris.)
