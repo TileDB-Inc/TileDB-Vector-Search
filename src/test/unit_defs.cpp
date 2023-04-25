@@ -114,12 +114,13 @@ TEST_CASE("defs: fixed_min_set", "[defs]") {
 
 TEST_CASE("defs: fixed_min_set with pairs", "[defs]") {
   using element = std::pair<float, int>;
-  fixed_min_set<element> a(5);
+  fixed_min_set_pair<float, int> a(5);
 
   SECTION("insert in ascending order") {
     for (auto &&i: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
       a.insert({10-i, i});
     }
+    CHECK(a.size() == 5);
     CHECK(begin(a)->first == 1.0);
     CHECK(begin(a)->second == 9);
     CHECK(rbegin(a)->first == 5.0);
@@ -129,6 +130,7 @@ TEST_CASE("defs: fixed_min_set with pairs", "[defs]") {
     for (auto &&i: {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
       a.insert({10+i, i});
     }
+    CHECK(a.size() == 5);
     CHECK(begin(a)->first == 10.0);
     CHECK(begin(a)->second == 0);
     CHECK(rbegin(a)->first == 14.0);

@@ -103,15 +103,52 @@ struct fixed_min_set : public std::set<T, Compare, Allocator> {
   explicit fixed_min_set(unsigned k) : max_size{k} { }
   fixed_min_set(unsigned k, const Compare& comp) : base(comp), max_size{k} {}
 
-  bool maxed_ { false };
+  bool at_max_size_ { false };
+  T max_value_ = std::numeric_limits<T>::max();
 
   void insert(T const& x) {
-    base::insert(x);
-    if (maxed_) {
-      base::erase(std::prev(base::end()));
+    if (at_max_size_) {
+      if (x < max_value_) {
+	base::insert(x);
+	base::erase(std::prev(base::end()));
+	max_value_ = *(std::prev(base::end()));
+      }
     } else {
-      if (base::size() == max_size) {
-	maxed_ = true;
+      base::insert(x);
+      max_value_ = *(std::prev(base::end()));
+      if (max_size == base::size()) {
+	at_max_size_ = true;
+      }
+    }
+  }
+};
+
+
+template <class T, class U, class Compare = std::less<std::pair<T,U>>, class Allocator = std::allocator<std::pair<T,U>>>
+struct fixed_min_set_pair : public std::set<std::pair<T, U>, Compare, Allocator> {
+  using base = std::set<std::pair<T, U>, Compare, Allocator>;
+  using base::base;
+
+  unsigned max_size{0};
+
+  explicit fixed_min_set_pair(unsigned k) : max_size{k} { }
+  fixed_min_set_pair(unsigned k, const Compare& comp) : base(comp), max_size{k} {}
+
+  bool at_max_size_ { false };
+  std::pair<T, U> max_value_ {std::numeric_limits<T>::max(), std::numeric_limits<U>::max()};
+
+  void insert(std::pair<T,U> const& x) {
+    if (at_max_size_) {
+      if (x.first < max_value_.first) {
+	base::insert(x);
+	base::erase(std::prev(base::end()));
+	max_value_ = *(std::prev(base::end()));
+      }
+    } else {
+      base::insert(x);
+      max_value_ = *(std::prev(base::end()));
+      if (max_size == base::size()) {
+	at_max_size_ = true;
       }
     }
   }
@@ -120,6 +157,7 @@ struct fixed_min_set : public std::set<T, Compare, Allocator> {
 
 template <class V, class L, class I>
 auto get_top_k(V const& scores, L & top_k, I & index, int k) {
+#if 1
   std::nth_element(begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) {
     return scores[a] < scores[b];
   });
@@ -128,6 +166,23 @@ auto get_top_k(V const& scores, L & top_k, I & index, int k) {
   std::sort(begin(top_k), end(top_k), [&](auto& a, auto& b) {
     return scores[a] < scores[b];
   });
+#else
+
+  using element = std::pair<float, int>;
+  auto min_k {fixed_min_set<element>(k)};
+
+  auto scores_size = size(scores);
+
+  for (size_t j = 0; j < scores_size; ++j) {
+    min_k.insert(element{scores[j], index[j]});
+  }
+  // Copy indexes into top_k
+  std::transform(min_k.begin(), min_k.end(), top_k.begin(), ([](auto &e) { return e.second; }));
+
+  // Try to break ties by sorting the top k
+  std::sort(begin(top_k), end(top_k));
+
+#endif
 }
 
 
