@@ -1,4 +1,5 @@
 # feature-vector-prototype
+
 Directory for prototyping feature vector / similarity search.  The main program is
 called `flat` which does an exhaustive vector-by-vector comparison between a given 
 set of vectors and a given set of query vectors. 
@@ -213,11 +214,11 @@ performance of `gemm` could be matched at any rate.
   tar zxf sift.tar.gz
 ```
 
+
 ### Ingesting the data
 The python notebook `python/ingest_eq.ipynb` was used to
-convert the original data files to TileDB arrays in S3.  **Important:**
-Do not re-run this unless you change the paths to avoid
-overwriting the existing arrays.
+convert the original data files to TileDB arrays in S3.  
+This file has since been removed from the repository.
 
 
 ### Run `flat` with local files
@@ -240,11 +241,11 @@ This specifies to run `flat` on the `siftsmall` data, checking the first 100 nei
 
 You can also run on the medium data set:
 ```c++
-  # Run with small data
-  time ./src/flat  --db_file ../external/data/sift/sift_base.fvecs \
-                    --q_file ../external/data/sift/sift_query.fvecs \
-                    --g_file ../external/data/sift/sift_groundtruth.ivecs \
-                    --k 100
+  # Run with medium data (1M)
+  ./src/flat  --db_file ../external/data/sift/sift_base.fvecs \
+              --q_file ../external/data/sift/sift_query.fvecs \
+              --g_file ../external/data/sift/sift_groundtruth.ivecs \
+              --k 100
 ```
 
 The memory and CPU requirements for the 1B dataset become prohibitive and probably can't be run on a typical desktop or typical server.

@@ -123,7 +123,7 @@ void query_qv_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, int nthr
 	}
 
 	// Copy indexes into top_k
-	std::transform(scores.begin(), scores.end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
+	std::transform(scores.c().begin(), scores.c().end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
 
 	// Try to break ties by sorting the top k
 	std::sort(begin(top_k[j]), end(top_k[j]));
@@ -160,7 +160,6 @@ void query_vq_hw(const DB& db, const Q&q, const G& g, TK& top_k, int k, int nthr
   for (int j = 0; j < size_q; ++j) {
     scores[j] = std::span<float>(_score_data.data() + j * size(db), size(db));
   }
-
 
   init_time.stop();
   std::cout << init_time << std::endl;
@@ -281,7 +280,7 @@ void query_vq_ew(const DB& db, const Q&q, const G& g, TK& top_k, int k, int nthr
 	// For each query
 	for (int j = q_start; j < q_stop; ++j) {
 	  
-	  std::transform(scores[j].begin(), scores[j].end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
+	  std::transform(scores[j].c().begin(), scores[j].c().end(), top_k[j].begin(), ([](auto &e) { return e.second; }));
 	  std::sort(begin(top_k[j]), end(top_k[j]));
 	  
 	  std::sort(begin(g[j]), begin(g[j]) + k);

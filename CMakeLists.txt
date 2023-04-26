@@ -93,7 +93,6 @@ if (TileDB_FOUND)
     message(STATUS "Found TileDB")
     get_target_property(_TDB_INCLUDES TileDB::tiledb_shared INTERFACE_INCLUDE_DIRECTORIES)
     message(STATUS "TileDB include directories are ${_TDB_INCLUDES}")
-
 endif()
 
 add_subdirectory(src)
