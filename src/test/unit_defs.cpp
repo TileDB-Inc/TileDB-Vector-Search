@@ -5,6 +5,7 @@
 #include <catch2/catch_all.hpp>
 #include <algorithm>
 #include <iterator>
+#include <random>
 #include <set>
 #include <vector>
 #include "../defs.h"
@@ -251,7 +252,9 @@ TEST_CASE("defs: fixed_min_set with pairs", "[defs]") {
 TEST_CASE("defs: get_top_k", "[defs]") {
   std::vector<int> v(1000);
   std::iota(begin(v), end(v), 0);
-  std::random_shuffle(begin(v), end(v));
+
+  std::mt19937 rng(std::time(nullptr));
+  std::shuffle(v.begin(), v.end(), rng);
 
   std::vector<int> i(1000);
   std::iota(begin(i), end(i), 0);
@@ -260,9 +263,6 @@ TEST_CASE("defs: get_top_k", "[defs]") {
   std::vector<int> top_k(k);
 
   get_top_k(v, top_k, i, k);
-
-  //  template <class V, class L, class I>
-  //auto get_top_k(V const& scores, L & top_k, I & index, int k) {
 
   for (int i = 0; i < k; ++i) {
     CHECK(v[top_k[i]] == i);
