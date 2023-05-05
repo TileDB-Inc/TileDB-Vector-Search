@@ -1,6 +1,33 @@
-//
-// Created by Andrew Lumsdaine on 4/12/23.
-//
+/**
+ * @file   flat.cc
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
+ */
 
 #include <algorithm>
 #include <cmath>
@@ -16,17 +43,15 @@
 
 #include "defs.h"
 #include "query.h"
-#include "sift_db.h"
 #include "sift_array.h"
+#include "sift_db.h"
 #include "timer.h"
-
-
 
 bool verbose = false;
 bool debug = false;
 
 static constexpr const char USAGE[] =
-        R"(flat: feature vector search with flat index.
+    R"(flat: feature vector search with flat index.
   Usage:
       tdb (-h | --help)
       tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) (--g_file FILE | --g_uri URI) 
@@ -52,7 +77,7 @@ static constexpr const char USAGE[] =
       -v, --verbose         run in verbose mode [default: false]
 )";
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
   auto args = docopt::docopt(USAGE, strings, true);
 
@@ -123,8 +148,10 @@ int main(int argc, char *argv[]) {
     load_time.stop();
     std::cout << load_time << std::endl;
 
-    if(!(size(db[0]) == size(q[0]))) {
-      throw std::runtime_error("vector sizes do not match " + std::to_string(size(db[0])) + ", " + std::to_string(size(q[0])) + ", " + std::to_string(size(g[0])));
+    if (!(size(db[0]) == size(q[0]))) {
+      throw std::runtime_error(
+          "vector sizes do not match " + std::to_string(size(db[0])) + ", " +
+          std::to_string(size(q[0])) + ", " + std::to_string(size(g[0])));
     }
 
     std::vector<std::vector<int>> top_k(size(q), std::vector<int>(k, 0));
@@ -155,7 +182,8 @@ int main(int argc, char *argv[]) {
       }
       query_gemm(db, q, g, top_k, k, hardway, nthreads);
     } else {
-      std::cout << "Unknown ordering: " << args["--order"].asString() << std::endl;
+      std::cout << "Unknown ordering: " << args["--order"].asString()
+                << std::endl;
       return 1;
     }
   } else if (!db_uri.empty() && !q_uri.empty() && !g_uri.empty()) {
@@ -172,8 +200,10 @@ int main(int argc, char *argv[]) {
     load_time.stop();
     std::cout << load_time << std::endl;
 
-    if(!(size(db[0]) == size(q[0]))) {
-      throw std::runtime_error("vector sizes do not match " + std::to_string(size(db[0])) + ", " + std::to_string(size(q[0])) + ", " + std::to_string(size(g[0])));
+    if (!(size(db[0]) == size(q[0]))) {
+      throw std::runtime_error(
+          "vector sizes do not match " + std::to_string(size(db[0])) + ", " +
+          std::to_string(size(q[0])) + ", " + std::to_string(size(g[0])));
     }
 
     std::vector<std::vector<int>> top_k(size(q), std::vector<int>(k, 0));
@@ -204,7 +234,8 @@ int main(int argc, char *argv[]) {
       }
       query_gemm(db, q, g, top_k, k, hardway, nthreads);
     } else {
-      std::cout << "Unknown ordering: " << args["--order"].asString() << std::endl;
+      std::cout << "Unknown ordering: " << args["--order"].asString()
+                << std::endl;
       return 1;
     }
 

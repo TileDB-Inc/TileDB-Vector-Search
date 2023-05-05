@@ -34,14 +34,14 @@ target_link_libraries(flat PUBLIC TileDB::tiledb_shared)
 target_link_libraries(flat PUBLIC mdspan)
 
 
-add_executable(latency latency.cc sift_array.h timer.h)
+# Quick and dirty program to assess latency of one-byte array access
+# add_executable(latency latency.cc sift_array.h timer.h)
 
 # add_executable(ingest ingest.cc sift_db.h timer.h)
 # target_include_directories(ingest PUBLIC
 #     /Users/lums/Contrib/dist/include
 # )
 # target_link_libraries(ingest PUBLIC docopt TileDB::tiledb_shared)
-
 
 #
 # Some debugging code

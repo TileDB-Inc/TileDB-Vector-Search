@@ -35,7 +35,7 @@ if ("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
                You must delete them, or cmake will refuse to work.")
 endif() # yes, end-markers and even else() need empty parens
 
-project(tdb)
+project(flat)
 
 set(CMAKE_CXX_STANDARD 20)
 

@@ -277,7 +277,7 @@ void query_vq_ew(
       int db_stop = std::min<int>((n + 1) * db_block_size, size(db));
 
       futs.emplace_back(std::async(
-          std::launch::async, [&scores, &q, size_q, &db, db_start, db_stop, size_db, n]() {
+          std::launch::async, [&scores, &q, size_q, &db, db_start, db_stop, n]() {
             // For each database vector
             for (int i = db_start; i < db_stop; ++i) {
               for (int j = 0; j < size_q; ++j) {

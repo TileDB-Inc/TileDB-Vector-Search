@@ -34,7 +34,7 @@ configure_file(config.h.in config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_library(sift_test INTERFACE)
-target_link_libraries(sift_test INTERFACE Catch2::Catch2WithMain TileDB::tiledb_shared flat_blas)
+target_link_libraries(sift_test INTERFACE Catch2::Catch2WithMain TileDB::tiledb_shared)
 
 add_executable(unit_sift_array unit_sift_array.cc)
 target_link_libraries(unit_sift_array PRIVATE sift_test)
@@ -46,7 +46,7 @@ add_executable(unit_defs unit_defs.cc)
 target_link_libraries(unit_defs PRIVATE Catch2::Catch2WithMain)
 
 add_executable(unit_gemm unit_gemm.cc)
-target_link_libraries(unit_gemm PRIVATE sift_test)
+target_link_libraries(unit_gemm PRIVATE sift_test flat_blas)
 
 add_executable(unit_linalg unit_linalg.cc)
 target_link_libraries(unit_linalg PRIVATE sift_test mdspan)
