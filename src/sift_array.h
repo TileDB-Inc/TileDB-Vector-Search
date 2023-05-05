@@ -46,22 +46,24 @@
 
 /**
  * Class for reading SIFT data stored in a TileDB array.  This was based off the
- * sift_db class, which handled the specific format from http://corpus-texmex.irisa.fr .
- * However, we ingested the original SIFT data into a TileDB array, which has no
- * SIFT-specific characteristics -- it's just a 2D array of floats (or chars).
+ * sift_db class, which handled the specific format from
+ * http://corpus-texmex.irisa.fr . However, we ingested the original SIFT data
+ * into a TileDB array, which has no SIFT-specific characteristics -- it's just
+ * a 2D array of floats (or chars).
  *
- * The class reads the TileDB array and provides a std::vector<std::span<T>> interface,
- * which is basically a column-oriented view of the data. Much better would be to use
- * `mdspan`.
+ * The class reads the TileDB array and provides a std::vector<std::span<T>>
+ * interface, which is basically a column-oriented view of the data. Much better
+ * would be to use `mdspan`.
  *
- * @todo: Switch to using `mdspan` instead of `vector<span>` for better performance.
+ * @todo: Switch to using `mdspan` instead of `vector<span>` for better
+ * performance.
  *
  * @tparam T The type of the data in the array (float or char for ANN_SIFT).
  */
 template <class T>
 class sift_array : public std::vector<std::span<T>> {
-
-  // @todo: Switch to using `mdspan` instead of `vector<span>` for better performance.
+  // @todo: Switch to using `mdspan` instead of `vector<span>` for better
+  // performance.
   using Base = std::vector<std::span<T>>;
 
   std::map<std::string, std::string> init_{{"vfs.s3.region", "us-west-2"}};
@@ -80,12 +82,11 @@ class sift_array : public std::vector<std::span<T>> {
   std::unique_ptr<T[]> data_;
 
  public:
-
-   /**
-    * Constructor for reading a TileDB array.
-    * @param array_name URI of the TileDB array to read.
-    * @param subset How many of the columns to read.  If 0, read all columns.
-    */
+  /**
+   * Constructor for reading a TileDB array.
+   * @param array_name URI of the TileDB array to read.
+   * @param subset How many of the columns to read.  If 0, read all columns.
+   */
   sift_array(const std::string& array_name, size_t subset = 0)
       : array_(ctx_, array_name, TILEDB_READ)
       , schema_(array_.schema())

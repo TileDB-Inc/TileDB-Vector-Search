@@ -46,12 +46,14 @@
 namespace tiledb::common {
 
 template <class T, class LayoutPolicy = Kokkos::layout_right, class I = size_t>
-class Matrix
-    : public Kokkos::mdspan<
-          T,
-          Kokkos::extents<I, std::dynamic_extent, std::dynamic_extent>, LayoutPolicy> {
-  using Base = Kokkos::
-      mdspan<T, Kokkos::extents<I, std::dynamic_extent, std::dynamic_extent>, LayoutPolicy>;
+class Matrix : public Kokkos::mdspan<
+                   T,
+                   Kokkos::extents<I, std::dynamic_extent, std::dynamic_extent>,
+                   LayoutPolicy> {
+  using Base = Kokkos::mdspan<
+      T,
+      Kokkos::extents<I, std::dynamic_extent, std::dynamic_extent>,
+      LayoutPolicy>;
   using Base::Base;
 
   using index_type = I;

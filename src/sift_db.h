@@ -54,7 +54,8 @@
  * unitialized storage and use `mdspan` to provide the view.
  *
  * @todo: Use uninitialized storage for data.
- * @todo: Switch to using `mdspan` instead of `vector<span>` for better performance.
+ * @todo: Switch to using `mdspan` instead of `vector<span>` for better
+ * performance.
  *
  * @tparam T The type of the data in the array (float or char for ANN_SIFT).
  */
