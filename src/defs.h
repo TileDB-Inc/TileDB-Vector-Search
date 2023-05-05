@@ -1,20 +1,46 @@
-//
-// Created by Andrew Lumsdaine on 4/12/23.
-//
+/**
+ * @file   defs.h
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
+ */
 
 #ifndef TDB_DEFS_H
 #define TDB_DEFS_H
 
 #include <algorithm>
-#include <span>
 #include <cmath>
 #include <future>
 #include <iostream>
+#include <span>
 // #include <execution>
 #include <memory>
 #include <queue>
 #include <set>
-#include <type_traits>
 
 #include "timer.h"
 
@@ -23,7 +49,7 @@ using Vector = std::span<T>;
 
 template <class V>
 auto L2(V const& a, V const& b) {
-  typename V::value_type sum {0};
+  typename V::value_type sum{0};
 
   auto size_a = size(a);
   for (decltype(a.size()) i = 0; i < size_a; ++i) {
@@ -35,9 +61,9 @@ auto L2(V const& a, V const& b) {
 
 template <class V>
 auto cosine(V const& a, V const& b) {
-  typename V::value_type sum {0};
-  auto a2  = 0.0;
-  auto b2  = 0.0;
+  typename V::value_type sum{0};
+  auto a2 = 0.0;
+  auto b2 = 0.0;
 
   auto size_a = size(a);
   for (auto i = 0; i < size_a; ++i) {
@@ -49,7 +75,8 @@ auto cosine(V const& a, V const& b) {
 }
 
 template <class M, class V, class Function>
-auto col_sum(const M& m, V& v, Function f = [](auto& x) -> const auto &{ return x; }) {
+auto col_sum(
+    const M& m, V& v, Function f = [](auto& x) -> const auto& { return x; }) {
   int size_m = size(m);
   int size_m0 = size(m[0]);
 
@@ -62,12 +89,12 @@ auto col_sum(const M& m, V& v, Function f = [](auto& x) -> const auto &{ return 
   }
 }
 
-
 template <class V, class L, class I>
 auto verify_top_k(V const& scores, L const& top_k, I const& g, int k, int qno) {
-  if (!std::equal(begin(top_k), begin(top_k) +  k, g.begin(), [&](auto& a, auto& b) {
-    return scores[a] == scores[b];
-  })) {
+  if (!std::equal(
+          begin(top_k), begin(top_k) + k, g.begin(), [&](auto& a, auto& b) {
+            return scores[a] == scores[b];
+          })) {
     std::cout << "Query " << qno << " is incorrect" << std::endl;
     for (int i = 0; i < std::min<int>(10, k); ++i) {
       std::cout << "  (" << top_k[i] << " " << scores[top_k[i]] << ") ";
@@ -86,244 +113,87 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
   if (!std::equal(begin(top_k), begin(top_k) + k, g.begin())) {
     std::cout << "Query " << qno << " is incorrect" << std::endl;
     for (int i = 0; i < std::min(k, 10); ++i) {
-      std::cout << "  (" << top_k[i] << " " << g[i] <<")";
+      std::cout << "  (" << top_k[i] << " " << g[i] << ")";
     }
     std::cout << std::endl;
   }
 }
 
-
-
-#if 0
-template <class T, class Compare = std::less<T>, class Allocator = std::allocator<T>>
+template <
+    class T,
+    class Compare = std::less<T>,
+    class Allocator = std::allocator<T>>
 struct fixed_min_set : public std::set<T, Compare, Allocator> {
   using base = std::set<T, Compare, Allocator>;
   using base::base;
 
   unsigned max_size{0};
 
-  explicit fixed_min_set(unsigned k) : max_size{k} { }
-  fixed_min_set(unsigned k, const Compare& comp) : base(comp), max_size{k} {}
+  explicit fixed_min_set(unsigned k)
+      : max_size{k} {
+  }
+  fixed_min_set(unsigned k, const Compare& comp)
+      : base(comp)
+      , max_size{k} {
+  }
 
-  bool at_max_size_ { false };
-  T max_value_ = std::numeric_limits<T>::max();
+  bool maxed_{false};
 
   void insert(T const& x) {
-    if (at_max_size_) {
-      if (x < max_value_) {
-	base::insert(x);
-	base::erase(std::prev(base::end()));
-	max_value_ = *(std::prev(base::end()));
-      }
+    base::insert(x);
+    if (maxed_) {
+      base::erase(std::prev(base::end()));
     } else {
-      base::insert(x);
-      max_value_ = *(std::prev(base::end()));
-      if (max_size == base::size()) {
-	at_max_size_ = true;
+      if (base::size() == max_size) {
+        maxed_ = true;
       }
     }
   }
 };
-
-
-
-template <class T, class U, class Compare = std::less<std::pair<T,U>>, class Allocator = std::allocator<std::pair<T,U>>>
-struct fixed_min_set_pair : public std::set<std::pair<T, U>, Compare, Allocator> {
-  using base = std::set<std::pair<T, U>, Compare, Allocator>;
-  using base::base;
-
-  unsigned max_size{0};
-
-  explicit fixed_min_set_pair(unsigned k) : max_size{k} { }
-  fixed_min_set_pair(unsigned k, const Compare& comp) : base(comp), max_size{k} {}
-
-  bool at_max_size_ { false };
-  std::pair<T, U> max_value_ {std::numeric_limits<T>::max(), std::numeric_limits<U>::max()};
-
-  void insert(std::pair<T,U> const& x) {
-    if (at_max_size_) {
-      if (x.first < max_value_.first) {
-	base::insert(x);
-	base::erase(std::prev(base::end()));
-	max_value_ = *(std::prev(base::end()));
-      }
-    } else {
-      base::insert(x);
-      max_value_ = *(std::prev(base::end()));
-      if (max_size == base::size()) {
-	at_max_size_ = true;
-      }
-    }
-  }
-};
-#endif
-
-/*
-template<
-    class T,
-    class Container = std::vector<T>,
-    class Compare = std::less<typename Container::value_type>
-> class priority_queue;
- */
-
-
-template <class T, class Container = std::vector<T>,
-	  class Compare = std::less<typename Container::value_type>>
-  struct fixed_min_set : public std::priority_queue<T, Container, Compare>
-{
-  using base = std::priority_queue<T, Container, Compare>;
-  using base::base;
-
-  unsigned max_size{0};
-
-  explicit fixed_min_set(unsigned k) : max_size{k} { }
-  fixed_min_set(unsigned k, const Compare& comp) : base(comp), max_size{k} {}
-
-  template <class Iter>
-  fixed_min_set(unsigned k, Iter begin, Iter end, const Compare& comp = Compare()) : base(begin, end, comp), max_size{k} {}
-
-  template <class Iter>
-  fixed_min_set(unsigned k, Iter begin, Iter end, const Compare& comp, Container&& c) : base(begin, end, comp, c), max_size{k} {}
-
-
-  bool at_max_size_ { false };
-  T max_value_ {std::numeric_limits<T>::max()};
-
-  void insert(T const& x) {
-    if (at_max_size_) {
-      if (base::comp(x, max_value_)) {
-	base::push(x);
-
-	base::pop();
-	max_value_ = base::top();
-	//      std::cout << "2 Pushing " << x.first << ", " << x.second << ", top is " << max_value_.first << ", " << max_value_.second <<std::endl;
-
-      }
-    } else {
-      base::push(x);
-
-      max_value_ = base::top();
-
-      //      std::cout << "1 Pushing " << x.first << ", " << x.second << ", top is " << max_value_.first << ", " << max_value_.second <<std::endl;
-
-      if (max_size == base::size()) {
-	at_max_size_ = true;
-      }
-    }
-  }
-  auto& c() { return base::c; }
-};
-
-template <class I>
-fixed_min_set(size_t, I, I) -> fixed_min_set<typename I::value_type>;
-
-
-template <class T, class U, class Container = std::vector<std::pair<T,U>>,
-	  class Compare = std::less<typename Container::value_type>>
-  struct fixed_min_set_pair : public std::priority_queue<std::pair<T, U>, Container, Compare>
-{
-  using base = std::priority_queue<std::pair<T, U>, Container, Compare>;
-  using base::base;
-
-  unsigned max_size{0};
-
-  explicit fixed_min_set_pair(unsigned k) : max_size{k} { }
-  fixed_min_set_pair(unsigned k, const Compare& comp) : base(comp), max_size{k} {}
-
-  bool at_max_size_ { false };
-  std::pair<T, U> max_value_ {std::numeric_limits<T>::max(), std::numeric_limits<U>::max()};
-
-  void insert(std::pair<T,U> const& x) {
-    if (at_max_size_) {
-      if (base::comp(x, max_value_)) {
-	base::push(x);
-
-	base::pop();
-	max_value_ = base::top();
-	//      std::cout << "2 Pushing " << x.first << ", " << x.second << ", top is " << max_value_.first << ", " << max_value_.second <<std::endl;
-
-      }
-    } else {
-      base::push(x);
-
-      max_value_ = base::top();
-
-      //      std::cout << "1 Pushing " << x.first << ", " << x.second << ", top is " << max_value_.first << ", " << max_value_.second <<std::endl;
-
-      if (max_size == base::size()) {
-	at_max_size_ = true;
-      }
-    }
-  }
-
-  auto& c() { return base::c; }
-};
-
 
 template <class V, class L, class I>
-auto get_top_k(V const& scores, L & top_k, I & index, int k) {
-#if 0
-  std::nth_element(begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) {
-    return scores[a] < scores[b];
-  });
+auto get_top_k(V const& scores, L& top_k, I& index, int k) {
+  std::nth_element(
+      begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) {
+        return scores[a] < scores[b];
+      });
   std::copy(begin(index), begin(index) + k, begin(top_k));
 
   std::sort(begin(top_k), end(top_k), [&](auto& a, auto& b) {
     return scores[a] < scores[b];
   });
-#else
-
-  using element = std::pair<float, int>;
-  auto min_k {fixed_min_set<element>(k)};
-
-  auto scores_size = size(scores);
-
-  for (size_t j = 0; j < scores_size; ++j) {
-    min_k.insert(element{scores[j], index[j]});
-  }
-
-  std::sort(begin(min_k.c()), end(min_k.c()));
-
-  // Copy indexes into top_k
-  std::transform(min_k.c().begin(), min_k.c().end(), begin(top_k), ([](auto &e) { return e.second; }));
-
-  // Try to break ties by sorting the top k -- only works if we also sort g
-  // std::sort(begin(top_k), end(top_k));
-
-#endif
 }
 
-
 template <class S, class T>
-void get_top_k(const S& scores, T& top_k, int k, int size_q, int size_db, int nthreads) {
+void get_top_k(
+    const S& scores, T& top_k, int k, int size_q, int size_db, int nthreads) {
   life_timer _{"Get top k"};
 
   std::vector<int> i_index(size_db);
   std::iota(begin(i_index), end(i_index), 0);
-  
-  int q_block_size = (size_q + nthreads -1) / nthreads;
+
+  int q_block_size = (size_q + nthreads - 1) / nthreads;
   std::vector<std::future<void>> futs;
   futs.reserve(nthreads);
-  
+
   for (int n = 0; n < nthreads; ++n) {
-    
-    int q_start = n*q_block_size;
-    int q_stop = std::min<int>((n+1)*q_block_size, size_q);
-    
-    futs.emplace_back(std::async(std::launch::async, [q_start, q_stop, &scores, &top_k, k, size_db]() {
-      
-      std::vector<int> index(size_db);
-      
-      for (int j = q_start; j < q_stop; ++j) {
-	// std::copy(begin(i_index), end(i_index), begin(index));
-	std::iota(begin(index), end(index), 0);
-	get_top_k(scores[j], top_k[j], index, k);
-      }
-    }));
-  }      
+    int q_start = n * q_block_size;
+    int q_stop = std::min<int>((n + 1) * q_block_size, size_q);
+
+    futs.emplace_back(std::async(
+        std::launch::async, [q_start, q_stop, &scores, &top_k, k, size_db]() {
+          std::vector<int> index(size_db);
+
+          for (int j = q_start; j < q_stop; ++j) {
+            // std::copy(begin(i_index), end(i_index), begin(index));
+            std::iota(begin(index), end(index), 0);
+            get_top_k(scores[j], top_k[j], index, k);
+          }
+        }));
+  }
   for (int n = 0; n < nthreads; ++n) {
     futs[n].get();
   }
 }
 
-#endif//TDB_DEFS_H
+#endif  // TDB_DEFS_H

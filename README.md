@@ -1,5 +1,4 @@
 # feature-vector-prototype
-
 Directory for prototyping feature vector / similarity search.  The main program is
 called `flat` which does an exhaustive vector-by-vector comparison between a given 
 set of vectors and a given set of query vectors. 
@@ -109,6 +108,12 @@ the problems are:
 |  ANN_SIFT1B | sift1b    | 128	   | 1,000,000,000 | 10,000	  | 100,000,000	 | bvecs   |
 
 
+These have been ingested as TileDB arrays and can be found at
+```text
+s3://tiledb-lums/sift/${name}_{base,query,learn,ground_truth}
+```
+Red permissions are set for all of TileDB.
+
 ### Run `flat` with TileDB arrays
 
 Basic invocation of flat requires specifying at least the base set of vectors, the query vectors, and
@@ -214,11 +219,11 @@ performance of `gemm` could be matched at any rate.
   tar zxf sift.tar.gz
 ```
 
-
 ### Ingesting the data
 The python notebook `python/ingest_eq.ipynb` was used to
-convert the original data files to TileDB arrays in S3.  
-This file has since been removed from the repository.
+convert the original data files to TileDB arrays in S3.  **Important:**
+Do not re-run this unless you change the paths to avoid
+overwriting the existing arrays.
 
 
 ### Run `flat` with local files
@@ -241,11 +246,11 @@ This specifies to run `flat` on the `siftsmall` data, checking the first 100 nei
 
 You can also run on the medium data set:
 ```c++
-  # Run with medium data (1M)
-  ./src/flat  --db_file ../external/data/sift/sift_base.fvecs \
-              --q_file ../external/data/sift/sift_query.fvecs \
-              --g_file ../external/data/sift/sift_groundtruth.ivecs \
-              --k 100
+  # Run with small data
+  time ./src/flat  --db_file ../external/data/sift/sift_base.fvecs \
+                    --q_file ../external/data/sift/sift_query.fvecs \
+                    --g_file ../external/data/sift/sift_groundtruth.ivecs \
+                    --k 100
 ```
 
 The memory and CPU requirements for the 1B dataset become prohibitive and probably can't be run on a typical desktop or typical server.
@@ -255,12 +260,12 @@ The memory and CPU requirements for the 1B dataset become prohibitive and probab
 (**Note:** We can now say that TileDB can be used for similarity search.)
 
 * **Use OpenBLAS instead of MKL for gemm** and incorporate into the build process.  This should take less than a day.
-* **Implement parallelism using task graph** This should not be too difficult, a couple of days, as the `std::async` parallelism is similar to very basic task graph usage.
-* **Optimize get_top_k** For some reason, the `get_top_k` function is extremely slow and appears to be compute bound rahter than memory bound. It should have a different implementation.  The current bottleneck is `std::nth_element`, which puts the top k elements at the beginning of the score vector.  Scanning the score vector with a heap might be faster. 
 * **Move prototype into core as a query.** If I can work with Luc this shouldn't take more than a week (and would not take up anywhere close to a week for Luc).  This shouldn't take more than a week, depending on how fancy we want to be.  Probably need to add a day or two to deal with designing the API.
+* **Provide --id argument** to allow selection of a single vector to query
 * **Use streaming approach to handle arrays/files that won't fit in local memory of one machine.**  This could be done before moving into core or afterwords.  It is probably better to do this with the prototype.  This shouldn't take more than two days.
 * **Use parallel/distributed approach** to handle arrays/files that won't fit in local memory of one machine.  This is doable if we want to just parallelize an application using libtiledb.  However, if we want to do the similarity search "in the cloud" it might be better to orchestrate the distributed computation at the Python task graph level.
 * **Improve performance with better blocking for memory use** In conjunction with reorganizing for out-of-core operation, we should also arrange the in-memory computation to make better use of the memory hierarchy.
 * **Finish implementation of cosine similarity** This should be fairly straightforward to implement. However, we have not ground truth to verify it with the sift benchmark dataset.
 * **Make ground truth comparison an optional argument**
 * **Perform ground truth comparison only when requested**
+* **Implement parallelism using task graph** This should not be too difficult, a couple of days, as the `std::async` parallelism is similar to very basic task graph usage.
