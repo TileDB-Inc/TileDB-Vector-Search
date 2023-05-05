@@ -119,6 +119,12 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
   }
 }
 
+/**
+ * A class for keeping a running tally of the top k elements in a set.
+ * @tparam T
+ * @tparam Compare
+ * @tparam Allocator
+ */
 template <
     class T,
     class Compare = std::less<T>,

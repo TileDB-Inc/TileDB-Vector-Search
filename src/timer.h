@@ -35,6 +35,14 @@
 #include <chrono>
 #include <iostream>
 
+/**
+ * @brief A simple timer class for measuring elapsed wall clock time.
+ * @tparam D The granularity of the timer. Defaults to microseconds.
+ *
+ * @todo: Rewrite to just store microseconds.  Print out results based
+ * on how much time has elapsed.  E.g., if it is just a few us, print
+ * in us.  If O(1,000) us, print in ms, and so on.
+ */
 template <class D = std::chrono::microseconds>
 class timer {
  private:
@@ -84,6 +92,11 @@ class empty_timer {
   }
 };
 
+/**
+ * A handy class for timing the lifetime of a scope, using
+ * RAII.  Starts timer on creations, rints out the elapsed time
+ * on destruction.
+ */
 class life_timer : public empty_timer, public ms_timer {
  public:
   explicit life_timer(const std::string& msg = "")

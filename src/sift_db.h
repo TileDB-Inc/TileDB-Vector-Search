@@ -43,9 +43,21 @@
 #include <vector>
 
 /**
- * See http://corpus-texmex.irisa.fr for file format
+ *
  */
 
+/**
+ * Class for reading SIFT data stored in a local file.  The specific format
+ * is described in http://corpus-texmex.irisa.fr .  This class mmap's the file
+ * and then reads the data into a `std::vector`.  It then creates a 2D view over
+ * the data with std::vector<std::span<T>>.  Much better would be to create
+ * unitialized storage and use `mdspan` to provide the view.
+ *
+ * @todo: Use uninitialized storage for data.
+ * @todo: Switch to using `mdspan` instead of `vector<span>` for better performance.
+ *
+ * @tparam T The type of the data in the array (float or char for ANN_SIFT).
+ */
 template <class T>
 class sift_db : public std::vector<std::span<T>> {
   using Base = std::vector<std::span<T>>;
