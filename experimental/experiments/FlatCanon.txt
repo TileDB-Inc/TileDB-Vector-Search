@@ -1,0 +1,33 @@
+
+
+Databases.  These are nested subsets of each other
+  s3://tiledb-andrew/sift/bigann1M_base
+  s3://tiledb-andrew/sift/bigann10M_base
+  s3://tiledb-andrew/sift/bigann100M_base
+  s3://tiledb-nikos/vector-search/datasets/arrays/sift-1b-col-major
+
+Ground truths.
+  s3://tiledb-andrew/kmeans/benchmark/bigann_1M_GT_nnids
+  s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids
+  s3://tiledb-andrew/kmeans/benchmark/bigann_100M_GT_nnids
+  s3://tiledb-andrew/kmeans/benchmark/bigann_1B_GT_nnids
+
+Query.
+  s3://tiledb-andrew/kmeans/benchmark/query_public_10k
+
+These work:
+  ./src/flat --db_uri s3://tiledb-andrew/sift/bigann1M_base
+             --q_uri s3://tiledb-andrew/kmeans/benchmark/query_public_10k
+             --g_uri s3://tiledb-andrew/kmeans/benchmark/bigann_1M_GT_nnids
+             --k 100 --order vq_heap --nqueries 10000
+
+  ./src/flat --db_uri s3://tiledb-andrew/sift/bigann10M_base \
+             --q_uri s3://tiledb-andrew/kmeans/benchmark/query_public_10k  \
+             --g_uri s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids \
+             --nqueries 10 -V -v -d --order vq_heap
+
+This fails: 
+  ./src/flat  --db_uri s3://tiledb-andrew/sift/bigann10M_base \
+              --q_uri s3://tiledb-nikos/vector-search/datasets/queries/arrays/sift \
+              --g_uri s3://tiledb-nikos/vector-search/datasets/ground-truths/arrays/sift-10m \
+              --nqueries 10 -V -v -d --order vq_heap
