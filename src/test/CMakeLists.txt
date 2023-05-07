@@ -51,6 +51,9 @@ target_link_libraries(unit_gemm PRIVATE sift_test flat_blas)
 add_executable(unit_linalg unit_linalg.cc)
 target_link_libraries(unit_linalg PRIVATE sift_test mdspan)
 
+add_executable(unit_algorithm unit_algorithm.cc)
+target_link_libraries(unit_algorithm PRIVATE sift_test)
+
 # Create the subdirectory for the extracted files
 file(MAKE_DIRECTORY ${SIFT_TEST_DIR}/siftsmall)
 
