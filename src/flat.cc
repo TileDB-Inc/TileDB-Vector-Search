@@ -42,7 +42,7 @@
 #include <docopt.h>
 
 #include "defs.h"
-#include "query.h"
+#include "flat_query.h"
 #include "sift_array.h"
 #include "sift_db.h"
 #include "timer.h"

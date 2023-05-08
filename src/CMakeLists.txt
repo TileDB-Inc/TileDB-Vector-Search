@@ -25,7 +25,7 @@
 # THE SOFTWARE.
 #
 
-add_executable(flat flat.cc query.h defs.h sift_db.h timer.h sift_array.h linalg.h)
+add_executable(flat flat.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h)
 
 target_link_libraries(flat PUBLIC docopt)
 target_link_libraries(flat PUBLIC flat_mt)
