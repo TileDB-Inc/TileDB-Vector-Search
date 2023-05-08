@@ -66,6 +66,8 @@
 #include <mkl_cblas.h>
 #endif
 
+#include "algorithm.h"
+
 /**
  * Dispatch to the query that uses the qv ordering (loop over query vectors on
  * outer loop and over database vectors on inner loop).
@@ -186,13 +188,14 @@ void query_qv_hw(
  */
 template <class DB, class Q, class G, class TK>
 void query_qv_ew(
-    const DB& db, const Q& q, const G& g, TK& top_k, int k, int nthreads) {
+    const DB& db, const Q& q, const G& g, TK& top_k, int k, unsigned nthreads) {
   life_timer _{"Total time (qv set way)"};
 
   using element = std::pair<float, int>;
 
   std::vector<int> i_index(size(db));
   std::iota(begin(i_index), end(i_index), 0);
+
 
   int size_db = size(db);
   int q_block_size = (size(q) + nthreads - 1) / nthreads;
@@ -324,7 +327,7 @@ void query_vq_hw(
  */
 template <class DB, class Q, class G, class TK>
 void query_vq_ew(
-    const DB& db, const Q& q, const G& g, TK& top_k, int k, int nthreads) {
+    const DB& db, const Q& q, const G& g, TK& top_k, int k, unsigned nthreads) {
   life_timer _{"Total time (vq loop nesting, set way)"};
 
   using element = std::pair<float, int>;
@@ -334,6 +337,17 @@ void query_vq_ew(
 
   {
     life_timer _{"L2 distance"};
+
+#if 1
+    auto par = stdx::execution::indexed_parallel_policy{nthreads};
+    stdx::for_each(par, begin(db), end(db), [&](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
+      unsigned size_q = size(q);
+      for (int j = 0; j < size_q; ++j) {
+        auto score = L2(q[j], db_vec);
+        scores[n][j].insert(element{score, i});
+      }
+    });
+#else
 
     int size_q = size(q);
     int size_db = size(db);
@@ -360,6 +374,7 @@ void query_vq_ew(
             }
           }));
     }
+#endif
   }
 
   // Merge the scores from each thread

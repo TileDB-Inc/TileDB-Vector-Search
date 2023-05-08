@@ -77,7 +77,35 @@ TEST_CASE("algorithm: for_each", "[algorithm]") {
         [](int& x) { x *= 2; });
   }
 
-  // CHECK(size(v) == length);
+  SECTION("indexed parallel") {
+    auto nthreads = GENERATE(1, 2, 3, 4, 5, 5, 6, 7, 8, 9, 10, 63);
+    std::vector<unsigned> indices(nthreads);
+
+    stdx::for_each(
+        stdx::execution::indexed_parallel_policy(nthreads),
+        begin(v),
+        end(v),
+        [&indices](int& x, auto&& n, auto&& i) mutable {
+          x += i + 1;
+          indices[n] = x;
+        });
+
+    if (length > 0) {
+      for (size_t n = 0; n < nthreads; ++n) {
+        size_t block_size = (length + nthreads - 1) / nthreads;
+        auto start = std::min<size_t>(n * block_size, length);
+        auto stop = std::min<size_t>((n+1) * block_size, length);
+        unsigned j = stop * 2;
+        if (stop != start) {
+          CHECK(indices[n] == j);
+        } else {
+          CHECK(indices[n] == 0);
+        }
+      }
+    }
+  }
+
+  CHECK(size(v) == length);
 
   switch (length) {
     case 4096:
@@ -146,7 +174,6 @@ TEST_CASE("algorithm: for_each", "[algorithm]") {
     case 0:
       CHECK(v.empty());
       break;
-
   }
-
 }
+
