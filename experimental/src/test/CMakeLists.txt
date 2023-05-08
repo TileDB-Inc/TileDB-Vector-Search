@@ -54,6 +54,12 @@ target_link_libraries(unit_linalg PRIVATE sift_test mdspan)
 add_executable(unit_algorithm unit_algorithm.cc)
 target_link_libraries(unit_algorithm PRIVATE sift_test)
 
+add_executable(unit_ivf_index unit_ivf_index.cc)
+target_link_libraries(unit_ivf_index PRIVATE sift_test mdspan)
+
+add_executable(unit_ivf_query unit_ivf_query.cc)
+target_link_libraries(unit_ivf_query PRIVATE sift_test)
+
 # Create the subdirectory for the extracted files
 file(MAKE_DIRECTORY ${SIFT_TEST_DIR}/siftsmall)
 

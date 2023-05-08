@@ -1,0 +1,285 @@
+/**
+ * @file   ivf_hack.cc
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
+ * Driver program for kmeans.
+ *
+ * The program can operate in one of two modes.
+ *
+ * 1) It takes a set of feature vectors and a set of centroid
+ * vectors and creates a new set of feature vectors partitioned according
+ * to their nearest centroid.  I then writes the partitioned vectors,
+ * the partition index and a vector of the original vector IDs to disk.
+ *
+ * 2) Given a query vector, it finds the set of nearest centroids and
+ * then searches the partitions corresponding to those centroids
+ * for the nearest neighbors.
+ *
+ * @todo This should probably be split into two programs.
+ * @todo This should probably be broken into smaller functions.
+ * @todo We need to add a good dose of parallelism.
+ * @todo We need to add accuracy reporting as well as QPS.
+ */
+
+#include <algorithm>
+#include <cmath>
+#include <filesystem>
+// #include <execution>
+#include <iostream>
+#include <memory>
+#include <numeric>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include <docopt.h>
+
+#include "defs.h"
+#include "ivf_query.h"
+#include "linalg.h"
+#include "timer.h"
+
+bool verbose = false;
+bool debug = false;
+
+static constexpr const char USAGE[] =
+    R"(kmeans: demo hack feature vector search with kmeans index.
+Usage:
+    tdb (-h | --help)
+    tdb  [--db_uri URI  --centroids_uri URI] --index_uri URI --part_uri URI --id_uri URI
+         [--k NN] [--cluster NN] [--write] [--nthreads N] [-d | -v]
+
+Options:
+    -h, --help            show this screen
+    --db_uri URI          database URI with feature vectors
+    --centroids_uri URI   query URI with feature vectors to search for
+    --index_uri URI       URI to store the paritioning index
+    --part_uri URI        URI to store the partitioned data
+    --id_uri URI          URI to store original IDs of vectors
+    --write               write the index to disk [default: false]
+    --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
+    --k NN                number of nearest neighbors to search for [default: 10]
+    --cluster NN          number of clusters to use [default: 100]
+    -d, --debug           run in debug mode [default: false]
+    -v, --verbose         run in verbose mode [default: false]
+)";
+
+int main(int argc, char* argv[]) {
+  std::vector<std::string> strings(argv + 1, argv + argc);
+  auto args = docopt::docopt(USAGE, strings, true);
+
+  auto centroids_uri = args["--centroids_uri"].asString();
+  auto db_uri = args["--db_uri"].asString();
+  auto nthreads = args["--nthreads"].asLong();
+  if (nthreads == 0) {
+    nthreads = std::thread::hardware_concurrency();
+  }
+
+  if (std::filesystem::exists(centroids_uri) == false) {
+    std::cerr << "Error: centroids URI does not exist: "
+              << args["--centroids_uri"] << std::endl;
+    return 1;
+  }
+  auto centroids = tdbMatrix<float, Kokkos::layout_left>(centroids_uri);
+
+  if (std::filesystem::exists(db_uri) == false) {
+    std::cerr << "Error: db URI does not exist: " << args["--centroids_uri"]
+              << std::endl;
+    return 1;
+  }
+  auto db = tdbMatrix<float, Kokkos::layout_left>(db_uri);
+
+  if (args["--write"].asBool()) {
+    auto parts = gemm_partition(centroids, db, nthreads);
+    //  auto parts = qv_partition(centroids, db, nthreads);
+
+    // read centroids
+    // for each vector in the dataset, find nearest centroid
+    // [ D, I ] = query_gemm(centroids, data, top_k, nthreads);
+    {
+      life_timer _{"shuffling data"};
+      std::vector<size_t> degrees(centroids.num_cols());
+      std::vector<size_t> indices(centroids.num_cols() + 1);
+      for (size_t i = 0; i < db.num_cols(); ++i) {
+        auto j = parts[i];
+        ++degrees[j];
+      }
+      indices[0] = 0;
+      std::inclusive_scan(begin(degrees), end(degrees), begin(indices) + 1);
+      std::vector<size_t> check(indices.size());
+      std::copy(begin(indices), end(indices), begin(check));
+
+      // Some variables for debugging
+      // @todo remove these once we are confident in the code
+      auto mis = std::max_element(begin(indices), end(indices));
+      auto a = std::distance(begin(indices), mis);
+      auto b = std::distance(mis, end(indices));
+      auto misx = *mis;
+
+      // Array for storing the shuffled data
+      auto shuffled_db = ColMajorMatrix<float>{db.num_rows(), db.num_cols()};
+      std::vector shuffled_ids = std::vector<uint64_t>(db.num_cols());
+      std::iota(begin(shuffled_ids), end(shuffled_ids), 0);
+
+      // @todo parallelize
+      // Unfortunately this variant of the algorithm is not parallelizable.
+      // The other approach involves doing parallel sort on the indices,
+      // which will group them nicely -- but a distributed parallel sort may
+      // be difficult to implement.  Even this algorithm is not trivial to
+      // parallelize, because of the random access to the indices array.
+      for (size_t i = 0; i < db.num_cols(); ++i) {
+        size_t bin = parts[i];
+        size_t ibin = indices[bin];
+
+        shuffled_ids[ibin] = i;
+
+        assert(ibin < shuffled_db.num_cols());
+        for (size_t j = 0; j < db.num_rows(); ++j) {
+          shuffled_db(j, ibin) = db(j, i);
+        }
+        ++indices[bin];
+      }
+
+      std::shift_right(begin(indices), end(indices), 1);
+      indices[0] = 0;
+
+      // A check for debugging
+      auto x = std::equal(begin(indices), end(indices), begin(check));
+
+      // Write out the arrays
+      auto part_uri = args["--part_uri"].asString();
+      auto index_uri = args["--index_uri"].asString();
+      auto id_uri = args["--id_uri"].asString();
+
+      if (part_uri != "") {
+        part_uri = args["--part_uri"].asString();
+        if (std::filesystem::exists(part_uri)) {
+          // std::filesystem::remove(part_uri);
+        }
+        write_matrix(shuffled_db, part_uri);
+      }
+      if (index_uri != "") {
+        index_uri = args["--index_uri"].asString();
+        if (std::filesystem::exists(index_uri)) {
+          // std::filesystem::remove(index_uri);
+        }
+        write_matrix(indices, index_uri);
+      }
+      if (id_uri != "") {
+        id_uri = args["--id_uri"].asString();
+        if (std::filesystem::exists(id_uri)) {
+          // std::filesystem::remove(id_uri);
+        }
+        write_matrix(shuffled_ids, id_uri);
+      }
+    }
+  } else {
+    // Read all of the precomputed data
+    auto part_uri = args["--part_uri"].asString();
+    auto index_uri = args["--index_uri"].asString();
+    auto id_uri = args["--id_uri"].asString();
+    auto shuffled_db = tdbMatrix<float, Kokkos::layout_left>(part_uri);
+    // auto indices = tdbMatrix<size_t, Kokkos::layout_left>(index_uri);
+    auto indices = read_vector<size_t>(index_uri);
+    auto shuffled_ids = read_vector<uint64_t>(id_uri);
+
+    // Some variables for debugging
+    auto mv = *std::max_element(begin(shuffled_ids), end(shuffled_ids));
+
+    // Function for finding the top k nearest neighbors accelerated by kmeans
+    // @todo Move this to a self-contained function
+    {
+      life_timer _("query_time");
+
+      size_t nprobe = args["--cluster"].asLong();
+      size_t k_nn = args["--k"].asLong();
+
+      // Pick first column of db as query vector
+      // @todo add query_uri as an argument
+      auto q = ColMajorMatrix<float>{centroids.num_rows(), 1};
+      for (size_t i = 0; i < centroids.num_rows(); ++i) {
+        q(i, 0) = db(i, 0);
+      }
+
+      // get closest centroid for each query vector
+      auto top_k = qv_query(centroids, q, nprobe, nthreads);
+
+      // Copy top k from Matrix to vector
+      std::vector<size_t> top_top_k(nprobe, 0);
+      for (size_t i = 0; i < nprobe; ++i) {
+        top_top_k[i] = top_k(i, 0);
+      }
+
+      // gather all the probed partitions into a single matrix
+      size_t total_size = 0;
+      for (size_t i = 0; i < size(top_top_k); ++i) {
+        total_size += indices[top_top_k[i] + 1] - indices[top_top_k[i]];
+      }
+
+      // Storage for the probed partitions and their ids
+      auto all_results =
+          ColMajorMatrix<float>{centroids.num_rows(), total_size};
+      auto all_ids = std::vector<uint64_t>(total_size);
+
+      // Tracks next location to copy into
+      size_t ctr = 0;
+
+      // Copy the probed partitions into contiguous storage
+      // For each probed partition
+      for (size_t j = 0; j < nprobe; ++j) {
+        // Get begin and end indices of the partition
+        size_t start = indices[top_top_k[j]];
+        size_t end = indices[top_top_k[j] + 1];
+
+        // Copy the partition into the storage
+        // For each vector in the partition
+        for (size_t i = start; i < end; ++i) {
+          // Copy the vector into all_results and ids into all_ids
+          // @todo Abstract all of this explicit loop based assignment
+          for (size_t l = 0; l < db.num_rows(); ++l) {
+            all_results(l, ctr) = shuffled_db(l, i);
+            all_ids[ctr] = shuffled_ids[i];
+          }
+          ++ctr;
+        }
+      }
+
+      // Now, with the single matrix of probed partitions, find the closest
+      // vectors
+      auto kmeans_ids = qv_query(all_results, q, k_nn, nthreads);
+
+      // Once this is a function, simply return kmeans_ids
+      // For now, print the results to std::cout
+      // @todo also get scores
+      // @todo add an output_uri argument
+      for (size_t i = 0; i < kmeans_ids.num_rows(); ++i) {
+        std::cout << all_ids[kmeans_ids(i, 0)] << ": " << std::endl;
+      }
+    }
+  }
+}
