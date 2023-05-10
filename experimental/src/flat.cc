@@ -85,6 +85,7 @@
 
 #include <docopt.h>
 
+#include "api_sketch.h"
 #include "defs.h"
 #include "ivf_query.h"
 #include "stats.h"
