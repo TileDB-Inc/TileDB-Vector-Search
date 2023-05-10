@@ -41,6 +41,7 @@
 
 #include <docopt.h>
 
+#include "api_sketch.h"
 #include "defs.h"
 #include "query.h"
 #include "sift_array.h"

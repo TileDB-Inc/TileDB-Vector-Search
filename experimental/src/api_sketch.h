@@ -1,0 +1,84 @@
+#include <span>
+#include <stdexcept>
+#include <tiledb/tiledb>
+
+using namespace tiledb;
+
+namespace tiledb::vector_search {
+
+namespace impl {
+
+template <class T>
+constexpr int get_d(const std::vector<std::span<T>>& vectors) {
+  if (vectors.empty()) {
+    throw std::invalid_argument("Vectors array cannot be empty.");
+  }
+
+  int d = vectors[0].size();
+  for (auto& v : vectors) {
+    if (v.size() != d) {
+      throw std::invalid_argument("All vectors must have the same length.");
+    }
+  }
+  return d;
+}
+
+template <class T>
+ArraySchema create_kmeans_index_schema(const Context& ctx, int d) {
+  return ArraySchema{ctx, TILEDB_DENSE}
+      .set_domain(Domain{ctx}.add_dimension(
+          Dimension::create<int>(ctx, "kmeans_id", {0, 9999})))
+      .add_attribute(Attribute::create<T>(ctx, "value").set_cell_val_num(d));
+}
+
+std::string get_kmeans_index_uri(const std::string& uri) {
+  return uri + "/kmeans_index";
+}
+
+template <class T>
+ArraySchema create_data_schema(const Context& ctx, int d) {
+  return ArraySchema{ctx, TILEDB_DENSE}
+      .set_domain(Domain{ctx}
+                      .add_dimension(
+                          Dimension::create<int>(ctx, "kmeans_id", {0, 9999}))
+                      .add_dimension(Dimension::create<int>(
+                          ctx, "object_id", {0, 999999999})))
+      .add_attribute(Attribute::create<T>(ctx, "vector").set_cell_val_num(d));
+}
+
+std::string get_data_uri(const std::string& uri) {
+  return uri + "/data";
+}
+
+}  // namespace impl
+
+/**
+ * Provides access to a vector search index backed by a TileDB array.
+ */
+// template <class T>
+class VectorArray {
+  //   static_assert(
+  //       std::is_same_v<T, float>,
+  //       "VectorArray is currently only supported for floats.");
+  using T = float;
+
+ public:
+  static void create(
+      const Context& ctx,
+      const std::string& uri,
+      const std::vector<std::span<T>>& vectors) {
+    int d = impl::get_d(vectors);
+
+    Array::create(
+        impl::get_kmeans_index_uri(uri),
+        impl::create_kmeans_index_schema<T>(ctx, d));
+
+    Array::create(impl::get_data_uri(uri), impl::create_data_schema<T>(ctx, d));
+  }
+
+  VectorArray(
+      const Context& ctx,
+      const std::string& uri,
+      tiledb_query_type_t query_type);
+};
+}  // namespace tiledb::vector_search
