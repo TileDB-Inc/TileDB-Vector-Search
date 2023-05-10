@@ -80,5 +80,29 @@ class VectorArray {
       const Context& ctx,
       const std::string& uri,
       tiledb_query_type_t query_type);
+
+  /**
+   * Returns the number of dimensions of the vectors of this vector array.
+   */
+  int get_d() {
+    throw std::runtime_error("Implement me");
+  }
+
+  /**
+   * Queries the vectors in the array that are most similar to the given vector.
+   * Returns a list of the vectors alongside their ID.
+   */
+  std::vector<std::pair<std::vector<T>, int>> query(
+      std::span<T> vector, int top_k) {
+    if (top_k < 0) {
+      throw std::invalid_argument("top_k cannot be negative");
+    }
+
+    if (top_k == 0) {
+      return {};
+    }
+
+    throw std::runtime_error("Implement me");
+  }
 };
 }  // namespace tiledb::vector_search
