@@ -1,3 +1,4 @@
+#include <cmath>
 #include <span>
 #include <stdexcept>
 #include <tiledb/tiledb>
@@ -24,10 +25,10 @@ constexpr int get_d(const std::vector<std::span<T>>& vectors) {
 }
 
 template <class T>
-ArraySchema create_kmeans_index_schema(const Context& ctx, int d) {
+ArraySchema create_kmeans_index_schema(const Context& ctx, int d, int k) {
   return ArraySchema{ctx, TILEDB_DENSE}
       .set_domain(Domain{ctx}.add_dimension(
-          Dimension::create<int>(ctx, "kmeans_id", {0, 9999})))
+          Dimension::create<int>(ctx, "kmeans_id", {0, k - 1})))
       .add_attribute(Attribute::create<T>(ctx, "value").set_cell_val_num(d));
 }
 
@@ -36,11 +37,11 @@ std::string get_kmeans_index_uri(const std::string& uri) {
 }
 
 template <class T>
-ArraySchema create_data_schema(const Context& ctx, int d) {
+ArraySchema create_data_schema(const Context& ctx, int d, int k) {
   return ArraySchema{ctx, TILEDB_DENSE}
       .set_domain(Domain{ctx}
                       .add_dimension(
-                          Dimension::create<int>(ctx, "kmeans_id", {0, 9999}))
+                          Dimension::create<int>(ctx, "kmeans_id", {0, k - 1}))
                       .add_dimension(Dimension::create<int>(
                           ctx, "object_id", {0, 999999999})))
       .add_attribute(Attribute::create<T>(ctx, "vector").set_cell_val_num(d));
@@ -68,12 +69,16 @@ class VectorArray {
       const std::string& uri,
       const std::vector<std::span<T>>& vectors) {
     int d = impl::get_d(vectors);
+    int k = std::sqrt(d);
 
     Array::create(
         impl::get_kmeans_index_uri(uri),
-        impl::create_kmeans_index_schema<T>(ctx, d));
+        impl::create_kmeans_index_schema<T>(ctx, d, k));
 
-    Array::create(impl::get_data_uri(uri), impl::create_data_schema<T>(ctx, d));
+    Array::create(
+        impl::get_data_uri(uri), impl::create_data_schema<T>(ctx, d, k));
+
+    throw std::runtime_error("Implement the rest");
   }
 
   VectorArray(
