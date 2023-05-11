@@ -9,6 +9,10 @@ namespace tiledb::vector_search {
 
 namespace impl {
 
+const std::string& kmeans_id_attribute_name = "__kmeans_id";
+
+const std::string& vector_attribute_name = "__vector";
+
 template <class T>
 constexpr int get_d(const std::vector<std::span<T>>& vectors) {
   if (vectors.empty()) {
@@ -25,11 +29,15 @@ constexpr int get_d(const std::vector<std::span<T>>& vectors) {
 }
 
 template <class T>
-ArraySchema create_kmeans_index_schema(const Context& ctx, int d, int k) {
+ArraySchema create_kmeans_index_schema(
+    const Context& ctx, const ArraySchema& schema, int k) {
   return ArraySchema{ctx, TILEDB_DENSE}
-      .set_domain(Domain{ctx}.add_dimension(
-          Dimension::create<int>(ctx, "kmeans_id", {0, k - 1})))
-      .add_attribute(Attribute::create<T>(ctx, "value").set_cell_val_num(d));
+      .set_domain(Domain{ctx}
+                      .add_dimensions(schema.domain().dimensions())
+                      .add_dimension(Dimension::create<int>(
+                          ctx, kmeans_id_attribute_name, {0, k - 1})))
+      .add_attribute(
+          Attribute::create<T>(ctx, vector_attribute_name).set_cell_val_num(d));
 }
 
 std::string get_kmeans_index_uri(const std::string& uri) {
@@ -37,14 +45,25 @@ std::string get_kmeans_index_uri(const std::string& uri) {
 }
 
 template <class T>
-ArraySchema create_data_schema(const Context& ctx, int d, int k) {
-  return ArraySchema{ctx, TILEDB_DENSE}
-      .set_domain(Domain{ctx}
-                      .add_dimension(
-                          Dimension::create<int>(ctx, "kmeans_id", {0, k - 1}))
-                      .add_dimension(Dimension::create<int>(
-                          ctx, "object_id", {0, 999999999})))
-      .add_attribute(Attribute::create<T>(ctx, "vector").set_cell_val_num(d));
+ArraySchema create_data_schema(
+    const Context& ctx, int d, int k, const ArraySchema& schema) {
+  if (schema.has_attribute(vector_attribute_name)) {
+    throw std::invalid_argument(
+        "Array schema must not contain an attribute called '" +
+        vector_attribute_name + "'");
+  }
+  ArraySchema new_schema{ctx, schema.array_type()};
+  new_schema.set_domain(
+      Domain{ctx}
+          .add_dimension(Dimension::create<int>(ctx, "kmeans_id", {0, k - 1}))
+          .add_dimension(Dimension::create<int>(
+              ctx, "object_id", {0, std::numeric_limits<int>::max()})));
+  for (unsigned int i = 0; i < schema.attribute_num(); i++) {
+    new_schema.add_attribute(schema.attribute(i));
+  }
+  new_schema.add_attribute(
+      Attribute::create<T>(ctx, vector_attribute_name).set_cell_val_num(d));
+  return new_schema;
 }
 
 std::string get_data_uri(const std::string& uri) {
@@ -67,16 +86,17 @@ class VectorArray {
   static void create(
       const Context& ctx,
       const std::string& uri,
-      const std::vector<std::span<T>>& vectors) {
-    int d = impl::get_d(vectors);
+      const ArraySchema& schema,
+      int d) {
     int k = std::sqrt(d);
 
     Array::create(
         impl::get_kmeans_index_uri(uri),
-        impl::create_kmeans_index_schema<T>(ctx, d, k));
+        impl::create_kmeans_index_schema<T>(ctx, schema, k));
 
     Array::create(
-        impl::get_data_uri(uri), impl::create_data_schema<T>(ctx, d, k));
+        impl::get_data_uri(uri),
+        impl::create_data_schema<T>(ctx, d, k, schema));
 
     throw std::runtime_error("Implement the rest");
   }
@@ -98,7 +118,7 @@ class VectorArray {
    * Returns a list of the vectors alongside their ID.
    */
   std::vector<std::pair<std::vector<T>, int>> query(
-      std::span<T> vector, int top_k) {
+      const std::span<T> vector, int top_k) {
     if (top_k < 0) {
       throw std::invalid_argument("top_k cannot be negative");
     }
