@@ -49,7 +49,8 @@
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
-// #include <execution>
+// #include <format>     // Not suppored by Apple clang
+// #include <execution>  // Not suppored by Apple clang
 #include <iostream>
 #include <memory>
 #include <numeric>
@@ -63,6 +64,7 @@
 #include "ivf_query.h"
 #include "linalg.h"
 #include "timer.h"
+#include "utils.h"
 
 bool verbose = false;
 bool debug = false;
@@ -100,14 +102,14 @@ int main(int argc, char* argv[]) {
     nthreads = std::thread::hardware_concurrency();
   }
 
-  if (std::filesystem::exists(centroids_uri) == false) {
+  if (is_local_array(centroids_uri) && !std::filesystem::exists(centroids_uri)) {
     std::cerr << "Error: centroids URI does not exist: "
               << args["--centroids_uri"] << std::endl;
     return 1;
   }
   auto centroids = tdbMatrix<float, Kokkos::layout_left>(centroids_uri);
 
-  if (std::filesystem::exists(db_uri) == false) {
+  if (is_local_array(centroids_uri) && !std::filesystem::exists(db_uri)) {
     std::cerr << "Error: db URI does not exist: " << args["--centroids_uri"]
               << std::endl;
     return 1;
@@ -172,27 +174,41 @@ int main(int argc, char* argv[]) {
       auto x = std::equal(begin(indices), end(indices), begin(check));
 
       // Write out the arrays
+
+      // @todo Better checking for existing files and reporting errors
       auto part_uri = args["--part_uri"].asString();
       auto index_uri = args["--index_uri"].asString();
       auto id_uri = args["--id_uri"].asString();
 
       if (part_uri != "") {
-        part_uri = args["--part_uri"].asString();
-        if (std::filesystem::exists(part_uri)) {
-          // std::filesystem::remove(part_uri);
+        if (is_local_array(part_uri) && std::filesystem::exists(part_uri)) {
+          // Apple clang does not support std::format yet
+          // std::cerr << std::format("Error: URI {} already exists: " , part_uri) << std::endl;
+          std::cerr << "Error: URI " << part_uri << " already exists: " << std::endl;
+          std::cerr << "This is a dangerous operation, so we will not overwrite the file." << std::endl;
+          std::cerr << "Please delete the file manually and try again." << std::endl;
+          return 1;
+          // Too dangerous to have this ability
+          // std::filesystem::remove_all(part_uri);
         }
         write_matrix(shuffled_db, part_uri);
       }
       if (index_uri != "") {
-        index_uri = args["--index_uri"].asString();
-        if (std::filesystem::exists(index_uri)) {
+        if (is_local_array(index_uri) && std::filesystem::exists(index_uri)) {
           // std::filesystem::remove(index_uri);
+          std::cerr << "Error: URI " << index_uri << " already exists: " << std::endl;
+          std::cerr << "This is a dangerous operation, so we will not overwrite the file." << std::endl;
+          std::cerr << "Please delete the file manually and try again." << std::endl;
+          return 1;
         }
         write_matrix(indices, index_uri);
       }
       if (id_uri != "") {
-        id_uri = args["--id_uri"].asString();
-        if (std::filesystem::exists(id_uri)) {
+        if (is_local_array (id_uri) && std::filesystem::exists(id_uri)) {
+          std::cerr << "Error: URI " << id_uri << " already exists: " << std::endl;
+          std::cerr << "This is a dangerous operation, so we will not overwrite the file." << std::endl;
+          std::cerr << "Please delete the file manually and try again." << std::endl;
+          return 1;
           // std::filesystem::remove(id_uri);
         }
         write_matrix(shuffled_ids, id_uri);
@@ -258,6 +274,8 @@ int main(int argc, char* argv[]) {
 
         // Copy the partition into the storage
         // For each vector in the partition
+        // @todo parallelize this loop
+        // @todo don't make contiguous copy -- just search each cluster separately
         for (size_t i = start; i < end; ++i) {
           // Copy the vector into all_results and ids into all_ids
           // @todo Abstract all of this explicit loop based assignment
