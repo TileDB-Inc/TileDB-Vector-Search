@@ -1,28 +1,108 @@
-### Terminology
-
-Faiss naming of algorithms:
-*  indexFlatL2
-*  indexIVFFlat
-*  indexIVFPQ
+# C++ Support Library for Similarity Search with TileDB
 
 
-For the C++ implementation, our naming:
-* flat -- can use L2, cosine, jaccard comparisons; does all-all; stores flat vectors
-* ivf_flat -- uses inverted file index and flat vector storage
-* ivf_pq -- uses inverted file index and pq vector storage
+
+## The Partitioned Search Driver
+
+The `main` program for the driver performing partitioned search is  
+called `ivf_flat` which does an approximate search based on a given partition (an index).
+
+### Building ivf_hack
+
+`ivf_hack` is built in the same manner as `flat` (below).
 
 
-The main program is
+
+### Running ivf_hack
+
+Usage:
+
+```
+Usage:
+    tdb (-h | --help)
+    tdb  [--db_uri URI  --centroids_uri URI] --index_uri URI --part_uri URI --id_uri URI
+         [--k NN] [--cluster NN] [--write] [--nthreads N] [-d | -v]
+
+Options:
+    -h, --help            show this screen
+    --db_uri URI          database URI with feature vectors
+    --centroids_uri URI   query URI with feature vectors to search for
+    --index_uri URI       URI to store the paritioning index
+    --part_uri URI        URI to store the partitioned data
+    --id_uri URI          URI to store original IDs of vectors
+    --write               write the index to disk [default: false]
+    --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
+    --k NN                number of nearest neighbors to search for [default: 10]
+    --cluster NN          number of clusters to use [default: 100]
+    -d, --debug           run in debug mode [default: false]
+    -v, --verbose         run in verbose mode [default: false]
+)";
+```
+
+
+### Running `ivf_hack` with TileDB Arrays
+
+`ivf_hack` reads and writes its data from TileDB arrays.
+Unlike `flat` below, `ivf_hack` does not support reading from data files.
+
+`ivf_hack` can be run in one of two modes: query mode or write mode.
+
+The usage for query mode and write mode is essentially the same, with the exception that query mode can take a URI specifying a set of query vectors, whereas write mode takes the argument `--write` to indicate write mode.
+
+#### Query mode
+
+Query mode takes as input a vector database, an array centroids, 
+a reordered vector database, an array containing partition indexes for the reordered vector database, an array of original ids of the shuffled vectors.
+Optionally, the user can optionlly specify an array containing query vectors as well as optionally specify an array for writing the found nearest neighbors, their indices, and their scores. 
+
+The user can also specify values for how many nearest neighbors to return for
+each search vector, and how many partitions to use in searching for each search vector.
+
+Example:
+```
+  ivf_hack --id_uri s3://tiledb-lums/kmeans/ivf_hack/ids              \
+           --index_uri s3://tiledb-lums/kmeans/ivf_hack/index         \
+           --part_uri s3://tiledb-lums/kmeans/ivf_hack/parts          \ 
+           --centroids_uri s3://tiledb-lums/kmeans/ivf_hack/centroids \
+           --db_uri s3://tiledb-lums/sift/sift_base 
+```
+
+#### Write mode
+Write mode takes as input a vector database and an array of centroids. Using the centroids, it 
+partitions the vector database and saves the partitioning data in three arrays, the shuffled (partitioned) vector database, the partitioning indexes, and the original vector database ids for the shuffled vectors. 
+
+Example:
+```
+  ivf_hack --id_uri s3://tiledb-lums/kmeans/ivf_hack/ids              \
+           --index_uri s3://tiledb-lums/kmeans/ivf_hack/index         \
+           --part_uri s3://tiledb-lums/kmeans/ivf_hack/parts          \ 
+           --centroids_uri s3://tiledb-lums/kmeans/ivf_hack/centroids \
+           --db_uri s3://tiledb-lums/sift/sift_base                   \
+           --write 
+```
+
+Note that the program will **not** overwrite any existing arrays.  It is the responsibility of the user to make sure that the arrays to be written do not exist when the program is executed.
+
+**NB:** The reason write mode exists is because the available partitioning data was created with faiss, which I am not wholly familiar with.  It seems to only return centroids rather than the partitioned set of vectors.
+
+However, this was not redundant development.  The functionality for partitioning, shuffling, and so forth will be necessary when we implement our own k-means algorithm.
+
+**TODO:**  Split query and write mode into separate driver programs.  (They began as a single program because I was not initially writing out intermediate state.)
+
+## The Flat Search Driver
+
+The `main` program for the driver performing flat search is  
 called `flat` which does an exhaustive vector-by-vector comparison between a given
 set of vectors and a given set of query vectors.
 
-## Very basic steps
+
 
 ### Running flat
 
 The `flat` program is a basic program that reads the "texmex" sift feature vector data, either
 from a TileDB array or from a file.
-The program performs either L2 (default) or (TBD) cosine similarity and checks the result against
+(**NB:** When reading from a file, the format must be the sift format.  The program is able to handle arbitrary formats when reading from TileDB arrays.  Plain file support will be deprecated in the future.)
+The program performs either L2 (default), (TBD) cosine similarity, or Jaccard similarity and checks the result against
 a given ground truth.  If the computed results do not match the ground truth, the
 differences are reported on the console.  **Note** A correct computation is not
 unique.  That is, multiple vectors may return the same results, i.e., there may
@@ -107,25 +187,6 @@ then you likely need a more recent version of `libtiledb`.  To fix this, first t
 should be built with S3 support.
 
 
-### About the datasets
-
-`flat` is set up to run with the sift reference arrays available on `http://corpus-texmex.irisa.fr`
-and complete info about those arrays can be found there.  The basic characteristics of
-the problems are:
-
-| Vector Set  | name      | dimension | nb base       | nb query | nb learn     | format  |
-|-------------|-----------|-----------|---------------|----------|--------------|---------|
-| ANN_SIFT10K | siftsmall | 128       | 10,000	       | 100	  | 25,000	     | fvecs   |
-| ANN_SIFT1M  | sift      | 128	   | 1,000,000	   | 10,000	  | 100,000	     | fvecs   |
-| ANN_GIST1M  | gist      | 960       | 1,000,000	   | 1,000	  | 500,000      | 	fvecs  |
-|  ANN_SIFT1B | sift1b    | 128	   | 1,000,000,000 | 10,000	  | 100,000,000	 | bvecs   |
-
-
-These have been ingested as TileDB arrays and can be found at
-```text
-s3://tiledb-lums/sift/${name}_{base,query,learn,ground_truth}
-```
-Red permissions are set for all of TileDB.
 
 ### Run `flat` with TileDB arrays
 
@@ -219,6 +280,28 @@ For the other approaches, different parameter values may result
 in different performance.  Significant experimentation would need
 to be done to find those, however, and it isn't clear that the
 performance of `gemm` could be matched at any rate.
+
+
+
+## About the datasets
+
+`flat` is set up to run with the sift reference arrays available on `http://corpus-texmex.irisa.fr`
+and complete info about those arrays can be found there.  The basic characteristics of
+the problems are:
+
+| Vector Set  | name      | dimension | nb base       | nb query | nb learn     | format  |
+|-------------|-----------|-----------|---------------|----------|--------------|---------|
+| ANN_SIFT10K | siftsmall | 128       | 10,000	       | 100	  | 25,000	     | fvecs   |
+| ANN_SIFT1M  | sift      | 128	   | 1,000,000	   | 10,000	  | 100,000	     | fvecs   |
+| ANN_GIST1M  | gist      | 960       | 1,000,000	   | 1,000	  | 500,000      | 	fvecs  |
+|  ANN_SIFT1B | sift1b    | 128	   | 1,000,000,000 | 10,000	  | 100,000,000	 | bvecs   |
+
+
+These have been ingested as TileDB arrays and can be found at
+```text
+s3://tiledb-lums/sift/${name}_{base,query,learn,ground_truth}
+```
+Read permissions are set for all of TileDB.
 
 
 ### Get file data (optional)

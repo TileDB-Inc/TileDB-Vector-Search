@@ -100,6 +100,9 @@ class Vector : public std::span<T> {
   }
 };
 
+template <class I = size_t>
+using matrix_extents = Kokkos::extents<I, std::dynamic_extent, std::dynamic_extent>;
+
 /**
  * @brief A 2-D matrix class that owns its storage.  The interface is
  * that of mdspan.
@@ -107,16 +110,12 @@ class Vector : public std::span<T> {
  * @tparam T
  * @tparam LayoutPolicy
  * @tparam I
+ *
+ * @todo Make an alias for extents.
  */
 template <class T, class LayoutPolicy = Kokkos::layout_right, class I = size_t>
-class Matrix : public Kokkos::mdspan<
-                   T,
-                   Kokkos::extents<I, std::dynamic_extent, std::dynamic_extent>,
-                   LayoutPolicy> {
-  using Base = Kokkos::mdspan<
-      T,
-      Kokkos::extents<I, std::dynamic_extent, std::dynamic_extent>,
-      LayoutPolicy>;
+class Matrix : public Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy> {
+  using Base = Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy>;
   using Base::Base;
 
  public:

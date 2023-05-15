@@ -1,12 +1,14 @@
-# Glossary of Terms
+## Glossary of Terms
 
 This glossary is intended to describe the terms used in this project to facilitate communication.  Right now these are organized alphabetically, but we might want to put different terms into different subsections.  However, since this is only for internal consumption, additional organization is probably not necessary.
 
 Please feel free to suggest better terminology.  Whatever terms we choose, it is extremely important that we all use the same terminogy.
 
+Also included below is suggested naming of similarity search notions to C++ abstractions.  Initially these will just be datatypes and named template parameters.  Later we can create actual concepts.
+
 * **approximate nearest neighbor (ANN)** Search algorithms not guaranteed to find the exact nearest neighbor in a similarity search, but instead returns a point that is expected to be close to the true nearest neighbor.
 
-* **embedding** A mapping of features from a data item in a dataset to a finite-dimensional vector.  cf https://www.pinecone.io/learn/vector-embeddings-for-developers/ .  Embeddings can be generated from ML models and represent the outputs of the final stage of the model (just before computation of the loss function).
+* **embedding** A mapping of features from a data item in a dataset to a finite-dimensional vector.  cf https://www.pinecone.io/learn/vector-embeddings-for-developers/ .  Embeddings can be generated from ML models and represent the outputs of the final stage of the model (just before computation of the loss function).  The motivation for embeddings is to reduce the dimensionality of the original items in such a way that original items that are similar to each other (according to designated features) have corresponding vector embeddings that are also close to each other.
 
 * **feature space:** A mathematical representation of a set of objects or data points, where each object is described by a set of *features* (or variables) that are important for a particular task or analysis.
 
@@ -33,3 +35,94 @@ Please feel free to suggest better terminology.  Whatever terms we choose, it is
 * **vector** A one-dimension container of elements that can be indexed to retrieve an element.  The index values are assumed to be in the range of `[0, N)`.  `N` is the *dimension* (or *size* or *length*) of the vector.  This should not be confused with `std::vector` and we should explicitly refer to `std::vector` when that is what we actually mean.
 
 * **vector database** A collection of vectors representing embeddings from a given corpus of data.  These are the complete set of vectors that we want to query.  We can talk about the vector database being stored in a TileDB array or being held in memory.  
+
+## Reflecting Terminology in C++ Abstractions
+
+### Enums
+
+Faiss naming of our highest-priority algorithms: 
+*  indexFlatL2
+*  indexIVFFlat
+*  indexIVFPQ
+
+Milvus naming:
+* Flat
+* IVF_Flat
+* IVF_PQ
+
+
+For the C++ implementation, our naming:
+* `flat` -- can use L2, cosine, jaccard comparisons; does all-all; stores flat vectors
+* `ivf_flat` -- uses inverted file index and flat vector storage (and exact search)
+* `ivf_pq` -- uses inverted file index and pq vector storage
+
+### Data types
+
+### Functions
+
+High-level pseudo description of interfaces (Python but good C++ should be similar)
+
+Faiss:
+```
+xb = ... # database
+xq = ... # query
+index = faiss.IndexFlatL2(d)
+index.add(xb)
+D, I = index.search(xq, k)  # Returns Data and Indices for nearest neighbors
+```
+
+Or
+
+```
+xb = ... # database
+xq = ... # query
+nlist = 50  # how many cells
+quantizer = faiss.IndexFlatL2(d)
+index = faiss.IndexIVFFlat(quantizer, d, nlist)nlist = 50  # how many cells
+index.train(xb)  # or could be separate, smaller, training set
+index.add(xb)
+D, I = index.search(xq, k)
+```
+
+Milvus:
+
+```
+status, results = conn.search(collection_name, query_records, top_k, params)
+```
+
+
+### C++
+
+```
+// One dimensional storage. A lightweight wrapper around span, but that owns its storage 
+template <class T>
+class Vector;
+
+// Two dimensional storage. A lightweight wrapper around span, but that owns its storage 
+template <class T>
+class Matrix;
+
+// Feature vector type.  Vectors can be used for more than feature vectors
+template <class T>
+using feature_vector_type = Vector<T>;   
+
+// Collection of feature vectors
+template <class T>
+using feature_vector_list = Matrix<T>;   
+
+// TBD
+template <class T, class I>
+class index_class;
+
+// Do similar
+template <class T, class I>
+std::tuple<feature_vector_list<T>, Matrix<I>> flat_query(const feature_vector_list<T>& collection, 
+                                               const feature_vector_list<T>& query_records,
+                                               size_t k); 
+
+std::tuple<feature_vector_list<T>, Matrix<I>> ivf_query(const index_class_type& index,
+                                               const feature_vector_list<T>& collection, 
+                                               const feature_vector_list<T>& query_records,
+                                               size_t nprobe, size_t k); 
+```
+

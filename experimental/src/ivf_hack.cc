@@ -27,7 +27,8 @@
  *
  * @section DESCRIPTION
  *
- * Driver program for kmeans.
+ * Driver program for experimenting with algorithms and data structures
+ * for kmeans.
  *
  * The program can operate in one of two modes.
  *
@@ -70,11 +71,11 @@ bool verbose = false;
 bool debug = false;
 
 static constexpr const char USAGE[] =
-    R"(kmeans: demo hack feature vector search with kmeans index.
+    R"(ivf_hack: demo hack feature vector search with kmeans index.
 Usage:
     tdb (-h | --help)
-    tdb  [--db_uri URI  --centroids_uri URI] --index_uri URI --part_uri URI --id_uri URI
-         [--k NN] [--cluster NN] [--write] [--nthreads N] [-d | -v]
+    tdb   --db_uri URI --centroids_uri URI --index_uri URI --part_uri URI --id_uri URI
+          [--query_uri URI] [--output_uri URI] [--k NN] [--cluster NN] [--write] [--nthreads N] [-d | -v]
 
 Options:
     -h, --help            show this screen
@@ -83,6 +84,8 @@ Options:
     --index_uri URI       URI to store the paritioning index
     --part_uri URI        URI to store the partitioned data
     --id_uri URI          URI to store original IDs of vectors
+    --query_uri URI       URI to store query vectors
+    --output_uri URI      URI to store search results
     --write               write the index to disk [default: false]
     --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
     --k NN                number of nearest neighbors to search for [default: 10]
