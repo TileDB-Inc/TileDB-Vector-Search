@@ -105,7 +105,7 @@ auto qv_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
 
   using element = std::pair<float, int>;
 
-  Matrix<size_t> top_k(k, q.num_cols());
+  ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
   // Have to do explicit asynchronous threading here, as the current parallel
   // algorithms have iterator-based interaces, and the `Matrix` class does not

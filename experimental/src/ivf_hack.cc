@@ -75,7 +75,8 @@ static constexpr const char USAGE[] =
 Usage:
     tdb (-h | --help)
     tdb   --db_uri URI --centroids_uri URI --index_uri URI --part_uri URI --id_uri URI
-          [--query_uri URI] [--output_uri URI] [--k NN] [--cluster NN] [--write] [--nthreads N] [-d | -v]
+         [--output_uri URI] [--query_uri URI] [--nqueries NN] [--k NN] [--cluster NN]
+         [--write] [--nthreads N] [-d | -v]
 
 Options:
     -h, --help            show this screen
@@ -84,8 +85,9 @@ Options:
     --index_uri URI       URI to store the paritioning index
     --part_uri URI        URI to store the partitioned data
     --id_uri URI          URI to store original IDs of vectors
-    --query_uri URI       URI to store query vectors
     --output_uri URI      URI to store search results
+    --query_uri URI       URI to store query vectors
+    --nqueries NN         number of query vectors to use [default: 1]
     --write               write the index to disk [default: false]
     --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
     --k NN                number of nearest neighbors to search for [default: 10]
@@ -238,12 +240,21 @@ int main(int argc, char* argv[]) {
       size_t nprobe = args["--cluster"].asLong();
       size_t k_nn = args["--k"].asLong();
 
-      // Pick first column of db as query vector
-      // @todo add query_uri as an argument
-      auto q = ColMajorMatrix<float>{centroids.num_rows(), 1};
-      for (size_t i = 0; i < centroids.num_rows(); ++i) {
-        q(i, 0) = db(i, 0);
-      }
+      auto query_uri = args["--query_uri"] ? args["--query_uri"].asString() : ""; // args["--query_uri"].asString();
+
+      auto nqueries = (size_t)args["--nqueries"].asLong();
+      auto q = [&]() -> ColMajorMatrix<float> {
+        if (query_uri != "") {
+          auto qq = tdbMatrix<float, Kokkos::layout_left>(query_uri, nqueries);
+          return qq;
+        } else {
+          auto qq = ColMajorMatrix<float>{centroids.num_rows(), nqueries};
+          for (size_t i = 0; i < centroids.num_rows(); ++i) {
+            qq(i, 0) = db(i, 0);
+          }
+          return qq;
+        }
+      }();
 
       // get closest centroid for each query vector
       auto top_k = qv_query(centroids, q, nprobe, nthreads);

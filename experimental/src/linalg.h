@@ -254,8 +254,31 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   tiledb::ArraySchema schema_;
 
  public:
+
+#if 0
+  if constexpr (std::is_same_v<LayoutPolicy, Kokkos::layout_right>) {
+    return std::span(&Base::operator()(i, 0), ncols_);
+  } else {
+    return std::span(&Base::operator()(0, i), nrows_);
+  }
+#endif
+
+  tdbMatrix (const std::string& uri, size_t num_elts) noexcept
+  requires (std::is_same_v<LayoutPolicy, Kokkos::layout_right>)
+      : tdbMatrix(uri, num_elts, 0)
+  {}
+  tdbMatrix (const std::string& uri, size_t num_elts) noexcept
+    requires (std::is_same_v<LayoutPolicy, Kokkos::layout_left>)
+      : tdbMatrix(uri, 0, num_elts)
+  {}
+
+  tdbMatrix (const std::string& uri) noexcept
+    requires (std::is_same_v<LayoutPolicy, Kokkos::layout_left>)
+      : tdbMatrix(uri, 0, 0)
+  {}
+
   tdbMatrix(
-      const std::string& uri) noexcept
+      const std::string& uri, size_t num_rows, size_t num_cols) noexcept
       : array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()}
   {
@@ -274,13 +297,26 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
                   - array_rows_.template domain<row_domain_type>().first + 1)};
     auto mat_cols_{(array_cols_.template domain<col_domain_type>().second
                    - array_cols_.template domain<col_domain_type>().first + 1)};
-
+    if (num_rows != 0) {
+      mat_rows_ = num_rows;
+    }
+    if (num_cols != 0) {
+      mat_cols_ = num_cols;
+    }
+#if 0
+    if constexpr (std::is_same_v<LayoutPolicy, Kokkos::layout_right>) {
+      return std::span(&Base::operator()(i, 0), ncols_);
+    } else {
+      return std::span(&Base::operator()(0, i), nrows_);
+    }
+#endif
     auto attr_num {schema_.attribute_num()};
     auto attr = schema_.attribute(idx);
 
     std::string attr_name = attr.name();
     tiledb_datatype_t attr_type = attr.type();
 
+    // @todo: Make this configurable.
     ctx_.set_tag("vfs.s3.region", "us-west-2");
 
     // Create a subarray that reads the array up to the specified subset.
