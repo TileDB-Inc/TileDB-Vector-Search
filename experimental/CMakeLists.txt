@@ -45,6 +45,12 @@ set(CMAKE_CXX_STANDARD 20)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 # -----------------------------------------------------------------------------
+# Build options and defaults
+# -----------------------------------------------------------------------------
+
+option(TILEDB_VS_ENABLE_PYTHON "Enable Python API" OFF)
+
+# -----------------------------------------------------------------------------
 # Build types and default flags
 # -----------------------------------------------------------------------------
 
@@ -110,3 +116,7 @@ include(mdspan)
 
 add_subdirectory(src)
 add_subdirectory(src/test)
+
+if (TILEDB_VS_ENABLE_PYTHON)
+    add_subdirectory(python)
+endif()
