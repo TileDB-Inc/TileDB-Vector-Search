@@ -52,6 +52,8 @@
 #include <mdspan/mdspan.hpp>
 #include <tiledb/tiledb>
 
+#include "timer.h"
+
 /**
  * @brief A 1-D vector class that owns its storage.
  * @tparam T

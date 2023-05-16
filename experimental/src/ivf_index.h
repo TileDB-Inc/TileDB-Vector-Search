@@ -70,7 +70,7 @@ auto ivf_flat(
 
     // @todo: Need to make ground_truth optional
     // @todo: Need to return scores
-    query_gemm(centroids, data, dummy, top_k, 1, false, nthreads);
+    //query_gemm(centroids, data, dummy, top_k, 1, false, nthreads);
 
     // compute top_k scores of centroids vs vectors
     //   note that the roles of data vectors and query vectors is reversed,
