@@ -38,6 +38,8 @@
 #include "flat_query.h"
 #include "linalg.h"
 
+#include <random>
+
 enum class InitType { random, kmeanspp };
 enum class KMeansAlgorithm { lloyd, elkan };
 

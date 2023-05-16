@@ -38,11 +38,12 @@
 #include <cmath>
 #include <future>
 #include <iostream>
-#include <span>
-// #include <execution>
 #include <memory>
+#include <numeric>
 #include <queue>
 #include <set>
+#include <span>
+// #include <execution>
 
 #include "timer.h"
 
