@@ -70,7 +70,6 @@ auto kmeans_query(
     auto&& nprobe,
     auto&& k_nn,
     auto&& nthreads) {
-
   // get closest centroid for each query vector
   auto top_k = qv_query(centroids, q, nprobe, nthreads);
 

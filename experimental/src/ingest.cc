@@ -1,8 +1,7 @@
 
 
-#include "linalg.h"
 #include <docopt.h>
-
+#include "linalg.h"
 
 static constexpr const char USAGE[] =
     R"(ingest: create TileDB array from input data
@@ -33,17 +32,14 @@ int main(int argc, char* argv[]) {
   if (type == "char" || type == "byte" || type == "uint8" || type == "int8") {
     auto in = tdbColMajorMatrix<uint8_t>(input_uri, subset);
     write_matrix<uint8_t>(in, output_uri);
-  } else
-  if (type == "int" || type == "uint32" || type == "int32") {
+  } else if (type == "int" || type == "uint32" || type == "int32") {
     auto in = tdbColMajorMatrix<uint32_t>(input_uri, subset);
     write_matrix<uint32_t>(in, output_uri);
-  } else
-  if (type == "float" || type == "float32") {
+  } else if (type == "float" || type == "float32") {
     auto in = tdbColMajorMatrix<float>(input_uri, subset);
     write_matrix<float>(in, output_uri);
   } else {
     std::cerr << "Unknown type: " << type << std::endl;
     return 1;
-    }
+  }
 }
-

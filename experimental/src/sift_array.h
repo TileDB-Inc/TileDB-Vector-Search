@@ -133,9 +133,12 @@ class sift_array : public std::vector<std::span<T>> {
     array_.close();
     assert(tiledb::Query::Status::COMPLETE == query.query_status());
   }
-  auto& operator()(size_t i, size_t j)       { return Base::operator[](j)[i]; }
-  auto  operator()(size_t i, size_t j) const { return Base::operator[](j)[i]; }
+  auto& operator()(size_t i, size_t j) {
+    return Base::operator[](j)[i];
+  }
+  auto operator()(size_t i, size_t j) const {
+    return Base::operator[](j)[i];
+  }
 };
-
 
 #endif  // TDB_SIFT_ARRAY_H

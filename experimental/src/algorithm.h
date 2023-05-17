@@ -64,8 +64,7 @@ struct parallel_unsequenced_policy {
 };
 struct indexed_parallel_policy {
   const size_t nthreads_;
-  indexed_parallel_policy(
-      size_t nthreads = std::thread::hardware_concurrency())
+  indexed_parallel_policy(size_t nthreads = std::thread::hardware_concurrency())
       : nthreads_(nthreads) {
   }
 };
@@ -122,12 +121,16 @@ void for_each(
 
   for (size_t n = 0; n < nthreads; ++n) {
     auto start = std::min<size_t>(n * block_size, container_size);
-    auto stop = std::min<size_t>((n+1) * block_size, container_size);
+    auto stop = std::min<size_t>((n + 1) * block_size, container_size);
 
     if (start != stop) {
       futs.emplace_back(std::async(
           std::launch::async,
-          [n, begin, start, stop, f = std::forward<UnaryFunction>(f)]() mutable {
+          [n,
+           begin,
+           start,
+           stop,
+           f = std::forward<UnaryFunction>(f)]() mutable {
             for (size_t i = start; i < stop; ++i) {
               std::forward<UnaryFunction>(f)(begin[i], n, i);
             }
@@ -139,7 +142,6 @@ void for_each(
   }
 }
 
+}  // namespace stdx
 
-} // namespace stdx
-
-#endif // TDB_ALGORITHM_H
+#endif  // TDB_ALGORITHM_H

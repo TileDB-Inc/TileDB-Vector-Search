@@ -29,4 +29,3 @@
  *
  * Very simple class for holding stats about an array.
  */
-

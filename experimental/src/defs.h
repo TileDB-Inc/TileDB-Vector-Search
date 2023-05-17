@@ -47,7 +47,6 @@
 
 #include "timer.h"
 
-
 /**
  * @brief Compute L2 distance between two vectors.
  * @tparam V
@@ -102,7 +101,6 @@ auto cosine(V const& a, V const& b) {
 template <class M, class V, class Function>
 auto col_sum(
     const M& m, V& v, Function f = [](auto& x) -> const auto& { return x; }) {
-
   int size_m = size(m);
   int size_m0 = size(m[0]);
 
@@ -122,7 +120,6 @@ auto col_sum(
 template <class M, class V, class Function>
 auto mat_col_sum(
     const M& m, V& v, Function f = [](auto& x) -> const auto& { return x; }) {
-
   auto num_cols = m.num_cols();
   auto num_rows = m.num_rows();
 
@@ -134,7 +131,6 @@ auto mat_col_sum(
     v[j] = vj;
   }
 }
-
 
 /**
  * @brief Check the computed top k vectors against the ground truth.
@@ -258,7 +254,5 @@ void get_top_k(
     futs[n].get();
   }
 }
-
-
 
 #endif  // TDB_DEFS_H

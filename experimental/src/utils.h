@@ -38,7 +38,7 @@
 #include <string>
 
 bool is_s3_array(const std::string& array_uri) {
-  return regex_match(array_uri, std::regex {"^s3://.*"});
+  return regex_match(array_uri, std::regex{"^s3://.*"});
 }
 
 bool is_local_array(const std::string& array_uri) {

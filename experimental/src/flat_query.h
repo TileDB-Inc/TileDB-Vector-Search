@@ -56,8 +56,8 @@
 #define TDB_FLAT_QUERY_H
 
 #include "defs.h"
-#include "timer.h"
 #include "linalg.h"
+#include "timer.h"
 
 #include <cassert>
 #include <cmath>
@@ -473,7 +473,7 @@ auto gemm_compute_scores(
         -2.0,
         db[0].data(),  // A: K x M -> A^T: M x K
         K,
-        q[0].data(),   // B: K x N
+        q[0].data(),  // B: K x N
         K,
         0.0,  // Overwrite the (uninitialized) target with the matrix product
         _score_data.data(),  // C: M x N
@@ -600,14 +600,14 @@ void query_gemm(
     [[maybe_unused]] bool hw,
     size_t nthreads) {
   auto scores = gemm_compute_scores(db, q, top_k, k, hw, nthreads);
-    {
-      life_timer _{"Checking results"};
+  {
+    life_timer _{"Checking results"};
 
-      size_t size_q = size(q);
-      for (size_t j = 0; j < size_q; ++j) {
-        verify_top_k(scores[j], top_k[j], g[j], k, j);
-      }
+    size_t size_q = size(q);
+    for (size_t j = 0; j < size_q; ++j) {
+      verify_top_k(scores[j], top_k[j], g[j], k, j);
     }
+  }
 }
 
 #endif  // TDB_FLAT_QUERY_H

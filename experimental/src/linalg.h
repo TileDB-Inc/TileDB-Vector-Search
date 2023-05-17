@@ -256,7 +256,6 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   tiledb::ArraySchema schema_;
 
  public:
-
   /**
    * @brief Construct a new tdbMatrix object, limited to `num_elts` vectors.
    * In this case, the `Matrix` is row-major, so the number of vectors is
@@ -265,10 +264,10 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param uri URI of the TileDB array to read.
    * @param num_elts Number of vectors to read from the array.
    */
-  tdbMatrix (const std::string& uri, size_t num_elts) noexcept
-  requires (std::is_same_v<LayoutPolicy, Kokkos::layout_right>)
-      : tdbMatrix(uri, num_elts, 0)
-  {}
+  tdbMatrix(const std::string& uri, size_t num_elts) noexcept
+      requires(std::is_same_v<LayoutPolicy, Kokkos::layout_right>)
+      : tdbMatrix(uri, num_elts, 0) {
+  }
 
   /**
    * @brief Construct a new tdbMatrix object, limited to `num_elts` vectors.
@@ -278,10 +277,10 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param uri URI of the TileDB array to read.
    * @param num_elts Number of vectors to read from the array.
    */
-  tdbMatrix (const std::string& uri, size_t num_elts) noexcept
-    requires (std::is_same_v<LayoutPolicy, Kokkos::layout_left>)
-      : tdbMatrix(uri, 0, num_elts)
-  {}
+  tdbMatrix(const std::string& uri, size_t num_elts) noexcept
+      requires(std::is_same_v<LayoutPolicy, Kokkos::layout_left>)
+      : tdbMatrix(uri, 0, num_elts) {
+  }
 
   /**
    * @brief Construct a new tdbMatrix object, reading all of the vectors in
@@ -289,10 +288,10 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    *
    * @param uri URI of the TileDB array to read.
    */
-  tdbMatrix (const std::string& uri) noexcept
-    //requires (std::is_same_v<LayoutPolicy, Kokkos::layout_left>)
-      : tdbMatrix(uri, 0, 0)
-  {}
+  tdbMatrix(const std::string& uri) noexcept
+      // requires (std::is_same_v<LayoutPolicy, Kokkos::layout_left>)
+      : tdbMatrix(uri, 0, 0) {
+  }
 
   /**
    * @brief Construct a new tdbMatrix object, reading a subset of the vectors
@@ -302,10 +301,9 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param num_rows
    * @param num_cols
    */
-  tdbMatrix(
-      const std::string& uri, size_t num_rows, size_t num_cols) noexcept
-      : tdbMatrix(uri, 0, num_rows, 0, num_cols) {}
-
+  tdbMatrix(const std::string& uri, size_t num_rows, size_t num_cols) noexcept
+      : tdbMatrix(uri, 0, num_rows, 0, num_cols) {
+  }
 
   /**
    * @brief General constructor.  Read a view of the array, delimited by the
@@ -320,10 +318,13 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @todo Make this compatible with various schemas we are using
    */
   tdbMatrix(
-      const std::string& uri, size_t row_begin, size_t row_end, size_t col_begin, size_t col_end) noexcept
+      const std::string& uri,
+      size_t row_begin,
+      size_t row_end,
+      size_t col_begin,
+      size_t col_end) noexcept
       : array_{ctx_, uri, TILEDB_READ}
-      , schema_{array_.schema()}
-  {
+      , schema_{array_.schema()} {
     life_timer _{"read matrix " + uri};
     using row_domain_type = int32_t;
     using col_domain_type = int32_t;
@@ -335,10 +336,12 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     auto array_cols_{domain_.dimension(1)};
     auto dim_num_{domain_.ndim()};
 
-    auto max_rows_{(array_rows_.template domain<row_domain_type>().second
-                  - array_rows_.template domain<row_domain_type>().first + 1)};
-    auto max_cols_{(array_cols_.template domain<col_domain_type>().second
-                   - array_cols_.template domain<col_domain_type>().first + 1)};
+    auto max_rows_{
+        (array_rows_.template domain<row_domain_type>().second -
+         array_rows_.template domain<row_domain_type>().first + 1)};
+    auto max_cols_{
+        (array_cols_.template domain<col_domain_type>().second -
+         array_cols_.template domain<col_domain_type>().first + 1)};
 
     if (row_begin == 0 && row_end == 0) {
       row_end = max_rows_;
@@ -349,7 +352,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     auto num_rows = row_end - row_begin;
     auto num_cols = col_end - col_begin;
 
-    auto attr_num {schema_.attribute_num()};
+    auto attr_num{schema_.attribute_num()};
     auto attr = schema_.attribute(idx);
 
     std::string attr_name = attr.name();
@@ -359,7 +362,11 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     ctx_.set_tag("vfs.s3.region", "us-west-2");
 
     // Create a subarray that reads the array up to the specified subset.
-    std::vector<int32_t> subarray_vals = {(int32_t)row_begin, (int32_t)row_end - 1, (int32_t)col_begin, (int32_t)col_end - 1};
+    std::vector<int32_t> subarray_vals = {
+        (int32_t)row_begin,
+        (int32_t)row_end - 1,
+        (int32_t)col_begin,
+        (int32_t)col_end - 1};
     tiledb::Subarray subarray(ctx_, array_);
     subarray.set_subarray(subarray_vals);
 
@@ -371,8 +378,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 #endif
 
     tiledb::Query query(ctx_, array_);
-    query.set_subarray(subarray)
-        .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
+    query.set_subarray(subarray).set_data_buffer(
+        attr_name, data_.get(), num_rows * num_cols);
 
     query.submit();
     array_.close();
@@ -381,7 +388,6 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     Base::operator=(Base{std::move(data_), num_rows, num_cols});
   }
 };
-
 
 /**
  * Convenience class for row-major matrices.
@@ -406,12 +412,17 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
   tiledb::Context ctx;
 
   size_t num_parts = 10;
-  size_t row_extent = std::max<size_t>((A.num_rows() + num_parts - 1) / num_parts, 2);
-  size_t col_extent = std::max<size_t>((A.num_cols() + num_parts - 1) / num_parts, 2);
+  size_t row_extent =
+      std::max<size_t>((A.num_rows() + num_parts - 1) / num_parts, 2);
+  size_t col_extent =
+      std::max<size_t>((A.num_cols() + num_parts - 1) / num_parts, 2);
 
   tiledb::Domain domain(ctx);
-  domain.add_dimension(tiledb::Dimension::create<int>(ctx, "rows", {{0, (int)A.num_rows()-1}}, row_extent))
-      .add_dimension(tiledb::Dimension::create<int>(ctx, "cols", {{0, (int)A.num_cols()-1}}, col_extent));
+  domain
+      .add_dimension(tiledb::Dimension::create<int>(
+          ctx, "rows", {{0, (int)A.num_rows() - 1}}, row_extent))
+      .add_dimension(tiledb::Dimension::create<int>(
+          ctx, "cols", {{0, (int)A.num_cols() - 1}}, col_extent));
 
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
@@ -421,7 +432,8 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
 
   tiledb::Array::create(uri, schema);
 
-  std::vector<int32_t> subarray_vals {0, (int)A.num_rows() - 1, 0, (int)A.num_cols() - 1};
+  std::vector<int32_t> subarray_vals{
+      0, (int)A.num_rows() - 1, 0, (int)A.num_cols() - 1};
 
   // Open array for writing
   tiledb::Array array(ctx, uri, TILEDB_WRITE);
@@ -431,13 +443,13 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
 
   tiledb::Query query(ctx, array);
   query.set_layout(TILEDB_ROW_MAJOR)
-      .set_data_buffer("values", &A(0, 0), (int)A.num_rows() * (int)A.num_cols())
+      .set_data_buffer(
+          "values", &A(0, 0), (int)A.num_rows() * (int)A.num_cols())
       .set_subarray(subarray);
   query.submit();
 
   array.close();
 }
-
 
 /**
  * Write the contents of a std::vector to a TileDB array.
@@ -452,7 +464,8 @@ void write_matrix(std::vector<T>& v, const std::string& uri) {
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
   tiledb::Domain domain(ctx);
-  domain.add_dimension(tiledb::Dimension::create<int>(ctx, "rows", {{0, (int)size(v)-1}}, tile_extent));
+  domain.add_dimension(tiledb::Dimension::create<int>(
+      ctx, "rows", {{0, (int)size(v) - 1}}, tile_extent));
 
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
@@ -462,7 +475,7 @@ void write_matrix(std::vector<T>& v, const std::string& uri) {
 
   tiledb::Array::create(uri, schema);
   // Set the subarray to write into
-  std::vector<int32_t> subarray_vals {0, (int)size(v) - 1};
+  std::vector<int32_t> subarray_vals{0, (int)size(v) - 1};
 
   // Open array for writing
   tiledb::Array array(ctx, uri, TILEDB_WRITE);
@@ -483,11 +496,11 @@ void write_matrix(std::vector<T>& v, const std::string& uri) {
  * Read the contents of a TileDB array into a std::vector.
  */
 template <class T>
-auto read_vector(std::string& uri)
-{
-  auto init_ = std::map<std::string, std::string> {{"vfs.s3.region", "us-west-2"}};
-  auto config_ = tiledb::Config {init_};
-  auto ctx_ = tiledb::Context {config_};
+auto read_vector(std::string& uri) {
+  auto init_ =
+      std::map<std::string, std::string>{{"vfs.s3.region", "us-west-2"}};
+  auto config_ = tiledb::Config{init_};
+  auto ctx_ = tiledb::Context{config_};
 
   auto array_ = tiledb::Array{ctx_, uri, TILEDB_READ};
   auto schema_ = array_.schema();
@@ -501,10 +514,11 @@ auto read_vector(std::string& uri)
   auto dim_num_{domain_.ndim()};
   auto array_rows_{domain_.dimension(0)};
 
-  auto vec_rows_{(array_rows_.template domain<domain_type>().second
-                  - array_rows_.template domain<domain_type>().first /*+ 1*/)};
+  auto vec_rows_{
+      (array_rows_.template domain<domain_type>().second -
+       array_rows_.template domain<domain_type>().first /*+ 1*/)};
 
-  auto attr_num {schema_.attribute_num()};
+  auto attr_num{schema_.attribute_num()};
   auto attr = schema_.attribute(idx);
 
   std::string attr_name = attr.name();
@@ -521,8 +535,8 @@ auto read_vector(std::string& uri)
   std::vector<T> data_(vec_rows_);
 
   tiledb::Query query(ctx_, array_);
-  query.set_subarray(subarray)
-      .set_data_buffer(attr_name, data_.data(), vec_rows_);
+  query.set_subarray(subarray).set_data_buffer(
+      attr_name, data_.data(), vec_rows_);
 
   query.submit();
   array_.close();

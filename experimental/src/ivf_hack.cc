@@ -108,7 +108,8 @@ int main(int argc, char* argv[]) {
     nthreads = std::thread::hardware_concurrency();
   }
 
-  if (is_local_array(centroids_uri) && !std::filesystem::exists(centroids_uri)) {
+  if (is_local_array(centroids_uri) &&
+      !std::filesystem::exists(centroids_uri)) {
     std::cerr << "Error: centroids URI does not exist: "
               << args["--centroids_uri"] << std::endl;
     return 1;
@@ -189,10 +190,15 @@ int main(int argc, char* argv[]) {
       if (part_uri != "") {
         if (is_local_array(part_uri) && std::filesystem::exists(part_uri)) {
           // Apple clang does not support std::format yet
-          // std::cerr << std::format("Error: URI {} already exists: " , part_uri) << std::endl;
-          std::cerr << "Error: URI " << part_uri << " already exists: " << std::endl;
-          std::cerr << "This is a dangerous operation, so we will not overwrite the file." << std::endl;
-          std::cerr << "Please delete the file manually and try again." << std::endl;
+          // std::cerr << std::format("Error: URI {} already exists: " ,
+          // part_uri) << std::endl;
+          std::cerr << "Error: URI " << part_uri
+                    << " already exists: " << std::endl;
+          std::cerr << "This is a dangerous operation, so we will not "
+                       "overwrite the file."
+                    << std::endl;
+          std::cerr << "Please delete the file manually and try again."
+                    << std::endl;
           return 1;
           // Too dangerous to have this ability
           // std::filesystem::remove_all(part_uri);
@@ -202,18 +208,26 @@ int main(int argc, char* argv[]) {
       if (index_uri != "") {
         if (is_local_array(index_uri) && std::filesystem::exists(index_uri)) {
           // std::filesystem::remove(index_uri);
-          std::cerr << "Error: URI " << index_uri << " already exists: " << std::endl;
-          std::cerr << "This is a dangerous operation, so we will not overwrite the file." << std::endl;
-          std::cerr << "Please delete the file manually and try again." << std::endl;
+          std::cerr << "Error: URI " << index_uri
+                    << " already exists: " << std::endl;
+          std::cerr << "This is a dangerous operation, so we will not "
+                       "overwrite the file."
+                    << std::endl;
+          std::cerr << "Please delete the file manually and try again."
+                    << std::endl;
           return 1;
         }
         write_matrix(indices, index_uri);
       }
       if (id_uri != "") {
-        if (is_local_array (id_uri) && std::filesystem::exists(id_uri)) {
-          std::cerr << "Error: URI " << id_uri << " already exists: " << std::endl;
-          std::cerr << "This is a dangerous operation, so we will not overwrite the file." << std::endl;
-          std::cerr << "Please delete the file manually and try again." << std::endl;
+        if (is_local_array(id_uri) && std::filesystem::exists(id_uri)) {
+          std::cerr << "Error: URI " << id_uri
+                    << " already exists: " << std::endl;
+          std::cerr << "This is a dangerous operation, so we will not "
+                       "overwrite the file."
+                    << std::endl;
+          std::cerr << "Please delete the file manually and try again."
+                    << std::endl;
           return 1;
           // std::filesystem::remove(id_uri);
         }
@@ -257,7 +271,16 @@ int main(int argc, char* argv[]) {
       }();
 
       // What should be returned here?  Maybe a pair with the ids and scores?
-      auto&& [kmeans_ids, all_ids] = kmeans_query(db, shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nthreads);
+      auto&& [kmeans_ids, all_ids] = kmeans_query(
+          db,
+          shuffled_db,
+          centroids,
+          q,
+          indices,
+          shuffled_ids,
+          nprobe,
+          k_nn,
+          nthreads);
       // Once this is a function, simply return kmeans_ids
       // For now, print the results to std::cout
       // @todo also get scores
