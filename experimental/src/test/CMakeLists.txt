@@ -58,7 +58,7 @@ add_executable(unit_ivf_index unit_ivf_index.cc)
 target_link_libraries(unit_ivf_index PRIVATE sift_test mdspan)
 
 add_executable(unit_ivf_query unit_ivf_query.cc)
-target_link_libraries(unit_ivf_query PRIVATE sift_test)
+target_link_libraries(unit_ivf_query PRIVATE sift_test mdspan)
 
 # Create the subdirectory for the extracted files
 file(MAKE_DIRECTORY ${SIFT_TEST_DIR}/siftsmall)
@@ -82,12 +82,12 @@ add_custom_target(download_siftsmall DEPENDS ${SIFT_TEST_DIR}/siftsmall/)
 # add_executable(target2 ...)
 
 # # Exclude the targets from the default build and set dependencies
-# set_target_properties(target1 PROPERTIES 
+# set_target_properties(target1 PROPERTIES
 #   EXCLUDE_FROM_ALL TRUE
 #   EXCLUDE_FROM_DEFAULT_BUILD TRUE
 # )
 
-# set_target_properties(target2 PROPERTIES 
+# set_target_properties(target2 PROPERTIES
 #   EXCLUDE_FROM_ALL TRUE
 #   EXCLUDE_FROM_DEFAULT_BUILD TRUE
 # )
