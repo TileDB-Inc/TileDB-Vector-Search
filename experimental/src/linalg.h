@@ -248,6 +248,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   using reference = typename Base::reference;
 
  private:
+  // @todo: Make this configurable
   std::map<std::string, std::string> init_{{"vfs.s3.region", "us-west-2"}};
   tiledb::Config config_{init_};
   tiledb::Context ctx_{config_};
@@ -358,8 +359,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     std::string attr_name = attr.name();
     tiledb_datatype_t attr_type = attr.type();
 
-    // @todo: Make this configurable.
-    ctx_.set_tag("vfs.s3.region", "us-west-2");
+    // This should be set in initialization
+    // ctx_.set_tag("vfs.s3.region", "us-west-2");
 
     // Create a subarray that reads the array up to the specified subset.
     std::vector<int32_t> subarray_vals = {
@@ -409,7 +410,9 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
   life_timer _{"write matrix " + uri};
 
   // Create context
-  tiledb::Context ctx;
+  std::map<std::string, std::string> init_{{"vfs.s3.region", "us-west-2"}};
+  tiledb::Config config_{init_};
+  tiledb::Context ctx {config_};
 
   size_t num_parts = 10;
   size_t row_extent =
@@ -458,8 +461,11 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
 template <class T>
 void write_matrix(std::vector<T>& v, const std::string& uri) {
   life_timer _{"write matrix " + uri};
+
   // Create context
-  tiledb::Context ctx;
+  std::map<std::string, std::string> init_{{"vfs.s3.region", "us-west-2"}};
+  tiledb::Config config_{init_};
+  tiledb::Context ctx {config_};
 
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
