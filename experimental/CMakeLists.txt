@@ -42,7 +42,7 @@ set(CMAKE_CXX_STANDARD 20)
 # -----------------------------------------------------------------------------
 # Extend the module path so we can find our custom modules
 # -----------------------------------------------------------------------------
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # -----------------------------------------------------------------------------
 # Build options and defaults
