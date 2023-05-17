@@ -94,7 +94,7 @@ TEST_CASE("algorithm: for_each", "[algorithm]") {
       for (size_t n = 0; n < nthreads; ++n) {
         size_t block_size = (length + nthreads - 1) / nthreads;
         auto start = std::min<size_t>(n * block_size, length);
-        auto stop = std::min<size_t>((n+1) * block_size, length);
+        auto stop = std::min<size_t>((n + 1) * block_size, length);
         unsigned j = stop * 2;
         if (stop != start) {
           CHECK(indices[n] == j);
@@ -176,4 +176,3 @@ TEST_CASE("algorithm: for_each", "[algorithm]") {
       break;
   }
 }
-

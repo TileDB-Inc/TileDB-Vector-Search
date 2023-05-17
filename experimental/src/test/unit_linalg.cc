@@ -33,15 +33,14 @@
 #include <tuple>
 #include "../linalg.h"
 
-
 using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 
 TEST_CASE("linalg: test test", "[linalg]") {
   REQUIRE(true);
 }
 
-
-TEMPLATE_LIST_TEST_CASE("linalg: test Vector constructor", "[linalg]", TestTypes) {
+TEMPLATE_LIST_TEST_CASE(
+    "linalg: test Vector constructor", "[linalg]", TestTypes) {
   auto a = Vector<TestType>(7);
   auto v = a.data();
   std::iota(v, v + 7, 1);
@@ -57,7 +56,7 @@ TEMPLATE_LIST_TEST_CASE("linalg: test Vector constructor", "[linalg]", TestTypes
       a(i) *= a[i];
     }
     for (size_t i = 0; i < a.num_rows(); ++i) {
-      CHECK(a(i) == (i + 1)*(i + 1));
+      CHECK(a(i) == (i + 1) * (i + 1));
     }
   }
   SECTION("values, copy") {
@@ -69,13 +68,15 @@ TEMPLATE_LIST_TEST_CASE("linalg: test Vector constructor", "[linalg]", TestTypes
       b(i) *= b[i];
     }
     for (size_t i = 0; i < a.num_rows(); ++i) {
-      CHECK(b(i) == (i + 1)*(i + 1));
+      CHECK(b(i) == (i + 1) * (i + 1));
     }
   }
 }
 
 TEMPLATE_LIST_TEST_CASE(
-    "linalg: test Matrix constructor, default oriented", "[linalg]", TestTypes) {
+    "linalg: test Matrix constructor, default oriented",
+    "[linalg]",
+    TestTypes) {
   auto a = Matrix<TestType>(3, 2);
   auto v = a.data();
   std::iota(v, v + 6, 1);
@@ -107,7 +108,6 @@ TEMPLATE_LIST_TEST_CASE(
     CHECK(b[5] == 6);
   }
 }
-
 
 TEMPLATE_LIST_TEST_CASE(
     "linalg: test Matrix constructor, row oriented", "[linalg]", TestTypes) {
@@ -193,7 +193,7 @@ auto make_matrix(size_t num_rows, size_t num_cols) {
   auto a = Matrix<TestType, Kokkos::layout_right>(3, 2);
   auto v = a.data();
   std::iota(v, v + 6, 1);
-  //return std::make_tuple(a, a.data(), v);
+  // return std::make_tuple(a, a.data(), v);
   return std::make_tuple(std::move(a), v);
 };
 
@@ -211,12 +211,12 @@ TEST_CASE("linalg: test Matrix copy constructor, row oriented", "[linalg]") {
 }
 
 TEST_CASE("linalg: test tdbMatrix constructor, row", "[linalg]") {
-// d1, d2, val_1
-//  data = np.array([
-//    [8, 6, 7, 5, 3, 1, 4, 1],
-//    [3, 0, 9, 9, 5, 9, 2, 7],
-//    [9, 8, 6, 7, 2, 6, 4, 3],
-//    [5, 3, 0, 9, 4, 2, 2, 4]], dtype=np.int32)
+  // d1, d2, val_1
+  //  data = np.array([
+  //    [8, 6, 7, 5, 3, 1, 4, 1],
+  //    [3, 0, 9, 9, 5, 9, 2, 7],
+  //    [9, 8, 6, 7, 2, 6, 4, 3],
+  //    [5, 3, 0, 9, 4, 2, 2, 4]], dtype=np.int32)
 
   try {
     auto a = tdbMatrix<int32_t>("array_dense_1");
@@ -237,7 +237,6 @@ TEST_CASE("linalg: test tdbMatrix constructor, row", "[linalg]") {
 }
 
 TEST_CASE("linalg: test tdbMatrix constructor, column", "[linalg]") {
-
   auto a = tdbMatrix<int32_t, Kokkos::layout_left>("array_dense_1");
 
   CHECK(a.num_rows() == 4);
