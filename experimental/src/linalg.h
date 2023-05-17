@@ -103,7 +103,7 @@ class Vector : public std::span<T> {
 };
 
 template <class I = size_t>
-using matrix_extents = Kokkos::extents<I, std::dynamic_extent, std::dynamic_extent>;
+using matrix_extents = Kokkos::dextents<I, 2>;
 
 /**
  * @brief A 2-D matrix class that owns its storage.  The interface is
