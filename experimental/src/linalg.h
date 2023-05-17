@@ -257,26 +257,68 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
  public:
 
+  /**
+   * @brief Construct a new tdbMatrix object, limited to `num_elts` vectors.
+   * In this case, the `Matrix` is row-major, so the number of vectors is
+   * the number of rows.
+   *
+   * @param uri URI of the TileDB array to read.
+   * @param num_elts Number of vectors to read from the array.
+   */
   tdbMatrix (const std::string& uri, size_t num_elts) noexcept
   requires (std::is_same_v<LayoutPolicy, Kokkos::layout_right>)
       : tdbMatrix(uri, num_elts, 0)
   {}
+
+  /**
+   * @brief Construct a new tdbMatrix object, limited to `num_elts` vectors.
+   * In this case, the `Matrix` is column-major, so the number of vectors is
+   * the number of columns.
+   *
+   * @param uri URI of the TileDB array to read.
+   * @param num_elts Number of vectors to read from the array.
+   */
   tdbMatrix (const std::string& uri, size_t num_elts) noexcept
     requires (std::is_same_v<LayoutPolicy, Kokkos::layout_left>)
       : tdbMatrix(uri, 0, num_elts)
   {}
 
+  /**
+   * @brief Construct a new tdbMatrix object, reading all of the vectors in
+   * the array.
+   *
+   * @param uri URI of the TileDB array to read.
+   */
   tdbMatrix (const std::string& uri) noexcept
     //requires (std::is_same_v<LayoutPolicy, Kokkos::layout_left>)
       : tdbMatrix(uri, 0, 0)
   {}
 
+  /**
+   * @brief Construct a new tdbMatrix object, reading a subset of the vectors
+   * and a subset of the elements in each vector.
+   *
+   * @param uri
+   * @param num_rows
+   * @param num_cols
+   */
   tdbMatrix(
       const std::string& uri, size_t num_rows, size_t num_cols) noexcept
       : tdbMatrix(uri, 0, num_rows, 0, num_cols) {}
 
 
-  // @todo Make this compatible with schemas we are using
+  /**
+   * @brief General constructor.  Read a view of the array, delimited by the
+   * given row and column indices.
+   *
+   * @param uri
+   * @param row_begin
+   * @param row_end
+   * @param col_begin
+   * @param col_end
+   *
+   * @todo Make this compatible with various schemas we are using
+   */
   tdbMatrix(
       const std::string& uri, size_t row_begin, size_t row_end, size_t col_begin, size_t col_end) noexcept
       : array_{ctx_, uri, TILEDB_READ}
