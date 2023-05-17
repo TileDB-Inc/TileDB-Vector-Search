@@ -52,6 +52,8 @@
 #include <mdspan/mdspan.hpp>
 #include <tiledb/tiledb>
 
+#include "timer.h"
+
 /**
  * @brief A 1-D vector class that owns its storage.
  * @tparam T
@@ -255,14 +257,6 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
  public:
 
-#if 0
-  if constexpr (std::is_same_v<LayoutPolicy, Kokkos::layout_right>) {
-    return std::span(&Base::operator()(i, 0), ncols_);
-  } else {
-    return std::span(&Base::operator()(0, i), nrows_);
-  }
-#endif
-
   tdbMatrix (const std::string& uri, size_t num_elts) noexcept
   requires (std::is_same_v<LayoutPolicy, Kokkos::layout_right>)
       : tdbMatrix(uri, num_elts, 0)
@@ -273,12 +267,18 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   {}
 
   tdbMatrix (const std::string& uri) noexcept
-    requires (std::is_same_v<LayoutPolicy, Kokkos::layout_left>)
+    //requires (std::is_same_v<LayoutPolicy, Kokkos::layout_left>)
       : tdbMatrix(uri, 0, 0)
   {}
 
   tdbMatrix(
       const std::string& uri, size_t num_rows, size_t num_cols) noexcept
+      : tdbMatrix(uri, 0, num_rows, 0, num_cols) {}
+
+
+  // @todo Make this compatible with schemas we are using
+  tdbMatrix(
+      const std::string& uri, size_t row_begin, size_t row_end, size_t col_begin, size_t col_end) noexcept
       : array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()}
   {
@@ -293,23 +293,20 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     auto array_cols_{domain_.dimension(1)};
     auto dim_num_{domain_.ndim()};
 
-    auto mat_rows_{(array_rows_.template domain<row_domain_type>().second
+    auto max_rows_{(array_rows_.template domain<row_domain_type>().second
                   - array_rows_.template domain<row_domain_type>().first + 1)};
-    auto mat_cols_{(array_cols_.template domain<col_domain_type>().second
+    auto max_cols_{(array_cols_.template domain<col_domain_type>().second
                    - array_cols_.template domain<col_domain_type>().first + 1)};
-    if (num_rows != 0) {
-      mat_rows_ = num_rows;
+
+    if (row_begin == 0 && row_end == 0) {
+      row_end = max_rows_;
     }
-    if (num_cols != 0) {
-      mat_cols_ = num_cols;
+    if (col_begin == 0 && col_end == 0) {
+      col_end = max_cols_;
     }
-#if 0
-    if constexpr (std::is_same_v<LayoutPolicy, Kokkos::layout_right>) {
-      return std::span(&Base::operator()(i, 0), ncols_);
-    } else {
-      return std::span(&Base::operator()(0, i), nrows_);
-    }
-#endif
+    auto num_rows = row_end - row_begin;
+    auto num_cols = col_end - col_begin;
+
     auto attr_num {schema_.attribute_num()};
     auto attr = schema_.attribute(idx);
 
@@ -320,28 +317,41 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     ctx_.set_tag("vfs.s3.region", "us-west-2");
 
     // Create a subarray that reads the array up to the specified subset.
-    std::vector<int32_t> subarray_vals = {0, mat_rows_ - 1, 0, mat_cols_ - 1};
+    std::vector<int32_t> subarray_vals = {(int32_t)row_begin, (int32_t)row_end - 1, (int32_t)col_begin, (int32_t)col_end - 1};
     tiledb::Subarray subarray(ctx_, array_);
     subarray.set_subarray(subarray_vals);
 
 #ifndef __APPLE__
-    auto data_ = std::make_unique_for_overwrite<T[]>(mat_rows_ * mat_cols_);
+    auto data_ = std::make_unique_for_overwrite<T[]>(num_rows * num_cols_);
 #else
     // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
-    auto data_ = std::unique_ptr<T[]>(new T[mat_rows_ * mat_cols_]);
+    auto data_ = std::unique_ptr<T[]>(new T[num_rows * num_cols]);
 #endif
 
     tiledb::Query query(ctx_, array_);
     query.set_subarray(subarray)
-        .set_data_buffer(attr_name, data_.get(), mat_rows_ * mat_cols_);
+        .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
 
     query.submit();
     array_.close();
     assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
-    Base::operator=(Base{std::move(data_), (size_type)mat_rows_, (size_type)mat_cols_});
+    Base::operator=(Base{std::move(data_), num_rows, num_cols});
   }
 };
+
+
+/**
+ * Convenience class for row-major matrices.
+ */
+template <class T, class I = size_t>
+using tdbRowMajorMatrix = tdbMatrix<T, Kokkos::layout_right, I>;
+
+/**
+ * Convenience class for column-major matrices.
+ */
+template <class T, class I = size_t>
+using tdbColMajorMatrix = tdbMatrix<T, Kokkos::layout_left, I>;
 
 /**
  * Write the contents of a Matrix to a TileDB array.

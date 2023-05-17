@@ -49,8 +49,8 @@
 
 // Interfaces
 //   faiss: D, I = index.search(xb, k) # search
-//   milvus: status, results = conn.search(collection_name, query_records, top_k,
-//   params) # search
+//   milvus: status, results = conn.search(collection_name, query_records,
+//   top_k, params) # search
 //     "nlist" to create index (how many bins)
 //     "nprobe" to search index (how many bins to search)
 
@@ -58,47 +58,72 @@
  * @brief Query a single vector against a vector database.
  * Intended to be a high-level interface that can dispatch
  * to the right query function depending on the size of the query.
- * Not implemented at the moment.
- * @todo Implement this function
- *
- * @tparam Q Type of queries
- * @param db URI of the vector database
- * @param q Queries
- * @param k Number of nearest neighbors to return
- * @param nprobe Number of bins to search
- * @param nthreads Number of threads to use
- * @return tuple of distances and indices
  */
-template <class Q>
+
 auto kmeans_query(
-    const std::string& db,
-    const Q& q,
-    size_t k,
-    size_t nprobe,
-    size_t nthreads) {
-  // @todo: dispatch to the right query function depending on size of q
-  //      (e.g., if q is a single vector, use query_single)
-  //      (e.g., if q is a matrix, use query_batch)
-  //      For now, just use query_single
+    auto&& db,
+    auto&& shuffled_db,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    auto&& shuffled_ids,
+    auto&& nprobe,
+    auto&& k_nn,
+    auto&& nthreads) {
 
-  // Load centroids
-  // Search nprobe of the centroids
-  // Search the corresponding db partitions
-}
+  // get closest centroid for each query vector
+  auto top_k = qv_query(centroids, q, nprobe, nthreads);
 
-/**
- * @brief Query a set of vectors agains a vector database.
- * @tparam DB Type of database (expected `Matrix`)
- * @tparam Q Type of queries (expected `Matrix`)
- * @param db Database
- * @param q Queries
- * @param k Number of nearest neighbors to return
- * @param nthreads Number of threads to use
- * @return tuple of indices of top k matches
- *
- * @todo Implement using parallel for_each.  Will need to add iterators etc
- * to the `Matrix` class to make this work.
- */
+  // Copy top k from Matrix to vector
+  std::vector<size_t> top_top_k(nprobe, 0);
+  for (size_t i = 0; i < nprobe; ++i) {
+    top_top_k[i] = top_k(i, 0);
+  }
+
+  // gather all the probed partitions into a single matrix
+  size_t total_size = 0;
+  for (size_t i = 0; i < size(top_top_k); ++i) {
+    total_size += indices[top_top_k[i] + 1] - indices[top_top_k[i]];
+  }
+
+  // Storage for the probed partitions and their ids
+  auto all_results = ColMajorMatrix<float>{centroids.num_rows(), total_size};
+  auto all_ids = std::vector<uint64_t>(total_size);
+
+  // Tracks next location to copy into
+  size_t ctr = 0;
+
+  // @todo parallelize this loop
+  // @todo don't make contiguous copy -- just search each cluster separately
+  // Copy the probed partitions into contiguous storage
+  // For each probed partition
+  for (size_t j = 0; j < nprobe; ++j) {
+    // Get begin and end indices of the partition
+    size_t start = indices[top_top_k[j]];
+    size_t end = indices[top_top_k[j] + 1];
+
+    // Copy the partition into the storage
+    // For each vector in the partition
+    for (size_t i = start; i < end; ++i) {
+      // Copy the vector into all_results and ids into all_ids
+      // @todo Abstract all of this explicit loop based assignment
+      for (size_t l = 0; l < db.num_rows(); ++l) {
+        all_results(l, ctr) = shuffled_db(l, i);
+        all_ids[ctr] = shuffled_ids[i];
+      }
+      ++ctr;
+    }
+  }
+
+  // Now, with the single matrix of probed partitions, find the closest vectors
+  auto kmeans_ids = qv_query(all_results, q, k_nn, nthreads);
+
+  // Original ids are: all_ids[kmeans_ids(i, 0)]
+  // Maybe that is what should be returned?
+
+  return std::make_tuple(std::move(kmeans_ids), all_ids);
+};
+
 template <class DB, class Q>
 auto qv_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
   life_timer _{"Total time (qv query)"};
@@ -126,19 +151,20 @@ auto qv_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
     if (start != stop) {
       futs.emplace_back(std::async(
           std::launch::async, [k, start, stop, size_db, &q, &db, &top_k]() {
-        for (size_t j = start; j < stop; ++j) {
-          fixed_min_set<element> scores(k);
-          size_t idx = 0;
+            for (size_t j = start; j < stop; ++j) {
+              fixed_min_set<element> scores(k);
+              size_t idx = 0;
 
-          for (int i = 0; i < size_db; ++i) {
-            auto score = L2(q[j], db[i]);
-            scores.insert(element{score, i});
-          }
-          std::transform(
-              scores.begin(), scores.end(), top_k[j].begin(), ([](auto&& e) {
-                return e.second;
-              }));
-        }
+              for (int i = 0; i < size_db; ++i) {
+                auto score = L2(q[j], db[i]);
+                scores.insert(element{score, i});
+              }
+              std::transform(
+                  scores.begin(),
+                  scores.end(),
+                  top_k[j].begin(),
+                  ([](auto&& e) { return e.second; }));
+            }
           }));
     }
   }
@@ -205,7 +231,9 @@ auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
 
 /**
  * @brief Query a set of vectors against a vector database, returning the
- * indices of all matches for each query vector.
+ * indices of the best matches for each query vector.  The difference between
+ * partition and query is that query returns the indices for the top k
+ * scores, whereas partition returns just the top index.
  *
  * @tparam DB
  * @tparam Q
@@ -253,7 +281,8 @@ auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
   {
     life_timer _{"L2 comparison colsum"};
 
-    mat_col_sum(db, alpha, [](auto a) { return a * a; });  // @todo optimize somehow
+    mat_col_sum(
+        db, alpha, [](auto a) { return a * a; });  // @todo optimize somehow
     mat_col_sum(q, beta, [](auto a) { return a * a; });
   }
 

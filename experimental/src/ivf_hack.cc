@@ -57,6 +57,7 @@
 #include <numeric>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <vector>
 
 #include <docopt.h>
@@ -224,25 +225,24 @@ int main(int argc, char* argv[]) {
     auto part_uri = args["--part_uri"].asString();
     auto index_uri = args["--index_uri"].asString();
     auto id_uri = args["--id_uri"].asString();
-    auto shuffled_db = tdbMatrix<float, Kokkos::layout_left>(part_uri);
-    // auto indices = tdbMatrix<size_t, Kokkos::layout_left>(index_uri);
-    auto indices = read_vector<size_t>(index_uri);
-    auto shuffled_ids = read_vector<uint64_t>(id_uri);
-
-    // Some variables for debugging
-    auto mv = *std::max_element(begin(shuffled_ids), end(shuffled_ids));
+    size_t nprobe = args["--cluster"].asLong();
+    size_t k_nn = args["--k"].asLong();
+    auto query_uri = args["--query_uri"] ? args["--query_uri"].asString() : "";
+    auto nqueries = (size_t)args["--nqueries"].asLong();
 
     // Function for finding the top k nearest neighbors accelerated by kmeans
     // @todo Move this to a self-contained function
     {
       life_timer _("query_time");
 
-      size_t nprobe = args["--cluster"].asLong();
-      size_t k_nn = args["--k"].asLong();
+      auto shuffled_db = tdbMatrix<float, Kokkos::layout_left>(part_uri);
+      // auto indices = tdbMatrix<size_t, Kokkos::layout_left>(index_uri);
+      auto indices = read_vector<size_t>(index_uri);
+      auto shuffled_ids = read_vector<uint64_t>(id_uri);
 
-      auto query_uri = args["--query_uri"] ? args["--query_uri"].asString() : ""; // args["--query_uri"].asString();
+      // Some variables for debugging
+      auto mv = *std::max_element(begin(shuffled_ids), end(shuffled_ids));
 
-      auto nqueries = (size_t)args["--nqueries"].asLong();
       auto q = [&]() -> ColMajorMatrix<float> {
         if (query_uri != "") {
           auto qq = tdbMatrix<float, Kokkos::layout_left>(query_uri, nqueries);
@@ -256,55 +256,8 @@ int main(int argc, char* argv[]) {
         }
       }();
 
-      // get closest centroid for each query vector
-      auto top_k = qv_query(centroids, q, nprobe, nthreads);
-
-      // Copy top k from Matrix to vector
-      std::vector<size_t> top_top_k(nprobe, 0);
-      for (size_t i = 0; i < nprobe; ++i) {
-        top_top_k[i] = top_k(i, 0);
-      }
-
-      // gather all the probed partitions into a single matrix
-      size_t total_size = 0;
-      for (size_t i = 0; i < size(top_top_k); ++i) {
-        total_size += indices[top_top_k[i] + 1] - indices[top_top_k[i]];
-      }
-
-      // Storage for the probed partitions and their ids
-      auto all_results =
-          ColMajorMatrix<float>{centroids.num_rows(), total_size};
-      auto all_ids = std::vector<uint64_t>(total_size);
-
-      // Tracks next location to copy into
-      size_t ctr = 0;
-
-      // Copy the probed partitions into contiguous storage
-      // For each probed partition
-      for (size_t j = 0; j < nprobe; ++j) {
-        // Get begin and end indices of the partition
-        size_t start = indices[top_top_k[j]];
-        size_t end = indices[top_top_k[j] + 1];
-
-        // Copy the partition into the storage
-        // For each vector in the partition
-        // @todo parallelize this loop
-        // @todo don't make contiguous copy -- just search each cluster separately
-        for (size_t i = start; i < end; ++i) {
-          // Copy the vector into all_results and ids into all_ids
-          // @todo Abstract all of this explicit loop based assignment
-          for (size_t l = 0; l < db.num_rows(); ++l) {
-            all_results(l, ctr) = shuffled_db(l, i);
-            all_ids[ctr] = shuffled_ids[i];
-          }
-          ++ctr;
-        }
-      }
-
-      // Now, with the single matrix of probed partitions, find the closest
-      // vectors
-      auto kmeans_ids = qv_query(all_results, q, k_nn, nthreads);
-
+      // What should be returned here?  Maybe a pair with the ids and scores?
+      auto&& [kmeans_ids, all_ids] = kmeans_query(db, shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nthreads);
       // Once this is a function, simply return kmeans_ids
       // For now, print the results to std::cout
       // @todo also get scores

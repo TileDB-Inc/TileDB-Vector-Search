@@ -51,6 +51,13 @@ target_link_libraries(ivf_hack PUBLIC flat_blas)
 target_link_libraries(ivf_hack PUBLIC TileDB::tiledb_shared)
 target_link_libraries(ivf_hack PUBLIC mdspan)
 
+add_executable(ingest ingest.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h)
+
+target_link_libraries(ingest PUBLIC docopt)
+target_link_libraries(ingest PUBLIC flat_mt)
+target_link_libraries(ingest PUBLIC flat_blas)
+target_link_libraries(ingest PUBLIC TileDB::tiledb_shared)
+target_link_libraries(ingest PUBLIC mdspan)
 # Quick and dirty program to assess latency of one-byte array access
 # add_executable(latency latency.cc sift_array.h timer.h)
 
