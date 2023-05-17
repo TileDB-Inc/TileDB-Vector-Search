@@ -8,6 +8,21 @@ int add(int i, int j) {
     return i + j;
 }
 
+namespace {
+
+template <typename T>
+static void declareVector(py::module& mod, std::string const& suffix) {
+  using TVector = Vector<T>;
+  using PyTVector = py::class_<TVector, std::shared_ptr<TVector>>;
+
+  PyTVector cls(mod, ("Vector" + suffix).c_str());
+
+  cls.def(py::init<T>());
+  cls.def("size", &TVector::num_rows);
+  cls.def("__getitem__", [](TVector& self, size_t i) { return self[i]; });
+}
+}
+
 PYBIND11_MODULE(tiledbvspy, m) {
   m.def("add", &add);
 
@@ -31,4 +46,14 @@ PYBIND11_MODULE(tiledbvspy, m) {
                           algorithm,
                           nthreads);
         });
+
+  declareVector<float32_t>(m, "_f32");
+
+  m.def("get_v", []() {
+    auto a = std::make_shared<Vector<float32_t>>(7);
+    auto v = a->data();
+    std::iota(v, v + 7, 1);
+
+    return a;
+  });
 }
