@@ -25,39 +25,99 @@
 # THE SOFTWARE.
 #
 
-add_executable(flat flat.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h)
+# Get the current date and time
+string(TIMESTAMP CURRENT_DATETIME "%Y-%m-%d %H:%M:%S")
 
-target_link_libraries(flat PUBLIC docopt)
-target_link_libraries(flat PUBLIC flat_mt)
-target_link_libraries(flat PUBLIC flat_blas)
-target_link_libraries(flat PUBLIC TileDB::tiledb_shared)
-target_link_libraries(flat PUBLIC mdspan)
+# Execute "git rev-parse --abbrev-ref HEAD" command to get the current branch name
+execute_process(
+        COMMAND git rev-parse --abbrev-ref HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_BRANCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+# Get the Git repository URL
+execute_process(
+        COMMAND git config --get remote.origin.url
+        OUTPUT_VARIABLE GIT_REPO_URL
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+# Get the Git repository name
+execute_process(
+        COMMAND git rev-parse --show-toplevel
+        OUTPUT_VARIABLE GIT_REPO_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+get_filename_component(GIT_REPO_NAME ${GIT_REPO_DIR} NAME)
+
+# Get the short commit name
+execute_process(
+        COMMAND git rev-parse --short HEAD
+        OUTPUT_VARIABLE GIT_COMMIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+        COMMAND git show -s --format=%cd --date=short HEAD
+        OUTPUT_VARIABLE GIT_COMMIT_DATE
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+        COMMAND git log -1 --format=%cd --date=format:%H:%M:%S
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_COMMIT_TIME
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 
 
-add_executable(kmeans flat_query.h flat.cc defs.h sift_db.h timer.h sift_array.h linalg.h)
+get_filename_component(IVF_HACK_CXX_COMPILER ${CMAKE_CXX_COMPILER} NAME)
 
-target_link_libraries(kmeans PUBLIC docopt)
-target_link_libraries(kmeans PUBLIC flat_mt)
-target_link_libraries(kmeans PUBLIC flat_blas)
-target_link_libraries(kmeans PUBLIC TileDB::tiledb_shared)
-target_link_libraries(kmeans PUBLIC mdspan)
+configure_file(../include/config.h.in config.h)
+
+#---[ Dependencies ]------------------------------------------------------------
+add_library(kmeans_lib INTERFACE)
+target_sources(kmeans_lib INTERFACE
+        ../include/flat_query.h ../include/linalg.h ../include/ivf_query.h ../include/scoring.h ../include/fixed_min_queues.h
+        ../include/defs.h ../include/algorithm.h ../include/concepts.h ../include/stats.h
+        ../include/utils/timer.h ../include/utils/logging.h ../include/utils/print_types.h
+        )
+target_include_directories(kmeans_lib INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_BINARY_DIR}
+)
+target_link_libraries(kmeans_lib INTERFACE
+        nlohmann_json::nlohmann_json
+        docopt
+        flat_mt
+        flat_blas
+        TileDB::tiledb_shared
+        mdspan
+)
 
 
-add_executable(ivf_hack ivf_hack.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h)
+#---[ Demos ]------------------------------------------------------------
+add_executable(flat flat.cc)
+target_link_libraries(flat PUBLIC kmeans_lib)
 
-target_link_libraries(ivf_hack PUBLIC docopt)
-target_link_libraries(ivf_hack PUBLIC flat_mt)
-target_link_libraries(ivf_hack PUBLIC flat_blas)
-target_link_libraries(ivf_hack PUBLIC TileDB::tiledb_shared)
-target_link_libraries(ivf_hack PUBLIC mdspan)
+add_executable(ivf_hack ivf_hack.cc)
+target_link_libraries(ivf_hack PUBLIC kmeans_lib)
 
-add_executable(ingest ingest.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h)
+#---[ TBD ]------------------------------------------------------------
+if (FALSE)
+add_executable(index index.cc)
+target_link_libraries(index PUBLIC kmeans_lib)
 
-target_link_libraries(ingest PUBLIC docopt)
-target_link_libraries(ingest PUBLIC flat_mt)
-target_link_libraries(ingest PUBLIC flat_blas)
-target_link_libraries(ingest PUBLIC TileDB::tiledb_shared)
-target_link_libraries(ingest PUBLIC mdspan)
+add_executable(ingest ingest.cc)
+target_link_libraries(ingest PUBLIC kmeans_lib)
+
+add_executable(kmeans kmeans.cc)
+target_link_libraries(kmeans PUBLIC kmeans_lib)
+endif()
+
 # Quick and dirty program to assess latency of one-byte array access
 # add_executable(latency latency.cc sift_array.h timer.h)
 
