@@ -36,6 +36,7 @@
 
 #include <algorithm>
 #include "algorithm.h"
+#include "concepts.h"
 #include "defs.h"
 #include "linalg.h"
 #include "timer.h"
@@ -123,7 +124,21 @@ auto kmeans_query(
   return std::make_tuple(std::move(kmeans_ids), all_ids);
 };
 
-template <class DB, class Q>
+/**
+ * @brief Query a set of vector against a vector database, using "qv" loop
+ * ordering.  This is the most basic query function, and is intended to be
+ * used when the size of the query is small compared to the size of the
+ * database.
+ *
+ * @tparam DB
+ * @tparam Q
+ * @param db
+ * @param q
+ * @param k
+ * @param nthreads
+ * @return
+ */
+template <vector_database DB, class Q>
 auto qv_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
   life_timer _{"Total time (qv query)"};
 

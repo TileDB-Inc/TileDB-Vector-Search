@@ -30,6 +30,9 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <algorithm>
+#include <cstdio>
+#include <filesystem>
 #include <tuple>
 #include "../linalg.h"
 
@@ -38,6 +41,22 @@ using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 TEST_CASE("linalg: test test", "[linalg]") {
   REQUIRE(true);
 }
+
+TEMPLATE_LIST_TEST_CASE(
+    "linalg: test mdspan", "[linalg]", TestTypes) {
+
+  auto M = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+  auto N = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+  TestType* t = nullptr;
+  auto m = Kokkos::mdspan(t, M, N);
+  CHECK(m.size() == M*N);
+  CHECK(m.rank() == 2);
+}
+
+TEMPLATE_LIST_TEST_CASE(
+    "linalg: test span", "[linalg]", TestTypes) {
+}
+
 
 TEMPLATE_LIST_TEST_CASE(
     "linalg: test Vector constructor", "[linalg]", TestTypes) {
@@ -248,4 +267,64 @@ TEST_CASE("linalg: test tdbMatrix constructor, column", "[linalg]") {
   CHECK(a(3, 0) == 5);
   CHECK(a(0, 1) == 3);
   CHECK(a(3, 7) == 4);
+}
+
+TEMPLATE_LIST_TEST_CASE("linalg: test write/read std::vector",
+    "[linalg]", TestTypes) {
+  auto length = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+
+  auto a = std::vector<TestType>(length);
+  std::iota(begin(a), end(a), 17);
+
+  auto v = std::vector<TestType>(length);
+  std::copy(begin(a), end(a), begin(v));
+
+  auto tmpfilename = std::string(tmpnam(nullptr));
+  auto tempDir = std::filesystem::temp_directory_path();
+  auto uri = (tempDir / tmpfilename).string();
+  write_vector(v, uri);
+  auto w = read_vector<TestType>(uri);
+  CHECK(std::equal(begin(v), end(v), begin(w)));
+  std::filesystem::remove_all(uri);
+}
+
+using LayoutTypes = std::tuple<Kokkos::layout_right, Kokkos::layout_left>;
+
+TEMPLATE_LIST_TEST_CASE("linalg: test write/read Matrix", "[linalg]", TestTypes) {
+  auto M = GENERATE(1, 2, 13, 1440, 1441);
+  auto N = GENERATE(1, 2, 5, 1440, 1441);
+
+  auto tmpfilename = std::string(tmpnam(nullptr));
+  auto tempDir = std::filesystem::temp_directory_path();
+  auto uri = (tempDir / tmpfilename).string();
+
+  SECTION("right") {
+    auto A = Matrix<TestType, Kokkos::layout_right>(M, N);
+    std::iota(A.data(), A.data() + M * N, 17);
+
+    write_matrix(A, uri);
+    auto B = tdbMatrix<TestType, Kokkos::layout_right>(uri);
+
+    CHECK(A.num_rows() == M);
+    CHECK(A.num_cols() == N);
+    CHECK(A.num_rows() == B.num_rows());
+    CHECK(A.num_cols() == B.num_cols());
+    CHECK(
+        std::equal(A.data(), A.data() + A.num_rows() * A.num_cols(), B.data()));
+  }
+
+  SECTION("left") {
+    auto A = Matrix<TestType, Kokkos::layout_left>(M, N);
+    std::iota(A.data(), A.data() + M * N, 17);
+
+    write_matrix(A, uri);
+    auto B = tdbMatrix<TestType, Kokkos::layout_left>(uri);
+
+    CHECK(A.num_rows() == M);
+    CHECK(A.num_cols() == N);
+    CHECK(A.num_rows() == B.num_rows());
+    CHECK(A.num_cols() == B.num_cols());
+    CHECK(
+        std::equal(A.data(), A.data() + A.num_rows() * A.num_cols(), B.data()));
+  }
 }
