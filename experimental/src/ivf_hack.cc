@@ -107,6 +107,14 @@ int main(int argc, char* argv[]) {
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
+  debug = args["--debug"].asBool();
+  verbose = args["--verbose"].asBool();
+
+  if (debug) {
+    auto&& [major, minor, patch] = tiledb::version();
+    std::cout << "TileDB version: " << major << "." << minor << "." << patch
+              << std::endl;
+  }
 
   if (is_local_array(centroids_uri) &&
       !std::filesystem::exists(centroids_uri)) {
