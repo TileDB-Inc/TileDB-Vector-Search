@@ -117,6 +117,6 @@ include(mdspan)
 add_subdirectory(src)
 add_subdirectory(src/test)
 
-if (TILEDB_VS_ENABLE_PYTHON)
+if (TILEDB_VS_PYTHON)
     add_subdirectory(python)
 endif()

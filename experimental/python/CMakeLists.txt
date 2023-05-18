@@ -45,7 +45,7 @@ option(TILEDB_VS_PYTHON_STANDALONE "Build TileDB-VS-Py using FetchContent to ret
 
 if (TILEDB_VS_PYTHON_STANDALONE OR NOT EXISTS "../../experimental/python/tiledb_vs")
   # TODO -- include(BuildTileDBVS_FetchContent)
-elseif(NOT DEFINED TILEDB_VS_ENABLE_PYTHON)
+elseif(NOT DEFINED TILEDB_VS_PYTHON)
   # TODO -- If we are building standalone, then include the top-level project
   # add_subdirectory("../" "${CMAKE_BINARY_DIR}/tiledb_vs")
 endif()
