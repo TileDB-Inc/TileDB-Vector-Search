@@ -27,6 +27,49 @@
  *
  * @section DESCRIPTION
  *
+ * Driver program for "flat" feature vector search.  Can read and search
+ * from local files in "ANN" format or from simple dense TileDB arrays.
+ *
+ * The program has a lot of different options to enable exploration of the
+ * performance of different formulations of the search algorithms.  It turns
+ * out (not surprisingly) that for many of the multi-query problems, that
+ * a gemm-based algorithm is fastest.  For other searches, particular with
+ * just a small number of query vectors (e.g. 1), a brute-force search is
+ * fastest.
+ *
+ * This program currently uses `sift_db` and `sift_array` structures to
+ * hold the data, depending on whether the data comes from local file
+ * or from a TileDB array but I have since written some better abstractions.
+ * @todo Replace sift_db and sift_array with `tdbMatrix`
+ *
+ * Originally, I represented sets of feature vectors as a `std::vector` of
+ * spans over a single allocation of memory.  The very first approach
+ * used a `std::vector` to provide that, but I am gradually migrating
+ * to using `stdx::mdspan` instead.  There are very efficient ways to
+ * allocate memory and `mdspan` is much more lightweight than a `vector`
+ * of `span`.
+ *
+ * Most of the functionality in this driver should be fairly straightforward
+ * to follow.  The search algorithms all do a search, find the indices
+ * of the top k matches, and compare those results to ground truth.
+ *
+ * Determining top k is done in one of two ways.  The "hard way" is to compute
+ * all scores between the query and the database vectors and then find the
+ * top k scores using `nth_element`.  The "easy way" is to use a priority
+ * queue to keep a running list of the top k scores.  The easy way is much
+ * faster in the qv and vq cases.  The hard way is currently the only way
+ * to do top k in gemm, yet gemm tends to be the fastest.
+ *
+ * The difference between vq vs qv is the ordering of the two nested loops:
+ * vq loops over the database vectors and then the queries, while qv loops
+ * over the queries and then the database vectors.  There are some
+ * ramifications in terms of resource usage and execution time between the
+ * two approaches.
+ *
+ * With the vector of spans approach, each element of the outer std::vector
+ * corresponds to a vector.  There isn't really an orientation per se.
+ * I.e., A[i] returns a span comprising the ith vector in A.
+ *
  */
 
 #include <algorithm>
@@ -42,7 +85,7 @@
 #include <docopt.h>
 
 #include "defs.h"
-#include "query.h"
+#include "flat_query.h"
 #include "sift_array.h"
 #include "sift_db.h"
 #include "timer.h"
@@ -66,8 +109,9 @@ static constexpr const char USAGE[] =
       --g_file FILE         ground truth file
       --g_uri URI           ground true URI
       --k NN                number of nearest neighbors to find [default: 10]
-      --L2                  use L2 distance (Euclidean)
-      --cosine              use cosine distance [default]
+      --L2                  use L2 distance (Euclidean) [default]
+      --cosine              use cosine distance
+      --jaccard             use Jaccard distance
       --order ORDER         which ordering to do comparisons [default: gemm]
       --hardway             use hard way to compute distances [default: false]
       --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]

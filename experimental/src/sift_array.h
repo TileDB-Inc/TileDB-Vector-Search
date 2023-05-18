@@ -111,7 +111,7 @@ class sift_array : public std::vector<std::span<T>> {
   {
     ctx_.set_tag("vfs.s3.region", "us-west-2");
 
-    // Initialize the view of the data.  Replacw with `mdspan`
+    // Initialize the view of the data.  Replace with `mdspan`
     this->resize(num_cols_);
     for (decltype(num_cols_) j = 0; j < num_cols_; ++j) {
       Base::operator[](j) =
@@ -132,6 +132,12 @@ class sift_array : public std::vector<std::span<T>> {
     query.submit();
     array_.close();
     assert(tiledb::Query::Status::COMPLETE == query.query_status());
+  }
+  auto& operator()(size_t i, size_t j) {
+    return Base::operator[](j)[i];
+  }
+  auto operator()(size_t i, size_t j) const {
+    return Base::operator[](j)[i];
   }
 };
 

@@ -27,6 +27,8 @@
  *
  * @section DESCRIPTION
  *
+ * Support functions for TiledB vector search algorithms.
+ *
  */
 
 #ifndef TDB_DEFS_H
@@ -36,17 +38,22 @@
 #include <cmath>
 #include <future>
 #include <iostream>
-#include <span>
-// #include <execution>
 #include <memory>
+#include <numeric>
 #include <queue>
 #include <set>
+#include <span>
+// #include <execution>
 
 #include "timer.h"
 
-template <class T>
-using Vector = std::span<T>;
-
+/**
+ * @brief Compute L2 distance between two vectors.
+ * @tparam V
+ * @param a
+ * @param b
+ * @return L2 norm of the difference between a and b.
+ */
 template <class V>
 auto L2(V const& a, V const& b) {
   typename V::value_type sum{0};
@@ -59,6 +66,13 @@ auto L2(V const& a, V const& b) {
   return std::sqrt(sum);
 }
 
+/**
+ * @brief Compute cosine similarity between two vectors.
+ * @tparam V
+ * @param a
+ * @param b
+ * @return
+ */
 template <class V>
 auto cosine(V const& a, V const& b) {
   typename V::value_type sum{0};
@@ -74,6 +88,16 @@ auto cosine(V const& a, V const& b) {
   return sum / std::sqrt(a2 * b2);
 }
 
+/**
+ * @brief Foreach input vector, apply a function to each element of the
+ * vector and sum the resulting values
+ * @tparam M
+ * @tparam V
+ * @param m
+ * @param v
+ * @param f
+ * @return A vector containing the sum of the function applied down each column.
+ */
 template <class M, class V, class Function>
 auto col_sum(
     const M& m, V& v, Function f = [](auto& x) -> const auto& { return x; }) {
@@ -89,6 +113,31 @@ auto col_sum(
   }
 }
 
+/**
+ * @brief Same as above, but for columns of a matrix rather than a collection
+ * of vectors.
+ */
+template <class M, class V, class Function>
+auto mat_col_sum(
+    const M& m, V& v, Function f = [](auto& x) -> const auto& { return x; }) {
+  auto num_cols = m.num_cols();
+  auto num_rows = m.num_rows();
+
+  for (int j = 0; j < num_cols; ++j) {
+    decltype(v[0]) vj = v[j];
+    for (int i = 0; i < num_rows; ++i) {
+      vj += f(m(i, j));
+    }
+    v[j] = vj;
+  }
+}
+
+/**
+ * @brief Check the computed top k vectors against the ground truth.
+ * Useful only for exact search.
+ * Prints diagnostic message if difference is found.
+ * @todo Handle the error more systematically and succinctly.
+ */
 template <class V, class L, class I>
 auto verify_top_k(V const& scores, L const& top_k, I const& g, int k, int qno) {
   if (!std::equal(
@@ -108,6 +157,10 @@ auto verify_top_k(V const& scores, L const& top_k, I const& g, int k, int qno) {
   }
 }
 
+/**
+ * @brief Check the computed top k vectors against the ground truth.
+ * Useful only for exact search.
+ */
 template <class L, class I>
 auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
   if (!std::equal(begin(top_k), begin(top_k) + k, g.begin())) {
