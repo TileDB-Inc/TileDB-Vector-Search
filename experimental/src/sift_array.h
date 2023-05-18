@@ -32,10 +32,6 @@
 #ifndef TDB_SIFT_ARRAY_H
 #define TDB_SIFT_ARRAY_H
 
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <cassert>
 #include <filesystem>
 #include <span>
