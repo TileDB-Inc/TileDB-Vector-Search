@@ -118,7 +118,7 @@ using matrix_extents = Kokkos::dextents<I, 2>;
 template <class T, class LayoutPolicy = Kokkos::layout_right, class I = size_t>
 class Matrix : public Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using Base = Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy>;
-  using Base::Base;
+  //using Base::Base;
 
  public:
   using index_type = typename Base::index_type;
@@ -132,6 +132,8 @@ class Matrix : public Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   std::unique_ptr<T[]> storage_;
 
  public:
+  Matrix() noexcept = default;
+
   Matrix(
       size_type nrows,
       size_type ncols,
@@ -197,6 +199,19 @@ class Matrix : public Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       return std::span(&Base::operator()(i, 0), ncols_);
     } else {
       return std::span(&Base::operator()(0, i), nrows_);
+    }
+  }
+
+  auto rank() const noexcept {
+    return Base::extents().rank();
+    // return 2;  //
+  }
+
+  auto span() const noexcept {
+    if constexpr (std::is_same_v<LayoutPolicy, Kokkos::layout_right>) {
+      return num_cols();
+    } else {
+      return num_rows();
     }
   }
 
@@ -414,11 +429,12 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
   tiledb::Config config_{init_};
   tiledb::Context ctx {config_};
 
+  // @todo: make this a parameter
   size_t num_parts = 10;
   size_t row_extent =
-      std::max<size_t>((A.num_rows() + num_parts - 1) / num_parts, 2);
+      std::max<size_t>((A.num_rows() + num_parts - 1) / num_parts, A.num_rows() >= 2 ? 2 : 1);
   size_t col_extent =
-      std::max<size_t>((A.num_cols() + num_parts - 1) / num_parts, 2);
+      std::max<size_t>((A.num_cols() + num_parts - 1) / num_parts, A.num_cols() >= 2 ? 2 : 1);
 
   tiledb::Domain domain(ctx);
   domain
@@ -459,8 +475,8 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
  * @todo change the naming of this function to something more appropriate
  */
 template <class T>
-void write_matrix(std::vector<T>& v, const std::string& uri) {
-  life_timer _{"write matrix " + uri};
+void write_vector(std::vector<T>& v, const std::string& uri) {
+  life_timer _{"write vector " + uri};
 
   // Create context
   std::map<std::string, std::string> init_{{"vfs.s3.region", "us-west-2"}};
@@ -502,7 +518,7 @@ void write_matrix(std::vector<T>& v, const std::string& uri) {
  * Read the contents of a TileDB array into a std::vector.
  */
 template <class T>
-auto read_vector(std::string& uri) {
+auto read_vector(const std::string& uri) {
   auto init_ =
       std::map<std::string, std::string>{{"vfs.s3.region", "us-west-2"}};
   auto config_ = tiledb::Config{init_};
@@ -522,7 +538,7 @@ auto read_vector(std::string& uri) {
 
   auto vec_rows_{
       (array_rows_.template domain<domain_type>().second -
-       array_rows_.template domain<domain_type>().first /*+ 1*/)};
+       array_rows_.template domain<domain_type>().first + 1)};
 
   auto attr_num{schema_.attribute_num()};
   auto attr = schema_.attribute(idx);
