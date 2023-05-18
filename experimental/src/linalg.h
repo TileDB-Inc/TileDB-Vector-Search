@@ -93,6 +93,10 @@ class Vector : public std::span<T> {
     Base::operator=(Base{storage_.get(), nrows_});
   }
 
+  //void* data() {
+  //  return storage_.get();
+  //}
+
   constexpr reference operator()(size_type idx) const noexcept {
     return Base::operator[](idx);
   }
