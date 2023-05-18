@@ -372,7 +372,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     subarray.set_subarray(subarray_vals);
 
 #ifndef __APPLE__
-    auto data_ = std::make_unique_for_overwrite<T[]>(num_rows * num_cols_);
+    auto data_ = std::make_unique_for_overwrite<T[]>(num_rows * num_cols);
 #else
     // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
     auto data_ = std::unique_ptr<T[]>(new T[num_rows * num_cols]);
