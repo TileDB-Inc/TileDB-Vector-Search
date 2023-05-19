@@ -1,5 +1,5 @@
 /**
- * @file   linalg.h
+ * @file   utils.h
  *
  * @section LICENSE
  *
@@ -36,13 +36,72 @@
 
 #include <regex>
 #include <string>
+#include <filesystem>
 
-bool is_s3_array(const std::string& array_uri) {
-  return regex_match(array_uri, std::regex{"^s3://.*"});
+
+bool is_http_address(const std::string& filename) {
+  std::regex httpRegex("^https?://.*");
+  return std::regex_match(filename, httpRegex);
+}
+
+bool is_s3_container(const std::string& filename) {
+  std::regex awsRegex("^[a-zA-Z0-9]+\\.s3\\.amazonaws\\.com.*");
+  std::regex s3Regex("^s3://.*");
+  return std::regex_match(filename, s3Regex) ||
+         std::regex_match(filename, s3Regex);
+}
+
+std::string get_filename(const std::string& filename) {
+  std::regex fileRegex("^file://(.*)");
+  std::smatch match;
+
+  if (std::regex_match(filename, match, fileRegex) && match.size() > 1) {
+    std::string extractedString = match.str(1);
+    return extractedString;
+  }
+  return filename;
+}
+
+bool local_directory_exists(const std::string& path) {
+  std::filesystem::path directoryPath(path);
+  auto a = std::filesystem::status(directoryPath);
+  auto b = std::filesystem::is_directory(directoryPath);
+
+  return std::filesystem::is_directory(directoryPath);
+}
+
+bool is_local_directory(const std::string& path) {
+  return local_directory_exists(path);
+}
+
+bool subdirectory_exists(const std::string& path, const std::string& subdirectoryName) {
+  std::filesystem::path directoryPath(path);
+  std::filesystem::path subdirectoryPath = directoryPath / subdirectoryName;
+
+  return std::filesystem::is_directory(subdirectoryPath);
+}
+
+bool local_file_exists(const std::string& filename) {
+  if (is_http_address(filename) || is_s3_container(filename) || is_local_directory(filename)){
+    return false;
+  }
+  auto fname = get_filename(filename);
+  std::filesystem::path filePath(fname);
+  return std::filesystem::is_regular_file(filePath);
+}
+
+bool is_local_file(const std::string& filename) {
+  return local_file_exists(filename);
+}
+
+bool local_array_exists(const std::string& array_uri) {
+  auto aname = get_filename(array_uri);
+  return local_directory_exists(aname) && subdirectory_exists(array_uri, "__schema");
 }
 
 bool is_local_array(const std::string& array_uri) {
-  return !is_s3_array(array_uri);
+  return local_array_exists(array_uri);
 }
+
 
 #endif
