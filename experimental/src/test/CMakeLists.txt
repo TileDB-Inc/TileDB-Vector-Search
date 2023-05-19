@@ -63,6 +63,9 @@ target_link_libraries(unit_ivf_query PRIVATE sift_test mdspan)
 add_executable(unit_concepts unit_concepts.cc)
 target_link_libraries(unit_concepts PRIVATE mdspan Catch2::Catch2WithMain)
 
+add_executable(unit_utils unit_utils.cc)
+target_link_libraries(unit_utils PRIVATE mdspan Catch2::Catch2WithMain)
+
 # Create the subdirectory for the extracted files
 file(MAKE_DIRECTORY ${SIFT_TEST_DIR}/siftsmall)
 
