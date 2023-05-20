@@ -29,8 +29,8 @@
  *
  */
 
-#include <catch2/catch_all.hpp>
 #include <algorithm>
+#include <catch2/catch_all.hpp>
 #include <cstdio>
 #include <filesystem>
 #include <tuple>
@@ -42,21 +42,17 @@ TEST_CASE("linalg: test test", "[linalg]") {
   REQUIRE(true);
 }
 
-TEMPLATE_LIST_TEST_CASE(
-    "linalg: test mdspan", "[linalg]", TestTypes) {
-
+TEMPLATE_LIST_TEST_CASE("linalg: test mdspan", "[linalg]", TestTypes) {
   auto M = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
   auto N = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
   TestType* t = nullptr;
   auto m = Kokkos::mdspan(t, M, N);
-  CHECK(m.size() == M*N);
+  CHECK(m.size() == M * N);
   CHECK(m.rank() == 2);
 }
 
-TEMPLATE_LIST_TEST_CASE(
-    "linalg: test span", "[linalg]", TestTypes) {
+TEMPLATE_LIST_TEST_CASE("linalg: test span", "[linalg]", TestTypes) {
 }
-
 
 TEMPLATE_LIST_TEST_CASE(
     "linalg: test Vector constructor", "[linalg]", TestTypes) {
@@ -244,10 +240,43 @@ TEST_CASE("linalg: test tdbMatrix constructor, row", "[linalg]") {
     CHECK(a.num_cols() == 8);
 
     CHECK(a(0, 0) == 8);
-    CHECK(a(0, 1) == 6);
-    CHECK(a(0, 2) == 7);
-    CHECK(a(0, 3) == 5);
     CHECK(a(1, 0) == 3);
+    CHECK(a(2, 0) == 9);
+    CHECK(a(3, 0) == 5);
+
+    CHECK(a(0, 1) == 6);
+    CHECK(a(1, 1) == 0);
+    CHECK(a(2, 1) == 8);
+    CHECK(a(3, 1) == 3);
+
+    CHECK(a(0, 2) == 7);
+    CHECK(a(1, 2) == 9);
+    CHECK(a(2, 2) == 6);
+    CHECK(a(3, 2) == 0);
+
+    CHECK(a(0, 3) == 5);
+    CHECK(a(1, 3) == 9);
+    CHECK(a(2, 3) == 7);
+    CHECK(a(3, 3) == 9);
+
+    CHECK(a(0, 4) == 3);
+    CHECK(a(1, 4) == 5);
+    CHECK(a(2, 4) == 2);
+    CHECK(a(3, 4) == 4);
+
+    CHECK(a(0, 5) == 1);
+    CHECK(a(1, 5) == 9);
+    CHECK(a(2, 5) == 6);
+    CHECK(a(3, 5) == 2);
+
+    CHECK(a(0, 6) == 4);
+    CHECK(a(1, 6) == 2);
+    CHECK(a(2, 6) == 4);
+    CHECK(a(3, 6) == 2);
+
+    CHECK(a(0, 7) == 1);
+    CHECK(a(1, 7) == 7);
+    CHECK(a(2, 7) == 3);
     CHECK(a(3, 7) == 4);
 
   } catch (const std::exception& e) {
@@ -258,19 +287,155 @@ TEST_CASE("linalg: test tdbMatrix constructor, row", "[linalg]") {
 TEST_CASE("linalg: test tdbMatrix constructor, column", "[linalg]") {
   auto a = tdbMatrix<int32_t, Kokkos::layout_left>("array_dense_1");
 
-  CHECK(a.num_rows() == 4);
-  CHECK(a.num_cols() == 8);
+  CHECK(a.num_rows() == 8);
+  CHECK(a.num_cols() == 4);
 
   CHECK(a(0, 0) == 8);
   CHECK(a(1, 0) == 6);
   CHECK(a(2, 0) == 7);
   CHECK(a(3, 0) == 5);
+  CHECK(a(4, 0) == 3);
+  CHECK(a(5, 0) == 1);
+  CHECK(a(6, 0) == 4);
+  CHECK(a(7, 0) == 1);
+
   CHECK(a(0, 1) == 3);
-  CHECK(a(3, 7) == 4);
+  CHECK(a(1, 1) == 0);
+  CHECK(a(2, 1) == 9);
+  CHECK(a(3, 1) == 9);
+  CHECK(a(4, 1) == 5);
+  CHECK(a(5, 1) == 9);
+  CHECK(a(6, 1) == 2);
+  CHECK(a(7, 1) == 7);
+
+  CHECK(a(0, 2) == 9);
+  CHECK(a(1, 2) == 8);
+  CHECK(a(2, 2) == 6);
+  CHECK(a(3, 2) == 7);
+  CHECK(a(4, 2) == 2);
+  CHECK(a(5, 2) == 6);
+  CHECK(a(6, 2) == 4);
+  CHECK(a(7, 2) == 3);
+
+  CHECK(a(0, 3) == 5);
+  CHECK(a(1, 3) == 3);
+  CHECK(a(2, 3) == 0);
+  CHECK(a(3, 3) == 9);
+  CHECK(a(4, 3) == 4);
+  CHECK(a(5, 3) == 2);
+  CHECK(a(6, 3) == 2);
+  CHECK(a(7, 3) == 4);
 }
 
-TEMPLATE_LIST_TEST_CASE("linalg: test write/read std::vector",
-    "[linalg]", TestTypes) {
+TEST_CASE("linalg: test partitioned tdbMatrix constructor, row", "[linalg]") {
+  size_t part = GENERATE(0, 1, 2, 3, 4);
+
+  auto a = tdbMatrix<int32_t, Kokkos::layout_right>("array_dense_1", part);
+
+  CHECK(a.num_rows() == (part == 0 ? 4 : part));
+  CHECK(a.num_cols() == 8);
+
+  if (part > 0) {
+    CHECK(a(0, 0) == 8);
+    CHECK(a(0, 1) == 6);
+    CHECK(a(0, 2) == 7);
+    CHECK(a(0, 3) == 5);
+    CHECK(a(0, 4) == 3);
+    CHECK(a(0, 5) == 1);
+    CHECK(a(0, 6) == 4);
+    CHECK(a(0, 7) == 1);
+  }
+  if (part > 1) {
+    CHECK(a(1, 0) == 3);
+    CHECK(a(1, 1) == 0);
+    CHECK(a(1, 2) == 9);
+    CHECK(a(1, 3) == 9);
+    CHECK(a(1, 4) == 5);
+    CHECK(a(1, 5) == 9);
+    CHECK(a(1, 6) == 2);
+    CHECK(a(1, 7) == 7);
+  }
+  if (part > 2) {
+    CHECK(a(2, 0) == 9);
+    CHECK(a(2, 1) == 8);
+    CHECK(a(2, 2) == 6);
+    CHECK(a(2, 3) == 7);
+    CHECK(a(2, 4) == 2);
+    CHECK(a(2, 5) == 6);
+    CHECK(a(2, 6) == 4);
+    CHECK(a(2, 7) == 3);
+  }
+  if (part > 3 || part == 0) {
+    CHECK(a(3, 0) == 5);
+    CHECK(a(3, 1) == 3);
+    CHECK(a(3, 2) == 0);
+    CHECK(a(3, 3) == 9);
+    CHECK(a(3, 4) == 4);
+    CHECK(a(3, 5) == 2);
+    CHECK(a(3, 6) == 2);
+    CHECK(a(3, 7) == 4);
+  }
+}
+
+TEST_CASE(
+    "linalg: test partitioned tdbMatrix constructor, column", "[linalg]") {
+  size_t part = GENERATE(0, 1, 2, 3, 4);
+
+  auto a = tdbMatrix<int32_t, Kokkos::layout_left>("array_dense_1", part);
+
+  if (part == 0) {
+    part = 4;
+  }
+  CHECK(a.num_rows() == 8);
+  CHECK(a.num_cols() == part);
+
+  if (part > 0) {
+    CHECK(a(0, 0) == 8);
+    CHECK(a(1, 0) == 6);
+    CHECK(a(2, 0) == 7);
+    CHECK(a(3, 0) == 5);
+    CHECK(a(4, 0) == 3);
+    CHECK(a(5, 0) == 1);
+    CHECK(a(6, 0) == 4);
+    CHECK(a(7, 0) == 1);
+  }
+
+  if (part > 1) {
+    CHECK(a(0, 1) == 3);
+    CHECK(a(1, 1) == 0);
+    CHECK(a(2, 1) == 9);
+    CHECK(a(3, 1) == 9);
+    CHECK(a(4, 1) == 5);
+    CHECK(a(5, 1) == 9);
+    CHECK(a(6, 1) == 2);
+    CHECK(a(7, 1) == 7);
+  }
+
+  if (part > 2) {
+    CHECK(a(0, 2) == 9);
+    CHECK(a(1, 2) == 8);
+    CHECK(a(2, 2) == 6);
+    CHECK(a(3, 2) == 7);
+    CHECK(a(4, 2) == 2);
+    CHECK(a(5, 2) == 6);
+    CHECK(a(6, 2) == 4);
+    CHECK(a(7, 2) == 3);
+  }
+
+  if (part > 3) {
+    CHECK(a(0, 3) == 5);
+    CHECK(a(1, 3) == 3);
+    CHECK(a(2, 3) == 0);
+    CHECK(a(3, 3) == 9);
+    CHECK(a(4, 3) == 4);
+    CHECK(a(5, 3) == 2);
+    CHECK(a(6, 3) == 2);
+    CHECK(a(7, 3) == 4);
+  }
+}
+
+TEMPLATE_LIST_TEST_CASE(
+    "linalg: test write/read std::vector", "[linalg]", TestTypes) {
   auto length = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 
   auto a = std::vector<TestType>(length);
@@ -290,7 +455,8 @@ TEMPLATE_LIST_TEST_CASE("linalg: test write/read std::vector",
 
 using LayoutTypes = std::tuple<Kokkos::layout_right, Kokkos::layout_left>;
 
-TEMPLATE_LIST_TEST_CASE("linalg: test write/read Matrix", "[linalg]", TestTypes) {
+TEMPLATE_LIST_TEST_CASE(
+    "linalg: test write/read Matrix", "[linalg]", TestTypes) {
   auto M = GENERATE(1, 2, 13, 1440, 1441);
   auto N = GENERATE(1, 2, 5, 1440, 1441);
 
@@ -324,6 +490,9 @@ TEMPLATE_LIST_TEST_CASE("linalg: test write/read Matrix", "[linalg]", TestTypes)
     CHECK(A.num_cols() == N);
     CHECK(A.num_rows() == B.num_rows());
     CHECK(A.num_cols() == B.num_cols());
+    for (size_t i = 0; i < M*N; ++i) {
+      CHECK(A.data()[i] == B.data()[i]);
+    }
     CHECK(
         std::equal(A.data(), A.data() + A.num_rows() * A.num_cols(), B.data()));
   }
