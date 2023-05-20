@@ -76,19 +76,20 @@ static constexpr const char USAGE[] =
 Usage:
     tdb (-h | --help)
     tdb   --db_uri URI --centroids_uri URI --index_uri URI --part_uri URI --id_uri URI
-         [--output_uri URI] [--query_uri URI] [--nqueries NN] [--k NN] [--cluster NN]
-         [--write] [--nthreads N] [-d | -v]
+         [--output_uri URI] [--query_uri URI] [--ndb NN] [--nqueries NN]
+         [--k NN] [--cluster NN] [--write] [--nthreads N] [-d | -v]
 
 Options:
     -h, --help            show this screen
     --db_uri URI          database URI with feature vectors
-    --centroids_uri URI   query URI with feature vectors to search for
-    --index_uri URI       URI to store the paritioning index
-    --part_uri URI        URI to store the partitioned data
-    --id_uri URI          URI to store original IDs of vectors
+    --centroids_uri URI   URI with centroid vectors
+    --index_uri URI       URI with the paritioning index
+    --part_uri URI        URI with the partitioned data
+    --id_uri URI          URI with original IDs of vectors
     --output_uri URI      URI to store search results
-    --query_uri URI       URI to store query vectors
-    --nqueries NN         number of query vectors to use [default: 1]
+    --query_uri URI       URI storing query vectors
+    --nqueries NN         number of query vectors to use (0 = all) [default: 1]
+    --ndb NN              number of database vectors to use (0 = all) [default: 0]
     --write               write the index to disk [default: false]
     --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
     --k NN                number of nearest neighbors to search for [default: 10]
@@ -103,6 +104,7 @@ int main(int argc, char* argv[]) {
 
   auto centroids_uri = args["--centroids_uri"].asString();
   auto db_uri = args["--db_uri"].asString();
+  auto ndb = args["--ndb"].asLong();
   auto nthreads = args["--nthreads"].asLong();
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
@@ -129,7 +131,8 @@ int main(int argc, char* argv[]) {
               << std::endl;
     return 1;
   }
-  auto db = tdbMatrix<float, Kokkos::layout_left>(db_uri);
+
+  auto db = tdbMatrix<float, Kokkos::layout_left>(db_uri, ndb);
 
   if (args["--write"].asBool()) {
     auto parts = gemm_partition(centroids, db, nthreads);

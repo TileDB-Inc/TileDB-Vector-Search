@@ -46,6 +46,7 @@
 #include <cstddef>
 #include <memory>
 #include <span>
+#include <stdexcept>
 #include <type_traits>
 #include <vector>
 
@@ -344,6 +345,15 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     life_timer _{"read matrix " + uri};
     using row_domain_type = int32_t;
     using col_domain_type = int32_t;
+
+    auto cell_order = schema_.cell_order();
+    auto tile_order = schema_.tile_order();
+
+    // @todo Maybe throw an exception here?  Have to properly handle since this
+    // is a constructor.
+    assert (cell_order == tile_order);
+
+
     const size_t idx = 0;
 
     auto domain_{schema_.domain()};
@@ -359,12 +369,19 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         (array_cols_.template domain<col_domain_type>().second -
          array_cols_.template domain<col_domain_type>().first + 1)};
 
+    if ((std::is_same_v<LayoutPolicy, Kokkos::layout_right> && cell_order == TILEDB_COL_MAJOR)
+        || (std::is_same_v<LayoutPolicy, Kokkos::layout_left> && cell_order == TILEDB_ROW_MAJOR)) {
+      std::swap(row_begin, col_begin);
+      std::swap(row_end, col_end);
+    }
+
     if (row_begin == 0 && row_end == 0) {
       row_end = max_rows_;
     }
     if (col_begin == 0 && col_end == 0) {
       col_end = max_cols_;
     }
+
     auto num_rows = row_end - row_begin;
     auto num_cols = col_end - col_begin;
 
@@ -386,6 +403,9 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     tiledb::Subarray subarray(ctx_, array_);
     subarray.set_subarray(subarray_vals);
 
+//    auto layout_order = std::is_same_v<LayoutPolicy, Kokkos::layout_right> ? TILEDB_ROW_MAJOR : TILEDB_COL_MAJOR;
+    auto layout_order = cell_order;
+
 #ifndef __APPLE__
     auto data_ = std::make_unique_for_overwrite<T[]>(num_rows * num_cols);
 #else
@@ -394,12 +414,18 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 #endif
 
     tiledb::Query query(ctx_, array_);
-    query.set_subarray(subarray).set_data_buffer(
-        attr_name, data_.get(), num_rows * num_cols);
+    query.set_subarray(subarray)
+        .set_layout(layout_order)
+        .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
 
     query.submit();
     array_.close();
     assert(tiledb::Query::Status::COMPLETE == query.query_status());
+
+    if ((std::is_same_v<LayoutPolicy, Kokkos::layout_right> && cell_order == TILEDB_COL_MAJOR)
+        || (std::is_same_v<LayoutPolicy, Kokkos::layout_left> && cell_order == TILEDB_ROW_MAJOR)) {
+      std::swap(num_rows, num_cols);
+    }
 
     Base::operator=(Base{std::move(data_), num_rows, num_cols});
   }
@@ -445,7 +471,9 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
 
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
-  schema.set_domain(domain).set_order({{TILEDB_ROW_MAJOR, TILEDB_ROW_MAJOR}});
+
+  auto order = std::is_same_v<LayoutPolicy, Kokkos::layout_right> ? TILEDB_ROW_MAJOR : TILEDB_COL_MAJOR;
+  schema.set_domain(domain).set_order({{order, order}});
 
   schema.add_attribute(tiledb::Attribute::create<T>(ctx, "values"));
 
@@ -454,14 +482,15 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
   std::vector<int32_t> subarray_vals{
       0, (int)A.num_rows() - 1, 0, (int)A.num_cols() - 1};
 
-  // Open array for writing
+      // Open array for writing
   tiledb::Array array(ctx, uri, TILEDB_WRITE);
 
   tiledb::Subarray subarray(ctx, array);
   subarray.set_subarray(subarray_vals);
 
   tiledb::Query query(ctx, array);
-  query.set_layout(TILEDB_ROW_MAJOR)
+
+  query.set_layout(order)
       .set_data_buffer(
           "values", &A(0, 0), (int)A.num_rows() * (int)A.num_cols())
       .set_subarray(subarray);
