@@ -55,6 +55,9 @@
 
 #include "timer.h"
 
+
+extern std::string global_region;
+
 /**
  * @brief A 1-D vector class that owns its storage.
  * @tparam T
@@ -122,6 +125,7 @@ class Matrix : public Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   //using Base::Base;
 
  public:
+  using layout_policy = LayoutPolicy;
   using index_type = typename Base::index_type;
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
@@ -265,7 +269,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
  private:
   // @todo: Make this configurable
-  std::map<std::string, std::string> init_{{"vfs.s3.region", "us-west-2"}};
+  std::map<std::string, std::string> init_{{"vfs.s3.region", global_region.c_str()}};
   tiledb::Config config_{init_};
   tiledb::Context ctx_{config_};
 
@@ -392,7 +396,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     tiledb_datatype_t attr_type = attr.type();
 
     // This should be set in initialization
-    // ctx_.set_tag("vfs.s3.region", "us-west-2");
+    // ctx_.set_tag("vfs.s3.region", global_region.c_str());
 
     // Create a subarray that reads the array up to the specified subset.
     std::vector<int32_t> subarray_vals = {
@@ -451,7 +455,7 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
   life_timer _{"write matrix " + uri};
 
   // Create context
-  std::map<std::string, std::string> init_{{"vfs.s3.region", "us-west-2"}};
+  std::map<std::string, std::string> init_{{"vfs.s3.region", global_region.c_str()}};
   tiledb::Config config_{init_};
   tiledb::Context ctx {config_};
 
@@ -482,7 +486,7 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
   std::vector<int32_t> subarray_vals{
       0, (int)A.num_rows() - 1, 0, (int)A.num_cols() - 1};
 
-      // Open array for writing
+  // Open array for writing
   tiledb::Array array(ctx, uri, TILEDB_WRITE);
 
   tiledb::Subarray subarray(ctx, array);
@@ -508,7 +512,7 @@ void write_vector(std::vector<T>& v, const std::string& uri) {
   life_timer _{"write vector " + uri};
 
   // Create context
-  std::map<std::string, std::string> init_{{"vfs.s3.region", "us-west-2"}};
+  std::map<std::string, std::string> init_{{"vfs.s3.region", global_region.c_str()}};
   tiledb::Config config_{init_};
   tiledb::Context ctx {config_};
 
@@ -549,7 +553,7 @@ void write_vector(std::vector<T>& v, const std::string& uri) {
 template <class T>
 auto read_vector(const std::string& uri) {
   auto init_ =
-      std::map<std::string, std::string>{{"vfs.s3.region", "us-west-2"}};
+      std::map<std::string, std::string>{{"vfs.s3.region", global_region.c_str()}};
   auto config_ = tiledb::Config{init_};
   auto ctx_ = tiledb::Context{config_};
 
@@ -575,8 +579,6 @@ auto read_vector(const std::string& uri) {
   std::string attr_name = attr.name();
   tiledb_datatype_t attr_type = attr.type();
 
-  ctx_.set_tag("vfs.s3.region", "us-west-2");
-
   // Create a subarray that reads the array up to the specified subset.
   std::vector<int32_t> subarray_vals = {0, vec_rows_ - 1};
   tiledb::Subarray subarray(ctx_, array_);
@@ -596,4 +598,49 @@ auto read_vector(const std::string& uri) {
   return data_;
 }
 
+
+/**
+ * Is the matrix row-oriented?
+ */
+template <class Matrix>
+constexpr bool is_row_oriented(const Matrix& A) {
+  return std::is_same_v<typename Matrix::layout_policy, Kokkos::layout_right>;
+}
+
+/**
+ * Print information about a Matrix.
+ * @param A
+ */
+template <class Matrix>
+std::string matrix_info(const Matrix& A, const std::string& msg = "") {
+  std::string str = "# " + msg;
+  if (!msg.empty()) {
+    str += ": ";
+  }
+  str += "Shape: ( " + std::to_string(A.num_rows()) + ", " + std::to_string(A.num_cols()) + " )";
+  str += std::string(" Layout: ") + (is_row_oriented(A) ? "row major" : "column major");
+  return str;
+}
+
+/**
+ * Print information about a std::vector -- overload.
+ * @param A
+ */
+template <class T>
+std::string matrix_info(const std::vector<T>& A, const std::string& msg = "") {
+  std::string str = msg;
+  if (!msg.empty()) {
+    str += ": ";
+  }
+  str += "Shape: (" + std::to_string(A.size()) + " )";
+  return str;
+}
+
+template <class Matrix>
+void debug_matrix(const Matrix& A, const std::string& msg = "") {
+  extern bool global_debug;
+  if (global_debug) {
+    std::cout << matrix_info(A, msg) << std::endl;
+  }
+}
 #endif  // TDB_LINALG_H
