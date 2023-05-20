@@ -68,8 +68,10 @@
 #include "timer.h"
 #include "utils.h"
 
-bool verbose = false;
-bool debug = false;
+bool global_verbose = false;
+bool global_debug = false;
+bool global_dryrun = false;
+std::string global_region;
 
 static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
@@ -77,7 +79,7 @@ Usage:
     tdb (-h | --help)
     tdb   --db_uri URI --centroids_uri URI --index_uri URI --part_uri URI --id_uri URI
          [--output_uri URI] [--query_uri URI] [--ndb NN] [--nqueries NN]
-         [--k NN] [--cluster NN] [--write] [--nthreads N] [-d | -v]
+         [--k NN] [--cluster NN] [--write] [--nthreads N] [--region REGION] [-n] [-d | -v]
 
 Options:
     -h, --help            show this screen
@@ -94,6 +96,8 @@ Options:
     --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
     --k NN                number of nearest neighbors to search for [default: 10]
     --cluster NN          number of clusters to use [default: 100]
+    --region REGION       AWS S3 region [default: us-east-1]
+    -n, --dryrun          perform a dry run (no writes) [default: false]
     -d, --debug           run in debug mode [default: false]
     -v, --verbose         run in verbose mode [default: false]
 )";
@@ -109,14 +113,19 @@ int main(int argc, char* argv[]) {
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
-  debug = args["--debug"].asBool();
-  verbose = args["--verbose"].asBool();
+  global_debug = args["--debug"].asBool();
+  global_verbose = args["--verbose"].asBool();
+  global_dryrun = args["--dryrun"].asBool();
+  global_region = args["--region"].asString();
 
-  if (debug) {
+  if (global_debug) {
     auto&& [major, minor, patch] = tiledb::version();
     std::cout << "TileDB version: " << major << "." << minor << "." << patch
               << std::endl;
   }
+
+  auto db = tdbMatrix<float, Kokkos::layout_left>(db_uri, ndb);
+  debug_matrix(db, "db");
 
   if (is_local_array(centroids_uri) &&
       !std::filesystem::exists(centroids_uri)) {
@@ -125,6 +134,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   auto centroids = tdbMatrix<float, Kokkos::layout_left>(centroids_uri);
+  debug_matrix(centroids, "centroids");
 
   if (is_local_array(centroids_uri) && !std::filesystem::exists(db_uri)) {
     std::cerr << "Error: db URI does not exist: " << args["--centroids_uri"]
@@ -132,10 +142,9 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  auto db = tdbMatrix<float, Kokkos::layout_left>(db_uri, ndb);
-
   if (args["--write"].asBool()) {
     auto parts = gemm_partition(centroids, db, nthreads);
+    debug_matrix(parts, "parts");
     //  auto parts = qv_partition(centroids, db, nthreads);
 
     // read centroids
@@ -154,6 +163,9 @@ int main(int argc, char* argv[]) {
       std::vector<size_t> check(indices.size());
       std::copy(begin(indices), end(indices), begin(check));
 
+      debug_matrix(degrees, "degrees");
+      debug_matrix(indices, "indices");
+
       // Some variables for debugging
       // @todo remove these once we are confident in the code
       auto mis = std::max_element(begin(indices), end(indices));
@@ -165,6 +177,9 @@ int main(int argc, char* argv[]) {
       auto shuffled_db = ColMajorMatrix<float>{db.num_rows(), db.num_cols()};
       std::vector shuffled_ids = std::vector<uint64_t>(db.num_cols());
       std::iota(begin(shuffled_ids), end(shuffled_ids), 0);
+
+      debug_matrix(shuffled_db, "shuffled_db");
+      debug_matrix(shuffled_ids, "shuffled_ids");
 
       // @todo parallelize
       // Unfortunately this variant of the algorithm is not parallelizable.
@@ -198,51 +213,53 @@ int main(int argc, char* argv[]) {
       auto index_uri = args["--index_uri"].asString();
       auto id_uri = args["--id_uri"].asString();
 
-      if (part_uri != "") {
-        if (is_local_array(part_uri) && std::filesystem::exists(part_uri)) {
-          // Apple clang does not support std::format yet
-          // std::cerr << std::format("Error: URI {} already exists: " ,
-          // part_uri) << std::endl;
-          std::cerr << "Error: URI " << part_uri
-                    << " already exists: " << std::endl;
-          std::cerr << "This is a dangerous operation, so we will not "
-                       "overwrite the file."
-                    << std::endl;
-          std::cerr << "Please delete the file manually and try again."
-                    << std::endl;
-          return 1;
-          // Too dangerous to have this ability
-          // std::filesystem::remove_all(part_uri);
+      if (!global_dryrun) {
+        if (part_uri != "") {
+          if (is_local_array(part_uri) && std::filesystem::exists(part_uri)) {
+            // Apple clang does not support std::format yet
+            // std::cerr << std::format("Error: URI {} already exists: " ,
+            // part_uri) << std::endl;
+            std::cerr << "Error: URI " << part_uri
+                      << " already exists: " << std::endl;
+            std::cerr << "This is a dangerous operation, so we will not "
+                         "overwrite the file."
+                      << std::endl;
+            std::cerr << "Please delete the file manually and try again."
+                      << std::endl;
+            return 1;
+            // Too dangerous to have this ability
+            // std::filesystem::remove_all(part_uri);
+          }
+          write_matrix(shuffled_db, part_uri);
         }
-        write_matrix(shuffled_db, part_uri);
-      }
-      if (index_uri != "") {
-        if (is_local_array(index_uri) && std::filesystem::exists(index_uri)) {
-          // std::filesystem::remove(index_uri);
-          std::cerr << "Error: URI " << index_uri
-                    << " already exists: " << std::endl;
-          std::cerr << "This is a dangerous operation, so we will not "
-                       "overwrite the file."
-                    << std::endl;
-          std::cerr << "Please delete the file manually and try again."
-                    << std::endl;
-          return 1;
+        if (index_uri != "") {
+          if (is_local_array(index_uri) && std::filesystem::exists(index_uri)) {
+            // std::filesystem::remove(index_uri);
+            std::cerr << "Error: URI " << index_uri
+                      << " already exists: " << std::endl;
+            std::cerr << "This is a dangerous operation, so we will not "
+                         "overwrite the file."
+                      << std::endl;
+            std::cerr << "Please delete the file manually and try again."
+                      << std::endl;
+            return 1;
+          }
+          write_vector(indices, index_uri);
         }
-        write_matrix(indices, index_uri);
-      }
-      if (id_uri != "") {
-        if (is_local_array(id_uri) && std::filesystem::exists(id_uri)) {
-          std::cerr << "Error: URI " << id_uri
-                    << " already exists: " << std::endl;
-          std::cerr << "This is a dangerous operation, so we will not "
-                       "overwrite the file."
-                    << std::endl;
-          std::cerr << "Please delete the file manually and try again."
-                    << std::endl;
-          return 1;
-          // std::filesystem::remove(id_uri);
+        if (id_uri != "") {
+          if (is_local_array(id_uri) && std::filesystem::exists(id_uri)) {
+            std::cerr << "Error: URI " << id_uri
+                      << " already exists: " << std::endl;
+            std::cerr << "This is a dangerous operation, so we will not "
+                         "overwrite the file."
+                      << std::endl;
+            std::cerr << "Please delete the file manually and try again."
+                      << std::endl;
+            return 1;
+            // std::filesystem::remove(id_uri);
+          }
+          write_vector(shuffled_ids, id_uri);
         }
-        write_matrix(shuffled_ids, id_uri);
       }
     }
   } else {
@@ -265,6 +282,10 @@ int main(int argc, char* argv[]) {
       auto indices = read_vector<size_t>(index_uri);
       auto shuffled_ids = read_vector<uint64_t>(id_uri);
 
+      debug_matrix(shuffled_db, "shuffled_db");
+      debug_matrix(indices, "indices");
+      debug_matrix(shuffled_ids, "shuffled_ids");
+
       // Some variables for debugging
       auto mv = *std::max_element(begin(shuffled_ids), end(shuffled_ids));
 
@@ -280,6 +301,7 @@ int main(int argc, char* argv[]) {
           return qq;
         }
       }();
+      debug_matrix(q, "q");
 
       // What should be returned here?  Maybe a pair with the ids and scores?
       auto&& [kmeans_ids, all_ids] = kmeans_query(
@@ -292,6 +314,7 @@ int main(int argc, char* argv[]) {
           nprobe,
           k_nn,
           nthreads);
+      debug_matrix(kmeans_ids, "kmeans_ids");
       // Once this is a function, simply return kmeans_ids
       // For now, print the results to std::cout
       // @todo also get scores
