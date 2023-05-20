@@ -234,50 +234,93 @@ TEST_CASE("linalg: test tdbMatrix constructor, row", "[linalg]") {
   //    [5, 3, 0, 9, 4, 2, 2, 4]], dtype=np.int32)
 
   try {
+    std::vector<int32_t> data = {8, 6, 7, 5, 3, 1, 4, 1, 3, 0, 9, 9, 5, 9, 2, 7,
+                                 9, 8, 6, 7, 2, 6, 4, 3, 5, 3, 0, 9, 4, 2, 2, 4};  // OMG
     auto a = tdbMatrix<int32_t>("array_dense_1");
 
     CHECK(a.num_rows() == 4);
     CHECK(a.num_cols() == 8);
+    CHECK(std::equal(data.begin(), data.end(), a.data()));
 
     CHECK(a(0, 0) == 8);
-    CHECK(a(1, 0) == 3);
-    CHECK(a(2, 0) == 9);
-    CHECK(a(3, 0) == 5);
-
     CHECK(a(0, 1) == 6);
-    CHECK(a(1, 1) == 0);
-    CHECK(a(2, 1) == 8);
-    CHECK(a(3, 1) == 3);
-
     CHECK(a(0, 2) == 7);
-    CHECK(a(1, 2) == 9);
-    CHECK(a(2, 2) == 6);
-    CHECK(a(3, 2) == 0);
-
     CHECK(a(0, 3) == 5);
-    CHECK(a(1, 3) == 9);
-    CHECK(a(2, 3) == 7);
-    CHECK(a(3, 3) == 9);
-
     CHECK(a(0, 4) == 3);
-    CHECK(a(1, 4) == 5);
-    CHECK(a(2, 4) == 2);
-    CHECK(a(3, 4) == 4);
-
     CHECK(a(0, 5) == 1);
-    CHECK(a(1, 5) == 9);
-    CHECK(a(2, 5) == 6);
-    CHECK(a(3, 5) == 2);
-
     CHECK(a(0, 6) == 4);
-    CHECK(a(1, 6) == 2);
-    CHECK(a(2, 6) == 4);
-    CHECK(a(3, 6) == 2);
-
     CHECK(a(0, 7) == 1);
+
+    auto b = a[0];
+    CHECK(size(b) == 8);
+    CHECK(b[0] == 8);
+    CHECK(b[1] == 6);
+    CHECK(b[2] == 7);
+    CHECK(b[3] == 5);
+    CHECK(b[4] == 3);
+    CHECK(b[5] == 1);
+    CHECK(b[6] == 4);
+    CHECK(b[7] == 1);
+
+    CHECK(a(1, 0) == 3);
+    CHECK(a(1, 1) == 0);
+    CHECK(a(1, 2) == 9);
+    CHECK(a(1, 3) == 9);
+    CHECK(a(1, 4) == 5);
+    CHECK(a(1, 5) == 9);
+    CHECK(a(1, 6) == 2);
     CHECK(a(1, 7) == 7);
+
+    auto c = a[1];
+    CHECK(size(c) == 8);
+    CHECK(c[0] == 3);
+    CHECK(c[1] == 0);
+    CHECK(c[2] == 9);
+    CHECK(c[3] == 9);
+    CHECK(c[4] == 5);
+    CHECK(c[5] == 9);
+    CHECK(c[6] == 2);
+    CHECK(c[7] == 7);
+
+    CHECK(a(2, 0) == 9);
+    CHECK(a(2, 1) == 8);
+    CHECK(a(2, 2) == 6);
+    CHECK(a(2, 3) == 7);
+    CHECK(a(2, 4) == 2);
+    CHECK(a(2, 5) == 6);
+    CHECK(a(2, 6) == 4);
     CHECK(a(2, 7) == 3);
+
+    auto d = a[2];
+    CHECK(size(d) == 8);
+    CHECK(d[0] == 9);
+    CHECK(d[1] == 8);
+    CHECK(d[2] == 6);
+    CHECK(d[3] == 7);
+    CHECK(d[4] == 2);
+    CHECK(d[5] == 6);
+    CHECK(d[6] == 4);
+    CHECK(d[7] == 3);
+
+    CHECK(a(3, 0) == 5);
+    CHECK(a(3, 1) == 3);
+    CHECK(a(3, 2) == 0);
+    CHECK(a(3, 3) == 9);
+    CHECK(a(3, 4) == 4);
+    CHECK(a(3, 5) == 2);
+    CHECK(a(3, 6) == 2);
     CHECK(a(3, 7) == 4);
+
+    auto e = a[3];
+    CHECK(size(e) == 8);
+    CHECK(e[0] == 5);
+    CHECK(e[1] == 3);
+    CHECK(e[2] == 0);
+    CHECK(e[3] == 9);
+    CHECK(e[4] == 4);
+    CHECK(e[5] == 2);
+    CHECK(e[6] == 2);
+    CHECK(e[7] == 4);
 
   } catch (const std::exception& e) {
     std::cerr << "Exception caught: " << e.what() << std::endl;
@@ -285,10 +328,13 @@ TEST_CASE("linalg: test tdbMatrix constructor, row", "[linalg]") {
 }
 
 TEST_CASE("linalg: test tdbMatrix constructor, column", "[linalg]") {
+  std::vector<int32_t> data = {8, 6, 7, 5, 3, 1, 4, 1, 3, 0, 9, 9, 5, 9, 2, 7,
+                               9, 8, 6, 7, 2, 6, 4, 3, 5, 3, 0, 9, 4, 2, 2, 4};  // OMG
   auto a = tdbMatrix<int32_t, Kokkos::layout_left>("array_dense_1");
 
   CHECK(a.num_rows() == 8);
   CHECK(a.num_cols() == 4);
+  CHECK(std::equal(data.begin(), data.end(), a.data()));
 
   CHECK(a(0, 0) == 8);
   CHECK(a(1, 0) == 6);
@@ -299,6 +345,17 @@ TEST_CASE("linalg: test tdbMatrix constructor, column", "[linalg]") {
   CHECK(a(6, 0) == 4);
   CHECK(a(7, 0) == 1);
 
+  auto b = a[0];
+  CHECK(size(b) == 8);
+  CHECK(b[0] == 8);
+  CHECK(b[1] == 6);
+  CHECK(b[2] == 7);
+  CHECK(b[3] == 5);
+  CHECK(b[4] == 3);
+  CHECK(b[5] == 1);
+  CHECK(b[6] == 4);
+  CHECK(b[7] == 1);
+
   CHECK(a(0, 1) == 3);
   CHECK(a(1, 1) == 0);
   CHECK(a(2, 1) == 9);
@@ -307,6 +364,17 @@ TEST_CASE("linalg: test tdbMatrix constructor, column", "[linalg]") {
   CHECK(a(5, 1) == 9);
   CHECK(a(6, 1) == 2);
   CHECK(a(7, 1) == 7);
+
+  auto c = a[1];
+  CHECK(size(c) == 8);
+  CHECK(c[0] == 3);
+  CHECK(c[1] == 0);
+  CHECK(c[2] == 9);
+  CHECK(c[3] == 9);
+  CHECK(c[4] == 5);
+  CHECK(c[5] == 9);
+  CHECK(c[6] == 2);
+  CHECK(c[7] == 7);
 
   CHECK(a(0, 2) == 9);
   CHECK(a(1, 2) == 8);
@@ -317,6 +385,17 @@ TEST_CASE("linalg: test tdbMatrix constructor, column", "[linalg]") {
   CHECK(a(6, 2) == 4);
   CHECK(a(7, 2) == 3);
 
+  auto d = a[2];
+  CHECK(size(d) == 8);
+  CHECK(d[0] == 9);
+  CHECK(d[1] == 8);
+  CHECK(d[2] == 6);
+  CHECK(d[3] == 7);
+  CHECK(d[4] == 2);
+  CHECK(d[5] == 6);
+  CHECK(d[6] == 4);
+  CHECK(d[7] == 3);
+
   CHECK(a(0, 3) == 5);
   CHECK(a(1, 3) == 3);
   CHECK(a(2, 3) == 0);
@@ -325,6 +404,18 @@ TEST_CASE("linalg: test tdbMatrix constructor, column", "[linalg]") {
   CHECK(a(5, 3) == 2);
   CHECK(a(6, 3) == 2);
   CHECK(a(7, 3) == 4);
+
+  auto e = a[3];
+  CHECK(size(e) == 8);
+  CHECK(e[0] == 5);
+  CHECK(e[1] == 3);
+  CHECK(e[2] == 0);
+  CHECK(e[3] == 9);
+  CHECK(e[4] == 4);
+  CHECK(e[5] == 2);
+  CHECK(e[6] == 2);
+  CHECK(e[7] == 4);
+
 }
 
 TEST_CASE("linalg: test partitioned tdbMatrix constructor, row", "[linalg]") {
@@ -364,6 +455,17 @@ TEST_CASE("linalg: test partitioned tdbMatrix constructor, row", "[linalg]") {
     CHECK(a(2, 5) == 6);
     CHECK(a(2, 6) == 4);
     CHECK(a(2, 7) == 3);
+
+    auto d = a[2];
+    CHECK(size(d) == 8);
+    CHECK(d[0] == 9);
+    CHECK(d[1] == 8);
+    CHECK(d[2] == 6);
+    CHECK(d[3] == 7);
+    CHECK(d[4] == 2);
+    CHECK(d[5] == 6);
+    CHECK(d[6] == 4);
+    CHECK(d[7] == 3);
   }
   if (part > 3 || part == 0) {
     CHECK(a(3, 0) == 5);
