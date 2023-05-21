@@ -30,3 +30,6 @@
  */
 
 constexpr const char SIFT_TEST_DIR[] = "@SIFT_TEST_DIR@";
+constexpr const char CURRENT_DATETIME[] = "@CURRENT_DATETIME@";
+constexpr const char CMAKE_SOURCE_DIR[] = "@CMAKE_SOURCE_DIR@";
+constexpr const char GIT_BRANCH[] = "@GIT_BRANCH@";

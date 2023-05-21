@@ -35,6 +35,9 @@
 #include <chrono>
 #include <iostream>
 
+extern bool global_debug;
+extern bool global_verbose;
+
 /**
  * @brief A simple timer class for measuring elapsed wall clock time.
  * @tparam D The granularity of the timer. Defaults to microseconds.
@@ -101,6 +104,9 @@ class life_timer : public empty_timer, public ms_timer {
  public:
   explicit life_timer(const std::string& msg = "")
       : ms_timer(msg) {
+    if (global_debug) {
+      std::cout << "# [ " + msg + " ]: starting timer" << std::endl;
+    }
   }
 
   ~life_timer() {
