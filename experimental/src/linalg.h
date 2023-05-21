@@ -251,6 +251,26 @@ auto raveled(Matrix<T, LayoutPolicy, I>& m) {
   return m.raveled();
 }
 
+template <class LayoutPolicy>
+struct order_traits {
+  constexpr static auto order{ TILEDB_ROW_MAJOR };
+};
+
+template <>
+struct order_traits<Kokkos::layout_right> {
+  constexpr static auto order{ TILEDB_ROW_MAJOR };
+};
+
+template <>
+struct order_traits<Kokkos::layout_left> {
+  constexpr static auto order{ TILEDB_COL_MAJOR };
+};
+
+template <class LayoutPolicy>
+constexpr auto order_v = order_traits<LayoutPolicy>::order;
+
+
+
 /**
  * Derived from `Matrix`.  Initialized in construction by filling from a given
  * TileDB array.
@@ -268,6 +288,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   using index_type = typename Base::index_type;
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
+
+  constexpr static auto order{ order_v<LayoutPolicy> };
 
  private:
   // @todo: Make this configurable
@@ -353,82 +375,85 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       , schema_{array_.schema()} {
 
     life_timer _{"read matrix " + uri};
-    using row_domain_type = int32_t;
-    using col_domain_type = int32_t;
 
-    auto cell_order = schema_.cell_order();
-    auto tile_order = schema_.tile_order();
+    auto reader = [](size_t row_begin, size_t row_end, size_t col_begin, size_t col_end) {
+      using row_domain_type = int32_t;
+      using col_domain_type = int32_t;
 
-    // @todo Maybe throw an exception here?  Have to properly handle since this
-    // is a constructor.
-    assert (cell_order == tile_order);
+      auto cell_order = schema_.cell_order();
+      auto tile_order = schema_.tile_order();
 
+      // @todo Maybe throw an exception here?  Have to properly handle since this is a constructor.
+      assert(cell_order == tile_order);
 
-    const size_t idx = 0;
+      const size_t idx = 0;
 
-    auto domain_{schema_.domain()};
+      auto domain_{schema_.domain()};
 
-    auto array_rows_{domain_.dimension(0)};
-    auto array_cols_{domain_.dimension(1)};
-    auto dim_num_{domain_.ndim()};
+      auto array_rows_{domain_.dimension(0)};
+      auto array_cols_{domain_.dimension(1)};
+      auto dim_num_{domain_.ndim()};
 
-    auto max_rows_{
-        (array_rows_.template domain<row_domain_type>().second -
-         array_rows_.template domain<row_domain_type>().first + 1)};
-    auto max_cols_{
-        (array_cols_.template domain<col_domain_type>().second -
-         array_cols_.template domain<col_domain_type>().first + 1)};
+      auto max_rows_{
+          (array_rows_.template domain<row_domain_type>().second -
+           array_rows_.template domain<row_domain_type>().first + 1)};
+      auto max_cols_{
+          (array_cols_.template domain<col_domain_type>().second -
+           array_cols_.template domain<col_domain_type>().first + 1)};
 
-    if ((std::is_same_v<LayoutPolicy, Kokkos::layout_right> && cell_order == TILEDB_COL_MAJOR)
-        || (std::is_same_v<LayoutPolicy, Kokkos::layout_left> && cell_order == TILEDB_ROW_MAJOR)) {
-      std::swap(row_begin, col_begin);
-      std::swap(row_end, col_end);
-    }
+      if ((std::is_same_v<LayoutPolicy, Kokkos::layout_right> &&
+           cell_order == TILEDB_COL_MAJOR) ||
+          (std::is_same_v<LayoutPolicy, Kokkos::layout_left> &&
+           cell_order == TILEDB_ROW_MAJOR)) {
+        std::swap(row_begin, col_begin);
+        std::swap(row_end, col_end);
+      }
 
-    if (row_begin == 0 && row_end == 0) {
-      row_end = max_rows_;
-    }
-    if (col_begin == 0 && col_end == 0) {
-      col_end = max_cols_;
-    }
+      if (row_begin == 0 && row_end == 0) {
+        row_end = max_rows_;
+      }
+      if (col_begin == 0 && col_end == 0) {
+        col_end = max_cols_;
+      }
 
-    auto num_rows = row_end - row_begin;
-    auto num_cols = col_end - col_begin;
+      auto num_rows = row_end - row_begin;
+      auto num_cols = col_end - col_begin;
 
-    auto attr_num{schema_.attribute_num()};
-    auto attr = schema_.attribute(idx);
+      auto attr_num{schema_.attribute_num()};
+      auto attr = schema_.attribute(idx);
 
-    std::string attr_name = attr.name();
-    tiledb_datatype_t attr_type = attr.type();
+      std::string attr_name = attr.name();
+      tiledb_datatype_t attr_type = attr.type();
 
-    // This should be set in initialization
-    // ctx_.set_tag("vfs.s3.region", global_region.c_str());
+      // This should be set in initialization
+      // ctx_.set_tag("vfs.s3.region", global_region.c_str());
 
-    // Create a subarray that reads the array up to the specified subset.
-    std::vector<int32_t> subarray_vals = {
-        (int32_t)row_begin,
-        (int32_t)row_end - 1,
-        (int32_t)col_begin,
-        (int32_t)col_end - 1};
-    tiledb::Subarray subarray(ctx_, array_);
-    subarray.set_subarray(subarray_vals);
+      // Create a subarray that reads the array up to the specified subset.
+      std::vector<int32_t> subarray_vals = {
+          (int32_t)row_begin,
+          (int32_t)row_end - 1,
+          (int32_t)col_begin,
+          (int32_t)col_end - 1};
+      tiledb::Subarray subarray(ctx_, array_);
+      subarray.set_subarray(subarray_vals);
 
-//    auto layout_order = std::is_same_v<LayoutPolicy, Kokkos::layout_right> ? TILEDB_ROW_MAJOR : TILEDB_COL_MAJOR;
-    auto layout_order = cell_order;
+      //    auto layout_order = std::is_same_v<LayoutPolicy, Kokkos::layout_right> ? TILEDB_ROW_MAJOR : TILEDB_COL_MAJOR;
+      auto layout_order = cell_order;
 
 #ifndef __APPLE__
-    auto data_ = std::make_unique_for_overwrite<T[]>(num_rows * num_cols);
+      auto data_ = std::make_unique_for_overwrite<T[]>(num_rows * num_cols);
 #else
-    // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
-    auto data_ = std::unique_ptr<T[]>(new T[num_rows * num_cols]);
+      // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
+      auto data_ = std::unique_ptr<T[]>(new T[num_rows * num_cols]);
 #endif
 
-    tiledb::Query query(ctx_, array_);
-    query.set_subarray(subarray)
-        .set_layout(layout_order)
-        .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
+      tiledb::Query query(ctx_, array_);
+      query.set_subarray(subarray)
+          .set_layout(layout_order)
+          .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
 
-    query.submit();
+      query.submit();
+    }
     array_.close();
     assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
