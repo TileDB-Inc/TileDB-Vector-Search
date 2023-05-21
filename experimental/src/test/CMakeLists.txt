@@ -45,6 +45,9 @@ target_link_libraries(unit_defs PRIVATE Catch2::Catch2WithMain)
 add_executable(unit_gemm unit_gemm.cc)
 target_link_libraries(unit_gemm PRIVATE sift_test flat_blas)
 
+add_executable(unit_mdspan unit_mdspan.cc)
+target_link_libraries(unit_mdspan PRIVATE sift_test mdspan)
+
 add_executable(unit_linalg unit_linalg.cc)
 target_link_libraries(unit_linalg PRIVATE sift_test mdspan)
 
