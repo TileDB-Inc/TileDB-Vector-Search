@@ -33,7 +33,7 @@
 #include <filesystem>
 #include <iostream>
 #include "../sift_db.h"
-#include "./config.h"
+#include "../config.h"
 
 TEST_CASE("sift_db: test test", "[sift_db]") {
 #include <filesystem>

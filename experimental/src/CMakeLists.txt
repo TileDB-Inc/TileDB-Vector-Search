@@ -25,6 +25,24 @@
 # THE SOFTWARE.
 #
 
+# Get the current date and time
+string(TIMESTAMP CURRENT_DATETIME "%Y-%m-%d %H:%M:%S")
+
+# Execute "git rev-parse --abbrev-ref HEAD" command to get the current branch name
+execute_process(
+        COMMAND git rev-parse --abbrev-ref HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_BRANCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+# Print the Git branch name
+# message("Current Git branch: ${GIT_BRANCH}")
+
+
+
+configure_file(config.h.in config.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 add_executable(flat flat.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h)
 
 target_link_libraries(flat PUBLIC docopt)
@@ -32,7 +50,6 @@ target_link_libraries(flat PUBLIC flat_mt)
 target_link_libraries(flat PUBLIC flat_blas)
 target_link_libraries(flat PUBLIC TileDB::tiledb_shared)
 target_link_libraries(flat PUBLIC mdspan)
-
 
 add_executable(kmeans flat_query.h flat.cc defs.h sift_db.h timer.h sift_array.h linalg.h)
 

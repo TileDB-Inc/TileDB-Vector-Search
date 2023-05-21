@@ -56,6 +56,8 @@
 #include "timer.h"
 
 
+extern bool global_verbose;
+extern bool global_debug;
 extern std::string global_region;
 
 /**
@@ -312,6 +314,9 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   tdbMatrix(const std::string& uri) noexcept
       // requires (std::is_same_v<LayoutPolicy, Kokkos::layout_left>)
       : tdbMatrix(uri, 0, 0) {
+    if (global_debug) {
+      std::cerr << "# tdbMatrix constructor: " << uri << std::endl;
+    }
   }
 
   /**
@@ -346,6 +351,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t col_end) noexcept
       : array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()} {
+
     life_timer _{"read matrix " + uri};
     using row_domain_type = int32_t;
     using col_domain_type = int32_t;
@@ -452,6 +458,10 @@ using tdbColMajorMatrix = tdbMatrix<T, Kokkos::layout_left, I>;
  */
 template <class T, class LayoutPolicy = Kokkos::layout_right, class I = size_t>
 void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
+  if (global_debug) {
+    std::cerr << "# Writing Matrix: " << uri << std::endl;
+  }
+
   life_timer _{"write matrix " + uri};
 
   // Create context
@@ -509,6 +519,10 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
  */
 template <class T>
 void write_vector(std::vector<T>& v, const std::string& uri) {
+  if (global_debug) {
+    std::cerr << "# Writing std::vector: " << uri << std::endl;
+  }
+
   life_timer _{"write vector " + uri};
 
   // Create context
@@ -552,6 +566,10 @@ void write_vector(std::vector<T>& v, const std::string& uri) {
  */
 template <class T>
 auto read_vector(const std::string& uri) {
+  if (global_debug) {
+    std::cerr << "# Reading std::vector: " << uri << std::endl;
+  }
+
   auto init_ =
       std::map<std::string, std::string>{{"vfs.s3.region", global_region.c_str()}};
   auto config_ = tiledb::Config{init_};
@@ -628,7 +646,7 @@ std::string matrix_info(const Matrix& A, const std::string& msg = "") {
  */
 template <class T>
 std::string matrix_info(const std::vector<T>& A, const std::string& msg = "") {
-  std::string str = msg;
+  std::string str = "# " + msg;
   if (!msg.empty()) {
     str += ": ";
   }
