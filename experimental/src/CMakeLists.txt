@@ -43,7 +43,7 @@ execute_process(
 configure_file(config.h.in config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-add_executable(flat flat.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h)
+add_executable(flat flat.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h array_view.h readers.h)
 
 target_link_libraries(flat PUBLIC docopt)
 target_link_libraries(flat PUBLIC flat_mt)
@@ -60,7 +60,7 @@ target_link_libraries(kmeans PUBLIC TileDB::tiledb_shared)
 target_link_libraries(kmeans PUBLIC mdspan)
 
 
-add_executable(ivf_hack ivf_hack.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h)
+add_executable(ivf_hack ivf_hack.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h array_view.h readers.h)
 
 target_link_libraries(ivf_hack PUBLIC docopt)
 target_link_libraries(ivf_hack PUBLIC flat_mt)
