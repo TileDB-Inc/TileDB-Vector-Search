@@ -30,9 +30,6 @@ include(Catch2)
 set (SIFT_TEST_DIR ${CMAKE_BINARY_DIR}/src/test)
 message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 
-configure_file(config.h.in config.h)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
 add_library(sift_test INTERFACE)
 target_link_libraries(sift_test INTERFACE Catch2::Catch2WithMain TileDB::tiledb_shared)
 

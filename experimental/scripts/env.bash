@@ -20,24 +20,26 @@ function init_paths() {
 	declare -g arch=${3}
     fi
 
-# declare -g region=us-west-2
-# declare -g s3_prefix=s3://tiledb-lums
+    # declare -g region=us-west-2
+    # declare -g s3_prefix=s3://tiledb-lums
 
-declare -g kmeans_prefix=${s3_prefix}/kmeans
-declare -g ivf_hack_prefix=${kmeans_prefix}/ivf_hack
-declare -g arch_prefix=${ivf_hack_prefix}/${arch}
-
-declare -g sift_prefix=${s3_prefix}/sift
-
-declare -g local_array_prefix=/Users/lums/TileDB/feature-vector-prototype/experimental/data/arrays/
-declare -g local_sift_prefix=${local_array_prefix}/sift
-declare -g local_kmeans_prefix=${local_array_prefix}/kmeans
-
+    declare -g kmeans_prefix=${s3_prefix}/kmeans
+    declare -g ivf_hack_prefix=${kmeans_prefix}/ivf_hack
+    declare -g arch_prefix=${ivf_hack_prefix}/${arch}
+    
+    declare -g sift_prefix=${s3_prefix}/sift
+    
+    declare -g local_array_prefix=/Users/lums/TileDB/feature-vector-prototype/experimental/data/arrays/
+    declare -g local_sift_prefix=${local_array_prefix}/sift
+    declare -g local_kmeans_prefix=${local_array_prefix}/kmeans
+    
+    declare -g default_ivf_build_prefix=/Users/lums/TileDB/feature-vector-prototype/experimental/cmake-build-release
 }
 
 function print_schema() {
-s3_prefix=${2}
-echo ${s3_prefix} at ${1}    
+    s3_prefix=${2}
+    echo ${s3_prefix} at ${1}    
+
 python3 -c """
 import tiledb
 tiledb.default_ctx({\"vfs.s3.region\": \"${1}\"})
@@ -68,11 +70,33 @@ print(f.schema)
 """
 }
 
-function ivf_hack() {
+function build_ivf_hack() {
+    ivf_build_prefix=${default_ivf_build_prefix}
+    
+    if [[ $# -gt 0 ]]; then
+	ivf_build_prefix=${1}
+    fi
+    if [[ $# -gt 1 ]]; then
+	branch=${2}
+    fi
 
-    ivf_build_prefix=/Users/lums/TileDB/feature-vector-prototype/experimental/cmake-build-release
+    pushd ${ivf_build_prefix}
+    if [ -n "${branch}" ];
+    then
+       git checkout ${branch}
+    fi
+    make clean
+    make ivf_hack
+    popd
+}
+			 
+
+
+function ivf_hack() {
+    ivf_build_prefix=${default_ivf_build_prefix}
     write=""
     dryrun=""
+    branch="lums/tmp/part"
 
   while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -88,6 +112,14 @@ function ivf_hack() {
         ivf_build_prefix=${2}
         shift 2
         ;;
+      -b|--branch)
+        branch=${2}
+        shift 2
+        ;;
+      -x|--build)
+	  build=1
+	  shift 1
+	  ;;
       *)
         echo "Unknown option: $1"
         return 1
@@ -105,11 +137,13 @@ function ivf_hack() {
       return
   fi
 
+  if [[ -n "${build}" ]];
+  then
+      build_ivf_hack ${ivf_build_prefix} ${branch}
+  fi
 
-    pushd ${ivf_build_prefix}
-    make clean
-    make ivf_hack
-    popd
+
+echo RUNNING ${ivf_build_prefix}/src/ivf_hack 
 
 ${ivf_build_prefix}/src/ivf_hack \
     --id_uri ${arch_prefix}/ids --index_uri ${arch_prefix}/index --part_uri ${arch_prefix}/parts  \

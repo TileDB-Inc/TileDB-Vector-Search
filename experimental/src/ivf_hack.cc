@@ -67,6 +67,7 @@
 #include "linalg.h"
 #include "timer.h"
 #include "utils.h"
+#include "config.h"
 
 bool global_verbose = false;
 bool global_debug = false;
@@ -119,8 +120,11 @@ int main(int argc, char* argv[]) {
   global_region = args["--region"].asString();
 
   if (global_debug) {
+    std::cout << "# " << argv[0] << " built at " << CURRENT_DATETIME << "\n";
+    std::cout << "# Git branch: " << GIT_BRANCH << "\n";
+    std::cout << "# Built from source in " << CMAKE_SOURCE_DIR << "\n";
     auto&& [major, minor, patch] = tiledb::version();
-    std::cout << "TileDB version: " << major << "." << minor << "." << patch
+    std::cout << "# TileDB version: " << major << "." << minor << "." << patch
               << std::endl;
   }
 
