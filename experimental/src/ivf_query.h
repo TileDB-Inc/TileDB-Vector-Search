@@ -381,6 +381,7 @@ auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
   assert(db.num_rows() == q.num_rows());
 
   {
+    // Don't want to emit messages at every iteration
 // life_timer _{"L2 comparison (gemm)"};
 
     for (;;) {
