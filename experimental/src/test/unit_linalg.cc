@@ -237,8 +237,9 @@ TEST_CASE("linalg: test tdbMatrix constructor, row", "[linalg]") {
   //    [5, 3, 0, 9, 4, 2, 2, 4]], dtype=np.int32)
 
   try {
-    std::vector<int32_t> data = {8, 6, 7, 5, 3, 1, 4, 1, 3, 0, 9, 9, 5, 9, 2, 7,
-                                 9, 8, 6, 7, 2, 6, 4, 3, 5, 3, 0, 9, 4, 2, 2, 4};  // OMG
+    std::vector<int32_t> data = {8, 6, 7, 5, 3, 1, 4, 1, 3, 0, 9,
+                                 9, 5, 9, 2, 7, 9, 8, 6, 7, 2, 6,
+                                 4, 3, 5, 3, 0, 9, 4, 2, 2, 4};  // OMG
     auto a = tdbMatrix<int32_t>("array_dense_1");
 
     CHECK(a.num_rows() == 4);
@@ -331,8 +332,9 @@ TEST_CASE("linalg: test tdbMatrix constructor, row", "[linalg]") {
 }
 
 TEST_CASE("linalg: test tdbMatrix constructor, column", "[linalg]") {
-  std::vector<int32_t> data = {8, 6, 7, 5, 3, 1, 4, 1, 3, 0, 9, 9, 5, 9, 2, 7,
-                               9, 8, 6, 7, 2, 6, 4, 3, 5, 3, 0, 9, 4, 2, 2, 4};  // OMG
+  std::vector<int32_t> data = {8, 6, 7, 5, 3, 1, 4, 1, 3, 0, 9,
+                               9, 5, 9, 2, 7, 9, 8, 6, 7, 2, 6,
+                               4, 3, 5, 3, 0, 9, 4, 2, 2, 4};  // OMG
   auto a = tdbMatrix<int32_t, Kokkos::layout_left>("array_dense_1");
 
   CHECK(a.num_rows() == 8);
@@ -418,7 +420,6 @@ TEST_CASE("linalg: test tdbMatrix constructor, column", "[linalg]") {
   CHECK(e[5] == 2);
   CHECK(e[6] == 2);
   CHECK(e[7] == 4);
-
 }
 
 TEST_CASE("linalg: test partitioned tdbMatrix constructor, row", "[linalg]") {
@@ -539,8 +540,7 @@ TEST_CASE(
   }
 }
 
-TEST_CASE("linalg: test advance", "[linalg]") {
-
+TEST_CASE("linalg: test advance, row major", "[linalg]") {
   auto a = tdbMatrix<int32_t, Kokkos::layout_right>("array_dense_1", 2);
 
   CHECK(a.num_rows() == 2);
@@ -585,6 +585,50 @@ TEST_CASE("linalg: test advance", "[linalg]") {
   CHECK(a(1, 7) == 4);
 }
 
+TEST_CASE("linalg: test advance, column", "[linalg]") {
+  auto a = tdbMatrix<int32_t, Kokkos::layout_left>("array_dense_1", 2);
+
+  CHECK(a.num_rows() == 8);
+  CHECK(a.num_cols() == 2);
+
+  CHECK(a(0, 0) == 8);
+  CHECK(a(1, 0) == 6);
+  CHECK(a(2, 0) == 7);
+  CHECK(a(3, 0) == 5);
+  CHECK(a(4, 0) == 3);
+  CHECK(a(5, 0) == 1);
+  CHECK(a(6, 0) == 4);
+  CHECK(a(7, 0) == 1);
+
+  CHECK(a(0, 1) == 3);
+  CHECK(a(1, 1) == 0);
+  CHECK(a(2, 1) == 9);
+  CHECK(a(3, 1) == 9);
+  CHECK(a(4, 1) == 5);
+  CHECK(a(5, 1) == 9);
+  CHECK(a(6, 1) == 2);
+  CHECK(a(7, 1) == 7);
+
+  a.advance();
+
+  CHECK(a(0, 0) == 9);
+  CHECK(a(1, 0) == 8);
+  CHECK(a(2, 0) == 6);
+  CHECK(a(3, 0) == 7);
+  CHECK(a(4, 0) == 2);
+  CHECK(a(5, 0) == 6);
+  CHECK(a(6, 0) == 4);
+  CHECK(a(7, 0) == 3);
+
+  CHECK(a(0, 1) == 5);
+  CHECK(a(1, 1) == 3);
+  CHECK(a(2, 1) == 0);
+  CHECK(a(3, 1) == 9);
+  CHECK(a(4, 1) == 4);
+  CHECK(a(5, 1) == 2);
+  CHECK(a(6, 1) == 2);
+  CHECK(a(7, 1) == 4);
+}
 
 TEMPLATE_LIST_TEST_CASE(
     "linalg: test write/read std::vector", "[linalg]", TestTypes) {
@@ -642,11 +686,10 @@ TEMPLATE_LIST_TEST_CASE(
     CHECK(A.num_cols() == N);
     CHECK(A.num_rows() == B.num_rows());
     CHECK(A.num_cols() == B.num_cols());
-    for (size_t i = 0; i < M*N; ++i) {
+    for (size_t i = 0; i < M * N; ++i) {
       CHECK(A.data()[i] == B.data()[i]);
     }
     CHECK(
         std::equal(A.data(), A.data() + A.num_rows() * A.num_cols(), B.data()));
   }
 }
-
