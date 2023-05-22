@@ -515,7 +515,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     auto layout_order = cell_order;
 
     if (layout_order == TILEDB_ROW_MAJOR) {
-      if (num_array_rows_ == row_offset_) {
+      if (num_array_rows_ <= std::get<1>(row_view_)) {
         return false;
       }
       if (num_elts == 0) {
@@ -526,7 +526,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       std::get<0>(row_view_) += num_elts;
       std::get<1>(row_view_) += num_elts;
     } else if (layout_order == TILEDB_COL_MAJOR) {
-      if (num_array_cols_ == col_offset_) {
+      if (num_array_cols_ <= std::get<1>(col_view_)) {
         return false;
       }
       if (num_elts == 0) {
@@ -574,7 +574,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     auto layout_order = cell_order;
 
     if (layout_order == TILEDB_ROW_MAJOR) {
-      if (num_array_rows_ == row_offset_) {
+      if (num_array_rows_ <= std::get<1>(row_view_)) {
         return false;
       }
       if (num_elts == 0) {
@@ -585,7 +585,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       std::get<0>(row_view_) += num_elts;
       std::get<1>(row_view_) += num_elts;
     } else if (layout_order == TILEDB_COL_MAJOR) {
-      if (num_array_cols_ == col_offset_) {
+      if (num_array_cols_ <= std::get<1>(col_view_)) {
         return false;
       }
       if (num_elts == 0) {
