@@ -69,11 +69,7 @@
 #include "utils.h"
 #include "config.h"
 
-// @todo Centralize this in a config file
-namespace stdx {
-using namespace Kokkos;
-using namespace Kokkos::Experimental;
-}
+
 
 bool global_verbose = false;
 bool global_debug = false;
@@ -85,7 +81,7 @@ static constexpr const char USAGE[] =
 Usage:
     tdb (-h | --help)
     tdb   --db_uri URI --centroids_uri URI --index_uri URI --part_uri URI --id_uri URI
-         [--output_uri URI] [--query_uri URI] [--ndb NN] [--nqueries NN]
+         [--output_uri URI] [--query_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
          [--k NN] [--cluster NN] [--write] [--nthreads N] [--region REGION] [-n] [-d | -v]
 
 Options:
@@ -103,6 +99,7 @@ Options:
     --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
     --k NN                number of nearest neighbors to search for [default: 10]
     --cluster NN          number of clusters to use [default: 100]
+    --blocksize NN        number of vectors to process in a block (0 = all) [default: 0]
     --region REGION       AWS S3 region [default: us-east-1]
     -n, --dryrun          perform a dry run (no writes) [default: false]
     -d, --debug           run in debug mode [default: false]
