@@ -491,18 +491,21 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     Base::operator=(Base{std::move(data_), num_rows, num_cols});
   }
 
-public:
+ public:
   /**
    * @brief Advance the view to the next row block of data.
    *
    * @param num_elts How many elements to advance the view by.  If 0, then
    * advance to the next block.
+   *
+   * @todo Handle case of advancing to the end of the array.
+   * @todo Make this an iterator.
    */
- void advance(size_t num_elts = 0)
-   requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
- {
-
-    // @todo These can probably all be made class members
+  void advance(size_t num_elts = 0)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+  {
+    // @todo attr_idx, attr_name, and cell_order / layout_order should be
+    // members of the class
     size_t attr_idx = 0;
     auto attr = schema_.attribute(attr_idx);
     std::string attr_name = attr.name();
@@ -536,23 +539,65 @@ public:
     tiledb::Subarray subarray(ctx_, array_);
     subarray.set_subarray(subarray_vals);
 
+    tiledb::Query query(ctx_, array_);
+    query.set_subarray(subarray)
+        .set_layout(layout_order)
+        .set_data_buffer(
+            attr_name,
+            this->data(),
+            (std::get<1>(row_view_) - std::get<0>(row_view_)) *
+                (std::get<1>(col_view_) - std::get<0>(col_view_)));
+    query.submit();
+  }
 
+  void advance(size_t num_elts = 0)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+  {
+    // @todo attr_idx, attr_name, and cell_order / layout_order should be
+    // members of the class
+    size_t attr_idx = 0;
+    auto attr = schema_.attribute(attr_idx);
+    std::string attr_name = attr.name();
+    auto cell_order = schema_.cell_order();
+    auto layout_order = cell_order;
 
+    if (layout_order == TILEDB_ROW_MAJOR) {
+      if (num_elts == 0) {
+        num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
+      }
+      row_offset_ += num_elts;
+      std::get<0>(row_view_) += num_elts;
+      std::get<1>(row_view_) += num_elts;
+    } else if (layout_order == TILEDB_COL_MAJOR) {
+      if (num_elts == 0) {
+        num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
+      }
+      col_offset_ += num_elts;
+      std::get<0>(col_view_) += num_elts;
+      std::get<1>(col_view_) += num_elts;
+    } else {
+      throw std::runtime_error("Unknown cell order");
+    }
+
+    // Create a subarray that reads the array with the specified view
+    std::vector<int32_t> subarray_vals = {
+        (int32_t)std::get<0>(row_view_),
+        (int32_t)std::get<1>(row_view_) - 1,
+        (int32_t)std::get<0>(col_view_),
+        (int32_t)std::get<1>(col_view_) - 1};
+    tiledb::Subarray subarray(ctx_, array_);
+    subarray.set_subarray(subarray_vals);
 
     tiledb::Query query(ctx_, array_);
     query.set_subarray(subarray)
         .set_layout(layout_order)
-        .set_data_buffer(attr_name, this->data(),
-                         (std::get<1>(row_view_) - std::get<0>(row_view_))
-                         *(std::get<1>(col_view_) - std::get<0>(col_view_)));
+        .set_data_buffer(
+            attr_name,
+            this->data(),
+            (std::get<1>(row_view_) - std::get<0>(row_view_)) *
+                (std::get<1>(col_view_) - std::get<0>(col_view_)));
     query.submit();
-
- }
-
- void advance(size_t num_elts = 0)
-   requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
- {
- }
+  }
 
   ~tdbMatrix() noexcept {
     array_.close();
