@@ -303,6 +303,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
+  size_t num_array_rows_{0};
+  size_t num_array_cols_{0};
 
   std::tuple<index_type, index_type> row_view_;
   std::tuple<index_type, index_type> col_view_;
@@ -420,12 +422,12 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     auto array_rows_{domain_.dimension(0)};
     auto array_cols_{domain_.dimension(1)};
 
-    auto num_array_rows_{
+    num_array_rows_ =
         (array_rows_.template domain<row_domain_type>().second -
-         array_rows_.template domain<row_domain_type>().first + 1)};
-    auto num_array_cols_{
+         array_rows_.template domain<row_domain_type>().first + 1);
+    num_array_cols_ =
         (array_cols_.template domain<col_domain_type>().second -
-         array_cols_.template domain<col_domain_type>().first + 1)};
+         array_cols_.template domain<col_domain_type>().first + 1);
 
     if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
         (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {
@@ -501,7 +503,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @todo Handle case of advancing to the end of the array.
    * @todo Make this an iterator.
    */
-  void advance(size_t num_elts = 0)
+  bool advance(size_t num_elts = 0)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
   {
     // @todo attr_idx, attr_name, and cell_order / layout_order should be
@@ -513,16 +515,24 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     auto layout_order = cell_order;
 
     if (layout_order == TILEDB_ROW_MAJOR) {
+      if (num_array_rows_ == row_offset_) {
+        return false;
+      }
       if (num_elts == 0) {
         num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
       }
+      num_elts = std::min(num_elts, num_array_rows_ - row_offset_);
       row_offset_ += num_elts;
       std::get<0>(row_view_) += num_elts;
       std::get<1>(row_view_) += num_elts;
     } else if (layout_order == TILEDB_COL_MAJOR) {
+      if (num_array_cols_ == col_offset_) {
+        return false;
+      }
       if (num_elts == 0) {
         num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
       }
+      num_elts = std::min(num_elts, num_array_cols_ - col_offset_);
       col_offset_ += num_elts;
       std::get<0>(col_view_) += num_elts;
       std::get<1>(col_view_) += num_elts;
@@ -548,9 +558,11 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
             (std::get<1>(row_view_) - std::get<0>(row_view_)) *
                 (std::get<1>(col_view_) - std::get<0>(col_view_)));
     query.submit();
+
+    return true;
   }
 
-  void advance(size_t num_elts = 0)
+  bool advance(size_t num_elts = 0)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
   {
     // @todo attr_idx, attr_name, and cell_order / layout_order should be
@@ -562,16 +574,24 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     auto layout_order = cell_order;
 
     if (layout_order == TILEDB_ROW_MAJOR) {
+      if (num_array_rows_ == row_offset_) {
+        return false;
+      }
       if (num_elts == 0) {
         num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
       }
+      num_elts = std::min(num_elts, num_array_rows_ - row_offset_);
       row_offset_ += num_elts;
       std::get<0>(row_view_) += num_elts;
       std::get<1>(row_view_) += num_elts;
     } else if (layout_order == TILEDB_COL_MAJOR) {
+      if (num_array_cols_ == col_offset_) {
+        return false;
+      }
       if (num_elts == 0) {
         num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
       }
+      num_elts = std::min(num_elts, num_array_cols_ - col_offset_);
       col_offset_ += num_elts;
       std::get<0>(col_view_) += num_elts;
       std::get<1>(col_view_) += num_elts;
@@ -597,12 +617,26 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
             (std::get<1>(row_view_) - std::get<0>(row_view_)) *
                 (std::get<1>(col_view_) - std::get<0>(col_view_)));
     query.submit();
+
+    return true;
   }
 
-  ~tdbMatrix() noexcept {
-    array_.close();
+  size_t offset() const
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+  {
+    return row_offset_;
   }
-};
+
+  size_t offset() const
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+  {
+    return col_offset_;
+  }
+
+    ~tdbMatrix() noexcept {
+      array_.close();
+    }
+  };
 
 /**
  * Convenience class for row-major matrices.

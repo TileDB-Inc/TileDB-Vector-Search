@@ -364,4 +364,116 @@ auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
   return top_k;
 }
 
+template <class DB, class Q>
+auto blocked_gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
+  life_timer _outer{"Total time blocked_gemm"};
+
+  ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
+  auto _score_data = raveled(scores);
+  auto top_k = std::vector<int>(q.num_cols());
+  auto min_scores =
+      std::vector<float>(q.num_cols(), std::numeric_limits<float>::max());
+
+  int M = db.num_cols();
+  int N = q.num_cols();
+  int K = db.num_rows();
+
+  assert(db.num_rows() == q.num_rows());
+
+  {
+    life_timer _{"L2 comparison (gemm)"};
+
+    for (;;) {
+      cblas_sgemm(
+          CblasColMajor,
+          CblasTrans,
+          CblasNoTrans,
+          M,
+          N,
+          K,
+          -2.0,
+          &db(0, 0),
+          K,
+          &q(0, 0),
+          K,
+          0.0,
+          &scores(0, 0),
+          M);
+
+      std::vector<float> alpha(M, 0.0f);
+      std::vector<float> beta(N, 0.0f);
+      {
+        life_timer _{"L2 comparison colsum"};
+
+        mat_col_sum(
+            db, alpha, [](auto a) { return a * a; });  // @todo optimize somehow
+        mat_col_sum(q, beta, [](auto a) { return a * a; });
+      }
+
+      {
+        life_timer _{"L2 comparison outer product"};
+
+        // A += alpha * x * transpose(y)
+        std::vector<float> alpha_ones(N, 1.0f);
+        std::vector<float> beta_ones(M, 1.0f);
+
+        // This should be more parallelizable -- but seems to be completely
+        // memory-bound
+        cblas_sger(
+            CblasColMajor,
+            M,
+            N,
+            1.0,
+            &alpha[0],
+            1,
+            &alpha_ones[0],
+            1,
+            &scores(0, 0),
+            M);
+        cblas_sger(
+            CblasColMajor,
+            M,
+            N,
+            1.0,
+            &beta_ones[0],
+            1,
+            &beta[0],
+            1,
+            &scores(0, 0),
+            M);
+      }
+
+      {
+        life_timer _{"L2 comparison finish"};
+
+        stdx::execution::parallel_policy par{nthreads};
+        stdx::for_each(
+            std::move(par), begin(_score_data), end(_score_data), [](auto& a) {
+              a = sqrt(a);
+            });
+      }
+
+      {
+        life_timer _{"top k"};
+        for (int i = 0; i < scores.num_cols(); ++i) {
+          auto min_score = min_scores[i];
+          auto idx = db.offset();
+
+          for (int j = 0; j < scores.num_rows(); ++j) {
+            auto score = scores(j, i);
+            if (score < min_score) {
+              min_score = score;
+              idx = j + db.offset();
+            }
+          }
+          top_k[i] = idx;
+        }
+      }
+      if (!db.advance()) {
+        break;
+      }
+    }
+  }
+  return top_k;
+}
 #endif  // TDB_IVF_QUERY_H
