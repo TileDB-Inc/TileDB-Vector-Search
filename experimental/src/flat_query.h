@@ -162,10 +162,9 @@ void query_qv_hw(
   std::iota(begin(i_index), end(i_index), 0);
 
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
-  stdx::for_each(
+  stdx::range_for_each(
       std::move(par),
-      begin(q),
-      end(q),
+      q,
       [&](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
         size_t size_q = size(q);
         size_t size_db = size(db);
@@ -198,10 +197,9 @@ void query_qv_ew(
   std::iota(begin(i_index), end(i_index), 0);
 
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
-  stdx::for_each(
+  stdx::range_for_each(
       std::move(par),
-      begin(q),
-      end(q),
+      q,
       [&](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
         size_t size_db = size(db);
 
@@ -328,10 +326,9 @@ void query_vq_ew(
     // Spawning threads manually is probably more like the distributed
     // memory case
     auto par = stdx::execution::indexed_parallel_policy{nthreads};
-    stdx::for_each(
+    stdx::range_for_each(
         std::move(par),
-        begin(db),
-        end(db),
+        db,
         [&](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
           unsigned size_q = size(q);
           for (int j = 0; j < size_q; ++j) {
@@ -612,8 +609,8 @@ void query_gemm(
 
 template <class DB, class Q, class TK>
 auto blocked_gemm_compute_scores(
-    const DB& db,
-    const Q& q,
+    DB& db,
+    Q& q,
     TK& top_k,
     int k,
     [[maybe_unused]] bool hw,
@@ -637,7 +634,7 @@ auto blocked_gemm_compute_scores(
   ms_timer init_time("Allocating score array");
   init_time.start();
 
-  Matrix<float> scores(size(q), size(db));
+  Matrix<float> scores(q.num_cols(), db.num_cols());
   auto _score_data = raveled(scores);
 
   std::vector<fixed_min_set<element>> min_scores(size(q), fixed_min_set<element>(k));
@@ -771,28 +768,41 @@ auto blocked_gemm_compute_scores(
           a = sqrt(a);
         });
 
+
     for (int i = 0; i < scores.num_cols(); ++i) {
       for (int j = 0; j < scores.num_rows(); ++j) {
-        min_scores[j].insert({scores[j][i], i});
+        min_scores[j].insert({scores(j,i), i + db.offset()});
       }
     }
-    for (int i = 0; i < scores.num_cols(); ++i) {
-      std::transform(
-          min_scores[i].begin(), min_scores[i].end(), top_k[i].begin(), ([](auto&& e) {
-            return e.second;
-          }));
-    }
 
-    // get_top_k(scores, top_k, k, size(q), size(db), nthreads);
+
+    bool done = false;
+    if (block_db) {
+      done = !db.advance();
+    } else {
+      done = !q.advance();
+    }
+    if (done) {
+      break;
+    }
   }
+  for (int j = 0; j < scores.num_rows(); ++j) {
+    std::transform(
+        min_scores[j].begin(), min_scores[j].end(), top_k[j].begin(), ([](auto&& e) {
+          return e.second;
+        }));
+  }
+
+
+
   return scores;
 }
 
 
 template <class DB, class Q, class G, class TK>
 void blocked_query_gemm(
-    const DB& db,
-    const Q& q,
+    DB& db,
+    Q& q,
     const G& g,
     TK& top_k,
     int k,
@@ -802,10 +812,27 @@ void blocked_query_gemm(
   {
     life_timer _{"Checking results"};
 
+    std::cout << std::endl;
+    for(size_t i = 0; i < 10; ++i) {
+      for (size_t j = 0; j < 10; ++j) {
+        std::cout << g[i][j] << " ";
+      }
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
     size_t size_q = size(q);
     for (size_t j = 0; j < size_q; ++j) {
       verify_top_k(scores[j], top_k[j], g[j], k, j);
     }
+
+    for(size_t i = 0; i < 10; ++i) {
+      for (size_t j = 0; j < 10; ++j) {
+        std::cout << g[i][j] << " ";
+      }
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
   }
 }
 #endif  // TDB_FLAT_QUERY_H

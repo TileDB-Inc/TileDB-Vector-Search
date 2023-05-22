@@ -92,13 +92,16 @@
 
 bool verbose = false;
 bool debug = false;
+bool global_debug = false;
+std::string global_region {"us-east-1"};
 
 static constexpr const char USAGE[] =
     R"(flat: feature vector search with flat index.
   Usage:
       tdb (-h | --help)
       tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) (--g_file FILE | --g_uri URI) 
-          [--k NN] [--L2 | --cosine] [--order ORDER][--hardway] [--nthreads N] [--nqueries N] [--ndb N] [-d | -v]
+          [--k NN] [--L2 | --cosine] [--order ORDER][--hardway] [--blocked]
+          [--nthreads N] [--nqueries N] [--ndb N] [-d | -v]
 
   Options:
       -h, --help            show this screen
@@ -113,7 +116,7 @@ static constexpr const char USAGE[] =
       --cosine              use cosine distance
       --jaccard             use Jaccard distance
       --order ORDER         which ordering to do comparisons [default: gemm]
-      --blocked             use blocked gemm [default: true]
+      --blocked             use blocked gemm [default: false]
       --hardway             use hard way to compute distances [default: false]
       --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
       --nqueries N          size of queries subset to compare (0 = all) [default: 0]
@@ -131,7 +134,7 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  debug = args["--debug"].asBool();
+  global_debug = debug = args["--debug"].asBool();
   verbose = args["--verbose"].asBool();
   auto hardway = args["--hardway"].asBool();
 
@@ -187,9 +190,9 @@ int main(int argc, char* argv[]) {
     }
 
     ms_timer load_time{"Load database, query, and ground truth"};
-    sift_db<float> db(db_file, ndb);
-    sift_db<float> q(q_file, nqueries);
-    sift_db<int> g(g_file, nqueries);
+    tdbColMajorMatrix<float> db(db_file, ndb);
+    tdbColMajorMatrix<float> q(q_file, nqueries);
+    tdbColMajorMatrix<int> g(g_file, nqueries);
     load_time.stop();
     std::cout << load_time << std::endl;
 
@@ -199,7 +202,7 @@ int main(int argc, char* argv[]) {
           std::to_string(size(q[0])) + ", " + std::to_string(size(g[0])));
     }
 
-    std::vector<std::vector<int>> top_k(size(q), std::vector<int>(k, 0));
+    std::vector<std::vector<int>> top_k(q.num_cols(), std::vector<int>(k, 0));
     std::cout << "Using " << args["--order"].asString() << std::endl;
 
     /**
@@ -226,6 +229,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Using gemm for query" << std::endl;
       }
       if (args["--blocked"].asBool()) {
+        std::cout << "Using blocked gemm for query" << std::endl;
         blocked_query_gemm(db, q, g, top_k, k, hardway, nthreads);
       } else {
         query_gemm(db, q, g, top_k, k, hardway, nthreads);
@@ -243,9 +247,9 @@ int main(int argc, char* argv[]) {
     // @todo other formats for arrays?
 
     ms_timer load_time{"Load database, query, and ground truth arrays"};
-    sift_array<float> db(db_uri, ndb);
-    sift_array<float> q(q_uri, nqueries);
-    sift_array<int> g(g_uri, nqueries);
+    tdbColMajorMatrix<float> db(db_uri, ndb);
+    tdbColMajorMatrix<float> q(q_uri, nqueries);
+    tdbColMajorMatrix<int> g(g_uri);
     load_time.stop();
     std::cout << load_time << std::endl;
 
@@ -278,10 +282,28 @@ int main(int argc, char* argv[]) {
       }
       query_qv(db, q, g, top_k, k, hardway, nthreads);
     } else if (args["--order"].asString() == "gemm") {
+
+
       if (verbose) {
         std::cout << "Using gemm for query" << std::endl;
       }
-      query_gemm(db, q, g, top_k, k, hardway, nthreads);
+
+      for(size_t i = 0; i < 10; ++i) {
+        for (size_t j = 0; j < 10; ++j) {
+          std::cout << g[i][j] << " ";
+        }
+        std::cout << std::endl;
+      }
+
+
+      if (args["--blocked"].asBool()) {
+        std::cout << "Using blocked gemm for query" << std::endl;
+
+
+        blocked_query_gemm(db, q, g, top_k, k, hardway, nthreads);
+      } else {
+        query_gemm(db, q, g, top_k, k, hardway, nthreads);
+      }
     } else {
       std::cout << "Unknown ordering: " << args["--order"].asString()
                 << std::endl;
