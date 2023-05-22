@@ -634,7 +634,9 @@ auto blocked_gemm_compute_scores(
   ms_timer init_time("Allocating score array");
   init_time.start();
 
+  // @todo Untangle this some day so that it is Column Major
   Matrix<float> scores(q.num_cols(), db.num_cols());
+  // ColMajorMatrix<float> scores(q.num_cols(), db.num_cols());
   auto _score_data = raveled(scores);
 
   std::vector<fixed_min_set<element>> min_scores(size(q), fixed_min_set<element>(k));
@@ -654,12 +656,13 @@ auto blocked_gemm_compute_scores(
    * scores[j][i] = alpha[i] + beta[j] - 2 * db[i] * q[j]
    */
 
+#if 0
   // Each score[j] is a column of the score matrix
   int size_q = size(q);
   for (int j = 0; j < size_q; ++j) {
     scores[j] = std::span<float>(_score_data.data() + j * M, M);
   }
-
+#endif
   for (;;) {
     cblas_sgemm(
         CblasColMajor,
@@ -793,8 +796,6 @@ auto blocked_gemm_compute_scores(
         }));
   }
 
-
-
   return scores;
 }
 
@@ -812,27 +813,10 @@ void blocked_query_gemm(
   {
     life_timer _{"Checking results"};
 
-    std::cout << std::endl;
-    for(size_t i = 0; i < 10; ++i) {
-      for (size_t j = 0; j < 10; ++j) {
-        std::cout << g[i][j] << " ";
-      }
-      std::cout << std::endl;
-    }
-    std::cout << std::endl;
-
     size_t size_q = size(q);
     for (size_t j = 0; j < size_q; ++j) {
       verify_top_k(scores[j], top_k[j], g[j], k, j);
     }
-
-    for(size_t i = 0; i < 10; ++i) {
-      for (size_t j = 0; j < 10; ++j) {
-        std::cout << g[i][j] << " ";
-      }
-      std::cout << std::endl;
-    }
-    std::cout << std::endl;
   }
 }
 #endif  // TDB_FLAT_QUERY_H
