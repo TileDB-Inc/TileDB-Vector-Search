@@ -98,7 +98,7 @@ static constexpr const char USAGE[] =
   Usage:
       tdb (-h | --help)
       tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) (--g_file FILE | --g_uri URI) 
-          [--k NN] [--L2 | --cosine] [--order ORDER] [--hardway] [--nthreads N] [--nqueries N] [--ndb N] [-d | -v]
+          [--k NN] [--L2 | --cosine] [--order ORDER][--hardway] [--nthreads N] [--nqueries N] [--ndb N] [-d | -v]
 
   Options:
       -h, --help            show this screen
@@ -113,6 +113,7 @@ static constexpr const char USAGE[] =
       --cosine              use cosine distance
       --jaccard             use Jaccard distance
       --order ORDER         which ordering to do comparisons [default: gemm]
+      --blocked             use blocked gemm [default: true]
       --hardway             use hard way to compute distances [default: false]
       --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
       --nqueries N          size of queries subset to compare (0 = all) [default: 0]
@@ -224,7 +225,11 @@ int main(int argc, char* argv[]) {
       if (verbose) {
         std::cout << "Using gemm for query" << std::endl;
       }
-      query_gemm(db, q, g, top_k, k, hardway, nthreads);
+      if (args["--blocked"].asBool()) {
+        blocked_query_gemm(db, q, g, top_k, k, hardway, nthreads);
+      } else {
+        query_gemm(db, q, g, top_k, k, hardway, nthreads);
+      }
     } else {
       std::cout << "Unknown ordering: " << args["--order"].asString()
                 << std::endl;
