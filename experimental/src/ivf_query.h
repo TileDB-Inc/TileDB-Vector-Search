@@ -368,6 +368,11 @@ template <class DB, class Q>
 auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
   life_timer _outer{"Total time blocked_gemm"};
 
+  auto block_db = true;
+  if (q.extents(1) > 2 * db.extents(1)) {
+    block_db = false;
+  }
+
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
   auto _score_data = raveled(scores);
   auto top_k = std::vector<int>(q.num_cols());
@@ -470,7 +475,13 @@ auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
           top_k[i] = idx;
         }
       }
-      if (!q.advance()) {
+      bool done = false;
+      if (block_db) {
+        done = !db.advance();
+      } else {
+        done = !q.advance();
+      }
+      if (done) {
         break;
       }
     }
