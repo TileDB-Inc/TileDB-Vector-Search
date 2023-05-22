@@ -150,7 +150,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (args["--write"].asBool()) {
-    auto parts = gemm_partition(centroids, db, nthreads);
+    auto parts = blocked_gemm_partition(centroids, db, nthreads);
     debug_matrix(parts, "parts");
     //  auto parts = qv_partition(centroids, db, nthreads);
 

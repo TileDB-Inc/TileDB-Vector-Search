@@ -365,7 +365,7 @@ auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
 }
 
 template <class DB, class Q>
-auto blocked_gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
+auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
   life_timer _outer{"Total time blocked_gemm"};
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
@@ -381,7 +381,7 @@ auto blocked_gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
   assert(db.num_rows() == q.num_rows());
 
   {
-    life_timer _{"L2 comparison (gemm)"};
+// life_timer _{"L2 comparison (gemm)"};
 
     for (;;) {
       cblas_sgemm(
@@ -403,7 +403,7 @@ auto blocked_gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
       std::vector<float> alpha(M, 0.0f);
       std::vector<float> beta(N, 0.0f);
       {
-        life_timer _{"L2 comparison colsum"};
+//   life_timer _{"L2 comparison colsum"};
 
         mat_col_sum(
             db, alpha, [](auto a) { return a * a; });  // @todo optimize somehow
@@ -411,7 +411,7 @@ auto blocked_gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
       }
 
       {
-        life_timer _{"L2 comparison outer product"};
+//       life_timer _{"L2 comparison outer product"};
 
         // A += alpha * x * transpose(y)
         std::vector<float> alpha_ones(N, 1.0f);
@@ -444,7 +444,7 @@ auto blocked_gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
       }
 
       {
-        life_timer _{"L2 comparison finish"};
+  //      life_timer _{"L2 comparison finish"};
 
         stdx::execution::parallel_policy par{nthreads};
         stdx::for_each(
@@ -454,7 +454,7 @@ auto blocked_gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
       }
 
       {
-        life_timer _{"top k"};
+  //      life_timer _{"top k"};
         for (int i = 0; i < scores.num_cols(); ++i) {
           auto min_score = min_scores[i];
           auto idx = db.offset();
@@ -469,7 +469,7 @@ auto blocked_gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
           top_k[i] = idx;
         }
       }
-      if (!db.advance()) {
+      if (!q.advance()) {
         break;
       }
     }
