@@ -369,7 +369,7 @@ auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
   life_timer _outer{"Total time blocked_gemm"};
 
   auto block_db = true;
-  if (q.extents(1) > 2 * db.extents(1)) {
+  if (q.extent(1) > 2 * db.extent(1)) {
     block_db = false;
   }
 
@@ -385,105 +385,89 @@ auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
 
   assert(db.num_rows() == q.num_rows());
 
-  {
-    // Don't want to emit messages at every iteration
-// life_timer _{"L2 comparison (gemm)"};
+  std::vector<float> alpha(M, 0.0f);
+  std::vector<float> beta(N, 0.0f);
+  std::vector<float> alpha_ones(N, 1.0f);
+  std::vector<float> beta_ones(M, 1.0f);
 
-    for (;;) {
-      cblas_sgemm(
-          CblasColMajor,
-          CblasTrans,
-          CblasNoTrans,
-          M,
-          N,
-          K,
-          -2.0,
-          &db(0, 0),
-          K,
-          &q(0, 0),
-          K,
-          0.0,
-          &scores(0, 0),
-          M);
+  for (;;) {
+    cblas_sgemm(
+        CblasColMajor,
+        CblasTrans,
+        CblasNoTrans,
+        M,
+        N,
+        K,
+        -2.0,
+        &db(0, 0),
+        K,
+        &q(0, 0),
+        K,
+        0.0,
+        &scores(0, 0),
+        M);
 
-      std::vector<float> alpha(M, 0.0f);
-      std::vector<float> beta(N, 0.0f);
-      {
-//   life_timer _{"L2 comparison colsum"};
+    std::fill(begin(alpha), end(alpha), 0.0f);
+    std::fill(begin(beta), end(beta), 0.0f);
 
-        mat_col_sum(
-            db, alpha, [](auto a) { return a * a; });  // @todo optimize somehow
-        mat_col_sum(q, beta, [](auto a) { return a * a; });
-      }
+    mat_col_sum(
+        db, alpha, [](auto a) { return a * a; });  // @todo optimize somehow
+    mat_col_sum(q, beta, [](auto a) { return a * a; });
 
-      {
-//       life_timer _{"L2 comparison outer product"};
+    // A += alpha * x * transpose(y)
 
-        // A += alpha * x * transpose(y)
-        std::vector<float> alpha_ones(N, 1.0f);
-        std::vector<float> beta_ones(M, 1.0f);
+    // This should be more parallelizable -- but seems to be completely
+    // memory-bound
+    cblas_sger(
+        CblasColMajor,
+        M,
+        N,
+        1.0,
+        &alpha[0],
+        1,
+        &alpha_ones[0],
+        1,
+        &scores(0, 0),
+        M);
+    cblas_sger(
+        CblasColMajor,
+        M,
+        N,
+        1.0,
+        &beta_ones[0],
+        1,
+        &beta[0],
+        1,
+        &scores(0, 0),
+        M);
 
-        // This should be more parallelizable -- but seems to be completely
-        // memory-bound
-        cblas_sger(
-            CblasColMajor,
-            M,
-            N,
-            1.0,
-            &alpha[0],
-            1,
-            &alpha_ones[0],
-            1,
-            &scores(0, 0),
-            M);
-        cblas_sger(
-            CblasColMajor,
-            M,
-            N,
-            1.0,
-            &beta_ones[0],
-            1,
-            &beta[0],
-            1,
-            &scores(0, 0),
-            M);
-      }
+    stdx::execution::parallel_policy par{nthreads};
+    stdx::for_each(
+        std::move(par), begin(_score_data), end(_score_data), [](auto& a) {
+          a = sqrt(a);
+        });
 
-      {
-  //      life_timer _{"L2 comparison finish"};
+    for (int i = 0; i < scores.num_cols(); ++i) {
+      auto min_score = min_scores[i];
+      auto idx = db.offset();
 
-        stdx::execution::parallel_policy par{nthreads};
-        stdx::for_each(
-            std::move(par), begin(_score_data), end(_score_data), [](auto& a) {
-              a = sqrt(a);
-            });
-      }
-
-      {
-  //      life_timer _{"top k"};
-        for (int i = 0; i < scores.num_cols(); ++i) {
-          auto min_score = min_scores[i];
-          auto idx = db.offset();
-
-          for (int j = 0; j < scores.num_rows(); ++j) {
-            auto score = scores(j, i);
-            if (score < min_score) {
-              min_score = score;
-              idx = j + db.offset();
-            }
-          }
-          top_k[i] = idx;
+      for (int j = 0; j < scores.num_rows(); ++j) {
+        auto score = scores(j, i);
+        if (score < min_score) {
+          min_score = score;
+          idx = j + db.offset();
         }
       }
-      bool done = false;
-      if (block_db) {
-        done = !db.advance();
-      } else {
-        done = !q.advance();
-      }
-      if (done) {
-        break;
-      }
+      top_k[i] = idx;
+    }
+    bool done = false;
+    if (block_db) {
+      done = !db.advance();
+    } else {
+      done = !q.advance();
+    }
+    if (done) {
+      break;
     }
   }
   return top_k;
