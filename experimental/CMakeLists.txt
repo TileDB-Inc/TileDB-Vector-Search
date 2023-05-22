@@ -101,9 +101,9 @@ else()
     message(STATUS "TileDB_DIR is not set -- find_package will use default search path.")
 endif()
 
-find_package(TileDB REQUIRED)
+find_package(TileDB_EP REQUIRED)
 
-if (TileDB_FOUND)
+if (TileDB_EP_FOUND)
     message(STATUS "Found TileDB")
     get_target_property(_TDB_INCLUDES TileDB::tiledb_shared INTERFACE_INCLUDE_DIRECTORIES)
     message(STATUS "TileDB include directories are ${_TDB_INCLUDES}")
