@@ -99,8 +99,8 @@ static constexpr const char USAGE[] =
     R"(flat: feature vector search with flat index.
   Usage:
       tdb (-h | --help)
-      tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) (--g_file FILE | --g_uri URI) 
-          [--k NN] [--L2 | --cosine] [--order ORDER][--hardway] [--blocked]
+      tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) (--g_file FILE | --g_uri URI)
+          [--k NN] [--L2 | --cosine] [--order ORDER][--hardway] [--blocked] [--output_uri URI]
           [--nthreads N] [--nqueries N] [--ndb N] [-d | -v]
 
   Options:
@@ -111,6 +111,7 @@ static constexpr const char USAGE[] =
       --q_uri URI           query URI with feature vectors to search for
       --g_file FILE         ground truth file
       --g_uri URI           ground true URI
+      --output URI          output URI for results
       --k NN                number of nearest neighbors to find [default: 10]
       --L2                  use L2 distance (Euclidean) [default]
       --cosine              use cosine distance
@@ -288,14 +289,6 @@ int main(int argc, char* argv[]) {
         std::cout << "Using gemm for query" << std::endl;
       }
 
-      for(size_t i = 0; i < 10; ++i) {
-        for (size_t j = 0; j < 10; ++j) {
-          std::cout << g[i][j] << " ";
-        }
-        std::cout << std::endl;
-      }
-
-
       if (args["--blocked"].asBool()) {
         std::cout << "Using blocked gemm for query" << std::endl;
 
@@ -310,10 +303,15 @@ int main(int argc, char* argv[]) {
       return 1;
     }
 
+    ColMajorMatrix<int> top_k_mat(top_k.size(), top_k[0].size());
+
   } else {
     std::cout << "Must specify either --db_file, --q_file, and --g_file or "
                  "--db_uri, --q_uri, and --g_uri"
               << std::endl;
     return 1;
   }
+
+
+
 }
