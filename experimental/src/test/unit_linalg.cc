@@ -36,6 +36,9 @@
 #include <tuple>
 #include "../linalg.h"
 
+bool global_debug = false;
+std::string global_region = "us-east-1";
+
 using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 
 TEST_CASE("linalg: test test", "[linalg]") {
@@ -536,6 +539,53 @@ TEST_CASE(
   }
 }
 
+TEST_CASE("linalg: test advance", "[linalg]") {
+
+  auto a = tdbMatrix<int32_t, Kokkos::layout_right>("array_dense_1", 2);
+
+  CHECK(a.num_rows() == 2);
+  CHECK(a.num_cols() == 8);
+
+  CHECK(a(0, 0) == 8);
+  CHECK(a(0, 1) == 6);
+  CHECK(a(0, 2) == 7);
+  CHECK(a(0, 3) == 5);
+  CHECK(a(0, 4) == 3);
+  CHECK(a(0, 5) == 1);
+  CHECK(a(0, 6) == 4);
+  CHECK(a(0, 7) == 1);
+
+  CHECK(a(1, 0) == 3);
+  CHECK(a(1, 1) == 0);
+  CHECK(a(1, 2) == 9);
+  CHECK(a(1, 3) == 9);
+  CHECK(a(1, 4) == 5);
+  CHECK(a(1, 5) == 9);
+  CHECK(a(1, 6) == 2);
+  CHECK(a(1, 7) == 7);
+
+  a.advance();
+
+  CHECK(a(0, 0) == 9);
+  CHECK(a(0, 1) == 8);
+  CHECK(a(0, 2) == 6);
+  CHECK(a(0, 3) == 7);
+  CHECK(a(0, 4) == 2);
+  CHECK(a(0, 5) == 6);
+  CHECK(a(0, 6) == 4);
+  CHECK(a(0, 7) == 3);
+
+  CHECK(a(1, 0) == 5);
+  CHECK(a(1, 1) == 3);
+  CHECK(a(1, 2) == 0);
+  CHECK(a(1, 3) == 9);
+  CHECK(a(1, 4) == 4);
+  CHECK(a(1, 5) == 2);
+  CHECK(a(1, 6) == 2);
+  CHECK(a(1, 7) == 4);
+}
+
+
 TEMPLATE_LIST_TEST_CASE(
     "linalg: test write/read std::vector", "[linalg]", TestTypes) {
   auto length = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
@@ -599,3 +649,4 @@ TEMPLATE_LIST_TEST_CASE(
         std::equal(A.data(), A.data() + A.num_rows() * A.num_cols(), B.data()));
   }
 }
+

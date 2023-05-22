@@ -55,6 +55,10 @@
 
 #include "timer.h"
 
+namespace stdx {
+using namespace Kokkos;
+using namespace Kokkos::Experimental;
+}  // namespace stdx
 
 extern bool global_verbose;
 extern bool global_debug;
@@ -81,7 +85,7 @@ class Vector : public std::span<T> {
   std::unique_ptr<T[]> storage_;
 
  public:
-  Vector(index_type nrows) noexcept
+  explicit Vector(index_type nrows) noexcept
       : nrows_(nrows)
       , storage_{new T[nrows_]} {
     Base::operator=(Base{storage_.get(), nrows_});
@@ -109,7 +113,7 @@ class Vector : public std::span<T> {
 };
 
 template <class I = size_t>
-using matrix_extents = Kokkos::dextents<I, 2>;
+using matrix_extents = stdx::dextents<I, 2>;
 
 /**
  * @brief A 2-D matrix class that owns its storage.  The interface is
@@ -121,10 +125,10 @@ using matrix_extents = Kokkos::dextents<I, 2>;
  *
  * @todo Make an alias for extents.
  */
-template <class T, class LayoutPolicy = Kokkos::layout_right, class I = size_t>
-class Matrix : public Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy> {
-  using Base = Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy>;
-  //using Base::Base;
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
+  using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
+  // using Base::Base;
 
  public:
   using layout_policy = LayoutPolicy;
@@ -132,10 +136,11 @@ class Matrix : public Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
- private:
+ protected:
   size_type nrows_{0};
   size_type ncols_{0};
 
+ private:
   std::unique_ptr<T[]> storage_;
 
  public:
@@ -162,14 +167,14 @@ class Matrix : public Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     Base::operator=(Base{storage_.get(), nrows_, ncols_});
   }
 
-  Matrix(Matrix&& rhs)
+  Matrix(Matrix&& rhs) noexcept
       : nrows_{rhs.nrows_}
       , ncols_{rhs.ncols_}
       , storage_{std::move(rhs.storage_)} {
     Base::operator=(Base{storage_.get(), nrows_, ncols_});
   }
 
-  auto& operator=(Matrix&& rhs) {
+  auto& operator=(Matrix&& rhs) noexcept {
     nrows_ = rhs.nrows_;
     ncols_ = rhs.ncols_;
     storage_ = std::move(rhs.storage_);
@@ -194,7 +199,7 @@ class Matrix : public Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   }
 
   auto operator[](index_type i) {
-    if constexpr (std::is_same_v<LayoutPolicy, Kokkos::layout_right>) {
+    if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
       return std::span(&Base::operator()(i, 0), ncols_);
     } else {
       return std::span(&Base::operator()(0, i), nrows_);
@@ -202,7 +207,7 @@ class Matrix : public Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   }
 
   auto operator[](index_type i) const {
-    if constexpr (std::is_same_v<LayoutPolicy, Kokkos::layout_right>) {
+    if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
       return std::span(&Base::operator()(i, 0), ncols_);
     } else {
       return std::span(&Base::operator()(0, i), nrows_);
@@ -215,7 +220,7 @@ class Matrix : public Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   }
 
   auto span() const noexcept {
-    if constexpr (std::is_same_v<LayoutPolicy, Kokkos::layout_right>) {
+    if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
       return num_cols();
     } else {
       return num_rows();
@@ -235,41 +240,39 @@ class Matrix : public Kokkos::mdspan<T, matrix_extents<I>, LayoutPolicy> {
  * Convenience class for row-major matrices.
  */
 template <class T, class I = size_t>
-using RowMajorMatrix = Matrix<T, Kokkos::layout_right, I>;
+using RowMajorMatrix = Matrix<T, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.
  */
 template <class T, class I = size_t>
-using ColMajorMatrix = Matrix<T, Kokkos::layout_left, I>;
+using ColMajorMatrix = Matrix<T, stdx::layout_left, I>;
 
 /**
  * Convenience class for turning 2D matrices into 1D vectors.
  */
-template <class T, class LayoutPolicy = Kokkos::layout_right, class I = size_t>
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 auto raveled(Matrix<T, LayoutPolicy, I>& m) {
   return m.raveled();
 }
 
 template <class LayoutPolicy>
 struct order_traits {
-  constexpr static auto order{ TILEDB_ROW_MAJOR };
+  constexpr static auto order{TILEDB_ROW_MAJOR};
 };
 
 template <>
-struct order_traits<Kokkos::layout_right> {
-  constexpr static auto order{ TILEDB_ROW_MAJOR };
+struct order_traits<stdx::layout_right> {
+  constexpr static auto order{TILEDB_ROW_MAJOR};
 };
 
 template <>
-struct order_traits<Kokkos::layout_left> {
-  constexpr static auto order{ TILEDB_COL_MAJOR };
+struct order_traits<stdx::layout_left> {
+  constexpr static auto order{TILEDB_COL_MAJOR};
 };
 
 template <class LayoutPolicy>
 constexpr auto order_v = order_traits<LayoutPolicy>::order;
-
-
 
 /**
  * Derived from `Matrix`.  Initialized in construction by filling from a given
@@ -279,7 +282,7 @@ constexpr auto order_v = order_traits<LayoutPolicy>::order;
  * it is sufficient to simply have one Matrix class and have a factory that
  * creates them by reading from TileDB.
  */
-template <class T, class LayoutPolicy = Kokkos::layout_right, class I = size_t>
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   using Base = Matrix<T, LayoutPolicy, I>;
   using Base::Base;
@@ -289,16 +292,22 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
-  constexpr static auto order{ order_v<LayoutPolicy> };
+  constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
  private:
   // @todo: Make this configurable
-  std::map<std::string, std::string> init_{{"vfs.s3.region", global_region.c_str()}};
+  std::map<std::string, std::string> init_{
+      {"vfs.s3.region", global_region.c_str()}};
   tiledb::Config config_{init_};
   tiledb::Context ctx_{config_};
 
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
+
+  std::tuple<index_type, index_type> row_view_;
+  std::tuple<index_type, index_type> col_view_;
+  index_type row_offset_{0};
+  index_type col_offset_{0};
 
  public:
   /**
@@ -310,7 +319,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param num_elts Number of vectors to read from the array.
    */
   tdbMatrix(const std::string& uri, size_t num_elts) noexcept
-      requires(std::is_same_v<LayoutPolicy, Kokkos::layout_right>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : tdbMatrix(uri, num_elts, 0) {
   }
 
@@ -323,7 +332,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param num_elts Number of vectors to read from the array.
    */
   tdbMatrix(const std::string& uri, size_t num_elts) noexcept
-      requires(std::is_same_v<LayoutPolicy, Kokkos::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbMatrix(uri, 0, num_elts) {
   }
 
@@ -333,8 +342,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    *
    * @param uri URI of the TileDB array to read.
    */
-  tdbMatrix(const std::string& uri) noexcept
-      // requires (std::is_same_v<LayoutPolicy, Kokkos::layout_left>)
+  explicit tdbMatrix(const std::string& uri) noexcept
+      // requires (std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbMatrix(uri, 0, 0) {
     if (global_debug) {
       std::cerr << "# tdbMatrix constructor: " << uri << std::endl;
@@ -352,6 +361,28 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   tdbMatrix(const std::string& uri, size_t num_rows, size_t num_cols) noexcept
       : tdbMatrix(uri, 0, num_rows, 0, num_cols) {
   }
+
+  /**
+   * @brief "Slice" interface.
+   * @param uri
+   * @param rows pair of row indices indicating begin and end of view
+   * @param cols pair of column indices indicating begin and end of view
+   */
+  tdbMatrix(
+      const std::string& uri,
+      std::tuple<size_t, size_t> rows,
+      std::tuple<size_t, size_t> cols) noexcept
+      : tdbMatrix(
+            uri,
+            std::get<0>(rows),
+            std::get<1>(rows),
+            std::get<0>(cols),
+            std::get<1>(cols)) {
+  }
+
+ private:
+  using row_domain_type = int32_t;
+  using col_domain_type = int32_t;
 
   /**
    * @brief General constructor.  Read a view of the array, delimited by the
@@ -373,96 +404,158 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t col_end) noexcept
       : array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()} {
-
     life_timer _{"read matrix " + uri};
 
-    auto reader = [](size_t row_begin, size_t row_end, size_t col_begin, size_t col_end) {
-      using row_domain_type = int32_t;
-      using col_domain_type = int32_t;
+    auto cell_order = schema_.cell_order();
+    auto tile_order = schema_.tile_order();
 
-      auto cell_order = schema_.cell_order();
-      auto tile_order = schema_.tile_order();
+    // @todo Maybe throw an exception here?  Have to properly handle since this
+    // is a constructor.
+    assert(cell_order == tile_order);
 
-      // @todo Maybe throw an exception here?  Have to properly handle since this is a constructor.
-      assert(cell_order == tile_order);
+    const size_t attr_idx = 0;
 
-      const size_t idx = 0;
+    auto domain_{schema_.domain()};
 
-      auto domain_{schema_.domain()};
+    auto array_rows_{domain_.dimension(0)};
+    auto array_cols_{domain_.dimension(1)};
 
-      auto array_rows_{domain_.dimension(0)};
-      auto array_cols_{domain_.dimension(1)};
-      auto dim_num_{domain_.ndim()};
+    auto num_array_rows_{
+        (array_rows_.template domain<row_domain_type>().second -
+         array_rows_.template domain<row_domain_type>().first + 1)};
+    auto num_array_cols_{
+        (array_cols_.template domain<col_domain_type>().second -
+         array_cols_.template domain<col_domain_type>().first + 1)};
 
-      auto max_rows_{
-          (array_rows_.template domain<row_domain_type>().second -
-           array_rows_.template domain<row_domain_type>().first + 1)};
-      auto max_cols_{
-          (array_cols_.template domain<col_domain_type>().second -
-           array_cols_.template domain<col_domain_type>().first + 1)};
+    if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
+        (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {
+      std::swap(row_begin, col_begin);
+      std::swap(row_end, col_end);
+    }
 
-      if ((std::is_same_v<LayoutPolicy, Kokkos::layout_right> &&
-           cell_order == TILEDB_COL_MAJOR) ||
-          (std::is_same_v<LayoutPolicy, Kokkos::layout_left> &&
-           cell_order == TILEDB_ROW_MAJOR)) {
-        std::swap(row_begin, col_begin);
-        std::swap(row_end, col_end);
-      }
+    if (row_begin == 0 && row_end == 0) {
+      row_end = num_array_rows_;
+    }
+    if (col_begin == 0 && col_end == 0) {
+      col_end = num_array_cols_;
+    }
 
-      if (row_begin == 0 && row_end == 0) {
-        row_end = max_rows_;
-      }
-      if (col_begin == 0 && col_end == 0) {
-        col_end = max_cols_;
-      }
+    std::get<0>(row_view_) = row_begin;
+    std::get<1>(row_view_) = row_end;
+    std::get<0>(col_view_) = col_begin;
+    std::get<1>(col_view_) = col_end;
+    row_offset_ = row_begin;
+    col_offset_ = col_begin;
 
-      auto num_rows = row_end - row_begin;
-      auto num_cols = col_end - col_begin;
-
-      auto attr_num{schema_.attribute_num()};
-      auto attr = schema_.attribute(idx);
-
-      std::string attr_name = attr.name();
-      tiledb_datatype_t attr_type = attr.type();
-
-      // This should be set in initialization
-      // ctx_.set_tag("vfs.s3.region", global_region.c_str());
-
-      // Create a subarray that reads the array up to the specified subset.
-      std::vector<int32_t> subarray_vals = {
-          (int32_t)row_begin,
-          (int32_t)row_end - 1,
-          (int32_t)col_begin,
-          (int32_t)col_end - 1};
-      tiledb::Subarray subarray(ctx_, array_);
-      subarray.set_subarray(subarray_vals);
-
-      //    auto layout_order = std::is_same_v<LayoutPolicy, Kokkos::layout_right> ? TILEDB_ROW_MAJOR : TILEDB_COL_MAJOR;
-      auto layout_order = cell_order;
+    auto num_rows = row_end - row_begin;
+    auto num_cols = col_end - col_begin;
 
 #ifndef __APPLE__
-      auto data_ = std::make_unique_for_overwrite<T[]>(num_rows * num_cols);
+    auto data_ = std::make_unique_for_overwrite<T[]>(num_rows * num_cols);
 #else
-      // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
-      auto data_ = std::unique_ptr<T[]>(new T[num_rows * num_cols]);
+    // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
+    auto data_ = std::unique_ptr<T[]>(new T[num_rows * num_cols]);
 #endif
 
-      tiledb::Query query(ctx_, array_);
-      query.set_subarray(subarray)
-          .set_layout(layout_order)
-          .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
+    auto attr_num{schema_.attribute_num()};
+    auto attr = schema_.attribute(attr_idx);
 
-      query.submit();
-    }
-    array_.close();
+    std::string attr_name = attr.name();
+    tiledb_datatype_t attr_type = attr.type();
+
+    // Create a subarray that reads the array up to the specified subset.
+    std::vector<int32_t> subarray_vals = {
+        (int32_t)row_begin,
+        (int32_t)row_end - 1,
+        (int32_t)col_begin,
+        (int32_t)col_end - 1};
+    tiledb::Subarray subarray(ctx_, array_);
+    subarray.set_subarray(subarray_vals);
+
+    auto layout_order = cell_order;
+
+    tiledb::Query query(ctx_, array_);
+    query.set_subarray(subarray)
+        .set_layout(layout_order)
+        .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
+
+    query.submit();
+
     assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
-    if ((std::is_same_v<LayoutPolicy, Kokkos::layout_right> && cell_order == TILEDB_COL_MAJOR)
-        || (std::is_same_v<LayoutPolicy, Kokkos::layout_left> && cell_order == TILEDB_ROW_MAJOR)) {
+    if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
+        (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {
       std::swap(num_rows, num_cols);
     }
 
     Base::operator=(Base{std::move(data_), num_rows, num_cols});
+  }
+
+public:
+  /**
+   * @brief Advance the view to the next row block of data.
+   *
+   * @param num_elts How many elements to advance the view by.  If 0, then
+   * advance to the next block.
+   */
+ void advance(size_t num_elts = 0)
+   requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+ {
+
+    // @todo These can probably all be made class members
+    size_t attr_idx = 0;
+    auto attr = schema_.attribute(attr_idx);
+    std::string attr_name = attr.name();
+    auto cell_order = schema_.cell_order();
+    auto layout_order = cell_order;
+
+    if (layout_order == TILEDB_ROW_MAJOR) {
+      if (num_elts == 0) {
+        num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
+      }
+      row_offset_ += num_elts;
+      std::get<0>(row_view_) += num_elts;
+      std::get<1>(row_view_) += num_elts;
+    } else if (layout_order == TILEDB_COL_MAJOR) {
+      if (num_elts == 0) {
+        num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
+      }
+      col_offset_ += num_elts;
+      std::get<0>(col_view_) += num_elts;
+      std::get<1>(col_view_) += num_elts;
+    } else {
+      throw std::runtime_error("Unknown cell order");
+    }
+
+    // Create a subarray that reads the array with the specified view
+    std::vector<int32_t> subarray_vals = {
+        (int32_t)std::get<0>(row_view_),
+        (int32_t)std::get<1>(row_view_) - 1,
+        (int32_t)std::get<0>(col_view_),
+        (int32_t)std::get<1>(col_view_) - 1};
+    tiledb::Subarray subarray(ctx_, array_);
+    subarray.set_subarray(subarray_vals);
+
+
+
+
+    tiledb::Query query(ctx_, array_);
+    query.set_subarray(subarray)
+        .set_layout(layout_order)
+        .set_data_buffer(attr_name, this->data(),
+                         (std::get<1>(row_view_) - std::get<0>(row_view_))
+                         *(std::get<1>(col_view_) - std::get<0>(col_view_)));
+    query.submit();
+
+ }
+
+ void advance(size_t num_elts = 0)
+   requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+ {
+ }
+
+  ~tdbMatrix() noexcept {
+    array_.close();
   }
 };
 
@@ -470,18 +563,18 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
  * Convenience class for row-major matrices.
  */
 template <class T, class I = size_t>
-using tdbRowMajorMatrix = tdbMatrix<T, Kokkos::layout_right, I>;
+using tdbRowMajorMatrix = tdbMatrix<T, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.
  */
 template <class T, class I = size_t>
-using tdbColMajorMatrix = tdbMatrix<T, Kokkos::layout_left, I>;
+using tdbColMajorMatrix = tdbMatrix<T, stdx::layout_left, I>;
 
 /**
  * Write the contents of a Matrix to a TileDB array.
  */
-template <class T, class LayoutPolicy = Kokkos::layout_right, class I = size_t>
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
   if (global_debug) {
     std::cerr << "# Writing Matrix: " << uri << std::endl;
@@ -490,16 +583,17 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
   life_timer _{"write matrix " + uri};
 
   // Create context
-  std::map<std::string, std::string> init_{{"vfs.s3.region", global_region.c_str()}};
+  std::map<std::string, std::string> init_{
+      {"vfs.s3.region", global_region.c_str()}};
   tiledb::Config config_{init_};
-  tiledb::Context ctx {config_};
+  tiledb::Context ctx{config_};
 
   // @todo: make this a parameter
   size_t num_parts = 10;
-  size_t row_extent =
-      std::max<size_t>((A.num_rows() + num_parts - 1) / num_parts, A.num_rows() >= 2 ? 2 : 1);
-  size_t col_extent =
-      std::max<size_t>((A.num_cols() + num_parts - 1) / num_parts, A.num_cols() >= 2 ? 2 : 1);
+  size_t row_extent = std::max<size_t>(
+      (A.num_rows() + num_parts - 1) / num_parts, A.num_rows() >= 2 ? 2 : 1);
+  size_t col_extent = std::max<size_t>(
+      (A.num_cols() + num_parts - 1) / num_parts, A.num_cols() >= 2 ? 2 : 1);
 
   tiledb::Domain domain(ctx);
   domain
@@ -511,7 +605,9 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
 
-  auto order = std::is_same_v<LayoutPolicy, Kokkos::layout_right> ? TILEDB_ROW_MAJOR : TILEDB_COL_MAJOR;
+  auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
+                   TILEDB_ROW_MAJOR :
+                   TILEDB_COL_MAJOR;
   schema.set_domain(domain).set_order({{order, order}});
 
   schema.add_attribute(tiledb::Attribute::create<T>(ctx, "values"));
@@ -551,9 +647,10 @@ void write_vector(std::vector<T>& v, const std::string& uri) {
   life_timer _{"write vector " + uri};
 
   // Create context
-  std::map<std::string, std::string> init_{{"vfs.s3.region", global_region.c_str()}};
+  std::map<std::string, std::string> init_{
+      {"vfs.s3.region", global_region.c_str()}};
   tiledb::Config config_{init_};
-  tiledb::Context ctx {config_};
+  tiledb::Context ctx{config_};
 
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
@@ -595,8 +692,8 @@ auto read_vector(const std::string& uri) {
     std::cerr << "# Reading std::vector: " << uri << std::endl;
   }
 
-  auto init_ =
-      std::map<std::string, std::string>{{"vfs.s3.region", global_region.c_str()}};
+  auto init_ = std::map<std::string, std::string>{
+      {"vfs.s3.region", global_region.c_str()}};
   auto config_ = tiledb::Config{init_};
   auto ctx_ = tiledb::Context{config_};
 
@@ -641,13 +738,12 @@ auto read_vector(const std::string& uri) {
   return data_;
 }
 
-
 /**
  * Is the matrix row-oriented?
  */
 template <class Matrix>
 constexpr bool is_row_oriented(const Matrix& A) {
-  return std::is_same_v<typename Matrix::layout_policy, Kokkos::layout_right>;
+  return std::is_same_v<typename Matrix::layout_policy, stdx::layout_right>;
 }
 
 /**
@@ -660,8 +756,10 @@ std::string matrix_info(const Matrix& A, const std::string& msg = "") {
   if (!msg.empty()) {
     str += ": ";
   }
-  str += "Shape: ( " + std::to_string(A.num_rows()) + ", " + std::to_string(A.num_cols()) + " )";
-  str += std::string(" Layout: ") + (is_row_oriented(A) ? "row major" : "column major");
+  str += "Shape: ( " + std::to_string(A.num_rows()) + ", " +
+         std::to_string(A.num_cols()) + " )";
+  str += std::string(" Layout: ") +
+         (is_row_oriented(A) ? "row major" : "column major");
   return str;
 }
 
@@ -681,7 +779,6 @@ std::string matrix_info(const std::vector<T>& A, const std::string& msg = "") {
 
 template <class Matrix>
 void debug_matrix(const Matrix& A, const std::string& msg = "") {
-  extern bool global_debug;
   if (global_debug) {
     std::cout << matrix_info(A, msg) << std::endl;
   }
