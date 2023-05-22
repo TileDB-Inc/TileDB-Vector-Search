@@ -69,6 +69,12 @@
 #include "utils.h"
 #include "config.h"
 
+// @todo Centralize this in a config file
+namespace stdx {
+using namespace Kokkos;
+using namespace Kokkos::Experimental;
+}
+
 bool global_verbose = false;
 bool global_debug = false;
 bool global_dryrun = false;
