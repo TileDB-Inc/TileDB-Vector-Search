@@ -303,6 +303,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
+  std::unique_ptr<uint8_t[]> tmp_storage_;
   size_t num_array_rows_{0};
   size_t num_array_cols_{0};
 
@@ -386,7 +387,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   using row_domain_type = int32_t;
   using col_domain_type = int32_t;
 
-  /**
+    /**
    * @brief General constructor.  Read a view of the array, delimited by the
    * given row and column indices.
    *
@@ -465,6 +466,16 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     std::string attr_name = attr.name();
     tiledb_datatype_t attr_type = attr.type();
 
+    // Hard-code uint8_t for now.
+    if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
+      auto num_bytes = tiledb_datatype_size(attr_type);
+#ifndef __APPLE__
+      auto tmp_storage_ = std::make_unique_for_overwrite<uint8_t[]>(num_rows * num_cols * num_bytes);
+#else
+      auto tmp_storage_ = std::unique_ptr<uint8_t[]>(new uint8_t[num_rows * num_cols * num_bytes]);
+#endif
+    }
+
     // Create a subarray that reads the array up to the specified subset.
     std::vector<int32_t> subarray_vals = {
         (int32_t)row_begin,
@@ -477,13 +488,22 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     auto layout_order = cell_order;
 
     tiledb::Query query(ctx_, array_);
-    query.set_subarray(subarray)
-        .set_layout(layout_order)
-        .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
 
-    query.submit();
+    if (attr_type == tiledb::impl::type_to_tiledb<T>::tiledb_type) {
+      query.set_subarray(subarray)
+          .set_layout(layout_order)
+          .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
+      query.submit();
+    } else {
+      auto num_bytes = tiledb_datatype_size(attr_type);
+      query.set_subarray(subarray)
+          .set_layout(layout_order)
+          .set_data_buffer(attr_name, tmp_storage_.get(), num_rows * num_cols * num_bytes);
+      query.submit();
 
-    assert(tiledb::Query::Status::COMPLETE == query.query_status());
+      assert(tiledb::Query::Status::COMPLETE == query.query_status());
+      std::copy(tmp_storage_.get(), tmp_storage_.get() + num_rows * num_cols, data_.get());
+    }
 
     if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
         (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {
