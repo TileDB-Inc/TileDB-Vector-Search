@@ -35,8 +35,6 @@
 #include <chrono>
 #include <iostream>
 
-extern bool global_debug;
-extern bool global_verbose;
 
 /**
  * @brief A simple timer class for measuring elapsed wall clock time.
@@ -102,9 +100,9 @@ class empty_timer {
  */
 class life_timer : public empty_timer, public ms_timer {
  public:
-  explicit life_timer(const std::string& msg = "")
+  explicit life_timer(const std::string& msg = "", bool debug = false)
       : ms_timer(msg) {
-    if (global_debug) {
+    if (debug) {
       std::cout << "# [ " + msg + " ]: starting timer" << std::endl;
     }
   }
