@@ -470,9 +470,9 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
       auto num_bytes = tiledb_datatype_size(attr_type);
 #ifndef __APPLE__
-      auto tmp_storage_ = std::make_unique_for_overwrite<uint8_t[]>(num_rows * num_cols * num_bytes);
+      tmp_storage_ = std::make_unique_for_overwrite<uint8_t[]>(num_rows * num_cols * num_bytes);
 #else
-      auto tmp_storage_ = std::unique_ptr<uint8_t[]>(new uint8_t[num_rows * num_cols * num_bytes]);
+      tmp_storage_ = std::unique_ptr<uint8_t[]>(new uint8_t[num_rows * num_cols * num_bytes]);
 #endif
     }
 
@@ -524,7 +524,80 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @todo Make this an iterator.
    */
   bool advance(size_t num_elts = 0)
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+    // requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+  {
+    // @todo attr_idx, attr_name, and cell_order / layout_order should be
+    // members of the class
+    size_t attr_idx = 0;
+    auto attr = schema_.attribute(attr_idx);
+    std::string attr_name = attr.name();
+    tiledb_datatype_t attr_type = attr.type();
+    auto cell_order = schema_.cell_order();
+    auto layout_order = cell_order;
+
+    if (layout_order == TILEDB_ROW_MAJOR) {
+      if (num_array_rows_ <= std::get<1>(row_view_)) {
+        return false;
+      }
+      if (num_elts == 0) {
+        num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
+      }
+      num_elts = std::min(num_elts, num_array_rows_ - row_offset_);
+      row_offset_ += num_elts;
+      std::get<0>(row_view_) += num_elts;
+      std::get<1>(row_view_) += num_elts;
+    } else if (layout_order == TILEDB_COL_MAJOR) {
+      if (num_array_cols_ <= std::get<1>(col_view_)) {
+        return false;
+      }
+      if (num_elts == 0) {
+        num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
+      }
+      num_elts = std::min(num_elts, num_array_cols_ - col_offset_);
+      col_offset_ += num_elts;
+      std::get<0>(col_view_) += num_elts;
+      std::get<1>(col_view_) += num_elts;
+    } else {
+      throw std::runtime_error("Unknown cell order");
+    }
+
+    // Create a subarray that reads the array with the specified view
+    std::vector<int32_t> subarray_vals = {
+        (int32_t)std::get<0>(row_view_),
+        (int32_t)std::get<1>(row_view_) - 1,
+        (int32_t)std::get<0>(col_view_),
+        (int32_t)std::get<1>(col_view_) - 1};
+    tiledb::Subarray subarray(ctx_, array_);
+    subarray.set_subarray(subarray_vals);
+
+    tiledb::Query query(ctx_, array_);
+
+    if (attr_type == tiledb::impl::type_to_tiledb<T>::tiledb_type) {
+      query.set_subarray(subarray)
+          .set_layout(layout_order)
+          .set_data_buffer(
+              attr_name,
+              this->data(),
+              (std::get<1>(row_view_) - std::get<0>(row_view_)) *
+                  (std::get<1>(col_view_) - std::get<0>(col_view_)));
+      query.submit();
+    } else {
+      auto num_bytes = tiledb_datatype_size(attr_type);
+      query.set_subarray(subarray)
+          .set_layout(layout_order)
+          .set_data_buffer(attr_name, tmp_storage_.get(), this->num_rows() * this->num_cols() * num_bytes);
+      query.submit();
+
+      assert(tiledb::Query::Status::COMPLETE == query.query_status());
+      std::copy(tmp_storage_.get(), tmp_storage_.get() + this->num_rows() * this->num_cols() * num_bytes, this->data());
+    }
+
+    return true;
+  }
+
+  bool advance(size_t num_elts = 0)
+    // requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      requires(false)
   {
     // @todo attr_idx, attr_name, and cell_order / layout_order should be
     // members of the class
@@ -582,75 +655,17 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     return true;
   }
 
-  bool advance(size_t num_elts = 0)
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+
+  size_t offset() const
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
   {
-    // @todo attr_idx, attr_name, and cell_order / layout_order should be
-    // members of the class
-    size_t attr_idx = 0;
-    auto attr = schema_.attribute(attr_idx);
-    std::string attr_name = attr.name();
-    auto cell_order = schema_.cell_order();
-    auto layout_order = cell_order;
-
-    if (layout_order == TILEDB_ROW_MAJOR) {
-      if (num_array_rows_ <= std::get<1>(row_view_)) {
-        return false;
-      }
-      if (num_elts == 0) {
-        num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
-      }
-      num_elts = std::min(num_elts, num_array_rows_ - row_offset_);
-      row_offset_ += num_elts;
-      std::get<0>(row_view_) += num_elts;
-      std::get<1>(row_view_) += num_elts;
-    } else if (layout_order == TILEDB_COL_MAJOR) {
-      if (num_array_cols_ <= std::get<1>(col_view_)) {
-        return false;
-      }
-      if (num_elts == 0) {
-        num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
-      }
-      num_elts = std::min(num_elts, num_array_cols_ - col_offset_);
-      col_offset_ += num_elts;
-      std::get<0>(col_view_) += num_elts;
-      std::get<1>(col_view_) += num_elts;
-    } else {
-      throw std::runtime_error("Unknown cell order");
-    }
-
-    // Create a subarray that reads the array with the specified view
-    std::vector<int32_t> subarray_vals = {
-        (int32_t)std::get<0>(row_view_),
-        (int32_t)std::get<1>(row_view_) - 1,
-        (int32_t)std::get<0>(col_view_),
-        (int32_t)std::get<1>(col_view_) - 1};
-    tiledb::Subarray subarray(ctx_, array_);
-    subarray.set_subarray(subarray_vals);
-
-    tiledb::Query query(ctx_, array_);
-    query.set_subarray(subarray)
-        .set_layout(layout_order)
-        .set_data_buffer(
-            attr_name,
-            this->data(),
-            (std::get<1>(row_view_) - std::get<0>(row_view_)) *
-                (std::get<1>(col_view_) - std::get<0>(col_view_)));
-    query.submit();
-
-    return true;
+    return col_offset_;
   }
 
   size_t offset() const
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
   {
     return row_offset_;
-  }
-
-  size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-  {
-    return col_offset_;
   }
 
     ~tdbMatrix() noexcept {
