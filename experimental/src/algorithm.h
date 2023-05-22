@@ -142,6 +142,41 @@ void for_each(
   }
 }
 
+template <class /*std::ranges::random_access_range*/ Range, class UnaryFunction>
+void range_for_each(
+    stdx::execution::indexed_parallel_policy&& par,
+    Range&& range,
+    UnaryFunction f) {
+  size_t container_size = size(range);
+  size_t nthreads = par.nthreads_;
+  size_t block_size = (container_size + nthreads - 1) / nthreads;
+
+  std::vector<std::future<void>> futs;
+  futs.reserve(nthreads);
+
+  for (size_t n = 0; n < nthreads; ++n) {
+    auto start = std::min<size_t>(n * block_size, container_size);
+    auto stop = std::min<size_t>((n + 1) * block_size, container_size);
+
+    if (start != stop) {
+      futs.emplace_back(std::async(
+          std::launch::async,
+          [n,
+           &range,
+           start,
+           stop,
+           f = std::forward<UnaryFunction>(f)]() mutable {
+            for (size_t i = start; i < stop; ++i) {
+              std::forward<UnaryFunction>(f)(range[i], n, i);
+            }
+          }));
+    }
+  }
+  for (size_t n = 0; n < size(futs); ++n) {
+    futs[n].wait();
+  }
+}
+
 }  // namespace stdx
 
 #endif  // TDB_ALGORITHM_H
