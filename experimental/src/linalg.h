@@ -274,6 +274,19 @@ struct order_traits<stdx::layout_left> {
 template <class LayoutPolicy>
 constexpr auto order_v = order_traits<LayoutPolicy>::order;
 
+
+// @todo these are k
+template <class T, class I>
+size_t size(const Matrix<T, stdx::layout_right, I>& m) {
+  return m.num_rows();
+}
+
+template <class T, class I>
+size_t size(const Matrix<T, stdx::layout_left, I>& m) {
+  return m.num_cols();
+}
+
+
 /**
  * Derived from `Matrix`.  Initialized in construction by filling from a given
  * TileDB array.
@@ -536,9 +549,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     auto layout_order = cell_order;
 
     if (layout_order == TILEDB_ROW_MAJOR) {
-      if (num_array_rows_ <= std::get<1>(row_view_)) {
-        return false;
-      }
+
       if (num_elts == 0) {
         num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
       }
@@ -546,10 +557,12 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       row_offset_ += num_elts;
       std::get<0>(row_view_) += num_elts;
       std::get<1>(row_view_) += num_elts;
-    } else if (layout_order == TILEDB_COL_MAJOR) {
-      if (num_array_cols_ <= std::get<1>(col_view_)) {
+
+      if (std::get<0>(row_view_) >= num_array_rows_) {
         return false;
       }
+    } else if (layout_order == TILEDB_COL_MAJOR) {
+
       if (num_elts == 0) {
         num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
       }
@@ -557,6 +570,10 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       col_offset_ += num_elts;
       std::get<0>(col_view_) += num_elts;
       std::get<1>(col_view_) += num_elts;
+
+      if (std::get<0>(col_view_) >= num_array_cols_) {
+        return false;
+      }
     } else {
       throw std::runtime_error("Unknown cell order");
     }
@@ -659,13 +676,13 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   size_t offset() const
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
   {
-    return col_offset_;
+    return row_offset_;
   }
 
   size_t offset() const
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
   {
-    return row_offset_;
+    return col_offset_;
   }
 
     ~tdbMatrix() noexcept {
