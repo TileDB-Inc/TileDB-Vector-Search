@@ -54,6 +54,7 @@ set(INHERITED_CMAKE_ARGS
   -DTILEDB_S3=${TILEDB_S3}
   -DTileDB_DIR=${TileDB_DIR}
   -DOVERRIDE_INSTALL_PREFIX=${OVERRIDE_INSTALL_PREFIX}
+  -DBLA_VENDOR=${BLA_VENDOR}
 )
 
 ############################################################
