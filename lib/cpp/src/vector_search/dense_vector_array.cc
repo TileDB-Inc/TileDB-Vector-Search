@@ -114,12 +114,19 @@ std::vector<std::vector<uint8_t>> DenseVectorArray::read_vector_partition(int pa
 std::vector<uint8_t> DenseVectorArray::read_vector_partition_flat(int partition_id){
     Subarray subarray(ctx_, read_array_);
     subarray.add_range(0, partition_start_offsets_[partition_id], partition_end_offsets_[partition_id]);
-    std::vector<uint8_t> data(partition_sizes_[partition_id]*num_vector_dim_);
+    subarray.add_range(1, 0, num_vector_dim_-1);
+    std::vector<uint8_t> data(3*partition_sizes_[partition_id]*num_vector_dim_);
     Query query(ctx_, read_array_, TILEDB_READ);
     query.set_subarray(subarray)
         .set_layout(TILEDB_ROW_MAJOR)
         .set_data_buffer("value", data);
     query.submit();
+    Query::Status status = query.query_status();
+    if(status != Query::Status::COMPLETE){
+        throw TileDBError(
+            "[TileDB::SparseVectorArray] Error: Partition query status not complete.");
+    }
+    data.resize(partition_sizes_[partition_id]*num_vector_dim_);
     return data;
 }
 

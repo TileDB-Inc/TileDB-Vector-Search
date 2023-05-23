@@ -34,6 +34,12 @@ namespace tiledb::vector_search {
 
 using namespace tiledb;
 
+struct SimilarityResult {  
+  double similarity_score;           
+  int object_id;
+  std::vector<uint8_t> vector;
+};  
+
 /* **************************** */
 /*         VECTOR ARRAY         */
 /* **************************** */
@@ -60,6 +66,9 @@ class VectorArray {
   virtual std::vector<std::vector<float>> get_centroids() = 0;
   virtual std::vector<uint8_t> read_vector_partition_flat(int partition_id) = 0;
   virtual std::vector<float> get_centroids_flat() = 0;
+
+  std::vector<SimilarityResult> ann_query(std::vector<uint8_t> query_vector, int k, int nprobe, int nthreads);
+  std::vector<std::vector<SimilarityResult>> ann_query_batch(std::vector<std::vector<uint8_t>> query_vectors, int k, int nprobe, int nthreads);
 
  protected:
   /* ********************************* */

@@ -26,7 +26,9 @@
 #
 
 add_executable(vector_search 
-    example.cc 
+    example.cc
+    utils/vector_distance.h
+    vector_search/sparse_vector_array.h 
     vector_search/vector_array.h 
     vector_search/vector_array.cc 
     vector_search/dense_vector_array.h 
