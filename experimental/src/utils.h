@@ -104,4 +104,46 @@ bool is_local_array(const std::string& array_uri) {
 }
 
 
+/**
+ * @brief A simple counter iterator that can be used as an output iterator
+ * @todo Make it a proper iterator
+ *
+ * @tparam T The type of the counter
+ */
+template <class T = std::size_t>
+struct counter {
+  using iterator_category = std::output_iterator_tag;
+  using value_type        = void;
+  using difference_type   = void;
+  using pointer           = void;
+  using reference         = void;
+
+  T count {0};
+
+  counter(T init = {}) : count(init) {
+  }
+
+  constexpr operator T() const {
+    return count;
+  }
+
+  counter& operator++() {
+    return *this;
+  }
+  counter& operator++(int) {
+    return *this;
+  }
+  counter& operator*() {
+    return *this;
+  }
+
+  template <class U>
+  decltype(auto) operator=(U) {
+    ++count;
+    return *this;
+  }
+};
+
+
+
 #endif
