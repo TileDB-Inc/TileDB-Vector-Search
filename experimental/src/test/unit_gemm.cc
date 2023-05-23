@@ -238,8 +238,8 @@ TEST_CASE("gemm: row major test", "[sgemm]") {
     std::vector<float> C{0.0, 0.0, 0.0, 0.0};
     std::vector<float> L{0.0, 0.0, 0.0, 0.0};
 
-    std::vector<std::span<float>> A_span(3);
-    std::vector<std::span<float>> B_span(3);
+    std::vector<std::span<float>> A_span(2);
+    std::vector<std::span<float>> B_span(2);
     std::vector<std::span<float>> C_span(2);
     std::vector<std::span<float>> L2_span(2);
 
@@ -269,6 +269,9 @@ TEST_CASE("gemm: row major test", "[sgemm]") {
     CHECK(A_span[0][0] == 1.0);
     CHECK(A_span[0][1] == 2.0);
     CHECK(A_span[0][2] == 3.0);
+    CHECK(A_span[1][0] == 4.0);
+    CHECK(A_span[1][1] == 5.0);
+    CHECK(A_span[1][2] == 6.0);
 
     /****************************************************************
      *

@@ -32,4 +32,37 @@
 constexpr const char SIFT_TEST_DIR[] = "@SIFT_TEST_DIR@";
 constexpr const char CURRENT_DATETIME[] = "@CURRENT_DATETIME@";
 constexpr const char CMAKE_SOURCE_DIR[] = "@CMAKE_SOURCE_DIR@";
-constexpr const char GIT_BRANCH[] = "@GIT_BRANCH@";
+constexpr const char IVF_HACK_GIT_BRANCH[] = "@IVF_HACK_GIT_BRANCH@";
+constexpr const char BUILD_TYPE[] = "@CMAKE_BUILD_TYPE@";
+constexpr const char CXX_VERSION[] = "@CMAKE_CXX_COMPILER_VERSION@";
+constexpr const char CXX_COMPILER_ID[] = "@CMAKE_CXX_COMPILER_ID@";
+constexpr const char CXX_COMPILER[] = "@IVF_HACK_CXX_COMPILER@";
+
+/*
+  UUID
+Date and Time
+Program	Database URI
+Query URI
+Centroid URI
+Index URI
+ID URI	Groundtruth URI
+Database size
+Query Size
+Query type
+# Partitions
+nprobe
+Program args
+libtiledb version/git branch
+feature-vector-prototype git branch /version
+C++ compiler
+Compiler version
+Optimization flags
+cmake build type
+host type
+machine	host name
+threads
+Performance lib
+First Read time
+Query Time
+Accuracy
+*/
