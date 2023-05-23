@@ -62,14 +62,12 @@
 
 #include <docopt.h>
 
+#include "config.h"
 #include "defs.h"
 #include "ivf_query.h"
 #include "linalg.h"
 #include "timer.h"
 #include "utils.h"
-#include "config.h"
-
-
 
 bool global_verbose = false;
 bool global_debug = false;
@@ -125,7 +123,7 @@ int main(int argc, char* argv[]) {
 
   if (global_debug) {
     std::cout << "# " << argv[0] << " built at " << CURRENT_DATETIME << "\n";
-    std::cout << "# Git branch: " << GIT_BRANCH << "\n";
+    std::cout << "# Git branch: " << IVF_HACK_GIT_BRANCH << "\n";
     std::cout << "# Built from source in " << CMAKE_SOURCE_DIR << "\n";
     auto&& [major, minor, patch] = tiledb::version();
     std::cout << "# TileDB version: " << major << "." << minor << "." << patch
@@ -347,9 +345,9 @@ for (size_t i = 0; i < kmeans_ids.num_rows(); ++i) {
         //       sort
         //       intersect count
 
-        size_t total_query_in_groundtruth {0};
+        size_t total_query_in_groundtruth{0};
         // for each query
-        std::vector<int> comp (kmeans_ids.num_rows());
+        std::vector<int> comp(kmeans_ids.num_rows());
         for (size_t i = 0; i < kmeans_ids.num_cols(); ++i) {
           for (size_t j = 0; j < kmeans_ids.num_rows(); ++j) {
             comp[j] = all_ids[kmeans_ids(j, i)];
@@ -357,17 +355,27 @@ for (size_t i = 0; i < kmeans_ids.num_rows(); ++i) {
           std::sort(begin(comp), end(comp));
           std::sort(begin(groundtruth[i]), end(groundtruth[i]));
 
-          static constexpr auto lt = [](auto&& x, auto&& y) { return std::get<0>(x) < std::get<0>(y); };
-          total_query_in_groundtruth += std::set_intersection(begin(comp), end(comp), begin(groundtruth[i]), end(groundtruth[i]), counter{});
-          //std::cout << all_ids[kmeans_ids(i, 0)] << ": " << std::endl;
-          //std::cout << i << ": " << std::endl;
+          static constexpr auto lt = [](auto&& x, auto&& y) {
+            return std::get<0>(x) < std::get<0>(y);
+          };
+          total_query_in_groundtruth += std::set_intersection(
+              begin(comp),
+              end(comp),
+              begin(groundtruth[i]),
+              end(groundtruth[i]),
+              counter{});
+          // std::cout << all_ids[kmeans_ids(i, 0)] << ": " << std::endl;
+          // std::cout << i << ": " << std::endl;
         }
-        std::cout << "total_query_in_groundtruth: " << total_query_in_groundtruth ;
-        std::cout << " / " << kmeans_ids.num_cols() * kmeans_ids.num_rows() ;
-        std::cout << " = " << (((float)total_query_in_groundtruth / ((float)(kmeans_ids.num_cols()) * kmeans_ids.num_rows()))) << std::endl;
+        std::cout << "total_query_in_groundtruth: "
+                  << total_query_in_groundtruth;
+        std::cout << " / " << kmeans_ids.num_cols() * kmeans_ids.num_rows();
+        std::cout << " = "
+                  << (((float)total_query_in_groundtruth /
+                       ((float)(kmeans_ids.num_cols()) *
+                        kmeans_ids.num_rows())))
+                  << std::endl;
       }
     }
   }
 }
-
-

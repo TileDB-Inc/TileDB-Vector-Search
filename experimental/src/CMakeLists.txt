@@ -32,13 +32,11 @@ string(TIMESTAMP CURRENT_DATETIME "%Y-%m-%d %H:%M:%S")
 execute_process(
         COMMAND git rev-parse --abbrev-ref HEAD
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_BRANCH
+        OUTPUT_VARIABLE IVF_HACK_GIT_BRANCH
         OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-# Print the Git branch name
-# message("Current Git branch: ${GIT_BRANCH}")
 
-
+get_filename_component(IVF_HACK_CXX_COMPILER ${CMAKE_CXX_COMPILER} NAME)
 
 configure_file(config.h.in config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -58,7 +56,6 @@ target_link_libraries(kmeans PUBLIC flat_mt)
 target_link_libraries(kmeans PUBLIC flat_blas)
 target_link_libraries(kmeans PUBLIC TileDB::tiledb_shared)
 target_link_libraries(kmeans PUBLIC mdspan)
-
 
 add_executable(ivf_hack ivf_hack.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h array_view.h readers.h)
 
