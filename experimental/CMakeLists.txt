@@ -84,7 +84,16 @@ include(MultiThreading)
 # Interface library for BLAS
 # -----------------------------------------------------------------------------
 # Control compiler-specific flags.
-include(BLAS)
+# include(BLAS)
+find_package(BLAS REQUIRED)
+message(STATUS "BLAS_FOUND is ${BLAS_FOUND}")
+message(STATUS "BLAS_LIBRARIES is ${BLAS_LIBRARIES}")
+message(STATUS "BLAS_INCLUDE_DIRS is ${BLAS_INCLUDE_DIRS}")
+message(STATUS "BLAS_LINKER_FLAGS is ${BLAS_LINKER_FLAGS}")
+message(STATUS "BLAS_VERSION_STRING is ${BLAS_VERSION_STRING}")
+
+
+
 
 
 
