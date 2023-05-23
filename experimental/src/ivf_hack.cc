@@ -81,7 +81,7 @@ static constexpr const char USAGE[] =
 Usage:
     tdb (-h | --help)
     tdb   --db_uri URI --centroids_uri URI --index_uri URI --part_uri URI --id_uri URI
-         [--output_uri URI] [--query_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
+         [--output_uri URI] [--query_uri URI] [--groundtruth_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
          [--k NN] [--cluster NN] [--write] [--nthreads N] [--region REGION] [-n] [-d | -v]
 
 Options:
@@ -93,6 +93,7 @@ Options:
     --id_uri URI          URI with original IDs of vectors
     --output_uri URI      URI to store search results
     --query_uri URI       URI storing query vectors
+    --groundtruth_uri URI URI storing ground truth vectors
     --nqueries NN         number of query vectors to use (0 = all) [default: 1]
     --ndb NN              number of database vectors to use (0 = all) [default: 0]
     --write               write the index to disk [default: false]
@@ -326,9 +327,47 @@ int main(int argc, char* argv[]) {
       // For now, print the results to std::cout
       // @todo also get scores
       // @todo add an output_uri argument
-      for (size_t i = 0; i < kmeans_ids.num_rows(); ++i) {
-        std::cout << all_ids[kmeans_ids(i, 0)] << ": " << std::endl;
+#if 0
+for (size_t i = 0; i < kmeans_ids.num_rows(); ++i) {
+  std::cout << all_ids[kmeans_ids(i, 0)] << ": " << std::endl;
+      }
+#endif
+
+      if (args["--groundtruth_uri"]) {
+        auto groundtruth_uri = args["--groundtruth_uri"].asString();
+        auto groundtruth = tdbMatrix<int, Kokkos::layout_left>(groundtruth_uri);
+        debug_matrix(groundtruth, "groundtruth");
+
+        // kmeans_ids is k by nqueries
+
+        // foreach query
+        // get the top k
+        //    get the groundtruth
+        //    compare
+        //       sort
+        //       intersect count
+
+        size_t total_query_in_groundtruth {0};
+        // for each query
+        std::vector<int> comp (kmeans_ids.num_rows());
+        for (size_t i = 0; i < kmeans_ids.num_cols(); ++i) {
+          for (size_t j = 0; j < kmeans_ids.num_rows(); ++j) {
+            comp[j] = all_ids[kmeans_ids(j, i)];
+          }
+          std::sort(begin(comp), end(comp));
+          std::sort(begin(groundtruth[i]), end(groundtruth[i]));
+
+          static constexpr auto lt = [](auto&& x, auto&& y) { return std::get<0>(x) < std::get<0>(y); };
+          total_query_in_groundtruth += std::set_intersection(begin(comp), end(comp), begin(groundtruth[i]), end(groundtruth[i]), counter{});
+          //std::cout << all_ids[kmeans_ids(i, 0)] << ": " << std::endl;
+          //std::cout << i << ": " << std::endl;
+        }
+        std::cout << "total_query_in_groundtruth: " << total_query_in_groundtruth ;
+        std::cout << " / " << kmeans_ids.num_cols() * kmeans_ids.num_rows() ;
+        std::cout << " = " << (((float)total_query_in_groundtruth / ((float)(kmeans_ids.num_cols()) * kmeans_ids.num_rows()))) << std::endl;
       }
     }
   }
 }
+
+
