@@ -174,10 +174,12 @@ void query_qv_hw(
           scores[i] = L2(q_vec, db[i]);
         }
 
+        if (g.num_rows() > 0) {
         // std::copy(begin(i_index), end(i_index), begin(index));
         std::iota(begin(index), end(index), 0);
         get_top_k(scores, top_k[j], index, k);
         verify_top_k(scores, top_k[j], g[j], k, j);
+        }
       });
 }
 
@@ -217,11 +219,12 @@ void query_qv_ew(
             scores.begin(), scores.end(), top_k[j].begin(), ([](auto&& e) {
               return e.second;
             }));
-
+        if (g.num_rows() > 0) {
         // Try to break ties by sorting the top k
         std::sort(begin(top_k[j]), end(top_k[j]));
         std::sort(begin(g[j]), begin(g[j]) + k);
         verify_top_k(top_k[j], g[j], k, j);
+        }
       });
 }
 
@@ -295,7 +298,7 @@ void query_vq_hw(
 
   get_top_k(scores, top_k, k, size(q), size(db), nthreads);
 
-  {
+  if (g.num_rows() > 0) {
     life_timer _{"Checking results"};
 
     // #pragma omp parallel for
@@ -374,9 +377,10 @@ void query_vq_ew(
                   top_k[j].begin(),
                   ([](auto&& e) { return e.second; }));
               std::sort(begin(top_k[j]), end(top_k[j]));
-
-              std::sort(begin(g[j]), begin(g[j]) + k);
-              verify_top_k(top_k[j], g[j], k, j);
+              if (g.num_rows() > 0) {
+                std::sort(begin(g[j]), begin(g[j]) + k);
+                verify_top_k(top_k[j], g[j], k, j);
+              }
             }
           }));
     }
@@ -597,6 +601,7 @@ void query_gemm(
     [[maybe_unused]] bool hw,
     size_t nthreads) {
   auto scores = gemm_compute_scores(db, q, top_k, k, hw, nthreads);
+  if (g.num_rows() > 0)
   {
     life_timer _{"Checking results"};
 
@@ -810,6 +815,7 @@ void blocked_query_gemm(
     [[maybe_unused]] bool hw,
     size_t nthreads) {
   auto scores = blocked_gemm_compute_scores(db, q, top_k, k, hw, nthreads);
+  if (g.num_rows() > 0)
   {
     life_timer _{"Checking results"};
 
