@@ -51,6 +51,8 @@ class SparseVectorArray: public VectorArray {
 
   std::vector<std::vector<uint8_t>> read_vector_partition(int partition_id);
   std::vector<std::vector<float>> get_centroids();
+  std::vector<uint8_t> read_vector_partition_flat(int partition_id);
+  std::vector<float> get_centroids_flat();
 
  private:
 
@@ -58,6 +60,7 @@ class SparseVectorArray: public VectorArray {
   Array index_array_;
   int array_type_version_;
   std::vector<std::vector<float>> centroids_;
+  std::vector<float> centroids_flat_;
 
   void read_index_data();
 };

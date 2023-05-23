@@ -53,22 +53,14 @@ std::vector<std::vector<float>> SparseVectorArray::get_centroids(){
     return centroids_;
 }
 
+std::vector<float> SparseVectorArray::get_centroids_flat(){
+    return centroids_flat_;
+}
+
 std::vector<std::vector<uint8_t>> SparseVectorArray::read_vector_partition(int partition_id){
-    Subarray subarray(ctx_, read_array_);
-    subarray.add_range(0, partition_id, partition_id);
-    std::vector<uint8_t> data(100*num_partitions_*num_vector_dim_);
-    Query query(ctx_, read_array_, TILEDB_READ);
-    query.set_subarray(subarray)
-        .set_layout(TILEDB_ROW_MAJOR)
-        .set_data_buffer("vector", data);
-    query.submit();
-    Query::Status status = query.query_status();
-    if(status != Query::Status::COMPLETE){
-        throw TileDBError(
-            "[TileDB::SparseVectorArray] Error: Partition query status not complete.");
-    }
-    auto result_num = int(int(query.result_buffer_elements()["vector"].second)/num_vector_dim_);
     std::vector<std::vector<uint8_t>> res;
+    std::vector<uint8_t> data = read_vector_partition_flat(partition_id);
+    int result_num = int(data.size()/num_vector_dim_);
     res.resize(result_num);
     for (int i = 0; i < result_num; i++) {
         res[i].resize(num_vector_dim_);
@@ -82,15 +74,33 @@ std::vector<std::vector<uint8_t>> SparseVectorArray::read_vector_partition(int p
     return res;
 }
 
+std::vector<uint8_t> SparseVectorArray::read_vector_partition_flat(int partition_id){
+    Subarray subarray(ctx_, read_array_);
+    subarray.add_range(0, partition_id, partition_id);
+    std::vector<uint8_t> data(100*num_partitions_*num_vector_dim_);
+    Query query(ctx_, read_array_, TILEDB_READ);
+    query.set_subarray(subarray)
+        .set_layout(TILEDB_ROW_MAJOR)
+        .set_data_buffer("vector", data);
+    query.submit();
+    Query::Status status = query.query_status();
+    if(status != Query::Status::COMPLETE){
+        throw TileDBError(
+            "[TileDB::SparseVectorArray] Error: Partition query status not complete.");
+    }
+    data.resize(int(query.result_buffer_elements()["vector"].second));
+    return data;
+}
+
 void SparseVectorArray::read_index_data(){
     Subarray subarray(ctx_, index_array_);
     subarray.add_range(0, 0, num_partitions_-1).add_range(1, 0, num_vector_dim_-1);
 
-    std::vector<float> data(num_vector_dim_ *num_partitions_);
+    centroids_flat_.resize(num_vector_dim_*num_partitions_);
     Query query(ctx_, index_array_, TILEDB_READ);
     query.set_subarray(subarray)
         .set_layout(TILEDB_ROW_MAJOR)
-        .set_data_buffer("value", data);
+        .set_data_buffer("value", centroids_flat_);
     query.submit();
     std::vector<std::vector<float>> res;
     centroids_.resize(num_partitions_);
@@ -98,11 +108,11 @@ void SparseVectorArray::read_index_data(){
     {
         centroids_[i].resize(num_vector_dim_);
     }
-    for (int i = 0; i < data.size(); i++)
+    for (int i = 0; i < centroids_flat_.size(); i++)
     {
         int row = i / num_vector_dim_;
         int col = i %num_vector_dim_;
-        centroids_[row][col] = data[i];
+        centroids_[row][col] = centroids_flat_[i];
     }
 }
 

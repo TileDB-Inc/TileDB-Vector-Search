@@ -55,17 +55,21 @@ std::vector<std::vector<float>> DenseVectorArray::get_centroids(){
     return centroids_;
 }
 
+std::vector<float> DenseVectorArray::get_centroids_flat(){
+    return centroids_flat_;
+}
+
 void DenseVectorArray::read_index_data(){
     Subarray subarray(ctx_, index_array_);
     subarray.add_range(0, 0, num_partitions_-1);
 
-    std::vector<float> centroids(num_vector_dim_*num_partitions_);
+    centroids_flat_.resize(num_vector_dim_*num_partitions_);
     std::vector<uint32_t> partition_sizes(num_partitions_);
 
     Query query(ctx_, index_array_, TILEDB_READ);
     query.set_subarray(subarray)
         .set_layout(TILEDB_ROW_MAJOR)
-        .set_data_buffer("vector", centroids)
+        .set_data_buffer("vector", centroids_flat_)
         .set_data_buffer("size", partition_sizes);
     query.submit();
 
@@ -73,11 +77,11 @@ void DenseVectorArray::read_index_data(){
     for (int i = 0; i < num_partitions_; i++) {
         centroids_[i].resize(num_vector_dim_);
     }
-    for (int i = 0; i < centroids.size(); i++)
+    for (int i = 0; i < centroids_flat_.size(); i++)
     {
         int row = i / num_vector_dim_;
         int col = i %num_vector_dim_;
-        centroids_[row][col] = centroids[i];
+        centroids_[row][col] = centroids_flat_[i];
     }
     partition_start_offsets_.resize(num_partitions_);
     partition_end_offsets_.resize(num_partitions_);
@@ -92,15 +96,7 @@ void DenseVectorArray::read_index_data(){
 }
 
 std::vector<std::vector<uint8_t>> DenseVectorArray::read_vector_partition(int partition_id){
-    Subarray subarray(ctx_, read_array_);
-    subarray.add_range(0, partition_start_offsets_[partition_id], partition_end_offsets_[partition_id]);
-    std::vector<uint8_t> data(partition_sizes_[partition_id]*num_vector_dim_);
-    Query query(ctx_, read_array_, TILEDB_READ);
-    query.set_subarray(subarray)
-        .set_layout(TILEDB_ROW_MAJOR)
-        .set_data_buffer("value", data);
-    query.submit();
-
+    std::vector<uint8_t> data = read_vector_partition_flat(partition_id);
     std::vector<std::vector<uint8_t>> res;
     res.resize(partition_sizes_[partition_id]);
     for (int i = 0; i < partition_sizes_[partition_id]; i++) {
@@ -113,6 +109,18 @@ std::vector<std::vector<uint8_t>> DenseVectorArray::read_vector_partition(int pa
         res[row][col] = data[i];
     }
     return res;
+}
+
+std::vector<uint8_t> DenseVectorArray::read_vector_partition_flat(int partition_id){
+    Subarray subarray(ctx_, read_array_);
+    subarray.add_range(0, partition_start_offsets_[partition_id], partition_end_offsets_[partition_id]);
+    std::vector<uint8_t> data(partition_sizes_[partition_id]*num_vector_dim_);
+    Query query(ctx_, read_array_, TILEDB_READ);
+    query.set_subarray(subarray)
+        .set_layout(TILEDB_ROW_MAJOR)
+        .set_data_buffer("value", data);
+    query.submit();
+    return data;
 }
 
 }   // namespace tiledb::vector_search

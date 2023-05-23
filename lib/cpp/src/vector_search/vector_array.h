@@ -58,6 +58,8 @@ class VectorArray {
 
   virtual std::vector<std::vector<uint8_t>> read_vector_partition(int partition_id) = 0;
   virtual std::vector<std::vector<float>> get_centroids() = 0;
+  virtual std::vector<uint8_t> read_vector_partition_flat(int partition_id) = 0;
+  virtual std::vector<float> get_centroids_flat() = 0;
 
  protected:
   /* ********************************* */
