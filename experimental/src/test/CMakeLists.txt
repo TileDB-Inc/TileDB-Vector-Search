@@ -27,6 +27,8 @@
 
 include(Catch2)
 
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 set (SIFT_TEST_DIR ${CMAKE_BINARY_DIR}/src/test)
 message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 

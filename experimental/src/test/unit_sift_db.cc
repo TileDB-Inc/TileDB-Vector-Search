@@ -32,8 +32,8 @@
 #include <catch2/catch_all.hpp>
 #include <filesystem>
 #include <iostream>
-#include "../sift_db.h"
 #include "../config.h"
+#include "../sift_db.h"
 
 TEST_CASE("sift_db: test test", "[sift_db]") {
 #include <filesystem>
