@@ -70,6 +70,11 @@
  * corresponds to a vector.  There isn't really an orientation per se.
  * I.e., A[i] returns a span comprising the ith vector in A.
  *
+ * @todo Replace `sift_db` and `sift_array` with `tdbMatrix`
+ * @todo Replace `std::vector` of `span` with `stdx::mdspan`
+ * @todo Rewrite all query functions (as possible) to return top_k rather
+ * than doing ground truth comparisons.
+ *
  */
 
 #include <algorithm>
@@ -99,7 +104,7 @@ static constexpr const char USAGE[] =
     R"(flat: feature vector search with flat index.
   Usage:
       tdb (-h | --help)
-      tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) (--g_file FILE | --g_uri URI)
+      tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) [--g_file FILE | --g_uri URI]
           [--k NN] [--L2 | --cosine] [--order ORDER][--hardway] [--blocked] [--output_uri URI]
           [--nthreads N] [--nqueries N] [--ndb N] [-d | -v]
 
@@ -111,7 +116,7 @@ static constexpr const char USAGE[] =
       --q_uri URI           query URI with feature vectors to search for
       --g_file FILE         ground truth file
       --g_uri URI           ground true URI
-      --output URI          output URI for results
+      --output_uri URI      output URI for results
       --k NN                number of nearest neighbors to find [default: 10]
       --L2                  use L2 distance (Euclidean) [default]
       --cosine              use cosine distance
@@ -163,14 +168,16 @@ int main(int argc, char* argv[]) {
 
   std::string g_file{};
   std::string g_uri{};
+#if 0
   if (args["--g_file"]) {
     g_file = args["--g_file"].asString();
   } else if (args["--g_uri"]) {
     g_uri = args["--g_uri"].asString();
   } else {
-    std::cout << "Must specify either --g_file or --q_uri" << std::endl;
+    std::cout << "Must specify either --g_file or --g_uri" << std::endl;
     return 1;
   }
+#endif
 
   size_t k = args["--k"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
@@ -240,7 +247,7 @@ int main(int argc, char* argv[]) {
                 << std::endl;
       return 1;
     }
-  } else if (!db_uri.empty() && !q_uri.empty() && !g_uri.empty()) {
+  } else if (!db_uri.empty() && !q_uri.empty()) {
     if (db_uri == q_uri) {
       std::cout << "db_uri and q_uri must be different" << std::endl;
       return 1;
@@ -250,7 +257,10 @@ int main(int argc, char* argv[]) {
     ms_timer load_time{"Load database, query, and ground truth arrays"};
     tdbColMajorMatrix<float> db(db_uri, ndb);
     tdbColMajorMatrix<float> q(q_uri, nqueries);
-    tdbColMajorMatrix<int> g(g_uri);
+
+    auto g = g_uri.empty() ? ColMajorMatrix<int>(0,0) : tdbColMajorMatrix<int>(g_uri);
+    // tdbColMajorMatrix<int> g(g_uri);
+
     load_time.stop();
     std::cout << load_time << std::endl;
 
@@ -303,8 +313,36 @@ int main(int argc, char* argv[]) {
       return 1;
     }
 
-    ColMajorMatrix<int> top_k_mat(top_k.size(), top_k[0].size());
+    if (args["--output_uri"]) {
+      auto ground_truth = ColMajorMatrix<int>(top_k.size(), top_k[0].size());
+      for (size_t i = 0; i < top_k.size(); ++i) {
+        for (size_t j = 0; j < top_k[i].size(); ++j) {
+          ground_truth(i, j) = top_k[j][i];
+        }
+      }
+      write_matrix(ground_truth, args["--output_uri"].asString());
 
+#if 0
+      for (size_t i = 0; i < g.num_rows(); ++i) {
+        for (size_t j = 0; j < g.num_cols(); ++j) {
+          if (g(i,j) != ground_truth(i, j)) {
+            std::cout << "[ " << i << ", " << j << "] ( " << g(i, j) << " : " << ground_truth(i, j)
+                                                  << " ) ";
+          }
+        }
+        std::cout << std::endl;
+      }
+
+      if (!std::equal(
+              ground_truth.data(),
+              ground_truth.data() +
+                  ground_truth.num_rows() * ground_truth.num_cols(),
+              g.data())) {
+        std::cout << "Ground truth does not match" << std::endl;
+        return 1;
+      }
+#endif
+    }
   } else {
     std::cout << "Must specify either --db_file, --q_file, and --g_file or "
                  "--db_uri, --q_uri, and --g_uri"
