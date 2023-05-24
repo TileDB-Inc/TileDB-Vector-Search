@@ -36,6 +36,7 @@
 
 #include "algorithm.h"
 #include "concepts.h"
+#incdlue "scoring.h
 #include "defs.h"
 #include "linalg.h"
 #include "timer.h"
@@ -323,51 +324,7 @@ template <class DB, class Q>
 auto gemm_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
   life_timer _outer { "Total time gemm_query" };
 
-  ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
-  auto                  _score_data = raveled(scores);
-
-  int M = db.num_cols();
-  int N = q.num_cols();
-  int K = db.num_rows();
-
-  assert(db.num_rows() == q.num_rows());
-
-  std::vector<float> alpha(M, 0.0f);
-  std::vector<float> beta(N, 0.0f);
-  std::vector<float> alpha_ones(N, 1.0f);
-  std::vector<float> beta_ones(M, 1.0f);
-
-  {
-    life_timer _ { "L2 comparison (gemm)" };
-
-    cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, M, N, K, -2.0, &db(0, 0), K, &q(0, 0), K, 0.0, &scores(0, 0), M);
-  }
-
-  {
-    life_timer _ { "L2 comparison colsum" };
-
-    mat_col_sum(db, alpha, [](auto a) { return a * a; });    // @todo optimize somehow
-    mat_col_sum(q, beta, [](auto a) { return a * a; });
-  }
-
-  {
-    life_timer _ { "L2 comparison outer product" };
-
-    // A += alpha * x * transpose(y)
-
-
-    // This should be more parallelizable -- but seems to be completely
-    // memory-bound
-    cblas_sger(CblasColMajor, M, N, 1.0, &alpha[0], 1, &alpha_ones[0], 1, &scores(0, 0), M);
-    cblas_sger(CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, &scores(0, 0), M);
-  }
-
-  {
-    life_timer _ { "L2 comparison finish" };
-
-    stdx::execution::parallel_policy par { nthreads };
-    stdx::for_each(std::move(par), begin(_score_data), end(_score_data), [](auto& a) { a = sqrt(a); });
-  }
+  auto scores = gemm_scores(db, q, nthreads);
 
   ColMajorMatrix<size_t> top_k(k, q.num_cols());
   {
@@ -396,49 +353,7 @@ template <class DB, class Q>
 auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
   life_timer _outer { "Total time gemm" };
 
-  ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
-  auto                  _score_data = raveled(scores);
-
-  int M = db.num_cols();
-  int N = q.num_cols();
-  int K = db.num_rows();
-
-  assert(db.num_rows() == q.num_rows());
-
-  {
-    life_timer _ { "L2 comparison (gemm)" };
-
-    cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, M, N, K, -2.0, &db(0, 0), K, &q(0, 0), K, 0.0, &scores(0, 0), M);
-  }
-
-  std::vector<float> alpha(M, 0.0f);
-  std::vector<float> beta(N, 0.0f);
-  {
-    life_timer _ { "L2 comparison colsum" };
-
-    mat_col_sum(db, alpha, [](auto a) { return a * a; });    // @todo optimize somehow
-    mat_col_sum(q, beta, [](auto a) { return a * a; });
-  }
-
-  {
-    life_timer _ { "L2 comparison outer product" };
-
-    // A += alpha * x * transpose(y)
-    std::vector<float> alpha_ones(N, 1.0f);
-    std::vector<float> beta_ones(M, 1.0f);
-
-    // This should be more parallelizable -- but seems to be completely
-    // memory-bound
-    cblas_sger(CblasColMajor, M, N, 1.0, &alpha[0], 1, &alpha_ones[0], 1, &scores(0, 0), M);
-    cblas_sger(CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, &scores(0, 0), M);
-  }
-
-  {
-    life_timer _ { "L2 comparison finish" };
-
-    stdx::execution::parallel_policy par { nthreads };
-    stdx::for_each(std::move(par), begin(_score_data), end(_score_data), [](auto& a) { a = sqrt(a); });
-  }
+  auto scores = gemm_scores(db, q, nthreads);
 
   auto top_k = std::vector<int>(q.num_cols());
   {

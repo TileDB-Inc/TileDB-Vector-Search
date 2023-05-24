@@ -58,6 +58,7 @@
 #include "defs.h"
 #include "linalg.h"
 #include "timer.h"
+#include "fixed_min_queues.h"
 
 #include <cassert>
 #include <cmath>
@@ -70,14 +71,8 @@
 
 #include <vector>
 
-// If apple, use Accelerate
-#ifdef __APPLE__
-#include <Accelerate/Accelerate.h>
-#else
-#include <mkl_cblas.h>
-#endif
-
 #include "algorithm.h"
+#include "scoring.h"
 
 /**
  * Dispatch to the query that uses the qv ordering (loop over query vectors on
@@ -179,7 +174,7 @@ void query_qv_ew(const DB& db, const Q& q, const G& g, TK& top_k, int k, unsigne
     size_t size_db = size(db);
 
     // Create a set of the top k scores
-    fixed_min_set<element> scores(k);
+    fixed_min_heap<element> scores(k);
 
     // Compare with each database vector
     for (int i = 0; i < size_db; ++i) {
@@ -285,7 +280,7 @@ void query_vq_ew(const DB& db, const Q& q, const G& g, TK& top_k, int k, unsigne
   life_timer _outer { "Total time (vq loop nesting, set way)" };
 
   using element = std::pair<float, int>;
-  std::vector<std::vector<fixed_min_set<element>>> scores(nthreads, std::vector<fixed_min_set<element>>(size(q), fixed_min_set<element>(k)));
+  std::vector<std::vector<fixed_min_heap<element>>> scores(nthreads, std::vector<fixed_min_heap<element>>(size(q), fixed_min_heap<element>(k)));
 
   {
     life_timer _ { "L2 distance" };
@@ -355,126 +350,10 @@ void query_vq_ew(const DB& db, const Q& q, const G& g, TK& top_k, int k, unsigne
  * as vq_ew for small numbers of query vectors.
  */
 template <class DB, class Q, class TK>
-auto gemm_compute_scores(const DB& db, const Q& q, TK& top_k, int k, [[maybe_unused]] bool hw, size_t nthreads) {
+auto gemm_compute_scores(const DB& db, const Q& q, TK& top_k, int k, size_t nthreads) {
   life_timer _outer { "Total time gemm" };
-  /**
-   * scores is nsamples X nq
-   * db is dimension X nsamples
-   * q is vsize X dimension
-   * scores <- db^T * q
-   */
 
-  ms_timer init_time("Allocating score array");
-  init_time.start();
-
-#if 1
-  Matrix<float> scores(size(q), size(db));
-  auto          _score_data = raveled(scores);
-#else
-  std::vector<std::span<float>> scores(size(q));
-
-#if __APPLE__
-  //  std::vector<float> _score_data(size(q) * size(db));
-  auto             buf = std::make_unique<float[]>(size(q) * size(db));
-  std::span<float> _score_data { buf.get(), size(q) * size(db) };
-#else
-  auto             buf = std::make_unique_for_overwrite<float[]>(size(q) * size(db));
-  std::span<float> _score_data { buf.get(), size(q) * size(db) };
-#endif
-  init_time.stop();
-  std::cout << init_time << std::endl;
-#ifdef __APPLE__
-  std::cout << "Apple clang does not yet support make_unique_for_overwrite" << std::endl;
-  std::cout << "This time would not be seen in libraries supporting "
-               "make_unique_for_overwrite"
-            << std::endl;
-#endif
-#endif
-
-  int M = size(db);
-  int N = size(q);
-  int K = size(db[0]);
-  assert(size(db[0]) == size(q[0]));
-
-  /**
-   * Compute the score matrix, based on (a - b)^2 = a^2 + b^2 - 2ab
-   * scores[j][i] = alpha[i] + beta[j] - 2 * db[i] * q[j]
-   */
-
-
-
-  // It seems to save a fair amount of time to do the gemm first then the outer
-  // products -- maybe b/c C = A*B is faster than C += A * B?
-  {
-    life_timer _ { "L2 comparison (gemm)" };
-
-    cblas_sgemm(CblasColMajor,
-                CblasTrans,            // db^T
-                CblasNoTrans,          // q
-                (int32_t)M,            // number of samples
-                (int32_t)N,            // number of queries
-                (int32_t)K,            // dimension of vectors
-                -2.0,
-                db[0].data(),          // A: K x M -> A^T: M x K
-                K,
-                q[0].data(),           // B: K x N
-                K,
-                0.0,                   // Overwrite the (uninitialized) target with the matrix product
-                _score_data.data(),    // C: M x N
-                M);
-  }
-
-  std::vector<float> alpha(M, 0.0f);
-  std::vector<float> beta(N, 0.0f);
-
-  {
-    life_timer _ { "L2 comparison colsum" };
-
-    col_sum(db, alpha, [](auto a) { return a * a; });    // @todo optimize somehow
-    col_sum(q, beta, [](auto a) { return a * a; });
-  }
-
-  {
-    life_timer _ { "L2 comparison outer product" };
-
-    // A += alpha * x * transpose(y)
-    std::vector<float> alpha_ones(N, 1.0f);
-    std::vector<float> beta_ones(M, 1.0f);
-
-    // This should be more parallelizable -- but seems to be completely
-    // memory-bound
-#if 1
-    cblas_sger(CblasColMajor, M, N, 1.0, &alpha[0], 1, &alpha_ones[0], 1, _score_data.data(), M);
-    cblas_sger(CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, _score_data.data(), M);
-#else
-    size_t block_size = (N + nthreads - 1) / nthreads;
-
-    std::vector<std::future<void>> futs;
-    futs.reserve(nthreads);
-    for (size_t n = 0; n < nthreads; ++n) {
-      size_t start = n * block_size;
-      size_t stop  = std::min<size_t>((n + 1) * block_size, N);
-
-      futs.emplace_back(
-          std::async(std::launch::async, [start, stop, &_score_data, M, N, block_size, &alpha, &beta, &alpha_ones, &beta_ones, n]() {
-            cblas_sger(CblasColMajor, M, stop - start /*N*/, 1.0, &alpha[0], 1, &alpha_ones[start], 1, _score_data.data() + M * start, M);
-            cblas_sger(CblasColMajor, M, stop - start /*N*/, 1.0, &beta_ones[0], 1, &beta[start], 1, _score_data.data() + M * start, M);
-          }));
-    }
-
-    for (int n = 0; n < nthreads; ++n) {
-      futs[n].get();
-    }
-#endif
-  }
-
-  {
-    life_timer _ { "L2 comparison finish" };
-
-    stdx::execution::parallel_policy par { nthreads };
-    stdx::for_each(std::move(par), begin(_score_data), end(_score_data), [](auto& a) { a = sqrt(a); });
-  }
-
+  auto scores = gemm_scores(db, q, nthreads);
   get_top_k(scores, top_k, k, size(q), size(db), nthreads);
 
   return scores;
@@ -482,7 +361,7 @@ auto gemm_compute_scores(const DB& db, const Q& q, TK& top_k, int k, [[maybe_unu
 
 template <class DB, class Q, class G, class TK>
 void query_gemm(const DB& db, const Q& q, const G& g, TK& top_k, int k, [[maybe_unused]] bool hw, size_t nthreads) {
-  auto scores = gemm_compute_scores(db, q, top_k, k, hw, nthreads);
+  auto scores = gemm_compute_scores(db, q, top_k, k, nthreads);
   if (g.num_rows() > 0) {
     life_timer _ { "Checking results" };
 
@@ -494,105 +373,26 @@ void query_gemm(const DB& db, const Q& q, const G& g, TK& top_k, int k, [[maybe_
 }
 
 template <class DB, class Q, class TK>
-auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, [[maybe_unused]] bool hw, size_t nthreads) {
+auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, size_t nthreads) {
   life_timer _outer { "Total time gemm" };
 
   using element = std::pair<float, unsigned>;
 
   auto block_db = true;
- // if (q.size() > 2 * db.size()) {
-//    block_db = false;
-//  }
-
-  /**
-   * scores is nsamples X nq
-   * db is dimension X nsamples
-   * q is vsize X dimension
-   * scores <- db^T * q
-   */
-
-  ms_timer init_time("Allocating score array");
-  init_time.start();
 
   // @todo Untangle this some day so that it is Column Major
-  Matrix<float> scores(q.num_cols(), db.num_cols());
+  ColMajorMatrix<float> scores(q.num_cols(), db.num_cols());
   // ColMajorMatrix<float> scores(q.num_cols(), db.num_cols());
   auto _score_data = raveled(scores);
 
-  std::vector<fixed_min_set<element>> min_scores(size(q), fixed_min_set<element>(k));
-
-  int M = size(db);
-  int N = size(q);
-  int K = size(db[0]);
-  assert(size(db[0]) == size(q[0]));
-
-  std::vector<float> alpha(M, 0.0f);
-  std::vector<float> beta(N, 0.0f);
-  std::vector<float> alpha_ones(N, 1.0f);
-  std::vector<float> beta_ones(M, 1.0f);
-
-  /**
-   * Compute the score matrix, based on (a - b)^2 = a^2 + b^2 - 2ab
-   * scores[j][i] = alpha[i] + beta[j] - 2 * db[i] * q[j]
-   */
+  std::vector<fixed_min_heap<element>> min_scores(size(q), fixed_min_heap<element>(k));
 
   for (;;) {
-    { life_timer _{"gemm et al"};
-      cblas_sgemm(CblasColMajor,
-                  CblasTrans,            // db^T
-                  CblasNoTrans,          // q
-                  (int32_t)M,            // number of samples
-                  (int32_t)N,            // number of queries
-                  (int32_t)K,            // dimension of vectors
-                  -2.0,
-                  db[0].data(),          // A: K x M -> A^T: M x K
-                  K,
-                  q[0].data(),           // B: K x N
-                  K,
-                  0.0,                   // Overwrite the (uninitialized) target with the matrix product
-                  _score_data.data(),    // C: M x N
-                  M);
 
-      std::fill(begin(alpha), end(alpha), 0.0f);
-      std::fill(begin(beta), end(beta), 0.0f);
+    gemm_scores(db, q, scores, nthreads);
 
-      col_sum(db, alpha, [](auto a) { return a * a; });    // @todo optimize somehow
-      col_sum(q, beta, [](auto a) { return a * a; });
-
-      // A += alpha * x * transpose(y)
-
-      // This should be more parallelizable -- but seems to be completely
-      // memory-bound
-#if 1
-      cblas_sger(CblasColMajor, M, N, 1.0, &alpha[0], 1, &alpha_ones[0], 1, _score_data.data(), M);
-      cblas_sger(CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, _score_data.data(), M);
-#else
-      size_t block_size = (N + nthreads - 1) / nthreads;
-
-      std::vector<std::future<void>> futs;
-      futs.reserve(nthreads);
-      for (size_t n = 0; n < nthreads; ++n) {
-        size_t start = n * block_size;
-        size_t stop  = std::min<size_t>((n + 1) * block_size, N);
-
-        futs.emplace_back(
-            std::async(std::launch::async, [start, stop, &_score_data, M, N, block_size, &alpha, &beta, &alpha_ones, &beta_ones, n]() {
-              cblas_sger(CblasColMajor, M, stop - start /*N*/, 1.0, &alpha[0], 1, &alpha_ones[start], 1, _score_data.data() + M * start, M);
-              cblas_sger(CblasColMajor, M, stop - start /*N*/, 1.0, &beta_ones[0], 1, &beta[start], 1, _score_data.data() + M * start, M);
-            }));
-      }
-
-      for (int n = 0; n < nthreads; ++n) {
-        futs[n].get();
-      }
-#endif
-    }
-    {
-      life_timer                       _ { "sqrt" };
-      stdx::execution::parallel_policy par { nthreads };
-      stdx::for_each(std::move(par), begin(_score_data), end(_score_data), [](auto& a) { a = sqrt(a); });
-    }
     { life_timer _ { "inserting" };
+
       for (int i = 0; i < scores.num_cols(); ++i) {
         for (int j = 0; j < scores.num_rows(); ++j) {
           min_scores[j].insert({ scores(j, i), i + db.offset() });
@@ -624,7 +424,7 @@ auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, [[maybe_unused]
 
 template <class DB, class Q, class G, class TK>
 void blocked_query_gemm(DB& db, Q& q, const G& g, TK& top_k, int k, [[maybe_unused]] bool hw, size_t nthreads) {
-  auto scores = blocked_gemm_compute_scores(db, q, top_k, k, hw, nthreads);
+  auto scores = blocked_gemm_compute_scores(db, q, top_k, k, nthreads);
   if (g.num_rows() > 0) {
     life_timer _ { "Checking results" };
 
