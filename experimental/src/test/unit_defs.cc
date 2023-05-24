@@ -164,3 +164,33 @@ TEST_CASE("defs: fixed_min_set with pairs", "[defs]") {
   }
   CHECK(a.size() == 5);
 }
+
+
+TEST_CASE("defs: fixed_min_set with a large vector", "[defs]") {
+  using element = std::pair<float, int>;
+  fixed_min_set<element> a(7);
+
+  std::vector<element> v(5500);
+  for (auto&& i : v) {
+    i = {std::rand(), std::rand()};
+    CHECK(i != element{});
+  }
+  for (auto&& i : v) {
+    a.insert(i);
+  }
+  CHECK(a.size() == 7);
+  std::vector<element> v2(begin(a), end(a));
+  std::sort(begin(v2), end(v2));
+
+  std::vector<element> u(v.begin(), v.begin() + 7);
+
+  std::nth_element(v.begin(), v.begin() + 7, v.end());
+  std::vector<element> w(v.begin(), v.begin() + 7);
+
+  CHECK(u != w);
+
+  std::vector<element> v3(v.begin(), v.begin() + 7);
+  std::sort(begin(v3), end(v3));
+  CHECK(v2 == v3);
+
+}
