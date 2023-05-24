@@ -31,6 +31,8 @@
 *
 */
 
+
+#define ALLHEAPS 1
 #include "../timer.h"
 #include "../fixed_min_queues.h"
 #include <functional>
@@ -69,6 +71,12 @@ void do_time_indirect(const std::string& msg, Heap& heap, const std::vector<size
   for (unsigned i = 0; i < size_v; ++i) {
     heap.insert(i);
   }
+}
+
+void do_time_nth_element(const std::string& msg, std::vector<size_t>& v, size_t n) {
+  life_timer _ { msg };
+
+  std::nth_element(begin(v), begin(v) + n, end(v));
 }
 
 int main() {
@@ -110,14 +118,27 @@ int main() {
 //      do_time("heap4", heap4);
 //      do_time("set", set);
 
+      std::sort(begin(v), end(v), std::less<>());
+      do_time("heap1 ascending", heap1, v);
+
+      std::sort(begin(v), end(v), std::greater<>());
+      do_time("heap1 descending", heap1, v);
+
       std::shuffle(begin(v), end(v), rng);
-      do_time("heap1", heap1, v);
+      do_time("heap1 random", heap1, v);
 
       std::shuffle(begin(v), end(v), rng);
       do_time("heap2", heap2, v);
 
+
+      std::sort(begin(v), end(v), std::less<>());
+      do_time("heap3 ascending", heap3, v);
+
+      std::sort(begin(v), end(v), std::greater<>());
+      do_time("heap3 descending", heap3, v);
+
       std::shuffle(begin(v), end(v), rng);
-      do_time("heap3", heap3, v);
+      do_time("heap3 random", heap3, v);
 
       std::shuffle(begin(v), end(v), rng);
       std::shuffle(begin(scores), end(scores), rng);
@@ -125,14 +146,24 @@ int main() {
 
       std::shuffle(begin(v), end(v), rng);
       std::shuffle(begin(scores), end(scores), rng);
-      do_time_indirect("indirect heap6 (2", heap6, v);
+      do_time_indirect("indirect heap6 (2)", heap6, v);
 
       std::shuffle(begin(v), end(v), rng);
       std::shuffle(begin(scores), end(scores), rng);
       do_time_indirect("indirect heap7 (3)", heap7, v);
 
+      std::sort(begin(v), end(v), std::less<>());
+      do_time_nth_element("nth descending", v, i);
+
+      std::sort(begin(v), end(v), std::greater<>());
+      do_time_nth_element("nth ascending", v, i);
+
+      std::shuffle(begin(v), end(v), rng);
+      do_time_nth_element("nth element random", v, i);
+
+
     }
-    {
+    if (false) {
       fixed_min_set_heap_1<std::pair<float, size_t>> heap1(i);
       fixed_min_set_heap_2<std::pair<float, size_t>> heap2(i);
       fixed_min_set_heap_3<std::pair<float, size_t>> heap3(i);
@@ -151,5 +182,6 @@ int main() {
 //      do_time_pair("heap4", heap4);
 //      do_time_pair("set", set);
     }
+    std::cout << "\n";
   }
 }
