@@ -311,7 +311,6 @@ int main(int argc, char* argv[]) {
 
       // What should be returned here?  Maybe a pair with the ids and scores?
       auto&& [kmeans_ids, all_ids] = kmeans_query(
-          db,
           shuffled_db,
           centroids,
           q,
