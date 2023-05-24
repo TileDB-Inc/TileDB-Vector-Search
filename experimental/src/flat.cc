@@ -315,27 +315,6 @@ int main(int argc, char* argv[]) {
         }
       }
       write_matrix(ground_truth, args["--output_uri"].asString());
-
-#if 0
-      for (size_t i = 0; i < g.num_rows(); ++i) {
-        for (size_t j = 0; j < g.num_cols(); ++j) {
-          if (g(i,j) != ground_truth(i, j)) {
-            std::cout << "[ " << i << ", " << j << "] ( " << g(i, j) << " : " << ground_truth(i, j)
-                                                  << " ) ";
-          }
-        }
-        std::cout << std::endl;
-      }
-
-      if (!std::equal(
-              ground_truth.data(),
-              ground_truth.data() +
-                  ground_truth.num_rows() * ground_truth.num_cols(),
-              g.data())) {
-        std::cout << "Ground truth does not match" << std::endl;
-        return 1;
-      }
-#endif
     }
   } else {
     std::cout << "Must specify either --db_file, --q_file, and --g_file or "
@@ -343,7 +322,4 @@ int main(int argc, char* argv[]) {
               << std::endl;
     return 1;
   }
-
-
-
 }

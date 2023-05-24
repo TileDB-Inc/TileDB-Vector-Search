@@ -182,7 +182,7 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
  *
  * @tparam T
  */
-#if 1
+#if 0
 template<class T>
 class fixed_min_set : public std::vector<T> {
   using Base = std::vector<T>;
