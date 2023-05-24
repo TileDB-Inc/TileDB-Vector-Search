@@ -12,7 +12,7 @@ kmeans=/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/kmeans/i
 
 
 
-for size in sift ;#siftsmall;
+for size in siftsmall ;#siftsmall;
 do
     db_uri=${sift}/${size}_base
     q_uri=${sift}/${size}_query
@@ -21,9 +21,19 @@ do
     for order in gemm ; do # qv vq gemm;    do
 	for hardway in " " ;#"--hardway";
 	do
-	    ${flat} --db_uri ${db_uri} --q_uri ${q_uri} --g_uri ${g_uri} --order ${order} ${hardway} --blocked --ndb 100
+	    ${flat} --db_uri ${db_uri} --q_uri ${q_uri} --g_uri ${g_uri} --order ${order} ${hardway} 
+	    ${flat} --db_uri ${db_uri} --q_uri ${q_uri} --g_uri ${g_uri} --order ${order} ${hardway} --blocked --ndb 0
+#	    ${flat} --db_uri ${db_uri} --q_uri ${q_uri} --g_uri ${g_uri} --order ${order} ${hardway} --blocked --ndb 100
+	    ${flat} --db_uri ${db_uri} --q_uri ${q_uri} --g_uri ${g_uri} --order ${order} ${hardway} --blocked --ndb 1000
+#	    ${flat} --db_uri ${db_uri} --q_uri ${q_uri} --g_uri ${g_uri} --order ${order} ${hardway} --blocked --ndb 5000
 #	    ${flat} --db_uri ${db_uri} --q_uri ${q_uri} --g_uri ${g_uri} --order ${order} ${hardway} --blocked --ndb 10000
-#	    ${flat} --db_uri ${db_uri} --q_uri ${q_uri} --g_uri ${g_uri} --order ${order} ${hardway} --blocked --ndb 50000
+
+#	    ${flat} --db_uri ${db_uri} --q_uri ${q_uri} --order ${order} ${hardway} 
+#	    ${flat} --db_uri ${db_uri} --q_uri ${q_uri} --order ${order} ${hardway} --blocked --ndb 0
+#	    ${flat} --db_uri ${db_uri} --q_uri ${q_uri} --order ${order} ${hardway} --blocked --ndb 100
+#	    ${flat} --db_uri ${db_uri} --q_uri ${q_uri} --order ${order} ${hardway} --blocked --ndb 1000
+#	    ${flat} --db_uri ${db_uri} --q_uri ${q_uri} --order ${order} ${hardway} --blocked --ndb 5000
+#	    ${flat} --db_uri ${db_uri} --q_uri ${q_uri} --order ${order} ${hardway} --blocked --ndb 20000
 	done
     done
 done

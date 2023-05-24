@@ -281,6 +281,8 @@ auto get_top_k(V const& scores, L& top_k, I& index, int k) {
     return scores[a] < scores[b];
   });
 #else
+
+// Either of these seems okay
 #if 0
   using Comparator = std::function<bool(unsigned, unsigned)>;
 
