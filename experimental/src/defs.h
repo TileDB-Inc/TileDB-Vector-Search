@@ -176,7 +176,7 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
 // @todo implement with fixed_min_set
 template <class V, class L, class I>
 auto get_top_k(V const& scores, L&& top_k, I& index, int k) {
-#if 0
+#if 1
   std::nth_element(
       begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) {
         return scores[a] < scores[b];
