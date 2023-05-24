@@ -176,7 +176,7 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
 // @todo implement with fixed_min_set
 template <class V, class L, class I>
 auto get_top_k(V const& scores, L&& top_k, I& index, int k) {
-#if 1
+#if 0
   std::nth_element(
       begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) {
         return scores[a] < scores[b];
@@ -207,7 +207,7 @@ auto get_top_k(V const& scores, L&& top_k, I& index, int k) {
   });
 #else
   using element = std::pair<float, unsigned>;
-  fixed_min_set<element> s(k);
+  fixed_min_heap<element> s(k);
   for (size_t i = 0; i < index.size(); ++i) {
     s.insert({scores[index[i]], index[i]});
   }

@@ -102,7 +102,7 @@ public:
 template <class T, class Compare = std::less<T>>
 using fixed_min_heap = fixed_min_set_heap_1<T, Compare>;
 
-#if 0 // These are really slow
+#ifdef ALLHEAPS // These are really slow
 template <class T, class Compare = std::less<T>>
 class fixed_min_set_heap_3 : public std::vector<T> {
   using Base = std::vector<T>;
