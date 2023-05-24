@@ -57,6 +57,14 @@ target_link_libraries(kmeans PUBLIC flat_blas)
 target_link_libraries(kmeans PUBLIC TileDB::tiledb_shared)
 target_link_libraries(kmeans PUBLIC mdspan)
 
+add_executable(index flat_query.h flat.cc defs.h sift_db.h timer.h sift_array.h linalg.h)
+
+target_link_libraries(index PUBLIC docopt)
+target_link_libraries(index PUBLIC flat_mt)
+target_link_libraries(index PUBLIC flat_blas)
+target_link_libraries(index PUBLIC TileDB::tiledb_shared)
+target_link_libraries(index PUBLIC mdspan)
+
 add_executable(ivf_hack ivf_hack.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h array_view.h readers.h)
 
 target_link_libraries(ivf_hack PUBLIC docopt)
