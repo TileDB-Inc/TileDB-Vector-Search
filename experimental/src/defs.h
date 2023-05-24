@@ -182,20 +182,26 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
  *
  * @tparam T
  */
-#if 0
-template<class T>
+#if 1
+template<class T, class Compare = std::less<T>>
 class fixed_min_set : public std::vector<T> {
   using Base = std::vector<T>;
-  using Base::Base;
+  // using Base::Base;
   unsigned max_size{0};
+  Compare comp;
 
 public:
   explicit fixed_min_set(unsigned k)
-      : Base(), max_size{k} {
+      : Base(0), max_size{k} {
     Base::reserve(k);
   }
+ fixed_min_set(unsigned k, Compare c)
+    : Base(0), max_size{k}, comp{std::move(c)} {
+  Base::reserve(k);
+}
 
-  void insert(T const& x) {
+#if 0
+    void insert(T const& x) {
     if (Base::size() < max_size) {
       Base::push_back(x);
       // std::push_heap(begin(*this), end(*this), std::less<T>());
@@ -209,6 +215,22 @@ public:
       std::push_heap(begin(*this), end(*this), std::less<T>());
     }
   }
+#else
+void insert(T const& x) {
+  if (Base::size() < max_size) {
+      Base::push_back(x);
+      // std::push_heap(begin(*this), end(*this), std::less<T>());
+      if (Base::size() == max_size) {
+        std::make_heap(begin(*this), end(*this), comp);
+      }
+  } else if (comp(x, this->front())) {
+      std::pop_heap(begin(*this), end(*this), comp);
+      this->pop_back();
+      this->push_back(x);
+      std::push_heap(begin(*this), end(*this), comp);
+  }
+}
+#endif
 };
 #else
 template <
@@ -248,6 +270,7 @@ struct fixed_min_set : public std::set<T, Compare, Allocator> {
 // @todo implement with fixed_min_set
 template <class V, class L, class I>
 auto get_top_k(V const& scores, L& top_k, I& index, int k) {
+#if 0
   std::nth_element(
       begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) {
         return scores[a] < scores[b];
@@ -257,6 +280,34 @@ auto get_top_k(V const& scores, L& top_k, I& index, int k) {
   std::sort(begin(top_k), end(top_k), [&](auto& a, auto& b) {
     return scores[a] < scores[b];
   });
+#else
+#if 0
+  using Comparator = std::function<bool(unsigned, unsigned)>;
+
+  fixed_min_set<unsigned, Comparator> s(k, [&](unsigned a, unsigned b) {
+    return scores[a] < scores[b];
+  });
+  for (auto i : index) {
+    s.insert(i);
+  }
+  // std::sort_heap(begin(s), end(s), [&](unsigned a, unsigned b) {
+    // return scores[a] < scores[b];
+  //});
+  std::copy(begin(s), end(s), begin(top_k));
+  std::sort(begin(top_k), end(top_k), [&](unsigned a, unsigned b) {
+    return scores[a] < scores[b];
+  });
+#else
+  using element = std::pair<float, unsigned>;
+  fixed_min_set<element> s(k);
+  for (size_t i = 0; i < index.size(); ++i) {
+    s.insert({scores[index[i]], index[i]});
+  }
+  std::sort_heap(begin(s), end(s));
+  std::transform(s.begin(), s.end(), top_k.begin(), ([](auto&& e) { return e.second; }));
+
+#endif
+#endif
 }
 
 template <class S, class T>
