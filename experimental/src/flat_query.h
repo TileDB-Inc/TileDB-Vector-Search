@@ -388,7 +388,7 @@ auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, size_t nthreads
 
     gemm_scores(db, q, scores, nthreads);
 
-    { life_timer _ { "inserting" };
+    { // life_timer _ { "inserting" };
       auto par = stdx::execution::indexed_parallel_policy { nthreads };
       stdx::range_for_each(std::move(par), scores, [&](auto&& q_vec, auto&& n = 0, auto&& i = 0) {
 
