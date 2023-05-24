@@ -380,10 +380,7 @@ auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, size_t nthreads
 
   auto block_db = true;
 
-  // @todo Untangle this some day so that it is Column Major
-  ColMajorMatrix<float> scores(q.num_cols(), db.num_cols());
-  // ColMajorMatrix<float> scores(q.num_cols(), db.num_cols());
-  auto _score_data = raveled(scores);
+  ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
 
   std::vector<fixed_min_heap<element>> min_scores(size(q), fixed_min_heap<element>(k));
 
@@ -395,7 +392,7 @@ auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, size_t nthreads
 
       for (int i = 0; i < scores.num_cols(); ++i) {
         for (int j = 0; j < scores.num_rows(); ++j) {
-          min_scores[j].insert({ scores(j, i), i + db.offset() });
+          min_scores[i].insert({ scores(j, i), j + db.offset() });
         }
       }
     }
@@ -410,10 +407,13 @@ auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, size_t nthreads
       break;
     }
   }
+
+  //get_top_k(scores, top_k, k, size(q), size(db), nthreads);
+  //if(false)
   {
     life_timer _ { "Sorting" };
-    for (int j = 0; j < scores.num_rows(); ++j) {
-      std::sort_heap(min_scores[j].begin(), min_scores[j].end());
+    for (int j = 0; j < min_scores.size(); ++j) {
+      std::sort(min_scores[j].begin(), min_scores[j].end());
       std::transform(min_scores[j].begin(), min_scores[j].end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
     }
   }
