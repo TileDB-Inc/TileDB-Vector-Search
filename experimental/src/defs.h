@@ -174,38 +174,35 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
 
 /**
  * A class for keeping a running tally of the top k elements in a set.
+ *
+ * It has a std::vector as its base class, so unlike a priority_queue,
+ * we can iterate over the elements.  Note that unlike the set-based
+ * version, the elements are *not* sorted.  That does not seem to be
+ * necessary for this program.
+ *
  * @tparam T
- * @tparam Compare
- * @tparam Allocator
  */
-template <
-    class T,
-    class Compare = std::less<T>,
-    class Allocator = std::allocator<T>>
-struct fixed_min_set : public std::set<T, Compare, Allocator> {
-  using base = std::set<T, Compare, Allocator>;
-  using base::base;
-
+template<class T>
+class fixed_min_set : public std::vector<T> {
+  using Base = std::vector<T>;
+  using Base::Base;
   unsigned max_size{0};
 
+ public:
   explicit fixed_min_set(unsigned k)
       : max_size{k} {
+    Base::reserve(max_size);
   }
-  fixed_min_set(unsigned k, const Compare& comp)
-      : base(comp)
-      , max_size{k} {
-  }
-
-  bool maxed_{false};
 
   void insert(T const& x) {
-    base::insert(x);
-    if (maxed_) {
-      base::erase(std::prev(base::end()));
-    } else {
-      if (base::size() == max_size) {
-        maxed_ = true;
-      }
+    if (Base::size() < max_size) {
+      Base::push_back(x);
+      std::push_heap(begin(*this), end(*this), std::less<T>());
+    } else if (x < this->front()) {
+      std::pop_heap(begin(*this), end(*this), std::less<T>());
+      this->pop_back();
+      this->push_back(x);
+      std::push_heap(begin(*this), end(*this), std::less<T>());
     }
   }
 };
