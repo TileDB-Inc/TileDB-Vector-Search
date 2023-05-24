@@ -208,8 +208,9 @@ int main(int argc, char* argv[]) {
     }
 
     // std::vector<std::vector<int>> top_k(q.num_cols(), std::vector<int>(k, 0));
-    auto top_k = Matrix<int>(q.num_cols(), k);
-    std::cout << "Using " << args["--order"].asString() << std::endl;
+    //auto top_k = ColMajorMatrix<int>(q.num_cols(), k);
+    auto top_k = ColMajorMatrix<int>(k, q.num_cols());
+    //std::cout << "Using " << args["--order"].asString() << std::endl;
 
     /**
      * vq: for each vector in the database, compare with each query vector
@@ -268,7 +269,8 @@ int main(int argc, char* argv[]) {
           std::to_string(size(q[0])) + ", " + std::to_string(size(g[0])));
     }
 
-    std::vector<std::vector<int>> top_k(size(q), std::vector<int>(k, 0));
+    // std::vector<std::vector<int>> top_k(size(q), std::vector<int>(k, 0));
+    auto top_k = ColMajorMatrix<int>(k, q.num_cols());
     std::cout << "Using " << args["--order"].asString() << std::endl;
 
     /**
