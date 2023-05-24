@@ -305,6 +305,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
+  using view_type = Base;
+
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
  private:
