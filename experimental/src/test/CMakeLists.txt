@@ -68,6 +68,9 @@ target_link_libraries(unit_concepts PRIVATE mdspan Catch2::Catch2WithMain)
 add_executable(unit_utils unit_utils.cc)
 target_link_libraries(unit_utils PRIVATE mdspan Catch2::Catch2WithMain)
 
+add_executable(time_insert time_insert.cc ../timer.h)
+target_link_libraries(time_insert PRIVATE sift_test mdspan)
+
 # Create the subdirectory for the extracted files
 file(MAKE_DIRECTORY ${SIFT_TEST_DIR}/siftsmall)
 

@@ -46,6 +46,7 @@
 // #include <execution>
 
 #include "timer.h"
+#include "fixed_min_queues.h"
 
 /**
  * @brief Compute L2 distance between two vectors.
@@ -172,104 +173,9 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
   }
 }
 
-/**
- * A class for keeping a running tally of the top k elements in a set.
- *
- * It has a std::vector as its base class, so unlike a priority_queue,
- * we can iterate over the elements.  Note that unlike the set-based
- * version, the elements are *not* sorted.  That does not seem to be
- * necessary for this program.
- *
- * @tparam T
- */
-#if 1
-template<class T, class Compare = std::less<T>>
-class fixed_min_set : public std::vector<T> {
-  using Base = std::vector<T>;
-  // using Base::Base;
-  unsigned max_size{0};
-  Compare comp;
-
-public:
-  explicit fixed_min_set(unsigned k)
-      : Base(0), max_size{k} {
-    Base::reserve(k);
-  }
- fixed_min_set(unsigned k, Compare c)
-    : Base(0), max_size{k}, comp{std::move(c)} {
-  Base::reserve(k);
-}
-
-#if 0
-    void insert(T const& x) {
-    if (Base::size() < max_size) {
-      Base::push_back(x);
-      // std::push_heap(begin(*this), end(*this), std::less<T>());
-      if (Base::size() == max_size) {
-        std::make_heap(begin(*this), end(*this), std::less<T>());
-      }
-    } else if (x < this->front()) {
-      std::pop_heap(begin(*this), end(*this), std::less<T>());
-      this->pop_back();
-      this->push_back(x);
-      std::push_heap(begin(*this), end(*this), std::less<T>());
-    }
-  }
-#else
-void insert(T const& x) {
-  if (Base::size() < max_size) {
-      Base::push_back(x);
-      // std::push_heap(begin(*this), end(*this), std::less<T>());
-      if (Base::size() == max_size) {
-        std::make_heap(begin(*this), end(*this), comp);
-      }
-  } else if (comp(x, this->front())) {
-      std::pop_heap(begin(*this), end(*this), comp);
-      this->pop_back();
-      this->push_back(x);
-      std::push_heap(begin(*this), end(*this), comp);
-  }
-}
-#endif
-};
-#else
-template <
-    class T,
-    class Compare = std::less<T>,
-    class Allocator = std::allocator<T>>
-struct fixed_min_set : public std::set<T, Compare, Allocator> {
-  using base = std::set<T, Compare, Allocator>;
-  using base::base;
-
-  unsigned max_size{0};
-
-  explicit fixed_min_set(unsigned k)
-      : max_size{k} {
-  }
-  fixed_min_set(unsigned k, const Compare& comp)
-      : base(comp)
-        , max_size{k} {
-  }
-
-  bool maxed_{false};
-
-  void insert(T const& x) {
-    base::insert(x);
-    if (maxed_) {
-      base::erase(std::prev(base::end()));
-    } else {
-      if (base::size() == max_size) {
-        maxed_ = true;
-      }
-    }
-  }
-};
-#endif
-
-
 // @todo implement with fixed_min_set
 template <class V, class L, class I>
-auto get_top_k(V const& scores, L& top_k, I& index, int k) {
+auto get_top_k(V const& scores, L&& top_k, I& index, int k) {
 #if 1
   std::nth_element(
       begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) {
@@ -335,7 +241,8 @@ void get_top_k(
           for (int j = q_start; j < q_stop; ++j) {
             // std::copy(begin(i_index), end(i_index), begin(index));
             std::iota(begin(index), end(index), 0);
-            get_top_k(scores[j], top_k[j], index, k);
+            auto temp_t = top_k[j];
+            get_top_k(scores[j], std::move(top_k[j]), index, k);
           }
         }));
   }
