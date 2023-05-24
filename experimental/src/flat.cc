@@ -168,16 +168,13 @@ int main(int argc, char* argv[]) {
 
   std::string g_file{};
   std::string g_uri{};
-#if 0
+
   if (args["--g_file"]) {
     g_file = args["--g_file"].asString();
   } else if (args["--g_uri"]) {
     g_uri = args["--g_uri"].asString();
-  } else {
-    std::cout << "Must specify either --g_file or --g_uri" << std::endl;
-    return 1;
   }
-#endif
+
 
   size_t k = args["--k"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
@@ -294,15 +291,12 @@ int main(int argc, char* argv[]) {
       query_qv(db, q, g, top_k, k, hardway, nthreads);
     } else if (args["--order"].asString() == "gemm") {
 
-
       if (verbose) {
         std::cout << "Using gemm for query" << std::endl;
       }
 
       if (args["--blocked"].asBool()) {
         std::cout << "Using blocked gemm for query" << std::endl;
-
-
         blocked_query_gemm(db, q, g, top_k, k, hardway, nthreads);
       } else {
         query_gemm(db, q, g, top_k, k, hardway, nthreads);
