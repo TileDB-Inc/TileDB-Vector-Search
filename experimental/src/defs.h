@@ -182,22 +182,26 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
  *
  * @tparam T
  */
+#if 1
 template<class T>
 class fixed_min_set : public std::vector<T> {
   using Base = std::vector<T>;
   using Base::Base;
   unsigned max_size{0};
 
- public:
+public:
   explicit fixed_min_set(unsigned k)
-      : max_size{k} {
-    Base::reserve(max_size);
+      : Base(), max_size{k} {
+    Base::reserve(k);
   }
 
   void insert(T const& x) {
     if (Base::size() < max_size) {
       Base::push_back(x);
-      std::push_heap(begin(*this), end(*this), std::less<T>());
+      // std::push_heap(begin(*this), end(*this), std::less<T>());
+      if (Base::size() == max_size) {
+        std::make_heap(begin(*this), end(*this), std::less<T>());
+      }
     } else if (x < this->front()) {
       std::pop_heap(begin(*this), end(*this), std::less<T>());
       this->pop_back();
@@ -206,7 +210,42 @@ class fixed_min_set : public std::vector<T> {
     }
   }
 };
+#else
+template <
+    class T,
+    class Compare = std::less<T>,
+    class Allocator = std::allocator<T>>
+struct fixed_min_set : public std::set<T, Compare, Allocator> {
+  using base = std::set<T, Compare, Allocator>;
+  using base::base;
 
+  unsigned max_size{0};
+
+  explicit fixed_min_set(unsigned k)
+      : max_size{k} {
+  }
+  fixed_min_set(unsigned k, const Compare& comp)
+      : base(comp)
+        , max_size{k} {
+  }
+
+  bool maxed_{false};
+
+  void insert(T const& x) {
+    base::insert(x);
+    if (maxed_) {
+      base::erase(std::prev(base::end()));
+    } else {
+      if (base::size() == max_size) {
+        maxed_ = true;
+      }
+    }
+  }
+};
+#endif
+
+
+// @todo implement with fixed_min_set
 template <class V, class L, class I>
 auto get_top_k(V const& scores, L& top_k, I& index, int k) {
   std::nth_element(
