@@ -413,7 +413,7 @@ auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, size_t nthreads
   {
     life_timer _ { "Sorting" };
     for (int j = 0; j < scores.num_rows(); ++j) {
-      //std::sort(min_scores[j].begin(), min_scores[j].end());
+      std::sort_heap(min_scores[j].begin(), min_scores[j].end());
       std::transform(min_scores[j].begin(), min_scores[j].end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
     }
   }
