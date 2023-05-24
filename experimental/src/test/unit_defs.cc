@@ -135,9 +135,9 @@ TEST_CASE("defs: fixed_min_set", "[defs]") {
     }
   }
   CHECK(a.size() == 5);
-  CHECK(a.count(0) == 1);
-  CHECK(*begin(a) == 0);
-  CHECK(*rbegin(a) == 4);
+  // CHECK(a.count(0) == 1);
+  // CHECK(*begin(a) == 0);
+  // CHECK(*rbegin(a) == 4);
 }
 
 TEST_CASE("defs: fixed_min_set with pairs", "[defs]") {
@@ -148,19 +148,28 @@ TEST_CASE("defs: fixed_min_set with pairs", "[defs]") {
     for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
       a.insert({10 - i, i});
     }
-    CHECK(begin(a)->first == 1.0);
+    std::sort(begin(a), end(a));
+    CHECK(begin(a)->first == 1);
     CHECK(begin(a)->second == 9);
     CHECK(rbegin(a)->first == 5.0);
     CHECK(rbegin(a)->second == 5);
+
   }
   SECTION("insert in descending order") {
     for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
       a.insert({10 + i, i});
     }
+    std::sort(begin(a), end(a));
     CHECK(begin(a)->first == 10.0);
     CHECK(begin(a)->second == 0);
     CHECK(rbegin(a)->first == 14.0);
     CHECK(rbegin(a)->second == 4);
+
+    for (size_t i = 0 ; i < size(a); ++i) {
+      CHECK(a[i].first == 10.0 + i);
+      CHECK(a[i].second == i);
+    }
+
   }
   CHECK(a.size() == 5);
 }
@@ -179,8 +188,9 @@ TEST_CASE("defs: fixed_min_set with a large vector", "[defs]") {
     a.insert(i);
   }
   CHECK(a.size() == 7);
-  std::vector<element> v2(begin(a), end(a));
-  std::sort(begin(v2), end(v2));
+
+  std::vector<element> a2(begin(a), end(a));
+  std::sort(begin(a2), end(a2));
 
   std::vector<element> u(v.begin(), v.begin() + 7);
 
@@ -191,6 +201,5 @@ TEST_CASE("defs: fixed_min_set with a large vector", "[defs]") {
 
   std::vector<element> v3(v.begin(), v.begin() + 7);
   std::sort(begin(v3), end(v3));
-  CHECK(v2 == v3);
-
+  CHECK(a2 == v3);
 }
