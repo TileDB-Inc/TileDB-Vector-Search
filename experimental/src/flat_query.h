@@ -537,61 +537,66 @@ auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, [[maybe_unused]
    */
 
   for (;;) {
-    cblas_sgemm(CblasColMajor,
-                CblasTrans,            // db^T
-                CblasNoTrans,          // q
-                (int32_t)M,            // number of samples
-                (int32_t)N,            // number of queries
-                (int32_t)K,            // dimension of vectors
-                -2.0,
-                db[0].data(),          // A: K x M -> A^T: M x K
-                K,
-                q[0].data(),           // B: K x N
-                K,
-                0.0,                   // Overwrite the (uninitialized) target with the matrix product
-                _score_data.data(),    // C: M x N
-                M);
+    { life_timer _{"gemm et al"};
+      cblas_sgemm(CblasColMajor,
+                  CblasTrans,            // db^T
+                  CblasNoTrans,          // q
+                  (int32_t)M,            // number of samples
+                  (int32_t)N,            // number of queries
+                  (int32_t)K,            // dimension of vectors
+                  -2.0,
+                  db[0].data(),          // A: K x M -> A^T: M x K
+                  K,
+                  q[0].data(),           // B: K x N
+                  K,
+                  0.0,                   // Overwrite the (uninitialized) target with the matrix product
+                  _score_data.data(),    // C: M x N
+                  M);
 
-    std::fill(begin(alpha), end(alpha), 0.0f);
-    std::fill(begin(beta), end(beta), 0.0f);
+      std::fill(begin(alpha), end(alpha), 0.0f);
+      std::fill(begin(beta), end(beta), 0.0f);
 
-    col_sum(db, alpha, [](auto a) { return a * a; });    // @todo optimize somehow
-    col_sum(q, beta, [](auto a) { return a * a; });
+      col_sum(db, alpha, [](auto a) { return a * a; });    // @todo optimize somehow
+      col_sum(q, beta, [](auto a) { return a * a; });
 
-    // A += alpha * x * transpose(y)
+      // A += alpha * x * transpose(y)
 
-    // This should be more parallelizable -- but seems to be completely
-    // memory-bound
+      // This should be more parallelizable -- but seems to be completely
+      // memory-bound
 #if 1
-    cblas_sger(CblasColMajor, M, N, 1.0, &alpha[0], 1, &alpha_ones[0], 1, _score_data.data(), M);
-    cblas_sger(CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, _score_data.data(), M);
+      cblas_sger(CblasColMajor, M, N, 1.0, &alpha[0], 1, &alpha_ones[0], 1, _score_data.data(), M);
+      cblas_sger(CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, _score_data.data(), M);
 #else
-    size_t block_size = (N + nthreads - 1) / nthreads;
+      size_t block_size = (N + nthreads - 1) / nthreads;
 
-    std::vector<std::future<void>> futs;
-    futs.reserve(nthreads);
-    for (size_t n = 0; n < nthreads; ++n) {
-      size_t start = n * block_size;
-      size_t stop  = std::min<size_t>((n + 1) * block_size, N);
+      std::vector<std::future<void>> futs;
+      futs.reserve(nthreads);
+      for (size_t n = 0; n < nthreads; ++n) {
+        size_t start = n * block_size;
+        size_t stop  = std::min<size_t>((n + 1) * block_size, N);
 
-      futs.emplace_back(
-          std::async(std::launch::async, [start, stop, &_score_data, M, N, block_size, &alpha, &beta, &alpha_ones, &beta_ones, n]() {
-            cblas_sger(CblasColMajor, M, stop - start /*N*/, 1.0, &alpha[0], 1, &alpha_ones[start], 1, _score_data.data() + M * start, M);
-            cblas_sger(CblasColMajor, M, stop - start /*N*/, 1.0, &beta_ones[0], 1, &beta[start], 1, _score_data.data() + M * start, M);
-          }));
-    }
+        futs.emplace_back(
+            std::async(std::launch::async, [start, stop, &_score_data, M, N, block_size, &alpha, &beta, &alpha_ones, &beta_ones, n]() {
+              cblas_sger(CblasColMajor, M, stop - start /*N*/, 1.0, &alpha[0], 1, &alpha_ones[start], 1, _score_data.data() + M * start, M);
+              cblas_sger(CblasColMajor, M, stop - start /*N*/, 1.0, &beta_ones[0], 1, &beta[start], 1, _score_data.data() + M * start, M);
+            }));
+      }
 
-    for (int n = 0; n < nthreads; ++n) {
-      futs[n].get();
-    }
+      for (int n = 0; n < nthreads; ++n) {
+        futs[n].get();
+      }
 #endif
-
-    stdx::execution::parallel_policy par { nthreads };
-    stdx::for_each(std::move(par), begin(_score_data), end(_score_data), [](auto& a) { a = sqrt(a); });
-
-    for (int i = 0; i < scores.num_cols(); ++i) {
-      for (int j = 0; j < scores.num_rows(); ++j) {
-        min_scores[j].insert({ scores(j, i), i + db.offset() });
+    }
+    {
+      life_timer                       _ { "sqrt" };
+      stdx::execution::parallel_policy par { nthreads };
+      stdx::for_each(std::move(par), begin(_score_data), end(_score_data), [](auto& a) { a = sqrt(a); });
+    }
+    { life_timer _ { "inserting" };
+      for (int i = 0; i < scores.num_cols(); ++i) {
+        for (int j = 0; j < scores.num_rows(); ++j) {
+          min_scores[j].insert({ scores(j, i), i + db.offset() });
+        }
       }
     }
 
@@ -605,10 +610,12 @@ auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, [[maybe_unused]
       break;
     }
   }
-
-  for (int j = 0; j < scores.num_rows(); ++j) {
-    std::sort(min_scores[j].begin(), min_scores[j].end());
-    std::transform(min_scores[j].begin(), min_scores[j].end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
+  {
+    life_timer _ { "Sorting" };
+    for (int j = 0; j < scores.num_rows(); ++j) {
+      std::sort(min_scores[j].begin(), min_scores[j].end());
+      std::transform(min_scores[j].begin(), min_scores[j].end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
+    }
   }
 
   return scores;
