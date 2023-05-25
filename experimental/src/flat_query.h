@@ -378,7 +378,11 @@ auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, size_t nthreads
 
   using element = std::pair<float, unsigned>;
 
-  auto block_db = true;
+  const auto block_db = db.is_blocked();
+  const auto block_q = q.is_blocked();
+  if (block_db && block_q) {
+    throw std::runtime_error("Can't block both db and q");
+  }
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
 
@@ -392,17 +396,26 @@ auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, size_t nthreads
       auto par = stdx::execution::indexed_parallel_policy { nthreads };
       stdx::range_for_each(std::move(par), scores, [&](auto&& q_vec, auto&& n = 0, auto&& i = 0) {
 
-	//       for (int i = 0; i < scores.num_cols(); ++i) {
-        for (int j = 0; j < scores.num_rows(); ++j) {
-          min_scores[i].insert({ scores(j, i), j + db.offset() });
+        if (block_db) {
+          for (int j = 0; j < scores.num_rows(); ++j) {
+            min_scores[i].insert({ scores(j, i), j + db.offset() });
+          }
+        } else if (block_q) {
+          for (int j = 0; j < scores.num_rows(); ++j) {
+            min_scores[i + q.offset()].insert({ scores(j, i), j });
+          }
+        } else {
+          for (int j = 0; j < scores.num_rows(); ++j) {
+            min_scores[i].insert({ scores(j, i), j });
+          }
         }
       });
     }
 
-    bool done = false;
-    if (block_db) {
+    bool done = true;
+    if  (block_db) {
       done = !db.advance();
-    } else {
+    } else if (block_q){
       done = !q.advance();
     }
     if (done) {
@@ -410,8 +423,6 @@ auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, size_t nthreads
     }
   }
 
-  //get_top_k(scores, top_k, k, size(q), size(db), nthreads);
-  //if(false)
   {
     life_timer _ { "Sorting" };
     for (int j = 0; j < min_scores.size(); ++j) {
@@ -423,6 +434,25 @@ auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, size_t nthreads
   return scores;
 }
 
+#if 0
+template <class DB, class Q, class G, class TK>
+void blocked_query_gemm(DB& db, Q& q, const G& g, TK& top_k, int k, [[maybe_unused]] bool hw, size_t nthreads) {
+  auto scores = blocked_gemm_compute_scores(db, q, top_k, k, nthreads);
+  if (g.num_rows() > 0) {
+    life_timer _ { "Checking results" };
+
+    size_t size_q = size(q);
+    for (size_t j = 0; j < size_q; ++j) {
+      // verify_top_k(scores[j], top_k[j], g[j], k, j);
+      std::sort(begin(g[j]), begin(g[j]) + k);
+      std::sort(begin(top_k[j]), end(top_k[j]));
+      if (!std::equal(begin(top_k[j]), end(top_k[j]), g[j])) {
+        std::cout << "Solution vector " << top_k[j] << " != " << g[j] << std::endl;
+      }
+    }
+  }
+}
+#else
 
 template <class DB, class Q, class G, class TK>
 void blocked_query_gemm(DB& db, Q& q, const G& g, TK& top_k, int k, [[maybe_unused]] bool hw, size_t nthreads) {
@@ -432,8 +462,9 @@ void blocked_query_gemm(DB& db, Q& q, const G& g, TK& top_k, int k, [[maybe_unus
 
     size_t size_q = size(q);
     for (size_t j = 0; j < size_q; ++j) {
-      verify_top_k(scores[j], top_k[j], g[j], k, j);
+      verify_top_k_index(top_k[j], g[j], k, j);
     }
   }
 }
+#endif
 #endif    // TDB_FLAT_QUERY_H
