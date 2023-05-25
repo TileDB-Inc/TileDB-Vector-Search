@@ -41,8 +41,11 @@ get_filename_component(IVF_HACK_CXX_COMPILER ${CMAKE_CXX_COMPILER} NAME)
 configure_file(config.h.in config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
+add_library(kmeans_lib INTERFACE)
+
 add_executable(flat flat.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h array_view.h readers.h scoring.h print_types.h fixed_min_queues.h)
 
+target_link_libraries(flat PUBLIC nlohmann_json::nlohmann_json)
 target_link_libraries(flat PUBLIC docopt)
 target_link_libraries(flat PUBLIC flat_mt)
 target_link_libraries(flat PUBLIC flat_blas)
@@ -51,6 +54,7 @@ target_link_libraries(flat PUBLIC mdspan)
 
 add_executable(index flat_query.h flat.cc defs.h sift_db.h timer.h sift_array.h linalg.h)
 
+target_link_libraries(index PUBLIC nlohmann_json::nlohmann_json)
 target_link_libraries(index PUBLIC docopt)
 target_link_libraries(index PUBLIC flat_mt)
 target_link_libraries(index PUBLIC flat_blas)
@@ -67,6 +71,7 @@ target_link_libraries(ingest PUBLIC mdspan)
 
 add_executable(ivf_hack ivf_hack.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h array_view.h readers.h scoring.h print_types.h fixed_min_queues.h)
 
+target_link_libraries(ivf_hack PUBLIC nlohmann_json::nlohmann_json)
 target_link_libraries(ivf_hack PUBLIC docopt)
 target_link_libraries(ivf_hack PUBLIC flat_mt)
 target_link_libraries(ivf_hack PUBLIC flat_blas)
@@ -75,6 +80,7 @@ target_link_libraries(ivf_hack PUBLIC mdspan)
 
 add_executable(kmeans kmeans.cc flat_query.h defs.h sift_db.h timer.h sift_array.h linalg.h)
 
+target_link_libraries(kmeans PUBLIC nlohmann_json::nlohmann_json)
 target_link_libraries(kmeans PUBLIC docopt)
 target_link_libraries(kmeans PUBLIC flat_mt)
 target_link_libraries(kmeans PUBLIC flat_blas)
