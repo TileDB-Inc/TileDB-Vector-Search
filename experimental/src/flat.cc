@@ -139,7 +139,7 @@ int main(int argc, char* argv[]) {
   size_t nqueries = args["--nqueries"].asLong();
   size_t block    = args["--block"].asLong();
 
-  auto nth = bool(args["--nth"]);
+  auto nth = args["--nth"].asBool();
 
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
