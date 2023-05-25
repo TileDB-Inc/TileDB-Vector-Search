@@ -98,7 +98,7 @@ static constexpr const char USAGE[] =
   Usage:
       flat (-h | --help)
       flat --db_uri URI --q_uri URI [--g_uri URI] [--output_uri URI] [--order ORDER] [--k NN]
-          [--block N] [--nqueries N] [--nthreads N] [-d ] [-v]
+          [--block N] [--nqueries N] [--nthreads N] [--nth] [-d ] [-v]
 
   Options:
       -h, --help            show this screen
