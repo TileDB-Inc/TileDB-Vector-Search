@@ -98,7 +98,7 @@ static constexpr const char USAGE[] =
   Usage:
       flat (-h | --help)
       flat --db_uri URI --q_uri URI [--g_uri URI] [--output_uri URI] [--order ORDER] [--k NN]
-          [--block N] [--nqueries N] [--nthreads N] [--nth] [-d ] [-v]
+          [--block N] [--nqueries N] [--nthreads N] [--nth] [--validate] [-d ] [-v]
 
   Options:
       -h, --help            show this screen
@@ -112,6 +112,7 @@ static constexpr const char USAGE[] =
       --nqueries N          size of queries subset to compare (0 = all) [default: 0]
       --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
       --nth                 use nth_element for top k [default: false]
+      -V, --validate        validate results [default: false]
       -d, --debug           run in debug mode [default: false]
       -v, --verbose         run in verbose mode [default: false]
 )";
@@ -140,6 +141,7 @@ int main(int argc, char* argv[]) {
   size_t block    = args["--block"].asLong();
 
   auto nth = args["--nth"].asBool();
+  auto validate = args["--validate"].asBool();
 
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
@@ -187,7 +189,7 @@ int main(int argc, char* argv[]) {
     return ColMajorMatrix<size_t>(0, 0);
   }();
 
-  if (!g_uri.empty()) {
+  if (!g_uri.empty() && validate) {
     validate_top_k(top_k, g);
   }
 
