@@ -91,7 +91,8 @@ struct vector_database_0 {
     return 2;
   }
   std::span<T> raveled() const {
-    return std::span<T>((T*)nullptr, 0);
+    static T x;
+    return std::span<T>(&x, 1);
   }
 };
 
