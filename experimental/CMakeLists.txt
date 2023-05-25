@@ -86,13 +86,13 @@ include(MultiThreading)
 # Control compiler-specific flags.
 include(BLAS)
 
+# @todo migrate to find_package for BLAS
 # find_package(BLAS REQUIRED)
 # message(STATUS "BLAS_FOUND is ${BLAS_FOUND}")
 # message(STATUS "BLAS_LIBRARIES is ${BLAS_LIBRARIES}")
 # message(STATUS "BLAS_INCLUDE_DIRS is ${BLAS_INCLUDE_DIRS}")
 # message(STATUS "BLAS_LINKER_FLAGS is ${BLAS_LINKER_FLAGS}")
 # message(STATUS "BLAS_VERSION_STRING is ${BLAS_VERSION_STRING}")
-
 
 if (DEFINED TileDB_DIR)
     set(CMAKE_PREFIX_PATH "${TileDB_DIR};{CMAKE_PREFIX_PATH}")
@@ -110,7 +110,6 @@ if (TileDB_FOUND)
 endif()
 
 include(Docopt)
-
 include(mdspan)
 
 find_package(nlohmann_json 3.2.0 QUIET)
@@ -127,6 +126,15 @@ if (NOT nlohmann_json_FOUND)
     endif()
 endif()
 
-
 add_subdirectory(src)
-add_subdirectory(src/test)
+
+
+option(BUILD_TESTS "Build the tests" ON)
+
+
+if(BUILD_TESTS)
+    # include(Catch2)
+    add_subdirectory(include/test)
+    # enable_testing()
+endif()
+

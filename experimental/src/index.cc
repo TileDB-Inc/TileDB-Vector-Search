@@ -158,4 +158,6 @@ if (args["--write"].asBool()) {
 
 --write               write the index to disk [default: false]
     -n, --dryrun          perform a dry run (no writes) [default: false]
+#else
+int main(){}
 #endif

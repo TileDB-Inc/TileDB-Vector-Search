@@ -27,52 +27,51 @@
 
 include(Catch2)
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+macro (kmeans_add_exe EXENAME)
+    add_executable(${EXENAME} ${EXENAME}.cc)
+    target_link_libraries(${EXENAME} kmeans_lib)
+endmacro (kmeans_add_exe)
+
+macro (kmeans_add_test TESTNAME)
+    add_executable(${TESTNAME} ${TESTNAME}.cc)
+    target_link_libraries(${TESTNAME} PRIVATE kmeans_lib Catch2::Catch2WithMain)
+    target_compile_definitions(${TESTNAME} PRIVATE DATA_DIR="${CMAKE_SOURCE_DIR}/data/")
+    target_compile_definitions(${TESTNAME} PRIVATE DATA_FILE="${CMAKE_SOURCE_DIR}/data/karate.mtx")
+    # add_test(NAME ${TESTNAME}_test COMMAND ${TESTNAME})
+    # catch_discover_tests(${TESTNAME})
+endmacro (kmeans_add_test)
 
 set (SIFT_TEST_DIR ${CMAKE_BINARY_DIR}/src/test)
 message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 
-add_library(sift_test INTERFACE)
-target_link_libraries(sift_test INTERFACE Catch2::Catch2WithMain TileDB::tiledb_shared)
+# Deprecated / removed
+# kmeans_add_test(unit_sift_array)
+# kmeans_add_test(unit_sift_db)
 
-add_executable(unit_sift_array unit_sift_array.cc)
-target_link_libraries(unit_sift_array PRIVATE sift_test)
 
-add_executable(unit_sift_db unit_sift_db.cc)
-target_link_libraries(unit_sift_db PRIVATE Catch2::Catch2WithMain)
+kmeans_add_test(time_insert)
 
-add_executable(unit_defs unit_defs.cc)
-target_link_libraries(unit_defs PRIVATE Catch2::Catch2WithMain)
+kmeans_add_test(unit_algorithm)
 
-add_executable(unit_gemm unit_gemm.cc)
-target_link_libraries(unit_gemm PRIVATE sift_test flat_blas)
+kmeans_add_test(unit_concepts)
 
-add_executable(unit_mdspan unit_mdspan.cc)
-target_link_libraries(unit_mdspan PRIVATE sift_test mdspan)
+kmeans_add_test(unit_defs)
 
-add_executable(unit_linalg unit_linalg.cc)
-target_link_libraries(unit_linalg PRIVATE sift_test mdspan)
+kmeans_add_test(unit_gemm)
 
-add_executable(unit_algorithm unit_algorithm.cc)
-target_link_libraries(unit_algorithm PRIVATE sift_test)
+kmeans_add_test(unit_ivf_index)
 
-add_executable(unit_ivf_index unit_ivf_index.cc)
-target_link_libraries(unit_ivf_index PRIVATE sift_test mdspan)
+kmeans_add_test(unit_ivf_query)
 
-add_executable(unit_ivf_query unit_ivf_query.cc)
-target_link_libraries(unit_ivf_query PRIVATE sift_test mdspan)
+kmeans_add_test(unit_linalg)
 
-add_executable(unit_concepts unit_concepts.cc)
-target_link_libraries(unit_concepts PRIVATE mdspan Catch2::Catch2WithMain)
+kmeans_add_test(unit_mdspan)
 
-add_executable(unit_utils unit_utils.cc)
-target_link_libraries(unit_utils PRIVATE mdspan Catch2::Catch2WithMain)
+kmeans_add_test(unit_stats)
 
-add_executable(unit_stats unit_stats.cc)
-target_link_libraries(unit_stats PRIVATE mdspan Catch2::Catch2WithMain nlohmann_json::nlohmann_json)
+kmeans_add_test(unit_utils)
 
-add_executable(time_insert time_insert.cc ../timer.h)
-target_link_libraries(time_insert PRIVATE sift_test mdspan)
+
 
 # Create the subdirectory for the extracted files
 file(MAKE_DIRECTORY ${SIFT_TEST_DIR}/siftsmall)
@@ -92,8 +91,8 @@ add_custom_command(
 add_custom_target(download_siftsmall DEPENDS ${SIFT_TEST_DIR}/siftsmall/)
 
 # Add the targets that depend on siftsmall
-# add_executable(target1 ...)
-# add_executable(target2 ...)
+# kmeans_add_test(target1 ...)
+# kmeans_add_test(target2 ...)
 
 # # Exclude the targets from the default build and set dependencies
 # set_target_properties(target1 PROPERTIES
@@ -106,8 +105,8 @@ add_custom_target(download_siftsmall DEPENDS ${SIFT_TEST_DIR}/siftsmall/)
 #   EXCLUDE_FROM_DEFAULT_BUILD TRUE
 # )
 
-add_dependencies(unit_sift_array download_siftsmall)
-add_dependencies(unit_sift_db download_siftsmall)
+# add_dependencies(unit_sift_array download_siftsmall)
+# add_dependencies(unit_sift_db download_siftsmall)
 
 # file(MAKE_DIRECTORY siftsmall)
 

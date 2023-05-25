@@ -29,25 +29,25 @@
  */
 
 #include <span>
-
-#include <mdspan/mdspan.hpp>
+#include "mdspan/mdspan.hpp"
 #include <tiledb/tiledb>
+
+#include "linalg.h"
 
 namespace stdx {
 using namespace Kokkos;
 using namespace Kokkos::Experimental;
 }    // namespace stdx
 
-template <typename T>
+template <class T>
 using FeatureVector = std::span<T>;
 
 template <class T>
-class FeatureVectorRange : public stdx::mdspan<T, stdx::dextents<size_t, 2>> {
-  std::unique_ptr<T[]> storage_;
+using FeatureVectorRange = ColMajorMatrix<T>;
 
-public:
-};
-
+// @todo operator[] should be part of FeatureVectorRange rather than Matrix
+template <class T>
+using tdbFeatureVectorRange = tdbColMajorMatrix<T>;
 
 template <typename T>
 class FeatureVectorRangeReader {

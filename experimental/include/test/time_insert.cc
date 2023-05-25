@@ -112,6 +112,20 @@ int main() {
       //      do_time("heap4", heap4);
       //      do_time("set", set);
 
+      {
+        life_timer _ { "warm cache" };
+        for (size_t i = 0; i < v.size(); ++i) {
+          v[i] = i + 1;
+        }
+      }
+
+      {
+        life_timer _ { "calibration" };
+        for (size_t i = 0; i < v.size(); ++i) {
+          v[i] = i - 1;
+        }
+      }
+
       std::sort(begin(v), end(v), std::less<>());
       do_time("heap1 ascending", heap1, v);
 
