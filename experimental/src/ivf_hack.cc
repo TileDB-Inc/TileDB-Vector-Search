@@ -41,8 +41,7 @@
  * then searches the partitions corresponding to those centroids
  * for the nearest neighbors.
  *
- * @todo This should probably be split into two programs.
- * @todo This should probably be broken into smaller functions.
+  * @todo This should probably be broken into smaller functions.
  * @todo We need to add a good dose of parallelism.
  * @todo We need to add accuracy reporting as well as QPS.
  */
@@ -52,9 +51,11 @@
 #include <filesystem>
 // #include <format>     // Not suppored by Apple clang
 // #include <execution>  // Not suppored by Apple clang
+
 #include <iostream>
 #include <memory>
 #include <numeric>
+#include <random>
 #include <string>
 #include <thread>
 #include <tuple>
@@ -68,6 +69,9 @@
 #include "linalg.h"
 #include "timer.h"
 #include "utils.h"
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 bool        global_verbose = false;
 bool        global_debug   = false;
@@ -104,6 +108,61 @@ Options:
     -v, --verbose         run in verbose mode [default: false]
 )";
 
+auto config_log(const std::string& program_name) {
+  std::string uuid_;
+  char        host_[16];
+  std::string date_;
+  std::size_t uuid_size_ = 24;
+
+  auto seed = std::random_device();
+  auto gen  = std::mt19937(seed());
+  auto dis  = std::uniform_int_distribution<int8_t>(97, 122);
+  uuid_.resize(uuid_size_);
+  std::generate(uuid_.begin(), uuid_.end(), [&] { return dis(gen); });
+
+  if (int e = gethostname(host_, sizeof(host_))) {
+    std::cerr << "truncated host name\n";
+    strncpy(host_, "ghost", 15);
+  }
+  {
+    std::stringstream ss;
+    std::time_t       currentTime = std::time(nullptr);
+    std::string       dateString  = std::ctime(&currentTime);
+    dateString.erase(dateString.find('\n'));
+    ss << dateString;
+    date_ = ss.str();
+  }
+
+  auto&& [major, minor, patch] = tiledb::version();
+  json config                  = {
+    {"uuid",              uuid_                                                         },
+    { "host",             host_                                                         },
+    { "Program",          program_name                                                  },
+    { "Build_date",       CURRENT_DATETIME                                              },
+    { "Run_date",         date_                                                         },
+    { "git_branch",       IVF_HACK_GIT_BRANCH                                           },
+    { "cmake_source_dir", CMAKE_SOURCE_DIR                                              },
+    { "tiledb_version",   { { "major", major }, { "minor", minor }, { "patch", patch } }},
+    { "Build",            BUILD_TYPE                                                    },
+    { "CXX_COMPILER",     CXX_COMPILER                                                  },
+    { "CXX_COMPILER_ID",  CXX_COMPILER_ID                                               },
+    { "CXX_VERSION",      CXX_VERSION                                                   }
+  };
+  return config;
+}
+
+template <typename Args>
+auto args_log(const Args& args) {
+  json arg_log;
+
+  for (auto&& arg : args) {
+    std::stringstream buf;
+    buf << std::get<1>(arg);
+    arg_log.push_back({std::get<0>(arg), buf.str()});
+  }
+  return arg_log;
+}
+
 int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
   auto                     args = docopt::docopt(USAGE, strings, true);
@@ -126,15 +185,7 @@ int main(int argc, char* argv[]) {
   size_t k_nn      = args["--k"].asLong();
   auto   query_uri = args["--query_uri"] ? args["--query_uri"].asString() : "";
   auto   nqueries  = (size_t)args["--nqueries"].asLong();
-  bool  nth       = args["--nth"].asBool();
-
-  if (global_debug) {
-    std::cout << "# " << argv[0] << " built at " << CURRENT_DATETIME << "\n";
-    std::cout << "# Git branch: " << IVF_HACK_GIT_BRANCH << "\n";
-    std::cout << "# Built from source in " << CMAKE_SOURCE_DIR << "\n";
-    auto&& [major, minor, patch] = tiledb::version();
-    std::cout << "# TileDB version: " << major << "." << minor << "." << patch << std::endl;
-  }
+  bool   nth       = args["--nth"].asBool();
 
   auto db = tdbColMajorMatrix<float>(db_uri, ndb);
   debug_matrix(db, "db");
@@ -150,6 +201,7 @@ int main(int argc, char* argv[]) {
     std::cerr << "Error: db URI does not exist: " << args["--centroids_uri"] << std::endl;
     return 1;
   }
+  json recalls;
 
   // Function for finding the top k nearest neighbors accelerated by kmeans
   // @todo Move this to a self-contained function
@@ -191,7 +243,6 @@ int main(int argc, char* argv[]) {
     // @todo also get scores
     // @todo add an output_uri argument
 
-
     if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
       auto groundtruth     = tdbMatrix<int, Kokkos::layout_left>(groundtruth_uri);
@@ -218,13 +269,33 @@ int main(int argc, char* argv[]) {
 
         static constexpr auto lt = [](auto&& x, auto&& y) { return std::get<0>(x) < std::get<0>(y); };
         total_query_in_groundtruth += std::set_intersection(begin(comp), end(comp), begin(groundtruth[i]), end(groundtruth[i]), counter {});
-        // std::cout << all_ids[kmeans_ids(i, 0)] << ": " << std::endl;
-        // std::cout << i << ": " << std::endl;
       }
-      std::cout << "total_query_in_groundtruth: " << total_query_in_groundtruth;
-      std::cout << " / " << kmeans_ids.num_cols() * kmeans_ids.num_rows();
-      std::cout << " = " << (((float)total_query_in_groundtruth / ((float)(kmeans_ids.num_cols()) * kmeans_ids.num_rows()))) << std::endl;
+      recalls["queries_in_groundtruth"] = total_query_in_groundtruth;
+      recalls["total_queries"]          = kmeans_ids.num_cols() * kmeans_ids.num_rows();
+
+      if (global_verbose) {
+        std::cout << "total_query_in_groundtruth: " << total_query_in_groundtruth;
+        std::cout << " / " << kmeans_ids.num_cols() * kmeans_ids.num_rows();
+        std::cout << " = " << (((float)total_query_in_groundtruth / ((float)(kmeans_ids.num_cols()) * kmeans_ids.num_rows()))) << std::endl;
+      }
     }
   }
+
+  auto program_args = args_log(args);
+  auto config = config_log(argv[0]);
+
+  json log_log = {
+    {"Config", config },
+    {"Args", program_args},
+    {"Recalls", recalls}
+  };
+
+  std::cout << log_log.dump(2) << std::endl;
 }
 
+// recalls = {}
+// i = 1
+// while i <= k:
+//    recalls[i] = (I[:, :i] == gt[:, :1]).sum() / float(#queries
+//    i *= 10
+// return (t1 - t0) * 1000.0 / nq, recalls

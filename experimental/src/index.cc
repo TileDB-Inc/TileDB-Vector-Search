@@ -31,6 +31,8 @@
  *
  */
 
+// @todo This is a work in progress.
+#if 0
 if (args["--write"].asBool()) {
   auto parts = blocked_gemm_partition(centroids, db, nthreads);
   debug_matrix(parts, "parts");
@@ -156,3 +158,4 @@ if (args["--write"].asBool()) {
 
 --write               write the index to disk [default: false]
     -n, --dryrun          perform a dry run (no writes) [default: false]
+#endif
