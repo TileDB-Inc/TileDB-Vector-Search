@@ -42,7 +42,7 @@
 #include "scoring.h"
 #include "utils/timer.h"
 
-#include <blas.h>
+#include <cblas.h>
 
 // Interfaces
 //   faiss: D, I = index.search(xb, k) # search
