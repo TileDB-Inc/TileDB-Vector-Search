@@ -50,15 +50,16 @@
  * not support the `std::for_each` interface because it does not have
  * iterators.  I have not yet decided which is the best representation.
  *
+ * These algorithms have not been blocked yet.
  */
 
 #ifndef TDB_FLAT_QUERY_H
 #define TDB_FLAT_QUERY_H
 
 #include "defs.h"
+#include "fixed_min_queues.h"
 #include "linalg.h"
 #include "timer.h"
-#include "fixed_min_queues.h"
 
 #include <cassert>
 #include <cmath>
@@ -75,268 +76,144 @@
 #include "scoring.h"
 
 /**
- * Dispatch to the query that uses the qv ordering (loop over query vectors on
- * outer loop and over database vectors on inner loop).
- * @tparam DB
- * @tparam Q
- * @tparam G
- * @tparam TK
- * @param db The database vectors
- * @param q The query vectors
- * @param g The ground truth indices
- * @param top_k The top-k results
- * @param k How many nearest neighbors to find
- * @param hardway Whether to use the hard way (compute all distances) or the
- * easy way (compute a running set of only the top-k distances)
- * @param nthreads Number of threads to use
- */
-template <class DB, class Q, class G, class TK>
-void query_qv(const DB& db, const Q& q, const G& g, TK& top_k, int k, bool hardway, int nthreads) {
-  if (hardway) {
-    query_qv_hw(db, q, g, top_k, k, nthreads);
-  } else {
-    query_qv_ew(db, q, g, top_k, k, nthreads);
-  }
-}
-
-/**
- * Dispatch to the query that uses the vq ordering (loop over database vectors
- * on outer loop and over query vectors on inner loop).
- * @tparam DB
- * @tparam Q
- * @tparam G
- * @tparam TK
- * @param db The database vectors
- * @param q The query vectors
- * @param g The ground truth indices
- * @param top_k The top-k results
- * @param k How many nearest neighbors to find
- * @param hardway Whether to use the hard way (compute all distances) or the
- * easy way (compute a running set of only the top-k distances)
- * @param nthreads Number of threads to use
- */
-template <class DB, class Q, class G, class TK>
-void query_vq(const DB& db, const Q& q, const G& g, TK& top_k, int k, bool hardway, int nthreads) {
-  if (hardway) {
-    query_vq_hw(db, q, g, top_k, k, nthreads);
-  } else {
-    query_vq_ew(db, q, g, top_k, k, nthreads);
-  }
-}
-
-/**
  * Query using the qv ordering (loop over query vectors on outer loop and over
- * database vectors on inner loop). Does this the hard way -- computes all
- * distances and then sorts to find the top k.
+ * database vectors on inner loop).
+ *
+ * This algorithm does not form the scores matrix but rather computes the
+ * relevant portion of the top_k query by query, only working on a single
+ * scores vector (rather than matrix).
+ *
+ * @note The qv_query algorithm in ivf_query.h is essentially this, but has
+ * get_top_k hard-coded to use a heap based algorithm.  This version can
+ * use either a heap or the nth_element algorithm, depending on value of nth.
+ *
+ * @todo Implement a blocked version
+ * @todo Are there other optimizations to apply?
  */
-template <class DB, class Q, class G, class TK>
-void query_qv_hw(const DB& db, const Q& q, const G& g, TK& top_k, int k, unsigned int nthreads) {
+template <class DB, class Q>
+auto qv_query_nth(const DB& db, const Q& q, int k, bool nth, unsigned int nthreads) {
   life_timer _ { "Total time (vq hard way)" };
 
-  std::vector<int> i_index(size(db));
-  std::iota(begin(i_index), end(i_index), 0);
+  ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
   auto par = stdx::execution::indexed_parallel_policy { nthreads };
-  stdx::range_for_each(std::move(par), q, [&](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
-    size_t             size_q  = size(q);
-    size_t             size_db = size(db);
+  stdx::range_for_each(std::move(par), q, [&, nth](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
+    size_t size_q  = size(q);
+    size_t size_db = size(db);
+
+    // @todo can we do this more efficiently?
     std::vector<int>   index(size_db);
     std::vector<float> scores(size_db);
+
     for (int i = 0; i < size_db; ++i) {
       scores[i] = L2(q_vec, db[i]);
     }
-
-    if (g.num_rows() > 0) {
-      // std::copy(begin(i_index), end(i_index), begin(index));
-      std::iota(begin(index), end(index), 0);
-      get_top_k(scores, top_k[j], index, k);
-      verify_top_k(scores, top_k[j], g[j], k, j);
-    }
+    std::iota(begin(index), end(index), 0);
+    get_top_k(scores, top_k[j], index, k, nth);
   });
+
+  return top_k;
 }
 
 /**
- * Query using the qv ordering (loop over query vectors on outer loop and over
- * database vectors on inner loop). Does this the easy way -- keeps a running
- * total of the top k distances.
+ * This algorithm requires fully forming the scores matrix, which is then
+ * inspected for top_k.  The method for getting top_k is selected by the
+ * nth argument (true = nth_element, false = heap).
+ *
+ * @todo Implement a blocked version
  */
-template <class DB, class Q, class G, class TK>
-void query_qv_ew(const DB& db, const Q& q, const G& g, TK& top_k, int k, unsigned nthreads) {
-  life_timer _ { "Total time (qv set way)" };
+template <class DB, class Q>
+auto query_vq_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
+  life_timer _outer { "Total time (vq loop nesting, nth = " + std::to_string(nth) };
 
-  using element = std::pair<float, int>;
+  ColMajorMatrix<float>  scores(db.num_cols(), q.num_cols());
+  ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
-  std::vector<int> i_index(size(db));
-  std::iota(begin(i_index), end(i_index), 0);
+  auto                           db_block_size = (size(db) + nthreads - 1) / nthreads;
+  std::vector<std::future<void>> futs;
+  futs.reserve(nthreads);
 
-  auto par = stdx::execution::indexed_parallel_policy { nthreads };
-  stdx::range_for_each(std::move(par), q, [&](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
-    size_t size_db = size(db);
+  // Parallelize over the database vectors (outer loop)
+  for (int n = 0; n < nthreads; ++n) {
+    int    db_start = n * db_block_size;
+    int    db_stop  = std::min<int>((n + 1) * db_block_size, size(db));
+    size_t size_q   = size(q);
 
-    // Create a set of the top k scores
-    fixed_min_heap<element> scores(k);
-
-    // Compare with each database vector
-    for (int i = 0; i < size_db; ++i) {
-      auto score = L2(q[j], db[i]);
-      scores.insert(element { score, i });
-    }
-
-    // Copy indexes into top_k
-    std::transform(scores.begin(), scores.end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
-    if (g.num_rows() > 0) {
-      // Try to break ties by sorting the top k
-      std::sort(begin(top_k[j]), end(top_k[j]));
-      std::sort(begin(g[j]), begin(g[j]) + k);
-      verify_top_k(top_k[j], g[j], k, j);
-    }
-  });
-}
-
-/**
- * Query using the vq ordering (loop over database vectors on outer loop and
- * over query vectors on inner loop). Does this the hard way -- computes all
- * distances and then sorts (actually, nth_element) to find the top k.
- */
-template <class DB, class Q, class G, class TK>
-void query_vq_hw(const DB& db, const Q& q, const G& g, TK& top_k, int k, int nthreads) {
-  life_timer _outer { "Total time (vq loop nesting, hard way)" };
-
-  ms_timer init_time("Allocating score array");
-  init_time.start();
-
-#if __APPLE__
-  // std::vector<std::vector<float>> scores(size(q),
-  // std::vector<float>(size(db), 0.0f));
-  auto             buf = std::make_unique<float[]>(size(q) * size(db));
-  std::span<float> _score_data { buf.get(), size(q) * size(db) };
-#else
-  auto                          buf = std::make_unique_for_overwrite<float[]>(size(q) * size(db));
-  std::span<float>              _score_data { buf.get(), size(q) * size(db) };
-#endif
-
-  std::vector<std::span<float>> scores(size(q));
-
-  // Each score[j] is a column of the score matrix
-  int size_q = size(q);
-  for (int j = 0; j < size_q; ++j) {
-    scores[j] = std::span<float>(_score_data.data() + j * size(db), size(db));
-  }
-
-  init_time.stop();
-  std::cout << init_time << std::endl;
-
-#ifdef __APPLE__
-  std::cout << "Apple clang does not yet support make_unique_for_overwrite" << std::endl;
-  std::cout << "so this is about 3X slower than it should be" << std::endl;
-#endif
-
-  {
-    life_timer _ { "L2 distance" };
-
-    auto                           db_block_size = (size(db) + nthreads - 1) / nthreads;
-    std::vector<std::future<void>> futs;
-    futs.reserve(nthreads);
-
-    // Parallelize over the database vectors (outer loop)
-    for (int n = 0; n < nthreads; ++n) {
-      int db_start = n * db_block_size;
-      int db_stop  = std::min<int>((n + 1) * db_block_size, size(db));
-
-      futs.emplace_back(std::async(std::launch::async, [&db, &q, db_start, db_stop, size_q, &scores]() {
-        // For each database vector
-        for (int i = db_start; i < db_stop; ++i) {
-          // Compare with each query
-          for (int j = 0; j < size_q; ++j) {
-            scores[j][i] = L2(q[j], db[i]);
-          }
+    futs.emplace_back(std::async(std::launch::async, [&db, &q, db_start, db_stop, size_q, &scores, &top_k]() {
+      // For each database vector
+      for (int i = db_start; i < db_stop; ++i) {
+        // Compare with each query
+        for (int j = 0; j < size_q; ++j) {
+          scores[j][i] = L2(q[j], db[i]);
         }
-      }));
-    }
-    for (int n = 0; n < nthreads; ++n) {
-      futs[n].get();
-    }
+      }
+    }));
+  }
+  for (int n = 0; n < nthreads; ++n) {
+    futs[n].get();
   }
 
-  get_top_k(scores, top_k, k, size(q), size(db), nthreads);
+  get_top_k(scores, top_k, k, size(q), size(db), nth, nthreads);
 
-  if (g.num_rows() > 0) {
-    life_timer _ { "Checking results" };
-
-    // #pragma omp parallel for
-    for (int j = 0; j < size_q; ++j) {
-      verify_top_k(scores[j], top_k[j], g[j], k, j);
-    }
-  }
+  return top_k;
 }
 
 /**
- * Query using the vq ordering (loop over database vectors on outer loop and
- * over query vectors on inner loop). Does this the easy way -- keeps a running
- * tally of top k scores.
+ * This algorithm accumulates top_k as it goes, but in a transpose fashion to
+ * qv_query.  Namely, it loops over the database vectors on the outer loop,
+ * where each thread keeps its own set of heaps for each query vector.  After
+ * The database vector loop, the heaps are merged and then copied to top_k.
+ *
+ * @todo Implement a blocked version
  */
-template <class DB, class Q, class G, class TK>
-void query_vq_ew(const DB& db, const Q& q, const G& g, TK& top_k, int k, unsigned nthreads) {
+template <class DB, class Q>
+void vq_query_heap(const DB& db, const Q& q, int k, bool nth, unsigned nthreads) {
   life_timer _outer { "Total time (vq loop nesting, set way)" };
 
   using element = std::pair<float, int>;
   std::vector<std::vector<fixed_min_heap<element>>> scores(nthreads, std::vector<fixed_min_heap<element>>(size(q), fixed_min_heap<element>(k)));
 
-  {
-    life_timer _ { "L2 distance" };
+  auto par = stdx::execution::indexed_parallel_policy { nthreads };
+  stdx::range_for_each(std::move(par), db, [&](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
+    unsigned size_q = size(q);
+    for (int j = 0; j < size_q; ++j) {
+      auto score = L2(q[j], db_vec);
+      scores[n][j].insert(element { score, i });
+    }
+  });
 
-    // Spawning threads manually is probably more like the distributed
-    // memory case
-    auto par = stdx::execution::indexed_parallel_policy { nthreads };
-    stdx::range_for_each(std::move(par), db, [&](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
-      unsigned size_q = size(q);
-      for (int j = 0; j < size_q; ++j) {
-        auto score = L2(q[j], db_vec);
-        scores[n][j].insert(element { score, i });
-      }
-    });
-  }
-
-  // Merge the scores from each thread
-  {
-    life_timer _ { "Merge" };
-    for (int j = 0; j < size(q); ++j) {
-      for (int n = 1; n < nthreads; ++n) {
-        for (auto&& e : scores[n][j]) {
-          scores[0][j].insert(e);
-        }
+  for (int j = 0; j < size(q); ++j) {
+    for (int n = 1; n < nthreads; ++n) {
+      for (auto&& e : scores[n][j]) {
+        scores[0][j].insert(e);
       }
     }
   }
 
-  {
-    life_timer _ { "Get top k and check results" };
+  ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
-    int                            q_block_size = (size(q) + std::min<int>(nthreads, size(q)) - 1) / std::min<int>(nthreads, size(q));
-    std::vector<std::future<void>> futs;
-    futs.reserve(nthreads);
+  // This might not be a win.
+  int                            q_block_size = (size(q) + std::min<int>(nthreads, size(q)) - 1) / std::min<int>(nthreads, size(q));
+  std::vector<std::future<void>> futs;
+  futs.reserve(nthreads);
 
-    // Parallelize over the query vectors (inner loop)
-    // Should pick a threshold below which we don't bother with parallelism
-    for (int n = 0; n < std::min<int>(nthreads, size(q)); ++n) {
-      int q_start = n * q_block_size;
-      int q_stop  = std::min<int>((n + 1) * q_block_size, size(q));
+  // Parallelize over the query vectors (inner loop)
+  // Should pick a threshold below which we don't bother with parallelism
+  for (int n = 0; n < std::min<int>(nthreads, size(q)); ++n) {
+    int q_start = n * q_block_size;
+    int q_stop  = std::min<int>((n + 1) * q_block_size, size(q));
 
-      futs.emplace_back(std::async(std::launch::async, [&scores, &g, q_start, q_stop, &top_k, k]() {
-        // For each query
-        for (int j = q_start; j < q_stop; ++j) {
-          std::transform(scores[0][j].begin(), scores[0][j].end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
-          std::sort(begin(top_k[j]), end(top_k[j]));
-          if (g.num_rows() > 0) {
-            std::sort(begin(g[j]), begin(g[j]) + k);
-            verify_top_k(top_k[j], g[j], k, j);
-          }
-        }
-      }));
-    }
-    for (int n = 0; n < std::min<int>(nthreads, size(q)); ++n) {
-      futs[n].get();
-    }
+    futs.emplace_back(std::async(std::launch::async, [&scores, q_start, q_stop, &top_k, k]() {
+      // For each query
+      for (int j = q_start; j < q_stop; ++j) {
+        std::transform(scores[0][j].begin(), scores[0][j].end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
+        std::sort(begin(top_k[j]), end(top_k[j]));
+       }
+    }));
+  }
+
+  for (int n = 0; n < std::min<int>(nthreads, size(q)); ++n) {
+    futs[n].get();
   }
 }
 

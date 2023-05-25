@@ -73,6 +73,8 @@ auto kmeans_query(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices
 
 /**
  * @brief Query a set of query vectors against a vector database.
+ *
+ * This will need to be restructured to support blocking.
  */
 auto kmeans_query_large_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids, size_t nprobe, size_t k_nn,
                           bool nth, size_t nthreads) {
@@ -191,20 +193,10 @@ auto kmeans_query_small_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&&
 }
 
 /**
- * @brief Query a set of vector against a vector database, using "qv" loop
- * ordering.  This is the most basic query function, and is intended to be
- * used when the size of the query is small compared to the size of the
- * database.
- *
- * @tparam DB
- * @tparam Q
- * @param db
- * @param q
- * @param k
- * @param nthreads
- * @return
- *
  * @todo Block the query to avoid memory blowup
+ *
+ * @note qv_query_by_vector in flat_query.h is similar to this, but
+ * uses foreach instead of manually spawning threads.
  */
 template <vector_database DB, class Q>
 auto qv_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
@@ -226,6 +218,7 @@ auto qv_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
   std::vector<std::future<void>> futs;
   futs.reserve(nthreads);
 
+  // @todo: Use range::for_each
   for (size_t n = 0; n < nthreads; ++n) {
     auto start = std::min<size_t>(n * block_size, container_size);
     auto stop  = std::min<size_t>((n + 1) * block_size, container_size);
@@ -233,33 +226,27 @@ auto qv_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
     if (start != stop) {
       futs.emplace_back(std::async(std::launch::async, [k, start, stop, size_db, &q, &db, &top_k]() {
         for (size_t j = start; j < stop; ++j) {
-          fixed_min_set<element> scores(k);
+          fixed_min_set<element> min_scores(k);
           size_t                 idx = 0;
 
           for (int i = 0; i < size_db; ++i) {
             auto score = L2(q[j], db[i]);
-            scores.insert(element { score, i });
+            min_scores.insert(element { score, i });
           }
-          std::transform(scores.begin(), scores.end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
+          std::sort(min_scores.begin(), min_scores.end());
+          std::transform(min_scores.begin(), min_scores.end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
         }
       }));
     }
   }
 
+  for (int n = 0; n < nthreads; ++n) {
+    futs[n].get();
+  }
+
   return top_k;
 }
 
-/**
- * @brief Query a single vector against a vector database, returning the
- * indices of the single best matches among the database vectors.
- *
- * @tparam DB
- * @tparam Q
- * @param db
- * @param q
- * @param nthreads
- * @return
- */
 template <class DB, class Q>
 auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
   life_timer _ { "Total time (qv partition)" };
