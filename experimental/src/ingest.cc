@@ -1,10 +1,10 @@
 
 
+#include "linalg.h"
 #include <docopt.h>
 #include <string>
-#include "linalg.h"
 
-bool global_debug{false};
+bool        global_debug { false };
 std::string global_region;
 
 static constexpr const char USAGE[] =
@@ -25,13 +25,13 @@ static constexpr const char USAGE[] =
 
 int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
-  auto args = docopt::docopt(USAGE, strings, true);
+  auto                     args = docopt::docopt(USAGE, strings, true);
 
-  auto input_uri = args["--input"].asString();
-  auto output_uri = args["--output"].asString();
-  size_t subset = args["--subset"].asLong();
-  size_t nthreads = args["--nthreads"].asLong();
-  auto type = args["--type"] ? args["--type"].asString() : "float32";
+  auto   input_uri  = args["--input"].asString();
+  auto   output_uri = args["--output"].asString();
+  size_t subset     = args["--subset"].asLong();
+  size_t nthreads   = args["--nthreads"].asLong();
+  auto   type       = args["--type"] ? args["--type"].asString() : "float32";
 
   if (type == "char" || type == "byte" || type == "uint8" || type == "int8") {
     auto in = tdbColMajorMatrix<uint8_t>(input_uri, subset);

@@ -36,7 +36,7 @@
 namespace stdx {
 using namespace Kokkos;
 using namespace Kokkos::Experimental;
-}
+}    // namespace stdx
 
 TEST_CASE("mdspan: test test", "[mdspan]") {
   REQUIRE(true);
@@ -48,15 +48,8 @@ TEST_CASE("mdspan: basic construction", "[mdspan]") {
   // stdx::dynamic_extent>>;
   std::vector<int> v(100);
   std::iota(v.begin(), v.end(), 17);
-  stdx::mdspan<
-      int,
-      stdx::extents<size_t, stdx::dynamic_extent, stdx::dynamic_extent>>
-      m(v.data(), 10, 10);
-  stdx::mdspan<
-      int,
-      stdx::extents<size_t, stdx::dynamic_extent, stdx::dynamic_extent>,
-      stdx::layout_left>
-      n(v.data(), 10, 10);
+  stdx::mdspan<int, stdx::extents<size_t, stdx::dynamic_extent, stdx::dynamic_extent>>                    m(v.data(), 10, 10);
+  stdx::mdspan<int, stdx::extents<size_t, stdx::dynamic_extent, stdx::dynamic_extent>, stdx::layout_left> n(v.data(), 10, 10);
 
   SECTION("check extents") {
     CHECK(m.extent(0) == 10);
@@ -73,11 +66,10 @@ TEST_CASE("mdspan: basic construction", "[mdspan]") {
     CHECK(n(0, 1) == 27);
   }
   SECTION("submdspan") {
-    auto sbm = stdx::submdspan(m, std::pair{1, 3}, std::pair{2, 4});
+    auto sbm = stdx::submdspan(m, std::pair { 1, 3 }, std::pair { 2, 4 });
     CHECK(sbm(0, 0) == 29);
     CHECK(sbm(0, 1) == 30);
     CHECK(sbm(1, 0) == 39);
     CHECK(sbm(1, 1) == 40);
   }
 }
-

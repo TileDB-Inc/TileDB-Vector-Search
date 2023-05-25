@@ -128,9 +128,9 @@ int main(int argc, char* argv[]) {
   global_debug = debug = args["--debug"].asBool();
   verbose              = args["--verbose"].asBool();
 
-  std::string db_uri     = args["--db_uri"].asString();
-  std::string q_uri      = args["--q_uri"].asString();
-  std::string g_uri      = args["--g_uri"].asString();
+  std::string db_uri = args["--db_uri"].asString();
+  std::string q_uri  = args["--q_uri"].asString();
+  std::string g_uri  = args["--g_uri"].asString();
 
   std::cout << "# Using " << args["--order"].asString() << std::endl;
 
@@ -146,8 +146,8 @@ int main(int argc, char* argv[]) {
   }
 
   ms_timer                 load_time { "Load database, query, and ground truth arrays" };
-  tdbColMajorMatrix<float> db(db_uri, block);   // blocked
-  tdbColMajorMatrix<float> q(q_uri, nqueries);  // just a slice
+  tdbColMajorMatrix<float> db(db_uri, block);     // blocked
+  tdbColMajorMatrix<float> q(q_uri, nqueries);    // just a slice
 
   auto g = g_uri.empty() ? ColMajorMatrix<int>(0, 0) : tdbColMajorMatrix<int>(g_uri);
   load_time.stop();
@@ -155,7 +155,7 @@ int main(int argc, char* argv[]) {
 
   auto top_k = [&]() {
 
-    // @todo reimplement these
+  // @todo reimplement these
 #if 0
   if (args["--order"].asString() == "vq") {
     if (verbose) {
@@ -175,16 +175,17 @@ int main(int argc, char* argv[]) {
     return query_qv(db, q, k, nth, nthreads);
   } else
 #endif
-        if (args["--order"].asString() == "gemm") {
-          if (block != 0) {
-            std::cout << "# Using blocked gemm for query" << std::endl;
-            return blocked_gemm_query(db, q, k, nth, nthreads);
-          } else {
-            std::cout << "# Using gemm for query" << std::endl;
-            return gemm_query(db, q, k, nth, nthreads);
-          }
-        } return ColMajorMatrix<size_t>(0,0);
-      }();
+    if (args["--order"].asString() == "gemm") {
+      if (block != 0) {
+        std::cout << "# Using blocked gemm for query" << std::endl;
+        return blocked_gemm_query(db, q, k, nth, nthreads);
+      } else {
+        std::cout << "# Using gemm for query" << std::endl;
+        return gemm_query(db, q, k, nth, nthreads);
+      }
+    }
+    return ColMajorMatrix<size_t>(0, 0);
+  }();
 
   if (!g_uri.empty()) {
     validate_top_k(top_k, g);

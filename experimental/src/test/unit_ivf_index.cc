@@ -29,9 +29,9 @@
  *
  */
 
-#include <catch2/catch_all.hpp>
 #include "../ivf_index.h"
 #include "../linalg.h"
+#include <catch2/catch_all.hpp>
 
 TEST_CASE("ivf_index: test test", "[ivf_index]") {
   REQUIRE(true);

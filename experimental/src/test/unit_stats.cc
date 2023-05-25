@@ -30,9 +30,9 @@
 */
 
 #include <catch2/catch_all.hpp>
-#include <thread>
 #include <chrono>
 #include <iostream>
+#include <thread>
 
 #include "../stats.h"
 #include "../timer.h"
@@ -43,7 +43,8 @@ TEST_CASE("stats: test test", "[stats]") {
 
 TEST_CASE("stats: test", "[stats]") {
 
-  { life_timer _{"test1"};
+  {
+    life_timer _ { "test1" };
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
   std::cout << get_timings() << std::endl;

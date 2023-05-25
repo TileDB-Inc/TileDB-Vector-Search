@@ -33,8 +33,8 @@
 
 
 #define ALLHEAPS 1
-#include "../timer.h"
 #include "../fixed_min_queues.h"
+#include "../timer.h"
 #include <functional>
 #include <numeric>
 #include <random>
@@ -81,9 +81,9 @@ void do_time_nth_element(const std::string& msg, std::vector<size_t>& v, size_t 
 
 int main() {
 
-  unsigned n = 100'000'000;
+  unsigned            n = 100'000'000;
   std::vector<size_t> v(n);
-  std::vector<float> scores(n);
+  std::vector<float>  scores(n);
   std::iota(begin(v), end(v), 17);
   std::iota(begin(scores), end(scores), 17);
 
@@ -91,7 +91,7 @@ int main() {
 
   // Use a random device as the seed for the random number generator
   std::random_device rd;
-  std::mt19937 rng(rd());
+  std::mt19937       rng(rd());
 
 
   for (auto i : { 1, 10, 50, 100 }) {
@@ -101,22 +101,16 @@ int main() {
       fixed_min_set_heap_2<size_t> heap2(i);
       fixed_min_set_heap_3<size_t> heap3(i);
       //fixed_min_set_heap_3<size_t> heap4(i, std::greater<size_t>());
-      fixed_min_set_set<size_t>    set(i);
+      fixed_min_set_set<size_t> set(i);
 
       using Comparator = std::function<bool(unsigned, unsigned)>;
 
-      auto heap5 = fixed_min_set_heap_1<unsigned, Comparator> (i, [&](unsigned a, unsigned b) {
-        return scores[a] < scores[b];
-      });
-      auto heap6 = fixed_min_set_heap_2<unsigned, Comparator> (i, [&](unsigned a, unsigned b) {
-        return scores[a] < scores[b];
-      });
-      auto heap7 = fixed_min_set_heap_3<unsigned, Comparator> (i, [&](unsigned a, unsigned b) {
-        return scores[a] < scores[b];
-      });
+      auto heap5 = fixed_min_set_heap_1<unsigned, Comparator>(i, [&](unsigned a, unsigned b) { return scores[a] < scores[b]; });
+      auto heap6 = fixed_min_set_heap_2<unsigned, Comparator>(i, [&](unsigned a, unsigned b) { return scores[a] < scores[b]; });
+      auto heap7 = fixed_min_set_heap_3<unsigned, Comparator>(i, [&](unsigned a, unsigned b) { return scores[a] < scores[b]; });
 
-//      do_time("heap4", heap4);
-//      do_time("set", set);
+      //      do_time("heap4", heap4);
+      //      do_time("set", set);
 
       std::sort(begin(v), end(v), std::less<>());
       do_time("heap1 ascending", heap1, v);
@@ -160,15 +154,13 @@ int main() {
 
       std::shuffle(begin(v), end(v), rng);
       do_time_nth_element("nth element random", v, i);
-
-
     }
     if (false) {
       fixed_min_set_heap_1<std::pair<float, size_t>> heap1(i);
       fixed_min_set_heap_2<std::pair<float, size_t>> heap2(i);
       fixed_min_set_heap_3<std::pair<float, size_t>> heap3(i);
       //fixed_min_set_heap_3<std::pair<float, size_t>> heap4(i, std::greater<>());
-      fixed_min_set_set<std::pair<float, size_t>>    set(i);
+      fixed_min_set_set<std::pair<float, size_t>> set(i);
 
 
       std::shuffle(begin(v), end(v), rng);
@@ -179,8 +171,8 @@ int main() {
 
       std::shuffle(begin(v), end(v), rng);
       do_time_pair("heap3", heap3, v);
-//      do_time_pair("heap4", heap4);
-//      do_time_pair("set", set);
+      //      do_time_pair("heap4", heap4);
+      //      do_time_pair("set", set);
     }
     std::cout << "\n";
   }

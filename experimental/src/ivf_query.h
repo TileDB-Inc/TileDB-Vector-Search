@@ -36,9 +36,9 @@
 
 #include "algorithm.h"
 #include "concepts.h"
-#include "scoring.h"
 #include "defs.h"
 #include "linalg.h"
+#include "scoring.h"
 #include "timer.h"
 #include <algorithm>
 
@@ -62,8 +62,8 @@
  * to the right query function depending on the size of the query.
  */
 
-auto kmeans_query(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids,
-                  size_t nprobe, size_t k_nn, bool nth, size_t nthreads) {
+auto kmeans_query(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids, size_t nprobe, size_t k_nn, bool nth,
+                  size_t nthreads) {
   if (q.size() < 5) {
     return kmeans_query_small_q(shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nth, nthreads);
   } else {
@@ -74,8 +74,7 @@ auto kmeans_query(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices
 /**
  * @brief Query a set of query vectors against a vector database.
  */
-auto kmeans_query_large_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids,
-                          size_t nprobe, size_t k_nn,
+auto kmeans_query_large_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids, size_t nprobe, size_t k_nn,
                           bool nth, size_t nthreads) {
   // get closest centroid for each query vector
   auto top_k = blocked_gemm_query(centroids, q, nprobe, nth, nthreads);
@@ -135,8 +134,8 @@ auto kmeans_query_large_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&&
 /**
  * @brief Query a (small) set of query vectors against a vector database.
  */
-auto kmeans_query_small_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids,
-                          size_t nprobe, size_t k_nn, bool nth, size_t nthreads) {
+auto kmeans_query_small_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids, size_t nprobe, size_t k_nn,
+                          bool nth, size_t nthreads) {
   // get closest centroid for each query vector
   auto top_k = qv_query(centroids, q, nprobe, nthreads);
 
@@ -307,12 +306,11 @@ auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
 }
 
 
-
 template <class DB, class Q>
 auto gemm_query(const DB& db, const Q& q, int k, bool nth, size_t nthreads) {
   life_timer _outer { "Total time query gemm" };
-  auto scores = gemm_scores(db, q, nthreads);
-  auto top_k = get_top_k(scores, k, nth, nthreads);
+  auto       scores = gemm_scores(db, q, nthreads);
+  auto       top_k  = get_top_k(scores, k, nth, nthreads);
   return top_k;
 }
 
@@ -323,7 +321,7 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
   using element = std::pair<float, unsigned>;
 
   const auto block_db = db.is_blocked();
-  const auto block_q = q.is_blocked();
+  const auto block_q  = q.is_blocked();
   if (block_db && block_q) {
     throw std::runtime_error("Can't block both db and q");
   }
@@ -338,7 +336,6 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
 
     auto par = stdx::execution::indexed_parallel_policy { nthreads };
     stdx::range_for_each(std::move(par), scores, [&](auto&& q_vec, auto&& n = 0, auto&& i = 0) {
-
       if (block_db) {
         for (int j = 0; j < scores.num_rows(); ++j) {
           min_scores[i].insert({ scores(j, i), j + db.offset() });
@@ -355,9 +352,9 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
     });
 
     bool done = true;
-    if  (block_db) {
+    if (block_db) {
       done = !db.advance();
-    } else if (block_q){
+    } else if (block_q) {
       done = !q.advance();
     }
     if (done) {
@@ -408,7 +405,7 @@ auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
   life_timer _outer { "Total time blocked_gemm_partition" };
 
   const auto block_db = db.is_blocked();
-  const auto block_q = q.is_blocked();
+  const auto block_q  = q.is_blocked();
   if (block_db && block_q) {
     throw std::runtime_error("Can't block both db and q");
   }

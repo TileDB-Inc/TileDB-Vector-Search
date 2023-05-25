@@ -41,17 +41,19 @@
 
 
 template <typename T>
-concept feature_vector = requires (T t) {
+concept feature_vector = requires(T t) {
   typename T::value_type;
-//  typename T::index_type;
-//  typename T::size_type;
-//  typename T::reference;
+  //  typename T::index_type;
+  //  typename T::size_type;
+  //  typename T::reference;
   { t.size() } -> std::convertible_to<std::size_t>;
-  requires  ( requires (T t) {
-    { t[0] } -> std::convertible_to<typename T::value_type>;
-  } || requires (T t) {
-    { t(0) } -> std::convertible_to<typename T::value_type>;
-  } );
+  requires(
+      requires(T t) {
+        { t[0] } -> std::convertible_to<typename T::value_type>;
+      } ||
+      requires(T t) {
+        { t(0) } -> std::convertible_to<typename T::value_type>;
+      });
   { t.data() } -> std::convertible_to<typename T::value_type*>;
   { num_features(t) } -> std::convertible_to<std::size_t>;
 };
@@ -62,21 +64,20 @@ concept query_vector = feature_vector<T>;
 template <typename T>
 concept vector_database = requires(T t) {
   typename T::value_type;
-//  typename T::index_type;
-//  typename T::size_type;
-//  typename T::reference;
+  //  typename T::index_type;
+  //  typename T::size_type;
+  //  typename T::reference;
   { t.size() } -> std::convertible_to<std::size_t>;
   { t.rank() } -> std::convertible_to<std::size_t>;
   { t[0] } -> std::convertible_to<std::span<typename T::value_type>>;
-  { t(0,0) } -> std::convertible_to<typename T::value_type>;
+  { t(0, 0) } -> std::convertible_to<typename T::value_type>;
   { t.data() } -> std::convertible_to<typename T::value_type*>;
-  { t.rank() == 2};
+  { t.rank() == 2 };
   { raveled(t) } -> std::convertible_to<std::span<typename T::value_type>>;
 };
 
 template <typename T>
 concept query_set = vector_database<T>;
-
 
 
 #endif

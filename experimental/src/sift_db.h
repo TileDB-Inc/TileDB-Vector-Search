@@ -32,14 +32,14 @@
 #ifndef TDB_SIFT_DB_H
 #define TDB_SIFT_DB_H
 
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <cassert>
+#include <fcntl.h>
 #include <filesystem>
 #include <span>
 #include <string>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <vector>
 
 /**
@@ -65,7 +65,7 @@ class sift_db : public std::vector<std::span<T>> {
 
   std::vector<T> data_;
 
- public:
+public:
   sift_db(const std::string& bin_file, size_t subset = 0) {
     if (!std::filesystem::exists(bin_file)) {
       throw std::runtime_error("file " + bin_file + " does not exist");
@@ -77,15 +77,13 @@ class sift_db : public std::vector<std::span<T>> {
       throw std::runtime_error("could not open " + bin_file);
     }
 
-    uint32_t dimension{0};
-    auto num_read = read(fd, &dimension, 4);
+    uint32_t dimension { 0 };
+    auto     num_read = read(fd, &dimension, 4);
     lseek(fd, 0, SEEK_SET);
 
     auto max_vectors = file_size / (4 + dimension * sizeof(T));
     if (subset > max_vectors) {
-      throw std::runtime_error(
-          "specified subset is too large " + std::to_string(subset) + " > " +
-          std::to_string(max_vectors));
+      throw std::runtime_error("specified subset is too large " + std::to_string(subset) + " > " + std::to_string(max_vectors));
     }
 
     auto num_vectors = subset == 0 ? max_vectors : subset;
@@ -95,8 +93,7 @@ class sift_db : public std::vector<std::span<T>> {
     size_t mapped_size = s.st_size;
     assert(s.st_size == file_size);
 
-    T* mapped_ptr = reinterpret_cast<T*>(
-        mmap(0, mapped_size, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0));
+    T* mapped_ptr = reinterpret_cast<T*>(mmap(0, mapped_size, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0));
     if ((long)mapped_ptr == -1) {
       throw std::runtime_error("mmap failed");
     }
@@ -112,12 +109,10 @@ class sift_db : public std::vector<std::span<T>> {
       // Check for consistency of dimensions
       decltype(dimension) dim = *reinterpret_cast<int*>(sift_ptr++);
       if (dim != dimension) {
-        throw std::runtime_error(
-            "dimension mismatch: " + std::to_string(dim) +
-            " != " + std::to_string(dimension));
+        throw std::runtime_error("dimension mismatch: " + std::to_string(dim) + " != " + std::to_string(dimension));
       }
       std::copy(sift_ptr, sift_ptr + dimension, data_ptr);
-      this->emplace_back(std::span<T>{data_ptr, dimension});
+      this->emplace_back(std::span<T> { data_ptr, dimension });
       data_ptr += dimension;
       sift_ptr += dimension;
     }
@@ -127,4 +122,4 @@ class sift_db : public std::vector<std::span<T>> {
   }
 };
 
-#endif  // TDB_SIFT_DB_H
+#endif    // TDB_SIFT_DB_H
