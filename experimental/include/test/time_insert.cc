@@ -55,8 +55,6 @@ template <class Heap>
 void do_time_pair(const std::string& msg, Heap& heap, const std::vector<size_t>& v) {
   life_timer _ { msg };
 
-  using element = std::pair<float, unsigned>;
-
   auto size_v = v.size();
   for (unsigned i = 0; i < size_v; ++i) {
     heap.insert({ v[i], i });
@@ -86,8 +84,6 @@ int main() {
   std::vector<float>  scores(n);
   std::iota(begin(v), end(v), 17);
   std::iota(begin(scores), end(scores), 17);
-
-  using element = std::pair<float, unsigned>;
 
   // Use a random device as the seed for the random number generator
   std::random_device rd;

@@ -42,6 +42,7 @@
 #include <functional>
 #include <future>
 #include <thread>
+#include <vector>
 #include <utility>
 
 namespace stdx {
