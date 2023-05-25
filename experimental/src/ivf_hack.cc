@@ -69,9 +69,9 @@
 #include "timer.h"
 #include "utils.h"
 
-bool global_verbose = false;
-bool global_debug = false;
-bool global_dryrun = false;
+bool        global_verbose = false;
+bool        global_debug   = false;
+bool        global_dryrun  = false;
 std::string global_region;
 
 static constexpr const char USAGE[] =
@@ -80,7 +80,7 @@ Usage:
     tdb (-h | --help)
     tdb   --db_uri URI --centroids_uri URI --index_uri URI --part_uri URI --id_uri URI
          [--output_uri URI] [--query_uri URI] [--groundtruth_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
-         [--k NN] [--cluster NN] [--write] [--nthreads N] [--region REGION] [-n] [-d | -v]
+         [--k NN] [--cluster NN] [--nthreads N] [--region REGION] [--nth] [-d | -v]
 
 Options:
     -h, --help            show this screen
@@ -94,287 +94,137 @@ Options:
     --groundtruth_uri URI URI storing ground truth vectors
     --nqueries NN         number of query vectors to use (0 = all) [default: 1]
     --ndb NN              number of database vectors to use (0 = all) [default: 0]
-    --write               write the index to disk [default: false]
     --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
     --k NN                number of nearest neighbors to search for [default: 10]
     --cluster NN          number of clusters to use [default: 100]
     --blocksize NN        number of vectors to process in a block (0 = all) [default: 0]
+    --nth                 use nth_element for top k [default: false]
     --region REGION       AWS S3 region [default: us-east-1]
-    -n, --dryrun          perform a dry run (no writes) [default: false]
     -d, --debug           run in debug mode [default: false]
     -v, --verbose         run in verbose mode [default: false]
 )";
 
 int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
-  auto args = docopt::docopt(USAGE, strings, true);
+  auto                     args = docopt::docopt(USAGE, strings, true);
 
   auto centroids_uri = args["--centroids_uri"].asString();
-  auto db_uri = args["--db_uri"].asString();
-  auto ndb = args["--ndb"].asLong();
-  auto nthreads = args["--nthreads"].asLong();
+  auto db_uri        = args["--db_uri"].asString();
+  auto ndb           = args["--ndb"].asLong();
+  auto nthreads      = args["--nthreads"].asLong();
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
-  global_debug = args["--debug"].asBool();
+  global_debug   = args["--debug"].asBool();
   global_verbose = args["--verbose"].asBool();
-  global_dryrun = args["--dryrun"].asBool();
-  global_region = args["--region"].asString();
+  global_region  = args["--region"].asString();
+
+  auto   part_uri  = args["--part_uri"].asString();
+  auto   index_uri = args["--index_uri"].asString();
+  auto   id_uri    = args["--id_uri"].asString();
+  size_t nprobe    = args["--cluster"].asLong();
+  size_t k_nn      = args["--k"].asLong();
+  auto   query_uri = args["--query_uri"] ? args["--query_uri"].asString() : "";
+  auto   nqueries  = (size_t)args["--nqueries"].asLong();
+  bool  nth       = args["--nth"].asBool();
 
   if (global_debug) {
     std::cout << "# " << argv[0] << " built at " << CURRENT_DATETIME << "\n";
     std::cout << "# Git branch: " << IVF_HACK_GIT_BRANCH << "\n";
     std::cout << "# Built from source in " << CMAKE_SOURCE_DIR << "\n";
     auto&& [major, minor, patch] = tiledb::version();
-    std::cout << "# TileDB version: " << major << "." << minor << "." << patch
-              << std::endl;
+    std::cout << "# TileDB version: " << major << "." << minor << "." << patch << std::endl;
   }
 
-  auto db = tdbMatrix<float, Kokkos::layout_left>(db_uri, ndb);
+  auto db = tdbColMajorMatrix<float>(db_uri, ndb);
   debug_matrix(db, "db");
 
-  if (is_local_array(centroids_uri) &&
-      !std::filesystem::exists(centroids_uri)) {
-    std::cerr << "Error: centroids URI does not exist: "
-              << args["--centroids_uri"] << std::endl;
+  if (is_local_array(centroids_uri) && !std::filesystem::exists(centroids_uri)) {
+    std::cerr << "Error: centroids URI does not exist: " << args["--centroids_uri"] << std::endl;
     return 1;
   }
-  auto centroids = tdbMatrix<float, Kokkos::layout_left>(centroids_uri);
+  auto centroids = tdbColMajorMatrix<float>(centroids_uri);
   debug_matrix(centroids, "centroids");
 
   if (is_local_array(centroids_uri) && !std::filesystem::exists(db_uri)) {
-    std::cerr << "Error: db URI does not exist: " << args["--centroids_uri"]
-              << std::endl;
+    std::cerr << "Error: db URI does not exist: " << args["--centroids_uri"] << std::endl;
     return 1;
   }
 
-  if (args["--write"].asBool()) {
-    auto parts = blocked_gemm_partition(centroids, db, nthreads);
-    debug_matrix(parts, "parts");
-    //  auto parts = qv_partition(centroids, db, nthreads);
+  // Function for finding the top k nearest neighbors accelerated by kmeans
+  // @todo Move this to a self-contained function
+  {
+    life_timer _("query_time");
 
-    // read centroids
-    // for each vector in the dataset, find nearest centroid
-    // [ D, I ] = query_gemm(centroids, data, top_k, nthreads);
-    {
-      life_timer _{"shuffling data"};
-      std::vector<size_t> degrees(centroids.num_cols());
-      std::vector<size_t> indices(centroids.num_cols() + 1);
-      for (size_t i = 0; i < db.num_cols(); ++i) {
-        auto j = parts[i];
-        ++degrees[j];
+    auto shuffled_db = tdbColMajorMatrix<float>(part_uri);
+    // auto indices = tdbMatrix<size_t, Kokkos::layout_left>(index_uri);
+    auto indices      = read_vector<size_t>(index_uri);
+    auto shuffled_ids = read_vector<uint64_t>(id_uri);
+
+    debug_matrix(shuffled_db, "shuffled_db");
+    debug_matrix(indices, "indices");
+    debug_matrix(shuffled_ids, "shuffled_ids");
+
+    // Some variables for debugging
+    auto mv = *std::max_element(begin(shuffled_ids), end(shuffled_ids));
+
+    auto q = [&]() -> ColMajorMatrix<float> {
+      if (query_uri != "") {
+        auto qq = tdbColMajorMatrix<float>(query_uri, nqueries);
+        return qq;
+      } else {
+        auto qq = ColMajorMatrix<float> { centroids.num_rows(), nqueries };
+        for (size_t i = 0; i < centroids.num_rows(); ++i) {
+          qq(i, 0) = db(i, 0);
+        }
+        return qq;
       }
-      indices[0] = 0;
-      std::inclusive_scan(begin(degrees), end(degrees), begin(indices) + 1);
-      std::vector<size_t> check(indices.size());
-      std::copy(begin(indices), end(indices), begin(check));
+    }();
+    debug_matrix(q, "q");
 
-      debug_matrix(degrees, "degrees");
-      debug_matrix(indices, "indices");
+    // What should be returned here?  Maybe a pair with the ids and scores?
+    auto&& [kmeans_ids, all_ids] = kmeans_query(shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nth, nthreads);
+    debug_matrix(kmeans_ids, "kmeans_ids");
 
-      // Some variables for debugging
-      // @todo remove these once we are confident in the code
-      auto mis = std::max_element(begin(indices), end(indices));
-      auto a = std::distance(begin(indices), mis);
-      auto b = std::distance(mis, end(indices));
-      auto misx = *mis;
+    // Once this is a function, simply return kmeans_ids
+    // For now, print the results to std::cout
+    // @todo also get scores
+    // @todo add an output_uri argument
 
-      // Array for storing the shuffled data
-      auto shuffled_db = ColMajorMatrix<float>{db.num_rows(), db.num_cols()};
-      std::vector shuffled_ids = std::vector<uint64_t>(db.num_cols());
-      std::iota(begin(shuffled_ids), end(shuffled_ids), 0);
 
-      debug_matrix(shuffled_db, "shuffled_db");
-      debug_matrix(shuffled_ids, "shuffled_ids");
+    if (args["--groundtruth_uri"]) {
+      auto groundtruth_uri = args["--groundtruth_uri"].asString();
+      auto groundtruth     = tdbMatrix<int, Kokkos::layout_left>(groundtruth_uri);
+      debug_matrix(groundtruth, "groundtruth");
 
-      // @todo parallelize
-      // Unfortunately this variant of the algorithm is not parallelizable.
-      // The other approach involves doing parallel sort on the indices,
-      // which will group them nicely -- but a distributed parallel sort may
-      // be difficult to implement.  Even this algorithm is not trivial to
-      // parallelize, because of the random access to the indices array.
-      for (size_t i = 0; i < db.num_cols(); ++i) {
-        size_t bin = parts[i];
-        size_t ibin = indices[bin];
+      // kmeans_ids is k by nqueries
 
-        shuffled_ids[ibin] = i;
+      // foreach query
+      // get the top k
+      //    get the groundtruth
+      //    compare
+      //       sort
+      //       intersect count
 
-        assert(ibin < shuffled_db.num_cols());
-        for (size_t j = 0; j < db.num_rows(); ++j) {
-          shuffled_db(j, ibin) = db(j, i);
+      size_t total_query_in_groundtruth { 0 };
+      // for each query
+      std::vector<int> comp(kmeans_ids.num_rows());
+      for (size_t i = 0; i < kmeans_ids.num_cols(); ++i) {
+        for (size_t j = 0; j < kmeans_ids.num_rows(); ++j) {
+          comp[j] = all_ids[kmeans_ids(j, i)];
         }
-        ++indices[bin];
+        std::sort(begin(comp), end(comp));
+        std::sort(begin(groundtruth[i]), end(groundtruth[i]));
+
+        static constexpr auto lt = [](auto&& x, auto&& y) { return std::get<0>(x) < std::get<0>(y); };
+        total_query_in_groundtruth += std::set_intersection(begin(comp), end(comp), begin(groundtruth[i]), end(groundtruth[i]), counter {});
+        // std::cout << all_ids[kmeans_ids(i, 0)] << ": " << std::endl;
+        // std::cout << i << ": " << std::endl;
       }
-
-      std::shift_right(begin(indices), end(indices), 1);
-      indices[0] = 0;
-
-      // A check for debugging
-      auto x = std::equal(begin(indices), end(indices), begin(check));
-
-      // Write out the arrays
-
-      // @todo Better checking for existing files and reporting errors
-      auto part_uri = args["--part_uri"].asString();
-      auto index_uri = args["--index_uri"].asString();
-      auto id_uri = args["--id_uri"].asString();
-
-      if (!global_dryrun) {
-        if (part_uri != "") {
-          if (is_local_array(part_uri) && std::filesystem::exists(part_uri)) {
-            // Apple clang does not support std::format yet
-            // std::cerr << std::format("Error: URI {} already exists: " ,
-            // part_uri) << std::endl;
-            std::cerr << "Error: URI " << part_uri
-                      << " already exists: " << std::endl;
-            std::cerr << "This is a dangerous operation, so we will not "
-                         "overwrite the file."
-                      << std::endl;
-            std::cerr << "Please delete the file manually and try again."
-                      << std::endl;
-            return 1;
-            // Too dangerous to have this ability
-            // std::filesystem::remove_all(part_uri);
-          }
-          write_matrix(shuffled_db, part_uri);
-        }
-        if (index_uri != "") {
-          if (is_local_array(index_uri) && std::filesystem::exists(index_uri)) {
-            // std::filesystem::remove(index_uri);
-            std::cerr << "Error: URI " << index_uri
-                      << " already exists: " << std::endl;
-            std::cerr << "This is a dangerous operation, so we will not "
-                         "overwrite the file."
-                      << std::endl;
-            std::cerr << "Please delete the file manually and try again."
-                      << std::endl;
-            return 1;
-          }
-          write_vector(indices, index_uri);
-        }
-        if (id_uri != "") {
-          if (is_local_array(id_uri) && std::filesystem::exists(id_uri)) {
-            std::cerr << "Error: URI " << id_uri
-                      << " already exists: " << std::endl;
-            std::cerr << "This is a dangerous operation, so we will not "
-                         "overwrite the file."
-                      << std::endl;
-            std::cerr << "Please delete the file manually and try again."
-                      << std::endl;
-            return 1;
-            // std::filesystem::remove(id_uri);
-          }
-          write_vector(shuffled_ids, id_uri);
-        }
-      }
-    }
-  } else {
-    // Read all of the precomputed data
-    auto part_uri = args["--part_uri"].asString();
-    auto index_uri = args["--index_uri"].asString();
-    auto id_uri = args["--id_uri"].asString();
-    size_t nprobe = args["--cluster"].asLong();
-    size_t k_nn = args["--k"].asLong();
-    auto query_uri = args["--query_uri"] ? args["--query_uri"].asString() : "";
-    auto nqueries = (size_t)args["--nqueries"].asLong();
-
-    // Function for finding the top k nearest neighbors accelerated by kmeans
-    // @todo Move this to a self-contained function
-    {
-      life_timer _("query_time");
-
-      auto shuffled_db = tdbMatrix<float, Kokkos::layout_left>(part_uri);
-      // auto indices = tdbMatrix<size_t, Kokkos::layout_left>(index_uri);
-      auto indices = read_vector<size_t>(index_uri);
-      auto shuffled_ids = read_vector<uint64_t>(id_uri);
-
-      debug_matrix(shuffled_db, "shuffled_db");
-      debug_matrix(indices, "indices");
-      debug_matrix(shuffled_ids, "shuffled_ids");
-
-      // Some variables for debugging
-      auto mv = *std::max_element(begin(shuffled_ids), end(shuffled_ids));
-
-      auto q = [&]() -> ColMajorMatrix<float> {
-        if (query_uri != "") {
-          auto qq = tdbMatrix<float, Kokkos::layout_left>(query_uri, nqueries);
-          return qq;
-        } else {
-          auto qq = ColMajorMatrix<float>{centroids.num_rows(), nqueries};
-          for (size_t i = 0; i < centroids.num_rows(); ++i) {
-            qq(i, 0) = db(i, 0);
-          }
-          return qq;
-        }
-      }();
-      debug_matrix(q, "q");
-
-      // What should be returned here?  Maybe a pair with the ids and scores?
-      auto&& [kmeans_ids, all_ids] = kmeans_query(
-          shuffled_db,
-          centroids,
-          q,
-          indices,
-          shuffled_ids,
-          nprobe,
-          k_nn,
-          nthreads);
-      debug_matrix(kmeans_ids, "kmeans_ids");
-      // Once this is a function, simply return kmeans_ids
-      // For now, print the results to std::cout
-      // @todo also get scores
-      // @todo add an output_uri argument
-#if 0
-for (size_t i = 0; i < kmeans_ids.num_rows(); ++i) {
-  std::cout << all_ids[kmeans_ids(i, 0)] << ": " << std::endl;
-      }
-#endif
-
-      if (args["--groundtruth_uri"]) {
-        auto groundtruth_uri = args["--groundtruth_uri"].asString();
-        auto groundtruth = tdbMatrix<int, Kokkos::layout_left>(groundtruth_uri);
-        debug_matrix(groundtruth, "groundtruth");
-
-        // kmeans_ids is k by nqueries
-
-        // foreach query
-        // get the top k
-        //    get the groundtruth
-        //    compare
-        //       sort
-        //       intersect count
-
-        size_t total_query_in_groundtruth{0};
-        // for each query
-        std::vector<int> comp(kmeans_ids.num_rows());
-        for (size_t i = 0; i < kmeans_ids.num_cols(); ++i) {
-          for (size_t j = 0; j < kmeans_ids.num_rows(); ++j) {
-            comp[j] = all_ids[kmeans_ids(j, i)];
-          }
-          std::sort(begin(comp), end(comp));
-          std::sort(begin(groundtruth[i]), end(groundtruth[i]));
-
-          static constexpr auto lt = [](auto&& x, auto&& y) {
-            return std::get<0>(x) < std::get<0>(y);
-          };
-          total_query_in_groundtruth += std::set_intersection(
-              begin(comp),
-              end(comp),
-              begin(groundtruth[i]),
-              end(groundtruth[i]),
-              counter{});
-          // std::cout << all_ids[kmeans_ids(i, 0)] << ": " << std::endl;
-          // std::cout << i << ": " << std::endl;
-        }
-        std::cout << "total_query_in_groundtruth: "
-                  << total_query_in_groundtruth;
-        std::cout << " / " << kmeans_ids.num_cols() * kmeans_ids.num_rows();
-        std::cout << " = "
-                  << (((float)total_query_in_groundtruth /
-                       ((float)(kmeans_ids.num_cols()) *
-                        kmeans_ids.num_rows())))
-                  << std::endl;
-      }
+      std::cout << "total_query_in_groundtruth: " << total_query_in_groundtruth;
+      std::cout << " / " << kmeans_ids.num_cols() * kmeans_ids.num_rows();
+      std::cout << " = " << (((float)total_query_in_groundtruth / ((float)(kmeans_ids.num_cols()) * kmeans_ids.num_rows()))) << std::endl;
     }
   }
 }
+

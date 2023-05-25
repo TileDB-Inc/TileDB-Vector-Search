@@ -242,6 +242,15 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   constexpr auto is_blocked() const noexcept {
     return false;
   }
+
+  constexpr auto advance() const noexcept {
+    return false;
+  }
+
+  constexpr auto offset() const noexcept {
+    return 0UL;
+  }
+
 };
 
 /**

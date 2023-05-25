@@ -40,7 +40,6 @@
  * This program currently uses `sift_db` and `sift_array` structures to
  * hold the data, depending on whether the data comes from local file
  * or from a TileDB array but I have since written some better abstractions.
- * @todo Replace sift_db and sift_array with `tdbMatrix`
  *
  * Originally, I represented sets of feature vectors as a `std::vector` of
  * spans over a single allocation of memory.  The very first approach
