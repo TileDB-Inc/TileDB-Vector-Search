@@ -26,6 +26,7 @@
 #
 
 include(Catch2)
+include(CTest)
 
 macro (kmeans_add_exe EXENAME)
     add_executable(${EXENAME} ${EXENAME}.cc)
@@ -37,7 +38,7 @@ macro (kmeans_add_test TESTNAME)
     target_link_libraries(${TESTNAME} PRIVATE kmeans_lib Catch2::Catch2WithMain)
     # target_compile_definitions(${TESTNAME} PRIVATE DATA_DIR="${CMAKE_SOURCE_DIR}/data/")
     # target_compile_definitions(${TESTNAME} PRIVATE DATA_FILE="${CMAKE_SOURCE_DIR}/data/karate.mtx")
-    # add_test(NAME ${TESTNAME}_test COMMAND ${TESTNAME})
+    add_test(NAME ${TESTNAME}_test COMMAND ${TESTNAME})
     # catch_discover_tests(${TESTNAME})
 endmacro (kmeans_add_test)
 

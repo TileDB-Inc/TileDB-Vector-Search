@@ -17,6 +17,8 @@ jobs:
         run: sudo apt install libopenblas-dev
       - uses: actions/checkout@v3
       - name: Configure CMake
-        run: cmake -S ./experimental -B ./experimental/build
+        run: cmake -S ./experimental -B ./experimental/build -DCMAKE_BUILD_TYPE=Debug
       - name: Build
         run: cmake --build ./experimental/build
+      - name: Run Tests
+        run: cmake --build ./experimental/build --target check
