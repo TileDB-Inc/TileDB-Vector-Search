@@ -96,9 +96,9 @@ std::string global_region { "us-east-1" };
 static constexpr const char USAGE[] =
     R"(flat: feature vector search with flat index.
   Usage:
-      tdb (-h | --help)
-      tdb --db_uri URI --q_uri URI [--g_uri URI] [--output_uri URI] [--order ORDER] [--k NN]
-         [--block N] [--nqueries N] [--nthreads N] [-d ] [-v]
+      flat (-h | --help)
+      flat --db_uri URI --q_uri URI [--g_uri URI] [--output_uri URI] [--order ORDER] [--k NN]
+          [--block N] [--nqueries N] [--nthreads N] [-d ] [-v]
 
   Options:
       -h, --help            show this screen
