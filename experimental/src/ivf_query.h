@@ -62,22 +62,23 @@
  * to the right query function depending on the size of the query.
  */
 
-auto kmeans_query(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids, auto&& nprobe, auto&& k_nn,
-                  auto&& nthreads) {
+auto kmeans_query(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids,
+                  size_t nprobe, size_t k_nn, bool nth, size_t nthreads) {
   if (q.size() < 5) {
-    return kmeans_query_small_q(shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nthreads);
+    return kmeans_query_small_q(shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nth, nthreads);
   } else {
-    return kmeans_query_large_q(shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nthreads);
+    return kmeans_query_large_q(shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nth, nthreads);
   }
 }
 
 /**
  * @brief Query a set of query vectors against a vector database.
  */
-auto kmeans_query_large_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids, auto&& nprobe, auto&& k_nn,
-                          auto&& nthreads) {
+auto kmeans_query_large_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids,
+                          size_t nprobe, size_t k_nn,
+                          bool nth, size_t nthreads) {
   // get closest centroid for each query vector
-  auto top_k = blocked_gemm_query(centroids, q, nprobe, nthreads);
+  auto top_k = blocked_gemm_query(centroids, q, nprobe, nth, nthreads);
 
   // Copy top k from Matrix to vector
   std::vector<size_t> top_top_k(nprobe, 0);
@@ -122,7 +123,7 @@ auto kmeans_query_large_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&&
   }
 
   // Now, with the single matrix of probed partitions, find the closest vectors
-  auto kmeans_ids = blocked_gemm_query(all_results, q, k_nn, nthreads);
+  auto kmeans_ids = blocked_gemm_query(all_results, q, k_nn, nth, nthreads);
 
   // Original ids are: all_ids[kmeans_ids(i, 0)]
   // Maybe that is what should be returned?
@@ -134,8 +135,8 @@ auto kmeans_query_large_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&&
 /**
  * @brief Query a (small) set of query vectors against a vector database.
  */
-auto kmeans_query_small_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids, auto&& nprobe, auto&& k_nn,
-                          auto&& nthreads) {
+auto kmeans_query_small_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids,
+                          size_t nprobe, size_t k_nn, bool nth, size_t nthreads) {
   // get closest centroid for each query vector
   auto top_k = qv_query(centroids, q, nprobe, nthreads);
 

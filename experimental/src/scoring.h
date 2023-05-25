@@ -58,8 +58,8 @@
  * This is extremely fast for large numbers of query vectors, but is not as fast
  * as vq_ew for small numbers of query vectors.
  */
-template <class Matrix1, class Matrix2 = typename Matrix1::view_type>
-void gemm_scores(const Matrix1& A, const Matrix1& B, Matrix2& C, unsigned nthreads) {
+template <class Matrix1, class Matrix2, class Matrix3> // = typename Matrix1::view_type>
+void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads) {
 
   static_assert(std::is_same<typename Matrix1::value_type, typename Matrix2::value_type>::value,
                 "Matrix1 and Matrix2 must have the same value_type");
@@ -87,9 +87,9 @@ void gemm_scores(const Matrix1& A, const Matrix1& B, Matrix2& C, unsigned nthrea
   stdx::for_each(std::move(par), begin(raveled_C), end(raveled_C), [](auto& a) { a = sqrt(a); });
 }
 
-template <class Matrix>
-auto gemm_scores(const Matrix& A, const Matrix &B, int nthreads) {
-  using View = typename Matrix::view_type;
+template <class Matrix1, class Matrix2>
+auto gemm_scores(const Matrix1& A, const Matrix2& B, int nthreads) {
+  using View = typename Matrix1::view_type;
   auto C = View (A.num_cols(), B.num_cols());
   gemm_scores(A, B, C, nthreads);
   return C;
