@@ -83,10 +83,10 @@ std::string global_region;
 static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
 Usage:
-    tdb (-h | --help)
-    tdb   --db_uri URI --centroids_uri URI --index_uri URI --part_uri URI --id_uri URI
-         [--output_uri URI] [--query_uri URI] [--groundtruth_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
-         [--k NN] [--cluster NN] [--nthreads N] [--region REGION] [--nth] [--log FILE] [-d | -v]
+    ivf_hack (-h | --help)
+    ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --part_uri URI --id_uri URI
+            [--output_uri URI] [--query_uri URI] [--groundtruth_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
+            [--k NN] [--cluster NN] [--nthreads N] [--region REGION] [--nth] [--log FILE] [-d | -v]
 
 Options:
     -h, --help            show this screen
