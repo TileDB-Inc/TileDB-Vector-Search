@@ -133,6 +133,24 @@ auto mat_col_sum(
   }
 }
 
+
+template <class L, class I>
+auto verify_top_k_index(L const& top_k, I const& g, int k, int qno) {
+
+  std::sort(begin(g), begin(g) + k);
+  std::sort(begin(top_k), end(top_k));
+
+  if (!std::equal(begin(top_k), begin(top_k) + k, g.begin())) {
+    std::cout << "Query " << qno << " is incorrect" << std::endl;
+    for (int i = 0; i < std::min<int>(10, k); ++i) {
+      std::cout << "(" << top_k[i] << " != " << g[i] << ")  ";
+    }
+    std::cout << std::endl;
+    std::cout << std::endl;
+  }
+}
+
+
 /**
  * @brief Check the computed top k vectors against the ground truth.
  * Useful only for exact search.
@@ -236,6 +254,7 @@ void get_top_k(
 
     futs.emplace_back(std::async(
         std::launch::async, [q_start, q_stop, &scores, &top_k, k, size_db]() {
+
           std::vector<int> index(size_db);
 
           for (int j = q_start; j < q_stop; ++j) {
