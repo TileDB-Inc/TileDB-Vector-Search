@@ -64,3 +64,16 @@ void blocked_query_gemm(DB& db, Q& q, const G& g, int k, [[maybe_unused]] bool h
 #endif
 #endif
 }
+
+
+
+#if 0
+  if (!std::equal(begin(top_k), begin(top_k) + k, g.begin())) {
+    std::cout << "Query " << qno << " is incorrect" << std::endl;
+    for (int i = 0; i < std::min(k, 10); ++i) {
+      std::cout << "  (" << top_k[i] << " " << g[i] << ")";
+    }
+    std::cout << std::endl;
+    return false;
+  }
+#endif

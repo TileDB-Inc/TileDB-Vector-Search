@@ -70,10 +70,6 @@
  * corresponds to a vector.  There isn't really an orientation per se.
  * I.e., A[i] returns a span comprising the ith vector in A.
  *
- * @todo Replace `sift_db` and `sift_array` with `tdbMatrix`
- * @todo Replace `std::vector` of `span` with `stdx::mdspan`
- * @todo Rewrite all query functions (as possible) to return top_k rather
- * than doing ground truth comparisons.
  *
  */
 
@@ -159,6 +155,8 @@ int main(int argc, char* argv[]) {
   std::cout << load_time << std::endl;
 
   auto top_k = [&]() {
+
+    // @todo reimplement these
 #if 0
   if (args["--order"].asString() == "vq") {
     if (verbose) {
