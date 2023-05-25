@@ -56,9 +56,9 @@
 #define TDB_FLAT_QUERY_H
 
 #include "defs.h"
+#include "fixed_min_queues.h"
 #include "linalg.h"
 #include "timer.h"
-#include "fixed_min_queues.h"
 
 #include <cassert>
 #include <cmath>
@@ -211,8 +211,8 @@ void query_vq_hw(const DB& db, const Q& q, const G& g, TK& top_k, int k, int nth
   auto             buf = std::make_unique<float[]>(size(q) * size(db));
   std::span<float> _score_data { buf.get(), size(q) * size(db) };
 #else
-  auto                          buf = std::make_unique_for_overwrite<float[]>(size(q) * size(db));
-  std::span<float>              _score_data { buf.get(), size(q) * size(db) };
+  auto             buf = std::make_unique_for_overwrite<float[]>(size(q) * size(db));
+  std::span<float> _score_data { buf.get(), size(q) * size(db) };
 #endif
 
   std::vector<std::span<float>> scores(size(q));

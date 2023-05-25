@@ -30,8 +30,8 @@
  */
 
 
-#include <catch2/catch_all.hpp>
 #include "../utils.h"
+#include <catch2/catch_all.hpp>
 
 TEST_CASE("utils: test test", "[utils]") {
   REQUIRE(true);
@@ -104,4 +104,3 @@ TEST_CASE("utils: test", "[utils]") {
   CHECK(!is_local_array("http://www.tiledb.com/index.html"));
   CHECK(!is_local_array("https://www.tiledb.com/index.html"));
 }
-

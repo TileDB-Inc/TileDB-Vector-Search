@@ -29,27 +29,39 @@
 *
 */
 
-#include <catch2/catch_all.hpp>
 #include "../concepts.h"
-#include <span>
+#include <catch2/catch_all.hpp>
 #include <mdspan/mdspan.hpp>
+#include <span>
 
 
 template <class T>
 struct feature_vector_0 {
   using value_type = T;
-  std::size_t size() const { return 0; }
-  std::size_t dim() const { return 0; }
-  T operator[](std::size_t i) const { return 0; }
-  T* data() const { return nullptr; }
+  std::size_t size() const {
+    return 0;
+  }
+  std::size_t dim() const {
+    return 0;
+  }
+  T operator[](std::size_t i) const {
+    return 0;
+  }
+  T* data() const {
+    return nullptr;
+  }
 };
 
 template <class FV>
-auto num_features(const FV& fv) { return fv.size(); }
+auto num_features(const FV& fv) {
+  return fv.size();
+}
 
 template <class FV>
-requires feature_vector<FV>
-auto a(const FV& fv){ return true; }
+  requires feature_vector<FV>
+auto a(const FV& fv) {
+  return true;
+}
 
 TEST_CASE("feature_vector_0", "[concepts]") {
   feature_vector_0<float> fv;
@@ -60,24 +72,44 @@ TEST_CASE("feature_vector_0", "[concepts]") {
 template <class T>
 struct vector_database_0 {
   using value_type = T;
-  std::size_t size() const { return 0; }
-  std::size_t dim() const { return 0; }
-  std::span<T> operator[](std::size_t i) const { return std::span<T>(nullptr, 0); }
-  T operator ()(std::size_t i, std::size_t j) const { return 0; }
-  T* data() const { return nullptr; }
-  constexpr auto rank() const noexcept { return 2; }
-  std::span<T> raveled() const { return std::span<T>((T*)nullptr, 0); }
+  std::size_t size() const {
+    return 0;
+  }
+  std::size_t dim() const {
+    return 0;
+  }
+  std::span<T> operator[](std::size_t i) const {
+    return std::span<T>(nullptr, 0);
+  }
+  T operator()(std::size_t i, std::size_t j) const {
+    return 0;
+  }
+  T* data() const {
+    return nullptr;
+  }
+  constexpr auto rank() const noexcept {
+    return 2;
+  }
+  std::span<T> raveled() const {
+    return std::span<T>((T*)nullptr, 0);
+  }
 };
 
 template <class DB>
-auto num_vectors(const DB& db) { return db.span(); }
+auto num_vectors(const DB& db) {
+  return db.span();
+}
 
 template <class DB>
-auto raveled(const DB& db) { return db.raveled(); }
+auto raveled(const DB& db) {
+  return db.raveled();
+}
 
 template <class DB>
-requires vector_database<DB>
-auto b(const DB& db){ return true; }
+  requires vector_database<DB>
+auto b(const DB& db) {
+  return true;
+}
 
 TEST_CASE("vector_database_0", "[concepts]") {
   vector_database_0<float> db;

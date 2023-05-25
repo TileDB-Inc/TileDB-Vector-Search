@@ -52,9 +52,9 @@
 // #include <format>     // Not suppored by Apple clang
 // #include <execution>  // Not suppored by Apple clang
 
+#include <fstream>
 #include <iostream>
 #include <memory>
-#include <fstream>
 #include <numeric>
 #include <random>
 #include <string>
@@ -78,7 +78,6 @@ using json = nlohmann::json;
 bool        global_verbose = false;
 bool        global_debug   = false;
 std::string global_region;
-
 
 
 static constexpr const char USAGE[] =
@@ -162,7 +161,7 @@ auto args_log(const Args& args) {
   for (auto&& arg : args) {
     std::stringstream buf;
     buf << std::get<1>(arg);
-    arg_log.push_back({std::get<0>(arg), buf.str()});
+    arg_log.push_back({ std::get<0>(arg), buf.str() });
   }
   return arg_log;
 }
@@ -291,10 +290,10 @@ int main(int argc, char* argv[]) {
     auto config       = config_log(argv[0]);
 
     json log_log = {
-      {"Config",   config      },
-      { "Args",    program_args},
-      { "Recalls", recalls     },
-      {"Times", get_timings()  }
+      {"Config",   config       },
+      { "Args",    program_args },
+      { "Recalls", recalls      },
+      { "Times",   get_timings()}
     };
 
     if (args["--log"].asString() == "-") {

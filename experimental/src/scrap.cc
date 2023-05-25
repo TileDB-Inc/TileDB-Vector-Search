@@ -66,7 +66,6 @@ void blocked_query_gemm(DB& db, Q& q, const G& g, int k, [[maybe_unused]] bool h
 }
 
 
-
 #if 0
   if (!std::equal(begin(top_k), begin(top_k) + k, g.begin())) {
     std::cout << "Query " << qno << " is incorrect" << std::endl;
@@ -124,7 +123,6 @@ auto gemm_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
  */
 
 
-
 /**
  * @brief Query a set of vectors against a vector database, returning the
  * indices of the best matches for each query vector.  The difference between
@@ -145,12 +143,12 @@ auto blocked_gemm_query(DB& db, Q& q, size_t k, unsigned nthreads) {
   using element = std::pair<float, unsigned>;
 
   const auto block_db = db.is_blocked();
-  const auto block_q = q.is_blocked();
+  const auto block_q  = q.is_blocked();
   if (block_db && block_q) {
     throw std::runtime_error("Can't block both db and q");
   }
 
-  ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
+  ColMajorMatrix<float>               scores(db.num_cols(), q.num_cols());
   std::vector<fixed_min_set<element>> min_scores(size(q), fixed_min_set<element>(k));
 
   for (;;) {
@@ -158,7 +156,6 @@ auto blocked_gemm_query(DB& db, Q& q, size_t k, unsigned nthreads) {
 
     auto par = stdx::execution::indexed_parallel_policy { nthreads };
     stdx::range_for_each(std::move(par), scores, [&](auto&& q_vec, auto&& n = 0, auto&& i = 0) {
-
       if (block_db) {
         for (int j = 0; j < scores.num_rows(); ++j) {
           min_scores[i].insert({ scores(j, i), j + db.offset() });
@@ -213,4 +210,3 @@ auto blocked_gemm_query(DB& db, Q& q, size_t k, unsigned nthreads) {
 
 
 cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, M, N, K, -2.0, &db(0, 0), K, &q(0, 0), K, 0.0, &scores(0, 0), M);
-
