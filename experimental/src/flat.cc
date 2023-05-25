@@ -86,7 +86,7 @@
 #include <docopt.h>
 
 #include "defs.h"
-#include "flat_query.h"
+#include "ivf_query.h"
 #include "timer.h"
 
 bool        verbose      = false;
@@ -179,10 +179,10 @@ int main(int argc, char* argv[]) {
         if (args["--order"].asString() == "gemm") {
           if (block != 0) {
             std::cout << "# Using blocked gemm for query" << std::endl;
-            return blocked_query_gemm(db, q, k, nth, nthreads);
+            return blocked_gemm_query(db, q, k, nth, nthreads);
           } else {
             std::cout << "# Using gemm for query" << std::endl;
-            return query_gemm(db, q, k, nth, nthreads);
+            return gemm_query(db, q, k, nth, nthreads);
           }
         } return ColMajorMatrix<size_t>(0,0);
       }();

@@ -238,6 +238,10 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   auto num_cols() const noexcept {
     return ncols_;
   }
+
+  constexpr auto is_blocked() const noexcept {
+    return false;
+  }
 };
 
 /**

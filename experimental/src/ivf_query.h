@@ -306,94 +306,19 @@ auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
 }
 
 
-/**
- * @brief Query a set of vectors against a vector database, returning the
- * indices of the best matches for each query vector.  The difference between
- * partition and query is that query returns the indices for the top k
- * scores, whereas partition returns just the top index.
- *
- * @tparam DB
- * @tparam Q
- * @param db
- * @param q
- * @param k
- * @param nthreads
- * @return
- */
+
 template <class DB, class Q>
-auto gemm_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
-  life_timer _outer { "Total time gemm_query" };
-
+auto gemm_query(const DB& db, const Q& q, int k, bool nth, size_t nthreads) {
+  life_timer _outer { "Total time query gemm" };
   auto scores = gemm_scores(db, q, nthreads);
-
-  ColMajorMatrix<size_t> top_k(k, q.num_cols());
-  {
-    life_timer _ { "top k" };
-    get_top_k(scores, top_k, k, size(q), size(db), nthreads);
-  }
-
+  auto top_k = get_top_k(scores, k, nth, nthreads);
   return top_k;
 }
 
-/**
- * @brief Query a set of vectors against a vector database, returning the
- * indices of the best matches for each query vector.  The difference between
- * partition and query is that query returns the indices for the top k
- * scores, whereas partition returns just the top index.
- *
- * @tparam DB
- * @tparam Q
- * @param db
- * @param q
- * @param k
- * @param nthreads
- * @return
- */
 template <class DB, class Q>
-auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
-  life_timer _outer { "Total time gemm" };
+auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
+  life_timer _outer { "Total time blocked query gemm" };
 
-  auto scores = gemm_scores(db, q, nthreads);
-
-  auto top_k = std::vector<int>(q.num_cols());
-  {
-    life_timer _ { "top k" };
-    for (int i = 0; i < scores.num_cols(); ++i) {
-      auto min_score = std::numeric_limits<float>::max();
-      auto idx       = 0;
-
-      for (int j = 0; j < scores.num_rows(); ++j) {
-        auto score = scores(j, i);
-        if (score < min_score) {
-          min_score = score;
-          idx       = j;
-        }
-      }
-      top_k[i] = idx;
-    }
-  }
-
-  return top_k;
-}
-
-
-/**
- * @brief Query a set of vectors against a vector database, returning the
- * indices of the best matches for each query vector.  The difference between
- * partition and query is that query returns the indices for the top k
- * scores, whereas partition returns just the top index.
- *
- * @tparam DB
- * @tparam Q
- * @param db
- * @param q
- * @param k
- * @param nthreads
- * @return
- */
-template <class DB, class Q>
-auto blocked_gemm_query(DB& db, Q& q, size_t k, unsigned nthreads) {
-  life_timer _outer { "Total time blocked_gemm_query" };
   using element = std::pair<float, unsigned>;
 
   const auto block_db = db.is_blocked();
@@ -403,9 +328,11 @@ auto blocked_gemm_query(DB& db, Q& q, size_t k, unsigned nthreads) {
   }
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
-  std::vector<fixed_min_set<element>> min_scores(size(q), fixed_min_set<element>(k));
+
+  std::vector<fixed_min_heap<element>> min_scores(size(q), fixed_min_heap<element>(k));
 
   for (;;) {
+
     gemm_scores(db, q, scores, nthreads);
 
     auto par = stdx::execution::indexed_parallel_policy { nthreads };
@@ -427,9 +354,9 @@ auto blocked_gemm_query(DB& db, Q& q, size_t k, unsigned nthreads) {
     });
 
     bool done = true;
-    if (block_db) {
+    if  (block_db) {
       done = !db.advance();
-    } else if (block_q) {
+    } else if (block_q){
       done = !q.advance();
     }
     if (done) {
@@ -438,8 +365,9 @@ auto blocked_gemm_query(DB& db, Q& q, size_t k, unsigned nthreads) {
   }
 
   ColMajorMatrix<size_t> top_k(k, q.num_cols());
-
-  for (int j = 0; j < scores.num_rows(); ++j) {
+  for (int j = 0; j < min_scores.size(); ++j) {
+    // @todo sort_heap
+    std::sort(min_scores[j].begin(), min_scores[j].end());
     std::transform(min_scores[j].begin(), min_scores[j].end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
   }
 
@@ -448,12 +376,40 @@ auto blocked_gemm_query(DB& db, Q& q, size_t k, unsigned nthreads) {
 
 
 template <class DB, class Q>
+auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
+  life_timer _outer { "Total time gemm" };
+
+  auto scores = gemm_scores(db, q, nthreads);
+
+  auto top_k = std::vector<int>(q.num_cols());
+  {
+    life_timer _ { "top k partition" };
+    for (int i = 0; i < scores.num_cols(); ++i) {
+      auto min_score = std::numeric_limits<float>::max();
+      auto idx       = 0;
+
+      for (int j = 0; j < scores.num_rows(); ++j) {
+        auto score = scores(j, i);
+        if (score < min_score) {
+          min_score = score;
+          idx       = j;
+        }
+      }
+      top_k[i] = idx;
+    }
+  }
+
+  return top_k;
+}
+
+template <class DB, class Q>
 auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
   life_timer _outer { "Total time blocked_gemm_partition" };
 
-  auto block_db = true;
-  if (q.extent(1) > 2 * db.extent(1)) {
-    block_db = false;
+  const auto block_db = db.is_blocked();
+  const auto block_q = q.is_blocked();
+  if (block_db && block_q) {
+    throw std::runtime_error("Can't block both db and q");
   }
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
@@ -461,35 +417,8 @@ auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
   auto                  top_k       = std::vector<int>(q.num_cols());
   auto                  min_scores  = std::vector<float>(q.num_cols(), std::numeric_limits<float>::max());
 
-  int M = db.num_cols();
-  int N = q.num_cols();
-  int K = db.num_rows();
-
-  assert(db.num_rows() == q.num_rows());
-
-  std::vector<float> alpha(M, 0.0f);
-  std::vector<float> beta(N, 0.0f);
-  std::vector<float> alpha_ones(N, 1.0f);
-  std::vector<float> beta_ones(M, 1.0f);
-
   for (;;) {
-    cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, M, N, K, -2.0, &db(0, 0), K, &q(0, 0), K, 0.0, &scores(0, 0), M);
-
-    std::fill(begin(alpha), end(alpha), 0.0f);
-    std::fill(begin(beta), end(beta), 0.0f);
-
-    mat_col_sum(db, alpha, [](auto a) { return a * a; });    // @todo optimize somehow
-    mat_col_sum(q, beta, [](auto a) { return a * a; });
-
-    // A += alpha * x * transpose(y)
-
-    // This should be more parallelizable -- but seems to be completely
-    // memory-bound
-    cblas_sger(CblasColMajor, M, N, 1.0, &alpha[0], 1, &alpha_ones[0], 1, &scores(0, 0), M);
-    cblas_sger(CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, &scores(0, 0), M);
-
-    stdx::execution::parallel_policy par { nthreads };
-    stdx::for_each(std::move(par), begin(_score_data), end(_score_data), [](auto& a) { a = sqrt(a); });
+    gemm_scores(db, q, scores, nthreads);
 
     for (int i = 0; i < scores.num_cols(); ++i) {
       auto min_score = min_scores[i];
@@ -504,7 +433,7 @@ auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
       }
       top_k[i] = idx;
     }
-    bool done = false;
+    bool done = true;
     if (block_db) {
       done = !db.advance();
     } else {
@@ -516,4 +445,6 @@ auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
   }
   return top_k;
 }
+
+
 #endif    // TDB_IVF_QUERY_H
