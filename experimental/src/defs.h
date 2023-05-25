@@ -45,6 +45,7 @@
 #include <span>
 // #include <execution>
 
+#include "linalg.h"
 #include "timer.h"
 #include "fixed_min_queues.h"
 
@@ -193,74 +194,45 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
 
 // @todo implement with fixed_min_set
 template <class V, class L, class I>
-auto get_top_k(V const& scores, L&& top_k, I& index, int k) {
-#if 1
-  std::nth_element(
-      begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) {
-        return scores[a] < scores[b];
-      });
-  std::copy(begin(index), begin(index) + k, begin(top_k));
-
-  std::sort(begin(top_k), end(top_k), [&](auto& a, auto& b) {
-    return scores[a] < scores[b];
-  });
-#else
-
-// Either of these seems okay maybe
-#if 0
-  using Comparator = std::function<bool(unsigned, unsigned)>;
-
-  fixed_min_set<unsigned, Comparator> s(k, [&](unsigned a, unsigned b) {
-    return scores[a] < scores[b];
-  });
-  for (auto i : index) {
-    s.insert(i);
+auto get_top_k(V const& scores, L&& top_k, I& index, int k, bool nth = false) {
+  if (nth) {
+    std::nth_element(begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) { return scores[a] < scores[b]; });
+    std::copy(begin(index), begin(index) + k, begin(top_k));
+    std::sort(begin(top_k), end(top_k), [&](auto& a, auto& b) { return scores[a] < scores[b]; });
+  } else {
+    using element = std::pair<float, unsigned>;
+    fixed_min_heap<element> s(k);
+    for (size_t i = 0; i < index.size(); ++i) {
+      s.insert({ scores[index[i]], index[i] });
+    }
+    std::sort_heap(begin(s), end(s));
+    std::transform(s.begin(), s.end(), top_k.begin(), ([](auto&& e) { return e.second; }));
   }
-  // std::sort_heap(begin(s), end(s), [&](unsigned a, unsigned b) {
-    // return scores[a] < scores[b];
-  //});
-  std::copy(begin(s), end(s), begin(top_k));
-  std::sort(begin(top_k), end(top_k), [&](unsigned a, unsigned b) {
-    return scores[a] < scores[b];
-  });
-#else
-  using element = std::pair<float, unsigned>;
-  fixed_min_heap<element> s(k);
-  for (size_t i = 0; i < index.size(); ++i) {
-    s.insert({scores[index[i]], index[i]});
-  }
-  std::sort_heap(begin(s), end(s));
-  std::transform(s.begin(), s.end(), top_k.begin(), ([](auto&& e) { return e.second; }));
-
-#endif
-#endif
 }
 
-template <class S, class T>
-void get_top_k(
-    const S& scores, T& top_k, int k, int size_q, int size_db, int nthreads) {
+template <class S>
+auto get_top_k(const S& scores, int k, bool nth, int nthreads) {
   life_timer _{"Get top k"};
 
-  std::vector<int> i_index(size_db);
-  std::iota(begin(i_index), end(i_index), 0);
+  auto num_queries = scores.num_cols();
 
-  int q_block_size = (size_q + nthreads - 1) / nthreads;
+  auto top_k = ColMajorMatrix<size_t>(k, num_queries);
+
+  int q_block_size = (num_queries + nthreads - 1) / nthreads;
   std::vector<std::future<void>> futs;
   futs.reserve(nthreads);
 
   for (int n = 0; n < nthreads; ++n) {
     int q_start = n * q_block_size;
-    int q_stop = std::min<int>((n + 1) * q_block_size, size_q);
+    int q_stop = std::min<int>((n + 1) * q_block_size, num_queries);
 
     futs.emplace_back(std::async(
-        std::launch::async, [q_start, q_stop, &scores, &top_k, k, size_db]() {
+        std::launch::async, [q_start, q_stop, &scores, &top_k, k]() {
 
-          std::vector<int> index(size_db);
+          std::vector<int> index(scores.num_rows());
 
           for (int j = q_start; j < q_stop; ++j) {
-            // std::copy(begin(i_index), end(i_index), begin(index));
             std::iota(begin(index), end(index), 0);
-            auto temp_t = top_k[j];
             get_top_k(scores[j], std::move(top_k[j]), index, k);
           }
         }));
@@ -268,6 +240,41 @@ void get_top_k(
   for (int n = 0; n < nthreads; ++n) {
     futs[n].get();
   }
+  return top_k;
+}
+
+template <class TK, class G>
+bool validate_top_k( TK& top_k,  G& g) {
+
+  size_t k = top_k.num_rows();
+  size_t num_errors = 0;
+  for (size_t qno = 0; qno < top_k.num_cols(); ++qno) {
+    std::sort(begin(top_k[qno]), end(top_k[qno]));
+    std::sort(begin(g[qno]), begin(g[qno]) + top_k.num_rows());
+
+    if (!std::equal(begin(top_k[qno]), begin(top_k[qno]) + k, begin(g[qno]))) {
+      if (num_errors++ > 10) {
+        return false;
+      }
+      std::cout << "Query " << qno << " is incorrect" << std::endl;
+      for (int i = 0; i < std::min(k, 10UL); ++i) {
+        std::cout << "  (" << top_k(i,qno) << " " << g(i,qno) << ")";
+      }
+      std::cout << std::endl;
+    }
+  }
+
+#if 0
+  if (!std::equal(begin(top_k), begin(top_k) + k, g.begin())) {
+    std::cout << "Query " << qno << " is incorrect" << std::endl;
+    for (int i = 0; i < std::min(k, 10); ++i) {
+      std::cout << "  (" << top_k[i] << " " << g[i] << ")";
+    }
+    std::cout << std::endl;
+    return false;
+  }
+#endif
+  return true;
 }
 
 #endif  // TDB_DEFS_H

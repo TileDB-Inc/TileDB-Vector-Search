@@ -48,16 +48,15 @@
 #include <mkl_cblas.h>
 #endif
 
+
 /**
- * @brief Compute L2 distance between all pairs of vectors in A and B.
+ * Query using dense linear algebra.  This uses the vector generalization of
+ * the identity (a - b) * (a - b) = a * a + b * b - 2 * a * b .
+ * We use outer products to compute the a * a and b * b terms, and then use
+ * a gemm to compute the a * b term.
  *
- * A and B are containers of vectors, with each vector being a
- * column of the matrix and each vector being contiguous in memory.
- *
- * The matrices must have a data() member function that returns a pointer to the
- * underlying data.  For now the data is assumed to be float.
- *
- * @tparam Matrix
+ * This is extremely fast for large numbers of query vectors, but is not as fast
+ * as vq_ew for small numbers of query vectors.
  */
 template <class Matrix1, class Matrix2 = typename Matrix1::view_type>
 void gemm_scores(const Matrix1& A, const Matrix1& B, Matrix2& C, unsigned nthreads) {
