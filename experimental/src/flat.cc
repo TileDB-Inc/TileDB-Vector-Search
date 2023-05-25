@@ -91,49 +91,39 @@
 
 #include "defs.h"
 #include "flat_query.h"
-#include "sift_array.h"
-#include "sift_db.h"
 #include "timer.h"
 
-bool verbose = false;
-bool debug = false;
-bool global_debug = false;
-std::string global_region {"us-east-1"};
+bool        verbose      = false;
+bool        debug        = false;
+bool        global_debug = false;
+std::string global_region { "us-east-1" };
 
 static constexpr const char USAGE[] =
     R"(flat: feature vector search with flat index.
   Usage:
       tdb (-h | --help)
-      tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) [--g_file FILE | --g_uri URI]
-          [--k NN] [--L2 | --cosine] [--order ORDER][--hardway] [--blocked] [--output_uri URI]
-          [--nthreads N] [--nqueries N] [--ndb N] [-d | -v]
+      tdb --db_uri URI --q_uri URI [--g_uri URI] [--output_uri URI] [--order ORDER] [--k NN]
+         [--block N] [--nqueries N] [--nthreads N] [-d ] [-v]
 
   Options:
       -h, --help            show this screen
-      --db_file FILE        database file with feature vectors
       --db_uri URI          database URI with feature vectors
-      --q_file FILE         query file with feature vectors to search for
       --q_uri URI           query URI with feature vectors to search for
-      --g_file FILE         ground truth file
       --g_uri URI           ground true URI
       --output_uri URI      output URI for results
-      --k NN                number of nearest neighbors to find [default: 10]
-      --L2                  use L2 distance (Euclidean) [default]
-      --cosine              use cosine distance
-      --jaccard             use Jaccard distance
       --order ORDER         which ordering to do comparisons [default: gemm]
-      --blocked             use blocked gemm [default: false]
-      --hardway             use hard way to compute distances [default: false]
-      --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
+      --k NN                number of nearest neighbors to find [default: 10]
+      --block N             block database with size N (0 = no blocking) [default: 0]
       --nqueries N          size of queries subset to compare (0 = all) [default: 0]
-      --ndb N               size of vectors subset to compare (0 = all) [default: 0]
+      --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
+      --nth                 use nth_element for top k [default: false]
       -d, --debug           run in debug mode [default: false]
       -v, --verbose         run in verbose mode [default: false]
 )";
 
 int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
-  auto args = docopt::docopt(USAGE, strings, true);
+  auto                     args = docopt::docopt(USAGE, strings, true);
 
   if (args["--help"].asBool()) {
     std::cout << USAGE << std::endl;
@@ -141,188 +131,69 @@ int main(int argc, char* argv[]) {
   }
 
   global_debug = debug = args["--debug"].asBool();
-  verbose = args["--verbose"].asBool();
-  auto hardway = args["--hardway"].asBool();
+  verbose              = args["--verbose"].asBool();
 
-  std::string db_file{};
-  std::string db_uri{};
-  if (args["--db_file"]) {
-    db_file = args["--db_file"].asString();
-  } else if (args["--db_uri"]) {
-    db_uri = args["--db_uri"].asString();
-  } else {
-    std::cout << "Must specify either --db_file or --db_uri" << std::endl;
-    return 1;
-  }
+  std::string db_uri     = args["--db_uri"].asString();
+  std::string q_uri      = args["--q_uri"].asString();
+  std::string g_uri      = args["--g_uri"].asString();
 
-  std::string q_file{};
-  std::string q_uri{};
-  if (args["--q_file"]) {
-    q_file = args["--q_file"].asString();
-  } else if (args["--q_uri"]) {
-    q_uri = args["--q_uri"].asString();
-  } else {
-    std::cout << "Must specify either --q_file or --q_uri" << std::endl;
-    return 1;
-  }
+  std::cout << "# Using " << args["--order"].asString() << std::endl;
 
-  std::string g_file{};
-  std::string g_uri{};
-
-  if (args["--g_file"]) {
-    g_file = args["--g_file"].asString();
-  } else if (args["--g_uri"]) {
-    g_uri = args["--g_uri"].asString();
-  }
-
-
-  size_t k = args["--k"].asLong();
+  size_t k        = args["--k"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
   size_t nqueries = args["--nqueries"].asLong();
-  size_t ndb = args["--ndb"].asLong();
+  size_t block    = args["--block"].asLong();
+
+  auto nth = bool(args["--nth"]);
 
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
 
-  // @todo verify only if debug is set?
-  // @todo mix and match files and uris?  (Ultimately only want uris.)
-  // @todo other types of input besides sift files
-  if (!db_file.empty() && !q_file.empty() && !g_file.empty()) {
-    if (db_file == q_file) {
-      std::cout << "db_file and q_file must be different" << std::endl;
-      return 1;
+  ms_timer                 load_time { "Load database, query, and ground truth arrays" };
+  tdbColMajorMatrix<float> db(db_uri, block);   // blocked
+  tdbColMajorMatrix<float> q(q_uri, nqueries);  // just a slice
+
+  auto g = g_uri.empty() ? ColMajorMatrix<int>(0, 0) : tdbColMajorMatrix<int>(g_uri);
+  load_time.stop();
+  std::cout << load_time << std::endl;
+
+  auto top_k = [&]() {
+#if 0
+  if (args["--order"].asString() == "vq") {
+    if (verbose) {
+      std::cout << "# Using vq loop nesting for query" << std::endl;
+      if (nth) {
+        std::cout << "# Using nth_element selection" << std::endl;
+      }
     }
-
-    ms_timer load_time{"Load database, query, and ground truth"};
-    tdbColMajorMatrix<float> db(db_file, ndb);
-    tdbColMajorMatrix<float> q(q_file, nqueries);
-    tdbColMajorMatrix<int> g(g_file, nqueries);
-    load_time.stop();
-    std::cout << load_time << std::endl;
-
-    if (!(size(db[0]) == size(q[0]))) {
-      throw std::runtime_error(
-          "vector sizes do not match " + std::to_string(size(db[0])) + ", " +
-          std::to_string(size(q[0])) + ", " + std::to_string(size(g[0])));
+    return query_vq(db, q, k, nth, nthreads);
+  } else if (args["--order"].asString() == "qv") {
+    if (verbose) {
+      std::cout << "# Using qv nesting for query" << std::endl;
+      if (nth) {
+        std::cout << "# Using nth element selection" << std::endl;
+      }
     }
+    return query_qv(db, q, k, nth, nthreads);
+  } else
+#endif
+        if (args["--order"].asString() == "gemm") {
+          if (block != 0) {
+            std::cout << "# Using blocked gemm for query" << std::endl;
+            return blocked_query_gemm(db, q, k, nth, nthreads);
+          } else {
+            std::cout << "# Using gemm for query" << std::endl;
+            return query_gemm(db, q, k, nth, nthreads);
+          }
+        } return ColMajorMatrix<size_t>(0,0);
+      }();
 
-    // std::vector<std::vector<int>> top_k(q.num_cols(), std::vector<int>(k, 0));
-    //auto top_k = ColMajorMatrix<int>(q.num_cols(), k);
-    auto top_k = ColMajorMatrix<int>(k, q.num_cols());
-    //std::cout << "Using " << args["--order"].asString() << std::endl;
+  if (!g_uri.empty()) {
+    validate_top_k(top_k, g);
+  }
 
-    /**
-     * vq: for each vector in the database, compare with each query vector
-     */
-    if (args["--order"].asString() == "vq") {
-      if (verbose) {
-        std::cout << "Using vq loop nesting for query" << std::endl;
-        if (hardway) {
-          std::cout << "Doing it the hard way" << std::endl;
-        }
-      }
-      query_vq(db, q, g, top_k, k, hardway, nthreads);
-    } else if (args["--order"].asString() == "qv") {
-      if (verbose) {
-        std::cout << "Using qv nesting for query" << std::endl;
-        if (hardway) {
-          std::cout << "Doing it the hard way" << std::endl;
-        }
-      }
-      query_qv(db, q, g, top_k, k, hardway, nthreads);
-    } else if (args["--order"].asString() == "gemm") {
-      if (verbose) {
-        std::cout << "Using gemm for query" << std::endl;
-      }
-      if (args["--blocked"].asBool()) {
-        std::cout << "Using blocked gemm for query" << std::endl;
-        blocked_query_gemm(db, q, g, top_k, k, hardway, nthreads);
-      } else {
-        query_gemm(db, q, g, top_k, k, hardway, nthreads);
-      }
-    } else {
-      std::cout << "Unknown ordering: " << args["--order"].asString()
-                << std::endl;
-      return 1;
-    }
-  } else if (!db_uri.empty() && !q_uri.empty()) {
-    if (db_uri == q_uri) {
-      std::cout << "db_uri and q_uri must be different" << std::endl;
-      return 1;
-    }
-    // @todo other formats for arrays?
-
-    ms_timer load_time{"Load database, query, and ground truth arrays"};
-    tdbColMajorMatrix<float> db(db_uri, ndb);
-    tdbColMajorMatrix<float> q(q_uri, nqueries);
-
-    auto g = g_uri.empty() ? ColMajorMatrix<int>(0,0) : tdbColMajorMatrix<int>(g_uri);
-    // tdbColMajorMatrix<int> g(g_uri);
-
-    load_time.stop();
-    std::cout << load_time << std::endl;
-
-    if (!(size(db[0]) == size(q[0]))) {
-      throw std::runtime_error(
-          "vector sizes do not match " + std::to_string(size(db[0])) + ", " +
-          std::to_string(size(q[0])) + ", " + std::to_string(size(g[0])));
-    }
-
-    // std::vector<std::vector<int>> top_k(size(q), std::vector<int>(k, 0));
-    auto top_k = ColMajorMatrix<int>(k, q.num_cols());
-    std::cout << "Using " << args["--order"].asString() << std::endl;
-
-    /**
-     * vq: for each vector in the database, compare with each query vector
-     */
-    if (args["--order"].asString() == "vq") {
-      if (verbose) {
-        std::cout << "Using vq loop nesting for query" << std::endl;
-        if (hardway) {
-          std::cout << "Doing it the hard way" << std::endl;
-        }
-      }
-      query_vq(db, q, g, top_k, k, hardway, nthreads);
-    } else if (args["--order"].asString() == "qv") {
-      if (verbose) {
-        std::cout << "Using qv nesting for query" << std::endl;
-        if (hardway) {
-          std::cout << "Doing it the hard way" << std::endl;
-        }
-      }
-      query_qv(db, q, g, top_k, k, hardway, nthreads);
-    } else if (args["--order"].asString() == "gemm") {
-
-      if (verbose) {
-        std::cout << "Using gemm for query" << std::endl;
-      }
-
-      if (args["--blocked"].asBool()) {
-        std::cout << "Using blocked gemm for query" << std::endl;
-        blocked_query_gemm(db, q, g, top_k, k, hardway, nthreads);
-      } else {
-        query_gemm(db, q, g, top_k, k, hardway, nthreads);
-      }
-    } else {
-      std::cout << "Unknown ordering: " << args["--order"].asString()
-                << std::endl;
-      return 1;
-    }
-
-    if (args["--output_uri"]) {
-      auto ground_truth = ColMajorMatrix<int>(top_k.size(), top_k[0].size());
-      for (size_t i = 0; i < top_k.size(); ++i) {
-        for (size_t j = 0; j < top_k[i].size(); ++j) {
-          ground_truth(i, j) = top_k[j][i];
-        }
-      }
-      write_matrix(ground_truth, args["--output_uri"].asString());
-    }
-  } else {
-    std::cout << "Must specify either --db_file, --q_file, and --g_file or "
-                 "--db_uri, --q_uri, and --g_uri"
-              << std::endl;
-    return 1;
+  if (args["--output_uri"]) {
+    write_matrix(top_k, args["--output_uri"].asString());
   }
 }
