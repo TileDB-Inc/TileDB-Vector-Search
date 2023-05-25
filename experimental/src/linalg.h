@@ -64,6 +64,10 @@ extern bool global_verbose;
 extern bool global_debug;
 extern std::string global_region;
 
+template <class M>
+concept is_view = requires(M) {typename M::view_type;};
+
+
 /**
  * @brief A 1-D vector class that owns its storage.
  * @tparam T
@@ -529,6 +533,10 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   }
 
  public:
+   bool is_blocked() const noexcept {
+    return num_array_rows_ != this->num_rows() || num_array_cols_ != this->num_cols();
+   }
+
   /**
    * @brief Advance the view to the next row block of data.
    *
