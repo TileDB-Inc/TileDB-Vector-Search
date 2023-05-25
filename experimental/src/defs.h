@@ -223,12 +223,12 @@ auto get_top_k(const S& scores, int k, bool nth, int nthreads) {
     int q_start = n * q_block_size;
     int q_stop  = std::min<int>((n + 1) * q_block_size, num_queries);
 
-    futs.emplace_back(std::async(std::launch::async, [q_start, q_stop, &scores, &top_k, k]() {
+    futs.emplace_back(std::async(std::launch::async, [q_start, q_stop, &scores, &top_k, k, nth]() {
       std::vector<int> index(scores.num_rows());
 
       for (int j = q_start; j < q_stop; ++j) {
         std::iota(begin(index), end(index), 0);
-        get_top_k(scores[j], std::move(top_k[j]), index, k);
+        get_top_k(scores[j], std::move(top_k[j]), index, k, nth);
       }
     }));
   }
