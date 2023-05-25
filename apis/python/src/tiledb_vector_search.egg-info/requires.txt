@@ -1,2 +1,0 @@
-tiledb-cloud>=0.10.5
-tiledb>=0.15.2

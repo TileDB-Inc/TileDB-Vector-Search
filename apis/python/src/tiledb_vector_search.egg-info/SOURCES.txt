@@ -1,6 +1,0 @@
-MANIFEST.in
-pyproject.toml
-./README.md
-src/tiledb/vector_search/__init__.py
-src/tiledb/vector_search/ingestion.py
-src/tiledb/vector_search/version.py
