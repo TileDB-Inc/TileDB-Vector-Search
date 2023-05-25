@@ -36,7 +36,7 @@
 
 #include "algorithm.h"
 #include "concepts.h"
-#incdlue "scoring.h
+#include "scoring.h"
 #include "defs.h"
 #include "linalg.h"
 #include "timer.h"
@@ -396,49 +396,40 @@ auto blocked_gemm_query(DB& db, Q& q, size_t k, unsigned nthreads) {
   life_timer _outer { "Total time blocked_gemm_query" };
   using element = std::pair<float, unsigned>;
 
-  //@todo check if this is a good heuristic and if it is correct
-  auto block_db = true;
-  if (q.extent(1) > 2 * db.extent(1)) {
-    block_db = false;
+  const auto block_db = db.is_blocked();
+  const auto block_q = q.is_blocked();
+  if (block_db && block_q) {
+    throw std::runtime_error("Can't block both db and q");
   }
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
-  auto                  _score_data = raveled(scores);
   std::vector<fixed_min_set<element>> min_scores(size(q), fixed_min_set<element>(k));
 
-  int M = db.num_cols();
-  int N = q.num_cols();
-  int K = db.num_rows();
-
-  assert(db.num_rows() == q.num_rows());
-
-  std::vector<float> alpha(M, 0.0f);
-  std::vector<float> beta(N, 0.0f);
-  std::vector<float> alpha_ones(N, 1.0f);
-  std::vector<float> beta_ones(M, 1.0f);
-
   for (;;) {
-    cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, M, N, K, -2.0, &db(0, 0), K, &q(0, 0), K, 0.0, &scores(0, 0), M);
+    gemm_scores(db, q, scores, nthreads);
 
-    mat_col_sum(db, alpha, [](auto a) { return a * a; });    // @todo optimize somehow
-    mat_col_sum(q, beta, [](auto a) { return a * a; });
+    auto par = stdx::execution::indexed_parallel_policy { nthreads };
+    stdx::range_for_each(std::move(par), scores, [&](auto&& q_vec, auto&& n = 0, auto&& i = 0) {
 
-    cblas_sger(CblasColMajor, M, N, 1.0, &alpha[0], 1, &alpha_ones[0], 1, &scores(0, 0), M);
-    cblas_sger(CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, &scores(0, 0), M);
-
-    stdx::execution::parallel_policy par { nthreads };
-    stdx::for_each(std::move(par), begin(_score_data), end(_score_data), [](auto& a) { a = sqrt(a); });
-
-    for (int i = 0; i < scores.num_cols(); ++i) {
-      for (int j = 0; j < scores.num_rows(); ++j) {
-        min_scores[j].insert({ scores(j, i), i + db.offset() });
+      if (block_db) {
+        for (int j = 0; j < scores.num_rows(); ++j) {
+          min_scores[i].insert({ scores(j, i), j + db.offset() });
+        }
+      } else if (block_q) {
+        for (int j = 0; j < scores.num_rows(); ++j) {
+          min_scores[i + q.offset()].insert({ scores(j, i), j });
+        }
+      } else {
+        for (int j = 0; j < scores.num_rows(); ++j) {
+          min_scores[i].insert({ scores(j, i), j });
+        }
       }
-    }
+    });
 
-    bool done = false;
+    bool done = true;
     if (block_db) {
       done = !db.advance();
-    } else {
+    } else if (block_q) {
       done = !q.advance();
     }
     if (done) {

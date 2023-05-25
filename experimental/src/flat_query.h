@@ -340,41 +340,29 @@ void query_vq_ew(const DB& db, const Q& q, const G& g, TK& top_k, int k, unsigne
   }
 }
 
+
 /**
- * Query using dense linear algebra.  This uses the vector generalization of
- * the identity (a - b) * (a - b) = a * a + b * b - 2 * a * b .
- * We use outer products to compute the a * a and b * b terms, and then use
- * a gemm to compute the a * b term.
- *
- * This is extremely fast for large numbers of query vectors, but is not as fast
- * as vq_ew for small numbers of query vectors.
+ * Query using linear algebra (GEMM). This is the fastest method.
+ * @tparam DB
+ * @tparam Q
+ * @param db
+ * @param q
+ * @param k
+ * @param nth
+ * @param nthreads
+ * @return
  */
-template <class DB, class Q, class TK>
-auto gemm_compute_scores(const DB& db, const Q& q, TK& top_k, int k, size_t nthreads) {
-  life_timer _outer { "Total time gemm" };
-
+template <class DB, class Q>
+auto query_gemm(const DB& db, const Q& q, int k, bool nth, size_t nthreads) {
+  life_timer _outer { "Total time query gemm" };
   auto scores = gemm_scores(db, q, nthreads);
-  get_top_k(scores, top_k, k, size(q), size(db), nthreads);
-
-  return scores;
+  auto top_k = get_top_k(scores, k, nth, nthreads);
+  return top_k;
 }
 
-template <class DB, class Q, class G, class TK>
-void query_gemm(const DB& db, const Q& q, const G& g, TK& top_k, int k, [[maybe_unused]] bool hw, size_t nthreads) {
-  auto scores = gemm_compute_scores(db, q, top_k, k, nthreads);
-  if (g.num_rows() > 0) {
-    life_timer _ { "Checking results" };
-
-    size_t size_q = size(q);
-    for (size_t j = 0; j < size_q; ++j) {
-      verify_top_k(scores[j], top_k[j], g[j], k, j);
-    }
-  }
-}
-
-template <class DB, class Q, class TK>
-auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, size_t nthreads) {
-  life_timer _outer { "Total time gemm" };
+template <class DB, class Q>
+auto blocked_query_gemm(DB& db, Q& q, int k, bool nth, size_t nthreads) {
+  life_timer _outer { "Total time blocked query gemm" };
 
   using element = std::pair<float, unsigned>;
 
@@ -392,25 +380,23 @@ auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, size_t nthreads
 
     gemm_scores(db, q, scores, nthreads);
 
-    { // life_timer _ { "inserting" };
-      auto par = stdx::execution::indexed_parallel_policy { nthreads };
-      stdx::range_for_each(std::move(par), scores, [&](auto&& q_vec, auto&& n = 0, auto&& i = 0) {
+    auto par = stdx::execution::indexed_parallel_policy { nthreads };
+    stdx::range_for_each(std::move(par), scores, [&](auto&& q_vec, auto&& n = 0, auto&& i = 0) {
 
-        if (block_db) {
-          for (int j = 0; j < scores.num_rows(); ++j) {
-            min_scores[i].insert({ scores(j, i), j + db.offset() });
-          }
-        } else if (block_q) {
-          for (int j = 0; j < scores.num_rows(); ++j) {
-            min_scores[i + q.offset()].insert({ scores(j, i), j });
-          }
-        } else {
-          for (int j = 0; j < scores.num_rows(); ++j) {
-            min_scores[i].insert({ scores(j, i), j });
-          }
+      if (block_db) {
+        for (int j = 0; j < scores.num_rows(); ++j) {
+          min_scores[i].insert({ scores(j, i), j + db.offset() });
         }
-      });
-    }
+      } else if (block_q) {
+        for (int j = 0; j < scores.num_rows(); ++j) {
+          min_scores[i + q.offset()].insert({ scores(j, i), j });
+        }
+      } else {
+        for (int j = 0; j < scores.num_rows(); ++j) {
+          min_scores[i].insert({ scores(j, i), j });
+        }
+      }
+    });
 
     bool done = true;
     if  (block_db) {
@@ -423,48 +409,14 @@ auto blocked_gemm_compute_scores(DB& db, Q& q, TK& top_k, int k, size_t nthreads
     }
   }
 
-  {
-    life_timer _ { "Sorting" };
-    for (int j = 0; j < min_scores.size(); ++j) {
-      std::sort(min_scores[j].begin(), min_scores[j].end());
-      std::transform(min_scores[j].begin(), min_scores[j].end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
-    }
+  ColMajorMatrix<size_t> top_k(k, q.num_cols());
+  for (int j = 0; j < min_scores.size(); ++j) {
+    // @todo sort_heap
+    std::sort(min_scores[j].begin(), min_scores[j].end());
+    std::transform(min_scores[j].begin(), min_scores[j].end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
   }
 
-  return scores;
+  return top_k;
 }
 
-#if 0
-template <class DB, class Q, class G, class TK>
-void blocked_query_gemm(DB& db, Q& q, const G& g, TK& top_k, int k, [[maybe_unused]] bool hw, size_t nthreads) {
-  auto scores = blocked_gemm_compute_scores(db, q, top_k, k, nthreads);
-  if (g.num_rows() > 0) {
-    life_timer _ { "Checking results" };
-
-    size_t size_q = size(q);
-    for (size_t j = 0; j < size_q; ++j) {
-      // verify_top_k(scores[j], top_k[j], g[j], k, j);
-      std::sort(begin(g[j]), begin(g[j]) + k);
-      std::sort(begin(top_k[j]), end(top_k[j]));
-      if (!std::equal(begin(top_k[j]), end(top_k[j]), g[j])) {
-        std::cout << "Solution vector " << top_k[j] << " != " << g[j] << std::endl;
-      }
-    }
-  }
-}
-#else
-
-template <class DB, class Q, class G, class TK>
-void blocked_query_gemm(DB& db, Q& q, const G& g, TK& top_k, int k, [[maybe_unused]] bool hw, size_t nthreads) {
-  auto scores = blocked_gemm_compute_scores(db, q, top_k, k, nthreads);
-  if (g.num_rows() > 0) {
-    life_timer _ { "Checking results" };
-
-    size_t size_q = size(q);
-    for (size_t j = 0; j < size_q; ++j) {
-      verify_top_k_index(top_k[j], g[j], k, j);
-    }
-  }
-}
-#endif
 #endif    // TDB_FLAT_QUERY_H
