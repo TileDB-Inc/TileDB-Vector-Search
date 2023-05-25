@@ -54,6 +54,7 @@
 
 #include <iostream>
 #include <memory>
+#include <fstream>
 #include <numeric>
 #include <random>
 #include <string>
@@ -67,6 +68,7 @@
 #include "defs.h"
 #include "ivf_query.h"
 #include "linalg.h"
+#include "stats.h"
 #include "timer.h"
 #include "utils.h"
 
@@ -75,8 +77,9 @@ using json = nlohmann::json;
 
 bool        global_verbose = false;
 bool        global_debug   = false;
-bool        global_dryrun  = false;
 std::string global_region;
+
+
 
 static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
@@ -84,7 +87,7 @@ Usage:
     tdb (-h | --help)
     tdb   --db_uri URI --centroids_uri URI --index_uri URI --part_uri URI --id_uri URI
          [--output_uri URI] [--query_uri URI] [--groundtruth_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
-         [--k NN] [--cluster NN] [--nthreads N] [--region REGION] [--nth] [-d | -v]
+         [--k NN] [--cluster NN] [--nthreads N] [--region REGION] [--nth] [--log FILE] [-d | -v]
 
 Options:
     -h, --help            show this screen
@@ -103,6 +106,7 @@ Options:
     --cluster NN          number of clusters to use [default: 100]
     --blocksize NN        number of vectors to process in a block (0 = all) [default: 0]
     --nth                 use nth_element for top k [default: false]
+    --log FILE            log info to FILE (- for stdout)
     --region REGION       AWS S3 region [default: us-east-1]
     -d, --debug           run in debug mode [default: false]
     -v, --verbose         run in verbose mode [default: false]
@@ -281,16 +285,27 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  auto program_args = args_log(args);
-  auto config = config_log(argv[0]);
+  if (args["--log"]) {
 
-  json log_log = {
-    {"Config", config },
-    {"Args", program_args},
-    {"Recalls", recalls}
-  };
+    auto program_args = args_log(args);
+    auto config       = config_log(argv[0]);
 
-  std::cout << log_log.dump(2) << std::endl;
+    json log_log = {
+      {"Config",   config      },
+      { "Args",    program_args},
+      { "Recalls", recalls     },
+      {"Times", get_timings()  }
+    };
+
+    if (args["--log"].asString() == "-") {
+      std::cout << log_log.dump(2) << std::endl;
+    } else {
+      std::ofstream outfile(args["--log"].asString(), std::ios_base::app);
+      outfile << log_log.dump(2) << std::endl;
+    }
+
+    std::cout << log_log.dump(2) << std::endl;
+  }
 }
 
 // recalls = {}
