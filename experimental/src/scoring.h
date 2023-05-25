@@ -58,14 +58,14 @@
  * This is extremely fast for large numbers of query vectors, but is not as fast
  * as vq_ew for small numbers of query vectors.
  */
-template <class Matrix1, class Matrix2, class Matrix3> // = typename Matrix1::view_type>
+template <class Matrix1, class Matrix2, class Matrix3>    // = typename Matrix1::view_type>
 void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads) {
 
   static_assert(std::is_same<typename Matrix1::value_type, typename Matrix2::value_type>::value,
                 "Matrix1 and Matrix2 must have the same value_type");
   using T = typename Matrix1::value_type;
 
-  size_t M = A.num_cols();  // Vector dimension
+  size_t M = A.num_cols();    // Vector dimension
   size_t N = B.num_cols();
   size_t K = A.num_rows();
 
@@ -73,7 +73,7 @@ void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthrea
   std::vector<T> beta(N, 0.0f);
   std::vector<T> alpha_ones(N, 1.0f);
   std::vector<T> beta_ones(M, 1.0f);
-  auto raveled_C = raveled(C);
+  auto           raveled_C = raveled(C);
 
   cblas_sgemm(CblasColMajor, CblasTrans, CblasNoTrans, M, N, K, -2.0, A.data(), K, B.data(), K, 0.0, C.data(), M);
 
@@ -90,9 +90,9 @@ void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthrea
 template <class Matrix1, class Matrix2>
 auto gemm_scores(const Matrix1& A, const Matrix2& B, int nthreads) {
   using View = typename Matrix1::view_type;
-  auto C = View (A.num_cols(), B.num_cols());
+  auto C     = View(A.num_cols(), B.num_cols());
   gemm_scores(A, B, C, nthreads);
   return C;
 }
 
-#endif // TDB_SCORING_H
+#endif    // TDB_SCORING_H

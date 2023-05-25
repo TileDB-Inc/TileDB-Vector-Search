@@ -58,14 +58,14 @@
 namespace stdx {
 using namespace Kokkos;
 using namespace Kokkos::Experimental;
-}  // namespace stdx
+}    // namespace stdx
 
-extern bool global_verbose;
-extern bool global_debug;
+extern bool        global_verbose;
+extern bool        global_debug;
 extern std::string global_region;
 
 template <class M>
-concept is_view = requires(M) {typename M::view_type;};
+concept is_view = requires(M) { typename M::view_type; };
 
 
 /**
@@ -79,32 +79,26 @@ class Vector : public std::span<T> {
   using Base = std::span<T>;
   using Base::Base;
 
- public:
+public:
   using index_type = typename Base::difference_type;
-  using size_type = typename Base::size_type;
-  using reference = typename Base::reference;
+  using size_type  = typename Base::size_type;
+  using reference  = typename Base::reference;
 
- private:
-  size_type nrows_;
+private:
+  size_type            nrows_;
   std::unique_ptr<T[]> storage_;
 
- public:
-  explicit Vector(index_type nrows) noexcept
-      : nrows_(nrows)
-      , storage_{new T[nrows_]} {
-    Base::operator=(Base{storage_.get(), nrows_});
+public:
+  explicit Vector(index_type nrows) noexcept : nrows_(nrows), storage_ { new T[nrows_] } {
+    Base::operator=(Base { storage_.get(), nrows_ });
   }
 
-  Vector(index_type nrows, std::unique_ptr<T[]> storage)
-      : nrows_(nrows)
-      , storage_{std::move(storage)} {
-    Base::operator=(Base{storage_.get(), nrows_});
+  Vector(index_type nrows, std::unique_ptr<T[]> storage) : nrows_(nrows), storage_ { std::move(storage) } {
+    Base::operator=(Base { storage_.get(), nrows_ });
   }
 
-  Vector(Vector&& rhs)
-      : nrows_{rhs.nrows_}
-      , storage_{std::move(rhs.storage_)} {
-    Base::operator=(Base{storage_.get(), nrows_});
+  Vector(Vector&& rhs) : nrows_ { rhs.nrows_ }, storage_ { std::move(rhs.storage_) } {
+    Base::operator=(Base { storage_.get(), nrows_ });
   }
 
   constexpr reference operator()(size_type idx) const noexcept {
@@ -134,55 +128,41 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
   // using Base::Base;
 
- public:
+public:
   using layout_policy = LayoutPolicy;
-  using index_type = typename Base::index_type;
-  using size_type = typename Base::size_type;
-  using reference = typename Base::reference;
+  using index_type    = typename Base::index_type;
+  using size_type     = typename Base::size_type;
+  using reference     = typename Base::reference;
 
- protected:
-  size_type nrows_{0};
-  size_type ncols_{0};
+protected:
+  size_type nrows_ { 0 };
+  size_type ncols_ { 0 };
 
- private:
+private:
   std::unique_ptr<T[]> storage_;
 
- public:
+public:
   Matrix() noexcept = default;
 
-  Matrix(
-      size_type nrows,
-      size_type ncols,
-      LayoutPolicy policy = LayoutPolicy()) noexcept
-      : nrows_(nrows)
-      , ncols_(ncols)
-      , storage_{new T[nrows_ * ncols_]} {
-    Base::operator=(Base{storage_.get(), nrows_, ncols_});
+  Matrix(size_type nrows, size_type ncols, LayoutPolicy policy = LayoutPolicy()) noexcept
+      : nrows_(nrows), ncols_(ncols), storage_ { new T[nrows_ * ncols_] } {
+    Base::operator=(Base { storage_.get(), nrows_, ncols_ });
   }
 
-  Matrix(
-      std::unique_ptr<T[]>&& storage,
-      size_type nrows,
-      size_type ncols,
-      LayoutPolicy policy = LayoutPolicy()) noexcept
-      : nrows_(nrows)
-      , ncols_(ncols)
-      , storage_{std::move(storage)} {
-    Base::operator=(Base{storage_.get(), nrows_, ncols_});
+  Matrix(std::unique_ptr<T[]>&& storage, size_type nrows, size_type ncols, LayoutPolicy policy = LayoutPolicy()) noexcept
+      : nrows_(nrows), ncols_(ncols), storage_ { std::move(storage) } {
+    Base::operator=(Base { storage_.get(), nrows_, ncols_ });
   }
 
-  Matrix(Matrix&& rhs) noexcept
-      : nrows_{rhs.nrows_}
-      , ncols_{rhs.ncols_}
-      , storage_{std::move(rhs.storage_)} {
-    Base::operator=(Base{storage_.get(), nrows_, ncols_});
+  Matrix(Matrix&& rhs) noexcept : nrows_ { rhs.nrows_ }, ncols_ { rhs.ncols_ }, storage_ { std::move(rhs.storage_) } {
+    Base::operator=(Base { storage_.get(), nrows_, ncols_ });
   }
 
   auto& operator=(Matrix&& rhs) noexcept {
-    nrows_ = rhs.nrows_;
-    ncols_ = rhs.ncols_;
+    nrows_   = rhs.nrows_;
+    ncols_   = rhs.ncols_;
     storage_ = std::move(rhs.storage_);
-    Base::operator=(Base{storage_.get(), nrows_, ncols_});
+    Base::operator=(Base { storage_.get(), nrows_, ncols_ });
     return *this;
   }
 
@@ -250,7 +230,6 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   constexpr auto offset() const noexcept {
     return 0UL;
   }
-
 };
 
 /**
@@ -275,17 +254,17 @@ auto raveled(Matrix<T, LayoutPolicy, I>& m) {
 
 template <class LayoutPolicy>
 struct order_traits {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
+  constexpr static auto order { TILEDB_ROW_MAJOR };
 };
 
 template <>
 struct order_traits<stdx::layout_right> {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
+  constexpr static auto order { TILEDB_ROW_MAJOR };
 };
 
 template <>
 struct order_traits<stdx::layout_left> {
-  constexpr static auto order{TILEDB_COL_MAJOR};
+  constexpr static auto order { TILEDB_COL_MAJOR };
 };
 
 template <class LayoutPolicy>
@@ -317,34 +296,35 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   using Base = Matrix<T, LayoutPolicy, I>;
   using Base::Base;
 
- public:
+public:
   using index_type = typename Base::index_type;
-  using size_type = typename Base::size_type;
-  using reference = typename Base::reference;
+  using size_type  = typename Base::size_type;
+  using reference  = typename Base::reference;
 
   using view_type = Base;
 
-  constexpr static auto matrix_order_{order_v<LayoutPolicy>};
+  constexpr static auto matrix_order_ { order_v<LayoutPolicy> };
 
- private:
+private:
   // @todo: Make this configurable
-  std::map<std::string, std::string> init_{
-      {"vfs.s3.region", global_region.c_str()}};
-  tiledb::Config config_{init_};
-  tiledb::Context ctx_{config_};
+  std::map<std::string, std::string> init_ {
+    {"vfs.s3.region", global_region.c_str()}
+  };
+  tiledb::Config  config_ { init_ };
+  tiledb::Context ctx_ { config_ };
 
-  tiledb::Array array_;
-  tiledb::ArraySchema schema_;
+  tiledb::Array              array_;
+  tiledb::ArraySchema        schema_;
   std::unique_ptr<uint8_t[]> tmp_storage_;
-  size_t num_array_rows_{0};
-  size_t num_array_cols_{0};
+  size_t                     num_array_rows_ { 0 };
+  size_t                     num_array_cols_ { 0 };
 
   std::tuple<index_type, index_type> row_view_;
   std::tuple<index_type, index_type> col_view_;
-  index_type row_offset_{0};
-  index_type col_offset_{0};
+  index_type                         row_offset_ { 0 };
+  index_type                         col_offset_ { 0 };
 
- public:
+public:
   /**
    * @brief Construct a new tdbMatrix object, limited to `num_elts` vectors.
    * In this case, the `Matrix` is row-major, so the number of vectors is
@@ -393,8 +373,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param num_rows
    * @param num_cols
    */
-  tdbMatrix(const std::string& uri, size_t num_rows, size_t num_cols) noexcept
-      : tdbMatrix(uri, 0, num_rows, 0, num_cols) {
+  tdbMatrix(const std::string& uri, size_t num_rows, size_t num_cols) noexcept : tdbMatrix(uri, 0, num_rows, 0, num_cols) {
   }
 
   /**
@@ -403,23 +382,15 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param rows pair of row indices indicating begin and end of view
    * @param cols pair of column indices indicating begin and end of view
    */
-  tdbMatrix(
-      const std::string& uri,
-      std::tuple<size_t, size_t> rows,
-      std::tuple<size_t, size_t> cols) noexcept
-      : tdbMatrix(
-            uri,
-            std::get<0>(rows),
-            std::get<1>(rows),
-            std::get<0>(cols),
-            std::get<1>(cols)) {
+  tdbMatrix(const std::string& uri, std::tuple<size_t, size_t> rows, std::tuple<size_t, size_t> cols) noexcept
+      : tdbMatrix(uri, std::get<0>(rows), std::get<1>(rows), std::get<0>(cols), std::get<1>(cols)) {
   }
 
- private:
+private:
   using row_domain_type = int32_t;
   using col_domain_type = int32_t;
 
-    /**
+  /**
    * @brief General constructor.  Read a view of the array, delimited by the
    * given row and column indices.
    *
@@ -431,15 +402,9 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    *
    * @todo Make this compatible with various schemas we are using
    */
-  tdbMatrix(
-      const std::string& uri,
-      size_t row_begin,
-      size_t row_end,
-      size_t col_begin,
-      size_t col_end) noexcept
-      : array_{ctx_, uri, TILEDB_READ}
-      , schema_{array_.schema()} {
-    life_timer _{"read matrix " + uri};
+  tdbMatrix(const std::string& uri, size_t row_begin, size_t row_end, size_t col_begin, size_t col_end) noexcept
+      : array_ { ctx_, uri, TILEDB_READ }, schema_ { array_.schema() } {
+    life_timer _ { "read matrix " + uri };
 
     auto cell_order = schema_.cell_order();
     auto tile_order = schema_.tile_order();
@@ -450,17 +415,13 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
     const size_t attr_idx = 0;
 
-    auto domain_{schema_.domain()};
+    auto domain_ { schema_.domain() };
 
-    auto array_rows_{domain_.dimension(0)};
-    auto array_cols_{domain_.dimension(1)};
+    auto array_rows_ { domain_.dimension(0) };
+    auto array_cols_ { domain_.dimension(1) };
 
-    num_array_rows_ =
-        (array_rows_.template domain<row_domain_type>().second -
-         array_rows_.template domain<row_domain_type>().first + 1);
-    num_array_cols_ =
-        (array_cols_.template domain<col_domain_type>().second -
-         array_cols_.template domain<col_domain_type>().first + 1);
+    num_array_rows_ = (array_rows_.template domain<row_domain_type>().second - array_rows_.template domain<row_domain_type>().first + 1);
+    num_array_cols_ = (array_cols_.template domain<col_domain_type>().second - array_cols_.template domain<col_domain_type>().first + 1);
 
     if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
         (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {
@@ -479,8 +440,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     std::get<1>(row_view_) = row_end;
     std::get<0>(col_view_) = col_begin;
     std::get<1>(col_view_) = col_end;
-    row_offset_ = row_begin;
-    col_offset_ = col_begin;
+    row_offset_            = row_begin;
+    col_offset_            = col_begin;
 
     auto num_rows = row_end - row_begin;
     auto num_cols = col_end - col_begin;
@@ -492,10 +453,10 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     auto data_ = std::unique_ptr<T[]>(new T[num_rows * num_cols]);
 #endif
 
-    auto attr_num{schema_.attribute_num()};
+    auto attr_num { schema_.attribute_num() };
     auto attr = schema_.attribute(attr_idx);
 
-    std::string attr_name = attr.name();
+    std::string       attr_name = attr.name();
     tiledb_datatype_t attr_type = attr.type();
 
     // Hard-code uint8_t for now.
@@ -509,12 +470,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     }
 
     // Create a subarray that reads the array up to the specified subset.
-    std::vector<int32_t> subarray_vals = {
-        (int32_t)row_begin,
-        (int32_t)row_end - 1,
-        (int32_t)col_begin,
-        (int32_t)col_end - 1};
-    tiledb::Subarray subarray(ctx_, array_);
+    std::vector<int32_t> subarray_vals = { (int32_t)row_begin, (int32_t)row_end - 1, (int32_t)col_begin, (int32_t)col_end - 1 };
+    tiledb::Subarray     subarray(ctx_, array_);
     subarray.set_subarray(subarray_vals);
 
     auto layout_order = cell_order;
@@ -522,15 +479,11 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     tiledb::Query query(ctx_, array_);
 
     if (attr_type == tiledb::impl::type_to_tiledb<T>::tiledb_type) {
-      query.set_subarray(subarray)
-          .set_layout(layout_order)
-          .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
+      query.set_subarray(subarray).set_layout(layout_order).set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
       query.submit();
     } else {
       auto num_bytes = tiledb_datatype_size(attr_type);
-      query.set_subarray(subarray)
-          .set_layout(layout_order)
-          .set_data_buffer(attr_name, tmp_storage_.get(), num_rows * num_cols * num_bytes);
+      query.set_subarray(subarray).set_layout(layout_order).set_data_buffer(attr_name, tmp_storage_.get(), num_rows * num_cols * num_bytes);
       query.submit();
 
       assert(tiledb::Query::Status::COMPLETE == query.query_status());
@@ -542,13 +495,13 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       std::swap(num_rows, num_cols);
     }
 
-    Base::operator=(Base{std::move(data_), num_rows, num_cols});
+    Base::operator=(Base { std::move(data_), num_rows, num_cols });
   }
 
- public:
-   bool is_blocked() const noexcept {
+public:
+  bool is_blocked() const noexcept {
     return num_array_rows_ != this->num_rows() || num_array_cols_ != this->num_cols();
-   }
+  }
 
   /**
    * @brief Advance the view to the next row block of data.
@@ -560,16 +513,16 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @todo Make this an iterator.
    */
   bool advance(size_t num_elts = 0)
-    // requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+  // requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
   {
     // @todo attr_idx, attr_name, and cell_order / layout_order should be
     // members of the class
-    size_t attr_idx = 0;
-    auto attr = schema_.attribute(attr_idx);
-    std::string attr_name = attr.name();
-    tiledb_datatype_t attr_type = attr.type();
-    auto cell_order = schema_.cell_order();
-    auto layout_order = cell_order;
+    size_t            attr_idx     = 0;
+    auto              attr         = schema_.attribute(attr_idx);
+    std::string       attr_name    = attr.name();
+    tiledb_datatype_t attr_type    = attr.type();
+    auto              cell_order   = schema_.cell_order();
+    auto              layout_order = cell_order;
 
     if (layout_order == TILEDB_ROW_MAJOR) {
 
@@ -602,12 +555,9 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     }
 
     // Create a subarray that reads the array with the specified view
-    std::vector<int32_t> subarray_vals = {
-        (int32_t)std::get<0>(row_view_),
-        (int32_t)std::get<1>(row_view_) - 1,
-        (int32_t)std::get<0>(col_view_),
-        (int32_t)std::get<1>(col_view_) - 1};
-    tiledb::Subarray subarray(ctx_, array_);
+    std::vector<int32_t> subarray_vals = { (int32_t)std::get<0>(row_view_), (int32_t)std::get<1>(row_view_) - 1,
+                                           (int32_t)std::get<0>(col_view_), (int32_t)std::get<1>(col_view_) - 1 };
+    tiledb::Subarray     subarray(ctx_, array_);
     subarray.set_subarray(subarray_vals);
 
     tiledb::Query query(ctx_, array_);
@@ -615,11 +565,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     if (attr_type == tiledb::impl::type_to_tiledb<T>::tiledb_type) {
       query.set_subarray(subarray)
           .set_layout(layout_order)
-          .set_data_buffer(
-              attr_name,
-              this->data(),
-              (std::get<1>(row_view_) - std::get<0>(row_view_)) *
-                  (std::get<1>(col_view_) - std::get<0>(col_view_)));
+          .set_data_buffer(attr_name, this->data(),
+                           (std::get<1>(row_view_) - std::get<0>(row_view_)) * (std::get<1>(col_view_) - std::get<0>(col_view_)));
       query.submit();
     } else {
       auto num_bytes = tiledb_datatype_size(attr_type);
@@ -636,16 +583,16 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   }
 
   bool advance(size_t num_elts = 0)
-    // requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      requires(false)
+      // requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(false)
   {
     // @todo attr_idx, attr_name, and cell_order / layout_order should be
     // members of the class
-    size_t attr_idx = 0;
-    auto attr = schema_.attribute(attr_idx);
-    std::string attr_name = attr.name();
-    auto cell_order = schema_.cell_order();
-    auto layout_order = cell_order;
+    size_t      attr_idx     = 0;
+    auto        attr         = schema_.attribute(attr_idx);
+    std::string attr_name    = attr.name();
+    auto        cell_order   = schema_.cell_order();
+    auto        layout_order = cell_order;
 
     if (layout_order == TILEDB_ROW_MAJOR) {
       if (num_array_rows_ <= std::get<1>(row_view_)) {
@@ -674,22 +621,16 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     }
 
     // Create a subarray that reads the array with the specified view
-    std::vector<int32_t> subarray_vals = {
-        (int32_t)std::get<0>(row_view_),
-        (int32_t)std::get<1>(row_view_) - 1,
-        (int32_t)std::get<0>(col_view_),
-        (int32_t)std::get<1>(col_view_) - 1};
-    tiledb::Subarray subarray(ctx_, array_);
+    std::vector<int32_t> subarray_vals = { (int32_t)std::get<0>(row_view_), (int32_t)std::get<1>(row_view_) - 1,
+                                           (int32_t)std::get<0>(col_view_), (int32_t)std::get<1>(col_view_) - 1 };
+    tiledb::Subarray     subarray(ctx_, array_);
     subarray.set_subarray(subarray_vals);
 
     tiledb::Query query(ctx_, array_);
     query.set_subarray(subarray)
         .set_layout(layout_order)
-        .set_data_buffer(
-            attr_name,
-            this->data(),
-            (std::get<1>(row_view_) - std::get<0>(row_view_)) *
-                (std::get<1>(col_view_) - std::get<0>(col_view_)));
+        .set_data_buffer(attr_name, this->data(),
+                         (std::get<1>(row_view_) - std::get<0>(row_view_)) * (std::get<1>(col_view_) - std::get<0>(col_view_)));
     query.submit();
 
     return true;
@@ -708,10 +649,10 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     return col_offset_;
   }
 
-    ~tdbMatrix() noexcept {
-      array_.close();
-    }
-  };
+  ~tdbMatrix() noexcept {
+    array_.close();
+  }
+};
 
 /**
  * Convenience class for row-major matrices.
@@ -734,42 +675,42 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
     std::cerr << "# Writing Matrix: " << uri << std::endl;
   }
 
-  life_timer _{"write matrix " + uri};
+  life_timer _ { "write matrix " + uri };
 
   // Create context
-  std::map<std::string, std::string> init_{
-      {"vfs.s3.region", global_region.c_str()}};
-  tiledb::Config config_{init_};
-  tiledb::Context ctx{config_};
+  std::map<std::string, std::string> init_ {
+    {"vfs.s3.region", global_region.c_str()}
+  };
+  tiledb::Config  config_ { init_ };
+  tiledb::Context ctx { config_ };
 
   // @todo: make this a parameter
-  size_t num_parts = 10;
-  size_t row_extent = std::max<size_t>(
-      (A.num_rows() + num_parts - 1) / num_parts, A.num_rows() >= 2 ? 2 : 1);
-  size_t col_extent = std::max<size_t>(
-      (A.num_cols() + num_parts - 1) / num_parts, A.num_cols() >= 2 ? 2 : 1);
+  size_t num_parts  = 10;
+  size_t row_extent = std::max<size_t>((A.num_rows() + num_parts - 1) / num_parts, A.num_rows() >= 2 ? 2 : 1);
+  size_t col_extent = std::max<size_t>((A.num_cols() + num_parts - 1) / num_parts, A.num_cols() >= 2 ? 2 : 1);
 
   tiledb::Domain domain(ctx);
   domain
-      .add_dimension(tiledb::Dimension::create<int>(
-          ctx, "rows", {{0, (int)A.num_rows() - 1}}, row_extent))
-      .add_dimension(tiledb::Dimension::create<int>(
-          ctx, "cols", {{0, (int)A.num_cols() - 1}}, col_extent));
+      .add_dimension(tiledb::Dimension::create<int>(ctx, "rows",
+                                                    {
+                                                        {0, (int)A.num_rows() - 1}
+  },
+                                                    row_extent))
+      .add_dimension(tiledb::Dimension::create<int>(ctx, "cols", { { 0, (int)A.num_cols() - 1 } }, col_extent));
 
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
 
-  auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
-                   TILEDB_ROW_MAJOR :
-                   TILEDB_COL_MAJOR;
-  schema.set_domain(domain).set_order({{order, order}});
+  auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ? TILEDB_ROW_MAJOR : TILEDB_COL_MAJOR;
+  schema.set_domain(domain).set_order({
+      {order, order}
+  });
 
   schema.add_attribute(tiledb::Attribute::create<T>(ctx, "values"));
 
   tiledb::Array::create(uri, schema);
 
-  std::vector<int32_t> subarray_vals{
-      0, (int)A.num_rows() - 1, 0, (int)A.num_cols() - 1};
+  std::vector<int32_t> subarray_vals { 0, (int)A.num_rows() - 1, 0, (int)A.num_cols() - 1 };
 
   // Open array for writing
   tiledb::Array array(ctx, uri, TILEDB_WRITE);
@@ -779,10 +720,7 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
 
   tiledb::Query query(ctx, array);
 
-  query.set_layout(order)
-      .set_data_buffer(
-          "values", &A(0, 0), (int)A.num_rows() * (int)A.num_cols())
-      .set_subarray(subarray);
+  query.set_layout(order).set_data_buffer("values", &A(0, 0), (int)A.num_rows() * (int)A.num_cols()).set_subarray(subarray);
   query.submit();
 
   array.close();
@@ -798,29 +736,35 @@ void write_vector(std::vector<T>& v, const std::string& uri) {
     std::cerr << "# Writing std::vector: " << uri << std::endl;
   }
 
-  life_timer _{"write vector " + uri};
+  life_timer _ { "write vector " + uri };
 
   // Create context
-  std::map<std::string, std::string> init_{
-      {"vfs.s3.region", global_region.c_str()}};
-  tiledb::Config config_{init_};
-  tiledb::Context ctx{config_};
+  std::map<std::string, std::string> init_ {
+    {"vfs.s3.region", global_region.c_str()}
+  };
+  tiledb::Config  config_ { init_ };
+  tiledb::Context ctx { config_ };
 
-  size_t num_parts = 10;
-  size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
+  size_t         num_parts   = 10;
+  size_t         tile_extent = (size(v) + num_parts - 1) / num_parts;
   tiledb::Domain domain(ctx);
-  domain.add_dimension(tiledb::Dimension::create<int>(
-      ctx, "rows", {{0, (int)size(v) - 1}}, tile_extent));
+  domain.add_dimension(tiledb::Dimension::create<int>(ctx, "rows",
+                                                      {
+                                                          {0, (int)size(v) - 1}
+  },
+                                                      tile_extent));
 
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
-  schema.set_domain(domain).set_order({{TILEDB_ROW_MAJOR, TILEDB_ROW_MAJOR}});
+  schema.set_domain(domain).set_order({
+      {TILEDB_ROW_MAJOR, TILEDB_ROW_MAJOR}
+  });
 
   schema.add_attribute(tiledb::Attribute::create<T>(ctx, "values"));
 
   tiledb::Array::create(uri, schema);
   // Set the subarray to write into
-  std::vector<int32_t> subarray_vals{0, (int)size(v) - 1};
+  std::vector<int32_t> subarray_vals { 0, (int)size(v) - 1 };
 
   // Open array for writing
   tiledb::Array array(ctx, uri, TILEDB_WRITE);
@@ -829,9 +773,7 @@ void write_vector(std::vector<T>& v, const std::string& uri) {
   subarray.set_subarray(subarray_vals);
 
   tiledb::Query query(ctx, array);
-  query.set_layout(TILEDB_ROW_MAJOR)
-      .set_data_buffer("values", v)
-      .set_subarray(subarray);
+  query.set_layout(TILEDB_ROW_MAJOR).set_data_buffer("values", v).set_subarray(subarray);
   query.submit();
 
   array.close();
@@ -846,44 +788,42 @@ auto read_vector(const std::string& uri) {
     std::cerr << "# Reading std::vector: " << uri << std::endl;
   }
 
-  auto init_ = std::map<std::string, std::string>{
-      {"vfs.s3.region", global_region.c_str()}};
-  auto config_ = tiledb::Config{init_};
-  auto ctx_ = tiledb::Context{config_};
+  auto init_ = std::map<std::string, std::string> {
+    {"vfs.s3.region", global_region.c_str()}
+  };
+  auto config_ = tiledb::Config { init_ };
+  auto ctx_    = tiledb::Context { config_ };
 
-  auto array_ = tiledb::Array{ctx_, uri, TILEDB_READ};
+  auto array_  = tiledb::Array { ctx_, uri, TILEDB_READ };
   auto schema_ = array_.schema();
 
-  life_timer _{"read vector " + uri};
+  life_timer _ { "read vector " + uri };
   using domain_type = int32_t;
-  const size_t idx = 0;
+  const size_t idx  = 0;
 
-  auto domain_{schema_.domain()};
+  auto domain_ { schema_.domain() };
 
-  auto dim_num_{domain_.ndim()};
-  auto array_rows_{domain_.dimension(0)};
+  auto dim_num_ { domain_.ndim() };
+  auto array_rows_ { domain_.dimension(0) };
 
-  auto vec_rows_{
-      (array_rows_.template domain<domain_type>().second -
-       array_rows_.template domain<domain_type>().first + 1)};
+  auto vec_rows_ { (array_rows_.template domain<domain_type>().second - array_rows_.template domain<domain_type>().first + 1) };
 
-  auto attr_num{schema_.attribute_num()};
+  auto attr_num { schema_.attribute_num() };
   auto attr = schema_.attribute(idx);
 
-  std::string attr_name = attr.name();
+  std::string       attr_name = attr.name();
   tiledb_datatype_t attr_type = attr.type();
 
   // Create a subarray that reads the array up to the specified subset.
-  std::vector<int32_t> subarray_vals = {0, vec_rows_ - 1};
-  tiledb::Subarray subarray(ctx_, array_);
+  std::vector<int32_t> subarray_vals = { 0, vec_rows_ - 1 };
+  tiledb::Subarray     subarray(ctx_, array_);
   subarray.set_subarray(subarray_vals);
 
   // @todo: use something non-initializing
   std::vector<T> data_(vec_rows_);
 
   tiledb::Query query(ctx_, array_);
-  query.set_subarray(subarray).set_data_buffer(
-      attr_name, data_.data(), vec_rows_);
+  query.set_subarray(subarray).set_data_buffer(attr_name, data_.data(), vec_rows_);
 
   query.submit();
   array_.close();
@@ -910,10 +850,8 @@ std::string matrix_info(const Matrix& A, const std::string& msg = "") {
   if (!msg.empty()) {
     str += ": ";
   }
-  str += "Shape: ( " + std::to_string(A.num_rows()) + ", " +
-         std::to_string(A.num_cols()) + " )";
-  str += std::string(" Layout: ") +
-         (is_row_oriented(A) ? "row major" : "column major");
+  str += "Shape: ( " + std::to_string(A.num_rows()) + ", " + std::to_string(A.num_cols()) + " )";
+  str += std::string(" Layout: ") + (is_row_oriented(A) ? "row major" : "column major");
   return str;
 }
 
@@ -937,4 +875,4 @@ void debug_matrix(const Matrix& A, const std::string& msg = "") {
     std::cout << matrix_info(A, msg) << std::endl;
   }
 }
-#endif  // TDB_LINALG_H
+#endif    // TDB_LINALG_H

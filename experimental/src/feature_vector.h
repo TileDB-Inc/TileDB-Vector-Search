@@ -36,7 +36,7 @@
 namespace stdx {
 using namespace Kokkos;
 using namespace Kokkos::Experimental;
-}
+}    // namespace stdx
 
 template <typename T>
 using FeatureVector = std::span<T>;
@@ -45,32 +45,30 @@ template <class T>
 class FeatureVectorRange : public stdx::mdspan<T, stdx::dextents<size_t, 2>> {
   std::unique_ptr<T[]> storage_;
 
- public:
-
-
+public:
 };
 
 
 template <typename T>
 class FeatureVectorRangeReader {
 
- public:
+public:
   tiledb::Array open(const std::string& uri) {
     tiledb::Context ctx;
-    tiledb::Array array(ctx, uri, TILEDB_READ);
+    tiledb::Array   array(ctx, uri, TILEDB_READ);
     return array;
   }
 
-  FeatureVector<T> read(tiledb::Array& array, const std::string& attr_name, const std::vector<uint64_t>& start, const std::vector<uint64_t>& end) {
+  FeatureVector<T> read(tiledb::Array& array, const std::string& attr_name, const std::vector<uint64_t>& start,
+                        const std::vector<uint64_t>& end) {
     tiledb::Context ctx;
-    tiledb::Query query(ctx, array, TILEDB_READ);
+    tiledb::Query   query(ctx, array, TILEDB_READ);
     query.set_subarray(start, end);
     query.set_layout(TILEDB_ROW_MAJOR);
     query.set_buffer(attr_name, buffer);
     query.submit();
     return FeatureVector<T>(buffer, buffer_size);
   }
-
 };
 
 
@@ -79,16 +77,15 @@ class tdbFeatureVectorRange : FeatureVectorRange<T> {
 
   tiledb::Array array_;
 
- public:
-
-  tdbFeatureVectorRange(const std::string& uri) : array_(Reader::open(uri)) {}
-  ~tdbFeatureVectorRange() { array_.close(); }
-
+public:
+  tdbFeatureVectorRange(const std::string& uri) : array_(Reader::open(uri)) {
+  }
+  ~tdbFeatureVectorRange() {
+    array_.close();
+  }
 
 
   FeatureVector<T> read(const std::vector<uint64_t>& start, const std::vector<uint64_t>& end) {
     return Reader::read(array_, start, end);
   }
-
 };
-

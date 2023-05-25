@@ -44,31 +44,18 @@ enum class InitType { random, kmeanspp };
 enum class KMeansAlgorithm { lloyd, elkan };
 
 template <class T>
-auto ivf_flat(
-    const Matrix<T>& data,
-    unsigned nclusters,
-    InitType init_type,
-    unsigned nrepeats,
-    unsigned max_iter,
-    double tol,
-    size_t seed,
-    KMeansAlgorithm algorithm,
-    size_t nthreads) {
+auto ivf_flat(const Matrix<T>& data, unsigned nclusters, InitType init_type, unsigned nrepeats, unsigned max_iter, double tol, size_t seed,
+              KMeansAlgorithm algorithm, size_t nthreads) {
   Matrix<T> centroids(data.num_rows(), nclusters);
-  auto&& [lower, upper] = std::minmax_element(
-      data.data(), data.data() + data.num_rows() * data.num_cols());
+  auto&& [lower, upper] = std::minmax_element(data.data(), data.data() + data.num_rows() * data.num_cols());
 
   // initialize centroids randomly
-  std::random_device
-      rd;  // create a random device to seed the random number generator
-  std::mt19937 gen(rd());  // create a Mersenne Twister engine
-  std::uniform_real_distribution<T> dis(
-      *lower,
-      *upper);  // create a uniform integer distribution between 0 and 100
-  std::generate(
-      data.data(), data.data() + data.num_rows() * data.num_cols(), [&]() {
-        return dis(gen);
-      });  // use std::generate to fill the vector with random integers
+  std::random_device                rd;             // create a random device to seed the random number generator
+  std::mt19937                      gen(rd());      // create a Mersenne Twister engine
+  std::uniform_real_distribution<T> dis(*lower,
+                                        *upper);    // create a uniform integer distribution between 0 and 100
+  std::generate(data.data(), data.data() + data.num_rows() * data.num_cols(),
+                [&]() { return dis(gen); });        // use std::generate to fill the vector with random integers
 
   Matrix<size_t> top_k(1, data.num_cols());
 
@@ -96,4 +83,4 @@ auto ivf_flat(
   }
 }
 
-#endif  // TILEDB_IVF_INDEX_H
+#endif    // TILEDB_IVF_INDEX_H

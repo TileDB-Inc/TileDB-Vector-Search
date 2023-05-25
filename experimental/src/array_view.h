@@ -43,10 +43,9 @@
  * a portion of the TileDB array into memory at a time.  Loads additional
  * data from TileDB when requested.
  */
- struct tdbArrayView {
+struct tdbArrayView {
 
-   public:
-    tdbArrayView(const std::string& uri){}
-
-
+public:
+  tdbArrayView(const std::string& uri) {
+  }
 };

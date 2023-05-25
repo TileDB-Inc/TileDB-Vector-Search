@@ -34,9 +34,9 @@
 #ifndef TDB_UTILS_H
 #define TDB_UTILS_H
 
+#include <filesystem>
 #include <regex>
 #include <string>
-#include <filesystem>
 
 
 bool is_http_address(const std::string& filename) {
@@ -47,12 +47,11 @@ bool is_http_address(const std::string& filename) {
 bool is_s3_container(const std::string& filename) {
   std::regex awsRegex("^[a-zA-Z0-9]+\\.s3\\.amazonaws\\.com.*");
   std::regex s3Regex("^s3://.*");
-  return std::regex_match(filename, s3Regex) ||
-         std::regex_match(filename, s3Regex);
+  return std::regex_match(filename, s3Regex) || std::regex_match(filename, s3Regex);
 }
 
 std::string get_filename(const std::string& filename) {
-  std::regex fileRegex("^file://(.*)");
+  std::regex  fileRegex("^file://(.*)");
   std::smatch match;
 
   if (std::regex_match(filename, match, fileRegex) && match.size() > 1) {
@@ -64,8 +63,8 @@ std::string get_filename(const std::string& filename) {
 
 bool local_directory_exists(const std::string& path) {
   std::filesystem::path directoryPath(path);
-  auto a = std::filesystem::status(directoryPath);
-  auto b = std::filesystem::is_directory(directoryPath);
+  auto                  a = std::filesystem::status(directoryPath);
+  auto                  b = std::filesystem::is_directory(directoryPath);
 
   return std::filesystem::is_directory(directoryPath);
 }
@@ -82,10 +81,10 @@ bool subdirectory_exists(const std::string& path, const std::string& subdirector
 }
 
 bool local_file_exists(const std::string& filename) {
-  if (is_http_address(filename) || is_s3_container(filename) || is_local_directory(filename)){
+  if (is_http_address(filename) || is_s3_container(filename) || is_local_directory(filename)) {
     return false;
   }
-  auto fname = get_filename(filename);
+  auto                  fname = get_filename(filename);
   std::filesystem::path filePath(fname);
   return std::filesystem::is_regular_file(filePath);
 }
@@ -118,7 +117,7 @@ struct counter {
   using pointer           = void;
   using reference         = void;
 
-  T count {0};
+  T count { 0 };
 
   counter(T init = {}) : count(init) {
   }
@@ -143,7 +142,6 @@ struct counter {
     return *this;
   }
 };
-
 
 
 #endif

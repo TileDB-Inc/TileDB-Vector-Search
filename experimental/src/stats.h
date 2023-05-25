@@ -62,7 +62,7 @@ timing_data& get_timing_data_instance() {
   return instance;
 }
 
-timing_data& _timing_data {get_timing_data_instance()};
+timing_data& _timing_data { get_timing_data_instance() };
 
 void add_timing(const std::string& operation, double elapsedTime) {
   _timing_data.add_timing(operation, elapsedTime);
@@ -96,4 +96,4 @@ int main() {
   return 0;
 }
 #endif
-#endif //TDB_STATS_H
+#endif    //TDB_STATS_H

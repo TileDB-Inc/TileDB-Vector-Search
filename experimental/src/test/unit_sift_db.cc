@@ -29,11 +29,11 @@
  *
  */
 
+#include "../config.h"
+#include "../sift_db.h"
 #include <catch2/catch_all.hpp>
 #include <filesystem>
 #include <iostream>
-#include "../config.h"
-#include "../sift_db.h"
 
 TEST_CASE("sift_db: test test", "[sift_db]") {
 #include <filesystem>
@@ -47,9 +47,7 @@ TEST_CASE("sift_db: test test", "[sift_db]") {
 
 TEST_CASE("sift_db: test exceptions", "[sift_db]") {
   SECTION("file does not exist") {
-    CHECK_THROWS_WITH(
-        sift_db<float>("no_such_file", 128),
-        "file no_such_file does not exist");
+    CHECK_THROWS_WITH(sift_db<float>("no_such_file", 128), "file no_such_file does not exist");
   }
 }
 

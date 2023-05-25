@@ -29,8 +29,8 @@
  *
  */
 
-#include <catch2/catch_all.hpp>
 #include "../sift_array.h"
+#include <catch2/catch_all.hpp>
 
 TEST_CASE("sift_array: test test", "[sift_db]") {
   REQUIRE(true);
@@ -38,9 +38,7 @@ TEST_CASE("sift_array: test test", "[sift_db]") {
 
 TEST_CASE("sift_array: test exceptions", "[sift_array]") {
   SECTION("file does not exist") {
-    REQUIRE_THROWS_WITH(
-        sift_array<float>("no_such_file"),
-        "[TileDB::Array] Error: Cannot open array; Array does not exist.");
+    REQUIRE_THROWS_WITH(sift_array<float>("no_such_file"), "[TileDB::Array] Error: Cannot open array; Array does not exist.");
   }
 }
 
@@ -63,8 +61,7 @@ TEST_CASE("sift_array: open files", "[sift_array]") {
     auto query = sift_array<float>("s3://tiledb-lums/sift/siftsmall_query", 0);
     CHECK(query.size() == 100);
 
-    auto truth =
-        sift_array<int>("s3://tiledb-lums/sift/siftsmall_groundtruth", 0);
+    auto truth = sift_array<int>("s3://tiledb-lums/sift/siftsmall_groundtruth", 0);
     CHECK(truth.size() == 100);
   }
 
@@ -75,8 +72,7 @@ TEST_CASE("sift_array: open files", "[sift_array]") {
     auto query = sift_array<float>("s3://tiledb-lums/sift/siftsmall_query", 10);
     CHECK(query.size() == 10);
 
-    auto truth =
-        sift_array<int>("s3://tiledb-lums/sift/siftsmall_groundtruth", 10);
+    auto truth = sift_array<int>("s3://tiledb-lums/sift/siftsmall_groundtruth", 10);
     CHECK(truth.size() == 10);
   }
 }
