@@ -1,5 +1,5 @@
 /**
- * @file   sift_array.h
+ * @file   stats.h
  *
  * @section LICENSE
  *
@@ -27,5 +27,73 @@
  *
  * @section DESCRIPTION
  *
- * Very simple class for holding stats about an array.
+ * Very simple code for measuring details of program performance.
  */
+
+
+#ifndef TDB_STATS_H
+#define TDB_STATS_H
+
+#include <chrono>
+#include <iostream>
+#include <map>
+#include <string>
+
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
+
+class timing_data {
+private:
+  json timings;
+
+public:
+  void add_timing(const std::string& operation, double elapsedTime) {
+    timings[operation] = elapsedTime;
+  }
+
+  auto get_timings() {
+    return timings;
+  }
+};
+
+timing_data& get_timing_data_instance() {
+  static timing_data instance;
+  return instance;
+}
+
+timing_data& _timing_data {get_timing_data_instance()};
+
+void add_timing(const std::string& operation, double elapsedTime) {
+  _timing_data.add_timing(operation, elapsedTime);
+}
+
+auto get_timings() {
+  return _timing_data.get_timings();
+}
+
+#if 0
+int main() {
+  Timer timer;
+
+  // Perform operation 1
+  timer.Start();
+  // ... Operation 1 code ...
+  double elapsedTime1 = timer.Stop();
+  Gettiming_dataInstance().AddTiming("Operation 1", elapsedTime1);
+
+  // Perform operation 2
+  timer.Start();
+  // ... Operation 2 code ...
+  double elapsedTime2 = timer.Stop();
+  Gettiming_dataInstance().AddTiming("Operation 2", elapsedTime2);
+
+  // Perform more operations...
+
+  // Report all timings at the end
+  Gettiming_dataInstance().ReportTimings();
+
+  return 0;
+}
+#endif
+#endif //TDB_STATS_H

@@ -68,6 +68,9 @@ target_link_libraries(unit_concepts PRIVATE mdspan Catch2::Catch2WithMain)
 add_executable(unit_utils unit_utils.cc)
 target_link_libraries(unit_utils PRIVATE mdspan Catch2::Catch2WithMain)
 
+add_executable(unit_stats unit_stats.cc)
+target_link_libraries(unit_stats PRIVATE mdspan Catch2::Catch2WithMain nlohmann_json::nlohmann_json)
+
 add_executable(time_insert time_insert.cc ../timer.h)
 target_link_libraries(time_insert PRIVATE sift_test mdspan)
 

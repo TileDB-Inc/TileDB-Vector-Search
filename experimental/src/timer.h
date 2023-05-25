@@ -34,7 +34,7 @@
 
 #include <chrono>
 #include <iostream>
-
+#include "stats.h"
 
 /**
  * @brief A simple timer class for measuring elapsed wall clock time.
@@ -109,9 +109,16 @@ class life_timer : public empty_timer, public ms_timer {
 
   ~life_timer() {
     stop();
+
     if (ms_timer::msg_ != "") {
       std::cout << "# [ " + msg_ + " ]: ";
       std::cout << elapsed() << " ms" << std::endl;
+    }
+
+    if (ms_timer::msg_ != "") {
+      add_timing(ms_timer::msg_, elapsed());
+    } else {
+      add_timing("life_timer", elapsed());
     }
   }
 };
