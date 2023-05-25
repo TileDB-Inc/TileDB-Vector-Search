@@ -59,7 +59,7 @@
 #include "defs.h"
 #include "fixed_min_queues.h"
 #include "linalg.h"
-#include "utils/timer.h"
+#include "timer.h"
 
 #include <cassert>
 #include <cmath>
@@ -208,7 +208,7 @@ void vq_query_heap(const DB& db, const Q& q, int k, bool nth, unsigned nthreads)
       for (int j = q_start; j < q_stop; ++j) {
         std::transform(scores[0][j].begin(), scores[0][j].end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
         std::sort(begin(top_k[j]), end(top_k[j]));
-      }
+       }
     }));
   }
 
