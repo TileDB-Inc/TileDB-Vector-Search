@@ -41,7 +41,7 @@
  * then searches the partitions corresponding to those centroids
  * for the nearest neighbors.
  *
-  * @todo This should probably be broken into smaller functions.
+ * @todo This should probably be broken into smaller functions.
  * @todo We need to add a good dose of parallelism.
  * @todo We need to add accuracy reporting as well as QPS.
  */
@@ -68,18 +68,17 @@
 #include "defs.h"
 #include "ivf_query.h"
 #include "linalg.h"
+#include "stats.h"
 #include "utils/logging.h"
 #include "utils/timer.h"
 #include "utils/utils.h"
-#include "stats.h"
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-bool        global_verbose = false;
-bool        global_debug   = false;
+bool global_verbose = false;
+bool global_debug = false;
 std::string global_region;
-
 
 static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
@@ -114,40 +113,43 @@ Options:
 
 int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
-  auto                     args = docopt::docopt(USAGE, strings, true);
+  auto args = docopt::docopt(USAGE, strings, true);
 
   auto centroids_uri = args["--centroids_uri"].asString();
-  auto db_uri        = args["--db_uri"].asString();
-  auto ndb           = args["--ndb"].asLong();
-  auto nthreads      = args["--nthreads"].asLong();
+  auto db_uri = args["--db_uri"].asString();
+  auto ndb = args["--ndb"].asLong();
+  auto nthreads = args["--nthreads"].asLong();
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
-  global_debug   = args["--debug"].asBool();
+  global_debug = args["--debug"].asBool();
   global_verbose = args["--verbose"].asBool();
-  global_region  = args["--region"].asString();
+  global_region = args["--region"].asString();
 
-  auto   part_uri  = args["--parts_uri"].asString();
-  auto   index_uri = args["--index_uri"].asString();
-  auto   id_uri    = args["--ids_uri"].asString();
-  size_t nprobe    = args["--cluster"].asLong();
-  size_t k_nn      = args["--k"].asLong();
-  auto   query_uri = args["--query_uri"] ? args["--query_uri"].asString() : "";
-  auto   nqueries  = (size_t)args["--nqueries"].asLong();
-  bool   nth       = args["--nth"].asBool();
+  auto part_uri = args["--parts_uri"].asString();
+  auto index_uri = args["--index_uri"].asString();
+  auto id_uri = args["--ids_uri"].asString();
+  size_t nprobe = args["--cluster"].asLong();
+  size_t k_nn = args["--k"].asLong();
+  auto query_uri = args["--query_uri"] ? args["--query_uri"].asString() : "";
+  auto nqueries = (size_t)args["--nqueries"].asLong();
+  bool nth = args["--nth"].asBool();
 
   auto db = tdbColMajorMatrix<float>(db_uri, ndb);
   debug_matrix(db, "db");
 
-  if (is_local_array(centroids_uri) && !std::filesystem::exists(centroids_uri)) {
-    std::cerr << "Error: centroids URI does not exist: " << args["--centroids_uri"] << std::endl;
+  if (is_local_array(centroids_uri) &&
+      !std::filesystem::exists(centroids_uri)) {
+    std::cerr << "Error: centroids URI does not exist: "
+              << args["--centroids_uri"] << std::endl;
     return 1;
   }
   auto centroids = tdbColMajorMatrix<float>(centroids_uri);
   debug_matrix(centroids, "centroids");
 
   if (is_local_array(centroids_uri) && !std::filesystem::exists(db_uri)) {
-    std::cerr << "Error: db URI does not exist: " << args["--centroids_uri"] << std::endl;
+    std::cerr << "Error: db URI does not exist: " << args["--centroids_uri"]
+              << std::endl;
     return 1;
   }
   json recalls;
@@ -159,7 +161,7 @@ int main(int argc, char* argv[]) {
 
     auto shuffled_db = tdbColMajorMatrix<float>(part_uri);
     // auto indices = tdbMatrix<size_t, Kokkos::layout_left>(index_uri);
-    auto indices      = read_vector<size_t>(index_uri);
+    auto indices = read_vector<size_t>(index_uri);
     auto shuffled_ids = read_vector<uint64_t>(id_uri);
 
     debug_matrix(shuffled_db, "shuffled_db");
@@ -174,7 +176,7 @@ int main(int argc, char* argv[]) {
         auto qq = tdbColMajorMatrix<float>(query_uri, nqueries);
         return qq;
       } else {
-        auto qq = ColMajorMatrix<float> { centroids.num_rows(), nqueries };
+        auto qq = ColMajorMatrix<float>{centroids.num_rows(), nqueries};
         for (size_t i = 0; i < centroids.num_rows(); ++i) {
           qq(i, 0) = db(i, 0);
         }
@@ -184,7 +186,16 @@ int main(int argc, char* argv[]) {
     debug_matrix(q, "q");
 
     // What should be returned here?  Maybe a pair with the ids and scores?
-    auto&& [kmeans_ids, all_ids] = kmeans_query(shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nth, nthreads);
+    auto&& [kmeans_ids, all_ids] = kmeans_query(
+        shuffled_db,
+        centroids,
+        q,
+        indices,
+        shuffled_ids,
+        nprobe,
+        k_nn,
+        nth,
+        nthreads);
     debug_matrix(kmeans_ids, "kmeans_ids");
 
     // Once this is a function, simply return kmeans_ids
@@ -194,7 +205,7 @@ int main(int argc, char* argv[]) {
 
     if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
-      auto groundtruth     = tdbMatrix<int, Kokkos::layout_left>(groundtruth_uri);
+      auto groundtruth = tdbMatrix<int, Kokkos::layout_left>(groundtruth_uri);
       debug_matrix(groundtruth, "groundtruth");
 
       // kmeans_ids is k by nqueries
@@ -206,7 +217,7 @@ int main(int argc, char* argv[]) {
       //       sort
       //       intersect count
 
-      size_t total_query_in_groundtruth { 0 };
+      size_t total_query_in_groundtruth{0};
       // for each query
       std::vector<int> comp(kmeans_ids.num_rows());
       for (size_t i = 0; i < kmeans_ids.num_cols(); ++i) {
@@ -216,31 +227,41 @@ int main(int argc, char* argv[]) {
         std::sort(begin(comp), end(comp));
         std::sort(begin(groundtruth[i]), end(groundtruth[i]));
 
-        static constexpr auto lt = [](auto&& x, auto&& y) { return std::get<0>(x) < std::get<0>(y); };
-        total_query_in_groundtruth += std::set_intersection(begin(comp), end(comp), begin(groundtruth[i]), end(groundtruth[i]), counter {});
+        static constexpr auto lt = [](auto&& x, auto&& y) {
+          return std::get<0>(x) < std::get<0>(y);
+        };
+        total_query_in_groundtruth += std::set_intersection(
+            begin(comp),
+            end(comp),
+            begin(groundtruth[i]),
+            end(groundtruth[i]),
+            counter{});
       }
       recalls["queries_in_groundtruth"] = total_query_in_groundtruth;
-      recalls["total_queries"]          = kmeans_ids.num_cols() * kmeans_ids.num_rows();
+      recalls["total_queries"] = kmeans_ids.num_cols() * kmeans_ids.num_rows();
 
       if (global_verbose) {
-        std::cout << "total_query_in_groundtruth: " << total_query_in_groundtruth;
+        std::cout << "total_query_in_groundtruth: "
+                  << total_query_in_groundtruth;
         std::cout << " / " << kmeans_ids.num_cols() * kmeans_ids.num_rows();
-        std::cout << " = " << (((float)total_query_in_groundtruth / ((float)(kmeans_ids.num_cols()) * kmeans_ids.num_rows()))) << std::endl;
+        std::cout << " = "
+                  << (((float)total_query_in_groundtruth /
+                       ((float)(kmeans_ids.num_cols()) *
+                        kmeans_ids.num_rows())))
+                  << std::endl;
       }
     }
   }
 
   if (args["--log"]) {
-
     auto program_args = args_log(args);
-    auto config       = config_log(argv[0]);
+    auto config = config_log(argv[0]);
 
     json log_log = {
-      {"Config",   config       },
-      { "Args",    program_args },
-      { "Recalls", recalls      },
-      { "Times",   get_timings()}
-    };
+        {"Config", config},
+        {"Args", program_args},
+        {"Recalls", recalls},
+        {"Times", get_timings()}};
 
     if (args["--log"].asString() == "-") {
       std::cout << log_log.dump(2) << std::endl;

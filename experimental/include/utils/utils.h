@@ -38,7 +38,6 @@
 #include <regex>
 #include <string>
 
-
 bool is_http_address(const std::string& filename) {
   std::regex httpRegex("^https?://.*");
   return std::regex_match(filename, httpRegex);
@@ -47,11 +46,12 @@ bool is_http_address(const std::string& filename) {
 bool is_s3_container(const std::string& filename) {
   std::regex awsRegex("^[a-zA-Z0-9]+\\.s3\\.amazonaws\\.com.*");
   std::regex s3Regex("^s3://.*");
-  return std::regex_match(filename, s3Regex) || std::regex_match(filename, s3Regex);
+  return std::regex_match(filename, s3Regex) ||
+         std::regex_match(filename, s3Regex);
 }
 
 std::string get_filename(const std::string& filename) {
-  std::regex  fileRegex("^file://(.*)");
+  std::regex fileRegex("^file://(.*)");
   std::smatch match;
 
   if (std::regex_match(filename, match, fileRegex) && match.size() > 1) {
@@ -63,8 +63,8 @@ std::string get_filename(const std::string& filename) {
 
 bool local_directory_exists(const std::string& path) {
   std::filesystem::path directoryPath(path);
-  auto                  a = std::filesystem::status(directoryPath);
-  auto                  b = std::filesystem::is_directory(directoryPath);
+  auto a = std::filesystem::status(directoryPath);
+  auto b = std::filesystem::is_directory(directoryPath);
 
   return std::filesystem::is_directory(directoryPath);
 }
@@ -73,7 +73,8 @@ bool is_local_directory(const std::string& path) {
   return local_directory_exists(path);
 }
 
-bool subdirectory_exists(const std::string& path, const std::string& subdirectoryName) {
+bool subdirectory_exists(
+    const std::string& path, const std::string& subdirectoryName) {
   std::filesystem::path directoryPath(path);
   std::filesystem::path subdirectoryPath = directoryPath / subdirectoryName;
 
@@ -81,10 +82,11 @@ bool subdirectory_exists(const std::string& path, const std::string& subdirector
 }
 
 bool local_file_exists(const std::string& filename) {
-  if (is_http_address(filename) || is_s3_container(filename) || is_local_directory(filename)) {
+  if (is_http_address(filename) || is_s3_container(filename) ||
+      is_local_directory(filename)) {
     return false;
   }
-  auto                  fname = get_filename(filename);
+  auto fname = get_filename(filename);
   std::filesystem::path filePath(fname);
   return std::filesystem::is_regular_file(filePath);
 }
@@ -95,13 +97,13 @@ bool is_local_file(const std::string& filename) {
 
 bool local_array_exists(const std::string& array_uri) {
   auto aname = get_filename(array_uri);
-  return local_directory_exists(aname) && subdirectory_exists(array_uri, "__schema");
+  return local_directory_exists(aname) &&
+         subdirectory_exists(array_uri, "__schema");
 }
 
 bool is_local_array(const std::string& array_uri) {
   return local_array_exists(array_uri);
 }
-
 
 /**
  * @brief A simple counter iterator that can be used as an output iterator
@@ -112,14 +114,15 @@ bool is_local_array(const std::string& array_uri) {
 template <class T = std::size_t>
 struct counter {
   using iterator_category = std::output_iterator_tag;
-  using value_type        = void;
-  using difference_type   = void;
-  using pointer           = void;
-  using reference         = void;
+  using value_type = void;
+  using difference_type = void;
+  using pointer = void;
+  using reference = void;
 
-  T count { 0 };
+  T count{0};
 
-  counter(T init = {}) : count(init) {
+  counter(T init = {})
+      : count(init) {
   }
 
   constexpr operator T() const {
@@ -142,6 +145,5 @@ struct counter {
     return *this;
   }
 };
-
 
 #endif

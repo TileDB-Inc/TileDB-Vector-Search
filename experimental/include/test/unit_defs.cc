@@ -29,25 +29,21 @@
  *
  */
 
-#include "../defs.h"
 #include <catch2/catch_all.hpp>
 #include <set>
 #include <vector>
+#include "../defs.h"
 
 TEST_CASE("defs: test test", "[defs]") {
   REQUIRE(true);
 }
 
 TEST_CASE("defs: vector test", "[defs]") {
-  std::vector<std::vector<float>> a {
-    {1,   2,  3 },
-    { 4,  5,  6 },
-    { 7,  8,  9 },
-    { 10, 11, 12}
-  };
-  std::vector<float> b { 0, 0, 0, 0 };
+  std::vector<std::vector<float>> a{
+      {1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}};
+  std::vector<float> b{0, 0, 0, 0};
 
-  std::vector<float>            c { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+  std::vector<float> c{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
   std::vector<std::span<float>> d;
   for (size_t i = 0; i < 4; ++i) {
     d.push_back(std::span<float>(c.data() + i * 3, 3));
@@ -82,12 +78,12 @@ TEST_CASE("defs: std::set", "[defs]") {
   std::set<int> a;
 
   SECTION("insert in ascending order") {
-    for (auto&& i : { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }) {
+    for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
       a.insert(i);
     }
   }
   SECTION("insert in descending order") {
-    for (auto&& i : { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }) {
+    for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
       a.insert(i);
     }
   }
@@ -102,8 +98,8 @@ TEST_CASE("defs: std::set with pairs", "[defs]") {
   std::set<element> a;
 
   SECTION("insert in ascending order") {
-    for (auto&& i : { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }) {
-      a.insert({ 10 - i, i });
+    for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
+      a.insert({10 - i, i});
     }
     CHECK(begin(a)->first == 1);
     CHECK(begin(a)->second == 9);
@@ -111,8 +107,8 @@ TEST_CASE("defs: std::set with pairs", "[defs]") {
     CHECK(rbegin(a)->second == 0);
   }
   SECTION("insert in descending order") {
-    for (auto&& i : { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }) {
-      a.insert({ 10 + i, i });
+    for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
+      a.insert({10 + i, i});
     }
     CHECK(begin(a)->first == 10.0);
     CHECK(begin(a)->second == 0);
@@ -128,13 +124,13 @@ TEST_CASE("defs: fixed_min_set", "[defs]") {
   fixed_min_set<int> a(5);
 
   SECTION("insert in ascending order") {
-    for (auto&& i : { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }) {
+    for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
       a.insert(i);
     }
   }
 
   SECTION("insert in descending order") {
-    for (auto&& i : { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }) {
+    for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
       a.insert(i);
     }
   }
@@ -149,8 +145,8 @@ TEST_CASE("defs: fixed_min_set with pairs", "[defs]") {
   fixed_min_set<element> a(5);
 
   SECTION("insert in ascending order") {
-    for (auto&& i : { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }) {
-      a.insert({ 10 - i, i });
+    for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
+      a.insert({10 - i, i});
     }
     std::sort(begin(a), end(a));
     CHECK(begin(a)->first == 1);
@@ -159,8 +155,8 @@ TEST_CASE("defs: fixed_min_set with pairs", "[defs]") {
     CHECK(rbegin(a)->second == 5);
   }
   SECTION("insert in descending order") {
-    for (auto&& i : { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }) {
-      a.insert({ 10 + i, i });
+    for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
+      a.insert({10 + i, i});
     }
     std::sort(begin(a), end(a));
     CHECK(begin(a)->first == 10.0);
@@ -176,15 +172,14 @@ TEST_CASE("defs: fixed_min_set with pairs", "[defs]") {
   CHECK(a.size() == 5);
 }
 
-
 TEST_CASE("defs: fixed_min_set with a large vector", "[defs]") {
   using element = std::pair<float, int>;
   fixed_min_set<element> a(7);
 
   std::vector<element> v(5500);
   for (auto&& i : v) {
-    i = { std::rand(), std::rand() };
-    CHECK(i != element {});
+    i = {std::rand(), std::rand()};
+    CHECK(i != element{});
   }
   for (auto&& i : v) {
     a.insert(i);

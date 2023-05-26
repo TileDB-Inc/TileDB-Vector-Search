@@ -29,15 +29,37 @@
  *
  */
 
-#include "../algorithm.h"
 #include <catch2/catch_all.hpp>
+#include "../algorithm.h"
 
 TEST_CASE("algorithm: test test", "[algorithm]") {
   REQUIRE(true);
 }
 
 TEST_CASE("algorithm: for_each", "[algorithm]") {
-  auto             length = GENERATE(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 17, 32, 64, 128, 256, 512, 1024, 2048, 4096);
+  auto length = GENERATE(
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      13,
+      17,
+      32,
+      64,
+      128,
+      256,
+      512,
+      1024,
+      2048,
+      4096);
   std::vector<int> v(length);
   std::iota(begin(v), end(v), 1);
 
@@ -48,24 +70,32 @@ TEST_CASE("algorithm: for_each", "[algorithm]") {
   SECTION("parallel") {
     auto nthreads = GENERATE(1, 2, 3, 4, 5, 5, 6, 7, 8, 9, 10, 63);
 
-    stdx::for_each(stdx::execution::parallel_policy(nthreads), begin(v), end(v), [](int& x) { x *= 2; });
+    stdx::for_each(
+        stdx::execution::parallel_policy(nthreads),
+        begin(v),
+        end(v),
+        [](int& x) { x *= 2; });
   }
 
   SECTION("indexed parallel") {
-    auto                  nthreads = GENERATE(1, 2, 3, 4, 5, 5, 6, 7, 8, 9, 10, 63);
+    auto nthreads = GENERATE(1, 2, 3, 4, 5, 5, 6, 7, 8, 9, 10, 63);
     std::vector<unsigned> indices(nthreads);
 
-    stdx::for_each(stdx::execution::indexed_parallel_policy(nthreads), begin(v), end(v), [&indices](int& x, auto&& n, auto&& i) mutable {
-      x += i + 1;
-      indices[n] = x;
-    });
+    stdx::for_each(
+        stdx::execution::indexed_parallel_policy(nthreads),
+        begin(v),
+        end(v),
+        [&indices](int& x, auto&& n, auto&& i) mutable {
+          x += i + 1;
+          indices[n] = x;
+        });
 
     if (length > 0) {
       for (size_t n = 0; n < nthreads; ++n) {
-        size_t   block_size = (length + nthreads - 1) / nthreads;
-        auto     start      = std::min<size_t>(n * block_size, length);
-        auto     stop       = std::min<size_t>((n + 1) * block_size, length);
-        unsigned j          = stop * 2;
+        size_t block_size = (length + nthreads - 1) / nthreads;
+        auto start = std::min<size_t>(n * block_size, length);
+        auto stop = std::min<size_t>((n + 1) * block_size, length);
+        unsigned j = stop * 2;
         if (stop != start) {
           CHECK(indices[n] == j);
         } else {

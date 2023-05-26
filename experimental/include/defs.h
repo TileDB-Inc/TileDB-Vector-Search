@@ -58,7 +58,7 @@
  */
 template <class V>
 auto L2(V const& a, V const& b) {
-  typename V::value_type sum { 0 };
+  typename V::value_type sum{0};
 
   auto size_a = size(a);
   for (decltype(a.size()) i = 0; i < size_a; ++i) {
@@ -77,9 +77,9 @@ auto L2(V const& a, V const& b) {
  */
 template <class V>
 auto cosine(V const& a, V const& b) {
-  typename V::value_type sum { 0 };
-  auto                   a2 = 0.0;
-  auto                   b2 = 0.0;
+  typename V::value_type sum{0};
+  auto a2 = 0.0;
+  auto b2 = 0.0;
 
   auto size_a = size(a);
   for (auto i = 0; i < size_a; ++i) {
@@ -103,7 +103,7 @@ auto cosine(V const& a, V const& b) {
 template <class M, class V, class Function>
 auto col_sum(
     const M& m, V& v, Function f = [](auto& x) -> const auto& { return x; }) {
-  int size_m  = size(m);
+  int size_m = size(m);
   int size_m0 = size(m[0]);
 
   for (int j = 0; j < size_m; ++j) {
@@ -134,10 +134,8 @@ auto mat_col_sum(
   }
 }
 
-
 template <class L, class I>
 auto verify_top_k_index(L const& top_k, I const& g, int k, int qno) {
-
   std::sort(begin(g), begin(g) + k);
   std::sort(begin(top_k), end(top_k));
 
@@ -151,7 +149,6 @@ auto verify_top_k_index(L const& top_k, I const& g, int k, int qno) {
   }
 }
 
-
 /**
  * @brief Check the computed top k vectors against the ground truth.
  * Useful only for exact search.
@@ -160,7 +157,10 @@ auto verify_top_k_index(L const& top_k, I const& g, int k, int qno) {
  */
 template <class V, class L, class I>
 auto verify_top_k(V const& scores, L const& top_k, I const& g, int k, int qno) {
-  if (!std::equal(begin(top_k), begin(top_k) + k, g.begin(), [&](auto& a, auto& b) { return scores[a] == scores[b]; })) {
+  if (!std::equal(
+          begin(top_k), begin(top_k) + k, g.begin(), [&](auto& a, auto& b) {
+            return scores[a] == scores[b];
+          })) {
     std::cout << "Query " << qno << " is incorrect" << std::endl;
     for (int i = 0; i < std::min<int>(10, k); ++i) {
       std::cout << "  (" << top_k[i] << " " << scores[top_k[i]] << ") ";
@@ -193,44 +193,51 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
 template <class V, class L, class I>
 auto get_top_k(V const& scores, L&& top_k, I& index, int k, bool nth = false) {
   if (nth) {
-    std::nth_element(begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) { return scores[a] < scores[b]; });
+    std::nth_element(
+        begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) {
+          return scores[a] < scores[b];
+        });
     std::copy(begin(index), begin(index) + k, begin(top_k));
-    std::sort(begin(top_k), end(top_k), [&](auto& a, auto& b) { return scores[a] < scores[b]; });
+    std::sort(begin(top_k), end(top_k), [&](auto& a, auto& b) {
+      return scores[a] < scores[b];
+    });
   } else {
     using element = std::pair<float, unsigned>;
     fixed_min_heap<element> s(k);
     for (size_t i = 0; i < index.size(); ++i) {
-      s.insert({ scores[index[i]], index[i] });
+      s.insert({scores[index[i]], index[i]});
     }
     std::sort_heap(begin(s), end(s));
-    std::transform(s.begin(), s.end(), top_k.begin(), ([](auto&& e) { return e.second; }));
+    std::transform(
+        s.begin(), s.end(), top_k.begin(), ([](auto&& e) { return e.second; }));
   }
 }
 
 template <class S>
 auto get_top_k(const S& scores, int k, bool nth, int nthreads) {
-  life_timer _ { "Get top k" };
+  life_timer _{"Get top k"};
 
   auto num_queries = scores.num_cols();
 
   auto top_k = ColMajorMatrix<size_t>(k, num_queries);
 
-  int                            q_block_size = (num_queries + nthreads - 1) / nthreads;
+  int q_block_size = (num_queries + nthreads - 1) / nthreads;
   std::vector<std::future<void>> futs;
   futs.reserve(nthreads);
 
   for (int n = 0; n < nthreads; ++n) {
     int q_start = n * q_block_size;
-    int q_stop  = std::min<int>((n + 1) * q_block_size, num_queries);
+    int q_stop = std::min<int>((n + 1) * q_block_size, num_queries);
 
-    futs.emplace_back(std::async(std::launch::async, [q_start, q_stop, &scores, &top_k, k, nth]() {
-      std::vector<int> index(scores.num_rows());
+    futs.emplace_back(std::async(
+        std::launch::async, [q_start, q_stop, &scores, &top_k, k, nth]() {
+          std::vector<int> index(scores.num_rows());
 
-      for (int j = q_start; j < q_stop; ++j) {
-        std::iota(begin(index), end(index), 0);
-        get_top_k(scores[j], std::move(top_k[j]), index, k, nth);
-      }
-    }));
+          for (int j = q_start; j < q_stop; ++j) {
+            std::iota(begin(index), end(index), 0);
+            get_top_k(scores[j], std::move(top_k[j]), index, k, nth);
+          }
+        }));
   }
   for (int n = 0; n < nthreads; ++n) {
     futs[n].get();
@@ -240,8 +247,7 @@ auto get_top_k(const S& scores, int k, bool nth, int nthreads) {
 
 template <class TK, class G>
 bool validate_top_k(TK& top_k, G& g) {
-
-  size_t k          = top_k.num_rows();
+  size_t k = top_k.num_rows();
   size_t num_errors = 0;
   for (size_t qno = 0; qno < top_k.num_cols(); ++qno) {
     std::sort(begin(top_k[qno]), end(top_k[qno]));
@@ -262,4 +268,4 @@ bool validate_top_k(TK& top_k, G& g) {
   return true;
 }
 
-#endif    // TDB_DEFS_H
+#endif  // TDB_DEFS_H

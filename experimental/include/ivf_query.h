@@ -34,13 +34,13 @@
 #ifndef TDB_IVF_QUERY_H
 #define TDB_IVF_QUERY_H
 
+#include <algorithm>
 #include "algorithm.h"
 #include "concepts.h"
 #include "defs.h"
 #include "linalg.h"
 #include "scoring.h"
 #include "utils/timer.h"
-#include <algorithm>
 
 // If apple, use Accelerate
 #ifdef __APPLE__
@@ -62,12 +62,38 @@
  * to the right query function depending on the size of the query.
  */
 
-auto kmeans_query(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids, size_t nprobe, size_t k_nn, bool nth,
-                  size_t nthreads) {
+auto kmeans_query(
+    auto&& shuffled_db,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    auto&& shuffled_ids,
+    size_t nprobe,
+    size_t k_nn,
+    bool nth,
+    size_t nthreads) {
   if (q.size() < 5) {
-    return kmeans_query_small_q(shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nth, nthreads);
+    return kmeans_query_small_q(
+        shuffled_db,
+        centroids,
+        q,
+        indices,
+        shuffled_ids,
+        nprobe,
+        k_nn,
+        nth,
+        nthreads);
   } else {
-    return kmeans_query_large_q(shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nth, nthreads);
+    return kmeans_query_large_q(
+        shuffled_db,
+        centroids,
+        q,
+        indices,
+        shuffled_ids,
+        nprobe,
+        k_nn,
+        nth,
+        nthreads);
   }
 }
 
@@ -76,8 +102,16 @@ auto kmeans_query(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices
  *
  * This will need to be restructured to support blocking.
  */
-auto kmeans_query_large_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids, size_t nprobe, size_t k_nn,
-                          bool nth, size_t nthreads) {
+auto kmeans_query_large_q(
+    auto&& shuffled_db,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    auto&& shuffled_ids,
+    size_t nprobe,
+    size_t k_nn,
+    bool nth,
+    size_t nthreads) {
   // get closest centroid for each query vector
   // Does this even need to be blocked...?
   // The whole point of ivf is to avoid loading everything
@@ -97,8 +131,8 @@ auto kmeans_query_large_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&&
   }
 
   // Storage for the probed partitions and their ids
-  auto all_results = ColMajorMatrix<float> { centroids.num_rows(), total_size };
-  auto all_ids     = std::vector<uint64_t>(total_size);
+  auto all_results = ColMajorMatrix<float>{centroids.num_rows(), total_size};
+  auto all_ids = std::vector<uint64_t>(total_size);
 
   // Tracks next location to copy into
   size_t ctr = 0;
@@ -110,7 +144,7 @@ auto kmeans_query_large_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&&
   for (size_t j = 0; j < nprobe; ++j) {
     // Get begin and end indices of the partition
     size_t start = indices[top_top_k[j]];
-    size_t end   = indices[top_top_k[j] + 1];
+    size_t end = indices[top_top_k[j] + 1];
 
     // Copy the partition into the storage
     // For each vector in the partition
@@ -120,7 +154,7 @@ auto kmeans_query_large_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&&
       size_t l_end = shuffled_db.num_rows();
       for (size_t l = 0; l < l_end; ++l) {
         all_results(l, ctr) = shuffled_db(l, i);
-        all_ids[ctr]        = shuffled_ids[i];
+        all_ids[ctr] = shuffled_ids[i];
       }
       ++ctr;
     }
@@ -135,12 +169,19 @@ auto kmeans_query_large_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&&
   return std::make_tuple(std::move(kmeans_ids), all_ids);
 }
 
-
 /**
  * @brief Query a (small) set of query vectors against a vector database.
  */
-auto kmeans_query_small_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids, size_t nprobe, size_t k_nn,
-                          bool nth, size_t nthreads) {
+auto kmeans_query_small_q(
+    auto&& shuffled_db,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    auto&& shuffled_ids,
+    size_t nprobe,
+    size_t k_nn,
+    bool nth,
+    size_t nthreads) {
   // get closest centroid for each query vector
   auto top_k = qv_query(centroids, q, nprobe, nthreads);
 
@@ -157,8 +198,8 @@ auto kmeans_query_small_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&&
   }
 
   // Storage for the probed partitions and their ids
-  auto all_results = ColMajorMatrix<float> { centroids.num_rows(), total_size };
-  auto all_ids     = std::vector<uint64_t>(total_size);
+  auto all_results = ColMajorMatrix<float>{centroids.num_rows(), total_size};
+  auto all_ids = std::vector<uint64_t>(total_size);
 
   // Tracks next location to copy into
   size_t ctr = 0;
@@ -170,7 +211,7 @@ auto kmeans_query_small_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&&
   for (size_t j = 0; j < nprobe; ++j) {
     // Get begin and end indices of the partition
     size_t start = indices[top_top_k[j]];
-    size_t end   = indices[top_top_k[j] + 1];
+    size_t end = indices[top_top_k[j] + 1];
 
     // Copy the partition into the storage
     // For each vector in the partition
@@ -180,7 +221,7 @@ auto kmeans_query_small_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&&
       size_t l_end = shuffled_db.num_rows();
       for (size_t l = 0; l < l_end; ++l) {
         all_results(l, ctr) = shuffled_db(l, i);
-        all_ids[ctr]        = shuffled_ids[i];
+        all_ids[ctr] = shuffled_ids[i];
       }
       ++ctr;
     }
@@ -203,7 +244,7 @@ auto kmeans_query_small_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&&
  */
 template <vector_database DB, class Q>
 auto qv_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
-  life_timer _ { "Total time (qv query)" };
+  life_timer _{"Total time (qv query)"};
 
   using element = std::pair<float, int>;
 
@@ -213,10 +254,10 @@ auto qv_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
   // algorithms have iterator-based interaces, and the `Matrix` class does not
   // yet have iterators.
   // @todo Implement iterator interface to `Matrix` class
-  size_t size_db        = db.num_cols();
-  size_t size_q         = q.num_cols();
+  size_t size_db = db.num_cols();
+  size_t size_q = q.num_cols();
   size_t container_size = size_q;
-  size_t block_size     = (container_size + nthreads - 1) / nthreads;
+  size_t block_size = (container_size + nthreads - 1) / nthreads;
 
   std::vector<std::future<void>> futs;
   futs.reserve(nthreads);
@@ -224,22 +265,27 @@ auto qv_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
   // @todo: Use range::for_each
   for (size_t n = 0; n < nthreads; ++n) {
     auto start = std::min<size_t>(n * block_size, container_size);
-    auto stop  = std::min<size_t>((n + 1) * block_size, container_size);
+    auto stop = std::min<size_t>((n + 1) * block_size, container_size);
 
     if (start != stop) {
-      futs.emplace_back(std::async(std::launch::async, [k, start, stop, size_db, &q, &db, &top_k]() {
-        for (size_t j = start; j < stop; ++j) {
-          fixed_min_set<element> min_scores(k);
-          size_t                 idx = 0;
+      futs.emplace_back(std::async(
+          std::launch::async, [k, start, stop, size_db, &q, &db, &top_k]() {
+            for (size_t j = start; j < stop; ++j) {
+              fixed_min_set<element> min_scores(k);
+              size_t idx = 0;
 
-          for (int i = 0; i < size_db; ++i) {
-            auto score = L2(q[j], db[i]);
-            min_scores.insert(element { score, i });
-          }
-          std::sort(min_scores.begin(), min_scores.end());
-          std::transform(min_scores.begin(), min_scores.end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
-        }
-      }));
+              for (int i = 0; i < size_db; ++i) {
+                auto score = L2(q[j], db[i]);
+                min_scores.insert(element{score, i});
+              }
+              std::sort(min_scores.begin(), min_scores.end());
+              std::transform(
+                  min_scores.begin(),
+                  min_scores.end(),
+                  top_k[j].begin(),
+                  ([](auto&& e) { return e.second; }));
+            }
+          }));
     }
   }
 
@@ -252,41 +298,42 @@ auto qv_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
 
 template <class DB, class Q>
 auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
-  life_timer _ { "Total time (qv partition)" };
+  life_timer _{"Total time (qv partition)"};
 
   // Just need a single vector
   std::vector<unsigned> top_k(q.num_cols());
 
   // Again, doing the parallelization by hand here....
-  size_t size_db        = db.num_cols();
-  size_t size_q         = q.num_cols();
+  size_t size_db = db.num_cols();
+  size_t size_q = q.num_cols();
   size_t container_size = size_q;
-  size_t block_size     = (container_size + nthreads - 1) / nthreads;
+  size_t block_size = (container_size + nthreads - 1) / nthreads;
 
   std::vector<std::future<void>> futs;
   futs.reserve(nthreads);
 
   for (size_t n = 0; n < nthreads; ++n) {
     auto start = std::min<size_t>(n * block_size, container_size);
-    auto stop  = std::min<size_t>((n + 1) * block_size, container_size);
+    auto stop = std::min<size_t>((n + 1) * block_size, container_size);
 
     if (start != stop) {
-      futs.emplace_back(std::async(std::launch::async, [start, stop, size_db, &q, &db, &top_k]() {
-        for (size_t j = start; j < stop; ++j) {
-          float  min_score = std::numeric_limits<float>::max();
-          size_t idx       = 0;
+      futs.emplace_back(std::async(
+          std::launch::async, [start, stop, size_db, &q, &db, &top_k]() {
+            for (size_t j = start; j < stop; ++j) {
+              float min_score = std::numeric_limits<float>::max();
+              size_t idx = 0;
 
-          for (int i = 0; i < size_db; ++i) {
-            auto score = L2(q[j], db[i]);
-            if (score < min_score) {
-              min_score = score;
-              idx       = i;
+              for (int i = 0; i < size_db; ++i) {
+                auto score = L2(q[j], db[i]);
+                if (score < min_score) {
+                  min_score = score;
+                  idx = i;
+                }
+              }
+
+              top_k[j] = idx;
             }
-          }
-
-          top_k[j] = idx;
-        }
-      }));
+          }));
     }
   }
   for (size_t n = 0; n < size(futs); ++n) {
@@ -295,51 +342,51 @@ auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
   return top_k;
 }
 
-
 template <class DB, class Q>
 auto gemm_query(const DB& db, const Q& q, int k, bool nth, size_t nthreads) {
-  life_timer _outer { "Total time query gemm" };
-  auto       scores = gemm_scores(db, q, nthreads);
-  auto       top_k  = get_top_k(scores, k, nth, nthreads);
+  life_timer _outer{"Total time query gemm"};
+  auto scores = gemm_scores(db, q, nthreads);
+  auto top_k = get_top_k(scores, k, nth, nthreads);
   return top_k;
 }
 
 template <class DB, class Q>
 auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
-  life_timer _outer { "Total time blocked query gemm" };
+  life_timer _outer{"Total time blocked query gemm"};
 
   using element = std::pair<float, unsigned>;
 
   const auto block_db = db.is_blocked();
-  const auto block_q  = q.is_blocked();
+  const auto block_q = q.is_blocked();
   if (block_db && block_q) {
     throw std::runtime_error("Can't block both db and q");
   }
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
 
-  std::vector<fixed_min_heap<element>> min_scores(size(q), fixed_min_heap<element>(k));
+  std::vector<fixed_min_heap<element>> min_scores(
+      size(q), fixed_min_heap<element>(k));
 
   for (;;) {
-
     gemm_scores(db, q, scores, nthreads);
 
-    auto par = stdx::execution::indexed_parallel_policy { nthreads };
-    stdx::range_for_each(std::move(par), scores, [&](auto&& q_vec, auto&& n = 0, auto&& i = 0) {
-      if (block_db) {
-        for (int j = 0; j < scores.num_rows(); ++j) {
-          min_scores[i].insert({ scores(j, i), j + db.offset() });
-        }
-      } else if (block_q) {
-        for (int j = 0; j < scores.num_rows(); ++j) {
-          min_scores[i + q.offset()].insert({ scores(j, i), j });
-        }
-      } else {
-        for (int j = 0; j < scores.num_rows(); ++j) {
-          min_scores[i].insert({ scores(j, i), j });
-        }
-      }
-    });
+    auto par = stdx::execution::indexed_parallel_policy{nthreads};
+    stdx::range_for_each(
+        std::move(par), scores, [&](auto&& q_vec, auto&& n = 0, auto&& i = 0) {
+          if (block_db) {
+            for (int j = 0; j < scores.num_rows(); ++j) {
+              min_scores[i].insert({scores(j, i), j + db.offset()});
+            }
+          } else if (block_q) {
+            for (int j = 0; j < scores.num_rows(); ++j) {
+              min_scores[i + q.offset()].insert({scores(j, i), j});
+            }
+          } else {
+            for (int j = 0; j < scores.num_rows(); ++j) {
+              min_scores[i].insert({scores(j, i), j});
+            }
+          }
+        });
 
     bool done = true;
     if (block_db) {
@@ -356,31 +403,34 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
   for (int j = 0; j < min_scores.size(); ++j) {
     // @todo sort_heap
     std::sort(min_scores[j].begin(), min_scores[j].end());
-    std::transform(min_scores[j].begin(), min_scores[j].end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
+    std::transform(
+        min_scores[j].begin(),
+        min_scores[j].end(),
+        top_k[j].begin(),
+        ([](auto&& e) { return e.second; }));
   }
 
   return top_k;
 }
 
-
 template <class DB, class Q>
 auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
-  life_timer _outer { "Total time gemm" };
+  life_timer _outer{"Total time gemm"};
 
   auto scores = gemm_scores(db, q, nthreads);
 
   auto top_k = std::vector<int>(q.num_cols());
   {
-    life_timer _ { "top k partition" };
+    life_timer _{"top k partition"};
     for (int i = 0; i < scores.num_cols(); ++i) {
       auto min_score = std::numeric_limits<float>::max();
-      auto idx       = 0;
+      auto idx = 0;
 
       for (int j = 0; j < scores.num_rows(); ++j) {
         auto score = scores(j, i);
         if (score < min_score) {
           min_score = score;
-          idx       = j;
+          idx = j;
         }
       }
       top_k[i] = idx;
@@ -392,31 +442,32 @@ auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
 
 template <class DB, class Q>
 auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
-  life_timer _outer { "Total time blocked_gemm_partition" };
+  life_timer _outer{"Total time blocked_gemm_partition"};
 
   const auto block_db = db.is_blocked();
-  const auto block_q  = q.is_blocked();
+  const auto block_q = q.is_blocked();
   if (block_db && block_q) {
     throw std::runtime_error("Can't block both db and q");
   }
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
-  auto                  _score_data = raveled(scores);
-  auto                  top_k       = std::vector<int>(q.num_cols());
-  auto                  min_scores  = std::vector<float>(q.num_cols(), std::numeric_limits<float>::max());
+  auto _score_data = raveled(scores);
+  auto top_k = std::vector<int>(q.num_cols());
+  auto min_scores =
+      std::vector<float>(q.num_cols(), std::numeric_limits<float>::max());
 
   for (;;) {
     gemm_scores(db, q, scores, nthreads);
 
     for (int i = 0; i < scores.num_cols(); ++i) {
       auto min_score = min_scores[i];
-      auto idx       = db.offset();
+      auto idx = db.offset();
 
       for (int j = 0; j < scores.num_rows(); ++j) {
         auto score = scores(j, i);
         if (score < min_score) {
           min_score = score;
-          idx       = j + db.offset();
+          idx = j + db.offset();
         }
       }
       top_k[i] = idx;
@@ -434,5 +485,4 @@ auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
   return top_k;
 }
 
-
-#endif    // TDB_IVF_QUERY_H
+#endif  // TDB_IVF_QUERY_H
