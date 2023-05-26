@@ -105,7 +105,7 @@ def ingest(
     def read_source_metadata(
         source_uri: str, source_type: str, logger: logging.Logger
     ) -> (int, int, np.dtype):
-        if source_type == "ILEDB_ARRAY":
+        if source_type == "TILEDB_ARRAY":
             schema = tiledb.ArraySchema.load(source_uri)
             size = schema.domain.dim(1).domain[1] + 1
             dimensions = schema.domain.dim(0).domain[1] + 1
