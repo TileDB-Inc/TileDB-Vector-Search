@@ -1,3 +1,69 @@
+bigann1M_arrays = [
+    's3://tiledb-andrew/sift/sift_base',
+    's3://tiledb-andrew/sift/sift_groundtruth',
+    's3://tiledb-andrew/sift/sift_learn',
+    's3://tiledb-andrew/sift/sift_query',
+    's3://tiledb-andrew/kmeans/ivf_hack/m1/centroids',
+    's3://tiledb-andrew/kmeans/ivf_hack/m1/ids',
+    's3://tiledb-andrew/kmeans/ivf_hack/m1/index',
+    's3://tiledb-andrew/kmeans/ivf_hack/m1/parts'
+]
+
+bigann10M_arrays = [
+    's3://tiledb-andrew/sift/bigann10M_base',
+    's3://tiledb-andrew/sift/bigann10M_query',
+    's3://tiledb-andrew/kmeans/bigann/bigann10M_centroids',
+    's3://tiledb-andrew/kmeans/bigann/bigann10M_groundtruth',
+    's3://tiledb-andrew/kmeans/bigann/bigann10M_ids',
+    's3://tiledb-andrew/kmeans/bigann/bigann10M_index',
+    's3://tiledb-andrew/kmeans/bigann/bigann10M_parts'
+]
+
+bigann100M_arrays = [
+    's3://tiledb-andrew/sift/bigann100M_base',
+    's3://tiledb-andrew/sift/bigann100M_query',
+    's3://tiledb-andrew/kmeans/bigann/bigann100M_centroids',
+#    's3://tiledb-andrew/kmeans/bigann/bigann100M_groundtruth',
+    's3://tiledb-andrew/kmeans/bigann/bigann100M_ids',
+    's3://tiledb-andrew/kmeans/bigann/bigann100M_index',
+    's3://tiledb-andrew/kmeans/bigann/bigann100M_parts'  
+]
+
+bigann1B_arrays = [
+    's3://tiledb-andrew/sift/bigann1B_base',
+    's3://tiledb-andrew/sift/bigann1B_learn',
+    's3://tiledb-andrew/sift/bigann1B_query'
+]
+
+
+sift1M_arrays = [
+    's3://tiledb-andrew/sift/sift_base',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-1m-2000p/parts.tdb',
+    's3://tiledb-andrew/sift/sift_query',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-1m-2000p/index.tdb',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-1m-2000p/centroids.tdb',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-1m-2000p/ids.tdb' ]
+
+sift10M_arrays = [
+    's3://tiledb-nikos/vector-search/datasets/base.1B.u8bin(0-10M)',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/parts.tdb',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/index.tdb',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/centroids.tdb',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/ids.tdb',
+
+sift100M_arrays = [
+    's3://tiledb-nikos/vector-search/datasets/base.1B.u8bin(0-100M)',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/parts.tdb',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/index.tdb',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/centroids.tdb',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/ids.tdb' ]
+    
+sift1B_arrays = [
+    's3://tiledb-nikos/vector-search/datasets/base.1B.u8bin',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/parts.tdb',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/index.tdb',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/centroids.tdb',
+    's3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/ids.tdb' ]
 
 
 #
