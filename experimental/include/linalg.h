@@ -65,7 +65,9 @@ extern bool        global_debug;
 extern std::string global_region;
 
 template <class M>
-concept is_view = requires(M) { typename M::view_type; };
+concept is_view = requires(M) {
+  typename M::view_type;
+};
 
 
 /**
@@ -333,8 +335,7 @@ public:
    * @param uri URI of the TileDB array to read.
    * @param num_elts Number of vectors to read from the array.
    */
-  tdbMatrix(const std::string& uri, size_t num_elts) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+  tdbMatrix(const std::string& uri, size_t num_elts) noexcept requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : tdbMatrix(uri, num_elts, 0) {
   }
 
@@ -346,8 +347,7 @@ public:
    * @param uri URI of the TileDB array to read.
    * @param num_elts Number of vectors to read from the array.
    */
-  tdbMatrix(const std::string& uri, size_t num_elts) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+  tdbMatrix(const std::string& uri, size_t num_elts) noexcept requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbMatrix(uri, 0, num_elts) {
   }
 
@@ -584,8 +584,7 @@ public:
 
   bool advance(size_t num_elts = 0)
       // requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-    requires(false)
-  {
+      requires(false) {
     // @todo attr_idx, attr_name, and cell_order / layout_order should be
     // members of the class
     size_t      attr_idx     = 0;
@@ -637,15 +636,11 @@ public:
   }
 
 
-  size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-  {
+  size_t offset() const requires(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
     return row_offset_;
   }
 
-  size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-  {
+  size_t offset() const requires(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
     return col_offset_;
   }
 

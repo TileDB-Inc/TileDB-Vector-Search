@@ -29,15 +29,28 @@
  *
  */
 
+#ifndef TILEDB_CONFIG_H
+#define TILEDB_CONFIG_H
+
 constexpr const char SIFT_TEST_DIR[] = "@SIFT_TEST_DIR@";
 constexpr const char CURRENT_DATETIME[] = "@CURRENT_DATETIME@";
 constexpr const char CMAKE_SOURCE_DIR[] = "@CMAKE_SOURCE_DIR@";
-constexpr const char IVF_HACK_GIT_BRANCH[] = "@IVF_HACK_GIT_BRANCH@";
 constexpr const char BUILD_TYPE[] = "@CMAKE_BUILD_TYPE@";
 constexpr const char CXX_VERSION[] = "@CMAKE_CXX_COMPILER_VERSION@";
 constexpr const char CXX_COMPILER_ID[] = "@CMAKE_CXX_COMPILER_ID@";
-constexpr const char CXX_COMPILER[] = "@IVF_HACK_CXX_COMPILER@";
+constexpr const char IVF_HACK_CXX_COMPILER[] = "@CMAKE_CXX_COMPILER@";
+constexpr const char CMAKE_CXX_FLAGS[] = "@CMAKE_CXX_FLAGS@";
+constexpr const char CMAKE_CXX_FLAGS_DEBUG[] = "@CMAKE_CXX_FLAGS_DEBUG@";
+constexpr const char CMAKE_CXX_FLAGS_RELEASE[] = "@CMAKE_CXX_FLAGS_RELEASE@";
+constexpr const char CMAKE_CXX_FLAGS_RELWITHDEBINFO[] = "@CMAKE_CXX_FLAGS_RELWITHDEBINFO@";
+constexpr const char GIT_REPO_NAME[] = "@GIT_REPO_NAME@";
+constexpr const char GIT_REPO_URL[] = "@GIT_REPO_URL@";
+constexpr const char GIT_BRANCH[] = "@GIT_BRANCH@";
+constexpr const char GIT_COMMIT_HASH[] = "@GIT_COMMIT_HASH@";
+constexpr const char GIT_COMMIT_DATE[] = "@GIT_COMMIT_DATE@";
+constexpr const char GIT_COMMIT_TIME[] = "@GIT_COMMIT_TIME@";
 
+#endif  // TILEDB_CONFIG_H
 /*
   UUID
 Date and Time

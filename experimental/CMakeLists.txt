@@ -128,9 +128,7 @@ endif()
 
 add_subdirectory(src)
 
-
 option(BUILD_TESTS "Build the tests" ON)
-
 
 if(BUILD_TESTS)
     # include(Catch2)
