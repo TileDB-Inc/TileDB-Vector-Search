@@ -48,6 +48,7 @@ execute_process(
         COMMAND git rev-parse --show-toplevel
         OUTPUT_VARIABLE GIT_REPO_DIR
         OUTPUT_STRIP_TRAILING_WHITESPACE
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
 )
 get_filename_component(GIT_REPO_NAME ${GIT_REPO_DIR} NAME)
 
@@ -56,12 +57,14 @@ execute_process(
         COMMAND git rev-parse --short HEAD
         OUTPUT_VARIABLE GIT_COMMIT_HASH
         OUTPUT_STRIP_TRAILING_WHITESPACE
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
 )
 
 execute_process(
         COMMAND git show -s --format=%cd --date=short HEAD
         OUTPUT_VARIABLE GIT_COMMIT_DATE
         OUTPUT_STRIP_TRAILING_WHITESPACE
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
 )
 
 execute_process(
@@ -69,6 +72,7 @@ execute_process(
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE GIT_COMMIT_TIME
         OUTPUT_STRIP_TRAILING_WHITESPACE
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
 )
 
 
