@@ -363,7 +363,6 @@ The memory and CPU requirements for the 1B dataset become prohibitive and probab
 
 (**Note:** We can now say that TileDB can be used for similarity search.)
 
-* **Use OpenBLAS instead of MKL for gemm** and incorporate into the build process.  This should take less than a day.
 * **Move prototype into core as a query.** If I can work with Luc this shouldn't take more than a week (and would not take up anywhere close to a week for Luc).  This shouldn't take more than a week, depending on how fancy we want to be.  Probably need to add a day or two to deal with designing the API.
 * **Provide --id argument** to allow selection of a single vector to query
 * **Use parallel/distributed approach** to handle arrays/files that won't fit in local memory of one machine.  This is doable if we want to just parallelize an application using libtiledb.  However, if we want to do the similarity search "in the cloud" it might be better to orchestrate the distributed computation at the Python task graph level.

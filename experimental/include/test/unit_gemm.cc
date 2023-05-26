@@ -34,13 +34,7 @@
 #include <vector>
 #include "../defs.h"
 
-// If apple, use Accelerate
-#ifdef __APPLE__
-#include <Accelerate/Accelerate.h>
-#else
-// If not apple, use OpenBLAS/MKL/etc
 #include <cblas.h>
-#endif
 
 /*
       func cblas_dgemm(
