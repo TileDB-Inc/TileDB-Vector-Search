@@ -32,9 +32,45 @@ string(TIMESTAMP CURRENT_DATETIME "%Y-%m-%d %H:%M:%S")
 execute_process(
         COMMAND git rev-parse --abbrev-ref HEAD
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        OUTPUT_VARIABLE IVF_HACK_GIT_BRANCH
+        OUTPUT_VARIABLE GIT_BRANCH
         OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+
+# Get the Git repository URL
+execute_process(
+        COMMAND git config --get remote.origin.url
+        OUTPUT_VARIABLE GIT_REPO_URL
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+# Get the Git repository name
+execute_process(
+        COMMAND git rev-parse --show-toplevel
+        OUTPUT_VARIABLE GIT_REPO_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+get_filename_component(GIT_REPO_NAME ${GIT_REPO_DIR} NAME)
+
+# Get the short commit name
+execute_process(
+        COMMAND git rev-parse --short HEAD
+        OUTPUT_VARIABLE GIT_COMMIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+        COMMAND git show -s --format=%cd --date=short HEAD
+        OUTPUT_VARIABLE GIT_COMMIT_DATE
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+        COMMAND git log -1 --format=%cd --date=format:%H:%M:%S
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_COMMIT_TIME
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
 
 get_filename_component(IVF_HACK_CXX_COMPILER ${CMAKE_CXX_COMPILER} NAME)
 
@@ -43,9 +79,9 @@ configure_file(../include/config.h.in config.h)
 #---[ Dependencies ]------------------------------------------------------------
 add_library(kmeans_lib INTERFACE)
 target_sources(kmeans_lib INTERFACE
-        ../include/flat_query.h ../include/linalg.h ../include/ivf_query.h ../include/scoring.h ../include/fixed_min_queues.h ../include/defs.h
-        ../include/algorithm.h ../include/concepts.h
-        ../include/timer.h ../include/stats.h ../include/print_types.h
+        ../include/flat_query.h ../include/linalg.h ../include/ivf_query.h ../include/scoring.h ../include/fixed_min_queues.h
+        ../include/defs.h ../include/algorithm.h ../include/concepts.h ../include/stats.h
+        ../include/utils/timer.h ../include/utils/logging.h ../include/utils/print_types.h
         )
 target_include_directories(kmeans_lib INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}

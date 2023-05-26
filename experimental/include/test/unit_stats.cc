@@ -34,8 +34,8 @@
 #include <iostream>
 #include <thread>
 
-#include "../stats.h"
-#include "../timer.h"
+#include "utils/logging.h"
+#include "utils/timer.h"
 
 TEST_CASE("stats: test test", "[stats]") {
   REQUIRE(true);

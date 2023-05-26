@@ -44,6 +44,7 @@
 #include <thread>
 #include <vector>
 #include <utility>
+#include <vector>
 
 namespace stdx {
 
