@@ -59,7 +59,7 @@
 #include "defs.h"
 #include "fixed_min_queues.h"
 #include "linalg.h"
-#include "timer.h"
+#include "utils/timer.h"
 
 #include <cassert>
 #include <cmath>
