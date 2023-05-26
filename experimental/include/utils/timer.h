@@ -32,9 +32,9 @@
 #ifndef TILEDB_TIMER_HPP
 #define TILEDB_TIMER_HPP
 
-#include "logging.h"
 #include <chrono>
 #include <iostream>
+#include "logging.h"
 
 /**
  * @brief A simple timer class for measuring elapsed wall clock time.
@@ -46,11 +46,14 @@
  */
 template <class D = std::chrono::microseconds>
 class timer {
-private:
+ private:
   typedef std::chrono::time_point<std::chrono::system_clock> time_t;
 
-public:
-  explicit timer(const std::string& msg = "") : start_time(std::chrono::system_clock::now()), stop_time(start_time), msg_(msg) {
+ public:
+  explicit timer(const std::string& msg = "")
+      : start_time(std::chrono::system_clock::now())
+      , stop_time(start_time)
+      , msg_(msg) {
   }
 
   time_t start() {
@@ -71,19 +74,19 @@ public:
     return msg_;
   }
 
-private:
+ private:
   time_t start_time, stop_time;
 
-protected:
+ protected:
   std::string msg_;
 };
 
 using seconds_timer = timer<std::chrono::seconds>;
-using ms_timer      = timer<std::chrono::milliseconds>;
-using us_timer      = timer<std::chrono::microseconds>;
+using ms_timer = timer<std::chrono::milliseconds>;
+using us_timer = timer<std::chrono::microseconds>;
 
 class empty_timer {
-public:
+ public:
   empty_timer(const std::string& msg = "") {
   }
   ~empty_timer() {
@@ -96,8 +99,9 @@ public:
  * on destruction.
  */
 class life_timer : public empty_timer, public ms_timer {
-public:
-  explicit life_timer(const std::string& msg = "", bool debug = false) : ms_timer(msg) {
+ public:
+  explicit life_timer(const std::string& msg = "", bool debug = false)
+      : ms_timer(msg) {
     if (debug) {
       std::cout << "# [ " + msg + " ]: starting timer" << std::endl;
     }
@@ -147,4 +151,4 @@ std::ostream& operator<<(std::ostream& os, const us_timer& t) {
   return os;
 }
 
-#endif    // TILEDB_TIMER_HPP
+#endif  // TILEDB_TIMER_HPP

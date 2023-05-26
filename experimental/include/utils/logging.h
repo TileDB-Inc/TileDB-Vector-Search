@@ -30,7 +30,6 @@
  * Very simple code for measuring details of program performance.
  */
 
-
 #ifndef TDB_LOGGING_H
 #define TDB_LOGGING_H
 
@@ -44,10 +43,10 @@
 using json = nlohmann::json;
 
 class timing_data {
-private:
+ private:
   json timings;
 
-public:
+ public:
   void add_timing(const std::string& operation, double elapsedTime) {
     timings[operation] = elapsedTime;
   }
@@ -62,7 +61,7 @@ timing_data& get_timing_data_instance() {
   return instance;
 }
 
-timing_data& _timing_data { get_timing_data_instance() };
+timing_data& _timing_data{get_timing_data_instance()};
 
 void add_timing(const std::string& operation, double elapsedTime) {
   _timing_data.add_timing(operation, elapsedTime);
@@ -72,4 +71,4 @@ auto get_timings() {
   return _timing_data.get_timings();
 }
 
-#endif    //TDB_LOGGING_H
+#endif  // TDB_LOGGING_H
