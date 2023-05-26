@@ -72,20 +72,33 @@ auto config_log(const std::string& program_name) {
   }
 
   auto&& [major, minor, patch] = tiledb::version();
-  json config                  = {
+
+  json config = {
     {"uuid",              uuid_                                                         },
     { "host",             host_                                                         },
     { "Program",          program_name                                                  },
     { "Build_date",       CURRENT_DATETIME                                              },
     { "Run_date",         date_                                                         },
-    { "git_branch",       IVF_HACK_GIT_BRANCH                                           },
     { "cmake_source_dir", CMAKE_SOURCE_DIR                                              },
-    { "tiledb_version",   { { "major", major }, { "minor", minor }, { "patch", patch } }},
     { "Build",            BUILD_TYPE                                                    },
-    { "CXX_COMPILER",     CXX_COMPILER                                                  },
-    { "CXX_COMPILER_ID",  CXX_COMPILER_ID                                               },
-    { "CXX_VERSION",      CXX_VERSION                                                   }
+    { "Compiler",
+     { { "CXX_COMPILER", IVF_HACK_CXX_COMPILER },
+        { "CXX_COMPILER_ID", CXX_COMPILER_ID },
+        { "CXX_VERSION", CXX_VERSION },
+        { "CMAKE_CXX_FLAGS", CMAKE_CXX_FLAGS },
+        { "CMAKE_CXX_FLAGS_DEBUG", CMAKE_CXX_FLAGS_DEBUG },
+        { "CMAKE_CXX_FLAGS_RELEASE", CMAKE_CXX_FLAGS_RELEASE },
+        { "CMAKE_CXX_FLAGS_RELWITHDEBINFO", CMAKE_CXX_FLAGS_RELWITHDEBINFO } }          },
+    { "GIT_REPO",
+     { { "GIT_REPO_NAME", GIT_REPO_NAME },
+        { "GIT_REPO_URL", GIT_REPO_URL },
+        { "GIT_BRANCH", GIT_BRANCH },
+        { "GIT_COMMIT_HASH", GIT_COMMIT_HASH },
+        { "GIT_COMMIT_DATE", GIT_COMMIT_DATE },
+        { "GIT_COMMIT_TIME", GIT_COMMIT_TIME } }                                        },
+    { "tiledb_version",   { { "major", major }, { "minor", minor }, { "patch", patch } }}
   };
+
   return config;
 }
 
@@ -101,4 +114,4 @@ auto args_log(const Args& args) {
   return arg_log;
 }
 
-#endif //TDB_STATS_H
+#endif    //TDB_STATS_H
