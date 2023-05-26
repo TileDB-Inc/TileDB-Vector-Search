@@ -29,8 +29,8 @@
  *
  */
 
-#include "../ivf_query.h"
 #include <catch2/catch_all.hpp>
+#include "../ivf_query.h"
 
 TEST_CASE("ivf_query: test test", "[ivf_query]") {
   REQUIRE(true);

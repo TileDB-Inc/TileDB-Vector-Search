@@ -44,8 +44,7 @@
  * data from TileDB when requested.
  */
 struct tdbArrayView {
-
-public:
+ public:
   tdbArrayView(const std::string& uri) {
   }
 };

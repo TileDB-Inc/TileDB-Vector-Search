@@ -29,9 +29,8 @@
  *
  */
 
-
-#include "utils/utils.h"
 #include <catch2/catch_all.hpp>
+#include "utils/utils.h"
 
 TEST_CASE("utils: test test", "[utils]") {
   REQUIRE(true);

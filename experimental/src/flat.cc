@@ -90,10 +90,10 @@
 #include "stats.h"
 #include "utils/timer.h"
 
-bool        verbose      = false;
-bool        debug        = false;
-bool        global_debug = false;
-std::string global_region { "us-east-1" };
+bool verbose = false;
+bool debug = false;
+bool global_debug = false;
+std::string global_region{"us-east-1"};
 
 static constexpr const char USAGE[] =
     R"(flat: feature vector search with flat index.
@@ -122,7 +122,7 @@ static constexpr const char USAGE[] =
 
 int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
-  auto                     args = docopt::docopt(USAGE, strings, true);
+  auto args = docopt::docopt(USAGE, strings, true);
 
   if (args["--help"].asBool()) {
     std::cout << USAGE << std::endl;
@@ -130,18 +130,18 @@ int main(int argc, char* argv[]) {
   }
 
   global_debug = debug = args["--debug"].asBool();
-  verbose              = args["--verbose"].asBool();
+  verbose = args["--verbose"].asBool();
 
   std::string db_uri = args["--db_uri"].asString();
-  std::string q_uri  = args["--q_uri"].asString();
-  std::string g_uri  = args["--g_uri"] ? args["--g_uri"].asString() : "";
+  std::string q_uri = args["--q_uri"].asString();
+  std::string g_uri = args["--g_uri"] ? args["--g_uri"].asString() : "";
 
   std::cout << "# Using " << args["--order"].asString() << std::endl;
 
-  size_t k        = args["--k"].asLong();
+  size_t k = args["--k"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
   size_t nqueries = args["--nqueries"].asLong();
-  size_t block    = args["--block"].asLong();
+  size_t block = args["--block"].asLong();
 
   auto nth = args["--nth"].asBool();
   auto validate = args["--validate"].asBool();
@@ -150,11 +150,12 @@ int main(int argc, char* argv[]) {
     nthreads = std::thread::hardware_concurrency();
   }
 
-  ms_timer                 load_time { "Load database, query, and ground truth arrays" };
-  tdbColMajorMatrix<float> db(db_uri, block);     // blocked
-  tdbColMajorMatrix<float> q(q_uri, nqueries);    // just a slice
+  ms_timer load_time{"Load database, query, and ground truth arrays"};
+  tdbColMajorMatrix<float> db(db_uri, block);   // blocked
+  tdbColMajorMatrix<float> q(q_uri, nqueries);  // just a slice
 
-  auto g = g_uri.empty() ? ColMajorMatrix<int>(0, 0) : tdbColMajorMatrix<int>(g_uri);
+  auto g =
+      g_uri.empty() ? ColMajorMatrix<int>(0, 0) : tdbColMajorMatrix<int>(g_uri);
   load_time.stop();
   std::cout << load_time << std::endl;
 
@@ -201,15 +202,11 @@ int main(int argc, char* argv[]) {
   }
 
   if (args["--log"]) {
-
     auto program_args = args_log(args);
-    auto config       = config_log(argv[0]);
+    auto config = config_log(argv[0]);
 
     json log_log = {
-      {"Config",   config       },
-      { "Args",    program_args },
-      { "Times",   get_timings()}
-    };
+        {"Config", config}, {"Args", program_args}, {"Times", get_timings()}};
 
     if (args["--log"].asString() == "-") {
       std::cout << log_log.dump(2) << std::endl;
