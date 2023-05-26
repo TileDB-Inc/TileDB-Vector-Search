@@ -30,7 +30,7 @@
  */
 
 
-#include "../utils.h"
+#include "utils/utils.h"
 #include <catch2/catch_all.hpp>
 
 TEST_CASE("utils: test test", "[utils]") {

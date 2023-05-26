@@ -39,7 +39,7 @@
 #include "defs.h"
 #include "linalg.h"
 #include "scoring.h"
-#include "timer.h"
+#include "utils/timer.h"
 #include <algorithm>
 
 // If apple, use Accelerate

@@ -68,9 +68,10 @@
 #include "defs.h"
 #include "ivf_query.h"
 #include "linalg.h"
+#include "utils/logging.h"
+#include "utils/timer.h"
+#include "utils/utils.h"
 #include "stats.h"
-#include "timer.h"
-#include "utils.h"
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -110,61 +111,6 @@ Options:
     -d, --debug           run in debug mode [default: false]
     -v, --verbose         run in verbose mode [default: false]
 )";
-
-auto config_log(const std::string& program_name) {
-  std::string uuid_;
-  char        host_[16];
-  std::string date_;
-  std::size_t uuid_size_ = 24;
-
-  auto seed = std::random_device();
-  auto gen  = std::mt19937(seed());
-  auto dis  = std::uniform_int_distribution<int8_t>(97, 122);
-  uuid_.resize(uuid_size_);
-  std::generate(uuid_.begin(), uuid_.end(), [&] { return dis(gen); });
-
-  if (int e = gethostname(host_, sizeof(host_))) {
-    std::cerr << "truncated host name\n";
-    strncpy(host_, "ghost", 15);
-  }
-  {
-    std::stringstream ss;
-    std::time_t       currentTime = std::time(nullptr);
-    std::string       dateString  = std::ctime(&currentTime);
-    dateString.erase(dateString.find('\n'));
-    ss << dateString;
-    date_ = ss.str();
-  }
-
-  auto&& [major, minor, patch] = tiledb::version();
-  json config                  = {
-    {"uuid",              uuid_                                                         },
-    { "host",             host_                                                         },
-    { "Program",          program_name                                                  },
-    { "Build_date",       CURRENT_DATETIME                                              },
-    { "Run_date",         date_                                                         },
-    { "git_branch",       IVF_HACK_GIT_BRANCH                                           },
-    { "cmake_source_dir", CMAKE_SOURCE_DIR                                              },
-    { "tiledb_version",   { { "major", major }, { "minor", minor }, { "patch", patch } }},
-    { "Build",            BUILD_TYPE                                                    },
-    { "CXX_COMPILER",     CXX_COMPILER                                                  },
-    { "CXX_COMPILER_ID",  CXX_COMPILER_ID                                               },
-    { "CXX_VERSION",      CXX_VERSION                                                   }
-  };
-  return config;
-}
-
-template <typename Args>
-auto args_log(const Args& args) {
-  json arg_log;
-
-  for (auto&& arg : args) {
-    std::stringstream buf;
-    buf << std::get<1>(arg);
-    arg_log.push_back({ std::get<0>(arg), buf.str() });
-  }
-  return arg_log;
-}
 
 int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
@@ -302,8 +248,6 @@ int main(int argc, char* argv[]) {
       std::ofstream outfile(args["--log"].asString(), std::ios_base::app);
       outfile << log_log.dump(2) << std::endl;
     }
-
-    std::cout << log_log.dump(2) << std::endl;
   }
 }
 

@@ -38,7 +38,7 @@
 #include "concepts.h"
 #include "defs.h"
 #include "linalg.h"
-#include "timer.h"
+#include "utils/timer.h"
 #include <algorithm>
 
 // If apple, use Accelerate

@@ -32,7 +32,7 @@
 #ifndef TILEDB_TIMER_HPP
 #define TILEDB_TIMER_HPP
 
-#include "stats.h"
+#include "logging.h"
 #include <chrono>
 #include <iostream>
 

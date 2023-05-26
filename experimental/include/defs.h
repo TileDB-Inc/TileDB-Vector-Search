@@ -47,7 +47,7 @@
 
 #include "fixed_min_queues.h"
 #include "linalg.h"
-#include "timer.h"
+#include "utils/timer.h"
 
 /**
  * @brief Compute L2 distance between two vectors.

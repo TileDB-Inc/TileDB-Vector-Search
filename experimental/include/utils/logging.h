@@ -1,5 +1,5 @@
 /**
- * @file   array_view.h
+ * @file   logging.h
  *
  * @section LICENSE
  *
@@ -21,31 +21,55 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
  * @section DESCRIPTION
  *
- *
+ * Very simple code for measuring details of program performance.
  */
 
-#include <concepts>
-#include <memory>
+
+#ifndef TDB_LOGGING_H
+#define TDB_LOGGING_H
+
+#include <chrono>
+#include <iostream>
+#include <map>
 #include <string>
 
-#include <tiledb/tiledb>
+#include "nlohmann/json.hpp"
 
-#include "linalg.h"
-#include "utils/utils.h"
+using json = nlohmann::json;
 
-/**
- * A view of a TileDB array.  Presents a Matrix interface but only loads
- * a portion of the TileDB array into memory at a time.  Loads additional
- * data from TileDB when requested.
- */
-struct tdbArrayView {
+class timing_data {
+private:
+  json timings;
 
 public:
-  tdbArrayView(const std::string& uri) {
+  void add_timing(const std::string& operation, double elapsedTime) {
+    timings[operation] = elapsedTime;
+  }
+
+  auto get_timings() {
+    return timings;
   }
 };
+
+timing_data& get_timing_data_instance() {
+  static timing_data instance;
+  return instance;
+}
+
+timing_data& _timing_data { get_timing_data_instance() };
+
+void add_timing(const std::string& operation, double elapsedTime) {
+  _timing_data.add_timing(operation, elapsedTime);
+}
+
+auto get_timings() {
+  return _timing_data.get_timings();
+}
+
+#endif    //TDB_LOGGING_H
