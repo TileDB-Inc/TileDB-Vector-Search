@@ -32,11 +32,7 @@
 #ifndef TILEDB_TIMER_HPP
 #define TILEDB_TIMER_HPP
 
-<<<<<<<< HEAD:experimental/include/timer.h
-#include "stats.h"
-========
 #include "logging.h"
->>>>>>>> 96bf148 (Add more unit tests for tdb vector and matrix [skip ci]):experimental/include/utils/timer.h
 #include <chrono>
 #include <iostream>
 
