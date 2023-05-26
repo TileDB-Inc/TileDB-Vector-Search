@@ -79,6 +79,9 @@ auto kmeans_query(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices
 auto kmeans_query_large_q(auto&& shuffled_db, auto&& centroids, auto&& q, auto&& indices, auto&& shuffled_ids, size_t nprobe, size_t k_nn,
                           bool nth, size_t nthreads) {
   // get closest centroid for each query vector
+  // Does this even need to be blocked...?
+  // The whole point of ivf is to avoid loading everything
+  // The shuffled_db is the big array to avoid loading
   auto top_k = blocked_gemm_query(centroids, q, nprobe, nth, nthreads);
 
   // Copy top k from Matrix to vector
