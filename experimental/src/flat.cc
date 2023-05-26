@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
 
   std::string db_uri = args["--db_uri"].asString();
   std::string q_uri  = args["--q_uri"].asString();
-  std::string g_uri  = args["--g_uri"].asString();
+  std::string g_uri  = args["--g_uri"] ? args["--g_uri"].asString() : "";
 
   std::cout << "# Using " << args["--order"].asString() << std::endl;
 

@@ -85,21 +85,21 @@ static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
 Usage:
     ivf_hack (-h | --help)
-    ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --part_uri URI --id_uri URI
+    ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --parts_uri URI --ids_uri URI
             [--output_uri URI] [--query_uri URI] [--groundtruth_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
-            [--k NN] [--cluster NN] [--nthreads N] [--region REGION] [--nth] [--log FILE] [-d | -v]
+            [--k NN] [--cluster NN] [--nthreads N] [--region REGION] [--nth] [--log FILE] [-d] [-v]
 
 Options:
     -h, --help            show this screen
     --db_uri URI          database URI with feature vectors
     --centroids_uri URI   URI with centroid vectors
     --index_uri URI       URI with the paritioning index
-    --part_uri URI        URI with the partitioned data
-    --id_uri URI          URI with original IDs of vectors
+    --parts_uri URI       URI with the partitioned data
+    --ids_uri URI         URI with original IDs of vectors
     --output_uri URI      URI to store search results
     --query_uri URI       URI storing query vectors
     --groundtruth_uri URI URI storing ground truth vectors
-    --nqueries NN         number of query vectors to use (0 = all) [default: 1]
+    --nqueries NN         number of query vectors to use (0 = all) [default: 0]
     --ndb NN              number of database vectors to use (0 = all) [default: 0]
     --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
     --k NN                number of nearest neighbors to search for [default: 10]
@@ -127,9 +127,9 @@ int main(int argc, char* argv[]) {
   global_verbose = args["--verbose"].asBool();
   global_region  = args["--region"].asString();
 
-  auto   part_uri  = args["--part_uri"].asString();
+  auto   part_uri  = args["--parts_uri"].asString();
   auto   index_uri = args["--index_uri"].asString();
-  auto   id_uri    = args["--id_uri"].asString();
+  auto   id_uri    = args["--ids_uri"].asString();
   size_t nprobe    = args["--cluster"].asLong();
   size_t k_nn      = args["--k"].asLong();
   auto   query_uri = args["--query_uri"] ? args["--query_uri"].asString() : "";
