@@ -58,6 +58,7 @@ apis/python/sdist/
 apis/python/var/
 apis/python/wheels/
 apis/python/*.egg-info/
+apis/python/src/*.egg-info
 apis/python/.installed.cfg
 apis/python/*.egg
 apis/python/MANIFEST
