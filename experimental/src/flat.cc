@@ -74,6 +74,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 // #include <execution>
 #include <iostream>
 #include <memory>
@@ -86,7 +87,8 @@
 
 #include "defs.h"
 #include "ivf_query.h"
-#include "timer.h"
+#include "stats.h"
+#include "utils/timer.h"
 
 bool        verbose      = false;
 bool        debug        = false;
@@ -98,7 +100,7 @@ static constexpr const char USAGE[] =
   Usage:
       flat (-h | --help)
       flat --db_uri URI --q_uri URI [--g_uri URI] [--output_uri URI] [--order ORDER] [--k NN]
-          [--block N] [--nqueries N] [--nthreads N] [--nth] [--validate] [-d ] [-v]
+          [--block N] [--nqueries N] [--nthreads N] [--nth] [--validate] [--log FILE] [-d] [-v]
 
   Options:
       -h, --help            show this screen
@@ -112,6 +114,7 @@ static constexpr const char USAGE[] =
       --nqueries N          size of queries subset to compare (0 = all) [default: 0]
       --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
       --nth                 use nth_element for top k [default: false]
+      --log FILE            log info to FILE (- for stdout)
       -V, --validate        validate results [default: false]
       -d, --debug           run in debug mode [default: false]
       -v, --verbose         run in verbose mode [default: false]
@@ -131,7 +134,7 @@ int main(int argc, char* argv[]) {
 
   std::string db_uri = args["--db_uri"].asString();
   std::string q_uri  = args["--q_uri"].asString();
-  std::string g_uri  = args["--g_uri"].asString();
+  std::string g_uri  = args["--g_uri"] ? args["--g_uri"].asString() : "";
 
   std::cout << "# Using " << args["--order"].asString() << std::endl;
 
@@ -195,5 +198,24 @@ int main(int argc, char* argv[]) {
 
   if (args["--output_uri"]) {
     write_matrix(top_k, args["--output_uri"].asString());
+  }
+
+  if (args["--log"]) {
+
+    auto program_args = args_log(args);
+    auto config       = config_log(argv[0]);
+
+    json log_log = {
+      {"Config",   config       },
+      { "Args",    program_args },
+      { "Times",   get_timings()}
+    };
+
+    if (args["--log"].asString() == "-") {
+      std::cout << log_log.dump(2) << std::endl;
+    } else {
+      std::ofstream outfile(args["--log"].asString(), std::ios_base::app);
+      outfile << log_log.dump(2) << std::endl;
+    }
   }
 }

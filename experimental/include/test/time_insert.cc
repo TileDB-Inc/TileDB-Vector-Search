@@ -34,7 +34,7 @@
 
 #define ALLHEAPS 1
 #include "../fixed_min_queues.h"
-#include "../timer.h"
+#include "utils/timer.h"
 #include <functional>
 #include <numeric>
 #include <random>

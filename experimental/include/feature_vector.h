@@ -28,8 +28,8 @@
  *
  */
 
-#include <span>
 #include "mdspan/mdspan.hpp"
+#include <span>
 #include <tiledb/tiledb>
 
 #include "linalg.h"
