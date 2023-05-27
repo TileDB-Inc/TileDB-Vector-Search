@@ -1,5 +1,5 @@
 /**
- * @file   unit_slicing.cc
+ * @file   gen_queries.cc
  *
  * @section LICENSE
  *
@@ -27,49 +27,53 @@
  *
  * @section DESCRIPTION
  *
- * Test various slicing constructors for tdbMatrix
- *
  */
 
 #include <catch2/catch_all.hpp>
-#include "../linalg.h"
+#include <thread>
+#include "utils/timer.h"
 
+#include "flat_query.h"
+#include "ivf_query.h"
+#include "linalg.h"
+
+bool global_debug = false;
 std::string global_region = "us-east-1";
 
-TEST_CASE("slice", "[linalg]") {
-  std::string uri = "s3://tiledb-andrew/sift/sift_base";
+TEST_CASE("gen db", "[queries]") {
+  size_t dimension = 128;
 
-  std::map<std::string, std::string> init_{
-      {"vfs.s3.region", global_region.c_str()}};
-  tiledb::Config config_{init_};
-  ;
-  tiledb::Context ctx_{config_};
-  ;
+  size_t db = GENERATE(1, 10, 100, 1000, 10000, 100000, 1000000, 10000000);
 
-  std::vector<int> data_(288);
-  std::vector<int> data2_(288);
-  std::vector<float> value_(288);
+  std::cout << "db: " << db << std::endl;
 
-  tiledb::Array array_{ctx_, uri, TILEDB_READ};
-  tiledb::ArraySchema schema_{array_.schema()};
-  tiledb::Query query(ctx_, array_);
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<int> dist(-127, 127);
 
-  tiledb::Subarray subarray(ctx_, array_);
-  subarray.add_range(0, 0, 5).add_range(1, 88, 100).add_range(0, 10, 13);
-
-  //      .add_range(1, col_0_start, col_0_end);
-  query.set_subarray(subarray);
-
-  query.set_subarray(subarray)
-      .set_layout(TILEDB_COL_MAJOR)
-      .set_data_buffer("cols", data2_.data(), 288)
-      .set_data_buffer("rows", data_.data(), 288)
-      .set_data_buffer("a", value_.data(), 288);
-
-  query.submit();
-
-  for (int i = 0; i < 135; i++) {
-    std::cout << data_[i] << ", " << data2_[i] << ": " << value_[i]
-              << std::endl;
+  auto db_mat = ColMajorMatrix<float>(dimension, db);
+  for (auto& x : raveled(db_mat)) {
+    x = dist(gen);
   }
+  std::string db_name = "db_" + std::to_string(db) + ".tdb";
+  write_matrix(db_mat, db_name);
+}
+
+TEST_CASE("gen q", "[queries]") {
+  size_t dimension = 128;
+
+  size_t q = GENERATE(1, 10, 100, 1000, 10000);
+
+  std::cout << "q: " << q << std::endl;
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<int> dist(-127, 127);
+
+  auto q_mat = ColMajorMatrix<float>(dimension, q);
+  for (auto& x : raveled(q_mat)) {
+    x = dist(gen);
+  }
+  std::string q_name = "q_" + std::to_string(q) + ".tdb";
+  write_matrix(q_mat, q_name);
 }

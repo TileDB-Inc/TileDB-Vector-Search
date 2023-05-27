@@ -208,7 +208,6 @@ int main(int argc, char* argv[]) {
       auto groundtruth = tdbMatrix<int, Kokkos::layout_left>(groundtruth_uri);
       debug_matrix(groundtruth, "groundtruth");
 
-
       Matrix<int> original_ids(kmeans_ids.num_rows(), kmeans_ids.num_cols());
       for (size_t i = 0; i < kmeans_ids.num_rows(); ++i) {
         for (size_t j = 0; j < kmeans_ids.num_cols(); ++j) {

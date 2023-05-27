@@ -58,12 +58,16 @@
  */
 template <class V>
 auto L2(V const& a, V const& b) {
-  typename V::value_type sum{0};
-
-  auto size_a = size(a);
-  for (decltype(a.size()) i = 0; i < size_a; ++i) {
-    auto diff = a[i] - b[i];
-    sum += diff * diff;
+  float sum{0.0};
+  size_t size_a = size(a);
+  for (size_t i = 0; i < size_a; ++i) {
+    if constexpr (std::is_same_v<typename V::value_type, float>) {
+      float diff = a[i] - b[i];
+      sum += diff * diff;
+    } else {
+      float diff = float(a[i]) - float(b[i]);
+      sum += diff * diff;
+    }
   }
   return std::sqrt(sum);
 }
@@ -191,26 +195,33 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
 
 // @todo implement with fixed_min_set
 template <class V, class L, class I>
-auto get_top_k(V const& scores, L&& top_k, I& index, int k, bool nth = false) {
-  if (nth) {
-    std::nth_element(
-        begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) {
-          return scores[a] < scores[b];
-        });
-    std::copy(begin(index), begin(index) + k, begin(top_k));
-    std::sort(begin(top_k), end(top_k), [&](auto& a, auto& b) {
-      return scores[a] < scores[b];
-    });
-  } else {
-    using element = std::pair<float, unsigned>;
-    fixed_min_heap<element> s(k);
-    for (size_t i = 0; i < index.size(); ++i) {
-      s.insert({scores[index[i]], index[i]});
-    }
-    std::sort_heap(begin(s), end(s));
-    std::transform(
-        s.begin(), s.end(), top_k.begin(), ([](auto&& e) { return e.second; }));
+auto get_top_k_nth(V const& scores, L&& top_k, I& index, int k) {
+  std::iota(begin(index), end(index), 0);
+  std::nth_element(
+      begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) {
+        return scores[a] < scores[b];
+      });
+  std::copy(begin(index), begin(index) + k, begin(top_k));
+  std::sort(begin(top_k), end(top_k), [&](auto& a, auto& b) {
+    return scores[a] < scores[b];
+  });
+  return top_k;
+}
+
+template <class V, class L>
+auto get_top_k(V const& scores, L&& top_k, int k) {
+  using element = std::pair<float, unsigned>;
+  fixed_min_heap<element> s(k);
+
+  auto num_scores = scores.size();
+  for (size_t i = 0; i < num_scores; ++i) {
+    s.insert({scores[i], i});
   }
+  std::sort_heap(begin(s), end(s));
+  std::transform(
+      s.begin(), s.end(), top_k.begin(), ([](auto&& e) { return e.second; }));
+
+  return top_k;
 }
 
 template <class S>
@@ -229,15 +240,25 @@ auto get_top_k(const S& scores, int k, bool nth, int nthreads) {
     int q_start = n * q_block_size;
     int q_stop = std::min<int>((n + 1) * q_block_size, num_queries);
 
-    futs.emplace_back(std::async(
-        std::launch::async, [q_start, q_stop, &scores, &top_k, k, nth]() {
-          std::vector<int> index(scores.num_rows());
+    if (nth) {
+      futs.emplace_back(std::async(
+          std::launch::async, [q_start, q_stop, &scores, &top_k, k]() {
+            std::vector<int> index(scores.num_rows());
 
-          for (int j = q_start; j < q_stop; ++j) {
-            std::iota(begin(index), end(index), 0);
-            get_top_k(scores[j], std::move(top_k[j]), index, k, nth);
-          }
-        }));
+            for (int j = q_start; j < q_stop; ++j) {
+              get_top_k_nth(scores[j], std::move(top_k[j]), index, k);
+            }
+          }));
+    } else {
+      futs.emplace_back(std::async(
+          std::launch::async, [q_start, q_stop, &scores, &top_k, k]() {
+            std::vector<int> index(scores.num_rows());
+
+            for (int j = q_start; j < q_stop; ++j) {
+              get_top_k(scores[j], std::move(top_k[j]), k);
+            }
+          }));
+    }
   }
   for (int n = 0; n < nthreads; ++n) {
     futs[n].get();
@@ -249,6 +270,7 @@ template <class TK, class G>
 bool validate_top_k(TK& top_k, G& g) {
   size_t k = top_k.num_rows();
   size_t num_errors = 0;
+
   for (size_t qno = 0; qno < top_k.num_cols(); ++qno) {
     std::sort(begin(top_k[qno]), end(top_k[qno]));
     std::sort(begin(g[qno]), begin(g[qno]) + top_k.num_rows());

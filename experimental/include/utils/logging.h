@@ -45,8 +45,21 @@ using json = nlohmann::json;
 class timing_data {
  private:
   json timings;
+  json metadata;
+  json search_data;
+
+  timing_data() = default;
+  ~timing_data() = default;
 
  public:
+  
+  timing_data(const timing_data&) = delete;
+  timing_data& operator=(const timing_data&) = delete;
+  
+  static timing_data & get_instance() {
+    static timing_data instance;
+    return instance;
+  }
 
   // @todo update this to record per-invocation times as well as
   // cumulative times for same timer
@@ -57,12 +70,34 @@ class timing_data {
   auto get_timings() {
     return timings;
   }
+
+  void add_metadata(const std::string& key, const std::string& value) {
+    metadata[key] = value;
+  }
+
+  auto get_metadata() {
+    return metadata;
+  }
+
+  template <typename T>
+  void add_search_datum(const std::string& key, T value) {
+    search_data[key] = value;
+  }
 };
 
-timing_data& get_timing_data_instance() {
-  static timing_data instance;
-  return instance;
+
+inline timing_data& get_timing_data_instance () {
+  return timing_data::get_instance();
 }
+
+/*
+ * Can also use this pattern:
+*
+* timing_data& get_timing_data_instance() {
+*   static timing_data instance;
+*   return instance;
+* }
+*/
 
 timing_data& _timing_data{get_timing_data_instance()};
 
