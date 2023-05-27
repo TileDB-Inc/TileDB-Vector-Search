@@ -141,6 +141,8 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
+  using view_type = Matrix;
+
  protected:
   size_type nrows_{0};
   size_type ncols_{0};
@@ -940,6 +942,23 @@ template <class Matrix>
 void debug_matrix(const Matrix& A, const std::string& msg = "") {
   if (global_debug) {
     std::cout << matrix_info(A, msg) << std::endl;
+  }
+}
+
+template <class Matrix>
+void debug_slice(const Matrix& A, const std::string& msg = "", size_t rows = 5, size_t cols = 15) {
+  if (global_debug) {
+    rows = std::min(rows, A.num_rows());
+    cols = std::min(cols, A.num_cols());
+
+    std::cout << "# " << msg << std::endl;
+    for (size_t i = 0; i < rows; ++i) {
+      std::cout << "# " ;
+      for (size_t j = 0; j < cols; ++j) {
+        std::cout << A(i, j) << "\t";
+      }
+      std::cout << std::endl;
+    }
   }
 }
 #endif  // TDB_LINALG_H

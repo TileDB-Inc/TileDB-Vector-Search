@@ -125,12 +125,11 @@ auto qv_query_nth(
  * @todo Implement a blocked version
  */
 template <class DB, class Q>
-auto query_vq_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
+auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
   life_timer _outer{
       "Total time (vq loop nesting, nth = " + std::to_string(nth)};
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
-  ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
   auto db_block_size = (size(db) + nthreads - 1) / nthreads;
   std::vector<std::future<void>> futs;
@@ -144,7 +143,7 @@ auto query_vq_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
 
     futs.emplace_back(std::async(
         std::launch::async,
-        [&db, &q, db_start, db_stop, size_q, &scores, &top_k]() {
+        [&db, &q, db_start, db_stop, size_q, &scores]() {
           // For each database vector
           for (int i = db_start; i < db_stop; ++i) {
             // Compare with each query
@@ -158,7 +157,7 @@ auto query_vq_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
     futs[n].get();
   }
 
-  get_top_k(scores, top_k, k, size(q), size(db), nth, nthreads);
+  auto top_k = get_top_k(scores, k, nth, nthreads);
 
   return top_k;
 }
@@ -173,7 +172,7 @@ auto query_vq_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
  */
 template <class DB, class Q>
 void vq_query_heap(
-    const DB& db, const Q& q, int k, bool nth, unsigned nthreads) {
+    const DB& db, const Q& q, int k, unsigned nthreads) {
   life_timer _outer{"Total time (vq loop nesting, set way)"};
 
   using element = std::pair<float, int>;

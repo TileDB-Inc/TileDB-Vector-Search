@@ -51,6 +51,8 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 
 kmeans_add_test(time_insert)
 
+kmeans_add_test(time_queries)
+
 kmeans_add_test(unit_algorithm)
 
 kmeans_add_test(unit_concepts)
@@ -67,9 +69,13 @@ kmeans_add_test(unit_linalg)
 
 kmeans_add_test(unit_mdspan)
 
+kmeans_add_test(unit_slicing)
+
 kmeans_add_test(unit_stats)
 
 kmeans_add_test(unit_utils)
+
+
 
 
 

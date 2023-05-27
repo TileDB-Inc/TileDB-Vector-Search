@@ -47,6 +47,9 @@ class timing_data {
   json timings;
 
  public:
+
+  // @todo update this to record per-invocation times as well as
+  // cumulative times for same timer
   void add_timing(const std::string& operation, double elapsedTime) {
     timings[operation] = elapsedTime;
   }

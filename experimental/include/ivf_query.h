@@ -289,7 +289,7 @@ auto qv_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
     }
   }
 
-  for (int n = 0; n < nthreads; ++n) {
+  for (int n = 0; n < size(futs); ++n) {
     futs[n].get();
   }
 
