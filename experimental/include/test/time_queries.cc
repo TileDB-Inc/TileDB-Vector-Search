@@ -64,7 +64,10 @@ TEST_CASE("time queries", "[queries]") {
   for (auto db : {small_db, med_db, big_db}) {
     for (auto q : {small_q, med_q, big_q}) {
       
-      if (db * q * 128 > 8'000'000'000) {
+      if ((db * q * 128)/nthreads > 32'000'000'000) {
+        continue;
+      }
+      if ((db * q * 128)/nthreads < 400'000) {
         continue;
       }
       
