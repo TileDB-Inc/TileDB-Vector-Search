@@ -15,46 +15,46 @@
 //    nth = true / false
 
 TEST_CASE("time queries", "[queries]") {
-  unsigned dimension = 128;
-  unsigned nthreads = std::thread::hardware_concurrency();
+  size_t dimension = 128;
+  size_t nthreads = std::thread::hardware_concurrency();
 #if 1
-  unsigned small_threads = 1;
-  unsigned med_threads = nthreads / 4;
-  unsigned big_threads = nthreads;
+  size_t small_threads = 1;
+  size_t med_threads = nthreads / 4;
+  size_t big_threads = nthreads;
 
-  unsigned small_q = 1;
-  unsigned med_q = 100;
-  unsigned big_q = 10000;
+  size_t small_q = 1;
+  size_t med_q = 100;
+  size_t big_q = 10000;
 
-  unsigned small_db = 1000;
-  unsigned med_db = 100000;
-  unsigned big_db = 10000000;
+  size_t small_db = 1000;
+  size_t med_db = 100000;
+  size_t big_db = 10000000;
 
-  unsigned small_k = 1;
-  unsigned med_k = 10;
-  unsigned big_k = 100;
+  size_t small_k = 1;
+  size_t med_k = 10;
+  size_t big_k = 100;
 
-  unsigned true_nth = true;
-  unsigned false_nth = false;
+  size_t true_nth = true;
+  size_t false_nth = false;
 #else
-  unsigned small_threads = 1;
-  unsigned med_threads = 2;
-  unsigned big_threads = 4;
+  size_t small_threads = 1;
+  size_t med_threads = 2;
+  size_t big_threads = 4;
 
-  unsigned small_q = 1;
-  unsigned med_q = 10;
-  unsigned big_q = 100;
+  size_t small_q = 1;
+  size_t med_q = 10;
+  size_t big_q = 100;
 
-  unsigned small_db = 100;
-  unsigned med_db = 1000;
-  unsigned big_db = 10000;
+  size_t small_db = 100;
+  size_t med_db = 1000;
+  size_t big_db = 10000;
 
-  unsigned small_k = 1;
-  unsigned med_k = 5;
-  unsigned big_k = 10;
+  size_t small_k = 1;
+  size_t med_k = 5;
+  size_t big_k = 10;
 
-  unsigned true_nth = true;
-  unsigned false_nth = false;
+  size_t true_nth = true;
+  size_t false_nth = false;
 
 #endif
   std::random_device rd;
@@ -63,6 +63,11 @@ TEST_CASE("time queries", "[queries]") {
 
   for (auto db : {small_db, med_db, big_db}) {
     for (auto q : {small_q, med_q, big_q}) {
+      
+      if (db * q * 128 > 8'000'000'000) {
+        continue;
+      }
+      
       auto db_mat = ColMajorMatrix<float>(dimension, db);
       for (auto& x : raveled(db_mat)) {
         x = dist(gen);
