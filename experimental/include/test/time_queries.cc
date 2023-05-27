@@ -64,12 +64,19 @@ TEST_CASE("time queries", "[queries]") {
   for (auto db : {small_db, med_db, big_db}) {
     for (auto q : {small_q, med_q, big_q}) {
       
-      if (db * q * 128 > 8'000'000'000) {
+      if ((db * q * 128)/nthreads > 32'000'000'000) {
         continue;
       }
-      
+      if ((db * q * 128)/nthreads < 800'000) {
+        continue;
+      }
+
       auto db_mat = ColMajorMatrix<float>(dimension, db);
       for (auto& x : raveled(db_mat)) {
+        x = dist(gen);
+      }
+      auto b_db_mat = BlockedMatrix<float, stdx::layout_left>(dimension, db, std::min(db, 100000UL));
+      for (auto& x : raveled(b_db_mat)) {
         x = dist(gen);
       }
       auto q_mat = ColMajorMatrix<float>(dimension, q);
@@ -105,6 +112,10 @@ TEST_CASE("time queries", "[queries]") {
             {
               life_timer _outer{"gemm_query"};
               gemm_query(db_mat, q_mat, k, nth, nthreads);
+            }
+            {
+              life_timer _outer{"blocked_gemm_query"};
+              blocked_gemm_query(b_db_mat, q_mat, k, nth, nthreads);
             }
           }
         }
