@@ -87,6 +87,7 @@
 
 #include "defs.h"
 #include "ivf_query.h"
+#include "flat_query.h"
 #include "stats.h"
 #include "utils/timer.h"
 
@@ -162,26 +163,40 @@ int main(int argc, char* argv[]) {
   auto top_k = [&]() {
 
   // @todo reimplement these
-#if 0
-  if (args["--order"].asString() == "vq") {
+
+  if (args["--order"].asString() == "vq_nth") {
     if (verbose) {
       std::cout << "# Using vq loop nesting for query" << std::endl;
       if (nth) {
         std::cout << "# Using nth_element selection" << std::endl;
       }
     }
-    return query_vq(db, q, k, nth, nthreads);
-  } else if (args["--order"].asString() == "qv") {
+    return vq_query_nth(db, q, k, nth, nthreads);
+  } else if (args["--order"].asString() == "vq_heap") {
+    if (verbose) {
+      std::cout << "# Using vq loop nesting for query" << std::endl;
+      if (nth) {
+        std::cout << "# Ignoring nth" << std::endl;
+      }
+    }
+    return vq_query_heap(db, q, k, nthreads);
+  } else if (args["--order"].asString() == "qv_nth") {
     if (verbose) {
       std::cout << "# Using qv nesting for query" << std::endl;
       if (nth) {
         std::cout << "# Using nth element selection" << std::endl;
       }
     }
-    return query_qv(db, q, k, nth, nthreads);
-  } else
-#endif
-    if (args["--order"].asString() == "gemm") {
+    return qv_query_nth(db, q, k, nth, nthreads);
+  } else if (args["--order"].asString() == "qv_heap") {
+      if (verbose) {
+        std::cout << "# Using qv nesting for query" << std::endl;
+        if (nth) {
+          std::cout << "# Ignoring nth" << std::endl;
+        }
+      }
+      return qv_query(db, q, k, nthreads);
+  } else if (args["--order"].asString() == "gemm") {
       if (block != 0) {
         std::cout << "# Using blocked gemm for query" << std::endl;
         return blocked_gemm_query(db, q, k, nth, nthreads);
