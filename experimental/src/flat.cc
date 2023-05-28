@@ -166,42 +166,30 @@ int main(int argc, char* argv[]) {
 
   if (args["--order"].asString() == "vq_nth") {
     if (verbose) {
-      std::cout << "# Using vq loop nesting for query" << std::endl;
-      if (nth) {
-        std::cout << "# Using nth_element selection" << std::endl;
-      }
+      std::cout << "# Using vq_nth, nth = " << std::to_string(nth) << std::endl;
     }
     return vq_query_nth(db, q, k, nth, nthreads);
   } else if (args["--order"].asString() == "vq_heap") {
     if (verbose) {
-      std::cout << "# Using vq loop nesting for query" << std::endl;
-      if (nth) {
-        std::cout << "# Ignoring nth" << std::endl;
-      }
+      std::cout << "# Using vq_heap, ignoring nth = " << std::to_string(nth) << std::endl;
     }
     return vq_query_heap(db, q, k, nthreads);
   } else if (args["--order"].asString() == "qv_nth") {
     if (verbose) {
-      std::cout << "# Using qv nesting for query" << std::endl;
-      if (nth) {
-        std::cout << "# Using nth element selection" << std::endl;
-      }
+      std::cout << "# Using qv_nth, nth = " << std::to_string(nth) << std::endl;
     }
     return qv_query_nth(db, q, k, nth, nthreads);
   } else if (args["--order"].asString() == "qv_heap") {
-      if (verbose) {
-        std::cout << "# Using qv nesting for query" << std::endl;
-        if (nth) {
-          std::cout << "# Ignoring nth" << std::endl;
-        }
-      }
-      return qv_query(db, q, k, nthreads);
+    if (verbose) {
+      std::cout << "# Using qv_query (qv_heap), ignoring nth = " << std::to_string(nth) << std::endl;
+    }
+    return qv_query(db, q, k, nthreads);
   } else if (args["--order"].asString() == "gemm") {
       if (block != 0) {
-        std::cout << "# Using blocked gemm for query" << std::endl;
+      std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth) << std::endl;
         return blocked_gemm_query(db, q, k, nth, nthreads);
       } else {
-        std::cout << "# Using gemm for query" << std::endl;
+        std::cout << "# Using gemm, nth = " << std::to_string(nth) << std::endl;
         return gemm_query(db, q, k, nth, nthreads);
       }
     }
