@@ -212,6 +212,7 @@ auto vq_query_heap(const DB& db, const Q& q, int k, unsigned nthreads) {
     }
   }
 
+
   ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
   // This might not be a win.
