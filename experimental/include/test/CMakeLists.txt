@@ -69,6 +69,8 @@ kmeans_add_test(unit_linalg)
 
 kmeans_add_test(unit_mdspan)
 
+kmeans_add_test(unit_queries)
+
 kmeans_add_test(unit_slicing)
 
 kmeans_add_test(unit_stats)

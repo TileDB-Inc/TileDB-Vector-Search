@@ -171,7 +171,7 @@ auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
  * @todo Implement a blocked version
  */
 template <class DB, class Q>
-void vq_query_heap(
+auto vq_query_heap(
     const DB& db, const Q& q, int k, unsigned nthreads) {
   life_timer _outer{"Total time (vq loop nesting, set way)"};
 
@@ -230,6 +230,8 @@ void vq_query_heap(
   for (int n = 0; n < std::min<int>(nthreads, size(q)); ++n) {
     futs[n].get();
   }
+
+  return top_k;
 }
 
 #endif  // TDB_FLAT_QUERY_H
