@@ -26,7 +26,7 @@ ${flat} \
 }
 
 
-for nqueries in 1 100 0;
+for nqueries in 1 100 ;#0;
 do
     for order in vq_heap qv_heap;
     do
