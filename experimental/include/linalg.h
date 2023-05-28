@@ -382,7 +382,7 @@ class BlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   BlockedMatrix(size_t array_rows, size_t array_cols, size_t block) {
 
 #ifndef __APPLE__
-    auto data_ = std::make_unique_for_overwrite<T[]>(num_rows * num_cols);
+    auto data_ = std::make_unique_for_overwrite<T[]>(array_rows * array_cols);
 #else
     // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
     auto data_ = std::unique_ptr<T[]>(new T[array_rows * array_cols]);
