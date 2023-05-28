@@ -49,6 +49,8 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 # kmeans_add_test(unit_sift_db)
 
 
+kmeans_add_test(gen_queries)
+
 kmeans_add_test(time_insert)
 
 kmeans_add_test(time_queries)
