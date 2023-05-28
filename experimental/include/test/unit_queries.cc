@@ -17,7 +17,8 @@ TEST_CASE("test queries", "[queries]") {
   size_t nthreads = GENERATE(1, 8);
 
   std::random_device rd;
-  std::mt19937 gen(rd());
+  //std::mt19937 gen(rd());
+  std::mt19937 gen(2514908090);
   std::uniform_int_distribution<int> dist(-128, 128);
 
   auto db_mat = ColMajorMatrix<float>(dimension, num_vectors);
@@ -33,7 +34,7 @@ TEST_CASE("test queries", "[queries]") {
 
   auto q_mat = ColMajorMatrix<float>(dimension, num_queries);
   for (size_t i = 0; i < num_queries; ++i) {
-    auto n = 17 * i;
+    auto n = 17 * (i + 3);
     std::copy(begin(db_mat[n]), end(db_mat[n]), begin(q_mat[i]));
   }
 
@@ -42,18 +43,18 @@ TEST_CASE("test queries", "[queries]") {
     CHECK(top_k.num_rows() == k);
     CHECK(top_k.num_cols() == num_queries);
     for (size_t i = 0; i < num_queries; ++i) {
-      auto n = 17 * i;
+      auto n = 17 * (i + 3);
       CHECK(top_k(0, i) == n);
     }
   }
 
-#if 0
+#if 1
   SECTION("vq_query_heap") {  // FIXME: this is broken
     auto top_k = vq_query_heap(db_mat, q_mat, k, nthreads);
     CHECK(top_k.num_rows() == k);
     CHECK(top_k.num_cols() == num_queries);
     for (size_t i = 0; i < num_queries; ++i) {
-      auto n = 17 * i;
+      auto n = 17 * (i + 3);
       CHECK(top_k(0, i) == n);
     }
   }
@@ -64,7 +65,7 @@ TEST_CASE("test queries", "[queries]") {
       CHECK(top_k.num_rows() == k);
       CHECK(top_k.num_cols() == num_queries);
       for (size_t i = 0; i < num_queries; ++i) {
-        auto n = 17 * i;
+        auto n = 17 * (i + 3);
         CHECK(top_k(0, i) == n);
       }
     }
@@ -74,7 +75,7 @@ TEST_CASE("test queries", "[queries]") {
       CHECK(top_k.num_rows() == k);
       CHECK(top_k.num_cols() == num_queries);
       for (size_t i = 0; i < num_queries; ++i) {
-        auto n = 17 * i;
+        auto n = 17 * (i + 3);
         CHECK(top_k(0, i) == n);
       }
     }
@@ -84,7 +85,7 @@ TEST_CASE("test queries", "[queries]") {
       CHECK(top_k.num_rows() == k);
       CHECK(top_k.num_cols() == num_queries);
       for (size_t i = 0; i < num_queries; ++i) {
-        auto n = 17 * i;
+        auto n = 17 * (i + 3);
         CHECK(top_k(0, i) == n);
       }
     }

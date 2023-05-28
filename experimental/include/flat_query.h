@@ -199,6 +199,7 @@ auto vq_query_heap(
     }
   }
 
+
   ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
   // This might not be a win.
@@ -214,15 +215,15 @@ auto vq_query_heap(
     int q_stop = std::min<int>((n + 1) * q_block_size, size(q));
 
     futs.emplace_back(
-        std::async(std::launch::async, [&scores, q_start, q_stop, &top_k, k]() {
+        std::async(std::launch::async, [&scores, q_start, q_stop, &top_k]() {
           // For each query
           for (int j = q_start; j < q_stop; ++j) {
+            sort_heap(scores[0][j].begin(), scores[0][j].end());
             std::transform(
                 scores[0][j].begin(),
                 scores[0][j].end(),
                 top_k[j].begin(),
                 ([](auto&& e) { return e.second; }));
-            std::sort(begin(top_k[j]), end(top_k[j]));
           }
         }));
   }
