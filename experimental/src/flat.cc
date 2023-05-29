@@ -153,8 +153,11 @@ int main(int argc, char* argv[]) {
 
   ms_timer load_time{"Load database, query, and ground truth arrays"};
 
-  auto db = (block == 0 ? tdbColMajorMatrix<float>(db_uri)  // unblocked
-                        : tdbBlockColMajorMatrix<float>(db_uri, block));   // blocked
+  //  auto db = (block == 0 ? tdbColMajorMatrix<float>(db_uri)  // unblocked
+  //                        : tdbBlockColMajorMatrix<float>(db_uri, block));   // blocked
+
+  auto db = tdbBlockColMajorMatrix<float>(db_uri, block);   // blocked
+
   // tdbColMajorMatrix<float> db(db_uri, block);   // blocked
 
   auto q = tdbColMajorMatrix<float> (q_uri, nqueries);  // just a slice
