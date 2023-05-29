@@ -190,7 +190,8 @@ int main(int argc, char* argv[]) {
     }
     return qv_query(db, q, k, nthreads);
   } else if (args["--order"].asString() == "gemm") {
-      if (block != 0) {
+      // if (block != 0) {
+    if (args["--order"]) {
       std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth) << std::endl;
         return blocked_gemm_query(db, q, k, nth, nthreads);
       } else {
