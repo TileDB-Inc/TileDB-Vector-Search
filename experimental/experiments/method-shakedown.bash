@@ -12,8 +12,21 @@ function run() {
 
     if [[ $2 -eq 1 ]]; then
 	ith="--nth"
+    else
+	ith=""
     fi
-echo      '${sift}/sift_base'                                        
+
+echo ${flat} \
+    --db_uri        "${sift}_base"                                        \
+    --q_uri         "${sift}_query"                                       \
+    --g_uri         "${sift}_groundtruth"                                 \
+    --order         ${order}                                                   \
+    ${ith}                                                                     \
+    --block         ${block}                                                   \
+    --nthreads      48                                                          \
+    --nqueries      ${nqueries}                                                          \
+    -v -d --log method-shakedown.log
+
 ${flat} \
     --db_uri        "${sift}_base"                                        \
     --q_uri         "${sift}_query"                                       \
@@ -21,7 +34,8 @@ ${flat} \
     --order         ${order}                                                   \
     ${ith}                                                                     \
     --block         ${block}                                                   \
-    --nthreads      8                                                          \
+    --nthreads      48                                                          \
+    --nqueries      ${nqueries}                                                          \
     -v -d --log method-shakedown.log
 }
 

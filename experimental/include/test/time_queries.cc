@@ -75,6 +75,9 @@ TEST_CASE("time queries", "[queries]") {
       if ((db * q * 128)/nthreads > 32'000'000'000) {
         continue;
       }
+      if ((db * q * 128)/nthreads < 400'000) {
+        continue;
+      }
       if ((db * q * 128)/nthreads < 800'000) {
         continue;
       }

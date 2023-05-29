@@ -54,6 +54,7 @@ kmeans_add_test(gen_queries)
 kmeans_add_test(time_insert)
 
 kmeans_add_test(time_queries)
+target_link_libraries(time_queries PRIVATE flat_blas)
 
 kmeans_add_test(unit_algorithm)
 
@@ -62,6 +63,7 @@ kmeans_add_test(unit_concepts)
 kmeans_add_test(unit_defs)
 
 kmeans_add_test(unit_gemm)
+target_link_libraries(time_queries PRIVATE flat_blas)
 
 kmeans_add_test(unit_ivf_index)
 
