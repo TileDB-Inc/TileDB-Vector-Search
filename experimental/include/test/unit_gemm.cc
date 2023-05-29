@@ -39,7 +39,7 @@
 #include <Accelerate/Accelerate.h>
 #else
 // If not apple, use OpenBLAS/MKL/etc
-#include <cblas.h>
+#include <mkl_cblas.h>
 #endif
 
 /*
