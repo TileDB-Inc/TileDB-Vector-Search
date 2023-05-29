@@ -402,7 +402,7 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
   ColMajorMatrix<size_t> top_k(k, q.num_cols());
   for (int j = 0; j < min_scores.size(); ++j) {
     // @todo sort_heap
-    std::sort(min_scores[j].begin(), min_scores[j].end());
+    std::sort_heap(min_scores[j].begin(), min_scores[j].end());
     std::transform(
         min_scores[j].begin(),
         min_scores[j].end(),
