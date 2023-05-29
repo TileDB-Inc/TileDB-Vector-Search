@@ -833,10 +833,10 @@ def ingest(
                     for i in range(0, len(kmeans_workers), 10):
                         reducers.append(d.submit(compute_new_centroids,
                                                  *kmeans_workers[i:i + 10], name="update-centroids-" + str(i),
-                                                 resources={"cpu": "1", "memory": "4Gi"}))
+                                                 resources={"cpu": "1", "memory": "8Gi"}))
                     internal_centroids_node = d.submit(compute_new_centroids,
                                                        *reducers, name="update-centroids",
-                                                       resources={"cpu": "1", "memory": "4Gi"})
+                                                       resources={"cpu": "1", "memory": "8Gi"})
                 centroids_node = d.submit(write_centroids,
                                           centroids=internal_centroids_node,
                                           array_uri=array_uri,
