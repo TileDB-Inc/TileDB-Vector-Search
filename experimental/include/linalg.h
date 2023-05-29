@@ -569,56 +569,17 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     return col_offset_;
   }
 
+
+
+  //bool is_blocked() const {
+//    std::cout << "tdbMatrix is blocked" << std::endl;
+//    return false;
+//  }
+
   ~tdbMatrix() noexcept {
     array_.close();
   }
-};
 
-/**
- * Convenience class for row-major matrices.
- */
-template <class T, class I = size_t>
-using tdbRowMajorMatrix = tdbMatrix<T, stdx::layout_right, I>;
-
-/**
- * Convenience class for column-major matrices.
- */
-template <class T, class I = size_t>
-using tdbColMajorMatrix = tdbMatrix<T, stdx::layout_left, I>;
-
-template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-class tdbBlockedMatrix : public tdbMatrix<T, LayoutPolicy, I> {
-  using Base = tdbMatrix<T, LayoutPolicy, I>;
-  using Base::Base;
-
- public:
-  using index_type = typename Base::index_type;
-  using size_type = typename Base::size_type;
-  using reference = typename Base::reference;
-
-  using view_type = Base;
-
-  using Base::array_;
-  using Base::col_offset_;
-  using Base::col_view_;
-  using Base::ctx_;
-  using Base::matrix_order_;
-  using Base::num_array_cols_;
-  using Base::num_array_rows_;
-  using Base::row_offset_;
-  using Base::row_view_;
-  using Base::schema_;
-  using Base::tmp_storage_;
-  using Base::is_blocked;
-  /**
-   * @brief Advance the view to the next row block of data.
-   *
-   * @param num_elts How many elements to advance the view by.  If 0, then
-   * advance to the next block.
-   *
-   * @todo Handle case of advancing to the end of the array.
-   * @todo Make this an iterator.
-   */
   bool advance(size_t num_elts = 0)
   // requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
   {
@@ -698,7 +659,58 @@ class tdbBlockedMatrix : public tdbMatrix<T, LayoutPolicy, I> {
 
     return true;
   }
+
+
+};
+
+/**
+ * Convenience class for row-major matrices.
+ */
+template <class T, class I = size_t>
+using tdbRowMajorMatrix = tdbMatrix<T, stdx::layout_right, I>;
+
+/**
+ * Convenience class for column-major matrices.
+ */
+template <class T, class I = size_t>
+using tdbColMajorMatrix = tdbMatrix<T, stdx::layout_left, I>;
+
 #if 0
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+class tdbBlockedMatrix : public tdbMatrix<T, LayoutPolicy, I> {
+  using Base = tdbMatrix<T, LayoutPolicy, I>;
+  using Base::Base;
+
+ public:
+  using index_type = typename Base::index_type;
+  using size_type = typename Base::size_type;
+  using reference = typename Base::reference;
+
+  using view_type = Base;
+
+  using Base::array_;
+  using Base::col_offset_;
+  using Base::col_view_;
+  using Base::ctx_;
+  using Base::matrix_order_;
+  using Base::num_array_cols_;
+  using Base::num_array_rows_;
+  using Base::row_offset_;
+  using Base::row_view_;
+  using Base::schema_;
+  using Base::tmp_storage_;
+  using Base::is_blocked;
+  using Base::set_blocked;
+  /**
+   * @brief Advance the view to the next row block of data.
+   *
+   * @param num_elts How many elements to advance the view by.  If 0, then
+   * advance to the next block.
+   *
+   * @todo Handle case of advancing to the end of the array.
+   * @todo Make this an iterator.
+   */
+
   bool advance(size_t num_elts = 0)
       // requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
     requires(false)
@@ -758,9 +770,13 @@ class tdbBlockedMatrix : public tdbMatrix<T, LayoutPolicy, I> {
 
     return true;
   }
-#endif
 
+  bool is_blocked() {
+    std::cout << "tdbBlockedMatrix is_blocked" << std::endl;
+    return true;
+  }
 };
+#endif
 
 /**
  * Convenience class for row-major matrices.
