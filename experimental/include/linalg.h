@@ -44,9 +44,11 @@
 #define TDB_LINALG_H
 
 #include <cstddef>
+#include <future>
 #include <memory>
 #include <span>
 #include <stdexcept>
+#include <thread>
 #include <type_traits>
 #include <vector>
 
@@ -340,6 +342,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
   std::unique_ptr<uint8_t[]> tmp_storage_;
+  std::unique_ptr<uint8_t[]> backing_data_;
   size_t num_array_rows_{0};
   size_t num_array_cols_{0};
 
@@ -660,6 +663,22 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     return true;
   }
 
+  std::future<bool> async_advance() {
+    if (!backing_data_) {
+#ifndef __APPLE__
+      backing_data_ = std::make_unique_for_overwrite<T[]>(
+          this->num_rows() * this->num_cols);
+#else
+      backing_data_ = std::unique_ptr<T[]>(
+          new uint8_t[this->num_rows() * this->num_cols()]);
+#endif
+    }
+    this->data_.swap(backing_data_);
+    auto fut = std::async(std::launch::async, [this]() {
+      return this->advance();
+    });
+    return fut;
+  }
 
 };
 
@@ -776,19 +795,21 @@ class tdbBlockedMatrix : public tdbMatrix<T, LayoutPolicy, I> {
     return true;
   }
 };
-#endif
+
 
 /**
- * Convenience class for row-major matrices.
+ * Convenience class for row-major blocked matrices.
  */
 template <class T, class I = size_t>
 using tdbBlockRowMajorMatrix = tdbMatrix<T, stdx::layout_right, I>;
 
+
 /**
- * Convenience class for column-major matrices.
+ * Convenience class for column-major blocked matrices.
  */
 template <class T, class I = size_t>
 using tdbBlockColMajorMatrix = tdbMatrix<T, stdx::layout_left, I>;
+#endif
 
 /**
  * Write the contents of a Matrix to a TileDB array.

@@ -163,7 +163,7 @@ int main(int argc, char* argv[]) {
   ///// blocked
   ///
 
-  auto db = tdbBlockColMajorMatrix<float>(db_uri, block);  // blocked
+  auto db = tdbColMajorMatrix<float>(db_uri, block);  // blocked
 
   auto q = tdbColMajorMatrix<float>(q_uri, nqueries);  // just a slice
 
