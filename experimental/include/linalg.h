@@ -586,6 +586,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   bool advance(size_t num_elts = 0)
   // requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
   {
+    // std::cout << "tdbMatrix advance" << std::endl;
     // @todo attr_idx, attr_name, and cell_order / layout_order should be
     // members of the class
     size_t attr_idx = 0;
