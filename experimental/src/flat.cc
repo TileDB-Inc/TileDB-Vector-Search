@@ -152,8 +152,12 @@ int main(int argc, char* argv[]) {
   }
 
   ms_timer load_time{"Load database, query, and ground truth arrays"};
-  tdbColMajorMatrix<float> db(db_uri, block);   // blocked
-  tdbColMajorMatrix<float> q(q_uri, nqueries);  // just a slice
+
+  auto db = (block == 0 ? tdbColMajorMatrix<float>(db_uri)  // unblocked
+                        : tdbBlockColMajorMatrix<float>(db_uri, block));   // blocked
+  // tdbColMajorMatrix<float> db(db_uri, block);   // blocked
+
+  auto q = tdbColMajorMatrix<float> (q_uri, nqueries);  // just a slice
 
   auto g =
       g_uri.empty() ? ColMajorMatrix<int>(0, 0) : tdbColMajorMatrix<int>(g_uri);
@@ -161,8 +165,6 @@ int main(int argc, char* argv[]) {
   std::cout << load_time << std::endl;
 
   auto top_k = [&]() {
-
-  // @todo reimplement these
 
   if (args["--order"].asString() == "vq_nth") {
     if (verbose) {
