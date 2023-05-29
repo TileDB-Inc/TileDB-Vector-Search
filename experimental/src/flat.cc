@@ -165,7 +165,7 @@ int main(int argc, char* argv[]) {
 
   auto db = tdbBlockColMajorMatrix<float>(db_uri, block);  // blocked
 
-  auto q = tdbColMajorMatrix<float>(q_uri, nqueries);      // just a slice
+  auto q = tdbColMajorMatrix<float>(q_uri, nqueries);  // just a slice
 
   auto g =
       g_uri.empty() ? ColMajorMatrix<int>(0, 0) : tdbColMajorMatrix<int>(g_uri);
