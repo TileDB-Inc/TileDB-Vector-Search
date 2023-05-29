@@ -240,16 +240,22 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     return ncols_;
   }
 
-  inline bool is_blocked() noexcept {
-    return false;
-  }
-
   constexpr auto advance() const noexcept {
     return false;
   }
 
   constexpr auto offset() const noexcept {
     return 0UL;
+  }
+
+  bool blocked_{false};
+
+  bool set_blocked() noexcept {
+    return (blocked_ = true);
+  }
+
+  inline bool is_blocked() noexcept {
+    return blocked_;
   }
 };
 
@@ -550,23 +556,6 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   }
 
  public:
-  //  bool is_blocked() const noexcept {
-  //  return num_array_rows_ != this->num_rows() ||
-  //         num_array_cols_ != this->num_cols();
-  //}
- /////n inline bool is_blocked() noexcept {
- //   return false;
-  //}
-
-  bool blocked_{false};
-
-  bool set_blocked() noexcept {
-    return (blocked_ = true);
-  }
-
-  inline bool is_blocked() noexcept {
-    return blocked_;
-  }
 
   size_t offset() const
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
