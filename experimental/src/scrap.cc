@@ -258,3 +258,153 @@ cblas_sgemm(
     0.0,
     &scores(0, 0),
     M);
+
+
+
+/**
+ * Derived from `Matrix`.  Initialized in construction by filling from a given
+ * TileDB array.
+ *
+ * @todo Evaluate whether or not we really need to do things this way or if
+ * it is sufficient to simply have one Matrix class and have a factory that
+ * creates them by reading from TileDB.
+ */
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+class BlockedMatrix : public Matrix<T, LayoutPolicy, I> {
+  using Base = Matrix<T, LayoutPolicy, I>;
+  using Base::Base;
+
+ public:
+  using index_type = typename Base::index_type;
+  using size_type = typename Base::size_type;
+  using reference = typename Base::reference;
+
+  using view_type = Base;
+
+  constexpr static auto matrix_order_{order_v<LayoutPolicy>};
+
+ private:
+  size_t num_array_rows_{0};
+  size_t num_array_cols_{0};
+
+  std::tuple<index_type, index_type> row_view_;
+  std::tuple<index_type, index_type> col_view_;
+
+  index_type row_offset_{0};
+  index_type col_offset_{0};
+
+ public:
+  // One-D blocking
+  BlockedMatrix(size_t array_rows, size_t array_cols, size_t block) {
+#ifndef __APPLE__
+    auto data_ = std::make_unique_for_overwrite<T[]>(array_rows * array_cols);
+#else
+    // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
+    auto data_ = std::unique_ptr<T[]>(new T[array_rows * array_cols]);
+#endif
+
+    num_array_rows_ = array_rows;
+    num_array_cols_ = array_cols;
+
+    size_t num_rows{0};
+    size_t num_cols{0};
+
+    if (matrix_order_ == TILEDB_ROW_MAJOR) {
+      num_rows = std::min(block, array_rows);
+      num_cols = array_cols;
+    } else if (matrix_order_ == TILEDB_COL_MAJOR) {
+      num_rows = array_rows;
+      num_cols = std::min(block, array_cols);
+    }
+
+    std::get<0>(row_view_) = 0;
+    std::get<1>(row_view_) = num_rows;
+    std::get<0>(col_view_) = 0;
+    std::get<1>(col_view_) = num_cols;
+
+    Base::operator=(Base{std::move(data_), num_rows, num_cols});
+  }
+
+  bool advance(size_t num_elts = 0) {
+    if (matrix_order_ == TILEDB_ROW_MAJOR) {
+      if (num_elts == 0) {
+        num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
+      }
+      num_elts = std::min(num_elts, num_array_rows_ - row_offset_);
+      row_offset_ += num_elts;
+      std::get<0>(row_view_) += num_elts;
+      std::get<1>(row_view_) += num_elts;
+
+      if (std::get<0>(row_view_) >= num_array_rows_) {
+        return false;
+      }
+    } else if (matrix_order_ == TILEDB_COL_MAJOR) {
+      if (num_elts == 0) {
+        num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
+      }
+      num_elts = std::min(num_elts, num_array_cols_ - col_offset_);
+      col_offset_ += num_elts;
+      std::get<0>(col_view_) += num_elts;
+      std::get<1>(col_view_) += num_elts;
+
+      if (std::get<0>(col_view_) >= num_array_cols_) {
+        return false;
+      }
+    } else {
+      throw std::runtime_error("Unknown cell order");
+    }
+    return true;
+  }
+
+  auto raveled()
+    requires(matrix_order_ == TILEDB_COL_MAJOR)
+  {
+    auto num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
+    return std::span(
+        this->storage_.get() + col_offset_ * this->num_rows(),
+        this->nrows * num_elts);
+  }
+
+  auto raveled()
+    requires(matrix_order_ == TILEDB_ROW_MAJOR)
+  {
+    auto num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
+    return std::span(
+        this->storage_.get() + row_offset_ * this->num_cols(),
+        this->ncols * num_elts);
+  }
+
+  auto raveled() const
+    requires(matrix_order_ == TILEDB_COL_MAJOR)
+  {
+    auto num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
+    return std::span(
+        this->storage_.get() + col_offset_ * this->num_rows(),
+        this->nrows * num_elts);
+  }
+
+  auto raveled() const
+    requires(matrix_order_ == TILEDB_ROW_MAJOR)
+  {
+    auto num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
+    return std::span(
+        this->storage_.get() + row_offset_ * this->num_cols(),
+        this->ncols * num_elts);
+  }
+
+  size_t offset() const
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+  {
+    return row_offset_;
+  }
+
+  size_t offset() const
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+  {
+    return col_offset_;
+  }
+
+  constexpr static bool is_blocked() {
+    return true;
+  }
+};

@@ -356,8 +356,8 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
 
   using element = std::pair<float, unsigned>;
 
-  const auto block_db = db.is_blocked();
-  const auto block_q = q.is_blocked();
+  auto block_db = db.is_blocked();
+  auto block_q = q.is_blocked();
   if (block_db && block_q) {
     throw std::runtime_error("Can't block both db and q");
   }
@@ -373,6 +373,7 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
     auto par = stdx::execution::indexed_parallel_policy{nthreads};
     stdx::range_for_each(
         std::move(par), scores, [&](auto&& q_vec, auto&& n = 0, auto&& i = 0) {
+#if 1
           if (block_db) {
             for (int j = 0; j < scores.num_rows(); ++j) {
               min_scores[i].insert({scores(j, i), j + db.offset()});
@@ -386,6 +387,17 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
               min_scores[i].insert({scores(j, i), j});
             }
           }
+#else
+      for (int j = 0; j < scores.num_rows(); ++j) {
+        if constexpr (block_db) {
+          min_scores[i].insert({scores(j, i), j + db.offset()});
+        } else if constexpr (block_q) {
+          min_scores[i + q.offset()].insert({scores(j, i), j});
+        } else {
+          min_scores[i].insert({scores(j, i), j});
+        }
+      }
+#endif
         });
 
     bool done = true;

@@ -153,12 +153,12 @@ int main(int argc, char* argv[]) {
 
   ms_timer load_time{"Load database, query, and ground truth arrays"};
 
-  //  auto db = (block == 0 ? tdbColMajorMatrix<float>(db_uri)  // unblocked
+  // auto db = (block == 0 ? tdbColMajorMatrix<float>(db_uri)  // unblocked
   //                        : tdbBlockColMajorMatrix<float>(db_uri, block));   // blocked
+  // auto db = tdbBlockColMajorMatrix<float>(db_uri, block);   // blocked
 
-  auto db = tdbBlockColMajorMatrix<float>(db_uri, block);   // blocked
-
-  // tdbColMajorMatrix<float> db(db_uri, block);   // blocked
+  auto db = (args["--block"] ? tdbBlockColMajorMatrix<float>(db_uri)  // unblocked
+                        : tdbColMajorMatrix<float>(db_uri, block));   // blocked
 
   auto q = tdbColMajorMatrix<float> (q_uri, nqueries);  // just a slice
 
@@ -191,8 +191,9 @@ int main(int argc, char* argv[]) {
     return qv_query(db, q, k, nthreads);
   } else if (args["--order"].asString() == "gemm") {
       // if (block != 0) {
-    if (args["--order"]) {
+    if (args["--block"]) {
       std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth) << std::endl;
+      db.set_blocked();
         return blocked_gemm_query(db, q, k, nth, nthreads);
       } else {
         std::cout << "# Using gemm, nth = " << std::to_string(nth) << std::endl;
