@@ -150,19 +150,11 @@ endif()
 include(Docopt)
 include(mdspan)
 
-find_package(nlohmann_json 3.2.0 QUIET)
-if (NOT nlohmann_json_FOUND)
-    message("Installed json not found -- fetching")
-    FetchContent_Declare(json
-            GIT_REPOSITORY https://github.com/nlohmann/json.git
-            GIT_TAG v3.7.3)
-
-    FetchContent_GetProperties(json)
-    if(NOT json_POPULATED)
-        FetchContent_Populate(json)
-        add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
-    endif()
-endif()
+add_library(nlohmann_json INTERFACE)
+target_include_directories(nlohmann_json INTERFACE ${CMAKE_SOURCE_DIR}/external/include)
+add_library(nlohmann_json::nlohmann_json ALIAS nlohmann_json)
+get_target_property(_JSON_INCLUDES nlohmann_json INTERFACE_INCLUDE_DIRECTORIES)
+message(STATUS "nlohmann_json include directories are ${_JSON_INCLUDES}")
 
 add_subdirectory(src)
 
@@ -173,4 +165,3 @@ if(BUILD_TESTS)
     add_subdirectory(include/test)
     # enable_testing()
 endif()
-
