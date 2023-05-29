@@ -65,9 +65,7 @@ extern bool global_debug;
 extern std::string global_region;
 
 template <class M>
-concept is_view = requires(M) {
-  typename M::view_type;
-};
+concept is_view = requires(M) { typename M::view_type; };
 
 /**
  * @brief A 1-D vector class that owns its storage.
@@ -304,8 +302,6 @@ size_t size(const Matrix<T, stdx::layout_left, I>& m) {
   return m.num_cols();
 }
 
-
-
 /**
  * Derived from `Matrix`.  Initialized in construction by filling from a given
  * TileDB array.
@@ -328,9 +324,7 @@ class BlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
-
  private:
-
   size_t num_array_rows_{0};
   size_t num_array_cols_{0};
 
@@ -341,10 +335,8 @@ class BlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   index_type col_offset_{0};
 
  public:
-
   // One-D blocking
   BlockedMatrix(size_t array_rows, size_t array_cols, size_t block) {
-
 #ifndef __APPLE__
     auto data_ = std::make_unique_for_overwrite<T[]>(array_rows * array_cols);
 #else
@@ -406,42 +398,50 @@ class BlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   }
 
   auto raveled()
-  requires(matrix_order_ == TILEDB_COL_MAJOR)
+    requires(matrix_order_ == TILEDB_COL_MAJOR)
   {
     auto num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
-    return std::span(this->storage_.get() + col_offset_*this->num_rows(), this->nrows * num_elts);
+    return std::span(
+        this->storage_.get() + col_offset_ * this->num_rows(),
+        this->nrows * num_elts);
   }
 
   auto raveled()
     requires(matrix_order_ == TILEDB_ROW_MAJOR)
   {
     auto num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
-    return std::span(this->storage_.get() + row_offset_*this->num_cols(), this->ncols * num_elts);
+    return std::span(
+        this->storage_.get() + row_offset_ * this->num_cols(),
+        this->ncols * num_elts);
   }
 
   auto raveled() const
     requires(matrix_order_ == TILEDB_COL_MAJOR)
   {
     auto num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
-    return std::span(this->storage_.get() + col_offset_*this->num_rows(), this->nrows * num_elts);
+    return std::span(
+        this->storage_.get() + col_offset_ * this->num_rows(),
+        this->nrows * num_elts);
   }
 
   auto raveled() const
     requires(matrix_order_ == TILEDB_ROW_MAJOR)
   {
     auto num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
-    return std::span(this->storage_.get() + row_offset_*this->num_cols(), this->ncols * num_elts);
+    return std::span(
+        this->storage_.get() + row_offset_ * this->num_cols(),
+        this->ncols * num_elts);
   }
 
-
-
   size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+  {
     return row_offset_;
   }
 
   size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+  {
     return col_offset_;
   }
 
@@ -500,7 +500,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param num_elts Number of vectors to read from the array.
    */
   tdbMatrix(const std::string& uri, size_t num_elts) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : tdbMatrix(uri, num_elts, 0) {
   }
 
@@ -513,7 +513,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param num_elts Number of vectors to read from the array.
    */
   tdbMatrix(const std::string& uri, size_t num_elts) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbMatrix(uri, 0, num_elts) {
   }
 
@@ -698,11 +698,66 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   }
 
  public:
-  bool is_blocked() const noexcept {
-    return num_array_rows_ != this->num_rows() ||
-           num_array_cols_ != this->num_cols();
+  //  bool is_blocked() const noexcept {
+  //  return num_array_rows_ != this->num_rows() ||
+  //         num_array_cols_ != this->num_cols();
+  //}
+  static constexpr bool is_blocked() noexcept {
+    return false;
   }
 
+  size_t offset() const
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+  {
+    return row_offset_;
+  }
+
+  size_t offset() const
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+  {
+    return col_offset_;
+  }
+
+  ~tdbMatrix() noexcept {
+    array_.close();
+  }
+};
+
+/**
+ * Convenience class for row-major matrices.
+ */
+template <class T, class I = size_t>
+using tdbRowMajorMatrix = tdbMatrix<T, stdx::layout_right, I>;
+
+/**
+ * Convenience class for column-major matrices.
+ */
+template <class T, class I = size_t>
+using tdbColMajorMatrix = tdbMatrix<T, stdx::layout_left, I>;
+
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+class tdbBlockedMatrix : public tdbMatrix<T, LayoutPolicy, I> {
+  using Base = tdbMatrix<T, LayoutPolicy, I>;
+  using Base::Base;
+
+ public:
+  using index_type = typename Base::index_type;
+  using size_type = typename Base::size_type;
+  using reference = typename Base::reference;
+
+  using view_type = Base;
+
+  using Base::array_;
+  using Base::col_offset_;
+  using Base::col_view_;
+  using Base::ctx_;
+  using Base::matrix_order_;
+  using Base::num_array_cols_;
+  using Base::num_array_rows_;
+  using Base::row_offset_;
+  using Base::row_view_;
+  using Base::schema_;
+  using Base::tmp_storage_;
   /**
    * @brief Advance the view to the next row block of data.
    *
@@ -794,7 +849,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
   bool advance(size_t num_elts = 0)
       // requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      requires(false) {
+    requires(false)
+  {
     // @todo attr_idx, attr_name, and cell_order / layout_order should be
     // members of the class
     size_t attr_idx = 0;
@@ -851,18 +907,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     return true;
   }
 
-  size_t offset() const
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
-    return row_offset_;
-  }
-
-  size_t offset() const
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
-    return col_offset_;
-  }
-
-  ~tdbMatrix() noexcept {
-    array_.close();
+  static constexpr bool is_blocked() noexcept {
+    return true;
   }
 };
 
@@ -870,13 +916,13 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
  * Convenience class for row-major matrices.
  */
 template <class T, class I = size_t>
-using tdbRowMajorMatrix = tdbMatrix<T, stdx::layout_right, I>;
+using tdbBlockRowMajorMatrix = tdbMatrix<T, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.
  */
 template <class T, class I = size_t>
-using tdbColMajorMatrix = tdbMatrix<T, stdx::layout_left, I>;
+using tdbBlockColMajorMatrix = tdbMatrix<T, stdx::layout_left, I>;
 
 /**
  * Write the contents of a Matrix to a TileDB array.
@@ -1092,14 +1138,18 @@ void debug_matrix(const Matrix& A, const std::string& msg = "") {
 }
 
 template <class Matrix>
-void debug_slice(const Matrix& A, const std::string& msg = "", size_t rows = 5, size_t cols = 15) {
+void debug_slice(
+    const Matrix& A,
+    const std::string& msg = "",
+    size_t rows = 5,
+    size_t cols = 15) {
   if (global_debug) {
     rows = std::min(rows, A.num_rows());
     cols = std::min(cols, A.num_cols());
 
     std::cout << "# " << msg << std::endl;
     for (size_t i = 0; i < rows; ++i) {
-      std::cout << "# " ;
+      std::cout << "# ";
       for (size_t j = 0; j < cols; ++j) {
         std::cout << A(i, j) << "\t";
       }
