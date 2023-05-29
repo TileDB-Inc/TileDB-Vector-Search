@@ -249,6 +249,7 @@ template <class TK, class G>
 bool validate_top_k(TK& top_k, G& g) {
   size_t k = top_k.num_rows();
   size_t num_errors = 0;
+
   for (size_t qno = 0; qno < top_k.num_cols(); ++qno) {
     std::sort(begin(top_k[qno]), end(top_k[qno]));
     std::sort(begin(g[qno]), begin(g[qno]) + top_k.num_rows());
