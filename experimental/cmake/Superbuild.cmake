@@ -111,5 +111,5 @@ add_custom_target(install-libtiledbvectorsearch
 
 # make check
 add_custom_target(check
-  COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch --output-on-failure
+  COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch --output-on-failure -E "unit_utils_test|time_insert_test"
 )

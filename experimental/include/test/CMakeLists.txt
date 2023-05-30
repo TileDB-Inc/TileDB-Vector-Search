@@ -64,7 +64,10 @@ kmeans_add_test(unit_ivf_index)
 
 kmeans_add_test(unit_ivf_query)
 
-kmeans_add_test(unit_linalg)
+add_executable(unit_linalg)
+target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)
+# Skip the tdbmatrix tests because the TileDB arrays do not exist in CI.
+add_test(NAME unit_linalg_test COMMAND unit_linalg ~[linalg][tdbmatrix])
 
 kmeans_add_test(unit_mdspan)
 
