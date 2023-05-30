@@ -1,0 +1,8 @@
+# Because `setuptools-scm` tries to include every single file known to Git,
+# we trim that down to include only the Python files themselves and manadatory
+# package metadata.
+
+global-exclude *
+include pyproject.toml
+include MANIFEST.in
+recursive-include src *.py
