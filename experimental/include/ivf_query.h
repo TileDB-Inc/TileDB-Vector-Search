@@ -42,12 +42,7 @@
 #include "scoring.h"
 #include "utils/timer.h"
 
-// If apple, use Accelerate
-#ifdef __APPLE__
-#include <Accelerate/Accelerate.h>
-#else
-#include <mkl_cblas.h>
-#endif
+#include <cblas.h>
 
 // Interfaces
 //   faiss: D, I = index.search(xb, k) # search

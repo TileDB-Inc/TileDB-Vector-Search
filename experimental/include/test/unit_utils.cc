@@ -32,10 +32,6 @@
 #include <catch2/catch_all.hpp>
 #include "utils/utils.h"
 
-TEST_CASE("utils: test test", "[utils]") {
-  REQUIRE(true);
-}
-
 TEST_CASE("utils: test", "[utils]") {
   CHECK(is_http_address("http://www.tiledb.com"));
   CHECK(is_http_address("http://www.tiledb.com/index.html"));
