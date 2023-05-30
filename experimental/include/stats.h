@@ -113,8 +113,4 @@ auto args_log(const Args& args) {
   return arg_log;
 }
 
-
-
-
-
 #endif  // TDB_STATS_H
