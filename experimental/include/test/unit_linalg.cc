@@ -536,7 +536,7 @@ TEST_CASE("linalg: test partitioned tdbMatrix constructor, column",
   }
 }
 
-TEST_CASE("linalg: test advance, row major", "[linalg][advance][row]") {
+TEST_CASE("linalg: test advance, row major", "[linalg][tdbmatrix][advance][row]") {
   auto a = tdbMatrix<int32_t, Kokkos::layout_right>("array_dense_1", 2);
 
   CHECK(a.num_rows() == 2);
@@ -581,7 +581,7 @@ TEST_CASE("linalg: test advance, row major", "[linalg][advance][row]") {
   CHECK(a(1, 7) == 4);
 }
 
-TEST_CASE("linalg: test advance, column", "[linalg][advance][column]") {
+TEST_CASE("linalg: test advance, column", "[linalg][tdbmatrix][advance][column]") {
   auto a = tdbMatrix<int32_t, Kokkos::layout_left>("array_dense_1", 2);
 
   CHECK(a.num_rows() == 8);
@@ -648,7 +648,7 @@ TEMPLATE_LIST_TEST_CASE("linalg: test write/read std::vector",
 using LayoutTypes = std::tuple<Kokkos::layout_right, Kokkos::layout_left>;
 
 TEMPLATE_LIST_TEST_CASE("linalg: test write/read Matrix",
-                        "[linalg][read-write][matrix]", TestTypes) {
+                        "[linalg][tdbmatrix][read-write][matrix]", TestTypes) {
   auto M = GENERATE(1, 2, 13, 1440, 1441);
   auto N = GENERATE(1, 2, 5, 1440, 1441);
 
