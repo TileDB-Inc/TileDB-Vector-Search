@@ -36,6 +36,7 @@
 
 #include <algorithm>
 #include "algorithm.h"
+#include <chrono>
 #include "concepts.h"
 #include "defs.h"
 #include "linalg.h"
@@ -350,14 +351,19 @@ auto gemm_query(const DB& db, const Q& q, int k, bool nth, size_t nthreads) {
   return top_k;
 }
 
+using namespace std::chrono_literals;
+
 template <class DB, class Q>
 auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
   life_timer _outer{"Total time blocked query gemm"};
 
   using element = std::pair<float, unsigned>;
 
+  // @todo constexpr block_db and block_q
   auto block_db = db.is_blocked();
   auto block_q = q.is_blocked();
+  auto async_db = block_db && db.is_async();
+  auto async_q = block_q && q.is_async();
   if (block_db && block_q) {
     throw std::runtime_error("Can't block both db and q");
   }
@@ -368,12 +374,18 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
       size(q), fixed_min_heap<element>(k));
 
   for (;;) {
+
+    if (async_db) {
+      db.advance_async();
+    }
+    if (async_q) {
+      q.advance_async();
+    }
     gemm_scores(db, q, scores, nthreads);
 
     auto par = stdx::execution::indexed_parallel_policy{nthreads};
     stdx::range_for_each(
         std::move(par), scores, [&](auto&& q_vec, auto&& n = 0, auto&& i = 0) {
-#if 1
           if (block_db) {
             for (int j = 0; j < scores.num_rows(); ++j) {
               min_scores[i].insert({scores(j, i), j + db.offset()});
@@ -387,24 +399,13 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
               min_scores[i].insert({scores(j, i), j});
             }
           }
-#else
-      for (int j = 0; j < scores.num_rows(); ++j) {
-        if constexpr (block_db) {
-          min_scores[i].insert({scores(j, i), j + db.offset()});
-        } else if constexpr (block_q) {
-          min_scores[i + q.offset()].insert({scores(j, i), j});
-        } else {
-          min_scores[i].insert({scores(j, i), j});
-        }
-      }
-#endif
         });
 
     bool done = true;
     if (block_db) {
-      done = !db.advance();
+      done = async_db ? !db.advance_wait() : !db.advance();
     } else if (block_q) {
-      done = !q.advance();
+      done = async_q ? !q.advance_wait() : !q.advance();
     }
     if (done) {
       break;

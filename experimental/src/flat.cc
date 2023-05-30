@@ -203,6 +203,7 @@ int main(int argc, char* argv[]) {
         std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth)
                   << std::endl;
         db.set_blocked();
+        // db.set_async();
         return blocked_gemm_query(db, q, k, nth, nthreads);
       } else {
         std::cout << "# Using gemm, nth = " << std::to_string(nth) << std::endl;

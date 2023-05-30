@@ -17,7 +17,7 @@ TEST_CASE("test queries", "[queries]") {
   size_t nthreads = GENERATE(1, 8);
 
   std::random_device rd;
-  //std::mt19937 gen(rd());
+  // std::mt19937 gen(rd());
   std::mt19937 gen(2514908090);
   std::uniform_int_distribution<int> dist(-128, 128);
 
@@ -26,11 +26,11 @@ TEST_CASE("test queries", "[queries]") {
     x = dist(gen);
   }
 
-  auto b_db_mat =
-      BlockedMatrix<float, stdx::layout_left>(dimension, num_vectors);
-  for (auto& x : raveled(b_db_mat)) {
-    x = dist(gen);
-  }
+  //  auto b_db_mat =
+  //      BlockedMatrix<float, stdx::layout_left>(dimension, num_vectors);
+  //  for (auto& x : raveled(b_db_mat)) {
+  //    x = dist(gen);
+  //  }
 
   auto q_mat = ColMajorMatrix<float>(dimension, num_queries);
   for (size_t i = 0; i < num_queries; ++i) {

@@ -104,14 +104,18 @@ auto qv_query_nth(
         size_t size_db = size(db);
 
         // @todo can we do this more efficiently?
-        std::vector<int> index(size_db);
         std::vector<float> scores(size_db);
 
         for (int i = 0; i < size_db; ++i) {
           scores[i] = L2(q_vec, db[i]);
         }
-        std::iota(begin(index), end(index), 0);
-        get_top_k(scores, top_k[j], index, k, nth);
+        if (nth) {
+          std::vector<int> index(size_db);
+          std::iota(begin(index), end(index), 0);
+          get_top_k_nth(scores, top_k[j], index, k);
+        } else {
+          get_top_k(scores, top_k[j], k);
+        }
       });
 
   return top_k;
@@ -171,8 +175,7 @@ auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
  * @todo Implement a blocked version
  */
 template <class DB, class Q>
-auto vq_query_heap(
-    const DB& db, const Q& q, int k, unsigned nthreads) {
+auto vq_query_heap(const DB& db, const Q& q, int k, unsigned nthreads) {
   life_timer _outer{"Total time (vq loop nesting, set way)"};
 
   using element = std::pair<float, int>;
@@ -198,7 +201,6 @@ auto vq_query_heap(
       }
     }
   }
-
 
   ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
@@ -234,5 +236,64 @@ auto vq_query_heap(
 
   return top_k;
 }
+#if 0
+template <class DB, class Q>
+auto vq_partition(const DB& db, const Q& q, int k, bool nth, int nthreads) {
+  life_timer _outer{
+      "Total time (vq loop nesting, nth = " + std::to_string(nth)};
+
+  ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
+
+  auto db_block_size = (size(db) + nthreads - 1) / nthreads;
+  std::vector<std::future<void>> futs;
+  futs.reserve(nthreads);
+
+  // Parallelize over the database vectors (outer loop)
+  for (int n = 0; n < nthreads; ++n) {
+    int db_start = n * db_block_size;
+    int db_stop = std::min<int>((n + 1) * db_block_size, size(db));
+    size_t size_q = size(q);
+
+    futs.emplace_back(std::async(
+        std::launch::async,
+        [&db, &q, db_start, db_stop, size_q, &scores]() {
+          // For each database vector
+          for (int i = db_start; i < db_stop; ++i) {
+            // Compare with each query
+            for (int j = 0; j < size_q; ++j) {
+              scores[j][i] = L2(q[j], db[i]);
+            }
+          }
+        }));
+  }
+  for (int n = 0; n < nthreads; ++n) {
+    futs[n].get();
+  }
+
+  auto num_queries = scores.num_cols();
+
+  auto top_k = ColMajorMatrix<size_t>(k, num_queries);
+
+  std::vector<int> index(scores.num_rows());
+
+  for (int j = 0; j < num_queries; ++j) {
+    std::iota(begin(index), end(index), 0);
+
+    using element = std::pair<float, unsigned>;
+    fixed_min_heap<element> s(k);
+
+    for (size_t i = 0; i < index.size(); ++i) {
+      s.insert({scores[index[i]], index[i]});
+    }
+
+    std::sort_heap(begin(s), end(s));
+    std::transform(
+        s.begin(), s.end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));
+  }
+
+  return top_k;
+}
+
+#endif
 
 #endif  // TDB_FLAT_QUERY_H
