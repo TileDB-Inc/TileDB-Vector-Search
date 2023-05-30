@@ -58,12 +58,16 @@
  */
 template <class V>
 auto L2(V const& a, V const& b) {
-  typename V::value_type sum{0};
-
-  auto size_a = size(a);
-  for (decltype(a.size()) i = 0; i < size_a; ++i) {
-    auto diff = a[i] - b[i];
-    sum += diff * diff;
+  float sum {0.0};
+  size_t size_a = size(a);
+  for (size_t i = 0; i < size_a; ++i) {
+    if constexpr (std::is_same_v<typename V::value_type, float>) {
+      float diff = a[i] - b[i];
+      sum += diff * diff;
+    } else {
+      float diff = float(a[i]) - float(b[i]);
+      sum += diff * diff;
+    }
   }
   return std::sqrt(sum);
 }
