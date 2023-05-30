@@ -35,8 +35,8 @@
 #define TDB_IVF_QUERY_H
 
 #include <algorithm>
-#include "algorithm.h"
 #include <chrono>
+#include "algorithm.h"
 #include "concepts.h"
 #include "defs.h"
 #include "linalg.h"
@@ -374,7 +374,6 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
       size(q), fixed_min_heap<element>(k));
 
   for (;;) {
-
     if (async_db) {
       db.advance_async();
     }

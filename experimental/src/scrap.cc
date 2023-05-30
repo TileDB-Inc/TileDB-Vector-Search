@@ -259,8 +259,6 @@ cblas_sgemm(
     &scores(0, 0),
     M);
 
-
-
 /**
  * Derived from `Matrix`.  Initialized in construction by filling from a given
  * TileDB array.
@@ -356,36 +354,28 @@ class BlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     return true;
   }
 
-  auto raveled()
-    requires(matrix_order_ == TILEDB_COL_MAJOR)
-  {
+  auto raveled() requires(matrix_order_ == TILEDB_COL_MAJOR) {
     auto num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
     return std::span(
         this->storage_.get() + col_offset_ * this->num_rows(),
         this->nrows * num_elts);
   }
 
-  auto raveled()
-    requires(matrix_order_ == TILEDB_ROW_MAJOR)
-  {
+  auto raveled() requires(matrix_order_ == TILEDB_ROW_MAJOR) {
     auto num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
     return std::span(
         this->storage_.get() + row_offset_ * this->num_cols(),
         this->ncols * num_elts);
   }
 
-  auto raveled() const
-    requires(matrix_order_ == TILEDB_COL_MAJOR)
-  {
+  auto raveled() const requires(matrix_order_ == TILEDB_COL_MAJOR) {
     auto num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
     return std::span(
         this->storage_.get() + col_offset_ * this->num_rows(),
         this->nrows * num_elts);
   }
 
-  auto raveled() const
-    requires(matrix_order_ == TILEDB_ROW_MAJOR)
-  {
+  auto raveled() const requires(matrix_order_ == TILEDB_ROW_MAJOR) {
     auto num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
     return std::span(
         this->storage_.get() + row_offset_ * this->num_cols(),
@@ -393,14 +383,12 @@ class BlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   }
 
   size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-  {
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
     return row_offset_;
   }
 
   size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-  {
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
     return col_offset_;
   }
 
@@ -526,8 +514,6 @@ using tdbBlockRowMajorMatrix = tdbMatrix<T, stdx::layout_right, I>;
 template <class T, class I = size_t>
 using tdbBlockColMajorMatrix = tdbMatrix<T, stdx::layout_left, I>;
 #endif
-
-
 
 #if 0
   bool advance_top(size_t num_elts = 0)
@@ -742,4 +728,3 @@ using tdbBlockColMajorMatrix = tdbMatrix<T, stdx::layout_left, I>;
     return true;
   }
 #endif
-

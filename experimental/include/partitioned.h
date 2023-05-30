@@ -36,8 +36,8 @@
 #include <span>
 #include "linalg.h"
 
-#include <tiledb/tiledb>
 #include <mdspan/mdspan.hpp>
+#include <tiledb/tiledb>
 
 namespace stdx {
 using namespace Kokkos;
@@ -105,12 +105,11 @@ class tdbPartitionedMatrix {
       }
     }
 
-
     auto matrix_order_{order_v<LayoutPolicy>};
 
     // Open array for reading
-    auto init_ = std::map<std::string, std::string>{
-        {"vfs.s3.region", "us-east-1"}};
+    auto init_ =
+        std::map<std::string, std::string>{{"vfs.s3.region", "us-east-1"}};
     auto config_ = tiledb::Config{init_};
     auto ctx_ = tiledb::Context{config_};
 
@@ -122,7 +121,6 @@ class tdbPartitionedMatrix {
 
     std::string attr_name = attr.name();
     tiledb_datatype_t attr_type = attr.type();
-
 
     // For each partition, create a tiledb query
     auto cell_order = schema_.cell_order();
@@ -169,8 +167,9 @@ class tdbPartitionedMatrix {
       assert(partitions_1d_[partno].data() == partitions_2d_[partno].data());
       assert(dimension == partitions_2d_[partno].extent(0));
       assert(num_elts == partitions_2d_[partno].extent(1) * dimension);
-      assert(indices[parts[partno] + 1] - indices[parts[partno]] ==
-             partitions_2d_[partno].extent(1));
+      assert(
+          indices[parts[partno] + 1] - indices[parts[partno]] ==
+          partitions_2d_[partno].extent(1));
 
       std::vector<int32_t> subarray_vals = {
           (int32_t)row_begin,

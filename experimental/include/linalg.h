@@ -67,7 +67,9 @@ extern bool global_debug;
 extern std::string global_region;
 
 template <class M>
-concept is_view = requires(M) { typename M::view_type; };
+concept is_view = requires(M) {
+  typename M::view_type;
+};
 
 /**
  * @brief A 1-D vector class that owns its storage.
@@ -147,7 +149,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   size_type nrows_{0};
   size_type ncols_{0};
 
- // private:
+  // private:
   std::unique_ptr<T[]> storage_;
 
  public:
@@ -379,7 +381,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param num_elts Number of vectors to read from the array.
    */
   tdbMatrix(const std::string& uri, size_t num_elts) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : tdbMatrix(uri, num_elts, 0) {
   }
 
@@ -392,7 +394,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param num_elts Number of vectors to read from the array.
    */
   tdbMatrix(const std::string& uri, size_t num_elts) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbMatrix(uri, 0, num_elts) {
   }
 
@@ -577,23 +579,19 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   }
 
  public:
-
   size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-  {
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
     return row_offset_;
   }
 
   size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-  {
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
     return col_offset_;
   }
 
   ~tdbMatrix() noexcept {
     array_.close();
   }
-
 
   bool advance(size_t num_elts = 0)
   // requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
@@ -659,34 +657,29 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
     tiledb::Query query(ctx_, array_);
 
-    auto this_data = this->is_async() ? this->backing_data_.get() : this->data();
+    auto this_data =
+        this->is_async() ? this->backing_data_.get() : this->data();
 
     size_t read_size = (std::get<1>(row_view_) - std::get<0>(row_view_)) *
                        (std::get<1>(col_view_) - std::get<0>(col_view_));
     if (attr_type == tiledb::impl::type_to_tiledb<T>::tiledb_type) {
       query.set_subarray(subarray)
           .set_layout(layout_order)
-          .set_data_buffer(
-              attr_name,
-              this_data,
-              read_size);
+          .set_data_buffer(attr_name, this_data, read_size);
       query.submit();
     } else {
       auto num_bytes = tiledb_datatype_size(attr_type);
       query.set_subarray(subarray)
           .set_layout(layout_order)
           .set_data_buffer(
-              attr_name,
-              tmp_storage_.get(),
-              read_size * num_bytes);
+              attr_name, tmp_storage_.get(), read_size * num_bytes);
       query.submit();
 
       assert(tiledb::Query::Status::COMPLETE == query.query_status());
       std::copy(
           tmp_storage_.get(),
           tmp_storage_.get() + read_size * num_bytes,
-          this_data
-          );
+          this_data);
     }
 
     return true;
@@ -698,8 +691,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       backing_data_ = std::make_unique_for_overwrite<T[]>(
           this->num_rows() * this->num_cols);
 #else
-      backing_data_ = std::unique_ptr<T[]>(
-          new T[this->num_rows() * this->num_cols()]);
+      backing_data_ =
+          std::unique_ptr<T[]>(new T[this->num_rows() * this->num_cols()]);
 #endif
     }
     // this->data_.swap(backing_data_);
@@ -741,7 +734,6 @@ using tdbRowMajorMatrix = tdbMatrix<T, stdx::layout_right, I>;
  */
 template <class T, class I = size_t>
 using tdbColMajorMatrix = tdbMatrix<T, stdx::layout_left, I>;
-
 
 /**
  * Write the contents of a Matrix to a TileDB array.

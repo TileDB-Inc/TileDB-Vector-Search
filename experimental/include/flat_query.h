@@ -146,8 +146,7 @@ auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
     size_t size_q = size(q);
 
     futs.emplace_back(std::async(
-        std::launch::async,
-        [&db, &q, db_start, db_stop, size_q, &scores]() {
+        std::launch::async, [&db, &q, db_start, db_stop, size_q, &scores]() {
           // For each database vector
           for (int i = db_start; i < db_stop; ++i) {
             // Compare with each query

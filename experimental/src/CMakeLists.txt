@@ -88,6 +88,7 @@ target_sources(kmeans_lib INTERFACE
         ../include/utils/timer.h ../include/utils/logging.h ../include/utils/print_types.h
         ../include/partitioned.h
         )
+
 target_include_directories(kmeans_lib INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/include
