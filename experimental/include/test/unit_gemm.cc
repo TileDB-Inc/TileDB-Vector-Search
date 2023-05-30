@@ -32,9 +32,10 @@
 #include <catch2/catch_all.hpp>
 #include <span>
 #include <vector>
-#include "../defs.h"
 
-#include <cblas.h>
+#include "../defs.h"
+#include "../choose_blas.h"
+
 
 /*
       func cblas_dgemm(
