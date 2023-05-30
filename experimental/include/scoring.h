@@ -41,7 +41,7 @@
 #include "linalg.h"
 #include "utils/timer.h"
 
-#include <cblas.h>
+#include "choose_blas.h"
 
 /**
  * Query using dense linear algebra.  This uses the vector generalization of

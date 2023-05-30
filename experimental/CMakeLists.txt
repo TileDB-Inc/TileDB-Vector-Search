@@ -42,6 +42,7 @@ option(FORCE_EXTERNAL_TILEDB "Forces a local build of TileDB instead of searchin
 option(DOWNLOAD_TILEDB_PREBUILT "If tiledb is being super built, this controls downloading prebuilt artifacts or building from source" ON)
 option(TILEDB_S3 "Enables S3/minio support using aws-cpp-sdk" ON)
 option(OVERRIDE_INSTALL_PREFIX "Ignores the setting of CMAKE_INSTALL_PREFIX and sets a default prefix" ON)
+option(USE_MKL_CBLAS "Try to use mkl_cblas.h (requires additional CMake configuration)" OFF)
 
 set(CMAKE_CXX_STANDARD 20)
 

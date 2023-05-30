@@ -42,8 +42,6 @@
 #include "scoring.h"
 #include "utils/timer.h"
 
-#include <cblas.h>
-
 // Interfaces
 //   faiss: D, I = index.search(xb, k) # search
 //   milvus: status, results = conn.search(collection_name, query_records,
