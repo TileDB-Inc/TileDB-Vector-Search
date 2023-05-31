@@ -147,21 +147,14 @@ int main(int argc, char* argv[]) {
   auto nth = args["--nth"].asBool();
   auto validate = args["--validate"].asBool();
 
+  // @todo make global
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
 
   ms_timer load_time{"Load database, query, and ground truth arrays"};
 
-  // auto db = (args["--block"] ? tdbBlockColMajorMatrix<float>(db_uri)  //
-  // unblocked
-  //                      : tdbColMajorMatrix<float>(db_uri, block));   //
-  //                      blocked
-
-  // auto db = (block == 0 ? tdbColMajorMatrix<float>(db_uri)  // unblocked
-  ////                        : tdbBlockColMajorMatrix<float>(db_uri, block));
-  ///// blocked
-  ///
+  // 10M, 100M, and 1B are all uint8_t
 
   auto db = tdbColMajorMatrix<float>(db_uri, block);  // blocked
   if (args["--block"]) {

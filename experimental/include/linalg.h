@@ -371,7 +371,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
-  std::unique_ptr<uint8_t[]> tmp_storage_;
+
   std::unique_ptr<T[]> backing_data_;
   size_t num_array_rows_{0};
   size_t num_array_cols_{0};
@@ -477,7 +477,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t row_begin,
       size_t row_end,
       size_t col_begin,
-      size_t col_end) noexcept
+      size_t col_end) // noexcept
       : array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()} {
     life_timer _{"read matrix " + uri};
@@ -538,17 +538,10 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
     std::string attr_name = attr.name();
     tiledb_datatype_t attr_type = attr.type();
-
-    // Hard-code uint8_t for now.
     if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
-      auto num_bytes = tiledb_datatype_size(attr_type);
-#ifndef __APPLE__
-      tmp_storage_ = std::make_unique_for_overwrite<uint8_t[]>(
-          num_rows * num_cols * num_bytes);
-#else
-      tmp_storage_ = std::unique_ptr<uint8_t[]>(
-          new uint8_t[num_rows * num_cols * num_bytes]);
-#endif
+      throw std::runtime_error(
+          "Attribute type mismatch: " + std::to_string(attr_type) +
+          " != " + std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
     }
 
     // Create a subarray that reads the array up to the specified subset.
@@ -564,24 +557,14 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
     tiledb::Query query(ctx_, array_);
 
-    if (attr_type == tiledb::impl::type_to_tiledb<T>::tiledb_type) {
-      query.set_subarray(subarray)
-          .set_layout(layout_order)
-          .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
-      query.submit();
-    } else {
-      auto num_bytes = tiledb_datatype_size(attr_type);
-      query.set_subarray(subarray)
-          .set_layout(layout_order)
-          .set_data_buffer(
-              attr_name, tmp_storage_.get(), num_rows * num_cols * num_bytes);
-      query.submit();
+    query.set_subarray(subarray)
+        .set_layout(layout_order)
+        .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
+    query.submit();
 
-      assert(tiledb::Query::Status::COMPLETE == query.query_status());
-      std::copy(
-          tmp_storage_.get(),
-          tmp_storage_.get() + num_rows * num_cols,
-          data_.get());
+    // assert(tiledb::Query::Status::COMPLETE == query.query_status());
+    if (tiledb::Query::Status::COMPLETE != query.query_status()) {
+      throw std::runtime_error("Query status is not complete -- fix me");
     }
 
     if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
@@ -676,24 +659,15 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
     size_t read_size = (std::get<1>(row_view_) - std::get<0>(row_view_)) *
                        (std::get<1>(col_view_) - std::get<0>(col_view_));
-    if (attr_type == tiledb::impl::type_to_tiledb<T>::tiledb_type) {
-      query.set_subarray(subarray)
-          .set_layout(layout_order)
-          .set_data_buffer(attr_name, this_data, read_size);
-      query.submit();
-    } else {
-      auto num_bytes = tiledb_datatype_size(attr_type);
-      query.set_subarray(subarray)
-          .set_layout(layout_order)
-          .set_data_buffer(
-              attr_name, tmp_storage_.get(), read_size * num_bytes);
-      query.submit();
 
-      assert(tiledb::Query::Status::COMPLETE == query.query_status());
-      std::copy(
-          tmp_storage_.get(),
-          tmp_storage_.get() + read_size * num_bytes,
-          this_data);
+    query.set_subarray(subarray)
+        .set_layout(layout_order)
+        .set_data_buffer(attr_name, this_data, read_size);
+    query.submit();
+
+    // assert(tiledb::Query::Status::COMPLETE == query.query_status());
+    if (tiledb::Query::Status::COMPLETE != query.query_status()) {
+      throw std::runtime_error("Query status is not complete -- fix me");
     }
 
     return true;
