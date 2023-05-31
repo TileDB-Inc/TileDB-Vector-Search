@@ -1,12 +1,14 @@
 import os
+import pytest
 
 from tiledb.vector_search.ingestion import ingest
 
-config = {"vfs.s3.aws_access_key_id": os.getenv("AWS_ACCESS_KEY_ID"),
-          "vfs.s3.aws_secret_access_key": os.getenv("AWS_SECRET_ACCESS_KEY")}
+def test_ingestion():
+    config = {"vfs.s3.aws_access_key_id": os.getenv("AWS_ACCESS_KEY_ID"),
+              "vfs.s3.aws_secret_access_key": os.getenv("AWS_SECRET_ACCESS_KEY")}
 
-million = 1000000
-ingest(array_uri="s3://tiledb-nikos/vector-search/test-ingestion-1",
+    million = 1000000
+    ingest(array_uri="s3://tiledb-nikos/vector-search/test-ingestion-1",
        source_uri="s3://tiledb-nikos/vector-search/datasets/base.1B.u8bin",
        source_type="U8BIN",
        size=100 * million,
