@@ -202,7 +202,8 @@ auto kmeans_query_small_q(
     auto&& centroids,
     auto&& q,
     auto&& indices,
-    const std::string& id_uri,
+    //const std::string& id_uri,
+    auto&& shuffled_ids,
     size_t nprobe,
     size_t k_nn,
     bool nth,
@@ -213,10 +214,10 @@ auto kmeans_query_small_q(
   auto top_centroids = qv_query_nth(centroids, q, nprobe, false, nthreads);
 
   auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
-  auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
+  //auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
 
   debug_matrix(shuffled_db, "shuffled_db");
-  debug_matrix(shuffled_ids, "shuffled_ids");
+  //debug_matrix(shuffled_ids, "shuffled_ids");
 
   using element = std::pair<float, uint64_t>;
   auto min_scores = std::vector<fixed_min_heap<element>>(

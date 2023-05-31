@@ -36,6 +36,10 @@ if ("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
                You must delete them, or cmake will refuse to work.")
 endif() # yes, end-markers and even else() need empty parens
 
+# -----------------------------------------------------------------------------
+# Build options and defaults
+# -----------------------------------------------------------------------------
+
 option(SUPERBUILD "If true, perform a superbuild (builds all missing dependencies)." ON)
 option(CMAKE_IDE "(Used for CLion builds). Disables superbuild and sets the EP install dir." OFF)
 option(FORCE_EXTERNAL_TILEDB "Forces a local build of TileDB instead of searching system paths." OFF)
@@ -43,13 +47,15 @@ option(DOWNLOAD_TILEDB_PREBUILT "If tiledb is being super built, this controls d
 option(TILEDB_S3 "Enables S3/minio support using aws-cpp-sdk" ON)
 option(OVERRIDE_INSTALL_PREFIX "Ignores the setting of CMAKE_INSTALL_PREFIX and sets a default prefix" ON)
 option(USE_MKL_CBLAS "Try to use mkl_cblas.h (requires additional CMake configuration)" OFF)
+option(TILEDB_VS_PYTHON "Build Python wrapping of C++ API" OFF)
+option(BUILD_TESTS "Build the tests" ON)
 
 set(CMAKE_CXX_STANDARD 20)
 
 # -----------------------------------------------------------------------------
 # Extend the module path so we can find our custom modules
 # -----------------------------------------------------------------------------
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # Search the externals install directory for dependencies.
 list(APPEND CMAKE_PREFIX_PATH "${EP_INSTALL_PREFIX}")
@@ -159,10 +165,13 @@ message(STATUS "nlohmann_json include directories are ${_JSON_INCLUDES}")
 
 add_subdirectory(src)
 
-option(BUILD_TESTS "Build the tests" ON)
-
 if(BUILD_TESTS)
     # include(Catch2)
     add_subdirectory(include/test)
     # enable_testing()
+endif()
+
+if (TILEDB_VS_PYTHON)
+    # HACK: make this work properly
+    add_subdirectory(../apis/python ${CMAKE_CURRENT_BINARY_DIR}/python)
 endif()

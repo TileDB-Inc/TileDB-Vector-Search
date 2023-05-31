@@ -43,7 +43,7 @@ TEST_CASE("partitioned: test test", "[partitioned]") {
   REQUIRE(true);
 }
 
-TEST_CASE("partitioned: even odd", "[partitioned][ci-skip]]") {
+TEST_CASE("partitioned: even odd", "[partitioned][ci-skip]") {
 
   std::string parts_uri{"even_odd_parts"};
   std::string index_uri{"even_odd_index"};
