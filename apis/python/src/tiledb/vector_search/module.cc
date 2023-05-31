@@ -7,10 +7,6 @@ namespace py = pybind11;
 bool global_debug = false;
 std::string global_region = "us-east=1";
 
-int add(int i, int j) {
-    return i + j;
-}
-
 namespace {
 
 
@@ -100,8 +96,6 @@ static void declareTdbMatrix(py::module& mod, std::string const& suffix) {
 }
 
 PYBIND11_MODULE(tiledbvspy, m) {
-  m.def("add", &add);
-
 /*
   m.def("ivf_flat",
         [](const Matrix<float32_t>& data,
@@ -127,6 +121,7 @@ PYBIND11_MODULE(tiledbvspy, m) {
 
   declareVector<float>(m, "_f32");
 
+  // Test helpers
   m.def("get_v", []() {
     auto a = std::make_shared<Vector<float>>(7);
     auto v = a->data();
@@ -140,6 +135,7 @@ PYBIND11_MODULE(tiledbvspy, m) {
   declareMatrix<float>(m, "_f32");
   declareTdbMatrix<float>(m, "_f32");
 
+  // Test helpers
   m.def("get_m", []() {
     auto a = std::make_shared<Matrix<float>>(3,3);
     auto v = a->data();
@@ -148,9 +144,6 @@ PYBIND11_MODULE(tiledbvspy, m) {
 
     return a;
   });
-
-  //py::class_<tdbMatrix<float>, std::shared_ptr<Matrix<float>>>(m, "tdbMatrix")
-  //  .def(py::init<std::string>());
 
   m.def("get_tdb", []() -> std::shared_ptr<tdbMatrix<float>> {
     auto a = std::make_shared<tdbMatrix<float, Kokkos::layout_right>>("test1");
