@@ -88,6 +88,18 @@ float l22(const V& u, const U& v) {
   return sum;
 }
 
+
+template <class V, class U>
+float l33(const U& u, const V& v) {
+  float sum = 0;
+  for (size_t i = 0; i < u.size(); ++i) {
+    float d = ((float)u[i]) - ((float)v[i]);
+    sum += d * d;
+  }
+  return sum;
+}
+
+
 template <class V, class U>
 float l22_x(const V& u, const U& v) {
   float sum = 0;
@@ -141,6 +153,21 @@ float l22_yack_swap(const V& u, const U& v) {
     } else if constexpr (std::is_same_v<typename V::value_type, uint8_t> && std::is_same_v<typename U::value_type, float>) {
       float d = v[i] - ((float)u[i]);
       sum += d * d;
+    } else {
+      sum += 0;
+    }
+  }
+  return sum;
+}
+
+template <class V, class U>
+float l22_yack_swap_2(const V& u, const U& v) {
+  float sum = 0;
+  for (size_t i = 0; i < u.size(); ++i) {
+    if constexpr (std::is_same_v<typename V::value_type, float> && std::is_same_v<typename U::value_type, uint8_t>) {
+      return l22(v, u);
+    } else if constexpr (std::is_same_v<typename V::value_type, uint8_t> && std::is_same_v<typename U::value_type, float>) {
+      return l22(u, v);
     } else {
       sum += 0;
     }
@@ -225,6 +252,22 @@ TEST_CASE("time queries", "[queries]") {
         CHECK(sum == 1.0);
   }
   {
+        life_timer _{"float float l33"};
+        float sum = 0;
+        for (size_t i = 0; i < repeats; ++i) {
+          sum += l33(u, v);
+        }
+        CHECK(sum == 1.0);
+  }
+  {
+        life_timer _{"char char l33"};
+        float sum = 0;
+        for (size_t i = 0; i < repeats; ++i) {
+          sum += l33(x, y);
+        }
+        CHECK(sum == 1.0);
+  }
+  {
         life_timer _{"char float l22"};
         float sum = 0;
         for (size_t i = 0; i < repeats; ++i) {
@@ -266,7 +309,7 @@ TEST_CASE("time queries", "[queries]") {
         life_timer _{"char float l22_x"};
         float sum = 0;
         for (size_t i = 0; i < repeats; ++i) {
-          sum += l22(x, u);
+          sum += l22_x(x, u);
         }
         CHECK(sum == 1.0);
   }
@@ -274,7 +317,7 @@ TEST_CASE("time queries", "[queries]") {
         life_timer _{"float char l22_x"};
         float sum = 0;
         for (size_t i = 0; i < repeats; ++i) {
-          sum += l22(u, x);
+          sum += l22_x(u, x);
         }
         CHECK(sum == 1.0);
   }
@@ -298,7 +341,7 @@ TEST_CASE("time queries", "[queries]") {
         life_timer _{"float char l22_yack_2"};
         float sum = 0;
         for (size_t i = 0; i < repeats; ++i) {
-          sum += l22_yack(u, x);
+          sum += l22_yack_2(u, x);
         }
         CHECK(sum == 1.0);
   }
@@ -306,7 +349,7 @@ TEST_CASE("time queries", "[queries]") {
         life_timer _{"char float l22_just_swap"};
         float sum = 0;
         for (size_t i = 0; i < repeats; ++i) {
-          sum += l22_yack(y, v);
+          sum += l22_just_swap(y, v);
         }
         CHECK(sum == 1.0);
   }
@@ -314,7 +357,7 @@ TEST_CASE("time queries", "[queries]") {
         life_timer _{"float char l22_just_swap"};
         float sum = 0;
         for (size_t i = 0; i < repeats; ++i) {
-          sum += l22_yack(u, x);
+          sum += l22_just_swap(u, x);
         }
         CHECK(sum == 1.0);
   }
@@ -322,7 +365,23 @@ TEST_CASE("time queries", "[queries]") {
         life_timer _{"char float l22_yack_swap"};
         float sum = 0;
         for (size_t i = 0; i < repeats; ++i) {
-          sum += l22_yack(y, v);
+          sum += l22_yack_swap(y, v);
+        }
+        CHECK(sum == 1.0);
+  }
+  {
+        life_timer _{"float char l22_yack_swap_2"};
+        float sum = 0;
+        for (size_t i = 0; i < repeats; ++i) {
+          sum += l22_yack_swap_2(u, x);
+        }
+        CHECK(sum == 1.0);
+  }
+  {
+        life_timer _{"char float l22_yack_swap_2"};
+        float sum = 0;
+        for (size_t i = 0; i < repeats; ++i) {
+          sum += l22_yack_swap_2(y, v);
         }
         CHECK(sum == 1.0);
   }
@@ -330,15 +389,24 @@ TEST_CASE("time queries", "[queries]") {
         life_timer _{"float char l22_yack_swap"};
         float sum = 0;
         for (size_t i = 0; i < repeats; ++i) {
-          sum += l22_yack(u, x);
+          sum += l22_yack_swap(u, x);
         }
         CHECK(sum == 1.0);
   }
+
   {
         life_timer _{"char float l22_yack_2"};
         float sum = 0;
         for (size_t i = 0; i < repeats; ++i) {
-          sum += l22_yack(y, v);
+          sum += l22_yack_2(y, v);
+        }
+        CHECK(sum == 1.0);
+  }
+  {
+        life_timer _{"float char l22_yack_2"};
+        float sum = 0;
+        for (size_t i = 0; i < repeats; ++i) {
+          sum += l22_yack_2(v, y);
         }
         CHECK(sum == 1.0);
   }
