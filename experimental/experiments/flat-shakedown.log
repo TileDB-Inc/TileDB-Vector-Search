@@ -904,3 +904,508 @@
     "read matrix s3://tiledb-andrew/sift/sift_query": 226.0
   }
 }
+{
+  "Args": [
+    [
+      "--block",
+      "\"1000000\""
+    ],
+    [
+      "--db_uri",
+      "\"s3://tiledb-andrew/sift/bigann10M_base\""
+    ],
+    [
+      "--debug",
+      "true"
+    ],
+    [
+      "--g_uri",
+      "\"s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids\""
+    ],
+    [
+      "--help",
+      "false"
+    ],
+    [
+      "--k",
+      "\"10\""
+    ],
+    [
+      "--log",
+      "\"flat-shakedown.log\""
+    ],
+    [
+      "--nqueries",
+      "\"1\""
+    ],
+    [
+      "--nth",
+      "false"
+    ],
+    [
+      "--nthreads",
+      "\"0\""
+    ],
+    [
+      "--order",
+      "\"vq_heap\""
+    ],
+    [
+      "--output_uri",
+      "null"
+    ],
+    [
+      "--q_uri",
+      "\"s3://tiledb-andrew/kmeans/benchmark/query_public_10k\""
+    ],
+    [
+      "--validate",
+      "false"
+    ],
+    [
+      "--verbose",
+      "true"
+    ]
+  ],
+  "Config": {
+    "Build": "Release",
+    "Build_date": "2023-05-30 23:02:57",
+    "Compiler": {
+      "CMAKE_CXX_FLAGS": "-Wall -Wno-unused-variable ",
+      "CMAKE_CXX_FLAGS_DEBUG": "-O0 -g -fno-elide-constructors  ",
+      "CMAKE_CXX_FLAGS_RELEASE": "-Ofast -march=native -DNDEBUG ",
+      "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-Ofast -g -march=native -DNDEBUG",
+      "CXX_COMPILER": "/usr/bin/clang++-14",
+      "CXX_COMPILER_ID": "Clang",
+      "CXX_VERSION": "14.0.0"
+    },
+    "GIT_REPO": {
+      "GIT_BRANCH": "lums/tmp/async_ivf",
+      "GIT_COMMIT_DATE": "2023-05-30",
+      "GIT_COMMIT_HASH": "9288390",
+      "GIT_COMMIT_TIME": "13:25:30",
+      "GIT_REPO_NAME": "feature-vector-prototype",
+      "GIT_REPO_URL": "git@github.com:TileDB-Inc/feature-vector-prototype.git"
+    },
+    "Program": "/home/lums/feature-vector-prototype/experimental/cmake-build-release/src/flat",
+    "Run_date": "Wed May 31 09:34:12 2023",
+    "cmake_source_dir": "/home/lums/feature-vector-prototype/experimental",
+    "host": "ip-172-31-0-97",
+    "tiledb_version": {
+      "major": 2,
+      "minor": 15,
+      "patch": 2
+    },
+    "uuid": "yjhocmhkfgrdkakypkkgtfvl"
+  },
+  "Times": {
+    "Total time vq_query_heap": 9459.0,
+    "read matrix s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids": 269.0,
+    "read matrix s3://tiledb-andrew/kmeans/benchmark/query_public_10k": 150.0,
+    "read matrix s3://tiledb-andrew/sift/bigann10M_base": 997.0
+  }
+}
+{
+  "Args": [
+    [
+      "--block",
+      "\"1000000\""
+    ],
+    [
+      "--db_uri",
+      "\"s3://tiledb-andrew/sift/bigann10M_base\""
+    ],
+    [
+      "--debug",
+      "true"
+    ],
+    [
+      "--g_uri",
+      "\"s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids\""
+    ],
+    [
+      "--help",
+      "false"
+    ],
+    [
+      "--k",
+      "\"10\""
+    ],
+    [
+      "--log",
+      "\"flat-shakedown.log\""
+    ],
+    [
+      "--nqueries",
+      "\"1\""
+    ],
+    [
+      "--nth",
+      "false"
+    ],
+    [
+      "--nthreads",
+      "\"0\""
+    ],
+    [
+      "--order",
+      "\"vq_heap\""
+    ],
+    [
+      "--output_uri",
+      "null"
+    ],
+    [
+      "--q_uri",
+      "\"s3://tiledb-andrew/kmeans/benchmark/query_public_10k\""
+    ],
+    [
+      "--validate",
+      "true"
+    ],
+    [
+      "--verbose",
+      "true"
+    ]
+  ],
+  "Config": {
+    "Build": "Release",
+    "Build_date": "2023-05-30 23:02:57",
+    "Compiler": {
+      "CMAKE_CXX_FLAGS": "-Wall -Wno-unused-variable ",
+      "CMAKE_CXX_FLAGS_DEBUG": "-O0 -g -fno-elide-constructors  ",
+      "CMAKE_CXX_FLAGS_RELEASE": "-Ofast -march=native -DNDEBUG ",
+      "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-Ofast -g -march=native -DNDEBUG",
+      "CXX_COMPILER": "/usr/bin/clang++-14",
+      "CXX_COMPILER_ID": "Clang",
+      "CXX_VERSION": "14.0.0"
+    },
+    "GIT_REPO": {
+      "GIT_BRANCH": "lums/tmp/async_ivf",
+      "GIT_COMMIT_DATE": "2023-05-30",
+      "GIT_COMMIT_HASH": "9288390",
+      "GIT_COMMIT_TIME": "13:25:30",
+      "GIT_REPO_NAME": "feature-vector-prototype",
+      "GIT_REPO_URL": "git@github.com:TileDB-Inc/feature-vector-prototype.git"
+    },
+    "Program": "/home/lums/feature-vector-prototype/experimental/cmake-build-release/src/flat",
+    "Run_date": "Wed May 31 09:34:57 2023",
+    "cmake_source_dir": "/home/lums/feature-vector-prototype/experimental",
+    "host": "ip-172-31-0-97",
+    "tiledb_version": {
+      "major": 2,
+      "minor": 15,
+      "patch": 2
+    },
+    "uuid": "wcrvjlxhbifrqognhhmhepsf"
+  },
+  "Times": {
+    "Total time vq_query_heap": 4824.0,
+    "read matrix s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids": 198.0,
+    "read matrix s3://tiledb-andrew/kmeans/benchmark/query_public_10k": 81.0,
+    "read matrix s3://tiledb-andrew/sift/bigann10M_base": 561.0
+  }
+}
+{
+  "Args": [
+    [
+      "--block",
+      "\"1000000\""
+    ],
+    [
+      "--db_uri",
+      "\"s3://tiledb-andrew/sift/bigann10M_base\""
+    ],
+    [
+      "--debug",
+      "true"
+    ],
+    [
+      "--g_uri",
+      "\"s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids\""
+    ],
+    [
+      "--help",
+      "false"
+    ],
+    [
+      "--k",
+      "\"10\""
+    ],
+    [
+      "--log",
+      "\"flat-shakedown.log\""
+    ],
+    [
+      "--nqueries",
+      "\"100\""
+    ],
+    [
+      "--nth",
+      "false"
+    ],
+    [
+      "--nthreads",
+      "\"0\""
+    ],
+    [
+      "--order",
+      "\"vq_heap\""
+    ],
+    [
+      "--output_uri",
+      "null"
+    ],
+    [
+      "--q_uri",
+      "\"s3://tiledb-andrew/kmeans/benchmark/query_public_10k\""
+    ],
+    [
+      "--validate",
+      "true"
+    ],
+    [
+      "--verbose",
+      "true"
+    ]
+  ],
+  "Config": {
+    "Build": "Release",
+    "Build_date": "2023-05-30 23:02:57",
+    "Compiler": {
+      "CMAKE_CXX_FLAGS": "-Wall -Wno-unused-variable ",
+      "CMAKE_CXX_FLAGS_DEBUG": "-O0 -g -fno-elide-constructors  ",
+      "CMAKE_CXX_FLAGS_RELEASE": "-Ofast -march=native -DNDEBUG ",
+      "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-Ofast -g -march=native -DNDEBUG",
+      "CXX_COMPILER": "/usr/bin/clang++-14",
+      "CXX_COMPILER_ID": "Clang",
+      "CXX_VERSION": "14.0.0"
+    },
+    "GIT_REPO": {
+      "GIT_BRANCH": "lums/tmp/async_ivf",
+      "GIT_COMMIT_DATE": "2023-05-30",
+      "GIT_COMMIT_HASH": "9288390",
+      "GIT_COMMIT_TIME": "13:25:30",
+      "GIT_REPO_NAME": "feature-vector-prototype",
+      "GIT_REPO_URL": "git@github.com:TileDB-Inc/feature-vector-prototype.git"
+    },
+    "Program": "/home/lums/feature-vector-prototype/experimental/cmake-build-release/src/flat",
+    "Run_date": "Wed May 31 09:35:23 2023",
+    "cmake_source_dir": "/home/lums/feature-vector-prototype/experimental",
+    "host": "ip-172-31-0-97",
+    "tiledb_version": {
+      "major": 2,
+      "minor": 15,
+      "patch": 2
+    },
+    "uuid": "chxpmcbgqrjfbmhmepdxsedv"
+  },
+  "Times": {
+    "Total time vq_query_heap": 4174.0,
+    "read matrix s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids": 84.0,
+    "read matrix s3://tiledb-andrew/kmeans/benchmark/query_public_10k": 55.0,
+    "read matrix s3://tiledb-andrew/sift/bigann10M_base": 451.0
+  }
+}
+{
+  "Args": [
+    [
+      "--block",
+      "\"1000000\""
+    ],
+    [
+      "--db_uri",
+      "\"s3://tiledb-andrew/sift/bigann10M_base\""
+    ],
+    [
+      "--debug",
+      "true"
+    ],
+    [
+      "--g_uri",
+      "\"s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids\""
+    ],
+    [
+      "--help",
+      "false"
+    ],
+    [
+      "--k",
+      "\"10\""
+    ],
+    [
+      "--log",
+      "\"flat-shakedown.log\""
+    ],
+    [
+      "--nqueries",
+      "\"100\""
+    ],
+    [
+      "--nth",
+      "false"
+    ],
+    [
+      "--nthreads",
+      "\"0\""
+    ],
+    [
+      "--order",
+      "\"vq_heap\""
+    ],
+    [
+      "--output_uri",
+      "null"
+    ],
+    [
+      "--q_uri",
+      "\"s3://tiledb-andrew/kmeans/benchmark/query_public_10k\""
+    ],
+    [
+      "--validate",
+      "true"
+    ],
+    [
+      "--verbose",
+      "true"
+    ]
+  ],
+  "Config": {
+    "Build": "Release",
+    "Build_date": "2023-05-30 23:02:57",
+    "Compiler": {
+      "CMAKE_CXX_FLAGS": "-Wall -Wno-unused-variable ",
+      "CMAKE_CXX_FLAGS_DEBUG": "-O0 -g -fno-elide-constructors  ",
+      "CMAKE_CXX_FLAGS_RELEASE": "-Ofast -march=native -DNDEBUG ",
+      "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-Ofast -g -march=native -DNDEBUG",
+      "CXX_COMPILER": "/usr/bin/clang++-14",
+      "CXX_COMPILER_ID": "Clang",
+      "CXX_VERSION": "14.0.0"
+    },
+    "GIT_REPO": {
+      "GIT_BRANCH": "lums/tmp/async_ivf",
+      "GIT_COMMIT_DATE": "2023-05-30",
+      "GIT_COMMIT_HASH": "9288390",
+      "GIT_COMMIT_TIME": "13:25:30",
+      "GIT_REPO_NAME": "feature-vector-prototype",
+      "GIT_REPO_URL": "git@github.com:TileDB-Inc/feature-vector-prototype.git"
+    },
+    "Program": "/home/lums/feature-vector-prototype/experimental/cmake-build-release/src/flat",
+    "Run_date": "Wed May 31 09:36:50 2023",
+    "cmake_source_dir": "/home/lums/feature-vector-prototype/experimental",
+    "host": "ip-172-31-0-97",
+    "tiledb_version": {
+      "major": 2,
+      "minor": 15,
+      "patch": 2
+    },
+    "uuid": "zifolfqqxvumkpkofzfrmdqk"
+  },
+  "Times": {
+    "Total time vq_query_heap": 6454.0,
+    "read matrix s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids": 71.0,
+    "read matrix s3://tiledb-andrew/kmeans/benchmark/query_public_10k": 71.0,
+    "read matrix s3://tiledb-andrew/sift/bigann10M_base": 744.0
+  }
+}
+{
+  "Args": [
+    [
+      "--block",
+      "\"5000000\""
+    ],
+    [
+      "--db_uri",
+      "\"s3://tiledb-andrew/sift/bigann100M_base\""
+    ],
+    [
+      "--debug",
+      "true"
+    ],
+    [
+      "--g_uri",
+      "\"s3://tiledb-andrew/kmeans/benchmark/bigann_100M_GT_nnids\""
+    ],
+    [
+      "--help",
+      "false"
+    ],
+    [
+      "--k",
+      "\"10\""
+    ],
+    [
+      "--log",
+      "\"flat-shakedown.log\""
+    ],
+    [
+      "--nqueries",
+      "\"100\""
+    ],
+    [
+      "--nth",
+      "false"
+    ],
+    [
+      "--nthreads",
+      "\"0\""
+    ],
+    [
+      "--order",
+      "\"vq_heap\""
+    ],
+    [
+      "--output_uri",
+      "null"
+    ],
+    [
+      "--q_uri",
+      "\"s3://tiledb-andrew/kmeans/benchmark/query_public_10k\""
+    ],
+    [
+      "--validate",
+      "true"
+    ],
+    [
+      "--verbose",
+      "true"
+    ]
+  ],
+  "Config": {
+    "Build": "Release",
+    "Build_date": "2023-05-30 23:02:57",
+    "Compiler": {
+      "CMAKE_CXX_FLAGS": "-Wall -Wno-unused-variable ",
+      "CMAKE_CXX_FLAGS_DEBUG": "-O0 -g -fno-elide-constructors  ",
+      "CMAKE_CXX_FLAGS_RELEASE": "-Ofast -march=native -DNDEBUG ",
+      "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-Ofast -g -march=native -DNDEBUG",
+      "CXX_COMPILER": "/usr/bin/clang++-14",
+      "CXX_COMPILER_ID": "Clang",
+      "CXX_VERSION": "14.0.0"
+    },
+    "GIT_REPO": {
+      "GIT_BRANCH": "lums/tmp/async_ivf",
+      "GIT_COMMIT_DATE": "2023-05-30",
+      "GIT_COMMIT_HASH": "9288390",
+      "GIT_COMMIT_TIME": "13:25:30",
+      "GIT_REPO_NAME": "feature-vector-prototype",
+      "GIT_REPO_URL": "git@github.com:TileDB-Inc/feature-vector-prototype.git"
+    },
+    "Program": "/home/lums/feature-vector-prototype/experimental/cmake-build-release/src/flat",
+    "Run_date": "Wed May 31 09:37:37 2023",
+    "cmake_source_dir": "/home/lums/feature-vector-prototype/experimental",
+    "host": "ip-172-31-0-97",
+    "tiledb_version": {
+      "major": 2,
+      "minor": 15,
+      "patch": 2
+    },
+    "uuid": "ukmxcbhjxbbxxrjlseqxeyzx"
+  },
+  "Times": {
+    "Total time vq_query_heap": 43867.0,
+    "read matrix s3://tiledb-andrew/kmeans/benchmark/bigann_100M_GT_nnids": 396.0,
+    "read matrix s3://tiledb-andrew/kmeans/benchmark/query_public_10k": 80.0,
+    "read matrix s3://tiledb-andrew/sift/bigann100M_base": 1966.0
+  }
+}
