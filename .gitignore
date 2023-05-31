@@ -36,3 +36,60 @@ build
 .vscode
 
 CMakeUserPresets.json
+
+# Byte-compiled / optimized / DLL files
+python/__pycache__/
+*.py[cod]
+*$py.class
+
+
+# Distribution / packaging
+apis/python/.Python
+apis/python/build/
+apis/python/develop-eggs/
+apis/python/dist/
+apis/python/downloads/
+apis/python/eggs/
+apis/python/.eggs/
+apis/python/lib/
+apis/python/lib64/
+apis/python/parts/
+apis/python/sdist/
+apis/python/var/
+apis/python/wheels/
+apis/python/*.egg-info/
+apis/python/src/*.egg-info
+apis/python/.installed.cfg
+apis/python/*.egg
+apis/python/MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+apis/python/pip-log.txt
+apis/python/pip-delete-this-directory.txt
+
+# PyBuilder
+apis/python/target/
+
+# pyenv
+apis/python/.python-version
+
+# Environments
+apis/python/.env
+apis/python/.venv
+apis/python/env/
+apis/python/venv/
+apis/python/ENV/
+apis/python/env.bak/
+apis/python/venv.bak/
+
+# mypy
+apis/python/.mypy_cache/
+
+.idea
+apis/python/src/tiledb/vector_search/version.py

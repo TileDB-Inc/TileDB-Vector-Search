@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  Run-Tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install OpenBLAS
+        run: sudo apt install libopenblas-dev
+      - uses: actions/checkout@v3
+      - name: Configure CMake
+        run: cmake -S ./experimental -B ./experimental/build -DCMAKE_BUILD_TYPE=Debug
+      - name: Build
+        run: cmake --build ./experimental/build
+      - name: Run Tests
+        run: cmake --build ./experimental/build --target check

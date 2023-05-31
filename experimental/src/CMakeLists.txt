@@ -107,7 +107,7 @@ target_link_libraries(kmeans_lib INTERFACE
 
 #---[ Demos ]------------------------------------------------------------
 add_executable(flat flat.cc)
-target_link_libraries(flat PUBLIC kmeans_lib)
+target_link_libraries(flat PUBLIC kmeans_lib nlohmann_json::nlohmann_json)
 
 add_executable(ivf_hack ivf_hack.cc)
 target_link_libraries(ivf_hack PUBLIC kmeans_lib)
