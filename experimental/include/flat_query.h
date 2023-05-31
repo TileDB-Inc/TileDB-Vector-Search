@@ -66,6 +66,16 @@
 #include <iostream>
 #include <memory>
 #include <numeric>
+
+#ifndef tdb_func__
+#ifndef __APPLE__
+#include <source_location>
+#define tdb_func (std::source_location::current().function_name())
+#else
+#define tdb_func__ std::string{(__func__)}
+#endif
+#endif
+
 #include <span>
 
 #include <future>
@@ -93,7 +103,7 @@
 template <class DB, class Q>
 auto qv_query_nth(
     const DB& db, const Q& q, int k, bool nth, unsigned int nthreads) {
-  life_timer _{"Total time (vq hard way)"};
+  life_timer _{"Total time " + tdb_func__};
 
   ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
@@ -130,8 +140,9 @@ auto qv_query_nth(
  */
 template <class DB, class Q>
 auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
-  life_timer _outer{
-      "Total time (vq loop nesting, nth = " + std::to_string(nth)};
+  life_timer _{"Total time " + tdb_func__};
+
+ // life_timer _{tdb_func__ + ", nth = " + std::to_string(nth)};
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
 
@@ -175,7 +186,7 @@ auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
  */
 template <class DB, class Q>
 auto vq_query_heap(const DB& db, const Q& q, int k, unsigned nthreads) {
-  life_timer _outer{"Total time (vq loop nesting, set way)"};
+  life_timer _{"Total time " + tdb_func__};
 
   using element = std::pair<float, int>;
   std::vector<std::vector<fixed_min_heap<element>>> scores(
@@ -238,8 +249,8 @@ auto vq_query_heap(const DB& db, const Q& q, int k, unsigned nthreads) {
 #if 0
 template <class DB, class Q>
 auto vq_partition(const DB& db, const Q& q, int k, bool nth, int nthreads) {
-  life_timer _outer{
-      "Total time (vq loop nesting, nth = " + std::to_string(nth)};
+ life_timer _{"Total time " + tdb_func__};
+
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
 

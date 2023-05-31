@@ -43,6 +43,15 @@
 #include "scoring.h"
 #include "utils/timer.h"
 
+#ifndef tdb_func__
+#ifndef __APPLE__
+#include <source_location>
+#define tdb_func (std::source_location::current().function_name())
+#else
+#define tdb_func__ std::string{(__func__)}
+#endif
+#endif
+
 // If apple, use Accelerate
 #ifdef __APPLE__
 #include <Accelerate/Accelerate.h>
@@ -245,7 +254,7 @@ auto kmeans_query_small_q(
  */
 template <vector_database DB, class Q>
 auto qv_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
-  life_timer _{"Total time (qv query)"};
+  life_timer _{"Total time " + tdb_func__};
 
   using element = std::pair<float, int>;
 
@@ -299,7 +308,7 @@ auto qv_query(const DB& db, const Q& q, size_t k, unsigned nthreads) {
 
 template <class DB, class Q>
 auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
-  life_timer _{"Total time (qv partition)"};
+  life_timer _{"Total time " + tdb_func__};
 
   // Just need a single vector
   std::vector<unsigned> top_k(q.num_cols());
@@ -345,7 +354,7 @@ auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
 
 template <class DB, class Q>
 auto gemm_query(const DB& db, const Q& q, int k, bool nth, size_t nthreads) {
-  life_timer _outer{"Total time query gemm"};
+  life_timer _{"Total time " + tdb_func__};
   auto scores = gemm_scores(db, q, nthreads);
   auto top_k = get_top_k(scores, k, nth, nthreads);
   return top_k;
@@ -355,7 +364,7 @@ using namespace std::chrono_literals;
 
 template <class DB, class Q>
 auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
-  life_timer _outer{"Total time blocked query gemm"};
+  life_timer _{"Total time " + tdb_func__};
 
   using element = std::pair<float, unsigned>;
 
@@ -427,13 +436,12 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
 
 template <class DB, class Q>
 auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
-  life_timer _outer{"Total time gemm"};
+  life_timer _{"Total time " + tdb_func__};
 
   auto scores = gemm_scores(db, q, nthreads);
 
   auto top_k = std::vector<int>(q.num_cols());
   {
-    life_timer _{"top k partition"};
     for (int i = 0; i < scores.num_cols(); ++i) {
       auto min_score = std::numeric_limits<float>::max();
       auto idx = 0;
@@ -454,7 +462,7 @@ auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
 
 template <class DB, class Q>
 auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
-  life_timer _outer{"Total time blocked_gemm_partition"};
+  life_timer _{"Total time " + tdb_func__};
 
   const auto block_db = db.is_blocked();
   const auto block_q = q.is_blocked();
