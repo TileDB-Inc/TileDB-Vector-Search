@@ -164,6 +164,9 @@ int main(int argc, char* argv[]) {
   ///
 
   auto db = tdbColMajorMatrix<float>(db_uri, block);  // blocked
+  if (args["--block"]) {
+    db.set_blocked();
+  }
 
   auto q = tdbColMajorMatrix<float>(q_uri, nqueries);  // just a slice
 

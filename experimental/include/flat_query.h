@@ -185,24 +185,65 @@ auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
  * @todo Implement a blocked version
  */
 template <class DB, class Q>
-auto vq_query_heap(const DB& db, const Q& q, int k, unsigned nthreads) {
+auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
   life_timer _{"Total time " + tdb_func__};
 
+  const auto block_db = db.is_blocked();
+  const auto block_q = q.is_blocked();
+  if (block_db && block_q) {
+    throw std::runtime_error("Can't block both db and q");
+  }
+
   using element = std::pair<float, int>;
+
+  // @todo Need to get the total number of queries, not just the first block
   std::vector<std::vector<fixed_min_heap<element>>> scores(
       nthreads,
       std::vector<fixed_min_heap<element>>(
           size(q), fixed_min_heap<element>(k)));
 
+
+  unsigned size_q = size(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
-  stdx::range_for_each(
-      std::move(par), db, [&](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
-        unsigned size_q = size(q);
-        for (int j = 0; j < size_q; ++j) {
-          auto score = L2(q[j], db_vec);
-          scores[n][j].insert(element{score, i});
-        }
-      });
+
+  // @todo Can we do blocking in the parallel for_each somehow?
+  for (;;) {
+
+    stdx::range_for_each(
+        std::move(par), db, [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
+
+          if (block_db) {
+
+            for (int j = 0; j < size_q; ++j) {
+              auto score = L2(q[j], db_vec);
+              scores[n][j].insert(element{score, i + db.offset()});
+            }
+
+          } else if (block_q) {
+            for (int j = 0; j < size_q; ++j) {
+              auto score = L2(q[j], db_vec);
+              scores[n][j + q.offset()].insert(element{score, i});
+            }
+
+          } else {
+            for (int j = 0; j < size_q; ++j) {
+              auto score = L2(q[j], db_vec);
+              scores[n][j].insert(element{score, i});
+            }
+
+          }
+        });
+
+    bool done = true;
+    if (block_db) {
+      done = !db.advance();
+    } else {
+      done = !q.advance();
+    }
+    if (done) {
+      break;
+    }
+  }
 
   for (int j = 0; j < size(q); ++j) {
     for (int n = 1; n < nthreads; ++n) {

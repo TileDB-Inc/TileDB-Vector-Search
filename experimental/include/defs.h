@@ -140,8 +140,8 @@ auto mat_col_sum(
 
 template <class L, class I>
 auto verify_top_k_index(L const& top_k, I const& g, int k, int qno) {
-  std::sort(begin(g), begin(g) + k);
-  std::sort(begin(top_k), end(top_k));
+  //std::sort(begin(g), begin(g) + k);
+  //std::sort(begin(top_k), end(top_k));
 
   if (!std::equal(begin(top_k), begin(top_k) + k, g.begin())) {
     std::cout << "Query " << qno << " is incorrect" << std::endl;
