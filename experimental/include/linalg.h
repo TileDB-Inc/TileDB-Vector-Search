@@ -703,7 +703,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     if (!backing_data_) {
 #ifndef __APPLE__
       backing_data_ = std::make_unique_for_overwrite<T[]>(
-          this->num_rows() * this->num_cols);
+          this->num_rows() * this->num_cols());
 #else
       backing_data_ =
           std::unique_ptr<T[]>(new T[this->num_rows() * this->num_cols()]);
