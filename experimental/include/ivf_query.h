@@ -207,7 +207,8 @@ auto kmeans_query_small_q(
     bool nth,
     size_t nthreads) {
   // get closest centroid for each query vector
-  auto top_k = qv_query(centroids, q, nprobe, nthreads);
+  // auto top_k = qv_query(centroids, q, nprobe, nthreads);
+  auto top_k = vq_query_heap(centroids, q, nprobe, nthreads);
 
   // Copy top k from Matrix to vector
   std::vector<size_t> top_top_k(nprobe, 0);
@@ -224,7 +225,7 @@ auto kmeans_query_small_q(
 
 
   // Now, with the single matrix of probed partitions, find the closest vectors
-  auto kmeans_ids = qv_query(shuffled_db, q, k_nn, nthreads);
+  auto kmeans_ids = vq_query_heap(shuffled_db, q, k_nn, nthreads);
 
   // Original ids are: all_ids[kmeans_ids(i, 0)]
   // Maybe that is what should be returned?
