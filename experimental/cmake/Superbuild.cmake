@@ -55,6 +55,8 @@ set(INHERITED_CMAKE_ARGS
   -DTileDB_DIR=${TileDB_DIR}
   -DOVERRIDE_INSTALL_PREFIX=${OVERRIDE_INSTALL_PREFIX}
   -DBLA_VENDOR=${BLA_VENDOR}
+  -DBUILD_TESTS=${BUILD_TESTS}
+  -DTILEDB_VS_PYTHON=${TILEDB_VS_PYTHON}
 )
 
 ############################################################
