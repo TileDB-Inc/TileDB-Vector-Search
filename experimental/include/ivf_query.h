@@ -39,9 +39,11 @@
 #include "algorithm.h"
 #include "concepts.h"
 #include "defs.h"
+#include "flat_query.h"
 #include "linalg.h"
 #include "scoring.h"
 #include "utils/timer.h"
+
 
 #ifndef tdb_func__
 #ifdef __cpp_lib_source_location
