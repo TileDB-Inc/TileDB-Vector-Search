@@ -43,11 +43,11 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 # This option forces FetchContent as in scenario (3) above.
 option(TILEDB_VS_PYTHON_STANDALONE "Build TileDB-VS-Py using FetchContent to retrieve the TileDB-VS library" OFF)
 
-if (TILEDB_VS_PYTHON_STANDALONE OR NOT EXISTS "../../experimental/python/tiledb_vs")
+if (TILEDB_VS_PYTHON_STANDALONE)
   # TODO -- include(BuildTileDBVS_FetchContent)
 elseif(NOT DEFINED TILEDB_VS_PYTHON)
   # TODO -- If we are building standalone, then include the top-level project
-  # add_subdirectory("../" "${CMAKE_BINARY_DIR}/tiledb_vs")
+  add_subdirectory("../" "${CMAKE_BINARY_DIR}/tiledb_vs")
 endif()
 # ----------------------------------------------------------------------------
 
@@ -57,8 +57,16 @@ find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(pybind11 CONFIG REQUIRED)
 
 python_add_library(tiledbvspy MODULE "tiledbvspy/module.cc" WITH_SOABI)
-target_link_libraries(tiledbvspy PRIVATE pybind11::headers mdspan TileDB::tiledb_shared)
+
+target_link_libraries(tiledbvspy
+  PRIVATE
+    pybind11::headers
+    mdspan
+    kmeans_lib
+    TileDB::tiledb_shared)
+
 target_compile_definitions(tiledbvspy PRIVATE VERSION_INFO=${PROJECT_VERSION})
-target_include_directories(tiledbvspy PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../src")
+
+#target_include_directories(tiledbvspy PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../src")
 
 install(TARGETS tiledbvspy DESTINATION tiledbvspy)
