@@ -1,4 +1,4 @@
-# Build Instructions
+# Prerequisites
 
 1. Create and activate a Python environment with pybind11 available
 
@@ -6,7 +6,23 @@
   b. `mamba env create -f environment.yml`
   c. `mamba activate tiledbvspy`
 
-2. Run the top level cmake build with `-DTILEDB_VS_PYTHON=ON`
+
+# Build Instructions
+
+## Build and install with pip
+
+(TODO: DOES NOT WORK YET)
+
+```
+CMAKE_ARGS="-DTileDB_DIR=/Users/inorton/work/bld/TileDB-2.15/rel/dist/lib/cmake/TileDB" pip install -e
+```
+
+## Direct build, then export PYTHONPATH
+
+For development purposes, at the moment it is simpler to build directly and export the
+extension directory into PYTHONPATH.
+
+1. Run the top level cmake build with `-DTILEDB_VS_PYTHON=ON`
 
 ```
 mkdir fvp-build
@@ -15,7 +31,8 @@ cmake -DTILEDB_VS_PYTHON=ON ~/work/git/feature-vector-type
 <cmake --build . or make -j4 etc.>
 ```
 
-3. Change directory to `fvp-build/python`. There should be a Python extension module:
+
+2. Look at `fvp-build/python`. There should be a Python extension module:
 
 ```
 pydev ❯ pwd
@@ -26,11 +43,19 @@ pydev ❯ ls
 CMakeFiles                       cmake_install.cmake              tiledbvspy.cpython-310-darwin.so
 ```
 
-4. Run Python, and `import tiledbvspy`
+3. Export the extension path as PYTHONPATH
+
+```
+export PYTHONPATH= ~/work/bld/fvp-build/python
+```
+
+3. Run Python, and `import tiledbvspy`
 
 ```
 import tiledbvspy
 ```
+
+# ====
 
 X. Usage example
 
