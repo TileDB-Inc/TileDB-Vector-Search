@@ -137,6 +137,7 @@ int main(int argc, char* argv[]) {
   size_t k_nn = args["--k"].asLong();
   auto query_uri = args["--query_uri"] ? args["--query_uri"].asString() : "";
   auto nqueries = (size_t)args["--nqueries"].asLong();
+  auto blocksize = (size_t)args["--blocksize"].asLong();
   bool nth = args["--nth"].asBool();
   auto algorithm = args["--alg"].asString();
 
@@ -169,9 +170,8 @@ int main(int argc, char* argv[]) {
     auto q = tdbColMajorMatrix<q_type>(query_uri, nqueries);
     debug_matrix(q, "q");
 
-    auto top_k = kmeans_query_small_q(
-        part_uri, centroids, q, indices, id_uri, nprobe, k_nn, nth, nthreads);
-
+    auto top_k = detail::ivf::qv_query_heap_finite_ram(
+        part_uri, centroids, q, indices, id_uri, nprobe, k_nn, blocksize, nth, nthreads);
 
     debug_matrix(top_k, "top_k");
 

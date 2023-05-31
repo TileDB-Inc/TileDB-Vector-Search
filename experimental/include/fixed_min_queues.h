@@ -36,12 +36,11 @@
 #include <functional>
 #include <set>
 
-template <class T, class Compare = std::less<T>>
+template <class T>
 class fixed_min_set_heap_1 : public std::vector<T> {
   using Base = std::vector<T>;
   // using Base::Base;
   unsigned max_size{0};
-  Compare comp;
 
  public:
   explicit fixed_min_set_heap_1(unsigned k)
@@ -49,12 +48,6 @@ class fixed_min_set_heap_1 : public std::vector<T> {
       , max_size{k} {
     Base::reserve(k);
   }
-  fixed_min_set_heap_1(unsigned k, Compare c)
-      : Base(0)
-      , max_size{k}
-      , comp{std::move(c)} {
-    Base::reserve(k);
-  }
 
   void insert(T const& x) {
     if (Base::size() < max_size) {
@@ -70,14 +63,18 @@ class fixed_min_set_heap_1 : public std::vector<T> {
       std::push_heap(begin(*this), end(*this), std::less<T>());
     }
   }
+
+  //  template<typename T, typename... Args>
+  //  void my_emplace_back(std::vector<T>& vec, Args&&... args) {
+  //    vec.emplace_back(std::forward<Args>(args)...);
+  //  }
 };
 
-template <class T, class Compare = std::less<T>>
+template <class T>
 class fixed_min_set_heap_2 : public std::vector<T> {
   using Base = std::vector<T>;
   // using Base::Base;
   unsigned max_size{0};
-  Compare comp;
 
  public:
   explicit fixed_min_set_heap_2(unsigned k)
@@ -85,34 +82,66 @@ class fixed_min_set_heap_2 : public std::vector<T> {
       , max_size{k} {
     Base::reserve(k);
   }
-  fixed_min_set_heap_2(unsigned k, Compare c)
-      : Base(0)
-      , max_size{k}
-      , comp{std::move(c)} {
-    Base::reserve(k);
-  }
 
   void insert(T const& x) {
     if (Base::size() < max_size) {
       Base::push_back(x);
       // std::push_heap(begin(*this), end(*this), std::less<T>());
       if (Base::size() == max_size) {
-        std::make_heap(begin(*this), end(*this), std::less<T>());
+        // std::make_heap(begin(*this), end(*this), std::less<T>());
+        std::make_heap(begin(*this), end(*this));
       }
     } else if (x < this->front()) {
-      std::pop_heap(begin(*this), end(*this), std::less<T>());
+      // std::pop_heap(begin(*this), end(*this), std::less<T>());
+      std::pop_heap(begin(*this), end(*this));
       this->pop_back();
       this->push_back(x);
-      std::push_heap(begin(*this), end(*this), std::less<T>());
+      // std::push_heap(begin(*this), end(*this), std::less<T>());
+      std::push_heap(begin(*this), end(*this));
     }
   }
 };
 
-template <class T, class Compare = std::less<T>>
-using fixed_min_heap = fixed_min_set_heap_1<T, Compare>;
+template <class T, class U>
+class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
+  using Base = std::vector<std::tuple<T, U>>;
+  // using Base::Base;
+  unsigned max_size{0};
 
-template <class T, class Compare = std::less<T>>
-using fixed_min_set = fixed_min_set_heap_1<T, Compare>;
+ public:
+  explicit fixed_min_pair_heap(unsigned k)
+      : Base(0)
+      , max_size{k} {
+    Base::reserve(k);
+  }
+
+  void insert(const T& x, const U& y) {
+    if (Base::size() < max_size) {
+      Base::emplace_back(x, y);
+      // std::push_heap(begin(*this), end(*this), std::less<T>());
+      if (Base::size() == max_size) {
+        std::make_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+	  return std::get<0>(a) < std::get<0>(b);
+	});
+      }
+    } else if (x < std::get<0>(this->front())) {
+      std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+	return std::get<0>(a) < std::get<0>(b);
+      });
+      this->pop_back();
+      this->emplace_back(x, y);
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+	return std::get<0>(a) < std::get<0>(b);
+      });
+    }
+  }
+};
+
+template <class T>
+using fixed_min_heap = fixed_min_set_heap_1<T>;
+
+template <class T>
+using fixed_min_set = fixed_min_set_heap_1<T>;
 
 #ifdef ALLHEAPS  // These are really slow
 template <class T, class Compare = std::less<T>>
