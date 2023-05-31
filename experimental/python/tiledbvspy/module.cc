@@ -15,11 +15,23 @@ static void declareVector(py::module& mod, std::string const& suffix) {
   using TVector = Vector<T>;
   using PyTVector = py::class_<TVector, std::shared_ptr<TVector>>;
 
-  PyTVector cls(mod, ("Vector" + suffix).c_str());
+  PyTVector cls(mod, ("Vector" + suffix).c_str(), py::buffer_protocol());
 
   cls.def(py::init<T>());
   cls.def("size", &TVector::num_rows);
   cls.def("__getitem__", [](TVector& self, size_t i) { return self[i]; });
+  cls.def("__setitem__", [](TVector& self, size_t i) { return self[i]; });
+  cls.def_buffer([](TVector &m) -> py::buffer_info {
+        return py::buffer_info(
+            m.data(),                               /* Pointer to buffer */
+            sizeof(T),                          /* Size of one scalar */
+            py::format_descriptor<T>::format(), /* Python struct-style format descriptor */
+            1,                                      /* Number of dimensions */
+            { m.num_rows() },                 /* Buffer dimensions */
+            { sizeof(T) }
+        );
+    });
+
 }
 }
 
