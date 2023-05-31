@@ -16,5 +16,9 @@ def test_tdbMatrix(tmpdir):
   assert m_array.shape == data.shape
   assert np.array_equal(m_array, data)
 
-  m[1,1] = data[1,1] = np.random.rand(1).astype(np.float32)
-  assert np.array_equal(m_array, data)
+  m_array2 = np.array(m, copy=False) # mutable view
+  v = np.random.rand(1).astype(np.float32)
+  m_array2[1,1] = v
+  data[1,1] = v
+  assert np.array_equal(m_array2, data)
+  assert m[1,1]
