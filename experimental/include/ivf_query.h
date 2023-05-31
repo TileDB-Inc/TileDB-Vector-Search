@@ -73,7 +73,7 @@
  */
 
 auto kmeans_query(
-    auto&& shuffled_db,
+    const std::string& part_uri,
     auto&& centroids,
     auto&& q,
     auto&& indices,
@@ -84,7 +84,7 @@ auto kmeans_query(
     size_t nthreads) {
 #if 1
     return kmeans_query_small_q(
-        shuffled_db,
+        part_uri,
         centroids,
         q,
         indices,
@@ -197,11 +197,11 @@ auto kmeans_query_large_q(
  * @brief Query a (small) set of query vectors against a vector database.
  */
 auto kmeans_query_small_q(
-    auto&& shuffled_db,
+    const std::string& part_uri,
     auto&& centroids,
     auto&& q,
     auto&& indices,
-    auto&& shuffled_ids,
+    const std::string& id_uri,
     size_t nprobe,
     size_t k_nn,
     bool nth,
@@ -215,49 +215,21 @@ auto kmeans_query_small_q(
     top_top_k[i] = top_k(i, 0);
   }
 
-  // gather all the probed partitions into a single matrix
-  size_t total_size = 0;
-  for (size_t i = 0; i < size(top_top_k); ++i) {
-    total_size += indices[top_top_k[i] + 1] - indices[top_top_k[i]];
-  }
 
-  // Storage for the probed partitions and their ids
-  auto all_results = ColMajorMatrix<float>{centroids.num_rows(), total_size};
-  auto all_ids = std::vector<uint64_t>(total_size);
+  std::vector<uint64_t> shuffled_ids;
+  auto shuffled_db = tdbColMajorMatrix<uint8_t>(part_uri, indices, top_top_k, id_uri, shuffled_ids, nthreads);
 
-  // Tracks next location to copy into
-  size_t ctr = 0;
+  debug_matrix(shuffled_db, "shuffled_db");
+  debug_matrix(shuffled_ids, "shuffled_ids");
 
-  // @todo parallelize this loop
-  // @todo don't make contiguous copy -- just search each cluster separately
-  // Copy the probed partitions into contiguous storage
-  // For each probed partition
-  for (size_t j = 0; j < nprobe; ++j) {
-    // Get begin and end indices of the partition
-    size_t start = indices[top_top_k[j]];
-    size_t end = indices[top_top_k[j] + 1];
-
-    // Copy the partition into the storage
-    // For each vector in the partition
-    for (size_t i = start; i < end; ++i) {
-      // Copy the vector into all_results and ids into all_ids
-      // @todo Abstract all of this explicit loop based assignment
-      size_t l_end = shuffled_db.num_rows();
-      for (size_t l = 0; l < l_end; ++l) {
-        all_results(l, ctr) = shuffled_db(l, i);
-        all_ids[ctr] = shuffled_ids[i];
-      }
-      ++ctr;
-    }
-  }
 
   // Now, with the single matrix of probed partitions, find the closest vectors
-  auto kmeans_ids = qv_query(all_results, q, k_nn, nthreads);
+  auto kmeans_ids = qv_query(shuffled_db, q, k_nn, nthreads);
 
   // Original ids are: all_ids[kmeans_ids(i, 0)]
   // Maybe that is what should be returned?
 
-  return std::make_tuple(std::move(kmeans_ids), all_ids);
+  return std::make_tuple(std::move(kmeans_ids), shuffled_ids);
 }
 
 /**

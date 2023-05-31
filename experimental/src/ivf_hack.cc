@@ -170,17 +170,15 @@ int main(int argc, char* argv[]) {
   {
     life_timer _("query_time");
 
-    auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
+    // auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
     // auto indices = tdbMatrix<size_t, Kokkos::layout_left>(index_uri);
     auto indices = read_vector<indices_type>(index_uri);
-    auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
+    // auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
 
-    debug_matrix(shuffled_db, "shuffled_db");
+    //debug_matrix(shuffled_db, "shuffled_db");
     debug_matrix(indices, "indices");
-    debug_matrix(shuffled_ids, "shuffled_ids");
+    //debug_matrix(shuffled_ids, "shuffled_ids");
 
-    // Some variables for debugging
-    auto mv = *std::max_element(begin(shuffled_ids), end(shuffled_ids));
 
     auto q = [&]() -> ColMajorMatrix<q_type> {
       if (query_uri != "") {
@@ -198,11 +196,11 @@ int main(int argc, char* argv[]) {
 
     // What should be returned here?  Maybe a pair with the ids and scores?
     auto&& [kmeans_ids, all_ids] = kmeans_query(
-        shuffled_db,
+        part_uri,
         centroids,
         q,
         indices,
-        shuffled_ids,
+        id_uri,
         nprobe,
         k_nn,
         nth,

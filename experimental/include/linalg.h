@@ -66,6 +66,9 @@ extern bool global_verbose;
 extern bool global_debug;
 extern std::string global_region;
 
+template <class T>
+std::vector<T> read_vector(const std::string&);
+
 template <class M>
 concept is_view = requires(M) {
   typename M::view_type;
@@ -576,6 +579,108 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   }
 
  public:
+
+  tdbMatrix(const std::string& uri, std::vector<uint64_t>& indices, const std::vector<size_t>& top_top_k,
+            const std::string& id_uri, std::vector<uint64_t>& shuffled_ids, size_t nthreads)
+      : array_{ctx_, uri, TILEDB_READ}
+      , schema_{array_.schema()} {
+    life_timer _{"read matrix " + uri};
+
+    auto cell_order = schema_.cell_order();
+    auto tile_order = schema_.tile_order();
+
+    // @todo Maybe throw an exception here?  Have to properly handle since this
+    // is a constructor.
+    assert(cell_order == tile_order);
+
+    const size_t attr_idx = 0;
+
+    auto attr_num{schema_.attribute_num()};
+    auto attr = schema_.attribute(attr_idx);
+
+    std::string attr_name = attr.name();
+    tiledb_datatype_t attr_type = attr.type();
+    if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
+      throw std::runtime_error(
+          "Attribute type mismatch: " + std::to_string(attr_type) +
+          " != " + std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
+    }
+
+    auto domain_{schema_.domain()};
+
+    auto array_rows_{domain_.dimension(0)};
+    auto array_cols_{domain_.dimension(1)};
+
+    num_array_rows_ =
+        (array_rows_.template domain<row_domain_type>().second -
+         array_rows_.template domain<row_domain_type>().first + 1);
+    num_array_cols_ =
+        (array_cols_.template domain<col_domain_type>().second -
+         array_cols_.template domain<col_domain_type>().first + 1);
+
+    if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
+        (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {
+      throw std::runtime_error("Cell order and matrix order must match");
+    }
+
+    size_t nprobe = size(top_top_k);
+    size_t num_cols = 0;
+    for (size_t i = 0; i < nprobe; ++i) {
+      num_cols += indices[top_top_k[i] + 1] - indices[top_top_k[i]];
+    }
+
+    size_t dimension = num_array_rows_;
+
+#ifndef __APPLE__
+    auto data_ = std::make_unique_for_overwrite<T[]>(dimension * num_cols);
+#else
+    // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
+    auto data_ = std::unique_ptr<T[]>(new T[dimension * num_cols]);
+#endif
+
+    auto part_ids =  read_vector<uint64_t>(id_uri);
+    auto new_ids = std::vector<uint64_t>(num_cols);
+    size_t offset = 0;
+    for (size_t j = 0; j < nprobe; ++j) {
+      size_t start = indices[top_top_k[j]];
+      size_t stop = indices[top_top_k[j] + 1];
+      size_t len = stop - start;
+      size_t num_elements = len * dimension;
+
+      std::copy(begin(part_ids) + start, begin(part_ids) + stop, begin(new_ids) + offset);
+
+      // Create a subarray that reads the array up to the specified subset.
+      std::vector<int32_t> subarray_vals = {
+          (int32_t)0,
+          (int32_t)dimension - 1,
+          (int32_t)start,
+          (int32_t)stop - 1};
+      tiledb::Subarray subarray(ctx_, array_);
+      subarray.set_subarray(subarray_vals);
+
+      auto layout_order = cell_order;
+
+      tiledb::Query query(ctx_, array_);
+
+      auto ptr = data_.get() + offset;
+      query.set_subarray(subarray)
+          .set_layout(layout_order)
+          .set_data_buffer(attr_name, ptr, num_elements);
+      query.submit();
+
+      // assert(tiledb::Query::Status::COMPLETE == query.query_status());
+      if (tiledb::Query::Status::COMPLETE != query.query_status()) {
+        throw std::runtime_error("Query status is not complete -- fix me");
+      }
+      offset += len;
+    }
+
+    Base::operator=(Base{std::move(data_), dimension, num_cols});
+    shuffled_ids = std::move(new_ids);
+  }
+
+
+ public:
   size_t offset() const
       requires(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
     return row_offset_;
@@ -839,7 +944,7 @@ void write_vector(std::vector<T>& v, const std::string& uri) {
  * Read the contents of a TileDB array into a std::vector.
  */
 template <class T>
-auto read_vector(const std::string& uri) {
+std::vector<T> read_vector(const std::string& uri) {
   if (global_debug) {
     std::cerr << "# Reading std::vector: " << uri << std::endl;
   }
