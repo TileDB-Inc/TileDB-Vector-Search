@@ -172,6 +172,6 @@ if(BUILD_TESTS)
     # enable_testing()
 endif()
 
-if (TILEDB_VS_ENABLE_PYTHON)
+if (TILEDB_VS_PYTHON)
     add_subdirectory(python)
 endif()
