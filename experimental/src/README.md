@@ -15,125 +15,125 @@ called `ivf_flat` which does an approximate search based on a given partition (a
 
 ### Running ivf_hack
 
-Usage:
-
 ```
 Usage:
-    tdb (-h | --help)
-    tdb  [--db_uri URI  --centroids_uri URI] --index_uri URI --part_uri URI --id_uri URI
-         [--k NN] [--cluster NN] [--write] [--nthreads N] [-d | -v]
+    ivf_hack (-h | --help)
+    ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --part_uri URI --id_uri URI
+            [--output_uri URI] [--query_uri URI] [--groundtruth_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
+            [--k NN] [--cluster NN] [--nthreads N] [--region REGION] [--nth] [--log FILE] [-d | -v]
 
 Options:
     -h, --help            show this screen
-    --db_uri URI          database URI with feature vectors
-    --centroids_uri URI   query URI with feature vectors to search for
-    --index_uri URI       URI to store the paritioning index
-    --part_uri URI        URI to store the partitioned data
-    --id_uri URI          URI to store original IDs of vectors
-    --write               write the index to disk [default: false]
+    --db_uri URI          database URI with feature vectors, to query against
+    --centroids_uri URI   URI with centroid vectors from kmeans applied to the feature vector set
+    --index_uri URI       URI with the paritioning index obtained from kmeans
+    --part_uri URI        URI with the data vectors reordered and partitioned by kmeans
+    --id_uri URI          URI with IDs of the partitioned vectors, as given in the original dataset  
+    --output_uri URI      URI to store search results
+    --query_uri URI       Optional URI containing a set of vectors to query the database against
+    --groundtruth_uri URI Optionsal URI containing the ground truth vectors for the query vectors
+    --nqueries NN         number of query vectors to use (0 = all) [default: 0]
+    --ndb NN              number of database vectors to use (0 = all) [default: 0]
     --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
     --k NN                number of nearest neighbors to search for [default: 10]
-    --cluster NN          number of clusters to use [default: 100]
-    -d, --debug           run in debug mode [default: false]
-    -v, --verbose         run in verbose mode [default: false]
-)";
+    --cluster NN          aka nprobe -- number of kmeanse clusters to use in the search [default: 100]
+    --blocksize NN        number of vectors to process in memory from the vector dataset (0 = all) [default: 0]
+    --nth                 use nth_element for finding top k rather than heap-based [default: false]
+    --log FILE            log program stats to FILE (- for stdout)
+    --region REGION       AWS S3 region for the arrays used by this program [default: us-east-1]
+    -d, --debug           emit and log debugging level information [default: false]
+    -v, --verbose         emit and log verbose level information [default: false]
 ```
-
 
 ### Running `ivf_hack` with TileDB Arrays
 
-`ivf_hack` reads and writes its data from TileDB arrays.
-Unlike `flat` below, `ivf_hack` does not support reading from data files.
-
-`ivf_hack` can be run in one of two modes: query mode or write mode.
-
-The usage for query mode and write mode is essentially the same, with the exception that query mode can take a URI specifying a set of query vectors, whereas write mode takes the argument `--write` to indicate write mode.
-
 #### Query mode
+`ivf_hack` performs a query for given queries against a specified dataset, using an inverted file index derived from applying kmeans partitioning against that dataset.
 
-Query mode takes as input a vector database, an array centroids, 
-a reordered vector database, an array containing partition indexes for the reordered vector database, an array of original ids of the shuffled vectors.
-Optionally, the user can optionlly specify an array containing query vectors as well as optionally specify an array for writing the found nearest neighbors, their indices, and their scores. 
+`ivf_hack`reads its data from TileDB arrays.  Reading from local data files is no longer supported. Previous functionality for writing the IVF index files (partitioned vectors, index, vector IDs) has been moved to another driver program (`index`).
+
+`ivf_hack` takes as input a vector database, an array centroids, 
+a reordered vector database, an array containing partition indexes for the reordered vector database, and an array of original ids of the shuffled vectors.
+The user can also optionally specify
+*  an array containing query vectors 
+*  an array containing ground truth vectors
 
 The user can also specify values for how many nearest neighbors to return for
 each search vector, and how many partitions to use in searching for each search vector.
 
 Example:
 ```
-  ivf_hack --id_uri s3://tiledb-lums/kmeans/ivf_hack/ids              \
-           --index_uri s3://tiledb-lums/kmeans/ivf_hack/index         \
-           --part_uri s3://tiledb-lums/kmeans/ivf_hack/parts          \ 
-           --centroids_uri s3://tiledb-lums/kmeans/ivf_hack/centroids \
-           --db_uri s3://tiledb-lums/sift/sift_base 
+  ivf_hack --id_uri s3://tiledb-andrew/kmeans/ivf_hack/ids              \
+           --index_uri s3://tiledb-andrew/kmeans/ivf_hack/index         \
+           --part_uri s3://tiledb-andrew/kmeans/ivf_hack/parts          \ 
+           --centroids_uri s3://tiledb-andrew/kmeans/ivf_hack/centroids \
+           --db_uri s3://tiledb-andrew/sift/sift_base 
 ```
 
-#### Write mode
-Write mode takes as input a vector database and an array of centroids. Using the centroids, it 
-partitions the vector database and saves the partitioning data in three arrays, the shuffled (partitioned) vector database, the partitioning indexes, and the original vector database ids for the shuffled vectors. 
+#### index_ivf
+
+The `index_ivf` driver is complementary to `ivf_hack` and writes the arrays necesarry for indexing, given a vector database and centroid vectors produces by kmeans. This functionality was previously also included as part of `ivf_hack` but has been moved to the `index_ivf` driver.
+
+The three arrays produced by `index_ivf` are the partitioned (shuffled) vector database, the partitioning indexes, and the original vector database ids for the shuffled vectors. 
 
 Example:
 ```
-  ivf_hack --id_uri s3://tiledb-lums/kmeans/ivf_hack/ids              \
-           --index_uri s3://tiledb-lums/kmeans/ivf_hack/index         \
-           --part_uri s3://tiledb-lums/kmeans/ivf_hack/parts          \ 
-           --centroids_uri s3://tiledb-lums/kmeans/ivf_hack/centroids \
-           --db_uri s3://tiledb-lums/sift/sift_base                   \
-           --write 
+  ivf_index --id_uri s3://tiledb-lums/kmeans/ivf_hack/ids              \
+            --index_uri s3://tiledb-lums/kmeans/ivf_hack/index         \
+            --part_uri s3://tiledb-lums/kmeans/ivf_hack/parts          \ 
+            --centroids_uri s3://tiledb-lums/kmeans/ivf_hack/centroids \
+            --db_uri s3://tiledb-lums/sift/sift_base                   
 ```
 
 Note that the program will **not** overwrite any existing arrays.  It is the responsibility of the user to make sure that the arrays to be written do not exist when the program is executed.
 
-**NB:** The reason write mode exists is because the available partitioning data was created with faiss, which I am not wholly familiar with.  It seems to only return centroids rather than the partitioned set of vectors.
-
-However, this was not redundant development.  The functionality for partitioning, shuffling, and so forth will be necessary when we implement our own k-means algorithm.
-
-**TODO:**  Split query and write mode into separate driver programs.  (They began as a single program because I was not initially writing out intermediate state.)
+**NB:** The reason write mode exists is because the available partitioning data created by kmeans programs only seem to include the centroids rather than the full set of data needed by `ivf_hack`.  
+This functionality will also be used in conjunction with TileDB's own kmeans centroid generation (currently WIP).
 
 ## The Flat Search Driver
 
-The `main` program for the driver performing flat search is  
+The driver program for 
+performing flat search is  
 called `flat` which does an exhaustive vector-by-vector comparison between a given
 set of vectors and a given set of query vectors.
 
 
-
 ### Running flat
 
-The `flat` program is a basic program that reads the "texmex" sift feature vector data, either
-from a TileDB array or from a file.
-(**NB:** When reading from a file, the format must be the sift format.  The program is able to handle arbitrary formats when reading from TileDB arrays.  Plain file support will be deprecated in the future.)
-The program performs either L2 (default), (TBD) cosine similarity, or Jaccard similarity and checks the result against
-a given ground truth.  If the computed results do not match the ground truth, the
-differences are reported on the console.  **Note** A correct computation is not
-unique.  That is, multiple vectors may return the same results, i.e., there may
-be ties.  Thus, the index values computed by `flat` may differ from the supplied
-ground truth.  You should examine any printed errors on the output for evidence
+The `flat` program is a basic program that reads the `sift` feature vector data, either
+from a TileDB array or from a file.  Both `flat` and `ivf_hack` use a simple (naive) array schema for the arrays that they use.  Future releases will include support for other pre-defined schema, as well as offer an API for user-defined schema.
+
+The program currently 
+performs search based on L2  similarity.  Future releases will include
+cosine similarity, and Jaccard similarity.  The program can also check its results against a supplied set of ground truth vectors.  The `sift` dataset includes ground truth files computed with L2 similarity.
+
+If the program is running in verbose mode, any vectors not mathing the ground truth will be printed to the console and logged.
+**Note** A correct computation is not
+unique.  That is, multiple vectors may return the same results, because of ties in their similarity scores.
+Thus, the index values computed by `flat` may differ from the supplied
+ground truth.  You should examine any differences logged to the output for evidence
 of ties.  Most methods in `flat` seem to process ties in the same order as
 the ground truth, so this only comes up in one or two cases.
 
+### Usage
 ```
-flat: feature vector search with flat index.
   Usage:
-      tdb (-h | --help)
-      tdb (--db_file FILE | --db_uri URI) (--q_file FILE | --q_uri URI) (--g_file FILE | --g_uri URI) 
-          [--k NN] [--L2 | --cosine] [--order ORDER] [--hardway] [--nthreads N] [--nqueries N] [--ndb N] [-d | -v]
+      flat (-h | --help)
+      flat --db_uri URI --q_uri URI [--g_uri URI] [--output_uri URI] [--order ORDER] [--k NN]
+          [--block N] [--nqueries N] [--nthreads N] [-d ] [-v]
 
   Options:
       -h, --help            show this screen
-      --db_file FILE        database file with feature vectors
       --db_uri URI          database URI with feature vectors
-      --q_file FILE         query file with feature vectors to search for
       --q_uri URI           query URI with feature vectors to search for
-      --g_file FILE         ground truth file
       --g_uri URI           ground true URI
-      --k NN                number of nearest neighbors to find [default: 10]
-      --L2                  use L2 distance (Euclidean)
-      --cosine              use cosine distance [default]
+      --output_uri URI      output URI for results
       --order ORDER         which ordering to do comparisons [default: gemm]
-      --hardway             use hard way to compute distances [default: false]
-      --nthreads N          number of threads to use in parallel loops [default: 8]
+      --k NN                number of nearest neighbors to find [default: 10]
+      --block N             block database with size N (0 = no blocking) [default: 0]
       --nqueries N          size of queries subset to compare (0 = all) [default: 0]
-      --ndb N               size of vectors subset to compare (0 = all) [default: 0]
+      --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
+      --nth                 use nth_element for top k [default: false]
       -d, --debug           run in debug mode [default: false]
       -v, --verbose         run in verbose mode [default: false]
 ```
@@ -351,17 +351,20 @@ You can also run on the medium data set:
 
 The memory and CPU requirements for the 1B dataset become prohibitive and probably can't be run on a typical desktop or typical server.
 
+## CHANGELOG
+
+* **Use streaming approach to handle arrays/files that won't fit in local memory of one machine.**  This could be done before moving into core or afterwords.  It is probably better to do this with the prototype.  This shouldn't take more than two days.
+* **Improve performance with better blocking for memory use** In conjunction with reorganizing for out-of-core operation, we should also arrange the in-memory computation to make better use of the memory hierarchy.
+* **Make ground truth comparison an optional argument**
+* **Perform ground truth comparison only when requested**
+
+
 ## Main TODO items
 
 (**Note:** We can now say that TileDB can be used for similarity search.)
 
-* **Use OpenBLAS instead of MKL for gemm** and incorporate into the build process.  This should take less than a day.
 * **Move prototype into core as a query.** If I can work with Luc this shouldn't take more than a week (and would not take up anywhere close to a week for Luc).  This shouldn't take more than a week, depending on how fancy we want to be.  Probably need to add a day or two to deal with designing the API.
 * **Provide --id argument** to allow selection of a single vector to query
-* **Use streaming approach to handle arrays/files that won't fit in local memory of one machine.**  This could be done before moving into core or afterwords.  It is probably better to do this with the prototype.  This shouldn't take more than two days.
 * **Use parallel/distributed approach** to handle arrays/files that won't fit in local memory of one machine.  This is doable if we want to just parallelize an application using libtiledb.  However, if we want to do the similarity search "in the cloud" it might be better to orchestrate the distributed computation at the Python task graph level.
-* **Improve performance with better blocking for memory use** In conjunction with reorganizing for out-of-core operation, we should also arrange the in-memory computation to make better use of the memory hierarchy.
 * **Finish implementation of cosine similarity** This should be fairly straightforward to implement. However, we have not ground truth to verify it with the sift benchmark dataset.
-* **Make ground truth comparison an optional argument**
-* **Perform ground truth comparison only when requested**
 * **Implement parallelism using task graph** This should not be too difficult, a couple of days, as the `std::async` parallelism is similar to very basic task graph usage.

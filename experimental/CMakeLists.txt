@@ -26,6 +26,7 @@
 #
 
 cmake_minimum_required(VERSION 3.22)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
 # The cmake options don't seem to really work
 if ("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
@@ -35,7 +36,12 @@ if ("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
                You must delete them, or cmake will refuse to work.")
 endif() # yes, end-markers and even else() need empty parens
 
-project(flat)
+option(SUPERBUILD "If true, perform a superbuild (builds all missing dependencies)." ON)
+option(CMAKE_IDE "(Used for CLion builds). Disables superbuild and sets the EP install dir." OFF)
+option(FORCE_EXTERNAL_TILEDB "Forces a local build of TileDB instead of searching system paths." OFF)
+option(DOWNLOAD_TILEDB_PREBUILT "If tiledb is being super built, this controls downloading prebuilt artifacts or building from source" ON)
+option(TILEDB_S3 "Enables S3/minio support using aws-cpp-sdk" ON)
+option(OVERRIDE_INSTALL_PREFIX "Ignores the setting of CMAKE_INSTALL_PREFIX and sets a default prefix" ON)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -43,6 +49,38 @@ set(CMAKE_CXX_STANDARD 20)
 # Extend the module path so we can find our custom modules
 # -----------------------------------------------------------------------------
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+# Search the externals install directory for dependencies.
+list(APPEND CMAKE_PREFIX_PATH "${EP_INSTALL_PREFIX}")
+
+# If this is an in-IDE build, we need to disable the superbuild and explicitly
+# set the EP base dir. The normal 'cmake && make' process won't need this step,
+# it is for better CLion support of the superbuild architecture.
+if (CMAKE_IDE)
+  set(SUPERBUILD OFF)
+  set(EP_BASE "${CMAKE_CURRENT_BINARY_DIR}/externals")
+endif()
+
+if (SUPERBUILD)
+  project(TileDB-Vectorsearch-Superbuild)
+  message(STATUS "Starting TileDB-Vectorsearch superbuild.")
+  include("cmake/Superbuild.cmake")
+  return()
+endif()
+
+project(TileDB-Vectorsearch)
+message(STATUS "Starting TileDB-Vectorsearch regular build.")
+
+# Paths to locate the installed external projects.
+set(EP_SOURCE_DIR "${EP_BASE}/src")
+set(EP_INSTALL_PREFIX "${EP_BASE}/install")
+
+############################################################
+# Regular build
+############################################################
+
+# Enable testing
+enable_testing()
 
 # -----------------------------------------------------------------------------
 # Build options and defaults
@@ -92,8 +130,13 @@ include(MultiThreading)
 # Control compiler-specific flags.
 include(BLAS)
 
-
-
+# @todo migrate to find_package for BLAS
+# find_package(BLAS REQUIRED)
+# message(STATUS "BLAS_FOUND is ${BLAS_FOUND}")
+# message(STATUS "BLAS_LIBRARIES is ${BLAS_LIBRARIES}")
+# message(STATUS "BLAS_INCLUDE_DIRS is ${BLAS_INCLUDE_DIRS}")
+# message(STATUS "BLAS_LINKER_FLAGS is ${BLAS_LINKER_FLAGS}")
+# message(STATUS "BLAS_VERSION_STRING is ${BLAS_VERSION_STRING}")
 
 if (DEFINED TileDB_DIR)
     set(CMAKE_PREFIX_PATH "${TileDB_DIR};{CMAKE_PREFIX_PATH}")
@@ -102,20 +145,32 @@ else()
     message(STATUS "TileDB_DIR is not set -- find_package will use default search path.")
 endif()
 
-find_package(TileDB REQUIRED)
+find_package(TileDB_EP REQUIRED)
 
-if (TileDB_FOUND)
+if (TileDB_EP_FOUND)
     message(STATUS "Found TileDB")
     get_target_property(_TDB_INCLUDES TileDB::tiledb_shared INTERFACE_INCLUDE_DIRECTORIES)
     message(STATUS "TileDB include directories are ${_TDB_INCLUDES}")
 endif()
 
 include(Docopt)
-
 include(mdspan)
 
+add_library(nlohmann_json INTERFACE)
+target_include_directories(nlohmann_json INTERFACE ${CMAKE_SOURCE_DIR}/external/include)
+add_library(nlohmann_json::nlohmann_json ALIAS nlohmann_json)
+get_target_property(_JSON_INCLUDES nlohmann_json INTERFACE_INCLUDE_DIRECTORIES)
+message(STATUS "nlohmann_json include directories are ${_JSON_INCLUDES}")
+
 add_subdirectory(src)
-add_subdirectory(src/test)
+
+option(BUILD_TESTS "Build the tests" ON)
+
+if(BUILD_TESTS)
+    # include(Catch2)
+    add_subdirectory(include/test)
+    # enable_testing()
+endif()
 
 if (TILEDB_VS_PYTHON)
     add_subdirectory(python)
