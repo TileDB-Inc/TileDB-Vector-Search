@@ -82,6 +82,19 @@ auto kmeans_query(
     size_t k_nn,
     bool nth,
     size_t nthreads) {
+#if 1
+    return kmeans_query_small_q(
+        shuffled_db,
+        centroids,
+        q,
+        indices,
+        shuffled_ids,
+        nprobe,
+        k_nn,
+        nth,
+        nthreads);
+
+#else
   if (q.size() < 5) {
     return kmeans_query_small_q(
         shuffled_db,
@@ -105,6 +118,7 @@ auto kmeans_query(
         nth,
         nthreads);
   }
+  #endif
 }
 
 /**

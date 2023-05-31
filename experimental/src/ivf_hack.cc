@@ -111,6 +111,17 @@ Options:
     -v, --verbose         run in verbose mode [default: false]
 )";
 
+
+using db_type = uint8_t;
+using shuffled_db_type = uint8_t;
+using shuffled_ids_type = uint64_t;
+using indices_type = uint64_t;
+using centroids_type = float;
+using q_type = uint8_t;
+using groundtruth_type = int32_t;
+
+using original_ids_type = uint64_t;
+
 int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
   auto args = docopt::docopt(USAGE, strings, true);
@@ -135,7 +146,7 @@ int main(int argc, char* argv[]) {
   auto nqueries = (size_t)args["--nqueries"].asLong();
   bool nth = args["--nth"].asBool();
 
-  auto db = tdbColMajorMatrix<float>(db_uri, ndb);
+  auto db = tdbColMajorMatrix<db_type>(db_uri, ndb);
   debug_matrix(db, "db");
 
   if (is_local_array(centroids_uri) &&
@@ -144,7 +155,7 @@ int main(int argc, char* argv[]) {
               << args["--centroids_uri"] << std::endl;
     return 1;
   }
-  auto centroids = tdbColMajorMatrix<float>(centroids_uri);
+  auto centroids = tdbColMajorMatrix<centroids_type>(centroids_uri);
   debug_matrix(centroids, "centroids");
 
   if (is_local_array(centroids_uri) && !std::filesystem::exists(db_uri)) {
@@ -159,10 +170,10 @@ int main(int argc, char* argv[]) {
   {
     life_timer _("query_time");
 
-    auto shuffled_db = tdbColMajorMatrix<float>(part_uri);
+    auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
     // auto indices = tdbMatrix<size_t, Kokkos::layout_left>(index_uri);
-    auto indices = read_vector<size_t>(index_uri);
-    auto shuffled_ids = read_vector<uint64_t>(id_uri);
+    auto indices = read_vector<indices_type>(index_uri);
+    auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
 
     debug_matrix(shuffled_db, "shuffled_db");
     debug_matrix(indices, "indices");
@@ -171,12 +182,12 @@ int main(int argc, char* argv[]) {
     // Some variables for debugging
     auto mv = *std::max_element(begin(shuffled_ids), end(shuffled_ids));
 
-    auto q = [&]() -> ColMajorMatrix<float> {
+    auto q = [&]() -> ColMajorMatrix<q_type> {
       if (query_uri != "") {
-        auto qq = tdbColMajorMatrix<float>(query_uri, nqueries);
+        auto qq = tdbColMajorMatrix<q_type>(query_uri, nqueries);
         return qq;
       } else {
-        auto qq = ColMajorMatrix<float>{centroids.num_rows(), nqueries};
+        auto qq = ColMajorMatrix<q_type>{centroids.num_rows(), nqueries};
         for (size_t i = 0; i < centroids.num_rows(); ++i) {
           qq(i, 0) = db(i, 0);
         }
@@ -205,10 +216,10 @@ int main(int argc, char* argv[]) {
 
     if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
-      auto groundtruth = tdbMatrix<int, Kokkos::layout_left>(groundtruth_uri);
+      auto groundtruth = tdbMatrix<groundtruth_type, Kokkos::layout_left>(groundtruth_uri);
       debug_matrix(groundtruth, "groundtruth");
 
-      Matrix<int> original_ids(kmeans_ids.num_rows(), kmeans_ids.num_cols());
+      Matrix<original_ids_type> original_ids(kmeans_ids.num_rows(), kmeans_ids.num_cols());
       for (size_t i = 0; i < kmeans_ids.num_rows(); ++i) {
         for (size_t j = 0; j < kmeans_ids.num_cols(); ++j) {
           original_ids(i, j) = all_ids[kmeans_ids(i, j)];
@@ -230,7 +241,7 @@ int main(int argc, char* argv[]) {
 
       size_t total_query_in_groundtruth{0};
       // for each query
-      std::vector<int> comp(kmeans_ids.num_rows());
+      std::vector<groundtruth_type> comp(kmeans_ids.num_rows());
       for (size_t i = 0; i < kmeans_ids.num_cols(); ++i) {
         for (size_t j = 0; j < kmeans_ids.num_rows(); ++j) {
           comp[j] = all_ids[kmeans_ids(j, i)];

@@ -31,7 +31,8 @@ bigann100M_arrays = [
 
 # Appear to be borked
 bigann1B_arrays = [
-#    's3://tiledb-andrew/sift/bigann1B_base',
+#    's3://tiledb-andrew/sift/bigann1B_base',  BORKED
+#    's3://tiledb-andrew/bigann_base',  BORKED
     's3://tiledb-andrew/sift/bigann1B_learn',
     's3://tiledb-andrew/sift/bigann1B_query'
 ]
