@@ -36,6 +36,10 @@ if ("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
                You must delete them, or cmake will refuse to work.")
 endif() # yes, end-markers and even else() need empty parens
 
+# -----------------------------------------------------------------------------
+# Build options and defaults
+# -----------------------------------------------------------------------------
+
 option(SUPERBUILD "If true, perform a superbuild (builds all missing dependencies)." ON)
 option(CMAKE_IDE "(Used for CLion builds). Disables superbuild and sets the EP install dir." OFF)
 option(FORCE_EXTERNAL_TILEDB "Forces a local build of TileDB instead of searching system paths." OFF)
@@ -43,6 +47,8 @@ option(DOWNLOAD_TILEDB_PREBUILT "If tiledb is being super built, this controls d
 option(TILEDB_S3 "Enables S3/minio support using aws-cpp-sdk" ON)
 option(OVERRIDE_INSTALL_PREFIX "Ignores the setting of CMAKE_INSTALL_PREFIX and sets a default prefix" ON)
 option(USE_MKL_CBLAS "Try to use mkl_cblas.h (requires additional CMake configuration)" OFF)
+option(TILEDB_VS_PYTHON "Build Python wrapping of C++ API" OFF)
+option(BUILD_TESTS "Build the tests" ON)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -82,13 +88,6 @@ set(EP_INSTALL_PREFIX "${EP_BASE}/install")
 
 # Enable testing
 enable_testing()
-
-# -----------------------------------------------------------------------------
-# Build options and defaults
-# -----------------------------------------------------------------------------
-
-option(TILEDB_VS_ENABLE_PYTHON "Enable Python API" OFF)
-option(BUILD_TESTS "Build the tests" ON)
 
 # -----------------------------------------------------------------------------
 # Build types and default flags

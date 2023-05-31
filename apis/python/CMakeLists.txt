@@ -40,9 +40,6 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 # 3. (TODO) Run python build from a *python source distribution*
 #   -> use FetchContent to get parent library
 
-# This option forces FetchContent as in scenario (3) above.
-option(TILEDB_VS_PYTHON_STANDALONE "Build TileDB-VS-Py using FetchContent to retrieve the TileDB-VS library" OFF)
-
 if (TILEDB_VS_PYTHON_STANDALONE)
   # TODO -- include(BuildTileDBVS_FetchContent)
 elseif(NOT DEFINED TILEDB_VS_PYTHON)
