@@ -33,7 +33,7 @@ repository = "https://github.com/TileDB-Inc/feature-vector-prototype"
 
 [build-system]
 requires = [
-    "setuptools>=42", "wheel", "setuptools_scm>=6"
+    "setuptools>=42", "wheel", "setuptools_scm>=6",
     "scikit-build-core>=0.3.3", "pybind11"
 ]
 build-backend = "scikit_build_core.build"

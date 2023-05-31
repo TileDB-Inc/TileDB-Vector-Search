@@ -173,5 +173,6 @@ if(BUILD_TESTS)
 endif()
 
 if (TILEDB_VS_PYTHON)
-    add_subdirectory(python)
+    # HACK: make this work properly
+    add_subdirectory(../apis/python ${CMAKE_CURRENT_BINARY_DIR}/python)
 endif()

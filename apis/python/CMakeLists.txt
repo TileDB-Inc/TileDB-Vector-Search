@@ -56,4 +56,4 @@ find_package(TileDB REQUIRED)
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(pybind11 CONFIG REQUIRED)
 
-add_subdirectory("tiledb/vector_search")
+add_subdirectory("src/tiledb/vector_search")
