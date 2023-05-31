@@ -12,7 +12,12 @@ def load_as_matrix(path):
   else:
     raise ValueError("Unsupported Matrix dtype: {}".format(a.attr(0).dtype))
 
-def load_as_array(path):
-  return np.array(
-    load_as_matrix(path), copy=False
-  )
+def load_as_array(path, return_matrix=False):
+  m = load_as_matrix(path)
+  r = np.array(m, copy=False)
+
+  # hang on to a copy for testing purposes, for now
+  if return_matrix:
+    return r, m
+  else:
+    return r
