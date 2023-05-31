@@ -46,7 +46,7 @@
 #ifndef tdb_func__
 #ifndef __APPLE__
 #include <source_location>
-#define tdb_func__ (std::source_location::current().function_name())
+#define tdb_func__ std::string(std::source_location::current().function_name())
 #else
 #define tdb_func__ std::string{(__func__)}
 #endif
