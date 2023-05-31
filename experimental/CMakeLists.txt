@@ -84,6 +84,13 @@ set(EP_INSTALL_PREFIX "${EP_BASE}/install")
 enable_testing()
 
 # -----------------------------------------------------------------------------
+# Build options and defaults
+# -----------------------------------------------------------------------------
+
+option(TILEDB_VS_ENABLE_PYTHON "Enable Python API" OFF)
+option(BUILD_TESTS "Build the tests" ON)
+
+# -----------------------------------------------------------------------------
 # Build types and default flags
 # -----------------------------------------------------------------------------
 
@@ -159,10 +166,12 @@ message(STATUS "nlohmann_json include directories are ${_JSON_INCLUDES}")
 
 add_subdirectory(src)
 
-option(BUILD_TESTS "Build the tests" ON)
-
 if(BUILD_TESTS)
     # include(Catch2)
     add_subdirectory(include/test)
     # enable_testing()
+endif()
+
+if (TILEDB_VS_ENABLE_PYTHON)
+    add_subdirectory(python)
 endif()
