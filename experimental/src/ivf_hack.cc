@@ -146,9 +146,6 @@ int main(int argc, char* argv[]) {
   auto nqueries = (size_t)args["--nqueries"].asLong();
   bool nth = args["--nth"].asBool();
 
-  auto db = tdbColMajorMatrix<db_type>(db_uri, ndb);
-  debug_matrix(db, "db");
-
   if (is_local_array(centroids_uri) &&
       !std::filesystem::exists(centroids_uri)) {
     std::cerr << "Error: centroids URI does not exist: "
@@ -158,11 +155,14 @@ int main(int argc, char* argv[]) {
   auto centroids = tdbColMajorMatrix<centroids_type>(centroids_uri);
   debug_matrix(centroids, "centroids");
 
+#if 0
   if (is_local_array(centroids_uri) && !std::filesystem::exists(db_uri)) {
     std::cerr << "Error: db URI does not exist: " << args["--centroids_uri"]
               << std::endl;
     return 1;
   }
+#endif
+
   json recalls;
 
   // Function for finding the top k nearest neighbors accelerated by kmeans
@@ -175,36 +175,16 @@ int main(int argc, char* argv[]) {
     auto indices = read_vector<indices_type>(index_uri);
     // auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
 
-    //debug_matrix(shuffled_db, "shuffled_db");
+    // debug_matrix(shuffled_db, "shuffled_db");
     debug_matrix(indices, "indices");
-    //debug_matrix(shuffled_ids, "shuffled_ids");
+    // debug_matrix(shuffled_ids, "shuffled_ids");
 
-
-    auto q = [&]() -> ColMajorMatrix<q_type> {
-      if (query_uri != "") {
-        auto qq = tdbColMajorMatrix<q_type>(query_uri, nqueries);
-        return qq;
-      } else {
-        auto qq = ColMajorMatrix<q_type>{centroids.num_rows(), nqueries};
-        for (size_t i = 0; i < centroids.num_rows(); ++i) {
-          qq(i, 0) = db(i, 0);
-        }
-        return qq;
-      }
-    }();
+    auto q = tdbColMajorMatrix<q_type>(query_uri, nqueries);
     debug_matrix(q, "q");
 
     // What should be returned here?  Maybe a pair with the ids and scores?
     auto&& [kmeans_ids, all_ids] = kmeans_query(
-        part_uri,
-        centroids,
-        q,
-        indices,
-        id_uri,
-        nprobe,
-        k_nn,
-        nth,
-        nthreads);
+        part_uri, centroids, q, indices, id_uri, nprobe, k_nn, nth, nthreads);
     debug_matrix(kmeans_ids, "kmeans_ids");
 
     // Once this is a function, simply return kmeans_ids
@@ -214,10 +194,12 @@ int main(int argc, char* argv[]) {
 
     if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
-      auto groundtruth = tdbMatrix<groundtruth_type, Kokkos::layout_left>(groundtruth_uri);
+      auto groundtruth =
+          tdbMatrix<groundtruth_type, Kokkos::layout_left>(groundtruth_uri);
       debug_matrix(groundtruth, "groundtruth");
 
-      Matrix<original_ids_type> original_ids(kmeans_ids.num_rows(), kmeans_ids.num_cols());
+      Matrix<original_ids_type> original_ids(
+          kmeans_ids.num_rows(), kmeans_ids.num_cols());
       for (size_t i = 0; i < kmeans_ids.num_rows(); ++i) {
         for (size_t j = 0; j < kmeans_ids.num_cols(); ++j) {
           original_ids(i, j) = all_ids[kmeans_ids(i, j)];
@@ -277,11 +259,10 @@ int main(int argc, char* argv[]) {
     auto program_args = args_log(args);
     auto config = config_log(argv[0]);
 
-    json log_log = {
-        {"Config", config},
-        {"Args", program_args},
-        {"Recalls", recalls},
-        {"Times", get_timings()}};
+    json log_log = {{"Config", config},
+                    {"Args", program_args},
+                    {"Recalls", recalls},
+                    {"Times", get_timings()}};
 
     if (args["--log"].asString() == "-") {
       std::cout << log_log.dump(2) << std::endl;
