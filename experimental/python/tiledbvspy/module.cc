@@ -39,7 +39,7 @@ PYBIND11_MODULE(tiledbvspy, m) {
   m.def("add", &add);
 
   m.def("ivf_flat",
-        [](const Matrix<float32_t>& data,
+        [](const Matrix<float>& data,
            unsigned nclusters,
            InitType init_type,
            unsigned nrepeats,
@@ -59,10 +59,10 @@ PYBIND11_MODULE(tiledbvspy, m) {
                           nthreads);
         });
 
-  declareVector<float32_t>(m, "_f32");
+  declareVector<float>(m, "_f32");
 
   m.def("get_v", []() {
-    auto a = std::make_shared<Vector<float32_t>>(7);
+    auto a = std::make_shared<Vector<float>>(7);
     auto v = a->data();
     std::iota(v, v + 7, 1);
 

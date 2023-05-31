@@ -57,8 +57,8 @@ find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(pybind11 CONFIG REQUIRED)
 
 python_add_library(tiledbvspy MODULE "tiledbvspy/module.cc" WITH_SOABI)
-target_link_libraries(tiledbvspy PRIVATE pybind11::headers mdspan TileDB::tiledb_shared)
+target_link_libraries(tiledbvspy PRIVATE pybind11::headers mdspan TileDB::tiledb_shared nlohmann_json::nlohmann_json)
 target_compile_definitions(tiledbvspy PRIVATE VERSION_INFO=${PROJECT_VERSION})
-target_include_directories(tiledbvspy PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../src")
+target_include_directories(tiledbvspy PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../include")
 
 install(TARGETS tiledbvspy DESTINATION tiledbvspy)
