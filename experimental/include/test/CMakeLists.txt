@@ -60,6 +60,8 @@ kmeans_add_test(gen_queries)
 
 kmeans_add_test(time_insert)
 
+kmeans_add_test(time_l2)
+
 kmeans_add_test(time_queries)
 target_link_libraries(time_queries PRIVATE flat_blas)
 

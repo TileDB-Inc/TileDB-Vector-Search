@@ -56,18 +56,13 @@
  * @param b
  * @return L2 norm of the difference between a and b.
  */
-template <class V>
-auto L2(V const& a, V const& b) {
+template <class V, class U>
+auto L2(V const& a, U const& b) {
   float sum{0.0};
   size_t size_a = size(a);
   for (size_t i = 0; i < size_a; ++i) {
-    if constexpr (std::is_same_v<typename V::value_type, float>) {
-      float diff = a[i] - b[i];
-      sum += diff * diff;
-    } else {
-      float diff = float(a[i]) - float(b[i]);
-      sum += diff * diff;
-    }
+    float diff = ((float)a[i]) - ((float)b[i]);
+    sum += diff * diff;
   }
   return std::sqrt(sum);
 }
@@ -140,8 +135,8 @@ auto mat_col_sum(
 
 template <class L, class I>
 auto verify_top_k_index(L const& top_k, I const& g, int k, int qno) {
-  //std::sort(begin(g), begin(g) + k);
-  //std::sort(begin(top_k), end(top_k));
+  // std::sort(begin(g), begin(g) + k);
+  // std::sort(begin(top_k), end(top_k));
 
   if (!std::equal(begin(top_k), begin(top_k) + k, g.begin())) {
     std::cout << "Query " << qno << " is incorrect" << std::endl;
@@ -272,6 +267,7 @@ bool validate_top_k(TK& top_k, G& g) {
   size_t num_errors = 0;
 
   for (size_t qno = 0; qno < top_k.num_cols(); ++qno) {
+    // @todo -- count intersections rather than testing for equality
     std::sort(begin(top_k[qno]), end(top_k[qno]));
     std::sort(begin(g[qno]), begin(g[qno]) + top_k.num_rows());
 
