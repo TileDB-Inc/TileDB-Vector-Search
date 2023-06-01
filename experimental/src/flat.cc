@@ -216,7 +216,14 @@ int main(int argc, char* argv[]) {
   }
 
   if (args["--output_uri"]) {
-    write_matrix(top_k, args["--output_uri"].asString());
+    auto output = ColMajorMatrix<int32_t>(top_k.num_rows(), top_k.num_cols());
+    for (size_t i = 0; i < top_k.num_rows(); ++i) {
+      for (size_t j = 0; j < top_k.num_cols(); ++j) {
+	output(i, j) = top_k(i, j);
+      }
+    }
+
+    write_matrix(output, args["--output_uri"].asString());
   }
 
   if (args["--log"]) {
