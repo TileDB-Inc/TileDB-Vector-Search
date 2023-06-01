@@ -3,9 +3,26 @@
 ivf_hack="${HOME}/TileDB/feature-vector-prototype/experimental/cmake-build-release/src/ivf_hack"
 
 sift_prefix=/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/sift/
-kmeans_prefix=/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/kmeans/ivf_hack/m1/
+
+# kmeans_prefix=/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/kmeans/ivf_hack/m1/
+
+# s3://tiledb-andrew/kmeans/ivf_hack/x86/
+kmeans_prefix=s3://tiledb-andrew/kmeans/ivf_hack/x86/
 
 
+ ${ivf_hack} \
+--db_uri          s3://tiledb-andrew/siftb/sift_base \
+--query_uri       s3://tiledb-andrew/sift/sift_query \
+--groundtruth_uri s3://tiledb-andrew/sift/sift_groundtruth \
+--centroids_uri   s3://tiledb-nikos/vector-search/andrew/sift-base-1m-2000p/centroids.tdb \
+--parts_uri       s3://tiledb-nikos/vector-search/andrew/sift-base-10m-2000p/parts.tdb \
+--index_uri       s3://tiledb-nikos/vector-search/andrew/sift-base-1m-2000p/index.tdb \
+--ids_uri         s3://tiledb-nikos/vector-search/andrew/sift-base-1m-2000p/ids.tdb \
+--nqueries        10 \
+--cluster         20 \
+-v -d
+
+exit 
 
 
  ${ivf_hack} \
@@ -17,8 +34,23 @@ kmeans_prefix=/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/k
      --index_uri         ${kmeans_prefix}/index \
      --ids_uri           ${kmeans_prefix}/ids \
      --nqueries           10  \
-     --cluster            10  \
+     --cluster            100  \
      -v -d \
+
+
+ ${ivf_hack} \
+     --db_uri            ${sift_prefix}/sift_base \
+     --query_uri         ${sift_prefix}/sift_query \
+     --groundtruth_uri   ${sift_prefix}/sift_groundtruth \
+     --centroids_uri     ${kmeans_prefix}/centroids \
+     --parts_uri         ${kmeans_prefix}/parts \
+     --index_uri         ${kmeans_prefix}/index \
+     --ids_uri           ${kmeans_prefix}/ids \
+     --nqueries           10  \
+     --cluster            100  \
+     -v -d \
+
+
 
 
 
@@ -51,7 +83,7 @@ ${ivf_hack} \
     --ids_uri           's3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/ids.tdb'        \
     --nqueries           0 \
     --cluster            20  \
-    -v -d 
+    -v -d
 
 ${ivf_hack} \
     --db_uri            's3://tiledb-nikos/vector-search/datasets/arrays/sift-1b-col-major' \
@@ -62,7 +94,7 @@ ${ivf_hack} \
     --ids_uri           's3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/ids.tdb'        \
     --nqueries          0 \
     --cluster           100 \
-    -v -d 
+    -v -d
 
 
 #
@@ -83,7 +115,7 @@ ${ivf_hack} \
     --groundtruth_uri   's3://tiledb-andrew/sift/sift_groundtruth'                                 \
     --log               'ivf-shakedown.log'                                                        \
     --nqueries          0 \
-    -v -d 
+    -v -d
 
 ${ivf_hack} \
     --db_uri            's3://tiledb-andrew/sift/sift_base'                                        \
@@ -95,7 +127,7 @@ ${ivf_hack} \
     --groundtruth_uri   's3://tiledb-andrew/sift/sift_groundtruth'                                 \
     --log               'ivf-shakedown.log'                                                        \
     --nqueries          0 \
-    -v -d 
+    -v -d
 
 ${ivf_hack} \
     --db_uri            's3://tiledb-andrew/sift/sift_base'                                        \
@@ -107,4 +139,4 @@ ${ivf_hack} \
     --groundtruth_uri   's3://tiledb-andrew/sift/sift_groundtruth'                                 \
     --log               'ivf-shakedown.log'                                                        \
     --nqueries          0 \
-    -v -d 
+    -v -d

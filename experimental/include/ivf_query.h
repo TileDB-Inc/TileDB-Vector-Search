@@ -213,8 +213,8 @@ auto kmeans_query_small_q(
   // auto top_k = qv_query(centroids, q, nprobe, nthreads);
   auto top_centroids = vq_query_heap(centroids, q, nprobe, nthreads);
 
-  auto shuffled_db = tdbColMajorMatrix<uint8_t>(part_uri);
-  auto shuffled_ids = read_vector<uint64_t>(id_uri);
+  auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
+  auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
 
   debug_matrix(shuffled_db, "shuffled_db");
   debug_matrix(shuffled_ids, "shuffled_ids");
