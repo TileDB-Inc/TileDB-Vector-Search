@@ -237,33 +237,36 @@ auto kmeans_query_small_q(
     }
   }
 #else
-    auto par = stdx::execution::indexed_parallel_policy{nthreads};
-    stdx::range_for_each(
-            std::move(par), q, [&, nprobe](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
-                for (size_t p = 0; p < nprobe; ++p) {
 
-                    size_t start = indices[top_centroids(p, j)];
-                    size_t stop = indices[top_centroids(p, j) + 1];
+        life_timer __{std::string{"In memory portion of "} + tdb_func__};
+        auto par = stdx::execution::indexed_parallel_policy{nthreads};
+        stdx::range_for_each(
+                std::move(par), q, [&, nprobe](auto &&q_vec, auto &&n = 0, auto &&j = 0) {
+                    for (size_t p = 0; p < nprobe; ++p) {
 
-                    for (size_t i = start; i < stop; ++i) {
-                        auto score = L2(q[j], shuffled_db[i]);
-                        min_scores[j].insert(element{score, shuffled_ids[i]});
+                        size_t start = indices[top_centroids(p, j)];
+                        size_t stop = indices[top_centroids(p, j) + 1];
+
+                        for (size_t i = start; i < stop; ++i) {
+                            auto score = L2(q[j], shuffled_db[i]);
+                            min_scores[j].insert(element{score, shuffled_ids[i]});
+                        }
                     }
-                }
 
-            });
+                });
 #endif
 
-  ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
+        ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
 
-  for (int j = 0; j < size(q); ++j) {
-    sort_heap(min_scores[j].begin(), min_scores[j].end());
-    std::transform(
-        min_scores[j].begin(),
-        min_scores[j].end(),
-        top_k[j].begin(),
-        ([](auto&& e) { return e.second; }));
-  }
+        for (int j = 0; j < size(q); ++j) {
+            sort_heap(min_scores[j].begin(), min_scores[j].end());
+            std::transform(
+                    min_scores[j].begin(),
+                    min_scores[j].end(),
+                    top_k[j].begin(),
+                    ([](auto &&e) { return e.second; }));
+        }
+    
 
   return top_k;
 }

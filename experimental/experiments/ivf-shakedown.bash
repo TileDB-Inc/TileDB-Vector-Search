@@ -9,6 +9,40 @@ sift_prefix=/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/sif
 # s3://tiledb-andrew/kmeans/ivf_hack/x86/
 kmeans_prefix=s3://tiledb-andrew/kmeans/ivf_hack/x86/
 
+ ${ivf_hack} \
+     --db_uri            's3://tiledb-andrew/sift/bigann10M_base'                                    \
+     --centroids_uri     's3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/centroids.tdb'  \
+     --parts_uri         's3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/parts.tdb'      \
+     --index_uri         's3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/index.tdb'      \
+     --ids_uri           's3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/ids.tdb'        \
+     --nqueries           1000  \
+     --cluster            3  \
+     -v  \
+     --query_uri         's3://tiledb-andrew/kmeans/benchmark/query_public_10k' \
+     --groundtruth_uri   's3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids'
+
+
+ echo
+ echo ===============================================
+ echo
+
+
+ ${ivf_hack} \
+     --db_uri            's3://tiledb-andrew/sift/bigann100M_base'                                    \
+     --centroids_uri     's3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/centroids.tdb'  \
+     --parts_uri         's3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/parts.tdb'      \
+     --index_uri         's3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/index.tdb'      \
+     --ids_uri           's3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/ids.tdb'        \
+     --nqueries           1000  \
+     --cluster            3  \
+     -v  \
+     --query_uri         's3://tiledb-andrew/kmeans/benchmark/query_public_10k' \
+     --groundtruth_uri   's3://tiledb-andrew/kmeans/benchmark/bigann_100M_GT_nnids'
+
+
+ exit
+
+
 
  ${ivf_hack} \
 --db_uri          s3://tiledb-andrew/siftb/sift_base \

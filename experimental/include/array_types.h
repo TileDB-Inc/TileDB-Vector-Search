@@ -3,7 +3,7 @@
 #define TDB_ARRAY_TYPES_H
 
 #include <cstdint>
-#if 0
+#if 1
 using db_type = uint8_t;
 using shuffled_db_type = uint8_t;
 using shuffled_ids_type = uint64_t;

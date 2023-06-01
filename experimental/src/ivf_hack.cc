@@ -186,21 +186,23 @@ int main(int argc, char* argv[]) {
     // @todo also get scores
     // @todo add an output_uri argument
 
-    if (global_debug && args["--groundtruth_uri"]) {
+    if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
 
 	  auto groundtruth = tdbColMajorMatrix<groundtruth_type>(groundtruth_uri, nqueries);
 
-      std::cout << std::endl;
+      if (global_debug) {
+          std::cout << std::endl;
 
-      debug_matrix(groundtruth, "groundtruth");
-      debug_slice(groundtruth, "groundtruth");
-      
-      std::cout << std::endl;
-      debug_matrix(top_k, "top_k");
-      debug_slice(top_k, "top_k");
+          debug_matrix(groundtruth, "groundtruth");
+          debug_slice(groundtruth, "groundtruth");
 
-      std::cout << std::endl;
+          std::cout << std::endl;
+          debug_matrix(top_k, "top_k");
+          debug_slice(top_k, "top_k");
+
+          std::cout << std::endl;
+      }
 
       size_t total_intersected {0};
       size_t total_groundtruth = top_k.num_cols() * top_k.num_rows();
@@ -217,7 +219,7 @@ int main(int argc, char* argv[]) {
                 counter{});
 
       }
-      std::cout << "total intersected = " << total_intersected << " of " << total_groundtruth << " = "
+      std::cout << "# total intersected = " << total_intersected << " of " << total_groundtruth << " = "
                 << "R" << k_nn << " of " << ((float)total_intersected) / ((float) total_groundtruth) <<std::endl;
 
       // kmeans_ids is k by nqueries
