@@ -188,8 +188,8 @@ int main(int argc, char* argv[]) {
 
     if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
-      auto groundtruth =
-	tdbMatrix<groundtruth_type, Kokkos::layout_left>(groundtruth_uri, nqueries);
+
+	  auto groundtruth = tdbColMajorMatrix<groundtruth_type>(groundtruth_uri, nqueries);
 
       std::cout << std::endl;
 
@@ -201,6 +201,24 @@ int main(int argc, char* argv[]) {
       debug_slice(top_k, "top_k");
 
       std::cout << std::endl;
+
+      size_t total_intersected {0};
+      size_t total_groundtruth = top_k.num_cols() * top_k.num_rows();
+      for (size_t i = 0; i < top_k.num_cols(); ++i) {
+          std::sort(begin(top_k[i]), end(top_k[i]));
+          std::sort(begin(groundtruth[i]), end(groundtruth[i]));
+          debug_matrix(top_k, "top_k");
+          debug_slice(top_k, "top_k");
+        total_intersected += std::set_intersection(
+                begin(top_k[i]),
+                end(top_k[i]),
+                begin(groundtruth[i]),
+                end(groundtruth[i]),
+                counter{});
+
+      }
+      std::cout << "total intersected = " << total_intersected << " of " << total_groundtruth << " = "
+                << "R" << k_nn << " of " << ((float)total_intersected) / ((float) total_groundtruth) <<std::endl;
 
       // kmeans_ids is k by nqueries
 
@@ -225,13 +243,7 @@ int main(int argc, char* argv[]) {
         static constexpr auto lt = [](auto&& x, auto&& y) {
           return std::get<0>(x) < std::get<0>(y);
         };
-        total_query_in_groundtruth += std::set_intersection(
-            begin(comp),
-            end(comp),
-            begin(groundtruth[i]),
-            end(groundtruth[i]),
-            counter{});
-      }
+   w
       recalls["queries_in_groundtruth"] = total_query_in_groundtruth;
       recalls["total_queries"] = kmeans_ids.num_cols() * kmeans_ids.num_rows();
 
