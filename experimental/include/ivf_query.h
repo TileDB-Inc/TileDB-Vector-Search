@@ -211,7 +211,8 @@ auto kmeans_query_small_q(
 
   // get closest centroid for each query vector
   // auto top_k = qv_query(centroids, q, nprobe, nthreads);
-  auto top_centroids = vq_query_heap(centroids, q, nprobe, nthreads);
+  //  auto top_centroids = vq_query_heap(centroids, q, nprobe, nthreads);
+  auto top_centroids = qv_query_nth(centroids, q, nprobe, false, nthreads);
 
   auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
   auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);

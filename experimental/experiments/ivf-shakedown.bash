@@ -1,6 +1,6 @@
 #!/bin/bash -f
 
-ivf_hack="${HOME}/TileDB/feature-vector-prototype/experimental/cmake-build-release/src/ivf_hack"
+ivf_hack="${HOME}/feature-vector-prototype/experimental/cmake-build-release/src/ivf_hack"
 
 sift_prefix=/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/sift/
 
@@ -15,7 +15,7 @@ kmeans_prefix=s3://tiledb-andrew/kmeans/ivf_hack/x86/
 --query_uri       s3://tiledb-andrew/sift/sift_query \
 --groundtruth_uri s3://tiledb-andrew/sift/sift_groundtruth \
 --centroids_uri   s3://tiledb-nikos/vector-search/andrew/sift-base-1m-2000p/centroids.tdb \
---parts_uri       s3://tiledb-nikos/vector-search/andrew/sift-base-10m-2000p/parts.tdb \
+--parts_uri       s3://tiledb-nikos/vector-search/andrew/sift-base-1m-2000p/parts.tdb \
 --index_uri       s3://tiledb-nikos/vector-search/andrew/sift-base-1m-2000p/index.tdb \
 --ids_uri         s3://tiledb-nikos/vector-search/andrew/sift-base-1m-2000p/ids.tdb \
 --nqueries        10 \
