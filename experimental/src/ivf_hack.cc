@@ -112,9 +112,6 @@ Options:
     -v, --verbose         run in verbose mode [default: false]
 )";
 
-
-
-
 int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
   auto args = docopt::docopt(USAGE, strings, true);
@@ -189,38 +186,41 @@ int main(int argc, char* argv[]) {
     if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
 
-	  auto groundtruth = tdbColMajorMatrix<groundtruth_type>(groundtruth_uri, nqueries);
+      auto groundtruth =
+          tdbColMajorMatrix<groundtruth_type>(groundtruth_uri, nqueries);
 
       if (global_debug) {
-          std::cout << std::endl;
+        std::cout << std::endl;
 
-          debug_matrix(groundtruth, "groundtruth");
-          debug_slice(groundtruth, "groundtruth");
+        debug_matrix(groundtruth, "groundtruth");
+        debug_slice(groundtruth, "groundtruth");
 
-          std::cout << std::endl;
-          debug_matrix(top_k, "top_k");
-          debug_slice(top_k, "top_k");
+        std::cout << std::endl;
+        debug_matrix(top_k, "top_k");
+        debug_slice(top_k, "top_k");
 
-          std::cout << std::endl;
+        std::cout << std::endl;
       }
 
-      size_t total_intersected {0};
+      size_t total_intersected{0};
       size_t total_groundtruth = top_k.num_cols() * top_k.num_rows();
       for (size_t i = 0; i < top_k.num_cols(); ++i) {
-          std::sort(begin(top_k[i]), end(top_k[i]));
-          std::sort(begin(groundtruth[i]), end(groundtruth[i]));
-          debug_matrix(top_k, "top_k");
-          debug_slice(top_k, "top_k");
+        std::sort(begin(top_k[i]), end(top_k[i]));
+        std::sort(begin(groundtruth[i]), end(groundtruth[i]));
+        debug_matrix(top_k, "top_k");
+        debug_slice(top_k, "top_k");
         total_intersected += std::set_intersection(
-                begin(top_k[i]),
-                end(top_k[i]),
-                begin(groundtruth[i]),
-                end(groundtruth[i]),
-                counter{});
-
+            begin(top_k[i]),
+            end(top_k[i]),
+            begin(groundtruth[i]),
+            end(groundtruth[i]),
+            counter{});
       }
-      std::cout << "# total intersected = " << total_intersected << " of " << total_groundtruth << " = "
-                << "R" << k_nn << " of " << ((float)total_intersected) / ((float) total_groundtruth) <<std::endl;
+      std::cout << "# total intersected = " << total_intersected << " of "
+                << total_groundtruth << " = "
+                << "R" << k_nn << " of "
+                << ((float)total_intersected) / ((float)total_groundtruth)
+                << std::endl;
 
       // kmeans_ids is k by nqueries
 
@@ -260,7 +260,6 @@ int main(int argc, char* argv[]) {
                   << std::endl;
       }
 #endif
-
     }
   }
 
@@ -268,10 +267,11 @@ int main(int argc, char* argv[]) {
     auto program_args = args_log(args);
     auto config = config_log(argv[0]);
 
-    json log_log = {{"Config", config},
-                    {"Args", program_args},
-                    {"Recalls", recalls},
-                    {"Times", get_timings()}};
+    json log_log = {
+        {"Config", config},
+        {"Args", program_args},
+        {"Recalls", recalls},
+        {"Times", get_timings()}};
 
     if (args["--log"].asString() == "-") {
       std::cout << log_log.dump(2) << std::endl;

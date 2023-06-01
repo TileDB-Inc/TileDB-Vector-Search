@@ -25,5 +25,4 @@ using groundtruth_type = int32_t;
 
 #endif
 
-
 #endif  // TDB_ARRAY_TYPES_H

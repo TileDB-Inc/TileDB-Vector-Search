@@ -195,20 +195,19 @@ int main(int argc, char* argv[]) {
                   << std::to_string(nth) << std::endl;
       }
       return qv_query(db, q, k, nthreads);
-    }/* else if (args["--order"].asString() == "gemm") {
-      // if (block != 0) {
-      if (args["--block"]) {
-        std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth)
-                  << std::endl;
-        db.set_blocked();
-        // db.set_async();
-        return blocked_gemm_query(db, q, k, nth, nthreads);
-      } else {
-        std::cout << "# Using gemm, nth = " << std::to_string(nth) << std::endl;
-        return gemm_query(db, q, k, nth, nthreads);
-      }
-      }*/
-
+    } /* else if (args["--order"].asString() == "gemm") {
+       // if (block != 0) {
+       if (args["--block"]) {
+         std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth)
+                   << std::endl;
+         db.set_blocked();
+         // db.set_async();
+         return blocked_gemm_query(db, q, k, nth, nthreads);
+       } else {
+         std::cout << "# Using gemm, nth = " << std::to_string(nth) <<
+       std::endl; return gemm_query(db, q, k, nth, nthreads);
+       }
+       }*/
   }();
 
   if (!g_uri.empty() && validate) {
@@ -219,7 +218,7 @@ int main(int argc, char* argv[]) {
     auto output = ColMajorMatrix<int32_t>(top_k.num_rows(), top_k.num_cols());
     for (size_t i = 0; i < top_k.num_rows(); ++i) {
       for (size_t j = 0; j < top_k.num_cols(); ++j) {
-	output(i, j) = top_k(i, j);
+        output(i, j) = top_k(i, j);
       }
     }
 

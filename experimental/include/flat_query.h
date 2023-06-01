@@ -72,7 +72,10 @@
 #include <source_location>
 #define tdb_func__ (std::source_location::current().function_name())
 #else
-#define tdb_func__ std::string{(__func__)}
+#define tdb_func__ \
+  std::string {    \
+    (__func__)     \
+  }
 #endif
 #endif
 
@@ -142,7 +145,7 @@ template <class DB, class Q>
 auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
   life_timer _{"Total time " + tdb_func__};
 
- // life_timer _{tdb_func__ + ", nth = " + std::to_string(nth)};
+  // life_timer _{tdb_func__ + ", nth = " + std::to_string(nth)};
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
 
@@ -202,18 +205,16 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
       std::vector<fixed_min_heap<element>>(
           size(q), fixed_min_heap<element>(k)));
 
-
   unsigned size_q = size(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
   // @todo Can we do blocking in the parallel for_each somehow?
   for (;;) {
-
     stdx::range_for_each(
-        std::move(par), db, [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
-
+        std::move(par),
+        db,
+        [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
           if (block_db) {
-
             for (int j = 0; j < size_q; ++j) {
               auto score = L2(q[j], db_vec);
               scores[n][j].insert(element{score, i + db.offset()});
@@ -230,7 +231,6 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
               auto score = L2(q[j], db_vec);
               scores[n][j].insert(element{score, i});
             }
-
           }
         });
 

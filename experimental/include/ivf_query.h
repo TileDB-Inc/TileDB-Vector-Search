@@ -44,13 +44,15 @@
 #include "scoring.h"
 #include "utils/timer.h"
 
-
 #ifndef tdb_func__
 #ifdef __cpp_lib_source_location
 #include <source_location>
 #define tdb_func__ (std::source_location::current().function_name())
 #else
-#define tdb_func__ std::string{(__func__)}
+#define tdb_func__ \
+  std::string {    \
+    (__func__)     \
+  }
 #endif
 #endif
 
@@ -85,16 +87,16 @@ auto kmeans_query(
     bool nth,
     size_t nthreads) {
 #if 1
-    return kmeans_query_small_q(
-        part_uri,
-        centroids,
-        q,
-        indices,
-        shuffled_ids,
-        nprobe,
-        k_nn,
-        nth,
-        nthreads);
+  return kmeans_query_small_q(
+      part_uri,
+      centroids,
+      q,
+      indices,
+      shuffled_ids,
+      nprobe,
+      k_nn,
+      nth,
+      nthreads);
 
 #else
   if (q.size() < 5) {
@@ -120,7 +122,7 @@ auto kmeans_query(
         nth,
         nthreads);
   }
-  #endif
+#endif
 }
 
 /**
@@ -208,7 +210,6 @@ auto kmeans_query_small_q(
     size_t k_nn,
     bool nth,
     size_t nthreads) {
-
   // get closest centroid for each query vector
   // auto top_k = qv_query(centroids, q, nprobe, nthreads);
   //  auto top_centroids = vq_query_heap(centroids, q, nprobe, nthreads);
@@ -221,7 +222,8 @@ auto kmeans_query_small_q(
   debug_matrix(shuffled_ids, "shuffled_ids");
 
   using element = std::pair<float, uint64_t>;
-  auto min_scores =  std::vector<fixed_min_heap<element>>(size(q), fixed_min_heap<element>(k_nn));
+  auto min_scores = std::vector<fixed_min_heap<element>>(
+      size(q), fixed_min_heap<element>(k_nn));
 
 #if 0
   for (size_t j = 0; j < size(q); ++j) {
@@ -238,35 +240,32 @@ auto kmeans_query_small_q(
   }
 #else
 
-        life_timer __{std::string{"In memory portion of "} + tdb_func__};
-        auto par = stdx::execution::indexed_parallel_policy{nthreads};
-        stdx::range_for_each(
-                std::move(par), q, [&, nprobe](auto &&q_vec, auto &&n = 0, auto &&j = 0) {
-                    for (size_t p = 0; p < nprobe; ++p) {
+  life_timer __{std::string{"In memory portion of "} + tdb_func__};
+  auto par = stdx::execution::indexed_parallel_policy{nthreads};
+  stdx::range_for_each(
+      std::move(par), q, [&, nprobe](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
+        for (size_t p = 0; p < nprobe; ++p) {
+          size_t start = indices[top_centroids(p, j)];
+          size_t stop = indices[top_centroids(p, j) + 1];
 
-                        size_t start = indices[top_centroids(p, j)];
-                        size_t stop = indices[top_centroids(p, j) + 1];
-
-                        for (size_t i = start; i < stop; ++i) {
-                            auto score = L2(q[j], shuffled_db[i]);
-                            min_scores[j].insert(element{score, shuffled_ids[i]});
-                        }
-                    }
-
-                });
+          for (size_t i = start; i < stop; ++i) {
+            auto score = L2(q[j], shuffled_db[i]);
+            min_scores[j].insert(element{score, shuffled_ids[i]});
+          }
+        }
+      });
 #endif
 
-        ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
+  ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
 
-        for (int j = 0; j < size(q); ++j) {
-            sort_heap(min_scores[j].begin(), min_scores[j].end());
-            std::transform(
-                    min_scores[j].begin(),
-                    min_scores[j].end(),
-                    top_k[j].begin(),
-                    ([](auto &&e) { return e.second; }));
-        }
-    
+  for (int j = 0; j < size(q); ++j) {
+    sort_heap(min_scores[j].begin(), min_scores[j].end());
+    std::transform(
+        min_scores[j].begin(),
+        min_scores[j].end(),
+        top_k[j].begin(),
+        ([](auto&& e) { return e.second; }));
+  }
 
   return top_k;
 }

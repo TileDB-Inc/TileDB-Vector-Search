@@ -70,9 +70,7 @@ template <class T>
 std::vector<T> read_vector(const std::string&);
 
 template <class M>
-concept is_view = requires(M) {
-  typename M::view_type;
-};
+concept is_view = requires(M) { typename M::view_type; };
 
 /**
  * @brief A 1-D vector class that owns its storage.
@@ -398,7 +396,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param num_elts Number of vectors to read from the array.
    */
   tdbMatrix(const std::string& uri, size_t num_elts) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : tdbMatrix(uri, num_elts, 0) {
   }
 
@@ -411,7 +409,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param num_elts Number of vectors to read from the array.
    */
   tdbMatrix(const std::string& uri, size_t num_elts) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbMatrix(uri, 0, num_elts) {
   }
 
@@ -480,7 +478,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t row_begin,
       size_t row_end,
       size_t col_begin,
-      size_t col_end) // noexcept
+      size_t col_end)  // noexcept
       : array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()} {
     life_timer _{"read matrix " + uri};
@@ -543,8 +541,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     tiledb_datatype_t attr_type = attr.type();
     if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
       throw std::runtime_error(
-          "Attribute type mismatch: " + std::to_string(attr_type) +
-          " != " + std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
+          "Attribute type mismatch: " + std::to_string(attr_type) + " != " +
+          std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
     }
 
     // Create a subarray that reads the array up to the specified subset.
@@ -579,61 +577,67 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   }
 
  public:
-
   /**
-   * Gather pieces of a partitioned array into a single array (along with the vector ids into a corresponding 1D array)
+   * Gather pieces of a partitioned array into a single array (along with the
+   * vector ids into a corresponding 1D array)
    */
-  tdbMatrix(const std::string& uri, std::vector<uint64_t>& indices, const std::vector<size_t>& top_top_k,
-            const std::string& id_uri, std::vector<uint64_t>& shuffled_ids, size_t nthreads)
+  tdbMatrix(
+      const std::string& uri,
+      std::vector<uint64_t>& indices,
+      const std::vector<size_t>& top_top_k,
+      const std::string& id_uri,
+      std::vector<uint64_t>& shuffled_ids,
+      size_t nthreads)
       : array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()} {
-
     size_t nprobe = size(top_top_k);
     size_t num_cols = 0;
     for (size_t i = 0; i < nprobe; ++i) {
       num_cols += indices[top_top_k[i] + 1] - indices[top_top_k[i]];
     }
-    
+
     {
       life_timer _{"read partitioned matrix " + uri};
-      
+
       auto cell_order = schema_.cell_order();
       auto tile_order = schema_.tile_order();
-      
-      // @todo Maybe throw an exception here?  Have to properly handle since this
-      // is a constructor.
+
+      // @todo Maybe throw an exception here?  Have to properly handle since
+      // this is a constructor.
       assert(cell_order == tile_order);
-      
+
       const size_t attr_idx = 0;
-      
+
       auto attr_num{schema_.attribute_num()};
       auto attr = schema_.attribute(attr_idx);
-      
+
       std::string attr_name = attr.name();
       tiledb_datatype_t attr_type = attr.type();
       if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
-	throw std::runtime_error(
-				 "Attribute type mismatch: " + std::to_string(attr_type) +
-				 " != " + std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
+        throw std::runtime_error(
+            "Attribute type mismatch: " + std::to_string(attr_type) + " != " +
+            std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
       }
-      
+
       auto domain_{schema_.domain()};
-      
+
       auto array_rows_{domain_.dimension(0)};
       auto array_cols_{domain_.dimension(1)};
 
       num_array_rows_ =
-	(array_rows_.template domain<row_domain_type>().second -
-	 array_rows_.template domain<row_domain_type>().first + 1);
+          (array_rows_.template domain<row_domain_type>().second -
+           array_rows_.template domain<row_domain_type>().first + 1);
       num_array_cols_ =
-        (array_cols_.template domain<col_domain_type>().second -
-         array_cols_.template domain<col_domain_type>().first + 1);
-      
-      if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
-	  (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {
-	throw std::runtime_error("Cell order and matrix order must match");
+          (array_cols_.template domain<col_domain_type>().second -
+           array_cols_.template domain<col_domain_type>().first + 1);
+
+      if ((matrix_order_ == TILEDB_ROW_MAJOR &&
+           cell_order == TILEDB_COL_MAJOR) ||
+          (matrix_order_ == TILEDB_COL_MAJOR &&
+           cell_order == TILEDB_ROW_MAJOR)) {
+        throw std::runtime_error("Cell order and matrix order must match");
       }
-      
+
       size_t dimension = num_array_rows_;
 
 #ifndef __APPLE__
@@ -642,106 +646,108 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       auto data_ = std::unique_ptr<T[]>(new T[dimension * num_cols]);
 #endif
 
-      /** 
+      /**
        * Read in the partitions
        */
       size_t offset = 0;
       for (size_t j = 0; j < nprobe; ++j) {
-	size_t start = indices[top_top_k[j]];
-	size_t stop = indices[top_top_k[j] + 1];
-	size_t len = stop - start;
-	size_t num_elements = len * dimension;
-	
-	// Create a subarray that reads the array up to the specified subset.
-	std::vector<int32_t> subarray_vals = {
-          (int32_t)0,
-          (int32_t)dimension - 1,
-          (int32_t)start,
-          (int32_t)stop - 1};
-	tiledb::Subarray subarray(ctx_, array_);
-	subarray.set_subarray(subarray_vals);
-	
-	auto layout_order = cell_order;
-	
-	tiledb::Query query(ctx_, array_);
-	
-	auto ptr = data_.get() + offset;
-	query.set_subarray(subarray)
-          .set_layout(layout_order)
-          .set_data_buffer(attr_name, ptr, num_elements);
-	query.submit();
-	
-	// assert(tiledb::Query::Status::COMPLETE == query.query_status());
-	if (tiledb::Query::Status::COMPLETE != query.query_status()) {
-	  throw std::runtime_error("Query status is not complete -- fix me");
-	}
-	offset += len;
+        size_t start = indices[top_top_k[j]];
+        size_t stop = indices[top_top_k[j] + 1];
+        size_t len = stop - start;
+        size_t num_elements = len * dimension;
+
+        // Create a subarray that reads the array up to the specified subset.
+        std::vector<int32_t> subarray_vals = {
+            (int32_t)0,
+            (int32_t)dimension - 1,
+            (int32_t)start,
+            (int32_t)stop - 1};
+        tiledb::Subarray subarray(ctx_, array_);
+        subarray.set_subarray(subarray_vals);
+
+        auto layout_order = cell_order;
+
+        tiledb::Query query(ctx_, array_);
+
+        auto ptr = data_.get() + offset;
+        query.set_subarray(subarray)
+            .set_layout(layout_order)
+            .set_data_buffer(attr_name, ptr, num_elements);
+        query.submit();
+
+        // assert(tiledb::Query::Status::COMPLETE == query.query_status());
+        if (tiledb::Query::Status::COMPLETE != query.query_status()) {
+          throw std::runtime_error("Query status is not complete -- fix me");
+        }
+        offset += len;
       }
-      
-    Base::operator=(Base{std::move(data_), dimension, num_cols});
+
+      Base::operator=(Base{std::move(data_), dimension, num_cols});
     }
 
-    auto part_ids =  std::vector<uint64_t> (num_cols);
+    auto part_ids = std::vector<uint64_t>(num_cols);
 
-    { life_timer _{"read partitioned vector" + id_uri};
+    {
+      life_timer _{"read partitioned vector" + id_uri};
       /**
-       * Now deal with ids 
+       * Now deal with ids
        */
       auto attr_idx = 0;
 
       auto ids_array_ = tiledb::Array{ctx_, id_uri, TILEDB_READ};
       auto ids_schema_ = ids_array_.schema();
-      
+
       auto attr_num{ids_schema_.attribute_num()};
       auto attr = ids_schema_.attribute(attr_idx);
-      
+
       std::string attr_name = attr.name();
-      
+
       auto domain_{ids_schema_.domain()};
       auto array_rows_{domain_.dimension(0)};
-      
+
       auto total_vec_rows_{
-	(array_rows_.template domain<row_domain_type>().second -
-	 array_rows_.template domain<row_domain_type>().first + 1)};
+          (array_rows_.template domain<row_domain_type>().second -
+           array_rows_.template domain<row_domain_type>().first + 1)};
 
       size_t offset = 0;
       for (size_t j = 0; j < nprobe; ++j) {
-	size_t start = indices[top_top_k[j]];
-	size_t stop = indices[top_top_k[j] + 1];
-	size_t len = stop - start;
-	size_t num_elements = len;
-	
-	// Create a subarray that reads the array up to the specified subset.
-	std::vector<int32_t> subarray_vals = {
-          (int32_t)start,
-          (int32_t)stop - 1};
-	tiledb::Subarray subarray(ctx_, ids_array_);
-	subarray.set_subarray(subarray_vals);
+        size_t start = indices[top_top_k[j]];
+        size_t stop = indices[top_top_k[j] + 1];
+        size_t len = stop - start;
+        size_t num_elements = len;
 
-	tiledb::Query query(ctx_, ids_array_);
-	auto ptr = part_ids.data() + offset;
-	query.set_subarray(subarray).set_data_buffer(attr_name, ptr, num_elements);
-	query.submit();
-	
-	if (tiledb::Query::Status::COMPLETE != query.query_status()) {
-	  throw std::runtime_error("Query status is not complete -- fix me");
-	}
-	offset += len;
+        // Create a subarray that reads the array up to the specified subset.
+        std::vector<int32_t> subarray_vals = {
+            (int32_t)start, (int32_t)stop - 1};
+        tiledb::Subarray subarray(ctx_, ids_array_);
+        subarray.set_subarray(subarray_vals);
+
+        tiledb::Query query(ctx_, ids_array_);
+        auto ptr = part_ids.data() + offset;
+        query.set_subarray(subarray).set_data_buffer(
+            attr_name, ptr, num_elements);
+        query.submit();
+
+        if (tiledb::Query::Status::COMPLETE != query.query_status()) {
+          throw std::runtime_error("Query status is not complete -- fix me");
+        }
+        offset += len;
       }
       ids_array_.close();
     }
     shuffled_ids = std::move(part_ids);
   }
 
-
  public:
   size_t offset() const
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+  {
     return row_offset_;
   }
 
   size_t offset() const
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+  {
     return col_offset_;
   }
 
@@ -836,7 +842,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     if (!backing_data_) {
 #ifndef __APPLE__
       backing_data_ = std::make_unique_for_overwrite<T[]>(
-	  this->num_rows() * this->num_cols());
+          this->num_rows() * this->num_cols());
 #else
       backing_data_ =
           std::unique_ptr<T[]>(new T[this->num_rows() * this->num_cols()]);
