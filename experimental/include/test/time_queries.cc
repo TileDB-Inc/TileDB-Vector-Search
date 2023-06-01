@@ -45,7 +45,7 @@
 bool global_debug = false;
 std::string global_region = "us-east-1";
 
-TEST_CASE("time queries", "[queries]") {
+TEST_CASE("time queries", "[queries][ci-skip]") {
   size_t dimension = 128;
 
   size_t nthreads = GENERATE(1, 8);

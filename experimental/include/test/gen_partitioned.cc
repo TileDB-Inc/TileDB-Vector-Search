@@ -41,7 +41,7 @@ TEST_CASE("getn_partitioned: test test", "[gen_partitioned]") {
   REQUIRE(true);
 }
 
-TEST_CASE("gen_partitioned: even odd", "[gen_partitioned]") {
+TEST_CASE("gen_partitioned: even odd", "[gen_partitioned][ci-skip]") {
   size_t dimension {128};
   size_t n {10};
   std::vector<uint32_t> ids = {0, 2, 4, 6, 8, 1, 3, 5, 7, 9};

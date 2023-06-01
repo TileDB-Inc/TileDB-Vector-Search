@@ -36,7 +36,7 @@
 
 std::string global_region = "us-east-1";
 
-TEST_CASE("slice", "[linalg]") {
+TEST_CASE("slice", "[linalg][ci-skip]") {
   std::string uri = "s3://tiledb-andrew/sift/sift_base";
 
   std::map<std::string, std::string> init_{
