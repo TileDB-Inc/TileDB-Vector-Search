@@ -175,7 +175,7 @@ int main(int argc, char* argv[]) {
 
     // What should be returned here?  Maybe a pair with the ids and scores?
     auto top_k = kmeans_query(
-        part_uri, centroids, q, indices, id_uri, nprobe, k_nn, nth, nthreads);
+        ctx, part_uri, centroids, q, indices, id_uri, nprobe, k_nn, nth, nthreads);
 
     debug_matrix(top_k, "top_k");
 
@@ -188,7 +188,7 @@ int main(int argc, char* argv[]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
 
       auto groundtruth =
-          tdbColMajorMatrix<groundtruth_type>(groundtruth_uri, nqueries);
+          tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
 
       if (global_debug) {
         std::cout << std::endl;

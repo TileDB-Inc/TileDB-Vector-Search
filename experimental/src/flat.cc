@@ -154,17 +154,17 @@ int main(int argc, char* argv[]) {
 
   ms_timer load_time{"Load database, query, and ground truth arrays"};
 
+  tiledb::Context ctx;
+
   // 10M, 100M, and 1B are all uint8_t
 
-  //  auto db = tdbColMajorMatrix<float>(db_uri, block);  // blocked
-  auto db = tdbColMajorMatrix<uint8_t>(db_uri, block);  // blocked
+  //  auto db = tdbColMajorMatrix<float>(ctx, db_uri, block);  // blocked
+  auto db = tdbColMajorMatrix<uint8_t>(ctx, db_uri, block);  // blocked
   if (args["--block"]) {
     db.set_blocked();
   }
 
-  tiledb::Context ctx;
-
-  //  auto q = tdbColMajorMatrix<float>(q_uri, nqueries);  // just a slice
+  //  auto q = tdbColMajorMatrix<float>(ctx, q_uri, nqueries);  // just a slice
   auto q = tdbColMajorMatrix<uint8_t>(ctx, q_uri, nqueries);  // just a slice
 
   auto g =
@@ -224,7 +224,7 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    write_matrix(output, args["--output_uri"].asString());
+    write_matrix(ctx, output, args["--output_uri"].asString());
   }
 
   if (args["--log"]) {
