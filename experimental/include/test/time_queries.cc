@@ -38,6 +38,7 @@
 #include <iostream>
 #include "utils/timer.h"
 
+#include "array_types.h"
 #include "flat_query.h"
 #include "ivf_query.h"
 #include "linalg.h"

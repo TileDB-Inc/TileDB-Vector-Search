@@ -64,6 +64,7 @@
 
 #include <docopt.h>
 
+#include "array_types.h"
 #include "config.h"
 #include "defs.h"
 #include "ivf_query.h"
@@ -136,24 +137,23 @@ int main(int argc, char* argv[]) {
   bool nth = args["--nth"].asBool();
 
   tiledb::Context ctx;
-
-  auto db = tdbColMajorMatrix<float>(ctx, db_uri, ndb);
-  debug_matrix(db, "db");
-
   if (is_local_array(centroids_uri) &&
       !std::filesystem::exists(centroids_uri)) {
     std::cerr << "Error: centroids URI does not exist: "
               << args["--centroids_uri"] << std::endl;
     return 1;
   }
-  auto centroids = tdbColMajorMatrix<float>(ctx, centroids_uri);
+  auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
   debug_matrix(centroids, "centroids");
 
+#if 0
   if (is_local_array(centroids_uri) && !std::filesystem::exists(db_uri)) {
     std::cerr << "Error: db URI does not exist: " << args["--centroids_uri"]
               << std::endl;
     return 1;
   }
+#endif
+
   json recalls;
 
   // Function for finding the top k nearest neighbors accelerated by kmeans
@@ -161,44 +161,23 @@ int main(int argc, char* argv[]) {
   {
     life_timer _("query_time");
 
-    auto shuffled_db = tdbColMajorMatrix<float>(ctx, part_uri);
+    // auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(ctx, part_uri);
     // auto indices = tdbMatrix<size_t, Kokkos::layout_left>(ctx, index_uri);
-    auto indices = read_vector<size_t>(ctx, index_uri);
-    auto shuffled_ids = read_vector<uint64_t>(ctx, id_uri);
+    auto indices = read_vector<indices_type>(ctx, index_uri);
+    // auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
 
-    debug_matrix(shuffled_db, "shuffled_db");
+    // debug_matrix(shuffled_db, "shuffled_db");
     debug_matrix(indices, "indices");
-    debug_matrix(shuffled_ids, "shuffled_ids");
+    // debug_matrix(shuffled_ids, "shuffled_ids");
 
-    // Some variables for debugging
-    auto mv = *std::max_element(begin(shuffled_ids), end(shuffled_ids));
-
-    auto q = [&]() -> ColMajorMatrix<float> {
-      if (query_uri != "") {
-        auto qq = tdbColMajorMatrix<float>(ctx, query_uri, nqueries);
-        return qq;
-      } else {
-        auto qq = ColMajorMatrix<float>{centroids.num_rows(), nqueries};
-        for (size_t i = 0; i < centroids.num_rows(); ++i) {
-          qq(i, 0) = db(i, 0);
-        }
-        return qq;
-      }
-    }();
+    auto q = tdbColMajorMatrix<q_type>(ctx, query_uri, nqueries);
     debug_matrix(q, "q");
 
     // What should be returned here?  Maybe a pair with the ids and scores?
-    auto&& [kmeans_ids, all_ids] = kmeans_query(
-        shuffled_db,
-        centroids,
-        q,
-        indices,
-        shuffled_ids,
-        nprobe,
-        k_nn,
-        nth,
-        nthreads);
-    debug_matrix(kmeans_ids, "kmeans_ids");
+    auto top_k = kmeans_query(
+        part_uri, centroids, q, indices, id_uri, nprobe, k_nn, nth, nthreads);
+
+    debug_matrix(top_k, "top_k");
 
     // Once this is a function, simply return kmeans_ids
     // For now, print the results to std::cout
@@ -207,9 +186,44 @@ int main(int argc, char* argv[]) {
 
     if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
-      auto groundtruth = tdbMatrix<int, Kokkos::layout_left>(ctx, groundtruth_uri);
-      debug_matrix(groundtruth, "groundtruth");
 
+      auto groundtruth =
+          tdbColMajorMatrix<groundtruth_type>(groundtruth_uri, nqueries);
+
+      if (global_debug) {
+        std::cout << std::endl;
+
+        debug_matrix(groundtruth, "groundtruth");
+        debug_slice(groundtruth, "groundtruth");
+
+        std::cout << std::endl;
+        debug_matrix(top_k, "top_k");
+        debug_slice(top_k, "top_k");
+
+        std::cout << std::endl;
+      }
+
+      size_t total_intersected{0};
+      size_t total_groundtruth = top_k.num_cols() * top_k.num_rows();
+      for (size_t i = 0; i < top_k.num_cols(); ++i) {
+        std::sort(begin(top_k[i]), end(top_k[i]));
+        std::sort(begin(groundtruth[i]), end(groundtruth[i]));
+        debug_matrix(top_k, "top_k");
+        debug_slice(top_k, "top_k");
+        total_intersected += std::set_intersection(
+            begin(top_k[i]),
+            end(top_k[i]),
+            begin(groundtruth[i]),
+            end(groundtruth[i]),
+            counter{});
+      }
+      std::cout << "# total intersected = " << total_intersected << " of "
+                << total_groundtruth << " = "
+                << "R" << k_nn << " of "
+                << ((float)total_intersected) / ((float)total_groundtruth)
+                << std::endl;
+
+#if 0
       Matrix<int> original_ids(kmeans_ids.num_rows(), kmeans_ids.num_cols());
       for (size_t i = 0; i < kmeans_ids.num_rows(); ++i) {
         for (size_t j = 0; j < kmeans_ids.num_cols(); ++j) {
@@ -232,7 +246,7 @@ int main(int argc, char* argv[]) {
 
       size_t total_query_in_groundtruth{0};
       // for each query
-      std::vector<int> comp(kmeans_ids.num_rows());
+      std::vector<groundtruth_type> comp(kmeans_ids.num_rows());
       for (size_t i = 0; i < kmeans_ids.num_cols(); ++i) {
         for (size_t j = 0; j < kmeans_ids.num_rows(); ++j) {
           comp[j] = all_ids[kmeans_ids(j, i)];
@@ -243,13 +257,7 @@ int main(int argc, char* argv[]) {
         static constexpr auto lt = [](auto&& x, auto&& y) {
           return std::get<0>(x) < std::get<0>(y);
         };
-        total_query_in_groundtruth += std::set_intersection(
-            begin(comp),
-            end(comp),
-            begin(groundtruth[i]),
-            end(groundtruth[i]),
-            counter{});
-      }
+   w
       recalls["queries_in_groundtruth"] = total_query_in_groundtruth;
       recalls["total_queries"] = kmeans_ids.num_cols() * kmeans_ids.num_rows();
 
@@ -263,6 +271,7 @@ int main(int argc, char* argv[]) {
                         kmeans_ids.num_rows())))
                   << std::endl;
       }
+#endif
     }
   }
 

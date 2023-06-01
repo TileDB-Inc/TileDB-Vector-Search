@@ -29,15 +29,16 @@
  *
  * Defines class for partitioned matrix, used for indexing knn search.
  *
- * In the naive case, we can load the entire partitioned matrix into memory and pull out the partitions we need.
+ * In the naive case, we can load the entire partitioned matrix into memory and
+ * pull out the partitions we need.
  *
  */
 
 #include <cassert>
 #include <memory>
 #include <span>
-#include "linalg.h"
 #include "flat_query.h"
+#include "linalg.h"
 
 #include <mdspan/mdspan.hpp>
 #include <tiledb/tiledb>
@@ -59,8 +60,8 @@ class tdbPartitionedMatrix {
   tdbPartitionedMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
-      const C& centroids,
-      const Q& queries,
+      C& centroids,
+      Q& queries,
       const Idx& indices,
       const Ids& vector_ids,
       size_t nprobe,
@@ -102,7 +103,8 @@ class tdbPartitionedMatrix {
       auto part_size = stop - start;
       partitions_1d_.emplace_back(
           storage_.get() + i * dimension * part_size, dimension * part_size);
-      partitions_2d_.emplace_back(storage_.get() + i * dimension * part_size, dimension, part_size);
+      partitions_2d_.emplace_back(
+          storage_.get() + i * dimension * part_size, dimension, part_size);
 
       while (start != stop) {
         original_ids_.push_back(vector_ids[start++]);
@@ -162,7 +164,9 @@ class tdbPartitionedMatrix {
       auto addr = partitions_1d_[partno].data();
       auto num_elts = partitions_1d_[partno].size();
 
-      assert(partitions_1d_[partno].data() == partitions_2d_[partno].data_handle());
+      assert(
+          partitions_1d_[partno].data() ==
+          partitions_2d_[partno].data_handle());
       assert(dimension == partitions_2d_[partno].extent(0));
       assert(num_elts == partitions_2d_[partno].extent(1) * dimension);
       assert(
