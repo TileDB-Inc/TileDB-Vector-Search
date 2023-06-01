@@ -208,31 +208,45 @@ auto kmeans_query_small_q(
     size_t k_nn,
     bool nth,
     size_t nthreads) {
+
   // get closest centroid for each query vector
   // auto top_k = qv_query(centroids, q, nprobe, nthreads);
-  auto top_k = vq_query_heap(centroids, q, nprobe, nthreads);
+  auto top_centroids = vq_query_heap(centroids, q, nprobe, nthreads);
 
-  // Copy top k from Matrix to vector
-  std::vector<size_t> top_top_k(nprobe, 0);
-  for (size_t i = 0; i < nprobe; ++i) {
-    top_top_k[i] = top_k(i, 0);
-  }
-
-
-  std::vector<uint64_t> shuffled_ids;
-  auto shuffled_db = tdbColMajorMatrix<uint8_t>(part_uri, indices, top_top_k, id_uri, shuffled_ids, nthreads);
+  auto shuffled_db = tdbColMajorMatrix<uint8_t>(part_uri);
+  auto shuffled_ids = read_vector<uint64_t>(id_uri);
 
   debug_matrix(shuffled_db, "shuffled_db");
   debug_matrix(shuffled_ids, "shuffled_ids");
 
+  using element = std::pair<float, uint64_t>;
+  auto min_scores =  std::vector<fixed_min_heap<element>>(size(q), fixed_min_heap<element>(k_nn));
 
-  // Now, with the single matrix of probed partitions, find the closest vectors
-  auto kmeans_ids = vq_query_heap(shuffled_db, q, k_nn, nthreads);
+  for (size_t j = 0; j < size(q); ++j) {
+    for (size_t p = 0; p < nprobe; ++p) {
 
-  // Original ids are: all_ids[kmeans_ids(i, 0)]
-  // Maybe that is what should be returned?
+      size_t start = indices[top_centroids(p, j)];
+      size_t stop = indices[top_centroids(p, j) + 1];
 
-  return std::make_tuple(std::move(kmeans_ids), shuffled_ids);
+      for (size_t i = start; i < stop; ++i) {
+        auto score = L2(q[j], shuffled_db[i]);
+        min_scores[j].insert(element{score, shuffled_ids[i]});
+      }
+    }
+  }
+
+  ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
+
+  for (int j = 0; j < size(q); ++j) {
+    sort_heap(min_scores[j].begin(), min_scores[j].end());
+    std::transform(
+        min_scores[j].begin(),
+        min_scores[j].end(),
+        top_k[j].begin(),
+        ([](auto&& e) { return e.second; }));
+  }
+
+  return top_k;
 }
 
 /**

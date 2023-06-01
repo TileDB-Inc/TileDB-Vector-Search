@@ -1,6 +1,28 @@
 #!/bin/bash -f
 
-ivf_hack="${HOME}/feature-vector-prototype/experimental/cmake-build-release/src/ivf_hack"
+ivf_hack="${HOME}/TileDB/feature-vector-prototype/experimental/cmake-build-release/src/ivf_hack"
+
+sift_prefix=/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/sift/
+kmeans_prefix=/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/kmeans/ivf_hack/m1/
+
+
+
+
+ ${ivf_hack} \
+     --db_uri            ${sift_prefix}/sift_base \
+     --query_uri         ${sift_prefix}/sift_query \
+     --groundtruth_uri   ${sift_prefix}/sift_groundtruth \
+     --centroids_uri     ${kmeans_prefix}/centroids \
+     --parts_uri         ${kmeans_prefix}/parts \
+     --index_uri         ${kmeans_prefix}/index \
+     --ids_uri           ${kmeans_prefix}/ids \
+     --nqueries           10  \
+     --cluster            10  \
+     -v -d \
+
+
+
+exit
 
  ${ivf_hack} \
      --db_uri            's3://tiledb-andrew/sift/bigann10M_base'		                     \

@@ -32,6 +32,8 @@
 
 #include <catch2/catch_all.hpp>
 #include "linalg.h"
+#include "flat_query.h"
+#include "ivf_query.h"
 #include <string>
 
 bool global_debug = false;
@@ -71,4 +73,28 @@ TEST_CASE("gen_partitioned: even odd", "[gen_partitioned]") {
   write_vector(index, "even_odd_index");
   write_matrix(centroid_mat, "even_odd_centroids");
   write_matrix(centroid_mat, "even_odd_queries");
+}
+
+TEST_CASE("gen_partitioned: 3D", "[gen_partitioned]") {
+  auto v = std::vector<float> {-64,  40,  82,  77, -85, -65, -53,  17,
+                               -41,  73, -46, -66,  50,  74, -85,  74,
+                               -58,  59, -50,  80,  32, 100,  45, -68};
+
+  auto m = ColMajorMatrix<float>(3, 8);
+  std::copy(v.begin(), v.end(), m.data());
+
+  auto q = ColMajorMatrix<float>(3, 1);
+  for (size_t i = 0; i < 3; ++i) {
+    q(i, 0) = m(i, 4);
+  }
+
+  auto top_k = vq_query_heap(m, q, 3, 1);
+
+  CHECK(top_k(0,0) == 4);
+  for (size_t i = 0; i < top_k.num_rows(); ++i) {
+    for (size_t j = 0; j < top_k.num_cols(); ++j) {
+      std::cout << top_k(i, j) << " ";
+    }
+    std::cout << std::endl;
+  }
 }

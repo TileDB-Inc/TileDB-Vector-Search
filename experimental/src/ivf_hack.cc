@@ -176,9 +176,10 @@ int main(int argc, char* argv[]) {
     debug_matrix(q, "q");
 
     // What should be returned here?  Maybe a pair with the ids and scores?
-    auto&& [kmeans_ids, all_ids] = kmeans_query(
+    auto top_k = kmeans_query(
         part_uri, centroids, q, indices, id_uri, nprobe, k_nn, nth, nthreads);
-    debug_matrix(kmeans_ids, "kmeans_ids");
+
+    debug_matrix(top_k, "top_k");
 
     // Once this is a function, simply return kmeans_ids
     // For now, print the results to std::cout
@@ -193,22 +194,12 @@ int main(int argc, char* argv[]) {
       std::cout << std::endl;
 
       debug_matrix(groundtruth, "groundtruth");
-
-      Matrix<original_ids_type> original_ids(
-          kmeans_ids.num_rows(), kmeans_ids.num_cols());
-      for (size_t i = 0; i < kmeans_ids.num_rows(); ++i) {
-        for (size_t j = 0; j < kmeans_ids.num_cols(); ++j) {
-          original_ids(i, j) = all_ids[kmeans_ids(i, j)];
-        }
-      }
-
       debug_slice(groundtruth, "groundtruth");
       
       std::cout << std::endl;
-      debug_slice(original_ids, "original_ids");
+      debug_matrix(top_k, "top_k");
+      debug_slice(top_k, "top_k");
 
-      std::cout << std::endl;
-      debug_slice(kmeans_ids, "kmeans_ids");
       std::cout << std::endl;
 
       // kmeans_ids is k by nqueries
@@ -220,6 +211,7 @@ int main(int argc, char* argv[]) {
       //       sort
       //       intersect count
 
+#if 0
       size_t total_query_in_groundtruth{0};
       // for each query
       std::vector<groundtruth_type> comp(kmeans_ids.num_rows());
@@ -253,6 +245,8 @@ int main(int argc, char* argv[]) {
                         kmeans_ids.num_rows())))
                   << std::endl;
       }
+#endif
+
     }
   }
 
