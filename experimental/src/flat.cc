@@ -163,12 +163,14 @@ int main(int argc, char* argv[]) {
   ///// blocked
   ///
 
-  auto db = tdbColMajorMatrix<float>(db_uri, block);  // blocked
+  tiledb::Context ctx;
 
-  auto q = tdbColMajorMatrix<float>(q_uri, nqueries);  // just a slice
+  auto db = tdbColMajorMatrix<float>(ctx, db_uri, block);  // blocked
+
+  auto q = tdbColMajorMatrix<float>(ctx, q_uri, nqueries);  // just a slice
 
   auto g =
-      g_uri.empty() ? ColMajorMatrix<int>(0, 0) : tdbColMajorMatrix<int>(g_uri);
+      g_uri.empty() ? ColMajorMatrix<int>(0, 0) : tdbColMajorMatrix<int>(ctx, g_uri);
   load_time.stop();
   std::cout << load_time << std::endl;
 
@@ -217,7 +219,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (args["--output_uri"]) {
-    write_matrix(top_k, args["--output_uri"].asString());
+    write_matrix(ctx, top_k, args["--output_uri"].asString());
   }
 
   if (args["--log"]) {

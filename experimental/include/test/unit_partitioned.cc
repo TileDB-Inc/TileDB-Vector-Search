@@ -44,6 +44,7 @@ TEST_CASE("partitioned: test test", "[partitioned]") {
 }
 
 TEST_CASE("partitioned: even odd", "[partitioned][ci-skip]]") {
+  tiledb::Context ctx;
 
   std::string parts_uri{"even_odd_parts"};
   std::string index_uri{"even_odd_index"};
@@ -51,11 +52,11 @@ TEST_CASE("partitioned: even odd", "[partitioned][ci-skip]]") {
   std::string centroids_uri{"even_odd_centroids"};
   std::string queries_uri{"even_odd_queries"};
 
-  auto parts_mat = tdbColMajorMatrix<float>(parts_uri);
-  auto index = read_vector<uint32_t>(index_uri);
-  auto ids = read_vector<uint32_t>(ids_uri);
-  auto centroids_mat = tdbColMajorMatrix<float>(centroids_uri);
-  auto queries_mat = tdbColMajorMatrix<float>(queries_uri);
+  auto parts_mat = tdbColMajorMatrix<float>(ctx, parts_uri);
+  auto index = read_vector<uint32_t>(ctx, index_uri);
+  auto ids = read_vector<uint32_t>(ctx, ids_uri);
+  auto centroids_mat = tdbColMajorMatrix<float>(ctx, centroids_uri);
+  auto queries_mat = tdbColMajorMatrix<float>(ctx, queries_uri);
 
-  auto partitioned = tdbPartitionedMatrix<float>(parts_uri, centroids_mat, queries_mat, index, ids, 2, 2);
+  auto partitioned = tdbPartitionedMatrix<float>(ctx, parts_uri, centroids_mat, queries_mat, index, ids, 2, 2);
 }

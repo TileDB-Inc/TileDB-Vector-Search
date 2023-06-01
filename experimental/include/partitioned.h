@@ -57,6 +57,7 @@ class tdbPartitionedMatrix {
  public:
   template <class C, class Q, class Idx, class Ids>
   tdbPartitionedMatrix(
+      const tiledb::Context& ctx,
       const std::string& uri,
       const C& centroids,
       const Q& queries,
@@ -110,13 +111,7 @@ class tdbPartitionedMatrix {
 
     auto matrix_order_{order_v<LayoutPolicy>};
 
-    // Open array for reading
-    auto init_ =
-        std::map<std::string, std::string>{{"vfs.s3.region", "us-east-1"}};
-    auto config_ = tiledb::Config{init_};
-    auto ctx_ = tiledb::Context{config_};
-
-    auto array_ = tiledb::Array{ctx_, uri, TILEDB_READ};
+    auto array_ = tiledb::Array{ctx, uri, TILEDB_READ};
     auto schema_ = array_.schema();
 
     const size_t attr_idx = 0;
@@ -179,12 +174,12 @@ class tdbPartitionedMatrix {
           (int32_t)row_end - 1,
           (int32_t)col_begin,
           (int32_t)col_end - 1};
-      tiledb::Subarray subarray(ctx_, array_);
+      tiledb::Subarray subarray(ctx, array_);
       subarray.set_subarray(subarray_vals);
 
       auto layout_order = cell_order;
 
-      tiledb::Query query(ctx_, array_);
+      tiledb::Query query(ctx, array_);
 
       query.set_subarray(subarray)
           .set_layout(layout_order)

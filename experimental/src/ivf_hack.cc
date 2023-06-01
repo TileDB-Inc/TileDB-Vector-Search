@@ -135,7 +135,9 @@ int main(int argc, char* argv[]) {
   auto nqueries = (size_t)args["--nqueries"].asLong();
   bool nth = args["--nth"].asBool();
 
-  auto db = tdbColMajorMatrix<float>(db_uri, ndb);
+  tiledb::Context ctx;
+
+  auto db = tdbColMajorMatrix<float>(ctx, db_uri, ndb);
   debug_matrix(db, "db");
 
   if (is_local_array(centroids_uri) &&
@@ -144,7 +146,7 @@ int main(int argc, char* argv[]) {
               << args["--centroids_uri"] << std::endl;
     return 1;
   }
-  auto centroids = tdbColMajorMatrix<float>(centroids_uri);
+  auto centroids = tdbColMajorMatrix<float>(ctx, centroids_uri);
   debug_matrix(centroids, "centroids");
 
   if (is_local_array(centroids_uri) && !std::filesystem::exists(db_uri)) {
@@ -159,10 +161,10 @@ int main(int argc, char* argv[]) {
   {
     life_timer _("query_time");
 
-    auto shuffled_db = tdbColMajorMatrix<float>(part_uri);
-    // auto indices = tdbMatrix<size_t, Kokkos::layout_left>(index_uri);
-    auto indices = read_vector<size_t>(index_uri);
-    auto shuffled_ids = read_vector<uint64_t>(id_uri);
+    auto shuffled_db = tdbColMajorMatrix<float>(ctx, part_uri);
+    // auto indices = tdbMatrix<size_t, Kokkos::layout_left>(ctx, index_uri);
+    auto indices = read_vector<size_t>(ctx, index_uri);
+    auto shuffled_ids = read_vector<uint64_t>(ctx, id_uri);
 
     debug_matrix(shuffled_db, "shuffled_db");
     debug_matrix(indices, "indices");
@@ -173,7 +175,7 @@ int main(int argc, char* argv[]) {
 
     auto q = [&]() -> ColMajorMatrix<float> {
       if (query_uri != "") {
-        auto qq = tdbColMajorMatrix<float>(query_uri, nqueries);
+        auto qq = tdbColMajorMatrix<float>(ctx, query_uri, nqueries);
         return qq;
       } else {
         auto qq = ColMajorMatrix<float>{centroids.num_rows(), nqueries};
@@ -205,7 +207,7 @@ int main(int argc, char* argv[]) {
 
     if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
-      auto groundtruth = tdbMatrix<int, Kokkos::layout_left>(groundtruth_uri);
+      auto groundtruth = tdbMatrix<int, Kokkos::layout_left>(ctx, groundtruth_uri);
       debug_matrix(groundtruth, "groundtruth");
 
       Matrix<int> original_ids(kmeans_ids.num_rows(), kmeans_ids.num_cols());

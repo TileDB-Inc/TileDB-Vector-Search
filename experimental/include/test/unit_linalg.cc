@@ -231,10 +231,11 @@ TEST_CASE("linalg: test tdbMatrix constructor, row",
   //    [5, 3, 0, 9, 4, 2, 2, 4]], dtype=np.int32)
 
   try {
+    tiledb::Context ctx;
     std::vector<int32_t> data = {8, 6, 7, 5, 3, 1, 4, 1, 3, 0, 9,
                                  9, 5, 9, 2, 7, 9, 8, 6, 7, 2, 6,
                                  4, 3, 5, 3, 0, 9, 4, 2, 2, 4}; // OMG
-    auto a = tdbMatrix<int32_t>("array_dense_1");
+    auto a = tdbMatrix<int32_t>(ctx, "array_dense_1");
 
     CHECK(a.num_rows() == 4);
     CHECK(a.num_cols() == 8);
@@ -330,7 +331,8 @@ TEST_CASE("linalg: test tdbMatrix constructor, column",
   std::vector<int32_t> data = {8, 6, 7, 5, 3, 1, 4, 1, 3, 0, 9,
                                9, 5, 9, 2, 7, 9, 8, 6, 7, 2, 6,
                                4, 3, 5, 3, 0, 9, 4, 2, 2, 4}; // OMG
-  auto a = tdbMatrix<int32_t, Kokkos::layout_left>("array_dense_1");
+  tiledb::Context ctx;
+  auto a = tdbMatrix<int32_t, Kokkos::layout_left>(ctx, "array_dense_1");
 
   CHECK(a.num_rows() == 8);
   CHECK(a.num_cols() == 4);
@@ -421,7 +423,8 @@ TEST_CASE("linalg: test partitioned tdbMatrix constructor, row",
           "[linalg][partitioned][tdbmatrix][create][row]") {
   size_t part = GENERATE(0, 1, 2, 3, 4);
 
-  auto a = tdbMatrix<int32_t, Kokkos::layout_right>("array_dense_1", part);
+  tiledb::Context ctx;
+  auto a = tdbMatrix<int32_t, Kokkos::layout_right>(ctx, "array_dense_1", part);
 
   CHECK(a.num_rows() == (part == 0 ? 4 : part));
   CHECK(a.num_cols() == 8);
@@ -483,7 +486,8 @@ TEST_CASE("linalg: test partitioned tdbMatrix constructor, column",
           "[linalg][partitioned][tdbmatrix][create][column]") {
   size_t part = GENERATE(0, 1, 2, 3, 4);
 
-  auto a = tdbMatrix<int32_t, Kokkos::layout_left>("array_dense_1", part);
+  tiledb::Context ctx;
+  auto a = tdbMatrix<int32_t, Kokkos::layout_left>(ctx, "array_dense_1", part);
 
   if (part == 0) {
     part = 4;
@@ -537,7 +541,8 @@ TEST_CASE("linalg: test partitioned tdbMatrix constructor, column",
 }
 
 TEST_CASE("linalg: test advance, row major", "[linalg][tdbmatrix][advance][row]") {
-  auto a = tdbMatrix<int32_t, Kokkos::layout_right>("array_dense_1", 2);
+  tiledb::Context ctx;
+  auto a = tdbMatrix<int32_t, Kokkos::layout_right>(ctx, "array_dense_1", 2);
 
   CHECK(a.num_rows() == 2);
   CHECK(a.num_cols() == 8);
@@ -582,7 +587,8 @@ TEST_CASE("linalg: test advance, row major", "[linalg][tdbmatrix][advance][row]"
 }
 
 TEST_CASE("linalg: test advance, column", "[linalg][tdbmatrix][advance][column]") {
-  auto a = tdbMatrix<int32_t, Kokkos::layout_left>("array_dense_1", 2);
+  tiledb::Context ctx;
+  auto a = tdbMatrix<int32_t, Kokkos::layout_left>(ctx, "array_dense_1", 2);
 
   CHECK(a.num_rows() == 8);
   CHECK(a.num_cols() == 2);
@@ -629,6 +635,7 @@ TEST_CASE("linalg: test advance, column", "[linalg][tdbmatrix][advance][column]"
 TEMPLATE_LIST_TEST_CASE("linalg: test write/read std::vector",
                         "[linalg][read-write][vector]", TestTypes) {
   auto length = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+  tiledb::Context ctx;
 
   auto a = std::vector<TestType>(length);
   std::iota(begin(a), end(a), 17);
@@ -639,8 +646,8 @@ TEMPLATE_LIST_TEST_CASE("linalg: test write/read std::vector",
   auto tmpfilename = std::string(tmpnam(nullptr));
   auto tempDir = std::filesystem::temp_directory_path();
   auto uri = (tempDir / tmpfilename).string();
-  write_vector(v, uri);
-  auto w = read_vector<TestType>(uri);
+  write_vector(ctx, v, uri);
+  auto w = read_vector<TestType>(ctx, uri);
   CHECK(std::equal(begin(v), end(v), begin(w)));
   std::filesystem::remove_all(uri);
 }
@@ -656,12 +663,14 @@ TEMPLATE_LIST_TEST_CASE("linalg: test write/read Matrix",
   auto tempDir = std::filesystem::temp_directory_path();
   auto uri = (tempDir / tmpfilename).string();
 
+  tiledb::Context ctx;
+
   SECTION("right") {
     auto A = Matrix<TestType, Kokkos::layout_right>(M, N);
     std::iota(A.data(), A.data() + M * N, 17);
 
-    write_matrix(A, uri);
-    auto B = tdbMatrix<TestType, Kokkos::layout_right>(uri);
+    write_matrix(ctx, A, uri);
+    auto B = tdbMatrix<TestType, Kokkos::layout_right>(ctx, uri);
 
     CHECK(A.num_rows() == M);
     CHECK(A.num_cols() == N);
@@ -675,8 +684,8 @@ TEMPLATE_LIST_TEST_CASE("linalg: test write/read Matrix",
     auto A = Matrix<TestType, Kokkos::layout_left>(M, N);
     std::iota(A.data(), A.data() + M * N, 17);
 
-    write_matrix(A, uri);
-    auto B = tdbMatrix<TestType, Kokkos::layout_left>(uri);
+    write_matrix(ctx, A, uri);
+    auto B = tdbMatrix<TestType, Kokkos::layout_left>(ctx, uri);
 
     CHECK(A.num_rows() == M);
     CHECK(A.num_cols() == N);

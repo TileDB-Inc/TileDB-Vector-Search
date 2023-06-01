@@ -46,6 +46,7 @@ TEST_CASE("gen_partitioned: even odd", "[gen_partitioned][ci-skip]") {
   size_t n {10};
   std::vector<uint32_t> ids = {0, 2, 4, 6, 8, 1, 3, 5, 7, 9};
   std::vector<uint32_t> index = {0, 5, 10};
+  tiledb::Context ctx;
 
   CHECK(size(ids) == n);
 
@@ -66,9 +67,9 @@ TEST_CASE("gen_partitioned: even odd", "[gen_partitioned][ci-skip]") {
     centroid_mat(i, 9) = part_mat(i, 9);
   }
 
-  write_matrix(part_mat, "even_odd_parts");
-  write_vector(ids, "even_odd_ids");
-  write_vector(index, "even_odd_index");
-  write_matrix(centroid_mat, "even_odd_centroids");
-  write_matrix(centroid_mat, "even_odd_queries");
+  write_matrix(ctx, part_mat, "even_odd_parts");
+  write_vector(ctx, ids, "even_odd_ids");
+  write_vector(ctx, index, "even_odd_index");
+  write_matrix(ctx, centroid_mat, "even_odd_centroids");
+  write_matrix(ctx, centroid_mat, "even_odd_queries");
 }

@@ -79,9 +79,11 @@ TEST_CASE("time queries", "[queries][ci-skip]") {
 
     // std::cout << "db_name: " << db_name << " q_name: " << q_name << "\n";
 
-    auto db_mat = tdbColMajorMatrix<float>(db_name);
+    tiledb::Context ctx;
 
-    auto q_mat = tdbColMajorMatrix<float>(q_name);
+    auto db_mat = tdbColMajorMatrix<float>(ctx, db_name);
+
+    auto q_mat = tdbColMajorMatrix<float>(ctx, q_name);
 
     std::cout << "\n# [ Experiment: ]: nthreads: " << nthreads << " q: " << q
               << " db: " << db << " k: " << k << " nth: " << nth << "\n\n";
