@@ -7,12 +7,21 @@ flat="${HOME}/feature-vector-prototype/experimental/cmake-build-release/src/flat
 
 
 ${flat} \
+    --db_uri        's3://tiledb-andrew/sift/bigann1M_base'                \
+    --q_uri         's3://tiledb-andrew/kmeans/benchmark/query_public_10k' \
+    --g_uri         's3://tiledb-andrew/sift/gnd/idx_1M'                   \
+    -V -v -d
+
+exit
+
+
+${flat} \
     --db_uri        's3://tiledb-andrew/sift/sift_base'                                        \
     --q_uri         's3://tiledb-andrew/sift/sift_query'                                       \
     --g_uri         's3://tiledb-andrew/sift/sift_groundtruth'                                 \
     -V -v -d 
 
-exit
+
 
 ${flat} \
     --db_uri        's3://tiledb-nikos/vector-search/datasets/arrays/sift-1b-col-major' \

@@ -48,9 +48,20 @@ s3://tiledb-andrew/kmeans/benchmark/bigann_1B_GT_nnids
 s3://tiledb-andrew/kmeans/benchmark/public_query_gt100_distances
 s3://tiledb-andrew/kmeans/benchmark/public_query_gt100_nn_ids
 
-
 s3://tiledb-andrew/kmeans/benchmark/query_public_10k
 s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids
+
+# From texmex -- gnd truth for 1B subsets
+
+s3://tiledb-andrew/sift/gnd/idx_1M
+s3://tiledb-andrew/sift/bigann1M_base
+
+
+# New from Nikos
+database:    's3://tiledb-nikos/vector-search/datasets/arrays/sift-1b-col-major'
+query:       's3://tiledb-nikos/vector-search/datasets/queries/arrays/sift'
+groundtruth: 's3://tiledb-nikos/vector-search/datasets/ground-truths/arrays/sift-[10m,100m,1b]'
+
 
 sift1M_arrays = [
     's3://tiledb-andrew/sift/sift_base',

@@ -188,7 +188,10 @@ int main(int argc, char* argv[]) {
     if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
       auto groundtruth =
-          tdbMatrix<groundtruth_type, Kokkos::layout_left>(groundtruth_uri);
+	tdbMatrix<groundtruth_type, Kokkos::layout_left>(groundtruth_uri, nqueries);
+
+      std::cout << std::endl;
+
       debug_matrix(groundtruth, "groundtruth");
 
       Matrix<original_ids_type> original_ids(
@@ -200,8 +203,13 @@ int main(int argc, char* argv[]) {
       }
 
       debug_slice(groundtruth, "groundtruth");
+      
+      std::cout << std::endl;
       debug_slice(original_ids, "original_ids");
+
+      std::cout << std::endl;
       debug_slice(kmeans_ids, "kmeans_ids");
+      std::cout << std::endl;
 
       // kmeans_ids is k by nqueries
 
