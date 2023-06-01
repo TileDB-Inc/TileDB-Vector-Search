@@ -86,7 +86,7 @@ target_sources(kmeans_lib INTERFACE
         ../include/flat_query.h ../include/linalg.h ../include/ivf_query.h ../include/scoring.h ../include/fixed_min_queues.h
         ../include/defs.h ../include/algorithm.h ../include/concepts.h ../include/stats.h
         ../include/utils/timer.h ../include/utils/logging.h ../include/utils/print_types.h
-        ../include/partitioned.h
+        ../include/partitioned.h ../include/array_types.h
         )
 
 target_include_directories(kmeans_lib INTERFACE
@@ -112,10 +112,11 @@ target_link_libraries(flat PUBLIC kmeans_lib)
 add_executable(ivf_hack ivf_hack.cc)
 target_link_libraries(ivf_hack PUBLIC kmeans_lib)
 
-#---[ TBD ]------------------------------------------------------------
-if (FALSE)
 add_executable(index index.cc)
 target_link_libraries(index PUBLIC kmeans_lib)
+
+#---[ TBD ]------------------------------------------------------------
+if (FALSE)
 
 add_executable(ingest ingest.cc)
 target_link_libraries(ingest PUBLIC kmeans_lib)
