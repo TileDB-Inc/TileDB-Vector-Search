@@ -223,6 +223,7 @@ auto kmeans_query_small_q(
   using element = std::pair<float, uint64_t>;
   auto min_scores =  std::vector<fixed_min_heap<element>>(size(q), fixed_min_heap<element>(k_nn));
 
+#if 0
   for (size_t j = 0; j < size(q); ++j) {
     for (size_t p = 0; p < nprobe; ++p) {
 
@@ -235,6 +236,23 @@ auto kmeans_query_small_q(
       }
     }
   }
+#else
+    auto par = stdx::execution::indexed_parallel_policy{nthreads};
+    stdx::range_for_each(
+            std::move(par), q, [&, nprobe](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
+                for (size_t p = 0; p < nprobe; ++p) {
+
+                    size_t start = indices[top_centroids(p, j)];
+                    size_t stop = indices[top_centroids(p, j) + 1];
+
+                    for (size_t i = start; i < stop; ++i) {
+                        auto score = L2(q[j], shuffled_db[i]);
+                        min_scores[j].insert(element{score, shuffled_ids[i]});
+                    }
+                }
+
+            });
+#endif
 
   ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
 

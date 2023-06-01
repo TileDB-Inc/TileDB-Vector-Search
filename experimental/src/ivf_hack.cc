@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
     // @todo also get scores
     // @todo add an output_uri argument
 
-    if (args["--groundtruth_uri"]) {
+    if (global_debug && args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
 
 	  auto groundtruth = tdbColMajorMatrix<groundtruth_type>(groundtruth_uri, nqueries);

@@ -18,8 +18,8 @@ kmeans_prefix=s3://tiledb-andrew/kmeans/ivf_hack/x86/
 --parts_uri       s3://tiledb-nikos/vector-search/andrew/sift-base-1m-2000p/parts.tdb \
 --index_uri       s3://tiledb-nikos/vector-search/andrew/sift-base-1m-2000p/index.tdb \
 --ids_uri         s3://tiledb-nikos/vector-search/andrew/sift-base-1m-2000p/ids.tdb \
---nqueries        10 \
---cluster         20 \
+--nqueries        1000 \
+--cluster         3 \
 -v -d
 
 exit 
