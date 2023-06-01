@@ -28,6 +28,10 @@
 include(Catch2)
 include(CTest)
 
+if ($ENV{CI})
+  set(CISKIP "~[ci-skip]")
+endif()
+
 macro (kmeans_add_exe EXENAME)
     add_executable(${EXENAME} ${EXENAME}.cc)
     target_link_libraries(${EXENAME} kmeans_lib)
@@ -38,7 +42,7 @@ macro (kmeans_add_test TESTNAME)
     target_link_libraries(${TESTNAME} PRIVATE kmeans_lib Catch2::Catch2WithMain)
     # target_compile_definitions(${TESTNAME} PRIVATE DATA_DIR="${CMAKE_SOURCE_DIR}/data/")
     # target_compile_definitions(${TESTNAME} PRIVATE DATA_FILE="${CMAKE_SOURCE_DIR}/data/karate.mtx")
-    add_test(NAME ${TESTNAME}_test COMMAND ${TESTNAME})
+    add_test(NAME ${TESTNAME}_test COMMAND ${TESTNAME} "${CISKIP}")
     # catch_discover_tests(${TESTNAME})
 endmacro (kmeans_add_test)
 
@@ -50,7 +54,14 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 # kmeans_add_test(unit_sift_db)
 
 
+kmeans_add_test(gen_partitioned)
+
+kmeans_add_test(gen_queries)
+
 kmeans_add_test(time_insert)
+
+kmeans_add_test(time_queries)
+target_link_libraries(time_queries PRIVATE flat_blas)
 
 kmeans_add_test(unit_algorithm)
 
@@ -59,6 +70,7 @@ kmeans_add_test(unit_concepts)
 kmeans_add_test(unit_defs)
 
 kmeans_add_test(unit_gemm)
+target_link_libraries(time_queries PRIVATE flat_blas)
 
 kmeans_add_test(unit_ivf_index)
 
@@ -71,9 +83,17 @@ add_test(NAME unit_linalg_test COMMAND unit_linalg ~[tdbmatrix])
 
 kmeans_add_test(unit_mdspan)
 
+kmeans_add_test(unit_partitioned)
+
+kmeans_add_test(unit_queries)
+
+kmeans_add_test(unit_slicing)
+
 kmeans_add_test(unit_stats)
 
 kmeans_add_test(unit_utils)
+
+
 
 
 

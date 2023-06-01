@@ -44,9 +44,11 @@
 #define TDB_LINALG_H
 
 #include <cstddef>
+#include <future>
 #include <memory>
 #include <span>
 #include <stdexcept>
+#include <thread>
 #include <type_traits>
 #include <vector>
 
@@ -141,11 +143,13 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
+  using view_type = Matrix;
+
  protected:
   size_type nrows_{0};
   size_type ncols_{0};
 
- private:
+  // private:
   std::unique_ptr<T[]> storage_;
 
  public:
@@ -240,16 +244,50 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     return ncols_;
   }
 
-  constexpr auto is_blocked() const noexcept {
-    return false;
-  }
-
   constexpr auto advance() const noexcept {
     return false;
   }
 
+#if 0
+  void advance_async() const noexcept {
+    fut_ = std::async(std::launch::async, []() { return false; });
+  }
+
+  bool advance_wait() {
+    return fut_.get();
+  }
+#else
+  void advance_async() const noexcept {
+  }
+
+  constexpr static bool advance_wait() {
+    return false;
+  }
+
+#endif
+
   constexpr auto offset() const noexcept {
     return 0UL;
+  }
+
+  bool blocked_{false};
+
+  bool set_blocked() noexcept {
+    return (blocked_ = true);
+  }
+
+  inline bool is_blocked() noexcept {
+    return blocked_;
+  }
+
+  bool async_{false};
+
+  bool set_async() noexcept {
+    return (async_ = true);
+  }
+
+  inline bool is_async() noexcept {
+    return async_;
   }
 };
 
@@ -334,6 +372,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
   std::unique_ptr<uint8_t[]> tmp_storage_;
+  std::unique_ptr<T[]> backing_data_;
   size_t num_array_rows_{0};
   size_t num_array_cols_{0};
 
@@ -341,6 +380,10 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   std::tuple<index_type, index_type> col_view_;
   index_type row_offset_{0};
   index_type col_offset_{0};
+
+  std::future<bool> fut_;
+  size_t pending_row_offset{0};
+  size_t pending_col_offset{0};
 
  public:
   /**
@@ -550,23 +593,24 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   }
 
  public:
-  bool is_blocked() const noexcept {
-    return num_array_rows_ != this->num_rows() ||
-           num_array_cols_ != this->num_cols();
+  size_t offset() const
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
+    return row_offset_;
   }
 
-  /**
-   * @brief Advance the view to the next row block of data.
-   *
-   * @param num_elts How many elements to advance the view by.  If 0, then
-   * advance to the next block.
-   *
-   * @todo Handle case of advancing to the end of the array.
-   * @todo Make this an iterator.
-   */
+  size_t offset() const
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
+    return col_offset_;
+  }
+
+  ~tdbMatrix() noexcept {
+    array_.close();
+  }
+
   bool advance(size_t num_elts = 0)
   // requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
   {
+    // std::cout << "tdbMatrix advance" << std::endl;
     // @todo attr_idx, attr_name, and cell_order / layout_order should be
     // members of the class
     size_t attr_idx = 0;
@@ -580,10 +624,16 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       if (num_elts == 0) {
         num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
       }
-      num_elts = std::min(num_elts, num_array_rows_ - row_offset_);
-      row_offset_ += num_elts;
+      auto num_end_elts = std::min(num_elts, num_array_rows_ - row_offset_);
+
+      if (this->is_async()) {
+        pending_row_offset = row_offset_ + num_end_elts;
+      } else {
+        row_offset_ += num_end_elts;
+      }
+
       std::get<0>(row_view_) += num_elts;
-      std::get<1>(row_view_) += num_elts;
+      std::get<1>(row_view_) += num_end_elts;
 
       if (std::get<0>(row_view_) >= num_array_rows_) {
         return false;
@@ -592,10 +642,16 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       if (num_elts == 0) {
         num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
       }
-      num_elts = std::min(num_elts, num_array_cols_ - col_offset_);
-      col_offset_ += num_elts;
+      auto num_end_elts = std::min(num_elts, num_array_cols_ - col_offset_);
+
+      if (this->is_async()) {
+        pending_col_offset = col_offset_ + num_end_elts;
+      } else {
+        col_offset_ += num_end_elts;
+      }
+
       std::get<0>(col_view_) += num_elts;
-      std::get<1>(col_view_) += num_elts;
+      std::get<1>(col_view_) += num_end_elts;
 
       if (std::get<0>(col_view_) >= num_array_cols_) {
         return false;
@@ -615,106 +671,69 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
     tiledb::Query query(ctx_, array_);
 
+    auto this_data =
+        this->is_async() ? this->backing_data_.get() : this->data();
+
+    size_t read_size = (std::get<1>(row_view_) - std::get<0>(row_view_)) *
+                       (std::get<1>(col_view_) - std::get<0>(col_view_));
     if (attr_type == tiledb::impl::type_to_tiledb<T>::tiledb_type) {
       query.set_subarray(subarray)
           .set_layout(layout_order)
-          .set_data_buffer(
-              attr_name,
-              this->data(),
-              (std::get<1>(row_view_) - std::get<0>(row_view_)) *
-                  (std::get<1>(col_view_) - std::get<0>(col_view_)));
+          .set_data_buffer(attr_name, this_data, read_size);
       query.submit();
     } else {
       auto num_bytes = tiledb_datatype_size(attr_type);
       query.set_subarray(subarray)
           .set_layout(layout_order)
           .set_data_buffer(
-              attr_name,
-              tmp_storage_.get(),
-              this->num_rows() * this->num_cols() * num_bytes);
+              attr_name, tmp_storage_.get(), read_size * num_bytes);
       query.submit();
 
       assert(tiledb::Query::Status::COMPLETE == query.query_status());
       std::copy(
           tmp_storage_.get(),
-          tmp_storage_.get() + this->num_rows() * this->num_cols() * num_bytes,
-          this->data());
+          tmp_storage_.get() + read_size * num_bytes,
+          this_data);
     }
 
     return true;
   }
 
-  bool advance(size_t num_elts = 0)
-      // requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      requires(false) {
-    // @todo attr_idx, attr_name, and cell_order / layout_order should be
-    // members of the class
-    size_t attr_idx = 0;
-    auto attr = schema_.attribute(attr_idx);
-    std::string attr_name = attr.name();
-    auto cell_order = schema_.cell_order();
-    auto layout_order = cell_order;
+  void advance_async(size_t num_elts = 0) {
+    if (!backing_data_) {
+#ifndef __APPLE__
+      backing_data_ = std::make_unique_for_overwrite<T[]>(
+          this->num_rows() * this->num_cols());
+#else
+      backing_data_ =
+          std::unique_ptr<T[]>(new T[this->num_rows() * this->num_cols()]);
+#endif
+    }
+    // this->data_.swap(backing_data_);
+    fut_ = std::async(std::launch::async, [this, num_elts]() {
+      return this->advance(num_elts);
+    });
+  }
 
-    if (layout_order == TILEDB_ROW_MAJOR) {
-      if (num_array_rows_ <= std::get<1>(row_view_)) {
-        return false;
-      }
-      if (num_elts == 0) {
-        num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
-      }
-      num_elts = std::min(num_elts, num_array_rows_ - row_offset_);
-      row_offset_ += num_elts;
-      std::get<0>(row_view_) += num_elts;
-      std::get<1>(row_view_) += num_elts;
-    } else if (layout_order == TILEDB_COL_MAJOR) {
-      if (num_array_cols_ <= std::get<1>(col_view_)) {
-        return false;
-      }
-      if (num_elts == 0) {
-        num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
-      }
-      num_elts = std::min(num_elts, num_array_cols_ - col_offset_);
-      col_offset_ += num_elts;
-      std::get<0>(col_view_) += num_elts;
-      std::get<1>(col_view_) += num_elts;
+  void swap_offsets() {
+    std::swap(row_offset_, pending_row_offset);
+    std::swap(col_offset_, pending_col_offset);
+  }
+
+  bool advance_wait(size_t num_elts = 0) {
+    bool more{true};
+    if (fut_.valid()) {
+      more = fut_.get();
     } else {
-      throw std::runtime_error("Unknown cell order");
+      throw std::runtime_error("advance_wait: future is not valid");
     }
-
-    // Create a subarray that reads the array with the specified view
-    std::vector<int32_t> subarray_vals = {
-        (int32_t)std::get<0>(row_view_),
-        (int32_t)std::get<1>(row_view_) - 1,
-        (int32_t)std::get<0>(col_view_),
-        (int32_t)std::get<1>(col_view_) - 1};
-    tiledb::Subarray subarray(ctx_, array_);
-    subarray.set_subarray(subarray_vals);
-
-    tiledb::Query query(ctx_, array_);
-    query.set_subarray(subarray)
-        .set_layout(layout_order)
-        .set_data_buffer(
-            attr_name,
-            this->data(),
-            (std::get<1>(row_view_) - std::get<0>(row_view_)) *
-                (std::get<1>(col_view_) - std::get<0>(col_view_)));
-    query.submit();
+    if (!more) {
+      return false;
+    }
+    this->storage_.swap(this->backing_data_);
+    this->swap_offsets();
 
     return true;
-  }
-
-  size_t offset() const
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
-    return row_offset_;
-  }
-
-  size_t offset() const
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
-    return col_offset_;
-  }
-
-  ~tdbMatrix() noexcept {
-    array_.close();
   }
 };
 
@@ -940,6 +959,27 @@ template <class Matrix>
 void debug_matrix(const Matrix& A, const std::string& msg = "") {
   if (global_debug) {
     std::cout << matrix_info(A, msg) << std::endl;
+  }
+}
+
+template <class Matrix>
+void debug_slice(
+    const Matrix& A,
+    const std::string& msg = "",
+    size_t rows = 5,
+    size_t cols = 15) {
+  if (global_debug) {
+    rows = std::min(rows, A.num_rows());
+    cols = std::min(cols, A.num_cols());
+
+    std::cout << "# " << msg << std::endl;
+    for (size_t i = 0; i < rows; ++i) {
+      std::cout << "# ";
+      for (size_t j = 0; j < cols; ++j) {
+        std::cout << A(i, j) << "\t";
+      }
+      std::cout << std::endl;
+    }
   }
 }
 #endif  // TDB_LINALG_H

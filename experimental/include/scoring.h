@@ -54,11 +54,8 @@
  */
 template <class Matrix1, class Matrix2, class Matrix3>  // = typename
                                                         // Matrix1::view_type>
-                                                        void gemm_scores(
-                                                            const Matrix1& A,
-                                                            const Matrix2& B,
-                                                            Matrix3& C,
-                                                            unsigned nthreads) {
+void gemm_scores(
+    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads) {
   static_assert(
       std::is_same<typename Matrix1::value_type, typename Matrix2::value_type>::
           value,

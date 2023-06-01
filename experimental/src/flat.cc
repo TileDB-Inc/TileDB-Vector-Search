@@ -86,6 +86,7 @@
 #include <docopt.h>
 
 #include "defs.h"
+#include "flat_query.h"
 #include "ivf_query.h"
 #include "stats.h"
 #include "utils/timer.h"
@@ -151,8 +152,20 @@ int main(int argc, char* argv[]) {
   }
 
   ms_timer load_time{"Load database, query, and ground truth arrays"};
-  tdbColMajorMatrix<float> db(db_uri, block);   // blocked
-  tdbColMajorMatrix<float> q(q_uri, nqueries);  // just a slice
+
+  // auto db = (args["--block"] ? tdbBlockColMajorMatrix<float>(db_uri)  //
+  // unblocked
+  //                      : tdbColMajorMatrix<float>(db_uri, block));   //
+  //                      blocked
+
+  // auto db = (block == 0 ? tdbColMajorMatrix<float>(db_uri)  // unblocked
+  ////                        : tdbBlockColMajorMatrix<float>(db_uri, block));
+  ///// blocked
+  ///
+
+  auto db = tdbColMajorMatrix<float>(db_uri, block);  // blocked
+
+  auto q = tdbColMajorMatrix<float>(q_uri, nqueries);  // just a slice
 
   auto g =
       g_uri.empty() ? ColMajorMatrix<int>(0, 0) : tdbColMajorMatrix<int>(g_uri);
@@ -160,37 +173,43 @@ int main(int argc, char* argv[]) {
   std::cout << load_time << std::endl;
 
   auto top_k = [&]() {
-
-  // @todo reimplement these
-#if 0
-  if (args["--order"].asString() == "vq") {
-    if (verbose) {
-      std::cout << "# Using vq loop nesting for query" << std::endl;
-      if (nth) {
-        std::cout << "# Using nth_element selection" << std::endl;
+    if (args["--order"].asString() == "vq_nth") {
+      if (verbose) {
+        std::cout << "# Using vq_nth, nth = " << std::to_string(nth)
+                  << std::endl;
       }
-    }
-    return query_vq(db, q, k, nth, nthreads);
-  } else if (args["--order"].asString() == "qv") {
-    if (verbose) {
-      std::cout << "# Using qv nesting for query" << std::endl;
-      if (nth) {
-        std::cout << "# Using nth element selection" << std::endl;
+      return vq_query_nth(db, q, k, nth, nthreads);
+    } else if (args["--order"].asString() == "vq_heap") {
+      if (verbose) {
+        std::cout << "# Using vq_heap, ignoring nth = " << std::to_string(nth)
+                  << std::endl;
       }
-    }
-    return query_qv(db, q, k, nth, nthreads);
-  } else
-#endif
-    if (args["--order"].asString() == "gemm") {
-      if (block != 0) {
-        std::cout << "# Using blocked gemm for query" << std::endl;
+      return vq_query_heap(db, q, k, nthreads);
+    } else if (args["--order"].asString() == "qv_nth") {
+      if (verbose) {
+        std::cout << "# Using qv_nth, nth = " << std::to_string(nth)
+                  << std::endl;
+      }
+      return qv_query_nth(db, q, k, nth, nthreads);
+    } else if (args["--order"].asString() == "qv_heap") {
+      if (verbose) {
+        std::cout << "# Using qv_query (qv_heap), ignoring nth = "
+                  << std::to_string(nth) << std::endl;
+      }
+      return qv_query(db, q, k, nthreads);
+    } else if (args["--order"].asString() == "gemm") {
+      // if (block != 0) {
+      if (args["--block"]) {
+        std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth)
+                  << std::endl;
+        db.set_blocked();
+        // db.set_async();
         return blocked_gemm_query(db, q, k, nth, nthreads);
       } else {
-        std::cout << "# Using gemm for query" << std::endl;
+        std::cout << "# Using gemm, nth = " << std::to_string(nth) << std::endl;
         return gemm_query(db, q, k, nth, nthreads);
       }
     }
-    return ColMajorMatrix<size_t>(0, 0);
   }();
 
   if (!g_uri.empty() && validate) {
