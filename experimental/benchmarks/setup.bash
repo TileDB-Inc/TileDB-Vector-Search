@@ -167,6 +167,8 @@ ${log} \
 ${verbose} \
 ${debug}"
 
-    echo "${query}"
-    echo eval "${query}"
+    printf "================================================================\n"
+    printf "=\n=\n"
+    printf "${query}\n"
+    eval "${query}"
 }
