@@ -240,6 +240,7 @@ int main(int argc, char* argv[]) {
 
     auto ms = global_time_of_interest;
     auto qps = ((float)nqueries) / ((float)ms / 1000.0);
+    std::cout << std::setw(8) << "-|-";
     std::cout << std::setw(8) << nqueries;
     std::cout << std::setw(8) << nprobe;
     std::cout << std::setw(8) << k_nn;
