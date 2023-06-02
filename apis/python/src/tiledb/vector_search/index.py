@@ -30,5 +30,4 @@ class FlatIndex:
             nqueries,
             nthreads
         )
-
         return np.array(r)

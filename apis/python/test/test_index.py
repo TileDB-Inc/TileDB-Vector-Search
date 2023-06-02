@@ -18,4 +18,4 @@ def test_flat_index(tmpdir):
     result = index.query(query_vectors)
 
     #ground_truth = vs.load_as_array(ground_truth_uri)
-    print(result)
+    assert isinstance(result, np.ndarray)

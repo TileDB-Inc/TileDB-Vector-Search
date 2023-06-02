@@ -18,7 +18,6 @@ template <typename T>
 static void declareVector(py::module& mod, std::string const& suffix) {
   using TVector = Vector<T>;
   using PyTVector = py::class_<TVector>;
-  //using PyTVector = py::class_<TVector, std::shared_ptr<TVector>>;
 
   PyTVector cls(mod, ("Vector" + suffix).c_str(), py::buffer_protocol());
 
@@ -45,7 +44,6 @@ static void declareColMajorMatrix(py::module& mod, std::string const& suffix) {
   using TMatrix = ColMajorMatrix<T>;
   using PyTMatrix = py::class_<TMatrix>;
 
-  std::cout << "ColMajorMatrix" << suffix << std::endl;
   PyTMatrix cls(mod, ("ColMajorMatrix" + suffix).c_str(), py::buffer_protocol());
 
   cls.def(py::init<size_t, size_t>());
