@@ -372,7 +372,6 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
-
   std::unique_ptr<T[]> backing_data_;
   size_t num_array_rows_{0};
   size_t num_array_cols_{0};

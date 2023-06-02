@@ -222,6 +222,17 @@ int main(int argc, char* argv[]) {
                 << ((float)total_intersected) / ((float)total_groundtruth)
                 << std::endl;
 
+      Matrix<int> original_ids(kmeans_ids.num_rows(), kmeans_ids.num_cols());
+      for (size_t i = 0; i < kmeans_ids.num_rows(); ++i) {
+        for (size_t j = 0; j < kmeans_ids.num_cols(); ++j) {
+          original_ids(i, j) = all_ids[kmeans_ids(i, j)];
+        }
+      }
+
+      debug_slice(groundtruth, "groundtruth");
+      debug_slice(original_ids, "original_ids");
+      debug_slice(kmeans_ids, "kmeans_ids");
+
       // kmeans_ids is k by nqueries
 
       // foreach query

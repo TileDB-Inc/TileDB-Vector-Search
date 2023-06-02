@@ -26,6 +26,11 @@
 #
 
 include(Catch2)
+include(CTest)
+
+if ($ENV{CI})
+  set(CISKIP "~[ci-skip]")
+endif()
 
 macro (kmeans_add_exe EXENAME)
     add_executable(${EXENAME} ${EXENAME}.cc)
@@ -37,7 +42,7 @@ macro (kmeans_add_test TESTNAME)
     target_link_libraries(${TESTNAME} PRIVATE kmeans_lib Catch2::Catch2WithMain)
     # target_compile_definitions(${TESTNAME} PRIVATE DATA_DIR="${CMAKE_SOURCE_DIR}/data/")
     # target_compile_definitions(${TESTNAME} PRIVATE DATA_FILE="${CMAKE_SOURCE_DIR}/data/karate.mtx")
-    # add_test(NAME ${TESTNAME}_test COMMAND ${TESTNAME})
+    add_test(NAME ${TESTNAME}_test COMMAND ${TESTNAME} "${CISKIP}")
     # catch_discover_tests(${TESTNAME})
 endmacro (kmeans_add_test)
 
@@ -73,7 +78,10 @@ kmeans_add_test(unit_ivf_index)
 
 kmeans_add_test(unit_ivf_query)
 
-kmeans_add_test(unit_linalg)
+add_executable(unit_linalg unit_linalg.cc)
+target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)
+# Skip the tdbmatrix tests because the TileDB arrays do not exist in CI.
+add_test(NAME unit_linalg_test COMMAND unit_linalg ~[tdbmatrix])
 
 kmeans_add_test(unit_mdspan)
 
