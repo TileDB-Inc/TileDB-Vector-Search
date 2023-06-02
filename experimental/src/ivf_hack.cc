@@ -81,6 +81,7 @@ using json = nlohmann::json;
 bool global_verbose = false;
 bool global_debug = false;
 std::string global_region;
+double global_time_of_interest{0};
 
 static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
@@ -230,14 +231,14 @@ int main(int argc, char* argv[]) {
 
   auto timings = get_timings();
 
-  if (global_verbose) {
+  if (true || global_verbose) {
     // Report these results in a table
     // algorithm dataset nqueries nprobe top-n ms qps recall
     // # [ In memory portion of kmeans_query_small_q ]
     // std::cout << std::setw() << std::left  usw
     //
 
-    auto ms = timings["# [ In memory portion of kmeans_query_small_q ]"];
+    auto ms = global_time_of_interest;
     auto qps = ((float)nqueries) / ((float)ms / 1000.0);
     std::cout << std::setw(8) << nqueries;
     std::cout << std::setw(8) << nprobe;
