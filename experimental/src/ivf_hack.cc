@@ -81,6 +81,7 @@ using json = nlohmann::json;
 bool global_verbose = false;
 bool global_debug = false;
 std::string global_region;
+double global_time_of_interest{0};
 
 static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
@@ -149,7 +150,8 @@ int main(int argc, char* argv[]) {
   float recall{0.0f};
   json recalls;
 
-  // Find the top k nearest neighbors accelerated by kmeans and do some reporting
+  // Find the top k nearest neighbors accelerated by kmeans and do some
+  // reporting
   {
     life_timer _("query_time");
 
@@ -207,19 +209,17 @@ int main(int argc, char* argv[]) {
       recall = ((float)total_intersected) / ((float)total_groundtruth);
       std::cout << "# total intersected = " << total_intersected << " of "
                 << total_groundtruth << " = "
-                << "R@" << k_nn << " of "
-                << recall
-                << std::endl;
+                << "R@" << k_nn << " of " << recall << std::endl;
     }
   }
 
   auto timings = get_timings();
 
-  if (global_verbose) {
-
-    // Quick and dirty way to get query info in summarizable form
-    auto ms = timings["# [ In memory portion of kmeans_query_small_q ]"];
+  // Quick and dirty way to get query info in summarizable form
+  if (true || global_verbose) {
+    auto ms = global_time_of_interest;
     auto qps = ((float)nqueries) / ((float)ms / 1000.0);
+    std::cout << std::setw(8) << "-|-";
     std::cout << std::setw(8) << nqueries;
     std::cout << std::setw(8) << nprobe;
     std::cout << std::setw(8) << k_nn;
@@ -234,11 +234,10 @@ int main(int argc, char* argv[]) {
     auto program_args = args_log(args);
     auto config = config_log(argv[0]);
 
-    json log_log = {
-        {"Config", config},
-        {"Args", program_args},
-        {"Recalls", recalls},
-        {"Times", timings}};
+    json log_log = {{"Config", config},
+                    {"Args", program_args},
+                    {"Recalls", recalls},
+                    {"Times", timings}};
 
     if (args["--log"].asString() == "-") {
       std::cout << log_log.dump(2) << std::endl;

@@ -60,6 +60,9 @@
 
 #include "choose_blas.h"
 
+extern double global_time_of_interest;
+
+
 // Interfaces
 //   faiss: D, I = index.search(xb, k) # search
 //   milvus: status, results = conn.search(collection_name, query_records,
@@ -267,6 +270,10 @@ auto kmeans_query_small_q(
         top_k[j].begin(),
         ([](auto&& e) { return e.second; }));
   }
+
+  // @todo this is an ugly and embarrassing hack
+  __.stop();
+  global_time_of_interest = __.elapsed();
 
   return top_k;
 }
