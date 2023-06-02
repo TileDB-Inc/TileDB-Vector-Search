@@ -147,25 +147,23 @@ int main(int argc, char* argv[]) {
   auto nth = args["--nth"].asBool();
   auto validate = args["--validate"].asBool();
 
+  // @todo make global
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
 
   ms_timer load_time{"Load database, query, and ground truth arrays"};
 
-  // auto db = (args["--block"] ? tdbBlockColMajorMatrix<float>(db_uri)  //
-  // unblocked
-  //                      : tdbColMajorMatrix<float>(db_uri, block));   //
-  //                      blocked
+  // 10M, 100M, and 1B are all uint8_t
 
-  // auto db = (block == 0 ? tdbColMajorMatrix<float>(db_uri)  // unblocked
-  ////                        : tdbBlockColMajorMatrix<float>(db_uri, block));
-  ///// blocked
-  ///
+  //  auto db = tdbColMajorMatrix<float>(db_uri, block);  // blocked
+  auto db = tdbColMajorMatrix<uint8_t>(db_uri, block);  // blocked
+  if (args["--block"]) {
+    db.set_blocked();
+  }
 
-  auto db = tdbColMajorMatrix<float>(db_uri, block);  // blocked
-
-  auto q = tdbColMajorMatrix<float>(q_uri, nqueries);  // just a slice
+  //  auto q = tdbColMajorMatrix<float>(q_uri, nqueries);  // just a slice
+  auto q = tdbColMajorMatrix<uint8_t>(q_uri, nqueries);  // just a slice
 
   auto g =
       g_uri.empty() ? ColMajorMatrix<int>(0, 0) : tdbColMajorMatrix<int>(g_uri);
@@ -197,19 +195,19 @@ int main(int argc, char* argv[]) {
                   << std::to_string(nth) << std::endl;
       }
       return qv_query(db, q, k, nthreads);
-    } else if (args["--order"].asString() == "gemm") {
-      // if (block != 0) {
-      if (args["--block"]) {
-        std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth)
-                  << std::endl;
-        db.set_blocked();
-        // db.set_async();
-        return blocked_gemm_query(db, q, k, nth, nthreads);
-      } else {
-        std::cout << "# Using gemm, nth = " << std::to_string(nth) << std::endl;
-        return gemm_query(db, q, k, nth, nthreads);
-      }
-    }
+    } /* else if (args["--order"].asString() == "gemm") {
+       // if (block != 0) {
+       if (args["--block"]) {
+         std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth)
+                   << std::endl;
+         db.set_blocked();
+         // db.set_async();
+         return blocked_gemm_query(db, q, k, nth, nthreads);
+       } else {
+         std::cout << "# Using gemm, nth = " << std::to_string(nth) <<
+       std::endl; return gemm_query(db, q, k, nth, nthreads);
+       }
+       }*/
   }();
 
   if (!g_uri.empty() && validate) {
@@ -217,7 +215,14 @@ int main(int argc, char* argv[]) {
   }
 
   if (args["--output_uri"]) {
-    write_matrix(top_k, args["--output_uri"].asString());
+    auto output = ColMajorMatrix<int32_t>(top_k.num_rows(), top_k.num_cols());
+    for (size_t i = 0; i < top_k.num_rows(); ++i) {
+      for (size_t j = 0; j < top_k.num_cols(); ++j) {
+        output(i, j) = top_k(i, j);
+      }
+    }
+
+    write_matrix(output, args["--output_uri"].asString());
   }
 
   if (args["--log"]) {
