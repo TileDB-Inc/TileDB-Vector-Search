@@ -6,12 +6,19 @@
     <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/docopt-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/json-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/mdspan-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug/libtiledbvectorsearch/_deps/catch2-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug/libtiledbvectorsearch/_deps/docopt-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug/libtiledbvectorsearch/_deps/mdspan-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/catch2-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/docopt-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/json-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/mdspan-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-release/libtiledbvectorsearch/_deps/catch2-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-release/libtiledbvectorsearch/_deps/docopt-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-release/libtiledbvectorsearch/_deps/mdspan-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo/_deps/catch2-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo/_deps/docopt-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo/_deps/json-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo/_deps/mdspan-src" vcs="Git" />
   </component>
 </project>
