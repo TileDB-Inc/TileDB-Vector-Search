@@ -222,6 +222,7 @@ int main(int argc, char* argv[]) {
                 << ((float)total_intersected) / ((float)total_groundtruth)
                 << std::endl;
 
+#if 0
       Matrix<int> original_ids(kmeans_ids.num_rows(), kmeans_ids.num_cols());
       for (size_t i = 0; i < kmeans_ids.num_rows(); ++i) {
         for (size_t j = 0; j < kmeans_ids.num_cols(); ++j) {
@@ -242,7 +243,6 @@ int main(int argc, char* argv[]) {
       //       sort
       //       intersect count
 
-#if 0
       size_t total_query_in_groundtruth{0};
       // for each query
       std::vector<groundtruth_type> comp(kmeans_ids.num_rows());

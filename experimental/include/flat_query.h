@@ -61,6 +61,8 @@
 #include "linalg.h"
 #include "utils/timer.h"
 
+#include "array_types.h"
+
 #include <cassert>
 #include <cmath>
 #include <iostream>

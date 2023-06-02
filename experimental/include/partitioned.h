@@ -59,8 +59,8 @@ class tdbPartitionedMatrix {
   template <class C, class Q, class Idx, class Ids>
   tdbPartitionedMatrix(
       const std::string& uri,
-      const C& centroids,
-      const Q& queries,
+      C& centroids,
+      Q& queries,
       const Idx& indices,
       const Ids& vector_ids,
       size_t nprobe,

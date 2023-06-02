@@ -277,7 +277,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     return (blocked_ = true);
   }
 
-  inline bool is_blocked() noexcept {
+  inline bool is_blocked() const noexcept {
     return blocked_;
   }
 
