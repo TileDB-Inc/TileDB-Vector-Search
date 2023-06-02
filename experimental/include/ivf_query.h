@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <chrono>
 #include "algorithm.h"
+#include "array_types.h"
 #include "concepts.h"
 #include "defs.h"
 #include "flat_query.h"
