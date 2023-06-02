@@ -43,7 +43,7 @@ TEST_CASE("partitioned: test test", "[partitioned]") {
   REQUIRE(true);
 }
 
-TEST_CASE("partitioned: even odd", "[partitioned][ci-skip]]") {
+TEST_CASE("partitioned: even odd", "[partitioned][ci-skip]") {
   tiledb::Context ctx;
 
   std::string parts_uri{"even_odd_parts"};

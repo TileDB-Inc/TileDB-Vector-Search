@@ -184,7 +184,9 @@ int main(int argc, char* argv[]) {
         std::cout << "# Using vq_heap, ignoring nth = " << std::to_string(nth)
                   << std::endl;
       }
-      return vq_query_heap(db, q, k, nthreads);
+      auto r = vq_query_heap(db, q, k, nthreads);
+      debug_slice(r, "", 10,10);
+      return r;
     } else if (args["--order"].asString() == "qv_nth") {
       if (verbose) {
         std::cout << "# Using qv_nth, nth = " << std::to_string(nth)
@@ -213,6 +215,8 @@ int main(int argc, char* argv[]) {
   }();
 
   if (!g_uri.empty() && validate) {
+    std::cout << "Top g: " << std::endl;
+    debug_slice(g, "", 10, 10);
     validate_top_k(top_k, g);
   }
 
