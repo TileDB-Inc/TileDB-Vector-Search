@@ -207,11 +207,9 @@ auto kmeans_query_small_q(
     size_t k_nn,
     bool nth,
     size_t nthreads) {
-  // get closest centroid for each query vector
-  // auto top_k = qv_query(centroids, q, nprobe, nthreads);
-  //  auto top_centroids = vq_query_heap(centroids, q, nprobe, nthreads);
-  auto top_centroids = qv_query_nth(centroids, q, nprobe, false, nthreads);
 
+  // Read the shuffled database and ids
+  // @todo To this more systematically
   auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
   auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
 
@@ -219,6 +217,12 @@ auto kmeans_query_small_q(
   debug_matrix(shuffled_ids, "shuffled_ids");
 
   using element = std::pair<float, uint64_t>;
+
+  // get closest centroid for each query vector
+  // auto top_k = qv_query(centroids, q, nprobe, nthreads);
+  //  auto top_centroids = vq_query_heap(centroids, q, nprobe, nthreads);
+  auto top_centroids = qv_query_nth(centroids, q, nprobe, false, nthreads);
+
   auto min_scores = std::vector<fixed_min_heap<element>>(
       size(q), fixed_min_heap<element>(k_nn));
 
@@ -236,7 +240,6 @@ auto kmeans_query_small_q(
     }
   }
 #else
-
   life_timer __{std::string{"In memory portion of "} + tdb_func__};
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
   stdx::range_for_each(
@@ -255,6 +258,7 @@ auto kmeans_query_small_q(
 
   ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
 
+  // @todo this pattern repeats alot -- put into a function
   for (int j = 0; j < size(q); ++j) {
     sort_heap(min_scores[j].begin(), min_scores[j].end());
     std::transform(

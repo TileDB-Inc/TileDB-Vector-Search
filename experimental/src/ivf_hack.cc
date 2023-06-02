@@ -53,6 +53,7 @@
 // #include <execution>  // Not suppored by Apple clang
 
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <numeric>
@@ -153,6 +154,7 @@ int main(int argc, char* argv[]) {
   }
 #endif
 
+  float recall{0.0f};
   json recalls;
 
   // Function for finding the top k nearest neighbors accelerated by kmeans
@@ -178,11 +180,11 @@ int main(int argc, char* argv[]) {
 
     debug_matrix(top_k, "top_k");
 
-    // Once this is a function, simply return kmeans_ids
+
+        // Once this is a function, simply return kmeans_ids
     // For now, print the results to std::cout
     // @todo also get scores
     // @todo add an output_uri argument
-
     if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
 
@@ -216,62 +218,35 @@ int main(int argc, char* argv[]) {
             end(groundtruth[i]),
             counter{});
       }
+
+      recall = ((float)total_intersected) / ((float)total_groundtruth);
       std::cout << "# total intersected = " << total_intersected << " of "
                 << total_groundtruth << " = "
-                << "R" << k_nn << " of "
-                << ((float)total_intersected) / ((float)total_groundtruth)
+                << "R@" << k_nn << " of "
+                << recall
                 << std::endl;
-
-#if 0
-      Matrix<int> original_ids(kmeans_ids.num_rows(), kmeans_ids.num_cols());
-      for (size_t i = 0; i < kmeans_ids.num_rows(); ++i) {
-        for (size_t j = 0; j < kmeans_ids.num_cols(); ++j) {
-          original_ids(i, j) = all_ids[kmeans_ids(i, j)];
-        }
-      }
-
-      debug_slice(groundtruth, "groundtruth");
-      debug_slice(original_ids, "original_ids");
-      debug_slice(kmeans_ids, "kmeans_ids");
-
-      // kmeans_ids is k by nqueries
-
-      // foreach query
-      // get the top k
-      //    get the groundtruth
-      //    compare
-      //       sort
-      //       intersect count
-
-      size_t total_query_in_groundtruth{0};
-      // for each query
-      std::vector<groundtruth_type> comp(kmeans_ids.num_rows());
-      for (size_t i = 0; i < kmeans_ids.num_cols(); ++i) {
-        for (size_t j = 0; j < kmeans_ids.num_rows(); ++j) {
-          comp[j] = all_ids[kmeans_ids(j, i)];
-        }
-        std::sort(begin(comp), end(comp));
-        std::sort(begin(groundtruth[i]), end(groundtruth[i]));
-
-        static constexpr auto lt = [](auto&& x, auto&& y) {
-          return std::get<0>(x) < std::get<0>(y);
-        };
-   w
-      recalls["queries_in_groundtruth"] = total_query_in_groundtruth;
-      recalls["total_queries"] = kmeans_ids.num_cols() * kmeans_ids.num_rows();
-
-      if (global_verbose) {
-        std::cout << "total_query_in_groundtruth: "
-                  << total_query_in_groundtruth;
-        std::cout << " / " << kmeans_ids.num_cols() * kmeans_ids.num_rows();
-        std::cout << " = "
-                  << (((float)total_query_in_groundtruth /
-                       ((float)(kmeans_ids.num_cols()) *
-                        kmeans_ids.num_rows())))
-                  << std::endl;
-      }
-#endif
     }
+  }
+
+  auto timings = get_timings();
+
+  if (global_verbose) {
+    // Report these results in a table
+    // algorithm dataset nqueries nprobe top-n ms qps recall
+    // # [ In memory portion of kmeans_query_small_q ]
+    // std::cout << std::setw() << std::left  usw
+    //
+
+    auto ms = timings["# [ In memory portion of kmeans_query_small_q ]"];
+    auto qps = ((float)nqueries) / ((float)ms / 1000.0);
+    std::cout << std::setw(8) << nqueries;
+    std::cout << std::setw(8) << nprobe;
+    std::cout << std::setw(8) << k_nn;
+    std::cout << std::setw(8) << nthreads;
+    std::cout << std::setw(8) << ms;
+    std::cout << std::setw(8) << qps;
+    std::cout << std::setw(8) << recall;
+    std::cout << std::endl;
   }
 
   if (args["--log"]) {
@@ -282,7 +257,7 @@ int main(int argc, char* argv[]) {
         {"Config", config},
         {"Args", program_args},
         {"Recalls", recalls},
-        {"Times", get_timings()}};
+        {"Times", timings}};
 
     if (args["--log"].asString() == "-") {
       std::cout << log_log.dump(2) << std::endl;
