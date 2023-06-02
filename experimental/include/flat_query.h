@@ -72,7 +72,7 @@
 #ifndef tdb_func__
 #ifdef __cpp_lib_source_location
 #include <source_location>
-#define tdb_func__ (std::source_location::current().function_name())
+#define tdb_func__ std::string(std::source_location::current().function_name())
 #else
 #define tdb_func__ \
   std::string {    \
