@@ -87,7 +87,7 @@ static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
 Usage:
     ivf_hack (-h | --help)
-    ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --parts_uri URI --ids_uri URI
+    ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --parts_uri URI --ids_uri URI [--alg algo]
             [--output_uri URI] [--query_uri URI] [--groundtruth_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
             [--k NN] [--cluster NN] [--nthreads N] [--region REGION] [--nth] [--log FILE] [-d] [-v]
 
@@ -98,6 +98,7 @@ Options:
     --index_uri URI       URI with the paritioning index
     --parts_uri URI       URI with the partitioned data
     --ids_uri URI         URI with original IDs of vectors
+    --alg algo            which algorithm to use for query [default: qv_heap]
     --output_uri URI      URI to store search results
     --query_uri URI       URI storing query vectors
     --groundtruth_uri URI URI storing ground truth vectors
@@ -137,6 +138,7 @@ int main(int argc, char* argv[]) {
   auto query_uri = args["--query_uri"] ? args["--query_uri"].asString() : "";
   auto nqueries = (size_t)args["--nqueries"].asLong();
   bool nth = args["--nth"].asBool();
+  auto algorithm = args["--alg"].asString();
 
   if (is_local_array(centroids_uri) &&
       !std::filesystem::exists(centroids_uri)) {
@@ -167,8 +169,9 @@ int main(int argc, char* argv[]) {
     auto q = tdbColMajorMatrix<q_type>(query_uri, nqueries);
     debug_matrix(q, "q");
 
-    auto top_k = kmeans_query(
+    auto top_k = kmeans_query_small_q(
         part_uri, centroids, q, indices, id_uri, nprobe, k_nn, nth, nthreads);
+
 
     debug_matrix(top_k, "top_k");
 
@@ -220,6 +223,7 @@ int main(int argc, char* argv[]) {
     auto ms = global_time_of_interest;
     auto qps = ((float)nqueries) / ((float)ms / 1000.0);
     std::cout << std::setw(8) << "-|-";
+    std::cout << std::setw(8) << algorithm;
     std::cout << std::setw(8) << nqueries;
     std::cout << std::setw(8) << nprobe;
     std::cout << std::setw(8) << k_nn;
