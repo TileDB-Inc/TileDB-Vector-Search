@@ -77,8 +77,9 @@ auto qv_query_heap(
   auto top_centroids =
       detail::flat::qv_query_nth(centroids, q, nprobe, false, nthreads);
 
-  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-      size(q), fixed_min_pair_heap<float, size_t>(k_nn));
+  //  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
+  //      size(q), fixed_min_pair_heap<float, size_t>(k_nn));
+  auto min_scores = std::vector<fixed_min_heap<std::pair<float, size_t>>>(size(q), fixed_min_heap<std::pair<float, size_t>>(k_nn));
 
   life_timer __{std::string{"In memory portion of "} + tdb_func__};
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
@@ -90,7 +91,8 @@ auto qv_query_heap(
 
           for (size_t i = start; i < stop; ++i) {
             auto score = L2(q[j], shuffled_db[i]);
-            min_scores[j].insert(score, shuffled_ids[i]);
+            // min_scores[j].insert(score, shuffled_ids[i]);
+	    min_scores[j].insert({score, shuffled_ids[i]});
           }
         }
       });
