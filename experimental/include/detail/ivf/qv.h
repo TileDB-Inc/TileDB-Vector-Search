@@ -68,17 +68,17 @@ auto qv_query_heap(
   debug_matrix(shuffled_db, "shuffled_db");
   debug_matrix(shuffled_ids, "shuffled_ids");
 
-  using element = std::pair<float, uint64_t>;
-
   // get closest centroid for each query vector
   // auto top_k = qv_query(centroids, q, nprobe, nthreads);
   //  auto top_centroids = vq_query_heap(centroids, q, nprobe, nthreads);
 
-  // @todo is this the best (fastest) algorithm to use?
-  auto top_centroids = detail::flat::qv_query_nth(centroids, q, nprobe, false, nthreads);
+  // @todo is this the best (fastest) algorithm to use?  (it takes miniscule
+  // time)
+  auto top_centroids =
+      detail::flat::qv_query_nth(centroids, q, nprobe, false, nthreads);
 
-  auto min_scores = std::vector<fixed_min_heap<element>>(
-      size(q), fixed_min_heap<element>(k_nn));
+  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
+      size(q), fixed_min_pair_heap<float, size_t>(k_nn));
 
   life_timer __{std::string{"In memory portion of "} + tdb_func__};
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
@@ -90,7 +90,7 @@ auto qv_query_heap(
 
           for (size_t i = start; i < stop; ++i) {
             auto score = L2(q[j], shuffled_db[i]);
-            min_scores[j].insert(element{score, shuffled_ids[i]});
+            min_scores[j].insert(score, shuffled_ids[i]);
           }
         }
       });
@@ -106,7 +106,7 @@ auto qv_query_heap(
         min_scores[j].begin(),
         min_scores[j].end(),
         top_k[j].begin(),
-        ([](auto&& e) { return e.second; }));
+        ([](auto&& e) { return std::get<1>(e); }));
   }
 
   // @todo this is an ugly and embarrassing hack
@@ -127,9 +127,6 @@ auto kmeans_query_small_q_minparts(
     size_t k_nn,
     bool nth,
     size_t nthreads) {
-
-
-  using element = std::pair<float, uint64_t>;
 
   size_t num_queries = q.num_cols();
   // get closest centroid for each query vector

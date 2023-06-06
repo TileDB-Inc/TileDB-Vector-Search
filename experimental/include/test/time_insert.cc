@@ -62,6 +62,17 @@ void do_time_pair(
 }
 
 template <class Heap>
+void do_time_pair2(
+    const std::string& msg, Heap& heap, const std::vector<size_t>& v) {
+  life_timer _{msg};
+
+  auto size_v = v.size();
+  for (unsigned i = 0; i < size_v; ++i) {
+    heap.insert(v[i], i);
+  }
+}
+
+template <class Heap>
 void do_time_indirect(
     const std::string& msg, Heap& heap, const std::vector<size_t>& v) {
   life_timer _{msg};
@@ -91,13 +102,14 @@ int main() {
   std::mt19937 rng(rd());
 
   for (auto i : {1, 10, 50, 100}) {
-    {
+    if constexpr (false) {
       fixed_min_set_heap_1<size_t> heap1(i);
       fixed_min_set_heap_2<size_t> heap2(i);
       fixed_min_set_heap_3<size_t> heap3(i);
       // fixed_min_set_heap_3<size_t> heap4(i, std::greater<size_t>());
       fixed_min_set_set<size_t> set(i);
 
+#if 0
       using Comparator = std::function<bool(unsigned, unsigned)>;
 
       auto heap5 = fixed_min_set_heap_1<unsigned, Comparator>(
@@ -107,6 +119,18 @@ int main() {
       auto heap7 = fixed_min_set_heap_3<unsigned, Comparator>(
           i, [&](unsigned a, unsigned b) { return scores[a] < scores[b]; });
 
+std::shuffle(begin(v), end(v), rng);
+std::shuffle(begin(scores), end(scores), rng);
+do_time_indirect("indirect heap5 (1)", heap5, v);
+
+std::shuffle(begin(v), end(v), rng);
+std::shuffle(begin(scores), end(scores), rng);
+do_time_indirect("indirect heap6 (2)", heap6, v);
+
+std::shuffle(begin(v), end(v), rng);
+std::shuffle(begin(scores), end(scores), rng);
+do_time_indirect("indirect heap7 (3)", heap7, v);
+#endif
       //      do_time("heap4", heap4);
       //      do_time("set", set);
 
@@ -145,18 +169,6 @@ int main() {
       std::shuffle(begin(v), end(v), rng);
       do_time("heap3 random", heap3, v);
 
-      std::shuffle(begin(v), end(v), rng);
-      std::shuffle(begin(scores), end(scores), rng);
-      do_time_indirect("indirect heap5 (1)", heap5, v);
-
-      std::shuffle(begin(v), end(v), rng);
-      std::shuffle(begin(scores), end(scores), rng);
-      do_time_indirect("indirect heap6 (2)", heap6, v);
-
-      std::shuffle(begin(v), end(v), rng);
-      std::shuffle(begin(scores), end(scores), rng);
-      do_time_indirect("indirect heap7 (3)", heap7, v);
-
       std::sort(begin(v), end(v), std::less<>());
       do_time_nth_element("nth descending", v, i);
 
@@ -166,10 +178,22 @@ int main() {
       std::shuffle(begin(v), end(v), rng);
       do_time_nth_element("nth element random", v, i);
     }
-    if (false) {
-      fixed_min_set_heap_1<std::pair<float, size_t>> heap1(i);
-      fixed_min_set_heap_2<std::pair<float, size_t>> heap2(i);
-      fixed_min_set_heap_3<std::pair<float, size_t>> heap3(i);
+
+    fixed_min_set_heap_1<std::pair<float, size_t>> heap1(i);
+    fixed_min_set_heap_2<std::pair<float, size_t>> heap2(i);
+
+    std::shuffle(begin(v), end(v), rng);
+    do_time_pair("heap1", heap1, v);
+
+    std::shuffle(begin(v), end(v), rng);
+    do_time_pair("heap2", heap2, v);
+
+    fixed_min_set_pair_heap<float, size_t> heap12(i);
+
+    std::shuffle(begin(v), end(v), rng);
+    do_time_pair2("heap12", heap12, v);
+
+    if constexpr (false) {
       // fixed_min_set_heap_3<std::pair<float, size_t>> heap4(i,
       // std::greater<>());
       fixed_min_set_set<std::pair<float, size_t>> set(i);
@@ -180,8 +204,8 @@ int main() {
       std::shuffle(begin(v), end(v), rng);
       do_time_pair("heap2", heap2, v);
 
-      std::shuffle(begin(v), end(v), rng);
-      do_time_pair("heap3", heap3, v);
+      //      std::shuffle(begin(v), end(v), rng);
+      //      do_time_pair("heap3", heap3, v);
       //      do_time_pair("heap4", heap4);
       //      do_time_pair("set", set);
     }
