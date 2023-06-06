@@ -21,4 +21,4 @@ jobs:
       - name: Build
         run: cmake --build ./experimental/build
       - name: Run Tests
-        run: cmake --build ./experimental/build --target check
+        run: cmake --build ./experimental/build --target check-ci
