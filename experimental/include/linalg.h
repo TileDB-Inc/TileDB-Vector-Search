@@ -582,17 +582,17 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    */
   tdbMatrix(
       const std::string& uri,
-      std::vector<uint64_t>& indices,
-      const std::vector<size_t>& top_top_k,
+      std::vector<indices_type>& indices,
+      const std::vector<parts_type>& parts,
       const std::string& id_uri,
-      std::vector<uint64_t>& shuffled_ids,
+      std::vector<shuffled_ids_type>& shuffled_ids,
       size_t nthreads)
       : array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()} {
-    size_t nprobe = size(top_top_k);
+    size_t nprobe = size(parts);
     size_t num_cols = 0;
     for (size_t i = 0; i < nprobe; ++i) {
-      num_cols += indices[top_top_k[i] + 1] - indices[top_top_k[i]];
+      num_cols += indices[parts[i] + 1] - indices[parts[i]];
     }
 
     {
@@ -650,8 +650,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
        */
       size_t offset = 0;
       for (size_t j = 0; j < nprobe; ++j) {
-        size_t start = indices[top_top_k[j]];
-        size_t stop = indices[top_top_k[j] + 1];
+        size_t start = indices[parts[j]];
+        size_t stop = indices[parts[j] + 1];
         size_t len = stop - start;
         size_t num_elements = len * dimension;
 
@@ -710,8 +710,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
       size_t offset = 0;
       for (size_t j = 0; j < nprobe; ++j) {
-        size_t start = indices[top_top_k[j]];
-        size_t stop = indices[top_top_k[j] + 1];
+        size_t start = indices[parts[j]];
+        size_t stop = indices[parts[j] + 1];
         size_t len = stop - start;
         size_t num_elements = len;
 
@@ -1001,6 +1001,7 @@ void write_vector(std::vector<T>& v, const std::string& uri) {
 
 /**
  * Read the contents of a TileDB array into a std::vector.
+ * @todo change this to our own Vector class
  */
 template <class T>
 std::vector<T> read_vector(const std::string& uri) {
@@ -1053,6 +1054,7 @@ std::vector<T> read_vector(const std::string& uri) {
 
   return data_;
 }
+
 
 /**
  * Is the matrix row-oriented?
