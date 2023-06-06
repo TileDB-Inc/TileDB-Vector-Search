@@ -3,6 +3,15 @@
 #define TDB_ARRAY_TYPES_H
 
 #include <cstdint>
+
+/**
+ * In general for our similarity computations, large sets of vectors are stored
+ * using 8 bits per vector element.  Occasionally, smaller datsets will be
+ * stored as float.  Ideally, we would support either type (likely using some
+ * form of type erasure).  But for now, we just use a sledgehammer.
+ *
+ * @todo Use size_t instead of uint64_t?
+ */
 #if 1
 using db_type = uint8_t;
 using shuffled_db_type = uint8_t;
