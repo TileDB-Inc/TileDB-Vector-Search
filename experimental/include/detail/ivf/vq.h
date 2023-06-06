@@ -1,5 +1,5 @@
 /**
- * @file   unit_partitioned.cc
+ * @file   ivf/vq.h
  *
  * @section LICENSE
  *
@@ -27,35 +27,15 @@
  *
  * @section DESCRIPTION
  *
- * Test correctness of partitioned vector database.
+ *
  */
 
-#include <catch2/catch_all.hpp>
-#include <set>
-#include <vector>
-#include "linalg.h"
-#include "partitioned.h"
+#ifndef TILEDB_IVF_VQ_H
+#define TILEDB_IVF_VQ_H
 
-bool global_debug = false;
-std::string global_region = "us-east-1";
+namespace detail::ivf {
 
-TEST_CASE("partitioned: test test", "[partitioned]") {
-  REQUIRE(true);
-}
 
-TEST_CASE("partitioned: even odd", "[partitioned][ci-skip]]") {
-  std::string parts_uri{"even_odd_parts"};
-  std::string index_uri{"even_odd_index"};
-  std::string ids_uri{"even_odd_ids"};
-  std::string centroids_uri{"even_odd_centroids"};
-  std::string queries_uri{"even_odd_queries"};
+} // namespace detail::ivf
 
-  auto parts_mat = tdbColMajorMatrix<float>(parts_uri);
-  auto index = read_vector<uint32_t>(index_uri);
-  auto ids = read_vector<uint32_t>(ids_uri);
-  auto centroids_mat = tdbColMajorMatrix<float>(centroids_uri);
-  auto queries_mat = tdbColMajorMatrix<float>(queries_uri);
-
-  auto partitioned = tdbPartitionedMatrix<float>(
-      parts_uri, centroids_mat, queries_mat, index, ids, 2, 2);
-}
+#endif // TILEDB_IVF_VQ_H

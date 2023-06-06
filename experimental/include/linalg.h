@@ -55,6 +55,7 @@
 #include <tiledb/tiledb>
 #include "mdspan/mdspan.hpp"
 
+#include "array_types.h"
 #include "utils/timer.h"
 
 namespace stdx {
@@ -70,7 +71,9 @@ template <class T>
 std::vector<T> read_vector(const std::string&);
 
 template <class M>
-concept is_view = requires(M) { typename M::view_type; };
+concept is_view = requires(M) {
+  typename M::view_type;
+};
 
 /**
  * @brief A 1-D vector class that owns its storage.
@@ -395,7 +398,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param num_elts Number of vectors to read from the array.
    */
   tdbMatrix(const std::string& uri, size_t num_elts) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : tdbMatrix(uri, num_elts, 0) {
   }
 
@@ -408,7 +411,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param num_elts Number of vectors to read from the array.
    */
   tdbMatrix(const std::string& uri, size_t num_elts) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbMatrix(uri, 0, num_elts) {
   }
 
@@ -739,14 +742,12 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
  public:
   size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-  {
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
     return row_offset_;
   }
 
   size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-  {
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
     return col_offset_;
   }
 
@@ -1054,7 +1055,6 @@ std::vector<T> read_vector(const std::string& uri) {
 
   return data_;
 }
-
 
 /**
  * Is the matrix row-oriented?

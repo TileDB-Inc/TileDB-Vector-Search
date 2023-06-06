@@ -71,7 +71,7 @@ concept vector_database = requires(T t) {
   { t[0] } -> std::convertible_to<std::span<typename T::value_type>>;
   { t(0, 0) } -> std::convertible_to<typename T::value_type>;
   { t.data() } -> std::convertible_to<typename T::value_type*>;
-  { t.rank() == 2 };
+  {t.rank() == 2};
   { raveled(t) } -> std::convertible_to<std::span<typename T::value_type>>;
 };
 
