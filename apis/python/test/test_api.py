@@ -62,3 +62,37 @@ def test_flat_query(tmpdir):
 
     g_m = vs.load_as_matrix(g_uri)
     assert vspy.validate_top_k(r, g_m)
+
+def test_ivf_query(tmpdir):
+    p = str(tmpdir.mkdir("test").join("test.tdb"))
+    base = "~/work/proj/vector-search/datasets/sift-andrew/"
+
+    #db_uri = f"{base}/sift_base"
+    #groundtruth_uri = f"{base}/sift_groundtruth"
+
+    parts_uri = f"{base}/parts.tdb"
+    centroids_uri = f"{base}/centroids.tdb"
+
+    query_uri = f"{base}/sift_query"
+    index_uri = f"{base}/index.tdb"
+    ids_uri = f"{base}/ids.tdb"
+
+    query_vectors = vs.load_as_matrix(query_uri, 10)
+    index_vectors = vspy.read_vector_u64(index_uri) # TODO generic
+    centroids = vs.load_as_matrix(centroids_uri)
+
+    r = vspy.kmeans_query(
+      parts_uri,
+      centroids,
+      query_vectors,
+      index_vectors,
+      ids_uri,
+      3,
+      10,
+      True,
+      8
+    )
+
+    ra = np.array(r)
+    #print(ra)
+    # TODO: validate results TBD...

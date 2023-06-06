@@ -4,6 +4,9 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
+// TODO: for read_vector->std::vector, probably don't want this forever
+#include <pybind11/stl.h>
+
 #include "linalg.h"
 #include "ivf_index.h"
 #include "ivf_query.h"
@@ -109,6 +112,9 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   /* Vector */
   declareVector<float>(m, "_f32");
 
+  m.def("read_vector_u32", &read_vector<uint32_t>, "Read a vector from TileDB");
+  m.def("read_vector_u64", &read_vector<uint64_t>, "Read a vector from TileDB");
+
   /* === Matrix === */
 
   // template specializations
@@ -119,6 +125,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declareColMajorMatrix<double>(m, "_f64");
   declareColMajorMatrix<int32_t>(m, "_i32");
   declareColMajorMatrix<int64_t>(m, "_i64");
+  declareColMajorMatrix<uint64_t>(m, "_u64");
   declareColMajorMatrix<size_t>(m, "_szt");
 
   declareColMajorMatrixSubclass<tdbColMajorMatrix<uint8_t>>(
@@ -131,6 +138,9 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       m, "tdbColMajorMatrix", "_i32");
   declareColMajorMatrixSubclass<tdbColMajorMatrix<int64_t>>(
       m, "tdbColMajorMatrix", "_i64");
+  declareColMajorMatrixSubclass<tdbColMajorMatrix<uint64_t>>(
+      m, "tdbColMajorMatrix", "_u64");
+
 
 
 
@@ -177,18 +187,19 @@ PYBIND11_MODULE(_tiledbvspy, m) {
          size_t nprobe,
          size_t k_nn,
          bool nth,
-         size_t nthreads) {
+         size_t nthreads) -> ColMajorMatrix<size_t> {
         auto r = detail::ivf::qv_query_heap_infinite_ram(
             ctx,
             part_uri,
             centroids,
             query_vectors,
-            indices,
+            index_vector,
             id_uri,
             nprobe,
             k_nn,
             nth,
             nthreads);
-         });
+        return r;
+        });
 
 }

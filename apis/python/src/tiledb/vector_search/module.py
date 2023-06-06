@@ -4,7 +4,7 @@ from tiledb.vector_search import _tiledbvspy as vspy
 
 
 def load_as_matrix(path, nqueries=0, config={}):
-    ctx = vspy.Ctx({})
+    ctx = vspy.Ctx(config)
 
     a = tiledb.ArraySchema.load(path)
     dtype = a.attr(0).dtype
@@ -40,5 +40,13 @@ def query_vq(db: np.ndarray, *args):
         return vspy.query_vq_f32(db, *args)
     elif db.dtype == np.uint8:
         return vspy.query_vq_u8(db, *args)
+    else:
+        raise TypeError("Unknown type!")
+
+def query_kmeans(db: np.ndarray, *args):
+    if db.dtype == np.float32:
+        return vspy.kmeans_query_f32(db, *args)
+    elif db.dtype == np.uint8:
+        raise NotImplementedError("kmeans_query[u8] not implemented")
     else:
         raise TypeError("Unknown type!")
