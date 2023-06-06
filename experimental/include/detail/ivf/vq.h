@@ -35,6 +35,28 @@
 
 namespace detail::ivf {
 
+template <class DB, class Q>
+auto vq_query_nth(
+    const std::string& part_uri,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    const std::string& id_uri,
+    size_t nprobe,
+    size_t k_nn,
+    bool nth,
+    size_t nthreads) {
+
+    // Read the shuffled database and ids
+
+
+
+    // for each partition (or set of partitions or set of vectors from partitions)
+        // for each query vector in the partition
+            // query the partition
+}
+
+
 
 } // namespace detail::ivf
 
