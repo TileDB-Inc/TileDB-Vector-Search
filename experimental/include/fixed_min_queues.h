@@ -120,13 +120,13 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
       Base::emplace_back(x, y);
       // std::push_heap(begin(*this), end(*this), std::less<T>());
       if (Base::size() == max_size) {
-        std::make_heap(begin(*this), end(*this));
+        std::make_heap(begin(*this), end(*this), std::less<std::tuple<T, U>>{});
       }
     } else if (x < std::get<0>(this->front())) {
-      std::pop_heap(begin(*this), end(*this));
+      std::pop_heap(begin(*this), end(*this), std::less<std::tuple<T, U>>{});
       this->pop_back();
       this->emplace_back(x, y);
-      std::push_heap(begin(*this), end(*this));
+      std::push_heap(begin(*this), end(*this), std::less<std::tuple<T, U>>{});
     }
   }
 };
