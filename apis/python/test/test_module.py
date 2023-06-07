@@ -11,7 +11,8 @@ def test_tdbMatrix(tmpdir):
 
     create_array(p, data)
 
-    m = tiledbvspy.tdbColMajorMatrix_f32(p, 0)
+    ctx = vspy.Ctx({})
+    m = vspy.tdbColMajorMatrix_f32(ctx, p, 0)
     m_array = np.array(m)
     assert m_array.shape == data.shape
     assert np.array_equal(m_array, data)
@@ -26,5 +27,5 @@ def test_tdbMatrix(tmpdir):
 def test_context(tmpdir):
     p = str(tmpdir.mkdir("test").join("test.tdb"))
 
-    ctx = vspy.Ctx({})
+    ctx = vspy.Ctx()
     ctx = vspy.Ctx({"vfs.s3.region": "us-east-1"})
