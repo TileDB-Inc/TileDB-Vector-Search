@@ -665,7 +665,6 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       /**
        * Read in the partitions
        */
-
       tiledb::Subarray subarray(ctx_, array_);
 
       // Dimension 0 goes from 0 to 127
@@ -746,16 +745,32 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
       auto attr_num{ids_schema_.attribute_num()};
       auto attr = ids_schema_.attribute(attr_idx);
-
       std::string attr_name = attr.name();
 
-      auto domain_{ids_schema_.domain()};
-      auto array_rows_{domain_.dimension(0)};
+      tiledb::Subarray subarray(ctx_, ids_array_);
 
-      auto total_vec_rows_{
-          (array_rows_.template domain<row_domain_type>().second -
-           array_rows_.template domain<row_domain_type>().first + 1)};
+      for (size_t j = 0; j < num_parts; ++j) {
+        size_t start = indices[parts[j]];
+        size_t stop = indices[parts[j] + 1];
+        size_t len = stop - start;
+        size_t num_elements = len;
+        subarray.add_range(0, (int)start, (int)stop - 1);
+      }
+      tiledb::Query query(ctx_, ids_array_);
 
+      auto ptr = part_ids.data();
+      query.set_subarray(subarray)
+          .set_data_buffer(attr_name, ptr, num_cols);
+      query.submit();
+
+      // assert(tiledb::Query::Status::COMPLETE == query.query_status());
+      if (tiledb::Query::Status::COMPLETE != query.query_status()) {
+        throw std::runtime_error("Query status is not complete -- fix me");
+      }
+
+
+
+#if 0
       size_t offset = 0;
       for (size_t j = 0; j < num_parts; ++j) {
         size_t start = indices[parts[j]];
@@ -780,6 +795,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         }
         offset += len;
       }
+#endif
       ids_array_.close();
     }
     shuffled_ids = std::move(part_ids);
