@@ -166,7 +166,9 @@ auto qv_query_heap_finite_ram(
     }
   }
 
-  // debug_slice(top_centroids, "top_centroids", std::min<size_t>(16, top_centroids.num_rows()), std::min<size_t>(16, top_centroids.num_cols()));
+  // debug_slice(top_centroids, "top_centroids",
+  // std::min<size_t>(16, top_centroids.num_rows()),
+  // std::min<size_t>(16, top_centroids.num_cols()));
 
   auto parts = std::vector<parts_type>(size(active_centroids));
   std::copy(begin(active_centroids), end(active_centroids), begin(parts));
@@ -210,28 +212,10 @@ auto qv_query_heap_finite_ram(
       auto j = i->second;
       for (size_t k = start; k < stop; ++k) {
         auto score = L2(q[j], shuffled_db[k]);
-        auto tmp = shuffled_ids[k];
         min_scores[j].insert(score, shuffled_ids[k]);
       }
     }
   }
-
-#if 0
-  life_timer __{std::string{"In memory portion of "} + tdb_func__};
-  auto par = stdx::execution::indexed_parallel_policy{nthreads};
-  stdx::range_for_each(
-      std::move(par), q, [&, nprobe](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
-        for (size_t p = 0; p < nprobe; ++p) {
-          size_t start = indices[top_centroids(p, j)];
-          size_t stop = indices[top_centroids(p, j) + 1];
-
-          for (size_t i = start; i < stop; ++i) {
-            auto score = L2(q[j], shuffled_db[i]);
-            min_scores[j].insert(score, shuffled_ids[i]);
-          }
-        }
-      });
-#endif
 
   ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
 
