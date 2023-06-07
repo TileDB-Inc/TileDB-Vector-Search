@@ -1,5 +1,5 @@
 import tiledb
-import tiledbvspy
+import tiledbvspy as vspy
 
 import numpy as np
 
@@ -22,3 +22,9 @@ def test_tdbMatrix(tmpdir):
     data[1,2] = v
     assert np.array_equal(m_array2, data)
     assert m[1,2] == v
+
+def test_context(tmpdir):
+    p = str(tmpdir.mkdir("test").join("test.tdb"))
+
+    ctx = vspy.Ctx({})
+    ctx = vspy.Ctx({"vfs.s3.region": "us-east-1"})
