@@ -143,13 +143,14 @@ int main(int argc, char* argv[]) {
   auto algorithm = args["--alg"].asString();
   bool finite = args["--finite"].asBool();
 
+  tiledb::Context ctx;
   if (is_local_array(centroids_uri) &&
       !std::filesystem::exists(centroids_uri)) {
     std::cerr << "Error: centroids URI does not exist: "
               << args["--centroids_uri"] << std::endl;
     return 1;
   }
-  auto centroids = tdbColMajorMatrix<centroids_type>(centroids_uri);
+  auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
   debug_matrix(centroids, "centroids");
 
   float recall{0.0f};
@@ -160,16 +161,16 @@ int main(int argc, char* argv[]) {
   {
     life_timer _("query_time");
 
-    // @todo Encapsulate these arrays in a class
-    // auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
-    // auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
+    // auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(ctx, part_uri);
+    // auto indices = tdbMatrix<size_t, Kokkos::layout_left>(ctx, index_uri);
+    auto indices = read_vector<indices_type>(ctx, index_uri);
+    // auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
+
     // debug_matrix(shuffled_db, "shuffled_db");
+    debug_matrix(indices, "indices");
     // debug_matrix(shuffled_ids, "shuffled_ids");
 
-    auto indices = read_vector<indices_type>(index_uri);
-    debug_matrix(indices, "indices");
-
-    auto q = tdbColMajorMatrix<q_type>(query_uri, nqueries);
+    auto q = tdbColMajorMatrix<q_type>(ctx, query_uri, nqueries);
     debug_matrix(q, "q");
 
     auto top_k = [&]() {
@@ -201,11 +202,16 @@ int main(int argc, char* argv[]) {
 
     debug_matrix(top_k, "top_k");
 
+    // Once this is a function, simply return kmeans_ids
+    // For now, print the results to std::cout
+    // @todo also get scores
+    // @todo add an output_uri argument
+
     if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
 
       auto groundtruth =
-          tdbColMajorMatrix<groundtruth_type>(groundtruth_uri, nqueries);
+          tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
 
       if (global_debug) {
         std::cout << std::endl;
@@ -257,7 +263,7 @@ int main(int argc, char* argv[]) {
     std::cout << std::fixed << std::setprecision(2);
     std::cout << std::setw(12) << ms;
     std::cout << std::setw(12) << qps;
-    std::cout << std::setw(8) << recall;  
+    std::cout << std::setw(8) << recall;
     std::cout << std::endl;
   }
 

@@ -47,27 +47,24 @@ using FeatureVectorRange = ColMajorMatrix<T>;
 
 // @todo operator[] should be part of FeatureVectorRange rather than Matrix
 template <class T>
-using tdbFeatureVectorRange = tdbColMajorMatrix<T>;
+using tdbFeatureVectorRange = tdbColMajorMatrix<T>
 
 template <typename T>
 class FeatureVectorRangeReader {
  public:
-  tiledb::Array open(const std::string& uri) {
-    tiledb::Context ctx;
-    tiledb::Array array(ctx, uri, TILEDB_READ);
-    return array;
-  }
-
   FeatureVector<T> read(
-      tiledb::Array& array,
+      tiledb::Context& ctx,
+      const std::string& uri,
       const std::string& attr_name,
       const std::vector<uint64_t>& start,
       const std::vector<uint64_t>& end) {
-    tiledb::Context ctx;
-    tiledb::Query query(ctx, array, TILEDB_READ);
-    query.set_subarray(start, end);
+    tiledb::Array array(ctx, uri, TILEDB_READ);
+    tiledb::Query query(ctx, array);
+    tiledb::Subarray subarray(ctx, array);
+    subarray.set_subarray(start, end);
+    query.set_subarray(subarray);
     query.set_layout(TILEDB_ROW_MAJOR);
-    query.set_buffer(attr_name, buffer);
+    query.set_data_buffer(attr_name, buffer);
     query.submit();
     return FeatureVector<T>(buffer, buffer_size);
   }
