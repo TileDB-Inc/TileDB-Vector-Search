@@ -74,6 +74,7 @@
  */
 
 auto kmeans_query(
+    const tiledb::Context& ctx,
     const std::string& part_uri,
     auto&& centroids,
     auto&& q,
@@ -85,6 +86,7 @@ auto kmeans_query(
     size_t nthreads) {
 #if 1
   return kmeans_query_small_q(
+      ctx,
       part_uri,
       centroids,
       q,
@@ -198,6 +200,7 @@ auto kmeans_query_large_q(
  * @brief Query a (small) set of query vectors against a vector database.
  */
 auto kmeans_query_small_q(
+    const tiledb::Context& ctx,
     const std::string& part_uri,
     auto&& centroids,
     auto&& q,
@@ -213,8 +216,8 @@ auto kmeans_query_small_q(
   //  auto top_centroids = vq_query_heap(centroids, q, nprobe, nthreads);
   auto top_centroids = qv_query_nth(centroids, q, nprobe, false, nthreads);
 
-  auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
-  //auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
+  auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(ctx, part_uri);
+  // auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
 
   debug_matrix(shuffled_db, "shuffled_db");
   //debug_matrix(shuffled_ids, "shuffled_ids");

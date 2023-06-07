@@ -1,11 +1,15 @@
+#include <tiledb/tiledb>
+
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/stl.h>
 
 #include "linalg.h"
 #include "ivf_index.h"
 #include "ivf_query.h"
 
 namespace py = pybind11;
+using Ctx = tiledb::Context;
 
 bool global_debug = true;
 //std::string global_region = "us-east-1";
@@ -83,12 +87,23 @@ static void declareColMajorMatrixSubclass(py::module& mod,
 
   // TODO auto-namify
   PyTMatrix cls(mod, (name + suffix).c_str(), py::buffer_protocol());
-  cls.def(py::init<std::string, size_t>());
+  cls.def(py::init<Ctx, std::string, size_t>());
 }
 
 }
 
 PYBIND11_MODULE(tiledbvspy, m) {
+
+  py::class_<tiledb::Context> (m, "Ctx", py::module_local())
+    .def(py::init([](py::dict config) {
+      tiledb::Config cfg;
+      for (auto item : config) {
+          cfg.set(item.first.cast<std::string>(), item.second.cast<std::string>());
+      }
+      return tiledb::Context(cfg);
+    }
+  ));
+
   /* Vector */
   declareVector<float>(m, "_f32");
 
@@ -138,7 +153,8 @@ PYBIND11_MODULE(tiledbvspy, m) {
       });
 
   m.def("kmeans_query",
-      [](const std::string& part_uri,
+      [](Ctx ctx,
+         const std::string& part_uri,
          const ColMajorMatrix<uint8_t>& centroids,
          const ColMajorMatrix<uint8_t>& query_vectors,
          const std::vector<uint64_t>& indices,
@@ -148,6 +164,7 @@ PYBIND11_MODULE(tiledbvspy, m) {
          bool nth,
          size_t nthreads) {
         auto r = kmeans_query(
+            ctx,
             part_uri,
             centroids,
             query_vectors,

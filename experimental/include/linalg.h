@@ -364,12 +364,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
  private:
-  // @todo: Make this configurable
-  std::map<std::string, std::string> init_{
-      {"vfs.s3.region", global_region.c_str()}};
-  tiledb::Config config_{init_};
-  tiledb::Context ctx_{config_};
-
+  std::reference_wrapper<const tiledb::Context> ctx_;
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
   std::unique_ptr<T[]> backing_data_;
@@ -391,36 +386,39 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * In this case, the `Matrix` is row-major, so the number of vectors is
    * the number of rows.
    *
+   * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
    * @param num_elts Number of vectors to read from the array.
    */
-  tdbMatrix(const std::string& uri, size_t num_elts) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-      : tdbMatrix(uri, num_elts, 0) {
-  }
+  tdbMatrix(const tiledb::Context &ctx, const std::string &uri,
+            size_t num_elts) noexcept
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+      : tdbMatrix(ctx, uri, num_elts, 0) {}
 
   /**
    * @brief Construct a new tdbMatrix object, limited to `num_elts` vectors.
    * In this case, the `Matrix` is column-major, so the number of vectors is
    * the number of columns.
    *
+   * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
    * @param num_elts Number of vectors to read from the array.
    */
-  tdbMatrix(const std::string& uri, size_t num_elts) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : tdbMatrix(uri, 0, num_elts) {
-  }
+  tdbMatrix(const tiledb::Context &ctx, const std::string &uri,
+            size_t num_elts) noexcept
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : tdbMatrix(ctx, uri, 0, num_elts) {}
 
   /**
    * @brief Construct a new tdbMatrix object, reading all of the vectors in
    * the array.
    *
+   * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
    */
-  explicit tdbMatrix(const std::string& uri) noexcept
+  explicit tdbMatrix(const tiledb::Context& ctx, const std::string &uri) noexcept
       // requires (std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : tdbMatrix(uri, 0, 0) {
+      : tdbMatrix(ctx, uri, 0, 0) {
     if (global_debug) {
       std::cerr << "# tdbMatrix constructor: " << uri << std::endl;
     }
@@ -430,31 +428,27 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @brief Construct a new tdbMatrix object, reading a subset of the vectors
    * and a subset of the elements in each vector.
    *
+   * @param ctx
    * @param uri
    * @param num_rows
    * @param num_cols
    */
-  tdbMatrix(const std::string& uri, size_t num_rows, size_t num_cols) noexcept
-      : tdbMatrix(uri, 0, num_rows, 0, num_cols) {
-  }
+  tdbMatrix(const tiledb::Context &ctx, const std::string &uri, size_t num_rows,
+            size_t num_cols) noexcept
+      : tdbMatrix(ctx, uri, 0, num_rows, 0, num_cols) {}
 
   /**
    * @brief "Slice" interface.
+   * @param ctx The TileDB context to use.
    * @param uri
    * @param rows pair of row indices indicating begin and end of view
    * @param cols pair of column indices indicating begin and end of view
    */
-  tdbMatrix(
-      const std::string& uri,
-      std::tuple<size_t, size_t> rows,
-      std::tuple<size_t, size_t> cols) noexcept
-      : tdbMatrix(
-            uri,
-            std::get<0>(rows),
-            std::get<1>(rows),
-            std::get<0>(cols),
-            std::get<1>(cols)) {
-  }
+  tdbMatrix(const tiledb::Context &ctx, const std::string &uri,
+            std::tuple<size_t, size_t> rows,
+            std::tuple<size_t, size_t> cols) noexcept
+      : tdbMatrix(uri, std::get<0>(rows), std::get<1>(rows), std::get<0>(cols),
+                  std::get<1>(cols)) {}
 
  private:
   using row_domain_type = int32_t;
@@ -472,14 +466,10 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    *
    * @todo Make this compatible with various schemas we are using
    */
-  tdbMatrix(
-      const std::string& uri,
-      size_t row_begin,
-      size_t row_end,
-      size_t col_begin,
-      size_t col_end)  // noexcept
-      : array_{ctx_, uri, TILEDB_READ}
-      , schema_{array_.schema()} {
+  tdbMatrix(const tiledb::Context &ctx, const std::string &uri,
+            size_t row_begin, size_t row_end, size_t col_begin,
+            size_t col_end) // noexcept
+      : ctx_{ctx}, array_{ctx, uri, TILEDB_READ}, schema_{array_.schema()} {
     life_timer _{"read matrix " + uri};
 
     auto cell_order = schema_.cell_order();
@@ -891,18 +881,12 @@ using tdbColMajorMatrix = tdbMatrix<T, stdx::layout_left, I>;
  * Write the contents of a Matrix to a TileDB array.
  */
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
+void write_matrix(const tiledb::Context& ctx, const Matrix<T, LayoutPolicy, I> &A, const std::string &uri) {
   if (global_debug) {
     std::cerr << "# Writing Matrix: " << uri << std::endl;
   }
 
   life_timer _{"write matrix " + uri};
-
-  // Create context
-  std::map<std::string, std::string> init_{
-      {"vfs.s3.region", global_region.c_str()}};
-  tiledb::Config config_{init_};
-  tiledb::Context ctx{config_};
 
   // @todo: make this a parameter
   size_t num_parts = 10;
@@ -955,18 +939,12 @@ void write_matrix(const Matrix<T, LayoutPolicy, I>& A, const std::string& uri) {
  * @todo change the naming of this function to something more appropriate
  */
 template <class T>
-void write_vector(std::vector<T>& v, const std::string& uri) {
+void write_vector(const tiledb::Context& ctx, std::vector<T> &v, const std::string &uri) {
   if (global_debug) {
     std::cerr << "# Writing std::vector: " << uri << std::endl;
   }
 
   life_timer _{"write vector " + uri};
-
-  // Create context
-  std::map<std::string, std::string> init_{
-      {"vfs.s3.region", global_region.c_str()}};
-  tiledb::Config config_{init_};
-  tiledb::Context ctx{config_};
 
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
@@ -1003,17 +981,12 @@ void write_vector(std::vector<T>& v, const std::string& uri) {
  * Read the contents of a TileDB array into a std::vector.
  */
 template <class T>
-std::vector<T> read_vector(const std::string& uri) {
+std::vector<T> read_vector(const tiledb::Context &ctx, const std::string &uri) {
   if (global_debug) {
     std::cerr << "# Reading std::vector: " << uri << std::endl;
   }
 
-  auto init_ = std::map<std::string, std::string>{
-      {"vfs.s3.region", global_region.c_str()}};
-  auto config_ = tiledb::Config{init_};
-  auto ctx_ = tiledb::Context{config_};
-
-  auto array_ = tiledb::Array{ctx_, uri, TILEDB_READ};
+  auto array_ = tiledb::Array{ctx, uri, TILEDB_READ};
   auto schema_ = array_.schema();
 
   life_timer _{"read vector " + uri};
@@ -1037,13 +1010,13 @@ std::vector<T> read_vector(const std::string& uri) {
 
   // Create a subarray that reads the array up to the specified subset.
   std::vector<int32_t> subarray_vals = {0, vec_rows_ - 1};
-  tiledb::Subarray subarray(ctx_, array_);
+  tiledb::Subarray subarray(ctx, array_);
   subarray.set_subarray(subarray_vals);
 
   // @todo: use something non-initializing
   std::vector<T> data_(vec_rows_);
 
-  tiledb::Query query(ctx_, array_);
+  tiledb::Query query(ctx, array_);
   query.set_subarray(subarray).set_data_buffer(
       attr_name, data_.data(), vec_rows_);
 

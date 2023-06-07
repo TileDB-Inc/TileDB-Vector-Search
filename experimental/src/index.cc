@@ -94,8 +94,10 @@ int main(int argc, char* argv[]) {
   auto id_uri = args["--ids_uri"].asString();
   bool nth = args["--nth"].asBool();
 
-  auto db = tdbColMajorMatrix<db_type>(db_uri);
-  auto centroids = tdbColMajorMatrix<centroids_type>(centroids_uri);
+  tiledb::Context ctx;
+
+  auto db = tdbColMajorMatrix<db_type>(ctx, db_uri);
+  auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
 
   auto parts = qv_partition(
       centroids,
@@ -182,7 +184,7 @@ int main(int argc, char* argv[]) {
         // Too dangerous to have this ability
         // std::filesystem::remove_all(part_uri);
       }
-      write_matrix(shuffled_db, part_uri);
+      write_matrix(ctx, shuffled_db, part_uri);
     }
     if (index_uri != "") {
       if (is_local_array(index_uri) && std::filesystem::exists(index_uri)) {
@@ -196,7 +198,7 @@ int main(int argc, char* argv[]) {
                   << std::endl;
         return 1;
       }
-      write_vector(indices, index_uri);
+      write_vector(ctx, indices, index_uri);
     }
     if (id_uri != "") {
       if (is_local_array(id_uri) && std::filesystem::exists(id_uri)) {
@@ -210,7 +212,7 @@ int main(int argc, char* argv[]) {
         return 1;
         // std::filesystem::remove(id_uri);
       }
-      write_vector(shuffled_ids, id_uri);
+      write_vector(ctx, shuffled_ids, id_uri);
     }
   }
 }
