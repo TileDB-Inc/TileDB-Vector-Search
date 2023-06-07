@@ -600,6 +600,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       : array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()} {
 
+    // FIXME!!
     size_t num_parts = size(parts);
     size_t num_cols = 0;
 
@@ -645,16 +646,18 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         throw std::runtime_error("Cell order and matrix order must match");
       }
 
-      if (indices[size(indices) - 1] == 0) {
+      size_t dimension = num_array_rows_;
+
+      if (indices[size(indices) - 1] == indices[size(indices) - 2]) {
+        if (indices[size(indices) - 1] > num_array_cols_) {
+          throw std::runtime_error("Indices are not valid");
+        }
         indices[size(indices) - 1] = num_array_cols_;
       }
-
-      size_t dimension = num_array_rows_;
 
       for (size_t i = 0; i < num_parts; ++i) {
         num_cols += indices[parts[i] + 1] - indices[parts[i]];
       }
-
 
 #ifndef __APPLE__
       auto data_ = std::make_unique_for_overwrite<T[]>(dimension * num_cols);
@@ -674,6 +677,9 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         size_t start = indices[parts[j]];
         size_t stop = indices[parts[j] + 1];
         size_t len = stop - start;
+        if (len == 0) {
+          continue;
+        }
         size_t num_elements = len * dimension;
         subarray.add_range(1, (int)start, (int)stop - 1);
       }
@@ -753,6 +759,9 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         size_t start = indices[parts[j]];
         size_t stop = indices[parts[j] + 1];
         size_t len = stop - start;
+        if (len == 0) {
+          continue;
+        }
         size_t num_elements = len;
         subarray.add_range(0, (int)start, (int)stop - 1);
       }

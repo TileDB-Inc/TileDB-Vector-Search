@@ -137,11 +137,6 @@ auto qv_query_heap_finite_ram(
     size_t nthreads) {
   size_t num_queries = size(q);
 
-  if (size(indices) == centroids.num_cols()) {
-    indices.resize(size(indices) + 1);
-    indices[size(indices) - 1] = 0;
-  }
-  assert(size(indices) == centroids.num_cols() + 1);
 
   // get closest centroid for each query vector
   auto top_centroids =
@@ -170,27 +165,34 @@ auto qv_query_heap_finite_ram(
   // std::min<size_t>(16, top_centroids.num_rows()),
   // std::min<size_t>(16, top_centroids.num_cols()));
 
-  auto parts = std::vector<parts_type>(size(active_centroids));
-  std::copy(begin(active_centroids), end(active_centroids), begin(parts));
+  auto active_partitions = std::vector<parts_type>(begin(active_centroids), end(active_centroids));
+  // std::copy(begin(active_centroids), end(active_centroids), begin(active_partitions));
 
   /*
    * Read the necessary partitions and ids
    */
+  if (size(indices) != centroids.num_cols() + 1) {
+    std::cout << "#\n# indices " << size(indices) << " != " << centroids.num_cols() + 1 << std::endl;
+    std::cout << "# some minimal inaccuracy until fixed\n#" << std::endl;
+    indices.resize(centroids.num_cols() + 1);
+    indices[size(indices) - 1] = indices[size(indices) - 2];
+  }
+  std::vector<parts_type> new_indices(size(active_partitions) + 1);
+  new_indices[0] = 0;
+  for (size_t i = 0; i < size(active_partitions); ++i) {
+    new_indices[i + 1] = new_indices[i] + indices[active_partitions[i] + 1] -
+                         indices[active_partitions[i]];
+  }
+
   std::vector<shuffled_ids_type> shuffled_ids;
+
   auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(
-      part_uri, indices, parts, id_uri, shuffled_ids, nthreads);
+      part_uri, indices, active_partitions, id_uri, shuffled_ids, nthreads);
 
   assert(shuffled_db.num_cols() == shuffled_ids.size());
 
   debug_matrix(shuffled_db, "shuffled_db");
   debug_matrix(shuffled_ids, "shuffled_ids");
-
-  std::vector<parts_type> new_indices(size(parts) + 1);
-  new_indices[0] = 0;
-  for (size_t i = 0; i < size(parts); ++i) {
-    new_indices[i + 1] =
-        new_indices[i] + indices[parts[i] + 1] - indices[parts[i]];
-  }
 
   life_timer __{std::string{"In memory portion of "} + tdb_func__};
 
@@ -202,14 +204,14 @@ auto qv_query_heap_finite_ram(
       std::vector<fixed_min_pair_heap<float, size_t>>(
           size(q), fixed_min_pair_heap<float, size_t>(k_nn)));
 
-  size_t block_size = (size(parts) + nthreads - 1) / nthreads;
+  size_t block_size = (size(active_partitions) + nthreads - 1) / nthreads;
 
   std::vector<std::future<void>> futs;
   futs.reserve(nthreads);
 
   for (size_t n = 0; n < nthreads; ++n) {
-    auto start = std::min<size_t>(n * block_size, size(parts));
-    auto stop = std::min<size_t>((n + 1) * block_size, size(parts));
+    auto start = std::min<size_t>(n * block_size, size(active_partitions));
+    auto stop = std::min<size_t>((n + 1) * block_size, size(active_partitions));
 
     if (start != stop) {
       futs.emplace_back(std::async(std::launch::async, [&, n, start, stop]() {
@@ -225,7 +227,7 @@ auto qv_query_heap_finite_ram(
           /*
            * Get the queries associated with this partition.
            */
-          auto range = centroid_query.equal_range(parts[partno]);
+          auto range = centroid_query.equal_range(active_partitions[partno]);
           for (auto i = range.first; i != range.second; ++i) {
             auto j = i->second;
             auto q_vec = q[j];
