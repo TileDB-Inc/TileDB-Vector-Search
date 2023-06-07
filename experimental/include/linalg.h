@@ -665,6 +665,36 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       /**
        * Read in the partitions
        */
+
+      tiledb::Subarray subarray(ctx_, array_);
+
+      // Dimension 0 goes from 0 to 127
+      subarray.add_range(0, 0, (int)dimension - 1);
+
+      for (size_t j = 0; j < num_parts; ++j) {
+        size_t start = indices[parts[j]];
+        size_t stop = indices[parts[j] + 1];
+        size_t len = stop - start;
+        size_t num_elements = len * dimension;
+        subarray.add_range(1, (int)start, (int)stop - 1);
+      }
+      auto layout_order = cell_order;
+
+      tiledb::Query query(ctx_, array_);
+
+      auto ptr = data_.get();
+      query.set_subarray(subarray)
+          .set_layout(layout_order)
+          .set_data_buffer(attr_name, ptr, num_cols * dimension);
+      query.submit();
+
+      // assert(tiledb::Query::Status::COMPLETE == query.query_status());
+      if (tiledb::Query::Status::COMPLETE != query.query_status()) {
+        throw std::runtime_error("Query status is not complete -- fix me");
+      }
+
+#if 0
+
       size_t offset = 0;
       for (size_t j = 0; j < num_parts; ++j) {
         size_t start = indices[parts[j]];
@@ -698,7 +728,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         }
         offset += num_elements;
       }
-
+#endif
       Base::operator=(Base{std::move(data_), dimension, num_cols});
     }
 
