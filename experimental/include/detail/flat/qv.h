@@ -134,12 +134,15 @@ auto qv_query_heap(const DB& db, const Q& q, size_t k, unsigned nthreads) {
                 auto score = L2(q[j], db[i]);
                 min_scores.insert(element{score, i});
               }
-              std::sort(min_scores.begin(), min_scores.end());
+
+              // @todo use get_top_k_from_heap
+              std::sort_heap(min_scores.begin(), min_scores.end());
               std::transform(
                   min_scores.begin(),
                   min_scores.end(),
                   top_k[j].begin(),
                   ([](auto&& e) { return e.second; }));
+
             }
           }));
     }

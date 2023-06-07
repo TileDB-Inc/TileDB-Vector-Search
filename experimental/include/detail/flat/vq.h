@@ -110,6 +110,7 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
   using element = std::pair<float, int>;
 
   // @todo Need to get the total number of queries, not just the first block
+  // @todo Use Matrix here rather than vector of vectors
   std::vector<std::vector<fixed_min_heap<element>>> scores(
       nthreads,
       std::vector<fixed_min_heap<element>>(
@@ -180,6 +181,8 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
     futs.emplace_back(
         std::async(std::launch::async, [&scores, q_start, q_stop, &top_k]() {
           // For each query
+
+          // @todo get_top_k_from_heap
           for (int j = q_start; j < q_stop; ++j) {
             sort_heap(scores[0][j].begin(), scores[0][j].end());
             std::transform(
@@ -248,6 +251,7 @@ auto vq_partition(const DB& db, const Q& q, int k, bool nth, int nthreads) {
       s.insert({scores[index[i]], index[i]});
     }
 
+    // @todo get_top_k_from_heap
     std::sort_heap(begin(s), end(s));
     std::transform(
         s.begin(), s.end(), top_k[j].begin(), ([](auto&& e) { return e.second; }));

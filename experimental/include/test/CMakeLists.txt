@@ -67,6 +67,8 @@ target_link_libraries(time_queries PRIVATE flat_blas)
 
 kmeans_add_test(unit_algorithm)
 
+kmeans_add_test(unit_config)
+
 kmeans_add_test(unit_concepts)
 
 kmeans_add_test(unit_defs)

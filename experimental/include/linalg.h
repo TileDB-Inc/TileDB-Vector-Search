@@ -308,11 +308,16 @@ template <class T, class I = size_t>
 using ColMajorMatrix = Matrix<T, stdx::layout_left, I>;
 
 /**
- * Convenience class for turning 2D matrices into 1D vectors.
+ * Convenience function for turning 2D matrices into 1D vectors.
  */
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-auto raveled(Matrix<T, LayoutPolicy, I>& m) {
+auto raveled(const Matrix<T, LayoutPolicy, I>& m) {
   return m.raveled();
+}
+
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+auto span(const Matrix<T, LayoutPolicy, I>& m) {
+  return m.span();
 }
 
 template <class LayoutPolicy>
@@ -582,6 +587,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   /**
    * Gather pieces of a partitioned array into a single array (along with the
    * vector ids into a corresponding 1D array)
+   *
+   * @todo Column major is kind of baked in here.  Need to generalize.
    */
   tdbMatrix(
       const std::string& uri,
@@ -592,11 +599,9 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t nthreads)
       : array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()} {
-    size_t nprobe = size(parts);
+
+    size_t num_parts = size(parts);
     size_t num_cols = 0;
-    for (size_t i = 0; i < nprobe; ++i) {
-      num_cols += indices[parts[i] + 1] - indices[parts[i]];
-    }
 
     {
       life_timer _{"read partitioned matrix " + uri};
@@ -640,7 +645,16 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         throw std::runtime_error("Cell order and matrix order must match");
       }
 
+      if (indices[size(indices) - 1] == 0) {
+        indices[size(indices) - 1] = num_array_cols_;
+      }
+
       size_t dimension = num_array_rows_;
+
+      for (size_t i = 0; i < num_parts; ++i) {
+        num_cols += indices[parts[i] + 1] - indices[parts[i]];
+      }
+
 
 #ifndef __APPLE__
       auto data_ = std::make_unique_for_overwrite<T[]>(dimension * num_cols);
@@ -652,13 +666,14 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
        * Read in the partitions
        */
       size_t offset = 0;
-      for (size_t j = 0; j < nprobe; ++j) {
+      for (size_t j = 0; j < num_parts; ++j) {
         size_t start = indices[parts[j]];
         size_t stop = indices[parts[j] + 1];
         size_t len = stop - start;
         size_t num_elements = len * dimension;
 
         // Create a subarray that reads the array up to the specified subset.
+        // @todo Multiple queries can be submitted here.
         std::vector<int32_t> subarray_vals = {
             (int32_t)0,
             (int32_t)dimension - 1,
@@ -681,7 +696,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         if (tiledb::Query::Status::COMPLETE != query.query_status()) {
           throw std::runtime_error("Query status is not complete -- fix me");
         }
-        offset += len;
+        offset += num_elements;
       }
 
       Base::operator=(Base{std::move(data_), dimension, num_cols});
@@ -712,7 +727,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
            array_rows_.template domain<row_domain_type>().first + 1)};
 
       size_t offset = 0;
-      for (size_t j = 0; j < nprobe; ++j) {
+      for (size_t j = 0; j < num_parts; ++j) {
         size_t start = indices[parts[j]];
         size_t stop = indices[parts[j] + 1];
         size_t len = stop - start;
