@@ -5,8 +5,7 @@ description = "TileDB Vector Search Python client"
 readme = "./README.md"
 authors = [
 ]
-dynamic = ["version"]
-requires-python = ">=3.7"
+requires-python = "~=3.7"
 classifiers = [
   "Development Status :: 4 - Beta",
   "License :: OSI Approved :: MIT License",
