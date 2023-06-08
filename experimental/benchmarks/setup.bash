@@ -3,7 +3,7 @@
 declare -g gp3_root=/home/lums/feature-vector-prototype/experimental/external/data/gp3
 declare -g nvme_root=/mnt/ssd
 
-function init_1M () {
+function init_1M_s3 () {
     declare -g db_uri="s3://tiledb-andrew/sift/bigann1M_base"
     declare -g centroids_uri="s3://tiledb-andrew/sift/bigann1M_base_tdb/centroids.tdb"
     declare -g parts_uri="s3://tiledb-andrew/sift/bigann1M_base_tdb/parts.tdb"
@@ -33,7 +33,7 @@ function init_1M_nvme () {
     declare -g groundtruth_uri="${nvme_root}/1M/bigann_1M_GT_nnids"
 }
 
-function init_10M () {
+function init_10M_s3 () {
     declare -g db_uri="s3://tiledb-andrew/sift/bigann10M_base"
     declare -g centroids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/centroids.tdb"
     declare -g parts_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/parts.tdb"
@@ -63,7 +63,7 @@ function init_10M_nvme () {
     declare -g groundtruth_uri="${nvme_root}/10M/bigann_10M_GT_nnids"
 }
 
-function init_100M () {
+function init_100M_s3 () {
     declare -g db_uri="s3://tiledb-andrew/sift/bigann100M_base"
     declare -g centroids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/centroids.tdb"
     declare -g parts_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/parts.tdb"
@@ -93,7 +93,7 @@ function init_100M_nvme () {
     declare -g groundtruth_uri="${nvme_root}/100M/bigann_100M_GT_nnids"
 }
 
-function init_1B () {
+function init_1B_s3 () {
     declare -g db_uri="s3://tiledb-nikos/vector-search/datasets/arrays/sift-1b-col-major"
     declare -g centroids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/centroids.tdb"
     declare -g parts_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/parts.tdb"
@@ -214,39 +214,39 @@ function ivf_query() {
 		shift 1
 		;;
 	    -d|--debug)
-		debug="-d"
+		_debug="-d"
 		shift 1
 		;;
 	    -v|--verbose)
-		verbose="-v"
+		_verbose="-v"
 		shift 1
 		;;
 	    --k|--knn|--k_nn)
-		k_nn="--k ${2}"
+		_k_nn="--k ${2}"
 		shift 2
 		;;
 	    --nqueries)
-		nqueries="--nqueries ${2}"
+		_nqueries="--nqueries ${2}"
 		shift 2
 		;;
 	    --nthreads)
-		nthreads="--nthreads ${2}"
+		_nthreads="--nthreads ${2}"
 		shift 2
 		;;
 	    --cluster|--nprobe)
-		cluster="--cluster ${2}"
+		_cluster="--cluster ${2}"
 		shift 2
 		;;
 	    --block|--blocksize)
-		blocksize="--blocksize ${2}"
+		_blocksize="--blocksize ${2}"
 		shift 2
 		;;
 	    --finite)
-		finite="--finite"
+		_finite="--finite"
 		shift 1
 		;;
 	    --log)
-		log="--log ${2}"
+		_log="--log ${2}"
 		shift 2
 		;;
 	    *)
@@ -271,15 +271,15 @@ ${ivf_query} \
 --ids_uri ${ids_uri} \
 --query_uri ${query_uri} \
 --groundtruth_uri ${groundtruth_uri} \
-${k_nn} \
-${nqueries} \
-${nthreads} \
-${cluster} \
-${blocksize} \
-${finite} \
-${log} \
-${verbose} \
-${debug}"
+${_k_nn} \
+${_nqueries} \
+${_nthreads} \
+${_cluster} \
+${_blocksize} \
+${_finite} \
+${_log} \
+${_verbose} \
+${_debug}"
 
     printf "================================================================\n"
     printf "=\n=\n"
