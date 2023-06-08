@@ -139,8 +139,10 @@ auto qv_query_heap_finite_ram(
     size_t upper_bound,
     bool nth,
     size_t nthreads) {
-  size_t num_queries = size(q);
 
+  life_timer _{"Total time " + tdb_func__};
+
+  size_t num_queries = size(q);
 
   // get closest centroid for each query vector
   auto top_centroids =
