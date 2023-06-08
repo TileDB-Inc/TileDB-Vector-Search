@@ -52,11 +52,10 @@ class timing_data {
   ~timing_data() = default;
 
  public:
-  
   timing_data(const timing_data&) = delete;
   timing_data& operator=(const timing_data&) = delete;
-  
-  static timing_data & get_instance() {
+
+  static timing_data& get_instance() {
     static timing_data instance;
     return instance;
   }
@@ -85,19 +84,18 @@ class timing_data {
   }
 };
 
-
-inline timing_data& get_timing_data_instance () {
+inline timing_data& get_timing_data_instance() {
   return timing_data::get_instance();
 }
 
 /*
  * Can also use this pattern:
-*
-* timing_data& get_timing_data_instance() {
-*   static timing_data instance;
-*   return instance;
-* }
-*/
+ *
+ * timing_data& get_timing_data_instance() {
+ *   static timing_data instance;
+ *   return instance;
+ * }
+ */
 
 timing_data& _timing_data{get_timing_data_instance()};
 

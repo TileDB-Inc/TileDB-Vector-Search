@@ -34,7 +34,6 @@
 #ifndef TDB_IVF_QUERY_H
 #define TDB_IVF_QUERY_H
 
-
 // Interfaces
 //   faiss: D, I = index.search(xb, k) # search
 //   milvus: status, results = conn.search(collection_name, query_records,

@@ -151,7 +151,6 @@ std::ostream& operator<<(std::ostream& os, const us_timer& t) {
   return os;
 }
 
-
 #ifndef tdb_func__
 #ifdef __cpp_lib_source_location
 #include <source_location>
@@ -163,6 +162,5 @@ std::ostream& operator<<(std::ostream& os, const us_timer& t) {
   }
 #endif
 #endif
-
 
 #endif  // TILEDB_TIMER_HPP

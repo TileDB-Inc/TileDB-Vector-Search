@@ -375,7 +375,6 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   using row_domain_type = int32_t;
   using col_domain_type = int32_t;
 
-
   // @todo: Make this configurable
   std::map<std::string, std::string> init_{
       {"vfs.s3.region", global_region.c_str()}};
@@ -398,8 +397,10 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   size_t pending_col_offset{0};
 
  protected:
-  tdbMatrix(const std::string& uri, bool) noexcept : array_{ctx_, uri, TILEDB_READ}
-      , schema_{array_.schema()}{}
+  tdbMatrix(const std::string& uri, bool) noexcept
+      : array_{ctx_, uri, TILEDB_READ}
+      , schema_{array_.schema()} {
+  }
 
  public:
   /**
@@ -473,7 +474,6 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   }
 
  private:
-
   /**
    * @brief General constructor.  Read a view of the array, delimited by the
    * given row and column indices.

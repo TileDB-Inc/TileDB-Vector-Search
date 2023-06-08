@@ -36,10 +36,10 @@
 #include <map>
 
 #include "algorithm.h"
+#include "flat_query.h"
 #include "linalg.h"
 #include "tdb_matrix.h"
 #include "tdb_partitioned_matrix.h"
-#include "flat_query.h"
 
 extern double global_time_of_interest;
 
@@ -139,7 +139,6 @@ auto qv_query_heap_finite_ram(
     size_t upper_bound,
     bool nth,
     size_t nthreads) {
-
   life_timer _{"Total time " + tdb_func__};
 
   size_t num_queries = size(q);
@@ -171,14 +170,17 @@ auto qv_query_heap_finite_ram(
   // std::min<size_t>(16, top_centroids.num_rows()),
   // std::min<size_t>(16, top_centroids.num_cols()));
 
-  auto active_partitions = std::vector<parts_type>(begin(active_centroids), end(active_centroids));
-  // std::copy(begin(active_centroids), end(active_centroids), begin(active_partitions));
+  auto active_partitions =
+      std::vector<parts_type>(begin(active_centroids), end(active_centroids));
+  // std::copy(begin(active_centroids), end(active_centroids),
+  // begin(active_partitions));
 
   /*
    * Read the necessary partitions and ids
    */
   if (size(indices) != centroids.num_cols() + 1) {
-    std::cout << "#\n# indices " << size(indices) << " != " << centroids.num_cols() + 1 << std::endl;
+    std::cout << "#\n# indices " << size(indices)
+              << " != " << centroids.num_cols() + 1 << std::endl;
     std::cout << "# some minimal inaccuracy until fixed\n#" << std::endl;
     indices.resize(centroids.num_cols() + 1);
     indices[size(indices) - 1] = indices[size(indices) - 2];
@@ -193,7 +195,12 @@ auto qv_query_heap_finite_ram(
   // std::vector<shuffled_ids_type> shuffled_ids;
 
   auto shuffled_db = tdbColMajorPartitionedMatrix<shuffled_db_type>(
-      part_uri, std::move(indices), active_partitions, id_uri, upper_bound, /* shuffled_ids,*/ nthreads);
+      part_uri,
+      std::move(indices),
+      active_partitions,
+      id_uri,
+      upper_bound,
+      /* shuffled_ids,*/ nthreads);
 
   assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
 
@@ -210,50 +217,53 @@ auto qv_query_heap_finite_ram(
       std::vector<fixed_min_pair_heap<float, size_t>>(
           size(q), fixed_min_pair_heap<float, size_t>(k_nn)));
 
-
-  for(;;) {
+  for (;;) {
     // size_t block_size = (size(active_partitions) + nthreads - 1) / nthreads;
-    size_t parts_per_thread = (shuffled_db.num_col_parts() + nthreads - 1) / nthreads;
+    size_t parts_per_thread =
+        (shuffled_db.num_col_parts() + nthreads - 1) / nthreads;
 
     std::vector<std::future<void>> futs;
     futs.reserve(nthreads);
 
     for (size_t n = 0; n < nthreads; ++n) {
-      auto first_part = std::min<size_t>(n * parts_per_thread, shuffled_db.num_col_parts());
-      auto last_part =
-          std::min<size_t>((n + 1) * parts_per_thread, shuffled_db.num_col_parts());
+      auto first_part =
+          std::min<size_t>(n * parts_per_thread, shuffled_db.num_col_parts());
+      auto last_part = std::min<size_t>(
+          (n + 1) * parts_per_thread, shuffled_db.num_col_parts());
 
       if (first_part != last_part) {
-        futs.emplace_back(std::async(std::launch::async, [&, n, first_part, last_part]() {
-          /*
-         * For each partition, process the queries that have that partition
-         * as their top centroid.
-           */
-          for (size_t p = first_part; p < last_part; ++p) {
-            auto partno = p + shuffled_db.col_part_offset();
-            auto start = new_indices[partno];
-            auto stop = new_indices[partno + 1];
+        futs.emplace_back(
+            std::async(std::launch::async, [&, n, first_part, last_part]() {
+              /*
+               * For each partition, process the queries that have that
+               * partition as their top centroid.
+               */
+              for (size_t p = first_part; p < last_part; ++p) {
+                auto partno = p + shuffled_db.col_part_offset();
+                auto start = new_indices[partno];
+                auto stop = new_indices[partno + 1];
 
-            /*
-           * Get the queries associated with this partition.
-             */
-            auto range = centroid_query.equal_range(active_partitions[partno]);
-            for (auto i = range.first; i != range.second; ++i) {
-              auto j = i->second;
-              auto q_vec = q[j];
+                /*
+                 * Get the queries associated with this partition.
+                 */
+                auto range =
+                    centroid_query.equal_range(active_partitions[partno]);
+                for (auto i = range.first; i != range.second; ++i) {
+                  auto j = i->second;
+                  auto q_vec = q[j];
 
-              // @todo shift start / stop back by the offset
-              for (size_t k = start; k < stop; ++k) {
-                auto kp = k - shuffled_db.col_offset();
+                  // @todo shift start / stop back by the offset
+                  for (size_t k = start; k < stop; ++k) {
+                    auto kp = k - shuffled_db.col_offset();
 
-                auto score = L2(q_vec, shuffled_db[kp]);
+                    auto score = L2(q_vec, shuffled_db[kp]);
 
-                // @todo any performance with apparent extra indirection?
-                min_scores[n][j].insert(score, shuffled_db.ids()[kp]);
+                    // @todo any performance with apparent extra indirection?
+                    min_scores[n][j].insert(score, shuffled_db.ids()[kp]);
+                  }
+                }
               }
-            }
-          }
-        }));
+            }));
       }
     }
 

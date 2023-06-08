@@ -171,7 +171,16 @@ int main(int argc, char* argv[]) {
     debug_matrix(q, "q");
 
     auto top_k = detail::ivf::qv_query_heap_finite_ram(
-        part_uri, centroids, q, indices, id_uri, nprobe, k_nn, blocksize, nth, nthreads);
+        part_uri,
+        centroids,
+        q,
+        indices,
+        id_uri,
+        nprobe,
+        k_nn,
+        blocksize,
+        nth,
+        nthreads);
 
     debug_matrix(top_k, "top_k");
 
@@ -238,10 +247,11 @@ int main(int argc, char* argv[]) {
     auto program_args = args_log(args);
     auto config = config_log(argv[0]);
 
-    json log_log = {{"Config", config},
-                    {"Args", program_args},
-                    {"Recalls", recalls},
-                    {"Times", timings}};
+    json log_log = {
+        {"Config", config},
+        {"Args", program_args},
+        {"Recalls", recalls},
+        {"Times", timings}};
 
     if (args["--log"].asString() == "-") {
       std::cout << log_log.dump(2) << std::endl;

@@ -30,7 +30,6 @@
  *
  */
 
-
 #ifndef TILEDB_FLAT_QV_H
 #define TILEDB_FLAT_QV_H
 
@@ -142,7 +141,6 @@ auto qv_query_heap(const DB& db, const Q& q, size_t k, unsigned nthreads) {
                   min_scores.end(),
                   top_k[j].begin(),
                   ([](auto&& e) { return e.second; }));
-
             }
           }));
     }

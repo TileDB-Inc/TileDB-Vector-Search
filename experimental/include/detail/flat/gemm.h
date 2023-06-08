@@ -36,8 +36,8 @@
 #include "algorithm.h"
 #include "choose_blas.h"
 #include "linalg.h"
-#include "utils/timer.h"
 #include "scoring.h"
+#include "utils/timer.h"
 
 namespace detail::flat {
 
@@ -111,7 +111,6 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
 
   ColMajorMatrix<size_t> top_k(k, q.num_cols());
   for (int j = 0; j < min_scores.size(); ++j) {
-
     // @todo get_top_k_from_heap
     std::sort_heap(min_scores[j].begin(), min_scores[j].end());
     std::transform(
@@ -196,4 +195,4 @@ auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
 }
 }  // namespace detail::flat
 
-#endif // TILEDB_FLAT_GEMM_H
+#endif  // TILEDB_FLAT_GEMM_H

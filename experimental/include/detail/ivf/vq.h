@@ -46,18 +46,13 @@ auto vq_query_nth(
     size_t k_nn,
     bool nth,
     size_t nthreads) {
+  // Read the shuffled database and ids
 
-    // Read the shuffled database and ids
-
-
-
-    // for each partition (or set of partitions or set of vectors from partitions)
-        // for each query vector in the partition
-            // query the partition
+  // for each partition (or set of partitions or set of vectors from partitions)
+  // for each query vector in the partition
+  // query the partition
 }
 
+}  // namespace detail::ivf
 
-
-} // namespace detail::ivf
-
-#endif // TILEDB_IVF_VQ_H
+#endif  // TILEDB_IVF_VQ_H
