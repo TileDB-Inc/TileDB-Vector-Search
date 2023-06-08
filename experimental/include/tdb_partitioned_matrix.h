@@ -134,7 +134,6 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       , parts_{in_parts}
       , row_part_view_{0, 0}
       , col_part_view_{0, 0} {
-
     total_num_parts_ = size(parts_);
 
     life_timer _{"Initialize tdb partitioned matrix " + uri};
@@ -205,98 +204,62 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   bool advance() {
     // @todo -- col oriented only for now -- generalize!!
 
-    const size_t attr_idx = 0;
-    auto attr = schema_.attribute(attr_idx);
-
-    std::string attr_name = attr.name();
-    tiledb_datatype_t attr_type = attr.type();
-    if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
-      throw std::runtime_error(
-          "Attribute type mismatch: " + std::to_string(attr_type) + " != " +
-          std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
-    }
-
-    auto dimension = num_array_rows_;
-
-    /*
-     * Fit as many partitions as we can into max_cols_
-     */
-    std::get<0>(col_view_) = std::get<1>(col_view_);            // # columns
-    std::get<0>(col_part_view_) = std::get<1>(col_part_view_);  // # partitions
-
-    std::get<1>(col_part_view_) = std::get<0>(col_part_view_);
-    for (size_t i = std::get<0>(col_part_view_); i < total_num_parts_; ++i) {
-      auto next_part_size = indices_[parts_[i] + 1] - indices_[parts_[i]];
-      if ((std::get<1>(col_view_) + next_part_size) > max_cols_) {
-        break;
-      }
-      std::get<1>(col_view_) += next_part_size;
-      std::get<1>(col_part_view_) = i + 1;
-    }
-    num_cols_ = std::get<1>(col_view_) - std::get<0>(col_view_);
-    col_offset_ = std::get<0>(col_view_);
-
-    num_col_parts_ = std::get<1>(col_part_view_) - std::get<0>(col_part_view_);
-    col_part_offset_ = std::get<0>(col_part_view_);
-
-    /*
-     * Set up the subarray to read the partitions
-     */
-    tiledb::Subarray subarray(ctx_, this->array_);
-
-    // Dimension 0 goes from 0 to 127
-    subarray.add_range(0, 0, (int)dimension - 1);
-
-    /**
-     * Read in the next batch of partitions
-     */
-    size_t col_count = 0;
-    for (size_t j = std::get<0>(col_part_view_);
-         j < std::get<1>(col_part_view_);
-         ++j) {
-      size_t start = indices_[parts_[j]];
-      size_t stop = indices_[parts_[j] + 1];
-      size_t len = stop - start;
-      if (len == 0) {
-        continue;
-      }
-      col_count += len;
-      subarray.add_range(1, (int)start, (int)stop - 1);
-    }
-    if (col_count != std::get<1>(col_view_) - std::get<0>(col_view_)) {
-      throw std::runtime_error("Column count mismatch");
-    }
-
-    auto cell_order = schema_.cell_order();
-    auto layout_order = cell_order;
-
-    tiledb::Query query(ctx_, this->array_);
-
-    //auto ptr = data_.get();
-
-    auto ptr = this->data();
-    query.set_subarray(subarray)
-        .set_layout(layout_order)
-        .set_data_buffer(attr_name, ptr, col_count * dimension);
-    query.submit();
-
-    // assert(tiledb::Query::Status::COMPLETE == query.query_status());
-    if (tiledb::Query::Status::COMPLETE != query.query_status()) {
-      throw std::runtime_error("Query status is not complete -- fix me");
-    }
-
-
-  /**
-   * Now deal with ids
-   */
     {
-      auto attr_idx = 0;
+      const size_t attr_idx = 0;
+      auto attr = schema_.attribute(attr_idx);
 
-      auto attr = ids_schema_.attribute(attr_idx);
       std::string attr_name = attr.name();
+      tiledb_datatype_t attr_type = attr.type();
+      if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
+        throw std::runtime_error(
+            "Attribute type mismatch: " + std::to_string(attr_type) + " != " +
+            std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
+      }
 
-      tiledb::Subarray subarray(ctx_, ids_array_);
+      auto dimension = num_array_rows_;
 
+      /*
+       * Fit as many partitions as we can into max_cols_
+       */
+      std::get<0>(col_view_) = std::get<1>(col_view_);  // # columns
+      std::get<0>(col_part_view_) =
+          std::get<1>(col_part_view_);                  // # partitions
+
+      std::get<1>(col_part_view_) = std::get<0>(col_part_view_);
+      for (size_t i = std::get<0>(col_part_view_); i < total_num_parts_; ++i) {
+        auto next_part_size = indices_[parts_[i] + 1] - indices_[parts_[i]];
+        if ((std::get<1>(col_view_) + next_part_size) > max_cols_) {
+          break;
+        }
+        std::get<1>(col_view_) += next_part_size;
+        std::get<1>(col_part_view_) = i + 1;
+      }
+      num_cols_ = std::get<1>(col_view_) - std::get<0>(col_view_);
+      col_offset_ = std::get<0>(col_view_);
+
+      num_col_parts_ =
+          std::get<1>(col_part_view_) - std::get<0>(col_part_view_);
+      col_part_offset_ = std::get<0>(col_part_view_);
+
+      if ((num_cols_ == 0 && num_col_parts_ != 0) ||
+          (num_cols_ != 0 && num_col_parts_ == 0)) {
+        throw std::runtime_error("Invalid partitioning");
+      }
+      if (num_cols_ == 0) {
+        return false;
+      }
+
+      /*
+       * Set up the subarray to read the partitions
+       */
+      tiledb::Subarray subarray(ctx_, this->array_);
+
+      // Dimension 0 goes from 0 to 127
+      subarray.add_range(0, 0, (int)dimension - 1);
+
+      /**
+       * Read in the next batch of partitions
+       */
       size_t col_count = 0;
       for (size_t j = std::get<0>(col_part_view_);
            j < std::get<1>(col_part_view_);
@@ -308,20 +271,68 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
           continue;
         }
         col_count += len;
-        subarray.add_range(0, (int)start, (int)stop - 1);
+        subarray.add_range(1, (int)start, (int)stop - 1);
       }
       if (col_count != std::get<1>(col_view_) - std::get<0>(col_view_)) {
         throw std::runtime_error("Column count mismatch");
       }
 
-      tiledb::Query query(ctx_, ids_array_);
+      auto cell_order = schema_.cell_order();
+      auto layout_order = cell_order;
 
-      auto ptr = ids_.data();
-      query.set_subarray(subarray).set_data_buffer(attr_name, ptr, col_count);
+      tiledb::Query query(ctx_, this->array_);
+
+      // auto ptr = data_.get();
+
+      auto ptr = this->data();
+      query.set_subarray(subarray)
+          .set_layout(layout_order)
+          .set_data_buffer(attr_name, ptr, col_count * dimension);
       query.submit();
 
       // assert(tiledb::Query::Status::COMPLETE == query.query_status());
       if (tiledb::Query::Status::COMPLETE != query.query_status()) {
+        throw std::runtime_error("Query status is not complete -- fix me");
+      }
+    }
+
+    /**
+     * Now deal with ids
+     */
+    {
+      auto ids_attr_idx = 0;
+
+      auto ids_attr = ids_schema_.attribute(ids_attr_idx);
+      std::string ids_attr_name = ids_attr.name();
+
+      tiledb::Subarray ids_subarray(ctx_, ids_array_);
+
+      size_t ids_col_count = 0;
+      for (size_t j = std::get<0>(col_part_view_);
+           j < std::get<1>(col_part_view_);
+           ++j) {
+        size_t start = indices_[parts_[j]];
+        size_t stop = indices_[parts_[j] + 1];
+        size_t len = stop - start;
+        if (len == 0) {
+          continue;
+        }
+        ids_col_count += len;
+        ids_subarray.add_range(0, (int)start, (int)stop - 1);
+      }
+      if (ids_col_count != std::get<1>(col_view_) - std::get<0>(col_view_)) {
+        throw std::runtime_error("Column count mismatch");
+      }
+
+      tiledb::Query ids_query(ctx_, ids_array_);
+
+      auto ids_ptr = ids_.data();
+      ids_query.set_subarray(ids_subarray)
+          .set_data_buffer(ids_attr_name, ids_ptr, ids_col_count);
+      ids_query.submit();
+
+      // assert(tiledb::Query::Status::COMPLETE == query.query_status());
+      if (tiledb::Query::Status::COMPLETE != ids_query.query_status()) {
         throw std::runtime_error("Query status is not complete -- fix me");
       }
     }
