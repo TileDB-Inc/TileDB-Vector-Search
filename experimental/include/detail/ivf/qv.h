@@ -136,6 +136,7 @@ auto qv_query_heap_finite_ram(
     const std::string& id_uri,
     size_t nprobe,
     size_t k_nn,
+    size_t upper_bound,
     bool nth,
     size_t nthreads) {
   size_t num_queries = size(q);
@@ -190,7 +191,7 @@ auto qv_query_heap_finite_ram(
   // std::vector<shuffled_ids_type> shuffled_ids;
 
   auto shuffled_db = tdbColMajorPartitionedMatrix<shuffled_db_type>(
-      part_uri, std::move(indices), active_partitions, id_uri, /* shuffled_ids,*/ nthreads);
+      part_uri, std::move(indices), active_partitions, id_uri, upper_bound, /* shuffled_ids,*/ nthreads);
 
   assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
 
@@ -207,47 +208,56 @@ auto qv_query_heap_finite_ram(
       std::vector<fixed_min_pair_heap<float, size_t>>(
           size(q), fixed_min_pair_heap<float, size_t>(k_nn)));
 
-  size_t block_size = (size(active_partitions) + nthreads - 1) / nthreads;
 
-  std::vector<std::future<void>> futs;
-  futs.reserve(nthreads);
+  for(;;) {
+    // size_t block_size = (size(active_partitions) + nthreads - 1) / nthreads;
+    size_t parts_per_thread = (shuffled_db.num_col_parts() + nthreads - 1) / nthreads;
 
-  for (size_t n = 0; n < nthreads; ++n) {
-    auto start = std::min<size_t>(n * block_size, size(active_partitions));
-    auto stop = std::min<size_t>((n + 1) * block_size, size(active_partitions));
+    std::vector<std::future<void>> futs;
+    futs.reserve(nthreads);
 
-    if (start != stop) {
-      futs.emplace_back(std::async(std::launch::async, [&, n, start, stop]() {
-        /*
+    for (size_t n = 0; n < nthreads; ++n) {
+      auto start = std::min<size_t>(n * parts_per_thread, size(active_partitions));
+      auto stop =
+          std::min<size_t>((n + 1) * parts_per_thread, size(active_partitions));
+
+      if (start != stop) {
+        futs.emplace_back(std::async(std::launch::async, [&, n, start, stop]() {
+          /*
          * For each partition, process the queries that have that partition
          * as their top centroid.
-         */
-        for (size_t p = start; p < stop; ++p) {
-          auto partno = p /*parts[i]*/;
-          auto start = new_indices[partno];
-          auto stop = new_indices[partno + 1];
-
-          /*
-           * Get the queries associated with this partition.
            */
-          auto range = centroid_query.equal_range(active_partitions[partno]);
-          for (auto i = range.first; i != range.second; ++i) {
-            auto j = i->second;
-            auto q_vec = q[j];
-            for (size_t k = start; k < stop; ++k) {
-              auto score = L2(q_vec, shuffled_db[k]);
+          for (size_t p = start; p < stop; ++p) {
+            auto partno = p /*parts[i]*/;
+            auto start = new_indices[partno];
+            auto stop = new_indices[partno + 1];
 
-              // @todo any performance with apparent extra indirection?
-              min_scores[n][j].insert(score, shuffled_db.ids()[k]);
+            /*
+           * Get the queries associated with this partition.
+             */
+            auto range = centroid_query.equal_range(active_partitions[partno]);
+            for (auto i = range.first; i != range.second; ++i) {
+              auto j = i->second;
+              auto q_vec = q[j];
+              for (size_t k = start; k < stop; ++k) {
+                auto score = L2(q_vec, shuffled_db[k]);
+
+                // @todo any performance with apparent extra indirection?
+                min_scores[n][j].insert(score, shuffled_db.ids()[k]);
+              }
             }
           }
-        }
-      }));
+        }));
+      }
     }
-  }
 
-  for (int n = 0; n < size(futs); ++n) {
-    futs[n].get();
+    for (int n = 0; n < size(futs); ++n) {
+      futs[n].get();
+    }
+
+    if (!shuffled_db.advance()) {
+      break;
+    }
   }
 
   for (int j = 0; j < size(q); ++j) {

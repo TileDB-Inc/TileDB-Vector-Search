@@ -120,7 +120,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
    */
   tdbPartitionedMatrix(
       const std::string& uri,
-      std::vector<indices_type>& in_indices,
+      std::vector<indices_type>&& in_indices,
       const std::vector<parts_type>& in_parts,
       const std::string& ids_uri,
       // std::vector<shuffled_ids_type>& shuffled_ids,
@@ -194,6 +194,8 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 #endif
 
     Base::operator=(Base{std::move(data_), dimension, max_cols_});
+
+    // @todo Take this out
     advance();
   }
 
@@ -344,8 +346,12 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
     return ids_;
   }
 
-  index_type num_parts() const {
+  index_type num_col_parts() const {
     return std::get<1>(col_part_view_) - std::get<0>(col_part_view_);
+  }
+
+  index_type col_part_offset() const {
+    return col_part_offset_;
   }
 
   /**
