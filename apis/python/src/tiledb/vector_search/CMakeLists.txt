@@ -28,6 +28,11 @@
 cmake_minimum_required(VERSION 3.21)
 set(CMAKE_CXX_STANDARD 20)
 
+find_package(TileDB REQUIRED)
+
+find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
+find_package(pybind11 CONFIG REQUIRED)
+
 python_add_library(tiledbvspy MODULE "module.cc" WITH_SOABI)
 
 target_link_libraries(tiledbvspy

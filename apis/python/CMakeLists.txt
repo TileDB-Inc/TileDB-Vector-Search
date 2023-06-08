@@ -44,7 +44,7 @@ if (TILEDB_VS_PYTHON_STANDALONE)
   # TODO -- include(BuildTileDBVS_FetchContent)
 elseif(NOT DEFINED TILEDB_VS_PYTHON)
   # TODO -- If we are building standalone, then include the top-level project
-  add_subdirectory("../" "${CMAKE_BINARY_DIR}/tiledb_vs")
+  #add_subdirectory("../" "${CMAKE_BINARY_DIR}/tiledb_vs")
 endif()
 # ----------------------------------------------------------------------------
 
