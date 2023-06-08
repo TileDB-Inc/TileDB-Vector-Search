@@ -217,9 +217,9 @@ auto qv_query_heap_finite_ram(
     futs.reserve(nthreads);
 
     for (size_t n = 0; n < nthreads; ++n) {
-      auto first_part = std::min<size_t>(n * parts_per_thread, size(active_partitions));
+      auto first_part = std::min<size_t>(n * parts_per_thread, shuffled_db.num_col_parts());
       auto last_part =
-          std::min<size_t>((n + 1) * parts_per_thread, size(active_partitions));
+          std::min<size_t>((n + 1) * parts_per_thread, shuffled_db.num_col_parts());
 
       if (first_part != last_part) {
         futs.emplace_back(std::async(std::launch::async, [&, n, first_part, last_part]() {
