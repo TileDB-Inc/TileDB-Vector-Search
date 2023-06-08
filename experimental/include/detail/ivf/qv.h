@@ -217,18 +217,18 @@ auto qv_query_heap_finite_ram(
     futs.reserve(nthreads);
 
     for (size_t n = 0; n < nthreads; ++n) {
-      auto start = std::min<size_t>(n * parts_per_thread, size(active_partitions));
-      auto stop =
+      auto first_part = std::min<size_t>(n * parts_per_thread, size(active_partitions));
+      auto last_part =
           std::min<size_t>((n + 1) * parts_per_thread, size(active_partitions));
 
-      if (start != stop) {
-        futs.emplace_back(std::async(std::launch::async, [&, n, start, stop]() {
+      if (first_part != last_part) {
+        futs.emplace_back(std::async(std::launch::async, [&, n, first_part, last_part]() {
           /*
          * For each partition, process the queries that have that partition
          * as their top centroid.
            */
-          for (size_t p = start; p < stop; ++p) {
-            auto partno = p /*parts[i]*/;
+          for (size_t p = first_part; p < last_part; ++p) {
+            auto partno = p + shuffled_db.col_part_offset();
             auto start = new_indices[partno];
             auto stop = new_indices[partno + 1];
 
@@ -242,12 +242,12 @@ auto qv_query_heap_finite_ram(
 
               // @todo shift start / stop back by the offset
               for (size_t k = start; k < stop; ++k) {
-                auto kp = k - shuffled_db.col_part_offset();
+                auto kp = k - shuffled_db.col_offset();
 
-                auto score = L2(q_vec, shuffled_db[k]);
+                auto score = L2(q_vec, shuffled_db[kp]);
 
                 // @todo any performance with apparent extra indirection?
-                min_scores[n][j].insert(score, shuffled_db.ids()[k]);
+                min_scores[n][j].insert(score, shuffled_db.ids()[kp]);
               }
             }
           }

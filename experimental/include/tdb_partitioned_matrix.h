@@ -354,6 +354,10 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
     return col_part_offset_;
   }
 
+  index_type col_offset() const {
+    return col_offset_;
+  }
+
   /**
    * Destructor.  Closes arrays if they are open.
    */
