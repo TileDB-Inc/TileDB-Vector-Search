@@ -87,7 +87,7 @@ static void declareColMajorMatrixSubclass(py::module& mod,
 
   // TODO auto-namify
   PyTMatrix cls(mod, (name + suffix).c_str(), py::buffer_protocol());
-  cls.def(py::init<Ctx, std::string, size_t>());
+  cls.def(py::init<const Ctx&, std::string, size_t>(),  py::keep_alive<1,2>());
 }
 
 }
@@ -95,10 +95,12 @@ static void declareColMajorMatrixSubclass(py::module& mod,
 PYBIND11_MODULE(tiledbvspy, m) {
 
   py::class_<tiledb::Context> (m, "Ctx", py::module_local())
-    .def(py::init([](py::dict config) {
+    .def(py::init([](std::optional<py::dict> maybe_config) {
       tiledb::Config cfg;
-      for (auto item : config) {
-          cfg.set(item.first.cast<std::string>(), item.second.cast<std::string>());
+      if (maybe_config.has_value()) {
+        for (auto item : maybe_config.value()) {
+            cfg.set(item.first.cast<std::string>(), item.second.cast<std::string>());
+        }
       }
       return tiledb::Context(cfg);
     }
