@@ -6,7 +6,7 @@ ivf_query=~/TileDB/feature-vector-prototype/experimental/cmake-build-release/src
 ivf_query=/home/lums/feature-vector-prototype/experimental/cmake-build-release/libtiledbvectorsearch/src/ivf_hack
 
 
-init_100M_local
+init_100M_gp3
 for nprobe in 1 2 4 8 16 32 64 128 256;
 do
     for nqueries in 1 10 100 1000 5000 10000;
@@ -16,7 +16,7 @@ do
 done
 
 
-init_1B_local
+init_1B_gp3
 for nprobe in 1 2 4 8 16 32 64 128 256;
 do
     for nqueries in 1 10 100 1000 5000 10000;
