@@ -239,7 +239,11 @@ auto qv_query_heap_finite_ram(
             for (auto i = range.first; i != range.second; ++i) {
               auto j = i->second;
               auto q_vec = q[j];
+
+              // @todo shift start / stop back by the offset
               for (size_t k = start; k < stop; ++k) {
+                auto kp = k - shuffled_db.col_part_offset();
+
                 auto score = L2(q_vec, shuffled_db[k]);
 
                 // @todo any performance with apparent extra indirection?
