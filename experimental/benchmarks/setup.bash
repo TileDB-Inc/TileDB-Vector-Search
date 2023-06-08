@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export gp3_root=/home/lums/feature-vector-prototype/experimental/external/data/gp3
+export nvme_root=${nvme_root}
 
 function init_1M () {
     declare -g db_uri='s3://tiledb-andrew/sift/bigann1M_base'
@@ -11,14 +13,24 @@ function init_1M () {
     declare -g groundtruth_uri='s3://tiledb-andrew/kmeans/benchmark/bigann_1M_GT_nnids'
 }
 
-function init_1M_local () {
-    declare -g db_uri='/mnt/ssd/1M/bigann1M_base'
-    declare -g centroids_uri='/mnt/ssd/1M/centroids.tdb'
-    declare -g parts_uri='/mnt/ssd/1M/parts.tdb'
-    declare -g index_uri='/mnt/ssd/1M/index.tdb'
-    declare -g ids_uri='/mnt/ssd/1M/ids.tdb'
-    declare -g query_uri='/mnt/ssd/1M/query_public_10k'
-    declare -g groundtruth_uri='/mnt/ssd/1M/bigann_1M_GT_nnids'
+function init_1M_gp3 () {
+    declare -g db_uri='${gp3_root}/1M/bigann1M_base'
+    declare -g centroids_uri='${gp3_root}/1M/centroids.tdb'
+    declare -g parts_uri='${gp3_root}/1M/parts.tdb'
+    declare -g index_uri='${gp3_root}/1M/index.tdb'
+    declare -g ids_uri='${gp3_root}/1M/ids.tdb'
+    declare -g query_uri='${gp3_root}/1M/query_public_10k'
+    declare -g groundtruth_uri='${gp3_root}/1M/bigann_1M_GT_nnids'
+}
+
+function init_1M_nvme () {
+    declare -g db_uri='${nvme_root}/1M/bigann1M_base'
+    declare -g centroids_uri='${nvme_root}/1M/centroids.tdb'
+    declare -g parts_uri='${nvme_root}/1M/parts.tdb'
+    declare -g index_uri='${nvme_root}/1M/index.tdb'
+    declare -g ids_uri='${nvme_root}/1M/ids.tdb'
+    declare -g query_uri='${nvme_root}/1M/query_public_10k'
+    declare -g groundtruth_uri='${nvme_root}/1M/bigann_1M_GT_nnids'
 }
 
 function init_10M () {
@@ -31,14 +43,24 @@ function init_10M () {
     declare -g groundtruth_uri='s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids'
 }
 
-function init_10M_local () {
-    declare -g db_uri='/mnt/ssd/10M/bigann10M_base'
-    declare -g centroids_uri='/mnt/ssd/10M/centroids.tdb'
-    declare -g parts_uri='/mnt/ssd/10M/parts.tdb'
-    declare -g index_uri='/mnt/ssd/10M/index.tdb'
-    declare -g ids_uri='/mnt/ssd/10M/ids.tdb'
-    declare -g query_uri='/mnt/ssd/10M/query_public_10k'
-    declare -g groundtruth_uri='/mnt/ssd/10M/bigann_10M_GT_nnids'
+function init_10M_gp3 () {
+    declare -g db_uri='${gp3_root}/10M/bigann10M_base'
+    declare -g centroids_uri='${gp3_root}/10M/centroids.tdb'
+    declare -g parts_uri='${gp3_root}/10M/parts.tdb'
+    declare -g index_uri='${gp3_root}/10M/index.tdb'
+    declare -g ids_uri='${gp3_root}/10M/ids.tdb'
+    declare -g query_uri='${gp3_root}/10M/query_public_10k'
+    declare -g groundtruth_uri='${gp3_root}/10M/bigann_10M_GT_nnids'
+}
+
+function init_10M_nvme () {
+    declare -g db_uri='${nvme_root}/10M/bigann10M_base'
+    declare -g centroids_uri='${nvme_root}/10M/centroids.tdb'
+    declare -g parts_uri='${nvme_root}/10M/parts.tdb'
+    declare -g index_uri='${nvme_root}/10M/index.tdb'
+    declare -g ids_uri='${nvme_root}/10M/ids.tdb'
+    declare -g query_uri='${nvme_root}/10M/query_public_10k'
+    declare -g groundtruth_uri='${nvme_root}/10M/bigann_10M_GT_nnids'
 }
 
 function init_100M () {
@@ -51,14 +73,24 @@ function init_100M () {
     declare -g groundtruth_uri='s3://tiledb-andrew/kmeans/benchmark/bigann_100M_GT_nnids'
 }
 
-function init_100M_local () {
-    declare -g db_uri='/mnt/ssd/100M/bigann100M_base'
-    declare -g centroids_uri='/mnt/ssd/100M/centroids.tdb'
-    declare -g parts_uri='/mnt/ssd/100M/parts.tdb'
-    declare -g index_uri='/mnt/ssd/100M/index.tdb'
-    declare -g ids_uri='/mnt/ssd/100M/ids.tdb'
-    declare -g query_uri='/mnt/ssd/100M/query_public_10k'
-    declare -g groundtruth_uri='/mnt/ssd/100M/bigann_100M_GT_nnids'
+function init_100M_gp3 () {
+    declare -g db_uri='${gp3_root}/100M/bigann100M_base'
+    declare -g centroids_uri='${gp3_root}/100M/centroids.tdb'
+    declare -g parts_uri='${gp3_root}/100M/parts.tdb'
+    declare -g index_uri='${gp3_root}/100M/index.tdb'
+    declare -g ids_uri='${gp3_root}/100M/ids.tdb'
+    declare -g query_uri='${gp3_root}/100M/query_public_10k'
+    declare -g groundtruth_uri='${gp3_root}/100M/bigann_100M_GT_nnids'
+}
+
+function init_100M_nvme () {
+    declare -g db_uri='${nvme_root}/100M/bigann100M_base'
+    declare -g centroids_uri='${nvme_root}/100M/centroids.tdb'
+    declare -g parts_uri='${nvme_root}/100M/parts.tdb'
+    declare -g index_uri='${nvme_root}/100M/index.tdb'
+    declare -g ids_uri='${nvme_root}/100M/ids.tdb'
+    declare -g query_uri='${nvme_root}/100M/query_public_10k'
+    declare -g groundtruth_uri='${nvme_root}/100M/bigann_100M_GT_nnids'
 }
 
 function init_1B () {
@@ -71,17 +103,25 @@ function init_1B () {
     declare -g groundtruth_uri='s3://tiledb-andrew/kmeans/benchmark/bigann_1B_GT_nnids'
 }
 
-
-function init_1B_local () {
-    declare -g db_uri='/mnt/ssd/1B/sift-1b-col-major'
-    declare -g centroids_uri='/mnt/ssd/1B/centroids.tdb'
-    declare -g parts_uri='/mnt/ssd/1B/parts.tdb'
-    declare -g index_uri='/mnt/ssd/1B/index.tdb'
-    declare -g ids_uri='/mnt/ssd/1B/ids.tdb'
-    declare -g query_uri='/mnt/ssd/1B/query_public_10k'
-    declare -g groundtruth_uri='/mnt/ssd/1B/bigann_1B_GT_nnids'
+function init_1B_gp3 () {
+    declare -g db_uri='${gp3_root}/1B/sift-1b-col-major'
+    declare -g centroids_uri='${gp3_root}/1B/centroids.tdb'
+    declare -g parts_uri='${gp3_root}/1B/parts.tdb'
+    declare -g index_uri='${gp3_root}/1B/index.tdb'
+    declare -g ids_uri='${gp3_root}/1B/ids.tdb'
+    declare -g query_uri='${gp3_root}/1B/query_public_10k'
+    declare -g groundtruth_uri='${gp3_root}/1B/bigann_1B_GT_nnids'
 }
 
+function init_1B_nvme () {
+    declare -g db_uri='${nvme_root}/1B/sift-1b-col-major'
+    declare -g centroids_uri='${nvme_root}/1B/centroids.tdb'
+    declare -g parts_uri='${nvme_root}/1B/parts.tdb'
+    declare -g index_uri='${nvme_root}/1B/index.tdb'
+    declare -g ids_uri='${nvme_root}/1B/ids.tdb'
+    declare -g query_uri='${nvme_root}/1B/query_public_10k'
+    declare -g groundtruth_uri='${nvme_root}/1B/bigann_1B_GT_nnids'
+}
 
 function verify_s3 () {
     aws s3 ls ${db_uri}
@@ -131,8 +171,35 @@ function print_all_schemas () {
     print_seven_schemas
     init_100M
     print_seven_schemas
-    init_1B
-    print_seven_schemas
+
+    if [ -d "${gp3_root}" ]; then
+	init_1M_gp3
+	print_seven_schemas
+	init_10M_gp3
+	print_seven_schemas
+	init_100M_gp3
+	print_seven_schemas
+	init_1B_gp3
+	print_seven_schemas
+    else
+	printf "\n++\n++ ${gp3_root} not found\n++\n"
+    fi
+
+    if [ -d "${nvme_root}" ]; then
+	init_1M_nvme
+	print_seven_schemas
+	init_10M_nvme
+	print_seven_schemas
+	init_100M_nvme
+	print_seven_schemas
+	init_1B
+	print_seven_schemas
+	init_1B_gp3
+	print_seven_schemas
+    else
+	printf "\n++\n++ ${nvme_root} not found\n++\n"
+    fi
+
 }
 
 function ivf_query() {
@@ -174,6 +241,10 @@ function ivf_query() {
 		blocksize="--blocksize ${2}"
 		shift 2
 		;;
+	    --finite)
+		finite="--finite"
+		shift 1
+		;;
 	    --log)
 		log="--log ${2}"
 		shift 2
@@ -205,6 +276,7 @@ ${nqueries} \
 ${nthreads} \
 ${cluster} \
 ${blocksize} \
+${finite} \
 ${log} \
 ${verbose} \
 ${debug}"

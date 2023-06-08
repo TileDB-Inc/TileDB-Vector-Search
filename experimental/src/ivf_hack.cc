@@ -89,7 +89,7 @@ Usage:
     ivf_hack (-h | --help)
     ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --parts_uri URI --ids_uri URI [--alg algo]
             [--output_uri URI] [--query_uri URI] [--groundtruth_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
-            [--k NN] [--cluster NN] [--nthreads N] [--region REGION] [--nth] [--log FILE] [-d] [-v]
+            [--finite] [--k NN] [--cluster NN] [--nthreads N] [--region REGION] [--nth] [--log FILE] [-d] [-v]
 
 Options:
     -h, --help            show this screen
@@ -104,6 +104,7 @@ Options:
     --groundtruth_uri URI URI storing ground truth vectors
     --nqueries NN         number of query vectors to use (0 = all) [default: 0]
     --ndb NN              number of database vectors to use (0 = all) [default: 0]
+    --finite              use finite RAM (out of core) algorithm [default: false]
     --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
     --k NN                number of nearest neighbors to search for [default: 10]
     --cluster NN          number of clusters to use [default: 100]
@@ -140,6 +141,7 @@ int main(int argc, char* argv[]) {
   auto blocksize = (size_t)args["--blocksize"].asLong();
   bool nth = args["--nth"].asBool();
   auto algorithm = args["--alg"].asString();
+  bool finite = args["--finite"].asBool();
 
   if (is_local_array(centroids_uri) &&
       !std::filesystem::exists(centroids_uri)) {
@@ -170,17 +172,32 @@ int main(int argc, char* argv[]) {
     auto q = tdbColMajorMatrix<q_type>(query_uri, nqueries);
     debug_matrix(q, "q");
 
-    auto top_k = detail::ivf::qv_query_heap_finite_ram(
-        part_uri,
-        centroids,
-        q,
-        indices,
-        id_uri,
-        nprobe,
-        k_nn,
-        blocksize,
-        nth,
-        nthreads);
+    auto top_k = [&]() {
+      if (finite) {
+        return detail::ivf::qv_query_heap_finite_ram(
+            part_uri,
+            centroids,
+            q,
+            indices,
+            id_uri,
+            nprobe,
+            k_nn,
+            blocksize,
+            nth,
+            nthreads);
+      } else {
+        return detail::ivf::qv_query_heap_infinite_ram(
+            part_uri,
+            centroids,
+            q,
+            indices,
+            id_uri,
+            nprobe,
+            k_nn,
+            nth,
+            nthreads);
+      }
+    }();
 
     debug_matrix(top_k, "top_k");
 
