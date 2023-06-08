@@ -92,7 +92,7 @@ static void declareColMajorMatrixSubclass(py::module& mod,
 
 }
 
-PYBIND11_MODULE(tiledbvspy, m) {
+PYBIND11_MODULE(_tiledbvspy, m) {
 
   py::class_<tiledb::Context> (m, "Ctx", py::module_local())
     .def(py::init([](py::dict config) {

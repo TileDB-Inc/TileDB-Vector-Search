@@ -1,5 +1,3 @@
-import tiledbvspy as vspy
-
 import tiledb
 import numpy as np
 

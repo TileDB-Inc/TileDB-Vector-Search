@@ -46,4 +46,5 @@ target_compile_definitions(tiledbvspy PRIVATE VERSION_INFO=${PROJECT_VERSION})
 
 #target_include_directories(tiledbvspy PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../src")
 
-install(TARGETS tiledbvspy DESTINATION tiledbvspy)
+#install(TARGETS tiledbvspy DESTINATION "${CMAKE_INSTALL_PREFIX}/tiledb/vector_search")
+install(TARGETS tiledbvspy DESTINATION .)

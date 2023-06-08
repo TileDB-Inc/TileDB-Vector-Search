@@ -1,8 +1,8 @@
-import tiledb
-import tiledbvspy as vspy
-
 import numpy as np
 
+import tiledb
+
+from tiledb.vector_search import _tiledbvspy as vspy
 from common import *
 
 def test_tdbMatrix(tmpdir):
@@ -11,7 +11,7 @@ def test_tdbMatrix(tmpdir):
 
     create_array(p, data)
 
-    m = tiledbvspy.tdbColMajorMatrix_f32(p, 0)
+    m = vspy.tdbColMajorMatrix_f32(p, 0)
     m_array = np.array(m)
     assert m_array.shape == data.shape
     assert np.array_equal(m_array, data)

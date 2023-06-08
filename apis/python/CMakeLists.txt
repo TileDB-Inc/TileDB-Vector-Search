@@ -28,29 +28,34 @@
 cmake_minimum_required(VERSION 3.21)
 set(CMAKE_CXX_STANDARD 20)
 
-project(TileDB-VS-Py)
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-
-# ----------------------------------------------------------------------------
-# Build scenarios:
-# 1. add_subdirectory from parent tree CMake build
-#   -> build python extension only, no package install
-# 2. Run python build (ie `pip install`) within this directory
-#   -> do a relative include for the parent tree to get libtiledbvs
-# 3. (TODO) Run python build from a *python source distribution*
-#   -> use FetchContent to get parent library
-
-if (TILEDB_VS_PYTHON_STANDALONE)
-  # TODO -- include(BuildTileDBVS_FetchContent)
-elseif(NOT DEFINED TILEDB_VS_PYTHON)
-  # TODO -- If we are building standalone, then include the top-level project
-  #add_subdirectory("../" "${CMAKE_BINARY_DIR}/tiledb_vs")
-endif()
-# ----------------------------------------------------------------------------
+# Define CMAKE_INSTALL_xxx: LIBDIR, INCLUDEDIR
+include(GNUInstallDirs)
+include(FetchContent)
 
 find_package(TileDB REQUIRED)
 
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(pybind11 CONFIG REQUIRED)
 
-add_subdirectory("src/tiledb/vector_search")
+#set(VSPY_TARGET_NAME _vector_search)
+set(VSPY_TARGET_NAME _tiledbvspy)
+
+python_add_library(${VSPY_TARGET_NAME} MODULE "src/tiledb/vector_search/module.cc" WITH_SOABI)
+
+target_link_libraries(${VSPY_TARGET_NAME}
+  PRIVATE
+    pybind11::headers
+    mdspan
+    kmeans_lib
+    TileDB::tiledb_shared)
+
+target_compile_definitions(${VSPY_TARGET_NAME} PRIVATE VERSION_INFO=${PROJECT_VERSION})
+
+#target_include_directories(${VSPY_TARGET_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../src")
+
+#install(TARGETS tiledbvspy DESTINATION "${CMAKE_INSTALL_PREFIX}/tiledb/vector_search")
+#install(TARGETS ${VSPY_TARGET_NAME} LIBRARY DESTINATION tiledb/vector_search)
+install(TARGETS ${VSPY_TARGET_NAME} DESTINATION .)
+
+# Quiet a warning, since this project is only valid with SKBUILD
+set(ignoreMe "${SKBUILD}")
