@@ -187,15 +187,15 @@ auto qv_query_heap_finite_ram(
                          indices[active_partitions[i]];
   }
 
-  std::vector<shuffled_ids_type> shuffled_ids;
+  // std::vector<shuffled_ids_type> shuffled_ids;
 
   auto shuffled_db = tdbColMajorPartitionedMatrix<shuffled_db_type>(
-      part_uri, std::move(indices), active_partitions, id_uri, shuffled_ids, nthreads);
+      part_uri, std::move(indices), active_partitions, id_uri, /* shuffled_ids,*/ nthreads);
 
-  assert(shuffled_db.num_cols() == shuffled_ids.size());
+  assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
 
   debug_matrix(shuffled_db, "shuffled_db");
-  debug_matrix(shuffled_ids, "shuffled_ids");
+  debug_matrix(shuffled_db.ids(), "shuffled_db.ids()");
 
   life_timer __{std::string{"In memory portion of "} + tdb_func__};
 
@@ -236,7 +236,9 @@ auto qv_query_heap_finite_ram(
             auto q_vec = q[j];
             for (size_t k = start; k < stop; ++k) {
               auto score = L2(q_vec, shuffled_db[k]);
-              min_scores[n][j].insert(score, shuffled_ids[k]);
+
+              // @todo any performance with apparent extra indirection?
+              min_scores[n][j].insert(score, shuffled_db.ids()[k]);
             }
           }
         }

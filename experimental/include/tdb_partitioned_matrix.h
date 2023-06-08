@@ -99,8 +99,8 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       std::vector<indices_type>&& indices,
       const std::vector<parts_type>& parts,
       const std::string& id_uri,
-      std::vector<shuffled_ids_type>& shuffled_ids,
-      size_t nthreads) : tdbPartitionedMatrix(uri, indices, parts, id_uri, shuffled_ids, 0, nthreads) {}
+      // std::vector<shuffled_ids_type>& shuffled_ids,
+      size_t nthreads) : tdbPartitionedMatrix(uri, indices, parts, id_uri, /*shuffled_ids,*/ 0, nthreads) {}
 
   /**
    * Gather pieces of a partitioned array into a single array (along with the
@@ -113,7 +113,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       std::vector<indices_type>& in_indices,
       const std::vector<parts_type>& in_parts,
       const std::string& ids_uri,
-      std::vector<shuffled_ids_type>& shuffled_ids,
+      // std::vector<shuffled_ids_type>& shuffled_ids,
       size_t upper_bound,
       size_t nthreads)
       : array_{ctx_, uri, TILEDB_READ}
@@ -264,9 +264,9 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
     if (size(ids_) < num_cols) {
       ids_.resize(num_cols);
     }
-    if (size(shuffled_ids) < num_cols) {
-      shuffled_ids.resize(num_cols);
-    }
+    //if (size(shuffled_ids) < num_cols) {
+    //  shuffled_ids.resize(num_cols);
+    //}
 
     {
       life_timer _{"read tdb partitioned ids vector" + ids_uri};
@@ -305,7 +305,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
         throw std::runtime_error("Query status is not complete -- fix me");
       }
     }
-    std::copy(begin(ids_), end(ids_), begin(shuffled_ids));
+    // std::copy(begin(ids_), end(ids_), begin(shuffled_ids));
   }
 
   bool advance() {
@@ -317,9 +317,11 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
     std::get<0>(col_view_) = std::get<1>(col_view_);           // # columns
     std::get<0>(col_part_view_) = std::get<1>(col_part_view_); // # partitions
 
-
-
     return true;
+  }
+
+  auto& ids() const {
+    return ids_;
   }
 
   /**
