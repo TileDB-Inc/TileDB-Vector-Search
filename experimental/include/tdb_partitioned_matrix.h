@@ -1,6 +1,5 @@
 
 
-
 #ifndef TILEDB_PARTITIONED_MATRIX_H
 #define TILEDB_PARTITIONED_MATRIX_H
 #include <cstddef>
@@ -29,10 +28,8 @@ extern bool global_verbose;
 extern bool global_debug;
 extern std::string global_region;
 
-
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
-
   /****************************************************************************
    *
    * Duplication from tdbMatrix
@@ -44,8 +41,8 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   using Base::Base;
 
   using typename Base::index_type;
-  using typename Base::size_type;
   using typename Base::reference;
+  using typename Base::size_type;
 
   using view_type = Base;
 
@@ -54,7 +51,6 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
  private:
   using row_domain_type = int32_t;
   using col_domain_type = int32_t;
-
 
   // @todo: Make this configurable
   std::map<std::string, std::string> init_{
@@ -77,6 +73,8 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   size_t pending_row_offset{0};
   size_t pending_col_offset{0};
 
+  size_t total_num_parts_{0};
+
   /****************************************************************************
    *
    * Stuff for partitioned (reshuffled) matrix
@@ -89,18 +87,30 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   std::vector<shuffled_ids_type> indices_;  // @todo pointer and span?
   std::vector<parts_type> parts_;           // @todo pointer and span?
   std::vector<shuffled_ids_type> ids_;      // @todo pointer and span?
+
   std::tuple<index_type, index_type> row_part_view_;
   std::tuple<index_type, index_type> col_part_view_;
 
- public:
+  index_type row_part_offset_{0};
+  index_type col_part_offset_{0};
 
+  size_t max_cols_{0};
+  size_t num_cols_{0};
+
+  size_t max_col_parts_{0};
+  size_t num_col_parts_{0};
+
+ public:
   tdbPartitionedMatrix(
       const std::string& uri,
       std::vector<indices_type>&& indices,
       const std::vector<parts_type>& parts,
       const std::string& id_uri,
       // std::vector<shuffled_ids_type>& shuffled_ids,
-      size_t nthreads) : tdbPartitionedMatrix(uri, indices, parts, id_uri, /*shuffled_ids,*/ 0, nthreads) {}
+      size_t nthreads)
+      : tdbPartitionedMatrix(
+            uri, indices, parts, id_uri, /*shuffled_ids,*/ 0, nthreads) {
+  }
 
   /**
    * Gather pieces of a partitioned array into a single array (along with the
@@ -125,152 +135,161 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       , row_part_view_{0, 0}
       , col_part_view_{0, 0} {
 
-    size_t total_num_parts = size(parts_);
-    size_t num_cols = 0;
+    total_num_parts_ = size(parts_);
 
-    {
-      life_timer _{"read tdb partitioned matrix " + uri};
+    life_timer _{"Initialize tdb partitioned matrix " + uri};
 
-      auto cell_order = schema_.cell_order();
-      auto tile_order = schema_.tile_order();
+    auto cell_order = schema_.cell_order();
+    auto tile_order = schema_.tile_order();
 
-      // @todo Maybe throw an exception here?  Have to properly handle since
-      // this is a constructor.
-      assert(cell_order == tile_order);
+    // @todo Maybe throw an exception here?  Have to properly handle since
+    // this is a constructor.
+    assert(cell_order == tile_order);
 
-      const size_t attr_idx = 0;
+    auto domain_{schema_.domain()};
 
-      auto attr = schema_.attribute(attr_idx);
+    auto array_rows_{domain_.dimension(0)};
+    auto array_cols_{domain_.dimension(1)};
 
-      std::string attr_name = attr.name();
-      tiledb_datatype_t attr_type = attr.type();
-      if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
-        throw std::runtime_error(
-            "Attribute type mismatch: " + std::to_string(attr_type) + " != " +
-            std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
-      }
+    num_array_rows_ =
+        (array_rows_.template domain<row_domain_type>().second -
+         array_rows_.template domain<row_domain_type>().first + 1);
+    num_array_cols_ =
+        (array_cols_.template domain<col_domain_type>().second -
+         array_cols_.template domain<col_domain_type>().first + 1);
 
-      auto domain_{schema_.domain()};
-
-      auto array_rows_{domain_.dimension(0)};
-      auto array_cols_{domain_.dimension(1)};
-
-      num_array_rows_ =
-          (array_rows_.template domain<row_domain_type>().second -
-           array_rows_.template domain<row_domain_type>().first + 1);
-      num_array_cols_ =
-          (array_cols_.template domain<col_domain_type>().second -
-           array_cols_.template domain<col_domain_type>().first + 1);
-
-      if ((matrix_order_ == TILEDB_ROW_MAJOR &&
-           cell_order == TILEDB_COL_MAJOR) ||
-          (matrix_order_ == TILEDB_COL_MAJOR &&
-           cell_order == TILEDB_ROW_MAJOR)) {
-        throw std::runtime_error("Cell order and matrix order must match");
-      }
-
-      size_t dimension = num_array_rows_;
-
-      if (indices_[size(indices_) - 1] == indices_[size(indices_) - 2]) {
-        if (indices_[size(indices_) - 1] > num_array_cols_) {
-          throw std::runtime_error("Indices are not valid");
-        }
-        indices_[size(indices_) - 1] = num_array_cols_;
-      }
-
-      size_t max_num_cols {0};
-      for (size_t i = 0; i < total_num_parts; ++i) {
-        max_num_cols += indices_[parts_[i] + 1] - indices_[parts_[i]];
-      }
-      if (upper_bound == 0) {
-        num_cols = max_num_cols;
-      } else if (upper_bound > max_num_cols) {
-        num_cols = max_num_cols;
-      } else {
-        num_cols = upper_bound;
-      }
-
-#ifndef __APPLE__
-      auto data_ = std::make_unique_for_overwrite<T[]>(dimension * num_cols);
-#else
-      auto data_ = std::unique_ptr<T[]>(new T[dimension * num_cols]);
-#endif
-
-      /**
-       * Read in the partitions
-       */
-
-      /**
-       * Determine how many partitions to read in, given upper_bound
-       */
-      std::get<0>(col_view_) = std::get<1>(col_view_);           // # columns
-      std::get<0>(col_part_view_) = std::get<1>(col_part_view_); // # partitions
-
-      std::get<1>(col_part_view_) = std::get<0>(col_part_view_);
-      for (size_t i = std::get<0>(col_part_view_); i < total_num_parts; ++i) {
-        auto next_part_size = indices_[parts_[i] + 1] - indices_[parts_[i]];
-        if ((std::get<1>(col_view_) + next_part_size) > num_cols) {
-          break;
-        }
-        std::get<1>(col_view_) += next_part_size;
-        std::get<1>(col_part_view_) = i + 1;
-      }
-
-      tiledb::Subarray subarray(ctx_, this->array_);
-
-      // Dimension 0 goes from 0 to 127
-      subarray.add_range(0, 0, (int)dimension - 1);
-
-      /**
-       * Read in the next batch of partitions
-       */
-      size_t col_count = 0;
-      for (size_t j = std::get<0>(col_part_view_); j < std::get<1>(col_part_view_); ++j) {
-        size_t start = indices_[parts_[j]];
-        size_t stop = indices_[parts_[j] + 1];
-        size_t len = stop - start;
-        if (len == 0) {
-          continue;
-        }
-        col_count += len;
-        subarray.add_range(1, (int)start, (int)stop - 1);
-      }
-      if (col_count != std::get<1>(col_view_) - std::get<0>(col_view_)) {
-        throw std::runtime_error("Column count mismatch");
-      }
-
-      auto layout_order = cell_order;
-
-      tiledb::Query query(ctx_, this->array_);
-
-      auto ptr = data_.get();
-      query.set_subarray(subarray)
-          .set_layout(layout_order)
-          .set_data_buffer(attr_name, ptr, col_count * dimension);
-      query.submit();
-
-      // assert(tiledb::Query::Status::COMPLETE == query.query_status());
-      if (tiledb::Query::Status::COMPLETE != query.query_status()) {
-        throw std::runtime_error("Query status is not complete -- fix me");
-      }
-      Base::operator=(Base{std::move(data_), dimension, num_cols});
+    if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
+        (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {
+      throw std::runtime_error("Cell order and matrix order must match");
     }
 
-    /**
-     * Now deal with ids
-     */
+    size_t dimension = num_array_rows_;
+
+    if (indices_[size(indices_) - 1] == indices_[size(indices_) - 2]) {
+      if (indices_[size(indices_) - 1] > num_array_cols_) {
+        throw std::runtime_error("Indices are not valid");
+      }
+      indices_[size(indices_) - 1] = num_array_cols_;
+    }
+
+    auto total_max_cols = 0;
+    for (size_t i = 0; i < total_num_parts_; ++i) {
+      total_max_cols += indices_[parts_[i] + 1] - indices_[parts_[i]];
+    }
+
+    if (upper_bound == 0 || upper_bound > total_max_cols) {
+      max_cols_ = total_max_cols;
+    } else {
+      max_cols_ = upper_bound;
+    }
 
     // @todo be more sensible -- dont use a vector and don't use inout
-    if (size(ids_) < num_cols) {
-      ids_.resize(num_cols);
+    if (size(ids_) < max_cols_) {
+      ids_.resize(max_cols_);
     }
-    //if (size(shuffled_ids) < num_cols) {
-    //  shuffled_ids.resize(num_cols);
-    //}
 
+#ifndef __APPLE__
+    auto data_ = std::make_unique_for_overwrite<T[]>(dimension * num_cols);
+#else
+    auto data_ = std::unique_ptr<T[]>(new T[dimension * max_cols_]);
+#endif
+
+    Base::operator=(Base{std::move(data_), dimension, max_cols_});
+    advance();
+  }
+
+  /**
+   * Read in the next partitions
+   */
+
+  bool advance() {
+    // @todo -- col oriented only for now -- generalize!!
+
+    const size_t attr_idx = 0;
+    auto attr = schema_.attribute(attr_idx);
+
+    std::string attr_name = attr.name();
+    tiledb_datatype_t attr_type = attr.type();
+    if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
+      throw std::runtime_error(
+          "Attribute type mismatch: " + std::to_string(attr_type) + " != " +
+          std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
+    }
+
+    auto dimension = num_array_rows_;
+
+    /*
+     * Fit as many partitions as we can into max_cols_
+     */
+    std::get<0>(col_view_) = std::get<1>(col_view_);            // # columns
+    std::get<0>(col_part_view_) = std::get<1>(col_part_view_);  // # partitions
+
+    std::get<1>(col_part_view_) = std::get<0>(col_part_view_);
+    for (size_t i = std::get<0>(col_part_view_); i < total_num_parts_; ++i) {
+      auto next_part_size = indices_[parts_[i] + 1] - indices_[parts_[i]];
+      if ((std::get<1>(col_view_) + next_part_size) > max_cols_) {
+        break;
+      }
+      std::get<1>(col_view_) += next_part_size;
+      std::get<1>(col_part_view_) = i + 1;
+    }
+    num_cols_ = std::get<1>(col_view_) - std::get<0>(col_view_);
+    col_offset_ = std::get<0>(col_view_);
+
+    num_col_parts_ = std::get<1>(col_part_view_) - std::get<0>(col_part_view_);
+    col_part_offset_ = std::get<0>(col_part_view_);
+
+    /*
+     * Set up the subarray to read the partitions
+     */
+    tiledb::Subarray subarray(ctx_, this->array_);
+
+    // Dimension 0 goes from 0 to 127
+    subarray.add_range(0, 0, (int)dimension - 1);
+
+    /**
+     * Read in the next batch of partitions
+     */
+    size_t col_count = 0;
+    for (size_t j = std::get<0>(col_part_view_);
+         j < std::get<1>(col_part_view_);
+         ++j) {
+      size_t start = indices_[parts_[j]];
+      size_t stop = indices_[parts_[j] + 1];
+      size_t len = stop - start;
+      if (len == 0) {
+        continue;
+      }
+      col_count += len;
+      subarray.add_range(1, (int)start, (int)stop - 1);
+    }
+    if (col_count != std::get<1>(col_view_) - std::get<0>(col_view_)) {
+      throw std::runtime_error("Column count mismatch");
+    }
+
+    auto cell_order = schema_.cell_order();
+    auto layout_order = cell_order;
+
+    tiledb::Query query(ctx_, this->array_);
+
+    //auto ptr = data_.get();
+
+    auto ptr = this->data();
+    query.set_subarray(subarray)
+        .set_layout(layout_order)
+        .set_data_buffer(attr_name, ptr, col_count * dimension);
+    query.submit();
+
+    // assert(tiledb::Query::Status::COMPLETE == query.query_status());
+    if (tiledb::Query::Status::COMPLETE != query.query_status()) {
+      throw std::runtime_error("Query status is not complete -- fix me");
+    }
+
+
+  /**
+   * Now deal with ids
+   */
     {
-      life_timer _{"read tdb partitioned ids vector" + ids_uri};
-
       auto attr_idx = 0;
 
       auto attr = ids_schema_.attribute(attr_idx);
@@ -279,7 +298,9 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       tiledb::Subarray subarray(ctx_, ids_array_);
 
       size_t col_count = 0;
-      for (size_t j = std::get<0>(col_part_view_); j < std::get<1>(col_part_view_); ++j) {
+      for (size_t j = std::get<0>(col_part_view_);
+           j < std::get<1>(col_part_view_);
+           ++j) {
         size_t start = indices_[parts_[j]];
         size_t stop = indices_[parts_[j] + 1];
         size_t len = stop - start;
@@ -296,8 +317,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       tiledb::Query query(ctx_, ids_array_);
 
       auto ptr = ids_.data();
-      query.set_subarray(subarray)
-          .set_data_buffer(attr_name, ptr, col_count);
+      query.set_subarray(subarray).set_data_buffer(attr_name, ptr, col_count);
       query.submit();
 
       // assert(tiledb::Query::Status::COMPLETE == query.query_status());
@@ -305,23 +325,16 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
         throw std::runtime_error("Query status is not complete -- fix me");
       }
     }
-    // std::copy(begin(ids_), end(ids_), begin(shuffled_ids));
-  }
-
-  bool advance() {
-
-    // @todo -- col oriented only for now
-    /**
-     * Determine how many partitions to read in
-     */
-    std::get<0>(col_view_) = std::get<1>(col_view_);           // # columns
-    std::get<0>(col_part_view_) = std::get<1>(col_part_view_); // # partitions
 
     return true;
   }
 
   auto& ids() const {
     return ids_;
+  }
+
+  index_type num_parts() const {
+    return std::get<1>(col_part_view_) - std::get<0>(col_part_view_);
   }
 
   /**
@@ -341,14 +354,14 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
  * Convenience class for row-major matrices.
  */
 template <class T, class I = size_t>
-using tdbRowMajorPartitionedMatrix = tdbPartitionedMatrix<T, stdx::layout_right, I>;
+using tdbRowMajorPartitionedMatrix =
+    tdbPartitionedMatrix<T, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.
  */
 template <class T, class I = size_t>
-using tdbColMajorPartitionedMatrix = tdbPartitionedMatrix<T, stdx::layout_left, I>;
+using tdbColMajorPartitionedMatrix =
+    tdbPartitionedMatrix<T, stdx::layout_left, I>;
 
-
-
-#endif //TILEDB_PARTITIONED_MATRIX_H
+#endif  // TILEDB_PARTITIONED_MATRIX_H
