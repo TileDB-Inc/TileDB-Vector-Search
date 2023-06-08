@@ -1,126 +1,126 @@
 #!/bin/bash
 
-export gp3_root=/home/lums/feature-vector-prototype/experimental/external/data/gp3
-export nvme_root=${nvme_root}
+declare -g gp3_root=/home/lums/feature-vector-prototype/experimental/external/data/gp3
+declare -g nvme_root=/mnt/ssd
 
 function init_1M () {
-    declare -g db_uri='s3://tiledb-andrew/sift/bigann1M_base'
-    declare -g centroids_uri='s3://tiledb-andrew/sift/bigann1M_base_tdb/centroids.tdb'
-    declare -g parts_uri='s3://tiledb-andrew/sift/bigann1M_base_tdb/parts.tdb'
-    declare -g index_uri='s3://tiledb-andrew/sift/bigann1M_base_tdb/index.tdb'
-    declare -g ids_uri='s3://tiledb-andrew/sift/bigann1M_base_tdb/ids.tdb'
-    declare -g query_uri='s3://tiledb-andrew/kmeans/benchmark/query_public_10k'
-    declare -g groundtruth_uri='s3://tiledb-andrew/kmeans/benchmark/bigann_1M_GT_nnids'
+    declare -g db_uri="s3://tiledb-andrew/sift/bigann1M_base"
+    declare -g centroids_uri="s3://tiledb-andrew/sift/bigann1M_base_tdb/centroids.tdb"
+    declare -g parts_uri="s3://tiledb-andrew/sift/bigann1M_base_tdb/parts.tdb"
+    declare -g index_uri="s3://tiledb-andrew/sift/bigann1M_base_tdb/index.tdb"
+    declare -g ids_uri="s3://tiledb-andrew/sift/bigann1M_base_tdb/ids.tdb"
+    declare -g query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
+    declare -g groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_1M_GT_nnids"
 }
 
 function init_1M_gp3 () {
-    declare -g db_uri='${gp3_root}/1M/bigann1M_base'
-    declare -g centroids_uri='${gp3_root}/1M/centroids.tdb'
-    declare -g parts_uri='${gp3_root}/1M/parts.tdb'
-    declare -g index_uri='${gp3_root}/1M/index.tdb'
-    declare -g ids_uri='${gp3_root}/1M/ids.tdb'
-    declare -g query_uri='${gp3_root}/1M/query_public_10k'
-    declare -g groundtruth_uri='${gp3_root}/1M/bigann_1M_GT_nnids'
+    declare -g db_uri="${gp3_root}/1M/bigann1M_base"
+    declare -g centroids_uri="${gp3_root}/1M/centroids.tdb"
+    declare -g parts_uri="${gp3_root}/1M/parts.tdb"
+    declare -g index_uri="${gp3_root}/1M/index.tdb"
+    declare -g ids_uri="${gp3_root}/1M/ids.tdb"
+    declare -g query_uri="${gp3_root}/1M/query_public_10k"
+    declare -g groundtruth_uri="${gp3_root}/1M/bigann_1M_GT_nnids"
 }
 
 function init_1M_nvme () {
-    declare -g db_uri='${nvme_root}/1M/bigann1M_base'
-    declare -g centroids_uri='${nvme_root}/1M/centroids.tdb'
-    declare -g parts_uri='${nvme_root}/1M/parts.tdb'
-    declare -g index_uri='${nvme_root}/1M/index.tdb'
-    declare -g ids_uri='${nvme_root}/1M/ids.tdb'
-    declare -g query_uri='${nvme_root}/1M/query_public_10k'
-    declare -g groundtruth_uri='${nvme_root}/1M/bigann_1M_GT_nnids'
+    declare -g db_uri="${nvme_root}/1M/bigann1M_base"
+    declare -g centroids_uri="${nvme_root}/1M/centroids.tdb"
+    declare -g parts_uri="${nvme_root}/1M/parts.tdb"
+    declare -g index_uri="${nvme_root}/1M/index.tdb"
+    declare -g ids_uri="${nvme_root}/1M/ids.tdb"
+    declare -g query_uri="${nvme_root}/1M/query_public_10k"
+    declare -g groundtruth_uri="${nvme_root}/1M/bigann_1M_GT_nnids"
 }
 
 function init_10M () {
-    declare -g db_uri='s3://tiledb-andrew/sift/bigann10M_base'
-    declare -g centroids_uri='s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/centroids.tdb'
-    declare -g parts_uri='s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/parts.tdb'
-    declare -g index_uri='s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/index.tdb'
-    declare -g ids_uri='s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/ids.tdb'
-    declare -g query_uri='s3://tiledb-andrew/kmeans/benchmark/query_public_10k'
-    declare -g groundtruth_uri='s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids'
+    declare -g db_uri="s3://tiledb-andrew/sift/bigann10M_base"
+    declare -g centroids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/centroids.tdb"
+    declare -g parts_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/parts.tdb"
+    declare -g index_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/index.tdb"
+    declare -g ids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/ids.tdb"
+    declare -g query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
+    declare -g groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids"
 }
 
 function init_10M_gp3 () {
-    declare -g db_uri='${gp3_root}/10M/bigann10M_base'
-    declare -g centroids_uri='${gp3_root}/10M/centroids.tdb'
-    declare -g parts_uri='${gp3_root}/10M/parts.tdb'
-    declare -g index_uri='${gp3_root}/10M/index.tdb'
-    declare -g ids_uri='${gp3_root}/10M/ids.tdb'
-    declare -g query_uri='${gp3_root}/10M/query_public_10k'
-    declare -g groundtruth_uri='${gp3_root}/10M/bigann_10M_GT_nnids'
+    declare -g db_uri="${gp3_root}/10M/bigann10M_base"
+    declare -g centroids_uri="${gp3_root}/10M/centroids.tdb"
+    declare -g parts_uri="${gp3_root}/10M/parts.tdb"
+    declare -g index_uri="${gp3_root}/10M/index.tdb"
+    declare -g ids_uri="${gp3_root}/10M/ids.tdb"
+    declare -g query_uri="${gp3_root}/10M/query_public_10k"
+    declare -g groundtruth_uri="${gp3_root}/10M/bigann_10M_GT_nnids"
 }
 
 function init_10M_nvme () {
-    declare -g db_uri='${nvme_root}/10M/bigann10M_base'
-    declare -g centroids_uri='${nvme_root}/10M/centroids.tdb'
-    declare -g parts_uri='${nvme_root}/10M/parts.tdb'
-    declare -g index_uri='${nvme_root}/10M/index.tdb'
-    declare -g ids_uri='${nvme_root}/10M/ids.tdb'
-    declare -g query_uri='${nvme_root}/10M/query_public_10k'
-    declare -g groundtruth_uri='${nvme_root}/10M/bigann_10M_GT_nnids'
+    declare -g db_uri="${nvme_root}/10M/bigann10M_base"
+    declare -g centroids_uri="${nvme_root}/10M/centroids.tdb"
+    declare -g parts_uri="${nvme_root}/10M/parts.tdb"
+    declare -g index_uri="${nvme_root}/10M/index.tdb"
+    declare -g ids_uri="${nvme_root}/10M/ids.tdb"
+    declare -g query_uri="${nvme_root}/10M/query_public_10k"
+    declare -g groundtruth_uri="${nvme_root}/10M/bigann_10M_GT_nnids"
 }
 
 function init_100M () {
-    declare -g db_uri='s3://tiledb-andrew/sift/bigann100M_base'
-    declare -g centroids_uri='s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/centroids.tdb'
-    declare -g parts_uri='s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/parts.tdb'
-    declare -g index_uri='s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/index.tdb'
-    declare -g ids_uri='s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/ids.tdb'
-    declare -g query_uri='s3://tiledb-andrew/kmeans/benchmark/query_public_10k'
-    declare -g groundtruth_uri='s3://tiledb-andrew/kmeans/benchmark/bigann_100M_GT_nnids'
+    declare -g db_uri="s3://tiledb-andrew/sift/bigann100M_base"
+    declare -g centroids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/centroids.tdb"
+    declare -g parts_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/parts.tdb"
+    declare -g index_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/index.tdb"
+    declare -g ids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/ids.tdb"
+    declare -g query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
+    declare -g groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_100M_GT_nnids"
 }
 
 function init_100M_gp3 () {
-    declare -g db_uri='${gp3_root}/100M/bigann100M_base'
-    declare -g centroids_uri='${gp3_root}/100M/centroids.tdb'
-    declare -g parts_uri='${gp3_root}/100M/parts.tdb'
-    declare -g index_uri='${gp3_root}/100M/index.tdb'
-    declare -g ids_uri='${gp3_root}/100M/ids.tdb'
-    declare -g query_uri='${gp3_root}/100M/query_public_10k'
-    declare -g groundtruth_uri='${gp3_root}/100M/bigann_100M_GT_nnids'
+    declare -g db_uri="${gp3_root}/100M/bigann100M_base"
+    declare -g centroids_uri="${gp3_root}/100M/centroids.tdb"
+    declare -g parts_uri="${gp3_root}/100M/parts.tdb"
+    declare -g index_uri="${gp3_root}/100M/index.tdb"
+    declare -g ids_uri="${gp3_root}/100M/ids.tdb"
+    declare -g query_uri="${gp3_root}/100M/query_public_10k"
+    declare -g groundtruth_uri="${gp3_root}/100M/bigann_100M_GT_nnids"
 }
 
 function init_100M_nvme () {
-    declare -g db_uri='${nvme_root}/100M/bigann100M_base'
-    declare -g centroids_uri='${nvme_root}/100M/centroids.tdb'
-    declare -g parts_uri='${nvme_root}/100M/parts.tdb'
-    declare -g index_uri='${nvme_root}/100M/index.tdb'
-    declare -g ids_uri='${nvme_root}/100M/ids.tdb'
-    declare -g query_uri='${nvme_root}/100M/query_public_10k'
-    declare -g groundtruth_uri='${nvme_root}/100M/bigann_100M_GT_nnids'
+    declare -g db_uri="${nvme_root}/100M/bigann100M_base"
+    declare -g centroids_uri="${nvme_root}/100M/centroids.tdb"
+    declare -g parts_uri="${nvme_root}/100M/parts.tdb"
+    declare -g index_uri="${nvme_root}/100M/index.tdb"
+    declare -g ids_uri="${nvme_root}/100M/ids.tdb"
+    declare -g query_uri="${nvme_root}/100M/query_public_10k"
+    declare -g groundtruth_uri="${nvme_root}/100M/bigann_100M_GT_nnids"
 }
 
 function init_1B () {
-    declare -g db_uri='s3://tiledb-nikos/vector-search/datasets/arrays/sift-1b-col-major'
-    declare -g centroids_uri='s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/centroids.tdb'
-    declare -g parts_uri='s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/parts.tdb'
-    declare -g index_uri='s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/index.tdb'
-    declare -g ids_uri='s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/ids.tdb'
-    declare -g query_uri='s3://tiledb-andrew/kmeans/benchmark/query_public_10k'
-    declare -g groundtruth_uri='s3://tiledb-andrew/kmeans/benchmark/bigann_1B_GT_nnids'
+    declare -g db_uri="s3://tiledb-nikos/vector-search/datasets/arrays/sift-1b-col-major"
+    declare -g centroids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/centroids.tdb"
+    declare -g parts_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/parts.tdb"
+    declare -g index_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/index.tdb"
+    declare -g ids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/ids.tdb"
+    declare -g query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
+    declare -g groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_1B_GT_nnids"
 }
 
 function init_1B_gp3 () {
-    declare -g db_uri='${gp3_root}/1B/sift-1b-col-major'
-    declare -g centroids_uri='${gp3_root}/1B/centroids.tdb'
-    declare -g parts_uri='${gp3_root}/1B/parts.tdb'
-    declare -g index_uri='${gp3_root}/1B/index.tdb'
-    declare -g ids_uri='${gp3_root}/1B/ids.tdb'
-    declare -g query_uri='${gp3_root}/1B/query_public_10k'
-    declare -g groundtruth_uri='${gp3_root}/1B/bigann_1B_GT_nnids'
+    declare -g db_uri="${gp3_root}/1B/sift-1b-col-major"
+    declare -g centroids_uri="${gp3_root}/1B/centroids.tdb"
+    declare -g parts_uri="${gp3_root}/1B/parts.tdb"
+    declare -g index_uri="${gp3_root}/1B/index.tdb"
+    declare -g ids_uri="${gp3_root}/1B/ids.tdb"
+    declare -g query_uri="${gp3_root}/1B/query_public_10k"
+    declare -g groundtruth_uri="${gp3_root}/1B/bigann_1B_GT_nnids"
 }
 
 function init_1B_nvme () {
-    declare -g db_uri='${nvme_root}/1B/sift-1b-col-major'
-    declare -g centroids_uri='${nvme_root}/1B/centroids.tdb'
-    declare -g parts_uri='${nvme_root}/1B/parts.tdb'
-    declare -g index_uri='${nvme_root}/1B/index.tdb'
-    declare -g ids_uri='${nvme_root}/1B/ids.tdb'
-    declare -g query_uri='${nvme_root}/1B/query_public_10k'
-    declare -g groundtruth_uri='${nvme_root}/1B/bigann_1B_GT_nnids'
+    declare -g db_uri="${nvme_root}/1B/sift-1b-col-major"
+    declare -g centroids_uri="${nvme_root}/1B/centroids.tdb"
+    declare -g parts_uri="${nvme_root}/1B/parts.tdb"
+    declare -g index_uri="${nvme_root}/1B/index.tdb"
+    declare -g ids_uri="${nvme_root}/1B/ids.tdb"
+    declare -g query_uri="${nvme_root}/1B/query_public_10k"
+    declare -g groundtruth_uri="${nvme_root}/1B/bigann_1B_GT_nnids"
 }
 
 function verify_s3 () {
