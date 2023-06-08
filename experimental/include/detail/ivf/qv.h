@@ -207,7 +207,6 @@ auto qv_query_heap_finite_ram(
   debug_matrix(shuffled_db, "shuffled_db");
   debug_matrix(shuffled_db.ids(), "shuffled_db.ids()");
 
-  life_timer __{std::string{"In memory portion of "} + tdb_func__};
 
   // auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
   //       size(q), fixed_min_pair_heap<float, size_t>(k_nn));
@@ -216,6 +215,8 @@ auto qv_query_heap_finite_ram(
       nthreads,
       std::vector<fixed_min_pair_heap<float, size_t>>(
           size(q), fixed_min_pair_heap<float, size_t>(k_nn)));
+
+  life_timer __{std::string{"Iteration portion of "} + tdb_func__};
 
   for (;;) {
     // size_t block_size = (size(active_partitions) + nthreads - 1) / nthreads;
@@ -301,8 +302,8 @@ auto qv_query_heap_finite_ram(
   }
 
   // @todo this is an ugly and embarrassing hack
-  __.stop();
-  global_time_of_interest = __.elapsed();
+  _.stop();
+  global_time_of_interest = _.elapsed();
 
   return top_k;
 }
