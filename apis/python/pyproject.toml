@@ -2,9 +2,9 @@
 name = "tiledb-vector-search"
 version = "0.0.1"
 description = "TileDB Vector Search Python client"
+license = { text = "MIT" }
 readme = "./README.md"
-authors = [
-]
+authors = []
 requires-python = "~=3.7"
 classifiers = [
   "Development Status :: 4 - Beta",
