@@ -45,7 +45,7 @@ option(CMAKE_IDE "(Used for CLion builds). Disables superbuild and sets the EP i
 option(FORCE_EXTERNAL_TILEDB "Forces a local build of TileDB instead of searching system paths." OFF)
 option(DOWNLOAD_TILEDB_PREBUILT "If tiledb is being super built, this controls downloading prebuilt artifacts or building from source" ON)
 option(TILEDB_S3 "Enables S3/minio support using aws-cpp-sdk" ON)
-option(OVERRIDE_INSTALL_PREFIX "Ignores the setting of CMAKE_INSTALL_PREFIX and sets a default prefix" ON)
+option(OVERRIDE_INSTALL_PREFIX "Ignores the setting of CMAKE_INSTALL_PREFIX and sets a default prefix" OFF)
 option(USE_MKL_CBLAS "Try to use mkl_cblas.h (requires additional CMake configuration)" OFF)
 option(TILEDB_VS_PYTHON "Build Python wrapping of C++ API" OFF)
 option(BUILD_TESTS "Build the tests" ON)
