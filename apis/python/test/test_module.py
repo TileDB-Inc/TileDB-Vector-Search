@@ -11,7 +11,8 @@ def test_tdbMatrix(tmpdir):
 
     create_array(p, data)
 
-    m = vspy.tdbColMajorMatrix_f32(p, 0)
+    ctx = vspy.Ctx({})
+    m = vspy.tdbColMajorMatrix_f32(ctx, p, 0)
     m_array = np.array(m)
     assert m_array.shape == data.shape
     assert np.array_equal(m_array, data)
