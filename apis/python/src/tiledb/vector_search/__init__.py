@@ -1,5 +1,5 @@
 from .ingestion import ingest
-from .module import load_as_array, load_as_matrix
+from .module import load_as_array, load_as_matrix, query_vq
 from .index import FlatIndex
 
 __all__ = [

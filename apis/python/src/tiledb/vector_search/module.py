@@ -1,7 +1,7 @@
+from tiledb.vector_search import _tiledbvspy as vspy
+
 import tiledb
 import numpy as np
-
-from tiledb.vector_search import _tiledbvspy as vspy
 
 def load_as_matrix(path, nqueries=0, config={}):
     ctx = vspy.Ctx({})
