@@ -11,6 +11,9 @@ function init_1M_s3 () {
     declare -g ids_uri="s3://tiledb-andrew/sift/bigann1M_base_tdb/ids.tdb"
     declare -g query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
     declare -g groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_1M_GT_nnids"
+    echo "     -|-"
+    echo "     -|-  ${FUNCNAME[0]}"
+    echo "     -|-"
 }
 
 function init_1M_gp3 () {
@@ -21,6 +24,9 @@ function init_1M_gp3 () {
     declare -g ids_uri="${gp3_root}/1M/ids.tdb"
     declare -g query_uri="${gp3_root}/1M/query_public_10k"
     declare -g groundtruth_uri="${gp3_root}/1M/bigann_1M_GT_nnids"
+    echo "     -|-"
+    echo "     -|-  ${FUNCNAME[0]}"
+    echo "     -|-"
 }
 
 function init_1M_nvme () {
@@ -31,6 +37,9 @@ function init_1M_nvme () {
     declare -g ids_uri="${nvme_root}/1M/ids.tdb"
     declare -g query_uri="${nvme_root}/1M/query_public_10k"
     declare -g groundtruth_uri="${nvme_root}/1M/bigann_1M_GT_nnids"
+    echo "     -|-"
+    echo "     -|-  ${FUNCNAME[0]}"
+    echo "     -|-"
 }
 
 function init_10M_s3 () {
@@ -41,6 +50,9 @@ function init_10M_s3 () {
     declare -g ids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/ids.tdb"
     declare -g query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
     declare -g groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids"
+    echo "     -|-"
+    echo "     -|-  ${FUNCNAME[0]}"
+    echo "     -|-"
 }
 
 function init_10M_gp3 () {
@@ -51,6 +63,9 @@ function init_10M_gp3 () {
     declare -g ids_uri="${gp3_root}/10M/ids.tdb"
     declare -g query_uri="${gp3_root}/10M/query_public_10k"
     declare -g groundtruth_uri="${gp3_root}/10M/bigann_10M_GT_nnids"
+    echo "     -|-"
+    echo "     -|-  ${FUNCNAME[0]}"
+    echo "     -|-"
 }
 
 function init_10M_nvme () {
@@ -61,6 +76,9 @@ function init_10M_nvme () {
     declare -g ids_uri="${nvme_root}/10M/ids.tdb"
     declare -g query_uri="${nvme_root}/10M/query_public_10k"
     declare -g groundtruth_uri="${nvme_root}/10M/bigann_10M_GT_nnids"
+    echo "     -|-"
+    echo "     -|-  ${FUNCNAME[0]}"
+    echo "     -|-"
 }
 
 function init_100M_s3 () {
@@ -71,6 +89,9 @@ function init_100M_s3 () {
     declare -g ids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/ids.tdb"
     declare -g query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
     declare -g groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_100M_GT_nnids"
+    echo "     -|-"
+    echo "     -|-  ${FUNCNAME[0]}"
+    echo "     -|-"
 }
 
 function init_100M_gp3 () {
@@ -81,6 +102,9 @@ function init_100M_gp3 () {
     declare -g ids_uri="${gp3_root}/100M/ids.tdb"
     declare -g query_uri="${gp3_root}/100M/query_public_10k"
     declare -g groundtruth_uri="${gp3_root}/100M/bigann_100M_GT_nnids"
+    echo "     -|-"
+    echo "     -|-  ${FUNCNAME[0]}"
+    echo "     -|-"
 }
 
 function init_100M_nvme () {
@@ -91,6 +115,9 @@ function init_100M_nvme () {
     declare -g ids_uri="${nvme_root}/100M/ids.tdb"
     declare -g query_uri="${nvme_root}/100M/query_public_10k"
     declare -g groundtruth_uri="${nvme_root}/100M/bigann_100M_GT_nnids"
+    echo "     -|-"
+    echo "     -|-  ${FUNCNAME[0]}"
+    echo "     -|-"
 }
 
 function init_1B_s3 () {
@@ -101,6 +128,9 @@ function init_1B_s3 () {
     declare -g ids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/ids.tdb"
     declare -g query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
     declare -g groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_1B_GT_nnids"
+    echo "     -|-"
+    echo "     -|-  ${FUNCNAME[0]}"
+    echo "     -|-"
 }
 
 function init_1B_gp3 () {
@@ -111,6 +141,9 @@ function init_1B_gp3 () {
     declare -g ids_uri="${gp3_root}/1B/ids.tdb"
     declare -g query_uri="${gp3_root}/1B/query_public_10k"
     declare -g groundtruth_uri="${gp3_root}/1B/bigann_1B_GT_nnids"
+    echo "     -|-"
+    echo "     -|-  ${FUNCNAME[0]}"
+    echo "     -|-"
 }
 
 function init_1B_nvme () {
@@ -121,6 +154,9 @@ function init_1B_nvme () {
     declare -g ids_uri="${nvme_root}/1B/ids.tdb"
     declare -g query_uri="${nvme_root}/1B/query_public_10k"
     declare -g groundtruth_uri="${nvme_root}/1B/bigann_1B_GT_nnids"
+    echo "     -|-"
+    echo "     -|-  ${FUNCNAME[0]}"
+    echo "     -|-"
 }
 
 function verify_s3 () {

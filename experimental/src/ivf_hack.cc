@@ -254,9 +254,10 @@ int main(int argc, char* argv[]) {
     std::cout << std::setw(8) << nprobe;
     std::cout << std::setw(8) << k_nn;
     std::cout << std::setw(8) << nthreads;
-    std::cout << std::setw(8) << ms;
-    std::cout << std::setw(8) << qps;
-    std::cout << std::setw(8) << recall;
+    std::cout << std::fixed << std::setprecision(2);
+    std::cout << std::setw(12) << ms;
+    std::cout << std::setw(12) << qps;
+    std::cout << std::setw(8) << recall;  
     std::cout << std::endl;
   }
 

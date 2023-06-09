@@ -60,6 +60,9 @@ auto qv_query_heap_infinite_ram(
     size_t k_nn,
     bool nth,
     size_t nthreads) {
+  life_timer _{"Total time " + tdb_func__};
+
+
   // Read the shuffled database and ids
   // @todo To this more systematically
   auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
@@ -122,8 +125,8 @@ auto qv_query_heap_infinite_ram(
   }
 
   // @todo this is an ugly and embarrassing hack
-  __.stop();
-  global_time_of_interest = __.elapsed();
+  _.stop();
+  global_time_of_interest = _.elapsed();
 
   return top_k;
 }
