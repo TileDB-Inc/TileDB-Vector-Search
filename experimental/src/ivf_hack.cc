@@ -144,6 +144,7 @@ int main(int argc, char* argv[]) {
   bool finite = args["--finite"].asBool();
 
   tiledb::Context ctx;
+
   if (is_local_array(centroids_uri) &&
       !std::filesystem::exists(centroids_uri)) {
     std::cerr << "Error: centroids URI does not exist: "
@@ -161,14 +162,14 @@ int main(int argc, char* argv[]) {
   {
     life_timer _("query_time");
 
-    // auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(ctx, part_uri);
-    // auto indices = tdbMatrix<size_t, Kokkos::layout_left>(ctx, index_uri);
-    auto indices = read_vector<indices_type>(ctx, index_uri);
-    // auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
-
+    // @todo Encapsulate these arrays in a class
+    // auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
+    // auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
     // debug_matrix(shuffled_db, "shuffled_db");
-    debug_matrix(indices, "indices");
     // debug_matrix(shuffled_ids, "shuffled_ids");
+
+    auto indices = read_vector<indices_type>(ctx, index_uri);
+    debug_matrix(indices, "indices");
 
     auto q = tdbColMajorMatrix<q_type>(ctx, query_uri, nqueries);
     debug_matrix(q, "q");
@@ -176,6 +177,7 @@ int main(int argc, char* argv[]) {
     auto top_k = [&]() {
       if (finite) {
         return detail::ivf::qv_query_heap_finite_ram(
+            ctx,
             part_uri,
             centroids,
             q,
@@ -188,6 +190,7 @@ int main(int argc, char* argv[]) {
             nthreads);
       } else {
         return detail::ivf::qv_query_heap_infinite_ram(
+            ctx,
             part_uri,
             centroids,
             q,
@@ -201,11 +204,6 @@ int main(int argc, char* argv[]) {
     }();
 
     debug_matrix(top_k, "top_k");
-
-    // Once this is a function, simply return kmeans_ids
-    // For now, print the results to std::cout
-    // @todo also get scores
-    // @todo add an output_uri argument
 
     if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
@@ -260,10 +258,10 @@ int main(int argc, char* argv[]) {
     std::cout << std::setw(8) << nprobe;
     std::cout << std::setw(8) << k_nn;
     std::cout << std::setw(8) << nthreads;
-    std::cout << std::fixed << std::setprecision(2);
     std::cout << std::setw(12) << ms;
+    std::cout << std::fixed << std::setprecision(3);
     std::cout << std::setw(12) << qps;
-    std::cout << std::setw(8) << recall;
+    std::cout << std::setw(8) << recall;  
     std::cout << std::endl;
   }
 
