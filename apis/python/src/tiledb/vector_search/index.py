@@ -1,5 +1,5 @@
 from . import module as vs
-from tiledbvspy import ColMajorMatrix_f32
+#from ._tiledbvspy import ColMajorMatrix_f32
 import numpy as np
 
 class FlatIndex:
@@ -30,5 +30,4 @@ class FlatIndex:
             nqueries,
             nthreads
         )
-
         return np.array(r)

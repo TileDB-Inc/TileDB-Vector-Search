@@ -106,11 +106,18 @@ ExternalProject_Add(libtiledbvectorsearch
 
 # make install-libtiledbvectorsearch
 add_custom_target(install-libtiledbvectorsearch
-  COMMAND ${CMAKE_COMMAND} --build . --target install --config ${CMAKE_BUILD_TYPE}
+  COMMAND
+    ${CMAKE_COMMAND} --build . --target install --config ${CMAKE_BUILD_TYPE}
+  COMMAND
+    ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch/install_manifest.txt ${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch
 )
 
 # make check
 add_custom_target(check
-  COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch --output-on-failure -E \"unit_utils_test|time_insert_test\"
+  COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch --output-on-failure
+)
+
+add_custom_target(check-ci
+  COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch --output-on-failure -E \"unit_slicing_test|unit_utils_test|time_.+\"
 )

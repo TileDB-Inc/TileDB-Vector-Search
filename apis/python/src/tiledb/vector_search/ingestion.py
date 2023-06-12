@@ -1,5 +1,7 @@
 from typing import Optional
 
+from tiledb.cloud.dag import Mode
+
 
 def ingest(
     array_uri: str,
@@ -15,6 +17,7 @@ def ingest(
     workers: int = -1,
     verbose: bool = False,
     trace_id: Optional[str] = None,
+    mode: Mode = Mode.LOCAL,
 ) -> None:
     """
     Ingest vectors into TileDB.
@@ -36,6 +39,7 @@ def ingest(
         if not provided, is auto-configured based on the dataset size
     :param verbose: verbose logging, defaults to False
     :param trace_id: trace ID for logging, defaults to None
+    :param mode: execution mode, defaults to LOCAL use BATCH for distributed execution
     """
     import enum
     import logging
@@ -758,52 +762,61 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
+        mode: Mode = Mode.LOCAL,
     ) -> dag.DAG:
+        dag_mode = Mode.REALTIME
+        if mode == Mode.BATCH:
+            dag_mode = Mode.BATCH
+
         d = dag.DAG(
             name="vector-ingestion",
-            mode=Mode.BATCH,
+            mode=dag_mode,
             max_workers=workers,
             retry_strategy=models.RetryStrategy(
                 limit=1,
                 retry_policy="Always",
             ),
         )
+        submit = d.submit_local
+        if mode == Mode.BATCH or mode == Mode.REALTIME:
+            submit = d.submit
+
         input_vectors_batch_size = input_vectors_per_work_item * input_vectors_work_items_per_worker
         if copy_centroids_uri is not None:
-            centroids_node = d.submit(copy_centroids,
-                                      array_uri=array_uri,
-                                      copy_centroids_uri=copy_centroids_uri,
-                                      config=config,
-                                      verbose=verbose,
-                                      trace_id=trace_id,
-                                      name="copy-centroids", resources={"cpu": "1", "memory": "2Gi"})
+            centroids_node = submit(copy_centroids,
+                                    array_uri=array_uri,
+                                    copy_centroids_uri=copy_centroids_uri,
+                                    config=config,
+                                    verbose=verbose,
+                                    trace_id=trace_id,
+                                    name="copy-centroids", resources={"cpu": "1", "memory": "2Gi"})
         else:
             if training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE:
-                centroids_node = d.submit(centralised_kmeans,
-                                          array_uri=array_uri,
-                                          source_uri=source_uri,
-                                          source_type=source_type,
-                                          vector_type=vector_type,
-                                          partitions=partitions,
-                                          dimensions=dimensions,
-                                          sample_start_pos=0,
-                                          sample_end_pos=training_sample_size,
-                                          config=config,
-                                          verbose=verbose,
-                                          trace_id=trace_id,
-                                          name="kmeans", resources={"cpu": "8", "memory": "32Gi"})
+                centroids_node = submit(centralised_kmeans,
+                                        array_uri=array_uri,
+                                        source_uri=source_uri,
+                                        source_type=source_type,
+                                        vector_type=vector_type,
+                                        partitions=partitions,
+                                        dimensions=dimensions,
+                                        sample_start_pos=0,
+                                        sample_end_pos=training_sample_size,
+                                        config=config,
+                                        verbose=verbose,
+                                        trace_id=trace_id,
+                                        name="kmeans", resources={"cpu": "8", "memory": "32Gi"})
             else:
-                internal_centroids_node = d.submit(init_centroids,
-                                                   source_uri=source_uri,
-                                                   source_type=source_type,
-                                                   vector_type=vector_type,
-                                                   partitions=partitions,
-                                                   dimensions=dimensions,
-                                                   config=config,
-                                                   verbose=verbose,
-                                                   trace_id=trace_id,
-                                                   name="init-centroids",
-                                                   resources={"cpu": "1", "memory": "1Gi"})
+                internal_centroids_node = submit(init_centroids,
+                                                 source_uri=source_uri,
+                                                 source_type=source_type,
+                                                 vector_type=vector_type,
+                                                 partitions=partitions,
+                                                 dimensions=dimensions,
+                                                 config=config,
+                                                 verbose=verbose,
+                                                 trace_id=trace_id,
+                                                 name="init-centroids",
+                                                 resources={"cpu": "1", "memory": "1Gi"})
 
                 for it in range(5):
                     kmeans_workers = []
@@ -813,42 +826,42 @@ def ingest(
                         end = i + input_vectors_batch_size
                         if end > size:
                             end = size
-                        kmeans_workers.append(d.submit(assign_points_and_partial_new_centroids,
-                                                       centroids=internal_centroids_node,
-                                                       source_uri=source_uri,
-                                                       source_type=source_type,
-                                                       vector_type=vector_type,
-                                                       partitions=partitions,
-                                                       dimensions=dimensions,
-                                                       vector_start_pos=start,
-                                                       vector_end_pos=end,
-                                                       threads=8,
-                                                       config=config,
-                                                       verbose=verbose,
-                                                       trace_id=trace_id,
-                                                       name="k-means-part-" + str(task_id),
-                                                       resources={"cpu": "8", "memory": "12Gi"}))
+                        kmeans_workers.append(submit(assign_points_and_partial_new_centroids,
+                                                     centroids=internal_centroids_node,
+                                                     source_uri=source_uri,
+                                                     source_type=source_type,
+                                                     vector_type=vector_type,
+                                                     partitions=partitions,
+                                                     dimensions=dimensions,
+                                                     vector_start_pos=start,
+                                                     vector_end_pos=end,
+                                                     threads=8,
+                                                     config=config,
+                                                     verbose=verbose,
+                                                     trace_id=trace_id,
+                                                     name="k-means-part-" + str(task_id),
+                                                     resources={"cpu": "8", "memory": "12Gi"}))
                         task_id += 1
                     reducers = []
                     for i in range(0, len(kmeans_workers), 10):
-                        reducers.append(d.submit(compute_new_centroids,
-                                                 *kmeans_workers[i:i + 10], name="update-centroids-" + str(i),
-                                                 resources={"cpu": "1", "memory": "8Gi"}))
-                    internal_centroids_node = d.submit(compute_new_centroids,
-                                                       *reducers, name="update-centroids",
-                                                       resources={"cpu": "1", "memory": "8Gi"})
-                centroids_node = d.submit(write_centroids,
-                                          centroids=internal_centroids_node,
-                                          array_uri=array_uri,
-                                          partitions=partitions,
-                                          dimensions=dimensions,
-                                          config=config,
-                                          verbose=verbose,
-                                          trace_id=trace_id,
-                                          name="write-centroids",
-                                          resources={"cpu": "1", "memory": "2Gi"})
+                        reducers.append(submit(compute_new_centroids,
+                                               *kmeans_workers[i:i + 10], name="update-centroids-" + str(i),
+                                               resources={"cpu": "1", "memory": "8Gi"}))
+                    internal_centroids_node = submit(compute_new_centroids,
+                                                     *reducers, name="update-centroids",
+                                                     resources={"cpu": "1", "memory": "8Gi"})
+                centroids_node = submit(write_centroids,
+                                        centroids=internal_centroids_node,
+                                        array_uri=array_uri,
+                                        partitions=partitions,
+                                        dimensions=dimensions,
+                                        config=config,
+                                        verbose=verbose,
+                                        trace_id=trace_id,
+                                        name="write-centroids",
+                                        resources={"cpu": "1", "memory": "2Gi"})
 
-        wait_node = d.submit(print, "ok", name="wait", resources={"cpu": "0.5", "memory": "500Mi"})
+        wait_node = submit(print, "ok", name="wait", resources={"cpu": "0.5", "memory": "500Mi"})
 
         task_id = 0
         for i in range(0, size, input_vectors_batch_size):
@@ -856,7 +869,7 @@ def ingest(
             end = i + input_vectors_batch_size
             if end > size:
                 end = size
-            ingest_node = d.submit(
+            ingest_node = submit(
                 ingest_vectors_udf,
                 array_uri=array_uri,
                 source_uri=source_uri,
@@ -878,13 +891,13 @@ def ingest(
             wait_node.depends_on(ingest_node)
             task_id += 1
 
-        compute_indexes_node = d.submit(compute_partition_indexes_udf,
-                                        array_uri=array_uri,
-                                        config=config,
-                                        verbose=verbose,
-                                        trace_id=trace_id,
-                                        name="compute-indexes",
-                                        resources={"cpu": "1", "memory": "2Gi"})
+        compute_indexes_node = submit(compute_partition_indexes_udf,
+                                      array_uri=array_uri,
+                                      config=config,
+                                      verbose=verbose,
+                                      trace_id=trace_id,
+                                      name="compute-indexes",
+                                      resources={"cpu": "1", "memory": "2Gi"})
         task_id = 0
         partitions_batch = table_partitions_work_items_per_worker * table_partitions_per_work_item
         for i in range(0, partitions, partitions_batch):
@@ -892,16 +905,16 @@ def ingest(
             end = i + partitions_batch
             if end > partitions:
                 end = partitions
-            compute_partition_sizes_node = d.submit(compute_partition_sizes_udf,
-                                                    array_uri=array_uri,
-                                                    partition_id_start=start,
-                                                    partition_id_end=end,
-                                                    batch=table_partitions_per_work_item,
-                                                    config=config,
-                                                    verbose=verbose,
-                                                    trace_id=trace_id,
-                                                    name="compute-partition-sizes-" + str(task_id),
-                                                    resources={"cpu": "2", "memory": "16Gi"})
+            compute_partition_sizes_node = submit(compute_partition_sizes_udf,
+                                                  array_uri=array_uri,
+                                                  partition_id_start=start,
+                                                  partition_id_end=end,
+                                                  batch=table_partitions_per_work_item,
+                                                  config=config,
+                                                  verbose=verbose,
+                                                  trace_id=trace_id,
+                                                  name="compute-partition-sizes-" + str(task_id),
+                                                  resources={"cpu": "2", "memory": "16Gi"})
             compute_partition_sizes_node.depends_on(wait_node)
             compute_indexes_node.depends_on(compute_partition_sizes_node)
             task_id += 1
@@ -912,17 +925,17 @@ def ingest(
             end = i + partitions_batch
             if end > partitions:
                 end = partitions
-            consolidate_partition_node = d.submit(consolidate_partition_udf,
-                                                  array_uri=array_uri,
-                                                  partition_id_start=start,
-                                                  partition_id_end=end,
-                                                  batch=table_partitions_per_work_item,
-                                                  dimensions=dimensions,
-                                                  config=config,
-                                                  verbose=verbose,
-                                                  trace_id=trace_id,
-                                                  name="consolidate-partition-" + str(task_id),
-                                                  resources={"cpu": "2", "memory": "24Gi"})
+            consolidate_partition_node = submit(consolidate_partition_udf,
+                                                array_uri=array_uri,
+                                                partition_id_start=start,
+                                                partition_id_end=end,
+                                                batch=table_partitions_per_work_item,
+                                                dimensions=dimensions,
+                                                config=config,
+                                                verbose=verbose,
+                                                trace_id=trace_id,
+                                                name="consolidate-partition-" + str(task_id),
+                                                resources={"cpu": "2", "memory": "24Gi"})
             consolidate_partition_node.depends_on(compute_indexes_node)
             task_id += 1
         return d
@@ -1015,6 +1028,7 @@ def ingest(
             config=config,
             verbose=verbose,
             trace_id=trace_id,
+            mode=mode,
         )
         logger.info("Submitting ingestion graph")
         d.compute()

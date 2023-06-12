@@ -93,3 +93,4 @@ apis/python/.mypy_cache/
 
 .idea
 apis/python/src/tiledb/vector_search/version.py
+_skbuild

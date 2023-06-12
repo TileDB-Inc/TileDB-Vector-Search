@@ -42,6 +42,7 @@ std::string global_region = "us-east-1";
 
 TEST_CASE("gen db", "[queries]") {
   size_t dimension = 128;
+  tiledb::Context ctx;
 
   size_t db = GENERATE(1, 10, 100, 1000, 10000, 100000, 1000000, 10000000);
 
@@ -56,11 +57,12 @@ TEST_CASE("gen db", "[queries]") {
     x = dist(gen);
   }
   std::string db_name = "db_" + std::to_string(db) + ".tdb";
-  write_matrix(db_mat, db_name);
+  write_matrix(ctx, db_mat, db_name);
 }
 
 TEST_CASE("gen q", "[queries]") {
   size_t dimension = 128;
+  tiledb::Context ctx;
 
   size_t q = GENERATE(1, 10, 100, 1000, 10000);
 
@@ -75,5 +77,5 @@ TEST_CASE("gen q", "[queries]") {
     x = dist(gen);
   }
   std::string q_name = "q_" + std::to_string(q) + ".tdb";
-  write_matrix(q_mat, q_name);
+  write_matrix(ctx, q_mat, q_name);
 }
