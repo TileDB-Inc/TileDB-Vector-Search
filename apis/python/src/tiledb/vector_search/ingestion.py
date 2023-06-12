@@ -764,19 +764,24 @@ def ingest(
         trace_id: Optional[str] = None,
         mode: Mode = Mode.LOCAL,
     ) -> dag.DAG:
-        dag_mode = Mode.REALTIME
         if mode == Mode.BATCH:
-            dag_mode = Mode.BATCH
+            d = dag.DAG(
+                name="vector-ingestion",
+                mode=Mode.BATCH,
+                max_workers=workers,
+                retry_strategy=models.RetryStrategy(
+                    limit=1,
+                    retry_policy="Always",
+                ),
+            )
+        else:
+            d = dag.DAG(
+                name="vector-ingestion",
+                mode=Mode.REALTIME,
+                max_workers=workers,
+                namespace="default",
+            )
 
-        d = dag.DAG(
-            name="vector-ingestion",
-            mode=dag_mode,
-            max_workers=workers,
-            retry_strategy=models.RetryStrategy(
-                limit=1,
-                retry_policy="Always",
-            ),
-        )
         submit = d.submit_local
         if mode == Mode.BATCH or mode == Mode.REALTIME:
             submit = d.submit
