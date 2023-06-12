@@ -51,6 +51,7 @@ namespace detail::ivf {
  * queries each vector in the query set against the appropriate partitions.
  */
 auto qv_query_heap_infinite_ram(
+    tiledb::Context& ctx,
     const std::string& part_uri,
     auto&& centroids,
     auto&& q,
@@ -65,8 +66,8 @@ auto qv_query_heap_infinite_ram(
 
   // Read the shuffled database and ids
   // @todo To this more systematically
-  auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
-  auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
+  auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(ctx, part_uri);
+  auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
 
   assert(shuffled_db.num_cols() == shuffled_ids.size());
   if (size(indices) == centroids.num_cols()) {
@@ -132,6 +133,7 @@ auto qv_query_heap_infinite_ram(
 }
 
 auto qv_query_heap_finite_ram(
+    tiledb::Context& ctx,
     const std::string& part_uri,
     auto&& centroids,
     auto&& q,
