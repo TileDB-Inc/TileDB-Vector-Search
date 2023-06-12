@@ -1,6 +1,8 @@
-from . import module as vs
-#from ._tiledbvspy import ColMajorMatrix_f32
 import numpy as np
+
+from . import module as vs
+from ._tiledbvspy import ColMajorMatrix_f32
+
 
 class FlatIndex:
     def __init__(self, uri):
