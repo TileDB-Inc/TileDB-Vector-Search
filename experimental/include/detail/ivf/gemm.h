@@ -33,6 +33,8 @@
 #ifndef TILEDB_IVF_GEMM_H
 #define TILEDB_IVF_GEMM_H
 
+#include "linalg.h"
+
 namespace detail::ivf {
 
 /**

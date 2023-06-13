@@ -68,7 +68,7 @@ void do_time_pair2(
 
   auto size_v = v.size();
   for (unsigned i = 0; i < size_v; ++i) {
-    heap.insert(v[i], i);
+    heap.insert(std::make_pair(v[i], i));
   }
 }
 
@@ -188,7 +188,7 @@ do_time_indirect("indirect heap7 (3)", heap7, v);
     std::shuffle(begin(v), end(v), rng);
     do_time_pair("heap2", heap2, v);
 
-    fixed_min_set_pair_heap<float, size_t> heap12(i);
+    fixed_min_set_set<std::pair<float, size_t>> heap12(i);
 
     std::shuffle(begin(v), end(v), rng);
     do_time_pair2("heap12", heap12, v);

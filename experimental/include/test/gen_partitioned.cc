@@ -39,6 +39,8 @@
 bool global_debug = false;
 std::string global_region = "us-east-1";
 
+using namespace detail::flat;
+
 TEST_CASE("getn_partitioned: test test", "[gen_partitioned]") {
   REQUIRE(true);
 }

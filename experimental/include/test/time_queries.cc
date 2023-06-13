@@ -46,6 +46,8 @@
 bool global_debug = false;
 std::string global_region = "us-east-1";
 
+using namespace detail::flat;
+
 TEST_CASE("time queries", "[queries][ci-skip]") {
   size_t dimension = 128;
 
@@ -92,7 +94,7 @@ TEST_CASE("time queries", "[queries][ci-skip]") {
     //    if constexpr (false)
     {
       life_timer _outer{"qv_query"};
-      qv_query(db_mat, q_mat, k, nthreads);
+      qv_query_heap(db_mat, q_mat, k, nthreads);
     }
     //    if constexpr (false)
     {
