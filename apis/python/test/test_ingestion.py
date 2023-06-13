@@ -4,10 +4,10 @@ from tiledb.vector_search.ingestion import ingest
 from common import *
 
 
-def test_local_ingestion():
-  dataset_dir = "/tmp/test-dataset"
-  create_random_dataset(nb=10000, d=1000, nq=100, k=10, path=dataset_dir)
-  array_uri = "/tmp/test-ingestion"
+def test_local_ingestion(tmp_path):
+  dataset_dir = os.path.join(tmp_path, "dataset")
+  array_uri = os.path.join(tmp_path, "array")
+  create_random_dataset(nb=10000, d=100, nq=100, k=10, path=dataset_dir)
   source_type = "F32BIN"
   dtype = np.float32
   k = 10
@@ -17,7 +17,7 @@ def test_local_ingestion():
 
   index = ingest(index_type="FLAT",
                  array_uri=array_uri,
-                 source_uri=dataset_dir + "/data",
+                 source_uri=os.path.join(dataset_dir, "data"),
                  source_type=source_type)
   result = np.transpose(index.query(np.transpose(query_vectors), k=k))
   assert (np.array_equal(result, gt_i))
