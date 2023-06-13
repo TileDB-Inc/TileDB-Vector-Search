@@ -39,6 +39,8 @@
 #include "ivf_query.h"
 #include "linalg.h"
 
+using namespace detail::flat;
+
 TEST_CASE("test queries", "[queries]") {
   size_t dimension = 128;
   size_t num_vectors = 2000;
@@ -70,7 +72,7 @@ TEST_CASE("test queries", "[queries]") {
   }
 
   SECTION("qv_query") {
-    auto top_k = qv_query(db_mat, q_mat, k, nthreads);
+    auto top_k = qv_query_heap(db_mat, q_mat, k, nthreads);
     CHECK(top_k.num_rows() == k);
     CHECK(top_k.num_cols() == num_queries);
     for (size_t i = 0; i < num_queries; ++i) {

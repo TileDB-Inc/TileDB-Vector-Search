@@ -87,7 +87,6 @@
 
 #include "defs.h"
 #include "flat_query.h"
-#include "ivf_query.h"
 #include "stats.h"
 #include "utils/timer.h"
 
@@ -104,21 +103,21 @@ static constexpr const char USAGE[] =
           [--block N] [--nqueries N] [--nthreads N] [--nth] [--validate] [--log FILE] [-d] [-v]
 
   Options:
-      -h, --help            show this screen
-      --db_uri URI          database URI with feature vectors
-      --q_uri URI           query URI with feature vectors to search for
-      --g_uri URI           ground true URI
-      --output_uri URI      output URI for results
-      --order ORDER         which ordering to do comparisons [default: gemm]
-      --k NN                number of nearest neighbors to find [default: 10]
-      --block N             block database with size N (0 = no blocking) [default: 0]
-      --nqueries N          size of queries subset to compare (0 = all) [default: 0]
-      --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
-      --nth                 use nth_element for top k [default: false]
-      --log FILE            log info to FILE (- for stdout)
-      -V, --validate        validate results [default: false]
-      -d, --debug           run in debug mode [default: false]
-      -v, --verbose         run in verbose mode [default: false]
+      -h, --help              show this screen
+      --db_uri URI            database URI with feature vectors
+      --query_uri URI         query URI with feature vectors to search for
+      --groundtruth_uri URI   ground truth URI
+      --output_uri URI        output URI for results
+      --alg ALGO              which algorithm to use for comparisons [default: vq_heap]
+      --k NN                  number of nearest neighbors to find [default: 10]
+      --block N               block database with size N (0 = no blocking) [default: 0]
+      --nqueries N            size of queries subset to compare (0 = all) [default: 0]
+      --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
+      --nth                   use nth_element for top k [default: false]
+      --log FILE              log info to FILE (- for stdout)
+      -V, --validate          validate results [default: false]
+      -d, --debug             run in debug mode [default: false]
+      -v, --verbose           run in verbose mode [default: false]
 )";
 
 int main(int argc, char* argv[]) {
@@ -178,45 +177,41 @@ int main(int argc, char* argv[]) {
         std::cout << "# Using vq_nth, nth = " << std::to_string(nth)
                   << std::endl;
       }
-      return vq_query_nth(db, q, k, nth, nthreads);
+      return detail::flat::vq_query_nth(db, q, k, nth, nthreads);
     } else if (args["--order"].asString() == "vq_heap") {
       if (verbose) {
         std::cout << "# Using vq_heap, ignoring nth = " << std::to_string(nth)
                   << std::endl;
       }
-      auto r = vq_query_heap(db, q, k, nthreads);
-      debug_slice(r, "", 10,10);
-      return r;
+      return detail::flat::vq_query_heap(db, q, k, nthreads);
     } else if (args["--order"].asString() == "qv_nth") {
       if (verbose) {
         std::cout << "# Using qv_nth, nth = " << std::to_string(nth)
                   << std::endl;
       }
-      return qv_query_nth(db, q, k, nth, nthreads);
+      return detail::flat::qv_query_nth(db, q, k, nth, nthreads);
     } else if (args["--order"].asString() == "qv_heap") {
       if (verbose) {
         std::cout << "# Using qv_query (qv_heap), ignoring nth = "
                   << std::to_string(nth) << std::endl;
       }
-      return qv_query(db, q, k, nthreads);
+      return detail::flat::qv_query_heap(db, q, k, nthreads);
     } /* else if (args["--order"].asString() == "gemm") {
-       // if (block != 0) {
-       if (args["--block"]) {
-         std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth)
-                   << std::endl;
-         db.set_blocked();
-         // db.set_async();
-         return blocked_gemm_query(db, q, k, nth, nthreads);
-       } else {
-         std::cout << "# Using gemm, nth = " << std::to_string(nth) <<
-       std::endl; return gemm_query(db, q, k, nth, nthreads);
-       }
-       }*/
+      // if (block != 0) {
+      if (args["--block"]) {
+        std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth)
+                  << std::endl;
+        db.set_blocked();
+        // db.set_async();
+        return detail::flat::blocked_gemm_query(db, q, k, nth, nthreads);
+      } else {
+        std::cout << "# Using gemm, nth = " << std::to_string(nth) << std::endl;
+        return detail::flat::gemm_query(db, q, k, nth, nthreads);
+      }
+    }*/
   }();
 
   if (!g_uri.empty() && validate) {
-    std::cout << "Top g: " << std::endl;
-    debug_slice(g, "", 10, 10);
     validate_top_k(top_k, g);
   }
 

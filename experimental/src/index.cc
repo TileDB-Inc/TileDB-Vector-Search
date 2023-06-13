@@ -48,12 +48,14 @@ bool global_verbose = false;
 bool global_debug = false;
 std::string global_region;
 
+using namespace detail::flat;
+
 static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
 Usage:
     ivf_hack (-h | --help)
     ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --parts_uri URI --ids_uri URI
-            [--blocksize NN] [--nthreads N] [--region REGION] [--nth] [--log FILE] 
+            [--blocksize NN] [--nthreads N] [--region REGION] [--nth] [--log FILE]
             [--force] [--dryrun] [-d] [-v]
 
 Options:
