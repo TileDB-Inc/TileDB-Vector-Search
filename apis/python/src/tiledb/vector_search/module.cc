@@ -114,12 +114,15 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   // template specializations
   //declareTdbMatrix<float>(m, "_f32");
 
+  declareColMajorMatrix<uint8_t>(m, "_u8");
   declareColMajorMatrix<float>(m, "_f32");
   declareColMajorMatrix<double>(m, "_f64");
   declareColMajorMatrix<int32_t>(m, "_i32");
   declareColMajorMatrix<int64_t>(m, "_i64");
   declareColMajorMatrix<size_t>(m, "_szt");
 
+  declareColMajorMatrixSubclass<tdbColMajorMatrix<uint8_t>>(
+      m, "tdbColMajorMatrix", "_u8");
   declareColMajorMatrixSubclass<tdbColMajorMatrix<size_t>>(
       m, "tdbColMajorMatrix", "_szt");
   declareColMajorMatrixSubclass<tdbColMajorMatrix<float>>(
@@ -145,6 +148,16 @@ PYBIND11_MODULE(_tiledbvspy, m) {
            bool nth,
            size_t nthreads) {
           auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
+          return r;
+        });
+
+  m.def("query_vq_u8",
+        [](const ColMajorMatrix<uint8_t>& data,
+           const ColMajorMatrix<float>& query_vectors,
+           int k,
+           bool nth,
+           size_t nthreads) {
+          auto r = vq_query_heap(data, query_vectors, k, nthreads);
           return r;
         });
 
