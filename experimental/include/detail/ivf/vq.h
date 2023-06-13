@@ -1,5 +1,5 @@
 /**
- * @file   ivf_query.h
+ * @file   ivf/vq.h
  *
  * @section LICENSE
  *
@@ -27,22 +27,32 @@
  *
  * @section DESCRIPTION
  *
- * Contains some basic query functions for kmeans indexing.
  *
  */
 
-#ifndef TDB_IVF_QUERY_H
-#define TDB_IVF_QUERY_H
+#ifndef TILEDB_IVF_VQ_H
+#define TILEDB_IVF_VQ_H
 
-// Interfaces
-//   faiss: D, I = index.search(xb, k) # search
-//   milvus: status, results = conn.search(collection_name, query_records,
-//   top_k, params) # search
-//     "nlist" to create index (how many bins)
-//     "nprobe" to search index (how many bins to search)
+namespace detail::ivf {
 
-#include "detail/ivf/gemm.h"
-#include "detail/ivf/qv.h"
-#include "detail/ivf/vq.h"
+template <class DB, class Q>
+auto vq_query_nth(
+    const std::string& part_uri,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    const std::string& id_uri,
+    size_t nprobe,
+    size_t k_nn,
+    bool nth,
+    size_t nthreads) {
+  // Read the shuffled database and ids
 
-#endif  // TDB_IVF_QUERY_H
+  // for each partition (or set of partitions or set of vectors from partitions)
+  // for each query vector in the partition
+  // query the partition
+}
+
+}  // namespace detail::ivf
+
+#endif  // TILEDB_IVF_VQ_H

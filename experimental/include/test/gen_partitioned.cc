@@ -39,13 +39,15 @@
 bool global_debug = false;
 std::string global_region = "us-east-1";
 
+using namespace detail::flat;
+
 TEST_CASE("getn_partitioned: test test", "[gen_partitioned]") {
   REQUIRE(true);
 }
 
 TEST_CASE("gen_partitioned: even odd", "[gen_partitioned][ci-skip]") {
-  size_t dimension {128};
-  size_t n {10};
+  size_t dimension{128};
+  size_t n{10};
   std::vector<uint32_t> ids = {0, 2, 4, 6, 8, 1, 3, 5, 7, 9};
   std::vector<uint32_t> index = {0, 5, 10};
   tiledb::Context ctx;
