@@ -19,19 +19,18 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Print Python version
-        run: |
-          which python
-          which pip
-          python --version
-      - name: Install pybind11
-        run: pip install "pybind11[global]" pytest
       - uses: actions/checkout@v3
-      - name: Configure CMake
-        run: cmake -S ./experimental -B ./experimental/build -DCMAKE_BUILD_TYPE=Debug -DTILEDB_VS_PYTHON=ON
-      - name: Build directly
-        run: cmake --build ./experimental/build
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          # the create command looks like this:
+          # `micromamba create -n test-env python=3.10 numpy`
+          environment-name: test-env
+          create-args: >-
+            python=3.10
+            numpy
+            tiledb
+            tiledb-py
+            pybind11
       - name: Build and test python
         run: |
           export TILEDB_DIR=`pwd`/experimental/build/externals/install/lib/cmake/TileDB
