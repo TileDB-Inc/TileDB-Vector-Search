@@ -34,7 +34,9 @@ jobs:
         run: cmake --build ./experimental/build
       - name: Build and test python
         run: |
-          export TILEDB_DIR=`pwd`/experimental/build/externals/install/lib/libtiledb.dylib
+          export TILEDB_DIR=`pwd`/experimental/build/externals/install/lib/cmake/TileDB
+          ls $TILEDB_DIR
+          export LD_LIBRARY_PATH=`pwd`/experimental/build/externals/install/lib
           cd apis/python
           pip install .
           pytest -k "not ingest" # TODO: requires token
