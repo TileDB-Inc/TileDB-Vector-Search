@@ -39,9 +39,9 @@ class KMeansIndex:
 
         # TODO self._db = vs.load_as_matrix(self.db_uri)
         self._centroids = vs.load_as_matrix(self.centroids_uri)
-        #self._index = vs.load_as_matrix(self.index_uri)
+        # self._index = vs.load_as_matrix(self.index_uri)
 
-        ctx = vs.Ctx({}) # TODO pass in a context
+        ctx = vs.Ctx({})  # TODO pass in a context
         self._index = read_vector_u64(ctx, self.index_uri)
 
         # self._ids = vs.load_as_matrix(self.ids_uri)
@@ -62,7 +62,7 @@ class KMeansIndex:
             self.ids_uri,
             k,
             nqueries,
-            True, # ??
+            True,  # ??
             nthreads,
         )
         result = np.array(r)
