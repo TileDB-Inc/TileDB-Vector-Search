@@ -72,6 +72,9 @@ std::vector<T> read_vector(const std::string&);
 template <class M>
 concept is_view = requires(M) { typename M::view_type; };
 
+template <class T>
+using VectorView = std::span<T>;
+
 /**
  * @brief A 1-D vector class that owns its storage.
  * @tparam T
@@ -105,7 +108,7 @@ class Vector : public std::span<T> {
     Base::operator=(Base{storage_.get(), nrows_});
   }
 
-  Vector(Vector&& rhs)
+  Vector(Vector&& rhs) noexcept
       : nrows_{rhs.nrows_}
       , storage_{std::move(rhs.storage_)} {
     Base::operator=(Base{storage_.get(), nrows_});
@@ -113,6 +116,11 @@ class Vector : public std::span<T> {
 
   constexpr reference operator()(size_type idx) const noexcept {
     return Base::operator[](idx);
+  }
+
+  Vector& operator=(const VectorView<T>& rhs) {
+    std::copy(rhs.begin(), rhs.end(), this->begin());
+    return *this;
   }
 
   constexpr size_type num_rows() const noexcept {
