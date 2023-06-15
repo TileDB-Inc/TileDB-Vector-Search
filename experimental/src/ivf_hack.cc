@@ -261,7 +261,7 @@ int main(int argc, char* argv[]) {
     std::cout << std::setw(12) << ms;
     std::cout << std::fixed << std::setprecision(3);
     std::cout << std::setw(12) << qps;
-    std::cout << std::setw(8) << recall;  
+    std::cout << std::setw(8) << recall;
     std::cout << std::endl;
   }
 

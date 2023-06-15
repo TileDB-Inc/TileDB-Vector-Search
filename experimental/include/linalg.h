@@ -70,7 +70,9 @@ template <class T>
 std::vector<T> read_vector(const std::string&);
 
 template <class M>
-concept is_view = requires(M) { typename M::view_type; };
+concept is_view = requires(M) {
+  typename M::view_type;
+};
 
 template <class T>
 using VectorView = std::span<T>;
@@ -398,10 +400,13 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param uri URI of the TileDB array to read.
    * @param num_elts Number of vectors to read from the array.
    */
-  tdbMatrix(const tiledb::Context &ctx, const std::string &uri,
-            size_t num_elts) noexcept
+  tdbMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t num_elts) noexcept
       requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-      : tdbMatrix(ctx, uri, num_elts, 0) {}
+      : tdbMatrix(ctx, uri, num_elts, 0) {
+  }
 
   /**
    * @brief Construct a new tdbMatrix object, limited to `num_elts` vectors.
@@ -412,10 +417,13 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param uri URI of the TileDB array to read.
    * @param num_elts Number of vectors to read from the array.
    */
-  tdbMatrix(const tiledb::Context &ctx, const std::string &uri,
-            size_t num_elts) noexcept
+  tdbMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t num_elts) noexcept
       requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : tdbMatrix(ctx, uri, 0, num_elts) {}
+      : tdbMatrix(ctx, uri, 0, num_elts) {
+  }
 
   /**
    * @brief Construct a new tdbMatrix object, reading all of the vectors in
@@ -424,7 +432,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
    */
-  explicit tdbMatrix(const tiledb::Context& ctx, const std::string &uri) noexcept
+  explicit tdbMatrix(
+      const tiledb::Context& ctx, const std::string& uri) noexcept
       // requires (std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbMatrix(ctx, uri, 0, 0) {
     if (global_debug) {
@@ -441,9 +450,13 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param num_rows
    * @param num_cols
    */
-  tdbMatrix(const tiledb::Context &ctx, const std::string &uri, size_t num_rows,
-            size_t num_cols) noexcept
-      : tdbMatrix(ctx, uri, 0, num_rows, 0, num_cols) {}
+  tdbMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t num_rows,
+      size_t num_cols) noexcept
+      : tdbMatrix(ctx, uri, 0, num_rows, 0, num_cols) {
+  }
 
   /**
    * @brief "Slice" interface.
@@ -452,11 +465,18 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param rows pair of row indices indicating begin and end of view
    * @param cols pair of column indices indicating begin and end of view
    */
-  tdbMatrix(const tiledb::Context &ctx, const std::string &uri,
-            std::tuple<size_t, size_t> rows,
-            std::tuple<size_t, size_t> cols) noexcept
-      : tdbMatrix(uri, std::get<0>(rows), std::get<1>(rows), std::get<0>(cols),
-                  std::get<1>(cols)) {}
+  tdbMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      std::tuple<size_t, size_t> rows,
+      std::tuple<size_t, size_t> cols) noexcept
+      : tdbMatrix(
+            uri,
+            std::get<0>(rows),
+            std::get<1>(rows),
+            std::get<0>(cols),
+            std::get<1>(cols)) {
+  }
 
  private:
   using row_domain_type = int32_t;
@@ -474,10 +494,16 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    *
    * @todo Make this compatible with various schemas we are using
    */
-  tdbMatrix(const tiledb::Context &ctx, const std::string &uri,
-            size_t row_begin, size_t row_end, size_t col_begin,
-            size_t col_end) // noexcept
-      : ctx_{ctx}, array_{ctx, uri, TILEDB_READ}, schema_{array_.schema()} {
+  tdbMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t row_begin,
+      size_t row_end,
+      size_t col_begin,
+      size_t col_end)  // noexcept
+      : ctx_{ctx}
+      , array_{ctx, uri, TILEDB_READ}
+      , schema_{array_.schema()} {
     life_timer _{"read matrix " + uri};
 
     auto cell_order = schema_.cell_order();
@@ -737,14 +763,12 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
  public:
   size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-  {
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
     return row_offset_;
   }
 
   size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-  {
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
     return col_offset_;
   }
 
@@ -889,7 +913,10 @@ using tdbColMajorMatrix = tdbMatrix<T, stdx::layout_left, I>;
  * Write the contents of a Matrix to a TileDB array.
  */
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-void write_matrix(const tiledb::Context& ctx, const Matrix<T, LayoutPolicy, I> &A, const std::string &uri) {
+void write_matrix(
+    const tiledb::Context& ctx,
+    const Matrix<T, LayoutPolicy, I>& A,
+    const std::string& uri) {
   if (global_debug) {
     std::cerr << "# Writing Matrix: " << uri << std::endl;
   }
@@ -947,7 +974,8 @@ void write_matrix(const tiledb::Context& ctx, const Matrix<T, LayoutPolicy, I> &
  * @todo change the naming of this function to something more appropriate
  */
 template <class T>
-void write_vector(const tiledb::Context& ctx, std::vector<T> &v, const std::string &uri) {
+void write_vector(
+    const tiledb::Context& ctx, std::vector<T>& v, const std::string& uri) {
   if (global_debug) {
     std::cerr << "# Writing std::vector: " << uri << std::endl;
   }
@@ -989,7 +1017,7 @@ void write_vector(const tiledb::Context& ctx, std::vector<T> &v, const std::stri
  * Read the contents of a TileDB array into a std::vector.
  */
 template <class T>
-std::vector<T> read_vector(const tiledb::Context &ctx, const std::string &uri) {
+std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
   if (global_debug) {
     std::cerr << "# Reading std::vector: " << uri << std::endl;
   }

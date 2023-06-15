@@ -35,9 +35,9 @@
 #include <iostream>
 #include <vector>
 
+#include "../defs.h"
 #include "../ivf_index.h"
 #include "../linalg.h"
-#include "../defs.h"
 
 bool global_debug = false;
 
@@ -46,10 +46,8 @@ TEST_CASE("ivf_index: test test", "[ivf_index]") {
 }
 
 TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index]") {
-  std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2,
-                             1, 4, 1, 3, 0, 5, 1, 2,
-                             9, 9, 5, 9, 2, 0, 2, 7,
-                             7, 9, 8, 6, 7, 9, 6, 6 };
+  std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
+                             9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
 
   ColMajorMatrix<float> training_data(4, 8);
   std::copy(begin(data), end(data), training_data.data());
@@ -78,8 +76,11 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index]") {
 #endif
 
   for (size_t i = 0; i < index.get_centroids().num_cols() - 1; ++i) {
-    for (size_t j = i+1; j < index.get_centroids().num_cols(); ++j) {
-      CHECK(!std::equal(index.get_centroids()[i].begin(), index.get_centroids()[i].end(), index.get_centroids()[j].begin()));
+    for (size_t j = i + 1; j < index.get_centroids().num_cols(); ++j) {
+      CHECK(!std::equal(
+          index.get_centroids()[i].begin(),
+          index.get_centroids()[i].end(),
+          index.get_centroids()[j].begin()));
     }
   }
 
@@ -87,14 +88,16 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index]") {
   for (size_t i = 0; i < index.get_centroids().num_cols(); ++i) {
     size_t inner_counts = 0;
     for (size_t j = 0; j < training_data.num_cols(); ++j) {
-      inner_counts += std::equal(index.get_centroids()[i].begin(), index.get_centroids()[i].end(), training_data[j].begin());
+      inner_counts += std::equal(
+          index.get_centroids()[i].begin(),
+          index.get_centroids()[i].end(),
+          training_data[j].begin());
     }
     CHECK(inner_counts == 1);
     outer_counts += inner_counts;
   }
   CHECK(outer_counts == index.get_centroids().num_cols());
 }
-
 
 void debug_centroids(auto& index) {
   for (size_t j = 0; j < index.get_centroids().num_rows(); ++j) {
@@ -106,14 +109,9 @@ void debug_centroids(auto& index) {
   std::cout << std::endl;
 }
 
-
-
 TEST_CASE("ivf_index: test kmeans", "[ivf_index]") {
-
-  std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2,
-                             1, 4, 1, 3, 0, 5, 1, 2,
-                             9, 9, 5, 9, 2, 0, 2, 7,
-                             7, 9, 8, 6, 7, 9, 6, 6 };
+  std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
+                             9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
 
   ColMajorMatrix<float> training_data(4, 8);
   std::copy(begin(data), end(data), training_data.data());
@@ -133,13 +131,16 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index]") {
   // Test???
 
   // debug_centroids(index);
-
 }
 
 TEST_CASE("ivf_index: not a unit test per se", "[ivf_index]") {
   tiledb::Context ctx;
-//  auto A = tdbColMajorMatrix<float>(ctx, "s3://tiledb-andrew/sift/siftsmall_base");
-  auto A = tdbColMajorMatrix<float>(ctx, "/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/sift/sift_base");
+  //  auto A = tdbColMajorMatrix<float>(ctx,
+  //  "s3://tiledb-andrew/sift/siftsmall_base");
+  auto A = tdbColMajorMatrix<float>(
+      ctx,
+      "/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/sift/"
+      "sift_base");
 
   CHECK(A.num_rows() == 128);
   CHECK(A.num_cols() == 10'000);

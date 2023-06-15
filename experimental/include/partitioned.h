@@ -71,7 +71,8 @@ class tdbPartitionedMatrix {
     size_t dimension = centroids.num_cols();
 
     // @todo optimize for best choice based on size of centroids and queries
-    auto proto_parts = detail::flat::vq_query_heap(centroids, queries, nprobe, nthreads);
+    auto proto_parts =
+        detail::flat::vq_query_heap(centroids, queries, nprobe, nthreads);
 
     size_t total_size = 0;
     std::vector<size_t> parts(nprobe);

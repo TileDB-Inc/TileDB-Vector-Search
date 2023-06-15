@@ -49,7 +49,6 @@
 #include "linalg.h"
 #include "utils/timer.h"
 
-
 /**
  * @brief Compute sum of squares distance between two vectors.
  * @tparam V
@@ -69,7 +68,6 @@ inline auto sum_of_squares(V const& a, U const& b) {
   return sum;
 }
 
-
 /**
  * @brief Compute L2 distance between two vectors.
  * @tparam V
@@ -81,7 +79,6 @@ template <class V, class U>
 inline auto L2(V const& a, U const& b) {
   return std::sqrt(sum_of_squares(a, b));
 }
-
 
 /**
  * @brief Compute cosine similarity between two vectors.

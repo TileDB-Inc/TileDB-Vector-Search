@@ -112,10 +112,7 @@ int main(int argc, char* argv[]) {
 
   auto db = tdbColMajorMatrix<db_type>(ctx, db_uri);
 
-  auto parts = qv_partition(
-      centroids,
-      db,
-      nthreads);
+  auto parts = qv_partition(centroids, db, nthreads);
   debug_matrix(parts, "parts");
 
   {
