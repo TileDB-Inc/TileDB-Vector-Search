@@ -12,6 +12,7 @@ namespace py = pybind11;
 using Ctx = tiledb::Context;
 
 bool global_debug = true;
+double global_time_of_interest;
 //std::string global_region = "us-east-1";
 std::string global_region = "us-west-2";
 

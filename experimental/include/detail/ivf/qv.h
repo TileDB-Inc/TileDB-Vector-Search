@@ -41,13 +41,13 @@
 #include "tdb_matrix.h"
 #include "tdb_partitioned_matrix.h"
 
-//extern double global_time_of_interest;
+extern double global_time_of_interest;
 
 namespace detail::ivf {
 
 /**
- * @brief Query a (small) set of query vectors against a vector database.
- * This version loads the entire partition array into memory and then
+* @brief Query a (small) set of query vectors against a vector database.
+/ * This version loads the entire partition array into memory and then
  * queries each vector in the query set against the appropriate partitions.
  */
 auto qv_query_heap_infinite_ram(
@@ -127,7 +127,7 @@ auto qv_query_heap_infinite_ram(
 
   // @todo this is an ugly and embarrassing hack
   _.stop();
-  //global_time_of_interest = _.elapsed();
+  global_time_of_interest = _.elapsed();
 
   return top_k;
 }
@@ -308,7 +308,7 @@ auto qv_query_heap_finite_ram(
 
   // @todo this is an ugly and embarrassing hack
   _.stop();
-  //global_time_of_interest = _.elapsed();
+  global_time_of_interest = _.elapsed();
 
   return top_k;
 }
@@ -395,7 +395,7 @@ auto kmeans_query_small_q_minparts(
 
   // @todo this is an ugly and embarrassing hack
   __.stop();
-  //global_time_of_interest = __.elapsed();
+  global_time_of_interest = __.elapsed();
 
   return top_k;
 }
