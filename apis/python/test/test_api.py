@@ -26,6 +26,7 @@ def test_load_matrix(tmpdir):
     assert np.array_equal(orig_matrix[0,0], data[0,0])
 
 def test_flat_query(tmpdir):
+    ctx = vspy.Ctx({})
     #db_uri = "s3://tiledb-andrew/sift/sift_base"
     #probe_uri = "s3://tiledb-andrew/sift/sift_query"
     #g_uri = "s3://tiledb-andrew/sift/sift_groundtruth"
@@ -44,7 +45,6 @@ def test_flat_query(tmpdir):
       db,
       targets,
       k,  # k
-      nqueries, # nqueries
       8    # nthreads
     )
 
@@ -64,6 +64,8 @@ def test_flat_query(tmpdir):
     assert vspy.validate_top_k(r, g_m)
 
 def test_ivf_query(tmpdir):
+    ctx = vspy.Ctx({})
+
     p = str(tmpdir.mkdir("test").join("test.tdb"))
     base = "~/work/proj/vector-search/datasets/sift-andrew/"
 
@@ -78,10 +80,11 @@ def test_ivf_query(tmpdir):
     ids_uri = f"{base}/ids.tdb"
 
     query_vectors = vs.load_as_matrix(query_uri, 10)
-    index_vectors = vspy.read_vector_u64(index_uri) # TODO generic
+    index_vectors = vspy.read_vector_u64(ctx, index_uri) # TODO generic
     centroids = vs.load_as_matrix(centroids_uri)
 
-    r = vspy.kmeans_query(
+    r = vs.query_kmeans(
+      ctx,
       parts_uri,
       centroids,
       query_vectors,
@@ -94,5 +97,3 @@ def test_ivf_query(tmpdir):
     )
 
     ra = np.array(r)
-    #print(ra)
-    # TODO: validate results TBD...

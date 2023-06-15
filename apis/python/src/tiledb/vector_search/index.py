@@ -1,11 +1,8 @@
 import numpy as np
 
-<<<<<<< HEAD
-from . import module as vs
 from ._tiledbvspy import ColMajorMatrix_f32
+from . import module as vs
 
-=======
->>>>>>> 8826f67 (WIP wrap and test kmeans_query)
 
 class FlatIndex:
     def __init__(self, uri):
@@ -14,7 +11,7 @@ class FlatIndex:
 
         self._db = vs.load_as_matrix(uri)
 
-    def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8):
+    def query(self, targets: np.ndarray, k=10, nthreads=8):
         # TODO:
         # - typecheck targets
         # - don't copy the array
@@ -28,7 +25,7 @@ class FlatIndex:
         targets_m_a = np.array(targets_m, copy=False)
         targets_m_a[:] = targets
 
-        r = vs.query_vq(self._db, targets_m, k, nqueries, nthreads)
+        r = vs.query_vq(self._db, targets_m, k, nthreads)
         return np.array(r)
 
 

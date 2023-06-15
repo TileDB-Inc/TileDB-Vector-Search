@@ -67,7 +67,7 @@ extern bool global_debug;
 extern std::string global_region;
 
 template <class T>
-std::vector<T> read_vector(const std::string&);
+std::vector<T> read_vector(const tiledb::Context &ctx, const std::string&);
 
 template <class M>
 concept is_view = requires(M) { typename M::view_type; };

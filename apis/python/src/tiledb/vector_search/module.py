@@ -35,7 +35,7 @@ def load_as_array(path, return_matrix=False):
         return r
 
 
-def query_vq(db: np.ndarray, *args):
+def query_vq(db: "colMajorMatrix", *args):
     if db.dtype == np.float32:
         return vspy.query_vq_f32(db, *args)
     elif db.dtype == np.uint8:
@@ -43,10 +43,37 @@ def query_vq(db: np.ndarray, *args):
     else:
         raise TypeError("Unknown type!")
 
-def query_kmeans(db: np.ndarray, *args):
-    if db.dtype == np.float32:
-        return vspy.kmeans_query_f32(db, *args)
-    elif db.dtype == np.uint8:
-        raise NotImplementedError("kmeans_query[u8] not implemented")
+
+def query_kmeans(
+    ctx,
+    parts_uri,
+    centroids_db: "colMajorMatrix",
+    query_vectors: "colMajorMatrix",
+    index_db: "Vector",
+    ids_uri: str,
+    nprobe: int,
+    k_nn: int,
+    nth: bool,
+    nthreads: int,
+):
+    args = tuple(
+        [
+            ctx,
+            parts_uri,
+            centroids_db,
+            query_vectors,
+            index_db,
+            ids_uri,
+            nprobe,
+            k_nn,
+            nth,
+            nthreads,
+        ]
+    )
+
+    if centroids_db.dtype == np.float32:
+        return vspy.kmeans_query_f32(*args)
+    elif centroids_db.dtype == np.uint8:
+        return vspy.kmeans_query_u8(*args)
     else:
         raise TypeError("Unknown type!")

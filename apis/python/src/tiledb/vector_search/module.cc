@@ -17,6 +17,7 @@ using Ctx = tiledb::Context;
 bool global_debug = true;
 //std::string global_region = "us-east-1";
 std::string global_region = "us-west-2";
+double global_time_of_interest;
 
 namespace {
 
@@ -90,7 +91,35 @@ static void declareColMajorMatrixSubclass(py::module& mod,
 
   // TODO auto-namify
   PyTMatrix cls(mod, (name + suffix).c_str(), py::buffer_protocol());
-  cls.def(py::init<const Ctx&, std::string, size_t>(),  py::keep_alive<1,2>());
+  cls.def(py::init<const Ctx&, std::string, size_t>(), py::keep_alive<1,2>());
+}
+
+template <typename T>
+static void declare_kmeans_query(py::module& m, const std::string& suffix) {
+  m.def(("kmeans_query_" + suffix).c_str(),
+      [](Ctx ctx,
+         const std::string& part_uri,
+         const ColMajorMatrix<T>& centroids,
+         const ColMajorMatrix<T>& query_vectors,
+         std::vector<uint64_t>& indices,
+         const std::string& id_uri,
+         size_t nprobe,
+         size_t k_nn,
+         bool nth,
+         size_t nthreads) -> ColMajorMatrix<size_t> {
+        auto r = detail::ivf::qv_query_heap_infinite_ram(
+            ctx,
+            part_uri,
+            centroids,
+            query_vectors,
+            indices,
+            id_uri,
+            nprobe,
+            k_nn,
+            nth,
+            nthreads);
+        return r;
+        }, py::keep_alive<1,2>());
 }
 
 }
@@ -110,10 +139,14 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   ));
 
   /* Vector */
+  declareVector<uint32_t>(m, "_u32");
+  declareVector<uint64_t>(m, "_u64");
   declareVector<float>(m, "_f32");
+  declareVector<double>(m, "_f64");
 
   m.def("read_vector_u32", &read_vector<uint32_t>, "Read a vector from TileDB");
   m.def("read_vector_u64", &read_vector<uint64_t>, "Read a vector from TileDB");
+  //m.def("read_vector_u64", &read_vector<uint64_t>, "Read a vector from TileDB");
 
   /* === Matrix === */
 
@@ -155,7 +188,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         [](const ColMajorMatrix<float>& data,
            const ColMajorMatrix<float>& query_vectors,
            int k,
-           bool nth,
            size_t nthreads) {
           auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
           return r;
@@ -165,9 +197,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         [](const ColMajorMatrix<uint8_t>& data,
            const ColMajorMatrix<float>& query_vectors,
            int k,
-           bool nth,
            size_t nthreads) {
-          auto r = vq_query_heap(data, query_vectors, k, nthreads);
+          auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
           return r;
         });
 
@@ -177,29 +208,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         return validate_top_k(top_k, ground_truth);
       });
 
-  m.def("kmeans_query",
-      [](Ctx ctx,
-         const std::string& part_uri,
-         const ColMajorMatrix<uint8_t>& centroids,
-         const ColMajorMatrix<uint8_t>& query_vectors,
-         std::vector<uint64_t>& indices,
-         const std::string& id_uri,
-         size_t nprobe,
-         size_t k_nn,
-         bool nth,
-         size_t nthreads) -> ColMajorMatrix<size_t> {
-        auto r = detail::ivf::qv_query_heap_infinite_ram(
-            ctx,
-            part_uri,
-            centroids,
-            query_vectors,
-            index_vector,
-            id_uri,
-            nprobe,
-            k_nn,
-            nth,
-            nthreads);
-        return r;
-        });
+  declare_kmeans_query<uint8_t>(m, "u8");
+  declare_kmeans_query<float>(m, "f32");
 
 }
