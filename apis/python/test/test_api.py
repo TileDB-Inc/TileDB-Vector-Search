@@ -84,7 +84,6 @@ def test_ivf_query(tmpdir):
     centroids = vs.load_as_matrix(centroids_uri)
 
     r = vs.query_kmeans(
-      ctx,
       parts_uri,
       centroids,
       query_vectors,
@@ -93,7 +92,9 @@ def test_ivf_query(tmpdir):
       3,
       10,
       True,
-      8
+      8,
+      ctx=ctx
     )
 
     ra = np.array(r)
+    print(ra)

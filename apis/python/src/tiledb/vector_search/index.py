@@ -1,6 +1,6 @@
 import numpy as np
 
-from ._tiledbvspy import ColMajorMatrix_f32
+from ._tiledbvspy import ColMajorMatrix_f32, ColMajorMatrix_u8, read_vector_u64
 from . import module as vs
 
 
@@ -32,14 +32,18 @@ class FlatIndex:
 class KMeansIndex:
     # TODO: this should support a Group URI
     def __init__(self, db_uri, centroids_uri, index_uri, ids_uri):
-        self.db_uri = db_uri
+        self.parts_db_uri = db_uri
         self.centroids_uri = centroids_uri
         self.index_uri = index_uri
         self.ids_uri = ids_uri
 
         # TODO self._db = vs.load_as_matrix(self.db_uri)
         self._centroids = vs.load_as_matrix(self.centroids_uri)
-        self._index = vs.load_as_matrix(self.index_uri)
+        #self._index = vs.load_as_matrix(self.index_uri)
+
+        ctx = vs.Ctx({}) # TODO pass in a context
+        self._index = read_vector_u64(ctx, self.index_uri)
+
         # self._ids = vs.load_as_matrix(self.ids_uri)
 
     def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8):
@@ -50,14 +54,16 @@ class KMeansIndex:
         targets_m_a = np.array(targets_m, copy=False)
         targets_m_a[:] = targets
 
-        r = vs.query_vq(
-            self.db_uri,
+        r = vs.query_kmeans(
+            self.parts_db_uri,
             self._centroids,
             targets_m,
             self._index,
             self.ids_uri,
             k,
             nqueries,
+            True, # ??
             nthreads,
         )
-        return np.array(r)
+        result = np.array(r)
+        return result

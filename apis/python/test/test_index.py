@@ -19,3 +19,30 @@ def test_flat_index(tmpdir):
     assert isinstance(result, np.ndarray)
 
     #ground_truth = vs.load_as_array(ground_truth_uri)
+
+def test_kmeans_index(tmpdir):
+    p = str(tmpdir.mkdir("test").join("test.tdb"))
+    base = "~/work/proj/vector-search/datasets/sift-andrew/"
+
+    #db_uri = f"{base}/sift_base"
+    #groundtruth_uri = f"{base}/sift_groundtruth"
+
+    parts_db_uri = f"{base}/parts.tdb"
+    centroids_uri = f"{base}/centroids.tdb"
+
+    query_uri = f"{base}/sift_query"
+    index_uri = f"{base}/index.tdb"
+    ids_uri = f"{base}/ids.tdb"
+
+    index = vs.KMeansIndex(
+        parts_db_uri,
+        centroids_uri,
+        index_uri,
+        ids_uri
+    )
+
+    query_vectors = vs.load_as_matrix(query_uri, 10)
+    query_array = np.array(query_vectors, copy=False)
+
+    r = index.query(query_array)
+    print(r)

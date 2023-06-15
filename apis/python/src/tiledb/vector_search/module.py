@@ -1,6 +1,7 @@
 import numpy as np
 import tiledb
 from tiledb.vector_search import _tiledbvspy as vspy
+from tiledb.vector_search._tiledbvspy import Ctx
 
 
 def load_as_matrix(path, nqueries=0, config={}):
@@ -45,7 +46,6 @@ def query_vq(db: "colMajorMatrix", *args):
 
 
 def query_kmeans(
-    ctx,
     parts_uri,
     centroids_db: "colMajorMatrix",
     query_vectors: "colMajorMatrix",
@@ -55,7 +55,11 @@ def query_kmeans(
     k_nn: int,
     nth: bool,
     nthreads: int,
+    ctx: "Ctx" = None,
 ):
+    if ctx is None:
+        ctx = vspy.Ctx({})
+
     args = tuple(
         [
             ctx,
