@@ -46,7 +46,7 @@ extern double global_time_of_interest;
 namespace detail::ivf {
 
 /**
-* @brief Query a (small) set of query vectors against a vector database.
+ * @brief Query a (small) set of query vectors against a vector database.
  * This version loads the entire partition array into memory and then
  * queries each vector in the query set against the appropriate partitions.
  */
