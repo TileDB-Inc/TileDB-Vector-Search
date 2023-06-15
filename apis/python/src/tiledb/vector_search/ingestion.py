@@ -1035,7 +1035,7 @@ def ingest(
                             reducers.append(
                                 submit(
                                     compute_new_centroids,
-                                    *kmeans_workers[i: i + 10],
+                                    *kmeans_workers[i : i + 10],
                                     name="update-centroids-" + str(i),
                                     resources={"cpu": "1", "memory": "8Gi"},
                                 )
