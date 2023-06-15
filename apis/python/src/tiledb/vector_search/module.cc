@@ -157,7 +157,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
            int k,
            bool nth,
            size_t nthreads) {
-          auto r = vq_query_heap(data, query_vectors, k, nthreads);
+          auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
           return r;
         });
 
