@@ -1,7 +1,7 @@
 from typing import Optional
 
 from tiledb.cloud.dag import Mode
-from tiledb.vector_search.index import FlatIndex
+from tiledb.vector_search.index import FlatIndex, IVFFlatIndex
 
 
 def ingest(
@@ -1035,7 +1035,7 @@ def ingest(
                             reducers.append(
                                 submit(
                                     compute_new_centroids,
-                                    *kmeans_workers[i : i + 10],
+                                    *kmeans_workers[i: i + 10],
                                     name="update-centroids-" + str(i),
                                     resources={"cpu": "1", "memory": "8Gi"},
                                 )
@@ -1234,4 +1234,8 @@ def ingest(
         d.wait()
         group = tiledb.Group(array_uri)
         parts_array_uri = group[PARTS_ARRAY_NAME].uri
-        return FlatIndex(parts_array_uri)
+
+        if index_type == "FLAT":
+            return FlatIndex(array_uri)
+        elif index_type == "IVF_FLAT":
+            return IVFFlatIndex(array_uri)

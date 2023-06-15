@@ -42,3 +42,4 @@ def test_ivf_flat_ingestion(tmp_path):
         source_type=source_type,
     )
     result = np.transpose(index.query(np.transpose(query_vectors), k=k))
+    assert np.array_equal(result, gt_i)
