@@ -76,6 +76,34 @@ static void declareColMajorMatrix(py::module& mod, std::string const& suffix) {
 
 }
 
+template <typename T>
+static void declare_kmeans_query(py::module& m, const std::string& suffix) {
+  m.def(("kmeans_query_" + suffix).c_str(),
+      [](Ctx ctx,
+         const std::string& part_uri,
+         const ColMajorMatrix<T>& centroids,
+         const ColMajorMatrix<T>& query_vectors,
+         std::vector<uint64_t>& indices,
+         const std::string& id_uri,
+         size_t nprobe,
+         size_t k_nn,
+         bool nth,
+         size_t nthreads) -> ColMajorMatrix<size_t> {
+        auto r = detail::ivf::qv_query_heap_infinite_ram(
+            ctx,
+            part_uri,
+            centroids,
+            query_vectors,
+            indices,
+            id_uri,
+            nprobe,
+            k_nn,
+            nth,
+            nthreads);
+        return r;
+        }, py::keep_alive<1,2>());
+}
+
 
 // Declarations for typed subclasses of ColMajorMatrix
 template <typename P>
@@ -108,8 +136,13 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   ));
 
   /* Vector */
+  declareVector<uint32_t>(m, "_u32");
+  declareVector<uint64_t>(m, "_u64");
   declareVector<float>(m, "_f32");
+  declareVector<double>(m, "_f64");
 
+  m.def("read_vector_u32", &read_vector<uint32_t>, "Read a vector from TileDB");
+  m.def("read_vector_u64", &read_vector<uint64_t>, "Read a vector from TileDB");
   /* === Matrix === */
 
   // template specializations
@@ -120,6 +153,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declareColMajorMatrix<double>(m, "_f64");
   declareColMajorMatrix<int32_t>(m, "_i32");
   declareColMajorMatrix<int64_t>(m, "_i64");
+  declareColMajorMatrix<uint64_t>(m, "_u64");
   declareColMajorMatrix<size_t>(m, "_szt");
 
   declareColMajorMatrixSubclass<tdbColMajorMatrix<uint8_t>>(
@@ -132,6 +166,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       m, "tdbColMajorMatrix", "_i32");
   declareColMajorMatrixSubclass<tdbColMajorMatrix<int64_t>>(
       m, "tdbColMajorMatrix", "_i64");
+  declareColMajorMatrixSubclass<tdbColMajorMatrix<uint64_t>>(
+      m, "tdbColMajorMatrix", "_u64");
 
 
 
@@ -168,28 +204,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         return validate_top_k(top_k, ground_truth);
       });
 
-  m.def("kmeans_query",
-      [](Ctx ctx,
-         const std::string& part_uri,
-         const ColMajorMatrix<uint8_t>& centroids,
-         const ColMajorMatrix<uint8_t>& query_vectors,
-         std::vector<uint64_t>& indices,
-         const std::string& id_uri,
-         size_t nprobe,
-         size_t k_nn,
-         bool nth,
-         size_t nthreads) {
-        auto r = detail::ivf::qv_query_heap_infinite_ram(
-            ctx,
-            part_uri,
-            centroids,
-            query_vectors,
-            indices,
-            id_uri,
-            nprobe,
-            k_nn,
-            nth,
-            nthreads);
-         });
+  declare_kmeans_query<uint8_t>(m, "u8");
+  declare_kmeans_query<float>(m, "f32");
 
 }
