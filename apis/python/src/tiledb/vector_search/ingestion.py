@@ -218,7 +218,7 @@ def ingest(
                 logger.info("Creating index array")
                 index_array_rows_dim = tiledb.Dim(
                     name="rows",
-                    domain=(0, partitions - 1),
+                    domain=(0, partitions),
                     tile=partitions,
                     dtype=np.dtype(np.int32),
                 )
@@ -248,11 +248,12 @@ def ingest(
                 index_attr = tiledb.Attr(name="values", dtype=np.dtype(np.uint64))
                 index_schema = tiledb.ArraySchema(
                     domain=index_array_dom,
-                    sparse=False,
+                    sparse=True,
                     attrs=[index_attr],
                     capacity=partitions,
                     cell_order="row-major",
                     tile_order="row-major",
+                    allows_duplicates=True,
                 )
                 logger.info(index_schema)
                 tiledb.Array.create(index_size_uri, index_schema)
@@ -713,6 +714,7 @@ def ingest(
         group = tiledb.Group(array_uri)
         centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
         write_array_uri = group[WRITE_ARRAY_NAME].uri
+        index_size_array_uri = group[INDEX_SIZE_ARRAY_NAME].uri
         vector_dtype = [
             (
                 "",
@@ -731,6 +733,7 @@ def ingest(
                     centroids_array[0:dimensions, 0:partitions]["centroids"]
                 ).copy(order="C")
             target = tiledb.open(write_array_uri, mode="w")
+            index_size_array = tiledb.open(index_size_array_uri, mode="w")
 
             for part in range(start, end, batch):
                 part_end = part + batch
@@ -766,8 +769,12 @@ def ingest(
                 write_indexes_k = []
                 write_indexes_id = []
                 write_vectors = []
+                sizes = np.zeros(partitions).astype(np.uint64)
+                size_indexes = []
                 for i in range(partitions):
+                    partition_size = 0
                     for partitioned_object_id in partitioned_object_ids[i]:
+                        partition_size += 1
                         write_indexes_k.append(i)
                         write_indexes_id.append(partitioned_object_id)
                         write_vectors.append(
@@ -775,43 +782,18 @@ def ingest(
                             .astype(vector_type)
                             .view(vector_dtype)
                         )
+                    size_indexes.append(i)
+                    sizes[i] = partition_size
                 logger.info(f"Writing data to array {write_array_uri}")
                 target[write_indexes_k, write_indexes_id] = {"vector": write_vectors}
-            target.close()
-
-    def compute_partition_sizes_udf(
-        array_uri: str,
-        partition_id_start: int,
-        partition_id_end: int,
-        batch: int,
-        config: Optional[Mapping[str, Any]] = None,
-        verbose: bool = False,
-        trace_id: Optional[str] = None,
-    ):
-        logger = setup(config, verbose)
-        with tiledb.scope_ctx(ctx_or_config=config):
-            group = tiledb.Group(array_uri)
-            write_array_uri = group[WRITE_ARRAY_NAME].uri
-            index_size_array_uri = group[INDEX_SIZE_ARRAY_NAME].uri
-            write_array = tiledb.open(write_array_uri, mode="r")
-            index_size_array = tiledb.open(index_size_array_uri, mode="w")
-            logger.info(
-                f"Partitions start: {partition_id_start} end: {partition_id_end}"
-            )
-            for part in range(partition_id_start, partition_id_end, batch):
-                part_end = part + batch
-                if part_end > partition_id_end:
-                    part_end = partition_id_end
-                logger.info(f"Read partitions start: {part} end: {part_end}")
-                partition = write_array[part:part_end, :]
-                sizes = np.zeros(part_end - part).astype(np.uint64)
-                for p in partition["kmeans_id"]:
-                    sizes[p - part] += 1
                 logger.info(f"Partition sizes: {sizes}")
-                index_size_array[part:part_end] = sizes
+                index_size_array[size_indexes] = {"values": sizes}
+            target.close()
+            index_size_array.close()
 
     def compute_partition_indexes_udf(
         array_uri: str,
+        partitions: int,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
@@ -823,13 +805,20 @@ def ingest(
             index_array_uri = group[INDEX_ARRAY_NAME].uri
             index_size_array = tiledb.open(index_size_array_uri, mode="r")
             sizes = index_size_array[:]["values"]
-            sum = 0
-            indexes = np.zeros(len(sizes)).astype(np.uint64)
+            part_id = index_size_array[:]["rows"]
+            partition_sizes = np.zeros(partitions).astype(np.uint64)
+            indexes = np.zeros(partitions + 1).astype(np.uint64)
             i = 0
             for size in sizes:
-                indexes[i] = sum
-                sum += size
+                partition_sizes[part_id[i]] += size
                 i += 1
+            i = 0
+            sum = 0
+            for partition_size in partition_sizes:
+                indexes[i] = sum
+                sum += partition_size
+                i += 1
+            indexes[i] = sum
             logger.info(f"Partition indexes: {indexes}")
             index_array = tiledb.open(index_array_uri, mode="w")
             index_array[:] = indexes
@@ -957,7 +946,7 @@ def ingest(
                     dimensions=dimensions,
                     start=start,
                     end=end,
-                    batch=input_vectors_per_work_item,
+                    batch=input_vectors_batch_size,
                     config=config,
                     verbose=verbose,
                     trace_id=trace_id,
@@ -1070,8 +1059,15 @@ def ingest(
                         resources={"cpu": "1", "memory": "2Gi"},
                     )
 
-            wait_node = submit(
-                print, "ok", name="wait", resources={"cpu": "0.5", "memory": "500Mi"}
+            compute_indexes_node = submit(
+                compute_partition_indexes_udf,
+                array_uri=array_uri,
+                partitions=partitions,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+                name="compute-indexes",
+                resources={"cpu": "1", "memory": "2Gi"},
             )
 
             task_id = 0
@@ -1099,43 +1095,12 @@ def ingest(
                     resources={"cpu": "6", "memory": "32Gi"},
                 )
                 ingest_node.depends_on(centroids_node)
-                wait_node.depends_on(ingest_node)
+                compute_indexes_node.depends_on(ingest_node)
                 task_id += 1
 
-            compute_indexes_node = submit(
-                compute_partition_indexes_udf,
-                array_uri=array_uri,
-                config=config,
-                verbose=verbose,
-                trace_id=trace_id,
-                name="compute-indexes",
-                resources={"cpu": "1", "memory": "2Gi"},
-            )
-            task_id = 0
             partitions_batch = (
                 table_partitions_work_items_per_worker * table_partitions_per_work_item
             )
-            for i in range(0, partitions, partitions_batch):
-                start = i
-                end = i + partitions_batch
-                if end > partitions:
-                    end = partitions
-                compute_partition_sizes_node = submit(
-                    compute_partition_sizes_udf,
-                    array_uri=array_uri,
-                    partition_id_start=start,
-                    partition_id_end=end,
-                    batch=table_partitions_per_work_item,
-                    config=config,
-                    verbose=verbose,
-                    trace_id=trace_id,
-                    name="compute-partition-sizes-" + str(task_id),
-                    resources={"cpu": "2", "memory": "16Gi"},
-                )
-                compute_partition_sizes_node.depends_on(wait_node)
-                compute_indexes_node.depends_on(compute_partition_sizes_node)
-                task_id += 1
-
             task_id = 0
             for i in range(0, partitions, partitions_batch):
                 start = i
