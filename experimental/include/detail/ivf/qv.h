@@ -200,6 +200,7 @@ auto qv_query_heap_finite_ram(
   // std::vector<shuffled_ids_type> shuffled_ids;
 
   auto shuffled_db = tdbColMajorPartitionedMatrix<shuffled_db_type>(
+      ctx,
       part_uri,
       std::move(indices),
       active_partitions,
