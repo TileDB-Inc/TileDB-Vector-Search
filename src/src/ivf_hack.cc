@@ -204,45 +204,11 @@ int main(int argc, char* argv[]) {
     }();
 
     debug_matrix(top_k, "top_k");
+    assert(k_nn == top_k.num_rows());
+    assert(nqueries == top_k.num_cols());
 
     if (args["--groundtruth_uri"]) {
-      auto groundtruth_uri = args["--groundtruth_uri"].asString();
-
-      auto groundtruth =
-          tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
-
-      if (global_debug) {
-        std::cout << std::endl;
-
-        debug_matrix(groundtruth, "groundtruth");
-        debug_slice(groundtruth, "groundtruth");
-
-        std::cout << std::endl;
-        debug_matrix(top_k, "top_k");
-        debug_slice(top_k, "top_k");
-
-        std::cout << std::endl;
-      }
-
-      size_t total_intersected{0};
-      size_t total_groundtruth = top_k.num_cols() * top_k.num_rows();
-      for (size_t i = 0; i < top_k.num_cols(); ++i) {
-        std::sort(begin(top_k[i]), end(top_k[i]));
-        std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
-        debug_matrix(top_k, "top_k");
-        debug_slice(top_k, "top_k");
-        total_intersected += std::set_intersection(
-            begin(top_k[i]),
-            end(top_k[i]),
-            begin(groundtruth[i]),
-            end(groundtruth[i]),
-            counter{});
-      }
-
-      recall = ((float)total_intersected) / ((float)total_groundtruth);
-      std::cout << "# total intersected = " << total_intersected << " of "
-                << total_groundtruth << " = "
-                << "R@" << k_nn << " of " << recall << std::endl;
+      recall = compute_recall(args["--groundtruth_uri"].asString(), top_k);
     }
   }
 

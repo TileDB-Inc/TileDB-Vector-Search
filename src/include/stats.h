@@ -39,11 +39,15 @@
 
 #include <tiledb/tiledb>
 
+#include "array_types.h"
 #include "config.h"
+#include "utils/utils.h"
 
 #include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
+
+extern bool global_debug;
 
 auto config_log(const std::string& program_name) {
   std::string uuid_;
@@ -111,6 +115,75 @@ auto args_log(const Args& args) {
     arg_log.push_back({std::get<0>(arg), buf.str()});
   }
   return arg_log;
+}
+
+
+/**
+ * @brief Compute the recall of a top-k matrix against a groundtruth matrix.
+ *
+ * @tparam Topk The type of the `top_k` matrix
+ * @param groundtruth_uri URI of the groundtruth matrix
+ * @param top_k The previously computed matrix of top-k nearest neighbors
+ * @param nqueries How many queries were used to compute the top-k matrix
+ * @param k_nn
+ * @return double
+ */
+template <class Topk>
+double compute_recall(const std::string& groundtruth_uri, const Topk& top_k) {
+  tiledb::Context ctx;
+  return compute_recall(ctx, groundtruth_uri, top_k);
+}
+
+template <class Topk>
+double compute_recall(const tiledb::Context ctx, const std::string& groundtruth_uri, const Topk& top_k) {
+  size_t nqueries = top_k.num_cols();
+  auto groundtruth =
+      tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
+  return compute_recall(groundtruth, top_k);
+}
+
+template <class Matrix, class Topk>
+double compute_recall(const Matrix& groundtruth, const Topk& top_k) {
+
+  if (global_debug) {
+    std::cout << std::endl;
+
+    debug_matrix(groundtruth, "groundtruth");
+    debug_slice(groundtruth, "groundtruth");
+
+    std::cout << std::endl;
+    debug_matrix(top_k, "top_k");
+    debug_slice(top_k, "top_k");
+
+    std::cout << std::endl;
+  }
+
+  assert(groundtruth.num_cols() == top_k.num_cols());
+
+  size_t k_nn = top_k.num_rows();
+  size_t total_intersected{0};
+  size_t total_groundtruth = top_k.num_cols() * top_k.num_rows();
+  for (size_t i = 0; i < top_k.num_cols(); ++i) {
+    std::sort(begin(top_k[i]), end(top_k[i]));
+    std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
+    debug_matrix(top_k, "top_k");
+    debug_slice(top_k, "top_k");
+    total_intersected += std::set_intersection(
+        begin(top_k[i]),
+        end(top_k[i]),
+        begin(groundtruth[i]),
+        end(groundtruth[i]),
+        counter{});
+  }
+  auto recall = ((double)total_intersected) / ((double)total_groundtruth);
+
+  if (global_verbose) {
+    std::cout << "# total intersected = " << total_intersected << " of "
+              << total_groundtruth << " = "
+              << "R@" << k_nn << " of " << recall << std::endl;
+  }
+
+  return recall;
 }
 
 #endif  // TDB_STATS_H
