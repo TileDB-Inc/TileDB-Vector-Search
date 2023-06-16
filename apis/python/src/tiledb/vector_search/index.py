@@ -1,9 +1,6 @@
 import os
 
-import numpy as np
-from tiledb.vector_search._tiledbvspy import *
-
-from . import module as vs
+from tiledb.vector_search.module import *
 
 
 class Index:
@@ -16,7 +13,7 @@ class FlatIndex(Index):
         self.uri = uri
         self._index = None
 
-        self._db = vs.load_as_matrix(os.path.join(uri, parts_name))
+        self._db = load_as_matrix(os.path.join(uri, parts_name))
 
     def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8):
         # TODO:
@@ -32,7 +29,7 @@ class FlatIndex(Index):
         targets_m_a = np.array(targets_m, copy=False)
         targets_m_a[:] = targets
 
-        r = vs.query_vq(self._db, targets_m, k, nqueries, nthreads)
+        r = query_vq(self._db, targets_m, k, nqueries, nthreads)
         return np.array(r)
 
 
@@ -44,10 +41,10 @@ class IVFFlatIndex(Index):
         self.ids_uri = os.path.join(uri, "ids.tdb")
 
         ctx = Ctx({})  # TODO pass in a context
-        # TODO self._db = vs.load_as_matrix(self.db_uri)
-        self._centroids = vs.load_as_matrix(self.centroids_uri)
+        # TODO self._db = load_as_matrix(self.db_uri)
+        self._centroids = load_as_matrix(self.centroids_uri)
         self._index = read_vector_u64(ctx, self.index_uri)
-        # self._ids = vs.load_as_matrix(self.ids_uri)
+        # self._ids = load_as_matrix(self.ids_uri)
 
     def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8, nprobe=1):
         assert targets.dtype == np.float32
@@ -57,7 +54,7 @@ class IVFFlatIndex(Index):
         targets_m_a = np.array(targets_m, copy=False)
         targets_m_a[:] = targets
 
-        r = vs.query_kmeans(
+        r = query_kmeans(
             self.parts_db_uri,
             self._centroids,
             targets_m,
