@@ -29,6 +29,6 @@ jobs:
         run: pip install "pybind11[global]"
       - uses: actions/checkout@v3
       - name: Configure CMake
-        run: cmake -S ./experimental -B ./experimental/build -DCMAKE_BUILD_TYPE=Debug -DTILEDB_VS_PYTHON=ON
+        run: cmake -S ./src -B ./src/build -DCMAKE_BUILD_TYPE=Debug -DTILEDB_VS_PYTHON=ON
       - name: Build
-        run: cmake --build ./experimental/build
+        run: cmake --build ./src/build
