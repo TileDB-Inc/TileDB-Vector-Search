@@ -81,15 +81,15 @@ static void declare_kmeans_query(py::module& m, const std::string& suffix) {
   m.def(("kmeans_query_" + suffix).c_str(),
       [](Ctx ctx,
          const std::string& part_uri,
-         const ColMajorMatrix<T>& centroids,
-         const ColMajorMatrix<T>& query_vectors,
+         const ColMajorMatrix<float>& centroids,
+         const ColMajorMatrix<float>& query_vectors,
          std::vector<uint64_t>& indices,
          const std::string& id_uri,
          size_t nprobe,
          size_t k_nn,
          bool nth,
          size_t nthreads) -> ColMajorMatrix<size_t> {
-        auto r = detail::ivf::qv_query_heap_infinite_ram(
+        auto r = detail::ivf::qv_query_heap_infinite_ram<T>(
             ctx,
             part_uri,
             centroids,
@@ -153,7 +153,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declareColMajorMatrix<double>(m, "_f64");
   declareColMajorMatrix<int32_t>(m, "_i32");
   declareColMajorMatrix<int64_t>(m, "_i64");
-  declareColMajorMatrix<uint64_t>(m, "_u64");
+//  declareColMajorMatrix<uint64_t>(m, "_u64");
   declareColMajorMatrix<size_t>(m, "_szt");
 
   declareColMajorMatrixSubclass<tdbColMajorMatrix<uint8_t>>(
@@ -166,17 +166,12 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       m, "tdbColMajorMatrix", "_i32");
   declareColMajorMatrixSubclass<tdbColMajorMatrix<int64_t>>(
       m, "tdbColMajorMatrix", "_i64");
-  declareColMajorMatrixSubclass<tdbColMajorMatrix<uint64_t>>(
-      m, "tdbColMajorMatrix", "_u64");
+//  declareColMajorMatrixSubclass<tdbColMajorMatrix<uint64_t>>(
+//      m, "tdbColMajorMatrix", "_u64");
 
 
 
   /* Query API */
-
-  // KMeansAlgorithm enum
-  py::enum_<KMeansAlgorithm>(m, "KMeansAlgorithm")
-    .value("lloyd", KMeansAlgorithm::lloyd)
-    .value("elkan", KMeansAlgorithm::elkan);
 
   m.def("query_vq_f32",
         [](const ColMajorMatrix<float>& data,

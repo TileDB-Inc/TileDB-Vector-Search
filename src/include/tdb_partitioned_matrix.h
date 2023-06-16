@@ -26,7 +26,8 @@ using namespace Kokkos::Experimental;
 
 extern bool global_verbose;
 extern bool global_debug;
-extern std::string global_region;
+
+using Context = tiledb::Context;
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
@@ -52,11 +53,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   using row_domain_type = int32_t;
   using col_domain_type = int32_t;
 
-  // @todo: Make this configurable
-  std::map<std::string, std::string> init_{
-      {"vfs.s3.region", global_region.c_str()}};
-  tiledb::Config config_{init_};
-  tiledb::Context ctx_{config_};
+  std::reference_wrapper<const tiledb::Context> ctx_;
 
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
@@ -102,6 +99,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
  public:
   tdbPartitionedMatrix(
+      const tiledb::Context& ctx,
       const std::string& uri,
       std::vector<indices_type>&& indices,
       const std::vector<parts_type>& parts,
@@ -119,6 +117,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @todo Column major is kind of baked in here.  Need to generalize.
    */
   tdbPartitionedMatrix(
+      const Context& ctx,
       const std::string& uri,
       std::vector<indices_type>&& in_indices,
       const std::vector<parts_type>& in_parts,
@@ -126,7 +125,8 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       // std::vector<shuffled_ids_type>& shuffled_ids,
       size_t upper_bound,
       size_t nthreads)
-      : array_{ctx_, uri, TILEDB_READ}
+      : ctx_(ctx)
+      , array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()}
       , ids_array_{ctx_, ids_uri, TILEDB_READ}
       , ids_schema_{ids_array_.schema()}

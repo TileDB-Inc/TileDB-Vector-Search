@@ -1236,6 +1236,6 @@ def ingest(
         parts_array_uri = group[PARTS_ARRAY_NAME].uri
 
         if index_type == "FLAT":
-            return FlatIndex(array_uri)
+            return FlatIndex(uri=array_uri, dtype=vector_type)
         elif index_type == "IVF_FLAT":
-            return IVFFlatIndex(array_uri)
+            return IVFFlatIndex(uri=array_uri, dtype=vector_type)

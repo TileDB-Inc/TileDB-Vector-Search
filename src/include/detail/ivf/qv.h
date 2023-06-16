@@ -50,6 +50,7 @@ namespace detail::ivf {
  * This version loads the entire partition array into memory and then
  * queries each vector in the query set against the appropriate partitions.
  */
+template <typename T = shuffled_db_type>
 auto qv_query_heap_infinite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -63,10 +64,9 @@ auto qv_query_heap_infinite_ram(
     size_t nthreads) {
   life_timer _{"Total time " + tdb_func__};
 
-
   // Read the shuffled database and ids
   // @todo To this more systematically
-  auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(ctx, part_uri);
+  auto shuffled_db = tdbColMajorMatrix<T>(ctx, part_uri);
   auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
 
   assert(shuffled_db.num_cols() == shuffled_ids.size());
@@ -200,6 +200,7 @@ auto qv_query_heap_finite_ram(
   // std::vector<shuffled_ids_type> shuffled_ids;
 
   auto shuffled_db = tdbColMajorPartitionedMatrix<shuffled_db_type>(
+      ctx,
       part_uri,
       std::move(indices),
       active_partitions,
@@ -211,7 +212,6 @@ auto qv_query_heap_finite_ram(
 
   debug_matrix(shuffled_db, "shuffled_db");
   debug_matrix(shuffled_db.ids(), "shuffled_db.ids()");
-
 
   // auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
   //       size(q), fixed_min_pair_heap<float, size_t>(k_nn));

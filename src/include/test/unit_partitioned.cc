@@ -58,5 +58,6 @@ TEST_CASE("partitioned: even odd", "[partitioned][ci-skip]") {
   auto centroids_mat = tdbColMajorMatrix<float>(ctx, centroids_uri);
   auto queries_mat = tdbColMajorMatrix<float>(ctx, queries_uri);
 
-  auto partitioned = tdbPartitionedMatrix<float>(ctx, parts_uri, centroids_mat, queries_mat, index, ids, 2, 2);
+  auto partitioned = tdbPartitionedMatrix<float>(
+      ctx, parts_uri, centroids_mat, queries_mat, index, ids, 2, 2);
 }

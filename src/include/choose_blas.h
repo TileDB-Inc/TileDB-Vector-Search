@@ -1,5 +1,5 @@
 /**
- * @file   unit_ivf_index.cc
+ * @file   choose_blas.h
  *
  * @section LICENSE
  *
@@ -27,17 +27,15 @@
  *
  * @section DESCRIPTION
  *
+ * Include the right headers for BLAS support.
+ *
  */
 
-#include <catch2/catch_all.hpp>
-#include "../ivf_index.h"
-#include "../linalg.h"
-
-TEST_CASE("ivf_index: test test", "[ivf_index]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("ivf_index: trivial call to ivf_flat", "[ivf_index]") {
-  Matrix<float> data(0, 0);
-  ivf_flat(data, 0, InitType::random, 0, 0, 0, 0, KMeansAlgorithm::lloyd, 0);
-}
+// If apple, use Accelerate
+#if defined(USE_MKL)
+#include <mkl_cblas.h>
+#elif defined __APPLE__
+#include <Accelerate/Accelerate.h>
+#else
+#include <cblas.h>
+#endif

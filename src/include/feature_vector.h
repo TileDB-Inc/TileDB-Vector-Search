@@ -49,8 +49,8 @@ using FeatureVectorRange = ColMajorMatrix<T>;
 template <class T>
 using tdbFeatureVectorRange = tdbColMajorMatrix<T>
 
-template <typename T>
-class FeatureVectorRangeReader {
+    template <typename T>
+    class FeatureVectorRangeReader {
  public:
   FeatureVector<T> read(
       tiledb::Context& ctx,
