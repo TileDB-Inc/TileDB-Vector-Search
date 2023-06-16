@@ -67,7 +67,7 @@ extern bool global_debug;
 extern std::string global_region;
 
 template <class T>
-std::vector<T> read_vector(const tiledb::Context &ctx, const std::string&);
+std::vector<T> read_vector(const std::string&);
 
 template <class M>
 concept is_view = requires(M) {
@@ -374,6 +374,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
  private:
+  log_timer constructor_timer{"tdbMatrix::construct"};
+
   std::reference_wrapper<const tiledb::Context> ctx_;
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
@@ -504,7 +506,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       : ctx_{ctx}
       , array_{ctx, uri, TILEDB_READ}
       , schema_{array_.schema()} {
-    life_timer _{"read matrix " + uri};
+    constructor_timer.stop();
+    scoped_timer _{tdb_func__ + std::string{uri}};
 
     auto cell_order = schema_.cell_order();
     auto tile_order = schema_.tile_order();
@@ -613,6 +616,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t nthreads)
       : array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()} {
+    constructor_timer.stop();
+
     size_t nprobe = size(top_top_k);
     size_t num_cols = 0;
     for (size_t i = 0; i < nprobe; ++i) {
@@ -620,7 +625,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     }
 
     {
-      life_timer _{"read partitioned matrix " + uri};
+      scoped_timer _{tdb_func__ + std::string{uri}};
 
       auto cell_order = schema_.cell_order();
       auto tile_order = schema_.tile_order();
@@ -711,7 +716,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     auto part_ids = std::vector<uint64_t>(num_cols);
 
     {
-      life_timer _{"read partitioned vector" + id_uri};
+      scoped_timer _{tdb_func__ + std::string{"_ids_"} + id_uri};
       /**
        * Now deal with ids
        */
@@ -921,7 +926,7 @@ void write_matrix(
     std::cerr << "# Writing Matrix: " << uri << std::endl;
   }
 
-  life_timer _{"write matrix " + uri};
+  scoped_timer _{tdb_func__ + std::string{uri}};
 
   // @todo: make this a parameter
   size_t num_parts = 10;
@@ -980,7 +985,7 @@ void write_vector(
     std::cerr << "# Writing std::vector: " << uri << std::endl;
   }
 
-  life_timer _{"write vector " + uri};
+  scoped_timer _{tdb_func__ + std::string{uri}};
 
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
@@ -1021,11 +1026,11 @@ std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
   if (global_debug) {
     std::cerr << "# Reading std::vector: " << uri << std::endl;
   }
+  scoped_timer _{tdb_func__ + std::string{uri}};
 
   auto array_ = tiledb::Array{ctx, uri, TILEDB_READ};
   auto schema_ = array_.schema();
 
-  life_timer _{"read vector " + uri};
   using domain_type = int32_t;
   const size_t idx = 0;
 

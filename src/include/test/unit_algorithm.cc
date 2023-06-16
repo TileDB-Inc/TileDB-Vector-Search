@@ -1,5 +1,5 @@
 /**
- * @file   unit_alogrithm.cc
+ * @file   unit_algorithm.cc
  *
  * @section LICENSE
  *

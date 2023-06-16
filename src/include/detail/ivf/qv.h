@@ -50,7 +50,6 @@ namespace detail::ivf {
  * This version loads the entire partition array into memory and then
  * queries each vector in the query set against the appropriate partitions.
  */
-template <typename T = shuffled_db_type>
 auto qv_query_heap_infinite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -62,11 +61,11 @@ auto qv_query_heap_infinite_ram(
     size_t k_nn,
     bool nth,
     size_t nthreads) {
-  life_timer _{"Total time " + tdb_func__};
+  scoped_timer _{tdb_func__};
 
   // Read the shuffled database and ids
   // @todo To this more systematically
-  auto shuffled_db = tdbColMajorMatrix<T>(ctx, part_uri);
+  auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(ctx, part_uri);
   auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
 
   assert(shuffled_db.num_cols() == shuffled_ids.size());
@@ -93,41 +92,42 @@ auto qv_query_heap_infinite_ram(
   // auto min_scores = std::vector<fixed_min_heap<std::pair<float,
   // size_t>>>(size(q), fixed_min_heap<std::pair<float, size_t>>(k_nn));
 
-  life_timer __{std::string{"In memory portion of "} + tdb_func__};
-  auto par = stdx::execution::indexed_parallel_policy{nthreads};
-  stdx::range_for_each(
-      std::move(par), q, [&, nprobe](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
-        for (size_t p = 0; p < nprobe; ++p) {
-          size_t start = indices[top_centroids(p, j)];
-          size_t stop = indices[top_centroids(p, j) + 1];
+  {
+    scoped_timer __{tdb_func__ + std::string{"_in_ram"}};
+    auto par = stdx::execution::indexed_parallel_policy{nthreads};
+    stdx::range_for_each(
+        std::move(par),
+        q,
+        [&, nprobe](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
+          for (size_t p = 0; p < nprobe; ++p) {
+            size_t start = indices[top_centroids(p, j)];
+            size_t stop = indices[top_centroids(p, j) + 1];
 
-          for (size_t i = start; i < stop; ++i) {
-            auto score = L2(q_vec /*q[j]*/, shuffled_db[i]);
-            min_scores[j].insert(score, shuffled_ids[i]);
-            // min_scores[j].insert({score, shuffled_ids[i]});
+            for (size_t i = start; i < stop; ++i) {
+              auto score = L2(q_vec /*q[j]*/, shuffled_db[i]);
+              min_scores[j].insert(score, shuffled_ids[i]);
+              // min_scores[j].insert({score, shuffled_ids[i]});
+            }
           }
-        }
-      });
-
-  ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
-
-  life_timer ___{std::string{"Top k portion of "} + tdb_func__};
-
-  // get_top_k_from_heap(min_scores, top_k);
-
-  // @todo get_top_k_from_heap
-  for (int j = 0; j < size(q); ++j) {
-    sort_heap(min_scores[j].begin(), min_scores[j].end());
-    std::transform(
-        min_scores[j].begin(),
-        min_scores[j].end(),
-        top_k[j].begin(),
-        ([](auto&& e) { return std::get<1>(e); }));
+        });
   }
 
-  // @todo this is an ugly and embarrassing hack
-  _.stop();
-  global_time_of_interest = _.elapsed();
+  ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
+  {
+    scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
+
+    // get_top_k_from_heap(min_scores, top_k);
+
+    // @todo get_top_k_from_heap
+    for (int j = 0; j < size(q); ++j) {
+      sort_heap(min_scores[j].begin(), min_scores[j].end());
+      std::transform(
+          min_scores[j].begin(),
+          min_scores[j].end(),
+          top_k[j].begin(),
+          ([](auto&& e) { return std::get<1>(e); }));
+    }
+  }
 
   return top_k;
 }
@@ -144,7 +144,7 @@ auto qv_query_heap_finite_ram(
     size_t upper_bound,
     bool nth,
     size_t nthreads) {
-  life_timer _{"Total time " + tdb_func__};
+  scoped_timer _{tdb_func__};
 
   size_t num_queries = size(q);
 
@@ -200,7 +200,6 @@ auto qv_query_heap_finite_ram(
   // std::vector<shuffled_ids_type> shuffled_ids;
 
   auto shuffled_db = tdbColMajorPartitionedMatrix<shuffled_db_type>(
-      ctx,
       part_uri,
       std::move(indices),
       active_partitions,
@@ -221,9 +220,10 @@ auto qv_query_heap_finite_ram(
       std::vector<fixed_min_pair_heap<float, size_t>>(
           size(q), fixed_min_pair_heap<float, size_t>(k_nn)));
 
-  life_timer __{std::string{"Iteration portion of "} + tdb_func__};
+  log_timer _i{tdb_func__ + "_iteration"};
 
   for (;;) {
+    _i.start();
     // size_t block_size = (size(active_partitions) + nthreads - 1) / nthreads;
     size_t parts_per_thread =
         (shuffled_db.num_col_parts() + nthreads - 1) / nthreads;
@@ -276,12 +276,16 @@ auto qv_query_heap_finite_ram(
     for (int n = 0; n < size(futs); ++n) {
       futs[n].get();
     }
-
-    if (!shuffled_db.advance()) {
-      break;
+    _i.stop();
+    {
+      scoped_timer _a{tdb_func__ + "_advance"};
+      if (!shuffled_db.advance()) {
+        break;
+      }
     }
   }
 
+  _i.start();
   for (int j = 0; j < size(q); ++j) {
     for (int n = 1; n < nthreads; ++n) {
       for (auto&& e : min_scores[n][j]) {
@@ -289,10 +293,11 @@ auto qv_query_heap_finite_ram(
       }
     }
   }
+  _i.stop();
 
   ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
 
-  life_timer ___{std::string{"Top k portion of "} + tdb_func__};
+  scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
 
   // get_top_k_from_heap(min_scores, top_k);
 
@@ -305,10 +310,6 @@ auto qv_query_heap_finite_ram(
         top_k[j].begin(),
         ([](auto&& e) { return std::get<1>(e); }));
   }
-
-  // @todo this is an ugly and embarrassing hack
-  _.stop();
-  global_time_of_interest = _.elapsed();
 
   return top_k;
 }

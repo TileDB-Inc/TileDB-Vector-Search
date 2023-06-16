@@ -43,7 +43,7 @@ TEST_CASE("stats: test test", "[stats]") {
 
 TEST_CASE("stats: test", "[stats]") {
   {
-    life_timer _{"test1"};
+    scoped_timer _{"test1"};
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
   std::cout << get_timings() << std::endl;
