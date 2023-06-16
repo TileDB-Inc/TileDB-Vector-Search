@@ -13,11 +13,11 @@ class Index:
 
 
 class FlatIndex(Index):
-    def __init__(self, uri):
+    def __init__(self, uri, parts_name="parts.tdb"):
         self.uri = uri
         self._index = None
 
-        self._db = vs.load_as_matrix(os.path.join(uri, "parts.tdb"))
+        self._db = vs.load_as_matrix(os.path.join(uri, parts_name))
 
     def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8):
         # TODO:
