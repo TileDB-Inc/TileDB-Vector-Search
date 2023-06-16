@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
   debug_matrix(parts, "parts");
 
   {
-    life_timer _{"shuffling data"};
+    scoped_timer _{"shuffling data"};
     std::vector<size_t> degrees(centroids.num_cols());
     std::vector<indices_type> indices(centroids.num_cols() + 1);
     for (size_t i = 0; i < db.num_cols(); ++i) {

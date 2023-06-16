@@ -82,7 +82,7 @@ class kmeans_index {
    * @brief Use kmeans++ algorithm to choose initial centroids.
    */
   void kmeans_pp(const ColMajorMatrix<T>& training_set) {
-    life_timer _{__FUNCTION__};
+    scoped_timer _{__FUNCTION__};
 
     std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
     auto choice = dis(gen);
@@ -180,7 +180,7 @@ class kmeans_index {
    * @brief Initialize centroids by choosing them at random from training set.
    */
   void kmeans_random_init(const ColMajorMatrix<T>& training_set) {
-    life_timer _{__FUNCTION__};
+    scoped_timer _{__FUNCTION__};
 
     std::vector<size_t> indices(nlist_);
     std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
@@ -202,7 +202,7 @@ class kmeans_index {
    * @brief Use kmeans algorithm to cluster vectors into centroids.
    */
   void train_no_init(const ColMajorMatrix<T>& training_set) {
-    life_timer _{__FUNCTION__};
+    scoped_timer _{__FUNCTION__};
 
     std::vector<size_t> degrees(nlist_, 0);
 

@@ -234,7 +234,7 @@ auto get_top_k(V const& scores, L&& top_k, int k) {
 
 template <class S>
 auto get_top_k(const S& scores, int k, bool nth, int nthreads) {
-  life_timer _{"Get top k"};
+  scoped_timer _{"Get top k"};
 
   auto num_queries = scores.num_cols();
 

@@ -40,11 +40,19 @@
 
 #include "nlohmann/json.hpp"
 
-#include "utils/print_types.h"
+#ifndef tdb_func__
+#ifdef __cpp_lib_source_location
+#include <source_location>
+#define tdb_func__ std::string{std::source_location::current().function_name()}
+#else
+#define tdb_func__ \
+  std::string {    \
+    (__func__)     \
+  }
+#endif
+#endif
 
 using json = nlohmann::json;
-
-namespace fixed_width_logging {
 
 class timing_data_class {
  public:
@@ -171,20 +179,16 @@ class log_timer {
 };
 
 
-class life_timer : public log_timer {
+class scoped_timer : public log_timer {
  public:
-  explicit life_timer(const std::string& msg = "", bool noisy = false)
+  explicit scoped_timer(const std::string& msg = "", bool noisy = false)
       : log_timer(msg, noisy) {
   }
 
-  ~life_timer() {
+  ~scoped_timer() {
     this->stop();
   }
 };
-
-} // namespace fixed_width_logging
-
-namespace json_logging {
 
 class timing_data {
  private:
@@ -228,7 +232,7 @@ class timing_data {
   }
 };
 
-inline timing_data& get_timing_data_instance() {
+inline timing_data& get_json_timing_data_instance() {
   return timing_data::get_instance();
 }
 
@@ -241,14 +245,14 @@ inline timing_data& get_timing_data_instance() {
  * }
  */
 
-timing_data& _timing_data{get_timing_data_instance()};
+timing_data& _json_timing_data{get_json_timing_data_instance()};
 
 void add_timing(const std::string& operation, double elapsedTime) {
-  _timing_data.add_timing(operation, elapsedTime);
+  _json_timing_data.add_timing(operation, elapsedTime);
 }
 
 auto get_timings() {
-  return _timing_data.get_timings();
+  return _json_timing_data.get_timings();
 }
-}  // namespace json_logging
+
 #endif  // TDB_LOGGING_H

@@ -52,9 +52,9 @@ namespace detail::flat {
  */
 template <class DB, class Q>
 auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
-  life_timer _{"Total time " + tdb_func__};
+  scoped_timer _{"Total time " + tdb_func__};
 
-  // life_timer _{tdb_func__ + ", nth = " + std::to_string(nth)};
+  // scoped_timer _{tdb_func__ + ", nth = " + std::to_string(nth)};
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
 
@@ -99,7 +99,7 @@ auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
  */
 template <class DB, class Q>
 auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
-  life_timer _{"Total time " + tdb_func__};
+  scoped_timer _{"Total time " + tdb_func__};
 
   const auto block_db = db.is_blocked();
   const auto block_q = q.is_blocked();
@@ -204,7 +204,7 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
 #if 0
 template <class DB, class Q>
 auto vq_partition(const DB& db, const Q& q, int k, bool nth, int nthreads) {
- life_timer _{"Total time " + tdb_func__};
+ scoped_timer _{"Total time " + tdb_func__};
 
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());

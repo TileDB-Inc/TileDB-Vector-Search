@@ -129,12 +129,12 @@ TEST_CASE("logging: interval test", "[logging]") {
 }
 
 
-TEST_CASE("logging: life_timer start test", "[logging]") {
+TEST_CASE("logging: scoped_timer start test", "[logging]") {
   life_timer a("life_test");
   std::this_thread::sleep_for(300ms);
 }
 
-TEST_CASE("logging: life_timer stop test", "[logging]") {
+TEST_CASE("logging: scoped_timer stop test", "[logging]") {
   std::this_thread::sleep_for(500ms);
   auto f = _timing_data.get_intervals_summed("life_test");
   CHECK((f <= 310 && f >= 290));

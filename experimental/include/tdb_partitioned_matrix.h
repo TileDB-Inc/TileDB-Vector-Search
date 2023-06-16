@@ -53,8 +53,8 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   using col_domain_type = int32_t;
 
   // @todo: Make this configurable
-  std::map<std::string, std::string> init_{
-      {"vfs.s3.region", global_region.c_str()}};
+  std::map<std::string, std::string> init_{};
+  // {"vfs.s3.region", global_region.c_str()}};
   tiledb::Config config_{init_};
   tiledb::Context ctx_{config_};
 
@@ -136,7 +136,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       , col_part_view_{0, 0} {
     total_num_parts_ = size(parts_);
 
-    life_timer _{"Initialize tdb partitioned matrix " + uri};
+    scoped_timer _{"Initialize tdb partitioned matrix " + uri};
 
     auto cell_order = schema_.cell_order();
     auto tile_order = schema_.tile_order();

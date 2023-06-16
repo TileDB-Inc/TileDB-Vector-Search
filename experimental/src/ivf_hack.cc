@@ -80,8 +80,6 @@ using json = nlohmann::json;
 
 bool global_verbose = false;
 bool global_debug = false;
-std::string global_region;
-double global_time_of_interest{0};
 
 static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
@@ -89,7 +87,7 @@ Usage:
     ivf_hack (-h | --help)
     ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --parts_uri URI --ids_uri URI [--alg algo]
             [--output_uri URI] [--query_uri URI] [--groundtruth_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
-            [--finite] [--k NN] [--cluster NN] [--nthreads N] [--region REGION] [--nth] [--log FILE] [-d] [-v]
+            [--finite] [--k NN] [--cluster NN] [--nthreads N] [--nth] [--log FILE] [-d] [-v]
 
 Options:
     -h, --help            show this screen
@@ -111,7 +109,6 @@ Options:
     --blocksize NN        number of vectors to process in a block (0 = all) [default: 0]
     --nth                 use nth_element for top k [default: false]
     --log FILE            log info to FILE (- for stdout)
-    --region REGION       AWS S3 region [default: us-east-1]
     -d, --debug           run in debug mode [default: false]
     -v, --verbose         run in verbose mode [default: false]
 )";
@@ -129,7 +126,6 @@ int main(int argc, char* argv[]) {
   }
   global_debug = args["--debug"].asBool();
   global_verbose = args["--verbose"].asBool();
-  global_region = args["--region"].asString();
 
   auto part_uri = args["--parts_uri"].asString();
   auto index_uri = args["--index_uri"].asString();
@@ -160,7 +156,7 @@ int main(int argc, char* argv[]) {
   // Find the top k nearest neighbors accelerated by kmeans and do some
   // reporting
   {
-    life_timer _("query_time");
+    scoped_timer _("query_time");
 
     // @todo Encapsulate these arrays in a class
     // auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
@@ -246,26 +242,46 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  auto timings = get_timings();
+
 
   // Quick and dirty way to get query info in summarizable form
   if (true || global_verbose) {
-    auto ms = global_time_of_interest;
-    auto qps = ((float)nqueries) / ((float)ms / 1000.0);
-    std::cout << std::setw(8) << "-|-";
-    std::cout << std::setw(8) << algorithm;
-    std::cout << std::setw(8) << nqueries;
+
+    if (true) {
+      std::cout << std::setw(5) << "-|-";
+      std::cout << std::setw(12) << "Algorithm";
+      std::cout << std::setw(9) << "Queries";
+      std::cout << std::setw(8) << "nprobe";
+      std::cout << std::setw(8) << "k_nn";
+      std::cout << std::setw(8) << "thrds";
+      std::cout << std::setw(8) << "recall";
+
+      auto timers = _timing_data.get_timer_names();
+      for (auto& timer : timers) {
+        std::cout << std::setw(10) << timer;
+      }
+      std::cout << std::endl;
+    }
+
+    std::cout << std::setw(5) << "-|-";
+    std::cout << std::setw(12) << algorithm;
+    std::cout << std::setw(9) << nqueries;
     std::cout << std::setw(8) << nprobe;
     std::cout << std::setw(8) << k_nn;
     std::cout << std::setw(8) << nthreads;
-    std::cout << std::setw(12) << ms;
-    std::cout << std::fixed << std::setprecision(3);
-    std::cout << std::setw(12) << qps;
     std::cout << std::setw(8) << recall;
+
+    auto timers = _timing_data.get_timer_names();
+    for (auto& timer : timers) {
+      std::cout << std::setw(10) << _timing_data.get_intervals_summed(timer);
+    }
+
     std::cout << std::endl;
   }
 
+#if 0
   if (args["--log"]) {
+    auto timings = get_timings();
     auto program_args = args_log(args);
     auto config = config_log(argv[0]);
 
@@ -282,11 +298,5 @@ int main(int argc, char* argv[]) {
       outfile << log_log.dump(2) << std::endl;
     }
   }
+#endif
 }
-
-// recalls = {}
-// i = 1
-// while i <= k:
-//    recalls[i] = (I[:, :i] == gt[:, :1]).sum() / float(#queries
-//    i *= 10
-// return (t1 - t0) * 1000.0 / nq, recalls
