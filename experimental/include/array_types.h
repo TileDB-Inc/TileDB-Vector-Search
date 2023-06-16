@@ -12,7 +12,7 @@
  *
  * @todo Use size_t instead of uint64_t?
  */
-#if 0
+#if 1
 
 using db_type = uint8_t;
 using shuffled_db_type = uint8_t;
