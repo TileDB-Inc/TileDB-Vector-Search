@@ -51,11 +51,17 @@ target_link_libraries(${VSPY_TARGET_NAME}
 
 target_compile_definitions(${VSPY_TARGET_NAME} PRIVATE VERSION_INFO=${PROJECT_VERSION})
 
-#target_include_directories(${VSPY_TARGET_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../src")
+if (APPLE)
+  set_target_properties(${VSPY_TARGET_NAME} PROPERTIES INSTALL_RPATH "@loader_path/lib")
+elseif(UNIX)
+  set_target_properties(${VSPY_TARGET_NAME} PROPERTIES INSTALL_RPATH "\$ORIGIN/lib")
+endif()
 
-#install(TARGETS tiledbvspy DESTINATION "${CMAKE_INSTALL_PREFIX}/tiledb/vector_search")
-#install(TARGETS ${VSPY_TARGET_NAME} LIBRARY DESTINATION tiledb/vector_search)
+# Install the extension module
 install(TARGETS ${VSPY_TARGET_NAME} DESTINATION .)
+
+# Install libtiledb so that we can repackage it with the extension
+install(IMPORTED_RUNTIME_ARTIFACTS TileDB::tiledb_shared DESTINATION lib)
 
 # Quiet a warning, since this project is only valid with SKBUILD
 set(ignoreMe "${SKBUILD}")

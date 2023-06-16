@@ -5,9 +5,10 @@ import tiledb
 from tiledb.vector_search import _tiledbvspy as vspy
 from common import *
 
+
 def test_tdbMatrix(tmpdir):
     p = str(tmpdir.mkdir("test").join("test.tdb"))
-    data = np.random.rand(12).astype(np.float32).reshape(3,4)
+    data = np.random.rand(12).astype(np.float32).reshape(3, 4)
 
     create_array(p, data)
 
@@ -17,12 +18,13 @@ def test_tdbMatrix(tmpdir):
     assert m_array.shape == data.shape
     assert np.array_equal(m_array, data)
 
-    m_array2 = np.array(m, copy=False) # mutable view
+    m_array2 = np.array(m, copy=False)  # mutable view
     v = np.random.rand(1).astype(np.float32)
-    m_array2[1,2] = v
-    data[1,2] = v
+    m_array2[1, 2] = v
+    data[1, 2] = v
     assert np.array_equal(m_array2, data)
-    assert m[1,2] == v
+    assert m[1, 2] == v
+
 
 def test_context(tmpdir):
     p = str(tmpdir.mkdir("test").join("test.tdb"))
