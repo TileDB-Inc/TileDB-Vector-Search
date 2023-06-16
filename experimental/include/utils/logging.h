@@ -105,9 +105,15 @@ class timing_data_class {
   }
 
   auto get_timer_names() {
+    std::set<std::string> multinames;
+
     std::vector<std::string> names;
+
     for (auto& i : interval_times_) {
-      names.push_back(i.first);
+      multinames.insert(i.first);
+    }
+    for (auto& i : multinames) {
+      names.push_back(i);
     }
     return names;
   }

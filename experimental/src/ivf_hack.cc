@@ -139,7 +139,12 @@ int main(int argc, char* argv[]) {
   auto algorithm = args["--alg"].asString();
   bool finite = args["--finite"].asBool();
 
+  float recall{0.0f};
+  json recalls;
   tiledb::Context ctx;
+
+  {
+    scoped_timer _("query_time");
 
   if (is_local_array(centroids_uri) &&
       !std::filesystem::exists(centroids_uri)) {
@@ -147,16 +152,15 @@ int main(int argc, char* argv[]) {
               << args["--centroids_uri"] << std::endl;
     return 1;
   }
+
   auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
   debug_matrix(centroids, "centroids");
 
-  float recall{0.0f};
-  json recalls;
 
   // Find the top k nearest neighbors accelerated by kmeans and do some
   // reporting
-  {
-    scoped_timer _("query_time");
+
+
 
     // @todo Encapsulate these arrays in a class
     // auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
@@ -242,10 +246,10 @@ int main(int argc, char* argv[]) {
     }
   }
 
-
-
   // Quick and dirty way to get query info in summarizable form
   if (true || global_verbose) {
+    char tag = 'A';
+    std::map<std::string, std::string> toc;
 
     if (true) {
       std::cout << std::setw(5) << "-|-";
@@ -258,7 +262,18 @@ int main(int argc, char* argv[]) {
 
       auto timers = _timing_data.get_timer_names();
       for (auto& timer : timers) {
-        std::cout << std::setw(10) << timer;
+
+	std::string text;
+
+	if (size(timer) < 3) {
+	  text = timer;
+	} else {
+	  std::string key = "[" + std::string(1,tag) + "]";
+	  toc[key] = timer;
+	  ++tag;
+	  text = key;
+	}
+        std::cout << std::setw(12) << text;
       }
       std::cout << std::endl;
     }
@@ -269,14 +284,22 @@ int main(int argc, char* argv[]) {
     std::cout << std::setw(8) << nprobe;
     std::cout << std::setw(8) << k_nn;
     std::cout << std::setw(8) << nthreads;
+    std::cout << std::fixed << std::setprecision(3) ;
     std::cout << std::setw(8) << recall;
+    std::cout << std::setprecision(std::cout.precision());
 
+    std::cout << std::fixed << std::setprecision(3) ;
     auto timers = _timing_data.get_timer_names();
     for (auto& timer : timers) {
-      std::cout << std::setw(10) << _timing_data.get_intervals_summed(timer);
+      std::cout << std::setw(12) << _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer)/1000.0;
     }
+    std::cout << std::setprecision(std::cout.precision());
 
     std::cout << std::endl;
+
+    for (auto& t: toc) {
+      std::cout << t.first << ": " << t.second << std::endl;
+    }
   }
 
 #if 0
