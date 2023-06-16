@@ -50,6 +50,25 @@
 #include "utils/timer.h"
 
 /**
+ * @brief Compute sum of squares distance between two vectors.
+ * @tparam V
+ * @tparam U
+ * @param a
+ * @param b
+ * @return
+ */
+template <class V, class U>
+inline auto sum_of_squares(V const& a, U const& b) {
+  float sum{0.0};
+  size_t size_a = size(a);
+  for (size_t i = 0; i < size_a; ++i) {
+    float diff = ((float)a[i]) - ((float)b[i]);
+    sum += diff * diff;
+  }
+  return sum;
+}
+
+/**
  * @brief Compute L2 distance between two vectors.
  * @tparam V
  * @param a
@@ -57,14 +76,8 @@
  * @return L2 norm of the difference between a and b.
  */
 template <class V, class U>
-auto L2(V const& a, U const& b) {
-  float sum{0.0};
-  size_t size_a = size(a);
-  for (size_t i = 0; i < size_a; ++i) {
-    float diff = ((float)a[i]) - ((float)b[i]);
-    sum += diff * diff;
-  }
-  return std::sqrt(sum);
+inline auto L2(V const& a, U const& b) {
+  return std::sqrt(sum_of_squares(a, b));
 }
 
 /**

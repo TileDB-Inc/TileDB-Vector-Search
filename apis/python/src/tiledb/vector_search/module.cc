@@ -173,11 +173,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   /* Query API */
 
-  // KMeansAlgorithm enum
-  py::enum_<KMeansAlgorithm>(m, "KMeansAlgorithm")
-    .value("lloyd", KMeansAlgorithm::lloyd)
-    .value("elkan", KMeansAlgorithm::elkan);
-
   m.def("query_vq_f32",
         [](const ColMajorMatrix<float>& data,
            const ColMajorMatrix<float>& query_vectors,

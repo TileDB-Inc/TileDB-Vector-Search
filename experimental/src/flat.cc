@@ -166,8 +166,8 @@ int main(int argc, char* argv[]) {
   //  auto q = tdbColMajorMatrix<float>(ctx, q_uri, nqueries);  // just a slice
   auto q = tdbColMajorMatrix<uint8_t>(ctx, q_uri, nqueries);  // just a slice
 
-  auto g =
-      g_uri.empty() ? ColMajorMatrix<int>(0, 0) : tdbColMajorMatrix<int>(ctx, g_uri);
+  auto g = g_uri.empty() ? ColMajorMatrix<int>(0, 0) :
+                           tdbColMajorMatrix<int>(ctx, g_uri);
   load_time.stop();
   std::cout << load_time << std::endl;
 
