@@ -40,7 +40,6 @@
 /**
  * @todo Use size_t instead of uint64_t?
  */
-
 #if 1
 
 using db_type = uint8_t;
