@@ -87,9 +87,10 @@ static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
 Usage:
     ivf_hack (-h | --help)
-    ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --parts_uri URI --ids_uri URI [--alg algo]
-            [--output_uri URI] [--query_uri URI] [--groundtruth_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
-            [--finite] [--k NN] [--cluster NN] [--nthreads N] [--region REGION] [--nth] [--log FILE] [-d] [-v]
+    ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --parts_uri URI --ids_uri URI --query_uri URI
+            [--groundtruth_uri URI] [--output_uri URI] [--k NN][--nprobe NN] [--nqueries NN]
+            [--alg ALGO] [--finite] [--blocksize NN] [--nth]
+            [--nthreads N] [--region REGION] [--log FILE] [-d] [-v]
 
 Options:
     -h, --help            show this screen
@@ -98,20 +99,19 @@ Options:
     --index_uri URI       URI with the paritioning index
     --parts_uri URI       URI with the partitioned data
     --ids_uri URI         URI with original IDs of vectors
-    --alg algo            which algorithm to use for query [default: qv_heap]
-    --output_uri URI      URI to store search results
     --query_uri URI       URI storing query vectors
     --groundtruth_uri URI URI storing ground truth vectors
-    --nqueries NN         number of query vectors to use (0 = all) [default: 0]
-    --ndb NN              number of database vectors to use (0 = all) [default: 0]
-    --finite              use finite RAM (out of core) algorithm [default: false]
-    --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
+    --output_uri URI      URI to store search results
     --k NN                number of nearest neighbors to search for [default: 10]
-    --cluster NN          number of clusters to use [default: 100]
-    --blocksize NN        number of vectors to process in a block (0 = all) [default: 0]
+    --nprobe NN           number of clusters to use [default: 100]
+    --nqueries NN         number of query vectors to use (0 = all) [default: 0]
+    --alg ALGO            which algorithm to use for query [default: qv_heap]
+    --finite              use finite RAM (out of core) algorithm [default: false]
+    --blocksize NN        number of vectors to process in an out of core block (0 = all) [default: 0]
     --nth                 use nth_element for top k [default: false]
-    --log FILE            log info to FILE (- for stdout)
+    --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
     --region REGION       AWS S3 region [default: us-east-1]
+    --log FILE            log info to FILE (- for stdout)
     -d, --debug           run in debug mode [default: false]
     -v, --verbose         run in verbose mode [default: false]
 )";
@@ -122,7 +122,6 @@ int main(int argc, char* argv[]) {
 
   auto centroids_uri = args["--centroids_uri"].asString();
   auto db_uri = args["--db_uri"].asString();
-  auto ndb = args["--ndb"].asLong();
   auto nthreads = args["--nthreads"].asLong();
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
@@ -243,6 +242,17 @@ int main(int argc, char* argv[]) {
       std::cout << "# total intersected = " << total_intersected << " of "
                 << total_groundtruth << " = "
                 << "R@" << k_nn << " of " << recall << std::endl;
+    }
+
+    if (args["--output_uri"]) {
+      auto output = ColMajorMatrix<int32_t>(top_k.num_rows(), top_k.num_cols());
+      for (size_t i = 0; i < top_k.num_rows(); ++i) {
+        for (size_t j = 0; j < top_k.num_cols(); ++j) {
+          output(i, j) = top_k(i, j);
+        }
+      }
+
+      write_matrix(ctx, output, args["--output_uri"].asString());
     }
   }
 

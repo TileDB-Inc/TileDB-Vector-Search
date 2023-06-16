@@ -99,8 +99,10 @@ static constexpr const char USAGE[] =
     R"(flat: feature vector search with flat index.
   Usage:
       flat (-h | --help)
-      flat --db_uri URI --q_uri URI [--g_uri URI] [--output_uri URI] [--order ORDER] [--k NN]
-          [--block N] [--nqueries N] [--nthreads N] [--nth] [--validate] [--log FILE] [-d] [-v]
+      flat --db_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
+          [--k NN] [--nqueries NN]
+          [--alg ALGO] [--finite] [--blocksize NN] [-nth]
+          [--nthreads N] [--region] [--validate] [--log FILE] [-d] [-v]
 
   Options:
       -h, --help              show this screen
@@ -108,14 +110,16 @@ static constexpr const char USAGE[] =
       --query_uri URI         query URI with feature vectors to search for
       --groundtruth_uri URI   ground truth URI
       --output_uri URI        output URI for results
-      --alg ALGO              which algorithm to use for comparisons [default: vq_heap]
       --k NN                  number of nearest neighbors to find [default: 10]
-      --block N               block database with size N (0 = no blocking) [default: 0]
-      --nqueries N            size of queries subset to compare (0 = all) [default: 0]
-      --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
+      --nqueries NN            size of queries subset to compare (0 = all) [default: 0]
+      --alg ALGO              which algorithm to use for comparisons [default: vq_heap]
+      --finite                use finite RAM (out of core) algorithm [default: false]
+      --blocksize NN          number of vectors to process in an out of core block (0 = all) [default: 0]
       --nth                   use nth_element for top k [default: false]
-      --log FILE              log info to FILE (- for stdout)
+      --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
+      --region REGION         AWS S3 region [default: us-east-1]
       -V, --validate          validate results [default: false]
+      --log FILE              log info to FILE (- for stdout)
       -d, --debug             run in debug mode [default: false]
       -v, --verbose           run in verbose mode [default: false]
 )";
@@ -133,15 +137,15 @@ int main(int argc, char* argv[]) {
   verbose = args["--verbose"].asBool();
 
   std::string db_uri = args["--db_uri"].asString();
-  std::string q_uri = args["--q_uri"].asString();
-  std::string g_uri = args["--g_uri"] ? args["--g_uri"].asString() : "";
+  std::string q_uri = args["--query_uri"].asString();
+  std::string g_uri = args["--groundtruth_uri"] ? args["--groundtruth_uri"].asString() : "";
 
-  std::cout << "# Using " << args["--order"].asString() << std::endl;
+  std::cout << "# Using " << args["--algo"].asString() << std::endl;
 
   size_t k = args["--k"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
   size_t nqueries = args["--nqueries"].asLong();
-  size_t block = args["--block"].asLong();
+  size_t blocksize = args["--blocksize"].asLong();
 
   auto nth = args["--nth"].asBool();
   auto validate = args["--validate"].asBool();
@@ -158,8 +162,8 @@ int main(int argc, char* argv[]) {
   // 10M, 100M, and 1B are all uint8_t
 
   //  auto db = tdbColMajorMatrix<float>(ctx, db_uri, block);  // blocked
-  auto db = tdbColMajorMatrix<uint8_t>(ctx, db_uri, block);  // blocked
-  if (args["--block"]) {
+  auto db = tdbColMajorMatrix<uint8_t>(ctx, db_uri, blocksize);  // blocked
+  if (args["--blocksize"]) {
     db.set_blocked();
   }
 

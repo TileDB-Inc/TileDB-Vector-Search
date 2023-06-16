@@ -36,10 +36,10 @@
 #include <map>
 
 #include "algorithm.h"
+#include "detail/linalg/tdb_matrix.h"
+#include "detail/linalg/tdb_partitioned_matrix.h"
 #include "flat_query.h"
 #include "linalg.h"
-#include "tdb_matrix.h"
-#include "tdb_partitioned_matrix.h"
 
 extern double global_time_of_interest;
 

@@ -40,8 +40,8 @@
 #include "flat_query.h"
 #include "linalg.h"
 
-#include <mdspan/mdspan.hpp>
 #include <tiledb/tiledb>
+#include "mdspan/mdspan.hpp"
 
 namespace stdx {
 using namespace Kokkos;

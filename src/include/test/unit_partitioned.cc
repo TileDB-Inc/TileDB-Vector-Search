@@ -33,8 +33,8 @@
 #include <catch2/catch_all.hpp>
 #include <set>
 #include <vector>
+#include "detail/linalg/partitioned.h"
 #include "linalg.h"
-#include "partitioned.h"
 
 bool global_debug = false;
 std::string global_region = "us-east-1";
