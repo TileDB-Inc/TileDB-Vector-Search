@@ -18,8 +18,8 @@ def load_as_matrix(path, nqueries=0, config={}):
         return tdbColMajorMatrix_i64(ctx, path, nqueries)
     elif dtype == np.uint8:
         return tdbColMajorMatrix_u8(ctx, path, nqueries)
-    elif dtype == np.uint64:
-        return tdbColMajorMatrix_u64(ctx, path, nqueries)
+    # elif dtype == np.uint64:
+    #     return tdbColMajorMatrix_u64(ctx, path, nqueries)
     else:
         raise ValueError("Unsupported Matrix dtype: {}".format(a.attr(0).dtype))
 
@@ -45,6 +45,7 @@ def query_vq(db: "colMajorMatrix", *args):
 
 
 def query_kmeans(
+    dtype: np.dtype,
     parts_uri,
     centroids_db: "colMajorMatrix",
     query_vectors: "colMajorMatrix",
@@ -74,9 +75,9 @@ def query_kmeans(
         ]
     )
 
-    if centroids_db.dtype == np.float32:
+    if dtype == np.float32:
         return kmeans_query_f32(*args)
-    elif centroids_db.dtype == np.uint8:
+    elif dtype == np.uint8:
         return kmeans_query_u8(*args)
     else:
         raise TypeError("Unknown type!")
