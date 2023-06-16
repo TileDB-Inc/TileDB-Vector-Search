@@ -40,7 +40,151 @@
 
 #include "nlohmann/json.hpp"
 
+#include "utils/print_types.h"
+
 using json = nlohmann::json;
+
+namespace fixed_width_logging {
+
+class timing_data_class {
+ public:
+  using clock_type = std::chrono::high_resolution_clock;
+  using time_type = std::chrono::time_point<clock_type>;
+  using duration_type = std::chrono::duration<clock_type::rep, clock_type::period>;
+  using name_time = std::multimap<std::string, duration_type>;
+
+
+ private:
+  name_time interval_times_;
+  bool verbose_ {false};
+  bool debug_ {false};
+
+  timing_data_class() = default;
+  ~timing_data_class() = default;
+
+ public:
+  timing_data_class(const timing_data_class&) = delete;
+  timing_data_class& operator=(const timing_data_class&) = delete;
+
+  static timing_data_class& get_instance() {
+    static timing_data_class instance;
+    return instance;
+  }
+
+  void insert_interval(const std::string& name, const duration_type& time) {
+    interval_times_.insert(std::make_pair(name, time));
+  }
+
+  template <class D = std::chrono::milliseconds>
+  auto get_intervals_separately(const std::string& string){
+    std::vector<double> intervals;
+
+    auto range = interval_times_.equal_range(string);
+    for (auto i = range.first; i != range.second; ++i) {
+      intervals.push_back((std::chrono::duration_cast<D>(i->second)).count());
+    }
+    return intervals;
+  }
+
+  template <class D = std::chrono::milliseconds>
+  auto get_intervals_summed(const std::string& string){
+    double sum = 0.0;
+    auto range = interval_times_.equal_range(string);
+    for (auto i = range.first; i != range.second; ++i) {
+      sum += (std::chrono::duration_cast<D>(i->second)).count();
+    }
+    return sum;
+  }
+
+  auto get_timer_names() {
+    std::vector<std::string> names;
+    for (auto& i : interval_times_) {
+      names.push_back(i.first);
+    }
+    return names;
+  }
+
+  void set_verbose(bool verbose) {
+    verbose_ = verbose;
+  }
+
+  bool get_verbose() {
+    return verbose_;
+  }
+
+  void set_debug(bool debug) {
+    debug_ = debug;
+  }
+
+  bool get_debug() {
+    return debug_;
+  }
+};
+
+inline timing_data_class& get_timing_data_instance() {
+  return timing_data_class::get_instance();
+}
+
+timing_data_class& _timing_data{get_timing_data_instance()};
+
+class log_timer {
+ private:
+  using time_t = timing_data_class::time_type;
+  using clock_t = timing_data_class::clock_type;
+  time_t start_time, stop_time;
+  std::string msg_;
+  bool noisy_ {false};
+
+ public:
+  explicit log_timer(const std::string& msg = "unknown", bool noisy = false)
+      : start_time(clock_t::now())
+      , stop_time(start_time)
+      , msg_(msg)
+      , noisy_(noisy) {
+    noisy_ |= _timing_data.get_verbose();
+    if (noisy_) {
+      std::cout << "# Starting timer " << msg_ << std::endl;
+    }
+  }
+
+  time_t start() {
+    if (noisy_) {
+      std::cout << "# Starting timer " << msg_ << std::endl;
+    }
+    return (start_time = clock_t::now());
+  }
+
+  time_t stop() {
+    stop_time = clock_t::now();
+    _timing_data.insert_interval(msg_, stop_time - start_time);
+
+    if (noisy_) {
+      std::cout << "# Stopping timer " << msg_ << ": " <<
+          std::chrono::duration_cast<std::chrono::milliseconds>(stop_time-start_time).count() << " ms" << std::endl;
+    }
+    return stop_time;
+  }
+
+  std::string name() const {
+    return msg_;
+  }
+};
+
+
+class life_timer : public log_timer {
+ public:
+  explicit life_timer(const std::string& msg = "", bool noisy = false)
+      : log_timer(msg, noisy) {
+  }
+
+  ~life_timer() {
+    this->stop();
+  }
+};
+
+} // namespace fixed_width_logging
+
+namespace json_logging {
 
 class timing_data {
  private:
@@ -106,5 +250,5 @@ void add_timing(const std::string& operation, double elapsedTime) {
 auto get_timings() {
   return _timing_data.get_timings();
 }
-
+}  // namespace json_logging
 #endif  // TDB_LOGGING_H
