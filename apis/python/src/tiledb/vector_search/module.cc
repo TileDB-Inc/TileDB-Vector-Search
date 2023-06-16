@@ -89,7 +89,7 @@ static void declare_kmeans_query(py::module& m, const std::string& suffix) {
          size_t k_nn,
          bool nth,
          size_t nthreads) -> ColMajorMatrix<size_t> {
-        auto r = detail::ivf::qv_query_heap_infinite_ram(
+        auto r = detail::ivf::qv_query_heap_infinite_ram<T>(
             ctx,
             part_uri,
             centroids,
@@ -190,7 +190,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   m.def("query_vq_u8",
         [](const ColMajorMatrix<uint8_t>& data,
-           const ColMajorMatrix<float>& query_vectors,
+           const ColMajorMatrix<uint8_t>& query_vectors,
            int k,
            bool nth,
            size_t nthreads) {
