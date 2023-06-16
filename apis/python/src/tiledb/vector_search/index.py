@@ -1,10 +1,9 @@
 import os
 
 import numpy as np
-from tiledb.vector_search import _tiledbvspy as vspy
+from tiledb.vector_search._tiledbvspy import *
 
 from . import module as vs
-from ._tiledbvspy import ColMajorMatrix_f32, read_vector_u64
 
 
 class Index:
@@ -44,13 +43,13 @@ class IVFFlatIndex(Index):
         self.index_uri = os.path.join(uri, "index.tdb")
         self.ids_uri = os.path.join(uri, "ids.tdb")
 
-        ctx = vspy.Ctx({})  # TODO pass in a context
+        ctx = Ctx({})  # TODO pass in a context
         # TODO self._db = vs.load_as_matrix(self.db_uri)
         self._centroids = vs.load_as_matrix(self.centroids_uri)
         self._index = read_vector_u64(ctx, self.index_uri)
         # self._ids = vs.load_as_matrix(self.ids_uri)
 
-    def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8):
+    def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8, nprobe=1):
         assert targets.dtype == np.float32
 
         # TODO: use Matrix constructor from py::array
@@ -64,8 +63,8 @@ class IVFFlatIndex(Index):
             targets_m,
             self._index,
             self.ids_uri,
+            nprobe,
             k,
-            nqueries,
             True,  # ??
             nthreads,
         )

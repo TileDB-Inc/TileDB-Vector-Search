@@ -40,6 +40,7 @@ def test_ivf_flat_ingestion(tmp_path):
         array_uri=array_uri,
         source_uri=os.path.join(dataset_dir, "data"),
         source_type=source_type,
+        partitions=100,
     )
-    result = np.transpose(index.query(np.transpose(query_vectors), k=k))
+    result = np.transpose(index.query(np.transpose(query_vectors), k=k, nprobe=100))
     assert np.array_equal(result, gt_i)

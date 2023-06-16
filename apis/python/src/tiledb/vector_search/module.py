@@ -1,25 +1,25 @@
 import numpy as np
 import tiledb
-from tiledb.vector_search import _tiledbvspy as vspy
+from tiledb.vector_search._tiledbvspy import *
 
 
 def load_as_matrix(path, nqueries=0, config={}):
-    ctx = vspy.Ctx(config)
+    ctx = Ctx(config)
 
     a = tiledb.ArraySchema.load(path)
     dtype = a.attr(0).dtype
     if dtype == np.float32:
-        return vspy.tdbColMajorMatrix_f32(ctx, path, nqueries)
+        return tdbColMajorMatrix_f32(ctx, path, nqueries)
     elif dtype == np.float64:
-        return vspy.tdbColMajorMatrix_f64(ctx, path, nqueries)
+        return tdbColMajorMatrix_f64(ctx, path, nqueries)
     elif dtype == np.int32:
-        return vspy.tdbColMajorMatrix_i32(ctx, path, nqueries)
+        return tdbColMajorMatrix_i32(ctx, path, nqueries)
     elif dtype == np.int32:
-        return vspy.tdbColMajorMatrix_i64(ctx, path, nqueries)
+        return tdbColMajorMatrix_i64(ctx, path, nqueries)
     elif dtype == np.uint8:
-        return vspy.tdbColMajorMatrix_u8(ctx, path, nqueries)
+        return tdbColMajorMatrix_u8(ctx, path, nqueries)
     elif dtype == np.uint64:
-        return vspy.tdbColMajorMatrix_u64(ctx, path, nqueries)
+        return tdbColMajorMatrix_u64(ctx, path, nqueries)
     else:
         raise ValueError("Unsupported Matrix dtype: {}".format(a.attr(0).dtype))
 
@@ -37,9 +37,9 @@ def load_as_array(path, return_matrix=False):
 
 def query_vq(db: "colMajorMatrix", *args):
     if db.dtype == np.float32:
-        return vspy.query_vq_f32(db, *args)
+        return query_vq_f32(db, *args)
     elif db.dtype == np.uint8:
-        return vspy.query_vq_u8(db, *args)
+        return query_vq_u8(db, *args)
     else:
         raise TypeError("Unknown type!")
 
@@ -57,7 +57,7 @@ def query_kmeans(
     ctx: "Ctx" = None,
 ):
     if ctx is None:
-        ctx = vspy.Ctx({})
+        ctx = Ctx({})
 
     args = tuple(
         [
@@ -75,8 +75,8 @@ def query_kmeans(
     )
 
     if centroids_db.dtype == np.float32:
-        return vspy.kmeans_query_f32(*args)
+        return kmeans_query_f32(*args)
     elif centroids_db.dtype == np.uint8:
-        return vspy.kmeans_query_u8(*args)
+        return kmeans_query_u8(*args)
     else:
         raise TypeError("Unknown type!")
