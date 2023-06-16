@@ -34,7 +34,6 @@
 #include <set>
 #include <vector>
 #include "detail/linalg/partitioned.h"
-#include "linalg.h"
 
 bool global_debug = false;
 std::string global_region = "us-east-1";
@@ -58,6 +57,6 @@ TEST_CASE("partitioned: even odd", "[partitioned][ci-skip]") {
   auto centroids_mat = tdbColMajorMatrix<float>(ctx, centroids_uri);
   auto queries_mat = tdbColMajorMatrix<float>(ctx, queries_uri);
 
-  auto partitioned = tdbPartitionedMatrix<float>(
+  auto partitioned = tdbPartitionedMatrix_<float>(
       ctx, parts_uri, centroids_mat, queries_mat, index, ids, 2, 2);
 }

@@ -32,12 +32,12 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#include <vector>
-#include <tiledb/tiledb>
 #include <span>
+#include <tiledb/tiledb>
+#include <vector>
 
 template <class T>
-std::vector<T> read_vector(const tiledb::Context &ctx, const std::string&);
+std::vector<T> read_vector(const tiledb::Context& ctx, const std::string&);
 
 template <class M>
 concept is_view = requires(M) {

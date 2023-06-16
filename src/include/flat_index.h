@@ -1,5 +1,5 @@
 /**
- * @file   linalg_defs.h
+ * @file   flat_index.h
  *
  * @section LICENSE
  *
@@ -27,21 +27,28 @@
  *
  * @section DESCRIPTION
  *
+ * Header-only library of class that implements a flat index.
+ *
+ * The basic use case is:
+ * - Create an instance of the index
+ * - Call train() to build the index (nullop for flat index)
+ * - OR Call load() to load the index from TileDB arrays
+ * - Call add() to add vectors to the index (alt. add with ids)
+ * - Call search() to query the index, returning the ids of the nearest vectors,
+ *   and optionally the distances.
+ * - Compute the recall of the search results.
+ *
+ * - Call save() to save the index to disk
+ * - Call reset() to clear the index
+ *
+ * In general, we will neither be able to have the entire index in memory,
+ * nor the original vectors.  Thus, we either construct the index from
+ * URIs (and the index uses out-of-core data structures), or we construct
+ * the requisite data structures and pass them to the index, again using
+ * out-of-core data structures as necessary.
  */
 
-#ifndef TDB_LINALG_DEFS_H
-#define TDB_LINALG_DEFS_H
+#ifndef TILEDB_IVF_INDEX_H
+#define TILEDB_IVF_INDEX_H
 
-#include <string>
-#include "mdspan/mdspan.hpp"
-
-namespace stdx {
-using namespace Kokkos;
-using namespace Kokkos::Experimental;
-}  // namespace stdx
-
-extern bool global_verbose;
-extern bool global_debug;
-extern std::string global_region;
-
-#endif  // TDB_LINALG_DEFS_H
+#endif TILEDB_IVF_INDEX_H

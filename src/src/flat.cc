@@ -137,8 +137,8 @@ int main(int argc, char* argv[]) {
   verbose = args["--verbose"].asBool();
 
   std::string db_uri = args["--db_uri"].asString();
-  std::string q_uri = args["--query_uri"].asString();
-  std::string g_uri = args["--groundtruth_uri"] ? args["--groundtruth_uri"].asString() : "";
+  std::string query_uri = args["--query_uri"].asString();
+  std::string groundtruth_uri = args["--groundtruth_uri"] ? args["--groundtruth_uri"].asString() : "";
 
   std::cout << "# Using " << args["--algo"].asString() << std::endl;
 
@@ -168,10 +168,9 @@ int main(int argc, char* argv[]) {
   }
 
   //  auto q = tdbColMajorMatrix<float>(ctx, q_uri, nqueries);  // just a slice
-  auto q = tdbColMajorMatrix<uint8_t>(ctx, q_uri, nqueries);  // just a slice
+  auto query = tdbColMajorMatrix<uint8_t>(ctx, query_uri, nqueries);  // just a slice
 
-  auto g = g_uri.empty() ? ColMajorMatrix<int>(0, 0) :
-                           tdbColMajorMatrix<int>(ctx, g_uri);
+
   load_time.stop();
   std::cout << load_time << std::endl;
 
@@ -181,25 +180,25 @@ int main(int argc, char* argv[]) {
         std::cout << "# Using vq_nth, nth = " << std::to_string(nth)
                   << std::endl;
       }
-      return detail::flat::vq_query_nth(db, q, k, nth, nthreads);
+      return detail::flat::vq_query_nth(db, query, k, nth, nthreads);
     } else if (args["--order"].asString() == "vq_heap") {
       if (verbose) {
         std::cout << "# Using vq_heap, ignoring nth = " << std::to_string(nth)
                   << std::endl;
       }
-      return detail::flat::vq_query_heap(db, q, k, nthreads);
+      return detail::flat::vq_query_heap(db, query, k, nthreads);
     } else if (args["--order"].asString() == "qv_nth") {
       if (verbose) {
         std::cout << "# Using qv_nth, nth = " << std::to_string(nth)
                   << std::endl;
       }
-      return detail::flat::qv_query_nth(db, q, k, nth, nthreads);
+      return detail::flat::qv_query_nth(db, query, k, nth, nthreads);
     } else if (args["--order"].asString() == "qv_heap") {
       if (verbose) {
         std::cout << "# Using qv_query (qv_heap), ignoring nth = "
                   << std::to_string(nth) << std::endl;
       }
-      return detail::flat::qv_query_heap(db, q, k, nthreads);
+      return detail::flat::qv_query_heap(db, query, k, nthreads);
     } /* else if (args["--order"].asString() == "gemm") {
       // if (block != 0) {
       if (args["--block"]) {
@@ -215,8 +214,11 @@ int main(int argc, char* argv[]) {
     }*/
   }();
 
-  if (!g_uri.empty() && validate) {
-    validate_top_k(top_k, g);
+  if (!groundtruth_uri.empty() && validate) {
+    auto groundtruth = groundtruth_uri.empty() ?
+                           ColMajorMatrix<int>(0, 0) :
+                           tdbColMajorMatrix<int>(ctx, groundtruth_uri);
+      validate_top_k(top_k, groundtruth);
   }
 
   if (args["--output_uri"]) {

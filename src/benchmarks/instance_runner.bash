@@ -43,7 +43,7 @@ do
 
     benchname="1b-${instance_type}-125MiB"
     bash_script="1b-c6a-16x-125MiB.bash"
-    command="bash feature-vector-prototype/experimental/benchmarks/${bash_script}"
+    command="bash feature-vector-prototype/src/benchmarks/${bash_script}"
     
     for ((i=1; i<=2; i++))
     do

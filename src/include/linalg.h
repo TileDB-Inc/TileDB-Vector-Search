@@ -43,12 +43,12 @@
 #ifndef TDB_LINALG_H
 #define TDB_LINALG_H
 
+#include "detail/linalg/choose_blas.h"
 #include "detail/linalg/linalg_defs.h"
-#include "detail/linalg/vector.h"
 #include "detail/linalg/matrix.h"
+#include "detail/linalg/tdb_io.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
-#include "detail/linalg/tdb_io.h"
-#include "detail/linalg/choose_blas.h"
+#include "detail/linalg/vector.h"
 
 #endif  // TDB_LINALG_H
