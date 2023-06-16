@@ -185,7 +185,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   m.def("query_vq_u8",
         [](const ColMajorMatrix<uint8_t>& data,
-           const ColMajorMatrix<uint8_t>& query_vectors,
+           const ColMajorMatrix<float>& query_vectors,
            int k,
            bool nth,
            size_t nthreads) {
