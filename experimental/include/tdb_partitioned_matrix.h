@@ -52,6 +52,8 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   using row_domain_type = int32_t;
   using col_domain_type = int32_t;
 
+  log_timer constructor_timer{"tdbPartitionedMatrix constructor"};
+
   // @todo: Make this configurable
   std::map<std::string, std::string> init_{};
   // {"vfs.s3.region", global_region.c_str()}};
@@ -134,6 +136,9 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       , parts_{in_parts}
       , row_part_view_{0, 0}
       , col_part_view_{0, 0} {
+
+    constructor_timer.stop();
+
     total_num_parts_ = size(parts_);
 
     scoped_timer _{"Initialize tdb partitioned matrix " + uri};
