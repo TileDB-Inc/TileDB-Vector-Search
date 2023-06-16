@@ -12,7 +12,7 @@ def test_flat_index(tmpdir):
 
     query_vectors = vs.load_as_array(query_uri)[:, :10]
 
-    index = FlatIndex(group_uri, parts_name="sift_base")
+    index = FlatIndex(group_uri, dtype='float32', parts_name="sift_base")
     result = index.query(query_vectors)
     assert isinstance(result, np.ndarray)
 
