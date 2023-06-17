@@ -287,7 +287,7 @@ int main(int argc, char* argv[]) {
           }
           std::cout << std::setw(12) << text;
         }
-        units = std::string(" (MB)"); // copilot scares me
+        units = std::string(" (MiB)"); // copilot scares me
       }
 
       std::cout << std::endl;
