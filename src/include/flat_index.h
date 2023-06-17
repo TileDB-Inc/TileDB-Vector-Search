@@ -1,5 +1,5 @@
 /**
- * @file   unit_partitioned.cc
+ * @file   flat_index.h
  *
  * @section LICENSE
  *
@@ -27,36 +27,28 @@
  *
  * @section DESCRIPTION
  *
- * Test correctness of partitioned vector database.
+ * Header-only library of class that implements a flat index.
+ *
+ * The basic use case is:
+ * - Create an instance of the index
+ * - Call train() to build the index (nullop for flat index)
+ * - OR Call load() to load the index from TileDB arrays
+ * - Call add() to add vectors to the index (alt. add with ids)
+ * - Call search() to query the index, returning the ids of the nearest vectors,
+ *   and optionally the distances.
+ * - Compute the recall of the search results.
+ *
+ * - Call save() to save the index to disk
+ * - Call reset() to clear the index
+ *
+ * In general, we will neither be able to have the entire index in memory,
+ * nor the original vectors.  Thus, we either construct the index from
+ * URIs (and the index uses out-of-core data structures), or we construct
+ * the requisite data structures and pass them to the index, again using
+ * out-of-core data structures as necessary.
  */
 
-#include <catch2/catch_all.hpp>
-#include <set>
-#include <vector>
-#include "detail/linalg/partitioned.h"
+#ifndef TILEDB_IVF_INDEX_H
+#define TILEDB_IVF_INDEX_H
 
-bool global_debug = false;
-std::string global_region = "us-east-1";
-
-TEST_CASE("partitioned: test test", "[partitioned]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("partitioned: even odd", "[partitioned][ci-skip]") {
-  tiledb::Context ctx;
-
-  std::string parts_uri{"even_odd_parts"};
-  std::string index_uri{"even_odd_index"};
-  std::string ids_uri{"even_odd_ids"};
-  std::string centroids_uri{"even_odd_centroids"};
-  std::string queries_uri{"even_odd_queries"};
-
-  auto parts_mat = tdbColMajorMatrix<float>(ctx, parts_uri);
-  auto index = read_vector<uint32_t>(ctx, index_uri);
-  auto ids = read_vector<uint32_t>(ctx, ids_uri);
-  auto centroids_mat = tdbColMajorMatrix<float>(ctx, centroids_uri);
-  auto queries_mat = tdbColMajorMatrix<float>(ctx, queries_uri);
-
-  auto partitioned = tdbPartitionedMatrix_<float>(
-      ctx, parts_uri, centroids_mat, queries_mat, index, ids, 2, 2);
-}
+#endif TILEDB_IVF_INDEX_H

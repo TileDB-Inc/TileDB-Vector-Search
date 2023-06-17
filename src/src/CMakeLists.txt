@@ -83,7 +83,15 @@ configure_file(../include/config.h.in config.h)
 #---[ Dependencies ]------------------------------------------------------------
 add_library(kmeans_linalg INTERFACE)
 target_sources(kmeans_linalg INTERFACE
-        ../include/linalg.h ../include/tdb_matrix.h ../include/tdb_partitioned_matrix.h
+        ../include/linalg.h ../include/detail/linalg/tdb_matrix.h ../include/detail/linalg/tdb_partitioned_matrix.h ../include/detail/linalg/matrix.h
+        ../include/detail/linalg/vector.h ../include/detail/linalg/linalg_defs.h
+        ../include/detail/linalg/tdb_io.h
+        )
+
+add_library(kmeans_queries INTERFACE)
+target_sources(kmeans_queries INTERFACE
+        ../include/detail/flat/qv.h ../include/detail/flat/vq.h ../include/detail/flat/gemm.h
+        ../include/detail/ivf/qv.h ../include/detail/ivf/vq.h ../include/detail/ivf/gemm.h
         )
 
 add_library(kmeans_lib INTERFACE)
@@ -91,7 +99,7 @@ target_sources(kmeans_lib INTERFACE
         ../include/flat_query.h ../include/ivf_query.h ../include/scoring.h ../include/fixed_min_queues.h
         ../include/defs.h ../include/algorithm.h ../include/concepts.h ../include/stats.h
         ../include/utils/timer.h ../include/utils/logging.h ../include/utils/print_types.h
-        ../include/partitioned.h ../include/array_types.h
+        ../include/array_types.h ../include/flat_index.h ../include/ivf_index.h
         )
 
 target_include_directories(kmeans_lib INTERFACE
@@ -103,6 +111,7 @@ target_include_directories(kmeans_lib INTERFACE
 
 target_link_libraries(kmeans_lib INTERFACE
         kmeans_linalg
+        kmeans_queries
         )
 
 target_link_libraries(kmeans_lib INTERFACE

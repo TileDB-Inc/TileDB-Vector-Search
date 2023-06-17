@@ -34,14 +34,16 @@
  *
  */
 
+#ifndef TILEDB_PARTITIONED_H
+#define TILEDB_PARTITIONED_H
+
 #include <cassert>
 #include <memory>
 #include <span>
-#include "flat_query.h"
-#include "linalg.h"
-
-#include <mdspan/mdspan.hpp>
 #include <tiledb/tiledb>
+#include "detail/linalg/linalg_defs.h"
+#include "flat_query.h"
+#include "mdspan/mdspan.hpp"
 
 namespace stdx {
 using namespace Kokkos;
@@ -49,7 +51,7 @@ using namespace Kokkos::Experimental;
 }  // namespace stdx
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-class tdbPartitionedMatrix {
+class tdbPartitionedMatrix_ {
   std::unique_ptr<T[]> storage_;
   std::vector<std::span<T>> partitions_1d_;
   std::vector<stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>> partitions_2d_;
@@ -57,7 +59,7 @@ class tdbPartitionedMatrix {
 
  public:
   template <class C, class Q, class Idx, class Ids>
-  tdbPartitionedMatrix(
+  tdbPartitionedMatrix_(
       const tiledb::Context& ctx,
       const std::string& uri,
       C& centroids,
@@ -174,11 +176,10 @@ class tdbPartitionedMatrix {
           indices[parts[partno] + 1] - indices[parts[partno]] ==
           partitions_2d_[partno].extent(1));
 
-      std::vector<int32_t> subarray_vals = {
-          (int32_t)row_begin,
-          (int32_t)row_end - 1,
-          (int32_t)col_begin,
-          (int32_t)col_end - 1};
+      std::vector<int32_t> subarray_vals = {(int32_t)row_begin,
+                                            (int32_t)row_end - 1,
+                                            (int32_t)col_begin,
+                                            (int32_t)col_end - 1};
       tiledb::Subarray subarray(ctx, array_);
       subarray.set_subarray(subarray_vals);
 
@@ -196,3 +197,5 @@ class tdbPartitionedMatrix {
     array_.close();
   }
 };
+
+#endif

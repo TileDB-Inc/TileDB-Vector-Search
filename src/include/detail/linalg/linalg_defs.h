@@ -1,5 +1,5 @@
 /**
- * @file   unit_partitioned.cc
+ * @file   linalg_defs.h
  *
  * @section LICENSE
  *
@@ -27,36 +27,21 @@
  *
  * @section DESCRIPTION
  *
- * Test correctness of partitioned vector database.
  */
 
-#include <catch2/catch_all.hpp>
-#include <set>
-#include <vector>
-#include "detail/linalg/partitioned.h"
+#ifndef TDB_LINALG_DEFS_H
+#define TDB_LINALG_DEFS_H
 
-bool global_debug = false;
-std::string global_region = "us-east-1";
+#include <string>
+#include "mdspan/mdspan.hpp"
 
-TEST_CASE("partitioned: test test", "[partitioned]") {
-  REQUIRE(true);
-}
+namespace stdx {
+using namespace Kokkos;
+using namespace Kokkos::Experimental;
+}  // namespace stdx
 
-TEST_CASE("partitioned: even odd", "[partitioned][ci-skip]") {
-  tiledb::Context ctx;
+extern bool global_verbose;
+extern bool global_debug;
+extern std::string global_region;
 
-  std::string parts_uri{"even_odd_parts"};
-  std::string index_uri{"even_odd_index"};
-  std::string ids_uri{"even_odd_ids"};
-  std::string centroids_uri{"even_odd_centroids"};
-  std::string queries_uri{"even_odd_queries"};
-
-  auto parts_mat = tdbColMajorMatrix<float>(ctx, parts_uri);
-  auto index = read_vector<uint32_t>(ctx, index_uri);
-  auto ids = read_vector<uint32_t>(ctx, ids_uri);
-  auto centroids_mat = tdbColMajorMatrix<float>(ctx, centroids_uri);
-  auto queries_mat = tdbColMajorMatrix<float>(ctx, queries_uri);
-
-  auto partitioned = tdbPartitionedMatrix_<float>(
-      ctx, parts_uri, centroids_mat, queries_mat, index, ids, 2, 2);
-}
+#endif  // TDB_LINALG_DEFS_H

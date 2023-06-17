@@ -80,14 +80,17 @@ using json = nlohmann::json;
 
 bool global_verbose = false;
 bool global_debug = false;
+std::string global_region;
+double global_time_of_interest{0};
 
 static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
 Usage:
     ivf_hack (-h | --help)
-    ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --parts_uri URI --ids_uri URI [--alg algo]
-            [--output_uri URI] [--query_uri URI] [--groundtruth_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
-            [--finite] [--k NN] [--cluster NN] [--nthreads N] [--nth] [--log FILE] [-d] [-v]
+    ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --parts_uri URI --ids_uri URI --query_uri URI
+            [--groundtruth_uri URI] [--output_uri URI] [--k NN][--nprobe NN] [--nqueries NN]
+            [--alg ALGO] [--finite] [--blocksize NN] [--nth]
+            [--nthreads N] [--region REGION] [--log FILE] [-d] [-v]
 
 Options:
     -h, --help            show this screen
@@ -96,18 +99,18 @@ Options:
     --index_uri URI       URI with the paritioning index
     --parts_uri URI       URI with the partitioned data
     --ids_uri URI         URI with original IDs of vectors
-    --alg algo            which algorithm to use for query [default: qv_heap]
-    --output_uri URI      URI to store search results
     --query_uri URI       URI storing query vectors
     --groundtruth_uri URI URI storing ground truth vectors
-    --nqueries NN         number of query vectors to use (0 = all) [default: 0]
-    --ndb NN              number of database vectors to use (0 = all) [default: 0]
-    --finite              use finite RAM (out of core) algorithm [default: false]
-    --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
+    --output_uri URI      URI to store search results
     --k NN                number of nearest neighbors to search for [default: 10]
-    --cluster NN          number of clusters to use [default: 100]
-    --blocksize NN        number of vectors to process in a block (0 = all) [default: 0]
+    --nprobe NN           number of clusters to use [default: 100]
+    --nqueries NN         number of query vectors to use (0 = all) [default: 0]
+    --alg ALGO            which algorithm to use for query [default: qv_heap]
+    --finite              use finite RAM (out of core) algorithm [default: false]
+    --blocksize NN        number of vectors to process in an out of core block (0 = all) [default: 0]
     --nth                 use nth_element for top k [default: false]
+    --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
+    --region REGION       AWS S3 region [default: us-east-1]
     --log FILE            log info to FILE (- for stdout)
     -d, --debug           run in debug mode [default: false]
     -v, --verbose         run in verbose mode [default: false]
@@ -119,13 +122,13 @@ int main(int argc, char* argv[]) {
 
   auto centroids_uri = args["--centroids_uri"].asString();
   auto db_uri = args["--db_uri"].asString();
-  auto ndb = args["--ndb"].asLong();
   auto nthreads = args["--nthreads"].asLong();
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
   global_debug = args["--debug"].asBool();
   global_verbose = args["--verbose"].asBool();
+  global_region = args["--region"].asString();
 
   auto part_uri = args["--parts_uri"].asString();
   auto index_uri = args["--index_uri"].asString();
@@ -139,12 +142,7 @@ int main(int argc, char* argv[]) {
   auto algorithm = args["--alg"].asString();
   bool finite = args["--finite"].asBool();
 
-  float recall{0.0f};
-  json recalls;
   tiledb::Context ctx;
-
-  {
-    scoped_timer _("query_time");
 
   if (is_local_array(centroids_uri) &&
       !std::filesystem::exists(centroids_uri)) {
@@ -152,15 +150,16 @@ int main(int argc, char* argv[]) {
               << args["--centroids_uri"] << std::endl;
     return 1;
   }
-
   auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
   debug_matrix(centroids, "centroids");
 
+  float recall{0.0f};
+  json recalls;
 
   // Find the top k nearest neighbors accelerated by kmeans and do some
   // reporting
-
-
+  {
+    life_timer _("query_time");
 
     // @todo Encapsulate these arrays in a class
     // auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
@@ -244,67 +243,39 @@ int main(int argc, char* argv[]) {
                 << total_groundtruth << " = "
                 << "R@" << k_nn << " of " << recall << std::endl;
     }
+
+    if (args["--output_uri"]) {
+      auto output = ColMajorMatrix<int32_t>(top_k.num_rows(), top_k.num_cols());
+      for (size_t i = 0; i < top_k.num_rows(); ++i) {
+        for (size_t j = 0; j < top_k.num_cols(); ++j) {
+          output(i, j) = top_k(i, j);
+        }
+      }
+
+      write_matrix(ctx, output, args["--output_uri"].asString());
+    }
   }
+
+  auto timings = get_timings();
 
   // Quick and dirty way to get query info in summarizable form
   if (true || global_verbose) {
-    char tag = 'A';
-    std::map<std::string, std::string> toc;
-
-    if (true) {
-      std::cout << std::setw(5) << "-|-";
-      std::cout << std::setw(12) << "Algorithm";
-      std::cout << std::setw(9) << "Queries";
-      std::cout << std::setw(8) << "nprobe";
-      std::cout << std::setw(8) << "k_nn";
-      std::cout << std::setw(8) << "thrds";
-      std::cout << std::setw(8) << "recall";
-
-      auto timers = _timing_data.get_timer_names();
-      for (auto& timer : timers) {
-
-	std::string text;
-
-	if (size(timer) < 3) {
-	  text = timer;
-	} else {
-	  std::string key = "[" + std::string(1,tag) + "]";
-	  toc[key] = timer;
-	  ++tag;
-	  text = key;
-	}
-        std::cout << std::setw(12) << text;
-      }
-      std::cout << std::endl;
-    }
-
-    std::cout << std::setw(5) << "-|-";
-    std::cout << std::setw(12) << algorithm;
-    std::cout << std::setw(9) << nqueries;
+    auto ms = global_time_of_interest;
+    auto qps = ((float)nqueries) / ((float)ms / 1000.0);
+    std::cout << std::setw(8) << "-|-";
+    std::cout << std::setw(8) << algorithm;
+    std::cout << std::setw(8) << nqueries;
     std::cout << std::setw(8) << nprobe;
     std::cout << std::setw(8) << k_nn;
     std::cout << std::setw(8) << nthreads;
-    std::cout << std::fixed << std::setprecision(3) ;
+    std::cout << std::setw(12) << ms;
+    std::cout << std::fixed << std::setprecision(3);
+    std::cout << std::setw(12) << qps;
     std::cout << std::setw(8) << recall;
-    std::cout << std::setprecision(std::cout.precision());
-
-    std::cout << std::fixed << std::setprecision(3) ;
-    auto timers = _timing_data.get_timer_names();
-    for (auto& timer : timers) {
-      std::cout << std::setw(12) << _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer)/1000.0;
-    }
-    std::cout << std::setprecision(std::cout.precision());
-
     std::cout << std::endl;
-
-    for (auto& t: toc) {
-      std::cout << t.first << ": " << t.second << std::endl;
-    }
   }
 
-#if 0
   if (args["--log"]) {
-    auto timings = get_timings();
     auto program_args = args_log(args);
     auto config = config_log(argv[0]);
 
@@ -321,5 +292,11 @@ int main(int argc, char* argv[]) {
       outfile << log_log.dump(2) << std::endl;
     }
   }
-#endif
 }
+
+// recalls = {}
+// i = 1
+// while i <= k:
+//    recalls[i] = (I[:, :i] == gt[:, :1]).sum() / float(#queries
+//    i *= 10
+// return (t1 - t0) * 1000.0 / nq, recalls

@@ -34,7 +34,7 @@
 #define TILEDB_FLAT_GEMM_H
 
 #include "algorithm.h"
-#include "choose_blas.h"
+#include "detail/linalg/choose_blas.h"
 #include "linalg.h"
 #include "scoring.h"
 #include "utils/timer.h"
