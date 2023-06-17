@@ -273,23 +273,27 @@ int main(int argc, char* argv[]) {
       std::cout << std::setw(8) << "thrds";
       std::cout << std::setw(8) << "recall";
 
-      auto timers = _timing_data.get_timer_names();
-      for (auto& timer : timers) {
-
-	std::string text;
-
-	if (size(timer) < 3) {
-	  text = timer;
-	} else {
-	  std::string key = "[" + std::string(1,tag) + "]";
-	  toc[key] = timer;
-	  ++tag;
-	  text = key;
-	}
-        std::cout << std::setw(12) << text;
+      auto units = std::string(" (s)");
+      for (auto& timers : { _timing_data.get_timer_names(), _memory_data.get_usage_names() }) {
+        for (auto& timer : timers) {
+          std::string text;
+          if (size(timer) < 3) {
+            text = timer;
+          } else {
+            std::string key = "[" + std::string(1, tag) + "]";
+            toc[key] = timer + units;
+            ++tag;
+            text = key;
+          }
+          std::cout << std::setw(12) << text;
+        }
+        units = std::string(" (MB)"); // copilot scares me
       }
+
       std::cout << std::endl;
     }
+
+    auto original_precision = std::cout.precision();
 
     std::cout << std::setw(5) << "-|-";
     std::cout << std::setw(12) << algorithm;
@@ -299,16 +303,37 @@ int main(int argc, char* argv[]) {
     std::cout << std::setw(8) << nthreads;
     std::cout << std::fixed << std::setprecision(3) ;
     std::cout << std::setw(8) << recall;
-    std::cout << std::setprecision(std::cout.precision());
 
-    std::cout << std::fixed << std::setprecision(3) ;
+    std::cout.precision(original_precision);
+    std::cout << std::fixed << std::setprecision(3);
     auto timers = _timing_data.get_timer_names();
     for (auto& timer : timers) {
-      std::cout << std::setw(12) << _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer)/1000.0;
+      std::cout
+          << std::setw(12)
+          << _timing_data.get_entries_summed<std::chrono::milliseconds>(
+              timer) / 1000.0;
     }
-    std::cout << std::setprecision(std::cout.precision());
 
+    std::cout << std::fixed << std::setprecision(0);
+
+    auto usages = _memory_data.get_usage_names();
+    for (auto& usage : usages) {
+      auto mem = _memory_data.get_entries_summed(usage);
+      if (mem < 1) {
+        std::cout << std::fixed << std::setprecision(3);
+      } else if (mem < 10) {
+        std::cout << std::fixed << std::setprecision(2);
+      } else if (mem < 100) {
+        std::cout << std::fixed << std::setprecision(1);
+      } else {
+        std::cout << std::fixed << std::setprecision(0);
+      }
+      std::cout
+          <<  std::setw(12)
+          << _memory_data.get_entries_summed(usage);
+    }
     std::cout << std::endl;
+    std::cout << std::setprecision(original_precision);
 
     for (auto& t: toc) {
       std::cout << t.first << ": " << t.second << std::endl;

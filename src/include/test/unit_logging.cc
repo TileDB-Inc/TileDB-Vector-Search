@@ -49,14 +49,14 @@ TEST_CASE("logging: test", "[logging]") {
 
   a.stop();
 
-  auto f = _timing_data.get_intervals_summed("test");
+  auto f = _timing_data.get_entries_summed("test");
   CHECK((f <= 510 && f >= 490));
 
   a.start();
   std::this_thread::sleep_for(500ms);
   a.stop();
 
-  f = _timing_data.get_intervals_summed("test");
+  f = _timing_data.get_entries_summed("test");
   CHECK((f <= 1010 && f >= 990));
 }
 
@@ -69,14 +69,14 @@ TEST_CASE("logging: noisy test", "[logging]") {
 
   a.stop();
 
-  auto f = _timing_data.get_intervals_summed("noisy_test");
+  auto f = _timing_data.get_entries_summed("noisy_test");
   CHECK((f <= 510 && f >= 490));
 
   a.start();
   std::this_thread::sleep_for(500ms);
   a.stop();
 
-  f = _timing_data.get_intervals_summed("noisy_test");
+  f = _timing_data.get_entries_summed("noisy_test");
   CHECK((f <= 1010 && f >= 990));
 }
 
@@ -90,9 +90,9 @@ TEST_CASE("logging: interval test", "[logging]") {
 
   a.stop();
 
-  auto f = _timing_data.get_intervals_summed("interval_test");
+  auto f = _timing_data.get_entries_summed("interval_test");
   CHECK((f <= 510 && f >= 490));
-  auto g = _timing_data.get_intervals_separately("interval_test");
+  auto g = _timing_data.get_entries_separately("interval_test");
   CHECK(g.size() == 1);
   CHECK((g[0] <= 510 && g[0] >= 490));
   auto g0 = g[0];
@@ -101,28 +101,28 @@ TEST_CASE("logging: interval test", "[logging]") {
   std::this_thread::sleep_for(500ms);
   a.stop();
 
-  f = _timing_data.get_intervals_summed("interval_test");
+  f = _timing_data.get_entries_summed("interval_test");
   CHECK((f <= 1010 && f >= 990));
-  g = _timing_data.get_intervals_separately("interval_test");
+  g = _timing_data.get_entries_separately("interval_test");
   CHECK(g.size() == 2);
   CHECK((g[0] <= 510 && g[0] >= 490));
   CHECK((g[1] <= 510 && g[1] >= 490));
   CHECK(g[0] == g0);
 
-  f = _timing_data.get_intervals_summed("interval_test");
+  f = _timing_data.get_entries_summed("interval_test");
   CHECK((f <= 1010 && f >= 990));
 
   std::this_thread::sleep_for(500ms);
 
-  f = _timing_data.get_intervals_summed("interval_test");
+  f = _timing_data.get_entries_summed("interval_test");
   CHECK((f <= 1010 && f >= 990));
-  g = _timing_data.get_intervals_separately("interval_test");
+  g = _timing_data.get_entries_separately("interval_test");
   CHECK(g.size() == 2);
   CHECK((g[0] <= 510 && g[0] >= 490));
   CHECK((g[1] <= 510 && g[1] >= 490));
   CHECK(g[0] == g0);
 
-  f = _timing_data.get_intervals_summed("interval_test");
+  f = _timing_data.get_entries_summed("interval_test");
   CHECK((f <= 1010 && f >= 990));
 }
 
@@ -133,7 +133,54 @@ TEST_CASE("logging: scoped_timer start test", "[logging]") {
 
 TEST_CASE("logging: scoped_timer stop test", "[logging]") {
   std::this_thread::sleep_for(500ms);
-  auto f = _timing_data.get_intervals_summed("life_test");
+  auto f = _timing_data.get_entries_summed("life_test");
   CHECK((f <= 310 && f >= 290));
 }
 
+TEST_CASE("logging: ordering", "[logging]") {
+
+  auto g = log_timer{"g"};
+  auto f = log_timer{"f"};
+  auto i = log_timer{"i"};
+  auto h = log_timer{"h"};
+
+  i.start();
+  std::this_thread::sleep_for(100ms);
+  g.start();
+  std::this_thread::sleep_for(100ms);
+  h.start();
+  std::this_thread::sleep_for(100ms);
+  f.start();
+  std::this_thread::sleep_for(100ms);
+  g.stop();
+  std::this_thread::sleep_for(100ms);
+  g.start();
+  std::this_thread::sleep_for(100ms);
+  g.stop();
+  std::this_thread::sleep_for(100ms);
+  f.stop();
+  g.start();
+  h.stop();
+  f.start();
+  std::this_thread::sleep_for(100ms);
+  f.stop();
+  g.stop();
+  i.stop();
+
+  auto i_t = _timing_data.get_entries_summed("i");
+  auto h_t = _timing_data.get_entries_summed("h");
+  auto g_t = _timing_data.get_entries_summed("g");
+  auto f_t = _timing_data.get_entries_summed("f");
+
+  std::cout << f_t << " " << g_t << " " << h_t << " " << i_t << std::endl;
+
+  CHECK((i_t > 770 && i_t < 830));
+  CHECK((h_t > 470 && h_t < 530));
+  CHECK((g_t > 470 && g_t < 530));
+  CHECK((f_t > 470 && f_t < 530));
+}
+
+
+TEST_CASE("logging: memory", "[logging]") {
+  _memory_data.insert_entry(tdb_func__, 8675309);
+}

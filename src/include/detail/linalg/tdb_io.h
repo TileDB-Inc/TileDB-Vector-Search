@@ -35,6 +35,7 @@
 #include <tiledb/tiledb>
 #include "detail/linalg/matrix.h"
 #include "utils/timer.h"
+#include "utils/logging.h"
 
 /**
  * Write the contents of a Matrix to a TileDB array.
@@ -182,8 +183,9 @@ std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
   tiledb::Query query(ctx, array_);
   query.set_subarray(subarray).set_data_buffer(
       attr_name, data_.data(), vec_rows_);
-
   query.submit();
+  _memory_data.insert_entry(tdb_func__, vec_rows_ * sizeof(T));
+
   array_.close();
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
 

@@ -326,6 +326,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
           .set_layout(layout_order)
           .set_data_buffer(attr_name, ptr, col_count * dimension);
       query.submit();
+      _memory_data.insert_entry(tdb_func__, col_count * dimension * sizeof(T));
 
       // assert(tiledb::Query::Status::COMPLETE == query.query_status());
       if (tiledb::Query::Status::COMPLETE != query.query_status()) {
@@ -367,6 +368,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       ids_query.set_subarray(ids_subarray)
           .set_data_buffer(ids_attr_name, ids_ptr, ids_col_count);
       ids_query.submit();
+      _memory_data.insert_entry(tdb_func__, ids_col_count * sizeof(T));
 
       // assert(tiledb::Query::Status::COMPLETE == query.query_status());
       if (tiledb::Query::Status::COMPLETE != ids_query.query_status()) {

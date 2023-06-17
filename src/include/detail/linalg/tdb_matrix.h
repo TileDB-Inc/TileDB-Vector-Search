@@ -284,6 +284,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         .set_layout(layout_order)
         .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
     query.submit();
+    _memory_data.insert_entry(tdb_func__, num_rows * num_cols * sizeof(T));
+
 
     // assert(tiledb::Query::Status::COMPLETE == query.query_status());
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
@@ -395,6 +397,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
             .set_layout(layout_order)
             .set_data_buffer(attr_name, ptr, num_elements);
         query.submit();
+        _memory_data.insert_entry(tdb_func__, num_elements * sizeof(T));
+
 
         // assert(tiledb::Query::Status::COMPLETE == query.query_status());
         if (tiledb::Query::Status::COMPLETE != query.query_status()) {
@@ -448,6 +452,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         query.set_subarray(subarray).set_data_buffer(
             attr_name, ptr, num_elements);
         query.submit();
+        _memory_data.insert_entry(tdb_func__, num_elements * sizeof(T));
+
 
         if (tiledb::Query::Status::COMPLETE != query.query_status()) {
           throw std::runtime_error("Query status is not complete -- fix me");
@@ -547,6 +553,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         .set_layout(layout_order)
         .set_data_buffer(attr_name, this_data, read_size);
     query.submit();
+    _memory_data.insert_entry(tdb_func__, read_size * sizeof(T));
 
     // assert(tiledb::Query::Status::COMPLETE == query.query_status());
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {

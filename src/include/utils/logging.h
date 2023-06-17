@@ -83,12 +83,12 @@ class timing_data_class {
     return instance;
   }
 
-  void insert_interval(const std::string& name, const duration_type& time) {
+  void insert_entry(const std::string& name, const duration_type& time) {
     interval_times_.insert(std::make_pair(name, time));
   }
 
   template <class D = std::chrono::milliseconds>
-  auto get_intervals_separately(const std::string& string) {
+  auto get_entries_separately(const std::string& string) {
     std::vector<double> intervals;
 
     auto range = interval_times_.equal_range(string);
@@ -99,7 +99,7 @@ class timing_data_class {
   }
 
   template <class D = std::chrono::milliseconds>
-  auto get_intervals_summed(const std::string& string) {
+  auto get_entries_summed(const std::string& string) {
     double sum = 0.0;
     auto range = interval_times_.equal_range(string);
     for (auto i = range.first; i != range.second; ++i) {
@@ -174,7 +174,7 @@ class log_timer {
 
   time_t stop() {
     stop_time = clock_t::now();
-    _timing_data.insert_interval(msg_, stop_time - start_time);
+    _timing_data.insert_entry(msg_, stop_time - start_time);
 
     if (noisy_) {
       std::cout << "# Stopping timer " << msg_ << ": " <<
@@ -199,6 +199,91 @@ class scoped_timer : public log_timer {
     this->stop();
   }
 };
+
+
+class memory_data {
+ public:
+  using memory_type = size_t;
+  using name_memory = std::multimap<std::string, memory_type>;
+
+ private:
+  name_memory memory_usages_;
+  bool verbose_{false};
+  bool debug_{false};
+
+  memory_data() = default;
+  ~memory_data() = default;
+
+ public:
+  memory_data(const memory_data&) = delete;
+  memory_data& operator=(const memory_data&) = delete;
+
+  static memory_data& get_instance() {
+    static memory_data instance;
+    return instance;
+  }
+
+  void insert_entry(const std::string& name, const memory_type& time) {
+    memory_usages_.insert(std::make_pair(name, time));
+  }
+
+  template <class D = std::chrono::milliseconds>
+  auto get_entries_separately(const std::string& string) {
+    std::vector<double> usages;
+
+    auto range = memory_usages_.equal_range(string);
+    for (auto i = range.first; i != range.second; ++i) {
+      usages.push_back((std::chrono::duration_cast<D>(i->second)).count());
+    }
+    return usages;
+  }
+
+  auto get_entries_summed(const std::string& string) {
+    double sum = 0.0;
+    auto range = memory_usages_.equal_range(string);
+    for (auto i = range.first; i != range.second; ++i) {
+      sum += i->second;
+    }
+    return sum / (1024*1024);
+  }
+
+  auto get_usage_names() {
+    std::set<std::string> multinames;
+
+    std::vector<std::string> names;
+
+    for (auto& i : memory_usages_) {
+      multinames.insert(i.first);
+    }
+    for (auto& i : multinames) {
+      names.push_back(i);
+    }
+    return names;
+  }
+
+  void set_verbose(bool verbose) {
+    verbose_ = verbose;
+  }
+
+  bool get_verbose() {
+    return verbose_;
+  }
+
+  void set_debug(bool debug) {
+    debug_ = debug;
+  }
+
+  bool get_debug() {
+    return debug_;
+  }
+};
+
+inline memory_data& get_memory_data_instance() {
+  return memory_data::get_instance();
+}
+
+memory_data& _memory_data{get_memory_data_instance()};
+
 
 class timing_data {
  private:
