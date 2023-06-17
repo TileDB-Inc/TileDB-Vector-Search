@@ -84,6 +84,15 @@ do
     bash_script="1b-c6a-16x-125MiB.bash"
     command="bash feature-vector-prototype/src/benchmarks/${bash_script}"
  
+
+    for ((i=1; i<=2; i++))
+    do
+	# nuke from space, it's the only way to be sure
+	# ssh ec2 killall -u lums
+        ssh ec2 "kill \$(ps auxw | fgrep feature | awk '{ print \$2 }')"
+	sleep 1
+    done
+    ssh ec2 ps auxw | fgrep feature
     for ((i=1; i<=2; i++))
     do
 	logname="${benchname}-$(date +'%Y%m%d-%H%M%S').log"
