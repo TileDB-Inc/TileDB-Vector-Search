@@ -129,7 +129,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
  public:
   tdbPartitionedMatrix(
-      tiledb::Context& ctx,
+      const tiledb::Context& ctx,
       const std::string& uri,
       std::vector<indices_type>&& indices,
       const std::vector<parts_type>& parts,
@@ -147,7 +147,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @todo Column major is kind of baked in here.  Need to generalize.
    */
   tdbPartitionedMatrix(
-      tiledb::Context& ctx,
+      const tiledb::Context& ctx,
       const std::string& uri,
       std::vector<indices_type>&& in_indices,
       const std::vector<parts_type>& in_parts,
