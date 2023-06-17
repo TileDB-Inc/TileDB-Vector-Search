@@ -63,7 +63,7 @@ namespace detail::flat {
 template <class DB, class Q>
 auto qv_query_nth(
     const DB& db, const Q& q, int k, bool nth, unsigned int nthreads) {
-  life_timer _{"Total time " + tdb_func__};
+  scoped_timer _{tdb_func__};
 
   ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
@@ -99,7 +99,7 @@ auto qv_query_nth(
  */
 template <vector_database DB, class Q>
 auto qv_query_heap(const DB& db, const Q& q, size_t k, unsigned nthreads) {
-  life_timer _{"Total time " + tdb_func__};
+  scoped_timer _{tdb_func__};
 
   using element = std::pair<float, int>;
 
@@ -155,7 +155,7 @@ auto qv_query_heap(const DB& db, const Q& q, size_t k, unsigned nthreads) {
 
 template <class DB, class Q>
 auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
-  life_timer _{"Total time " + tdb_func__};
+  scoped_timer _{tdb_func__};
 
   // Just need a single vector
   std::vector<unsigned> top_k(q.num_cols());

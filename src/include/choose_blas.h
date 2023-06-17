@@ -1,4 +1,4 @@
-/**
+/*
  * @file   choose_blas.h
  *
  * @section LICENSE

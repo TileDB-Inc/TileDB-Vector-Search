@@ -42,7 +42,7 @@
 
 template <class Heap>
 void do_time(const std::string& msg, Heap& heap, const std::vector<size_t>& v) {
-  life_timer _{msg};
+  scoped_timer _{msg};
 
   auto size_v = v.size();
   for (unsigned i = 0; i < size_v; ++i) {
@@ -53,7 +53,7 @@ void do_time(const std::string& msg, Heap& heap, const std::vector<size_t>& v) {
 template <class Heap>
 void do_time_pair(
     const std::string& msg, Heap& heap, const std::vector<size_t>& v) {
-  life_timer _{msg};
+  scoped_timer _{msg};
 
   auto size_v = v.size();
   for (unsigned i = 0; i < size_v; ++i) {
@@ -64,7 +64,7 @@ void do_time_pair(
 template <class Heap>
 void do_time_pair2(
     const std::string& msg, Heap& heap, const std::vector<size_t>& v) {
-  life_timer _{msg};
+  scoped_timer _{msg};
 
   auto size_v = v.size();
   for (unsigned i = 0; i < size_v; ++i) {
@@ -75,7 +75,7 @@ void do_time_pair2(
 template <class Heap>
 void do_time_indirect(
     const std::string& msg, Heap& heap, const std::vector<size_t>& v) {
-  life_timer _{msg};
+  scoped_timer _{msg};
 
   auto size_v = v.size();
   for (unsigned i = 0; i < size_v; ++i) {
@@ -85,7 +85,7 @@ void do_time_indirect(
 
 void do_time_nth_element(
     const std::string& msg, std::vector<size_t>& v, size_t n) {
-  life_timer _{msg};
+  scoped_timer _{msg};
 
   std::nth_element(begin(v), begin(v) + n, end(v));
 }
@@ -135,14 +135,14 @@ do_time_indirect("indirect heap7 (3)", heap7, v);
       //      do_time("set", set);
 
       {
-        life_timer _{"warm cache"};
+        scoped_timer _{"warm cache"};
         for (size_t i = 0; i < v.size(); ++i) {
           v[i] = i + 1;
         }
       }
 
       {
-        life_timer _{"calibration"};
+        scoped_timer _{"calibration"};
         for (size_t i = 0; i < v.size(); ++i) {
           v[i] = i - 1;
         }
