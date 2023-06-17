@@ -44,13 +44,38 @@
 extern double global_time_of_interest;
 
 namespace detail::ivf {
+template <typename T = shuffled_db_type>
+auto qv_query_heap_infinite_ram(
+    auto&& shuffled_db,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    auto&& shuffled_ids,
+    size_t nprobe,
+    size_t k_nn,
+    bool nth,
+    size_t nthreads);
+
+template <typename T = shuffled_db_type>
+auto qv_query_heap_infinite_ram(
+    tiledb::Context& ctx,
+    const std::string& part_uri,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    const std::string& id_uri,
+    size_t nprobe,
+    size_t k_nn,
+    bool nth,
+    size_t nthreads);
 
 /**
  * @brief Query a (small) set of query vectors against a vector database.
  * This version loads the entire partition array into memory and then
  * queries each vector in the query set against the appropriate partitions.
  */
-template <typename T = shuffled_db_type>
+
+template <typename T>
 auto qv_query_heap_infinite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -64,10 +89,61 @@ auto qv_query_heap_infinite_ram(
     size_t nthreads) {
   scoped_timer _{tdb_func__};
 
+
   // Read the shuffled database and ids
   // @todo To this more systematically
   auto shuffled_db = tdbColMajorMatrix<T>(ctx, part_uri);
   auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
+
+  return qv_query_heap_infinite_ram<T>(
+      shuffled_db,
+      centroids,
+      q,
+      indices,
+      shuffled_ids,
+      nprobe,
+      k_nn,
+      nth,
+      nthreads);
+}
+
+template <typename T = shuffled_db_type>
+auto qv_query_heap_infinite_ram(
+    const std::string& part_uri,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    const std::string& id_uri,
+    size_t nprobe,
+    size_t k_nn,
+    bool nth,
+    size_t nthreads) {
+  tiledb::Context ctx;
+  return qv_query_heap_infinite_ram<T>(
+      ctx,
+      part_uri,
+      centroids,
+      q,
+      indices,
+      id_uri,
+      nprobe,
+      k_nn,
+      nth,
+      nthreads);
+}
+
+template <typename T>
+auto qv_query_heap_infinite_ram(
+    auto&& shuffled_db,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    auto&& shuffled_ids,
+    size_t nprobe,
+    size_t k_nn,
+    bool nth,
+    size_t nthreads) {
+  life_timer _{"Total time " + tdb_func__};
 
   assert(shuffled_db.num_cols() == shuffled_ids.size());
   if (size(indices) == centroids.num_cols()) {
