@@ -44,7 +44,7 @@ do
 	do
 	    for nprobe in 1 2 4 8 16 32 64 128 ;
 	    do
-		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize} --seconds
+		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize}
 	    done
 	done
     done
