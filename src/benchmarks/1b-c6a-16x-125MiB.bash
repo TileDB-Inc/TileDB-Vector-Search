@@ -4,8 +4,8 @@ dir=$(dirname $0)
 
 . ${dir}/setup.bash
 
-ivf_query=~/TileDB/feature-vector-prototype/experimental/cmake-build-release/src/ivf_hack
-ivf_query=/home/lums/feature-vector-prototype/experimental/cmake-build-release/libtiledbvectorsearch/src/ivf_hack
+ivf_query=~/TileDB/feature-vector-prototype/src/cmake-build-release/src/ivf_hack
+ivf_query=/home/lums/feature-vector-prototype/src/cmake-build-release/libtiledbvectorsearch/src/ivf_hack
 
 printf "=========================================================================================================================================\n\n"
 echo "Starting benchmark run: "
