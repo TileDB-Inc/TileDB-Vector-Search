@@ -273,8 +273,6 @@ auto qv_query_heap_finite_ram(
                          indices[active_partitions[i]];
   }
 
-  // std::vector<shuffled_ids_type> shuffled_ids;
-
   auto shuffled_db = tdbColMajorPartitionedMatrix<shuffled_db_type>(
       ctx,
       part_uri,
@@ -283,6 +281,15 @@ auto qv_query_heap_finite_ram(
       id_uri,
       upper_bound,
       /* shuffled_ids,*/ nthreads);
+
+  size_t max_partition_size{0};
+  for (size_t i = 0; i < size(new_indices) - 1; ++i) {
+    auto partition_size = new_indices[i + 1] - new_indices[i];
+    max_partition_size = std::max<size_t>(max_partition_size, partition_size);
+    _memory_data.insert_entry(tdb_func__ + " (predicted)", partition_size * sizeof(shuffled_db_type) * shuffled_db.num_rows());
+  }
+    _memory_data.insert_entry(tdb_func__ + " (upper bound)", nprobe * num_queries * sizeof(shuffled_db_type) * max_partition_size);
+
 
   assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
 
