@@ -103,7 +103,7 @@ Options:
     --groundtruth_uri URI URI storing ground truth vectors
     --output_uri URI      URI to store search results
     --k NN                number of nearest neighbors to search for [default: 10]
-    --nprobe NN           number of clusters to use [default: 100]
+    --nprobe NN           number of centroid partitions to use [default: 100]
     --nqueries NN         number of query vectors to use (0 = all) [default: 0]
     --alg ALGO            which algorithm to use for query [default: qv_heap]
     --finite              use finite RAM (out of core) algorithm [default: false]
@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
   auto part_uri = args["--parts_uri"].asString();
   auto index_uri = args["--index_uri"].asString();
   auto id_uri = args["--ids_uri"].asString();
-  size_t nprobe = args["--cluster"].asLong();
+  size_t nprobe = args["--nprobe"].asLong();
   size_t k_nn = args["--k"].asLong();
   auto query_uri = args["--query_uri"] ? args["--query_uri"].asString() : "";
   auto nqueries = (size_t)args["--nqueries"].asLong();

@@ -65,6 +65,9 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
  private:
+
+  log_timer constructor_timer{"tdbMatrix constructor"};
+
   std::reference_wrapper<const tiledb::Context> ctx_;
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
@@ -199,7 +202,9 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       : ctx_{ctx}
       , array_{ctx, uri, TILEDB_READ}
       , schema_{array_.schema()} {
-    life_timer _{"read matrix " + uri};
+
+    constructor_timer.stop();
+    scoped_timer _{tdb_func__ + uri};
 
     auto cell_order = schema_.cell_order();
     auto tile_order = schema_.tile_order();

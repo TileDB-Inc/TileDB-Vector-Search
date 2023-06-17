@@ -84,12 +84,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   log_timer constructor_timer{"tdbPartitionedMatrix constructor"};
 
-  // @todo: Make this configurable
-  std::map<std::string, std::string> init_{};
-  // {"vfs.s3.region", global_region.c_str()}};
-  tiledb::Config config_{init_};
-  tiledb::Context ctx_{config_};
-
+  std::reference_wrapper<const tiledb::Context> ctx_;
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
   std::unique_ptr<T[]> backing_data_;
@@ -134,6 +129,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
  public:
   tdbPartitionedMatrix(
+      tiledb::Context& ctx,
       const std::string& uri,
       std::vector<indices_type>&& indices,
       const std::vector<parts_type>& parts,
@@ -151,6 +147,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @todo Column major is kind of baked in here.  Need to generalize.
    */
   tdbPartitionedMatrix(
+      tiledb::Context& ctx,
       const std::string& uri,
       std::vector<indices_type>&& in_indices,
       const std::vector<parts_type>& in_parts,
@@ -158,7 +155,8 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       // std::vector<shuffled_ids_type>& shuffled_ids,
       size_t upper_bound,
       size_t nthreads)
-      : array_{ctx_, uri, TILEDB_READ}
+      : ctx_{ctx}
+      , array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()}
       , ids_array_{ctx_, ids_uri, TILEDB_READ}
       , ids_schema_{ids_array_.schema()}
@@ -171,7 +169,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
     total_num_parts_ = size(parts_);
 
-    scoped_timer _{"Initialize tdb partitioned matrix " + uri};
+    scoped_timer _{tdb_func__ + uri};
 
     auto cell_order = schema_.cell_order();
     auto tile_order = schema_.tile_order();

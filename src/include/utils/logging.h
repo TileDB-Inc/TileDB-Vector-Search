@@ -36,6 +36,7 @@
 #include <chrono>
 #include <iostream>
 #include <map>
+#include <set>
 #include <string>
 
 #include "nlohmann/json.hpp"
@@ -43,7 +44,10 @@
 #ifndef tdb_func__
 #ifdef __cpp_lib_source_location
 #include <source_location>
-#define tdb_func__ std::string{std::source_location::current().function_name()}
+#define tdb_func__                                  \
+  std::string {                                     \
+    std::source_location::current().function_name() \
+  }
 #else
 #define tdb_func__ \
   std::string {    \
@@ -58,14 +62,14 @@ class timing_data_class {
  public:
   using clock_type = std::chrono::high_resolution_clock;
   using time_type = std::chrono::time_point<clock_type>;
-  using duration_type = std::chrono::duration<clock_type::rep, clock_type::period>;
+  using duration_type =
+      std::chrono::duration<clock_type::rep, clock_type::period>;
   using name_time = std::multimap<std::string, duration_type>;
-
 
  private:
   name_time interval_times_;
-  bool verbose_ {false};
-  bool debug_ {false};
+  bool verbose_{false};
+  bool debug_{false};
 
   timing_data_class() = default;
   ~timing_data_class() = default;
@@ -84,7 +88,7 @@ class timing_data_class {
   }
 
   template <class D = std::chrono::milliseconds>
-  auto get_intervals_separately(const std::string& string){
+  auto get_intervals_separately(const std::string& string) {
     std::vector<double> intervals;
 
     auto range = interval_times_.equal_range(string);
@@ -95,7 +99,7 @@ class timing_data_class {
   }
 
   template <class D = std::chrono::milliseconds>
-  auto get_intervals_summed(const std::string& string){
+  auto get_intervals_summed(const std::string& string) {
     double sum = 0.0;
     auto range = interval_times_.equal_range(string);
     for (auto i = range.first; i != range.second; ++i) {
