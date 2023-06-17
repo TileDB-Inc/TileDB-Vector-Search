@@ -28,6 +28,9 @@
  *
  * @section DESCRIPTION
  *
+ * A basic matrix class.  It is essentially a wrapper around mdspan, but
+ * owns its storage.
+ *
  */
 
 #ifndef TILEDB_MATRIX_H
@@ -268,6 +271,14 @@ std::string matrix_info(const Matrix& A, const std::string& msg = "") {
          (is_row_oriented(A) ? "row major" : "column major");
   return str;
 }
+
+
+
+ /**********************************************************************
+ *
+ * Some debugging utilities.
+ *
+ * *********************************************************************/
 
 /**
  * Print information about a std::vector -- overload.

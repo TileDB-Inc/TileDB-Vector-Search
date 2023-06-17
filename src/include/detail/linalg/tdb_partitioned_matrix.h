@@ -27,6 +27,15 @@
  *
  * @section DESCRIPTION
  *
+ * Class the provides a matrix view to a partitioned TileDB array (as partitioned by
+ * IVF indexing).
+ *
+ * The class requires the URI of a partitioned TileDB array and partioned set of
+ * vector identifiers.  The class will provide a view of the requested partitions
+ * and the corresponding vector identifiers.
+ *
+ * Also provides support for out-of-core operation.
+ *
  */
 
 #ifndef TILEDB_PARTITIONED_MATRIX_H
@@ -155,7 +164,8 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       // std::vector<shuffled_ids_type>& shuffled_ids,
       size_t upper_bound,
       size_t nthreads)
-      : ctx_{ctx}
+      : constructor_timer{tdb_func__ + std::string{" constructor"}}
+      , ctx_{ctx}
       , array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()}
       , ids_array_{ctx_, ids_uri, TILEDB_READ}
@@ -228,7 +238,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
     Base::operator=(Base{std::move(data_), dimension, max_cols_});
 
-    // @todo Take this out
+    // @todo Take this out and require user to make first call to advance()
     advance();
   }
 
@@ -325,6 +335,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
           .set_layout(layout_order)
           .set_data_buffer(attr_name, ptr, col_count * dimension);
       query.submit();
+      _memory_data.insert_entry(tdb_func__, col_count * dimension * sizeof(T));
 
       // assert(tiledb::Query::Status::COMPLETE == query.query_status());
       if (tiledb::Query::Status::COMPLETE != query.query_status()) {
@@ -366,6 +377,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       ids_query.set_subarray(ids_subarray)
           .set_data_buffer(ids_attr_name, ids_ptr, ids_col_count);
       ids_query.submit();
+      _memory_data.insert_entry(tdb_func__, ids_col_count * sizeof(T));
 
       // assert(tiledb::Query::Status::COMPLETE == query.query_status());
       if (tiledb::Query::Status::COMPLETE != ids_query.query_status()) {

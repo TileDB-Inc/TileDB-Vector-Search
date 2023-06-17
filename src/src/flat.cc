@@ -138,7 +138,8 @@ int main(int argc, char* argv[]) {
 
   std::string db_uri = args["--db_uri"].asString();
   std::string query_uri = args["--query_uri"].asString();
-  std::string groundtruth_uri = args["--groundtruth_uri"] ? args["--groundtruth_uri"].asString() : "";
+  std::string groundtruth_uri =
+      args["--groundtruth_uri"] ? args["--groundtruth_uri"].asString() : "";
 
   std::cout << "# Using " << args["--algo"].asString() << std::endl;
 
@@ -168,8 +169,8 @@ int main(int argc, char* argv[]) {
   }
 
   //  auto q = tdbColMajorMatrix<float>(ctx, q_uri, nqueries);  // just a slice
-  auto query = tdbColMajorMatrix<uint8_t>(ctx, query_uri, nqueries);  // just a slice
-
+  auto query =
+      tdbColMajorMatrix<uint8_t>(ctx, query_uri, nqueries);  // just a slice
 
   load_time.stop();
   std::cout << load_time << std::endl;
@@ -218,7 +219,7 @@ int main(int argc, char* argv[]) {
     auto groundtruth = groundtruth_uri.empty() ?
                            ColMajorMatrix<int>(0, 0) :
                            tdbColMajorMatrix<int>(ctx, groundtruth_uri);
-      validate_top_k(top_k, groundtruth);
+    validate_top_k(top_k, groundtruth);
   }
 
   if (args["--output_uri"]) {
@@ -232,6 +233,8 @@ int main(int argc, char* argv[]) {
     write_matrix(ctx, output, args["--output_uri"].asString());
   }
 
+  // @todo replace with new functionality in logging.h
+#if 0
   if (args["--log"]) {
     auto program_args = args_log(args);
     auto config = config_log(argv[0]);
@@ -246,4 +249,5 @@ int main(int argc, char* argv[]) {
       outfile << log_log.dump(2) << std::endl;
     }
   }
+#endif
 }

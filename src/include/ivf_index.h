@@ -42,6 +42,7 @@
  * - Call save() to save the index to disk
  * - Call reset() to clear the index
  *
+ * Still WIP.
  */
 
 #ifndef TILEDB_IVF_INDEX_H
@@ -58,7 +59,7 @@
 
 #include "detail/flat/qv.h"
 
-template <class T>
+template <class T = shuffled_db_type>
 class kmeans_index {
   // Random device to seed the random number generator
   std::random_device rd;
@@ -94,7 +95,7 @@ class kmeans_index {
    * @brief Use kmeans++ algorithm to choose initial centroids.
    */
   void kmeans_pp(const ColMajorMatrix<T>& training_set) {
-    life_timer _{__FUNCTION__};
+    scoped_timer _{__FUNCTION__};
 
     std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
     auto choice = dis(gen);
@@ -192,7 +193,7 @@ class kmeans_index {
    * @brief Initialize centroids by choosing them at random from training set.
    */
   void kmeans_random_init(const ColMajorMatrix<T>& training_set) {
-    life_timer _{__FUNCTION__};
+    scoped_timer _{__FUNCTION__};
 
     std::vector<size_t> indices(nlist_);
     std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
@@ -214,7 +215,7 @@ class kmeans_index {
    * @brief Use kmeans algorithm to cluster vectors into centroids.
    */
   void train_no_init(const ColMajorMatrix<T>& training_set) {
-    life_timer _{__FUNCTION__};
+    scoped_timer _{__FUNCTION__};
 
     std::vector<size_t> degrees(nlist_, 0);
 
@@ -233,37 +234,7 @@ class kmeans_index {
       std::fill(begin(degrees), end(degrees), 0);
 
       stdx::execution::indexed_parallel_policy par{nthreads_};
-#if 0
-      std::vector<ColMajorMatrix<T>> temp_centroids(
-          nthreads_, ColMajorMatrix<T>(dimension_, nlist_));
 
-      stdx::range_for_each(
-          std::move(par),
-          temp_centroids,
-          [this, &parts, &training_set, &temp_centroids, &degrees](
-              auto&& temp_centroid, size_t n, size_t i) {
-            auto part = parts[i];
-            auto centroid = temp_centroid;
-            auto vector = training_set[i];
-            for (size_t j = 0; j < dimension_; ++j) {
-              centroid[j] += vector[j];
-            }
-#ifdef __cpp_lib_atomic_ref
-            std::atomic_ref<size_t> elem{degree[part]};
-            ++elem;
-#else
-            ++degrees[part];
-#endif
-          });
-      for (size_t n = 0; n < nthreads_; ++n) {
-        for (size_t j = 0; j < nlist_; ++j) {
-          for (size_t k = 0; k < dimension_; ++k) {
-            centroids_(k, j) += temp_centroids[n](k, j);
-          }
-        }
-      }
-
-#else
       // @todo parallelize -- use a temp centroid matrix for each thread
       for (size_t i = 0; i < training_set.num_cols(); ++i) {
         auto part = parts[i];
@@ -274,7 +245,6 @@ class kmeans_index {
         }
         ++degrees[part];
       }
-#endif
 
       auto mm = std::minmax_element(begin(degrees), end(degrees));
       double sum = std::accumulate(begin(degrees), end(degrees), 0);
@@ -288,17 +258,7 @@ class kmeans_index {
 
       // @todo parallelize
 
-#if 0
-      stdx::range_for_each(
-          std::move(par), degrees, [this, &degrees](auto&& degree, size_t n, size_t j) {
-            if (degree != 0) {
-              for (size_t j = 0; j < nlist_; ++j) {
-                centroids_(n, j) /= degree;
-              }
-            }
-          });
-    }
-#else
+
       for (size_t j = 0; j < nlist_; ++j) {
         auto centroid = centroids_[j];
         for (size_t k = 0; k < dimension_; ++k) {
@@ -308,7 +268,8 @@ class kmeans_index {
         }
       }
     }
-#endif
+
+    // Debugging
 #ifdef _SAVE_PARTITIONS
       {
         char tempFileName[L_tmpnam];
@@ -344,7 +305,7 @@ class kmeans_index {
     std::vector<size_t> degrees(centroids_.num_cols());
     std::vector<indices_type> indices(centroids_.num_cols() + 1);
     std::vector shuffled_ids = std::vector<shuffled_ids_type>(db.num_cols());
-    auto shuffled_db = ColMajorMatrix<shuffled_db_type>{db.num_rows(), db.num_cols()};
+    auto shuffled_db = ColMajorMatrix<T>{db.num_rows(), db.num_cols()};
 
     for (size_t i = 0; i < db.num_cols(); ++i) {
       auto j = parts[i];

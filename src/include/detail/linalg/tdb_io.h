@@ -35,6 +35,7 @@
 #include <tiledb/tiledb>
 #include "detail/linalg/matrix.h"
 #include "utils/timer.h"
+#include "utils/logging.h"
 
 /**
  * Write the contents of a Matrix to a TileDB array.
@@ -48,7 +49,7 @@ void write_matrix(
     std::cerr << "# Writing Matrix: " << uri << std::endl;
   }
 
-  life_timer _{"write matrix " + uri};
+  scoped_timer _{"write matrix " + uri};
 
   // @todo: make this a parameter
   size_t num_parts = 10;
@@ -107,7 +108,7 @@ void write_vector(
     std::cerr << "# Writing std::vector: " << uri << std::endl;
   }
 
-  life_timer _{"write vector " + uri};
+  scoped_timer _{"write vector " + uri};
 
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
@@ -152,7 +153,7 @@ std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
   auto array_ = tiledb::Array{ctx, uri, TILEDB_READ};
   auto schema_ = array_.schema();
 
-  life_timer _{"read vector " + uri};
+  scoped_timer _{"read vector " + uri};
   using domain_type = int32_t;
   const size_t idx = 0;
 
@@ -182,8 +183,9 @@ std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
   tiledb::Query query(ctx, array_);
   query.set_subarray(subarray).set_data_buffer(
       attr_name, data_.data(), vec_rows_);
-
   query.submit();
+  _memory_data.insert_entry(tdb_func__, vec_rows_ * sizeof(T));
+
   array_.close();
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
 

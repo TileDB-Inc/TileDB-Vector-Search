@@ -27,6 +27,10 @@
  *
  * @section DESCRIPTION
  *
+ * Simple vector class, basically a span that owns it data.
+ *
+ * @todo Migrate from std::vector to this class.
+ *
  */
 
 #ifndef VECTOR_H

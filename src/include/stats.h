@@ -27,7 +27,13 @@
  *
  * @section DESCRIPTION
  *
- * Very simple code for gathering and reporting execution environment.
+ * Very simple code for gathering and reporting execution environment, using
+ * the nlohmann/json library.  This is currently not being used, in favor
+ * of the singletons in logging.h.  This code is left here for reference.
+ *
+ * @todo Optionally generate json code from the singleton loggers.
+ * @todo Make the config information accessible to the rest of the code in
+ * a more convenient way.
  */
 
 #ifndef TDB_STATS_H
@@ -101,6 +107,12 @@ auto config_log(const std::string& program_name) {
   return config;
 }
 
+/**
+ * Log all of the argument data created by the command line parser (docopt).
+ * @tparam Args
+ * @param args
+ * @return
+ */
 template <typename Args>
 auto args_log(const Args& args) {
   json arg_log;
