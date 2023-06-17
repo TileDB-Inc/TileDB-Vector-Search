@@ -43,7 +43,7 @@ def groundtruth_read(dataset_dir, nqueries=None):
         return I, D
 
 
-def create_random_dataset(nb, d, nq, k, path):
+def create_random_dataset_f32(nb, d, nq, k, path):
     from sklearn.datasets import make_blobs
     import sklearn.model_selection
     from sklearn.neighbors import NearestNeighbors
@@ -62,6 +62,40 @@ def create_random_dataset(nb, d, nq, k, path):
     with open(os.path.join(path, "queries"), "wb") as f:
         np.array([nq, d], dtype="uint32").tofile(f)
         queries.astype("float32").tofile(f)
+
+    print("Computing groundtruth")
+
+    nbrs = NearestNeighbors(n_neighbors=k, metric="euclidean", algorithm="brute").fit(
+        data
+    )
+    D, I = nbrs.kneighbors(queries)
+    with open(os.path.join(path, "gt"), "wb") as f:
+        np.array([nq, k], dtype="uint32").tofile(f)
+        I.astype("uint32").tofile(f)
+        D.astype("float32").tofile(f)
+
+
+def create_random_dataset_u8(nb, d, nq, k, path):
+    from sklearn.datasets import make_blobs
+    import sklearn.model_selection
+    from sklearn.neighbors import NearestNeighbors
+
+    print(f"Preparing datasets with {nb} random points and {nq} queries.")
+    os.mkdir(path)
+    X, _ = make_blobs(n_samples=nb + nq, n_features=d, centers=nq, random_state=1)
+
+    data, queries = sklearn.model_selection.train_test_split(
+        X, test_size=nq, random_state=1
+    )
+    data = data.astype("uint8")
+    queries = queries.astype("uint8")
+
+    with open(os.path.join(path, "data"), "wb") as f:
+        np.array([nb, d], dtype="uint32").tofile(f)
+        data.tofile(f)
+    with open(os.path.join(path, "queries"), "wb") as f:
+        np.array([nq, d], dtype="uint32").tofile(f)
+        queries.tofile(f)
 
     print("Computing groundtruth")
 
