@@ -93,24 +93,24 @@ TEST_CASE("time queries", "[queries][ci-skip]") {
 
     //    if constexpr (false)
     {
-      life_timer _outer{"qv_query"};
+      scoped_timer _outer{"qv_query"};
       qv_query_heap(db_mat, q_mat, k, nthreads);
     }
     //    if constexpr (false)
     {
-      life_timer _outer{"qv_query_nth"};
+      scoped_timer _outer{"qv_query_nth"};
       qv_query_nth(db_mat, q_mat, k, nth, nthreads);
     }
     {
-      life_timer _outer{"vq_query_heap"};
+      scoped_timer _outer{"vq_query_heap"};
       vq_query_heap(db_mat, q_mat, k, nthreads);
     }
     {
-      life_timer _outer{"vq_query_nth"};
+      scoped_timer _outer{"vq_query_nth"};
       vq_query_nth(db_mat, q_mat, k, nth, nthreads);
     }
     {
-      life_timer _outer{"gemm_query"};
+      scoped_timer _outer{"gemm_query"};
       gemm_query(db_mat, q_mat, k, nth, nthreads);
     }
 #if 0
