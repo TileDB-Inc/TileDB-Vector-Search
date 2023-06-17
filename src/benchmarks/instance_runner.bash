@@ -1,6 +1,8 @@
 
 instance_id="i-0daab006867136323"
 region="us-east-1"
+# git_branch="lums/tmp/benchmark"
+git_branch="lums/tmp/gemm2.0"
 
 for instance_type in c6a.4xlarge c6a.2xlarge;
 do
@@ -44,7 +46,10 @@ do
     benchname="1b-${instance_type}-125MiB"
     bash_script="1b-c6a-16x-125MiB.bash"
     command="bash feature-vector-prototype/src/benchmarks/${bash_script}"
-    
+ 
+    ssh ec2 "cd feature-vector-prototype ; git commit -am \"Pause for benchmark [skip ci]\" ; git checkout ${git_branch}"
+    ssh ec2 "cd feature-vector-prototype/src/cmake-build-release ; make -C libtiledbvectorsearch ivf_hack"
+   
     for ((i=1; i<=2; i++))
     do
 	logname="${benchname}-$(date +'%Y%m%d-%H%M%S').log"

@@ -259,6 +259,8 @@ int main(int argc, char* argv[]) {
 
   // Quick and dirty way to get query info in summarizable form
   if (true || global_verbose) {
+    std::cout << "# [ Repo ]: " << GIT_REPO_NAME << " @ " << GIT_BRANCH << std::endl;
+
     char tag = 'A';
     std::map<std::string, std::string> toc;
 
