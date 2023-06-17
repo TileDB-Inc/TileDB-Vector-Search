@@ -43,7 +43,7 @@ namespace detail::flat {
 
 template <class DB, class Q>
 auto gemm_query(const DB& db, const Q& q, int k, bool nth, size_t nthreads) {
-  life_timer _{"Total time " + tdb_func__};
+  scoped_timer _{"Total time " + tdb_func__};
   auto scores = gemm_scores(db, q, nthreads);
   auto top_k = get_top_k(scores, k, nth, nthreads);
   return top_k;
@@ -53,7 +53,7 @@ using namespace std::chrono_literals;
 
 template <class DB, class Q>
 auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
-  life_timer _{"Total time " + tdb_func__};
+  scoped_timer _{"Total time " + tdb_func__};
 
   using element = std::pair<float, unsigned>;
 
@@ -125,7 +125,7 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
 
 template <class DB, class Q>
 auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
-  life_timer _{"Total time " + tdb_func__};
+  scoped_timer _{"Total time " + tdb_func__};
 
   auto scores = gemm_scores(db, q, nthreads);
 
@@ -151,7 +151,7 @@ auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
 
 template <class DB, class Q>
 auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
-  life_timer _{"Total time " + tdb_func__};
+  scoped_timer _{"Total time " + tdb_func__};
 
   const auto block_db = db.is_blocked();
   const auto block_q = q.is_blocked();
