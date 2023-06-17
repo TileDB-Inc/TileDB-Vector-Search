@@ -155,7 +155,8 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       // std::vector<shuffled_ids_type>& shuffled_ids,
       size_t upper_bound,
       size_t nthreads)
-      : ctx_{ctx}
+      : constructor_timer{tdb_func__ + std::string{" constructor"}}
+      , ctx_{ctx}
       , array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()}
       , ids_array_{ctx_, ids_uri, TILEDB_READ}
