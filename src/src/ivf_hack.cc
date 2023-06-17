@@ -308,10 +308,18 @@ int main(int argc, char* argv[]) {
     std::cout << std::fixed << std::setprecision(3);
     auto timers = _timing_data.get_timer_names();
     for (auto& timer : timers) {
-      std::cout
-          << std::setw(12)
-          << _timing_data.get_entries_summed<std::chrono::milliseconds>(
-              timer) / 1000.0;
+      auto ms = _timing_data.get_entries_summed<std::chrono::microseconds>(
+                    timer);
+      if (ms < 1000) {
+        std::cout << std::fixed << std::setprecision(6);
+      } else if (ms < 10000) {
+        std::cout << std::fixed << std::setprecision(5);
+      } else if (ms < 100000) {
+        std::cout << std::fixed << std::setprecision(4);
+      } else {
+        std::cout << std::fixed << std::setprecision(3);
+      }
+      std::cout << std::setw(12) << ms / 1000000.0;
     }
 
     std::cout << std::fixed << std::setprecision(0);
