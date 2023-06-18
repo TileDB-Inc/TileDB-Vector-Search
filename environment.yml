@@ -8,3 +8,4 @@ dependencies:
   - pybind11
   - openblas
   - ninja
+  - pytest
