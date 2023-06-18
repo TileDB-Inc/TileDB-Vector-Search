@@ -104,6 +104,22 @@ static void declare_kmeans_query(py::module& m, const std::string& suffix) {
         }, py::keep_alive<1,2>());
 }
 
+template <typename T>
+static void declare_pyarray_to_matrix(py::module& m, const std::string& suffix) {
+  m.def(("pyarray_copyto_matrix" + suffix).c_str(),
+      [](py::array_t<T> arr) -> ColMajorMatrix<T> {
+        py::buffer_info info = arr.request();
+        if (info.ndim != 2)
+          throw std::runtime_error("Number of dimensions must be two");
+        if (info.format != py::format_descriptor<T>::format())
+          throw std::runtime_error("Mismatched buffer format!");
+
+        auto data = std::unique_ptr<T[]>{new T[info.shape[0] * info.shape[1]]};
+        auto r = ColMajorMatrix<T>(std::move(data), info.shape[0], info.shape[1]);
+        return r;
+        });
+}
+
 
 // Declarations for typed subclasses of ColMajorMatrix
 template <typename P>
@@ -169,7 +185,10 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 //  declareColMajorMatrixSubclass<tdbColMajorMatrix<uint64_t>>(
 //      m, "tdbColMajorMatrix", "_u64");
 
-
+  declare_pyarray_to_matrix<uint8_t>(m, "_u8");
+  declare_pyarray_to_matrix<uint64_t>(m, "_u64");
+  declare_pyarray_to_matrix<float>(m, "_f32");
+  declare_pyarray_to_matrix<double>(m, "_f64");
 
   /* Query API */
 

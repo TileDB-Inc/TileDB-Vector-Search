@@ -80,3 +80,17 @@ def query_kmeans(
         return kmeans_query_u8(*args)
     else:
         raise TypeError("Unknown type!")
+
+def array_to_matrix(array: np.ndarray):
+    if array.dtype == np.float32:
+        return pyarray_copyto_matrix_f32(array)
+    elif array.dtype == np.float64:
+        return pyarray_copyto_matrix_f64(array)
+    elif array.dtype == np.uint8:
+        return pyarray_copyto_matrix_u8(array)
+    elif array.dtype == np.int32:
+        return pyarray_copyto_matrix_i32(array)
+    elif array.dtype == np.uint64:
+        return pyarray_copyto_matrix_u64(array)
+    else:
+        raise TypeError("Unsupported type!")
