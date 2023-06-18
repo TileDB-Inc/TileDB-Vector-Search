@@ -36,7 +36,7 @@ jobs:
       - name: "Quarto render"
         shell: bash
         run: |
-          pip install quartodoc PyYAML
+          pip install quartodoc PyYAML click
           # create a symlink to the tiledbvcf python package, so it doesn't have to be installed
           #ln -s apis/python/src/tiledb/vector_search
           quartodoc build
