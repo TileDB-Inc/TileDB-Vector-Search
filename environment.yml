@@ -1,0 +1,10 @@
+name: test-env
+
+dependencies:
+  - python=3.10
+  - numpy
+  - tiledb
+  - tiledb-py
+  - pybind11
+  - openblas
+  - ninja

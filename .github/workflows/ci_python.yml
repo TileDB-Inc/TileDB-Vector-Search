@@ -25,13 +25,7 @@ jobs:
             powershell
           cache-environment: true
           post-cleanup: 'all'
-          create-args: >-
-            python=3.10
-            numpy
-            tiledb
-            tiledb-py
-            pybind11
-            openblas
+          environment-file: environment.yml
       - name: Build and test python
         run: |
           cd apis/python
