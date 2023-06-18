@@ -19,6 +19,6 @@ jobs:
       - name: Configure CMake
         run: cmake -S ./src -B ./src/build -DCMAKE_BUILD_TYPE=Debug
       - name: Build
-        run: cmake --build ./src/build
+        run: cmake --build ./src/build -j3
       - name: Run Tests
         run: cmake --build ./src/build --target check-ci
