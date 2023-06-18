@@ -84,11 +84,11 @@ def query_vq(db: "colMajorMatrix", *args):
 
 def query_kmeans(
     dtype: np.dtype,
-    parts_uri: str,
+    parts_db: "colMajorMatrix",
     centroids_db: "colMajorMatrix",
     query_vectors: "colMajorMatrix",
-    index_db: "Vector",
-    ids_uri: str,
+    indices: "Vector",
+    ids: "Vector",
     nprobe: int,
     k_nn: int,
     nth: bool,
@@ -128,12 +128,11 @@ def query_kmeans(
 
     args = tuple(
         [
-            ctx,
-            parts_uri,
+            parts_db,
             centroids_db,
             query_vectors,
-            index_db,
-            ids_uri,
+            indices,
+            ids,
             nprobe,
             k_nn,
             nth,

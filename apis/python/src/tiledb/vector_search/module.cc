@@ -75,34 +75,6 @@ static void declareColMajorMatrix(py::module& mod, std::string const& suffix) {
 }
 
 template <typename T>
-static void declare_kmeans_query(py::module& m, const std::string& suffix) {
-  m.def(("kmeans_query_" + suffix).c_str(),
-      [](Ctx ctx,
-         const std::string& part_uri,
-         const ColMajorMatrix<float>& centroids,
-         const ColMajorMatrix<float>& query_vectors,
-         std::vector<uint64_t>& indices,
-         const std::string& id_uri,
-         size_t nprobe,
-         size_t k_nn,
-         bool nth,
-         size_t nthreads) -> ColMajorMatrix<size_t> {
-        auto r = detail::ivf::qv_query_heap_infinite_ram<T>(
-            ctx,
-            part_uri,
-            centroids,
-            query_vectors,
-            indices,
-            id_uri,
-            nprobe,
-            k_nn,
-            nth,
-            nthreads);
-        return r;
-        }, py::keep_alive<1,2>());
-}
-
-template <typename T>
 static void declare_pyarray_to_matrix(py::module& m, const std::string& suffix) {
   m.def(("pyarray_copyto_matrix" + suffix).c_str(),
       [](py::array_t<T> arr) -> ColMajorMatrix<T> {
@@ -116,6 +88,32 @@ static void declare_pyarray_to_matrix(py::module& m, const std::string& suffix) 
         auto r = ColMajorMatrix<T>(std::move(data), info.shape[0], info.shape[1]);
         return r;
         });
+}
+
+template <typename T>
+static void declare_kmeans_query(py::module& m, const std::string& suffix) {
+  m.def(("kmeans_query_" + suffix).c_str(),
+      [](const ColMajorMatrix<T>& parts,
+         const ColMajorMatrix<float>& centroids,
+         const ColMajorMatrix<float>& query_vectors,
+         std::vector<uint64_t>& indices,
+         std::vector<shuffled_ids_type>& ids,
+         size_t nprobe,
+         size_t k_nn,
+         bool nth,
+         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
+        auto r = detail::ivf::qv_query_heap_infinite_ram<T>(
+            parts,
+            centroids,
+            query_vectors,
+            indices,
+            ids,
+            nprobe,
+            k_nn,
+            nth,
+            nthreads);
+        return r;
+        }, py::keep_alive<1,2>());
 }
 
 
