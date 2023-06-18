@@ -82,6 +82,12 @@ def query_kmeans(
     else:
         raise TypeError("Unknown type!")
 
+def validate_top_k(results: np.ndarray, ground_truth: np.ndarray):
+    if results.dtype == np.uint64:
+        return cc.validate_top_k_u64(results, ground_truth)
+    else:
+        raise TypeError("Unknown type for validate_top_k!")
+
 def array_to_matrix(array: np.ndarray):
     if array.dtype == np.float32:
         return pyarray_copyto_matrix_f32(array)
