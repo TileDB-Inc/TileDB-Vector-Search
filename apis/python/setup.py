@@ -23,9 +23,8 @@ def get_cmake_overrides():
         conf.append("-DCMAKE_BUILD_TYPE={}".format(val))
 
     key = "BUILD_TESTS"
-    val = os.environ.get(key, default=None)
-    if val:
-        conf.append("-DBUILD_TESTS={}".format(val))
+    val = os.environ.get(key, default="OFF")
+    conf.append("-DBUILD_TESTS={}".format(val))
 
     key = "USE_MKL_CBLAS"
     val = os.environ.get(key, default=None)
