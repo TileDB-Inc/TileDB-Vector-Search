@@ -34,4 +34,4 @@ jobs:
           pip uninstall tiledb.vector_search
           pip install -e .
           pytest -k "not ingest" # TODO: requires token
-        shell: bash
+        shell: bash -el {0}
