@@ -1,0 +1,86 @@
+[
+  {
+    "objectID": "documentation/reference/index.FlatIndex.html",
+    "href": "documentation/reference/index.FlatIndex.html",
+    "title": "index.FlatIndex",
+    "section": "",
+    "text": "vector_search.index.FlatIndex(self, uri, dtype, parts_name='parts.tdb')\n\n\n\n\n\nName\nDescription\n\n\n\n\nquery\n\n\n\n\n\n\nvector_search.index.FlatIndex.query(self, targets, k=10, nqueries=10, nthreads=8, nprobe=1)"
+  },
+  {
+    "objectID": "documentation/reference/index.FlatIndex.html#methods",
+    "href": "documentation/reference/index.FlatIndex.html#methods",
+    "title": "index.FlatIndex",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nquery\n\n\n\n\n\n\nvector_search.index.FlatIndex.query(self, targets, k=10, nqueries=10, nthreads=8, nprobe=1)"
+  },
+  {
+    "objectID": "documentation/reference/module.html",
+    "href": "documentation/reference/module.html",
+    "title": "module",
+    "section": "",
+    "text": "vector_search.module\n\n\n\n\n\nName\nDescription\n\n\n\n\nload_as_array\n\n\n\nload_as_matrix\n\n\n\nquery_kmeans\n\n\n\nquery_vq\n\n\n\n\n\n\nvector_search.module.load_as_array(path, return_matrix=False)\n\n\n\nvector_search.module.load_as_matrix(path, nqueries=0, config={})\n\n\n\nvector_search.module.query_kmeans(dtype, parts_uri, centroids_db, query_vectors, index_db, ids_uri, nprobe, k_nn, nth, nthreads, ctx=None)\n\n\n\nvector_search.module.query_vq(db, *args)"
+  },
+  {
+    "objectID": "documentation/reference/module.html#functions",
+    "href": "documentation/reference/module.html#functions",
+    "title": "module",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nload_as_array\n\n\n\nload_as_matrix\n\n\n\nquery_kmeans\n\n\n\nquery_vq\n\n\n\n\n\n\nvector_search.module.load_as_array(path, return_matrix=False)\n\n\n\nvector_search.module.load_as_matrix(path, nqueries=0, config={})\n\n\n\nvector_search.module.query_kmeans(dtype, parts_uri, centroids_db, query_vectors, index_db, ids_uri, nprobe, k_nn, nth, nthreads, ctx=None)\n\n\n\nvector_search.module.query_vq(db, *args)"
+  },
+  {
+    "objectID": "documentation/reference/index.html",
+    "href": "documentation/reference/index.html",
+    "title": "Python",
+    "section": "",
+    "text": "index.Index\n\n\n\nindex.FlatIndex\n\n\n\nindex.IVFFlatIndex\n\n\n\ningestion\n\n\n\nmodule"
+  },
+  {
+    "objectID": "documentation/reference/index.html#tiledb.vector_search",
+    "href": "documentation/reference/index.html#tiledb.vector_search",
+    "title": "Python",
+    "section": "",
+    "text": "index.Index\n\n\n\nindex.FlatIndex\n\n\n\nindex.IVFFlatIndex\n\n\n\ningestion\n\n\n\nmodule"
+  },
+  {
+    "objectID": "documentation/reference/ingestion.html",
+    "href": "documentation/reference/ingestion.html",
+    "title": "ingestion",
+    "section": "",
+    "text": "vector_search.ingestion\n\n\n\n\n\nName\nDescription\n\n\n\n\ningest\nIngest vectors into TileDB.\n\n\n\n\n\nvector_search.ingestion.ingest(index_type, array_uri, source_uri, source_type, *, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, verbose=False, trace_id=None, mode=Mode.LOCAL)\nIngest vectors into TileDB.\n:param index_type: Type of vector index (FLAT, IVF_FLAT) :param array_uri: Vector array URI :param source_uri: Data source URI :param source_type: Type of the source data :param config: config dictionary, defaults to None :param namespace: TileDB-Cloud namespace, defaults to None :param size: Number of input vectors, if not provided use the full size of the input dataset :param partitions: Number of partitions to load the data with, if not provided, is auto-configured based on the dataset size :param copy_centroids_uri: TileDB array URI to copy centroids from, if not provided, centroids are build running kmeans :param training_sample_size: vector sample size to train centroids with, if not provided, is auto-configured based on the dataset size :param workers: number of workers for vector ingestion, if not provided, is auto-configured based on the dataset size :param verbose: verbose logging, defaults to False :param trace_id: trace ID for logging, defaults to None :param mode: execution mode, defaults to LOCAL use BATCH for distributed execution"
+  },
+  {
+    "objectID": "documentation/reference/ingestion.html#functions",
+    "href": "documentation/reference/ingestion.html#functions",
+    "title": "ingestion",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\ningest\nIngest vectors into TileDB.\n\n\n\n\n\nvector_search.ingestion.ingest(index_type, array_uri, source_uri, source_type, *, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, verbose=False, trace_id=None, mode=Mode.LOCAL)\nIngest vectors into TileDB.\n:param index_type: Type of vector index (FLAT, IVF_FLAT) :param array_uri: Vector array URI :param source_uri: Data source URI :param source_type: Type of the source data :param config: config dictionary, defaults to None :param namespace: TileDB-Cloud namespace, defaults to None :param size: Number of input vectors, if not provided use the full size of the input dataset :param partitions: Number of partitions to load the data with, if not provided, is auto-configured based on the dataset size :param copy_centroids_uri: TileDB array URI to copy centroids from, if not provided, centroids are build running kmeans :param training_sample_size: vector sample size to train centroids with, if not provided, is auto-configured based on the dataset size :param workers: number of workers for vector ingestion, if not provided, is auto-configured based on the dataset size :param verbose: verbose logging, defaults to False :param trace_id: trace ID for logging, defaults to None :param mode: execution mode, defaults to LOCAL use BATCH for distributed execution"
+  },
+  {
+    "objectID": "documentation/reference/index.IVFFlatIndex.html",
+    "href": "documentation/reference/index.IVFFlatIndex.html",
+    "title": "index.IVFFlatIndex",
+    "section": "",
+    "text": "vector_search.index.IVFFlatIndex(self, uri, dtype)\n\n\n\n\n\nName\nDescription\n\n\n\n\nquery\n\n\n\n\n\n\nvector_search.index.IVFFlatIndex.query(self, targets, k=10, nqueries=10, nthreads=8, nprobe=1)"
+  },
+  {
+    "objectID": "documentation/reference/index.IVFFlatIndex.html#methods",
+    "href": "documentation/reference/index.IVFFlatIndex.html#methods",
+    "title": "index.IVFFlatIndex",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nquery\n\n\n\n\n\n\nvector_search.index.IVFFlatIndex.query(self, targets, k=10, nqueries=10, nthreads=8, nprobe=1)"
+  },
+  {
+    "objectID": "documentation/reference/index.Index.html",
+    "href": "documentation/reference/index.Index.html",
+    "title": "index.Index",
+    "section": "",
+    "text": "vector_search.index.Index()\n\n\n\n\n\nName\nDescription\n\n\n\n\nquery\n\n\n\n\n\n\nvector_search.index.Index.query(self, targets, k=10, nqueries=10, nthreads=8, nprobe=1)"
+  },
+  {
+    "objectID": "documentation/reference/index.Index.html#methods",
+    "href": "documentation/reference/index.Index.html#methods",
+    "title": "index.Index",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nquery\n\n\n\n\n\n\nvector_search.index.Index.query(self, targets, k=10, nqueries=10, nthreads=8, nprobe=1)"
+  }
+]
