@@ -164,7 +164,7 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
     }
   }
 
-  ColMajorMatrix<size_t> top_k(k, q.num_cols());
+  ColMajorMatrix<uint64_t> top_k(k, q.num_cols());
 
   // This might not be a win.
   int q_block_size = (size(q) + std::min<int>(nthreads, size(q)) - 1) /

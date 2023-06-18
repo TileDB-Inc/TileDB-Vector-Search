@@ -1,6 +1,7 @@
 import numpy as np
 import tiledb
 from tiledb.vector_search._tiledbvspy import *
+from tiledb.vector_search import _tiledbvspy as cc
 
 def load_as_matrix(path, nqueries=0, config={}):
     ctx = Ctx(config)

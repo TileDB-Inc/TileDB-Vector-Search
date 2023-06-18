@@ -151,7 +151,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
     }
   ));
 
-  /* Vector */
+  /* === Vector === */
+
   declareVector<uint32_t>(m, "_u32");
   declareVector<uint64_t>(m, "_u64");
   declareVector<float>(m, "_f32");
@@ -159,32 +160,32 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   m.def("read_vector_u32", &read_vector<uint32_t>, "Read a vector from TileDB");
   m.def("read_vector_u64", &read_vector<uint64_t>, "Read a vector from TileDB");
+
+
   /* === Matrix === */
 
   // template specializations
-  //declareTdbMatrix<float>(m, "_f32");
-
   declareColMajorMatrix<uint8_t>(m, "_u8");
   declareColMajorMatrix<float>(m, "_f32");
   declareColMajorMatrix<double>(m, "_f64");
   declareColMajorMatrix<int32_t>(m, "_i32");
   declareColMajorMatrix<int64_t>(m, "_i64");
-//  declareColMajorMatrix<uint64_t>(m, "_u64");
-  declareColMajorMatrix<size_t>(m, "_szt");
+  declareColMajorMatrix<uint32_t>(m, "_u32");
+  declareColMajorMatrix<uint64_t>(m, "_u64");
+  declareColMajorMatrix<unsigned long>(m, "_ul");
 
   declareColMajorMatrixSubclass<tdbColMajorMatrix<uint8_t>>(
       m, "tdbColMajorMatrix", "_u8");
-  declareColMajorMatrixSubclass<tdbColMajorMatrix<size_t>>(
-      m, "tdbColMajorMatrix", "_szt");
+  declareColMajorMatrixSubclass<tdbColMajorMatrix<uint64_t>>(
+      m, "tdbColMajorMatrix", "_u64");
   declareColMajorMatrixSubclass<tdbColMajorMatrix<float>>(
       m, "tdbColMajorMatrix", "_f32");
   declareColMajorMatrixSubclass<tdbColMajorMatrix<int32_t>>(
       m, "tdbColMajorMatrix", "_i32");
   declareColMajorMatrixSubclass<tdbColMajorMatrix<int64_t>>(
       m, "tdbColMajorMatrix", "_i64");
-//  declareColMajorMatrixSubclass<tdbColMajorMatrix<uint64_t>>(
-//      m, "tdbColMajorMatrix", "_u64");
 
+  // Converters from pyarray to matrix
   declare_pyarray_to_matrix<uint8_t>(m, "_u8");
   declare_pyarray_to_matrix<uint64_t>(m, "_u64");
   declare_pyarray_to_matrix<float>(m, "_f32");
@@ -197,7 +198,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
            const ColMajorMatrix<float>& query_vectors,
            int k,
            bool nth,
-           size_t nthreads) {
+           size_t nthreads) -> ColMajorMatrix<uint64_t> {
           auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
           return r;
         });
@@ -207,13 +208,13 @@ PYBIND11_MODULE(_tiledbvspy, m) {
            const ColMajorMatrix<float>& query_vectors,
            int k,
            bool nth,
-           size_t nthreads) {
+           size_t nthreads) -> ColMajorMatrix<uint64_t> {
           auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
           return r;
         });
 
-  m.def("validate_top_k",
-      [](const ColMajorMatrix<size_t>& top_k,
+  m.def("validate_top_k_u64",
+      [](const ColMajorMatrix<uint64_t>& top_k,
          const ColMajorMatrix<int32_t>& ground_truth) -> bool {
         return validate_top_k(top_k, ground_truth);
       });
