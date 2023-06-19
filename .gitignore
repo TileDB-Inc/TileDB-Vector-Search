@@ -99,4 +99,5 @@ _skbuild
 /.quarto/
 docs/.quarto
 
-documentation/reference/
+documentation/reference/*
+documentation/reference
