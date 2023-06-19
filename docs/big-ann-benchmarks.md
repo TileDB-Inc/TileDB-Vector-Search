@@ -20,3 +20,23 @@ git clone https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb
 cd big-ann-benchmarks
 docker build -f install/Dockerfile.tiledb .
 ```
+
+## Running benchmarks
+
+1) Create a local dataset.
+
+   note: the `create_dataset.py` command will download
+   remote files the first time it runs, some of which can total >100GB). Use `--skip-data`
+   to avoid downloading the large base set.
+
+   *This* command will download 7.7MB of data:
+
+```
+python create_dataset.py --dataset bigann-10M --skip-data
+```
+
+2) Run the benchmarks, choosing either `tiledb-flat` or `tiledb-ivf-flat`:
+
+```
+python run.py --dataset bigann-10M --algorithm tiledb-flat
+```
