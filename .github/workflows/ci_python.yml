@@ -15,15 +15,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
-      - uses: mamba-org/setup-micromamba@v1
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
         with:
-          environment-name: tiledb-vs-env
-          init-shell: >-
-            bash
-            powershell
-          cache-environment: true
-          post-cleanup: 'all'
-          environment-file: environment.yml
+          python-version: ${{ matrix.python-version }}
+     - name: Print Python version
+       run: |
+         which python
+         which pip
+         python --version
       - name: Build and test python
         run: |
           cd apis/python
