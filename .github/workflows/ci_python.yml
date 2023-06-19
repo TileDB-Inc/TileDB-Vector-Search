@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  Run-Tests:
+  run-Tests:
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -17,9 +17,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: mamba-org/setup-micromamba@v1
         with:
-          # the create command looks like this:
-          # `micromamba create -n test-env python=3.10 numpy`
-          environment-name: test-env
+          environment-name: tiledb-vs-env
           init-shell: >-
             bash
             powershell

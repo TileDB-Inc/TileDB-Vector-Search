@@ -1,4 +1,4 @@
-name: test-env
+name: tiledb-vs-env
 
 dependencies:
   - python=3.10
@@ -6,6 +6,7 @@ dependencies:
   - tiledb
   - tiledb-py
   - pybind11
+  - cmake
   - openblas
   - ninja
   - pytest
