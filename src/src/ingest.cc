@@ -5,7 +5,6 @@
 #include "linalg.h"
 
 bool global_debug{false};
-std::string global_region;
 
 static constexpr const char USAGE[] =
     R"(ingest: create TileDB array from input data

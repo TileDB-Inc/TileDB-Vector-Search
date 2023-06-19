@@ -38,7 +38,6 @@
 #include "linalg.h"
 
 bool global_debug = false;
-std::string global_region = "us-east-1";
 
 TEST_CASE("gen db", "[queries]") {
   size_t dimension = 128;

@@ -44,7 +44,6 @@
 #include "linalg.h"
 
 bool global_debug = false;
-std::string global_region = "us-east-1";
 
 using namespace detail::flat;
 
