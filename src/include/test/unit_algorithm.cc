@@ -78,7 +78,7 @@ TEST_CASE("algorithm: for_each", "[algorithm]") {
   }
 
   SECTION("indexed parallel") {
-    auto nthreads = GENERATE(1, 2, 3, 4, 5, 5, 6, 7, 8, 9, 10, 63);
+    size_t nthreads = GENERATE(1, 2, 3, 4, 5, 5, 6, 7, 8, 9, 10, 63);
     std::vector<unsigned> indices(nthreads);
 
     stdx::for_each(
