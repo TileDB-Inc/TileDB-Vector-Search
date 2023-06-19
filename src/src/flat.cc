@@ -93,7 +93,6 @@
 bool verbose = false;
 bool debug = false;
 bool global_debug = false;
-std::string global_region{"us-east-1"};
 
 static constexpr const char USAGE[] =
     R"(flat: feature vector search with flat index.
@@ -209,6 +208,7 @@ int main(int argc, char* argv[]) {
         return detail::flat::gemm_query(db, q, k, nth, nthreads);
       }
     }*/
+    throw std::runtime_error("incorrect or unset order type: " + args["--order"].asString());
   }();
 
   if (!g_uri.empty() && validate) {

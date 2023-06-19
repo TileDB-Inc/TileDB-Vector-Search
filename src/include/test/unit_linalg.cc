@@ -37,7 +37,6 @@
 #include "../linalg.h"
 
 bool global_debug = false;
-std::string global_region = "us-east-1";
 
 using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 

@@ -194,7 +194,6 @@ float l22_just_swap(const V& u, const U& v) {
 }
 
 bool global_debug = false;
-std::string global_region = "us-east-1";
 
 TEST_CASE("time queries", "[queries]") {
   size_t dimension = 128;
