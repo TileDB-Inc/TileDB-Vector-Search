@@ -8,10 +8,10 @@
 
 # Quick Links
 
-* [Installation](https://tiledb-inc.github.io/tiledb-vector-search/documentation/installation.html)
-* [Build Instructions](https://tiledb-inc.github.io/tiledb-vector-search/documentation/building.html)
-* [TileDB Documentation](https://tiledb-inc.github.io/tiledb-vector-search/)
-* [Python API reference](https://tiledb-inc.github.io/tiledb-vector-search/documentation/reference/)
+* [Installation](https://tiledb-inc.github.io/tiledb-vector-search/documentation/Installation.html)
+* [Build Instructions](https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/Building.html)
+* [TileDB Documentation](https://tiledb-inc.github.io/TileDB-Vector-Search/)
+* [Python API reference](https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/)
 
 # Quick Installation
 
