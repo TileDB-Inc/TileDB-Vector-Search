@@ -69,6 +69,8 @@ website:
       align: left
       contents:
         - href: "documentation/index.md"
+        - href: "documentation/Installation.md"
+        - href: "documentation/Building.md"
 
         # - section: "Examples"
         #   contents:
