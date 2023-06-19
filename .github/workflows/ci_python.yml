@@ -19,11 +19,11 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-     - name: Print Python version
-       run: |
-         which python
-         which pip
-         python --version
+      - name: Print Python version
+        run: |
+          which python
+          which pip
+          python --version
       - name: Build and test python
         run: |
           cd apis/python
