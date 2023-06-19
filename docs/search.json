@@ -2,16 +2,30 @@
   {
     "objectID": "documentation/index.html",
     "href": "documentation/index.html",
-    "title": "",
+    "title": "TileDB Vector Search",
     "section": "",
-    "text": "TileDB vector similarity search"
+    "text": "TileDB Vector Search\nTileDB-Vector-Search is a C++ library and Python interface to Vector Search built onto of the TileDB Storage Engine.\n\n\nQuick Links\n\nInstallation\nBuild Instructions\nTileDB Documentation\nPython API reference\n\n\n\nQuick Installation\nTileDB-Vector-Search is available from either PyPI with pip:\npip install tiledb-vector-search\nor from conda-forge with conda or mamba:\nconda install -c tiledb tiledb-vector-search\n\n\nContributing\nWe welcome contributions, please see CONTRIBUTING.md for suggestions and development-build instructions. For larger features, please open an issue to discuss goals and approach in order to ensure a smooth PR integration and review process."
   },
   {
     "objectID": "documentation/Building.html",
     "href": "documentation/Building.html",
     "title": "Building From Source",
     "section": "",
-    "text": "Building From Source\nTileDB Vector Search can be built from source.\napt-get openblas-dev build-essentials cmake3 \ncd apis/python\npip install ."
+    "text": "TileDB Vector Search can be built from source.\n\n\nThere are several dependencies needed, for Ubuntu you can install via:\napt-get openblas-dev build-essentials cmake3 \nTo build the python API after you have the dependencies, use pip:\ncd apis/python\npip install .\n\n\n\nA docker image is also provided for simplicity:\ndocker build -t tiledb/tiledb-vector-search .\nYou run the example docker image which provides the python package with:\ndocker run --rm tiledb/tiledb-vector-search"
+  },
+  {
+    "objectID": "documentation/Building.html#linux",
+    "href": "documentation/Building.html#linux",
+    "title": "Building From Source",
+    "section": "",
+    "text": "There are several dependencies needed, for Ubuntu you can install via:\napt-get openblas-dev build-essentials cmake3 \nTo build the python API after you have the dependencies, use pip:\ncd apis/python\npip install ."
+  },
+  {
+    "objectID": "documentation/Building.html#docker",
+    "href": "documentation/Building.html#docker",
+    "title": "Building From Source",
+    "section": "",
+    "text": "A docker image is also provided for simplicity:\ndocker build -t tiledb/tiledb-vector-search .\nYou run the example docker image which provides the python package with:\ndocker run --rm tiledb/tiledb-vector-search"
   },
   {
     "objectID": "documentation/Installation.html",

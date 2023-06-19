@@ -126,7 +126,7 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../documentation/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">index.html</span></a>
+ <span class="menu-text">TileDB Vector Search</span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -168,7 +168,11 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#building-from-source" id="toc-building-from-source" class="nav-link active" data-scroll-target="#building-from-source">Building From Source</a></li>
+  <li><a href="#building-from-source" id="toc-building-from-source" class="nav-link active" data-scroll-target="#building-from-source">Building From Source</a>
+  <ul class="collapse">
+  <li><a href="#linux" id="toc-linux" class="nav-link" data-scroll-target="#linux">Linux</a></li>
+  <li><a href="#docker" id="toc-docker" class="nav-link" data-scroll-target="#docker">Docker</a></li>
+  </ul></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/edit/main/documentation/Building.md" class="toc-action">Edit this page</a></p><p><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/issues/new" class="toc-action">Report an issue</a></p></div></div></nav>
     </div>
@@ -180,11 +184,23 @@ ul.task-list li input[type="checkbox"] {
 <section id="building-from-source" class="level1">
 <h1>Building From Source</h1>
 <p>TileDB Vector Search can be built from source.</p>
+<section id="linux" class="level2">
+<h2 class="anchored" data-anchor-id="linux">Linux</h2>
+<p>There are several dependencies needed, for Ubuntu you can install via:</p>
 <pre><code>apt-get openblas-dev build-essentials cmake3 </code></pre>
+<p>To build the python API after you have the dependencies, use pip:</p>
 <pre><code>cd apis/python
 pip install .</code></pre>
+</section>
+<section id="docker" class="level2">
+<h2 class="anchored" data-anchor-id="docker">Docker</h2>
+<p>A docker image is also provided for simplicity:</p>
+<pre><code>docker build -t tiledb/tiledb-vector-search .</code></pre>
+<p>You run the example docker image which provides the python package with:</p>
+<pre><code>docker run --rm tiledb/tiledb-vector-search</code></pre>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
