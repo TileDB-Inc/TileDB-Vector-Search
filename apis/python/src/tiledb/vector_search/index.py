@@ -10,17 +10,45 @@ class Index:
 
 
 class FlatIndex(Index):
+    """
+    Open a flat index
+
+    Parameters
+    ----------
+    uri: str
+        URI of datataset
+    dtype: numpy.dtype
+        datatype float32 or uint8
+    parts_name: str
+        Optional name of partitions
+    """
     def __init__(self,
-                 uri,
+                 uri: str,
                  dtype: np.dtype,
-                 parts_name="parts.tdb"):
+                 parts_name: str="parts.tdb"):
         self.uri = uri
         self.dtype = dtype
         self._index = None
 
         self._db = load_as_matrix(os.path.join(uri, parts_name))
 
-    def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8, nprobe=1):
+    def query(self, targets: np.ndarray, k: int=10, nqueries: int=10, nthreads: int=8, nprobe: int=1):
+        """
+        Open a flat index
+
+        Parameters
+        ----------
+        targets: numpy.ndarray
+            ND Array of query targets
+        k: int
+            Number of top results to return per target
+        nqueries: int
+            Number of queries
+        nthreads: int
+            Number of threads to use for queyr
+        nprobe: int
+            number of probes
+        """
         # TODO:
         # - typecheck targets
         # - don't copy the array
@@ -39,6 +67,16 @@ class FlatIndex(Index):
 
 
 class IVFFlatIndex(Index):
+    """
+    Open a IVF Flat index
+
+    Parameters
+    ----------
+    uri: str
+        URI of datataset
+    dtype: numpy.dtype
+        datatype float32 or uint8
+    """
     def __init__(self,
                  uri,
                  dtype: np.dtype):
@@ -55,6 +93,22 @@ class IVFFlatIndex(Index):
         # self._ids = load_as_matrix(self.ids_uri)
 
     def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8, nprobe=1):
+        """
+        Open a flat index
+
+        Parameters
+        ----------
+        targets: numpy.ndarray
+            ND Array of query targets
+        k: int
+            Number of top results to return per target
+        nqueries: int
+            Number of queries
+        nthreads: int
+            Number of threads to use for queyr
+        nprobe: int
+            number of probes
+        """
         assert targets.dtype == np.float32
 
         # TODO: use Matrix constructor from py::array

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search.index import FlatIndex, IVFFlatIndex
@@ -24,25 +24,41 @@ def ingest(
     """
     Ingest vectors into TileDB.
 
-    :param index_type: Type of vector index (FLAT, IVF_FLAT)
-    :param array_uri: Vector array URI
-    :param source_uri: Data source URI
-    :param source_type: Type of the source data
-    :param config: config dictionary, defaults to None
-    :param namespace: TileDB-Cloud namespace, defaults to None
-    :param size: Number of input vectors,
+    Parameters
+    ----------
+    index_type: str
+        Type of vector index (FLAT, IVF_FLAT)
+    array_uri: str
+        Vector array URI
+    source_uri: str
+        Data source URI
+    source_type: str
+        Type of the source data
+    config: None
+        config dictionary, defaults to None
+    namespace: str
+        TileDB-Cloud namespace, defaults to None
+    size: int = 1
+        Number of input vectors,
         if not provided use the full size of the input dataset
-    :param partitions: Number of partitions to load the data with,
+    partitions: int = -1
+        Number of partitions to load the data with,
         if not provided, is auto-configured based on the dataset size
-    :param copy_centroids_uri: TileDB array URI to copy centroids from,
+    copy_centroids_uri: str
+        TileDB array URI to copy centroids from,
         if not provided, centroids are build running kmeans
-    :param training_sample_size: vector sample size to train centroids with,
+    training_sample_size: int = 1
+        vector sample size to train centroids with,
         if not provided, is auto-configured based on the dataset size
-    :param workers: number of workers for vector ingestion,
+    workers: int = -1
+        number of workers for vector ingestion,
         if not provided, is auto-configured based on the dataset size
-    :param verbose: verbose logging, defaults to False
-    :param trace_id: trace ID for logging, defaults to None
-    :param mode: execution mode, defaults to LOCAL use BATCH for distributed execution
+    verbose: bool
+        verbose logging, defaults to False
+    trace_id: Optional[str]
+        trace ID for logging, defaults to None
+    mode: Mode
+        execution mode, defaults to LOCAL use BATCH for distributed execution
     """
     import enum
     import logging
@@ -111,7 +127,7 @@ def ingest(
 
     def read_source_metadata(
         source_uri: str, source_type: str, logger: logging.Logger
-    ) -> (int, int, np.dtype):
+    ) -> Tuple[int, int, np.dtype]:
         if source_type == "TILEDB_ARRAY":
             schema = tiledb.ArraySchema.load(source_uri)
             size = schema.domain.dim(1).domain[1] + 1
