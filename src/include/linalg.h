@@ -64,7 +64,6 @@ using namespace Kokkos::Experimental;
 
 extern bool global_verbose;
 extern bool global_debug;
-extern std::string global_region;
 
 template <class T>
 std::vector<T> read_vector(const tiledb::Context&, const std::string&);

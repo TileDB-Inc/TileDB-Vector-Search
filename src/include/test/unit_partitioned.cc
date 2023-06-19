@@ -37,7 +37,6 @@
 #include "partitioned.h"
 
 bool global_debug = false;
-std::string global_region = "us-east-1";
 
 TEST_CASE("partitioned: test test", "[partitioned]") {
   REQUIRE(true);

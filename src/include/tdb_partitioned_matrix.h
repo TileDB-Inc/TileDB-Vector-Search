@@ -26,7 +26,6 @@ using namespace Kokkos::Experimental;
 
 extern bool global_verbose;
 extern bool global_debug;
-extern std::string global_region;
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
@@ -56,7 +55,6 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   // @todo: Make this configurable
   std::map<std::string, std::string> init_{};
-  // {"vfs.s3.region", global_region.c_str()}};
   tiledb::Config config_{init_};
   tiledb::Context ctx_{config_};
 
