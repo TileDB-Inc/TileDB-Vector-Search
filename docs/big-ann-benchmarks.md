@@ -18,7 +18,7 @@ docker build -f Dockerfile . -t tiledb_vs
 ```
 git clone https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb
 cd big-ann-benchmarks
-docker build -f install/Dockerfile.tiledb .
+docker build -f install/Dockerfile.tiledb . -t billion-scale-benchmark-tiledb
 ```
 
 ## Running benchmarks
