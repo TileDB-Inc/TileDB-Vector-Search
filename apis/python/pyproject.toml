@@ -28,7 +28,7 @@ test = ["pytest"]
 
 [project.urls]
 homepage = "https://tiledb.com"
-repository = "https://github.com/TileDB-Inc/feature-vector-prototype"
+repository = "https://github.com/TileDB-Inc/tiledb-vector-search"
 
 [build-system]
 requires = [
