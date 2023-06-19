@@ -121,6 +121,12 @@ ul.task-list li input[type="checkbox"] {
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
     <div class="sidebar-menu-container"> 
     <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../documentation/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">index.html</span></a>
+  </div>
+</li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">
@@ -186,9 +192,113 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.ingestion.ingest">ingest</h3>
 <p><code>vector_search.ingestion.ingest(index_type, array_uri, source_uri, source_type, *, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, verbose=False, trace_id=None, mode=Mode.LOCAL)</code></p>
 <p>Ingest vectors into TileDB.</p>
-<p>:param index_type: Type of vector index (FLAT, IVF_FLAT) :param array_uri: Vector array URI :param source_uri: Data source URI :param source_type: Type of the source data :param config: config dictionary, defaults to None :param namespace: TileDB-Cloud namespace, defaults to None :param size: Number of input vectors, if not provided use the full size of the input dataset :param partitions: Number of partitions to load the data with, if not provided, is auto-configured based on the dataset size :param copy_centroids_uri: TileDB array URI to copy centroids from, if not provided, centroids are build running kmeans :param training_sample_size: vector sample size to train centroids with, if not provided, is auto-configured based on the dataset size :param workers: number of workers for vector ingestion, if not provided, is auto-configured based on the dataset size :param verbose: verbose logging, defaults to False :param trace_id: trace ID for logging, defaults to None :param mode: execution mode, defaults to LOCAL use BATCH for distributed execution</p>
+<section id="parameters" class="level4">
+<h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 63%">
+<col style="width: 8%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>index_type</code></td>
+<td>str</td>
+<td>Type of vector index (FLAT, IVF_FLAT)</td>
+<td>required</td>
+</tr>
+<tr class="even">
+<td><code>array_uri</code></td>
+<td>str</td>
+<td>Vector array URI</td>
+<td>required</td>
+</tr>
+<tr class="odd">
+<td><code>source_uri</code></td>
+<td>str</td>
+<td>Data source URI</td>
+<td>required</td>
+</tr>
+<tr class="even">
+<td><code>source_type</code></td>
+<td>str</td>
+<td>Type of the source data</td>
+<td>required</td>
+</tr>
+<tr class="odd">
+<td><code>config</code></td>
+<td></td>
+<td>config dictionary, defaults to None</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>namespace</code></td>
+<td>typing.Optional[str]</td>
+<td>TileDB-Cloud namespace, defaults to None</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>size</code></td>
+<td>int</td>
+<td>Number of input vectors, if not provided use the full size of the input dataset</td>
+<td><code>-1</code></td>
+</tr>
+<tr class="even">
+<td><code>partitions</code></td>
+<td>int</td>
+<td>Number of partitions to load the data with, if not provided, is auto-configured based on the dataset size</td>
+<td><code>-1</code></td>
+</tr>
+<tr class="odd">
+<td><code>copy_centroids_uri</code></td>
+<td>str</td>
+<td>TileDB array URI to copy centroids from, if not provided, centroids are build running kmeans</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>training_sample_size</code></td>
+<td>int</td>
+<td>vector sample size to train centroids with, if not provided, is auto-configured based on the dataset size</td>
+<td><code>-1</code></td>
+</tr>
+<tr class="odd">
+<td><code>workers</code></td>
+<td>int</td>
+<td>number of workers for vector ingestion, if not provided, is auto-configured based on the dataset size</td>
+<td><code>-1</code></td>
+</tr>
+<tr class="even">
+<td><code>verbose</code></td>
+<td>bool</td>
+<td>verbose logging, defaults to False</td>
+<td><code>False</code></td>
+</tr>
+<tr class="odd">
+<td><code>trace_id</code></td>
+<td>typing.Optional[str]</td>
+<td>trace ID for logging, defaults to None</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>mode</code></td>
+<td>Mode</td>
+<td>execution mode, defaults to LOCAL use BATCH for distributed execution</td>
+<td><code>Mode.LOCAL</code></td>
+</tr>
+</tbody>
+</table>
 
 
+</section>
 </section>
 </section>
 </section>

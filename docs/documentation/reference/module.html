@@ -121,6 +121,12 @@ ul.task-list li input[type="checkbox"] {
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
     <div class="sidebar-menu-container"> 
     <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../documentation/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">index.html</span></a>
+  </div>
+</li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">
@@ -181,39 +187,235 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td><a href="#tiledb.vector_search.module.load_as_array">load_as_array</a></td>
-<td></td>
+<td>Load array as array class</td>
 </tr>
 <tr class="even">
 <td><a href="#tiledb.vector_search.module.load_as_matrix">load_as_matrix</a></td>
-<td></td>
+<td>Load array as Matrix class</td>
 </tr>
 <tr class="odd">
 <td><a href="#tiledb.vector_search.module.query_kmeans">query_kmeans</a></td>
-<td></td>
+<td>Run kmeans vector query</td>
 </tr>
 <tr class="even">
 <td><a href="#tiledb.vector_search.module.query_vq">query_vq</a></td>
-<td></td>
+<td>Run vector query</td>
 </tr>
 </tbody>
 </table>
 <section id="tiledb.vector_search.module.load_as_array" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.module.load_as_array">load_as_array</h3>
-<p><code>vector_search.module.load_as_array(path, return_matrix=False)</code></p>
+<p><code>vector_search.module.load_as_array(path, return_matrix=False, config={})</code></p>
+<p>Load array as array class</p>
+<section id="parameters" class="level4">
+<h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 24%">
+<col style="width: 11%">
+<col style="width: 47%">
+<col style="width: 15%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>path</code></td>
+<td></td>
+<td>Array path</td>
+<td>required</td>
+</tr>
+<tr class="even">
+<td><code>return_matrix</code></td>
+<td>bool</td>
+<td>Return matrix</td>
+<td><code>False</code></td>
+</tr>
+<tr class="odd">
+<td><code>config</code></td>
+<td>Dict</td>
+<td>TileDB configuration parameters</td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+</section>
 </section>
 <section id="tiledb.vector_search.module.load_as_matrix" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.module.load_as_matrix">load_as_matrix</h3>
 <p><code>vector_search.module.load_as_matrix(path, nqueries=0, config={})</code></p>
+<p>Load array as Matrix class</p>
+<section id="parameters-1" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
+<table class="table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>path</code></td>
+<td>str</td>
+<td>Array path</td>
+<td>required</td>
+</tr>
+<tr class="even">
+<td><code>nqueries</code></td>
+<td>int</td>
+<td>Number of queries</td>
+<td><code>0</code></td>
+</tr>
+<tr class="odd">
+<td><code>config</code></td>
+<td>Dict</td>
+<td>TileDB configuration parameters</td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+</section>
 </section>
 <section id="tiledb.vector_search.module.query_kmeans" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.module.query_kmeans">query_kmeans</h3>
 <p><code>vector_search.module.query_kmeans(dtype, parts_uri, centroids_db, query_vectors, index_db, ids_uri, nprobe, k_nn, nth, nthreads, ctx=None)</code></p>
+<p>Run kmeans vector query</p>
+<section id="parameters-2" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 16%">
+<col style="width: 54%">
+<col style="width: 11%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>dtype</code></td>
+<td>numpy.dtype</td>
+<td>Type of vectpr, flaot32 or uint8</td>
+<td>required</td>
+</tr>
+<tr class="even">
+<td><code>parts_uri</code></td>
+<td>str</td>
+<td>Partition URI</td>
+<td>required</td>
+</tr>
+<tr class="odd">
+<td><code>centroids_db</code></td>
+<td>colMajorMatrix</td>
+<td>Open Matrix class from load_as_matrix for centroids</td>
+<td>required</td>
+</tr>
+<tr class="even">
+<td><code>query_vectors</code></td>
+<td>colMajorMatrix</td>
+<td>Open Matrix class from load_as_matrix for queries</td>
+<td>required</td>
+</tr>
+<tr class="odd">
+<td><code>index_db</code></td>
+<td>Vector</td>
+<td>Vectors</td>
+<td>required</td>
+</tr>
+<tr class="even">
+<td><code>ids_uri</code></td>
+<td>str</td>
+<td>URI for id mappings</td>
+<td>required</td>
+</tr>
+<tr class="odd">
+<td><code>nprobe</code></td>
+<td>int</td>
+<td>Number of probs</td>
+<td>required</td>
+</tr>
+<tr class="even">
+<td><code>k_nn</code></td>
+<td>int</td>
+<td>Number of nn</td>
+<td>required</td>
+</tr>
+<tr class="odd">
+<td><code>nth</code></td>
+<td>bool</td>
+<td>Return nth records</td>
+<td>required</td>
+</tr>
+<tr class="even">
+<td><code>nthreads</code></td>
+<td>int</td>
+<td>Number of theads</td>
+<td>required</td>
+</tr>
+<tr class="odd">
+<td><code>ctx</code></td>
+<td>Ctx</td>
+<td>Tiledb Context</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
 </section>
 <section id="tiledb.vector_search.module.query_vq" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.module.query_vq">query_vq</h3>
 <p><code>vector_search.module.query_vq(db, *args)</code></p>
+<p>Run vector query</p>
+<section id="parameters-3" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-3">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 21%">
+<col style="width: 52%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>db</code></td>
+<td>colMajorMatrix</td>
+<td>Open Matrix class from load_as_matrix</td>
+<td>required</td>
+</tr>
+<tr class="even">
+<td><code>args</code></td>
+<td></td>
+<td>Args for query</td>
+<td><code>()</code></td>
+</tr>
+</tbody>
+</table>
 
 
+</section>
 </section>
 </section>
 </section>
