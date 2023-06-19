@@ -1,7 +1,8 @@
 from typing import Optional, Tuple
 
 from tiledb.cloud.dag import Mode
-from tiledb.vector_search.index import FlatIndex, IVFFlatIndex
+from tiledb.vector_search.index import FlatIndex
+from tiledb.vector_search.index import IVFFlatIndex
 
 
 def ingest(
@@ -66,6 +67,7 @@ def ingest(
     from typing import Any, Mapping, Optional
 
     import numpy as np
+
     import tiledb
     from tiledb.cloud import dag
     from tiledb.cloud.dag import Mode
@@ -533,6 +535,7 @@ def ingest(
         trace_id: Optional[str] = None,
     ):
         from sklearn.cluster import KMeans
+
         import tiledb.cloud
 
         def generate_new_centroid_per_thread(
@@ -599,7 +602,7 @@ def ingest(
                 )
                 workers[i].join()
 
-            logger.info(f"Finished all threads, aggregating partial results.")
+            logger.info("Finished all threads, aggregating partial results.")
             new_centroids = []
             for c_id in range(partitions):
                 cent = []
@@ -657,6 +660,7 @@ def ingest(
         trace_id: Optional[str] = None,
     ):
         import numpy as np
+
         import tiledb.cloud
 
         logger = setup(config, verbose)
@@ -722,8 +726,9 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
-        from sklearn.cluster import KMeans
         import numpy as np
+        from sklearn.cluster import KMeans
+
         import tiledb.cloud
 
         logger = setup(config, verbose)
@@ -744,7 +749,7 @@ def ingest(
         with tiledb.scope_ctx(ctx_or_config=config):
             logger.info(f"Input vectors start_pos: {start}, end_pos: {end}")
             with tiledb.open(centroids_uri, mode="r") as centroids_array:
-                logger.info(f"Reading centroids")
+                logger.info("Reading centroids")
                 km.cluster_centers_ = np.transpose(
                     centroids_array[0:dimensions, 0:partitions]["centroids"]
                 ).copy(order="C")
@@ -868,7 +873,7 @@ def ingest(
                 with tiledb.open(index_array_uri, "r") as A:
                     start_pos = A[part]["values"]
                 logger.info(f"partition start index: {start_pos}")
-                logger.info(f"Reading partition data")
+                logger.info("Reading partition data")
                 with tiledb.open(write_array_uri, mode="r") as A:
                     partition = A[part:part_end, :]
 
@@ -1051,7 +1056,7 @@ def ingest(
                             reducers.append(
                                 submit(
                                     compute_new_centroids,
-                                    *kmeans_workers[i: i + 10],
+                                    *kmeans_workers[i : i + 10],
                                     name="update-centroids-" + str(i),
                                     resources={"cpu": "1", "memory": "8Gi"},
                                 )
@@ -1249,7 +1254,7 @@ def ingest(
         logger.info("Submitted ingestion graph")
         d.wait()
         group = tiledb.Group(array_uri)
-        parts_array_uri = group[PARTS_ARRAY_NAME].uri
+        group[PARTS_ARRAY_NAME].uri
 
         if index_type == "FLAT":
             return FlatIndex(uri=array_uri, dtype=vector_type)

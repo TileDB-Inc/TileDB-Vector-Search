@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+
 from tiledb.vector_search.module import *
 
 
@@ -22,17 +23,22 @@ class FlatIndex(Index):
     parts_name: str
         Optional name of partitions
     """
-    def __init__(self,
-                 uri: str,
-                 dtype: np.dtype,
-                 parts_name: str="parts.tdb"):
+
+    def __init__(self, uri: str, dtype: np.dtype, parts_name: str = "parts.tdb"):
         self.uri = uri
         self.dtype = dtype
         self._index = None
 
         self._db = load_as_matrix(os.path.join(uri, parts_name))
 
-    def query(self, targets: np.ndarray, k: int=10, nqueries: int=10, nthreads: int=8, nprobe: int=1):
+    def query(
+        self,
+        targets: np.ndarray,
+        k: int = 10,
+        nqueries: int = 10,
+        nthreads: int = 8,
+        nprobe: int = 1,
+    ):
         """
         Open a flat index
 
@@ -77,9 +83,8 @@ class IVFFlatIndex(Index):
     dtype: numpy.dtype
         datatype float32 or uint8
     """
-    def __init__(self,
-                 uri,
-                 dtype: np.dtype):
+
+    def __init__(self, uri, dtype: np.dtype):
         self.parts_db_uri = os.path.join(uri, "parts.tdb")
         self.centroids_uri = os.path.join(uri, "centroids.tdb")
         self.index_uri = os.path.join(uri, "index.tdb")

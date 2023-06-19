@@ -1,6 +1,6 @@
-from tiledb.vector_search.ingestion import ingest
-
 from common import *
+
+from tiledb.vector_search.ingestion import ingest
 
 
 def test_flat_ingestion_u8(tmp_path):

@@ -1,9 +1,9 @@
-from skbuild import setup  # This line replaces 'from setuptools import setup'
-
 import os
 
+from skbuild import setup  # This line replaces 'from setuptools import setup'
+
+
 def get_cmake_overrides():
-    import sys
 
     conf = list()
 
@@ -32,6 +32,7 @@ def get_cmake_overrides():
         conf.append("-DUSE_MKL_CBLAS={}".format(val))
 
     return conf
+
 
 cmake_args = ["-DTILEDB_VS_PYTHON=ON"]
 

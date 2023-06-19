@@ -1,10 +1,12 @@
-import numpy as np
-import tiledb
-from tiledb.vector_search._tiledbvspy import *
 from typing import Dict
 
+import numpy as np
 
-def load_as_matrix(path: str, nqueries: int = 0, config: Dict={}):
+import tiledb
+from tiledb.vector_search._tiledbvspy import *
+
+
+def load_as_matrix(path: str, nqueries: int = 0, config: Dict = {}):
     """
     Load array as Matrix class
 

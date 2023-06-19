@@ -1,9 +1,7 @@
 import numpy as np
-
-import tiledb
+from common import *
 
 from tiledb.vector_search import _tiledbvspy as vspy
-from common import *
 
 
 def test_tdbMatrix(tmpdir):
@@ -27,7 +25,7 @@ def test_tdbMatrix(tmpdir):
 
 
 def test_context(tmpdir):
-    p = str(tmpdir.mkdir("test").join("test.tdb"))
+    str(tmpdir.mkdir("test").join("test.tdb"))
 
-    ctx = vspy.Ctx({})
-    ctx = vspy.Ctx({"vfs.s3.region": "us-east-1"})
+    vspy.Ctx({})
+    vspy.Ctx({"vfs.s3.region": "us-east-1"})
