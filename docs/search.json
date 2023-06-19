@@ -7,6 +7,27 @@
     "text": "TileDB vector similarity search"
   },
   {
+    "objectID": "documentation/Building.html",
+    "href": "documentation/Building.html",
+    "title": "Building From Source",
+    "section": "",
+    "text": "Building From Source\nTileDB Vector Search can be built from source.\napt-get openblas-dev build-essentials cmake3 \ncd apis/python\npip install ."
+  },
+  {
+    "objectID": "documentation/Installation.html",
+    "href": "documentation/Installation.html",
+    "title": "Quick Installation",
+    "section": "",
+    "text": "TileDB-Vector-Search is available from either PyPI with pip:\npip install tiledb-vector-search\nor from conda-forge with conda or mamba:\nconda install -c tiledb tiledb-vector-search\n\n\nTileDB Vector Search can be installed from source via github or a local checkout.\nFrom github:\npip install git+https://github.com/TileDB-Inc/TileDB-Vector-Search.git#subdirectory=apis/python\nFrom a local checkout:\ncd apis/python\npip install ."
+  },
+  {
+    "objectID": "documentation/Installation.html#installation-from-source",
+    "href": "documentation/Installation.html#installation-from-source",
+    "title": "Quick Installation",
+    "section": "",
+    "text": "TileDB Vector Search can be installed from source via github or a local checkout.\nFrom github:\npip install git+https://github.com/TileDB-Inc/TileDB-Vector-Search.git#subdirectory=apis/python\nFrom a local checkout:\ncd apis/python\npip install ."
+  },
+  {
     "objectID": "documentation/reference/index.FlatIndex.html",
     "href": "documentation/reference/index.FlatIndex.html",
     "title": "index.FlatIndex",
