@@ -27,7 +27,7 @@ jobs:
       - name: Build and test python
         run: |
           cd apis/python
-          pip install .
+          pip install .[test]
           pytest -k "not ingest" # TODO: requires token
           pip uninstall tiledb.vector_search
           pip install -e .
