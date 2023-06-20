@@ -1,9 +1,8 @@
 import numpy as np
+from common import *
 
 import tiledb
-
 import tiledb.vector_search as vs
-from common import *
 from tiledb.vector_search import _tiledbvspy as vspy
 
 

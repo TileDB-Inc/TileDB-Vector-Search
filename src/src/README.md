@@ -170,15 +170,15 @@ This will tell you the path that will be used when building `flat`.  If it isn't
 
 `flat` does require a fairly recent version of `libtiledb`.  If you get compilation errors along the lines of
 ```
-In file included from /home/user/feature-vector-prototype/src/test/unit_sift_array.cpp:5:
-/home/user/feature-vector-prototype/src/test/../sift_array.h:67:21: error: expected ';' after expression
+In file included from /home/user/tiledb-vector-search/src/test/unit_sift_array.cpp:5:
+/home/user/tiledb-vector-search/src/test/../sift_array.h:67:21: error: expected ';' after expression
     tiledb::Subarray subarray(ctx_, array_);
                     ^
                     ;
-/home/user/feature-vector-prototype/src/test/../sift_array.h:67:13: error: no member named 'Subarray' in namespace 'tiledb'
+/home/user/tiledb-vector-search/src/test/../sift_array.h:67:13: error: no member named 'Subarray' in namespace 'tiledb'
     tiledb::Subarray subarray(ctx_, array_);
     ~~~~~~~~^
-/home/user/feature-vector-prototype/src/test/../sift_array.h:68:5: error: use of undeclared identifier 'subarray'
+/home/user/tiledb-vector-search/src/test/../sift_array.h:68:5: error: use of undeclared identifier 'subarray'
     subarray.set_subarray(subarray_vals);
 ```
 then you likely need a more recent version of `libtiledb`.  To fix this, first try updating your instaleld version of `libtiledb` by invoking the appropriate "upgrade" or "update" command associated with your package manager (if you installed `libtiledb` using a package manager).  Otherwise, obtain an up-to-date version of `libtiledb` from the TileDB github repository at `https://github.com/TileDB-Inc/TileDB` and build and install that per the instructions there.
