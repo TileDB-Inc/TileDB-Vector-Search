@@ -27,12 +27,12 @@
  *
  * @section DESCRIPTION
  *
- * Class the provides a matrix view to a partitioned TileDB array (as partitioned by
- * IVF indexing).
+ * Class the provides a matrix view to a partitioned TileDB array (as
+ * partitioned by IVF indexing).
  *
  * The class requires the URI of a partitioned TileDB array and partioned set of
- * vector identifiers.  The class will provide a view of the requested partitions
- * and the corresponding vector identifiers.
+ * vector identifiers.  The class will provide a view of the requested
+ * partitions and the corresponding vector identifiers.
  *
  * Also provides support for out-of-core operation.
  *
@@ -55,7 +55,6 @@
 
 #include "detail/linalg/tdb_defs.h"
 
-#include "array_types.h"
 #include "utils/timer.h"
 
 namespace stdx {
@@ -67,7 +66,20 @@ extern bool global_verbose;
 extern bool global_debug;
 extern std::string global_region;
 
-template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+/**
+ *
+ * @note The template parameters indices_type and parts_type are deduced using
+ * CTAD.  However, with the uri-based constructor, the type of the indices and
+ * the shuffled_db array cannot be deduced.  Therefore, the user must specify
+ * the type of the indices and the shuffled_ids array.
+ */
+template <
+    class T,
+    class shuffled_ids_type,
+    class indices_type,
+    class parts_type,
+    class LayoutPolicy = stdx::layout_right,
+    class I = size_t>
 class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   /****************************************************************************
    *
@@ -120,9 +132,9 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
    ****************************************************************************/
   tiledb::Array ids_array_;
   tiledb::ArraySchema ids_schema_;
-  std::vector<shuffled_ids_type> indices_;  // @todo pointer and span?
-  std::vector<parts_type> parts_;           // @todo pointer and span?
-  std::vector<shuffled_ids_type> ids_;      // @todo pointer and span?
+  std::vector<indices_type> indices_;   // @todo pointer and span?
+  std::vector<parts_type> parts_;       // @todo pointer and span?
+  std::vector<shuffled_ids_type> ids_;  // @todo pointer and span?
 
   std::tuple<index_type, index_type> row_part_view_;
   std::tuple<index_type, index_type> col_part_view_;
@@ -174,7 +186,6 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       , parts_{in_parts}
       , row_part_view_{0, 0}
       , col_part_view_{0, 0} {
-
     constructor_timer.stop();
 
     total_num_parts_ = size(parts_);
@@ -268,7 +279,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
        */
       std::get<0>(col_view_) = std::get<1>(col_view_);  // # columns
       std::get<0>(col_part_view_) =
-          std::get<1>(col_part_view_);  // # partitions
+          std::get<1>(col_part_view_);                  // # partitions
 
       std::get<1>(col_part_view_) = std::get<0>(col_part_view_);
       for (size_t i = std::get<0>(col_part_view_); i < total_num_parts_; ++i) {
@@ -420,15 +431,25 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 /**
  * Convenience class for row-major matrices.
  */
-template <class T, class I = size_t>
+template <
+    class T,
+    class shuffled_ids_type,
+    class indices_type,
+    class parts_type,
+    class I = size_t>
 using tdbRowMajorPartitionedMatrix =
-    tdbPartitionedMatrix<T, stdx::layout_right, I>;
+    tdbPartitionedMatrix<T, shuffled_ids_type, indices_type, parts_type, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.
  */
-template <class T, class I = size_t>
+template <
+    class T,
+    class shuffled_ids_type,
+    class indices_type,
+    class parts_type,
+    class I = size_t>
 using tdbColMajorPartitionedMatrix =
-    tdbPartitionedMatrix<T, stdx::layout_left, I>;
+    tdbPartitionedMatrix<T, shuffled_ids_type, indices_type, parts_type, stdx::layout_left, I>;
 
 #endif  // TILEDB_PARTITIONED_MATRIX_H

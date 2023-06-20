@@ -65,7 +65,6 @@
 
 #include <docopt.h>
 
-#include "array_types.h"
 #include "config.h"
 #include "defs.h"
 #include "ivf_query.h"
@@ -80,6 +79,27 @@ using json = nlohmann::json;
 
 bool global_verbose = false;
 bool global_debug = false;
+
+
+#include <cstdint>
+
+/**
+ * Specify some types for the demo.
+ */
+#if 1
+using db_type = uint8_t;
+#else
+using db_type = float;
+#endif
+
+using groundtruth_type = int32_t;
+using centroids_type = float;
+
+using shuffled_ids_type = uint64_t;
+
+// @todo Are these the same?
+using indices_type = uint64_t;
+using parts_type = uint64_t;
 
 static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
@@ -171,12 +191,12 @@ int main(int argc, char* argv[]) {
     auto indices = read_vector<indices_type>(ctx, index_uri);
     debug_matrix(indices, "indices");
 
-    auto q = tdbColMajorMatrix<q_type>(ctx, query_uri, nqueries);
+    auto q = tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri, nqueries);
     debug_matrix(q, "q");
 
     auto top_k = [&]() {
       if (finite) {
-        return detail::ivf::qv_query_heap_finite_ram(
+        return detail::ivf::qv_query_heap_finite_ram<db_type, shuffled_ids_type>(
             ctx,
             part_uri,
             centroids,
@@ -189,7 +209,7 @@ int main(int argc, char* argv[]) {
             nth,
             nthreads);
       } else {
-        return detail::ivf::qv_query_heap_infinite_ram(
+        return detail::ivf::qv_query_heap_infinite_ram<db_type, shuffled_ids_type>(
             ctx,
             part_uri,
             centroids,
