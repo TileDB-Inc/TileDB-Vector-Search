@@ -27,6 +27,8 @@
  *
  * @section DESCRIPTION
  *
+ * Unit tests for time logging singleton class and associated timers.
+ *
  */
 
 #include <catch2/catch_all.hpp>

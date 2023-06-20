@@ -27,7 +27,7 @@
  *
  * @section DESCRIPTION
  *
- * Header-only library of some basic linear algebra data structures and
+ * Header-only library of some useful utilities.
  *
  */
 
@@ -107,7 +107,7 @@ bool is_local_array(const std::string& array_uri) {
 
 /**
  * @brief A simple counter iterator that can be used as an output iterator
- * @todo Make it a proper iterator
+ * @todo Make it a proper iterator per the standard (use an iterator facade)
  *
  * @tparam T The type of the counter
  */

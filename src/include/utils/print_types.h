@@ -39,6 +39,14 @@
  * @authors
  *   Luke D'Alessandro
  *
+ * Very handy utility for debugging template metaprogramming.
+ * Usage: print_types(a, b, c, d);
+ * Will generate a compiler error that looks like:
+ * error: no matching function for call to ‘print_types(int, int, int, int)’
+ * from which one can easily see the types of the arguments.
+ *
+ * This function will one day save your sanity.
+ *
  */
 
 #ifndef PRINT_TYPES_HPP
