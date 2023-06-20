@@ -93,12 +93,12 @@ enable_testing()
 # Build types and default flags
 # -----------------------------------------------------------------------------
 
-message("Architecture is ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+message("Architecture is ${CMAKE_SYSTEM_PROCESSOR}")
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(FCONCEPTS_DIAGNOSTICS_DEPTH "-fconcepts-diagnostics-depth=3")
 endif()
 
-if (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL arm64)
+if (CMAKE_OSX_ARCHITECTURES STREQUAL arm64 OR CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
     set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-elide-constructors ${FCONCEPTS_DIAGNOSTICS_DEPTH} " CACHE STRING "" FORCE)
     set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG " CACHE STRING "" FORCE)
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-Ofast -g -DNDEBUG" CACHE STRING "" FORCE)
