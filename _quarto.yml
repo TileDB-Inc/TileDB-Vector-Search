@@ -69,6 +69,7 @@ website:
       contents:
         - href: "documentation/index.md"
         - href: "documentation/Building.md"
+        - href: "documentation/Benchmarks.md"
 
         # - section: "Examples"
         #   contents:
