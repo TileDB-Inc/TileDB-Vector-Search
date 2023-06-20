@@ -41,10 +41,13 @@
 #include "flat_query.h"
 #include "linalg.h"
 
-extern double global_time_of_interest;
 
 namespace detail::ivf {
-template <typename T = shuffled_db_type>
+
+/**
+ * Overload for already opened arrays.  Since the array is already opened, we don't need
+ * to specify its type with a template parameter.
+ */
 auto qv_query_heap_infinite_ram(
     auto&& shuffled_db,
     auto&& centroids,
@@ -56,7 +59,12 @@ auto qv_query_heap_infinite_ram(
     bool nth,
     size_t nthreads);
 
-template <typename T = shuffled_db_type>
+/**
+ * Overload for case where we need to open the vector and id arrays.  We can't
+ * do any template argument deduction here because we need to know the type of
+ * the vector array.
+ */
+template <typename T>
 auto qv_query_heap_infinite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -69,13 +77,15 @@ auto qv_query_heap_infinite_ram(
     bool nth,
     size_t nthreads);
 
+
 /**
  * @brief Query a (small) set of query vectors against a vector database.
  * This version loads the entire partition array into memory and then
  * queries each vector in the query set against the appropriate partitions.
+ *
+ * For now that type of the array needs to be passed as a template argument.
  */
-
-template <typename T>
+template <typename T, class shuffled_ids_type>
 auto qv_query_heap_infinite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -95,7 +105,7 @@ auto qv_query_heap_infinite_ram(
   auto shuffled_db = tdbColMajorMatrix<T>(ctx, part_uri);
   auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
 
-  return qv_query_heap_infinite_ram<T>(
+  return qv_query_heap_infinite_ram(
       shuffled_db,
       centroids,
       q,
@@ -107,7 +117,7 @@ auto qv_query_heap_infinite_ram(
       nthreads);
 }
 
-template <typename T = shuffled_db_type>
+
 auto qv_query_heap_infinite_ram(
     const std::string& part_uri,
     auto&& centroids,
@@ -119,7 +129,7 @@ auto qv_query_heap_infinite_ram(
     bool nth,
     size_t nthreads) {
   tiledb::Context ctx;
-  return qv_query_heap_infinite_ram<T>(
+  return qv_query_heap_infinite_ram(
       ctx,
       part_uri,
       centroids,
@@ -132,7 +142,6 @@ auto qv_query_heap_infinite_ram(
       nthreads);
 }
 
-template <typename T>
 auto qv_query_heap_infinite_ram(
     auto&& shuffled_db,
     auto&& centroids,
@@ -209,7 +218,7 @@ auto qv_query_heap_infinite_ram(
   return top_k;
 }
 
-template <typename T = shuffled_db_type>
+template <typename T, class shuffled_ids_type>
 auto qv_query_heap_finite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -223,6 +232,9 @@ auto qv_query_heap_finite_ram(
     bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__};
+
+  using parts_type = typename std::remove_reference_t<decltype(centroids)>::value_type;
+  using indices_type = typename std::remove_reference_t<decltype(indices)>::value_type;
 
   size_t num_queries = size(q);
 
@@ -275,7 +287,7 @@ auto qv_query_heap_finite_ram(
                          indices[active_partitions[i]];
   }
 
-  auto shuffled_db = tdbColMajorPartitionedMatrix<T>(
+  auto shuffled_db = tdbColMajorPartitionedMatrix<T, shuffled_ids_type, indices_type, parts_type>(
       ctx,
       part_uri,
       std::move(indices),
