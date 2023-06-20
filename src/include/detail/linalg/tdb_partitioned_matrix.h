@@ -27,6 +27,15 @@
  *
  * @section DESCRIPTION
  *
+ * Class the provides a matrix view to a partitioned TileDB array (as partitioned by
+ * IVF indexing).
+ *
+ * The class requires the URI of a partitioned TileDB array and partioned set of
+ * vector identifiers.  The class will provide a view of the requested partitions
+ * and the corresponding vector identifiers.
+ *
+ * Also provides support for out-of-core operation.
+ *
  */
 
 #ifndef TILEDB_PARTITIONED_MATRIX_H
@@ -229,7 +238,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
     Base::operator=(Base{std::move(data_), dimension, max_cols_});
 
-    // @todo Take this out
+    // @todo Take this out and require user to make first call to advance()
     advance();
   }
 

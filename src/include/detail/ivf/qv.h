@@ -142,7 +142,7 @@ auto qv_query_heap_infinite_ram(
     size_t k_nn,
     bool nth,
     size_t nthreads) {
-  life_timer _{"Total time " + tdb_func__};
+  scoped_timer _{"Total time " + tdb_func__};
 
   assert(shuffled_db.num_cols() == shuffled_ids.size());
   if (size(indices) == centroids.num_cols()) {
@@ -447,7 +447,7 @@ auto kmeans_query_small_q_minparts(
   auto min_scores = std::vector<fixed_min_heap<element>>(
       size(q), fixed_min_heap<element>(k_nn));
 
-  life_timer __{std::string{"In memory portion of "} + tdb_func__};
+  scoped_timer __{std::string{"In memory portion of "} + tdb_func__};
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
   stdx::range_for_each(
@@ -467,7 +467,7 @@ auto kmeans_query_small_q_minparts(
   ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
 
 
-  life_timer ___{std::string{"Top k portion of "} + tdb_func__};
+  scoped_timer ___{std::string{"Top k portion of "} + tdb_func__};
 
   // @todo this pattern repeats alot -- put into a function
   for (int j = 0; j < size(q); ++j) {

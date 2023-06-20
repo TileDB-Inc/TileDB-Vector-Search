@@ -27,7 +27,10 @@
  *
  * @section DESCRIPTION
  *
- * Include the right headers for BLAS support.
+ * Class that provides a matrix interface to a TileDB array.
+ *
+ * @todo Include the right headers for BLAS support.
+ * @todo Refactor ala tdb_partitioned_matrix.h
  *
  */
 
@@ -321,7 +324,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     }
 
     {
-      life_timer _{"read tdb matrix " + uri};
+      scoped_timer _{"read tdb matrix " + uri};
 
       auto cell_order = schema_.cell_order();
       auto tile_order = schema_.tile_order();
@@ -413,7 +416,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     auto part_ids = std::vector<uint64_t>(num_cols);
 
     {
-      life_timer _{"read partitioned vector" + id_uri};
+      scoped_timer _{"read partitioned vector" + id_uri};
       /**
        * Now deal with ids
        */

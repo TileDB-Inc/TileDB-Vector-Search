@@ -27,6 +27,7 @@
  *
  * @section DESCRIPTION
  *
+ * WIP.
  */
 
 #include <catch2/catch_all.hpp>
@@ -39,12 +40,4 @@
 
 TEST_CASE("stats: test test", "[stats]") {
   REQUIRE(true);
-}
-
-TEST_CASE("stats: test", "[stats]") {
-  {
-    scoped_timer _{"test1"};
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-  }
-  std::cout << get_timings() << std::endl;
 }
