@@ -77,7 +77,7 @@ static void declareColMajorMatrix(py::module& mod, std::string const& suffix) {
 template <typename T>
 static void declare_pyarray_to_matrix(py::module& m, const std::string& suffix) {
   m.def(("pyarray_copyto_matrix" + suffix).c_str(),
-      [](py::array_t<T> arr) -> ColMajorMatrix<T> {
+      [](py::array_t<T, py::array::f_style> arr) -> ColMajorMatrix<T> {
         py::buffer_info info = arr.request();
         if (info.ndim != 2)
           throw std::runtime_error("Number of dimensions must be two");
@@ -85,6 +85,7 @@ static void declare_pyarray_to_matrix(py::module& m, const std::string& suffix) 
           throw std::runtime_error("Mismatched buffer format!");
 
         auto data = std::unique_ptr<T[]>{new T[info.shape[0] * info.shape[1]]};
+        std::memcpy(data.get(), info.ptr, info.shape[0] * info.shape[1] * sizeof(T));
         auto r = ColMajorMatrix<T>(std::move(data), info.shape[0], info.shape[1]);
         return r;
         });
