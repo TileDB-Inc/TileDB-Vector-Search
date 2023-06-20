@@ -170,7 +170,10 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declareColMajorMatrix<int64_t>(m, "_i64");
   declareColMajorMatrix<uint32_t>(m, "_u32");
   declareColMajorMatrix<uint64_t>(m, "_u64");
-  declareColMajorMatrix<unsigned long>(m, "_ul");
+  if constexpr (!std::is_same<uint64_t, unsigned long>::value) {
+    // Required for a return type, but these types are equivalent on linux :/
+    declareColMajorMatrix<unsigned long>(m, "_ul");
+  }
 
   declareColMajorMatrixSubclass<tdbColMajorMatrix<uint8_t>>(
       m, "tdbColMajorMatrix", "_u8");
