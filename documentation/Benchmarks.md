@@ -1,8 +1,8 @@
-# Running big-ann-benchmarks
+# Benchmarks
 
-We have implemented a [big-ann-benchmarks](https://big-ann-benchmarks.com) runner for TileDB-Vector-Search,
+We have implemented a [big-ann-benchmarks](https://big-ann-benchmarks.com) interface for TileDB-Vector-Search,
 which is available in the `tiledb` branch of our fork:
-- [https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb](https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb)
+- [https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb](https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb). This interface implements two new algorithms: `tiledb-flat` and `tiledb-ivf-flat`, which are usable within the framework's runner.
 
 ## Building
 
