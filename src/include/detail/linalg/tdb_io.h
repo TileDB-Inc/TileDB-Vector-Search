@@ -34,8 +34,8 @@
 
 #include <tiledb/tiledb>
 #include "detail/linalg/matrix.h"
-#include "utils/timer.h"
 #include "utils/logging.h"
+#include "utils/timer.h"
 
 /**
  * Write the contents of a Matrix to a TileDB array.

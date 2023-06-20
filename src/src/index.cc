@@ -40,7 +40,6 @@
 
 #include <docopt.h>
 
-#include "array_types.h"
 #include "flat_query.h"
 #include "ivf_query.h"
 #include "linalg.h"
@@ -50,6 +49,21 @@ bool global_verbose = false;
 bool global_debug = false;
 
 using namespace detail::flat;
+
+/**
+ * Specify some types for the demo.  For now the types associated with the
+ * vector db to be queried are hard-coded.
+ */
+#if 1
+using db_type = uint8_t;
+#else
+using db_type = float;
+#endif
+
+using groundtruth_type = int32_t;
+using centroids_type = float;
+using shuffled_ids_type = uint64_t;
+using indices_type = uint64_t;
 
 static constexpr const char USAGE[] =
     R"(index: demo CLI program to create kmeans ivf search index.
@@ -140,8 +154,7 @@ int main(int argc, char* argv[]) {
     auto misx = *mis;
 
     // Array for storing the shuffled data
-    auto shuffled_db =
-        ColMajorMatrix<shuffled_db_type>{db.num_rows(), db.num_cols()};
+    auto shuffled_db = ColMajorMatrix<db_type>{db.num_rows(), db.num_cols()};
     std::vector shuffled_ids = std::vector<shuffled_ids_type>(db.num_cols());
     std::iota(begin(shuffled_ids), end(shuffled_ids), 0);
 

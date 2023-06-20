@@ -69,7 +69,6 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
  private:
-
   log_timer constructor_timer{"tdbMatrix constructor"};
 
   std::reference_wrapper<const tiledb::Context> ctx_;
@@ -101,10 +100,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   tdbMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
-      size_t num_elts) noexcept requires(std::
-                                             is_same_v<
-                                                 LayoutPolicy,
-                                                 stdx::layout_right>)
+      size_t num_elts) noexcept
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : tdbMatrix(ctx, uri, num_elts, 0) {
   }
 
@@ -120,10 +117,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   tdbMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
-      size_t num_elts) noexcept requires(std::
-                                             is_same_v<
-                                                 LayoutPolicy,
-                                                 stdx::layout_left>)
+      size_t num_elts) noexcept
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbMatrix(ctx, uri, 0, num_elts) {
   }
 
@@ -206,7 +201,6 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       : ctx_{ctx}
       , array_{ctx, uri, TILEDB_READ}
       , schema_{array_.schema()} {
-
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + uri};
 
@@ -273,10 +267,11 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     }
 
     // Create a subarray that reads the array up to the specified subset.
-    std::vector<int32_t> subarray_vals = {(int32_t)row_begin,
-                                          (int32_t)row_end - 1,
-                                          (int32_t)col_begin,
-                                          (int32_t)col_end - 1};
+    std::vector<int32_t> subarray_vals = {
+        (int32_t)row_begin,
+        (int32_t)row_end - 1,
+        (int32_t)col_begin,
+        (int32_t)col_end - 1};
     tiledb::Subarray subarray(ctx_, array_);
     subarray.set_subarray(subarray_vals);
 
@@ -289,7 +284,6 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
     query.submit();
     _memory_data.insert_entry(tdb_func__, num_rows * num_cols * sizeof(T));
-
 
     // assert(tiledb::Query::Status::COMPLETE == query.query_status());
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
@@ -385,10 +379,11 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         size_t num_elements = len * dimension;
 
         // Create a subarray that reads the array up to the specified subset.
-        std::vector<int32_t> subarray_vals = {(int32_t)0,
-                                              (int32_t)dimension - 1,
-                                              (int32_t)start,
-                                              (int32_t)stop - 1};
+        std::vector<int32_t> subarray_vals = {
+            (int32_t)0,
+            (int32_t)dimension - 1,
+            (int32_t)start,
+            (int32_t)stop - 1};
         tiledb::Subarray subarray(ctx_, array_);
         subarray.set_subarray(subarray_vals);
 
@@ -402,7 +397,6 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
             .set_data_buffer(attr_name, ptr, num_elements);
         query.submit();
         _memory_data.insert_entry(tdb_func__, num_elements * sizeof(T));
-
 
         // assert(tiledb::Query::Status::COMPLETE == query.query_status());
         if (tiledb::Query::Status::COMPLETE != query.query_status()) {
@@ -446,8 +440,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         size_t num_elements = len;
 
         // Create a subarray that reads the array up to the specified subset.
-        std::vector<int32_t> subarray_vals = {(int32_t)start,
-                                              (int32_t)stop - 1};
+        std::vector<int32_t> subarray_vals = {
+            (int32_t)start, (int32_t)stop - 1};
         tiledb::Subarray subarray(ctx_, ids_array_);
         subarray.set_subarray(subarray_vals);
 
@@ -457,7 +451,6 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
             attr_name, ptr, num_elements);
         query.submit();
         _memory_data.insert_entry(tdb_func__, num_elements * sizeof(T));
-
 
         if (tiledb::Query::Status::COMPLETE != query.query_status()) {
           throw std::runtime_error("Query status is not complete -- fix me");
@@ -538,10 +531,11 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     }
 
     // Create a subarray that reads the array with the specified view
-    std::vector<int32_t> subarray_vals = {(int32_t)std::get<0>(row_view_),
-                                          (int32_t)std::get<1>(row_view_) - 1,
-                                          (int32_t)std::get<0>(col_view_),
-                                          (int32_t)std::get<1>(col_view_) - 1};
+    std::vector<int32_t> subarray_vals = {
+        (int32_t)std::get<0>(row_view_),
+        (int32_t)std::get<1>(row_view_) - 1,
+        (int32_t)std::get<0>(col_view_),
+        (int32_t)std::get<1>(col_view_) - 1};
     tiledb::Subarray subarray(ctx_, array_);
     subarray.set_subarray(subarray_vals);
 

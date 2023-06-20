@@ -41,12 +41,11 @@
 #include "flat_query.h"
 #include "linalg.h"
 
-
 namespace detail::ivf {
 
 /**
- * Overload for already opened arrays.  Since the array is already opened, we don't need
- * to specify its type with a template parameter.
+ * Overload for already opened arrays.  Since the array is already opened, we
+ * don't need to specify its type with a template parameter.
  */
 auto qv_query_heap_infinite_ram(
     auto&& shuffled_db,
@@ -77,7 +76,6 @@ auto qv_query_heap_infinite_ram(
     bool nth,
     size_t nthreads);
 
-
 /**
  * @brief Query a (small) set of query vectors against a vector database.
  * This version loads the entire partition array into memory and then
@@ -99,7 +97,6 @@ auto qv_query_heap_infinite_ram(
     size_t nthreads) {
   scoped_timer _{tdb_func__};
 
-
   // Read the shuffled database and ids
   // @todo To this more systematically
   auto shuffled_db = tdbColMajorMatrix<T>(ctx, part_uri);
@@ -116,7 +113,6 @@ auto qv_query_heap_infinite_ram(
       nth,
       nthreads);
 }
-
 
 auto qv_query_heap_infinite_ram(
     const std::string& part_uri,
@@ -233,8 +229,10 @@ auto qv_query_heap_finite_ram(
     size_t nthreads) {
   scoped_timer _{tdb_func__};
 
-  using parts_type = typename std::remove_reference_t<decltype(centroids)>::value_type;
-  using indices_type = typename std::remove_reference_t<decltype(indices)>::value_type;
+  using parts_type =
+      typename std::remove_reference_t<decltype(centroids)>::value_type;
+  using indices_type =
+      typename std::remove_reference_t<decltype(indices)>::value_type;
 
   size_t num_queries = size(q);
 
@@ -287,7 +285,11 @@ auto qv_query_heap_finite_ram(
                          indices[active_partitions[i]];
   }
 
-  auto shuffled_db = tdbColMajorPartitionedMatrix<T, shuffled_ids_type, indices_type, parts_type>(
+  auto shuffled_db = tdbColMajorPartitionedMatrix<
+      T,
+      shuffled_ids_type,
+      indices_type,
+      parts_type>(
       ctx,
       part_uri,
       std::move(indices),
@@ -300,10 +302,13 @@ auto qv_query_heap_finite_ram(
   for (size_t i = 0; i < size(new_indices) - 1; ++i) {
     auto partition_size = new_indices[i + 1] - new_indices[i];
     max_partition_size = std::max<size_t>(max_partition_size, partition_size);
-    _memory_data.insert_entry(tdb_func__ + " (predicted)", partition_size * sizeof(T) * shuffled_db.num_rows());
+    _memory_data.insert_entry(
+        tdb_func__ + " (predicted)",
+        partition_size * sizeof(T) * shuffled_db.num_rows());
   }
-    _memory_data.insert_entry(tdb_func__ + " (upper bound)", nprobe * num_queries * sizeof(T) * max_partition_size);
-
+  _memory_data.insert_entry(
+      tdb_func__ + " (upper bound)",
+      nprobe * num_queries * sizeof(T) * max_partition_size);
 
   assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
 
