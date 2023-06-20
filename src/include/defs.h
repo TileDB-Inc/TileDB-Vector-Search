@@ -238,7 +238,7 @@ auto get_top_k(const S& scores, int k, bool nth, int nthreads) {
 
   auto num_queries = scores.num_cols();
 
-  auto top_k = ColMajorMatrix<size_t>(k, num_queries);
+  auto top_k = ColMajorMatrix<uint64_t>(k, num_queries);
 
   int q_block_size = (num_queries + nthreads - 1) / nthreads;
   std::vector<std::future<void>> futs;

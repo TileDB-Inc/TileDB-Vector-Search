@@ -7,6 +7,10 @@ def get_cmake_overrides():
 
     conf = list()
 
+    tiledb_dir = os.environ.get("TILEDB_DIR", None)
+    if tiledb_dir:
+        cmake_args.append(f"-DTileDB_DIR={tiledb_dir}")
+
     key = "CMAKE_OSX_DEPLOYMENT_TARGET"
     val = os.environ.get(key, default=None)
     if val:

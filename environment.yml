@@ -1,0 +1,12 @@
+name: tiledb-vs-env
+
+dependencies:
+  - python=3.10
+  - numpy
+  - tiledb
+  - tiledb-py
+  - pybind11
+  - cmake
+  - openblas
+  - ninja
+  - pytest

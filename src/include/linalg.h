@@ -57,6 +57,7 @@
 
 #include "utils/timer.h"
 
+
 namespace stdx {
 using namespace Kokkos;
 using namespace Kokkos::Experimental;

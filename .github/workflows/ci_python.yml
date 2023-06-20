@@ -7,15 +7,14 @@ on:
     branches: [main]
 
 jobs:
-  Run-Tests:
+  run-tests:
     strategy:
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.9"]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Install OpenBLAS
-        run: sudo apt install libopenblas-dev
+      - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -25,10 +24,12 @@ jobs:
           which python
           which pip
           python --version
-      - name: Install pybind11
-        run: pip install "pybind11[global]"
-      - uses: actions/checkout@v3
-      - name: Configure CMake
-        run: cmake -S ./src -B ./src/build -DCMAKE_BUILD_TYPE=Debug -DTILEDB_VS_PYTHON=ON
-      - name: Build
-        run: cmake --build ./src/build
+      - name: Build and test python
+        run: |
+          cd apis/python
+          pip install .[test]
+          pytest -k "not ingest" # TODO: requires token
+          #pip uninstall -y tiledb.vector_search
+          #pip install -e .
+          #pytest -k "not ingest" # TODO: requires token
+        shell: bash -el {0}
