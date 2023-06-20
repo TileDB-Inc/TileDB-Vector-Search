@@ -7,7 +7,7 @@ project:
     - "documentation/index.md"
     - "documentation"
     - "documentation/reference"
-    - "examples/README.md"
+    # - "examples/README.md"
     - "examples"
 
 format:
@@ -71,9 +71,9 @@ website:
         - href: "documentation/Building.md"
         - href: "documentation/Benchmarks.md"
 
-        # - section: "Examples"
-        #   contents:
-        #     # - href: "examples/overview.md"
+        - section: "Examples"
+          contents:
+            - href: "examples/flat_index.ipynb"
 
         # - section: "Ingestion"
         #   contents:
