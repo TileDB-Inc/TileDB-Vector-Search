@@ -43,8 +43,6 @@
 #ifndef TDB_LINALG_H
 #define TDB_LINALG_H
 
-
-
 #include "detail/linalg/choose_blas.h"
 #include "detail/linalg/linalg_defs.h"
 #include "detail/linalg/matrix.h"

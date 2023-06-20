@@ -52,7 +52,7 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index]") {
   ColMajorMatrix<float> training_data(4, 8);
   std::copy(begin(data), end(data), training_data.data());
 
-  auto index = kmeans_index<float>(4, 3, 10, 1e-4, 1);
+  auto index = kmeans_index<float, uint32, uint32>(4, 3, 10, 1e-4, 1);
 
   SECTION("random") {
     index.kmeans_random_init(training_data);
@@ -116,7 +116,7 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index]") {
   ColMajorMatrix<float> training_data(4, 8);
   std::copy(begin(data), end(data), training_data.data());
 
-  auto index = kmeans_index<float>(4, 3, 10, 1e-4, 1);
+  auto index = kmeans_index<float, size_t, size_t>(4, 3, 10, 1e-4, 1);
 
   SECTION("random") {
     index.kmeans_random_init(training_data);
@@ -144,7 +144,8 @@ TEST_CASE("ivf_index: not a unit test per se", "[ivf_index]") {
 
   CHECK(A.num_rows() == 128);
   CHECK(A.num_cols() == 10'000);
-  auto index = kmeans_index<float>(A.num_rows(), 1000, 10, 1e-4, 8);
+  auto index =
+      kmeans_index<float, uint32_t, size_t>(A.num_rows(), 1000, 10, 1e-4, 8);
 
   SECTION("kmeans++") {
     index.kmeans_pp(A);

@@ -272,9 +272,7 @@ std::string matrix_info(const Matrix& A, const std::string& msg = "") {
   return str;
 }
 
-
-
- /**********************************************************************
+/**********************************************************************
  *
  * Some debugging utilities.
  *
