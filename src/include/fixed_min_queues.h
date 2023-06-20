@@ -27,7 +27,11 @@
  *
  * @section DESCRIPTION
  *
+ * Contains two implementations of a fixed-size min-heap (to experiment with potential performance differences).
+ * Also contains an implementation of a fixed_size min-heap for pairs.
  *
+ * This type of heap is used to maintain the top k small scores as we compute
+ * scores during similarity search.
  */
 
 #ifndef TILEDB_FIXED_MIN_QUEUES_H
@@ -102,6 +106,11 @@ class fixed_min_set_heap_2 : public std::vector<T> {
   }
 };
 
+/**
+ * Heap to store a pair of values, ordered by the first element.
+ * @tparam T Type of first element
+ * @tparam U Type of second element
+ */
 template <class T, class U>
 class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   using Base = std::vector<std::tuple<T, U>>;
@@ -140,10 +149,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
 template <class T>
 using fixed_min_heap = fixed_min_set_heap_1<T>;
 
-template <class T>
-using fixed_min_set = fixed_min_set_heap_1<T>;
-
-#ifdef ALLHEAPS  // These are really slow
+#ifdef ALLHEAPS  // Kept here for historical comparison reasons.  They are really slow.
 template <class T, class Compare = std::less<T>>
 class fixed_min_set_heap_3 : public std::vector<T> {
   using Base = std::vector<T>;

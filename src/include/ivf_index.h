@@ -233,37 +233,7 @@ class kmeans_index {
       std::fill(begin(degrees), end(degrees), 0);
 
       stdx::execution::indexed_parallel_policy par{nthreads_};
-#if 0
-      std::vector<ColMajorMatrix<T>> temp_centroids(
-          nthreads_, ColMajorMatrix<T>(dimension_, nlist_));
 
-      stdx::range_for_each(
-          std::move(par),
-          temp_centroids,
-          [this, &parts, &training_set, &temp_centroids, &degrees](
-              auto&& temp_centroid, size_t n, size_t i) {
-            auto part = parts[i];
-            auto centroid = temp_centroid;
-            auto vector = training_set[i];
-            for (size_t j = 0; j < dimension_; ++j) {
-              centroid[j] += vector[j];
-            }
-#ifdef __cpp_lib_atomic_ref
-            std::atomic_ref<size_t> elem{degree[part]};
-            ++elem;
-#else
-            ++degrees[part];
-#endif
-          });
-      for (size_t n = 0; n < nthreads_; ++n) {
-        for (size_t j = 0; j < nlist_; ++j) {
-          for (size_t k = 0; k < dimension_; ++k) {
-            centroids_(k, j) += temp_centroids[n](k, j);
-          }
-        }
-      }
-
-#else
       // @todo parallelize -- use a temp centroid matrix for each thread
       for (size_t i = 0; i < training_set.num_cols(); ++i) {
         auto part = parts[i];
@@ -274,7 +244,6 @@ class kmeans_index {
         }
         ++degrees[part];
       }
-#endif
 
       auto mm = std::minmax_element(begin(degrees), end(degrees));
       double sum = std::accumulate(begin(degrees), end(degrees), 0);
@@ -288,17 +257,7 @@ class kmeans_index {
 
       // @todo parallelize
 
-#if 0
-      stdx::range_for_each(
-          std::move(par), degrees, [this, &degrees](auto&& degree, size_t n, size_t j) {
-            if (degree != 0) {
-              for (size_t j = 0; j < nlist_; ++j) {
-                centroids_(n, j) /= degree;
-              }
-            }
-          });
-    }
-#else
+
       for (size_t j = 0; j < nlist_; ++j) {
         auto centroid = centroids_[j];
         for (size_t k = 0; k < dimension_; ++k) {
@@ -308,7 +267,8 @@ class kmeans_index {
         }
       }
     }
-#endif
+
+    // Debugging
 #ifdef _SAVE_PARTITIONS
       {
         char tempFileName[L_tmpnam];

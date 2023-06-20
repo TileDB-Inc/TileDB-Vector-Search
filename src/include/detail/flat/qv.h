@@ -126,7 +126,7 @@ auto qv_query_heap(const DB& db, const Q& q, size_t k, unsigned nthreads) {
       futs.emplace_back(std::async(
           std::launch::async, [k, start, stop, size_db, &q, &db, &top_k]() {
             for (size_t j = start; j < stop; ++j) {
-              fixed_min_set<element> min_scores(k);
+              fixed_min_heap<element> min_scores(k);
               size_t idx = 0;
 
               for (int i = 0; i < size_db; ++i) {

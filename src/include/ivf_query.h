@@ -27,7 +27,7 @@
  *
  * @section DESCRIPTION
  *
- * Contains some basic query functions for kmeans indexing.
+ * Master header for ivf_query.
  *
  */
 

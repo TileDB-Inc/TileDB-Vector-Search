@@ -201,7 +201,7 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
   }
 }
 
-// @todo implement with fixed_min_set
+// @todo implement with fixed_min_heap
 template <class V, class L, class I>
 auto get_top_k_nth(V const& scores, L&& top_k, I& index, int k) {
   std::iota(begin(index), end(index), 0);

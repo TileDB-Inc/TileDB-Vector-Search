@@ -27,7 +27,7 @@
  *
  * @section DESCRIPTION
  *
- *
+ * Gemm-based scoring.
  *
  */
 

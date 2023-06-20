@@ -120,8 +120,8 @@ TEST_CASE("defs: std::set with pairs", "[defs]") {
   // CHECK(*rbegin(a) == element{9, 1});
 }
 
-TEST_CASE("defs: fixed_min_set", "[defs]") {
-  fixed_min_set<int> a(5);
+TEST_CASE("defs: fixed_min_heap", "[defs]") {
+  fixed_min_heap<int> a(5);
 
   SECTION("insert in ascending order") {
     for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
@@ -140,9 +140,9 @@ TEST_CASE("defs: fixed_min_set", "[defs]") {
   // CHECK(*rbegin(a) == 4);
 }
 
-TEST_CASE("defs: fixed_min_set with pairs", "[defs]") {
+TEST_CASE("defs: fixed_min_heap with pairs", "[defs]") {
   using element = std::pair<float, int>;
-  fixed_min_set<element> a(5);
+  fixed_min_heap<element> a(5);
 
   SECTION("insert in ascending order") {
     for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
@@ -172,9 +172,9 @@ TEST_CASE("defs: fixed_min_set with pairs", "[defs]") {
   CHECK(a.size() == 5);
 }
 
-TEST_CASE("defs: fixed_min_set with a large vector", "[defs]") {
+TEST_CASE("defs: fixed_min_heap with a large vector", "[defs]") {
   using element = std::pair<float, int>;
-  fixed_min_set<element> a(7);
+  fixed_min_heap<element> a(7);
 
   std::vector<element> v(5500);
   for (auto&& i : v) {
