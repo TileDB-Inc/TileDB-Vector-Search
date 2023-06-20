@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>ingestion</title>
+<title>benchmarks</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -23,23 +23,25 @@ ul.task-list li input[type="checkbox"] {
 </style>
 
 
-<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
-<script src="../../site_libs/clipboard/clipboard.min.js"></script>
-<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="../../site_libs/quarto-search/fuse.min.js"></script>
-<script src="../../site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="../../">
-<link href="../../documentation/assets/tiledb.ico" rel="icon">
-<script src="../../site_libs/quarto-html/quarto.js"></script>
-<script src="../../site_libs/quarto-html/popper.min.js"></script>
-<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="../../site_libs/quarto-html/anchor.min.js"></script>
-<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../documentation/reference/index.html" rel="next">
+<link href="../documentation/Building.html" rel="prev">
+<link href="../documentation/assets/tiledb.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -62,7 +64,7 @@ ul.task-list li input[type="checkbox"] {
 }</script>
 
 
-<link rel="stylesheet" href="../../quarto-materials/tiledb.css">
+<link rel="stylesheet" href="../quarto-materials/tiledb.css">
 </head>
 
 <body class="nav-sidebar floating nav-fixed">
@@ -72,8 +74,8 @@ ul.task-list li input[type="checkbox"] {
     <nav class="navbar navbar-expand-lg navbar-dark ">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container">
-    <a href="../../index.html" class="navbar-brand navbar-brand-logo">
-    <img src="../../quarto-materials/tiledb-logo.png" alt="" class="navbar-logo">
+    <a href="../index.html" class="navbar-brand navbar-brand-logo">
+    <img src="../quarto-materials/tiledb-logo.png" alt="" class="navbar-logo">
     </a>
   </div>
             <div id="quarto-search" class="" title="Search"></div>
@@ -109,7 +111,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"></ol></nav>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../documentation/Benchmarks.html">Benchmarks</a></li></ol></nav>
       <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
       </a>
     </div>
@@ -123,19 +125,19 @@ ul.task-list li input[type="checkbox"] {
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../documentation/index.html" class="sidebar-item-text sidebar-link">
+  <a href="../documentation/index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">TileDB Vector Search</span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../documentation/Building.html" class="sidebar-item-text sidebar-link">
+  <a href="../documentation/Building.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Building From Source</span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../documentation/Benchmarks.html" class="sidebar-item-text sidebar-link">
+  <a href="../documentation/Benchmarks.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">Benchmarks</span></a>
   </div>
 </li>
@@ -150,7 +152,7 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../documentation/reference/index.html" class="sidebar-item-text sidebar-link">
+  <a href="../documentation/reference/index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Python</span></a>
   </div>
 </li>
@@ -166,152 +168,50 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#tiledb.vector_search.ingestion" id="toc-tiledb.vector_search.ingestion" class="nav-link active" data-scroll-target="#tiledb.vector_search.ingestion">ingestion</a>
+  <li><a href="#benchmarks" id="toc-benchmarks" class="nav-link active" data-scroll-target="#benchmarks">Benchmarks</a>
   <ul class="collapse">
-  <li><a href="#functions" id="toc-functions" class="nav-link" data-scroll-target="#functions">Functions</a>
-  <ul class="collapse">
-  <li><a href="#tiledb.vector_search.ingestion.ingest" id="toc-tiledb.vector_search.ingestion.ingest" class="nav-link" data-scroll-target="#tiledb.vector_search.ingestion.ingest">ingest</a></li>
-  </ul></li>
+  <li><a href="#building" id="toc-building" class="nav-link" data-scroll-target="#building">Building</a></li>
+  <li><a href="#running-benchmarks" id="toc-running-benchmarks" class="nav-link" data-scroll-target="#running-benchmarks">Running benchmarks</a></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/edit/main/documentation/reference/ingestion.qmd" class="toc-action">Edit this page</a></p><p><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/issues/new" class="toc-action">Report an issue</a></p></div></div></nav>
+<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/edit/main/documentation/Benchmarks.md" class="toc-action">Edit this page</a></p><p><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/issues/new" class="toc-action">Report an issue</a></p></div></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
 
 
-<section id="tiledb.vector_search.ingestion" class="level1">
-<h1>ingestion</h1>
-<p><code>vector_search.ingestion</code></p>
-<section id="functions" class="level2">
-<h2 class="anchored" data-anchor-id="functions">Functions</h2>
-<table class="table">
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><a href="#tiledb.vector_search.ingestion.ingest">ingest</a></td>
-<td>Ingest vectors into TileDB.</td>
-</tr>
-</tbody>
-</table>
-<section id="tiledb.vector_search.ingestion.ingest" class="level3">
-<h3 class="anchored" data-anchor-id="tiledb.vector_search.ingestion.ingest">ingest</h3>
-<p><code>vector_search.ingestion.ingest(index_type, array_uri, source_uri, source_type, *, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, verbose=False, trace_id=None, mode=Mode.LOCAL)</code></p>
-<p>Ingest vectors into TileDB.</p>
-<section id="parameters" class="level4">
-<h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
-<table class="table">
-<colgroup>
-<col style="width: 14%">
-<col style="width: 14%">
-<col style="width: 63%">
-<col style="width: 8%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>index_type</code></td>
-<td>str</td>
-<td>Type of vector index (FLAT, IVF_FLAT)</td>
-<td>required</td>
-</tr>
-<tr class="even">
-<td><code>array_uri</code></td>
-<td>str</td>
-<td>Vector array URI</td>
-<td>required</td>
-</tr>
-<tr class="odd">
-<td><code>source_uri</code></td>
-<td>str</td>
-<td>Data source URI</td>
-<td>required</td>
-</tr>
-<tr class="even">
-<td><code>source_type</code></td>
-<td>str</td>
-<td>Type of the source data</td>
-<td>required</td>
-</tr>
-<tr class="odd">
-<td><code>config</code></td>
-<td></td>
-<td>config dictionary, defaults to None</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td><code>namespace</code></td>
-<td>typing.Optional[str]</td>
-<td>TileDB-Cloud namespace, defaults to None</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td><code>size</code></td>
-<td>int</td>
-<td>Number of input vectors, if not provided use the full size of the input dataset</td>
-<td><code>-1</code></td>
-</tr>
-<tr class="even">
-<td><code>partitions</code></td>
-<td>int</td>
-<td>Number of partitions to load the data with, if not provided, is auto-configured based on the dataset size</td>
-<td><code>-1</code></td>
-</tr>
-<tr class="odd">
-<td><code>copy_centroids_uri</code></td>
-<td>str</td>
-<td>TileDB array URI to copy centroids from, if not provided, centroids are build running kmeans</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td><code>training_sample_size</code></td>
-<td>int</td>
-<td>vector sample size to train centroids with, if not provided, is auto-configured based on the dataset size</td>
-<td><code>-1</code></td>
-</tr>
-<tr class="odd">
-<td><code>workers</code></td>
-<td>int</td>
-<td>number of workers for vector ingestion, if not provided, is auto-configured based on the dataset size</td>
-<td><code>-1</code></td>
-</tr>
-<tr class="even">
-<td><code>verbose</code></td>
-<td>bool</td>
-<td>verbose logging, defaults to False</td>
-<td><code>False</code></td>
-</tr>
-<tr class="odd">
-<td><code>trace_id</code></td>
-<td>typing.Optional[str]</td>
-<td>trace ID for logging, defaults to None</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td><code>mode</code></td>
-<td>Mode</td>
-<td>execution mode, defaults to LOCAL use BATCH for distributed execution</td>
-<td><code>Mode.LOCAL</code></td>
-</tr>
-</tbody>
-</table>
+<section id="benchmarks" class="level1">
+<h1>Benchmarks</h1>
+<p>We have implemented a <a href="https://big-ann-benchmarks.com">big-ann-benchmarks</a> interface for TileDB-Vector-Search, which is available in the <code>tiledb</code> branch of our fork: - <a href="https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb">https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb</a>. This interface implements two new algorithms: <code>tiledb-flat</code> and <code>tiledb-ivf-flat</code>, which are usable within the framework’s runner.</p>
+<section id="building" class="level2">
+<h2 class="anchored" data-anchor-id="building">Building</h2>
+<ol type="1">
+<li>Build the <code>Dockerfile</code> at the root of this repository:</li>
+</ol>
+<pre><code>cd tiledb-vector-search
+docker build -f Dockerfile . -t tiledb_vs</code></pre>
+<ol start="2" type="1">
+<li>Build the TileDB docker image in the big-ann fork (requires image from step 1):</li>
+</ol>
+<pre><code>git clone https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb
+cd big-ann-benchmarks
+docker build -f install/Dockerfile.tiledb . -t billion-scale-benchmark-tiledb</code></pre>
+</section>
+<section id="running-benchmarks" class="level2">
+<h2 class="anchored" data-anchor-id="running-benchmarks">Running benchmarks</h2>
+<ol type="1">
+<li><p>Create a local dataset.</p>
+<p>note: the <code>create_dataset.py</code> command will download remote files the first time it runs, some of which can total &gt;100GB). Use <code>--skip-data</code> to avoid downloading the large base set.</p>
+<p><em>This</em> command will download 7.7MB of data:</p></li>
+</ol>
+<pre><code>python create_dataset.py --dataset bigann-10M --skip-data</code></pre>
+<ol start="2" type="1">
+<li>Run the benchmarks, choosing either <code>tiledb-flat</code> or <code>tiledb-ivf-flat</code>:</li>
+</ol>
+<pre><code>python run.py --dataset bigann-10M --algorithm tiledb-flat</code></pre>
 
 
-</section>
-</section>
 </section>
 </section>
 
@@ -549,6 +449,18 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   }
 });
 </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../documentation/Building.html" class="pagination-link">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Building From Source</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../documentation/reference/index.html" class="pagination-link">
+        <span class="nav-page-text">Python</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
 </div> <!-- /content -->
 
 

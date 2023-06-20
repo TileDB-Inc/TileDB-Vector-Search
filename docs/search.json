@@ -42,6 +42,27 @@
     "text": "Docker\nA docker image is also provided for simplicity:\ndocker build -t tiledb/tiledb-vector-search .\nYou run the example docker image which provides the python package with:\ndocker run --rm tiledb/tiledb-vector-search"
   },
   {
+    "objectID": "documentation/Benchmarks.html",
+    "href": "documentation/Benchmarks.html",
+    "title": "Benchmarks",
+    "section": "",
+    "text": "We have implemented a big-ann-benchmarks interface for TileDB-Vector-Search, which is available in the tiledb branch of our fork: - https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb. This interface implements two new algorithms: tiledb-flat and tiledb-ivf-flat, which are usable within the framework’s runner.\n\n\n\nBuild the Dockerfile at the root of this repository:\n\ncd tiledb-vector-search\ndocker build -f Dockerfile . -t tiledb_vs\n\nBuild the TileDB docker image in the big-ann fork (requires image from step 1):\n\ngit clone https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb\ncd big-ann-benchmarks\ndocker build -f install/Dockerfile.tiledb . -t billion-scale-benchmark-tiledb\n\n\n\n\nCreate a local dataset.\nnote: the create_dataset.py command will download remote files the first time it runs, some of which can total &gt;100GB). Use --skip-data to avoid downloading the large base set.\nThis command will download 7.7MB of data:\n\npython create_dataset.py --dataset bigann-10M --skip-data\n\nRun the benchmarks, choosing either tiledb-flat or tiledb-ivf-flat:\n\npython run.py --dataset bigann-10M --algorithm tiledb-flat"
+  },
+  {
+    "objectID": "documentation/Benchmarks.html#building",
+    "href": "documentation/Benchmarks.html#building",
+    "title": "Benchmarks",
+    "section": "",
+    "text": "Build the Dockerfile at the root of this repository:\n\ncd tiledb-vector-search\ndocker build -f Dockerfile . -t tiledb_vs\n\nBuild the TileDB docker image in the big-ann fork (requires image from step 1):\n\ngit clone https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb\ncd big-ann-benchmarks\ndocker build -f install/Dockerfile.tiledb . -t billion-scale-benchmark-tiledb"
+  },
+  {
+    "objectID": "documentation/Benchmarks.html#running-benchmarks",
+    "href": "documentation/Benchmarks.html#running-benchmarks",
+    "title": "Benchmarks",
+    "section": "",
+    "text": "Create a local dataset.\nnote: the create_dataset.py command will download remote files the first time it runs, some of which can total &gt;100GB). Use --skip-data to avoid downloading the large base set.\nThis command will download 7.7MB of data:\n\npython create_dataset.py --dataset bigann-10M --skip-data\n\nRun the benchmarks, choosing either tiledb-flat or tiledb-ivf-flat:\n\npython run.py --dataset bigann-10M --algorithm tiledb-flat"
+  },
+  {
     "objectID": "documentation/reference/index.FlatIndex.html",
     "href": "documentation/reference/index.FlatIndex.html",
     "title": "index.FlatIndex",
