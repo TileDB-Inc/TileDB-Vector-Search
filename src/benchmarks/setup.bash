@@ -2,6 +2,8 @@
 
 ec2_ivf_hack="/home/lums/feature-vector-prototype/src/cmake-build-release/src/ivf_hack"
 m1_ivf_hack="/Users/lums/TileDB/feature-vector-prototype/src/cmake-build-release/src/ivf_hack"
+ec2_flat="/home/lums/feature-vector-prototype/src/cmake-build-release/src/flat"
+m1_flat="/Users/lums/TileDB/feature-vector-prototype/src/cmake-build-release/src/flat"
 
 if [ -f "${ivf_query}" ]; then
     ivf_query="${ivf_query}"
@@ -10,7 +12,17 @@ elif [ -f "${ec2_ivf_hack}" ]; then
 elif [ -f "${m1_ivf_hack}" ]; then
     ivf_query="${m1_ivf_hack}"
 else
-    echo "Neither file exists"
+    echo "Neither ivf_hack executable file exists"
+fi
+
+if [ -f "${flat_query}" ]; then
+    flat_query="${flat_query}"
+elif [ -f "${ec2_flat}" ]; then
+    flat_query="${ec2_flat}"
+elif [ -f "${m1_flat}" ]; then
+    flat_query="${m1_flat}"
+else
+    echo "Neither flat executable file exists"
 fi
 
 # gp3_root=/home/lums/feature-vector-prototype/external/data/gp3
@@ -28,6 +40,7 @@ elif [ -d "${m1_root}" ]; then
 else
     echo "gp3 directory does not exist"
 fi
+
 
 db_uri="not_set"
 centroids_uri="not_set"
@@ -367,7 +380,7 @@ function ivf_query() {
     if [ -z "${ivf_query}" ];
     then
 	echo "ivf_query executable not set"
-	return -1
+	return 255
     fi
 
     query="\
@@ -386,6 +399,77 @@ ${_cluster} \
 ${_blocksize} \
 ${_finite} \
 ${_log} \
+${_verbose} \
+${_debug}"
+
+    printf "================================================================\n"
+    printf "=\n=\n"
+    printf "${query}\n"
+    eval "${query}"
+}
+
+function flat_query() {
+
+    while [ "$#" -gt 0 ]; do
+	case "$1" in
+	    -x|--exec)
+		flat_query=${2}
+		shift 2
+		;;
+	    -h|--help)
+		shift 1
+		;;
+	    -d|--debug)
+		_debug="-d"
+		shift 1
+		;;
+	    -v|--verbose)
+		_verbose="-v"
+		shift 1
+		;;
+	    --nqueries)
+		_nqueries="--nqueries ${2}"
+		shift 2
+		;;
+	    --nthreads)
+		_nthreads="--nthreads ${2}"
+		shift 2
+		;;
+	    --block|--blocksize)
+		_blocksize="--blocksize ${2}"
+		shift 2
+		;;
+	    --log)
+		_log="--log ${2}"
+		shift 2
+		;;
+	    -V|--validate)
+		_validate="--validate"
+		shift 1
+		;;
+	    *)
+		echo "Unknown option: $1"
+		return 1
+		;;
+	esac
+    done
+
+    if [ -z "${flat_query}" ];
+    then
+	echo "flat_query executable not set"
+	return 255
+    fi
+
+    query="\
+${flat_query} \
+--db_uri ${db_uri} \
+--query_uri ${query_uri} \
+--groundtruth_uri ${groundtruth_uri} \
+${_nqueries} \
+${_nthreads} \
+${_blocksize} \
+${_log} \
+${_validate} \
 ${_verbose} \
 ${_debug}"
 
