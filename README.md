@@ -4,7 +4,7 @@
 
 # TileDB Vector Search
 
-*TileDB-Vector-Search* is a C++ library and Python interface to Vector Search built onto of the [TileDB Storage Engine](https://github.com/TileDB-Inc/TileDB).
+*TileDB-Vector-Search* is a C++ library and Python API for vector search built on top of the [TileDB Storage Engine](https://github.com/TileDB-Inc/TileDB).
 
 # Quick Links
 
@@ -29,6 +29,8 @@ conda install -c tiledb tiledb-vector-search
 
 # Contributing
 
-We welcome contributions, please see [`CONTRIBUTING.md`](CONTRIBUTING.md) for suggestions and
-development-build instructions. For larger features, please open an issue to discuss goals and
-approach in order to ensure a smooth PR integration and review process.
+We welcome contributions. Please see [`Building`](Building.md) for
+development-build instructions. For large new
+features, please open an issue to discuss goals and approach in order
+to ensure a smooth PR integration and review process. All contributions
+must be licensed under the repository's [MIT License](../LICENSE).
