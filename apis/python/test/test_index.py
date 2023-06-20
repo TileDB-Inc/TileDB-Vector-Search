@@ -1,4 +1,5 @@
-import tiledb
+import numpy as np
+
 import tiledb.vector_search as vs
 from tiledb.vector_search.index import FlatIndex
 
@@ -12,13 +13,13 @@ import pytest
     reason="requires sift dataset")
 def test_flat_index_local():
     group_uri = "~/work/proj/vector-search/datasets/sift-andrew/"
-    ground_truth_uri = "~/work/proj/vector-search/datasets/sift-andrew/sift_groundtruth"
     query_uri = "~/work/proj/vector-search/datasets/sift-andrew/sift_query"
+    ground_truth_uri = "~/work/proj/vector-search/datasets/sift-andrew/sift_groundtruth"
 
     nquery = 10
     query_vectors = vs.load_as_array(query_uri)[:, :nquery]
 
-    index = FlatIndex(group_uri, dtype='float32', parts_name="sift_base")
+    index = FlatIndex(group_uri, dtype="float32", parts_name="sift_base")
     result = index.query(query_vectors)
     assert isinstance(result, np.ndarray)
 

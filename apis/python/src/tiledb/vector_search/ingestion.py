@@ -1,7 +1,8 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 from tiledb.cloud.dag import Mode
-from tiledb.vector_search.index import FlatIndex, IVFFlatIndex
+from tiledb.vector_search.index import FlatIndex
+from tiledb.vector_search.index import IVFFlatIndex
 
 
 def ingest(
@@ -24,25 +25,41 @@ def ingest(
     """
     Ingest vectors into TileDB.
 
-    :param index_type: Type of vector index (FLAT, IVF_FLAT)
-    :param array_uri: Vector array URI
-    :param source_uri: Data source URI
-    :param source_type: Type of the source data
-    :param config: config dictionary, defaults to None
-    :param namespace: TileDB-Cloud namespace, defaults to None
-    :param size: Number of input vectors,
+    Parameters
+    ----------
+    index_type: str
+        Type of vector index (FLAT, IVF_FLAT)
+    array_uri: str
+        Vector array URI
+    source_uri: str
+        Data source URI
+    source_type: str
+        Type of the source data
+    config: None
+        config dictionary, defaults to None
+    namespace: str
+        TileDB-Cloud namespace, defaults to None
+    size: int = 1
+        Number of input vectors,
         if not provided use the full size of the input dataset
-    :param partitions: Number of partitions to load the data with,
+    partitions: int = -1
+        Number of partitions to load the data with,
         if not provided, is auto-configured based on the dataset size
-    :param copy_centroids_uri: TileDB array URI to copy centroids from,
+    copy_centroids_uri: str
+        TileDB array URI to copy centroids from,
         if not provided, centroids are build running kmeans
-    :param training_sample_size: vector sample size to train centroids with,
+    training_sample_size: int = 1
+        vector sample size to train centroids with,
         if not provided, is auto-configured based on the dataset size
-    :param workers: number of workers for vector ingestion,
+    workers: int = -1
+        number of workers for vector ingestion,
         if not provided, is auto-configured based on the dataset size
-    :param verbose: verbose logging, defaults to False
-    :param trace_id: trace ID for logging, defaults to None
-    :param mode: execution mode, defaults to LOCAL use BATCH for distributed execution
+    verbose: bool
+        verbose logging, defaults to False
+    trace_id: Optional[str]
+        trace ID for logging, defaults to None
+    mode: Mode
+        execution mode, defaults to LOCAL use BATCH for distributed execution
     """
     import enum
     import logging
@@ -50,6 +67,7 @@ def ingest(
     from typing import Any, Mapping, Optional
 
     import numpy as np
+
     import tiledb
     from tiledb.cloud import dag
     from tiledb.cloud.dag import Mode
@@ -111,7 +129,7 @@ def ingest(
 
     def read_source_metadata(
         source_uri: str, source_type: str, logger: logging.Logger
-    ) -> (int, int, np.dtype):
+    ) -> Tuple[int, int, np.dtype]:
         if source_type == "TILEDB_ARRAY":
             schema = tiledb.ArraySchema.load(source_uri)
             size = schema.domain.dim(1).domain[1] + 1
@@ -517,6 +535,7 @@ def ingest(
         trace_id: Optional[str] = None,
     ):
         from sklearn.cluster import KMeans
+
         import tiledb.cloud
 
         def generate_new_centroid_per_thread(
@@ -583,7 +602,7 @@ def ingest(
                 )
                 workers[i].join()
 
-            logger.info(f"Finished all threads, aggregating partial results.")
+            logger.info("Finished all threads, aggregating partial results.")
             new_centroids = []
             for c_id in range(partitions):
                 cent = []
@@ -641,6 +660,7 @@ def ingest(
         trace_id: Optional[str] = None,
     ):
         import numpy as np
+
         import tiledb.cloud
 
         logger = setup(config, verbose)
@@ -706,8 +726,9 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
-        from sklearn.cluster import KMeans
         import numpy as np
+        from sklearn.cluster import KMeans
+
         import tiledb.cloud
 
         logger = setup(config, verbose)
@@ -728,7 +749,7 @@ def ingest(
         with tiledb.scope_ctx(ctx_or_config=config):
             logger.info(f"Input vectors start_pos: {start}, end_pos: {end}")
             with tiledb.open(centroids_uri, mode="r") as centroids_array:
-                logger.info(f"Reading centroids")
+                logger.info("Reading centroids")
                 km.cluster_centers_ = np.transpose(
                     centroids_array[0:dimensions, 0:partitions]["centroids"]
                 ).copy(order="C")
@@ -852,7 +873,7 @@ def ingest(
                 with tiledb.open(index_array_uri, "r") as A:
                     start_pos = A[part]["values"]
                 logger.info(f"partition start index: {start_pos}")
-                logger.info(f"Reading partition data")
+                logger.info("Reading partition data")
                 with tiledb.open(write_array_uri, mode="r") as A:
                     partition = A[part:part_end, :]
 
@@ -1035,7 +1056,7 @@ def ingest(
                             reducers.append(
                                 submit(
                                     compute_new_centroids,
-                                    *kmeans_workers[i: i + 10],
+                                    *kmeans_workers[i : i + 10],
                                     name="update-centroids-" + str(i),
                                     resources={"cpu": "1", "memory": "8Gi"},
                                 )
@@ -1233,7 +1254,7 @@ def ingest(
         logger.info("Submitted ingestion graph")
         d.wait()
         group = tiledb.Group(array_uri)
-        parts_array_uri = group[PARTS_ARRAY_NAME].uri
+        group[PARTS_ARRAY_NAME].uri
 
         if index_type == "FLAT":
             return FlatIndex(uri=array_uri, dtype=vector_type)

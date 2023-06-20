@@ -94,3 +94,10 @@ apis/python/.mypy_cache/
 .idea
 apis/python/src/tiledb/vector_search/version.py
 _skbuild
+
+# Quarto dev-cache
+/.quarto/
+docs/.quarto
+
+documentation/reference/*
+documentation/reference
