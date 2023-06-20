@@ -31,7 +31,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
 <link href="../documentation/reference/index.html" rel="next">
-<link href="../documentation/Installation.html" rel="prev">
+<link href="../documentation/index.html" rel="prev">
 <link href="../documentation/assets/tiledb.ico" rel="icon">
 <script src="../site_libs/quarto-html/quarto.js"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
@@ -131,12 +131,6 @@ ul.task-list li input[type="checkbox"] {
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../documentation/Installation.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Quick Installation</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
   <a href="../documentation/Building.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">Building From Source</span></a>
   </div>
@@ -170,6 +164,11 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#building-from-source" id="toc-building-from-source" class="nav-link active" data-scroll-target="#building-from-source">Building From Source</a>
   <ul class="collapse">
+  <li><a href="#installation-from-github-with-pip" id="toc-installation-from-github-with-pip" class="nav-link" data-scroll-target="#installation-from-github-with-pip">Installation from github with pip:</a></li>
+  <li><a href="#installation-from-a-local-checkout" id="toc-installation-from-a-local-checkout" class="nav-link" data-scroll-target="#installation-from-a-local-checkout">Installation from a local checkout:</a></li>
+  </ul></li>
+  <li><a href="#dependencies" id="toc-dependencies" class="nav-link" data-scroll-target="#dependencies">Dependencies</a>
+  <ul class="collapse">
   <li><a href="#linux" id="toc-linux" class="nav-link" data-scroll-target="#linux">Linux</a></li>
   <li><a href="#docker" id="toc-docker" class="nav-link" data-scroll-target="#docker">Docker</a></li>
   </ul></li>
@@ -183,11 +182,23 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="building-from-source" class="level1">
 <h1>Building From Source</h1>
-<p>TileDB Vector Search can be built from source.</p>
+<p>TileDB Vector Search can be built from source. For information on dependencies, see below.</p>
+<section id="installation-from-github-with-pip" class="level2">
+<h2 class="anchored" data-anchor-id="installation-from-github-with-pip">Installation from github with pip:</h2>
+<pre><code>pip install git+https://github.com/TileDB-Inc/TileDB-Vector-Search.git#subdirectory=apis/python</code></pre>
+</section>
+<section id="installation-from-a-local-checkout" class="level2">
+<h2 class="anchored" data-anchor-id="installation-from-a-local-checkout">Installation from a local checkout:</h2>
+<pre><code>cd apis/python
+pip install .</code></pre>
+</section>
+</section>
+<section id="dependencies" class="level1">
+<h1>Dependencies</h1>
 <section id="linux" class="level2">
 <h2 class="anchored" data-anchor-id="linux">Linux</h2>
 <p>There are several dependencies needed, for Ubuntu you can install via:</p>
-<pre><code>apt-get openblas-dev build-essentials cmake3 </code></pre>
+<pre><code>apt-get openblas-dev build-essentials cmake3</code></pre>
 <p>To build the python API after you have the dependencies, use pip:</p>
 <pre><code>cd apis/python
 pip install .</code></pre>
@@ -439,8 +450,8 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="../documentation/Installation.html" class="pagination-link">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Quick Installation</span>
+      <a href="../documentation/index.html" class="pagination-link">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">TileDB Vector Search</span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">

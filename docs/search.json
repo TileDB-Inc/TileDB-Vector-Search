@@ -4,42 +4,42 @@
     "href": "documentation/index.html",
     "title": "TileDB Vector Search",
     "section": "",
-    "text": "TileDB Vector Search\nTileDB-Vector-Search is a C++ library and Python interface to Vector Search built onto of the TileDB Storage Engine.\n\n\nQuick Links\n\nInstallation\nBuild Instructions\nTileDB Documentation\nPython API reference\n\n\n\nQuick Installation\nTileDB-Vector-Search is available from either PyPI with pip:\npip install tiledb-vector-search\nor from conda-forge with conda or mamba:\nconda install -c tiledb tiledb-vector-search\n\n\nContributing\nWe welcome contributions, please see CONTRIBUTING.md for suggestions and development-build instructions. For larger features, please open an issue to discuss goals and approach in order to ensure a smooth PR integration and review process."
+    "text": "TileDB Vector Search\nTileDB-Vector-Search is a C++ library and Python API for vector search built on top of the TileDB Storage Engine.\n\n\nQuick Links\n\nBuild Instructions\nTileDB Documentation\nPython API reference\n\n\n\nQuick Installation\nTileDB-Vector-Search is available from either PyPI with pip:\npip install tiledb-vector-search\nor from the tiledb conda channel with conda or mamba (Pending 🚧):\nconda install -c tiledb tiledb-vector-search\n\n\nContributing\nWe welcome contributions. Please see Building for development-build instructions. For large new features, please open an issue to discuss goals and approach in order to ensure a smooth PR integration and review process. All contributions must be licensed under the repository’s MIT License."
   },
   {
     "objectID": "documentation/Building.html",
     "href": "documentation/Building.html",
     "title": "Building From Source",
     "section": "",
-    "text": "TileDB Vector Search can be built from source.\n\n\nThere are several dependencies needed, for Ubuntu you can install via:\napt-get openblas-dev build-essentials cmake3 \nTo build the python API after you have the dependencies, use pip:\ncd apis/python\npip install .\n\n\n\nA docker image is also provided for simplicity:\ndocker build -t tiledb/tiledb-vector-search .\nYou run the example docker image which provides the python package with:\ndocker run --rm tiledb/tiledb-vector-search"
+    "text": "TileDB Vector Search can be built from source. For information on dependencies, see below.\n\n\npip install git+https://github.com/TileDB-Inc/TileDB-Vector-Search.git#subdirectory=apis/python\n\n\n\ncd apis/python\npip install ."
+  },
+  {
+    "objectID": "documentation/Building.html#installation-from-github-with-pip",
+    "href": "documentation/Building.html#installation-from-github-with-pip",
+    "title": "Building From Source",
+    "section": "",
+    "text": "pip install git+https://github.com/TileDB-Inc/TileDB-Vector-Search.git#subdirectory=apis/python"
+  },
+  {
+    "objectID": "documentation/Building.html#installation-from-a-local-checkout",
+    "href": "documentation/Building.html#installation-from-a-local-checkout",
+    "title": "Building From Source",
+    "section": "",
+    "text": "cd apis/python\npip install ."
   },
   {
     "objectID": "documentation/Building.html#linux",
     "href": "documentation/Building.html#linux",
     "title": "Building From Source",
-    "section": "",
-    "text": "There are several dependencies needed, for Ubuntu you can install via:\napt-get openblas-dev build-essentials cmake3 \nTo build the python API after you have the dependencies, use pip:\ncd apis/python\npip install ."
+    "section": "Linux",
+    "text": "Linux\nThere are several dependencies needed, for Ubuntu you can install via:\napt-get openblas-dev build-essentials cmake3\nTo build the python API after you have the dependencies, use pip:\ncd apis/python\npip install ."
   },
   {
     "objectID": "documentation/Building.html#docker",
     "href": "documentation/Building.html#docker",
     "title": "Building From Source",
-    "section": "",
-    "text": "A docker image is also provided for simplicity:\ndocker build -t tiledb/tiledb-vector-search .\nYou run the example docker image which provides the python package with:\ndocker run --rm tiledb/tiledb-vector-search"
-  },
-  {
-    "objectID": "documentation/Installation.html",
-    "href": "documentation/Installation.html",
-    "title": "Quick Installation",
-    "section": "",
-    "text": "TileDB-Vector-Search is available from either PyPI with pip:\npip install tiledb-vector-search\nor from conda-forge with conda or mamba:\nconda install -c tiledb tiledb-vector-search\n\n\nTileDB Vector Search can be installed from source via github or a local checkout.\nFrom github:\npip install git+https://github.com/TileDB-Inc/TileDB-Vector-Search.git#subdirectory=apis/python\nFrom a local checkout:\ncd apis/python\npip install ."
-  },
-  {
-    "objectID": "documentation/Installation.html#installation-from-source",
-    "href": "documentation/Installation.html#installation-from-source",
-    "title": "Quick Installation",
-    "section": "",
-    "text": "TileDB Vector Search can be installed from source via github or a local checkout.\nFrom github:\npip install git+https://github.com/TileDB-Inc/TileDB-Vector-Search.git#subdirectory=apis/python\nFrom a local checkout:\ncd apis/python\npip install ."
+    "section": "Docker",
+    "text": "Docker\nA docker image is also provided for simplicity:\ndocker build -t tiledb/tiledb-vector-search .\nYou run the example docker image which provides the python package with:\ndocker run --rm tiledb/tiledb-vector-search"
   },
   {
     "objectID": "documentation/reference/index.FlatIndex.html",
@@ -63,32 +63,18 @@
     "text": "Name\nDescription\n\n\n\n\nquery\nOpen a flat index\n\n\n\n\n\nvector_search.index.FlatIndex.query(self, targets, k=10, nqueries=10, nthreads=8, nprobe=1)\nOpen a flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ntargets\nnumpy.ndarray\nND Array of query targets\nrequired\n\n\nk\nint\nNumber of top results to return per target\n10\n\n\nnqueries\nint\nNumber of queries\n10\n\n\nnthreads\nint\nNumber of threads to use for queyr\n8\n\n\nnprobe\nint\nnumber of probes\n1"
   },
   {
-    "objectID": "documentation/reference/module.html",
-    "href": "documentation/reference/module.html",
-    "title": "module",
-    "section": "",
-    "text": "vector_search.module\n\n\n\n\n\nName\nDescription\n\n\n\n\nload_as_array\nLoad array as array class\n\n\nload_as_matrix\nLoad array as Matrix class\n\n\nquery_kmeans\nRun kmeans vector query\n\n\nquery_vq\nRun vector query\n\n\n\n\n\nvector_search.module.load_as_array(path, return_matrix=False, config={})\nLoad array as array class\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\n\nArray path\nrequired\n\n\nreturn_matrix\nbool\nReturn matrix\nFalse\n\n\nconfig\nDict\nTileDB configuration parameters\n{}\n\n\n\n\n\n\n\nvector_search.module.load_as_matrix(path, nqueries=0, config={})\nLoad array as Matrix class\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr\nArray path\nrequired\n\n\nnqueries\nint\nNumber of queries\n0\n\n\nconfig\nDict\nTileDB configuration parameters\n{}\n\n\n\n\n\n\n\nvector_search.module.query_kmeans(dtype, parts_uri, centroids_db, query_vectors, index_db, ids_uri, nprobe, k_nn, nth, nthreads, ctx=None)\nRun kmeans vector query\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndtype\nnumpy.dtype\nType of vectpr, flaot32 or uint8\nrequired\n\n\nparts_uri\nstr\nPartition URI\nrequired\n\n\ncentroids_db\ncolMajorMatrix\nOpen Matrix class from load_as_matrix for centroids\nrequired\n\n\nquery_vectors\ncolMajorMatrix\nOpen Matrix class from load_as_matrix for queries\nrequired\n\n\nindex_db\nVector\nVectors\nrequired\n\n\nids_uri\nstr\nURI for id mappings\nrequired\n\n\nnprobe\nint\nNumber of probs\nrequired\n\n\nk_nn\nint\nNumber of nn\nrequired\n\n\nnth\nbool\nReturn nth records\nrequired\n\n\nnthreads\nint\nNumber of theads\nrequired\n\n\nctx\nCtx\nTiledb Context\nNone\n\n\n\n\n\n\n\nvector_search.module.query_vq(db, *args)\nRun vector query\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndb\ncolMajorMatrix\nOpen Matrix class from load_as_matrix\nrequired\n\n\nargs\n\nArgs for query\n()"
-  },
-  {
-    "objectID": "documentation/reference/module.html#functions",
-    "href": "documentation/reference/module.html#functions",
-    "title": "module",
-    "section": "",
-    "text": "Name\nDescription\n\n\n\n\nload_as_array\nLoad array as array class\n\n\nload_as_matrix\nLoad array as Matrix class\n\n\nquery_kmeans\nRun kmeans vector query\n\n\nquery_vq\nRun vector query\n\n\n\n\n\nvector_search.module.load_as_array(path, return_matrix=False, config={})\nLoad array as array class\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\n\nArray path\nrequired\n\n\nreturn_matrix\nbool\nReturn matrix\nFalse\n\n\nconfig\nDict\nTileDB configuration parameters\n{}\n\n\n\n\n\n\n\nvector_search.module.load_as_matrix(path, nqueries=0, config={})\nLoad array as Matrix class\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr\nArray path\nrequired\n\n\nnqueries\nint\nNumber of queries\n0\n\n\nconfig\nDict\nTileDB configuration parameters\n{}\n\n\n\n\n\n\n\nvector_search.module.query_kmeans(dtype, parts_uri, centroids_db, query_vectors, index_db, ids_uri, nprobe, k_nn, nth, nthreads, ctx=None)\nRun kmeans vector query\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndtype\nnumpy.dtype\nType of vectpr, flaot32 or uint8\nrequired\n\n\nparts_uri\nstr\nPartition URI\nrequired\n\n\ncentroids_db\ncolMajorMatrix\nOpen Matrix class from load_as_matrix for centroids\nrequired\n\n\nquery_vectors\ncolMajorMatrix\nOpen Matrix class from load_as_matrix for queries\nrequired\n\n\nindex_db\nVector\nVectors\nrequired\n\n\nids_uri\nstr\nURI for id mappings\nrequired\n\n\nnprobe\nint\nNumber of probs\nrequired\n\n\nk_nn\nint\nNumber of nn\nrequired\n\n\nnth\nbool\nReturn nth records\nrequired\n\n\nnthreads\nint\nNumber of theads\nrequired\n\n\nctx\nCtx\nTiledb Context\nNone\n\n\n\n\n\n\n\nvector_search.module.query_vq(db, *args)\nRun vector query\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndb\ncolMajorMatrix\nOpen Matrix class from load_as_matrix\nrequired\n\n\nargs\n\nArgs for query\n()"
-  },
-  {
     "objectID": "documentation/reference/index.html",
     "href": "documentation/reference/index.html",
     "title": "Python",
     "section": "",
-    "text": "index.Index\n\n\n\nindex.FlatIndex\nOpen a flat index\n\n\nindex.IVFFlatIndex\nOpen a IVF Flat index\n\n\ningestion\n\n\n\nmodule"
+    "text": "index.Index\n\n\n\nindex.FlatIndex\nOpen a flat index\n\n\nindex.IVFFlatIndex\nOpen a IVF Flat index\n\n\ningestion"
   },
   {
     "objectID": "documentation/reference/index.html#tiledb.vector_search",
     "href": "documentation/reference/index.html#tiledb.vector_search",
     "title": "Python",
     "section": "",
-    "text": "index.Index\n\n\n\nindex.FlatIndex\nOpen a flat index\n\n\nindex.IVFFlatIndex\nOpen a IVF Flat index\n\n\ningestion\n\n\n\nmodule"
+    "text": "index.Index\n\n\n\nindex.FlatIndex\nOpen a flat index\n\n\nindex.IVFFlatIndex\nOpen a IVF Flat index\n\n\ningestion"
   },
   {
     "objectID": "documentation/reference/ingestion.html",
