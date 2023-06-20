@@ -13,8 +13,6 @@ using Ctx = tiledb::Context;
 
 bool global_debug = true;
 double global_time_of_interest;
-//std::string global_region = "us-east-1";
-std::string global_region = "us-west-2";
 
 namespace {
 
@@ -77,25 +75,40 @@ static void declareColMajorMatrix(py::module& mod, std::string const& suffix) {
 }
 
 template <typename T>
+static void declare_pyarray_to_matrix(py::module& m, const std::string& suffix) {
+  m.def(("pyarray_copyto_matrix" + suffix).c_str(),
+      [](py::array_t<T, py::array::f_style> arr) -> ColMajorMatrix<T> {
+        py::buffer_info info = arr.request();
+        if (info.ndim != 2)
+          throw std::runtime_error("Number of dimensions must be two");
+        if (info.format != py::format_descriptor<T>::format())
+          throw std::runtime_error("Mismatched buffer format!");
+
+        auto data = std::unique_ptr<T[]>{new T[info.shape[0] * info.shape[1]]};
+        std::memcpy(data.get(), info.ptr, info.shape[0] * info.shape[1] * sizeof(T));
+        auto r = ColMajorMatrix<T>(std::move(data), info.shape[0], info.shape[1]);
+        return r;
+        });
+}
+
+template <typename T>
 static void declare_kmeans_query(py::module& m, const std::string& suffix) {
   m.def(("kmeans_query_" + suffix).c_str(),
-      [](Ctx ctx,
-         const std::string& part_uri,
+      [](const ColMajorMatrix<T>& parts,
          const ColMajorMatrix<float>& centroids,
          const ColMajorMatrix<float>& query_vectors,
          std::vector<uint64_t>& indices,
-         const std::string& id_uri,
+         std::vector<shuffled_ids_type>& ids,
          size_t nprobe,
          size_t k_nn,
          bool nth,
-         size_t nthreads) -> ColMajorMatrix<size_t> {
+         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
         auto r = detail::ivf::qv_query_heap_infinite_ram<T>(
-            ctx,
-            part_uri,
+            parts,
             centroids,
             query_vectors,
             indices,
-            id_uri,
+            ids,
             nprobe,
             k_nn,
             nth,
@@ -135,7 +148,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
     }
   ));
 
-  /* Vector */
+  /* === Vector === */
+
   declareVector<uint32_t>(m, "_u32");
   declareVector<uint64_t>(m, "_u64");
   declareVector<float>(m, "_f32");
@@ -143,33 +157,39 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   m.def("read_vector_u32", &read_vector<uint32_t>, "Read a vector from TileDB");
   m.def("read_vector_u64", &read_vector<uint64_t>, "Read a vector from TileDB");
+
+
   /* === Matrix === */
 
   // template specializations
-  //declareTdbMatrix<float>(m, "_f32");
-
   declareColMajorMatrix<uint8_t>(m, "_u8");
   declareColMajorMatrix<float>(m, "_f32");
   declareColMajorMatrix<double>(m, "_f64");
   declareColMajorMatrix<int32_t>(m, "_i32");
   declareColMajorMatrix<int64_t>(m, "_i64");
-//  declareColMajorMatrix<uint64_t>(m, "_u64");
-  declareColMajorMatrix<size_t>(m, "_szt");
+  declareColMajorMatrix<uint32_t>(m, "_u32");
+  declareColMajorMatrix<uint64_t>(m, "_u64");
+  if constexpr (!std::is_same<uint64_t, unsigned long>::value) {
+    // Required for a return type, but these types are equivalent on linux :/
+    declareColMajorMatrix<unsigned long>(m, "_ul");
+  }
 
   declareColMajorMatrixSubclass<tdbColMajorMatrix<uint8_t>>(
       m, "tdbColMajorMatrix", "_u8");
-  declareColMajorMatrixSubclass<tdbColMajorMatrix<size_t>>(
-      m, "tdbColMajorMatrix", "_szt");
+  declareColMajorMatrixSubclass<tdbColMajorMatrix<uint64_t>>(
+      m, "tdbColMajorMatrix", "_u64");
   declareColMajorMatrixSubclass<tdbColMajorMatrix<float>>(
       m, "tdbColMajorMatrix", "_f32");
   declareColMajorMatrixSubclass<tdbColMajorMatrix<int32_t>>(
       m, "tdbColMajorMatrix", "_i32");
   declareColMajorMatrixSubclass<tdbColMajorMatrix<int64_t>>(
       m, "tdbColMajorMatrix", "_i64");
-//  declareColMajorMatrixSubclass<tdbColMajorMatrix<uint64_t>>(
-//      m, "tdbColMajorMatrix", "_u64");
 
-
+  // Converters from pyarray to matrix
+  declare_pyarray_to_matrix<uint8_t>(m, "_u8");
+  declare_pyarray_to_matrix<uint64_t>(m, "_u64");
+  declare_pyarray_to_matrix<float>(m, "_f32");
+  declare_pyarray_to_matrix<double>(m, "_f64");
 
   /* Query API */
 
@@ -178,7 +198,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
            const ColMajorMatrix<float>& query_vectors,
            int k,
            bool nth,
-           size_t nthreads) {
+           size_t nthreads) -> ColMajorMatrix<uint64_t> {
           auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
           return r;
         });
@@ -188,13 +208,13 @@ PYBIND11_MODULE(_tiledbvspy, m) {
            const ColMajorMatrix<float>& query_vectors,
            int k,
            bool nth,
-           size_t nthreads) {
+           size_t nthreads) -> ColMajorMatrix<uint64_t> {
           auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
           return r;
         });
 
-  m.def("validate_top_k",
-      [](const ColMajorMatrix<size_t>& top_k,
+  m.def("validate_top_k_u64",
+      [](const ColMajorMatrix<uint64_t>& top_k,
          const ColMajorMatrix<int32_t>& ground_truth) -> bool {
         return validate_top_k(top_k, ground_truth);
       });

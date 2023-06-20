@@ -65,7 +65,7 @@ auto qv_query_nth(
     const DB& db, const Q& q, int k, bool nth, unsigned int nthreads) {
   scoped_timer _{tdb_func__};
 
-  ColMajorMatrix<size_t> top_k(k, q.num_cols());
+  ColMajorMatrix<uint64_t> top_k(k, q.num_cols());
 
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
   stdx::range_for_each(
@@ -76,7 +76,7 @@ auto qv_query_nth(
         // @todo can we do this more efficiently?
         std::vector<float> scores(size_db);
 
-        for (int i = 0; i < size_db; ++i) {
+        for (size_t i = 0; i < size_db; ++i) {
           scores[i] = L2(q_vec, db[i]);
         }
         if (nth) {
@@ -103,7 +103,7 @@ auto qv_query_heap(const DB& db, const Q& q, size_t k, unsigned nthreads) {
 
   using element = std::pair<float, int>;
 
-  ColMajorMatrix<size_t> top_k(k, q.num_cols());
+  ColMajorMatrix<uint64_t> top_k(k, q.num_cols());
 
   // Have to do explicit asynchronous threading here, as the current parallel
   // algorithms have iterator-based interaces, and the `Matrix` class does not
@@ -129,7 +129,7 @@ auto qv_query_heap(const DB& db, const Q& q, size_t k, unsigned nthreads) {
               fixed_min_heap<element> min_scores(k);
               size_t idx = 0;
 
-              for (int i = 0; i < size_db; ++i) {
+              for (size_t i = 0; i < size_db; ++i) {
                 auto score = L2(q[j], db[i]);
                 min_scores.insert(element{score, i});
               }
@@ -146,7 +146,7 @@ auto qv_query_heap(const DB& db, const Q& q, size_t k, unsigned nthreads) {
     }
   }
 
-  for (int n = 0; n < size(futs); ++n) {
+  for (size_t n = 0; n < size(futs); ++n) {
     futs[n].get();
   }
 

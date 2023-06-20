@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+
 import tiledb
 
 
@@ -44,8 +45,8 @@ def groundtruth_read(dataset_dir, nqueries=None):
 
 
 def create_random_dataset_f32(nb, d, nq, k, path):
-    from sklearn.datasets import make_blobs
     import sklearn.model_selection
+    from sklearn.datasets import make_blobs
     from sklearn.neighbors import NearestNeighbors
 
     print(f"Preparing datasets with {nb} random points and {nq} queries.")
@@ -76,8 +77,8 @@ def create_random_dataset_f32(nb, d, nq, k, path):
 
 
 def create_random_dataset_u8(nb, d, nq, k, path):
-    from sklearn.datasets import make_blobs
     import sklearn.model_selection
+    from sklearn.datasets import make_blobs
     from sklearn.neighbors import NearestNeighbors
 
     print(f"Preparing datasets with {nb} random points and {nq} queries.")

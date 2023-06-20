@@ -73,7 +73,7 @@ auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
           // For each database vector
           for (int i = db_start; i < db_stop; ++i) {
             // Compare with each query
-            for (int j = 0; j < size_q; ++j) {
+            for (size_t j = 0; j < size_q; ++j) {
               // scores[j][i] = L2(q[j], db[i]);
               scores(i, j) = L2(q[j], db[i]);
             }
@@ -126,19 +126,19 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
         db,
         [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
           if (block_db) {
-            for (int j = 0; j < size_q; ++j) {
+            for (size_t j = 0; j < size_q; ++j) {
               auto score = L2(q[j], db_vec);
               scores[n][j].insert(element{score, i + db.offset()});
             }
 
           } else if (block_q) {
-            for (int j = 0; j < size_q; ++j) {
+            for (size_t j = 0; j < size_q; ++j) {
               auto score = L2(q[j], db_vec);
               scores[n][j + q.offset()].insert(element{score, i});
             }
 
           } else {
-            for (int j = 0; j < size_q; ++j) {
+            for (size_t j = 0; j < size_q; ++j) {
               auto score = L2(q[j], db_vec);
               scores[n][j].insert(element{score, i});
             }
@@ -156,15 +156,15 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
     }
   }
 
-  for (int j = 0; j < size(q); ++j) {
-    for (int n = 1; n < nthreads; ++n) {
+  for (size_t j = 0; j < size(q); ++j) {
+    for (unsigned n = 1; n < nthreads; ++n) {
       for (auto&& e : scores[n][j]) {
         scores[0][j].insert(e);
       }
     }
   }
 
-  ColMajorMatrix<size_t> top_k(k, q.num_cols());
+  ColMajorMatrix<uint64_t> top_k(k, q.num_cols());
 
   // This might not be a win.
   int q_block_size = (size(q) + std::min<int>(nthreads, size(q)) - 1) /

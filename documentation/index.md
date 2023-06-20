@@ -20,8 +20,8 @@ TileDB-Vector-Search is available from either [PyPI](https://pypi.org/project/ti
 pip install tiledb-vector-search
 ```
 
-or from [conda-forge](https://anaconda.org/conda-forge/tiledb-vector-searcg) with
-[conda](https://conda.io/docs/) or [mamba](https://github.com/mamba-org/mamba#installation):
+~~or from the [tiledb conda channel](https://anaconda.org/tiledb/tiledb-vector-search) with
+[conda](https://conda.io/docs/) or [mamba](https://github.com/mamba-org/mamba#installation)~~ (Pending 🚧):
 
 ```
 conda install -c tiledb tiledb-vector-search

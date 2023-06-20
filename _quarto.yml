@@ -1,0 +1,84 @@
+# Cloned from https://github.com/TileDB-Inc/tiledb-quarto-template
+project:
+  type: website
+  output-dir: docs
+  render:
+    # The first item will be the landing page
+    - "documentation/index.md"
+    - "documentation"
+    - "documentation/reference"
+    - "examples/README.md"
+    - "examples"
+
+format:
+  html:
+    # https://quarto.org/docs/output-formats/page-layout.html#grid-customization
+    grid:
+      sidebar-width: 350px
+      body-width: 1000px
+      margin-width: 350px
+      gutter-width: 1rem
+    toc: true
+    theme:
+      light: [flatly, "quarto-materials/tiledb.scss"]
+    mainfont: Helvetica
+    fontsize: 1rem
+    linkcolor: "#4d9fff"
+    code-copy: true
+    code-overflow: wrap
+    css: "quarto-materials/tiledb.css"
+
+quartodoc:
+  title: "Python"
+  package: tiledb.vector_search
+  dir: "documentation/reference"
+  sections:
+    - title: "tiledb.vector_search"
+      desc: ""
+      contents:
+          - index.Index
+          - index.FlatIndex
+          - index.IVFFlatIndex
+          - ingestion
+
+website:
+  favicon: "documentation/assets/tiledb.ico"
+  site-url: https://tiledb-inc.github.io/TileDB-Vector-Search/
+  repo-url: https://github.com/TileDB-Inc/TileDB-Vector-Search
+  # You may want one or both of these, or neither:
+  repo-actions: [edit, issue]
+  page-navigation: true
+  navbar:
+    background: light
+    logo: "quarto-materials/tiledb-logo.png"
+    collapse-below: lg
+    left:
+      - text: "Home page"
+        href: "https://tiledb.com"
+      - text: "Login"
+        href: "https://cloud.tiledb.com/auth/login"
+      - text: "Contact us"
+        href: "https://tiledb.com/contact"
+      - text: "Repo"
+        href: "https://github.com/TileDB-Inc/TileDB-Vector-Search"
+
+  sidebar:
+    - style: "floating"
+      collapse-level: 2
+      align: left
+      contents:
+        - href: "documentation/index.md"
+        - href: "documentation/Building.md"
+        - href: "documentation/Benchmarks.md"
+
+        # - section: "Examples"
+        #   contents:
+        #     # - href: "examples/overview.md"
+
+        # - section: "Ingestion"
+        #   contents:
+        #     # - href: "documentation/ingestion/overview.md"
+
+        - section: "API Reference"
+          contents:
+            - href: "documentation/reference/index.qmd"

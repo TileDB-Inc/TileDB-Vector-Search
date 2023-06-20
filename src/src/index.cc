@@ -48,7 +48,6 @@
 
 bool global_verbose = false;
 bool global_debug = false;
-std::string global_region;
 
 using namespace detail::flat;
 
