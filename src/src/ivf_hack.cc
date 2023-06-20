@@ -80,11 +80,11 @@ using json = nlohmann::json;
 bool global_verbose = false;
 bool global_debug = false;
 
-
 #include <cstdint>
 
 /**
- * Specify some types for the demo.
+ * Specify some types for the demo.  For now the types associated with the
+ * vector db to be queried are hard-coded.
  */
 #if 1
 using db_type = uint8_t;
@@ -94,12 +94,8 @@ using db_type = float;
 
 using groundtruth_type = int32_t;
 using centroids_type = float;
-
 using shuffled_ids_type = uint64_t;
-
-// @todo Are these the same?
 using indices_type = uint64_t;
-using parts_type = uint64_t;
 
 static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
@@ -166,21 +162,18 @@ int main(int argc, char* argv[]) {
   {
     scoped_timer _("query_time");
 
-  if (is_local_array(centroids_uri) &&
-      !std::filesystem::exists(centroids_uri)) {
-    std::cerr << "Error: centroids URI does not exist: "
-              << args["--centroids_uri"] << std::endl;
-    return 1;
-  }
+    if (is_local_array(centroids_uri) &&
+        !std::filesystem::exists(centroids_uri)) {
+      std::cerr << "Error: centroids URI does not exist: "
+                << args["--centroids_uri"] << std::endl;
+      return 1;
+    }
 
-  auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
-  debug_matrix(centroids, "centroids");
+    auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
+    debug_matrix(centroids, "centroids");
 
-
-  // Find the top k nearest neighbors accelerated by kmeans and do some
-  // reporting
-
-
+    // Find the top k nearest neighbors accelerated by kmeans and do some
+    // reporting
 
     // @todo Encapsulate these arrays in a class
     // auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
@@ -191,35 +184,38 @@ int main(int argc, char* argv[]) {
     auto indices = read_vector<indices_type>(ctx, index_uri);
     debug_matrix(indices, "indices");
 
-    auto q = tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri, nqueries);
+    auto q =
+        tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri, nqueries);
     debug_matrix(q, "q");
 
     auto top_k = [&]() {
       if (finite) {
-        return detail::ivf::qv_query_heap_finite_ram<db_type, shuffled_ids_type>(
-            ctx,
-            part_uri,
-            centroids,
-            q,
-            indices,
-            id_uri,
-            nprobe,
-            k_nn,
-            blocksize,
-            nth,
-            nthreads);
+        return detail::ivf::
+            qv_query_heap_finite_ram<db_type, shuffled_ids_type>(
+                ctx,
+                part_uri,
+                centroids,
+                q,
+                indices,
+                id_uri,
+                nprobe,
+                k_nn,
+                blocksize,
+                nth,
+                nthreads);
       } else {
-        return detail::ivf::qv_query_heap_infinite_ram<db_type, shuffled_ids_type>(
-            ctx,
-            part_uri,
-            centroids,
-            q,
-            indices,
-            id_uri,
-            nprobe,
-            k_nn,
-            nth,
-            nthreads);
+        return detail::ivf::
+            qv_query_heap_infinite_ram<db_type, shuffled_ids_type>(
+                ctx,
+                part_uri,
+                centroids,
+                q,
+                indices,
+                id_uri,
+                nprobe,
+                k_nn,
+                nth,
+                nthreads);
       }
     }();
 
@@ -279,7 +275,8 @@ int main(int argc, char* argv[]) {
 
   // Quick and dirty way to get query info in summarizable form
   if (true || global_verbose) {
-    std::cout << "# [ Repo ]: " << GIT_REPO_NAME << " @ " << GIT_BRANCH << std::endl;
+    std::cout << "# [ Repo ]: " << GIT_REPO_NAME << " @ " << GIT_BRANCH
+              << std::endl;
 
     char tag = 'A';
     std::map<std::string, std::string> toc;
@@ -294,7 +291,8 @@ int main(int argc, char* argv[]) {
       std::cout << std::setw(8) << "recall";
 
       auto units = std::string(" (s)");
-      for (auto& timers : { _timing_data.get_timer_names(), _memory_data.get_usage_names() }) {
+      for (auto& timers :
+           {_timing_data.get_timer_names(), _memory_data.get_usage_names()}) {
         for (auto& timer : timers) {
           std::string text;
           if (size(timer) < 3) {
@@ -307,7 +305,7 @@ int main(int argc, char* argv[]) {
           }
           std::cout << std::setw(12) << text;
         }
-        units = std::string(" (MiB)"); // copilot scares me
+        units = std::string(" (MiB)");  // copilot scares me
       }
 
       std::cout << std::endl;
@@ -321,15 +319,15 @@ int main(int argc, char* argv[]) {
     std::cout << std::setw(8) << nprobe;
     std::cout << std::setw(8) << k_nn;
     std::cout << std::setw(8) << nthreads;
-    std::cout << std::fixed << std::setprecision(3) ;
+    std::cout << std::fixed << std::setprecision(3);
     std::cout << std::setw(8) << recall;
 
     std::cout.precision(original_precision);
     std::cout << std::fixed << std::setprecision(3);
     auto timers = _timing_data.get_timer_names();
     for (auto& timer : timers) {
-      auto ms = _timing_data.get_entries_summed<std::chrono::microseconds>(
-                    timer);
+      auto ms =
+          _timing_data.get_entries_summed<std::chrono::microseconds>(timer);
       if (ms < 1000) {
         std::cout << std::fixed << std::setprecision(6);
       } else if (ms < 10000) {
@@ -356,14 +354,12 @@ int main(int argc, char* argv[]) {
       } else {
         std::cout << std::fixed << std::setprecision(0);
       }
-      std::cout
-          <<  std::setw(12)
-          << _memory_data.get_entries_summed(usage);
+      std::cout << std::setw(12) << _memory_data.get_entries_summed(usage);
     }
     std::cout << std::endl;
     std::cout << std::setprecision(original_precision);
 
-    for (auto& t: toc) {
+    for (auto& t : toc) {
       std::cout << t.first << ": " << t.second << std::endl;
     }
   }

@@ -53,13 +53,12 @@
 #include <thread>
 
 #include "algorithm.h"
-#include "array_types.h"
 #include "defs.h"
 #include "linalg.h"
 
 #include "detail/flat/qv.h"
 
-template <class T = shuffled_db_type>
+template <class T, class shuffled_ids_type, class indices_type>
 class kmeans_index {
   // Random device to seed the random number generator
   std::random_device rd;
@@ -73,7 +72,7 @@ class kmeans_index {
 
   ColMajorMatrix<T> centroids_;
   std::vector<indices_type> indices_;
-  std::vector<indices_type> shuffled_ids_;
+  std::vector<shuffled_ids_type> shuffled_ids_;
   ColMajorMatrix<T> shuffled_db_;
 
  public:
@@ -258,7 +257,6 @@ class kmeans_index {
 
       // @todo parallelize
 
-
       for (size_t j = 0; j < nlist_; ++j) {
         auto centroid = centroids_[j];
         for (size_t k = 0; k < dimension_; ++k) {
@@ -271,32 +269,32 @@ class kmeans_index {
 
     // Debugging
 #ifdef _SAVE_PARTITIONS
-      {
-        char tempFileName[L_tmpnam];
-        tmpnam(tempFileName);
+    {
+      char tempFileName[L_tmpnam];
+      tmpnam(tempFileName);
 
-        std::ofstream file(tempFileName);
-        if (!file) {
-          std::cout << "Error opening the file." << std::endl;
-          return;
-        }
-
-        for (const auto& element : degrees) {
-          file << element << ',';
-        }
-        file << std::endl;
-
-        file.close();
-
-        std::cout << "Data written to file: " << tempFileName << std::endl;
+      std::ofstream file(tempFileName);
+      if (!file) {
+        std::cout << "Error opening the file." << std::endl;
+        return;
       }
-#endif
-    }
 
-    void train(const ColMajorMatrix<T>& training_set) {
-      kmeans_pp(training_set);
-      train_no_init(training_set);
+      for (const auto& element : degrees) {
+        file << element << ',';
+      }
+      file << std::endl;
+
+      file.close();
+
+      std::cout << "Data written to file: " << tempFileName << std::endl;
     }
+#endif
+  }
+
+  void train(const ColMajorMatrix<T>& training_set) {
+    kmeans_pp(training_set);
+    train_no_init(training_set);
+  }
 
 #if 0
   // @todo WIP
@@ -338,9 +336,9 @@ class kmeans_index {
   }
 #endif
 
-    auto& get_centroids() {
-      return centroids_;
-    }
-  };
+  auto& get_centroids() {
+    return centroids_;
+  }
+};
 
 #endif  // TILEDB_IVF_INDEX_H
