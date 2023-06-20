@@ -12,5 +12,5 @@ __all__ = [
     "query_vq",
     "query_kmeans",
     "validate_top_k",
-    "array_to_matrix"
+    "array_to_matrix",
 ]
