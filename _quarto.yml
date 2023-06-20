@@ -19,7 +19,7 @@ format:
       margin-width: 350px
       gutter-width: 1rem
     toc: true
-    theme: 
+    theme:
       light: [flatly, "quarto-materials/tiledb.scss"]
     mainfont: Helvetica
     fontsize: 1rem
@@ -40,7 +40,6 @@ quartodoc:
           - index.FlatIndex
           - index.IVFFlatIndex
           - ingestion
-          - module 
 
 website:
   favicon: "documentation/assets/tiledb.ico"
@@ -69,7 +68,6 @@ website:
       align: left
       contents:
         - href: "documentation/index.md"
-        - href: "documentation/Installation.md"
         - href: "documentation/Building.md"
 
         # - section: "Examples"
