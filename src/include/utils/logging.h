@@ -73,6 +73,15 @@
  * mechanism to allow the user to log memory usage at particular points in the code.
  * The associated singleton provides methods for getting memory usages individually
  * or cumulatively.
+ *
+ * @example
+ * @code{.cpp}
+// Print totals for all timers
+auto timers = _timing_data.get_timer_names();
+for (auto& timer : timers) {
+   std::cout << timer << ":  " << _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
+}
+ * @endcode
  */
 
 #ifndef TDB_LOGGING_H

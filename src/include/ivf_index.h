@@ -58,7 +58,7 @@
 
 #include "detail/flat/qv.h"
 
-template <class T>
+template <class T = shuffled_db_type>
 class kmeans_index {
   // Random device to seed the random number generator
   std::random_device rd;
@@ -304,7 +304,7 @@ class kmeans_index {
     std::vector<size_t> degrees(centroids_.num_cols());
     std::vector<indices_type> indices(centroids_.num_cols() + 1);
     std::vector shuffled_ids = std::vector<shuffled_ids_type>(db.num_cols());
-    auto shuffled_db = ColMajorMatrix<shuffled_db_type>{db.num_rows(), db.num_cols()};
+    auto shuffled_db = ColMajorMatrix<T>{db.num_rows(), db.num_cols()};
 
     for (size_t i = 0; i < db.num_cols(); ++i) {
       auto j = parts[i];

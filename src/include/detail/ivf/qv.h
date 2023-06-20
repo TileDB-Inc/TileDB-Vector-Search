@@ -91,7 +91,7 @@ auto qv_query_heap_infinite_ram(
 
   // Read the shuffled database and ids
   // @todo To this more systematically
-  auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(ctx, part_uri);
+  auto shuffled_db = tdbColMajorMatrix<T>(ctx, part_uri);
   auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
 
   return qv_query_heap_infinite_ram<T>(
@@ -208,6 +208,7 @@ auto qv_query_heap_infinite_ram(
   return top_k;
 }
 
+template <typename T = shuffled_db_type>
 auto qv_query_heap_finite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -273,7 +274,7 @@ auto qv_query_heap_finite_ram(
                          indices[active_partitions[i]];
   }
 
-  auto shuffled_db = tdbColMajorPartitionedMatrix<shuffled_db_type>(
+  auto shuffled_db = tdbColMajorPartitionedMatrix<T>(
       ctx,
       part_uri,
       std::move(indices),
@@ -286,9 +287,9 @@ auto qv_query_heap_finite_ram(
   for (size_t i = 0; i < size(new_indices) - 1; ++i) {
     auto partition_size = new_indices[i + 1] - new_indices[i];
     max_partition_size = std::max<size_t>(max_partition_size, partition_size);
-    _memory_data.insert_entry(tdb_func__ + " (predicted)", partition_size * sizeof(shuffled_db_type) * shuffled_db.num_rows());
+    _memory_data.insert_entry(tdb_func__ + " (predicted)", partition_size * sizeof(T) * shuffled_db.num_rows());
   }
-    _memory_data.insert_entry(tdb_func__ + " (upper bound)", nprobe * num_queries * sizeof(shuffled_db_type) * max_partition_size);
+    _memory_data.insert_entry(tdb_func__ + " (upper bound)", nprobe * num_queries * sizeof(T) * max_partition_size);
 
 
   assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
@@ -434,11 +435,11 @@ auto kmeans_query_small_q_minparts(
 
   // Read the shuffled database and ids
   // @todo To this more systematically
-  // auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
+  // auto shuffled_db = tdbColMajorMatrix<T>(part_uri);
   // auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
 
   std::vector<shuffled_ids_type> shuffled_ids;
-  auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri, indices, parts, id_uri, shuffled_ids, nthreads);
+  auto shuffled_db = tdbColMajorMatrix<T>(part_uri, indices, parts, id_uri, shuffled_ids, nthreads);
 
   debug_matrix(shuffled_db, "shuffled_db");
   debug_matrix(shuffled_ids, "shuffled_ids");
