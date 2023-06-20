@@ -59,6 +59,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   using Base::Base;
 
  public:
+  using value_type = typename Base::value_type;
   using index_type = typename Base::index_type;
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
