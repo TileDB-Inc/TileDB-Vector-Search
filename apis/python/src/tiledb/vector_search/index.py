@@ -92,10 +92,10 @@ class IVFFlatIndex(Index):
         self.dtype = dtype
 
         ctx = Ctx({})  # TODO pass in a context
-        # TODO self._db = load_as_matrix(self.db_uri)
+        self._db = load_as_matrix(self.parts_db_uri)
         self._centroids = load_as_matrix(self.centroids_uri)
         self._index = read_vector_u64(ctx, self.index_uri)
-        # self._ids = load_as_matrix(self.ids_uri)
+        self._ids = read_vector_u64(ctx, self.ids_uri)
 
     def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8, nprobe=1):
         """
@@ -122,12 +122,12 @@ class IVFFlatIndex(Index):
         targets_m_a[:] = targets
 
         r = query_kmeans(
-            self.dtype,
-            self.parts_db_uri,
+            self._db.dtype,
+            self._db,
             self._centroids,
             targets_m,
             self._index,
-            self.ids_uri,
+            self._ids,
             nprobe=nprobe,
             k_nn=k,
             nth=True,  # ??
