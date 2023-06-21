@@ -101,9 +101,9 @@ static constexpr const char USAGE[] =
     R"(ivf_hack: demo hack feature vector search with kmeans index.
 Usage:
     ivf_hack (-h | --help)
-    ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --parts_uri URI --ids_uri URI --query_uri URI
-            [--groundtruth_uri URI] [--output_uri URI] [--k NN][--nprobe NN] [--nqueries NN]
-            [--alg ALGO] [--finite] [--blocksize NN] [--nth]
+    ivf_hack --db_uri URI --centroids_uri URI (--index_uri URI | --sizes_uri URI)
+             --parts_uri URI --ids_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
+            [--k NN][--nprobe NN] [--nqueries NN] [--alg ALGO] [--finite] [--blocksize NN] [--nth]
             [--nthreads NN] [--region REGION] [--log FILE] [-d] [-v]
 
 Options:
@@ -111,6 +111,7 @@ Options:
     --db_uri URI          database URI with feature vectors
     --centroids_uri URI   URI with centroid vectors
     --index_uri URI       URI with the paritioning index
+    --sizes_uri URI       URI with the parition sizes
     --parts_uri URI       URI with the partitioned data
     --ids_uri URI         URI with original IDs of vectors
     --query_uri URI       URI storing query vectors
@@ -144,7 +145,26 @@ int main(int argc, char* argv[]) {
   global_verbose = args["--verbose"].asBool();
 
   auto part_uri = args["--parts_uri"].asString();
-  auto index_uri = args["--index_uri"].asString();
+
+
+  std::string index_uri;
+  bool size_index {false};
+  if (args["--index_uri"]) {
+    if (args["--sizes_uri"]) {
+      std::cerr << "Cannot specify both --index_uri and --sizes_uri\n";
+      return 1;
+    }
+    index_uri = args["--index_uri"].asString();
+  }
+  if (args["--sizes_uri"]) {
+    index_uri = args["--sizes_uri"].asString();
+    size_index = true;
+  }
+  if (index_uri.empty()) {
+    std::cerr << "Must specify either --index_uri or --sizes_uri\n";
+    return 1;
+  }
+
   auto id_uri = args["--ids_uri"].asString();
   size_t nprobe = args["--nprobe"].asLong();
   size_t k_nn = args["--k"].asLong();
@@ -182,6 +202,9 @@ int main(int argc, char* argv[]) {
     // debug_matrix(shuffled_ids, "shuffled_ids");
 
     auto indices = read_vector<indices_type>(ctx, index_uri);
+    if (size_index) {
+      indices = sizes_to_indices(indices);
+    }
     debug_matrix(indices, "indices");
 
     auto q =

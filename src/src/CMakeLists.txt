@@ -125,11 +125,11 @@ target_link_libraries(kmeans_lib INTERFACE
 
 
 #---[ Demos ]------------------------------------------------------------
-add_executable(flat flat.cc)
-target_link_libraries(flat PUBLIC kmeans_lib nlohmann_json::nlohmann_json)
+add_executable(flat_l2 flat_l2.cc)
+target_link_libraries(flat_l2 PUBLIC kmeans_lib nlohmann_json::nlohmann_json)
 
-add_executable(ivf_hack ivf_hack.cc)
-target_link_libraries(ivf_hack PUBLIC kmeans_lib)
+add_executable(ivf_flat ivf_flat.cc)
+target_link_libraries(ivf_flat PUBLIC kmeans_lib)
 
 add_executable(index index.cc)
 target_link_libraries(index PUBLIC kmeans_lib)

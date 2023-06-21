@@ -46,15 +46,18 @@ db_uri="not_set"
 centroids_uri="not_set"
 parts_uri="not_set"
 index_uri="not_set"
+sizes_uri="not_set"
 ids_uri="not_set"
 query_uri="not_set"
 groundtruth_uri="not_set"
+
 
 function init_1M_s3 () {
     db_uri="s3://tiledb-andrew/sift/bigann1M_base"
     centroids_uri="s3://tiledb-andrew/sift/bigann1M_base_tdb/centroids.tdb"
     parts_uri="s3://tiledb-andrew/sift/bigann1M_base_tdb/parts.tdb"
     index_uri="s3://tiledb-andrew/sift/bigann1M_base_tdb/index.tdb"
+    sizes_uri="s3://tiledb-andrew/sift/bigann1M_base_tdb/index_size.tdb"
     ids_uri="s3://tiledb-andrew/sift/bigann1M_base_tdb/ids.tdb"
     query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
     groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_1M_GT_nnids"
@@ -68,6 +71,7 @@ function init_1M_gp3 () {
     centroids_uri="${gp3_root}/1M/centroids.tdb"
     parts_uri="${gp3_root}/1M/parts.tdb"
     index_uri="${gp3_root}/1M/index.tdb"
+    sizes_uri="${gp3_root}/1M/index_size.tdb"
     ids_uri="${gp3_root}/1M/ids.tdb"
     query_uri="${gp3_root}/1M/query_public_10k"
     groundtruth_uri="${gp3_root}/1M/bigann_1M_GT_nnids"
@@ -81,6 +85,7 @@ function init_1M_nvme () {
     centroids_uri="${nvme_root}/1M/centroids.tdb"
     parts_uri="${nvme_root}/1M/parts.tdb"
     index_uri="${nvme_root}/1M/index.tdb"
+    sizes_uri="${nvme_root}/1M/index_size.tdb"
     ids_uri="${nvme_root}/1M/ids.tdb"
     query_uri="${nvme_root}/1M/query_public_10k"
     groundtruth_uri="${nvme_root}/1M/bigann_1M_GT_nnids"
@@ -94,6 +99,7 @@ function init_10M_s3 () {
     centroids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/centroids.tdb"
     parts_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/parts.tdb"
     index_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/index.tdb"
+    sizes_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/index_size.tdb"
     ids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/ids.tdb"
     query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
     groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids"
@@ -107,6 +113,7 @@ function init_10M_gp3 () {
     centroids_uri="${gp3_root}/10M/centroids.tdb"
     parts_uri="${gp3_root}/10M/parts.tdb"
     index_uri="${gp3_root}/10M/index.tdb"
+    sizes_uri="${gp3_root}/10M/index_size.tdb"
     ids_uri="${gp3_root}/10M/ids.tdb"
     query_uri="${gp3_root}/10M/query_public_10k"
     groundtruth_uri="${gp3_root}/10M/bigann_10M_GT_nnids"
@@ -120,6 +127,7 @@ function init_10M_nvme () {
     centroids_uri="${nvme_root}/10M/centroids.tdb"
     parts_uri="${nvme_root}/10M/parts.tdb"
     index_uri="${nvme_root}/10M/index.tdb"
+    sizes_uri="${nvme_root}/10M/index_size.tdb"
     ids_uri="${nvme_root}/10M/ids.tdb"
     query_uri="${nvme_root}/10M/query_public_10k"
     groundtruth_uri="${nvme_root}/10M/bigann_10M_GT_nnids"
@@ -133,6 +141,7 @@ function init_100M_s3 () {
     centroids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/centroids.tdb"
     parts_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/parts.tdb"
     index_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/index.tdb"
+    sizes_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/index_size.tdb"
     ids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/ids.tdb"
     query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
     groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_100M_GT_nnids"
@@ -146,6 +155,7 @@ function init_100M_gp3 () {
     centroids_uri="${gp3_root}/100M/centroids.tdb"
     parts_uri="${gp3_root}/100M/parts.tdb"
     index_uri="${gp3_root}/100M/index.tdb"
+    sizes_uri="${gp3_root}/100M/index_size.tdb"
     ids_uri="${gp3_root}/100M/ids.tdb"
     query_uri="${gp3_root}/100M/query_public_10k"
     groundtruth_uri="${gp3_root}/100M/bigann_100M_GT_nnids"
@@ -159,6 +169,7 @@ function init_100M_nvme () {
     centroids_uri="${nvme_root}/100M/centroids.tdb"
     parts_uri="${nvme_root}/100M/parts.tdb"
     index_uri="${nvme_root}/100M/index.tdb"
+    sizes_uri="${nvme_root}/100M/index_size.tdb"
     ids_uri="${nvme_root}/100M/ids.tdb"
     query_uri="${nvme_root}/100M/query_public_10k"
     groundtruth_uri="${nvme_root}/100M/bigann_100M_GT_nnids"
@@ -172,6 +183,7 @@ function init_1B_s3 () {
     centroids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/centroids.tdb"
     parts_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/parts.tdb"
     index_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/index.tdb"
+    sizes_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/index_size.tdb"
     ids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/ids.tdb"
     query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
     groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_1B_GT_nnids"
@@ -185,6 +197,7 @@ function init_1B_gp3 () {
     centroids_uri="${gp3_root}/1B/centroids.tdb"
     parts_uri="${gp3_root}/1B/parts.tdb"
     index_uri="${gp3_root}/1B/index.tdb"
+    sizes_uri="${gp3_root}/1B/index_size.tdb"
     ids_uri="${gp3_root}/1B/ids.tdb"
     query_uri="${gp3_root}/1B/query_public_10k"
     groundtruth_uri="${gp3_root}/1B/bigann_1B_GT_nnids"
@@ -198,6 +211,7 @@ function init_1B_nvme () {
     centroids_uri="${nvme_root}/1B/centroids.tdb"
     parts_uri="${nvme_root}/1B/parts.tdb"
     index_uri="${nvme_root}/1B/index.tdb"
+    sizes_uri="${nvme_root}/1B/index_size.tdb"
     ids_uri="${nvme_root}/1B/ids.tdb"
     query_uri="${nvme_root}/1B/query_public_10k"
     groundtruth_uri="${nvme_root}/1B/bigann_1B_GT_nnids"
@@ -211,6 +225,7 @@ function init_sift_s3 () {
     centroids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/centroids.tdb"
     parts_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/parts.tdb"
     index_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/index.tdb"
+    sizes_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/index_size.tdb"
     ids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/ids.tdb"
     query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
     groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_1B_GT_nnids"
@@ -223,7 +238,8 @@ function init_sift_gp3 () {
     db_uri="${gp3_root}/sift/sift_base"
     centroids_uri="${gp3_root}/sift/centroids"
     parts_uri="${gp3_root}/sift/parts"
-    index_uri="${gp3_root}/sift/indexb"
+    index_uri="${gp3_root}/sift/index"
+    sizes_uri="${gp3_root}/sift/index_size"
     ids_uri="${gp3_root}/sift/ids"
     query_uri="${gp3_root}/sift/sift_query"
     groundtruth_uri="${gp3_root}/sift/sift_groundtruth"
@@ -232,38 +248,85 @@ function init_sift_gp3 () {
     echo "     -|-"
 }
 
-function init_1B_nvme () {
-    db_uri="${nvme_root}/1B/sift-1b-col-major"
-    centroids_uri="${nvme_root}/1B/centroids.tdb"
-    parts_uri="${nvme_root}/1B/parts.tdb"
-    index_uri="${nvme_root}/1B/index.tdb"
-    ids_uri="${nvme_root}/1B/ids.tdb"
-    query_uri="${nvme_root}/1B/query_public_10k"
-    groundtruth_uri="${nvme_root}/1B/bigann_1B_GT_nnids"
+function init_sift_nvme () {
+    db_uri="${nvme_root}/sift/sift_base"
+    centroids_uri="${nvme_root}/sift/centroids"
+    parts_uri="${nvme_root}/sift/parts"
+    index_uri="${nvme_root}/sift/index"
+    index_uri="${nvme_root}/sift/index_size"
+    ids_uri="${nvme_root}/sift/ids"
+    query_uri="${nvme_root}/sift/sift_query"
+    groundtruth_uri="${nvme_root}/sift/sift_groundtruth"
     echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
     echo "     -|-"
 }
+
+
 function verify_s3 () {
     aws s3 ls ${db_uri}
     aws s3 ls ${centroids_uri}
     aws s3 ls ${parts_uri}
     aws s3 ls ${index_uri}
+    aws s3 ls ${sizes_uri}
     aws s3 ls ${ids_uri}
     aws s3 ls ${query_uri}
     aws s3 ls ${groundtruth_uri}
 }
 
-function verify_all () {
-    init_1M
+function verify_gp3 () {
+    if [[ ! -d ${db_uri} ]]; then
+	echo "${db_uri} does not exist"
+    fi
+    if [[ ! -d ${centroids_uri} ]]; then
+	echo "${centoids_uri} does not exist"
+    fi
+    if [[ ! -d ${parts_uri} ]]; then
+	echo "${parts_uri} does not exist"
+    fi
+    if [[ ! -d ${index_uri} ]]; then
+	echo "${index_uri} does not exist"
+    fi
+    if [[ ! -d ${sizes_uri} ]]; then
+	echo "${sizes_uri} does not exist"
+    fi
+    if [[ ! -d ${ids_uri} ]]; then
+	echo "${ids_uri} does not exist"
+    fi
+    if [[ ! -d ${query_uri} ]]; then
+	echo "${query_uri} does not exist"
+    fi
+    if [[ ! -d ${groundtruth_uri} ]]; then
+	echo "${groundtruth_uri} does not exist"
+    fi
+}
+
+function verify_all_s3 () {
+    init_1M_s3
     verify_s3
-    init_10M
+    init_10M_s3
     verify_s3
-    init_100M
+    init_100M_s3
     verify_s3
-    init_1B
+    init_1B_s3
+    verify_s3
+    init_sift_s3
     verify_s3
 }
+
+function verify_all_gp3 () {
+    init_1M_gp3
+    verify_gp3
+    init_10M_gp3
+    verify_gp3
+    init_100M_gp3
+    verify_gp3
+    init_1B_gp3
+    verify_gp3
+    init_sift_gp3
+    verify_gp3
+}
+
 
 function print_one_schema() {
     printf "================================================================\n"
@@ -383,12 +446,13 @@ function ivf_query() {
 	return 255
     fi
 
+# --index_uri ${index_uri} \
     local query="\
 ${ivf_query} \
 --db_uri ${db_uri} \
 --centroids_uri ${centroids_uri} \
 --parts_uri ${parts_uri} \
---index_uri ${index_uri} \
+--sizes_uri ${sizes_uri} \
 --ids_uri ${ids_uri} \
 --query_uri ${query_uri} \
 --groundtruth_uri ${groundtruth_uri} \
