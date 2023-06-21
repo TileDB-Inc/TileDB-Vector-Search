@@ -171,12 +171,7 @@ auto qv_query_heap_infinite_ram(
 
   assert(shuffled_db.num_cols() == shuffled_ids.size());
 
-  // Fix up the indices vector in case the array only had N indices rather than
-  // N+1.
-  if (size(indices) == centroids.num_cols()) {
-    indices.resize(size(indices) + 1);
-    indices[size(indices) - 1] = shuffled_db.num_cols();
-  }
+  // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
 
   debug_matrix(shuffled_db, "shuffled_db");
@@ -293,19 +288,10 @@ auto qv_query_heap_finite_ram(
 
   auto active_partitions =
       std::vector<parts_type>(begin(active_centroids), end(active_centroids));
-  // std::copy(begin(active_centroids), end(active_centroids),
-  // begin(active_partitions));
 
-  /*
-   * Read the necessary partitions and ids
-   */
-  if (size(indices) != centroids.num_cols() + 1) {
-    std::cout << "#\n# indices " << size(indices)
-              << " != " << centroids.num_cols() + 1 << std::endl;
-    std::cout << "# some minimal inaccuracy until fixed\n#" << std::endl;
-    indices.resize(centroids.num_cols() + 1);
-    indices[size(indices) - 1] = indices[size(indices) - 2];
-  }
+  // Check that the size of the indices vector is correct
+  assert(size(indices) == centroids.num_cols() + 1);
+
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
   new_indices[0] = 0;
   for (size_t i = 0; i < size(active_partitions); ++i) {
