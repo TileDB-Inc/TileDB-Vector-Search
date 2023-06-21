@@ -32,6 +32,9 @@
 #ifndef TILEDB_TDB_IO_H
 #define TILEDB_TDB_IO_H
 
+#include <vector>
+#include <numeric>
+
 #include <tiledb/tiledb>
 #include "detail/linalg/matrix.h"
 #include "utils/logging.h"
@@ -45,11 +48,12 @@ void write_matrix(
     const tiledb::Context& ctx,
     const Matrix<T, LayoutPolicy, I>& A,
     const std::string& uri) {
+  scoped_timer _{tdb_func__ + " " + std::string{uri}};
+
   if (global_debug) {
     std::cerr << "# Writing Matrix: " << uri << std::endl;
   }
 
-  scoped_timer _{"write matrix " + uri};
 
   // @todo: make this a parameter
   size_t num_parts = 10;
@@ -104,11 +108,12 @@ void write_matrix(
 template <class T>
 void write_vector(
     const tiledb::Context& ctx, std::vector<T>& v, const std::string& uri) {
+  scoped_timer _{tdb_func__ + " " + std::string{uri}};
+
   if (global_debug) {
     std::cerr << "# Writing std::vector: " << uri << std::endl;
   }
 
-  scoped_timer _{"write vector " + uri};
 
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
@@ -146,6 +151,8 @@ void write_vector(
  */
 template <class T>
 std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
+  scoped_timer _{tdb_func__ + " " + std::string{uri}};
+
   if (global_debug) {
     std::cerr << "# Reading std::vector: " << uri << std::endl;
   }
@@ -153,7 +160,6 @@ std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
   auto array_ = tiledb::Array{ctx, uri, TILEDB_READ};
   auto schema_ = array_.schema();
 
-  scoped_timer _{"read vector " + uri};
   using domain_type = int32_t;
   const size_t idx = 0;
 
@@ -190,6 +196,14 @@ std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
   return data_;
+}
+
+template <class T>
+auto sizes_to_indices(const std::vector<T>& sizes) {
+  std::vector<T> indices(size(sizes) + 1);
+  std::inclusive_scan(begin(sizes), end(sizes), begin(indices)+1);
+
+  return indices;
 }
 
 #endif  // TILEDB_TDB_IO_H

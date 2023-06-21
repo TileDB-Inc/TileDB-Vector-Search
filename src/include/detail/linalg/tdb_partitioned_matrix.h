@@ -105,6 +105,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   log_timer constructor_timer{"tdbPartitionedMatrix constructor"};
 
+  std::string uri_;
   std::reference_wrapper<const tiledb::Context> ctx_;
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
@@ -177,6 +178,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t upper_bound,
       size_t nthreads)
       : constructor_timer{tdb_func__ + std::string{" constructor"}}
+      , uri_{uri}
       , ctx_{ctx}
       , array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()}
@@ -190,7 +192,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
     total_num_parts_ = size(parts_);
 
-    scoped_timer _{tdb_func__ + uri};
+    scoped_timer _{tdb_func__ + " " + uri_};
 
     auto cell_order = schema_.cell_order();
     auto tile_order = schema_.tile_order();
@@ -248,18 +250,16 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 #endif
 
     Base::operator=(Base{std::move(data_), dimension, max_cols_});
-
-    // @todo Take this out and require user to make first call to advance()
-    advance();
   }
 
   /**
    * Read in the next partitions
    */
 
-  bool advance() {
-    // @todo -- col oriented only for now -- generalize!!
+  bool load() {
+    scoped_timer _{tdb_func__ + " " + uri_};
 
+    // @todo -- col oriented only for now -- generalize!!
     {
       const size_t attr_idx = 0;
       auto attr = schema_.attribute(attr_idx);

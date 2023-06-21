@@ -48,7 +48,8 @@ namespace detail::flat {
  * inspected for top_k.  The method for getting top_k is selected by the
  * nth argument (true = nth_element, false = heap).
  *
- * @todo Implement a blocked version
+ * @todo Implement a blocked version that does not require fully forming the
+ * scores matrix (and which could also be used for out-of core).
  */
 template <class DB, class Q>
 auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
@@ -90,10 +91,10 @@ auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
 }
 
 /**
- * This algorithm accumulates top_k as it goes, but in a transpose fashion to
+ * This algorithm accumulates top_k as it goes, but in a "transposed" fashion to
  * qv_query.  Namely, it loops over the database vectors on the outer loop,
  * where each thread keeps its own set of heaps for each query vector.  After
- * The database vector loop, the heaps are merged and then copied to top_k.
+ * The database vector loop, the heaps are merged and then copied to `top_k`.
  *
  * @todo Implement a blocked version
  */

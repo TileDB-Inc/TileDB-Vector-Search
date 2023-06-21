@@ -52,7 +52,7 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index]") {
   ColMajorMatrix<float> training_data(4, 8);
   std::copy(begin(data), end(data), training_data.data());
 
-  auto index = kmeans_index<float, uint32_t, uint32_t>(4, 3, 10, 1e-4, 1);
+  auto index = kmeans_index<float, uint32, uint32>(4, 3, 10, 1e-4, 1);
 
   SECTION("random") {
     index.kmeans_random_init(training_data);

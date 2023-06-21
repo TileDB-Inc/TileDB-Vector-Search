@@ -27,7 +27,25 @@
  *
  * @section DESCRIPTION
  *
+ * Implementation of queries for the "qv" orderings, i.e., for which the loop
+ * over the queries is on the outer loop and the loop over the vectors is on the
+ * inner loop.  Since the vectors in the inner loop are partitioned, we can
+ * operate on them blockwise, which ameliorates the locality issues that
+ * arise when doing this order with a flat index, say.
  *
+ * There are two implementations here: infinite RAM and finite RAM.  The
+ * infinite RAM case loads the entire partitioned database into memory, and then
+ * searches in the partitions as indicated by the nearest centroids to the
+ * queries.  The infinite RAM case does not perform any out-of-core operations.
+ * The finite RAM case only loads the partitions into memory that are necessary
+ * for the search. The user can specify an upper bound on the amount of RAM to
+ * be used for holding the queries being searched.  The searches are ordered so
+ * that the partitions can be loaded into memory in the order they are layed out
+ * in the array.
+ *
+ * In general there is probably no reason to ever use the infinite RAM case
+ * other than for benchmarking, as it requires machines with very large amounts
+ * of RAM.
  */
 
 #ifndef TILEDB_IVF_QV_H
@@ -138,6 +156,7 @@ auto qv_query_heap_infinite_ram(
       nthreads);
 }
 
+// @todo We should still order the queries so partitions are searched in order
 auto qv_query_heap_infinite_ram(
     auto&& shuffled_db,
     auto&& centroids,
@@ -151,10 +170,8 @@ auto qv_query_heap_infinite_ram(
   scoped_timer _{"Total time " + tdb_func__};
 
   assert(shuffled_db.num_cols() == shuffled_ids.size());
-  if (size(indices) == centroids.num_cols()) {
-    indices.resize(size(indices) + 1);
-    indices[size(indices) - 1] = shuffled_db.num_cols();
-  }
+
+  // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
 
   debug_matrix(shuffled_db, "shuffled_db");
@@ -165,14 +182,12 @@ auto qv_query_heap_infinite_ram(
   //  auto top_centroids = vq_query_heap(centroids, q, nprobe, nthreads);
 
   // @todo is this the best (fastest) algorithm to use?  (it takes miniscule
-  // time)
+  // time at rate)
   auto top_centroids =
       detail::flat::qv_query_nth(centroids, q, nprobe, false, nthreads);
 
   auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
       size(q), fixed_min_pair_heap<float, size_t>(k_nn));
-  // auto min_scores = std::vector<fixed_min_heap<std::pair<float,
-  // size_t>>>(size(q), fixed_min_heap<std::pair<float, size_t>>(k_nn));
 
   {
     scoped_timer __{tdb_func__ + std::string{"_in_ram"}};
@@ -188,7 +203,6 @@ auto qv_query_heap_infinite_ram(
             for (size_t i = start; i < stop; ++i) {
               auto score = L2(q_vec /*q[j]*/, shuffled_db[i]);
               min_scores[j].insert(score, shuffled_ids[i]);
-              // min_scores[j].insert({score, shuffled_ids[i]});
             }
           }
         });
@@ -214,6 +228,15 @@ auto qv_query_heap_infinite_ram(
   return top_k;
 }
 
+/**
+ * @brief Query a set of vectors against a partitioned database.
+ *
+ * This function queries each vector in the query set against the appropriate
+ * partitions.
+ *
+ * For now that type of the array and the type of the shuffled
+ * ids need to be passed as template arguments.
+ */
 template <typename T, class shuffled_ids_type>
 auto qv_query_heap_finite_ram(
     tiledb::Context& ctx,
@@ -265,19 +288,10 @@ auto qv_query_heap_finite_ram(
 
   auto active_partitions =
       std::vector<parts_type>(begin(active_centroids), end(active_centroids));
-  // std::copy(begin(active_centroids), end(active_centroids),
-  // begin(active_partitions));
 
-  /*
-   * Read the necessary partitions and ids
-   */
-  if (size(indices) != centroids.num_cols() + 1) {
-    std::cout << "#\n# indices " << size(indices)
-              << " != " << centroids.num_cols() + 1 << std::endl;
-    std::cout << "# some minimal inaccuracy until fixed\n#" << std::endl;
-    indices.resize(centroids.num_cols() + 1);
-    indices[size(indices) - 1] = indices[size(indices) - 2];
-  }
+  // Check that the size of the indices vector is correct
+  assert(size(indices) == centroids.num_cols() + 1);
+
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
   new_indices[0] = 0;
   for (size_t i = 0; i < size(active_partitions); ++i) {
@@ -323,10 +337,12 @@ auto qv_query_heap_finite_ram(
       std::vector<fixed_min_pair_heap<float, size_t>>(
           size(q), fixed_min_pair_heap<float, size_t>(k_nn)));
 
-  log_timer _i{tdb_func__ + "_iteration"};
+  log_timer _i{tdb_func__ + " in RAM"};
 
-  for (;;) {
+  while(shuffled_db.load()) {
+
     _i.start();
+
     // size_t block_size = (size(active_partitions) + nthreads - 1) / nthreads;
     size_t parts_per_thread =
         (shuffled_db.num_col_parts() + nthreads - 1) / nthreads;
@@ -380,12 +396,6 @@ auto qv_query_heap_finite_ram(
       futs[n].get();
     }
     _i.stop();
-    {
-      scoped_timer _a{tdb_func__ + "_advance"};
-      if (!shuffled_db.advance()) {
-        break;
-      }
-    }
   }
 
   _i.start();
@@ -398,9 +408,10 @@ auto qv_query_heap_finite_ram(
   }
   _i.stop();
 
-  ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
 
   scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
+
+  ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
 
   // get_top_k_from_heap(min_scores, top_k);
 
@@ -417,93 +428,6 @@ auto qv_query_heap_finite_ram(
   return top_k;
 }
 
-#if 0
-auto kmeans_query_small_q_minparts(
-    const std::string& part_uri,
-    auto&& centroids,
-    auto&& q,
-    auto&& indices,
-    const std::string& id_uri,
-    size_t nprobe,
-    size_t k_nn,
-    bool nth,
-    size_t nthreads) {
-
-  size_t num_queries = q.num_cols();
-  // get closest centroid for each query vector
-  // auto top_k = qv_query(centroids, q, nprobe, nthreads);
-  //  auto top_centroids = vq_query_heap(centroids, q, nprobe, nthreads);
-  auto top_centroids = qv_query_nth(centroids, q, nprobe, false, nthreads);
-
-  std::vector<std::multiset<size_t>> queries_per_centroid(top_centroids.num_cols(), std::multiset<size_t>{});
-  for (size_t j = 0; j < num_queries; ++j) {
-    for (size_t p = 0; p < nprobe; ++p) {
-      queries_per_centroid[j].insert(top_centroids(p, j));
-    }
-  }
-  std::sort(begin(raveled(top_centroids)), end(raveled(top_centroids)));
-  auto new_begin = begin(raveled(top_centroids));
-  auto new_end = std::unique(begin(raveled(top_centroids)), end(raveled(top_centroids)));
-  std::vector<parts_type> parts(new_begin, new_end);
-
-  std::map<size_t, size_t> part_map;
-  for (size_t i = 0; i < parts.size(); ++i) {
-    part_map[parts[i]] = i;
-  }
-
-  // Read the shuffled database and ids
-  // @todo To this more systematically
-  // auto shuffled_db = tdbColMajorMatrix<T>(part_uri);
-  // auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
-
-  std::vector<shuffled_ids_type> shuffled_ids;
-  auto shuffled_db = tdbColMajorMatrix<T>(part_uri, indices, parts, id_uri, shuffled_ids, nthreads);
-
-  debug_matrix(shuffled_db, "shuffled_db");
-  debug_matrix(shuffled_ids, "shuffled_ids");
-
-  auto min_scores = std::vector<fixed_min_heap<element>>(
-      size(q), fixed_min_heap<element>(k_nn));
-
-  scoped_timer __{std::string{"In memory portion of "} + tdb_func__};
-  auto par = stdx::execution::indexed_parallel_policy{nthreads};
-
-  stdx::range_for_each(
-      std::move(par), q, [&, nprobe](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
-        for (size_t p = 0; p < nprobe; ++p) {
-          size_t start = part_map[indices[top_centroids(p, j)]];
-          size_t stop = part_map[indices[top_centroids(p, j) + 1]];
-
-          for (size_t i = start; i < stop; ++i) {
-            auto score = L2(q[j], shuffled_db[i]);
-            min_scores[j].insert(element{score, shuffled_ids[i]});
-          }
-        }
-      });
-
-
-  ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
-
-
-  scoped_timer ___{std::string{"Top k portion of "} + tdb_func__};
-
-  // @todo this pattern repeats alot -- put into a function
-  for (int j = 0; j < size(q); ++j) {
-    sort_heap(min_scores[j].begin(), min_scores[j].end());
-    std::transform(
-        min_scores[j].begin(),
-        min_scores[j].end(),
-        top_k[j].begin(),
-        ([](auto&& e) { return e.second; }));
-  }
-
-  // @todo this is an ugly and embarrassing hack
-  __.stop();
-  global_time_of_interest = __.elapsed();
-
-  return top_k;
-}
-#endif
 
 }  // namespace detail::ivf
 
