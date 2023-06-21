@@ -9,7 +9,7 @@ target_link_libraries(flat_blas INTERFACE BLAS::BLAS)
 get_target_property(foo BLAS::BLAS INCLUDE_DIRECTORIES)
 
 if (USE_MKL_CBLAS)
-  target_compile_definitions(flat_blas USE_MKL)
+  target_compile_definitions(flat_blas INTERFACE USE_MKL)
 endif()
 
 if (BLAS_LIBRARIES MATCHES "cblas" OR BLAS_LIBRARIES MATCHES "openblas")
