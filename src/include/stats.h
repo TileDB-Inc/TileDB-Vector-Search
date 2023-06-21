@@ -45,11 +45,119 @@
 
 #include <tiledb/tiledb>
 
+#include "utils/logging.h"
+
 #include "config.h"
 
 #include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
+
+
+
+auto dump_logs = [](std::ostream& output,
+                    const std::string algorithm,
+                    size_t nqueries,
+                    size_t nprobe,
+                    size_t k_nn,
+                    size_t nthreads,
+                    double recall) {
+  // Quick and dirty way to get query info in summarizable and useful form -- fixed-width columns
+  // @todo encapsulate this as a function that can be customized
+  // @todo  use --log to specify destination (if any)
+
+  // @todo print other information
+  output << "# [ Repo ]: " << GIT_REPO_NAME << " @ " << GIT_BRANCH
+         << std::endl;
+
+  output << std::setw(5) << "-|-";
+  output << std::setw(12) << "Algorithm";
+  output << std::setw(9) << "Queries";
+  output << std::setw(8) << "nprobe";
+  output << std::setw(8) << "k_nn";
+  output << std::setw(8) << "thrds";
+  output << std::setw(8) << "recall";
+
+  // Table of contents -- quantities with long identifiers are marked with a
+  // letter in their column and the key is printed out after the line is logged.
+  std::map<std::string, std::string> toc;
+  char tag = 'A';
+
+  // A bit of a hack -- first set units to seconds
+  auto units = std::string(" (s)");
+  for (auto& timers :
+       {_timing_data.get_timer_names(), _memory_data.get_usage_names()}) {
+    for (auto& timer : timers) {
+      std::string text;
+      if (size(timer) < 3) {
+        text = timer;
+      } else {
+        std::string key = "[" + std::string(1, tag) + "]";
+        toc[key] = timer + units;
+        ++tag;
+        text = key;
+      }
+      output << std::setw(12) << text;
+    }
+    // hack, continued -- set units to MiB at bottom of loop
+    units = std::string(" (MiB)");  // copilot scares me
+  }
+
+  output << std::endl;
+
+  auto original_precision = output.precision();
+
+  output << std::setw(5) << "-|-";
+  output << std::setw(12) << algorithm;
+  output << std::setw(9) << nqueries;
+  output << std::setw(8) << nprobe;
+  output << std::setw(8) << k_nn;
+  output << std::setw(8) << nthreads;
+  output << std::fixed << std::setprecision(3);
+  output << std::setw(8) << recall;
+
+  output.precision(original_precision);
+  output << std::fixed << std::setprecision(3);
+  auto timers = _timing_data.get_timer_names();
+  for (auto& timer : timers) {
+    auto ms =
+        _timing_data.get_entries_summed<std::chrono::microseconds>(timer);
+    if (ms < 1000) {
+      output << std::fixed << std::setprecision(6);
+    } else if (ms < 10000) {
+      output << std::fixed << std::setprecision(5);
+    } else if (ms < 100000) {
+      output << std::fixed << std::setprecision(4);
+    } else {
+      output << std::fixed << std::setprecision(3);
+    }
+    output << std::setw(12) << ms / 1000000.0;
+  }
+
+  output << std::fixed << std::setprecision(0);
+
+  auto usages = _memory_data.get_usage_names();
+  for (auto& usage : usages) {
+    auto mem = _memory_data.get_entries_summed(usage);
+    if (mem < 1) {
+      output << std::fixed << std::setprecision(3);
+    } else if (mem < 10) {
+      output << std::fixed << std::setprecision(2);
+    } else if (mem < 100) {
+      output << std::fixed << std::setprecision(1);
+    } else {
+      output << std::fixed << std::setprecision(0);
+    }
+    output << std::setw(12) << _memory_data.get_entries_summed(usage);
+  }
+  output << std::endl;
+  output << std::setprecision(original_precision);
+
+  for (auto& t : toc) {
+    output << t.first << ": " << t.second << std::endl;
+  }
+};
+
 
 auto config_log(const std::string& program_name) {
   std::string uuid_;

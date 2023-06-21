@@ -56,7 +56,7 @@ namespace detail::flat {
  * get_top_k hard-coded to use a heap based algorithm.  This version can
  * use either a heap or the nth_element algorithm, depending on value of nth.
  *
- * @todo Implement a blocked version
+ * @todo Implement a blocked / out-of-core version
  * @todo Are there other optimizations to apply?
  */
 
@@ -92,10 +92,8 @@ auto qv_query_nth(
 }
 
 /**
- * @todo Block the query to avoid memory blowup
+ * @todo Use blocked / out-of-core to avoid memory blowup
  *
- * @note qv_query_by_vector in flat_query.h is similar to this, but
- * uses foreach instead of manually spawning threads.
  */
 template <vector_database DB, class Q>
 auto qv_query_heap(const DB& db, const Q& q, size_t k, unsigned nthreads) {

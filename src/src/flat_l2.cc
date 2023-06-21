@@ -100,8 +100,8 @@ static constexpr const char USAGE[] =
       flat (-h | --help)
       flat --db_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
           [--k NN] [--nqueries NN]
-          [--alg ALGO] [--finite] [--blocksize NN] [-nth]
-          [--nthreads N] [--region] [--validate] [--log FILE] [-d] [-v]
+          [--alg ALGO] [--finite] [--blocksize NN] [--nth]
+          [--nthreads N] [--region REGION] [--validate] [--log FILE] [-d] [-v]
 
   Options:
       -h, --help              show this screen
@@ -110,14 +110,14 @@ static constexpr const char USAGE[] =
       --groundtruth_uri URI   ground truth URI
       --output_uri URI        output URI for results
       --k NN                  number of nearest neighbors to find [default: 10]
-      --nqueries NN            size of queries subset to compare (0 = all) [default: 0]
+      --nqueries NN           size of queries subset to compare (0 = all) [default: 0]
       --alg ALGO              which algorithm to use for comparisons [default: vq_heap]
       --finite                use finite RAM (out of core) algorithm [default: false]
       --blocksize NN          number of vectors to process in an out of core block (0 = all) [default: 0]
       --nth                   use nth_element for top k [default: false]
       --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
-      --region REGION         AWS S3 region [default: us-east-1]
       -V, --validate          validate results [default: false]
+      --region REGION         AWS region [default: us-east-1]
       --log FILE              log info to FILE (- for stdout)
       -d, --debug             run in debug mode [default: false]
       -v, --verbose           run in verbose mode [default: false]
@@ -140,7 +140,8 @@ int main(int argc, char* argv[]) {
   std::string groundtruth_uri =
       args["--groundtruth_uri"] ? args["--groundtruth_uri"].asString() : "";
 
-  std::cout << "# Using " << args["--algo"].asString() << std::endl;
+  auto alg_name = args["--alg"].asString();
+  std::cout << "# Using " << alg_name << std::endl;
 
   size_t k = args["--k"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
@@ -175,31 +176,31 @@ int main(int argc, char* argv[]) {
   std::cout << load_time << std::endl;
 
   auto top_k = [&]() {
-    if (args["--order"].asString() == "vq_nth") {
+    if (alg_name == "vq_nth") {
       if (verbose) {
         std::cout << "# Using vq_nth, nth = " << std::to_string(nth)
                   << std::endl;
       }
       return detail::flat::vq_query_nth(db, query, k, nth, nthreads);
-    } else if (args["--order"].asString() == "vq_heap") {
+    } else if (alg_name == "vq_heap") {
       if (verbose) {
         std::cout << "# Using vq_heap, ignoring nth = " << std::to_string(nth)
                   << std::endl;
       }
       return detail::flat::vq_query_heap(db, query, k, nthreads);
-    } else if (args["--order"].asString() == "qv_nth") {
+    } else if (alg_name == "qv_nth") {
       if (verbose) {
         std::cout << "# Using qv_nth, nth = " << std::to_string(nth)
                   << std::endl;
       }
       return detail::flat::qv_query_nth(db, query, k, nth, nthreads);
-    } else if (args["--order"].asString() == "qv_heap") {
+    } else if (alg_name == "qv_heap") {
       if (verbose) {
         std::cout << "# Using qv_query (qv_heap), ignoring nth = "
                   << std::to_string(nth) << std::endl;
       }
       return detail::flat::qv_query_heap(db, query, k, nthreads);
-    } /* else if (args["--order"].asString() == "gemm") {
+    } /* else if (alg_name == "gemm") {
       // if (block != 0) {
       if (args["--block"]) {
         std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth)
@@ -213,14 +214,20 @@ int main(int argc, char* argv[]) {
       }
     }*/
     throw std::runtime_error(
-        "incorrect or unset order type: " + args["--order"].asString());
+        "incorrect or unset algorithm type: " + alg_name);
   }();
 
   if (!groundtruth_uri.empty() && validate) {
     auto groundtruth = groundtruth_uri.empty() ?
                            ColMajorMatrix<int>(0, 0) :
                            tdbColMajorMatrix<int>(ctx, groundtruth_uri);
-    validate_top_k(top_k, groundtruth);
+    if(!validate_top_k(top_k, groundtruth)) {
+      std::cout << "Validation failed" << std::endl;
+    } else {
+      if (verbose) {
+        std::cout << "Validation succeeded" << std::endl;
+      }
+    }
   }
 
   if (args["--output_uri"]) {
@@ -234,21 +241,8 @@ int main(int argc, char* argv[]) {
     write_matrix(ctx, output, args["--output_uri"].asString());
   }
 
-  // @todo replace with new functionality in logging.h
-#if 0
-  if (args["--log"]) {
-    auto program_args = args_log(args);
-    auto config = config_log(argv[0]);
-
-    json log_log = {
-        {"Config", config}, {"Args", program_args}, {"Times", get_timings()}};
-
-    if (args["--log"].asString() == "-") {
-      std::cout << log_log.dump(2) << std::endl;
-    } else {
-      std::ofstream outfile(args["--log"].asString(), std::ios_base::app);
-      outfile << log_log.dump(2) << std::endl;
-    }
+  // @todo send to output specified by --log
+  if (true || verbose) {
+    dump_logs(std::cout, alg_name, nqueries, 0, k, nthreads, 0);
   }
-#endif
 }
