@@ -98,12 +98,12 @@ static void declare_kmeans_query(py::module& m, const std::string& suffix) {
          const ColMajorMatrix<float>& centroids,
          const ColMajorMatrix<float>& query_vectors,
          std::vector<uint64_t>& indices,
-         std::vector<shuffled_ids_type>& ids,
+         std::vector<uint64_t>& ids,
          size_t nprobe,
          size_t k_nn,
          bool nth,
          size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
-        auto r = detail::ivf::qv_query_heap_infinite_ram<T>(
+        auto r = detail::ivf::qv_query_heap_infinite_ram(
             parts,
             centroids,
             query_vectors,
