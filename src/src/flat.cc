@@ -241,21 +241,8 @@ int main(int argc, char* argv[]) {
     write_matrix(ctx, output, args["--output_uri"].asString());
   }
 
-  // @todo replace with new functionality in logging.h
-#if 0
-  if (args["--log"]) {
-    auto program_args = args_log(args);
-    auto config = config_log(argv[0]);
-
-    json log_log = {
-        {"Config", config}, {"Args", program_args}, {"Times", get_timings()}};
-
-    if (args["--log"].asString() == "-") {
-      std::cout << log_log.dump(2) << std::endl;
-    } else {
-      std::ofstream outfile(args["--log"].asString(), std::ios_base::app);
-      outfile << log_log.dump(2) << std::endl;
-    }
+  // @todo send to output specified by --log
+  if (true || verbose) {
+    dump_logs(std::cout, alg_name, nqueries, 0, k, nthreads, 0);
   }
-#endif
 }

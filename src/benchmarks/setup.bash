@@ -328,46 +328,46 @@ function ivf_query() {
     while [ "$#" -gt 0 ]; do
 	case "$1" in
 	    -x|--exec)
-		ivf_query=${2}
+		local ivf_query=${2}
 		shift 2
 		;;
 	    -h|--help)
 		shift 1
 		;;
 	    -d|--debug)
-		_debug="-d"
+		local _debug="-d"
 		shift 1
 		;;
 	    -v|--verbose)
-		_verbose="-v"
+		local _verbose="-v"
 		shift 1
 		;;
 	    --k|--knn|--k_nn)
-		_k_nn="--k ${2}"
+		local _k_nn="--k ${2}"
 		shift 2
 		;;
 	    --nqueries)
-		_nqueries="--nqueries ${2}"
+		local _nqueries="--nqueries ${2}"
 		shift 2
 		;;
 	    --nthreads)
-		_nthreads="--nthreads ${2}"
+		local _nthreads="--nthreads ${2}"
 		shift 2
 		;;
 	    --cluster|--nprobe)
-		_cluster="--cluster ${2}"
+		local _cluster="--cluster ${2}"
 		shift 2
 		;;
 	    --block|--blocksize)
-		_blocksize="--blocksize ${2}"
+		local _blocksize="--blocksize ${2}"
 		shift 2
 		;;
 	    --finite)
-		_finite="--finite"
+		local _finite="--finite"
 		shift 1
 		;;
 	    --log)
-		_log="--log ${2}"
+		local _log="--log ${2}"
 		shift 2
 		;;
 	    *)
@@ -383,7 +383,7 @@ function ivf_query() {
 	return 255
     fi
 
-    query="\
+    local query="\
 ${ivf_query} \
 --db_uri ${db_uri} \
 --centroids_uri ${centroids_uri} \
@@ -413,38 +413,46 @@ function flat_query() {
     while [ "$#" -gt 0 ]; do
 	case "$1" in
 	    -x|--exec)
-		flat_query=${2}
+		local flat_query=${2}
+		shift 2
+		;;
+	    -a|--alg|--algorithm)
+		local _algorithm="--alg ${2}"
 		shift 2
 		;;
 	    -h|--help)
 		shift 1
 		;;
 	    -d|--debug)
-		_debug="-d"
+		local _debug="-d"
 		shift 1
 		;;
 	    -v|--verbose)
-		_verbose="-v"
+		local _verbose="-v"
 		shift 1
 		;;
 	    --nqueries)
-		_nqueries="--nqueries ${2}"
+		local _nqueries="--nqueries ${2}"
 		shift 2
 		;;
 	    --nthreads)
-		_nthreads="--nthreads ${2}"
+		local _nthreads="--nthreads ${2}"
 		shift 2
 		;;
 	    --block|--blocksize)
-		_blocksize="--blocksize ${2}"
+		local _blocksize="--blocksize ${2}"
 		shift 2
 		;;
+	    --nth)
+		local _nth="--nth"
+		shift 1
+		;;
 	    --log)
-		_log="--log ${2}"
+		local _log="--log ${2}"
 		shift 2
 		;;
 	    -V|--validate)
-		_validate="--validate"
+		local _validate="--validate"
 		shift 1
 		;;
 	    *)
@@ -460,14 +468,16 @@ function flat_query() {
 	return 255
     fi
 
-    query="\
+    local query="\
 ${flat_query} \
 --db_uri ${db_uri} \
 --query_uri ${query_uri} \
 --groundtruth_uri ${groundtruth_uri} \
+${_algorithm} \
 ${_nqueries} \
 ${_nthreads} \
 ${_blocksize} \
+${_nth} \
 ${_log} \
 ${_validate} \
 ${_verbose} \

@@ -175,8 +175,8 @@ int main(int argc, char* argv[]) {
     // Find the top k nearest neighbors accelerated by kmeans and do some
     // reporting
 
-    // @todo Encapsulate these arrays in a class
-    // auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
+    // @todo Encapsulate these arrays into a single ivf_index class (WIP)
+    // auto shuffled_db = tdbColMajorMatrix<db_type>(part_uri);
     // auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
     // debug_matrix(shuffled_db, "shuffled_db");
     // debug_matrix(shuffled_ids, "shuffled_ids");
@@ -221,6 +221,7 @@ int main(int argc, char* argv[]) {
 
     debug_matrix(top_k, "top_k");
 
+    // @todo encapsulate as a function
     if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
 
@@ -273,115 +274,8 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  // Quick and dirty way to get query info in summarizable form
+  // @todo send to output specified by --log
   if (true || global_verbose) {
-    std::cout << "# [ Repo ]: " << GIT_REPO_NAME << " @ " << GIT_BRANCH
-              << std::endl;
-
-    char tag = 'A';
-    std::map<std::string, std::string> toc;
-
-    if (true) {
-      std::cout << std::setw(5) << "-|-";
-      std::cout << std::setw(12) << "Algorithm";
-      std::cout << std::setw(9) << "Queries";
-      std::cout << std::setw(8) << "nprobe";
-      std::cout << std::setw(8) << "k_nn";
-      std::cout << std::setw(8) << "thrds";
-      std::cout << std::setw(8) << "recall";
-
-      auto units = std::string(" (s)");
-      for (auto& timers :
-           {_timing_data.get_timer_names(), _memory_data.get_usage_names()}) {
-        for (auto& timer : timers) {
-          std::string text;
-          if (size(timer) < 3) {
-            text = timer;
-          } else {
-            std::string key = "[" + std::string(1, tag) + "]";
-            toc[key] = timer + units;
-            ++tag;
-            text = key;
-          }
-          std::cout << std::setw(12) << text;
-        }
-        units = std::string(" (MiB)");  // copilot scares me
-      }
-
-      std::cout << std::endl;
-    }
-
-    auto original_precision = std::cout.precision();
-
-    std::cout << std::setw(5) << "-|-";
-    std::cout << std::setw(12) << algorithm;
-    std::cout << std::setw(9) << nqueries;
-    std::cout << std::setw(8) << nprobe;
-    std::cout << std::setw(8) << k_nn;
-    std::cout << std::setw(8) << nthreads;
-    std::cout << std::fixed << std::setprecision(3);
-    std::cout << std::setw(8) << recall;
-
-    std::cout.precision(original_precision);
-    std::cout << std::fixed << std::setprecision(3);
-    auto timers = _timing_data.get_timer_names();
-    for (auto& timer : timers) {
-      auto ms =
-          _timing_data.get_entries_summed<std::chrono::microseconds>(timer);
-      if (ms < 1000) {
-        std::cout << std::fixed << std::setprecision(6);
-      } else if (ms < 10000) {
-        std::cout << std::fixed << std::setprecision(5);
-      } else if (ms < 100000) {
-        std::cout << std::fixed << std::setprecision(4);
-      } else {
-        std::cout << std::fixed << std::setprecision(3);
-      }
-      std::cout << std::setw(12) << ms / 1000000.0;
-    }
-
-    std::cout << std::fixed << std::setprecision(0);
-
-    auto usages = _memory_data.get_usage_names();
-    for (auto& usage : usages) {
-      auto mem = _memory_data.get_entries_summed(usage);
-      if (mem < 1) {
-        std::cout << std::fixed << std::setprecision(3);
-      } else if (mem < 10) {
-        std::cout << std::fixed << std::setprecision(2);
-      } else if (mem < 100) {
-        std::cout << std::fixed << std::setprecision(1);
-      } else {
-        std::cout << std::fixed << std::setprecision(0);
-      }
-      std::cout << std::setw(12) << _memory_data.get_entries_summed(usage);
-    }
-    std::cout << std::endl;
-    std::cout << std::setprecision(original_precision);
-
-    for (auto& t : toc) {
-      std::cout << t.first << ": " << t.second << std::endl;
-    }
+    dump_logs(std::cout, algorithm, nqueries, nprobe, k_nn, nthreads, recall);
   }
-
-#if 0
-  if (args["--log"]) {
-    auto timings = get_timings();
-    auto program_args = args_log(args);
-    auto config = config_log(argv[0]);
-
-    json log_log = {
-        {"Config", config},
-        {"Args", program_args},
-        {"Recalls", recalls},
-        {"Times", timings}};
-
-    if (args["--log"].asString() == "-") {
-      std::cout << log_log.dump(2) << std::endl;
-    } else {
-      std::ofstream outfile(args["--log"].asString(), std::ios_base::app);
-      outfile << log_log.dump(2) << std::endl;
-    }
-  }
-#endif
 }
