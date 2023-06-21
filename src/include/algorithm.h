@@ -27,10 +27,9 @@
  *
  * @section DESCRIPTION
  *
- * Header-only library of some basic linear algebra data structures and
- * operations. Uses C++23 reference implementation of mdspan from Sandia
- * National Laboratories.
- *
+ * Header-only library to encapsulate parallel use patterns in the library.
+ * They emulate the C++17 parallel algorithms, but are modified / tuned for
+ * the library's use cases.
  */
 
 #ifndef TDB_ALGORITHM_H
@@ -47,6 +46,14 @@
 
 namespace stdx {
 
+/**
+ * Define our own custom execution policies.  We construct these with the
+ * number of threads that we want to use.  The default is to use all available
+ * threads (hardware_concurrency()).
+ *
+ * We re-implement some of these because Apple clang does not yet support
+ * C++17 parallel algorithms.
+ */
 namespace execution {
 struct parallel_policy {
   const size_t nthreads_;
@@ -76,7 +83,10 @@ void for_each(RandomIt first, RandomIt last, UnaryFunction f) {
   std::for_each(first, last, f);
 }
 
-// @todo:  Use `advance()` to handle non-random access iterators
+/**
+ * Execute a function in parallel over a range of elements as specified
+ * by a begin and end iterator.
+ */
 template <std::random_access_iterator RandomIt, class UnaryFunction>
 void for_each(
     stdx::execution::parallel_policy&& par,
@@ -107,6 +117,11 @@ void for_each(
   }
 }
 
+/**
+ * Execute a function in parallel over a range of elements as specified
+ * by a begin and end iterator.  We also pass the thread number and the
+ * current iteration number to the function.
+ */
 template <std::random_access_iterator RandomIt, class UnaryFunction>
 void for_each(
     stdx::execution::indexed_parallel_policy&& par,
@@ -143,6 +158,9 @@ void for_each(
   }
 }
 
+/**
+ * Same as above, but with a range, rather than iterator pair.
+ */
 template <class /*std::ranges::random_access_range*/ Range, class UnaryFunction>
 void range_for_each(
     stdx::execution::indexed_parallel_policy&& par,

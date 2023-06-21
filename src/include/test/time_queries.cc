@@ -114,7 +114,7 @@ TEST_CASE("time queries", "[queries][ci-skip]") {
     }
 #if 0
   {
-    life_timer _outer{"blocked_gemm_query"};
+    scoped_timer _outer{"blocked_gemm_query"};
     blocked_gemm_query(b_db_mat, q_mat, k, nth, nthreads);
   }
 #endif

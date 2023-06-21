@@ -27,19 +27,13 @@
  *
  * @section DESCRIPTION
  *
- * Contains some basic query functions for kmeans indexing.
+ * Master header for ivf queries.
  *
  */
 
 #ifndef TDB_IVF_QUERY_H
 #define TDB_IVF_QUERY_H
 
-// Interfaces
-//   faiss: D, I = index.search(xb, k) # search
-//   milvus: status, results = conn.search(collection_name, query_records,
-//   top_k, params) # search
-//     "nlist" to create index (how many bins)
-//     "nprobe" to search index (how many bins to search)
 
 #include "detail/ivf/gemm.h"
 #include "detail/ivf/qv.h"

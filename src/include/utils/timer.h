@@ -116,11 +116,11 @@ class life_timer : public empty_timer, public ms_timer {
       std::cout << elapsed() << " ms" << std::endl;
     }
 
-    if (ms_timer::msg_ != "") {
-      add_timing(ms_timer::msg_, elapsed());
-    } else {
-      add_timing("life_timer", elapsed());
-    }
+//    if (ms_timer::msg_ != "") {
+//      add_timing(ms_timer::msg_, elapsed());
+//    } else {
+//      add_timing("life_timer", elapsed());
+//    }
   }
 };
 
@@ -152,5 +152,19 @@ std::ostream& operator<<(std::ostream& os, const us_timer& t) {
   return os;
 }
 
+#ifndef tdb_func__
+#ifdef __cpp_lib_source_location
+#include <source_location>
+#define tdb_func__                                  \
+  std::string {                                     \
+    std::source_location::current().function_name() \
+  }
+#else
+#define tdb_func__ \
+  std::string {    \
+    (__func__)     \
+  }
+#endif
+#endif
 
 #endif  // TILEDB_TIMER_HPP

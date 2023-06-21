@@ -27,7 +27,7 @@
  *
  * @section DESCRIPTION
  *
- *
+ * Gemm-based scoring.
  *
  */
 
@@ -41,7 +41,7 @@
 #include "linalg.h"
 #include "utils/timer.h"
 
-#include "choose_blas.h"
+#include "detail/linalg/choose_blas.h"
 
 /**
  * Query using dense linear algebra.  This uses the vector generalization of

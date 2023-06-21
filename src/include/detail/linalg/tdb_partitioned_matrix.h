@@ -1,7 +1,46 @@
-
+/**
+ * @file   tdb_partitioned_matrix.h
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
+ * Class the provides a matrix view to a partitioned TileDB array (as partitioned by
+ * IVF indexing).
+ *
+ * The class requires the URI of a partitioned TileDB array and partioned set of
+ * vector identifiers.  The class will provide a view of the requested partitions
+ * and the corresponding vector identifiers.
+ *
+ * Also provides support for out-of-core operation.
+ *
+ */
 
 #ifndef TILEDB_PARTITIONED_MATRIX_H
 #define TILEDB_PARTITIONED_MATRIX_H
+
 #include <cstddef>
 #include <future>
 #include <memory>
@@ -14,7 +53,7 @@
 #include <tiledb/tiledb>
 #include "mdspan/mdspan.hpp"
 
-#include "linalg.h"
+#include "detail/linalg/tdb_defs.h"
 
 #include "array_types.h"
 #include "utils/timer.h"
@@ -26,6 +65,7 @@ using namespace Kokkos::Experimental;
 
 extern bool global_verbose;
 extern bool global_debug;
+extern std::string global_region;
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
@@ -53,11 +93,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   log_timer constructor_timer{"tdbPartitionedMatrix constructor"};
 
-  // @todo: Make this configurable
-  std::map<std::string, std::string> init_{};
-  tiledb::Config config_{init_};
-  tiledb::Context ctx_{config_};
-
+  std::reference_wrapper<const tiledb::Context> ctx_;
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
   std::unique_ptr<T[]> backing_data_;
@@ -102,6 +138,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
  public:
   tdbPartitionedMatrix(
+      const tiledb::Context& ctx,
       const std::string& uri,
       std::vector<indices_type>&& indices,
       const std::vector<parts_type>& parts,
@@ -109,7 +146,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       // std::vector<shuffled_ids_type>& shuffled_ids,
       size_t nthreads)
       : tdbPartitionedMatrix(
-            uri, indices, parts, id_uri, /*shuffled_ids,*/ 0, nthreads) {
+            ctx, uri, indices, parts, id_uri, /*shuffled_ids,*/ 0, nthreads) {
   }
 
   /**
@@ -119,6 +156,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @todo Column major is kind of baked in here.  Need to generalize.
    */
   tdbPartitionedMatrix(
+      const tiledb::Context& ctx,
       const std::string& uri,
       std::vector<indices_type>&& in_indices,
       const std::vector<parts_type>& in_parts,
@@ -126,7 +164,9 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       // std::vector<shuffled_ids_type>& shuffled_ids,
       size_t upper_bound,
       size_t nthreads)
-      : array_{ctx_, uri, TILEDB_READ}
+      : constructor_timer{tdb_func__ + std::string{" constructor"}}
+      , ctx_{ctx}
+      , array_{ctx_, uri, TILEDB_READ}
       , schema_{array_.schema()}
       , ids_array_{ctx_, ids_uri, TILEDB_READ}
       , ids_schema_{ids_array_.schema()}
@@ -139,7 +179,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
     total_num_parts_ = size(parts_);
 
-    scoped_timer _{"Initialize tdb partitioned matrix " + uri};
+    scoped_timer _{tdb_func__ + uri};
 
     auto cell_order = schema_.cell_order();
     auto tile_order = schema_.tile_order();
@@ -198,7 +238,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
     Base::operator=(Base{std::move(data_), dimension, max_cols_});
 
-    // @todo Take this out
+    // @todo Take this out and require user to make first call to advance()
     advance();
   }
 
@@ -295,6 +335,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
           .set_layout(layout_order)
           .set_data_buffer(attr_name, ptr, col_count * dimension);
       query.submit();
+      _memory_data.insert_entry(tdb_func__, col_count * dimension * sizeof(T));
 
       // assert(tiledb::Query::Status::COMPLETE == query.query_status());
       if (tiledb::Query::Status::COMPLETE != query.query_status()) {
@@ -336,6 +377,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       ids_query.set_subarray(ids_subarray)
           .set_data_buffer(ids_attr_name, ids_ptr, ids_col_count);
       ids_query.submit();
+      _memory_data.insert_entry(tdb_func__, ids_col_count * sizeof(T));
 
       // assert(tiledb::Query::Status::COMPLETE == query.query_status());
       if (tiledb::Query::Status::COMPLETE != ids_query.query_status()) {

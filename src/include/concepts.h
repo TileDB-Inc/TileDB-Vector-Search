@@ -27,7 +27,7 @@
  *
  * @section DESCRIPTION
  *
- * Some very basic concepts to help a bit with testing.
+ * Nascent concepts for code organization and to help with testing.
  *
  */
 

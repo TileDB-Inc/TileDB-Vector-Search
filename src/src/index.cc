@@ -29,6 +29,8 @@
  *
  * Driver program to compute kmeans ivf search index.
  *
+ * WIP.
+ *
  */
 #include <filesystem>
 #include <string>

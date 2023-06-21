@@ -36,10 +36,10 @@
 #include <map>
 
 #include "algorithm.h"
+#include "detail/linalg/tdb_matrix.h"
+#include "detail/linalg/tdb_partitioned_matrix.h"
 #include "flat_query.h"
 #include "linalg.h"
-#include "tdb_matrix.h"
-#include "tdb_partitioned_matrix.h"
 
 extern double global_time_of_interest;
 
@@ -143,7 +143,7 @@ auto qv_query_heap_infinite_ram(
     size_t k_nn,
     bool nth,
     size_t nthreads) {
-  life_timer _{"Total time " + tdb_func__};
+  scoped_timer _{"Total time " + tdb_func__};
 
   assert(shuffled_db.num_cols() == shuffled_ids.size());
   if (size(indices) == centroids.num_cols()) {
@@ -209,6 +209,7 @@ auto qv_query_heap_infinite_ram(
   return top_k;
 }
 
+template <typename T = shuffled_db_type>
 auto qv_query_heap_finite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -274,15 +275,23 @@ auto qv_query_heap_finite_ram(
                          indices[active_partitions[i]];
   }
 
-  // std::vector<shuffled_ids_type> shuffled_ids;
-
-  auto shuffled_db = tdbColMajorPartitionedMatrix<shuffled_db_type>(
+  auto shuffled_db = tdbColMajorPartitionedMatrix<T>(
+      ctx,
       part_uri,
       std::move(indices),
       active_partitions,
       id_uri,
       upper_bound,
       /* shuffled_ids,*/ nthreads);
+
+  size_t max_partition_size{0};
+  for (size_t i = 0; i < size(new_indices) - 1; ++i) {
+    auto partition_size = new_indices[i + 1] - new_indices[i];
+    max_partition_size = std::max<size_t>(max_partition_size, partition_size);
+    _memory_data.insert_entry(tdb_func__ + " (predicted)", partition_size * sizeof(T) * shuffled_db.num_rows());
+  }
+    _memory_data.insert_entry(tdb_func__ + " (upper bound)", nprobe * num_queries * sizeof(T) * max_partition_size);
+
 
   assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
 
@@ -427,11 +436,11 @@ auto kmeans_query_small_q_minparts(
 
   // Read the shuffled database and ids
   // @todo To this more systematically
-  // auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri);
+  // auto shuffled_db = tdbColMajorMatrix<T>(part_uri);
   // auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
 
   std::vector<shuffled_ids_type> shuffled_ids;
-  auto shuffled_db = tdbColMajorMatrix<shuffled_db_type>(part_uri, indices, parts, id_uri, shuffled_ids, nthreads);
+  auto shuffled_db = tdbColMajorMatrix<T>(part_uri, indices, parts, id_uri, shuffled_ids, nthreads);
 
   debug_matrix(shuffled_db, "shuffled_db");
   debug_matrix(shuffled_ids, "shuffled_ids");
@@ -439,7 +448,7 @@ auto kmeans_query_small_q_minparts(
   auto min_scores = std::vector<fixed_min_heap<element>>(
       size(q), fixed_min_heap<element>(k_nn));
 
-  life_timer __{std::string{"In memory portion of "} + tdb_func__};
+  scoped_timer __{std::string{"In memory portion of "} + tdb_func__};
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
   stdx::range_for_each(
@@ -459,7 +468,7 @@ auto kmeans_query_small_q_minparts(
   ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
 
 
-  life_timer ___{std::string{"Top k portion of "} + tdb_func__};
+  scoped_timer ___{std::string{"Top k portion of "} + tdb_func__};
 
   // @todo this pattern repeats alot -- put into a function
   for (int j = 0; j < size(q); ++j) {

@@ -1,5 +1,5 @@
 /**
- * @file   unit_partitioned.cc
+ * @file   tdb_defs.h
  *
  * @section LICENSE
  *
@@ -27,36 +27,28 @@
  *
  * @section DESCRIPTION
  *
- * Test correctness of partitioned vector database.
+ *
  */
 
-#include <catch2/catch_all.hpp>
-#include <set>
-#include <vector>
-#include "linalg.h"
-#include "partitioned.h"
+#ifndef TILEDB_TDB_DEFS_H
+#define TILEDB_TDB_DEFS_H
 
-bool global_debug = false;
+template <class LayoutPolicy>
+struct order_traits {
+  constexpr static auto order{TILEDB_ROW_MAJOR};
+};
 
-TEST_CASE("partitioned: test test", "[partitioned]") {
-  REQUIRE(true);
-}
+template <>
+struct order_traits<stdx::layout_right> {
+  constexpr static auto order{TILEDB_ROW_MAJOR};
+};
 
-TEST_CASE("partitioned: even odd", "[partitioned][ci-skip]") {
-  tiledb::Context ctx;
+template <>
+struct order_traits<stdx::layout_left> {
+  constexpr static auto order{TILEDB_COL_MAJOR};
+};
 
-  std::string parts_uri{"even_odd_parts"};
-  std::string index_uri{"even_odd_index"};
-  std::string ids_uri{"even_odd_ids"};
-  std::string centroids_uri{"even_odd_centroids"};
-  std::string queries_uri{"even_odd_queries"};
+template <class LayoutPolicy>
+constexpr auto order_v = order_traits<LayoutPolicy>::order;
 
-  auto parts_mat = tdbColMajorMatrix<float>(ctx, parts_uri);
-  auto index = read_vector<uint32_t>(ctx, index_uri);
-  auto ids = read_vector<uint32_t>(ctx, ids_uri);
-  auto centroids_mat = tdbColMajorMatrix<float>(ctx, centroids_uri);
-  auto queries_mat = tdbColMajorMatrix<float>(ctx, queries_uri);
-
-  auto partitioned = tdbPartitionedMatrix<float>(
-      ctx, parts_uri, centroids_mat, queries_mat, index, ids, 2, 2);
-}
+#endif  // TILEDB_TDB_DEFS_H

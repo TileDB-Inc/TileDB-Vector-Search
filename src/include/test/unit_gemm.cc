@@ -33,8 +33,8 @@
 #include <span>
 #include <vector>
 
-#include "../choose_blas.h"
 #include "defs.h"
+#include "detail/linalg/choose_blas.h"
 
 /*
       func cblas_dgemm(

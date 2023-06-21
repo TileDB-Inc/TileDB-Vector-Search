@@ -89,8 +89,6 @@ kmeans_add_test(unit_logging)
 
 kmeans_add_test(unit_mdspan)
 
-kmeans_add_test(unit_partitioned)
-
 kmeans_add_test(unit_queries)
 
 kmeans_add_test(unit_slicing)
