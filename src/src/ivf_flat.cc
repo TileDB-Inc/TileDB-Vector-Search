@@ -98,7 +98,7 @@ using shuffled_ids_type = uint64_t;
 using indices_type = uint64_t;
 
 static constexpr const char USAGE[] =
-    R"(ivf_hack: demo hack feature vector search with kmeans index.
+    R"(ivf_flat: demo CLI program for performing feature vector search with kmeans index.
 Usage:
     ivf_hack (-h | --help)
     ivf_hack --db_uri URI --centroids_uri URI (--index_uri URI | --sizes_uri URI)

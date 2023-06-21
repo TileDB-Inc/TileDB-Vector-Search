@@ -1,18 +1,18 @@
 #!/bin/bash
 
-ec2_ivf_hack="/home/lums/feature-vector-prototype/src/cmake-build-release/src/ivf_hack"
-m1_ivf_hack="/Users/lums/TileDB/feature-vector-prototype/src/cmake-build-release/src/ivf_hack"
+ec2_ivf_flat="/home/lums/feature-vector-prototype/src/cmake-build-release/src/ivf_flat"
+m1_ivf_flat="/Users/lums/TileDB/feature-vector-prototype/src/cmake-build-release/src/ivf_flat"
 ec2_flat="/home/lums/feature-vector-prototype/src/cmake-build-release/src/flat"
 m1_flat="/Users/lums/TileDB/feature-vector-prototype/src/cmake-build-release/src/flat"
 
 if [ -f "${ivf_query}" ]; then
     ivf_query="${ivf_query}"
-elif [ -f "${ec2_ivf_hack}" ]; then
-    ivf_query="${ec2_ivf_hack}"
-elif [ -f "${m1_ivf_hack}" ]; then
-    ivf_query="${m1_ivf_hack}"
+elif [ -f "${ec2_ivf_flat}" ]; then
+    ivf_query="${ec2_ivf_flat}"
+elif [ -f "${m1_ivf_flat}" ]; then
+    ivf_query="${m1_ivf_flat}"
 else
-    echo "Neither ivf_hack executable file exists"
+    echo "Neither ivf_flat executable file exists"
 fi
 
 if [ -f "${flat_query}" ]; then
