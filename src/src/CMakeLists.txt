@@ -99,7 +99,7 @@ target_sources(kmeans_lib INTERFACE
         ../include/flat_query.h ../include/ivf_query.h ../include/scoring.h ../include/fixed_min_queues.h
         ../include/defs.h ../include/algorithm.h ../include/concepts.h ../include/stats.h
         ../include/utils/timer.h ../include/utils/logging.h ../include/utils/print_types.h
-        ../include/array_types.h ../include/flat_index.h ../include/ivf_index.h
+        ../include/flat_index.h ../include/ivf_index.h
         )
 
 target_include_directories(kmeans_lib INTERFACE
