@@ -140,11 +140,20 @@ template <typename T>
 void declareStdVector(py::module& m) {
 
   auto name = std::string("IntVector") + typeid(T).name();
-  py::class_<std::vector<T>>(m, name.c_str())
+  py::class_<std::vector<T>>(m, name.c_str(), py::buffer_protocol())
     .def(py::init<>())
     .def("clear", &std::vector<T>::clear)
     .def("pop_back", &std::vector<T>::pop_back)
-    .def("__len__", [](const std::vector<T> &v) { return v.size(); });
+    .def("__len__", [](const std::vector<T> &v) { return v.size(); })
+    .def_buffer([](std::vector<T> &v) -> py::buffer_info {
+        return py::buffer_info(
+            v.data(),                               /* Pointer to buffer */
+            sizeof(T),                          /* Size of one scalar */
+            py::format_descriptor<T>::format(), /* Python struct-style format descriptor */
+            1,                                      /* Number of dimensions */
+            { v.size() },                 /* Buffer dimensions */
+            { sizeof(T) });
+    });
 }
 
 } // anonymous namespace
@@ -173,6 +182,12 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   m.def("read_vector_u32", &read_vector<uint32_t>, "Read a vector from TileDB");
   m.def("read_vector_u64", &read_vector<uint64_t>, "Read a vector from TileDB");
 
+  m.def("_create_vector_u64", []() {
+    auto v = std::vector<uint64_t>(10);
+    // fill vector with range 1:10 using std::iota
+    std::iota(v.begin(), v.begin() + 10, 0);
+    return v;
+  });
 
   /* === Matrix === */
 
