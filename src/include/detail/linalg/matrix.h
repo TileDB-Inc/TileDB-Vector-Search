@@ -250,6 +250,20 @@ std::string matrix_info(const std::vector<T>& A, const std::string& msg = "") {
   return str;
 }
 
+/**
+ * Print information about a std::span -- overload.
+ * @param A
+ */
+template <class T>
+std::string matrix_info(const std::span<T>& A, const std::string& msg = "") {
+  std::string str = "# " + msg;
+  if (!msg.empty()) {
+    str += ": ";
+  }
+  str += "Shape: (" + std::to_string(A.size()) + " )";
+  return str;
+}
+
 template <class Matrix>
 void debug_matrix(const Matrix& A, const std::string& msg = "") {
   if (global_debug) {

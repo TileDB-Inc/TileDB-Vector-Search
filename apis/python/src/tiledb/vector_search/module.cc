@@ -14,6 +14,9 @@ using Ctx = tiledb::Context;
 bool global_debug = true;
 double global_time_of_interest;
 
+PYBIND11_MAKE_OPAQUE(std::vector<uint32_t>);
+PYBIND11_MAKE_OPAQUE(std::vector<uint64_t>);
+
 namespace {
 
 
@@ -91,18 +94,19 @@ static void declare_pyarray_to_matrix(py::module& m, const std::string& suffix) 
         });
 }
 
-template <typename T>
+template <typename T, typename Id_Type = uint64_t>
 static void declare_kmeans_query(py::module& m, const std::string& suffix) {
   m.def(("kmeans_query_" + suffix).c_str(),
       [](const ColMajorMatrix<T>& parts,
          const ColMajorMatrix<float>& centroids,
          const ColMajorMatrix<float>& query_vectors,
-         std::vector<uint64_t>& indices,
-         std::vector<uint64_t>& ids,
+         std::vector<Id_Type> indices,
+         std::vector<Id_Type> ids,
          size_t nprobe,
          size_t k_nn,
          bool nth,
          size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
+
         auto r = detail::ivf::qv_query_heap_infinite_ram(
             parts,
             centroids,
@@ -132,7 +136,28 @@ static void declareColMajorMatrixSubclass(py::module& mod,
   cls.def(py::init<const Ctx&, std::string, size_t>(),  py::keep_alive<1,2>());
 }
 
+template <typename T>
+void declareStdVector(py::module& m) {
+
+  auto name = std::string("IntVector") + typeid(T).name();
+  py::class_<std::vector<T>>(m, name.c_str(), py::buffer_protocol())
+    .def(py::init<>())
+    .def("clear", &std::vector<T>::clear)
+    .def("pop_back", &std::vector<T>::pop_back)
+    .def("__len__", [](const std::vector<T> &v) { return v.size(); })
+    .def_buffer([](std::vector<T> &v) -> py::buffer_info {
+        return py::buffer_info(
+            v.data(),                               /* Pointer to buffer */
+            sizeof(T),                          /* Size of one scalar */
+            py::format_descriptor<T>::format(), /* Python struct-style format descriptor */
+            1,                                      /* Number of dimensions */
+            { v.size() },                 /* Buffer dimensions */
+            { sizeof(T) });
+    });
 }
+
+} // anonymous namespace
+
 
 PYBIND11_MODULE(_tiledbvspy, m) {
 
@@ -150,14 +175,19 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   /* === Vector === */
 
-  declareVector<uint32_t>(m, "_u32");
-  declareVector<uint64_t>(m, "_u64");
-  declareVector<float>(m, "_f32");
-  declareVector<double>(m, "_f64");
+  // Must have matching PYBIND11_MAKE_OPAQUE declaration at top of file
+  declareStdVector<uint32_t>(m);
+  declareStdVector<uint64_t>(m);
 
   m.def("read_vector_u32", &read_vector<uint32_t>, "Read a vector from TileDB");
   m.def("read_vector_u64", &read_vector<uint64_t>, "Read a vector from TileDB");
 
+  m.def("_create_vector_u64", []() {
+    auto v = std::vector<uint64_t>(10);
+    // fill vector with range 1:10 using std::iota
+    std::iota(v.begin(), v.begin() + 10, 0);
+    return v;
+  });
 
   /* === Matrix === */
 
