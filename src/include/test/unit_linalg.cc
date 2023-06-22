@@ -34,7 +34,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <tuple>
-#include "../linalg.h"
+#include "linalg.h"
 
 bool global_debug = false;
 
@@ -233,6 +233,7 @@ TEST_CASE(
   CHECK(b[5] == 6);
 }
 
+#ifdef TDB_ROW_MATRIX
 TEST_CASE(
     "linalg: test tdbMatrix constructor, row",
     "[linalg][tdbmatrix][create][row]") {
@@ -338,6 +339,7 @@ TEST_CASE(
     std::cerr << "Exception caught: " << e.what() << std::endl;
   }
 }
+#endif
 
 TEST_CASE(
     "linalg: test tdbMatrix constructor, column",
@@ -433,6 +435,7 @@ TEST_CASE(
   CHECK(e[7] == 4);
 }
 
+#ifdef TILEDB_ROW_MATRIX
 TEST_CASE(
     "linalg: test partitioned tdbMatrix constructor, row",
     "[linalg][partitioned][tdbmatrix][create][row]") {
@@ -496,6 +499,7 @@ TEST_CASE(
     CHECK(a(3, 7) == 4);
   }
 }
+#endif
 
 TEST_CASE(
     "linalg: test partitioned tdbMatrix constructor, column",
@@ -556,6 +560,7 @@ TEST_CASE(
   }
 }
 
+#ifdef TILEDB_ROW_MATRIX
 TEST_CASE(
     "linalg: test advance, row major", "[linalg][tdbmatrix][advance][row]") {
   tiledb::Context ctx;
@@ -582,7 +587,7 @@ TEST_CASE(
   CHECK(a(1, 6) == 2);
   CHECK(a(1, 7) == 7);
 
-  a.advance();
+  a.load();
 
   CHECK(a(0, 0) == 9);
   CHECK(a(0, 1) == 8);
@@ -602,6 +607,7 @@ TEST_CASE(
   CHECK(a(1, 6) == 2);
   CHECK(a(1, 7) == 4);
 }
+#endif
 
 TEST_CASE(
     "linalg: test advance, column", "[linalg][tdbmatrix][advance][column]") {
@@ -629,7 +635,7 @@ TEST_CASE(
   CHECK(a(6, 1) == 2);
   CHECK(a(7, 1) == 7);
 
-  a.advance();
+  a.load();
 
   CHECK(a(0, 0) == 9);
   CHECK(a(1, 0) == 8);
@@ -687,6 +693,7 @@ TEMPLATE_LIST_TEST_CASE(
 
   tiledb::Context ctx;
 
+#ifdef TILEDB_ROW_MATRIX
   SECTION("right") {
     auto A = Matrix<TestType, Kokkos::layout_right>(M, N);
     std::iota(A.data(), A.data() + M * N, 17);
@@ -701,6 +708,7 @@ TEMPLATE_LIST_TEST_CASE(
     CHECK(
         std::equal(A.data(), A.data() + A.num_rows() * A.num_cols(), B.data()));
   }
+#endif
 
   SECTION("left") {
     auto A = Matrix<TestType, Kokkos::layout_left>(M, N);

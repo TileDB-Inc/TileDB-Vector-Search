@@ -298,4 +298,11 @@ using tdbRowMajorMatrix = tdbBlockedMatrix<T, stdx::layout_right, I>;
  */
 template <class T, class I = size_t>
 using tdbColMajorMatrix = tdbBlockedMatrix<T, stdx::layout_left, I>;
+
+/**
+ * Convenience class for row-major matrices.
+ */
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+using tdbMatrix = tdbBlockedMatrix<T, LayoutPolicy, I>;
+
 #endif  // TDB_MATRIX_H
