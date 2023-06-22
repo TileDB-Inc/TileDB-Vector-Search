@@ -309,8 +309,7 @@ auto qv_query_heap_finite_ram(
       std::move(indices),
       active_partitions,
       id_uri,
-      upper_bound,
-      /* shuffled_ids,*/ nthreads);
+      upper_bound);
 
   size_t max_partition_size{0};
   for (size_t i = 0; i < size(new_indices) - 1; ++i) {

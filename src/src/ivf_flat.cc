@@ -189,7 +189,8 @@ int main(int argc, char* argv[]) {
       return 1;
     }
 
-    auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
+    auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri, nqueries);
+    centroids.load();
     debug_matrix(centroids, "centroids");
 
     // Find the top k nearest neighbors accelerated by kmeans and do some
@@ -209,6 +210,7 @@ int main(int argc, char* argv[]) {
 
     auto q =
         tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri, nqueries);
+    q.load();
     debug_matrix(q, "q");
 
     auto top_k = [&]() {
@@ -250,6 +252,7 @@ int main(int argc, char* argv[]) {
 
       auto groundtruth =
           tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
+      groundtruth.load();
 
       if (global_debug) {
         std::cout << std::endl;

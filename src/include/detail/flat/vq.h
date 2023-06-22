@@ -96,17 +96,10 @@ auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
  * where each thread keeps its own set of heaps for each query vector.  After
  * The database vector loop, the heaps are merged and then copied to `top_k`.
  *
- * @todo Implement a blocked version
+ * @todo Unify out of core and not out of core versions.
  */
 template <class DB, class Q>
 auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
-  scoped_timer _{"Total time " + tdb_func__};
-
-  const auto block_db = db.is_blocked();
-  const auto block_q = q.is_blocked();
-  if (block_db && block_q) {
-    throw std::runtime_error("Can't block both db and q");
-  }
 
   using element = std::pair<float, int>;
 
@@ -120,43 +113,24 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
   unsigned size_q = size(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
+  log_timer _i{tdb_func__ + " in RAM"};
+
   // @todo Can we do blocking in the parallel for_each somehow?
-  for (;;) {
+  while (db.load()) {
+    _i.start();
     stdx::range_for_each(
         std::move(par),
         db,
         [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
-          if (block_db) {
             for (size_t j = 0; j < size_q; ++j) {
               auto score = L2(q[j], db_vec);
               scores[n][j].insert(element{score, i + db.offset()});
             }
+          });
+    _i.stop();
+        }
 
-          } else if (block_q) {
-            for (size_t j = 0; j < size_q; ++j) {
-              auto score = L2(q[j], db_vec);
-              scores[n][j + q.offset()].insert(element{score, i});
-            }
-
-          } else {
-            for (size_t j = 0; j < size_q; ++j) {
-              auto score = L2(q[j], db_vec);
-              scores[n][j].insert(element{score, i});
-            }
-          }
-        });
-
-    bool done = true;
-    if (block_db) {
-      done = !db.advance();
-    } else {
-      done = !q.advance();
-    }
-    if (done) {
-      break;
-    }
-  }
-
+  _i.start();
   for (size_t j = 0; j < size(q); ++j) {
     for (unsigned n = 1; n < nthreads; ++n) {
       for (auto&& e : scores[n][j]) {
@@ -165,7 +139,7 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
     }
   }
 
-  ColMajorMatrix<uint64_t> top_k(k, q.num_cols());
+  ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
   // This might not be a win.
   int q_block_size = (size(q) + std::min<int>(nthreads, size(q)) - 1) /
@@ -198,6 +172,7 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
   for (int n = 0; n < std::min<int>(nthreads, size(q)); ++n) {
     futs[n].get();
   }
+  _i.stop();
 
   return top_k;
 }

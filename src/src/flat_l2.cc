@@ -94,6 +94,14 @@ bool verbose = false;
 bool debug = false;
 bool global_debug = false;
 
+#if 1
+using db_type = uint8_t;
+#else
+using db_type = float;
+#endif
+
+using groundtruth_type = int32_t;
+
 static constexpr const char USAGE[] =
     R"(flat: feature vector search with flat index.
   Usage:
@@ -160,21 +168,17 @@ int main(int argc, char* argv[]) {
 
   tiledb::Context ctx;
 
-  // 10M, 100M, and 1B are all uint8_t
+  auto db = tdbColMajorMatrix<db_type>(ctx, db_uri, blocksize);  // blocked
 
-  //  auto db = tdbColMajorMatrix<float>(ctx, db_uri, block);  // blocked
-  auto db = tdbColMajorMatrix<uint8_t>(ctx, db_uri, blocksize);  // blocked
-  if (args["--blocksize"]) {
-    db.set_blocked();
-  }
-
-  //  auto q = tdbColMajorMatrix<float>(ctx, q_uri, nqueries);  // just a slice
   auto query =
       tdbColMajorMatrix<uint8_t>(ctx, query_uri, nqueries);  // just a slice
+  query.load();
 
   load_time.stop();
   std::cout << load_time << std::endl;
 
+
+  // @todo decide on what the type of top_k::value should be
   auto top_k = [&]() {
     if (alg_name == "vq_nth") {
       if (verbose) {
@@ -200,27 +204,24 @@ int main(int argc, char* argv[]) {
                   << std::to_string(nth) << std::endl;
       }
       return detail::flat::qv_query_heap(db, query, k, nthreads);
-    } /* else if (alg_name == "gemm") {
-      // if (block != 0) {
-      if (args["--block"]) {
+    } else if (alg_name == "gemm") {
+      if (args["--blocksize"]) {
         std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth)
                   << std::endl;
-        db.set_blocked();
-        // db.set_async();
-        return detail::flat::blocked_gemm_query(db, q, k, nth, nthreads);
+        return detail::flat::blocked_gemm_query(db, query, k, nth, nthreads);
       } else {
         std::cout << "# Using gemm, nth = " << std::to_string(nth) << std::endl;
-        return detail::flat::gemm_query(db, q, k, nth, nthreads);
+        return detail::flat::gemm_query(db, query, k, nth, nthreads);
       }
-    }*/
+    }
     throw std::runtime_error(
         "incorrect or unset algorithm type: " + alg_name);
   }();
 
   if (!groundtruth_uri.empty() && validate) {
-    auto groundtruth = groundtruth_uri.empty() ?
-                           ColMajorMatrix<int>(0, 0) :
-                           tdbColMajorMatrix<int>(ctx, groundtruth_uri);
+    auto groundtruth = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
+    groundtruth.load();
+
     if(!validate_top_k(top_k, groundtruth)) {
       std::cout << "Validation failed" << std::endl;
     } else {

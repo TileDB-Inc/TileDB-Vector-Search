@@ -52,14 +52,14 @@
  * This is extremely fast for large numbers of query vectors, but is not as fast
  * as vq_ew for small numbers of query vectors.
  */
-template <class Matrix1, class Matrix2, class Matrix3>  // = typename
-                                                        // Matrix1::view_type>
+template <class Matrix1, class Matrix2, class Matrix3>
 void gemm_scores(
-    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads) {
-  static_assert(
-      std::is_same<typename Matrix1::value_type, typename Matrix2::value_type>::
-          value,
-      "Matrix1 and Matrix2 must have the same value_type");
+    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
+requires((
+    std::is_same_v<typename Matrix1::value_type, float> &&
+    std::is_same_v<typename Matrix2::value_type, float> &&
+    std::is_same_v<typename Matrix3::value_type, float>))
+{
   using T = typename Matrix1::value_type;
 
   size_t M = A.num_cols();  // Vector dimension
@@ -103,11 +103,43 @@ void gemm_scores(
   });
 }
 
+template <class Matrix1, class Matrix2, class Matrix3>
+void gemm_scores(
+    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
+  requires((
+      (!std::is_same_v<typename Matrix1::value_type, float>) &&
+      std::is_same_v<typename Matrix2::value_type, float> &&
+      std::is_same_v<typename Matrix3::value_type, float>)) {
+
+  ColMajorMatrix<float> A_f(A.num_rows(), A.num_cols());
+  std::copy(A.data(), A.data() + A.num_rows() * A.num_cols(), A_f.data());
+
+  gemm_scores(A_f, B, C, nthreads);
+}
+
+template <class Matrix1, class Matrix2, class Matrix3>
+void gemm_scores(
+    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
+  requires((
+      (!std::is_same_v<typename Matrix1::value_type, float>) &&
+      (!std::is_same_v<typename Matrix2::value_type, float>) &&
+      std::is_same_v<typename Matrix3::value_type, float>)) {
+
+  ColMajorMatrix<float> A_f(A.num_rows(), A.num_cols());
+  std::copy(A.data(), A.data() + A.num_rows() * A.num_cols(), A_f.data());
+
+  ColMajorMatrix<float> B_f(B.num_rows(), B.num_cols());
+  std::copy(B.data(), B.data() + B.num_rows() * B.num_cols(), B_f.data());
+
+  gemm_scores(A_f, B_f, C, nthreads);
+}
+
 template <class Matrix1, class Matrix2>
-auto gemm_scores(const Matrix1& A, const Matrix2& B, int nthreads) {
-  using View = typename Matrix1::view_type;
-  auto C = View(A.num_cols(), B.num_cols());
+auto gemm_scores(const Matrix1& A, const Matrix2& B, unsigned nthreads) {
+
+  auto C = ColMajorMatrix<float>(A.num_cols(), B.num_cols());
   gemm_scores(A, B, C, nthreads);
+
   return C;
 }
 
