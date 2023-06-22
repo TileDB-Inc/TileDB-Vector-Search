@@ -229,18 +229,49 @@ auto qv_query_heap_infinite_ram(
   return top_k;
 }
 
+/**
+ * @brief Query a set of vectors against a partitioned database.
+ *
+ * This function queries each vector in the query set against the appropriate
+ * partitions.
+ *
+ * For now that type of the array and the type of the shuffled
+ * ids need to be passed as template arguments.
+ */
 
-auto get_active_partitions(auto&& centroids, auto&& query, size_t nprobe, size_t nthreads) {
-  using parts_type =
-      typename std::remove_reference_t<decltype(centroids)>::value_type;
 
-  auto num_queries = query.num_cols();
+template <typename T, class shuffled_ids_type>
+auto qv_query_heap_finite_ram(
+    tiledb::Context& ctx,
+    const std::string& part_uri,
+    auto&& centroids,
+    auto&& query,
+    auto&& indices,
+    auto&& partition_mask,
+    const std::string& id_uri,
+    size_t nprobe,
+    size_t k_nn,
+    size_t upper_bound,
+    bool nth,
+    size_t nthreads) {
+  scoped_timer _{tdb_func__};
+
+  using indices_type =
+      typename std::remove_reference_t<decltype(indices)>::value_type;
+
+  // Check that the size of the indices vector is correct
+  assert(size(indices) == centroids.num_cols() + 1);
+
+  size_t num_queries = size(query);
 
   // get closest centroid for each query vector
   auto top_centroids =
       detail::flat::qv_query_nth(centroids, query, nprobe, false, nthreads);
+
+  using parts_type = typename decltype(top_centroids)::value_type;
+
   /*
-   * `top_centroids` maps from rank X query index to the centroid index.
+   * `top_centroids` maps from rank X query index to the centroid *index*.
    *
    * To process centroids (partitions) in order, we need to map from `centroid`
    * to the set of queries having that centroid.
@@ -258,55 +289,15 @@ auto get_active_partitions(auto&& centroids, auto&& query, size_t nprobe, size_t
     }
   }
 
+  // auto active_partitions =
+  // std::vector<parts_type>(begin(active_centroids), end(active_centroids));
 
-  auto active_partitions =
-      std::vector<parts_type>(begin(active_centroids), end(active_centroids));
-  return active_partitions;
-};
-
-
-
-/**
- * @brief Query a set of vectors against a partitioned database.
- *
- * This function queries each vector in the query set against the appropriate
- * partitions.
- *
- * For now that type of the array and the type of the shuffled
- * ids need to be passed as template arguments.
- */
-template <typename T, class shuffled_ids_type>
-auto qv_query_heap_finite_ram(
-    tiledb::Context& ctx,
-    const std::string& part_uri,
-    auto&& centroids,
-    auto&& query,
-    auto&& indices,
-    const std::string& id_uri,
-    size_t nprobe,
-    size_t k_nn,
-    size_t upper_bound,
-    bool nth,
-    size_t nthreads) {
-  scoped_timer _{tdb_func__};
-
-  using parts_type =
-      typename std::remove_reference_t<decltype(centroids)>::value_type;
-  using indices_type =
-      typename std::remove_reference_t<decltype(indices)>::value_type;
-
-  // Check that the size of the indices vector is correct
-  assert(size(indices) == centroids.num_cols() + 1);
-
-  size_t num_queries = size(query);
-
-  auto active_partitions = get_active_partitions(centroids, query, nprobe, nthreads);
-
-  std::vector<parts_type> new_indices(size(active_partitions) + 1);
-  new_indices[0] = 0;
-  for (size_t i = 0; i < size(active_partitions); ++i) {
-    new_indices[i + 1] = new_indices[i] + indices[active_partitions[i] + 1] -
-                         indices[active_partitions[i]];
+  size_t num_active_parts = size(partition_mask) == 0 ? size(active_centroids) : size(partition_mask);
+  auto active_partitions = std::vector<parts_type>(num_active_parts);
+  if (size(partition_mask) == 0) {
+    std::copy(begin(active_centroids), end(active_centroids), begin(active_partitions));
+  } else {
+    std::copy(begin(partition_mask), end(partition_mask), begin(active_partitions));
   }
 
   auto shuffled_db = tdbColMajorPartitionedMatrix<
@@ -316,10 +307,17 @@ auto qv_query_heap_finite_ram(
       parts_type>(
       ctx,
       part_uri,
-      std::move(indices),
+      indices,
       active_partitions,
       id_uri,
       upper_bound);
+
+  std::vector<parts_type> new_indices(size(active_partitions) + 1);
+  new_indices[0] = 0;
+  for (size_t i = 0; i < size(active_partitions); ++i) {
+    new_indices[i + 1] = new_indices[i] + indices[active_partitions[i] + 1] -
+                         indices[active_partitions[i]];
+  }
 
   size_t max_partition_size{0};
   for (size_t i = 0; i < size(new_indices) - 1; ++i) {
@@ -437,6 +435,35 @@ auto qv_query_heap_finite_ram(
   return top_k;
 }
 
+
+template <typename T, class shuffled_ids_type>
+auto qv_query_heap_finite_ram(
+    tiledb::Context& ctx,
+    const std::string& part_uri,
+    auto&& centroids,
+    auto&& query,
+    auto&& indices,
+    const std::string& id_uri,
+    size_t nprobe,
+    size_t k_nn,
+    size_t upper_bound,
+    bool nth,
+    size_t nthreads) {
+
+  return qv_query_heap_finite_ram<T, shuffled_ids_type>(
+      ctx,
+      part_uri,
+      centroids,
+      query,
+      indices,
+      std::vector<size_t>{},
+      id_uri,
+      nprobe,
+      k_nn,
+      upper_bound,
+      nth,
+      nthreads);
+}
 
 }  // namespace detail::ivf
 

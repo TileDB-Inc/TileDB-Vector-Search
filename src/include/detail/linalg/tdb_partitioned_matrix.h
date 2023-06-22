@@ -180,7 +180,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   tdbPartitionedMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
-      std::vector<indices_type>&& in_indices,
+      std::vector<indices_type>& in_indices,
       const std::vector<parts_type>& in_parts,
       const std::string& ids_uri,
       // std::vector<shuffled_ids_type>& shuffled_ids,
@@ -192,7 +192,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       , schema_{array_.schema()}
       , ids_array_{ctx_, ids_uri, TILEDB_READ}
       , ids_schema_{ids_array_.schema()}
-      , indices_{std::move(in_indices)}
+      , indices_{in_indices}
       , parts_{in_parts}
       , col_part_view_{0, 0} {
     constructor_timer.stop();
