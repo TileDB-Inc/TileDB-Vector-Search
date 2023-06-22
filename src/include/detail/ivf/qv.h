@@ -229,41 +229,16 @@ auto qv_query_heap_infinite_ram(
   return top_k;
 }
 
-/**
- * @brief Query a set of vectors against a partitioned database.
- *
- * This function queries each vector in the query set against the appropriate
- * partitions.
- *
- * For now that type of the array and the type of the shuffled
- * ids need to be passed as template arguments.
- */
-template <typename T, class shuffled_ids_type>
-auto qv_query_heap_finite_ram(
-    tiledb::Context& ctx,
-    const std::string& part_uri,
-    auto&& centroids,
-    auto&& q,
-    auto&& indices,
-    const std::string& id_uri,
-    size_t nprobe,
-    size_t k_nn,
-    size_t upper_bound,
-    bool nth,
-    size_t nthreads) {
-  scoped_timer _{tdb_func__};
 
+auto get_active_partitions(auto&& centroids, auto&& query, size_t nprobe, size_t nthreads) {
   using parts_type =
       typename std::remove_reference_t<decltype(centroids)>::value_type;
-  using indices_type =
-      typename std::remove_reference_t<decltype(indices)>::value_type;
 
-  size_t num_queries = size(q);
+  auto num_queries = query.num_cols();
 
   // get closest centroid for each query vector
   auto top_centroids =
-      detail::flat::qv_query_nth(centroids, q, nprobe, false, nthreads);
-
+      detail::flat::qv_query_nth(centroids, query, nprobe, false, nthreads);
   /*
    * `top_centroids` maps from rank X query index to the centroid index.
    *
@@ -283,15 +258,49 @@ auto qv_query_heap_finite_ram(
     }
   }
 
-  // debug_slice(top_centroids, "top_centroids",
-  // std::min<size_t>(16, top_centroids.num_rows()),
-  // std::min<size_t>(16, top_centroids.num_cols()));
 
   auto active_partitions =
       std::vector<parts_type>(begin(active_centroids), end(active_centroids));
+  return active_partitions;
+};
+
+
+
+/**
+ * @brief Query a set of vectors against a partitioned database.
+ *
+ * This function queries each vector in the query set against the appropriate
+ * partitions.
+ *
+ * For now that type of the array and the type of the shuffled
+ * ids need to be passed as template arguments.
+ */
+template <typename T, class shuffled_ids_type>
+auto qv_query_heap_finite_ram(
+    tiledb::Context& ctx,
+    const std::string& part_uri,
+    auto&& centroids,
+    auto&& query,
+    auto&& indices,
+    const std::string& id_uri,
+    size_t nprobe,
+    size_t k_nn,
+    size_t upper_bound,
+    bool nth,
+    size_t nthreads) {
+  scoped_timer _{tdb_func__};
+
+  using parts_type =
+      typename std::remove_reference_t<decltype(centroids)>::value_type;
+  using indices_type =
+      typename std::remove_reference_t<decltype(indices)>::value_type;
 
   // Check that the size of the indices vector is correct
   assert(size(indices) == centroids.num_cols() + 1);
+
+  size_t num_queries = size(query);
+
+  auto active_partitions = get_active_partitions(centroids, query, nprobe, nthreads);
 
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
   new_indices[0] = 0;
@@ -335,7 +344,7 @@ auto qv_query_heap_finite_ram(
   std::vector<std::vector<fixed_min_pair_heap<float, size_t>>> min_scores(
       nthreads,
       std::vector<fixed_min_pair_heap<float, size_t>>(
-          size(q), fixed_min_pair_heap<float, size_t>(k_nn)));
+          num_queries, fixed_min_pair_heap<float, size_t>(k_nn)));
 
   log_timer _i{tdb_func__ + " in RAM"};
 
@@ -375,7 +384,7 @@ auto qv_query_heap_finite_ram(
                     centroid_query.equal_range(active_partitions[partno]);
                 for (auto i = range.first; i != range.second; ++i) {
                   auto j = i->second;
-                  auto q_vec = q[j];
+                  auto q_vec = query[j];
 
                   // @todo shift start / stop back by the offset
                   for (size_t k = start; k < stop; ++k) {
@@ -399,7 +408,7 @@ auto qv_query_heap_finite_ram(
   }
 
   _i.start();
-  for (int j = 0; j < size(q); ++j) {
+  for (int j = 0; j < num_queries; ++j) {
     for (int n = 1; n < nthreads; ++n) {
       for (auto&& e : min_scores[n][j]) {
         min_scores[0][j].insert(std::get<0>(e), std::get<1>(e));
@@ -411,12 +420,12 @@ auto qv_query_heap_finite_ram(
 
   scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
 
-  ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
+  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
 
   // get_top_k_from_heap(min_scores, top_k);
 
   // @todo get_top_k_from_heap
-  for (int j = 0; j < size(q); ++j) {
+  for (int j = 0; j < num_queries; ++j) {
     sort_heap(min_scores[0][j].begin(), min_scores[0][j].end());
     std::transform(
         min_scores[0][j].begin(),
