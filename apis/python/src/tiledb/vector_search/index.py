@@ -57,16 +57,11 @@ class FlatIndex(Index):
         """
         # TODO:
         # - typecheck targets
-        # - don't copy the array
         # - add all the options and query strategies
 
         assert targets.dtype == np.float32
 
-        # TODO: make Matrix constructor from py::array. This is ugly (and copies).
-        # Create a Matrix from the input targets
-        targets_m = ColMajorMatrix_f32(*targets.shape)
-        targets_m_a = np.array(targets_m, copy=False)
-        targets_m_a[:] = targets
+        targets_m = array_to_matrix(targets)
 
         r = query_vq(self._db, targets_m, k, nqueries, nthreads)
         return np.array(r)
@@ -116,10 +111,7 @@ class IVFFlatIndex(Index):
         """
         assert targets.dtype == np.float32
 
-        # TODO: use Matrix constructor from py::array
-        targets_m = ColMajorMatrix_f32(*targets.shape)
-        targets_m_a = np.array(targets_m, copy=False)
-        targets_m_a[:] = targets
+        targets_m = array_to_matrix(targets)
 
         r = query_kmeans(
             self._db.dtype,
