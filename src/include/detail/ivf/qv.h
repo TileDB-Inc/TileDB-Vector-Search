@@ -118,6 +118,7 @@ auto qv_query_heap_infinite_ram(
   // Read the shuffled database and ids
   // @todo To this more systematically
   auto shuffled_db = tdbColMajorMatrix<T>(ctx, part_uri);
+  shuffled_db.load();
   auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
 
   return qv_query_heap_infinite_ram(
