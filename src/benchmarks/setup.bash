@@ -418,7 +418,7 @@ function ivf_query() {
 		shift 2
 		;;
 	    --cluster|--nprobe)
-		local _cluster="--cluster ${2}"
+		local _cluster="--nprobe ${2}"
 		shift 2
 		;;
 	    --block|--blocksize)

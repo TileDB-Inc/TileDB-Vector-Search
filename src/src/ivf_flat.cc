@@ -189,7 +189,7 @@ int main(int argc, char* argv[]) {
       return 1;
     }
 
-    auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri, nqueries);
+    auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
     centroids.load();
     debug_matrix(centroids, "centroids");
 
