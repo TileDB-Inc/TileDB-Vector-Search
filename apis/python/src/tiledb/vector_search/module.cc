@@ -107,19 +107,12 @@ static void declare_kmeans_query(py::module& m, const std::string& suffix) {
          bool nth,
          size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
 
-        /* WARNING: these spans are function-local */
-
-        auto indices_view = std::span(reinterpret_cast<Id_Type*>(indices.data()),
-            indices.size());
-        auto ids_view = std::span(reinterpret_cast<Id_Type*>(ids.data()),
-            ids.size());
-
         auto r = detail::ivf::qv_query_heap_infinite_ram(
             parts,
             centroids,
             query_vectors,
-            indices_view,
-            ids_view,
+            indices,
+            ids,
             nprobe,
             k_nn,
             nth,
