@@ -10,6 +10,6 @@ RUN conda install mamba
 
 RUN mamba install -y -c tiledb tiledb==2.15.3 cmake pybind11 pytest c-compiler cxx-compiler ninja openblas-devel "pip>22"
 
-COPY . feature-vector-prototype/
+COPY . TileDB-Vector-Search/
 
-RUN . ~/.bashrc && cd feature-vector-prototype/apis/python && pip install .
+RUN . ~/.bashrc && cd TileDB-Vector-Search/apis/python && pip install .
