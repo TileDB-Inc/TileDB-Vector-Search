@@ -1,13 +1,14 @@
 
 #include <string>
 #include <tiledb/tiledb>
+#include "detail/linalg/tdb_helpers.h"
 #include "utils/timer.h"
 
 void open_array(const std::string& uri) {
   scoped_timer _{"open_array " + uri};
 
   tiledb::Context ctx;
-  tiledb::Array array(ctx, uri, TILEDB_READ);
+  tiledb::Array array = tiledb_helpers::open_array(ctx, uri, TILEDB_READ);
 
   scoped_timer _2{"get_schema portion"};
   tiledb::ArraySchema schema = array.schema();

@@ -50,7 +50,7 @@ TEST_CASE("slice", "[linalg][ci-skip]") {
   std::vector<int> data2_(288);
   std::vector<float> value_(288);
 
-  tiledb::Array array_{ctx_, uri, TILEDB_READ};
+  tiledb::Array array_ = tiledb_helpers::open_array(ctx_, uri, TILEDB_READ);
   tiledb::ArraySchema schema_{array_.schema()};
   tiledb::Query query(ctx_, array_);
 
@@ -66,7 +66,7 @@ TEST_CASE("slice", "[linalg][ci-skip]") {
       .set_data_buffer("rows", data_.data(), 288)
       .set_data_buffer("a", value_.data(), 288);
 
-  query.submit();
+  tiledb_helpers::submit_query(query);
 
   for (int i = 0; i < 135; i++) {
     std::cout << data_[i] << ", " << data2_[i] << ": " << value_[i]
