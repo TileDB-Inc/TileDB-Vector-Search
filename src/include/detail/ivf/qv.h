@@ -51,6 +51,7 @@
 #ifndef TILEDB_IVF_QV_H
 #define TILEDB_IVF_QV_H
 
+#include <future>
 #include <map>
 
 #include "algorithm.h"
@@ -247,6 +248,20 @@ auto qv_query_heap_finite_ram(
     bool nth,
     size_t nthreads);
 
+template <typename T, class shuffled_ids_type>
+auto nuv_query_heap_finite_ram(
+    tiledb::Context& ctx,
+    const std::string& part_uri,
+    auto&& centroids,
+    auto&& query,
+    auto&& indices,
+    const std::string& id_uri,
+    size_t nprobe,
+    size_t k_nn,
+    size_t upper_bound,
+    bool nth,
+    size_t nthreads);
+
 /**
  * Interface with uris for all arguments.
  */
@@ -273,6 +288,71 @@ auto qv_query_heap_finite_ram(
   query.load();
 
   auto indices = read_vector<indices_type>(ctx, indices_uri);
+
+  return qv_query_heap_finite_ram(
+      ctx,
+      part_uri,
+      centroids,
+      query,
+      indices,
+      id_uri,
+      nprobe,
+      k_nn,
+      upper_bound,
+      nth,
+      nthreads);
+}
+
+/**
+ * Interface with uris for all arguments.
+ */
+template <typename db_type, class shuffled_ids_type, class centroids_type, class indices_type>
+auto nuv_query_heap_finite_ram(
+    const std::string& part_uri,
+    const std::string& centroids_uri,
+    const std::string& query_uri,
+    const std::string& indices_uri,
+    const std::string& id_uri,
+    size_t nqueries,
+    size_t nprobe,
+    size_t k_nn,
+    size_t upper_bound,
+    bool nth,
+    size_t nthreads) {
+  tiledb::Context ctx;
+
+  using centroid_type = std::invoke_result_t<tdbColMajorMatrix<centroids_type>>;
+  using query_type = std::invoke_result_t<tdbColMajorMatrix<db_type>>;
+  using idx_type = std::invoke_result_t<tdbColMajorMatrix<indices_type>>;
+
+  std::future<centroids_type> centroids_future = std::async(std::launch::async, [&](){
+    auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
+    centroids.load();
+    return centroids;
+  });
+  // auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
+  // centroids.load();
+
+  std::future<query_type> query_future = std::async(std::launch::async, [&](){
+    auto query =
+      tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri, nqueries);
+    query.load();
+    return query;
+  });
+  // auto query =
+  //      tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri, nqueries);
+  // query.load();
+
+        std::future<idx_type> indices_future = std::async(std::launch::async, [&](){
+        auto indices = read_vector<indices_type>(ctx, indices_uri);
+        return indices;
+        });
+  //  auto indices = read_vector<indices_type>(ctx, indices_uri);
+
+  // Wait for completion in order of expected access time
+  auto indices = indices_future.get();
+  auto query = query_future.get();
+  auto centroids = centroids_future.get();
 
   return qv_query_heap_finite_ram(
       ctx,
