@@ -216,7 +216,7 @@ int main(int argc, char* argv[]) {
     auto top_k = [&]() {
       if (finite) {
         return detail::ivf::
-            qv_query_heap_finite_ram<db_type, shuffled_ids_type>(
+            nuv_query_heap_finite_ram<db_type, shuffled_ids_type>(
                 ctx,
                 part_uri,
                 centroids,
