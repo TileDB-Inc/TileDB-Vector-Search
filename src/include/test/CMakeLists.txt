@@ -87,6 +87,8 @@ add_test(NAME unit_linalg_test COMMAND unit_linalg ~[tdbmatrix])
 
 kmeans_add_test(unit_logging)
 
+kmeans_add_test(unit_matrix)
+
 kmeans_add_test(unit_mdspan)
 
 kmeans_add_test(unit_queries)
