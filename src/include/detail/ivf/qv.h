@@ -425,8 +425,8 @@ auto nuv_query_heap_finite_ram(
         tdb_func__ + " (upper bound)",
         nprobe * num_queries * sizeof(T) * max_partition_size);
   }
-  assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
 
+  assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
   debug_matrix(shuffled_db, "shuffled_db");
   debug_matrix(shuffled_db.ids(), "shuffled_db.ids()");
 
@@ -444,7 +444,6 @@ auto nuv_query_heap_finite_ram(
 
     _i.start();
 
-    // size_t block_size = (size(active_partitions) + nthreads - 1) / nthreads;
     size_t parts_per_thread =
         (shuffled_db.num_col_parts() + nthreads - 1) / nthreads;
 
@@ -527,8 +526,6 @@ auto nuv_query_heap_finite_ram(
   }
 
   return top_k;
-
-
 }
 
 
