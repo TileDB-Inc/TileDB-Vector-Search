@@ -1,9 +1,11 @@
 #!/bin/bash
 
-ec2_ivf_flat="/home/lums/TileDB-Vector-Search/src/cmake-build-release/src/ivf_flat"
+ec2_ivf_flat="/home/lums/TileDB-Vector-Search/src/cmake-build-release/libtiledbvectorsearch/src/ivf_flat"
 m1_ivf_flat="/Users/lums/TileDB/TileDB-Vector-Search/src/cmake-build-release/src/ivf_flat"
 ec2_flat="/home/lums/TileDB-Vector-Search/src/cmake-build-release/src/flat_l2"
 m1_flat="/Users/lums/TileDB/TileDB-Vector-Search/src/cmake-build-release/src/flat_l2"
+
+
 
 if [ -f "${ivf_query}" ]; then
     ivf_query="${ivf_query}"

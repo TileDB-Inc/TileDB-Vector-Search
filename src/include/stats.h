@@ -67,8 +67,19 @@ auto dump_logs = [](std::ostream& output,
   // @todo  use --log to specify destination (if any)
 
   // @todo print other information
-  output << "# [ Repo ]: " << GIT_REPO_NAME << " @ " << GIT_BRANCH
-         << std::endl;
+  output << "# [ Repo ]: " << GIT_REPO_NAME << " @ " << GIT_BRANCH << " / "  << 
+    GIT_COMMIT_HASH << std::endl;
+
+  output << "# [cmake source directory]: " << CMAKE_SOURCE_DIR << std::endl;
+  output << "# [cmake build type]: " << BUILD_TYPE << std::endl;
+  output << "# [compiler]: "<< IVF_HACK_CXX_COMPILER << std::endl;
+  output << "# [compiler id]: "<< CXX_COMPILER_ID << std::endl;
+  output << "# [compiler version ]: "<< CXX_VERSION << std::endl;
+  output << "# [c++ flags]: "<< CMAKE_CXX_FLAGS << std::endl;
+  output << "# [c++ debug flags ]: "<< CMAKE_CXX_FLAGS_DEBUG << std::endl;
+  output << "# [c++ release flags ]: "<< CMAKE_CXX_FLAGS_RELEASE << std::endl;
+  output << "# [c++ relwithdebinfo flags]: "<< CMAKE_CXX_FLAGS_RELWITHDEBINFO << std::endl;
+
 
   output << std::setw(5) << "-|-";
   output << std::setw(12) << "Algorithm";
