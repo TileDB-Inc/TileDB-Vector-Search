@@ -230,7 +230,7 @@ int main(int argc, char* argv[]) {
                 nthreads);
       } else {
         return detail::ivf::
-            qv_query_heap_infinite_ram<db_type, shuffled_ids_type>(
+            nuv_query_heap_infinite_ram<db_type, shuffled_ids_type>(
                 ctx,
                 part_uri,
                 centroids,
