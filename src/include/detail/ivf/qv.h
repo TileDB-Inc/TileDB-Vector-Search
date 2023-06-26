@@ -106,6 +106,12 @@ auto partition_ivf_index(
     }
   }
 
+  /*
+   * From the active centroids we can compute the active partitions, i.e.,
+   * the partitions that have at least one query.  Note that since the
+   * active centroids were stored by index in a set, the active partitions
+   * will be stored in sorted order.
+   */
   auto active_partitions =
       std::vector<parts_type>(begin(active_centroids), end(active_centroids));
 
@@ -327,17 +333,17 @@ auto nuv_query_heap_infinite_ram(
               /*
                * Get the queries associated with this partition.
                */
-              //
               for (auto j : part_queries[partno]) {
                 auto q_vec = query[j];
 
-                // @todo shift start / stop back by the offset
-                for (size_t k = start; k < stop; ++k) {
-                  auto kp = k - shuffled_db.col_offset();
+                // for (size_t k = start; k < stop; ++k) {
+                //   auto kp = k - shuffled_db.col_offset();
+                for (size_t kp = start - shuffled_db.col_offset(); kp < stop; ++kp) {
 
                   auto score = L2(q_vec, shuffled_db[kp]);
 
                   // @todo any performance with apparent extra indirection?
+                  // (Compiler should do the right thing, but...)
                   min_scores[n][j].insert(score, shuffled_ids[kp]);
                 }
               }
