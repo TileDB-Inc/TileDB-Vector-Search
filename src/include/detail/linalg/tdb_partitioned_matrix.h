@@ -124,8 +124,6 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   // size_t pending_row_offset{0};
   // size_t pending_col_offset{0};
 
-
-
   /****************************************************************************
    *
    * Stuff for partitioned (reshuffled) matrix

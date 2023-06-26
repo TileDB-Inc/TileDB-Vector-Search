@@ -146,9 +146,8 @@ int main(int argc, char* argv[]) {
 
   auto part_uri = args["--parts_uri"].asString();
 
-
   std::string index_uri;
-  bool size_index {false};
+  bool size_index{false};
   if (args["--index_uri"]) {
     if (args["--sizes_uri"]) {
       std::cerr << "Cannot specify both --index_uri and --sizes_uri\n";

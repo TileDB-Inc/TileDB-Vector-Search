@@ -62,8 +62,6 @@
 
 namespace detail::ivf {
 
-
-
 /**
  * In order to execute a query in distributed fashion, we perform a
  * preprocessing step on a single node to determine the total set of
@@ -77,14 +75,8 @@ namespace detail::ivf {
  *
  */
 auto partition_ivf_index(
-    auto&& centroids,
-    auto&& query,
-    size_t nprobe,
-    size_t nthreads) {
+    auto&& centroids, auto&& query, size_t nprobe, size_t nthreads) {
   scoped_timer _{tdb_func__};
-
-  using query_type =
-      typename std::remove_reference_t<decltype(query)>::value_type;
 
   size_t dimension = centroids.num_rows();
   size_t num_queries = size(query);
@@ -114,14 +106,15 @@ auto partition_ivf_index(
     }
   }
 
-  auto active_partitions = std::vector<parts_type>(begin(active_centroids), end(active_centroids));
+  auto active_partitions =
+      std::vector<parts_type>(begin(active_centroids), end(active_centroids));
 
   /*
    * Get the query vectors associated with each partition.  We store the
    * index of the query vectors in the original query matrix.  We are
    * basically creating a partitionable version of the centroid_query map.
    */
-  std::vector<std::vector<parts_type>> part_queries (size(active_partitions));
+  std::vector<std::vector<parts_type>> part_queries(size(active_partitions));
 
   for (size_t partno = 0; partno < size(active_partitions); ++partno) {
     auto active_part = active_partitions[partno];
@@ -133,10 +126,11 @@ auto partition_ivf_index(
     }
   }
 
-  return std::make_tuple(std::move(top_centroids),
-                         std::move(active_partitions), std::move(part_queries));
+  return std::make_tuple(
+      std::move(top_centroids),
+      std::move(active_partitions),
+      std::move(part_queries));
 }
-
 
 /**
  * Overload for already opened arrays.  Since the array is already opened, we
@@ -299,42 +293,39 @@ auto nuv_query_heap_infinite_ram(
   auto&& [top_centroids, active_partitions, part_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);
 
-  //auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-  //    size(q), fixed_min_pair_heap<float, size_t>(k_nn));
+  // auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
+  //     size(q), fixed_min_pair_heap<float, size_t>(k_nn));
 
   std::vector<std::vector<fixed_min_pair_heap<float, size_t>>> min_scores(
       nthreads,
       std::vector<fixed_min_pair_heap<float, size_t>>(
           num_queries, fixed_min_pair_heap<float, size_t>(k_nn)));
 
-  size_t parts_per_thread =
-      (size(active_partitions) + nthreads - 1) / nthreads;
+  size_t parts_per_thread = (size(active_partitions) + nthreads - 1) / nthreads;
 
   std::vector<std::future<void>> futs;
   futs.reserve(nthreads);
 
   for (size_t n = 0; n < nthreads; ++n) {
-
     auto first_part =
         std::min<size_t>(n * parts_per_thread, size(active_partitions));
-    auto last_part = std::min<size_t>(
-        (n + 1) * parts_per_thread, size(active_partitions));
+    auto last_part =
+        std::min<size_t>((n + 1) * parts_per_thread, size(active_partitions));
 
     if (first_part != last_part) {
       futs.emplace_back(std::async(
           std::launch::async,
           [&, &part_queries = part_queries, n, first_part, last_part]() {
             /*
-               * For each partition, process the queries that have that
-               * partition as their top centroid.
+             * For each partition, process the queries that have that
+             * partition as their top centroid.
              */
             for (size_t partno = first_part; partno < last_part; ++partno) {
-
               auto start = indices[partno];
               auto stop = indices[partno + 1];
 
               /*
-                 * Get the queries associated with this partition.
+               * Get the queries associated with this partition.
                */
               //
               for (auto j : part_queries[partno]) {
@@ -376,7 +367,6 @@ auto nuv_query_heap_infinite_ram(
 
   return top_k;
 }
-
 
 // OG version
 // @todo We should still order the queries so partitions are searched in order
@@ -452,7 +442,6 @@ auto qv_query_heap_infinite_ram(
   return top_k;
 }
 
-
 /**
  * Forward declaration
  */
@@ -487,7 +476,11 @@ auto nuv_query_heap_finite_ram(
 /**
  * Interface with uris for all arguments.
  */
-template <typename db_type, class shuffled_ids_type, class centroids_type, class indices_type>
+template <
+    typename db_type,
+    class shuffled_ids_type,
+    class centroids_type,
+    class indices_type>
 auto qv_query_heap_finite_ram(
     const std::string& part_uri,
     const std::string& centroids_uri,
@@ -528,7 +521,11 @@ auto qv_query_heap_finite_ram(
 /**
  * Interface with uris for all arguments.
  */
-template <typename db_type, class shuffled_ids_type, class centroids_type, class indices_type>
+template <
+    typename db_type,
+    class shuffled_ids_type,
+    class centroids_type,
+    class indices_type>
 auto nuv_query_heap_finite_ram(
     const std::string& part_uri,
     const std::string& centroids_uri,
@@ -543,32 +540,35 @@ auto nuv_query_heap_finite_ram(
     size_t nthreads) {
   tiledb::Context ctx;
 
-  using centroid_type = std::invoke_result_t<tdbColMajorMatrix<centroids_type>>;
+  // using centroid_type =
+  // std::invoke_result_t<tdbColMajorMatrix<centroids_type>>;
   using query_type = std::invoke_result_t<tdbColMajorMatrix<db_type>>;
   using idx_type = std::invoke_result_t<tdbColMajorMatrix<indices_type>>;
 
-  std::future<centroids_type> centroids_future = std::async(std::launch::async, [&](){
-    auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
-    centroids.load();
-    return centroids;
-  });
+  std::future<centroids_type> centroids_future =
+      std::async(std::launch::async, [&]() {
+        auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
+        centroids.load();
+        return centroids;
+      });
   // auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
   // centroids.load();
 
-  std::future<query_type> query_future = std::async(std::launch::async, [&](){
+  std::future<query_type> query_future = std::async(std::launch::async, [&]() {
     auto query =
-      tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri, nqueries);
+        tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri, nqueries);
     query.load();
     return query;
   });
   // auto query =
-  //      tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri, nqueries);
+  //      tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri,
+  //      nqueries);
   // query.load();
 
-        std::future<idx_type> indices_future = std::async(std::launch::async, [&](){
-        auto indices = read_vector<indices_type>(ctx, indices_uri);
-        return indices;
-        });
+  std::future<idx_type> indices_future = std::async(std::launch::async, [&]() {
+    auto indices = read_vector<indices_type>(ctx, indices_uri);
+    return indices;
+  });
   //  auto indices = read_vector<indices_type>(ctx, indices_uri);
 
   // Wait for completion in order of expected access time
@@ -590,8 +590,6 @@ auto nuv_query_heap_finite_ram(
       nthreads);
 }
 
-
-
 template <typename T, class shuffled_ids_type>
 auto nuv_query_heap_finite_ram(
     tiledb::Context& ctx,
@@ -605,7 +603,6 @@ auto nuv_query_heap_finite_ram(
     size_t upper_bound,
     bool nth,
     size_t nthreads) {
-
   scoped_timer _{tdb_func__ + " " + part_uri};
 
   // Check that the size of the indices vector is correct
@@ -626,12 +623,7 @@ auto nuv_query_heap_finite_ram(
       shuffled_ids_type,
       indices_type,
       parts_type>(
-      ctx,
-      part_uri,
-      indices,
-      active_partitions,
-      id_uri,
-      upper_bound);
+      ctx, part_uri, indices, active_partitions, id_uri, upper_bound);
 
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
   new_indices[0] = 0;
@@ -669,8 +661,7 @@ auto nuv_query_heap_finite_ram(
 
   log_timer _i{tdb_func__ + " in RAM"};
 
-  while(shuffled_db.load()) {
-
+  while (shuffled_db.load()) {
     _i.start();
 
     size_t parts_per_thread =
@@ -686,8 +677,9 @@ auto nuv_query_heap_finite_ram(
           (n + 1) * parts_per_thread, shuffled_db.num_col_parts());
 
       if (first_part != last_part) {
-        futs.emplace_back(
-            std::async(std::launch::async, [&, &part_queries = part_queries, n, first_part, last_part]() {
+        futs.emplace_back(std::async(
+            std::launch::async,
+            [&, &part_queries = part_queries, n, first_part, last_part]() {
               /*
                * For each partition, process the queries that have that
                * partition as their top centroid.
@@ -702,7 +694,6 @@ auto nuv_query_heap_finite_ram(
                  */
                 //
                 for (auto j : part_queries[partno]) {
-
                   auto q_vec = query[j];
 
                   // @todo shift start / stop back by the offset
@@ -714,7 +705,6 @@ auto nuv_query_heap_finite_ram(
                     // @todo any performance with apparent extra indirection?
                     min_scores[n][j].insert(score, shuffled_db.ids()[kp]);
                   }
-
                 }
               }
             }));
@@ -737,7 +727,6 @@ auto nuv_query_heap_finite_ram(
   }
   _i.stop();
 
-
   scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
 
   ColMajorMatrix<size_t> top_k(k_nn, num_queries);
@@ -756,7 +745,6 @@ auto nuv_query_heap_finite_ram(
 
   return top_k;
 }
-
 
 /**
  * OG version of the query function.
@@ -810,19 +798,14 @@ auto qv_query_heap_finite_ram(
   }
 
   auto active_partitions =
-  std::vector<parts_type>(begin(active_centroids), end(active_centroids));
+      std::vector<parts_type>(begin(active_centroids), end(active_centroids));
 
   auto shuffled_db = tdbColMajorPartitionedMatrix<
       T,
       shuffled_ids_type,
       indices_type,
       parts_type>(
-      ctx,
-      part_uri,
-      indices,
-      active_partitions,
-      id_uri,
-      upper_bound);
+      ctx, part_uri, indices, active_partitions, id_uri, upper_bound);
 
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
   new_indices[0] = 0;
@@ -858,8 +841,7 @@ auto qv_query_heap_finite_ram(
 
   log_timer _i{tdb_func__ + " in RAM"};
 
-  while(shuffled_db.load()) {
-
+  while (shuffled_db.load()) {
     _i.start();
 
     // size_t block_size = (size(active_partitions) + nthreads - 1) / nthreads;
@@ -926,7 +908,6 @@ auto qv_query_heap_finite_ram(
     }
   }
   _i.stop();
-
 
   scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
 

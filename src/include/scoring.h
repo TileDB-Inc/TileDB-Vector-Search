@@ -53,13 +53,10 @@
  * as vq_ew for small numbers of query vectors.
  */
 template <class Matrix1, class Matrix2, class Matrix3>
-void gemm_scores(
-    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
-requires((
-    std::is_same_v<typename Matrix1::value_type, float> &&
-    std::is_same_v<typename Matrix2::value_type, float> &&
-    std::is_same_v<typename Matrix3::value_type, float>))
-{
+void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads) requires(
+    (std::is_same_v<typename Matrix1::value_type, float> &&
+     std::is_same_v<typename Matrix2::value_type, float> &&
+     std::is_same_v<typename Matrix3::value_type, float>)) {
   using T = typename Matrix1::value_type;
 
   size_t M = A.num_cols();  // Vector dimension
@@ -104,13 +101,10 @@ requires((
 }
 
 template <class Matrix1, class Matrix2, class Matrix3>
-void gemm_scores(
-    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
-  requires((
-      (!std::is_same_v<typename Matrix1::value_type, float>) &&
-      std::is_same_v<typename Matrix2::value_type, float> &&
-      std::is_same_v<typename Matrix3::value_type, float>)) {
-
+void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads) requires(
+    ((!std::is_same_v<typename Matrix1::value_type, float>)&&std::
+         is_same_v<typename Matrix2::value_type, float> &&
+     std::is_same_v<typename Matrix3::value_type, float>)) {
   ColMajorMatrix<float> A_f(A.num_rows(), A.num_cols());
   std::copy(A.data(), A.data() + A.num_rows() * A.num_cols(), A_f.data());
 
@@ -119,12 +113,20 @@ void gemm_scores(
 
 template <class Matrix1, class Matrix2, class Matrix3>
 void gemm_scores(
-    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
-  requires((
-      (!std::is_same_v<typename Matrix1::value_type, float>) &&
-      (!std::is_same_v<typename Matrix2::value_type, float>) &&
-      std::is_same_v<typename Matrix3::value_type, float>)) {
-
+    const Matrix1& A,
+    const Matrix2& B,
+    Matrix3& C,
+    unsigned nthreads) requires(((!std::
+                                      is_same_v<
+                                          typename Matrix1::value_type,
+                                          float>)&&(!std::
+                                                        is_same_v<
+                                                            typename Matrix2::
+                                                                value_type,
+                                                            float>)&&std::
+                                     is_same_v<
+                                         typename Matrix3::value_type,
+                                         float>)) {
   ColMajorMatrix<float> A_f(A.num_rows(), A.num_cols());
   std::copy(A.data(), A.data() + A.num_rows() * A.num_cols(), A_f.data());
 
@@ -136,7 +138,6 @@ void gemm_scores(
 
 template <class Matrix1, class Matrix2>
 auto gemm_scores(const Matrix1& A, const Matrix2& B, unsigned nthreads) {
-
   auto C = ColMajorMatrix<float>(A.num_cols(), B.num_cols());
   gemm_scores(A, B, C, nthreads);
 

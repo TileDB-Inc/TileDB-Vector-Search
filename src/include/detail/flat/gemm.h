@@ -63,7 +63,6 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
       size(q), fixed_min_heap<element>(k));
 
   while (db.load()) {
-
     gemm_scores(db, q, scores, nthreads);
 
     auto par = stdx::execution::indexed_parallel_policy{nthreads};
@@ -118,7 +117,6 @@ auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
 template <class DB, class Q>
 auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
   scoped_timer _{tdb_func__};
-
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
   auto _score_data = raveled(scores);

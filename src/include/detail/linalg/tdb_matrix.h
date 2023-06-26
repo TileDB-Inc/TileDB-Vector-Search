@@ -68,10 +68,10 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
- private:  
+ private:
   using row_domain_type = int32_t;
   using col_domain_type = int32_t;
-  
+
   log_timer constructor_timer{"tdbBlockedMatrix constructor"};
 
   std::string uri_;
@@ -100,40 +100,37 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   // size_t pending_col_offset{0};
 
  public:
-
   ~tdbBlockedMatrix() noexcept {
     array_.close();
   }
 
   /**
-   * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound` vectors.
-   * In this case, the `Matrix` is row-major, so the number of vectors is
-   * the number of rows.
+   * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
+   * vectors. In this case, the `Matrix` is row-major, so the number of vectors
+   * is the number of rows.
    *
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
    */
-  tdbBlockedMatrix(
-      const tiledb::Context& ctx,
-      const std::string& uri) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+  tdbBlockedMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrix(ctx, uri, 0) {
   }
 
   /**
-    * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound` vectors.
-    * In this case, the `Matrix` is column-major, so the number of vectors is
-    * the number of columns.
-    *
-    * @param ctx The TileDB context to use.
-    * @param uri URI of the TileDB array to read.
-    * @param upper_bound The maximum number of vectors to read.
+   * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
+   * vectors. In this case, the `Matrix` is column-major, so the number of
+   * vectors is the number of columns.
+   *
+   * @param ctx The TileDB context to use.
+   * @param uri URI of the TileDB array to read.
+   * @param upper_bound The maximum number of vectors to read.
    */
   tdbBlockedMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
       size_t upper_bound)  // noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : uri_{uri}
       , ctx_{ctx}
       , array_{ctx, uri, TILEDB_READ}
@@ -200,9 +197,9 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
           std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
     }
 
-
     auto dimension = num_array_rows_;
-    auto num_end_elts = std::min(blocksize_, num_array_cols_ - std::get<1>(col_view_));
+    auto num_end_elts =
+        std::min(blocksize_, num_array_cols_ - std::get<1>(col_view_));
 
     std::get<0>(col_view_) = std::get<1>(col_view_);
     std::get<1>(col_view_) += num_end_elts;
@@ -218,7 +215,8 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     // Create a subarray for the next block of columns
     tiledb::Subarray subarray(ctx_, array_);
     subarray.add_range(0, 0, (int)dimension - 1);
-    subarray.add_range(1, (int)std::get<0>(col_view_), (int)std::get<1>(col_view_) - 1);
+    subarray.add_range(
+        1, (int)std::get<0>(col_view_), (int)std::get<1>(col_view_) - 1);
 
     auto layout_order = schema_.cell_order();
 
@@ -242,35 +240,30 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   }
 };
 
-
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
   using Base = tdbBlockedMatrix<T, LayoutPolicy, I>;
   using Base::Base;
 
  public:
-
-  tdbPreLoadMatrix(
-      const tiledb::Context& ctx,
-      const std::string& uri) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+  tdbPreLoadMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(ctx, uri, 0) {
     Base::load();
   }
 
   /**
-    * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound` vectors.
-    * In this case, the `Matrix` is column-major, so the number of vectors is
-    * the number of columns.
-    *
-    * @param ctx The TileDB context to use.
-    * @param uri URI of the TileDB array to read.
-    * @param upper_bound The maximum number of vectors to read.
+   * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
+   * vectors. In this case, the `Matrix` is column-major, so the number of
+   * vectors is the number of columns.
+   *
+   * @param ctx The TileDB context to use.
+   * @param uri URI of the TileDB array to read.
+   * @param upper_bound The maximum number of vectors to read.
    */
   tdbPreLoadMatrix(
-      const tiledb::Context& ctx,
-      const std::string& uri,
-      size_t upper_bound) : Base(ctx, uri, upper_bound) {
+      const tiledb::Context& ctx, const std::string& uri, size_t upper_bound)
+      : Base(ctx, uri, upper_bound) {
     Base::load();
   }
 };

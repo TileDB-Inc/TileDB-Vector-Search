@@ -113,9 +113,9 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
    * Initializer list constructor.  Useful for testing and for examples.
    */
   Matrix(std::initializer_list<std::initializer_list<T>> list) noexcept
-             : num_rows_{list.size()}
-             , num_cols_{list.begin()->size()}
-             , storage_{new T[num_rows_ * num_cols_]} {
+      : num_rows_{list.size()}
+      , num_cols_{list.begin()->size()}
+      , storage_{new T[num_rows_ * num_cols_]} {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
     auto it = list.begin();
     for (size_type i = 0; i < num_rows_; ++i, ++it) {

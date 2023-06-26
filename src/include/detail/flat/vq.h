@@ -100,7 +100,6 @@ auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
  */
 template <class DB, class Q>
 auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
-
   using element = std::pair<float, int>;
 
   // @todo Need to get the total number of queries, not just the first block
@@ -122,13 +121,13 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
         std::move(par),
         db,
         [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
-            for (size_t j = 0; j < size_q; ++j) {
-              auto score = L2(q[j], db_vec);
-              scores[n][j].insert(element{score, i + db.offset()});
-            }
-          });
+          for (size_t j = 0; j < size_q; ++j) {
+            auto score = L2(q[j], db_vec);
+            scores[n][j].insert(element{score, i + db.offset()});
+          }
+        });
     _i.stop();
-        }
+  }
 
   _i.start();
   for (size_t j = 0; j < size(q); ++j) {

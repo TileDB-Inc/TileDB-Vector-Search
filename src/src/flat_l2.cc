@@ -177,7 +177,6 @@ int main(int argc, char* argv[]) {
   load_time.stop();
   std::cout << load_time << std::endl;
 
-
   // @todo decide on what the type of top_k::value should be
   auto top_k = [&]() {
     if (alg_name == "vq_nth") {
@@ -214,15 +213,15 @@ int main(int argc, char* argv[]) {
         return detail::flat::gemm_query(db, query, k, nth, nthreads);
       }
     }
-    throw std::runtime_error(
-        "incorrect or unset algorithm type: " + alg_name);
+    throw std::runtime_error("incorrect or unset algorithm type: " + alg_name);
   }();
 
   if (!groundtruth_uri.empty() && validate) {
-    auto groundtruth = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
+    auto groundtruth =
+        tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
     groundtruth.load();
 
-    if(!validate_top_k(top_k, groundtruth)) {
+    if (!validate_top_k(top_k, groundtruth)) {
       std::cout << "Validation failed" << std::endl;
     } else {
       if (verbose) {

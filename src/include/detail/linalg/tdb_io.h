@@ -32,8 +32,8 @@
 #ifndef TILEDB_TDB_IO_H
 #define TILEDB_TDB_IO_H
 
-#include <vector>
 #include <numeric>
+#include <vector>
 
 #include <tiledb/tiledb>
 #include "detail/linalg/matrix.h"
@@ -53,7 +53,6 @@ void write_matrix(
   if (global_debug) {
     std::cerr << "# Writing Matrix: " << uri << std::endl;
   }
-
 
   // @todo: make this a parameter
   size_t num_parts = 10;
@@ -113,7 +112,6 @@ void write_vector(
   if (global_debug) {
     std::cerr << "# Writing std::vector: " << uri << std::endl;
   }
-
 
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
@@ -201,7 +199,7 @@ std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
 template <class T>
 auto sizes_to_indices(const std::vector<T>& sizes) {
   std::vector<T> indices(size(sizes) + 1);
-  std::inclusive_scan(begin(sizes), end(sizes), begin(indices)+1);
+  std::inclusive_scan(begin(sizes), end(sizes), begin(indices) + 1);
 
   return indices;
 }
