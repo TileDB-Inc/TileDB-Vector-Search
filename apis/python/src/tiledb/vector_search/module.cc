@@ -121,6 +121,56 @@ static void declare_kmeans_query(py::module& m, const std::string& suffix) {
         }, py::keep_alive<1,2>());
 }
 
+template <typename T>
+static void declare_ivf_index(py::module& m, const std::string& suffix) {
+  m.def(("ivf_index_" + suffix).c_str(),
+      [](tiledb::Context& ctx,
+        const ColMajorMatrix<T>& db,
+        const std::string& centroids_uri,
+        const std::string& parts_uri,
+        const std::string& index_uri,
+        const std::string& id_uri,
+        size_t start_pos,
+        size_t end_pos,
+        size_t nthreads) -> int {
+            return detail::ivf::ivf_index<T, uint64_t, float>(
+                ctx,
+                db,
+                centroids_uri,
+                parts_uri,
+                index_uri,
+                id_uri,
+                start_pos,
+                end_pos,
+                nthreads);
+        }, py::keep_alive<1,2>());
+}
+
+template <typename T>
+static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
+  m.def(("ivf_index_tdb_" + suffix).c_str(),
+      [](tiledb::Context& ctx,
+        const std::string& db_uri,
+        const std::string& centroids_uri,
+        const std::string& parts_uri,
+        const std::string& index_uri,
+        const std::string& id_uri,
+        size_t start_pos,
+        size_t end_pos,
+        size_t nthreads) -> int {
+            return detail::ivf::ivf_index<T, uint64_t, float>(
+                ctx,
+                db_uri,
+                centroids_uri,
+                parts_uri,
+                index_uri,
+                id_uri,
+                start_pos,
+                end_pos,
+                nthreads);
+        }, py::keep_alive<1,2>());
+}
+
 
 // Declarations for typed subclasses of ColMajorMatrix
 template <typename P>
@@ -251,5 +301,10 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   declare_kmeans_query<uint8_t>(m, "u8");
   declare_kmeans_query<float>(m, "f32");
+
+  declare_ivf_index<uint8_t>(m, "u8");
+  declare_ivf_index<float>(m, "f32");
+  declare_ivf_index_tdb<uint8_t>(m, "u8");
+  declare_ivf_index_tdb<float>(m, "f32");
 
 }

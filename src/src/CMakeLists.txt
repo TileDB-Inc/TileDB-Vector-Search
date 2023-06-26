@@ -91,7 +91,7 @@ target_sources(kmeans_linalg INTERFACE
 add_library(kmeans_queries INTERFACE)
 target_sources(kmeans_queries INTERFACE
         ../include/detail/flat/qv.h ../include/detail/flat/vq.h ../include/detail/flat/gemm.h
-        ../include/detail/ivf/qv.h ../include/detail/ivf/vq.h ../include/detail/ivf/gemm.h
+        ../include/detail/ivf/qv.h ../include/detail/ivf/vq.h ../include/detail/ivf/gemm.h ../include/detail/ivf/index.h
         )
 
 add_library(kmeans_lib INTERFACE)
