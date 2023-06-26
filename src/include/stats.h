@@ -79,7 +79,7 @@ public:
     if (!enable_stats)
       return;
     std::string stats_str;
-    tiledb::Stats::dump(&stats_str);
+    tiledb::Stats::raw_dump(&stats_str);
     core_stats.push_back({
       {"uri", uri_},
       {"function", function_},
