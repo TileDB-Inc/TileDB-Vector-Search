@@ -326,6 +326,7 @@ auto nuv_query_heap_infinite_ram(
              * For each partition, process the queries that have that
              * partition as their top centroid.
              */
+            auto &mscores = min_scores[n];
             for (size_t partno = first_part; partno < last_part; ++partno) {
               auto start = indices[partno];
               auto stop = indices[partno + 1];
@@ -334,17 +335,19 @@ auto nuv_query_heap_infinite_ram(
                * Get the queries associated with this partition.
                */
               for (auto j : part_queries[partno]) {
+                auto& msj = mscores[j];
                 auto q_vec = query[j];
 
                 // for (size_t k = start; k < stop; ++k) {
                 //   auto kp = k - shuffled_db.col_offset();
-                for (size_t kp = start - shuffled_db.col_offset(); kp < stop; ++kp) {
+                for (size_t kp = start; kp < stop; ++kp) {
 
                   auto score = L2(q_vec, shuffled_db[kp]);
 
                   // @todo any performance with apparent extra indirection?
                   // (Compiler should do the right thing, but...)
-                  min_scores[n][j].insert(score, shuffled_ids[kp]);
+                  // min_scores[n][j].insert(score, shuffled_ids[kp]);
+                  msj.insert(score, shuffled_ids[kp]);
                 }
               }
             }
@@ -353,6 +356,14 @@ auto nuv_query_heap_infinite_ram(
   }
   for (size_t n = 0; n < size(futs); ++n) {
     futs[n].get();
+  }
+
+  for (size_t j = 0; j < num_queries; ++j) {
+    for (size_t n = 1; n < nthreads; ++n) {
+      for (auto&& e : min_scores[n][j]) {
+        min_scores[0][j].insert(std::get<0>(e), std::get<1>(e));
+      }
+    }
   }
 
   scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
@@ -690,26 +701,29 @@ auto nuv_query_heap_finite_ram(
                * For each partition, process the queries that have that
                * partition as their top centroid.
                */
+              auto& ms = min_scores[n];
               for (size_t p = first_part; p < last_part; ++p) {
                 auto partno = p + shuffled_db.col_part_offset();
-                auto start = new_indices[partno];
-                auto stop = new_indices[partno + 1];
+                auto start = new_indices[partno]  - shuffled_db.col_offset();
+                auto stop = new_indices[partno + 1]  - shuffled_db.col_offset();;
 
                 /*
                  * Get the queries associated with this partition.
                  */
                 //
                 for (auto j : part_queries[partno]) {
+                  auto& msj = ms[j];
                   auto q_vec = query[j];
 
-                  // @todo shift start / stop back by the offset
-                  for (size_t k = start; k < stop; ++k) {
-                    auto kp = k - shuffled_db.col_offset();
-
+                  /*
+                   * Apply the query to the partition.
+                   */
+                  for (size_t kp = start; kp < stop; ++kp) {
                     auto score = L2(q_vec, shuffled_db[kp]);
 
                     // @todo any performance with apparent extra indirection?
-                    min_scores[n][j].insert(score, shuffled_db.ids()[kp]);
+                    // min_scores[n][j].insert(score, shuffled_db.ids()[kp]);
+                    msj.insert(score, shuffled_db.ids()[kp]);
                   }
                 }
               }
