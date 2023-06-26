@@ -15,16 +15,13 @@ void open_array(const std::string& uri) {
 
 int main() {
   for (const std::string& s :
-       {"s3://tiledb-nikos/vector-search/datasets/arrays/sift-1b-col-major",
-        "s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/"
-        "centroids.tdb",
-        "s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/parts.tdb",
-        "/home/lums/feature-vector-prototype/experimental/external/data/gp3/1B/"
-        "sift-1b-col-major",
-        "/home/lums/feature-vector-prototype/experimental/external/data/gp3/1B/"
-        "centroids.tdb",
-        "/home/lums/feature-vector-prototype/experimental/external/data/gp3/1B/"
-        "parts.tdb"}) {
+	 {std::string("s3://tiledb-nikos/vector-search/datasets/arrays/sift-1b-col-major"),
+	  std::string("s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/centroids.tdb"),
+	  std::string("s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/parts.tdb"),
+	  std::string("s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/ids.tdb"),
+	  std::string("/home/lums/TileDB-Vector-Search/external/data/gp3/1B/sift-1b-col-major"),
+	  std::string("/home/lums/TileDB-Vector-Search/external/data/gp3/1B/centroids.tdb"),
+	  std::string("/home/lums/TileDB-Vector-Search/external/data/gp3/1B/parts.tdb")}) {
     open_array(s);
   }
 }

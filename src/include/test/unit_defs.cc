@@ -166,7 +166,7 @@ TEST_CASE("defs: fixed_min_heap with pairs", "[defs]") {
 
     for (size_t i = 0; i < size(a); ++i) {
       CHECK(a[i].first == 10.0 + i);
-      CHECK(a[i].second == i);
+      CHECK((size_t)a[i].second == i);
     }
   }
   CHECK(a.size() == 5);

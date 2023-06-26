@@ -226,7 +226,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
     size_t dimension = num_array_rows_;
 
     // indices might not be contiguous, so we need to explicitly add the deltas
-    auto total_max_cols = 0;
+    auto total_max_cols = 0UL;
     for (size_t i = 0; i < total_num_parts_; ++i) {
       total_max_cols += indices_[parts_[i] + 1] - indices_[parts_[i]];
     }

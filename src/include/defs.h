@@ -137,9 +137,9 @@ auto mat_col_sum(
   auto num_cols = m.num_cols();
   auto num_rows = m.num_rows();
 
-  for (int j = 0; j < num_cols; ++j) {
+  for (size_t j = 0; j < num_cols; ++j) {
     decltype(v[0]) vj = v[j];
-    for (int i = 0; i < num_rows; ++i) {
+    for (size_t i = 0; i < num_rows; ++i) {
       vj += f(m(i, j));
     }
     v[j] = vj;

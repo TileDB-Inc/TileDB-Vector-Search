@@ -178,7 +178,7 @@ auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
               float min_score = std::numeric_limits<float>::max();
               size_t idx = 0;
 
-              for (int i = 0; i < size_db; ++i) {
+              for (size_t i = 0; i < size_db; ++i) {
                 auto score = L2(q[j], db[i]);
                 if (score < min_score) {
                   min_score = score;

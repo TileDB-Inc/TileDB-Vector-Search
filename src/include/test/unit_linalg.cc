@@ -45,8 +45,8 @@ TEST_CASE("linalg: test test", "[linalg]") {
 }
 
 TEMPLATE_LIST_TEST_CASE("linalg: test mdspan", "[linalg][mdspan]", TestTypes) {
-  auto M = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
-  auto N = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+  size_t M = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+  size_t N = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
   TestType* t = nullptr;
   auto m = Kokkos::mdspan(t, M, N);
   CHECK(m.size() == M * N);
@@ -67,25 +67,25 @@ TEMPLATE_LIST_TEST_CASE(
   }
   SECTION("values") {
     for (size_t i = 0; i < a.num_rows(); ++i) {
-      CHECK(a(i) == i + 1);
+      CHECK((size_t)a(i) == i + 1);
     }
     for (size_t i = 0; i < a.num_rows(); ++i) {
       a(i) *= a[i];
     }
     for (size_t i = 0; i < a.num_rows(); ++i) {
-      CHECK(a(i) == (i + 1) * (i + 1));
+      CHECK((size_t)a(i) == (i + 1) * (i + 1));
     }
   }
   SECTION("values, copy") {
     auto b = std::move(a);
     for (size_t i = 0; i < a.num_rows(); ++i) {
-      CHECK(b(i) == i + 1);
+      CHECK((size_t)b(i) == i + 1);
     }
     for (size_t i = 0; i < a.num_rows(); ++i) {
       b(i) *= b[i];
     }
     for (size_t i = 0; i < a.num_rows(); ++i) {
-      CHECK(b(i) == (i + 1) * (i + 1));
+      CHECK((size_t)b(i) == (i + 1) * (i + 1));
     }
   }
 }
@@ -684,8 +684,8 @@ TEMPLATE_LIST_TEST_CASE(
     "linalg: test write/read Matrix",
     "[linalg][tdbmatrix][read-write][matrix]",
     TestTypes) {
-  auto M = GENERATE(1, 2, 13, 1440, 1441);
-  auto N = GENERATE(1, 2, 5, 1440, 1441);
+  size_t M = GENERATE(1, 2, 13, 1440, 1441);
+  size_t N = GENERATE(1, 2, 5, 1440, 1441);
 
   auto tmpfilename = std::string(tmpnam(nullptr));
   auto tempDir = std::filesystem::temp_directory_path();

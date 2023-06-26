@@ -68,14 +68,14 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
     auto par = stdx::execution::indexed_parallel_policy{nthreads};
     stdx::range_for_each(
         std::move(par), scores, [&](auto&& q_vec, auto&& n = 0, auto&& i = 0) {
-          for (int j = 0; j < scores.num_rows(); ++j) {
+          for (size_t j = 0; j < scores.num_rows(); ++j) {
             min_scores[i].insert({scores(j, i), j + db.col_offset()});
           }
         });
   }
 
   ColMajorMatrix<size_t> top_k(k, q.num_cols());
-  for (int j = 0; j < min_scores.size(); ++j) {
+  for (size_t j = 0; j < size(min_scores); ++j) {
     // @todo get_top_k_from_heap
     std::sort_heap(min_scores[j].begin(), min_scores[j].end());
     std::transform(

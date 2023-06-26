@@ -345,7 +345,7 @@ auto nuv_query_heap_infinite_ram(
           }));
     }
   }
-  for (int n = 0; n < size(futs); ++n) {
+  for (size_t n = 0; n < size(futs); ++n) {
     futs[n].get();
   }
 
@@ -356,7 +356,7 @@ auto nuv_query_heap_infinite_ram(
   // get_top_k_from_heap(min_scores, top_k);
 
   // @todo get_top_k_from_heap
-  for (int j = 0; j < num_queries; ++j) {
+  for (size_t j = 0; j < num_queries; ++j) {
     sort_heap(min_scores[0][j].begin(), min_scores[0][j].end());
     std::transform(
         min_scores[0][j].begin(),
@@ -711,15 +711,15 @@ auto nuv_query_heap_finite_ram(
       }
     }
 
-    for (int n = 0; n < size(futs); ++n) {
+    for (size_t n = 0; n < size(futs); ++n) {
       futs[n].get();
     }
     _i.stop();
   }
 
   _i.start();
-  for (int j = 0; j < num_queries; ++j) {
-    for (int n = 1; n < nthreads; ++n) {
+  for (size_t j = 0; j < num_queries; ++j) {
+    for (size_t n = 1; n < nthreads; ++n) {
       for (auto&& e : min_scores[n][j]) {
         min_scores[0][j].insert(std::get<0>(e), std::get<1>(e));
       }
@@ -734,7 +734,7 @@ auto nuv_query_heap_finite_ram(
   // get_top_k_from_heap(min_scores, top_k);
 
   // @todo get_top_k_from_heap
-  for (int j = 0; j < num_queries; ++j) {
+  for (size_t j = 0; j < num_queries; ++j) {
     sort_heap(min_scores[0][j].begin(), min_scores[0][j].end());
     std::transform(
         min_scores[0][j].begin(),

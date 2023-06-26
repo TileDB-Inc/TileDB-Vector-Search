@@ -103,7 +103,7 @@ auto dump_logs = [](std::ostream& output,
       if (size(timer) < 3) {
         text = timer;
       } else {
-        std::string key = "[" + std::string(1, tag) + "]";
+        std::string key = std::string("[") + std::string(1, tag) + std::string("]");
         toc[key] = timer + units;
         ++tag;
         text = key;
