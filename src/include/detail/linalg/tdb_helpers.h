@@ -34,38 +34,42 @@
 #ifndef TILEDB_HELPERS_H
 #define TILEDB_HELPERS_H
 
-#include <tiledb/tiledb>
 #include "stats.h"
+#include <tiledb/tiledb>
 
 namespace tiledb_helpers {
 
 /**
  * @brief Opens a TileDB array and displays stats to stderr.
- * 
+ *
  * Stats are only collected if the TILEDBVS_ENABLE_STATS symbol is
  * defined, and a variable named enable_stats is set to true.
- * 
+ *
+ * @param function_name The name of the function calling this. You can use the tdb_func__ macro.
  * @param ctx The TileDB context to use.
  * @param uri The URI of the array to open.
  * @param query_type The mode to open the array.
  */
-inline tiledb::Array open_array(const tiledb::Context &ctx,
+inline tiledb::Array open_array(const std::string &function_name,
+                                const tiledb::Context &ctx,
                                 const std::string &uri,
                                 tiledb_query_type_t query_type) {
-  StatsCollectionScope stats_scope("open_array(\"" + uri + "\")");
+  StatsCollectionScope stats_scope("open_array(\"" + uri + "\") at " + function_name);
   return tiledb::Array(ctx, uri, query_type);
 }
 
 /**
  * @brief Submits a TileDB query and displays stats to stderr.
- * 
+ *
  * Stats are only collected if the TILEDBVS_ENABLE_STATS symbol is
  * defined, and a variable named enable_stats is set to true.
- * 
+ *
+ * @param function_name The name of the function calling this. You can use the tdb_func__ macro.
  * @param query The query to submit.
  */
-inline void submit_query(tiledb::Query &query) {
-  StatsCollectionScope stats_scope("submit_query");
+inline void submit_query(const std::string &function_name,
+                         tiledb::Query &query) {
+  StatsCollectionScope stats_scope("submit_query at " + function_name);
   query.submit();
 }
 
