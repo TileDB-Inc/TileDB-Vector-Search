@@ -53,8 +53,6 @@
 
 using json = nlohmann::json;
 
-
-
 auto dump_logs = [](std::ostream& output,
                     const std::string algorithm,
                     size_t nqueries,
@@ -62,24 +60,25 @@ auto dump_logs = [](std::ostream& output,
                     size_t k_nn,
                     size_t nthreads,
                     double recall) {
-  // Quick and dirty way to get query info in summarizable and useful form -- fixed-width columns
+  // Quick and dirty way to get query info in summarizable and useful form --
+  // fixed-width columns
   // @todo encapsulate this as a function that can be customized
   // @todo  use --log to specify destination (if any)
 
   // @todo print other information
-  output << "# [ Repo ]: " << GIT_REPO_NAME << " @ " << GIT_BRANCH << " / "  << 
-    GIT_COMMIT_HASH << std::endl;
+  output << "# [ Repo ]: " << GIT_REPO_NAME << " @ " << GIT_BRANCH << " / "
+         << GIT_COMMIT_HASH << std::endl;
 
   output << "# [cmake source directory]: " << CMAKE_SOURCE_DIR << std::endl;
   output << "# [cmake build type]: " << BUILD_TYPE << std::endl;
-  output << "# [compiler]: "<< IVF_HACK_CXX_COMPILER << std::endl;
-  output << "# [compiler id]: "<< CXX_COMPILER_ID << std::endl;
-  output << "# [compiler version ]: "<< CXX_VERSION << std::endl;
-  output << "# [c++ flags]: "<< CMAKE_CXX_FLAGS << std::endl;
-  output << "# [c++ debug flags ]: "<< CMAKE_CXX_FLAGS_DEBUG << std::endl;
-  output << "# [c++ release flags ]: "<< CMAKE_CXX_FLAGS_RELEASE << std::endl;
-  output << "# [c++ relwithdebinfo flags]: "<< CMAKE_CXX_FLAGS_RELWITHDEBINFO << std::endl;
-
+  output << "# [compiler]: " << IVF_HACK_CXX_COMPILER << std::endl;
+  output << "# [compiler id]: " << CXX_COMPILER_ID << std::endl;
+  output << "# [compiler version ]: " << CXX_VERSION << std::endl;
+  output << "# [c++ flags]: " << CMAKE_CXX_FLAGS << std::endl;
+  output << "# [c++ debug flags ]: " << CMAKE_CXX_FLAGS_DEBUG << std::endl;
+  output << "# [c++ release flags ]: " << CMAKE_CXX_FLAGS_RELEASE << std::endl;
+  output << "# [c++ relwithdebinfo flags]: " << CMAKE_CXX_FLAGS_RELWITHDEBINFO
+         << std::endl;
 
   output << std::setw(5) << "-|-";
   output << std::setw(12) << "Algorithm";
@@ -103,7 +102,8 @@ auto dump_logs = [](std::ostream& output,
       if (size(timer) < 3) {
         text = timer;
       } else {
-        std::string key = std::string("[") + std::string(1, tag) + std::string("]");
+        std::string key =
+            std::string("[") + std::string(1, tag) + std::string("]");
         toc[key] = timer + units;
         ++tag;
         text = key;
@@ -131,8 +131,7 @@ auto dump_logs = [](std::ostream& output,
   output << std::fixed << std::setprecision(3);
   auto timers = _timing_data.get_timer_names();
   for (auto& timer : timers) {
-    auto ms =
-        _timing_data.get_entries_summed<std::chrono::microseconds>(timer);
+    auto ms = _timing_data.get_entries_summed<std::chrono::microseconds>(timer);
     if (ms < 1000) {
       output << std::fixed << std::setprecision(6);
     } else if (ms < 10000) {
@@ -168,7 +167,6 @@ auto dump_logs = [](std::ostream& output,
     output << t.first << ": " << t.second << std::endl;
   }
 };
-
 
 auto config_log(const std::string& program_name) {
   std::string uuid_;
