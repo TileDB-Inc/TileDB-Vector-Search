@@ -56,28 +56,35 @@ using json = nlohmann::json;
 // Make stats support opt-in to avoid requiring to define an enable_stats variable on all projects.
 #ifdef TILEDBVS_ENABLE_STATS
 extern bool enable_stats;
-#else
-constexpr bool enable_stats = false;
+extern FILE* stats_file;
 #endif
 
 class StatsCollectionScope final {
 public:
   explicit StatsCollectionScope(const std::string &name) {
+#ifdef TILEDBVS_ENABLE_STATS
     if (!enable_stats)
       return;
     tiledb::Stats::reset();
     name_ = name;
+#else
+    std::ignore = name;
+#endif
   }
 
   ~StatsCollectionScope() {
+#ifdef TILEDBVS_ENABLE_STATS
     if (!enable_stats)
       return;
-    fprintf(stderr, "---------- STATS %s ------------\n", name_.c_str());
-    tiledb::Stats::dump(stderr);
+    fprintf(stats_file, "---------- STATS %s ------------\n", name_.c_str());
+    tiledb::Stats::dump(stats_file);
+#endif
   }
 
+#ifdef TILEDBVS_ENABLE_STATS
 private:
   std::string name_;
+#endif
 };
 
 auto dump_logs = [](std::ostream& output,

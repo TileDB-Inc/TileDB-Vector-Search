@@ -44,6 +44,7 @@ namespace tiledb_helpers {
  *
  * Stats are only collected if the TILEDBVS_ENABLE_STATS symbol is
  * defined, and a variable named enable_stats is set to true.
+ * The stats are written to a FILE* specified by the variable named stats_file.
  *
  * @param function_name The name of the function calling this. You can use the tdb_func__ macro.
  * @param ctx The TileDB context to use.
@@ -63,6 +64,7 @@ inline tiledb::Array open_array(const std::string &function_name,
  *
  * Stats are only collected if the TILEDBVS_ENABLE_STATS symbol is
  * defined, and a variable named enable_stats is set to true.
+ * The stats are written to a FILE* specified by the variable named stats_file.
  *
  * @param function_name The name of the function calling this. You can use the tdb_func__ macro.
  * @param query The query to submit.

@@ -15,6 +15,7 @@ bool global_debug = true;
 double global_time_of_interest;
 
 bool enable_stats = false;
+FILE* stats_file = stdout;
 
 PYBIND11_MAKE_OPAQUE(std::vector<uint32_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<uint64_t>);
