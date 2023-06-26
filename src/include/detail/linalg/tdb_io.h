@@ -96,7 +96,7 @@ void write_matrix(
       .set_data_buffer(
           "values", &A(0, 0), (int)A.num_rows() * (int)A.num_cols())
       .set_subarray(subarray);
-  tiledb_helpers::submit_query(tdb_func__, query);
+  tiledb_helpers::submit_query(tdb_func__, uri, query);
 
   array.close();
 }
@@ -141,7 +141,7 @@ void write_vector(
   query.set_layout(TILEDB_ROW_MAJOR)
       .set_data_buffer("values", v)
       .set_subarray(subarray);
-  tiledb_helpers::submit_query(tdb_func__, query);
+  tiledb_helpers::submit_query(tdb_func__, uri, query);
 
   array.close();
 }
@@ -189,7 +189,7 @@ std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
   tiledb::Query query(ctx, array_);
   query.set_subarray(subarray).set_data_buffer(
       attr_name, data_.data(), vec_rows_);
-  tiledb_helpers::submit_query(tdb_func__, query);
+  tiledb_helpers::submit_query(tdb_func__, uri, query);
   _memory_data.insert_entry(tdb_func__, vec_rows_ * sizeof(T));
 
   array_.close();

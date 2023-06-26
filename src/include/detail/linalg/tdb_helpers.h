@@ -55,7 +55,7 @@ inline tiledb::Array open_array(const std::string &function_name,
                                 const tiledb::Context &ctx,
                                 const std::string &uri,
                                 tiledb_query_type_t query_type) {
-  StatsCollectionScope stats_scope("open_array(\"" + uri + "\") at " + function_name);
+  StatsCollectionScope stats_scope(uri, function_name, "open_array");
   return tiledb::Array(ctx, uri, query_type);
 }
 
@@ -70,8 +70,9 @@ inline tiledb::Array open_array(const std::string &function_name,
  * @param query The query to submit.
  */
 inline void submit_query(const std::string &function_name,
+                         const std::string &uri,
                          tiledb::Query &query) {
-  StatsCollectionScope stats_scope("submit_query at " + function_name);
+  StatsCollectionScope stats_scope(uri, function_name, "submit_query");
   query.submit();
 }
 

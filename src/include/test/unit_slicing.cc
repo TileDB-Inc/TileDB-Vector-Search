@@ -66,7 +66,7 @@ TEST_CASE("slice", "[linalg][ci-skip]") {
       .set_data_buffer("rows", data_.data(), 288)
       .set_data_buffer("a", value_.data(), 288);
 
-  tiledb_helpers::submit_query(tdb_func__, query);
+  tiledb_helpers::submit_query(tdb_func__, uri, query);
 
   for (int i = 0; i < 135; i++) {
     std::cout << data_[i] << ", " << data2_[i] << ": " << value_[i]
