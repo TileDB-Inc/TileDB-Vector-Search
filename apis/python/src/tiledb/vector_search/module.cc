@@ -224,8 +224,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   /* Query API */
 
   m.def("query_vq_f32",
-        [](const ColMajorMatrix<float>& data,
-           const ColMajorMatrix<float>& query_vectors,
+        [](tdbColMajorMatrix<float>& data,
+           ColMajorMatrix<float>& query_vectors,
            int k,
            bool nth,
            size_t nthreads) -> ColMajorMatrix<uint64_t> {
@@ -234,8 +234,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         });
 
   m.def("query_vq_u8",
-        [](const ColMajorMatrix<uint8_t>& data,
-           const ColMajorMatrix<float>& query_vectors,
+        [](tdbColMajorMatrix<uint8_t>& data,
+           ColMajorMatrix<float>& query_vectors,
            int k,
            bool nth,
            size_t nthreads) -> ColMajorMatrix<uint64_t> {
