@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["pytest", "sklearn", "tiledb-cloud"]
 
 
 [project.urls]
