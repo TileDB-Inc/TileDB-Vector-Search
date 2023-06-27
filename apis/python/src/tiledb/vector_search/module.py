@@ -24,19 +24,21 @@ def load_as_matrix(path: str, nqueries: int = 0, config: Dict = {}):
     a = tiledb.ArraySchema.load(path)
     dtype = a.attr(0).dtype
     if dtype == np.float32:
-        return tdbColMajorMatrix_f32(ctx, path, nqueries)
+        m = tdbColMajorMatrix_f32(ctx, path, nqueries)
     elif dtype == np.float64:
-        return tdbColMajorMatrix_f64(ctx, path, nqueries)
+        m =  tdbColMajorMatrix_f64(ctx, path, nqueries)
     elif dtype == np.int32:
-        return tdbColMajorMatrix_i32(ctx, path, nqueries)
+        m = tdbColMajorMatrix_i32(ctx, path, nqueries)
     elif dtype == np.int32:
-        return tdbColMajorMatrix_i64(ctx, path, nqueries)
+        m = tdbColMajorMatrix_i64(ctx, path, nqueries)
     elif dtype == np.uint8:
-        return tdbColMajorMatrix_u8(ctx, path, nqueries)
+        m = tdbColMajorMatrix_u8(ctx, path, nqueries)
     # elif dtype == np.uint64:
     #     return tdbColMajorMatrix_u64(ctx, path, nqueries)
     else:
         raise ValueError("Unsupported Matrix dtype: {}".format(a.attr(0).dtype))
+    m.load()
+    return m
 
 
 def load_as_array(path, return_matrix: bool = False, config: Dict = {}):

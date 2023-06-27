@@ -13,6 +13,7 @@ def test_tdbMatrix(tmpdir):
 
     ctx = vspy.Ctx({})
     m = vspy.tdbColMajorMatrix_f32(ctx, p, 0)
+    m.load()
     m_array = np.array(m)
     assert m_array.shape == data.shape
     assert np.array_equal(m_array, data)
