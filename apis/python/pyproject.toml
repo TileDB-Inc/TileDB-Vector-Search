@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest", "scikit-learn", "tiledb-cloud", "typing-extension"]
+test = ["pytest", "scikit-learn", "tiledb-cloud"]
 
 
 [project.urls]
