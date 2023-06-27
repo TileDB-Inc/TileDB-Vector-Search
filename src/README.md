@@ -1,6 +1,6 @@
-# tiledb-vector-search
-Directory for prototyping feature vector / similarity search.  
 
-There are two driver programs in `experimental/src` : `flat.cc` and `ivf_hack.cc`, which do exact-flat and kmeans-flat searches, respectively.
+# TileDB-Vector-Search: A C++ Support Library for Similarity Search with TileDB
 
-Documentation for these driver programs can be found in `experimental/src/README.md`.
+
+The TileDB-Vector-Search C++ Library is a header-only library with search, indexing, and utility functions to support vector similarity search on the TileDB platform.
+

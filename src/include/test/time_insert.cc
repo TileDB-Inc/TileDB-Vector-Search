@@ -37,7 +37,7 @@
 #include <random>
 #include <set>
 #include <vector>
-#include "../fixed_min_queues.h"
+#include "utils/fixed_min_queues.h"
 #include "utils/timer.h"
 
 template <class Heap>

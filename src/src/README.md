@@ -1,8 +1,15 @@
-# C++ Support Library for Similarity Search with TileDB
 
 
+# Command Line Drivers for the TileDB-Vector-Search Library
 
-## The Partitioned Search Driver
+This subdirectory contains command-line driver programs for accessing functionality of the TileDB-Vector-Search library.
+Much of their functionality is for evaluating performance of different algorithmic approaches within the library.
+A wealth of internal performance information can be dumped from the programs.  
+
+
+## `ivf_flat`:  Inverted File Index with Stored Vectors 
+
+
 
 The `main` program for the driver performing partitioned search is  
 called `ivf_flat` which does an approximate search based on a given partition (an index).

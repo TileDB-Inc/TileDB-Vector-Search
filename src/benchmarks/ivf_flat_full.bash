@@ -1,11 +1,28 @@
 #!/bin/bash
 
+################################################################################
+#
+# Run the `ivf_flat` benchmark on the 1B dataset on a large combinaation of
+# data source, block sizes, query sizes, and nprobe sizes.  Each combination
+# of parameters is run five times.  The benchmark will generate a large
+# amount of ouput, which should be saved to a log file.
+#
+# The file `log_postprocessing.py` in this subdirectory will read a set of
+# log files and create a csv file with performance results, suitable for
+# importing into your favorite spreadsheet program.
+#
+# To help with reproducibility, before we run the benchmark itself, we
+# emit some information about the execution environment (which is assumed
+# to be an EC2 instance).
+#
+# It is assumed that the `ivf_flat` executable that you wish to run has
+# been built and is pointed to by the appropriate variable in `setup.bash`
+#
+################################################################################
+
 dir=$(dirname $0)
 
 . ${dir}/setup.bash
-
-ivf_query=~/TileDB/feature-vector-prototype/src/cmake-build-release/src/ivf_hack
-ivf_query=/home/lums/feature-vector-prototype/src/cmake-build-release/libtiledbvectorsearch/src/ivf_hack
 
 printf "=========================================================================================================================================\n\n"
 echo "Starting benchmark run: "
@@ -20,7 +37,7 @@ curl -s http://169.254.169.254/latest/meta-data/instance-type
 
 printf "\n\n-----------------------------------------------------------------------------------------------------------------------------------------\n\n"
 
-aws ec2 --region us-east-1 describe-volumes --volume-id vol-0192769447c7688d0 
+aws ec2 --region us-east-1 describe-volumes --volume-id ${volume_id}
 
 printf "\n\n-----------------------------------------------------------------------------------------------------------------------------------------\n\n"
 
@@ -34,16 +51,21 @@ cat $0
 
 echo "========================================================================================================================================="
 
+# Benchmark both local storage and cloud storage
 for source in gp3 s3;
 do
     init_1B_${source}
     for blocksize in 0 1000000 10000000 ;
     do
 	log_header
-	for nqueries in 1 10 100 ;
+	for nqueries in 1 10 100 1000 10000;
 	do
 	    for nprobe in 1 2 4 8 16 32 64 128 ;
 	    do
+		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize}
+		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize}
+		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize}
+		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize}
 		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize}
 	    done
 	done

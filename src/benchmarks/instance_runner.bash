@@ -1,29 +1,42 @@
-#!/bin/bashA
+#!/bin/bash
 
-instance_id="i-0daab006867136323"
-region="us-east-1"
+################################################################################
+#
+# Script for remotely running the `ivf_flat` benchmark scripts on different
+# EC2 instances.
+#
+# The script will stop the currently running instance (if it is not of the
+# desired type), start the new instance, and execute the benchmarking script
+# on the remote host.
+#
+# You will need to have the aws cli tools, nc, and ssh installed on your
+# local host.  The script assumes you can connect to the remote instance
+# with the command `ssh ec2`.  You can change the command as necessary in
+# this script, or establish an `ec2` host in your `.ssh/config`.
+#
+################################################################################
+
 # git_branch="lums/tmp/benchmark"
-git_branch="lums/tmp/gemm2.0"
+git_branch="main"
 ntrials=1
 
 max_nc_tries=12
 nc_tries_sleep=8
-instance_ip=$(aws ec2 describe-instances --instance-ids i-0daab006867136323 --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+instance_ip=$(aws ec2 describe-instances --instance-ids ${instance_id} --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
 
 if [ -f ~/.bash_awsrc ]; then
     . ~/.bash_awsrc
 fi
 
-#    ssh ec2 "cd feature-vector-prototype ; git commit -am \"Pause for benchmark [skip ci]\" ; git checkout ${git_branch}"
-#    ssh ec2 "cd feature-vector-prototype/src/cmake-build-release ; make -C libtiledbvectorsearch ivf_hack"
-
-# for instance_type in c6a.4xlarge c6a.2xlarge;
-# for instance_type in c6a.16xlarge c6a.2xlarge;
-for instance_type in r6a.24xlarge c6a.16xlarge c6a.4xlarge c6a.2xlarge t3.xlarge t1.micro;
+# Specify the instance you want to execute on
+for instance_type in r6a.24xlarge c6a.16xlarge c6a.4xlarge c6a.2xlarge t3.xlarge;
 do
 
+    # How do we want to identify this set of runs
     benchname="1b-${instance_type}-10k-125MiB"
-    bash_script="1b-c6a-16x-10k-125MiB.bash"
+
+    # Name of the script to execute (see definition of the `command` variable below)
+    bash_script="ivf_flat_full.bash"
 
     echo "Benchmark name is ${benchname}, running script ${bash_script}"
 
@@ -79,8 +92,6 @@ do
 	echo "Instance is ${state}"
 	sleep 30
     fi
-    # feature-vector-prototype/experimental/benchmarks/1b-c6a-16x-125MiB.bash
-    # 1b-c6a-16x-125MiB-2023-0613-1419.log
 
 
     # Make sure remote instance is ready to accept logins
@@ -112,7 +123,7 @@ do
     done
     ssh ec2 ps auxw | fgrep feature
 
-    command="bash feature-vector-prototype/src/benchmarks/${bash_script}"
+    command="bash TileDB-Vector-Search/src/benchmarks/${bash_script}"
     for ((i=1; i<=${ntrials}; i++))
     do
 	logname="${benchname}-$(date +'%Y%m%d-%H%M%S').log"

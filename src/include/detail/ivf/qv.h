@@ -710,7 +710,6 @@ auto nuv_query_heap_finite_ram(
                 /*
                  * Get the queries associated with this partition.
                  */
-                //
                 for (auto j : part_queries[partno]) {
                   auto& msj = ms[j];
                   auto q_vec = query[j];
