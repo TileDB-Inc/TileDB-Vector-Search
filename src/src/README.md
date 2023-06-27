@@ -288,19 +288,37 @@ This will tell you the path that will be used when building `flat`.  If it isn't
 **Note:** If you build `libtiledb` yourself and are going to use S3 as a source for TileDB array input, your `libtiledb`
 should be built with S3 support.
 
-#### Building with MKL BLAS
+#### Building with MKL BLAS (Linux)
 
 If you have MKL BLAS available on the machine where you are building and running the CLI programs, you should configure them to use MKL BLAS.
 ```bash
   cmake .. -DUSE_MKL_CBLAS=on
 ```
-If you do not have MKL BLAS available, `cmake` will default to downloading and using Open BLAS.
+If you do not have MKL BLAS available, `cmake` will default to Open BLAS.  In either case, for the moment, you must have at least one of Open BLAS or MKL BLAS installed.
 
+If you use the `apt` package manager you should be able to install MKL with
+```
+  % sudo apt install intel-oneapi-mkl
+```
+You can also use
+```
+apt-cache pkgnames intel | grep intel-oneapi | grep -v intel-oneapi-runtime | fgrep mkl
+```
+to see other available packages variations.
 
+#### Building with Open BLAS (Linux)
+
+To install Open BLAS, you can install one of a number of different options.  I am not sure which version offers best performance, so you may want to experiment with the `openmp` vs `pthreads` version.  Depending on the compiler used, one or the other may be used.  The Intel compilers generally provide the best `openmp` support (installing and using those is beyond the scope of this README however.)
+```
+  % apt install libopenblas64-dev
+```
+
+#### MacOS
+
+If you are using MacOS, the `Accelerate` framework will automatically be selected.  You should not have to do anything yourself to use optimized BLAS with MacOS.
 
 
 ## Example Datasets
-
 
 ### S3
 
