@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest", "sklearn", "tiledb-cloud"]
+test = ["pytest", "scikit-learn", "tiledb-cloud"]
 
 
 [project.urls]
