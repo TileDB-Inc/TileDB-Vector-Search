@@ -14,17 +14,17 @@
 
 # Quick Installation
 
-TileDB-Vector-Search is available from either [PyPI](https://pypi.org/project/tiledb-vector-search/) with ``pip``:
-
-```
-pip install tiledb-vector-search
-```
-
-~~or from the [tiledb conda channel](https://anaconda.org/tiledb/tiledb-vector-search) with
-[conda](https://conda.io/docs/) or [mamba](https://github.com/mamba-org/mamba#installation)~~ (Pending 🚧):
+TileDB-Vector-Search is available from the [tiledb conda channel](https://anaconda.org/tiledb/tiledb-vector-search) with
+[conda](https://conda.io/docs/) or [mamba](https://github.com/mamba-org/mamba#installation)
 
 ```
 conda install -c tiledb tiledb-vector-search
+```
+
+~~Or [PyPI](https://pypi.org/project/tiledb-vector-search/) with ``pip``~~: (Pending 🚧)
+
+```
+pip install tiledb-vector-search
 ```
 
 # Contributing
