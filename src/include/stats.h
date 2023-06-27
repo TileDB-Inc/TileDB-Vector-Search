@@ -68,7 +68,7 @@ auto dump_logs = [](std::string filename,
 
   // I don't know why this has to be done in two steps like this but oh well
   auto c = filename == "" ? std::ofstream(filename) : std::ofstream();
-  std::ostream& output { (filename == "-") ? std::cout : c };
+  std::ostream& output{(filename == "-") ? std::cout : c};
 
   // @todo print other information
   output << "# [ Repo ]: " << GIT_REPO_NAME << " @ " << GIT_BRANCH << " / "
@@ -173,7 +173,6 @@ auto dump_logs = [](std::string filename,
   }
 };
 
-
 #ifdef JSON_LOGGING
 auto config_log(const std::string& program_name) {
   std::string uuid_;
@@ -248,6 +247,6 @@ auto args_log(const Args& args) {
   }
   return arg_log;
 }
-#endif // JSON_LOGGING
+#endif  // JSON_LOGGING
 
 #endif  // TDB_STATS_H

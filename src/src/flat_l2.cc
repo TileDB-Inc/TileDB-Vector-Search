@@ -132,6 +132,8 @@ static constexpr const char USAGE[] =
 )";
 
 int main(int argc, char* argv[]) {
+  scoped_timer _(tdb_func__ + std::string("all inclusive query time"));
+
   std::vector<std::string> strings(argv + 1, argv + argc);
   auto args = docopt::docopt(USAGE, strings, true);
 
@@ -230,14 +232,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (args["--output_uri"]) {
-    auto output = ColMajorMatrix<int32_t>(top_k.num_rows(), top_k.num_cols());
-    for (size_t i = 0; i < top_k.num_rows(); ++i) {
-      for (size_t j = 0; j < top_k.num_cols(); ++j) {
-        output(i, j) = top_k(i, j);
-      }
-    }
-
-    write_matrix(ctx, output, args["--output_uri"].asString());
+    write_matrix(ctx, top_k, args["--output_uri"].asString());
   }
 
   if (args["--log"]) {

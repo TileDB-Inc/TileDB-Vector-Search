@@ -129,6 +129,8 @@ Options:
 )";
 
 int main(int argc, char* argv[]) {
+  scoped_timer _(tdb_func__ + std::string("all inclusive query time"));
+
   std::vector<std::string> strings(argv + 1, argv + argc);
   auto args = docopt::docopt(USAGE, strings, true);
 
@@ -174,127 +176,122 @@ int main(int argc, char* argv[]) {
   float recall{0.0f};
   tiledb::Context ctx;
 
-  {
-    scoped_timer _("query_time");
+  if (is_local_array(centroids_uri) &&
+      !std::filesystem::exists(centroids_uri)) {
+    std::cerr << "Error: centroids URI does not exist: "
+              << args["--centroids_uri"] << std::endl;
+    return 1;
+  }
 
-    if (is_local_array(centroids_uri) &&
-        !std::filesystem::exists(centroids_uri)) {
-      std::cerr << "Error: centroids URI does not exist: "
-                << args["--centroids_uri"] << std::endl;
-      return 1;
+  auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
+  centroids.load();
+  debug_matrix(centroids, "centroids");
+
+  // Find the top k nearest neighbors accelerated by kmeans and do some
+  // reporting
+
+  // @todo Encapsulate these arrays into a single ivf_index class (WIP)
+  // auto shuffled_db = tdbColMajorMatrix<db_type>(part_uri);
+  // auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
+  // debug_matrix(shuffled_db, "shuffled_db");
+  // debug_matrix(shuffled_ids, "shuffled_ids");
+
+  auto indices = read_vector<indices_type>(ctx, index_uri);
+  if (size_index) {
+    indices = sizes_to_indices(indices);
+  }
+  debug_matrix(indices, "indices");
+
+  auto q =
+      tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri, nqueries);
+  q.load();
+  debug_matrix(q, "q");
+
+  auto top_k = [&]() {
+    if (finite) {
+      return detail::ivf::nuv_query_heap_finite_ram<db_type, shuffled_ids_type>(
+          ctx,
+          part_uri,
+          centroids,
+          q,
+          indices,
+          id_uri,
+          nprobe,
+          k_nn,
+          blocksize,
+          nth,
+          nthreads);
+    } else {
+      return detail::ivf::
+          nuv_query_heap_infinite_ram<db_type, shuffled_ids_type>(
+              ctx,
+              part_uri,
+              centroids,
+              q,
+              indices,
+              id_uri,
+              nprobe,
+              k_nn,
+              nth,
+              nthreads);
+    }
+  }();
+
+  debug_matrix(top_k, "top_k");
+
+  // @todo encapsulate as a function
+  if (args["--groundtruth_uri"]) {
+    auto groundtruth_uri = args["--groundtruth_uri"].asString();
+
+    auto groundtruth =
+        tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
+    groundtruth.load();
+
+    if (global_debug) {
+      std::cout << std::endl;
+
+      debug_matrix(groundtruth, "groundtruth");
+      debug_slice(groundtruth, "groundtruth");
+
+      std::cout << std::endl;
+      debug_matrix(top_k, "top_k");
+      debug_slice(top_k, "top_k");
+
+      std::cout << std::endl;
     }
 
-    auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
-    centroids.load();
-    debug_matrix(centroids, "centroids");
+    size_t total_intersected{0};
+    size_t total_groundtruth = top_k.num_cols() * top_k.num_rows();
 
-    // Find the top k nearest neighbors accelerated by kmeans and do some
-    // reporting
-
-    // @todo Encapsulate these arrays into a single ivf_index class (WIP)
-    // auto shuffled_db = tdbColMajorMatrix<db_type>(part_uri);
-    // auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
-    // debug_matrix(shuffled_db, "shuffled_db");
-    // debug_matrix(shuffled_ids, "shuffled_ids");
-
-    auto indices = read_vector<indices_type>(ctx, index_uri);
-    if (size_index) {
-      indices = sizes_to_indices(indices);
-    }
-    debug_matrix(indices, "indices");
-
-    auto q =
-        tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri, nqueries);
-    q.load();
-    debug_matrix(q, "q");
-
-    auto top_k = [&]() {
-      if (finite) {
-        return detail::ivf::
-            nuv_query_heap_finite_ram<db_type, shuffled_ids_type>(
-                ctx,
-                part_uri,
-                centroids,
-                q,
-                indices,
-                id_uri,
-                nprobe,
-                k_nn,
-                blocksize,
-                nth,
-                nthreads);
-      } else {
-        return detail::ivf::
-            nuv_query_heap_infinite_ram<db_type, shuffled_ids_type>(
-                ctx,
-                part_uri,
-                centroids,
-                q,
-                indices,
-                id_uri,
-                nprobe,
-                k_nn,
-                nth,
-                nthreads);
-      }
-    }();
-
-    debug_matrix(top_k, "top_k");
-
-    // @todo encapsulate as a function
-    if (args["--groundtruth_uri"]) {
-      auto groundtruth_uri = args["--groundtruth_uri"].asString();
-
-      auto groundtruth =
-          tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
-      groundtruth.load();
-
-      if (global_debug) {
-        std::cout << std::endl;
-
-        debug_matrix(groundtruth, "groundtruth");
-        debug_slice(groundtruth, "groundtruth");
-
-        std::cout << std::endl;
-        debug_matrix(top_k, "top_k");
-        debug_slice(top_k, "top_k");
-
-        std::cout << std::endl;
-      }
-
-      size_t total_intersected{0};
-      size_t total_groundtruth = top_k.num_cols() * top_k.num_rows();
-
-      for (size_t i = 0; i < top_k.num_cols(); ++i) {
-        std::sort(begin(top_k[i]), end(top_k[i]));
-        std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
-        total_intersected += std::set_intersection(
-            begin(top_k[i]),
-            end(top_k[i]),
-            begin(groundtruth[i]),
-            end(groundtruth[i]),
-            counter{});
-      }
-
-      recall = ((float)total_intersected) / ((float)total_groundtruth);
-      std::cout << "# total intersected = " << total_intersected << " of "
-                << total_groundtruth << " = "
-                << "R@" << k_nn << " of " << recall << std::endl;
+    for (size_t i = 0; i < top_k.num_cols(); ++i) {
+      std::sort(begin(top_k[i]), end(top_k[i]));
+      std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
+      total_intersected += std::set_intersection(
+          begin(top_k[i]),
+          end(top_k[i]),
+          begin(groundtruth[i]),
+          end(groundtruth[i]),
+          counter{});
     }
 
-    if (args["--output_uri"]) {
-      auto output = ColMajorMatrix<int32_t>(top_k.num_rows(), top_k.num_cols());
-      for (size_t i = 0; i < top_k.num_rows(); ++i) {
-        for (size_t j = 0; j < top_k.num_cols(); ++j) {
-          output(i, j) = top_k(i, j);
-        }
-      }
+    recall = ((float)total_intersected) / ((float)total_groundtruth);
+    std::cout << "# total intersected = " << total_intersected << " of "
+              << total_groundtruth << " = "
+              << "R@" << k_nn << " of " << recall << std::endl;
+  }
 
-      write_matrix(ctx, output, args["--output_uri"].asString());
-    }
+  if (args["--output_uri"]) {
+    write_matrix(ctx, top_k, args["--output_uri"].asString());
   }
 
   if (args["--log"]) {
-    dump_logs(args["--log"].asString(), algorithm, nqueries, nprobe, k_nn, nthreads, recall);
+    dump_logs(
+        args["--log"].asString(),
+        algorithm,
+        nqueries,
+        nprobe,
+        k_nn,
+        nthreads,
+        recall);
   }
 }
