@@ -49,9 +49,10 @@
 
 #include "config.h"
 
+#ifdef JSON_LOGGING
 #include "nlohmann/json.hpp"
-
 using json = nlohmann::json;
+#endif
 
 auto dump_logs = [](std::ostream& output,
                     const std::string algorithm,
@@ -168,6 +169,8 @@ auto dump_logs = [](std::ostream& output,
   }
 };
 
+
+#ifdef JSON_LOGGING
 auto config_log(const std::string& program_name) {
   std::string uuid_;
   char host_[16];
@@ -241,5 +244,6 @@ auto args_log(const Args& args) {
   }
   return arg_log;
 }
+#endif // JSON_LOGGING
 
 #endif  // TDB_STATS_H

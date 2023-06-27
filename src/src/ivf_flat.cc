@@ -74,9 +74,6 @@
 #include "utils/timer.h"
 #include "utils/utils.h"
 
-#include <nlohmann/json.hpp>
-using json = nlohmann::json;
-
 bool global_verbose = false;
 bool global_debug = false;
 
@@ -175,7 +172,6 @@ int main(int argc, char* argv[]) {
   bool finite = args["--finite"].asBool();
 
   float recall{0.0f};
-  json recalls;
   tiledb::Context ctx;
 
   {

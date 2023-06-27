@@ -11,6 +11,8 @@ A wealth of internal performance information can be dumped from the programs.
 
 
 
+
+
 The `main` program for the driver performing partitioned search is  
 called `ivf_flat` which does an approximate search based on a given partition (an index).
 
