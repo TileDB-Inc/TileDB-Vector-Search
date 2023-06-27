@@ -63,7 +63,8 @@ def test_ivf_flat_ingestion_u8(tmp_path):
         array_uri=array_uri,
         source_uri=os.path.join(dataset_dir, "data"),
         source_type=source_type,
-        partitions=partitions
+        partitions=partitions,
+        input_vectors_per_work_item=int(size / 10),
     )
     result = np.transpose(index.query(np.transpose(query_vectors), k=k, nprobe=partitions))
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
@@ -87,7 +88,8 @@ def test_ivf_flat_ingestion_f32(tmp_path):
         array_uri=array_uri,
         source_uri=os.path.join(dataset_dir, "data"),
         source_type=source_type,
-        partitions=partitions
+        partitions=partitions,
+        input_vectors_per_work_item=int(size / 10),
     )
     result = np.transpose(index.query(np.transpose(query_vectors), k=k, nprobe=partitions))
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))

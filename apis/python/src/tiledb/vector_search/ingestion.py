@@ -407,7 +407,7 @@ def ingest(
         elif source_type == "F32BIN":
             vfs = tiledb.VFS()
             read_size = end_pos - start_pos
-            read_offset = start_pos * dimensions + 8
+            read_offset = start_pos * dimensions * 4 + 8
             with vfs.open(source_uri, "rb") as f:
                 f.seek(read_offset)
                 return np.reshape(
@@ -851,38 +851,28 @@ def ingest(
                     prev_index = partial_indexes[0]
                     i = 0
                     for partial_index in partial_indexes[1:]:
-                        partition_slices[i].append(slice(int(prev_index), int(partial_index - 1)))
+                        s = slice(int(prev_index), int(partial_index - 1))
+                        if s.start <= s.stop:
+                            partition_slices[i].append(s)
                         prev_index = partial_index
                         i += 1
 
-            for part in range(partition_id_start, partition_id_end, batch):
-                part_end = part + batch
-                if part_end > partition_id_end:
-                    part_end = partition_id_end
-
-                logger.info(
-                    f"Partitions start: {part} end: {part_end}"
-                )
-                read_slices = []
+            partial_write_array_ids_array = tiledb.open(partial_write_array_ids_uri, mode="r")
+            partial_write_array_parts_array = tiledb.open(partial_write_array_parts_uri, mode="r")
+            index_array = tiledb.open(index_array_uri, mode="r")
+            ids_array = tiledb.open(ids_array_uri, mode="w")
+            parts_array = tiledb.open(parts_array_uri, mode="w")
+            for part in range(partition_id_start, partition_id_end):
+                logger.info(f"Partition: {part}")
                 i = 0
-                for part_slice in partition_slices[part]:
-                    new_slice = slice(part_slice.start, partition_slices[part_end - 1][i].stop)
-                    i += 1
-                    if new_slice.start > new_slice.stop:
-                        continue
-                    read_slices.append(new_slice)
-                logger.debug(f"Read slices: {read_slices}")
-                partial_write_array_ids_array = tiledb.open(partial_write_array_ids_uri, mode="r")
-                partial_write_array_parts_array = tiledb.open(partial_write_array_parts_uri, mode="r")
-                index_array = tiledb.open(index_array_uri, mode="r")
-                ids_array = tiledb.open(ids_array_uri, mode="w")
-                parts_array = tiledb.open(parts_array_uri, mode="w")
+                read_slices = partition_slices[part]
 
+                logger.debug(f"Read slices: {read_slices}")
                 ids = partial_write_array_ids_array.multi_index[read_slices]["values"]
                 vectors = partial_write_array_parts_array.multi_index[:, read_slices]["values"]
-                indexes = index_array[part:part_end + 1]["values"]
-                start_pos = indexes[0]
-                end_pos = indexes[len(indexes) - 1]
+                start_pos = int(index_array[part]["values"])
+                end_pos = int(index_array[part + 1]["values"])
+
                 logger.debug(
                     f"Ids shape {ids.shape}, expected size: {end_pos - start_pos} expected range:({start_pos},{end_pos})")
                 if ids.shape[0] != end_pos - start_pos:

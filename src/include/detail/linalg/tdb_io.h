@@ -115,6 +115,8 @@ void write_matrix(
       .set_subarray(subarray);
   query.submit();
 
+  assert(tiledb::Query::Status::COMPLETE == query.query_status());
+
   array.close();
 }
 
@@ -175,6 +177,7 @@ void write_vector(
       .set_data_buffer("values", v)
       .set_subarray(subarray);
   query.submit();
+  assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
   array.close();
 }
