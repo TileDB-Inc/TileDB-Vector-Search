@@ -97,15 +97,14 @@ using indices_type = uint64_t;
 static constexpr const char USAGE[] =
     R"(ivf_flat: demo CLI program for performing feature vector search with kmeans index.
 Usage:
-    ivf_hack (-h | --help)
-    ivf_hack --db_uri URI --centroids_uri URI (--index_uri URI | --sizes_uri URI)
-             --parts_uri URI --ids_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
+    ivf_flat (-h | --help)
+    ivf_flat --centroids_uri URI --parts_uri URI (--index_uri URI | --sizes_uri URI)
+             --ids_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
             [--k NN][--nprobe NN] [--nqueries NN] [--alg ALGO] [--finite] [--blocksize NN] [--nth]
             [--nthreads NN] [--region REGION] [--log FILE] [-d] [-v]
 
 Options:
     -h, --help            show this screen
-    --db_uri URI          database URI with feature vectors
     --centroids_uri URI   URI with centroid vectors
     --index_uri URI       URI with the paritioning index
     --sizes_uri URI       URI with the parition sizes
@@ -133,7 +132,6 @@ int main(int argc, char* argv[]) {
   auto args = docopt::docopt(USAGE, strings, true);
 
   auto centroids_uri = args["--centroids_uri"].asString();
-  auto db_uri = args["--db_uri"].asString();
   auto nthreads = args["--nthreads"].asLong();
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();

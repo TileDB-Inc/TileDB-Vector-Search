@@ -9,94 +9,96 @@ A wealth of internal performance information can be dumped from the programs.
 
 ## `ivf_flat`:  Inverted File Index with Stored Vectors 
 
+### Building ivf_flat
 
 
-
-
-The `main` program for the driver performing partitioned search is  
-called `ivf_flat` which does an approximate search based on a given partition (an index).
-
-### Building ivf_hack
-
-`ivf_hack` is built in the same manner as `flat` (below).
-
-
-
-### Running ivf_hack
+### Running `ivf_flat`
 
 ```
+ivf_flat: demo CLI program for performing feature vector search with kmeans index.
 Usage:
-    ivf_hack (-h | --help)
-    ivf_hack --db_uri URI --centroids_uri URI --index_uri URI --part_uri URI --id_uri URI
-            [--output_uri URI] [--query_uri URI] [--groundtruth_uri URI] [--ndb NN] [--nqueries NN] [--blocksize NN]
-            [--k NN] [--cluster NN] [--nthreads N] [--region REGION] [--nth] [--log FILE] [-d | -v]
+    ivf_flat (-h | --help)
+    ivf_flat --db_uri URI --centroids_uri URI (--index_uri URI | --sizes_uri URI)
+             --parts_uri URI --ids_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
+            [--k NN][--nprobe NN] [--nqueries NN] [--alg ALGO] [--finite] [--blocksize NN] [--nth]
+            [--nthreads NN] [--region REGION] [--log FILE] [-d] [-v]
 
 Options:
     -h, --help            show this screen
-    --db_uri URI          database URI with feature vectors, to query against
-    --centroids_uri URI   URI with centroid vectors from kmeans applied to the feature vector set
-    --index_uri URI       URI with the paritioning index obtained from kmeans
-    --part_uri URI        URI with the data vectors reordered and partitioned by kmeans
-    --id_uri URI          URI with IDs of the partitioned vectors, as given in the original dataset  
+    --db_uri URI          database URI with feature vectors
+    --centroids_uri URI   URI with centroid vectors
+    --index_uri URI       URI with the paritioning index
+    --sizes_uri URI       URI with the parition sizes
+    --parts_uri URI       URI with the partitioned data
+    --ids_uri URI         URI with original IDs of vectors
+    --query_uri URI       URI storing query vectors
+    --groundtruth_uri URI URI storing ground truth vectors
     --output_uri URI      URI to store search results
-    --query_uri URI       Optional URI containing a set of vectors to query the database against
-    --groundtruth_uri URI Optionsal URI containing the ground truth vectors for the query vectors
-    --nqueries NN         number of query vectors to use (0 = all) [default: 0]
-    --ndb NN              number of database vectors to use (0 = all) [default: 0]
-    --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
     --k NN                number of nearest neighbors to search for [default: 10]
-    --cluster NN          aka nprobe -- number of kmeanse clusters to use in the search [default: 100]
-    --blocksize NN        number of vectors to process in memory from the vector dataset (0 = all) [default: 0]
-    --nth                 use nth_element for finding top k rather than heap-based [default: false]
-    --log FILE            log program stats to FILE (- for stdout)
-    --region REGION       AWS S3 region for the arrays used by this program [default: us-east-1]
-    -d, --debug           emit and log debugging level information [default: false]
-    -v, --verbose         emit and log verbose level information [default: false]
+    --nprobe NN           number of centroid partitions to use [default: 100]
+    --nqueries NN         number of query vectors to use (0 = all) [default: 0]
+    --alg ALGO            which algorithm to use for query [default: qv_heap]
+    --finite              use finite RAM (out of core) algorithm [default: false]
+    --blocksize NN        number of vectors to process in an out of core block (0 = all) [default: 0]
+    --nth                 use nth_element for top k [default: false]
+    --nthreads NN         number of threads to use (0 = all) [default: 0]
+    --region REGION       AWS S3 region [default: us-east-1]
+    --log FILE            log info to FILE (- for stdout)
+    -d, --debug           run in debug mode [default: false]
+    -v, --verbose         run in verbose mode [default: false]
 ```
 
-### Running `ivf_hack` with TileDB Arrays
 
-#### Query mode
-`ivf_hack` performs a query for given queries against a specified dataset, using an inverted file index derived from applying kmeans partitioning against that dataset.
 
-`ivf_hack`reads its data from TileDB arrays.  Reading from local data files is no longer supported. Previous functionality for writing the IVF index files (partitioned vectors, index, vector IDs) has been moved to another driver program (`index`).
 
-`ivf_hack` takes as input a vector database, an array centroids, 
-a reordered vector database, an array containing partition indexes for the reordered vector database, and an array of original ids of the shuffled vectors.
+### Running `ivf_flat` with TileDB Arrays
+
+#### Specifying the query
+
+`ivf_flat` performs a query for given queries against a specified dataset, using an inverted file index derived from applying kmeans partitioning against that dataset.
+
+The inverted file index consists of 
+its data from TileDB arrays, which can be stored locally or in the cloud.  (Any valid URI can be used to specify a TileDB array.)  The necessary arrays for a query are:
+* a vector database (`--db_uri`), 
+* an array of centroids (`--centroids_uri`),
+* a vector database reordered into partitions, with on partition per centroid, such that each partition comprises the vectors closest to the corresponding centroid (`--parts_uri`),
+* an array containing partition indexes for the reordered vector database (`--index_uri`), or an array containing the sizes of each partition (`--sizes_uri`), 
+* an array of original ids of the shuffled vectors (`--ids_uri`),
+* and an array containing query vectors (`--query_id`).
+
 The user can also optionally specify
-*  an array containing query vectors 
-*  an array containing ground truth vectors
+*  an array containing ground truth vectors (`--groundtruth_uri`).
 
 The user can also specify values for how many nearest neighbors to return for
 each search vector, and how many partitions to use in searching for each search vector.
 
 Example:
 ```
-  ivf_hack --id_uri s3://tiledb-andrew/kmeans/ivf_hack/ids              \
-           --index_uri s3://tiledb-andrew/kmeans/ivf_hack/index         \
-           --part_uri s3://tiledb-andrew/kmeans/ivf_hack/parts          \ 
-           --centroids_uri s3://tiledb-andrew/kmeans/ivf_hack/centroids \
+  ivf_flat --id_uri s3://tiledb-andrew/kmeans/ivf_flat/ids              \
+           --index_uri s3://tiledb-andrew/kmeans/ivf_flat/index         \
+           --part_uri s3://tiledb-andrew/kmeans/ivf_flat/parts          \ 
+           --centroids_uri s3://tiledb-andrew/kmeans/ivf_flat/centroids \
            --db_uri s3://tiledb-andrew/sift/sift_base 
 ```
 
 #### index_ivf
 
-The `index_ivf` driver is complementary to `ivf_hack` and writes the arrays necesarry for indexing, given a vector database and centroid vectors produces by kmeans. This functionality was previously also included as part of `ivf_hack` but has been moved to the `index_ivf` driver.
+The `index_ivf` driver is complementary to `ivf_flat` and writes the arrays necesarry for indexing, given a vector database and centroid vectors produces by kmeans. This functionality was previously also included as part of `ivf_flat` but has been moved to the `index_ivf` driver.
 
 The three arrays produced by `index_ivf` are the partitioned (shuffled) vector database, the partitioning indexes, and the original vector database ids for the shuffled vectors. 
 
 Example:
 ```
-  ivf_index --id_uri s3://tiledb-lums/kmeans/ivf_hack/ids              \
-            --index_uri s3://tiledb-lums/kmeans/ivf_hack/index         \
-            --part_uri s3://tiledb-lums/kmeans/ivf_hack/parts          \ 
-            --centroids_uri s3://tiledb-lums/kmeans/ivf_hack/centroids \
+  ivf_index --id_uri s3://tiledb-lums/kmeans/ivf_flat/ids              \
+            --index_uri s3://tiledb-lums/kmeans/ivf_flat/index         \
+            --part_uri s3://tiledb-lums/kmeans/ivf_flat/parts          \ 
+            --centroids_uri s3://tiledb-lums/kmeans/ivf_flat/centroids \
             --db_uri s3://tiledb-lums/sift/sift_base                   
 ```
 
 Note that the program will **not** overwrite any existing arrays.  It is the responsibility of the user to make sure that the arrays to be written do not exist when the program is executed.
 
-**NB:** The reason write mode exists is because the available partitioning data created by kmeans programs only seem to include the centroids rather than the full set of data needed by `ivf_hack`.  
+**NB:** The reason write mode exists is because the available partitioning data created by kmeans programs only seem to include the centroids rather than the full set of data needed by `ivf_flat`.  
 This functionality will also be used in conjunction with TileDB's own kmeans centroid generation (currently WIP).
 
 ## The Flat Search Driver
@@ -110,7 +112,7 @@ set of vectors and a given set of query vectors.
 ### Running flat
 
 The `flat` program is a basic program that reads the `sift` feature vector data, either
-from a TileDB array or from a file.  Both `flat` and `ivf_hack` use a simple (naive) array schema for the arrays that they use.  Future releases will include support for other pre-defined schema, as well as offer an API for user-defined schema.
+from a TileDB array or from a file.  Both `flat` and `ivf_flat` use a simple (naive) array schema for the arrays that they use.  Future releases will include support for other pre-defined schema, as well as offer an API for user-defined schema.
 
 The program currently 
 performs search based on L2  similarity.  Future releases will include
