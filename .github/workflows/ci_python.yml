@@ -28,8 +28,9 @@ jobs:
         run: |
           cd apis/python
           pip install .[test]
-          pytest -k "not ingest" # TODO: requires token
+          pytest
+          # TODO: fix editable on linux
           #pip uninstall -y tiledb.vector_search
           #pip install -e .
-          #pytest -k "not ingest" # TODO: requires token
+          #pytest
         shell: bash -el {0}
