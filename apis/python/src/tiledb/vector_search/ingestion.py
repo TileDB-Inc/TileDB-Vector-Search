@@ -862,26 +862,26 @@ def ingest(
             index_array = tiledb.open(index_array_uri, mode="r")
             ids_array = tiledb.open(ids_array_uri, mode="w")
             parts_array = tiledb.open(parts_array_uri, mode="w")
+            read_slices = []
             for part in range(partition_id_start, partition_id_end):
-                logger.info(f"Partition: {part}")
-                i = 0
-                read_slices = partition_slices[part]
+                for partition_slice in partition_slices[part]:
+                    read_slices.append(partition_slice)
 
-                logger.debug(f"Read slices: {read_slices}")
-                ids = partial_write_array_ids_array.multi_index[read_slices]["values"]
-                vectors = partial_write_array_parts_array.multi_index[:, read_slices]["values"]
-                start_pos = int(index_array[part]["values"])
-                end_pos = int(index_array[part + 1]["values"])
+            logger.debug(f"Read slices: {read_slices}")
+            ids = partial_write_array_ids_array.multi_index[read_slices]["values"]
+            vectors = partial_write_array_parts_array.multi_index[:, read_slices]["values"]
+            start_pos = int(index_array[partition_id_start]["values"])
+            end_pos = int(index_array[partition_id_end]["values"])
 
-                logger.debug(
-                    f"Ids shape {ids.shape}, expected size: {end_pos - start_pos} expected range:({start_pos},{end_pos})")
-                if ids.shape[0] != end_pos - start_pos:
-                    raise ValueError("Incorrect partition size.")
+            logger.debug(
+                f"Ids shape {ids.shape}, expected size: {end_pos - start_pos} expected range:({start_pos},{end_pos})")
+            if ids.shape[0] != end_pos - start_pos:
+                raise ValueError("Incorrect partition size.")
 
-                logger.info(f"Writing data to array: {parts_array_uri}")
-                parts_array[:, start_pos:end_pos] = vectors
-                logger.info(f"Writing data to array: {ids_array_uri}")
-                ids_array[start_pos:end_pos] = ids
+            logger.info(f"Writing data to array: {parts_array_uri}")
+            parts_array[:, start_pos:end_pos] = vectors
+            logger.info(f"Writing data to array: {ids_array_uri}")
+            ids_array[start_pos:end_pos] = ids
 
     # --------------------------------------------------------------------
     # DAG
