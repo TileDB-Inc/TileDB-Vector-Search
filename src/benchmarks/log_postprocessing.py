@@ -6,7 +6,13 @@ import numpy as np
 import re
 import os
 
-# Hard coded logs to process
+import os
+
+# current_directory = os.getcwd()
+# print(current_directory)
+
+# get_ipython().run_cell_magic('html', '', '<style>\n.container {\n    width: 95% !important;\n}\n</style>\n')
+
 logs = [ [ '1b-r6a-24x-125MiB-5x-infinite-clang-2023-06-25-13-10.log', 'clang',  '[F]' ],
          [ '1b-r6a-24x-125MiB-5x-g++-2023-06-24-23-01.log',            'g++',    '[C]' ],
          [ '1b-c6a-16x-125MiB-g++-docker-2023-06-23-14-16.log',        'docker', '[C]' ],
@@ -21,7 +27,7 @@ results_table = pd.DataFrame()
 header = None
 
 for logpair in logs:
-    log = logpair[0]
+    log = "logs/"+logpair[0]
     time_column = logpair[2]
             
     data_lines = []
@@ -45,42 +51,31 @@ for logpair in logs:
         df.index = pd.RangeIndex(len(df)) 
         df_min = df.groupby(np.arange(len(df))//5)[time_column].min() # g++ is C, clang is F
 
-        # print(df.shape[0])
-        
+
         if (count*200 >= df.shape[0]):
             break
         
         df = df.iloc[count*200:(count+1)*200]
-
 
         if qn.empty:
             qn = df[['Queries', 'nprobe']].astype(int)
             qn = qn.groupby(np.arange(len(df))//5)[['Queries', 'nprobe']].mean().astype(int)
             results_table = qn
             results_table.columns=pd.MultiIndex.from_product([['Params'],['Queries', 'nprobe']])
-
-        # print(logpair[0], logpair[1])
-        # g++ is C, clang is F
-
-        df = df[time_column].to_frame()
-
-        # I don't know why this doesn't work, but it doesn't -- in a very very strange way
-        # df.index = pd.RangeIndex(len(df)) 
-        # grouped = df.groupby(np.arange(len(df))//5)
-        # for group, indices in grouped.groups.items():
-        #    print(f"Group: {group}")
-        #    print(df.loc[indices])
-        #    print()
-        # df_min = df.groupby(np.arange(len(df))//5).min().astype(float)
-        # print(df_min)
         
-        # Compute the average of every five non-overlapping rows
-        df_min = df.rolling(5).min().iloc[4::5]
+        # Make sure to set type of data to float!!!
+        df = df[time_column].to_frame().astype(float)
+
+        # One way to compute min over groups of non-overlapping rows
+        df.index = pd.RangeIndex(len(df)) 
+        df_min = df.groupby(np.arange(len(df))//5).min()
+        
+        # Another way to compute the min over every five non-overlapping rows
+        # df_min = df.rolling(5).min().iloc[4::5]
 
         # Reset the index of the new DataFrame
         df_min = df_min.reset_index(drop=True)
         df_min.columns=['latency']
-        # df.rename(columns={'[C]':'latency'})
 
         df_qps = (qn['Params','Queries'] / df_min['latency']).to_frame()
         df_qps.columns=['QPS']
@@ -101,5 +96,4 @@ pd.set_option('display.expand_frame_repr', False)
 file_path = 'ivf_logs.csv'
 results_table.to_csv(file_path, index=False)
     
-# Display results table (Mostly useful in a jupyter notebook)
-# results_table
+results_table
