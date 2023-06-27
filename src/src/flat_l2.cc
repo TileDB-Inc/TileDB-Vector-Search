@@ -120,7 +120,8 @@ static constexpr const char USAGE[] =
       --k NN                  number of nearest neighbors to find [default: 10]
       --nqueries NN           size of queries subset to compare (0 = all) [default: 0]
       --alg ALGO              which algorithm to use for comparisons [default: vq_heap]
-      --finite                use finite RAM (out of core) algorithm [default: false]
+      --infinite              use infinite RAM algorithm [default: false]
+      --finite                (legacy) use finite RAM (out of core) algorithm [default: true]
       --blocksize NN          number of vectors to process in an out of core block (0 = all) [default: 0]
       --nth                   use nth_element for top k [default: false]
       --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
@@ -239,8 +240,7 @@ int main(int argc, char* argv[]) {
     write_matrix(ctx, output, args["--output_uri"].asString());
   }
 
-  // @todo send to output specified by --log
-  if (true || verbose) {
-    dump_logs(std::cout, alg_name, nqueries, 0, k, nthreads, 0);
+  if (args["--log"]) {
+    dump_logs(args["--log"].asString(), alg_name, nqueries, 0, k, nthreads, 0);
   }
 }

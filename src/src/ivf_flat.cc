@@ -100,8 +100,8 @@ Usage:
     ivf_flat (-h | --help)
     ivf_flat --centroids_uri URI --parts_uri URI (--index_uri URI | --sizes_uri URI)
              --ids_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
-            [--k NN][--nprobe NN] [--nqueries NN] [--alg ALGO] [--finite] [--blocksize NN] [--nth]
-            [--nthreads NN] [--region REGION] [--log FILE] [-d] [-v]
+            [--k NN][--nprobe NN] [--nqueries NN] [--alg ALGO] [--infinite] [--finite] [--blocksize NN]
+            [--nth] [--nthreads NN] [--region REGION] [--log FILE] [-d] [-v]
 
 Options:
     -h, --help            show this screen
@@ -117,10 +117,11 @@ Options:
     --nprobe NN           number of centroid partitions to use [default: 100]
     --nqueries NN         number of query vectors to use (0 = all) [default: 0]
     --alg ALGO            which algorithm to use for query [default: qv_heap]
-    --finite              use finite RAM (out of core) algorithm [default: false]
+    --infinite            use infinite RAM algorithm [default: false]
+    --finite              (legacy) use finite RAM (out of core) algorithm [default: true]
     --blocksize NN        number of vectors to process in an out of core block (0 = all) [default: 0]
-    --nth                 use nth_element for top k [default: false]
-    --nthreads NN         number of threads to use (0 = all) [default: 0]
+    --nth                 (deprecated) use nth_element for top k [default: false]
+    --nthreads NN         number of threads to use (0 = hardware concurrency) [default: 0]
     --region REGION       AWS S3 region [default: us-east-1]
     --log FILE            log info to FILE (- for stdout)
     -d, --debug           run in debug mode [default: false]
@@ -167,7 +168,8 @@ int main(int argc, char* argv[]) {
   auto blocksize = (size_t)args["--blocksize"].asLong();
   bool nth = args["--nth"].asBool();
   auto algorithm = args["--alg"].asString();
-  bool finite = args["--finite"].asBool();
+  // bool finite = args["--finite"].asBool();
+  bool finite = !(args["--finite"].asBool());
 
   float recall{0.0f};
   tiledb::Context ctx;
@@ -292,8 +294,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  // @todo send to output specified by --log
-  if (true || global_verbose) {
-    dump_logs(std::cout, algorithm, nqueries, nprobe, k_nn, nthreads, recall);
+  if (args["--log"]) {
+    dump_logs(args["--log"].asString(), algorithm, nqueries, nprobe, k_nn, nthreads, recall);
   }
 }

@@ -42,6 +42,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <random>
+#include <string>
 
 #include <tiledb/tiledb>
 
@@ -54,17 +55,20 @@
 using json = nlohmann::json;
 #endif
 
-auto dump_logs = [](std::ostream& output,
+auto dump_logs = [](std::string filename,
                     const std::string algorithm,
                     size_t nqueries,
                     size_t nprobe,
                     size_t k_nn,
                     size_t nthreads,
                     double recall) {
-  // Quick and dirty way to get query info in summarizable and useful form --
+  // Quick and dirty way to get log info into a summarizable and useful form --
   // fixed-width columns
   // @todo encapsulate this as a function that can be customized
-  // @todo  use --log to specify destination (if any)
+
+  // I don't know why this has to be done in two steps like this but oh well
+  auto c = filename == "" ? std::ofstream(filename) : std::ofstream();
+  std::ostream& output { (filename == "-") ? std::cout : c };
 
   // @todo print other information
   output << "# [ Repo ]: " << GIT_REPO_NAME << " @ " << GIT_BRANCH << " / "
