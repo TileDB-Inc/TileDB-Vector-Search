@@ -501,7 +501,6 @@ function ivf_query() {
     # --index_uri ${index_uri} \
 	local query="\
 ${ivf_query} \
---db_uri ${db_uri} \
 --centroids_uri ${centroids_uri} \
 --parts_uri ${parts_uri} \
 --sizes_uri ${sizes_uri} \

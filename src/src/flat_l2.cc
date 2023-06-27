@@ -103,10 +103,10 @@ using db_type = float;
 using groundtruth_type = int32_t;
 
 static constexpr const char USAGE[] =
-    R"(flat: feature vector search with flat index.
+    R"(flat_l2: feature vector search with flat index.
   Usage:
-      flat (-h | --help)
-      flat --db_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
+      flat_l2 (-h | --help)
+      flat_l2 --db_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
           [--k NN] [--nqueries NN]
           [--alg ALGO] [--finite] [--blocksize NN] [--nth]
           [--nthreads N] [--region REGION] [--validate] [--log FILE] [-d] [-v]
@@ -124,7 +124,6 @@ static constexpr const char USAGE[] =
       --blocksize NN          number of vectors to process in an out of core block (0 = all) [default: 0]
       --nth                   use nth_element for top k [default: false]
       --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
-      -V, --validate          validate results [default: false]
       --region REGION         AWS region [default: us-east-1]
       --log FILE              log info to FILE (- for stdout)
       -d, --debug             run in debug mode [default: false]
@@ -157,7 +156,6 @@ int main(int argc, char* argv[]) {
   size_t blocksize = args["--blocksize"].asLong();
 
   auto nth = args["--nth"].asBool();
-  auto validate = args["--validate"].asBool();
 
   // @todo make global
   if (nthreads == 0) {
@@ -216,7 +214,7 @@ int main(int argc, char* argv[]) {
     throw std::runtime_error("incorrect or unset algorithm type: " + alg_name);
   }();
 
-  if (!groundtruth_uri.empty() && validate) {
+  if (!groundtruth_uri.empty()) {
     auto groundtruth =
         tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
     groundtruth.load();
