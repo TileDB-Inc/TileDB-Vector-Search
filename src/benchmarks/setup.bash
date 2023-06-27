@@ -82,32 +82,35 @@ if [[ "$(type -t check_instance_status)" != "function" ]]; then
     }
 fi
 
-# Locations of the "ivf_flat" and "flat_l2" driver executables
-ec2_ivf_flat="/home/lums/TileDB-Vector-Search/src/cmake-build-release/libtiledbvectorsearch/src/ivf_flat"
-m1_ivf_flat="/Users/lums/TileDB/TileDB-Vector-Search/src/cmake-build-release/src/ivf_flat"
-ec2_flat="/home/lums/TileDB-Vector-Search/src/cmake-build-release/src/flat_l2"
-m1_flat="/Users/lums/TileDB/TileDB-Vector-Search/src/cmake-build-release/src/flat_l2"
+# Two possible locations of TileDB-Vector-Search root -- edit as necessary
+tdb_vector_search_root_1="${HOME}/TileDB-Vector-Search"
+tdb_vector_search_root_2="${HOME}/TileDB/TileDB-Vector-Search"
 
-###############################################################################
+ivf_flat_tail="src/cmake-build-release/libtiledbvectorsearch/src/ivf_flat"
+ivf_flat_1=${tdb_vector_search_root_1}/${ivf_flat_tail}
+ivf_flat_2=${tdb_vector_search_root_2}/${ivf_flat_tail}
+flat_l2_tail="src/cmake-build-release/libtiledbvectorsearch/src/ivf_flat"
+flat_l2_1=${tdb_vector_search_root_1}/${flat_l2_tail}
+flat_l2_2=${tdb_vector_search_root_2}/${flat_l2_tail}
 
 if [ -f "${ivf_query}" ]; then
     ivf_query="${ivf_query}"
-elif [ -f "${ec2_ivf_flat}" ]; then
-    ivf_query="${ec2_ivf_flat}"
-elif [ -f "${m1_ivf_flat}" ]; then
-    ivf_query="${m1_ivf_flat}"
+elif [ -f "${ivf_flat_1}" ]; then
+    ivf_query="${ivf_flat_1}"
+elif [ -f "${ivf_flat_2}" ]; then
+    ivf_query="${ivf_flat_2}"
 else
     echo "Neither ivf_flat executable file exists"
 fi
 
-if [ -f "${flat_query}" ]; then
+if [ -f flat_query ]; then
     flat_query="${flat_query}"
-elif [ -f "${ec2_flat}" ]; then
-    flat_query="${ec2_flat}"
-elif [ -f "${m1_flat}" ]; then
-    flat_query="${m1_flat}"
+elif [ -f "${flat_l2_1}" ]; then
+    flat_query="${flat_l2_1}"
+elif [ -f "${flat_l2_2}" ]; then
+    flat_query="${flat_l2_2}"
 else
-    echo "Neither flat executable file exists"
+    echo "Neither flat_l2 executable file exists"
 fi
 
 nvme_root=/mnt/ssd
@@ -439,7 +442,6 @@ function print_all_schemas () {
 }
 
 function ivf_query() {
-
     while [ "$#" -gt 0 ]; do
 	case "$1" in
 	    -x|--exec)
@@ -481,6 +483,10 @@ function ivf_query() {
 		local _finite="--finite"
 		shift 1
 		;;
+	    --infinite)
+		local _infinite="--infinite"
+		shift 1
+		;;
 	    --log)
 		local _log="--log ${2}"
 		shift 2
@@ -513,6 +519,7 @@ ${_nthreads} \
 ${_cluster} \
 ${_blocksize} \
 ${_finite} \
+${_infinite} \
 ${_log} \
 ${_verbose} \
 ${_debug}"
@@ -524,7 +531,6 @@ ${_debug}"
 }
 
 function flat_query() {
-
     while [ "$#" -gt 0 ]; do
 	case "$1" in
 	    -x|--exec)
@@ -566,10 +572,6 @@ function flat_query() {
 		local _log="--log ${2}"
 		shift 2
 		;;
-	    -V|--validate)
-		local _validate="--validate"
-		shift 1
-		;;
 	    *)
 		echo "Unknown option: $1"
 		return 1
@@ -594,7 +596,6 @@ ${_nthreads} \
 ${_blocksize} \
 ${_nth} \
 ${_log} \
-${_validate} \
 ${_verbose} \
 ${_debug}"
 

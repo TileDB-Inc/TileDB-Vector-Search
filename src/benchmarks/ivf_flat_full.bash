@@ -27,23 +27,31 @@ dir=$(dirname $0)
 printf "=========================================================================================================================================\n\n"
 echo "Starting benchmark run: "
 date +"%A, %B %d, %Y %H:%M:%S"
-echo $0
+echo Running script $0
 printf "Benchmark program ${ivf_query}\n\n"
 uptime
 
 printf "\n\n-----------------------------------------------------------------------------------------------------------------------------------------\n\n"
 
-curl -s http://169.254.169.254/latest/meta-data/instance-type
-
-printf "\n\n-----------------------------------------------------------------------------------------------------------------------------------------\n\n"
-
-aws ec2 --region us-east-1 describe-volumes --volume-id ${volume_id}
+if ping -c 1 -W 1250 169.254.169.254;
+then
+  echo "Running on EC2 instance"
+  curl -s http://169.254.169.254/latest/meta-data/instance-type
+  aws ec2 --region us-east-1 describe-volumes --volume-id ${volume_id}
+else
+  echo "Not running on EC2 instance"
+  hostname
+fi
 
 printf "\n\n-----------------------------------------------------------------------------------------------------------------------------------------\n\n"
 
 arch
 nproc
 head -1 /proc/meminfo
+
+printf "\n\n-----------------------------------------------------------------------------------------------------------------------------------------\n\n"
+
+declare -f ivf_query
 
 printf "\n\n-----------------------------------------------------------------------------------------------------------------------------------------\n\n"
 
@@ -62,11 +70,11 @@ do
 	do
 	    for nprobe in 1 2 4 8 16 32 64 128 ;
 	    do
-		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize}
-		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize}
-		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize}
-		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize}
-		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize}
+		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize} --log -
+		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize} --log -
+		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize} --log -
+		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize} --log -
+		ivf_query --nqueries ${nqueries} --nprobe ${nprobe} --finite --blocksize ${blocksize} --log -
 	    done
 	done
     done
