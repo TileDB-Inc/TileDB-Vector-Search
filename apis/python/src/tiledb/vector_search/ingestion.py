@@ -69,6 +69,7 @@ def ingest(
     import logging
     import math
     from typing import Any, Mapping, Optional
+    import multiprocessing
 
     import numpy as np
 
@@ -832,11 +833,11 @@ def ingest(
     ):
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
+            logger.info(f"Consolidating partitions {partition_id_start}-{partition_id_end}")
             group = tiledb.Group(array_uri)
             partial_write_array_dir_uri = array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
             partial_write_array_ids_uri = partial_write_array_dir_uri + "/" + IDS_ARRAY_NAME
             partial_write_array_parts_uri = partial_write_array_dir_uri + "/" + PARTS_ARRAY_NAME
-            logger.info("Consolidating array")
             index_array_uri = group[INDEX_ARRAY_NAME].uri
             ids_array_uri = group[IDS_ARRAY_NAME].uri
             parts_array_uri = group[PARTS_ARRAY_NAME].uri
@@ -862,26 +863,36 @@ def ingest(
             index_array = tiledb.open(index_array_uri, mode="r")
             ids_array = tiledb.open(ids_array_uri, mode="w")
             parts_array = tiledb.open(parts_array_uri, mode="w")
-            read_slices = []
-            for part in range(partition_id_start, partition_id_end):
-                for partition_slice in partition_slices[part]:
-                    read_slices.append(partition_slice)
+            logger.info(
+                f"Partitions start: {partition_id_start} end: {partition_id_end}"
+            )
+            for part in range(partition_id_start, partition_id_end, batch):
+                part_end = part + batch
+                if part_end > partition_id_end:
+                    part_end = partition_id_end
+                logger.info(f"Consolidating partitions start: {part} end: {part_end}")
+                read_slices = []
+                for p in range(part, part_end):
+                    for partition_slice in partition_slices[p]:
+                        read_slices.append(partition_slice)
 
-            logger.debug(f"Read slices: {read_slices}")
-            ids = partial_write_array_ids_array.multi_index[read_slices]["values"]
-            vectors = partial_write_array_parts_array.multi_index[:, read_slices]["values"]
-            start_pos = int(index_array[partition_id_start]["values"])
-            end_pos = int(index_array[partition_id_end]["values"])
+                logger.debug(f"Read slices: {read_slices}")
+                ids = partial_write_array_ids_array.multi_index[read_slices]["values"]
+                vectors = partial_write_array_parts_array.multi_index[:, read_slices]["values"]
+                start_pos = int(index_array[part]["values"])
+                end_pos = int(index_array[part_end]["values"])
 
-            logger.debug(
-                f"Ids shape {ids.shape}, expected size: {end_pos - start_pos} expected range:({start_pos},{end_pos})")
-            if ids.shape[0] != end_pos - start_pos:
-                raise ValueError("Incorrect partition size.")
+                logger.debug(
+                    f"Ids shape {ids.shape}, expected size: {end_pos - start_pos} expected range:({start_pos},{end_pos})")
+                if ids.shape[0] != end_pos - start_pos:
+                    raise ValueError("Incorrect partition size.")
 
-            logger.info(f"Writing data to array: {parts_array_uri}")
-            parts_array[:, start_pos:end_pos] = vectors
-            logger.info(f"Writing data to array: {ids_array_uri}")
-            ids_array[start_pos:end_pos] = ids
+                logger.info(f"Writing data to array: {parts_array_uri}")
+                parts_array[:, start_pos:end_pos] = vectors
+                logger.info(f"Writing data to array: {ids_array_uri}")
+                ids_array[start_pos:end_pos] = ids
+            parts_array.close()
+            ids_array.close()
 
     # --------------------------------------------------------------------
     # DAG
@@ -918,6 +929,7 @@ def ingest(
                     retry_policy="Always",
                 ),
             )
+            threads = 8
         else:
             d = dag.DAG(
                 name="vector-ingestion",
@@ -925,6 +937,7 @@ def ingest(
                 max_workers=workers,
                 namespace="default",
             )
+            threads = multiprocessing.cpu_count()
 
         submit = d.submit_local
         if mode == Mode.BATCH or mode == Mode.REALTIME:
@@ -1024,12 +1037,12 @@ def ingest(
                                     dimensions=dimensions,
                                     vector_start_pos=start,
                                     vector_end_pos=end,
-                                    threads=8,
+                                    threads=threads,
                                     config=config,
                                     verbose=verbose,
                                     trace_id=trace_id,
                                     name="k-means-part-" + str(task_id),
-                                    resources={"cpu": "8", "memory": "12Gi"},
+                                    resources={"cpu": str(threads), "memory": "12Gi"},
                                 )
                             )
                             task_id += 1
@@ -1090,12 +1103,12 @@ def ingest(
                     start=start,
                     end=end,
                     batch=input_vectors_per_work_item,
-                    threads=6,
+                    threads=threads,
                     config=config,
                     verbose=verbose,
                     trace_id=trace_id,
                     name="ingest-" + str(task_id),
-                    resources={"cpu": "6", "memory": "32Gi"},
+                    resources={"cpu": str(threads), "memory": "32Gi"},
                 )
                 ingest_node.depends_on(centroids_node)
                 compute_indexes_node.depends_on(ingest_node)
