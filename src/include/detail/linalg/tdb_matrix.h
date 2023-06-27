@@ -72,6 +72,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   log_timer constructor_timer{"tdbMatrix constructor"};
 
   std::reference_wrapper<const tiledb::Context> ctx_;
+  std::string uri_;
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
   std::unique_ptr<T[]> backing_data_;
@@ -199,7 +200,8 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t col_begin,
       size_t col_end)  // noexcept
       : ctx_{ctx}
-      , array_{ctx, uri, TILEDB_READ}
+      , uri_{uri}
+      , array_{tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ)}
       , schema_{array_.schema()} {
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + uri};
@@ -282,7 +284,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     query.set_subarray(subarray)
         .set_layout(layout_order)
         .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
-    query.submit();
+    tiledb_helpers::submit_query(tdb_func__, uri, query);
     _memory_data.insert_entry(tdb_func__, num_rows * num_cols * sizeof(T));
 
     // assert(tiledb::Query::Status::COMPLETE == query.query_status());
@@ -395,7 +397,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         query.set_subarray(subarray)
             .set_layout(layout_order)
             .set_data_buffer(attr_name, ptr, num_elements);
-        query.submit();
+        tiledb_helpers::submit_query(tdb_func__, uri, query);
         _memory_data.insert_entry(tdb_func__, num_elements * sizeof(T));
 
         // assert(tiledb::Query::Status::COMPLETE == query.query_status());
@@ -417,7 +419,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
        */
       auto attr_idx = 0;
 
-      auto ids_array_ = tiledb::Array{ctx_, id_uri, TILEDB_READ};
+      tiledb::Array ids_array_ = tiledb_helpers::open_array(tdb_func__, ctx_, id_uri, TILEDB_READ);
       auto ids_schema_ = ids_array_.schema();
 
       auto attr_num{ids_schema_.attribute_num()};
@@ -449,7 +451,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
         auto ptr = part_ids.data() + offset;
         query.set_subarray(subarray).set_data_buffer(
             attr_name, ptr, num_elements);
-        query.submit();
+        tiledb_helpers::submit_query(tdb_func__, uri, query);
         _memory_data.insert_entry(tdb_func__, num_elements * sizeof(T));
 
         if (tiledb::Query::Status::COMPLETE != query.query_status()) {
@@ -550,7 +552,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     query.set_subarray(subarray)
         .set_layout(layout_order)
         .set_data_buffer(attr_name, this_data, read_size);
-    query.submit();
+    tiledb_helpers::submit_query(tdb_func__, uri_, query);
     _memory_data.insert_entry(tdb_func__, read_size * sizeof(T));
 
     // assert(tiledb::Query::Status::COMPLETE == query.query_status());

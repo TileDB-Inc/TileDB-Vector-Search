@@ -49,7 +49,7 @@ target_link_libraries(${VSPY_TARGET_NAME}
     kmeans_lib
     TileDB::tiledb_shared)
 
-target_compile_definitions(${VSPY_TARGET_NAME} PRIVATE VERSION_INFO=${PROJECT_VERSION})
+target_compile_definitions(${VSPY_TARGET_NAME} PRIVATE TILEDBVS_ENABLE_STATS VERSION_INFO=${PROJECT_VERSION})
 
 if (APPLE)
   set_target_properties(${VSPY_TARGET_NAME} PROPERTIES INSTALL_RPATH "@loader_path/lib")

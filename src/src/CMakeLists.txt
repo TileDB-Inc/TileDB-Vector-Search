@@ -127,12 +127,15 @@ target_link_libraries(kmeans_lib INTERFACE
 #---[ Demos ]------------------------------------------------------------
 add_executable(flat_l2 flat_l2.cc)
 target_link_libraries(flat_l2 PUBLIC kmeans_lib nlohmann_json::nlohmann_json)
+target_compile_definitions(flat_l2 PUBLIC TILEDBVS_ENABLE_STATS)
 
 add_executable(ivf_flat ivf_flat.cc)
 target_link_libraries(ivf_flat PUBLIC kmeans_lib)
+target_compile_definitions(ivf_flat PUBLIC TILEDBVS_ENABLE_STATS)
 
 add_executable(index index.cc)
 target_link_libraries(index PUBLIC kmeans_lib)
+target_compile_definitions(index PUBLIC TILEDBVS_ENABLE_STATS)
 
 #---[ TBD ]------------------------------------------------------------
 if (FALSE)

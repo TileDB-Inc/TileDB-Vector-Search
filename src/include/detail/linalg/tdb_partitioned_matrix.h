@@ -106,6 +106,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   log_timer constructor_timer{"tdbPartitionedMatrix constructor"};
 
   std::reference_wrapper<const tiledb::Context> ctx_;
+  std::string uri_;
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
   std::unique_ptr<T[]> backing_data_;
@@ -178,9 +179,10 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t nthreads)
       : constructor_timer{tdb_func__ + std::string{" constructor"}}
       , ctx_{ctx}
-      , array_{ctx_, uri, TILEDB_READ}
+      , uri_{uri}
+      , array_{tiledb_helpers::open_array(tdb_func__, ctx_, uri, TILEDB_READ)}
       , schema_{array_.schema()}
-      , ids_array_{ctx_, ids_uri, TILEDB_READ}
+      , ids_array_{tiledb_helpers::open_array(tdb_func__, ctx_, ids_uri, TILEDB_READ)}
       , ids_schema_{ids_array_.schema()}
       , indices_{std::move(in_indices)}
       , parts_{in_parts}
@@ -345,7 +347,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       query.set_subarray(subarray)
           .set_layout(layout_order)
           .set_data_buffer(attr_name, ptr, col_count * dimension);
-      query.submit();
+      tiledb_helpers::submit_query(tdb_func__, uri_, query);
       _memory_data.insert_entry(tdb_func__, col_count * dimension * sizeof(T));
 
       // assert(tiledb::Query::Status::COMPLETE == query.query_status());
