@@ -102,7 +102,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       const tiledb::Context& ctx,
       const std::string& uri,
       size_t num_elts) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : tdbMatrix(ctx, uri, num_elts, 0) {
   }
 
@@ -119,7 +119,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
       const tiledb::Context& ctx,
       const std::string& uri,
       size_t num_elts) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbMatrix(ctx, uri, 0, num_elts) {
   }
 
@@ -175,10 +175,6 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
             std::get<0>(cols),
             std::get<1>(cols)) {
   }
-
- private:
-  using row_domain_type = int32_t;
-  using col_domain_type = int32_t;
 
   /**
    * @brief General constructor.  Read a view of the array, delimited by the
@@ -464,14 +460,20 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
     shuffled_ids = std::move(part_ids);
   }
 
+ private:
+  using row_domain_type = int32_t;
+  using col_domain_type = int32_t;
+
  public:
   size_t offset() const
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+  {
     return row_offset_;
   }
 
   size_t offset() const
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+  {
     return col_offset_;
   }
 

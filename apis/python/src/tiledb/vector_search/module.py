@@ -4,7 +4,6 @@ import numpy as np
 
 import tiledb
 from tiledb.vector_search._tiledbvspy import *
-from tiledb.vector_search import _tiledbvspy as cc
 
 
 def load_as_matrix(path: str, nqueries: int = 0, config: Dict = {}):
@@ -82,6 +81,84 @@ def query_vq(db: "colMajorMatrix", *args):
         raise TypeError("Unknown type!")
 
 
+def ivf_index_tdb(
+    dtype: np.dtype,
+    db_uri: str,
+    centroids_uri: str,
+    parts_uri: str,
+    index_uri: str,
+    id_uri: str,
+    start: int = 0,
+    end: int = 0,
+    nthreads: int = 0,
+    config: Dict = None,
+):
+    if config is None:
+        ctx = Ctx({})
+    else:
+        ctx = Ctx(config)
+
+    args = tuple(
+        [
+            ctx,
+            db_uri,
+            centroids_uri,
+            parts_uri,
+            index_uri,
+            id_uri,
+            start,
+            end,
+            nthreads
+        ]
+    )
+
+    if dtype == np.float32:
+        return ivf_index_tdb_f32(*args)
+    elif dtype == np.uint8:
+        return ivf_index_tdb_u8(*args)
+    else:
+        raise TypeError("Unknown type!")
+
+
+def ivf_index(
+    dtype: np.dtype,
+    db: "colMajorMatrix",
+    centroids_uri: str,
+    parts_uri: str,
+    index_uri: str,
+    id_uri: str,
+    start: int = 0,
+    end: int = 0,
+    nthreads: int = 0,
+    config: Dict = None,
+):
+    if config is None:
+        ctx = Ctx({})
+    else:
+        ctx = Ctx(config)
+
+    args = tuple(
+        [
+            ctx,
+            db,
+            centroids_uri,
+            parts_uri,
+            index_uri,
+            id_uri,
+            start,
+            end,
+            nthreads
+        ]
+    )
+
+    if dtype == np.float32:
+        return ivf_index_f32(*args)
+    elif dtype == np.uint8:
+        return ivf_index_u8(*args)
+    else:
+        raise TypeError("Unknown type!")
+
+
 def query_kmeans(
     dtype: np.dtype,
     parts_db: "colMajorMatrix",
@@ -150,7 +227,7 @@ def query_kmeans(
 
 def validate_top_k(results: np.ndarray, ground_truth: np.ndarray):
     if results.dtype == np.uint64:
-        return cc.validate_top_k_u64(results, ground_truth)
+        return validate_top_k_u64(results, ground_truth)
     else:
         raise TypeError("Unknown type for validate_top_k!")
 

@@ -57,6 +57,7 @@
 #include "linalg.h"
 
 #include "detail/flat/qv.h"
+#include "detail/ivf/index.h"
 
 template <class T, class shuffled_ids_type, class indices_type>
 class kmeans_index {
