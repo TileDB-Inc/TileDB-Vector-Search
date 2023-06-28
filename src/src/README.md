@@ -203,6 +203,8 @@ automatically set the various options (notably the URIs) for `ivf_flat` and invo
 some customization you may need to do to make the scripts work in your local environment.  The README and comments
 in the scripts are intended to help you do that.
 
+See the section [Benchmarking](#benchmarking) below. 
+
 #### index (WIP) 
 
 The `index` driver creates an inverted file index, given an input array of vectors to be indexed (`--db_uri`).
@@ -316,6 +318,26 @@ in different performance.  Significant experimentation would need
 to be done to find those, however, and it isn't clear that the
 performance of `gemm` could be matched at any rate.
 
+## Benchmarking
+
+Example.  Run the `ivf_flat` CLI program for the `bigann1M` example problem.  We assume the appropriate arrays have
+been installed locally in the `gp3` subdirectory (see [Example Datasets](#example-datasets) below).
+
+Example. Run the `ivf_query` CLI program for the `bigann1M` example problem.  We assume the appropriate arrays have
+been installed under the `gp3` subdirectory per [Example Datasets](#example-datasets) below.
+
+```
+  cd src/benchmarks
+  . ./setup.bash
+  init_1M_gp3
+  ivf_flat --nqueries 16 --nprobe 16 --finite
+```
+
+Output:
+```txt
+
+```
+
 
 ## Example Datasets
 
@@ -362,7 +384,7 @@ https://dl.fbaipublicfiles.com/billion-scale-ann-benchmarks/bigann/query.public.
 https://comp21storage.blob.core.windows.net/publiccontainer/comp21/bigann/public_query_gt100.bin
 ```
 
-**NB:** You should not run examples with arrays stored in S3 from your local machine (desktop or laptop) as there are substantial charges for data egress from S3 (in addition, the bandwidth is extremely throttled, so loading them could take hours).  It is recommended that
+**NB:** You should not run the larger examples using arrays stored in S3 from your local machine (desktop or laptop) as there are substantial charges for data egress from S3 (in addition, the bandwidth is extremely throttled, so loading them could take hours).  It is recommended that
 * If you want to run problems on your local desktop or laptop that you copy the arrays from S3 to your local machine (but see below)
 * If you want to run problems on the larger examples that you do so using a suitable EC2 instance or that you do so using TileDB Cloud (recommended) 
 
@@ -386,7 +408,7 @@ So, for example, to download the array `s3://tiledb-vector-search/bigann10M/biga
 aws s3 sync s3://tiledb-vector-search/bigann10M/bigann10M_base ./bigann10M_base --recursive
 ```
 
-**Warning** The `db_uri` and `parts_uri` arrays are over 120GB each, meaning downloading the full set of arrays for this problem will consume a quarter of a TB of storage (and incur the corresponding egress chages).
+**Warning** The `db_uri` and `parts_uri` arrays for `bigann1B` are more than 120GB each, meaning downloading the full set of arrays for this problem will consume a quarter of a TB of storage (and incur the corresponding egress chages).
 It is recommended that you copy the 1B and 100M examples to local storage only if you know your machine has sufficient available storage.
 
 

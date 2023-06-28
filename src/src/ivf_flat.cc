@@ -104,7 +104,7 @@ Usage:
     ivf_flat --centroids_uri URI --parts_uri URI (--index_uri URI | --sizes_uri URI)
              --ids_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
             [--k NN][--nprobe NN] [--nqueries NN] [--alg ALGO] [--infinite] [--finite] [--blocksize NN]
-            [--nth] [--nthreads NN] [--region REGION] [--log FILE] [-d] [-v]
+            [--nth] [--nthreads NN] [--region REGION] [--stats] [--log FILE] [-d] [-v]
 
 Options:
     -h, --help            show this screen
@@ -176,7 +176,7 @@ int main(int argc, char* argv[]) {
   bool nth = args["--nth"].asBool();
   auto algorithm = args["--alg"].asString();
   // bool finite = args["--finite"].asBool();
-  bool finite = !(args["--finite"].asBool());
+  bool finite = !(args["--infinite"].asBool());
 
   float recall{0.0f};
   tiledb::Context ctx;

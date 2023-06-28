@@ -122,6 +122,7 @@ auto partition_ivf_index(
    */
   std::vector<std::vector<parts_type>> part_queries(size(active_partitions));
 
+  // @todo return indices rather than vectors
   for (size_t partno = 0; partno < size(active_partitions); ++partno) {
     auto active_part = active_partitions[partno];
     auto num_part_queries = centroid_query.count(active_part);
@@ -299,6 +300,7 @@ auto nuv_query_heap_infinite_ram(
   auto&& [top_centroids, active_partitions, part_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);
 
+
   // auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
   //     size(q), fixed_min_pair_heap<float, size_t>(k_nn));
 
@@ -312,6 +314,8 @@ auto nuv_query_heap_infinite_ram(
   std::vector<std::future<void>> futs;
   futs.reserve(nthreads);
 
+  size_t foo = 0;
+
   for (size_t n = 0; n < nthreads; ++n) {
     auto first_part =
         std::min<size_t>(n * parts_per_thread, size(active_partitions));
@@ -321,15 +325,15 @@ auto nuv_query_heap_infinite_ram(
     if (first_part != last_part) {
       futs.emplace_back(std::async(
           std::launch::async,
-          [&, &part_queries = part_queries, n, first_part, last_part]() {
+          [&, &part_queries = part_queries, &active_partitions = active_partitions, n, first_part, last_part]() {
             /*
              * For each partition, process the queries that have that
              * partition as their top centroid.
              */
             auto& mscores = min_scores[n];
             for (size_t partno = first_part; partno < last_part; ++partno) {
-              auto start = indices[partno];
-              auto stop = indices[partno + 1];
+              auto start = indices[active_partitions[partno]];
+              auto stop = indices[active_partitions[partno] + 1];
 
               /*
                * Get the queries associated with this partition.
@@ -345,8 +349,8 @@ auto nuv_query_heap_infinite_ram(
 
                   // @todo any performance with apparent extra indirection?
                   // (Compiler should do the right thing, but...)
-                  // min_scores[n][j].insert(score, shuffled_ids[kp]);
-                  msj.insert(score, shuffled_ids[kp]);
+                  min_scores[n][j].insert(score, shuffled_ids[kp]);
+                  // msj.insert(score, shuffled_ids[kp]);
                 }
               }
             }
@@ -403,8 +407,8 @@ auto qv_query_heap_infinite_ram(
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
 
-  debug_matrix(shuffled_db, "shuffled_db");
-  debug_matrix(shuffled_ids, "shuffled_ids");
+  // debug_matrix(shuffled_db, "shuffled_db");
+  // debug_matrix(shuffled_ids, "shuffled_ids");
 
   // get closest centroid for each query vector
   // auto top_k = qv_query(centroids, q, nprobe, nthreads);
@@ -414,6 +418,8 @@ auto qv_query_heap_infinite_ram(
   // time at rate)
   auto top_centroids =
       detail::flat::qv_query_nth(centroids, q, nprobe, false, nthreads);
+  debug_matrix(top_centroids, "top_centroids");
+  debug_slice(top_centroids, "top_centroids");
 
   auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
       size(q), fixed_min_pair_heap<float, size_t>(k_nn));
@@ -648,6 +654,7 @@ auto nuv_query_heap_finite_ram(
                          indices[active_partitions[i]];
   }
 
+
   {
     // Record some memory usage stats
     size_t max_partition_size{0};
@@ -685,7 +692,7 @@ auto nuv_query_heap_finite_ram(
 
     std::vector<std::future<void>> futs;
     futs.reserve(nthreads);
-
+size_t foo =0;
     for (size_t n = 0; n < nthreads; ++n) {
       auto first_part =
           std::min<size_t>(n * parts_per_thread, shuffled_db.num_col_parts());
@@ -719,6 +726,8 @@ auto nuv_query_heap_finite_ram(
                    */
                   for (size_t kp = start; kp < stop; ++kp) {
                     auto score = L2(q_vec, shuffled_db[kp]);
+
+
 
                     // @todo any performance with apparent extra indirection?
                     // min_scores[n][j].insert(score, shuffled_db.ids()[kp]);

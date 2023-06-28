@@ -32,6 +32,11 @@
 #
 # You will need to edit the variables in this section
 
+# Two possible locations of TileDB-Vector-Search root -- edit as necessary
+tdb_vector_search_root_1="${HOME}/TileDB-Vector-Search"
+tdb_vector_search_root_2="${HOME}/TileDB/TileDB-Vector-Search"
+
+
 # AWS information
 # Defines the variables instance_id, volume_id, region, and instance_ip
 # 
@@ -82,9 +87,6 @@ if [[ "$(type -t check_instance_status)" != "function" ]]; then
     }
 fi
 
-# Two possible locations of TileDB-Vector-Search root -- edit as necessary
-tdb_vector_search_root_1="${HOME}/TileDB-Vector-Search"
-tdb_vector_search_root_2="${HOME}/TileDB/TileDB-Vector-Search"
 
 ivf_flat_tail="src/cmake-build-release/libtiledbvectorsearch/src/ivf_flat"
 ivf_flat_1=${tdb_vector_search_root_1}/${ivf_flat_tail}
