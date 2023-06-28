@@ -1,4 +1,5 @@
 from typing import Optional, Tuple
+from functools import partial
 
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search.index import FlatIndex
@@ -49,7 +50,7 @@ def ingest(
     copy_centroids_uri: str
         TileDB array URI to copy centroids from,
         if not provided, centroids are build running kmeans
-    training_sample_size: int = 1
+    training_sample_size: int = -1
         vector sample size to train centroids with,
         if not provided, is auto-configured based on the dataset size
     workers: int = -1
@@ -86,9 +87,10 @@ def ingest(
     IDS_ARRAY_NAME = "ids.tdb"
     PARTS_ARRAY_NAME = "parts.tdb"
     PARTIAL_WRITE_ARRAY_DIR = "write_temp"
-    VECTORS_PER_WORK_ITEM = 1000000
+    VECTORS_PER_WORK_ITEM = 10000000
     MAX_TASKS_PER_STAGE = 100
     CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 1000000
+    DEFAULT_IMG_NAME = "3.9-vectorsearch"
 
     class SourceType(enum.Enum):
         """SourceType of input vectors"""
@@ -959,6 +961,11 @@ def ingest(
     # --------------------------------------------------------------------
     # DAG
     # --------------------------------------------------------------------
+    def submit_local(d, func, *args, **kwargs):
+        # Drop kwarg
+        kwargs.pop("image_name", None)
+        kwargs.pop("resources", None)
+        return d.submit_local(func, *args, **kwargs)
 
     def create_ingestion_dag(
         index_type: str,
@@ -1001,7 +1008,7 @@ def ingest(
             )
             threads = multiprocessing.cpu_count()
 
-        submit = d.submit_local
+        submit = partial(submit_local, d)
         if mode == Mode.BATCH or mode == Mode.REALTIME:
             submit = d.submit
 
@@ -1029,7 +1036,8 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="ingest-" + str(task_id),
-                    resources={"cpu": "6", "memory": "32Gi"},
+                    resources={"cpu": str(threads), "memory": "8Gi"},
+                    image_name=DEFAULT_IMG_NAME,
                 )
                 task_id += 1
             return d
@@ -1044,6 +1052,7 @@ def ingest(
                     trace_id=trace_id,
                     name="copy-centroids",
                     resources={"cpu": "1", "memory": "2Gi"},
+                    image_name=DEFAULT_IMG_NAME,
                 )
             else:
                 if training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE:
@@ -1062,6 +1071,7 @@ def ingest(
                         trace_id=trace_id,
                         name="kmeans",
                         resources={"cpu": "8", "memory": "32Gi"},
+                        image_name=DEFAULT_IMG_NAME,
                     )
                 else:
                     internal_centroids_node = submit(
@@ -1076,6 +1086,7 @@ def ingest(
                         trace_id=trace_id,
                         name="init-centroids",
                         resources={"cpu": "1", "memory": "1Gi"},
+                        image_name=DEFAULT_IMG_NAME,
                     )
 
                     for it in range(5):
@@ -1105,6 +1116,7 @@ def ingest(
                                     trace_id=trace_id,
                                     name="k-means-part-" + str(task_id),
                                     resources={"cpu": str(threads), "memory": "12Gi"},
+                                    image_name=DEFAULT_IMG_NAME,
                                 )
                             )
                             task_id += 1
@@ -1116,6 +1128,7 @@ def ingest(
                                     *kmeans_workers[i: i + 10],
                                     name="update-centroids-" + str(i),
                                     resources={"cpu": "1", "memory": "8Gi"},
+                                    image_name=DEFAULT_IMG_NAME,
                                 )
                             )
                         internal_centroids_node = submit(
@@ -1123,6 +1136,7 @@ def ingest(
                             *reducers,
                             name="update-centroids",
                             resources={"cpu": "1", "memory": "8Gi"},
+                            image_name=DEFAULT_IMG_NAME,
                         )
                     centroids_node = submit(
                         write_centroids,
@@ -1135,6 +1149,7 @@ def ingest(
                         trace_id=trace_id,
                         name="write-centroids",
                         resources={"cpu": "1", "memory": "2Gi"},
+                        image_name=DEFAULT_IMG_NAME,
                     )
 
             compute_indexes_node = submit(
@@ -1146,6 +1161,7 @@ def ingest(
                 trace_id=trace_id,
                 name="compute-indexes",
                 resources={"cpu": "1", "memory": "2Gi"},
+                image_name=DEFAULT_IMG_NAME,
             )
 
             task_id = 0
@@ -1170,7 +1186,8 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="ingest-" + str(task_id),
-                    resources={"cpu": str(threads), "memory": "32Gi"},
+                    resources={"cpu": str(threads), "memory": "8Gi"},
+                    image_name=DEFAULT_IMG_NAME,
                 )
                 ingest_node.depends_on(centroids_node)
                 compute_indexes_node.depends_on(ingest_node)
@@ -1196,7 +1213,8 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="consolidate-partition-" + str(task_id),
-                    resources={"cpu": "2", "memory": "24Gi"},
+                    resources={"cpu": str(threads), "memory": "8Gi"},
+                    image_name=DEFAULT_IMG_NAME,
                 )
                 consolidate_partition_node.depends_on(compute_indexes_node)
                 task_id += 1
@@ -1258,11 +1276,16 @@ def ingest(
         logger.info(f"Vector dimension type {vector_type}")
         if partitions == -1:
             partitions = int(math.sqrt(size))
+        if training_sample_size == -1:
+            training_sample_size = min(size, 100 * partitions)
         if mode == Mode.BATCH:
             if workers == -1:
                 workers = 10
         else:
             workers = 1
+        logger.info(f"Partitions {partitions}")
+        logger.info(f"Training sample size {training_sample_size}")
+        logger.info(f"Number of workers {workers}")
 
         if input_vectors_per_work_item == -1:
             input_vectors_per_work_item = VECTORS_PER_WORK_ITEM

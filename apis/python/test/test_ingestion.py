@@ -2,6 +2,8 @@ from common import *
 
 from tiledb.vector_search.ingestion import ingest
 
+from tiledb.cloud.dag import Mode
+
 
 def test_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
