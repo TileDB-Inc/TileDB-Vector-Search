@@ -300,7 +300,6 @@ auto nuv_query_heap_infinite_ram(
   auto&& [top_centroids, active_partitions, part_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);
 
-
   // auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
   //     size(q), fixed_min_pair_heap<float, size_t>(k_nn));
 
@@ -325,7 +324,12 @@ auto nuv_query_heap_infinite_ram(
     if (first_part != last_part) {
       futs.emplace_back(std::async(
           std::launch::async,
-          [&, &part_queries = part_queries, &active_partitions = active_partitions, n, first_part, last_part]() {
+          [&,
+           &part_queries = part_queries,
+           &active_partitions = active_partitions,
+           n,
+           first_part,
+           last_part]() {
             /*
              * For each partition, process the queries that have that
              * partition as their top centroid.
@@ -654,7 +658,6 @@ auto nuv_query_heap_finite_ram(
                          indices[active_partitions[i]];
   }
 
-
   {
     // Record some memory usage stats
     size_t max_partition_size{0};
@@ -692,7 +695,7 @@ auto nuv_query_heap_finite_ram(
 
     std::vector<std::future<void>> futs;
     futs.reserve(nthreads);
-size_t foo =0;
+    size_t foo = 0;
     for (size_t n = 0; n < nthreads; ++n) {
       auto first_part =
           std::min<size_t>(n * parts_per_thread, shuffled_db.num_col_parts());
@@ -726,8 +729,6 @@ size_t foo =0;
                    */
                   for (size_t kp = start; kp < stop; ++kp) {
                     auto score = L2(q_vec, shuffled_db[kp]);
-
-
 
                     // @todo any performance with apparent extra indirection?
                     // min_scores[n][j].insert(score, shuffled_db.ids()[kp]);
