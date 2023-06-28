@@ -40,6 +40,7 @@
 #define TDB_STATS_H
 
 #include <unistd.h>
+#include <iomanip>
 #include <iostream>
 #include <random>
 #include <string>
