@@ -203,9 +203,17 @@ automatically set the various options (notably the URIs) for `ivf_flat` and invo
 some customization you may need to do to make the scripts work in your local environment.  The README and comments
 in the scripts are intended to help you do that.
 
-See the section [Benchmarking](#benchmarking) below. 
+See the section [Benchmarking](#benchmarking) below on generating your own benchmark results.
 
-#### index (WIP) 
+### Recommendations
+
+If you use the CLI programs for your own queries, you will need to set the URIs to the arrays containing your own data.
+For the other options, 
+many of the defaults are reasonable choices for attaining good performance in most use cases.  For your own queries, the main
+options that you might want to change are `--k`, `--nprobe`, `--nqueries`, and `--blocksize`.
+
+
+## `index` (WIP) 
 
 The `index` driver creates an inverted file index, given an input array of vectors to be indexed (`--db_uri`).
 If the `--kmeans` flag is specified, `index` will generate a centroids array using the kmeans algorithm.  If the
@@ -364,6 +372,13 @@ Output:
 ```txt
 # total intersected = 148 of 160 = R@10 of 0.925
 ```
+
+Example with S3.  Running with arrays from S3 is an almost identical invocation
+```txt
+  init_1M_s3
+  ivf_flat --nqueries 16 --nprobe 16 --finite
+```
+
 
 #### Basic invocation.
 To get complete information about a run, including various pieces of timing information, we add `--log -` to the command line.
