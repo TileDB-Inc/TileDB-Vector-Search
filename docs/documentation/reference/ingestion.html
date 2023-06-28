@@ -202,16 +202,16 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="tiledb.vector_search.ingestion.ingest" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.ingestion.ingest">ingest</h3>
-<p><code>vector_search.ingestion.ingest(index_type, array_uri, source_uri, source_type, *, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, verbose=False, trace_id=None, mode=Mode.LOCAL)</code></p>
+<p><code>vector_search.ingestion.ingest(index_type, array_uri, source_uri, source_type, *, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, input_vectors_per_work_item=-1, verbose=False, trace_id=None, mode=Mode.LOCAL)</code></p>
 <p>Ingest vectors into TileDB.</p>
 <section id="parameters" class="level4">
 <h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
 <table class="table">
 <colgroup>
-<col style="width: 14%">
-<col style="width: 14%">
-<col style="width: 63%">
-<col style="width: 8%">
+<col style="width: 17%">
+<col style="width: 13%">
+<col style="width: 60%">
+<col style="width: 7%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -289,18 +289,24 @@ ul.task-list li input[type="checkbox"] {
 <td><code>-1</code></td>
 </tr>
 <tr class="even">
+<td><code>input_vectors_per_work_item</code></td>
+<td>int</td>
+<td>number of vectors per ingestion work item, if not provided, is auto-configured</td>
+<td><code>-1</code></td>
+</tr>
+<tr class="odd">
 <td><code>verbose</code></td>
 <td>bool</td>
 <td>verbose logging, defaults to False</td>
 <td><code>False</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>trace_id</code></td>
 <td>typing.Optional[str]</td>
 <td>trace ID for logging, defaults to None</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>mode</code></td>
 <td>Mode</td>
 <td>execution mode, defaults to LOCAL use BATCH for distributed execution</td>
