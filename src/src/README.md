@@ -318,14 +318,41 @@ in different performance.  Significant experimentation would need
 to be done to find those, however, and it isn't clear that the
 performance of `gemm` could be matched at any rate.
 
-## Benchmarking
+## Benchmarking With Provided Examples
 
 Example.  Run the `ivf_flat` CLI program for the `bigann1M` example problem.  We assume the appropriate arrays have
 been installed locally in the `gp3` subdirectory (see [Example Datasets](#example-datasets) below).
 
-Example. Run the `ivf_query` CLI program for the `bigann1M` example problem.  We assume the appropriate arrays have
-been installed under the `gp3` subdirectory per [Example Datasets](#example-datasets) below.
+### Setup
 
+Prior to runnning any benchmakrs, we first set up the benchmarking environment
+```
+  cd src/benchmarks
+  . ./setup.bash
+```
+This only needs to be once per shell session -- you can run various benchmark configurations without having to rerun the setup script.
+
+Once `setup.bash` has been sourced, there are two steps to running a benchmark.  First, you select which dataset you
+want to run with.  Second you invoke the benchmarking function.
+
+In choosing a benchmark, you run a defined bash function of the form:
+```
+init_<dataset>_<datasource>
+```
+For example
+```
+init_1M_gp3
+```
+selects the `bigann1M` dataset from the `gp3` datasource. 
+Once an `init` function has been invoked you can invoke a benchmark function, either `ivf_query` (which runs the `ivf_flat` CLI program) or `flat_query` (which runs the `flat_l2`).
+
+
+### Examples
+Running the benchmarks
+
+#### Basic invocation.
+Run the `ivf_query` CLI program for the `bigann1M` example problem.  We assume the appropriate arrays have
+been installed under the `gp3` subdirectory per [Example Datasets](#example-datasets) below.  Here we just run the query and report recall.
 ```
   cd src/benchmarks
   . ./setup.bash
@@ -335,9 +362,60 @@ been installed under the `gp3` subdirectory per [Example Datasets](#example-data
 
 Output:
 ```txt
-
+# total intersected = 148 of 160 = R@10 of 0.925
 ```
 
+#### Basic invocation.
+To get complete information about a run, including various pieces of timing information, we add `--log -` to the command line.
+```txt
+  cd src/benchmarks
+  . ./setup.bash
+  init_1M_gp3
+  ivf_flat --nqueries 16 --nprobe 16 --finite --log -
+```
+
+This run will generate copious output (with sufficient information to enable duplication of the results).
+```txt
+# total intersected = 148 of 160 = R@10 of 0.925
+# [ Repo ]: TileDB-Vector-Search @ lums/tmp/release_prep / 6b83bd2
+# [cmake source directory]: /Users/lums/TileDB/TileDB-Vector-Search/src
+# [cmake build type]: Release
+# [compiler]: /Library/Developer/CommandLineTools/usr/bin/c++
+# [compiler id]: AppleClang
+# [compiler version ]: 14.0.3.14030022
+# [c++ flags]: -Wall -Wno-unused-variable 
+# [c++ debug flags ]: -O0 -g -fno-elide-constructors  
+# [c++ release flags ]: -Ofast -DNDEBUG 
+# [c++ relwithdebinfo flags]: -Ofast -g -DNDEBUG
+  -|-   Algorithm  Queries  nprobe    k_nn   thrds  recall         [A]         [B]         [C]         [D]         [E]         [F]         [G]         [H]         [I]         [J]         [K]         [L]         [M]         [N]         [O]         [P]         [Q]         [R]         [S]         [T]         [U]
+  -|-     qv_heap       16      16      10      16   0.925     0.00114     0.00188      0.0462     0.00174      0.0657      0.0504     0.00170    0.000004    0.000513    0.000380     0.00200    0.000004    0.000015    0.000007     0.00201    0.000259    0.000838        27.5        26.8       0.905       0.008
+[A]: load /Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/1M/bigann_1M_GT_nnids (s)
+[B]: load /Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/1M/centroids.tdb (s)
+[C]: load /Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/1M/parts.tdb (s)
+[D]: load /Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/1M/query_public_10k (s)
+[E]: mainall inclusive query time (s)
+[F]: nuv_query_heap_finite_ram /Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/1M/parts.tdb (s)
+[G]: nuv_query_heap_finite_ram in RAM (s)
+[H]: nuv_query_heap_finite_ram_top_k (s)
+[I]: partition_ivf_index (s)
+[J]: qv_query_nth (s)
+[K]: read_vector /Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/1M/index_size.tdb (s)
+[L]: tdbBlockedMatrix /Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/1M/bigann_1M_GT_nnids (s)
+[M]: tdbBlockedMatrix /Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/1M/centroids.tdb (s)
+[N]: tdbBlockedMatrix /Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/1M/query_public_10k (s)
+[O]: tdbBlockedMatrix constructor (s)
+[P]: tdbPartitionedMatrix /Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/1M/parts.tdb (s)
+[Q]: tdbPartitionedMatrix constructor (s)
+[R]: load (MiB)
+[S]: nuv_query_heap_finite_ram (predicted) (MiB)
+[T]: nuv_query_heap_finite_ram (upper bound) (MiB)
+[U]: read_vector (MiB)
+```
+The line beginning with `-|-` contains fine-grained timing and memory usage information.  The columns are keyed with
+a letter, which are explained in the index that follows.  One time of interest will be the time with the text "in RAM", which
+measures the amount of wall-clock time spent in the indicated query.  Another time of interest is the total query time (including all array loads), which is indicated by the key containing `main`.  The number of queries is also displayed; QPS can be computed by dividing the number of queries by the time in RAM, or by the total query time, depending on what you are reporting.
+
+**NB:** The timers are keyed on the name of the function, as generated by the compiler, in which they are contained.  Since different compilers generate different functions names, the column of interest for time in RAM will differ.  As of the writing of this document, `clang` is in column `[G]`, while `g++` is in column `[D]`.
 
 ## Example Datasets
 

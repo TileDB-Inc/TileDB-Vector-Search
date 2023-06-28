@@ -133,7 +133,7 @@ Options:
 )";
 
 int main(int argc, char* argv[]) {
-  scoped_timer _(tdb_func__ + std::string("all inclusive query time"));
+  log_timer _(tdb_func__ + std::string(" all inclusive query time"));
 
   std::vector<std::string> strings(argv + 1, argv + argc);
   auto args = docopt::docopt(USAGE, strings, true);
@@ -289,11 +289,13 @@ int main(int argc, char* argv[]) {
     write_matrix(ctx, top_k, args["--output_uri"].asString());
   }
 
+  _.stop();
+
   if (args["--log"]) {
     dump_logs(
         args["--log"].asString(),
         algorithm,
-        nqueries,
+        (nqueries == 0 ? size(q) : nqueries),
         nprobe,
         k_nn,
         nthreads,
