@@ -74,7 +74,7 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
         });
   }
 
-  ColMajorMatrix<uint64_t> top_k(k, q.num_cols());
+  ColMajorMatrix<size_t> top_k(k, q.num_cols());
   for (size_t j = 0; j < size(min_scores); ++j) {
     // @todo get_top_k_from_heap
     std::sort_heap(min_scores[j].begin(), min_scores[j].end());

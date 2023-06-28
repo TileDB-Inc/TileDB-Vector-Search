@@ -65,7 +65,7 @@ auto qv_query_nth(
     const DB& db, const Q& q, int k, bool nth, unsigned int nthreads) {
   scoped_timer _{tdb_func__};
 
-  ColMajorMatrix<uint64_t> top_k(k, q.num_cols());
+  ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
   stdx::range_for_each(
@@ -101,7 +101,7 @@ auto qv_query_heap(const DB& db, const Q& q, size_t k, unsigned nthreads) {
 
   using element = std::pair<float, int>;
 
-  ColMajorMatrix<uint64_t> top_k(k, q.num_cols());
+  ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
   // Have to do explicit asynchronous threading here, as the current parallel
   // algorithms have iterator-based interaces, and the `Matrix` class does not

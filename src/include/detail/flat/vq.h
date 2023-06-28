@@ -138,7 +138,7 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
     }
   }
 
-  ColMajorMatrix<uint64_t> top_k(k, q.num_cols());
+  ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
   // This might not be a win.
   int q_block_size = (size(q) + std::min<int>(nthreads, size(q)) - 1) /
@@ -212,7 +212,7 @@ auto vq_partition(const DB& db, const Q& q, int k, bool nth, int nthreads) {
 
   auto num_queries = scores.num_cols();
 
-  auto top_k = ColMajorMatrix<uint64_t>(k, num_queries);
+  auto top_k = ColMajorMatrix<size_t>(k, num_queries);
 
   std::vector<int> index(scores.num_rows());
 

@@ -281,12 +281,12 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   /* Query API */
 
   m.def("query_vq_f32",
-        [](tdbColMajorMatrix<float>& data,
+        [](ColMajorMatrix<float>& data,
            ColMajorMatrix<float>& query_vectors,
            int k,
            bool nth,
-           size_t nthreads) -> ColMajorMatrix<uint64_t> {
-          auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
+           size_t nthreads) -> ColMajorMatrix<size_t> {
+          auto r = detail::flat::vq_query_nth(data, query_vectors, k, true, nthreads);
           return r;
         });
 
@@ -295,8 +295,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
            ColMajorMatrix<float>& query_vectors,
            int k,
            bool nth,
-           size_t nthreads) -> ColMajorMatrix<uint64_t> {
-          auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
+           size_t nthreads) -> ColMajorMatrix<size_t> {
+          auto r = detail::flat::vq_query_nth(data, query_vectors, k, true, nthreads);
           return r;
         });
 
