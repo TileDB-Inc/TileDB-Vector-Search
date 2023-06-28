@@ -101,6 +101,8 @@ using db_type = float;
 #endif
 
 using groundtruth_type = int32_t;
+bool enable_stats = false;
+std::vector<json> core_stats;
 
 static constexpr const char USAGE[] =
     R"(flat: feature vector search with flat index.
@@ -127,6 +129,7 @@ static constexpr const char USAGE[] =
       -V, --validate          validate results [default: false]
       --region REGION         AWS region [default: us-east-1]
       --log FILE              log info to FILE (- for stdout)
+      --stats                 log TileDB stats [default: false]
       -d, --debug             run in debug mode [default: false]
       -v, --verbose           run in verbose mode [default: false]
 )";
@@ -142,6 +145,7 @@ int main(int argc, char* argv[]) {
 
   global_debug = debug = args["--debug"].asBool();
   verbose = args["--verbose"].asBool();
+  enable_stats = args["--stats"].asBool();
 
   std::string db_uri = args["--db_uri"].asString();
   std::string query_uri = args["--query_uri"].asString();
@@ -244,5 +248,8 @@ int main(int argc, char* argv[]) {
   // @todo send to output specified by --log
   if (true || verbose) {
     dump_logs(std::cout, alg_name, nqueries, 0, k, nthreads, 0);
+  }
+  if (enable_stats) {
+    std::cout << json{core_stats}.dump() << std::endl;
   }
 }

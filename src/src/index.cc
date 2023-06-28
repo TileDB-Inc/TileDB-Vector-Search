@@ -33,6 +33,7 @@
  *
  */
 #include <filesystem>
+#include <iostream>
 #include <string>
 #include <thread>
 #include <tuple>
@@ -47,6 +48,9 @@
 
 bool global_verbose = false;
 bool global_debug = false;
+
+bool enable_stats = false;
+std::vector<json> core_stats;
 
 using namespace detail::flat;
 
@@ -86,6 +90,7 @@ Options:
     --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
     --nth                 use nth_element for top k [default: false]
     --log FILE            log info to FILE (- for stdout)
+    --stats               log TileDB stats [default: false]
     --force               overwrite output file if it exists [default: false]
     --dryrun              do not write output file [default: false]
     -d, --debug           run in debug mode [default: false]
@@ -105,6 +110,7 @@ int main(int argc, char* argv[]) {
   }
   global_debug = args["--debug"].asBool();
   global_verbose = args["--verbose"].asBool();
+  enable_stats = args["--stats"].asBool();
   bool dryrun = args["--dryrun"].asBool();
 
   auto parts_uri = args["--parts_uri"] ? args["--parts_uri"].asString() : "";
@@ -238,6 +244,9 @@ int main(int argc, char* argv[]) {
       }
       write_vector(ctx, shuffled_ids, id_uri);
     }
+  }
+  if (enable_stats) {
+    std::cout << json{core_stats}.dump() << std::endl;
   }
 }
 

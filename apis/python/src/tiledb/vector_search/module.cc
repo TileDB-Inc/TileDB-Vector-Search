@@ -14,6 +14,9 @@ using Ctx = tiledb::Context;
 bool global_debug = true;
 double global_time_of_interest;
 
+bool enable_stats = false;
+std::vector<json> core_stats;
+
 PYBIND11_MAKE_OPAQUE(std::vector<uint32_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<uint64_t>);
 
@@ -118,6 +121,56 @@ static void declare_kmeans_query(py::module& m, const std::string& suffix) {
             nth,
             nthreads);
         return r;
+        }, py::keep_alive<1,2>());
+}
+
+template <typename T>
+static void declare_ivf_index(py::module& m, const std::string& suffix) {
+  m.def(("ivf_index_" + suffix).c_str(),
+      [](tiledb::Context& ctx,
+        const ColMajorMatrix<T>& db,
+        const std::string& centroids_uri,
+        const std::string& parts_uri,
+        const std::string& index_uri,
+        const std::string& id_uri,
+        size_t start_pos,
+        size_t end_pos,
+        size_t nthreads) -> int {
+            return detail::ivf::ivf_index<T, uint64_t, float>(
+                ctx,
+                db,
+                centroids_uri,
+                parts_uri,
+                index_uri,
+                id_uri,
+                start_pos,
+                end_pos,
+                nthreads);
+        }, py::keep_alive<1,2>());
+}
+
+template <typename T>
+static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
+  m.def(("ivf_index_tdb_" + suffix).c_str(),
+      [](tiledb::Context& ctx,
+        const std::string& db_uri,
+        const std::string& centroids_uri,
+        const std::string& parts_uri,
+        const std::string& index_uri,
+        const std::string& id_uri,
+        size_t start_pos,
+        size_t end_pos,
+        size_t nthreads) -> int {
+            return detail::ivf::ivf_index<T, uint64_t, float>(
+                ctx,
+                db_uri,
+                centroids_uri,
+                parts_uri,
+                index_uri,
+                id_uri,
+                start_pos,
+                end_pos,
+                nthreads);
         }, py::keep_alive<1,2>());
 }
 
@@ -249,7 +302,30 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         return validate_top_k(top_k, ground_truth);
       });
 
+  m.def("stats_enable", []() {
+    enable_stats = true;
+    tiledb::Stats::enable();
+  });
+
+  m.def("stats_disable", []() {
+    enable_stats = false;
+    tiledb::Stats::disable();
+  });
+
+  m.def("stats_reset", []() {
+    core_stats.clear();
+  });
+
+  m.def("stats_dump", []() {
+    return json{core_stats}.dump();
+  });
+
   declare_kmeans_query<uint8_t>(m, "u8");
   declare_kmeans_query<float>(m, "f32");
+
+  declare_ivf_index<uint8_t>(m, "u8");
+  declare_ivf_index<float>(m, "f32");
+  declare_ivf_index_tdb<uint8_t>(m, "u8");
+  declare_ivf_index_tdb<float>(m, "f32");
 
 }

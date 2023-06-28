@@ -11,6 +11,44 @@ def xbin_mmap(fname, dtype):
     return np.memmap(fname, dtype=dtype, mode="r", offset=8, shape=(n, d))
 
 
+def get_queries_fvec(file, dimensions, nqueries=None):
+    vfs = tiledb.VFS()
+    vector_values = 1 + dimensions
+    vector_size = vector_values * 4
+    read_size = nqueries
+    read_offset = 0
+    with vfs.open(file, "rb") as f:
+        f.seek(read_offset)
+        return np.delete(
+            np.reshape(
+                np.frombuffer(
+                    f.read(read_size * vector_size),
+                    count=read_size * vector_values,
+                    dtype=np.float32,
+                ).astype(np.float32),
+                (read_size, dimensions + 1),
+            ), 0, axis=1)
+
+
+def get_groundtruth_ivec(file, k=None, nqueries=None):
+    vfs = tiledb.VFS()
+    vector_values = 1 + k
+    vector_size = vector_values * 4
+    read_size = nqueries
+    read_offset = 0
+    with vfs.open(file, "rb") as f:
+        f.seek(read_offset)
+        return np.delete(
+            np.reshape(
+                np.frombuffer(
+                    f.read(read_size * vector_size),
+                    count=read_size * vector_values,
+                    dtype=np.int32,
+                ).astype(np.int32),
+                (read_size, k + 1),
+            ), 0, axis=1), None
+
+
 def get_queries(dataset_dir, dtype, nqueries=None):
     fname = os.path.join(dataset_dir, "queries")
     x = xbin_mmap(fname, dtype=dtype)

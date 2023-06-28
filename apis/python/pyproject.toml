@@ -20,10 +20,11 @@ classifiers = [
 dependencies = [
     "tiledb-cloud>=0.10.5",
     "tiledb>=0.15.2",
+    "typing-extensions" # for tiledb-cloud indirect
 ]
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["pytest", "scikit-learn", "tiledb-cloud"]
 
 
 [project.urls]

@@ -1,4 +1,5 @@
 from typing import Optional, Tuple
+from functools import partial
 
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search.index import FlatIndex
@@ -18,6 +19,7 @@ def ingest(
     copy_centroids_uri: str = None,
     training_sample_size: int = -1,
     workers: int = -1,
+    input_vectors_per_work_item: int = -1,
     verbose: bool = False,
     trace_id: Optional[str] = None,
     mode: Mode = Mode.LOCAL,
@@ -48,12 +50,15 @@ def ingest(
     copy_centroids_uri: str
         TileDB array URI to copy centroids from,
         if not provided, centroids are build running kmeans
-    training_sample_size: int = 1
+    training_sample_size: int = -1
         vector sample size to train centroids with,
         if not provided, is auto-configured based on the dataset size
     workers: int = -1
         number of workers for vector ingestion,
         if not provided, is auto-configured based on the dataset size
+    input_vectors_per_work_item: int = -1
+        number of vectors per ingestion work item,
+        if not provided, is auto-configured
     verbose: bool
         verbose logging, defaults to False
     trace_id: Optional[str]
@@ -65,6 +70,8 @@ def ingest(
     import logging
     import math
     from typing import Any, Mapping, Optional
+    import multiprocessing
+    import os
 
     import numpy as np
 
@@ -77,13 +84,13 @@ def ingest(
 
     CENTROIDS_ARRAY_NAME = "centroids.tdb"
     INDEX_ARRAY_NAME = "index.tdb"
-    INDEX_SIZE_ARRAY_NAME = "index_size.tdb"
     IDS_ARRAY_NAME = "ids.tdb"
     PARTS_ARRAY_NAME = "parts.tdb"
-    WRITE_ARRAY_NAME = "write_temp.tdb"
-    VECTORS_PER_WORK_ITEM = 1000000
+    PARTIAL_WRITE_ARRAY_DIR = "write_temp"
+    VECTORS_PER_WORK_ITEM = 10000000
     MAX_TASKS_PER_STAGE = 100
-    CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 2000000
+    CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 1000000
+    DEFAULT_IMG_NAME = "3.9-vectorsearch"
 
     class SourceType(enum.Enum):
         """SourceType of input vectors"""
@@ -134,7 +141,7 @@ def ingest(
             schema = tiledb.ArraySchema.load(source_uri)
             size = schema.domain.dim(1).domain[1] + 1
             dimensions = schema.domain.dim(0).domain[1] + 1
-            return size, dimensions, schema.attr("a").dtype
+            return size, dimensions, schema.attr("values").dtype
         elif source_type == "U8BIN":
             vfs = tiledb.VFS()
             with vfs.open(source_uri, "rb") as f:
@@ -147,6 +154,33 @@ def ingest(
                 size = int.from_bytes(f.read(4), "little")
                 dimensions = int.from_bytes(f.read(4), "little")
                 return size, dimensions, np.float32
+        elif source_type == "FVEC":
+            vfs = tiledb.VFS()
+            with vfs.open(source_uri, "rb") as f:
+                dimensions = int.from_bytes(f.read(4), "little")
+                vector_size = 4 + dimensions * 4
+                f.seek(0, os.SEEK_END)
+                file_size = f.tell()
+                size = int(file_size / vector_size)
+                return size, dimensions, np.float32
+        elif source_type == "IVEC":
+            vfs = tiledb.VFS()
+            with vfs.open(source_uri, "rb") as f:
+                dimensions = int.from_bytes(f.read(4), "little")
+                vector_size = 4 + dimensions * 4
+                f.seek(0, os.SEEK_END)
+                file_size = f.tell()
+                size = int(file_size / vector_size)
+                return size, dimensions, np.int32
+        elif source_type == "BVEC":
+            vfs = tiledb.VFS()
+            with vfs.open(source_uri, "rb") as f:
+                dimensions = int.from_bytes(f.read(4), "little")
+                vector_size = 4 + dimensions
+                f.seek(0, os.SEEK_END)
+                file_size = f.tell()
+                size = int(file_size / vector_size)
+                return size, dimensions, np.uint8
         else:
             raise ValueError(f"Not supported source_type {source_type}")
 
@@ -195,10 +229,12 @@ def ingest(
         elif index_type == "IVF_FLAT":
             centroids_uri = f"{group.uri}/{CENTROIDS_ARRAY_NAME}"
             index_uri = f"{group.uri}/{INDEX_ARRAY_NAME}"
-            index_size_uri = f"{group.uri}/{INDEX_SIZE_ARRAY_NAME}"
             ids_uri = f"{group.uri}/{IDS_ARRAY_NAME}"
             parts_uri = f"{group.uri}/{PARTS_ARRAY_NAME}"
-            write_array_uri = f"{group.uri}/{WRITE_ARRAY_NAME}"
+            partial_write_array_dir_uri = f"{group.uri}/{PARTIAL_WRITE_ARRAY_DIR}"
+            partial_write_array_index_uri = f"{partial_write_array_dir_uri}/{INDEX_ARRAY_NAME}"
+            partial_write_array_ids_uri = f"{partial_write_array_dir_uri}/{IDS_ARRAY_NAME}"
+            partial_write_array_parts_uri = f"{partial_write_array_dir_uri}/{PARTS_ARRAY_NAME}"
 
             if not tiledb.array_exists(centroids_uri):
                 logger.info("Creating centroids array")
@@ -247,35 +283,12 @@ def ingest(
                     sparse=False,
                     attrs=[index_attr],
                     capacity=partitions,
-                    cell_order="row-major",
-                    tile_order="row-major",
+                    cell_order="col-major",
+                    tile_order="col-major",
                 )
                 logger.info(index_schema)
                 tiledb.Array.create(index_uri, index_schema)
                 group.add(index_uri, name=INDEX_ARRAY_NAME)
-
-            if not tiledb.array_exists(index_size_uri):
-                logger.info("Creating index size array")
-                index_array_rows_dim = tiledb.Dim(
-                    name="rows",
-                    domain=(0, partitions - 1),
-                    tile=partitions,
-                    dtype=np.dtype(np.int32),
-                )
-                index_array_dom = tiledb.Domain(index_array_rows_dim)
-                index_attr = tiledb.Attr(name="values", dtype=np.dtype(np.uint64))
-                index_schema = tiledb.ArraySchema(
-                    domain=index_array_dom,
-                    sparse=True,
-                    attrs=[index_attr],
-                    capacity=partitions,
-                    cell_order="row-major",
-                    tile_order="row-major",
-                    allows_duplicates=True,
-                )
-                logger.info(index_schema)
-                tiledb.Array.create(index_size_uri, index_schema)
-                group.add(index_size_uri, name=INDEX_SIZE_ARRAY_NAME)
 
             if not tiledb.array_exists(ids_uri):
                 logger.info("Creating ids array")
@@ -292,8 +305,8 @@ def ingest(
                     sparse=False,
                     attrs=[ids_attr],
                     capacity=int(size / partitions),
-                    cell_order="row-major",
-                    tile_order="row-major",
+                    cell_order="col-major",
+                    tile_order="col-major",
                 )
                 logger.info(ids_schema)
                 tiledb.Array.create(ids_uri, ids_schema)
@@ -329,42 +342,66 @@ def ingest(
                 tiledb.Array.create(parts_uri, parts_schema)
                 group.add(parts_uri, name=PARTS_ARRAY_NAME)
 
-            if not tiledb.array_exists(write_array_uri):
-                logger.info("Creating write array")
-                kmeans_id_dim = tiledb.Dim(
-                    name="kmeans_id",
-                    domain=(0, partitions - 1),
-                    tile=1,
-                    dtype=np.dtype(np.int32),
-                )
-                object_id_dim = tiledb.Dim(
-                    name="object_id",
+            vfs = tiledb.VFS()
+            if vfs.is_dir(partial_write_array_dir_uri):
+                vfs.remove_dir(partial_write_array_dir_uri)
+            vfs.create_dir(partial_write_array_dir_uri)
+            if vfs.is_dir(partial_write_array_index_uri):
+                vfs.remove_dir(partial_write_array_index_uri)
+            vfs.create_dir(partial_write_array_index_uri)
+
+            if not tiledb.array_exists(partial_write_array_ids_uri):
+                logger.info("Creating temp ids array")
+                ids_array_rows_dim = tiledb.Dim(
+                    name="rows",
                     domain=(0, size - 1),
-                    tile=size,
+                    tile=int(size / partitions),
                     dtype=np.dtype(np.int32),
                 )
-                dom = tiledb.Domain(kmeans_id_dim, object_id_dim)
-                vector_dtype = [
-                    (
-                        "",
-                        vector_type,
-                    )
-                    for _ in range(dimensions)
-                ]
-                vector_attr = tiledb.Attr(name="vector", dtype=np.dtype(vector_dtype))
-                schema = tiledb.ArraySchema(
-                    domain=dom,
-                    sparse=True,
-                    attrs=[vector_attr],
-                    capacity=max(
-                        1000, int(size / partitions / input_vectors_work_items)
-                    ),
+                ids_array_dom = tiledb.Domain(ids_array_rows_dim)
+                ids_attr = tiledb.Attr(name="values", dtype=np.dtype(np.uint64))
+                ids_schema = tiledb.ArraySchema(
+                    domain=ids_array_dom,
+                    sparse=False,
+                    attrs=[ids_attr],
+                    capacity=int(size / partitions),
+                    cell_order="col-major",
+                    tile_order="col-major",
                 )
-                logger.info(schema)
-                tiledb.Array.create(write_array_uri, schema)
-                group.add(write_array_uri, name=WRITE_ARRAY_NAME)
-            else:
-                raise ValueError(f"Not supported index_type {index_type}")
+                logger.info(ids_schema)
+                tiledb.Array.create(partial_write_array_ids_uri, ids_schema)
+
+            if not tiledb.array_exists(partial_write_array_parts_uri):
+                logger.info("Creating temp parts array")
+                parts_array_rows_dim = tiledb.Dim(
+                    name="rows",
+                    domain=(0, dimensions - 1),
+                    tile=dimensions,
+                    dtype=np.dtype(np.int32),
+                )
+                parts_array_cols_dim = tiledb.Dim(
+                    name="cols",
+                    domain=(0, size - 1),
+                    tile=int(size / partitions),
+                    dtype=np.dtype(np.int32),
+                )
+                parts_array_dom = tiledb.Domain(
+                    parts_array_rows_dim, parts_array_cols_dim
+                )
+                parts_attr = tiledb.Attr(name="values", dtype=vector_type)
+                parts_schema = tiledb.ArraySchema(
+                    domain=parts_array_dom,
+                    sparse=False,
+                    attrs=[parts_attr],
+                    capacity=int(size / partitions) * dimensions,
+                    cell_order="col-major",
+                    tile_order="col-major",
+                )
+                logger.info(parts_schema)
+                logger.info(partial_write_array_parts_uri)
+                tiledb.Array.create(partial_write_array_parts_uri, parts_schema)
+        else:
+            raise ValueError(f"Not supported index_type {index_type}")
 
     def read_input_vectors(
         source_uri: str,
@@ -382,7 +419,7 @@ def ingest(
         if source_type == "TILEDB_ARRAY":
             with tiledb.open(source_uri, mode="r") as src_array:
                 return np.transpose(
-                    src_array[0:dimensions, start_pos:end_pos]["a"]
+                    src_array[0:dimensions, start_pos:end_pos]["values"]
                 ).copy(order="C")
         elif source_type == "U8BIN":
             vfs = tiledb.VFS()
@@ -395,13 +432,13 @@ def ingest(
                         f.read(read_size * dimensions),
                         count=read_size * dimensions,
                         dtype=vector_type,
-                    ).astype(np.float32),
+                    ).astype(vector_type),
                     (read_size, dimensions),
                 )
         elif source_type == "F32BIN":
             vfs = tiledb.VFS()
             read_size = end_pos - start_pos
-            read_offset = start_pos * dimensions + 8
+            read_offset = start_pos * dimensions * 4 + 8
             with vfs.open(source_uri, "rb") as f:
                 f.seek(read_offset)
                 return np.reshape(
@@ -409,9 +446,43 @@ def ingest(
                         f.read(read_size * dimensions * 4),
                         count=read_size * dimensions,
                         dtype=vector_type,
-                    ).astype(np.float32),
+                    ).astype(vector_type),
                     (read_size, dimensions),
                 )
+        elif source_type == "FVEC" or source_type == "IVEC":
+            vfs = tiledb.VFS()
+            vector_values = 1 + dimensions
+            vector_size = vector_values * 4
+            read_size = end_pos - start_pos
+            read_offset = start_pos * vector_size
+            with vfs.open(source_uri, "rb") as f:
+                f.seek(read_offset)
+                return np.delete(
+                    np.reshape(
+                        np.frombuffer(
+                            f.read(read_size * vector_size),
+                            count=read_size * vector_values,
+                            dtype=vector_type,
+                        ).astype(vector_type),
+                        (read_size, dimensions + 1),
+                    ), 0, axis=1)
+        elif source_type == "BVEC":
+            vfs = tiledb.VFS()
+            vector_values = 1 + dimensions
+            vector_size = vector_values * 1
+            read_size = end_pos - start_pos
+            read_offset = start_pos * vector_size
+            with vfs.open(source_uri, "rb") as f:
+                f.seek(read_offset)
+                return np.delete(
+                    np.reshape(
+                        np.frombuffer(
+                            f.read(read_size * vector_size),
+                            count=read_size * vector_values,
+                            dtype=vector_type,
+                        ).astype(vector_type),
+                        (read_size, dimensions + 1),
+                    ), 0, axis=1)
 
     # --------------------------------------------------------------------
     # UDFs
@@ -726,40 +797,36 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
-        import numpy as np
-        from sklearn.cluster import KMeans
-
         import tiledb.cloud
+        from tiledb.vector_search.module import ivf_index_tdb, ivf_index, array_to_matrix
 
         logger = setup(config, verbose)
         group = tiledb.Group(array_uri)
         centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
-        write_array_uri = group[WRITE_ARRAY_NAME].uri
-        index_size_array_uri = group[INDEX_SIZE_ARRAY_NAME].uri
-        vector_dtype = [
-            (
-                "",
-                vector_type,
-            )
-            for _ in range(dimensions)
-        ]
-        km = KMeans()
-        km._n_threads = threads
+        partial_write_array_dir_uri = array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
+        partial_write_array_ids_uri = partial_write_array_dir_uri + "/" + IDS_ARRAY_NAME
+        partial_write_array_parts_uri = partial_write_array_dir_uri + "/" + PARTS_ARRAY_NAME
 
-        with tiledb.scope_ctx(ctx_or_config=config):
-            logger.info(f"Input vectors start_pos: {start}, end_pos: {end}")
-            with tiledb.open(centroids_uri, mode="r") as centroids_array:
-                logger.info("Reading centroids")
-                km.cluster_centers_ = np.transpose(
-                    centroids_array[0:dimensions, 0:partitions]["centroids"]
-                ).copy(order="C")
-            target = tiledb.open(write_array_uri, mode="w")
-            index_size_array = tiledb.open(index_size_array_uri, mode="w")
+        for part in range(start, end, batch):
+            part_end = part + batch
+            if part_end > end:
+                part_end = end
 
-            for part in range(start, end, batch):
-                part_end = part + batch
-                if part_end > end:
-                    part_end = end
+            part_name = str(part) + "-" + str(part_end)
+            partial_write_array_index_uri = partial_write_array_dir_uri + "/" + INDEX_ARRAY_NAME + "/" + part_name
+            logger.info(f"Input vectors start_pos: {part}, end_pos: {part_end}")
+            if source_type == "TILEDB_ARRAY":
+                ivf_index_tdb(dtype=vector_type,
+                              db_uri=source_uri,
+                              centroids_uri=centroids_uri,
+                              parts_uri=partial_write_array_parts_uri,
+                              index_uri=partial_write_array_index_uri,
+                              id_uri=partial_write_array_ids_uri,
+                              start=part,
+                              end=part_end,
+                              nthreads=threads,
+                              config=config)
+            else:
                 in_vectors = read_input_vectors(
                     source_uri=source_uri,
                     source_type=source_type,
@@ -771,46 +838,16 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
-
-                logger.info(f"Vector read:{len(in_vectors)}")
-                logger.info("Assigning vectors to partitions")
-                in_vector_partitions = km.predict(in_vectors)
-                logger.info("Assignment complete")
-
-                logger.info("Prepare write vectors")
-                partitioned_object_ids = []
-                for i in range(partitions):
-                    partitioned_object_ids.append([])
-
-                object_id = part
-                for partition in in_vector_partitions:
-                    partitioned_object_ids[partition].append(object_id)
-                    object_id += 1
-
-                write_indexes_k = []
-                write_indexes_id = []
-                write_vectors = []
-                sizes = np.zeros(partitions).astype(np.uint64)
-                size_indexes = []
-                for i in range(partitions):
-                    partition_size = 0
-                    for partitioned_object_id in partitioned_object_ids[i]:
-                        partition_size += 1
-                        write_indexes_k.append(i)
-                        write_indexes_id.append(partitioned_object_id)
-                        write_vectors.append(
-                            in_vectors[partitioned_object_id - part]
-                            .astype(vector_type)
-                            .view(vector_dtype)
-                        )
-                    size_indexes.append(i)
-                    sizes[i] = partition_size
-                logger.info(f"Writing data to array {write_array_uri}")
-                target[write_indexes_k, write_indexes_id] = {"vector": write_vectors}
-                logger.info(f"Partition sizes: {sizes}")
-                index_size_array[size_indexes] = {"values": sizes}
-            target.close()
-            index_size_array.close()
+                ivf_index(dtype=vector_type,
+                          db=array_to_matrix(np.transpose(in_vectors).astype(vector_type)),
+                          centroids_uri=centroids_uri,
+                          parts_uri=partial_write_array_parts_uri,
+                          index_uri=partial_write_array_index_uri,
+                          id_uri=partial_write_array_ids_uri,
+                          start=part,
+                          end=part_end,
+                          nthreads=threads,
+                          config=config)
 
     def compute_partition_indexes_udf(
         array_uri: str,
@@ -822,17 +859,21 @@ def ingest(
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
             group = tiledb.Group(array_uri)
-            index_size_array_uri = group[INDEX_SIZE_ARRAY_NAME].uri
             index_array_uri = group[INDEX_ARRAY_NAME].uri
-            index_size_array = tiledb.open(index_size_array_uri, mode="r")
-            sizes = index_size_array[:]["values"]
-            part_id = index_size_array[:]["rows"]
-            partition_sizes = np.zeros(partitions).astype(np.uint64)
+            vfs = tiledb.VFS()
+            partition_sizes = np.zeros(partitions)
             indexes = np.zeros(partitions + 1).astype(np.uint64)
-            i = 0
-            for size in sizes:
-                partition_sizes[part_id[i]] += size
-                i += 1
+            for partial_index_array_uri in vfs.ls(array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR + "/" + INDEX_ARRAY_NAME):
+                if tiledb.array_exists(partial_index_array_uri):
+                    partial_index_array = tiledb.open(partial_index_array_uri, mode="r")
+                    partial_indexes = partial_index_array[:]["values"]
+                    i = 0
+                    prev_index = partial_indexes[0]
+                    for partial_index in partial_indexes[1:]:
+                        partition_sizes[i] += int(partial_index) - int(prev_index)
+                        prev_index = partial_index
+                        i += 1
+            logger.debug(f"Partition sizes: {partition_sizes}")
             i = 0
             sum = 0
             for partition_size in partition_sizes:
@@ -856,12 +897,36 @@ def ingest(
     ):
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
+            logger.info(f"Consolidating partitions {partition_id_start}-{partition_id_end}")
             group = tiledb.Group(array_uri)
-            logger.info("Consolidating array")
-            write_array_uri = group[WRITE_ARRAY_NAME].uri
+            partial_write_array_dir_uri = array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
+            partial_write_array_ids_uri = partial_write_array_dir_uri + "/" + IDS_ARRAY_NAME
+            partial_write_array_parts_uri = partial_write_array_dir_uri + "/" + PARTS_ARRAY_NAME
             index_array_uri = group[INDEX_ARRAY_NAME].uri
             ids_array_uri = group[IDS_ARRAY_NAME].uri
             parts_array_uri = group[PARTS_ARRAY_NAME].uri
+            vfs = tiledb.VFS()
+            partition_slices = []
+            for i in range(partitions):
+                partition_slices.append([])
+            for partial_index_array_uri in vfs.ls(array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR + "/" + INDEX_ARRAY_NAME):
+                if tiledb.array_exists(partial_index_array_uri):
+                    partial_index_array = tiledb.open(partial_index_array_uri, mode="r")
+                    partial_indexes = partial_index_array[:]["values"]
+                    prev_index = partial_indexes[0]
+                    i = 0
+                    for partial_index in partial_indexes[1:]:
+                        s = slice(int(prev_index), int(partial_index - 1))
+                        if s.start <= s.stop:
+                            partition_slices[i].append(s)
+                        prev_index = partial_index
+                        i += 1
+
+            partial_write_array_ids_array = tiledb.open(partial_write_array_ids_uri, mode="r")
+            partial_write_array_parts_array = tiledb.open(partial_write_array_parts_uri, mode="r")
+            index_array = tiledb.open(index_array_uri, mode="r")
+            ids_array = tiledb.open(ids_array_uri, mode="w")
+            parts_array = tiledb.open(parts_array_uri, mode="w")
             logger.info(
                 f"Partitions start: {partition_id_start} end: {partition_id_end}"
             )
@@ -869,41 +934,38 @@ def ingest(
                 part_end = part + batch
                 if part_end > partition_id_end:
                     part_end = partition_id_end
-                logger.info(f"Read partitions start: {part} end: {part_end}")
-                with tiledb.open(index_array_uri, "r") as A:
-                    start_pos = A[part]["values"]
-                logger.info(f"partition start index: {start_pos}")
-                logger.info("Reading partition data")
-                with tiledb.open(write_array_uri, mode="r") as A:
-                    partition = A[part:part_end, :]
+                logger.info(f"Consolidating partitions start: {part} end: {part_end}")
+                read_slices = []
+                for p in range(part, part_end):
+                    for partition_slice in partition_slices[p]:
+                        read_slices.append(partition_slice)
 
-                partition_size = len(partition["object_id"])
-                logger.info(f"Vectors in partition: {partition_size}")
-                vectors = []
-                for i in range(dimensions):
-                    vectors.append([])
-                object_ids = []
-                pids = partition["object_id"]
-                tt = 0
-                for v in partition["vector"]:
-                    j = 0
-                    for dim in v:
-                        vectors[j].append(dim)
-                        j += 1
-                    object_ids.append(pids[tt])
-                    tt += 1
+                logger.debug(f"Read slices: {read_slices}")
+                ids = partial_write_array_ids_array.multi_index[read_slices]["values"]
+                vectors = partial_write_array_parts_array.multi_index[:, read_slices]["values"]
+                start_pos = int(index_array[part]["values"])
+                end_pos = int(index_array[part_end]["values"])
 
-                end_pos = start_pos + partition_size - 1
+                logger.debug(
+                    f"Ids shape {ids.shape}, expected size: {end_pos - start_pos} expected range:({start_pos},{end_pos})")
+                if ids.shape[0] != end_pos - start_pos:
+                    raise ValueError("Incorrect partition size.")
+
                 logger.info(f"Writing data to array: {parts_array_uri}")
-                with tiledb.open(parts_array_uri, mode="w") as A:
-                    A[0:dimensions, start_pos:end_pos] = np.array(vectors)
+                parts_array[:, start_pos:end_pos] = vectors
                 logger.info(f"Writing data to array: {ids_array_uri}")
-                with tiledb.open(ids_array_uri, mode="w") as A:
-                    A[start_pos:end_pos] = np.array(object_ids)
+                ids_array[start_pos:end_pos] = ids
+            parts_array.close()
+            ids_array.close()
 
     # --------------------------------------------------------------------
     # DAG
     # --------------------------------------------------------------------
+    def submit_local(d, func, *args, **kwargs):
+        # Drop kwarg
+        kwargs.pop("image_name", None)
+        kwargs.pop("resources", None)
+        return d.submit_local(func, *args, **kwargs)
 
     def create_ingestion_dag(
         index_type: str,
@@ -936,6 +998,7 @@ def ingest(
                     retry_policy="Always",
                 ),
             )
+            threads = 8
         else:
             d = dag.DAG(
                 name="vector-ingestion",
@@ -943,8 +1006,9 @@ def ingest(
                 max_workers=workers,
                 namespace="default",
             )
+            threads = multiprocessing.cpu_count()
 
-        submit = d.submit_local
+        submit = partial(submit_local, d)
         if mode == Mode.BATCH or mode == Mode.REALTIME:
             submit = d.submit
 
@@ -972,7 +1036,8 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="ingest-" + str(task_id),
-                    resources={"cpu": "6", "memory": "32Gi"},
+                    resources={"cpu": str(threads), "memory": "8Gi"},
+                    image_name=DEFAULT_IMG_NAME,
                 )
                 task_id += 1
             return d
@@ -987,6 +1052,7 @@ def ingest(
                     trace_id=trace_id,
                     name="copy-centroids",
                     resources={"cpu": "1", "memory": "2Gi"},
+                    image_name=DEFAULT_IMG_NAME,
                 )
             else:
                 if training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE:
@@ -1005,6 +1071,7 @@ def ingest(
                         trace_id=trace_id,
                         name="kmeans",
                         resources={"cpu": "8", "memory": "32Gi"},
+                        image_name=DEFAULT_IMG_NAME,
                     )
                 else:
                     internal_centroids_node = submit(
@@ -1019,6 +1086,7 @@ def ingest(
                         trace_id=trace_id,
                         name="init-centroids",
                         resources={"cpu": "1", "memory": "1Gi"},
+                        image_name=DEFAULT_IMG_NAME,
                     )
 
                     for it in range(5):
@@ -1042,12 +1110,13 @@ def ingest(
                                     dimensions=dimensions,
                                     vector_start_pos=start,
                                     vector_end_pos=end,
-                                    threads=8,
+                                    threads=threads,
                                     config=config,
                                     verbose=verbose,
                                     trace_id=trace_id,
                                     name="k-means-part-" + str(task_id),
-                                    resources={"cpu": "8", "memory": "12Gi"},
+                                    resources={"cpu": str(threads), "memory": "12Gi"},
+                                    image_name=DEFAULT_IMG_NAME,
                                 )
                             )
                             task_id += 1
@@ -1056,9 +1125,10 @@ def ingest(
                             reducers.append(
                                 submit(
                                     compute_new_centroids,
-                                    *kmeans_workers[i : i + 10],
+                                    *kmeans_workers[i: i + 10],
                                     name="update-centroids-" + str(i),
                                     resources={"cpu": "1", "memory": "8Gi"},
+                                    image_name=DEFAULT_IMG_NAME,
                                 )
                             )
                         internal_centroids_node = submit(
@@ -1066,6 +1136,7 @@ def ingest(
                             *reducers,
                             name="update-centroids",
                             resources={"cpu": "1", "memory": "8Gi"},
+                            image_name=DEFAULT_IMG_NAME,
                         )
                     centroids_node = submit(
                         write_centroids,
@@ -1078,6 +1149,7 @@ def ingest(
                         trace_id=trace_id,
                         name="write-centroids",
                         resources={"cpu": "1", "memory": "2Gi"},
+                        image_name=DEFAULT_IMG_NAME,
                     )
 
             compute_indexes_node = submit(
@@ -1089,6 +1161,7 @@ def ingest(
                 trace_id=trace_id,
                 name="compute-indexes",
                 resources={"cpu": "1", "memory": "2Gi"},
+                image_name=DEFAULT_IMG_NAME,
             )
 
             task_id = 0
@@ -1108,12 +1181,13 @@ def ingest(
                     start=start,
                     end=end,
                     batch=input_vectors_per_work_item,
-                    threads=6,
+                    threads=threads,
                     config=config,
                     verbose=verbose,
                     trace_id=trace_id,
                     name="ingest-" + str(task_id),
-                    resources={"cpu": "6", "memory": "32Gi"},
+                    resources={"cpu": str(threads), "memory": "8Gi"},
+                    image_name=DEFAULT_IMG_NAME,
                 )
                 ingest_node.depends_on(centroids_node)
                 compute_indexes_node.depends_on(ingest_node)
@@ -1139,13 +1213,42 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="consolidate-partition-" + str(task_id),
-                    resources={"cpu": "2", "memory": "24Gi"},
+                    resources={"cpu": str(threads), "memory": "8Gi"},
+                    image_name=DEFAULT_IMG_NAME,
                 )
                 consolidate_partition_node.depends_on(compute_indexes_node)
                 task_id += 1
             return d
         else:
             raise ValueError(f"Not supported index_type {index_type}")
+
+    def consolidate_and_vacuum(
+        array_uri: str,
+        config: Optional[Mapping[str, Any]] = None,
+    ):
+        conf_fragment_meta = tiledb.Config(config)
+        conf_fragment_meta["sm.consolidation.mode"] = "fragment_meta"
+        ctx_fragment_meta = tiledb.Ctx(conf_fragment_meta)
+        group = tiledb.Group(array_uri, ctx=ctx_fragment_meta)
+        tiledb.consolidate(group[PARTS_ARRAY_NAME].uri, ctx=ctx_fragment_meta)
+        tiledb.vacuum(group[PARTS_ARRAY_NAME].uri, ctx=ctx_fragment_meta)
+        if index_type == "IVF_FLAT":
+            tiledb.consolidate(group[IDS_ARRAY_NAME].uri, ctx=ctx_fragment_meta)
+            tiledb.vacuum(group[IDS_ARRAY_NAME].uri, ctx=ctx_fragment_meta)
+
+        conf_array_meta = tiledb.Config(config)
+        conf_array_meta["sm.consolidation.mode"] = "array_meta"
+        ctx_array_meta = tiledb.Ctx(conf_array_meta)
+        tiledb.consolidate(group[PARTS_ARRAY_NAME].uri, ctx=ctx_array_meta)
+        tiledb.vacuum(group[PARTS_ARRAY_NAME].uri, ctx=ctx_array_meta)
+        if index_type == "IVF_FLAT":
+            tiledb.consolidate(group[IDS_ARRAY_NAME].uri, ctx=ctx_fragment_meta)
+            tiledb.vacuum(group[IDS_ARRAY_NAME].uri, ctx=ctx_fragment_meta)
+
+        vfs = tiledb.VFS()
+        partial_write_array_dir_uri = array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
+        if vfs.is_dir(partial_write_array_dir_uri):
+            vfs.remove_dir(partial_write_array_dir_uri)
 
     with tiledb.scope_ctx(ctx_or_config=config):
         logger = setup(config, verbose)
@@ -1159,6 +1262,7 @@ def ingest(
             else:
                 raise err
         group = tiledb.Group(array_uri, "w")
+        group.meta["dataset_type"] = "vector_search"
 
         in_size, dimensions, vector_type = read_source_metadata(
             source_uri=source_uri, source_type=source_type, logger=logger
@@ -1172,10 +1276,19 @@ def ingest(
         logger.info(f"Vector dimension type {vector_type}")
         if partitions == -1:
             partitions = int(math.sqrt(size))
-        if workers == -1:
-            workers = 10
+        if training_sample_size == -1:
+            training_sample_size = min(size, 100 * partitions)
+        if mode == Mode.BATCH:
+            if workers == -1:
+                workers = 10
+        else:
+            workers = 1
+        logger.info(f"Partitions {partitions}")
+        logger.info(f"Training sample size {training_sample_size}")
+        logger.info(f"Number of workers {workers}")
 
-        input_vectors_per_work_item = VECTORS_PER_WORK_ITEM
+        if input_vectors_per_work_item == -1:
+            input_vectors_per_work_item = VECTORS_PER_WORK_ITEM
         input_vectors_work_items = int(math.ceil(size / input_vectors_per_work_item))
         input_vectors_work_tasks = input_vectors_work_items
         input_vectors_work_items_per_worker = 1
@@ -1194,7 +1307,7 @@ def ingest(
 
         vectors_per_table_partitions = size / partitions
         table_partitions_per_work_item = int(
-            math.ceil(VECTORS_PER_WORK_ITEM / vectors_per_table_partitions)
+            math.ceil(input_vectors_per_work_item / vectors_per_table_partitions)
         )
         table_partitions_work_items = int(
             math.ceil(partitions / table_partitions_per_work_item)
@@ -1253,8 +1366,7 @@ def ingest(
         d.compute()
         logger.info("Submitted ingestion graph")
         d.wait()
-        group = tiledb.Group(array_uri)
-        group[PARTS_ARRAY_NAME].uri
+        consolidate_and_vacuum(array_uri=array_uri, config=config)
 
         if index_type == "FLAT":
             return FlatIndex(uri=array_uri, dtype=vector_type)
