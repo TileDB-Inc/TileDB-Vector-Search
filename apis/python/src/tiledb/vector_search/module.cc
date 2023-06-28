@@ -14,6 +14,9 @@ using Ctx = tiledb::Context;
 bool global_debug = true;
 double global_time_of_interest;
 
+bool enable_stats = false;
+std::vector<json> core_stats;
+
 PYBIND11_MAKE_OPAQUE(std::vector<uint32_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<uint64_t>);
 
@@ -298,6 +301,24 @@ PYBIND11_MODULE(_tiledbvspy, m) {
          const ColMajorMatrix<int32_t>& ground_truth) -> bool {
         return validate_top_k(top_k, ground_truth);
       });
+
+  m.def("stats_enable", []() {
+    enable_stats = true;
+    tiledb::Stats::enable();
+  });
+
+  m.def("stats_disable", []() {
+    enable_stats = false;
+    tiledb::Stats::disable();
+  });
+
+  m.def("stats_reset", []() {
+    core_stats.clear();
+  });
+
+  m.def("stats_dump", []() {
+    return json{core_stats}.dump();
+  });
 
   declare_kmeans_query<uint8_t>(m, "u8");
   declare_kmeans_query<float>(m, "f32");

@@ -46,6 +46,7 @@
 #include "detail/linalg/choose_blas.h"
 #include "detail/linalg/linalg_defs.h"
 #include "detail/linalg/matrix.h"
+#include "detail/linalg/tdb_helpers.h"
 #include "detail/linalg/tdb_io.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"

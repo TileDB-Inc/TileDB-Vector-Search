@@ -100,7 +100,8 @@ void write_matrix(
       (int)start_pos + (int)A.num_cols() - 1};
 
   // Open array for writing
-  tiledb::Array array(ctx, uri, TILEDB_WRITE);
+  tiledb::Array array =
+      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_WRITE);
 
   tiledb::Subarray subarray(ctx, array);
   subarray.set_subarray(subarray_vals);
@@ -113,7 +114,7 @@ void write_matrix(
       .set_data_buffer(
           "values", &A(0, 0), (uint64_t)A.num_rows() * (uint64_t)A.num_cols())
       .set_subarray(subarray);
-  query.submit();
+  tiledb_helpers::submit_query(tdb_func__, uri, query);
 
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
@@ -167,7 +168,8 @@ void write_vector(
       (int)start_pos, (int)start_pos + (int)size(v) - 1};
 
   // Open array for writing
-  tiledb::Array array(ctx, uri, TILEDB_WRITE);
+  tiledb::Array array =
+      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_WRITE);
 
   tiledb::Subarray subarray(ctx, array);
   subarray.set_subarray(subarray_vals);
@@ -176,8 +178,10 @@ void write_vector(
   query.set_layout(TILEDB_ROW_MAJOR)
       .set_data_buffer("values", v)
       .set_subarray(subarray);
+
   query.submit();
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
+  tiledb_helpers::submit_query(tdb_func__, uri, query);
 
   array.close();
 }
@@ -193,7 +197,8 @@ std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
     std::cerr << "# Reading std::vector: " << uri << std::endl;
   }
 
-  auto array_ = tiledb::Array{ctx, uri, TILEDB_READ};
+  tiledb::Array array_ =
+      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
   auto schema_ = array_.schema();
 
   using domain_type = int32_t;
@@ -225,7 +230,7 @@ std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
   tiledb::Query query(ctx, array_);
   query.set_subarray(subarray).set_data_buffer(
       attr_name, data_.data(), vec_rows_);
-  query.submit();
+  tiledb_helpers::submit_query(tdb_func__, uri, query);
   _memory_data.insert_entry(tdb_func__, vec_rows_ * sizeof(T));
 
   array_.close();
