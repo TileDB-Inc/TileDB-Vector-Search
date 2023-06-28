@@ -453,5 +453,72 @@ inline memory_data& get_memory_data_instance() {
 
 memory_data& _memory_data{get_memory_data_instance()};
 
+#if 0
+class stats_data {
+  public:
+    enum operation_type {open_array, submit_query};
+
+    struct stats_type {
+      operation_type operation;
+      std::string uri;
+      std::string location;
+    };
+
+    using stats_map = std::multimap<stats_type, std::string>;
+
+  private:
+
+    stats_map stats_;
+    bool verbose_{false};
+    bool debug_{false};
+
+    /**
+     * Constructor.  Private to enforce singleton pattern.
+     */
+    stats_data() = default;
+    ~stats_data() = default;
+
+  public:
+
+    /**
+     * Copy constructor.  Deleted to enforce singleton pattern.
+     */
+    stats_data(const stats_data&) = delete;
+    stats_data& operator=(const stats_data&) = delete;
+
+    /**
+     * Get a reference to the singleton instance of the class.
+     * @return Reference to the singleton instance of the class.
+     */
+    static stats_data& get_instance() {
+      static stats_data instance;
+      return instance;
+    }
+
+    /**
+     * Insert a memory consumption entry into the multimap.
+     * @param name The name to be associated with the memory consumption.
+     * @param use The memory consumption to be recorded (in bytes).
+     */
+    void insert_entry(const stats_type& key, const std::string& stats) {
+      stats_.insert({key, stats});
+    }
+
+    /**
+     * Get the memory consumption entries associated with a name.
+     * @param string Name to be queried.
+     * @return Vector of memory consumption values associated with the name.
+     */
+    auto get_entries_separately(const std::string& string) {
+      std::vector<double> usages;
+
+      auto range = stats_.equal_range(string);
+      for (auto i = range.first; i != range.second; ++i) {
+        usages.push_back(i->second / (1024*1024));
+      }
+      return usages;
+    }
+};
+#endif
 
 #endif  // TDB_LOGGING_H

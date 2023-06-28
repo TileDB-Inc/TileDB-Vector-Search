@@ -77,6 +77,9 @@
 bool global_verbose = false;
 bool global_debug = false;
 
+bool enable_stats = false;
+std::vector<json> core_stats;
+
 #include <cstdint>
 
 /**
@@ -124,6 +127,7 @@ Options:
     --nthreads NN         number of threads to use (0 = hardware concurrency) [default: 0]
     --region REGION       AWS S3 region [default: us-east-1]
     --log FILE            log info to FILE (- for stdout)
+    --stats               log TileDB stats [default: false]
     -d, --debug           run in debug mode [default: false]
     -v, --verbose         run in verbose mode [default: false]
 )";
@@ -141,6 +145,7 @@ int main(int argc, char* argv[]) {
   }
   global_debug = args["--debug"].asBool();
   global_verbose = args["--verbose"].asBool();
+  enable_stats = args["--stats"].asBool();
 
   auto part_uri = args["--parts_uri"].asString();
 
@@ -293,5 +298,8 @@ int main(int argc, char* argv[]) {
         k_nn,
         nthreads,
         recall);
+  }
+  if (enable_stats) {
+    std::cout << json{core_stats}.dump() << std::endl;
   }
 }

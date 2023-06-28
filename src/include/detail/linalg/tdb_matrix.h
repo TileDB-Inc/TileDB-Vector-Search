@@ -76,6 +76,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   std::string uri_;
   std::reference_wrapper<const tiledb::Context> ctx_;
+  std::string uri_;
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
   size_t num_array_rows_{0};
@@ -133,7 +134,8 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : uri_{uri}
       , ctx_{ctx}
-      , array_{ctx, uri, TILEDB_READ}
+      , uri_{uri}
+      , array_{tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ)}
       , schema_{array_.schema()} {
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + " " + uri};
@@ -225,7 +227,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     query.set_subarray(subarray)
         .set_layout(layout_order)
         .set_data_buffer(attr_name, this->data(), num_cols_ * dimension);
-    query.submit();
+    tiledb_helpers::submit_query(tdb_func__, uri_, query);
     _memory_data.insert_entry(tdb_func__, num_cols_ * dimension * sizeof(T));
 
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
