@@ -76,7 +76,6 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   std::string uri_;
   std::reference_wrapper<const tiledb::Context> ctx_;
-  std::string uri_;
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
   size_t num_array_rows_{0};
@@ -134,7 +133,6 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : uri_{uri}
       , ctx_{ctx}
-      , uri_{uri}
       , array_{tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ)}
       , schema_{array_.schema()} {
     constructor_timer.stop();

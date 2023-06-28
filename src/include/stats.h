@@ -40,6 +40,7 @@
 #define TDB_STATS_H
 
 #include <unistd.h>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <random>
@@ -54,15 +55,19 @@
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
 
-// Make stats support opt-in to avoid requiring to define an enable_stats variable on all projects.
+// Make stats support opt-in to avoid requiring to define an enable_stats
+// variable on all projects.
 #ifdef TILEDBVS_ENABLE_STATS
 extern bool enable_stats;
 extern std::vector<json> core_stats;
 #endif
 
 class StatsCollectionScope final {
-public:
-  explicit StatsCollectionScope(const std::string &uri, const std::string& function, const std::string &operation_type) {
+ public:
+  explicit StatsCollectionScope(
+      const std::string& uri,
+      const std::string& function,
+      const std::string& operation_type) {
 #ifdef TILEDBVS_ENABLE_STATS
     if (!enable_stats)
       return;
@@ -75,23 +80,22 @@ public:
 #endif
   }
 
-~StatsCollectionScope() {
+  ~StatsCollectionScope() {
 #ifdef TILEDBVS_ENABLE_STATS
     if (!enable_stats)
       return;
     std::string stats_str;
     tiledb::Stats::raw_dump(&stats_str);
-    core_stats.push_back({
-      {"uri", uri_},
-      {"function", function_},
-      {"operation_type", operation_type_},
-      {"stats", json::parse(stats_str)}
-    });
+    core_stats.push_back(
+        {{"uri", uri_},
+         {"function", function_},
+         {"operation_type", operation_type_},
+         {"stats", json::parse(stats_str)}});
 #endif
   }
 
 #ifdef TILEDBVS_ENABLE_STATS
-private:
+ private:
   std::string uri_, function_, operation_type_;
 #endif
 };

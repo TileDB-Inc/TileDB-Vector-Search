@@ -84,7 +84,8 @@ void write_matrix(
       0, (int)A.num_rows() - 1, 0, (int)A.num_cols() - 1};
 
   // Open array for writing
-  tiledb::Array array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_WRITE);
+  tiledb::Array array =
+      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_WRITE);
 
   tiledb::Subarray subarray(ctx, array);
   subarray.set_subarray(subarray_vals);
@@ -130,7 +131,8 @@ void write_vector(
   std::vector<int32_t> subarray_vals{0, (int)size(v) - 1};
 
   // Open array for writing
-  tiledb::Array array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_WRITE);
+  tiledb::Array array =
+      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_WRITE);
 
   tiledb::Subarray subarray(ctx, array);
   subarray.set_subarray(subarray_vals);
@@ -155,7 +157,8 @@ std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
     std::cerr << "# Reading std::vector: " << uri << std::endl;
   }
 
-  tiledb::Array array_ = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
+  tiledb::Array array_ =
+      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
   auto schema_ = array_.schema();
 
   using domain_type = int32_t;

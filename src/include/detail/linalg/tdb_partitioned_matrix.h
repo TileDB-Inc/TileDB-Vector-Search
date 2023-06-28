@@ -108,7 +108,6 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   std::string uri_;
   std::reference_wrapper<const tiledb::Context> ctx_;
-  std::string uri_;
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
   size_t num_array_rows_{0};
@@ -187,10 +186,10 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       : constructor_timer{tdb_func__ + std::string{" constructor"}}
       , uri_{uri}
       , ctx_{ctx}
-      , uri_{uri}
       , array_{tiledb_helpers::open_array(tdb_func__, ctx_, uri, TILEDB_READ)}
       , schema_{array_.schema()}
-      , ids_array_{tiledb_helpers::open_array(tdb_func__, ctx_, ids_uri, TILEDB_READ)}
+      , ids_array_{tiledb_helpers::open_array(
+            tdb_func__, ctx_, ids_uri, TILEDB_READ)}
       , ids_schema_{ids_array_.schema()}
       , indices_{in_indices}
       , parts_{in_parts}

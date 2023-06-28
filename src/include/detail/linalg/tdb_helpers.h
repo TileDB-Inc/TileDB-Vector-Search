@@ -34,8 +34,8 @@
 #ifndef TILEDB_HELPERS_H
 #define TILEDB_HELPERS_H
 
-#include "stats.h"
 #include <tiledb/tiledb>
+#include "stats.h"
 
 namespace tiledb_helpers {
 
@@ -46,15 +46,17 @@ namespace tiledb_helpers {
  * defined, and a variable named enable_stats is set to true.
  * The stats are written to a FILE* specified by the variable named stats_file.
  *
- * @param function_name The name of the function calling this. You can use the tdb_func__ macro.
+ * @param function_name The name of the function calling this. You can use the
+ * tdb_func__ macro.
  * @param ctx The TileDB context to use.
  * @param uri The URI of the array to open.
  * @param query_type The mode to open the array.
  */
-inline tiledb::Array open_array(const std::string &function_name,
-                                const tiledb::Context &ctx,
-                                const std::string &uri,
-                                tiledb_query_type_t query_type) {
+inline tiledb::Array open_array(
+    const std::string& function_name,
+    const tiledb::Context& ctx,
+    const std::string& uri,
+    tiledb_query_type_t query_type) {
   StatsCollectionScope stats_scope(uri, function_name, "open_array");
   return tiledb::Array(ctx, uri, query_type);
 }
@@ -66,16 +68,18 @@ inline tiledb::Array open_array(const std::string &function_name,
  * defined, and a variable named enable_stats is set to true.
  * The stats are written to a FILE* specified by the variable named stats_file.
  *
- * @param function_name The name of the function calling this. You can use the tdb_func__ macro.
+ * @param function_name The name of the function calling this. You can use the
+ * tdb_func__ macro.
  * @param query The query to submit.
  */
-inline void submit_query(const std::string &function_name,
-                         const std::string &uri,
-                         tiledb::Query &query) {
+inline void submit_query(
+    const std::string& function_name,
+    const std::string& uri,
+    tiledb::Query& query) {
   StatsCollectionScope stats_scope(uri, function_name, "submit_query");
   query.submit();
 }
 
-} // namespace tiledb_helpers
+}  // namespace tiledb_helpers
 
 #endif
