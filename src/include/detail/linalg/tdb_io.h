@@ -111,7 +111,7 @@ void write_matrix(
                    TILEDB_COL_MAJOR;
   query.set_layout(order)
       .set_data_buffer(
-          "values", &A(0, 0), (int)A.num_rows() * (int)A.num_cols())
+          "values", &A(0, 0), (uint64_t)A.num_rows() * (uint64_t)A.num_cols())
       .set_subarray(subarray);
   query.submit();
 

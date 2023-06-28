@@ -93,3 +93,28 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     )
     result = np.transpose(index.query(np.transpose(query_vectors), k=k, nprobe=partitions))
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
+
+
+def test_ivf_flat_ingestion_fvec(tmp_path):
+    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
+    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
+    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    source_type = "FVEC"
+    array_uri = os.path.join(tmp_path, "array")
+    k = 100
+    dimensions = 128
+    partitions = 1000
+    nqueries = 100
+
+    query_vectors = get_queries_fvec(queries_uri, dimensions=dimensions, nqueries=nqueries)
+    gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
+
+    index = ingest(
+        index_type="IVF_FLAT",
+        array_uri=array_uri,
+        source_uri=source_uri,
+        source_type=source_type,
+        partitions=partitions,
+    )
+    result = np.transpose(index.query(np.transpose(query_vectors), k=k, nprobe=partitions))
+    assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))

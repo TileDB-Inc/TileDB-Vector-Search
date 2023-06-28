@@ -70,6 +70,7 @@ def ingest(
     import math
     from typing import Any, Mapping, Optional
     import multiprocessing
+    import os
 
     import numpy as np
 
@@ -151,6 +152,33 @@ def ingest(
                 size = int.from_bytes(f.read(4), "little")
                 dimensions = int.from_bytes(f.read(4), "little")
                 return size, dimensions, np.float32
+        elif source_type == "FVEC":
+            vfs = tiledb.VFS()
+            with vfs.open(source_uri, "rb") as f:
+                dimensions = int.from_bytes(f.read(4), "little")
+                vector_size = 4 + dimensions * 4
+                f.seek(0, os.SEEK_END)
+                file_size = f.tell()
+                size = int(file_size / vector_size)
+                return size, dimensions, np.float32
+        elif source_type == "IVEC":
+            vfs = tiledb.VFS()
+            with vfs.open(source_uri, "rb") as f:
+                dimensions = int.from_bytes(f.read(4), "little")
+                vector_size = 4 + dimensions * 4
+                f.seek(0, os.SEEK_END)
+                file_size = f.tell()
+                size = int(file_size / vector_size)
+                return size, dimensions, np.int32
+        elif source_type == "BVEC":
+            vfs = tiledb.VFS()
+            with vfs.open(source_uri, "rb") as f:
+                dimensions = int.from_bytes(f.read(4), "little")
+                vector_size = 4 + dimensions
+                f.seek(0, os.SEEK_END)
+                file_size = f.tell()
+                size = int(file_size / vector_size)
+                return size, dimensions, np.uint8
         else:
             raise ValueError(f"Not supported source_type {source_type}")
 
@@ -419,6 +447,40 @@ def ingest(
                     ).astype(vector_type),
                     (read_size, dimensions),
                 )
+        elif source_type == "FVEC" or source_type == "IVEC":
+            vfs = tiledb.VFS()
+            vector_values = 1 + dimensions
+            vector_size = vector_values * 4
+            read_size = end_pos - start_pos
+            read_offset = start_pos * vector_size
+            with vfs.open(source_uri, "rb") as f:
+                f.seek(read_offset)
+                return np.delete(
+                    np.reshape(
+                        np.frombuffer(
+                            f.read(read_size * vector_size),
+                            count=read_size * vector_values,
+                            dtype=vector_type,
+                        ).astype(vector_type),
+                        (read_size, dimensions + 1),
+                    ), 0, axis=1)
+        elif source_type == "BVEC":
+            vfs = tiledb.VFS()
+            vector_values = 1 + dimensions
+            vector_size = vector_values * 1
+            read_size = end_pos - start_pos
+            read_offset = start_pos * vector_size
+            with vfs.open(source_uri, "rb") as f:
+                f.seek(read_offset)
+                return np.delete(
+                    np.reshape(
+                        np.frombuffer(
+                            f.read(read_size * vector_size),
+                            count=read_size * vector_values,
+                            dtype=vector_type,
+                        ).astype(vector_type),
+                        (read_size, dimensions + 1),
+                    ), 0, axis=1)
 
     # --------------------------------------------------------------------
     # UDFs
@@ -1182,6 +1244,7 @@ def ingest(
             else:
                 raise err
         group = tiledb.Group(array_uri, "w")
+        group.meta["dataset_type"] = "vector_search"
 
         in_size, dimensions, vector_type = read_source_metadata(
             source_uri=source_uri, source_type=source_type, logger=logger
