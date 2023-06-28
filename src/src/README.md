@@ -2,13 +2,97 @@
 
 # Command Line Drivers for the TileDB-Vector-Search Library
 
-This subdirectory contains command-line driver programs for accessing functionality of the TileDB-Vector-Search library.
+This subdirectory contains command-line driver programs for accessing functionality of the TileDB-Vector-Search library: `ivf_flat`, `flat_l2`, and (WIP) `index`.
 Much of their functionality is for evaluating performance of different algorithmic approaches within the library.
 A wealth of internal performance information can be dumped from the programs.  
 
-## `ivf_flat`:  Inverted File Index with Stored Vectors 
+## Building
 
-### Building ivf_flat
+
+```bash
+  cd < project root >
+  mkdir build
+  cd build
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DTileDB_DIR=/path/to/installed/libtiledb
+```
+**Note:** The CLI programs build against `libtiledb`.  You will need to point your the `TileDB_DIR` to the
+directory where `libtiledb` is installed (along with associated headers, etc) .
+
+That is, if the `libtiledb` you want to use is in `/usr/local/tiledb/lib/libtiledb.so` then you would set `TileDB_DIR` to `/usr/local/tiledb/lib/cmake`
+```
+  % cmake .. -DTileDB_DIR=/usr/local/tiledb/
+```
+**If you don't specify a value for `TileDB_DIR`** the system default will be used (an installation of TileDB done with a package manager such as `apt` or `homebrew`).  That is, you do not have to specify a value for `TileDB_DIR` if the system defaults are good enough.
+
+The CLI do require a fairly recent version of `libtiledb`.  If you get compilation errors along the lines of
+```
+In file included from /home/user/tiledb-vector-search/src/test/unit_sift_array.cpp:5:
+/home/user/tiledb-vector-search/src/test/../sift_array.h:67:21: error: expected ';' after expression
+    tiledb::Subarray subarray(ctx_, array_);
+                    ^
+                    ;
+/home/user/tiledb-vector-search/src/test/../sift_array.h:67:13: error: no member named 'Subarray' in namespace 'tiledb'
+    tiledb::Subarray subarray(ctx_, array_);
+    ~~~~~~~~^
+/home/user/tiledb-vector-search/src/test/../sift_array.h:68:5: error: use of undeclared identifier 'subarray'
+    subarray.set_subarray(subarray_vals);
+```
+then you likely need a more recent version of `libtiledb`.  To fix this, first try updating your installed version of `libtiledb` by invoking the appropriate "upgrade" or "update" command associated with your package manager (if you installed `libtiledb` using a package manager).  Otherwise, obtain an up-to-date version of `libtiledb` from the TileDB github repository at `https://github.com/TileDB-Inc/TileDB` and build and install it per the instructions there.
+
+After installing TileDB, your setting for
+`TileDB_DIR` should be the same as the value of `CMAKE_INSTALL_PREFIX` that was used when building and installing `libtiledb`.
+That is, if you built `libtiledb` with
+```
+  % cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/tiledb
+```
+Then if you set `TileDB_DIR` to `/usr/local/tiledb`
+```
+  % cmake .. -DTileDB_DIR=/usr/local/tiledb
+```
+If you did not explicitly set `CMAKE_INSTALL_PREFIX`, you should be able to find its value in `CMakeCache.txt`.
+(And, if you used the default setting, `cmake` for TileDB-Vector-Search may find it automatically.)
+Also, the `fetch_content` call in `CMakeLists.txt` may also find the TileDB installation.
+To check if the right path will be searched, look for the output line
+```
+-- TileDB include directories are <>
+```
+This will tell you the path that will be used when building `flat`.  If it isn't the path you are expecting, e.g., if it is the system defaults when you expected something else, check the path you used when invoking `cmake`.
+
+**Note:** If you build `libtiledb` yourself and are going to use S3 as a source for TileDB array input, your `libtiledb`
+should be built with S3 support.
+
+#### Building with MKL BLAS (Linux)
+
+If you have MKL BLAS available on the machine where you are building and running the CLI programs, you should configure them to use MKL BLAS.
+```bash
+  cmake .. -DUSE_MKL_CBLAS=on
+```
+If you do not have MKL BLAS available, `cmake` will default to Open BLAS.  In either case, for the moment, you must have at least one of Open BLAS or MKL BLAS installed.
+
+If you use the `apt` package manager you should be able to install MKL with
+```
+  % sudo apt install intel-oneapi-mkl
+```
+You can also use
+```
+apt-cache pkgnames intel | grep intel-oneapi | grep -v intel-oneapi-runtime | fgrep mkl
+```
+to see other available packages variations.
+
+#### Building with Open BLAS (Linux)
+
+To install Open BLAS, you can install one of a number of different options.  I am not sure which version offers best performance, so you may want to experiment with the `openmp` vs `pthreads` version.  Depending on the compiler used, one or the other may be used.  The Intel compilers generally provide the best `openmp` support (installing and using those is beyond the scope of this README however.)
+```
+  % apt install libopenblas64-dev
+```
+
+#### Building with MacOS
+
+If you are using MacOS, the `Accelerate` framework will automatically be selected.  You should not have to do anything yourself to use optimized BLAS with MacOS.
+
+
+
+## `ivf_flat`:  Inverted File Index with Stored Vectors
 
 ### Running `ivf_flat` with TileDB Arrays
 
@@ -231,91 +315,6 @@ For the other approaches, different parameter values may result
 in different performance.  Significant experimentation would need
 to be done to find those, however, and it isn't clear that the
 performance of `gemm` could be matched at any rate.
-
-
-
-### Building `index_ivf` and 'flat_l2'
-
-```bash
-  cd < project root >
-  mkdir build
-  cd build
-  cmake .. -DCMAKE_BUILD_TYPE=Release -DTileDB_DIR=/path/to/installed/libtiledb
-```
-**Note:** `index_ivf` and `flat` build against `libtiledb`.  You will need to point your the `TileDB_DIR` to the
-directory where `libtiledb` is installed (along with associated headers, etc) .
-
-That is, if the `libtiledb` you want to use is in `/usr/local/tiledb/lib/libtiledb.so` then you would set `TileDB_DIR` to `/usr/local/tiledb/lib/cmake`
-```
-  % cmake .. -DTileDB_DIR=/usr/local/tiledb/
-```
-**If you don't specify a value for `TileDB_DIR`** the system default will be used.  That is, you do not have to specify a value for `TileDB_DIR` if the system defaults are good enough.
-
-However `flat_l2` and `ivf_flat1 do require a fairly recent version of `libtiledb`.  If you get compilation errors along the lines of
-```
-In file included from /home/user/tiledb-vector-search/src/test/unit_sift_array.cpp:5:
-/home/user/tiledb-vector-search/src/test/../sift_array.h:67:21: error: expected ';' after expression
-    tiledb::Subarray subarray(ctx_, array_);
-                    ^
-                    ;
-/home/user/tiledb-vector-search/src/test/../sift_array.h:67:13: error: no member named 'Subarray' in namespace 'tiledb'
-    tiledb::Subarray subarray(ctx_, array_);
-    ~~~~~~~~^
-/home/user/tiledb-vector-search/src/test/../sift_array.h:68:5: error: use of undeclared identifier 'subarray'
-    subarray.set_subarray(subarray_vals);
-```
-then you likely need a more recent version of `libtiledb`.  To fix this, first try updating your instaleld version of `libtiledb` by invoking the appropriate "upgrade" or "update" command associated with your package manager (if you installed `libtiledb` using a package manager).  Otherwise, obtain an up-to-date version of `libtiledb` from the TileDB github repository at `https://github.com/TileDB-Inc/TileDB` and build and install that per the instructions there.
-
-After installing TileDB, your setting for 
-`TileDB_DIR` should be the same as the value of `CMAKE_INSTALL_PREFIX` that was used when building and installing `libtiledb`.
-That is, if you built `libtiledb` with
-```
-  % cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/tiledb
-```
-Then if you set `TileDB_DIR` to `/usr/local/tiledb`
-```
-  % cmake .. -DTileDB_DIR=/usr/local/tiledb
-```
-If you did not explicitly set `CMAKE_INSTALL_PREFIX`, you should be able to find its value in `CMakeCache.txt`.
-(And, if you used the default setting, `cmake` for TileDB-Vector-Search may find it automatically.)
-Also, the `fetch_content` call in `CMakeLists.txt` may also find the TileDB installation.
-To check if the right path will be searched, look for the output line
-```
--- TileDB include directories are <>
-```
-This will tell you the path that will be used when building `flat`.  If it isn't the path you are expecting, e.g., if it is the system defaults when you expected something else, check the path you used when invoking `cmake`.
-
-**Note:** If you build `libtiledb` yourself and are going to use S3 as a source for TileDB array input, your `libtiledb`
-should be built with S3 support.
-
-#### Building with MKL BLAS (Linux)
-
-If you have MKL BLAS available on the machine where you are building and running the CLI programs, you should configure them to use MKL BLAS.
-```bash
-  cmake .. -DUSE_MKL_CBLAS=on
-```
-If you do not have MKL BLAS available, `cmake` will default to Open BLAS.  In either case, for the moment, you must have at least one of Open BLAS or MKL BLAS installed.
-
-If you use the `apt` package manager you should be able to install MKL with
-```
-  % sudo apt install intel-oneapi-mkl
-```
-You can also use
-```
-apt-cache pkgnames intel | grep intel-oneapi | grep -v intel-oneapi-runtime | fgrep mkl
-```
-to see other available packages variations.
-
-#### Building with Open BLAS (Linux)
-
-To install Open BLAS, you can install one of a number of different options.  I am not sure which version offers best performance, so you may want to experiment with the `openmp` vs `pthreads` version.  Depending on the compiler used, one or the other may be used.  The Intel compilers generally provide the best `openmp` support (installing and using those is beyond the scope of this README however.)
-```
-  % apt install libopenblas64-dev
-```
-
-#### MacOS
-
-If you are using MacOS, the `Accelerate` framework will automatically be selected.  You should not have to do anything yourself to use optimized BLAS with MacOS.
 
 
 ## Example Datasets
