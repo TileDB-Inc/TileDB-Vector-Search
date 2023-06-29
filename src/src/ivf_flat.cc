@@ -274,20 +274,19 @@ int main(int argc, char* argv[]) {
                 nthreads);
       }
     } else if (algorithm == "dist_nuv_heap" || algorithm == "dist") {
-      return detail::ivf::
-          dist_qv_finite_ram<db_type, shuffled_ids_type>(
-              ctx,
-              part_uri,
-              centroids,
-              q,
-              indices,
-              id_uri,
-              nprobe,
-              k_nn,
-              blocksize,
-              nth,
-              nthreads,
-              num_nodes);
+      return detail::ivf::dist_qv_finite_ram<db_type, shuffled_ids_type>(
+          ctx,
+          part_uri,
+          centroids,
+          q,
+          indices,
+          id_uri,
+          nprobe,
+          k_nn,
+          blocksize,
+          nth,
+          nthreads,
+          num_nodes);
     }
   }();
 

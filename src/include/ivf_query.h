@@ -34,9 +34,9 @@
 #ifndef TDB_IVF_QUERY_H
 #define TDB_IVF_QUERY_H
 
+#include "detail/ivf/dist_qv.h"
 #include "detail/ivf/gemm.h"
 #include "detail/ivf/qv.h"
 #include "detail/ivf/vq.h"
-#include "detail/ivf/dist_qv.h"
 
 #endif  // TDB_IVF_QUERY_H

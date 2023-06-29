@@ -254,7 +254,7 @@ auto nuv_query_heap_infinite_ram(
              * For each partition, process the queries that have that
              * partition as their top centroid.
              */
-            auto &mscores = min_scores[n];
+            auto& mscores = min_scores[n];
             for (size_t partno = first_part; partno < last_part; ++partno) {
               auto start = indices[partno];
               auto stop = indices[partno + 1];
@@ -269,7 +269,6 @@ auto nuv_query_heap_infinite_ram(
                 // for (size_t k = start; k < stop; ++k) {
                 //   auto kp = k - shuffled_db.col_offset();
                 for (size_t kp = start; kp < stop; ++kp) {
-
                   auto score = L2(q_vec, shuffled_db[kp]);
 
                   // @todo any performance with apparent extra indirection?
@@ -624,7 +623,12 @@ auto nuv_query_heap_finite_ram(
       if (first_part != last_part) {
         futs.emplace_back(std::async(
             std::launch::async,
-            [&, &active_queries = active_queries, &new_indices = new_indices, n, first_part, last_part]() {
+            [&,
+             &active_queries = active_queries,
+             &new_indices = new_indices,
+             n,
+             first_part,
+             last_part]() {
               /*
                * For each partition, process the queries that have that
                * partition as their top centroid.
@@ -632,8 +636,9 @@ auto nuv_query_heap_finite_ram(
               auto& ms = min_scores[n];
               for (size_t p = first_part; p < last_part; ++p) {
                 auto partno = p + shuffled_db.col_part_offset();
-                auto start = new_indices[partno]  - shuffled_db.col_offset();
-                auto stop = new_indices[partno + 1]  - shuffled_db.col_offset();;
+                auto start = new_indices[partno] - shuffled_db.col_offset();
+                auto stop = new_indices[partno + 1] - shuffled_db.col_offset();
+                ;
 
                 /*
                  * Get the queries associated with this partition.

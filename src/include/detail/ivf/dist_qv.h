@@ -28,26 +28,25 @@
  *
  * @section DESCRIPTION
  *
- * Implementation of infrastructure for distributed queries, based on qv_finite_ram.
+ * Implementation of infrastructure for distributed queries, based on
+ * qv_finite_ram.
  */
-
 
 #ifndef TILEDB_IVF_DIST_QV_H
 #define TILEDB_IVF_DIST_QV_H
 
-#include <string>
 #include <future>
+#include <string>
 #include <vector>
 
 #include <tiledb/tiledb>
 
-#include "utils/fixed_min_queues.h"
 #include "detail/ivf/index.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "stats.h"
+#include "utils/fixed_min_queues.h"
 
 namespace detail::ivf {
-
 
 template <typename T, class shuffled_ids_type>
 auto dist_qv_finite_ram_part(
@@ -64,8 +63,10 @@ auto dist_qv_finite_ram_part(
     nthreads = std::thread::hardware_concurrency();
   }
 
-  using parts_type = typename std::remove_reference_t<decltype(active_partitions)>::value_type;
-  using indices_type = typename std::remove_reference_t<decltype(indices)>::value_type;
+  using parts_type =
+      typename std::remove_reference_t<decltype(active_partitions)>::value_type;
+  using indices_type =
+      typename std::remove_reference_t<decltype(indices)>::value_type;
 
   // OR size(active_queries)?
   size_t num_queries = size(query);
@@ -84,10 +85,11 @@ auto dist_qv_finite_ram_part(
                          indices[active_partitions[i]];
   }
 
-    auto min_scores = std::vector<std::vector<fixed_min_pair_heap<float, size_t>>> (
-        nthreads,
-        std::vector<fixed_min_pair_heap<float, size_t>>(
-            num_queries, fixed_min_pair_heap<float, size_t>(k_nn)));
+  auto min_scores =
+      std::vector<std::vector<fixed_min_pair_heap<float, size_t>>>(
+          nthreads,
+          std::vector<fixed_min_pair_heap<float, size_t>>(
+              num_queries, fixed_min_pair_heap<float, size_t>(k_nn)));
 
   assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
 
@@ -145,8 +147,8 @@ auto dist_qv_finite_ram_part(
     futs[n].get();
   }
 
-  auto min_min_scores = std::vector<fixed_min_pair_heap<float, size_t>> (
-          num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+  auto min_min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
+      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
   for (size_t j = 0; j < num_queries; ++j) {
     for (size_t n = 0; n < nthreads; ++n) {
@@ -189,27 +191,32 @@ auto dist_qv_finite_ram(
   auto num_parts = size(active_partitions);
   using parts_type = typename decltype(active_partitions)::value_type;
 
-  std::vector<fixed_min_pair_heap<float, size_t>> min_scores(num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+  std::vector<fixed_min_pair_heap<float, size_t>> min_scores(
+      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
   size_t parts_per_node = (num_parts + num_nodes - 1) / num_nodes;
 
   for (size_t node = 0; node < num_nodes; ++node) {
-    auto first_part =
-        std::min<size_t>(node * parts_per_node, num_parts);
-    auto last_part = std::min<size_t>(
-        (node + 1) * parts_per_node, num_parts);
+    auto first_part = std::min<size_t>(node * parts_per_node, num_parts);
+    auto last_part = std::min<size_t>((node + 1) * parts_per_node, num_parts);
 
     if (first_part != last_part) {
+      std::vector<parts_type> dist_partitions{
+          begin(active_partitions) + first_part,
+          begin(active_partitions) + last_part};
+      std::vector<indices_type> dist_indices{
+          begin(indices) + first_part, begin(indices) + last_part + 1};
 
-      std::vector<parts_type> dist_partitions{begin(active_partitions) + first_part, begin(active_partitions) + last_part};
-      std::vector<indices_type> dist_indices{begin(indices) + first_part, begin(indices) + last_part + 1};
-
-      auto dist_min_scores = dist_qv_finite_ram_part<T, shuffled_ids_type>(ctx, part_uri,
-                                                     dist_partitions,
-                                                     query,
-                                                     active_queries,
-                                                     indices,
-                                                     id_uri, k_nn, nthreads);
+      auto dist_min_scores = dist_qv_finite_ram_part<T, shuffled_ids_type>(
+          ctx,
+          part_uri,
+          dist_partitions,
+          query,
+          active_queries,
+          indices,
+          id_uri,
+          k_nn,
+          nthreads);
 
       for (size_t j = 0; j < num_queries; ++j) {
         for (auto&& [e0, e1] : dist_min_scores[j]) {
@@ -236,7 +243,6 @@ auto dist_qv_finite_ram(
   return top_k;
 }
 
+}  // namespace detail::ivf
 
-}
-
-#endif //TILEDB_IVF_DIST_QV_H
+#endif  // TILEDB_IVF_DIST_QV_H
