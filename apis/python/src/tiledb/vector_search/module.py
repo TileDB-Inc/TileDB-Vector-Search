@@ -226,6 +226,13 @@ def query_kmeans(
     else:
         raise TypeError("Unknown type!")
 
+def partition_ivf_index(centroids, query, nprobe=1, nthreads=0):
+    if centroids.dtype == np.float32:
+        return partition_ivf_index_f32(centroids, query, nprobe, nthreads)
+    elif centroids.dtype == np.uint8:
+        return partition_ivf_index_u8(centroids, query, nprobe, nthreads)
+    else:
+        raise TypeError("Unsupported type!")
 
 def validate_top_k(results: np.ndarray, ground_truth: np.ndarray):
     if results.dtype == np.uint64:
