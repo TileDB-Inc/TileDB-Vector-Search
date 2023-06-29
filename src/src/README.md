@@ -37,7 +37,7 @@ In file included from /home/user/tiledb-vector-search/src/test/unit_sift_array.c
 /home/user/tiledb-vector-search/src/test/../sift_array.h:68:5: error: use of undeclared identifier 'subarray'
     subarray.set_subarray(subarray_vals);
 ```
-then you likely need a more recent version of `libtiledb`.  To fix this, first try updating your installed version of `libtiledb` by invoking the appropriate "upgrade" or "update" command associated with your package manager (if you installed `libtiledb` using a package manager).  Otherwise, obtain an up-to-date version of `libtiledb` from the TileDB github repository at `https://github.com/TileDB-Inc/TileDB` and build and install it per the instructions there.
+then you likely need a more recent version of `libtiledb`.  To fix this, first try updating your installed version of `libtiledb` by invoking the appropriate "upgrade" or "update" command associated with your package manager (if you installed `libtiledb` using a package manager).  Otherwise, obtain an up-to-date version of `libtiledb` from the TileDB GitHub repository at `https://github.com/TileDB-Inc/TileDB` and build and install it per the instructions there.
 
 After installing TileDB, your setting for
 `TileDB_DIR` should be the same as the value of `CMAKE_INSTALL_PREFIX` that was used when building and installing `libtiledb`.
@@ -203,7 +203,7 @@ automatically set the various options (notably the URIs) for `ivf_flat` and invo
 some customization you may need to do to make the scripts work in your local environment.  The README and comments
 in the scripts are intended to help you do that.
 
-See the section [Benchmarking](#benchmarking) below on generating your own benchmark results.
+See the section [Benchmarking](#benchmarking-with-provided-examples) below on generating your own benchmark results.
 
 ### Recommendations
 
