@@ -206,18 +206,12 @@ static void declarePartitionedMatrix(py::module& mod,
 
   // TODO auto-namify
   PyTMatrix cls(mod, (name + suffix).c_str(), py::buffer_protocol());
-
-  cls.def(py::init< const Ctx&,
+  cls.def(py::init< const tiledb::Context&,
                      const std::string&,
-                     std::vector<uint64_t>,
-                     std::vector<uint64_t>,
-                     const std::string&,
-                     size_t >,
+                     std::vector<uint64_t>&,
+                     std::vector<uint64_t>&,
+                     const std::string&>(),
                      py::keep_alive<1,2>());
-
-  if constexpr (std::is_same<P, tdbColMajorMatrix<T>>::value) {
-    cls.def("load", &TMatrix::load);
-  }
 }
 
 
