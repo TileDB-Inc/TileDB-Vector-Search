@@ -1,7 +1,6 @@
 import os
 
 import numpy as np
-
 from tiledb.vector_search.module import *
 
 

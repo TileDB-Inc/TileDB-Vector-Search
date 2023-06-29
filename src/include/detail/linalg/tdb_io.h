@@ -40,18 +40,13 @@
 #include "utils/logging.h"
 #include "utils/timer.h"
 
-/**
- * Write the contents of a Matrix to a TileDB array.
- */
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-void write_matrix(
+void create_matrix(
     const tiledb::Context& ctx,
     const Matrix<T, LayoutPolicy, I>& A,
     const std::string& uri) {
-  scoped_timer _{tdb_func__ + " " + std::string{uri}};
-
   if (global_debug) {
-    std::cerr << "# Writing Matrix: " << uri << std::endl;
+    std::cerr << "# Creating Matrix: " << uri << std::endl;
   }
 
   // @todo: make this a parameter
@@ -79,9 +74,30 @@ void write_matrix(
   schema.add_attribute(tiledb::Attribute::create<T>(ctx, "values"));
 
   tiledb::Array::create(uri, schema);
+}
+/**
+ * Write the contents of a Matrix to a TileDB array.
+ */
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+void write_matrix(
+    const tiledb::Context& ctx,
+    const Matrix<T, LayoutPolicy, I>& A,
+    const std::string& uri,
+    size_t start_pos = 0,
+    bool create = true) {
+  scoped_timer _{tdb_func__ + " " + std::string{uri}};
+  if (global_debug) {
+    std::cerr << "# Writing Matrix: " << uri << std::endl;
+  }
 
+  if (create) {
+    create_matrix<T, LayoutPolicy, I>(ctx, A, uri);
+  }
   std::vector<int32_t> subarray_vals{
-      0, (int)A.num_rows() - 1, 0, (int)A.num_cols() - 1};
+      0,
+      (int)A.num_rows() - 1,
+      (int)start_pos,
+      (int)start_pos + (int)A.num_cols() - 1};
 
   // Open array for writing
   tiledb::Array array =
@@ -91,27 +107,25 @@ void write_matrix(
   subarray.set_subarray(subarray_vals);
 
   tiledb::Query query(ctx, array);
-
+  auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
+                   TILEDB_ROW_MAJOR :
+                   TILEDB_COL_MAJOR;
   query.set_layout(order)
       .set_data_buffer(
-          "values", &A(0, 0), (int)A.num_rows() * (int)A.num_cols())
+          "values", &A(0, 0), (uint64_t)A.num_rows() * (uint64_t)A.num_cols())
       .set_subarray(subarray);
   tiledb_helpers::submit_query(tdb_func__, uri, query);
+
+  assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
   array.close();
 }
 
-/**
- * Write the contents of a std::vector to a TileDB array.
- * @todo change the naming of this function to something more appropriate
- */
 template <class T>
-void write_vector(
+void create_vector(
     const tiledb::Context& ctx, std::vector<T>& v, const std::string& uri) {
-  scoped_timer _{tdb_func__ + " " + std::string{uri}};
-
   if (global_debug) {
-    std::cerr << "# Writing std::vector: " << uri << std::endl;
+    std::cerr << "# Creating std::vector: " << uri << std::endl;
   }
 
   size_t num_parts = 10;
@@ -127,8 +141,31 @@ void write_vector(
   schema.add_attribute(tiledb::Attribute::create<T>(ctx, "values"));
 
   tiledb::Array::create(uri, schema);
+}
+
+/**
+ * Write the contents of a std::vector to a TileDB array.
+ * @todo change the naming of this function to something more appropriate
+ */
+template <class T>
+void write_vector(
+    const tiledb::Context& ctx,
+    std::vector<T>& v,
+    const std::string& uri,
+    size_t start_pos = 0,
+    bool create = true) {
+  scoped_timer _{tdb_func__ + " " + std::string{uri}};
+
+  if (global_debug) {
+    std::cerr << "# Writing std::vector: " << uri << std::endl;
+  }
+
+  if (create) {
+    create_vector<T>(ctx, v, uri);
+  }
   // Set the subarray to write into
-  std::vector<int32_t> subarray_vals{0, (int)size(v) - 1};
+  std::vector<int32_t> subarray_vals{
+      (int)start_pos, (int)start_pos + (int)size(v) - 1};
 
   // Open array for writing
   tiledb::Array array =
@@ -141,6 +178,9 @@ void write_vector(
   query.set_layout(TILEDB_ROW_MAJOR)
       .set_data_buffer("values", v)
       .set_subarray(subarray);
+
+  query.submit();
+  assert(tiledb::Query::Status::COMPLETE == query.query_status());
   tiledb_helpers::submit_query(tdb_func__, uri, query);
 
   array.close();

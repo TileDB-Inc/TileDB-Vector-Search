@@ -74,16 +74,16 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   log_timer constructor_timer{"tdbBlockedMatrix constructor"};
 
-  std::string uri_;
   std::reference_wrapper<const tiledb::Context> ctx_;
+  std::string uri_;
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
   size_t num_array_rows_{0};
   size_t num_array_cols_{0};
 
-  // std::tuple<index_type, index_type> row_view_;
+  std::tuple<index_type, index_type> row_view_;
   std::tuple<index_type, index_type> col_view_;
-  // index_type row_offset_{0};
+  index_type row_offset_{0};
   index_type col_offset_{0};
 
   // The number of columns loaded into memory.  Except for the last block,
@@ -131,8 +131,8 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       const std::string& uri,
       size_t upper_bound)  // noexcept
       requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : uri_{uri}
-      , ctx_{ctx}
+      : ctx_{ctx}
+      , uri_{uri}
       , array_{tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ)}
       , schema_{array_.schema()} {
     constructor_timer.stop();
@@ -238,7 +238,127 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   index_type col_offset() const {
     return col_offset_;
   }
-};
+
+  /**
+   * @brief General constructor.  Read a view of the array, delimited by the
+   * given row and column indices.
+   *
+   * @param uri
+   * @param row_begin
+   * @param row_end
+   * @param col_begin
+   * @param col_end
+   *
+   * @todo Make this compatible with various schemas we are using
+   */
+  tdbBlockedMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t row_begin,
+      size_t row_end,
+      size_t col_begin,
+      size_t col_end)  // noexcept
+      : ctx_{ctx}
+      , uri_{uri}
+      , array_{tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ)}
+      , schema_{array_.schema()} {
+    constructor_timer.stop();
+    scoped_timer _{tdb_func__ + uri};
+
+    auto cell_order = schema_.cell_order();
+    auto tile_order = schema_.tile_order();
+
+    // @todo Maybe throw an exception here?  Have to properly handle since this
+    // is a constructor.
+    assert(cell_order == tile_order);
+
+    const size_t attr_idx = 0;
+
+    auto domain_{schema_.domain()};
+
+    auto array_rows_{domain_.dimension(0)};
+    auto array_cols_{domain_.dimension(1)};
+
+    num_array_rows_ =
+        (array_rows_.template domain<row_domain_type>().second -
+         array_rows_.template domain<row_domain_type>().first + 1);
+    num_array_cols_ =
+        (array_cols_.template domain<col_domain_type>().second -
+         array_cols_.template domain<col_domain_type>().first + 1);
+
+    if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
+        (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {
+      std::swap(row_begin, col_begin);
+      std::swap(row_end, col_end);
+    }
+
+    if (row_begin == 0 && row_end == 0) {
+      row_end = num_array_rows_;
+    }
+    if (col_begin == 0 && col_end == 0) {
+      col_end = num_array_cols_;
+    }
+
+    std::get<0>(row_view_) = row_begin;
+    std::get<1>(row_view_) = row_end;
+    std::get<0>(col_view_) = col_begin;
+    std::get<1>(col_view_) = col_end;
+    row_offset_ = row_begin;
+    col_offset_ = col_begin;
+
+    auto num_rows = row_end - row_begin;
+    auto num_cols = col_end - col_begin;
+
+#ifndef __APPLE__
+    auto data_ = std::make_unique_for_overwrite<T[]>(num_rows * num_cols);
+#else
+    // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
+    auto data_ = std::unique_ptr<T[]>(new T[num_rows * num_cols]);
+#endif
+
+    auto attr_num{schema_.attribute_num()};
+    auto attr = schema_.attribute(attr_idx);
+
+    std::string attr_name = attr.name();
+    tiledb_datatype_t attr_type = attr.type();
+    if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
+      throw std::runtime_error(
+          "Attribute type mismatch: " + std::to_string(attr_type) + " != " +
+          std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
+    }
+
+    // Create a subarray that reads the array up to the specified subset.
+    std::vector<int32_t> subarray_vals = {
+        (int32_t)row_begin,
+        (int32_t)row_end - 1,
+        (int32_t)col_begin,
+        (int32_t)col_end - 1};
+    tiledb::Subarray subarray(ctx_, array_);
+    subarray.set_subarray(subarray_vals);
+
+    auto layout_order = cell_order;
+
+    tiledb::Query query(ctx_, array_);
+
+    query.set_subarray(subarray)
+        .set_layout(layout_order)
+        .set_data_buffer(attr_name, data_.get(), num_rows * num_cols);
+    tiledb_helpers::submit_query(tdb_func__, uri, query);
+    _memory_data.insert_entry(tdb_func__, num_rows * num_cols * sizeof(T));
+
+    // assert(tiledb::Query::Status::COMPLETE == query.query_status());
+    if (tiledb::Query::Status::COMPLETE != query.query_status()) {
+      throw std::runtime_error("Query status is not complete -- fix me");
+    }
+
+    if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
+        (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {
+      std::swap(num_rows, num_cols);
+    }
+
+    Base::operator=(Base{std::move(data_), num_rows, num_cols});
+  }
+}; // tdbBlockedMatrix
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
