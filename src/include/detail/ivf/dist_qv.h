@@ -48,6 +48,16 @@
 
 namespace detail::ivf {
 
+
+/**
+ * Function to be run on a distributed compute node in a TileDB task graph.
+ * @param active_partitions -- A vector of which partitions in the part_uri array to query against
+ * @param query -- The full set of query vectors
+ * @param active_queries -- A vector of which query vectors to use
+ * @param indices -- The full set of indices
+ * @param nthreads -- The number of threads to be executed on the compute node
+ * @return
+ */
 template <typename T, class shuffled_ids_type>
 auto dist_qv_finite_ram_part(
     tiledb::Context& ctx,
@@ -185,6 +195,10 @@ auto dist_qv_finite_ram(
 
   auto num_queries = size(query);
 
+  /*
+   * Select the relevant partitions from the array, along with the queries
+   * that are in turn relevant to each partition.
+   */
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, indices, query, nprobe, nthreads);
 
@@ -196,6 +210,9 @@ auto dist_qv_finite_ram(
 
   size_t parts_per_node = (num_parts + num_nodes - 1) / num_nodes;
 
+  /*
+   * "Distribute" the work to compute nodes.
+   */
   for (size_t node = 0; node < num_nodes; ++node) {
     auto first_part = std::min<size_t>(node * parts_per_node, num_parts);
     auto last_part = std::min<size_t>((node + 1) * parts_per_node, num_parts);
@@ -207,6 +224,9 @@ auto dist_qv_finite_ram(
       std::vector<indices_type> dist_indices{
           begin(indices) + first_part, begin(indices) + last_part + 1};
 
+      /*
+       * Each compute node returns a min_heap of its own min_scores
+       */
       auto dist_min_scores = dist_qv_finite_ram_part<T, shuffled_ids_type>(
           ctx,
           part_uri,
@@ -218,6 +238,9 @@ auto dist_qv_finite_ram(
           k_nn,
           nthreads);
 
+      /*
+       * Merge the min_scores from each compute node.
+       */
       for (size_t j = 0; j < num_queries; ++j) {
         for (auto&& [e0, e1] : dist_min_scores[j]) {
           min_scores[j].insert(e0, e1);
@@ -226,6 +249,9 @@ auto dist_qv_finite_ram(
     }
   }
 
+  /*
+   * Now create the top_k matrix.
+   */
   ColMajorMatrix<size_t> top_k(k_nn, num_queries);
 
   // get_top_k_from_heap(min_scores, top_k);
