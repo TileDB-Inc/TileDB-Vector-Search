@@ -187,6 +187,10 @@ static void declareColMajorMatrixSubclass(py::module& mod,
   // TODO auto-namify
   PyTMatrix cls(mod, (name + suffix).c_str(), py::buffer_protocol());
   cls.def(py::init<const Ctx&, std::string, size_t>(),  py::keep_alive<1,2>());
+
+  if constexpr (std::is_same<P, tdbColMajorMatrix<T>>::value) {
+    cls.def("load", &TMatrix::load);
+  }
 }
 
 template <typename T>
@@ -277,22 +281,22 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   /* Query API */
 
   m.def("query_vq_f32",
-        [](const ColMajorMatrix<float>& data,
-           const ColMajorMatrix<float>& query_vectors,
+        [](ColMajorMatrix<float>& data,
+           ColMajorMatrix<float>& query_vectors,
            int k,
            bool nth,
-           size_t nthreads) -> ColMajorMatrix<uint64_t> {
-          auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
+           size_t nthreads) -> ColMajorMatrix<size_t> {
+          auto r = detail::flat::vq_query_nth(data, query_vectors, k, true, nthreads);
           return r;
         });
 
   m.def("query_vq_u8",
-        [](const ColMajorMatrix<uint8_t>& data,
-           const ColMajorMatrix<float>& query_vectors,
+        [](tdbColMajorMatrix<uint8_t>& data,
+           ColMajorMatrix<float>& query_vectors,
            int k,
            bool nth,
-           size_t nthreads) -> ColMajorMatrix<uint64_t> {
-          auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
+           size_t nthreads) -> ColMajorMatrix<size_t> {
+          auto r = detail::flat::vq_query_nth(data, query_vectors, k, true, nthreads);
           return r;
         });
 

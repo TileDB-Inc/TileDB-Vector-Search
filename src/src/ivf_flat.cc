@@ -151,9 +151,8 @@ int main(int argc, char* argv[]) {
 
   auto part_uri = args["--parts_uri"].asString();
 
-
   std::string index_uri;
-  bool size_index {false};
+  bool size_index{false};
   if (args["--index_uri"]) {
     if (args["--sizes_uri"]) {
       std::cerr << "Cannot specify both --index_uri and --sizes_uri\n";
@@ -195,6 +194,7 @@ int main(int argc, char* argv[]) {
     }
 
     auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
+    centroids.load();
     debug_matrix(centroids, "centroids");
 
     // Find the top k nearest neighbors accelerated by kmeans and do some
@@ -214,12 +214,13 @@ int main(int argc, char* argv[]) {
 
     auto q =
         tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri, nqueries);
+    q.load();
     debug_matrix(q, "q");
 
     auto top_k = [&]() {
       if (finite) {
         return detail::ivf::
-            qv_query_heap_finite_ram<db_type, shuffled_ids_type>(
+            nuv_query_heap_finite_ram<db_type, shuffled_ids_type>(
                 ctx,
                 part_uri,
                 centroids,
@@ -233,7 +234,7 @@ int main(int argc, char* argv[]) {
                 nthreads);
       } else {
         return detail::ivf::
-            qv_query_heap_infinite_ram<db_type, shuffled_ids_type>(
+            nuv_query_heap_infinite_ram<db_type, shuffled_ids_type>(
                 ctx,
                 part_uri,
                 centroids,
@@ -255,6 +256,7 @@ int main(int argc, char* argv[]) {
 
       auto groundtruth =
           tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
+      groundtruth.load();
 
       if (global_debug) {
         std::cout << std::endl;
@@ -271,11 +273,10 @@ int main(int argc, char* argv[]) {
 
       size_t total_intersected{0};
       size_t total_groundtruth = top_k.num_cols() * top_k.num_rows();
+
       for (size_t i = 0; i < top_k.num_cols(); ++i) {
         std::sort(begin(top_k[i]), end(top_k[i]));
         std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
-        debug_matrix(top_k, "top_k");
-        debug_slice(top_k, "top_k");
         total_intersected += std::set_intersection(
             begin(top_k[i]),
             end(top_k[i]),

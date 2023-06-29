@@ -45,9 +45,9 @@ TEST_CASE("logging: test test", "[logging]") {
 }
 
 TEST_CASE("logging: test", "[logging]") {
- log_timer a("test");
+  log_timer a("test");
 
- std::this_thread::sleep_for(500ms);
+  std::this_thread::sleep_for(500ms);
 
   a.stop();
 
@@ -62,9 +62,7 @@ TEST_CASE("logging: test", "[logging]") {
   CHECK((f <= 1010 && f >= 990));
 }
 
-
 TEST_CASE("logging: noisy test", "[logging]") {
-
   log_timer a("noisy_test", true);
 
   std::this_thread::sleep_for(500ms);
@@ -82,10 +80,7 @@ TEST_CASE("logging: noisy test", "[logging]") {
   CHECK((f <= 1010 && f >= 990));
 }
 
-
-
 TEST_CASE("logging: interval test", "[logging]") {
-
   log_timer a("interval_test", true);
 
   std::this_thread::sleep_for(500ms);
@@ -140,7 +135,6 @@ TEST_CASE("logging: scoped_timer stop test", "[logging]") {
 }
 
 TEST_CASE("logging: ordering", "[logging]") {
-
   auto g = log_timer{"g"};
   auto f = log_timer{"f"};
   auto i = log_timer{"i"};
@@ -181,7 +175,6 @@ TEST_CASE("logging: ordering", "[logging]") {
   CHECK((g_t > 470 && g_t < 530));
   CHECK((f_t > 470 && f_t < 530));
 }
-
 
 TEST_CASE("logging: memory", "[logging]") {
   _memory_data.insert_entry(tdb_func__, 8675309);

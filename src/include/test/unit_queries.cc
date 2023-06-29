@@ -81,8 +81,8 @@ TEST_CASE("test queries", "[queries]") {
     }
   }
 
-#if 1
-  SECTION("vq_query_heap") {  // FIXME: this is broken
+#ifdef TDB_MATRIX_LOAD
+  SECTION("vq_query_heap") {
     auto top_k = vq_query_heap(db_mat, q_mat, k, nthreads);
     CHECK(top_k.num_rows() == k);
     CHECK(top_k.num_cols() == num_queries);

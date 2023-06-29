@@ -65,7 +65,7 @@ auto qv_query_nth(
     const DB& db, const Q& q, int k, bool nth, unsigned int nthreads) {
   scoped_timer _{tdb_func__};
 
-  ColMajorMatrix<uint64_t> top_k(k, q.num_cols());
+  ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
   stdx::range_for_each(
@@ -101,7 +101,7 @@ auto qv_query_heap(const DB& db, const Q& q, size_t k, unsigned nthreads) {
 
   using element = std::pair<float, int>;
 
-  ColMajorMatrix<uint64_t> top_k(k, q.num_cols());
+  ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
   // Have to do explicit asynchronous threading here, as the current parallel
   // algorithms have iterator-based interaces, and the `Matrix` class does not
@@ -156,7 +156,7 @@ auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
   scoped_timer _{tdb_func__};
 
   // Just need a single vector
-  std::vector<unsigned> top_k(q.num_cols());
+  std::vector<size_t> top_k(q.num_cols());
 
   // Again, doing the parallelization by hand here....
   size_t size_db = db.num_cols();
@@ -178,7 +178,7 @@ auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
               float min_score = std::numeric_limits<float>::max();
               size_t idx = 0;
 
-              for (int i = 0; i < size_db; ++i) {
+              for (size_t i = 0; i < size_db; ++i) {
                 auto score = L2(q[j], db[i]);
                 if (score < min_score) {
                   min_score = score;

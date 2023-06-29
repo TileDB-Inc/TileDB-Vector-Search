@@ -137,9 +137,9 @@ auto mat_col_sum(
   auto num_cols = m.num_cols();
   auto num_rows = m.num_rows();
 
-  for (int j = 0; j < num_cols; ++j) {
+  for (size_t j = 0; j < num_cols; ++j) {
     decltype(v[0]) vj = v[j];
-    for (int i = 0; i < num_rows; ++i) {
+    for (size_t i = 0; i < num_rows; ++i) {
       vj += f(m(i, j));
     }
     v[j] = vj;
@@ -238,7 +238,7 @@ auto get_top_k(const S& scores, int k, bool nth, int nthreads) {
 
   auto num_queries = scores.num_cols();
 
-  auto top_k = ColMajorMatrix<uint64_t>(k, num_queries);
+  auto top_k = ColMajorMatrix<size_t>(k, num_queries);
 
   int q_block_size = (num_queries + nthreads - 1) / nthreads;
   std::vector<std::future<void>> futs;

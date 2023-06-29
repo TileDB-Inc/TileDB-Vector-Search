@@ -37,6 +37,7 @@
 #define TILEDB_MATRIX_H
 
 #include <cstddef>
+#include <initializer_list>
 #include <iostream>
 #include "mdspan/mdspan.hpp"
 
@@ -71,8 +72,8 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using view_type = Matrix;
 
  protected:
-  size_type nrows_{0};
-  size_type ncols_{0};
+  size_type num_rows_{0};
+  size_type num_cols_{0};
 
   // private:
   std::unique_ptr<T[]> storage_;
@@ -84,10 +85,10 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       size_type nrows,
       size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
-      : nrows_(nrows)
-      , ncols_(ncols)
-      , storage_{new T[nrows_ * ncols_]} {
-    Base::operator=(Base{storage_.get(), nrows_, ncols_});
+      : num_rows_(nrows)
+      , num_cols_(ncols)
+      , storage_{new T[num_rows_ * num_cols_]} {
+    Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
   }
 
   Matrix(
@@ -95,24 +96,38 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       size_type nrows,
       size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
-      : nrows_(nrows)
-      , ncols_(ncols)
+      : num_rows_(nrows)
+      , num_cols_(ncols)
       , storage_{std::move(storage)} {
-    Base::operator=(Base{storage_.get(), nrows_, ncols_});
+    Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
   }
 
   Matrix(Matrix&& rhs) noexcept
-      : nrows_{rhs.nrows_}
-      , ncols_{rhs.ncols_}
+      : num_rows_{rhs.num_rows_}
+      , num_cols_{rhs.num_cols_}
       , storage_{std::move(rhs.storage_)} {
-    Base::operator=(Base{storage_.get(), nrows_, ncols_});
+    Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
+  }
+
+  /**
+   * Initializer list constructor.  Useful for testing and for examples.
+   */
+  Matrix(std::initializer_list<std::initializer_list<T>> list) noexcept
+      : num_rows_{list.size()}
+      , num_cols_{list.begin()->size()}
+      , storage_{new T[num_rows_ * num_cols_]} {
+    Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
+    auto it = list.begin();
+    for (size_type i = 0; i < num_rows_; ++i, ++it) {
+      std::copy(it->begin(), it->end(), (*this)[i].begin());
+    }
   }
 
   auto& operator=(Matrix&& rhs) noexcept {
-    nrows_ = rhs.nrows_;
-    ncols_ = rhs.ncols_;
+    num_rows_ = rhs.num_rows_;
+    num_cols_ = rhs.num_cols_;
     storage_ = std::move(rhs.storage_);
-    Base::operator=(Base{storage_.get(), nrows_, ncols_});
+    Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
     return *this;
   }
 
@@ -125,26 +140,26 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   }
 
   auto raveled() {
-    return std::span(storage_.get(), nrows_ * ncols_);
+    return std::span(storage_.get(), num_rows_ * num_cols_);
   }
 
   auto raveled() const {
-    return std::span(storage_.get(), nrows_ * ncols_);
+    return std::span(storage_.get(), num_rows_ * num_cols_);
   }
 
   auto operator[](index_type i) {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
-      return std::span(&Base::operator()(i, 0), ncols_);
+      return std::span(&Base::operator()(i, 0), num_cols_);
     } else {
-      return std::span(&Base::operator()(0, i), nrows_);
+      return std::span(&Base::operator()(0, i), num_rows_);
     }
   }
 
   auto operator[](index_type i) const {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
-      return std::span(&Base::operator()(i, 0), ncols_);
+      return std::span(&Base::operator()(i, 0), num_cols_);
     } else {
-      return std::span(&Base::operator()(0, i), nrows_);
+      return std::span(&Base::operator()(0, i), num_rows_);
     }
   }
 
@@ -162,57 +177,15 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   }
 
   auto num_rows() const noexcept {
-    return nrows_;
+    return num_rows_;
   }
 
   auto num_cols() const noexcept {
-    return ncols_;
+    return num_cols_;
   }
-
-  constexpr auto advance() const noexcept {
-    return false;
-  }
-
-#if 0
-  void advance_async() const noexcept {
-    fut_ = std::async(std::launch::async, []() { return false; });
-  }
-
-  bool advance_wait() {
-    return fut_.get();
-  }
-#else
-  void advance_async() const noexcept {
-  }
-
-  constexpr static bool advance_wait() {
-    return false;
-  }
-
-#endif
 
   constexpr auto offset() const noexcept {
     return 0UL;
-  }
-
-  bool blocked_{false};
-
-  bool set_blocked() noexcept {
-    return (blocked_ = true);
-  }
-
-  inline bool is_blocked() const noexcept {
-    return blocked_;
-  }
-
-  bool async_{false};
-
-  bool set_async() noexcept {
-    return (async_ = true);
-  }
-
-  inline bool is_async() noexcept {
-    return async_;
   }
 };
 

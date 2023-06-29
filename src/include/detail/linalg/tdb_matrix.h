@@ -54,7 +54,7 @@
  * creates them by reading from TileDB.
  */
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
+class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   using Base = Matrix<T, LayoutPolicy, I>;
   using Base::Base;
 
@@ -69,13 +69,15 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
  private:
-  log_timer constructor_timer{"tdbMatrix constructor"};
+  using row_domain_type = int32_t;
+  using col_domain_type = int32_t;
+
+  log_timer constructor_timer{"tdbBlockedMatrix constructor"};
 
   std::reference_wrapper<const tiledb::Context> ctx_;
   std::string uri_;
   tiledb::Array array_;
   tiledb::ArraySchema schema_;
-  std::unique_ptr<T[]> backing_data_;
   size_t num_array_rows_{0};
   size_t num_array_cols_{0};
 
@@ -84,96 +86,157 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
   index_type row_offset_{0};
   index_type col_offset_{0};
 
-  std::future<bool> fut_;
-  size_t pending_row_offset{0};
-  size_t pending_col_offset{0};
+  // The number of columns loaded into memory.  Except for the last block,
+  // this is equal to `blocksize_`.
+  index_type num_cols_{0};
+
+  // How many columns to load at a time
+  index_type blocksize_{0};
+
+  // For future asynchronous loads
+  // std::unique_ptr<T[]> backing_data_;
+  // std::future<bool> fut_;
+  // size_t pending_row_offset{0};
+  // size_t pending_col_offset{0};
 
  public:
-  /**
-   * @brief Construct a new tdbMatrix object, limited to `num_elts` vectors.
-   * In this case, the `Matrix` is row-major, so the number of vectors is
-   * the number of rows.
-   *
-   * @param ctx The TileDB context to use.
-   * @param uri URI of the TileDB array to read.
-   * @param num_elts Number of vectors to read from the array.
-   */
-  tdbMatrix(
-      const tiledb::Context& ctx,
-      const std::string& uri,
-      size_t num_elts) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-      : tdbMatrix(ctx, uri, num_elts, 0) {
+  ~tdbBlockedMatrix() noexcept {
+    array_.close();
   }
 
   /**
-   * @brief Construct a new tdbMatrix object, limited to `num_elts` vectors.
-   * In this case, the `Matrix` is column-major, so the number of vectors is
-   * the number of columns.
+   * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
+   * vectors. In this case, the `Matrix` is row-major, so the number of vectors
+   * is the number of rows.
    *
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
-   * @param num_elts Number of vectors to read from the array.
    */
-  tdbMatrix(
-      const tiledb::Context& ctx,
-      const std::string& uri,
-      size_t num_elts) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : tdbMatrix(ctx, uri, 0, num_elts) {
+  tdbBlockedMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : tdbBlockedMatrix(ctx, uri, 0) {
   }
 
   /**
-   * @brief Construct a new tdbMatrix object, reading all of the vectors in
-   * the array.
+   * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
+   * vectors. In this case, the `Matrix` is column-major, so the number of
+   * vectors is the number of columns.
    *
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
+   * @param upper_bound The maximum number of vectors to read.
    */
-  explicit tdbMatrix(
-      const tiledb::Context& ctx, const std::string& uri) noexcept
-      // requires (std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : tdbMatrix(ctx, uri, 0, 0) {
-    if (global_debug) {
-      std::cerr << "# tdbMatrix constructor: " << uri << std::endl;
+  tdbBlockedMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t upper_bound)  // noexcept
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : ctx_{ctx}
+      , uri_{uri}
+      , array_{tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ)}
+      , schema_{array_.schema()} {
+    constructor_timer.stop();
+    scoped_timer _{tdb_func__ + " " + uri};
+
+    auto cell_order = schema_.cell_order();
+    auto tile_order = schema_.tile_order();
+
+    // @todo Maybe throw an exception here?  Have to properly handle since this
+    // is a constructor.
+    assert(cell_order == tile_order);
+
+    const size_t attr_idx = 0;
+
+    auto domain_{schema_.domain()};
+
+    auto array_rows_{domain_.dimension(0)};
+    auto array_cols_{domain_.dimension(1)};
+
+    num_array_rows_ =
+        (array_rows_.template domain<row_domain_type>().second -
+         array_rows_.template domain<row_domain_type>().first + 1);
+    num_array_cols_ =
+        (array_cols_.template domain<col_domain_type>().second -
+         array_cols_.template domain<col_domain_type>().first + 1);
+
+    if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
+        (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {
+      throw std::runtime_error("Cell order and matrix order must match");
     }
+
+    size_t dimension = num_array_rows_;
+
+    if (upper_bound == 0 || upper_bound > num_array_cols_) {
+      blocksize_ = num_array_cols_;
+    } else {
+      blocksize_ = upper_bound;
+    }
+
+#ifndef __APPLE__
+    auto data_ = std::make_unique_for_overwrite<T[]>(dimension * blocksize_);
+#else
+    // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
+    auto data_ = std::unique_ptr<T[]>(new T[dimension * blocksize_]);
+#endif
+
+    Base::operator=(Base{std::move(data_), dimension, blocksize_});
   }
 
-  /**
-   * @brief Construct a new tdbMatrix object, reading a subset of the vectors
-   * and a subset of the elements in each vector.
-   *
-   * @param ctx
-   * @param uri
-   * @param num_rows
-   * @param num_cols
-   */
-  tdbMatrix(
-      const tiledb::Context& ctx,
-      const std::string& uri,
-      size_t num_rows,
-      size_t num_cols) noexcept
-      : tdbMatrix(ctx, uri, 0, num_rows, 0, num_cols) {
+  // @todo Allow specification of how many columns to advance by
+  bool load() {
+    scoped_timer _{tdb_func__ + " " + uri_};
+
+    const size_t attr_idx{0};
+    auto attr = schema_.attribute(attr_idx);
+
+    std::string attr_name = attr.name();
+    tiledb_datatype_t attr_type = attr.type();
+    if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
+      throw std::runtime_error(
+          "Attribute type mismatch: " + std::to_string(attr_type) + " != " +
+          std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
+    }
+
+    auto dimension = num_array_rows_;
+    auto num_end_elts =
+        std::min(blocksize_, num_array_cols_ - std::get<1>(col_view_));
+
+    std::get<0>(col_view_) = std::get<1>(col_view_);
+    std::get<1>(col_view_) += num_end_elts;
+    col_offset_ = std::get<0>(col_view_);
+
+    num_cols_ = std::get<1>(col_view_) - std::get<0>(col_view_);
+    if (num_cols_ == 0) {
+      return false;
+    }
+
+    assert(std::get<1>(col_view_) <= num_array_cols_);
+
+    // Create a subarray for the next block of columns
+    tiledb::Subarray subarray(ctx_, array_);
+    subarray.add_range(0, 0, (int)dimension - 1);
+    subarray.add_range(
+        1, (int)std::get<0>(col_view_), (int)std::get<1>(col_view_) - 1);
+
+    auto layout_order = schema_.cell_order();
+
+    // Create a query
+    tiledb::Query query(ctx_, array_);
+    query.set_subarray(subarray)
+        .set_layout(layout_order)
+        .set_data_buffer(attr_name, this->data(), num_cols_ * dimension);
+    tiledb_helpers::submit_query(tdb_func__, uri_, query);
+    _memory_data.insert_entry(tdb_func__, num_cols_ * dimension * sizeof(T));
+
+    if (tiledb::Query::Status::COMPLETE != query.query_status()) {
+      throw std::runtime_error("Query status is not complete -- fix me");
+    }
+
+    return true;
   }
 
-  /**
-   * @brief "Slice" interface.
-   * @param ctx The TileDB context to use.
-   * @param uri
-   * @param rows pair of row indices indicating begin and end of view
-   * @param cols pair of column indices indicating begin and end of view
-   */
-  tdbMatrix(
-      const tiledb::Context& ctx,
-      const std::string& uri,
-      std::tuple<size_t, size_t> rows,
-      std::tuple<size_t, size_t> cols) noexcept
-      : tdbMatrix(
-            uri,
-            std::get<0>(rows),
-            std::get<1>(rows),
-            std::get<0>(cols),
-            std::get<1>(cols)) {
+  index_type col_offset() const {
+    return col_offset_;
   }
 
   /**
@@ -188,7 +251,7 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
    *
    * @todo Make this compatible with various schemas we are using
    */
-  tdbMatrix(
+  tdbBlockedMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
       size_t row_begin,
@@ -295,324 +358,64 @@ class tdbMatrix : public Matrix<T, LayoutPolicy, I> {
 
     Base::operator=(Base{std::move(data_), num_rows, num_cols});
   }
+}; // tdbBlockedMatrix
+
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
+  using Base = tdbBlockedMatrix<T, LayoutPolicy, I>;
+  using Base::Base;
 
  public:
+  tdbPreLoadMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : Base(ctx, uri, 0) {
+    Base::load();
+  }
+
   /**
-   * Gather pieces of a partitioned array into a single array (along with the
-   * vector ids into a corresponding 1D array)
+   * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
+   * vectors. In this case, the `Matrix` is column-major, so the number of
+   * vectors is the number of columns.
+   *
+   * @param ctx The TileDB context to use.
+   * @param uri URI of the TileDB array to read.
+   * @param upper_bound The maximum number of vectors to read.
    */
-  tdbMatrix(
-      const std::string& uri,
-      std::vector<uint64_t>& indices,
-      const std::vector<size_t>& top_top_k,
-      const std::string& id_uri,
-      std::vector<uint64_t>& shuffled_ids,
-      size_t nthreads)
-      : array_{ctx_, uri, TILEDB_READ}
-      , schema_{array_.schema()} {
-    size_t nprobe = size(top_top_k);
-    size_t num_cols = 0;
-    for (size_t i = 0; i < nprobe; ++i) {
-      num_cols += indices[top_top_k[i] + 1] - indices[top_top_k[i]];
-    }
-
-    {
-      scoped_timer _{"read tdb matrix " + uri};
-
-      auto cell_order = schema_.cell_order();
-      auto tile_order = schema_.tile_order();
-
-      // @todo Maybe throw an exception here?  Have to properly handle since
-      // this is a constructor.
-      assert(cell_order == tile_order);
-
-      const size_t attr_idx = 0;
-
-      auto attr_num{schema_.attribute_num()};
-      auto attr = schema_.attribute(attr_idx);
-
-      std::string attr_name = attr.name();
-      tiledb_datatype_t attr_type = attr.type();
-      if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
-        throw std::runtime_error(
-            "Attribute type mismatch: " + std::to_string(attr_type) + " != " +
-            std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
-      }
-
-      auto domain_{schema_.domain()};
-
-      auto array_rows_{domain_.dimension(0)};
-      auto array_cols_{domain_.dimension(1)};
-
-      num_array_rows_ =
-          (array_rows_.template domain<row_domain_type>().second -
-           array_rows_.template domain<row_domain_type>().first + 1);
-      num_array_cols_ =
-          (array_cols_.template domain<col_domain_type>().second -
-           array_cols_.template domain<col_domain_type>().first + 1);
-
-      if ((matrix_order_ == TILEDB_ROW_MAJOR &&
-           cell_order == TILEDB_COL_MAJOR) ||
-          (matrix_order_ == TILEDB_COL_MAJOR &&
-           cell_order == TILEDB_ROW_MAJOR)) {
-        throw std::runtime_error("Cell order and matrix order must match");
-      }
-
-      size_t dimension = num_array_rows_;
-
-#ifndef __APPLE__
-      auto data_ = std::make_unique_for_overwrite<T[]>(dimension * num_cols);
-#else
-      auto data_ = std::unique_ptr<T[]>(new T[dimension * num_cols]);
-#endif
-
-      /**
-       * Read in the partitions
-       */
-      size_t offset = 0;
-      for (size_t j = 0; j < nprobe; ++j) {
-        size_t start = indices[top_top_k[j]];
-        size_t stop = indices[top_top_k[j] + 1];
-        size_t len = stop - start;
-        size_t num_elements = len * dimension;
-
-        // Create a subarray that reads the array up to the specified subset.
-        std::vector<int32_t> subarray_vals = {
-            (int32_t)0,
-            (int32_t)dimension - 1,
-            (int32_t)start,
-            (int32_t)stop - 1};
-        tiledb::Subarray subarray(ctx_, array_);
-        subarray.set_subarray(subarray_vals);
-
-        auto layout_order = cell_order;
-
-        tiledb::Query query(ctx_, array_);
-
-        auto ptr = data_.get() + offset;
-        query.set_subarray(subarray)
-            .set_layout(layout_order)
-            .set_data_buffer(attr_name, ptr, num_elements);
-        tiledb_helpers::submit_query(tdb_func__, uri, query);
-        _memory_data.insert_entry(tdb_func__, num_elements * sizeof(T));
-
-        // assert(tiledb::Query::Status::COMPLETE == query.query_status());
-        if (tiledb::Query::Status::COMPLETE != query.query_status()) {
-          throw std::runtime_error("Query status is not complete -- fix me");
-        }
-        offset += len;
-      }
-
-      Base::operator=(Base{std::move(data_), dimension, num_cols});
-    }
-
-    auto part_ids = std::vector<uint64_t>(num_cols);
-
-    {
-      scoped_timer _{"read partitioned vector" + id_uri};
-      /**
-       * Now deal with ids
-       */
-      auto attr_idx = 0;
-
-      tiledb::Array ids_array_ = tiledb_helpers::open_array(tdb_func__, ctx_, id_uri, TILEDB_READ);
-      auto ids_schema_ = ids_array_.schema();
-
-      auto attr_num{ids_schema_.attribute_num()};
-      auto attr = ids_schema_.attribute(attr_idx);
-
-      std::string attr_name = attr.name();
-
-      auto domain_{ids_schema_.domain()};
-      auto array_rows_{domain_.dimension(0)};
-
-      auto total_vec_rows_{
-          (array_rows_.template domain<row_domain_type>().second -
-           array_rows_.template domain<row_domain_type>().first + 1)};
-
-      size_t offset = 0;
-      for (size_t j = 0; j < nprobe; ++j) {
-        size_t start = indices[top_top_k[j]];
-        size_t stop = indices[top_top_k[j] + 1];
-        size_t len = stop - start;
-        size_t num_elements = len;
-
-        // Create a subarray that reads the array up to the specified subset.
-        std::vector<int32_t> subarray_vals = {
-            (int32_t)start, (int32_t)stop - 1};
-        tiledb::Subarray subarray(ctx_, ids_array_);
-        subarray.set_subarray(subarray_vals);
-
-        tiledb::Query query(ctx_, ids_array_);
-        auto ptr = part_ids.data() + offset;
-        query.set_subarray(subarray).set_data_buffer(
-            attr_name, ptr, num_elements);
-        tiledb_helpers::submit_query(tdb_func__, uri, query);
-        _memory_data.insert_entry(tdb_func__, num_elements * sizeof(T));
-
-        if (tiledb::Query::Status::COMPLETE != query.query_status()) {
-          throw std::runtime_error("Query status is not complete -- fix me");
-        }
-        offset += len;
-      }
-      ids_array_.close();
-    }
-    shuffled_ids = std::move(part_ids);
-  }
-
- private:
-  using row_domain_type = int32_t;
-  using col_domain_type = int32_t;
-
- public:
-  size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-  {
-    return row_offset_;
-  }
-
-  size_t offset() const
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-  {
-    return col_offset_;
-  }
-
-  ~tdbMatrix() noexcept {
-    array_.close();
-  }
-
-  bool advance(size_t num_elts = 0)
-  // requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-  {
-    // std::cout << "tdbMatrix advance" << std::endl;
-    // @todo attr_idx, attr_name, and cell_order / layout_order should be
-    // members of the class
-    size_t attr_idx = 0;
-    auto attr = schema_.attribute(attr_idx);
-    std::string attr_name = attr.name();
-    tiledb_datatype_t attr_type = attr.type();
-    auto cell_order = schema_.cell_order();
-    auto layout_order = cell_order;
-
-    if (layout_order == TILEDB_ROW_MAJOR) {
-      if (num_elts == 0) {
-        num_elts = std::get<1>(row_view_) - std::get<0>(row_view_);
-      }
-      auto num_end_elts = std::min(num_elts, num_array_rows_ - row_offset_);
-
-      if (this->is_async()) {
-        pending_row_offset = row_offset_ + num_end_elts;
-      } else {
-        row_offset_ += num_end_elts;
-      }
-
-      std::get<0>(row_view_) += num_elts;
-      std::get<1>(row_view_) += num_end_elts;
-
-      if (std::get<0>(row_view_) >= num_array_rows_) {
-        return false;
-      }
-    } else if (layout_order == TILEDB_COL_MAJOR) {
-      if (num_elts == 0) {
-        num_elts = std::get<1>(col_view_) - std::get<0>(col_view_);
-      }
-      auto num_end_elts = std::min(num_elts, num_array_cols_ - col_offset_);
-
-      if (this->is_async()) {
-        pending_col_offset = col_offset_ + num_end_elts;
-      } else {
-        col_offset_ += num_end_elts;
-      }
-
-      std::get<0>(col_view_) += num_elts;
-      std::get<1>(col_view_) += num_end_elts;
-
-      if (std::get<0>(col_view_) >= num_array_cols_) {
-        return false;
-      }
-    } else {
-      throw std::runtime_error("Unknown cell order");
-    }
-
-    // Create a subarray that reads the array with the specified view
-    std::vector<int32_t> subarray_vals = {
-        (int32_t)std::get<0>(row_view_),
-        (int32_t)std::get<1>(row_view_) - 1,
-        (int32_t)std::get<0>(col_view_),
-        (int32_t)std::get<1>(col_view_) - 1};
-    tiledb::Subarray subarray(ctx_, array_);
-    subarray.set_subarray(subarray_vals);
-
-    tiledb::Query query(ctx_, array_);
-
-    auto this_data =
-        this->is_async() ? this->backing_data_.get() : this->data();
-
-    size_t read_size = (std::get<1>(row_view_) - std::get<0>(row_view_)) *
-                       (std::get<1>(col_view_) - std::get<0>(col_view_));
-
-    query.set_subarray(subarray)
-        .set_layout(layout_order)
-        .set_data_buffer(attr_name, this_data, read_size);
-    tiledb_helpers::submit_query(tdb_func__, uri_, query);
-    _memory_data.insert_entry(tdb_func__, read_size * sizeof(T));
-
-    // assert(tiledb::Query::Status::COMPLETE == query.query_status());
-    if (tiledb::Query::Status::COMPLETE != query.query_status()) {
-      throw std::runtime_error("Query status is not complete -- fix me");
-    }
-
-    return true;
-  }
-
-  void advance_async(size_t num_elts = 0) {
-    if (!backing_data_) {
-#ifndef __APPLE__
-      backing_data_ = std::make_unique_for_overwrite<T[]>(
-          this->num_rows() * this->num_cols());
-#else
-      backing_data_ =
-          std::unique_ptr<T[]>(new T[this->num_rows() * this->num_cols()]);
-#endif
-    }
-    // this->data_.swap(backing_data_);
-    fut_ = std::async(std::launch::async, [this, num_elts]() {
-      return this->advance(num_elts);
-    });
-  }
-
-  void swap_offsets() {
-    std::swap(row_offset_, pending_row_offset);
-    std::swap(col_offset_, pending_col_offset);
-  }
-
-  bool advance_wait(size_t num_elts = 0) {
-    bool more{true};
-    if (fut_.valid()) {
-      more = fut_.get();
-    } else {
-      throw std::runtime_error("advance_wait: future is not valid");
-    }
-    if (!more) {
-      return false;
-    }
-    this->storage_.swap(this->backing_data_);
-    this->swap_offsets();
-
-    return true;
+  tdbPreLoadMatrix(
+      const tiledb::Context& ctx, const std::string& uri, size_t upper_bound)
+      : Base(ctx, uri, upper_bound) {
+    Base::load();
   }
 };
+
+/**
+ * Convenience class for row-major blocked matrices.
+ */
+template <class T, class I = size_t>
+using tdbRowMajorBlockedMatrix = tdbBlockedMatrix<T, stdx::layout_right, I>;
+
+/**
+ * Convenience class for column-major blockef matrices.
+ */
+template <class T, class I = size_t>
+using tdbColMajorBlockedMatrix = tdbBlockedMatrix<T, stdx::layout_left, I>;
 
 /**
  * Convenience class for row-major matrices.
  */
 template <class T, class I = size_t>
-using tdbRowMajorMatrix = tdbMatrix<T, stdx::layout_right, I>;
+using tdbRowMajorMatrix = tdbBlockedMatrix<T, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.
  */
 template <class T, class I = size_t>
-using tdbColMajorMatrix = tdbMatrix<T, stdx::layout_left, I>;
+using tdbColMajorMatrix = tdbBlockedMatrix<T, stdx::layout_left, I>;
+
+/**
+ * Convenience class for row-major matrices.
+ */
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+using tdbMatrix = tdbBlockedMatrix<T, LayoutPolicy, I>;
 
 #endif  // TDB_MATRIX_H

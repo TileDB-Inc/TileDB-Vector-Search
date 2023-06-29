@@ -50,7 +50,7 @@ def test_flat_query():
 
     r = vs.query_vq(db, targets, k, nqueries, 8)  # k  # nqueries  # nthreads
 
-    ra = np.array(r, copy=False)
+    ra = np.array(r, copy=True)
     print(ra)
     print(ra.shape)
 

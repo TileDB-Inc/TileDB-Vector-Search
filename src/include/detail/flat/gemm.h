@@ -53,64 +53,29 @@ using namespace std::chrono_literals;
 
 template <class DB, class Q>
 auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
-  scoped_timer _{"Total time " + tdb_func__};
+  scoped_timer _{tdb_func__};
 
   using element = std::pair<float, unsigned>;
-
-  // @todo constexpr block_db and block_q
-  auto block_db = db.is_blocked();
-  auto block_q = q.is_blocked();
-  auto async_db = block_db && db.is_async();
-  auto async_q = block_q && q.is_async();
-  if (block_db && block_q) {
-    throw std::runtime_error("Can't block both db and q");
-  }
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
 
   std::vector<fixed_min_heap<element>> min_scores(
       size(q), fixed_min_heap<element>(k));
 
-  for (;;) {
-    if (async_db) {
-      db.advance_async();
-    }
-    if (async_q) {
-      q.advance_async();
-    }
+  while (db.load()) {
     gemm_scores(db, q, scores, nthreads);
 
     auto par = stdx::execution::indexed_parallel_policy{nthreads};
     stdx::range_for_each(
         std::move(par), scores, [&](auto&& q_vec, auto&& n = 0, auto&& i = 0) {
-          if (block_db) {
-            for (int j = 0; j < scores.num_rows(); ++j) {
-              min_scores[i].insert({scores(j, i), j + db.offset()});
-            }
-          } else if (block_q) {
-            for (int j = 0; j < scores.num_rows(); ++j) {
-              min_scores[i + q.offset()].insert({scores(j, i), j});
-            }
-          } else {
-            for (int j = 0; j < scores.num_rows(); ++j) {
-              min_scores[i].insert({scores(j, i), j});
-            }
+          for (size_t j = 0; j < scores.num_rows(); ++j) {
+            min_scores[i].insert({scores(j, i), j + db.col_offset()});
           }
         });
-
-    bool done = true;
-    if (block_db) {
-      done = async_db ? !db.advance_wait() : !db.advance();
-    } else if (block_q) {
-      done = async_q ? !q.advance_wait() : !q.advance();
-    }
-    if (done) {
-      break;
-    }
   }
 
   ColMajorMatrix<size_t> top_k(k, q.num_cols());
-  for (int j = 0; j < min_scores.size(); ++j) {
+  for (size_t j = 0; j < size(min_scores); ++j) {
     // @todo get_top_k_from_heap
     std::sort_heap(min_scores[j].begin(), min_scores[j].end());
     std::transform(
@@ -125,11 +90,11 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
 
 template <class DB, class Q>
 auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
-  scoped_timer _{"Total time " + tdb_func__};
+  scoped_timer _{tdb_func__};
 
   auto scores = gemm_scores(db, q, nthreads);
 
-  auto top_k = std::vector<int>(q.num_cols());
+  auto top_k = std::vector<size_t>(q.num_cols());
   {
     for (int i = 0; i < scores.num_cols(); ++i) {
       auto min_score = std::numeric_limits<float>::max();
@@ -151,13 +116,7 @@ auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
 
 template <class DB, class Q>
 auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
-  scoped_timer _{"Total time " + tdb_func__};
-
-  const auto block_db = db.is_blocked();
-  const auto block_q = q.is_blocked();
-  if (block_db && block_q) {
-    throw std::runtime_error("Can't block both db and q");
-  }
+  scoped_timer _{tdb_func__};
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
   auto _score_data = raveled(scores);
@@ -165,7 +124,7 @@ auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
   auto min_scores =
       std::vector<float>(q.num_cols(), std::numeric_limits<float>::max());
 
-  for (;;) {
+  while (db.load()) {
     gemm_scores(db, q, scores, nthreads);
 
     for (int i = 0; i < scores.num_cols(); ++i) {
@@ -180,15 +139,6 @@ auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
         }
       }
       top_k[i] = idx;
-    }
-    bool done = true;
-    if (block_db) {
-      done = !db.advance();
-    } else {
-      done = !q.advance();
-    }
-    if (done) {
-      break;
     }
   }
   return top_k;

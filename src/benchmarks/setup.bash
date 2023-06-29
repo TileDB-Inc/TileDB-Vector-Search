@@ -1,9 +1,11 @@
 #!/bin/bash
 
-ec2_ivf_flat="/home/lums/feature-vector-prototype/src/cmake-build-release/src/ivf_flat"
-m1_ivf_flat="/Users/lums/TileDB/feature-vector-prototype/src/cmake-build-release/src/ivf_flat"
-ec2_flat="/home/lums/feature-vector-prototype/src/cmake-build-release/src/flat"
-m1_flat="/Users/lums/TileDB/feature-vector-prototype/src/cmake-build-release/src/flat"
+ec2_ivf_flat="/home/lums/TileDB-Vector-Search/src/cmake-build-release/libtiledbvectorsearch/src/ivf_flat"
+m1_ivf_flat="/Users/lums/TileDB/TileDB-Vector-Search/src/cmake-build-release/src/ivf_flat"
+ec2_flat="/home/lums/TileDB-Vector-Search/src/cmake-build-release/src/flat_l2"
+m1_flat="/Users/lums/TileDB/TileDB-Vector-Search/src/cmake-build-release/src/flat_l2"
+
+
 
 if [ -f "${ivf_query}" ]; then
     ivf_query="${ivf_query}"
@@ -25,11 +27,11 @@ else
     echo "Neither flat executable file exists"
 fi
 
-# gp3_root=/home/lums/feature-vector-prototype/external/data/gp3
+# gp3_root=/home/lums/TileDB-Vector-Search/external/data/gp3
 nvme_root=/mnt/ssd
 
-ec2_root="/home/lums/feature-vector-prototype/external/data/gp3"
-m1_root="/Users/lums/TileDB/feature-vector-prototype/external/data/gp3"
+ec2_root="/home/lums/TileDB-Vector-Search/external/data/gp3"
+m1_root="/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3"
 
 if [ -d "${gp3_root}" ]; then
     gp3_root=${gp3_root}
@@ -418,7 +420,7 @@ function ivf_query() {
 		shift 2
 		;;
 	    --cluster|--nprobe)
-		local _cluster="--cluster ${2}"
+		local _cluster="--nprobe ${2}"
 		shift 2
 		;;
 	    --block|--blocksize)

@@ -77,6 +77,7 @@ TEST_CASE("gen_partitioned: even odd", "[gen_partitioned][ci-skip]") {
   write_matrix(ctx, centroid_mat, "even_odd_queries");
 }
 
+#ifdef TDB_MATRIX_LOAD
 TEST_CASE("gen_partitioned: 3D", "[gen_partitioned]") {
   auto v = std::vector<float>{-64, 40, 82,  77,  -85, -65, -53, 17,
                               -41, 73, -46, -66, 50,  74,  -85, 74,
@@ -100,3 +101,4 @@ TEST_CASE("gen_partitioned: 3D", "[gen_partitioned]") {
     std::cout << std::endl;
   }
 }
+#endif
