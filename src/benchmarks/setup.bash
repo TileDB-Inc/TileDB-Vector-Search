@@ -417,6 +417,10 @@ function ivf_query() {
 		local _verbose="-v"
 		shift 1
 		;;
+	    -a|--alg|--algorithm)
+		local _algorithm="--alg ${2}"
+		shift 2
+		;;
 	    --k|--knn|--k_nn)
 		local _k_nn="--k ${2}"
 		shift 2
@@ -471,6 +475,7 @@ ${ivf_query} \
 --ids_uri ${ids_uri} \
 --query_uri ${query_uri} \
 --groundtruth_uri ${groundtruth_uri} \
+${_algorithm} \
 ${_k_nn} \
 ${_nqueries} \
 ${_nthreads} \
