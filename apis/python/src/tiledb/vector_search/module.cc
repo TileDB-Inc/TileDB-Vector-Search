@@ -266,7 +266,7 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
         const std::string& part_uri,
         std::vector<shuffled_ids_type>& active_partitions,
         ColMajorMatrix<query_type>& query,
-        std::vector<shuffled_ids_type>& active_queries,
+        std::vector<std::vector<shuffled_ids_type>>& active_queries,
         std::vector<shuffled_ids_type>& indices,
         const std::string& id_uri,
         size_t k_nn
