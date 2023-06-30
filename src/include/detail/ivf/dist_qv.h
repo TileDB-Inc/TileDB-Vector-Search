@@ -1,6 +1,6 @@
 
 /**
- * @file   ivf/qv.h
+ * @file   ivf/dist_qv.h
  *
  * @section LICENSE
  *
@@ -42,21 +42,26 @@
 #include <tiledb/tiledb>
 
 #include "detail/ivf/index.h"
+#include "detail/ivf/partition.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "stats.h"
 #include "utils/fixed_min_queues.h"
 
 namespace detail::ivf {
 
-
 /**
  * Function to be run on a distributed compute node in a TileDB task graph.
- * @param active_partitions -- A vector of which partitions in the part_uri array to query against
+ * @param active_partitions -- A vector of which partitions in the part_uri
+ * array to query against
  * @param query -- The full set of query vectors
  * @param active_queries -- A vector of which query vectors to use
  * @param indices -- The full set of indices
  * @param nthreads -- The number of threads to be executed on the compute node
- * @return
+ * @return A vector of min heaps, one for each query vector
+ *
+ * @todo Be more parsimonious about parameters and return values.
+ * Should be able to use only the indices and the query vectors that are active
+ * on this node, and return only the min heaps for the active query vectors
  */
 template <typename T, class shuffled_ids_type>
 auto dist_qv_finite_ram_part(
@@ -68,7 +73,7 @@ auto dist_qv_finite_ram_part(
     auto&& indices,
     const std::string& id_uri,
     size_t k_nn,
-    size_t nthreads) {
+    size_t nthreads = std::thread::hardware_concurrency()) {
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
@@ -78,7 +83,6 @@ auto dist_qv_finite_ram_part(
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
-  // OR size(active_queries)?
   size_t num_queries = size(query);
 
   auto shuffled_db = tdbColMajorPartitionedMatrix<
@@ -86,8 +90,15 @@ auto dist_qv_finite_ram_part(
       shuffled_ids_type,
       indices_type,
       parts_type>(ctx, part_uri, indices, active_partitions, id_uri, 0);
+  // !! Make sure to load the data into the matrix
   shuffled_db.load();
 
+  scoped_timer _i{tdb_func__ + " in RAM"};
+
+  /*
+   * Create local indices for the active partitions that have been loaded into
+   * shuffled_db.
+   */
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
   new_indices[0] = 0;
   for (size_t i = 0; i < size(active_partitions); ++i) {
@@ -95,15 +106,13 @@ auto dist_qv_finite_ram_part(
                          indices[active_partitions[i]];
   }
 
+  assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
+
   auto min_scores =
       std::vector<std::vector<fixed_min_pair_heap<float, size_t>>>(
           nthreads,
           std::vector<fixed_min_pair_heap<float, size_t>>(
               num_queries, fixed_min_pair_heap<float, size_t>(k_nn)));
-
-  assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
-
-  log_timer _i{tdb_func__ + " in RAM"};
 
   size_t parts_per_thread =
       (shuffled_db.num_col_parts() + nthreads - 1) / nthreads;
@@ -129,7 +138,6 @@ auto dist_qv_finite_ram_part(
               auto partno = p + shuffled_db.col_part_offset();
               auto start = new_indices[partno] - shuffled_db.col_offset();
               auto stop = new_indices[partno + 1] - shuffled_db.col_offset();
-              ;
 
               /*
                * Get the queries associated with this partition.

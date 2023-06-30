@@ -609,26 +609,21 @@ auto nuv_query_heap_finite_ram(
     _i.start();
 
     size_t parts_per_thread =
-        (shuffled_db.num_col_parts() + nthreads - 1) / nthreads;
+        (size(active_partitions) + nthreads - 1) / nthreads;
 
     std::vector<std::future<void>> futs;
     futs.reserve(nthreads);
 
     for (size_t n = 0; n < nthreads; ++n) {
       auto first_part =
-          std::min<size_t>(n * parts_per_thread, shuffled_db.num_col_parts());
-      auto last_part = std::min<size_t>(
-          (n + 1) * parts_per_thread, shuffled_db.num_col_parts());
+          std::min<size_t>(n * parts_per_thread, size(active_partitions));
+      auto last_part =
+          std::min<size_t>((n + 1) * parts_per_thread, size(active_partitions));
 
       if (first_part != last_part) {
         futs.emplace_back(std::async(
             std::launch::async,
-            [&,
-             &active_queries = active_queries,
-             &new_indices = new_indices,
-             n,
-             first_part,
-             last_part]() {
+            [&, &active_queries = active_queries, n, first_part, last_part]() {
               /*
                * For each partition, process the queries that have that
                * partition as their top centroid.
@@ -799,16 +794,16 @@ auto qv_query_heap_finite_ram(
 
     // size_t block_size = (size(active_partitions) + nthreads - 1) / nthreads;
     size_t parts_per_thread =
-        (shuffled_db.num_col_parts() + nthreads - 1) / nthreads;
+        (size(active_partitions) + nthreads - 1) / nthreads;
 
     std::vector<std::future<void>> futs;
     futs.reserve(nthreads);
 
     for (size_t n = 0; n < nthreads; ++n) {
       auto first_part =
-          std::min<size_t>(n * parts_per_thread, shuffled_db.num_col_parts());
-      auto last_part = std::min<size_t>(
-          (n + 1) * parts_per_thread, shuffled_db.num_col_parts());
+          std::min<size_t>(n * parts_per_thread, size(active_partitions));
+      auto last_part =
+          std::min<size_t>((n + 1) * parts_per_thread, size(active_partitions));
 
       if (first_part != last_part) {
         futs.emplace_back(

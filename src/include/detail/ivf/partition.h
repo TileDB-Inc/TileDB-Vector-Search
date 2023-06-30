@@ -29,6 +29,9 @@
  *
  */
 
+#ifndef TDB_IVF_PARTITION_H
+#define TDB_IVF_PARTITION_H
+
 #include <map>
 #include <set>
 #include <tuple>
@@ -114,3 +117,5 @@ auto partition_ivf_index(
   return std::make_tuple(std::move(active_partitions), std::move(part_queries));
 }
 }  // namespace detail::ivf
+
+#endif  // TDB_IVF_PARTITION_H
