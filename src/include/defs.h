@@ -45,8 +45,8 @@
 #include <span>
 // #include <execution>
 
-#include "fixed_min_queues.h"
 #include "linalg.h"
+#include "utils/fixed_min_queues.h"
 #include "utils/timer.h"
 
 /**

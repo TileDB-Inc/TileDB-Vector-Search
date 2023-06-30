@@ -40,8 +40,11 @@
 #define TDB_STATS_H
 
 #include <unistd.h>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <random>
+#include <string>
 
 #include <tiledb/tiledb>
 
@@ -50,18 +53,21 @@
 #include "config.h"
 
 #include "nlohmann/json.hpp"
-
 using json = nlohmann::json;
 
-// Make stats support opt-in to avoid requiring to define an enable_stats variable on all projects.
+// Make stats support opt-in to avoid requiring to define an enable_stats
+// variable on all projects.
 #ifdef TILEDBVS_ENABLE_STATS
 extern bool enable_stats;
 extern std::vector<json> core_stats;
 #endif
 
 class StatsCollectionScope final {
-public:
-  explicit StatsCollectionScope(const std::string &uri, const std::string& function, const std::string &operation_type) {
+ public:
+  explicit StatsCollectionScope(
+      const std::string& uri,
+      const std::string& function,
+      const std::string& operation_type) {
 #ifdef TILEDBVS_ENABLE_STATS
     if (!enable_stats)
       return;
@@ -80,32 +86,34 @@ public:
       return;
     std::string stats_str;
     tiledb::Stats::raw_dump(&stats_str);
-    core_stats.push_back({
-      {"uri", uri_},
-      {"function", function_},
-      {"operation_type", operation_type_},
-      {"stats", json::parse(stats_str)}
-    });
+    core_stats.push_back(
+        {{"uri", uri_},
+         {"function", function_},
+         {"operation_type", operation_type_},
+         {"stats", json::parse(stats_str)}});
 #endif
   }
 
 #ifdef TILEDBVS_ENABLE_STATS
-private:
+ private:
   std::string uri_, function_, operation_type_;
 #endif
 };
 
-auto dump_logs = [](std::ostream& output,
+auto dump_logs = [](std::string filename,
                     const std::string algorithm,
                     size_t nqueries,
                     size_t nprobe,
                     size_t k_nn,
                     size_t nthreads,
                     double recall) {
-  // Quick and dirty way to get query info in summarizable and useful form --
+  // Quick and dirty way to get log info into a summarizable and useful form --
   // fixed-width columns
   // @todo encapsulate this as a function that can be customized
-  // @todo  use --log to specify destination (if any)
+
+  // I don't know why this has to be done in two steps like this but oh well
+  auto c = filename == "" ? std::ofstream(filename) : std::ofstream();
+  std::ostream& output{(filename == "-") ? std::cout : c};
 
   // @todo print other information
   output << "# [ Repo ]: " << GIT_REPO_NAME << " @ " << GIT_BRANCH << " / "
@@ -210,6 +218,7 @@ auto dump_logs = [](std::ostream& output,
   }
 };
 
+#ifdef JSON_LOGGING
 auto config_log(const std::string& program_name) {
   std::string uuid_;
   char host_[16];
@@ -283,5 +292,6 @@ auto args_log(const Args& args) {
   }
   return arg_log;
 }
+#endif  // JSON_LOGGING
 
 #endif  // TDB_STATS_H

@@ -94,6 +94,9 @@ bool verbose = false;
 bool debug = false;
 bool global_debug = false;
 
+bool enable_stats = false;
+std::vector<json> core_stats;
+
 #if 1
 using db_type = uint8_t;
 #else
@@ -101,14 +104,12 @@ using db_type = float;
 #endif
 
 using groundtruth_type = int32_t;
-bool enable_stats = false;
-std::vector<json> core_stats;
 
 static constexpr const char USAGE[] =
-    R"(flat: feature vector search with flat index.
+    R"(flat_l2: feature vector search with flat index.
   Usage:
-      flat (-h | --help)
-      flat --db_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
+      flat_l2 (-h | --help)
+      flat_l2 --db_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
           [--k NN] [--nqueries NN]
           [--alg ALGO] [--finite] [--blocksize NN] [--nth]
           [--nthreads N] [--region REGION] [--validate] [--log FILE] [-d] [-v]
@@ -122,11 +123,11 @@ static constexpr const char USAGE[] =
       --k NN                  number of nearest neighbors to find [default: 10]
       --nqueries NN           size of queries subset to compare (0 = all) [default: 0]
       --alg ALGO              which algorithm to use for comparisons [default: vq_heap]
-      --finite                use finite RAM (out of core) algorithm [default: false]
+      --infinite              use infinite RAM algorithm [default: false]
+      --finite                (legacy) use finite RAM (out of core) algorithm [default: true]
       --blocksize NN          number of vectors to process in an out of core block (0 = all) [default: 0]
       --nth                   use nth_element for top k [default: false]
       --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
-      -V, --validate          validate results [default: false]
       --region REGION         AWS region [default: us-east-1]
       --log FILE              log info to FILE (- for stdout)
       --stats                 log TileDB stats [default: false]
@@ -135,6 +136,8 @@ static constexpr const char USAGE[] =
 )";
 
 int main(int argc, char* argv[]) {
+  scoped_timer _(tdb_func__ + std::string("all inclusive query time"));
+
   std::vector<std::string> strings(argv + 1, argv + argc);
   auto args = docopt::docopt(USAGE, strings, true);
 
@@ -161,7 +164,6 @@ int main(int argc, char* argv[]) {
   size_t blocksize = args["--blocksize"].asLong();
 
   auto nth = args["--nth"].asBool();
-  auto validate = args["--validate"].asBool();
 
   // @todo make global
   if (nthreads == 0) {
@@ -220,7 +222,7 @@ int main(int argc, char* argv[]) {
     throw std::runtime_error("incorrect or unset algorithm type: " + alg_name);
   }();
 
-  if (!groundtruth_uri.empty() && validate) {
+  if (!groundtruth_uri.empty()) {
     auto groundtruth =
         tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
     groundtruth.load();
@@ -235,19 +237,11 @@ int main(int argc, char* argv[]) {
   }
 
   if (args["--output_uri"]) {
-    auto output = ColMajorMatrix<int32_t>(top_k.num_rows(), top_k.num_cols());
-    for (size_t i = 0; i < top_k.num_rows(); ++i) {
-      for (size_t j = 0; j < top_k.num_cols(); ++j) {
-        output(i, j) = top_k(i, j);
-      }
-    }
-
-    write_matrix(ctx, output, args["--output_uri"].asString());
+    write_matrix(ctx, top_k, args["--output_uri"].asString());
   }
 
-  // @todo send to output specified by --log
-  if (true || verbose) {
-    dump_logs(std::cout, alg_name, nqueries, 0, k, nthreads, 0);
+  if (args["--log"]) {
+    dump_logs(args["--log"].asString(), alg_name, nqueries, 0, k, nthreads, 0);
   }
   if (enable_stats) {
     std::cout << json{core_stats}.dump() << std::endl;

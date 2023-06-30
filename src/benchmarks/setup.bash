@@ -1,33 +1,76 @@
 #!/bin/bash
 
-ec2_ivf_flat="/home/lums/TileDB-Vector-Search/src/cmake-build-release/libtiledbvectorsearch/src/ivf_flat"
-m1_ivf_flat="/Users/lums/TileDB/TileDB-Vector-Search/src/cmake-build-release/src/ivf_flat"
-ec2_flat="/home/lums/TileDB-Vector-Search/src/cmake-build-release/src/flat_l2"
-m1_flat="/Users/lums/TileDB/TileDB-Vector-Search/src/cmake-build-release/src/flat_l2"
+###############################################################################
+#
+# This is a convenience script that sets up functions to invoke the C++
+# CLI programs with the pre-defined TileDB arrays for the bigann benchmarks
+#
+# After sourcing this script you can configure the set of required arrays
+# by invoking (e.g.) `init_1B_gp3` which will initialize variables for
+# all of the arrays necssary to benchmark with the bigann 1B dataset, stored
+# on your local filesystem.  Similar commands exist to initialize for the
+# 1M, 10M, and 100M subsets of the 1B dataset.  In addition, you can
+# substitute `s3` for `gp3` if you want to use the arrays stored in S3.
+# Note that you will need to download the arrays to local storage and
+# point to their location with the `ec2_root` or `m1_root` variable.
+#
+# Once you have initialized the dataset you are going to use, you can
+# invoke the benchmark you want with `ivf_query` or `flat_query`
+#
+# The following will run the `flat_l2` benchmark using the 10M dataset
+# stored in S3:
+# ```
+# $ . ./setup.bash
+# $ init_10M_s3
+# $ flat_query
+# ```
+#
+# The `ivf_query` and `flat_query` functions will also accept many of the
+# available options for the driver programs themselves.
+#
+###############################################################################
 
 
+# Two possible locations of TileDB-Vector-Search root -- edit as necessary
+tdb_vector_search_root_1="${HOME}/TileDB-Vector-Search"
+tdb_vector_search_root_2="${HOME}/TileDB/TileDB-Vector-Search"
+
+# AWS information
+# Defines the variables instance_id, volume_id, region, and instance_ip
+# 
+if [ -f ~/.bash_awsrc ]; then
+    . ~/.bash_awsrc
+elif [ -f ./awsrc.bash ]; then
+        . ./awsrc.bash
+fi
+
+ivf_flat_tail="src/cmake-build-release/libtiledbvectorsearch/src/ivf_flat"
+ivf_flat_1=${tdb_vector_search_root_1}/${ivf_flat_tail}
+ivf_flat_2=${tdb_vector_search_root_2}/${ivf_flat_tail}
+flat_l2_tail="src/cmake-build-release/libtiledbvectorsearch/src/flat_l2"
+flat_l2_1=${tdb_vector_search_root_1}/${flat_l2_tail}
+flat_l2_2=${tdb_vector_search_root_2}/${flat_l2_tail}
 
 if [ -f "${ivf_query}" ]; then
     ivf_query="${ivf_query}"
-elif [ -f "${ec2_ivf_flat}" ]; then
-    ivf_query="${ec2_ivf_flat}"
-elif [ -f "${m1_ivf_flat}" ]; then
-    ivf_query="${m1_ivf_flat}"
+elif [ -f "${ivf_flat_1}" ]; then
+    ivf_query="${ivf_flat_1}"
+elif [ -f "${ivf_flat_2}" ]; then
+    ivf_query="${ivf_flat_2}"
 else
     echo "Neither ivf_flat executable file exists"
 fi
 
-if [ -f "${flat_query}" ]; then
+if [ -f flat_query ]; then
     flat_query="${flat_query}"
-elif [ -f "${ec2_flat}" ]; then
-    flat_query="${ec2_flat}"
-elif [ -f "${m1_flat}" ]; then
-    flat_query="${m1_flat}"
+elif [ -f "${flat_l2_1}" ]; then
+    flat_query="${flat_l2_1}"
+elif [ -f "${flat_l2_2}" ]; then
+    flat_query="${flat_l2_2}"
 else
-    echo "Neither flat executable file exists"
+    echo "Neither flat_l2 executable file exists"
 fi
 
-# gp3_root=/home/lums/TileDB-Vector-Search/external/data/gp3
 nvme_root=/mnt/ssd
 
 ec2_root="/home/lums/TileDB-Vector-Search/external/data/gp3"
@@ -43,7 +86,6 @@ else
     echo "gp3 directory does not exist"
 fi
 
-
 db_uri="not_set"
 centroids_uri="not_set"
 parts_uri="not_set"
@@ -52,7 +94,6 @@ sizes_uri="not_set"
 ids_uri="not_set"
 query_uri="not_set"
 groundtruth_uri="not_set"
-
 
 function init_1M_s3 () {
     db_uri="s3://tiledb-andrew/sift/bigann1M_base"
@@ -63,9 +104,7 @@ function init_1M_s3 () {
     ids_uri="s3://tiledb-andrew/sift/bigann1M_base_tdb/ids.tdb"
     query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
     groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_1M_GT_nnids"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 function init_1M_gp3 () {
@@ -77,9 +116,7 @@ function init_1M_gp3 () {
     ids_uri="${gp3_root}/1M/ids.tdb"
     query_uri="${gp3_root}/1M/query_public_10k"
     groundtruth_uri="${gp3_root}/1M/bigann_1M_GT_nnids"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 function init_1M_nvme () {
@@ -91,9 +128,7 @@ function init_1M_nvme () {
     ids_uri="${nvme_root}/1M/ids.tdb"
     query_uri="${nvme_root}/1M/query_public_10k"
     groundtruth_uri="${nvme_root}/1M/bigann_1M_GT_nnids"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 function init_10M_s3 () {
@@ -105,9 +140,7 @@ function init_10M_s3 () {
     ids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-10m-1000p/ids.tdb"
     query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
     groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_10M_GT_nnids"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 function init_10M_gp3 () {
@@ -119,9 +152,7 @@ function init_10M_gp3 () {
     ids_uri="${gp3_root}/10M/ids.tdb"
     query_uri="${gp3_root}/10M/query_public_10k"
     groundtruth_uri="${gp3_root}/10M/bigann_10M_GT_nnids"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 function init_10M_nvme () {
@@ -133,9 +164,7 @@ function init_10M_nvme () {
     ids_uri="${nvme_root}/10M/ids.tdb"
     query_uri="${nvme_root}/10M/query_public_10k"
     groundtruth_uri="${nvme_root}/10M/bigann_10M_GT_nnids"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 function init_100M_s3 () {
@@ -147,9 +176,7 @@ function init_100M_s3 () {
     ids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-100m-10000p/ids.tdb"
     query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
     groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_100M_GT_nnids"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 function init_100M_gp3 () {
@@ -161,9 +188,7 @@ function init_100M_gp3 () {
     ids_uri="${gp3_root}/100M/ids.tdb"
     query_uri="${gp3_root}/100M/query_public_10k"
     groundtruth_uri="${gp3_root}/100M/bigann_100M_GT_nnids"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 function init_100M_nvme () {
@@ -175,9 +200,7 @@ function init_100M_nvme () {
     ids_uri="${nvme_root}/100M/ids.tdb"
     query_uri="${nvme_root}/100M/query_public_10k"
     groundtruth_uri="${nvme_root}/100M/bigann_100M_GT_nnids"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 function init_1B_s3 () {
@@ -189,9 +212,7 @@ function init_1B_s3 () {
     ids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/ids.tdb"
     query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
     groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_1B_GT_nnids"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 function init_1B_gp3 () {
@@ -203,9 +224,7 @@ function init_1B_gp3 () {
     ids_uri="${gp3_root}/1B/ids.tdb"
     query_uri="${gp3_root}/1B/query_public_10k"
     groundtruth_uri="${gp3_root}/1B/bigann_1B_GT_nnids"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 function init_1B_nvme () {
@@ -217,9 +236,7 @@ function init_1B_nvme () {
     ids_uri="${nvme_root}/1B/ids.tdb"
     query_uri="${nvme_root}/1B/query_public_10k"
     groundtruth_uri="${nvme_root}/1B/bigann_1B_GT_nnids"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 function init_sift_s3 () {
@@ -231,9 +248,7 @@ function init_sift_s3 () {
     ids_uri="s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/ids.tdb"
     query_uri="s3://tiledb-andrew/kmeans/benchmark/query_public_10k"
     groundtruth_uri="s3://tiledb-andrew/kmeans/benchmark/bigann_1B_GT_nnids"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 function init_sift_gp3 () {
@@ -245,9 +260,7 @@ function init_sift_gp3 () {
     ids_uri="${gp3_root}/sift/ids"
     query_uri="${gp3_root}/sift/sift_query"
     groundtruth_uri="${gp3_root}/sift/sift_groundtruth"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 function init_sift_nvme () {
@@ -259,9 +272,7 @@ function init_sift_nvme () {
     ids_uri="${nvme_root}/sift/ids"
     query_uri="${nvme_root}/sift/sift_query"
     groundtruth_uri="${nvme_root}/sift/sift_groundtruth"
-    echo "     -|-"
     echo "     -|-  ${FUNCNAME[0]}"
-    echo "     -|-"
 }
 
 
@@ -389,7 +400,6 @@ function print_all_schemas () {
 }
 
 function ivf_query() {
-
     while [ "$#" -gt 0 ]; do
 	case "$1" in
 	    -x|--exec)
@@ -406,6 +416,10 @@ function ivf_query() {
 	    -v|--verbose)
 		local _verbose="-v"
 		shift 1
+		;;
+	    -a|--alg|--algorithm)
+		local _algorithm="--alg ${2}"
+		shift 2
 		;;
 	    --k|--knn|--k_nn)
 		local _k_nn="--k ${2}"
@@ -431,6 +445,10 @@ function ivf_query() {
 		local _finite="--finite"
 		shift 1
 		;;
+	    --infinite)
+		local _infinite="--infinite"
+		shift 1
+		;;
 	    --log)
 		local _log="--log ${2}"
 		shift 2
@@ -448,34 +466,34 @@ function ivf_query() {
 	return 255
     fi
 
-# --index_uri ${index_uri} \
-    local query="\
+    # --index_uri ${index_uri} \
+	local query="\
 ${ivf_query} \
---db_uri ${db_uri} \
 --centroids_uri ${centroids_uri} \
 --parts_uri ${parts_uri} \
 --sizes_uri ${sizes_uri} \
 --ids_uri ${ids_uri} \
 --query_uri ${query_uri} \
 --groundtruth_uri ${groundtruth_uri} \
+${_algorithm} \
 ${_k_nn} \
 ${_nqueries} \
 ${_nthreads} \
 ${_cluster} \
 ${_blocksize} \
 ${_finite} \
+${_infinite} \
 ${_log} \
 ${_verbose} \
 ${_debug}"
 
-    printf "================================================================\n"
-    printf "=\n=\n"
-    printf "${query}\n"
-    eval "${query}"
+	printf "================================================================\n"
+	printf "=\n=\n"
+	printf "${query}\n"
+	eval "${query}"
 }
 
 function flat_query() {
-
     while [ "$#" -gt 0 ]; do
 	case "$1" in
 	    -x|--exec)
@@ -517,10 +535,6 @@ function flat_query() {
 		local _log="--log ${2}"
 		shift 2
 		;;
-	    -V|--validate)
-		local _validate="--validate"
-		shift 1
-		;;
 	    *)
 		echo "Unknown option: $1"
 		return 1
@@ -545,7 +559,6 @@ ${_nthreads} \
 ${_blocksize} \
 ${_nth} \
 ${_log} \
-${_validate} \
 ${_verbose} \
 ${_debug}"
 

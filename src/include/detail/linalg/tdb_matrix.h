@@ -358,7 +358,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
     Base::operator=(Base{std::move(data_), num_rows, num_cols});
   }
-}; // tdbBlockedMatrix
+};  // tdbBlockedMatrix
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {

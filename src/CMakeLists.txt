@@ -156,12 +156,9 @@ endif()
 
 include(Docopt)
 include(mdspan)
+include(nlohmann_json)
 
-add_library(nlohmann_json INTERFACE)
-target_include_directories(nlohmann_json INTERFACE ${CMAKE_SOURCE_DIR}/external/include)
-add_library(nlohmann_json::nlohmann_json ALIAS nlohmann_json)
-get_target_property(_JSON_INCLUDES nlohmann_json INTERFACE_INCLUDE_DIRECTORIES)
-message(STATUS "nlohmann_json include directories are ${_JSON_INCLUDES}")
+
 
 add_subdirectory(src)
 
