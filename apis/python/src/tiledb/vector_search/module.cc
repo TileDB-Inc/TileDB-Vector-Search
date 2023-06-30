@@ -55,7 +55,6 @@ static void declareVector(py::module& mod, std::string const& suffix) {
 
 template <typename T>
 static void declareColMajorMatrix(py::module& mod, std::string const& suffix) {
-  using value_type = T;
   using TMatrix = ColMajorMatrix<T>;
   using PyTMatrix = py::class_<TMatrix>;
 
