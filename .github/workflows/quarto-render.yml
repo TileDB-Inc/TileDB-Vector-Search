@@ -25,7 +25,7 @@ jobs:
           which pip
           python --version
       - name: Install pybind11
-        run: pip install "pybind11[global]"
+        run: pip install "pybind11[global]" "pydantic<2"
       - uses: actions/checkout@v3
       - name: Install
         run: cd apis/python && pip install .
