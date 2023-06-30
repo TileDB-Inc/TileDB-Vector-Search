@@ -44,6 +44,7 @@
 #include "detail/linalg/linalg_defs.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_defs.h"
+#include "detail/linalg/tdb_helpers.h"
 
 /**
  * Derived from `Matrix`.  Initialized in construction by filling from a given
@@ -358,7 +359,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
     Base::operator=(Base{std::move(data_), num_rows, num_cols});
   }
-}; // tdbBlockedMatrix
+};  // tdbBlockedMatrix
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {

@@ -188,7 +188,8 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       , ctx_{ctx}
       , array_{tiledb_helpers::open_array(tdb_func__, ctx_, uri, TILEDB_READ)}
       , schema_{array_.schema()}
-      , ids_array_{tiledb_helpers::open_array(tdb_func__, ctx_, ids_uri, TILEDB_READ)}
+      , ids_array_{tiledb_helpers::open_array(
+            tdb_func__, ctx_, ids_uri, TILEDB_READ)}
       , ids_schema_{ids_array_.schema()}
       , indices_{in_indices}
       , parts_{in_parts}
