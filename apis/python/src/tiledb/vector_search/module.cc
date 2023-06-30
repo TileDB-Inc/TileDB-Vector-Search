@@ -22,9 +22,9 @@ PYBIND11_MAKE_OPAQUE(std::vector<uint32_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<uint64_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<float>);
 PYBIND11_MAKE_OPAQUE(std::vector<double>);
-if constexpr (!std::is_same<uint64_t, unsigned long>::value) {
+#if defined __GNUC__ && !defined __clang__
   PYBIND11_MAKE_OPAQUE(std::vector<size_t>);
-}
+#endif
 
 namespace {
 
