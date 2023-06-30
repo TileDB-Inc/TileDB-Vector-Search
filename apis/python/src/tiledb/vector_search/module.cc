@@ -219,8 +219,6 @@ static void declarePartitionedMatrix(py::module& mod,
   cls.def("load", &TMatrix::load);
 }
 
-
-
 template <typename T>
 void declareStdVector(py::module& m, const std::string& suffix) {
   auto name = std::string("StdVector_") + suffix;
@@ -248,16 +246,42 @@ void declareStdVector(py::module& m, const std::string& suffix) {
     });
 }
 
-template <typename T>
+template <typename T, typename indices_type = size_t>
 void declarePartitionIvfIndex(py::module& m, const std::string& suffix) {
   m.def(("partition_ivf_index_" + suffix).c_str(),
         [](ColMajorMatrix<T>& centroids,
+           std::vector<indices_type>& indices,
            ColMajorMatrix<float>& query,
            size_t nprobe,
            size_t nthreads) {
-          return detail::ivf::partition_ivf_index(centroids, query, nprobe, nthreads);
+          return detail::ivf::partition_ivf_index(centroids, indices, query, nprobe, nthreads);
            }
         );
+}
+
+template <typename query_type, typename shuffled_ids_type = size_t>
+static void declare_dist_qv(py::module& m, const std::string& suffix) {
+  m.def(("dist_qv_" + suffix).c_str(),
+      [](tiledb::Context& ctx,
+        const std::string& part_uri,
+        std::vector<shuffled_ids_type>& active_partitions,
+        ColMajorMatrix<query_type>& query,
+        std::vector<shuffled_ids_type>& active_queries,
+        std::vector<shuffled_ids_type>& indices,
+        const std::string& id_uri,
+        size_t k_nn
+        /* size_t nthreads TODO: optional arg w/ fallback to C++ default arg */
+        ) { /* TODO return type */
+            return detail::ivf::dist_qv_finite_ram_part<query_type, shuffled_ids_type>(
+                ctx,
+                part_uri,
+                active_partitions,
+                query,
+                active_queries,
+                indices,
+                id_uri,
+                k_nn);
+        }, py::keep_alive<1,2>());
 }
 
 } // anonymous namespace
@@ -390,4 +414,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   declarePartitionedMatrix<tdbColMajorPartitionedMatrix<uint8_t, uint64_t, uint64_t, uint64_t > >(m, "tdbPartitionedMatrix", "u8");
   declarePartitionedMatrix<tdbColMajorPartitionedMatrix<float, uint64_t, uint64_t, uint64_t> >(m, "tdbPartitionedMatrix", "f32");
+
+  declare_dist_qv<float>(m, "f32");
 }
