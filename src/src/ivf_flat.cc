@@ -288,6 +288,7 @@ int main(int argc, char* argv[]) {
           nthreads,
           num_nodes);
     }
+    throw std::runtime_error("incorrect or unset algorithm type: " + algorithm);
   }();
 
   debug_matrix(top_k, "top_k");
