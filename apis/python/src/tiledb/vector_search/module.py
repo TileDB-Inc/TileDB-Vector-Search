@@ -5,6 +5,7 @@ import numpy as np
 import tiledb
 from tiledb.vector_search._tiledbvspy import *
 
+from typing import Optional
 
 def load_as_matrix(path: str, nqueries: int = 0, config: Dict = {}):
     """
@@ -254,3 +255,21 @@ def array_to_matrix(array: np.ndarray):
         return pyarray_copyto_matrix_u64(array)
     else:
         raise TypeError("Unsupported type!")
+
+# TODO
+#def load_partitioned(uri, partitions, dtype: Optional[np.dtype] = None):
+#    if dtype is None:
+#        arr = tiledb.open(uri).dtype
+#    if dtype == np.float32:
+#        return tdbPartitionedMatrix_f32(uri,
+#    elif dtype == np.uint8:
+#        return tdbPartitionedMatrix_f32(uri,
+#    else:
+#        raise TypeError("Unknown type!")
+
+#class PartitionedMatrix:
+#    def __init__(self, uri, partitions):
+#        self.uri = uri
+#        self.partitions = partitions
+#
+#        self._m = load_partitioned(uri, partitions)
