@@ -63,10 +63,12 @@ namespace detail::flat {
 template <class DB, class Q>
 auto qv_query_nth(
     DB& db, const Q& q, int k, bool nth, unsigned int nthreads) {
-  db.load();
+  if constexpr (is_loadable_v<decltype(db)>) {
+    db.load();
+  }
+  scoped_timer _{tdb_func__ + (nth? std::string{"nth"} : std::string{"heap"})};
 
-  scoped_timer _{tdb_func__};
-  ColMajorMatrix<size_t> top_k(k, q.num_cols());
+  ColMajorMatrix<size_t> top_k(k, size(q));
 
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
   stdx::range_for_each(
@@ -98,7 +100,9 @@ auto qv_query_nth(
  */
 template <vector_database DB, class Q>
 auto qv_query_heap(DB& db, const Q& q, size_t k, unsigned nthreads) {
-  db.load();
+  if constexpr (is_loadable_v<decltype(db)>) {
+    db.load();
+  }
 
   scoped_timer _{tdb_func__};
 

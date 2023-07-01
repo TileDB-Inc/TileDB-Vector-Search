@@ -40,6 +40,14 @@
 #include <type_traits>
 
 template <typename T>
+concept has_load_member = requires(T&& t) {
+  t.load();
+};
+
+template <class T>
+constexpr bool is_loadable_v = has_load_member<T>;
+
+template <typename T>
 concept feature_vector = requires(T t) {
   typename T::value_type;
   //  typename T::index_type;

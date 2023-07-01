@@ -53,10 +53,10 @@ namespace detail::flat {
  */
 template <class DB, class Q>
 auto vq_query_nth(DB& db, const Q& q, int k, bool nth, int nthreads) {
-  db.load();
-  scoped_timer _{"Total time " + tdb_func__};
-
-  // scoped_timer _{tdb_func__ + ", nth = " + std::to_string(nth)};
+  if constexpr (is_loadable_v<decltype(db)>) {
+    db.load();
+  }
+  scoped_timer _{tdb_func__ + (nth? std::string{"nth"} : std::string{"heap"})};
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
 
