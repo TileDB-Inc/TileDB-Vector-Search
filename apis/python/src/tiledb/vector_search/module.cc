@@ -249,11 +249,10 @@ template <typename T, typename indices_type = size_t>
 void declarePartitionIvfIndex(py::module& m, const std::string& suffix) {
   m.def(("partition_ivf_index_" + suffix).c_str(),
         [](ColMajorMatrix<T>& centroids,
-           std::vector<indices_type>& indices,
            ColMajorMatrix<float>& query,
            size_t nprobe,
            size_t nthreads) {
-          return detail::ivf::partition_ivf_index(centroids, indices, query, nprobe, nthreads);
+          return detail::ivf::partition_ivf_index(centroids, query, nprobe, nthreads);
            }
         );
 }
