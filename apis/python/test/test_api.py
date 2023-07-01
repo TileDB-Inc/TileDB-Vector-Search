@@ -73,9 +73,9 @@ def test_partition_ivf_index(tmpdir):
     query_m = vs.array_to_matrix(query)
 
     r = vspy.partition_ivf_index_f32(data_m, query_m, 1, 2)
-    r_a = np.array(r[0], copy=True)
+    r_a = np.array(r[1], copy=True)
 
-    assert np.array_equal(r_a, np.array([[1, 0, 2]], dtype=np.uint64))
+    assert np.array_equal(r_a, np.array([[1], [0], [2]], dtype=np.uint64))
 
 def test_partition_ivf_index2(tmpdir):
     path = tmpdir.mkdir("test").join("test.tdb")
@@ -88,7 +88,6 @@ def test_partition_ivf_index2(tmpdir):
     query_m = vs.array_to_matrix(query)
 
     r = vspy.partition_ivf_index_f32(data_m, query_m, 1, 2)
-    r_a = np.array(r[0], copy=True)
+    r_a = np.array(r[1], copy=True)
 
-    assert np.array_equal(r_a, np.array([[1, 0, 2]], dtype=np.uint64))
-    breakpoint()
+    assert np.array_equal(r_a, np.array([[1], [0], [2]], dtype=np.uint64))
