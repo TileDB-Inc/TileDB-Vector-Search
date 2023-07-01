@@ -62,9 +62,10 @@ namespace detail::flat {
 
 template <class DB, class Q>
 auto qv_query_nth(
-    const DB& db, const Q& q, int k, bool nth, unsigned int nthreads) {
-  scoped_timer _{tdb_func__};
+    DB& db, const Q& q, int k, bool nth, unsigned int nthreads) {
+  db.load();
 
+  scoped_timer _{tdb_func__};
   ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
@@ -96,10 +97,10 @@ auto qv_query_nth(
  *
  */
 template <vector_database DB, class Q>
-auto qv_query_heap(const DB& db, const Q& q, size_t k, unsigned nthreads) {
-  scoped_timer _{tdb_func__};
+auto qv_query_heap(DB& db, const Q& q, size_t k, unsigned nthreads) {
+  db.load();
 
-  using element = std::pair<float, int>;
+  scoped_timer _{tdb_func__};
 
   ColMajorMatrix<size_t> top_k(k, q.num_cols());
 
@@ -124,12 +125,12 @@ auto qv_query_heap(const DB& db, const Q& q, size_t k, unsigned nthreads) {
       futs.emplace_back(std::async(
           std::launch::async, [k, start, stop, size_db, &q, &db, &top_k]() {
             for (size_t j = start; j < stop; ++j) {
-              fixed_min_heap<element> min_scores(k);
+              fixed_min_pair_heap<float, size_t> min_scores(k);
               size_t idx = 0;
 
               for (size_t i = 0; i < size_db; ++i) {
                 auto score = L2(q[j], db[i]);
-                min_scores.insert(element{score, i});
+                min_scores.insert(score, i);
               }
 
               // @todo use get_top_k_from_heap
@@ -138,7 +139,7 @@ auto qv_query_heap(const DB& db, const Q& q, size_t k, unsigned nthreads) {
                   min_scores.begin(),
                   min_scores.end(),
                   top_k[j].begin(),
-                  ([](auto&& e) { return e.second; }));
+                  ([](auto&& e) { return std::get<1>(e); }));
             }
           }));
     }

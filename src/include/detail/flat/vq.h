@@ -52,7 +52,8 @@ namespace detail::flat {
  * scores matrix (and which could also be used for out-of core).
  */
 template <class DB, class Q>
-auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
+auto vq_query_nth(DB& db, const Q& q, int k, bool nth, int nthreads) {
+  db.load();
   scoped_timer _{"Total time " + tdb_func__};
 
   // scoped_timer _{tdb_func__ + ", nth = " + std::to_string(nth)};

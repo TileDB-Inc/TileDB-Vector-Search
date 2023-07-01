@@ -112,7 +112,7 @@ static constexpr const char USAGE[] =
       flat_l2 --db_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
           [--k NN] [--nqueries NN]
           [--alg ALGO] [--finite] [--blocksize NN] [--nth]
-          [--nthreads N] [--region REGION] [--validate] [--log FILE] [-d] [-v]
+          [--nthreads N] [--region REGION] [--validate] [--log FILE] [--stats] [-d] [-v]
 
   Options:
       -h, --help              show this screen
