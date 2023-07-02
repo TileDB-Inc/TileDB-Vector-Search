@@ -124,7 +124,7 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
         [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
           for (size_t j = 0; j < size_q; ++j) {
             auto score = L2(q[j], db_vec);
-            scores[n][j].insert(element{score, i + db.offset()});
+            scores[n][j].insert(element{score, i + db.col_offset()});
           }
         });
     _i.stop();

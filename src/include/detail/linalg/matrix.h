@@ -183,10 +183,6 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   auto num_cols() const noexcept {
     return num_cols_;
   }
-
-  constexpr auto offset() const noexcept {
-    return 0UL;
-  }
 };
 
 /**
