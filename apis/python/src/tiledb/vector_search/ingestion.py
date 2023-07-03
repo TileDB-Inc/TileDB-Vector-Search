@@ -940,11 +940,15 @@ def ingest(
                     for partition_slice in partition_slices[p]:
                         read_slices.append(partition_slice)
 
+                start_pos = int(index_array[part]["values"])
+                end_pos = int(index_array[part_end]["values"])
+                if len(read_slices) == 0:
+                    if start_pos != end_pos:
+                        raise ValueError("Incorrect partition size.")
+                    continue
                 logger.debug(f"Read slices: {read_slices}")
                 ids = partial_write_array_ids_array.multi_index[read_slices]["values"]
                 vectors = partial_write_array_parts_array.multi_index[:, read_slices]["values"]
-                start_pos = int(index_array[part]["values"])
-                end_pos = int(index_array[part_end]["values"])
 
                 logger.debug(
                     f"Ids shape {ids.shape}, expected size: {end_pos - start_pos} expected range:({start_pos},{end_pos})")
