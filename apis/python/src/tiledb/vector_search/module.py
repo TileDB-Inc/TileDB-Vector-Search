@@ -180,7 +180,7 @@ def query_kmeans(
     Parameters
     ----------
     dtype: numpy.dtype
-        Type of vectpr, flaot32 or uint8
+        Type of vector, float32 or uint8
     parts_uri: str
         Partition URI
     centroids_db: colMajorMatrix
