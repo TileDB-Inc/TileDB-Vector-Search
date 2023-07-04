@@ -216,19 +216,34 @@ int main(int argc, char* argv[]) {
 
   auto top_k = [&]() {
     if (algorithm == "reg") {
-      return detail::ivf::
-          nuv_query_heap_finite_ram_reg_blocked<db_type, shuffled_ids_type>(
-              ctx,
-              part_uri,
-              centroids,
-              q,
-              indices,
-              id_uri,
-              nprobe,
-              k_nn,
-              blocksize,
-              nth,
-              nthreads);
+      if (finite) {
+        return detail::ivf::
+            nuv_query_heap_finite_ram_reg_blocked<db_type, shuffled_ids_type>(
+                ctx,
+                part_uri,
+                centroids,
+                q,
+                indices,
+                id_uri,
+                nprobe,
+                k_nn,
+                blocksize,
+                nth,
+                nthreads);
+      } else {
+        return detail::ivf::
+            nuv_query_heap_infinite_ram_reg_blocked<db_type, shuffled_ids_type>(
+                ctx,
+                part_uri,
+                centroids,
+                q,
+                indices,
+                id_uri,
+                nprobe,
+                k_nn,
+                nth,
+                nthreads);
+      }
     } else if (algorithm == "nuv_heap" || algorithm == "nuv") {
       if (finite) {
         return detail::ivf::
