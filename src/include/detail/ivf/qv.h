@@ -611,16 +611,16 @@ auto nuv_query_heap_finite_ram(
     auto current_part_size = shuffled_db.num_col_parts();
 
     size_t parts_per_thread =
-        (current_parts_size + nthreads - 1) / nthreads;
+        (current_part_size + nthreads - 1) / nthreads;
 
     std::vector<std::future<void>> futs;
     futs.reserve(nthreads);
 
     for (size_t n = 0; n < nthreads; ++n) {
       auto first_part =
-          std::min<size_t>(n * parts_per_thread, current_parts_size);
+          std::min<size_t>(n * parts_per_thread, current_part_size);
       auto last_part =
-          std::min<size_t>((n + 1) * parts_per_thread, current_parts_size);
+          std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
 
       if (first_part != last_part) {
         futs.emplace_back(std::async(
@@ -815,7 +815,7 @@ auto qv_query_heap_finite_ram(
 
       if (first_part != last_part) {
         futs.emplace_back(
-			  std::async(std::launch::async, [&query, &min_scores, &shuffled_db, &new_indices, &centroid_query, &active_partitions, n, first_part, last_part, upper_bound]() {
+			  std::async(std::launch::async, [&query, &min_scores, &shuffled_db, &new_indices, &centroid_query, &active_partitions, n, first_part, last_part]() {
               /*
                * For each partition, process the queries that have that
                * partition as their top centroid.
@@ -838,9 +838,6 @@ auto qv_query_heap_finite_ram(
                   // @todo shift start / stop back by the offset
                   for (size_t k = start; k < stop; ++k) {
                     auto kp = k - shuffled_db.col_offset();
-
-		    assert (kp < upper_bound);
-
                     auto score = L2(q_vec, shuffled_db[kp]);
 
                     // @todo any performance with apparent extra indirection?
