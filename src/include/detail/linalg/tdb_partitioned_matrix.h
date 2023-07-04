@@ -288,11 +288,13 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
             std::get<0>(col_view_) + max_cols_) {
           break;
         }
-        std::get<1>(col_view_) += next_part_size;
-        std::get<1>(col_part_view_) = i + 1;
+	std::get<1>(col_view_) += next_part_size;   // FIXME ??
+	std::get<1>(col_part_view_) = i + 1;
       }
       num_cols_ = std::get<1>(col_view_) - std::get<0>(col_view_);
       col_offset_ = std::get<0>(col_view_);
+
+      assert(num_cols_ < max_cols_);
 
       num_col_parts_ =
           std::get<1>(col_part_view_) - std::get<0>(col_part_view_);
