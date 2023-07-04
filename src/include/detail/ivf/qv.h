@@ -988,9 +988,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                 auto len = 2 * (size(active_queries[partno]) / 2);
 
                 auto end =  active_queries[partno].begin() + len;
-                for (auto j = active_queries[partno].begin();
-                     j != end;
-                     j += 2) {
+                for (auto j = active_queries[partno].begin(); j != end; j += 2) {
                   auto j0 = j[0];
                   auto j1 = j[1];
                   auto q_vec_0 = query[j0];
@@ -999,7 +997,8 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                    * Apply the query to the partition.
                    *
                    */
-                  for (size_t kp = start; kp < stop; kp += 2) {
+                  auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
+                  for (size_t kp = start; kp < kstop; kp += 2) {
 
                     auto score_00 = L2(q_vec_0, shuffled_db[kp+0]);
                     auto score_01 = L2(q_vec_0, shuffled_db[kp+1]);
@@ -1012,7 +1011,35 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                     min_scores[n][j1].insert(score_11, shuffled_db.ids()[kp+1]);
 
                   }
+                  for (size_t kp = kstop; kp < kstop; ++kp) {
+                    auto score_00 = L2(q_vec_0, shuffled_db[kp+0]);
+                    auto score_10 = L2(q_vec_1, shuffled_db[kp+0]);
+                    min_scores[n][j0].insert(score_00, shuffled_db.ids()[kp+0]);
+                    min_scores[n][j1].insert(score_10, shuffled_db.ids()[kp+0]);
+                  }
                 }
+#if 1
+                for (auto j = end; j < active_queries[partno].end(); ++j) {
+                  auto j0 = j[0];
+                  auto q_vec_0 = query[j0];
+
+                  auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
+                  for (size_t kp = start; kp < kstop; kp += 2) {
+                    auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+                    auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
+
+                    min_scores[n][j0].insert(
+                        score_00, shuffled_db.ids()[kp + 0]);
+                    min_scores[n][j0].insert(
+                        score_01, shuffled_db.ids()[kp + 1]);
+                  }
+                  for (size_t kp = kstop; kp < stop; ++kp) {
+                    auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+                    min_scores[n][j0].insert(
+                        score_00, shuffled_db.ids()[kp + 0]);
+                  }
+                }
+#endif
               }
             }));
       }
