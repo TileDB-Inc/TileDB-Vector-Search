@@ -33,7 +33,8 @@ uptime
 
 printf "\n\n-----------------------------------------------------------------------------------------------------------------------------------------\n\n"
 
-if ping -c 1 -W 1250 169.254.169.254;
+#if ping -c 1 -W 1250 169.254.169.254;
+if [[ -d "/sys/hypervisor/uuid" ]]
 then
   echo "Running on EC2 instance"
   curl -s http://169.254.169.254/latest/meta-data/instance-type
@@ -65,7 +66,6 @@ do
     init_1B_${source}
     for blocksize in 0 1000000 10000000 ;
     do
-	log_header
 	for nqueries in 1 10 100 1000 10000;
 	do
 	    for nprobe in 1 2 4 8 16 32 64 128 ;
