@@ -209,6 +209,10 @@ int main(int argc, char* argv[]) {
   }
   debug_matrix(indices, "indices");
 
+  if (blocksize != 0) {
+    std::cout << blocksize << " " << indices[size(indices)-1] << " " << size(indices) <<  std::endl;
+  }
+
   auto q =
       tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri, nqueries);
   q.load();
