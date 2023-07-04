@@ -66,6 +66,7 @@ int ivf_index(
     nthreads = std::thread::hardware_concurrency();
   }
   auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
+  centroids.load();
   auto parts = detail::flat::qv_partition(centroids, db, nthreads);
   debug_matrix(parts, "parts");
   {
@@ -169,6 +170,7 @@ int ivf_index(
     size_t end_pos,
     size_t nthreads) {
   auto db = tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos);
+  db.load();
   return ivf_index<T, ids_type, centroids_type>(
       ctx,
       db,
