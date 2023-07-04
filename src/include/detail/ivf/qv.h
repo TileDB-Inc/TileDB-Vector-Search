@@ -520,7 +520,7 @@ auto nuv_query_heap_finite_ram(
   auto query = query_future.get();
   auto centroids = centroids_future.get();
 
-  return qv_query_heap_finite_ram(
+  return nuv_query_heap_finite_ram(
       ctx,
       part_uri,
       centroids,
@@ -608,17 +608,19 @@ auto nuv_query_heap_finite_ram(
   while (shuffled_db.load()) {
     _i.start();
 
+    auto current_part_size = shuffled_db.num_col_parts();
+
     size_t parts_per_thread =
-        (size(active_partitions) + nthreads - 1) / nthreads;
+        (current_parts_size + nthreads - 1) / nthreads;
 
     std::vector<std::future<void>> futs;
     futs.reserve(nthreads);
 
     for (size_t n = 0; n < nthreads; ++n) {
       auto first_part =
-          std::min<size_t>(n * parts_per_thread, size(active_partitions));
+          std::min<size_t>(n * parts_per_thread, current_parts_size);
       auto last_part =
-          std::min<size_t>((n + 1) * parts_per_thread, size(active_partitions));
+          std::min<size_t>((n + 1) * parts_per_thread, current_parts_size);
 
       if (first_part != last_part) {
         futs.emplace_back(std::async(
@@ -1132,17 +1134,20 @@ auto nuv_query_heap_finite_ram_reg_blocked(
   while (shuffled_db.load()) {
     _i.start();
 
+
+    auto current_part_size = shuffled_db.num_col_parts();
+
     size_t parts_per_thread =
-        (size(active_partitions) + nthreads - 1) / nthreads;
+        (current_part_size + nthreads - 1) / nthreads;
 
     std::vector<std::future<void>> futs;
     futs.reserve(nthreads);
 
     for (size_t n = 0; n < nthreads; ++n) {
       auto first_part =
-          std::min<size_t>(n * parts_per_thread, size(active_partitions));
+          std::min<size_t>(n * parts_per_thread, current_part_size);
       auto last_part =
-          std::min<size_t>((n + 1) * parts_per_thread, size(active_partitions));
+          std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
 
       if (first_part != last_part) {
         futs.emplace_back(std::async(
