@@ -87,7 +87,7 @@ def ingest(
     IDS_ARRAY_NAME = "ids.tdb"
     PARTS_ARRAY_NAME = "parts.tdb"
     PARTIAL_WRITE_ARRAY_DIR = "write_temp"
-    VECTORS_PER_WORK_ITEM = 10000000
+    VECTORS_PER_WORK_ITEM = 20000000
     MAX_TASKS_PER_STAGE = 100
     CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 1000000
     DEFAULT_IMG_NAME = "3.9-vectorsearch"
@@ -542,7 +542,7 @@ def ingest(
                 config=config,
                 verbose=verbose,
                 trace_id=trace_id,
-            )
+            ).astype(np.float32)
             verb = 0
             if verbose:
                 verb = 3
@@ -816,6 +816,7 @@ def ingest(
             partial_write_array_index_uri = partial_write_array_dir_uri + "/" + INDEX_ARRAY_NAME + "/" + part_name
             logger.info(f"Input vectors start_pos: {part}, end_pos: {part_end}")
             if source_type == "TILEDB_ARRAY":
+                logger.info("Start indexing")
                 ivf_index_tdb(dtype=vector_type,
                               db_uri=source_uri,
                               centroids_uri=centroids_uri,
@@ -838,6 +839,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
+                logger.info("Start indexing")
                 ivf_index(dtype=vector_type,
                           db=array_to_matrix(np.transpose(in_vectors).astype(vector_type)),
                           centroids_uri=centroids_uri,
@@ -1002,7 +1004,7 @@ def ingest(
                     retry_policy="Always",
                 ),
             )
-            threads = 8
+            threads = 16
         else:
             d = dag.DAG(
                 name="vector-ingestion",
@@ -1040,7 +1042,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="ingest-" + str(task_id),
-                    resources={"cpu": str(threads), "memory": "8Gi"},
+                    resources={"cpu": str(threads), "memory": "16Gi"},
                     image_name=DEFAULT_IMG_NAME,
                 )
                 task_id += 1
@@ -1190,7 +1192,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="ingest-" + str(task_id),
-                    resources={"cpu": str(threads), "memory": "8Gi"},
+                    resources={"cpu": str(threads), "memory": "16Gi"},
                     image_name=DEFAULT_IMG_NAME,
                 )
                 ingest_node.depends_on(centroids_node)
@@ -1217,7 +1219,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="consolidate-partition-" + str(task_id),
-                    resources={"cpu": str(threads), "memory": "8Gi"},
+                    resources={"cpu": str(threads), "memory": "16Gi"},
                     image_name=DEFAULT_IMG_NAME,
                 )
                 consolidate_partition_node.depends_on(compute_indexes_node)
@@ -1375,4 +1377,4 @@ def ingest(
         if index_type == "FLAT":
             return FlatIndex(uri=array_uri, dtype=vector_type)
         elif index_type == "IVF_FLAT":
-            return IVFFlatIndex(uri=array_uri, dtype=vector_type)
+            return IVFFlatIndex(uri=array_uri, dtype=vector_type, memory_budget=1000000)

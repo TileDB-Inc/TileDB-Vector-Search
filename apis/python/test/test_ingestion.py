@@ -1,8 +1,7 @@
 from common import *
 
 from tiledb.vector_search.ingestion import ingest
-
-from tiledb.cloud.dag import Mode
+from tiledb.vector_search.index import IVFFlatIndex
 
 
 def test_flat_ingestion_u8(tmp_path):
@@ -71,6 +70,12 @@ def test_ivf_flat_ingestion_u8(tmp_path):
     result = np.transpose(index.query(np.transpose(query_vectors), k=k, nprobe=partitions))
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
 
+    index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype)
+    result = np.transpose(index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions))
+    assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
+    result = np.transpose(index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions, use_nuv_implementation=True))
+    assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
+
 
 def test_ivf_flat_ingestion_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -96,12 +101,19 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     result = np.transpose(index.query(np.transpose(query_vectors), k=k, nprobe=partitions))
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
 
+    index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype)
+    result = np.transpose(index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions))
+    assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
+    result = np.transpose(index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions, use_nuv_implementation=True))
+    assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
+
 
 def test_ivf_flat_ingestion_fvec(tmp_path):
     source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
     queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
     gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
     source_type = "FVEC"
+    dtype = np.float32
     array_uri = os.path.join(tmp_path, "array")
     k = 100
     dimensions = 128
@@ -119,4 +131,10 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
         partitions=partitions,
     )
     result = np.transpose(index.query(np.transpose(query_vectors), k=k, nprobe=partitions))
+    assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
+
+    index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype)
+    result = np.transpose(index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions))
+    assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
+    result = np.transpose(index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions, use_nuv_implementation=True))
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))

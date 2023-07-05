@@ -161,7 +161,7 @@ def ivf_index(
         raise TypeError("Unknown type!")
 
 
-def query_kmeans(
+def ivf_query_ram(
     dtype: np.dtype,
     parts_db: "colMajorMatrix",
     centroids_db: "colMajorMatrix",
@@ -173,24 +173,25 @@ def query_kmeans(
     nth: bool,
     nthreads: int,
     ctx: "Ctx" = None,
+    use_nuv_implementation: bool = False,
 ):
     """
-    Run kmeans vector query
+    Run IVF vector query using infinite RAM
 
     Parameters
     ----------
     dtype: numpy.dtype
         Type of vector, float32 or uint8
-    parts_uri: str
-        Partition URI
+    parts_db: colMajorMatrix
+        Partitioned vectors
     centroids_db: colMajorMatrix
         Open Matrix class from load_as_matrix for centroids
     query_vectors: colMajorMatrix
         Open Matrix class from load_as_matrix for queries
-    index_db: Vector
-        Vectors
-    ids_uri: str
-        URI for id mappings
+    indices: Vector
+        Partition indices
+    ids: Vector
+        Vector IDs
     nprobe: int
         Number of probs
     k_nn: int
@@ -220,9 +221,92 @@ def query_kmeans(
     )
 
     if dtype == np.float32:
-        return kmeans_query_f32(*args)
+        if use_nuv_implementation:
+            return nuv_query_heap_infinite_ram_f32(*args)
+        else:
+            return qv_query_heap_infinite_ram_f32(*args)
     elif dtype == np.uint8:
-        return kmeans_query_u8(*args)
+        if use_nuv_implementation:
+            return nuv_query_heap_infinite_ram_u8(*args)
+        else:
+            return qv_query_heap_infinite_ram_u8(*args)
+    else:
+        raise TypeError("Unknown type!")
+
+def ivf_query(
+    dtype: np.dtype,
+    parts_uri: str,
+    centroids: "colMajorMatrix",
+    query_vectors: "colMajorMatrix",
+    indices: "Vector",
+    ids_uri: str,
+    nprobe: int,
+    k_nn: int,
+    memory_budget: int,
+    nth: bool,
+    nthreads: int,
+    ctx: "Ctx" = None,
+    use_nuv_implementation: bool = False,
+):
+    """
+    Run IVF vector query using a memory budget
+
+    Parameters
+    ----------
+    dtype: numpy.dtype
+        Type of vector, float32 or uint8
+    parts_uri: str
+        Partition URI
+    centroids: colMajorMatrix
+        Open Matrix class from load_as_matrix for centroids
+    query_vectors: colMajorMatrix
+        Open Matrix class from load_as_matrix for queries
+    indeces: Vector
+        Vectors
+    ids_uri: str
+        URI for id mappings
+    nprobe: int
+        Number of probs
+    k_nn: int
+        Number of nn
+    memory_budget: int
+        Main memory budget
+    nth: bool
+        Return nth records
+    nthreads: int
+        Number of theads
+    ctx: Ctx
+        Tiledb Context
+    """
+    if ctx is None:
+        ctx = Ctx({})
+
+    args = tuple(
+        [
+            ctx,
+            parts_uri,
+            centroids,
+            query_vectors,
+            indices,
+            ids_uri,
+            nprobe,
+            k_nn,
+            memory_budget,
+            nth,
+            nthreads,
+        ]
+    )
+
+    if dtype == np.float32:
+        if use_nuv_implementation:
+            return nuv_query_heap_finite_ram_f32(*args)
+        else:
+            return qv_query_heap_finite_ram_f32(*args)
+    elif dtype == np.uint8:
+        if use_nuv_implementation:
+            return nuv_query_heap_finite_ram_u8(*args)
+        else:
+            return qv_query_heap_finite_ram_u8(*args)
     else:
         raise TypeError("Unknown type!")
 
