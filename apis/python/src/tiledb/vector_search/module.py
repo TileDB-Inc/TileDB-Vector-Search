@@ -7,6 +7,7 @@ from tiledb.vector_search._tiledbvspy import *
 
 from typing import Optional
 
+
 def load_as_matrix(path: str, nqueries: int = 0, config: Dict = {}):
     """
     Load array as Matrix class
@@ -27,7 +28,7 @@ def load_as_matrix(path: str, nqueries: int = 0, config: Dict = {}):
     if dtype == np.float32:
         m = tdbColMajorMatrix_f32(ctx, path, nqueries)
     elif dtype == np.float64:
-        m =  tdbColMajorMatrix_f64(ctx, path, nqueries)
+        m = tdbColMajorMatrix_f64(ctx, path, nqueries)
     elif dtype == np.int32:
         m = tdbColMajorMatrix_i32(ctx, path, nqueries)
     elif dtype == np.int32:
@@ -102,17 +103,7 @@ def ivf_index_tdb(
         ctx = Ctx(config)
 
     args = tuple(
-        [
-            ctx,
-            db_uri,
-            centroids_uri,
-            parts_uri,
-            index_uri,
-            id_uri,
-            start,
-            end,
-            nthreads
-        ]
+        [ctx, db_uri, centroids_uri, parts_uri, index_uri, id_uri, start, end, nthreads]
     )
 
     if dtype == np.float32:
@@ -141,17 +132,7 @@ def ivf_index(
         ctx = Ctx(config)
 
     args = tuple(
-        [
-            ctx,
-            db,
-            centroids_uri,
-            parts_uri,
-            index_uri,
-            id_uri,
-            start,
-            end,
-            nthreads
-        ]
+        [ctx, db, centroids_uri, parts_uri, index_uri, id_uri, start, end, nthreads]
     )
 
     if dtype == np.float32:
@@ -227,6 +208,7 @@ def query_kmeans(
     else:
         raise TypeError("Unknown type!")
 
+
 def partition_ivf_index(centroids, query, nprobe=1, nthreads=0):
     if centroids.dtype == np.float32:
         return partition_ivf_index_f32(centroids, query, nprobe, nthreads)
@@ -234,6 +216,7 @@ def partition_ivf_index(centroids, query, nprobe=1, nthreads=0):
         return partition_ivf_index_u8(centroids, query, nprobe, nthreads)
     else:
         raise TypeError("Unsupported type!")
+
 
 def validate_top_k(results: np.ndarray, ground_truth: np.ndarray):
     if results.dtype == np.uint64:
@@ -256,8 +239,9 @@ def array_to_matrix(array: np.ndarray):
     else:
         raise TypeError("Unsupported type!")
 
+
 # TODO
-#def load_partitioned(uri, partitions, dtype: Optional[np.dtype] = None):
+# def load_partitioned(uri, partitions, dtype: Optional[np.dtype] = None):
 #    if dtype is None:
 #        arr = tiledb.open(uri).dtype
 #    if dtype == np.float32:
@@ -267,7 +251,7 @@ def array_to_matrix(array: np.ndarray):
 #    else:
 #        raise TypeError("Unknown type!")
 
-#class PartitionedMatrix:
+# class PartitionedMatrix:
 #    def __init__(self, uri, partitions):
 #        self.uri = uri
 #        self.partitions = partitions
