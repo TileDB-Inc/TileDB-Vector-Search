@@ -62,3 +62,32 @@ def test_flat_query():
 
     g_m = vs.load_as_matrix(g_uri)
     assert vspy.validate_top_k_u64(r, g_m)
+
+def test_partition_ivf_index(tmpdir):
+    path = tmpdir.mkdir("test").join("test.tdb")
+
+    # Test: 3x3 identity; swap columns 0 and 1; check assignment matches swap.
+    data = np.identity(3).astype(np.float32)
+    data_m = vs.array_to_matrix(data)
+    query = data.copy()[:,[1,0,2]]
+    query_m = vs.array_to_matrix(query)
+
+    r = vspy.partition_ivf_index_f32(data_m, query_m, 1, 2)
+    r_a = np.array(r[1], copy=True)
+
+    assert np.array_equal(r_a, np.array([[1], [0], [2]], dtype=np.uint64))
+
+def test_partition_ivf_index2(tmpdir):
+    path = tmpdir.mkdir("test").join("test.tdb")
+
+    # Test: 3x3 identity; swap columns 0 and 1; check assignment matches swap.
+    data = np.identity(3).astype(np.float32)
+    np.repeat(data, 3)
+    data_m = vs.array_to_matrix(data)
+    query = np.identity(3).astype(np.float32)[:,[1,0,2]]
+    query_m = vs.array_to_matrix(query)
+
+    r = vspy.partition_ivf_index_f32(data_m, query_m, 1, 2)
+    r_a = np.array(r[1], copy=True)
+
+    assert np.array_equal(r_a, np.array([[1], [0], [2]], dtype=np.uint64))
