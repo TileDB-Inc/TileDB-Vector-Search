@@ -26,7 +26,7 @@ def load_as_matrix(path: str, nqueries: int = 0, config: Dict = {}):
     if dtype == np.float32:
         m = tdbColMajorMatrix_f32(ctx, path, nqueries)
     elif dtype == np.float64:
-        m =  tdbColMajorMatrix_f64(ctx, path, nqueries)
+        m = tdbColMajorMatrix_f64(ctx, path, nqueries)
     elif dtype == np.int32:
         m = tdbColMajorMatrix_i32(ctx, path, nqueries)
     elif dtype == np.int32:
@@ -101,17 +101,7 @@ def ivf_index_tdb(
         ctx = Ctx(config)
 
     args = tuple(
-        [
-            ctx,
-            db_uri,
-            centroids_uri,
-            parts_uri,
-            index_uri,
-            id_uri,
-            start,
-            end,
-            nthreads
-        ]
+        [ctx, db_uri, centroids_uri, parts_uri, index_uri, id_uri, start, end, nthreads]
     )
 
     if dtype == np.float32:
@@ -140,17 +130,7 @@ def ivf_index(
         ctx = Ctx(config)
 
     args = tuple(
-        [
-            ctx,
-            db,
-            centroids_uri,
-            parts_uri,
-            index_uri,
-            id_uri,
-            start,
-            end,
-            nthreads
-        ]
+        [ctx, db, centroids_uri, parts_uri, index_uri, id_uri, start, end, nthreads]
     )
 
     if dtype == np.float32:
@@ -232,6 +212,7 @@ def ivf_query_ram(
             return qv_query_heap_infinite_ram_u8(*args)
     else:
         raise TypeError("Unknown type!")
+
 
 def ivf_query(
     dtype: np.dtype,

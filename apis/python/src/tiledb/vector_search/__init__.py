@@ -2,7 +2,15 @@ from .index import FlatIndex, IVFFlatIndex
 from .ingestion import ingest
 from .module import load_as_array
 from .module import load_as_matrix
-from .module import query_vq, ivf_query, ivf_query_ram, validate_top_k, array_to_matrix, ivf_index, ivf_index_tdb
+from .module import (
+    query_vq,
+    ivf_query,
+    ivf_query_ram,
+    validate_top_k,
+    array_to_matrix,
+    ivf_index,
+    ivf_index_tdb,
+)
 
 __all__ = [
     "FlatIndex",

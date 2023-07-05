@@ -27,7 +27,10 @@ def get_queries_fvec(file, dimensions, nqueries=None):
                     dtype=np.float32,
                 ).astype(np.float32),
                 (read_size, dimensions + 1),
-            ), 0, axis=1)
+            ),
+            0,
+            axis=1,
+        )
 
 
 def get_groundtruth_ivec(file, k=None, nqueries=None):
@@ -38,15 +41,21 @@ def get_groundtruth_ivec(file, k=None, nqueries=None):
     read_offset = 0
     with vfs.open(file, "rb") as f:
         f.seek(read_offset)
-        return np.delete(
-            np.reshape(
-                np.frombuffer(
-                    f.read(read_size * vector_size),
-                    count=read_size * vector_values,
-                    dtype=np.int32,
-                ).astype(np.int32),
-                (read_size, k + 1),
-            ), 0, axis=1), None
+        return (
+            np.delete(
+                np.reshape(
+                    np.frombuffer(
+                        f.read(read_size * vector_size),
+                        count=read_size * vector_values,
+                        dtype=np.int32,
+                    ).astype(np.int32),
+                    (read_size, k + 1),
+                ),
+                0,
+                axis=1,
+            ),
+            None,
+        )
 
 
 def get_queries(dataset_dir, dtype, nqueries=None):

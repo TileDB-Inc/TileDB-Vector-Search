@@ -67,13 +67,24 @@ def test_ivf_flat_ingestion_u8(tmp_path):
         partitions=partitions,
         input_vectors_per_work_item=int(size / 10),
     )
-    result = np.transpose(index.query(np.transpose(query_vectors), k=k, nprobe=partitions))
+    result = np.transpose(
+        index.query(np.transpose(query_vectors), k=k, nprobe=partitions)
+    )
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
 
     index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype)
-    result = np.transpose(index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions))
+    result = np.transpose(
+        index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions)
+    )
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
-    result = np.transpose(index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions, use_nuv_implementation=True))
+    result = np.transpose(
+        index_ram.query(
+            np.transpose(query_vectors),
+            k=k,
+            nprobe=partitions,
+            use_nuv_implementation=True,
+        )
+    )
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
 
 
@@ -98,13 +109,24 @@ def test_ivf_flat_ingestion_f32(tmp_path):
         partitions=partitions,
         input_vectors_per_work_item=int(size / 10),
     )
-    result = np.transpose(index.query(np.transpose(query_vectors), k=k, nprobe=partitions))
+    result = np.transpose(
+        index.query(np.transpose(query_vectors), k=k, nprobe=partitions)
+    )
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
 
     index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype)
-    result = np.transpose(index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions))
+    result = np.transpose(
+        index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions)
+    )
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
-    result = np.transpose(index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions, use_nuv_implementation=True))
+    result = np.transpose(
+        index_ram.query(
+            np.transpose(query_vectors),
+            k=k,
+            nprobe=partitions,
+            use_nuv_implementation=True,
+        )
+    )
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
 
 
@@ -120,7 +142,9 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     partitions = 1000
     nqueries = 100
 
-    query_vectors = get_queries_fvec(queries_uri, dimensions=dimensions, nqueries=nqueries)
+    query_vectors = get_queries_fvec(
+        queries_uri, dimensions=dimensions, nqueries=nqueries
+    )
     gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
     index = ingest(
@@ -130,11 +154,22 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
         source_type=source_type,
         partitions=partitions,
     )
-    result = np.transpose(index.query(np.transpose(query_vectors), k=k, nprobe=partitions))
+    result = np.transpose(
+        index.query(np.transpose(query_vectors), k=k, nprobe=partitions)
+    )
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
 
     index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype)
-    result = np.transpose(index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions))
+    result = np.transpose(
+        index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions)
+    )
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
-    result = np.transpose(index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions, use_nuv_implementation=True))
+    result = np.transpose(
+        index_ram.query(
+            np.transpose(query_vectors),
+            k=k,
+            nprobe=partitions,
+            use_nuv_implementation=True,
+        )
+    )
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))

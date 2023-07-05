@@ -7,6 +7,7 @@ from tiledb.vector_search import _tiledbvspy as vspy
 
 import pytest
 
+
 def test_load_matrix(tmpdir):
     p = str(tmpdir.mkdir("test").join("test.tdb"))
     data = np.random.rand(12).astype(np.float32).reshape(3, 4)
@@ -24,13 +25,18 @@ def test_load_matrix(tmpdir):
     assert np.array_equal(m, data)
     assert np.array_equal(orig_matrix[0, 0], data[0, 0])
 
+
 def test_vector(tmpdir):
     v = vspy._create_vector_u64()
     assert np.array_equal(np.array(v), np.arange(10))
 
+
 @pytest.mark.skipif(
-    not os.path.exists(os.path.expanduser("~/work/proj/vector-search/datasets/sift-andrew/")),
-    reason="requires sift dataset")
+    not os.path.exists(
+        os.path.expanduser("~/work/proj/vector-search/datasets/sift-andrew/")
+    ),
+    reason="requires sift dataset",
+)
 def test_flat_query():
     # db_uri = "s3://tiledb-andrew/sift/sift_base"
     # probe_uri = "s3://tiledb-andrew/sift/sift_query"

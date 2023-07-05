@@ -80,7 +80,9 @@ class IVFFlatIndex(Index):
         Main memory budget. If not provided no memory budget is applied.
     """
 
-    def __init__(self, uri, dtype: np.dtype, memory_budget: int = -1, ctx: "Ctx" = None):
+    def __init__(
+        self, uri, dtype: np.dtype, memory_budget: int = -1, ctx: "Ctx" = None
+    ):
         self.parts_db_uri = os.path.join(uri, "parts.tdb")
         self.centroids_uri = os.path.join(uri, "centroids.tdb")
         self.index_uri = os.path.join(uri, "index.tdb")
@@ -99,8 +101,15 @@ class IVFFlatIndex(Index):
         self._centroids = load_as_matrix(self.centroids_uri)
         self._index = read_vector_u64(self.ctx, self.index_uri)
 
-    def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8, nprobe=1,
-    use_nuv_implementation: bool = False,):
+    def query(
+        self,
+        targets: np.ndarray,
+        k=10,
+        nqueries=10,
+        nthreads=8,
+        nprobe=1,
+        use_nuv_implementation: bool = False,
+    ):
         """
         Open a flat index
 
