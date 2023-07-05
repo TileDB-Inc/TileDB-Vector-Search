@@ -17,8 +17,14 @@ double global_time_of_interest;
 bool enable_stats = false;
 std::vector<json> core_stats;
 
+PYBIND11_MAKE_OPAQUE(std::vector<uint8_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<uint32_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<uint64_t>);
+PYBIND11_MAKE_OPAQUE(std::vector<float>);
+PYBIND11_MAKE_OPAQUE(std::vector<double>);
+#if !defined(__GNUC__)
+  PYBIND11_MAKE_OPAQUE(std::vector<size_t>);
+#endif
 
 namespace {
 
@@ -49,7 +55,6 @@ static void declareVector(py::module& mod, std::string const& suffix) {
 
 template <typename T>
 static void declareColMajorMatrix(py::module& mod, std::string const& suffix) {
-  using value_type = T;
   using TMatrix = ColMajorMatrix<T>;
   using PyTMatrix = py::class_<TMatrix>;
 
@@ -275,6 +280,7 @@ static void declareColMajorMatrixSubclass(py::module& mod,
 
   // TODO auto-namify
   PyTMatrix cls(mod, (name + suffix).c_str(), py::buffer_protocol());
+
   cls.def(py::init<const Ctx&, std::string, size_t>(),  py::keep_alive<1,2>());
 
   if constexpr (std::is_same<P, tdbColMajorMatrix<T>>::value) {
@@ -282,12 +288,38 @@ static void declareColMajorMatrixSubclass(py::module& mod,
   }
 }
 
-template <typename T>
-void declareStdVector(py::module& m) {
+template <typename P>
+static void declarePartitionedMatrix(py::module& mod,
+    std::string const& name,
+    std::string const& suffix) {
 
-  auto name = std::string("IntVector") + typeid(T).name();
+  using T = typename P::value_type;
+  using TMatrix = P;
+  using PyTMatrix = py::class_<TMatrix, ColMajorMatrix<T>>;
+
+  PyTMatrix cls(mod, (name + "_" + suffix).c_str(), py::buffer_protocol());
+  cls.def(py::init<const tiledb::Context&,
+                   const std::string&,      // db_uri
+                   std::vector<uint64_t>&,  // partition array indices
+                   std::vector<uint64_t>&,  // partition list to load
+                   const std::string&>(),   // id_uri
+                  py::keep_alive<1,2>());
+  cls.def("load", &TMatrix::load);
+}
+
+template <typename T>
+void declareStdVector(py::module& m, const std::string& suffix) {
+  auto name = std::string("StdVector_") + suffix;
   py::class_<std::vector<T>>(m, name.c_str(), py::buffer_protocol())
     .def(py::init<>())
+    .def(py::init([suffix](py::array_t<T> b) -> std::vector<T> {
+        py::buffer_info info = b.request();
+        if (info.ndim != 1)
+            throw std::runtime_error("Incompatible buffer dimension!");
+        std::vector<T> v(info.shape[0]);
+        std::memcpy(v.data(), info.ptr, info.shape[0] * sizeof(T));
+        return v;
+    }))
     .def("clear", &std::vector<T>::clear)
     .def("pop_back", &std::vector<T>::pop_back)
     .def("__len__", [](const std::vector<T> &v) { return v.size(); })
@@ -300,6 +332,43 @@ void declareStdVector(py::module& m) {
             { v.size() },                 /* Buffer dimensions */
             { sizeof(T) });
     });
+}
+
+template <typename T, typename indices_type = size_t>
+void declarePartitionIvfIndex(py::module& m, const std::string& suffix) {
+  m.def(("partition_ivf_index_" + suffix).c_str(),
+        [](ColMajorMatrix<T>& centroids,
+           ColMajorMatrix<float>& query,
+           size_t nprobe,
+           size_t nthreads) {
+          return detail::ivf::partition_ivf_index(centroids, query, nprobe, nthreads);
+           }
+        );
+}
+
+template <typename query_type, typename shuffled_ids_type = size_t>
+static void declare_dist_qv(py::module& m, const std::string& suffix) {
+  m.def(("dist_qv_" + suffix).c_str(),
+      [](tiledb::Context& ctx,
+        const std::string& part_uri,
+        std::vector<shuffled_ids_type>& active_partitions,
+        ColMajorMatrix<query_type>& query,
+        std::vector<std::vector<shuffled_ids_type>>& active_queries,
+        std::vector<shuffled_ids_type>& indices,
+        const std::string& id_uri,
+        size_t k_nn
+        /* size_t nthreads TODO: optional arg w/ fallback to C++ default arg */
+        ) { /* TODO return type */
+            return detail::ivf::dist_qv_finite_ram_part<query_type, shuffled_ids_type>(
+                ctx,
+                part_uri,
+                active_partitions,
+                query,
+                active_queries,
+                indices,
+                id_uri,
+                k_nn);
+        }, py::keep_alive<1,2>());
 }
 
 } // anonymous namespace
@@ -322,8 +391,14 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   /* === Vector === */
 
   // Must have matching PYBIND11_MAKE_OPAQUE declaration at top of file
-  declareStdVector<uint32_t>(m);
-  declareStdVector<uint64_t>(m);
+  declareStdVector<float>(m, "f32");
+  declareStdVector<double>(m, "f64");
+  declareStdVector<uint8_t>(m, "u8");
+  declareStdVector<uint32_t>(m, "u32");
+  declareStdVector<uint64_t>(m, "u64");
+  if constexpr (!std::is_same<uint64_t, unsigned long>::value) {
+    declareStdVector<size_t>(m, "szt");
+  }
 
   m.def("read_vector_u32", &read_vector<uint32_t>, "Read a vector from TileDB");
   m.def("read_vector_u64", &read_vector<uint64_t>, "Read a vector from TileDB");
@@ -427,4 +502,11 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declare_ivf_index_tdb<uint8_t>(m, "u8");
   declare_ivf_index_tdb<float>(m, "f32");
 
+  declarePartitionIvfIndex<uint8_t>(m, "u8");
+  declarePartitionIvfIndex<float>(m, "f32");
+
+  declarePartitionedMatrix<tdbColMajorPartitionedMatrix<uint8_t, uint64_t, uint64_t, uint64_t > >(m, "tdbPartitionedMatrix", "u8");
+  declarePartitionedMatrix<tdbColMajorPartitionedMatrix<float, uint64_t, uint64_t, uint64_t> >(m, "tdbPartitionedMatrix", "f32");
+
+  declare_dist_qv<float>(m, "f32");
 }

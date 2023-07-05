@@ -54,7 +54,6 @@ namespace detail::ivf {
  */
 auto partition_ivf_index(
     auto&& centroids,
-    auto&& indices,
     auto&& query,
     size_t nprobe,
     size_t nthreads) {

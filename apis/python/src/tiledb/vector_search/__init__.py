@@ -10,6 +10,7 @@ from .module import (
     array_to_matrix,
     ivf_index,
     ivf_index_tdb,
+    partition_ivf_index,
 )
 
 __all__ = [
@@ -25,4 +26,5 @@ __all__ = [
     "ivf_index",
     "ivf_index_tdb",
     "array_to_matrix",
+    "partition_ivf_index",
 ]
