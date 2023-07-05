@@ -87,7 +87,7 @@ def ingest(
     IDS_ARRAY_NAME = "ids.tdb"
     PARTS_ARRAY_NAME = "parts.tdb"
     PARTIAL_WRITE_ARRAY_DIR = "write_temp"
-    VECTORS_PER_WORK_ITEM = 10000000
+    VECTORS_PER_WORK_ITEM = 20000000
     MAX_TASKS_PER_STAGE = 100
     CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 1000000
     DEFAULT_IMG_NAME = "3.9-vectorsearch"
@@ -232,9 +232,15 @@ def ingest(
             ids_uri = f"{group.uri}/{IDS_ARRAY_NAME}"
             parts_uri = f"{group.uri}/{PARTS_ARRAY_NAME}"
             partial_write_array_dir_uri = f"{group.uri}/{PARTIAL_WRITE_ARRAY_DIR}"
-            partial_write_array_index_uri = f"{partial_write_array_dir_uri}/{INDEX_ARRAY_NAME}"
-            partial_write_array_ids_uri = f"{partial_write_array_dir_uri}/{IDS_ARRAY_NAME}"
-            partial_write_array_parts_uri = f"{partial_write_array_dir_uri}/{PARTS_ARRAY_NAME}"
+            partial_write_array_index_uri = (
+                f"{partial_write_array_dir_uri}/{INDEX_ARRAY_NAME}"
+            )
+            partial_write_array_ids_uri = (
+                f"{partial_write_array_dir_uri}/{IDS_ARRAY_NAME}"
+            )
+            partial_write_array_parts_uri = (
+                f"{partial_write_array_dir_uri}/{PARTS_ARRAY_NAME}"
+            )
 
             if not tiledb.array_exists(centroids_uri):
                 logger.info("Creating centroids array")
@@ -465,7 +471,10 @@ def ingest(
                             dtype=vector_type,
                         ).astype(vector_type),
                         (read_size, dimensions + 1),
-                    ), 0, axis=1)
+                    ),
+                    0,
+                    axis=1,
+                )
         elif source_type == "BVEC":
             vfs = tiledb.VFS()
             vector_values = 1 + dimensions
@@ -482,7 +491,10 @@ def ingest(
                             dtype=vector_type,
                         ).astype(vector_type),
                         (read_size, dimensions + 1),
-                    ), 0, axis=1)
+                    ),
+                    0,
+                    axis=1,
+                )
 
     # --------------------------------------------------------------------
     # UDFs
@@ -542,7 +554,7 @@ def ingest(
                 config=config,
                 verbose=verbose,
                 trace_id=trace_id,
-            )
+            ).astype(np.float32)
             verb = 0
             if verbose:
                 verb = 3
@@ -798,14 +810,20 @@ def ingest(
         trace_id: Optional[str] = None,
     ):
         import tiledb.cloud
-        from tiledb.vector_search.module import ivf_index_tdb, ivf_index, array_to_matrix
+        from tiledb.vector_search.module import (
+            ivf_index_tdb,
+            ivf_index,
+            array_to_matrix,
+        )
 
         logger = setup(config, verbose)
         group = tiledb.Group(array_uri)
         centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
         partial_write_array_dir_uri = array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
         partial_write_array_ids_uri = partial_write_array_dir_uri + "/" + IDS_ARRAY_NAME
-        partial_write_array_parts_uri = partial_write_array_dir_uri + "/" + PARTS_ARRAY_NAME
+        partial_write_array_parts_uri = (
+            partial_write_array_dir_uri + "/" + PARTS_ARRAY_NAME
+        )
 
         for part in range(start, end, batch):
             part_end = part + batch
@@ -813,19 +831,24 @@ def ingest(
                 part_end = end
 
             part_name = str(part) + "-" + str(part_end)
-            partial_write_array_index_uri = partial_write_array_dir_uri + "/" + INDEX_ARRAY_NAME + "/" + part_name
+            partial_write_array_index_uri = (
+                partial_write_array_dir_uri + "/" + INDEX_ARRAY_NAME + "/" + part_name
+            )
             logger.info(f"Input vectors start_pos: {part}, end_pos: {part_end}")
             if source_type == "TILEDB_ARRAY":
-                ivf_index_tdb(dtype=vector_type,
-                              db_uri=source_uri,
-                              centroids_uri=centroids_uri,
-                              parts_uri=partial_write_array_parts_uri,
-                              index_uri=partial_write_array_index_uri,
-                              id_uri=partial_write_array_ids_uri,
-                              start=part,
-                              end=part_end,
-                              nthreads=threads,
-                              config=config)
+                logger.info("Start indexing")
+                ivf_index_tdb(
+                    dtype=vector_type,
+                    db_uri=source_uri,
+                    centroids_uri=centroids_uri,
+                    parts_uri=partial_write_array_parts_uri,
+                    index_uri=partial_write_array_index_uri,
+                    id_uri=partial_write_array_ids_uri,
+                    start=part,
+                    end=part_end,
+                    nthreads=threads,
+                    config=config,
+                )
             else:
                 in_vectors = read_input_vectors(
                     source_uri=source_uri,
@@ -838,16 +861,19 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
-                ivf_index(dtype=vector_type,
-                          db=array_to_matrix(np.transpose(in_vectors).astype(vector_type)),
-                          centroids_uri=centroids_uri,
-                          parts_uri=partial_write_array_parts_uri,
-                          index_uri=partial_write_array_index_uri,
-                          id_uri=partial_write_array_ids_uri,
-                          start=part,
-                          end=part_end,
-                          nthreads=threads,
-                          config=config)
+                logger.info("Start indexing")
+                ivf_index(
+                    dtype=vector_type,
+                    db=array_to_matrix(np.transpose(in_vectors).astype(vector_type)),
+                    centroids_uri=centroids_uri,
+                    parts_uri=partial_write_array_parts_uri,
+                    index_uri=partial_write_array_index_uri,
+                    id_uri=partial_write_array_ids_uri,
+                    start=part,
+                    end=part_end,
+                    nthreads=threads,
+                    config=config,
+                )
 
     def compute_partition_indexes_udf(
         array_uri: str,
@@ -863,7 +889,9 @@ def ingest(
             vfs = tiledb.VFS()
             partition_sizes = np.zeros(partitions)
             indexes = np.zeros(partitions + 1).astype(np.uint64)
-            for partial_index_array_uri in vfs.ls(array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR + "/" + INDEX_ARRAY_NAME):
+            for partial_index_array_uri in vfs.ls(
+                array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR + "/" + INDEX_ARRAY_NAME
+            ):
                 if tiledb.array_exists(partial_index_array_uri):
                     partial_index_array = tiledb.open(partial_index_array_uri, mode="r")
                     partial_indexes = partial_index_array[:]["values"]
@@ -897,11 +925,17 @@ def ingest(
     ):
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
-            logger.info(f"Consolidating partitions {partition_id_start}-{partition_id_end}")
+            logger.info(
+                f"Consolidating partitions {partition_id_start}-{partition_id_end}"
+            )
             group = tiledb.Group(array_uri)
             partial_write_array_dir_uri = array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
-            partial_write_array_ids_uri = partial_write_array_dir_uri + "/" + IDS_ARRAY_NAME
-            partial_write_array_parts_uri = partial_write_array_dir_uri + "/" + PARTS_ARRAY_NAME
+            partial_write_array_ids_uri = (
+                partial_write_array_dir_uri + "/" + IDS_ARRAY_NAME
+            )
+            partial_write_array_parts_uri = (
+                partial_write_array_dir_uri + "/" + PARTS_ARRAY_NAME
+            )
             index_array_uri = group[INDEX_ARRAY_NAME].uri
             ids_array_uri = group[IDS_ARRAY_NAME].uri
             parts_array_uri = group[PARTS_ARRAY_NAME].uri
@@ -909,7 +943,9 @@ def ingest(
             partition_slices = []
             for i in range(partitions):
                 partition_slices.append([])
-            for partial_index_array_uri in vfs.ls(array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR + "/" + INDEX_ARRAY_NAME):
+            for partial_index_array_uri in vfs.ls(
+                array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR + "/" + INDEX_ARRAY_NAME
+            ):
                 if tiledb.array_exists(partial_index_array_uri):
                     partial_index_array = tiledb.open(partial_index_array_uri, mode="r")
                     partial_indexes = partial_index_array[:]["values"]
@@ -922,8 +958,12 @@ def ingest(
                         prev_index = partial_index
                         i += 1
 
-            partial_write_array_ids_array = tiledb.open(partial_write_array_ids_uri, mode="r")
-            partial_write_array_parts_array = tiledb.open(partial_write_array_parts_uri, mode="r")
+            partial_write_array_ids_array = tiledb.open(
+                partial_write_array_ids_uri, mode="r"
+            )
+            partial_write_array_parts_array = tiledb.open(
+                partial_write_array_parts_uri, mode="r"
+            )
             index_array = tiledb.open(index_array_uri, mode="r")
             ids_array = tiledb.open(ids_array_uri, mode="w")
             parts_array = tiledb.open(parts_array_uri, mode="w")
@@ -940,14 +980,21 @@ def ingest(
                     for partition_slice in partition_slices[p]:
                         read_slices.append(partition_slice)
 
-                logger.debug(f"Read slices: {read_slices}")
-                ids = partial_write_array_ids_array.multi_index[read_slices]["values"]
-                vectors = partial_write_array_parts_array.multi_index[:, read_slices]["values"]
                 start_pos = int(index_array[part]["values"])
                 end_pos = int(index_array[part_end]["values"])
+                if len(read_slices) == 0:
+                    if start_pos != end_pos:
+                        raise ValueError("Incorrect partition size.")
+                    continue
+                logger.debug(f"Read slices: {read_slices}")
+                ids = partial_write_array_ids_array.multi_index[read_slices]["values"]
+                vectors = partial_write_array_parts_array.multi_index[:, read_slices][
+                    "values"
+                ]
 
                 logger.debug(
-                    f"Ids shape {ids.shape}, expected size: {end_pos - start_pos} expected range:({start_pos},{end_pos})")
+                    f"Ids shape {ids.shape}, expected size: {end_pos - start_pos} expected range:({start_pos},{end_pos})"
+                )
                 if ids.shape[0] != end_pos - start_pos:
                     raise ValueError("Incorrect partition size.")
 
@@ -998,7 +1045,7 @@ def ingest(
                     retry_policy="Always",
                 ),
             )
-            threads = 8
+            threads = 16
         else:
             d = dag.DAG(
                 name="vector-ingestion",
@@ -1036,7 +1083,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="ingest-" + str(task_id),
-                    resources={"cpu": str(threads), "memory": "8Gi"},
+                    resources={"cpu": str(threads), "memory": "16Gi"},
                     image_name=DEFAULT_IMG_NAME,
                 )
                 task_id += 1
@@ -1125,7 +1172,7 @@ def ingest(
                             reducers.append(
                                 submit(
                                     compute_new_centroids,
-                                    *kmeans_workers[i: i + 10],
+                                    *kmeans_workers[i : i + 10],
                                     name="update-centroids-" + str(i),
                                     resources={"cpu": "1", "memory": "8Gi"},
                                     image_name=DEFAULT_IMG_NAME,
@@ -1186,7 +1233,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="ingest-" + str(task_id),
-                    resources={"cpu": str(threads), "memory": "8Gi"},
+                    resources={"cpu": str(threads), "memory": "16Gi"},
                     image_name=DEFAULT_IMG_NAME,
                 )
                 ingest_node.depends_on(centroids_node)
@@ -1213,7 +1260,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="consolidate-partition-" + str(task_id),
-                    resources={"cpu": str(threads), "memory": "8Gi"},
+                    resources={"cpu": str(threads), "memory": "16Gi"},
                     image_name=DEFAULT_IMG_NAME,
                 )
                 consolidate_partition_node.depends_on(compute_indexes_node)
@@ -1371,4 +1418,4 @@ def ingest(
         if index_type == "FLAT":
             return FlatIndex(uri=array_uri, dtype=vector_type)
         elif index_type == "IVF_FLAT":
-            return IVFFlatIndex(uri=array_uri, dtype=vector_type)
+            return IVFFlatIndex(uri=array_uri, dtype=vector_type, memory_budget=1000000)

@@ -5,6 +5,8 @@ import numpy as np
 import tiledb
 from tiledb.vector_search._tiledbvspy import *
 
+from typing import Optional
+
 
 def load_as_matrix(path: str, nqueries: int = 0, config: Dict = {}):
     """
@@ -26,7 +28,7 @@ def load_as_matrix(path: str, nqueries: int = 0, config: Dict = {}):
     if dtype == np.float32:
         m = tdbColMajorMatrix_f32(ctx, path, nqueries)
     elif dtype == np.float64:
-        m =  tdbColMajorMatrix_f64(ctx, path, nqueries)
+        m = tdbColMajorMatrix_f64(ctx, path, nqueries)
     elif dtype == np.int32:
         m = tdbColMajorMatrix_i32(ctx, path, nqueries)
     elif dtype == np.int32:
@@ -101,17 +103,7 @@ def ivf_index_tdb(
         ctx = Ctx(config)
 
     args = tuple(
-        [
-            ctx,
-            db_uri,
-            centroids_uri,
-            parts_uri,
-            index_uri,
-            id_uri,
-            start,
-            end,
-            nthreads
-        ]
+        [ctx, db_uri, centroids_uri, parts_uri, index_uri, id_uri, start, end, nthreads]
     )
 
     if dtype == np.float32:
@@ -140,17 +132,7 @@ def ivf_index(
         ctx = Ctx(config)
 
     args = tuple(
-        [
-            ctx,
-            db,
-            centroids_uri,
-            parts_uri,
-            index_uri,
-            id_uri,
-            start,
-            end,
-            nthreads
-        ]
+        [ctx, db, centroids_uri, parts_uri, index_uri, id_uri, start, end, nthreads]
     )
 
     if dtype == np.float32:
@@ -161,7 +143,7 @@ def ivf_index(
         raise TypeError("Unknown type!")
 
 
-def query_kmeans(
+def ivf_query_ram(
     dtype: np.dtype,
     parts_db: "colMajorMatrix",
     centroids_db: "colMajorMatrix",
@@ -173,24 +155,25 @@ def query_kmeans(
     nth: bool,
     nthreads: int,
     ctx: "Ctx" = None,
+    use_nuv_implementation: bool = False,
 ):
     """
-    Run kmeans vector query
+    Run IVF vector query using infinite RAM
 
     Parameters
     ----------
     dtype: numpy.dtype
-        Type of vectpr, flaot32 or uint8
-    parts_uri: str
-        Partition URI
+        Type of vector, float32 or uint8
+    parts_db: colMajorMatrix
+        Partitioned vectors
     centroids_db: colMajorMatrix
         Open Matrix class from load_as_matrix for centroids
     query_vectors: colMajorMatrix
         Open Matrix class from load_as_matrix for queries
-    index_db: Vector
-        Vectors
-    ids_uri: str
-        URI for id mappings
+    indices: Vector
+        Partition indices
+    ids: Vector
+        Vector IDs
     nprobe: int
         Number of probs
     k_nn: int
@@ -220,11 +203,104 @@ def query_kmeans(
     )
 
     if dtype == np.float32:
-        return kmeans_query_f32(*args)
+        if use_nuv_implementation:
+            return nuv_query_heap_infinite_ram_f32(*args)
+        else:
+            return qv_query_heap_infinite_ram_f32(*args)
     elif dtype == np.uint8:
-        return kmeans_query_u8(*args)
+        if use_nuv_implementation:
+            return nuv_query_heap_infinite_ram_u8(*args)
+        else:
+            return qv_query_heap_infinite_ram_u8(*args)
     else:
         raise TypeError("Unknown type!")
+
+
+def ivf_query(
+    dtype: np.dtype,
+    parts_uri: str,
+    centroids: "colMajorMatrix",
+    query_vectors: "colMajorMatrix",
+    indices: "Vector",
+    ids_uri: str,
+    nprobe: int,
+    k_nn: int,
+    memory_budget: int,
+    nth: bool,
+    nthreads: int,
+    ctx: "Ctx" = None,
+    use_nuv_implementation: bool = False,
+):
+    """
+    Run IVF vector query using a memory budget
+
+    Parameters
+    ----------
+    dtype: numpy.dtype
+        Type of vector, float32 or uint8
+    parts_uri: str
+        Partition URI
+    centroids: colMajorMatrix
+        Open Matrix class from load_as_matrix for centroids
+    query_vectors: colMajorMatrix
+        Open Matrix class from load_as_matrix for queries
+    indeces: Vector
+        Vectors
+    ids_uri: str
+        URI for id mappings
+    nprobe: int
+        Number of probs
+    k_nn: int
+        Number of nn
+    memory_budget: int
+        Main memory budget
+    nth: bool
+        Return nth records
+    nthreads: int
+        Number of theads
+    ctx: Ctx
+        Tiledb Context
+    """
+    if ctx is None:
+        ctx = Ctx({})
+
+    args = tuple(
+        [
+            ctx,
+            parts_uri,
+            centroids,
+            query_vectors,
+            indices,
+            ids_uri,
+            nprobe,
+            k_nn,
+            memory_budget,
+            nth,
+            nthreads,
+        ]
+    )
+
+    if dtype == np.float32:
+        if use_nuv_implementation:
+            return nuv_query_heap_finite_ram_f32(*args)
+        else:
+            return qv_query_heap_finite_ram_f32(*args)
+    elif dtype == np.uint8:
+        if use_nuv_implementation:
+            return nuv_query_heap_finite_ram_u8(*args)
+        else:
+            return qv_query_heap_finite_ram_u8(*args)
+    else:
+        raise TypeError("Unknown type!")
+
+
+def partition_ivf_index(centroids, query, nprobe=1, nthreads=0):
+    if centroids.dtype == np.float32:
+        return partition_ivf_index_f32(centroids, query, nprobe, nthreads)
+    elif centroids.dtype == np.uint8:
+        return partition_ivf_index_u8(centroids, query, nprobe, nthreads)
+    else:
+        raise TypeError("Unsupported type!")
 
 
 def validate_top_k(results: np.ndarray, ground_truth: np.ndarray):
@@ -247,3 +323,22 @@ def array_to_matrix(array: np.ndarray):
         return pyarray_copyto_matrix_u64(array)
     else:
         raise TypeError("Unsupported type!")
+
+
+# TODO
+# def load_partitioned(uri, partitions, dtype: Optional[np.dtype] = None):
+#    if dtype is None:
+#        arr = tiledb.open(uri).dtype
+#    if dtype == np.float32:
+#        return tdbPartitionedMatrix_f32(uri,
+#    elif dtype == np.uint8:
+#        return tdbPartitionedMatrix_f32(uri,
+#    else:
+#        raise TypeError("Unknown type!")
+
+# class PartitionedMatrix:
+#    def __init__(self, uri, partitions):
+#        self.uri = uri
+#        self.partitions = partitions
+#
+#        self._m = load_partitioned(uri, partitions)

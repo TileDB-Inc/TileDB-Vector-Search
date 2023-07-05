@@ -208,7 +208,7 @@ auto dist_qv_finite_ram(
    * that are in turn relevant to each partition.
    */
   auto&& [active_partitions, active_queries] =
-      partition_ivf_index(centroids, indices, query, nprobe, nthreads);
+      partition_ivf_index(centroids, query, nprobe, nthreads);
 
   auto num_parts = size(active_partitions);
   using parts_type = typename decltype(active_partitions)::value_type;

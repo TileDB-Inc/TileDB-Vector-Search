@@ -91,6 +91,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   using Base = Matrix<T, LayoutPolicy, I>;
   using Base::Base;
 
+public:
   using value_type = typename Base::value_type;
   using typename Base::index_type;
   using typename Base::reference;
@@ -162,7 +163,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   tdbPartitionedMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
-      std::vector<indices_type>&& indices,
+      std::vector<indices_type>& indices,
       const std::vector<parts_type>& parts,
       const std::string& id_uri)
       : tdbPartitionedMatrix(
