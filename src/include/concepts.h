@@ -47,6 +47,14 @@ concept has_load_member = requires(T&& t) {
 template <class T>
 constexpr bool is_loadable_v = has_load_member<T>;
 
+
+template <typename T>
+concept has_col_offset = requires(T&& t) {
+  t.col_offset();
+};
+
+
+
 template <typename T>
 concept feature_vector = requires(T t) {
   typename T::value_type;

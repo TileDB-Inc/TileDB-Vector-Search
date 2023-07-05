@@ -249,6 +249,7 @@ int main(int argc, char* argv[]) {
                 nthreads);
       }
     } else if (algorithm == "final" || algorithm == "fin") {
+      if (finite) {
         return detail::ivf::
             query_finite_ram<db_type, shuffled_ids_type>(
                 ctx,
@@ -262,6 +263,21 @@ int main(int argc, char* argv[]) {
 		blocksize,
                 nth,
                 nthreads, ppt);
+      } else {
+       return detail::ivf::
+	 query_infinite_ram<db_type, shuffled_ids_type>(
+							 ctx,
+							 part_uri,
+                centroids,
+                q,
+                indices,
+                id_uri,
+                nprobe,
+                k_nn,
+                nth,
+                nthreads);
+
+      }
     } else if (algorithm == "nuv_heap" || algorithm == "nuv") {
       if (finite) {
         return detail::ivf::
