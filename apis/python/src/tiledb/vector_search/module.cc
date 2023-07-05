@@ -103,8 +103,8 @@ static void declare_pyarray_to_matrix(py::module& m, const std::string& suffix) 
 }
 
 template <typename T, typename Id_Type = uint64_t>
-static void declare_kmeans_query(py::module& m, const std::string& suffix) {
-  m.def(("kmeans_query_" + suffix).c_str(),
+static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string& suffix) {
+  m.def(("qv_query_heap_infinite_ram_" + suffix).c_str(),
       [](const ColMajorMatrix<T>& parts,
          const ColMajorMatrix<float>& centroids,
          const ColMajorMatrix<float>& query_vectors,
@@ -123,6 +123,95 @@ static void declare_kmeans_query(py::module& m, const std::string& suffix) {
             ids,
             nprobe,
             k_nn,
+            nth,
+            nthreads);
+        return r;
+        }, py::keep_alive<1,2>());
+}
+
+template <typename T, typename Id_Type = uint64_t>
+static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& suffix) {
+  m.def(("qv_query_heap_finite_ram_" + suffix).c_str(),
+      [](tiledb::Context& ctx,
+         const std::string& parts_uri,
+         const ColMajorMatrix<float>& centroids,
+         const ColMajorMatrix<float>& query_vectors,
+         std::vector<Id_Type> indices,
+         const std::string& ids_uri,
+         size_t nprobe,
+         size_t k_nn,
+         size_t upper_bound,
+         bool nth,
+         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
+
+        auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
+            ctx,
+            parts_uri,
+            centroids,
+            query_vectors,
+            indices,
+            ids_uri,
+            nprobe,
+            k_nn,
+            upper_bound,
+            nth,
+            nthreads);
+        return r;
+        }, py::keep_alive<1,2>());
+}
+
+template <typename T, typename Id_Type = uint64_t>
+static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string& suffix) {
+  m.def(("nuv_query_heap_infinite_ram_" + suffix).c_str(),
+      [](const ColMajorMatrix<T>& parts,
+         const ColMajorMatrix<float>& centroids,
+         const ColMajorMatrix<float>& query_vectors,
+         std::vector<Id_Type> indices,
+         std::vector<Id_Type> ids,
+         size_t nprobe,
+         size_t k_nn,
+         bool nth,
+         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
+
+        auto r = detail::ivf::nuv_query_heap_infinite_ram(
+            parts,
+            centroids,
+            query_vectors,
+            indices,
+            ids,
+            nprobe,
+            k_nn,
+            nth,
+            nthreads);
+        return r;
+        }, py::keep_alive<1,2>());
+}
+
+template <typename T, typename Id_Type = uint64_t>
+static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& suffix) {
+  m.def(("nuv_query_heap_finite_ram_" + suffix).c_str(),
+      [](tiledb::Context& ctx,
+         const std::string& parts_uri,
+         const ColMajorMatrix<float>& centroids,
+         const ColMajorMatrix<float>& query_vectors,
+         std::vector<Id_Type> indices,
+         const std::string& ids_uri,
+         size_t nprobe,
+         size_t k_nn,
+         size_t upper_bound,
+         bool nth,
+         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
+
+        auto r = detail::ivf::nuv_query_heap_finite_ram<T, Id_Type>(
+            ctx,
+            parts_uri,
+            centroids,
+            query_vectors,
+            indices,
+            ids_uri,
+            nprobe,
+            k_nn,
+            upper_bound,
             nth,
             nthreads);
         return r;
@@ -399,8 +488,14 @@ PYBIND11_MODULE(_tiledbvspy, m) {
     return json{core_stats}.dump();
   });
 
-  declare_kmeans_query<uint8_t>(m, "u8");
-  declare_kmeans_query<float>(m, "f32");
+  declare_qv_query_heap_infinite_ram<uint8_t>(m, "u8");
+  declare_qv_query_heap_infinite_ram<float>(m, "f32");
+  declare_qv_query_heap_finite_ram<uint8_t>(m, "u8");
+  declare_qv_query_heap_finite_ram<float>(m, "f32");
+  declare_nuv_query_heap_infinite_ram<uint8_t>(m, "u8");
+  declare_nuv_query_heap_infinite_ram<float>(m, "f32");
+  declare_nuv_query_heap_finite_ram<uint8_t>(m, "u8");
+  declare_nuv_query_heap_finite_ram<float>(m, "f32");
 
   declare_ivf_index<uint8_t>(m, "u8");
   declare_ivf_index<float>(m, "f32");

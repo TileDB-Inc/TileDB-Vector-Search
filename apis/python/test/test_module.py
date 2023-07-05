@@ -27,6 +27,7 @@ def test_tdbMatrix(tmpdir):
     assert np.array_equal(m_array2, data)
     assert m[1, 2] == v
 
+
 def test_array_to_matrix(tmpdir):
     p = str(tmpdir.mkdir("test").join("test.tdb"))
 
@@ -35,6 +36,7 @@ def test_array_to_matrix(tmpdir):
     mat = vs.array_to_matrix(data)
     mat_view = np.array(mat, copy=True)  # mutable view
     assert np.array_equal(mat_view, data)
+
 
 def test_context(tmpdir):
     str(tmpdir.mkdir("test").join("test.tdb"))

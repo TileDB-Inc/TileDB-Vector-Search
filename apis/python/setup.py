@@ -4,7 +4,6 @@ from skbuild import setup  # This line replaces 'from setuptools import setup'
 
 
 def get_cmake_overrides():
-
     conf = list()
 
     tiledb_dir = os.environ.get("TILEDB_DIR", None)
