@@ -1273,24 +1273,18 @@ def ingest(
         array_uri: str,
         config: Optional[Mapping[str, Any]] = None,
     ):
-        conf_fragment_meta = tiledb.Config(config)
-        conf_fragment_meta["sm.consolidation.mode"] = "fragment_meta"
-        ctx_fragment_meta = tiledb.Ctx(conf_fragment_meta)
-        group = tiledb.Group(array_uri, ctx=ctx_fragment_meta)
-        tiledb.consolidate(group[PARTS_ARRAY_NAME].uri, ctx=ctx_fragment_meta)
-        tiledb.vacuum(group[PARTS_ARRAY_NAME].uri, ctx=ctx_fragment_meta)
-        if index_type == "IVF_FLAT":
-            tiledb.consolidate(group[IDS_ARRAY_NAME].uri, ctx=ctx_fragment_meta)
-            tiledb.vacuum(group[IDS_ARRAY_NAME].uri, ctx=ctx_fragment_meta)
-
-        conf_array_meta = tiledb.Config(config)
-        conf_array_meta["sm.consolidation.mode"] = "array_meta"
-        ctx_array_meta = tiledb.Ctx(conf_array_meta)
-        tiledb.consolidate(group[PARTS_ARRAY_NAME].uri, ctx=ctx_array_meta)
-        tiledb.vacuum(group[PARTS_ARRAY_NAME].uri, ctx=ctx_array_meta)
-        if index_type == "IVF_FLAT":
-            tiledb.consolidate(group[IDS_ARRAY_NAME].uri, ctx=ctx_fragment_meta)
-            tiledb.vacuum(group[IDS_ARRAY_NAME].uri, ctx=ctx_fragment_meta)
+        modes = ["fragment_meta", "commits", "array_meta"]
+        for mode in modes:
+            conf = tiledb.Config(config)
+            conf["sm.consolidation.mode"] = mode
+            conf["sm.vacuum.mode"] = mode
+            ctx= tiledb.Ctx(conf)
+            group = tiledb.Group(array_uri, ctx=ctx)
+            tiledb.consolidate(group[PARTS_ARRAY_NAME].uri, ctx=ctx)
+            tiledb.vacuum(group[PARTS_ARRAY_NAME].uri, ctx=ctx)
+            if index_type == "IVF_FLAT":
+                tiledb.consolidate(group[IDS_ARRAY_NAME].uri, ctx=ctx)
+                tiledb.vacuum(group[IDS_ARRAY_NAME].uri, ctx=ctx)
 
         vfs = tiledb.VFS()
         partial_write_array_dir_uri = array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
