@@ -241,7 +241,8 @@ int main(int argc, char* argv[]) {
   }
 
   if (args["--log"]) {
-    dump_logs(args["--log"].asString(), alg_name, nqueries, nth, k, nthreads, 0);
+    dump_logs(
+        args["--log"].asString(), alg_name, nqueries, nth, k, nthreads, 0);
   }
   if (enable_stats) {
     std::cout << json{core_stats}.dump() << std::endl;

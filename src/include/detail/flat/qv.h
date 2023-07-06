@@ -61,12 +61,11 @@ namespace detail::flat {
  */
 
 template <class DB, class Q>
-auto qv_query_nth(
-    DB& db, const Q& q, int k, bool nth, unsigned int nthreads) {
+auto qv_query_nth(DB& db, const Q& q, int k, bool nth, unsigned int nthreads) {
   if constexpr (is_loadable_v<decltype(db)>) {
     db.load();
   }
-  scoped_timer _{tdb_func__ + (nth? std::string{"nth"} : std::string{"heap"})};
+  scoped_timer _{tdb_func__ + (nth ? std::string{"nth"} : std::string{"heap"})};
 
   ColMajorMatrix<size_t> top_k(k, size(q));
 

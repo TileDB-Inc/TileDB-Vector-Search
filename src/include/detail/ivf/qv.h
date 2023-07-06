@@ -56,12 +56,12 @@
 #include <string>
 
 #include "algorithm.h"
+#include "concepts.h"
 #include "detail/ivf/partition.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "flat_query.h"
 #include "linalg.h"
-#include "concepts.h"
 
 #include "utils/print_types.h"
 
@@ -225,7 +225,6 @@ auto nuv_query_heap_infinite_ram(
 
   debug_matrix(shuffled_ids, "shuffled_ids");
 
-
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
 
@@ -234,10 +233,11 @@ auto nuv_query_heap_infinite_ram(
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);
 
-  auto min_scores = std::vector<std::vector<fixed_min_pair_heap<float, size_t>>>(
-      nthreads,
-      std::vector<fixed_min_pair_heap<float, size_t>>(
-          num_queries, fixed_min_pair_heap<float, size_t>(k_nn)));
+  auto min_scores =
+      std::vector<std::vector<fixed_min_pair_heap<float, size_t>>>(
+          nthreads,
+          std::vector<fixed_min_pair_heap<float, size_t>>(
+              num_queries, fixed_min_pair_heap<float, size_t>(k_nn)));
 
   size_t parts_per_thread = (size(active_partitions) + nthreads - 1) / nthreads;
 
@@ -253,14 +253,18 @@ auto nuv_query_heap_infinite_ram(
     if (first_part != last_part) {
       futs.emplace_back(std::async(
           std::launch::async,
-          [&, &active_queries = active_queries, &active_partitions = active_partitions, n, first_part, last_part]() {
+          [&,
+           &active_queries = active_queries,
+           &active_partitions = active_partitions,
+           n,
+           first_part,
+           last_part]() {
             /*
              * For each partition, process the queries that have that
              * partition as their top centroid.
              */
             for (size_t p = first_part; p < last_part; ++p) {
-
-	      auto partno = active_partitions[p];
+              auto partno = active_partitions[p];
               auto start = indices[partno];
               auto stop = indices[partno + 1];
 
@@ -372,7 +376,6 @@ auto qv_query_heap_infinite_ram(
   ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
   {
     scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
-
 
     // @todo get_top_k_from_heap
     for (int j = 0; j < size(q); ++j) {
@@ -562,7 +565,6 @@ auto nuv_query_heap_finite_ram(
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);
 
-
   using parts_type = typename decltype(active_partitions)::value_type;
 
   auto shuffled_db = tdbColMajorPartitionedMatrix<
@@ -613,8 +615,7 @@ auto nuv_query_heap_finite_ram(
 
     auto current_part_size = shuffled_db.num_col_parts();
 
-    size_t parts_per_thread =
-        (current_part_size + nthreads - 1) / nthreads;
+    size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
     std::vector<std::future<void>> futs;
     futs.reserve(nthreads);
@@ -676,8 +677,6 @@ auto nuv_query_heap_finite_ram(
     }
   }
   _i.stop();
-
-
 
   scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
 
@@ -772,12 +771,12 @@ auto qv_query_heap_finite_ram(
       auto partition_size = new_indices[i + 1] - new_indices[i];
       max_partition_size = std::max<size_t>(max_partition_size, partition_size);
       _memory_data.insert_entry(
-				tdb_func__ + " (predicted)",
-				partition_size * sizeof(T) * shuffled_db.num_rows());
+          tdb_func__ + " (predicted)",
+          partition_size * sizeof(T) * shuffled_db.num_rows());
     }
     _memory_data.insert_entry(
-			      tdb_func__ + " (upper bound)",
-			      nprobe * num_queries * sizeof(T) * max_partition_size);
+        tdb_func__ + " (upper bound)",
+        nprobe * num_queries * sizeof(T) * max_partition_size);
   }
 
   assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
@@ -803,8 +802,7 @@ auto qv_query_heap_finite_ram(
     // size_t block_size = (size(active_partitions) + nthreads - 1) / nthreads;
     // size_t parts_per_thread =
     //        (size(active_partitions) + nthreads - 1) / nthreads;
-    size_t parts_per_thread =
-        (current_part_size + nthreads - 1) / nthreads;
+    size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
     std::vector<std::future<void>> futs;
     futs.reserve(nthreads);
@@ -816,8 +814,17 @@ auto qv_query_heap_finite_ram(
           std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
 
       if (first_part != last_part) {
-        futs.emplace_back(
-			  std::async(std::launch::async, [&query, &min_scores, &shuffled_db, &new_indices, &centroid_query, &active_partitions, n, first_part, last_part]() {
+        futs.emplace_back(std::async(
+            std::launch::async,
+            [&query,
+             &min_scores,
+             &shuffled_db,
+             &new_indices,
+             &centroid_query,
+             &active_partitions,
+             n,
+             first_part,
+             last_part]() {
               /*
                * For each partition, process the queries that have that
                * partition as their top centroid.
@@ -944,7 +951,7 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
               auto stop = indices[partno + 1];
 
               auto len = 2 * (size(active_queries[partno]) / 2);
-              auto end =  active_queries[partno].begin() + len;
+              auto end = active_queries[partno].begin() + len;
               for (auto j = active_queries[partno].begin(); j != end; j += 2) {
                 auto j0 = j[0];
                 auto j1 = j[1];
@@ -953,31 +960,30 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
 
                 auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
                 for (size_t kp = start; kp < kstop; kp += 2) {
+                  auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+                  auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
+                  auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
+                  auto score_11 = L2(q_vec_1, shuffled_db[kp + 1]);
 
-                  auto score_00 = L2(q_vec_0, shuffled_db[kp+0]);
-                  auto score_01 = L2(q_vec_0, shuffled_db[kp+1]);
-                  auto score_10 = L2(q_vec_1, shuffled_db[kp+0]);
-                  auto score_11 = L2(q_vec_1, shuffled_db[kp+1]);
-
-                  min_scores[n][j0].insert(score_00, shuffled_ids[kp+0]);
-                  min_scores[n][j0].insert(score_01, shuffled_ids[kp+1]);
-                  min_scores[n][j1].insert(score_10, shuffled_ids[kp+0]);
-                  min_scores[n][j1].insert(score_11, shuffled_ids[kp+1]);
+                  min_scores[n][j0].insert(score_00, shuffled_ids[kp + 0]);
+                  min_scores[n][j0].insert(score_01, shuffled_ids[kp + 1]);
+                  min_scores[n][j1].insert(score_10, shuffled_ids[kp + 0]);
+                  min_scores[n][j1].insert(score_11, shuffled_ids[kp + 1]);
                 }
 
                 /*
-                   * Cleanup the last iteration(s) of k
+                 * Cleanup the last iteration(s) of k
                  */
                 for (size_t kp = kstop; kp < kstop; ++kp) {
-                  auto score_00 = L2(q_vec_0, shuffled_db[kp+0]);
-                  auto score_10 = L2(q_vec_1, shuffled_db[kp+0]);
-                  min_scores[n][j0].insert(score_00, shuffled_ids[kp+0]);
-                  min_scores[n][j1].insert(score_10, shuffled_ids[kp+0]);
+                  auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+                  auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
+                  min_scores[n][j0].insert(score_00, shuffled_ids[kp + 0]);
+                  min_scores[n][j1].insert(score_10, shuffled_ids[kp + 0]);
                 }
               }
 
               /*
-                 * Cleanup the last iteration(s) of j
+               * Cleanup the last iteration(s) of j
                */
               for (auto j = end; j < active_queries[partno].end(); ++j) {
                 auto j0 = j[0];
@@ -988,15 +994,12 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
                   auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
                   auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
 
-                  min_scores[n][j0].insert(
-                      score_00, shuffled_ids[kp + 0]);
-                  min_scores[n][j0].insert(
-                      score_01, shuffled_ids[kp + 1]);
+                  min_scores[n][j0].insert(score_00, shuffled_ids[kp + 0]);
+                  min_scores[n][j0].insert(score_01, shuffled_ids[kp + 1]);
                 }
                 for (size_t kp = kstop; kp < stop; ++kp) {
                   auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
-                  min_scores[n][j0].insert(
-                      score_00, shuffled_ids[kp + 0]);
+                  min_scores[n][j0].insert(score_00, shuffled_ids[kp + 0]);
                 }
               }
             }
@@ -1055,9 +1058,6 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
 
   return top_k;
 }
-
-
-
 
 template <typename T, class shuffled_ids_type>
 auto nuv_query_heap_finite_ram_reg_blocked(
@@ -1133,11 +1133,9 @@ auto nuv_query_heap_finite_ram_reg_blocked(
   while (shuffled_db.load()) {
     _i.start();
 
-
     auto current_part_size = shuffled_db.num_col_parts();
 
-    size_t parts_per_thread =
-        (current_part_size + nthreads - 1) / nthreads;
+    size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
     std::vector<std::future<void>> futs;
     futs.reserve(nthreads);
@@ -1151,7 +1149,14 @@ auto nuv_query_heap_finite_ram_reg_blocked(
       if (first_part != last_part) {
         futs.emplace_back(std::async(
             std::launch::async,
-            [&min_scores, &query, &shuffled_db, &new_indices, &active_queries = active_queries, n, first_part, last_part]() {
+            [&min_scores,
+             &query,
+             &shuffled_db,
+             &new_indices,
+             &active_queries = active_queries,
+             n,
+             first_part,
+             last_part]() {
               /*
                * For each partition, process the queries that have that
                * partition as their top centroid.
@@ -1163,8 +1168,9 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                 auto stop = new_indices[partno + 1] - shuffled_db.col_offset();
 
                 auto len = 2 * (size(active_queries[partno]) / 2);
-                auto end =  active_queries[partno].begin() + len;
-                for (auto j = active_queries[partno].begin(); j != end; j += 2) {
+                auto end = active_queries[partno].begin() + len;
+                for (auto j = active_queries[partno].begin(); j != end;
+                     j += 2) {
                   auto j0 = j[0];
                   auto j1 = j[1];
                   auto q_vec_0 = query[j0];
@@ -1172,26 +1178,31 @@ auto nuv_query_heap_finite_ram_reg_blocked(
 
                   auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
                   for (size_t kp = start; kp < kstop; kp += 2) {
+                    auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+                    auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
+                    auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
+                    auto score_11 = L2(q_vec_1, shuffled_db[kp + 1]);
 
-                    auto score_00 = L2(q_vec_0, shuffled_db[kp+0]);
-                    auto score_01 = L2(q_vec_0, shuffled_db[kp+1]);
-                    auto score_10 = L2(q_vec_1, shuffled_db[kp+0]);
-                    auto score_11 = L2(q_vec_1, shuffled_db[kp+1]);
-
-                    min_scores[n][j0].insert(score_00, shuffled_db.ids()[kp+0]);
-                    min_scores[n][j0].insert(score_01, shuffled_db.ids()[kp+1]);
-                    min_scores[n][j1].insert(score_10, shuffled_db.ids()[kp+0]);
-                    min_scores[n][j1].insert(score_11, shuffled_db.ids()[kp+1]);
+                    min_scores[n][j0].insert(
+                        score_00, shuffled_db.ids()[kp + 0]);
+                    min_scores[n][j0].insert(
+                        score_01, shuffled_db.ids()[kp + 1]);
+                    min_scores[n][j1].insert(
+                        score_10, shuffled_db.ids()[kp + 0]);
+                    min_scores[n][j1].insert(
+                        score_11, shuffled_db.ids()[kp + 1]);
                   }
 
                   /*
                    * Cleanup the last iteration(s) of k
                    */
                   for (size_t kp = kstop; kp < kstop; ++kp) {
-                    auto score_00 = L2(q_vec_0, shuffled_db[kp+0]);
-                    auto score_10 = L2(q_vec_1, shuffled_db[kp+0]);
-                    min_scores[n][j0].insert(score_00, shuffled_db.ids()[kp+0]);
-                    min_scores[n][j1].insert(score_10, shuffled_db.ids()[kp+0]);
+                    auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+                    auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
+                    min_scores[n][j0].insert(
+                        score_00, shuffled_db.ids()[kp + 0]);
+                    min_scores[n][j1].insert(
+                        score_10, shuffled_db.ids()[kp + 0]);
                   }
                 }
 
@@ -1258,7 +1269,6 @@ auto nuv_query_heap_finite_ram_reg_blocked(
   return top_k;
 }
 
-
 template <typename T, class shuffled_ids_type>
 auto nuv_query_heap_infinite_ram_reg_blocked(
     tiledb::Context& ctx,
@@ -1291,14 +1301,21 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
       nthreads);
 }
 
-
-
-auto apply_query(auto&& query, auto&& shuffled_db, auto&& new_indices, auto&& active_queries, auto&& ids, auto&& active_partitions, size_t k_nn, size_t first_part, size_t last_part) {
-
+auto apply_query(
+    auto&& query,
+    auto&& shuffled_db,
+    auto&& new_indices,
+    auto&& active_queries,
+    auto&& ids,
+    auto&& active_partitions,
+    size_t k_nn,
+    size_t first_part,
+    size_t last_part) {
   //  print_types(query, shuffled_db, new_indices, active_queries);
 
   auto num_queries = size(query);
-  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>> (num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
+      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
   size_t part_offset = 0;
   size_t col_offset = 0;
@@ -1308,7 +1325,6 @@ auto apply_query(auto&& query, auto&& shuffled_db, auto&& new_indices, auto&& ac
   }
 
   for (size_t p = first_part; p < last_part; ++p) {
-
     auto partno = p + part_offset;
 
     // @todo this is a bit of a hack
@@ -1319,71 +1335,65 @@ auto apply_query(auto&& query, auto&& shuffled_db, auto&& new_indices, auto&& ac
 
     auto start = new_indices[quartno] - col_offset;
     auto stop = new_indices[quartno + 1] - col_offset;
-    
+
     auto len = 2 * (size(active_queries[partno]) / 2);
-    auto end =  active_queries[partno].begin() + len;
+    auto end = active_queries[partno].begin() + len;
     for (auto j = active_queries[partno].begin(); j != end; j += 2) {
       auto j0 = j[0];
       auto j1 = j[1];
       auto q_vec_0 = query[j0];
       auto q_vec_1 = query[j1];
-      
+
       auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
       for (size_t kp = start; kp < kstop; kp += 2) {
-	
-	auto score_00 = L2(q_vec_0, shuffled_db[kp+0]);
-	auto score_01 = L2(q_vec_0, shuffled_db[kp+1]);
-	auto score_10 = L2(q_vec_1, shuffled_db[kp+0]);
-	auto score_11 = L2(q_vec_1, shuffled_db[kp+1]);
-	
-	min_scores[j0].insert(score_00, ids[kp+0]);
-	min_scores[j0].insert(score_01, ids[kp+1]);
-	min_scores[j1].insert(score_10, ids[kp+0]);
-	min_scores[j1].insert(score_11, ids[kp+1]);
+        auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+        auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
+        auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
+        auto score_11 = L2(q_vec_1, shuffled_db[kp + 1]);
+
+        min_scores[j0].insert(score_00, ids[kp + 0]);
+        min_scores[j0].insert(score_01, ids[kp + 1]);
+        min_scores[j1].insert(score_10, ids[kp + 0]);
+        min_scores[j1].insert(score_11, ids[kp + 1]);
       }
-      
+
       /*
        * Cleanup the last iteration(s) of k
        */
       for (size_t kp = kstop; kp < kstop; ++kp) {
-	auto score_00 = L2(q_vec_0, shuffled_db[kp+0]);
-	auto score_10 = L2(q_vec_1, shuffled_db[kp+0]);
-	min_scores[j0].insert(score_00, ids[kp+0]);
-	min_scores[j1].insert(score_10, ids[kp+0]);
+        auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+        auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
+        min_scores[j0].insert(score_00, ids[kp + 0]);
+        min_scores[j1].insert(score_10, ids[kp + 0]);
       }
     }
-    
+
     /*
      * Cleanup the last iteration(s) of j
      */
     for (auto j = end; j < active_queries[partno].end(); ++j) {
       auto j0 = j[0];
       auto q_vec_0 = query[j0];
-      
+
       auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
       for (size_t kp = start; kp < kstop; kp += 2) {
-	auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
-	auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
-	
-	min_scores[j0].insert(
-				 score_00, ids[kp + 0]);
-	min_scores[j0].insert(
-				 score_01, ids[kp + 1]);
+        auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+        auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
+
+        min_scores[j0].insert(score_00, ids[kp + 0]);
+        min_scores[j0].insert(score_01, ids[kp + 1]);
       }
       for (size_t kp = kstop; kp < stop; ++kp) {
-	auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
-	min_scores[j0].insert(
-				 score_00, ids[kp + 0]);
+        auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+        min_scores[j0].insert(score_00, ids[kp + 0]);
       }
     }
   }
   return min_scores;
 }
 
-
-
 template <typename T, class shuffled_ids_type>
-auto query_finite_ram (
+auto query_finite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
     auto&& centroids,
@@ -1394,7 +1404,8 @@ auto query_finite_ram (
     size_t k_nn,
     size_t upper_bound,
     bool nth,
-    size_t nthreads, size_t min_parts_per_thread = 0) {
+    size_t nthreads,
+    size_t min_parts_per_thread = 0) {
   scoped_timer _{tdb_func__ + " " + part_uri};
 
   // Check that the size of the indices vector is correct
@@ -1443,7 +1454,8 @@ auto query_finite_ram (
   debug_matrix(shuffled_db, "shuffled_db");
   debug_matrix(shuffled_db.ids(), "shuffled_db.ids()");
 
-  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>> (num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
+      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
   log_timer _i{tdb_func__ + " in RAM"};
 
@@ -1455,37 +1467,53 @@ auto query_finite_ram (
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
     {
-      
       std::vector<std::future<decltype(min_scores)>> futs;
       futs.reserve(nthreads);
-      
-      for (size_t n = 0; n < nthreads; ++n) {
-	auto first_part =
-          std::min<size_t>(n * parts_per_thread, current_part_size);
-	auto last_part =
-          std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
-	
-	if (first_part != last_part) {
-	  futs.emplace_back(std::async(std::launch::async, [&query, &shuffled_db, &new_indices, &active_queries = active_queries, &active_partitions = active_partitions, k_nn, first_part, last_part]() {
-	    return apply_query(query, shuffled_db, new_indices, active_queries, shuffled_db.ids(), active_partitions, k_nn, first_part, last_part);
-	  }));
-	}
-      }
-      
-      for (size_t n = 0; n < size(futs); ++n) {
-	auto min_n = futs[n].get();
 
-	for (size_t j = 0; j < num_queries; ++j) {
-	  for (auto&& e : min_n[j]) {
-	    min_scores[j].insert(std::get<0>(e), std::get<1>(e));
-	  }
-	}
+      for (size_t n = 0; n < nthreads; ++n) {
+        auto first_part =
+            std::min<size_t>(n * parts_per_thread, current_part_size);
+        auto last_part =
+            std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
+
+        if (first_part != last_part) {
+          futs.emplace_back(std::async(
+              std::launch::async,
+              [&query,
+               &shuffled_db,
+               &new_indices,
+               &active_queries = active_queries,
+               &active_partitions = active_partitions,
+               k_nn,
+               first_part,
+               last_part]() {
+                return apply_query(
+                    query,
+                    shuffled_db,
+                    new_indices,
+                    active_queries,
+                    shuffled_db.ids(),
+                    active_partitions,
+                    k_nn,
+                    first_part,
+                    last_part);
+              }));
+        }
+      }
+
+      for (size_t n = 0; n < size(futs); ++n) {
+        auto min_n = futs[n].get();
+
+        for (size_t j = 0; j < num_queries; ++j) {
+          for (auto&& e : min_n[j]) {
+            min_scores[j].insert(std::get<0>(e), std::get<1>(e));
+          }
+        }
       }
     }
 
     _i.stop();
   }
-
 
   scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
 
@@ -1506,17 +1534,16 @@ auto query_finite_ram (
   return top_k;
 }
 
-
 auto query_infinite_ram(
-			auto&& shuffled_db,
-			auto&& centroids,
-			auto&& query,
-			auto&& indices,
-			auto&& shuffled_ids,
-			size_t nprobe,
-			size_t k_nn,
-			bool nth,
-			size_t nthreads) {
+    auto&& shuffled_db,
+    auto&& centroids,
+    auto&& query,
+    auto&& indices,
+    auto&& shuffled_ids,
+    size_t nprobe,
+    size_t k_nn,
+    bool nth,
+    size_t nthreads) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
   assert(shuffled_db.num_cols() == shuffled_ids.size());
@@ -1529,13 +1556,14 @@ auto query_infinite_ram(
   // @todo Maybe we don't want to do new_indices in partition_ivf_index after
   //  all since they aren't used in this function
   auto&& [active_partitions, active_queries] =
-    partition_ivf_index(centroids, indices, query, nprobe, nthreads);
+      partition_ivf_index(centroids, indices, query, nprobe, nthreads);
 
   using parts_type = typename decltype(active_partitions)::value_type;
 
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
 
-  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>> (num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
+      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
   size_t parts_per_thread = (size(active_partitions) + nthreads - 1) / nthreads;
 
@@ -1544,45 +1572,63 @@ auto query_infinite_ram(
 
   for (size_t n = 0; n < nthreads; ++n) {
     auto first_part =
-      std::min<size_t>(n * parts_per_thread, size(active_partitions));
+        std::min<size_t>(n * parts_per_thread, size(active_partitions));
     auto last_part =
-      std::min<size_t>((n + 1) * parts_per_thread, size(active_partitions));
+        std::min<size_t>((n + 1) * parts_per_thread, size(active_partitions));
 
     if (first_part != last_part) {
-      futs.emplace_back(std::async(std::launch::async, [&query, &shuffled_db, &indices, &active_queries = active_queries, &active_partitions = active_partitions, &shuffled_ids, k_nn, first_part, last_part]() {
-	return apply_query(query, shuffled_db, indices, active_queries, shuffled_ids, active_partitions, k_nn, first_part, last_part);
-      }));
+      futs.emplace_back(std::async(
+          std::launch::async,
+          [&query,
+           &shuffled_db,
+           &indices,
+           &active_queries = active_queries,
+           &active_partitions = active_partitions,
+           &shuffled_ids,
+           k_nn,
+           first_part,
+           last_part]() {
+            return apply_query(
+                query,
+                shuffled_db,
+                indices,
+                active_queries,
+                shuffled_ids,
+                active_partitions,
+                k_nn,
+                first_part,
+                last_part);
+          }));
     }
   }
 
   // @todo We should do this without putting all queries on every node
   for (size_t n = 0; n < size(futs); ++n) {
     auto min_n = futs[n].get();
-    
+
     for (size_t j = 0; j < num_queries; ++j) {
       for (auto&& e : min_n[j]) {
-	min_scores[j].insert(std::get<0>(e), std::get<1>(e));
+        min_scores[j].insert(std::get<0>(e), std::get<1>(e));
       }
     }
-  }    
-    
+  }
+
   scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
-  
+
   ColMajorMatrix<size_t> top_k(k_nn, num_queries);
-  
+
   // @todo get_top_k_from_heap
   for (size_t j = 0; j < num_queries; ++j) {
     sort_heap(min_scores[j].begin(), min_scores[j].end());
     std::transform(
-		   min_scores[j].begin(),
-		   min_scores[j].end(),
-		   top_k[j].begin(),
-		   ([](auto&& e) { return std::get<1>(e); }));
+        min_scores[j].begin(),
+        min_scores[j].end(),
+        top_k[j].begin(),
+        ([](auto&& e) { return std::get<1>(e); }));
   }
-  
+
   return top_k;
 }
-
 
 template <typename T, class shuffled_ids_type>
 auto query_infinite_ram(
@@ -1604,7 +1650,7 @@ auto query_infinite_ram(
   shuffled_db.load();
   auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
 
-  return query_infinite_ram (
+  return query_infinite_ram(
       shuffled_db,
       centroids,
       q,
@@ -1615,9 +1661,6 @@ auto query_infinite_ram(
       nth,
       nthreads);
 }
-
-
-
 
 }  // namespace detail::ivf
 

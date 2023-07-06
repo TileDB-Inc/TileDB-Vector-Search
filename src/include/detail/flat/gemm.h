@@ -68,7 +68,6 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
   log_timer _i{tdb_func__ + " in RAM"};
 
   while (db.load()) {
-
     _i.start();
 
     gemm_scores(db, q, scores, nthreads);

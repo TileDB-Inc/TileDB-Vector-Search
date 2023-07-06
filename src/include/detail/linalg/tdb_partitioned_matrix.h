@@ -91,7 +91,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   using Base = Matrix<T, LayoutPolicy, I>;
   using Base::Base;
 
-public:
+ public:
   using value_type = typename Base::value_type;
   using typename Base::index_type;
   using typename Base::reference;
@@ -289,8 +289,8 @@ public:
             std::get<0>(col_view_) + max_cols_) {
           break;
         }
-	std::get<1>(col_view_) += next_part_size;   // FIXME ??
-	std::get<1>(col_part_view_) = i + 1;
+        std::get<1>(col_view_) += next_part_size;  // FIXME ??
+        std::get<1>(col_part_view_) = i + 1;
       }
       num_cols_ = std::get<1>(col_view_) - std::get<0>(col_view_);
       col_offset_ = std::get<0>(col_view_);

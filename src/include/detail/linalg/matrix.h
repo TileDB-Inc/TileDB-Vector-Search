@@ -296,7 +296,7 @@ void debug_slice(
     for (size_t i = 0; i < rows; ++i) {
       std::cout << "# ";
       for (size_t j = 0; j < cols; ++j) {
-        std::cout << (float) A(i, j) << "\t";
+        std::cout << (float)A(i, j) << "\t";
       }
       std::cout << std::endl;
     }
