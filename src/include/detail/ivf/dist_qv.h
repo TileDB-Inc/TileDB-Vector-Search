@@ -76,6 +76,7 @@ auto dist_qv_finite_ram_part(
     const std::string& id_uri,
     size_t k_nn,
     size_t nthreads = std::thread::hardware_concurrency()) {
+
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
