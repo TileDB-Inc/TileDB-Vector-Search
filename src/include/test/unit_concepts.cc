@@ -36,19 +36,23 @@
 
 template <class T>
 struct loadable_class {
-  bool load() const { return true; }
+  bool load() const {
+    return true;
+  }
 };
 
 template <class T>
 struct not_loadable_class {
-  bool not_load() const { return true; }
+  bool not_load() const {
+    return true;
+  }
 };
 
 template <class T>
-void maybe_load (const T& t) {
+void maybe_load(const T& t) {
   if constexpr (is_loadable_v<T>) {
     CHECK(t.load());
-  } else if constexpr (!is_loadable_v<T>){
+  } else if constexpr (!is_loadable_v<T>) {
     CHECK(t.not_load());
   }
 }

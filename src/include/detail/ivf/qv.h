@@ -940,14 +940,19 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
     if (first_part != last_part) {
       futs.emplace_back(std::async(
           std::launch::async,
-          [&, &active_queries = active_queries, &active_partitions = active_partitions, n, first_part, last_part]() {
+          [&,
+           &active_queries = active_queries,
+           &active_partitions = active_partitions,
+           n,
+           first_part,
+           last_part]() {
             /*
              * For each partition, process the queries that have that
              * partition as their top centroid.
              */
             auto& mscores = min_scores[n];
             for (size_t partno = first_part; partno < last_part; ++partno) {
-	      auto quartno = active_partitions[partno];
+              auto quartno = active_partitions[partno];
               auto start = indices[quartno];
               auto stop = indices[quartno + 1];
 

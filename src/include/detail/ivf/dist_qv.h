@@ -76,7 +76,6 @@ auto dist_qv_finite_ram_part(
     const std::string& id_uri,
     size_t k_nn,
     size_t nthreads = std::thread::hardware_concurrency()) {
-
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
@@ -123,8 +122,7 @@ auto dist_qv_finite_ram_part(
   futs.reserve(nthreads);
 
   for (size_t n = 0; n < nthreads; ++n) {
-    auto first_part =
-        std::min<size_t>(n * parts_per_thread, current_part_size);
+    auto first_part = std::min<size_t>(n * parts_per_thread, current_part_size);
     auto last_part =
         std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
 
@@ -132,13 +130,13 @@ auto dist_qv_finite_ram_part(
       futs.emplace_back(std::async(
           std::launch::async,
           [&query,
-              &shuffled_db,
-              &new_indices,
-              &active_queries = active_queries,
-              &active_partitions = active_partitions,
-              k_nn,
-              first_part,
-              last_part]() {
+           &shuffled_db,
+           &new_indices,
+           &active_queries = active_queries,
+           &active_partitions = active_partitions,
+           k_nn,
+           first_part,
+           last_part]() {
             return apply_query(
                 query,
                 shuffled_db,
@@ -164,7 +162,6 @@ auto dist_qv_finite_ram_part(
   }
   return min_scores;
 }
-
 
 #if 0
   auto min_scores =
@@ -237,7 +234,6 @@ auto dist_qv_finite_ram_part(
 
   return min_min_scores;
 #endif
-
 
 template <typename T, class shuffled_ids_type>
 auto dist_qv_finite_ram(
