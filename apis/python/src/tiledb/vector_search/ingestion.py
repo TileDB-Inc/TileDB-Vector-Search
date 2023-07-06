@@ -900,12 +900,12 @@ def ingest(
                         i += 1
             logger.debug("Partition sizes: %s", partition_sizes)
             i = 0
-            sum = 0
+            _sum = 0
             for partition_size in partition_sizes:
-                indexes[i] = sum
-                sum += partition_size
+                indexes[i] = _sum
+                _sum += partition_size
                 i += 1
-            indexes[i] = sum
+            indexes[i] = _sum
             logger.info("Partition indexes: %d", indexes)
             index_array = tiledb.open(index_array_uri, mode="w")
             index_array[:] = indexes
