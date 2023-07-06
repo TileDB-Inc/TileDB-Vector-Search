@@ -181,3 +181,11 @@ def create_array(path: str, data):
     tiledb.Array.create(path, schema)
     with tiledb.open(path, "w") as A:
         A[:] = data
+
+def accuracy(result, gt):
+    found = 0
+    total = 0
+    for i in range(len(result)):
+        total+=len(result[i])
+        found+=len(np.intersect1d(result[i], gt[i]))
+    return found/total
