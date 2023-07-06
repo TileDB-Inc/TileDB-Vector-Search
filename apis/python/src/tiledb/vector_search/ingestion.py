@@ -224,7 +224,7 @@ def ingest(
                 )
                 logger.info(parts_schema)
                 tiledb.Array.create(parts_uri, parts_schema)
-                group.add(parts_uri, name=PARTS_ARRAY_NAME)
+                group.add(PARTS_ARRAY_NAME, name=PARTS_ARRAY_NAME, relative=True)
 
         elif index_type == "IVF_FLAT":
             centroids_uri = f"{group.uri}/{CENTROIDS_ARRAY_NAME}"
@@ -272,7 +272,7 @@ def ingest(
                 )
                 logger.info(centroids_schema)
                 tiledb.Array.create(centroids_uri, centroids_schema)
-                group.add(centroids_uri, name=CENTROIDS_ARRAY_NAME)
+                group.add(CENTROIDS_ARRAY_NAME, name=CENTROIDS_ARRAY_NAME, relative=True)
 
             if not tiledb.array_exists(index_uri):
                 logger.info("Creating index array")
@@ -294,7 +294,7 @@ def ingest(
                 )
                 logger.info(index_schema)
                 tiledb.Array.create(index_uri, index_schema)
-                group.add(index_uri, name=INDEX_ARRAY_NAME)
+                group.add(INDEX_ARRAY_NAME, name=INDEX_ARRAY_NAME, relative=True)
 
             if not tiledb.array_exists(ids_uri):
                 logger.info("Creating ids array")
@@ -316,7 +316,7 @@ def ingest(
                 )
                 logger.info(ids_schema)
                 tiledb.Array.create(ids_uri, ids_schema)
-                group.add(ids_uri, name=IDS_ARRAY_NAME)
+                group.add(IDS_ARRAY_NAME, name=IDS_ARRAY_NAME, relative=True)
 
             if not tiledb.array_exists(parts_uri):
                 logger.info("Creating parts array")
@@ -346,7 +346,7 @@ def ingest(
                 )
                 logger.info(parts_schema)
                 tiledb.Array.create(parts_uri, parts_schema)
-                group.add(parts_uri, name=PARTS_ARRAY_NAME)
+                group.add(PARTS_ARRAY_NAME, name=PARTS_ARRAY_NAME, relative=True)
 
             vfs = tiledb.VFS()
             if vfs.is_dir(partial_write_array_dir_uri):
