@@ -104,7 +104,7 @@ Usage:
     ivf_flat --centroids_uri URI --parts_uri URI (--index_uri URI | --sizes_uri URI)
              --ids_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
             [--k NN][--nprobe NN] [--nqueries NN] [--alg ALGO] [--infinite] [--finite] [--blocksize NN]
-            [--nth] [--nthreads NN] [--nodes NN] [--region REGION] [--stats] [--log FILE] [-d] [-v]
+            [--nth] [--nthreads NN] [--ppt NN] [--vpt NN] [--nodes NN] [--region REGION] [--stats] [--log FILE] [-d] [-v]
 
 Options:
     -h, --help            show this screen
@@ -125,6 +125,8 @@ Options:
     --blocksize NN        number of vectors to process in an out of core block (0 = all) [default: 0]
     --nth                 (deprecated) use nth_element for top k [default: false]
     --nthreads NN         number of threads to use (0 = hardware concurrency) [default: 0]
+    --ppt NN              minimum number of partitions to assign to a thread (0 = no min) [default: 0]
+    --vpt NN              minimum number of vectors to assign to a thread (0 = no min) [default: 0]
     --nodes NN            number of nodes to use for (emulated) distributed query [default: 1]
     --region REGION       AWS S3 region [default: us-east-1]
     --log FILE            log info to FILE (- for stdout)
@@ -176,6 +178,8 @@ int main(int argc, char* argv[]) {
   auto blocksize = (size_t)args["--blocksize"].asLong();
   auto num_nodes = (size_t)args["--nodes"].asLong();
   bool nth = args["--nth"].asBool();
+  auto ppt = args["--ppt"].asLong();
+  auto vpt = args["--vpt"].asLong();
   auto algorithm = args["--alg"].asString();
   // bool finite = args["--finite"].asBool();
   bool finite = !(args["--infinite"].asBool());
@@ -243,6 +247,36 @@ int main(int argc, char* argv[]) {
                 k_nn,
                 nth,
                 nthreads);
+      }
+    } else if (algorithm == "final" || algorithm == "fin") {
+      if (finite) {
+        return detail::ivf::
+            query_finite_ram<db_type, shuffled_ids_type>(
+                ctx,
+                part_uri,
+                centroids,
+                q,
+                indices,
+                id_uri,
+                nprobe,
+                k_nn,
+		blocksize,
+                nth,
+                nthreads, ppt);
+      } else {
+       return detail::ivf::
+	 query_infinite_ram<db_type, shuffled_ids_type>(
+							 ctx,
+							 part_uri,
+                centroids,
+                q,
+                indices,
+                id_uri,
+                nprobe,
+                k_nn,
+                nth,
+                nthreads);
+
       }
     } else if (algorithm == "nuv_heap" || algorithm == "nuv") {
       if (finite) {
