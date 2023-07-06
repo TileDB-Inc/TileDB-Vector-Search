@@ -72,7 +72,7 @@ def test_ivf_flat_ingestion_u8(tmp_path):
     )
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
 
-    index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype)
+    index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype, memory_budget=int(size / 10))
     result = np.transpose(
         index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions)
     )
@@ -114,7 +114,7 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     )
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
 
-    index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype)
+    index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype, memory_budget=int(size / 10))
     result = np.transpose(
         index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions)
     )
@@ -159,7 +159,7 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     )
     assert np.array_equal(np.sort(result, axis=1), np.sort(gt_i, axis=1))
 
-    index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype)
+    index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype, memory_budget=int(size / 10))
     result = np.transpose(
         index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions)
     )
