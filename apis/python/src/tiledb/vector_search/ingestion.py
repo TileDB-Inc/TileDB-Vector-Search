@@ -420,7 +420,7 @@ def ingest(
         trace_id: Optional[str] = None,
     ) -> np.array:
         logger = setup(config, verbose)
-        logger.info(f"Reading input vectors start_pos: {start_pos}, end_pos: {end_pos}")
+        logger.info("Reading input vectors start_pos: %i, end_pos: %i", start_pos, end_pos)
         if source_type == "TILEDB_ARRAY":
             with tiledb.open(source_uri, mode="r") as src_array:
                 return np.transpose(
@@ -509,9 +509,7 @@ def ingest(
         logger = setup(config, verbose)
         group = tiledb.Group(array_uri)
         centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
-        logger.info(
-            f"Copying centroids from: {copy_centroids_uri}, to: {centroids_uri}"
-        )
+        logger.info("Copying centroids from: %s, to: %s", copy_centroids_uri, centroids_uri)
         src = tiledb.open(copy_centroids_uri, mode="r")
         dest = tiledb.open(centroids_uri, mode="w")
         src_centroids = src[:, :]
@@ -566,7 +564,7 @@ def ingest(
                 n_init=n_init,
             )
             km.fit_predict(sample_vectors)
-            logger.info(f"Writing centroids to array {centroids_uri}")
+            logger.info("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w") as A:
                 A[0:dimensions, 0:partitions] = np.transpose(
                     np.array(km.cluster_centers_)
@@ -629,7 +627,7 @@ def ingest(
             new_centroid_count = np.ones(len(cents_t))
             for vector_id in range(start, end):
                 if vector_id % 100000 == 0:
-                    logger.info(f"Vectors computed: {vector_id}")
+                    logger.info("Vectors computed: %d", vector_id)
                 c_id = assignments_t[vector_id]
                 if new_centroid_count[c_id] == 1:
                     new_centroid_sums[c_id] = vectors_t[vector_id]
@@ -639,13 +637,13 @@ def ingest(
                 new_centroid_count[c_id] += 1
             new_centroid_sums_queue.put(new_centroid_sums)
             new_centroid_counts_queue.put(new_centroid_count)
-            logger.info(f"Finished thread: {thread_id}")
+            logger.info("Finished thread: %d", thread_id)
 
         def update_centroids():
             import multiprocessing as mp
 
             logger.info("Updating centroids based on assignments.")
-            logger.info(f"Using {threads} threads.")
+            logger.info("Using %d threads.", threads)
             global cents_t, vectors_t, assignments_t, new_centroid_thread_sums, new_centroid_thread_counts
             cents_t = centroids
             vectors_t = vectors
@@ -712,15 +710,15 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             )
-            logger.info(f"Input centroids: {centroids[0:5]}")
+            logger.info("Input centroids: %s", centroids[0:5])
             logger.info("Assigning vectors to centroids")
             km = KMeans()
             km._n_threads = threads
             km.cluster_centers_ = centroids
             assignments = km.predict(vectors)
-            logger.info(f"Assignments: {assignments[0:100]}")
+            logger.info("Assignments: %s", assignments[0:100])
             partial_new_centroids = update_centroids()
-            logger.info(f"New centroids: {partial_new_centroids[0:5]}")
+            logger.info("New centroids: %s", partial_new_centroids[0:5])
             return partial_new_centroids
 
     def compute_new_centroids(*argv):
@@ -750,7 +748,7 @@ def ingest(
             group = tiledb.Group(array_uri)
             parts_array_uri = group[PARTS_ARRAY_NAME].uri
             target = tiledb.open(parts_array_uri, mode="w")
-            logger.info(f"Input vectors start_pos: {start}, end_pos: {end}")
+            logger.info("Input vectors start_pos: %d, end_pos: %d", start, end)
 
             for part in range(start, end, batch):
                 part_end = part + batch
@@ -768,8 +766,8 @@ def ingest(
                     trace_id=trace_id,
                 )
 
-                logger.info(f"Vector read:{len(in_vectors)}")
-                logger.info(f"Writing data to array {parts_array_uri}")
+                logger.info("Vector read: %d", len(in_vectors))
+                logger.info("Writing data to array %s", parts_array_uri)
                 target[0:dimensions, start:end] = np.transpose(in_vectors)
             target.close()
 
@@ -786,7 +784,7 @@ def ingest(
             logger = setup(config, verbose)
             group = tiledb.Group(array_uri)
             centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
-            logger.info(f"Writing centroids to array {centroids_uri}")
+            logger.info("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w") as A:
                 A[0:dimensions, 0:partitions] = np.transpose(np.array(centroids))
 
@@ -833,7 +831,7 @@ def ingest(
             partial_write_array_index_uri = (
                 partial_write_array_dir_uri + "/" + INDEX_ARRAY_NAME + "/" + part_name
             )
-            logger.info(f"Input vectors start_pos: {part}, end_pos: {part_end}")
+            logger.info("Input vectors start_pos: %d, end_pos: %d", part, part_end)
             if source_type == "TILEDB_ARRAY":
                 logger.info("Start indexing")
                 ivf_index_tdb(
@@ -900,7 +898,7 @@ def ingest(
                         partition_sizes[i] += int(partial_index) - int(prev_index)
                         prev_index = partial_index
                         i += 1
-            logger.debug(f"Partition sizes: {partition_sizes}")
+            logger.debug("Partition sizes: %s", partition_sizes)
             i = 0
             sum = 0
             for partition_size in partition_sizes:
@@ -908,7 +906,7 @@ def ingest(
                 sum += partition_size
                 i += 1
             indexes[i] = sum
-            logger.info(f"Partition indexes: {indexes}")
+            logger.info("Partition indexes: %d", indexes)
             index_array = tiledb.open(index_array_uri, mode="w")
             index_array[:] = indexes
 
@@ -924,9 +922,7 @@ def ingest(
     ):
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
-            logger.info(
-                f"Consolidating partitions {partition_id_start}-{partition_id_end}"
-            )
+            logger.info("Consolidating partitions %d-%d", partition_id_start, partition_id_end)
             group = tiledb.Group(array_uri)
             partial_write_array_dir_uri = array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
             partial_write_array_ids_uri = (
@@ -966,14 +962,12 @@ def ingest(
             index_array = tiledb.open(index_array_uri, mode="r")
             ids_array = tiledb.open(ids_array_uri, mode="w")
             parts_array = tiledb.open(parts_array_uri, mode="w")
-            logger.info(
-                f"Partitions start: {partition_id_start} end: {partition_id_end}"
-            )
+            logger.info("Partitions start: %d end: %d", partition_id_start, partition_id_end)
             for part in range(partition_id_start, partition_id_end, batch):
                 part_end = part + batch
                 if part_end > partition_id_end:
                     part_end = partition_id_end
-                logger.info(f"Consolidating partitions start: {part} end: {part_end}")
+                logger.info("Consolidating partitions start: %d end: %d", part, part_end)
                 read_slices = []
                 for p in range(part, part_end):
                     for partition_slice in partition_slices[p]:
@@ -985,21 +979,20 @@ def ingest(
                     if start_pos != end_pos:
                         raise ValueError("Incorrect partition size.")
                     continue
-                logger.debug(f"Read slices: {read_slices}")
+                logger.debug("Read slices: %s", read_slices)
                 ids = partial_write_array_ids_array.multi_index[read_slices]["values"]
                 vectors = partial_write_array_parts_array.multi_index[:, read_slices][
                     "values"
                 ]
 
-                logger.debug(
-                    f"Ids shape {ids.shape}, expected size: {end_pos - start_pos} expected range:({start_pos},{end_pos})"
-                )
+                logger.debug("Ids shape %s, expected size: %d expected range:(%d,%d)", ids.shape, end_pos - start_pos,
+                             start_pos, end_pos)
                 if ids.shape[0] != end_pos - start_pos:
                     raise ValueError("Incorrect partition size.")
 
-                logger.info(f"Writing data to array: {parts_array_uri}")
+                logger.info("Writing data to array: %s", parts_array_uri)
                 parts_array[:, start_pos:end_pos] = vectors
-                logger.info(f"Writing data to array: {ids_array_uri}")
+                logger.info("Writing data to array: %s", ids_array_uri)
                 ids_array[start_pos:end_pos] = ids
             parts_array.close()
             ids_array.close()
@@ -1319,7 +1312,7 @@ def ingest(
             size = in_size
         logger.info("Input dataset size %d", size)
         logger.info("Input dataset dimensions %d", dimensions)
-        logger.info(f"Vector dimension type {vector_type}")
+        logger.info("Vector dimension type %s", vector_type)
         if partitions == -1:
             partitions = int(math.sqrt(size))
         if training_sample_size == -1:
@@ -1329,9 +1322,9 @@ def ingest(
                 workers = 10
         else:
             workers = 1
-        logger.info(f"Partitions {partitions}")
-        logger.info(f"Training sample size {training_sample_size}")
-        logger.info(f"Number of workers {workers}")
+        logger.info("Partitions %d", partitions)
+        logger.info("Training sample size %d", training_sample_size)
+        logger.info("Number of workers %d", workers)
 
         if input_vectors_per_work_item == -1:
             input_vectors_per_work_item = VECTORS_PER_WORK_ITEM
@@ -1346,10 +1339,7 @@ def ingest(
         logger.info("input_vectors_per_work_item %d", input_vectors_per_work_item)
         logger.info("input_vectors_work_items %d", input_vectors_work_items)
         logger.info("input_vectors_work_tasks %d", input_vectors_work_tasks)
-        logger.info(
-            "input_vectors_work_items_per_worker %d",
-            input_vectors_work_items_per_worker,
-        )
+        logger.info("input_vectors_work_items_per_worker %d", input_vectors_work_items_per_worker)
 
         vectors_per_table_partitions = size / partitions
         table_partitions_per_work_item = int(
@@ -1368,10 +1358,7 @@ def ingest(
         logger.info("table_partitions_per_work_item %d", table_partitions_per_work_item)
         logger.info("table_partitions_work_items %d", table_partitions_work_items)
         logger.info("table_partitions_work_tasks %d", table_partitions_work_tasks)
-        logger.info(
-            "table_partitions_work_items_per_worker %d",
-            table_partitions_work_items_per_worker,
-        )
+        logger.info("table_partitions_work_items_per_worker %d", table_partitions_work_items_per_worker)
 
         logger.info("Creating arrays")
         create_arrays(
