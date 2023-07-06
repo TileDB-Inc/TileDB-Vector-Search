@@ -29,9 +29,12 @@
  *
  */
 
+#define CATCH_CONFIG_RUNNER
+
 #include <catch2/catch_all.hpp>
 
 #include <fstream>
+#include <sstream>
 #include <iostream>
 #include <vector>
 
@@ -135,12 +138,23 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index]") {
 
 TEST_CASE("ivf_index: not a unit test per se", "[ivf_index]") {
   tiledb::Context ctx;
-  //  auto A = tdbColMajorMatrix<float>(ctx,
-  //  "s3://tiledb-andrew/sift/siftsmall_base");
-  auto A = tdbColMajorMatrix<float>(
-      ctx,
-      "/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/sift/"
-      "sift_base");
+
+  auto path = std::string(SOURCE_DIR) + "/include/test/siftsmall/siftsmall_base.fvecs";
+
+  std::ifstream f{path, std::ios::in | std::ios::binary};
+  f.seekg(0, std::ios::end);
+  auto sz = f.tellg();
+  auto size = size_t(sz);
+  f.seekg(4, std::ios::beg);
+
+  // allocate memory buffer and read file
+  // skip the first 4 bytes
+  auto nelem = (size - 4) / 4;
+  auto buffer = std::unique_ptr<float[]>(new float[nelem]);
+  f.read((char*)buffer.get(), size);
+
+  // convert to float
+  auto A = ColMajorMatrix<float>(std::move(buffer), 128, 10'000);
 
   CHECK(A.num_rows() == 128);
   CHECK(A.num_cols() == 10'000);

@@ -28,6 +28,21 @@
 include(Catch2)
 include(CTest)
 
+###
+
+# Set up temp directory for tests using a CMake test fixture. cmake/ctest runs the
+# `update_tmpdir` "test" before all other tests.
+# The test command runs a cmake script to generate a new temp directory and symlink
+# it to a standardized path. The tmp path is set as the WORKING_DIRECTORY for tests.
+
+add_test(
+  NAME update_tmpdir
+  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/cmake/tmpdir.cmake
+)
+set_tests_properties(update_tmpdir PROPERTIES FIXTURES_SETUP f_update_tmpdir)
+
+###
+
 if ($ENV{CI})
   set(CISKIP "~[ci-skip]")
 endif()
@@ -42,7 +57,18 @@ macro (kmeans_add_test TESTNAME)
     target_link_libraries(${TESTNAME} PRIVATE kmeans_lib Catch2::Catch2WithMain)
     # target_compile_definitions(${TESTNAME} PRIVATE DATA_DIR="${CMAKE_SOURCE_DIR}/data/")
     # target_compile_definitions(${TESTNAME} PRIVATE DATA_FILE="${CMAKE_SOURCE_DIR}/data/karate.mtx")
-    add_test(NAME ${TESTNAME}_test COMMAND ${TESTNAME} "${CISKIP}")
+
+    target_compile_definitions(${TESTNAME}
+      PRIVATE
+      SOURCE_DIR="${CMAKE_SOURCE_DIR}/"
+      BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}/")
+
+    add_test(NAME ${TESTNAME}_test
+            COMMAND ${TESTNAME} "${CISKIP}" ${OPT_ARGS}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/last_tmpdir)
+
+    # use update_tmpdir above to create new temp directory
+    set_tests_properties( ${TESTNAME}_test PROPERTIES  FIXTURES_REQUIRED f_update_tmpdir)
     # catch_discover_tests(${TESTNAME})
 endmacro (kmeans_add_test)
 
@@ -61,8 +87,6 @@ kmeans_add_test(gen_queries)
 kmeans_add_test(time_insert)
 
 kmeans_add_test(time_l2)
-
-kmeans_add_test(time_open)
 
 kmeans_add_test(time_queries)
 target_link_libraries(time_queries PRIVATE flat_blas)
@@ -84,6 +108,7 @@ add_executable(unit_linalg unit_linalg.cc)
 target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)
 # Skip the tdbmatrix tests because the TileDB arrays do not exist in CI.
 add_test(NAME unit_linalg_test COMMAND unit_linalg ~[tdbmatrix])
+set_tests_properties(unit_linalg_test PROPERTIES  FIXTURES_REQUIRED f_update_tmpdir)
 
 kmeans_add_test(unit_logging)
 
@@ -99,9 +124,7 @@ kmeans_add_test(unit_stats)
 
 kmeans_add_test(unit_utils)
 
-
-
-
+kmeans_add_test(time_open)
 
 # Create the subdirectory for the extracted files
 file(MAKE_DIRECTORY ${SIFT_TEST_DIR}/siftsmall)
