@@ -196,7 +196,7 @@ def ingest(
         if index_type == "FLAT":
             parts_uri = f"{group.uri}/{PARTS_ARRAY_NAME}"
             if not tiledb.array_exists(parts_uri):
-                logger.info("Creating parts array")
+                logger.debug("Creating parts array")
                 parts_array_rows_dim = tiledb.Dim(
                     name="rows",
                     domain=(0, dimensions - 1),
@@ -223,7 +223,7 @@ def ingest(
                 )
                 logger.debug(parts_schema)
                 tiledb.Array.create(parts_uri, parts_schema)
-                group.add(parts_uri, name=PARTS_ARRAY_NAME)
+                group.add(PARTS_ARRAY_NAME, name=PARTS_ARRAY_NAME, relative=True)
 
         elif index_type == "IVF_FLAT":
             centroids_uri = f"{group.uri}/{CENTROIDS_ARRAY_NAME}"
@@ -242,7 +242,7 @@ def ingest(
             )
 
             if not tiledb.array_exists(centroids_uri):
-                logger.info("Creating centroids array")
+                logger.debug("Creating centroids array")
                 centroids_array_rows_dim = tiledb.Dim(
                     name="rows",
                     domain=(0, dimensions - 1),
@@ -271,10 +271,12 @@ def ingest(
                 )
                 logger.debug(centroids_schema)
                 tiledb.Array.create(centroids_uri, centroids_schema)
-                group.add(centroids_uri, name=CENTROIDS_ARRAY_NAME)
+                group.add(
+                    CENTROIDS_ARRAY_NAME, name=CENTROIDS_ARRAY_NAME, relative=True
+                )
 
             if not tiledb.array_exists(index_uri):
-                logger.info("Creating index array")
+                logger.debug("Creating index array")
                 index_array_rows_dim = tiledb.Dim(
                     name="rows",
                     domain=(0, partitions),
@@ -293,10 +295,10 @@ def ingest(
                 )
                 logger.debug(index_schema)
                 tiledb.Array.create(index_uri, index_schema)
-                group.add(index_uri, name=INDEX_ARRAY_NAME)
+                group.add(INDEX_ARRAY_NAME, name=INDEX_ARRAY_NAME, relative=True)
 
             if not tiledb.array_exists(ids_uri):
-                logger.info("Creating ids array")
+                logger.debug("Creating ids array")
                 ids_array_rows_dim = tiledb.Dim(
                     name="rows",
                     domain=(0, size - 1),
@@ -315,10 +317,10 @@ def ingest(
                 )
                 logger.debug(ids_schema)
                 tiledb.Array.create(ids_uri, ids_schema)
-                group.add(ids_uri, name=IDS_ARRAY_NAME)
+                group.add(IDS_ARRAY_NAME, name=IDS_ARRAY_NAME, relative=True)
 
             if not tiledb.array_exists(parts_uri):
-                logger.info("Creating parts array")
+                logger.debug("Creating parts array")
                 parts_array_rows_dim = tiledb.Dim(
                     name="rows",
                     domain=(0, dimensions - 1),
@@ -345,7 +347,7 @@ def ingest(
                 )
                 logger.debug(parts_schema)
                 tiledb.Array.create(parts_uri, parts_schema)
-                group.add(parts_uri, name=PARTS_ARRAY_NAME)
+                group.add(PARTS_ARRAY_NAME, name=PARTS_ARRAY_NAME, relative=True)
 
             vfs = tiledb.VFS()
             if vfs.is_dir(partial_write_array_dir_uri):
@@ -356,7 +358,7 @@ def ingest(
             vfs.create_dir(partial_write_array_index_uri)
 
             if not tiledb.array_exists(partial_write_array_ids_uri):
-                logger.info("Creating temp ids array")
+                logger.debug("Creating temp ids array")
                 ids_array_rows_dim = tiledb.Dim(
                     name="rows",
                     domain=(0, size - 1),
@@ -377,7 +379,7 @@ def ingest(
                 tiledb.Array.create(partial_write_array_ids_uri, ids_schema)
 
             if not tiledb.array_exists(partial_write_array_parts_uri):
-                logger.info("Creating temp parts array")
+                logger.debug("Creating temp parts array")
                 parts_array_rows_dim = tiledb.Dim(
                     name="rows",
                     domain=(0, dimensions - 1),
@@ -403,6 +405,7 @@ def ingest(
                     tile_order="col-major",
                 )
                 logger.debug(parts_schema)
+                logger.debug(partial_write_array_parts_uri)
                 tiledb.Array.create(partial_write_array_parts_uri, parts_schema)
         else:
             raise ValueError(f"Not supported index_type {index_type}")
@@ -1295,8 +1298,7 @@ def ingest(
             message = str(err)
             if "already exists" in message:
                 logger.info(f"Group '{array_uri}' already exists")
-            else:
-                raise err
+            raise err
         group = tiledb.Group(array_uri, "w")
         group.meta["dataset_type"] = "vector_search"
 
@@ -1357,7 +1359,7 @@ def ingest(
         logger.debug("table_partitions_work_tasks %d", table_partitions_work_tasks)
         logger.debug("table_partitions_work_items_per_worker %d", table_partitions_work_items_per_worker)
 
-        logger.info("Creating arrays")
+        logger.debug("Creating arrays")
         create_arrays(
             group=group,
             index_type=index_type,
@@ -1370,7 +1372,7 @@ def ingest(
         )
         group.close()
 
-        logger.info("Creating ingestion graph")
+        logger.debug("Creating ingestion graph")
         d = create_ingestion_dag(
             index_type=index_type,
             array_uri=array_uri,
@@ -1392,7 +1394,7 @@ def ingest(
             trace_id=trace_id,
             mode=mode,
         )
-        logger.info("Submitting ingestion graph")
+        logger.debug("Submitting ingestion graph")
         d.compute()
         logger.info("Submitted ingestion graph")
         d.wait()
