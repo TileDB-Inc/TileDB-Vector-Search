@@ -8,6 +8,7 @@ INDEX_ARRAY_NAME = "index.tdb"
 IDS_ARRAY_NAME = "ids.tdb"
 PARTS_ARRAY_NAME = "parts.tdb"
 
+
 class Index:
     def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8, nprobe=1):
         raise NotImplementedError

@@ -272,7 +272,9 @@ def ingest(
                 )
                 logger.info(centroids_schema)
                 tiledb.Array.create(centroids_uri, centroids_schema)
-                group.add(CENTROIDS_ARRAY_NAME, name=CENTROIDS_ARRAY_NAME, relative=True)
+                group.add(
+                    CENTROIDS_ARRAY_NAME, name=CENTROIDS_ARRAY_NAME, relative=True
+                )
 
             if not tiledb.array_exists(index_uri):
                 logger.info("Creating index array")
