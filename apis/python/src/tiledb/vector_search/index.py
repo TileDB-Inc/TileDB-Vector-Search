@@ -3,6 +3,11 @@ import os
 import numpy as np
 from tiledb.vector_search.module import *
 
+CENTROIDS_ARRAY_NAME = "centroids.tdb"
+INDEX_ARRAY_NAME = "index.tdb"
+IDS_ARRAY_NAME = "ids.tdb"
+PARTS_ARRAY_NAME = "parts.tdb"
+
 
 class Index:
     def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8, nprobe=1):
@@ -83,10 +88,11 @@ class IVFFlatIndex(Index):
     def __init__(
         self, uri, dtype: np.dtype, memory_budget: int = -1, ctx: "Ctx" = None
     ):
-        self.parts_db_uri = os.path.join(uri, "parts.tdb")
-        self.centroids_uri = os.path.join(uri, "centroids.tdb")
-        self.index_uri = os.path.join(uri, "index.tdb")
-        self.ids_uri = os.path.join(uri, "ids.tdb")
+        group = tiledb.Group(uri)
+        self.parts_db_uri = group[PARTS_ARRAY_NAME].uri
+        self.centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
+        self.index_uri = group[INDEX_ARRAY_NAME].uri
+        self.ids_uri = group[IDS_ARRAY_NAME].uri
         self.dtype = dtype
         self.memory_budget = memory_budget
         self.ctx = ctx
