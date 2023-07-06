@@ -234,26 +234,7 @@ auto nuv_query_heap_infinite_ram(
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, indices, query, nprobe, nthreads);
 
-  for (size_t i = 0; i < 50; ++i) {
-    std::cout << active_partitions[i] << " ";
-  }
-  std::cout << std::endl;
-  std::cout << std::endl;
-  for (size_t i = 0; i < 50; ++i) {
-    std::cout << size(active_queries[i]) << " " ;
-  }
-  std::cout << std::endl;
-  std::cout << std::endl;
-  for (size_t i = 0; i < 50; ++i) {
-    std::cout << active_queries[i][0] << " " ;
-  }
-  std::cout << std::endl;
-  std::cout << std::endl;
-
-  // auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-  //     size(q), fixed_min_pair_heap<float, size_t>(k_nn));
-
-  std::vector<std::vector<fixed_min_pair_heap<float, size_t>>> min_scores(
+  auto min_scores = std::vector<std::vector<fixed_min_pair_heap<float, size_t>>>(
       nthreads,
       std::vector<fixed_min_pair_heap<float, size_t>>(
           num_queries, fixed_min_pair_heap<float, size_t>(k_nn)));
@@ -278,6 +259,7 @@ auto nuv_query_heap_infinite_ram(
              * partition as their top centroid.
              */
             for (size_t p = first_part; p < last_part; ++p) {
+
 	      auto partno = active_partitions[p];
               auto start = indices[partno];
               auto stop = indices[partno + 1];
@@ -579,22 +561,6 @@ auto nuv_query_heap_finite_ram(
 
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, indices, query, nprobe, nthreads);
-
-  for (size_t i = 0; i < 50; ++i) {
-    std::cout << active_partitions[i] << " ";
-  }
-  std::cout << std::endl;
-  std::cout << std::endl;
-  for (size_t i = 0; i < 50; ++i) {
-    std::cout << size(active_queries[i]) << " " ;
-  }
-  std::cout << std::endl;
-  std::cout << std::endl;
-  for (size_t i = 0; i < 50; ++i) {
-    std::cout << active_queries[i][0] << " " ;
-  }
-  std::cout << std::endl;
-  std::cout << std::endl;
 
 
   using parts_type = typename decltype(active_partitions)::value_type;
@@ -1327,29 +1293,32 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
 
 
 
-auto apply_query(auto&& query, auto&& shuffled_db, auto&& new_indices, auto&& active_queries, auto&& ids, size_t k_nn, size_t first_part, size_t last_part) {
+auto apply_query(auto&& query, auto&& shuffled_db, auto&& new_indices, auto&& active_queries, auto&& ids, auto&& active_partitions, size_t k_nn, size_t first_part, size_t last_part) {
 
   //  print_types(query, shuffled_db, new_indices, active_queries);
 
   auto num_queries = size(query);
   auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>> (num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
+  size_t part_offset = 0;
+  size_t col_offset = 0;
+  if constexpr (has_num_col_parts<decltype(shuffled_db)>) {
+    part_offset = shuffled_db.col_part_offset();
+    col_offset = shuffled_db.col_offset();
+  }
+
   for (size_t p = first_part; p < last_part; ++p) {
 
-    size_t offset = 0;
-    if constexpr (has_col_offset<decltype(shuffled_db)>) {
-      offset = shuffled_db.col_offset();
+    auto partno = p + part_offset;
+
+    // @todo this is a bit of a hack
+    auto quartno = partno;
+    if constexpr (!has_num_col_parts<decltype(shuffled_db)>) {
+      quartno = active_partitions[partno];
     }
 
-#if 0
-    auto partno = p + shuffled_db.col_part_offset();
-    auto start = new_indices[partno] - shuffled_db.col_offset();
-    auto stop = new_indices[partno + 1] - shuffled_db.col_offset();
-#else
-    auto partno = p + offset;
-    auto start = new_indices[partno] - offset;
-    auto stop = new_indices[partno + 1] - offset;
-#endif
+    auto start = new_indices[quartno] - col_offset;
+    auto stop = new_indices[quartno + 1] - col_offset;
     
     auto len = 2 * (size(active_queries[partno]) / 2);
     auto end =  active_queries[partno].begin() + len;
@@ -1481,23 +1450,11 @@ auto query_finite_ram (
   while (shuffled_db.load()) {
     _i.start();
 
-    //    const size_t min_parts_per_thread {16};
-
     auto current_part_size = shuffled_db.num_col_parts();
 
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
-    parts_per_thread = std::max(parts_per_thread, min_parts_per_thread);
-
-    if (min_parts_per_thread > 0 && current_part_size <= min_parts_per_thread) {
-
-      auto min_n = apply_query(query, shuffled_db, new_indices, active_queries, shuffled_db.ids(), k_nn, 0, current_part_size);
-      for (size_t j = 0; j < num_queries; ++j) {
-	for (auto&& e : min_n[j]) {
-	  min_scores[j].insert(std::get<0>(e), std::get<1>(e));
-	}
-      }
-    } else {
+    {
       
       std::vector<std::future<decltype(min_scores)>> futs;
       futs.reserve(nthreads);
@@ -1509,8 +1466,8 @@ auto query_finite_ram (
           std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
 	
 	if (first_part != last_part) {
-	  futs.emplace_back(std::async(std::launch::async, [&query, &shuffled_db, &new_indices, &active_queries = active_queries, k_nn, first_part, last_part]() {
-	    return apply_query(query, shuffled_db, new_indices, active_queries, shuffled_db.ids(), k_nn, first_part, last_part);
+	  futs.emplace_back(std::async(std::launch::async, [&query, &shuffled_db, &new_indices, &active_queries = active_queries, &active_partitions = active_partitions, k_nn, first_part, last_part]() {
+	    return apply_query(query, shuffled_db, new_indices, active_queries, shuffled_db.ids(), active_partitions, k_nn, first_part, last_part);
 	  }));
 	}
       }
@@ -1574,6 +1531,10 @@ auto query_infinite_ram(
   auto&& [active_partitions, active_queries] =
     partition_ivf_index(centroids, indices, query, nprobe, nthreads);
 
+  using parts_type = typename decltype(active_partitions)::value_type;
+
+  std::vector<parts_type> new_indices(size(active_partitions) + 1);
+
   auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>> (num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
   size_t parts_per_thread = (size(active_partitions) + nthreads - 1) / nthreads;
@@ -1588,8 +1549,8 @@ auto query_infinite_ram(
       std::min<size_t>((n + 1) * parts_per_thread, size(active_partitions));
 
     if (first_part != last_part) {
-      futs.emplace_back(std::async(std::launch::async, [&query, &shuffled_db, &indices, &active_queries = active_queries, &shuffled_ids, k_nn, first_part, last_part]() {
-	return apply_query(query, shuffled_db, indices, active_queries, shuffled_ids, k_nn, first_part, last_part);
+      futs.emplace_back(std::async(std::launch::async, [&query, &shuffled_db, &indices, &active_queries = active_queries, &active_partitions = active_partitions, &shuffled_ids, k_nn, first_part, last_part]() {
+	return apply_query(query, shuffled_db, indices, active_queries, shuffled_ids, active_partitions, k_nn, first_part, last_part);
       }));
     }
   }

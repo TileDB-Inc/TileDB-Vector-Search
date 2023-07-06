@@ -53,6 +53,11 @@ concept has_col_offset = requires(T&& t) {
   t.col_offset();
 };
 
+template <typename T>
+concept has_num_col_parts = requires(T&& t) {
+  t.num_col_parts();
+};
+
 
 
 template <typename T>
