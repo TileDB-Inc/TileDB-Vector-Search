@@ -940,15 +940,16 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
     if (first_part != last_part) {
       futs.emplace_back(std::async(
           std::launch::async,
-          [&, &active_queries = active_queries, n, first_part, last_part]() {
+          [&, &active_queries = active_queries, &active_partitions = active_partitions, n, first_part, last_part]() {
             /*
              * For each partition, process the queries that have that
              * partition as their top centroid.
              */
             auto& mscores = min_scores[n];
             for (size_t partno = first_part; partno < last_part; ++partno) {
-              auto start = indices[partno];
-              auto stop = indices[partno + 1];
+	      auto quartno = active_partitions[partno];
+              auto start = indices[quartno];
+              auto stop = indices[quartno + 1];
 
               auto len = 2 * (size(active_queries[partno]) / 2);
               auto end = active_queries[partno].begin() + len;
@@ -1161,7 +1162,6 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                * For each partition, process the queries that have that
                * partition as their top centroid.
                */
-              auto& ms = min_scores[n];
               for (size_t p = first_part; p < last_part; ++p) {
                 auto partno = p + shuffled_db.col_part_offset();
                 auto start = new_indices[partno] - shuffled_db.col_offset();
