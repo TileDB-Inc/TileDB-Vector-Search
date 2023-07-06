@@ -221,7 +221,7 @@ def ingest(
                     cell_order="col-major",
                     tile_order="col-major",
                 )
-                logger.info(parts_schema)
+                logger.debug(parts_schema)
                 tiledb.Array.create(parts_uri, parts_schema)
                 group.add(parts_uri, name=PARTS_ARRAY_NAME)
 
@@ -269,7 +269,7 @@ def ingest(
                     cell_order="col-major",
                     tile_order="col-major",
                 )
-                logger.info(centroids_schema)
+                logger.debug(centroids_schema)
                 tiledb.Array.create(centroids_uri, centroids_schema)
                 group.add(centroids_uri, name=CENTROIDS_ARRAY_NAME)
 
@@ -291,7 +291,7 @@ def ingest(
                     cell_order="col-major",
                     tile_order="col-major",
                 )
-                logger.info(index_schema)
+                logger.debug(index_schema)
                 tiledb.Array.create(index_uri, index_schema)
                 group.add(index_uri, name=INDEX_ARRAY_NAME)
 
@@ -313,7 +313,7 @@ def ingest(
                     cell_order="col-major",
                     tile_order="col-major",
                 )
-                logger.info(ids_schema)
+                logger.debug(ids_schema)
                 tiledb.Array.create(ids_uri, ids_schema)
                 group.add(ids_uri, name=IDS_ARRAY_NAME)
 
@@ -343,7 +343,7 @@ def ingest(
                     cell_order="col-major",
                     tile_order="col-major",
                 )
-                logger.info(parts_schema)
+                logger.debug(parts_schema)
                 tiledb.Array.create(parts_uri, parts_schema)
                 group.add(parts_uri, name=PARTS_ARRAY_NAME)
 
@@ -373,7 +373,7 @@ def ingest(
                     cell_order="col-major",
                     tile_order="col-major",
                 )
-                logger.info(ids_schema)
+                logger.debug(ids_schema)
                 tiledb.Array.create(partial_write_array_ids_uri, ids_schema)
 
             if not tiledb.array_exists(partial_write_array_parts_uri):
@@ -402,7 +402,7 @@ def ingest(
                     cell_order="col-major",
                     tile_order="col-major",
                 )
-                logger.info(parts_schema)
+                logger.debug(parts_schema)
                 logger.info(partial_write_array_parts_uri)
                 tiledb.Array.create(partial_write_array_parts_uri, parts_schema)
         else:
