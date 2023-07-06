@@ -47,6 +47,8 @@
 #include "stats.h"
 #include "utils/fixed_min_queues.h"
 
+#include "detail/ivf/qv.h"
+
 namespace detail::ivf {
 
 /**
@@ -90,7 +92,9 @@ auto dist_qv_finite_ram_part(
       shuffled_ids_type,
       indices_type,
       parts_type>(ctx, part_uri, indices, active_partitions, id_uri, 0);
-  // !! Make sure to load the data into the matrix
+
+  // We are assuming that we are not doing out of core computation here.
+  // (It is easy enough to change this if we need to.)
   shuffled_db.load();
 
   scoped_timer _i{tdb_func__ + " in RAM"};
@@ -105,9 +109,63 @@ auto dist_qv_finite_ram_part(
     new_indices[i + 1] = new_indices[i] + indices[active_partitions[i] + 1] -
                          indices[active_partitions[i]];
   }
-
   assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
 
+  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
+      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+
+  auto current_part_size = shuffled_db.num_col_parts();
+
+  size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
+
+  std::vector<std::future<decltype(min_scores)>> futs;
+  futs.reserve(nthreads);
+
+  for (size_t n = 0; n < nthreads; ++n) {
+    auto first_part =
+        std::min<size_t>(n * parts_per_thread, current_part_size);
+    auto last_part =
+        std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
+
+    if (first_part != last_part) {
+      futs.emplace_back(std::async(
+          std::launch::async,
+          [&query,
+              &shuffled_db,
+              &new_indices,
+              &active_queries = active_queries,
+              &active_partitions = active_partitions,
+              k_nn,
+              first_part,
+              last_part]() {
+            return apply_query(
+                query,
+                shuffled_db,
+                new_indices,
+                active_queries,
+                shuffled_db.ids(),
+                active_partitions,
+                k_nn,
+                first_part,
+                last_part);
+          }));
+    }
+  }
+
+  for (size_t n = 0; n < size(futs); ++n) {
+    auto min_n = futs[n].get();
+
+    for (size_t j = 0; j < num_queries; ++j) {
+      for (auto&& e : min_n[j]) {
+        min_scores[j].insert(std::get<0>(e), std::get<1>(e));
+      }
+    }
+  }
+  return min_scores;
+}
+
+
+#if 0
   auto min_scores =
       std::vector<std::vector<fixed_min_pair_heap<float, size_t>>>(
           nthreads,
@@ -177,7 +235,8 @@ auto dist_qv_finite_ram_part(
   }
 
   return min_min_scores;
-}
+#endif
+
 
 template <typename T, class shuffled_ids_type>
 auto dist_qv_finite_ram(

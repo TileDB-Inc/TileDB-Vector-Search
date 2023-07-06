@@ -916,7 +916,7 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
   // @todo Maybe we don't want to do new_indices in partition_ivf_index after
   //  all since they aren't used in this function
   auto&& [active_partitions, active_queries] =
-      partition_ivf_index(centroids, indices, query, nprobe, nthreads);
+      partition_ivf_index(centroids, query, nprobe, nthreads);
 
   // auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
   //     size(q), fixed_min_pair_heap<float, size_t>(k_nn));
@@ -1083,7 +1083,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
   auto num_queries = size(query);
 
   auto&& [active_partitions, active_queries] =
-      partition_ivf_index(centroids, indices, query, nprobe, nthreads);
+      partition_ivf_index(centroids, query, nprobe, nthreads);
 
   using parts_type = typename decltype(active_partitions)::value_type;
 
@@ -1417,7 +1417,7 @@ auto query_finite_ram(
   auto num_queries = size(query);
 
   auto&& [active_partitions, active_queries] =
-      partition_ivf_index(centroids, indices, query, nprobe, nthreads);
+      partition_ivf_index(centroids, query, nprobe, nthreads);
 
   using parts_type = typename decltype(active_partitions)::value_type;
 
@@ -1556,7 +1556,7 @@ auto query_infinite_ram(
   // @todo Maybe we don't want to do new_indices in partition_ivf_index after
   //  all since they aren't used in this function
   auto&& [active_partitions, active_queries] =
-      partition_ivf_index(centroids, indices, query, nprobe, nthreads);
+      partition_ivf_index(centroids, query, nprobe, nthreads);
 
   using parts_type = typename decltype(active_partitions)::value_type;
 
