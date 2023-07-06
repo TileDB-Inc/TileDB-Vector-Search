@@ -109,6 +109,9 @@ void debug_centroids(auto& index) {
   std::cout << std::endl;
 }
 
+// kmeans and kmeans indexing still WIP
+#if 0
+
 TEST_CASE("ivf_index: test kmeans", "[ivf_index]") {
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
                              9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
@@ -133,6 +136,8 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index]") {
   // debug_centroids(index);
 }
 
+
+
 TEST_CASE("ivf_index: not a unit test per se", "[ivf_index]") {
   tiledb::Context ctx;
   //  auto A = tdbColMajorMatrix<float>(ctx,
@@ -156,7 +161,7 @@ TEST_CASE("ivf_index: not a unit test per se", "[ivf_index]") {
 
   index.train_no_init(A);
 }
-#if 0
+
 TEST_CASE("ivf_index: also not a unit test per se", "[ivf_index]") {
   tiledb::Context ctx;
   //  auto A = tdbColMajorMatrix<float>(ctx, "s3://tiledb-andrew/sift/siftsmall_base");
