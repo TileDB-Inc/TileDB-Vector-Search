@@ -69,7 +69,7 @@ def ingest(
     import enum
     import logging
     import math
-    from typing import Any, Mapping, Optional
+    from typing import Any, Mapping
     import multiprocessing
     import os
 
@@ -77,7 +77,6 @@ def ingest(
 
     import tiledb
     from tiledb.cloud import dag
-    from tiledb.cloud.dag import Mode
     from tiledb.cloud.rest_api import models
     from tiledb.cloud.utilities import get_logger
     from tiledb.cloud.utilities import set_aws_context
