@@ -52,10 +52,11 @@ namespace detail::flat {
  * scores matrix (and which could also be used for out-of core).
  */
 template <class DB, class Q>
-auto vq_query_nth(const DB& db, const Q& q, int k, bool nth, int nthreads) {
-  scoped_timer _{"Total time " + tdb_func__};
-
-  // scoped_timer _{tdb_func__ + ", nth = " + std::to_string(nth)};
+auto vq_query_nth(DB& db, const Q& q, int k, bool nth, int nthreads) {
+  if constexpr (is_loadable_v<decltype(db)>) {
+    db.load();
+  }
+  scoped_timer _{tdb_func__ + (nth ? std::string{"nth"} : std::string{"heap"})};
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
 
@@ -123,7 +124,7 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
         [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
           for (size_t j = 0; j < size_q; ++j) {
             auto score = L2(q[j], db_vec);
-            scores[n][j].insert(element{score, i + db.offset()});
+            scores[n][j].insert(element{score, i + db.col_offset()});
           }
         });
     _i.stop();

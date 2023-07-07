@@ -35,6 +35,46 @@
 #include "../concepts.h"
 
 template <class T>
+struct loadable_class {
+  bool load() const {
+    return true;
+  }
+};
+
+template <class T>
+struct not_loadable_class {
+  bool not_load() const {
+    return true;
+  }
+};
+
+template <class T>
+void maybe_load(const T& t) {
+  if constexpr (is_loadable_v<T>) {
+    CHECK(t.load());
+  } else if constexpr (!is_loadable_v<T>) {
+    CHECK(t.not_load());
+  }
+}
+
+TEST_CASE("loadable", "[concepts]") {
+  CHECK(is_loadable_v<loadable_class<int>>);
+  CHECK(!is_loadable_v<not_loadable_class<int>>);
+  loadable_class<int> lc;
+  not_loadable_class<int> nlc;
+  CHECK(is_loadable_v<decltype(lc)>);
+  CHECK(!is_loadable_v<decltype(nlc)>);
+  if (is_loadable_v<decltype(lc)>) {
+    CHECK(lc.load());
+  }
+  if (is_loadable_v<decltype(nlc)>) {
+    CHECK(nlc.not_load());
+  }
+  maybe_load(lc);
+  maybe_load(nlc);
+}
+
+template <class T>
 struct feature_vector_0 {
   using value_type = T;
   std::size_t size() const {

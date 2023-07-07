@@ -183,10 +183,6 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   auto num_cols() const noexcept {
     return num_cols_;
   }
-
-  constexpr auto offset() const noexcept {
-    return 0UL;
-  }
 };
 
 /**
@@ -300,7 +296,7 @@ void debug_slice(
     for (size_t i = 0; i < rows; ++i) {
       std::cout << "# ";
       for (size_t j = 0; j < cols; ++j) {
-        std::cout << A(i, j) << "\t";
+        std::cout << (float)A(i, j) << "\t";
       }
       std::cout << std::endl;
     }
