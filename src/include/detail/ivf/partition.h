@@ -53,10 +53,7 @@ namespace detail::ivf {
  *
  */
 auto partition_ivf_index(
-    auto&& centroids,
-    auto&& query,
-    size_t nprobe,
-    size_t nthreads) {
+    auto&& centroids, auto&& query, size_t nprobe, size_t nthreads) {
   scoped_timer _{tdb_func__};
 
   size_t dimension = centroids.num_rows();

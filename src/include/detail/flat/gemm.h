@@ -43,6 +43,9 @@ namespace detail::flat {
 
 template <class DB, class Q>
 auto gemm_query(const DB& db, const Q& q, int k, bool nth, size_t nthreads) {
+  if constexpr (is_loadable_v<decltype(db)>) {
+    db.load();
+  }
   scoped_timer _{"Total time " + tdb_func__};
   auto scores = gemm_scores(db, q, nthreads);
   auto top_k = get_top_k(scores, k, nth, nthreads);
@@ -62,7 +65,11 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
   std::vector<fixed_min_heap<element>> min_scores(
       size(q), fixed_min_heap<element>(k));
 
+  log_timer _i{tdb_func__ + " in RAM"};
+
   while (db.load()) {
+    _i.start();
+
     gemm_scores(db, q, scores, nthreads);
 
     auto par = stdx::execution::indexed_parallel_policy{nthreads};
@@ -72,8 +79,10 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
             min_scores[i].insert({scores(j, i), j + db.col_offset()});
           }
         });
+    _i.stop();
   }
 
+  _i.start();
   ColMajorMatrix<size_t> top_k(k, q.num_cols());
   for (size_t j = 0; j < size(min_scores); ++j) {
     // @todo get_top_k_from_heap
@@ -84,6 +93,7 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
         top_k[j].begin(),
         ([](auto&& e) { return e.second; }));
   }
+  _i.stop();
 
   return top_k;
 }
