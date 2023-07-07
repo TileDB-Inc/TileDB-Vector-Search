@@ -204,12 +204,12 @@ def ivf_query_ram(
 
     if dtype == np.float32:
         if use_nuv_implementation:
-            return nuv_query_heap_infinite_ram_f32(*args)
+            return nuv_query_heap_infinite_ram_reg_blocked_f32(*args)
         else:
             return qv_query_heap_infinite_ram_f32(*args)
     elif dtype == np.uint8:
         if use_nuv_implementation:
-            return nuv_query_heap_infinite_ram_u8(*args)
+            return nuv_query_heap_infinite_ram_reg_blocked_u8(*args)
         else:
             return qv_query_heap_infinite_ram_u8(*args)
     else:
@@ -282,12 +282,12 @@ def ivf_query(
 
     if dtype == np.float32:
         if use_nuv_implementation:
-            return nuv_query_heap_finite_ram_f32(*args)
+            return nuv_query_heap_finite_ram_reg_blocked_f32(*args)
         else:
             return qv_query_heap_finite_ram_f32(*args)
     elif dtype == np.uint8:
         if use_nuv_implementation:
-            return nuv_query_heap_finite_ram_u8(*args)
+            return nuv_query_heap_finite_ram_reg_blocked_u8(*args)
         else:
             return qv_query_heap_finite_ram_u8(*args)
     else:

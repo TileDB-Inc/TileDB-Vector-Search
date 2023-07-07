@@ -162,7 +162,7 @@ static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& s
 
 template <typename T, typename Id_Type = uint64_t>
 static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string& suffix) {
-  m.def(("nuv_query_heap_infinite_ram_" + suffix).c_str(),
+  m.def(("nuv_query_heap_infinite_ram_reg_blocked_" + suffix).c_str(),
       [](const ColMajorMatrix<T>& parts,
          const ColMajorMatrix<float>& centroids,
          const ColMajorMatrix<float>& query_vectors,
@@ -173,7 +173,7 @@ static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string
          bool nth,
          size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
 
-        auto r = detail::ivf::nuv_query_heap_infinite_ram(
+        auto r = detail::ivf::nuv_query_heap_infinite_ram_reg_blocked(
             parts,
             centroids,
             query_vectors,
@@ -189,7 +189,7 @@ static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string
 
 template <typename T, typename Id_Type = uint64_t>
 static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& suffix) {
-  m.def(("nuv_query_heap_finite_ram_" + suffix).c_str(),
+  m.def(("nuv_query_heap_finite_ram_reg_blocked_" + suffix).c_str(),
       [](tiledb::Context& ctx,
          const std::string& parts_uri,
          const ColMajorMatrix<float>& centroids,
@@ -202,7 +202,7 @@ static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& 
          bool nth,
          size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
 
-        auto r = detail::ivf::nuv_query_heap_finite_ram<T, Id_Type>(
+        auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
             ctx,
             parts_uri,
             centroids,
@@ -465,7 +465,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         });
 
   m.def("validate_top_k_u64",
-      [](const ColMajorMatrix<uint64_t>& top_k,
+      [](const ColMajorMatrix<size_t>& top_k,
          const ColMajorMatrix<int32_t>& ground_truth) -> bool {
         return validate_top_k(top_k, ground_truth);
       });
