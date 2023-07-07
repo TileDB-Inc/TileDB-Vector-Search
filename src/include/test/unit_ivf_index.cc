@@ -45,6 +45,19 @@ TEST_CASE("ivf_index: test test", "[ivf_index]") {
   REQUIRE(true);
 }
 
+// kmeans and kmeans indexing still WIP
+#if 0
+
+void debug_centroids(auto& index) {
+  for (size_t j = 0; j < index.get_centroids().num_rows(); ++j) {
+    for (size_t i = 0; i < index.get_centroids().num_cols(); ++i) {
+      std::cout << index.get_centroids()(j, i) << " ";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+}
+
 TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index]") {
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
                              9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
@@ -74,6 +87,7 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index]") {
   }
   std::cout << std::endl;
 #endif
+debug_centroids(index);
 
   for (size_t i = 0; i < index.get_centroids().num_cols() - 1; ++i) {
     for (size_t j = i + 1; j < index.get_centroids().num_cols(); ++j) {
@@ -99,15 +113,7 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index]") {
   CHECK(outer_counts == index.get_centroids().num_cols());
 }
 
-void debug_centroids(auto& index) {
-  for (size_t j = 0; j < index.get_centroids().num_rows(); ++j) {
-    for (size_t i = 0; i < index.get_centroids().num_cols(); ++i) {
-      std::cout << index.get_centroids()(j, i) << " ";
-    }
-    std::cout << std::endl;
-  }
-  std::cout << std::endl;
-}
+
 
 TEST_CASE("ivf_index: test kmeans", "[ivf_index]") {
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
@@ -133,6 +139,8 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index]") {
   // debug_centroids(index);
 }
 
+
+
 TEST_CASE("ivf_index: not a unit test per se", "[ivf_index]") {
   tiledb::Context ctx;
   //  auto A = tdbColMajorMatrix<float>(ctx,
@@ -156,7 +164,7 @@ TEST_CASE("ivf_index: not a unit test per se", "[ivf_index]") {
 
   index.train_no_init(A);
 }
-#if 0
+
 TEST_CASE("ivf_index: also not a unit test per se", "[ivf_index]") {
   tiledb::Context ctx;
   //  auto A = tdbColMajorMatrix<float>(ctx, "s3://tiledb-andrew/sift/siftsmall_base");

@@ -433,6 +433,10 @@ function ivf_query() {
 		local _nthreads="--nthreads ${2}"
 		shift 2
 		;;
+	    --ppt)
+		local _ppt="--ppt ${2}"
+		shift 2
+		;;
 	    --cluster|--nprobe)
 		local _cluster="--nprobe ${2}"
 		shift 2
