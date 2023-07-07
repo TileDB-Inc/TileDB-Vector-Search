@@ -46,7 +46,6 @@ TEST_CASE("ivf_index: test test", "[ivf_index]") {
 }
 
 // kmeans and kmeans indexing still WIP
-#if 0
 
 void debug_centroids(auto& index) {
   for (size_t j = 0; j < index.get_centroids().num_rows(); ++j) {
@@ -57,6 +56,8 @@ void debug_centroids(auto& index) {
   }
   std::cout << std::endl;
 }
+
+#if 0
 
 TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index]") {
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
@@ -113,6 +114,7 @@ debug_centroids(index);
   CHECK(outer_counts == index.get_centroids().num_cols());
 }
 
+#endif
 
 
 // kmeans and kmeans indexing still WIP
