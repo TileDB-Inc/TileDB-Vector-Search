@@ -1388,6 +1388,10 @@ auto apply_query(
         min_scores[j0].insert(score_00, ids[kp + 0]);
         min_scores[j0].insert(score_01, ids[kp + 1]);
       }
+
+      /*
+       * Cleanup the last last iteration(s) of k
+       */
       for (size_t kp = kstop; kp < stop; ++kp) {
         auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
         min_scores[j0].insert(score_00, ids[kp + 0]);
@@ -1666,6 +1670,8 @@ auto query_infinite_ram(
       nth,
       nthreads);
 }
+
+
 
 }  // namespace detail::ivf
 

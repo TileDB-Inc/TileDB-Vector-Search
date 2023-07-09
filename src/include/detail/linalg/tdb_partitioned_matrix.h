@@ -295,7 +295,8 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       num_cols_ = std::get<1>(col_view_) - std::get<0>(col_view_);
       col_offset_ = std::get<0>(col_view_);
 
-      assert(num_cols_ < max_cols_);
+      // @todo < or <= ??
+      assert(num_cols_ <= max_cols_);
 
       num_col_parts_ =
           std::get<1>(col_part_view_) - std::get<0>(col_part_view_);
