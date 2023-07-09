@@ -22,7 +22,7 @@
 namespace impl {
 
 // #define WORK_STEALING
-// #define MULTI
+#define MULTI
 // #define NO_RECURSIVE_PUSH
 
 class threadpool {
@@ -201,30 +201,39 @@ class threadpool {
       std::optional<std::shared_ptr<std::function<void()>>> val;
 
 #ifdef MULTI
-      for (size_t j = 0; j < num_threads_ * rounds_; ++j) {
-        val = task_queues_[(i + j) % num_threads_].try_pop();
+      val = task_queues_[i].try_pop();
+      if (val) {
+        (*(*val))();
+      } else {
+        for (size_t j = 0; j < num_threads_ * rounds_; ++j) {
+          val = task_queues_[(i + j) % num_threads_].try_pop();
+          if (val) {
+            break;
+          }
+        }
         if (val) {
-          break;
+          (*(*val))();
+        } else {
+          val = task_queues_[i].pop();
+          if (val) {
+            (*(*val))();
+          } else {
+            break;
+          }
         }
       }
 #else
-      val = task_queue_.try_pop();
-#endif
-
-      if (!val) {
-#ifdef MULTI
-        val = task_queues_[i].pop();
-#else
-        val = task_queue_.pop();
-#endif
-      }
+      val = task_queue_.pop();
       if (val) {
         (*(*val))();
       } else {
         break;
       }
+#endif
     }
   }
+
+
 
   const size_t num_threads_;
   std::vector<std::thread> threads_;

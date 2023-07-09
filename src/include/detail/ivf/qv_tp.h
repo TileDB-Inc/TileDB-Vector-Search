@@ -125,6 +125,8 @@ auto query_finite_ram_tp(
   // Check that the size of the indices vector is correct
   assert(size(indices) == centroids.num_cols() + 1);
 
+  std::cout << "nthreads = " << nthreads << ", " << threadpool.num_threads() << "\n";
+
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
