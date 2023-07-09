@@ -27,40 +27,54 @@
  *
  * @section DESCRIPTION
  *
- * Very simple code for measuring details of program performance.  This file defines
+ * Very simple code for measuring details of program performance.  This file
+defines
  * as singleton class that is used to log timing data.
  *
  * There are two timer classes associated with timing singleton.
  *
- * `log_timer`: A log_timer internally maintains a start time and a stop time (which are
- * std::chrono::time_points).  It has three methods affecting timing: a constructor, start(), and stop().
- * The constructor takes a string identifier and sets the start time to the current time, using the
+ * `log_timer`: A log_timer internally maintains a start time and a stop time
+(which are
+ * std::chrono::time_points).  It has three methods affecting timing: a
+constructor, start(), and stop().
+ * The constructor takes a string identifier and sets the start time to the
+current time, using the
  * chrono high_resolution_clock.
  *
  * A new start time can be set by calling `start()`
  *
- * A call to `stop()` set the stop time to the current time and will record the elapsed time
- * (the difference between the stop time and  most recent start time) in the timing singleton,
+ * A call to `stop()` set the stop time to the current time and will record the
+elapsed time
+ * (the difference between the stop time and  most recent start time) in the
+timing singleton,
  * using the string identifier passed to the constructor as the key.
  *
  * Thus start and stop should be used in pairs
  *
- * Each time stop() is called, a duration is separately recorded.  Thus the same timer
+ * Each time stop() is called, a duration is separately recorded.  Thus the same
+timer
  * can have associated with it multiple timing intervals.
  *
- * `scoped_timer`: Like the `log_timer` a scoped_timer internally maintains a start time and a
- * stop time (which are std::chrono::time_points).  Unlike the `log_timer`, timing is
+ * `scoped_timer`: Like the `log_timer` a scoped_timer internally maintains a
+start time and a
+ * stop time (which are std::chrono::time_points).  Unlike the `log_timer`,
+timing is
  * contolled by the constructor and destructor.
  *
- * The constructor takes a string identifier and sets the start time to the current time
- * The destructor records the time since the last start time in the timing singleton, using
+ * The constructor takes a string identifier and sets the start time to the
+current time
+ * The destructor records the time since the last start time in the timing
+singleton, using
  * the string identifier passed to the constructor as the key.
  *
- * @note `start()` and `stop()` are currently available methods, but should not be used with a scoped_timer
+ * @note `start()` and `stop()` are currently available methods, but should not
+be used with a scoped_timer
  *
  * The timing data is all available in the global singleton `_timing_data`.
- * * `get_timer_names()` returns a vector of the names of all timers that logged data
- * * `get_entries_separately(const std::string&) returns a vector of all intervals
+ * * `get_timer_names()` returns a vector of the names of all timers that logged
+data
+ * * `get_entries_separately(const std::string&) returns a vector of all
+intervals
  * recorded for that timer.  The units of the returned quantity are specified by
  * a template parameter (default is milliseconds).
  * * `get_intervals_summed(const std::string&)`
@@ -70,8 +84,10 @@
  *
  * This file also contains the definition of classes for logging memory
  * usage.  It does not automatically log memory usage, but provides a
- * mechanism to allow the user to log memory usage at particular points in the code.
- * The associated singleton provides methods for getting memory usages individually
+ * mechanism to allow the user to log memory usage at particular points in the
+code.
+ * The associated singleton provides methods for getting memory usages
+individually
  * or cumulatively.
  *
  * @example
@@ -79,7 +95,8 @@
 // Print totals for all timers
 auto timers = _timing_data.get_timer_names();
 for (auto& timer : timers) {
-   std::cout << timer << ":  " << _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
+   std::cout << timer << ":  " <<
+_timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
 }
  * @endcode
  */
@@ -92,7 +109,6 @@ for (auto& timer : timers) {
 #include <map>
 #include <set>
 #include <string>
-
 
 /**
  *  Macro holding the name of the function in which it is called.
@@ -112,15 +128,14 @@ for (auto& timer : timers) {
 #endif
 #endif
 
-
 /**
  * Singleton class for storing timing data.
  *
- * As a singleton, the object from this class can be used from anywhere in the code.
- * Timing data is stored in a multimap, where the key string is the name of the timer
- * and the value is a duration.
+ * As a singleton, the object from this class can be used from anywhere in the
+ * code. Timing data is stored in a multimap, where the key string is the name
+ * of the timer and the value is a duration.
  */
- class timing_data_class {
+class timing_data_class {
  public:
   using clock_type = std::chrono::high_resolution_clock;
   using time_type = std::chrono::time_point<clock_type>;
@@ -140,13 +155,11 @@ for (auto& timer : timers) {
   ~timing_data_class() = default;
 
  public:
-
   /**
    * Delete copy constructor and assignment operator.
    */
   timing_data_class(const timing_data_class&) = delete;
   timing_data_class& operator=(const timing_data_class&) = delete;
-
 
   /**
    * Return a reference to the singleton instance.
@@ -169,12 +182,13 @@ for (auto& timer : timers) {
     interval_times_.insert(std::make_pair(name, time));
   }
 
-   /**
-    * Return a vector of the individual times logged with a given name.
-    * @tparam D Duration type specifying the units associated with the returned values.
-    * @param string Name of the timer to be queried.
-    * @return Vector of the individual times logged with the given name.
-    */
+  /**
+   * Return a vector of the individual times logged with a given name.
+   * @tparam D Duration type specifying the units associated with the returned
+   * values.
+   * @param string Name of the timer to be queried.
+   * @return Vector of the individual times logged with the given name.
+   */
   template <class D = std::chrono::milliseconds>
   auto get_entries_separately(const std::string& string) {
     std::vector<double> intervals;
@@ -186,12 +200,14 @@ for (auto& timer : timers) {
     return intervals;
   }
 
-/**
- * Return the sum of the individual times logged with a given name.
- * @tparam D Duration type specifying the units associated with the returned values.
- * @param string Name of the timer to be queried.
- * @return Cumulative duration of all the durations logged with the given name.
- */
+  /**
+   * Return the sum of the individual times logged with a given name.
+   * @tparam D Duration type specifying the units associated with the returned
+   * values.
+   * @param string Name of the timer to be queried.
+   * @return Cumulative duration of all the durations logged with the given
+   * name.
+   */
   template <class D = std::chrono::milliseconds>
   auto get_entries_summed(const std::string& string) {
     double sum = 0.0;
@@ -243,12 +259,10 @@ inline timing_data_class& get_timing_data_instance() {
 
 timing_data_class& _timing_data{get_timing_data_instance()};
 
-
-
 /**
- * Timer class for logging timing data.  Internnally aintains a start time and a stop time (which are
-* std::chrono::time_points).  The constructor, `start()`, and `stop()` methods control operation
- * and logging of the timer.
+ * Timer class for logging timing data.  Internnally aintains a start time and a
+ * stop time (which are std::chrono::time_points).  The constructor, `start()`,
+ * and `stop()` methods control operation and logging of the timer.
  */
 class log_timer {
  private:
@@ -256,10 +270,9 @@ class log_timer {
   using clock_t = timing_data_class::clock_type;
   time_t start_time, stop_time;
   std::string msg_;
-  bool noisy_ {false};
+  bool noisy_{false};
 
  public:
-
   /**
    * Constructor.  Associates a name with the timer and records the start time.
    * If the noisy flag is enabled, the timer will optionally prints a message.
@@ -297,8 +310,11 @@ class log_timer {
     _timing_data.insert_entry(msg_, stop_time - start_time);
 
     if (noisy_) {
-      std::cout << "# Stopping timer " << msg_ << ": " <<
-          std::chrono::duration_cast<std::chrono::milliseconds>(stop_time-start_time).count() << " ms" << std::endl;
+      std::cout << "# Stopping timer " << msg_ << ": "
+                << std::chrono::duration_cast<std::chrono::milliseconds>(
+                       stop_time - start_time)
+                       .count()
+                << " ms" << std::endl;
     }
     return stop_time;
   }
@@ -312,12 +328,13 @@ class log_timer {
   }
 };
 
-
 /**
- * Scoped timer class for logging timing data.  Internnally maintains a start time and a stop time (which are
- * std::chrono::time_points).  The constructor and destructor control operation and logging of the timer.
- * It inherits from `log_timer` but invokes `stop()` in its destructor. It is intended to measure the
- * lifetime of a scope.  It begins timing when it is constructed and stops timing when it is destructed.
+ * Scoped timer class for logging timing data.  Internnally maintains a start
+ * time and a stop time (which are std::chrono::time_points).  The constructor
+ * and destructor control operation and logging of the timer. It inherits from
+ * `log_timer` but invokes `stop()` in its destructor. It is intended to measure
+ * the lifetime of a scope.  It begins timing when it is constructed and stops
+ * timing when it is destructed.
  */
 class scoped_timer : public log_timer {
  public:
@@ -334,9 +351,10 @@ class scoped_timer : public log_timer {
 };
 
 /**
- * Singleton class for recording memory consumption.  Internally maintains a multimap of names and memory
- * consumption values.  The `insert_entry()` method is used to record memory consumption.  The `get_entries_*()`
- * methods are used to query the recorded memory consumption.
+ * Singleton class for recording memory consumption.  Internally maintains a
+ * multimap of names and memory consumption values.  The `insert_entry()` method
+ * is used to record memory consumption.  The `get_entries_*()` methods are used
+ * to query the recorded memory consumption.
  *
  * Data are stored as bytes.  The `get_entries_*()` methods return values
  * as MiB (2^10 bytes).
@@ -392,11 +410,10 @@ class memory_data {
 
     auto range = memory_usages_.equal_range(string);
     for (auto i = range.first; i != range.second; ++i) {
-      usages.push_back(i->second / (1024*1024));
+      usages.push_back(i->second / (1024 * 1024));
     }
     return usages;
   }
-
 
   /**
    * Get the sum of the memory consumption entries associated with a name.
@@ -409,7 +426,7 @@ class memory_data {
     for (auto i = range.first; i != range.second; ++i) {
       sum += i->second;
     }
-    return sum / (1024*1024);
+    return sum / (1024 * 1024);
   }
 
   /**

@@ -1,12 +1,34 @@
-//
-// This file is part of the course materials for CSE P 524 at the University of Washington,
-// Winter 2022
-//
-// Licensed under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License
-// https://creativecommons.org/licenses/by-nc-sa/4.0/
-//
-// Author: Andrew Lumsdaine
-//
+/**
+ * @file   utils/threadpool.h
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ * A work-stealing threadpool implementation.
+ *
+ */
 
 #ifndef TILEDB_THREADPOOL_H
 #define TILEDB_THREADPOOL_H
@@ -65,7 +87,7 @@ class threadpool {
 
  public:
   /**
-   * Delete copy constructor and assignment operator.
+   * Delete copy constructor and assignment operator for singleton.
    */
   threadpool(const threadpool&) = delete;
   threadpool& operator=(const threadpool&) = delete;
@@ -81,6 +103,15 @@ class threadpool {
   }
 
  public:
+
+  /**
+   * @brief Submit a task to the threadpool.
+   * @tparam Fn The type of the task.
+   * @tparam Args The types of the arguments to the task.
+   * @param f The function to execute.
+   * @param args The arguments to the function.
+   * @return A future to the result of the task.
+   */
   template <class Fn, class... Args>
   auto async(Fn&& f, Args&&... args) {
     using R = std::invoke_result_t<std::decay_t<Fn>, std::decay_t<Args>...>;
@@ -193,8 +224,18 @@ class threadpool {
   }
 
  private:
+  /**
+   * Class variable to hold the id of the thread, in the range [0, num_threads_).
+   */
   static thread_local size_t thread_id;
 
+  /**
+   * The worker function for each thread.  The function loops, trying to get
+   * tasks from the queue.  If the queue is empty, the thread will try to steal
+   * tasks from other threads. If the thread cannot steal any tasks, it will
+   * block on its own queue.
+   * @param i Identifier for the thread, in the range [0, num_threads_).
+   */
   void worker(size_t i) {
     thread_id = i;
     while (true) {
@@ -233,8 +274,6 @@ class threadpool {
     }
   }
 
-
-
   const size_t num_threads_;
   std::vector<std::thread> threads_;
 
@@ -247,14 +286,14 @@ class threadpool {
 #endif
 };
 
-thread_local size_t threadpool::thread_id {0};
+thread_local size_t threadpool::thread_id{0};
 
-} //namespace
+}  // namespace impl
 
 auto& threadpool = impl::threadpool::get_instance();
 
-void yack(){
+void yack() {
   std::cout << threadpool.get_thread_id();
 }
 
-#endif // TILEDB_THREADPOOL_H
+#endif  // TILEDB_THREADPOOL_H

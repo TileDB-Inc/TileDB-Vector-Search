@@ -1671,8 +1671,6 @@ auto query_infinite_ram(
       nthreads);
 }
 
-
-
 }  // namespace detail::ivf
 
 #endif  // TILEDB_IVF_QV_H

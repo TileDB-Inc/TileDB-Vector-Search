@@ -67,10 +67,10 @@
 
 #include "config.h"
 #include "defs.h"
-#include "ivf_query.h"
-#include "linalg.h"
 #include "detail/ivf/qv.h"
 #include "detail/ivf/qv_tp.h"
+#include "ivf_query.h"
+#include "linalg.h"
 #include "stats.h"
 #include "utils/logging.h"
 #include "utils/timer.h"
@@ -278,7 +278,7 @@ int main(int argc, char* argv[]) {
             nth,
             nthreads);
       }
-    }  else if (algorithm == "threadpool" || algorithm == "tp") {
+    } else if (algorithm == "threadpool" || algorithm == "tp") {
       if (finite) {
         return detail::ivf::query_finite_ram_tp<db_type, shuffled_ids_type>(
             ctx,
@@ -306,7 +306,7 @@ int main(int argc, char* argv[]) {
             nth,
             nthreads);
       }
-    }else if (algorithm == "nuv_heap" || algorithm == "nuv") {
+    } else if (algorithm == "nuv_heap" || algorithm == "nuv") {
       if (finite) {
         return detail::ivf::
             nuv_query_heap_finite_ram<db_type, shuffled_ids_type>(

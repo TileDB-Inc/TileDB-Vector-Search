@@ -1,16 +1,60 @@
+/**
+* @file   ivf/qv.h
+*
+* @section LICENSE
+*
+* The MIT License
+*
+* @copyright Copyright (c) 2023 TileDB, Inc.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in
+* all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+* THE SOFTWARE.
+*
+ * @section DESCRIPTION
+ * Implementation of the query vector (qv) algorithm, using a threadpool.  We
+ * enqueue a task for each partition, and each task applies the queries
+ * associated with that partition.  The scores for each task are stored in a
+ * fixed_min_queue specific to the thread id of the particular thread
+ * executing the task.  After all partitions have been processed,
+ * the final scores are merged into a single fixed_min_queue.
+ *
+ */
 
 #ifndef TILEDB_IVF_QV_TP_H
 #define TILEDB_IVF_QV_TP_H
 
 #include <string>
-#include "stats.h"
 #include "concepts.h"
+#include "detail/linalg/matrix.h"
+#include "stats.h"
 #include "utils/fixed_min_queues.h"
 #include "utils/threadpool.h"
-#include "detail/linalg/matrix.h"
 
 #include <tiledb/tiledb>
 
+
+/**
+ * Apply a query to a designated set of partitions from the partitioned
+ * database.  The query is applied to each partition in parallel, and the
+ * results are stored in a fixed_min_queue specific to the thread id of the
+ * particular thread executing the task.  After all partitions have been
+ * processed, the final scores are merged into a single fixed_min_queue.
+ */
 namespace detail::ivf {
 auto apply_query_tp(
     auto&& query,
@@ -26,7 +70,8 @@ auto apply_query_tp(
   auto num_queries = size(query);
   auto n = threadpool.get_thread_id();
 
-  // std::cout << "thread " << n << " running " << first_part << " to " << last_part << std::endl;
+  // std::cout << "thread " << n << " running " << first_part << " to " <<
+  // last_part << std::endl;
 
   size_t part_offset = 0;
   size_t col_offset = 0;
@@ -49,14 +94,16 @@ auto apply_query_tp(
 
     auto len = 2 * (size(active_queries[partno]) / 2);
     auto end = active_queries[partno].begin() + len;
-    for (auto j = active_queries[partno].begin(); j != end; j += 2) {
-      auto j0 = j[0];
-      auto j1 = j[1];
-      auto q_vec_0 = query[j0];
-      auto q_vec_1 = query[j1];
+    auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
 
-      auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
-      for (size_t kp = start; kp < kstop; kp += 2) {
+    for (size_t kp = start; kp < kstop; kp += 2) {
+
+      for (auto j = active_queries[partno].begin(); j != end; j += 2) {
+        auto j0 = j[0];
+        auto j1 = j[1];
+        auto q_vec_0 = query[j0];
+        auto q_vec_1 = query[j1];
+
         auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
         auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
         auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
@@ -71,34 +118,43 @@ auto apply_query_tp(
       /*
        * Cleanup the last iteration(s) of k
        */
-      for (size_t kp = kstop; kp < kstop; ++kp) {
+//
+      //      for (size_t kp = kstop; kp < kstop; ++kp) {
+      for (auto j = end; j < active_queries[partno].end(); ++j) {
+        auto j0 = j[0];
+        auto q_vec_0 = query[j0];
+
         auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
-        auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
+        auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
         min_scores[n][j0].insert(score_00, ids[kp + 0]);
-        min_scores[n][j1].insert(score_10, ids[kp + 0]);
+        min_scores[n][j0].insert(score_01, ids[kp + 1]);
       }
     }
 
     /*
      * Cleanup the last iteration(s) of j
      */
-    for (auto j = end; j < active_queries[partno].end(); ++j) {
-      auto j0 = j[0];
-      auto q_vec_0 = query[j0];
 
-      auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
-      for (size_t kp = start; kp < kstop; kp += 2) {
+
+    for (size_t kp = kstop; kp < stop; ++kp) {
+      for (auto j = active_queries[partno].begin(); j != end; j += 2) {
+        auto j0 = j[0];
+        auto j1 = j[1];
+        auto q_vec_0 = query[j0];
+        auto q_vec_1 = query[j1];
+
         auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
-        auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
+        auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
 
         min_scores[n][j0].insert(score_00, ids[kp + 0]);
-        min_scores[n][j0].insert(score_01, ids[kp + 1]);
+        min_scores[n][j1].insert(score_10, ids[kp + 0]);
+
       }
 
-      /*
-       * Cleanup the last last iteration(s) of k
-       */
-      for (size_t kp = kstop; kp < stop; ++kp) {
+      for (auto j = end; j < active_queries[partno].end(); ++j) {
+        auto j0 = j[0];
+        auto q_vec_0 = query[j0];
+
         auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
         min_scores[n][j0].insert(score_00, ids[kp + 0]);
       }
@@ -125,7 +181,8 @@ auto query_finite_ram_tp(
   // Check that the size of the indices vector is correct
   assert(size(indices) == centroids.num_cols() + 1);
 
-  std::cout << "nthreads = " << nthreads << ", " << threadpool.num_threads() << "\n";
+  std::cout << "nthreads = " << nthreads << ", " << threadpool.num_threads()
+            << "\n";
 
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
@@ -150,7 +207,6 @@ auto query_finite_ram_tp(
     new_indices[i + 1] = new_indices[i] + indices[active_partitions[i] + 1] -
                          indices[active_partitions[i]];
   }
-
 
   ColMajorMatrix<size_t> top_k(k_nn, num_queries);
   auto min_scores =
@@ -184,8 +240,7 @@ auto query_finite_ram_tp(
                                 &min_scores,
                                 k_nn,
                                 first_part,
-                                last_part
-                                ]() {
+                                last_part]() {
                 return apply_query_tp(
                     query,
                     shuffled_db,
@@ -223,13 +278,13 @@ auto query_finite_ram_tp(
   for (size_t j = 0; j < num_queries; ++j) {
     sort_heap(min_scores[0][j].begin(), min_scores[0][j].end());
     std::transform(
-          min_scores[0][j].begin(),
-          min_scores[0][j].end(),
-          top_k[j].begin(),
-          ([](auto&& e) { return std::get<1>(e); }));
+        min_scores[0][j].begin(),
+        min_scores[0][j].end(),
+        top_k[j].begin(),
+        ([](auto&& e) { return std::get<1>(e); }));
   }
 
   return top_k;
 }
-} // namespace detail::ivf
-#endif // TILEDB_IVF_QV_TP_H
+}  // namespace detail::ivf
+#endif  // TILEDB_IVF_QV_TP_H
