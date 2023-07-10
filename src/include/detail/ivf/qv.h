@@ -1343,6 +1343,7 @@ auto apply_query(
 
     auto len = 2 * (size(active_queries[partno]) / 2);
     auto end = active_queries[partno].begin() + len;
+
     for (auto j = active_queries[partno].begin(); j != end; j += 2) {
       auto j0 = j[0];
       auto j1 = j[1];
@@ -1397,7 +1398,7 @@ auto apply_query(
   return min_scores;
 }
 
-template <typename T, class shuffled_ids_type>
+template <class T, class shuffled_ids_type>
 auto query_finite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -1433,6 +1434,8 @@ auto query_finite_ram(
       parts_type>(
       ctx, part_uri, indices, active_partitions, id_uri, upper_bound);
 
+  log_timer _i{tdb_func__ + " in RAM"};
+
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
   new_indices[0] = 0;
   for (size_t i = 0; i < size(active_partitions); ++i) {
@@ -1462,7 +1465,6 @@ auto query_finite_ram(
   auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
       num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
-  log_timer _i{tdb_func__ + " in RAM"};
 
   while (shuffled_db.load()) {
     _i.start();
