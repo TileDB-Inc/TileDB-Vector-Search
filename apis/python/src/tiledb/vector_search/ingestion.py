@@ -1270,15 +1270,14 @@ def ingest(
             conf = tiledb.Config(config)
             conf["sm.consolidation.mode"] = mode
             conf["sm.vacuum.mode"] = mode
-            ctx= tiledb.Ctx(conf)
-            group = tiledb.Group(array_uri, ctx=ctx)
-            tiledb.consolidate(group[PARTS_ARRAY_NAME].uri, ctx=ctx)
-            tiledb.vacuum(group[PARTS_ARRAY_NAME].uri, ctx=ctx)
+            group = tiledb.Group(array_uri, config=conf)
+            tiledb.consolidate(group[PARTS_ARRAY_NAME].uri, config=conf)
+            tiledb.vacuum(group[PARTS_ARRAY_NAME].uri, config=conf)
             if index_type == "IVF_FLAT":
-                tiledb.consolidate(group[IDS_ARRAY_NAME].uri, ctx=ctx)
-                tiledb.vacuum(group[IDS_ARRAY_NAME].uri, ctx=ctx)
+                tiledb.consolidate(group[IDS_ARRAY_NAME].uri, config=conf)
+                tiledb.vacuum(group[IDS_ARRAY_NAME].uri, config=conf)
 
-        vfs = tiledb.VFS()
+        vfs = tiledb.VFS(config)
         partial_write_array_dir_uri = array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
         if vfs.is_dir(partial_write_array_dir_uri):
             vfs.remove_dir(partial_write_array_dir_uri)
