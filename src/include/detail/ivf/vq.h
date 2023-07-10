@@ -36,7 +36,6 @@
 
 namespace detail::ivf {
 
-
 auto vq_apply_query(
     auto&& query,
     auto&& shuffled_db,
@@ -46,12 +45,12 @@ auto vq_apply_query(
     auto&& active_partitions,
     size_t k_nn,
     size_t first_part,
-    size_t last_part) {
-  //  print_types(query, shuffled_db, new_indices, active_queries);
-
+    size_t last_part,
+    auto&& min_scores) {
   auto num_queries = size(query);
-  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+
+  // std::cout << "thread " << n << " running " << first_part << " to " <<
+  // last_part << std::endl;
 
   size_t part_offset = 0;
   size_t col_offset = 0;
@@ -74,15 +73,16 @@ auto vq_apply_query(
 
     auto len = 2 * (size(active_queries[partno]) / 2);
     auto end = active_queries[partno].begin() + len;
+    auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
 
-    for (auto j = active_queries[partno].begin(); j != end; j += 2) {
-      auto j0 = j[0];
-      auto j1 = j[1];
-      auto q_vec_0 = query[j0];
-      auto q_vec_1 = query[j1];
+    for (size_t kp = start; kp < kstop; kp += 2) {
 
-      auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
-      for (size_t kp = start; kp < kstop; kp += 2) {
+      for (auto j = active_queries[partno].begin(); j != end; j += 2) {
+        auto j0 = j[0];
+        auto j1 = j[1];
+        auto q_vec_0 = query[j0];
+        auto q_vec_1 = query[j1];
+
         auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
         auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
         auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
@@ -97,38 +97,49 @@ auto vq_apply_query(
       /*
        * Cleanup the last iteration(s) of k
        */
-      for (size_t kp = kstop; kp < kstop; ++kp) {
+      //
+      //      for (size_t kp = kstop; kp < kstop; ++kp) {
+      for (auto j = end; j < active_queries[partno].end(); ++j) {
+        auto j0 = j[0];
+        auto q_vec_0 = query[j0];
+
         auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
-        auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
+        auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
         min_scores[j0].insert(score_00, ids[kp + 0]);
-        min_scores[j1].insert(score_10, ids[kp + 0]);
+        min_scores[j0].insert(score_01, ids[kp + 1]);
       }
     }
 
     /*
      * Cleanup the last iteration(s) of j
      */
-    for (auto j = end; j < active_queries[partno].end(); ++j) {
-      auto j0 = j[0];
-      auto q_vec_0 = query[j0];
 
-      auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
-      for (size_t kp = start; kp < kstop; kp += 2) {
+
+    for (size_t kp = kstop; kp < stop; ++kp) {
+      for (auto j = active_queries[partno].begin(); j != end; j += 2) {
+        auto j0 = j[0];
+        auto j1 = j[1];
+        auto q_vec_0 = query[j0];
+        auto q_vec_1 = query[j1];
+
         auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
-        auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
+        auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
 
         min_scores[j0].insert(score_00, ids[kp + 0]);
-        min_scores[j0].insert(score_01, ids[kp + 1]);
+        min_scores[j1].insert(score_10, ids[kp + 0]);
+
       }
-      for (size_t kp = kstop; kp < stop; ++kp) {
+
+      for (auto j = end; j < active_queries[partno].end(); ++j) {
+        auto j0 = j[0];
+        auto q_vec_0 = query[j0];
+
         auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
         min_scores[j0].insert(score_00, ids[kp + 0]);
       }
     }
   }
-  return min_scores;
 }
-
 
 template <class T, class shuffled_ids_type>
 auto vq_query_finite_ram(

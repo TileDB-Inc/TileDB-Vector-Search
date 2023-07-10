@@ -334,7 +334,39 @@ int main(int argc, char* argv[]) {
                 nth,
                 nthreads);
       }
-    } else if (algorithm == "dist_nuv_heap" || algorithm == "dist") {
+    } else if (algorithm == "vq_heap" || algorithm == "vq") {
+      if (finite) {
+        return detail::ivf::
+            vq_query_finite_ram<db_type, shuffled_ids_type>(
+                ctx,
+                part_uri,
+                centroids,
+                q,
+                indices,
+                id_uri,
+                nprobe,
+                k_nn,
+                blocksize,
+                nth,
+                nthreads);
+      }
+#if 0
+      else {
+        return detail::ivf::
+            vq_query_heap_infinite_ram<db_type, shuffled_ids_type>(
+                ctx,
+                part_uri,
+                centroids,
+                q,
+                indices,
+                id_uri,
+                nprobe,
+                k_nn,
+                nth,
+                nthreads);
+      }
+#endif
+    } if (algorithm == "dist_nuv_heap" || algorithm == "dist") {
       return detail::ivf::dist_qv_finite_ram<db_type, shuffled_ids_type>(
           ctx,
           part_uri,
