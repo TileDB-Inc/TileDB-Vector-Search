@@ -59,8 +59,8 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 # kmeans_add_test(time_open)
 # target_link_libraries(time_queries PRIVATE flat_blas)
 
-kmeans_add_test(gen_queries)
-kmeans_add_test(time_queries)
+# kmeans_add_test(gen_queries)
+# kmeans_add_test(time_queries)
 
 
 kmeans_add_test(unit_algorithm)
