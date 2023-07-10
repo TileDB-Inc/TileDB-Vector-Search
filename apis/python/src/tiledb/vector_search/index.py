@@ -1,4 +1,5 @@
 import os
+import math
 
 import numpy as np
 from tiledb.vector_search.module import *
@@ -44,7 +45,7 @@ class FlatIndex(Index):
         nprobe: int = 1,
     ):
         """
-        Open a flat index
+        Query a flat index
 
         Parameters
         ----------
@@ -117,7 +118,7 @@ class IVFFlatIndex(Index):
         use_nuv_implementation: bool = False,
     ):
         """
-        Open a flat index
+        Query an IVF_FLAT index
 
         Parameters
         ----------
@@ -128,7 +129,7 @@ class IVFFlatIndex(Index):
         nqueries: int
             Number of queries
         nthreads: int
-            Number of threads to use for queyr
+            Number of threads to use for query
         nprobe: int
             number of probes
         use_nuv_implementation: bool
@@ -170,3 +171,66 @@ class IVFFlatIndex(Index):
             )
 
         return np.array(r)
+
+    def distributed_query(
+        self,
+        targets: np.ndarray,
+        k=10,
+        nthreads=8,
+        nprobe=1,
+        num_nodes=5,
+    ):
+        """
+        Distributed Query on top of an IVF_FLAT index
+
+        Parameters
+        ----------
+        targets: numpy.ndarray
+            ND Array of query targets
+        k: int
+            Number of top results to return per target
+        nqueries: int
+            Number of queries
+        nthreads: int
+            Number of threads to use for query
+        nprobe: int
+            number of probes
+        """
+        assert targets.dtype == np.float32
+
+        targets_m = array_to_matrix(targets)
+        active_partitions, active_queries = partition_ivf_index(
+            centroids=self._centroids,
+            query=targets_m,
+            nprobe=nprobe,
+            nthreads=nthreads)
+        num_parts = len(active_partitions)
+
+        parts_per_node = int(math.ceil(num_parts / num_nodes))
+        results = []
+        for part in range(0, num_parts, parts_per_node):
+            part_end = part + parts_per_node
+            if part_end > num_parts:
+                part_end = num_parts
+            results.append(dist_qv(
+                dtype=self.dtype,
+                parts_uri=self.parts_db_uri,
+                ids_uri=self.ids_uri,
+                query_vectors=targets_m,
+                active_partitions=active_partitions[part:part_end],
+                active_queries=active_queries[part:part_end],
+                indices=self._index,
+                k_nn=k,
+                ctx=self.ctx,
+            ))
+
+        results_per_query = []
+        for q in range(targets.shape[1]):
+            tmp_results = []
+            for j in range(k):
+                for r in results:
+                    if len(r[q]) > 0:
+                        if r[q][j][0] > 0:
+                            tmp_results.append(r[q][j])
+            results_per_query.append(sorted(tmp_results, key=lambda t: t[0])[0:k])
+        return results_per_query

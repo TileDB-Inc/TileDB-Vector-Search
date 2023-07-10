@@ -46,7 +46,6 @@ def test_flat_ingestion_f32(tmp_path):
     result = np.transpose(index.query(np.transpose(query_vectors), k=k))
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-
 def test_ivf_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     array_uri = os.path.join(tmp_path, "array")
@@ -109,6 +108,10 @@ def test_ivf_flat_ingestion_f32(tmp_path):
         partitions=partitions,
         input_vectors_per_work_item=int(size / 10),
     )
+
+    result = index.distributed_query(np.transpose(query_vectors), k=k, nprobe=partitions)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
     result = np.transpose(
         index.query(np.transpose(query_vectors), k=k, nprobe=partitions)
     )
@@ -128,6 +131,7 @@ def test_ivf_flat_ingestion_f32(tmp_path):
         )
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
 
 
 def test_ivf_flat_ingestion_fvec(tmp_path):
