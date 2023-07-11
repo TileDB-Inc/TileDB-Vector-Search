@@ -27,7 +27,35 @@
  *
  * @section DESCRIPTION
  *
- * WIP.
+ * A set of algorithms that use the inverted file index (IVF) for querying. The set
+ * of vectors to search are provided in partitioned form, where each partition
+ * consists of the vectors closest to a given centroid vector (the centroids are
+ * also provided).  In addition to the query vectors to be applied, an IVF search
+ * also specifies how many partitions to search (`nprobe` or the number of
+ * centroids to probe).
+ *
+ * To perform a search using the index, given a query vector `q`
+ * * Find the `nprobe` centroids closest to `q[i]`, using a top k query of q
+ * against the centroids, with k = `nprobe`.  These centroids are the "active
+ * centroids" and the corresponding partitions are the "active partitions".
+ * * Determine the set of queries that are associated with each of the active
+ * partitions (i.e., the queries for which each centroid is in the top `nprobe`
+ * closest centroids for the query
+ * * For each active partition, search the vectors in the partition for the
+ * closest matches to the queries
+ * * Return `top_k`, but using the indexes for the vectors (ids) corresponding
+ * to their locations in the original (unpartitioned) data set
+ *
+ * Note that the same process applies to the case of an "infinite RAM" query
+ * or a "finite RAM" query.  In the former case, the entire database is loaded
+ * into memory and the designated active partitions are searched. In the latter
+ * case, only the active partitions are loaded into memory and searched.  In
+ * addition, in the finite RAM case, the vectors to be searched may be loaded
+ * in out-of-core fashion.
+ *
+ * The actual query application in `vq_apply_query`, loops over vectors on the
+ * outer loop and queries on the inner loop.
+ * To perform a search using the index, given a query vector `q[i]`
  *
  */
 
@@ -36,6 +64,29 @@
 
 namespace detail::ivf {
 
+/**
+ * @brief Apply a query to a set of partitioned vectors.  In order to support
+ * the infinite RAM and finite RAM cases, the input may
+ * consist of all of the partitions in the database or a subset of them (only
+ * the ones that need to be searched).  In the former case, the set of
+ * partitions to be searched is given by the active_partitions vector.  In the
+ * latter case, the active_partitions vector is ignored.
+ *
+ * Note that this algorithm is essentially the transpose of the one in qv.h.
+ *
+ * @param query The set of all query vectors.
+ * @param shuffled_db The partitioned set of vectors to be searched
+ * @param new_indices The indices delimiting the partitions.
+ * @param active_queries Indicates which queries to apply to each of the active
+ * partitions.
+ * @param ids The ids of the vectors in the database.
+ * @param active_partitions The active partitions.
+ * @param k_nn The number of nearest neighbors to return.
+ * @param first_part The first partition to search.
+ * @param last_part The last partition to search.
+ *
+ * @return A vector of pairs of scores and ids.
+ */
 auto vq_apply_query(
     auto&& query,
     auto&& shuffled_db,
@@ -61,6 +112,9 @@ auto vq_apply_query(
   auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
       num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
+  /**
+   * Loop over given partitons to be searched
+   */
   for (size_t p = first_part; p < last_part; ++p) {
     auto partno = p + part_offset;
 
@@ -77,8 +131,14 @@ auto vq_apply_query(
     auto end = active_queries[partno].begin() + len;
     auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
 
+    /*
+     * Loop over the vectors in the partition
+     */
     for (size_t kp = start; kp < kstop; kp += 2) {
 
+      /*
+       * Loop over the queries associated with the partition
+       */
       for (auto j = active_queries[partno].begin(); j != end; j += 2) {
         auto j0 = j[0];
         auto j1 = j[1];
@@ -97,10 +157,8 @@ auto vq_apply_query(
       }
 
       /*
-       * Cleanup the last iteration(s) of k
+       * Cleanup the last iteration(s) of j
        */
-      //
-      //      for (size_t kp = kstop; kp < kstop; ++kp) {
       for (auto j = end; j < active_queries[partno].end(); ++j) {
         auto j0 = j[0];
         auto q_vec_0 = query[j0];
@@ -113,10 +171,8 @@ auto vq_apply_query(
     }
 
     /*
-     * Cleanup the last iteration(s) of j
+     * Cleanup the last iteration(s) of k
      */
-
-
     for (size_t kp = kstop; kp < stop; ++kp) {
       for (auto j = active_queries[partno].begin(); j != end; j += 2) {
         auto j0 = j[0];
@@ -129,9 +185,11 @@ auto vq_apply_query(
 
         min_scores[j0].insert(score_00, ids[kp + 0]);
         min_scores[j1].insert(score_10, ids[kp + 0]);
-
       }
 
+      /*
+       * Cleanup the last last iteration(s) of j
+       */
       for (auto j = end; j < active_queries[partno].end(); ++j) {
         auto j0 = j[0];
         auto q_vec_0 = query[j0];
@@ -144,6 +202,15 @@ auto vq_apply_query(
   return min_scores;
 }
 
+/*
+ * @brief Perform a query on a partitioned database, using `vq_apply_query`
+ * This function determines the active partitions and active queries, and
+ * then creates a partitioned matrix holding the vectors from the identified
+ * active partitions.  (This may be done in out of core fashion, so that
+ * only a subset of the active partitions are loaded at any one time.)  The
+ * function then invoked `vq_apply_query` on the partitioned matrix in
+ * parallel fashion, decomposing over the partitions.
+ */
 template <class T, class shuffled_ids_type>
 auto vq_query_finite_ram(
     tiledb::Context& ctx,
@@ -210,7 +277,6 @@ auto vq_query_finite_ram(
 
   auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
       num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
-
 
   while (shuffled_db.load()) {
     _i.start();
@@ -288,7 +354,11 @@ auto vq_query_finite_ram(
 }
 
 
-
+/**
+ * Similar to vq_query_finite_ram, but the entire database is loaded into RAM.
+ * This function takes a partitioned matrix as input, which is assumed to
+ * already have loaded all of its data.
+ */
 auto vq_query_infinite_ram(
     auto&& shuffled_db,
     auto&& centroids,
@@ -385,6 +455,11 @@ auto vq_query_infinite_ram(
   return top_k;
 }
 
+/**
+ * Function that takes a URI to a partitioned matrix and a query matrix,
+ * loads them each into a matrix, and then calls `vq_query_infinite_ram`
+ * above.
+ */
 template <typename T, class shuffled_ids_type>
 auto vq_query_infinite_ram(
     tiledb::Context& ctx,
@@ -416,8 +491,6 @@ auto vq_query_infinite_ram(
       nth,
       nthreads);
 }
-
-
 
 }  // namespace detail::ivf
 
