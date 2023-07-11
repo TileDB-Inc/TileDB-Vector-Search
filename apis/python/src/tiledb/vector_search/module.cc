@@ -268,6 +268,16 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
         }, py::keep_alive<1,2>());
 }
 
+template <class T=float, class U=size_t>
+static void declareFixedMinPairHeap(py::module& mod) {
+  using PyFixedMinPairHeap = py::class_<fixed_min_pair_heap<T, U>>;
+  PyFixedMinPairHeap cls(mod, "FixedMinPairHeap", py::buffer_protocol());
+
+  cls.def(py::init<unsigned>());
+  cls.def("insert", &fixed_min_pair_heap<T, U>::insert);
+  cls.def("__len__", [](const fixed_min_pair_heap<T, U> &v) { return v.size(); });
+  cls.def("__getitem__", [](fixed_min_pair_heap<T, U>& v, size_t i) { return v[i]; });
+}
 
 // Declarations for typed subclasses of ColMajorMatrix
 template <typename P>
@@ -323,6 +333,7 @@ void declareStdVector(py::module& m, const std::string& suffix) {
     .def("clear", &std::vector<T>::clear)
     .def("pop_back", &std::vector<T>::pop_back)
     .def("__len__", [](const std::vector<T> &v) { return v.size(); })
+    .def("__getitem__", [](const std::vector<T> &v, size_t i) { return v[i]; })
     .def_buffer([](std::vector<T> &v) -> py::buffer_info {
         return py::buffer_info(
             v.data(),                               /* Pointer to buffer */
@@ -337,8 +348,8 @@ void declareStdVector(py::module& m, const std::string& suffix) {
 template <typename T, typename indices_type = size_t>
 void declarePartitionIvfIndex(py::module& m, const std::string& suffix) {
   m.def(("partition_ivf_index_" + suffix).c_str(),
-        [](ColMajorMatrix<T>& centroids,
-           ColMajorMatrix<float>& query,
+        [](ColMajorMatrix<float>& centroids,
+           ColMajorMatrix<T>& query,
            size_t nprobe,
            size_t nthreads) {
           return detail::ivf::partition_ivf_index(centroids, query, nprobe, nthreads);
@@ -346,20 +357,20 @@ void declarePartitionIvfIndex(py::module& m, const std::string& suffix) {
         );
 }
 
-template <typename query_type, typename shuffled_ids_type = size_t>
+template <typename T, typename shuffled_ids_type = uint64_t>
 static void declare_dist_qv(py::module& m, const std::string& suffix) {
   m.def(("dist_qv_" + suffix).c_str(),
       [](tiledb::Context& ctx,
         const std::string& part_uri,
-        std::vector<shuffled_ids_type>& active_partitions,
-        ColMajorMatrix<query_type>& query,
-        std::vector<std::vector<shuffled_ids_type>>& active_queries,
+        std::vector<int>& active_partitions,
+        ColMajorMatrix<float>& query,
+        std::vector<std::vector<int>>& active_queries,
         std::vector<shuffled_ids_type>& indices,
         const std::string& id_uri,
         size_t k_nn
         /* size_t nthreads TODO: optional arg w/ fallback to C++ default arg */
         ) { /* TODO return type */
-            return detail::ivf::dist_qv_finite_ram_part<query_type, shuffled_ids_type>(
+            return detail::ivf::dist_qv_finite_ram_part<T, shuffled_ids_type>(
                 ctx,
                 part_uri,
                 active_partitions,
@@ -508,5 +519,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declarePartitionedMatrix<tdbColMajorPartitionedMatrix<uint8_t, uint64_t, uint64_t, uint64_t > >(m, "tdbPartitionedMatrix", "u8");
   declarePartitionedMatrix<tdbColMajorPartitionedMatrix<float, uint64_t, uint64_t, uint64_t> >(m, "tdbPartitionedMatrix", "f32");
 
+  declare_dist_qv<uint8_t>(m, "u8");
   declare_dist_qv<float>(m, "f32");
+  declareFixedMinPairHeap(m);
 }
