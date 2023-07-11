@@ -30,17 +30,17 @@
  * Implementation of queries for the "qv" orderings, i.e., for which the loop
  * over the queries is on the outer loop and the loop over the vectors is on the
  * inner loop.  Since the vectors in the inner loop are partitioned, we can
- * operate on them blockwise, which ameliorates the locality issues that
+ * operate on them blockwise, which ameliorates some of the locality issues that
  * arise when doing this order with a flat index, say.
  *
- * There are two implementations here: infinite RAM and finite RAM.  The
+ * There are two types of implementation here: infinite RAM and finite RAM.  The
  * infinite RAM case loads the entire partitioned database into memory, and then
  * searches in the partitions as indicated by the nearest centroids to the
  * queries.  The infinite RAM case does not perform any out-of-core operations.
  * The finite RAM case only loads the partitions into memory that are necessary
  * for the search. The user can specify an upper bound on the amount of RAM to
  * be used for holding the queries being searched.  The searches are ordered so
- * that the partitions can be loaded into memory in the order they are layed out
+ * that the partitions can be loaded into memory in the order they are laid out
  * in the array.
  *
  * In general there is probably no reason to ever use the infinite RAM case
@@ -1464,7 +1464,6 @@ auto query_finite_ram(
 
   auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
       num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
-
 
   while (shuffled_db.load()) {
     _i.start();

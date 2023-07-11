@@ -56,7 +56,8 @@ auto vq_query_nth(DB& db, const Q& q, int k, bool nth, int nthreads) {
   if constexpr (is_loadable_v<decltype(db)>) {
     db.load();
   }
-  scoped_timer _{tdb_func__ + (nth ? std::string{" nth"} : std::string{" heap"})};
+  scoped_timer _{
+      tdb_func__ + (nth ? std::string{" nth"} : std::string{" heap"})};
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
 
@@ -254,8 +255,6 @@ auto vq_query_heap_tiled(DB& db, Q& q, int k, unsigned nthreads) {
 
   return top_k;
 }
-
-
 
 #if 0
 template <class DB, class Q>

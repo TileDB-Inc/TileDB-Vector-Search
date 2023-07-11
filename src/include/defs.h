@@ -274,7 +274,6 @@ auto get_top_k(const S& scores, int k, bool nth, int nthreads) {
   return top_k;
 }
 
-
 // @todo use get_top_k_from_heap
 void get_top_k_from_heap(auto&& min_scores, auto&& top_k) {
   std::sort_heap(begin(min_scores), end(min_scores));
