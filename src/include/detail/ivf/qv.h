@@ -980,7 +980,7 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
                 /*
                  * Cleanup the last iteration(s) of k
                  */
-                for (size_t kp = kstop; kp < kstop; ++kp) {
+                for (size_t kp = kstop; kp < stop; ++kp) {
                   auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
                   auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
                   min_scores[n][j0].insert(score_00, shuffled_ids[kp + 0]);
@@ -1201,7 +1201,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                   /*
                    * Cleanup the last iteration(s) of k
                    */
-                  for (size_t kp = kstop; kp < kstop; ++kp) {
+                  for (size_t kp = kstop; kp < stop; ++kp) {
                     auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
                     auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
                     min_scores[n][j0].insert(
