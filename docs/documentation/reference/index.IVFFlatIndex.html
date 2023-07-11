@@ -172,6 +172,7 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
   <ul class="collapse">
   <li><a href="#tiledb.vector_search.index.IVFFlatIndex.query" id="toc-tiledb.vector_search.index.IVFFlatIndex.query" class="nav-link" data-scroll-target="#tiledb.vector_search.index.IVFFlatIndex.query">query</a></li>
+  <li><a href="#tiledb.vector_search.index.IVFFlatIndex.taskgraph_query" id="toc-tiledb.vector_search.index.IVFFlatIndex.taskgraph_query" class="nav-link" data-scroll-target="#tiledb.vector_search.index.IVFFlatIndex.taskgraph_query">taskgraph_query</a></li>
   </ul></li>
   </ul></li>
   </ul>
@@ -237,22 +238,26 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td><a href="#tiledb.vector_search.index.IVFFlatIndex.query">query</a></td>
-<td>Open a flat index</td>
+<td>Query an IVF_FLAT index</td>
+</tr>
+<tr class="even">
+<td><a href="#tiledb.vector_search.index.IVFFlatIndex.taskgraph_query">taskgraph_query</a></td>
+<td>Query an IVF_FLAT index using TileDB cloud taskgraphs</td>
 </tr>
 </tbody>
 </table>
 <section id="tiledb.vector_search.index.IVFFlatIndex.query" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.index.IVFFlatIndex.query">query</h3>
-<p><code>vector_search.index.IVFFlatIndex.query(self, targets, k=10, nqueries=10, nthreads=8, nprobe=1, use_nuv_implementation=False)</code></p>
-<p>Open a flat index</p>
+<p><code>vector_search.index.IVFFlatIndex.query(self, queries, k=10, nprobe=10, nthreads=-1, use_nuv_implementation=False, mode=None, num_partitions=-1, num_workers=-1)</code></p>
+<p>Query an IVF_FLAT index</p>
 <section id="parameters-1" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
 <table class="table">
 <colgroup>
-<col style="width: 23%">
-<col style="width: 13%">
-<col style="width: 53%">
-<col style="width: 10%">
+<col style="width: 14%">
+<col style="width: 8%">
+<col style="width: 71%">
+<col style="width: 6%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -264,40 +269,126 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>targets</code></td>
+<td><code>queries</code></td>
 <td>numpy.ndarray</td>
-<td>ND Array of query targets</td>
+<td>ND Array of queries</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
 <td><code>k</code></td>
-<td></td>
+<td>int</td>
 <td>Number of top results to return per target</td>
 <td><code>10</code></td>
 </tr>
 <tr class="odd">
-<td><code>nqueries</code></td>
-<td></td>
-<td>Number of queries</td>
+<td><code>nprobe</code></td>
+<td>int</td>
+<td>number of probes</td>
 <td><code>10</code></td>
 </tr>
 <tr class="even">
 <td><code>nthreads</code></td>
-<td></td>
-<td>Number of threads to use for queyr</td>
-<td><code>8</code></td>
+<td>int</td>
+<td>Number of threads to use for query</td>
+<td><code>-1</code></td>
 </tr>
 <tr class="odd">
-<td><code>nprobe</code></td>
-<td></td>
-<td>number of probes</td>
-<td><code>1</code></td>
-</tr>
-<tr class="even">
 <td><code>use_nuv_implementation</code></td>
 <td>bool</td>
 <td>wether to use the nuv query implementation. Default: False</td>
 <td><code>False</code></td>
+</tr>
+<tr class="even">
+<td><code>mode</code></td>
+<td>Mode</td>
+<td>If provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>num_partitions</code></td>
+<td>int</td>
+<td>Only relevant for taskgraph based execution. If provided, we split the query execution in that many partitions.</td>
+<td><code>-1</code></td>
+</tr>
+<tr class="even">
+<td><code>num_workers</code></td>
+<td>int</td>
+<td>Only relevant for taskgraph based execution. If provided, this is the number of workers to use for the query execution.</td>
+<td><code>-1</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="tiledb.vector_search.index.IVFFlatIndex.taskgraph_query" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.index.IVFFlatIndex.taskgraph_query">taskgraph_query</h3>
+<p><code>vector_search.index.IVFFlatIndex.taskgraph_query(self, queries, k=10, nprobe=10, nthreads=-1, mode=None, num_partitions=-1, num_workers=-1)</code></p>
+<p>Query an IVF_FLAT index using TileDB cloud taskgraphs</p>
+<section id="parameters-2" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 14%">
+<col style="width: 8%">
+<col style="width: 71%">
+<col style="width: 6%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>queries</code></td>
+<td>numpy.ndarray</td>
+<td>ND Array of queries</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>k</code></td>
+<td>int</td>
+<td>Number of top results to return per target</td>
+<td><code>10</code></td>
+</tr>
+<tr class="odd">
+<td><code>nprobe</code></td>
+<td>int</td>
+<td>number of probes</td>
+<td><code>10</code></td>
+</tr>
+<tr class="even">
+<td><code>nthreads</code></td>
+<td>int</td>
+<td>Number of threads to use for query</td>
+<td><code>-1</code></td>
+</tr>
+<tr class="odd">
+<td><code>use_nuv_implementation</code></td>
+<td></td>
+<td>wether to use the nuv query implementation. Default: False</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>mode</code></td>
+<td>Mode</td>
+<td>If provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>num_partitions</code></td>
+<td>int</td>
+<td>Only relevant for taskgraph based execution. If provided, we split the query execution in that many partitions.</td>
+<td><code>-1</code></td>
+</tr>
+<tr class="even">
+<td><code>num_workers</code></td>
+<td>int</td>
+<td>Only relevant for taskgraph based execution. If provided, this is the number of workers to use for the query execution.</td>
+<td><code>-1</code></td>
 </tr>
 </tbody>
 </table>
