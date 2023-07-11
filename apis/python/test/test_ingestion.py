@@ -2,6 +2,7 @@ from common import *
 
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.index import IVFFlatIndex
+from tiledb.cloud.dag import Mode
 
 MINIMUM_ACCURACY = 0.9
 
@@ -52,7 +53,10 @@ def test_ivf_flat_ingestion_u8(tmp_path):
     k = 10
     size = 100000
     partitions = 100
-    create_random_dataset_u8(nb=size, d=100, nq=10, k=k, path=dataset_dir)
+    dimensions = 128
+    nqueries = 100
+    nprobe = 20
+    create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
     source_type = "U8BIN"
     dtype = np.uint8
 
@@ -67,33 +71,40 @@ def test_ivf_flat_ingestion_u8(tmp_path):
         input_vectors_per_work_item=int(size / 10),
     )
     result = np.transpose(
-        index.query(np.transpose(query_vectors), k=k, nprobe=10)
+        index.query(np.transpose(query_vectors), k=k, nprobe=nprobe)
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype, memory_budget=int(size / 10))
     result = np.transpose(
-        index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions)
+        index_ram.query(np.transpose(query_vectors), k=k, nprobe=nprobe)
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
     result = np.transpose(
         index_ram.query(
             np.transpose(query_vectors),
             k=k,
-            nprobe=partitions,
+            nprobe=nprobe,
             use_nuv_implementation=True,
         )
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    result = index_ram.distributed_query(np.transpose(query_vectors.astype(np.uint8)), k=k, nprobe=nprobe, mode=Mode.LOCAL)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 def test_ivf_flat_ingestion_f32(tmp_path):
+    import time
     dataset_dir = os.path.join(tmp_path, "dataset")
     array_uri = os.path.join(tmp_path, "array")
     k = 10
     size = 100000
+    dimensions = 128
     partitions = 100
-    create_random_dataset_f32(nb=size, d=100, nq=10, k=k, path=dataset_dir)
+    nqueries = 100
+    nprobe = 20
+
+    create_random_dataset_f32(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
     source_type = "F32BIN"
     dtype = np.float32
 
@@ -109,27 +120,27 @@ def test_ivf_flat_ingestion_f32(tmp_path):
         input_vectors_per_work_item=int(size / 10),
     )
 
-    result = index.distributed_query(np.transpose(query_vectors), k=k, nprobe=partitions)
-    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
-
     result = np.transpose(
-        index.query(np.transpose(query_vectors), k=k, nprobe=partitions)
+        index.query(np.transpose(query_vectors), k=k, nprobe=nprobe)
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype, memory_budget=int(size / 10))
     result = np.transpose(
-        index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions)
+        index_ram.query(np.transpose(query_vectors), k=k, nprobe=nprobe)
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
     result = np.transpose(
         index_ram.query(
             np.transpose(query_vectors),
             k=k,
-            nprobe=partitions,
+            nprobe=nprobe,
             use_nuv_implementation=True,
         )
     )
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    result = index_ram.distributed_query(np.transpose(query_vectors), k=k, nprobe=nprobe, mode=Mode.LOCAL)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
@@ -143,8 +154,9 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     array_uri = os.path.join(tmp_path, "array")
     k = 100
     dimensions = 128
-    partitions = 1000
+    partitions = 100
     nqueries = 100
+    nprobe = 20
 
     query_vectors = get_queries_fvec(
         queries_uri, dimensions=dimensions, nqueries=nqueries
@@ -159,21 +171,24 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
         partitions=partitions,
     )
     result = np.transpose(
-        index.query(np.transpose(query_vectors), k=k, nprobe=partitions)
+        index.query(np.transpose(query_vectors), k=k, nprobe=nprobe)
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype)
     result = np.transpose(
-        index_ram.query(np.transpose(query_vectors), k=k, nprobe=partitions)
+        index_ram.query(np.transpose(query_vectors), k=k, nprobe=nprobe)
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
     result = np.transpose(
         index_ram.query(
             np.transpose(query_vectors),
             k=k,
-            nprobe=partitions,
+            nprobe=nprobe,
             use_nuv_implementation=True,
         )
     )
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    result = index_ram.distributed_query(np.transpose(query_vectors), k=k, nprobe=nprobe, mode=Mode.LOCAL)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY

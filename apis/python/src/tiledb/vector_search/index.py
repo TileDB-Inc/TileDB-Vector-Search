@@ -3,12 +3,18 @@ import math
 
 import numpy as np
 from tiledb.vector_search.module import *
+from tiledb.cloud.dag import Mode
 
 CENTROIDS_ARRAY_NAME = "centroids.tdb"
 INDEX_ARRAY_NAME = "index.tdb"
 IDS_ARRAY_NAME = "ids.tdb"
 PARTS_ARRAY_NAME = "parts.tdb"
 
+def submit_local(d, func, *args, **kwargs):
+    # Drop kwarg
+    kwargs.pop("image_name", None)
+    kwargs.pop("resources", None)
+    return d.submit_local(func, *args, **kwargs)
 
 class Index:
     def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8, nprobe=1):
@@ -179,6 +185,7 @@ class IVFFlatIndex(Index):
         nthreads=8,
         nprobe=1,
         num_nodes=5,
+        mode: Mode = Mode.REALTIME,
     ):
         """
         Distributed Query on top of an IVF_FLAT index
@@ -196,7 +203,64 @@ class IVFFlatIndex(Index):
         nprobe: int
             number of probes
         """
-        assert targets.dtype == np.float32
+        from tiledb.cloud import dag
+        from tiledb.cloud.dag import Mode
+        from tiledb.vector_search.module import array_to_matrix, partition_ivf_index, dist_qv
+        import math
+        import numpy as np
+        from functools import partial
+
+        def dist_qv_udf(
+            dtype: np.dtype,
+            parts_uri: str,
+            ids_uri: str,
+            query_vectors: np.ndarray,
+            active_partitions: np.array,
+            active_queries: np.array,
+            indices: np.array,
+            k_nn: int):
+            targets_m = array_to_matrix(query_vectors)
+            r = dist_qv(
+                dtype=dtype,
+                parts_uri=parts_uri,
+                ids_uri=ids_uri,
+                query_vectors=targets_m,
+                active_partitions=active_partitions,
+                active_queries=active_queries,
+                indices=indices,
+                k_nn=k_nn,
+            )
+            results = []
+            for q in range(len(r)):
+                tmp_results = []
+                for j in range(len(r[q])):
+                    tmp_results.append(r[q][j])
+                results.append(tmp_results)
+            return results
+
+        assert targets.dtype == self.dtype
+        if mode == Mode.BATCH:
+            d = dag.DAG(
+                name="vector-query",
+                mode=Mode.BATCH,
+                max_workers=num_nodes,
+            )
+        if mode == Mode.REALTIME:
+            d = dag.DAG(
+                name="vector-query",
+                mode=Mode.REALTIME,
+                max_workers=num_nodes,
+            )
+        else:
+            d = dag.DAG(
+                name="vector-query",
+                mode=Mode.REALTIME,
+                max_workers=1,
+                namespace="default",
+            )
+        submit = partial(submit_local, d)
+        if mode == Mode.BATCH or mode == Mode.REALTIME:
+            submit = d.submit
 
         targets_m = array_to_matrix(targets)
         active_partitions, active_queries = partition_ivf_index(
@@ -207,29 +271,38 @@ class IVFFlatIndex(Index):
         num_parts = len(active_partitions)
 
         parts_per_node = int(math.ceil(num_parts / num_nodes))
-        results = []
+        nodes = []
         for part in range(0, num_parts, parts_per_node):
             part_end = part + parts_per_node
             if part_end > num_parts:
                 part_end = num_parts
-            results.append(dist_qv(
+            nodes.append(submit(
+                dist_qv_udf,
                 dtype=self.dtype,
                 parts_uri=self.parts_db_uri,
                 ids_uri=self.ids_uri,
-                query_vectors=targets_m,
+                query_vectors=targets,
                 active_partitions=np.array(active_partitions)[part:part_end],
-                active_queries=np.array(active_queries[part:part_end]),
-                indices=self._index,
+                active_queries=np.array(active_queries[part:part_end], dtype=object),
+                indices=np.array(self._index),
                 k_nn=k,
-                ctx=self.ctx,
+                resource_class='large',
+                image_name="3.9-vectorsearch",
             ))
+
+        d.compute()
+        d.wait()
+        results = []
+        for node in nodes:
+            res = node.result()
+            results.append(res)
 
         results_per_query = []
         for q in range(targets.shape[1]):
             tmp_results = []
             for j in range(k):
                 for r in results:
-                    if len(r[q]) > 0:
+                    if len(r[q]) > j:
                         if r[q][j][0] > 0:
                             tmp_results.append(r[q][j])
             results_per_query.append(sorted(tmp_results, key=lambda t: t[0])[0:k])

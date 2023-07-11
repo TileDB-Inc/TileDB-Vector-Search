@@ -295,9 +295,9 @@ def ivf_query(
 
 
 def partition_ivf_index(centroids, query, nprobe=1, nthreads=0):
-    if centroids.dtype == np.float32:
+    if query.dtype == np.float32:
         return partition_ivf_index_f32(centroids, query, nprobe, nthreads)
-    elif centroids.dtype == np.uint8:
+    elif query.dtype == np.uint8:
         return partition_ivf_index_u8(centroids, query, nprobe, nthreads)
     else:
         raise TypeError("Unsupported type!")
@@ -307,9 +307,9 @@ def dist_qv(
     parts_uri: str,
     ids_uri: str,
     query_vectors: "colMajorMatrix",
-    active_partitions: "Vector",
-    active_queries: "Vector",
-    indices: "Vector",
+    active_partitions: np.array,
+    active_queries: np.array,
+    indices: np.array,
     k_nn: int,
     ctx: "Ctx" = None):
     if ctx is None:
@@ -321,7 +321,7 @@ def dist_qv(
             active_partitions,
             query_vectors,
             active_queries,
-            indices,
+            StdVector_u64(indices),
             ids_uri,
             k_nn
         ]
