@@ -10,11 +10,13 @@ INDEX_ARRAY_NAME = "index.tdb"
 IDS_ARRAY_NAME = "ids.tdb"
 PARTS_ARRAY_NAME = "parts.tdb"
 
+
 def submit_local(d, func, *args, **kwargs):
     # Drop kwarg
     kwargs.pop("image_name", None)
     kwargs.pop("resources", None)
     return d.submit_local(func, *args, **kwargs)
+
 
 class Index:
     def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8, nprobe=1):
@@ -205,7 +207,11 @@ class IVFFlatIndex(Index):
         """
         from tiledb.cloud import dag
         from tiledb.cloud.dag import Mode
-        from tiledb.vector_search.module import array_to_matrix, partition_ivf_index, dist_qv
+        from tiledb.vector_search.module import (
+            array_to_matrix,
+            partition_ivf_index,
+            dist_qv,
+        )
         import math
         import numpy as np
         from functools import partial
@@ -218,7 +224,8 @@ class IVFFlatIndex(Index):
             active_partitions: np.array,
             active_queries: np.array,
             indices: np.array,
-            k_nn: int):
+            k_nn: int,
+        ):
             targets_m = array_to_matrix(query_vectors)
             r = dist_qv(
                 dtype=dtype,
@@ -264,10 +271,8 @@ class IVFFlatIndex(Index):
 
         targets_m = array_to_matrix(targets)
         active_partitions, active_queries = partition_ivf_index(
-            centroids=self._centroids,
-            query=targets_m,
-            nprobe=nprobe,
-            nthreads=nthreads)
+            centroids=self._centroids, query=targets_m, nprobe=nprobe, nthreads=nthreads
+        )
         num_parts = len(active_partitions)
 
         parts_per_node = int(math.ceil(num_parts / num_nodes))
@@ -276,19 +281,23 @@ class IVFFlatIndex(Index):
             part_end = part + parts_per_node
             if part_end > num_parts:
                 part_end = num_parts
-            nodes.append(submit(
-                dist_qv_udf,
-                dtype=self.dtype,
-                parts_uri=self.parts_db_uri,
-                ids_uri=self.ids_uri,
-                query_vectors=targets,
-                active_partitions=np.array(active_partitions)[part:part_end],
-                active_queries=np.array(active_queries[part:part_end], dtype=object),
-                indices=np.array(self._index),
-                k_nn=k,
-                resource_class='large',
-                image_name="3.9-vectorsearch",
-            ))
+            nodes.append(
+                submit(
+                    dist_qv_udf,
+                    dtype=self.dtype,
+                    parts_uri=self.parts_db_uri,
+                    ids_uri=self.ids_uri,
+                    query_vectors=targets,
+                    active_partitions=np.array(active_partitions)[part:part_end],
+                    active_queries=np.array(
+                        active_queries[part:part_end], dtype=object
+                    ),
+                    indices=np.array(self._index),
+                    k_nn=k,
+                    resource_class="large",
+                    image_name="3.9-vectorsearch",
+                )
+            )
 
         d.compute()
         d.wait()

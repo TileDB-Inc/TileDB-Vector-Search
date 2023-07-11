@@ -302,6 +302,7 @@ def partition_ivf_index(centroids, query, nprobe=1, nthreads=0):
     else:
         raise TypeError("Unsupported type!")
 
+
 def dist_qv(
     dtype: np.dtype,
     parts_uri: str,
@@ -311,7 +312,8 @@ def dist_qv(
     active_queries: np.array,
     indices: np.array,
     k_nn: int,
-    ctx: "Ctx" = None):
+    ctx: "Ctx" = None,
+):
     if ctx is None:
         ctx = Ctx({})
     args = tuple(
@@ -323,7 +325,7 @@ def dist_qv(
             active_queries,
             StdVector_u64(indices),
             ids_uri,
-            k_nn
+            k_nn,
         ]
     )
     if dtype == np.float32:
@@ -332,6 +334,7 @@ def dist_qv(
         return dist_qv_u8(*args)
     else:
         raise TypeError("Unsupported type!")
+
 
 def validate_top_k(results: np.ndarray, ground_truth: np.ndarray):
     if results.dtype == np.uint64:
