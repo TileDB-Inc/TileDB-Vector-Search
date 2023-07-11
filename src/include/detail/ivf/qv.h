@@ -1530,12 +1530,15 @@ auto query_finite_ram(
 
   // @todo get_top_k_from_heap
   for (size_t j = 0; j < num_queries; ++j) {
+    get_top_k_from_heap(min_scores[j], top_k[j]);
+#if 0
     sort_heap(min_scores[j].begin(), min_scores[j].end());
     std::transform(
         min_scores[j].begin(),
         min_scores[j].end(),
         top_k[j].begin(),
         ([](auto&& e) { return std::get<1>(e); }));
+#endif
   }
 
   return top_k;
