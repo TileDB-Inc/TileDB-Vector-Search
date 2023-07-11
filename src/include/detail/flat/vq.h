@@ -177,6 +177,86 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
   return top_k;
 }
 
+template <class DB, class Q>
+auto vq_query_heap_tiled(DB& db, Q& q, int k, unsigned nthreads) {
+  using element = std::pair<float, int>;
+
+  // @todo Need to get the total number of queries, not just the first block
+  // @todo Use Matrix here rather than vector of vectors
+  std::vector<std::vector<fixed_min_heap<element>>> scores(
+      nthreads,
+      std::vector<fixed_min_heap<element>>(
+          size(q), fixed_min_heap<element>(k)));
+
+  unsigned size_q = size(q);
+  auto par = stdx::execution::indexed_parallel_policy{nthreads};
+
+  log_timer _i{tdb_func__ + " in RAM"};
+
+  // @todo Can we do blocking in the parallel for_each somehow?
+  while (db.load()) {
+    _i.start();
+    stdx::range_for_each(
+        std::move(par),
+        db,
+        [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
+          for (size_t j = 0; j < size_q; ++j) {
+            auto score = L2(q[j], db_vec);
+            scores[n][j].insert(element{score, i + db.col_offset()});
+          }
+        });
+    _i.stop();
+  }
+
+  _i.start();
+  for (size_t j = 0; j < size(q); ++j) {
+    for (unsigned n = 1; n < nthreads; ++n) {
+      for (auto&& e : scores[n][j]) {
+        scores[0][j].insert(e);
+      }
+    }
+  }
+
+  ColMajorMatrix<size_t> top_k(k, q.num_cols());
+
+  // This might not be a win.
+  int q_block_size = (size(q) + std::min<int>(nthreads, size(q)) - 1) /
+                     std::min<int>(nthreads, size(q));
+  std::vector<std::future<void>> futs;
+  futs.reserve(nthreads);
+
+  // Parallelize over the query vectors (inner loop)
+  // Should pick a threshold below which we don't bother with parallelism
+  for (int n = 0; n < std::min<int>(nthreads, size(q)); ++n) {
+    int q_start = n * q_block_size;
+    int q_stop = std::min<int>((n + 1) * q_block_size, size(q));
+
+    futs.emplace_back(
+        std::async(std::launch::async, [&scores, q_start, q_stop, &top_k]() {
+          // For each query
+
+          // @todo get_top_k_from_heap
+          for (int j = q_start; j < q_stop; ++j) {
+            sort_heap(scores[0][j].begin(), scores[0][j].end());
+            std::transform(
+                scores[0][j].begin(),
+                scores[0][j].end(),
+                top_k[j].begin(),
+                ([](auto&& e) { return e.second; }));
+          }
+        }));
+  }
+
+  for (int n = 0; n < std::min<int>(nthreads, size(q)); ++n) {
+    futs[n].get();
+  }
+  _i.stop();
+
+  return top_k;
+}
+
+
+
 #if 0
 template <class DB, class Q>
 auto vq_partition(const DB& db, const Q& q, int k, bool nth, int nthreads) {
