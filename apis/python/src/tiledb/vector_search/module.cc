@@ -333,6 +333,7 @@ void declareStdVector(py::module& m, const std::string& suffix) {
     .def("clear", &std::vector<T>::clear)
     .def("pop_back", &std::vector<T>::pop_back)
     .def("__len__", [](const std::vector<T> &v) { return v.size(); })
+    .def("__getitem__", [](const std::vector<T> &v, size_t i) { return v[i]; })
     .def_buffer([](std::vector<T> &v) -> py::buffer_info {
         return py::buffer_info(
             v.data(),                               /* Pointer to buffer */
