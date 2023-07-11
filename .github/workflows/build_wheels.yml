@@ -18,7 +18,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.14.0
         env:
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
-          CIBW_SKIP: "*-win32 cp27-* cp35-* cp36-* cp37-* pp*"
+          CIBW_SKIP: "*-win32 cp27-* cp35-* cp36-* cp37-* pp* *_i686 *musllinux*"
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_BUILD_VERBOSITY: 3
           MACOSX_DEPLOYMENT_TARGET: "12.0"
