@@ -1366,7 +1366,7 @@ auto apply_query(
       /*
        * Cleanup the last iteration(s) of k
        */
-      for (size_t kp = kstop; kp < kstop; ++kp) {
+      for (size_t kp = kstop; kp < stop; ++kp) {
         auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
         auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
         min_scores[j0].insert(score_00, ids[kp + 0]);
@@ -1530,12 +1530,15 @@ auto query_finite_ram(
 
   // @todo get_top_k_from_heap
   for (size_t j = 0; j < num_queries; ++j) {
+    get_top_k_from_heap(min_scores[j], top_k[j]);
+#if 0
     sort_heap(min_scores[j].begin(), min_scores[j].end());
     std::transform(
         min_scores[j].begin(),
         min_scores[j].end(),
         top_k[j].begin(),
         ([](auto&& e) { return std::get<1>(e); }));
+#endif
   }
 
   return top_k;

@@ -203,6 +203,11 @@ int main(int argc, char* argv[]) {
                   << std::endl;
       }
       return detail::flat::qv_query_nth(db, query, k, nth, nthreads);
+    } else if (alg_name == "qv_tiled") {
+      if (verbose) {
+        std::cout << "# Using qv_tiled" <<                   std::endl;
+      }
+      return detail::flat::qv_query_heap_tiled(db, query, k, nthreads);
     } else if (alg_name == "qv_heap" || alg_name == "qv") {
       if (verbose) {
         std::cout << "# Using qv_query (qv_heap), ignoring nth = "

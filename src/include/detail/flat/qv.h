@@ -171,12 +171,13 @@ auto qv_query_heap_tiled(DB& db, const Q& query, size_t k, unsigned nthreads) {
   // yet have iterators.
   // @todo Implement iterator interface to `Matrix` class
   size_t size_db = db.num_cols();
-  size_t size_q = query.num_cols();
-  size_t container_size = size_q;
+  size_t container_size = size(query);
   size_t block_size = (container_size + nthreads - 1) / nthreads;
 
   std::vector<std::future<void>> futs;
   futs.reserve(nthreads);
+
+  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>> (size(query), fixed_min_pair_heap<float, size_t> (k));
 
   // @todo: Use range::for_each
   for (size_t n = 0; n < nthreads; ++n) {
@@ -185,102 +186,77 @@ auto qv_query_heap_tiled(DB& db, const Q& query, size_t k, unsigned nthreads) {
 
     if (start != stop) {
       futs.emplace_back(std::async(
-          std::launch::async, [k, start, stop, size_db, &query, &db, &top_k]() {
-#if 0
-            for (size_t j = start; j < stop; ++j) {
-              fixed_min_pair_heap<float, size_t> min_scores(k);
-              size_t idx = 0;
+          std::launch::async, [k, start, stop, size_db, &query, &db, &top_k, &min_scores]() {
 
-              for (size_t i = 0; i < size_db; ++i) {
-                auto score = L2(q[j], db[i]);
-                min_scores.insert(score, i);
-              }
-
-              // @todo use get_top_k_from_heap
-              std::sort_heap(min_scores.begin(), min_scores.end());
-              std::transform(
-                  min_scores.begin(),
-                  min_scores.end(),
-                  top_k[j].begin(),
-                  ([](auto&& e) { return std::get<1>(e); }));
-            }
-
-#endif
-            auto num_queries = size(query);
-
-            auto len = 2 * (num_queries / 2);
+            auto len = 2 * ((stop - start) / 2);
             auto end = start + len;
         
-            auto min_scores0 = fixed_min_pair_heap<float, size_t> (k);
-            auto min_scores1 = fixed_min_pair_heap<float, size_t> (k);
+            // auto min_scores0 = fixed_min_pair_heap<float, size_t> (k);
+            // auto min_scores1 = fixed_min_pair_heap<float, size_t> (k);
 
             for (auto j = start; j != end; j += 2) {
-
-              min_scores0.clear();
-              min_scores1.clear();
 
               auto j0 = j + 0;
               auto j1 = j + 1;
               auto q_vec_0 = query[j0];
               auto q_vec_1 = query[j1];
 
-              auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
-              for (size_t kp = start; kp < kstop; kp += 2) {
+              auto kstop = std::min<size_t>(size(db), 2 * (size(db) / 2));
+
+              for (size_t kp = 0; kp < kstop; kp += 2) {
                 auto score_00 = L2(q_vec_0, db[kp + 0]);
                 auto score_01 = L2(q_vec_0, db[kp + 1]);
                 auto score_10 = L2(q_vec_1, db[kp + 0]);
                 auto score_11 = L2(q_vec_1, db[kp + 1]);
 
-                min_scores0.insert(score_00, kp + 0);
-                min_scores0.insert(score_01, kp + 1);
-                min_scores1.insert(score_10, kp + 0);
-                min_scores1.insert(score_11, kp + 1);
+                min_scores[j0].insert(score_00, kp + 0);
+                min_scores[j0].insert(score_01, kp + 1);
+                min_scores[j1].insert(score_10, kp + 0);
+                min_scores[j1].insert(score_11, kp + 1);
               }
 
               /*
        * Cleanup the last iteration(s) of k
            */
-              for (size_t kp = kstop; kp < kstop; ++kp) {
+              for (size_t kp = kstop; kp < size(db); ++kp) {
                 auto score_00 = L2(q_vec_0, db[kp + 0]);
                 auto score_10 = L2(q_vec_1, db[kp + 0]);
-                min_scores0.insert(score_00, kp + 0);
-                min_scores1.insert(score_10, kp + 0);
+                min_scores[j0].insert(score_00, kp + 0);
+                min_scores[j1].insert(score_10, kp + 0);
               }
-              if (end == end(query)) {
-                get_top_k_from_heap(min_scores0, top_k[j0]);
-              }
-              get_top_k_from_heap(min_scores1, top_k[j1]);
             }
 
             /*
      * Cleanup the last iteration(s) of j
          */
-            for (auto j = end; j < query.end(); ++j) {
-              auto j0 = j[0];
+            for (auto j = end; j < stop; ++j) {
+              auto j0 = j + 0;
               auto q_vec_0 = query[j0];
 
-              auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
-              for (size_t kp = start; kp < kstop; kp += 2) {
+              auto kstop = std::min<size_t>(size(db), 2 * (size(db) / 2));
+              for (size_t kp = 0; kp < kstop; kp += 2) {
                 auto score_00 = L2(q_vec_0, db[kp + 0]);
                 auto score_01 = L2(q_vec_0, db[kp + 1]);
 
-                min_scores0.insert(score_00, kp + 0);
-                min_scores0.insert(score_01, kp + 1);
+                min_scores[j0].insert(score_00, kp + 0);
+                min_scores[j0].insert(score_01, kp + 1);
               }
-              for (size_t kp = kstop; kp < stop; ++kp) {
+              for (size_t kp = kstop; kp < size(db); ++kp) {
                 auto score_00 = L2(q_vec_0, db[kp + 0]);
-                min_scores0.insert(score_00, kp + 0);
+                min_scores[j0].insert(score_00, kp + 0);
               }
-              get_top_k_from_heap(min_scores0, top_k[j]);
             }
           }
           ));
-
     }
   }
 
   for (size_t n = 0; n < size(futs); ++n) {
     futs[n].get();
+  }
+
+  for (int j = 0; j < size(query); ++j) {
+    get_top_k_from_heap(min_scores[j], top_k[j]);
   }
 
   return top_k;
