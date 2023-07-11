@@ -41,6 +41,7 @@
 #include "concepts.h"
 #include "linalg.h"
 #include "utils/timer.h"
+#include "utils/fixed_min_queues.h"
 
 namespace detail::flat {
 

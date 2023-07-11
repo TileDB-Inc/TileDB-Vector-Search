@@ -31,6 +31,7 @@
  *
  */
 
+#if defined(TILEDB_VS_ENABLE_BLAS)
 // If apple, use Accelerate
 #if defined(USE_MKL)
 #include <mkl_cblas.h>
@@ -38,4 +39,5 @@
 #include <Accelerate/Accelerate.h>
 #else
 #include <cblas.h>
+#endif
 #endif

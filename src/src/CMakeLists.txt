@@ -124,24 +124,31 @@ target_link_libraries(kmeans_lib INTERFACE
         nlohmann_json::nlohmann_json
         docopt
         flat_mt
-        flat_blas
         TileDB::tiledb_shared
         mdspan
 )
+if (TILEDB_VS_ENABLE_BLAS)
+  target_link_Libraries(kmeans_lib INTERFACE
+      flat_blas)
+endif()
 
 
 #---[ Demos ]------------------------------------------------------------
-add_executable(flat_l2 flat_l2.cc)
-target_link_libraries(flat_l2 PUBLIC kmeans_lib nlohmann_json::nlohmann_json)
-target_compile_definitions(flat_l2 PUBLIC TILEDBVS_ENABLE_STATS)
+if (TILEDB_VS_ENABLE_BLAS)
+  # requires BLAS
+  add_executable(flat_l2 flat_l2.cc)
+  target_link_libraries(flat_l2 PUBLIC kmeans_lib nlohmann_json::nlohmann_json)
+  target_compile_definitions(flat_l2 PUBLIC TILEDBVS_ENABLE_STATS)
+  add_executable(ivf_flat ivf_flat.cc)
+  target_link_libraries(ivf_flat PUBLIC kmeans_lib)
+  target_compile_definitions(ivf_flat PUBLIC TILEDBVS_ENABLE_STATS)
 
-add_executable(ivf_flat ivf_flat.cc)
-target_link_libraries(ivf_flat PUBLIC kmeans_lib)
-target_compile_definitions(ivf_flat PUBLIC TILEDBVS_ENABLE_STATS)
-
-add_executable(index index.cc)
-target_link_libraries(index PUBLIC kmeans_lib)
-target_compile_definitions(index PUBLIC TILEDBVS_ENABLE_STATS)
+  add_executable(index index.cc)
+  target_link_libraries(index PUBLIC kmeans_lib)
+  target_compile_definitions(index PUBLIC TILEDBVS_ENABLE_STATS)
+else()
+  message(STATUS "Disabling demo executables build because BLAS is disabled (TILEDBVS_ENABLE_BLAS).")
+endif()
 
 #---[ TBD ]------------------------------------------------------------
 if (FALSE)
