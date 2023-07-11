@@ -357,20 +357,20 @@ void declarePartitionIvfIndex(py::module& m, const std::string& suffix) {
         );
 }
 
-template <typename query_type, typename shuffled_ids_type = uint64_t>
+template <typename T, typename shuffled_ids_type = uint64_t>
 static void declare_dist_qv(py::module& m, const std::string& suffix) {
   m.def(("dist_qv_" + suffix).c_str(),
       [](tiledb::Context& ctx,
         const std::string& part_uri,
         std::vector<int>& active_partitions,
-        ColMajorMatrix<query_type>& query,
+        ColMajorMatrix<float>& query,
         std::vector<std::vector<int>>& active_queries,
         std::vector<shuffled_ids_type>& indices,
         const std::string& id_uri,
         size_t k_nn
         /* size_t nthreads TODO: optional arg w/ fallback to C++ default arg */
         ) { /* TODO return type */
-            return detail::ivf::dist_qv_finite_ram_part<query_type, shuffled_ids_type>(
+            return detail::ivf::dist_qv_finite_ram_part<T, shuffled_ids_type>(
                 ctx,
                 part_uri,
                 active_partitions,

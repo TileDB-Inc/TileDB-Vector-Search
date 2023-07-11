@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 import math
 
@@ -74,10 +75,10 @@ class FlatIndex(Index):
 
         assert targets.dtype == np.float32
 
-        targets_m = array_to_matrix(targets)
+        targets_m = array_to_matrix(np.transpose(targets))
 
         r = query_vq(self._db, targets_m, k, nqueries, nthreads)
-        return np.array(r)
+        return np.transpose(np.array(r))
 
 
 class IVFFlatIndex(Index):
@@ -118,92 +119,124 @@ class IVFFlatIndex(Index):
 
     def query(
         self,
-        targets: np.ndarray,
-        k=10,
-        nqueries=10,
-        nthreads=8,
-        nprobe=1,
+        queries: np.ndarray,
+        k: int = 10,
+        nprobe: int = 10,
+        nthreads: int = -1,
         use_nuv_implementation: bool = False,
+        mode: Mode = None,
+        num_partitions: int = -1,
+        num_workers: int = -1,
     ):
         """
         Query an IVF_FLAT index
 
         Parameters
         ----------
-        targets: numpy.ndarray
-            ND Array of query targets
+        queries: numpy.ndarray
+            ND Array of queries
         k: int
             Number of top results to return per target
-        nqueries: int
-            Number of queries
-        nthreads: int
-            Number of threads to use for query
         nprobe: int
             number of probes
+        nthreads: int
+            Number of threads to use for query
         use_nuv_implementation: bool
             wether to use the nuv query implementation. Default: False
+        mode: Mode
+            If provided the query will be executed using TileDB cloud taskgraphs.
+            For distributed execution you can use REALTIME or BATCH mode
+        num_partitions: int
+            Only relevant for taskgraph based execution.
+            If provided, we split the query execution in that many partitions.
+        num_workers: int
+            Only relevant for taskgraph based execution.
+            If provided, this is the number of workers to use for the query execution.
+
         """
-        assert targets.dtype == np.float32
+        assert queries.dtype == np.float32
+        if nthreads == -1:
+            nthreads = multiprocessing.cpu_count()
+        if mode is None:
+            queries_m = array_to_matrix(np.transpose(queries))
+            if self.memory_budget == -1:
+                r = ivf_query_ram(
+                    self.dtype,
+                    self._db,
+                    self._centroids,
+                    queries_m,
+                    self._index,
+                    self._ids,
+                    nprobe=nprobe,
+                    k_nn=k,
+                    nth=True,  # ??
+                    nthreads=nthreads,
+                    ctx=self.ctx,
+                    use_nuv_implementation=use_nuv_implementation,
+                )
+            else:
+                r = ivf_query(
+                    self.dtype,
+                    self.parts_db_uri,
+                    self._centroids,
+                    queries_m,
+                    self._index,
+                    self.ids_uri,
+                    nprobe=nprobe,
+                    k_nn=k,
+                    memory_budget=self.memory_budget,
+                    nth=True,  # ??
+                    nthreads=nthreads,
+                    ctx=self.ctx,
+                    use_nuv_implementation=use_nuv_implementation,
+                )
 
-        targets_m = array_to_matrix(targets)
-        if self.memory_budget == -1:
-            r = ivf_query_ram(
-                self.dtype,
-                self._db,
-                self._centroids,
-                targets_m,
-                self._index,
-                self._ids,
-                nprobe=nprobe,
-                k_nn=k,
-                nth=True,  # ??
-                nthreads=nthreads,
-                ctx=self.ctx,
-                use_nuv_implementation=use_nuv_implementation,
-            )
+            return np.transpose(np.array(r))
         else:
-            r = ivf_query(
-                self.dtype,
-                self.parts_db_uri,
-                self._centroids,
-                targets_m,
-                self._index,
-                self.ids_uri,
-                nprobe=nprobe,
-                k_nn=k,
-                memory_budget=self.memory_budget,
-                nth=True,  # ??
+            return self.taskgraph_query(
+                queries=queries,
+                k=k,
                 nthreads=nthreads,
-                ctx=self.ctx,
-                use_nuv_implementation=use_nuv_implementation,
+                nprobe=nprobe,
+                mode=mode,
+                num_partitions=num_partitions,
+                num_workers=num_workers,
             )
 
-        return np.array(r)
-
-    def distributed_query(
+    def taskgraph_query(
         self,
-        targets: np.ndarray,
-        k=10,
-        nthreads=8,
-        nprobe=1,
-        num_nodes=5,
-        mode: Mode = Mode.REALTIME,
+        queries: np.ndarray,
+        k: int = 10,
+        nprobe: int = 10,
+        nthreads: int = -1,
+        mode: Mode = None,
+        num_partitions: int = -1,
+        num_workers: int = -1,
     ):
         """
-        Distributed Query on top of an IVF_FLAT index
+        Query an IVF_FLAT index using TileDB cloud taskgraphs
 
         Parameters
         ----------
-        targets: numpy.ndarray
-            ND Array of query targets
+        queries: numpy.ndarray
+            ND Array of queries
         k: int
             Number of top results to return per target
-        nqueries: int
-            Number of queries
-        nthreads: int
-            Number of threads to use for query
         nprobe: int
             number of probes
+        nthreads: int
+            Number of threads to use for query
+        use_nuv_implementation: bool
+            wether to use the nuv query implementation. Default: False
+        mode: Mode
+            If provided the query will be executed using TileDB cloud taskgraphs.
+            For distributed execution you can use REALTIME or BATCH mode
+        num_partitions: int
+            Only relevant for taskgraph based execution.
+            If provided, we split the query execution in that many partitions.
+        num_workers: int
+            Only relevant for taskgraph based execution.
+            If provided, this is the number of workers to use for the query execution.
         """
         from tiledb.cloud import dag
         from tiledb.cloud.dag import Mode
@@ -226,12 +259,12 @@ class IVFFlatIndex(Index):
             indices: np.array,
             k_nn: int,
         ):
-            targets_m = array_to_matrix(query_vectors)
+            queries_m = array_to_matrix(np.transpose(query_vectors))
             r = dist_qv(
                 dtype=dtype,
                 parts_uri=parts_uri,
                 ids_uri=ids_uri,
-                query_vectors=targets_m,
+                query_vectors=queries_m,
                 active_partitions=active_partitions,
                 active_queries=active_queries,
                 indices=indices,
@@ -245,18 +278,22 @@ class IVFFlatIndex(Index):
                 results.append(tmp_results)
             return results
 
-        assert targets.dtype == self.dtype
+        assert queries.dtype == np.float32
+        if num_partitions == -1:
+            num_partitions = 5
+        if num_workers == -1:
+            num_workers = num_partitions
         if mode == Mode.BATCH:
             d = dag.DAG(
                 name="vector-query",
                 mode=Mode.BATCH,
-                max_workers=num_nodes,
+                max_workers=num_workers,
             )
         if mode == Mode.REALTIME:
             d = dag.DAG(
                 name="vector-query",
                 mode=Mode.REALTIME,
-                max_workers=num_nodes,
+                max_workers=num_workers,
             )
         else:
             d = dag.DAG(
@@ -269,13 +306,13 @@ class IVFFlatIndex(Index):
         if mode == Mode.BATCH or mode == Mode.REALTIME:
             submit = d.submit
 
-        targets_m = array_to_matrix(targets)
+        queries_m = array_to_matrix(np.transpose(queries))
         active_partitions, active_queries = partition_ivf_index(
-            centroids=self._centroids, query=targets_m, nprobe=nprobe, nthreads=nthreads
+            centroids=self._centroids, query=queries_m, nprobe=nprobe, nthreads=nthreads
         )
         num_parts = len(active_partitions)
 
-        parts_per_node = int(math.ceil(num_parts / num_nodes))
+        parts_per_node = int(math.ceil(num_parts / num_partitions))
         nodes = []
         for part in range(0, num_parts, parts_per_node):
             part_end = part + parts_per_node
@@ -287,7 +324,7 @@ class IVFFlatIndex(Index):
                     dtype=self.dtype,
                     parts_uri=self.parts_db_uri,
                     ids_uri=self.ids_uri,
-                    query_vectors=targets,
+                    query_vectors=queries,
                     active_partitions=np.array(active_partitions)[part:part_end],
                     active_queries=np.array(
                         active_queries[part:part_end], dtype=object
@@ -307,7 +344,7 @@ class IVFFlatIndex(Index):
             results.append(res)
 
         results_per_query = []
-        for q in range(targets.shape[1]):
+        for q in range(queries.shape[0]):
             tmp_results = []
             for j in range(k):
                 for r in results:
