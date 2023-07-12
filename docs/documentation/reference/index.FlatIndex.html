@@ -243,7 +243,7 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="tiledb.vector_search.index.FlatIndex.query" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.index.FlatIndex.query">query</h3>
-<p><code>vector_search.index.FlatIndex.query(self, targets, k=10, nqueries=10, nthreads=8, nprobe=1)</code></p>
+<p><code>vector_search.index.FlatIndex.query(self, targets, k=10, nthreads=8, nprobe=1, query_type='heap')</code></p>
 <p>Query a flat index</p>
 <section id="parameters-1" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
@@ -277,9 +277,9 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="odd">
 <td><code>nqueries</code></td>
-<td>int</td>
+<td></td>
 <td>Number of queries</td>
-<td><code>10</code></td>
+<td><em>required</em></td>
 </tr>
 <tr class="even">
 <td><code>nthreads</code></td>
