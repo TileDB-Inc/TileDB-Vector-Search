@@ -386,8 +386,8 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
 template <typename T, typename shuffled_ids_type = uint64_t>
 static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
   m.def(("vq_query_heap_" + suffix).c_str(),
-        [](tdbColMajorMatrix<float>& data,
-           tdbColMajorMatrix<float>& query_vectors,
+        [](tdbColMajorMatrix<T>& data,
+           ColMajorMatrix<float>& query_vectors,
            int k,
            size_t nthreads) -> ColMajorMatrix<size_t> {
           auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
