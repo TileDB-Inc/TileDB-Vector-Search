@@ -84,6 +84,7 @@ def query_vq_nth(db: "colMajorMatrix", *args):
     else:
         raise TypeError("Unknown type!")
 
+
 def query_vq_heap(db: "colMajorMatrix", *args):
     """
     Run vector query
@@ -101,6 +102,7 @@ def query_vq_heap(db: "colMajorMatrix", *args):
         return vq_query_heap_u8(db, *args)
     else:
         raise TypeError("Unknown type!")
+
 
 def ivf_index_tdb(
     dtype: np.dtype,
