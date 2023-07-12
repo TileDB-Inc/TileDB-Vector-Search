@@ -27,7 +27,6 @@ def test_flat_index_local():
     result = index.query(query_vectors)
     assert isinstance(result, np.ndarray)
 
-    # ground_truth = vs.load_as_array(ground_truth_uri)
     ground_truth = vs.load_as_matrix(ground_truth_uri, nquery)
     result_m = vs.array_to_matrix(result)
     vs.validate_top_k(result_m, ground_truth)

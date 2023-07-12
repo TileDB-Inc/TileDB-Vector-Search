@@ -7,6 +7,7 @@
 #include "linalg.h"
 #include "ivf_index.h"
 #include "ivf_query.h"
+#include "flat_query.h"
 
 namespace py = pybind11;
 using Ctx = tiledb::Context;
@@ -382,6 +383,18 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
         }, py::keep_alive<1,2>());
 }
 
+template <typename T, typename shuffled_ids_type = uint64_t>
+static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
+  m.def(("vq_query_heap_" + suffix).c_str(),
+        [](tdbColMajorMatrix<T>& data,
+           ColMajorMatrix<float>& query_vectors,
+           int k,
+           size_t nthreads) -> ColMajorMatrix<size_t> {
+          auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
+          return r;
+        });
+}
+
 } // anonymous namespace
 
 
@@ -459,7 +472,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         [](ColMajorMatrix<float>& data,
            ColMajorMatrix<float>& query_vectors,
            int k,
-           bool nth,
            size_t nthreads) -> ColMajorMatrix<size_t> {
           auto r = detail::flat::vq_query_nth(data, query_vectors, k, true, nthreads);
           return r;
@@ -469,7 +481,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         [](tdbColMajorMatrix<uint8_t>& data,
            ColMajorMatrix<float>& query_vectors,
            int k,
-           bool nth,
            size_t nthreads) -> ColMajorMatrix<size_t> {
           auto r = detail::flat::vq_query_nth(data, query_vectors, k, true, nthreads);
           return r;
@@ -498,6 +509,9 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   m.def("stats_dump", []() {
     return json{core_stats}.dump();
   });
+
+  declare_vq_query_heap<uint8_t>(m, "u8");
+  declare_vq_query_heap<float>(m, "f32");
 
   declare_qv_query_heap_infinite_ram<uint8_t>(m, "u8");
   declare_qv_query_heap_infinite_ram<float>(m, "f32");

@@ -54,7 +54,7 @@ def test_flat_query():
     db = vs.load_as_matrix(db_uri)
     targets = vs.load_as_matrix(probe_uri, nqueries)  # TODO: make 2nd optional
 
-    r = vs.query_vq(db, targets, k, nqueries, 8)  # k  # nqueries  # nthreads
+    r = vs.query_vq_nth(db, targets, k, 8)  # k  # nqueries  # nthreads
 
     ra = np.array(r, copy=True)
     print(ra)
