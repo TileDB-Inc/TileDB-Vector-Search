@@ -1,6 +1,7 @@
 import multiprocessing
 import os
 import math
+import logging
 
 import numpy as np
 from tiledb.vector_search.module import *
@@ -78,7 +79,15 @@ class FlatIndex(Index):
 
         targets_m = array_to_matrix(np.transpose(targets))
 
-        r = query_vq(self._db, targets_m, k, nqueries, nthreads, query_type=query_type)
+        if query_type == "heap":
+          if nqueries != 10:
+            logging.warning("nqueries is ignored for heap query type")
+          r = query_vq_heap(self._db, targets_m, k, nthreads)
+        elif query_type == "nth":
+          r = query_vq_nth(self._db, targets_m, k, nqueries, nthreads)
+        else:
+          raise Exception("Unknown query type!")
+
         return np.transpose(np.array(r))
 
 

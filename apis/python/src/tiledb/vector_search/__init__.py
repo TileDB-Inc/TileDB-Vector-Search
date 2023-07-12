@@ -3,7 +3,8 @@ from .ingestion import ingest
 from .module import load_as_array
 from .module import load_as_matrix
 from .module import (
-    query_vq,
+    query_vq_heap,
+    query_vq_nth,
     ivf_query,
     ivf_query_ram,
     validate_top_k,
@@ -19,7 +20,8 @@ __all__ = [
     "load_as_array",
     "load_as_matrix",
     "ingest",
-    "query_vq",
+    "query_vq_nth",
+    "query_vq_heap",
     "ivf_query",
     "ivf_query_ram",
     "validate_top_k",
