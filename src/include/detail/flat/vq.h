@@ -116,7 +116,7 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
   log_timer _i{tdb_func__ + " in RAM"};
 
   // @todo Can we do blocking in the parallel for_each somehow?
-  while (db.load()) {
+  do {
     _i.start();
     stdx::range_for_each(
         std::move(par),
@@ -128,7 +128,7 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
           }
         });
     _i.stop();
-  }
+  } while (db.load());
 
   _i.start();
   for (size_t j = 0; j < size(q); ++j) {
