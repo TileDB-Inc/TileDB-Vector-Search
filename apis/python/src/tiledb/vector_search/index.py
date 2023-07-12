@@ -50,7 +50,6 @@ class FlatIndex(Index):
         self,
         targets: np.ndarray,
         k: int = 10,
-        nqueries: int = 10,
         nthreads: int = 8,
         nprobe: int = 1,
         query_type="heap",
@@ -80,11 +79,9 @@ class FlatIndex(Index):
         targets_m = array_to_matrix(np.transpose(targets))
 
         if query_type == "heap":
-            if nqueries != 10:
-                logging.warning("nqueries is ignored for heap query type")
             r = query_vq_heap(self._db, targets_m, k, nthreads)
         elif query_type == "nth":
-            r = query_vq_nth(self._db, targets_m, k, nqueries, nthreads)
+            r = query_vq_nth(self._db, targets_m, k, nthreads)
         else:
             raise Exception("Unknown query type!")
 

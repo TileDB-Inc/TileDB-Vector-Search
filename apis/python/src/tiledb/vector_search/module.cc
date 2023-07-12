@@ -472,7 +472,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         [](ColMajorMatrix<float>& data,
            ColMajorMatrix<float>& query_vectors,
            int k,
-           bool nth,
            size_t nthreads) -> ColMajorMatrix<size_t> {
           auto r = detail::flat::vq_query_nth(data, query_vectors, k, true, nthreads);
           return r;
@@ -482,7 +481,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         [](tdbColMajorMatrix<uint8_t>& data,
            ColMajorMatrix<float>& query_vectors,
            int k,
-           bool nth,
            size_t nthreads) -> ColMajorMatrix<size_t> {
           auto r = detail::flat::vq_query_nth(data, query_vectors, k, true, nthreads);
           return r;
