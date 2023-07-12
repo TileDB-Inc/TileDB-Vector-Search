@@ -52,6 +52,7 @@ class FlatIndex(Index):
         nqueries: int = 10,
         nthreads: int = 8,
         nprobe: int = 1,
+        query_type="heap"
     ):
         """
         Query a flat index
@@ -77,7 +78,7 @@ class FlatIndex(Index):
 
         targets_m = array_to_matrix(np.transpose(targets))
 
-        r = query_vq(self._db, targets_m, k, nqueries, nthreads)
+        r = query_vq(self._db, targets_m, k, nqueries, nthreads, query_type=query_type)
         return np.transpose(np.array(r))
 
 

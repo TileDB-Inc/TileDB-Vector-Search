@@ -66,7 +66,7 @@ def load_as_array(path, return_matrix: bool = False, config: Dict = {}):
         return r
 
 
-def query_vq(db: "colMajorMatrix", *args):
+def query_vq(db: "colMajorMatrix", *args, query_type="nth"):
     """
     Run vector query
 
@@ -77,10 +77,16 @@ def query_vq(db: "colMajorMatrix", *args):
     args:
         Args for query
     """
-    if db.dtype == np.float32:
-        return query_vq_f32(db, *args)
-    elif db.dtype == np.uint8:
-        return query_vq_u8(db, *args)
+    if query_type == "nth":
+      if db.dtype == np.float32:
+          return query_vq_f32(db, *args)
+      elif db.dtype == np.uint8:
+          return query_vq_u8(db, *args)
+    elif query_type == "heap":
+      if db.dtype == np.float32:
+          return vq_query_heap_f32(db, *args)
+      elif db.dtype == np.uint8:
+          return vq_query_heap_u8(db, *args)
     else:
         raise TypeError("Unknown type!")
 

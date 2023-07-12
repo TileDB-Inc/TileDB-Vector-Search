@@ -4,10 +4,15 @@ from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.index import IVFFlatIndex
 from tiledb.cloud.dag import Mode
 
+import pytest
+
 MINIMUM_ACCURACY = 0.9
 
 
-def test_flat_ingestion_u8(tmp_path):
+@pytest.mark.parametrize(
+  "query_type", ["heap", "nth"]
+)
+def test_flat_ingestion_u8(tmp_path, query_type):
     dataset_dir = os.path.join(tmp_path, "dataset")
     array_uri = os.path.join(tmp_path, "array")
     create_random_dataset_u8(nb=10000, d=100, nq=100, k=10, path=dataset_dir)
@@ -24,11 +29,13 @@ def test_flat_ingestion_u8(tmp_path):
         source_uri=os.path.join(dataset_dir, "data"),
         source_type=source_type,
     )
-    result = index.query(query_vectors, k=k)
+    result = index.query(query_vectors, k=k, query_type=query_type)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-
-def test_flat_ingestion_f32(tmp_path):
+@pytest.mark.parametrize(
+  "query_type", ["heap", "nth"]
+)
+def test_flat_ingestion_f32(tmp_path, query_type):
     dataset_dir = os.path.join(tmp_path, "dataset")
     array_uri = os.path.join(tmp_path, "array")
     create_random_dataset_f32(nb=10000, d=100, nq=100, k=10, path=dataset_dir)
@@ -45,7 +52,7 @@ def test_flat_ingestion_f32(tmp_path):
         source_uri=os.path.join(dataset_dir, "data"),
         source_type=source_type,
     )
-    result = index.query(query_vectors, k=k)
+    result = index.query(query_vectors, k=k, query_type=query_type)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
