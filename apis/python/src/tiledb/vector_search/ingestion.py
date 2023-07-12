@@ -121,7 +121,7 @@ def ingest(
 
         set_aws_context(config)
 
-        level = logging.DEBUG if verbose else logging.INFO
+        level = logging.DEBUG if verbose else logging.NOTSET
         logger = get_logger(level)
 
         logger.debug(
@@ -1007,9 +1007,9 @@ def ingest(
                 if ids.shape[0] != end_pos - start_pos:
                     raise ValueError("Incorrect partition size.")
 
-                logger.info("Writing data to array: %s", parts_array_uri)
+                logger.debug("Writing data to array: %s", parts_array_uri)
                 parts_array[:, start_pos:end_pos] = vectors
-                logger.info("Writing data to array: %s", ids_array_uri)
+                logger.debug("Writing data to array: %s", ids_array_uri)
                 ids_array[start_pos:end_pos] = ids
             parts_array.close()
             ids_array.close()
@@ -1301,13 +1301,13 @@ def ingest(
 
     with tiledb.scope_ctx(ctx_or_config=config):
         logger = setup(config, verbose)
-        logger.info("Ingesting Vectors into %r", array_uri)
+        logger.debug("Ingesting Vectors into %r", array_uri)
         try:
             tiledb.group_create(array_uri)
         except tiledb.TileDBError as err:
             message = str(err)
             if "already exists" in message:
-                logger.info(f"Group '{array_uri}' already exists")
+                logger.debug(f"Group '{array_uri}' already exists")
             raise err
         group = tiledb.Group(array_uri, "w")
         group.meta["dataset_type"] = "vector_search"
@@ -1414,7 +1414,7 @@ def ingest(
         )
         logger.debug("Submitting ingestion graph")
         d.compute()
-        logger.info("Submitted ingestion graph")
+        logger.debug("Submitted ingestion graph")
         d.wait()
         consolidate_and_vacuum(array_uri=array_uri, config=config)
 

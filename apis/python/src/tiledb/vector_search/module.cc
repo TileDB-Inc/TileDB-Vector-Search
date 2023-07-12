@@ -12,7 +12,7 @@
 namespace py = pybind11;
 using Ctx = tiledb::Context;
 
-bool global_debug = true;
+bool global_debug = false;
 double global_time_of_interest;
 
 bool enable_stats = false;
