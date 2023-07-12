@@ -145,6 +145,7 @@ def create_random_dataset_u8(nb, d, nq, k, path):
         np.array([nq, d], dtype="uint32").tofile(f)
         queries.tofile(f)
 
+    #print("Computing groundtruth")
 
     nbrs = NearestNeighbors(n_neighbors=k, metric="euclidean", algorithm="brute").fit(
         data
