@@ -8,7 +8,6 @@ import pytest
 
 MINIMUM_ACCURACY = 0.9
 
-
 @pytest.mark.parametrize(
   "query_type", ["heap", "nth"]
 )

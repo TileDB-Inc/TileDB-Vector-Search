@@ -96,7 +96,7 @@ def create_random_dataset_f32(nb, d, nq, k, path):
     from sklearn.datasets import make_blobs
     from sklearn.neighbors import NearestNeighbors
 
-    print(f"Preparing datasets with {nb} random points and {nq} queries.")
+    #print(f"Preparing datasets with {nb} random points and {nq} queries.")
     os.mkdir(path)
     X, _ = make_blobs(n_samples=nb + nq, n_features=d, centers=nq, random_state=1)
 
@@ -111,7 +111,7 @@ def create_random_dataset_f32(nb, d, nq, k, path):
         np.array([nq, d], dtype="uint32").tofile(f)
         queries.astype("float32").tofile(f)
 
-    print("Computing groundtruth")
+    #print("Computing groundtruth")
 
     nbrs = NearestNeighbors(n_neighbors=k, metric="euclidean", algorithm="brute").fit(
         data
@@ -128,7 +128,7 @@ def create_random_dataset_u8(nb, d, nq, k, path):
     from sklearn.datasets import make_blobs
     from sklearn.neighbors import NearestNeighbors
 
-    print(f"Preparing datasets with {nb} random points and {nq} queries.")
+    #print(f"Preparing datasets with {nb} random points and {nq} queries.")
     os.mkdir(path)
     X, _ = make_blobs(n_samples=nb + nq, n_features=d, centers=nq, random_state=1)
 
@@ -145,7 +145,7 @@ def create_random_dataset_u8(nb, d, nq, k, path):
         np.array([nq, d], dtype="uint32").tofile(f)
         queries.tofile(f)
 
-    print("Computing groundtruth")
+    ("Computing groundtruth")
 
     nbrs = NearestNeighbors(n_neighbors=k, metric="euclidean", algorithm="brute").fit(
         data
