@@ -197,7 +197,13 @@ int main(int argc, char* argv[]) {
                   << std::endl;
       }
       return detail::flat::vq_query_heap(db, query, k, nthreads);
-    } else if (alg_name == "qv_nth") {
+    } else if (alg_name == "vq_heap_2" || alg_name == "vq2") {
+      if (verbose) {
+        std::cout << "# Using vq_heap, ignoring nth = " << std::to_string(nth)
+                  << std::endl;
+      }
+      return detail::flat::vq_query_heap_2(db, query, k, nthreads);
+    }else if (alg_name == "qv_nth") {
       if (verbose) {
         std::cout << "# Using qv_nth, nth = " << std::to_string(nth)
                   << std::endl;

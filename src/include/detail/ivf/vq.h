@@ -492,6 +492,135 @@ auto vq_query_infinite_ram(
       nthreads);
 }
 
+
+template <class T, class shuffled_ids_type>
+auto vq_query_finite_ram_simple(
+    tiledb::Context& ctx,
+    const std::string& part_uri,
+    auto&& centroids,
+    auto&& query,
+    auto&& indices,
+    const std::string& id_uri,
+    size_t nprobe,
+    size_t k_nn,
+    size_t upper_bound,
+    bool nth,
+    size_t nthreads,
+    size_t min_parts_per_thread = 0) {
+  scoped_timer _{tdb_func__ + " " + part_uri};
+
+  using indices_type =
+      typename std::remove_reference_t<decltype(indices)>::value_type;
+
+  auto num_queries = size(query);
+
+  auto&& [active_partitions, active_queries] =
+      partition_ivf_index(centroids, query, nprobe, nthreads);
+
+  using parts_type = typename decltype(active_partitions)::value_type;
+
+  auto shuffled_db = tdbColMajorPartitionedMatrix<
+      T,
+      shuffled_ids_type,
+      indices_type,
+      parts_type>(
+      ctx, part_uri, indices, active_partitions, id_uri, upper_bound);
+
+  log_timer _i{tdb_func__ + " in RAM"};
+
+  std::vector<parts_type> new_indices(size(active_partitions) + 1);
+  new_indices[0] = 0;
+  for (size_t i = 0; i < size(active_partitions); ++i) {
+    new_indices[i + 1] = new_indices[i] + indices[active_partitions[i] + 1] -
+                         indices[active_partitions[i]];
+  }
+
+
+  std::vector<std::vector<fixed_min_heap<element>>> scores(
+      nthreads,
+      std::vector<fixed_min_heap<element>>(
+          size(q), fixed_min_heap<element>(k)));
+
+  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
+      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+
+  while (shuffled_db.load()) {
+    _i.start();
+
+    auto current_part_size = shuffled_db.num_col_parts();
+
+    size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
+
+    {
+      std::vector<std::future<decltype(min_scores)>> futs;
+      futs.reserve(nthreads);
+
+      for (size_t n = 0; n < nthreads; ++n) {
+        auto first_part =
+            std::min<size_t>(n * parts_per_thread, current_part_size);
+        auto last_part =
+            std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
+
+        if (first_part != last_part) {
+          futs.emplace_back(std::async(
+              std::launch::async,
+              [&query,
+               &shuffled_db,
+               &new_indices,
+               &active_queries = active_queries,
+               &active_partitions = active_partitions,
+               k_nn,
+               first_part,
+               last_part]() {
+                return vq_apply_query(
+                    query,
+                    shuffled_db,
+                    new_indices,
+                    active_queries,
+                    shuffled_db.ids(),
+                    active_partitions,
+                    k_nn,
+                    first_part,
+                    last_part);
+              }));
+        }
+      }
+
+      for (size_t n = 0; n < size(futs); ++n) {
+        auto min_n = futs[n].get();
+
+        for (size_t j = 0; j < num_queries; ++j) {
+          for (auto&& e : min_n[j]) {
+            min_scores[j].insert(std::get<0>(e), std::get<1>(e));
+          }
+        }
+      }
+    }
+
+    _i.stop();
+  }
+
+  scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
+
+  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
+
+  // get_top_k_from_heap(min_scores, top_k);
+
+  // @todo get_top_k_from_heap
+  for (size_t j = 0; j < num_queries; ++j) {
+    sort_heap(min_scores[j].begin(), min_scores[j].end());
+    std::transform(
+        min_scores[j].begin(),
+        min_scores[j].end(),
+        top_k[j].begin(),
+        ([](auto&& e) { return std::get<1>(e); }));
+  }
+
+  return top_k;
+}
+
+
+
 }  // namespace detail::ivf
 
 #endif  // TILEDB_IVF_VQ_H
