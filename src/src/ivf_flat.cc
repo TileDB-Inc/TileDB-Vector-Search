@@ -394,6 +394,21 @@ int main(int argc, char* argv[]) {
                 blocksize,
                 nth,
                 nthreads);
+      } else {
+        {
+          return detail::ivf::
+              vq_query_infinite_ram_2<db_type, shuffled_ids_type>(
+                  ctx,
+                  part_uri,
+                  centroids,
+                  q,
+                  indices,
+                  id_uri,
+                  nprobe,
+                  k_nn,
+                  nth,
+                  nthreads);
+        }
       }
     } else if (algorithm == "dist_nuv_heap" || algorithm == "dist") {
       return detail::ivf::dist_qv_finite_ram<db_type, shuffled_ids_type>(
