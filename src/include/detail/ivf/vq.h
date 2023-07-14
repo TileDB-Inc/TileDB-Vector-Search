@@ -494,7 +494,7 @@ auto vq_query_infinite_ram(
 
 
 template <class T, class shuffled_ids_type>
-auto vq_query_finite_ram_simple(
+auto vq_query_finite_ram_2(
     tiledb::Context& ctx,
     const std::string& part_uri,
     auto&& centroids,
@@ -535,14 +535,10 @@ auto vq_query_finite_ram_simple(
                          indices[active_partitions[i]];
   }
 
-
-  std::vector<std::vector<fixed_min_heap<element>>> scores(
+  auto min_scores = std::vector<std::vector<fixed_min_pair_heap<float, size_t>>> (
       nthreads,
-      std::vector<fixed_min_heap<element>>(
-          size(q), fixed_min_heap<element>(k)));
-
-  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+      std::vector<fixed_min_pair_heap<float, size_t>>(
+          num_queries, fixed_min_pair_heap<float, size_t>(k_nn)));
 
   while (shuffled_db.load()) {
     _i.start();
@@ -552,7 +548,7 @@ auto vq_query_finite_ram_simple(
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
     {
-      std::vector<std::future<decltype(min_scores)>> futs;
+      std::vector<std::future<void>> futs;
       futs.reserve(nthreads);
 
       for (size_t n = 0; n < nthreads; ++n) {
@@ -565,39 +561,58 @@ auto vq_query_finite_ram_simple(
           futs.emplace_back(std::async(
               std::launch::async,
               [&query,
+               &min_scores,
                &shuffled_db,
                &new_indices,
-               &active_queries = active_queries,
+                  &active_queries = active_queries,
                &active_partitions = active_partitions,
-               k_nn,
+               n,
                first_part,
                last_part]() {
-                return vq_apply_query(
-                    query,
-                    shuffled_db,
-                    new_indices,
-                    active_queries,
-                    shuffled_db.ids(),
-                    active_partitions,
-                    k_nn,
-                    first_part,
-                    last_part);
+                /*
+               * For each partition, process the queries that have that
+               * partition as their top centroid.
+                 */
+                for (size_t p = first_part; p < last_part; ++p) {
+                  auto partno = p + shuffled_db.col_part_offset();
+
+                  auto start = new_indices[partno];
+                  auto stop = new_indices[partno + 1];
+
+                  /*
+                 * Get the queries associated with this partition.
+                   */
+
+                  for (size_t k = start; k < stop; ++k) {
+                    auto kp = k - shuffled_db.col_offset();
+
+                    for(auto j : active_queries[partno]) {
+
+                      // @todo shift start / stop back by the offset
+
+                      auto score = L2(query[j], shuffled_db[kp]);
+
+                      // @todo any performance with apparent extra indirection?
+                      min_scores[n][j].insert(score, shuffled_db.ids()[kp]);
+                    }
+                  }
+                }
               }));
-        }
-      }
-
-      for (size_t n = 0; n < size(futs); ++n) {
-        auto min_n = futs[n].get();
-
-        for (size_t j = 0; j < num_queries; ++j) {
-          for (auto&& e : min_n[j]) {
-            min_scores[j].insert(std::get<0>(e), std::get<1>(e));
-          }
         }
       }
     }
 
     _i.stop();
+  }
+
+
+  _i.start();
+  for (size_t j = 0; j < num_queries; ++j) {
+    for (unsigned n = 1; n < nthreads; ++n) {
+      for (auto&& [e, f] : min_scores[n][j]) {
+        min_scores[0][j].insert(e, f);
+      }
+    }
   }
 
   scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
@@ -607,13 +622,9 @@ auto vq_query_finite_ram_simple(
   // get_top_k_from_heap(min_scores, top_k);
 
   // @todo get_top_k_from_heap
+
   for (size_t j = 0; j < num_queries; ++j) {
-    sort_heap(min_scores[j].begin(), min_scores[j].end());
-    std::transform(
-        min_scores[j].begin(),
-        min_scores[j].end(),
-        top_k[j].begin(),
-        ([](auto&& e) { return std::get<1>(e); }));
+    get_top_k_from_heap(min_scores[0][j], top_k[j]);
   }
 
   return top_k;

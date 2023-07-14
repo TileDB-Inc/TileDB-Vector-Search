@@ -366,7 +366,23 @@ int main(int argc, char* argv[]) {
                 nthreads);
       }
 #endif
-    } if (algorithm == "dist_nuv_heap" || algorithm == "dist") {
+    } else if (algorithm == "vq_heap_2" || algorithm == "vq2") {
+      if (finite) {
+        return detail::ivf::
+            vq_query_finite_ram_2<db_type, shuffled_ids_type>(
+                ctx,
+                part_uri,
+                centroids,
+                q,
+                indices,
+                id_uri,
+                nprobe,
+                k_nn,
+                blocksize,
+                nth,
+                nthreads);
+      }
+    } else if (algorithm == "dist_nuv_heap" || algorithm == "dist") {
       return detail::ivf::dist_qv_finite_ram<db_type, shuffled_ids_type>(
           ctx,
           part_uri,
