@@ -493,6 +493,163 @@ auto vq_query_infinite_ram(
 }
 
 
+/**
+ * Similar to vq_query_finite_ram, but the entire database is loaded into RAM.
+ * This function takes a partitioned matrix as input, which is assumed to
+ * already have loaded all of its data.
+ */
+auto vq_query_infinite_ram_2(
+    auto&& shuffled_db,
+    auto&& centroids,
+    auto&& query,
+    auto&& indices,
+    auto&& shuffled_ids,
+    size_t nprobe,
+    size_t k_nn,
+    bool nth,
+    size_t nthreads) {
+  scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
+
+  assert(shuffled_db.num_cols() == shuffled_ids.size());
+
+  // Check that the indices vector is the right size
+  assert(size(indices) == centroids.num_cols() + 1);
+
+  auto num_queries = size(query);
+
+  // @todo Maybe we don't want to do new_indices in partition_ivf_index after
+  //  all since they aren't used in this function
+  auto&& [active_partitions, active_queries] =
+      partition_ivf_index(centroids, query, nprobe, nthreads);
+
+  using parts_type = typename decltype(active_partitions)::value_type;
+
+  std::vector<parts_type> new_indices(size(active_partitions) + 1);
+
+  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
+      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+
+  size_t parts_per_thread = (size(active_partitions) + nthreads - 1) / nthreads;
+
+  std::vector<std::future<decltype(min_scores)>> futs;
+  futs.reserve(nthreads);
+
+  for (size_t n = 0; n < nthreads; ++n) {
+    auto first_part =
+        std::min<size_t>(n * parts_per_thread, size(active_partitions));
+    auto last_part =
+        std::min<size_t>((n + 1) * parts_per_thread, size(active_partitions));
+
+    if (first_part != last_part) {
+      futs.emplace_back(std::async(
+          std::launch::async,
+          [&query,
+           &min_scores,
+           &shuffled_db,
+           &new_indices = indices,
+           &active_queries = active_queries,
+           &active_partitions = active_partitions,
+           n,
+           first_part,
+           last_part]() {
+            /*
+               * For each partition, process the queries that have that
+               * partition as their top centroid.
+             */
+            for (size_t partno = first_part; partno < last_part; ++partno) {
+              auto quartno = active_partitions[partno];
+              auto start = new_indices[quartno];
+              auto stop = new_indices[quartno + 1];
+
+              /*
+                 * Get the queries associated with this partition.
+               */
+
+              for (size_t k = start; k < stop; ++k) {
+                auto kp = k - shuffled_db.col_offset();
+
+                for(auto j : active_queries[partno]) {
+
+                  // @todo shift start / stop back by the offset
+
+                  auto score = L2(query[j], shuffled_db[kp]);
+
+                  // @todo any performance with apparent extra indirection?
+                  min_scores[n][j].insert(score, shuffled_db.ids()[kp]);
+                }
+              }
+            }
+          }));
+    }
+  }
+
+  // @todo We should do this without putting all queries on every node
+  for (size_t n = 0; n < size(futs); ++n) {
+    auto min_n = futs[n].get();
+
+    for (size_t j = 0; j < num_queries; ++j) {
+      for (auto&& e : min_n[j]) {
+        min_scores[j].insert(std::get<0>(e), std::get<1>(e));
+      }
+    }
+  }
+
+  scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
+
+  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
+
+  // @todo get_top_k_from_heap
+  for (size_t j = 0; j < num_queries; ++j) {
+    sort_heap(min_scores[j].begin(), min_scores[j].end());
+    std::transform(
+        min_scores[j].begin(),
+        min_scores[j].end(),
+        top_k[j].begin(),
+        ([](auto&& e) { return std::get<1>(e); }));
+  }
+
+  return top_k;
+}
+
+/**
+ * Function that takes a URI to a partitioned matrix and a query matrix,
+ * loads them each into a matrix, and then calls `vq_query_infinite_ram`
+ * above.
+ */
+template <typename T, class shuffled_ids_type>
+auto vq_query_infinite_ram_2(
+    tiledb::Context& ctx,
+    const std::string& part_uri,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    const std::string& id_uri,
+    size_t nprobe,
+    size_t k_nn,
+    bool nth,
+    size_t nthreads) {
+  scoped_timer _{tdb_func__};
+
+  // Read the shuffled database and ids
+  // @todo To this more systematically
+  auto shuffled_db = tdbColMajorMatrix<T>(ctx, part_uri);
+  shuffled_db.load();
+  auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
+
+  return query_infinite_ram(
+      shuffled_db,
+      centroids,
+      q,
+      indices,
+      shuffled_ids,
+      nprobe,
+      k_nn,
+      nth,
+      nthreads);
+}
+
+
+
 template <class T, class shuffled_ids_type>
 auto vq_query_finite_ram_2(
     tiledb::Context& ctx,
