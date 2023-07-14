@@ -349,6 +349,19 @@ int main(int argc, char* argv[]) {
                 blocksize,
                 nth,
                 nthreads);
+      } else {
+        return detail::ivf::
+            vq_query_infinite_ram<db_type, shuffled_ids_type>(
+                ctx,
+                part_uri,
+                centroids,
+                q,
+                indices,
+                id_uri,
+                nprobe,
+                k_nn,
+                nth,
+                nthreads);
       }
 #if 0
       else {
