@@ -46,14 +46,7 @@
     "href": "documentation/reference/index.Index.html",
     "title": "index.Index",
     "section": "",
-    "text": "vector_search.index.Index()\n\n\n\n\n\nName\nDescription\n\n\n\n\nquery\n\n\n\n\n\n\nvector_search.index.Index.query(self, targets, k=10, nqueries=10, nthreads=8, nprobe=1)"
-  },
-  {
-    "objectID": "documentation/reference/index.Index.html#methods",
-    "href": "documentation/reference/index.Index.html#methods",
-    "title": "index.Index",
-    "section": "",
-    "text": "Name\nDescription\n\n\n\n\nquery\n\n\n\n\n\n\nvector_search.index.Index.query(self, targets, k=10, nqueries=10, nthreads=8, nprobe=1)"
+    "text": "index.Index\nvector_search.index.Index()"
   },
   {
     "objectID": "documentation/reference/index.html",
