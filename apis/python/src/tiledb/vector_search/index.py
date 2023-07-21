@@ -39,12 +39,15 @@ class FlatIndex(Index):
         Optional name of partitions
     """
 
-    def __init__(self, uri: str, dtype: np.dtype, parts_name: str = "parts.tdb"):
+    def __init__(self, uri: str, dtype: np.dtype, parts_name: str = "parts.tdb", ctx: "Ctx" = None):
         self.uri = uri
         self.dtype = dtype
         self._index = None
+        self.ctx = ctx
+        if ctx is None:
+            self.ctx = Ctx({})
 
-        self._db = load_as_matrix(os.path.join(uri, parts_name))
+        self._db = load_as_matrix(os.path.join(uri, parts_name), ctx=self.ctx)
 
     def query(
         self,
@@ -118,10 +121,10 @@ class IVFFlatIndex(Index):
 
         # TODO pass in a context
         if self.memory_budget == -1:
-            self._db = load_as_matrix(self.parts_db_uri)
+            self._db = load_as_matrix(self.parts_db_uri, ctx=self.ctx)
             self._ids = read_vector_u64(self.ctx, self.ids_uri)
 
-        self._centroids = load_as_matrix(self.centroids_uri)
+        self._centroids = load_as_matrix(self.centroids_uri, ctx=self.ctx)
         self._index = read_vector_u64(self.ctx, self.index_uri)
 
     def query(
