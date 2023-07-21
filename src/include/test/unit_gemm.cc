@@ -277,10 +277,10 @@ TEST_CASE("gemm: row major test", "[sgemm]") {
         L2_span[j][i] = L2(B_span[j], A_span[i]);
       }
     }
-    CHECK(std::abs(L2_span[0][0] - 10.3923) < .0001);
-    CHECK(std::abs(L2_span[1][0] - 15.5884) < .0001);
-    CHECK(std::abs(L2_span[0][1] - 5.1961) < .0001);
-    CHECK(std::abs(L2_span[1][1] - 10.3923) < .0001);
+    CHECK(std::abs(L2_span[0][0] - 10.3923 * 10.3923) < .001);
+    CHECK(std::abs(L2_span[1][0] - 15.5884 * 15.5884) < .002);
+    CHECK(std::abs(L2_span[0][1] - 5.1961 * 5.1961) < .002);
+    CHECK(std::abs(L2_span[1][1] - 10.3923 * 10.3923) < .001);
 
     /****************************************************************
      *
