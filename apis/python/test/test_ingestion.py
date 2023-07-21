@@ -126,7 +126,6 @@ def test_ivf_flat_ingestion_f32(tmp_path):
         source_type=source_type,
         partitions=partitions,
         input_vectors_per_work_item=int(size / 10),
-        verbose=True
     )
 
     result = index.query(query_vectors, k=k, nprobe=nprobe)
@@ -174,7 +173,6 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
         source_uri=source_uri,
         source_type=source_type,
         partitions=partitions,
-        verbose=True
     )
     result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
