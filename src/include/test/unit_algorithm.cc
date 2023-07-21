@@ -37,7 +37,7 @@ TEST_CASE("algorithm: test test", "[algorithm]") {
 }
 
 TEST_CASE("algorithm: for_each", "[algorithm]") {
-  auto length = GENERATE(
+  size_t length = GENERATE(
       0,
       1,
       2,
