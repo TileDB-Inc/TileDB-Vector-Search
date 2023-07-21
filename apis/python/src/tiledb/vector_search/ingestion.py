@@ -189,7 +189,7 @@ def ingest(
         size: int,
         dimensions: int,
         partitions: int,
-        input_vectors_work_items: int,
+        input_vectors_work_tasks: int,
         vector_type: np.dtype,
         logger: logging.Logger,
     ) -> None:
@@ -422,7 +422,7 @@ def ingest(
                 tiledb.Array.create(partial_write_array_parts_uri, parts_schema)
                 partial_write_array_group.add(partial_write_array_parts_uri, name=PARTS_ARRAY_NAME)
 
-            for part in range(1):
+            for part in range(input_vectors_work_tasks):
                 part_index_uri = partial_write_array_index_uri+"/"+str(part)
                 if not tiledb.array_exists(part_index_uri):
                     logger.debug(f"Creating part array {part_index_uri}")
@@ -1427,7 +1427,7 @@ def ingest(
             size=size,
             dimensions=dimensions,
             partitions=partitions,
-            input_vectors_work_items=input_vectors_work_items,
+            input_vectors_work_tasks=input_vectors_work_tasks,
             vector_type=vector_type,
             logger=logger,
         )
