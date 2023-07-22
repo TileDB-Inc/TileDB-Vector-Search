@@ -8,7 +8,7 @@ RUN conda config --prepend channels conda-forge
 # Install mamba for faster installations
 RUN conda install mamba
 
-RUN mamba install -y -c tiledb tiledb==2.15.3 cmake pybind11 pytest c-compiler cxx-compiler ninja openblas-devel "pip>22"
+RUN mamba install -y -c tiledb 'tiledb>=2.16,<2.17' tiledb-py cmake pybind11 pytest c-compiler cxx-compiler ninja openblas-devel "pip>22"
 
 COPY . TileDB-Vector-Search/
 
