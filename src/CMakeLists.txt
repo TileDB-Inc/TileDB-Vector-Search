@@ -98,6 +98,10 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(FCONCEPTS_DIAGNOSTICS_DEPTH "-fconcepts-diagnostics-depth=3")
 endif()
 
+# Control compiler-specific flags.
+include(CompilerFlags)
+
+
 if (CMAKE_OSX_ARCHITECTURES STREQUAL arm64 OR CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
     set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-elide-constructors ${FCONCEPTS_DIAGNOSTICS_DEPTH} " CACHE STRING "" FORCE)
     set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG " CACHE STRING "" FORCE)
@@ -117,9 +121,6 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "No build type selected, default to Release")
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)" FORCE)
 endif()
-
-# Control compiler-specific flags.
-include(CompilerFlags)
 
 # -----------------------------------------------------------------------------
 # Interface library for multi-threading
