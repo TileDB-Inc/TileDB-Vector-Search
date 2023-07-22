@@ -77,7 +77,8 @@ inline auto sum_of_squares(V const& a, U const& b) {
  */
 template <class V, class U>
 inline auto L2(V const& a, U const& b) {
-  return std::sqrt(sum_of_squares(a, b));
+  //  return std::sqrt(sum_of_squares(a, b));
+  return sum_of_squares(a, b);
 }
 
 /**
