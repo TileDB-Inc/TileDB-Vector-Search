@@ -57,16 +57,40 @@
  * @param b
  * @return
  */
+#if 0
 template <class V, class U>
 inline auto sum_of_squares(V const& a, U const& b) {
   float sum{0.0};
   size_t size_a = size(a);
+
+  if constexpr (std::is_same_v<decltype(a[0]),decltype(b[0])>) {
+    for (size_t i = 0; i < size_a; ++i) {
+      float diff = a[i]- b[i];
+      sum += diff * diff;
+    }
+  } else {
+    for (size_t i = 0; i < size_a; ++i) {
+      float diff = ((float)a[i]) - ((float)b[i]);
+      sum += diff * diff;
+    }
+  }
+  return sum;
+}
+#else
+template <class V, class U>
+inline auto sum_of_squares(V const& a, U const& b) {
+  float sum{0.0};
+  size_t size_a = size(a);
+
   for (size_t i = 0; i < size_a; ++i) {
-    float diff = ((float)a[i]) - ((float)b[i]);
+    // float diff = ((float)a[i]) - ((float)b[i]);
+    float diff = a[i] - b[i];
     sum += diff * diff;
   }
   return sum;
 }
+
+#endif
 
 /**
  * @brief Compute L2 distance between two vectors.
