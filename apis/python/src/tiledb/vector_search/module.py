@@ -8,7 +8,7 @@ from tiledb.vector_search._tiledbvspy import *
 from typing import Optional
 
 
-def load_as_matrix(path: str, nqueries: int = 0, config: Dict = {}):
+def load_as_matrix(path: str, nqueries: int = 0, ctx: "Ctx" = None):
     """
     Load array as Matrix class
 
@@ -18,10 +18,11 @@ def load_as_matrix(path: str, nqueries: int = 0, config: Dict = {}):
         Array path
     nqueries: int
         Number of queries
-    config: Dict
-        TileDB configuration parameters
+    ctx: Ctx
+        TileDB context
     """
-    ctx = Ctx(config)
+    if ctx is None:
+        ctx = Ctx({})
 
     a = tiledb.ArraySchema.load(path)
     dtype = a.attr(0).dtype
@@ -43,7 +44,7 @@ def load_as_matrix(path: str, nqueries: int = 0, config: Dict = {}):
     return m
 
 
-def load_as_array(path, return_matrix: bool = False, config: Dict = {}):
+def load_as_array(path, return_matrix: bool = False, ctx: "Ctx" = None):
     """
     Load array as array class
 
@@ -56,7 +57,7 @@ def load_as_array(path, return_matrix: bool = False, config: Dict = {}):
     config: Dict
         TileDB configuration parameters
     """
-    m = load_as_matrix(path, config=config)
+    m = load_as_matrix(path, ctx=ctx)
     r = np.array(m, copy=False)
 
     # hang on to a copy for testing purposes, for now
