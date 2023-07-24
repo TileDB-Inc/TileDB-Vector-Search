@@ -61,7 +61,9 @@ auto partition_ivf_index(
 
   // get closest centroid for each query vector
   auto top_centroids =
-      detail::flat::qv_query_nth(centroids, query, nprobe, false, nthreads);
+      detail::flat::qv_query_heap(centroids, query, nprobe, nthreads);
+    //      detail::flat::qv_query_nth(centroids, query, nprobe, false, nthreads);
+    //      detail::flat::vq_query_heap(centroids, query, nprobe, nthreads);
 
   using parts_type = typename decltype(top_centroids)::value_type;
 
