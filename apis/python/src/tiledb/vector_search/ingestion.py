@@ -2,8 +2,7 @@ from typing import Optional, Tuple
 from functools import partial
 
 from tiledb.cloud.dag import Mode
-from tiledb.vector_search.index import FlatIndex
-from tiledb.vector_search.index import IVFFlatIndex
+from tiledb.vector_search.index import FlatIndex, IVFFlatIndex, Index
 
 
 def ingest(
@@ -23,7 +22,7 @@ def ingest(
     verbose: bool = False,
     trace_id: Optional[str] = None,
     mode: Mode = Mode.LOCAL,
-) -> FlatIndex:
+) -> Index:
     """
     Ingest vectors into TileDB.
 
@@ -271,9 +270,7 @@ def ingest(
                 )
                 logger.debug(centroids_schema)
                 tiledb.Array.create(centroids_uri, centroids_schema)
-                group.add(
-                    centroids_uri, name=CENTROIDS_ARRAY_NAME
-                )
+                group.add(centroids_uri, name=CENTROIDS_ARRAY_NAME)
 
             if not tiledb.array_exists(index_uri):
                 logger.debug("Creating index array")
@@ -354,7 +351,9 @@ def ingest(
             except tiledb.TileDBError as err:
                 message = str(err)
                 if "already exists" in message:
-                    logger.debug(f"Group '{partial_write_array_dir_uri}' already exists")
+                    logger.debug(
+                        f"Group '{partial_write_array_dir_uri}' already exists"
+                    )
                 raise err
             partial_write_array_group = tiledb.Group(partial_write_array_dir_uri, "w")
             group.add(partial_write_array_dir_uri, name=PARTIAL_WRITE_ARRAY_DIR)
@@ -364,10 +363,16 @@ def ingest(
             except tiledb.TileDBError as err:
                 message = str(err)
                 if "already exists" in message:
-                    logger.debug(f"Group '{partial_write_array_index_uri}' already exists")
+                    logger.debug(
+                        f"Group '{partial_write_array_index_uri}' already exists"
+                    )
                 raise err
-            partial_write_array_group.add(partial_write_array_index_uri, name=INDEX_ARRAY_NAME)
-            partial_write_array_index_group = tiledb.Group(partial_write_array_index_uri, "w")
+            partial_write_array_group.add(
+                partial_write_array_index_uri, name=INDEX_ARRAY_NAME
+            )
+            partial_write_array_index_group = tiledb.Group(
+                partial_write_array_index_uri, "w"
+            )
 
             if not tiledb.array_exists(partial_write_array_ids_uri):
                 logger.debug("Creating temp ids array")
@@ -389,7 +394,9 @@ def ingest(
                 )
                 logger.debug(ids_schema)
                 tiledb.Array.create(partial_write_array_ids_uri, ids_schema)
-                partial_write_array_group.add(partial_write_array_ids_uri, name=IDS_ARRAY_NAME)
+                partial_write_array_group.add(
+                    partial_write_array_ids_uri, name=IDS_ARRAY_NAME
+                )
 
             if not tiledb.array_exists(partial_write_array_parts_uri):
                 logger.debug("Creating temp parts array")
@@ -420,10 +427,12 @@ def ingest(
                 logger.debug(parts_schema)
                 logger.debug(partial_write_array_parts_uri)
                 tiledb.Array.create(partial_write_array_parts_uri, parts_schema)
-                partial_write_array_group.add(partial_write_array_parts_uri, name=PARTS_ARRAY_NAME)
+                partial_write_array_group.add(
+                    partial_write_array_parts_uri, name=PARTS_ARRAY_NAME
+                )
 
             for part in range(input_vectors_work_tasks):
-                part_index_uri = partial_write_array_index_uri+"/"+str(part)
+                part_index_uri = partial_write_array_index_uri + "/" + str(part)
                 if not tiledb.array_exists(part_index_uri):
                     logger.debug(f"Creating part array {part_index_uri}")
                     index_array_rows_dim = tiledb.Dim(
@@ -867,8 +876,12 @@ def ingest(
         partial_write_array_group = tiledb.Group(partial_write_array_dir_uri)
         partial_write_array_ids_uri = partial_write_array_group[IDS_ARRAY_NAME].uri
         partial_write_array_parts_uri = partial_write_array_group[PARTS_ARRAY_NAME].uri
-        partial_write_array_index_dir_uri = partial_write_array_group[INDEX_ARRAY_NAME].uri
-        partial_write_array_index_group = tiledb.Group(partial_write_array_index_dir_uri)
+        partial_write_array_index_dir_uri = partial_write_array_group[
+            INDEX_ARRAY_NAME
+        ].uri
+        partial_write_array_index_group = tiledb.Group(
+            partial_write_array_index_dir_uri
+        )
 
         for part in range(start, end, batch):
             part_end = part + batch
@@ -877,7 +890,9 @@ def ingest(
 
             part_name = str(part) + "-" + str(part_end)
 
-            partial_write_array_index_uri = partial_write_array_index_group[str(int(start / batch))].uri
+            partial_write_array_index_uri = partial_write_array_index_group[
+                str(int(start / batch))
+            ].uri
             logger.debug("Input vectors start_pos: %d, end_pos: %d", part, part_end)
             if source_type == "TILEDB_ARRAY":
                 logger.debug("Start indexing")
@@ -932,8 +947,12 @@ def ingest(
             index_array_uri = group[INDEX_ARRAY_NAME].uri
             partial_write_array_dir_uri = group[PARTIAL_WRITE_ARRAY_DIR].uri
             partial_write_array_group = tiledb.Group(partial_write_array_dir_uri)
-            partial_write_array_index_dir_uri = partial_write_array_group[INDEX_ARRAY_NAME].uri
-            partial_write_array_index_group = tiledb.Group(partial_write_array_index_dir_uri)
+            partial_write_array_index_dir_uri = partial_write_array_group[
+                INDEX_ARRAY_NAME
+            ].uri
+            partial_write_array_index_group = tiledb.Group(
+                partial_write_array_index_dir_uri
+            )
             partition_sizes = np.zeros(partitions)
             indexes = np.zeros(partitions + 1).astype(np.uint64)
             for part in partial_write_array_index_group:
@@ -978,9 +997,15 @@ def ingest(
             partial_write_array_dir_uri = group[PARTIAL_WRITE_ARRAY_DIR].uri
             partial_write_array_group = tiledb.Group(partial_write_array_dir_uri)
             partial_write_array_ids_uri = partial_write_array_group[IDS_ARRAY_NAME].uri
-            partial_write_array_parts_uri = partial_write_array_group[PARTS_ARRAY_NAME].uri
-            partial_write_array_index_dir_uri = partial_write_array_group[INDEX_ARRAY_NAME].uri
-            partial_write_array_index_group = tiledb.Group(partial_write_array_index_dir_uri)
+            partial_write_array_parts_uri = partial_write_array_group[
+                PARTS_ARRAY_NAME
+            ].uri
+            partial_write_array_index_dir_uri = partial_write_array_group[
+                INDEX_ARRAY_NAME
+            ].uri
+            partial_write_array_index_group = tiledb.Group(
+                partial_write_array_index_dir_uri
+            )
             index_array_uri = group[INDEX_ARRAY_NAME].uri
             ids_array_uri = group[IDS_ARRAY_NAME].uri
             parts_array_uri = group[PARTS_ARRAY_NAME].uri
@@ -1342,7 +1367,7 @@ def ingest(
             if vfs.is_dir(partial_write_array_dir_uri):
                 vfs.remove_dir(partial_write_array_dir_uri)
 
-    with tiledb.scope_ctx(ctx_or_config=config) as ctx:
+    with tiledb.scope_ctx(ctx_or_config=config):
         logger = setup(config, verbose)
         logger.debug("Ingesting Vectors into %r", array_uri)
         try:
@@ -1462,6 +1487,8 @@ def ingest(
         consolidate_and_vacuum(array_uri=array_uri, config=config)
 
         if index_type == "FLAT":
-            return FlatIndex(uri=array_uri, dtype=vector_type, ctx=ctx)
+            return FlatIndex(uri=array_uri, dtype=vector_type, config=config)
         elif index_type == "IVF_FLAT":
-            return IVFFlatIndex(uri=array_uri, dtype=vector_type, memory_budget=1000000, ctx=ctx)
+            return IVFFlatIndex(
+                uri=array_uri, dtype=vector_type, memory_budget=1000000, config=config
+            )

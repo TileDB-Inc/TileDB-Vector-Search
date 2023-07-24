@@ -18,8 +18,8 @@ def load_as_matrix(path: str, nqueries: int = 0, ctx: "Ctx" = None):
         Array path
     nqueries: int
         Number of queries
-    config: Dict
-        TileDB configuration parameters
+    ctx: Ctx
+        TileDB context
     """
     if ctx is None:
         ctx = Ctx({})
@@ -44,7 +44,7 @@ def load_as_matrix(path: str, nqueries: int = 0, ctx: "Ctx" = None):
     return m
 
 
-def load_as_array(path, return_matrix: bool = False,  ctx: "Ctx" = None):
+def load_as_array(path, return_matrix: bool = False, ctx: "Ctx" = None):
     """
     Load array as array class
 
