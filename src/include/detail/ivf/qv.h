@@ -1315,12 +1315,11 @@ auto apply_query(
     auto&& active_partitions,
     size_t k_nn,
     size_t first_part,
-    size_t last_part) {
+    size_t last_part,
+    auto&& min_scores) {
   //  print_types(query, shuffled_db, new_indices, active_queries);
 
   auto num_queries = size(query);
-  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
   size_t part_offset = 0;
   size_t col_offset = 0;
@@ -1394,6 +1393,32 @@ auto apply_query(
       }
     }
   }
+}
+
+auto apply_query(
+    auto&& query,
+    auto&& shuffled_db,
+    auto&& new_indices,
+    auto&& active_queries,
+    auto&& ids,
+    auto&& active_partitions,
+    size_t k_nn,
+    size_t first_part,
+    size_t last_part) {
+  auto num_queries = size(query);
+  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
+      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+  apply_query(
+      query,
+      shuffled_db,
+      new_indices,
+      active_queries,
+      ids,
+      active_partitions,
+      k_nn,
+      first_part,
+      last_part,
+      min_scores);
   return min_scores;
 }
 
@@ -1467,51 +1492,66 @@ auto query_finite_ram(
   while (shuffled_db.load()) {
     _i.start();
 
-    auto current_part_size = shuffled_db.num_col_parts();
+    if (nthreads == 1) {
+      auto first_part = 0;
+      auto last_part = shuffled_db.num_col_parts();
+      apply_query(
+          query,
+          shuffled_db,
+          new_indices,
+          active_queries,
+          shuffled_db.ids(),
+          active_partitions,
+          k_nn,
+          first_part,
+          last_part,
+          min_scores);
+    } else {
+      auto current_part_size = shuffled_db.num_col_parts();
+      size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
-    size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
+      {
+        std::vector<std::future<decltype(min_scores)>> futs;
+        futs.reserve(nthreads);
 
-    {
-      std::vector<std::future<decltype(min_scores)>> futs;
-      futs.reserve(nthreads);
+        for (size_t n = 0; n < nthreads; ++n) {
+          auto first_part =
+              std::min<size_t>(n * parts_per_thread, current_part_size);
+          auto last_part =
+              std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
 
-      for (size_t n = 0; n < nthreads; ++n) {
-        auto first_part =
-            std::min<size_t>(n * parts_per_thread, current_part_size);
-        auto last_part =
-            std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
-
-        if (first_part != last_part) {
-          futs.emplace_back(std::async(
-              std::launch::async,
-              [&query,
-               &shuffled_db,
-               &new_indices,
-               &active_queries = active_queries,
-               &active_partitions = active_partitions,
-               k_nn,
-               first_part,
-               last_part]() {
-                return apply_query(
-                    query,
-                    shuffled_db,
-                    new_indices,
-                    active_queries,
-                    shuffled_db.ids(),
-                    active_partitions,
-                    k_nn,
-                    first_part,
-                    last_part);
-              }));
+          if (first_part != last_part) {
+            futs.emplace_back(std::async(
+                std::launch::async,
+                [&query,
+                 &shuffled_db,
+                 &new_indices,
+                 &active_queries = active_queries,
+                 &active_partitions = active_partitions,
+                 k_nn,
+                 first_part,
+                 last_part]() {
+                  return apply_query(
+                      query,
+                      shuffled_db,
+                      new_indices,
+                      active_queries,
+                      shuffled_db.ids(),
+                      active_partitions,
+                      k_nn,
+                      first_part,
+                      last_part);
+                }));
+          }
         }
-      }
 
-      for (size_t n = 0; n < size(futs); ++n) {
-        auto min_n = futs[n].get();
+        for (size_t n = 0; n < size(futs); ++n) {
+          auto min_n = futs[n].get();
 
-        for (size_t j = 0; j < num_queries; ++j) {
-          for (auto&& e : min_n[j]) {
-            min_scores[j].insert(std::get<0>(e), std::get<1>(e));
+          for (size_t j = 0; j < num_queries; ++j) {
+            for (auto&& e : min_n[j]) {
+              min_scores[j].insert(std::get<0>(e), std::get<1>(e));
+            }
           }
         }
       }
@@ -1570,54 +1610,73 @@ auto query_infinite_ram(
   auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
       num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
-  size_t parts_per_thread = (size(active_partitions) + nthreads - 1) / nthreads;
-
-  std::vector<std::future<decltype(min_scores)>> futs;
-  futs.reserve(nthreads);
-
-  for (size_t n = 0; n < nthreads; ++n) {
-    auto first_part =
-        std::min<size_t>(n * parts_per_thread, size(active_partitions));
-    auto last_part =
-        std::min<size_t>((n + 1) * parts_per_thread, size(active_partitions));
+  if (nthreads == 1) {
+    auto first_part = 0;
+    auto last_part = size(active_partitions);
 
     if (first_part != last_part) {
-      futs.emplace_back(std::async(
-          std::launch::async,
-          [&query,
-           &shuffled_db,
-           &indices,
-           &active_queries = active_queries,
-           &active_partitions = active_partitions,
-           &shuffled_ids,
-           k_nn,
-           first_part,
-           last_part]() {
-            return apply_query(
-                query,
-                shuffled_db,
-                indices,
-                active_queries,
-                shuffled_ids,
-                active_partitions,
-                k_nn,
-                first_part,
-                last_part);
-          }));
+      apply_query(
+          query,
+          shuffled_db,
+          indices,
+          active_queries,
+          shuffled_ids,
+          active_partitions,
+          k_nn,
+          first_part,
+          last_part,
+          min_scores);
     }
-  }
+  } else {
+    size_t parts_per_thread =
+        (size(active_partitions) + nthreads - 1) / nthreads;
 
-  // @todo We should do this without putting all queries on every node
-  for (size_t n = 0; n < size(futs); ++n) {
-    auto min_n = futs[n].get();
+    std::vector<std::future<decltype(min_scores)>> futs;
+    futs.reserve(nthreads);
 
-    for (size_t j = 0; j < num_queries; ++j) {
-      for (auto&& e : min_n[j]) {
-        min_scores[j].insert(std::get<0>(e), std::get<1>(e));
+    for (size_t n = 0; n < nthreads; ++n) {
+      auto first_part =
+          std::min<size_t>(n * parts_per_thread, size(active_partitions));
+      auto last_part =
+          std::min<size_t>((n + 1) * parts_per_thread, size(active_partitions));
+
+      if (first_part != last_part) {
+        futs.emplace_back(std::async(
+            std::launch::async,
+            [&query,
+             &shuffled_db,
+             &indices,
+             &active_queries = active_queries,
+             &active_partitions = active_partitions,
+             &shuffled_ids,
+             k_nn,
+             first_part,
+             last_part]() {
+              return apply_query(
+                  query,
+                  shuffled_db,
+                  indices,
+                  active_queries,
+                  shuffled_ids,
+                  active_partitions,
+                  k_nn,
+                  first_part,
+                  last_part);
+            }));
+      }
+    }
+
+    // @todo We should do this without putting all queries on every node
+    for (size_t n = 0; n < size(futs); ++n) {
+      auto min_n = futs[n].get();
+
+      for (size_t j = 0; j < num_queries; ++j) {
+        for (auto&& e : min_n[j]) {
+          min_scores[j].insert(std::get<0>(e), std::get<1>(e));
+        }
       }
     }
   }
-
   scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
 
   ColMajorMatrix<size_t> top_k(k_nn, num_queries);

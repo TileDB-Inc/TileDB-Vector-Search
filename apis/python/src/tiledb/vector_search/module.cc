@@ -162,8 +162,10 @@ static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& s
 }
 
 template <typename T, typename Id_Type = uint64_t>
-static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string& suffix) {
-  m.def(("nuv_query_heap_infinite_ram_reg_blocked_" + suffix).c_str(),
+static void declare_nuv_query_heap_infinite_ram(
+    py::module& m, const std::string& suffix) {
+  m.def(
+      ("nuv_query_heap_infinite_ram_reg_blocked_" + suffix).c_str(),
       [](const ColMajorMatrix<T>& parts,
          const ColMajorMatrix<float>& centroids,
          const ColMajorMatrix<float>& query_vectors,
@@ -172,9 +174,9 @@ static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string
          size_t nprobe,
          size_t k_nn,
          bool nth,
-         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
-
-        auto r = detail::ivf::nuv_query_heap_infinite_ram_reg_blocked(
+         size_t nthreads)
+          -> ColMajorMatrix<size_t> {  // TODO change return type
+        auto r = detail::ivf::query_infinite_ram(
             parts,
             centroids,
             query_vectors,
@@ -185,12 +187,15 @@ static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string
             nth,
             nthreads);
         return r;
-        }, py::keep_alive<1,2>());
+      },
+      py::keep_alive<1, 2>());
 }
 
 template <typename T, typename Id_Type = uint64_t>
-static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& suffix) {
-  m.def(("nuv_query_heap_finite_ram_reg_blocked_" + suffix).c_str(),
+static void declare_nuv_query_heap_finite_ram(
+    py::module& m, const std::string& suffix) {
+  m.def(
+      ("nuv_query_heap_finite_ram_reg_blocked_" + suffix).c_str(),
       [](tiledb::Context& ctx,
          const std::string& parts_uri,
          const ColMajorMatrix<float>& centroids,
@@ -201,9 +206,9 @@ static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& 
          size_t k_nn,
          size_t upper_bound,
          bool nth,
-         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
-
-        auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
+         size_t nthreads)
+          -> ColMajorMatrix<size_t> {  // TODO change return type
+        auto r = detail::ivf::query_finite_ram<T, Id_Type>(
             ctx,
             parts_uri,
             centroids,
@@ -216,7 +221,8 @@ static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& 
             nth,
             nthreads);
         return r;
-        }, py::keep_alive<1,2>());
+      },
+      py::keep_alive<1, 2>());
 }
 
 template <typename T>
