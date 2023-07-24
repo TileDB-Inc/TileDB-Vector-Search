@@ -8,9 +8,8 @@ import pytest
 
 MINIMUM_ACCURACY = 0.9
 
-@pytest.mark.parametrize(
-  "query_type", ["heap", "nth"]
-)
+
+@pytest.mark.parametrize("query_type", ["heap", "nth"])
 def test_flat_ingestion_u8(tmp_path, query_type):
     dataset_dir = os.path.join(tmp_path, "dataset")
     array_uri = os.path.join(tmp_path, "array")
@@ -31,9 +30,8 @@ def test_flat_ingestion_u8(tmp_path, query_type):
     result = index.query(query_vectors, k=k, query_type=query_type)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-@pytest.mark.parametrize(
-  "query_type", ["heap", "nth"]
-)
+
+@pytest.mark.parametrize("query_type", ["heap", "nth"])
 def test_flat_ingestion_f32(tmp_path, query_type):
     dataset_dir = os.path.join(tmp_path, "dataset")
     array_uri = os.path.join(tmp_path, "array")
@@ -143,9 +141,7 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-    result = index_ram.query(
-        query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL
-    )
+    result = index_ram.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
@@ -189,7 +185,5 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-    result = index_ram.query(
-        query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL
-    )
+    result = index_ram.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY

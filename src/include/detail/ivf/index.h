@@ -136,7 +136,7 @@ int ivf_index(
           ctx, shuffled_db, parts_uri, start_pos, false);
     }
     if (index_uri != "") {
-      write_vector<ids_type>(ctx, indices, index_uri, 0, true);
+      write_vector<ids_type>(ctx, indices, index_uri, 0, false);
     }
     if (id_uri != "") {
       write_vector<ids_type>(ctx, shuffled_ids, id_uri, start_pos, false);

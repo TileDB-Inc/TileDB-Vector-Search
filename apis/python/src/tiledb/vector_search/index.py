@@ -6,6 +6,7 @@ import logging
 import numpy as np
 from tiledb.vector_search.module import *
 from tiledb.cloud.dag import Mode
+from typing import Any, Mapping
 
 CENTROIDS_ARRAY_NAME = "centroids.tdb"
 INDEX_ARRAY_NAME = "index.tdb"
@@ -39,12 +40,19 @@ class FlatIndex(Index):
         Optional name of partitions
     """
 
-    def __init__(self, uri: str, dtype: np.dtype, parts_name: str = "parts.tdb"):
+    def __init__(
+        self,
+        uri: str,
+        dtype: np.dtype,
+        parts_name: str = "parts.tdb",
+        config: Optional[Mapping[str, Any]] = None,
+    ):
         self.uri = uri
         self.dtype = dtype
         self._index = None
+        self.ctx = Ctx(config)
 
-        self._db = load_as_matrix(os.path.join(uri, parts_name))
+        self._db = load_as_matrix(os.path.join(uri, parts_name), ctx=self.ctx)
 
     def query(
         self,
@@ -103,7 +111,11 @@ class IVFFlatIndex(Index):
     """
 
     def __init__(
-        self, uri, dtype: np.dtype, memory_budget: int = -1, ctx: "Ctx" = None
+        self,
+        uri,
+        dtype: np.dtype,
+        memory_budget: int = -1,
+        config: Optional[Mapping[str, Any]] = None,
     ):
         group = tiledb.Group(uri)
         self.parts_db_uri = group[PARTS_ARRAY_NAME].uri
@@ -112,16 +124,14 @@ class IVFFlatIndex(Index):
         self.ids_uri = group[IDS_ARRAY_NAME].uri
         self.dtype = dtype
         self.memory_budget = memory_budget
-        self.ctx = ctx
-        if ctx is None:
-            self.ctx = Ctx({})
+        self.ctx = Ctx(config)
 
         # TODO pass in a context
         if self.memory_budget == -1:
-            self._db = load_as_matrix(self.parts_db_uri)
+            self._db = load_as_matrix(self.parts_db_uri, ctx=self.ctx)
             self._ids = read_vector_u64(self.ctx, self.ids_uri)
 
-        self._centroids = load_as_matrix(self.centroids_uri)
+        self._centroids = load_as_matrix(self.centroids_uri, ctx=self.ctx)
         self._index = read_vector_u64(self.ctx, self.index_uri)
 
     def query(
