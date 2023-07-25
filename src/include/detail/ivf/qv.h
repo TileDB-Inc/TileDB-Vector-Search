@@ -1307,19 +1307,20 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
 }
 
 auto apply_query(
-    auto&& query,
-    auto&& shuffled_db,
-    auto&& new_indices,
-    auto&& active_queries,
-    auto&& ids,
-    auto&& active_partitions,
-    size_t k_nn,
-    size_t first_part,
-    size_t last_part,
-    auto&& min_scores) {
+		 auto&& query,
+		 auto&& shuffled_db,
+		 auto&& new_indices,
+		 auto&& active_queries,
+		 auto&& ids,
+		 auto&& active_partitions,
+		 size_t k_nn,
+		 size_t first_part,
+		 size_t last_part,
+		 auto&& min_scores) {
   //  print_types(query, shuffled_db, new_indices, active_queries);
 
   auto num_queries = size(query);
+
 
   size_t part_offset = 0;
   size_t col_offset = 0;
@@ -1328,68 +1329,95 @@ auto apply_query(
     col_offset = shuffled_db.col_offset();
   }
 
-  for (size_t p = first_part; p < last_part; ++p) {
-    auto partno = p + part_offset;
+  if (num_queries == 1) {
+    for (size_t p = first_part; p < last_part; ++p) {
 
-    // @todo this is a bit of a hack
-    auto quartno = partno;
-    if constexpr (!has_num_col_parts<decltype(shuffled_db)>) {
-      quartno = active_partitions[partno];
+      auto partno = p + part_offset;
+
+      // @todo this is a bit of a hack
+      auto quartno = partno;
+      if constexpr (!has_num_col_parts<decltype(shuffled_db)>) {
+	quartno = active_partitions[partno];
+      }
+
+      auto start = new_indices[quartno] - col_offset;
+      auto stop = new_indices[quartno + 1] - col_offset;
+
+      for (auto j : active_queries[partno]) {
+	auto q_vec = query[j];
+
+	for (size_t kp = start; kp < stop; ++kp) {
+	  auto score = L2(q_vec, shuffled_db[kp]);
+	  
+	  // @todo any performance with apparent extra indirection?
+	  min_scores[j].insert(score, ids[kp]);
+	}
+      }
     }
+  } else {
+    for (size_t p = first_part; p < last_part; ++p) {
+      auto partno = p + part_offset;
 
-    auto start = new_indices[quartno] - col_offset;
-    auto stop = new_indices[quartno + 1] - col_offset;
+      // @todo this is a bit of a hack
+      auto quartno = partno;
+      if constexpr (!has_num_col_parts<decltype(shuffled_db)>) {
+	quartno = active_partitions[partno];
+      }
 
-    auto len = 2 * (size(active_queries[partno]) / 2);
-    auto end = active_queries[partno].begin() + len;
-    for (auto j = active_queries[partno].begin(); j != end; j += 2) {
-      auto j0 = j[0];
-      auto j1 = j[1];
-      auto q_vec_0 = query[j0];
-      auto q_vec_1 = query[j1];
+      auto start = new_indices[quartno] - col_offset;
+      auto stop = new_indices[quartno + 1] - col_offset;
 
-      auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
-      for (size_t kp = start; kp < kstop; kp += 2) {
-        auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
-        auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
-        auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
-        auto score_11 = L2(q_vec_1, shuffled_db[kp + 1]);
+      auto len = 2 * (size(active_queries[partno]) / 2);
+      auto end = active_queries[partno].begin() + len;
+      for (auto j = active_queries[partno].begin(); j != end; j += 2) {
+	auto j0 = j[0];
+	auto j1 = j[1];
+	auto q_vec_0 = query[j0];
+	auto q_vec_1 = query[j1];
 
-        min_scores[j0].insert(score_00, ids[kp + 0]);
-        min_scores[j0].insert(score_01, ids[kp + 1]);
-        min_scores[j1].insert(score_10, ids[kp + 0]);
-        min_scores[j1].insert(score_11, ids[kp + 1]);
+	auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
+	for (size_t kp = start; kp < kstop; kp += 2) {
+	  auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+	  auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
+	  auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
+	  auto score_11 = L2(q_vec_1, shuffled_db[kp + 1]);
+
+	  min_scores[j0].insert(score_00, ids[kp + 0]);
+	  min_scores[j0].insert(score_01, ids[kp + 1]);
+	  min_scores[j1].insert(score_10, ids[kp + 0]);
+	  min_scores[j1].insert(score_11, ids[kp + 1]);
+	}
+
+	/*
+	 * Cleanup the last iteration(s) of k
+	 */
+	for (size_t kp = kstop; kp < stop; ++kp) {
+	  auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+	  auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
+	  min_scores[j0].insert(score_00, ids[kp + 0]);
+	  min_scores[j1].insert(score_10, ids[kp + 0]);
+	}
       }
 
       /*
-       * Cleanup the last iteration(s) of k
+       * Cleanup the last iteration(s) of j
        */
-      for (size_t kp = kstop; kp < stop; ++kp) {
-        auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
-        auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
-        min_scores[j0].insert(score_00, ids[kp + 0]);
-        min_scores[j1].insert(score_10, ids[kp + 0]);
-      }
-    }
+      for (auto j = end; j < active_queries[partno].end(); ++j) {
+	auto j0 = j[0];
+	auto q_vec_0 = query[j0];
 
-    /*
-     * Cleanup the last iteration(s) of j
-     */
-    for (auto j = end; j < active_queries[partno].end(); ++j) {
-      auto j0 = j[0];
-      auto q_vec_0 = query[j0];
+	auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
+	for (size_t kp = start; kp < kstop; kp += 2) {
+	  auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+	  auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
 
-      auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
-      for (size_t kp = start; kp < kstop; kp += 2) {
-        auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
-        auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
-
-        min_scores[j0].insert(score_00, ids[kp + 0]);
-        min_scores[j0].insert(score_01, ids[kp + 1]);
-      }
-      for (size_t kp = kstop; kp < stop; ++kp) {
-        auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
-        min_scores[j0].insert(score_00, ids[kp + 0]);
+	  min_scores[j0].insert(score_00, ids[kp + 0]);
+	  min_scores[j0].insert(score_01, ids[kp + 1]);
+	}
+	for (size_t kp = kstop; kp < stop; ++kp) {
+	  auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+	  min_scores[j0].insert(score_00, ids[kp + 0]);
+	}
       }
     }
   }

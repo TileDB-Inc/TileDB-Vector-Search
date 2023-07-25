@@ -116,7 +116,7 @@ static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string&
          bool nth,
          size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
 
-        auto r = detail::ivf::qv_query_heap_infinite_ram(
+        auto r = detail::ivf::query_infinite_ram(
             parts,
             centroids,
             query_vectors,
@@ -145,7 +145,7 @@ static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& s
          bool nth,
          size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
 
-        auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
+        auto r = detail::ivf::query_finite_ram<T, Id_Type>(
             ctx,
             parts_uri,
             centroids,

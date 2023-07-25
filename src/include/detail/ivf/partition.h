@@ -61,8 +61,8 @@ auto partition_ivf_index(
 
   // get closest centroid for each query vector
   auto top_centroids =
-      detail::flat::qv_query_heap(centroids, query, nprobe, nthreads);
-    //      detail::flat::qv_query_nth(centroids, query, nprobe, false, nthreads);
+    //      detail::flat::qv_query_heap(centroids, query, nprobe, nthreads);
+    detail::flat::qv_query_nth(centroids, query, nprobe, false, nthreads);
     //      detail::flat::vq_query_heap(centroids, query, nprobe, nthreads);
 
   using parts_type = typename decltype(top_centroids)::value_type;
@@ -80,7 +80,6 @@ auto partition_ivf_index(
   auto active_centroids = std::set<parts_type>{};
   for (size_t j = 0; j < num_queries; ++j) {
     for (size_t p = 0; p < nprobe; ++p) {
-      auto tmp = top_centroids(p, j);
       centroid_query.emplace(top_centroids(p, j), j);
       active_centroids.emplace(top_centroids(p, j));
     }
@@ -102,13 +101,19 @@ auto partition_ivf_index(
    */
   std::vector<std::vector<parts_type>> part_queries(size(active_partitions));
 
-  for (size_t partno = 0; partno < size(active_partitions); ++partno) {
-    auto active_part = active_partitions[partno];
-    auto num_part_queries = centroid_query.count(active_part);
-    part_queries[partno].reserve(num_part_queries);
-    auto range = centroid_query.equal_range(active_part);
-    for (auto i = range.first; i != range.second; ++i) {
-      part_queries[partno].emplace_back(i->second);
+  if (num_queries == 1) {
+    for (size_t partno = 0; partno < size(active_partitions); ++partno) {
+      part_queries[partno].emplace_back(0);
+    }
+  } else {
+    for (size_t partno = 0; partno < size(active_partitions); ++partno) {
+      auto active_part = active_partitions[partno];
+      auto num_part_queries = centroid_query.count(active_part);
+      part_queries[partno].reserve(num_part_queries);
+      auto range = centroid_query.equal_range(active_part);
+      for (auto i = range.first; i != range.second; ++i) {
+	part_queries[partno].emplace_back(i->second);
+      }
     }
   }
 
