@@ -39,7 +39,6 @@
 #ifndef TDB_STATS_H
 #define TDB_STATS_H
 
-#include <unistd.h>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
