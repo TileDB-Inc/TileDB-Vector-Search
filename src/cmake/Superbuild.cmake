@@ -77,6 +77,7 @@ set(INHERITED_CMAKE_ARGS
   -DPython3_ROOT_DIR=${Python3_ROOT_DIR}
   -DPython3_FIND_REGISTRY=${Python3_FIND_REGISTRY}
   -DPython3_INCLUDE_DIR=${Python3_INCLUDE_DIR}
+  -Dpybind11_DIR=${pybind11_DIR}
 )
 
 ############################################################

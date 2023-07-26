@@ -34,7 +34,7 @@ repository = "https://github.com/TileDB-Inc/tiledb-vector-search"
 [build-system]
 requires = [
     "setuptools>=42", "wheel", "setuptools_scm>=6",
-    "scikit-build>=0.13", "pybind11[global]",
+    "scikit-build>=0.13", "pybind11[global]>=2.10",
     "cmake"
 ]
 build-backend = "setuptools.build_meta"
