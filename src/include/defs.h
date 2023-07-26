@@ -314,7 +314,7 @@ bool validate_top_k(TK& top_k, G& g) {
         return false;
       }
       std::cout << "Query " << qno << " is incorrect" << std::endl;
-      for (size_t i = 0; i < std::min(k, 10UL); ++i) {
+      for (size_t i = 0; i < std::min(k, static_cast<size_t>(10UL)); ++i) {
         std::cout << "  (" << top_k(i, qno) << " " << g(i, qno) << ")";
       }
       std::cout << std::endl;
