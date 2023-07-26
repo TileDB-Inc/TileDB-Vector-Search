@@ -23,7 +23,7 @@ PYBIND11_MAKE_OPAQUE(std::vector<uint32_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<uint64_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<float>);
 PYBIND11_MAKE_OPAQUE(std::vector<double>);
-#if !defined(__GNUC__)
+#if !(defined(__GNUC__) || defined(_MSC_VER))
   PYBIND11_MAKE_OPAQUE(std::vector<size_t>);
 #endif
 
