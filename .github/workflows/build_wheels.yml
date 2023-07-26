@@ -13,9 +13,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - name: 'Brew setup on macOS' # x-ref c8e49ba8f8b9ce
+        if: ${{ startsWith(matrix.os, 'macos-') == true }}
+        run: |
+          set -e pipefail
+          brew install automake pkg-config ninja
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.14.0
+        uses: pypa/cibuildwheel@v2.14.1
         env:
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
           CIBW_SKIP: "*-win32 cp27-* cp35-* cp36-* cp37-* pp* *_i686 *musllinux*"
