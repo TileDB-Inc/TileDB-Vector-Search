@@ -34,6 +34,16 @@ def get_cmake_overrides():
     if val:
         conf.append("-DUSE_MKL_CBLAS={}".format(val))
 
+    try:
+      # Make sure we use pybind11 from this python environment if available,
+      # required for windows wheels due to:
+      #   https://github.com/pybind/pybind11/issues/3445
+      import pybind11
+      pb11_path =  pybind11.get_cmake_dir()
+      conf.append(f"-Dpybind11_DIR={pb11_path}")
+    except ImportError:
+      pass
+
     return conf
 
 

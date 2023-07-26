@@ -52,3 +52,4 @@ else()
 
 endif()
 
+target_compile_definitions(flat_blas INTERFACE TILEDB_VS_ENABLE_BLAS)

@@ -56,7 +56,9 @@
 #ifndef TDB_FLAT_QUERY_H
 #define TDB_FLAT_QUERY_H
 
+#if defined(TILEDB_VS_ENABLE_BLAS)
 #include "detail/flat/gemm.h"
+#endif
 #include "detail/flat/qv.h"
 #include "detail/flat/vq.h"
 

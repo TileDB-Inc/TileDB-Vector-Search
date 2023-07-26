@@ -420,7 +420,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declareStdVector<uint8_t>(m, "u8");
   declareStdVector<uint32_t>(m, "u32");
   declareStdVector<uint64_t>(m, "u64");
-  if constexpr (!std::is_same<uint64_t, unsigned long>::value) {
+  if constexpr (!std::is_same_v<uint64_t, size_t>) {
     declareStdVector<size_t>(m, "szt");
   }
 

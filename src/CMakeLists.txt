@@ -48,6 +48,7 @@ option(TILEDB_S3 "Enables S3/minio support using aws-cpp-sdk" ON)
 option(OVERRIDE_INSTALL_PREFIX "Ignores the setting of CMAKE_INSTALL_PREFIX and sets a default prefix" OFF)
 option(USE_MKL_CBLAS "Try to use mkl_cblas.h (requires additional CMake configuration)" OFF)
 option(TILEDB_VS_PYTHON "Build Python wrapping of C++ API" OFF)
+option(TILEDB_VS_ENABLE_BLAS "Build components and demos which require BLAS" OFF)
 option(BUILD_TESTS "Build the tests" ON)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -138,7 +139,9 @@ include(MultiThreading)
 # Interface library for BLAS
 # -----------------------------------------------------------------------------
 # Control compiler-specific flags.
-include(BLAS)
+if (TILEDBVS_ENABLE_FLAT_L2)
+  include(BLAS)
+endif()
 
 # @todo migrate to find_package for BLAS
 # find_package(BLAS REQUIRED)
