@@ -43,6 +43,7 @@ if(SKBUILD)
   set(Python_LIBRARY "${PYTHON_LIBRARY}")
 endif()
 
+set(Python_FIND_VIRTUALENV FIRST)
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(pybind11 CONFIG REQUIRED)
 
