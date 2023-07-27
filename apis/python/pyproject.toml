@@ -4,7 +4,7 @@ version = "0.0.7"
 #dynamic = ["version"]
 description = "TileDB Vector Search Python client"
 license = { text = "MIT" }
-readme = "./README.md"
+readme = "README.md"
 authors = []
 requires-python = "~=3.7"
 classifiers = [
