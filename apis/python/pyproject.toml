@@ -41,13 +41,11 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 zip-safe = false
-
-[tool.setuptools.packages.find]
-where = ["src"]
+#packages = ["tiledb.vector_search"]
 
 [tool.setuptools_scm]
 root = "../.."
-write_to = "apis/python/src/tiledb/vector_search/version.py"
+#write_to = "apis/python/src/tiledb/vector_search/version.py"
 
 [tool.ruff]
 extend-select = ["I"]

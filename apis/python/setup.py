@@ -62,4 +62,5 @@ setup(
     cmake_args=cmake_args,
     cmake_install_target="install-libtiledbvectorsearch",
     cmake_install_dir="src/tiledb/vector_search",
+    use_scm_version={"root": "../../", "relative_to":  __file__},
 )
