@@ -1,6 +1,13 @@
 name: Build wheels
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - release-*
+      - refs/tags/*
+  pull_request:
+    branches:
+      - '*wheel*'  # must quote since "*" is a YAML reserved character; we want a string
 
 jobs:
   build_wheels:
@@ -13,6 +20,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
       - name: 'Brew setup on macOS' # x-ref c8e49ba8f8b9ce
         if: ${{ startsWith(matrix.os, 'macos-') == true }}
         run: |

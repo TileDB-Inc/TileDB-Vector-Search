@@ -1,6 +1,7 @@
 [project]
 name = "tiledb-vector-search"
-dynamic = ["version"]
+version = "0.0.7"
+#dynamic = ["version"]
 description = "TileDB Vector Search Python client"
 license = { text = "MIT" }
 readme = "./README.md"
@@ -33,7 +34,7 @@ repository = "https://github.com/TileDB-Inc/tiledb-vector-search"
 
 [build-system]
 requires = [
-    "setuptools>=42", "wheel", "setuptools_scm>=6",
+    "setuptools>=42", "wheel", "setuptools_scm[toml]>=6",
     "scikit-build>=0.13", "pybind11[global]>=2.10",
     "cmake"
 ]
@@ -41,13 +42,11 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 zip-safe = false
-
-[tool.setuptools.packages.find]
-where = ["src"]
+#packages = ["tiledb.vector_search"]
 
 [tool.setuptools_scm]
 root = "../.."
-write_to = "apis/python/src/tiledb/vector_search/version.py"
+#write_to = "apis/python/src/tiledb/vector_search/version.py"
 
 [tool.ruff]
 extend-select = ["I"]
