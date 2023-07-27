@@ -1,6 +1,13 @@
 name: Build wheels
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - release-*
+      - refs/tags/*
+  pull_request:
+    branches:
+      - '*wheel*'  # must quote since "*" is a YAML reserved character; we want a string
 
 jobs:
   build_wheels:
