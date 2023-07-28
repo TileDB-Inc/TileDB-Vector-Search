@@ -67,7 +67,7 @@
     "href": "documentation/index.html",
     "title": "TileDB Vector Search",
     "section": "",
-    "text": "TileDB Vector Search\nTileDB-Vector-Search is a C++ library and Python API for vector search built on top of the TileDB Storage Engine.\n\n\nQuick Links\n\nBuild Instructions\nDocumentation\nPython API reference\n\n\n\nQuick Installation\nTileDB-Vector-Search is available from the tiledb conda channel with conda or mamba\nconda install -c tiledb tiledb-vector-search\nOr PyPI with pip: (Pending 🚧)\npip install tiledb-vector-search\n\n\nContributing\nWe welcome contributions. Please see Building for development-build instructions. For large new features, please open an issue to discuss goals and approach in order to ensure a smooth PR integration and review process. All contributions must be licensed under the repository’s MIT License."
+    "text": "TileDB Vector Search\nTileDB-Vector-Search is a C++ library and Python API for vector search built on top of the TileDB Storage Engine.\n\n\nQuick Links\n\nBuild Instructions\nDocumentation\nPython API reference\n\n\n\nQuick Installation\nTileDB-Vector-Search is available from PyPI or the tiledb conda channel.\nTo install from PyPI with pip, use:\npip install tiledb-vector-search\nTo install from conda, use conda or mamba:\nconda install -c tiledb tiledb-vector-search\nmamba install -c tiledb tiledb-vector-search\n\n\nContributing\nWe welcome contributions. Please see Building for development-build instructions. For large new features, please open an issue to discuss goals and approach in order to ensure a smooth PR integration and review process. All contributions must be licensed under the repository’s MIT License."
   },
   {
     "objectID": "documentation/reference/ingestion.html",
