@@ -18,7 +18,7 @@ Pre-built packages are available from the [tiledb conda channel](https://anacond
 [conda](https://conda.io/docs/) or [mamba](https://github.com/mamba-org/mamba#installation):
 
 ```
-conda install -c tiledb tiledb-vector-search
+conda install -c tiledb -c conda-forge tiledb-vector-search
 ```
 
 # Contributing
