@@ -14,7 +14,7 @@ def ingest(
     config=None,
     namespace: Optional[str] = None,
     size: int = -1,
-    partitions: int = -1,
+    partitions: int = 1,
     copy_centroids_uri: str = None,
     training_sample_size: int = -1,
     workers: int = -1,
