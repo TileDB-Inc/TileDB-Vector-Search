@@ -25,10 +25,10 @@ pip install tiledb-vector-search
 To install from [conda](https://anaconda.org/tiledb/tiledb-vector-search), use conda or [mamba](https://mamba.readthedocs.io/en/latest/):
 
 ```
-conda install -c tiledb tiledb-vector-search
+conda install -c tiledb -c conda-forge tiledb-vector-search
 ```
 ```
-mamba install -c tiledb tiledb-vector-search
+mamba install -c tiledb -c conda-forge tiledb-vector-search
 ```
 
 
