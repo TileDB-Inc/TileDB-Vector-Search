@@ -1,3 +1,4 @@
+from . import utils
 from .index import FlatIndex, IVFFlatIndex
 from .ingestion import ingest
 from .module import load_as_array
@@ -29,4 +30,5 @@ __all__ = [
     "ivf_index_tdb",
     "array_to_matrix",
     "partition_ivf_index",
+    "utils"
 ]
