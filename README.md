@@ -6,6 +6,11 @@
 
 *TileDB-Vector-Search* is a C++ library and Python API for vector search built on top of the [TileDB Storage Engine](https://github.com/TileDB-Inc/TileDB).
 
+Please see the following blog posts for background:
+
+* [Why TileDB as a Vector Database](https://tiledb.com/blog/why-tiledb-as-a-vector-database)
+* [TileDB Vector Search 101](https://tiledb.com/blog/tiledb-101-vector-search/)
+
 # Quick Links
 
 * [Build Instructions](https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/Building.html)
