@@ -124,6 +124,7 @@ class IVFFlatIndex(Index):
         self.ids_uri = group[IDS_ARRAY_NAME].uri
         self.dtype = dtype
         self.memory_budget = memory_budget
+        self.config = config
         self.ctx = Ctx(config)
 
         # TODO pass in a context
@@ -218,6 +219,7 @@ class IVFFlatIndex(Index):
                 mode=mode,
                 num_partitions=num_partitions,
                 num_workers=num_workers,
+                config=self.config,
             )
 
     def taskgraph_query(
@@ -229,6 +231,7 @@ class IVFFlatIndex(Index):
         mode: Mode = None,
         num_partitions: int = -1,
         num_workers: int = -1,
+        config: Optional[Mapping[str, Any]] = None,
     ):
         """
         Query an IVF_FLAT index using TileDB cloud taskgraphs
@@ -275,6 +278,7 @@ class IVFFlatIndex(Index):
             active_queries: np.array,
             indices: np.array,
             k_nn: int,
+            config: Optional[Mapping[str, Any]] = None,
         ):
             queries_m = array_to_matrix(np.transpose(query_vectors))
             r = dist_qv(
@@ -286,6 +290,7 @@ class IVFFlatIndex(Index):
                 active_queries=active_queries,
                 indices=indices,
                 k_nn=k_nn,
+                ctx=Ctx(config)
             )
             results = []
             for q in range(len(r)):
@@ -335,6 +340,12 @@ class IVFFlatIndex(Index):
             part_end = part + parts_per_node
             if part_end > num_parts:
                 part_end = num_parts
+            aq = []
+            for tt in range(part, part_end):
+                aqt = []
+                for ttt in range(len(active_queries[tt])):
+                    aqt.append(active_queries[tt][ttt])
+                aq.append(aqt)
             nodes.append(
                 submit(
                     dist_qv_udf,
@@ -344,10 +355,11 @@ class IVFFlatIndex(Index):
                     query_vectors=queries,
                     active_partitions=np.array(active_partitions)[part:part_end],
                     active_queries=np.array(
-                        active_queries[part:part_end], dtype=object
+                        aq, dtype=object
                     ),
                     indices=np.array(self._index),
                     k_nn=k,
+                    config=config,
                     resource_class="large",
                     image_name="3.9-vectorsearch",
                 )
@@ -368,5 +380,8 @@ class IVFFlatIndex(Index):
                     if len(r[q]) > j:
                         if r[q][j][0] > 0:
                             tmp_results.append(r[q][j])
-            results_per_query.append(sorted(tmp_results, key=lambda t: t[0])[0:k])
+            tmp = sorted(tmp_results, key=lambda t: t[0])[0:k]
+            for j in range(len(tmp), k):
+                tmp.append((float(0.0), int(0)))
+            results_per_query.append(np.array(tmp, dtype=np.dtype('float,int'))['f1'])
         return results_per_query
