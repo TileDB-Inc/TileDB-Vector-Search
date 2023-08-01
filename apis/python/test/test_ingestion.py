@@ -181,6 +181,12 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    # Test single query vector handling
+    result1 = index.query(query_vectors[10], k=k, nprobe=nprobe)
+    assert accuracy(result1, np.array([gt_i[10]])) > MINIMUM_ACCURACY
+
+
+
     index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype)
     result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
