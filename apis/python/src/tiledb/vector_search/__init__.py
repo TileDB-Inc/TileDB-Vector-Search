@@ -15,9 +15,13 @@ from .module import (
     partition_ivf_index,
 )
 
+# Re-import mode from cloud.dag
+from tiledb.cloud.dag.mode import Mode
+
 __all__ = [
     "FlatIndex",
     "IVFFlatIndex",
+    "Mode",
     "load_as_array",
     "load_as_matrix",
     "ingest",
