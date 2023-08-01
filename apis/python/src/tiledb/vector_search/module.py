@@ -5,7 +5,7 @@ import numpy as np
 import tiledb
 from tiledb.vector_search._tiledbvspy import *
 
-from typing import Optional
+from typing import Optional, Mapping, Any
 
 
 def load_as_matrix(path: str, nqueries: int = 0, ctx: "Ctx" = None, config: Optional[Mapping[str, Any]] = None):
