@@ -192,6 +192,10 @@ class IVFFlatIndex(Index):
 
         """
         assert queries.dtype == np.float32
+
+        if queries.ndim == 1:
+            queries = np.array([queries])
+
         if nthreads == -1:
             nthreads = multiprocessing.cpu_count()
         if mode is None:
