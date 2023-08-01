@@ -122,14 +122,18 @@ class IVFFlatIndex(Index):
         memory_budget: int = -1,
         config: Optional[Mapping[str, Any]] = None,
     ):
-        group = tiledb.Group(uri)
+        # If the user passes a tiledb python Config object convert to a dictionary
+        if isinstance(config, tiledb.Config):
+            config = dict(config)
+
+        self.config = config
+        self.ctx = Ctx(config)
+        group = tiledb.Group(uri, ctx=self.ctx)
         self.parts_db_uri = group[PARTS_ARRAY_NAME].uri
         self.centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
         self.index_uri = group[INDEX_ARRAY_NAME].uri
         self.ids_uri = group[IDS_ARRAY_NAME].uri
         self.memory_budget = memory_budget
-        self.config = config
-        self.ctx = Ctx(config)
 
         # TODO pass in a context
         if self.memory_budget == -1:
