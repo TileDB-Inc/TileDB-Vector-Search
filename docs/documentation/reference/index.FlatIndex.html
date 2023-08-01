@@ -184,16 +184,16 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="tiledb.vector_search.index.FlatIndex" class="level1">
 <h1>index.FlatIndex</h1>
-<p><code>vector_search.index.FlatIndex(self, uri, dtype, parts_name='parts.tdb', config=None)</code></p>
+<p><code>vector_search.index.FlatIndex(self, uri, dtype=None, parts_name='parts.tdb', config=None)</code></p>
 <p>Open a flat index</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
-<col style="width: 19%">
+<col style="width: 16%">
+<col style="width: 30%">
+<col style="width: 34%">
 <col style="width: 18%">
-<col style="width: 40%">
-<col style="width: 21%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -212,9 +212,9 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="even">
 <td><code>dtype</code></td>
-<td>numpy.dtype</td>
+<td>Optional[numpy.dtype]</td>
 <td>datatype float32 or uint8</td>
-<td><em>required</em></td>
+<td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td><code>parts_name</code></td>
