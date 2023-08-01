@@ -290,7 +290,7 @@ class IVFFlatIndex(Index):
                 active_queries=active_queries,
                 indices=indices,
                 k_nn=k_nn,
-                ctx=tiledb.Ctx(config)
+                ctx=Ctx(config)
             )
             results = []
             for q in range(len(r)):
