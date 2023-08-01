@@ -8,7 +8,7 @@ from tiledb.vector_search._tiledbvspy import *
 from typing import Optional
 
 
-def load_as_matrix(path: str, nqueries: int = 0, ctx: "Ctx" = None):
+def load_as_matrix(path: str, nqueries: int = 0, ctx: "Ctx" = None, config: Optional[Mapping[str, Any]] = None):
     """
     Load array as Matrix class
 
@@ -22,9 +22,9 @@ def load_as_matrix(path: str, nqueries: int = 0, ctx: "Ctx" = None):
         TileDB context
     """
     if ctx is None:
-        ctx = Ctx({})
+        ctx = Ctx(config)
 
-    a = tiledb.ArraySchema.load(path, ctx=ctx)
+    a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
     if dtype == np.float32:
         m = tdbColMajorMatrix_f32(ctx, path, nqueries)
@@ -44,7 +44,7 @@ def load_as_matrix(path: str, nqueries: int = 0, ctx: "Ctx" = None):
     return m
 
 
-def load_as_array(path, return_matrix: bool = False, ctx: "Ctx" = None):
+def load_as_array(path, return_matrix: bool = False, ctx: "Ctx" = None, config: Optional[Mapping[str, Any]] = None):
     """
     Load array as array class
 
@@ -57,7 +57,7 @@ def load_as_array(path, return_matrix: bool = False, ctx: "Ctx" = None):
     config: Dict
         TileDB configuration parameters
     """
-    m = load_as_matrix(path, ctx=ctx)
+    m = load_as_matrix(path, ctx=ctx, config=config)
     r = np.array(m, copy=False)
 
     # hang on to a copy for testing purposes, for now

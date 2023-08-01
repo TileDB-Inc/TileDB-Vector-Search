@@ -47,12 +47,17 @@ class FlatIndex(Index):
         parts_name: str = "parts.tdb",
         config: Optional[Mapping[str, Any]] = None,
     ):
+        # If the user passes a tiledb python Config object convert to a dictionary
+        if isinstance(config, tiledb.Config):
+            config = dict(config)
+
         self.uri = uri
         self.dtype = dtype
         self._index = None
         self.ctx = Ctx(config)
+        self.config = config
 
-        self._db = load_as_matrix(os.path.join(uri, parts_name), ctx=self.ctx)
+        self._db = load_as_matrix(os.path.join(uri, parts_name), ctx=self.ctx, config=config)
 
         if dtype is None:
             self.dtype = self._db.dtype
@@ -128,7 +133,7 @@ class IVFFlatIndex(Index):
 
         self.config = config
         self.ctx = Ctx(config)
-        group = tiledb.Group(uri, ctx=self.ctx)
+        group = tiledb.Group(uri, ctx=tiledb.Ctx(config))
         self.parts_db_uri = group[PARTS_ARRAY_NAME].uri
         self.centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
         self.index_uri = group[INDEX_ARRAY_NAME].uri
@@ -137,10 +142,10 @@ class IVFFlatIndex(Index):
 
         # TODO pass in a context
         if self.memory_budget == -1:
-            self._db = load_as_matrix(self.parts_db_uri, ctx=self.ctx)
+            self._db = load_as_matrix(self.parts_db_uri, ctx=self.ctx, config=config)
             self._ids = read_vector_u64(self.ctx, self.ids_uri)
 
-        self._centroids = load_as_matrix(self.centroids_uri, ctx=self.ctx)
+        self._centroids = load_as_matrix(self.centroids_uri, ctx=self.ctx, config=config)
 
         # TODO this should always be available
         if dtype is None:
