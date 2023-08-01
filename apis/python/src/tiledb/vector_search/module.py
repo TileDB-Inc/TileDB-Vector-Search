@@ -21,6 +21,10 @@ def load_as_matrix(path: str, nqueries: int = 0, ctx: "Ctx" = None, config: Opti
     ctx: Ctx
         TileDB context
     """
+    # If the user passes a tiledb python Config object convert to a dictionary
+    if isinstance(config, tiledb.Config):
+        config = dict(config)
+
     if ctx is None:
         ctx = Ctx(config)
 
