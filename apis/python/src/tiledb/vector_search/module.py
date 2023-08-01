@@ -24,7 +24,7 @@ def load_as_matrix(path: str, nqueries: int = 0, ctx: "Ctx" = None):
     if ctx is None:
         ctx = Ctx({})
 
-    a = tiledb.ArraySchema.load(path)
+    a = tiledb.ArraySchema.load(path, ctx=ctx)
     dtype = a.attr(0).dtype
     if dtype == np.float32:
         m = tdbColMajorMatrix_f32(ctx, path, nqueries)
