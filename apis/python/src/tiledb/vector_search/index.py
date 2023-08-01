@@ -124,6 +124,7 @@ class IVFFlatIndex(Index):
         self.ids_uri = group[IDS_ARRAY_NAME].uri
         self.dtype = dtype
         self.memory_budget = memory_budget
+        self.config = config
         self.ctx = Ctx(config)
 
         # TODO pass in a context
@@ -218,7 +219,7 @@ class IVFFlatIndex(Index):
                 mode=mode,
                 num_partitions=num_partitions,
                 num_workers=num_workers,
-                config=config,
+                config=self.config,
             )
 
     def taskgraph_query(
