@@ -43,7 +43,7 @@ class FlatIndex(Index):
     def __init__(
         self,
         uri: str,
-        dtype: np.dtype,
+        dtype: Optional[np.dtype] = None,
         parts_name: str = "parts.tdb",
         config: Optional[Mapping[str, Any]] = None,
     ):
@@ -53,6 +53,11 @@ class FlatIndex(Index):
         self.ctx = Ctx(config)
 
         self._db = load_as_matrix(os.path.join(uri, parts_name), ctx=self.ctx)
+
+        if dtype is None:
+            self.dtype = self._db.dtype
+        else:
+            self.dtype = dtype
 
     def query(
         self,

@@ -1,7 +1,7 @@
 from common import *
 
 from tiledb.vector_search.ingestion import ingest
-from tiledb.vector_search.index import IVFFlatIndex
+from tiledb.vector_search.index import FlatIndex, IVFFlatIndex
 from tiledb.cloud.dag import Mode
 
 import pytest
@@ -50,6 +50,10 @@ def test_flat_ingestion_f32(tmp_path, query_type):
         source_type=source_type,
     )
     result = index.query(query_vectors, k=k, query_type=query_type)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    index_ram = FlatIndex(uri=array_uri)
+    result = index_ram.query(query_vectors, k=k, query_type=query_type)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
