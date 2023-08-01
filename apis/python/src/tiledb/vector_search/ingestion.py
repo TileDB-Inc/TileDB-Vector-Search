@@ -14,7 +14,7 @@ def ingest(
     config=None,
     namespace: Optional[str] = None,
     size: int = -1,
-    partitions: int = 1,
+    partitions: int = -1,
     copy_centroids_uri: str = None,
     training_sample_size: int = -1,
     workers: int = -1,
@@ -43,7 +43,7 @@ def ingest(
     size: int = 1
         Number of input vectors,
         if not provided use the full size of the input dataset
-    partitions: int = 1
+    partitions: int = -1
         Number of partitions to load the data with,
         if not provided, is auto-configured based on the dataset size
     copy_centroids_uri: str

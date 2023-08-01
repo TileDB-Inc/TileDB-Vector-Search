@@ -202,6 +202,12 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     auto num_end_elts =
         std::min(blocksize_, num_array_cols_ - std::get<1>(col_view_));
 
+    // Return if we're at the end
+    if (num_end_elts == 0) {
+      return false;
+    }
+
+    // These calls change the current view
     std::get<0>(col_view_) = std::get<1>(col_view_);
     std::get<1>(col_view_) += num_end_elts;
     col_offset_ = std::get<0>(col_view_);
