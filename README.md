@@ -14,7 +14,15 @@
 
 # Quick Installation
 
-Pre-built packages are available from the [tiledb conda channel](https://anaconda.org/tiledb/tiledb-vector-search) using
+Tile
+
+Pre-built packages are available from PyPI using pip:
+
+```
+pip install tiledb-vector-search
+```
+
+Or from the [tiledb conda channel](https://anaconda.org/tiledb/tiledb-vector-search) using
 [conda](https://conda.io/docs/) or [mamba](https://github.com/mamba-org/mamba#installation):
 
 ```
