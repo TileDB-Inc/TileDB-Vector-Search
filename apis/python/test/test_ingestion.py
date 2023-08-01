@@ -133,6 +133,10 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    index_ram = IVFFlatIndex(uri=array_uri, memory_budget=int(size / 10))
+    result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
     result = index_ram.query(
         query_vectors,
         k=k,
