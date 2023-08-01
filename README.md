@@ -14,8 +14,6 @@
 
 # Quick Installation
 
-Tile
-
 Pre-built packages are available from PyPI using pip:
 
 ```
