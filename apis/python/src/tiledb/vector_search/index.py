@@ -113,7 +113,7 @@ class IVFFlatIndex(Index):
     def __init__(
         self,
         uri,
-        dtype: np.dtype,
+        dtype: np.dtype = None,
         memory_budget: int = -1,
         config: Optional[Mapping[str, Any]] = None,
     ):
@@ -122,7 +122,6 @@ class IVFFlatIndex(Index):
         self.centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
         self.index_uri = group[INDEX_ARRAY_NAME].uri
         self.ids_uri = group[IDS_ARRAY_NAME].uri
-        self.dtype = dtype
         self.memory_budget = memory_budget
         self.ctx = Ctx(config)
 
@@ -132,6 +131,12 @@ class IVFFlatIndex(Index):
             self._ids = read_vector_u64(self.ctx, self.ids_uri)
 
         self._centroids = load_as_matrix(self.centroids_uri, ctx=self.ctx)
+
+        # TODO this should always be available
+        if dtype is None:
+            self.dtype = self._centroids.dtype
+        else:
+            self.dtype = dtype
         self._index = read_vector_u64(self.ctx, self.index_uri)
 
     def query(
