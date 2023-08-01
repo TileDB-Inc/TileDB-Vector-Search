@@ -510,6 +510,10 @@ PYBIND11_MODULE(_tiledbvspy, m) {
     return json{core_stats}.dump();
   });
 
+  m.def("set_debug", [](bool debug) {
+    global_debug = debug;
+  });
+
   declare_vq_query_heap<uint8_t>(m, "u8");
   declare_vq_query_heap<float>(m, "f32");
 
