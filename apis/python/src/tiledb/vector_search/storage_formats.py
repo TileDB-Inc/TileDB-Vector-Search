@@ -11,7 +11,7 @@ storage_formats = {
         "INDEX_ARRAY_NAME": "partition_indexes",
         "IDS_ARRAY_NAME": "shuffled_vector_ids",
         "PARTS_ARRAY_NAME": "shuffled_vectors",
-        "PARTIAL_WRITE_ARRAY_DIR": "write_temp",
+        "PARTIAL_WRITE_ARRAY_DIR": "temp_data",
     },
 }
 
