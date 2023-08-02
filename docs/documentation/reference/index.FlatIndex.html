@@ -184,17 +184,11 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="tiledb.vector_search.index.FlatIndex" class="level1">
 <h1>index.FlatIndex</h1>
-<p><code>vector_search.index.FlatIndex(self, uri, dtype=None, parts_name='parts.tdb', config=None)</code></p>
+<p><code>vector_search.index.FlatIndex(self, uri, config=None)</code></p>
 <p>Open a flat index</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
-<colgroup>
-<col style="width: 16%">
-<col style="width: 30%">
-<col style="width: 34%">
-<col style="width: 18%">
-</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -212,15 +206,9 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="even">
 <td><code>dtype</code></td>
-<td>Optional[numpy.dtype]</td>
+<td></td>
 <td>datatype float32 or uint8</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td><code>parts_name</code></td>
-<td>str</td>
-<td>Optional name of partitions</td>
-<td><code>'parts.tdb'</code></td>
+<td><em>required</em></td>
 </tr>
 </tbody>
 </table>
@@ -243,7 +231,7 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="tiledb.vector_search.index.FlatIndex.query" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.index.FlatIndex.query">query</h3>
-<p><code>vector_search.index.FlatIndex.query(self, targets, k=10, nthreads=8, nprobe=1, query_type='heap')</code></p>
+<p><code>vector_search.index.FlatIndex.query(self, targets, k=10, nthreads=8, query_type='heap')</code></p>
 <p>Query a flat index</p>
 <section id="parameters-1" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
@@ -284,14 +272,8 @@ ul.task-list li input[type="checkbox"] {
 <tr class="even">
 <td><code>nthreads</code></td>
 <td>int</td>
-<td>Number of threads to use for queyr</td>
+<td>Number of threads to use for query</td>
 <td><code>8</code></td>
-</tr>
-<tr class="odd">
-<td><code>nprobe</code></td>
-<td>int</td>
-<td>number of probes</td>
-<td><code>1</code></td>
 </tr>
 </tbody>
 </table>
