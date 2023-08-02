@@ -5,13 +5,9 @@ import logging
 
 import numpy as np
 from tiledb.vector_search.module import *
+from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.cloud.dag import Mode
 from typing import Any, Mapping
-
-CENTROIDS_ARRAY_NAME = "centroids.tdb"
-INDEX_ARRAY_NAME = "index.tdb"
-IDS_ARRAY_NAME = "ids.tdb"
-PARTS_ARRAY_NAME = "parts.tdb"
 
 
 def submit_local(d, func, *args, **kwargs):
@@ -22,7 +18,7 @@ def submit_local(d, func, *args, **kwargs):
 
 
 class Index:
-    def query(self, targets: np.ndarray, k=10, nqueries=10, nthreads=8, nprobe=1):
+    def query(self, targets: np.ndarray, k):
         raise NotImplementedError
 
 
@@ -36,15 +32,11 @@ class FlatIndex(Index):
         URI of datataset
     dtype: numpy.dtype
         datatype float32 or uint8
-    parts_name: str
-        Optional name of partitions
     """
 
     def __init__(
         self,
         uri: str,
-        dtype: Optional[np.dtype] = None,
-        parts_name: str = "parts.tdb",
         config: Optional[Mapping[str, Any]] = None,
     ):
         # If the user passes a tiledb python Config object convert to a dictionary
@@ -52,24 +44,28 @@ class FlatIndex(Index):
             config = dict(config)
 
         self.uri = uri
-        self.dtype = dtype
         self._index = None
         self.ctx = Ctx(config)
         self.config = config
+        group = tiledb.Group(uri, ctx=tiledb.Ctx(config))
+        self.storage_version = group.meta.get("storage_version", "0.1")
+        self._db = load_as_matrix(
+            group[storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]].uri,
+            ctx=self.ctx,
+            config=config,
+        )
 
-        self._db = load_as_matrix(os.path.join(uri, parts_name), ctx=self.ctx, config=config)
-
+        dtype = group.meta.get("dtype", None)
         if dtype is None:
             self.dtype = self._db.dtype
         else:
-            self.dtype = dtype
+            self.dtype = np.dtype(dtype)
 
     def query(
         self,
         targets: np.ndarray,
         k: int = 10,
         nthreads: int = 8,
-        nprobe: int = 1,
         query_type="heap",
     ):
         """
@@ -84,9 +80,7 @@ class FlatIndex(Index):
         nqueries: int
             Number of queries
         nthreads: int
-            Number of threads to use for queyr
-        nprobe: int
-            number of probes
+            Number of threads to use for query
         """
         # TODO:
         # - typecheck targets
@@ -123,7 +117,6 @@ class IVFFlatIndex(Index):
     def __init__(
         self,
         uri,
-        dtype: np.dtype = None,
         memory_budget: int = -1,
         config: Optional[Mapping[str, Any]] = None,
     ):
@@ -134,31 +127,48 @@ class IVFFlatIndex(Index):
         self.config = config
         self.ctx = Ctx(config)
         group = tiledb.Group(uri, ctx=tiledb.Ctx(config))
-        self.parts_db_uri = group[PARTS_ARRAY_NAME].uri
-        self.centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
-        self.index_uri = group[INDEX_ARRAY_NAME].uri
-        self.ids_uri = group[IDS_ARRAY_NAME].uri
+        self.storage_version = group.meta.get("storage_version", "0.1")
+        self.parts_db_uri = group[
+            storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
+        ].uri
+        self.centroids_uri = group[
+            storage_formats[self.storage_version]["CENTROIDS_ARRAY_NAME"]
+        ].uri
+        self.index_uri = group[
+            storage_formats[self.storage_version]["INDEX_ARRAY_NAME"]
+        ].uri
+        self.ids_uri = group[
+            storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
+        ].uri
         self.memory_budget = memory_budget
+
+        self._centroids = load_as_matrix(
+            self.centroids_uri, ctx=self.ctx, config=config
+        )
+        self._index = read_vector_u64(self.ctx, self.index_uri)
 
         # TODO pass in a context
         if self.memory_budget == -1:
             self._db = load_as_matrix(self.parts_db_uri, ctx=self.ctx, config=config)
             self._ids = read_vector_u64(self.ctx, self.ids_uri)
 
-        self._centroids = load_as_matrix(self.centroids_uri, ctx=self.ctx, config=config)
-
-        # TODO this should always be available
+        dtype = group.meta.get("dtype", None)
         if dtype is None:
-            self.dtype = self._centroids.dtype
+            schema = tiledb.ArraySchema.load(self.parts_db_uri, ctx=tiledb.Ctx(self.config))
+            self.dtype = np.dtype(schema.attr("values").dtype)
         else:
-            self.dtype = dtype
-        self._index = read_vector_u64(self.ctx, self.index_uri)
+            self.dtype = np.dtype(dtype)
+
+        self.partitions = group.meta.get("partitions", -1)
+        if self.partitions == -1:
+            schema = tiledb.ArraySchema.load(self.centroids_uri, ctx=tiledb.Ctx(self.config))
+            self.partitions = schema.domain.dim("cols").domain[1] + 1
 
     def query(
         self,
         queries: np.ndarray,
         k: int = 10,
-        nprobe: int = 10,
+        nprobe: int = 1,
         nthreads: int = -1,
         use_nuv_implementation: bool = False,
         mode: Mode = None,
@@ -198,6 +208,8 @@ class IVFFlatIndex(Index):
 
         if nthreads == -1:
             nthreads = multiprocessing.cpu_count()
+
+        nprobe = min(nprobe, self.partitions)
         if mode is None:
             queries_m = array_to_matrix(np.transpose(queries))
             if self.memory_budget == -1:
@@ -313,7 +325,7 @@ class IVFFlatIndex(Index):
                 active_queries=active_queries,
                 indices=indices,
                 k_nn=k_nn,
-                ctx=Ctx(config)
+                ctx=Ctx(config),
             )
             results = []
             for q in range(len(r)):
@@ -377,9 +389,7 @@ class IVFFlatIndex(Index):
                     ids_uri=self.ids_uri,
                     query_vectors=queries,
                     active_partitions=np.array(active_partitions)[part:part_end],
-                    active_queries=np.array(
-                        aq, dtype=object
-                    ),
+                    active_queries=np.array(aq, dtype=object),
                     indices=np.array(self._index),
                     k_nn=k,
                     config=config,
@@ -406,5 +416,5 @@ class IVFFlatIndex(Index):
             tmp = sorted(tmp_results, key=lambda t: t[0])[0:k]
             for j in range(len(tmp), k):
                 tmp.append((float(0.0), int(0)))
-            results_per_query.append(np.array(tmp, dtype=np.dtype('float,int'))['f1'])
+            results_per_query.append(np.array(tmp, dtype=np.dtype("float,int"))["f1"])
         return results_per_query

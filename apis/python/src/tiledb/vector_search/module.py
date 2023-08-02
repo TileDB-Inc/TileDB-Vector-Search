@@ -8,7 +8,12 @@ from tiledb.vector_search._tiledbvspy import *
 from typing import Optional, Mapping, Any
 
 
-def load_as_matrix(path: str, nqueries: int = 0, ctx: "Ctx" = None, config: Optional[Mapping[str, Any]] = None):
+def load_as_matrix(
+    path: str,
+    nqueries: int = 0,
+    ctx: "Ctx" = None,
+    config: Optional[Mapping[str, Any]] = None,
+):
     """
     Load array as Matrix class
 
@@ -48,7 +53,12 @@ def load_as_matrix(path: str, nqueries: int = 0, ctx: "Ctx" = None, config: Opti
     return m
 
 
-def load_as_array(path, return_matrix: bool = False, ctx: "Ctx" = None, config: Optional[Mapping[str, Any]] = None):
+def load_as_array(
+    path,
+    return_matrix: bool = False,
+    ctx: "Ctx" = None,
+    config: Optional[Mapping[str, Any]] = None,
+):
     """
     Load array as array class
 
