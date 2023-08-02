@@ -79,12 +79,15 @@ def ingest(
     from tiledb.cloud.rest_api import models
     from tiledb.cloud.utilities import get_logger
     from tiledb.cloud.utilities import set_aws_context
+    from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSION
 
-    CENTROIDS_ARRAY_NAME = "centroids.tdb"
-    INDEX_ARRAY_NAME = "index.tdb"
-    IDS_ARRAY_NAME = "ids.tdb"
-    PARTS_ARRAY_NAME = "parts.tdb"
-    PARTIAL_WRITE_ARRAY_DIR = "write_temp"
+    CENTROIDS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["CENTROIDS_ARRAY_NAME"]
+    INDEX_ARRAY_NAME = storage_formats[STORAGE_VERSION]["INDEX_ARRAY_NAME"]
+    IDS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["IDS_ARRAY_NAME"]
+    PARTS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["PARTS_ARRAY_NAME"]
+    PARTIAL_WRITE_ARRAY_DIR = storage_formats[STORAGE_VERSION][
+        "PARTIAL_WRITE_ARRAY_DIR"
+    ]
     VECTORS_PER_WORK_ITEM = 20000000
     MAX_TASKS_PER_STAGE = 100
     CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 1000000
@@ -1378,7 +1381,6 @@ def ingest(
                 logger.debug(f"Group '{array_uri}' already exists")
             raise err
         group = tiledb.Group(array_uri, "w")
-        group.meta["dataset_type"] = "vector_search"
 
         in_size, dimensions, vector_type = read_source_metadata(
             source_uri=source_uri, source_type=source_type, logger=logger
@@ -1402,6 +1404,10 @@ def ingest(
         logger.debug("Partitions %d", partitions)
         logger.debug("Training sample size %d", training_sample_size)
         logger.debug("Number of workers %d", workers)
+        group.meta["dataset_type"] = "vector_search"
+        group.meta["dtype"] = np.dtype(vector_type).name
+        group.meta["partitions"] = partitions
+        group.meta["storage_version"] = STORAGE_VERSION
 
         if input_vectors_per_work_item == -1:
             input_vectors_per_work_item = VECTORS_PER_WORK_ITEM
@@ -1487,8 +1493,6 @@ def ingest(
         consolidate_and_vacuum(array_uri=array_uri, config=config)
 
         if index_type == "FLAT":
-            return FlatIndex(uri=array_uri, dtype=vector_type, config=config)
+            return FlatIndex(uri=array_uri, config=config)
         elif index_type == "IVF_FLAT":
-            return IVFFlatIndex(
-                uri=array_uri, dtype=vector_type, memory_budget=1000000, config=config
-            )
+            return IVFFlatIndex(uri=array_uri, memory_budget=1000000, config=config)

@@ -83,7 +83,7 @@ def test_ivf_flat_ingestion_u8(tmp_path):
     result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-    index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype, memory_budget=int(size / 10))
+    index_ram = IVFFlatIndex(uri=array_uri, memory_budget=int(size / 10))
     result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -133,7 +133,7 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-    index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype, memory_budget=int(size / 10))
+    index_ram = IVFFlatIndex(uri=array_uri, memory_budget=int(size / 10))
     result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -185,9 +185,7 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     result1 = index.query(query_vectors[10], k=k, nprobe=nprobe)
     assert accuracy(result1, np.array([gt_i[10]])) > MINIMUM_ACCURACY
 
-
-
-    index_ram = IVFFlatIndex(uri=array_uri, dtype=dtype)
+    index_ram = IVFFlatIndex(uri=array_uri)
     result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 

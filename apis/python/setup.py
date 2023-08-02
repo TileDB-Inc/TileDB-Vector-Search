@@ -35,14 +35,15 @@ def get_cmake_overrides():
         conf.append("-DUSE_MKL_CBLAS={}".format(val))
 
     try:
-      # Make sure we use pybind11 from this python environment if available,
-      # required for windows wheels due to:
-      #   https://github.com/pybind/pybind11/issues/3445
-      import pybind11
-      pb11_path =  pybind11.get_cmake_dir()
-      conf.append(f"-Dpybind11_DIR={pb11_path}")
+        # Make sure we use pybind11 from this python environment if available,
+        # required for windows wheels due to:
+        #   https://github.com/pybind/pybind11/issues/3445
+        import pybind11
+
+        pb11_path = pybind11.get_cmake_dir()
+        conf.append(f"-Dpybind11_DIR={pb11_path}")
     except ImportError:
-      pass
+        pass
 
     return conf
 
@@ -62,5 +63,5 @@ setup(
     cmake_args=cmake_args,
     cmake_install_target="install-libtiledbvectorsearch",
     cmake_install_dir="src/tiledb/vector_search",
-    use_scm_version={"root": "../../", "relative_to":  __file__},
+    use_scm_version={"root": "../../", "relative_to": __file__},
 )
