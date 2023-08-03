@@ -15,7 +15,7 @@ storage_formats = {
         "IDS_ARRAY_NAME": "shuffled_vector_ids",
         "PARTS_ARRAY_NAME": "shuffled_vectors",
         "PARTIAL_WRITE_ARRAY_DIR": "temp_data",
-        "DEFAULT_ATTR_FILTERS": tiledb.FilterList([tiledb.ZstdFilter(level=1)]),
+        "DEFAULT_ATTR_FILTERS": tiledb.FilterList([tiledb.ZstdFilter()]),
     },
 }
 
