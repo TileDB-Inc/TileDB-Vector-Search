@@ -134,7 +134,7 @@ class IVFFlatIndex(Index):
         self.centroids_uri = group[
             storage_formats[self.storage_version]["CENTROIDS_ARRAY_NAME"]
         ].uri
-        self.index_uri = group[
+        self.index_array_uri = group[
             storage_formats[self.storage_version]["INDEX_ARRAY_NAME"]
         ].uri
         self.ids_uri = group[
@@ -145,7 +145,7 @@ class IVFFlatIndex(Index):
         self._centroids = load_as_matrix(
             self.centroids_uri, ctx=self.ctx, config=config
         )
-        self._index = read_vector_u64(self.ctx, self.index_uri)
+        self._index = read_vector_u64(self.ctx, self.index_array_uri)
 
         # TODO pass in a context
         if self.memory_budget == -1:
