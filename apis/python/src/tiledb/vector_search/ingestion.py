@@ -88,6 +88,7 @@ def ingest(
     PARTIAL_WRITE_ARRAY_DIR = storage_formats[STORAGE_VERSION][
         "PARTIAL_WRITE_ARRAY_DIR"
     ]
+    DEFAULT_ATTR_FILTERS = storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"]
     VECTORS_PER_WORK_ITEM = 20000000
     MAX_TASKS_PER_STAGE = 100
     CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 1000000
@@ -214,7 +215,9 @@ def ingest(
                 parts_array_dom = tiledb.Domain(
                     parts_array_rows_dim, parts_array_cols_dim
                 )
-                parts_attr = tiledb.Attr(name="values", dtype=vector_type)
+                parts_attr = tiledb.Attr(
+                    name="values", dtype=vector_type, filters=DEFAULT_ATTR_FILTERS
+                )
                 parts_schema = tiledb.ArraySchema(
                     domain=parts_array_dom,
                     sparse=False,
@@ -261,7 +264,9 @@ def ingest(
                     centroids_array_rows_dim, centroids_array_cols_dim
                 )
                 centroids_attr = tiledb.Attr(
-                    name="centroids", dtype=np.dtype(np.float32)
+                    name="centroids",
+                    dtype=np.dtype(np.float32),
+                    filters=DEFAULT_ATTR_FILTERS,
                 )
                 centroids_schema = tiledb.ArraySchema(
                     domain=centroids_array_dom,
@@ -284,7 +289,11 @@ def ingest(
                     dtype=np.dtype(np.int32),
                 )
                 index_array_dom = tiledb.Domain(index_array_rows_dim)
-                index_attr = tiledb.Attr(name="values", dtype=np.dtype(np.uint64))
+                index_attr = tiledb.Attr(
+                    name="values",
+                    dtype=np.dtype(np.uint64),
+                    filters=DEFAULT_ATTR_FILTERS,
+                )
                 index_schema = tiledb.ArraySchema(
                     domain=index_array_dom,
                     sparse=False,
@@ -306,7 +315,11 @@ def ingest(
                     dtype=np.dtype(np.int32),
                 )
                 ids_array_dom = tiledb.Domain(ids_array_rows_dim)
-                ids_attr = tiledb.Attr(name="values", dtype=np.dtype(np.uint64))
+                ids_attr = tiledb.Attr(
+                    name="values",
+                    dtype=np.dtype(np.uint64),
+                    filters=DEFAULT_ATTR_FILTERS,
+                )
                 ids_schema = tiledb.ArraySchema(
                     domain=ids_array_dom,
                     sparse=False,
@@ -336,7 +349,9 @@ def ingest(
                 parts_array_dom = tiledb.Domain(
                     parts_array_rows_dim, parts_array_cols_dim
                 )
-                parts_attr = tiledb.Attr(name="values", dtype=vector_type)
+                parts_attr = tiledb.Attr(
+                    name="values", dtype=vector_type, filters=DEFAULT_ATTR_FILTERS
+                )
                 parts_schema = tiledb.ArraySchema(
                     domain=parts_array_dom,
                     sparse=False,
@@ -386,7 +401,11 @@ def ingest(
                     dtype=np.dtype(np.int32),
                 )
                 ids_array_dom = tiledb.Domain(ids_array_rows_dim)
-                ids_attr = tiledb.Attr(name="values", dtype=np.dtype(np.uint64))
+                ids_attr = tiledb.Attr(
+                    name="values",
+                    dtype=np.dtype(np.uint64),
+                    filters=DEFAULT_ATTR_FILTERS,
+                )
                 ids_schema = tiledb.ArraySchema(
                     domain=ids_array_dom,
                     sparse=False,
@@ -418,7 +437,9 @@ def ingest(
                 parts_array_dom = tiledb.Domain(
                     parts_array_rows_dim, parts_array_cols_dim
                 )
-                parts_attr = tiledb.Attr(name="values", dtype=vector_type)
+                parts_attr = tiledb.Attr(
+                    name="values", dtype=vector_type, filters=DEFAULT_ATTR_FILTERS
+                )
                 parts_schema = tiledb.ArraySchema(
                     domain=parts_array_dom,
                     sparse=False,
@@ -445,7 +466,11 @@ def ingest(
                         dtype=np.dtype(np.int32),
                     )
                     index_array_dom = tiledb.Domain(index_array_rows_dim)
-                    index_attr = tiledb.Attr(name="values", dtype=np.dtype(np.uint64))
+                    index_attr = tiledb.Attr(
+                        name="values",
+                        dtype=np.dtype(np.uint64),
+                        filters=DEFAULT_ATTR_FILTERS,
+                    )
                     index_schema = tiledb.ArraySchema(
                         domain=index_array_dom,
                         sparse=False,
