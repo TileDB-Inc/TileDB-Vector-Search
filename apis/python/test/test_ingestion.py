@@ -199,3 +199,50 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
 
     result = index_ram.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+
+def test_ivf_flat_ingestion_numpy(tmp_path):
+    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
+    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
+    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    array_uri = os.path.join(tmp_path, "array")
+    k = 100
+    dimensions = 128
+    partitions = 100
+    nqueries = 100
+    nprobe = 20
+
+    input_vectors = get_vectors_fvec(source_uri)
+
+    query_vectors = get_queries_fvec(
+        queries_uri, dimensions=dimensions, nqueries=nqueries
+    )
+    gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
+
+    index = ingest(
+        index_type="IVF_FLAT",
+        array_uri=array_uri,
+        input_vectors=input_vectors,
+        partitions=partitions,
+    )
+    result = index.query(query_vectors, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    # Test single query vector handling
+    result1 = index.query(query_vectors[10], k=k, nprobe=nprobe)
+    assert accuracy(result1, np.array([gt_i[10]])) > MINIMUM_ACCURACY
+
+    index_ram = IVFFlatIndex(uri=array_uri)
+    result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    result = index_ram.query(
+        query_vectors,
+        k=k,
+        nprobe=nprobe,
+        use_nuv_implementation=True,
+    )
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    result = index_ram.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY

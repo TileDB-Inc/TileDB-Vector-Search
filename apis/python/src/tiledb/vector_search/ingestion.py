@@ -3,14 +3,16 @@ from functools import partial
 
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search.index import FlatIndex, IVFFlatIndex, Index
+import numpy as np
 
 
 def ingest(
     index_type: str,
     array_uri: str,
-    source_uri: str,
-    source_type: str,
     *,
+    input_vectors: np.array = None,
+    source_uri: str = None,
+    source_type: str = None,
     config=None,
     namespace: Optional[str] = None,
     size: int = -1,
@@ -32,6 +34,8 @@ def ingest(
         Type of vector index (FLAT, IVF_FLAT)
     array_uri: str
         Vector array URI
+    input_vectors: numpy Array
+        Input vectors, if this is provided it takes precedence over source_uri and source_type.
     source_uri: str
         Data source URI
     source_type: str
@@ -85,6 +89,9 @@ def ingest(
     INDEX_ARRAY_NAME = storage_formats[STORAGE_VERSION]["INDEX_ARRAY_NAME"]
     IDS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["IDS_ARRAY_NAME"]
     PARTS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["PARTS_ARRAY_NAME"]
+    INPUT_VECTORS_ARRAY_NAME = storage_formats[STORAGE_VERSION][
+        "INPUT_VECTORS_ARRAY_NAME"
+    ]
     PARTIAL_WRITE_ARRAY_DIR = storage_formats[STORAGE_VERSION][
         "PARTIAL_WRITE_ARRAY_DIR"
     ]
@@ -184,6 +191,51 @@ def ingest(
                 return size, dimensions, np.uint8
         else:
             raise ValueError(f"Not supported source_type {source_type}")
+
+    def write_input_vectors(
+        group: tiledb.Group,
+        input_vectors: np.array,
+        size: int,
+        dimensions: int,
+        vector_type: np.dtype,
+    ) -> str:
+        input_vectors_array_uri = f"{group.uri}/{INPUT_VECTORS_ARRAY_NAME}"
+        if tiledb.array_exists(input_vectors_array_uri):
+            raise ValueError(f"Array exists {input_vectors_array_uri}")
+
+        logger.debug("Creating input vectors array")
+        input_vectors_array_rows_dim = tiledb.Dim(
+            name="rows",
+            domain=(0, dimensions - 1),
+            tile=dimensions,
+            dtype=np.dtype(np.int32),
+        )
+        input_vectors_array_cols_dim = tiledb.Dim(
+            name="cols",
+            domain=(0, size - 1),
+            tile=int(size / partitions),
+            dtype=np.dtype(np.int32),
+        )
+        input_vectors_array_dom = tiledb.Domain(
+            input_vectors_array_rows_dim, input_vectors_array_cols_dim
+        )
+        input_vectors_array_attr = tiledb.Attr(name="values", dtype=vector_type)
+        input_vectors_array_schema = tiledb.ArraySchema(
+            domain=input_vectors_array_dom,
+            sparse=False,
+            attrs=[input_vectors_array_attr],
+            cell_order="col-major",
+            tile_order="col-major",
+        )
+        logger.debug(input_vectors_array_schema)
+        tiledb.Array.create(input_vectors_array_uri, input_vectors_array_schema)
+        group.add(input_vectors_array_uri, name=INPUT_VECTORS_ARRAY_NAME)
+
+        input_vectors_array = tiledb.open(input_vectors_array_uri, "w")
+        input_vectors_array[:, :] = np.transpose(input_vectors)
+        input_vectors_array.close()
+
+        return input_vectors_array_uri
 
     def create_arrays(
         group: tiledb.Group,
@@ -1351,12 +1403,14 @@ def ingest(
         array_uri: str,
         config: Optional[Mapping[str, Any]] = None,
     ):
+        group = tiledb.Group(array_uri, config=config)
+        if INPUT_VECTORS_ARRAY_NAME in group:
+            tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
         modes = ["fragment_meta", "commits", "array_meta"]
         for mode in modes:
             conf = tiledb.Config(config)
             conf["sm.consolidation.mode"] = mode
             conf["sm.vacuum.mode"] = mode
-            group = tiledb.Group(array_uri, config=conf)
             tiledb.consolidate(group[PARTS_ARRAY_NAME].uri, config=conf)
             tiledb.vacuum(group[PARTS_ARRAY_NAME].uri, config=conf)
             if index_type == "IVF_FLAT":
@@ -1382,9 +1436,22 @@ def ingest(
             raise err
         group = tiledb.Group(array_uri, "w")
 
-        in_size, dimensions, vector_type = read_source_metadata(
-            source_uri=source_uri, source_type=source_type, logger=logger
-        )
+        if input_vectors is not None:
+            in_size = input_vectors.shape[0]
+            dimensions = input_vectors.shape[1]
+            vector_type = input_vectors.dtype
+            source_uri = write_input_vectors(
+                group=group,
+                input_vectors=input_vectors,
+                size=in_size,
+                dimensions=dimensions,
+                vector_type=vector_type,
+            )
+            source_type = "TILEDB_ARRAY"
+        else:
+            in_size, dimensions, vector_type = read_source_metadata(
+                source_uri=source_uri, source_type=source_type, logger=logger
+            )
         if size == -1:
             size = in_size
         if size > in_size:

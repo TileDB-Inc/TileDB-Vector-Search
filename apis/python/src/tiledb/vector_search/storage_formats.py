@@ -4,6 +4,7 @@ storage_formats = {
         "INDEX_ARRAY_NAME": "index.tdb",
         "IDS_ARRAY_NAME": "ids.tdb",
         "PARTS_ARRAY_NAME": "parts.tdb",
+        "INPUT_VECTORS_ARRAY_NAME": "input_vectors",
         "PARTIAL_WRITE_ARRAY_DIR": "write_temp",
     },
     "0.2": {
@@ -11,6 +12,7 @@ storage_formats = {
         "INDEX_ARRAY_NAME": "partition_indexes",
         "IDS_ARRAY_NAME": "shuffled_vector_ids",
         "PARTS_ARRAY_NAME": "shuffled_vectors",
+        "INPUT_VECTORS_ARRAY_NAME": "input_vectors",
         "PARTIAL_WRITE_ARRAY_DIR": "temp_data",
     },
 }
