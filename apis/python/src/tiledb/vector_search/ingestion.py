@@ -220,7 +220,7 @@ def ingest(
         input_vectors_array_dom = tiledb.Domain(
             input_vectors_array_rows_dim, input_vectors_array_cols_dim
         )
-        input_vectors_array_attr = tiledb.Attr(name="values", dtype=vector_type)
+        input_vectors_array_attr = tiledb.Attr(name="values", dtype=vector_type, filters=DEFAULT_ATTR_FILTERS)
         input_vectors_array_schema = tiledb.ArraySchema(
             domain=input_vectors_array_dom,
             sparse=False,
