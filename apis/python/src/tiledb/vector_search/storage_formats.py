@@ -1,3 +1,5 @@
+import tiledb
+
 storage_formats = {
     "0.1": {
         "CENTROIDS_ARRAY_NAME": "centroids.tdb",
@@ -6,6 +8,7 @@ storage_formats = {
         "PARTS_ARRAY_NAME": "parts.tdb",
         "INPUT_VECTORS_ARRAY_NAME": "input_vectors",
         "PARTIAL_WRITE_ARRAY_DIR": "write_temp",
+        "DEFAULT_ATTR_FILTERS": None,
     },
     "0.2": {
         "CENTROIDS_ARRAY_NAME": "partition_centroids",
@@ -14,6 +17,7 @@ storage_formats = {
         "PARTS_ARRAY_NAME": "shuffled_vectors",
         "INPUT_VECTORS_ARRAY_NAME": "input_vectors",
         "PARTIAL_WRITE_ARRAY_DIR": "temp_data",
+        "DEFAULT_ATTR_FILTERS": tiledb.FilterList([tiledb.ZstdFilter()]),
     },
 }
 
