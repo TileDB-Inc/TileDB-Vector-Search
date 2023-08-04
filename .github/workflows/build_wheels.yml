@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - release-*
-      - refs/tags/*
+    tags:
+      - '*'
   pull_request:
     branches:
       - '*wheel*'  # must quote since "*" is a YAML reserved character; we want a string
