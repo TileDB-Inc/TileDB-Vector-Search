@@ -346,7 +346,7 @@ class IVFFlatIndex(Index):
                 mode=Mode.BATCH,
                 max_workers=num_workers,
             )
-        if mode == Mode.REALTIME:
+        elif mode == Mode.REALTIME:
             d = dag.DAG(
                 name="vector-query",
                 mode=Mode.REALTIME,
