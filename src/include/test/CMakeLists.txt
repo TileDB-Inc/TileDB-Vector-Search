@@ -63,9 +63,13 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 
 kmeans_add_test(unit_algorithm)
 
+kmeans_add_test(unit_api)
+
 kmeans_add_test(unit_concepts)
 
 kmeans_add_test(unit_defs)
+
+kmeans_add_test(unit_feature_vector)
 
 kmeans_add_test(unit_ivf_index)
 
@@ -87,6 +91,8 @@ kmeans_add_test(unit_slicing)
 kmeans_add_test(unit_stats)
 
 kmeans_add_test(unit_utils)
+
+kmeans_add_test(unit_vector)
 
 if (TILEDB_VS_ENABLE_BLAS)
   kmeans_add_test(unit_queries)

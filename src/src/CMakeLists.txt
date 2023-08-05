@@ -134,7 +134,7 @@ endif()
 
 
 #---[ Demos ]------------------------------------------------------------
-if (TILEDB_VS_ENABLE_BLAS)
+if (TILEDB_VS_ENABLE_BLAS OR TRUE)
   # requires BLAS
   add_executable(flat_l2 flat_l2.cc)
   target_link_libraries(flat_l2 PUBLIC kmeans_lib nlohmann_json::nlohmann_json)

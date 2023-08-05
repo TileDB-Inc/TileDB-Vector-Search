@@ -95,9 +95,10 @@ void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthrea
       CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, C.data(), M);
 
   stdx::execution::parallel_policy par{nthreads};
-//  stdx::for_each(std::move(par), begin(raveled_C), end(raveled_C), [](auto& a) {
-//    a = sqrt(a);
-//  });
+  //  stdx::for_each(std::move(par), begin(raveled_C), end(raveled_C), [](auto&
+  //  a) {
+  //    a = sqrt(a);
+  //  });
 }
 
 template <class Matrix1, class Matrix2, class Matrix3>

@@ -90,10 +90,11 @@ class StatsCollectionScope final {
       return;
     std::string stats_str;
     tiledb::Stats::raw_dump(&stats_str);
-    core_stats.push_back({{"uri", uri_},
-                          {"function", function_},
-                          {"operation_type", operation_type_},
-                          {"stats", json::parse(stats_str)}});
+    core_stats.push_back(
+        {{"uri", uri_},
+         {"function", function_},
+         {"operation_type", operation_type_},
+         {"stats", json::parse(stats_str)}});
 #endif
   }
 

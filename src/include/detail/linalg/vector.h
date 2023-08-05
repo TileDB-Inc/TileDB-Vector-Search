@@ -27,35 +27,19 @@
  *
  * @section DESCRIPTION
  *
- * Simple vector class, basically a span that owns it data.
- *
- * @todo Migrate from std::vector to this class.
- *
  */
 
-#ifndef VECTOR_H
-#define VECTOR_H
+#ifndef TILEDB_VECTOR_H
+#define TILEDB_VECTOR_H
 
+#include <initializer_list>
+#include <memory>
 #include <span>
-#include <tiledb/tiledb>
-#include <vector>
-
-template <class T>
-std::vector<T> read_vector(const tiledb::Context& ctx, const std::string&);
-
-template <class M>
-concept is_view = requires(M) {
-  typename M::view_type;
-};
-
-template <class T>
-using VectorView = std::span<T>;
 
 /**
- * @brief A 1-D vector class that owns its storage.
+ * @brief A 1-D vector class that owns its storage.  Unlike std::vector, this
+ * class does not initialize its data.
  * @tparam T
- *
- * @todo More verification.  Replace uses of std::vector with this class.
  */
 template <class T>
 class Vector : public std::span<T> {
@@ -63,6 +47,7 @@ class Vector : public std::span<T> {
   using Base::Base;
 
  public:
+  using value_type = typename Base::value_type;
   using index_type = typename Base::difference_type;
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
@@ -72,6 +57,7 @@ class Vector : public std::span<T> {
   std::unique_ptr<T[]> storage_;
 
  public:
+  // @todo use make_unique_for_overwrite
   explicit Vector(index_type nrows) noexcept
       : nrows_(nrows)
       , storage_{new T[nrows_]} {
@@ -84,23 +70,51 @@ class Vector : public std::span<T> {
     Base::operator=(Base{storage_.get(), nrows_});
   }
 
+  Vector(std::initializer_list<T> lst)
+      : nrows_(lst.size())
+      , storage_{new T[nrows_]} {
+    Base::operator=(Base{storage_.get(), nrows_});
+    std::copy(lst.begin(), lst.end(), storage_.get());
+  }
+
   Vector(Vector&& rhs) noexcept
       : nrows_{rhs.nrows_}
       , storage_{std::move(rhs.storage_)} {
+    rhs.nrows_ = 0;
+    *static_cast<Base*>(&rhs) = Base{rhs.storage_.get(), 0};
     Base::operator=(Base{storage_.get(), nrows_});
   }
 
-  constexpr reference operator()(size_type idx) const noexcept {
+  Vector& operator=(Vector&& rhs) noexcept {
+    nrows_ = rhs.nrows_;
+    storage_ = std::move(rhs.storage_);
+    Base::operator=(Base{storage_.get(), nrows_});
+    return *this;
+  }
+
+  constexpr reference operator()(index_type idx) noexcept {
     return Base::operator[](idx);
   }
 
-  Vector& operator=(const VectorView<T>& rhs) {
-    std::copy(rhs.begin(), rhs.end(), this->begin());
-    return *this;
+  constexpr reference operator()(index_type idx) const noexcept {
+    return Base::operator[](idx);
+  }
+
+  constexpr reference operator[](index_type idx) noexcept {
+    return Base::operator[](idx);
+  }
+
+  constexpr reference operator[](index_type idx) const noexcept {
+    return Base::operator[](idx);
   }
 
   constexpr size_type num_rows() const noexcept {
     return nrows_;
   }
+
+  constexpr auto data() const {
+    return storage_.get();
+  }
 };
-#endif
+
+#endif  // TILEDB_VECTOR_H

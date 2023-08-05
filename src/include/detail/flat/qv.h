@@ -40,8 +40,8 @@
 #include "algorithm.h"
 #include "concepts.h"
 #include "linalg.h"
-#include "utils/timer.h"
 #include "utils/fixed_min_queues.h"
+#include "utils/timer.h"
 
 namespace detail::flat {
 
