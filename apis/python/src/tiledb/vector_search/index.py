@@ -154,14 +154,18 @@ class IVFFlatIndex(Index):
 
         dtype = group.meta.get("dtype", None)
         if dtype is None:
-            schema = tiledb.ArraySchema.load(self.parts_db_uri, ctx=tiledb.Ctx(self.config))
+            schema = tiledb.ArraySchema.load(
+                self.parts_db_uri, ctx=tiledb.Ctx(self.config)
+            )
             self.dtype = np.dtype(schema.attr("values").dtype)
         else:
             self.dtype = np.dtype(dtype)
 
         self.partitions = group.meta.get("partitions", -1)
         if self.partitions == -1:
-            schema = tiledb.ArraySchema.load(self.centroids_uri, ctx=tiledb.Ctx(self.config))
+            schema = tiledb.ArraySchema.load(
+                self.centroids_uri, ctx=tiledb.Ctx(self.config)
+            )
             self.partitions = schema.domain.dim("cols").domain[1] + 1
 
     def query(

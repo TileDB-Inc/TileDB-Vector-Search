@@ -11,28 +11,6 @@ def xbin_mmap(fname, dtype):
     return np.memmap(fname, dtype=dtype, mode="r", offset=8, shape=(n, d))
 
 
-def get_queries_fvec(file, dimensions, nqueries=None):
-    vfs = tiledb.VFS()
-    vector_values = 1 + dimensions
-    vector_size = vector_values * 4
-    read_size = nqueries
-    read_offset = 0
-    with vfs.open(file, "rb") as f:
-        f.seek(read_offset)
-        return np.delete(
-            np.reshape(
-                np.frombuffer(
-                    f.read(read_size * vector_size),
-                    count=read_size * vector_values,
-                    dtype=np.float32,
-                ).astype(np.float32),
-                (read_size, dimensions + 1),
-            ),
-            0,
-            axis=1,
-        )
-
-
 def get_groundtruth_ivec(file, k=None, nqueries=None):
     vfs = tiledb.VFS()
     vector_values = 1 + k
@@ -104,7 +82,7 @@ def create_random_dataset_f32(nb, d, nq, k, path):
         X, test_size=nq, random_state=1
     )
 
-    with open(os.path.join(path, "data"), "wb") as f:
+    with open(os.path.join(path, "data.f32bin"), "wb") as f:
         np.array([nb, d], dtype="uint32").tofile(f)
         data.astype("float32").tofile(f)
     with open(os.path.join(path, "queries"), "wb") as f:
@@ -138,7 +116,7 @@ def create_random_dataset_u8(nb, d, nq, k, path):
     data = data.astype("uint8")
     queries = queries.astype("uint8")
 
-    with open(os.path.join(path, "data"), "wb") as f:
+    with open(os.path.join(path, "data.u8bin"), "wb") as f:
         np.array([nb, d], dtype="uint32").tofile(f)
         data.tofile(f)
     with open(os.path.join(path, "queries"), "wb") as f:
