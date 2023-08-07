@@ -1,5 +1,6 @@
 from common import *
 
+from tiledb.vector_search.utils import load_fvecs
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.index import FlatIndex, IVFFlatIndex
 from tiledb.cloud.dag import Mode
@@ -14,7 +15,6 @@ def test_flat_ingestion_u8(tmp_path, query_type):
     dataset_dir = os.path.join(tmp_path, "dataset")
     array_uri = os.path.join(tmp_path, "array")
     create_random_dataset_u8(nb=10000, d=100, nq=100, k=10, path=dataset_dir)
-    source_type = "U8BIN"
     dtype = np.uint8
     k = 10
 
@@ -24,8 +24,7 @@ def test_flat_ingestion_u8(tmp_path, query_type):
     index = ingest(
         index_type="FLAT",
         array_uri=array_uri,
-        source_uri=os.path.join(dataset_dir, "data"),
-        source_type=source_type,
+        source_uri=os.path.join(dataset_dir, "data.u8bin"),
     )
     result = index.query(query_vectors, k=k, query_type=query_type)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
@@ -36,7 +35,6 @@ def test_flat_ingestion_f32(tmp_path, query_type):
     dataset_dir = os.path.join(tmp_path, "dataset")
     array_uri = os.path.join(tmp_path, "array")
     create_random_dataset_f32(nb=10000, d=100, nq=100, k=10, path=dataset_dir)
-    source_type = "F32BIN"
     dtype = np.float32
     k = 10
 
@@ -46,8 +44,7 @@ def test_flat_ingestion_f32(tmp_path, query_type):
     index = ingest(
         index_type="FLAT",
         array_uri=array_uri,
-        source_uri=os.path.join(dataset_dir, "data"),
-        source_type=source_type,
+        source_uri=os.path.join(dataset_dir, "data.f32bin"),
     )
     result = index.query(query_vectors, k=k, query_type=query_type)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
@@ -67,7 +64,6 @@ def test_ivf_flat_ingestion_u8(tmp_path):
     nqueries = 100
     nprobe = 20
     create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
-    source_type = "U8BIN"
     dtype = np.uint8
 
     query_vectors = get_queries(dataset_dir, dtype=dtype)
@@ -75,8 +71,7 @@ def test_ivf_flat_ingestion_u8(tmp_path):
     index = ingest(
         index_type="IVF_FLAT",
         array_uri=array_uri,
-        source_uri=os.path.join(dataset_dir, "data"),
-        source_type=source_type,
+        source_uri=os.path.join(dataset_dir, "data.u8bin"),
         partitions=partitions,
         input_vectors_per_work_item=int(size / 10),
     )
@@ -115,7 +110,6 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     nprobe = 20
 
     create_random_dataset_f32(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
-    source_type = "F32BIN"
     dtype = np.float32
 
     query_vectors = get_queries(dataset_dir, dtype=dtype)
@@ -124,8 +118,7 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     index = ingest(
         index_type="IVF_FLAT",
         array_uri=array_uri,
-        source_uri=os.path.join(dataset_dir, "data"),
-        source_type=source_type,
+        source_uri=os.path.join(dataset_dir, "data.f32bin"),
         partitions=partitions,
         input_vectors_per_work_item=int(size / 10),
     )
@@ -157,25 +150,19 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
     queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
     gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
-    source_type = "FVEC"
-    dtype = np.float32
     array_uri = os.path.join(tmp_path, "array")
     k = 100
-    dimensions = 128
     partitions = 100
     nqueries = 100
     nprobe = 20
 
-    query_vectors = get_queries_fvec(
-        queries_uri, dimensions=dimensions, nqueries=nqueries
-    )
+    query_vectors = load_fvecs(queries_uri)
     gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
     index = ingest(
         index_type="IVF_FLAT",
         array_uri=array_uri,
         source_uri=source_uri,
-        source_type=source_type,
         partitions=partitions,
     )
     result = index.query(query_vectors, k=k, nprobe=nprobe)
@@ -207,16 +194,13 @@ def test_ivf_flat_ingestion_numpy(tmp_path):
     gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
     array_uri = os.path.join(tmp_path, "array")
     k = 100
-    dimensions = 128
     partitions = 100
     nqueries = 100
     nprobe = 20
 
-    input_vectors = get_vectors_fvec(source_uri)
+    input_vectors = load_fvecs(source_uri)
 
-    query_vectors = get_queries_fvec(
-        queries_uri, dimensions=dimensions, nqueries=nqueries
-    )
+    query_vectors = load_fvecs(queries_uri)
     gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
     index = ingest(

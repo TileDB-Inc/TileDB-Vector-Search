@@ -39,7 +39,7 @@ def ingest(
     source_uri: str
         Data source URI
     source_type: str
-        Type of the source data
+        Type of the source data. If left empty it is auto-detected from the suffix of source_uri
     config: None
         config dictionary, defaults to None
     namespace: str
@@ -143,8 +143,23 @@ def ingest(
 
         return logger
 
+    def autodetect_source_type(source_uri: str) -> str:
+        if source_uri.endswith(".u8bin"):
+            return "U8BIN"
+        elif source_uri.endswith(".f32bin"):
+            return "F32BIN"
+        elif source_uri.endswith(".fvecs"):
+            return "FVEC"
+        elif source_uri.endswith(".ivecs"):
+            return "IVEC"
+        elif source_uri.endswith(".bvecs"):
+            return "BVEC"
+        else:
+            return "TILEDB_ARRAY"
+
+
     def read_source_metadata(
-        source_uri: str, source_type: str, logger: logging.Logger
+        source_uri: str, source_type: str = None
     ) -> Tuple[int, int, np.dtype]:
         if source_type == "TILEDB_ARRAY":
             schema = tiledb.ArraySchema.load(source_uri)
@@ -220,7 +235,9 @@ def ingest(
         input_vectors_array_dom = tiledb.Domain(
             input_vectors_array_rows_dim, input_vectors_array_cols_dim
         )
-        input_vectors_array_attr = tiledb.Attr(name="values", dtype=vector_type, filters=DEFAULT_ATTR_FILTERS)
+        input_vectors_array_attr = tiledb.Attr(
+            name="values", dtype=vector_type, filters=DEFAULT_ATTR_FILTERS
+        )
         input_vectors_array_schema = tiledb.ArraySchema(
             domain=input_vectors_array_dom,
             sparse=False,
@@ -1474,8 +1491,10 @@ def ingest(
             )
             source_type = "TILEDB_ARRAY"
         else:
+            if source_type is None:
+                source_type = autodetect_source_type(source_uri=source_uri)
             in_size, dimensions, vector_type = read_source_metadata(
-                source_uri=source_uri, source_type=source_type, logger=logger
+                source_uri=source_uri, source_type=source_type
             )
         if size == -1:
             size = in_size
