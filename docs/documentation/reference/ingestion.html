@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.3.433">
+<meta name="generator" content="quarto-1.3.450">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -202,7 +202,7 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="tiledb.vector_search.ingestion.ingest" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.ingestion.ingest">ingest</h3>
-<p><code>vector_search.ingestion.ingest(index_type, index_uri, source_uri, source_type, *, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, input_vectors_per_work_item=-1, verbose=False, trace_id=None, mode=Mode.LOCAL)</code></p>
+<p><code>vector_search.ingestion.ingest(index_type, index_uri, *, input_vectors=None, source_uri=None, source_type=None, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, input_vectors_per_work_item=-1, verbose=False, trace_id=None, mode=Mode.LOCAL)</code></p>
 <p>Ingest vectors into TileDB.</p>
 <section id="parameters" class="level4">
 <h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
@@ -235,78 +235,84 @@ ul.task-list li input[type="checkbox"] {
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
+<td><code>input_vectors</code></td>
+<td>numpy.ndarray</td>
+<td>Input vectors, if this is provided it takes precedence over source_uri and source_type.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
 <td><code>source_uri</code></td>
 <td>str</td>
 <td>Data source URI</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>source_type</code></td>
-<td>str</td>
-<td>Type of the source data</td>
-<td><em>required</em></td>
+<td><code>None</code></td>
 </tr>
 <tr class="odd">
+<td><code>source_type</code></td>
+<td>str</td>
+<td>Type of the source data. If left empty it is auto-detected from the suffix of source_uri</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
 <td><code>config</code></td>
 <td></td>
 <td>config dictionary, defaults to None</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>namespace</code></td>
 <td>typing.Optional[str]</td>
 <td>TileDB-Cloud namespace, defaults to None</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>size</code></td>
 <td>int</td>
 <td>Number of input vectors, if not provided use the full size of the input dataset</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>partitions</code></td>
 <td>int</td>
 <td>Number of partitions to load the data with, if not provided, is auto-configured based on the dataset size</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>copy_centroids_uri</code></td>
 <td>str</td>
 <td>TileDB array URI to copy centroids from, if not provided, centroids are build running kmeans</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>training_sample_size</code></td>
 <td>int</td>
 <td>vector sample size to train centroids with, if not provided, is auto-configured based on the dataset size</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>workers</code></td>
 <td>int</td>
 <td>number of workers for vector ingestion, if not provided, is auto-configured based on the dataset size</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>input_vectors_per_work_item</code></td>
 <td>int</td>
 <td>number of vectors per ingestion work item, if not provided, is auto-configured</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>verbose</code></td>
 <td>bool</td>
 <td>verbose logging, defaults to False</td>
 <td><code>False</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>trace_id</code></td>
 <td>typing.Optional[str]</td>
 <td>trace ID for logging, defaults to None</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>mode</code></td>
 <td>Mode</td>
 <td>execution mode, defaults to LOCAL use BATCH for distributed execution</td>
