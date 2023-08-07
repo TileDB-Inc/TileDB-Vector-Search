@@ -10,7 +10,7 @@ def ingest(
     index_type: str,
     array_uri: str,
     *,
-    input_vectors: np.array = None,
+    input_vectors: np.ndarray = None,
     source_uri: str = None,
     source_type: str = None,
     config=None,
@@ -157,7 +157,6 @@ def ingest(
         else:
             return "TILEDB_ARRAY"
 
-
     def read_source_metadata(
         source_uri: str, source_type: str = None
     ) -> Tuple[int, int, np.dtype]:
@@ -210,7 +209,7 @@ def ingest(
 
     def write_input_vectors(
         group: tiledb.Group,
-        input_vectors: np.array,
+        input_vectors: np.ndarray,
         size: int,
         dimensions: int,
         vector_type: np.dtype,
@@ -567,7 +566,7 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
-    ) -> np.array:
+    ) -> np.ndarray:
         logger = setup(config, verbose)
         logger.debug(
             "Reading input vectors start_pos: %i, end_pos: %i", start_pos, end_pos
@@ -735,7 +734,7 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
-    ) -> np.array:
+    ) -> np.ndarray:
         logger = setup(config, verbose)
         logger.debug(
             "Initialising centroids by reading the first vectors in the source data."
@@ -754,7 +753,7 @@ def ingest(
             )
 
     def assign_points_and_partial_new_centroids(
-        centroids: np.array,
+        centroids: np.ndarray,
         source_uri: str,
         source_type: str,
         vector_type: np.dtype,
@@ -925,7 +924,7 @@ def ingest(
             target.close()
 
     def write_centroids(
-        centroids: np.array,
+        centroids: np.ndarray,
         array_uri: str,
         partitions: int,
         dimensions: int,

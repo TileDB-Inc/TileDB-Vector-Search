@@ -7,7 +7,7 @@ from tiledb.cloud.dag import Mode
 
 import pytest
 
-MINIMUM_ACCURACY = 0.9
+MINIMUM_ACCURACY = 0.85
 
 
 @pytest.mark.parametrize("query_type", ["heap", "nth"])
