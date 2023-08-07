@@ -8,7 +8,7 @@ import numpy as np
 
 def ingest(
     index_type: str,
-    array_uri: str,
+    index_uri: str,
     *,
     input_vectors: np.ndarray = None,
     source_uri: str = None,
@@ -32,8 +32,8 @@ def ingest(
     ----------
     index_type: str
         Type of vector index (FLAT, IVF_FLAT)
-    array_uri: str
-        Vector array URI
+    index_uri: str
+        Vector index URI (stored as TileDB group)
     input_vectors: numpy Array
         Input vectors, if this is provided it takes precedence over source_uri and source_type.
     source_uri: str
@@ -84,6 +84,9 @@ def ingest(
     from tiledb.cloud.utilities import get_logger
     from tiledb.cloud.utilities import set_aws_context
     from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSION
+
+    # use index_group_uri for internal clarity
+    index_group_uri = index_uri
 
     CENTROIDS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["CENTROIDS_ARRAY_NAME"]
     INDEX_ARRAY_NAME = storage_formats[STORAGE_VERSION]["INDEX_ARRAY_NAME"]
@@ -300,7 +303,7 @@ def ingest(
 
         elif index_type == "IVF_FLAT":
             centroids_uri = f"{group.uri}/{CENTROIDS_ARRAY_NAME}"
-            index_uri = f"{group.uri}/{INDEX_ARRAY_NAME}"
+            index_array_uri = f"{group.uri}/{INDEX_ARRAY_NAME}"
             ids_uri = f"{group.uri}/{IDS_ARRAY_NAME}"
             parts_uri = f"{group.uri}/{PARTS_ARRAY_NAME}"
             partial_write_array_dir_uri = f"{group.uri}/{PARTIAL_WRITE_ARRAY_DIR}"
@@ -348,7 +351,7 @@ def ingest(
                 tiledb.Array.create(centroids_uri, centroids_schema)
                 group.add(centroids_uri, name=CENTROIDS_ARRAY_NAME)
 
-            if not tiledb.array_exists(index_uri):
+            if not tiledb.array_exists(index_array_uri):
                 logger.debug("Creating index array")
                 index_array_rows_dim = tiledb.Dim(
                     name="rows",
@@ -371,8 +374,8 @@ def ingest(
                     tile_order="col-major",
                 )
                 logger.debug(index_schema)
-                tiledb.Array.create(index_uri, index_schema)
-                group.add(index_uri, name=INDEX_ARRAY_NAME)
+                tiledb.Array.create(index_array_uri, index_schema)
+                group.add(index_array_uri, name=INDEX_ARRAY_NAME)
 
             if not tiledb.array_exists(ids_uri):
                 logger.debug("Creating ids array")
@@ -650,14 +653,14 @@ def ingest(
     # --------------------------------------------------------------------
 
     def copy_centroids(
-        array_uri: str,
+        index_group_uri: str,
         copy_centroids_uri: str,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
         logger = setup(config, verbose)
-        group = tiledb.Group(array_uri)
+        group = tiledb.Group(index_group_uri)
         centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
         logger.debug(
             "Copying centroids from: %s, to: %s", copy_centroids_uri, centroids_uri
@@ -672,7 +675,7 @@ def ingest(
     # centralised kmeans UDFs
     # --------------------------------------------------------------------
     def centralised_kmeans(
-        array_uri: str,
+        index_group_uri: str,
         source_uri: str,
         source_type: str,
         vector_type: np.dtype,
@@ -691,7 +694,7 @@ def ingest(
 
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
-            group = tiledb.Group(array_uri)
+            group = tiledb.Group(index_group_uri)
             centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
             sample_vectors = read_input_vectors(
                 source_uri=source_uri,
@@ -879,7 +882,7 @@ def ingest(
         return np.mean(argv, axis=0).astype(np.float32)
 
     def ingest_flat(
-        array_uri: str,
+        index_group_uri: str,
         source_uri: str,
         source_type: str,
         vector_type: np.dtype,
@@ -897,7 +900,7 @@ def ingest(
 
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
-            group = tiledb.Group(array_uri)
+            group = tiledb.Group(index_group_uri)
             parts_array_uri = group[PARTS_ARRAY_NAME].uri
             target = tiledb.open(parts_array_uri, mode="w")
             logger.debug("Input vectors start_pos: %d, end_pos: %d", start, end)
@@ -925,7 +928,7 @@ def ingest(
 
     def write_centroids(
         centroids: np.ndarray,
-        array_uri: str,
+        index_group_uri: str,
         partitions: int,
         dimensions: int,
         config: Optional[Mapping[str, Any]] = None,
@@ -934,7 +937,7 @@ def ingest(
     ):
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
-            group = tiledb.Group(array_uri)
+            group = tiledb.Group(index_group_uri)
             centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w") as A:
@@ -944,7 +947,7 @@ def ingest(
     # vector ingestion UDFs
     # --------------------------------------------------------------------
     def ingest_vectors_udf(
-        array_uri: str,
+        index_group_uri: str,
         source_uri: str,
         source_type: str,
         vector_type: np.dtype,
@@ -966,7 +969,7 @@ def ingest(
         )
 
         logger = setup(config, verbose)
-        group = tiledb.Group(array_uri)
+        group = tiledb.Group(index_uri)
         centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
         partial_write_array_dir_uri = group[PARTIAL_WRITE_ARRAY_DIR].uri
         partial_write_array_group = tiledb.Group(partial_write_array_dir_uri)
@@ -997,7 +1000,7 @@ def ingest(
                     db_uri=source_uri,
                     centroids_uri=centroids_uri,
                     parts_uri=partial_write_array_parts_uri,
-                    index_uri=partial_write_array_index_uri,
+                    index_array_uri=partial_write_array_index_uri,
                     id_uri=partial_write_array_ids_uri,
                     start=part,
                     end=part_end,
@@ -1022,7 +1025,7 @@ def ingest(
                     db=array_to_matrix(np.transpose(in_vectors).astype(vector_type)),
                     centroids_uri=centroids_uri,
                     parts_uri=partial_write_array_parts_uri,
-                    index_uri=partial_write_array_index_uri,
+                    index_array_uri=partial_write_array_index_uri,
                     id_uri=partial_write_array_ids_uri,
                     start=part,
                     end=part_end,
@@ -1031,7 +1034,7 @@ def ingest(
                 )
 
     def compute_partition_indexes_udf(
-        array_uri: str,
+        index_group_uri: str,
         partitions: int,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
@@ -1039,7 +1042,7 @@ def ingest(
     ):
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
-            group = tiledb.Group(array_uri)
+            group = tiledb.Group(index_group_uri)
             index_array_uri = group[INDEX_ARRAY_NAME].uri
             partial_write_array_dir_uri = group[PARTIAL_WRITE_ARRAY_DIR].uri
             partial_write_array_group = tiledb.Group(partial_write_array_dir_uri)
@@ -1075,7 +1078,7 @@ def ingest(
             index_array[:] = indexes
 
     def consolidate_partition_udf(
-        array_uri: str,
+        index_group_uri: str,
         partition_id_start: int,
         partition_id_end: int,
         batch: int,
@@ -1089,7 +1092,7 @@ def ingest(
             logger.debug(
                 "Consolidating partitions %d-%d", partition_id_start, partition_id_end
             )
-            group = tiledb.Group(array_uri)
+            group = tiledb.Group(index_group_uri)
             partial_write_array_dir_uri = group[PARTIAL_WRITE_ARRAY_DIR].uri
             partial_write_array_group = tiledb.Group(partial_write_array_dir_uri)
             partial_write_array_ids_uri = partial_write_array_group[IDS_ARRAY_NAME].uri
@@ -1187,7 +1190,7 @@ def ingest(
 
     def create_ingestion_dag(
         index_type: str,
-        array_uri: str,
+        index_group_uri: str,
         source_uri: str,
         source_type: str,
         vector_type: np.dtype,
@@ -1242,7 +1245,7 @@ def ingest(
                     end = size
                 ingest_node = submit(
                     ingest_flat,
-                    array_uri=array_uri,
+                    index_group_uri=index_group_uri,
                     source_uri=source_uri,
                     source_type=source_type,
                     vector_type=vector_type,
@@ -1263,7 +1266,7 @@ def ingest(
             if copy_centroids_uri is not None:
                 centroids_node = submit(
                     copy_centroids,
-                    array_uri=array_uri,
+                    index_group_uri=index_group_uri,
                     copy_centroids_uri=copy_centroids_uri,
                     config=config,
                     verbose=verbose,
@@ -1276,7 +1279,7 @@ def ingest(
                 if training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE:
                     centroids_node = submit(
                         centralised_kmeans,
-                        array_uri=array_uri,
+                        index_group_uri=index_group_uri,
                         source_uri=source_uri,
                         source_type=source_type,
                         vector_type=vector_type,
@@ -1359,7 +1362,7 @@ def ingest(
                     centroids_node = submit(
                         write_centroids,
                         centroids=internal_centroids_node,
-                        array_uri=array_uri,
+                        index_group_uri=index_group_uri,
                         partitions=partitions,
                         dimensions=dimensions,
                         config=config,
@@ -1372,7 +1375,7 @@ def ingest(
 
             compute_indexes_node = submit(
                 compute_partition_indexes_udf,
-                array_uri=array_uri,
+                index_group_uri=index_group_uri,
                 partitions=partitions,
                 config=config,
                 verbose=verbose,
@@ -1390,7 +1393,7 @@ def ingest(
                     end = size
                 ingest_node = submit(
                     ingest_vectors_udf,
-                    array_uri=array_uri,
+                    index_group_uri=index_group_uri,
                     source_uri=source_uri,
                     source_type=source_type,
                     vector_type=vector_type,
@@ -1422,7 +1425,7 @@ def ingest(
                     end = partitions
                 consolidate_partition_node = submit(
                     consolidate_partition_udf,
-                    array_uri=array_uri,
+                    index_group_uri=index_group_uri,
                     partition_id_start=start,
                     partition_id_end=end,
                     batch=table_partitions_per_work_item,
@@ -1441,10 +1444,10 @@ def ingest(
             raise ValueError(f"Not supported index_type {index_type}")
 
     def consolidate_and_vacuum(
-        array_uri: str,
+        index_group_uri: str,
         config: Optional[Mapping[str, Any]] = None,
     ):
-        group = tiledb.Group(array_uri, config=config)
+        group = tiledb.Group(index_group_uri, config=config)
         if INPUT_VECTORS_ARRAY_NAME in group:
             tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
         modes = ["fragment_meta", "commits", "array_meta"]
@@ -1459,23 +1462,29 @@ def ingest(
                 tiledb.vacuum(group[IDS_ARRAY_NAME].uri, config=conf)
 
         # TODO remove temp data for tiledb URIs
-        if not array_uri.startswith("tiledb://"):
+        if not index_group_uri.startswith("tiledb://"):
             vfs = tiledb.VFS(config)
-            partial_write_array_dir_uri = array_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
+            partial_write_array_dir_uri = index_group_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
             if vfs.is_dir(partial_write_array_dir_uri):
                 vfs.remove_dir(partial_write_array_dir_uri)
 
+
+    # --------------------------------------------------------------------
+    # End internal function definitions
+    # --------------------------------------------------------------------
+
+
     with tiledb.scope_ctx(ctx_or_config=config):
         logger = setup(config, verbose)
-        logger.debug("Ingesting Vectors into %r", array_uri)
+        logger.debug("Ingesting Vectors into %r", index_uri)
         try:
-            tiledb.group_create(array_uri)
+            tiledb.group_create(index_group_uri)
         except tiledb.TileDBError as err:
             message = str(err)
             if "already exists" in message:
-                logger.debug(f"Group '{array_uri}' already exists")
+                logger.debug(f"Group '{index_group_uri}' already exists")
             raise err
-        group = tiledb.Group(array_uri, "w")
+        group = tiledb.Group(index_group_uri, "w")
 
         if input_vectors is not None:
             in_size = input_vectors.shape[0]
@@ -1577,7 +1586,7 @@ def ingest(
         logger.debug("Creating ingestion graph")
         d = create_ingestion_dag(
             index_type=index_type,
-            array_uri=array_uri,
+            index_group_uri=index_group_uri,
             source_uri=source_uri,
             source_type=source_type,
             vector_type=vector_type,
@@ -1600,9 +1609,9 @@ def ingest(
         d.compute()
         logger.debug("Submitted ingestion graph")
         d.wait()
-        consolidate_and_vacuum(array_uri=array_uri, config=config)
+        consolidate_and_vacuum(index_group_uri=index_group_uri, config=config)
 
         if index_type == "FLAT":
-            return FlatIndex(uri=array_uri, config=config)
+            return FlatIndex(uri=index_group_uri, config=config)
         elif index_type == "IVF_FLAT":
-            return IVFFlatIndex(uri=array_uri, memory_budget=1000000, config=config)
+            return IVFFlatIndex(uri=index_group_uri, memory_budget=1000000, config=config)

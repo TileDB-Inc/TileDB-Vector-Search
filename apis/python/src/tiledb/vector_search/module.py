@@ -124,7 +124,7 @@ def ivf_index_tdb(
     db_uri: str,
     centroids_uri: str,
     parts_uri: str,
-    index_uri: str,
+    index_array_uri: str,
     id_uri: str,
     start: int = 0,
     end: int = 0,
@@ -137,7 +137,7 @@ def ivf_index_tdb(
         ctx = Ctx(config)
 
     args = tuple(
-        [ctx, db_uri, centroids_uri, parts_uri, index_uri, id_uri, start, end, nthreads]
+        [ctx, db_uri, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads]
     )
 
     if dtype == np.float32:
@@ -153,7 +153,7 @@ def ivf_index(
     db: "colMajorMatrix",
     centroids_uri: str,
     parts_uri: str,
-    index_uri: str,
+    index_array_uri: str,
     id_uri: str,
     start: int = 0,
     end: int = 0,
@@ -166,7 +166,7 @@ def ivf_index(
         ctx = Ctx(config)
 
     args = tuple(
-        [ctx, db, centroids_uri, parts_uri, index_uri, id_uri, start, end, nthreads]
+        [ctx, db, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads]
     )
 
     if dtype == np.float32:
