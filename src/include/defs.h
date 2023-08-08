@@ -171,6 +171,7 @@ auto mat_col_sum(
   }
 }
 
+#if 0
 template <class L, class I>
 auto verify_top_k_index(L const& top_k, I const& g, int k, int qno) {
   // std::sort(begin(g), begin(g) + k);
@@ -323,5 +324,5 @@ bool validate_top_k(TK& top_k, G& g) {
 
   return true;
 }
-
+#endif // 0
 #endif  // TDB_DEFS_H
