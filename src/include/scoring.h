@@ -58,6 +58,10 @@
 #include "utils/timer.h"
 
 
+// ----------------------------------------------------------------------------
+// Distance functions
+// ----------------------------------------------------------------------------
+
 /**
  * @brief Compute sum of squares distance between two vectors.
  * @tparam V
@@ -155,60 +159,9 @@ inline auto dot(U const& a, V const& b) {
 }
 
 
-template <class L, class I>
-auto verify_top_k_index(L const& top_k, I const& g, int k, int qno) {
-  // std::sort(begin(g), begin(g) + k);
-  // std::sort(begin(top_k), end(top_k));
-
-  if (!std::equal(begin(top_k), begin(top_k) + k, g.begin())) {
-    std::cout << "Query " << qno << " is incorrect" << std::endl;
-    for (int i = 0; i < std::min<int>(10, k); ++i) {
-      std::cout << "(" << top_k[i] << " != " << g[i] << ")  ";
-    }
-    std::cout << std::endl;
-    std::cout << std::endl;
-  }
-}
-
-/**
- * @brief Check the computed top k vectors against the ground truth.
- * Useful only for exact search.
- * Prints diagnostic message if difference is found.
- * @todo Handle the error more systematically and succinctly.
- */
-template <class V, class L, class I>
-auto verify_top_k(V const& scores, L const& top_k, I const& g, int k, int qno) {
-  if (!std::equal(
-          begin(top_k), begin(top_k) + k, g.begin(), [&](auto& a, auto& b) {
-            return scores[a] == scores[b];
-          })) {
-    std::cout << "Query " << qno << " is incorrect" << std::endl;
-    for (int i = 0; i < std::min<int>(10, k); ++i) {
-      std::cout << "  (" << top_k[i] << " " << scores[top_k[i]] << ") ";
-    }
-    std::cout << std::endl;
-    for (int i = 0; i < std::min(10, k); ++i) {
-      std::cout << "  (" << g[i] << " " << scores[g[i]] << ") ";
-    }
-    std::cout << std::endl;
-    std::cout << std::endl;
-  }
-}
-
-/**
- * @brief Check the computed top k vectors against the ground truth.
- * Useful only for exact search.
- */
-template <class L, class I>
-auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
-  if (!std::equal(begin(top_k), begin(top_k) + k, g.begin())) {
-    std::cout << "Query " << qno << " is incorrect" << std::endl;
-    for (int i = 0; i < std::min(k, 10); ++i) {
-      std::cout << "  (" << top_k[i] << " " << g[i] << ")";
-    }
-    std::cout << std::endl;
-  }
-}
+// ----------------------------------------------------------------------------
+// Functions for extracting top k neighbors from a raw scores matrix
+// ----------------------------------------------------------------------------
 
 // @todo implement with fixed_min_heap
 template <class V, class L, class I>
@@ -283,7 +236,18 @@ auto get_top_k(const S& scores, int k, bool nth, int nthreads) {
   return top_k;
 }
 
-// Put all of the lowest scores into the first vector
+// ----------------------------------------------------------------------------
+// Functions for extracting top k neighbors from a min heap (with pairs)
+// ----------------------------------------------------------------------------
+
+/**
+ * @brief Utility function to put the top scores for multiple threads into a
+ * single top_scores vector (the zeroth vector).
+ * @tparam Heap
+ *   @param min_scores a vector of vectors of min_heaps.  Each vector of min_heaps
+ * is the top k scores for a set of queries.  Each vector of vectors is stores
+ * a vector of min_heaps, one per thread.
+ */
 template <class Heap>
 void consolidate_scores(std::vector<std::vector<Heap>>& min_scores) {
   auto nthreads = size(min_scores);
@@ -297,6 +261,11 @@ void consolidate_scores(std::vector<std::vector<Heap>>& min_scores) {
   }
 }
 
+/**
+ * @brief Utility function to extract the top k scores from a single min heap.
+ * @param min_scores
+ * @param top_k
+ */
 inline void get_top_k_from_heap(auto&& min_scores, auto&& top_k) {
   std::sort_heap(begin(min_scores), end(min_scores));
   std::transform(
@@ -305,7 +274,17 @@ inline void get_top_k_from_heap(auto&& min_scores, auto&& top_k) {
       }));
 }
 
-// Overload for one-d scores
+/**
+ * @brief Utility function to extract the top k scores from a vector of min
+ * heaps.  Each entry in the vector of min heaps is the top k scores for a
+ * single query.
+ * @tparam Heap
+ * @tparam Index
+ * @param scores
+ * @param k_nn
+ * @return a Matrix of the top_k scores for each query.  Each column corresponds
+ * to a query,
+ */
 template <class Heap, class Index = size_t>
 inline auto get_top_k(std::vector<Heap>& scores, size_t k_nn) {
   auto num_queries = size(scores);
@@ -318,11 +297,27 @@ inline auto get_top_k(std::vector<Heap>& scores, size_t k_nn) {
   return top_k;
 }
 
-// Overload for two-d scores
+
+/**
+ * @brief Utility function to extract the top k scores from a vector of vectors.
+ * It is assumed that the scores have been consolidated, i.e., that the zeroth
+ * vector contains the top k scores for each query.
+ * @tparam Heap
+ * @tparam Index
+ * @param scores
+ * @param k_nn
+ * @return Matrix of the top k scores for each query.  Each column corresponds
+ * to a query.
+ */
 template <class Heap, class Index = size_t>
 inline auto get_top_k(std::vector<std::vector<Heap>>& scores, size_t k_nn) {
   return get_top_k(scores[0], k_nn);
 }
+
+
+// ----------------------------------------------------------------------------
+// Functions for computing top k neighbors with scores
+// ----------------------------------------------------------------------------
 
 inline void get_top_k_with_scores_from_heap(auto&& min_scores, auto&& top_k, auto&& top_k_scores) {
   std::sort_heap(begin(min_scores), end(min_scores));
@@ -356,6 +351,67 @@ inline auto get_top_k_with_scores(std::vector<Heap>& scores, size_t k_nn) {
 template <class Heap, class Index = size_t>
 inline auto get_top_k_with_scores(std::vector<std::vector<Heap>>& scores, size_t k_nn) {
   return get_top_k_with_scores(scores[0], k_nn);
+}
+
+
+// ----------------------------------------------------------------------------
+// Functions for verifying top k neighbors against groundtruth
+// ----------------------------------------------------------------------------
+
+
+template <class L, class I>
+auto verify_top_k_index(L const& top_k, I const& g, int k, int qno) {
+  // std::sort(begin(g), begin(g) + k);
+  // std::sort(begin(top_k), end(top_k));
+
+  if (!std::equal(begin(top_k), begin(top_k) + k, g.begin())) {
+    std::cout << "Query " << qno << " is incorrect" << std::endl;
+    for (int i = 0; i < std::min<int>(10, k); ++i) {
+      std::cout << "(" << top_k[i] << " != " << g[i] << ")  ";
+    }
+    std::cout << std::endl;
+    std::cout << std::endl;
+  }
+}
+
+/**
+ * @brief Check the computed top k vectors against the ground truth.
+ * Useful only for exact search.
+ * Prints diagnostic message if difference is found.
+ * @todo Handle the error more systematically and succinctly.
+ */
+template <class V, class L, class I>
+auto verify_top_k(V const& scores, L const& top_k, I const& g, int k, int qno) {
+  if (!std::equal(
+          begin(top_k), begin(top_k) + k, g.begin(), [&](auto& a, auto& b) {
+            return scores[a] == scores[b];
+          })) {
+    std::cout << "Query " << qno << " is incorrect" << std::endl;
+    for (int i = 0; i < std::min<int>(10, k); ++i) {
+      std::cout << "  (" << top_k[i] << " " << scores[top_k[i]] << ") ";
+    }
+    std::cout << std::endl;
+    for (int i = 0; i < std::min(10, k); ++i) {
+      std::cout << "  (" << g[i] << " " << scores[g[i]] << ") ";
+    }
+    std::cout << std::endl;
+    std::cout << std::endl;
+  }
+}
+
+/**
+ * @brief Check the computed top k vectors against the ground truth.
+ * Useful only for exact search.
+ */
+template <class L, class I>
+auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
+  if (!std::equal(begin(top_k), begin(top_k) + k, g.begin())) {
+    std::cout << "Query " << qno << " is incorrect" << std::endl;
+    for (int i = 0; i < std::min(k, 10); ++i) {
+      std::cout << "  (" << top_k[i] << " " << g[i] << ")";
+    }
+    std::cout << std::endl;
+  }
 }
 
 
