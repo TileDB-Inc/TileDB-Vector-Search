@@ -62,6 +62,7 @@
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "flat_query.h"
 #include "linalg.h"
+#include "scoring.h"
 
 #include "utils/print_types.h"
 

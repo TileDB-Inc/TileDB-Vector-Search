@@ -30,146 +30,11 @@
  * Support functions for TiledB vector search algorithms.
  *
  */
-
+#if 0
 #ifndef TDB_DEFS_H
 #define TDB_DEFS_H
 
-#include <algorithm>
-#include <cmath>
-#include <future>
-#include <iostream>
-#include <memory>
-#include <numeric>
-#include <queue>
-#include <set>
-#include <span>
-// #include <execution>
 
-#include "linalg.h"
-#include "utils/fixed_min_queues.h"
-#include "utils/timer.h"
-
-/**
- * @brief Compute sum of squares distance between two vectors.
- * @tparam V
- * @tparam U
- * @param a
- * @param b
- * @return
- */
-#if 0
-template <class V, class U>
-inline auto sum_of_squares(V const& a, U const& b) {
-  float sum{0.0};
-  size_t size_a = size(a);
-
-  if constexpr (std::is_same_v<decltype(a[0]),decltype(b[0])>) {
-    for (size_t i = 0; i < size_a; ++i) {
-      float diff = a[i]- b[i];
-      sum += diff * diff;
-    }
-  } else {
-    for (size_t i = 0; i < size_a; ++i) {
-      float diff = ((float)a[i]) - ((float)b[i]);
-      sum += diff * diff;
-    }
-  }
-  return sum;
-}
-#else
-template <class V, class U>
-inline auto sum_of_squares(V const& a, U const& b) {
-  float sum{0.0};
-  size_t size_a = size(a);
-
-  for (size_t i = 0; i < size_a; ++i) {
-    // float diff = ((float)a[i]) - ((float)b[i]);
-    float diff = a[i] - b[i];
-    sum += diff * diff;
-  }
-  return sum;
-}
-
-#endif
-
-/**
- * @brief Compute L2 distance between two vectors.
- * @tparam V
- * @param a
- * @param b
- * @return L2 norm of the difference between a and b.
- */
-template <class V, class U>
-inline auto L2(V const& a, U const& b) {
-  //  return std::sqrt(sum_of_squares(a, b));
-  return sum_of_squares(a, b);
-}
-
-/**
- * @brief Compute cosine similarity between two vectors.
- * @tparam V
- * @param a
- * @param b
- * @return
- */
-template <class V>
-auto cosine(V const& a, V const& b) {
-  typename V::value_type sum{0};
-  auto a2 = 0.0;
-  auto b2 = 0.0;
-
-  auto size_a = size(a);
-  for (auto i = 0; i < size_a; ++i) {
-    sum += a[i] * b[i];
-    a2 += a[i] * a[i];
-    b2 += b[i] * b[i];
-  }
-  return sum / std::sqrt(a2 * b2);
-}
-
-/**
- * @brief Foreach input vector, apply a function to each element of the
- * vector and sum the resulting values
- * @tparam M
- * @tparam V
- * @param m
- * @param v
- * @param f
- * @return A vector containing the sum of the function applied down each column.
- */
-template <class M, class V, class Function>
-auto col_sum(
-    const M& m, V& v, Function f = [](auto& x) -> const auto& { return x; }) {
-  int size_m = size(m);
-  int size_m0 = size(m[0]);
-
-  for (int j = 0; j < size_m; ++j) {
-    decltype(v[0]) vj = v[j];
-    for (int i = 0; i < size_m0; ++i) {
-      vj += f(m[j][i]);
-    }
-    v[j] = vj;
-  }
-}
-
-/**
- * @brief Same as above, but for columns of a matrix rather than a collection
- * of vectors.
- */
-template <class M, class V, class Function>
-auto mat_col_sum(
-    const M& m, V& v, Function f = [](auto& x) -> const auto& { return x; }) {
-  auto num_cols = m.num_cols();
-  auto num_rows = m.num_rows();
-
-  for (size_t j = 0; j < num_cols; ++j) {
-    decltype(v[0]) vj = v[j];
-    for (size_t i = 0; i < num_rows; ++i) {
-      vj += f(m(i, j));
-    }
-    v[j] = vj;
-  }
-}
 
 #if 0
 template <class L, class I>
@@ -335,3 +200,4 @@ bool validate_top_k(TK& top_k, G& g) {
 }
 #endif // 0
 #endif  // TDB_DEFS_H
+#endif // 0
