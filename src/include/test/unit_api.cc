@@ -215,12 +215,34 @@ TEST_CASE("api: Vector", "[api]") {
 }
 
 template <class T>
+class dummy_cpos {
+ public:
+  std::vector<T> vec;
+  std::vector<std::vector<T>> vec_of_vec;
+  std::vector<std::vector<std::vector<T>>> vec_of_vec_of_vec;
+
+  auto dimension() const {return vec.size();}
+  auto num_vectors() const {return vec_of_vec.size();}
+  auto num_partitions() const {return vec_of_vec.size();}
+};
+
+// dimension
+// num_vectors
+// num_partitions
+
+
+
+
+template <class T>
 class dummy_feature_vector : public std::vector<T> {
  public:
   using std::vector<T>::vector;
 
   auto dimension() const { return this->size(); }
 };
+
+
+
 
 TEST_CASE("api: feature_vector", "[api]") {
   CHECK(!feature_vector<int>);
@@ -234,7 +256,6 @@ TEST_CASE("api: feature_vector", "[api]") {
   CHECK(!feature_vector<std::span<int>>);
 
   CHECK(feature_vector<dummy_feature_vector<int>>);
-
 }
 
 TEST_CASE("api: query_vector", "[api]") {
