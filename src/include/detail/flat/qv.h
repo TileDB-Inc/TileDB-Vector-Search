@@ -223,7 +223,7 @@ auto qv_query_heap_tiled(DB& db, const Q& query, size_t k, unsigned nthreads) {
     if (start != stop) {
       futs.emplace_back(std::async(
           std::launch::async,
-          [k, start, stop, size_db, &query, &db, &top_k, &min_scores]() {
+          [start, stop, &query, &db, &min_scores]() {
             auto len = 2 * ((stop - start) / 2);
             auto end = start + len;
 

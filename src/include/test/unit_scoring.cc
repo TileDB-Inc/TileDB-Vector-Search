@@ -32,7 +32,7 @@
 #include <catch2/catch_all.hpp>
 #include <set>
 #include <vector>
-#include "../defs.h"
+#include "scoring.h"
 
 TEST_CASE("defs: test test", "[defs]") {
   REQUIRE(true);

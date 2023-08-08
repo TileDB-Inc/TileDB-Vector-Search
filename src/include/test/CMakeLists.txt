@@ -67,8 +67,6 @@ kmeans_add_test(unit_algorithm)
 
 kmeans_add_test(unit_concepts)
 
-kmeans_add_test(unit_defs)
-
 kmeans_add_test(unit_ivf_index)
 
 kmeans_add_test(unit_ivf_query)
@@ -83,6 +81,8 @@ kmeans_add_test(unit_logging)
 kmeans_add_test(unit_matrix)
 
 kmeans_add_test(unit_mdspan)
+
+kmeans_add_test(unit_scoring)
 
 kmeans_add_test(unit_slicing)
 

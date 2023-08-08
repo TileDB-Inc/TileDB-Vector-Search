@@ -85,7 +85,6 @@
 
 #include <docopt.h>
 
-#include "defs.h"
 #include "flat_query.h"
 #include "stats.h"
 #include "utils/timer.h"
@@ -220,7 +219,9 @@ int main(int argc, char* argv[]) {
                   << std::to_string(nth) << std::endl;
       }
       return detail::flat::qv_query_heap(db, query, k, nthreads);
-    } else if (alg_name == "gemm") {
+    }
+#ifdef TILEDB_VS_ENABLE_BLAS
+    else if (alg_name == "gemm") {
       if (args["--blocksize"]) {
         std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth)
                   << std::endl;
@@ -230,6 +231,7 @@ int main(int argc, char* argv[]) {
         return detail::flat::gemm_query(db, query, k, nth, nthreads);
       }
     }
+#endif
     throw std::runtime_error("incorrect or unset algorithm type: " + alg_name);
   }();
 

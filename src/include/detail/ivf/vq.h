@@ -722,7 +722,6 @@ auto vq_query_finite_ram_2(
                &shuffled_db,
                &new_indices,
                   &active_queries = active_queries,
-               &active_partitions = active_partitions,
                n,
                first_part,
                last_part]() {

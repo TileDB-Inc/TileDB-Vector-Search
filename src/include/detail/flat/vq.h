@@ -37,7 +37,6 @@
 #include <vector>
 
 #include "algorithm.h"
-#include "defs.h"
 #include "linalg.h"
 #include "utils/timer.h"
 

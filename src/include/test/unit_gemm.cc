@@ -29,11 +29,12 @@
  *
  */
 
+#ifdef TILEDB_VS_ENABLE_BLAS
+
 #include <catch2/catch_all.hpp>
 #include <span>
 #include <vector>
-
-#include "defs.h"
+#include "scoring.h"
 #include "detail/linalg/choose_blas.h"
 
 /*
@@ -328,3 +329,4 @@ TEST_CASE("gemm: row major test", "[sgemm]") {
     CHECK(std::abs(C_span[1][1] - 10.3923) < .0001);
   }
 }
+#endif

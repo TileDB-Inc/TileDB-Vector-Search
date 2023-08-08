@@ -53,7 +53,6 @@
 #include <thread>
 
 #include "algorithm.h"
-#include "defs.h"
 #include "linalg.h"
 
 #include "detail/flat/qv.h"
