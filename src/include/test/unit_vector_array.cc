@@ -1,5 +1,5 @@
 /**
- * @file   unit_vector.cc
+ * @file   unit_vector_array.cc
  *
  * @section LICENSE
  *
@@ -27,10 +27,16 @@
  *
  * @section DESCRIPTION
  *
- * Tests to measure abstraction penalty of data structures and algorithms.
+ * Tests for Vector class.
  *
  */
 
-#include "detail/linalg/vector.h"
-#include "feature_vector.h"
-#include "utils/timer.h"
+#include <catch2/catch_all.hpp>
+#include <vector>
+#include "api.h"
+#include "vector_array.h"
+
+
+TEST_CASE("FeatureVectorArray: test test", "[vector_array]") {
+  REQUIRE(true);
+}

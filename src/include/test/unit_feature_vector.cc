@@ -48,6 +48,44 @@ TEST_CASE("FeatureVector: feature_vector", "[FeatureVector]") {
   CHECK(!feature_vector<int>);
 }
 
+/**
+ * @brief Test that FeatureVector is a container and has container API.
+ *
+ * @todo Turn into tests that check the type of the return values.
+ */
+TEST_CASE("FeatureVector: test CPOs", "[FeatureVector]") {
+  FeatureVector<int> v(10);
+
+  begin(v);
+  end(v);
+  rbegin(v);
+  rend(v);
+  cbegin(v);
+  cend(v);
+  crbegin(v);
+  crend(v);
+
+  data(v);
+
+  // size(v);  // size() is ambiguous for FeatureVector et al
+  dimension(v);
+}
+
+TEST_CASE("FeatureVector: concepts", "[api]") {
+  CHECK(!range_of_ranges<FeatureVector<int>>);
+  CHECK(std::ranges::random_access_range<FeatureVector<int>>);
+  CHECK(std::ranges::sized_range<FeatureVector<int>>);
+  CHECK(std::ranges::contiguous_range<FeatureVector<int>>);
+  CHECK(subscriptable_container<FeatureVector<int>>);
+  CHECK(feature_vector<FeatureVector<int>>);
+
+  // Should FeatureVector be a sized_range?  size() is ambiguous and sort
+  // of an abstraction leak.  But it might be important for performance.
+  // OTOH we should be writing performance kernels in terms of Vector?
+  // CHECK(requires{ FeatureVector<int>{}.size();});
+  // CHECK(std::ranges::sized_range<Vector<int>>);
+}
+
 using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 
 TEMPLATE_LIST_TEST_CASE(

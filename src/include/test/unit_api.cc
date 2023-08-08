@@ -34,6 +34,11 @@
 #include <catch2/catch_all.hpp>
 #include "api.h"
 #include "detail/linalg/vector.h"
+#include "utils/print_types.h"
+
+#include <list>
+#include <string>
+#include <vector>
 
 TEST_CASE("api: test test", "[api]") {
   REQUIRE(true);
@@ -69,18 +74,93 @@ TEST_CASE("api: sized_range", "[api]") {
   CHECK(std::ranges::sized_range<Vector<int>>);
 }
 
-TEST_CASE("api: subscriptable", "[api]") {
-  CHECK(!subscriptable<int>);
-  CHECK(subscriptable<std::vector<int>>);
-  CHECK(subscriptable<std::vector<double>>);
-  CHECK(subscriptable<std::vector<std::vector<int>>>);
-  CHECK(subscriptable<std::array<int, 3>>);
+TEST_CASE("api: contiguous range", "[api]") {
+  CHECK(!std::ranges::contiguous_range<int>);
+  CHECK(std::ranges::contiguous_range<std::vector<int>>);
+  CHECK(std::ranges::contiguous_range<std::vector<double>>);
+  CHECK(std::ranges::contiguous_range<std::vector<std::vector<int>>>);
+  CHECK(std::ranges::contiguous_range<std::array<int, 3>>);
+  CHECK(!std::ranges::contiguous_range<std::list<int>>);
+  CHECK(!std::ranges::contiguous_range<std::list<std::vector<int>>>);
+  CHECK(std::ranges::contiguous_range<std::span<int>>);
+  CHECK(std::ranges::contiguous_range<Vector<int>>);
+}
+
+TEST_CASE("api: subscriptable_container", "[api]") {
+  using sv = std::vector<int>;
+  using svi = std::ranges::iterator_t<sv>;
+  using svri = std::iter_reference_t<svi>;
+
+  // print_types(sv{}, sv{}.begin(), sv{}.cbegin(), svi{}, svi{}[0],
+  // std::iter_value_t<svi>{});
+
+  CHECK(!subscriptable_container<int>);
+  CHECK(subscriptable_container<std::vector<int>>);
+  CHECK(subscriptable_container<std::vector<double>>);
+  CHECK(subscriptable_container<const std::vector<double>>);
+  CHECK(subscriptable_container<std::vector<std::vector<int>>>);
+  CHECK(subscriptable_container<std::array<int, 3>>);
+
+  int* d = new int[3];  // random access iterator but not random access range
+  CHECK(!subscriptable_container<decltype(d)>);
+  CHECK(subscriptable_container<std::span<int>>);
+
+  CHECK(subscriptable_container<Vector<int>>);
+}
+
+TEST_CASE("api: range_of_ranges", "[api]") {
+  CHECK(!range_of_ranges<int>);
+  CHECK(!range_of_ranges<std::vector<int>>);
+  CHECK(!range_of_ranges<std::vector<double>>);
+  CHECK(range_of_ranges<std::vector<std::vector<int>>>);
+  CHECK(range_of_ranges<std::vector<std::list<double>>>);
+  CHECK(range_of_ranges<std::vector<std::list<std::vector<std::string>>>>);
+  CHECK(!range_of_ranges<std::array<int, 3>>);
 
   int* d = nullptr;
-  CHECK(subscriptable<decltype(d)>);
-  CHECK(subscriptable<std::span<int>>);
+  CHECK(!range_of_ranges<decltype(d)>);
 
-  CHECK(subscriptable<Vector<int>>);
+  int** e = nullptr;
+  CHECK(!range_of_ranges<decltype(e)>);
+
+  CHECK(!range_of_ranges<std::span<int>>);
+
+  CHECK(!range_of_ranges<Vector<int>>);
+}
+
+TEST_CASE("api: inner_range", "[api]") {
+  CHECK(std::is_same_v<
+        inner_range_t<std::vector<std::vector<int>>>,
+        std::vector<int>>);
+  CHECK(std::is_same_v<
+        inner_range_t<std::vector<std::vector<int>>>,
+        typename std::vector<std::vector<int>>::value_type>);
+}
+
+TEST_CASE("api: inner_iterator_t", "[api]") {
+  CHECK(std::is_same_v<
+        inner_iterator_t<std::vector<std::vector<int>>>,
+        std::vector<int>::iterator>);
+}
+
+TEST_CASE("api: inner_const_iterator_t", "[api]") {
+  // print_types(inner_const_iterator_t<std::vector<std::vector<int>>>{},
+  // std::vector<int>::const_iterator{ });
+  CHECK(std::is_same_v<
+        inner_const_iterator_t<std::vector<std::vector<int>>>,
+        std::vector<int>::const_iterator>);
+}
+
+TEST_CASE("api: inner_value_t", "[api]") {
+  CHECK(std::is_same_v<
+        inner_value_t<std::vector<std::vector<int>>>,
+        std::vector<int>::value_type>);
+}
+
+TEST_CASE("api: inner_reference_t", "[api]") {
+  CHECK(std::is_same_v<
+        inner_reference_t<std::vector<std::vector<int>>>,
+        std::vector<int>::reference>);
 }
 
 template <class T>
@@ -122,4 +202,64 @@ TEST_CASE("api: callable_range", "[api]") {
   CHECK(callable_range<Vector<int>>);
 
   CHECK(callable<int, bar, int>);
+}
+
+TEST_CASE("api: Vector", "[api]") {
+  CHECK(!range_of_ranges<Vector<int>>);
+  CHECK(std::ranges::random_access_range<Vector<int>>);
+  CHECK(std::ranges::sized_range<Vector<int>>);
+  CHECK(std::ranges::contiguous_range<Vector<int>>);
+  CHECK(subscriptable_container<Vector<int>>);
+  CHECK(requires { Vector<int>{}.size(); });
+  CHECK(std::ranges::sized_range<Vector<int>>);
+}
+
+template <class T>
+class dummy_feature_vector : public std::vector<T> {
+ public:
+  using std::vector<T>::vector;
+
+  auto dimension() const { return this->size(); }
+};
+
+TEST_CASE("api: feature_vector", "[api]") {
+  CHECK(!feature_vector<int>);
+  CHECK(!feature_vector<std::vector<int>>);
+  CHECK(!feature_vector<std::vector<double>>);
+  CHECK(!feature_vector<std::vector<std::vector<int>>>);
+  CHECK(!feature_vector<std::array<int, 3>>);
+
+  int* d = nullptr;
+  CHECK(!feature_vector<decltype(d)>);
+  CHECK(!feature_vector<std::span<int>>);
+
+  CHECK(feature_vector<dummy_feature_vector<int>>);
+
+}
+
+TEST_CASE("api: query_vector", "[api]") {
+  CHECK(!query_vector<int>);
+  CHECK(!query_vector<std::vector<int>>);
+  CHECK(!query_vector<std::vector<double>>);
+  CHECK(!query_vector<std::vector<std::vector<int>>>);
+  CHECK(!query_vector<std::array<int, 3>>);
+
+  int* d = nullptr;
+  CHECK(!query_vector<decltype(d)>);
+  CHECK(!query_vector<std::span<int>>);
+
+  CHECK(!query_vector<Vector<int>>);
+  CHECK(query_vector<dummy_feature_vector<int>>);
+}
+
+TEST_CASE("api: feature_vector_range", "[api]") {
+}
+
+TEST_CASE("api: contiguous_feature_vector_range", "[api]") {
+}
+
+TEST_CASE("api: partitioned_feature_vector_range", "[api]") {
+}
+
+TEST_CASE("api: contiguous_partitioned_feature_vector_range", "[api]") {
 }

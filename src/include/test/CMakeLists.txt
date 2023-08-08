@@ -61,6 +61,8 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 # kmeans_add_test(time_queries)
 # target_link_libraries(time_queries PRIVATE flat_blas)
 
+kmeans_add_exe(time_abstraction_penalty)
+
 kmeans_add_test(unit_algorithm)
 
 kmeans_add_test(unit_api)
@@ -93,6 +95,8 @@ kmeans_add_test(unit_stats)
 kmeans_add_test(unit_utils)
 
 kmeans_add_test(unit_vector)
+
+kmeans_add_test(unit_vector_array)
 
 if (TILEDB_VS_ENABLE_BLAS)
   kmeans_add_test(unit_queries)
