@@ -58,7 +58,7 @@
 #include "detail/flat/qv.h"
 #include "detail/ivf/index.h"
 
-template <class T, class shuffled_ids_type, class indices_type>
+template <class T, class shuffled_ids_type = size_t, class indices_type = size_t>
 class kmeans_index {
   // Random device to seed the random number generator
   std::random_device rd;
