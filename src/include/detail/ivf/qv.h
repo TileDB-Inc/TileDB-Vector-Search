@@ -30,17 +30,17 @@
  * Implementation of queries for the "qv" orderings, i.e., for which the loop
  * over the queries is on the outer loop and the loop over the vectors is on the
  * inner loop.  Since the vectors in the inner loop are partitioned, we can
- * operate on them blockwise, which ameliorates the locality issues that
+ * operate on them blockwise, which ameliorates some of the locality issues that
  * arise when doing this order with a flat index, say.
  *
- * There are two implementations here: infinite RAM and finite RAM.  The
+ * There are two types of implementation here: infinite RAM and finite RAM.  The
  * infinite RAM case loads the entire partitioned database into memory, and then
  * searches in the partitions as indicated by the nearest centroids to the
  * queries.  The infinite RAM case does not perform any out-of-core operations.
  * The finite RAM case only loads the partitions into memory that are necessary
  * for the search. The user can specify an upper bound on the amount of RAM to
  * be used for holding the queries being searched.  The searches are ordered so
- * that the partitions can be loaded into memory in the order they are layed out
+ * that the partitions can be loaded into memory in the order they are laid out
  * in the array.
  *
  * In general there is probably no reason to ever use the infinite RAM case
@@ -1343,6 +1343,7 @@ auto apply_query(
 
     auto len = 2 * (size(active_queries[partno]) / 2);
     auto end = active_queries[partno].begin() + len;
+
     for (auto j = active_queries[partno].begin(); j != end; j += 2) {
       auto j0 = j[0];
       auto j1 = j[1];
@@ -1397,7 +1398,7 @@ auto apply_query(
   return min_scores;
 }
 
-template <typename T, class shuffled_ids_type>
+template <class T, class shuffled_ids_type>
 auto query_finite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -1433,6 +1434,8 @@ auto query_finite_ram(
       parts_type>(
       ctx, part_uri, indices, active_partitions, id_uri, upper_bound);
 
+  log_timer _i{tdb_func__ + " in RAM"};
+
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
   new_indices[0] = 0;
   for (size_t i = 0; i < size(active_partitions); ++i) {
@@ -1461,8 +1464,6 @@ auto query_finite_ram(
 
   auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
       num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
-
-  log_timer _i{tdb_func__ + " in RAM"};
 
   while (shuffled_db.load()) {
     _i.start();
@@ -1528,12 +1529,15 @@ auto query_finite_ram(
 
   // @todo get_top_k_from_heap
   for (size_t j = 0; j < num_queries; ++j) {
+    get_top_k_from_heap(min_scores[j], top_k[j]);
+#if 0
     sort_heap(min_scores[j].begin(), min_scores[j].end());
     std::transform(
         min_scores[j].begin(),
         min_scores[j].end(),
         top_k[j].begin(),
         ([](auto&& e) { return std::get<1>(e); }));
+#endif
   }
 
   return top_k;

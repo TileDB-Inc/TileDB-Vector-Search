@@ -191,19 +191,30 @@ int main(int argc, char* argv[]) {
                   << std::endl;
       }
       return detail::flat::vq_query_nth(db, query, k, nth, nthreads);
-    } else if (alg_name == "vq_heap") {
+    } else if (alg_name == "vq_heap" || alg_name == "vq") {
       if (verbose) {
         std::cout << "# Using vq_heap, ignoring nth = " << std::to_string(nth)
                   << std::endl;
       }
       return detail::flat::vq_query_heap(db, query, k, nthreads);
-    } else if (alg_name == "qv_nth") {
+    } else if (alg_name == "vq_heap_2" || alg_name == "vq2") {
+      if (verbose) {
+        std::cout << "# Using vq_heap, ignoring nth = " << std::to_string(nth)
+                  << std::endl;
+      }
+      return detail::flat::vq_query_heap_2(db, query, k, nthreads);
+    }else if (alg_name == "qv_nth") {
       if (verbose) {
         std::cout << "# Using qv_nth, nth = " << std::to_string(nth)
                   << std::endl;
       }
       return detail::flat::qv_query_nth(db, query, k, nth, nthreads);
-    } else if (alg_name == "qv_heap") {
+    } else if (alg_name == "qv_tiled") {
+      if (verbose) {
+        std::cout << "# Using qv_tiled" <<                   std::endl;
+      }
+      return detail::flat::qv_query_heap_tiled(db, query, k, nthreads);
+    } else if (alg_name == "qv_heap" || alg_name == "qv") {
       if (verbose) {
         std::cout << "# Using qv_query (qv_heap), ignoring nth = "
                   << std::to_string(nth) << std::endl;

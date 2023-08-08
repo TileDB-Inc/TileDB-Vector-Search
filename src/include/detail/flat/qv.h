@@ -27,7 +27,15 @@
  *
  * @section DESCRIPTION
  *
+ * Flat L2 query implementations using the qv ordering (loop over all query
+ * vectors on outer loop and over all database vectors on inner loop).
  *
+ * We currently assume that the database is loaded into memory.  This is a
+ * reasonable assumption for small databases (and/or large machines), but for
+ * large databases we may want to implement a blocked / out-of-core
+ *
+ * @todo Implement a blocked / out-of-core version?
+ * @todo Are there other optimizations to apply?
  */
 
 #ifndef TILEDB_FLAT_QV_H
@@ -46,21 +54,24 @@
 namespace detail::flat {
 
 /**
- * Query using the qv ordering (loop over query vectors on outer loop and over
- * database vectors on inner loop).
+ * This algorithm computes the scores by looping over all query vector and
+ * all database vectors, but rather than forming the entire score matrix,
+ * it only computes the scores for the query given in the outer loop.  It
+ * then computes the top k for that query and stores the results in the
+ * top_k matrix.  The top k values are computed either using the nth_element
+ * algorithm or a heap based algorithm, depending on the value of nth.
  *
- * This algorithm does not form the scores matrix but rather computes the
- * relevant portion of the top_k query by query, only working on a single
- * scores vector (rather than matrix).
- *
- * @note The qv_query algorithm in ivf_query.h is essentially this, but has
- * get_top_k hard-coded to use a heap based algorithm.  This version can
- * use either a heap or the nth_element algorithm, depending on value of nth.
- *
- * @todo Implement a blocked / out-of-core version
- * @todo Are there other optimizations to apply?
+ * @tparam DB The type of the database.
+ * @tparam Q The type of the query.
+ * @param db The database.
+ * @param q The query.
+ * @param k The number of top k results to return.
+ * @param nth If true, use the nth_element algorithm to get top k, otherwise
+ * use a heap based algorithm.
+ * @param nthreads The number of threads to use in parallel execution.
+ * @return A matrix of size k x #queries containing the top k results for each
+ * query.
  */
-
 template <class DB, class Q>
 auto qv_query_nth(DB& db, const Q& q, int k, bool nth, unsigned int nthreads) {
   if constexpr (is_loadable_v<decltype(db)>) {
@@ -95,8 +106,19 @@ auto qv_query_nth(DB& db, const Q& q, int k, bool nth, unsigned int nthreads) {
 }
 
 /**
- * @todo Use blocked / out-of-core to avoid memory blowup
+ * This algorithm computes the scores by looping over all query vector and
+ * all database vectors, but rather than forming the score matrix, or even a
+ * score vector as in the qv_query_nth algorithm, it computes the top k values
+ * on the fly, using a fixed_min_heap.
  *
+ * @tparam DB The type of the database.
+ * @tparam Q The type of the query.
+ * @param db The database.
+ * @param q The query.
+ * @param k The number of top k results to return.
+ * @param nthreads The number of threads to use in parallel execution.
+ * @return A matrix of size k x #queries containing the top k results for each
+ * query.
  */
 template <vector_database DB, class Q>
 auto qv_query_heap(DB& db, const Q& q, size_t k, unsigned nthreads) {
@@ -106,7 +128,7 @@ auto qv_query_heap(DB& db, const Q& q, size_t k, unsigned nthreads) {
 
   scoped_timer _{tdb_func__};
 
-  ColMajorMatrix<size_t> top_k(k, q.num_cols());
+  auto top_k = ColMajorMatrix<size_t>(k, q.num_cols());
 
   // Have to do explicit asynchronous threading here, as the current parallel
   // algorithms have iterator-based interaces, and the `Matrix` class does not
@@ -151,6 +173,123 @@ auto qv_query_heap(DB& db, const Q& q, size_t k, unsigned nthreads) {
 
   for (size_t n = 0; n < size(futs); ++n) {
     futs[n].get();
+  }
+
+  return top_k;
+}
+
+/**
+ * This algorithm is similar to `qv_query_heap`, but it tiles the query loop
+ * and the database loop (2X2). This is done to improve cache locality.
+ * @tparam DB The type of the database.
+ * @tparam Q The type of the query.
+ * @param db The database.
+ * @param query The query.
+ * @param k The number of top k results to return.
+ * @param nthreads The number of threads to use in parallel execution.
+ * @return A matrix of size k x #queries containing the top k results for each
+ * query.
+ */
+template <vector_database DB, class Q>
+auto qv_query_heap_tiled(DB& db, const Q& query, size_t k, unsigned nthreads) {
+  if constexpr (is_loadable_v<decltype(db)>) {
+    db.load();
+  }
+
+  scoped_timer _{tdb_func__};
+
+  ColMajorMatrix<size_t> top_k(k, query.num_cols());
+
+  // Have to do explicit asynchronous threading here, as the current parallel
+  // algorithms have iterator-based interaces, and the `Matrix` class does not
+  // yet have iterators.
+  // @todo Implement iterator interface to `Matrix` class
+  size_t size_db = db.num_cols();
+  size_t container_size = size(query);
+  size_t block_size = (container_size + nthreads - 1) / nthreads;
+
+  std::vector<std::future<void>> futs;
+  futs.reserve(nthreads);
+
+  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
+      size(query), fixed_min_pair_heap<float, size_t>(k));
+
+  // @todo: Use range::for_each
+  for (size_t n = 0; n < nthreads; ++n) {
+    auto start = std::min<size_t>(n * block_size, container_size);
+    auto stop = std::min<size_t>((n + 1) * block_size, container_size);
+
+    if (start != stop) {
+      futs.emplace_back(std::async(
+          std::launch::async,
+          [k, start, stop, size_db, &query, &db, &top_k, &min_scores]() {
+            auto len = 2 * ((stop - start) / 2);
+            auto end = start + len;
+
+            // auto min_scores0 = fixed_min_pair_heap<float, size_t> (k);
+            // auto min_scores1 = fixed_min_pair_heap<float, size_t> (k);
+
+            for (auto j = start; j != end; j += 2) {
+              auto j0 = j + 0;
+              auto j1 = j + 1;
+              auto q_vec_0 = query[j0];
+              auto q_vec_1 = query[j1];
+
+              auto kstop = std::min<size_t>(size(db), 2 * (size(db) / 2));
+
+              for (size_t kp = 0; kp < kstop; kp += 2) {
+                auto score_00 = L2(q_vec_0, db[kp + 0]);
+                auto score_01 = L2(q_vec_0, db[kp + 1]);
+                auto score_10 = L2(q_vec_1, db[kp + 0]);
+                auto score_11 = L2(q_vec_1, db[kp + 1]);
+
+                min_scores[j0].insert(score_00, kp + 0);
+                min_scores[j0].insert(score_01, kp + 1);
+                min_scores[j1].insert(score_10, kp + 0);
+                min_scores[j1].insert(score_11, kp + 1);
+              }
+
+              /*
+               * Cleanup the last iteration(s) of k
+               */
+              for (size_t kp = kstop; kp < size(db); ++kp) {
+                auto score_00 = L2(q_vec_0, db[kp + 0]);
+                auto score_10 = L2(q_vec_1, db[kp + 0]);
+                min_scores[j0].insert(score_00, kp + 0);
+                min_scores[j1].insert(score_10, kp + 0);
+              }
+            }
+
+            /*
+             * Cleanup the last iteration(s) of j
+             */
+            for (auto j = end; j < stop; ++j) {
+              auto j0 = j + 0;
+              auto q_vec_0 = query[j0];
+
+              auto kstop = std::min<size_t>(size(db), 2 * (size(db) / 2));
+              for (size_t kp = 0; kp < kstop; kp += 2) {
+                auto score_00 = L2(q_vec_0, db[kp + 0]);
+                auto score_01 = L2(q_vec_0, db[kp + 1]);
+
+                min_scores[j0].insert(score_00, kp + 0);
+                min_scores[j0].insert(score_01, kp + 1);
+              }
+              for (size_t kp = kstop; kp < size(db); ++kp) {
+                auto score_00 = L2(q_vec_0, db[kp + 0]);
+                min_scores[j0].insert(score_00, kp + 0);
+              }
+            }
+          }));
+    }
+  }
+
+  for (size_t n = 0; n < size(futs); ++n) {
+    futs[n].get();
+  }
+
+  for (int j = 0; j < size(query); ++j) {
+    get_top_k_from_heap(min_scores[j], top_k[j]);
   }
 
   return top_k;
