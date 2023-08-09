@@ -60,9 +60,7 @@
 
 template <class T, class shuffled_ids_type = size_t, class indices_type = size_t>
 class kmeans_index {
-  // Random device to seed the random number generator
-  std::random_device rd;
-  std::mt19937 gen{rd()};
+  std::mt19937 gen;
 
   size_t dimension_{0};
   size_t nlist_;
@@ -81,13 +79,15 @@ class kmeans_index {
       size_t nlist,
       size_t max_iter,
       double tol,
-      size_t nthreads)
+      size_t nthreads,
+      std::optional<unsigned int> seed = std::nullopt)
       : dimension_(dimension)
       , nlist_(nlist)
       , max_iter_(max_iter)
       , tol_(tol)
       , nthreads_(nthreads)
-      , centroids_(dimension, nlist) {
+      , centroids_(dimension, nlist)
+      , gen(seed ? *seed : std::random_device{}()) {
   }
 
   /**
