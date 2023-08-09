@@ -209,6 +209,90 @@ TEMPLATE_LIST_TEST_CASE(
   }
 }
 
+TEMPLATE_LIST_TEST_CASE(
+    "linalg: test Matrix initializer_list constructor, row oriented",
+    "[linalg][matrix][create][row]",
+    TestTypes) {
+  auto a = Matrix<TestType, Kokkos::layout_right> {{1, 2}, {3, 4}, {5, 6}};
+  auto v = a.data();
+  std::iota(v, v + 6, 1);
+
+  SECTION("dims") {
+    CHECK(a.num_rows() == 3);
+    CHECK(a.num_cols() == 2);
+  }
+  SECTION("values") {
+    CHECK(a(0, 0) == 1);
+    CHECK(a(0, 1) == 2);
+    CHECK(a(1, 0) == 3);
+    CHECK(a(1, 1) == 4);
+    CHECK(a(2, 0) == 5);
+    CHECK(a(2, 1) == 6);
+  }
+  SECTION("ravel") {
+    auto b = raveled(a);
+    CHECK(std::equal(b.begin(), b.end(), a.data()));
+  }
+  SECTION("operator[]") {
+    auto b = a[0];
+    CHECK(size(b) == 2);
+    CHECK(b[0] == 1);
+    CHECK(b[1] == 2);
+    CHECK(b[2] == 3);
+    CHECK(b[3] == 4);
+    CHECK(b[4] == 5);
+    CHECK(b[5] == 6);
+  }
+}
+
+using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
+TEMPLATE_LIST_TEST_CASE(
+    "linalg: test Matrix initializer list constructor, column oriented",
+    "[linalg][matrixx][create][column]",
+    TestTypes) {
+  auto a = Matrix<TestType, Kokkos::layout_left> {{1, 2, 3}, {4, 5, 6}};
+  auto v = a.data();
+  std::iota(v, v + 6, 1);
+
+  SECTION("dims") {
+    CHECK(a.num_rows() == 3);
+    CHECK(a.num_cols() == 2);
+  }
+  SECTION("values") {
+    CHECK(a(0, 0) == 1);
+    CHECK(a(0, 1) == 4);
+    CHECK(a(1, 0) == 2);
+    CHECK(a(1, 1) == 5);
+    CHECK(a(2, 0) == 3);
+    CHECK(a(2, 1) == 6);
+  }
+  SECTION("ravel") {
+    auto b = raveled(a);
+    CHECK(std::equal(b.begin(), b.end(), a.data()));
+  }
+  SECTION("operator[]") {
+    auto b = a[0];
+    CHECK(size(b) == 3);
+    CHECK(b[0] == 1);
+    CHECK(b[1] == 2);
+    CHECK(b[2] == 3);
+
+    auto c = a[1];
+    CHECK(size(c) == 3);
+    CHECK(c[0] == 4);
+    CHECK(c[1] == 5);
+    CHECK(c[2] == 6);
+
+    CHECK(a[0][0] == 1);
+    CHECK(a[0][1] == 2);
+    CHECK(a[0][2] == 3);
+    CHECK(a[1][0] == 4);
+    CHECK(a[1][1] == 5);
+    CHECK(a[1][2] == 6);
+  }
+}
+
+
 template <class TestType>
 auto make_matrix(size_t num_rows, size_t num_cols) {
   auto a = Matrix<TestType, Kokkos::layout_right>(3, 2);

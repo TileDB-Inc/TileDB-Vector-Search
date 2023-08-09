@@ -49,12 +49,13 @@
 #include <memory>
 #include <numeric>
 #include <queue>
+#include <ranges>
 #include <set>
 #include <span>
 // #include <execution>
 
 #include "linalg.h"
-#include "utils/fixed_min_queues.h"
+#include "utils/fixed_min_heap.h"
 #include "utils/timer.h"
 
 
@@ -165,7 +166,7 @@ inline auto dot(U const& a, V const& b) {
 
 // @todo implement with fixed_min_heap
 template <class V, class L, class I>
-auto get_top_k_nth(V const& scores, L&& top_k, I& index, int k) {
+[[deprecated]] auto get_top_k_nth(V const& scores, L&& top_k, I& index, int k) {
   std::iota(begin(index), end(index), 0);
   std::nth_element(
       begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) {
@@ -178,8 +179,8 @@ auto get_top_k_nth(V const& scores, L&& top_k, I& index, int k) {
   return top_k;
 }
 
-template <class V, class L>
-auto get_top_k(V const& scores, L&& top_k, int k) {
+template <std::ranges::random_access_range V, std::ranges::random_access_range L>
+[[deprecated]] auto get_top_k(V const& scores, L&& top_k, int k) {
   fixed_min_pair_heap<float, unsigned> s(k);
 
   auto num_scores = scores.size();
@@ -187,12 +188,10 @@ auto get_top_k(V const& scores, L&& top_k, int k) {
     s.insert(scores[i], i);
   }
   get_top_k_from_heap(s, top_k);
-
-  return top_k;
 }
 
 template <class S>
-auto get_top_k(const S& scores, int k, bool nth, int nthreads) {
+[[deprecated]] auto get_top_k(const S& scores, int k, bool nth, int nthreads) {
   scoped_timer _{"Get top k"};
 
   auto num_queries = scores.num_cols();
@@ -233,6 +232,55 @@ auto get_top_k(const S& scores, int k, bool nth, int nthreads) {
   return top_k;
 }
 
+/**
+ * @brief Get top k neighbors for each query. Scans the scores for each
+ * query and keeps the top k.
+ * @tparam S
+ * @param scores Array of scores.  One entry per query, for all comparisons.
+ * @param k
+ * @param nthreads
+ * @return Matrix of top k elements.  Each column is a query, each row is a
+ * neighbor index, ranked by closeness.
+ */
+template <class S>
+auto get_top_k(const S& scores, int k, int nthreads = 1) {
+  scoped_timer _{"Get top k"};
+
+  auto num_queries = scores.num_cols();
+
+  auto top_k = ColMajorMatrix<size_t>(k, num_queries);
+
+  if (nthreads == 1) {
+    for (int j = 0; j < num_queries; ++j) {
+      get_top_k(scores[j], std::move(top_k[j]), k);
+    }
+    return top_k;
+  } else {
+    int q_block_size = (num_queries + nthreads - 1) / nthreads;
+    std::vector<std::future<void>> futs;
+    futs.reserve(nthreads);
+
+    for (int n = 0; n < nthreads; ++n) {
+      int q_start = n * q_block_size;
+      int q_stop = std::min<int>((n + 1) * q_block_size, num_queries);
+
+      futs.emplace_back(std::async(
+          std::launch::async, [q_start, q_stop, &scores, &top_k, k]() {
+            std::vector<int> index(scores.num_rows());
+
+            for (int j = q_start; j < q_stop; ++j) {
+              get_top_k(scores[j], std::move(top_k[j]), k);
+            }
+          }));
+    }
+    for (int n = 0; n < nthreads; ++n) {
+      futs[n].get();
+    }
+  }
+  return top_k;
+}
+
+
 // ----------------------------------------------------------------------------
 // Functions for extracting top k neighbors from a min heap (with pairs)
 // ----------------------------------------------------------------------------
@@ -264,7 +312,7 @@ void consolidate_scores(std::vector<std::vector<Heap>>& min_scores) {
  * @param top_k
  */
 inline void get_top_k_from_heap(auto&& min_scores, auto&& top_k) {
-  std::sort_heap(begin(min_scores), end(min_scores));
+  std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&&b){return std::get<0>(a) < std::get<0>(b);});
   std::transform(
       begin(min_scores), end(min_scores), begin(top_k), ([](auto&& e) {
         return std::get<1>(e);
@@ -317,7 +365,7 @@ inline auto get_top_k(std::vector<std::vector<Heap>>& scores, size_t k_nn) {
 // ----------------------------------------------------------------------------
 
 inline void get_top_k_with_scores_from_heap(auto&& min_scores, auto&& top_k, auto&& top_k_scores) {
-  std::sort_heap(begin(min_scores), end(min_scores));
+  std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&&b){return std::get<0>(a) < std::get<0>(b);});
   std::transform(
       begin(min_scores), end(min_scores), begin(top_k_scores), ([](auto&& e) {
         return std::get<0>(e);
@@ -378,7 +426,7 @@ auto verify_top_k_index(L const& top_k, I const& g, int k, int qno) {
  * @todo Handle the error more systematically and succinctly.
  */
 template <class V, class L, class I>
-auto verify_top_k(V const& scores, L const& top_k, I const& g, int k, int qno) {
+auto verify_top_k_scores(V const& scores, L const& top_k, I const& g, int k, int qno) {
   if (!std::equal(
           begin(top_k), begin(top_k) + k, g.begin(), [&](auto& a, auto& b) {
             return scores[a] == scores[b];
@@ -396,6 +444,7 @@ auto verify_top_k(V const& scores, L const& top_k, I const& g, int k, int qno) {
   }
 }
 
+#if 0
 /**
  * @brief Check the computed top k vectors against the ground truth.
  * Useful only for exact search.
@@ -410,9 +459,13 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
     std::cout << std::endl;
   }
 }
+#endif
 
-
-
+/**
+ * @brief Check the computed top k vectors against the ground truth.
+ * This version is for approximate search and so will sort the results before
+ * comparing.
+ */
 template <class TK, class G>
 bool validate_top_k(TK& top_k, G& g) {
   size_t k = top_k.num_rows();

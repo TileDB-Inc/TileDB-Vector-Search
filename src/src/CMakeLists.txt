@@ -102,7 +102,7 @@ target_sources(kmeans_queries INTERFACE
 
 add_library(kmeans_lib INTERFACE)
 target_sources(kmeans_lib INTERFACE
-        ../include/flat_query.h ../include/ivf_query.h ../include/scoring.h ../include/utils/fixed_min_queues.h
+        ../include/flat_query.h ../include/ivf_query.h ../include/scoring.h ../include/utils/fixed_min_heap.h
         ../include/scoring.h ../include/algorithm.h ../include/concepts.h ../include/stats.h
         ../include/utils/timer.h ../include/utils/logging.h ../include/utils/print_types.h
         ../include/flat_index.h ../include/ivf_index.h

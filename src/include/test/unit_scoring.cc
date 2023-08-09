@@ -1,5 +1,5 @@
 /**
- * @file   unit_defs.cc
+ * @file   unit_fixed_min_heap.cc
  *
  * @section LICENSE
  *
@@ -31,12 +31,12 @@
 
 #include <catch2/catch_all.hpp>
 #include <set>
+#include <span>
 #include <vector>
 #include "scoring.h"
+#include "detail/linalg/matrix.h"
 
-TEST_CASE("defs: test test", "[defs]") {
-  REQUIRE(true);
-}
+#ifdef TILEDB_VS_ENABLE_BLAS
 
 TEST_CASE("defs: vector test", "[defs]") {
   std::vector<std::vector<float>> a{
@@ -73,115 +73,7 @@ TEST_CASE("defs: vector test", "[defs]") {
     CHECK(b[3] == (100 + 121 + 144));
   }
 }
-
-TEST_CASE("defs: std::set", "[defs]") {
-  std::set<int> a;
-
-  SECTION("insert in ascending order") {
-    for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
-      a.insert(i);
-    }
-  }
-  SECTION("insert in descending order") {
-    for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
-      a.insert(i);
-    }
-  }
-  CHECK(a.size() == 10);
-  CHECK(a.count(0) == 1);
-  CHECK(*begin(a) == 0);
-  CHECK(*rbegin(a) == 9);
-}
-
-TEST_CASE("defs: std::set with pairs", "[defs]") {
-  using element = std::pair<float, int>;
-  std::set<element> a;
-
-  SECTION("insert in ascending order") {
-    for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
-      a.insert({10 - i, i});
-    }
-    CHECK(std::get<0>(*(begin(a))) == 1);
-    CHECK(std::get<1>(*(begin(a))) == 9);
-    CHECK(std::get<0>(*(rbegin(a))) == 10.0);
-    CHECK(std::get<1>(*(rbegin(a))) == 0);
-  }
-  SECTION("insert in descending order") {
-    for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
-      a.insert({10 + i, i});
-    }
-    CHECK(std::get<0>(*(begin(a))) == 10.0);
-    CHECK(std::get<1>(*(begin(a))) == 0);
-    CHECK(std::get<0>(*(rbegin(a))) == 19.0);
-    CHECK(std::get<1>(*(rbegin(a))) == 9);
-  }
-  CHECK(a.size() == 10);
-  // CHECK(*begin(a) == element{10, 0});
-  // CHECK(*rbegin(a) == element{9, 1});
-}
-
-
-TEST_CASE("defs: fixed_min_pair_heap", "[defs]") {
-  fixed_min_pair_heap<float, int> a(5);
-
-  SECTION("insert in ascending order") {
-    for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
-      a.insert(10 - i, i);
-    }
-    std::sort(begin(a), end(a));
-    CHECK(std::get<0>(*(begin(a))) == 1);
-    CHECK(std::get<1>(*(begin(a))) == 9);
-    CHECK(std::get<0>(*(rbegin(a))) == 5.0);
-    CHECK(std::get<1>(*(rbegin(a))) == 5);
-  }
-  SECTION("insert in descending order") {
-    for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
-      a.insert(10 + i, i);
-    }
-    std::sort(begin(a), end(a));
-    CHECK(std::get<0>(*(begin(a))) == 10.0);
-    CHECK(std::get<1>(*(begin(a))) == 0);
-    CHECK(std::get<0>(*(rbegin(a))) == 14.0);
-    CHECK(std::get<1>(*(rbegin(a))) == 4);
-
-    for (size_t i = 0; i < size(a); ++i) {
-      CHECK(std::get<0>(a[i]) == 10.0 + i);
-      CHECK((size_t)std::get<1>(a[i]) == i);
-    }
-  }
-  CHECK(a.size() == 5);
-}
-
-TEST_CASE("defs: fixed_min_heap with a large vector", "[defs]") {
-  using element = std::pair<float, int>;
-
-  fixed_min_pair_heap<float, int> a(7);
-
-  std::vector<element> v(5500);
-  for (auto&& i : v) {
-    i = {std::rand(), std::rand()};
-    CHECK(i != element{});
-  }
-  for (auto&& [e, f] : v) {
-    a.insert(e, f);
-  }
-  CHECK(a.size() == 7);
-
-  std::vector<element> a2(begin(a), end(a));
-  std::sort(begin(a2), end(a2));
-
-  std::vector<element> u(v.begin(), v.begin() + 7);
-
-  std::nth_element(v.begin(), v.begin() + 7, v.end());
-  std::vector<element> w(v.begin(), v.begin() + 7);
-
-  CHECK(u != w);
-
-  std::vector<element> v3(v.begin(), v.begin() + 7);
-  std::sort(begin(v3), end(v3));
-  CHECK(a2 == v3);
-}
-
+#endif
 
 // L2
 // cosine
@@ -189,3 +81,33 @@ TEST_CASE("defs: fixed_min_heap with a large vector", "[defs]") {
 // jaccard WIP
 
 // get_top_k (heap) from scores array
+TEST_CASE("get_top_k (heap) from scores array", "[get_top_k]") {
+  std::vector<float> scores = { 8, 6, 7, 5, 3, 0, 9, 1, 2, 4  };
+
+  std::vector<unsigned> top_k (3);
+  get_top_k(scores, top_k, 3);
+  CHECK(top_k.size() == 3);
+  CHECK(top_k[0] == 5); // 0
+  CHECK(top_k[1] == 7); // 1
+  CHECK(top_k[2] == 8); // 2
+}
+
+// get_top_k (heap) from scores matrix, parallel
+
+
+
+// consolidate scores
+// get_top_k_from_heap (one min_heap)
+// get_top_k_from_heap (vector of min_heaps)
+// get_top_k_from_heap (vector of vectors of min_heaps)
+// get_top_k_with_scores_from_heap (one min_heap)
+// get_top_k_with_scores_from_heap (vector of min_heaps)
+// get_top_k_with_scores_from_heap (vector of vectors of min_heaps)
+
+// verify_top_k_index
+// verify_top_k_scores
+
+#ifdef TILEDB_VS_ENABLE_BLAS
+// mat_col_sum
+// gemm_scores
+#endif

@@ -45,7 +45,7 @@
 #include "detail/ivf/partition.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "stats.h"
-#include "utils/fixed_min_queues.h"
+#include "utils/fixed_min_heap.h"
 
 #include "detail/ivf/qv.h"
 
