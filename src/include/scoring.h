@@ -190,8 +190,9 @@ template <std::ranges::random_access_range V, std::ranges::random_access_range L
   get_top_k_from_heap(s, top_k);
 }
 
-template <class S>
-[[deprecated]] auto get_top_k(const S& scores, int k, bool nth, int nthreads) {
+template <class T>
+[[deprecated]] auto get_top_k(const ColMajorMatrix<T>& scores, int k, bool nth, int nthreads)
+{
   scoped_timer _{"Get top k"};
 
   auto num_queries = scores.num_cols();
@@ -242,8 +243,10 @@ template <class S>
  * @return Matrix of top k elements.  Each column is a query, each row is a
  * neighbor index, ranked by closeness.
  */
-template <class S>
-auto get_top_k(const S& scores, int k, int nthreads = 1) {
+template <template <class...> class S, class... T>
+auto get_top_k(const S<T...>& scores, int k, int nthreads = 1)
+requires(std::is_same_v<S<T...>, Matrix<T...>> ) {
+
   scoped_timer _{"Get top k"};
 
   auto num_queries = scores.num_cols();
@@ -311,7 +314,9 @@ void consolidate_scores(std::vector<std::vector<Heap>>& min_scores) {
  * @param min_scores
  * @param top_k
  */
-inline void get_top_k_from_heap(auto&& min_scores, auto&& top_k) {
+template <class Heap>
+inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k)
+requires(!std::is_same_v<Heap, std::vector<Heap>>) {
   std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&&b){return std::get<0>(a) < std::get<0>(b);});
   std::transform(
       begin(min_scores), end(min_scores), begin(top_k), ([](auto&& e) {
@@ -381,15 +386,15 @@ template <class Heap, class Index = size_t>
 inline auto get_top_k_with_scores(std::vector<Heap>& scores, size_t k_nn) {
   auto num_queries = size(scores);
 
-  using score_type = typename Heap::value_type::first_type;
+  using score_type = typename std::tuple_element<0, typename Heap::value_type>::type;
 
   ColMajorMatrix<Index> top_k(k_nn, num_queries);
   ColMajorMatrix<score_type> top_scores(k_nn, num_queries);
 
   for (size_t j = 0; j < num_queries; ++j) {
-    get_top_k_with_scores_from_heap(scores[j], top_k[j]);
+    get_top_k_with_scores_from_heap(scores[j], top_k[j], top_scores[j]);
   }
-  return top_k;
+  return std::make_tuple(std::move(top_scores), std::move(top_k));
 }
 
 // Overload for two-d scores
