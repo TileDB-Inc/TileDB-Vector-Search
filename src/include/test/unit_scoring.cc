@@ -103,8 +103,8 @@ TEST_CASE("defs: std::set with pairs", "[defs]") {
     }
     CHECK(std::get<0>(*(begin(a))) == 1);
     CHECK(std::get<1>(*(begin(a))) == 9);
-    CHECK(std::get<0>(*(begin(a))) == 10.0);
-    CHECK(std::get<1>(*(begin(a))) == 0);
+    CHECK(std::get<0>(*(rbegin(a))) == 10.0);
+    CHECK(std::get<1>(*(rbegin(a))) == 0);
   }
   SECTION("insert in descending order") {
     for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
@@ -112,8 +112,8 @@ TEST_CASE("defs: std::set with pairs", "[defs]") {
     }
     CHECK(std::get<0>(*(begin(a))) == 10.0);
     CHECK(std::get<1>(*(begin(a))) == 0);
-    CHECK(std::get<0>(*(begin(a))) == 19.0);
-    CHECK(std::get<1>(*(begin(a))) == 9);
+    CHECK(std::get<0>(*(rbegin(a))) == 19.0);
+    CHECK(std::get<1>(*(rbegin(a))) == 9);
   }
   CHECK(a.size() == 10);
   // CHECK(*begin(a) == element{10, 0});
@@ -131,8 +131,8 @@ TEST_CASE("defs: fixed_min_pair_heap", "[defs]") {
     std::sort(begin(a), end(a));
     CHECK(std::get<0>(*(begin(a))) == 1);
     CHECK(std::get<1>(*(begin(a))) == 9);
-    CHECK(std::get<0>(*(begin(a))) == 5.0);
-    CHECK(std::get<1>(*(begin(a))) == 5);
+    CHECK(std::get<0>(*(rbegin(a))) == 5.0);
+    CHECK(std::get<1>(*(rbegin(a))) == 5);
   }
   SECTION("insert in descending order") {
     for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
@@ -141,8 +141,8 @@ TEST_CASE("defs: fixed_min_pair_heap", "[defs]") {
     std::sort(begin(a), end(a));
     CHECK(std::get<0>(*(begin(a))) == 10.0);
     CHECK(std::get<1>(*(begin(a))) == 0);
-    CHECK(std::get<0>(*(begin(a))) == 14.0);
-    CHECK(std::get<1>(*(begin(a))) == 4);
+    CHECK(std::get<0>(*(rbegin(a))) == 14.0);
+    CHECK(std::get<1>(*(rbegin(a))) == 4);
 
     for (size_t i = 0; i < size(a); ++i) {
       CHECK(std::get<0>(a[i]) == 10.0 + i);
