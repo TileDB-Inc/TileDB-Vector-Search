@@ -101,72 +101,52 @@ TEST_CASE("defs: std::set with pairs", "[defs]") {
     for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
       a.insert({10 - i, i});
     }
-    CHECK(begin(a)->first == 1);
-    CHECK(begin(a)->second == 9);
-    CHECK(rbegin(a)->first == 10.0);
-    CHECK(rbegin(a)->second == 0);
+    CHECK(std::get<0>(*(begin(a))) == 1);
+    CHECK(std::get<1>(*(begin(a))) == 9);
+    CHECK(std::get<0>(*(begin(a))) == 10.0);
+    CHECK(std::get<1>(*(begin(a))) == 0);
   }
   SECTION("insert in descending order") {
     for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
       a.insert({10 + i, i});
     }
-    CHECK(begin(a)->first == 10.0);
-    CHECK(begin(a)->second == 0);
-    CHECK(rbegin(a)->first == 19.0);
-    CHECK(rbegin(a)->second == 9);
+    CHECK(std::get<0>(*(begin(a))) == 10.0);
+    CHECK(std::get<1>(*(begin(a))) == 0);
+    CHECK(std::get<0>(*(begin(a))) == 19.0);
+    CHECK(std::get<1>(*(begin(a))) == 9);
   }
   CHECK(a.size() == 10);
   // CHECK(*begin(a) == element{10, 0});
   // CHECK(*rbegin(a) == element{9, 1});
 }
 
-TEST_CASE("defs: fixed_min_heap", "[defs]") {
-  fixed_min_heap<int> a(5);
+
+TEST_CASE("defs: fixed_min_pair_heap", "[defs]") {
+  fixed_min_pair_heap<float, int> a(5);
 
   SECTION("insert in ascending order") {
     for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
-      a.insert(i);
-    }
-  }
-
-  SECTION("insert in descending order") {
-    for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
-      a.insert(i);
-    }
-  }
-  CHECK(a.size() == 5);
-  // CHECK(a.count(0) == 1);
-  // CHECK(*begin(a) == 0);
-  // CHECK(*rbegin(a) == 4);
-}
-
-TEST_CASE("defs: fixed_min_heap with pairs", "[defs]") {
-  using element = std::pair<float, int>;
-  fixed_min_heap<element> a(5);
-
-  SECTION("insert in ascending order") {
-    for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
-      a.insert({10 - i, i});
+      a.insert(10 - i, i);
     }
     std::sort(begin(a), end(a));
-    CHECK(begin(a)->first == 1);
-    CHECK(begin(a)->second == 9);
-    CHECK(rbegin(a)->first == 5.0);
-    CHECK(rbegin(a)->second == 5);
+    CHECK(std::get<0>(*(begin(a))) == 1);
+    CHECK(std::get<1>(*(begin(a))) == 9);
+    CHECK(std::get<0>(*(begin(a))) == 5.0);
+    CHECK(std::get<1>(*(begin(a))) == 5);
   }
   SECTION("insert in descending order") {
     for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
-      a.insert({10 + i, i});
+      a.insert(10 + i, i);
     }
     std::sort(begin(a), end(a));
-    CHECK(begin(a)->first == 10.0);
-    CHECK(begin(a)->second == 0);
-    CHECK(rbegin(a)->first == 14.0);
-    CHECK(rbegin(a)->second == 4);
+    CHECK(std::get<0>(*(begin(a))) == 10.0);
+    CHECK(std::get<1>(*(begin(a))) == 0);
+    CHECK(std::get<0>(*(begin(a))) == 14.0);
+    CHECK(std::get<1>(*(begin(a))) == 4);
 
     for (size_t i = 0; i < size(a); ++i) {
-      CHECK(a[i].first == 10.0 + i);
-      CHECK((size_t)a[i].second == i);
+      CHECK(std::get<0>(a[i]) == 10.0 + i);
+      CHECK((size_t)std::get<1>(a[i]) == i);
     }
   }
   CHECK(a.size() == 5);
@@ -174,15 +154,16 @@ TEST_CASE("defs: fixed_min_heap with pairs", "[defs]") {
 
 TEST_CASE("defs: fixed_min_heap with a large vector", "[defs]") {
   using element = std::pair<float, int>;
-  fixed_min_heap<element> a(7);
+
+  fixed_min_pair_heap<float, int> a(7);
 
   std::vector<element> v(5500);
   for (auto&& i : v) {
     i = {std::rand(), std::rand()};
     CHECK(i != element{});
   }
-  for (auto&& i : v) {
-    a.insert(i);
+  for (auto&& [e, f] : v) {
+    a.insert(e, f);
   }
   CHECK(a.size() == 7);
 
@@ -200,3 +181,11 @@ TEST_CASE("defs: fixed_min_heap with a large vector", "[defs]") {
   std::sort(begin(v3), end(v3));
   CHECK(a2 == v3);
 }
+
+
+// L2
+// cosine
+// dot
+// jaccard WIP
+
+// get_top_k (heap) from scores array

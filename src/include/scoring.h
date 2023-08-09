@@ -180,16 +180,13 @@ auto get_top_k_nth(V const& scores, L&& top_k, I& index, int k) {
 
 template <class V, class L>
 auto get_top_k(V const& scores, L&& top_k, int k) {
-  using element = std::pair<float, unsigned>;
-  fixed_min_heap<element> s(k);
+  fixed_min_pair_heap<float, unsigned> s(k);
 
   auto num_scores = scores.size();
   for (size_t i = 0; i < num_scores; ++i) {
-    s.insert({scores[i], i});
+    s.insert(scores[i], i);
   }
-  std::sort_heap(begin(s), end(s));
-  std::transform(
-      s.begin(), s.end(), top_k.begin(), ([](auto&& e) { return e.second; }));
+  get_top_k_from_heap(s, top_k);
 
   return top_k;
 }
@@ -254,8 +251,8 @@ void consolidate_scores(std::vector<std::vector<Heap>>& min_scores) {
   auto num_queries = size(min_scores[0]);
   for (size_t j = 0; j < num_queries; ++j) {
     for (size_t n = 1; n < nthreads; ++n) {
-      for (auto&& e : min_scores[n][j]) {
-        min_scores[0][j].insert(std::get<0>(e), std::get<1>(e));
+      for (auto&& [e, f] : min_scores[n][j]) {
+        min_scores[0][j].insert(e, f);
       }
     }
   }

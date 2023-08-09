@@ -147,8 +147,8 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   }
 };
 
-template <class T>
-using fixed_min_heap = fixed_min_set_heap_1<T>;
+// template <class T>
+// using fixed_min_heap = fixed_min_set_heap_1<T>;
 
 #ifdef ALLHEAPS  // Kept here for historical comparison reasons.  They are
                  // really slow.

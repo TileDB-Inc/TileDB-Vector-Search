@@ -101,14 +101,13 @@ auto vq_query_nth(DB& db, const Q& q, int k, bool nth, int nthreads) {
  */
 template <class DB, class Q>
 auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
-  using element = std::pair<float, int>;
 
   // @todo Need to get the total number of queries, not just the first block
   // @todo Use Matrix here rather than vector of vectors
-  std::vector<std::vector<fixed_min_heap<element>>> scores(
+  std::vector<std::vector<fixed_min_pair_heap<float, unsigned>>> scores(
       nthreads,
-      std::vector<fixed_min_heap<element>>(
-          size(q), fixed_min_heap<element>(k)));
+      std::vector<fixed_min_pair_heap<float, unsigned>>(
+          size(q), fixed_min_pair_heap<float, unsigned>(k)));
 
   unsigned size_q = size(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
@@ -124,7 +123,7 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
         [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
           for (size_t j = 0; j < size_q; ++j) {
             auto score = L2(q[j], db_vec);
-            scores[n][j].insert(element{score, i + db.col_offset()});
+            scores[n][j].insert(score, i + db.col_offset());
           }
         });
     _i.stop();
@@ -133,8 +132,8 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
   _i.start();
   for (size_t j = 0; j < size(q); ++j) {
     for (unsigned n = 1; n < nthreads; ++n) {
-      for (auto&& e : scores[n][j]) {
-        scores[0][j].insert(e);
+      for (auto&& [e, f] : scores[n][j]) {
+        scores[0][j].insert(e, f);
       }
     }
   }
@@ -164,7 +163,7 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
                 scores[0][j].begin(),
                 scores[0][j].end(),
                 top_k[j].begin(),
-                ([](auto&& e) { return e.second; }));
+                ([](auto&& e) { return std::get<1>(e); }));
           }
         }));
   }
@@ -179,14 +178,13 @@ auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
 
 template <class DB, class Q>
 auto vq_query_heap_tiled(DB& db, Q& q, int k, unsigned nthreads) {
-  using element = std::pair<float, int>;
 
   // @todo Need to get the total number of queries, not just the first block
   // @todo Use Matrix here rather than vector of vectors
-  std::vector<std::vector<fixed_min_heap<element>>> scores(
+  std::vector<std::vector<fixed_min_pair_heap<float, unsigned>>> scores(
       nthreads,
-      std::vector<fixed_min_heap<element>>(
-          size(q), fixed_min_heap<element>(k)));
+      std::vector<fixed_min_pair_heap<float, unsigned>>(
+          size(q), fixed_min_pair_heap<float, unsigned>(k)));
 
   unsigned size_q = size(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
@@ -202,7 +200,7 @@ auto vq_query_heap_tiled(DB& db, Q& q, int k, unsigned nthreads) {
         [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
           for (size_t j = 0; j < size_q; ++j) {
             auto score = L2(q[j], db_vec);
-            scores[n][j].insert(element{score, i + db.col_offset()});
+            scores[n][j].insert(score, i + db.col_offset());
           }
         });
     _i.stop();
@@ -211,8 +209,8 @@ auto vq_query_heap_tiled(DB& db, Q& q, int k, unsigned nthreads) {
   _i.start();
   for (size_t j = 0; j < size(q); ++j) {
     for (unsigned n = 1; n < nthreads; ++n) {
-      for (auto&& e : scores[n][j]) {
-        scores[0][j].insert(e);
+      for (auto&& [e, f] : scores[n][j]) {
+        scores[0][j].insert(e, f);
       }
     }
   }
