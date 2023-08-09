@@ -40,10 +40,6 @@
 
 bool global_debug = false;
 
-TEST_CASE("ivf_index: test test", "[ivf_index]") {
-  REQUIRE(true);
-}
-
 // kmeans and kmeans indexing still WIP
 
 void debug_centroids(auto& index) {
@@ -56,9 +52,7 @@ void debug_centroids(auto& index) {
   std::cout << std::endl;
 }
 
-#if 0
-
-TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index]") {
+TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
                              9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
 
@@ -78,16 +72,7 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index]") {
   CHECK(index.get_centroids().num_cols() == 3);
   CHECK(index.get_centroids().num_rows() == 4);
 
-#if 0
-  for (size_t j = 0; j < index.get_centroids().num_rows(); ++j) {
-    for (size_t i = 0; i < index.get_centroids().num_cols(); ++i) {
-      std::cout << index.get_centroids()(j,i) << " ";
-    }
-    std::cout << std::endl;
-  }
-  std::cout << std::endl;
-#endif
-debug_centroids(index);
+  debug_centroids(index);
 
   for (size_t i = 0; i < index.get_centroids().num_cols() - 1; ++i) {
     for (size_t j = i + 1; j < index.get_centroids().num_cols(); ++j) {
@@ -112,8 +97,6 @@ debug_centroids(index);
   }
   CHECK(outer_counts == index.get_centroids().num_cols());
 }
-
-#endif
 
 // kmeans and kmeans indexing still WIP
 #if 0
