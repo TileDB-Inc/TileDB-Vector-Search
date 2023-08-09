@@ -209,22 +209,6 @@ auto qv_query_heap_infinite_ram(
         });
   }
 
-#if 0
-  ColMajorMatrix<size_t> top_k(k_nn, q.num_cols());
-  {
-    scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
-
-    // @todo get_top_k_from_heap
-    for (size_t j = 0; j < size(q); ++j) {
-      sort_heap(min_scores[j].begin(), min_scores[j].end());
-      std::transform(
-          min_scores[j].begin(),
-          min_scores[j].end(),
-          top_k[j].begin(),
-          ([](auto&& e) { return std::get<1>(e); }));
-    }
-  }
-#endif
   auto top_k = get_top_k(min_scores, k_nn);
   return top_k;
 }
@@ -365,27 +349,8 @@ auto nuv_query_heap_infinite_ram(
     futs[n].get();
   }
 
-  for (size_t j = 0; j < num_queries; ++j) {
-    for (size_t n = 1; n < nthreads; ++n) {
-      for (auto&& e : min_scores[n][j]) {
-        min_scores[0][j].insert(std::get<0>(e), std::get<1>(e));
-      }
-    }
-  }
-
-  scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
-
-  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
-
-  // @todo get_top_k_from_heap
-  for (size_t j = 0; j < num_queries; ++j) {
-    sort_heap(min_scores[0][j].begin(), min_scores[0][j].end());
-    std::transform(
-        min_scores[0][j].begin(),
-        min_scores[0][j].end(),
-        top_k[j].begin(),
-        ([](auto&& e) { return std::get<1>(e); }));
-  }
+  consolidate_scores(min_scores);
+  auto top_k = get_top_k(min_scores, k_nn);
 
   return top_k;
 }
@@ -625,31 +590,8 @@ auto qv_query_heap_finite_ram(
     _i.stop();
   }
 
-  _i.start();
-  for (size_t j = 0; j < num_queries; ++j) {
-    for (size_t n = 1; n < nthreads; ++n) {
-      for (auto&& e : min_scores[n][j]) {
-        min_scores[0][j].insert(std::get<0>(e), std::get<1>(e));
-      }
-    }
-  }
-  _i.stop();
-
-  scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
-
-  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
-
-  // get_top_k_from_heap(min_scores, top_k);
-
-  // @todo get_top_k_from_heap
-  for (size_t j = 0; j < num_queries; ++j) {
-    sort_heap(min_scores[0][j].begin(), min_scores[0][j].end());
-    std::transform(
-        min_scores[0][j].begin(),
-        min_scores[0][j].end(),
-        top_k[j].begin(),
-        ([](auto&& e) { return std::get<1>(e); }));
-  }
+  consolidate_scores(min_scores);
+  auto top_k = get_top_k(min_scores, k_nn);
 
   return top_k;
 }
@@ -875,32 +817,8 @@ auto nuv_query_heap_finite_ram(
     _i.stop();
   }
 
-  _i.start();
-  for (size_t j = 0; j < num_queries; ++j) {
-    for (size_t n = 1; n < nthreads; ++n) {
-      for (auto&& e : min_scores[n][j]) {
-        min_scores[0][j].insert(std::get<0>(e), std::get<1>(e));
-      }
-    }
-  }
-  _i.stop();
-
-  scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
-
-  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
-
-  // get_top_k_from_heap(min_scores, top_k);
-
-  // @todo get_top_k_from_heap
-  for (size_t j = 0; j < num_queries; ++j) {
-    sort_heap(min_scores[0][j].begin(), min_scores[0][j].end());
-    std::transform(
-        min_scores[0][j].begin(),
-        min_scores[0][j].end(),
-        top_k[j].begin(),
-        ([](auto&& e) { return std::get<1>(e); }));
-  }
-
+  consolidate_scores(min_scores);
+  auto top_k = get_top_k(min_scores, k_nn);
   return top_k;
 }
 
@@ -1022,57 +940,15 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
               }
             }
           }));
-#if 0
-      /*
-               * Get the queries associated with this partition.
-               */
-              for (auto j : active_queries[partno]) {
-                auto& msj = mscores[j];
-                auto q_vec = query[j];
 
-                // for (size_t k = start; k < stop; ++k) {
-                //   auto kp = k - shuffled_db.col_offset();
-                for (size_t kp = start; kp < stop; ++kp) {
-                  auto score = L2(q_vec, shuffled_db[kp]);
-
-                  // @todo any performance with apparent extra indirection?
-                  // (Compiler should do the right thing, but...)
-                  // min_scores[n][j].insert(score, shuffled_ids[kp]);
-                  msj.insert(score, shuffled_ids[kp]);
-                }
-              }
-            }
-          }));
-#endif
     }
   }
   for (size_t n = 0; n < size(futs); ++n) {
     futs[n].get();
   }
 
-  for (size_t j = 0; j < num_queries; ++j) {
-    for (size_t n = 1; n < nthreads; ++n) {
-      for (auto&& e : min_scores[n][j]) {
-        min_scores[0][j].insert(std::get<0>(e), std::get<1>(e));
-      }
-    }
-  }
-
-  scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
-
-  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
-
-  // get_top_k_from_heap(min_scores, top_k);
-
-  // @todo get_top_k_from_heap
-  for (size_t j = 0; j < num_queries; ++j) {
-    sort_heap(min_scores[0][j].begin(), min_scores[0][j].end());
-    std::transform(
-        min_scores[0][j].begin(),
-        min_scores[0][j].end(),
-        top_k[j].begin(),
-        ([](auto&& e) { return std::get<1>(e); }));
-  }
+  consolidate_scores(min_scores);
+  auto top_k = get_top_k(min_scores, k_nn);
 
   return top_k;
 }
@@ -1257,31 +1133,8 @@ auto nuv_query_heap_finite_ram_reg_blocked(
     _i.stop();
   }
 
-  _i.start();
-  for (size_t j = 0; j < num_queries; ++j) {
-    for (size_t n = 1; n < nthreads; ++n) {
-      for (auto&& e : min_scores[n][j]) {
-        min_scores[0][j].insert(std::get<0>(e), std::get<1>(e));
-      }
-    }
-  }
-  _i.stop();
-
-  scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
-
-  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
-
-  // get_top_k_from_heap(min_scores, top_k);
-
-  // @todo get_top_k_from_heap
-  for (size_t j = 0; j < num_queries; ++j) {
-    sort_heap(min_scores[0][j].begin(), min_scores[0][j].end());
-    std::transform(
-        min_scores[0][j].begin(),
-        min_scores[0][j].end(),
-        top_k[j].begin(),
-        ([](auto&& e) { return std::get<1>(e); }));
-  }
+  consolidate_scores(min_scores);
+  auto top_k = get_top_k(min_scores, k_nn);
 
   return top_k;
 }
@@ -1533,24 +1386,7 @@ auto query_finite_ram(
     _i.stop();
   }
 
-  scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
-
-  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
-
-  // get_top_k_from_heap(min_scores, top_k);
-
-  // @todo get_top_k_from_heap
-  for (size_t j = 0; j < num_queries; ++j) {
-    get_top_k_from_heap(min_scores[j], top_k[j]);
-#if 0
-    sort_heap(min_scores[j].begin(), min_scores[j].end());
-    std::transform(
-        min_scores[j].begin(),
-        min_scores[j].end(),
-        top_k[j].begin(),
-        ([](auto&& e) { return std::get<1>(e); }));
-#endif
-  }
+  auto top_k = get_top_k(min_scores, k_nn);
 
   return top_k;
 }
@@ -1634,19 +1470,7 @@ auto query_infinite_ram(
     }
   }
 
-  scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
-
-  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
-
-  // @todo get_top_k_from_heap
-  for (size_t j = 0; j < num_queries; ++j) {
-    sort_heap(min_scores[j].begin(), min_scores[j].end());
-    std::transform(
-        min_scores[j].begin(),
-        min_scores[j].end(),
-        top_k[j].begin(),
-        ([](auto&& e) { return std::get<1>(e); }));
-  }
+  auto top_k = get_top_k(min_scores, k_nn);
 
   return top_k;
 }
