@@ -55,6 +55,7 @@ template <typename T, class ids_type, class centroids_type>
 int ivf_index(
     tiledb::Context& ctx,
     const ColMajorMatrix<T>& db,
+    const std::vector<ids_type>& external_ids,
     const std::string& centroids_uri,
     const std::string& parts_uri,
     const std::string& index_uri,
@@ -70,6 +71,7 @@ int ivf_index(
   auto parts = detail::flat::qv_partition(centroids, db, nthreads);
   debug_matrix(parts, "parts");
   {
+
     scoped_timer _{"shuffling data"};
     std::vector<size_t> degrees(centroids.num_cols());
     std::vector<ids_type> indices(centroids.num_cols() + 1);
@@ -96,7 +98,6 @@ int ivf_index(
     // Array for storing the shuffled data
     auto shuffled_db = ColMajorMatrix<T>{db.num_rows(), db.num_cols()};
     std::vector shuffled_ids = std::vector<ids_type>(db.num_cols());
-    std::iota(begin(shuffled_ids), end(shuffled_ids), 0);
 
     debug_matrix(shuffled_db, "shuffled_db");
     debug_matrix(shuffled_ids, "shuffled_ids");
@@ -111,7 +112,7 @@ int ivf_index(
       size_t bin = parts[i];
       size_t ibin = indices[bin];
 
-      shuffled_ids[ibin] = i + start_pos;
+      shuffled_ids[ibin] = external_ids[i];
 
       assert(ibin < shuffled_db.num_cols());
       for (size_t j = 0; j < db.num_rows(); ++j) {
@@ -149,38 +150,66 @@ template <typename T, class ids_type, class centroids_type>
 int ivf_index(
     tiledb::Context& ctx,
     const std::string& db_uri,
+    const std::string& external_ids_uri,
     const std::string& centroids_uri,
     const std::string& parts_uri,
     const std::string& index_uri,
     const std::string& id_uri,
-    size_t nthreads) {
+    size_t start_pos = 0,
+    size_t end_pos = 0,
+    size_t nthreads = 0) {
+  auto db = tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos);
+  db.load();
+  std::vector<ids_type> external_ids;
+  if (external_ids_uri.empty()) {
+    external_ids = std::vector<ids_type>(db.num_cols());
+    std::iota(begin(external_ids), end(external_ids), start_pos);
+  } else {
+    external_ids = read_vector<ids_type>(ctx, external_ids_uri, start_pos, end_pos);
+  }
   return ivf_index<T, ids_type, centroids_type>(
-      ctx, db_uri, centroids_uri, parts_uri, index_uri, id_uri, 0, 0, nthreads);
+      ctx, db, external_ids, centroids_uri, parts_uri, index_uri, id_uri, start_pos, end_pos, nthreads);
 }
 
 template <typename T, class ids_type, class centroids_type>
 int ivf_index(
     tiledb::Context& ctx,
     const std::string& db_uri,
+    const std::vector<ids_type>& external_ids,
     const std::string& centroids_uri,
     const std::string& parts_uri,
     const std::string& index_uri,
     const std::string& id_uri,
-    size_t start_pos,
-    size_t end_pos,
-    size_t nthreads) {
+    size_t start_pos = 0,
+    size_t end_pos = 0,
+    size_t nthreads = 0) {
   auto db = tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos);
   db.load();
   return ivf_index<T, ids_type, centroids_type>(
-      ctx,
-      db,
-      centroids_uri,
-      parts_uri,
-      index_uri,
-      id_uri,
-      start_pos,
-      end_pos,
-      nthreads);
+      ctx, db, external_ids, centroids_uri, parts_uri, index_uri, id_uri, start_pos, end_pos, nthreads);
+}
+
+template <typename T, class ids_type, class centroids_type>
+int ivf_index(
+    tiledb::Context& ctx,
+    const ColMajorMatrix<T>& db,
+    const std::string& external_ids_uri,
+    const std::string& centroids_uri,
+    const std::string& parts_uri,
+    const std::string& index_uri,
+    const std::string& id_uri,
+    size_t start_pos = 0,
+    size_t end_pos = 0,
+    size_t nthreads = 0) {
+  std::vector<ids_type> external_ids;
+  if (external_ids_uri.empty()) {
+    external_ids = std::vector<ids_type>(db.num_cols());
+    std::iota(begin(external_ids), end(external_ids), start_pos);
+  } else {
+    external_ids = read_vector<ids_type>(ctx, external_ids_uri, start_pos, end_pos);
+  }
+  return ivf_index<T, ids_type, centroids_type>(
+      ctx, db, external_ids, centroids_uri, parts_uri, index_uri, id_uri, start_pos, end_pos, nthreads);
 }
 
 }  // namespace detail::ivf

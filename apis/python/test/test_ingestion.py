@@ -10,8 +10,7 @@ import pytest
 MINIMUM_ACCURACY = 0.85
 
 
-@pytest.mark.parametrize("query_type", ["heap", "nth"])
-def test_flat_ingestion_u8(tmp_path, query_type):
+def test_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
     create_random_dataset_u8(nb=10000, d=100, nq=100, k=10, path=dataset_dir)
@@ -26,12 +25,11 @@ def test_flat_ingestion_u8(tmp_path, query_type):
         index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.u8bin"),
     )
-    result = index.query(query_vectors, k=k, query_type=query_type)
+    result = index.query(query_vectors, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
-@pytest.mark.parametrize("query_type", ["heap", "nth"])
-def test_flat_ingestion_f32(tmp_path, query_type):
+def test_flat_ingestion_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
     create_random_dataset_f32(nb=10000, d=100, nq=100, k=10, path=dataset_dir)
@@ -46,12 +44,35 @@ def test_flat_ingestion_f32(tmp_path, query_type):
         index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.f32bin"),
     )
-    result = index.query(query_vectors, k=k, query_type=query_type)
+    result = index.query(query_vectors, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_ram = FlatIndex(uri=index_uri)
-    result = index_ram.query(query_vectors, k=k, query_type=query_type)
+    result = index_ram.query(query_vectors, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+
+def test_flat_ingestion_external_id_u8(tmp_path):
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    index_uri = os.path.join(tmp_path, "array")
+    size = 10000
+    dtype = np.uint8
+    create_random_dataset_u8(nb=size, d=100, nq=100, k=10, path=dataset_dir)
+    k = 10
+    external_ids_offset = 100
+
+    query_vectors = get_queries(dataset_dir, dtype=dtype)
+    gt_i, gt_d = get_groundtruth(dataset_dir, k)
+    external_ids = np.array([range(external_ids_offset, size+external_ids_offset)], np.uint64)
+
+    index = ingest(
+        index_type="FLAT",
+        index_uri=index_uri,
+        source_uri=os.path.join(dataset_dir, "data.u8bin"),
+        external_ids=external_ids
+    )
+    result = index.query(query_vectors, k=k)
+    assert accuracy(result, gt_i, external_ids_offset=external_ids_offset) > MINIMUM_ACCURACY
 
 
 def test_ivf_flat_ingestion_u8(tmp_path):
@@ -230,3 +251,29 @@ def test_ivf_flat_ingestion_numpy(tmp_path):
 
     result = index_ram.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
+    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
+    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
+    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    index_uri = os.path.join(tmp_path, "array")
+    k = 100
+    partitions = 100
+    nqueries = 100
+    nprobe = 20
+    size = 10000
+    external_ids_offset = 100
+
+    input_vectors = load_fvecs(source_uri)
+
+    query_vectors = load_fvecs(queries_uri)
+    gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
+    external_ids = np.array([range(external_ids_offset, size+external_ids_offset)], np.uint64)
+    index = ingest(
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
+        input_vectors=input_vectors,
+        partitions=partitions,
+        external_ids=external_ids
+    )
+    result = index.query(query_vectors, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i, external_ids_offset) > MINIMUM_ACCURACY
