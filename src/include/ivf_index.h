@@ -195,9 +195,16 @@ class kmeans_index {
     scoped_timer _{__FUNCTION__};
 
     std::vector<size_t> indices(nlist_);
+    std::vector<bool> visited(training_set.num_cols(), false);
     std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
     for (size_t i = 0; i < nlist_; ++i) {
-      indices[i] = dis(gen);
+      size_t index;
+      do
+      {
+        index = dis(gen);
+      } while (visited[index]);
+      indices[i] = index;
+      visited[index] = true;
     }
     // std::iota(begin(indices), end(indices), 0);
     // std::shuffle(begin(indices), end(indices), gen);
