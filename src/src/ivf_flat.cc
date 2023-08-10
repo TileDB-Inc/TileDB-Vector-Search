@@ -217,7 +217,7 @@ int main(int argc, char* argv[]) {
   q.load();
   debug_matrix(q, "q");
 
-  auto top_k = [&]() {
+  auto&& [top_k_scores, top_k] = [&]() {
     if (algorithm == "reg") {
       if (finite) {
         return detail::ivf::

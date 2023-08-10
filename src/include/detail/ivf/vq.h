@@ -62,6 +62,8 @@
 #ifndef TILEDB_IVF_VQ_H
 #define TILEDB_IVF_VQ_H
 
+#include "scoring.h"
+
 namespace detail::ivf {
 
 /**
@@ -334,21 +336,7 @@ auto vq_query_finite_ram(
     _i.stop();
   }
 
-  scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
-
-  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
-
-  // get_top_k_from_heap(min_scores, top_k);
-
-  // @todo get_top_k_from_heap
-  for (size_t j = 0; j < num_queries; ++j) {
-    sort_heap(min_scores[j].begin(), min_scores[j].end());
-    std::transform(
-        min_scores[j].begin(),
-        min_scores[j].end(),
-        top_k[j].begin(),
-        ([](auto&& e) { return std::get<1>(e); }));
-  }
+  auto top_k = get_top_k_with_scores(min_scores, k_nn);
 
   return top_k;
 }
@@ -438,19 +426,7 @@ auto vq_query_infinite_ram(
     }
   }
 
-  scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
-
-  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
-
-  // @todo get_top_k_from_heap
-  for (size_t j = 0; j < num_queries; ++j) {
-    sort_heap(min_scores[j].begin(), min_scores[j].end());
-    std::transform(
-        min_scores[j].begin(),
-        min_scores[j].end(),
-        top_k[j].begin(),
-        ([](auto&& e) { return std::get<1>(e); }));
-  }
+  auto top_k = get_top_k_with_scores(min_scores, k_nn);
 
   return top_k;
 }
@@ -594,19 +570,7 @@ auto vq_query_infinite_ram_2(
     }
   }
 
-  scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
-
-  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
-
-  // @todo get_top_k_from_heap
-  for (size_t j = 0; j < num_queries; ++j) {
-    sort_heap(min_scores[j].begin(), min_scores[j].end());
-    std::transform(
-        min_scores[j].begin(),
-        min_scores[j].end(),
-        top_k[j].begin(),
-        ([](auto&& e) { return std::get<1>(e); }));
-  }
+  auto top_k = get_top_k_with_scores(min_scores, k_nn);
 
   return top_k;
 }
@@ -762,26 +726,8 @@ auto vq_query_finite_ram_2(
   }
 
 
-  _i.start();
-  for (size_t j = 0; j < num_queries; ++j) {
-    for (unsigned n = 1; n < nthreads; ++n) {
-      for (auto&& [e, f] : min_scores[n][j]) {
-        min_scores[0][j].insert(e, f);
-      }
-    }
-  }
-
-  scoped_timer ___{tdb_func__ + std::string{"_top_k"}};
-
-  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
-
-  // get_top_k_from_heap(min_scores, top_k);
-
-  // @todo get_top_k_from_heap
-
-  for (size_t j = 0; j < num_queries; ++j) {
-    get_top_k_from_heap(min_scores[0][j], top_k[j]);
-  }
+  consolidate_scores(min_scores);
+  auto top_k = get_top_k_with_scores(min_scores, k_nn);
 
   return top_k;
 }

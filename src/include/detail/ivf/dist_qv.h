@@ -313,22 +313,7 @@ auto dist_qv_finite_ram(
     }
   }
 
-  /*
-   * Now create the top_k matrix.
-   */
-  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
-
-  // get_top_k_from_heap(min_scores, top_k);
-
-  // @todo get_top_k_from_heap
-  for (size_t j = 0; j < num_queries; ++j) {
-    sort_heap(begin(min_scores[j]), end(min_scores[j]));
-    std::transform(
-        begin(min_scores[j]),
-        end(min_scores[j]),
-        begin(top_k[j]),
-        ([](auto&& e) { return std::get<1>(e); }));
-  }
+  auto top_k = get_top_k_with_scores(min_scores, k_nn);
 
   return top_k;
 }
