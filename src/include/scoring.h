@@ -408,7 +408,6 @@ inline auto get_top_k_with_scores(std::vector<std::vector<Heap>>& scores, size_t
 // Functions for verifying top k neighbors against groundtruth
 // ----------------------------------------------------------------------------
 
-
 template <class L, class I>
 auto verify_top_k_index(L const& top_k, I const& g, int k, int qno) {
   // std::sort(begin(g), begin(g) + k);
