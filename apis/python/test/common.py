@@ -161,10 +161,16 @@ def create_array(path: str, data):
         A[:] = data
 
 
-def accuracy(result, gt):
+def accuracy(result, gt, external_ids_offset=0):
     found = 0
     total = 0
     for i in range(len(result)):
-        total += len(result[i])
-        found += len(np.intersect1d(result[i], gt[i]))
+        if external_ids_offset==0:
+            temp_result = result[i]
+        else:
+            temp_result = []
+            for j in range(len(result[i])):
+                temp_result.append(int(result[i][j]-external_ids_offset))
+        total += len(temp_result)
+        found += len(np.intersect1d(temp_result, gt[i]))
     return found / total

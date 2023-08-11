@@ -122,6 +122,7 @@ def query_vq_heap(db: "colMajorMatrix", *args):
 def ivf_index_tdb(
     dtype: np.dtype,
     db_uri: str,
+    external_ids_uri: str,
     centroids_uri: str,
     parts_uri: str,
     index_array_uri: str,
@@ -137,7 +138,7 @@ def ivf_index_tdb(
         ctx = Ctx(config)
 
     args = tuple(
-        [ctx, db_uri, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads]
+        [ctx, db_uri, external_ids_uri, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads]
     )
 
     if dtype == np.float32:
@@ -151,6 +152,7 @@ def ivf_index_tdb(
 def ivf_index(
     dtype: np.dtype,
     db: "colMajorMatrix",
+    external_ids: "Vector",
     centroids_uri: str,
     parts_uri: str,
     index_array_uri: str,
@@ -166,7 +168,7 @@ def ivf_index(
         ctx = Ctx(config)
 
     args = tuple(
-        [ctx, db, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads]
+        [ctx, db, external_ids, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads]
     )
 
     if dtype == np.float32:

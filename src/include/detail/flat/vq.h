@@ -85,7 +85,6 @@ auto vq_query_nth(DB& db, const Q& q, int k, bool nth, int nthreads) {
   for (int n = 0; n < nthreads; ++n) {
     futs[n].get();
   }
-
   auto top_k = get_top_k(scores, k, nth, nthreads);
 
   return top_k;
@@ -100,7 +99,7 @@ auto vq_query_nth(DB& db, const Q& q, int k, bool nth, int nthreads) {
  * @todo Unify out of core and not out of core versions.
  */
 template <class DB, class Q>
-auto vq_query_heap(DB& db, Q& q, int k, unsigned nthreads) {
+auto vq_query_heap(DB& db, Q& q, const std::vector<uint64_t>& ids, int k, unsigned nthreads) {
 
   // @todo Need to get the total number of queries, not just the first block
   // @todo Use Matrix here rather than vector of vectors

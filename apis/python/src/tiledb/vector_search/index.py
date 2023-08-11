@@ -18,7 +18,7 @@ def submit_local(d, func, *args, **kwargs):
 
 
 class Index:
-    def query(self, targets: np.ndarray, k):
+    def query(self, targets: np.ndarray, k, **kwargs):
         raise NotImplementedError
 
 
@@ -49,11 +49,23 @@ class FlatIndex(Index):
         self.config = config
         group = tiledb.Group(uri, ctx=tiledb.Ctx(config))
         self.storage_version = group.meta.get("storage_version", "0.1")
+        self.index_uri = group[storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]].uri
         self._db = load_as_matrix(
-            group[storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]].uri,
+            self.index_uri,
             ctx=self.ctx,
             config=config,
         )
+        self.ids_uri = group[
+            storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
+        ].uri
+        if tiledb.array_exists(self.ids_uri, self.ctx):
+            self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, 0)
+        else:
+            schema = tiledb.ArraySchema.load(
+                self.index_uri, ctx=tiledb.Ctx(self.config)
+            )
+            self.size = schema.domain.dim(1).domain[1]
+            self._ids = StdVector_u64(np.arange(self.size).astype(np.uint64))
 
         dtype = group.meta.get("dtype", None)
         if dtype is None:
@@ -66,7 +78,6 @@ class FlatIndex(Index):
         targets: np.ndarray,
         k: int = 10,
         nthreads: int = 8,
-        query_type="heap",
     ):
         """
         Query a flat index
@@ -89,13 +100,7 @@ class FlatIndex(Index):
         assert targets.dtype == np.float32
 
         targets_m = array_to_matrix(np.transpose(targets))
-
-        if query_type == "heap":
-            r = query_vq_heap(self._db, targets_m, k, nthreads)
-        elif query_type == "nth":
-            r = query_vq_nth(self._db, targets_m, k, nthreads)
-        else:
-            raise Exception("Unknown query type!")
+        r = query_vq_heap(self._db, targets_m, self._ids, k, nthreads)
 
         return np.transpose(np.array(r))
 
@@ -145,12 +150,12 @@ class IVFFlatIndex(Index):
         self._centroids = load_as_matrix(
             self.centroids_uri, ctx=self.ctx, config=config
         )
-        self._index = read_vector_u64(self.ctx, self.index_array_uri)
+        self._index = read_vector_u64(self.ctx, self.index_array_uri, 0, 0)
 
         # TODO pass in a context
         if self.memory_budget == -1:
             self._db = load_as_matrix(self.parts_db_uri, ctx=self.ctx, config=config)
-            self._ids = read_vector_u64(self.ctx, self.ids_uri)
+            self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, 0)
 
         dtype = group.meta.get("dtype", None)
         if dtype is None:

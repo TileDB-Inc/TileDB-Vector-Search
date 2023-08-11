@@ -224,6 +224,7 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
   m.def(("ivf_index_" + suffix).c_str(),
       [](tiledb::Context& ctx,
         const ColMajorMatrix<T>& db,
+        const std::vector<uint64_t>& external_ids,
         const std::string& centroids_uri,
         const std::string& parts_uri,
         const std::string& index_array_uri,
@@ -234,6 +235,7 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
             return detail::ivf::ivf_index<T, uint64_t, float>(
                 ctx,
                 db,
+                external_ids,
                 centroids_uri,
                 parts_uri,
                 index_array_uri,
@@ -249,6 +251,7 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
   m.def(("ivf_index_tdb_" + suffix).c_str(),
       [](tiledb::Context& ctx,
         const std::string& db_uri,
+        const std::string& external_ids_uri,
         const std::string& centroids_uri,
         const std::string& parts_uri,
         const std::string& index_array_uri,
@@ -259,6 +262,7 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
             return detail::ivf::ivf_index<T, uint64_t, float>(
                 ctx,
                 db_uri,
+                external_ids_uri,
                 centroids_uri,
                 parts_uri,
                 index_array_uri,
@@ -388,9 +392,10 @@ static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
   m.def(("vq_query_heap_" + suffix).c_str(),
         [](tdbColMajorMatrix<T>& data,
            ColMajorMatrix<float>& query_vectors,
+           const std::vector<uint64_t> &ids,
            int k,
            size_t nthreads) -> ColMajorMatrix<size_t> {
-          auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
+          auto r = detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads);
           return r;
         });
 }
