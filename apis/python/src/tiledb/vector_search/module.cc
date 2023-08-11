@@ -114,7 +114,7 @@ static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string&
          size_t nprobe,
          size_t k_nn,
          bool nth,
-         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
+         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
         auto r = detail::ivf::qv_query_heap_infinite_ram(
             parts,
@@ -143,7 +143,7 @@ static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& s
          size_t k_nn,
          size_t upper_bound,
          bool nth,
-         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
+         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
         auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
             ctx,
@@ -172,7 +172,7 @@ static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string
          size_t nprobe,
          size_t k_nn,
          bool nth,
-         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
+         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
         auto r = detail::ivf::nuv_query_heap_infinite_ram_reg_blocked(
             parts,
@@ -201,7 +201,7 @@ static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& 
          size_t k_nn,
          size_t upper_bound,
          bool nth,
-         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
+         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
         auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
             ctx,
