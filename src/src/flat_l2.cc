@@ -183,14 +183,23 @@ int main(int argc, char* argv[]) {
   std::cout << load_time << std::endl;
 
   // @todo decide on what the type of top_k::value should be
-  auto top_k = [&]() {
+  auto [ top_k, top_k_scores ] = [&]() {
+#if 0
     if (alg_name == "vq_nth") {
       if (verbose) {
         std::cout << "# Using vq_nth, nth = " << std::to_string(nth)
                   << std::endl;
       }
       return detail::flat::vq_query_nth(db, query, k, nth, nthreads);
-    } else if (alg_name == "vq_heap" || alg_name == "vq") {
+    } else if (alg_name == "qv_nth") {
+      if (verbose) {
+        std::cout << "# Using qv_nth, nth = " << std::to_string(nth)
+            << std::endl;
+     }
+      return detail::flat::qv_query_nth(db, query, k, nth, nthreads);
+     } else
+#endif
+    if (alg_name == "vq_heap" || alg_name == "vq") {
       if (verbose) {
         std::cout << "# Using vq_heap, ignoring nth = " << std::to_string(nth)
                   << std::endl;
@@ -202,13 +211,7 @@ int main(int argc, char* argv[]) {
                   << std::endl;
       }
       return detail::flat::vq_query_heap_2(db, query, k, nthreads);
-    }else if (alg_name == "qv_nth") {
-      if (verbose) {
-        std::cout << "# Using qv_nth, nth = " << std::to_string(nth)
-                  << std::endl;
-      }
-      return detail::flat::qv_query_nth(db, query, k, nth, nthreads);
-    } else if (alg_name == "qv_tiled") {
+    } else  if (alg_name == "qv_tiled") {
       if (verbose) {
         std::cout << "# Using qv_tiled" <<                   std::endl;
       }
@@ -221,6 +224,7 @@ int main(int argc, char* argv[]) {
       return detail::flat::qv_query_heap(db, query, k, nthreads);
     }
 #ifdef TILEDB_VS_ENABLE_BLAS
+#if 0
     else if (alg_name == "gemm") {
       if (args["--blocksize"]) {
         std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth)
@@ -231,6 +235,7 @@ int main(int argc, char* argv[]) {
         return detail::flat::gemm_query(db, query, k, nth, nthreads);
       }
     }
+#endif
 #endif
     throw std::runtime_error("incorrect or unset algorithm type: " + alg_name);
   }();

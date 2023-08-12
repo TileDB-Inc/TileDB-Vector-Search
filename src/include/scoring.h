@@ -58,6 +58,16 @@
 #include "utils/fixed_min_heap.h"
 #include "utils/timer.h"
 
+// ----------------------------------------------------------------------------
+// Helper utilities
+//----------------------------------------------------------------------------
+namespace {
+class with_ids {};
+class without_ids {};
+template <class... T>
+constexpr bool always_false = false;
+}  // namespace
+
 
 // ----------------------------------------------------------------------------
 // Distance functions
