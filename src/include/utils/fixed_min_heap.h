@@ -126,7 +126,8 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
     Base::reserve(k);
   }
 
-  explicit fixed_min_pair_heap(unsigned k, std::initializer_list<std::tuple<T, U>> l)
+  explicit fixed_min_pair_heap(
+      unsigned k, std::initializer_list<std::tuple<T, U>> l)
       : Base(0)
       , max_size{k} {
     Base::reserve(k);

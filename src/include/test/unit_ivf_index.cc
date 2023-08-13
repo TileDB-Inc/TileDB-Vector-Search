@@ -115,7 +115,6 @@ debug_centroids(index);
 
 #endif
 
-
 // kmeans and kmeans indexing still WIP
 #if 0
 

@@ -27,12 +27,12 @@
  *
  * @section DESCRIPTION
  *
- * A set of algorithms that use the inverted file index (IVF) for querying. The set
- * of vectors to search are provided in partitioned form, where each partition
- * consists of the vectors closest to a given centroid vector (the centroids are
- * also provided).  In addition to the query vectors to be applied, an IVF search
- * also specifies how many partitions to search (`nprobe` or the number of
- * centroids to probe).
+ * A set of algorithms that use the inverted file index (IVF) for querying. The
+ * set of vectors to search are provided in partitioned form, where each
+ * partition consists of the vectors closest to a given centroid vector (the
+ * centroids are also provided).  In addition to the query vectors to be
+ * applied, an IVF search also specifies how many partitions to search (`nprobe`
+ * or the number of centroids to probe).
  *
  * To perform a search using the index, given a query vector `q`
  * * Find the `nprobe` centroids closest to `q[i]`, using a top k query of q
@@ -137,7 +137,6 @@ auto vq_apply_query(
      * Loop over the vectors in the partition
      */
     for (size_t kp = start; kp < kstop; kp += 2) {
-
       /*
        * Loop over the queries associated with the partition
        */
@@ -340,7 +339,6 @@ auto vq_query_finite_ram(
   return top_k;
 }
 
-
 /**
  * Similar to vq_query_finite_ram, but the entire database is loaded into RAM.
  * This function takes a partitioned matrix as input, which is assumed to
@@ -454,16 +452,8 @@ auto vq_query_infinite_ram(
   auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
 
   return query_infinite_ram(
-      shuffled_db,
-      centroids,
-      q,
-      indices,
-      shuffled_ids,
-      nprobe,
-      k_nn,
-      nthreads);
+      shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nthreads);
 }
-
 
 /**
  * Similar to vq_query_finite_ram, but the entire database is loaded into RAM.
@@ -524,8 +514,8 @@ auto vq_query_infinite_ram_2(
            first_part,
            last_part]() {
             /*
-               * For each partition, process the queries that have that
-               * partition as their top centroid.
+             * For each partition, process the queries that have that
+             * partition as their top centroid.
              */
             for (size_t partno = first_part; partno < last_part; ++partno) {
               auto quartno = active_partitions[partno];
@@ -533,14 +523,13 @@ auto vq_query_infinite_ram_2(
               auto stop = new_indices[quartno + 1];
 
               /*
-                 * Get the queries associated with this partition.
+               * Get the queries associated with this partition.
                */
 
               for (size_t k = start; k < stop; ++k) {
                 auto kp = k - shuffled_db.col_offset();
 
-                for(auto j : active_queries[partno]) {
-
+                for (auto j : active_queries[partno]) {
                   // @todo shift start / stop back by the offset
 
                   auto score = L2(query[j], shuffled_db[kp]);
@@ -595,17 +584,8 @@ auto vq_query_infinite_ram_2(
   auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
 
   return query_infinite_ram(
-      shuffled_db,
-      centroids,
-      q,
-      indices,
-      shuffled_ids,
-      nprobe,
-      k_nn,
-      nthreads);
+      shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nthreads);
 }
-
-
 
 template <class T, class shuffled_ids_type>
 auto vq_query_finite_ram_2(
@@ -648,10 +628,11 @@ auto vq_query_finite_ram_2(
                          indices[active_partitions[i]];
   }
 
-  auto min_scores = std::vector<std::vector<fixed_min_pair_heap<float, size_t>>> (
-      nthreads,
-      std::vector<fixed_min_pair_heap<float, size_t>>(
-          num_queries, fixed_min_pair_heap<float, size_t>(k_nn)));
+  auto min_scores =
+      std::vector<std::vector<fixed_min_pair_heap<float, size_t>>>(
+          nthreads,
+          std::vector<fixed_min_pair_heap<float, size_t>>(
+              num_queries, fixed_min_pair_heap<float, size_t>(k_nn)));
 
   while (shuffled_db.load()) {
     _i.start();
@@ -677,13 +658,13 @@ auto vq_query_finite_ram_2(
                &min_scores,
                &shuffled_db,
                &new_indices,
-                  &active_queries = active_queries,
+               &active_queries = active_queries,
                n,
                first_part,
                last_part]() {
                 /*
-               * For each partition, process the queries that have that
-               * partition as their top centroid.
+                 * For each partition, process the queries that have that
+                 * partition as their top centroid.
                  */
                 for (size_t p = first_part; p < last_part; ++p) {
                   auto partno = p + shuffled_db.col_part_offset();
@@ -692,14 +673,13 @@ auto vq_query_finite_ram_2(
                   auto stop = new_indices[partno + 1];
 
                   /*
-                 * Get the queries associated with this partition.
+                   * Get the queries associated with this partition.
                    */
 
                   for (size_t k = start; k < stop; ++k) {
                     auto kp = k - shuffled_db.col_offset();
 
-                    for(auto j : active_queries[partno]) {
-
+                    for (auto j : active_queries[partno]) {
                       // @todo shift start / stop back by the offset
 
                       auto score = L2(query[j], shuffled_db[kp]);
@@ -717,14 +697,11 @@ auto vq_query_finite_ram_2(
     _i.stop();
   }
 
-
   consolidate_scores(min_scores);
   auto top_k = get_top_k_with_scores(min_scores, k_nn);
 
   return top_k;
 }
-
-
 
 }  // namespace detail::ivf
 

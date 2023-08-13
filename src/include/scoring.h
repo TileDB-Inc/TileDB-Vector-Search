@@ -68,7 +68,6 @@ template <class... T>
 constexpr bool always_false = false;
 }  // namespace
 
-
 // ----------------------------------------------------------------------------
 // Distance functions
 // ----------------------------------------------------------------------------
@@ -169,11 +168,9 @@ inline auto dot(U const& a, V const& b) {
   return sum;
 }
 
-
 // ----------------------------------------------------------------------------
 // Functions for extracting top k neighbors from a raw scores matrix
 // ----------------------------------------------------------------------------
-
 
 /**
  * @brief Get top k neighbors for each query. Scans the scores for each
@@ -184,7 +181,9 @@ inline auto dot(U const& a, V const& b) {
  * @param k
  * @return
  */
-template <std::ranges::random_access_range V, std::ranges::random_access_range L>
+template <
+    std::ranges::random_access_range V,
+    std::ranges::random_access_range L>
 auto get_top_k_from_scores(V const& scores, L&& top_k, int k) {
   fixed_min_pair_heap<float, unsigned> s(k);
 
@@ -204,7 +203,6 @@ auto get_top_k_from_scores(const ColMajorMatrix<T>& scores, int k_nn) {
   return top_k;
 }
 
-
 // ----------------------------------------------------------------------------
 // Functions for consolidating vector of vectors of min_heaps to 0th min_heap
 // ----------------------------------------------------------------------------
@@ -212,9 +210,9 @@ auto get_top_k_from_scores(const ColMajorMatrix<T>& scores, int k_nn) {
  * @brief Utility function to put the top scores for multiple threads into a
  * single top_scores vector (the zeroth vector).
  * @tparam Heap
- *   @param min_scores a vector of vectors of min_heaps.  Each vector of min_heaps
- * is the top k scores for a set of queries.  Each vector of vectors is stores
- * a vector of min_heaps, one per thread.
+ *   @param min_scores a vector of vectors of min_heaps.  Each vector of
+ * min_heaps is the top k scores for a set of queries.  Each vector of vectors
+ * is stores a vector of min_heaps, one per thread.
  */
 template <class Heap>
 void consolidate_scores(std::vector<std::vector<Heap>>& min_scores) {
@@ -238,9 +236,11 @@ void consolidate_scores(std::vector<std::vector<Heap>>& min_scores) {
  * @param top_k
  */
 template <class Heap>
-inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k)
-requires(!std::is_same_v<Heap, std::vector<Heap>>) {
-  std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&&b){return std::get<0>(a) < std::get<0>(b);});
+inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k) requires(
+    !std::is_same_v<Heap, std::vector<Heap>>) {
+  std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&& b) {
+    return std::get<0>(a) < std::get<0>(b);
+  });
   std::transform(
       begin(min_scores), end(min_scores), begin(top_k), ([](auto&& e) {
         return std::get<1>(e);
@@ -270,7 +270,6 @@ inline auto get_top_k(std::vector<Heap>& scores, size_t k_nn) {
   return top_k;
 }
 
-
 /**
  * @brief Utility function to extract the top k scores from a vector of vectors.
  * It is assumed that the scores have been consolidated, i.e., that the zeroth
@@ -287,13 +286,15 @@ inline auto get_top_k(std::vector<std::vector<Heap>>& scores, size_t k_nn) {
   return get_top_k(scores[0], k_nn);
 }
 
-
 // ----------------------------------------------------------------------------
 // Functions for computing top k neighbors with scores
 // ----------------------------------------------------------------------------
 
-inline void get_top_k_with_scores_from_heap(auto&& min_scores, auto&& top_k, auto&& top_k_scores) {
-  std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&&b){return std::get<0>(a) < std::get<0>(b);});
+inline void get_top_k_with_scores_from_heap(
+    auto&& min_scores, auto&& top_k, auto&& top_k_scores) {
+  std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&& b) {
+    return std::get<0>(a) < std::get<0>(b);
+  });
   std::transform(
       begin(min_scores), end(min_scores), begin(top_k_scores), ([](auto&& e) {
         return std::get<0>(e);
@@ -309,7 +310,8 @@ template <class Heap, class Index = size_t>
 inline auto get_top_k_with_scores(std::vector<Heap>& scores, size_t k_nn) {
   auto num_queries = size(scores);
 
-  using score_type = typename std::tuple_element<0, typename Heap::value_type>::type;
+  using score_type =
+      typename std::tuple_element<0, typename Heap::value_type>::type;
 
   ColMajorMatrix<Index> top_k(k_nn, num_queries);
   ColMajorMatrix<score_type> top_scores(k_nn, num_queries);
@@ -322,10 +324,10 @@ inline auto get_top_k_with_scores(std::vector<Heap>& scores, size_t k_nn) {
 
 // Overload for two-d scores
 template <class Heap, class Index = size_t>
-inline auto get_top_k_with_scores(std::vector<std::vector<Heap>>& scores, size_t k_nn) {
+inline auto get_top_k_with_scores(
+    std::vector<std::vector<Heap>>& scores, size_t k_nn) {
   return get_top_k_with_scores(scores[0], k_nn);
 }
-
 
 // ----------------------------------------------------------------------------
 // Functions for verifying top k neighbors against groundtruth
@@ -353,7 +355,8 @@ auto verify_top_k_index(L const& top_k, I const& g, int k, int qno) {
  * @todo Handle the error more systematically and succinctly.
  */
 template <class V, class L, class I>
-auto verify_top_k_scores(V const& scores, L const& top_k, I const& g, int k, int qno) {
+auto verify_top_k_scores(
+    V const& scores, L const& top_k, I const& g, int k, int qno) {
   if (!std::equal(
           begin(top_k), begin(top_k) + k, g.begin(), [&](auto& a, auto& b) {
             return scores[a] == scores[b];
@@ -417,7 +420,6 @@ bool validate_top_k(TK& top_k, G& g) {
 
   return true;
 }
-
 
 #ifdef TILEDB_VS_ENABLE_BLAS
 
@@ -517,9 +519,10 @@ void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthrea
       CblasColMajor, M, N, 1.0, &beta_ones[0], 1, &beta[0], 1, C.data(), M);
 
   stdx::execution::parallel_policy par{nthreads};
-//  stdx::for_each(std::move(par), begin(raveled_C), end(raveled_C), [](auto& a) {
-//    a = sqrt(a);
-//  });
+  //  stdx::for_each(std::move(par), begin(raveled_C), end(raveled_C), [](auto&
+  //  a) {
+  //    a = sqrt(a);
+  //  });
 }
 
 template <class Matrix1, class Matrix2, class Matrix3>
@@ -565,5 +568,5 @@ auto gemm_scores(const Matrix1& A, const Matrix2& B, unsigned nthreads) {
 
   return C;
 }
-#endif // TILEDB_VS_ENABLE_BLAS
+#endif  // TILEDB_VS_ENABLE_BLAS
 #endif  // TDB_SCORING_H

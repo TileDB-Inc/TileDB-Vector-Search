@@ -72,10 +72,8 @@ namespace detail::flat {
  * query.
  */
 template <class DB, class Q>
-[[deprecated]] auto qv_query_heap_0(DB& db, const Q& q, int k_nn, unsigned int nthreads) {
-  if constexpr (is_loadable_v<decltype(db)>) {
-    db.load();
-  }
+[[deprecated]] auto qv_query_heap_0(
+    DB& db, const Q& q, int k_nn, unsigned int nthreads) {
   scoped_timer _{tdb_func__};
 
   ColMajorMatrix<size_t> top_k(k_nn, size(q));
@@ -116,22 +114,35 @@ template <class DB, class Q>
  * query.
  */
 template <class T, class DB, class Q, class Index>
-auto qv_query_heap(T, DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads);
+auto qv_query_heap(
+    T,
+    DB& db,
+    Q& q,
+    const std::vector<Index>& ids,
+    int k_nn,
+    unsigned nthreads);
 
 template <class DB, class Q>
 auto qv_query_heap(DB& db, Q& q, int k_nn, unsigned nthreads) {
-  return qv_query_heap(without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
+  return qv_query_heap(
+      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
 }
 
 template <class DB, class Q, class Index>
-auto qv_query_heap(DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
+auto qv_query_heap(
+    DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
   return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads);
 }
 
-
 // @todo Add to out of core
 template <class T, class DB, class Q, class Index>
-auto qv_query_heap(T, DB& db, Q& query, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
+auto qv_query_heap(
+    T,
+    DB& db,
+    Q& query,
+    const std::vector<Index>& ids,
+    int k_nn,
+    unsigned nthreads) {
   scoped_timer _{tdb_func__};
 
   auto top_k = ColMajorMatrix<size_t>(k_nn, query.num_cols());
@@ -157,8 +168,7 @@ auto qv_query_heap(T, DB& db, Q& query, const std::vector<Index>& ids, int k_nn,
           } else if constexpr (std::is_same_v<T, without_ids>) {
             min_scores.insert(score, i);
           } else {
-            static_assert(
-                always_false<T>, "T must be with_ids or without_ids");
+            static_assert(always_false<T>, "T must be with_ids or without_ids");
           }
         }
 
@@ -181,21 +191,34 @@ auto qv_query_heap(T, DB& db, Q& query, const std::vector<Index>& ids, int k_nn,
  * query.
  */
 template <class T, class DB, class Q, class Index>
-auto qv_query_heap_tiled(T, DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads);
+auto qv_query_heap_tiled(
+    T,
+    DB& db,
+    Q& q,
+    const std::vector<Index>& ids,
+    int k_nn,
+    unsigned nthreads);
 
 template <class DB, class Q>
 auto qv_query_heap_tiled(DB& db, Q& q, int k_nn, unsigned nthreads) {
-  return qv_query_heap_tiled(without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
+  return qv_query_heap_tiled(
+      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
 }
 
 template <class DB, class Q, class Index>
-auto qv_query_heap_tiled(DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
+auto qv_query_heap_tiled(
+    DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
   return qv_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads);
 }
 
 template <class T, class DB, class Q, class Index>
-auto qv_query_heap_tiled(T, DB& db, Q& query, [[maybe_unused]] const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
-
+auto qv_query_heap_tiled(
+    T,
+    DB& db,
+    Q& query,
+    [[maybe_unused]] const std::vector<Index>& ids,
+    int k_nn,
+    unsigned nthreads) {
   if constexpr (is_loadable_v<decltype(db)>) {
     db.load();
   }
@@ -223,9 +246,8 @@ auto qv_query_heap_tiled(T, DB& db, Q& query, [[maybe_unused]] const std::vector
 
     if (start != stop) {
       futs.emplace_back(std::async(
-          std::launch::async,
-          [start, stop, &query, &db, &min_scores, &ids]() {
-            (void) ids; // Suppress warnings
+          std::launch::async, [start, stop, &query, &db, &min_scores, &ids]() {
+            (void)ids;  // Suppress warnings
             auto len = 2 * ((stop - start) / 2);
             auto end = start + len;
 
@@ -348,20 +370,21 @@ auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
   // Just need a single vector
   std::vector<size_t> top_k(q.num_cols());
 
-  auto par = stdx::execution::indexed_parallel_policy{(size_t) nthreads};
-  stdx::range_for_each(std::move(par), q, [&, size_db](auto&& qvec, auto&& n = 0, auto&& j = 0) {
-    float min_score = std::numeric_limits<float>::max();
-    size_t idx = 0;
+  auto par = stdx::execution::indexed_parallel_policy{(size_t)nthreads};
+  stdx::range_for_each(
+      std::move(par), q, [&, size_db](auto&& qvec, auto&& n = 0, auto&& j = 0) {
+        float min_score = std::numeric_limits<float>::max();
+        size_t idx = 0;
 
-    for (size_t i = 0; i < size_db; ++i) {
-      auto score = L2(qvec, db[i]);
-      if (score < min_score) {
-        min_score = score;
-        idx = i;
-      }
-    }
-    top_k[j] = idx;
-  });
+        for (size_t i = 0; i < size_db; ++i) {
+          auto score = L2(qvec, db[i]);
+          if (score < min_score) {
+            min_score = score;
+            idx = i;
+          }
+        }
+        top_k[j] = idx;
+      });
 
   return top_k;
 }

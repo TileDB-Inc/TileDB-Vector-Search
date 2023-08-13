@@ -325,30 +325,28 @@ int main(int argc, char* argv[]) {
       }
     } else if (algorithm == "vq_heap" || algorithm == "vq") {
       if (finite) {
-        return detail::ivf::
-            vq_query_finite_ram<db_type, shuffled_ids_type>(
-                ctx,
-                part_uri,
-                centroids,
-                q,
-                indices,
-                id_uri,
-                nprobe,
-                k_nn,
-                blocksize,
-                nthreads);
+        return detail::ivf::vq_query_finite_ram<db_type, shuffled_ids_type>(
+            ctx,
+            part_uri,
+            centroids,
+            q,
+            indices,
+            id_uri,
+            nprobe,
+            k_nn,
+            blocksize,
+            nthreads);
       } else {
-        return detail::ivf::
-            vq_query_infinite_ram<db_type, shuffled_ids_type>(
-                ctx,
-                part_uri,
-                centroids,
-                q,
-                indices,
-                id_uri,
-                nprobe,
-                k_nn,
-                nthreads);
+        return detail::ivf::vq_query_infinite_ram<db_type, shuffled_ids_type>(
+            ctx,
+            part_uri,
+            centroids,
+            q,
+            indices,
+            id_uri,
+            nprobe,
+            k_nn,
+            nthreads);
       }
 #if 0
       else {
@@ -368,18 +366,17 @@ int main(int argc, char* argv[]) {
 #endif
     } else if (algorithm == "vq_heap_2" || algorithm == "vq2") {
       if (finite) {
-        return detail::ivf::
-            vq_query_finite_ram_2<db_type, shuffled_ids_type>(
-                ctx,
-                part_uri,
-                centroids,
-                q,
-                indices,
-                id_uri,
-                nprobe,
-                k_nn,
-                blocksize,
-                nthreads);
+        return detail::ivf::vq_query_finite_ram_2<db_type, shuffled_ids_type>(
+            ctx,
+            part_uri,
+            centroids,
+            q,
+            indices,
+            id_uri,
+            nprobe,
+            k_nn,
+            blocksize,
+            nthreads);
       } else {
         {
           return detail::ivf::

@@ -115,7 +115,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
    */
   Matrix(std::initializer_list<std::initializer_list<T>> list) noexcept
       requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-        : num_rows_{list.size()}
+      : num_rows_{list.size()}
       , num_cols_{list.begin()->size()}
       , storage_{new T[num_rows_ * num_cols_]} {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
@@ -130,7 +130,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
    * The initializer list is assumed to be in column-major order.
    */
   Matrix(std::initializer_list<std::initializer_list<T>> list) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : num_rows_{list.begin()->size()}
       , num_cols_{list.size()}
       , storage_{new T[num_rows_ * num_cols_]} {

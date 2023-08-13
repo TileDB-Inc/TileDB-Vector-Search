@@ -127,7 +127,7 @@ auto qv_query_heap_infinite_ram(
 
 /**
  * @brief Query a set of query vectors against an indexed vector database. The
- * arrays part_uri, centroids, indices, and id_uri comprise the index.  The 
+ * arrays part_uri, centroids, indices, and id_uri comprise the index.  The
  * partitioned database is stored in part_uri, the centroids are stored in
  * centroids, the indices demarcating partitions is stored in indices, and the
  * labels for the vectors in the original database are stored in id_uri.
@@ -135,8 +135,8 @@ auto qv_query_heap_infinite_ram(
  *
  * "Infinite RAM" means the entire index is loaded into memory before any
  * queries are applied, regardless of which partitions are to be queried.
- * 
- * @param part_uri Partitioned database URI 
+ *
+ * @param part_uri Partitioned database URI
  * @param centroids Centroids of the vectors in the original database (and
  * the partitioned database).  The ith centroid is the centroid of the ith
  * partition.
@@ -160,21 +160,13 @@ auto qv_query_heap_infinite_ram(
     size_t nthreads) {
   tiledb::Context ctx;
   return qv_query_heap_infinite_ram(
-      ctx,
-      part_uri,
-      centroids,
-      q,
-      indices,
-      id_uri,
-      nprobe,
-      k_nn,
-      nthreads);
+      ctx, part_uri, centroids, q, indices, id_uri, nprobe, k_nn, nthreads);
 }
 
 /**
  * @brief The OG version of querying with qv loop ordering.
  * Queries a set of query vectors against an indexed vector database. The
- * arrays part_uri, centroids, indices, and id_uri comprise the index.  The 
+ * arrays part_uri, centroids, indices, and id_uri comprise the index.  The
  * partitioned database is stored in part_uri, the centroids are stored in
  * centroids, the indices demarcating partitions is stored in indices, and the
  * labels for the vectors in the original database are stored in id_uri.
@@ -254,12 +246,9 @@ auto qv_query_heap_infinite_ram(
   return top_k;
 }
 
-
-
 // ----------------------------------------------------------------------------
 // Functions for searching with infinite RAM, new qv (nuv) ordering
 // ----------------------------------------------------------------------------
-
 
 auto nuv_query_heap_infinite_ram(
     auto&& partitioned_db,
@@ -416,7 +405,6 @@ auto nuv_query_heap_infinite_ram(
 
   return top_k;
 }
-
 
 auto nuv_query_heap_infinite_ram_reg_blocked(
     auto&& partitioned_db,
@@ -603,7 +591,6 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
               }
             }
           }));
-
     }
   }
   for (size_t n = 0; n < size(futs); ++n) {
@@ -615,9 +602,6 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
 
   return top_k;
 }
-
-
-
 
 // ----------------------------------------------------------------------------
 // Functions for searching with finite RAM, OG qv ordering
@@ -638,7 +622,6 @@ auto qv_query_heap_finite_ram(
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads);
-
 
 /**
  * Interface with uris for all arguments.
@@ -664,8 +647,8 @@ auto qv_query_heap_finite_ram(
   auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
   centroids.load();
 
-  auto query =
-      tdbColMajorMatrix<db_type, partitioned_ids_type>(ctx, query_uri, nqueries);
+  auto query = tdbColMajorMatrix<db_type, partitioned_ids_type>(
+      ctx, query_uri, nqueries);
   query.load();
 
   auto indices = read_vector<indices_type>(ctx, indices_uri);
@@ -682,7 +665,6 @@ auto qv_query_heap_finite_ram(
       upper_bound,
       nthreads);
 }
-
 
 /**
  * @brief OG Implementation of finite RAM qv query.
@@ -890,7 +872,6 @@ auto qv_query_heap_finite_ram(
   return top_k;
 }
 
-
 // ----------------------------------------------------------------------------
 // Functions for searching with finite RAM, new qv (nuv) ordering
 // ----------------------------------------------------------------------------
@@ -907,7 +888,6 @@ auto nuv_query_heap_finite_ram(
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads);
-
 
 /**
  * Interface with uris for all arguments.
@@ -945,8 +925,8 @@ auto nuv_query_heap_finite_ram(
   // centroids.load();
 
   std::future<query_type> query_future = std::async(std::launch::async, [&]() {
-    auto query =
-        tdbColMajorMatrix<db_type, partitioned_ids_type>(ctx, query_uri, nqueries);
+    auto query = tdbColMajorMatrix<db_type, partitioned_ids_type>(
+        ctx, query_uri, nqueries);
     query.load();
     return query;
   });
@@ -978,8 +958,6 @@ auto nuv_query_heap_finite_ram(
       upper_bound,
       nthreads);
 }
-
-
 
 /**
  * @brief OG Implementation of finite RAM using the new qv (nuv) ordering.
@@ -1115,7 +1093,8 @@ auto nuv_query_heap_finite_ram(
               for (size_t p = first_part; p < last_part; ++p) {
                 auto partno = p + partitioned_db.col_part_offset();
                 auto start = new_indices[partno] - partitioned_db.col_offset();
-                auto stop = new_indices[partno + 1] - partitioned_db.col_offset();
+                auto stop =
+                    new_indices[partno + 1] - partitioned_db.col_offset();
                 ;
 
                 /*
@@ -1296,7 +1275,8 @@ auto nuv_query_heap_finite_ram_reg_blocked(
               for (size_t p = first_part; p < last_part; ++p) {
                 auto partno = p + partitioned_db.col_part_offset();
                 auto start = new_indices[partno] - partitioned_db.col_offset();
-                auto stop = new_indices[partno + 1] - partitioned_db.col_offset();
+                auto stop =
+                    new_indices[partno + 1] - partitioned_db.col_offset();
 
                 auto len = 2 * (size(active_queries[partno]) / 2);
                 auto end = active_queries[partno].begin() + len;
@@ -1655,7 +1635,6 @@ auto query_finite_ram(
 
   return top_k;
 }
-
 
 /**
  * @brief Reference implementation of infinite RAM query using qv ordering.

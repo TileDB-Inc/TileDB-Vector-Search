@@ -39,7 +39,8 @@
 
 bool global_debug = false;
 
-using TestTypes = std::tuple<float, uint8_t, double, int, char, size_t, uint32_t>;
+using TestTypes =
+    std::tuple<float, uint8_t, double, int, char, size_t, uint32_t>;
 
 TEST_CASE("linalg: test test", "[linalg]") {
   REQUIRE(true);
@@ -213,7 +214,7 @@ TEMPLATE_LIST_TEST_CASE(
     "linalg: test Matrix initializer_list constructor, row oriented",
     "[linalg][matrix][create][row]",
     TestTypes) {
-  auto a = Matrix<TestType, Kokkos::layout_right> {{1, 2}, {3, 4}, {5, 6}};
+  auto a = Matrix<TestType, Kokkos::layout_right>{{1, 2}, {3, 4}, {5, 6}};
   auto v = a.data();
   std::iota(v, v + 6, 1);
 
@@ -249,7 +250,7 @@ TEMPLATE_LIST_TEST_CASE(
     "linalg: test Matrix initializer list constructor, column oriented",
     "[linalg][matrixx][create][column]",
     TestTypes) {
-  auto a = Matrix<TestType, Kokkos::layout_left> {{1, 2, 3}, {4, 5, 6}};
+  auto a = Matrix<TestType, Kokkos::layout_left>{{1, 2, 3}, {4, 5, 6}};
   auto v = a.data();
   std::iota(v, v + 6, 1);
 
@@ -290,7 +291,6 @@ TEMPLATE_LIST_TEST_CASE(
     CHECK(a[1][2] == 6);
   }
 }
-
 
 template <class TestType>
 auto make_matrix(size_t num_rows, size_t num_cols) {
@@ -424,19 +424,17 @@ TEST_CASE(
 }
 #endif
 
-
 TEST_CASE("linalg: print cwd", "[linalg][cwd]") {
   std::filesystem::path currentPath = std::filesystem::current_path();
   std::cout << "Current Working Directory: " << currentPath << std::endl;
 }
 
-
 TEST_CASE(
     "linalg: test tdbMatrix constructor, column",
     "[linalg][tdbmatrix][create][column]") {
-  std::vector<float> data = {8, 6, 7, 5, 3, 1, 4, 1, 3, 0, 9,
-                               9, 5, 9, 2, 7, 9, 8, 6, 7, 2, 6,
-                               4, 3, 5, 3, 0, 9, 4, 2, 2, 4};  // OMG
+  std::vector<float> data = {
+      8, 6, 7, 5, 3, 1, 4, 1, 3, 0, 9, 9, 5, 9, 2, 7,
+      9, 8, 6, 7, 2, 6, 4, 3, 5, 3, 0, 9, 4, 2, 2, 4};  // OMG
 
   REQUIRE(local_array_exists("array_dense_1"));
   tiledb::Context ctx;
@@ -597,7 +595,6 @@ TEST_CASE(
 TEST_CASE(
     "linalg: test partitioned tdbMatrix constructor, column",
     "[linalg][partitioned][tdbmatrix][create][column]") {
-
   REQUIRE(local_array_exists("array_dense_1"));
   size_t part = GENERATE(0, 1, 2, 3, 4);
 

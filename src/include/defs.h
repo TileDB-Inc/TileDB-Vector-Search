@@ -34,8 +34,6 @@
 #ifndef TDB_DEFS_H
 #define TDB_DEFS_H
 
-
-
 #if 0
 template <class L, class I>
 auto verify_top_k_index(L const& top_k, I const& g, int k, int qno) {
@@ -198,6 +196,6 @@ bool validate_top_k(TK& top_k, G& g) {
 
   return true;
 }
-#endif // 0
+#endif  // 0
 #endif  // TDB_DEFS_H
-#endif // 0
+#endif  // 0

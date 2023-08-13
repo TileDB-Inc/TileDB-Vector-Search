@@ -33,9 +33,8 @@
 #include <set>
 #include <span>
 #include <vector>
-#include "scoring.h"
-#include <span>
 #include "detail/linalg/matrix.h"
+#include "scoring.h"
 
 #ifdef TILEDB_VS_ENABLE_BLAS
 
@@ -83,14 +82,14 @@ TEST_CASE("defs: vector test", "[defs]") {
 
 // get_top_k (heap) from scores array
 TEST_CASE("get_top_k (heap) from scores array", "[get_top_k]") {
-  std::vector<float> scores = { 8, 6, 7, 5, 3, 0, 9, 1, 2, 4  };
+  std::vector<float> scores = {8, 6, 7, 5, 3, 0, 9, 1, 2, 4};
 
-  std::vector<unsigned> top_k (3);
+  std::vector<unsigned> top_k(3);
   get_top_k_from_scores(scores, top_k, 3);
   CHECK(top_k.size() == 3);
-  CHECK(top_k[0] == 5); // 0
-  CHECK(top_k[1] == 7); // 1
-  CHECK(top_k[2] == 8); // 2
+  CHECK(top_k[0] == 5);  // 0
+  CHECK(top_k[1] == 7);  // 1
+  CHECK(top_k[2] == 8);  // 2
 }
 
 // get_top_k (heap) from scores matrix, parallel
@@ -143,35 +142,114 @@ TEST_CASE("get_top_k (heap) from scores matrix, parallel", "[get_top_k]") {
 #endif
 }
 
-
 // consolidate scores
 TEST_CASE("scoring consolidate scores", "[scoring]") {
-  std::vector<fixed_min_pair_heap<float, unsigned>> scores00 {
-      fixed_min_pair_heap<float, unsigned>(3, {{0.1, 0}, {0.2, 1}, {0.3, 2}, {0.4, 3}, {0.5, 4},}),
-      fixed_min_pair_heap<float, unsigned>(3, {{0.9, 0}, {0.8, 1}, {0.7, 2}, {0.6, 3}, {0.5, 4},}),
-      fixed_min_pair_heap<float, unsigned>(3, {{0.6, 5}, {0.7, 6}, {0.8, 7}, {0.9, 8}, {1.0, 9},}),
-      fixed_min_pair_heap<float, unsigned>(3, {{0.4, 5}, {0.3, 6}, {0.2, 7}, {0.1, 8}, {0.0, 9},}),
+  std::vector<fixed_min_pair_heap<float, unsigned>> scores00{
+      fixed_min_pair_heap<float, unsigned>(
+          3,
+          {
+              {0.1, 0},
+              {0.2, 1},
+              {0.3, 2},
+              {0.4, 3},
+              {0.5, 4},
+          }),
+      fixed_min_pair_heap<float, unsigned>(
+          3,
+          {
+              {0.9, 0},
+              {0.8, 1},
+              {0.7, 2},
+              {0.6, 3},
+              {0.5, 4},
+          }),
+      fixed_min_pair_heap<float, unsigned>(
+          3,
+          {
+              {0.6, 5},
+              {0.7, 6},
+              {0.8, 7},
+              {0.9, 8},
+              {1.0, 9},
+          }),
+      fixed_min_pair_heap<float, unsigned>(
+          3,
+          {
+              {0.4, 5},
+              {0.3, 6},
+              {0.2, 7},
+              {0.1, 8},
+              {0.0, 9},
+          }),
   };
-  std::vector<fixed_min_pair_heap<float, unsigned>> scores01 {
-      fixed_min_pair_heap<float, unsigned>(3, {{0.1, 4}, {0.2, 5}, {0.3, 6}, {0.4, 7}, {0.5, 8},}),
-      fixed_min_pair_heap<float, unsigned>(3, {{0.6, 4}, {0.7, 3}, {0.2, 5}, {0.9, 7}, {1.0, 8},}),
-      fixed_min_pair_heap<float, unsigned>(3, {{0.9, 0}, {0.8, 1}, {0.7, 2}, {0.6, 3}, {0.5, 4},}),
-      fixed_min_pair_heap<float, unsigned>(3, {{0.4, 9}, {0.3, 8}, {0.2, 7}, {0.1, 5}, {0.0, 6},}),
+  std::vector<fixed_min_pair_heap<float, unsigned>> scores01{
+      fixed_min_pair_heap<float, unsigned>(
+          3,
+          {
+              {0.1, 4},
+              {0.2, 5},
+              {0.3, 6},
+              {0.4, 7},
+              {0.5, 8},
+          }),
+      fixed_min_pair_heap<float, unsigned>(
+          3,
+          {
+              {0.6, 4},
+              {0.7, 3},
+              {0.2, 5},
+              {0.9, 7},
+              {1.0, 8},
+          }),
+      fixed_min_pair_heap<float, unsigned>(
+          3,
+          {
+              {0.9, 0},
+              {0.8, 1},
+              {0.7, 2},
+              {0.6, 3},
+              {0.5, 4},
+          }),
+      fixed_min_pair_heap<float, unsigned>(
+          3,
+          {
+              {0.4, 9},
+              {0.3, 8},
+              {0.2, 7},
+              {0.1, 5},
+              {0.0, 6},
+          }),
   };
-  auto scores = std::vector<std::vector<fixed_min_pair_heap<float, unsigned>>> {scores00, scores01};
+  auto scores = std::vector<std::vector<fixed_min_pair_heap<float, unsigned>>>{
+      scores00, scores01};
   CHECK(scores.size() == 2);
   consolidate_scores(scores);
   CHECK(scores.size() == 2);
   auto s = scores[0];
   CHECK(s.size() == 4);
-  for ( auto&& j : s) {
+  for (auto&& j : s) {
     std::sort_heap(j.begin(), j.end());
   }
-  CHECK(std::equal(begin(s[0]), end(s[0]), std::vector<std::tuple<float, unsigned>>({{0.1, 0}, {0.1, 4}, {0.2, 5}}).begin()));
-  CHECK(std::equal(begin(s[1]), end(s[1]), std::vector<std::tuple<float, unsigned>>({{0.2, 5}, {0.5, 4}, {0.6, 4}}).begin()));
-  CHECK(std::equal(begin(s[2]), end(s[2]), std::vector<std::tuple<float, unsigned>>({{0.5, 4}, {0.6, 3}, {0.6, 5}}).begin()));
-  CHECK(std::equal(begin(s[3]), end(s[3]), std::vector<std::tuple<float, unsigned>>({{0.0, 6}, {0.0, 9}, {0.1, 5}}).begin()));
-
+  CHECK(std::equal(
+      begin(s[0]),
+      end(s[0]),
+      std::vector<std::tuple<float, unsigned>>({{0.1, 0}, {0.1, 4}, {0.2, 5}})
+          .begin()));
+  CHECK(std::equal(
+      begin(s[1]),
+      end(s[1]),
+      std::vector<std::tuple<float, unsigned>>({{0.2, 5}, {0.5, 4}, {0.6, 4}})
+          .begin()));
+  CHECK(std::equal(
+      begin(s[2]),
+      end(s[2]),
+      std::vector<std::tuple<float, unsigned>>({{0.5, 4}, {0.6, 3}, {0.6, 5}})
+          .begin()));
+  CHECK(std::equal(
+      begin(s[3]),
+      end(s[3]),
+      std::vector<std::tuple<float, unsigned>>({{0.0, 6}, {0.0, 9}, {0.1, 5}})
+          .begin()));
 }
 
 TEST_CASE("scoring get_top_k_from_heap one min_heap", "[scoring]") {
@@ -189,8 +267,12 @@ TEST_CASE("scoring get_top_k_from_heap one min_heap", "[scoring]") {
           {2, 8},
           {1, 9},
       });
-  std::vector<unsigned> gt_neighbors {
-      9, 8, 7, 6, 5,
+  std::vector<unsigned> gt_neighbors{
+      9,
+      8,
+      7,
+      6,
+      5,
   };
 
   SECTION("std::vector") {
@@ -236,32 +318,52 @@ TEST_CASE("scoring get_top_k_from_heap vector of min_heap", "[scoring]") {
           {9, 8},
           {0, 9},
       });
-  ColMajorMatrix<unsigned> gt_neighbors_mat {
-        {9, 8, 7, 6, 5},
-        {9, 4, 0, 5, 1},
+  ColMajorMatrix<unsigned> gt_neighbors_mat{
+      {9, 8, 7, 6, 5},
+      {9, 4, 0, 5, 1},
   };
-  std::vector<unsigned> gt_neighbors_vec {
-      9, 8, 7, 6, 5, 9, 4, 0, 5, 1,
+  std::vector<unsigned> gt_neighbors_vec{
+      9,
+      8,
+      7,
+      6,
+      5,
+      9,
+      4,
+      0,
+      5,
+      1,
   };
-  ColMajorMatrix<unsigned> gt_scores_mat {
+  ColMajorMatrix<unsigned> gt_scores_mat{
       {1, 2, 3, 4, 5},
       {0, 1, 2, 3, 4},
   };
-  std::vector<unsigned> gt_scores_vec {
-      1, 2, 3, 4, 5, 0, 1, 2, 3, 4,
+  std::vector<unsigned> gt_scores_vec{
+      1,
+      2,
+      3,
+      4,
+      5,
+      0,
+      1,
+      2,
+      3,
+      4,
   };
-  std::vector <fixed_min_pair_heap<float, unsigned>> scores {a, b};
+  std::vector<fixed_min_pair_heap<float, unsigned>> scores{a, b};
   SECTION("std::vector") {
     auto top_k = get_top_k(scores, 5);
     CHECK(top_k.num_rows() == 5);
     CHECK(top_k.num_cols() == 2);
-    CHECK(std::equal(begin(gt_neighbors_vec), end(gt_neighbors_vec), top_k.data()));
+    CHECK(std::equal(
+        begin(gt_neighbors_vec), end(gt_neighbors_vec), top_k.data()));
   }
   SECTION("std::span") {
     auto top_k = get_top_k(scores, 5);
     CHECK(top_k.num_rows() == 5);
     CHECK(top_k.num_cols() == 2);
-    CHECK(std::equal(begin(gt_neighbors_vec), end(gt_neighbors_vec), top_k.data()));
+    CHECK(std::equal(
+        begin(gt_neighbors_vec), end(gt_neighbors_vec), top_k.data()));
   }
   SECTION("scores, std::vector") {
     auto&& [top_scores, top_k] = get_top_k_with_scores(scores, 5);
@@ -277,12 +379,12 @@ TEST_CASE("scoring get_top_k_from_heap vector of min_heap", "[scoring]") {
     auto&& [top_scores, top_k] = get_top_k_with_scores(scores, 5);
     CHECK(top_k.num_rows() == 5);
     CHECK(top_k.num_cols() == 2);
-    CHECK(std::equal(begin(gt_neighbors_vec), end(gt_neighbors_vec), top_k.data()));
+    CHECK(std::equal(
+        begin(gt_neighbors_vec), end(gt_neighbors_vec), top_k.data()));
     CHECK(std::equal(
         begin(gt_scores_vec), end(gt_scores_vec), top_scores.data()));
   }
 }
-
 
 // get_top_k_from_heap (vector of vectors of min_heaps)
 // get_top_k_with_scores_from_heap (one min_heap)

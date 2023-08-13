@@ -161,7 +161,6 @@ int main(int argc, char* argv[]) {
   size_t nqueries = args["--nqueries"].asLong();
   size_t blocksize = args["--blocksize"].asLong();
 
-
   // @todo make global
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
@@ -181,12 +180,10 @@ int main(int argc, char* argv[]) {
   std::cout << load_time << std::endl;
 
   // @todo decide on what the type of top_k::value should be
-  auto [ top_k, top_k_scores ] = [&]() {
-
+  auto [top_k, top_k_scores] = [&]() {
     if (alg_name == "vq_heap" || alg_name == "vq") {
       if (verbose) {
-        std::cout << "# Using vq_heap"
-                  << std::endl;
+        std::cout << "# Using vq_heap" << std::endl;
       }
       return detail::flat::vq_query_heap(db, query, k, nthreads);
     } else if (alg_name == "vq_heap_2" || alg_name == "vq2") {
@@ -194,9 +191,9 @@ int main(int argc, char* argv[]) {
         std::cout << "# Using vq_heap_2" << std::endl;
       }
       return detail::flat::vq_query_heap_2(db, query, k, nthreads);
-    } else  if (alg_name == "qv_tiled") {
+    } else if (alg_name == "qv_tiled") {
       if (verbose) {
-        std::cout << "# Using qv_tiled" <<                   std::endl;
+        std::cout << "# Using qv_tiled" << std::endl;
       }
       return detail::flat::qv_query_heap_tiled(db, query, k, nthreads);
     } else if (alg_name == "qv_heap" || alg_name == "qv") {
@@ -240,8 +237,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (args["--log"]) {
-    dump_logs(
-        args["--log"].asString(), alg_name, nqueries, 0, k, nthreads, 0);
+    dump_logs(args["--log"].asString(), alg_name, nqueries, 0, k, nthreads, 0);
   }
   if (enable_stats) {
     std::cout << json{core_stats}.dump() << std::endl;

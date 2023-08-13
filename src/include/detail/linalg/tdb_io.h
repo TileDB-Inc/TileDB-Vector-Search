@@ -35,10 +35,10 @@
 #include <numeric>
 #include <vector>
 
+#include <tiledb/tiledb>
 #include "detail/linalg/matrix.h"
 #include "utils/logging.h"
 #include "utils/timer.h"
-#include <tiledb/tiledb>
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 void create_matrix(
@@ -66,7 +66,9 @@ void create_matrix(
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
 
-  auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ? TILEDB_ROW_MAJOR : TILEDB_COL_MAJOR;
+  auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
+                   TILEDB_ROW_MAJOR :
+                   TILEDB_COL_MAJOR;
   schema.set_domain(domain).set_order({{order, order}});
 
   schema.add_attribute(tiledb::Attribute::create<T>(ctx, "values"));
@@ -105,7 +107,9 @@ void write_matrix(
   subarray.set_subarray(subarray_vals);
 
   tiledb::Query query(ctx, array);
-  auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ? TILEDB_ROW_MAJOR : TILEDB_COL_MAJOR;
+  auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
+                   TILEDB_ROW_MAJOR :
+                   TILEDB_COL_MAJOR;
   query.set_layout(order)
       .set_data_buffer(
           "values", &A(0, 0), (uint64_t)A.num_rows() * (uint64_t)A.num_cols())
@@ -223,7 +227,8 @@ std::vector<T> read_vector(
   tiledb_datatype_t attr_type = attr.type();
 
   // Create a subarray that reads the array up to the specified subset.
-  std::vector<int32_t> subarray_vals = {(int32_t)start_pos, (int32_t)end_pos - 1};
+  std::vector<int32_t> subarray_vals = {
+      (int32_t)start_pos, (int32_t)end_pos - 1};
   tiledb::Subarray subarray(ctx, array_);
   subarray.set_subarray(subarray_vals);
 

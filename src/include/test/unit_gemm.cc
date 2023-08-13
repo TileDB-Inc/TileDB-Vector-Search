@@ -34,8 +34,8 @@
 #include <catch2/catch_all.hpp>
 #include <span>
 #include <vector>
-#include "scoring.h"
 #include "detail/linalg/choose_blas.h"
+#include "scoring.h"
 
 /*
       func cblas_dgemm(
