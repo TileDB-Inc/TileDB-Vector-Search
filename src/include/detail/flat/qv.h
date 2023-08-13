@@ -128,12 +128,10 @@ auto qv_query_heap(DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsign
   return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads);
 }
 
+
+// @todo Add to out of core
 template <class T, class DB, class Q, class Index>
 auto qv_query_heap(T, DB& db, Q& query, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
-  if constexpr (is_loadable_v<decltype(db)>) {
-    db.load();
-  }
-
   scoped_timer _{tdb_func__};
 
   auto top_k = ColMajorMatrix<size_t>(k_nn, query.num_cols());
@@ -143,40 +141,29 @@ auto qv_query_heap(T, DB& db, Q& query, const std::vector<Index>& ids, int k_nn,
   // algorithms have iterator-based interaces, and the `Matrix` class does not
   // yet have iterators.
   // @todo Implement iterator interface to `Matrix` class
-  size_t size_db = db.num_cols();
-  size_t size_q = query.num_cols();
-  size_t container_size = size_q;
-  size_t block_size = (container_size + nthreads - 1) / nthreads;
 
-  std::vector<std::future<void>> futs;
-  futs.reserve(nthreads);
+  auto size_db = db.num_cols();
+  auto par = stdx::execution::indexed_parallel_policy{nthreads};
+  stdx::range_for_each(
+      std::move(par),
+      query,
+      [&, size_db](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
+        fixed_min_pair_heap<float, size_t> min_scores(k_nn);
 
-  // @todo: Use range::for_each
-  for (size_t n = 0; n < nthreads; ++n) {
-    auto start = std::min<size_t>(n * block_size, container_size);
-    auto stop = std::min<size_t>((n + 1) * block_size, container_size);
+        for (size_t i = 0; i < size_db; ++i) {
+          auto score = L2(q_vec, db[i]);
+          if constexpr (std::is_same_v<T, with_ids>) {
+            min_scores.insert(score, ids[i]);
+          } else if constexpr (std::is_same_v<T, without_ids>) {
+            min_scores.insert(score, i);
+          } else {
+            static_assert(
+                always_false<T>, "T must be with_ids or without_ids");
+          }
+        }
 
-    if (start != stop) {
-      futs.emplace_back(std::async(
-          std::launch::async, [k_nn, start, stop, size_db, &query, &db, &top_k, &top_k_scores]() {
-            for (size_t j = start; j < stop; ++j) {
-              fixed_min_pair_heap<float, size_t> min_scores(k_nn);
-              size_t idx = 0;
-
-              for (size_t i = 0; i < size_db; ++i) {
-                auto score = L2(query[j], db[i]);
-                min_scores.insert(score, i);
-              }
-
-              get_top_k_with_scores_from_heap(min_scores, top_k[j], top_k_scores[j]);
-            }
-          }));
-    }
-  }
-
-  for (size_t n = 0; n < size(futs); ++n) {
-    futs[n].get();
-  }
+        get_top_k_with_scores_from_heap(min_scores, top_k[j], top_k_scores[j]);
+      });
 
   return std::make_tuple(std::move(top_k_scores), std::move(top_k));
 }
