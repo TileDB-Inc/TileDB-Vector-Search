@@ -84,13 +84,19 @@ kmeans_add_test(unit_matrix)
 
 kmeans_add_test(unit_mdspan)
 
+kmeans_add_test(unit_partition)
+
 kmeans_add_test(unit_scoring)
 
 kmeans_add_test(unit_slicing)
 
 kmeans_add_test(unit_stats)
 
+kmeans_add_test(unit_qv)
+
 kmeans_add_test(unit_utils)
+
+kmeans_add_test(unit_vq)
 
 if (TILEDB_VS_ENABLE_BLAS)
   kmeans_add_test(unit_queries)

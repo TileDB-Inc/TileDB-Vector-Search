@@ -67,40 +67,32 @@ namespace detail::flat {
  * @param db The database.
  * @param q The query.
  * @param k The number of top k results to return.
- * @param nth If true, use the nth_element algorithm to get top k, otherwise
- * use a heap based algorithm.
  * @param nthreads The number of threads to use in parallel execution.
  * @return A matrix of size k x #queries containing the top k results for each
  * query.
  */
 template <class DB, class Q>
-[[deprecated]] auto qv_query_nth(DB& db, const Q& q, int k, bool nth, unsigned int nthreads) {
+[[deprecated]] auto qv_query_heap_0(DB& db, const Q& q, int k_nn, unsigned int nthreads) {
   if constexpr (is_loadable_v<decltype(db)>) {
     db.load();
   }
-  scoped_timer _{tdb_func__ + (nth ? std::string{"nth"} : std::string{"heap"})};
+  scoped_timer _{tdb_func__};
 
-  ColMajorMatrix<size_t> top_k(k, size(q));
+  ColMajorMatrix<size_t> top_k(k_nn, size(q));
 
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
   stdx::range_for_each(
-      std::move(par), q, [&, nth](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
+      std::move(par), q, [&](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
         size_t size_q = size(q);
         size_t size_db = size(db);
 
         // @todo can we do this more efficiently?
-        std::vector<float> scores(size_db);
+        Vector<float> scores(size_db);
 
         for (size_t i = 0; i < size_db; ++i) {
           scores[i] = L2(q_vec, db[i]);
         }
-        if (nth) {
-          std::vector<int> index(size_db);
-          std::iota(begin(index), end(index), 0);
-          get_top_k_nth(scores, top_k[j], index, k);
-        } else {
-          get_top_k(scores, top_k[j], k);
-        }
+        get_top_k_from_scores(scores, top_k[j], k_nn);
       });
 
   return top_k;
@@ -350,49 +342,40 @@ auto qv_query_heap_tiled(T, DB& db, Q& query, [[maybe_unused]] const std::vector
   return top_k;
 }
 
+/**
+ * @brief Find the single nearest neighbor of each query vector in the database.
+ * This is essentially qv_query_heap, specialized for k = 1.
+ * @tparam DB
+ * @tparam Q
+ * @param db
+ * @param q
+ * @param nthreads
+ * @return
+ */
 template <class DB, class Q>
 auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
   scoped_timer _{tdb_func__};
 
+  auto size_db = size(db);
+
   // Just need a single vector
   std::vector<size_t> top_k(q.num_cols());
 
-  // Again, doing the parallelization by hand here....
-  size_t size_db = db.num_cols();
-  size_t size_q = q.num_cols();
-  size_t container_size = size_q;
-  size_t block_size = (container_size + nthreads - 1) / nthreads;
+  auto par = stdx::execution::indexed_parallel_policy{(size_t) nthreads};
+  stdx::range_for_each(std::move(par), q, [&, size_db](auto&& qvec, auto&& n = 0, auto&& j = 0) {
+    float min_score = std::numeric_limits<float>::max();
+    size_t idx = 0;
 
-  std::vector<std::future<void>> futs;
-  futs.reserve(nthreads);
-
-  for (size_t n = 0; n < nthreads; ++n) {
-    auto start = std::min<size_t>(n * block_size, container_size);
-    auto stop = std::min<size_t>((n + 1) * block_size, container_size);
-
-    if (start != stop) {
-      futs.emplace_back(std::async(
-          std::launch::async, [start, stop, size_db, &q, &db, &top_k]() {
-            for (size_t j = start; j < stop; ++j) {
-              float min_score = std::numeric_limits<float>::max();
-              size_t idx = 0;
-
-              for (size_t i = 0; i < size_db; ++i) {
-                auto score = L2(q[j], db[i]);
-                if (score < min_score) {
-                  min_score = score;
-                  idx = i;
-                }
-              }
-
-              top_k[j] = idx;
-            }
-          }));
+    for (size_t i = 0; i < size_db; ++i) {
+      auto score = L2(qvec, db[i]);
+      if (score < min_score) {
+        min_score = score;
+        idx = i;
+      }
     }
-  }
-  for (size_t n = 0; n < size(futs); ++n) {
-    futs[n].wait();
-  }
+    top_k[j] = idx;
+  });
+
   return top_k;
 }
 

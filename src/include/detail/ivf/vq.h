@@ -224,7 +224,6 @@ auto vq_query_finite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
-    bool nth,
     size_t nthreads,
     size_t min_parts_per_thread = 0) {
   scoped_timer _{tdb_func__ + " " + part_uri};
@@ -355,7 +354,6 @@ auto vq_query_infinite_ram(
     auto&& shuffled_ids,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
@@ -446,7 +444,6 @@ auto vq_query_infinite_ram(
     const std::string& id_uri,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__};
 
@@ -464,7 +461,6 @@ auto vq_query_infinite_ram(
       shuffled_ids,
       nprobe,
       k_nn,
-      nth,
       nthreads);
 }
 
@@ -482,7 +478,6 @@ auto vq_query_infinite_ram_2(
     auto&& shuffled_ids,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
@@ -590,7 +585,6 @@ auto vq_query_infinite_ram_2(
     const std::string& id_uri,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__};
 
@@ -608,7 +602,6 @@ auto vq_query_infinite_ram_2(
       shuffled_ids,
       nprobe,
       k_nn,
-      nth,
       nthreads);
 }
 
@@ -625,7 +618,6 @@ auto vq_query_finite_ram_2(
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
-    bool nth,
     size_t nthreads,
     size_t min_parts_per_thread = 0) {
   scoped_timer _{tdb_func__ + " " + part_uri};

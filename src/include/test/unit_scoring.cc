@@ -1,5 +1,5 @@
 /**
- * @file   unit_fixed_min_heap.cc
+ * @file   unit_scoring.cc
  *
  * @section LICENSE
  *

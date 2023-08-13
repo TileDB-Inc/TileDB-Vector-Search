@@ -86,7 +86,6 @@ auto qv_query_heap_infinite_ram(
     auto&& partitioned_ids,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads);
 
 /**
@@ -106,7 +105,6 @@ auto qv_query_heap_infinite_ram(
     const std::string& id_uri,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__};
 
@@ -124,7 +122,6 @@ auto qv_query_heap_infinite_ram(
       partitioned_ids,
       nprobe,
       k_nn,
-      nth,
       nthreads);
 }
 
@@ -160,7 +157,6 @@ auto qv_query_heap_infinite_ram(
     const std::string& id_uri,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads) {
   tiledb::Context ctx;
   return qv_query_heap_infinite_ram(
@@ -172,7 +168,6 @@ auto qv_query_heap_infinite_ram(
       id_uri,
       nprobe,
       k_nn,
-      nth,
       nthreads);
 }
 
@@ -210,7 +205,6 @@ auto qv_query_heap_infinite_ram(
     auto&& partitioned_ids,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{"Total time " + tdb_func__};
 
@@ -231,7 +225,7 @@ auto qv_query_heap_infinite_ram(
   // @todo is this the best (fastest) algorithm to use?  (it takes miniscule
   // time at rate)
   auto top_centroids =
-      detail::flat::qv_query_nth(centroids, q, nprobe, false, nthreads);
+      detail::flat::qv_query_heap_0(centroids, q, nprobe, nthreads);
 
   auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
       size(q), fixed_min_pair_heap<float, size_t>(k_nn));
@@ -275,7 +269,6 @@ auto nuv_query_heap_infinite_ram(
     auto&& partitioned_ids,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads);
 
 template <typename T, class partitioned_ids_type>
@@ -288,7 +281,6 @@ auto nuv_query_heap_infinite_ram(
     const std::string& id_uri,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__};
 
@@ -306,7 +298,6 @@ auto nuv_query_heap_infinite_ram(
       partitioned_ids,
       nprobe,
       k_nn,
-      nth,
       nthreads);
 }
 
@@ -343,7 +334,6 @@ auto nuv_query_heap_infinite_ram(
     auto&& partitioned_ids,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
@@ -436,7 +426,6 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
     auto&& partitioned_ids,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads);
 
 template <typename T, class partitioned_ids_type>
@@ -449,7 +438,6 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
     const std::string& id_uri,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__};
 
@@ -467,7 +455,6 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
       partitioned_ids,
       nprobe,
       k_nn,
-      nth,
       nthreads);
 }
 
@@ -509,7 +496,6 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
     auto&& partitioned_ids,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
@@ -651,7 +637,6 @@ auto qv_query_heap_finite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
-    bool nth,
     size_t nthreads);
 
 
@@ -673,7 +658,6 @@ auto qv_query_heap_finite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
-    bool nth,
     size_t nthreads) {
   tiledb::Context ctx;
 
@@ -696,7 +680,6 @@ auto qv_query_heap_finite_ram(
       nprobe,
       k_nn,
       upper_bound,
-      nth,
       nthreads);
 }
 
@@ -749,7 +732,6 @@ auto qv_query_heap_finite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__};
 
@@ -763,7 +745,7 @@ auto qv_query_heap_finite_ram(
 
   // get closest centroid for each query vector
   auto top_centroids =
-      detail::flat::qv_query_nth(centroids, query, nprobe, false, nthreads);
+      detail::flat::qv_query_heap_0(centroids, query, nprobe, nthreads);
 
   using parts_type = typename decltype(top_centroids)::value_type;
 
@@ -924,7 +906,6 @@ auto nuv_query_heap_finite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
-    bool nth,
     size_t nthreads);
 
 
@@ -946,7 +927,6 @@ auto nuv_query_heap_finite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
-    bool nth,
     size_t nthreads) {
   tiledb::Context ctx;
 
@@ -996,7 +976,6 @@ auto nuv_query_heap_finite_ram(
       nprobe,
       k_nn,
       upper_bound,
-      nth,
       nthreads);
 }
 
@@ -1050,7 +1029,6 @@ auto nuv_query_heap_finite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__ + " " + part_uri};
 
@@ -1225,7 +1203,6 @@ auto nuv_query_heap_finite_ram_reg_blocked(
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__ + " " + part_uri};
 
@@ -1563,7 +1540,6 @@ auto query_finite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
-    bool nth,
     size_t nthreads,
     size_t min_parts_per_thread = 0) {
   scoped_timer _{tdb_func__ + " " + part_uri};
@@ -1718,7 +1694,6 @@ auto query_infinite_ram(
     auto&& partitioned_ids,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
@@ -1804,7 +1779,6 @@ auto query_infinite_ram(
     const std::string& id_uri,
     size_t nprobe,
     size_t k_nn,
-    bool nth,
     size_t nthreads) {
   scoped_timer _{tdb_func__};
 
@@ -1822,7 +1796,6 @@ auto query_infinite_ram(
       partitioned_ids,
       nprobe,
       k_nn,
-      nth,
       nthreads);
 }
 

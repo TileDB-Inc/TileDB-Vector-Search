@@ -246,7 +246,6 @@ auto dist_qv_finite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
-    bool nth,
     size_t nthreads,
     size_t num_nodes) {
   scoped_timer _{tdb_func__ + " " + part_uri};

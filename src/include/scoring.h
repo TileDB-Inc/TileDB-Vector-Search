@@ -174,23 +174,18 @@ inline auto dot(U const& a, V const& b) {
 // Functions for extracting top k neighbors from a raw scores matrix
 // ----------------------------------------------------------------------------
 
-// @todo implement with fixed_min_heap
-template <class V, class L, class I>
-[[deprecated]] auto get_top_k_nth(V const& scores, L&& top_k, I& index, int k) {
-  std::iota(begin(index), end(index), 0);
-  std::nth_element(
-      begin(index), begin(index) + k, end(index), [&](auto&& a, auto&& b) {
-        return scores[a] < scores[b];
-      });
-  std::copy(begin(index), begin(index) + k, begin(top_k));
-  std::sort(begin(top_k), end(top_k), [&](auto& a, auto& b) {
-    return scores[a] < scores[b];
-  });
-  return top_k;
-}
 
+/**
+ * @brief Get top k neighbors for each query. Scans the scores for each
+ * @tparam V
+ * @tparam L
+ * @param scores
+ * @param top_k
+ * @param k
+ * @return
+ */
 template <std::ranges::random_access_range V, std::ranges::random_access_range L>
-[[deprecated]] auto get_top_k(V const& scores, L&& top_k, int k) {
+auto get_top_k_from_scores(V const& scores, L&& top_k, int k) {
   fixed_min_pair_heap<float, unsigned> s(k);
 
   auto num_scores = scores.size();
@@ -200,104 +195,9 @@ template <std::ranges::random_access_range V, std::ranges::random_access_range L
   get_top_k_from_heap(s, top_k);
 }
 
-template <class T>
-[[deprecated]] auto get_top_k(const ColMajorMatrix<T>& scores, int k, bool nth, int nthreads)
-{
-  scoped_timer _{"Get top k"};
-
-  auto num_queries = scores.num_cols();
-
-  auto top_k = ColMajorMatrix<size_t>(k, num_queries);
-
-  int q_block_size = (num_queries + nthreads - 1) / nthreads;
-  std::vector<std::future<void>> futs;
-  futs.reserve(nthreads);
-
-  for (int n = 0; n < nthreads; ++n) {
-    int q_start = n * q_block_size;
-    int q_stop = std::min<int>((n + 1) * q_block_size, num_queries);
-
-    if (nth) {
-      futs.emplace_back(std::async(
-          std::launch::async, [q_start, q_stop, &scores, &top_k, k]() {
-            std::vector<int> index(scores.num_rows());
-
-            for (int j = q_start; j < q_stop; ++j) {
-              get_top_k_nth(scores[j], std::move(top_k[j]), index, k);
-            }
-          }));
-    } else {
-      futs.emplace_back(std::async(
-          std::launch::async, [q_start, q_stop, &scores, &top_k, k]() {
-            std::vector<int> index(scores.num_rows());
-
-            for (int j = q_start; j < q_stop; ++j) {
-              get_top_k(scores[j], std::move(top_k[j]), k);
-            }
-          }));
-    }
-  }
-  for (int n = 0; n < nthreads; ++n) {
-    futs[n].get();
-  }
-  return top_k;
-}
-
-/**
- * @brief Get top k neighbors for each query. Scans the scores for each
- * query and keeps the top k.
- * @tparam S
- * @param scores Array of scores.  One entry per query, for all comparisons.
- * @param k
- * @param nthreads
- * @return Matrix of top k elements.  Each column is a query, each row is a
- * neighbor index, ranked by closeness.
- */
-template <template <class...> class S, class... T>
-auto get_top_k(const S<T...>& scores, int k, int nthreads = 1)
-requires(std::is_same_v<S<T...>, Matrix<T...>> ) {
-
-  scoped_timer _{"Get top k"};
-
-  auto num_queries = scores.num_cols();
-
-  auto top_k = ColMajorMatrix<size_t>(k, num_queries);
-
-  if (nthreads == 1) {
-    for (int j = 0; j < num_queries; ++j) {
-      get_top_k(scores[j], std::move(top_k[j]), k);
-    }
-    return top_k;
-  } else {
-    int q_block_size = (num_queries + nthreads - 1) / nthreads;
-    std::vector<std::future<void>> futs;
-    futs.reserve(nthreads);
-
-    for (int n = 0; n < nthreads; ++n) {
-      int q_start = n * q_block_size;
-      int q_stop = std::min<int>((n + 1) * q_block_size, num_queries);
-
-      futs.emplace_back(std::async(
-          std::launch::async, [q_start, q_stop, &scores, &top_k, k]() {
-            std::vector<int> index(scores.num_rows());
-
-            for (int j = q_start; j < q_stop; ++j) {
-              get_top_k(scores[j], std::move(top_k[j]), k);
-            }
-          }));
-    }
-    for (int n = 0; n < nthreads; ++n) {
-      futs[n].get();
-    }
-  }
-  return top_k;
-}
-
-
 // ----------------------------------------------------------------------------
-// Functions for extracting top k neighbors from a min heap (with pairs)
+// Functions for consolidating vector of vectors of min_heaps to 0th min_heap
 // ----------------------------------------------------------------------------
-
 /**
  * @brief Utility function to put the top scores for multiple threads into a
  * single top_scores vector (the zeroth vector).
@@ -319,6 +219,9 @@ void consolidate_scores(std::vector<std::vector<Heap>>& min_scores) {
   }
 }
 
+// ----------------------------------------------------------------------------
+// Functions for extracting top k neighbor indices from a min heap (with pairs)
+// ----------------------------------------------------------------------------
 /**
  * @brief Utility function to extract the top k scores from a single min heap.
  * @param min_scores
