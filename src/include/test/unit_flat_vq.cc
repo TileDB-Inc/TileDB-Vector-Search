@@ -1,5 +1,5 @@
 /**
-* @file   unit_qv.cc
+* @file   unit_flat_vq.cc
 *
 * @section LICENSE
 *
@@ -29,9 +29,9 @@
 *
  */
 
-#include "detail/ivf/qv.h"
+#include "detail/ivf/vq.h"
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("qv test test", "[qv]") {
+TEST_CASE("vq: test test", "[vq]") {
   REQUIRE(true);
 }

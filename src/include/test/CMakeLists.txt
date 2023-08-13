@@ -69,9 +69,17 @@ kmeans_add_test(unit_concepts)
 
 kmeans_add_test(unit_fixed_min_heap)
 
+kmeans_add_test(unit_flat_qv)
+
+kmeans_add_test(unit_flat_vq)
+
 kmeans_add_test(unit_ivf_index)
 
 kmeans_add_test(unit_ivf_query)
+
+kmeans_add_test(unit_ivf_qv)
+
+kmeans_add_test(unit_ivf_vq)
 
 add_executable(unit_linalg unit_linalg.cc)
 target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)
@@ -92,11 +100,9 @@ kmeans_add_test(unit_slicing)
 
 kmeans_add_test(unit_stats)
 
-kmeans_add_test(unit_qv)
 
 kmeans_add_test(unit_utils)
 
-kmeans_add_test(unit_vq)
 
 if (TILEDB_VS_ENABLE_BLAS)
   kmeans_add_test(unit_queries)

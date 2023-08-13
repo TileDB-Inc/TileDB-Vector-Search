@@ -195,6 +195,16 @@ auto get_top_k_from_scores(V const& scores, L&& top_k, int k) {
   get_top_k_from_heap(s, top_k);
 }
 
+template <class T>
+auto get_top_k_from_scores(const ColMajorMatrix<T>& scores, int k_nn) {
+  auto top_k = ColMajorMatrix<unsigned>(k_nn, scores.num_cols());
+  for (size_t j = 0; j < scores.num_cols(); ++j) {
+    get_top_k_from_scores(scores[j], top_k[j], k_nn);
+  }
+  return top_k;
+}
+
+
 // ----------------------------------------------------------------------------
 // Functions for consolidating vector of vectors of min_heaps to 0th min_heap
 // ----------------------------------------------------------------------------

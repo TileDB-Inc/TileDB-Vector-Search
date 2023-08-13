@@ -1,5 +1,5 @@
 /**
-* @file   unit_vq.cc
+* @file   unit_ivf_qv.cc
 *
 * @section LICENSE
 *
@@ -29,7 +29,7 @@
 *
  */
 
-#include "detail/ivf/vq.h"
+#include "detail/ivf/qv.h"
 #include <catch2/catch_all.hpp>
 
 TEST_CASE("vq: test test", "[vq]") {
