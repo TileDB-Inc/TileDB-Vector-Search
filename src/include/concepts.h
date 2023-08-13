@@ -47,6 +47,16 @@ concept has_load_member = requires(T&& t) {
 template <class T>
 constexpr bool is_loadable_v = has_load_member<T>;
 
+template<class T>
+bool load(T&& t) {
+  return false;
+}
+
+template<has_load_member T>
+bool load(T&& t) {
+  return t.load();
+}
+
 template <typename T>
 concept has_col_offset = requires(T&& t) {
   t.col_offset();

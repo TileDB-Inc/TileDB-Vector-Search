@@ -31,6 +31,7 @@
 
 #include "detail/ivf/partition.h"
 #include <catch2/catch_all.hpp>
+#include "query_common.h"
 
 TEST_CASE("partition: test test", "[partition]") {
   REQUIRE(true);
@@ -42,46 +43,6 @@ TEST_CASE("partition: partition_ivf_index", "[partition]") {
 
   auto nprobe = GENERATE(1, 2, 3);
   auto nthreads = GENERATE(3);
-
-
-  // clang-format off
-
-  auto centroids = ColMajorMatrix<float> {
-      {
-          {8, 6, 7},
-          {5, 3, 0},
-          {9, 1, 2},
-          {3, 4, 5},
-          {6, 7, 8},
-          {9, 0, 1},
-          {2, 3, 4},
-          {5, 6, 7},
-          {8, 9, 0},
-          {1, 2, 3},
-          {4, 5, 6},
-          {7, 8, 9},
-          {3.14, 1.59, 2.65},
-          {35, 89, 793},
-          {2, 384, 6.26},
-          {4, 33, 8},
-          {32.7, 9.502, 8},
-          {84, 1, 97},
-          {3, 1, 4},
-          {1, 5, 9},
-          {9, 0, 3,},
-          {5, 7, 6},
-      }
-  };
-  auto query = ColMajorMatrix<float>{
-      {
-          {3, 4, 5},
-          {2, 300, 8},
-          { 3, 1, 3.5},
-          {3, 1, 3},
-          {4, 5, 6},
-      }
-  };
-  // clang-format on
 
   auto && [active_partitions, active_queries] =
       detail::ivf::partition_ivf_index(centroids, query, nprobe, nthreads);

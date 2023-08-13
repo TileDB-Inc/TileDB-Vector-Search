@@ -39,10 +39,9 @@
 #include "algorithm.h"
 #include "linalg.h"
 #include "utils/timer.h"
+#include "scoring.h"
 
 namespace detail::flat {
-
-
 
 /**
  * This algorithm accumulates top_k as it goes, but in a "transposed" fashion to
@@ -65,6 +64,8 @@ auto vq_query_heap(DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsign
   return vq_query_heap(with_ids{}, db, q, ids, k_nn, nthreads);
 }
 
+
+// @todo Support out of core
 template <class T, class DB, class Q, class Index>
 auto vq_query_heap(T, DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
 
@@ -87,19 +88,26 @@ auto vq_query_heap(T, DB& db, Q& q, const std::vector<Index>& ids, int k_nn, uns
         std::move(par),
         db,
         [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
+          std::remove_cvref_t<decltype(i)> index = 0;
+          if constexpr (has_col_offset<DB>) {
+            index = i + db.col_offset();
+          } else {
+            index = i;
+          }
+
           for (size_t j = 0; j < size_q; ++j) {
             auto score = L2(q[j], db_vec);
             if constexpr (std::is_same_v<T, with_ids>) {
-              scores[n][j].insert(score, ids[i + db.col_offset()]);
+              scores[n][j].insert(score, ids[index]);
             } else if constexpr (std::is_same_v<T, without_ids>) {
-              scores[n][j].insert(score, i + db.col_offset());
+              scores[n][j].insert(score, index);
             } else {
               static_assert(always_false<T>, "T must be with_ids or without_ids");
             }
           }
         });
     _i.stop();
-  } while (db.load());
+  } while (load(db));
 
   consolidate_scores(scores);
   auto top_k = get_top_k_with_scores(scores, k_nn);
@@ -121,9 +129,9 @@ auto vq_query_heap(T, DB& db, Q& q, const std::vector<Index>& ids, int k_nn, uns
 template <class T, class DB, class Q, class Index>
 auto vq_query_heap_tiled(T, DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads);
 
-template <class DB, class Q, class Index>
+template <class DB, class Q>
 auto vq_query_heap_tiled(DB& db, Q& q, int k_nn, unsigned nthreads) {
-  return vq_query_heap_tiled(without_ids{}, db, q, std::vector<Index>{}, k_nn, nthreads);
+  return vq_query_heap_tiled(without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
 }
 
 template <class DB, class Q, class Index>
@@ -147,18 +155,24 @@ auto vq_query_heap_tiled(T, DB& db, Q& q, const std::vector<Index>& ids, int k_n
   log_timer _i{tdb_func__ + " in RAM"};
 
   // @todo Can we do blocking in the parallel for_each somehow?
-  while (db.load()) {
+  do {
     _i.start();
     stdx::range_for_each(
         std::move(par),
         db,
         [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
+          std::remove_cvref_t<decltype(i)> index = 0;
+          if constexpr (has_col_offset<DB>) {
+            index = i + db.col_offset();
+          } else {
+            index = i;
+          }
           for (size_t j = 0; j < size_q; ++j) {
             auto score = L2(q[j], db_vec);
             if constexpr (std::is_same_v<T, with_ids>) {
-              scores[n][j].insert(score, ids[i + db.col_offset()]);
+              scores[n][j].insert(score, ids[index]);
             } else if constexpr (std::is_same_v<T, without_ids>) {
-              scores[n][j].insert(score, i + db.col_offset());
+              scores[n][j].insert(score, index);
             } else {
               static_assert(
                   always_false<T>, "T must be with_ids or without_ids");
@@ -166,7 +180,7 @@ auto vq_query_heap_tiled(T, DB& db, Q& q, const std::vector<Index>& ids, int k_n
           }
         });
     _i.stop();
-  }
+  } while (load(db));
 
   consolidate_scores(scores);
   auto top_k = get_top_k_with_scores(scores, k_nn);
@@ -206,25 +220,31 @@ auto vq_query_heap_2(T, DB& db, Q& q, const std::vector<Index>& ids, int k_nn, u
   log_timer _i{tdb_func__ + " in RAM"};
 
   // @todo Can we do blocking in the parallel for_each somehow?
-  while (db.load()) {
+  do {
     _i.start();
     stdx::range_for_each(
         std::move(par),
         db,
         [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
+          std::remove_cvref_t<decltype(i)> index = 0;
+          if constexpr (has_col_offset<DB>) {
+            index = i + db.col_offset();
+          } else {
+            index = i;
+          }
           for (size_t j = 0; j < size_q; ++j) {
             auto score = L2(q[j], db_vec);
             if constexpr (std::is_same_v<T, with_ids>) {
-              scores[n][j].insert(score, ids[i + db.col_offset()]);
+              scores[n][j].insert(score, ids[index]);
             } else if constexpr (std::is_same_v<T, without_ids>) {
-              scores[n][j].insert(score, i + db.col_offset());
+              scores[n][j].insert(score, index);
             } else {
               static_assert(always_false<T>, "T must be with_ids or without_ids");
             }
           }
         });
     _i.stop();
-  }
+  } while (load(db));
 
   consolidate_scores(scores);
   auto top_k = get_top_k_with_scores(scores, k_nn);

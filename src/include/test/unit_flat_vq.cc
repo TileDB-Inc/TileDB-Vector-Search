@@ -29,9 +29,36 @@
 *
  */
 
-#include "detail/ivf/vq.h"
+#include "detail/flat/vq.h"
 #include <catch2/catch_all.hpp>
+#include "query_common.h"
 
-TEST_CASE("vq: test test", "[vq]") {
+TEST_CASE("flat vq: test test", "[flat vq]") {
   REQUIRE(true);
+}
+
+// @todo: test with tdbMatrix
+TEST_CASE("flat vq all or nothing", "[flat vq]") {
+  auto ids = std::vector<size_t>(sift_base.num_cols());
+  std::iota(ids.rbegin(), ids.rend(), 9);
+
+  auto && [D00, I00 ] = detail::flat::vq_query_heap(sift_base, sift_query, 3, 1);
+  auto && [D01, I01 ] = detail::flat::vq_query_heap_tiled(sift_base, sift_query, 3, 1);
+  auto && [D02, I02 ] = detail::flat::vq_query_heap_2(sift_base, sift_query, 3, 1);
+
+  CHECK(std::equal(D00.data(), D00.data() + D00.size(), D01.data()));
+  CHECK(std::equal(I00.data(), I00.data() + I00.size(), I01.data()));
+  CHECK(std::equal(D00.data(), D00.data() + D00.size(), D02.data()));
+  CHECK(std::equal(I00.data(), I00.data() + I00.size(), I02.data()));
+
+  auto && [D10, I10 ] = detail::flat::vq_query_heap(sift_base, sift_query, ids, 3, 1);
+  auto && [D11, I11 ] = detail::flat::vq_query_heap_tiled(sift_base, sift_query, ids, 3, 1);
+  auto && [D12, I12 ] = detail::flat::vq_query_heap_2(sift_base, sift_query, ids, 3, 1);
+
+  CHECK(!std::equal(I00.data(), I00.data() + I00.size(), I10.data()));
+
+  CHECK(std::equal(D10.data(), D10.data() + D10.size(), D11.data()));
+  CHECK(std::equal(I10.data(), I10.data() + I10.size(), I11.data()));
+  CHECK(std::equal(D10.data(), D10.data() + D10.size(), D12.data()));
+  CHECK(std::equal(I10.data(), I10.data() + I10.size(), I12.data()));
 }
