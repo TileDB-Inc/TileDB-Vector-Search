@@ -91,11 +91,8 @@ TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
         k_nn,
         nthreads);
 
-    debug_matrix(D00, "D00");
-    debug_matrix(D01, "D01");
-    debug_matrix(I00, "I00");
-    debug_matrix(I01, "I01");
-
+    CHECK(!std::equal(D00.data(), D00.data() + D00.size(), std::vector<db_type>(D00.size(), 0.0).data()));
+    CHECK(!std::equal(I00.data(), I00.data() + I00.size(), std::vector<indices_type>(I00.size(), 0.0).data()));
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D01.data()));
     CHECK(std::equal(I00.data(), I00.data() + I00.size(), I01.data()));
   }
