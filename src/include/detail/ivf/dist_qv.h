@@ -155,8 +155,8 @@ auto dist_qv_finite_ram_part(
     auto min_n = futs[n].get();
 
     for (size_t j = 0; j < num_queries; ++j) {
-      for (auto&& e : min_n[j]) {
-        min_scores[j].insert(std::get<0>(e), std::get<1>(e));
+      for (auto&& [e, f] : min_n[j]) {
+        min_scores[j].insert(e, f);
       }
     }
   }
@@ -281,11 +281,14 @@ auto dist_qv_finite_ram(
     auto last_part = std::min<size_t>((node + 1) * parts_per_node, num_parts);
 
     if (first_part != last_part) {
-      std::vector<parts_type> dist_partitions{
+      auto dist_partitions = std::vector<parts_type>{
           begin(active_partitions) + first_part,
           begin(active_partitions) + last_part};
-      std::vector<indices_type> dist_indices{
+      auto dist_indices = std::vector<indices_type>{
           begin(indices) + first_part, begin(indices) + last_part + 1};
+      auto dist_active_queries = std::vector<std::vector<size_t>>{
+          begin(active_queries) + first_part,
+          begin(active_queries) + last_part};
 
       /*
        * Each compute node returns a min_heap of its own min_scores
@@ -295,7 +298,7 @@ auto dist_qv_finite_ram(
           part_uri,
           dist_partitions,
           query,
-          active_queries,
+          dist_active_queries,
           indices,
           id_uri,
           k_nn,

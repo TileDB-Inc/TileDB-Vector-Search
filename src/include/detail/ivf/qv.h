@@ -1276,7 +1276,6 @@ auto nuv_query_heap_finite_ram_reg_blocked(
              n,
              first_part,
              last_part]() {
-
               size_t part_offset = 0;
               size_t col_offset = 0;
               if constexpr (has_num_col_parts<decltype(partitioned_db)>) {
@@ -1294,10 +1293,10 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                 if constexpr (!has_num_col_parts<decltype(partitioned_db)>) {
                   quartno = active_partitions[partno];
                 }
-                (void) active_partitions;
+                (void)active_partitions;
 
                 auto start = new_indices[quartno] - col_offset;
-                auto stop =  new_indices[quartno + 1] - col_offset;
+                auto stop = new_indices[quartno + 1] - col_offset;
                 auto kstep = stop - start;
                 auto kstop = start + 2 * (kstep / 2);
 
@@ -1642,8 +1641,8 @@ auto query_finite_ram(
         auto min_n = futs[n].get();
 
         for (size_t j = 0; j < num_queries; ++j) {
-          for (auto&& e : min_n[j]) {
-            min_scores[j].insert(std::get<0>(e), std::get<1>(e));
+          for (auto&& [e, f] : min_n[j]) {
+            min_scores[j].insert(e, f);
           }
         }
       }

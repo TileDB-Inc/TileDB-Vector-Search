@@ -40,7 +40,9 @@
 #include <type_traits>
 
 template <typename T>
-concept has_load_member = requires(T&& t) { t.load(); };
+concept has_load_member = requires(T&& t) {
+  t.load();
+};
 
 template <class T>
 constexpr bool is_loadable_v = has_load_member<T>;
@@ -66,10 +68,14 @@ size_t num_loads(T&& t) {
 }
 
 template <typename T>
-concept has_col_offset = requires(T&& t) { t.col_offset(); };
+concept has_col_offset = requires(T&& t) {
+  t.col_offset();
+};
 
 template <typename T>
-concept has_num_col_parts = requires(T&& t) { t.num_col_parts(); };
+concept has_num_col_parts = requires(T&& t) {
+  t.num_col_parts();
+};
 
 template <typename T>
 concept feature_vector = requires(T t) {
@@ -103,7 +109,7 @@ concept vector_database = requires(T t) {
   { t[0] } -> std::convertible_to<std::span<typename T::value_type>>;
   { t(0, 0) } -> std::convertible_to<typename T::value_type>;
   { t.data() } -> std::convertible_to<typename T::value_type*>;
-  { t.rank() == 2 };
+  {t.rank() == 2};
   { raveled(t) } -> std::convertible_to<std::span<typename T::value_type>>;
 };
 

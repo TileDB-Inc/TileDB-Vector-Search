@@ -292,7 +292,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
        */
       std::get<0>(col_view_) = std::get<1>(col_view_);  // # columns
       std::get<0>(col_part_view_) =
-          std::get<1>(col_part_view_);                  // # partitions
+          std::get<1>(col_part_view_);  // # partitions
 
       std::get<1>(col_part_view_) = std::get<0>(col_part_view_);
       for (size_t i = std::get<0>(col_part_view_); i < total_num_parts_; ++i) {

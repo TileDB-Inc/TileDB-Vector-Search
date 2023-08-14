@@ -138,14 +138,15 @@ TEST_CASE("ivf vq: finite all or none", "[ivf vq]") {
   auto query = tdbColMajorMatrix<db_type>(ctx, query_uri, num_queries);
   query.load();
   auto index = read_vector<indices_type>(ctx, index_uri);
-  auto groundtruth = tdbColMajorMatrix<indices_type>(ctx, groundtruth_uri);
+  auto groundtruth = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
+  groundtruth.load();
 
   SECTION("all") {
     auto nprobe = GENERATE(5, 1);
     auto k_nn = GENERATE(5, 1);
     auto nthreads = GENERATE(5, 1);
-    std::cout << upper_bound << " " << nprobe << " " << num_queries << " " << k_nn << " " << nthreads
-              << std::endl;
+    std::cout << upper_bound << " " << nprobe << " " << num_queries << " "
+              << k_nn << " " << nthreads << std::endl;
 
     auto&& [D00, I00] = detail::ivf::query_infinite_ram<db_type, ids_type>(
         ctx,
