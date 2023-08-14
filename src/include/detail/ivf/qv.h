@@ -1410,17 +1410,20 @@ auto apply_query(
 
     auto start = new_indices[quartno] - col_offset;
     auto stop = new_indices[quartno + 1] - col_offset;
+    auto kstep = stop - start;
+    auto kstop = start + 2 * (kstep / 2);
 
     auto len = 2 * (size(active_queries[partno]) / 2);
     auto end = active_queries[partno].begin() + len;
+    // auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
 
-    for (auto j = active_queries[partno].begin(); j != end; j += 2) {
+
+    for (auto j = active_queries[partno].begin(); j < end; j += 2) {
       auto j0 = j[0];
       auto j1 = j[1];
       auto q_vec_0 = query[j0];
       auto q_vec_1 = query[j1];
 
-      auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
       for (size_t kp = start; kp < kstop; kp += 2) {
         auto score_00 = L2(q_vec_0, partitioned_db[kp + 0]);
         auto score_01 = L2(q_vec_0, partitioned_db[kp + 1]);
@@ -1451,7 +1454,6 @@ auto apply_query(
       auto j0 = j[0];
       auto q_vec_0 = query[j0];
 
-      auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
       for (size_t kp = start; kp < kstop; kp += 2) {
         auto score_00 = L2(q_vec_0, partitioned_db[kp + 0]);
         auto score_01 = L2(q_vec_0, partitioned_db[kp + 1]);

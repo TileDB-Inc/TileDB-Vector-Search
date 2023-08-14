@@ -129,10 +129,13 @@ auto vq_apply_query(
 
     auto start = new_indices[quartno] - col_offset;
     auto stop = new_indices[quartno + 1] - col_offset;
+    auto kstep = stop - start;
+    auto kstop = start + 2 * (kstep / 2);
 
-    auto len = 2 * (size(active_queries[partno]) / 2);
+    // size_t i_begin = ii, i_step = std::min<size_t>(64, ii_last - ii), i_end = i_begin + 2 * (i_step / 2), i_last = i_begin + i_step;
+
+    auto len = 2*(size(active_queries[partno])/ 2);
     auto end = active_queries[partno].begin() + len;
-    auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
 
     /*
      * Loop over the vectors in the partition
@@ -141,7 +144,7 @@ auto vq_apply_query(
       /*
        * Loop over the queries associated with the partition
        */
-      for (auto j = active_queries[partno].begin(); j != end; j += 2) {
+      for (auto j = active_queries[partno].begin(); j < end; j += 2) {
         auto j0 = j[0];
         auto j1 = j[1];
         auto q_vec_0 = query[j0];

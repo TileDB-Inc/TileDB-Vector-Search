@@ -31,6 +31,7 @@
 
 #include <catch2/catch_all.hpp>
 #include "detail/ivf/vq.h"
+#include "detail/ivf/qv.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
 #include "query_common.h"
@@ -70,6 +71,17 @@ TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
     auto nthreads = GENERATE(1, 5);
     std::cout << nprobe << " " << k_nn << " " << nthreads << std::endl;
 
+    auto&& [D02, I02] = detail::ivf::query_infinite_ram<db_type, ids_type>(
+        ctx,
+        parts_uri,
+        centroids,
+        query,
+        index,
+        ids_uri,
+        nprobe,
+        k_nn,
+        nthreads);
+
     auto&& [D00, I00] = detail::ivf::vq_query_infinite_ram<db_type, ids_type>(
         ctx,
         parts_uri,
@@ -91,10 +103,14 @@ TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
         k_nn,
         nthreads);
 
+
+
     CHECK(!std::equal(D00.data(), D00.data() + D00.size(), std::vector<db_type>(D00.size(), 0.0).data()));
     CHECK(!std::equal(I00.data(), I00.data() + I00.size(), std::vector<indices_type>(I00.size(), 0.0).data()));
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D01.data()));
     CHECK(std::equal(I00.data(), I00.data() + I00.size(), I01.data()));
+    CHECK(std::equal(D00.data(), D00.data() + D00.size(), D02.data()));
+    CHECK(std::equal(I00.data(), I00.data() + I00.size(), I02.data()));
   }
 }
 
