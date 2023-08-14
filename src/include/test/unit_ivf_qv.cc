@@ -31,7 +31,6 @@
 
 #include <catch2/catch_all.hpp>
 #include "detail/ivf/qv.h"
-#include "detail/ivf/vq.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
 #include "query_common.h"
@@ -43,7 +42,7 @@ TEST_CASE("qv: test test", "[qv]") {
   REQUIRE(true);
 }
 
-TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
+TEST_CASE("ivf qv: infinite all or none", "[ivf qv]") {
   // vq_query_infinite_ram
   // vq_query_infinite_ram_2
 
@@ -65,7 +64,7 @@ TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
     auto nthreads = GENERATE(1, 5);
     std::cout << nprobe << " " << k_nn << " " << nthreads << std::endl;
 
-    auto&& [D02, I02] = detail::ivf::query_infinite_ram<db_type, ids_type>(
+    auto&& [D00, I00] = detail::ivf::query_infinite_ram<db_type, ids_type>(
         ctx,
         parts_uri,
         centroids,
@@ -76,7 +75,7 @@ TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
         k_nn,
         nthreads);
 
-    auto&& [D00, I00] = detail::ivf::vq_query_infinite_ram<db_type, ids_type>(
+    auto&& [D01, I01] = detail::ivf::qv_query_heap_infinite_ram<db_type, ids_type>(
         ctx,
         parts_uri,
         centroids,
@@ -87,7 +86,18 @@ TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
         k_nn,
         nthreads);
 
-    auto&& [D01, I01] = detail::ivf::vq_query_infinite_ram_2<db_type, ids_type>(
+    auto&& [D02, I02] = detail::ivf::nuv_query_heap_infinite_ram<db_type, ids_type>(
+        ctx,
+        parts_uri,
+        centroids,
+        query,
+        index,
+        ids_uri,
+        nprobe,
+        k_nn,
+        nthreads);
+
+    auto&& [D03, I03] = detail::ivf::nuv_query_heap_infinite_ram_reg_blocked<db_type, ids_type>(
         ctx,
         parts_uri,
         centroids,
@@ -106,15 +116,16 @@ TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
     CHECK(D00.num_cols() == D02.num_cols());
     CHECK(I00.num_rows() == I02.num_rows());
     CHECK(I00.num_cols() == I02.num_cols());
+    CHECK(D00.num_rows() == D03.num_rows());
+    CHECK(D00.num_cols() == D03.num_cols());
+    CHECK(I00.num_rows() == I03.num_rows());
+    CHECK(I00.num_cols() == I03.num_cols());
 
     for (size_t i = 0; i < I00.num_cols(); ++i) {
-      std::sort(begin(D00[i]), end(D00[i]));
-      std::sort(begin(D01[i]), end(D01[i]));
-      std::sort(begin(D02[i]), end(D02[i]));
-
       std::sort(begin(I00[i]), end(I00[i]));
       std::sort(begin(I01[i]), end(I01[i]));
       std::sort(begin(I02[i]), end(I02[i]));
+      std::sort(begin(I03[i]), end(I03[i]));
     }
 
     CHECK(!std::equal(
@@ -126,9 +137,8 @@ TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
         I00.data() + I00.size(),
         std::vector<indices_type>(I00.size(), 0.0).data()));
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D01.data()));
-    CHECK(std::equal(I00.data(), I00.data() + I00.size(), I01.data()));
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D02.data()));
-    CHECK(std::equal(I00.data(), I00.data() + I00.size(), I02.data()));
+    CHECK(std::equal(D00.data(), D00.data() + D00.size(), D03.data()));
   }
 }
-}
+

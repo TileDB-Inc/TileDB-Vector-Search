@@ -203,24 +203,15 @@ TEST_CASE("ivf vq: finite all or none", "[ivf vq]") {
     CHECK(I00.num_rows() == I02.num_rows());
     CHECK(I00.num_cols() == I02.num_cols());
 
-    auto count_intersections = [&groundtruth, k_nn](auto&& I) {
-      size_t total_intersected = 0;
-      for (size_t i = 0; i < I.num_cols(); ++i) {
-        std::sort(begin(I[i]), end(I[i]));
-        std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
-        total_intersected += std::set_intersection(
-            begin(I[i]),
-            end(I[i]),
-            begin(groundtruth[i]),
-            end(groundtruth[i]),
-            counter{});
-      }
-      return total_intersected;
-    };
-    auto intersections00 = count_intersections(I00);
-    auto intersections01 = count_intersections(I01);
-    auto intersections02 = count_intersections(I02);
-    auto intersections03 = count_intersections(I03);
+    auto intersections00 = count_intersections(I00, groundtruth, k_nn);
+    auto intersections01 = count_intersections(I01, groundtruth, k_nn);
+    auto intersections02 = count_intersections(I02, groundtruth, k_nn);
+    auto intersections03 = count_intersections(I03, groundtruth, k_nn);
+
+    CHECK(intersections00 != 0);
+    CHECK(intersections00 == intersections01);
+    CHECK(intersections00 == intersections02);
+    CHECK(intersections00 == intersections03);
 
     debug_slices_diff(D00, D01, "D00 vs D01");
     debug_slices_diff(D00, D02, "D00 vs D02");

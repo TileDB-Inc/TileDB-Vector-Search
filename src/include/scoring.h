@@ -39,6 +39,7 @@
 #include "concepts.h"
 #include "linalg.h"
 #include "utils/timer.h"
+#include "utils/utils.h"
 
 #include "detail/linalg/choose_blas.h"
 
@@ -421,6 +422,21 @@ bool validate_top_k(TK& top_k, G& g) {
 
   return true;
 }
+
+auto count_intersections(auto&& I, auto&& groundtruth, size_t k_nn){
+  size_t total_intersected = 0;
+  for (size_t i = 0; i < I.num_cols(); ++i) {
+    std::sort(begin(I[i]), end(I[i]));
+    std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
+    total_intersected += std::set_intersection(
+        begin(I[i]),
+        end(I[i]),
+        begin(groundtruth[i]),
+        end(groundtruth[i]),
+        counter{});
+  }
+  return total_intersected;
+};
 
 #ifdef TILEDB_VS_ENABLE_BLAS
 

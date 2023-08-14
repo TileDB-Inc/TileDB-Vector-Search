@@ -537,11 +537,14 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
              * For each partition, process the queries that have that
              * partition as their top centroid.
              */
+
             auto& mscores = min_scores[n];
             for (size_t partno = first_part; partno < last_part; ++partno) {
               auto quartno = active_partitions[partno];
               auto start = indices[quartno];
               auto stop = indices[quartno + 1];
+              auto kstep = stop - start;
+              auto kstop = start + 2 * (kstep / 2);
 
               auto len = 2 * (size(active_queries[partno]) / 2);
               auto end = active_queries[partno].begin() + len;
@@ -551,7 +554,6 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
                 auto q_vec_0 = query[j0];
                 auto q_vec_1 = query[j1];
 
-                auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
                 for (size_t kp = start; kp < kstop; kp += 2) {
                   auto score_00 = L2(q_vec_0, partitioned_db[kp + 0]);
                   auto score_01 = L2(q_vec_0, partitioned_db[kp + 1]);
@@ -582,7 +584,6 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
                 auto j0 = j[0];
                 auto q_vec_0 = query[j0];
 
-                auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
                 for (size_t kp = start; kp < kstop; kp += 2) {
                   auto score_00 = L2(q_vec_0, partitioned_db[kp + 0]);
                   auto score_01 = L2(q_vec_0, partitioned_db[kp + 1]);
