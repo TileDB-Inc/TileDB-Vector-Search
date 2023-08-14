@@ -239,9 +239,9 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
           max_part_size_, indices_[parts_[i] + 1] - indices_[parts_[i]]);
     }
 
-    if (upper_bound < max_part_size_) {
+    if (upper_bound != 0 && upper_bound < max_part_size_) {
       throw std::runtime_error(
-          "Upper bound is less than max partition size:" +
+          "Upper bound is less than max partition size: " +
           std::to_string(upper_bound) + " < " + std::to_string(max_part_size_));
     }
 
