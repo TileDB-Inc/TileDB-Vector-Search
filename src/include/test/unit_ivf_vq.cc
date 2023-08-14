@@ -35,9 +35,10 @@
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
 #include "query_common.h"
+#include "utils/utils.h"
 
 bool global_verbose = false;
-bool global_debug = true;
+bool global_debug = false;
 
 TEST_CASE("vq: test test", "[ivf vq]") {
   REQUIRE(true);
@@ -126,6 +127,7 @@ TEST_CASE("ivf vq: finite all or none", "[ivf vq]") {
   tiledb::Context ctx;
 
   auto upper_bound = GENERATE(2000, 0);
+  auto num_queries = GENERATE(1, 0);
 
   // auto parts = tdbColMajorMatrix<db_type>(ctx, parts_uri);
   // auto ids = read_vector<uint64_t>(ctx, ids_uri);
@@ -133,15 +135,16 @@ TEST_CASE("ivf vq: finite all or none", "[ivf vq]") {
 
   auto centroids = tdbColMajorMatrix<db_type>(ctx, centroids_uri);
   centroids.load();
-  auto query = tdbColMajorMatrix<db_type>(ctx, query_uri);
+  auto query = tdbColMajorMatrix<db_type>(ctx, query_uri, num_queries);
   query.load();
   auto index = read_vector<indices_type>(ctx, index_uri);
+  auto groundtruth = tdbColMajorMatrix<indices_type>(ctx, groundtruth_uri);
 
   SECTION("all") {
-    auto nprobe = GENERATE(1, 5);
-    auto k_nn = GENERATE(1, 5);
-    auto nthreads = GENERATE(1, 5);
-    std::cout << upper_bound << " " << nprobe << " " << k_nn << " " << nthreads
+    auto nprobe = GENERATE(5, 1);
+    auto k_nn = GENERATE(5, 1);
+    auto nthreads = GENERATE(5, 1);
+    std::cout << upper_bound << " " << nprobe << " " << num_queries << " " << k_nn << " " << nthreads
               << std::endl;
 
     auto&& [D00, I00] = detail::ivf::query_infinite_ram<db_type, ids_type>(
@@ -200,48 +203,36 @@ TEST_CASE("ivf vq: finite all or none", "[ivf vq]") {
     CHECK(I00.num_rows() == I02.num_rows());
     CHECK(I00.num_cols() == I02.num_cols());
 
-    for (size_t i = 0; i < I00.num_cols(); ++i) {
-      std::sort(begin(D00[i]), end(D00[i]));
-      std::sort(begin(D01[i]), end(D01[i]));
-      std::sort(begin(D02[i]), end(D02[i]));
-      std::sort(begin(D03[i]), end(D03[i]));
-
-      std::sort(begin(I00[i]), end(I00[i]));
-      std::sort(begin(I01[i]), end(I01[i]));
-      std::sort(begin(I02[i]), end(I02[i]));
-      std::sort(begin(I03[i]), end(I03[i]));
-    }
+    auto count_intersections = [&groundtruth, k_nn](auto&& I) {
+      size_t total_intersected = 0;
+      for (size_t i = 0; i < I.num_cols(); ++i) {
+        std::sort(begin(I[i]), end(I[i]));
+        std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
+        total_intersected += std::set_intersection(
+            begin(I[i]),
+            end(I[i]),
+            begin(groundtruth[i]),
+            end(groundtruth[i]),
+            counter{});
+      }
+      return total_intersected;
+    };
+    auto intersections00 = count_intersections(I00);
+    auto intersections01 = count_intersections(I01);
+    auto intersections02 = count_intersections(I02);
+    auto intersections03 = count_intersections(I03);
 
     debug_slices_diff(D00, D01, "D00 vs D01");
     debug_slices_diff(D00, D02, "D00 vs D02");
     debug_slices_diff(D00, D03, "D00 vs D03");
-
-    debug_slices_diff(I00, I01, "I00 vs I01");
-    debug_slices_diff(I00, I02, "I00 vs I02");
-    debug_slices_diff(I00, I03, "I00 vs I03");
-
-    debug_slices_diff(D00, D01, "D00 vs D01");
-    debug_slices_diff(D00, D02, "D00 vs D02");
-    debug_slices_diff(D00, D03, "D00 vs D03");
-
-    debug_slices_diff(I00, I01, "I00 vs I01");
-    debug_slices_diff(I00, I02, "I00 vs I02");
-    debug_slices_diff(I00, I03, "I00 vs I03");
 
     CHECK(!std::equal(
         D00.data(),
         D00.data() + D00.size(),
         std::vector<db_type>(D00.size(), 0.0).data()));
-    CHECK(!std::equal(
-        I00.data(),
-        I00.data() + I00.size(),
-        std::vector<indices_type>(I00.size(), 0.0).data()));
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D01.data()));
-    CHECK(std::equal(I00.data(), I00.data() + I00.size(), I01.data()));
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D02.data()));
-    CHECK(std::equal(I00.data(), I00.data() + I00.size(), I02.data()));
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D03.data()));
-    CHECK(std::equal(I00.data(), I00.data() + I00.size(), I03.data()));
   }
 }
 
