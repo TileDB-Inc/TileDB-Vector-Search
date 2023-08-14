@@ -1415,8 +1415,6 @@ auto apply_query(
 
     auto len = 2 * (size(active_queries[partno]) / 2);
     auto end = active_queries[partno].begin() + len;
-    // auto kstop = std::min<size_t>(stop, 2 * (stop / 2));
-
 
     for (auto j = active_queries[partno].begin(); j < end; j += 2) {
       auto j0 = j[0];

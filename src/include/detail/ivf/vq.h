@@ -62,8 +62,8 @@
 #ifndef TILEDB_IVF_VQ_H
 #define TILEDB_IVF_VQ_H
 
-#include "scoring.h"
 #include "partition.h"
+#include "scoring.h"
 
 namespace detail::ivf {
 
@@ -132,9 +132,10 @@ auto vq_apply_query(
     auto kstep = stop - start;
     auto kstop = start + 2 * (kstep / 2);
 
-    // size_t i_begin = ii, i_step = std::min<size_t>(64, ii_last - ii), i_end = i_begin + 2 * (i_step / 2), i_last = i_begin + i_step;
+    // size_t i_begin = ii, i_step = std::min<size_t>(64, ii_last - ii), i_end =
+    // i_begin + 2 * (i_step / 2), i_last = i_begin + i_step;
 
-    auto len = 2*(size(active_queries[partno])/ 2);
+    auto len = 2 * (size(active_queries[partno]) / 2);
     auto end = active_queries[partno].begin() + len;
 
     /*
@@ -206,7 +207,6 @@ auto vq_apply_query(
   }
   return min_scores;
 }
-
 
 /**
  * Similar to vq_query_finite_ram, but the entire database is loaded into RAM.
@@ -323,7 +323,6 @@ auto vq_query_infinite_ram(
   return vq_query_infinite_ram(
       shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nthreads);
 }
-
 
 /**
  * Similar to vq_query_finite_ram, but the entire database is loaded into RAM.
@@ -446,7 +445,6 @@ auto vq_query_infinite_ram_2(
     size_t k_nn,
     size_t nthreads) {
   scoped_timer _{tdb_func__};
-
 
   // Read the shuffled database and ids
   // @todo To this more systematically
@@ -709,8 +707,6 @@ auto vq_query_finite_ram_2(
 
   return top_k;
 }
-
-
 
 }  // namespace detail::ivf
 

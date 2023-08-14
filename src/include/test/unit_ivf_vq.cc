@@ -30,8 +30,8 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include "detail/ivf/vq.h"
 #include "detail/ivf/qv.h"
+#include "detail/ivf/vq.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
 #include "query_common.h"
@@ -45,7 +45,8 @@ TEST_CASE("vq: test test", "[ivf vq]") {
 
 // vq_apply_query
 TEST_CASE("ivf vq: vq apply query", "[ivf vq]") {
-//  vq_apply_query(query, shuffled_db, new_indices, active_queries, ids, active_partitions, k_nn, first_part, last_part);
+  //  vq_apply_query(query, shuffled_db, new_indices, active_queries, ids,
+  //  active_partitions, k_nn, first_part, last_part);
   REQUIRE(true);
 }
 
@@ -103,17 +104,20 @@ TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
         k_nn,
         nthreads);
 
-
-
-    CHECK(!std::equal(D00.data(), D00.data() + D00.size(), std::vector<db_type>(D00.size(), 0.0).data()));
-    CHECK(!std::equal(I00.data(), I00.data() + I00.size(), std::vector<indices_type>(I00.size(), 0.0).data()));
+    CHECK(!std::equal(
+        D00.data(),
+        D00.data() + D00.size(),
+        std::vector<db_type>(D00.size(), 0.0).data()));
+    CHECK(!std::equal(
+        I00.data(),
+        I00.data() + I00.size(),
+        std::vector<indices_type>(I00.size(), 0.0).data()));
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D01.data()));
     CHECK(std::equal(I00.data(), I00.data() + I00.size(), I01.data()));
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D02.data()));
     CHECK(std::equal(I00.data(), I00.data() + I00.size(), I02.data()));
   }
 }
-
 
 // vq_query_finite_ram
 // vq_query_finite_ram_2

@@ -152,18 +152,18 @@ using centroids_type = float;
 using ids_type = uint64_t;
 using indices_type = uint64_t;
 
-  static std::string ec2_root{
-      "/home/lums/TileDB-Vector-Search/external/data/gp3/sift/"};
-  static std::string m1_root{
-      "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/sift/"};
-  static std::string db_uri{m1_root + "sift_base"};
-  static std::string centroids_uri{m1_root + "centroids"};
-  static std::string parts_uri{m1_root + "parts"};
-  static std::string index_uri{m1_root + "index"};
+static std::string ec2_root{
+    "/home/lums/TileDB-Vector-Search/external/data/gp3/sift/"};
+static std::string m1_root{
+    "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/sift/"};
+static std::string db_uri{m1_root + "sift_base"};
+static std::string centroids_uri{m1_root + "centroids"};
+static std::string parts_uri{m1_root + "parts"};
+static std::string index_uri{m1_root + "index"};
 //  static std::string sizes_uri{m1_root + "/1M/index_size.tdb"};
-  static std::string ids_uri{m1_root + "ids"};
-  static std::string query_uri{m1_root + "sift_query"};
-  static std::string groundtruth_uri{m1_root + "sift_groundtruth"};
+static std::string ids_uri{m1_root + "ids"};
+static std::string query_uri{m1_root + "sift_query"};
+static std::string groundtruth_uri{m1_root + "sift_groundtruth"};
 
 #endif
 
