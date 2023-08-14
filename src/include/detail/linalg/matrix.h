@@ -114,7 +114,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
    * The intializer list is assumed to be in row-major order.
    */
   Matrix(std::initializer_list<std::initializer_list<T>> list) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : num_rows_{list.size()}
       , num_cols_{list.begin()->size()}
       , storage_{new T[num_rows_ * num_cols_]} {
@@ -130,7 +130,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
    * The initializer list is assumed to be in column-major order.
    */
   Matrix(std::initializer_list<std::initializer_list<T>> list) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : num_rows_{list.begin()->size()}
       , num_cols_{list.size()}
       , storage_{new T[num_rows_ * num_cols_]} {
@@ -317,6 +317,36 @@ void debug_slice(
         std::cout << (float)A(i, j) << "\t";
       }
       std::cout << std::endl;
+    }
+  }
+}
+
+template <class Matrix1, class Matrix2>
+void debug_slices_diff(
+    const Matrix1& A,
+    const Matrix2& B,
+    const std::string& msg = "",
+    size_t rows = 5,
+    size_t cols = 15) {
+  if (global_debug) {
+    rows = std::min(rows, A.num_rows());
+    cols = std::min(cols, A.num_cols());
+
+    std::cout << "# " << msg << std::endl;
+    for (size_t i = 0; i < A.num_rows(); ++i) {
+      for (size_t j = 0; j < A.num_cols(); ++j) {
+        if (A(i, j) != B(i, j)) {
+          std::cout << "A(" << i << ", " << j << ") = " << A(i, j) << " != "
+                    << "B(" << i << ", " << j << ") = " << B(i, j) << std::endl;
+          if (--cols == 0) {
+            break;
+          }
+        }
+      }
+      if (--rows == 0) {
+        break;
+      }
+      cols = std::min(cols, A.num_cols());
     }
   }
 }

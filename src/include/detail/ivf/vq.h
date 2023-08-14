@@ -499,6 +499,7 @@ auto vq_query_finite_ram(
       indices_type,
       parts_type>(
       ctx, part_uri, indices, active_partitions, id_uri, upper_bound);
+  load(shuffled_db);
 
   log_timer _i{tdb_func__ + " in RAM"};
 
@@ -531,7 +532,7 @@ auto vq_query_finite_ram(
   auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
       num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
-  while (shuffled_db.load()) {
+  do {
     _i.start();
 
     auto current_part_size = shuffled_db.num_col_parts();
@@ -585,7 +586,7 @@ auto vq_query_finite_ram(
     }
 
     _i.stop();
-  }
+  } while (load(shuffled_db));
 
   auto top_k = get_top_k_with_scores(min_scores, k_nn);
 

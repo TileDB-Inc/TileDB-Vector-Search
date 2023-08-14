@@ -37,7 +37,7 @@
 #include "query_common.h"
 
 bool global_verbose = false;
-bool global_debug = false;
+bool global_debug = true;
 
 TEST_CASE("vq: test test", "[ivf vq]") {
   REQUIRE(true);
@@ -116,6 +116,132 @@ TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
     CHECK(std::equal(I00.data(), I00.data() + I00.size(), I01.data()));
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D02.data()));
     CHECK(std::equal(I00.data(), I00.data() + I00.size(), I02.data()));
+  }
+}
+
+TEST_CASE("ivf vq: finite all or none", "[ivf vq]") {
+  // vq_query_infinite_ram
+  // vq_query_infinite_ram_2
+
+  tiledb::Context ctx;
+
+  auto upper_bound = GENERATE(2000, 0);
+
+  // auto parts = tdbColMajorMatrix<db_type>(ctx, parts_uri);
+  // auto ids = read_vector<uint64_t>(ctx, ids_uri);
+  // auto index = sizes_to_indices(sizes);
+
+  auto centroids = tdbColMajorMatrix<db_type>(ctx, centroids_uri);
+  centroids.load();
+  auto query = tdbColMajorMatrix<db_type>(ctx, query_uri);
+  query.load();
+  auto index = read_vector<indices_type>(ctx, index_uri);
+
+  SECTION("all") {
+    auto nprobe = GENERATE(1, 5);
+    auto k_nn = GENERATE(1, 5);
+    auto nthreads = GENERATE(1, 5);
+    std::cout << upper_bound << " " << nprobe << " " << k_nn << " " << nthreads
+              << std::endl;
+
+    auto&& [D00, I00] = detail::ivf::query_infinite_ram<db_type, ids_type>(
+        ctx,
+        parts_uri,
+        centroids,
+        query,
+        index,
+        ids_uri,
+        nprobe,
+        k_nn,
+        nthreads);
+
+    auto&& [D01, I01] = detail::ivf::vq_query_finite_ram<db_type, ids_type>(
+        ctx,
+        parts_uri,
+        centroids,
+        query,
+        index,
+        ids_uri,
+        nprobe,
+        k_nn,
+        upper_bound,
+        nthreads);
+
+    auto&& [D02, I02] = detail::ivf::vq_query_finite_ram_2<db_type, ids_type>(
+        ctx,
+        parts_uri,
+        centroids,
+        query,
+        index,
+        ids_uri,
+        nprobe,
+        k_nn,
+        upper_bound,
+        nthreads);
+
+    auto&& [D03, I03] = detail::ivf::query_finite_ram<db_type, ids_type>(
+        ctx,
+        parts_uri,
+        centroids,
+        query,
+        index,
+        ids_uri,
+        nprobe,
+        k_nn,
+        upper_bound,
+        nthreads);
+
+    CHECK(D00.num_rows() == D01.num_rows());
+    CHECK(D00.num_cols() == D01.num_cols());
+    CHECK(I00.num_rows() == I01.num_rows());
+    CHECK(I00.num_cols() == I01.num_cols());
+    CHECK(D00.num_rows() == D02.num_rows());
+    CHECK(D00.num_cols() == D02.num_cols());
+    CHECK(I00.num_rows() == I02.num_rows());
+    CHECK(I00.num_cols() == I02.num_cols());
+
+    for (size_t i = 0; i < I00.num_cols(); ++i) {
+      std::sort(begin(D00[i]), end(D00[i]));
+      std::sort(begin(D01[i]), end(D01[i]));
+      std::sort(begin(D02[i]), end(D02[i]));
+      std::sort(begin(D03[i]), end(D03[i]));
+
+      std::sort(begin(I00[i]), end(I00[i]));
+      std::sort(begin(I01[i]), end(I01[i]));
+      std::sort(begin(I02[i]), end(I02[i]));
+      std::sort(begin(I03[i]), end(I03[i]));
+    }
+
+    debug_slices_diff(D00, D01, "D00 vs D01");
+    debug_slices_diff(D00, D02, "D00 vs D02");
+    debug_slices_diff(D00, D03, "D00 vs D03");
+
+    debug_slices_diff(I00, I01, "I00 vs I01");
+    debug_slices_diff(I00, I02, "I00 vs I02");
+    debug_slices_diff(I00, I03, "I00 vs I03");
+
+    debug_slices_diff(D00, D01, "D00 vs D01");
+    debug_slices_diff(D00, D02, "D00 vs D02");
+    debug_slices_diff(D00, D03, "D00 vs D03");
+
+    debug_slices_diff(I00, I01, "I00 vs I01");
+    debug_slices_diff(I00, I02, "I00 vs I02");
+    debug_slices_diff(I00, I03, "I00 vs I03");
+
+    CHECK(!std::equal(
+        D00.data(),
+        D00.data() + D00.size(),
+        std::vector<db_type>(D00.size(), 0.0).data()));
+    CHECK(!std::equal(
+        I00.data(),
+        I00.data() + I00.size(),
+        std::vector<indices_type>(I00.size(), 0.0).data()));
+    CHECK(std::equal(D00.data(), D00.data() + D00.size(), D01.data()));
+    CHECK(std::equal(I00.data(), I00.data() + I00.size(), I01.data()));
+    CHECK(std::equal(D00.data(), D00.data() + D00.size(), D02.data()));
+    CHECK(std::equal(I00.data(), I00.data() + I00.size(), I02.data()));
+    CHECK(std::equal(D00.data(), D00.data() + D00.size(), D03.data()));
+    CHECK(std::equal(I00.data(), I00.data() + I00.size(), I03.data()));
   }
 }
 

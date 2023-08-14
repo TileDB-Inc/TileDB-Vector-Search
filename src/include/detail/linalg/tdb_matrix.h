@@ -94,6 +94,8 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   // How many columns to load at a time
   index_type blocksize_{0};
 
+  size_t num_loads_{0};
+
   // For future asynchronous loads
   // std::unique_ptr<T[]> backing_data_;
   // std::future<bool> fut_;
@@ -114,7 +116,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param uri URI of the TileDB array to read.
    */
   tdbBlockedMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrix(ctx, uri, 0) {
   }
 
@@ -131,7 +133,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       const tiledb::Context& ctx,
       const std::string& uri,
       size_t upper_bound)  // noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : ctx_{ctx}
       , uri_{uri}
       , array_{tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ)}
@@ -239,11 +241,16 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       throw std::runtime_error("Query status is not complete -- fix me");
     }
 
+    num_loads_++;
     return true;
   }
 
   index_type col_offset() const {
     return col_offset_;
+  }
+
+  index_type num_loads() const {
+    return num_loads_;
   }
 
   /**
@@ -374,7 +381,7 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
 
  public:
   tdbPreLoadMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(ctx, uri, 0) {
     Base::load();
   }

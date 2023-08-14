@@ -236,8 +236,9 @@ void consolidate_scores(std::vector<std::vector<Heap>>& min_scores) {
  * @param top_k
  */
 template <class Heap>
-inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k) requires(
-    !std::is_same_v<Heap, std::vector<Heap>>) {
+inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k)
+  requires(!std::is_same_v<Heap, std::vector<Heap>>)
+{
   std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&& b) {
     return std::get<0>(a) < std::get<0>(b);
   });
@@ -477,10 +478,13 @@ auto mat_col_sum(
  * as vq_ew for small numbers of query vectors.
  */
 template <class Matrix1, class Matrix2, class Matrix3>
-void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads) requires(
-    (std::is_same_v<typename Matrix1::value_type, float> &&
-     std::is_same_v<typename Matrix2::value_type, float> &&
-     std::is_same_v<typename Matrix3::value_type, float>)) {
+void gemm_scores(
+    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
+  requires(
+      (std::is_same_v<typename Matrix1::value_type, float> &&
+       std::is_same_v<typename Matrix2::value_type, float> &&
+       std::is_same_v<typename Matrix3::value_type, float>))
+{
   using T = typename Matrix1::value_type;
 
   size_t M = A.num_cols();  // Vector dimension
@@ -526,10 +530,13 @@ void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthrea
 }
 
 template <class Matrix1, class Matrix2, class Matrix3>
-void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads) requires(
-    ((!std::is_same_v<typename Matrix1::value_type, float>)&&std::
-         is_same_v<typename Matrix2::value_type, float> &&
-     std::is_same_v<typename Matrix3::value_type, float>)) {
+void gemm_scores(
+    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
+  requires(
+      ((!std::is_same_v<typename Matrix1::value_type, float>)&&std::
+           is_same_v<typename Matrix2::value_type, float> &&
+       std::is_same_v<typename Matrix3::value_type, float>))
+{
   ColMajorMatrix<float> A_f(A.num_rows(), A.num_cols());
   std::copy(A.data(), A.data() + A.num_rows() * A.num_cols(), A_f.data());
 
@@ -538,20 +545,11 @@ void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthrea
 
 template <class Matrix1, class Matrix2, class Matrix3>
 void gemm_scores(
-    const Matrix1& A,
-    const Matrix2& B,
-    Matrix3& C,
-    unsigned nthreads) requires(((!std::
-                                      is_same_v<
-                                          typename Matrix1::value_type,
-                                          float>)&&(!std::
-                                                        is_same_v<
-                                                            typename Matrix2::
-                                                                value_type,
-                                                            float>)&&std::
-                                     is_same_v<
-                                         typename Matrix3::value_type,
-                                         float>)) {
+    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
+  requires(((!std::is_same_v<typename Matrix1::value_type, float>)&&(
+      !std::is_same_v<typename Matrix2::value_type, float>)&&std::
+                is_same_v<typename Matrix3::value_type, float>))
+{
   ColMajorMatrix<float> A_f(A.num_rows(), A.num_cols());
   std::copy(A.data(), A.data() + A.num_rows() * A.num_cols(), A_f.data());
 

@@ -159,6 +159,9 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   // The number of partitions in the portion of array loaded into memory
   size_t num_col_parts_{0};
 
+  size_t num_loads_{0};
+  size_t max_part_size_{0};
+
  public:
   tdbPartitionedMatrix(
       const tiledb::Context& ctx,
@@ -229,8 +232,17 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
     // indices might not be contiguous, so we need to explicitly add the deltas
     auto total_max_cols = 0UL;
+    auto max_part_size_ = 0UL;
     for (size_t i = 0; i < total_num_parts_; ++i) {
       total_max_cols += indices_[parts_[i] + 1] - indices_[parts_[i]];
+      max_part_size_ = std::max<size_t>(
+          max_part_size_, indices_[parts_[i] + 1] - indices_[parts_[i]]);
+    }
+
+    if (upper_bound < max_part_size_) {
+      throw std::runtime_error(
+          "Upper bound is less than max partition size:" +
+          std::to_string(upper_bound) + " < " + std::to_string(max_part_size_));
     }
 
     if (upper_bound == 0 || upper_bound > total_max_cols) {
@@ -280,7 +292,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
        */
       std::get<0>(col_view_) = std::get<1>(col_view_);  // # columns
       std::get<0>(col_part_view_) =
-          std::get<1>(col_part_view_);  // # partitions
+          std::get<1>(col_part_view_);                  // # partitions
 
       std::get<1>(col_part_view_) = std::get<0>(col_part_view_);
       for (size_t i = std::get<0>(col_part_view_); i < total_num_parts_; ++i) {
@@ -400,6 +412,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       }
     }
 
+    num_loads_++;
     return true;
   }
 
@@ -417,6 +430,10 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   index_type col_offset() const {
     return col_offset_;
+  }
+
+  size_t num_loads() const {
+    return num_loads_;
   }
 
   /**

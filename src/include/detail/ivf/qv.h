@@ -111,7 +111,6 @@ auto qv_query_heap_infinite_ram(
   // Read the shuffled database and ids
   // @todo To this more systematically
   auto partitioned_db = tdbColMajorMatrix<T>(ctx, part_uri);
-  partitioned_db.load();
   auto partitioned_ids = read_vector<partitioned_ids_type>(ctx, id_uri);
 
   return qv_query_heap_infinite_ram(
@@ -198,6 +197,9 @@ auto qv_query_heap_infinite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t nthreads) {
+  if (num_loads(partitioned_db) == 0) {
+    load(partitioned_db);
+  }
   scoped_timer _{"Total time " + tdb_func__};
 
   assert(partitioned_db.num_cols() == partitioned_ids.size());
@@ -276,7 +278,6 @@ auto nuv_query_heap_infinite_ram(
   // Read the shuffled database and ids
   // @todo To this more systematically
   auto partitioned_db = tdbColMajorMatrix<T>(ctx, part_uri);
-  partitioned_db.load();
   auto partitioned_ids = read_vector<partitioned_ids_type>(ctx, id_uri);
 
   return nuv_query_heap_infinite_ram(
@@ -324,6 +325,9 @@ auto nuv_query_heap_infinite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t nthreads) {
+  if (num_loads(partitioned_db) == 0) {
+    load(partitioned_db);
+  }
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
   assert(partitioned_db.num_cols() == partitioned_ids.size());
@@ -432,7 +436,6 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
   // Read the shuffled database and ids
   // @todo To this more systematically
   auto partitioned_db = tdbColMajorMatrix<T>(ctx, part_uri);
-  partitioned_db.load();
   auto partitioned_ids = read_vector<partitioned_ids_type>(ctx, id_uri);
 
   return nuv_query_heap_infinite_ram_reg_blocked(
@@ -485,6 +488,9 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
     size_t nprobe,
     size_t k_nn,
     size_t nthreads) {
+  if (num_loads(partitioned_db) == 0) {
+    load(partitioned_db);
+  }
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
   assert(partitioned_db.num_cols() == partitioned_ids.size());
