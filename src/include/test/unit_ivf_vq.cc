@@ -31,7 +31,76 @@
 
 #include <catch2/catch_all.hpp>
 #include "detail/ivf/vq.h"
+#include "detail/linalg/matrix.h"
+#include "detail/linalg/tdb_io.h"
+#include "query_common.h"
 
-TEST_CASE("vq: test test", "[vq]") {
+bool global_verbose = false;
+bool global_debug = false;
+
+TEST_CASE("vq: test test", "[ivf vq]") {
   REQUIRE(true);
 }
+
+// vq_apply_query
+TEST_CASE("ivf vq: vq apply query", "[ivf vq]") {
+//  vq_apply_query(query, shuffled_db, new_indices, active_queries, ids, active_partitions, k_nn, first_part, last_part);
+  REQUIRE(true);
+}
+
+TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
+  // vq_query_infinite_ram
+  // vq_query_infinite_ram_2
+
+  tiledb::Context ctx;
+
+  // auto parts = tdbColMajorMatrix<db_type>(ctx, parts_uri);
+  // auto ids = read_vector<uint64_t>(ctx, ids_uri);
+  // auto index = sizes_to_indices(sizes);
+
+  auto centroids = tdbColMajorMatrix<db_type>(ctx, centroids_uri);
+  centroids.load();
+  auto query = tdbColMajorMatrix<db_type>(ctx, query_uri);
+  query.load();
+  auto index = read_vector<indices_type>(ctx, index_uri);
+
+  SECTION("all") {
+    auto nprobe = GENERATE(1, 5);
+    auto k_nn = GENERATE(1, 5);
+    auto nthreads = GENERATE(1, 5);
+    std::cout << nprobe << " " << k_nn << " " << nthreads << std::endl;
+
+    auto&& [D00, I00] = detail::ivf::vq_query_infinite_ram<db_type, ids_type>(
+        ctx,
+        parts_uri,
+        centroids,
+        query,
+        index,
+        ids_uri,
+        nprobe,
+        k_nn,
+        nthreads);
+    auto&& [D01, I01] = detail::ivf::vq_query_infinite_ram_2<db_type, ids_type>(
+        ctx,
+        parts_uri,
+        centroids,
+        query,
+        index,
+        ids_uri,
+        nprobe,
+        k_nn,
+        nthreads);
+
+    debug_matrix(D00, "D00");
+    debug_matrix(D01, "D01");
+    debug_matrix(I00, "I00");
+    debug_matrix(I01, "I01");
+
+    CHECK(std::equal(D00.data(), D00.data() + D00.size(), D01.data()));
+    CHECK(std::equal(I00.data(), I00.data() + I00.size(), I01.data()));
+  }
+}
+
+
+// vq_query_finite_ram
+// vq_query_finite_ram_2

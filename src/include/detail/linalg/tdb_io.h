@@ -218,7 +218,7 @@ std::vector<T> read_vector(
     end_pos = array_rows_.template domain<domain_type>().second + 1;
   }
 
-  auto vec_rows_{end_pos - start_pos + 1};
+  auto vec_rows_{end_pos - start_pos};
 
   auto attr_num{schema_.attribute_num()};
   auto attr = schema_.attribute(idx);

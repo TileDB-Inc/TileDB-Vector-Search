@@ -1,38 +1,39 @@
 /**
-* @file   query_common.h
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
-*
-*
-*/
+ * @file   query_common.h
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
+ *
+ */
 
 #ifndef TILEDB_QUERY_COMMON_H
 #define TILEDB_QUERY_COMMON_H
 
+#include <string>
 #include "linalg.h"
 
 // clang-format off
@@ -121,10 +122,49 @@
           { 3.,  2.,  0.}
       };
 
-
-
-
 // clang-format on
 
+#if 0
+using db_type = uint8_t;
+
+using groundtruth_type = int32_t;
+using centroids_type = float;
+using ids_type = uint64_t;
+using indices_type = uint64_t;
+
+static std::string ec2_root{
+    "/home/lums/TileDB-Vector-Search/external/data/gp3"};
+static std::string m1_root{
+    "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3"};
+static std::string db_uri{m1_root + "/1M/bigann1M_base"};
+static std::string centroids_uri{m1_root + "/1M/centroids.tdb"};
+static std::string parts_uri{m1_root + "/1M/parts.tdb"};
+static std::string index_uri{m1_root + "/1M/index.tdb"};
+static std::string sizes_uri{m1_root + "/1M/index_size.tdb"};
+static std::string ids_uri{m1_root + "/1M/ids.tdb"};
+static std::string query_uri{m1_root + "/1M/query_public_10k"};
+static std::string groundtruth_uri{m1_root + "/1M/bigann_1M_GT_nnids"};
+#else
+using db_type = float;
+
+using groundtruth_type = int32_t;
+using centroids_type = float;
+using ids_type = uint64_t;
+using indices_type = uint64_t;
+
+  static std::string ec2_root{
+      "/home/lums/TileDB-Vector-Search/external/data/gp3/sift/"};
+  static std::string m1_root{
+      "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/sift/"};
+  static std::string db_uri{m1_root + "sift_base"};
+  static std::string centroids_uri{m1_root + "centroids"};
+  static std::string parts_uri{m1_root + "parts"};
+  static std::string index_uri{m1_root + "index"};
+//  static std::string sizes_uri{m1_root + "/1M/index_size.tdb"};
+  static std::string ids_uri{m1_root + "ids"};
+  static std::string query_uri{m1_root + "sift_query"};
+  static std::string groundtruth_uri{m1_root + "sift_groundtruth"};
+
+#endif
 
 #endif  // TILEDB_QUERY_COMMON_H
