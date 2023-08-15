@@ -65,6 +65,8 @@
 namespace {
 class with_ids {};
 class without_ids {};
+class with_updates {};
+class without_updates {};
 template <class... T>
 constexpr bool always_false = false;
 }  // namespace
@@ -192,7 +194,7 @@ auto get_top_k_from_scores(V const& scores, L&& top_k, int k) {
   for (size_t i = 0; i < num_scores; ++i) {
     s.insert(scores[i], i);
   }
-  get_top_k_from_heap(s, top_k);
+  get_top_k_from_heap(s, top_k, k);
 }
 
 template <class T>

@@ -148,6 +148,7 @@ auto qv_query_heap_infinite_ram(
  * @param nthreads How many threads to use for parallel execution
  * @return The indices of the top_k neighbors for each query vector
  */
+#if 0
 auto qv_query_heap_infinite_ram(
     const std::string& part_uri,
     auto&& centroids,
@@ -161,6 +162,7 @@ auto qv_query_heap_infinite_ram(
   return qv_query_heap_infinite_ram(
       ctx, part_uri, centroids, q, indices, id_uri, nprobe, k_nn, nthreads);
 }
+#endif
 
 /**
  * @brief The OG version of querying with qv loop ordering.

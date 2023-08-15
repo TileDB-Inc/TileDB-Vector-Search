@@ -277,13 +277,13 @@ TEST_CASE("scoring get_top_k_from_heap one min_heap", "[scoring]") {
 
   SECTION("std::vector") {
     std::vector<unsigned> top_k(5);
-    get_top_k_from_heap(a, top_k);
+    get_top_k_from_heap(a, top_k, 5);
     CHECK(top_k.size() == 5);
     CHECK(std::equal(begin(gt_neighbors), end(gt_neighbors), top_k.begin()));
   }
   SECTION("std::span") {
     std::vector<unsigned> top_k(5);
-    get_top_k_from_heap(a, std::span(top_k.data(), 5));
+    get_top_k_from_heap(a, std::span(top_k.data(), 5), 5);
     CHECK(top_k.size() == 5);
     CHECK(std::equal(begin(gt_neighbors), end(gt_neighbors), top_k.begin()));
   }
