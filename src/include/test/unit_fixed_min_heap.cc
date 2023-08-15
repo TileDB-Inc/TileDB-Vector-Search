@@ -59,7 +59,7 @@ TEST_CASE("fixed_min_heap: std::set", "[fixed_min_heap]") {
 }
 
 TEST_CASE("fixed_min_heap: std::set with pairs", "[fixed_min_heap]") {
-  using element = std::pair<float, int>;
+  using element = std::tuple<float, int>;
   std::set<element> a;
 
   SECTION("insert in ascending order") {
@@ -173,7 +173,7 @@ TEST_CASE("fixed_min_heap: fixed_min_pair_heap", "[fixed_min_heap]") {
 
 TEST_CASE(
     "fixed_min_heap: fixed_min_heap with a large vector", "[fixed_min_heap]") {
-  using element = std::pair<float, int>;
+  using element = std::tuple<float, int>;
 
   fixed_min_pair_heap<float, int> a(7);
 
