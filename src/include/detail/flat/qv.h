@@ -172,7 +172,8 @@ auto qv_query_heap(
           }
         }
 
-        get_top_k_with_scores_from_heap(min_scores, top_k[j], top_k_scores[j]);
+        get_top_k_with_scores_from_heap(
+            min_scores, top_k[j], top_k_scores[j], k_nn);
       });
 
   return std::make_tuple(std::move(top_k_scores), std::move(top_k));

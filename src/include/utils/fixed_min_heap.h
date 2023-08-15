@@ -156,6 +156,12 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
       });
     }
   }
+
+  void make_heap() {
+    std::make_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      return std::get<0>(a) < std::get<0>(b);
+    });
+  }
 };
 
 // template <class T>

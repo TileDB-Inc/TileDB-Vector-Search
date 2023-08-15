@@ -209,9 +209,33 @@ auto get_top_k_from_scores(const ColMajorMatrix<T>& scores, int k_nn) {
 // ----------------------------------------------------------------------------
 /**
  * @brief Utility function to put the top scores for multiple threads into a
- * single top_scores vector (the zeroth vector).
+ * single top_scores vector. Useful if the heaps in top_scores have larger
+ * k than the heaps in min_scores.
+ *
  * @tparam Heap
- *   @param min_scores a vector of vectors of min_heaps.  Each vector of
+ * @param min_scores a vector of vectors of min_heaps.  Each vector of
+ * min_heaps is the top k scores for a set of queries.  Each vector of vectors
+ * is stores a vector of min_heaps, one per thread.
+ */
+template <class Heap>
+void consolidate_scores(
+    std::vector<std::vector<Heap>>& min_scores, std::vector<Heap>& top_scores) {
+  auto nthreads = size(min_scores);
+  auto num_queries = size(min_scores[0]);
+  for (size_t j = 0; j < num_queries; ++j) {
+    for (size_t n = 0; n < nthreads; ++n) {
+      for (auto&& [e, f] : min_scores[n][j]) {
+        top_scores[j].insert(e, f);
+      }
+    }
+  }
+}
+
+/**
+ * @brief Utility function to put the top scores for multiple threads into a
+ * single top_scores vector (the zeroth vector of min_scores).
+ * @tparam Heap
+ * @param min_scores a vector of vectors of min_heaps.  Each vector of
  * min_heaps is the top k scores for a set of queries.  Each vector of vectors
  * is stores a vector of min_heaps, one per thread.
  */
@@ -237,15 +261,19 @@ void consolidate_scores(std::vector<std::vector<Heap>>& min_scores) {
  * @param top_k
  */
 template <class Heap>
-inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k) requires(
-    !std::is_same_v<Heap, std::vector<Heap>>) {
-  std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&& b) {
-    return std::get<0>(a) < std::get<0>(b);
-  });
+inline void get_top_k_from_heap(
+    Heap& min_scores,
+    auto&& top_k,
+    size_t k_nn) requires(!std::is_same_v<Heap, std::vector<Heap>>) {
+  std::sort_heap(
+      begin(min_scores),
+      begin(min_scores) + k_nn /*end(min_scores)*/,
+      [](auto&& a, auto&& b) { return std::get<0>(a) < std::get<0>(b); });
   std::transform(
-      begin(min_scores), end(min_scores), begin(top_k), ([](auto&& e) {
-        return std::get<1>(e);
-      }));
+      begin(min_scores),
+      begin(min_scores) + k_nn /*end(min_scores)*/,
+      begin(top_k),
+      ([](auto&& e) { return std::get<1>(e); }));
 }
 
 /**
@@ -266,7 +294,7 @@ inline auto get_top_k(std::vector<Heap>& scores, size_t k_nn) {
   ColMajorMatrix<Index> top_k(k_nn, num_queries);
 
   for (size_t j = 0; j < num_queries; ++j) {
-    get_top_k_from_heap(scores[j], top_k[j]);
+    get_top_k_from_heap(scores[j], top_k[j], k_nn);
   }
   return top_k;
 }
@@ -292,18 +320,20 @@ inline auto get_top_k(std::vector<std::vector<Heap>>& scores, size_t k_nn) {
 // ----------------------------------------------------------------------------
 
 inline void get_top_k_with_scores_from_heap(
-    auto&& min_scores, auto&& top_k, auto&& top_k_scores) {
+    auto&& min_scores, auto&& top_k, auto&& top_k_scores, size_t k_nn) {
   std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&& b) {
     return std::get<0>(a) < std::get<0>(b);
   });
   std::transform(
-      begin(min_scores), end(min_scores), begin(top_k_scores), ([](auto&& e) {
-        return std::get<0>(e);
-      }));
+      begin(min_scores),
+      begin(min_scores) + k_nn /*end(min_scores)*/,
+      begin(top_k_scores),
+      ([](auto&& e) { return std::get<0>(e); }));
   std::transform(
-      begin(min_scores), end(min_scores), begin(top_k), ([](auto&& e) {
-        return std::get<1>(e);
-      }));
+      begin(min_scores),
+      begin(min_scores) + k_nn /*end(min_scores)*/,
+      begin(top_k_scores),
+      ([](auto&& e) { return std::get<1>(e); }));
 }
 
 // Overload for one-d scores
@@ -318,7 +348,7 @@ inline auto get_top_k_with_scores(std::vector<Heap>& scores, size_t k_nn) {
   ColMajorMatrix<score_type> top_scores(k_nn, num_queries);
 
   for (size_t j = 0; j < num_queries; ++j) {
-    get_top_k_with_scores_from_heap(scores[j], top_k[j], top_scores[j]);
+    get_top_k_with_scores_from_heap(scores[j], top_k[j], top_scores[j], k_nn);
   }
   return std::make_tuple(std::move(top_scores), std::move(top_k));
 }
@@ -328,6 +358,62 @@ template <class Heap, class Index = size_t>
 inline auto get_top_k_with_scores(
     std::vector<std::vector<Heap>>& scores, size_t k_nn) {
   return get_top_k_with_scores(scores[0], k_nn);
+}
+
+// ----------------------------------------------------------------------------
+// Functions for filtering top_k
+// ----------------------------------------------------------------------------
+
+/**
+ * @brief Filter the top k neighbors for each query.  For each of the heaps in
+ * min_scores, we remove any neighbors that are in ids_to_filter.
+ * @tparam Heap
+ * @param min_scores
+ * @param ids_to_filter
+ * @return
+ */
+template <class Heap>
+auto filter_top_k(std::vector<Heap>&& min_scores, auto&& ids_to_filter) {
+  auto validity_set = std::set<size_t>{};
+  for (auto&& id : ids_to_filter) {
+    validity_set.emplace(id);
+  }
+  for (auto&& mins : min_scores) {
+    for (auto&& [e, f] : mins) {
+      if (validity_set.find(f) != end(validity_set)) {
+        e = std::numeric_limits<float>::max();
+      }
+    }
+    mins.make_heap();
+  }
+}
+
+/**
+ * @brief Filter the top k neighbors for each query.  For each of the heaps in
+ * min_scores, we remove any neighbors that are marked as null in the
+ * validity vector.
+ * * @tparam Heap
+ * @param validity
+ * @param update_ids
+ * @return
+ */
+template <class Heap>
+auto filter_top_k(
+    std::vector<Heap>&& min_scores, auto&& validity, auto&& update_ids) {
+  auto validity_set = std::set<size_t>{};
+  for (size_t i = 0; i < size(validity); ++i) {
+    if (!validity[i]) {
+      validity_set.emplace(update_ids[i]);
+    }
+  }
+  for (auto&& mins : min_scores) {
+    for (auto&& [e, f] : mins) {
+      if (validity_set.find(f) != end(validity_set)) {
+        e = std::numeric_limits<float>::max();
+      }
+    }
+    mins.make_heap();
+  }
 }
 
 // ----------------------------------------------------------------------------
