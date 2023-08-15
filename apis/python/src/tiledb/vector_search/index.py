@@ -231,7 +231,6 @@ class IVFFlatIndex(Index):
                     self._ids,
                     nprobe=nprobe,
                     k_nn=k,
-                    nth=True,  # ??
                     nthreads=nthreads,
                     ctx=self.ctx,
                     use_nuv_implementation=use_nuv_implementation,
@@ -247,7 +246,6 @@ class IVFFlatIndex(Index):
                     nprobe=nprobe,
                     k_nn=k,
                     memory_budget=self.memory_budget,
-                    nth=True,  # ??
                     nthreads=nthreads,
                     ctx=self.ctx,
                     use_nuv_implementation=use_nuv_implementation,
