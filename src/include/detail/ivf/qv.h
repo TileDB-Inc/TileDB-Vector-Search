@@ -68,101 +68,13 @@
 
 namespace detail::ivf {
 
+
+
+
+
 // ----------------------------------------------------------------------------
 // Functions for searching with infinite RAM, OG qv ordering
 // ----------------------------------------------------------------------------
-
-// Forward declarations
-/**
- *
- * Overload for already opened arrays.  Since the array is already opened, we
- * don't need to specify its type with a template parameter.
- */
-auto qv_query_heap_infinite_ram(
-    auto&& partitioned_db,
-    auto&& centroids,
-    auto&& q,
-    auto&& indices,
-    auto&& partitioned_ids,
-    size_t nprobe,
-    size_t k_nn,
-    size_t nthreads);
-
-/**
- * @brief Query a (small) set of query vectors against a vector database.
- * This version loads the entire partition array into memory and then
- * queries each vector in the query set against the appropriate partitions.
- *
- * For now that type of the array needs to be passed as a template argument.
- */
-template <typename T, class partitioned_ids_type>
-auto qv_query_heap_infinite_ram(
-    tiledb::Context& ctx,
-    const std::string& part_uri,
-    auto&& centroids,
-    auto&& q,
-    auto&& indices,
-    const std::string& id_uri,
-    size_t nprobe,
-    size_t k_nn,
-    size_t nthreads) {
-  scoped_timer _{tdb_func__};
-
-  // Read the shuffled database and ids
-  // @todo To this more systematically
-  auto partitioned_db = tdbColMajorMatrix<T>(ctx, part_uri);
-  auto partitioned_ids = read_vector<partitioned_ids_type>(ctx, id_uri);
-
-  return qv_query_heap_infinite_ram(
-      partitioned_db,
-      centroids,
-      q,
-      indices,
-      partitioned_ids,
-      nprobe,
-      k_nn,
-      nthreads);
-}
-
-/**
- * @brief Query a set of query vectors against an indexed vector database. The
- * arrays part_uri, centroids, indices, and id_uri comprise the index.  The
- * partitioned database is stored in part_uri, the centroids are stored in
- * centroids, the indices demarcating partitions is stored in indices, and the
- * labels for the vectors in the original database are stored in id_uri.
- * The query is stored in q.
- *
- * "Infinite RAM" means the entire index is loaded into memory before any
- * queries are applied, regardless of which partitions are to be queried.
- *
- * @param part_uri Partitioned database URI
- * @param centroids Centroids of the vectors in the original database (and
- * the partitioned database).  The ith centroid is the centroid of the ith
- * partition.
- * @param q The query to be searched
- * @param indices The demarcations of partitions
- * @param id_uri URI of the labels for the vectors in the original database
- * @param nprobe How many partitions to search
- * @param k_nn How many nearest neighbors to return
- * @param nth Unused
- * @param nthreads How many threads to use for parallel execution
- * @return The indices of the top_k neighbors for each query vector
- */
-#if 0
-auto qv_query_heap_infinite_ram(
-    const std::string& part_uri,
-    auto&& centroids,
-    auto&& q,
-    auto&& indices,
-    const std::string& id_uri,
-    size_t nprobe,
-    size_t k_nn,
-    size_t nthreads) {
-  tiledb::Context ctx;
-  return qv_query_heap_infinite_ram(
-      ctx, part_uri, centroids, q, indices, id_uri, nprobe, k_nn, nthreads);
-}
-#endif
 
 /**
  * @brief The OG version of querying with qv loop ordering.
@@ -190,7 +102,9 @@ auto qv_query_heap_infinite_ram(
  * @return The indices of the top_k neighbors for each query vector
  */
 // @todo We should still order the queries so partitions are searched in order
+template <class U>
 auto qv_query_heap_infinite_ram(
+    U,
     auto&& partitioned_db,
     auto&& centroids,
     auto&& q,
@@ -198,6 +112,9 @@ auto qv_query_heap_infinite_ram(
     auto&& partitioned_ids,
     size_t nprobe,
     size_t k_nn,
+    auto&& updates,
+    auto&& update_ids,
+    auto&& update_validity,
     size_t nthreads) {
   if (num_loads(partitioned_db) == 0) {
     load(partitioned_db);
@@ -246,9 +163,184 @@ auto qv_query_heap_infinite_ram(
         });
   }
 
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-  return top_k;
+  if constexpr (std::is_same_v<U, with_updates>) {
+    // @todo once working, refactor into separate function
+    auto num_adds = size(update_validity);
+    auto num_invalid = std::count(
+        update_validity.begin(),
+        update_validity.end(),
+        decltype(update_validity[0]){0});
+    auto num_valid = num_adds - num_invalid;
+    auto inserts = decltype(updates)(num_valid);
+    auto deletes = decltype(updates)(num_invalid);
+    auto insert_ids = decltype(update_ids)(num_valid);
+    auto delete_ids = decltype(update_ids)(num_invalid);
+
+    size_t insert_idx = 0;
+    size_t delete_idx = 0;
+    for (size_t i = 0; i < size(update_validity); ++i) {
+      if (update_validity[i]) {
+        inserts[insert_idx] = updates[i];
+        insert_ids[insert_idx] = update_ids[i];
+        ++insert_idx;
+      } else {
+        deletes[delete_idx] = updates[i];
+        delete_ids[delete_idx] = update_ids[i];
+        ++delete_idx;
+      }
+      assert (insert_idx <= num_valid);
+      assert (delete_idx <= num_invalid);
+      assert (insert_idx + delete_idx == i + 1);
+    }
+
+    filter_top_k_scores(min_scores, delete_ids);
+
+    // @todo Should use a query that returns min_scores rather than two matrices
+    auto&& [top_k_inserted_scores, top_k_inserted] = detail::flat::qv_query_heap(inserts, q, insert_ids, k_nn, nthreads);
+
+    merge_top_k_scores(min_scores, top_k_inserted_scores, top_k_inserted);
+
+  } else if constexpr (std::is_same_v<U, without_updates>) {
+    ;
+  } else {
+    static_assert(always_false<U>, "U must be either with_updates or without_updates");
+  }
+  return get_top_k_with_scores(min_scores, k_nn);
 }
+
+
+/**
+ * @brief Overload for no updates and parts and ids specified by URI.
+ */
+template <class T, class partitioned_ids_type>
+auto qv_query_heap_infinite_ram(
+    tiledb::Context& ctx,
+    const std::string& part_uri,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    const std::string& id_uri,
+    size_t nprobe,
+    size_t k_nn,
+    size_t nthreads) {
+  scoped_timer _{tdb_func__};
+
+  // Read the shuffled database and ids
+  // @todo To this more systematically
+  auto partitioned_db = tdbColMajorMatrix<T>(ctx, part_uri);
+  auto partitioned_ids = read_vector<partitioned_ids_type>(ctx, id_uri);
+
+  return qv_query_heap_infinite_ram(
+      without_updates{},
+      partitioned_db,
+      centroids,
+      q,
+      indices,
+      partitioned_ids,
+      nprobe,
+      k_nn,
+      nullptr,
+      nullptr,
+      nullptr,
+      nthreads);
+}
+
+/**
+ * @brief Overload for updates and parts and ids specified by URI.
+ */
+template <class T, class partitioned_ids_type>
+auto qv_query_heap_infinite_ram(
+    tiledb::Context& ctx,
+    const std::string& part_uri,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    const std::string& id_uri,
+    size_t nprobe,
+    size_t k_nn,
+    auto&& updates,
+    auto&& update_ids,
+    auto&& update_validity,
+    size_t nthreads) {
+  scoped_timer _{tdb_func__};
+
+  // Read the shuffled database and ids
+  // @todo To this more systematically
+  auto partitioned_db = tdbColMajorMatrix<T>(ctx, part_uri);
+  auto partitioned_ids = read_vector<partitioned_ids_type>(ctx, id_uri);
+
+  return qv_query_heap_infinite_ram(
+      with_updates{},
+      partitioned_db,
+      centroids,
+      q,
+      indices,
+      partitioned_ids,
+      nprobe,
+      k_nn,
+      updates,
+      update_ids,
+      update_validity,
+      nthreads);
+}
+
+/**
+ * @brief Overload for no updates and parts and ids are already opened arrays.
+ */
+auto qv_query_heap_infinite_ram(
+    auto&& partitioned_db,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    auto&& partitioned_ids,
+    size_t nprobe,
+    size_t k_nn,
+    size_t nthreads) {
+  return qv_query_heap_infinite_ram(
+      without_updates{},
+      partitioned_db,
+      centroids,
+      q,
+      indices,
+      partitioned_ids,
+      nprobe,
+      k_nn,
+      nullptr,
+      nullptr,
+      nullptr,
+      nthreads);
+}
+
+/**
+ * @brief Overload for no updates and parts and ids are already opened arrays.
+ */
+auto qv_query_heap_infinite_ram(
+        auto&& partitioned_db,
+    auto&& centroids,
+    auto&& q,
+    auto&& indices,
+    auto&& partitioned_ids,
+    size_t nprobe,
+    size_t k_nn,
+    auto&& updates,
+    auto&& update_ids,
+    auto&& update_validity,
+    size_t nthreads) {
+  return qv_query_heap_infinite_ram(
+      with_updates{},
+      partitioned_db,
+      centroids,
+      q,
+      indices,
+      partitioned_ids,
+      nprobe,
+      k_nn,
+      updates,
+      update_ids,
+      update_validity,
+      nthreads);
+}
+
 
 // ----------------------------------------------------------------------------
 // Functions for searching with infinite RAM, new qv (nuv) ordering
@@ -263,6 +355,7 @@ auto nuv_query_heap_infinite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t nthreads);
+
 
 template <typename T, class partitioned_ids_type>
 auto nuv_query_heap_infinite_ram(
@@ -632,48 +725,6 @@ auto qv_query_heap_finite_ram(
     size_t upper_bound,
     size_t nthreads);
 
-/**
- * Interface with uris for all arguments.
- */
-template <
-    typename db_type,
-    class partitioned_ids_type,
-    class centroids_type,
-    class indices_type>
-auto qv_query_heap_finite_ram(
-    const std::string& part_uri,
-    const std::string& centroids_uri,
-    const std::string& query_uri,
-    const std::string& indices_uri,
-    const std::string& id_uri,
-    size_t nqueries,
-    size_t nprobe,
-    size_t k_nn,
-    size_t upper_bound,
-    size_t nthreads) {
-  tiledb::Context ctx;
-
-  auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
-  centroids.load();
-
-  auto query = tdbColMajorMatrix<db_type, partitioned_ids_type>(
-      ctx, query_uri, nqueries);
-  query.load();
-
-  auto indices = read_vector<indices_type>(ctx, indices_uri);
-
-  return qv_query_heap_finite_ram(
-      ctx,
-      part_uri,
-      centroids,
-      query,
-      indices,
-      id_uri,
-      nprobe,
-      k_nn,
-      upper_bound,
-      nthreads);
-}
 
 /**
  * @brief OG Implementation of finite RAM qv query.
@@ -898,75 +949,6 @@ auto nuv_query_heap_finite_ram(
     size_t upper_bound,
     size_t nthreads);
 
-/**
- * Interface with uris for all arguments.
- */
-template <
-    typename db_type,
-    class partitioned_ids_type,
-    class centroids_type,
-    class indices_type>
-auto nuv_query_heap_finite_ram(
-    const std::string& part_uri,
-    const std::string& centroids_uri,
-    const std::string& query_uri,
-    const std::string& indices_uri,
-    const std::string& id_uri,
-    size_t nqueries,
-    size_t nprobe,
-    size_t k_nn,
-    size_t upper_bound,
-    size_t nthreads) {
-  tiledb::Context ctx;
-
-  // using centroid_type =
-  // std::invoke_result_t<tdbColMajorMatrix<centroids_type>>;
-  using query_type = std::invoke_result_t<tdbColMajorMatrix<db_type>>;
-  using idx_type = std::invoke_result_t<tdbColMajorMatrix<indices_type>>;
-
-  std::future<centroids_type> centroids_future =
-      std::async(std::launch::async, [&]() {
-        auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
-        centroids.load();
-        return centroids;
-      });
-  // auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
-  // centroids.load();
-
-  std::future<query_type> query_future = std::async(std::launch::async, [&]() {
-    auto query = tdbColMajorMatrix<db_type, partitioned_ids_type>(
-        ctx, query_uri, nqueries);
-    query.load();
-    return query;
-  });
-  // auto query =
-  //      tdbColMajorMatrix<db_type, partitioned_ids_type>(ctx, query_uri,
-  //      nqueries);
-  // query.load();
-
-  std::future<idx_type> indices_future = std::async(std::launch::async, [&]() {
-    auto indices = read_vector<indices_type>(ctx, indices_uri);
-    return indices;
-  });
-  //  auto indices = read_vector<indices_type>(ctx, indices_uri);
-
-  // Wait for completion in order of expected access time
-  auto indices = indices_future.get();
-  auto query = query_future.get();
-  auto centroids = centroids_future.get();
-
-  return nuv_query_heap_finite_ram(
-      ctx,
-      part_uri,
-      centroids,
-      query,
-      indices,
-      id_uri,
-      nprobe,
-      k_nn,
-      upper_bound,
-      nthreads);
-}
 
 /**
  * @brief OG Implementation of finite RAM using the new qv (nuv) ordering.

@@ -223,33 +223,67 @@ TEST_CASE("scoring consolidate scores", "[scoring]") {
   auto scores = std::vector<std::vector<fixed_min_pair_heap<float, unsigned>>>{
       scores00, scores01};
   CHECK(scores.size() == 2);
-  consolidate_scores(scores);
-  CHECK(scores.size() == 2);
-  auto s = scores[0];
-  CHECK(s.size() == 4);
-  for (auto&& j : s) {
-    std::sort_heap(j.begin(), j.end());
+
+  SECTION("vector of vectors to zeroth vector") {
+    consolidate_scores(scores);
+    CHECK(scores.size() == 2);
+    auto s = scores[0];
+    CHECK(s.size() == 4);
+    for (auto&& j : s) {
+      std::sort_heap(j.begin(), j.end());
+    }
+    CHECK(std::equal(
+        begin(s[0]),
+        end(s[0]),
+        std::vector<std::tuple<float, unsigned>>({{0.1, 0}, {0.1, 4}, {0.2, 5}})
+            .begin()));
+    CHECK(std::equal(
+        begin(s[1]),
+        end(s[1]),
+        std::vector<std::tuple<float, unsigned>>({{0.2, 5}, {0.5, 4}, {0.6, 4}})
+            .begin()));
+    CHECK(std::equal(
+        begin(s[2]),
+        end(s[2]),
+        std::vector<std::tuple<float, unsigned>>({{0.5, 4}, {0.6, 3}, {0.6, 5}})
+            .begin()));
+    CHECK(std::equal(
+        begin(s[3]),
+        end(s[3]),
+        std::vector<std::tuple<float, unsigned>>({{0.0, 6}, {0.0, 9}, {0.1, 5}})
+            .begin()));
   }
-  CHECK(std::equal(
-      begin(s[0]),
-      end(s[0]),
-      std::vector<std::tuple<float, unsigned>>({{0.1, 0}, {0.1, 4}, {0.2, 5}})
-          .begin()));
-  CHECK(std::equal(
-      begin(s[1]),
-      end(s[1]),
-      std::vector<std::tuple<float, unsigned>>({{0.2, 5}, {0.5, 4}, {0.6, 4}})
-          .begin()));
-  CHECK(std::equal(
-      begin(s[2]),
-      end(s[2]),
-      std::vector<std::tuple<float, unsigned>>({{0.5, 4}, {0.6, 3}, {0.6, 5}})
-          .begin()));
-  CHECK(std::equal(
-      begin(s[3]),
-      end(s[3]),
-      std::vector<std::tuple<float, unsigned>>({{0.0, 6}, {0.0, 9}, {0.1, 5}})
-          .begin()));
+
+  SECTION("vector of vectors to new vector") {
+    std::vector<fixed_min_pair_heap<float, unsigned>> s(size(scores[0]), fixed_min_pair_heap<float, unsigned>(3));
+    consolidate_scores(s, scores);
+    CHECK(s.size() == 4);
+
+    for (auto&& j : s) {
+      std::sort_heap(j.begin(), j.end());
+    }
+
+    CHECK(std::equal(
+        begin(s[0]),
+        end(s[0]),
+        std::vector<std::tuple<float, unsigned>>({{0.1, 0}, {0.1, 4}, {0.2, 5}})
+            .begin()));
+    CHECK(std::equal(
+        begin(s[1]),
+        end(s[1]),
+        std::vector<std::tuple<float, unsigned>>({{0.2, 5}, {0.5, 4}, {0.6, 4}})
+            .begin()));
+    CHECK(std::equal(
+        begin(s[2]),
+        end(s[2]),
+        std::vector<std::tuple<float, unsigned>>({{0.5, 4}, {0.6, 3}, {0.6, 5}})
+            .begin()));
+    CHECK(std::equal(
+        begin(s[3]),
+        end(s[3]),
+        std::vector<std::tuple<float, unsigned>>({{0.0, 6}, {0.0, 9}, {0.1, 5}})
+            .begin()));
+  }
 }
 
 TEST_CASE("scoring get_top_k_from_heap one min_heap", "[scoring]") {
@@ -369,6 +403,7 @@ TEST_CASE("scoring get_top_k_from_heap vector of min_heap", "[scoring]") {
     auto&& [top_scores, top_k] = get_top_k_with_scores(scores, 5);
     CHECK(top_k.num_rows() == 5);
     CHECK(top_k.num_cols() == 2);
+    std::vector<unsigned> foo(top_k.data(), top_k.data() + top_k.size());
     CHECK(std::equal(
         begin(gt_neighbors_vec), end(gt_neighbors_vec), top_k.data()));
     CHECK(std::equal(

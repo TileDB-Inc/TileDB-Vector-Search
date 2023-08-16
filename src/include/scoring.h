@@ -221,7 +221,7 @@ auto get_top_k_from_scores(const ColMajorMatrix<T>& scores, int k_nn) {
  */
 template <class Heap>
 void consolidate_scores(
-    std::vector<std::vector<Heap>>& min_scores, std::vector<Heap>& top_scores) {
+    std::vector<Heap>& top_scores, std::vector<std::vector<Heap>>& min_scores) {
   auto nthreads = size(min_scores);
   auto num_queries = size(min_scores[0]);
   for (size_t j = 0; j < num_queries; ++j) {
@@ -253,6 +253,28 @@ void consolidate_scores(std::vector<std::vector<Heap>>& min_scores) {
     }
   }
 }
+
+
+template <class Heap>
+void merge_scores(std::vector<Heap>& min_scores, std::vector<Heap>& new_scores) {
+  auto num_queries = size(new_scores);
+  for (size_t j = 0; j < num_queries; ++j) {
+    for (auto&& [e, f] : new_scores[j]) {
+        min_scores[j].insert(e, f);
+    }
+  }
+}
+
+template <class Heap, class T, class U>
+void merge_scores(std::vector<Heap>& min_scores, ColMajorMatrix<T>& new_scores, ColMajorMatrix<U>& new_ids) {
+  auto num_queries = size(new_scores);
+  for (size_t j = 0; j < num_queries; ++j) {
+    for (size_t i = 0; i < size(new_scores[j]); ++i) {
+      min_scores[j].insert(new_scores(i, j), new_ids(i, j));
+    }
+  }
+}
+
 
 // ----------------------------------------------------------------------------
 // Functions for extracting top k neighbor indices from a min heap (with pairs)
@@ -334,7 +356,7 @@ inline void get_top_k_with_scores_from_heap(
   std::transform(
       begin(min_scores),
       begin(min_scores) + k_nn /*end(min_scores)*/,
-      begin(top_k_scores),
+      begin(top_k),
       ([](auto&& e) { return std::get<1>(e); }));
 }
 
@@ -375,7 +397,7 @@ inline auto get_top_k_with_scores(
  * @return
  */
 template <class Heap>
-auto filter_top_k(std::vector<Heap>&& min_scores, auto&& ids_to_filter) {
+auto filter_min_scores(std::vector<Heap>&& min_scores, auto&& ids_to_filter) {
   auto validity_set = std::set<size_t>{};
   for (auto&& id : ids_to_filter) {
     validity_set.emplace(id);
@@ -400,7 +422,7 @@ auto filter_top_k(std::vector<Heap>&& min_scores, auto&& ids_to_filter) {
  * @return
  */
 template <class Heap>
-auto filter_top_k(
+auto filter_min_scores(
     std::vector<Heap>&& min_scores, auto&& validity, auto&& update_ids) {
   auto validity_set = std::set<size_t>{};
   for (size_t i = 0; i < size(validity); ++i) {
@@ -417,6 +439,7 @@ auto filter_top_k(
     mins.make_heap();
   }
 }
+
 
 // ----------------------------------------------------------------------------
 // Functions for verifying top k neighbors against groundtruth
