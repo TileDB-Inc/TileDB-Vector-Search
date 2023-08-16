@@ -23,23 +23,15 @@ class FlatIndex(Index):
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
     ):
-        # If the user passes a tiledb python Config object convert to a dictionary
-        if isinstance(config, tiledb.Config):
-            config = dict(config)
-
-        self.uri = uri
+        super().__init__(uri=uri, config=config)
         self._index = None
-        self.ctx = Ctx(config)
-        self.config = config
-        group = tiledb.Group(uri, ctx=tiledb.Ctx(config))
-        self.storage_version = group.meta.get("storage_version", "0.1")
-        self.index_uri = group[storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]].uri
+        self.index_uri = self.group[storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]].uri
         self._db = load_as_matrix(
             self.index_uri,
             ctx=self.ctx,
             config=config,
         )
-        self.ids_uri = group[
+        self.ids_uri = self.group[
             storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
         ].uri
         if tiledb.array_exists(self.ids_uri, self.ctx):
@@ -51,13 +43,13 @@ class FlatIndex(Index):
             self.size = schema.domain.dim(1).domain[1]
             self._ids = StdVector_u64(np.arange(self.size).astype(np.uint64))
 
-        dtype = group.meta.get("dtype", None)
+        dtype = self.group.meta.get("dtype", None)
         if dtype is None:
             self.dtype = self._db.dtype
         else:
             self.dtype = np.dtype(dtype)
 
-    def query(
+    def query_internal(
         self,
         targets: np.ndarray,
         k: int = 10,

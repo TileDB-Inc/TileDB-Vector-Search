@@ -34,24 +34,17 @@ class IVFFlatIndex(Index):
         memory_budget: int = -1,
         config: Optional[Mapping[str, Any]] = None,
     ):
-        # If the user passes a tiledb python Config object convert to a dictionary
-        if isinstance(config, tiledb.Config):
-            config = dict(config)
-
-        self.config = config
-        self.ctx = Ctx(config)
-        group = tiledb.Group(uri, ctx=tiledb.Ctx(config))
-        self.storage_version = group.meta.get("storage_version", "0.1")
-        self.parts_db_uri = group[
+        super().__init__(uri=uri, config=config)
+        self.parts_db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
         ].uri
-        self.centroids_uri = group[
+        self.centroids_uri = self.group[
             storage_formats[self.storage_version]["CENTROIDS_ARRAY_NAME"]
         ].uri
-        self.index_array_uri = group[
+        self.index_array_uri = self.group[
             storage_formats[self.storage_version]["INDEX_ARRAY_NAME"]
         ].uri
-        self.ids_uri = group[
+        self.ids_uri = self.group[
             storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
         ].uri
         self.memory_budget = memory_budget
@@ -62,7 +55,7 @@ class IVFFlatIndex(Index):
         self._index = read_vector_u64(self.ctx, self.index_array_uri, 0, 0)
 
 
-        dtype = group.meta.get("dtype", None)
+        dtype = self.group.meta.get("dtype", None)
         if dtype is None:
             schema = tiledb.ArraySchema.load(
                 self.parts_db_uri, ctx=tiledb.Ctx(self.config)
@@ -71,7 +64,7 @@ class IVFFlatIndex(Index):
         else:
             self.dtype = np.dtype(dtype)
 
-        self.partitions = group.meta.get("partitions", -1)
+        self.partitions = self.group.meta.get("partitions", -1)
         if self.partitions == -1:
             schema = tiledb.ArraySchema.load(
                 self.centroids_uri, ctx=tiledb.Ctx(self.config)
@@ -85,7 +78,7 @@ class IVFFlatIndex(Index):
             self._db = load_as_matrix(self.parts_db_uri, ctx=self.ctx, config=config, size=self.size)
             self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, self.size)
 
-    def query(
+    def query_internal(
         self,
         queries: np.ndarray,
         k: int = 10,

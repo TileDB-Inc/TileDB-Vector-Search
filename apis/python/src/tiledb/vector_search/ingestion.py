@@ -19,8 +19,7 @@ def ingest(
     external_ids: np.array = None,
     external_ids_uri: str = "",
     external_ids_type: str = None,
-    additions_uri: str = None,
-    deletes_uri: str = None,
+    updates_uri: str = None,
     config=None,
     namespace: Optional[str] = None,
     size: int = -1,
@@ -54,7 +53,7 @@ def ingest(
         Source URI for external_ids
     external_ids_type: str
         File type of external_ids_uri. If left empty it is auto-detected from the suffix of external_ids_uri
-    additions_uri: str
+    updates_uri: str
         Updates
     config: None
         config dictionary, defaults to None
@@ -614,7 +613,7 @@ def ingest(
                     partial_write_array_parts_uri, name=PARTS_ARRAY_NAME
                 )
             partial_write_arrays = input_vectors_work_tasks
-            if additions_uri is not None:
+            if updates_uri is not None:
                 partial_write_arrays += 1
             for part in range(partial_write_arrays):
                 part_index_uri = partial_write_array_index_uri + "/" + str(part)
@@ -683,20 +682,39 @@ def ingest(
                 )
 
     def read_additions(
-        additions_uri: str,
+        updates_uri: str,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ) -> (np.ndarray, np.array):
+        if updates_uri is None:
+            return None, None
         logger = setup(config, verbose)
         logger.debug(
             "Reading additions vectors"
         )
-        additions_array = tiledb.open(additions_uri, mode="r")
-        q = additions_array.query(attrs=('vector',), coords=True)
+        updates_array = tiledb.open(updates_uri, mode="r")
+        q = updates_array.query(attrs=('vector',), coords=True)
         data = q[:]
-        return np.vstack(data["vector"]), data["external_id"]
+        additions_filter = [len(item) > 0 for item in data["vector"]]
+        return np.vstack(data["vector"][additions_filter]), data["external_id"][additions_filter]
 
+    def read_updated_ids(
+        updates_uri: str,
+        config: Optional[Mapping[str, Any]] = None,
+        verbose: bool = False,
+        trace_id: Optional[str] = None,
+    ) -> np.array:
+        if updates_uri is None:
+            return np.array([], np.uint64)
+        logger = setup(config, verbose)
+        logger.debug(
+            "Reading updated vector ids"
+        )
+        updates_array = tiledb.open(updates_uri, mode="r")
+        q = updates_array.query(attrs=('vector',), coords=True)
+        data = q[:]
+        return data["external_id"]
 
     def read_input_vectors(
         source_uri: str,
@@ -1116,7 +1134,7 @@ def ingest(
         end: int,
         batch: int,
         threads: int,
-        deletes_uri: str = None,
+        updates_uri: str = None,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
@@ -1154,18 +1172,19 @@ def ingest(
                 str(int(start / batch))
             ].uri
             logger.debug("Input vectors start_pos: %d, end_pos: %d", part, part_end)
-            deleted_ids = np.array([], np.uint64)
-            if deletes_uri is not None:
-                deletes_array = tiledb.open(deletes_uri, mode="r")
-                qd = deletes_array.query(attrs=('delete',), coords=True)
-                deleted_ids = qd[:]["external_id"]
+            updated_ids = read_updated_ids(
+                        updates_uri=updates_uri,
+                        config=config,
+                        verbose=verbose,
+                        trace_id=trace_id,
+                    )
             if source_type == "TILEDB_ARRAY":
                 logger.debug("Start indexing")
                 ivf_index_tdb(
                     dtype=vector_type,
                     db_uri=source_uri,
                     external_ids_uri=external_ids_uri,
-                    deleted_ids=StdVector_u64(deleted_ids),
+                    deleted_ids=StdVector_u64(updated_ids),
                     centroids_uri=centroids_uri,
                     parts_uri=partial_write_array_parts_uri,
                     index_array_uri=partial_write_array_index_uri,
@@ -1201,7 +1220,7 @@ def ingest(
                     dtype=vector_type,
                     db=array_to_matrix(np.transpose(in_vectors).astype(vector_type)),
                     external_ids=StdVector_u64(external_ids),
-                    deleted_ids=StdVector_u64(deleted_ids),
+                    deleted_ids=StdVector_u64(updated_ids),
                     centroids_uri=centroids_uri,
                     parts_uri=partial_write_array_parts_uri,
                     index_array_uri=partial_write_array_index_uri,
@@ -1214,12 +1233,11 @@ def ingest(
 
     def ingest_additions_udf(
         index_group_uri: str,
-        additions_uri: str,
+        updates_uri: str,
         vector_type: np.dtype,
         write_offset: int,
         batch: int,
         threads: int,
-        deletes_uri: str = None,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
@@ -1248,21 +1266,16 @@ def ingest(
             str(int(write_offset / batch))
         ].uri
         additions_vectors, additions_external_ids = read_additions(
-            additions_uri=additions_uri,
+            updates_uri=updates_uri,
             config=config,
             verbose=verbose,
             trace_id=trace_id,
         )
-        deleted_ids = np.array([], np.uint64)
-        if deletes_uri is not None:
-            deletes_array = tiledb.open(deletes_uri, mode="r")
-            qd = deletes_array.query(attrs=('delete',), coords=True)
-            deleted_ids = qd[:]["external_id"]
         ivf_index(
             dtype=vector_type,
             db=array_to_matrix(np.transpose(additions_vectors).astype(vector_type)),
             external_ids=StdVector_u64(additions_external_ids),
-            deleted_ids=StdVector_u64(deleted_ids),
+            deleted_ids=StdVector_u64(np.array([], np.uint64)),
             centroids_uri=centroids_uri,
             parts_uri=partial_write_array_parts_uri,
             index_array_uri=partial_write_array_index_uri,
@@ -1648,7 +1661,7 @@ def ingest(
                     end=end,
                     batch=input_vectors_per_work_item,
                     threads=threads,
-                    deletes_uri=deletes_uri,
+                    updates_uri=updates_uri,
                     config=config,
                     verbose=verbose,
                     trace_id=trace_id,
@@ -1660,16 +1673,15 @@ def ingest(
                 compute_indexes_node.depends_on(ingest_node)
                 task_id += 1
 
-            if additions_uri is not None:
+            if updates_uri is not None:
                 ingest_additions_node = submit(
                     ingest_additions_udf,
                     index_group_uri=index_group_uri,
-                    additions_uri=additions_uri,
+                    updates_uri=updates_uri,
                     vector_type=vector_type,
                     write_offset=size,
                     batch=input_vectors_per_work_item,
                     threads=threads,
-                    deletes_uri=deletes_uri,
                     config=config,
                     verbose=verbose,
                     trace_id=trace_id,

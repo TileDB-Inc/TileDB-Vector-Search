@@ -1,3 +1,5 @@
+import numpy as np
+
 from common import *
 
 from tiledb.vector_search.utils import load_fvecs
@@ -277,11 +279,11 @@ def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
     result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, external_ids_offset) > MINIMUM_ACCURACY
 
+
 def test_ivf_flat_ingestion_with_updates(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
-    additions_uri = os.path.join(tmp_path, "additions")
-    deletes_uri = os.path.join(tmp_path, "deletes")
+    index_uri_2 = os.path.join(tmp_path, "array_2")
     k = 10
     size = 100000
     partitions = 100
@@ -291,47 +293,6 @@ def test_ivf_flat_ingestion_with_updates(tmp_path):
     data = create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
     dtype = np.uint8
 
-    external_id_dim = tiledb.Dim(
-        name="external_id", domain=(0, 2**63-1), dtype=np.dtype(np.uint64)
-    )
-    dom = tiledb.Domain(external_id_dim)
-    vector_attr = tiledb.Attr(name="vector", dtype=np.dtype(dtype), var=True)
-    delete_attr = tiledb.Attr(name="delete", dtype=np.dtype(np.uint8))
-    additions_schema = tiledb.ArraySchema(
-        domain=dom,
-        sparse=True,
-        attrs=[vector_attr],
-    )
-    tiledb.Array.create(additions_uri, additions_schema)
-    deletes_schema = tiledb.ArraySchema(
-        domain=dom,
-        sparse=True,
-        attrs=[delete_attr],
-    )
-    tiledb.Array.create(deletes_uri, deletes_schema)
-    additions_array = tiledb.open(additions_uri, mode="w")
-    deletes_array = tiledb.open(deletes_uri, mode="w")
-    update_ids = {}
-    updated_ids = {}
-    for i in range(0, 100000, 2):
-        update_ids[i] = i + 1000000
-        updated_ids[i + 1000000] = i
-    delete_ids = np.zeros((len(update_ids)), dtype=np.uint64)
-    addition_ids = np.zeros((len(update_ids)), dtype=np.uint64)
-    deletes = np.zeros((len(update_ids)), dtype=np.uint8)
-    additions = np.empty((len(update_ids)), dtype='O')
-    id = 0
-    for prev_id, new_id in update_ids.items():
-        delete_ids[id] = prev_id
-        deletes[id] = 0
-        addition_ids[id] = new_id
-        additions[id] = data[prev_id].astype(dtype)
-        id += 1
-    deletes_array[delete_ids] = {"delete": deletes}
-    additions_array[addition_ids] = {"vector": additions}
-    additions_array.close()
-    deletes_array.close()
-
     query_vectors = get_queries(dataset_dir, dtype=dtype)
     gt_i, gt_d = get_groundtruth(dataset_dir, k)
     index = ingest(
@@ -340,8 +301,37 @@ def test_ivf_flat_ingestion_with_updates(tmp_path):
         source_uri=os.path.join(dataset_dir, "data.u8bin"),
         partitions=partitions,
         input_vectors_per_work_item=int(size / 10),
-        deletes_uri=deletes_uri,
-        additions_uri=additions_uri
     )
     result = index.query(query_vectors, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    update_ids = {}
+    updated_ids = {}
+    for i in range(0, 100000, 2):
+        update_ids[i] = i + 1000000
+        updated_ids[i + 1000000] = i
+    external_ids = np.zeros((len(update_ids)*2), dtype=np.uint64)
+    updates = np.empty((len(update_ids)*2), dtype='O')
+    id = 0
+    for prev_id, new_id in update_ids.items():
+        external_ids[id] = prev_id
+        updates[id] = np.array([], dtype=dtype)
+        id += 1
+        external_ids[id] = new_id
+        updates[id] = data[prev_id].astype(dtype)
+        id += 1
+
+    index.update_batch(vectors=updates, external_ids=external_ids)
+
+    index2 = ingest(
+        index_type="IVF_FLAT",
+        index_uri=index_uri_2,
+        size=size,
+        source_uri=index_uri+"/shuffled_vectors",
+        external_ids_uri=index_uri+"/shuffled_vector_ids",
+        updates_uri=index_uri+"/updates",
+        partitions=partitions,
+        input_vectors_per_work_item=int(size / 10),
+    )
+    result = index2.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, updated_ids=updated_ids) > MINIMUM_ACCURACY
