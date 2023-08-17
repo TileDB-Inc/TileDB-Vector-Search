@@ -222,7 +222,7 @@ class IVFFlatIndex(Index):
         if mode is None:
             queries_m = array_to_matrix(np.transpose(queries))
             if self.memory_budget == -1:
-                _, r = ivf_query_ram(
+                d, r = ivf_query_ram(
                     self.dtype,
                     self._db,
                     self._centroids,
@@ -236,7 +236,7 @@ class IVFFlatIndex(Index):
                     use_nuv_implementation=use_nuv_implementation,
                 )
             else:
-                _, r = ivf_query(
+                d, r = ivf_query(
                     self.dtype,
                     self.parts_db_uri,
                     self._centroids,
@@ -250,8 +250,7 @@ class IVFFlatIndex(Index):
                     ctx=self.ctx,
                     use_nuv_implementation=use_nuv_implementation,
                 )
-
-            return np.transpose(np.array(_)), np.transpose(np.array(r))
+            return (np.array(d), np.transpose(np.array(r)))
         else:
             return self.taskgraph_query(
                 queries=queries,
@@ -424,4 +423,4 @@ class IVFFlatIndex(Index):
             for j in range(len(tmp), k):
                 tmp.append((float(0.0), int(0)))
             results_per_query.append(np.array(tmp, dtype=np.dtype("float,int"))["f1"])
-        return results_per_query
+        return None, results_per_query  # TODO return distances?

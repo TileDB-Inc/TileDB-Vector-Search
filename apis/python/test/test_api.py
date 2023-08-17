@@ -31,45 +31,6 @@ def test_vector(tmpdir):
     assert np.array_equal(np.array(v), np.arange(10))
 
 
-@pytest.mark.skipif(
-    not os.path.exists(
-        os.path.expanduser("~/work/proj/vector-search/datasets/sift-andrew/")
-    ),
-    reason="requires sift dataset",
-)
-def test_flat_query():
-    # db_uri = "s3://tiledb-andrew/sift/sift_base"
-    # probe_uri = "s3://tiledb-andrew/sift/sift_query"
-    # g_uri = "s3://tiledb-andrew/sift/sift_groundtruth"
-
-    db_uri = "~/work/proj/vector-search/datasets/sift-andrew/sift_base"
-    probe_uri = "~/work/proj/vector-search/datasets/sift-andrew/sift_query"
-    g_uri = (
-        "/Users/inorton/work/proj/vector-search/datasets/sift-andrew/sift_groundtruth"
-    )
-
-    k = 10
-    nqueries = 1
-
-    db = vs.load_as_matrix(db_uri)
-    targets = vs.load_as_matrix(probe_uri, nqueries)  # TODO: make 2nd optional
-
-    r = vs.query_vq_nth(db, targets, k, 8)  # k  # nqueries  # nthreads
-
-    ra = np.array(r, copy=True)
-    print(ra)
-    print(ra.shape)
-
-    g_array = tiledb.open(g_uri)
-    g = g_array[:]["a"]
-
-    # validate top_k
-    assert np.array_equal(np.sort(ra[:k], axis=0), np.sort(g[:k, :nqueries], axis=0))
-
-    g_m = vs.load_as_matrix(g_uri)
-    assert vspy.validate_top_k_u64(r, g_m)
-
-
 def test_partition_ivf_index(tmpdir):
     path = tmpdir.mkdir("test").join("test.tdb")
 
