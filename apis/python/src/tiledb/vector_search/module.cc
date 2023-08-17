@@ -5,7 +5,6 @@
 #include <pybind11/stl.h>
 
 #include "linalg.h"
-#include "ivf_index.h"
 #include "ivf_query.h"
 #include "flat_query.h"
 
@@ -13,7 +12,6 @@ namespace py = pybind11;
 using Ctx = tiledb::Context;
 
 bool global_debug = false;
-double global_time_of_interest;
 
 bool enable_stats = false;
 std::vector<json> core_stats;
@@ -113,8 +111,7 @@ static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string&
          std::vector<Id_Type>& ids,
          size_t nprobe,
          size_t k_nn,
-         bool nth,
-         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
+         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
         auto r = detail::ivf::qv_query_heap_infinite_ram(
             parts,
@@ -124,7 +121,6 @@ static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string&
             ids,
             nprobe,
             k_nn,
-            nth,
             nthreads);
         return r;
         }, py::keep_alive<1,2>());
@@ -142,8 +138,7 @@ static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& s
          size_t nprobe,
          size_t k_nn,
          size_t upper_bound,
-         bool nth,
-         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
+         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
         auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
             ctx,
@@ -155,7 +150,6 @@ static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& s
             nprobe,
             k_nn,
             upper_bound,
-            nth,
             nthreads);
         return r;
         }, py::keep_alive<1,2>());
@@ -171,8 +165,7 @@ static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string
          std::vector<Id_Type>& ids,
          size_t nprobe,
          size_t k_nn,
-         bool nth,
-         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
+         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
         auto r = detail::ivf::nuv_query_heap_infinite_ram_reg_blocked(
             parts,
@@ -182,7 +175,6 @@ static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string
             ids,
             nprobe,
             k_nn,
-            nth,
             nthreads);
         return r;
         }, py::keep_alive<1,2>());
@@ -200,8 +192,7 @@ static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& 
          size_t nprobe,
          size_t k_nn,
          size_t upper_bound,
-         bool nth,
-         size_t nthreads) -> ColMajorMatrix<size_t> { // TODO change return type
+         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
         auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
             ctx,
@@ -213,7 +204,6 @@ static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& 
             nprobe,
             k_nn,
             upper_bound,
-            nth,
             nthreads);
         return r;
         }, py::keep_alive<1,2>());
@@ -394,7 +384,7 @@ static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
            ColMajorMatrix<float>& query_vectors,
            const std::vector<uint64_t> &ids,
            int k,
-           size_t nthreads) -> ColMajorMatrix<size_t> {
+           size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> {
           auto r = detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads);
           return r;
         });
@@ -477,8 +467,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         [](ColMajorMatrix<float>& data,
            ColMajorMatrix<float>& query_vectors,
            int k,
-           size_t nthreads) -> ColMajorMatrix<size_t> {
-          auto r = detail::flat::vq_query_nth(data, query_vectors, k, true, nthreads);
+           size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> {
+          auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
           return r;
         });
 
@@ -486,8 +476,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         [](tdbColMajorMatrix<uint8_t>& data,
            ColMajorMatrix<float>& query_vectors,
            int k,
-           size_t nthreads) -> ColMajorMatrix<size_t> {
-          auto r = detail::flat::vq_query_nth(data, query_vectors, k, true, nthreads);
+           size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> {
+          auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
           return r;
         });
 

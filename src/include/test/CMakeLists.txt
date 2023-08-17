@@ -54,22 +54,32 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 # kmeans_add_test(unit_sift_array)
 # kmeans_add_test(unit_sift_db)
 # kmeans_add_test(gen_partitioned)
-# kmeans_add_test(gen_queries)
 # kmeans_add_test(time_insert)
 # kmeans_add_test(time_l2)
 # kmeans_add_test(time_open)
-# kmeans_add_test(time_queries)
 # target_link_libraries(time_queries PRIVATE flat_blas)
+
+# kmeans_add_test(gen_queries)
+# kmeans_add_test(time_queries)
+
 
 kmeans_add_test(unit_algorithm)
 
 kmeans_add_test(unit_concepts)
 
-kmeans_add_test(unit_defs)
+kmeans_add_test(unit_fixed_min_heap)
+
+kmeans_add_test(unit_flat_qv)
+
+kmeans_add_test(unit_flat_vq)
 
 kmeans_add_test(unit_ivf_index)
 
 kmeans_add_test(unit_ivf_query)
+
+kmeans_add_test(unit_ivf_qv)
+
+kmeans_add_test(unit_ivf_vq)
 
 add_executable(unit_linalg unit_linalg.cc)
 target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)
@@ -86,11 +96,17 @@ kmeans_add_test(unit_nn-descent)
 
 kmeans_add_test(unit_nn-graph)
 
+kmeans_add_test(unit_partition)
+
+kmeans_add_test(unit_scoring)
+
 kmeans_add_test(unit_slicing)
 
 kmeans_add_test(unit_stats)
 
+
 kmeans_add_test(unit_utils)
+
 
 if (TILEDB_VS_ENABLE_BLAS)
   kmeans_add_test(unit_queries)

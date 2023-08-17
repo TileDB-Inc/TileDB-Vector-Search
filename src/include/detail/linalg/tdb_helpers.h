@@ -42,7 +42,7 @@ namespace tiledb_helpers {
 /**
  * @brief Opens a TileDB array and displays stats to stderr.
  *
- * Stats are only collected if the TILEDBVS_ENABLE_STATS symbol is
+ * Stats are only collected if the TILEDB_VS_ENABLE_STATS symbol is
  * defined, and a variable named enable_stats is set to true.
  * The stats are written to a FILE* specified by the variable named stats_file.
  *
@@ -64,7 +64,7 @@ inline tiledb::Array open_array(
 /**
  * @brief Submits a TileDB query and displays stats to stderr.
  *
- * Stats are only collected if the TILEDBVS_ENABLE_STATS symbol is
+ * Stats are only collected if the TILEDB_VS_ENABLE_STATS symbol is
  * defined, and a variable named enable_stats is set to true.
  * The stats are written to a FILE* specified by the variable named stats_file.
  *
