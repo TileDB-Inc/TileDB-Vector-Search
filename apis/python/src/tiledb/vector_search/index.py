@@ -1,5 +1,4 @@
 import numpy as np
-import tiledb
 
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
