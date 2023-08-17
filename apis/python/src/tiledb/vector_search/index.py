@@ -1,7 +1,6 @@
 import numpy as np
 import tiledb
 
-from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
 from typing import Any, Mapping, Optional
@@ -140,6 +139,7 @@ class Index:
         return tiledb.open(self.update_arrays_uri, mode="w")
 
     def consolidate_updates(self):
+        from tiledb.vector_search.ingestion import ingest
         return ingest(
             index_type=self.index_type,
             index_uri=self.uri,
