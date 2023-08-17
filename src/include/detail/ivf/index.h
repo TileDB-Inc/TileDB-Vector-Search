@@ -77,10 +77,17 @@ int ivf_index(
     std::unordered_set<ids_type> deleted_ids_set(deleted_ids.begin(), deleted_ids.end());
     std::vector<size_t> degrees(centroids.num_cols());
     std::vector<ids_type> indices(centroids.num_cols() + 1);
-    for (size_t i = 0; i < db.num_cols(); ++i) {
-      if (auto iter = deleted_ids_set.find(external_ids[i]); iter == deleted_ids_set.end()) {
+    if (deleted_ids.empty()) {
+      for (size_t i = 0; i < db.num_cols(); ++i) {
         auto j = parts[i];
         ++degrees[j];
+      }
+    } else {
+      for (size_t i = 0; i < db.num_cols(); ++i) {
+        if (auto iter = deleted_ids_set.find(external_ids[i]); iter == deleted_ids_set.end()) {
+          auto j = parts[i];
+          ++degrees[j];
+        }
       }
     }
     indices[0] = 0;
@@ -112,8 +119,8 @@ int ivf_index(
     // which will group them nicely -- but a distributed parallel sort may
     // be difficult to implement.  Even this algorithm is not trivial to
     // parallelize, because of the random access to the indices array.
-    for (size_t i = 0; i < db.num_cols(); ++i) {
-      if (auto iter = deleted_ids_set.find(external_ids[i]); iter == deleted_ids_set.end()) {
+    if (deleted_ids.empty()) {
+      for (size_t i = 0; i < db.num_cols(); ++i) {
         size_t bin = parts[i];
         size_t ibin = indices[bin];
 
@@ -124,6 +131,21 @@ int ivf_index(
           shuffled_db(j, ibin) = db(j, i);
         }
         ++indices[bin];
+      }
+    } else {
+      for (size_t i = 0; i < db.num_cols(); ++i) {
+        if (auto iter = deleted_ids_set.find(external_ids[i]); iter == deleted_ids_set.end()) {
+          size_t bin = parts[i];
+          size_t ibin = indices[bin];
+
+          shuffled_ids[ibin] = external_ids[i];
+
+          assert(ibin < shuffled_db.num_cols());
+          for (size_t j = 0; j < db.num_rows(); ++j) {
+            shuffled_db(j, ibin) = db(j, i);
+          }
+          ++indices[bin];
+        }
       }
     }
 

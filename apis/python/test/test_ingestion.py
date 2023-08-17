@@ -283,7 +283,6 @@ def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
 def test_ivf_flat_ingestion_with_updates(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
-    index_uri_2 = os.path.join(tmp_path, "array_2")
     k = 10
     size = 100000
     partitions = 100
