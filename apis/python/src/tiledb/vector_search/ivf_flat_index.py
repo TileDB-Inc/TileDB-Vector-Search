@@ -22,8 +22,8 @@ class IVFFlatIndex(Index):
     Parameters
     ----------
     uri: str
-        URI of datataset
-    config: None
+        URI of the index
+    config: Optional[Mapping[str, Any]]
         config dictionary, defaults to None
     memory_budget: int
         Main memory budget. If not provided, no memory budget is applied.
@@ -31,7 +31,7 @@ class IVFFlatIndex(Index):
 
     def __init__(
         self,
-        uri,
+        uri: str,
         config: Optional[Mapping[str, Any]] = None,
         memory_budget: int = -1,
     ):
@@ -100,7 +100,7 @@ class IVFFlatIndex(Index):
         queries: numpy.ndarray
             ND Array of queries
         k: int
-            Number of top results to return per target
+            Number of top results to return per query
         nprobe: int
             number of probes
         nthreads: int
@@ -193,13 +193,11 @@ class IVFFlatIndex(Index):
         queries: numpy.ndarray
             ND Array of queries
         k: int
-            Number of top results to return per target
+            Number of top results to return per query
         nprobe: int
             number of probes
         nthreads: int
             Number of threads to use for query
-        use_nuv_implementation: bool
-            wether to use the nuv query implementation. Default: False
         mode: Mode
             If provided the query will be executed using TileDB cloud taskgraphs.
             For distributed execution you can use REALTIME or BATCH mode
@@ -209,6 +207,8 @@ class IVFFlatIndex(Index):
         num_workers: int
             Only relevant for taskgraph based execution.
             If provided, this is the number of workers to use for the query execution.
+        config: None
+            config dictionary, defaults to None
         """
         from tiledb.cloud import dag
         from tiledb.cloud.dag import Mode

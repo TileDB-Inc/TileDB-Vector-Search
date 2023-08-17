@@ -13,8 +13,8 @@ class FlatIndex(Index):
     Parameters
     ----------
     uri: str
-        URI of datataset
-    config: None
+        URI of the index
+    config: Optional[Mapping[str, Any]]
         config dictionary, defaults to None
     """
 
@@ -52,7 +52,7 @@ class FlatIndex(Index):
 
     def query_internal(
         self,
-        targets: np.ndarray,
+        queries: np.ndarray,
         k: int = 10,
         nthreads: int = 8,
     ):
@@ -61,22 +61,20 @@ class FlatIndex(Index):
 
         Parameters
         ----------
-        targets: numpy.ndarray
-            ND Array of query targets
+        queries: numpy.ndarray
+            ND Array of queries
         k: int
-            Number of top results to return per target
-        nqueries: int
-            Number of queries
+            Number of top results to return per query
         nthreads: int
             Number of threads to use for query
         """
         # TODO:
-        # - typecheck targets
+        # - typecheck queries
         # - add all the options and query strategies
 
-        assert targets.dtype == np.float32
+        assert queries.dtype == np.float32
 
-        targets_m = array_to_matrix(np.transpose(targets))
-        r = query_vq_heap(self._db, targets_m, self._ids, k, nthreads)
+        queries_m = array_to_matrix(np.transpose(queries))
+        r = query_vq_heap(self._db, queries_m, self._ids, k, nthreads)
 
         return np.transpose(np.array(r))

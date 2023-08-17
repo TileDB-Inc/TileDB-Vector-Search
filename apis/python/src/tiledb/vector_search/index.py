@@ -8,9 +8,19 @@ MAX_UINT64 = 2 ** 63 - 1
 
 
 class Index:
+    """
+    Open a Vector index
+
+    Parameters
+    ----------
+    uri: str
+        URI of the index
+    config: Optional[Mapping[str, Any]]
+        config dictionary, defaults to None
+    """
     def __init__(
         self,
-        uri,
+        uri: str,
         config: Optional[Mapping[str, Any]] = None,
     ):
         # If the user passes a tiledb python Config object convert to a dictionary
@@ -26,14 +36,14 @@ class Index:
         self.index_version = self.group.meta.get("index_version", "")
 
 
-    def query(self, targets: np.ndarray, k, **kwargs):
+    def query(self, queries: np.ndarray, k, **kwargs):
         # TODO merge results based on scores and use higher k to improve retrieval
         updated_ids = set(self.read_updated_ids())
-        internal_results = self.query_internal(targets, k, **kwargs)
+        internal_results = self.query_internal(queries, k, **kwargs)
         if self.update_arrays_uri is None:
             return internal_results
-        addition_results = self.query_additions(targets, k)
-        merged_results = np.zeros((targets.shape[0], k), dtype=np.uint64)
+        addition_results = self.query_additions(queries, k)
+        merged_results = np.zeros((queries.shape[0], k), dtype=np.uint64)
         query_id = 0
         for query in internal_results:
             res_id = 0
@@ -48,17 +58,17 @@ class Index:
             query_id += 1
         return merged_results
 
-    def query_internal(self, targets: np.ndarray, k, **kwargs):
+    def query_internal(self, queries: np.ndarray, k, **kwargs):
         raise NotImplementedError
 
-    def query_additions(self, targets: np.ndarray, k):
-        assert targets.dtype == np.float32
+    def query_additions(self, queries: np.ndarray, k):
+        assert queries.dtype == np.float32
 
         additions_vectors, additions_external_ids = self.read_additions()
-        targets_m = array_to_matrix(np.transpose(targets))
+        queries_m = array_to_matrix(np.transpose(queries))
         r = query_vq_heap_pyarray(
             array_to_matrix(np.transpose(additions_vectors).astype(self.dtype)),
-            targets_m,
+            queries_m,
             StdVector_u64(additions_external_ids),
             k,
             8)

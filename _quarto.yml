@@ -39,7 +39,7 @@ quartodoc:
           - index.Index
           - flat_index.FlatIndex
           - ivf_flat_index.IVFFlatIndex
-          - ingestion.ingest
+          - ingestion
 
 website:
   favicon: "documentation/assets/tiledb.ico"

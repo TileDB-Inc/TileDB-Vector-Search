@@ -2,9 +2,6 @@ from typing import Optional, Tuple
 from functools import partial
 
 from tiledb.cloud.dag import Mode
-from tiledb.vector_search.index import Index
-from tiledb.vector_search.flat_index import FlatIndex
-from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search._tiledbvspy import *
 import numpy as np
 
@@ -31,7 +28,7 @@ def ingest(
     verbose: bool = False,
     trace_id: Optional[str] = None,
     mode: Mode = Mode.LOCAL,
-) -> Index:
+):
     """
     Ingest vectors into TileDB.
 
@@ -100,6 +97,9 @@ def ingest(
     from tiledb.cloud.utilities import get_logger
     from tiledb.cloud.utilities import set_aws_context
     from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSION
+    from tiledb.vector_search.index import Index
+    from tiledb.vector_search.flat_index import FlatIndex
+    from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 
     # use index_group_uri for internal clarity
     index_group_uri = index_uri
