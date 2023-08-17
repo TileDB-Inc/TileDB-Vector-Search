@@ -155,7 +155,7 @@ def ingest(
         set_aws_context(config)
 
         level = logging.DEBUG if verbose else logging.NOTSET
-        logger = get_logger(level, name=__name__+index_version)
+        logger = get_logger(level)
 
         logger.debug(
             "tiledb.cloud=%s, tiledb=%s, libtiledb=%s",
