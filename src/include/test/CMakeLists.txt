@@ -82,6 +82,10 @@ kmeans_add_test(unit_matrix)
 
 kmeans_add_test(unit_mdspan)
 
+kmeans_add_test(unit_nn-descent)
+
+kmeans_add_test(unit_nn-graph)
+
 kmeans_add_test(unit_slicing)
 
 kmeans_add_test(unit_stats)
