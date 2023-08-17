@@ -2,9 +2,6 @@ from typing import Optional, Tuple
 from functools import partial
 
 from tiledb.cloud.dag import Mode
-from tiledb.vector_search.index import Index
-from tiledb.vector_search.flat_index import FlatIndex
-from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search._tiledbvspy import *
 import numpy as np
 
@@ -31,7 +28,7 @@ def ingest(
     verbose: bool = False,
     trace_id: Optional[str] = None,
     mode: Mode = Mode.LOCAL,
-) -> Index:
+):
     """
     Ingest vectors into TileDB.
 
@@ -88,6 +85,7 @@ def ingest(
     import logging
     import math
     from typing import Any, Mapping
+    from datetime import datetime
     import multiprocessing
     import os
 
@@ -99,23 +97,26 @@ def ingest(
     from tiledb.cloud.utilities import get_logger
     from tiledb.cloud.utilities import set_aws_context
     from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSION
+    from tiledb.vector_search.flat_index import FlatIndex
+    from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 
     # use index_group_uri for internal clarity
     index_group_uri = index_uri
+    index_version = "_" + datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
-    CENTROIDS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["CENTROIDS_ARRAY_NAME"]
-    INDEX_ARRAY_NAME = storage_formats[STORAGE_VERSION]["INDEX_ARRAY_NAME"]
-    IDS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["IDS_ARRAY_NAME"]
-    PARTS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["PARTS_ARRAY_NAME"]
+    CENTROIDS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["CENTROIDS_ARRAY_NAME"] + index_version
+    INDEX_ARRAY_NAME = storage_formats[STORAGE_VERSION]["INDEX_ARRAY_NAME"] + index_version
+    IDS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["IDS_ARRAY_NAME"] + index_version
+    PARTS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["PARTS_ARRAY_NAME"] + index_version
     INPUT_VECTORS_ARRAY_NAME = storage_formats[STORAGE_VERSION][
         "INPUT_VECTORS_ARRAY_NAME"
-    ]
+    ] + index_version
     EXTERNAL_IDS_ARRAY_NAME = storage_formats[STORAGE_VERSION][
         "EXTERNAL_IDS_ARRAY_NAME"
-    ]
+    ] + index_version
     PARTIAL_WRITE_ARRAY_DIR = storage_formats[STORAGE_VERSION][
         "PARTIAL_WRITE_ARRAY_DIR"
-    ]
+    ] + index_version
     DEFAULT_ATTR_FILTERS = storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"]
     VECTORS_PER_WORK_ITEM = 20000000
     MAX_TASKS_PER_STAGE = 100
@@ -154,7 +155,7 @@ def ingest(
         set_aws_context(config)
 
         level = logging.DEBUG if verbose else logging.NOTSET
-        logger = get_logger(level)
+        logger = get_logger(level, name=index_version)
 
         logger.debug(
             "tiledb.cloud=%s, tiledb=%s, libtiledb=%s",
@@ -1236,7 +1237,7 @@ def ingest(
         updates_uri: str,
         vector_type: np.dtype,
         write_offset: int,
-        batch: int,
+        task_id: int,
         threads: int,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
@@ -1263,7 +1264,7 @@ def ingest(
             partial_write_array_index_dir_uri
         )
         partial_write_array_index_uri = partial_write_array_index_group[
-            str(int(write_offset / batch))
+            str(task_id)
         ].uri
         additions_vectors, additions_external_ids = read_additions(
             updates_uri=updates_uri,
@@ -1271,6 +1272,7 @@ def ingest(
             verbose=verbose,
             trace_id=trace_id,
         )
+        logger.debug(f"Ingesting additions {partial_write_array_index_uri}")
         ivf_index(
             dtype=vector_type,
             db=array_to_matrix(np.transpose(additions_vectors).astype(vector_type)),
@@ -1680,7 +1682,7 @@ def ingest(
                     updates_uri=updates_uri,
                     vector_type=vector_type,
                     write_offset=size,
-                    batch=input_vectors_per_work_item,
+                    task_id=task_id,
                     threads=threads,
                     config=config,
                     verbose=verbose,
@@ -1756,14 +1758,15 @@ def ingest(
 
     with tiledb.scope_ctx(ctx_or_config=config):
         logger = setup(config, verbose)
-        logger.debug("Ingesting Vectors into %r", index_uri)
+        logger.debug("Ingesting Vectors into %r", index_group_uri)
         try:
             tiledb.group_create(index_group_uri)
         except tiledb.TileDBError as err:
             message = str(err)
             if "already exists" in message:
                 logger.debug(f"Group '{index_group_uri}' already exists")
-            raise err
+            else:
+                raise err
         group = tiledb.Group(index_group_uri, "w")
 
         if input_vectors is not None:
@@ -1807,6 +1810,7 @@ def ingest(
         group.meta["dtype"] = np.dtype(vector_type).name
         group.meta["partitions"] = partitions
         group.meta["storage_version"] = STORAGE_VERSION
+        group.meta["index_version"] = index_version
 
         if external_ids is not None:
             external_ids_uri = write_external_ids(

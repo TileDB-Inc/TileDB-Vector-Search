@@ -35,17 +35,18 @@ class IVFFlatIndex(Index):
         config: Optional[Mapping[str, Any]] = None,
     ):
         super().__init__(uri=uri, config=config)
-        self.parts_db_uri = self.group[
-            storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
+        self.index_type = "IVF_FLAT"
+        self.db_uri = self.group[
+            storage_formats[self.storage_version]["PARTS_ARRAY_NAME"] + self.index_version
         ].uri
         self.centroids_uri = self.group[
-            storage_formats[self.storage_version]["CENTROIDS_ARRAY_NAME"]
+            storage_formats[self.storage_version]["CENTROIDS_ARRAY_NAME"] + self.index_version
         ].uri
         self.index_array_uri = self.group[
-            storage_formats[self.storage_version]["INDEX_ARRAY_NAME"]
+            storage_formats[self.storage_version]["INDEX_ARRAY_NAME"] + self.index_version
         ].uri
         self.ids_uri = self.group[
-            storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
+            storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version
         ].uri
         self.memory_budget = memory_budget
 
@@ -58,7 +59,7 @@ class IVFFlatIndex(Index):
         dtype = self.group.meta.get("dtype", None)
         if dtype is None:
             schema = tiledb.ArraySchema.load(
-                self.parts_db_uri, ctx=tiledb.Ctx(self.config)
+                self.db_uri, ctx=tiledb.Ctx(self.config)
             )
             self.dtype = np.dtype(schema.attr("values").dtype)
         else:
@@ -71,11 +72,12 @@ class IVFFlatIndex(Index):
             )
             self.partitions = schema.domain.dim("cols").domain[1] + 1
 
+        self.size = self._index[self.partitions]
+
 
         # TODO pass in a context
         if self.memory_budget == -1:
-            self.size = self._index[self.partitions]
-            self._db = load_as_matrix(self.parts_db_uri, ctx=self.ctx, config=config, size=self.size)
+            self._db = load_as_matrix(self.db_uri, ctx=self.ctx, config=config, size=self.size)
             self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, self.size)
 
     def query_internal(
@@ -144,7 +146,7 @@ class IVFFlatIndex(Index):
             else:
                 r = ivf_query(
                     self.dtype,
-                    self.parts_db_uri,
+                    self.db_uri,
                     self._centroids,
                     queries_m,
                     self._index,
@@ -299,7 +301,7 @@ class IVFFlatIndex(Index):
                 submit(
                     dist_qv_udf,
                     dtype=self.dtype,
-                    parts_uri=self.parts_db_uri,
+                    parts_uri=self.db_uri,
                     ids_uri=self.ids_uri,
                     query_vectors=queries,
                     active_partitions=np.array(active_partitions)[part:part_end],

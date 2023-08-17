@@ -24,23 +24,24 @@ class FlatIndex(Index):
         config: Optional[Mapping[str, Any]] = None,
     ):
         super().__init__(uri=uri, config=config)
+        self.index_type = "FLAT"
         self._index = None
-        self.index_uri = self.group[storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]].uri
+        self.db_uri = self.group[storage_formats[self.storage_version]["PARTS_ARRAY_NAME"] + self.index_version].uri
+        schema = tiledb.ArraySchema.load(
+            self.db_uri, ctx=tiledb.Ctx(self.config)
+        )
+        self.size = schema.domain.dim(1).domain[1]+1
         self._db = load_as_matrix(
-            self.index_uri,
+            self.db_uri,
             ctx=self.ctx,
             config=config,
         )
         self.ids_uri = self.group[
-            storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
+            storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version
         ].uri
         if tiledb.array_exists(self.ids_uri, self.ctx):
             self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, 0)
         else:
-            schema = tiledb.ArraySchema.load(
-                self.index_uri, ctx=tiledb.Ctx(self.config)
-            )
-            self.size = schema.domain.dim(1).domain[1]
             self._ids = StdVector_u64(np.arange(self.size).astype(np.uint64))
 
         dtype = self.group.meta.get("dtype", None)

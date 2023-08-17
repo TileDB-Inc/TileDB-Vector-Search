@@ -322,16 +322,10 @@ def test_ivf_flat_ingestion_with_updates(tmp_path):
         id += 1
 
     index.update_batch(vectors=updates, external_ids=external_ids)
-
-    index2 = ingest(
-        index_type="IVF_FLAT",
-        index_uri=index_uri_2,
-        size=size,
-        source_uri=index_uri+"/shuffled_vectors",
-        external_ids_uri=index_uri+"/shuffled_vector_ids",
-        updates_uri=index_uri+"/updates",
-        partitions=partitions,
-        input_vectors_per_work_item=int(size / 10),
-    )
-    result = index2.query(query_vectors, k=k, nprobe=nprobe)
+    result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, updated_ids=updated_ids) > MINIMUM_ACCURACY
+
+    index = index.consolidate_updates()
+    result = index.query(query_vectors, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i, updated_ids=updated_ids) > MINIMUM_ACCURACY
+

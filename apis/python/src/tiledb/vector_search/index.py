@@ -1,11 +1,13 @@
 import numpy as np
 import tiledb
 
+from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
 from typing import Any, Mapping, Optional
 
 MAX_UINT64 = 2 ** 63 - 1
+
 
 class Index:
     def __init__(
@@ -23,14 +25,30 @@ class Index:
         self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
         self.storage_version = self.group.meta.get("storage_version", "0.1")
         self.update_arrays_uri = None
+        self.index_version = self.group.meta.get("index_version", "")
+
 
     def query(self, targets: np.ndarray, k, **kwargs):
-        updated_ids = self.read_updated_ids()
+        # TODO merge results based on scores and use higher k to improve retrieval
+        updated_ids = set(self.read_updated_ids())
         internal_results = self.query_internal(targets, k, **kwargs)
         if self.update_arrays_uri is None:
             return internal_results
         addition_results = self.query_additions(targets, k)
-        print(addition_results)
+        merged_results = np.zeros((targets.shape[0], k), dtype=np.uint64)
+        query_id = 0
+        for query in internal_results:
+            res_id = 0
+            additional_res_id = 0
+            for res in query:
+                if res in updated_ids:
+                    merged_results[query_id, res_id] = addition_results[query_id, additional_res_id]
+                    additional_res_id += 1
+                else:
+                    merged_results[query_id, res_id] = res
+                res_id += 1
+            query_id += 1
+        return merged_results
 
     def query_internal(self, targets: np.ndarray, k, **kwargs):
         raise NotImplementedError
@@ -40,7 +58,7 @@ class Index:
 
         additions_vectors, additions_external_ids = self.read_additions()
         targets_m = array_to_matrix(np.transpose(targets))
-        r = query_vq_heap(
+        r = query_vq_heap_pyarray(
             array_to_matrix(np.transpose(additions_vectors).astype(self.dtype)),
             targets_m,
             StdVector_u64(additions_external_ids),
@@ -120,3 +138,13 @@ class Index:
             self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(self.config))
             self.update_arrays_uri = updates_array_uri
         return tiledb.open(self.update_arrays_uri, mode="w")
+
+    def consolidate_updates(self):
+        return ingest(
+            index_type=self.index_type,
+            index_uri=self.uri,
+            size=self.size,
+            source_uri=self.db_uri,
+            external_ids_uri=self.ids_uri,
+            updates_uri=self.update_arrays_uri
+        )

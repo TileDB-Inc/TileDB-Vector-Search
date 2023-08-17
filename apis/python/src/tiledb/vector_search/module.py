@@ -118,6 +118,23 @@ def query_vq_heap(db: "colMajorMatrix", *args):
     else:
         raise TypeError("Unknown type!")
 
+def query_vq_heap_pyarray(db: "colMajorMatrix", *args):
+    """
+    Run vector query
+
+    Parameters
+    ----------
+    db: colMajorMatrix
+        Open Matrix class from load_as_matrix
+    args:
+        Args for query
+    """
+    if db.dtype == np.float32:
+        return vq_query_heap_pyarray_f32(db, *args)
+    elif db.dtype == np.uint8:
+        return vq_query_heap_pyarray_u8(db, *args)
+    else:
+        raise TypeError("Unknown type!")
 
 def ivf_index_tdb(
     dtype: np.dtype,

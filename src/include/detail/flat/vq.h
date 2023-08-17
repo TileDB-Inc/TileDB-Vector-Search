@@ -115,7 +115,21 @@ auto vq_query_heap(DB& db, Q& q, const std::vector<uint64_t>& ids, int k, unsign
   log_timer _i{tdb_func__ + " in RAM"};
 
   // @todo Can we do blocking in the parallel for_each somehow?
-  do {
+  if constexpr (is_loadable_v<decltype(db)>) {
+    do {
+      _i.start();
+      stdx::range_for_each(
+          std::move(par),
+          db,
+          [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
+            for (size_t j = 0; j < size_q; ++j) {
+              auto score = L2(q[j], db_vec);
+              scores[n][j].insert(element{score, ids[i + db.col_offset()]});
+            }
+          });
+      _i.stop();
+    } while (db.load());
+  } else {
     _i.start();
     stdx::range_for_each(
         std::move(par),
@@ -123,11 +137,11 @@ auto vq_query_heap(DB& db, Q& q, const std::vector<uint64_t>& ids, int k, unsign
         [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
           for (size_t j = 0; j < size_q; ++j) {
             auto score = L2(q[j], db_vec);
-            scores[n][j].insert(element{score, ids[i + db.col_offset()]});
+            scores[n][j].insert(element{score, ids[i]});
           }
         });
     _i.stop();
-  } while (db.load());
+  }
 
   _i.start();
   for (size_t j = 0; j < size(q); ++j) {
