@@ -22,8 +22,8 @@ class IVFFlatIndex(Index):
     ----------
     uri: str
         URI of datataset
-    dtype: numpy.dtype
-        datatype float32 or uint8
+    config: None
+        config dictionary, defaults to None
     memory_budget: int
         Main memory budget. If not provided no memory budget is applied.
     """
@@ -31,8 +31,8 @@ class IVFFlatIndex(Index):
     def __init__(
         self,
         uri,
-        memory_budget: int = -1,
         config: Optional[Mapping[str, Any]] = None,
+        memory_budget: int = -1,
     ):
         super().__init__(uri=uri, config=config)
         self.index_type = "IVF_FLAT"

@@ -14,8 +14,8 @@ class FlatIndex(Index):
     ----------
     uri: str
         URI of datataset
-    dtype: numpy.dtype
-        datatype float32 or uint8
+    config: None
+        config dictionary, defaults to None
     """
 
     def __init__(
