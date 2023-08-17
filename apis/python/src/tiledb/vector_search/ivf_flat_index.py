@@ -14,6 +14,7 @@ def submit_local(d, func, *args, **kwargs):
     kwargs.pop("resources", None)
     return d.submit_local(func, *args, **kwargs)
 
+
 class IVFFlatIndex(Index):
     """
     Open a IVF Flat index
@@ -25,7 +26,7 @@ class IVFFlatIndex(Index):
     config: None
         config dictionary, defaults to None
     memory_budget: int
-        Main memory budget. If not provided no memory budget is applied.
+        Main memory budget. If not provided, no memory budget is applied.
     """
 
     def __init__(
