@@ -45,7 +45,7 @@
 #include "detail/ivf/partition.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "stats.h"
-#include "utils/fixed_min_queues.h"
+#include "utils/fixed_min_heap.h"
 
 #include "detail/ivf/qv.h"
 
@@ -155,8 +155,8 @@ auto dist_qv_finite_ram_part(
     auto min_n = futs[n].get();
 
     for (size_t j = 0; j < num_queries; ++j) {
-      for (auto&& e : min_n[j]) {
-        min_scores[j].insert(std::get<0>(e), std::get<1>(e));
+      for (auto&& [e, f] : min_n[j]) {
+        min_scores[j].insert(e, f);
       }
     }
   }
@@ -246,7 +246,6 @@ auto dist_qv_finite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
-    bool nth,
     size_t nthreads,
     size_t num_nodes) {
   scoped_timer _{tdb_func__ + " " + part_uri};
@@ -282,11 +281,14 @@ auto dist_qv_finite_ram(
     auto last_part = std::min<size_t>((node + 1) * parts_per_node, num_parts);
 
     if (first_part != last_part) {
-      std::vector<parts_type> dist_partitions{
+      auto dist_partitions = std::vector<parts_type>{
           begin(active_partitions) + first_part,
           begin(active_partitions) + last_part};
-      std::vector<indices_type> dist_indices{
+      auto dist_indices = std::vector<indices_type>{
           begin(indices) + first_part, begin(indices) + last_part + 1};
+      auto dist_active_queries = std::vector<std::vector<size_t>>{
+          begin(active_queries) + first_part,
+          begin(active_queries) + last_part};
 
       /*
        * Each compute node returns a min_heap of its own min_scores
@@ -296,7 +298,7 @@ auto dist_qv_finite_ram(
           part_uri,
           dist_partitions,
           query,
-          active_queries,
+          dist_active_queries,
           indices,
           id_uri,
           k_nn,
@@ -313,22 +315,7 @@ auto dist_qv_finite_ram(
     }
   }
 
-  /*
-   * Now create the top_k matrix.
-   */
-  ColMajorMatrix<size_t> top_k(k_nn, num_queries);
-
-  // get_top_k_from_heap(min_scores, top_k);
-
-  // @todo get_top_k_from_heap
-  for (size_t j = 0; j < num_queries; ++j) {
-    sort_heap(begin(min_scores[j]), end(min_scores[j]));
-    std::transform(
-        begin(min_scores[j]),
-        end(min_scores[j]),
-        begin(top_k[j]),
-        ([](auto&& e) { return std::get<1>(e); }));
-  }
+  auto top_k = get_top_k_with_scores(min_scores, k_nn);
 
   return top_k;
 }

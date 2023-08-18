@@ -71,7 +71,6 @@ int ivf_index(
   auto parts = detail::flat::qv_partition(centroids, db, nthreads);
   debug_matrix(parts, "parts");
   {
-
     scoped_timer _{"shuffling data"};
     std::vector<size_t> degrees(centroids.num_cols());
     std::vector<ids_type> indices(centroids.num_cols() + 1);
@@ -165,10 +164,20 @@ int ivf_index(
     external_ids = std::vector<ids_type>(db.num_cols());
     std::iota(begin(external_ids), end(external_ids), start_pos);
   } else {
-    external_ids = read_vector<ids_type>(ctx, external_ids_uri, start_pos, end_pos);
+    external_ids =
+        read_vector<ids_type>(ctx, external_ids_uri, start_pos, end_pos);
   }
   return ivf_index<T, ids_type, centroids_type>(
-      ctx, db, external_ids, centroids_uri, parts_uri, index_uri, id_uri, start_pos, end_pos, nthreads);
+      ctx,
+      db,
+      external_ids,
+      centroids_uri,
+      parts_uri,
+      index_uri,
+      id_uri,
+      start_pos,
+      end_pos,
+      nthreads);
 }
 
 template <typename T, class ids_type, class centroids_type>
@@ -186,7 +195,16 @@ int ivf_index(
   auto db = tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos);
   db.load();
   return ivf_index<T, ids_type, centroids_type>(
-      ctx, db, external_ids, centroids_uri, parts_uri, index_uri, id_uri, start_pos, end_pos, nthreads);
+      ctx,
+      db,
+      external_ids,
+      centroids_uri,
+      parts_uri,
+      index_uri,
+      id_uri,
+      start_pos,
+      end_pos,
+      nthreads);
 }
 
 template <typename T, class ids_type, class centroids_type>
@@ -206,10 +224,20 @@ int ivf_index(
     external_ids = std::vector<ids_type>(db.num_cols());
     std::iota(begin(external_ids), end(external_ids), start_pos);
   } else {
-    external_ids = read_vector<ids_type>(ctx, external_ids_uri, start_pos, end_pos);
+    external_ids =
+        read_vector<ids_type>(ctx, external_ids_uri, start_pos, end_pos);
   }
   return ivf_index<T, ids_type, centroids_type>(
-      ctx, db, external_ids, centroids_uri, parts_uri, index_uri, id_uri, start_pos, end_pos, nthreads);
+      ctx,
+      db,
+      external_ids,
+      centroids_uri,
+      parts_uri,
+      index_uri,
+      id_uri,
+      start_pos,
+      end_pos,
+      nthreads);
 }
 
 }  // namespace detail::ivf

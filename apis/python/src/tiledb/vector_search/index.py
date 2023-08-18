@@ -100,9 +100,9 @@ class FlatIndex(Index):
         assert targets.dtype == np.float32
 
         targets_m = array_to_matrix(np.transpose(targets))
-        r = query_vq_heap(self._db, targets_m, self._ids, k, nthreads)
+        _, r = query_vq_heap(self._db, targets_m, self._ids, k, nthreads)
 
-        return np.transpose(np.array(r))
+        return np.transpose(np.array(_)), np.transpose(np.array(r))
 
 
 class IVFFlatIndex(Index):
@@ -222,7 +222,7 @@ class IVFFlatIndex(Index):
         if mode is None:
             queries_m = array_to_matrix(np.transpose(queries))
             if self.memory_budget == -1:
-                r = ivf_query_ram(
+                _, r = ivf_query_ram(
                     self.dtype,
                     self._db,
                     self._centroids,
@@ -231,13 +231,12 @@ class IVFFlatIndex(Index):
                     self._ids,
                     nprobe=nprobe,
                     k_nn=k,
-                    nth=True,  # ??
                     nthreads=nthreads,
                     ctx=self.ctx,
                     use_nuv_implementation=use_nuv_implementation,
                 )
             else:
-                r = ivf_query(
+                _, r = ivf_query(
                     self.dtype,
                     self.parts_db_uri,
                     self._centroids,
@@ -247,13 +246,12 @@ class IVFFlatIndex(Index):
                     nprobe=nprobe,
                     k_nn=k,
                     memory_budget=self.memory_budget,
-                    nth=True,  # ??
                     nthreads=nthreads,
                     ctx=self.ctx,
                     use_nuv_implementation=use_nuv_implementation,
                 )
 
-            return np.transpose(np.array(r))
+            return np.transpose(np.array(_)), np.transpose(np.array(r))
         else:
             return self.taskgraph_query(
                 queries=queries,

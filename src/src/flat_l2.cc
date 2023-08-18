@@ -85,7 +85,6 @@
 
 #include <docopt.h>
 
-#include "defs.h"
 #include "flat_query.h"
 #include "stats.h"
 #include "utils/timer.h"
@@ -111,7 +110,7 @@ static constexpr const char USAGE[] =
       flat_l2 (-h | --help)
       flat_l2 --db_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
           [--k NN] [--nqueries NN]
-          [--alg ALGO] [--finite] [--blocksize NN] [--nth]
+          [--alg ALGO] [--finite] [--blocksize NN]
           [--nthreads N] [--region REGION] [--validate] [--log FILE] [--stats] [-d] [-v]
 
   Options:
@@ -126,7 +125,6 @@ static constexpr const char USAGE[] =
       --infinite              use infinite RAM algorithm [default: false]
       --finite                (legacy) use finite RAM (out of core) algorithm [default: true]
       --blocksize NN          number of vectors to process in an out of core block (0 = all) [default: 0]
-      --nth                   use nth_element for top k [default: false]
       --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
       --region REGION         AWS region [default: us-east-1]
       --log FILE              log info to FILE (- for stdout)
@@ -163,8 +161,6 @@ int main(int argc, char* argv[]) {
   size_t nqueries = args["--nqueries"].asLong();
   size_t blocksize = args["--blocksize"].asLong();
 
-  auto nth = args["--nth"].asBool();
-
   // @todo make global
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
@@ -184,41 +180,41 @@ int main(int argc, char* argv[]) {
   std::cout << load_time << std::endl;
 
   // @todo decide on what the type of top_k::value should be
-  auto top_k = [&]() {
-    if (alg_name == "vq_nth") {
+  auto [top_k, top_k_scores] = [&]() {
+    if (alg_name == "vq_heap" || alg_name == "vq") {
       if (verbose) {
-        std::cout << "# Using vq_nth, nth = " << std::to_string(nth)
-                  << std::endl;
-      }
-      return detail::flat::vq_query_nth(db, query, k, nth, nthreads);
-    } else if (alg_name == "vq_heap") {
-      if (verbose) {
-        std::cout << "# Using vq_heap, ignoring nth = " << std::to_string(nth)
-                  << std::endl;
+        std::cout << "# Using vq_heap" << std::endl;
       }
       return detail::flat::vq_query_heap(db, query, k, nthreads);
-    } else if (alg_name == "qv_nth") {
+    } else if (alg_name == "vq_heap_2" || alg_name == "vq2") {
       if (verbose) {
-        std::cout << "# Using qv_nth, nth = " << std::to_string(nth)
-                  << std::endl;
+        std::cout << "# Using vq_heap_2" << std::endl;
       }
-      return detail::flat::qv_query_nth(db, query, k, nth, nthreads);
-    } else if (alg_name == "qv_heap") {
+      return detail::flat::vq_query_heap_2(db, query, k, nthreads);
+    } else if (alg_name == "qv_tiled") {
       if (verbose) {
-        std::cout << "# Using qv_query (qv_heap), ignoring nth = "
-                  << std::to_string(nth) << std::endl;
+        std::cout << "# Using qv_tiled" << std::endl;
+      }
+      return detail::flat::qv_query_heap_tiled(db, query, k, nthreads);
+    } else if (alg_name == "qv_heap" || alg_name == "qv") {
+      if (verbose) {
+        std::cout << "# Using qv_query (qv_heap)" << std::endl;
       }
       return detail::flat::qv_query_heap(db, query, k, nthreads);
-    } else if (alg_name == "gemm") {
+    }
+#ifdef TILEDB_VS_ENABLE_BLAS
+#if 0
+    else if (alg_name == "gemm") {
       if (args["--blocksize"]) {
-        std::cout << "# Using blocked_gemm, nth = " << std::to_string(nth)
-                  << std::endl;
-        return detail::flat::blocked_gemm_query(db, query, k, nth, nthreads);
+        std::cout << "# Using blocked_gemm" << std::endl;
+        return detail::flat::blocked_gemm_query(db, query, k, nthreads);
       } else {
-        std::cout << "# Using gemm, nth = " << std::to_string(nth) << std::endl;
-        return detail::flat::gemm_query(db, query, k, nth, nthreads);
+        std::cout << "# Using gemm" << std::endl;
+        return detail::flat::gemm_query(db, query, k, nthreads);
       }
     }
+#endif
+#endif
     throw std::runtime_error("incorrect or unset algorithm type: " + alg_name);
   }();
 
@@ -241,8 +237,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (args["--log"]) {
-    dump_logs(
-        args["--log"].asString(), alg_name, nqueries, nth, k, nthreads, 0);
+    dump_logs(args["--log"].asString(), alg_name, nqueries, 0, k, nthreads, 0);
   }
   if (enable_stats) {
     std::cout << json{core_stats}.dump() << std::endl;

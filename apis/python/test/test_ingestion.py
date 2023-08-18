@@ -25,7 +25,7 @@ def test_flat_ingestion_u8(tmp_path):
         index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.u8bin"),
     )
-    result = index.query(query_vectors, k=k)
+    _, result = index.query(query_vectors, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
@@ -44,11 +44,11 @@ def test_flat_ingestion_f32(tmp_path):
         index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.f32bin"),
     )
-    result = index.query(query_vectors, k=k)
+    _, result = index.query(query_vectors, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_ram = FlatIndex(uri=index_uri)
-    result = index_ram.query(query_vectors, k=k)
+    _, result = index_ram.query(query_vectors, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
@@ -71,7 +71,7 @@ def test_flat_ingestion_external_id_u8(tmp_path):
         source_uri=os.path.join(dataset_dir, "data.u8bin"),
         external_ids=external_ids
     )
-    result = index.query(query_vectors, k=k)
+    _, result = index.query(query_vectors, k=k)
     assert accuracy(result, gt_i, external_ids_offset=external_ids_offset) > MINIMUM_ACCURACY
 
 
@@ -96,14 +96,14 @@ def test_ivf_flat_ingestion_u8(tmp_path):
         partitions=partitions,
         input_vectors_per_work_item=int(size / 10),
     )
-    result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_ram = IVFFlatIndex(uri=index_uri, memory_budget=int(size / 10))
-    result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-    result = index_ram.query(
+    _, result = index_ram.query(
         query_vectors,
         k=k,
         nprobe=nprobe,
@@ -111,7 +111,7 @@ def test_ivf_flat_ingestion_u8(tmp_path):
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-    result = index_ram.query(
+    _, result = index_ram.query(
         query_vectors,
         k=k,
         nprobe=nprobe,
@@ -144,18 +144,18 @@ def test_ivf_flat_ingestion_f32(tmp_path):
         input_vectors_per_work_item=int(size / 10),
     )
 
-    result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_ram = IVFFlatIndex(uri=index_uri, memory_budget=int(size / 10))
-    result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_ram = IVFFlatIndex(uri=index_uri, memory_budget=int(size / 10))
-    result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-    result = index_ram.query(
+    _, result = index_ram.query(
         query_vectors,
         k=k,
         nprobe=nprobe,
@@ -163,7 +163,7 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-    result = index_ram.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL)
+    _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
@@ -186,18 +186,18 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
         source_uri=source_uri,
         partitions=partitions,
     )
-    result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     # Test single query vector handling
-    result1 = index.query(query_vectors[10], k=k, nprobe=nprobe)
+    _, result1 = index.query(query_vectors[10], k=k, nprobe=nprobe)
     assert accuracy(result1, np.array([gt_i[10]])) > MINIMUM_ACCURACY
 
     index_ram = IVFFlatIndex(uri=index_uri)
-    result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-    result = index_ram.query(
+    _, result = index_ram.query(
         query_vectors,
         k=k,
         nprobe=nprobe,
@@ -205,7 +205,7 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-    result = index_ram.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL)
+    _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
@@ -230,18 +230,18 @@ def test_ivf_flat_ingestion_numpy(tmp_path):
         input_vectors=input_vectors,
         partitions=partitions,
     )
-    result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     # Test single query vector handling
-    result1 = index.query(query_vectors[10], k=k, nprobe=nprobe)
+    _, result1 = index.query(query_vectors[10], k=k, nprobe=nprobe)
     assert accuracy(result1, np.array([gt_i[10]])) > MINIMUM_ACCURACY
 
     index_ram = IVFFlatIndex(uri=index_uri)
-    result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-    result = index_ram.query(
+    _, result = index_ram.query(
         query_vectors,
         k=k,
         nprobe=nprobe,
@@ -249,7 +249,7 @@ def test_ivf_flat_ingestion_numpy(tmp_path):
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-    result = index_ram.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL)
+    _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
     source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
@@ -275,5 +275,5 @@ def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
         partitions=partitions,
         external_ids=external_ids
     )
-    result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, external_ids_offset) > MINIMUM_ACCURACY

@@ -188,7 +188,6 @@ def ivf_query_ram(
     ids: "Vector",
     nprobe: int,
     k_nn: int,
-    nth: bool,
     nthreads: int,
     ctx: "Ctx" = None,
     use_nuv_implementation: bool = False,
@@ -214,8 +213,6 @@ def ivf_query_ram(
         Number of probs
     k_nn: int
         Number of nn
-    nth: bool
-        Return nth records
     nthreads: int
         Number of theads
     ctx: Ctx
@@ -233,7 +230,6 @@ def ivf_query_ram(
             ids,
             nprobe,
             k_nn,
-            nth,
             nthreads,
         ]
     )
@@ -262,7 +258,6 @@ def ivf_query(
     nprobe: int,
     k_nn: int,
     memory_budget: int,
-    nth: bool,
     nthreads: int,
     ctx: "Ctx" = None,
     use_nuv_implementation: bool = False,
@@ -290,8 +285,6 @@ def ivf_query(
         Number of nn
     memory_budget: int
         Main memory budget
-    nth: bool
-        Return nth records
     nthreads: int
         Number of theads
     ctx: Ctx
@@ -311,7 +304,6 @@ def ivf_query(
             nprobe,
             k_nn,
             memory_budget,
-            nth,
             nthreads,
         ]
     )
