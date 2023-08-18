@@ -104,10 +104,6 @@ class Index:
     def get_updates_uri(self):
         return self.update_arrays_uri
 
-    def print_updates(self):
-        updates_array = tiledb.open(self.update_arrays_uri, mode="r")
-        print(updates_array[:])
-
     def read_additions(self) -> (np.ndarray, np.array):
         if self.update_arrays_uri is None:
             return None, None
@@ -152,7 +148,7 @@ class Index:
 
     def consolidate_updates(self):
         from tiledb.vector_search.ingestion import ingest
-        return ingest(
+        new_index = ingest(
             index_type=self.index_type,
             index_uri=self.uri,
             size=self.size,
@@ -160,3 +156,5 @@ class Index:
             external_ids_uri=self.ids_uri,
             updates_uri=self.update_arrays_uri
         )
+        tiledb.Array.delete_array(self.update_arrays_uri)
+        return new_index
