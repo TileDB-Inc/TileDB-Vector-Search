@@ -35,10 +35,12 @@
 #include <filesystem>
 #include <tuple>
 #include "linalg.h"
+#include "utils/utils.h"
 
 bool global_debug = false;
 
-using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
+using TestTypes =
+    std::tuple<float, uint8_t, double, int, char, size_t, uint32_t>;
 
 TEST_CASE("linalg: test test", "[linalg]") {
   REQUIRE(true);
@@ -162,12 +164,93 @@ TEMPLATE_LIST_TEST_CASE(
   }
 }
 
-using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 TEMPLATE_LIST_TEST_CASE(
     "linalg: test Matrix constructor, column oriented",
     "[linalg][matrixx][create][column]",
     TestTypes) {
   auto a = Matrix<TestType, Kokkos::layout_left>(3, 2);
+  auto v = a.data();
+  std::iota(v, v + 6, 1);
+
+  SECTION("dims") {
+    CHECK(a.num_rows() == 3);
+    CHECK(a.num_cols() == 2);
+  }
+  SECTION("values") {
+    CHECK(a(0, 0) == 1);
+    CHECK(a(0, 1) == 4);
+    CHECK(a(1, 0) == 2);
+    CHECK(a(1, 1) == 5);
+    CHECK(a(2, 0) == 3);
+    CHECK(a(2, 1) == 6);
+  }
+  SECTION("ravel") {
+    auto b = raveled(a);
+    CHECK(std::equal(b.begin(), b.end(), a.data()));
+  }
+  SECTION("operator[]") {
+    auto b = a[0];
+    CHECK(size(b) == 3);
+    CHECK(b[0] == 1);
+    CHECK(b[1] == 2);
+    CHECK(b[2] == 3);
+
+    auto c = a[1];
+    CHECK(size(c) == 3);
+    CHECK(c[0] == 4);
+    CHECK(c[1] == 5);
+    CHECK(c[2] == 6);
+
+    CHECK(a[0][0] == 1);
+    CHECK(a[0][1] == 2);
+    CHECK(a[0][2] == 3);
+    CHECK(a[1][0] == 4);
+    CHECK(a[1][1] == 5);
+    CHECK(a[1][2] == 6);
+  }
+}
+
+TEMPLATE_LIST_TEST_CASE(
+    "linalg: test Matrix initializer_list constructor, row oriented",
+    "[linalg][matrix][create][row]",
+    TestTypes) {
+  auto a = Matrix<TestType, Kokkos::layout_right>{{1, 2}, {3, 4}, {5, 6}};
+  auto v = a.data();
+  std::iota(v, v + 6, 1);
+
+  SECTION("dims") {
+    CHECK(a.num_rows() == 3);
+    CHECK(a.num_cols() == 2);
+  }
+  SECTION("values") {
+    CHECK(a(0, 0) == 1);
+    CHECK(a(0, 1) == 2);
+    CHECK(a(1, 0) == 3);
+    CHECK(a(1, 1) == 4);
+    CHECK(a(2, 0) == 5);
+    CHECK(a(2, 1) == 6);
+  }
+  SECTION("ravel") {
+    auto b = raveled(a);
+    CHECK(std::equal(b.begin(), b.end(), a.data()));
+  }
+  SECTION("operator[]") {
+    auto b = a[0];
+    CHECK(size(b) == 2);
+    CHECK(b[0] == 1);
+    CHECK(b[1] == 2);
+    CHECK(b[2] == 3);
+    CHECK(b[3] == 4);
+    CHECK(b[4] == 5);
+    CHECK(b[5] == 6);
+  }
+}
+
+TEMPLATE_LIST_TEST_CASE(
+    "linalg: test Matrix initializer list constructor, column oriented",
+    "[linalg][matrixx][create][column]",
+    TestTypes) {
+  auto a = Matrix<TestType, Kokkos::layout_left>{{1, 2, 3}, {4, 5, 6}};
   auto v = a.data();
   std::iota(v, v + 6, 1);
 
@@ -341,14 +424,22 @@ TEST_CASE(
 }
 #endif
 
+TEST_CASE("linalg: print cwd", "[linalg][cwd]") {
+  std::filesystem::path currentPath = std::filesystem::current_path();
+  std::cout << "Current Working Directory: " << currentPath << std::endl;
+}
+
 TEST_CASE(
     "linalg: test tdbMatrix constructor, column",
     "[linalg][tdbmatrix][create][column]") {
-  std::vector<int32_t> data = {8, 6, 7, 5, 3, 1, 4, 1, 3, 0, 9,
-                               9, 5, 9, 2, 7, 9, 8, 6, 7, 2, 6,
-                               4, 3, 5, 3, 0, 9, 4, 2, 2, 4};  // OMG
+  std::vector<float> data = {
+      8, 6, 7, 5, 3, 1, 4, 1, 3, 0, 9, 9, 5, 9, 2, 7,
+      9, 8, 6, 7, 2, 6, 4, 3, 5, 3, 0, 9, 4, 2, 2, 4};  // OMG
+
+  REQUIRE(local_array_exists("array_dense_1"));
   tiledb::Context ctx;
-  auto a = tdbMatrix<int32_t, Kokkos::layout_left>(ctx, "array_dense_1");
+  auto a = tdbMatrix<float, Kokkos::layout_left>(ctx, "array_dense_2");
+  a.load();
 
   CHECK(a.num_rows() == 8);
   CHECK(a.num_cols() == 4);
@@ -504,10 +595,12 @@ TEST_CASE(
 TEST_CASE(
     "linalg: test partitioned tdbMatrix constructor, column",
     "[linalg][partitioned][tdbmatrix][create][column]") {
+  REQUIRE(local_array_exists("array_dense_1"));
   size_t part = GENERATE(0, 1, 2, 3, 4);
 
   tiledb::Context ctx;
-  auto a = tdbMatrix<int32_t, Kokkos::layout_left>(ctx, "array_dense_1", part);
+  auto a = tdbMatrix<float, Kokkos::layout_left>(ctx, "array_dense_2", part);
+  a.load();
 
   if (part == 0) {
     part = 4;
@@ -564,7 +657,8 @@ TEST_CASE(
 TEST_CASE(
     "linalg: test advance, row major", "[linalg][tdbmatrix][advance][row]") {
   tiledb::Context ctx;
-  auto a = tdbMatrix<int32_t, Kokkos::layout_right>(ctx, "array_dense_1", 2);
+  auto a = tdbMatrix<float, Kokkos::layout_right>(ctx, "array_dense_1", 2);
+  a.load();
 
   CHECK(a.num_rows() == 2);
   CHECK(a.num_cols() == 8);
@@ -611,8 +705,10 @@ TEST_CASE(
 
 TEST_CASE(
     "linalg: test advance, column", "[linalg][tdbmatrix][advance][column]") {
+  REQUIRE(local_array_exists("array_dense_1"));
   tiledb::Context ctx;
-  auto a = tdbMatrix<int32_t, Kokkos::layout_left>(ctx, "array_dense_1", 2);
+  auto a = tdbMatrix<float, Kokkos::layout_left>(ctx, "array_dense_2", 2);
+  a.load();
 
   CHECK(a.num_rows() == 8);
   CHECK(a.num_cols() == 2);
@@ -700,6 +796,7 @@ TEMPLATE_LIST_TEST_CASE(
 
     write_matrix(ctx, A, uri);
     auto B = tdbMatrix<TestType, Kokkos::layout_right>(ctx, uri);
+    B.load();
 
     CHECK(A.num_rows() == M);
     CHECK(A.num_cols() == N);
@@ -716,15 +813,22 @@ TEMPLATE_LIST_TEST_CASE(
 
     write_matrix(ctx, A, uri);
     auto B = tdbMatrix<TestType, Kokkos::layout_left>(ctx, uri);
+    B.load();
 
-    CHECK(A.num_rows() == M);
-    CHECK(A.num_cols() == N);
-    CHECK(A.num_rows() == B.num_rows());
-    CHECK(A.num_cols() == B.num_cols());
-    for (size_t i = 0; i < M * N; ++i) {
-      CHECK(A.data()[i] == B.data()[i]);
+    SECTION("sizes") {
+      CHECK(A.num_rows() == M);
+      CHECK(A.num_cols() == N);
+      CHECK(A.num_rows() == B.num_rows());
+      CHECK(A.num_cols() == B.num_cols());
     }
-    CHECK(
-        std::equal(A.data(), A.data() + A.num_rows() * A.num_cols(), B.data()));
+    SECTION("contents") {
+      REQUIRE(std::equal(
+          A.data(), A.data() + A.num_rows() * A.num_cols(), B.data()));
+    }
+    SECTION("complete contents") {
+      for (size_t i = 0; i < M * N; ++i) {
+        REQUIRE(A.data()[i] == B.data()[i]);
+      }
+    }
   }
 }

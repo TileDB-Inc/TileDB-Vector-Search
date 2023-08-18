@@ -94,6 +94,8 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   // How many columns to load at a time
   index_type blocksize_{0};
 
+  size_t num_loads_{0};
+
   // For future asynchronous loads
   // std::unique_ptr<T[]> backing_data_;
   // std::future<bool> fut_;
@@ -239,11 +241,16 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       throw std::runtime_error("Query status is not complete -- fix me");
     }
 
+    num_loads_++;
     return true;
   }
 
   index_type col_offset() const {
     return col_offset_;
+  }
+
+  index_type num_loads() const {
+    return num_loads_;
   }
 
   /**
