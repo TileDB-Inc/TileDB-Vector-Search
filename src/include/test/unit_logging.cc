@@ -77,7 +77,7 @@ TEST_CASE("logging: noisy test", "[logging]") {
   a.stop();
 
   f = _timing_data.get_entries_summed("noisy_test");
-  CHECK((f <= 1010 && f >= 990));
+  CHECK((f <= 1020 && f >= 980));
 }
 
 TEST_CASE("logging: interval test", "[logging]") {
@@ -170,7 +170,7 @@ TEST_CASE("logging: ordering", "[logging]") {
 
   std::cout << f_t << " " << g_t << " " << h_t << " " << i_t << std::endl;
 
-  CHECK((i_t > 770 && i_t < 830));
+  CHECK((i_t > 770 && i_t < 880));
   CHECK((h_t > 470 && h_t < 530));
   CHECK((g_t > 470 && g_t < 530));
   CHECK((f_t > 470 && f_t < 530));

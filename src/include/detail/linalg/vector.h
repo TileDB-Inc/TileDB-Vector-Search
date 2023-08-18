@@ -41,7 +41,11 @@
 #include <vector>
 
 template <class T>
-std::vector<T> read_vector(const tiledb::Context& ctx, const std::string&, size_t start_pos, size_t end_pos);
+std::vector<T> read_vector(
+    const tiledb::Context& ctx,
+    const std::string&,
+    size_t start_pos,
+    size_t end_pos);
 
 template <class M>
 concept is_view = requires(M) {

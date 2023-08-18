@@ -32,7 +32,6 @@
 #ifndef TILEDB_TIMER_HPP
 #define TILEDB_TIMER_HPP
 
-
 #include <chrono>
 #include <iostream>
 #include "logging.h"
@@ -116,11 +115,11 @@ class life_timer : public empty_timer, public ms_timer {
       std::cout << elapsed() << " ms" << std::endl;
     }
 
-//    if (ms_timer::msg_ != "") {
-//      add_timing(ms_timer::msg_, elapsed());
-//    } else {
-//      add_timing("life_timer", elapsed());
-//    }
+    //    if (ms_timer::msg_ != "") {
+    //      add_timing(ms_timer::msg_, elapsed());
+    //    } else {
+    //      add_timing("life_timer", elapsed());
+    //    }
   }
 };
 

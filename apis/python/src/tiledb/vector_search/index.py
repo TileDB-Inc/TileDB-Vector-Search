@@ -1,10 +1,12 @@
 import numpy as np
+import sys
 
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
 from typing import Any, Mapping, Optional
 
-MAX_UINT64 = 2 ** 63 - 1
+MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
+MAX_FLOAT_32 = np.finfo(np.dtype("float32")).max
 
 
 class Index:
@@ -37,43 +39,44 @@ class Index:
 
 
     def query(self, queries: np.ndarray, k, **kwargs):
-        # TODO merge results based on scores and use higher k to improve retrieval
         updated_ids = set(self.read_updated_ids())
-        internal_results = self.query_internal(queries, k, **kwargs)
+        internal_results_d, internal_results_i = self.query_internal(queries, k, **kwargs)
         if self.update_arrays_uri is None:
-            return internal_results
-        addition_results = self.query_additions(queries, k)
-        merged_results = np.zeros((queries.shape[0], k), dtype=np.uint64)
+            return internal_results_d, internal_results_i
+
+        addition_results_d, addition_results_i = self.query_additions(queries, k)
+        # Filter updated vectors
         query_id = 0
-        for query in internal_results:
+        for query in internal_results_i:
             res_id = 0
-            additional_res_id = 0
             for res in query:
                 if res in updated_ids:
-                    merged_results[query_id, res_id] = addition_results[query_id, additional_res_id]
-                    additional_res_id += 1
-                else:
-                    merged_results[query_id, res_id] = res
+                    internal_results_d[query_id, res_id] = MAX_FLOAT_32
+                    internal_results_i[query_id, res_id] = 0
                 res_id += 1
             query_id += 1
-        return merged_results
+        # Merge update results
+        results_d = np.hstack((internal_results_d, addition_results_d))
+        results_i = np.hstack((internal_results_i, addition_results_i))
+        sort_index = np.argsort(results_d, axis=1)
+        results_d = np.take_along_axis(results_d, sort_index, axis=1)
+        results_i = np.take_along_axis(results_i, sort_index, axis=1)
+        return results_d[:, 0:k], results_i[:, 0:k]
 
     def query_internal(self, queries: np.ndarray, k, **kwargs):
         raise NotImplementedError
 
     def query_additions(self, queries: np.ndarray, k):
         assert queries.dtype == np.float32
-
         additions_vectors, additions_external_ids = self.read_additions()
         queries_m = array_to_matrix(np.transpose(queries))
-        r = query_vq_heap_pyarray(
+        d, i = query_vq_heap_pyarray(
             array_to_matrix(np.transpose(additions_vectors).astype(self.dtype)),
             queries_m,
             StdVector_u64(additions_external_ids),
             k,
             8)
-
-        return np.transpose(np.array(r))
+        return np.transpose(np.array(d)), np.transpose(np.array(i))
 
     def update(self, vector: np.array, external_id: np.uint64):
         updates_array = self.open_updates_array()
@@ -129,7 +132,7 @@ class Index:
             if tiledb.array_exists(updates_array_uri):
                 raise RuntimeError(f"Array {updates_array_uri} already exists.")
             external_id_dim = tiledb.Dim(
-                name="external_id", domain=(0, MAX_UINT64), dtype=np.dtype(np.uint64)
+                name="external_id", domain=(0, MAX_UINT64-1), dtype=np.dtype(np.uint64)
             )
             dom = tiledb.Domain(external_id_dim)
             vector_attr = tiledb.Attr(name="vector", dtype=self.dtype, var=True)

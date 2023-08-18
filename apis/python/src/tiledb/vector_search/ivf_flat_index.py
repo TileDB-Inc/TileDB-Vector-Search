@@ -130,7 +130,7 @@ class IVFFlatIndex(Index):
         if mode is None:
             queries_m = array_to_matrix(np.transpose(queries))
             if self.memory_budget == -1:
-                r = ivf_query_ram(
+                d, i = ivf_query_ram(
                     self.dtype,
                     self._db,
                     self._centroids,
@@ -139,13 +139,12 @@ class IVFFlatIndex(Index):
                     self._ids,
                     nprobe=nprobe,
                     k_nn=k,
-                    nth=True,  # ??
                     nthreads=nthreads,
                     ctx=self.ctx,
                     use_nuv_implementation=use_nuv_implementation,
                 )
             else:
-                r = ivf_query(
+                d, i = ivf_query(
                     self.dtype,
                     self.db_uri,
                     self._centroids,
@@ -155,13 +154,12 @@ class IVFFlatIndex(Index):
                     nprobe=nprobe,
                     k_nn=k,
                     memory_budget=self.memory_budget,
-                    nth=True,  # ??
                     nthreads=nthreads,
                     ctx=self.ctx,
                     use_nuv_implementation=use_nuv_implementation,
                 )
 
-            return np.transpose(np.array(r))
+            return np.transpose(np.array(d)), np.transpose(np.array(i))
         else:
             return self.taskgraph_query(
                 queries=queries,
@@ -322,7 +320,8 @@ class IVFFlatIndex(Index):
             res = node.result()
             results.append(res)
 
-        results_per_query = []
+        results_per_query_d = []
+        results_per_query_i = []
         for q in range(queries.shape[0]):
             tmp_results = []
             for j in range(k):
@@ -333,5 +332,6 @@ class IVFFlatIndex(Index):
             tmp = sorted(tmp_results, key=lambda t: t[0])[0:k]
             for j in range(len(tmp), k):
                 tmp.append((float(0.0), int(0)))
-            results_per_query.append(np.array(tmp, dtype=np.dtype("float,int"))["f1"])
-        return results_per_query
+            results_per_query_d.append(np.array(tmp, dtype=np.dtype("float,uint64"))["f0"])
+            results_per_query_i.append(np.array(tmp, dtype=np.dtype("float,uint64"))["f1"])
+        return results_per_query_d, results_per_query_i

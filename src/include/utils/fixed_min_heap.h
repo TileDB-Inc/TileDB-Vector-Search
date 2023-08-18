@@ -39,6 +39,7 @@
 #define TILEDB_FIXED_MIN_QUEUES_H
 
 #include <functional>
+#include <initializer_list>
 #include <set>
 
 template <class T>
@@ -125,6 +126,16 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
     Base::reserve(k);
   }
 
+  explicit fixed_min_pair_heap(
+      unsigned k, std::initializer_list<std::tuple<T, U>> l)
+      : Base(0)
+      , max_size{k} {
+    Base::reserve(k);
+    for (auto& p : l) {
+      insert(std::get<0>(p), std::get<1>(p));
+    }
+  }
+
   void insert(const T& x, const U& y) {
     if (Base::size() < max_size) {
       Base::emplace_back(x, y);
@@ -147,8 +158,8 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   }
 };
 
-template <class T>
-using fixed_min_heap = fixed_min_set_heap_1<T>;
+// template <class T>
+// using fixed_min_heap = fixed_min_set_heap_1<T>;
 
 #ifdef ALLHEAPS  // Kept here for historical comparison reasons.  They are
                  // really slow.

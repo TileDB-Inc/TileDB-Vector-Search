@@ -58,12 +58,10 @@ template <class DB, class Q>
 auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
   scoped_timer _{tdb_func__};
 
-  using element = std::pair<float, unsigned>;
-
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
 
-  std::vector<fixed_min_heap<element>> min_scores(
-      size(q), fixed_min_heap<element>(k));
+  std::vector<fixed_min_pair_heap<float, unsigned>> min_scores(
+      size(q), fixed_min_pair_heap<float, unsigned>(k));
 
   log_timer _i{tdb_func__ + " in RAM"};
 
@@ -76,7 +74,7 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
     stdx::range_for_each(
         std::move(par), scores, [&](auto&& q_vec, auto&& n = 0, auto&& i = 0) {
           for (size_t j = 0; j < scores.num_rows(); ++j) {
-            min_scores[i].insert({scores(j, i), j + db.col_offset()});
+            min_scores[i].insert(scores(j, i), j + db.col_offset());
           }
         });
     _i.stop();
@@ -91,7 +89,7 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
         min_scores[j].begin(),
         min_scores[j].end(),
         top_k[j].begin(),
-        ([](auto&& e) { return e.second; }));
+        ([](auto&& e) { return std::get<1>(e); }));
   }
   _i.stop();
 

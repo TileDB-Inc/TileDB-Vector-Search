@@ -75,6 +75,6 @@ class FlatIndex(Index):
         assert queries.dtype == np.float32
 
         queries_m = array_to_matrix(np.transpose(queries))
-        r = query_vq_heap(self._db, queries_m, self._ids, k, nthreads)
+        d, i = query_vq_heap(self._db, queries_m, self._ids, k, nthreads)
 
-        return np.transpose(np.array(r))
+        return np.transpose(np.array(d)), np.transpose(np.array(i))

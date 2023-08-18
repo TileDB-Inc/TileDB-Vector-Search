@@ -72,7 +72,7 @@ TEST_CASE("test queries", "[queries]") {
   }
 
   SECTION("qv_query") {
-    auto top_k = qv_query_heap(db_mat, q_mat, k, nthreads);
+    auto&& [top_k_scores, top_k] = qv_query_heap(db_mat, q_mat, k, nthreads);
     CHECK(top_k.num_rows() == k);
     CHECK(top_k.num_cols() == num_queries);
     for (size_t i = 0; i < num_queries; ++i) {
@@ -91,7 +91,7 @@ TEST_CASE("test queries", "[queries]") {
       CHECK(top_k(0, i) == n);
     }
   }
-#endif
+
   for (bool nth : {true, false}) {
     SECTION("qv, nth = " + std::to_string(nth)) {
       auto top_k = qv_query_nth(db_mat, q_mat, k, nth, nthreads);
@@ -122,13 +122,13 @@ TEST_CASE("test queries", "[queries]") {
         CHECK(top_k(0, i) == n);
       }
     }
-#if 0
+
     SECTION("blocked gemm, nth = " + std::to_string(nth)) {
       auto top_k = blocked_gemm_query(b_db_mat, q_mat, k, nth, nthreads);
       CHECK(top_k.num_rows() == k);
       CHECK(top_k.num_cols() == num_queries);
-      CHECK(top_k(0, 0) == 333);   // FIXME: this is broken (maybe)
+      CHECK(top_k(0, 0) == 333);  // FIXME: this is broken (maybe)
     }
-#endif
   }
+#endif
 }

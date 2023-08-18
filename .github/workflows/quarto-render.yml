@@ -1,7 +1,7 @@
 # Cloned from https://github.com/TileDB-Inc/tiledb-quarto-template
 
 name: Render and deploy Quarto files
-on: 
+on:
   push:
   pull_request:
 
@@ -36,7 +36,7 @@ jobs:
       - name: "Quarto render"
         shell: bash
         run: |
-          pip install quartodoc PyYAML click griffe==0.32.3
+          pip install quartodoc PyYAML click "griffe<0.33" # incompatible
           # create a symlink to the tiledbvcf python package, so it doesn't have to be installed
           #ln -s apis/python/src/tiledb/vector_search
           quartodoc build
