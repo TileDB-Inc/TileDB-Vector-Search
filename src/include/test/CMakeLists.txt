@@ -34,7 +34,7 @@ endif()
 
 macro (kmeans_add_exe EXENAME)
     add_executable(${EXENAME} ${EXENAME}.cc)
-    target_link_libraries(${EXENAME} kmeans_lib)
+    target_link_libraries(${EXENAME} PRIVATE kmeans_lib)
 endmacro (kmeans_add_exe)
 
 macro (kmeans_add_test TESTNAME)
@@ -62,6 +62,16 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 # kmeans_add_test(gen_queries)
 # kmeans_add_test(time_queries)
 
+find_package(Matplot++ REQUIRED)
+
+kmeans_add_exe(demo_matplot)
+target_link_libraries(demo_matplot PUBLIC Matplot++::matplot)
+
+kmeans_add_exe(demo_nn-graph)
+target_link_libraries(demo_nn-graph PUBLIC Matplot++::matplot)
+
+kmeans_add_exe(demo_nn-descent)
+target_link_libraries(demo_nn-descent PUBLIC Matplot++::matplot)
 
 kmeans_add_test(unit_algorithm)
 
@@ -103,7 +113,6 @@ kmeans_add_test(unit_scoring)
 kmeans_add_test(unit_slicing)
 
 kmeans_add_test(unit_stats)
-
 
 kmeans_add_test(unit_utils)
 

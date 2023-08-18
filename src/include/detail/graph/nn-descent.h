@@ -1,37 +1,38 @@
 /**
-* @file   nn-descent.h
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
-*
-*
-*/
+ * @file   nn-descent.h
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
+ *
+ */
 
 #ifndef TILEDB_NN_DESCENT_H
 #define TILEDB_NN_DESCENT_H
+
 
 namespace detail::graph {
 /*
@@ -53,13 +54,36 @@ the graph
     1. Start with a random graph (connect each node to 𝑘 random nodes)
     2. For each node:
     3. Measure the distance from the node to the neighbors of its neighbors
-    4. If any are closer, then update the graph accordingly, and keep only the 𝑘 closest
-    5. If any updates were made to the graph then go back to step 2, otherwise stop
+    4. If any are closer, then update the graph accordingly, and keep only the 𝑘
+   closest
+    5. If any updates were made to the graph then go back to step 2, otherwise
+   stop
  */
 
-auto naive_nn_descent() {
-
+auto naive_nn_descent(auto&& g) {
+  size_t num_updates{0};
+  size_t num_vertices{num_vertices(g)};
+  do {
+    for (size_t i = 0; i < num_vertices; ++i) {
+      for (auto&& [_, j] : out_edges(g, i)) {
+        if (i > j) {  //  lower triangle
+          for (auto&& [old_score, k] : out_edges(g, j)) {
+            auto new_score = distance(i, k);
+            if (j > k && new_score < old_score) {  //  lower triangle
+              // Graph is undirected, so insert both directions
+              g[i].insert(new_score, k);
+              g[k].insert(new_score, i);
+              ++num_updates;
+            }
+          }
+        }
+      }
+    }
+  }
+  while (num_updates > num_vertices(g) / 10);
 }
 
-}   // namespace detail::graph
+
+}  // namespace detail::graph
+
 #endif  // TILEDB_NN_DESCENT_H
