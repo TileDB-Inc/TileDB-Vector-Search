@@ -136,6 +136,7 @@ class Index:
                 domain=dom,
                 sparse=True,
                 attrs=[vector_attr],
+                allows_duplicates=False,
             )
             tiledb.Array.create(updates_array_uri, updates_schema)
             self.group.close()
