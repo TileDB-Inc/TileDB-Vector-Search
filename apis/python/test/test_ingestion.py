@@ -205,6 +205,10 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+<<<<<<< HEAD
+=======
+    # NB: local mode currently does not return distances
+>>>>>>> main
     _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 

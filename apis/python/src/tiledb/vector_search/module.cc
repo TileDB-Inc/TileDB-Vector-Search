@@ -101,6 +101,19 @@ static void declare_pyarray_to_matrix(py::module& m, const std::string& suffix) 
         });
 }
 
+namespace {
+ template <typename ...TArgs>
+ py::tuple make_python_pair(std::tuple<TArgs...>&& arg) {
+    static_assert(sizeof...(TArgs) == 2, "Must have exactly two arguments");
+
+   return py::make_tuple<py::return_value_policy::automatic>(
+      py::cast(std::get<0>(arg), py::return_value_policy::move),
+      py::cast(std::get<1>(arg), py::return_value_policy::move)
+   );
+ }
+
+}
+
 template <typename T, typename Id_Type = uint64_t>
 static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string& suffix) {
   m.def(("qv_query_heap_infinite_ram_" + suffix).c_str(),
@@ -111,7 +124,7 @@ static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string&
          std::vector<Id_Type>& ids,
          size_t nprobe,
          size_t k_nn,
-         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
+         size_t nthreads) -> py::tuple { //std::pair<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
         auto r = detail::ivf::qv_query_heap_infinite_ram(
             parts,
@@ -122,7 +135,7 @@ static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string&
             nprobe,
             k_nn,
             nthreads);
-        return r;
+        return make_python_pair(std::move(r));
         }, py::keep_alive<1,2>());
 }
 
@@ -138,7 +151,7 @@ static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& s
          size_t nprobe,
          size_t k_nn,
          size_t upper_bound,
-         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
+         size_t nthreads) -> py::tuple { //std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
         auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
             ctx,
@@ -151,7 +164,7 @@ static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& s
             k_nn,
             upper_bound,
             nthreads);
-        return r;
+        return make_python_pair(std::move(r));
         }, py::keep_alive<1,2>());
 }
 
