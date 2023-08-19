@@ -46,28 +46,58 @@ class nn_graph {
   size_t k_nn_{0};
 
   std::vector<fixed_min_pair_heap<T, I>> out_edges_;
+  std::vector<std::set<I>> in_edges_;
 
- public:
+   public:
   nn_graph(size_t num_vertices, size_t k_nn)
-      : num_vertices_{num_vertices}
-      , k_nn_{k_nn}
-      , out_edges_(num_vertices, fixed_min_pair_heap<T, I>(k_nn)) {
+          : num_vertices_{num_vertices}
+          , k_nn_{k_nn}
+          , out_edges_(num_vertices, fixed_min_pair_heap<T, I>(k_nn))
+          , in_edges_(num_vertices)
+  { }
+
+
+  /**
+   * Attempt to add edge to out_edge neighbor list.  Note that we can't add a corresponding edge to
+   * the in_edges_ list because we don't know which edge may have been displaced if the insert was
+   * successful.
+   * @param src
+   * @param dst
+   * @param score
+   */
+  auto add_edge(I src, I dst, T score) {
+    return out_edges_[src]. template insert<typename std::remove_cvref_t<decltype(out_edges_[src])>::unique_id>(score, dst);
   }
 
-  void add_edge(I src, I dst, T score) {
-    out_edges_[src].insert(score, dst);
-  }
-
-  void add_edge(const fixed_min_pair_heap<T, I> neighbors, I dst, T score) {
-    neighbors.insert(score, dst);
+  auto build_in_edges() {
+    for (size_t i = 0; i < num_vertices_; ++i) {
+      in_edges_[i].clear();
+    }
+    for (size_t i = 0; i < num_vertices_; ++i) {
+      for (auto && [s, e] : out_edges_[i]) {
+        in_edges_[e].insert(i);
+      }
+    }
   }
 
   auto& out_edges(I src) const {
     return out_edges_[src];
   }
 
+  auto& in_edges(I dst) const {
+    return in_edges_[dst];
+  }
+
   auto num_vertices() const {
     return num_vertices_;
+  }
+
+  auto out_degree(I src) const {
+    return out_edges_[src].size();
+  }
+
+  auto in_degree(I dst) const {
+    return in_edges_[dst].size();
   }
 };
 
@@ -82,25 +112,63 @@ auto out_edges(const nn_graph<T, I>& g, size_t i) {
 }
 
 template <class T, class I>
-auto make_random_nn_graph(auto&& db, size_t k_nn) {
+auto out_degree(const nn_graph<T, I>& g, size_t i) {
+  return g.out_degree(i);
+}
+
+template <class T, class I>
+auto in_degree(const nn_graph<T, I>& g, size_t i) {
+  return g.in_degree(i);
+}
+
+
+
+/**
+ * @brief Initialize a random graph with k_nn edges per vertex.  Each vertex is connected to another
+ * vertex chosen at random with a uniform probablity.  The graph is a directed graph, so the edges are
+ * the out edges of each vertex.
+ * @tparam T
+ * @tparam I
+ * @param db
+ * @param k_nn
+ * @return
+ */
+template <class T, class I = size_t, class Distance = sum_of_squares_distance>
+auto init_random_nn_graph(auto&& db, size_t k_nn, Distance distance = Distance()) {
   auto num_vertices = db.num_cols();
   nn_graph<T, I> g(num_vertices, k_nn);
   std::random_device rd;
   std::mt19937 gen(rd());
 
-  for (size_t i = 0; i < num_vertices; ++i) {
-    auto thisvec = db[i];
+  std::uniform_int_distribution<size_t> dis(0, num_vertices - 1);
 
-    std::uniform_int_distribution<> dis(0, num_vertices - 1);
-    for (size_t j = 0; j < k_nn - 1; ++j) {
+  for (size_t i = 0; i < num_vertices; ++i) {
+    for (size_t j = 0; j < k_nn; ++j) {
       auto nbr = dis(gen);
+      while (nbr == i) {
         nbr = dis(gen);
-      auto score = L2(thisvec, db[nbr]);
-      g.add_edge(i, nbr, score);
+      }
+      auto score = distance(db[i], db[nbr]);
+      while (g.add_edge(i, nbr, score) == false) {
+        nbr = dis(gen);
+        while (nbr == i) {
+          nbr = dis(gen);
+        }
+        score = distance(db[i], db[nbr]);
+      }
     }
   }
   return g;
 }
+
+template <class T, class I = size_t, class Distance = sum_of_squares_distance>
+auto make_random_nn_graph(auto&& db, size_t k_nn) {
+  auto g =
+      init_random_nn_graph<T, I, Distance>(db, k_nn, [](auto&& gen) { return gen(); });
+  return g;
+}
+
+
 }  // namespace detail::graph
 
 

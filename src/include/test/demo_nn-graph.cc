@@ -42,15 +42,16 @@ int main() {
   using namespace matplot;
 
   for (size_t i = 0; i < 1; ++i) {
-    auto g = ::detail::graph::make_random_nn_graph<float, size_t>(sift_base, 5);
+    auto g = ::detail::graph::init_random_nn_graph<float>(sift_base, 5);
     std::vector<std::pair<size_t, size_t>> edges;
     for (size_t i = 0; i < g.num_vertices(); ++i) {
       for (auto&& [_, j] : out_edges(g, i)) {
-          edges.emplace_back(i, j);
+        edges.emplace_back(i, j);
       }
     }
 
-    graph(edges, "-.dr")->show_labels(false);
+    digraph(edges, "-.dr")->show_labels(false);
+//    digraph(edges)->show_labels(false);
     show();
   }
 

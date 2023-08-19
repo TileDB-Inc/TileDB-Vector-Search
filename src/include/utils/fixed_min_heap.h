@@ -136,8 +136,23 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
     }
   }
 
-  void insert(const T& x, const U& y) {
+  class not_unique{};
+  class unique_id{};
+  class unique_score{};
+  class unique_both{};
+
+  // @todo Use push_heap instead of emplace_back
+  template <class Unique = not_unique>
+  bool insert(const T& x, const U& y) {
     if (Base::size() < max_size) {
+      if constexpr (std::is_same_v<Unique, unique_id>) {
+        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
+              return std::get<1>(e) == y;
+            }) != end(*this)) {
+          return false;
+        }
+      }
+
       Base::emplace_back(x, y);
       // std::push_heap(begin(*this), end(*this), std::less<T>());
       if (Base::size() == max_size) {
@@ -145,16 +160,29 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
           return std::get<0>(a) < std::get<0>(b);
         });
       }
+      return true;
     } else if (x < std::get<0>(this->front())) {
       std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
         return std::get<0>(a) < std::get<0>(b);
       });
+
+      if constexpr (std::is_same_v<Unique, unique_id>) {
+        if (std::find_if(begin(*this), end(*this), [y](auto&& e) { return std::get<1>(e) == y; }) != end(*this)) {
+          std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+            return std::get<0>(a) < std::get<0>(b);
+          });
+          return false;
+        }
+      }
+
       this->pop_back();
       this->emplace_back(x, y);
       std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
         return std::get<0>(a) < std::get<0>(b);
       });
+      return true;
     }
+    return false;
   }
 };
 

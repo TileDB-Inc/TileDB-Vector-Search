@@ -170,6 +170,22 @@ inline auto dot(U const& a, V const& b) {
   return sum;
 }
 
+
+// ----------------------------------------------------------------------------
+// Function objects for computing distances
+// ----------------------------------------------------------------------------
+
+struct sum_of_squares_distance {
+  template <class V, class U>
+  constexpr auto operator()(const V& a, const U& b) const {
+    return sum_of_squares(a, b);
+  }
+};
+
+using l2_distance = sum_of_squares_distance;
+using L2_distance = sum_of_squares_distance;
+
+
 // ----------------------------------------------------------------------------
 // Functions for extracting top k neighbors from a raw scores matrix
 // ----------------------------------------------------------------------------
