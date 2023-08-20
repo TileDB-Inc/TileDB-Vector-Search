@@ -35,6 +35,7 @@
 #include <matplot/matplot.h>
 
 #include <vector>
+#include "detail/graph/nn-descent.h"
 #include "detail/graph/nn-graph.h"
 #include "query_common.h"
 
@@ -47,7 +48,10 @@ void show_graph(auto&& g) {
       edges.emplace_back(i, j);
     }
   }
-  digraph(edges, "-.dr")->show_labels(false);
+  auto d = digraph(edges, "-.dr");
+  d->show_labels(false);
+  d->layout_algorithm(network::layout::random);
+
   //    digraph(edges)->show_labels(false);
   show();
 }
@@ -55,11 +59,17 @@ void show_graph(auto&& g) {
 
 int main() {
 
-  auto g = ::detail::graph::init_random_nn_graph<float>(sift_base, 5);
+  auto N = 512;
+  auto k_nn = 5;
+
+  tiledb::Context ctx;
+  auto db = tdbColMajorMatrix<db_type>(ctx, db_uri, N);
+  db.load();
+  auto g = ::detail::graph::init_random_nn_graph<float>(db/*sift_base*/, k_nn);
   show_graph(g);
 
   for (size_t i = 0; i < 4; ++i) {
-    auto num_updates = nn_descent_step_all(g, sift_base);
+    auto num_updates = nn_descent_step_all(g, db/*sift_base*/);
     std::cout << "num_updates: " << num_updates << std::endl;
     show_graph(g);
   }

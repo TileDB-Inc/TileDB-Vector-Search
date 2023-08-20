@@ -33,6 +33,8 @@
 #ifndef TILEDB_NN_DESCENT_H
 #define TILEDB_NN_DESCENT_H
 
+#include "scoring.h"
+#include "detail/graph/nn-graph.h"
 
 namespace detail::graph {
 /*
@@ -60,28 +62,58 @@ the graph
    stop
  */
 
-auto naive_nn_descent(auto&& g) {
-  size_t num_updates{0};
-  size_t num_vertices{num_vertices(g)};
-  do {
-    for (size_t i = 0; i < num_vertices; ++i) {
-      for (auto&& [_, j] : out_edges(g, i)) {
-        if (i > j) {  //  lower triangle
-          for (auto&& [old_score, k] : out_edges(g, j)) {
-            auto new_score = distance(i, k);
-            if (j > k && new_score < old_score) {  //  lower triangle
-              // Graph is undirected, so insert both directions
-              g[i].insert(new_score, k);
-              g[k].insert(new_score, i);
-              ++num_updates;
-            }
-          }
-        }
-      }
+
+
+template <class I = size_t, class Distance = sum_of_squares_distance>
+auto nn_descent_step(auto&& g, auto&& db, float ij_score, I i, I j, Distance distance = Distance()) {
+  size_t num_updates {0};
+  for (auto&& [_, k] : out_edges(g, j)) {  // _ is dist(j, k)
+    if (i == k) {
+      continue;
+    }
+    auto ik_score = distance(db[i], db[k]);
+    if (g.add_update_edge(i, k, ik_score)) {
+      ++num_updates;
     }
   }
-  while (num_updates > num_vertices(g) / 10);
+  return num_updates;
 }
+
+template <class Distance = sum_of_squares_distance>
+auto nn_descent_step_all(auto&& g, auto&& db, Distance distance = Distance()) {
+  size_t num_updates{0};
+  size_t nvertices{num_vertices(g)};
+  g.copy_to_update_edges();
+  g.build_in_edges();
+  for (size_t i = 0; i < nvertices; ++i) {
+    for (auto&& [_, j] : out_edges(g, i)) {
+      auto ij_score = distance(db[i], db[j]);
+      num_updates += nn_descent_step(g, db, ij_score, i, j);
+    }
+    for (auto&& j : in_edges(g,i)) {
+      auto ij_score = distance(db[i], db[j]);
+      num_updates += nn_descent_step(g, db, ij_score, i, j);
+    }
+    g.swap_update_edges(i);
+  }
+  return num_updates;
+}
+
+
+template <class T, class I = size_t, class Distance = sum_of_squares_distance>
+auto nn_descent(auto&& db, size_t k_nn, Distance distance = Distance()) {
+  auto g =
+      init_random_nn_graph<T, I, Distance>(db, k_nn, distance);
+
+  size_t num_updates{0};
+  do {
+    num_updates += nn_descent_step_all(g, db);
+
+  } while(num_updates > (k_nn * num_vertices(g)) / 100);
+
+  return g;
+}
+
 
 
 }  // namespace detail::graph
