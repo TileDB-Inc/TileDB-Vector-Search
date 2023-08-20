@@ -112,6 +112,11 @@ auto out_edges(const nn_graph<T, I>& g, size_t i) {
 }
 
 template <class T, class I>
+auto in_edges(const nn_graph<T, I>& g, size_t i) {
+  return g.in_edges(i);
+}
+
+template <class T, class I>
 auto out_degree(const nn_graph<T, I>& g, size_t i) {
   return g.out_degree(i);
 }
@@ -161,10 +166,49 @@ auto init_random_nn_graph(auto&& db, size_t k_nn, Distance distance = Distance()
   return g;
 }
 
+
+
+template <class I = size_t, class Distance = sum_of_squares_distance>
+auto nn_descent_step(auto&& g, auto&& db, I i, I j, Distance distance = Distance()) {
+  size_t num_updates {0};
+  for (auto&& [old_score, k] : out_edges(g, j)) {
+    auto new_score = distance(db[i], db[k]);
+    if (new_score < old_score) {
+      g.add_edge(i, k, new_score);
+      ++num_updates;
+    }
+  }
+  return num_updates;
+}
+
+
+auto nn_descent_step_all(auto&& g, auto&& db) {
+  size_t num_updates{0};
+  size_t nvertices{num_vertices(g)};
+  g.build_in_edges();
+  for (size_t i = 0; i < nvertices; ++i) {
+    for (auto&& [_, j] : out_edges(g, i)) {
+      num_updates += nn_descent_step(g, db, i, j);
+    }
+    for (auto&& j : in_edges(g,i)) {
+      num_updates += nn_descent_step(g, db, i, j);
+    }
+  }
+  return num_updates;
+}
+
+
 template <class T, class I = size_t, class Distance = sum_of_squares_distance>
-auto make_random_nn_graph(auto&& db, size_t k_nn) {
+auto nn_descent(auto&& db, size_t k_nn) {
   auto g =
       init_random_nn_graph<T, I, Distance>(db, k_nn, [](auto&& gen) { return gen(); });
+
+  size_t num_updates{0};
+  do {
+    num_updates += nn_descent_step_all(g, db);
+
+  } while(num_updates > num_vertices(g) / 10);
+
   return g;
 }
 
