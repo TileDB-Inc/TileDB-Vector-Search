@@ -44,7 +44,7 @@ TEST_CASE("nn-descent: test test", "[nn-descent]") {
   REQUIRE(true);
 }
 
-TEST_CASE("nn-graph: init_random_graph", "[nn-graph]") {
+TEST_CASE("nn-descent: accuracy", "[nn-descent]") {
   size_t N = 2048;
   size_t k_nn = 5;
 
