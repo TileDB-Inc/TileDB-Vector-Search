@@ -47,13 +47,15 @@ class nn_graph {
 
   std::vector<fixed_min_pair_heap<T, I>> out_edges_;
   std::vector<std::set<I>> in_edges_;
+  std::vector<fixed_min_pair_heap<T, I>> update_edges_;
 
-   public:
+public:
   nn_graph(size_t num_vertices, size_t k_nn)
           : num_vertices_{num_vertices}
           , k_nn_{k_nn}
           , out_edges_(num_vertices, fixed_min_pair_heap<T, I>(k_nn))
           , in_edges_(num_vertices)
+          , update_edges_(num_vertices, fixed_min_pair_heap<T, I>(k_nn))
   { }
 
 
@@ -67,6 +69,36 @@ class nn_graph {
    */
   auto add_edge(I src, I dst, T score) {
     return out_edges_[src]. template insert<typename std::remove_cvref_t<decltype(out_edges_[src])>::unique_id>(score, dst);
+  }
+
+  /**
+   * Attempt to add edge to update_edge neighbor list.  Note that we can't add a corresponding edge to
+   * the in_edges_ list because we don't know which edge may have been displaced if the insert was
+   * successful.
+   * @param src
+   * @param dst
+   * @param score
+   */
+  auto add_update_edge(I src, I dst, T score) {
+    return update_edges_[src]. template insert<typename std::remove_cvref_t<decltype(out_edges_[src])>::unique_id>(score, dst);
+  }
+
+  auto copy_to_update_edges() {
+    for (size_t i = 0; i < num_vertices_; ++i) {
+      for (auto&& [s, e] : out_edges_[i]) {
+        update_edges_[i].insert(s, e);
+      }
+    }
+  }
+
+  auto swap_update_edges(I i) {
+    out_edges_[i].swap(update_edges_[i]);
+  }
+
+  auto swap_all_update_edges() {
+    for (I i = 0; i < num_vertices_; ++i) {
+      swap_update_edges(i);
+    }
   }
 
   auto build_in_edges() {
@@ -167,32 +199,37 @@ auto init_random_nn_graph(auto&& db, size_t k_nn, Distance distance = Distance()
 }
 
 
-
 template <class I = size_t, class Distance = sum_of_squares_distance>
-auto nn_descent_step(auto&& g, auto&& db, I i, I j, Distance distance = Distance()) {
+auto nn_descent_step(auto&& g, auto&& db, float ij_score, I i, I j, Distance distance = Distance()) {
   size_t num_updates {0};
-  for (auto&& [old_score, k] : out_edges(g, j)) {
-    auto new_score = distance(db[i], db[k]);
-    if (new_score < old_score) {
-      g.add_edge(i, k, new_score);
+  for (auto&& [_, k] : out_edges(g, j)) {  // _ is dist(j, k)
+    if (i == k) {
+      continue;
+    }
+    auto ik_score = distance(db[i], db[k]);
+    if (g.add_update_edge(i, k, ik_score)) {
       ++num_updates;
     }
   }
   return num_updates;
 }
 
-
-auto nn_descent_step_all(auto&& g, auto&& db) {
+template <class Distance = sum_of_squares_distance>
+auto nn_descent_step_all(auto&& g, auto&& db, Distance distance = Distance()) {
   size_t num_updates{0};
   size_t nvertices{num_vertices(g)};
+  g.copy_to_update_edges();
   g.build_in_edges();
   for (size_t i = 0; i < nvertices; ++i) {
     for (auto&& [_, j] : out_edges(g, i)) {
-      num_updates += nn_descent_step(g, db, i, j);
+      auto ij_score = distance(db[i], db[j]);
+      num_updates += nn_descent_step(g, db, ij_score, i, j);
     }
     for (auto&& j : in_edges(g,i)) {
-      num_updates += nn_descent_step(g, db, i, j);
+      auto ij_score = distance(db[i], db[j]);
+      num_updates += nn_descent_step(g, db, ij_score, i, j);
     }
+    g.swap_update_edges(i);
   }
   return num_updates;
 }
