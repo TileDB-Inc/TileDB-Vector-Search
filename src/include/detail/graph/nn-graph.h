@@ -101,6 +101,10 @@ public:
     }
   }
 
+  auto sort_edges(I i) {
+
+  }
+
   auto build_in_edges() {
     for (size_t i = 0; i < num_vertices_; ++i) {
       in_edges_[i].clear();
@@ -113,6 +117,10 @@ public:
   }
 
   auto& out_edges(I src) const {
+    return out_edges_[src];
+  }
+
+  auto& out_edges(I src)  {
     return out_edges_[src];
   }
 

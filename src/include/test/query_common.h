@@ -152,6 +152,9 @@ using centroids_type = float;
 using ids_type = uint64_t;
 using indices_type = uint64_t;
 
+static std::string ec2_gp3_root = "/home/lums/TileDB-Vector-Search/external/data/gp3/";
+static std::string m1_gp3_root = "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/";
+
 static std::string ec2_root{
     "/home/lums/TileDB-Vector-Search/external/data/gp3/sift/"};
 static std::string m1_root{
@@ -164,6 +167,11 @@ static std::string index_uri{m1_root + "index"};
 static std::string ids_uri{m1_root + "ids"};
 static std::string query_uri{m1_root + "sift_query"};
 static std::string groundtruth_uri{m1_root + "sift_groundtruth"};
+
+static std::string fmnist_distances { m1_gp3_root + "fmnist/fmnist_distances.tdb" };
+static std::string fmnist_neighbors { m1_gp3_root + "fmnist/fmnist_neighbors.tdb" };
+static std::string fmnist_test { m1_gp3_root + "fmnist/fmnist_test.tdb" };
+static std::string fmnist_train { m1_gp3_root + "fmnist/fmnist_train.tdb" };
 
 #endif
 

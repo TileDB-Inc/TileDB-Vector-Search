@@ -445,6 +445,7 @@ auto count_intersections(auto&& I, auto&& groundtruth, size_t k_nn) {
     std::sort(begin(I[i]), end(I[i]));
     std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
 
+    // @todo remove -- for debugging only
     std::vector<size_t> x(begin(I[i]), end(I[i]));
     std::vector<size_t> y(begin(groundtruth[i]), end(groundtruth[i]));
 

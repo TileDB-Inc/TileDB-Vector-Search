@@ -65,17 +65,27 @@ the graph
 
 
 template <class I = size_t, class Distance = sum_of_squares_distance>
-auto nn_descent_step(auto&& g, auto&& db, float ij_score, I i, I j, Distance distance = Distance()) {
+auto nn_descent_step(auto&& g, auto&& db, I i, I j, Distance distance = Distance()) {
   size_t num_updates {0};
   for (auto&& [_, k] : out_edges(g, j)) {  // _ is dist(j, k)
     if (i == k) {
       continue;
     }
     auto ik_score = distance(db[i], db[k]);
-    if (g.add_update_edge(i, k, ik_score)) {
+    if (g.add_edge(i, k, ik_score)) {
       ++num_updates;
     }
   }
+  for (auto&& k : in_edges(g, j)) {  // _ is dist(j, k)
+    if (i == k) {
+      continue;
+    }
+    auto ik_score = distance(db[i], db[k]);
+    if (g.add_edge(i, k, ik_score)) {
+      ++num_updates;
+    }
+  }
+
   return num_updates;
 }
 
@@ -83,19 +93,21 @@ template <class Distance = sum_of_squares_distance>
 auto nn_descent_step_all(auto&& g, auto&& db, Distance distance = Distance()) {
   size_t num_updates{0};
   size_t nvertices{num_vertices(g)};
-  g.copy_to_update_edges();
+  // g.copy_to_update_edges();
+
   g.build_in_edges();
+
   for (size_t i = 0; i < nvertices; ++i) {
     for (auto&& [_, j] : out_edges(g, i)) {
-      auto ij_score = distance(db[i], db[j]);
-      num_updates += nn_descent_step(g, db, ij_score, i, j);
+      num_updates += nn_descent_step(g, db, i, j);
     }
-    for (auto&& j : in_edges(g,i)) {
-      auto ij_score = distance(db[i], db[j]);
-      num_updates += nn_descent_step(g, db, ij_score, i, j);
+
+    for (auto&& j : in_edges(g, i)) {
+      num_updates += nn_descent_step(g, db, i, j);
     }
-    g.swap_update_edges(i);
   }
+  // g.swap_all_update_edges();
+
   return num_updates;
 }
 
@@ -107,8 +119,7 @@ auto nn_descent(auto&& db, size_t k_nn, Distance distance = Distance()) {
 
   size_t num_updates{0};
   do {
-    num_updates += nn_descent_step_all(g, db);
-
+    num_updates = nn_descent_step_all(g, db);
   } while(num_updates > (k_nn * num_vertices(g)) / 100);
 
   return g;

@@ -64,6 +64,9 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 
 find_package(Matplot++ REQUIRED)
 
+kmeans_add_exe(demo_high_five)
+target_link_libraries(demo_high_five PRIVATE HighFive)
+
 kmeans_add_exe(demo_matplot)
 target_link_libraries(demo_matplot PUBLIC Matplot++::matplot)
 
@@ -82,6 +85,9 @@ kmeans_add_test(unit_fixed_min_heap)
 kmeans_add_test(unit_flat_qv)
 
 kmeans_add_test(unit_flat_vq)
+
+kmeans_add_test(unit_high_five)
+target_link_libraries(unit_high_five PRIVATE HighFive)
 
 kmeans_add_test(unit_ivf_index)
 

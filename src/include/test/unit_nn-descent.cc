@@ -45,30 +45,33 @@ TEST_CASE("nn-descent: test test", "[nn-descent]") {
 }
 
 TEST_CASE("nn-descent: accuracy", "[nn-descent]") {
-  size_t N = 2048;
-  size_t k_nn = 5;
+  size_t N = 10000;
+
+  size_t k_nn = 10;
 
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<db_type>(ctx, db_uri, N);
+  auto db = tdbColMajorMatrix<db_type>(ctx, fmnist_test, N);
   db.load();
+//  auto db = std::move(sift_base);
+//  N = db.num_cols();
+//  k_nn = 2;
 
-  auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(db, db, k_nn + 1, 3);
+  auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(db, db, k_nn + 1 , 3);
+  auto num_intersected = count_intersections(top_k, top_k, k_nn + 1);
+  std::cout << "num_intersected: " << num_intersected << " / " << N * (k_nn + 1) << " = " << ((double)num_intersected)/((double)N * (double)k_nn) << std::endl;
 
-  auto g = ::detail::graph::init_random_nn_graph<float>(db, 3*k_nn);
-  for (size_t i = 0; i < 5; ++i) {
+  auto g = ::detail::graph::init_random_nn_graph<float>(db, k_nn);
+  for (size_t i = 0; i < 10; ++i) {
     auto num_updates = nn_descent_step_all(g, db);
     std::cout << "num_updates: " << num_updates << std::endl;
 
     auto h = ColMajorMatrix<size_t>(k_nn + 1, N);
     for (size_t j = 0; j < N; ++j) {
       h(0, j) = j;
-      auto k = 1;
-      for (auto&& [_, l] : out_edges(g, j)) {
-        h(k, j) = l;
-        ++k;
-      }
+      get_top_k_from_heap(g.out_edges(j), std::span(&h(1,j), k_nn));
     }
-    auto num_intersected = count_intersections(h, top_k, k_nn);
-    std::cout << "num_intersected: " << num_intersected << " / " << N * k_nn << " = " << ((double)num_intersected)/((double)N * (double)k_nn) << std::endl;
+
+    auto num_intersected = count_intersections(h, top_k, k_nn+1);
+    std::cout << "num_intersected: " << num_intersected << " / " << N * (k_nn+1) << " = " << ((double)num_intersected)/((double)N * (double)(k_nn+1)) << std::endl;
   }
 }
