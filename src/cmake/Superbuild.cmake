@@ -44,11 +44,15 @@ set(FORWARD_EP_CMAKE_ARGS)
 # as a part of the superbuild.
 set(EXTERNAL_PROJECTS)
 
+# Passing lists through ExternalProject_Add requires using a separator
+# character other than a semicolon.
+list(JOIN CMAKE_PREFIX_PATH "|" CMAKE_PREFIX_PATH_STR)
+
 # Forward any additional CMake args to the non-superbuild.
 set(INHERITED_CMAKE_ARGS
   -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-  -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
-  -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+  -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH_STR}
+  -DCMAKE_BUILD_TYPE=$<CONFIG>
   -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}
   -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}
   -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
@@ -121,6 +125,7 @@ ExternalProject_Add(libtiledbvectorsearch
   INSTALL_COMMAND ""
   BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch
   DEPENDS ${EXTERNAL_PROJECTS}
+  LIST_SEPARATOR "|"
 )
 
 # make install-libtiledbvectorsearch
