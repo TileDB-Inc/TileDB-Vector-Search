@@ -68,7 +68,8 @@ public:
    * @param score
    */
   auto add_edge(I src, I dst, T score) {
-    return out_edges_[src]. template insert<typename std::remove_cvref_t<decltype(out_edges_[src])>::unique_id>(score, dst);
+    // return out_edges_[src]. template insert<typename std::remove_cvref_t<decltype(out_edges_[src])>::unique_id>(score, dst);
+    return out_edges_[src]. template insert<unique_id>(score, dst);
   }
 
   /**
@@ -114,6 +115,18 @@ public:
         in_edges_[e].insert(i);
       }
     }
+  }
+
+  auto entire_neighborhood(I i) const {
+    std::vector<I> nbrs;
+    nbrs.reserve(size(out_edges_[i]) + size(in_edges_[i]));
+    for (auto&& [s, e] : out_edges_[i]) {
+      nbrs.push_back(e);
+    }
+    for (auto&& e : in_edges_[i]) {
+      nbrs.push_back(e);
+    }
+    return nbrs;
   }
 
   auto& out_edges(I src) const {

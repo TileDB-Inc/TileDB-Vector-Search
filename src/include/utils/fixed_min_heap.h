@@ -41,6 +41,7 @@
 #include <functional>
 #include <initializer_list>
 #include <set>
+#include <concepts>
 
 template <class T>
 class fixed_min_set_heap_1 : public std::vector<T> {
@@ -108,6 +109,11 @@ class fixed_min_set_heap_2 : public std::vector<T> {
   }
 };
 
+
+class not_unique{};
+class unique_id{};
+class unique_score{};
+class unique_both{};
 /**
  * Heap to store a pair of values, ordered by the first element.
  * @tparam T Type of first element
@@ -120,9 +126,9 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   unsigned max_size{0};
 
  public:
-  explicit fixed_min_pair_heap(unsigned k)
+  explicit fixed_min_pair_heap(std::integral auto  k)
       : Base(0)
-      , max_size{k} {
+      , max_size{(unsigned) k} {
     Base::reserve(k);
   }
 
@@ -136,10 +142,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
     }
   }
 
-  class not_unique{};
-  class unique_id{};
-  class unique_score{};
-  class unique_both{};
+
 
   // @todo Use push_heap instead of emplace_back
   template <class Unique = not_unique>
@@ -183,6 +186,12 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
       return true;
     }
     return false;
+  }
+  void pop() {
+    std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      return std::get<0>(a) < std::get<0>(b);
+    });
+    this->pop_back();
   }
 };
 

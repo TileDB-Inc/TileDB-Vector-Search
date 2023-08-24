@@ -35,18 +35,19 @@
 #include "query_common.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/flat/qv.h"
+#include "detail/ivf/qv.h"
 
 #include <tiledb/tiledb>
 
 bool global_debug = false;
+
+size_t N = 10000;
 
 TEST_CASE("nn-descent: test test", "[nn-descent]") {
   REQUIRE(true);
 }
 
 TEST_CASE("nn-descent: accuracy", "[nn-descent]") {
-  size_t N = 10000;
-
   size_t k_nn = 10;
 
   tiledb::Context ctx;
@@ -58,20 +59,152 @@ TEST_CASE("nn-descent: accuracy", "[nn-descent]") {
 
   auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(db, db, k_nn + 1 , 3);
   auto num_intersected = count_intersections(top_k, top_k, k_nn + 1);
-  std::cout << "num_intersected: " << num_intersected << " / " << N * (k_nn + 1) << " = " << ((double)num_intersected)/((double)N * (double)k_nn) << std::endl;
+  std::cout << "num_intersected: " << num_intersected << " / " << N * (k_nn + 1) << " = " << ((double)num_intersected)/((double)N * (double)(k_nn+1)) << std::endl;
 
-  auto g = ::detail::graph::init_random_nn_graph<float>(db, k_nn);
-  for (size_t i = 0; i < 10; ++i) {
-    auto num_updates = nn_descent_step_all(g, db);
-    std::cout << "num_updates: " << num_updates << std::endl;
+  {
+    scoped_timer _{"nn_descent", true};
+    auto g = ::detail::graph::init_random_nn_graph<float>(db, k_nn);
+    for (size_t i = 0; i < 4; ++i) {
+      auto num_updates = nn_descent_1_step_all(g, db);
+      std::cout << "num_updates: " << num_updates << std::endl;
 
-    auto h = ColMajorMatrix<size_t>(k_nn + 1, N);
-    for (size_t j = 0; j < N; ++j) {
-      h(0, j) = j;
-      get_top_k_from_heap(g.out_edges(j), std::span(&h(1,j), k_nn));
+      auto h = ColMajorMatrix<size_t>(k_nn + 1, N);
+      for (size_t j = 0; j < N; ++j) {
+        h(0, j) = j;
+        get_top_k_from_heap(g.out_edges(j), std::span(&h(1, j), k_nn));
+      }
+      auto num_intersected = count_intersections(h, top_k, k_nn+1);
+      std::cout << "num_intersected: " << num_intersected << " / " << N * (k_nn+1) << " = " << ((double)num_intersected)/((double)N * (double)(k_nn+1)) << std::endl;
     }
-
-    auto num_intersected = count_intersections(h, top_k, k_nn+1);
-    std::cout << "num_intersected: " << num_intersected << " / " << N * (k_nn+1) << " = " << ((double)num_intersected)/((double)N * (double)(k_nn+1)) << std::endl;
+    _.stop();
   }
+}
+
+TEST_CASE("nn-descent: connectivity", "[nn-descent]") {
+  size_t k_nn = 10;
+
+  tiledb::Context ctx;
+  auto db = tdbColMajorMatrix<db_type>(ctx, fmnist_test, N);
+  db.load();
+  auto g = detail::graph::nn_descent_1<db_type>(db, k_nn);
+  bfs(g, 0UL);
+}
+
+
+TEST_CASE("nn-descent: nn_descent_1", "[nn-descent]") {
+  size_t nthreads = 1;
+  size_t k_nn = 10;
+  size_t num_queries = 10;
+
+  tiledb::Context ctx;
+  auto db = tdbColMajorMatrix<db_type>(ctx, fmnist_test, N);
+  db.load();
+  auto g = detail::graph::nn_descent_1<db_type>(db, k_nn);
+  auto query = ColMajorMatrix<float>(db.num_rows(), num_queries);
+  for (size_t i = 0; i < db.num_rows(); ++i) {
+    query(i, 0) = db(i, 0);
+  }
+
+  log_timer flat_timer{"flat_query", true};
+  auto&& [top_s, top_k] = detail::flat::qv_query_heap(db, query, k_nn + 1, nthreads);
+  flat_timer.stop();
+
+  std::vector<size_t> tv(k_nn+1);
+  for (size_t i = 0; i < k_nn+1; ++i) {
+    tv[i] = top_k(i, 0);
+  }
+
+  std::vector<float> sv(k_nn+1);
+  for (size_t i = 0; i < k_nn+1; ++i) {
+    sv[i] = top_s(i, 0);
+  }
+
+  log_timer query_timer{"nn_descent_1_query", true};
+  auto&& [s, t] = nn_descent_1_query(g, db, query, k_nn, k_nn+5, 3);
+  query_timer.stop();
+
+  std::vector<size_t> tw(k_nn+1);
+  for (size_t i = 0; i < k_nn+1; ++i) {
+    tw[i] = t(i, 0);
+  }
+  std::vector<size_t> sw(k_nn+1);
+  for (size_t i = 0; i < k_nn+1; ++i) {
+    sw[i] = s(i, 0);
+  }
+  std::sort(begin(tv), end(tv));
+  std::sort(begin(tw), end(tw));
+
+  auto tt = ColMajorMatrix<size_t>(k_nn + 1, 1);
+  for (size_t j = 0; j < 1; ++j) {
+    tt(0, j) = j;
+    for (size_t i = 0; i < k_nn; ++i) {
+      tt(i + 1, j) = t(i, j);
+    }
+  }
+
+  auto num_intersected = count_intersections(tt, top_k, k_nn+1);
+  std::cout << "num_intersected: " << num_intersected << " / " << num_queries * (k_nn+1) << " = " << ((double)num_intersected)/((double)num_queries * (double)(k_nn+1)) << std::endl;
+}
+
+
+
+TEST_CASE("nn-descent: nn_descent_1 vs ivf", "[nn-descent]") {
+  size_t nthreads = 1;
+  size_t k_nn = 10;
+  size_t num_queries = 50;
+
+  tiledb::Context ctx;
+
+  auto db = tdbColMajorMatrix<db_type>(ctx, db_uri);
+  db.load();
+  auto centroids = tdbColMajorMatrix<db_type>(ctx, centroids_uri);
+  centroids.load();
+  auto query = tdbColMajorMatrix<db_type>(ctx, query_uri, num_queries);
+  query.load();
+  auto index = read_vector<indices_type>(ctx, index_uri);
+  auto groundtruth = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
+  groundtruth.load();
+
+  auto parts = tdbColMajorMatrix<db_type>(ctx, parts_uri);
+  parts.load();
+  auto ids = read_vector<uint64_t>(ctx, ids_uri);
+
+  size_t nprobe = 20;
+
+  //nlog_timer flat_timer{"flat_query", true};
+  //auto&& [top_s, top_k] = detail::flat::qv_query_heap(db, query, k_nn + 1, nthreads);
+  //flat_timer.stop();
+
+  log_timer ivf_timer{"ivf_query", true};
+  auto&& [D00, I00] = detail::ivf::query_infinite_ram(
+      parts,
+      centroids,
+      query,
+      index,
+      ids,
+      nprobe,
+      k_nn + 1,
+      nthreads);
+  ivf_timer.stop();
+
+  log_timer graph_timer{"nn_descent_1", true};
+  auto g = detail::graph::nn_descent_1<db_type>(db, k_nn);
+  graph_timer.stop();
+
+  log_timer query_timer{"nn_descent_1_query", true};
+  auto&& [s, t] = nn_descent_1_query(g, db, query, k_nn, k_nn+5, 3);
+  query_timer.stop();
+
+  auto tt = ColMajorMatrix<size_t>(k_nn + 1, 1);
+  for (size_t j = 0; j < 1; ++j) {
+    tt(0, j) = j;
+    for (size_t i = 0; i < k_nn; ++i) {
+      tt(i + 1, j) = t(i, j);
+    }
+  }
+
+  auto num_intersected = count_intersections(t, groundtruth, k_nn+1);
+  auto qv_intersected = count_intersections(I00, groundtruth, k_nn+1);
+  std::cout << "qv_intersected: " << qv_intersected << " / " << num_queries * (k_nn+1) << " = " << ((double)qv_intersected)/((double)num_queries * (double)(k_nn+1)) << std::endl;
+  std::cout << "num_intersected: " << num_intersected << " / " << num_queries * (k_nn+1) << " = " << ((double)num_intersected)/((double)num_queries * (double)(k_nn+1)) << std::endl;
 }
