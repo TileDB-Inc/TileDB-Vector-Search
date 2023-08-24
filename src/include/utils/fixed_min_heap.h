@@ -142,9 +142,6 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
     }
   }
 
-
-
-  // @todo Use push_heap instead of emplace_back
   template <class Unique = not_unique>
   bool insert(const T& x, const U& y) {
     if (Base::size() < max_size) {
@@ -157,12 +154,15 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
       }
 
       Base::emplace_back(x, y);
-      // std::push_heap(begin(*this), end(*this), std::less<T>());
-      if (Base::size() == max_size) {
-        std::make_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
-          return std::get<0>(a) < std::get<0>(b);
-        });
-      }
+
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return std::get<0>(a) < std::get<0>(b);
+      });
+      //      if (Base::size() == max_size) {
+      //        std::make_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      //          return std::get<0>(a) < std::get<0>(b);
+      //        });
+      //      }
       return true;
     } else if (x < std::get<0>(this->front())) {
       std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
@@ -170,7 +170,9 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
       });
 
       if constexpr (std::is_same_v<Unique, unique_id>) {
-        if (std::find_if(begin(*this), end(*this), [y](auto&& e) { return std::get<1>(e) == y; }) != end(*this)) {
+        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
+              return std::get<1>(e) == y;
+            }) != end(*this)) {
           std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
             return std::get<0>(a) < std::get<0>(b);
           });
@@ -178,8 +180,9 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
         }
       }
 
-      this->pop_back();
-      this->emplace_back(x, y);
+      //      this->pop_back();
+      //      this->emplace_back(x, y);
+      (*this)[max_size - 1] = std::make_tuple(x, y);
       std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
         return std::get<0>(a) < std::get<0>(b);
       });
@@ -187,13 +190,18 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
     }
     return false;
   }
-  void pop() {
+
+  auto pop() {
     std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
       return std::get<0>(a) < std::get<0>(b);
     });
     this->pop_back();
   }
+
 };
+
+template <class T, class U>
+using k_min_heap = fixed_min_pair_heap<T, U>;
 
 // template <class T>
 // using fixed_min_heap = fixed_min_set_heap_1<T>;

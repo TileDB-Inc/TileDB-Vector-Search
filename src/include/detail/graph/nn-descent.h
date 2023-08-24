@@ -291,6 +291,7 @@ auto nn_descent_1_query(const detail::graph::nn_graph<T, I>& graph, auto&& db, a
 
 
     while (!q1.empty()) {
+
       auto start = q1.begin();
       auto stop = q1.end();
       if (lvl != 0) {
@@ -300,6 +301,7 @@ auto nn_descent_1_query(const detail::graph::nn_graph<T, I>& graph, auto&& db, a
 
       std::for_each(start, stop, [&](auto&& x) {
         auto&& [_, u] = x;
+      // auto&& [_, u] = q1.front();
 
         auto nbd {graph.entire_neighborhood(u)};
         auto in_start = begin(nbd);
@@ -313,7 +315,7 @@ auto nn_descent_1_query(const detail::graph::nn_graph<T, I>& graph, auto&& db, a
             top_k[i].insert(dist, v);
           }
         });
-      });
+       });
       std::swap(q1, q2);
       q2.clear();
       ++lvl;

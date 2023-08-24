@@ -197,6 +197,109 @@ void range_for_each(
   }
 }
 
+
+/**
+ * Execute a function in parallel over a range of elements as specified
+ * by a begin and end iterator.
+ */
+template <std::random_access_iterator InputIt, std::random_access_iterator OutputIt, class UnaryOperation>
+void transform(
+    stdx::execution::parallel_policy&& par,
+    InputIt begin,
+    InputIt end,
+    OutputIt out,
+    UnaryOperation f) {
+  size_t container_size = end - begin;
+  size_t nthreads = par.nthreads_;
+  size_t block_size = (container_size + nthreads - 1) / nthreads;
+
+  std::vector<std::future<void>> futs;
+  futs.reserve(nthreads);
+
+  for (size_t n = 0; n < nthreads; ++n) {
+    auto start = std::min<InputIt>(begin + n * block_size, end);
+    auto stop = std::min<InputIt>(start + block_size, end);
+
+    if (start != stop) {
+      futs.emplace_back(std::async(
+          std::launch::async,
+          [start, stop, out, f = std::forward<UnaryOperation>(f)]() mutable {
+            std::transform(start, stop, out, std::forward<UnaryOperation>(f));
+          }));
+    }
+  }
+  for (size_t n = 0; n < size(futs); ++n) {
+    futs[n].wait();
+  }
+}
+
+
+/**
+ * Execute a function in parallel over a range of elements as specified
+ * by a begin and end iterator.  We also pass the thread number and the
+ * current iteration number to the function.
+ */
+template <std::random_access_iterator InputIt, std::random_access_iterator OutputIt, class UnaryOperation>
+void transform(
+    stdx::execution::indexed_parallel_policy&& par,
+    InputIt begin,
+    InputIt end,
+    OutputIt out,
+    UnaryOperation f) {
+  size_t container_size = end - begin;
+  size_t nthreads = par.nthreads_;
+  size_t block_size = (container_size + nthreads - 1) / nthreads;
+
+  std::vector<std::future<void>> futs;
+  futs.reserve(nthreads);
+
+  for (size_t n = 0; n < nthreads; ++n) {
+    auto start = std::min<size_t>(n * block_size, container_size);
+    auto stop = std::min<size_t>((n + 1) * block_size, container_size);
+
+    if (start != stop) {
+      futs.emplace_back(std::async(
+          std::launch::async,
+          [n,
+           begin,
+           start,
+           stop,
+           out,
+           f = std::forward<UnaryOperation>(f)]() mutable {
+            for (size_t i = start; i < stop; ++i) {
+              out[i] = std::forward<UnaryOperation>(f)(begin[i], n, i);
+            }
+          }));
+    }
+  }
+  for (size_t n = 0; n < size(futs); ++n) {
+    futs[n].wait();
+  }
+}
+
+
+template <std::random_access_iterator InputIt, std::random_access_iterator OutputIt, class UnaryOperation>
+auto copy(
+    stdx::execution::parallel_policy&& par,
+    InputIt begin,
+    InputIt end,
+    OutputIt out) {
+  transform(std::move(par), begin, end, out, [](auto&& v) { return v; });
+  return out + (end - begin);
+}
+
+
+template <std::random_access_iterator InputIt, std::random_access_iterator OutputIt, class T>
+void fill(
+    stdx::execution::parallel_policy&& par,
+    InputIt begin,
+    InputIt end,
+    T val) {
+  for_each(std::move(par), begin, end, [val](auto& v) { v = val; });
+}
+
+
+
 }  // namespace stdx
 
 #endif  // TDB_ALGORITHM_H

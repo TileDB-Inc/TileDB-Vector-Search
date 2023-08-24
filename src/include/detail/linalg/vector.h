@@ -40,6 +40,8 @@
 #include <tiledb/tiledb>
 #include <vector>
 
+#if 0
+
 template <class T>
 std::vector<T> read_vector(
     const tiledb::Context& ctx,
@@ -55,6 +57,12 @@ concept is_view = requires(M) {
 template <class T>
 using VectorView = std::span<T>;
 
+Vector& operator=(const VectorView<T>& rhs) {
+  std::copy(rhs.begin(), rhs.end(), this->begin());
+  return *this;
+}
+#endif
+
 /**
  * @brief A 1-D vector class that owns its storage.
  * @tparam T
@@ -67,8 +75,9 @@ class Vector : public std::span<T> {
   using Base::Base;
 
  public:
+    using value_type = typename Base::value_type;
   using index_type = typename Base::difference_type;
-  using size_type = typename Base::size_type;
+    using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
  private:
@@ -88,19 +97,38 @@ class Vector : public std::span<T> {
     Base::operator=(Base{storage_.get(), nrows_});
   }
 
-  Vector(Vector&& rhs) noexcept
-      : nrows_{rhs.nrows_}
-      , storage_{std::move(rhs.storage_)} {
-    Base::operator=(Base{storage_.get(), nrows_});
+  Vector(std::initializer_list<T> lst) : nrows_(lst.size()), storage_ { new T[nrows_] } {
+    Base::operator=(Base { storage_.get(), nrows_ });
+    std::copy(lst.begin(), lst.end(), storage_.get());
   }
 
-  constexpr reference operator()(size_type idx) const noexcept {
+  Vector(Vector&& rhs) noexcept : nrows_ { rhs.nrows_ }, storage_ { std::move(rhs.storage_) } {
+    *static_cast<Base*>(&rhs) = Base { rhs.storage_.get(), 0 };
+    Base::operator=(Base { storage_.get(), nrows_ });
+  }
+
+  Vector& operator=(Vector&& rhs) noexcept {
+    nrows_   = rhs.nrows_;
+    storage_ = std::move(rhs.storage_);
+    *static_cast<Base*>(&rhs) = Base { rhs.storage_.get(), 0 };
+    Base::operator=(Base { storage_.get(), nrows_ });
+    return *this;
+  }
+
+  constexpr reference operator()(index_type idx) const noexcept {
     return Base::operator[](idx);
   }
 
-  Vector& operator=(const VectorView<T>& rhs) {
-    std::copy(rhs.begin(), rhs.end(), this->begin());
-    return *this;
+  constexpr reference operator()(index_type idx) noexcept {
+    return Base::operator[](idx);
+  }
+
+  constexpr reference operator[](index_type idx) noexcept {
+    return Base::operator[](idx);
+  }
+
+  constexpr reference operator[](index_type idx) const noexcept {
+    return Base::operator[](idx);
   }
 
   constexpr size_type num_rows() const noexcept {
