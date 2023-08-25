@@ -1,9 +1,9 @@
 #include <catch2/catch_all.hpp>
 #include <set>
 #include <vector>
-#include "coo.h"
-#include "csr.h"
-#include "timer.h"
+#include "detail/graph/coo.h"
+#include "detail/graph/csr.h"
+#include "utils/logging.h"
 
 #if HAS_TBB
 #include <tbb/global_control.h>

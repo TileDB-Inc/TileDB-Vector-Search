@@ -32,6 +32,7 @@
 
 #include <catch2/catch_all.hpp>
 #include "detail/graph/vamana.h"
+#include "detail/graph/nn-graph.h"
 #include "query_common.h"
 
 #include <tiledb/tiledb>
@@ -41,3 +42,76 @@ bool global_debug = false;
 TEST_CASE("vamana: test test", "[vamana]") {
   REQUIRE(true);
 }
+
+
+TEST_CASE("vamana: greedy search", "[vamana]") {
+
+  size_t k_near = 5;
+  size_t k_far = 5;
+
+  size_t N = 8 * (k_near + k_far + 1);
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<float> dist_near(-0.1, 0.1);
+  std::uniform_real_distribution<float> dist_far(0.2, 0.3);
+  std::uniform_int_distribution<int> heads(0, 1);
+
+  ColMajorMatrix<float> nn_hypercube(3, N+1);
+  size_t n {0};
+  nn_hypercube(0, n) = 0;
+  nn_hypercube(1, n) = 0;
+  nn_hypercube(2, n) = 0;
+  ++n;
+
+  for (auto i : {-1, 1}) {
+    for (auto j : {-1, 1}) {
+      for (auto k : {-1, 1}) {
+        nn_hypercube(0, n) = i;
+        nn_hypercube(1, n) = j;
+        nn_hypercube(2, n) = k;
+        ++n;
+      }
+    }
+  }
+
+  for (size_t m = 0; m < k_near; ++m) {
+    for (auto i : {-1, 1}) {
+      for (auto j : {-1, 1}) {
+        for (auto k : {-1, 1}) {
+          nn_hypercube(0, n) = i + dist_near(gen);
+          nn_hypercube(1, n) = j + dist_near(gen);
+          nn_hypercube(2, n) = k + dist_near(gen);
+          ++n;
+        }
+      }
+    }
+  }
+
+  for (size_t m = 0; m < k_far; ++m) {
+    for (auto i : {-1, 1}) {
+      for (auto j : {-1, 1}) {
+        for (auto k : {-1, 1}) {
+          nn_hypercube(0, n) = i + (heads(gen)?1:-1) * dist_far(gen);
+          nn_hypercube(1, n) = j + (heads(gen)?1:-1) * dist_far(gen);
+          nn_hypercube(2, n) = k + (heads(gen)?1:-1) * dist_far(gen);
+          ++n;
+        }
+      }
+    }
+  }
+
+  for (size_t i = 0; i < nn_hypercube.num_rows(); ++i) {
+    std::cout << nn_hypercube(i, 0) << ", " << nn_hypercube(i, 1) << ", " << nn_hypercube(i, 2) << std::endl;
+  }
+
+  std::vector<size_t> nbd(k_near);
+  auto g = detail::graph::init_random_nn_graph<float>(nn_hypercube, k_near);
+  auto query = Vector<float>{1.0, 1.0, 1.0};
+  greedy_search(g, nn_hypercube, 0, query, k_near, k_near, nbd);
+
+  for (auto&& n : nbd) {
+    std::cout << sum_of_squares_distance{}(nn_hypercube[n], query) << std::endl;
+  }
+
+  }

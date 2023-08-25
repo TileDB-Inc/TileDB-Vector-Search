@@ -50,6 +50,9 @@ class nn_graph {
   std::vector<fixed_min_pair_heap<T, I>> update_edges_;
 
 public:
+  using value_type = T;
+  using index_type = I;
+
   nn_graph(size_t num_vertices, size_t k_nn)
           : num_vertices_{num_vertices}
           , k_nn_{k_nn}
@@ -192,16 +195,16 @@ auto in_degree(const nn_graph<T, I>& g, size_t i) {
  * @return
  */
 template <class T, class I = size_t, class Distance = sum_of_squares_distance>
-auto init_random_nn_graph(auto&& db, size_t k_nn, Distance distance = Distance()) {
+auto init_random_nn_graph(auto&& db, size_t L, Distance distance = Distance()) {
   auto num_vertices = db.num_cols();
-  nn_graph<T, I> g(num_vertices, k_nn);
+  nn_graph<T, I> g(num_vertices, L);
   std::random_device rd;
   std::mt19937 gen(rd());
 
   std::uniform_int_distribution<size_t> dis(0, num_vertices - 1);
 
   for (size_t i = 0; i < num_vertices; ++i) {
-    for (size_t j = 0; j < k_nn; ++j) {
+    for (size_t j = 0; j < L; ++j) {
       auto nbr = dis(gen);
       while (nbr == i) {
         nbr = dis(gen);

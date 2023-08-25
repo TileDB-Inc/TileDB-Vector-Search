@@ -129,6 +129,25 @@ class coo_matrix {
   }
 
   /**
+   * @brief Construct a new coo matrix object from a container of tuples
+   * @param lst
+   */
+  coo_matrix(const std::vector<std::tuple<IndexType, IndexType, ValueType>>& lst)
+      : nnz_(lst.size()), row_idx_(lst.size()), col_idx_(lst.size()), values_(lst.size()) {
+
+    auto row_ptr = row_idx_.data();
+    auto col_ptr = col_idx_.data();
+    auto val_ptr = values_.data();
+
+    // Initializer lists are presumed to be small, so no point parallelizing this
+    for (auto& [row, col, val] : lst) {
+      *row_ptr++ = row;
+      *col_ptr++ = col;
+      *val_ptr++ = val;
+    }
+  }
+
+  /**
    * @brief Move equality operator
    * @param rhs
    * @return

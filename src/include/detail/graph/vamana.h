@@ -59,28 +59,34 @@ using size_t = std::size_t;
  *    d. If size of the result list > L, trim the result list to keep L closest points to query
  * 3. Copy the result list to the output
  */
-template <class T, class I = size_t, class Distance = std::less<>>
-auto greedy_search(auto&& graph, auto&&db, I source, I query, size_t k, size_t L, auto&& nbd, Distance&& distance = Distance{}) {
+template <class I = size_t, class Distance = sum_of_squares_distance>
+auto greedy_search(auto&& graph, auto&&db, I source, auto&& query, size_t k, size_t L, auto&& nbd, Distance&& distance = Distance{}) {
+  using value_type = typename std::decay_t<decltype(graph)>::value_type;
 
-  auto result = k_min_heap<T, I> {k};
-  auto q1 = k_min_heap<T, I> {L};
+  std::set<I> visited_vertices;
+  auto visited = [&visited_vertices](auto&& v) {
+    return visited_vertices.find(v) != visited_vertices.end();
+  };
 
-  result.insert(0, source);
-  std::set<I> visited;
+  auto result = k_min_heap<value_type, I> {k};
+  auto q1 = k_min_heap<value_type, I> {L};
+
+  result.insert(distance(db[source], query), source);
+  q1.insert(distance(db[source], query), source);
 
   while(!q1.empty()) {
     // p_star is the nearest unvisited neighbor to the query
-
     auto [s_star, p_star] = q1.front();
+    q1.pop();
 
-    for (auto&& p : graph.out_edges(p_star)) {
-      if (visited.find(p) == visited.end()) {
+    for (auto&& [_, p] : graph.out_edges(p_star)) {
+      if (visited(p)) {
         continue;
       }
-      auto score = distance(db[p], db[query]);
+      auto score = distance(db[p], query);
       q1.insert(score, p);
       result.insert(score, p);
-      visited.insert(p_star);
+      visited_vertices.insert(p_star);
     }
   }
 
