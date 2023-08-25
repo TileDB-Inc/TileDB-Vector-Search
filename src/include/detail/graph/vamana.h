@@ -79,14 +79,17 @@ auto greedy_search(auto&& graph, auto&&db, I source, auto&& query, size_t k, siz
     auto [s_star, p_star] = q1.front();
     q1.pop();
 
+    visited_vertices.insert(p_star);
+
     for (auto&& [_, p] : graph.out_edges(p_star)) {
-      if (visited(p)) {
-        continue;
-      }
       auto score = distance(db[p], query);
-      q1.insert(score, p);
-      result.insert(score, p);
-      visited_vertices.insert(p_star);
+      // result. template insert<unique_id>(score, p);
+
+      if (!visited(p)) {
+        visited_vertices.insert(p);
+        result.insert(score, p);
+        q1.insert(score, p);
+      }
     }
   }
 

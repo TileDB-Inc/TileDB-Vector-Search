@@ -34,6 +34,7 @@
 #include "detail/graph/vamana.h"
 #include "detail/graph/nn-graph.h"
 #include "query_common.h"
+#include "detail/flat/qv.h"
 
 #include <tiledb/tiledb>
 
@@ -48,6 +49,7 @@ TEST_CASE("vamana: greedy search", "[vamana]") {
 
   size_t k_near = 5;
   size_t k_far = 5;
+  size_t L = 7;
 
   size_t N = 8 * (k_near + k_far + 1);
 
@@ -101,17 +103,35 @@ TEST_CASE("vamana: greedy search", "[vamana]") {
     }
   }
 
-  for (size_t i = 0; i < nn_hypercube.num_rows(); ++i) {
-    std::cout << nn_hypercube(i, 0) << ", " << nn_hypercube(i, 1) << ", " << nn_hypercube(i, 2) << std::endl;
+std::cout << "Hypercube stats:" << std::endl;
+std::cout << "  num_rows: " << nn_hypercube.num_rows() << " ";
+std::cout << "  num_cols: " << nn_hypercube.num_cols() << std::endl;
+
+  std::cout << "Hypercube (transpose):" << std::endl;
+  for (size_t j = 0; j < nn_hypercube.num_cols(); ++j) {
+    for (size_t i = 0; i < nn_hypercube.num_rows(); ++i) {
+      std::cout << nn_hypercube(i, j) << ", ";
+    }
+    std::cout << std::endl;
   }
 
   std::vector<size_t> nbd(k_near);
   auto g = detail::graph::init_random_nn_graph<float>(nn_hypercube, k_near);
   auto query = Vector<float>{1.0, 1.0, 1.0};
-  greedy_search(g, nn_hypercube, 0, query, k_near, k_near, nbd);
+  greedy_search(g, nn_hypercube, 0, query, k_near, L, nbd);
 
+  std::cout << "Nearest neighbors:" << std::endl;
   for (auto&& n : nbd) {
-    std::cout << sum_of_squares_distance{}(nn_hypercube[n], query) << std::endl;
+    std::cout << n << " (" << nn_hypercube(0,n) << ", " << nn_hypercube(1,n) << ", "<< nn_hypercube(2,n) << "), "<< sum_of_squares_distance{}(nn_hypercube[n], query) << std::endl;
+  }
+
+  auto query_mat = ColMajorMatrix<float>(3, 1);
+  for (size_t i = 0; i < 3; ++i) {
+    query_mat(i, 0) = query[i];
+  }
+  auto&& [top_scores, top_k] = detail::flat::qv_query_heap(nn_hypercube, query_mat, k_near, 1);
+  for (size_t i = 0; i < k_near; ++i) {
+    std::cout << top_k(i, 0) << " (" << nn_hypercube(0,top_k(i, 0)) << ", " << nn_hypercube(1,top_k(i,0)) << ", "<< nn_hypercube(2,top_k(i,0)) << "), "<< top_scores(i,0) << std::endl;
   }
 
   }
