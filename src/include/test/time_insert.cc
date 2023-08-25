@@ -1,43 +1,46 @@
 /**
-* @file   time_insert.cc
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
-*
-* Program to test performance of different min-heap implementations.
-*
-*/
+ * @file   time_insert.cc
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
+ * Program to test performance of different min-heap implementations.
+ *
+ */
 
-#include "utils/logging.h"
 #include <numeric>
 #include <random>
+#include "utils/logging.h"
 
 template <class Heap>
 void do_time_heap_of_pair(
-    const std::string& msg, Heap& heap, const std::vector<size_t>& v, size_t trials = 1) {
+    const std::string& msg,
+    Heap& heap,
+    const std::vector<size_t>& v,
+    size_t trials = 1) {
   scoped_timer _{msg};
 
   auto size_v = v.size();
@@ -51,7 +54,10 @@ void do_time_heap_of_pair(
 
 template <class Heap>
 void do_time_pair_heap(
-    const std::string& msg, Heap& heap, const std::vector<size_t>& v, size_t trials = 1) {
+    const std::string& msg,
+    Heap& heap,
+    const std::vector<size_t>& v,
+    size_t trials = 1) {
   scoped_timer _{msg, true};
 
   auto size_v = v.size();
@@ -68,11 +74,11 @@ class simple_pair_heap : public std::vector<std::tuple<T, U>> {
   using Base = std::vector<std::tuple<T, U>>;
   // using Base::Base;
   unsigned max_size{0};
-  
+
  public:
-  explicit simple_pair_heap(std::integral auto  k)
+  explicit simple_pair_heap(std::integral auto k)
       : Base(0)
-      , max_size{(unsigned) k} {
+      , max_size{(unsigned)k} {
     Base::reserve(k);
   }
 
@@ -126,14 +132,12 @@ class simple_pair_heap : public std::vector<std::tuple<T, U>> {
   }
 };
 
-
 int main() {
-
   // Use a random device as the seed for the random number generator
   std::random_device rd;
   std::mt19937 rng(rd());
 
-  for (size_t n : { 10, 1000, 100'000, 100'000'000}) {
+  for (size_t n : {10, 1000, 100'000, 100'000'000}) {
     std::vector<float> scores(n);
     std::vector<size_t> v(n);
 
@@ -143,7 +147,7 @@ int main() {
     std::shuffle(begin(v), end(v), rng);
 
     for (unsigned k : {1, 10, 100}) {
-      auto trials = (10*100'000'000UL) / (n) + 1;
+      auto trials = (10 * 100'000'000UL) / (n) + 1;
 
       std::cout << n << " " << k << " " << trials << std::endl;
 
@@ -160,7 +164,6 @@ int main() {
       do_time_pair_heap("push pop", heap_yes_yes, v, trials);
 
       std::cout << "--------------------------------------------------------\n";
-
     }
   }
 }

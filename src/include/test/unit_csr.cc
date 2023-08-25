@@ -1,9 +1,9 @@
-#include "coo.h"
-#include "csr.h"
-#include "timer.h"
 #include <catch2/catch_all.hpp>
 #include <set>
 #include <vector>
+#include "coo.h"
+#include "csr.h"
+#include "timer.h"
 
 #if HAS_TBB
 #include <tbb/global_control.h>
@@ -14,57 +14,55 @@ TEST_CASE("csr: test test", "[csr]") {
 }
 
 TEST_CASE("csr: test initializer list", "[csr]") {
-  auto w = coo_matrix<double, int> {
-    {1,  3, 0},
-    { 2, 0, 1},
-    { 1, 2, 2},
-    { 5, 2, 3},
-    { 0, 5, 4},
-    { 5, 4, 5},
-    { 0, 1, 6},
-    { 5, 3, 7}
+  auto w = coo_matrix<double, int>{
+      {1, 3, 0},
+      {2, 0, 1},
+      {1, 2, 2},
+      {5, 2, 3},
+      {0, 5, 4},
+      {5, 4, 5},
+      {0, 1, 6},
+      {5, 3, 7}};
+  auto x = coo_matrix<double, int>{
+      {0, 5, 4},
+      {0, 1, 6},
+      {1, 2, 2},
+      {1, 3, 0},
+      {2, 0, 1},
+      {5, 2, 3},
+      {5, 4, 5},
+      {5, 3, 7},
   };
-  auto x = coo_matrix<double, int> {
-    {0,  5, 4},
-    { 0, 1, 6},
-    { 1, 2, 2},
-    { 1, 3, 0},
-    { 2, 0, 1},
-    { 5, 2, 3},
-    { 5, 4, 5},
-    { 5, 3, 7},
+  auto u = coo_matrix<double, int>{
+      {0, 5, 4},
+      {0, 1, 6},
+      {1, 3, 0},
+      {1, 2, 2},
+      {2, 0, 1},
+      {5, 2, 3},
+      {5, 4, 5},
+      {5, 3, 7},
   };
-  auto u = coo_matrix<double, int> {
-    {0,  5, 4},
-    { 0, 1, 6},
-    { 1, 3, 0},
-    { 1, 2, 2},
-    { 2, 0, 1},
-    { 5, 2, 3},
-    { 5, 4, 5},
-    { 5, 3, 7},
+  auto relabeled_x = coo_matrix<double, int>{
+      {0, 5, 4},
+      {0, 1, 6},
+      {1, 2, 2},
+      {1, 3, 0},
+      {2, 0, 1},
+      {3, 2, 3},
+      {3, 3, 7},
+      {3, 4, 5},
   };
-  auto relabeled_x = coo_matrix<double, int> {
-    {0,  5, 4},
-    { 0, 1, 6},
-    { 1, 2, 2},
-    { 1, 3, 0},
-    { 2, 0, 1},
-    { 3, 2, 3},
-    { 3, 3, 7},
-    { 3, 4, 5},
+  auto relabeled_u = coo_matrix<double, int>{
+      {0, 5, 4},
+      {0, 1, 6},
+      {1, 3, 0},
+      {1, 2, 2},
+      {2, 0, 1},
+      {3, 2, 3},
+      {3, 4, 5},
+      {3, 3, 7},
   };
-  auto relabeled_u = coo_matrix<double, int> {
-    {0,  5, 4},
-    { 0, 1, 6},
-    { 1, 3, 0},
-    { 1, 2, 2},
-    { 2, 0, 1},
-    { 3, 2, 3},
-    { 3, 4, 5},
-    { 3, 3, 7},
-  };
-
 
   SECTION("move constructor") {
     auto y = csr_matrix(std::move(w));
@@ -124,7 +122,6 @@ TEST_CASE("csr: test initializer list", "[csr]") {
   }
 }
 
-
 #if 0
 TEST_CASE("csr: info", "[csr]") {
   tiledb::Context ctx;
@@ -137,14 +134,12 @@ TEST_CASE("csr: info", "[csr]") {
 }
 #endif
 
-
 template <class V>
 void shuffle(V& v) {
   std::random_device rd;
-  std::mt19937       g(rd());
+  std::mt19937 g(rd());
   std::shuffle(v.begin(), v.end(), g);
 }
-
 
 template <class V>
 void init_one(V& v) {
@@ -152,7 +147,7 @@ void init_one(V& v) {
   // size_t M = 1'500;
   // size_t repeats = ( N + M - 1) / M;
   size_t repeats = 1'500;
-  size_t M       = (N + repeats - 1) / repeats;
+  size_t M = (N + repeats - 1) / repeats;
   for (size_t i = 0; i < repeats; ++i) {
     std::iota(begin(v) + i * M, begin(v) + std::min((i + 1) * M, N), 1.01);
   }
@@ -174,14 +169,15 @@ auto N = 100'000'000U;
 TEST_CASE("csr: test tdb copy tbb, shuffle", "[csr]") {
   auto x = new_coo(N);
 
-  for (auto&& max_p : { 1, 2, 4, 8 }) {
-    auto _ = tbb::global_control(tbb::global_control::max_allowed_parallelism, max_p);
+  for (auto&& max_p : {1, 2, 4, 8}) {
+    auto _ = tbb::global_control(
+        tbb::global_control::max_allowed_parallelism, max_p);
 
     x.shuffle_rows();
 
     std::cout << std::endl;
     scoped_timer t("csr copy tbb, shuffle", true);
-    auto         y = csr_matrix<float, int64_t>(x, true);
+    auto y = csr_matrix<float, int64_t>(x, true);
   }
 
   std::cout << "--------------------------" << std::endl;
@@ -190,42 +186,43 @@ TEST_CASE("csr: test tdb copy tbb, shuffle", "[csr]") {
 TEST_CASE("csr: test tdb copy tbb, no shuffle", "[csr]") {
   auto x = new_coo(N);
 
-  for (auto&& max_p : { 1, 2, 4, 8 }) {
+  for (auto&& max_p : {1, 2, 4, 8}) {
     std::cout << std::endl;
 
     scoped_timer t("csr copy tbb, no shuffle", true);
-    auto         y = csr_matrix<float, int64_t>(x, true);
+    auto y = csr_matrix<float, int64_t>(x, true);
   }
   std::cout << "--------------------------" << std::endl;
 }
 
 TEST_CASE("csr: test tdb move tbb, shuffle", "[csr]") {
-  for (auto&& max_p : { 1, 2, 4, 8 }) {
-    auto _ = tbb::global_control(tbb::global_control::max_allowed_parallelism, max_p);
+  for (auto&& max_p : {1, 2, 4, 8}) {
+    auto _ = tbb::global_control(
+        tbb::global_control::max_allowed_parallelism, max_p);
 
     auto x = new_coo(N);
     x.shuffle_rows();
 
     std::cout << std::endl;
     scoped_timer t("csr move tbb, shuffle", true);
-    auto         y = csr_matrix<float, int64_t>(std::move(x), true);
+    auto y = csr_matrix<float, int64_t>(std::move(x), true);
   }
   std::cout << "--------------------------" << std::endl;
 }
 
 TEST_CASE("csr: test tdb move tbb, no shuffle", "[csr]") {
-  for (auto&& max_p : { 1, 2, 4, 8 }) {
-    auto _ = tbb::global_control(tbb::global_control::max_allowed_parallelism, max_p);
+  for (auto&& max_p : {1, 2, 4, 8}) {
+    auto _ = tbb::global_control(
+        tbb::global_control::max_allowed_parallelism, max_p);
 
     auto x = new_coo(N);
 
     std::cout << std::endl;
     scoped_timer t("csr move tbb, no shuffle", true);
-    auto         y = csr_matrix<float, int64_t>(std::move(x), true);
+    auto y = csr_matrix<float, int64_t>(std::move(x), true);
   }
   std::cout << "--------------------------" << std::endl;
 }
-
 
 #else
 TEST_CASE("csr: test tdb copy tbb, shuffle", "[csr]") {
@@ -235,8 +232,7 @@ TEST_CASE("csr: test tdb copy tbb, shuffle", "[csr]") {
 
   std::cout << std::endl;
   scoped_timer t("csr copy tbb, shuffle", true);
-  auto         y = csr_matrix<float, int64_t>(x, true);
-
+  auto y = csr_matrix<float, int64_t>(x, true);
 
   std::cout << "--------------------------" << std::endl;
 }
@@ -247,35 +243,31 @@ TEST_CASE("csr: test tdb copy tbb, no shuffle", "[csr]") {
   std::cout << std::endl;
 
   scoped_timer t("csr copy tbb, no shuffle", true);
-  auto         y = csr_matrix<float, int64_t>(x, true);
+  auto y = csr_matrix<float, int64_t>(x, true);
   std::cout << "--------------------------" << std::endl;
 }
 
 TEST_CASE("csr: test tdb move tbb, shuffle", "[csr]") {
-
-
   auto x = new_coo(N);
   x.shuffle_rows();
 
   std::cout << std::endl;
   scoped_timer t("csr move tbb, shuffle", true);
-  auto         y = csr_matrix<float, int64_t>(std::move(x), true);
+  auto y = csr_matrix<float, int64_t>(std::move(x), true);
 
   std::cout << "--------------------------" << std::endl;
 }
 
 TEST_CASE("csr: test tdb move tbb, no shuffle", "[csr]") {
-
   auto x = new_coo(N);
 
   std::cout << std::endl;
   scoped_timer t("csr move tbb, no shuffle", true);
-  auto         y = csr_matrix<float, int64_t>(std::move(x), true);
+  auto y = csr_matrix<float, int64_t>(std::move(x), true);
   std::cout << "--------------------------" << std::endl;
 }
 
 #endif
-
 
 #if 0
 TEST_CASE("csr: test tdb open", "[csr]") {

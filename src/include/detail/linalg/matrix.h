@@ -106,6 +106,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       : num_rows_{rhs.num_rows_}
       , num_cols_{rhs.num_cols_}
       , storage_{std::move(rhs.storage_)} {
+    *static_cast<Base*>(&rhs) = Base { rhs.storage_.get(), 0, 0 };
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
   }
 

@@ -1,14 +1,13 @@
 
 
-#include "detail/linalg/vector.h"
 #include <catch2/catch_all.hpp>
 #include <set>
 #include <vector>
+#include "detail/linalg/vector.h"
 
 TEST_CASE("vector: test test", "[vector]") {
   REQUIRE(true);
 }
-
 
 TEST_CASE("vector: test constructor", "[vector]") {
   Vector<int> v(10);
@@ -19,7 +18,7 @@ TEST_CASE("vector: test constructor", "[vector]") {
 
 TEST_CASE("vector: test move constructor", "[vector]") {
   Vector<int> v(10);
-  auto        p = v.data();
+  auto p = v.data();
   Vector<int> w(std::move(v));
   REQUIRE(w.num_rows() == 10);
   REQUIRE(w.size() == 10);
@@ -37,8 +36,8 @@ TEST_CASE("vector: test operator()", "[vector]") {
 }
 
 TEST_CASE("vector: test initializer_list", "[vector]") {
-  std::vector<int> u { 8, 6, 7, 5, 3, 0, 9 };
-  Vector<int>      v { 8, 6, 7, 5, 3, 0, 9 };
+  std::vector<int> u{8, 6, 7, 5, 3, 0, 9};
+  Vector<int> v{8, 6, 7, 5, 3, 0, 9};
 
   REQUIRE(v.num_rows() == 7);
   REQUIRE(v.size() == 7);
@@ -47,9 +46,9 @@ TEST_CASE("vector: test initializer_list", "[vector]") {
 }
 
 TEST_CASE("vector: test move constructor too", "[vector]") {
-  std::vector<int> u { 8, 6, 7, 5, 3, 0, 9 };
-  Vector<int>      v { 8, 6, 7, 5, 3, 0, 9 };
-  Vector<int>      w { std::move(v) };
+  std::vector<int> u{8, 6, 7, 5, 3, 0, 9};
+  Vector<int> v{8, 6, 7, 5, 3, 0, 9};
+  Vector<int> w{std::move(v)};
 
   REQUIRE(v.data() == nullptr);
   REQUIRE(w.size() == 7);

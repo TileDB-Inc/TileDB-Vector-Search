@@ -1,8 +1,8 @@
 
 #include "detail/linalg/tdb_io.h"
 
-#include "detail/linalg/matrix.h"
 #include <highfive/H5File.hpp>
+#include "detail/linalg/matrix.h"
 
 using namespace HighFive;
 bool global_debug = false;
@@ -11,7 +11,7 @@ template <class T>
 auto to_matrix(const std::vector<std::vector<T>>& v) {
   size_t cols = v.size();
   size_t rows = v[0].size();
-  auto m =ColMajorMatrix<T> (rows, cols);
+  auto m = ColMajorMatrix<T>(rows, cols);
   for (size_t i = 0; i < cols; ++i) {
     for (size_t j = 0; j < rows; ++j) {
       m(j, i) = v[i][j];
@@ -21,16 +21,17 @@ auto to_matrix(const std::vector<std::vector<T>>& v) {
 }
 
 int main() {
-  std::string filename = "/Users/lums/TileDB/TileDB-Vector-Search/external/pynndescent/pynndescent/fashion-mnist-784-euclidean.hdf5";
+  std::string filename =
+      "/Users/lums/TileDB/TileDB-Vector-Search/external/pynndescent/"
+      "pynndescent/fashion-mnist-784-euclidean.hdf5";
 
-
-
-// fname = '/Users/lums/TileDB/TileDB-Vector-Search/external/pynndescent/pynndescent/fashion-mnist-784-euclidean.hdf5'
-//  ['distances', 'neighbors', 'test', 'train'] float int32 float float
+  // fname =
+  // '/Users/lums/TileDB/TileDB-Vector-Search/external/pynndescent/pynndescent/fashion-mnist-784-euclidean.hdf5'
+  //  ['distances', 'neighbors', 'test', 'train'] float int32 float float
 
   {
     File file(filename, File::ReadOnly);
-tiledb::Context ctx;
+    tiledb::Context ctx;
     auto dist_set = file.getDataSet("distances");
     auto dist_data = dist_set.read<std::vector<std::vector<float>>>();
     auto dist_mat = to_matrix(dist_data);
@@ -51,11 +52,10 @@ tiledb::Context ctx;
     auto train_mat = to_matrix(train_data);
     write_matrix(ctx, train_mat, "fmnist_train.tdb");
 
-
     // Because `pre_allocated` has the correct size, this will
     // not cause `pre_allocated` to be reallocated:
-//    auto pre_allocated = std::vector<int>(50);
-//    dataset.read(pre_allocated);
+    //    auto pre_allocated = std::vector<int>(50);
+    //    dataset.read(pre_allocated);
   }
 
   return 0;
