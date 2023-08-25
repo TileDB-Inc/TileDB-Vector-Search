@@ -31,10 +31,10 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include "detail/graph/vamana.h"
-#include "detail/graph/nn-graph.h"
-#include "query_common.h"
 #include "detail/flat/qv.h"
+#include "detail/graph/nn-graph.h"
+#include "detail/graph/vamana.h"
+#include "query_common.h"
 
 #include <tiledb/tiledb>
 
@@ -44,9 +44,7 @@ TEST_CASE("vamana: test test", "[vamana]") {
   REQUIRE(true);
 }
 
-
 TEST_CASE("vamana: greedy search", "[vamana]") {
-
   size_t k_near = 5;
   size_t k_far = 5;
   size_t L = 7;
@@ -59,8 +57,8 @@ TEST_CASE("vamana: greedy search", "[vamana]") {
   std::uniform_real_distribution<float> dist_far(0.2, 0.3);
   std::uniform_int_distribution<int> heads(0, 1);
 
-  ColMajorMatrix<float> nn_hypercube(3, N+1);
-  size_t n {0};
+  ColMajorMatrix<float> nn_hypercube(3, N + 1);
+  size_t n{0};
   nn_hypercube(0, n) = 0;
   nn_hypercube(1, n) = 0;
   nn_hypercube(2, n) = 0;
@@ -94,18 +92,18 @@ TEST_CASE("vamana: greedy search", "[vamana]") {
     for (auto i : {-1, 1}) {
       for (auto j : {-1, 1}) {
         for (auto k : {-1, 1}) {
-          nn_hypercube(0, n) = i + (heads(gen)?1:-1) * dist_far(gen);
-          nn_hypercube(1, n) = j + (heads(gen)?1:-1) * dist_far(gen);
-          nn_hypercube(2, n) = k + (heads(gen)?1:-1) * dist_far(gen);
+          nn_hypercube(0, n) = i + (heads(gen) ? 1 : -1) * dist_far(gen);
+          nn_hypercube(1, n) = j + (heads(gen) ? 1 : -1) * dist_far(gen);
+          nn_hypercube(2, n) = k + (heads(gen) ? 1 : -1) * dist_far(gen);
           ++n;
         }
       }
     }
   }
 
-std::cout << "Hypercube stats:" << std::endl;
-std::cout << "  num_rows: " << nn_hypercube.num_rows() << " ";
-std::cout << "  num_cols: " << nn_hypercube.num_cols() << std::endl;
+  std::cout << "Hypercube stats:" << std::endl;
+  std::cout << "  num_rows: " << nn_hypercube.num_rows() << " ";
+  std::cout << "  num_cols: " << nn_hypercube.num_cols() << std::endl;
 
   std::cout << "Hypercube (transpose):" << std::endl;
   for (size_t j = 0; j < nn_hypercube.num_cols(); ++j) {
@@ -122,16 +120,21 @@ std::cout << "  num_cols: " << nn_hypercube.num_cols() << std::endl;
 
   std::cout << "Nearest neighbors:" << std::endl;
   for (auto&& n : nbd) {
-    std::cout << n << " (" << nn_hypercube(0,n) << ", " << nn_hypercube(1,n) << ", "<< nn_hypercube(2,n) << "), "<< sum_of_squares_distance{}(nn_hypercube[n], query) << std::endl;
+    std::cout << n << " (" << nn_hypercube(0, n) << ", " << nn_hypercube(1, n)
+              << ", " << nn_hypercube(2, n) << "), "
+              << sum_of_squares_distance{}(nn_hypercube[n], query) << std::endl;
   }
 
   auto query_mat = ColMajorMatrix<float>(3, 1);
   for (size_t i = 0; i < 3; ++i) {
     query_mat(i, 0) = query[i];
   }
-  auto&& [top_scores, top_k] = detail::flat::qv_query_heap(nn_hypercube, query_mat, k_near, 1);
+  auto&& [top_scores, top_k] =
+      detail::flat::qv_query_heap(nn_hypercube, query_mat, k_near, 1);
   for (size_t i = 0; i < k_near; ++i) {
-    std::cout << top_k(i, 0) << " (" << nn_hypercube(0,top_k(i, 0)) << ", " << nn_hypercube(1,top_k(i,0)) << ", "<< nn_hypercube(2,top_k(i,0)) << "), "<< top_scores(i,0) << std::endl;
+    std::cout << top_k(i, 0) << " (" << nn_hypercube(0, top_k(i, 0)) << ", "
+              << nn_hypercube(1, top_k(i, 0)) << ", "
+              << nn_hypercube(2, top_k(i, 0)) << "), " << top_scores(i, 0)
+              << std::endl;
   }
-
-  }
+}
