@@ -123,6 +123,8 @@ class life_timer : public empty_timer, public ms_timer {
   }
 };
 
+namespace {
+
 std::ostream& operator<<(std::ostream& os, const seconds_timer& t) {
   std::string name = t.name();
   if (t.name() != "") {
@@ -150,6 +152,8 @@ std::ostream& operator<<(std::ostream& os, const us_timer& t) {
   os << t.elapsed() << " us";
   return os;
 }
+
+} // anonymous namespace
 
 #ifndef tdb_func__
 #ifdef __cpp_lib_source_location
