@@ -60,8 +60,13 @@ auto random_geomtric_2D(size_t N) {
 
 
 int main() {
-  auto X = random_geomtric_2D(200);
-  auto g = ::detail::graph::init_random_nn_graph<float>(X, 5);
+  size_t k_nn = 5;
+  size_t L = 7;
+  size_t R = 7;
+  float alpha = 1.0;
+
+  auto X = random_geomtric_2D(51);
+  auto g = ::detail::graph::init_random_nn_graph<float>(X, k_nn);
 
   std::vector<std::pair<size_t, size_t>> edges;
   for (size_t i = 0; i < g.num_vertices(); ++i) {
@@ -73,4 +78,24 @@ int main() {
   matplot::digraph(edges, "-.dr")->show_labels(false);
   //    digraph(edges)->show_labels(false);
   matplot::show();
+
+  auto start = medioid(X);
+  for (size_t p = 0; p < X.num_cols(); ++p) {
+    auto nbd = std::vector<size_t>(k_nn);
+    auto V = greedy_search(g, X, start, X[p], k_nn, L, nbd);
+    robust_prune(g, X, p, V, alpha, R);
+    if (p % 50 == 0) {
+      std::vector<std::pair<size_t, size_t>> edges;
+      for (size_t i = 0; i < g.num_vertices(); ++i) {
+        for (auto&& [_, j] : out_edges(g, i)) {
+          edges.emplace_back(i, j);
+        }
+      }
+
+      matplot::digraph(edges, "-.dr")->show_labels(false);
+      //    digraph(edges)->show_labels(false);
+      matplot::show();
+    }
+  }
+
 }

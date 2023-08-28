@@ -63,6 +63,10 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 # kmeans_add_test(time_queries)
 
 find_package(Matplot++ REQUIRED)
+find_package(Casablanca REQUIRED)
+
+kmeans_add_exe(demo_cytoscape)
+target_link_libraries(demo_cytoscape PRIVATE cpprestsdk::cpprest)
 
 kmeans_add_exe(demo_high_five)
 target_link_libraries(demo_high_five PRIVATE HighFive)
