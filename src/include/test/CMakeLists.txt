@@ -76,6 +76,9 @@ target_link_libraries(demo_nn-graph PUBLIC Matplot++::matplot)
 kmeans_add_exe(demo_nn-descent)
 target_link_libraries(demo_nn-descent PUBLIC Matplot++::matplot)
 
+kmeans_add_exe(demo_vamana)
+target_link_libraries(demo_vamana PUBLIC Matplot++::matplot)
+
 kmeans_add_exe(time_insert)
 
 kmeans_add_test(unit_algorithm)

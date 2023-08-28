@@ -32,9 +32,11 @@
 
 #include <catch2/catch_all.hpp>
 #include "detail/flat/qv.h"
+#include "detail/graph/nn-descent.h"
 #include "detail/graph/nn-graph.h"
 #include "detail/graph/vamana.h"
 #include "query_common.h"
+#include "utils/logging.h"
 
 #include <tiledb/tiledb>
 
@@ -44,11 +46,7 @@ TEST_CASE("vamana: test test", "[vamana]") {
   REQUIRE(true);
 }
 
-TEST_CASE("vamana: greedy search", "[vamana]") {
-  size_t k_near = 5;
-  size_t k_far = 5;
-  size_t L = 7;
-
+auto build_hypercube(size_t k_near, size_t k_far) {
   size_t N = 8 * (k_near + k_far + 1);
 
   std::random_device rd;
@@ -101,40 +99,321 @@ TEST_CASE("vamana: greedy search", "[vamana]") {
     }
   }
 
-  std::cout << "Hypercube stats:" << std::endl;
-  std::cout << "  num_rows: " << nn_hypercube.num_rows() << " ";
-  std::cout << "  num_cols: " << nn_hypercube.num_cols() << std::endl;
+  if (global_debug) {
+    std::cout << "Hypercube stats:" << std::endl;
+    std::cout << "  num_rows: " << nn_hypercube.num_rows() << " ";
+    std::cout << "  num_cols: " << nn_hypercube.num_cols() << std::endl;
 
-  std::cout << "Hypercube (transpose):" << std::endl;
-  for (size_t j = 0; j < nn_hypercube.num_cols(); ++j) {
-    for (size_t i = 0; i < nn_hypercube.num_rows(); ++i) {
-      std::cout << nn_hypercube(i, j) << ", ";
+    std::cout << "Hypercube (transpose):" << std::endl;
+    for (size_t j = 0; j < nn_hypercube.num_cols(); ++j) {
+      for (size_t i = 0; i < nn_hypercube.num_rows(); ++i) {
+        std::cout << nn_hypercube(i, j) << ", ";
+      }
+      std::cout << std::endl;
+    }
+  }
+  return nn_hypercube;
+}
+
+
+TEST_CASE("vamana: greedy search", "[vamana]") {
+  size_t k_near = 5;
+  size_t k_far = 5;
+  size_t L = 5;
+
+  auto nn_hypercube = build_hypercube(k_near, k_far);
+
+  std::vector<size_t> nbd(k_near);
+  auto g = detail::graph::init_random_nn_graph<float>(nn_hypercube, k_near);
+
+  for (float kk : {-1, 1}) {
+    auto query = Vector<float>{kk*1.05f, kk*0.95f, 1.09};
+    auto V = greedy_search(g, nn_hypercube, 2, query, k_near, L, nbd);
+
+    std::cout << "Nearest neighbors:" << std::endl;
+    for (auto&& n : nbd) {
+      std::cout << n << " (" << nn_hypercube(0, n) << ", " << nn_hypercube(1, n)
+                << ", " << nn_hypercube(2, n) << "), "
+                << sum_of_squares_distance{}(nn_hypercube[n], query)
+                << std::endl;
+    }
+    std::cout << "-----\ntop_k\n";
+
+    auto query_mat = ColMajorMatrix<float>(3, 1);
+    for (size_t i = 0; i < 3; ++i) {
+      query_mat(i, 0) = query[i];
+    }
+    auto&& [top_scores, top_k] =
+        detail::flat::qv_query_heap(nn_hypercube, query_mat, k_near, 1);
+    for (size_t i = 0; i < k_near; ++i) {
+      std::cout << top_k(i, 0) << " (" << nn_hypercube(0, top_k(i, 0)) << ", "
+                << nn_hypercube(1, top_k(i, 0)) << ", "
+                << nn_hypercube(2, top_k(i, 0)) << "), " << top_scores(i, 0)
+                << std::endl;
+    }
+    for (auto&& v : V) {
+      std::cout << v << ", ";
+    }
+    std::cout << std::endl;
+  }
+}
+
+
+TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
+  size_t k_near = 5;
+  size_t k_far = 5;
+  size_t L = 7;
+
+  auto nn_hypercube = build_hypercube(k_near, k_far);
+
+  std::vector<size_t> nbd(k_near);
+  auto g = detail::graph::init_random_nn_graph<float>(nn_hypercube, k_near);
+
+  for (size_t kk : {-1, 1}) {
+    auto query = Vector<float>{kk*1.05f, kk*0.95f, 1.09f};
+
+    auto V = greedy_search(g, nn_hypercube, 0UL, query, k_near, L, nbd);
+    std::cout << "size(V): " << size(V) << std::endl;
+
+    for (size_t i = 0; i < 4; ++i) {
+      auto num_updates = nn_descent_1_step_all(g, nn_hypercube);
+      std::cout << "num_updates: " << num_updates << std::endl;
+      if (num_updates == 0) {
+        break;
+      }
+      V = greedy_search(g, nn_hypercube, 0UL, query, k_near, L, nbd);
+      std::cout << "size(V): " << size(V) << std::endl;
+    }
+
+    for (auto&& v : V) {
+      std::cout << v << ", ";
+    }
+    std::cout << std::endl;
+
+
+    std::cout << "Nearest neighbors:" << std::endl;
+    for (auto&& n : nbd) {
+      std::cout << n << " (" << nn_hypercube(0, n) << ", " << nn_hypercube(1, n)
+                << ", " << nn_hypercube(2, n) << "), "
+                << sum_of_squares_distance{}(nn_hypercube[n], query) << std::endl;
+    }
+    std::cout << "-----\n";
+
+
+  }
+}
+
+TEST_CASE("vamana: fmnist", "[vamana]") {
+  size_t nthreads = 1;
+  size_t k_nn = 50;
+  size_t L = 7;
+  size_t num_queries = 10;
+  size_t N = 5000;
+
+  tiledb::Context ctx;
+  auto db = tdbColMajorMatrix<db_type>(ctx, fmnist_test, N);
+  db.load();
+  auto g = detail::graph::init_random_nn_graph<float>(db, L);
+
+  auto query = db[599];
+
+  auto query_mat = ColMajorMatrix<float>(size(query), 1);
+  for (size_t i = 0; i < size(query); ++i) {
+    query_mat(i, 0) = query[i];
+  }
+
+  auto&& [top_scores, top_k] =
+      detail::flat::qv_query_heap(db, query_mat, k_nn, 1);
+  std::sort(begin(top_k[0]), end(top_k[0]));
+  std::cout << "Neighbors: ";
+  for (size_t i = 0; i < k_nn; ++i) {
+    std::cout << top_k(i, 0) << " ";
+  }
+  std::cout << "\nDistances: ";
+  for (size_t i = 0; i < k_nn; ++i) {
+    std::cout << sum_of_squares_distance{}(db[top_k(i,0)], query) << " ";
+  }
+  std::cout << "\n-----\n";
+
+  auto nbd = ColMajorMatrix<size_t>(k_nn, 1);
+
+  auto V = greedy_search(g, db, 0UL, query, k_nn, L, nbd[0]);
+  std::cout << "size(V): " << size(V) << std::endl;
+  for (size_t i = 0; i < 7; ++i) {
+    auto num_updates = nn_descent_1_step_all(g, db);
+    std::cout << "num_updates: " << num_updates << std::endl;
+    V = greedy_search(g, db, 0UL, query, k_nn, L, nbd[0]);
+    std::cout << "size(V): " << size(V) << std::endl;
+
+    auto num_intersected = count_intersections(nbd, top_k, k_nn);
+    std::cout << "num_intersected: " << num_intersected << " / " << k_nn
+              << " = "
+              << ((double) num_intersected) / ((double) query_mat.num_cols() * k_nn)
+              << std::endl;
+
+    std::cout << "Greedy nearest neighbors: ";
+    for (auto&& n : nbd[0]) {
+      std::cout << n << " ";
+    }
+    std::cout << "\nGreedy distances: ";
+    for (auto&& n : nbd[0]) {
+      std::cout << sum_of_squares_distance{}(db[n], query) << " ";
+    }
+    std::cout << "\n-----\n";
+
+    if (num_updates == 0) {
+      break;
+    }
+  }
+
+  auto&& [s, t] = nn_descent_1_query(g, db, query_mat, k_nn, k_nn + 5, 3);
+
+  auto num_intersected = count_intersections(t, top_k, k_nn);
+  std::cout << "num_intersected: " << num_intersected << " / " << k_nn
+            << " = "
+            << ((double) num_intersected) / ((double) query_mat.num_cols() * k_nn)
+            << std::endl;
+
+  std::cout << "NN-descent nearest neighbors: ";
+  for (size_t i = 0; i < k_nn; ++i) {
+    std::cout << t(i, 0) << " ";
+  }
+
+  std::cout << "\nNN-descent returned distances: ";
+  for (size_t i = 0; i < k_nn; ++i) {
+    std::cout << s(i,0) << " ";
+  }
+  std::cout << "\nNN-descent computed distances: ";
+  for (size_t i = 0; i < k_nn; ++i) {
+    std::cout << sum_of_squares_distance{}(db[t(i,0)], query) << " ";
+  }
+  std::cout << std::endl;
+
+}
+
+TEST_CASE("vamana: robust prune", "[vamana]") {
+  size_t k_near = 5;
+  size_t k_far = 5;
+  size_t L = 7;
+  size_t R = 7;
+
+  float alpha = 1.0;
+
+  auto nn_hypercube = build_hypercube(k_near, k_far);
+  auto start = medioid(nn_hypercube);
+  for (auto&& s : nn_hypercube[start]) {
+    std::cout << s << ", ";
+  }
+  std::cout << std::endl;
+
+  std::vector<size_t> nbd(k_near);
+  auto g = detail::graph::init_random_nn_graph<float>(nn_hypercube, R);
+  auto query = Vector<float>{1.05, 0.95, 1.09};
+
+  SECTION("One node") {
+    auto p = 8UL;
+
+    for (auto&& [s, t] : g.out_edges(8UL)) {
+      std::cout << " ( " << t << ", " << s << " ) ";
+    }
+    std::cout << std::endl;
+
+    auto V = greedy_search(g, nn_hypercube, start, nn_hypercube[p], k_near, L, nbd);
+    robust_prune(g, nn_hypercube, p, V, alpha, R);
+
+    for (auto&& [s, t] : g.out_edges(8UL)) {
+      std::cout << " ( " << t << ", " << s << " ) ";
     }
     std::cout << std::endl;
   }
 
-  std::vector<size_t> nbd(k_near);
-  auto g = detail::graph::init_random_nn_graph<float>(nn_hypercube, k_near);
-  auto query = Vector<float>{1.0, 1.0, 1.0};
-  greedy_search(g, nn_hypercube, 0, query, k_near, L, nbd);
+  SECTION("One pass") {
 
-  std::cout << "Nearest neighbors:" << std::endl;
-  for (auto&& n : nbd) {
-    std::cout << n << " (" << nn_hypercube(0, n) << ", " << nn_hypercube(1, n)
-              << ", " << nn_hypercube(2, n) << "), "
-              << sum_of_squares_distance{}(nn_hypercube[n], query) << std::endl;
+    for (size_t p = 0; p < nn_hypercube.num_cols(); ++p) {
+      for (auto&& [s, t] : g.out_edges(p)) {
+        std::cout << " ( " << t << ", " << s << " ) ";
+      }
+      std::cout << std::endl;
+
+      auto V = greedy_search(g, nn_hypercube, start, nn_hypercube[p], k_near, L, nbd);
+      robust_prune(g, nn_hypercube, p, V, alpha, R);
+
+      for (auto&& [s, t] : g.out_edges(p)) {
+        std::cout << " ( " << t << ", " << s << " ) ";
+      }
+      std::cout << std::endl;
+    }
+
+    auto V = greedy_search(g, nn_hypercube, start, query, k_near, L, nbd);
+    std::cout << "V.size: " << size(V) << std::endl;
+    for (auto&& v : V) {
+      std::cout << v << ", ";
+    }
+    std::cout << std::endl;
+    for (auto&& n : nbd) {
+      std::cout << n << " (" << nn_hypercube(0, n) << ", " << nn_hypercube(1, n)
+                << ", " << nn_hypercube(2, n) << "), "
+                << sum_of_squares_distance{}(nn_hypercube[n], query) << std::endl;
+    }
   }
+}
 
-  auto query_mat = ColMajorMatrix<float>(3, 1);
-  for (size_t i = 0; i < 3; ++i) {
+
+TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
+  size_t nthreads = 1;
+  size_t k_nn = 50;
+  size_t L = 7;
+  size_t R = 7;
+  size_t num_queries = 10;
+  size_t N = 500;
+  float alpha = 1.0;
+
+  tiledb::Context ctx;
+  auto db = tdbColMajorMatrix<db_type>(ctx, fmnist_test, N);
+  db.load();
+  auto g = detail::graph::init_random_nn_graph<float>(db, L);
+
+  auto query = db[599];
+
+  auto query_mat = ColMajorMatrix<float>(size(query), 1);
+  for (size_t i = 0; i < size(query); ++i) {
     query_mat(i, 0) = query[i];
   }
+  auto qv_timer = log_timer{"qv", true};
   auto&& [top_scores, top_k] =
-      detail::flat::qv_query_heap(nn_hypercube, query_mat, k_near, 1);
-  for (size_t i = 0; i < k_near; ++i) {
-    std::cout << top_k(i, 0) << " (" << nn_hypercube(0, top_k(i, 0)) << ", "
-              << nn_hypercube(1, top_k(i, 0)) << ", "
-              << nn_hypercube(2, top_k(i, 0)) << "), " << top_scores(i, 0)
-              << std::endl;
+      detail::flat::qv_query_heap(db, query_mat, k_nn, 1);
+  std::sort(begin(top_k[0]), end(top_k[0]));
+  qv_timer.stop();
+
+  auto start = medioid(db);
+
+  for (float alpha : {1.0, 1.25}) {
+    for (size_t p = 0; p < db.num_cols(); ++p) {
+      auto nbd = std::vector<size_t>(k_nn);
+      auto V = greedy_search(g, db, start, db[p], k_nn, L, nbd);
+      robust_prune(g, db, p, V, alpha, R);
+    }
   }
+
+  auto nbd = ColMajorMatrix<size_t>(k_nn, 1);
+
+  auto greedy_timer = log_timer{"greedy", true};
+  auto V = greedy_search(g, db, start, query, k_nn, L, nbd[0]);
+  greedy_timer.stop();
+
+  std::cout << "V.size: " << size(V) << std::endl;
+
+  // for (auto&& v : V) {
+  //   std::cout << v << ", ";
+  // }
+
+  std::cout << std::endl;
+  for (auto&& n : nbd[0]) {
+    std::cout << n << " (" << db(0, n) << ", " << db(1, n) << ", " << db(2, n)
+              << "), " << sum_of_squares_distance{}(db[n], query) << std::endl;
+  }
+  auto num_intersected = count_intersections(nbd, top_k, k_nn);
+  std::cout << "num_intersected: " << num_intersected << " / " << k_nn << " = "
+            << ((double)num_intersected) / ((double)query_mat.num_cols() * k_nn)
+            << std::endl;
 }

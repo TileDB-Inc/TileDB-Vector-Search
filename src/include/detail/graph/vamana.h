@@ -34,11 +34,14 @@
 using size_t = std::size_t;
 
 #include <queue>
+#include <set>
+#include <functional>
 
 #include "utils/fixed_min_heap.h"
 #include "scoring.h"
-
+#include "utils/print_types.h"
 /**
+ *
  * @brief
  * @tparam T
  * @tparam I
@@ -70,28 +73,159 @@ auto greedy_search(auto&& graph, auto&&db, I source, auto&& query, size_t k, siz
 
   auto result = k_min_heap<value_type, I> {k};
   auto q1 = k_min_heap<value_type, I> {L};
+  auto q2 = k_min_heap<value_type, I> {L};
 
+  // L <- {s} and V <- empty`
   result.insert(distance(db[source], query), source);
+
+  // q1 = L \ V = {s}
   q1.insert(distance(db[source], query), source);
 
-  while(!q1.empty()) {
-    // p_star is the nearest unvisited neighbor to the query
-    auto [s_star, p_star] = q1.front();
-    q1.pop();
+  // while L\V is not empty
+  while (!q1.empty()) {
 
+    // p* <- argmin_{p \in L\V} distance(p, q)
+
+    // @todo: There must be a better way to do this
+    // Change to min_heap
+    std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
+      return std::get<0>(a) > std::get<0>(b);});
+
+    // Get and pop the min element
+    std::pop_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
+      return std::get<0>(a) > std::get<0>(b);});
+
+    auto [s_star, p_star] = q1.back();
+    q1.pop_back();
+
+    // Change back to max heap
+    std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
+      return std::get<0>(a) < std::get<0>(b);});
+
+    // V <- V \cup {p*} ; L\V <- L\V \ p*
     visited_vertices.insert(p_star);
 
+    // L <- L \cup Nout(p*)  ; L \ V <- L \ V \cup Nout(p*)
     for (auto&& [_, p] : graph.out_edges(p_star)) {
-      auto score = distance(db[p], query);
-      // result. template insert<unique_id>(score, p);
-
+      // assert(p != p_star);
       if (!visited(p)) {
+        auto score = distance(db[p], query);
+        result.template insert(score, p);
+        q1.template insert(score, p);
         visited_vertices.insert(p);
-        result.insert(score, p);
-        q1.insert(score, p);
       }
     }
   }
 
   get_top_k_from_heap(result, nbd, k);
+  return visited_vertices;
+}
+
+/**
+ * @brief RobustPrune(p, vee, alpha, R)
+ * @tparam I index type
+ * @tparam Distance distance functor
+ * @param graph Graph
+ * @param p point \in P
+ * @param V candidate set
+ * @param alpha distance threshold >= 1
+ * @param R Degree bound
+ *
+ * V <- (V \cup Nout(p) \ p
+ * Nout(p) < 0
+ * while (!V.empty()) {
+ *  Find p* \in V with smallest distance to p
+ *  Nout(p) <- Nout(p) \cup p*
+ *  if size(Nout(p)) == R {
+ *    break
+ *  }
+ *  for pp \in V {
+ *  if alpha * distance(p*, pp) <= distance(p, pp) {
+ *    remove pp from V
+ *  }
+ * }
+ */
+
+template <class I = size_t, class Distance = sum_of_squares_distance>
+auto robust_prune(auto&& graph, auto&&db, I p, auto&& V_in, float alpha, size_t R, Distance&& distance = Distance{}) {
+
+  using T = typename std::decay_t<decltype(graph)>::value_type;
+  static_assert(std::is_same_v<T, typename std::decay_t<decltype(db)>::value_type>, "graph and db must be of same type");
+  auto distance_comparator = [](auto&& a, auto&& b) { return std::get<0>(a) < std::get<0>(b); };
+  using element = std::tuple<T, I>;
+  auto V = std::set<element, std::function<bool(element, element)>>(distance_comparator);
+
+  for (auto&& v : V_in) {
+    // assert(v != p);
+    if (v != p) {
+      auto score = distance(db[v], db[p]);
+      V.emplace(score, v);
+    }
+  }
+
+  // V <- (V \cup Nout(p) \ p
+  for (auto&& [ss, pp] : graph.out_edges(p)) {
+    assert(pp != p);
+    assert(ss == distance(db[p], db[pp]));
+    V.emplace(ss, pp);
+  }
+
+  // Nout(p) <- 0
+  graph.out_edges(p).clear();
+
+  // while V != 0
+  while(!V.empty()) {
+
+    // p* <- argmin_{pp \in V} distance(p, pp)
+    auto&& [s_star, p_star] = *(V.begin()); /* V.top(); */
+    assert(p_star != p);
+
+    // Nout(p) <- Nout(p) \cup p*
+    graph.add_edge(p, p_star, s_star);
+
+    if (graph.out_edges(p).size() == R) {
+      break;
+    }
+
+    // For p' in V
+    auto to_be_removed = std::vector<element>{};
+    to_be_removed.reserve(V.size());
+    for (auto&& [ss, pp] : V) {
+
+      // if alpha * d(p*, p') <= d(p, p')
+      if (alpha * distance(db[p_star], db[pp]) <= ss) {
+        // V.erase({ss, pp});
+        to_be_removed.emplace_back(ss, pp);
+      }
+    }
+    for (auto&& [ss, pp] : to_be_removed) {
+      V.erase({ss, pp});
+    }
+  }
+}
+
+
+template <class Distance = sum_of_squares_distance>
+auto medioid(auto&& P, Distance distance = Distance{}) {
+  auto n = P.num_cols();
+  auto centroid = Vector<float>(P[0].size());
+  for (size_t j = 0; j < P.num_cols(); ++j) {
+    auto p = P[j];
+    for (size_t i = 0; i < p.size(); ++i) {
+      centroid[i] += p[i];
+    }
+  }
+  for (size_t i = 0; i < centroid.size(); ++i) {
+    centroid[i] /= P.num_cols();
+  }
+  auto min = std::numeric_limits<float>::max();
+  auto med = 0UL;
+  for (size_t i = 0; i < n; ++i) {
+    auto score = distance(P[i], centroid);
+    if (score < min) {
+      min = score;
+      med = i;
+    }
+  }
+  return med;
 }

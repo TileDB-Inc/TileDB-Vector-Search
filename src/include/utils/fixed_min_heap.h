@@ -206,6 +206,60 @@ using k_min_heap = fixed_min_pair_heap<T, U>;
 // template <class T>
 // using fixed_min_heap = fixed_min_set_heap_1<T>;
 
+template <class T, class Compare = std::greater<>>
+void max_heapify(std::vector<T>& heap, int i, int heap_size, Compare comp = Compare()) {
+  int largest = i;
+  int left = 2 * i + 1;
+  int right = 2 * i + 2;
+
+  if (left < heap_size && comp(heap[left], heap[largest])) {
+    largest = left;
+  }
+
+  if (right < heap_size && comp(heap[right], heap[largest])) {
+    largest = right;
+  }
+
+  if (largest != i) {
+    std::swap(heap[i], heap[largest]);
+    max_heapify(heap, largest, heap_size);
+  }
+}
+
+template <class T, class Compare = std::greater<>>
+void convert_to_max_heap(std::vector<T>& heap, Compare comp = Compare()) {
+  for (int i = heap.size() / 2 - 1; i >= 0; --i) {
+    max_heapify(heap, i, heap.size(), comp);
+  }
+}
+
+template <class T, class Compare = std::less<>>
+void min_heapify(std::vector<T>& heap, int i, int heap_size, Compare comp = Compare()) {
+  int smallest = i;
+  int left = 2 * i + 1;
+  int right = 2 * i + 2;
+
+  if (left < heap_size && comp(heap[left], heap[smallest])) {
+    smallest = left;
+  }
+
+  if (right < heap_size && comp(heap[right], heap[smallest])) {
+    smallest = right;
+  }
+
+  if (smallest != i) {
+    std::swap(heap[i], heap[smallest]);
+    min_heapify(heap, smallest, heap_size);
+  }
+}
+
+void convert_to_min_heap(std::vector<int>& heap) {
+  for (int i = heap.size() / 2 - 1; i >= 0; --i) {
+    min_heapify(heap, i, heap.size());
+  }
+}
+
+
 #ifdef ALLHEAPS  // Kept here for historical comparison reasons.  They are
                  // really slow.
 template <class T, class Compare = std::less<T>>

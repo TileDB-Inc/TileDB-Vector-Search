@@ -34,9 +34,73 @@
 #include <span>
 #include <vector>
 #include "utils/fixed_min_heap.h"
+#include <algorithm>
+#include <iostream>
 
 TEST_CASE("fixed_min_heap: test test", "[fixed_min_heap]") {
   REQUIRE(true);
+}
+
+TEST_CASE("fixed_min_heap: std::heap", "[fixed_min_heap]") {
+  std::vector<int> v{3, 1, 4, 1, 5, 9};
+
+  std::cout << "initial vector  : " ;
+  for (auto a : v) {
+    std::cout << a << ' ';
+  }
+  std::cout << '\n';
+
+  std::make_heap(v.begin(), v.end());
+  CHECK(std::is_heap(v.begin(), v.end(), std::less<>()));
+
+  std::cout << "initial max heap   : " ;
+  for (auto a : v) {
+    std::cout << a << ' ';
+  }
+  std::cout << '\n';
+
+  std::pop_heap(v.begin(), v.end());
+  std::cout << "max heap after pop heap: " ;
+  for (auto a : v) {
+    std::cout << a << ' ';
+  }
+  std::cout << '\n';
+
+  v.pop_back();
+  CHECK(std::is_heap(v.begin(), v.end(), std::less<>()));
+
+  std::cout << "max heap after pop back: " ;
+  for (auto a : v) {
+    std::cout << a << ' ';
+  }
+  std::cout << '\n';
+
+  std::make_heap(v.begin(), v.end(), std::greater<>());
+  CHECK(std::is_heap(v.begin(), v.end(), std::greater<>()));
+
+  std::cout << "min heap after make heap: ";
+  for (auto a : v) {
+    std::cout << a << ' ';
+  }
+  std::cout << '\n';
+
+  std::pop_heap(v.begin(), v.end());
+
+  std::cout << "min heap after pop heap: ";
+  for (auto a : v) {
+    std::cout << a << ' ';
+  }
+  std::cout << '\n';
+
+  v.pop_back();
+
+  CHECK(std::is_heap(v.begin(), v.end(), std::greater<>()));
+
+  std::cout << "min heap after pop back: ";
+  for (auto a : v) {
+    std::cout << a << ' ';
+  }
+  std::cout << '\n';
 }
 
 TEST_CASE("fixed_min_heap: std::set", "[fixed_min_heap]") {
