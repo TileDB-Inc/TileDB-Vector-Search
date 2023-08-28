@@ -1,5 +1,7 @@
 from . import utils
-from .index import FlatIndex, IVFFlatIndex
+from .index import Index
+from .ivf_flat_index import IVFFlatIndex
+from .flat_index import FlatIndex
 from .ingestion import ingest
 from .storage_formats import storage_formats, STORAGE_VERSION
 from .module import load_as_array

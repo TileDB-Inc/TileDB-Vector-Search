@@ -38,6 +38,7 @@
 #include <thread>
 #include <tiledb/tiledb>
 #include <tuple>
+#include <unordered_set>
 #include <vector>
 
 #include <docopt.h>
@@ -56,6 +57,7 @@ int ivf_index(
     tiledb::Context& ctx,
     const ColMajorMatrix<T>& db,
     const std::vector<ids_type>& external_ids,
+    const std::vector<ids_type>& deleted_ids,
     const std::string& centroids_uri,
     const std::string& parts_uri,
     const std::string& index_uri,
@@ -72,11 +74,21 @@ int ivf_index(
   debug_matrix(parts, "parts");
   {
     scoped_timer _{"shuffling data"};
+    std::unordered_set<ids_type> deleted_ids_set(deleted_ids.begin(), deleted_ids.end());
     std::vector<size_t> degrees(centroids.num_cols());
     std::vector<ids_type> indices(centroids.num_cols() + 1);
-    for (size_t i = 0; i < db.num_cols(); ++i) {
-      auto j = parts[i];
-      ++degrees[j];
+    if (deleted_ids.empty()) {
+      for (size_t i = 0; i < db.num_cols(); ++i) {
+        auto j = parts[i];
+        ++degrees[j];
+      }
+    } else {
+      for (size_t i = 0; i < db.num_cols(); ++i) {
+        if (auto iter = deleted_ids_set.find(external_ids[i]); iter == deleted_ids_set.end()) {
+          auto j = parts[i];
+          ++degrees[j];
+        }
+      }
     }
     indices[0] = 0;
     std::inclusive_scan(begin(degrees), end(degrees), begin(indices) + 1);
@@ -107,17 +119,34 @@ int ivf_index(
     // which will group them nicely -- but a distributed parallel sort may
     // be difficult to implement.  Even this algorithm is not trivial to
     // parallelize, because of the random access to the indices array.
-    for (size_t i = 0; i < db.num_cols(); ++i) {
-      size_t bin = parts[i];
-      size_t ibin = indices[bin];
+    if (deleted_ids.empty()) {
+      for (size_t i = 0; i < db.num_cols(); ++i) {
+        size_t bin = parts[i];
+        size_t ibin = indices[bin];
 
-      shuffled_ids[ibin] = external_ids[i];
+        shuffled_ids[ibin] = external_ids[i];
 
-      assert(ibin < shuffled_db.num_cols());
-      for (size_t j = 0; j < db.num_rows(); ++j) {
-        shuffled_db(j, ibin) = db(j, i);
+        assert(ibin < shuffled_db.num_cols());
+        for (size_t j = 0; j < db.num_rows(); ++j) {
+          shuffled_db(j, ibin) = db(j, i);
+        }
+        ++indices[bin];
       }
-      ++indices[bin];
+    } else {
+      for (size_t i = 0; i < db.num_cols(); ++i) {
+        if (auto iter = deleted_ids_set.find(external_ids[i]); iter == deleted_ids_set.end()) {
+          size_t bin = parts[i];
+          size_t ibin = indices[bin];
+
+          shuffled_ids[ibin] = external_ids[i];
+
+          assert(ibin < shuffled_db.num_cols());
+          for (size_t j = 0; j < db.num_rows(); ++j) {
+            shuffled_db(j, ibin) = db(j, i);
+          }
+          ++indices[bin];
+        }
+      }
     }
 
     std::shift_right(begin(indices), end(indices), 1);
@@ -150,6 +179,7 @@ int ivf_index(
     tiledb::Context& ctx,
     const std::string& db_uri,
     const std::string& external_ids_uri,
+    const std::vector<ids_type>& deleted_ids,
     const std::string& centroids_uri,
     const std::string& parts_uri,
     const std::string& index_uri,
@@ -171,6 +201,7 @@ int ivf_index(
       ctx,
       db,
       external_ids,
+      deleted_ids,
       centroids_uri,
       parts_uri,
       index_uri,
@@ -185,6 +216,7 @@ int ivf_index(
     tiledb::Context& ctx,
     const std::string& db_uri,
     const std::vector<ids_type>& external_ids,
+    const std::vector<ids_type>& deleted_ids,
     const std::string& centroids_uri,
     const std::string& parts_uri,
     const std::string& index_uri,
@@ -198,6 +230,7 @@ int ivf_index(
       ctx,
       db,
       external_ids,
+      deleted_ids,
       centroids_uri,
       parts_uri,
       index_uri,
@@ -212,6 +245,7 @@ int ivf_index(
     tiledb::Context& ctx,
     const ColMajorMatrix<T>& db,
     const std::string& external_ids_uri,
+    const std::vector<ids_type>& deleted_ids,
     const std::string& centroids_uri,
     const std::string& parts_uri,
     const std::string& index_uri,
@@ -231,6 +265,7 @@ int ivf_index(
       ctx,
       db,
       external_ids,
+      deleted_ids,
       centroids_uri,
       parts_uri,
       index_uri,

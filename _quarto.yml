@@ -37,8 +37,8 @@ quartodoc:
       desc: ""
       contents:
           - index.Index
-          - index.FlatIndex
-          - index.IVFFlatIndex
+          - flat_index.FlatIndex
+          - ivf_flat_index.IVFFlatIndex
           - ingestion
 
 website:

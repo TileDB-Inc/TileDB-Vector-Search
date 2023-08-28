@@ -228,6 +228,7 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
       [](tiledb::Context& ctx,
         const ColMajorMatrix<T>& db,
         const std::vector<uint64_t>& external_ids,
+        const std::vector<uint64_t>& deleted_ids,
         const std::string& centroids_uri,
         const std::string& parts_uri,
         const std::string& index_array_uri,
@@ -239,6 +240,7 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
                 ctx,
                 db,
                 external_ids,
+                deleted_ids,
                 centroids_uri,
                 parts_uri,
                 index_array_uri,
@@ -255,6 +257,7 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
       [](tiledb::Context& ctx,
         const std::string& db_uri,
         const std::string& external_ids_uri,
+        const std::vector<uint64_t>& deleted_ids,
         const std::string& centroids_uri,
         const std::string& parts_uri,
         const std::string& index_array_uri,
@@ -266,6 +269,7 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
                 ctx,
                 db_uri,
                 external_ids_uri,
+                deleted_ids,
                 centroids_uri,
                 parts_uri,
                 index_array_uri,
@@ -403,6 +407,19 @@ static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
         });
 }
 
+template <typename T, typename shuffled_ids_type = uint64_t>
+static void declare_vq_query_heap_pyarray(py::module& m, const std::string& suffix) {
+  m.def(("vq_query_heap_pyarray_" + suffix).c_str(),
+        [](ColMajorMatrix<T>& data,
+           ColMajorMatrix<float>& query_vectors,
+           const std::vector<uint64_t> &ids,
+           int k,
+           size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> {
+          auto r = detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads);
+          return r;
+        });
+}
+
 } // anonymous namespace
 
 
@@ -524,6 +541,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   declare_vq_query_heap<uint8_t>(m, "u8");
   declare_vq_query_heap<float>(m, "f32");
+  declare_vq_query_heap_pyarray<uint8_t>(m, "u8");
+  declare_vq_query_heap_pyarray<float>(m, "f32");
 
   declare_qv_query_heap_infinite_ram<uint8_t>(m, "u8");
   declare_qv_query_heap_infinite_ram<float>(m, "f32");
