@@ -1,11 +1,12 @@
+import numpy as np
+
 from common import *
 
 from tiledb.vector_search.utils import load_fvecs
 from tiledb.vector_search.ingestion import ingest
-from tiledb.vector_search.index import FlatIndex, IVFFlatIndex
+from tiledb.vector_search.flat_index import FlatIndex
+from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.cloud.dag import Mode
-
-import pytest
 
 MINIMUM_ACCURACY = 0.85
 
@@ -147,7 +148,7 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-    index_ram = IVFFlatIndex(uri=index_uri, memory_budget=int(size / 10))
+    index_ram = IVFFlatIndex(uri=index_uri)
     _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -252,6 +253,8 @@ def test_ivf_flat_ingestion_numpy(tmp_path):
 
     _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+
 def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
     source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
     queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
@@ -278,3 +281,53 @@ def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
     )
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, external_ids_offset) > MINIMUM_ACCURACY
+
+
+def test_ivf_flat_ingestion_with_updates(tmp_path):
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    index_uri = os.path.join(tmp_path, "array")
+    k = 10
+    size = 100000
+    partitions = 100
+    dimensions = 128
+    nqueries = 100
+    nprobe = 20
+    data = create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
+    dtype = np.uint8
+
+    query_vectors = get_queries(dataset_dir, dtype=dtype)
+    gt_i, gt_d = get_groundtruth(dataset_dir, k)
+    index = ingest(
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
+        source_uri=os.path.join(dataset_dir, "data.u8bin"),
+        partitions=partitions,
+        input_vectors_per_work_item=int(size / 10),
+    )
+    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    update_ids = {}
+    updated_ids = {}
+    for i in range(0, 100000, 2):
+        update_ids[i] = i + 1000000
+        updated_ids[i + 1000000] = i
+    external_ids = np.zeros((len(update_ids)*2), dtype=np.uint64)
+    updates = np.empty((len(update_ids)*2), dtype='O')
+    id = 0
+    for prev_id, new_id in update_ids.items():
+        external_ids[id] = prev_id
+        updates[id] = np.array([], dtype=dtype)
+        id += 1
+        external_ids[id] = new_id
+        updates[id] = data[prev_id].astype(dtype)
+        id += 1
+
+    index.update_batch(vectors=updates, external_ids=external_ids)
+    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i, updated_ids=updated_ids) > MINIMUM_ACCURACY
+
+    index = index.consolidate_updates()
+    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i, updated_ids=updated_ids) > MINIMUM_ACCURACY
+
