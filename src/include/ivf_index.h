@@ -298,6 +298,21 @@ class kmeans_index {
 #endif
   }
 
+  static std::vector<indices_type> predict(const ColMajorMatrix<T>& centroids, const ColMajorMatrix<T>& vectors) {
+    // Return a vector of indices of the nearest centroid for each vector in the matrix.
+    // Write the code below:
+    auto nClusters = centroids.num_cols();
+    std::vector<indices_type> indices(vectors.num_cols());
+    std::vector<T> distances(nClusters);
+    for (size_t i = 0; i < vectors.num_cols(); ++i) {
+      for (size_t j = 0; j < nClusters; ++j) {
+        distances[j] = sum_of_squares(vectors[i], centroids[j]);
+      }
+      indices[i] = std::min_element(begin(distances), end(distances)) - begin(distances);
+    }
+    return indices;
+  }
+
   void train(const ColMajorMatrix<T>& training_set) {
     kmeans_pp(training_set);
     train_no_init(training_set);

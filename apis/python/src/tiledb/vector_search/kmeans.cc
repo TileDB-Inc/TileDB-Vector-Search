@@ -37,6 +37,12 @@ static void declare_kmeans(py::module& m, const std::string& suffix) {
              }
              return std::move(idx.get_centroids());
   });
+
+  m.def(("kmeans_predict_" + suffix).c_str(),
+		[](const ColMajorMatrix<T>& centroids,
+		   const ColMajorMatrix<T>& sample_vectors) {
+			 return kmeans_index<T>::predict(centroids, sample_vectors);
+  });
 }
 
 } // anonymous namespace
