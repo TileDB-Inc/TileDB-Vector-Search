@@ -804,6 +804,10 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
+        from tiledb.vector_search.module import (
+            array_to_matrix,
+            kmeans_fit,
+        )
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
             group = tiledb.Group(index_group_uri)
@@ -820,12 +824,7 @@ def ingest(
                 trace_id=trace_id,
             )
             logger.debug("Start kmeans training")
-            if vector_type == np.uint8:
-                clusters = kmeans_fit_u8(partitions, init, max_iter, verbose, n_init, sample_vectors)
-            elif vector_type == np.float32:
-                clusters = kmeans_fit_f32(partitions, init, max_iter, verbose, n_init, sample_vectors)
-            else:
-                raise TypeError("Unknown type!")
+            clusters = kmeans_fit(partitions, init, max_iter, verbose, n_init, array_to_matrix(sample_vectors))
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w") as A:
                 A[0:dimensions, 0:partitions] = np.transpose(

@@ -385,6 +385,24 @@ def array_to_matrix(array: np.ndarray):
     else:
         raise TypeError("Unsupported type!")
 
+def kmeans_fit(partitions: int, init: str, max_iter: int, verbose: bool, n_init: int, sample_vectors: "colMajorMatrix"):
+    args = tuple(
+        [
+            partitions,
+            init,
+            max_iter,
+            verbose,
+            n_init,
+            sample_vectors,
+        ]
+    )
+    if sample_vectors.dtype == np.float32:
+        return kmeans_fit_f32(*args)
+    elif sample_vectors.dtype == np.uint8:
+        return kmeans_fit_u8(*args)
+    else:
+        raise TypeError("Unsupported type!")
+
 
 # TODO
 # def load_partitioned(uri, partitions, dtype: Optional[np.dtype] = None):
