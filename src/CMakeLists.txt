@@ -138,17 +138,9 @@ include(MultiThreading)
 # Interface library for BLAS
 # -----------------------------------------------------------------------------
 # Control compiler-specific flags.
-if (TILEDBVS_ENABLE_FLAT_L2)
+if (TILEDB_VS_ENABLE_BLAS)
   include(BLAS)
 endif()
-
-# @todo migrate to find_package for BLAS
-# find_package(BLAS REQUIRED)
-# message(STATUS "BLAS_FOUND is ${BLAS_FOUND}")
-# message(STATUS "BLAS_LIBRARIES is ${BLAS_LIBRARIES}")
-# message(STATUS "BLAS_INCLUDE_DIRS is ${BLAS_INCLUDE_DIRS}")
-# message(STATUS "BLAS_LINKER_FLAGS is ${BLAS_LINKER_FLAGS}")
-# message(STATUS "BLAS_VERSION_STRING is ${BLAS_VERSION_STRING}")
 
 if (DEFINED TileDB_DIR)
     set(CMAKE_PREFIX_PATH "${TileDB_DIR};{CMAKE_PREFIX_PATH}")
@@ -168,8 +160,6 @@ endif()
 include(Docopt)
 include(mdspan)
 include(nlohmann_json)
-
-
 
 add_subdirectory(src)
 

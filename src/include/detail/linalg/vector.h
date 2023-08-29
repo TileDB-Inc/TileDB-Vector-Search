@@ -35,6 +35,23 @@
 #include <initializer_list>
 #include <memory>
 #include <span>
+#include <tiledb/tiledb>
+#include <vector>
+
+template <class T>
+std::vector<T> read_vector(
+    const tiledb::Context& ctx,
+    const std::string&,
+    size_t start_pos,
+    size_t end_pos);
+
+template <class M>
+concept is_view = requires(M) {
+  typename M::view_type;
+};
+
+template <class T>
+using VectorView = std::span<T>;
 
 /**
  * @brief A 1-D vector class that owns its storage.  Unlike std::vector, this

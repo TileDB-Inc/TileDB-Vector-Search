@@ -35,7 +35,6 @@
 #include <iostream>
 #include <vector>
 
-#include "../defs.h"
 #include "../ivf_index.h"
 #include "../linalg.h"
 

@@ -60,8 +60,10 @@ auto partition_ivf_index(
   size_t num_queries = size(query);
 
   // get closest centroid for each query vector
+  // There may be duplicates
+  // @todo What is best algorithm to use here?
   auto top_centroids =
-      detail::flat::qv_query_nth(centroids, query, nprobe, false, nthreads);
+      detail::flat::qv_query_heap_0(centroids, query, nprobe, nthreads);
 
   using parts_type = typename decltype(top_centroids)::value_type;
 

@@ -61,7 +61,7 @@ using json = nlohmann::json;
 
 // Make stats support opt-in to avoid requiring to define an enable_stats
 // variable on all projects.
-#ifdef TILEDBVS_ENABLE_STATS
+#ifdef TILEDB_VS_ENABLE_STATS
 extern bool enable_stats;
 extern std::vector<json> core_stats;
 #endif
@@ -72,7 +72,7 @@ class StatsCollectionScope final {
       const std::string& uri,
       const std::string& function,
       const std::string& operation_type) {
-#ifdef TILEDBVS_ENABLE_STATS
+#ifdef TILEDB_VS_ENABLE_STATS
     if (!enable_stats)
       return;
     tiledb::Stats::reset();
@@ -85,7 +85,7 @@ class StatsCollectionScope final {
   }
 
   ~StatsCollectionScope() {
-#ifdef TILEDBVS_ENABLE_STATS
+#ifdef TILEDB_VS_ENABLE_STATS
     if (!enable_stats)
       return;
     std::string stats_str;
@@ -98,7 +98,7 @@ class StatsCollectionScope final {
 #endif
   }
 
-#ifdef TILEDBVS_ENABLE_STATS
+#ifdef TILEDB_VS_ENABLE_STATS
  private:
   std::string uri_, function_, operation_type_;
 #endif

@@ -190,7 +190,11 @@ void write_vector(
  * Read the contents of a TileDB array into a std::vector.
  */
 template <class T>
-std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
+std::vector<T> read_vector(
+    const tiledb::Context& ctx,
+    const std::string& uri,
+    size_t start_pos = 0,
+    size_t end_pos = 0) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
   if (global_debug) {
@@ -209,9 +213,12 @@ std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
   auto dim_num_{domain_.ndim()};
   auto array_rows_{domain_.dimension(0)};
 
-  auto vec_rows_{
-      (array_rows_.template domain<domain_type>().second -
-       array_rows_.template domain<domain_type>().first + 1)};
+  if (start_pos == 0 && end_pos == 0) {
+    start_pos = array_rows_.template domain<domain_type>().first;
+    end_pos = array_rows_.template domain<domain_type>().second + 1;
+  }
+
+  auto vec_rows_{end_pos - start_pos};
 
   auto attr_num{schema_.attribute_num()};
   auto attr = schema_.attribute(idx);
@@ -220,7 +227,8 @@ std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
   tiledb_datatype_t attr_type = attr.type();
 
   // Create a subarray that reads the array up to the specified subset.
-  std::vector<int32_t> subarray_vals = {0, vec_rows_ - 1};
+  std::vector<int32_t> subarray_vals = {
+      (int32_t)start_pos, (int32_t)end_pos - 1};
   tiledb::Subarray subarray(ctx, array_);
   subarray.set_subarray(subarray_vals);
 

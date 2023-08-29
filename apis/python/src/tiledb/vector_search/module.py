@@ -10,9 +10,9 @@ from typing import Optional, Mapping, Any
 
 def load_as_matrix(
     path: str,
-    nqueries: int = 0,
     ctx: "Ctx" = None,
     config: Optional[Mapping[str, Any]] = None,
+    size: int = 0
 ):
     """
     Load array as Matrix class
@@ -21,10 +21,10 @@ def load_as_matrix(
     ----------
     path: str
         Array path
-    nqueries: int
-        Number of queries
     ctx: Ctx
         TileDB context
+    size: int
+        Size of vectors to load
     """
     # If the user passes a tiledb python Config object convert to a dictionary
     if isinstance(config, tiledb.Config):
@@ -36,17 +36,17 @@ def load_as_matrix(
     a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
     if dtype == np.float32:
-        m = tdbColMajorMatrix_f32(ctx, path, nqueries)
+        m = tdbColMajorMatrix_f32(ctx, path, size)
     elif dtype == np.float64:
-        m = tdbColMajorMatrix_f64(ctx, path, nqueries)
+        m = tdbColMajorMatrix_f64(ctx, path, size)
     elif dtype == np.int32:
-        m = tdbColMajorMatrix_i32(ctx, path, nqueries)
+        m = tdbColMajorMatrix_i32(ctx, path, size)
     elif dtype == np.int32:
-        m = tdbColMajorMatrix_i64(ctx, path, nqueries)
+        m = tdbColMajorMatrix_i64(ctx, path, size)
     elif dtype == np.uint8:
-        m = tdbColMajorMatrix_u8(ctx, path, nqueries)
+        m = tdbColMajorMatrix_u8(ctx, path, size)
     # elif dtype == np.uint64:
-    #     return tdbColMajorMatrix_u64(ctx, path, nqueries)
+    #     return tdbColMajorMatrix_u64(ctx, path, size)
     else:
         raise ValueError("Unsupported Matrix dtype: {}".format(a.attr(0).dtype))
     m.load()
@@ -118,10 +118,29 @@ def query_vq_heap(db: "colMajorMatrix", *args):
     else:
         raise TypeError("Unknown type!")
 
+def query_vq_heap_pyarray(db: "colMajorMatrix", *args):
+    """
+    Run vector query
+
+    Parameters
+    ----------
+    db: colMajorMatrix
+        Open Matrix class from load_as_matrix
+    args:
+        Args for query
+    """
+    if db.dtype == np.float32:
+        return vq_query_heap_pyarray_f32(db, *args)
+    elif db.dtype == np.uint8:
+        return vq_query_heap_pyarray_u8(db, *args)
+    else:
+        raise TypeError("Unknown type!")
 
 def ivf_index_tdb(
     dtype: np.dtype,
     db_uri: str,
+    external_ids_uri: str,
+    deleted_ids: "Vector",
     centroids_uri: str,
     parts_uri: str,
     index_array_uri: str,
@@ -137,7 +156,7 @@ def ivf_index_tdb(
         ctx = Ctx(config)
 
     args = tuple(
-        [ctx, db_uri, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads]
+        [ctx, db_uri, external_ids_uri, deleted_ids, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads]
     )
 
     if dtype == np.float32:
@@ -151,6 +170,8 @@ def ivf_index_tdb(
 def ivf_index(
     dtype: np.dtype,
     db: "colMajorMatrix",
+    external_ids: "Vector",
+    deleted_ids: "Vector",
     centroids_uri: str,
     parts_uri: str,
     index_array_uri: str,
@@ -166,7 +187,7 @@ def ivf_index(
         ctx = Ctx(config)
 
     args = tuple(
-        [ctx, db, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads]
+        [ctx, db, external_ids, deleted_ids, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads]
     )
 
     if dtype == np.float32:
@@ -186,7 +207,6 @@ def ivf_query_ram(
     ids: "Vector",
     nprobe: int,
     k_nn: int,
-    nth: bool,
     nthreads: int,
     ctx: "Ctx" = None,
     use_nuv_implementation: bool = False,
@@ -212,8 +232,6 @@ def ivf_query_ram(
         Number of probs
     k_nn: int
         Number of nn
-    nth: bool
-        Return nth records
     nthreads: int
         Number of theads
     ctx: Ctx
@@ -231,7 +249,6 @@ def ivf_query_ram(
             ids,
             nprobe,
             k_nn,
-            nth,
             nthreads,
         ]
     )
@@ -260,7 +277,6 @@ def ivf_query(
     nprobe: int,
     k_nn: int,
     memory_budget: int,
-    nth: bool,
     nthreads: int,
     ctx: "Ctx" = None,
     use_nuv_implementation: bool = False,
@@ -288,8 +304,6 @@ def ivf_query(
         Number of nn
     memory_budget: int
         Main memory budget
-    nth: bool
-        Return nth records
     nthreads: int
         Number of theads
     ctx: Ctx
@@ -309,7 +323,6 @@ def ivf_query(
             nprobe,
             k_nn,
             memory_budget,
-            nth,
             nthreads,
         ]
     )
