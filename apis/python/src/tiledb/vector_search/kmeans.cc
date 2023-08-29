@@ -25,16 +25,18 @@ static void declare_kmeans(py::module& m, const std::string& suffix) {
            double tol,
            size_t n_threads,
            const ColMajorMatrix<T>& sample_vectors) {
-             kmeans_index<T> idx(sample_vectors.num_rows(), n_clusters, max_iter, tol, n_threads);
              // TODO: support verbose
              std::ignore = verbose;
+             kmeans_init init_val;
              if (init == "kmeans++") {
-                idx.kmeans_pp(sample_vectors);
+                init_val = kmeans_init::kmeanspp;
              } else if (init == "random") {
-                idx.kmeans_random_init(sample_vectors);
+                init_val = kmeans_init::random;
              } else {
                 throw std::invalid_argument("Invalid init method");
              }
+             kmeans_index<T> idx(sample_vectors.num_rows(), n_clusters, max_iter, tol, n_threads);
+             idx.train(sample_vectors, init_val);
              return std::move(idx.get_centroids());
   });
 

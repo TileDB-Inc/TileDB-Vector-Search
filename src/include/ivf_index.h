@@ -58,6 +58,8 @@
 #include "detail/flat/qv.h"
 #include "detail/ivf/index.h"
 
+enum kmeans_init { kmeanspp, random };
+
 template <class T, class shuffled_ids_type = size_t, class indices_type = size_t>
 class kmeans_index {
   std::mt19937 gen;
@@ -313,8 +315,11 @@ class kmeans_index {
     return indices;
   }
 
-  void train(const ColMajorMatrix<T>& training_set) {
-    kmeans_pp(training_set);
+  void train(const ColMajorMatrix<T>& training_set, kmeans_init init) {
+    if (init == kmeans_init::random)
+	  kmeans_random_init(training_set);
+    else
+      kmeans_pp(training_set);
     train_no_init(training_set);
   }
 
