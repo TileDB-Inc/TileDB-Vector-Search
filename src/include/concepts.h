@@ -74,7 +74,7 @@ using inner_reference_t = std::ranges::range_reference_t<inner_range_t<R>>;
  * @tparam T The type to check.
  */
 template <class T>
-concept subscriptable_container =
+concept subscriptable_range =
     std::ranges::random_access_range<T> &&
     requires(
         T& x,
@@ -134,7 +134,7 @@ template <typename R>
 concept feature_vector =
     std::ranges::random_access_range<R> && /* std::ranges::sized_range<R> && */
     std::ranges::contiguous_range<R> &&
-    (subscriptable_container<R> || callable_range<R>)&&requires(R r) {
+    (subscriptable_range<R> || callable_range<R>)&&requires(R r) {
       { dimension(r) } -> std::same_as<typename R::size_type>;
     };
 
@@ -142,7 +142,7 @@ template <class R>
 concept query_vector = feature_vector<R>;
 
 // ----------------------------------------------------------------------------
-// vector_range concept
+// feature_vector_range concept
 //
 // A vector range is a range of feature vectors.
 // We will want at least these kinds:
@@ -157,7 +157,7 @@ template <class D>
 concept feature_vector_range =
     // feature_vector<inner_range_t<D>> &&
     // std::ranges::random_access_range<D> && /* std::ranges::sized_range<D> && */
-    // subscriptable_container<D> &&
+    // subscriptable_range<D> &&
     // requires(D d, const std::iter_difference_t<std::ranges::iterator_t<D>> n) {
     requires(D d, typename D::index_type n) {
       { num_vectors(d) } -> semi_integral;
@@ -176,7 +176,9 @@ concept feature_vector_range =
  */
 template <class D>
 concept contiguous_feature_vector_range =
-    feature_vector_range<D> && std::ranges::contiguous_range<D>;
+feature_vector_range<D> && requires(D d) {
+  { data(d) } -> std::same_as<std::add_pointer_t<typename D::reference>>;
+};
 
 // ----------------------------------------------------------------------------
 // partitioned_feature_vector_range concept
@@ -196,7 +198,7 @@ concept contiguous_partitioned_feature_vector_range =
 template <class P>
 concept partition_index =
     std::ranges::random_access_range<P> && std::ranges::contiguous_range<P> &&
-    subscriptable_container<P>;
+    subscriptable_range<P>;
 
 // ----------------------------------------------------------------------------
 // vector_search_index concept

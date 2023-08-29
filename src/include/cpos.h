@@ -131,6 +131,31 @@ inline constexpr auto num_vectors = _num_vectors::_fn{};
 
 
 // ----------------------------------------------------------------------------
+// data CPO
+// ----------------------------------------------------------------------------
+namespace _data {
+void data(auto&) = delete;
+void data(const auto&) = delete;
+
+template <class T>
+concept _member_data = requires(T t) {
+  { t.data() };
+};
+
+struct _fn {
+  template <_member_data T>
+  auto constexpr operator()(T&& t) const noexcept {
+    return t.data();
+  }
+};
+}   // namespace _data
+inline namespace _cpo {
+inline constexpr auto data = _data::_fn{};
+}  // namespace _cpo
+
+
+
+// ----------------------------------------------------------------------------
 // num_partitions CPO
 // ----------------------------------------------------------------------------
 namespace _num_partitions {

@@ -169,7 +169,7 @@ TEST_CASE("concepts: invocable", "[concepts]") {
   CHECK(std::is_invocable_r_v<int, Vector<int>, int>);
 }
 
-TEST_CASE("concepts: subscriptable_container", "[concepts]") {
+TEST_CASE("concepts: subscriptable_range", "[concepts]") {
   using sv = std::vector<int>;
   using svi = std::ranges::iterator_t<sv>;
   using svri = std::iter_reference_t<svi>;
@@ -177,22 +177,22 @@ TEST_CASE("concepts: subscriptable_container", "[concepts]") {
   // print_types(sv{}, sv{}.begin(), sv{}.cbegin(), svi{}, svi{}[0],
   // std::iter_value_t<svi>{});
 
-  CHECK(!subscriptable_container<int>);
-  CHECK(subscriptable_container<std::vector<int>>);
-  CHECK(subscriptable_container<std::vector<double>>);
-  CHECK(subscriptable_container<const std::vector<double>>);
-  CHECK(subscriptable_container<std::vector<std::vector<int>>>);
-  CHECK(subscriptable_container<std::array<int, 3>>);
+  CHECK(!subscriptable_range<int>);
+  CHECK(subscriptable_range<std::vector<int>>);
+  CHECK(subscriptable_range<std::vector<double>>);
+  CHECK(subscriptable_range<const std::vector<double>>);
+  CHECK(subscriptable_range<std::vector<std::vector<int>>>);
+  CHECK(subscriptable_range<std::array<int, 3>>);
 
-  CHECK(subscriptable_container<sv>);
-  CHECK(!subscriptable_container<svi>);
-  CHECK(!subscriptable_container<svri>);
+  CHECK(subscriptable_range<sv>);
+  CHECK(!subscriptable_range<svi>);
+  CHECK(!subscriptable_range<svri>);
 
   int* d = new int[3];  // random access iterator but not random access range
-  CHECK(!subscriptable_container<decltype(d)>);
-  CHECK(subscriptable_container<std::span<int>>);
+  CHECK(!subscriptable_range<decltype(d)>);
+  CHECK(subscriptable_range<std::span<int>>);
 
-  CHECK(subscriptable_container<Vector<int>>);
+  CHECK(subscriptable_range<Vector<int>>);
 }
 
 
@@ -217,7 +217,7 @@ TEST_CASE("concepts: Vector", "[concepts]") {
   CHECK(std::ranges::random_access_range<Vector<int>>);
   CHECK(std::ranges::sized_range<Vector<int>>);
   CHECK(std::ranges::contiguous_range<Vector<int>>);
-  CHECK(subscriptable_container<Vector<int>>);
+  CHECK(subscriptable_range<Vector<int>>);
   CHECK(requires { Vector<int>{}.size(); });
   CHECK(std::ranges::sized_range<Vector<int>>);
 }

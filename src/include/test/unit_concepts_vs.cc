@@ -46,7 +46,7 @@ TEST_CASE("concepts_vs: test test", "[concepts_vs]") {
 }
 
 // Concepts:
-// 1. subscriptable_container
+// 1. subscriptable_range
 // 2. callable
 // 3. callable_range
 // 4. dimensionable
@@ -57,9 +57,9 @@ TEST_CASE("concepts_vs: test test", "[concepts_vs]") {
 // 9. contiguous_feature_vector_range
 
 TEST_CASE("concepts_vs: Vector", "[concepts_vs]") {
-  CHECK(subscriptable_container<Vector<int>>);
-  CHECK(subscriptable_container<Vector<double>>);
-  CHECK(subscriptable_container<Vector<bool>>);
+  CHECK(subscriptable_range<Vector<int>>);
+  CHECK(subscriptable_range<Vector<double>>);
+  CHECK(subscriptable_range<Vector<bool>>);
 
   CHECK(callable_range<Vector<int>>);
   CHECK(callable_range<Vector<double>>);
@@ -115,10 +115,18 @@ auto test_feature_vector_range(const Matrix<int>& d) {
   return _feature_vector_range(d);
 }
 
+template <contiguous_feature_vector_range D>
+auto _contiguous_feature_vector_range(const D& d) {
+  return num_vectors(d);
+}
+auto test_contiguous_feature_vector_range(const Matrix<int>& d) {
+  return _contiguous_feature_vector_range(d);
+}
+
 TEST_CASE("concepts_vs: Matrix", "[concepts_vs]") {
-  CHECK(!subscriptable_container<Matrix<int>>);
-  CHECK(!subscriptable_container<Matrix<double>>);
-  CHECK(!subscriptable_container<Matrix<bool>>);
+  CHECK(!subscriptable_range<Matrix<int>>);
+  CHECK(!subscriptable_range<Matrix<double>>);
+  CHECK(!subscriptable_range<Matrix<bool>>);
 
   CHECK(!callable_range<Matrix<int>>);
   CHECK(!callable_range<Matrix<double>>);
