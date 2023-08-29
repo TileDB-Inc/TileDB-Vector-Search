@@ -37,6 +37,8 @@
 #include <concepts>
 #include <ranges>
 
+#include "cpos.h"
+
 // ----------------------------------------------------------------------------
 // Convenience concepts
 // ----------------------------------------------------------------------------
@@ -105,37 +107,24 @@ concept callable_range =
         R,
         std::iter_difference_t<std::ranges::iterator_t<R>>>;
 
+
 // ----------------------------------------------------------------------------
 // Expected member functions for feature_vectors -- will be used by CPOs
 // ----------------------------------------------------------------------------
 
 template <class T>
-concept dimensionable = requires(T t) {
-  { t.dimension() };
+concept dimensionable = requires (T t) {
+  { dimension(t) } -> semi_integral;
 };
-
-/**
- * @brief Returns the dimension of a feature vector (which in vector search
- * terminology is the number of entries, aka number of rows, aka size.
- *
- * @tparam R The feature vector type.
- * @param r The feature vector.
- * @return The dimension of the feature vector.
- */
-template <dimensionable R>
-auto dimension(const R& r) {
-  return r.dimension();
-}
 
 template <class T>
 concept vectorable = requires(T t) {
-  { t.num_vectors() };
+  { num_vectors(t) } -> semi_integral;
 };
-
 
 template <class T>
 concept partitionable = requires(T t) {
-  { t.num_partitions() };
+  { num_partitions(t) } -> semi_integral;
 };
 
 
@@ -148,7 +137,7 @@ concept feature_vector =
     std::ranges::random_access_range<R> && /* std::ranges::sized_range<R> && */
     std::ranges::contiguous_range<R> &&
     (subscriptable_container<R> || callable_range<R>)&&requires(R r) {
-      { r.dimension() } -> std::same_as<typename R::size_type>;
+      { dimension(r) } -> std::same_as<typename R::size_type>;
     };
 
 template <class R>
@@ -220,57 +209,6 @@ concept vector_search_index = requires(I i) {
   { i.search() };
 };
 
-// ----------------------------------------------------------------------------
-// Customization point objects (CPOs) -- implemented as "niebloids"
-// ----------------------------------------------------------------------------
-
-namespace _dimension {
-void dimension(auto&) = delete;
-void dimension(const auto&) = delete;
-
-struct _fn {
-  template <dimensionable T>
-  auto constexpr operator()(T&& t) const noexcept {
-    return t.dimension();
-  }
-};
-}  // namespace _dimension
-
-inline namespace _cpo {
-inline constexpr auto dimension = _dimension::_fn{};
-}  // namespace _cpo
-
-namespace _num_partitions {
-void num_partitions(auto&) = delete;
-void num_partitions(const auto&) = delete;
-
-struct _fn {
-  template <partitionable T>
-  auto constexpr operator()(T&& t) const noexcept {
-    return t.num_partitions();
-  }
-};
-}  // namespace _num_partitions
-
-inline namespace _cpo {
-inline constexpr auto num_partitions = _num_partitions::_fn{};
-}  // namespace _cpo
-
-namespace _num_vectors {
-void num_vectors(auto&) = delete;
-void num_vectors(const auto&) = delete;
-
-struct _fn {
-  template <vectorable T>
-  auto constexpr operator()(T&& t) const noexcept {
-    return t.num_vectors();
-  }
-};
-}  // namespace _num_vectors
-
-inline namespace _cpo {
-inline constexpr auto num_vectors = _num_vectors::_fn{};
-}  // namespace _cpo
 
 
 #endif  // TDB_API_H

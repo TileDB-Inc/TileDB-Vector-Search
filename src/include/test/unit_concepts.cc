@@ -141,6 +141,19 @@ TEST_CASE("concepts: inner_reference_t", "[concepts]") {
         std::vector<int>::reference>);
 }
 
+
+template <class T>
+  requires callable<int, T, int>
+void foo(const T&) {
+}
+
+struct bar {
+  int operator()(int) {
+    return 0;
+  }
+};
+
+
 TEST_CASE("concepts: invocable", "[concepts]") {
   foo(bar{});
   std::invoke(bar{}, 1);
@@ -154,17 +167,6 @@ TEST_CASE("concepts: invocable", "[concepts]") {
         int>);
   CHECK(std::is_invocable_r_v<int, Vector<int>, int>);
 }
-
-struct with_operator_parens {
-  int operator()(int) {
-    return 0;
-  }
-};
-
-struct without_operator_parens {
-
-};
-
 
 TEST_CASE("concepts: subscriptable_container", "[concepts]") {
   using sv = std::vector<int>;
@@ -182,11 +184,8 @@ TEST_CASE("concepts: subscriptable_container", "[concepts]") {
   CHECK(subscriptable_container<std::array<int, 3>>);
 
   CHECK(subscriptable_container<sv>);
-  CHECK(subscriptable_container<svi>);
-  CHECK(subscriptable_container<svri>);
-
-  CHECK(subscriptable_container<with_operator_parens>);
-  CHECK(!subscriptable_container<without_operator_parens>);
+  CHECK(!subscriptable_container<svi>);
+  CHECK(!subscriptable_container<svri>);
 
   int* d = new int[3];  // random access iterator but not random access range
   CHECK(!subscriptable_container<decltype(d)>);
@@ -195,17 +194,6 @@ TEST_CASE("concepts: subscriptable_container", "[concepts]") {
   CHECK(subscriptable_container<Vector<int>>);
 }
 
-
-template <class T>
-requires callable<int, T, int>
-void foo(const T&) {
-}
-
-struct bar {
-  int operator()(int) {
-    return 0;
-  }
-};
 
 TEST_CASE("concepts: callable_range", "[concepts]") {
   CHECK(!callable_range<int>);
@@ -233,19 +221,32 @@ TEST_CASE("concepts: Vector", "[concepts]") {
   CHECK(std::ranges::sized_range<Vector<int>>);
 }
 
+template <dimensionable T>
+auto z(const T& t) {
+  return dimension(t);
+}
+
+auto w() {
+  return dimension(Vector<int>{});
+}
+
 TEST_CASE("concepts: dimensionable", "[concepts]") {
   CHECK(!dimensionable<int>);
-  CHECK(!dimensionable<std::vector<int>>);
-  CHECK(!dimensionable<std::vector<double>>);
+  CHECK(dimensionable<std::vector<int>>);
+  CHECK(dimensionable<std::vector<double>>);
   CHECK(!dimensionable<std::vector<std::vector<int>>>);
-  CHECK(!dimensionable<std::array<int, 3>>);
+  CHECK(dimensionable<std::array<int, 3>>);
 
   int* d = nullptr;
   CHECK(!dimensionable<decltype(d)>);
-  CHECK(!dimensionable<std::span<int>>);
+  CHECK(dimensionable<std::span<int>>);
 
   CHECK(dimensionable<Vector<int>>);
 }
+
+struct dummy_range_of_vectors {
+  auto num_vectors() const { return 0; }
+};
 
 TEST_CASE("concepts: vectorable", "[concepts]") {
   CHECK(!vectorable<int>);
@@ -258,7 +259,9 @@ TEST_CASE("concepts: vectorable", "[concepts]") {
   CHECK(!vectorable<decltype(d)>);
   CHECK(!vectorable<std::span<int>>);
 
-  CHECK(vectorable<Vector<int>>);
+  CHECK(!vectorable<Vector<int>>);
+
+  CHECK(vectorable<dummy_range_of_vectors>);
 }
 
 TEST_CASE("concepts: partitionable", "[concepts]") {
@@ -286,30 +289,41 @@ class dummy_feature_vector : public std::vector<T> {
 
 TEST_CASE("concepts: feature_vector", "[concepts]") {
   CHECK(!feature_vector<int>);
-  CHECK(!feature_vector<std::vector<int>>);
-  CHECK(!feature_vector<std::vector<double>>);
+  CHECK(feature_vector<std::vector<int>>);
+  CHECK(feature_vector<std::vector<double>>);
   CHECK(!feature_vector<std::vector<std::vector<int>>>);
-  CHECK(!feature_vector<std::array<int, 3>>);
+  CHECK(feature_vector<std::array<int, 3>>);
 
   int* d = nullptr;
   CHECK(!feature_vector<decltype(d)>);
-  CHECK(!feature_vector<std::span<int>>);
+  CHECK(feature_vector<std::span<int>>);
 
   CHECK(feature_vector<dummy_feature_vector<int>>);
 }
 
+template <dimensionable T>
+void x(const T& t) {}
+
+void y() {
+  dimension(std::vector<int>{});
+  std::vector<int> v;
+  dimension(v);
+  x(v);
+
+}
+
 TEST_CASE("concepts: query_vector", "[concepts]") {
   CHECK(!query_vector<int>);
-  CHECK(!query_vector<std::vector<int>>);
-  CHECK(!query_vector<std::vector<double>>);
+  CHECK(query_vector<std::vector<int>>);
+  CHECK(query_vector<std::vector<double>>);
   CHECK(!query_vector<std::vector<std::vector<int>>>);
-  CHECK(!query_vector<std::array<int, 3>>);
+  CHECK(query_vector<std::array<int, 3>>);
 
   int* d = nullptr;
   CHECK(!query_vector<decltype(d)>);
-  CHECK(!query_vector<std::span<int>>);
+  CHECK(query_vector<std::span<int>>);
 
-  CHECK(!query_vector<Vector<int>>);
+  CHECK(query_vector<Vector<int>>);
   CHECK(query_vector<dummy_feature_vector<int>>);
 }
 
