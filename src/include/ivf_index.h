@@ -58,7 +58,7 @@
 #include "detail/flat/qv.h"
 #include "detail/ivf/index.h"
 
-enum kmeans_init { kmeanspp, random };
+enum class kmeans_init { kmeanspp, random };
 
 template <class T, class shuffled_ids_type = size_t, class indices_type = size_t>
 class kmeans_index {
@@ -83,13 +83,13 @@ class kmeans_index {
       double tol = 0.0001,
       std::optional<size_t> nthreads = std::nullopt,
       std::optional<unsigned int> seed = std::nullopt)
-      : dimension_(dimension)
+      : gen(seed ? *seed : std::random_device{}())
+      , dimension_(dimension)
       , nlist_(nlist)
       , max_iter_(max_iter)
       , tol_(tol)
       , nthreads_(nthreads ? *nthreads : std::thread::hardware_concurrency())
-      , centroids_(dimension, nlist)
-      , gen(seed ? *seed : std::random_device{}()) {
+      , centroids_(dimension, nlist) {
   }
 
   /**
