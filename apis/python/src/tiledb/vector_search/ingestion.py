@@ -804,8 +804,6 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
-        from sklearn.cluster import KMeans
-
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
             group = tiledb.Group(index_group_uri)
@@ -820,23 +818,18 @@ def ingest(
                 config=config,
                 verbose=verbose,
                 trace_id=trace_id,
-            ).astype(np.float32)
-            verb = 0
-            if verbose:
-                verb = 3
-            logger.debug("Start kmeans training")
-            km = KMeans(
-                n_clusters=partitions,
-                init=init,
-                max_iter=max_iter,
-                verbose=verb,
-                n_init=n_init,
             )
-            km.fit_predict(sample_vectors)
+            logger.debug("Start kmeans training")
+            if vector_type == np.uint8:
+                clusters = kmeans_fit_u8(partitions, init, max_iter, verbose, n_init, sample_vectors)
+            elif vector_type == np.float32:
+                clusters = kmeans_fit_f32(partitions, init, max_iter, verbose, n_init, sample_vectors)
+            else:
+                raise TypeError("Unknown type!")
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w") as A:
                 A[0:dimensions, 0:partitions] = np.transpose(
-                    np.array(km.cluster_centers_)
+                    np.array(clusters)
                 )
 
     # --------------------------------------------------------------------

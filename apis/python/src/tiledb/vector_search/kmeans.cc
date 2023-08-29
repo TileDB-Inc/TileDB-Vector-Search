@@ -22,8 +22,6 @@ static void declare_kmeans(py::module& m, const std::string& suffix) {
            size_t max_iter,
            bool verbose,
            size_t n_init,
-           double tol,
-           size_t n_threads,
            const ColMajorMatrix<T>& sample_vectors) {
              // TODO: support verbose
              std::ignore = verbose;
@@ -35,7 +33,7 @@ static void declare_kmeans(py::module& m, const std::string& suffix) {
              } else {
                 throw std::invalid_argument("Invalid init method");
              }
-             kmeans_index<T> idx(sample_vectors.num_rows(), n_clusters, max_iter, tol, n_threads);
+             kmeans_index<T> idx(sample_vectors.num_rows(), n_clusters, max_iter);
              idx.train(sample_vectors, init_val);
              return std::move(idx.get_centroids());
   });
