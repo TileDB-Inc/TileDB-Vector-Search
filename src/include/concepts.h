@@ -107,26 +107,24 @@ concept callable_range =
         R,
         std::iter_difference_t<std::ranges::iterator_t<R>>>;
 
-
 // ----------------------------------------------------------------------------
 // Expected member functions for feature_vectors -- will be used by CPOs
 // ----------------------------------------------------------------------------
 
 template <class T>
-concept dimensionable = requires (T t) {
+concept dimensionable = requires(const T& t) {
   { dimension(t) } -> semi_integral;
 };
 
 template <class T>
-concept vectorable = requires(T t) {
+concept vectorable = requires(const T& t) {
   { num_vectors(t) } -> semi_integral;
 };
 
 template <class T>
-concept partitionable = requires(T t) {
+concept partitionable = requires(const T& t) {
   { num_partitions(t) } -> semi_integral;
 };
-
 
 // ----------------------------------------------------------------------------
 // feature_vector concept
@@ -152,21 +150,22 @@ concept query_vector = feature_vector<R>;
 //   partitioned -- the range is a range of partitions, each of which is a
 //                  contiguous range of vectors
 //   distributed?-- the range is a range of partitions, each of which is a
+//
+// @todo operator()(size_t, size_t) ?
 // ----------------------------------------------------------------------------
 template <class D>
 concept feature_vector_range =
-    feature_vector<inner_range_t<D>> &&
-    std::ranges::random_access_range<D> && /* std::ranges::sized_range<D> && */
-    subscriptable_container<D> &&
-    feature_vector<std::ranges::range_value_t<D>> &&
-    requires(D d, const std::iter_difference_t<std::ranges::iterator_t<D>> n) {
-      { d.num_vectors() } -> std::same_as<typename D::size_type>;
-      { d.dimension() } -> std::same_as<inner_range_t<typename D::size_type>>;
-
-      // Returns a feature_vector
-      // { d[n] } ->
-      // std::same_as<std::iter_reference_t<std::ranges::iterator_t<D>>>; { d[n]
-      // } -> feature_vector;
+    // feature_vector<inner_range_t<D>> &&
+    // std::ranges::random_access_range<D> && /* std::ranges::sized_range<D> && */
+    // subscriptable_container<D> &&
+    // requires(D d, const std::iter_difference_t<std::ranges::iterator_t<D>> n) {
+    requires(D d, typename D::index_type n) {
+      { num_vectors(d) } -> semi_integral;
+      { dimension(d) } -> semi_integral;
+      //{
+//        d[n]
+//      } -> std::same_as<std::iter_reference_t<std::ranges::iterator_t<D>>>;
+      { d[n] } -> feature_vector;  // Maybe redundant
     };
 
 /**
@@ -208,7 +207,5 @@ concept vector_search_index = requires(I i) {
   { i.add() };
   { i.search() };
 };
-
-
 
 #endif  // TDB_API_H

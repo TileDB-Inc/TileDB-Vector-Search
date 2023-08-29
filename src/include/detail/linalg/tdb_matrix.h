@@ -43,8 +43,8 @@
 
 #include "detail/linalg/linalg_defs.h"
 #include "detail/linalg/matrix.h"
-#include "detail/linalg/tdb_defs.h"
 #include "detail/linalg/tdb_helpers.h"
+#include "tdb_defs.h"
 
 /**
  * Derived from `Matrix`.  Initialized in construction by filling from a given

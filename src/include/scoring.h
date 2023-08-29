@@ -58,6 +58,7 @@
 #include "linalg.h"
 #include "utils/fixed_min_heap.h"
 #include "utils/timer.h"
+#include "tdb_defs.h"
 
 // ----------------------------------------------------------------------------
 // Helper utilities
@@ -65,8 +66,6 @@
 namespace {
 class with_ids {};
 class without_ids {};
-template <class... T>
-constexpr bool always_false = false;
 }  // namespace
 
 // ----------------------------------------------------------------------------

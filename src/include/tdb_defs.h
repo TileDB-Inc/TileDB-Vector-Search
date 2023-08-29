@@ -33,22 +33,8 @@
 #ifndef TILEDB_TDB_DEFS_H
 #define TILEDB_TDB_DEFS_H
 
-template <class LayoutPolicy>
-struct order_traits {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
-};
+template <class... T>
+constexpr bool always_false = false;
 
-template <>
-struct order_traits<stdx::layout_right> {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
-};
-
-template <>
-struct order_traits<stdx::layout_left> {
-  constexpr static auto order{TILEDB_COL_MAJOR};
-};
-
-template <class LayoutPolicy>
-constexpr auto order_v = order_traits<LayoutPolicy>::order;
 
 #endif  // TILEDB_TDB_DEFS_H

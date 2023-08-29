@@ -35,13 +35,32 @@
 #include <string>
 #include "mdspan/mdspan.hpp"
 
+extern bool global_verbose;
+extern bool global_debug;
+extern std::string global_region;
+
 namespace stdx {
 using namespace Kokkos;
 using namespace Kokkos::Experimental;
 }  // namespace stdx
 
-extern bool global_verbose;
-extern bool global_debug;
-extern std::string global_region;
+
+template <class LayoutPolicy>
+struct order_traits {
+  constexpr static auto order{TILEDB_ROW_MAJOR};
+};
+
+template <>
+struct order_traits<stdx::layout_right> {
+  constexpr static auto order{TILEDB_ROW_MAJOR};
+};
+
+template <>
+struct order_traits<stdx::layout_left> {
+  constexpr static auto order{TILEDB_COL_MAJOR};
+};
+
+template <class LayoutPolicy>
+constexpr auto order_v = order_traits<LayoutPolicy>::order;
 
 #endif  // TDB_LINALG_DEFS_H

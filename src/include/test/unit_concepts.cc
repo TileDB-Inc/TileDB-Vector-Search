@@ -34,6 +34,7 @@
 #include <catch2/catch_all.hpp>
 #include "concepts.h"
 #include "detail/linalg/vector.h"
+#include "detail/linalg/matrix.h"
 #include "utils/print_types.h"
 
 #include <list>
@@ -221,15 +222,6 @@ TEST_CASE("concepts: Vector", "[concepts]") {
   CHECK(std::ranges::sized_range<Vector<int>>);
 }
 
-template <dimensionable T>
-auto z(const T& t) {
-  return dimension(t);
-}
-
-auto w() {
-  return dimension(Vector<int>{});
-}
-
 TEST_CASE("concepts: dimensionable", "[concepts]") {
   CHECK(!dimensionable<int>);
   CHECK(dimensionable<std::vector<int>>);
@@ -244,7 +236,7 @@ TEST_CASE("concepts: dimensionable", "[concepts]") {
   CHECK(dimensionable<Vector<int>>);
 }
 
-struct dummy_range_of_vectors {
+struct dummy_vectorable {
   auto num_vectors() const { return 0; }
 };
 
@@ -261,7 +253,7 @@ TEST_CASE("concepts: vectorable", "[concepts]") {
 
   CHECK(!vectorable<Vector<int>>);
 
-  CHECK(vectorable<dummy_range_of_vectors>);
+  CHECK(vectorable<dummy_vectorable>);
 }
 
 TEST_CASE("concepts: partitionable", "[concepts]") {
@@ -301,16 +293,6 @@ TEST_CASE("concepts: feature_vector", "[concepts]") {
   CHECK(feature_vector<dummy_feature_vector<int>>);
 }
 
-template <dimensionable T>
-void x(const T& t) {}
-
-void y() {
-  dimension(std::vector<int>{});
-  std::vector<int> v;
-  dimension(v);
-  x(v);
-
-}
 
 TEST_CASE("concepts: query_vector", "[concepts]") {
   CHECK(!query_vector<int>);
@@ -328,6 +310,11 @@ TEST_CASE("concepts: query_vector", "[concepts]") {
 }
 
 TEST_CASE("concepts: feature_vector_range", "[concepts]") {
+
+  CHECK(!feature_vector_range<int>);
+  CHECK(!feature_vector_range<std::vector<int>>);
+  CHECK(!feature_vector_range<std::vector<double>>);
+  CHECK(!feature_vector_range<std::vector<std::vector<int>>>);
 }
 
 TEST_CASE("concepts: contiguous_feature_vector_range", "[concepts]") {

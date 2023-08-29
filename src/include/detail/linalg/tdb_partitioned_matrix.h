@@ -53,7 +53,7 @@
 #include <tiledb/tiledb>
 #include "mdspan/mdspan.hpp"
 
-#include "detail/linalg/tdb_defs.h"
+#include "tdb_defs.h"
 
 #include "utils/timer.h"
 

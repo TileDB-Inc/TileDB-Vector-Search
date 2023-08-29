@@ -40,6 +40,7 @@
 #include <initializer_list>
 #include <iostream>
 #include "mdspan/mdspan.hpp"
+#include "tdb_defs.h"
 
 #include "utils/timer.h"
 
@@ -57,6 +58,7 @@ using matrix_extents = stdx::dextents<I, 2>;
  * @tparam I
  *
  * @todo Make an alias for extents.
+ * @todo Make Matrix into a range (?)
  */
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
@@ -242,6 +244,49 @@ constexpr bool is_row_oriented(const Matrix& A) {
   return std::is_same_v<typename Matrix::layout_policy, stdx::layout_right>;
 }
 
+#if 0
+// @todo This will need some more infrastructure to work.  If we tag_invoke
+// for defining CPOs it can work.  Otherwise need to be more
+// careful with namespaces so that ADL can work (?)
+//
+/**********************************************************************
+ *
+ * Matrix CPO overloads
+ *
+ * *********************************************************************/
+
+template <class T, class LayoutPolicy, class I>
+auto dimension(const Matrix<T, LayoutPolicy, I>& m) {
+  // row major -- dimension is number of columns
+  if constexpr(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
+    return m.num_cols();
+  } else if constexpr(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
+    return m.num_rows();
+  } else {
+    static_assert(always_false<LayoutPolicy>, "Unknown layout policy");
+  }
+}
+
+template <class T, class LayoutPolicy, class I>
+auto num_vectors(const Matrix<T, LayoutPolicy, I>& m) {
+  // row major -- num_vectors is number of rows
+  if constexpr(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
+    return m.num_rows();
+  } else if constexpr(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
+    return m.num_cols();
+  } else {
+    static_assert(always_false<LayoutPolicy>, "Unknown layout policy");
+  }
+}
+#endif  // 0
+
+
+/**********************************************************************
+ *
+ * Some debugging utilities.
+ *
+ * *********************************************************************/
+
 /**
  * Print information about a Matrix.
  * @param A
@@ -258,12 +303,6 @@ std::string matrix_info(const Matrix& A, const std::string& msg = "") {
          (is_row_oriented(A) ? "row major" : "column major");
   return str;
 }
-
-/**********************************************************************
- *
- * Some debugging utilities.
- *
- * *********************************************************************/
 
 /**
  * Print information about a std::vector -- overload.
