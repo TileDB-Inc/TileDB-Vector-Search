@@ -77,8 +77,6 @@ kmeans_add_test(unit_flat_qv)
 
 kmeans_add_test(unit_flat_vq)
 
-kmeans_add_test(unit_feature_vector)
-
 kmeans_add_test(unit_ivf_index)
 
 kmeans_add_test(unit_ivf_query)
@@ -110,8 +108,6 @@ kmeans_add_test(unit_stats)
 kmeans_add_test(unit_utils)
 
 kmeans_add_test(unit_vector)
-
-kmeans_add_test(unit_vector_array)
 
 if (TILEDB_VS_ENABLE_BLAS)
   kmeans_add_test(unit_queries)
