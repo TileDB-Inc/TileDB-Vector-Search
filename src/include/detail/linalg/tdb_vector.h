@@ -1,5 +1,5 @@
 /**
-* @file   unit_concepts.cc
+* @file   tdb_vector.h
 *
 * @section LICENSE
 *
@@ -27,22 +27,28 @@
 *
 * @section DESCRIPTION
 *
-* Test application of concepts with TileDB-Vector-Search types
-*
- */
+*/
 
 
-#include <catch2/catch_all.hpp>
-#include "api.h"
-#include "detail/linalg/tdb_vector.h"
+#ifndef TILEDB_TDB_VECTOR_H
+#define TILEDB_TDB_VECTOR_H
+
+#include <tiledb/tiledb>
 #include "detail/linalg/vector.h"
 
+/**
+ * @brief Placeholder for now
+ *
+ * @tparam T
+ */
+template <class T>
+class tdbVector : public Vector<T> {
+  using Base = Vector<T>;
+  using Base::Base;
+ public:
+  tdbVector(const tiledb::Context& ctx, const std::string& uri)
+      : Base(read_vector<T>(ctx, uri, 0, 0)) {
+  }
+};
 
-TEST_CASE("api: test test", "[api]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("api: dimension", "[api]") {
-  CHECK(dimension(std::vector<int>{1,2,3}) == 3);
-  CHECK(dimension(FeatureVector(std::vector<int>{1,2,3})) == 3);
-}
+#endif //TILEDB_TDB_VECTOR_H

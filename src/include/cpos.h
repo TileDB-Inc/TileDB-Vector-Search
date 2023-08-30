@@ -58,10 +58,10 @@ concept _member_num_cols = requires(T t) {
 };
 
 template <class T>
-concept row_major = std::is_same_v<typename T::layout_policy, stdx::layout_right>;
+concept row_major = std::same_as<typename std::remove_cvref_t<T>::layout_policy, stdx::layout_right>;
 
 template <class T>
-concept col_major = std::is_same_v<typename T::layout_policy, stdx::layout_left>;
+concept col_major = std::same_as<typename std::remove_cvref_t<T>::layout_policy, stdx::layout_left>;
 
 // ----------------------------------------------------------------------------
 // dimension CPO
@@ -80,8 +80,6 @@ concept _member_size = requires(T t) {
   { t.size() } -> semi_integral;
 };
 
-
-
 struct _fn {
   template <_member_dimension T>
   auto constexpr operator()(T&& t) const noexcept {
@@ -91,27 +89,27 @@ struct _fn {
   template <class V>
     requires _member_size<V> && (!_member_num_rows<V>) &&
              std::is_arithmetic_v<std::ranges::range_value_t<V>>
-  auto constexpr operator()(const V& v) const noexcept {
+  auto constexpr operator()(V&& v) const noexcept {
     return v.size();
   }
 
   template <class V>
     requires _member_num_rows<V> &&
              std::is_arithmetic_v<std::ranges::range_value_t<V>>
-  auto constexpr operator()(const V& v) const noexcept {
+  constexpr auto operator()(V&& v) const noexcept {
     return v.num_rows();
   }
 
   // @todo This is a total temporary hack
   template <class M>
     requires _member_num_rows<M> && _member_num_cols<M> && row_major<M>
-  auto constexpr operator()(const M& m) const noexcept {
+  auto constexpr operator()(M&& m) const noexcept {
     return m.num_cols();
   }
 
   template <class M>
     requires _member_num_rows<M> && _member_num_cols<M> && col_major<M>
-  auto constexpr operator()(const M& m) const noexcept {
+  auto constexpr operator()(M&& m) const noexcept {
     return m.num_rows();
   }
 
@@ -141,7 +139,7 @@ struct _fn {
     return t.num_vectors();
   }
 
-  // @todo This is a total temporary hack
+  // @todo This is a total temporary hack -- abstraction violation
   template <class M>
     requires _member_num_rows<M> && _member_num_cols<M> && row_major<M>
   auto constexpr operator()(const M& m) const noexcept {
@@ -153,6 +151,7 @@ struct _fn {
   auto constexpr operator()(const M& m) const noexcept {
     return m.num_cols();
   }
+
 };
 }  // namespace _num_vectors
 
@@ -163,6 +162,7 @@ inline constexpr auto num_vectors = _num_vectors::_fn{};
 
 // ----------------------------------------------------------------------------
 // data CPO
+// @todo Figure out what is wrong with const
 // ----------------------------------------------------------------------------
 namespace _data {
 void data(auto&) = delete;
@@ -175,13 +175,37 @@ concept _member_data = requires(T t) {
 
 struct _fn {
   template <_member_data T>
-  auto constexpr operator()(T&& t) const noexcept {
+  constexpr auto operator()(T&& t) const noexcept {
     return t.data();
   }
 };
 }   // namespace _data
 inline namespace _cpo {
 inline constexpr auto data = _data::_fn{};
+}  // namespace _cpo
+
+
+// ----------------------------------------------------------------------------
+// extents CPO
+// ----------------------------------------------------------------------------
+namespace _extents {
+void extents(auto&) = delete;
+void extents(const auto&) = delete;
+
+template <class T>
+concept _member_extents = requires(T t) {
+  { t.extents() };
+};
+
+struct _fn {
+  template <_member_extents T>
+  auto constexpr operator()(T&& t) const noexcept {
+    return t.extents();
+  }
+};
+}   // namespace _extents
+inline namespace _cpo {
+inline constexpr auto extents = _extents::_fn{};
 }  // namespace _cpo
 
 

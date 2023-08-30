@@ -196,6 +196,10 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     }
   }
 
+  auto extents() const noexcept {
+    return std::vector<size_t>{Base::extents().extent(0), Base::extents().extent(1)};
+  }
+
   auto num_rows() const noexcept {
     return num_rows_;
   }
