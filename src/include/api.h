@@ -57,6 +57,10 @@ class ProtoFeatureVectorArray {
             std::make_shared<vector_array_impl<T>>(std::forward<T>(obj))) {
   }
 
+  [[nodiscard]] auto data() const {
+    return _cpo::data(*vector_array);
+  }
+
   [[nodiscard]] auto dimension() const {
     return _cpo::dimension(*vector_array);
   }
@@ -69,12 +73,16 @@ class ProtoFeatureVectorArray {
     virtual ~vector_array_base() = default;
     [[nodiscard]] virtual size_t dimension() const = 0;
     [[nodiscard]] virtual size_t num_vectors() const = 0;
+    [[nodiscard]] virtual void* data() const = 0;
   };
 
   template <typename T>
   struct vector_array_impl : vector_array_base {
     explicit vector_array_impl(const T& t)
-        : vector_array(t) {
+        : vector_array(std::move(t)) {
+    }
+    [[nodiscard]] void* data() const override {
+      return _cpo::data(vector_array);
     }
     [[nodiscard]] size_t dimension() const override {
       return _cpo::dimension(vector_array);
@@ -92,10 +100,12 @@ class ProtoFeatureVectorArray {
 
 #include <tiledb/tiledb>
 #include "detail/linalg/tdb_helpers.h"
+#include "detail/linalg/tdb_matrix.h"
 
-class MatrixWrapper {
+class FeatureVectorArray {
  public:
-  MatrixWrapper(const tiledb::Context& ctx, const std::string& uri) {
+
+  ProtoFeatureVectorArray open(const tiledb::Context& ctx, const std::string& uri) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
     auto schema = array.schema();
     auto attr = schema.attribute(0);  // @todo Is there a better way to look up
@@ -103,12 +113,33 @@ class MatrixWrapper {
     tiledb_datatype_t attr_type = attr.type();
 
     array.close();  // @todo create Matrix constructor that takes opened array
+
+    switch(attr_type) {
+      case TILEDB_FLOAT32:
+        return ProtoFeatureVectorArray(tdbColMajorMatrix<float>(ctx, uri));
+      case TILEDB_UINT8:
+        return ProtoFeatureVectorArray(tdbColMajorMatrix<uint8_t>(ctx, uri));
+      default:
+        throw std::runtime_error("Unsupported attribute type");
+    }
   }
-  // open uri
-  // get schema
-  // create matrix based on that type
-  // wrap matrix in ProtoFeatureVectorArray
-  // return
+
+  FeatureVectorArray(const tiledb::Context& ctx, const std::string& uri) : vector_array{open(ctx, uri)} {
+  }
+
+  void* data() const {
+    return (void*)_cpo::data(vector_array);
+  }
+
+  [[nodiscard]] auto dimension() const {
+    return _cpo::dimension(vector_array);
+  }
+
+  [[nodiscard]] auto num_vectors() const {
+    return _cpo::dimension(vector_array);
+  }
+
+  ProtoFeatureVectorArray vector_array;
 };
 
 #endif
