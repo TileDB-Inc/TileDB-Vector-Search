@@ -398,8 +398,6 @@ def kmeans_fit(partitions: int, init: str, max_iter: int, verbose: bool, n_init:
     )
     if sample_vectors.dtype == np.float32:
         return kmeans_fit_f32(*args)
-    elif sample_vectors.dtype == np.uint8:
-        return kmeans_fit_u8(*args)
     else:
         raise TypeError("Unsupported type!")
 

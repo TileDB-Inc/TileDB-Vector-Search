@@ -50,5 +50,4 @@ static void declare_kmeans(py::module& m, const std::string& suffix) {
 
 void init_kmeans(py::module_& m) {
   declare_kmeans<float>(m, "f32");
-  declare_kmeans<uint8_t>(m, "u8");
 }

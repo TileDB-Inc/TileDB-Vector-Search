@@ -822,7 +822,7 @@ def ingest(
                 config=config,
                 verbose=verbose,
                 trace_id=trace_id,
-            )
+            ).astype(np.float32)
             logger.debug("Start kmeans training")
             clusters = kmeans_fit(partitions, init, max_iter, verbose, n_init, array_to_matrix(np.transpose(sample_vectors)))
             clusters = np.array(clusters)
