@@ -107,6 +107,10 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     array_.close();
   }
 
+  tdbBlockedMatrix(const tdbBlockedMatrix&) = delete;
+  tdbBlockedMatrix(tdbBlockedMatrix&&) = default;
+
+
   /**
    * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
    * vectors. In this case, the `Matrix` is row-major, so the number of vectors
@@ -264,6 +268,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param col_end
    *
    * @todo Make this compatible with various schemas we are using
+   * @todo Why do we even have this?  Obsoleted by upper bound constructor?
    */
   tdbBlockedMatrix(
       const tiledb::Context& ctx,

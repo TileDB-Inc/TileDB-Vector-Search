@@ -34,27 +34,26 @@
 #ifndef TDB_API_H
 #define TDB_API_H
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
-
-#include <vector>
-
 #include <memory>
 #include <vector>
 
 #include "concepts.h"
 #include "cpos.h"
 
-// ----------------------------------------------------------------------------
-// Prototype of type erased FeatureVectorArray
-// ----------------------------------------------------------------------------
+/**
+ * Basic wrapper to type-erase a class.  It has a shared pointer to
+ * a non-template base class that has virtual methods for accessing member
+ * functions of the wrapped type.  It provides data(), dimension(), and
+ * num_vectors() methods that delegate to the wrapped type.
+ *
+ * @todo Instrument carefully to make sure we are not doing any copying.
+ */
 class ProtoFeatureVectorArray {
  public:
   template <typename T>
   ProtoFeatureVectorArray(T&& obj)
       : vector_array(
-            std::make_shared<vector_array_impl<T>>(std::forward<T>(obj))) {
+            std::make_shared<vector_array_impl<T>>(std::move(std::forward<T>(obj)))) {
   }
 
   [[nodiscard]] auto data() const {
@@ -76,9 +75,10 @@ class ProtoFeatureVectorArray {
     [[nodiscard]] virtual void* data() const = 0;
   };
 
+  // @todo Create move constructors for Matrix and tdbMatrix
   template <typename T>
   struct vector_array_impl : vector_array_base {
-    explicit vector_array_impl(const T& t)
+    explicit vector_array_impl(T&& t)
         : vector_array(std::move(t)) {
     }
     [[nodiscard]] void* data() const override {
@@ -98,6 +98,13 @@ class ProtoFeatureVectorArray {
   std::shared_ptr<const vector_array_base> vector_array;
 };
 
+// Put these here for now to enforce separation between matrix aware
+// and matrix unaware code.  We could (and probably should) merge these
+// into a single class.  Although we could use the above for
+// wrapping feature vectors as well (we would just use a concept
+// to elide num_vectors).  The separation may also be useful for
+// dealing with in-memory arrays vs arrays on disk.
+
 #include <tiledb/tiledb>
 #include "detail/linalg/tdb_helpers.h"
 #include "detail/linalg/tdb_matrix.h"
@@ -110,15 +117,22 @@ class FeatureVectorArray {
     auto schema = array.schema();
     auto attr = schema.attribute(0);  // @todo Is there a better way to look up
                                       // the attribute we're interested in?
-    tiledb_datatype_t attr_type = attr.type();
+    datatype_ = attr.type();
 
     array.close();  // @todo create Matrix constructor that takes opened array
 
-    switch(attr_type) {
+    /**
+     * Row and column orientation are kind of irrelevant?  We could dispatch
+     * on the layout in the schema, but that might not be necessary.  What is
+     * important is that the vectors are along the major axis, which should
+     * happen with either orientation, and so will work at the other end with
+     * either orientation since we are just passing a pointer to the data.
+     */
+    switch(datatype_) {
       case TILEDB_FLOAT32:
-        return ProtoFeatureVectorArray(tdbColMajorMatrix<float>(ctx, uri));
+        return ProtoFeatureVectorArray(std::move(tdbColMajorMatrix<float>(ctx, uri)));
       case TILEDB_UINT8:
-        return ProtoFeatureVectorArray(tdbColMajorMatrix<uint8_t>(ctx, uri));
+        return ProtoFeatureVectorArray(std::move(tdbColMajorMatrix<uint8_t>(ctx, uri)));
       default:
         throw std::runtime_error("Unsupported attribute type");
     }
@@ -127,7 +141,11 @@ class FeatureVectorArray {
   FeatureVectorArray(const tiledb::Context& ctx, const std::string& uri) : vector_array{open(ctx, uri)} {
   }
 
-  void* data() const {
+  [[nodiscard]] tiledb_datatype_t datatype() const {
+    return datatype_;
+  }
+
+  [[nodiscard]] void* data() const {
     return (void*)_cpo::data(vector_array);
   }
 
@@ -139,6 +157,7 @@ class FeatureVectorArray {
     return _cpo::dimension(vector_array);
   }
 
+  tiledb_datatype_t datatype_;
   ProtoFeatureVectorArray vector_array;
 };
 
