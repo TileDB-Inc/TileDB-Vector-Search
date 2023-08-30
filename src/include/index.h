@@ -66,9 +66,16 @@ public:
     QueryResults& results
   ) -> std::pair(FeatureVectorArray, IdVector);
 
-  // Insert, optionally with IDs and training parameters
+  // Insert from in-memory array, optionally with IDs and training parameters
   void insert(
     FeatureVectorArray vectors,
+    std::optional<IdVector> ids = std::nullopt,
+    std::optional<TrainingParameters> params = std::nullopt
+  );
+
+  // Insert from URI, optionally with IDs and training parameters
+  void insert(
+    URI vectors_uri,
     std::optional<IdVector> ids = std::nullopt,
     std::optional<TrainingParameters> params = std::nullopt
   );
