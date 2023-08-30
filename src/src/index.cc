@@ -18,9 +18,10 @@ private:
 }; // IndexBase
 
 // Type-specialized IVFIndex
-// This class will be a thing wrapper over
+// This class will be a thin wrapper over
 // 1. the array handles
-// 2. dispached to the appropriate qv_query (and similar) functions
+// 2. dispatching to the appropriate qv_query (and similar) functions,
+//    e.g., as currently done in Python: https://github.com/TileDB-Inc/TileDB-Vector-Search/blob/2985579ea2bd87485e6ed1b80148789e119f9f10/apis/python/src/tiledb/vector_search/module.py#L256-L268
 template <typename IndexVectorType>
 class IVFIndex : IndexBase<IVFIndex> {
   // Constructor: creates all type-specialized ColMajorMatrix (eg) objects
