@@ -73,7 +73,7 @@ public:
     std::optional<TrainingParameters> params = std::nullopt
   );
 
-  void delete(
+  void remove(
     std::span<IdType> ids
   );
 
