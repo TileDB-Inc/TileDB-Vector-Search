@@ -40,8 +40,10 @@
 #include "concepts.h"
 #include "cpos.h"
 
-#include "utils/print_types.h"
-
+//------------------------------------------------------------------------------
+// Type erasure in two parts: a generic type erased wrapper and a specific
+// type erased wrapper for feature vectors arrays.
+//------------------------------------------------------------------------------
 /**
  * Basic wrapper to type-erase a class.  It has a shared pointer to
  * a non-template base class that has virtual methods for accessing member
@@ -178,9 +180,8 @@ class ProtoFeatureVectorArray {
 class FeatureVector {
  public:
   template <class T>
-  explicit FeatureVector(T&& obj)
-      : vector(std::make_shared<vector_impl<T>>(
-            std::forward<T>(obj))) {
+  FeatureVector(T&& vec)
+      : vector_(std::make_shared<vector_impl<T>>(std::forward<T>(vec))) {
   }
 
   template <class T>
@@ -202,29 +203,24 @@ class FeatureVector {
      */
     switch (datatype_) {
       case TILEDB_FLOAT32:
-        vector =
-            std::make_shared<vector_impl<tdbVector<float>>>(
-                tdbVector<float>(ctx, uri));
+        vector_ = std::make_shared<vector_impl<tdbVector<float>>>(
+            tdbVector<float>(ctx, uri));
         break;
       case TILEDB_UINT8:
-        vector =
-            std::make_shared<vector_impl<tdbVector<uint8_t>>>(
-                tdbVector<uint8_t>(ctx, uri));
+        vector_ = std::make_shared<vector_impl<tdbVector<uint8_t>>>(
+            tdbVector<uint8_t>(ctx, uri));
         break;
       case TILEDB_INT32:
-        vector =
-            std::make_shared<vector_impl<tdbVector<int32_t>>>(
-                tdbVector<int32_t>(ctx, uri));
+        vector_ = std::make_shared<vector_impl<tdbVector<int32_t>>>(
+            tdbVector<int32_t>(ctx, uri));
         break;
       case TILEDB_UINT32:
-        vector =
-            std::make_shared<vector_impl<tdbVector<uint32_t>>>(
-                tdbVector<uint32_t>(ctx, uri));
+        vector_ = std::make_shared<vector_impl<tdbVector<uint32_t>>>(
+            tdbVector<uint32_t>(ctx, uri));
         break;
       case TILEDB_UINT64:
-        vector =
-            std::make_shared<vector_impl<tdbVector<uint64_t>>>(
-                tdbVector<uint64_t>(ctx, uri));
+        vector_ = std::make_shared<vector_impl<tdbVector<uint64_t>>>(
+            tdbVector<uint64_t>(ctx, uri));
         break;
       default:
         throw std::runtime_error("Unsupported attribute type");
@@ -233,11 +229,11 @@ class FeatureVector {
 
   [[nodiscard]] auto data() const {
     // return _cpo::data(*vector);
-    return vector->data();
+    return vector_->data();
   }
 
   [[nodiscard]] auto dimension() const {
-    return _cpo::dimension(*vector);
+    return _cpo::dimension(*vector_);
   }
 
   [[nodiscard]] tiledb_datatype_t datatype() const {
@@ -258,29 +254,28 @@ class FeatureVector {
   template <typename T>
   struct vector_impl : vector_base {
     explicit vector_impl(T&& t)
-        : vector(std::move(t)) {
+        : vector_(std::move(t)) {
     }
     [[nodiscard]] void* data() override {
-      return _cpo::data(vector);
-      // return vector.data();
+      return _cpo::data(vector_);
+      // return vector_.data();
     }
     [[nodiscard]] const void* data() const override {
-      return _cpo::data(vector);
-      // return vector.data();
+      return _cpo::data(vector_);
+      // return vector_.data();
     }
     [[nodiscard]] size_t dimension() const override {
-      return _cpo::dimension(vector);
+      return _cpo::dimension(vector_);
     }
 
    private:
-    T vector;
+    T vector_;
   };
 
  private:
   tiledb_datatype_t datatype_{TILEDB_ANY};
-  std::shared_ptr<const vector_base> vector;
+  std::shared_ptr<const vector_base> vector_;
 };
-
 
 /**
  * Unified wrapper for feature vector arrays.
@@ -388,10 +383,4 @@ class FeatureVectorArray {
   std::shared_ptr<const vector_array_base> vector_array;
 };
 
-
-
-
-
 #endif
-
-

@@ -45,6 +45,7 @@
 #include "utils/timer.h"
 
 #include "detail/linalg/linalg_defs.h"
+#include <version>
 
 template <class I = size_t>
 using matrix_extents = stdx::dextents<I, 2>;
@@ -89,7 +90,12 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       LayoutPolicy policy = LayoutPolicy()) noexcept
       : num_rows_(nrows)
       , num_cols_(ncols)
-      , storage_{new T[num_rows_ * num_cols_]} {
+#ifdef __cpp_lib_smart_ptr_for_overwrite
+      , storage_{std::make_unique_for_overwrite<T[]>(num_rows_ * num_cols_)}
+#else
+      , storage_{new T[num_rows_ * num_cols_]}
+#endif
+  {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
   }
 
@@ -119,7 +125,12 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : num_rows_{list.size()}
       , num_cols_{list.begin()->size()}
-      , storage_{new T[num_rows_ * num_cols_]} {
+#ifdef __cpp_lib_smart_ptr_for_overwrite
+      , storage_{std::make_unique_for_overwrite<T[]>(num_rows_ * num_cols_)}
+#else
+      , storage_{new T[num_rows_ * num_cols_]}
+#endif
+  {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
     auto it = list.begin();
     for (size_type i = 0; i < num_rows_; ++i, ++it) {
@@ -135,7 +146,12 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : num_rows_{list.begin()->size()}
       , num_cols_{list.size()}
-      , storage_{new T[num_rows_ * num_cols_]} {
+#ifdef __cpp_lib_smart_ptr_for_overwrite
+      , storage_{std::make_unique_for_overwrite<T[]>(num_rows_ * num_cols_)}
+#else
+      , storage_{new T[num_rows_ * num_cols_]}
+#endif
+  {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
     auto it = list.begin();
     for (size_type i = 0; i < num_cols_; ++i, ++it) {

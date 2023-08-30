@@ -179,10 +179,9 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       blocksize_ = upper_bound;
     }
 
-#ifndef __APPLE__
+#ifdef __cpp_lib_smart_ptr_for_overwrite
     auto data_ = std::make_unique_for_overwrite<T[]>(dimension * blocksize_);
 #else
-    // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
     auto data_ = std::unique_ptr<T[]>(new T[dimension * blocksize_]);
 #endif
 
@@ -328,10 +327,9 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     auto num_rows = row_end - row_begin;
     auto num_cols = col_end - col_begin;
 
-#ifndef __APPLE__
+#ifdef __cpp_lib_smart_ptr_for_overwrite
     auto data_ = std::make_unique_for_overwrite<T[]>(num_rows * num_cols);
 #else
-    // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
     auto data_ = std::unique_ptr<T[]>(new T[num_rows * num_cols]);
 #endif
 
