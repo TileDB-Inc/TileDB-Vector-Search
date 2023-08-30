@@ -1,5 +1,5 @@
 /**
- * @file   api.h
+ * @file   concepts.h
  *
  * @section LICENSE
  *
@@ -31,8 +31,8 @@
  *
  */
 
-#ifndef TDB_API_H
-#define TDB_API_H
+#ifndef TDB_CONCEPTS_H
+#define TDB_CONCEPTS_H
 
 #include <concepts>
 #include <ranges>
@@ -181,7 +181,7 @@ feature_vector_range<D> && requires(D d) {
 };
 
 // ----------------------------------------------------------------------------
-// partitioned_feature_vector_range concept
+// partitioned_feature_vector_range concept (WIP)
 // ----------------------------------------------------------------------------
 
 template <class D>
@@ -193,7 +193,7 @@ concept contiguous_partitioned_feature_vector_range =
     partitioned_feature_vector_range<D> && std::ranges::contiguous_range<D>;
 
 // ----------------------------------------------------------------------------
-// partition_index concept
+// partition_index concept (WIP)
 // ----------------------------------------------------------------------------
 template <class P>
 concept partition_index =
@@ -201,7 +201,7 @@ concept partition_index =
     subscriptable_range<P>;
 
 // ----------------------------------------------------------------------------
-// vector_search_index concept
+// vector_search_index concept (WIP)
 // ----------------------------------------------------------------------------
 template <typename I>
 concept vector_search_index = requires(I i) {
@@ -210,4 +210,4 @@ concept vector_search_index = requires(I i) {
   { i.search() };
 };
 
-#endif  // TDB_API_H
+#endif  // TDB_CONCEPTS_H

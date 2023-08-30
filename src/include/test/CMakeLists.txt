@@ -63,6 +63,8 @@ kmeans_add_exe(time_abstraction_penalty)
 
 kmeans_add_test(unit_algorithm)
 
+kmeans_add_test(unit_api)
+
 kmeans_add_test(unit_concepts)
 
 kmeans_add_test(unit_concepts_vs)
