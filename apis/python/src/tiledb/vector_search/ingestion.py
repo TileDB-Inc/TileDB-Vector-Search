@@ -824,12 +824,11 @@ def ingest(
                 trace_id=trace_id,
             )
             logger.debug("Start kmeans training")
-            clusters = kmeans_fit(partitions, init, max_iter, verbose, n_init, array_to_matrix(sample_vectors))
+            clusters = kmeans_fit(partitions, init, max_iter, verbose, n_init, array_to_matrix(np.transpose(sample_vectors)))
+            clusters = np.array(clusters)
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w") as A:
-                A[0:dimensions, 0:partitions] = np.transpose(
-                    np.array(clusters)
-                )
+                A[0:dimensions, 0:partitions] = clusters
 
     # --------------------------------------------------------------------
     # distributed kmeans UDFs
