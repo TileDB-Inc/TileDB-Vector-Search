@@ -98,26 +98,21 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
   CHECK(outer_counts == index.get_centroids().num_cols());
 }
 
-// kmeans and kmeans indexing still WIP
-#if 0
-
-TEST_CASE("ivf_index: test kmeans", "[ivf_index]") {
+TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
                              9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
 
   ColMajorMatrix<float> training_data(4, 8);
   std::copy(begin(data), end(data), training_data.data());
 
-  auto index = kmeans_index<float, size_t, size_t>(4, 3, 10, 1e-4, 1);
+  auto index = kmeans_index<float, size_t, size_t>(4, 3, 10, 1e-4, 1, Catch::rngSeed());
 
   SECTION("random") {
-    index.kmeans_random_init(training_data);
-    index.train_no_init(training_data);
+    index.train(training_data, kmeans_init::random);
   }
 
   SECTION("kmeans++") {
-    index.kmeans_pp(training_data);
-    index.train_no_init(training_data);
+    index.train(training_data, kmeans_init::kmeanspp);
   }
 
   // Test???
@@ -125,7 +120,8 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index]") {
   // debug_centroids(index);
 }
 
-
+// kmeans and kmeans indexing still WIP
+#if 0
 
 TEST_CASE("ivf_index: not a unit test per se", "[ivf_index]") {
   tiledb::Context ctx;

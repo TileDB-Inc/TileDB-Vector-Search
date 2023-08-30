@@ -293,6 +293,21 @@ class kmeans_index {
       }
       file << std::endl;
 
+      for (auto s = 0; s < training_set.num_cols(); ++s) {
+        for (auto t = 0; t < training_set.num_rows(); ++t) {
+          file << std::to_string(training_set(t, s)) << ',';
+        }
+        file << std::endl;
+      }
+      file << std::endl;
+
+      for (auto s = 0; s < centroids_.num_cols(); ++s) {
+        for (auto t = 0; t < centroids_.num_rows(); ++t) {
+          file << std::to_string(centroids_(t, s)) << ',';
+        }
+        file << std::endl;
+      }
+
       file.close();
 
       std::cout << "Data written to file: " << tempFileName << std::endl;
