@@ -45,6 +45,10 @@ TEST_CASE("api: test test", "[api]") {
   REQUIRE(true);
 }
 
+
+// ----------------------------------------------------------------------------
+// FeatureVector tests
+// ----------------------------------------------------------------------------
 TEST_CASE("api: FeatureVector data", "[api]") {
   auto v = std::vector<int>{1, 2, 3};
   auto w = Vector<int>{1, 2, 3};
@@ -148,3 +152,8 @@ TEMPLATE_LIST_TEST_CASE("api: FeatureVector read", "[api]", TestTypes) {
   auto ez = by + dimension(y);
   CHECK(std::equal(bz, ez, begin(x)));
 }
+
+
+// ----------------------------------------------------------------------------
+// FeatureVectorArray tests
+// ----------------------------------------------------------------------------

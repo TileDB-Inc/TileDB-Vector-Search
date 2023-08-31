@@ -180,7 +180,7 @@ class ProtoFeatureVectorArray {
  */
 class FeatureVector {
  public:
-  template <class T>
+  template <feature_vector T>
   FeatureVector(T&& vec)
       : vector_(std::make_unique<vector_impl<T>>(std::forward<T>(vec))) {
   }
@@ -286,7 +286,7 @@ using IdVector = FeatureVector;
  */
 class FeatureVectorArray {
  public:
-  template <class T>
+  template <feature_vector_array T>
   explicit FeatureVectorArray(T&& obj)
       : vector_array(std::make_unique<vector_array_impl<T>>(
             std::move(std::forward<T>(obj)))) {
@@ -405,7 +405,7 @@ class Index {
     // @todo
   }
 
-  template <feature_vector_range V>
+  template <feature_vector_array V>
   Index(
       const URI& index_uri,
       const V& vectors,

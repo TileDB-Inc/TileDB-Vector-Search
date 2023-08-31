@@ -142,7 +142,7 @@ template <class R>
 concept query_vector = feature_vector<R>;
 
 // ----------------------------------------------------------------------------
-// feature_vector_range concept
+// feature_vector_array concept
 //
 // A vector range is a range of feature vectors.
 // We will want at least these kinds:
@@ -154,7 +154,7 @@ concept query_vector = feature_vector<R>;
 // @todo operator()(size_t, size_t) ?
 // ----------------------------------------------------------------------------
 template <class D>
-concept feature_vector_range =
+concept feature_vector_array =
     // feature_vector<inner_range_t<D>> &&
     // std::ranges::random_access_range<D> && /* std::ranges::sized_range<D> && */
     // subscriptable_range<D> &&
@@ -176,7 +176,7 @@ concept feature_vector_range =
  */
 template <class D>
 concept contiguous_feature_vector_range =
-feature_vector_range<D> && requires(D d) {
+    feature_vector_array<D> && requires(D d) {
   { data(d) } -> std::same_as<std::add_pointer_t<typename D::reference>>;
 };
 
@@ -186,7 +186,7 @@ feature_vector_range<D> && requires(D d) {
 
 template <class D>
 concept partitioned_feature_vector_range =
-    feature_vector_range<D> && partitionable<D>;
+    feature_vector_array<D> && partitionable<D>;
 
 template <class D>
 concept contiguous_partitioned_feature_vector_range =

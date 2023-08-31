@@ -52,7 +52,7 @@ TEST_CASE("concepts_vs: test test", "[concepts_vs]") {
 // 5. vectorable
 // 6. partitionable
 // 7. feature_vector
-// 8. feature_vector_range
+// 8. feature_vector_array
 // 9. contiguous_feature_vector_range
 
 TEST_CASE("concepts_vs: Vector", "[concepts_vs]") {
@@ -82,9 +82,9 @@ TEST_CASE("concepts_vs: Vector", "[concepts_vs]") {
   CHECK(
       query_vector<Vector<bool>>);  // @todo ? Vector of bool is not contiguous?
 
-  CHECK(!feature_vector_range<Vector<int>>);
-  CHECK(!feature_vector_range<Vector<double>>);
-  CHECK(!feature_vector_range<Vector<bool>>);
+  CHECK(!feature_vector_array<Vector<int>>);
+  CHECK(!feature_vector_array<Vector<double>>);
+  CHECK(!feature_vector_array<Vector<bool>>);
 
   CHECK(!contiguous_feature_vector_range<Vector<int>>);
   CHECK(!contiguous_feature_vector_range<Vector<double>>);
@@ -108,7 +108,7 @@ auto test_dimensionable(const Matrix<int>& d) {
   return _dimensionable(d);
 }
 
-template <feature_vector_range D>
+template <feature_vector_array D>
 auto _feature_vector_range(const D& d) {
   return num_vectors(d);
 }
@@ -151,9 +151,9 @@ TEST_CASE("concepts_vs: Matrix", "[concepts_vs]") {
   CHECK(!query_vector<Matrix<bool>>);  // @todo ? Matrix of bool is not
                                        // contiguous?
 
-  CHECK(feature_vector_range<Matrix<int>>);
-  CHECK(feature_vector_range<Matrix<double>>);
-  CHECK(feature_vector_range<Matrix<bool>>);
+  CHECK(feature_vector_array<Matrix<int>>);
+  CHECK(feature_vector_array<Matrix<double>>);
+  CHECK(feature_vector_array<Matrix<bool>>);
 
   CHECK(contiguous_feature_vector_range<Matrix<int>>);
   CHECK(contiguous_feature_vector_range<Matrix<double>>);

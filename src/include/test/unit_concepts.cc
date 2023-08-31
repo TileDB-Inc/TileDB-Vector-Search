@@ -308,11 +308,11 @@ TEST_CASE("concepts: query_vector", "[concepts]") {
   CHECK(query_vector<dummy_feature_vector<int>>);
 }
 
-TEST_CASE("concepts: feature_vector_range", "[concepts]") {
-  CHECK(!feature_vector_range<int>);
-  CHECK(!feature_vector_range<std::vector<int>>);
-  CHECK(!feature_vector_range<std::vector<double>>);
-  CHECK(!feature_vector_range<std::vector<std::vector<int>>>);
+TEST_CASE("concepts: feature_vector_array", "[concepts]") {
+  CHECK(!feature_vector_array<int>);
+  CHECK(!feature_vector_array<std::vector<int>>);
+  CHECK(!feature_vector_array<std::vector<double>>);
+  CHECK(!feature_vector_array<std::vector<std::vector<int>>>);
 }
 
 TEST_CASE("concepts: contiguous_feature_vector_range", "[concepts]") {

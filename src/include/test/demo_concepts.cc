@@ -5,7 +5,7 @@
 #include "tdb_defs.h"
 #include "utils/fixed_min_heap.h"
 
-template <feature_vector_range DB, feature_vector_range Q, std::integral Index>
+template <feature_vector_array DB, feature_vector_array Q, std::integral Index>
 auto qv_query_heap(const DB& db, const Q& query, int k_nn, unsigned nthreads) {
   auto top_k = ColMajorMatrix<size_t>(k_nn, num_vectors(query));
   auto top_k_scores = ColMajorMatrix<float>(k_nn, num_vectors(query));

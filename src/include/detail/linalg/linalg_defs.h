@@ -34,6 +34,7 @@
 
 #include <string>
 #include "mdspan/mdspan.hpp"
+#include <tiledb/tiledb>
 
 extern bool global_verbose;
 extern bool global_debug;
