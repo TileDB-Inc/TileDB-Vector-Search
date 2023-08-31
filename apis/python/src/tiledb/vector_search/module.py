@@ -385,7 +385,7 @@ def array_to_matrix(array: np.ndarray):
     else:
         raise TypeError("Unsupported type!")
 
-def kmeans_fit(partitions: int, init: str, max_iter: int, verbose: bool, n_init: int, sample_vectors: "colMajorMatrix"):
+def kmeans_fit(partitions: int, init: str, max_iter: int, verbose: bool, n_init: int, sample_vectors: "colMajorMatrix", tol: Optional[float] = None, nthreads: Optional[int] = None, seed: Optional[int] = None):
     args = tuple(
         [
             partitions,
@@ -394,6 +394,9 @@ def kmeans_fit(partitions: int, init: str, max_iter: int, verbose: bool, n_init:
             verbose,
             n_init,
             sample_vectors,
+            tol,
+            nthreads,
+            seed,
         ]
     )
     if sample_vectors.dtype == np.float32:
