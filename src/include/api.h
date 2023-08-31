@@ -40,148 +40,148 @@
 #include "concepts.h"
 #include "cpos.h"
 
-//------------------------------------------------------------------------------
-// Type erasure in two parts: a generic type erased wrapper and a specific
-// type erased wrapper for feature vectors arrays.
-//------------------------------------------------------------------------------
-/**
- * Basic wrapper to type-erase a class.  It has a shared pointer to
- * a non-template base class that has virtual methods for accessing member
- * functions of the wrapped type.  It provides data(), dimension(), and
- * num_vectors() methods that delegate to the wrapped type.
- *
- * @todo Instrument carefully to make sure we are not doing any copying.
- */
-class FeatureVectorArrayWrapper {
- public:
-  template <typename T>
-  explicit FeatureVectorArrayWrapper(T&& obj)
-      : vector_array(std::make_shared<vector_array_impl<T>>(
-            std::move(std::forward<T>(obj)))) {
-  }
+  //------------------------------------------------------------------------------
+  // Type erasure in two parts: a generic type erased wrapper and a specific
+  // type erased wrapper for feature vectors arrays.
+  //------------------------------------------------------------------------------
+  /**
+   * Basic wrapper to type-erase a class.  It has a shared pointer to
+   * a non-template base class that has virtual methods for accessing member
+   * functions of the wrapped type.  It provides data(), dimension(), and
+   * num_vectors() methods that delegate to the wrapped type.
+   *
+   * @todo Instrument carefully to make sure we are not doing any copying.
+   */
+  class FeatureVectorArrayWrapper {
+   public:
+    template <typename T>
+    explicit FeatureVectorArrayWrapper(T&& obj)
+        : vector_array(std::make_unique<vector_array_impl<T>>(
+              std::move(std::forward<T>(obj)))) {
+    }
 
-  [[nodiscard]] auto data() const {
-    // return _cpo::data(*vector_array);
-    return vector_array->data();
-  }
+    [[nodiscard]] auto data() const {
+      // return _cpo::data(*vector_array);
+      return vector_array->data();
+    }
 
-  [[nodiscard]] auto dimension() const {
-    return _cpo::dimension(*vector_array);
-  }
+    [[nodiscard]] auto dimension() const {
+      return _cpo::dimension(*vector_array);
+    }
 
-  [[nodiscard]] auto num_vectors() const {
-    return _cpo::num_vectors(*vector_array);
-  }
+    [[nodiscard]] auto num_vectors() const {
+      return _cpo::num_vectors(*vector_array);
+    }
 
-  struct vector_array_base {
-    virtual ~vector_array_base() = default;
-    [[nodiscard]] virtual size_t dimension() const = 0;
-    [[nodiscard]] virtual size_t num_vectors() const = 0;
-    [[nodiscard]] virtual void* data() = 0;
-    [[nodiscard]] virtual const void* data() const = 0;
+    struct vector_array_base {
+      virtual ~vector_array_base() = default;
+      [[nodiscard]] virtual size_t dimension() const = 0;
+      [[nodiscard]] virtual size_t num_vectors() const = 0;
+      [[nodiscard]] virtual void* data() = 0;
+      [[nodiscard]] virtual const void* data() const = 0;
+    };
+
+    // @todo Create move constructors for Matrix and tdbMatrix
+    template <typename T>
+    struct vector_array_impl : vector_array_base {
+      explicit vector_array_impl(T&& t)
+          : vector_array(std::move(t)) {
+      }
+      [[nodiscard]] void* data() override {
+        return _cpo::data(vector_array);
+        // return vector_array.data();
+      }
+      [[nodiscard]] const void* data() const override {
+        return _cpo::data(vector_array);
+        // return vector_array.data();
+      }
+      [[nodiscard]] size_t dimension() const override {
+        return _cpo::dimension(vector_array);
+      }
+      [[nodiscard]] size_t num_vectors() const override {
+        return _cpo::num_vectors(vector_array);
+      }
+
+     private:
+      T vector_array;
+    };
+
+    std::unique_ptr<const vector_array_base> vector_array;
   };
 
-  // @todo Create move constructors for Matrix and tdbMatrix
-  template <typename T>
-  struct vector_array_impl : vector_array_base {
-    explicit vector_array_impl(T&& t)
-        : vector_array(std::move(t)) {
+  // Put these here for now to enforce separation between matrix aware
+  // and matrix unaware code.  We could (and probably should) merge these
+  // into a single class.  Although we could use the above for
+  // wrapping feature vectors as well (we would just use a concept
+  // to elide num_vectors).  The separation may also be useful for
+  // dealing with in-memory arrays vs arrays on disk.
+
+  #include <tiledb/tiledb>
+  #include "detail/linalg/tdb_helpers.h"
+  #include "detail/linalg/tdb_matrix.h"
+  #include "detail/linalg/tdb_vector.h"
+
+  class ProtoFeatureVectorArray {
+   public:
+    FeatureVectorArrayWrapper open(
+        const tiledb::Context& ctx, const std::string& uri) {
+      auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
+      auto schema = array.schema();
+      auto attr = schema.attribute(0);  // @todo Is there a better way to look up
+                                        // the attribute we're interested in?
+      datatype_ = attr.type();
+
+      array.close();  // @todo create Matrix constructor that takes opened array
+
+      /**
+       * Row and column orientation are kind of irrelevant?  We could dispatch
+       * on the layout in the schema, but that might not be necessary.  What is
+       * important is that the vectors are along the major axis, which should
+       * happen with either orientation, and so will work at the other end with
+       * either orientation since we are just passing a pointer to the data.
+       */
+      switch (datatype_) {
+        case TILEDB_FLOAT32:
+          return FeatureVectorArrayWrapper(tdbColMajorMatrix<float>(ctx, uri));
+        case TILEDB_UINT8:
+          return FeatureVectorArrayWrapper(tdbColMajorMatrix<uint8_t>(ctx, uri));
+        default:
+          throw std::runtime_error("Unsupported attribute type");
+      }
     }
-    [[nodiscard]] void* data() override {
-      return _cpo::data(vector_array);
-      // return vector_array.data();
+
+    ProtoFeatureVectorArray(const tiledb::Context& ctx, const std::string& uri)
+        : vector_array{open(ctx, uri)} {
     }
-    [[nodiscard]] const void* data() const override {
-      return _cpo::data(vector_array);
-      // return vector_array.data();
+
+    [[nodiscard]] tiledb_datatype_t datatype() const {
+      return datatype_;
     }
-    [[nodiscard]] size_t dimension() const override {
+
+    [[nodiscard]] void* data() const {
+      return (void*)_cpo::data(vector_array);
+    }
+
+    [[nodiscard]] auto dimension() const {
       return _cpo::dimension(vector_array);
     }
-    [[nodiscard]] size_t num_vectors() const override {
-      return _cpo::num_vectors(vector_array);
+
+    [[nodiscard]] auto num_vectors() const {
+      return _cpo::dimension(vector_array);
     }
 
-   private:
-    T vector_array;
+    tiledb_datatype_t datatype_;
+    FeatureVectorArrayWrapper vector_array;
   };
 
-  std::shared_ptr<const vector_array_base> vector_array;
-};
-
-// Put these here for now to enforce separation between matrix aware
-// and matrix unaware code.  We could (and probably should) merge these
-// into a single class.  Although we could use the above for
-// wrapping feature vectors as well (we would just use a concept
-// to elide num_vectors).  The separation may also be useful for
-// dealing with in-memory arrays vs arrays on disk.
-
-#include <tiledb/tiledb>
-#include "detail/linalg/tdb_helpers.h"
-#include "detail/linalg/tdb_matrix.h"
-#include "detail/linalg/tdb_vector.h"
-
-class ProtoFeatureVectorArray {
- public:
-  FeatureVectorArrayWrapper open(
-      const tiledb::Context& ctx, const std::string& uri) {
-    auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
-    auto schema = array.schema();
-    auto attr = schema.attribute(0);  // @todo Is there a better way to look up
-                                      // the attribute we're interested in?
-    datatype_ = attr.type();
-
-    array.close();  // @todo create Matrix constructor that takes opened array
-
-    /**
-     * Row and column orientation are kind of irrelevant?  We could dispatch
-     * on the layout in the schema, but that might not be necessary.  What is
-     * important is that the vectors are along the major axis, which should
-     * happen with either orientation, and so will work at the other end with
-     * either orientation since we are just passing a pointer to the data.
-     */
-    switch (datatype_) {
-      case TILEDB_FLOAT32:
-        return FeatureVectorArrayWrapper(tdbColMajorMatrix<float>(ctx, uri));
-      case TILEDB_UINT8:
-        return FeatureVectorArrayWrapper(tdbColMajorMatrix<uint8_t>(ctx, uri));
-      default:
-        throw std::runtime_error("Unsupported attribute type");
-    }
-  }
-
-  ProtoFeatureVectorArray(const tiledb::Context& ctx, const std::string& uri)
-      : vector_array{open(ctx, uri)} {
-  }
-
-  [[nodiscard]] tiledb_datatype_t datatype() const {
-    return datatype_;
-  }
-
-  [[nodiscard]] void* data() const {
-    return (void*)_cpo::data(vector_array);
-  }
-
-  [[nodiscard]] auto dimension() const {
-    return _cpo::dimension(vector_array);
-  }
-
-  [[nodiscard]] auto num_vectors() const {
-    return _cpo::dimension(vector_array);
-  }
-
-  tiledb_datatype_t datatype_;
-  FeatureVectorArrayWrapper vector_array;
-};
-
-/**
- * Unified wrapper for feature vector arrays.
- */
-class FeatureVector {
- public:
+  /**
+   * Unified wrapper for feature vector arrays.
+   */
+  class FeatureVector {
+   public:
   template <class T>
   FeatureVector(T&& vec)
-      : vector_(std::make_shared<vector_impl<T>>(std::forward<T>(vec))) {
+      : vector_(std::make_unique<vector_impl<T>>(std::forward<T>(vec))) {
   }
 
   template <class T>
@@ -203,23 +203,23 @@ class FeatureVector {
      */
     switch (datatype_) {
       case TILEDB_FLOAT32:
-        vector_ = std::make_shared<vector_impl<tdbVector<float>>>(
+        vector_ = std::make_unique<vector_impl<tdbVector<float>>>(
             tdbVector<float>(ctx, uri));
         break;
       case TILEDB_UINT8:
-        vector_ = std::make_shared<vector_impl<tdbVector<uint8_t>>>(
+        vector_ = std::make_unique<vector_impl<tdbVector<uint8_t>>>(
             tdbVector<uint8_t>(ctx, uri));
         break;
       case TILEDB_INT32:
-        vector_ = std::make_shared<vector_impl<tdbVector<int32_t>>>(
+        vector_ = std::make_unique<vector_impl<tdbVector<int32_t>>>(
             tdbVector<int32_t>(ctx, uri));
         break;
       case TILEDB_UINT32:
-        vector_ = std::make_shared<vector_impl<tdbVector<uint32_t>>>(
+        vector_ = std::make_unique<vector_impl<tdbVector<uint32_t>>>(
             tdbVector<uint32_t>(ctx, uri));
         break;
       case TILEDB_UINT64:
-        vector_ = std::make_shared<vector_impl<tdbVector<uint64_t>>>(
+        vector_ = std::make_unique<vector_impl<tdbVector<uint64_t>>>(
             tdbVector<uint64_t>(ctx, uri));
         break;
       default:
@@ -274,8 +274,11 @@ class FeatureVector {
 
  private:
   tiledb_datatype_t datatype_{TILEDB_ANY};
-  std::shared_ptr<const vector_base> vector_;
+  std::unique_ptr<const vector_base> vector_;
 };
+
+using QueryVector = FeatureVector;
+using IdVector = FeatureVector;
 
 /**
  * Unified wrapper for feature vector arrays.
@@ -285,7 +288,7 @@ class FeatureVectorArray {
  public:
   template <class T>
   explicit FeatureVectorArray(T&& obj)
-      : vector_array(std::make_shared<vector_array_impl<T>>(
+      : vector_array(std::make_unique<vector_array_impl<T>>(
             std::move(std::forward<T>(obj)))) {
   }
 
@@ -309,12 +312,12 @@ class FeatureVectorArray {
     switch (datatype_) {
       case TILEDB_FLOAT32:
         vector_array =
-            std::make_shared<vector_array_impl<tdbColMajorMatrix<float>>>(
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<float>>>(
                 tdbColMajorMatrix<float>(ctx, uri));
         break;
       case TILEDB_UINT8:
         vector_array =
-            std::make_shared<vector_array_impl<tdbColMajorMatrix<uint8_t>>>(
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint8_t>>>(
                 tdbColMajorMatrix<uint8_t>(ctx, uri));
         break;
       default:
@@ -380,7 +383,74 @@ class FeatureVectorArray {
 
  private:
   tiledb_datatype_t datatype_{TILEDB_ANY};
-  std::shared_ptr<const vector_array_base> vector_array;
+  std::unique_ptr<const vector_array_base> vector_array;
+};
+
+using QueryVectorArray = FeatureVectorArray;
+
+
+//------------------------------------------------------------------------------
+// Index
+//------------------------------------------------------------------------------
+
+using URI = std::string;
+using StringMap = std::map<std::string, std::string>;
+
+// @todo Context?
+class Index {
+
+ public:
+  Index(const URI& index_uri, std::optional<StringMap> config = std::nullopt){
+    // @todo
+  }
+
+  template <feature_vector_range V>
+  Index(const URI& index_uri, const V& vectors, const IndexOptions& options,
+      std::optional<StringMap> config = std::nullopt) {
+    // @todo
+  }
+
+  // Create from input URI
+  Index(const URI& index_uri, const URI& vectors_uri, const IndexOptions& options,
+      std::optional<StringMap> config = std::nullopt
+  );
+
+  struct index_base {
+    virtual ~index_base() = default;
+    virtual std::tuple<FeatureVectorArray, IdVector> query(QueryVectorArray vectors, size_t top_k) = 0;
+    virtual void insert(FeatureVectorArray, std::optional<IdVector> ids = std::nullopt,
+                std::optional<TrainingParameters> params = std::nullopt) = 0;
+    virtual void insert(URI vectors_uri, std::optional<IdVector> ids = std::nullopt,
+                std::optional<TrainingParameters> params = std::nullopt) = 0;
+    virtual void remove(IdVector ids) = 0;
+
+  };
+
+  template <typename T>
+  struct index_impl : index_base {
+    explicit index_impl(T&& t)
+        : index_(std::move(t)) {
+    }
+    auto query(QueryVectorArray vectors, size_t top_k) {
+      return index_->query(vectors, top_k);
+    }
+    void insert(FeatureVectorArray vectors, std::optional<IdVector> ids = std::nullopt,
+                        std::optional<TrainingParameters> params = std::nullopt) {
+      index_->insert(vectors, ids, params);
+    }
+    void insert(URI vectors_uri, std::optional<IdVector> ids = std::nullopt,
+                        std::optional<TrainingParameters> params = std::nullopt) {
+      index_->insert(vectors_uri, ids, params);
+    }
+    virtual void remove(IdVector ids) {
+      index_->remove(ids);
+    }
+
+   private:
+    T index_;
+  };
+
+  std::unique_ptr<const index_base> index_;
 };
 
 #endif
