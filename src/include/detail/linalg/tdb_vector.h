@@ -35,6 +35,7 @@
 
 #include <tiledb/tiledb>
 #include "detail/linalg/vector.h"
+#include "detail/linalg/tdb_io.h"
 
 /**
  * @brief Placeholder for now

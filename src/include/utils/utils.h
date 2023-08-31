@@ -112,7 +112,7 @@ bool is_local_array(const std::string& array_uri) {
  * @tparam T The type of the counter
  */
 template <class T = std::size_t>
-struct counter {
+struct assignment_counter {
   using iterator_category = std::output_iterator_tag;
   using value_type = void;
   using difference_type = void;
@@ -121,7 +121,7 @@ struct counter {
 
   T count{0};
 
-  counter(T init = {})
+  assignment_counter(T init = {})
       : count(init) {
   }
 
@@ -129,13 +129,13 @@ struct counter {
     return count;
   }
 
-  counter& operator++() {
+  assignment_counter& operator++() {
     return *this;
   }
-  counter& operator++(int) {
+  assignment_counter& operator++(int) {
     return *this;
   }
-  counter& operator*() {
+  assignment_counter& operator*() {
     return *this;
   }
 

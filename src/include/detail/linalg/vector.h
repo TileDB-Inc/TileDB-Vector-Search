@@ -38,13 +38,6 @@
 #include <tiledb/tiledb>
 #include <vector>
 
-template <class T>
-std::vector<T> read_vector(
-    const tiledb::Context& ctx,
-    const std::string&,
-    size_t start_pos,
-    size_t end_pos);
-
 template <class M>
 concept is_view = requires(M) {
   typename M::view_type;
@@ -93,6 +86,18 @@ class Vector : public std::span<T> {
   }
 
   Vector(std::initializer_list<T> lst)
+      : nrows_(lst.size())
+#ifdef __cpp_lib_smart_ptr_for_overwrite
+      , storage_{std::make_unique_for_overwrite<T[]>(nrows_)}
+#else
+      , storage_{new T[nrows_]}
+#endif
+  {
+    Base::operator=(Base{storage_.get(), nrows_});
+    std::copy(lst.begin(), lst.end(), storage_.get());
+  }
+
+  Vector(std::vector<T> lst)
       : nrows_(lst.size())
 #ifdef __cpp_lib_smart_ptr_for_overwrite
       , storage_{std::make_unique_for_overwrite<T[]>(nrows_)}

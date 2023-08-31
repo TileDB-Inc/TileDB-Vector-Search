@@ -34,6 +34,12 @@
 #include "api.h"
 #include "detail/linalg/tdb_vector.h"
 #include "detail/linalg/vector.h"
+#include "detail/linalg/tdb_io.h"
+#include "test_utils.h"
+#include "utils/utils.h"
+#include <filesystem>
+
+bool global_debug = false;
 
 TEST_CASE("api: test test", "[api]") {
   REQUIRE(true);
@@ -107,4 +113,42 @@ TEST_CASE("api: FeatureVector dimension", "[api]") {
   CHECK(dimension(FeatureVector(std::vector<int>{1,2,3})) == 3);
   CHECK(dimension(FeatureVector(Vector<int>{1,2,3})) == 3);
 }
+
+
+using TestTypes = std::tuple<float, uint8_t, int32_t, uint32_t, uint64_t>;
+
+int counter = 0;
+TEMPLATE_LIST_TEST_CASE("api: FeatureVector read", "[api]", TestTypes) {
+  size_t N = GENERATE( 1UL, 2UL, 8191UL, 8192UL, 8193UL );
+
+  std::vector<TestType> v(N);
+  randomize(v, {0, 128});
+  auto w{v};
+  auto ctx = tiledb::Context{};
+  auto vname = "/tmp/test_vector_" + std::to_string(counter++);
+  if (local_array_exists(vname)) {
+    std::filesystem::remove_all(vname);
+  }
+  write_vector(ctx, v, vname);
+  auto x = read_vector<TestType>(ctx, vname);
+
+  CHECK(dimension(x) == N);
+  CHECK(std::equal(begin(v), end(v), begin(x)));
+
+  auto y = FeatureVector{std::move(v)};
+  CHECK(dimension(y) == N);
+
+  auto by = (TestType*)y.data();
+  auto ey = by + dimension(y);
+  CHECK(std::equal(by, ey, begin(x)));
+
+  auto z = FeatureVector{ctx, vname};
+  CHECK(dimension(z) == N);
+
+  auto bz = (TestType*)y.data();
+  auto ez = by + dimension(y);
+  CHECK(std::equal(bz, ez, begin(x)));
+}
+
+
 

@@ -39,6 +39,7 @@
 
 #include "concepts.h"
 #include "cpos.h"
+#include "detail/linalg/tdb_vector.h"
 
 //------------------------------------------------------------------------------
 // Type erasure in two parts: a generic type erased wrapper and a specific
@@ -184,7 +185,6 @@ class FeatureVector {
       : vector_(std::make_unique<vector_impl<T>>(std::forward<T>(vec))) {
   }
 
-  template <class T>
   FeatureVector(const tiledb::Context& ctx, const std::string& uri) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
     auto schema = array.schema();
@@ -496,6 +496,7 @@ class Index {
     T index_;
   };
 
+  tiledb::Context ctx_;
   std::unique_ptr<const index_base> index_;
 };
 
