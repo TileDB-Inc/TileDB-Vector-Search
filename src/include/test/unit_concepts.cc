@@ -33,8 +33,8 @@
 
 #include <catch2/catch_all.hpp>
 #include "concepts.h"
-#include "detail/linalg/vector.h"
 #include "detail/linalg/matrix.h"
+#include "detail/linalg/vector.h"
 #include "utils/print_types.h"
 
 #include <list>
@@ -142,9 +142,8 @@ TEST_CASE("concepts: inner_reference_t", "[concepts]") {
         std::vector<int>::reference>);
 }
 
-
 template <class T>
-  requires callable<int, T, int>
+requires callable<int, T, int>
 void foo(const T&) {
 }
 
@@ -153,7 +152,6 @@ struct bar {
     return 0;
   }
 };
-
 
 TEST_CASE("concepts: invocable", "[concepts]") {
   foo(bar{});
@@ -194,7 +192,6 @@ TEST_CASE("concepts: subscriptable_range", "[concepts]") {
 
   CHECK(subscriptable_range<Vector<int>>);
 }
-
 
 TEST_CASE("concepts: callable_range", "[concepts]") {
   CHECK(!callable_range<int>);
@@ -237,7 +234,9 @@ TEST_CASE("concepts: dimensionable", "[concepts]") {
 }
 
 struct dummy_vectorable {
-  auto num_vectors() const { return 0; }
+  auto num_vectors() const {
+    return 0;
+  }
 };
 
 TEST_CASE("concepts: vectorable", "[concepts]") {
@@ -275,9 +274,10 @@ class dummy_feature_vector : public std::vector<T> {
  public:
   using std::vector<T>::vector;
 
-  auto dimension() const { return this->size(); }
+  auto dimension() const {
+    return this->size();
+  }
 };
-
 
 TEST_CASE("concepts: feature_vector", "[concepts]") {
   CHECK(!feature_vector<int>);
@@ -292,7 +292,6 @@ TEST_CASE("concepts: feature_vector", "[concepts]") {
 
   CHECK(feature_vector<dummy_feature_vector<int>>);
 }
-
 
 TEST_CASE("concepts: query_vector", "[concepts]") {
   CHECK(!query_vector<int>);
@@ -310,7 +309,6 @@ TEST_CASE("concepts: query_vector", "[concepts]") {
 }
 
 TEST_CASE("concepts: feature_vector_range", "[concepts]") {
-
   CHECK(!feature_vector_range<int>);
   CHECK(!feature_vector_range<std::vector<int>>);
   CHECK(!feature_vector_range<std::vector<double>>);
@@ -323,5 +321,6 @@ TEST_CASE("concepts: contiguous_feature_vector_range", "[concepts]") {
 TEST_CASE("concepts: partitioned_feature_vector_range", "[concepts]") {
 }
 
-TEST_CASE("concepts: contiguous_partitioned_feature_vector_range", "[concepts]") {
+TEST_CASE(
+    "concepts: contiguous_partitioned_feature_vector_range", "[concepts]") {
 }

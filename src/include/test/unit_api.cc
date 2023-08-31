@@ -1,43 +1,43 @@
 /**
-* @file   unit_concepts.cc
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
-*
-* Test application of concepts with TileDB-Vector-Search types
-*
+ * @file   unit_concepts.cc
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
+ * Test application of concepts with TileDB-Vector-Search types
+ *
  */
 #include <catch2/catch_all.hpp>
+#include <filesystem>
 #include "api.h"
+#include "detail/linalg/tdb_io.h"
 #include "detail/linalg/tdb_vector.h"
 #include "detail/linalg/vector.h"
-#include "detail/linalg/tdb_io.h"
 #include "test_utils.h"
 #include "utils/utils.h"
-#include <filesystem>
 
 bool global_debug = false;
 
@@ -88,9 +88,9 @@ TEST_CASE("api: FeatureVector data", "[api]") {
 
 TEST_CASE("api: FeatureVector dimension", "[api]") {
   auto v = std::vector<int>{1, 2, 3};
-  auto w = Vector<int> {1, 2, 3};
+  auto w = Vector<int>{1, 2, 3};
   auto t = std::vector<int>{1, 2, 3};
-  auto u = Vector<int> {1, 2, 3};
+  auto u = Vector<int>{1, 2, 3};
   auto x = FeatureVector{std::move(t)};
   auto y = FeatureVector{std::move(u)};
 
@@ -108,18 +108,17 @@ TEST_CASE("api: FeatureVector dimension", "[api]") {
     CHECK(dimension(FeatureVector(std::move(y))) == 3);
   }
 
-  CHECK(dimension(std::vector<int>{1,2,3}) == 3);
-  CHECK(dimension(Vector<int>{1,2,3}) == 3);
-  CHECK(dimension(FeatureVector(std::vector<int>{1,2,3})) == 3);
-  CHECK(dimension(FeatureVector(Vector<int>{1,2,3})) == 3);
+  CHECK(dimension(std::vector<int>{1, 2, 3}) == 3);
+  CHECK(dimension(Vector<int>{1, 2, 3}) == 3);
+  CHECK(dimension(FeatureVector(std::vector<int>{1, 2, 3})) == 3);
+  CHECK(dimension(FeatureVector(Vector<int>{1, 2, 3})) == 3);
 }
-
 
 using TestTypes = std::tuple<float, uint8_t, int32_t, uint32_t, uint64_t>;
 
 int counter = 0;
 TEMPLATE_LIST_TEST_CASE("api: FeatureVector read", "[api]", TestTypes) {
-  size_t N = GENERATE( 1UL, 2UL, 8191UL, 8192UL, 8193UL );
+  size_t N = GENERATE(1UL, 2UL, 8191UL, 8192UL, 8193UL);
 
   std::vector<TestType> v(N);
   randomize(v, {0, 128});
@@ -149,6 +148,3 @@ TEMPLATE_LIST_TEST_CASE("api: FeatureVector read", "[api]", TestTypes) {
   auto ez = by + dimension(y);
   CHECK(std::equal(bz, ez, begin(x)));
 }
-
-
-

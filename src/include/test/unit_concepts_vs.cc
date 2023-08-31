@@ -1,45 +1,44 @@
 /**
-* @file   unit_concepts.cc
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
-*
-* Test application of concepts with TileDB-Vector-Search types
-*
-*/
+ * @file   unit_concepts.cc
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
+ * Test application of concepts with TileDB-Vector-Search types
+ *
+ */
 
 #include <catch2/catch_all.hpp>
 
 #include "concepts.h"
 #include "cpos.h"
-#include "detail/linalg/vector.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
-
+#include "detail/linalg/vector.h"
 
 TEST_CASE("concepts_vs: test test", "[concepts_vs]") {
   REQUIRE(true);
@@ -75,11 +74,13 @@ TEST_CASE("concepts_vs: Vector", "[concepts_vs]") {
 
   CHECK(feature_vector<Vector<int>>);
   CHECK(feature_vector<Vector<double>>);
-  CHECK(feature_vector<Vector<bool>>);  // @todo ? Vector of bool is not contiguous?
+  CHECK(feature_vector<Vector<bool>>);  // @todo ? Vector of bool is not
+                                        // contiguous?
 
   CHECK(query_vector<Vector<int>>);
   CHECK(query_vector<Vector<double>>);
-  CHECK(query_vector<Vector<bool>>);   // @todo ? Vector of bool is not contiguous?
+  CHECK(
+      query_vector<Vector<bool>>);  // @todo ? Vector of bool is not contiguous?
 
   CHECK(!feature_vector_range<Vector<int>>);
   CHECK(!feature_vector_range<Vector<double>>);
@@ -142,11 +143,13 @@ TEST_CASE("concepts_vs: Matrix", "[concepts_vs]") {
 
   CHECK(!feature_vector<Matrix<int>>);
   CHECK(!feature_vector<Matrix<double>>);
-  CHECK(!feature_vector<Matrix<bool>>);  // @todo ? Matrix of bool is not contiguous?
+  CHECK(!feature_vector<Matrix<bool>>);  // @todo ? Matrix of bool is not
+                                         // contiguous?
 
   CHECK(!query_vector<Matrix<int>>);
   CHECK(!query_vector<Matrix<double>>);
-  CHECK(!query_vector<Matrix<bool>>);   // @todo ? Matrix of bool is not contiguous?
+  CHECK(!query_vector<Matrix<bool>>);  // @todo ? Matrix of bool is not
+                                       // contiguous?
 
   CHECK(feature_vector_range<Matrix<int>>);
   CHECK(feature_vector_range<Matrix<double>>);
@@ -172,4 +175,3 @@ TEST_CASE("concepts_vs: tdbMatrix", "[concepts_vs]") {
 TEST_CASE("concepts_vs: tdbPartitionedMatrix", "[concepts_vs]") {
   REQUIRE(true);
 }
-
