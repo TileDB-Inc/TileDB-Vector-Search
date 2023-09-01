@@ -174,11 +174,18 @@ concept feature_vector_array =
  * @tparam D
  *
  */
+ // @todo -- add ranges::contiguous_range as a requirement
 template <class D>
-concept contiguous_feature_vector_range =
+concept contiguous_feature_vector_array =
     feature_vector_array<D> && requires(D d) {
   { data(d) } -> std::same_as<std::add_pointer_t<typename D::reference>>;
 };
+
+template <class T>
+concept query_vector_array = feature_vector_array<T>;
+
+template <class T>
+concept contiguous_query_vector_array = contiguous_feature_vector_array<T>;
 
 // ----------------------------------------------------------------------------
 // partitioned_feature_vector_range concept (WIP)

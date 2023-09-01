@@ -27,7 +27,7 @@
  *
  * @section DESCRIPTION
  *
- * Nascent C++ API (including concepts).
+ * Nascent C++ API.
  *
  */
 
@@ -394,7 +394,7 @@ using URI = std::string;
 using StringMap = std::map<std::string, std::string>;
 
 using IndexOptions = std::map<std::string, std::string>;
-using TrainingParameters = std::map<std::string, std::string>;
+using UpdateOptions = std::map<std::string, std::string>;
 
 // @todo Context?
 class Index {
@@ -425,18 +425,18 @@ class Index {
     return index_->query(vectors, top_k);
   }
 
-  void insert(
+  void update(
       const FeatureVectorArray& vectors,
       const std::optional<IdVector>& ids = std::nullopt,
-      const std::optional<TrainingParameters>& params = std::nullopt) const {
-    index_->insert(vectors, ids, params);
+      const std::optional<UpdateOptions>& options = std::nullopt) const {
+    index_->update(vectors, ids, options);
   }
 
-  void insert(
+  void update(
       URI vectors_uri,
       const std::optional<IdVector>& ids = std::nullopt,
-      const std::optional<TrainingParameters>& params = std::nullopt) const {
-    index_->insert(vectors_uri, ids, params);
+      const std::optional<UpdateOptions>& options = std::nullopt) const {
+    index_->update(vectors_uri, ids, options);
   }
 
   virtual void remove(const IdVector& ids) const {
@@ -449,15 +449,15 @@ class Index {
     virtual std::tuple<FeatureVectorArray, IdVector> query (
         const QueryVectorArray& vectors, size_t top_k) const = 0;
 
-    virtual void insert(
+    virtual void update(
         const FeatureVectorArray&,
         const std::optional<IdVector>& ids = std::nullopt,
-        const std::optional<TrainingParameters>& params = std::nullopt) const = 0;
+        const std::optional<UpdateOptions>& options = std::nullopt) const = 0;
 
-    virtual void insert(
+    virtual void update(
         URI vectors_uri,
         const std::optional<IdVector>& ids = std::nullopt,
-        const std::optional<TrainingParameters>& params = std::nullopt) const = 0;
+        const std::optional<UpdateOptions>& options = std::nullopt) const = 0;
 
     virtual void remove(const IdVector& ids) const = 0;
   };
@@ -472,18 +472,18 @@ class Index {
       return index_->query(vectors, top_k);
     }
 
-    void insert(
+    void update(
         const FeatureVectorArray& vectors,
         const std::optional<IdVector>& ids = std::nullopt,
-        const std::optional<TrainingParameters>& params = std::nullopt) const {
-      index_->insert(vectors, ids, params);
+        const std::optional<UpdateOptions>& options = std::nullopt) const {
+      index_->insert(vectors, ids, options);
     }
 
-    void insert(
+    void update(
         URI vectors_uri,
         const std::optional<IdVector>& ids = std::nullopt,
-        const std::optional<TrainingParameters>& params = std::nullopt) const {
-      index_->insert(vectors_uri, ids, params);
+        const std::optional<UpdateOptions>& options = std::nullopt) const {
+      index_->insert(vectors_uri, ids, options);
     }
 
     virtual void remove(const IdVector& ids) const {

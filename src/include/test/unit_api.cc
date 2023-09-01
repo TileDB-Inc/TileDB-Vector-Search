@@ -36,16 +36,15 @@
 #include "detail/linalg/tdb_io.h"
 #include "detail/linalg/tdb_vector.h"
 #include "detail/linalg/vector.h"
+#include "query_common.h"
 #include "test_utils.h"
 #include "utils/utils.h"
-#include "query_common.h"
 
 bool global_debug = false;
 
 TEST_CASE("api: test test", "[api]") {
   REQUIRE(true);
 }
-
 
 // ----------------------------------------------------------------------------
 // FeatureVector tests
@@ -154,11 +153,9 @@ TEMPLATE_LIST_TEST_CASE("api: FeatureVector read", "[api]", TestTypes) {
   CHECK(std::equal(bz, ez, begin(x)));
 }
 
-
 // ----------------------------------------------------------------------------
 // FeatureVectorArray tests
 // ----------------------------------------------------------------------------
-
 
 TEST_CASE("api: feature vector array open", "[api]") {
   tiledb::Context ctx;
