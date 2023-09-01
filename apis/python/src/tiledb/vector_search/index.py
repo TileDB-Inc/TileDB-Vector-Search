@@ -40,11 +40,13 @@ class Index:
 
     def query(self, queries: np.ndarray, k, **kwargs):
         updated_ids = set(self.read_updated_ids())
-        internal_results_d, internal_results_i = self.query_internal(queries, k, **kwargs)
+        retrieval_k = k
+        if len(updated_ids) > 0:
+            retrieval_k = 2*k
+        internal_results_d, internal_results_i = self.query_internal(queries, retrieval_k, **kwargs)
         if self.update_arrays_uri is None:
-            return internal_results_d, internal_results_i
+            return internal_results_d[:, 0:k], internal_results_i[:, 0:k]
 
-        addition_results_d, addition_results_i = self.query_additions(queries, k)
         # Filter updated vectors
         query_id = 0
         for query in internal_results_i:
@@ -52,10 +54,29 @@ class Index:
             for res in query:
                 if res in updated_ids:
                     internal_results_d[query_id, res_id] = MAX_FLOAT_32
-                    internal_results_i[query_id, res_id] = 0
+                    internal_results_i[query_id, res_id] = MAX_UINT64
                 res_id += 1
             query_id += 1
+        sort_index = np.argsort(internal_results_d, axis=1)
+        internal_results_d = np.take_along_axis(internal_results_d, sort_index, axis=1)
+        internal_results_i = np.take_along_axis(internal_results_i, sort_index, axis=1)
+
         # Merge update results
+        addition_results_d, addition_results_i = self.query_additions(queries, k)
+        if addition_results_d is None:
+            return internal_results_d[:, 0:k], internal_results_i[:, 0:k]
+
+        query_id = 0
+        for query in addition_results_d:
+            res_id = 0
+            for res in query:
+                if addition_results_d[query_id, res_id] == 0 and addition_results_i[query_id, res_id] == 0:
+                    addition_results_d[query_id, res_id] = MAX_FLOAT_32
+                    addition_results_i[query_id, res_id] = MAX_UINT64
+                res_id += 1
+            query_id += 1
+
+
         results_d = np.hstack((internal_results_d, addition_results_d))
         results_i = np.hstack((internal_results_i, addition_results_i))
         sort_index = np.argsort(results_d, axis=1)
@@ -69,6 +90,8 @@ class Index:
     def query_additions(self, queries: np.ndarray, k):
         assert queries.dtype == np.float32
         additions_vectors, additions_external_ids = self.read_additions()
+        if additions_vectors is None:
+            return None, None
         queries_m = array_to_matrix(np.transpose(queries))
         d, i = query_vq_heap_pyarray(
             array_to_matrix(np.transpose(additions_vectors).astype(self.dtype)),
@@ -80,18 +103,25 @@ class Index:
 
     def update(self, vector: np.array, external_id: np.uint64):
         updates_array = self.open_updates_array()
-        updates_array[external_id] = vector
+        vectors = np.empty((1), dtype='O')
+        vectors[0] = vector
+        updates_array[external_id] = {'vector': vectors}
         updates_array.close()
+        self.consolidate_update_fragments()
 
     def update_batch(self, vectors: np.ndarray, external_ids: np.array):
         updates_array = self.open_updates_array()
         updates_array[external_ids] = {'vector': vectors}
         updates_array.close()
+        self.consolidate_update_fragments()
 
     def delete(self, external_id: np.uint64):
         updates_array = self.open_updates_array()
-        updates_array[external_id] = np.array([], dtype=self.dtype)
+        deletes = np.empty((1), dtype='O')
+        deletes[0] = np.array([], dtype=self.dtype)
+        updates_array[external_id] =  {'vector': deletes}
         updates_array.close()
+        self.consolidate_update_fragments()
 
     def delete_batch(self, external_ids: np.array):
         updates_array = self.open_updates_array()
@@ -100,6 +130,13 @@ class Index:
             deletes[i] = np.array([], dtype=self.dtype)
         updates_array[external_ids] = {'vector': deletes}
         updates_array.close()
+        self.consolidate_update_fragments()
+
+    def consolidate_update_fragments(self):
+        fragments_info = tiledb.array_fragments(self.update_arrays_uri)
+        if(len(fragments_info) > 10):
+            tiledb.consolidate(self.update_arrays_uri)
+            tiledb.vacuum(self.update_arrays_uri)
 
     def get_updates_uri(self):
         return self.update_arrays_uri
@@ -111,8 +148,10 @@ class Index:
         q = updates_array.query(attrs=('vector',), coords=True)
         data = q[:]
         additions_filter = [len(item) > 0 for item in data["vector"]]
-        return np.vstack(data["vector"][additions_filter]), data["external_id"][additions_filter]
-
+        if len(data["external_id"][additions_filter]) > 0:
+            return np.vstack(data["vector"][additions_filter]), data["external_id"][additions_filter]
+        else:
+            return None, None
     def read_updated_ids(self) -> np.array:
         if self.update_arrays_uri is None:
             return np.array([], np.uint64)
