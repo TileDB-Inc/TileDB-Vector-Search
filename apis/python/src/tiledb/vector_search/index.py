@@ -103,7 +103,9 @@ class Index:
 
     def update(self, vector: np.array, external_id: np.uint64):
         updates_array = self.open_updates_array()
-        updates_array[external_id] = vector
+        vectors = np.empty((1), dtype='O')
+        vectors[0] = vector
+        updates_array[external_id] = {'vector': vectors}
         updates_array.close()
         self.consolidate_update_fragments()
 
@@ -115,7 +117,9 @@ class Index:
 
     def delete(self, external_id: np.uint64):
         updates_array = self.open_updates_array()
-        updates_array[external_id] = np.array([], dtype=self.dtype)
+        deletes = np.empty((1), dtype='O')
+        deletes[0] = np.array([], dtype=self.dtype)
+        updates_array[external_id] =  {'vector': deletes}
         updates_array.close()
         self.consolidate_update_fragments()
 
