@@ -203,24 +203,19 @@ class FeatureVector {
      */
     switch (datatype_) {
       case TILEDB_FLOAT32:
-        vector_ = std::make_unique<vector_impl<tdbVector<float>>>(
-            tdbVector<float>(ctx, uri));
-        break;
+        vector_ = std::make_unique<vector_impl<tdbVector<float>>>(ctx, uri);
+                break;
       case TILEDB_UINT8:
-        vector_ = std::make_unique<vector_impl<tdbVector<uint8_t>>>(
-            tdbVector<uint8_t>(ctx, uri));
+        vector_ = std::make_unique<vector_impl<tdbVector<uint8_t>>>(ctx, uri);
         break;
       case TILEDB_INT32:
-        vector_ = std::make_unique<vector_impl<tdbVector<int32_t>>>(
-            tdbVector<int32_t>(ctx, uri));
+        vector_ = std::make_unique<vector_impl<tdbVector<int32_t>>>(ctx, uri);
         break;
       case TILEDB_UINT32:
-        vector_ = std::make_unique<vector_impl<tdbVector<uint32_t>>>(
-            tdbVector<uint32_t>(ctx, uri));
+        vector_ = std::make_unique<vector_impl<tdbVector<uint32_t>>>(ctx, uri);
         break;
       case TILEDB_UINT64:
-        vector_ = std::make_unique<vector_impl<tdbVector<uint64_t>>>(
-            tdbVector<uint64_t>(ctx, uri));
+        vector_ = std::make_unique<vector_impl<tdbVector<uint64_t>>>(ctx, uri);
         break;
       default:
         throw std::runtime_error("Unsupported attribute type");
@@ -255,6 +250,9 @@ class FeatureVector {
   struct vector_impl : vector_base {
     explicit vector_impl(T&& t)
         : vector_(std::move(t)) {
+    }
+    vector_impl(const tiledb::Context& ctx, const std::string& uri)
+        : vector_(ctx, uri) {
     }
     [[nodiscard]] void* data() override {
       return _cpo::data(vector_);
@@ -292,7 +290,6 @@ class FeatureVectorArray {
             std::move(std::forward<T>(obj)))) {
   }
 
-  template <class T>
   FeatureVectorArray(const tiledb::Context& ctx, const std::string& uri) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
     auto schema = array.schema();
@@ -312,13 +309,11 @@ class FeatureVectorArray {
     switch (datatype_) {
       case TILEDB_FLOAT32:
         vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<float>>>(
-                tdbColMajorMatrix<float>(ctx, uri));
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<float>>>(ctx, uri);
         break;
       case TILEDB_UINT8:
         vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint8_t>>>(
-                tdbColMajorMatrix<uint8_t>(ctx, uri));
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint8_t>>>(ctx, uri);
         break;
       default:
         throw std::runtime_error("Unsupported attribute type");
@@ -363,6 +358,9 @@ class FeatureVectorArray {
   struct vector_array_impl : vector_array_base {
     explicit vector_array_impl(T&& t)
         : vector_array(std::move(t)) {
+    }
+    vector_array_impl(const tiledb::Context& ctx, const std::string& uri)
+        : vector_array(ctx, uri) {
     }
     [[nodiscard]] void* data() const override {
       return _cpo::data(vector_array);

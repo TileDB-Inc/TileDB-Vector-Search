@@ -38,6 +38,7 @@
 #include "detail/linalg/vector.h"
 #include "test_utils.h"
 #include "utils/utils.h"
+#include "query_common.h"
 
 bool global_debug = false;
 
@@ -157,3 +158,28 @@ TEMPLATE_LIST_TEST_CASE("api: FeatureVector read", "[api]", TestTypes) {
 // ----------------------------------------------------------------------------
 // FeatureVectorArray tests
 // ----------------------------------------------------------------------------
+
+
+TEST_CASE("api: feature vector array open", "[api]") {
+  tiledb::Context ctx;
+
+  auto a = FeatureVectorArray(ctx, db_uri);
+  CHECK(a.datatype() == TILEDB_FLOAT32);
+  CHECK(dimension(a) == 128);
+  CHECK(num_vectors(a) == 1'000'000);
+
+  auto b = FeatureVectorArray(ctx, bigann1M_base_uri);
+  CHECK(b.datatype() == TILEDB_UINT8);
+  CHECK(dimension(b) == 128);
+  CHECK(num_vectors(b) == 1'000'000);
+
+  auto c = FeatureVectorArray(ctx, fmnist_train_uri);
+  CHECK(c.datatype() == TILEDB_FLOAT32);
+  CHECK(dimension(c) == 784);
+  CHECK(num_vectors(c) == 60'000);
+
+  auto d = FeatureVectorArray(ctx, sift_base_uri);
+  CHECK(d.datatype() == TILEDB_FLOAT32);
+  CHECK(dimension(d) == 128);
+  CHECK(num_vectors(d) == 1'000'000);
+}
