@@ -110,7 +110,6 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   tdbBlockedMatrix(const tdbBlockedMatrix&) = delete;
   tdbBlockedMatrix(tdbBlockedMatrix&&) = default;
 
-
   /**
    * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
    * vectors. In this case, the `Matrix` is row-major, so the number of vectors

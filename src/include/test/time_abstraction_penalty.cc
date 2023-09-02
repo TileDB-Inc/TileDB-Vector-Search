@@ -1,5 +1,5 @@
 /**
- * @file   unit_vector.cc
+ * @file   unit_abstraction_penalty.cc
  *
  * @section LICENSE
  *
@@ -31,6 +31,20 @@
  *
  */
 
-#include "detail/linalg/vector.h"
-#include "feature_vector.h"
+#include <tiledb/tiledb>
 #include "utils/timer.h"
+
+#if 0
+// Quick and dirty program to read pytest generated arrays
+int main(){
+  tiledb::Context ctx;
+  for (size_t i = 0; i < 25; ++i) {
+    auto uri = std::string("/tmp/test_vector_") + std::to_string(i);
+    auto array =  tiledb::Array(ctx, uri, TILEDB_READ);
+    auto schema = array.schema();
+    std::cout << "=============================" << std::endl;
+    std::cout << uri << std::endl;
+    schema.dump();
+  }
+}
+#endif

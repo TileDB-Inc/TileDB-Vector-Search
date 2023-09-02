@@ -56,9 +56,9 @@
 // #include <execution>
 
 #include "linalg.h"
+#include "tdb_defs.h"
 #include "utils/fixed_min_heap.h"
 #include "utils/timer.h"
-#include "tdb_defs.h"
 
 // ----------------------------------------------------------------------------
 // Helper utilities
@@ -435,7 +435,7 @@ auto count_intersections(auto&& I, auto&& groundtruth, size_t k_nn) {
         end(I[i]),
         begin(groundtruth[i]),
         /*end(groundtruth[i]*/ begin(groundtruth[i]) + k_nn,
-        counter{});
+        assignment_counter{});
   }
   return total_intersected;
 };

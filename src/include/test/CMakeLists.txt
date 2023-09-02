@@ -79,6 +79,8 @@ kmeans_add_test(unit_flat_qv)
 
 kmeans_add_test(unit_flat_vq)
 
+kmeans_add_test(unit_index)
+
 kmeans_add_test(unit_ivf_index)
 
 kmeans_add_test(unit_ivf_query)

@@ -39,7 +39,10 @@
 
 #include "concepts.h"
 #include "cpos.h"
+#include "index.h"
 #include "detail/linalg/tdb_vector.h"
+
+#include "utils/print_types.h"
 
 //------------------------------------------------------------------------------
 // Type erasure in two parts: a generic type erased wrapper and a specific
@@ -175,6 +178,23 @@ class ProtoFeatureVectorArray {
   FeatureVectorArrayWrapper vector_array;
 };
 
+namespace {
+auto get_array_datatype(const tiledb::Array& array) {
+  auto schema = array.schema();
+  auto num_attributes = schema.attribute_num();
+  if (num_attributes == 1) {
+    return schema.attribute(0).type();
+  }
+  if (schema.has_attribute("values")) {
+    return schema.attribute("values").type();
+  }
+  if (schema.has_attribute("a")) {
+    return schema.attribute("a").type();
+  }
+  throw std::runtime_error("Could not determine datatype of array attributes");
+}
+}  // namespace
+
 /**
  * Unified wrapper for feature vector arrays.
  */
@@ -187,11 +207,7 @@ class FeatureVector {
 
   FeatureVector(const tiledb::Context& ctx, const std::string& uri) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
-    auto schema = array.schema();
-    auto attr = schema.attribute(0);  // @todo Is there a better way to look up
-                                      // the attribute we're interested in?
-    datatype_ = attr.type();
-
+    datatype_ = get_array_datatype(array);
     array.close();  // @todo create Matrix constructor that takes opened array
 
     /**
@@ -204,7 +220,7 @@ class FeatureVector {
     switch (datatype_) {
       case TILEDB_FLOAT32:
         vector_ = std::make_unique<vector_impl<tdbVector<float>>>(ctx, uri);
-                break;
+        break;
       case TILEDB_UINT8:
         vector_ = std::make_unique<vector_impl<tdbVector<uint8_t>>>(ctx, uri);
         break;
@@ -292,11 +308,7 @@ class FeatureVectorArray {
 
   FeatureVectorArray(const tiledb::Context& ctx, const std::string& uri) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
-    auto schema = array.schema();
-    auto attr = schema.attribute(0);  // @todo Is there a better way to look up
-                                      // the attribute we're interested in?
-    datatype_ = attr.type();
-
+    datatype_ = get_array_datatype(array);
     array.close();  // @todo create Matrix constructor that takes opened array
 
     /**
@@ -309,11 +321,13 @@ class FeatureVectorArray {
     switch (datatype_) {
       case TILEDB_FLOAT32:
         vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<float>>>(ctx, uri);
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<float>>>(
+                ctx, uri);
         break;
       case TILEDB_UINT8:
         vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint8_t>>>(ctx, uri);
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint8_t>>>(
+                ctx, uri);
         break;
       default:
         throw std::runtime_error("Unsupported attribute type");
@@ -386,10 +400,12 @@ class FeatureVectorArray {
 
 using QueryVectorArray = FeatureVectorArray;
 
+
 //------------------------------------------------------------------------------
 // Index
 //------------------------------------------------------------------------------
 
+// Some fake types and type aliases for now
 using URI = std::string;
 using StringMap = std::map<std::string, std::string>;
 
@@ -398,9 +414,28 @@ using UpdateOptions = std::map<std::string, std::string>;
 
 // @todo Context?
 class Index {
+
  public:
-  Index(const URI& index_uri, std::optional<StringMap> config = std::nullopt) {
-    // @todo
+  Index(const URI& index_uri, std::optional<StringMap> config = std::nullopt)
+      : Index(tiledb::Context{}, index_uri, config) {}
+
+  Index(const tiledb::Context ctx, const URI& index_uri, std::optional<StringMap> config = std::nullopt)
+  : ctx_{ctx} {
+    auto array = tiledb_helpers::open_array(tdb_func__, ctx_, index_uri, TILEDB_READ);
+    datatype_ = get_array_datatype(array);
+    array.close();
+
+    //@todo Constructors that take open arrays
+    switch(datatype_) {
+      case TILEDB_FLOAT32:
+        index_ = std::make_unique<index_impl<flat_index<float>>>(ctx_, index_uri, config);
+        break;
+      case TILEDB_UINT8:
+        index_ = std::make_unique<index_impl<flat_index<uint8_t>>>(ctx_, index_uri, config);
+        break;
+      default:
+        throw std::runtime_error("Unsupported attribute type");
+    }
   }
 
   template <feature_vector_array V>
@@ -446,7 +481,7 @@ class Index {
   struct index_base {
     virtual ~index_base() = default;
 
-    virtual std::tuple<FeatureVectorArray, IdVector> query (
+    virtual std::tuple<FeatureVectorArray, FeatureVectorArray> query(
         const QueryVectorArray& vectors, size_t top_k) const = 0;
 
     virtual void update(
@@ -460,6 +495,7 @@ class Index {
         const std::optional<UpdateOptions>& options = std::nullopt) const = 0;
 
     virtual void remove(const IdVector& ids) const = 0;
+
   };
 
   template <typename T>
@@ -468,33 +504,94 @@ class Index {
         : index_(std::move(t)) {
     }
 
-    auto query(const QueryVectorArray& vectors, size_t top_k) const {
-      return index_->query(vectors, top_k);
+    index_impl(
+        const tiledb::Context& ctx,
+        const URI& index_uri,
+        const std::optional<StringMap>& config = std::nullopt)
+        : index_(ctx, index_uri, config) {
+    }
+
+    template <feature_vector_array V>
+    index_impl(
+        const URI& index_uri,
+        const V& vectors,
+        const IndexOptions& options,
+        const std::optional<StringMap>& config = std::nullopt)
+        : index_(index_uri, vectors, options, config) {
+    }
+
+    // Create from input URI
+    index_impl(
+        const URI& index_uri,
+        const URI& vectors_uri,
+        const IndexOptions& options,
+        std::optional<StringMap> config = std::nullopt)
+        : index_(index_uri, vectors_uri, options, config) {
+    }
+
+    auto query(tiledb::Context ctx, const URI& uri, size_t top_k) const {
+      return index_.query(ctx, uri, top_k);
+    }
+
+    std::tuple<FeatureVectorArray, FeatureVectorArray>
+    query(const QueryVectorArray& vectors, size_t k_nn) const {
+      using index_type = size_t; // @todo Parameterize?
+
+      auto dtype = vectors.datatype();
+
+      switch (dtype) {
+        case TILEDB_FLOAT32: {
+          // auto qspan = MatrixView{stdx::mdspan<float, matrix_extents<index_type>, stdx::layout_left>}
+          auto qspan = MatrixView{
+              (float*)vectors.data(),
+              extents(vectors)[0],
+              extents(vectors)[1]};  // @todo ??
+          auto [s, t] = index_.query(qspan, k_nn);
+          auto x = FeatureVectorArray{std::move(s)};
+          auto y = FeatureVectorArray{std::move(t)};
+          //return std::make_tuple( std::move(x), std::move(y) );
+          return { std::move(x), std::move(y) };
+        }
+        case TILEDB_UINT8: {
+          auto qspan = MatrixView{
+              (float*)vectors.data(),
+              extents(vectors)[0],
+              extents(vectors)[1]};  // @todo ??
+          auto [s, t] = index_.query(qspan, k_nn);
+          auto x = FeatureVectorArray{std::move(s)};
+          auto y = FeatureVectorArray{std::move(t)};
+          //return std::make_tuple( std::move(x), std::move(y) );
+          return { std::move(x), std::move(y) };
+        }
+        default:
+          throw std::runtime_error("Unsupported attribute type");
+      }
     }
 
     void update(
         const FeatureVectorArray& vectors,
         const std::optional<IdVector>& ids = std::nullopt,
         const std::optional<UpdateOptions>& options = std::nullopt) const {
-      index_->insert(vectors, ids, options);
+//      index_.update(vectors, ids, options);
     }
 
     void update(
         URI vectors_uri,
         const std::optional<IdVector>& ids = std::nullopt,
         const std::optional<UpdateOptions>& options = std::nullopt) const {
-      index_->insert(vectors_uri, ids, options);
+//      index_.update(vectors_uri, ids, options);
     }
 
     virtual void remove(const IdVector& ids) const {
-      index_->remove(ids);
+//      index_.remove(ids);
     }
 
    private:
     T index_;
   };
 
-  tiledb::Context ctx_;
+  tiledb::Context ctx_{};
+  tiledb_datatype_t datatype_{TILEDB_ANY};
   std::unique_ptr<const index_base> index_;
 };
 

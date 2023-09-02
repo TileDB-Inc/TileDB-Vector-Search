@@ -33,8 +33,8 @@
 #define TDB_LINALG_DEFS_H
 
 #include <string>
-#include "mdspan/mdspan.hpp"
 #include <tiledb/tiledb>
+#include "mdspan/mdspan.hpp"
 
 extern bool global_verbose;
 extern bool global_debug;
@@ -44,7 +44,6 @@ namespace stdx {
 using namespace Kokkos;
 using namespace Kokkos::Experimental;
 }  // namespace stdx
-
 
 template <class LayoutPolicy>
 struct order_traits {

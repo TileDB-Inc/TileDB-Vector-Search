@@ -44,12 +44,45 @@
 
 #include "utils/timer.h"
 
-#include "detail/linalg/linalg_defs.h"
 #include <version>
+#include "detail/linalg/linalg_defs.h"
 
 template <class I = size_t>
 using matrix_extents = stdx::dextents<I, 2>;
 
+
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
+  using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
+  using Base::Base;
+
+  using layout_policy = LayoutPolicy;
+  using index_type = typename Base::index_type;
+  using size_type = typename Base::size_type;
+  using reference = typename Base::reference;
+
+public:
+  MatrixView(const Base& rhs) : Base(rhs) {}
+
+  MatrixView(T* p, I r, I c) :Base{p, r, c} {
+  }
+
+   auto operator[](index_type i) {
+     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
+       return std::span(&Base::operator()(i, 0), this->extents().extent(0));
+     } else {
+       return std::span(&Base::operator()(i, 0), this->extents().extent(0));
+     }
+   }
+
+   auto operator[](index_type i) const {
+     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
+       return std::span(&Base::operator()(i, 0), this->extents().extent(0));
+     } else {
+       return std::span(&Base::operator()(i, 0), this->extents().extent(0));
+     }
+   }
+};
 /**
  * @brief A 2-D matrix class that owns its storage.  The interface is
  * that of mdspan.
@@ -58,13 +91,15 @@ using matrix_extents = stdx::dextents<I, 2>;
  * @tparam LayoutPolicy
  * @tparam I
  *
- * @todo Make an alias for extents.
- * @todo Make Matrix into a range (?)
+  * @todo Make Matrix into a range (?)
  */
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
   // using Base::Base;
+
+  // So that the CPO for data() doesn't get confused
+  // auto data_handle() = delete;
 
  public:
   using layout_policy = LayoutPolicy;
@@ -168,10 +203,12 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   }
 
   auto data() {
+    // return this->data_handle();
     return storage_.get();
   }
 
   auto data() const {
+    // return this->data_handle();
     return storage_.get();
   }
 
@@ -204,6 +241,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     // return 2;  //
   }
 
+#if 0
   auto span() const noexcept {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
       return num_cols();
@@ -211,9 +249,11 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       return num_rows();
     }
   }
+#endif
 
   auto extents() const noexcept {
-    return std::vector<size_t>{Base::extents().extent(0), Base::extents().extent(1)};
+    return std::vector<size_t>{
+        Base::extents().extent(0), Base::extents().extent(1)};
   }
 
   auto num_rows() const noexcept {
@@ -245,6 +285,7 @@ auto raveled(Matrix<T, LayoutPolicy, I>& m) {
   return m.raveled();
 }
 
+#if 0
 // @todo these are k
 template <class T, class I>
 size_t size(const Matrix<T, stdx::layout_right, I>& m) {
@@ -255,6 +296,7 @@ template <class T, class I>
 size_t size(const Matrix<T, stdx::layout_left, I>& m) {
   return m.num_cols();
 }
+#endif
 
 /**
  * Is the matrix row-oriented?
@@ -299,7 +341,6 @@ auto num_vectors(const Matrix<T, LayoutPolicy, I>& m) {
   }
 }
 #endif  // 0
-
 
 /**********************************************************************
  *

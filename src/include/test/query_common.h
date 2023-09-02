@@ -169,7 +169,6 @@ static std::string bigann1M_base_uri{m1_root + "1M/bigann1M_base"};
 static std::string fmnist_train_uri{m1_root + "fmnist/fmnist_train.tdb"};
 static std::string sift_base_uri{m1_root + "sift/sift_base"};
 
-
 #endif
 
 #endif  // TILEDB_QUERY_COMMON_H

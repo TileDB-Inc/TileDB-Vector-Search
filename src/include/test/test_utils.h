@@ -28,7 +28,4 @@ void randomize(R& r, std::tuple<int, int> range = {0, 128}) {
   }
 }
 
-
-
-
-#endif // TILEDB_TEST_UTILS_H
+#endif  // TILEDB_TEST_UTILS_H

@@ -36,5 +36,4 @@
 template <class... T>
 constexpr bool always_false = false;
 
-
 #endif  // TILEDB_TDB_DEFS_H

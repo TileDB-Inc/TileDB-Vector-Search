@@ -32,7 +32,15 @@
 
 #include <catch2/catch_all.hpp>
 #include "index.h"
+#include "api.h"
+#include "query_common.h"
 
 TEST_CASE("index: test test", "[index]") {
   REQUIRE(true);
+}
+
+TEST_CASE("index: uri constructor", "[index]") {
+  tiledb::Context ctx;
+  auto index = Index(ctx, sift_base);
+
 }

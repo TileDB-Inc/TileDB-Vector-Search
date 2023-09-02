@@ -34,6 +34,9 @@ def get_cmake_overrides():
     if val:
         conf.append("-DUSE_MKL_CBLAS={}".format(val))
 
+    conf.append("-DTileDB_DIR=/Users/lums/Contrib/dist")
+
+
     try:
         # Make sure we use pybind11 from this python environment if available,
         # required for windows wheels due to:
