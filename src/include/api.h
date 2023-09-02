@@ -27,7 +27,22 @@
  *
  * @section DESCRIPTION
  *
- * Nascent C++ API.
+ * Nascent C++ API.  Type-erased classes are provided here as an interface
+ * between the C++ vector search library and the Python bindings.
+ *
+ * Type erasure is accomplished with the following pattern.
+ *   - The type-erased class (the outer class) provides the API that is invoked
+ * by Python
+ *   - It defines an abstract base class that is not a template and a derived
+ * implementation class that is a template.
+ *   - Constructors for the outer class use information from how they are
+ * constructed (perhaps from reading the schema of an array) to determine the
+ * type of the implementation class. The unique_ptr member of the outer class is
+ * constructed with the derived implementation class.
+ *   - The member functions comprising the outer class API invoke the
+ * corresponding member functions of the base class object stored in the
+ * unique_ptr (which in turn invoke members of the concrete class stored by the
+ * implementation class).
  *
  */
 
@@ -39,144 +54,15 @@
 
 #include "concepts.h"
 #include "cpos.h"
-#include "index.h"
 #include "detail/linalg/tdb_vector.h"
+#include "index.h"
 
 #include "utils/print_types.h"
-
-//------------------------------------------------------------------------------
-// Type erasure in two parts: a generic type erased wrapper and a specific
-// type erased wrapper for feature vectors arrays.
-//------------------------------------------------------------------------------
-/**
- * Basic wrapper to type-erase a class.  It has a shared pointer to
- * a non-template base class that has virtual methods for accessing member
- * functions of the wrapped type.  It provides data(), dimension(), and
- * num_vectors() methods that delegate to the wrapped type.
- *
- * @todo Instrument carefully to make sure we are not doing any copying.
- */
-class FeatureVectorArrayWrapper {
- public:
-  template <typename T>
-  explicit FeatureVectorArrayWrapper(T&& obj)
-      : vector_array(std::make_unique<vector_array_impl<T>>(
-            std::move(std::forward<T>(obj)))) {
-  }
-
-  [[nodiscard]] auto data() const {
-    // return _cpo::data(*vector_array);
-    return vector_array->data();
-  }
-
-  [[nodiscard]] auto dimension() const {
-    return _cpo::dimension(*vector_array);
-  }
-
-  [[nodiscard]] auto num_vectors() const {
-    return _cpo::num_vectors(*vector_array);
-  }
-
-  struct vector_array_base {
-    virtual ~vector_array_base() = default;
-    [[nodiscard]] virtual size_t dimension() const = 0;
-    [[nodiscard]] virtual size_t num_vectors() const = 0;
-    [[nodiscard]] virtual void* data() = 0;
-    [[nodiscard]] virtual const void* data() const = 0;
-  };
-
-  // @todo Create move constructors for Matrix and tdbMatrix
-  template <typename T>
-  struct vector_array_impl : vector_array_base {
-    explicit vector_array_impl(T&& t)
-        : vector_array(std::move(t)) {
-    }
-    [[nodiscard]] void* data() override {
-      return _cpo::data(vector_array);
-      // return vector_array.data();
-    }
-    [[nodiscard]] const void* data() const override {
-      return _cpo::data(vector_array);
-      // return vector_array.data();
-    }
-    [[nodiscard]] size_t dimension() const override {
-      return _cpo::dimension(vector_array);
-    }
-    [[nodiscard]] size_t num_vectors() const override {
-      return _cpo::num_vectors(vector_array);
-    }
-
-   private:
-    T vector_array;
-  };
-
-  std::unique_ptr<const vector_array_base> vector_array;
-};
-
-// Put these here for now to enforce separation between matrix aware
-// and matrix unaware code.  We could (and probably should) merge these
-// into a single class.  Although we could use the above for
-// wrapping feature vectors as well (we would just use a concept
-// to elide num_vectors).  The separation may also be useful for
-// dealing with in-memory arrays vs arrays on disk.
 
 #include <tiledb/tiledb>
 #include "detail/linalg/tdb_helpers.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/tdb_vector.h"
-
-class ProtoFeatureVectorArray {
- public:
-  FeatureVectorArrayWrapper open(
-      const tiledb::Context& ctx, const std::string& uri) {
-    auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
-    auto schema = array.schema();
-    auto attr = schema.attribute(0);  // @todo Is there a better way to look up
-                                      // the attribute we're interested in?
-    datatype_ = attr.type();
-
-    array.close();  // @todo create Matrix constructor that takes opened array
-
-    /**
-     * Row and column orientation are kind of irrelevant?  We could dispatch
-     * on the layout in the schema, but that might not be necessary.  What is
-     * important is that the vectors are along the major axis, which should
-     * happen with either orientation, and so will work at the other end with
-     * either orientation since we are just passing a pointer to the data.
-     */
-    switch (datatype_) {
-      case TILEDB_FLOAT32:
-        return FeatureVectorArrayWrapper(tdbColMajorMatrix<float>(ctx, uri));
-      case TILEDB_UINT8:
-        return FeatureVectorArrayWrapper(tdbColMajorMatrix<uint8_t>(ctx, uri));
-      default:
-        throw std::runtime_error("Unsupported attribute type");
-    }
-  }
-
-  ProtoFeatureVectorArray(const tiledb::Context& ctx, const std::string& uri)
-      : vector_array{open(ctx, uri)} {
-  }
-
-  [[nodiscard]] tiledb_datatype_t datatype() const {
-    return datatype_;
-  }
-
-  [[nodiscard]] void* data() const {
-    return (void*)_cpo::data(vector_array);
-  }
-
-  [[nodiscard]] auto dimension() const {
-    return _cpo::dimension(vector_array);
-  }
-
-  [[nodiscard]] auto num_vectors() const {
-    return _cpo::dimension(vector_array);
-  }
-
-  tiledb_datatype_t datatype_;
-  FeatureVectorArrayWrapper vector_array;
-};
 
 namespace {
 auto get_array_datatype(const tiledb::Array& array) {
@@ -195,27 +81,37 @@ auto get_array_datatype(const tiledb::Array& array) {
 }
 }  // namespace
 
+//------------------------------------------------------------------------------
+// FeatureVector
+//------------------------------------------------------------------------------
+
 /**
- * Unified wrapper for feature vector arrays.
+ * @brief Outer class defining the API for feature vectors.
  */
 class FeatureVector {
  public:
+  /**
+   * @brief Construct from a class meeting the requirements of feature_vector.
+   * @tparam T
+   * @param vec
+   */
   template <feature_vector T>
-  FeatureVector(T&& vec)
+  explicit FeatureVector(T&& vec)
       : vector_(std::make_unique<vector_impl<T>>(std::forward<T>(vec))) {
   }
 
+  /**
+   * @brief Constructs a feature vector from an array URI.
+   * @param ctx
+   * @param uri
+   */
   FeatureVector(const tiledb::Context& ctx, const std::string& uri) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
     datatype_ = get_array_datatype(array);
     array.close();  // @todo create Matrix constructor that takes opened array
 
-    /**
-     * Row and column orientation are kind of irrelevant?  We could dispatch
-     * on the layout in the schema, but that might not be necessary.  What is
-     * important is that the vectors are along the major axis, which should
-     * happen with either orientation, and so will work at the other end with
-     * either orientation since we are just passing a pointer to the data.
+    /*
+     * Dispatch to the appropriate concrete class based on the datatype.
      */
     switch (datatype_) {
       case TILEDB_FLOAT32:
@@ -238,15 +134,27 @@ class FeatureVector {
     }
   }
 
+  /**
+   * @brief Returns a pointer to the underlying data.
+   * @return
+   */
   [[nodiscard]] auto data() const {
     // return _cpo::data(*vector);
     return vector_->data();
   }
 
+  /**
+   * @brief Returns the dimension (number of elements) of the vector
+   * @return
+   */
   [[nodiscard]] auto dimension() const {
     return _cpo::dimension(*vector_);
   }
 
+  /**
+   * @brief Returns the TileDB datatype of the vector
+   * @return
+   */
   [[nodiscard]] tiledb_datatype_t datatype() const {
     return datatype_;
   }
@@ -261,7 +169,10 @@ class FeatureVector {
     [[nodiscard]] virtual const void* data() const = 0;
   };
 
-  // @todo Create move constructors for Matrix and tdbMatrix?
+  /**
+   * @brief Type-parameterize implementation class.
+   * @tparam T Type of the concrete class that is being type-erased.
+   */
   template <typename T>
   struct vector_impl : vector_base {
     explicit vector_impl(T&& t)
@@ -294,6 +205,9 @@ class FeatureVector {
 using QueryVector = FeatureVector;
 using IdVector = FeatureVector;
 
+//------------------------------------------------------------------------------
+// FeatureVectorArray
+//------------------------------------------------------------------------------
 /**
  * Unified wrapper for feature vector arrays.
  * @todo Lots of duplicated code from FeatureVector.  Can we factor this out?
@@ -400,7 +314,6 @@ class FeatureVectorArray {
 
 using QueryVectorArray = FeatureVectorArray;
 
-
 //------------------------------------------------------------------------------
 // Index
 //------------------------------------------------------------------------------
@@ -412,26 +325,44 @@ using StringMap = std::map<std::string, std::string>;
 using IndexOptions = std::map<std::string, std::string>;
 using UpdateOptions = std::map<std::string, std::string>;
 
-// @todo Context?
+/**
+ * A type-erased index class. An index class is provides
+ *   - URI-based constructor
+ *   - Array-based constructor
+ *   - A train method
+ *   - An add method
+ *   - A query method
+ *   - An update method
+ *   - A remove method
+ */
 class Index {
-
  public:
-  Index(const URI& index_uri, std::optional<StringMap> config = std::nullopt)
-      : Index(tiledb::Context{}, index_uri, config) {}
+  // @todo Who owns the context?
+  Index(
+      const URI& index_uri,
+      const std::optional<StringMap>& config = std::nullopt)
+      : Index(tiledb::Context{}, index_uri, config) {
+  }
 
-  Index(const tiledb::Context ctx, const URI& index_uri, std::optional<StringMap> config = std::nullopt)
-  : ctx_{ctx} {
-    auto array = tiledb_helpers::open_array(tdb_func__, ctx_, index_uri, TILEDB_READ);
+  Index(
+      const tiledb::Context& ctx,
+      const URI& index_uri,
+      const std::optional<StringMap>& config = std::nullopt)
+      : ctx_{ctx} {
+    auto array =
+        tiledb_helpers::open_array(tdb_func__, ctx_, index_uri, TILEDB_READ);
     datatype_ = get_array_datatype(array);
     array.close();
 
-    //@todo Constructors that take open arrays
-    switch(datatype_) {
+    // @todo Constructors that take open arrays
+    switch (datatype_) {
       case TILEDB_FLOAT32:
-        index_ = std::make_unique<index_impl<flat_index<float>>>(ctx_, index_uri, config);
+        index_ = std::make_unique<index_impl<flat_index<float>>>(
+            ctx_, index_uri, config);
         break;
       case TILEDB_UINT8:
-        index_ = std::make_unique<index_impl<flat_index<uint8_t>>>(ctx_, index_uri, config);
+        index_ = std::make_unique<index_impl<flat_index<uint8_t>>>(
+            ctx_, index_uri, config);
         break;
       default:
         throw std::runtime_error("Unsupported attribute type");
@@ -443,7 +374,7 @@ class Index {
       const URI& index_uri,
       const V& vectors,
       const IndexOptions& options,
-      std::optional<StringMap> config = std::nullopt) {
+      const std::optional<StringMap>& config = std::nullopt) {
     // @todo
   }
 
@@ -452,11 +383,20 @@ class Index {
       const URI& index_uri,
       const URI& vectors_uri,
       const IndexOptions& options,
-      std::optional<StringMap> config = std::nullopt) {
+      const std::optional<StringMap>& config = std::nullopt) {
     // @todo
   }
 
-  auto query(const QueryVectorArray& vectors, size_t top_k) const {
+  void train() const {
+    // @todo
+  }
+
+  void add() const {
+    // @todo
+  }
+
+  [[nodiscard]] auto query(
+      const QueryVectorArray& vectors, size_t top_k) const {
     return index_->query(vectors, top_k);
   }
 
@@ -468,7 +408,7 @@ class Index {
   }
 
   void update(
-      URI vectors_uri,
+      const URI& vectors_uri,
       const std::optional<IdVector>& ids = std::nullopt,
       const std::optional<UpdateOptions>& options = std::nullopt) const {
     index_->update(vectors_uri, ids, options);
@@ -478,26 +418,32 @@ class Index {
     index_->remove(ids);
   }
 
+  /**
+   * Non-type parameterized base class (for type erasure).
+   */
   struct index_base {
     virtual ~index_base() = default;
 
-    virtual std::tuple<FeatureVectorArray, FeatureVectorArray> query(
-        const QueryVectorArray& vectors, size_t top_k) const = 0;
+    [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
+    query(const QueryVectorArray& vectors, size_t top_k) const = 0;
 
     virtual void update(
         const FeatureVectorArray&,
-        const std::optional<IdVector>& ids = std::nullopt,
-        const std::optional<UpdateOptions>& options = std::nullopt) const = 0;
+        const std::optional<IdVector>& ids,
+        const std::optional<UpdateOptions>& options) const = 0;
 
     virtual void update(
-        URI vectors_uri,
-        const std::optional<IdVector>& ids = std::nullopt,
-        const std::optional<UpdateOptions>& options = std::nullopt) const = 0;
+        const URI& vectors_uri,
+        const std::optional<IdVector>& ids,
+        const std::optional<UpdateOptions>& options) const = 0;
 
     virtual void remove(const IdVector& ids) const = 0;
-
   };
 
+  /**
+   * @brief Type-parameterize implementation class.
+   * @tparam T Type of the concrete class that is being type-erased.
+   */
   template <typename T>
   struct index_impl : index_base {
     explicit index_impl(T&& t)
@@ -508,7 +454,7 @@ class Index {
         const tiledb::Context& ctx,
         const URI& index_uri,
         const std::optional<StringMap>& config = std::nullopt)
-        : index_(ctx, index_uri, config) {
+        : index_(ctx, index_uri) {
     }
 
     template <feature_vector_array V>
@@ -529,19 +475,29 @@ class Index {
         : index_(index_uri, vectors_uri, options, config) {
     }
 
-    auto query(tiledb::Context ctx, const URI& uri, size_t top_k) const {
+    [[nodiscard]] auto query(
+        tiledb::Context ctx, const URI& uri, size_t top_k) const {
       return index_.query(ctx, uri, top_k);
     }
 
-    std::tuple<FeatureVectorArray, FeatureVectorArray>
-    query(const QueryVectorArray& vectors, size_t k_nn) const {
-      using index_type = size_t; // @todo Parameterize?
+    /**
+     * @brief Query the index with the given vectors.  The concrete query
+     * function returns a tuple of arrays, which are type erased and returned as
+     * a tuple of FeatureVectorArrays.
+     * @param vectors
+     * @param k_nn
+     * @return
+     *
+     * @todo Make sure the extents of the returned arrays are used correctly.
+     */
+    [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
+        const QueryVectorArray& vectors, size_t k_nn) const {
+      using index_type = size_t;  // @todo Parameterize?
 
       auto dtype = vectors.datatype();
 
       switch (dtype) {
         case TILEDB_FLOAT32: {
-          // auto qspan = MatrixView{stdx::mdspan<float, matrix_extents<index_type>, stdx::layout_left>}
           auto qspan = MatrixView{
               (float*)vectors.data(),
               extents(vectors)[0],
@@ -549,8 +505,7 @@ class Index {
           auto [s, t] = index_.query(qspan, k_nn);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
-          //return std::make_tuple( std::move(x), std::move(y) );
-          return { std::move(x), std::move(y) };
+          return {std::move(x), std::move(y)};
         }
         case TILEDB_UINT8: {
           auto qspan = MatrixView{
@@ -560,36 +515,42 @@ class Index {
           auto [s, t] = index_.query(qspan, k_nn);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
-          //return std::make_tuple( std::move(x), std::move(y) );
-          return { std::move(x), std::move(y) };
+          return {std::move(x), std::move(y)};
         }
         default:
           throw std::runtime_error("Unsupported attribute type");
       }
     }
 
+    // WIP
     void update(
         const FeatureVectorArray& vectors,
-        const std::optional<IdVector>& ids = std::nullopt,
-        const std::optional<UpdateOptions>& options = std::nullopt) const {
-//      index_.update(vectors, ids, options);
+        const std::optional<IdVector>& ids,
+        const std::optional<UpdateOptions>& options) const override {
+      //      index_.update(vectors, ids, options);
     }
 
+    // WIP
     void update(
-        URI vectors_uri,
-        const std::optional<IdVector>& ids = std::nullopt,
-        const std::optional<UpdateOptions>& options = std::nullopt) const {
-//      index_.update(vectors_uri, ids, options);
+        const URI& vectors_uri,
+        const std::optional<IdVector>& ids,
+        const std::optional<UpdateOptions>& options) const override {
+      //      index_.update(vectors_uri, ids, options);
     }
 
-    virtual void remove(const IdVector& ids) const {
-//      index_.remove(ids);
+    // WIP
+    void remove(const IdVector& ids) const override {
+      //      index_.remove(ids);
     }
 
    private:
+    /**
+     * @brief Instance of the concrete class.
+     */
     T index_;
   };
 
+  // @todo Who should own the context?
   tiledb::Context ctx_{};
   tiledb_datatype_t datatype_{TILEDB_ANY};
   std::unique_ptr<const index_base> index_;

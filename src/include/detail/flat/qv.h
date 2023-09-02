@@ -260,7 +260,8 @@ auto qv_query_heap_tiled(
               auto q_vec_0 = query[j0];
               auto q_vec_1 = query[j1];
 
-              auto kstop = std::min<size_t>(num_vectors(db), 2 * (num_vectors(db) / 2));
+              auto kstop =
+                  std::min<size_t>(num_vectors(db), 2 * (num_vectors(db) / 2));
 
               for (size_t kp = 0; kp < kstop; kp += 2) {
                 auto score_00 = L2(q_vec_0, db[kp + 0]);
@@ -310,7 +311,8 @@ auto qv_query_heap_tiled(
               auto j0 = j + 0;
               auto q_vec_0 = query[j0];
 
-              auto kstop = std::min<size_t>(num_vectors(db), 2 * (num_vectors(db) / 2));
+              auto kstop =
+                  std::min<size_t>(num_vectors(db), 2 * (num_vectors(db) / 2));
               for (size_t kp = 0; kp < kstop; kp += 2) {
                 auto score_00 = L2(q_vec_0, db[kp + 0]);
                 auto score_01 = L2(q_vec_0, db[kp + 1]);

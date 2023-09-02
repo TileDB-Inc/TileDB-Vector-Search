@@ -32,10 +32,10 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <iostream>
 #include "cpos.h"
 #include "mdspan/mdspan.hpp"
 #include "utils/print_types.h"
-#include <iostream>
 
 TEST_CASE("cpos: test test", "[cpos]") {
   REQUIRE(true);
@@ -44,15 +44,13 @@ TEST_CASE("cpos: test test", "[cpos]") {
 template <class I = size_t>
 using matrix_extents = stdx::dextents<I, 2>;
 
-
-
 TEMPLATE_TEST_CASE("cpos: test num_rows", "[cpos]", float, uint8_t) {
-
   std::vector<TestType> v0(200);
   std::vector<TestType> v1(200);
 
   // rows, cols
-  auto m0 = stdx::mdspan<TestType, matrix_extents<size_t>, stdx::layout_right>{v0.data(), 10, 20};
+  auto m0 = stdx::mdspan<TestType, matrix_extents<size_t>, stdx::layout_right>{
+      v0.data(), 10, 20};
   CHECK(num_vectors(m0) == 10);
   CHECK(dimension(m0) == 20);
   CHECK(data(m0) == v0.data());
@@ -60,12 +58,12 @@ TEMPLATE_TEST_CASE("cpos: test num_rows", "[cpos]", float, uint8_t) {
   CHECK(extents(m0)[0] == 10);
   CHECK(extents(m0)[1] == 20);
 
-  auto m1 = stdx::mdspan<TestType, matrix_extents<size_t>, stdx::layout_left>{v1.data(), 10, 20};
+  auto m1 = stdx::mdspan<TestType, matrix_extents<size_t>, stdx::layout_left>{
+      v1.data(), 10, 20};
   CHECK(num_vectors(m1) == 20);
   CHECK(dimension(m1) == 10);
   CHECK(data(m1) == v1.data());
 
   CHECK(extents(m1)[0] == 10);
   CHECK(extents(m1)[1] == 20);
-
 }

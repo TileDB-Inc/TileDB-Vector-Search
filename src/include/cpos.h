@@ -119,12 +119,14 @@ struct _fn {
 
   // @todo Leaking abstraction?
   template <class T, class I>
-  auto constexpr operator()(const stdx::mdspan<T, I, stdx::layout_left>& m) const noexcept {
+  auto constexpr operator()(
+      const stdx::mdspan<T, I, stdx::layout_left>& m) const noexcept {
     return m.extent(0);
   }
 
   template <class T, class I>
-  auto constexpr operator()(const stdx::mdspan<T, I, stdx::layout_right>& m) const noexcept {
+  auto constexpr operator()(
+      const stdx::mdspan<T, I, stdx::layout_right>& m) const noexcept {
     return m.extent(1);
   }
 };
@@ -167,15 +169,16 @@ struct _fn {
 
   // @todo Leaking abstraction?
   template <class T, class I>
-  auto constexpr operator()(const stdx::mdspan<T, I, stdx::layout_left>& m) const noexcept {
+  auto constexpr operator()(
+      const stdx::mdspan<T, I, stdx::layout_left>& m) const noexcept {
     return m.extent(1);
   }
 
   template <class T, class I>
-  auto constexpr operator()(const stdx::mdspan<T, I, stdx::layout_right>& m) const noexcept {
+  auto constexpr operator()(
+      const stdx::mdspan<T, I, stdx::layout_right>& m) const noexcept {
     return m.extent(0);
   }
-
 };
 }  // namespace _num_vectors
 
@@ -203,23 +206,20 @@ concept _member_data_handle = requires(T t) {
 
 struct _fn {
   template <_member_data T>
-  requires (!_member_data_handle<T>)
-  constexpr auto operator()(T&& t) const noexcept {
+  requires(!_member_data_handle<T>) constexpr auto operator()(
+      T&& t) const noexcept {
     return t.data();
   }
 
   template <_member_data_handle T>
-  requires (!_member_data<T>)
-  constexpr auto operator()(T&& t) const noexcept {
+  requires(!_member_data<T>) constexpr auto operator()(T&& t) const noexcept {
     return t.data_handle();
   }
 
   template <_member_data_handle T>
-  requires (_member_data<T>)
-  constexpr auto operator()(T&& t) const noexcept {
+  requires(_member_data<T>) constexpr auto operator()(T&& t) const noexcept {
     return t.data_handle();
   }
-
 };
 }  // namespace _data
 inline namespace _cpo {
@@ -235,21 +235,19 @@ void extents(const auto&) = delete;
 
 template <class T>
 concept _member_extents = requires(T t) {
-  { t.extents() };
+  {t.extents()};
 };
 
-template<typename T>
-concept _is_mdspan =
-  std::same_as<typename std::remove_cvref_t<T>,
-          stdx::mdspan<typename std::remove_cvref_t<T>::value_type,
-                              typename std::remove_cvref_t<T>::extents_type,
-                              typename std::remove_cvref_t<T>::layout_type>>;
+template <typename T>
+concept _is_mdspan = std::same_as < typename std::remove_cvref_t<T>,
+        stdx::mdspan < typename std::remove_cvref_t<T>::value_type,
+typename std::remove_cvref_t<T>::extents_type,
+    typename std::remove_cvref_t<T>::layout_type >>
+    ;
 
 struct _fn {
-
   template <_member_extents T>
-  requires (!_is_mdspan<T>)
-  auto constexpr operator()(T&& t) const noexcept {
+  requires(!_is_mdspan<T>) auto constexpr operator()(T&& t) const noexcept {
     return t.extents();
   }
 
@@ -257,7 +255,6 @@ struct _fn {
   auto constexpr operator()(M&& m) const noexcept {
     return std::vector<size_t>{m.extents().extent(0), m.extents().extent(1)};
   }
-
 };
 }  // namespace _extents
 inline namespace _cpo {
