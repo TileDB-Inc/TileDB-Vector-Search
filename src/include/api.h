@@ -217,7 +217,8 @@ class FeatureVectorArray {
   template <feature_vector_array T>
   explicit FeatureVectorArray(T&& obj)
       : vector_array(std::make_unique<vector_array_impl<T>>(
-            std::move(std::forward<T>(obj)))) {
+            // std::move(std::forward<T>(obj)))
+            std::forward<T>(obj))) {
   }
 
   FeatureVectorArray(const tiledb::Context& ctx, const std::string& uri, size_t num_vectors = 0) {
@@ -551,7 +552,7 @@ class Index {
      * @todo Make sure the extents of the returned arrays are used correctly.
      */
     [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
-        const QueryVectorArray& vectors, size_t k_nn) const {
+        const QueryVectorArray& vectors, size_t k_nn) const override {
 
       // @todo using index_type = size_t;
 
@@ -635,9 +636,36 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
   assert(a.datatype() == b.datatype());
 
   switch(a.datatype()) {
-    auto aview = MatrixView{(uint32_t*)a.data(), extents(a)[0], extents(a)[1]};
-    auto bview = MatrixView{(uint32_t*)b.data(), extents(b)[0], extents(b)[1]};
-    return validate_top_k(aview, bview);
+    case TILEDB_INT32: {
+      auto aview =
+          MatrixView{(int32_t*)a.data(), extents(a)[0], extents(a)[1]};
+      auto bview =
+          MatrixView{(int32_t*)b.data(), extents(b)[0], extents(b)[1]};
+      return validate_top_k(aview, bview);
+    }
+    case TILEDB_UINT32: {
+      auto aview =
+          MatrixView{(uint32_t*)a.data(), extents(a)[0], extents(a)[1]};
+      auto bview =
+          MatrixView{(uint32_t*)b.data(), extents(b)[0], extents(b)[1]};
+      return validate_top_k(aview, bview);
+    }
+    case TILEDB_INT64: {
+      auto aview =
+          MatrixView{(int64_t*)a.data(), extents(a)[0], extents(a)[1]};
+      auto bview =
+          MatrixView{(int64_t*)b.data(), extents(b)[0], extents(b)[1]};
+      return validate_top_k(aview, bview);
+    }
+    case TILEDB_UINT64: {
+      auto aview =
+          MatrixView{(uint64_t*)a.data(), extents(a)[0], extents(a)[1]};
+      auto bview =
+          MatrixView{(uint64_t*)b.data(), extents(b)[0], extents(b)[1]};
+      return validate_top_k(aview, bview);
+    }
+      default:
+        throw std::runtime_error("Unsupported attribute type");
   }
 }
 

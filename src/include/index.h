@@ -79,9 +79,9 @@ class flat_index {
             std::make_unique<tdbColMajorMatrix<attribute_type>>(ctx, uri)} {
   }
 
-  template <class M>
+  template <query_vector_array M>
   auto query(
-      M&& query,
+      const M& query,
       size_t k_nn,
       size_t nthreads = std::thread::hardware_concurrency()) const {
     return detail::flat::qv_query_heap_tiled(

@@ -55,6 +55,8 @@ class MatrixView : public stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy> {
    using Base = stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy>;
   using Base::Base;
 
+ public:
+
   using layout_policy = LayoutPolicy;
   using index_type = typename Base::index_type;
   using size_type = typename Base::size_type;
@@ -85,12 +87,12 @@ class MatrixView : public stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy> {
     }
   }
 
-  size_type num_rows() {
-    return this->extents(0);
+  size_type num_rows() const {
+    return this->extent(0);
   }
 
-  size_type num_cols() {
-    return this->extents(1);
+  size_type num_cols() const {
+    return this->extent(1);
   }
 };
 /**

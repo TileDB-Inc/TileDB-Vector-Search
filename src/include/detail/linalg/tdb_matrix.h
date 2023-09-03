@@ -104,6 +104,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
  public:
   ~tdbBlockedMatrix() noexcept {
+    std::cout << "tdbBlockedMatrix destructor" << std::endl;
     array_.close();
   }
 
@@ -121,6 +122,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   tdbBlockedMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
       requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrix(ctx, uri, 0) {
+    std::cout << "tdbBlockedMatrix constructor 0" << std::endl;
   }
 
   /**
@@ -141,6 +143,8 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       , uri_{uri}
       , array_{tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ)}
       , schema_{array_.schema()} {
+    std::cout << "tdbBlockedMatrix constructor 1" << std::endl;
+
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + " " + uri};
 

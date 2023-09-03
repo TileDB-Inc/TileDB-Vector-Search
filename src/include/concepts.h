@@ -152,7 +152,7 @@ concept feature_vector_array =
     // std::ranges::random_access_range<D> && /* std::ranges::sized_range<D> &&
     // */ subscriptable_range<D> && requires(D d, const
     // std::iter_difference_t<std::ranges::iterator_t<D>> n) {
-    requires(D d, typename D::index_type n) {
+    requires(D d, size_t n) {
   { num_vectors(d) } -> semi_integral;
   { dimension(d) } -> semi_integral;
   //{
