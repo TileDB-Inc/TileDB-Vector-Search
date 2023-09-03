@@ -220,7 +220,7 @@ class FeatureVectorArray {
             std::move(std::forward<T>(obj)))) {
   }
 
-  FeatureVectorArray(const tiledb::Context& ctx, const std::string& uri) {
+  FeatureVectorArray(const tiledb::Context& ctx, const std::string& uri, size_t num_vectors = 0) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
     datatype_ = get_array_datatype(array);
     array.close();  // @todo create Matrix constructor that takes opened array
@@ -236,16 +236,40 @@ class FeatureVectorArray {
       case TILEDB_FLOAT32:
         vector_array =
             std::make_unique<vector_array_impl<tdbColMajorMatrix<float>>>(
-                ctx, uri);
+                ctx, uri, num_vectors);
         break;
       case TILEDB_UINT8:
         vector_array =
             std::make_unique<vector_array_impl<tdbColMajorMatrix<uint8_t>>>(
-                ctx, uri);
+                ctx, uri, num_vectors);
+        break;
+      case TILEDB_INT32:
+        vector_array =
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<int32_t>>>(
+                ctx, uri, num_vectors);
+        break;
+      case TILEDB_UINT32:
+        vector_array =
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint32_t>>>(
+                ctx, uri, num_vectors);
+        break;
+      case TILEDB_INT64:
+        vector_array =
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<int64_t>>>(
+                ctx, uri, num_vectors);
+        break;
+      case TILEDB_UINT64:
+        vector_array =
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint64_t>>>(
+                ctx, uri, num_vectors);
         break;
       default:
         throw std::runtime_error("Unsupported attribute type");
     }
+  }
+
+  auto load() {
+    return _cpo::load(*vector_array);
   }
 
   // @todo fix so niebloids work
@@ -279,6 +303,7 @@ class FeatureVectorArray {
     [[nodiscard]] virtual size_t num_vectors() const = 0;
     [[nodiscard]] virtual void* data() const = 0;
     [[nodiscard]] virtual std::vector<size_t> extents() const = 0;
+    [[nodiscard]] virtual bool load() const = 0;
   };
 
   // @todo Create move constructors for Matrix and tdbMatrix?
@@ -287,8 +312,8 @@ class FeatureVectorArray {
     explicit vector_array_impl(T&& t)
         : vector_array(std::move(t)) {
     }
-    vector_array_impl(const tiledb::Context& ctx, const std::string& uri)
-        : vector_array(ctx, uri) {
+    vector_array_impl(const tiledb::Context& ctx, const std::string& uri, size_t num_vectors)
+        : vector_array(ctx, uri, num_vectors) {
     }
     [[nodiscard]] void* data() const override {
       return _cpo::data(vector_array);
@@ -301,6 +326,9 @@ class FeatureVectorArray {
     }
     [[nodiscard]] std::vector<size_t> extents() const override {
       return _cpo::extents(vector_array);
+    }
+    bool load() const override {
+      return _cpo::load(vector_array);
     }
 
    private:
@@ -529,6 +557,7 @@ class Index {
 
       auto dtype = vectors.datatype();
 
+      // @note This appears to work with default -- aka row major -- orientation
       switch (dtype) {
         case TILEDB_FLOAT32: {
           auto qspan = MatrixView{
@@ -601,5 +630,15 @@ class Index {
   tiledb_datatype_t datatype_{TILEDB_ANY};
   std::unique_ptr<const index_base> index_;
 };
+
+bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
+  assert(a.datatype() == b.datatype());
+
+  switch(a.datatype()) {
+    auto aview = MatrixView{(uint32_t*)a.data(), extents(a)[0], extents(a)[1]};
+    auto bview = MatrixView{(uint32_t*)b.data(), extents(b)[0], extents(b)[1]};
+    return validate_top_k(aview, bview);
+  }
+}
 
 #endif

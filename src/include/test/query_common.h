@@ -166,6 +166,9 @@ static std::string query_uri{m1_root + "sift/sift_query"};
 static std::string groundtruth_uri{m1_root + "sift/sift_groundtruth"};
 
 static std::string bigann1M_base_uri{m1_root + "1M/bigann1M_base"};
+static std::string bigann1M_query_uri{m1_root + "1M/query_public_10k"};
+static std::string bigann1M_groundtruth_uri{m1_root + "1M/bigann_1M_GT_nnids"};
+
 static std::string fmnist_train_uri{m1_root + "fmnist/fmnist_train.tdb"};
 static std::string sift_base_uri{m1_root + "sift/sift_base"};
 

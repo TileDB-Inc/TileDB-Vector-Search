@@ -288,6 +288,10 @@ inline namespace _cpo {
 inline constexpr auto load = _load::_fn{};
 }  // namespace _cpo
 
+
+// ----------------------------------------------------------------------------
+// col_offset CPO
+// ----------------------------------------------------------------------------
 namespace _col_offset {
 
 template <class T>

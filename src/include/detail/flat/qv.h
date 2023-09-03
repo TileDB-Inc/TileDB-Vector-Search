@@ -45,6 +45,8 @@
 #include <numeric>
 #include <vector>
 
+#include "concepts.h"
+
 #include "algorithm.h"
 #include "linalg.h"
 #include "old_concepts.h"
@@ -71,9 +73,9 @@ namespace detail::flat {
  * @return A matrix of size k x #queries containing the top k results for each
  * query.
  */
-template <class DB, class Q>
+template <feature_vector_array DB, query_vector_array Q>
 [[deprecated]] auto qv_query_heap_0(
-    DB& db, const Q& q, int k_nn, unsigned int nthreads) {
+    const DB& db, const Q& q, int k_nn, unsigned int nthreads) {
   scoped_timer _{tdb_func__};
 
   ColMajorMatrix<size_t> top_k(k_nn, num_vectors(q));
@@ -113,33 +115,13 @@ template <class DB, class Q>
  * @return A matrix of size k x #queries containing the top k results for each
  * query.
  */
-template <class T, class DB, class Q, class Index>
-auto qv_query_heap(
-    T,
-    DB& db,
-    Q& q,
-    const std::vector<Index>& ids,
-    int k_nn,
-    unsigned nthreads);
-
-template <class DB, class Q>
-auto qv_query_heap(DB& db, Q& q, int k_nn, unsigned nthreads) {
-  return qv_query_heap(
-      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
-}
-
-template <class DB, class Q, class Index>
-auto qv_query_heap(
-    DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
-  return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads);
-}
 
 // @todo Add to out of core
-template <class T, class DB, class Q, class Index>
+template <class T, feature_vector_array DB, feature_vector_array Q, class Index>
 auto qv_query_heap(
     T,
-    DB& db,
-    Q& query,
+    const DB& db,
+    const Q& query,
     const std::vector<Index>& ids,
     int k_nn,
     unsigned nthreads) {
@@ -178,6 +160,19 @@ auto qv_query_heap(
   return std::make_tuple(std::move(top_k_scores), std::move(top_k));
 }
 
+
+template <feature_vector_array DB, feature_vector_array Q>
+auto qv_query_heap(const DB& db, const Q& q, int k_nn, unsigned nthreads) {
+  return qv_query_heap(
+      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
+}
+
+template <feature_vector_array DB, feature_vector_array Q, class Index>
+auto qv_query_heap(
+    const DB& db, const Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
+  return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads);
+}
+
 /**
  * This algorithm is similar to `qv_query_heap`, but it tiles the query loop
  * and the database loop (2X2). This is done to improve cache locality.
@@ -190,32 +185,11 @@ auto qv_query_heap(
  * @return A matrix of size k x #queries containing the top k results for each
  * query.
  */
-template <class T, class DB, class Q, class Index>
+template <class T, feature_vector_array DB, feature_vector_array Q, class Index>
 auto qv_query_heap_tiled(
     T,
-    DB& db,
-    Q& q,
-    const std::vector<Index>& ids,
-    int k_nn,
-    unsigned nthreads);
-
-template <class DB, class Q>
-auto qv_query_heap_tiled(DB& db, Q& q, int k_nn, unsigned nthreads) {
-  return qv_query_heap_tiled(
-      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
-}
-
-template <class DB, class Q, class Index>
-auto qv_query_heap_tiled(
-    DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
-  return qv_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads);
-}
-
-template <class T, class DB, class Q, class Index>
-auto qv_query_heap_tiled(
-    T,
-    DB& db,
-    Q& query,
+    const DB& db,
+    const Q& query,
     [[maybe_unused]] const std::vector<Index>& ids,
     int k_nn,
     unsigned nthreads) {
@@ -351,6 +325,20 @@ auto qv_query_heap_tiled(
   return top_k;
 }
 
+
+template <feature_vector_array DB, feature_vector_array Q>
+auto qv_query_heap_tiled(const DB& db, const Q& q, int k_nn, unsigned nthreads) {
+  return qv_query_heap_tiled(
+      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
+}
+
+template <feature_vector_array DB, feature_vector_array Q, class Index>
+auto qv_query_heap_tiled(
+    const DB& db, const Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
+  return qv_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads);
+}
+
+
 /**
  * @brief Find the single nearest neighbor of each query vector in the database.
  * This is essentially qv_query_heap, specialized for k = 1.
@@ -361,7 +349,7 @@ auto qv_query_heap_tiled(
  * @param nthreads
  * @return
  */
-template <class DB, class Q>
+template <feature_vector_array DB, feature_vector_array Q>
 auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
   scoped_timer _{tdb_func__};
 

@@ -51,8 +51,8 @@ template <class I = size_t>
 using matrix_extents = stdx::dextents<I, 2>;
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
-  using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
+class MatrixView : public stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy> {
+   using Base = stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy>;
   using Base::Base;
 
   using layout_policy = LayoutPolicy;
@@ -61,28 +61,36 @@ class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using reference = typename Base::reference;
 
  public:
-  MatrixView(const Base& rhs)
-      : Base(rhs) {
-  }
+
+  MatrixView(const Base& rhs) : Base(rhs){}
 
   MatrixView(T* p, I r, I c)
       : Base{p, r, c} {
   }
 
+  // @todo is this right???
   auto operator[](index_type i) {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
-      return std::span(&Base::operator()(i, 0), this->extents().extent(0));
+      return std::span(&Base::operator()(i, 0), this->extents().extent(1));
     } else {
-      return std::span(&Base::operator()(i, 0), this->extents().extent(0));
+      return std::span(&Base::operator()(0, i), this->extents().extent(0));
     }
   }
 
   auto operator[](index_type i) const {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
-      return std::span(&Base::operator()(i, 0), this->extents().extent(0));
+      return std::span(&Base::operator()(i, 0), this->extents().extent(1));
     } else {
-      return std::span(&Base::operator()(i, 0), this->extents().extent(0));
+      return std::span(&Base::operator()(0, i), this->extents().extent(0));
     }
+  }
+
+  size_type num_rows() {
+    return this->extents(0);
+  }
+
+  size_type num_cols() {
+    return this->extents(1);
   }
 };
 /**
