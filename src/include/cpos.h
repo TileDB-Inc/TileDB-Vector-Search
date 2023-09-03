@@ -264,6 +264,58 @@ inline constexpr auto extents = _extents::_fn{};
 // ----------------------------------------------------------------------------
 // num_partitions CPO
 // ----------------------------------------------------------------------------
+namespace _load {
+
+template <class T>
+concept _member_load = requires(T t) {
+  {t.load()} -> std::convertible_to<bool>;
+};
+
+struct _fn {
+  template <_member_load T>
+  auto constexpr operator()(T&& t) const noexcept {
+    return t.load();
+  }
+
+  template <class T>
+  requires(!_member_load<T>)
+  auto constexpr operator()(T&& t) const noexcept {
+    return false;
+  }
+};
+}  // namespace _load
+inline namespace _cpo {
+inline constexpr auto load = _load::_fn{};
+}  // namespace _cpo
+
+namespace _col_offset {
+
+template <class T>
+concept _member_col_offset = requires(T t) {
+  {t.col_offset()} -> semi_integral;
+};
+
+struct _fn {
+  template <_member_col_offset T>
+  auto constexpr operator()(T&& t) const noexcept {
+    return t.col_offsets();
+  }
+
+  template <class T>
+  requires(!_member_col_offset<T>)
+  auto constexpr operator()(T&& t) const noexcept {
+    return 0;
+  }
+};
+}  // namespace _col_offsets
+inline namespace _cpo {
+inline constexpr auto col_offset = _col_offset::_fn{};
+}  // namespace _cpo
+
+
+// ----------------------------------------------------------------------------
+// num_partitions CPO
+// ----------------------------------------------------------------------------
 namespace _num_partitions {
 void num_partitions(auto&) = delete;
 void num_partitions(const auto&) = delete;

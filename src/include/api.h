@@ -387,14 +387,23 @@ class Index {
     // @todo
   }
 
-  void train() const {
-    // @todo
-  }
-
   void add() const {
     // @todo
   }
 
+  void add_with_ids() const {
+    // @todo
+  }
+
+  void train() const {
+    // @todo
+  }
+
+  void save() const {
+    // @todo
+  }
+
+  // todo query() or search() -- or both?
   [[nodiscard]] auto query(
       const QueryVectorArray& vectors, size_t top_k) const {
     return index_->query(vectors, top_k);
@@ -418,6 +427,23 @@ class Index {
     index_->remove(ids);
   }
 
+  auto dimension() {
+    return _cpo::dimension(*index_);
+  }
+
+  size_t ntotal() const {
+    // @todo
+    return 0;
+  }
+
+  auto num_vectors() {
+    return _cpo::num_vectors(*index_);
+  }
+
+  auto datatype() {
+    return datatype_;
+  }
+
   /**
    * Non-type parameterized base class (for type erasure).
    */
@@ -438,6 +464,12 @@ class Index {
         const std::optional<UpdateOptions>& options) const = 0;
 
     virtual void remove(const IdVector& ids) const = 0;
+
+    virtual size_t dimension() const = 0;
+
+    virtual size_t ntotal() const  = 0;
+
+    virtual size_t num_vectors() const = 0;
   };
 
   /**
@@ -492,7 +524,8 @@ class Index {
      */
     [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
         const QueryVectorArray& vectors, size_t k_nn) const {
-      using index_type = size_t;  // @todo Parameterize?
+
+      // @todo using index_type = size_t;
 
       auto dtype = vectors.datatype();
 
@@ -541,6 +574,19 @@ class Index {
     // WIP
     void remove(const IdVector& ids) const override {
       //      index_.remove(ids);
+    }
+
+
+    size_t dimension() const override {
+      return _cpo::dimension(index_);
+    }
+
+     size_t ntotal() const override {
+      return _cpo::num_vectors(index_);
+    }
+
+    size_t num_vectors() const override {
+      return _cpo::num_vectors(index_);
     }
 
    private:

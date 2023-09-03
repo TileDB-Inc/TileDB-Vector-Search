@@ -65,9 +65,9 @@ class flat_index {
   flat_index(const flat_index& index) = delete;
   flat_index& operator=(const flat_index& index) = delete;
 
-  flat_index(const flat_index&& index) {
+  flat_index(flat_index&& index) {
   }
-  flat_index& operator=(const flat_index&& index) = default;
+  flat_index& operator=(flat_index&& index) = default;
 
   ~flat_index() = default;
 
@@ -102,6 +102,22 @@ class flat_index {
 
   void update(const std::string& uri) {
     // @todo
+  }
+
+  auto dimension() const {
+    return _cpo::dimension(*feature_vectors_);
+  }
+
+  auto ntotal() const {
+    return _cpo::num_vectors(*feature_vectors_);
+  }
+
+  auto num_vectors() const {
+    return _cpo::num_vectors(*feature_vectors_);
+  }
+
+  auto num_rows() const {
+    return _cpo::dimension(*feature_vectors_);
   }
 };
 

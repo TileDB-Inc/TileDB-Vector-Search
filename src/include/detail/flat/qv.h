@@ -219,9 +219,7 @@ auto qv_query_heap_tiled(
     [[maybe_unused]] const std::vector<Index>& ids,
     int k_nn,
     unsigned nthreads) {
-  if constexpr (is_loadable_v<decltype(db)>) {
-    db.load();
-  }
+  load(db);
 
   scoped_timer _{tdb_func__};
 

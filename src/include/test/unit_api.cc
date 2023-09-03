@@ -180,3 +180,53 @@ TEST_CASE("api: feature vector array open", "[api]") {
   CHECK(dimension(d) == 128);
   CHECK(num_vectors(d) == 1'000'000);
 }
+
+// ----------------------------------------------------------------------------
+// Index tests
+// ----------------------------------------------------------------------------
+TEST_CASE("api: uri index constructors, context","[api][index]"){
+  tiledb::Context ctx;
+
+  auto a = Index(ctx, db_uri);
+  CHECK(a.datatype() == TILEDB_FLOAT32);
+  CHECK(dimension(a) == 128);
+  CHECK(num_vectors(a) == 1'000'000);
+
+  auto b = Index(ctx, bigann1M_base_uri);
+  CHECK(b.datatype() == TILEDB_UINT8);
+  CHECK(dimension(b) == 128);
+  CHECK(num_vectors(b) == 1'000'000);
+
+  auto c = Index(ctx, fmnist_train_uri);
+  CHECK(c.datatype() == TILEDB_FLOAT32);
+  CHECK(dimension(c) == 784);
+  CHECK(num_vectors(c) == 60'000);
+
+  auto d = Index(ctx, sift_base_uri);
+  CHECK(d.datatype() == TILEDB_FLOAT32);
+  CHECK(dimension(d) == 128);
+  CHECK(num_vectors(d) == 1'000'000);
+}
+
+TEST_CASE("api: uri index constructors, no context","[api][index]"){
+  auto a = Index(db_uri);
+  CHECK(a.datatype() == TILEDB_FLOAT32);
+  CHECK(dimension(a) == 128);
+  CHECK(num_vectors(a) == 1'000'000);
+
+  auto b = Index(bigann1M_base_uri);
+  CHECK(b.datatype() == TILEDB_UINT8);
+  CHECK(dimension(b) == 128);
+  CHECK(num_vectors(b) == 1'000'000);
+
+  auto c = Index(fmnist_train_uri);
+  CHECK(c.datatype() == TILEDB_FLOAT32);
+  CHECK(dimension(c) == 784);
+  CHECK(num_vectors(c) == 60'000);
+
+  auto d = Index(sift_base_uri);
+  CHECK(d.datatype() == TILEDB_FLOAT32);
+  CHECK(dimension(d) == 128);
+  CHECK(num_vectors(d) == 1'000'000);
+
+}
