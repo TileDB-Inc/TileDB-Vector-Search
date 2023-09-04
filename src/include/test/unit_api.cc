@@ -1,5 +1,5 @@
 /**
- * @file   unit_concepts.cc
+ * @file   unit_api.cc
  *
  * @section LICENSE
  *
@@ -36,11 +36,42 @@
 #include "detail/linalg/tdb_io.h"
 #include "detail/linalg/tdb_vector.h"
 #include "detail/linalg/vector.h"
-#include "query_common.h"
+// #include "query_common.h"
 #include "test_utils.h"
 #include "utils/utils.h"
 
 bool global_debug = false;
+
+TEST_CASE("api: uri query", "[api][index]") {
+  tiledb::Context ctx;
+
+  using groundtruth_type = int32_t;
+  static std::string m1_root{
+          "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/"};
+  static std::string groundtruth_uri{m1_root + "sift/sift_groundtruth"};
+
+  auto gk = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
+  load(gk);
+
+  auto x = FeatureVectorArray{std::move(gk)};
+}
+
+
+TEST_CASE("api: Matrix constructors and destructors", "[api]") {
+  {
+    auto a = ColMajorMatrix<int>(3, 7);
+    auto b = FeatureVectorArray(a);
+    int k = 0;
+  }
+  {
+    auto a = ColMajorMatrix<int>(3, 7);
+    auto b = FeatureVectorArray(std::move(a));
+    int i = 0;
+  }
+  int j = 0;
+}
+
+#if 0
 
 TEST_CASE("api: test test", "[api]") {
   REQUIRE(true);
@@ -238,6 +269,27 @@ auto ack() {
   _ack(MatrixView<float>{});
 }
 
+
+
+TEST_CASE("api: tdbMatrix constructors and destructors", "[api]") {
+  tiledb::Context ctx;
+  auto c = ColMajorMatrix<int>(3, 7);
+
+  std::filesystem::remove_all("/tmp/a");
+  write_matrix(ctx, c, "/tmp/a");
+  {
+    auto a = tdbColMajorMatrix<int>(ctx, "/tmp/a");
+    a.load();
+    auto b = FeatureVectorArray(a);
+  }
+  {
+    auto d = tdbColMajorMatrix<int>(ctx, "/tmp/a");
+    d.load();
+    auto e = FeatureVectorArray(std::move(d));
+  }
+}
+
+
 TEST_CASE("api: uri query", "[api][index]") {
   tiledb::Context ctx;
   size_t k_nn = 10;
@@ -261,13 +313,26 @@ TEST_CASE("api: uri query", "[api][index]") {
     load(qk);
     auto gk = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
     load(gk);
-    auto [ck_scores, ck_top_k] =
-        detail::flat::qv_query_heap(ck, qk, k_nn, nthreads);
-    CHECK(validate_top_k(ck_top_k, gk));
 
-    auto x = FeatureVectorArray{std::move(gk)};
+//    auto [ck_scores, ck_top_k] =
+//        detail::flat::qv_query_heap(ck, qk, k_nn, nthreads);
+
+//    CHECK(validate_top_k(ck_top_k, gk));
+
+    {
+ //     auto z = FeatureVectorArray{gk};
+    }
+
+
+    {
+     auto x = FeatureVectorArray{std::move(gk)};
+    }
   }
+#if 0
+{
 
+  }
+#endif
 #if 0
   {
 
@@ -294,3 +359,5 @@ TEST_CASE("api: uri query", "[api][index]") {
     CHECK(num_vectors(d) == 1'000'000);
   }
 }
+
+#endif

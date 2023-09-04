@@ -205,6 +205,7 @@ class FeatureVector {
 using QueryVector = FeatureVector;
 using IdVector = FeatureVector;
 
+#if 0
 //------------------------------------------------------------------------------
 // FeatureVectorArray
 //------------------------------------------------------------------------------
@@ -217,8 +218,8 @@ class FeatureVectorArray {
   template <feature_vector_array T>
   explicit FeatureVectorArray(T&& obj)
       : vector_array(std::make_unique<vector_array_impl<T>>(
-            // std::move(std::forward<T>(obj)))
-            std::forward<T>(obj))) {
+            //std::move(std::forward<T>(obj)))) {
+             std::forward<T>(obj))) {
   }
 
   FeatureVectorArray(const tiledb::Context& ctx, const std::string& uri, size_t num_vectors = 0) {
@@ -340,7 +341,145 @@ class FeatureVectorArray {
   tiledb_datatype_t datatype_{TILEDB_ANY};
   std::unique_ptr<const vector_array_base> vector_array;
 };
+#else
+class FeatureVectorArray {
+ public:
+  FeatureVectorArray(const FeatureVectorArray& other) = delete;
+  FeatureVectorArray& operator=(const FeatureVectorArray& other) = delete;
+  FeatureVectorArray() = delete;
+  virtual ~FeatureVectorArray() = default;
 
+  FeatureVectorArray(FeatureVectorArray&& other) = default;
+  FeatureVectorArray& operator=(FeatureVectorArray&& other) = default;
+
+  template <feature_vector_array T>
+  explicit FeatureVectorArray(T&& obj)
+      : vector_array(std::make_unique<vector_array_impl<T>>(std::forward<T>(obj))) {
+  }
+
+  FeatureVectorArray(const tiledb::Context& ctx, const std::string& uri, size_t num_vectors = 0) {
+    auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
+    datatype_ = get_array_datatype(array);
+    array.close();  // @todo create Matrix constructor that takes opened array
+
+    /**
+     * Row and column orientation are kind of irrelevant?  We could dispatch
+     * on the layout in the schema, but that might not be necessary.  What is
+     * important is that the vectors are along the major axis, which should
+     * happen with either orientation, and so will work at the other end with
+     * either orientation since we are just passing a pointer to the data.
+     */
+    switch (datatype_) {
+      case TILEDB_FLOAT32:
+        vector_array =
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<float>>>(
+                ctx, uri, num_vectors);
+        break;
+      case TILEDB_UINT8:
+        vector_array =
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint8_t>>>(
+                ctx, uri, num_vectors);
+        break;
+      case TILEDB_INT32:
+        vector_array =
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<int32_t>>>(
+                ctx, uri, num_vectors);
+        break;
+      case TILEDB_UINT32:
+        vector_array =
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint32_t>>>(
+                ctx, uri, num_vectors);
+        break;
+      case TILEDB_INT64:
+        vector_array =
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<int64_t>>>(
+                ctx, uri, num_vectors);
+        break;
+      case TILEDB_UINT64:
+        vector_array =
+            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint64_t>>>(
+                ctx, uri, num_vectors);
+        break;
+      default:
+        throw std::runtime_error("Unsupported attribute type");
+    }
+  }
+
+  auto load() {
+    return _cpo::load(*vector_array);
+  }
+
+  // @todo fix so niebloids work
+  [[nodiscard]] auto data() const {
+    // return _cpo::data(*vector_array);
+    return vector_array->data();
+  }
+
+  [[nodiscard]] auto extents() const {
+    return _cpo::extents(*vector_array);
+  }
+
+  [[nodiscard]] auto dimension() const {
+    return _cpo::dimension(*vector_array);
+  }
+
+  [[nodiscard]] auto num_vectors() const {
+    return _cpo::num_vectors(*vector_array);
+  }
+
+  [[nodiscard]] tiledb_datatype_t datatype() const {
+    return datatype_;
+  }
+
+  /**
+   * Non-type parameterized base class (for type erasure).
+   */
+  struct vector_array_base {
+    virtual ~vector_array_base() = default;
+    [[nodiscard]] virtual size_t dimension() const = 0;
+    [[nodiscard]] virtual size_t num_vectors() const = 0;
+    [[nodiscard]] virtual void* data() const = 0;
+    [[nodiscard]] virtual std::vector<size_t> extents() const = 0;
+    [[nodiscard]] virtual bool load() const = 0;
+  };
+
+  // @todo Create move constructors for Matrix and tdbMatrix?
+  template <typename T>
+  struct vector_array_impl : vector_array_base {
+    explicit vector_array_impl(T&& t)
+        : impl_vector_array(std::forward<T>(t)) {
+    }
+    vector_array_impl(const tiledb::Context& ctx, const std::string& uri, size_t num_vectors)
+        : impl_vector_array(ctx, uri, num_vectors) {
+      // print_types(vector_array);
+    }
+    [[nodiscard]] void* data() const override {
+      return _cpo::data(impl_vector_array);
+    }
+    [[nodiscard]] size_t dimension() const override {
+      return _cpo::dimension(impl_vector_array);
+    }
+    [[nodiscard]] size_t num_vectors() const override {
+      return _cpo::num_vectors(impl_vector_array);
+    }
+    [[nodiscard]] std::vector<size_t> extents() const override {
+      return _cpo::extents(impl_vector_array);
+    }
+    bool load() const override {
+      return _cpo::load(impl_vector_array);
+    }
+
+   private:
+    T impl_vector_array;
+  };
+
+ private:
+  tiledb_datatype_t datatype_{TILEDB_ANY};
+  std::unique_ptr<const vector_array_base> vector_array;
+};
+
+
+#endif
 using QueryVectorArray = FeatureVectorArray;
 
 //------------------------------------------------------------------------------

@@ -94,6 +94,8 @@ class MatrixView : public stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy> {
   size_type num_cols() const {
     return this->extent(1);
   }
+
+  ~MatrixView() = default;
 };
 /**
  * @brief A 2-D matrix class that owns its storage.  The interface is
@@ -105,6 +107,8 @@ class MatrixView : public stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy> {
  *
  * @todo Make Matrix into a range (?)
  */
+
+static int id = 0;
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
@@ -112,6 +116,8 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
 
   // So that the CPO for data() doesn't get confused
   // auto data_handle() = delete;
+
+  int id_{0};
 
  public:
   using layout_policy = LayoutPolicy;
@@ -128,8 +134,11 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   // private:
   std::unique_ptr<T[]> storage_;
 
- public:
+ protected:
+  // Needed because of deferred construction in derived classes
   Matrix() noexcept = default;
+
+ public:
 
   Matrix(
       size_type nrows,
@@ -144,6 +153,20 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
 #endif
   {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
+    id_ = id++;
+  }
+
+  Matrix(const Matrix&) = delete;
+  //Matrix(Matrix&&) = default;
+  Matrix(Matrix&& rhs) {
+    storage_ = std::move(rhs.storage_);
+    Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
+    id_ = id++;
+  }
+  int destructor_calls = 0;
+  ~Matrix() {
+    ++destructor_calls;
+    int b = destructor_calls;
   }
 
   Matrix(
@@ -155,14 +178,18 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       , num_cols_(ncols)
       , storage_{std::move(storage)} {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
+    id_ = id++;
   }
 
+#if 0
   Matrix(Matrix&& rhs) noexcept
       : num_rows_{rhs.num_rows_}
       , num_cols_{rhs.num_cols_}
       , storage_{std::move(rhs.storage_)} {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
+    id_ = id++;
   }
+#endif
 
   /**
    * Initializer list constructor.  Useful for testing and for examples.
@@ -182,6 +209,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     auto it = list.begin();
     for (size_type i = 0; i < num_rows_; ++i, ++it) {
       std::copy(it->begin(), it->end(), (*this)[i].begin());
+      id_ = id++;
     }
   }
 
@@ -204,6 +232,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     for (size_type i = 0; i < num_cols_; ++i, ++it) {
       std::copy(it->begin(), it->end(), (*this)[i].begin());
     }
+    id_ = id++;
   }
 
   auto& operator=(Matrix&& rhs) noexcept {
@@ -275,6 +304,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   auto num_cols() const noexcept {
     return num_cols_;
   }
+
 };
 
 /**
