@@ -10,6 +10,7 @@ storage_formats = {
         "EXTERNAL_IDS_ARRAY_NAME": "external_ids",
         "PARTIAL_WRITE_ARRAY_DIR": "write_temp",
         "DEFAULT_ATTR_FILTERS": None,
+        "UPDATES_ARRAY_NAME": "updates",
     },
     "0.2": {
         "CENTROIDS_ARRAY_NAME": "partition_centroids",
@@ -20,6 +21,7 @@ storage_formats = {
         "EXTERNAL_IDS_ARRAY_NAME": "external_ids",
         "PARTIAL_WRITE_ARRAY_DIR": "temp_data",
         "DEFAULT_ATTR_FILTERS": tiledb.FilterList([tiledb.ZstdFilter()]),
+        "UPDATES_ARRAY_NAME": "updates",
     },
 }
 

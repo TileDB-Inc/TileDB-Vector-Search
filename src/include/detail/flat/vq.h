@@ -94,25 +94,40 @@ auto vq_query_heap(
   log_timer _i{tdb_func__ + " in RAM"};
 
   // @todo Can we do blocking in the parallel for_each somehow?
-  do {
+  if constexpr (is_loadable_v<decltype(db)>) {
+    do {
+      _i.start();
+      stdx::range_for_each(
+          std::move(par),
+          db,
+          [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
+            size_t index = i + db.col_offset();
+            for (size_t j = 0; j < size_q; ++j) {
+              auto score = L2(q[j], db_vec);
+              if constexpr (std::is_same_v<T, with_ids>) {
+                scores[n][j].insert(score, ids[index]);
+              } else if constexpr (std::is_same_v<T, without_ids>) {
+                scores[n][j].insert(score, index);
+              } else {
+                static_assert(
+                    always_false<T>, "T must be with_ids or without_ids");
+              }
+            }
+          });
+      _i.stop();
+    } while (db.load());
+  } else {
     _i.start();
     stdx::range_for_each(
         std::move(par),
         db,
         [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
-          std::remove_cvref_t<decltype(i)> index = 0;
-          if constexpr (has_col_offset<DB>) {
-            index = i + db.col_offset();
-          } else {
-            index = i;
-          }
-
           for (size_t j = 0; j < size_q; ++j) {
             auto score = L2(q[j], db_vec);
             if constexpr (std::is_same_v<T, with_ids>) {
-              scores[n][j].insert(score, ids[index]);
+              scores[n][j].insert(score, ids[i]);
             } else if constexpr (std::is_same_v<T, without_ids>) {
-              scores[n][j].insert(score, index);
+              scores[n][j].insert(score, i);
             } else {
               static_assert(
                   always_false<T>, "T must be with_ids or without_ids");
@@ -120,7 +135,7 @@ auto vq_query_heap(
           }
         });
     _i.stop();
-  } while (load(db));
+  }
 
   consolidate_scores(scores);
   auto top_k = get_top_k_with_scores(scores, k_nn);
