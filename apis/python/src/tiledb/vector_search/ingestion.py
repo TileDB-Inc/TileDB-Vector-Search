@@ -4,6 +4,7 @@ from functools import partial
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search.index import FlatIndex, IVFFlatIndex, Index
 from tiledb.vector_search._tiledbvspy import *
+from tiledb.vector_search.module import kmeans_predict
 import numpy as np
 
 
@@ -874,8 +875,6 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
-        from sklearn.cluster import KMeans
-
         import tiledb.cloud
 
         def generate_new_centroid_per_thread(
@@ -972,10 +971,7 @@ def ingest(
             )
             logger.debug("Input centroids: %s", centroids[0:5])
             logger.debug("Assigning vectors to centroids")
-            km = KMeans()
-            km._n_threads = threads
-            km.cluster_centers_ = centroids
-            assignments = km.predict(vectors)
+            assignments = kmeans_predict(centroids, vectors)
             logger.debug("Assignments: %s", assignments[0:100])
             partial_new_centroids = update_centroids()
             logger.debug("New centroids: %s", partial_new_centroids[0:5])
