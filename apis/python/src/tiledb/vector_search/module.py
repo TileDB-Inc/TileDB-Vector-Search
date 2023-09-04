@@ -404,6 +404,18 @@ def kmeans_fit(partitions: int, init: str, max_iter: int, verbose: bool, n_init:
     else:
         raise TypeError("Unsupported type!")
 
+def kmeans_predict(centroids: "colMajorMatrix", sample_vectors: "colMajorMatrix"):
+    args = tuple(
+        [
+            centroids,
+            sample_vectors,
+        ]
+    )
+    if sample_vectors.dtype == np.float32:
+        return kmeans_predict_f32(*args)
+    else:
+        raise TypeError("Unsupported type!")
+
 
 # TODO
 # def load_partitioned(uri, partitions, dtype: Optional[np.dtype] = None):
