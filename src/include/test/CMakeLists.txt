@@ -63,27 +63,28 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 # kmeans_add_test(time_queries)
 
 find_package(Matplot++ REQUIRED)
-find_package(Casablanca REQUIRED)
+# find_package(Casablanca REQUIRED)
 
-kmeans_add_exe(demo_cytoscape)
-target_link_libraries(demo_cytoscape PRIVATE cpprestsdk::cpprest)
+# kmeans_add_exe(demo_cytoscape)
+# target_link_libraries(demo_cytoscape PRIVATE cpprestsdk::cpprest)
 
-kmeans_add_exe(demo_high_five)
-target_link_libraries(demo_high_five PRIVATE HighFive)
+# kmeans_add_exe(demo_high_five)
+# target_link_libraries(demo_high_five PRIVATE HighFive)
 
 kmeans_add_exe(demo_matplot)
 target_link_libraries(demo_matplot PUBLIC Matplot++::matplot)
 
-kmeans_add_exe(demo_nn-graph)
-target_link_libraries(demo_nn-graph PUBLIC Matplot++::matplot)
-
 kmeans_add_exe(demo_nn-descent)
 target_link_libraries(demo_nn-descent PUBLIC Matplot++::matplot)
+
+kmeans_add_exe(demo_nn-graph)
+target_link_libraries(demo_nn-graph PUBLIC Matplot++::matplot)
 
 kmeans_add_exe(demo_vamana)
 target_link_libraries(demo_vamana PUBLIC Matplot++::matplot)
 
 kmeans_add_exe(time_insert)
+
 kmeans_add_exe(time_abstraction_penalty)
 
 kmeans_add_test(unit_algorithm)
@@ -112,8 +113,8 @@ kmeans_add_test(unit_flat_vq)
 
 kmeans_add_test(unit_index)
 
-kmeans_add_test(unit_high_five)
-target_link_libraries(unit_high_five PRIVATE HighFive)
+# kmeans_add_test(unit_high_five)
+# target_link_libraries(unit_high_five PRIVATE HighFive)
 
 kmeans_add_test(unit_ivf_index)
 
@@ -132,9 +133,9 @@ kmeans_add_test(unit_logging)
 
 kmeans_add_test(unit_matrix)
 
-kmeans_add_test(unit_memory)
-
 kmeans_add_test(unit_mdspan)
+
+kmeans_add_test(unit_memory)
 
 kmeans_add_test(unit_nn-descent)
 
@@ -151,8 +152,6 @@ kmeans_add_test(unit_stats)
 kmeans_add_test(unit_utils)
 
 kmeans_add_test(unit_vamana)
-
-kmeans_add_test(unit_vector)
 
 kmeans_add_test(unit_vector)
 
