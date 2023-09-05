@@ -443,7 +443,7 @@ int main(int argc, char* argv[]) {
           end(top_k[i]),
           begin(groundtruth[i]),
           end(groundtruth[i]),
-          counter{});
+          assignment_counter{});
     }
 
     recall = ((float)total_intersected) / ((float)total_groundtruth);

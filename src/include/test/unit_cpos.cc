@@ -1,5 +1,5 @@
 /**
- * @file   tdb_defs.h
+ * @file   unit_cpos.cc
  *
  * @section LICENSE
  *
@@ -27,28 +27,43 @@
  *
  * @section DESCRIPTION
  *
+ * Test application of concepts with TileDB-Vector-Search types
  *
  */
 
-#ifndef TILEDB_TDB_DEFS_H
-#define TILEDB_TDB_DEFS_H
+#include <catch2/catch_all.hpp>
+#include <iostream>
+#include "cpos.h"
+#include "mdspan/mdspan.hpp"
+#include "utils/print_types.h"
 
-template <class LayoutPolicy>
-struct order_traits {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
-};
+TEST_CASE("cpos: test test", "[cpos]") {
+  REQUIRE(true);
+}
 
-template <>
-struct order_traits<stdx::layout_right> {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
-};
+template <class I = size_t>
+using matrix_extents = stdx::dextents<I, 2>;
 
-template <>
-struct order_traits<stdx::layout_left> {
-  constexpr static auto order{TILEDB_COL_MAJOR};
-};
+TEMPLATE_TEST_CASE("cpos: test num_rows", "[cpos]", float, uint8_t) {
+  std::vector<TestType> v0(200);
+  std::vector<TestType> v1(200);
 
-template <class LayoutPolicy>
-constexpr auto order_v = order_traits<LayoutPolicy>::order;
+  // rows, cols
+  auto m0 = stdx::mdspan<TestType, matrix_extents<size_t>, stdx::layout_right>{
+      v0.data(), 10, 20};
+  CHECK(num_vectors(m0) == 10);
+  CHECK(dimension(m0) == 20);
+  CHECK(data(m0) == v0.data());
 
-#endif  // TILEDB_TDB_DEFS_H
+  CHECK(extents(m0)[0] == 10);
+  CHECK(extents(m0)[1] == 20);
+
+  auto m1 = stdx::mdspan<TestType, matrix_extents<size_t>, stdx::layout_left>{
+      v1.data(), 10, 20};
+  CHECK(num_vectors(m1) == 20);
+  CHECK(dimension(m1) == 10);
+  CHECK(data(m1) == v1.data());
+
+  CHECK(extents(m1)[0] == 10);
+  CHECK(extents(m1)[1] == 20);
+}

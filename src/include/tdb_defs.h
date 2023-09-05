@@ -1,5 +1,5 @@
 /**
- * @file   linalg_defs.h
+ * @file   tdb_defs.h
  *
  * @section LICENSE
  *
@@ -27,40 +27,13 @@
  *
  * @section DESCRIPTION
  *
+ *
  */
 
-#ifndef TDB_LINALG_DEFS_H
-#define TDB_LINALG_DEFS_H
+#ifndef TILEDB_TDB_DEFS_H
+#define TILEDB_TDB_DEFS_H
 
-#include <string>
-#include <tiledb/tiledb>
-#include "mdspan/mdspan.hpp"
+template <class... T>
+constexpr bool always_false = false;
 
-extern bool global_verbose;
-extern bool global_debug;
-extern std::string global_region;
-
-namespace stdx {
-using namespace Kokkos;
-using namespace Kokkos::Experimental;
-}  // namespace stdx
-
-template <class LayoutPolicy>
-struct order_traits {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
-};
-
-template <>
-struct order_traits<stdx::layout_right> {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
-};
-
-template <>
-struct order_traits<stdx::layout_left> {
-  constexpr static auto order{TILEDB_COL_MAJOR};
-};
-
-template <class LayoutPolicy>
-constexpr auto order_v = order_traits<LayoutPolicy>::order;
-
-#endif  // TDB_LINALG_DEFS_H
+#endif  // TILEDB_TDB_DEFS_H

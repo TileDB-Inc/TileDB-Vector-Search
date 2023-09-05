@@ -84,10 +84,19 @@ kmeans_add_exe(demo_vamana)
 target_link_libraries(demo_vamana PUBLIC Matplot++::matplot)
 
 kmeans_add_exe(time_insert)
+kmeans_add_exe(time_abstraction_penalty)
 
 kmeans_add_test(unit_algorithm)
 
+kmeans_add_test(unit_api)
+
 kmeans_add_test(unit_concepts)
+
+kmeans_add_test(unit_concepts_vs)
+
+kmeans_add_test(unit_cpos)
+
+kmeans_add_test(unit_old_concepts)
 
 kmeans_add_test(unit_coo)
 
@@ -100,6 +109,8 @@ kmeans_add_test(unit_fixed_min_heap)
 kmeans_add_test(unit_flat_qv)
 
 kmeans_add_test(unit_flat_vq)
+
+kmeans_add_test(unit_index)
 
 kmeans_add_test(unit_high_five)
 target_link_libraries(unit_high_five PRIVATE HighFive)
@@ -143,6 +154,7 @@ kmeans_add_test(unit_vamana)
 
 kmeans_add_test(unit_vector)
 
+kmeans_add_test(unit_vector)
 
 if (TILEDB_VS_ENABLE_BLAS)
   kmeans_add_test(unit_queries)

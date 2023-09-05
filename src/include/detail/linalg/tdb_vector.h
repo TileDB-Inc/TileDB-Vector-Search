@@ -1,5 +1,5 @@
 /**
- * @file   linalg_defs.h
+ * @file   tdb_vector.h
  *
  * @section LICENSE
  *
@@ -29,38 +29,27 @@
  *
  */
 
-#ifndef TDB_LINALG_DEFS_H
-#define TDB_LINALG_DEFS_H
+#ifndef TILEDB_TDB_VECTOR_H
+#define TILEDB_TDB_VECTOR_H
 
-#include <string>
 #include <tiledb/tiledb>
-#include "mdspan/mdspan.hpp"
+#include "detail/linalg/tdb_io.h"
+#include "detail/linalg/vector.h"
 
-extern bool global_verbose;
-extern bool global_debug;
-extern std::string global_region;
+/**
+ * @brief Placeholder for now
+ *
+ * @tparam T
+ */
+template <class T>
+class tdbVector : public Vector<T> {
+  using Base = Vector<T>;
+  using Base::Base;
 
-namespace stdx {
-using namespace Kokkos;
-using namespace Kokkos::Experimental;
-}  // namespace stdx
-
-template <class LayoutPolicy>
-struct order_traits {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
+ public:
+  tdbVector(const tiledb::Context& ctx, const std::string& uri)
+      : Base(read_vector<T>(ctx, uri, 0, 0)) {
+  }
 };
 
-template <>
-struct order_traits<stdx::layout_right> {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
-};
-
-template <>
-struct order_traits<stdx::layout_left> {
-  constexpr static auto order{TILEDB_COL_MAJOR};
-};
-
-template <class LayoutPolicy>
-constexpr auto order_v = order_traits<LayoutPolicy>::order;
-
-#endif  // TDB_LINALG_DEFS_H
+#endif  // TILEDB_TDB_VECTOR_H

@@ -1,5 +1,5 @@
 /**
- * @file   linalg_defs.h
+ * @file   unit_abstraction_penalty.cc
  *
  * @section LICENSE
  *
@@ -27,40 +27,24 @@
  *
  * @section DESCRIPTION
  *
+ * Tests to measure abstraction penalty of data structures and algorithms.
+ *
  */
 
-#ifndef TDB_LINALG_DEFS_H
-#define TDB_LINALG_DEFS_H
-
-#include <string>
 #include <tiledb/tiledb>
-#include "mdspan/mdspan.hpp"
+#include "utils/timer.h"
 
-extern bool global_verbose;
-extern bool global_debug;
-extern std::string global_region;
-
-namespace stdx {
-using namespace Kokkos;
-using namespace Kokkos::Experimental;
-}  // namespace stdx
-
-template <class LayoutPolicy>
-struct order_traits {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
-};
-
-template <>
-struct order_traits<stdx::layout_right> {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
-};
-
-template <>
-struct order_traits<stdx::layout_left> {
-  constexpr static auto order{TILEDB_COL_MAJOR};
-};
-
-template <class LayoutPolicy>
-constexpr auto order_v = order_traits<LayoutPolicy>::order;
-
-#endif  // TDB_LINALG_DEFS_H
+#if 0
+// Quick and dirty program to read pytest generated arrays
+int main(){
+  tiledb::Context ctx;
+  for (size_t i = 0; i < 25; ++i) {
+    auto uri = std::string("/tmp/test_vector_") + std::to_string(i);
+    auto array =  tiledb::Array(ctx, uri, TILEDB_READ);
+    auto schema = array.schema();
+    std::cout << "=============================" << std::endl;
+    std::cout << uri << std::endl;
+    schema.dump();
+  }
+}
+#endif

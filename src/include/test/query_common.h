@@ -156,17 +156,26 @@ static std::string ec2_gp3_root = "/home/lums/TileDB-Vector-Search/external/data
 static std::string m1_gp3_root = "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/";
 
 static std::string ec2_root{
-    "/home/lums/TileDB-Vector-Search/external/data/gp3/sift/"};
+    "/home/lums/TileDB-Vector-Search/external/data/gp3/"};
 static std::string m1_root{
-    "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/sift/"};
-static std::string db_uri{m1_root + "sift_base"};
-static std::string centroids_uri{m1_root + "centroids"};
-static std::string parts_uri{m1_root + "parts"};
-static std::string index_uri{m1_root + "index"};
+    "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/"};
+static std::string db_uri{m1_root + "sift/sift_base"};
+static std::string centroids_uri{m1_root + "sift/centroids"};
+static std::string parts_uri{m1_root + "sift/parts"};
+static std::string index_uri{m1_root + "sift/index"};
 //  static std::string sizes_uri{m1_root + "/1M/index_size.tdb"};
-static std::string ids_uri{m1_root + "ids"};
-static std::string query_uri{m1_root + "sift_query"};
-static std::string groundtruth_uri{m1_root + "sift_groundtruth"};
+static std::string ids_uri{m1_root + "sift/ids"};
+static std::string query_uri{m1_root + "sift/sift_query"};
+static std::string groundtruth_uri{m1_root + "sift/sift_groundtruth"};
+
+static std::string bigann1M_base_uri{m1_root + "1M/bigann1M_base"};
+static std::string bigann1M_query_uri{m1_root + "1M/query_public_10k"};
+static std::string bigann1M_groundtruth_uri{m1_root + "1M/bigann_1M_GT_nnids"};
+
+static std::string fmnist_train_uri{m1_root + "fmnist/fmnist_train.tdb"};
+static std::string fmnist_test_uri{m1_root + "fmnist/fmnist_test.tdb"};
+static std::string fmnist_groundtruth_uri{m1_root + "fmnist/fmnist_neighbors.tdb"};
+static std::string sift_base_uri{m1_root + "sift/sift_base"};
 
 static std::string fmnist_distances { m1_gp3_root + "fmnist/fmnist_distances.tdb" };
 static std::string fmnist_neighbors { m1_gp3_root + "fmnist/fmnist_neighbors.tdb" };

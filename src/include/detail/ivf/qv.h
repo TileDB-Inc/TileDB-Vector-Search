@@ -56,12 +56,12 @@
 #include <string>
 
 #include "algorithm.h"
-#include "concepts.h"
 #include "detail/ivf/partition.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "flat_query.h"
 #include "linalg.h"
+#include "old_concepts.h"
 #include "scoring.h"
 
 #include "utils/print_types.h"

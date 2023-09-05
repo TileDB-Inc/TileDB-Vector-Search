@@ -167,7 +167,7 @@ void range_for_each(
     stdx::execution::indexed_parallel_policy&& par,
     Range&& range,
     UnaryFunction f) {
-  size_t container_size = size(range);
+  size_t container_size = num_vectors(range);
   size_t nthreads = par.nthreads_;
   size_t block_size = (container_size + nthreads - 1) / nthreads;
 

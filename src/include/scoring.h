@@ -36,8 +36,8 @@
 
 #include <algorithm>
 #include "algorithm.h"
-#include "concepts.h"
 #include "linalg.h"
+#include "old_concepts.h"
 #include "utils/timer.h"
 #include "utils/utils.h"
 
@@ -57,6 +57,7 @@
 // #include <execution>
 
 #include "linalg.h"
+#include "tdb_defs.h"
 #include "utils/fixed_min_heap.h"
 #include "utils/timer.h"
 
@@ -66,8 +67,6 @@
 namespace {
 class with_ids {};
 class without_ids {};
-template <class... T>
-constexpr bool always_false = false;
 }  // namespace
 
 // ----------------------------------------------------------------------------
@@ -282,11 +281,13 @@ inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k) requires(
  * @return a Matrix of the top_k scores for each query.  Each column corresponds
  * to a query,
  */
-template <class Heap, class Index = size_t>
+template <class Heap>
 inline auto get_top_k(std::vector<Heap>& scores, size_t k_nn) {
   auto num_queries = size(scores);
 
-  ColMajorMatrix<Index> top_k(k_nn, num_queries);
+  using id_type =
+      typename std::tuple_element<1, typename Heap::value_type>::type;
+  ColMajorMatrix<id_type> top_k(k_nn, num_queries);
 
   for (size_t j = 0; j < num_queries; ++j) {
     get_top_k_from_heap(scores[j], top_k[j]);
@@ -305,7 +306,7 @@ inline auto get_top_k(std::vector<Heap>& scores, size_t k_nn) {
  * @return Matrix of the top k scores for each query.  Each column corresponds
  * to a query.
  */
-template <class Heap, class Index = size_t>
+template <class Heap>
 inline auto get_top_k(std::vector<std::vector<Heap>>& scores, size_t k_nn) {
   return get_top_k(scores[0], k_nn);
 }
@@ -330,14 +331,16 @@ inline void get_top_k_with_scores_from_heap(
 }
 
 // Overload for one-d scores
-template <class Heap, class Index = size_t>
+template <class Heap>
 inline auto get_top_k_with_scores(std::vector<Heap>& scores, size_t k_nn) {
   auto num_queries = size(scores);
 
   using score_type =
       typename std::tuple_element<0, typename Heap::value_type>::type;
+  using id_type =
+      typename std::tuple_element<1, typename Heap::value_type>::type;
 
-  ColMajorMatrix<Index> top_k(k_nn, num_queries);
+  ColMajorMatrix<id_type> top_k(k_nn, num_queries);
   ColMajorMatrix<score_type> top_scores(k_nn, num_queries);
 
   for (size_t j = 0; j < num_queries; ++j) {
@@ -347,7 +350,7 @@ inline auto get_top_k_with_scores(std::vector<Heap>& scores, size_t k_nn) {
 }
 
 // Overload for two-d scores
-template <class Heap, class Index = size_t>
+template <class Heap>
 inline auto get_top_k_with_scores(
     std::vector<std::vector<Heap>>& scores, size_t k_nn) {
   return get_top_k_with_scores(scores[0], k_nn);
@@ -420,15 +423,15 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
  * This version is for approximate search and so will sort the results before
  * comparing.
  */
-template <class TK, class G>
-bool validate_top_k(TK& top_k, G& g) {
-  size_t k = top_k.num_rows();
+template <feature_vector_array TK, feature_vector_array G>
+bool validate_top_k(TK& top_k, const G& g) {
+  size_t k = dimension(top_k);
   size_t num_errors = 0;
 
-  for (size_t qno = 0; qno < top_k.num_cols(); ++qno) {
+  for (size_t qno = 0; qno < num_vectors(top_k); ++qno) {
     // @todo -- count intersections rather than testing for equality
     std::sort(begin(top_k[qno]), end(top_k[qno]));
-    std::sort(begin(g[qno]), begin(g[qno]) + top_k.num_rows());
+    std::sort(begin(g[qno]), begin(g[qno]) + dimension(top_k));
 
     if (!std::equal(begin(top_k[qno]), begin(top_k[qno]) + k, begin(g[qno]))) {
       if (num_errors++ > 10) {
@@ -460,7 +463,7 @@ auto count_intersections(auto&& I, auto&& groundtruth, size_t k_nn) {
         end(I[i]),
         begin(groundtruth[i]),
         /*end(groundtruth[i]*/ begin(groundtruth[i]) + k_nn,
-        counter{});
+        assignment_counter{});
   }
   return total_intersected;
 };

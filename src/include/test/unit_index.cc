@@ -1,5 +1,5 @@
 /**
- * @file   linalg_defs.h
+ * @file   unit_index.cc
  *
  * @section LICENSE
  *
@@ -27,40 +27,19 @@
  *
  * @section DESCRIPTION
  *
+ *
  */
 
-#ifndef TDB_LINALG_DEFS_H
-#define TDB_LINALG_DEFS_H
+#include <catch2/catch_all.hpp>
+#include "api.h"
+#include "index.h"
+#include "query_common.h"
 
-#include <string>
-#include <tiledb/tiledb>
-#include "mdspan/mdspan.hpp"
+TEST_CASE("index: test test", "[index]") {
+  REQUIRE(true);
+}
 
-extern bool global_verbose;
-extern bool global_debug;
-extern std::string global_region;
-
-namespace stdx {
-using namespace Kokkos;
-using namespace Kokkos::Experimental;
-}  // namespace stdx
-
-template <class LayoutPolicy>
-struct order_traits {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
-};
-
-template <>
-struct order_traits<stdx::layout_right> {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
-};
-
-template <>
-struct order_traits<stdx::layout_left> {
-  constexpr static auto order{TILEDB_COL_MAJOR};
-};
-
-template <class LayoutPolicy>
-constexpr auto order_v = order_traits<LayoutPolicy>::order;
-
-#endif  // TDB_LINALG_DEFS_H
+TEST_CASE("index: uri constructor", "[index]") {
+  tiledb::Context ctx;
+  auto index = Index(ctx, sift_base);
+}

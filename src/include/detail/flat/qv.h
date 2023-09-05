@@ -45,9 +45,11 @@
 #include <numeric>
 #include <vector>
 
-#include "algorithm.h"
 #include "concepts.h"
+
+#include "algorithm.h"
 #include "linalg.h"
+#include "old_concepts.h"
 #include "scoring.h"
 #include "utils/fixed_min_heap.h"
 #include "utils/timer.h"
@@ -71,18 +73,18 @@ namespace detail::flat {
  * @return A matrix of size k x #queries containing the top k results for each
  * query.
  */
-template <class DB, class Q>
+template <feature_vector_array DB, query_vector_array Q>
 [[deprecated]] auto qv_query_heap_0(
-    DB& db, const Q& q, int k_nn, unsigned int nthreads) {
+    const DB& db, const Q& q, int k_nn, unsigned int nthreads) {
   scoped_timer _{tdb_func__};
 
-  ColMajorMatrix<size_t> top_k(k_nn, size(q));
+  ColMajorMatrix<size_t> top_k(k_nn, num_vectors(q));
 
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
   stdx::range_for_each(
       std::move(par), q, [&](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
-        size_t size_q = size(q);
-        size_t size_db = size(db);
+        size_t size_q = num_vectors(q);
+        size_t size_db = num_vectors(db);
 
         // @todo can we do this more efficiently?
         Vector<float> scores(size_db);
@@ -113,39 +115,21 @@ template <class DB, class Q>
  * @return A matrix of size k x #queries containing the top k results for each
  * query.
  */
-template <class T, class DB, class Q, class Index>
-auto qv_query_heap(
-    T,
-    DB& db,
-    Q& q,
-    const std::vector<Index>& ids,
-    int k_nn,
-    unsigned nthreads);
-
-template <class DB, class Q>
-auto qv_query_heap(DB& db, Q& q, int k_nn, unsigned nthreads) {
-  return qv_query_heap(
-      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
-}
-
-template <class DB, class Q, class Index>
-auto qv_query_heap(
-    DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
-  return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads);
-}
 
 // @todo Add to out of core
-template <class T, class DB, class Q, class Index>
+template <class T, feature_vector_array DB, feature_vector_array Q, class Index>
 auto qv_query_heap(
     T,
     DB& db,
-    Q& query,
+    const Q& query,
     const std::vector<Index>& ids,
     int k_nn,
     unsigned nthreads) {
   scoped_timer _{tdb_func__};
+  load(db);
 
-  auto top_k = ColMajorMatrix<size_t>(k_nn, query.num_cols());
+  using id_type = Index;
+  auto top_k = ColMajorMatrix<id_type>(k_nn, query.num_cols());
   auto top_k_scores = ColMajorMatrix<float>(k_nn, query.num_cols());
 
   // Have to do explicit asynchronous threading here, as the current parallel
@@ -159,7 +143,7 @@ auto qv_query_heap(
       std::move(par),
       query,
       [&, size_db](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
-        fixed_min_pair_heap<float, size_t> min_scores(k_nn);
+        fixed_min_pair_heap<float, id_type> min_scores(k_nn);
 
         for (size_t i = 0; i < size_db; ++i) {
           auto score = L2(q_vec, db[i]);
@@ -178,6 +162,22 @@ auto qv_query_heap(
   return std::make_tuple(std::move(top_k_scores), std::move(top_k));
 }
 
+template <feature_vector_array DB, feature_vector_array Q>
+auto qv_query_heap(DB& db, const Q& q, int k_nn, unsigned nthreads) {
+  return qv_query_heap(
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);  /// ????
+}
+
+template <feature_vector_array DB, feature_vector_array Q, class Index>
+auto qv_query_heap(
+    DB& db,
+    const Q& q,
+    const std::vector<Index>& ids,
+    int k_nn,
+    unsigned nthreads) {
+  return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads);
+}
+
 /**
  * This algorithm is similar to `qv_query_heap`, but it tiles the query loop
  * and the database loop (2X2). This is done to improve cache locality.
@@ -190,38 +190,18 @@ auto qv_query_heap(
  * @return A matrix of size k x #queries containing the top k results for each
  * query.
  */
-template <class T, class DB, class Q, class Index>
+template <class T, feature_vector_array DB, feature_vector_array Q, class Index>
 auto qv_query_heap_tiled(
     T,
     DB& db,
-    Q& q,
-    const std::vector<Index>& ids,
-    int k_nn,
-    unsigned nthreads);
-
-template <class DB, class Q>
-auto qv_query_heap_tiled(DB& db, Q& q, int k_nn, unsigned nthreads) {
-  return qv_query_heap_tiled(
-      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
-}
-
-template <class DB, class Q, class Index>
-auto qv_query_heap_tiled(
-    DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
-  return qv_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads);
-}
-
-template <class T, class DB, class Q, class Index>
-auto qv_query_heap_tiled(
-    T,
-    DB& db,
-    Q& query,
+    const Q& query,
     [[maybe_unused]] const std::vector<Index>& ids,
     int k_nn,
     unsigned nthreads) {
-  if constexpr (is_loadable_v<decltype(db)>) {
-    db.load();
-  }
+  load(db);
+
+  debug_slice(db);
+  debug_slice(query);
 
   scoped_timer _{tdb_func__};
 
@@ -230,14 +210,15 @@ auto qv_query_heap_tiled(
   // yet have iterators.
   // @todo Implement iterator interface to `Matrix` class
   size_t size_db = db.num_cols();
-  size_t container_size = size(query);
+  size_t container_size = num_vectors(query);
   size_t block_size = (container_size + nthreads - 1) / nthreads;
 
   std::vector<std::future<void>> futs;
   futs.reserve(nthreads);
 
-  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-      size(query), fixed_min_pair_heap<float, size_t>(k_nn));
+  using id_type = Index;
+  auto min_scores = std::vector<fixed_min_pair_heap<float, id_type>>(
+      num_vectors(query), fixed_min_pair_heap<float, id_type>(k_nn));
 
   // @todo: Use range::for_each
   for (size_t n = 0; n < nthreads; ++n) {
@@ -260,7 +241,8 @@ auto qv_query_heap_tiled(
               auto q_vec_0 = query[j0];
               auto q_vec_1 = query[j1];
 
-              auto kstop = std::min<size_t>(size(db), 2 * (size(db) / 2));
+              auto kstop =
+                  std::min<size_t>(num_vectors(db), 2 * (num_vectors(db) / 2));
 
               for (size_t kp = 0; kp < kstop; kp += 2) {
                 auto score_00 = L2(q_vec_0, db[kp + 0]);
@@ -286,7 +268,7 @@ auto qv_query_heap_tiled(
               /*
                * Cleanup the last iteration(s) of k
                */
-              for (size_t kp = kstop; kp < size(db); ++kp) {
+              for (size_t kp = kstop; kp < num_vectors(db); ++kp) {
                 auto score_00 = L2(q_vec_0, db[kp + 0]);
                 auto score_10 = L2(q_vec_1, db[kp + 0]);
 
@@ -310,7 +292,8 @@ auto qv_query_heap_tiled(
               auto j0 = j + 0;
               auto q_vec_0 = query[j0];
 
-              auto kstop = std::min<size_t>(size(db), 2 * (size(db) / 2));
+              auto kstop =
+                  std::min<size_t>(num_vectors(db), 2 * (num_vectors(db) / 2));
               for (size_t kp = 0; kp < kstop; kp += 2) {
                 auto score_00 = L2(q_vec_0, db[kp + 0]);
                 auto score_01 = L2(q_vec_0, db[kp + 1]);
@@ -326,7 +309,7 @@ auto qv_query_heap_tiled(
                       always_false<T>, "T must be with_ids or without_ids");
                 }
               }
-              for (size_t kp = kstop; kp < size(db); ++kp) {
+              for (size_t kp = kstop; kp < num_vectors(db); ++kp) {
                 auto score_00 = L2(q_vec_0, db[kp + 0]);
                 if constexpr (std::is_same_v<T, with_ids>) {
                   min_scores[j0].insert(score_00, ids[kp + 0]);
@@ -351,6 +334,22 @@ auto qv_query_heap_tiled(
   return top_k;
 }
 
+template <feature_vector_array DB, feature_vector_array Q>
+auto qv_query_heap_tiled(DB& db, const Q& q, int k_nn, unsigned nthreads) {
+  return qv_query_heap_tiled(
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);  // ????
+}
+
+template <feature_vector_array DB, feature_vector_array Q, class Index>
+auto qv_query_heap_tiled(
+    DB& db,
+    const Q& q,
+    const std::vector<Index>& ids,
+    int k_nn,
+    unsigned nthreads) {
+  return qv_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads);
+}
+
 /**
  * @brief Find the single nearest neighbor of each query vector in the database.
  * This is essentially qv_query_heap, specialized for k = 1.
@@ -361,11 +360,11 @@ auto qv_query_heap_tiled(
  * @param nthreads
  * @return
  */
-template <class DB, class Q>
+template <feature_vector_array DB, feature_vector_array Q>
 auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
   scoped_timer _{tdb_func__};
 
-  auto size_db = size(db);
+  auto size_db = num_vectors(db);
 
   // Just need a single vector
   std::vector<size_t> top_k(q.num_cols());
