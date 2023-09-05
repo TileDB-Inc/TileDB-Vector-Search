@@ -571,10 +571,10 @@ class Index {
 
       auto dtype = vectors.datatype();
 
-      // @note This appears to work with default -- aka row major -- orientation
+      // @note We need to maintain same layout -> or swap extents
       switch (dtype) {
         case TILEDB_FLOAT32: {
-          auto qspan = MatrixView{
+          auto qspan = MatrixView<float, stdx::layout_left>{
               (float*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
@@ -587,8 +587,8 @@ class Index {
           return {std::move(x), std::move(y)};
         }
         case TILEDB_UINT8: {
-          auto qspan = MatrixView{
-              (float*)vectors.data(),
+          auto qspan = MatrixView<uint8_t, stdx::layout_left>{
+              (uint8_t*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
           auto [s, t] = impl_index_.query(qspan, k_nn);
@@ -656,22 +656,22 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
     switch(b.datatype()) {
       case TILEDB_INT32: {
         auto bview =
-            MatrixView{(int32_t*)b.data(), extents(b)[0], extents(b)[1]};
+            MatrixView<int32_t, stdx::layout_left>{(int32_t*)b.data(), extents(b)[0], extents(b)[1]};
         return validate_top_k(aview, bview);
       }
       case TILEDB_UINT32: {
         auto bview =
-            MatrixView{(uint32_t*)b.data(), extents(b)[0], extents(b)[1]};
+            MatrixView<uint32_t, stdx::layout_left>{(uint32_t*)b.data(), extents(b)[0], extents(b)[1]};
         return validate_top_k(aview, bview);
       }
       case TILEDB_INT64: {
         auto bview =
-            MatrixView{(int64_t*)b.data(), extents(b)[0], extents(b)[1]};
+            MatrixView<int64_t, stdx::layout_left>{(int64_t*)b.data(), extents(b)[0], extents(b)[1]};
         return validate_top_k(aview, bview);
       }
       case TILEDB_UINT64: {
         auto bview =
-            MatrixView{(uint64_t*)b.data(), extents(b)[0], extents(b)[1]};
+            MatrixView<uint64_t, stdx::layout_left>{(uint64_t*)b.data(), extents(b)[0], extents(b)[1]};
         return validate_top_k(aview, bview);
       }
       default:
@@ -682,22 +682,22 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
   switch(a.datatype()) {
     case TILEDB_INT32: {
       auto aview =
-          MatrixView{(int32_t*)a.data(), extents(a)[0], extents(a)[1]};
+          MatrixView<int32_t, stdx::layout_left>{(int32_t*)a.data(), extents(a)[0], extents(a)[1]};
       return proc_b(aview);
     }
     case TILEDB_UINT32: {
       auto aview =
-          MatrixView{(uint32_t*)a.data(), extents(a)[0], extents(a)[1]};
+          MatrixView<uint32_t, stdx::layout_left>{(uint32_t*)a.data(), extents(a)[0], extents(a)[1]};
       return proc_b(aview);
     }
     case TILEDB_INT64: {
       auto aview =
-          MatrixView{(int64_t*)a.data(), extents(a)[0], extents(a)[1]};
+          MatrixView<int64_t, stdx::layout_left>{(int64_t*)a.data(), extents(a)[0], extents(a)[1]};
       return proc_b(aview);
     }
     case TILEDB_UINT64: {
       auto aview =
-          MatrixView{(uint64_t*)a.data(), extents(a)[0], extents(a)[1]};
+          MatrixView<uint64_t, stdx::layout_left>{(uint64_t*)a.data(), extents(a)[0], extents(a)[1]};
       return proc_b(aview);
     }
     default:

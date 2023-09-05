@@ -131,7 +131,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   // private:
   std::unique_ptr<T[]> storage_;
 
- protected:
+ public:
   // Needed because of deferred construction in derived classes
   Matrix() noexcept = default;
 

@@ -55,7 +55,6 @@
  * creates them by reading from TileDB.
  */
 
-
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   using Base = Matrix<T, LayoutPolicy, I>;
@@ -117,9 +116,10 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 #if 1
   tdbBlockedMatrix(tdbBlockedMatrix&&) = default;
 #else
-  tdbBlockedMatrix(tdbBlockedMatrix&& rhs) :
-  ctx_{std::move(rhs.ctx_)}, schema_{std::move(rhs.schema_)}
-  { //: Base(std::forward<tdbBlockedMatrix>(rhs)) {
+  tdbBlockedMatrix(tdbBlockedMatrix&& rhs)
+      : ctx_{std::move(rhs.ctx_)}
+      , schema_{std::move(
+            rhs.schema_)} {  //: Base(std::forward<tdbBlockedMatrix>(rhs)) {
     *this = std::move(rhs);
   }
 #endif
@@ -132,7 +132,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param uri URI of the TileDB array to read.
    */
   tdbBlockedMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrix(ctx, uri, 0) {
   }
 
@@ -149,12 +149,11 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       const tiledb::Context& ctx,
       const std::string& uri,
       size_t upper_bound)  // noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : ctx_{ctx}
       , uri_{uri}
       , array_{std::make_unique<tiledb::Array>(ctx, uri, TILEDB_READ)}
       , schema_{array_->schema()} {
-
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + " " + uri};
 
@@ -203,6 +202,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   // @todo Allow specification of how many columns to advance by
   bool load() {
+
     scoped_timer _{tdb_func__ + " " + uri_};
 
     const size_t attr_idx{0};
@@ -397,7 +397,7 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
 
  public:
   tdbPreLoadMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(ctx, uri, 0) {
     Base::load();
   }

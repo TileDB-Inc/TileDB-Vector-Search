@@ -40,7 +40,7 @@
 #include "test_utils.h"
 #include "utils/utils.h"
 
-bool global_debug = true;
+bool global_debug = false;
 
 TEST_CASE("api: test test", "[api]") {
   REQUIRE(true);
@@ -246,7 +246,14 @@ TEST_CASE("api: Matrix constructors and destructors", "[api]") {
   auto d = FeatureVectorArray(std::move(c));
 }
 
-TEMPLATE_TEST_CASE("api: FeatureVector datatype", "[api]", int, uint8_t, uint32_t, float, uint64_t) {
+TEMPLATE_TEST_CASE(
+    "api: FeatureVector datatype",
+    "[api]",
+    int,
+    uint8_t,
+    uint32_t,
+    float,
+    uint64_t) {
   auto t = tiledb::impl::type_to_tiledb<TestType>::tiledb_type;
 
   auto a = std::vector<TestType>{1, 2, 3};
@@ -267,7 +274,14 @@ TEMPLATE_TEST_CASE("api: FeatureVector datatype", "[api]", int, uint8_t, uint32_
   CHECK(g.datatype() == t);
 }
 
-TEMPLATE_TEST_CASE("api: FeatureVectorArray datatype", "[api]", int, uint8_t, uint32_t, float, uint64_t) {
+TEMPLATE_TEST_CASE(
+    "api: FeatureVectorArray datatype",
+    "[api]",
+    int,
+    uint8_t,
+    uint32_t,
+    float,
+    uint64_t) {
   auto t = tiledb::impl::type_to_tiledb<TestType>::tiledb_type;
 
   auto a = ColMajorMatrix<TestType>{3, 17};
@@ -289,7 +303,6 @@ TEMPLATE_TEST_CASE("api: FeatureVectorArray datatype", "[api]", int, uint8_t, ui
   CHECK(g.datatype() == t);
 }
 
-
 TEST_CASE("api: tdbMatrix constructors and destructors", "[api]") {
   tiledb::Context ctx;
   auto c = ColMajorMatrix<int>(3, 7);
@@ -306,14 +319,20 @@ TEST_CASE("api: tdbMatrix constructors and destructors", "[api]") {
   auto e = FeatureVectorArray(std::move(d));
 }
 
-
-TEMPLATE_TEST_CASE("api: tdb FeatureVectorArray datatype", "[api]", int, uint8_t, uint32_t, float, uint64_t) {
+TEMPLATE_TEST_CASE(
+    "api: tdb FeatureVectorArray datatype",
+    "[api]",
+    int,
+    uint8_t,
+    uint32_t,
+    float,
+    uint64_t) {
   auto t = tiledb::impl::type_to_tiledb<TestType>::tiledb_type;
 
   tiledb::Context ctx;
   auto cc = ColMajorMatrix<TestType>(3, 7);
 
-  auto uri = std::string {"/tmp/a"};
+  auto uri = std::string{"/tmp/a"};
   std::filesystem::remove_all(uri);
   write_matrix(ctx, cc, uri);
 
@@ -341,52 +360,71 @@ TEST_CASE("api: types", "[types]") {
   CHECK(tiledb::impl::type_to_tiledb<int>::name == std::string("INT32"));
   CHECK(tiledb::impl::type_to_tiledb<unsigned>::name == std::string("UINT32"));
   CHECK(tiledb::impl::type_to_tiledb<long>::name == std::string("INT64"));
-  CHECK(tiledb::impl::type_to_tiledb<unsigned long>::name == std::string("UINT64"));
+  CHECK(
+      tiledb::impl::type_to_tiledb<unsigned long>::name ==
+      std::string("UINT64"));
   CHECK(tiledb::impl::type_to_tiledb<int64_t>::name == std::string("INT64"));
   CHECK(tiledb::impl::type_to_tiledb<uint64_t>::name == std::string("UINT64"));
   CHECK(tiledb::impl::type_to_tiledb<size_t>::name == std::string("UINT64"));
 }
 
 template <_load::_member_load T>
-void _yack (T&& t) {
+void _yack(T&& t) {
   auto x = load(t);
 }
 
 void yack() {
   tiledb::Context ctx;
-//  _yack(tdbColMajorMatrix<float>{ctx, "17"});
+  //  _yack(tdbColMajorMatrix<float>{ctx, "17"});
 
   auto f = FeatureVectorArray(tdbColMajorMatrix<float>{ctx, "17"});
   //_yack(f);
 
-//  auto k = tdbColMajorMatrix<float>{ctx, "17"};
-//  _yack(k);
+  //  auto k = tdbColMajorMatrix<float>{ctx, "17"};
+  //  _yack(k);
 
-//    auto g = FeatureVectorArray(k);
-//    _yack(g);
+  //    auto g = FeatureVectorArray(k);
+  //    _yack(g);
 
-//    _yack(std::move(g));
+  //    _yack(std::move(g));
 }
 
 TEST_CASE("api: uri query", "[api][index]") {
   tiledb::Context ctx;
   size_t k_nn = 10;
   size_t nthreads = 5;
-  size_t num_queries = 10;
+  size_t num_queries = 20;
 
-  {
-    auto a = Index(ctx, db_uri);
-
-    CHECK(a.datatype() == TILEDB_FLOAT32);
-    CHECK(dimension(a) == 128);
-    CHECK(num_vectors(a) == 1'000'000);
-
+  SECTION("simple check") {
     auto z = FeatureVectorArray(ctx, db_uri);
     auto nn = dimension(z);
     auto nnn = num_vectors(z);
     CHECK(dimension(z) == 128);
     CHECK(num_vectors(z) == 1'000'000);
+  }
 
+  SECTION("tdbMatrix") {
+    auto ck = tdbColMajorMatrix<float>(ctx, db_uri);
+
+    auto qk = tdbColMajorMatrix<float>(ctx, query_uri, num_queries);
+    load(qk);
+
+    auto [ck_scores, ck_top_k] =
+        detail::flat::qv_query_heap(ck, qk, k_nn, nthreads);
+
+    auto gk = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
+    load(gk);
+
+    auto ok = validate_top_k(ck_top_k, gk);
+    CHECK(ok);
+  }
+
+  SECTION("FeatureVectorArray") {
+    auto a = Index(ctx, db_uri);
+
+    CHECK(a.datatype() == TILEDB_FLOAT32);
+    CHECK(dimension(a) == 128);
+    CHECK(num_vectors(a) == 1'000'000);
 
     auto aq = QueryVectorArray(ctx, query_uri, num_queries);
     load(aq);
@@ -394,30 +432,21 @@ TEST_CASE("api: uri query", "[api][index]") {
     auto [aq_scores, aq_top_k] = a.query(aq, k_nn);
     auto& aa = aq_top_k;  // to be able to see in debugger
 
+    auto aa_nv = num_vectors(aa);
+    auto aa_d = dimension(aa);
+    CHECK(aa_nv == num_queries);
+    CHECK(aa_d == k_nn);
+
     auto hk = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
     load(hk);
-    CHECK(validate_top_k(aq_top_k, FeatureVectorArray{std::move(hk)}));
+
+    auto ok = validate_top_k(aq_top_k, FeatureVectorArray{std::move(hk)});
+    CHECK(ok);
   }
 
 
-  auto ag = QueryVectorArray(ctx, groundtruth_uri);
-  load(ag);
-
-  auto ck = tdbColMajorMatrix<float>(ctx, db_uri);
-  load(ck);
-  auto qk = tdbColMajorMatrix<float>(ctx, query_uri, num_queries);
-  load(qk);
-  auto gk = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
-  load(gk);
-
-  auto [ck_scores, ck_top_k] =
-      detail::flat::qv_query_heap(ck, qk, k_nn, nthreads);
-
-  CHECK(validate_top_k(ck_top_k, gk));
   // auto z = FeatureVectorArray{gk};
   // auto x = FeatureVectorArray{std::move(gk)};
-
-
 
   auto b = Index(ctx, bigann1M_base_uri);
   CHECK(b.datatype() == TILEDB_UINT8);

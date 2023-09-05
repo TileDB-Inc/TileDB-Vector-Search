@@ -120,12 +120,13 @@ template <feature_vector_array DB, query_vector_array Q>
 template <class T, feature_vector_array DB, feature_vector_array Q, class Index>
 auto qv_query_heap(
     T,
-    const DB& db,
+    DB& db,
     const Q& query,
     const std::vector<Index>& ids,
     int k_nn,
     unsigned nthreads) {
   scoped_timer _{tdb_func__};
+  load(db);
 
   using id_type = Index;
   auto top_k = ColMajorMatrix<id_type>(k_nn, query.num_cols());
@@ -163,14 +164,14 @@ auto qv_query_heap(
 
 
 template <feature_vector_array DB, feature_vector_array Q>
-auto qv_query_heap(const DB& db, const Q& q, int k_nn, unsigned nthreads) {
+auto qv_query_heap(DB& db, const Q& q, int k_nn, unsigned nthreads) {
   return qv_query_heap(
       without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);  /// ????
 }
 
 template <feature_vector_array DB, feature_vector_array Q, class Index>
 auto qv_query_heap(
-    const DB& db, const Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
+    DB& db, const Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
   return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads);
 }
 
