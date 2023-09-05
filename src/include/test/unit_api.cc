@@ -444,7 +444,6 @@ TEST_CASE("api: uri query", "[api][index]") {
     CHECK(ok);
   }
 
-
   // auto z = FeatureVectorArray{gk};
   // auto x = FeatureVectorArray{std::move(gk)};
 

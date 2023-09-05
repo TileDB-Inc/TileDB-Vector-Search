@@ -32,9 +32,9 @@
 #include <algorithm>
 #include <catch2/catch_all.hpp>
 #include <vector>
+#include "cpos.h"
 #include "detail/linalg/matrix.h"
 #include "mdspan/mdspan.hpp"
-#include "cpos.h"
 
 bool global_debug = false;
 
@@ -156,17 +156,21 @@ TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(mda(0, 0) == 0);
   CHECK(mda(0, 1) == 1);
 
-  auto a = Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_right>(t, major, minor);
+  auto a =
+      Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_right>(
+          t, major, minor);
   CHECK(a.extent(0) == major);
   CHECK(a.extent(1) == minor);
   CHECK(a(0, 0) == 0);
   CHECK(a(0, 1) == 1);
   CHECK(a(1, 0) == 13);
 
-  auto b = Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_left>(t, major, minor);
+  auto b =
+      Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_left>(
+          t, major, minor);
   CHECK(b.extent(0) == major);
   CHECK(b.extent(1) == minor);
-  CHECK(b(0, 0) == 0); // M(0, 0)
+  CHECK(b(0, 0) == 0);  // M(0, 0)
   CHECK(b(1, 0) == 1);  // M(1,0)
   CHECK(b(0, 1) == 7);  // M(1,0)
 
@@ -190,19 +194,24 @@ TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
   auto c = RowMajorMatrix<TestType>(major, minor);
   std::copy(v.begin(), v.end(), c.data());
   CHECK(c(0, 0) == 0);
-  CHECK(c(1, 0) == 13);  // 0 + 1 * 13 => j + i * extents(1) => minor = extents(1)
-  CHECK(c(0, 1) == 1);   // 1 + 0 * 13
+  CHECK(
+      c(1, 0) == 13);  // 0 + 1 * 13 => j + i * extents(1) => minor = extents(1)
+  CHECK(c(0, 1) == 1);  // 1 + 0 * 13
   CHECK(c.num_rows() == major);
   CHECK(c.num_cols() == minor);
   CHECK(num_vectors(c) == major);
   CHECK(dimension(c) == minor);
 
-  auto mc = Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_right>(t, major, minor);
+  auto mc =
+      Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_right>(
+          t, major, minor);
   CHECK(mc.extent(0) == major);
   CHECK(mc.extent(1) == minor);
   CHECK(mc(0, 0) == 0);
-  CHECK(mc(0, 1) == 1); // j + extents(1) * i => j + minor * i => j + num_cols * i
-  CHECK(mc(1, 0) == 13); // 0 + 1 * 13
+  CHECK(
+      mc(0, 1) ==
+      1);  // j + extents(1) * i => j + minor * i => j + num_cols * i
+  CHECK(mc(1, 0) == 13);  // 0 + 1 * 13
   CHECK(num_vectors(mc) == major);
   CHECK(dimension(mc) == minor);
 
@@ -211,8 +220,8 @@ TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(x[1] == 14);
   CHECK(size(x) == minor);
 
-  auto cv = MatrixView
-      ((TestType*)mc.data_handle(), (size_t)mc.extent(0), (size_t)mc.extent(1));
+  auto cv = MatrixView(
+      (TestType*)mc.data_handle(), (size_t)mc.extent(0), (size_t)mc.extent(1));
   CHECK(cv[0][0] == 0);
   CHECK(cv[1][0] == 13);
   CHECK(cv[1][1] == 14);
@@ -241,10 +250,14 @@ TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(dimension(cv) == minor);
 
   // Column major
-  auto md = Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_left>(t, major, minor);
+  auto md =
+      Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_left>(
+          t, major, minor);
   CHECK(md.extent(0) == major);
   CHECK(md.extent(1) == minor);
-  CHECK(md(0, 0) == 0);  // i + major * j => i + num_rows * j => i + extents(0) * j
+  CHECK(
+      md(0, 0) ==
+      0);  // i + major * j => i + num_rows * j => i + extents(0) * j
   CHECK(md(0, 1) == 7);
   CHECK(md(1, 0) == 1);
   CHECK(d.num_rows() == major);
@@ -252,14 +265,12 @@ TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(num_vectors(cv) == major);
   CHECK(dimension(cv) == minor);
 
-
   auto y = d[1];
   CHECK(y[0] == 7);  // == md(0, i)  = data() + i * major
   CHECK(y[1] == 8);
 
-
-  auto dv = MatrixView<TestType, Kokkos::layout_left, size_t>
-      ((TestType*)md.data_handle(),  (size_t)md.extent(0), (size_t)md.extent(1));
+  auto dv = MatrixView<TestType, Kokkos::layout_left, size_t>(
+      (TestType*)md.data_handle(), (size_t)md.extent(0), (size_t)md.extent(1));
   CHECK(dv[0][0] == 0);
   CHECK(dv[1][0] == 7);
   CHECK(dv[1][1] == 8);

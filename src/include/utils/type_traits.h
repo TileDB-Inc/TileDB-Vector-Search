@@ -12,5 +12,4 @@ struct type_to_tiledb<long> {
   static constexpr const char* name = "INT64";
 };
 
-
-} // namespace tiledb::impl
+}  // namespace tiledb::impl

@@ -95,7 +95,6 @@ auto vq_query_heap(
 
   // @todo Can we do blocking in the parallel for_each somehow?
 
-
   // @note load(db) will always return false for a matrix
   load(db);
   do {
@@ -119,7 +118,7 @@ auto vq_query_heap(
           }
         });
     _i.stop();
-   } while (load(db));
+  } while (load(db));
 
   consolidate_scores(scores);
   auto top_k = get_top_k_with_scores(scores, k_nn);

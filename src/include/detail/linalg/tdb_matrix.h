@@ -132,7 +132,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param uri URI of the TileDB array to read.
    */
   tdbBlockedMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrix(ctx, uri, 0) {
   }
 
@@ -149,7 +149,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       const tiledb::Context& ctx,
       const std::string& uri,
       size_t upper_bound)  // noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : ctx_{ctx}
       , uri_{uri}
       , array_{std::make_unique<tiledb::Array>(ctx, uri, TILEDB_READ)}
@@ -202,7 +202,6 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   // @todo Allow specification of how many columns to advance by
   bool load() {
-
     scoped_timer _{tdb_func__ + " " + uri_};
 
     const size_t attr_idx{0};
@@ -397,7 +396,7 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
 
  public:
   tdbPreLoadMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(ctx, uri, 0) {
     Base::load();
   }

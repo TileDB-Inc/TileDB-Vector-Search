@@ -162,7 +162,6 @@ auto qv_query_heap(
   return std::make_tuple(std::move(top_k_scores), std::move(top_k));
 }
 
-
 template <feature_vector_array DB, feature_vector_array Q>
 auto qv_query_heap(DB& db, const Q& q, int k_nn, unsigned nthreads) {
   return qv_query_heap(
@@ -171,7 +170,11 @@ auto qv_query_heap(DB& db, const Q& q, int k_nn, unsigned nthreads) {
 
 template <feature_vector_array DB, feature_vector_array Q, class Index>
 auto qv_query_heap(
-    DB& db, const Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
+    DB& db,
+    const Q& q,
+    const std::vector<Index>& ids,
+    int k_nn,
+    unsigned nthreads) {
   return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads);
 }
 
@@ -331,19 +334,21 @@ auto qv_query_heap_tiled(
   return top_k;
 }
 
-
 template <feature_vector_array DB, feature_vector_array Q>
 auto qv_query_heap_tiled(DB& db, const Q& q, int k_nn, unsigned nthreads) {
   return qv_query_heap_tiled(
-      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads); // ????
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);  // ????
 }
 
 template <feature_vector_array DB, feature_vector_array Q, class Index>
 auto qv_query_heap_tiled(
-        DB& db, const Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
+    DB& db,
+    const Q& q,
+    const std::vector<Index>& ids,
+    int k_nn,
+    unsigned nthreads) {
   return qv_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads);
 }
-
 
 /**
  * @brief Find the single nearest neighbor of each query vector in the database.

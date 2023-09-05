@@ -280,18 +280,15 @@ struct _fn {
   }
 
   template <class T>
-  requires(!_member_load<T>)
-  auto constexpr operator()(T&& t) const noexcept {
-    //return t.load();
+  requires(!_member_load<T>) auto constexpr operator()(T&& t) const noexcept {
+    // return t.load();
     return false;
   }
-
 };
 }  // namespace _load
 inline namespace _cpo {
 inline constexpr auto load = _load::_fn{};
 }  // namespace _cpo
-
 
 // ----------------------------------------------------------------------------
 // col_offset CPO
@@ -300,7 +297,7 @@ namespace _col_offset {
 
 template <class T>
 concept _member_col_offset = requires(T t) {
-  {t.col_offset()} -> semi_integral;
+  { t.col_offset() } -> semi_integral;
 };
 
 struct _fn {
@@ -310,16 +307,15 @@ struct _fn {
   }
 
   template <class T>
-  requires(!_member_col_offset<T>)
-  auto constexpr operator()(T&& t) const noexcept {
+  requires(!_member_col_offset<T>) auto constexpr operator()(
+      T&& t) const noexcept {
     return 0;
   }
 };
-}  // namespace _col_offsets
+}  // namespace _col_offset
 inline namespace _cpo {
 inline constexpr auto col_offset = _col_offset::_fn{};
 }  // namespace _cpo
-
 
 // ----------------------------------------------------------------------------
 // num_partitions CPO

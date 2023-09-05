@@ -52,8 +52,6 @@
 #include <memory>
 #include <vector>
 
-#include "utils/type_traits.h"
-
 #include "concepts.h"
 #include "cpos.h"
 #include "detail/linalg/tdb_vector.h"
@@ -100,8 +98,8 @@ class FeatureVector {
   template <feature_vector T>
   explicit FeatureVector(T&& vec)
       : vector_(std::make_unique<vector_impl<T>>(std::forward<T>(vec))) {
-    datatype_ = tiledb::impl::type_to_tiledb<typename std::remove_cvref_t<T>::value_type>::tiledb_type;
-
+    datatype_ = tiledb::impl::type_to_tiledb<
+        typename std::remove_cvref_t<T>::value_type>::tiledb_type;
   }
 
   /**
@@ -209,7 +207,6 @@ class FeatureVector {
 using QueryVector = FeatureVector;
 using IdVector = FeatureVector;
 
-
 //------------------------------------------------------------------------------
 // FeatureVectorArray
 //------------------------------------------------------------------------------
@@ -226,12 +223,16 @@ class FeatureVectorArray {
 
   template <feature_vector_array T>
   explicit FeatureVectorArray(T&& obj)
-      : vector_array(std::make_unique<vector_array_impl<T>>(std::forward<T>(obj))) {
-    datatype_ = tiledb::impl::type_to_tiledb<typename std::remove_cvref_t<T>::value_type>::tiledb_type;
-
+      : vector_array(
+            std::make_unique<vector_array_impl<T>>(std::forward<T>(obj))) {
+    datatype_ = tiledb::impl::type_to_tiledb<
+        typename std::remove_cvref_t<T>::value_type>::tiledb_type;
   }
 
-  FeatureVectorArray(const tiledb::Context& ctx, const std::string& uri, size_t num_vectors = 0) {
+  FeatureVectorArray(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t num_vectors = 0) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
     datatype_ = get_array_datatype(array);
     array.close();  // @todo create Matrix constructor that takes opened array
@@ -324,7 +325,8 @@ class FeatureVectorArray {
     explicit vector_array_impl(T&& t)
         : impl_vector_array(std::forward<T>(t)) {
     }
-    vector_array_impl(const tiledb::Context& ctx, const std::string& uri, size_t num_vectors)
+    vector_array_impl(
+        const tiledb::Context& ctx, const std::string& uri, size_t num_vectors)
         : impl_vector_array(ctx, uri, num_vectors) {
     }
     [[nodiscard]] void* data() const override {
@@ -509,7 +511,7 @@ class Index {
 
     virtual size_t dimension() const = 0;
 
-    virtual size_t ntotal() const  = 0;
+    virtual size_t ntotal() const = 0;
 
     virtual size_t num_vectors() const = 0;
   };
@@ -566,7 +568,6 @@ class Index {
      */
     [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
         const QueryVectorArray& vectors, size_t k_nn) const override {
-
       // @todo using index_type = size_t;
 
       auto dtype = vectors.datatype();
@@ -580,8 +581,8 @@ class Index {
               extents(vectors)[1]};  // @todo ??
           auto [s, t] = impl_index_.query(qspan, k_nn);
           debug_slice(t);
-          auto&ss = s;
-          auto&tt = t;
+          auto& ss = s;
+          auto& tt = t;
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -622,12 +623,11 @@ class Index {
       //      index_.remove(ids);
     }
 
-
     size_t dimension() const override {
       return _cpo::dimension(impl_index_);
     }
 
-     size_t ntotal() const override {
+    size_t ntotal() const override {
       return _cpo::num_vectors(impl_index_);
     }
 
@@ -648,30 +648,29 @@ class Index {
   std::unique_ptr<const index_base> index_;
 };
 
-
 bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
   // assert(a.datatype() == b.datatype());
 
   auto proc_b = [&b](auto& aview) {
-    switch(b.datatype()) {
+    switch (b.datatype()) {
       case TILEDB_INT32: {
-        auto bview =
-            MatrixView<int32_t, stdx::layout_left>{(int32_t*)b.data(), extents(b)[0], extents(b)[1]};
+        auto bview = MatrixView<int32_t, stdx::layout_left>{
+            (int32_t*)b.data(), extents(b)[0], extents(b)[1]};
         return validate_top_k(aview, bview);
       }
       case TILEDB_UINT32: {
-        auto bview =
-            MatrixView<uint32_t, stdx::layout_left>{(uint32_t*)b.data(), extents(b)[0], extents(b)[1]};
+        auto bview = MatrixView<uint32_t, stdx::layout_left>{
+            (uint32_t*)b.data(), extents(b)[0], extents(b)[1]};
         return validate_top_k(aview, bview);
       }
       case TILEDB_INT64: {
-        auto bview =
-            MatrixView<int64_t, stdx::layout_left>{(int64_t*)b.data(), extents(b)[0], extents(b)[1]};
+        auto bview = MatrixView<int64_t, stdx::layout_left>{
+            (int64_t*)b.data(), extents(b)[0], extents(b)[1]};
         return validate_top_k(aview, bview);
       }
       case TILEDB_UINT64: {
-        auto bview =
-            MatrixView<uint64_t, stdx::layout_left>{(uint64_t*)b.data(), extents(b)[0], extents(b)[1]};
+        auto bview = MatrixView<uint64_t, stdx::layout_left>{
+            (uint64_t*)b.data(), extents(b)[0], extents(b)[1]};
         return validate_top_k(aview, bview);
       }
       default:
@@ -679,25 +678,25 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
     }
   };
 
-  switch(a.datatype()) {
+  switch (a.datatype()) {
     case TILEDB_INT32: {
-      auto aview =
-          MatrixView<int32_t, stdx::layout_left>{(int32_t*)a.data(), extents(a)[0], extents(a)[1]};
+      auto aview = MatrixView<int32_t, stdx::layout_left>{
+          (int32_t*)a.data(), extents(a)[0], extents(a)[1]};
       return proc_b(aview);
     }
     case TILEDB_UINT32: {
-      auto aview =
-          MatrixView<uint32_t, stdx::layout_left>{(uint32_t*)a.data(), extents(a)[0], extents(a)[1]};
+      auto aview = MatrixView<uint32_t, stdx::layout_left>{
+          (uint32_t*)a.data(), extents(a)[0], extents(a)[1]};
       return proc_b(aview);
     }
     case TILEDB_INT64: {
-      auto aview =
-          MatrixView<int64_t, stdx::layout_left>{(int64_t*)a.data(), extents(a)[0], extents(a)[1]};
+      auto aview = MatrixView<int64_t, stdx::layout_left>{
+          (int64_t*)a.data(), extents(a)[0], extents(a)[1]};
       return proc_b(aview);
     }
     case TILEDB_UINT64: {
-      auto aview =
-          MatrixView<uint64_t, stdx::layout_left>{(uint64_t*)a.data(), extents(a)[0], extents(a)[1]};
+      auto aview = MatrixView<uint64_t, stdx::layout_left>{
+          (uint64_t*)a.data(), extents(a)[0], extents(a)[1]};
       return proc_b(aview);
     }
     default:

@@ -262,7 +262,8 @@ template <class Heap>
 inline auto get_top_k(std::vector<Heap>& scores, size_t k_nn) {
   auto num_queries = size(scores);
 
-  using id_type = typename std::tuple_element<1, typename Heap::value_type>::type;
+  using id_type =
+      typename std::tuple_element<1, typename Heap::value_type>::type;
   ColMajorMatrix<id_type> top_k(k_nn, num_queries);
 
   for (size_t j = 0; j < num_queries; ++j) {
@@ -313,7 +314,8 @@ inline auto get_top_k_with_scores(std::vector<Heap>& scores, size_t k_nn) {
 
   using score_type =
       typename std::tuple_element<0, typename Heap::value_type>::type;
-  using id_type = typename std::tuple_element<1, typename Heap::value_type>::type;
+  using id_type =
+      typename std::tuple_element<1, typename Heap::value_type>::type;
 
   ColMajorMatrix<id_type> top_k(k_nn, num_queries);
   ColMajorMatrix<score_type> top_scores(k_nn, num_queries);
