@@ -258,11 +258,12 @@ inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k) requires(
  * @return a Matrix of the top_k scores for each query.  Each column corresponds
  * to a query,
  */
-template <class Heap, class Index = size_t>
+template <class Heap>
 inline auto get_top_k(std::vector<Heap>& scores, size_t k_nn) {
   auto num_queries = size(scores);
 
-  ColMajorMatrix<Index> top_k(k_nn, num_queries);
+  using id_type = typename std::tuple_element<1, typename Heap::value_type>::type;
+  ColMajorMatrix<id_type> top_k(k_nn, num_queries);
 
   for (size_t j = 0; j < num_queries; ++j) {
     get_top_k_from_heap(scores[j], top_k[j]);
@@ -281,7 +282,7 @@ inline auto get_top_k(std::vector<Heap>& scores, size_t k_nn) {
  * @return Matrix of the top k scores for each query.  Each column corresponds
  * to a query.
  */
-template <class Heap, class Index = size_t>
+template <class Heap>
 inline auto get_top_k(std::vector<std::vector<Heap>>& scores, size_t k_nn) {
   return get_top_k(scores[0], k_nn);
 }
@@ -306,14 +307,15 @@ inline void get_top_k_with_scores_from_heap(
 }
 
 // Overload for one-d scores
-template <class Heap, class Index = size_t>
+template <class Heap>
 inline auto get_top_k_with_scores(std::vector<Heap>& scores, size_t k_nn) {
   auto num_queries = size(scores);
 
   using score_type =
       typename std::tuple_element<0, typename Heap::value_type>::type;
+  using id_type = typename std::tuple_element<1, typename Heap::value_type>::type;
 
-  ColMajorMatrix<Index> top_k(k_nn, num_queries);
+  ColMajorMatrix<id_type> top_k(k_nn, num_queries);
   ColMajorMatrix<score_type> top_scores(k_nn, num_queries);
 
   for (size_t j = 0; j < num_queries; ++j) {
@@ -323,7 +325,7 @@ inline auto get_top_k_with_scores(std::vector<Heap>& scores, size_t k_nn) {
 }
 
 // Overload for two-d scores
-template <class Heap, class Index = size_t>
+template <class Heap>
 inline auto get_top_k_with_scores(
     std::vector<std::vector<Heap>>& scores, size_t k_nn) {
   return get_top_k_with_scores(scores[0], k_nn);

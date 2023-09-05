@@ -52,19 +52,19 @@ using matrix_extents = stdx::dextents<I, 2>;
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class MatrixView : public stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy> {
-   using Base = stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy>;
+  using Base = stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy>;
   using Base::Base;
 
  public:
-
   using layout_policy = LayoutPolicy;
   using index_type = typename Base::index_type;
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
  public:
-
-  MatrixView(const Base& rhs) : Base(rhs){}
+  MatrixView(const Base& rhs)
+      : Base(rhs) {
+  }
 
   MatrixView(T* p, I r, I c)
       : Base{p, r, c} {
@@ -108,7 +108,6 @@ class MatrixView : public stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy> {
  * @todo Make Matrix into a range (?)
  */
 
-static int id = 0;
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
@@ -116,8 +115,6 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
 
   // So that the CPO for data() doesn't get confused
   // auto data_handle() = delete;
-
-  int id_{0};
 
  public:
   using layout_policy = LayoutPolicy;
@@ -139,6 +136,12 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   Matrix() noexcept = default;
 
  public:
+  Matrix(const Matrix&) = delete;
+  Matrix& operator=(const Matrix&) = delete;
+
+  Matrix(Matrix&&) = default;
+  Matrix& operator=(Matrix&& rhs) = default;
+  ~Matrix() = default;
 
   Matrix(
       size_type nrows,
@@ -153,20 +156,6 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
 #endif
   {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
-    id_ = id++;
-  }
-
-  Matrix(const Matrix&) = delete;
-  //Matrix(Matrix&&) = default;
-  Matrix(Matrix&& rhs) {
-    storage_ = std::move(rhs.storage_);
-    Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
-    id_ = id++;
-  }
-  int destructor_calls = 0;
-  ~Matrix() {
-    ++destructor_calls;
-    int b = destructor_calls;
   }
 
   Matrix(
@@ -178,7 +167,6 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       , num_cols_(ncols)
       , storage_{std::move(storage)} {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
-    id_ = id++;
   }
 
 #if 0
@@ -187,8 +175,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       , num_cols_{rhs.num_cols_}
       , storage_{std::move(rhs.storage_)} {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
-    id_ = id++;
-  }
+      }
 #endif
 
   /**
@@ -196,7 +183,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
    * The intializer list is assumed to be in row-major order.
    */
   Matrix(std::initializer_list<std::initializer_list<T>> list) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : num_rows_{list.size()}
       , num_cols_{list.begin()->size()}
 #ifdef __cpp_lib_smart_ptr_for_overwrite
@@ -209,7 +196,6 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     auto it = list.begin();
     for (size_type i = 0; i < num_rows_; ++i, ++it) {
       std::copy(it->begin(), it->end(), (*this)[i].begin());
-      id_ = id++;
     }
   }
 
@@ -218,7 +204,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
    * The initializer list is assumed to be in column-major order.
    */
   Matrix(std::initializer_list<std::initializer_list<T>> list) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : num_rows_{list.begin()->size()}
       , num_cols_{list.size()}
 #ifdef __cpp_lib_smart_ptr_for_overwrite
@@ -232,15 +218,6 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     for (size_type i = 0; i < num_cols_; ++i, ++it) {
       std::copy(it->begin(), it->end(), (*this)[i].begin());
     }
-    id_ = id++;
-  }
-
-  auto& operator=(Matrix&& rhs) noexcept {
-    num_rows_ = rhs.num_rows_;
-    num_cols_ = rhs.num_cols_;
-    storage_ = std::move(rhs.storage_);
-    Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
-    return *this;
   }
 
   auto data() {
@@ -304,7 +281,6 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   auto num_cols() const noexcept {
     return num_cols_;
   }
-
 };
 
 /**

@@ -60,7 +60,7 @@ template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   using Base = Matrix<T, LayoutPolicy, I>;
   using Base::Base;
-int id_ = 0;
+
  public:
   using value_type = typename Base::value_type;
   using index_type = typename Base::index_type;
@@ -114,8 +114,8 @@ int id_ = 0;
 
   tdbBlockedMatrix(const tdbBlockedMatrix&) = delete;
   tdbBlockedMatrix& operator=(tdbBlockedMatrix&&) = default;
-#if 0
-  tdbBlockedMatrix(const tdbBlockedMatrix&&) = default;
+#if 1
+  tdbBlockedMatrix(tdbBlockedMatrix&&) = default;
 #else
   tdbBlockedMatrix(tdbBlockedMatrix&& rhs) :
   ctx_{std::move(rhs.ctx_)}, schema_{std::move(rhs.schema_)}
@@ -134,7 +134,6 @@ int id_ = 0;
   tdbBlockedMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
       requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrix(ctx, uri, 0) {
-    id_ = id++;
   }
 
   /**
@@ -155,7 +154,6 @@ int id_ = 0;
       , uri_{uri}
       , array_{std::make_unique<tiledb::Array>(ctx, uri, TILEDB_READ)}
       , schema_{array_->schema()} {
-    id_ = id++;
 
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + " " + uri};
@@ -295,7 +293,6 @@ int id_ = 0;
       , uri_{uri}
       , array_{std::make_unique<tiledb::Array>(ctx, uri, TILEDB_READ)}
       , schema_{array_->schema()} {
-    id_ = id++;
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + uri};
 

@@ -144,7 +144,7 @@ void num_vectors(auto&) = delete;
 void num_vectors(const auto&) = delete;
 
 template <class T>
-concept _member_num_vectors = requires(T t) {
+concept _member_num_vectors = requires(T&& t) {
   {t.num_vectors()};
 };
 
@@ -265,10 +265,12 @@ inline constexpr auto extents = _extents::_fn{};
 // num_partitions CPO
 // ----------------------------------------------------------------------------
 namespace _load {
+void load(auto&) = delete;
+void load(auto&&) = delete;
 
 template <class T>
-concept _member_load = requires(T t) {
-  {t.load()} -> std::convertible_to<bool>;
+concept _member_load = requires(T&& t) {
+  { t.load() } -> std::convertible_to<bool>;
 };
 
 struct _fn {
@@ -280,8 +282,10 @@ struct _fn {
   template <class T>
   requires(!_member_load<T>)
   auto constexpr operator()(T&& t) const noexcept {
+    //return t.load();
     return false;
   }
+
 };
 }  // namespace _load
 inline namespace _cpo {

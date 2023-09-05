@@ -52,6 +52,8 @@
 #include <memory>
 #include <vector>
 
+#include "utils/type_traits.h"
+
 #include "concepts.h"
 #include "cpos.h"
 #include "detail/linalg/tdb_vector.h"
@@ -98,6 +100,8 @@ class FeatureVector {
   template <feature_vector T>
   explicit FeatureVector(T&& vec)
       : vector_(std::make_unique<vector_impl<T>>(std::forward<T>(vec))) {
+    datatype_ = tiledb::impl::type_to_tiledb<typename std::remove_cvref_t<T>::value_type>::tiledb_type;
+
   }
 
   /**
@@ -176,7 +180,7 @@ class FeatureVector {
   template <typename T>
   struct vector_impl : vector_base {
     explicit vector_impl(T&& t)
-        : vector_(std::move(t)) {
+        : vector_(std::forward<T>(t)) {
     }
     vector_impl(const tiledb::Context& ctx, const std::string& uri)
         : vector_(ctx, uri) {
@@ -205,143 +209,11 @@ class FeatureVector {
 using QueryVector = FeatureVector;
 using IdVector = FeatureVector;
 
-#if 0
+
 //------------------------------------------------------------------------------
 // FeatureVectorArray
 //------------------------------------------------------------------------------
-/**
- * Unified wrapper for feature vector arrays.
- * @todo Lots of duplicated code from FeatureVector.  Can we factor this out?
- */
-class FeatureVectorArray {
- public:
-  template <feature_vector_array T>
-  explicit FeatureVectorArray(T&& obj)
-      : vector_array(std::make_unique<vector_array_impl<T>>(
-            //std::move(std::forward<T>(obj)))) {
-             std::forward<T>(obj))) {
-  }
 
-  FeatureVectorArray(const tiledb::Context& ctx, const std::string& uri, size_t num_vectors = 0) {
-    auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
-    datatype_ = get_array_datatype(array);
-    array.close();  // @todo create Matrix constructor that takes opened array
-
-    /**
-     * Row and column orientation are kind of irrelevant?  We could dispatch
-     * on the layout in the schema, but that might not be necessary.  What is
-     * important is that the vectors are along the major axis, which should
-     * happen with either orientation, and so will work at the other end with
-     * either orientation since we are just passing a pointer to the data.
-     */
-    switch (datatype_) {
-      case TILEDB_FLOAT32:
-        vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<float>>>(
-                ctx, uri, num_vectors);
-        break;
-      case TILEDB_UINT8:
-        vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint8_t>>>(
-                ctx, uri, num_vectors);
-        break;
-      case TILEDB_INT32:
-        vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<int32_t>>>(
-                ctx, uri, num_vectors);
-        break;
-      case TILEDB_UINT32:
-        vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint32_t>>>(
-                ctx, uri, num_vectors);
-        break;
-      case TILEDB_INT64:
-        vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<int64_t>>>(
-                ctx, uri, num_vectors);
-        break;
-      case TILEDB_UINT64:
-        vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint64_t>>>(
-                ctx, uri, num_vectors);
-        break;
-      default:
-        throw std::runtime_error("Unsupported attribute type");
-    }
-  }
-
-  auto load() {
-    return _cpo::load(*vector_array);
-  }
-
-  // @todo fix so niebloids work
-  [[nodiscard]] auto data() const {
-    // return _cpo::data(*vector_array);
-    return vector_array->data();
-  }
-
-  [[nodiscard]] auto extents() const {
-    return _cpo::extents(*vector_array);
-  }
-
-  [[nodiscard]] auto dimension() const {
-    return _cpo::dimension(*vector_array);
-  }
-
-  [[nodiscard]] auto num_vectors() const {
-    return _cpo::num_vectors(*vector_array);
-  }
-
-  [[nodiscard]] tiledb_datatype_t datatype() const {
-    return datatype_;
-  }
-
-  /**
-   * Non-type parameterized base class (for type erasure).
-   */
-  struct vector_array_base {
-    virtual ~vector_array_base() = default;
-    [[nodiscard]] virtual size_t dimension() const = 0;
-    [[nodiscard]] virtual size_t num_vectors() const = 0;
-    [[nodiscard]] virtual void* data() const = 0;
-    [[nodiscard]] virtual std::vector<size_t> extents() const = 0;
-    [[nodiscard]] virtual bool load() const = 0;
-  };
-
-  // @todo Create move constructors for Matrix and tdbMatrix?
-  template <typename T>
-  struct vector_array_impl : vector_array_base {
-    explicit vector_array_impl(T&& t)
-        : vector_array(std::move(t)) {
-    }
-    vector_array_impl(const tiledb::Context& ctx, const std::string& uri, size_t num_vectors)
-        : vector_array(ctx, uri, num_vectors) {
-    }
-    [[nodiscard]] void* data() const override {
-      return _cpo::data(vector_array);
-    }
-    [[nodiscard]] size_t dimension() const override {
-      return _cpo::dimension(vector_array);
-    }
-    [[nodiscard]] size_t num_vectors() const override {
-      return _cpo::num_vectors(vector_array);
-    }
-    [[nodiscard]] std::vector<size_t> extents() const override {
-      return _cpo::extents(vector_array);
-    }
-    bool load() const override {
-      return _cpo::load(vector_array);
-    }
-
-   private:
-    T vector_array;
-  };
-
- private:
-  tiledb_datatype_t datatype_{TILEDB_ANY};
-  std::unique_ptr<const vector_array_base> vector_array;
-};
-#else
 class FeatureVectorArray {
  public:
   FeatureVectorArray(const FeatureVectorArray& other) = delete;
@@ -355,6 +227,8 @@ class FeatureVectorArray {
   template <feature_vector_array T>
   explicit FeatureVectorArray(T&& obj)
       : vector_array(std::make_unique<vector_array_impl<T>>(std::forward<T>(obj))) {
+    datatype_ = tiledb::impl::type_to_tiledb<typename std::remove_cvref_t<T>::value_type>::tiledb_type;
+
   }
 
   FeatureVectorArray(const tiledb::Context& ctx, const std::string& uri, size_t num_vectors = 0) {
@@ -405,8 +279,9 @@ class FeatureVectorArray {
     }
   }
 
-  auto load() {
-    return _cpo::load(*vector_array);
+  auto load() const {
+    // return _cpo::load(*vector_array);
+    return vector_array->load();
   }
 
   // @todo fix so niebloids work
@@ -440,7 +315,7 @@ class FeatureVectorArray {
     [[nodiscard]] virtual size_t num_vectors() const = 0;
     [[nodiscard]] virtual void* data() const = 0;
     [[nodiscard]] virtual std::vector<size_t> extents() const = 0;
-    [[nodiscard]] virtual bool load() const = 0;
+    [[nodiscard]] virtual bool load() = 0;
   };
 
   // @todo Create move constructors for Matrix and tdbMatrix?
@@ -451,7 +326,6 @@ class FeatureVectorArray {
     }
     vector_array_impl(const tiledb::Context& ctx, const std::string& uri, size_t num_vectors)
         : impl_vector_array(ctx, uri, num_vectors) {
-      // print_types(vector_array);
     }
     [[nodiscard]] void* data() const override {
       return _cpo::data(impl_vector_array);
@@ -465,7 +339,7 @@ class FeatureVectorArray {
     [[nodiscard]] std::vector<size_t> extents() const override {
       return _cpo::extents(impl_vector_array);
     }
-    bool load() const override {
+    bool load() override {
       return _cpo::load(impl_vector_array);
     }
 
@@ -475,11 +349,11 @@ class FeatureVectorArray {
 
  private:
   tiledb_datatype_t datatype_{TILEDB_ANY};
-  std::unique_ptr<const vector_array_base> vector_array;
+
+  // @todo const????
+  std::unique_ptr</*const*/ vector_array_base> vector_array;
 };
 
-
-#endif
 using QueryVectorArray = FeatureVectorArray;
 
 //------------------------------------------------------------------------------
@@ -647,14 +521,14 @@ class Index {
   template <typename T>
   struct index_impl : index_base {
     explicit index_impl(T&& t)
-        : index_(std::move(t)) {
+        : impl_index_(std::forward<T>(t)) {
     }
 
     index_impl(
         const tiledb::Context& ctx,
         const URI& index_uri,
         const std::optional<StringMap>& config = std::nullopt)
-        : index_(ctx, index_uri) {
+        : impl_index_(ctx, index_uri) {
     }
 
     template <feature_vector_array V>
@@ -663,7 +537,7 @@ class Index {
         const V& vectors,
         const IndexOptions& options,
         const std::optional<StringMap>& config = std::nullopt)
-        : index_(index_uri, vectors, options, config) {
+        : impl_index_(index_uri, vectors, options, config) {
     }
 
     // Create from input URI
@@ -672,12 +546,12 @@ class Index {
         const URI& vectors_uri,
         const IndexOptions& options,
         std::optional<StringMap> config = std::nullopt)
-        : index_(index_uri, vectors_uri, options, config) {
+        : impl_index_(index_uri, vectors_uri, options, config) {
     }
 
     [[nodiscard]] auto query(
         tiledb::Context ctx, const URI& uri, size_t top_k) const {
-      return index_.query(ctx, uri, top_k);
+      return impl_index_.query(ctx, uri, top_k);
     }
 
     /**
@@ -704,7 +578,10 @@ class Index {
               (float*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] = index_.query(qspan, k_nn);
+          auto [s, t] = impl_index_.query(qspan, k_nn);
+          debug_slice(t);
+          auto&ss = s;
+          auto&tt = t;
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -714,7 +591,7 @@ class Index {
               (float*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] = index_.query(qspan, k_nn);
+          auto [s, t] = impl_index_.query(qspan, k_nn);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -747,22 +624,22 @@ class Index {
 
 
     size_t dimension() const override {
-      return _cpo::dimension(index_);
+      return _cpo::dimension(impl_index_);
     }
 
      size_t ntotal() const override {
-      return _cpo::num_vectors(index_);
+      return _cpo::num_vectors(impl_index_);
     }
 
     size_t num_vectors() const override {
-      return _cpo::num_vectors(index_);
+      return _cpo::num_vectors(impl_index_);
     }
 
    private:
     /**
      * @brief Instance of the concrete class.
      */
-    T index_;
+    T impl_index_;
   };
 
   // @todo Who should own the context?
@@ -771,40 +648,60 @@ class Index {
   std::unique_ptr<const index_base> index_;
 };
 
+
 bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
-  assert(a.datatype() == b.datatype());
+  // assert(a.datatype() == b.datatype());
+
+  auto proc_b = [&b](auto& aview) {
+    switch(b.datatype()) {
+      case TILEDB_INT32: {
+        auto bview =
+            MatrixView{(int32_t*)b.data(), extents(b)[0], extents(b)[1]};
+        return validate_top_k(aview, bview);
+      }
+      case TILEDB_UINT32: {
+        auto bview =
+            MatrixView{(uint32_t*)b.data(), extents(b)[0], extents(b)[1]};
+        return validate_top_k(aview, bview);
+      }
+      case TILEDB_INT64: {
+        auto bview =
+            MatrixView{(int64_t*)b.data(), extents(b)[0], extents(b)[1]};
+        return validate_top_k(aview, bview);
+      }
+      case TILEDB_UINT64: {
+        auto bview =
+            MatrixView{(uint64_t*)b.data(), extents(b)[0], extents(b)[1]};
+        return validate_top_k(aview, bview);
+      }
+      default:
+        throw std::runtime_error("Unsupported attribute type");
+    }
+  };
 
   switch(a.datatype()) {
     case TILEDB_INT32: {
       auto aview =
           MatrixView{(int32_t*)a.data(), extents(a)[0], extents(a)[1]};
-      auto bview =
-          MatrixView{(int32_t*)b.data(), extents(b)[0], extents(b)[1]};
-      return validate_top_k(aview, bview);
+      return proc_b(aview);
     }
     case TILEDB_UINT32: {
       auto aview =
           MatrixView{(uint32_t*)a.data(), extents(a)[0], extents(a)[1]};
-      auto bview =
-          MatrixView{(uint32_t*)b.data(), extents(b)[0], extents(b)[1]};
-      return validate_top_k(aview, bview);
+      return proc_b(aview);
     }
     case TILEDB_INT64: {
       auto aview =
           MatrixView{(int64_t*)a.data(), extents(a)[0], extents(a)[1]};
-      auto bview =
-          MatrixView{(int64_t*)b.data(), extents(b)[0], extents(b)[1]};
-      return validate_top_k(aview, bview);
+      return proc_b(aview);
     }
     case TILEDB_UINT64: {
       auto aview =
           MatrixView{(uint64_t*)a.data(), extents(a)[0], extents(a)[1]};
-      auto bview =
-          MatrixView{(uint64_t*)b.data(), extents(b)[0], extents(b)[1]};
-      return validate_top_k(aview, bview);
+      return proc_b(aview);
     }
-      default:
-        throw std::runtime_error("Unsupported attribute type");
+    default:
+      throw std::runtime_error("Unsupported attribute type");
   }
 }
 
