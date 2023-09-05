@@ -334,4 +334,4 @@ class IVFFlatIndex(Index):
                 tmp.append((float(0.0), int(0)))
             results_per_query_d.append(np.array(tmp, dtype=np.dtype("float,uint64"))["f0"])
             results_per_query_i.append(np.array(tmp, dtype=np.dtype("float,uint64"))["f1"])
-        return results_per_query_d, results_per_query_i
+        return np.array(results_per_query_d), np.array(results_per_query_i)
