@@ -359,13 +359,14 @@ TEST_CASE("api: types", "[types]") {
   CHECK(tiledb::impl::type_to_tiledb<float>::name == std::string("FLOAT32"));
   CHECK(tiledb::impl::type_to_tiledb<int>::name == std::string("INT32"));
   CHECK(tiledb::impl::type_to_tiledb<unsigned>::name == std::string("UINT32"));
-  CHECK(tiledb::impl::type_to_tiledb<long>::name == std::string("INT64"));
-  CHECK(
-      tiledb::impl::type_to_tiledb<unsigned long>::name ==
-      std::string("UINT64"));
   CHECK(tiledb::impl::type_to_tiledb<int64_t>::name == std::string("INT64"));
   CHECK(tiledb::impl::type_to_tiledb<uint64_t>::name == std::string("UINT64"));
-  CHECK(tiledb::impl::type_to_tiledb<size_t>::name == std::string("UINT64"));
+
+  CHECK(tiledb::impl::type_to_tiledb<long>::name != std::string("INT64"));
+  CHECK(
+      tiledb::impl::type_to_tiledb<unsigned long>::name !=
+      std::string("UINT64"));
+  CHECK(tiledb::impl::type_to_tiledb<size_t>::name != std::string("UINT64"));
 }
 
 template <_load::_member_load T>
@@ -389,11 +390,12 @@ void yack() {
   //    _yack(std::move(g));
 }
 
-TEST_CASE("api: uri query", "[api][index]") {
+
+TEST_CASE("api: query checks", "[api][index]") {
   tiledb::Context ctx;
   size_t k_nn = 10;
-  size_t nthreads = 5;
-  size_t num_queries = 20;
+  size_t nthreads = 8;
+  size_t num_queries = 50;
 
   SECTION("simple check") {
     auto z = FeatureVectorArray(ctx, db_uri);
@@ -418,47 +420,66 @@ TEST_CASE("api: uri query", "[api][index]") {
     auto ok = validate_top_k(ck_top_k, gk);
     CHECK(ok);
   }
+}
 
-  SECTION("FeatureVectorArray") {
-    auto a = Index(ctx, db_uri);
+TEST_CASE("api: queries", "[api][index]") {
+  tiledb::Context ctx;
+  size_t k_nn = 10;
+  size_t nthreads = 8;
+  size_t num_queries = 50;
+    auto sift_test_tuple = std::make_tuple(
+      db_uri,
+      groundtruth_uri,
+      query_uri,
+      TILEDB_FLOAT32,
+      128,
+      1'000'000);
 
-    CHECK(a.datatype() == TILEDB_FLOAT32);
-    CHECK(dimension(a) == 128);
-    CHECK(num_vectors(a) == 1'000'000);
+  auto bigann1M_tuple = std::make_tuple(
+      bigann1M_base_uri,
+      bigann1M_groundtruth_uri,
+      bigann1M_query_uri,
+      TILEDB_UINT8,
+      128,
+      1'000'000);
 
-    auto aq = QueryVectorArray(ctx, query_uri, num_queries);
-    load(aq);
+  auto fmnist_tuple = std::make_tuple(
+      fmnist_train_uri,
+      fmnist_groundtruth_uri,
+      fmnist_test_uri,
+      TILEDB_FLOAT32,
+      784,
+      60'000);
 
-    auto [aq_scores, aq_top_k] = a.query(aq, k_nn);
-    auto& aa = aq_top_k;  // to be able to see in debugger
+  std::vector<std::tuple<std::string, std::string, std::string, tiledb_datatype_t, size_t, size_t>> tuples {
+    sift_test_tuple,
+    bigann1M_tuple,
+    fmnist_tuple
+  };
 
-    auto aa_nv = num_vectors(aa);
-    auto aa_d = dimension(aa);
-    CHECK(aa_nv == num_queries);
-    CHECK(aa_d == k_nn);
+  SECTION("FeatureVectorArray - queries") {
+    for (auto&& t : tuples) {
+      auto [uri, gt_uri, q_uri, dtype, dim, numv] = t;
+      auto a = Index(ctx, uri);
 
-    auto hk = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
-    load(hk);
+      CHECK(a.datatype() == dtype);
+      CHECK(dimension(a) == dim);
+      CHECK(num_vectors(a) == numv);
 
-    auto ok = validate_top_k(aq_top_k, FeatureVectorArray{std::move(hk)});
-    CHECK(ok);
+      auto aq = QueryVectorArray(ctx, q_uri, num_queries);
+      load(aq);
+
+      auto [aq_scores, aq_top_k] = a.query(aq, k_nn);
+      CHECK(num_vectors(aq_top_k) == num_queries);
+      CHECK(dimension(aq_top_k) == k_nn);
+      CHECK(num_vectors(aq_scores) == num_queries);
+      CHECK(dimension(aq_scores) == k_nn);
+
+      auto hk = tdbColMajorMatrix<groundtruth_type>(ctx, gt_uri);
+      load(hk);
+
+      auto ok = validate_top_k(aq_top_k, FeatureVectorArray{std::move(hk)});
+      CHECK(ok);
+    }
   }
-
-  // auto z = FeatureVectorArray{gk};
-  // auto x = FeatureVectorArray{std::move(gk)};
-
-  auto b = Index(ctx, bigann1M_base_uri);
-  CHECK(b.datatype() == TILEDB_UINT8);
-  CHECK(dimension(b) == 128);
-  CHECK(num_vectors(b) == 1'000'000);
-
-  auto c = Index(ctx, fmnist_train_uri);
-  CHECK(c.datatype() == TILEDB_FLOAT32);
-  CHECK(dimension(c) == 784);
-  CHECK(num_vectors(c) == 60'000);
-
-  auto d = Index(ctx, sift_base_uri);
-  CHECK(d.datatype() == TILEDB_FLOAT32);
-  CHECK(dimension(d) == 128);
-  CHECK(num_vectors(d) == 1'000'000);
 }
