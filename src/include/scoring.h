@@ -50,14 +50,17 @@
 #include <memory>
 #include <numeric>
 #include <queue>
-#include <ranges>
 #include <set>
 #include <span>
+
 // #include <execution>
 
 #include "linalg.h"
 #include "utils/fixed_min_heap.h"
 #include "utils/timer.h"
+
+
+
 
 // ----------------------------------------------------------------------------
 // Helper utilities
@@ -182,9 +185,8 @@ inline auto dot(U const& a, V const& b) {
  * @param k
  * @return
  */
-template <
-    std::ranges::random_access_range V,
-    std::ranges::random_access_range L>
+
+template <class V, class L>
 auto get_top_k_from_scores(V const& scores, L&& top_k, int k) {
   fixed_min_pair_heap<float, unsigned> s(k);
 

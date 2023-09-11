@@ -88,7 +88,7 @@ void for_each(RandomIt first, RandomIt last, UnaryFunction f) {
  * Execute a function in parallel over a range of elements as specified
  * by a begin and end iterator.
  */
-template <std::random_access_iterator RandomIt, class UnaryFunction>
+template <class RandomIt, class UnaryFunction>
 void for_each(
     stdx::execution::parallel_policy&& par,
     RandomIt begin,
@@ -123,7 +123,7 @@ void for_each(
  * by a begin and end iterator.  We also pass the thread number and the
  * current iteration number to the function.
  */
-template <std::random_access_iterator RandomIt, class UnaryFunction>
+template <class RandomIt, class UnaryFunction>
 void for_each(
     stdx::execution::indexed_parallel_policy&& par,
     RandomIt begin,
@@ -162,7 +162,7 @@ void for_each(
 /**
  * Same as above, but with a range, rather than iterator pair.
  */
-template <class /*std::ranges::random_access_range*/ Range, class UnaryFunction>
+template <class Range, class UnaryFunction>
 void range_for_each(
     stdx::execution::indexed_parallel_policy&& par,
     Range&& range,
