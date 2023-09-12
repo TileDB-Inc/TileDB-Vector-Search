@@ -85,6 +85,28 @@ TEST_CASE("vamana: greedy grid search", "[vamana]") {
   std::cout << std::endl;
 }
 
+TEST_CASE("vamana: greedy grid path", "[vamana]") {
+  auto&& [vecs, edges] = gen_grid(5, 7);
+
+  adj_list<float> A(35);
+  for (auto&& [src, dst] : edges) {
+    A.add_edge(src, dst, sum_of_squares_distance{}(vecs[src], vecs[dst]));
+  }
+
+  size_t source = 6;
+  std::vector<size_t> query {4, 5};
+  size_t k = 12;
+  size_t L = 20;
+  std::vector<size_t> nbd(k);
+
+  auto V = greedy_path(A, vecs, source, query, L);
+  CHECK(V.size() == 1);
+  for (auto&& v : V) {
+    std::cout << "(" << vecs[v][0] << ", " << vecs[v][1] << ") ";
+  }
+  std::cout << std::endl;
+}
+
 
 
 auto build_hypercube(size_t k_near, size_t k_far) {

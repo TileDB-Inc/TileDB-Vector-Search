@@ -43,8 +43,11 @@
 #include "utils/fixed_min_heap.h"
 #include "utils/print_types.h"
 
+namespace {
+  enum class SearchPath { path_and_search, path_only };
+}
+
 /**
- *
  * @brief
  * @tparam T
  * @tparam I
@@ -66,7 +69,7 @@
  * keep L closest points to query
  * 3. Copy the result list to the output
  */
-template <class I = size_t, class Distance = sum_of_squares_distance>
+template <SearchPath SP, class I = size_t, class Distance = sum_of_squares_distance>
 auto greedy_search(
     auto&& graph,
     auto&& db,
@@ -132,15 +135,43 @@ auto greedy_search(
       // assert(p != p_star);
       if (!visited(p)) {
         auto score = distance(db[p], query);
-        result.template insert(score, p);
+        if constexpr (SP == SearchPath::path_and_search) {
+          result.template insert(score, p);
+        }
         q1.template insert(score, p);
         ++bt;
       }
     }
   }
 
-  get_top_k_from_heap(result, nbd, k);
+  if constexpr (SP == SearchPath::path_and_search) {
+    get_top_k_from_heap(result, nbd, k);
+  }
   return visited_vertices;
+}
+
+template <class I = size_t, class Distance = sum_of_squares_distance>
+auto greedy_path(
+    auto&& graph,
+    auto&& db,
+    I source,
+    auto&& query,
+    size_t L,
+    Distance&& distance = Distance{}) {
+  return greedy_search<SearchPath::path_only>(graph, db, source, query, 1, L, std::vector<I>(1), distance);
+}
+
+template <class I = size_t, class Distance = sum_of_squares_distance>
+auto greedy_search(
+    auto&& graph,
+    auto&& db,
+    I source,
+    auto&& query,
+    size_t k,
+    size_t L,
+    auto&& nbd,
+    Distance&& distance = Distance{}) {
+  return greedy_search<SearchPath::path_and_search>(graph, db, source, query, k, L, nbd, distance);
 }
 
 /**
@@ -258,5 +289,70 @@ auto medioid(auto&& P, Distance distance = Distance{}) {
   }
   return med;
 }
+
+template <class attribute_type, class shuffled_ids_type, class indices_type>
+class vamana_index {
+  std::unique_ptr<tdbColMajorMatrix<attribute_type>> feature_vectors_;
+
+  size_t dimension_{0};
+  size_t num_vectors_{0};
+  size_t L_build_{0};       // diskANN paper says default = 100
+  size_t R_max_degree_{0};  // diskANN paper says default = 64
+  float alpha_min_ {1.0};   // per diskANN paper
+  float alpha_max_ {1.2};   // per diskANN paper
+  ::detail::graph::nn_graph<T, indices_type> graph_;
+
+ public:
+  vamana_index() = delete;
+  vamana_index(const vamana_index& index) = delete;
+  vamana_index& operator=(const vamana_index& index) = delete;
+  vamana_index(vamana_index&& index) {
+  }
+  vamana_index& operator=(vamana_index&& index) = default;
+
+  ~vamana_index() = default;
+
+  vamana_index(size_t L, size_t R) : L_build_{L}, R_max_degree_{R} {
+  }
+
+  template <feature_vector_array V>
+  void train(const V& training_set) {
+    dimension_ = dimension(training_set);
+    num_vectors_ = num_vectors(training_set);
+    graph_ = ::detail::graph::init_random_nn_graph<float>(
+        training_set, R_max_degree_);
+
+    for (float alpha : {alpha_min_, alpha_max_}) {
+      auto start = medioid(training_set);
+      for (size_t p = 0; p < num_vectors(training_set); ++p) {
+        auto visited =
+            greedy_path(graph_, training_set, start, training_set[p], L_build_);
+        robust_prune(graph_, training_set, p, visited, alpha, R_max_degree_);
+        for (auto&& [i, j] : graph_.out_edges(p)) {
+          if (graph_.out_degree(j) >= R_max_degree_) {
+            robust_prune(
+                graph_, training_set, j, training_set[j], alpha, R_max_degree_);
+          }
+        }
+      }
+    }
+  }
+  void add(const ColMajorMatrix<T>& database){}
+
+  auto query(const ColMajorMatrix<T>& query_set, size_t k) {}
+
+  auto remove(){}
+
+  auto update(){}
+
+  auto dimension(){}
+
+  auto ntotal(){}
+
+  auto num_vectors(){}
+  
+};
+
+
 
 #endif  // TDB_VAMANA_H
