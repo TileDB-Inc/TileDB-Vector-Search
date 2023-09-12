@@ -39,6 +39,7 @@
 #include "query_common.h"
 #include "utils/logging.h"
 #include "graphs/tiny.h"
+#include "gen_graphs.h"
 #include "cpos.h"
 
 #include <tiledb/tiledb>
@@ -49,6 +50,7 @@ TEST_CASE("vamana: test test", "[vamana]") {
   REQUIRE(true);
 }
 
+#if 0
 TEST_CASE("vamana: tiny greedy search", "[vamana]") {
   auto A = index_adj_list{tiny_index_adj_list};
   size_t source = 0;
@@ -59,6 +61,31 @@ TEST_CASE("vamana: tiny greedy search", "[vamana]") {
 
   auto V = greedy_search(A, tiny_vectors, source, query, k, L, nbd);
 }
+#endif
+
+TEST_CASE("vamana: greedy grid search", "[vamana]") {
+  auto&& [vecs, edges] = gen_grid(5, 7);
+
+  adj_list<float> A(35);
+  for (auto&& [src, dst] : edges) {
+    A.add_edge(src, dst, sum_of_squares_distance{}(vecs[src], vecs[dst]));
+  }
+
+  size_t source = 6;
+  std::vector<size_t> query {4, 5};
+  size_t k = 12;
+  size_t L = 20;
+  std::vector<size_t> nbd(k);
+
+  auto V = greedy_search(A, vecs, source, query, k, L, nbd);
+  CHECK(V.size() == 1);
+  for (auto&& v : V) {
+    std::cout << "(" << vecs[v][0] << ", " << vecs[v][1] << ") ";
+  }
+  std::cout << std::endl;
+}
+
+
 
 auto build_hypercube(size_t k_near, size_t k_far) {
   size_t N = 8 * (k_near + k_far + 1);

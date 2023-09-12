@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
   auto g = ::detail::graph::init_random_nn_graph<float>(X, 2*R);
   std::cout << "num_vertices " << g.num_vertices() << std::endl;
 
-  std::vector<std::pair<size_t, size_t>> edges;
+  std::vector<std::tuple<size_t, size_t>> edges;
   for (size_t i = 0; i < g.num_vertices(); ++i) {
     for (auto&& [_, j] : out_edges(g, i)) {
       edges.emplace_back(i, j);
@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
         }
       }
       if ((p+1) % 20 == 0) {
-        std::vector<std::pair<size_t, size_t>> edges;
+        std::vector<std::tuple<size_t, size_t>> edges;
         for (size_t i = 0; i < g.num_vertices(); ++i) {
           for (auto&& [_, j] : out_edges(g, i)) {
             edges.emplace_back(i, j);

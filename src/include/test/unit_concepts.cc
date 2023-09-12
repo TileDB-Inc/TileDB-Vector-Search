@@ -45,6 +45,50 @@ TEST_CASE("concepts: test test", "[concepts]") {
   REQUIRE(true);
 }
 
+template <class V, class U>
+inline auto sum_of_squares(V const& a, U const& b) {
+  float sum{0.0};
+  size_t size_a = size(a);
+
+  if constexpr (std::unsigned_integral<std::remove_reference_t<decltype(a[0])>>
+      || std::unsigned_integral<std::remove_reference_t<decltype(b[0])>>) {
+    for (size_t i = 0; i < size_a; ++i) {
+      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
+      float diff = (float) a[i] - (float) b[i];
+      sum += diff * diff;
+    }
+  } else {
+    for (size_t i = 0; i < size_a; ++i) {
+      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
+      float diff = a[i] - b[i];
+      sum += diff * diff;
+    }
+  }
+  return sum;
+}
+
+TEST_CASE("concepts: std::unsigned_integral", "[concepts]") {
+  std::vector<unsigned> v(1);
+  CHECK(std::unsigned_integral<unsigned>);
+  CHECK(std::same_as<decltype(v[0]), unsigned&>);
+  CHECK(std::same_as<std::remove_reference_t<decltype(v[0])>, unsigned>);
+  CHECK(std::same_as<std::remove_cvref_t<decltype(v[0])>, unsigned>);
+}
+
+
+TEMPLATE_TEST_CASE("concepts: std::unsigned_integral sum", "[concepts]", int, unsigned, long, unsigned long, size_t, float, uint8_t) {
+  std::vector<TestType> a{1, 2, 3};
+  std::vector<TestType> b{4, 5, 6};
+  std::span<TestType> c{a};
+  std::span<TestType> d{b};
+
+  auto sum = sum_of_squares(a, b);
+  CHECK(sum == 27.0);
+  auto sum2 = sum_of_squares(c, d);
+  CHECK(sum2 == 27.0);
+
+}
+
 TEST_CASE("concepts: random_access_range", "[concepts]") {
   CHECK(!std::ranges::random_access_range<int>);
 

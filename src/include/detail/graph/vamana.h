@@ -136,7 +136,7 @@ auto greedy_search(auto&& graph, auto&&db, I source, auto&& query, size_t k, siz
   };
 
   auto result = k_min_heap<value_type, I> {k};
-  auto q1 = k_min_heap<value_type, I> {L};
+  auto q1 = k_min_heap<value_type, I> {1};
   auto q2 = k_min_heap<value_type, I> {L};
 
   // L <- {s} and V <- empty`
@@ -145,7 +145,11 @@ auto greedy_search(auto&& graph, auto&&db, I source, auto&& query, size_t k, siz
   // q1 = L \ V = {s}
   q1.insert(distance(db[source], query), source);
 
-  // while L\V is not empty
+  auto a0 = db[source][0];
+  auto a1 = db[source][1];
+  std::cout << "source: " << source << " " << db[source][0] << " " << db[source][1] << std::endl;
+
+      // while L\V is not empty
   while (!q1.empty()) {
 
     // p* <- argmin_{p \in L\V} distance(p, q)
@@ -161,8 +165,11 @@ auto greedy_search(auto&& graph, auto&&db, I source, auto&& query, size_t k, siz
 
     auto [s_star, p_star] = q1.back();
     q1.pop_back();
-    auto s = s_star;
-    auto p = p_star;
+    auto sq = s_star;
+    auto pq = p_star;
+
+    auto b0 = db[p_star][0];
+    auto b1 = db[p_star][1];
 
     // Change back to max heap
     std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
@@ -178,11 +185,13 @@ auto greedy_search(auto&& graph, auto&&db, I source, auto&& query, size_t k, siz
     // L <- L \cup Nout(p*)  ; L \ V <- L \ V \cup Nout(p*)
     for (auto&& [_, p] : graph.out_edges(p_star)) {
       // assert(p != p_star);
+      auto ppp = p;
       if (!visited(p)) {
+        auto dpb = db[p];
         auto score = distance(db[p], query);
         result.template insert(score, p);
         q1.template insert(score, p);
-        visited_vertices.insert(p);
+        // visited_vertices.insert(p);
       }
     }
   }

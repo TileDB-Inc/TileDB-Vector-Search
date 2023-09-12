@@ -45,6 +45,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <concepts>
 #include <future>
 #include <iostream>
 #include <memory>
@@ -106,10 +107,19 @@ inline auto sum_of_squares(V const& a, U const& b) {
   float sum{0.0};
   size_t size_a = size(a);
 
-  for (size_t i = 0; i < size_a; ++i) {
-    // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-    float diff = a[i] - b[i];
-    sum += diff * diff;
+  if constexpr (std::unsigned_integral<std::remove_reference_t<decltype(a[0])>>
+      || std::unsigned_integral<std::remove_reference_t<decltype(b[0])>>) {
+    for (size_t i = 0; i < size_a; ++i) {
+      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
+      float diff = (float) a[i] - (float) b[i];
+      sum += diff * diff;
+    }
+  } else {
+    for (size_t i = 0; i < size_a; ++i) {
+      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
+      float diff = a[i] - b[i];
+      sum += diff * diff;
+    }
   }
   return sum;
 }
