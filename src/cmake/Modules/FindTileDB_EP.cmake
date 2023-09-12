@@ -57,7 +57,7 @@ else()
         elseif(APPLE) # OSX
 
           if (CMAKE_OSX_ARCHITECTURES STREQUAL x86_64 OR CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(AMD64|amd64)|(^i.86$)")
-            SET(DOWNLOAD_URL "https://github.com/TileDB-Inc/TileDB/releases/download/2.16.1/tiledb-macos-x86_64-2.16.3-194b5ae.tar.gz")
+            SET(DOWNLOAD_URL "https://github.com/TileDB-Inc/TileDB/releases/download/2.16.3/tiledb-macos-x86_64-2.16.3-194b5ae.tar.gz")
             SET(DOWNLOAD_SHA1 "b4d35306771d1c30b49bf2a98651e8e24c91037e")
           elseif (CMAKE_OSX_ARCHITECTURES STREQUAL arm64 OR CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
             SET(DOWNLOAD_URL "https://github.com/TileDB-Inc/TileDB/releases/download/2.16.3/tiledb-macos-arm64-2.16.3-194b5ae.tar.gz")
