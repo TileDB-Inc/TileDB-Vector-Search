@@ -63,7 +63,7 @@ using size_t = std::size_t;
  * 3. Copy the result list to the output
  */
 template <class I = size_t, class Distance = sum_of_squares_distance>
-auto greedy_search(auto&& graph, auto&&db, I source, auto&& query, size_t k, size_t L, auto&& nbd, Distance&& distance = Distance{}) {
+auto greedy_search_0(auto&& graph, auto&&db, I source, auto&& query, size_t k, size_t L, auto&& nbd, Distance&& distance = Distance{}) {
   using value_type = typename std::decay_t<decltype(graph)>::value_type;
 
   std::set<I> visited_vertices;
@@ -97,10 +97,80 @@ auto greedy_search(auto&& graph, auto&&db, I source, auto&& query, size_t k, siz
 
     auto [s_star, p_star] = q1.back();
     q1.pop_back();
+    auto s = s_star;
+    auto p = p_star;
 
     // Change back to max heap
     std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
       return std::get<0>(a) < std::get<0>(b);});
+
+    // V <- V \cup {p*} ; L\V <- L\V \ p*
+    visited_vertices.insert(p_star);
+
+    // L <- L \cup Nout(p*)  ; L \ V <- L \ V \cup Nout(p*)
+    for (auto&& [_, p] : graph.out_edges(p_star)) {
+      // assert(p != p_star);
+      if (!visited(p)) {
+        auto score = distance(db[p], query);
+        result.template insert(score, p);
+        q1.template insert(score, p);
+        //visited_vertices.insert(p);
+      }
+    }
+  }
+
+  get_top_k_from_heap(result, nbd, k);
+  return visited_vertices;
+}
+
+
+template <class I = size_t, class Distance = sum_of_squares_distance>
+auto greedy_search(auto&& graph, auto&&db, I source, auto&& query, size_t k, size_t L, auto&& nbd, Distance&& distance = Distance{}) {
+  using value_type = typename std::decay_t<decltype(graph)>::value_type;
+
+  // print_types(graph, db, value_type{});
+
+  std::set<I> visited_vertices;
+  auto visited = [&visited_vertices](auto&& v) {
+    return visited_vertices.find(v) != visited_vertices.end();
+  };
+
+  auto result = k_min_heap<value_type, I> {k};
+  auto q1 = k_min_heap<value_type, I> {L};
+  auto q2 = k_min_heap<value_type, I> {L};
+
+  // L <- {s} and V <- empty`
+  result.insert(distance(db[source], query), source);
+
+  // q1 = L \ V = {s}
+  q1.insert(distance(db[source], query), source);
+
+  // while L\V is not empty
+  while (!q1.empty()) {
+
+    // p* <- argmin_{p \in L\V} distance(p, q)
+
+    // @todo: There must be a better way to do this
+    // Change to min_heap
+    std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
+      return std::get<0>(a) > std::get<0>(b);});
+
+    // Get and pop the min element
+    std::pop_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
+      return std::get<0>(a) > std::get<0>(b);});
+
+    auto [s_star, p_star] = q1.back();
+    q1.pop_back();
+    auto s = s_star;
+    auto p = p_star;
+
+    // Change back to max heap
+    std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
+      return std::get<0>(a) < std::get<0>(b);});
+
+    if (visited(p_star)) {
+      continue;
+    }
 
     // V <- V \cup {p*} ; L\V <- L\V \ p*
     visited_vertices.insert(p_star);
@@ -120,6 +190,8 @@ auto greedy_search(auto&& graph, auto&&db, I source, auto&& query, size_t k, siz
   get_top_k_from_heap(result, nbd, k);
   return visited_vertices;
 }
+
+
 
 /**
  * @brief RobustPrune(p, vee, alpha, R)
@@ -193,7 +265,7 @@ auto robust_prune(auto&& graph, auto&&db, I p, auto&& V_in, float alpha, size_t 
     for (auto&& [ss, pp] : V) {
 
       // if alpha * d(p*, p') <= d(p, p')
-      if (alpha * distance(db[p_star], db[pp]) <= ss) {
+      if (alpha * distance(db[p_star], db[pp]) <= ss) { // @todo <= or >=
         // V.erase({ss, pp});
         to_be_removed.emplace_back(ss, pp);
       }

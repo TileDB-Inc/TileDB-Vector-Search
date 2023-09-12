@@ -35,8 +35,11 @@
 #include "detail/graph/nn-descent.h"
 #include "detail/graph/nn-graph.h"
 #include "detail/graph/vamana.h"
+#include "detail/graph/adj_list.h"
 #include "query_common.h"
 #include "utils/logging.h"
+#include "graphs/tiny.h"
+#include "cpos.h"
 
 #include <tiledb/tiledb>
 
@@ -44,6 +47,17 @@ bool global_debug = false;
 
 TEST_CASE("vamana: test test", "[vamana]") {
   REQUIRE(true);
+}
+
+TEST_CASE("vamana: tiny greedy search", "[vamana]") {
+  auto A = index_adj_list{tiny_index_adj_list};
+  size_t source = 0;
+  std::vector<size_t> query {0, 1};
+  size_t k = 3;
+  size_t L = 3;
+  std::vector<size_t> nbd(k);
+
+  auto V = greedy_search(A, tiny_vectors, source, query, k, L, nbd);
 }
 
 auto build_hypercube(size_t k_near, size_t k_far) {
@@ -201,6 +215,40 @@ TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
 
 
   }
+}
+
+TEST_CASE("vamana: diskann fbin", "[vamana]") {
+
+  size_t k_nn = 5;
+  size_t L = 3;
+
+  // should be dim = 128, num = 256
+  // npoints, ndims
+  uint32_t npoints{0};
+  uint32_t ndim{0};
+
+  std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
+  if (!binary_file.is_open()) {
+    throw std::runtime_error("Could not open file " + diskann_test_256bin);
+  }
+
+  binary_file.read((char*)&npoints, 4);
+  binary_file.read((char*)&ndim, 4);
+  REQUIRE(npoints == 256);
+  REQUIRE(ndim == 128);
+
+  auto x = ColMajorMatrix<float>(ndim, npoints);
+
+  binary_file.read((char*)x.data(), npoints*ndim);
+  binary_file.close();
+
+  auto q0 = ColMajorMatrix<float> (ndim, 1);
+  std::copy(x.data(), x.data() + ndim, q0.data());
+
+  auto g = detail::graph::init_random_nn_graph<float>(x, k_nn);
+  auto nbd = std::vector<size_t>(k_nn);
+  auto V = greedy_search(g, x, 0UL, x[0], k_nn, L, nbd);
+  REQUIRE(size(V) == 1);
 }
 
 TEST_CASE("vamana: fmnist", "[vamana]") {
@@ -417,3 +465,5 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
             << ((double)num_intersected) / ((double)query_mat.num_cols() * k_nn)
             << std::endl;
 }
+
+

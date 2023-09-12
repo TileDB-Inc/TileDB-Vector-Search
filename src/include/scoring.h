@@ -37,7 +37,7 @@
 #include <algorithm>
 #include "algorithm.h"
 #include "linalg.h"
-#include "old_concepts.h"
+#include "concepts.h"
 #include "utils/timer.h"
 #include "utils/utils.h"
 

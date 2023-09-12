@@ -35,38 +35,49 @@
 #include <matplot/matplot.h>
 #include <cmath>
 #include <random>
-#include "detail/graph/vamana.h"
 #include "detail/graph/nn-graph.h"
+#include "detail/graph/vamana.h"
 #include "detail/linalg/matrix.h"
 
+#include <docopt.h>
+
+static constexpr const char USAGE[] =
+    R"(demo_vamana: test vamana index
+  Usage:
+      demo_vamana (-h | --help)
+      demo_vamana [--max_degree NN] [--Lbuild NN] [--alpha FF] [--k_nn NN]
+
+  Options:
+      -h, --help              show this screen
+      -R, --max_degree NN     maximum degree of graph [default: 64]
+      -L, --Lbuild NN         size of search list while building [default: 100]
+      -a, --alpha FF          pruning parameter [default: 1.2]
+      -k, --k_nn NN           number of nearest neighbors [default: 1]
+)";
 
 
 
-auto random_geomtric_2D(size_t N) {
+int main(int argc, char* argv[]) {
+  std::vector<std::string> strings(argv + 1, argv + argc);
+  auto args = docopt::docopt(USAGE, strings, true);
 
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<float> coord(-1.0, 1.0);
-
-  auto X = ColMajorMatrix<float> (2, N);
-
-  for (size_t i = 0; i < N; ++i) {
-    X(0, i) = coord(gen);
-    X(1, i) = coord(gen);
+  if (args["--help"].asBool()) {
+    std::cout << USAGE << std::endl;
+    return 0;
   }
+  size_t L = args["--Lbuild"].asLong();
+  size_t R = args["--max_degree"].asLong();
+  std::string alpha_str = args["--alpha"].asString();
+  float alpha_1 = std::atof(alpha_str.c_str());
 
-  return X;
-}
+  size_t k_nn = args["--k_nn"].asLong();
+  float alpha_0 = 1.0;
+  size_t num_nodes{200};
 
-
-int main() {
-  size_t k_nn = 5;
-  size_t L = 7;
-  size_t R = 7;
-  float alpha = 1.0;
-
-  auto X = random_geomtric_2D(51);
-  auto g = ::detail::graph::init_random_nn_graph<float>(X, k_nn);
+  auto X = random_geomtric_2D(num_nodes);
+  dump_coordinates("coords.txt", X);
+  auto g = ::detail::graph::init_random_nn_graph<float>(X, 2*R);
+  std::cout << "num_vertices " << g.num_vertices() << std::endl;
 
   std::vector<std::pair<size_t, size_t>> edges;
   for (size_t i = 0; i < g.num_vertices(); ++i) {
@@ -75,27 +86,29 @@ int main() {
     }
   }
 
-  matplot::digraph(edges, "-.dr")->show_labels(false);
-  //    digraph(edges)->show_labels(false);
-  matplot::show();
+  dump_edgelist("edges_" + std::to_string(0) + ".txt", edges);
 
-  auto start = medioid(X);
-  for (size_t p = 0; p < X.num_cols(); ++p) {
-    auto nbd = std::vector<size_t>(k_nn);
-    auto V = greedy_search(g, X, start, X[p], k_nn, L, nbd);
-    robust_prune(g, X, p, V, alpha, R);
-    if (p % 50 == 0) {
-      std::vector<std::pair<size_t, size_t>> edges;
-      for (size_t i = 0; i < g.num_vertices(); ++i) {
-        for (auto&& [_, j] : out_edges(g, i)) {
-          edges.emplace_back(i, j);
+  for (float alpha : {alpha_0, alpha_1}) {
+    auto start = medioid(X);
+    for (size_t p = 0; p < X.num_cols(); ++p) {
+
+      auto nbd = std::vector<size_t>(k_nn);
+      auto V = greedy_search(g, X, start, X[p], k_nn, L, nbd);
+      robust_prune(g, X, p, V, alpha, R);
+      for (auto&& [i, j] : g.out_edges(p)) {
+        if (g.out_degree(j) >= R) {
+          robust_prune(g, X, j, X[j], alpha, R);
         }
       }
-
-      matplot::digraph(edges, "-.dr")->show_labels(false);
-      //    digraph(edges)->show_labels(false);
-      matplot::show();
+      if ((p+1) % 20 == 0) {
+        std::vector<std::pair<size_t, size_t>> edges;
+        for (size_t i = 0; i < g.num_vertices(); ++i) {
+          for (auto&& [_, j] : out_edges(g, i)) {
+            edges.emplace_back(i, j);
+          }
+          dump_edgelist("edges_" + std::to_string(p + 1) + ".txt", edges);
+        }
+      }
     }
   }
-
 }

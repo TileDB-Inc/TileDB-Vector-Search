@@ -87,6 +87,8 @@ kmeans_add_exe(time_insert)
 
 kmeans_add_exe(time_abstraction_penalty)
 
+kmeans_add_test(unit_adj_list)
+
 kmeans_add_test(unit_algorithm)
 
 kmeans_add_test(unit_api)
@@ -110,6 +112,8 @@ kmeans_add_test(unit_fixed_min_heap)
 kmeans_add_test(unit_flat_qv)
 
 kmeans_add_test(unit_flat_vq)
+
+kmeans_add_test(unit_gen_graphs)
 
 kmeans_add_test(unit_index)
 
@@ -148,6 +152,10 @@ kmeans_add_test(unit_scoring)
 kmeans_add_test(unit_slicing)
 
 kmeans_add_test(unit_stats)
+
+kmeans_add_test(unit_stl)
+
+kmeans_add_test(unit_tdb_io)
 
 kmeans_add_test(unit_utils)
 

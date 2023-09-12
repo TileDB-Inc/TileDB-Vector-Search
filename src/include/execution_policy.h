@@ -37,6 +37,7 @@
 #include <numeric>
 
 namespace stdx {
+#ifdef __cpp_lib_execution
     namespace execution {
 
 // using sequenced_policy = std::execution::sequenced_policy;
@@ -49,7 +50,7 @@ constexpr auto par_unseq = std::execution::par_unseq;
 constexpr auto unseq = std::execution::unseq;
 }   // namespace stdx::execution
 
-#ifdef __cpp_lib_execution
+
 
 template <class ExecutionPolicy, class ForwardIt>
 auto for_each(ExecutionPolicy&& policy, ForwardIt first, ForwardIt last) {
@@ -119,10 +120,25 @@ ForwardIt adjacent_find(ExecutionPolicy&& policy, ForwardIt first, ForwardIt las
 #else
 
 #warning "Parallel execution not supported!"
+namespace execution {
+constexpr size_t seq{0xdeadbeef};
+constexpr size_t par_unseq{0xdeadbeef};
+constexpr size_t par{0xdeadbeef};
+}
+
+template< class ExecutionPolicy, class ForwardIt >
+constexpr ForwardIt adjacent_find(ExecutionPolicy&& policy,  ForwardIt first, ForwardIt last ) {
+  return std::adjacent_find(first, last);
+}
 
 template <class ExecutionPolicy, class ForwardIt>
 auto for_each(ExecutionPolicy&& policy, ForwardIt first, ForwardIt last) {
   return std::for_each(first, last);
+}
+
+template <class ExecutionPolicy, class ForwardIt>
+auto sort(ExecutionPolicy&& policy, ForwardIt first, ForwardIt last) {
+  return std::sort(first, last);
 }
 
 template <class ExecutionPolicy, class ForwardIt, class OutputIt>
@@ -154,6 +170,10 @@ template <class ExecutionPolicy, class ForwardIt, class OutputIt>
 auto exclusive_scan(ExecutionPolicy&& policy, ForwardIt first, ForwardIt last, OutputIt d_first) {
   return std::exclusive_scan(first, last, d_first);
 }
+
+template< class ExecutionPolicy, class ForwardIt >
+std::pair<ForwardIt, ForwardIt>
+minmax_element(ForwardIt first, ForwardIt last );
 #endif
 }   // namespace stdx::execution
 

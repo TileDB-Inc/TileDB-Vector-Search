@@ -182,6 +182,9 @@ static std::string fmnist_neighbors { m1_gp3_root + "fmnist/fmnist_neighbors.tdb
 static std::string fmnist_test { m1_gp3_root + "fmnist/fmnist_test.tdb" };
 static std::string fmnist_train { m1_gp3_root + "fmnist/fmnist_train.tdb" };
 
+static std::string diskann_test_256bin { m1_gp3_root + "diskann/siftsmall_learn_256pts.fbin" };
+
+
 #endif
 
 #endif  // TILEDB_QUERY_COMMON_H
