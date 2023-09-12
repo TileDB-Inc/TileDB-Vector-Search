@@ -1,6 +1,6 @@
 
 /**
- * @file  demo_nn-descent.h
+ * @file  demo_vamana.h
  *
  * @section LICENSE
  *
@@ -39,6 +39,8 @@
 #include "detail/graph/vamana.h"
 #include "detail/linalg/matrix.h"
 
+#include "gen_graphs.h"
+
 #include <docopt.h>
 
 static constexpr const char USAGE[] =
@@ -74,7 +76,7 @@ int main(int argc, char* argv[]) {
   float alpha_0 = 1.0;
   size_t num_nodes{200};
 
-  auto X = random_geomtric_2D(num_nodes);
+  auto X = random_geometric_2D(num_nodes);
   dump_coordinates("coords.txt", X);
   auto g = ::detail::graph::init_random_nn_graph<float>(X, 2*R);
   std::cout << "num_vertices " << g.num_vertices() << std::endl;
