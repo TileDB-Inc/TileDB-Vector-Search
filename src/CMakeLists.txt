@@ -94,7 +94,7 @@ enable_testing()
 # Build types and default flags
 # -----------------------------------------------------------------------------
 
-message("Architecture is ${CMAKE_SYSTEM_PROCESSOR}")
+message("Host architecture is ${CMAKE_SYSTEM_PROCESSOR}")
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(FCONCEPTS_DIAGNOSTICS_DEPTH "-fconcepts-diagnostics-depth=3")
 endif()
