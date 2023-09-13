@@ -68,7 +68,7 @@ else()
           SET(DOWNLOAD_SHA1 "6ccafbee52137478d0b8146e71a11323755c9ed5")
         endif()
 
-        message(STATUS "Using TileDB artifact: ${DOWNLOAD_URL} -- ${DOWNLOAD_SHA1} -- ${CMAKE_OSX_ARCHITECTURES}")
+        message(WARNING "Using TileDB artifact: ${DOWNLOAD_URL} -- ${DOWNLOAD_SHA1} -- ${CMAKE_OSX_ARCHITECTURES}")
 
         ExternalProject_Add(ep_tiledb
                 PREFIX "externals"
