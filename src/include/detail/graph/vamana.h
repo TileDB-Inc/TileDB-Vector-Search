@@ -208,9 +208,9 @@ auto robust_prune(
     size_t R,
     Distance&& distance = Distance{}) {
   using T = typename std::decay_t<decltype(graph)>::value_type;
-  static_assert(
-      std::is_same_v<T, typename std::decay_t<decltype(db)>::value_type>,
-      "graph and db must be of same type");
+//  static_assert(
+//      std::is_same_v<T, typename std::decay_t<decltype(db)>::value_type>,
+//      "graph and db must be of same type");
   auto distance_comparator = [](auto&& a, auto&& b) {
     return std::get<0>(a) < std::get<0>(b);
   };
@@ -219,7 +219,6 @@ auto robust_prune(
       distance_comparator);
 
   for (auto&& v : V_in) {
-    // assert(v != p);
     if (v != p) {
       auto score = distance(db[v], db[p]);
       V.emplace(score, v);
@@ -300,7 +299,7 @@ class vamana_index {
   size_t R_max_degree_{0};  // diskANN paper says default = 64
   float alpha_min_ {1.0};   // per diskANN paper
   float alpha_max_ {1.2};   // per diskANN paper
-  ::detail::graph::nn_graph<T, indices_type> graph_;
+  ::detail::graph::nn_graph<attribute_type, indices_type> graph_;
 
  public:
   vamana_index() = delete;
@@ -337,9 +336,12 @@ class vamana_index {
       }
     }
   }
-  void add(const ColMajorMatrix<T>& database){}
 
-  auto query(const ColMajorMatrix<T>& query_set, size_t k) {}
+  template <query_vector_array Q>
+  void add(const Q& database){}
+
+  template <query_vector_array Q>
+  auto query(const Q& query_set, size_t k) {}
 
   auto remove(){}
 

@@ -1,5 +1,5 @@
 /**
- * @file   ivf_hack.cc
+ * @file   ivf_flat.cc
  *
  * @section LICENSE
  *
