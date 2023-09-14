@@ -409,5 +409,8 @@ def test_kmeans():
             x.append(np.linalg.norm(queries[i] - centroids[results[i]]))
         return np.mean(np.array(x))
 
-    print(f"sklearn score: {get_score(centroids_sk, results_sk)}")
-    print(f"tiledb score: {get_score(centroids_tdb_np, results_tdb_np)}")
+    sklearn_score = get_score(centroids_sk, results_sk)
+    tdb_score = get_score(centroids_tdb_np, results_tdb_np)
+    print(f"sklearn score: {sklearn_score}")
+    print(f"tiledb score: {tdb_score}")
+    assert tdb_score < 1.5 * sklearn_score
