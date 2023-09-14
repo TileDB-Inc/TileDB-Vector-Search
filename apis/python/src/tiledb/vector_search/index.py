@@ -1,3 +1,4 @@
+import multiprocessing as mp
 import numpy as np
 import sys
 
@@ -37,15 +38,26 @@ class Index:
         self.update_arrays_uri = None
         self.index_version = self.group.meta.get("index_version", "")
 
-
     def query(self, queries: np.ndarray, k, **kwargs):
+        if self.update_arrays_uri is None:
+            return self.query_internal(queries, k, **kwargs)
+
+        # Query with updates
         updated_ids = set(self.read_updated_ids())
         retrieval_k = k
         if len(updated_ids) > 0:
             retrieval_k = 2*k
+
+        # Perform the queries in parallel
+        kwargs["nthreads"] = int(mp.cpu_count()/2)
+        parent_conn, child_conn = mp.Pipe()
+        p = mp.Process(
+            target=Index.query_additions,
+            args=(child_conn, queries, k, self.dtype, self.update_arrays_uri, int(mp.cpu_count()/2)))
+        p.start()
         internal_results_d, internal_results_i = self.query_internal(queries, retrieval_k, **kwargs)
-        if self.update_arrays_uri is None:
-            return internal_results_d[:, 0:k], internal_results_i[:, 0:k]
+        addition_results_d, addition_results_i = parent_conn.recv()
+        p.join()
 
         # Filter updated vectors
         query_id = 0
@@ -62,7 +74,6 @@ class Index:
         internal_results_i = np.take_along_axis(internal_results_i, sort_index, axis=1)
 
         # Merge update results
-        addition_results_d, addition_results_i = self.query_additions(queries, k)
         if addition_results_d is None:
             return internal_results_d[:, 0:k], internal_results_i[:, 0:k]
 
@@ -84,22 +95,38 @@ class Index:
         results_i = np.take_along_axis(results_i, sort_index, axis=1)
         return results_d[:, 0:k], results_i[:, 0:k]
 
-    def query_internal(self, queries: np.ndarray, k, **kwargs):
-        raise NotImplementedError
-
-    def query_additions(self, queries: np.ndarray, k):
+    @staticmethod
+    def query_additions(conn, queries: np.ndarray, k, dtype, update_arrays_uri, nthreads=8):
         assert queries.dtype == np.float32
-        additions_vectors, additions_external_ids = self.read_additions()
+        additions_vectors, additions_external_ids = Index.read_additions(update_arrays_uri)
         if additions_vectors is None:
             return None, None
         queries_m = array_to_matrix(np.transpose(queries))
         d, i = query_vq_heap_pyarray(
-            array_to_matrix(np.transpose(additions_vectors).astype(self.dtype)),
+            array_to_matrix(np.transpose(additions_vectors).astype(dtype)),
             queries_m,
             StdVector_u64(additions_external_ids),
             k,
-            8)
-        return np.transpose(np.array(d)), np.transpose(np.array(i))
+            nthreads)
+        conn.send((np.transpose(np.array(d)), np.transpose(np.array(i))))
+        conn.close()
+
+    @staticmethod
+    def read_additions(update_arrays_uri) -> (np.ndarray, np.array):
+        if update_arrays_uri is None:
+            return None, None
+        updates_array = tiledb.open(update_arrays_uri, mode="r")
+        q = updates_array.query(attrs=('vector',), coords=True)
+        data = q[:]
+        updates_array.close()
+        additions_filter = [len(item) > 0 for item in data["vector"]]
+        if len(data["external_id"][additions_filter]) > 0:
+            return np.vstack(data["vector"][additions_filter]), data["external_id"][additions_filter]
+        else:
+            return None, None
+
+    def query_internal(self, queries: np.ndarray, k, **kwargs):
+        raise NotImplementedError
 
     def update(self, vector: np.array, external_id: np.uint64):
         updates_array = self.open_updates_array()
@@ -141,23 +168,13 @@ class Index:
     def get_updates_uri(self):
         return self.update_arrays_uri
 
-    def read_additions(self) -> (np.ndarray, np.array):
-        if self.update_arrays_uri is None:
-            return None, None
-        updates_array = tiledb.open(self.update_arrays_uri, mode="r")
-        q = updates_array.query(attrs=('vector',), coords=True)
-        data = q[:]
-        additions_filter = [len(item) > 0 for item in data["vector"]]
-        if len(data["external_id"][additions_filter]) > 0:
-            return np.vstack(data["vector"][additions_filter]), data["external_id"][additions_filter]
-        else:
-            return None, None
     def read_updated_ids(self) -> np.array:
         if self.update_arrays_uri is None:
             return np.array([], np.uint64)
         updates_array = tiledb.open(self.update_arrays_uri, mode="r")
         q = updates_array.query(attrs=('vector',), coords=True)
         data = q[:]
+        updates_array.close()
         return data["external_id"]
 
     def open_updates_array(self):
@@ -197,4 +214,8 @@ class Index:
             updates_uri=self.update_arrays_uri
         )
         tiledb.Array.delete_array(self.update_arrays_uri)
+        self.group.close()
+        self.group = tiledb.Group(self.uri, "w", ctx=tiledb.Ctx(self.config))
+        self.group.remove(self.update_arrays_uri)
+        self.group.close()
         return new_index
