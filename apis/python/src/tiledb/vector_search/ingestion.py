@@ -1728,7 +1728,7 @@ def ingest(
         index_group_uri: str,
         config: Optional[Mapping[str, Any]] = None,
     ):
-        group = tiledb.Group(index_group_uri, config=config)
+        group = tiledb.Group(index_group_uri)
         if INPUT_VECTORS_ARRAY_NAME in group:
             tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
         if EXTERNAL_IDS_ARRAY_NAME in group:
