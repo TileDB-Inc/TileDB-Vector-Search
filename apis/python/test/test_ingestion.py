@@ -376,6 +376,9 @@ def test_kmeans():
     d = 16
     n = k * k
     max_iter = 100
+    n_init = 10
+    verbose = True
+    init = "random"
 
     import sklearn.model_selection
     from sklearn.datasets import make_blobs
@@ -388,13 +391,13 @@ def test_kmeans():
         X, test_size=0.1, random_state=1
     )
 
-    km = KMeans(n_clusters=k)
+    km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init=init)
     km.fit(data)
     centroids_sk = km.cluster_centers_
     results_sk = km.predict(queries)
 
     centroids_tdb = kmeans_fit(
-        k, "random", max_iter, False, 10, array_to_matrix(np.transpose(data))
+        k, init, max_iter, verbose, n_init, array_to_matrix(np.transpose(data))
     )
     centroids_tdb_np = np.transpose(np.array(centroids_tdb))
     results_tdb = kmeans_predict(centroids_tdb, array_to_matrix(np.transpose(queries)))
