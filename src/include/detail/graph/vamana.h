@@ -95,8 +95,18 @@ auto greedy_search(
   // q1 = L \ V = {s}
   q1.insert(distance(db[source], query), source);
 
+  size_t counter {0};
+
   // while L\V is not empty
   while (!q1.empty()) {
+//    std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
+
+//    std::cout << "q1: " ;
+    for (auto&& q : q1) {
+//      std::cout << std::get<1>(q) << " ";
+    }
+//    std::cout << std::endl;
+
     // p* <- argmin_{p \in L\V} distance(p, q)
 
     // @todo: There must be a better way to do this
@@ -113,6 +123,8 @@ auto greedy_search(
     auto [s_star, p_star] = q1.back();
     q1.pop_back();
 
+//    std::cout << "p*: " << p_star << std::endl;
+
     // Change back to max heap
     std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
       return std::get<0>(a) < std::get<0>(b);
@@ -124,24 +136,43 @@ auto greedy_search(
 
     // V <- V \cup {p*} ; L\V <- L\V \ p*
     visited_vertices.insert(p_star);
+    //std::cout << "visited: " ;
+    for (auto&& q : visited_vertices) {
+      //std::cout << q << " ";
+    }
+    //std::cout << std::endl;
+
+    //std::cout << "Nout(p*): " ;
+    for (auto&& q: graph.out_edges(p_star)) {
+      //std::cout << std::get<1>(q) << " ";
+    }
+    //std::cout << std::endl;
+
+    // @todo -- needed?
+    q1.clear(); // Or remove newly visited
 
     // L <- L \cup Nout(p*)  ; L \ V <- L \ V \cup Nout(p*)
-    size_t bt{0};
     for (auto&& [_, p] : graph.out_edges(p_star)) {
-      if (bt == L) {
-        break;
-      }
 
       // assert(p != p_star);
       if (!visited(p)) {
         auto score = distance(db[p], query);
-        if constexpr (SP == SearchPath::path_and_search) {
-          result.template insert(score, p);
+        if (result.template insert<unique_id>(score, p)) {
+          q1.template insert<unique_id>(score, p);
         }
-        q1.template insert(score, p);
-        ++bt;
       }
     }
+
+    //std::cout << "result: " ;
+    for (auto&& q: result) {
+//      std::cout << std::get<1>(q) << " ";
+    }
+  //  std::cout << " ( " ;
+    for (auto&& q: result) {
+    //  std::cout << std::get<0>(q) << " ";
+    }
+    //std::cout << " )" << std::endl;
+
   }
 
   if constexpr (SP == SearchPath::path_and_search) {
@@ -291,15 +322,17 @@ auto medioid(auto&& P, Distance distance = Distance{}) {
 
 template <class attribute_type, class shuffled_ids_type, class indices_type>
 class vamana_index {
-  std::unique_ptr<tdbColMajorMatrix<attribute_type>> feature_vectors_;
+  ColMajorMatrix<attribute_type> feature_vectors_;
 
   size_t dimension_{0};
   size_t num_vectors_{0};
   size_t L_build_{0};       // diskANN paper says default = 100
   size_t R_max_degree_{0};  // diskANN paper says default = 64
+  size_t B_backtrack_{0};   // diskANN paper says default = 10
   float alpha_min_ {1.0};   // per diskANN paper
   float alpha_max_ {1.2};   // per diskANN paper
   ::detail::graph::nn_graph<attribute_type, indices_type> graph_;
+  size_t medioid_{0};
 
  public:
   vamana_index() = delete;
@@ -311,21 +344,24 @@ class vamana_index {
 
   ~vamana_index() = default;
 
-  vamana_index(size_t L, size_t R) : L_build_{L}, R_max_degree_{R} {
+  vamana_index(size_t L, size_t R, size_t B) : L_build_{L}, R_max_degree_{R}, B_backtrack_{B} {
   }
 
   template <feature_vector_array V>
-  void train(const V& training_set) {
-    dimension_ = dimension(training_set);
-    num_vectors_ = num_vectors(training_set);
+  void train(V& training_set) {
+    feature_vectors_ = std::move(training_set);
+
+    dimension_ = _cpo::dimension(feature_vectors_);
+    num_vectors_ = _cpo::num_vectors(training_set);
     graph_ = ::detail::graph::init_random_nn_graph<float>(
         training_set, R_max_degree_);
 
+    medioid_ = medioid(training_set);
+
     for (float alpha : {alpha_min_, alpha_max_}) {
-      auto start = medioid(training_set);
-      for (size_t p = 0; p < num_vectors(training_set); ++p) {
+      for (size_t p = 0; p < num_vectors_; ++p) {
         auto visited =
-            greedy_path(graph_, training_set, start, training_set[p], L_build_);
+            greedy_path(graph_, training_set, medioid_, training_set[p], L_build_);
         robust_prune(graph_, training_set, p, visited, alpha, R_max_degree_);
         for (auto&& [i, j] : graph_.out_edges(p)) {
           if (graph_.out_degree(j) >= R_max_degree_) {
@@ -341,7 +377,22 @@ class vamana_index {
   void add(const Q& database){}
 
   template <query_vector_array Q>
-  auto query(const Q& query_set, size_t k) {}
+  auto query(const Q& query_set, size_t k) {
+
+    auto top_k = ColMajorMatrix<size_t>(k, num_queries(query_set));
+    for (size_t i = 0; i < num_queries(query_set); ++i) {
+      greedy_search(graph_, *feature_vectors_, medioid, query_set[i], k, L_build_, top_k[i]);
+    }
+    return top_k;
+  }
+
+  template <query_vector Q>
+  auto query(const Q& query_vec, size_t k) {
+
+    auto top_k = std::vector<size_t>(k);
+    greedy_search(graph_, feature_vectors_, medioid_, query_vec, k, L_build_, top_k);
+    return top_k;
+  }
 
   auto remove(){}
 

@@ -53,6 +53,8 @@ public:
   using value_type = T;
   using index_type = I;
 
+  nn_graph() = default;
+
   nn_graph(size_t num_vertices, size_t k_nn)
           : num_vertices_{num_vertices}
           , k_nn_{k_nn}

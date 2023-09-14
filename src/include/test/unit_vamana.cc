@@ -1,5 +1,5 @@
 /**
- * @file   unit_vamana.h
+ * @file   unit_vamana.cc
  *
  * @section LICENSE
  *
@@ -31,6 +31,7 @@
  */
 
 #include <catch2/catch_all.hpp>
+
 #include "detail/flat/qv.h"
 #include "detail/graph/nn-descent.h"
 #include "detail/graph/nn-graph.h"
@@ -64,50 +65,166 @@ TEST_CASE("vamana: tiny greedy search", "[vamana]") {
 #endif
 
 TEST_CASE("vamana: greedy grid search", "[vamana]") {
-  auto&& [vecs, edges] = gen_grid(5, 7);
+  size_t M = 5;
+  size_t N = 7;
+
+  auto one_two = GENERATE(1, 2);
+  auto&& [vecs, edges] = ([one_two, M, N]() {
+    if (one_two == 1) {
+      return gen_uni_grid(M, N);
+    } else {
+      return gen_bi_grid(M, N);
+    }
+    })();
 
   adj_list<float> A(35);
   for (auto&& [src, dst] : edges) {
     A.add_edge(src, dst, sum_of_squares_distance{}(vecs[src], vecs[dst]));
   }
 
-  size_t source = 6;
-  std::vector<size_t> query {4, 5};
-  size_t k = 12;
-  size_t L = 20;
-  std::vector<size_t> nbd(k);
+  // (2, 3): 17 -> {10, 16, 17, 18, 24}
+  // (3, 4): 25 -> {18, 24, 25, 26, 32}
+  // (3, 6): 27 -> {20, 26, 27, 34}
+  // (4, 5): 33 -> {26, 32, 33, 34}
+  // (4, 6): 33 -> {27, 33, 34}
 
-  auto V = greedy_search(A, vecs, source, query, k, L, nbd);
-  CHECK(V.size() == 1);
-  for (auto&& v : V) {
-    std::cout << "(" << vecs[v][0] << ", " << vecs[v][1] << ") ";
+  using expt_type = std::tuple<
+      std::vector<size_t>, size_t,
+      std::vector<size_t>, size_t,
+      size_t,
+        std::vector<size_t>>;
+  std::vector<expt_type> expts{
+      {{0, 0}, 0, {2, 3}, 17,  7, {10, 16, 17, 18, 24}},
+      {{0, 0}, 0, {3, 4}, 25,  9, {18, 24, 25, 26, 32}},
+      {{0, 0}, 0, {3, 6}, 27, 11, {20, 26, 27, 34}},  // 33
+      {{0, 0}, 0, {4, 5}, 33, 11, {26, 32, 33, 34}},  // 25
+      {{0, 0}, 0, {4, 6}, 34, 11, {27, 33, 34}},  // 26 32
+  };
+
+  size_t count = 0;
+  for (auto&& [source_vec, source_coord, query_vec, query_coord, path_length, expected] :
+       expts) {
+    size_t k = 5;
+    size_t L = 2;
+    size_t expected_length = query_vec[0] - source_vec[0] + query_vec[1] - source_vec[1] + 2;
+    std::vector<size_t> nbd(k);
+    auto V = greedy_search(A, vecs, source_coord, query_vec, size(expected), L, nbd);
+    std::sort(begin(nbd), begin(nbd) + size(expected));
+    CHECK(V.size() == path_length);
+    CHECK(std::equal(begin(expected), end(expected), begin(nbd)));
+
+    std::cout << ":::: " << count << " :::: \n";
+    for (auto&& n : nbd) {
+      std::cout << n << " ";
+    }
+    std::cout << std::endl;
+    for (auto&& e : expected) {
+      std::cout << e << " ";
+    }
+    std::cout << std::endl;
+    for (auto&& v : V) {
+      std::cout << "(" << vecs[v][0] << ", " << vecs[v][1] << ") ";
+    }
+    std::cout << std::endl;
+
   }
-  std::cout << std::endl;
 }
 
 TEST_CASE("vamana: greedy grid path", "[vamana]") {
-  auto&& [vecs, edges] = gen_grid(5, 7);
+  auto&& [vecs, edges] = gen_bi_grid(5, 7);
 
   adj_list<float> A(35);
   for (auto&& [src, dst] : edges) {
     A.add_edge(src, dst, sum_of_squares_distance{}(vecs[src], vecs[dst]));
   }
 
-  size_t source = 6;
-  std::vector<size_t> query {4, 5};
   size_t k = 12;
   size_t L = 20;
-  std::vector<size_t> nbd(k);
 
-  auto V = greedy_path(A, vecs, source, query, L);
-  CHECK(V.size() == 1);
-  for (auto&& v : V) {
-    std::cout << "(" << vecs[v][0] << ", " << vecs[v][1] << ") ";
+  SECTION ("source 0") {
+    size_t source = 0;
+    std::vector<size_t> query{4, 5};
+
+    std::vector<size_t> nbd(k);
+    auto V = greedy_path(A, vecs, source, query, 2);
+
+    CHECK(V.size() == 9);
+    auto v = begin(V);
+    CHECK(*v++ == 0);
+    CHECK(*v++ == 1);
+    CHECK(*v++ == 2);
+    CHECK(*v++ == 3);
+    CHECK(*v++ == 4);
+    CHECK(*v++ == 5);
+    CHECK(*v++ == 12);
+    CHECK(*v++ == 19);
+    CHECK(*v++ == 26);
+    CHECK(*v++ == 33);
+
+
+        for (auto&& v : V) {
+          std::cout << v << std::endl;
+        }
+
+        for (auto&& v : V) {
+          std::cout << "(" << vecs[v][0] << ", " << vecs[v][1] << ") ";
+        }
+        std::cout << std::endl;
+
+
   }
-  std::cout << std::endl;
+
+  SECTION ("source 5") {
+    size_t source = 5;
+    std::vector<size_t> query{4, 5};
+
+    std::vector<size_t> nbd(k);
+    auto V = greedy_path(A, vecs, source, query, L);
+
+    CHECK(V.size() == 5);
+    auto v = begin(V);
+    CHECK(*v++ == 6);
+    CHECK(*v++ == 13);
+    CHECK(*v++ == 20);
+    CHECK(*v++ == 27);
+    CHECK(*v++ == 34);
+  }
+
+
+  SECTION ("source 6") {
+    size_t source = 6;
+    std::vector<size_t> query{4, 5};
+
+    std::vector<size_t> nbd(k);
+    auto V = greedy_path(A, vecs, source, query, L);
+
+    CHECK(V.size() == 5);
+    auto v = begin(V);
+    CHECK(*v++ == 6);
+    CHECK(*v++ == 13);
+    CHECK(*v++ == 20);
+    CHECK(*v++ == 27);
+    CHECK(*v++ == 34);
+  }
+
+  SECTION ("source 28") {
+    size_t source = 28;
+    std::vector<size_t> query{4, 5};
+
+    std::vector<size_t> nbd(k);
+    auto V = greedy_path(A, vecs, source, query, L);
+
+    CHECK(V.size() == 5);
+    auto v = begin(V);
+    CHECK(*v++ == 6);
+    CHECK(*v++ == 13);
+    CHECK(*v++ == 20);
+    CHECK(*v++ == 27);
+    CHECK(*v++ == 34);
+  }
+
+
 }
-
-
 
 auto build_hypercube(size_t k_near, size_t k_far) {
   size_t N = 8 * (k_near + k_far + 1);
@@ -515,4 +632,40 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
             << std::endl;
 }
 
+TEST_CASE("vamana: vamana_index", "[vamana]") {
+  // should be dim = 128, num = 256
+  // npoints, ndims
+  uint32_t npoints{0};
+  uint32_t ndim{0};
 
+  std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
+  if (!binary_file.is_open()) {
+    throw std::runtime_error("Could not open file " + diskann_test_256bin);
+  }
+
+  binary_file.read((char*)&npoints, 4);
+  binary_file.read((char*)&ndim, 4);
+  REQUIRE(npoints == 256);
+  REQUIRE(ndim == 128);
+
+  auto x = ColMajorMatrix<float>(ndim, npoints);
+
+  binary_file.read((char*)x.data(), npoints*ndim);
+  binary_file.close();
+
+  size_t L = 100;
+  size_t R = 100;
+  size_t B = 2;
+  auto index = vamana_index<float, size_t, size_t>(L, R, B);
+
+  auto x0 = std::vector<float>(ndim);
+  std::copy(x.data(), x.data() + ndim, begin(x0));
+
+  index.train(x);
+
+      // x, 5, 7, 7, 1.0, 1, 1);
+  // 0
+  // 14
+  auto v0 = index.query(x0, 5);
+  CHECK(v0[0] == 0);
+}

@@ -77,7 +77,7 @@ void dump_edgelist(
   out.close();
 }
 
-auto gen_grid(size_t M, size_t N) {
+auto gen_uni_grid(size_t M, size_t N) {
   auto dim = 2;
   auto nvectors = M * N;
   auto nedges = (M - 1) * N + M * (N-1);
@@ -111,5 +111,47 @@ auto gen_grid(size_t M, size_t N) {
 
   return std::make_tuple(std::move(vec_array), edges);
 }
+
+auto gen_bi_grid(size_t M, size_t N) {
+  auto dim = 2;
+  auto nvectors = M * N;
+  auto nedges = (M - 1) * N + M * (N-1);
+
+  std::vector<std::tuple<size_t, size_t>> edges;
+  edges.reserve(nedges);
+
+  auto vec_array = ColMajorMatrix<size_t>(dim, nvectors);
+
+  size_t k = 0;
+  for (size_t i = 0; i < M; ++i) {
+    for (size_t j = 0; j < N; ++j) {
+      vec_array(0, i * N + j) = i;
+      vec_array(1, i * N + j) = j;
+      ++k;
+    }
+  }
+
+
+  for (size_t i = 0; i < M; ++i) {
+    for (size_t j = 0; j < N; ++j) {
+      if (j < N-1) {
+        auto src = i * N + j;
+        auto dst = i * N + j + 1;
+        edges.emplace_back(src, dst);
+        edges.emplace_back(dst, src);
+      }
+      if (i < M-1) {
+        auto src = i * N + j;
+        auto dst = (i + 1) * N + j;
+        edges.emplace_back(src, dst);
+        edges.emplace_back(dst, src);
+      }
+    }
+  }
+
+
+  return std::make_tuple(std::move(vec_array), edges);
+}
+
 
 #endif //TDB_GEN_GRAPHS_H

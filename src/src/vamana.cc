@@ -56,9 +56,9 @@ static constexpr const char USAGE[] =
     R"(vamana: test vamana index
   Usage:
       vamana (-h | --help)
-      vamana --db_uri URI --query_uri URI [--groundtruth_uri URI] [--k NN] [--nqueries NN}
+      vamana --db_uri URI --query_uri URI [--groundtruth_uri URI] [--k NN] [--nqueries NN]
              [--max_degree NN] [--Lbuild NN] [--alpha FF] [--k_nn NN]
-             [--nthreads NN} [--validate] [--log FILE] [--stats] [-d] [-v] [--dump NN]
+             [--nthreads NN] [--validate] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
   Options:
       -h, --help              show this screen
@@ -189,6 +189,5 @@ int main(int argc, char* argv[]) {
               << total_groundtruth << " = "
               << "R@" << k_nn << " of " << recall << std::endl;
   }
-
 }
 
