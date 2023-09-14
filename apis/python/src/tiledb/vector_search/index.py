@@ -21,6 +21,7 @@ class Index:
     config: Optional[Mapping[str, Any]]
         config dictionary, defaults to None
     """
+
     def __init__(
         self,
         uri: str,
@@ -43,20 +44,26 @@ class Index:
             return self.query_internal(queries, k, **kwargs)
 
         # Query with updates
-        updated_ids = set(self.read_updated_ids())
-        retrieval_k = k
-        if len(updated_ids) > 0:
-            retrieval_k = 2*k
-
         # Perform the queries in parallel
-        kwargs["nthreads"] = int(mp.cpu_count()/2)
+        retrieval_k = 2 * k
+        kwargs["nthreads"] = int(mp.cpu_count() / 2)
         parent_conn, child_conn = mp.Pipe()
         p = mp.Process(
             target=Index.query_additions,
-            args=(child_conn, queries, k, self.dtype, self.update_arrays_uri, int(mp.cpu_count()/2)))
+            args=(
+                child_conn,
+                queries,
+                k,
+                self.dtype,
+                self.update_arrays_uri,
+                int(mp.cpu_count() / 2),
+            ),
+        )
         p.start()
-        internal_results_d, internal_results_i = self.query_internal(queries, retrieval_k, **kwargs)
-        addition_results_d, addition_results_i = parent_conn.recv()
+        internal_results_d, internal_results_i = self.query_internal(
+            queries, retrieval_k, **kwargs
+        )
+        addition_results_d, addition_results_i, updated_ids = parent_conn.recv()
         p.join()
 
         # Filter updated vectors
@@ -81,12 +88,14 @@ class Index:
         for query in addition_results_d:
             res_id = 0
             for res in query:
-                if addition_results_d[query_id, res_id] == 0 and addition_results_i[query_id, res_id] == 0:
+                if (
+                    addition_results_d[query_id, res_id] == 0
+                    and addition_results_i[query_id, res_id] == 0
+                ):
                     addition_results_d[query_id, res_id] = MAX_FLOAT_32
                     addition_results_i[query_id, res_id] = MAX_UINT64
                 res_id += 1
             query_id += 1
-
 
         results_d = np.hstack((internal_results_d, addition_results_d))
         results_i = np.hstack((internal_results_i, addition_results_i))
@@ -96,95 +105,103 @@ class Index:
         return results_d[:, 0:k], results_i[:, 0:k]
 
     @staticmethod
-    def query_additions(conn, queries: np.ndarray, k, dtype, update_arrays_uri, nthreads=8):
+    def query_additions(
+        conn, queries: np.ndarray, k, dtype, update_arrays_uri, nthreads=8
+    ):
         assert queries.dtype == np.float32
-        additions_vectors, additions_external_ids = Index.read_additions(update_arrays_uri)
+        additions_vectors, additions_external_ids, updated_ids = Index.read_additions(
+            update_arrays_uri
+        )
         if additions_vectors is None:
-            return None, None
+            conn.send(None, None, updated_ids)
+            conn.close()
+            return
+
         queries_m = array_to_matrix(np.transpose(queries))
         d, i = query_vq_heap_pyarray(
             array_to_matrix(np.transpose(additions_vectors).astype(dtype)),
             queries_m,
             StdVector_u64(additions_external_ids),
             k,
-            nthreads)
-        conn.send((np.transpose(np.array(d)), np.transpose(np.array(i))))
+            nthreads,
+        )
+        conn.send((np.transpose(np.array(d)), np.transpose(np.array(i)), updated_ids))
         conn.close()
 
     @staticmethod
     def read_additions(update_arrays_uri) -> (np.ndarray, np.array):
         if update_arrays_uri is None:
-            return None, None
+            return None, None, np.array([], np.uint64)
         updates_array = tiledb.open(update_arrays_uri, mode="r")
-        q = updates_array.query(attrs=('vector',), coords=True)
+        q = updates_array.query(attrs=("vector",), coords=True)
         data = q[:]
         updates_array.close()
+        updated_ids = data["external_id"]
         additions_filter = [len(item) > 0 for item in data["vector"]]
         if len(data["external_id"][additions_filter]) > 0:
-            return np.vstack(data["vector"][additions_filter]), data["external_id"][additions_filter]
+            return (
+                np.vstack(data["vector"][additions_filter]),
+                data["external_id"][additions_filter],
+                updated_ids
+            )
         else:
-            return None, None
+            return None, None, updated_ids
 
     def query_internal(self, queries: np.ndarray, k, **kwargs):
         raise NotImplementedError
 
     def update(self, vector: np.array, external_id: np.uint64):
         updates_array = self.open_updates_array()
-        vectors = np.empty((1), dtype='O')
+        vectors = np.empty((1), dtype="O")
         vectors[0] = vector
-        updates_array[external_id] = {'vector': vectors}
+        updates_array[external_id] = {"vector": vectors}
         updates_array.close()
         self.consolidate_update_fragments()
 
     def update_batch(self, vectors: np.ndarray, external_ids: np.array):
         updates_array = self.open_updates_array()
-        updates_array[external_ids] = {'vector': vectors}
+        updates_array[external_ids] = {"vector": vectors}
         updates_array.close()
         self.consolidate_update_fragments()
 
     def delete(self, external_id: np.uint64):
         updates_array = self.open_updates_array()
-        deletes = np.empty((1), dtype='O')
+        deletes = np.empty((1), dtype="O")
         deletes[0] = np.array([], dtype=self.dtype)
-        updates_array[external_id] =  {'vector': deletes}
+        updates_array[external_id] = {"vector": deletes}
         updates_array.close()
         self.consolidate_update_fragments()
 
     def delete_batch(self, external_ids: np.array):
         updates_array = self.open_updates_array()
-        deletes = np.empty((len(external_ids)), dtype='O')
+        deletes = np.empty((len(external_ids)), dtype="O")
         for i in range(len(external_ids)):
             deletes[i] = np.array([], dtype=self.dtype)
-        updates_array[external_ids] = {'vector': deletes}
+        updates_array[external_ids] = {"vector": deletes}
         updates_array.close()
         self.consolidate_update_fragments()
 
     def consolidate_update_fragments(self):
         fragments_info = tiledb.array_fragments(self.update_arrays_uri)
-        if(len(fragments_info) > 10):
+        if len(fragments_info) > 10:
             tiledb.consolidate(self.update_arrays_uri)
             tiledb.vacuum(self.update_arrays_uri)
 
     def get_updates_uri(self):
         return self.update_arrays_uri
 
-    def read_updated_ids(self) -> np.array:
-        if self.update_arrays_uri is None:
-            return np.array([], np.uint64)
-        updates_array = tiledb.open(self.update_arrays_uri, mode="r")
-        q = updates_array.query(attrs=('vector',), coords=True)
-        data = q[:]
-        updates_array.close()
-        return data["external_id"]
-
     def open_updates_array(self):
         if self.update_arrays_uri is None:
-            updates_array_name = storage_formats[self.storage_version]["UPDATES_ARRAY_NAME"]
+            updates_array_name = storage_formats[self.storage_version][
+                "UPDATES_ARRAY_NAME"
+            ]
             updates_array_uri = f"{self.group.uri}/{updates_array_name}"
             if tiledb.array_exists(updates_array_uri):
                 raise RuntimeError(f"Array {updates_array_uri} already exists.")
             external_id_dim = tiledb.Dim(
-                name="external_id", domain=(0, MAX_UINT64-1), dtype=np.dtype(np.uint64)
+                name="external_id",
+                domain=(0, MAX_UINT64 - 1),
+                dtype=np.dtype(np.uint64),
             )
             dom = tiledb.Domain(external_id_dim)
             vector_attr = tiledb.Attr(name="vector", dtype=self.dtype, var=True)
@@ -205,13 +222,14 @@ class Index:
 
     def consolidate_updates(self):
         from tiledb.vector_search.ingestion import ingest
+
         new_index = ingest(
             index_type=self.index_type,
             index_uri=self.uri,
             size=self.size,
             source_uri=self.db_uri,
             external_ids_uri=self.ids_uri,
-            updates_uri=self.update_arrays_uri
+            updates_uri=self.update_arrays_uri,
         )
         tiledb.Array.delete_array(self.update_arrays_uri)
         self.group.close()
