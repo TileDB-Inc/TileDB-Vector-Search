@@ -30,7 +30,7 @@ static void declare_kmeans(py::module& m, const std::string& suffix) {
              std::ignore = verbose;
              std::ignore = n_init;
              kmeans_init init_val;
-             if (init == "kmeans++") {
+             if (init == "k-means++") {
                 init_val = kmeans_init::kmeanspp;
              } else if (init == "random") {
                 init_val = kmeans_init::random;
