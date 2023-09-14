@@ -58,7 +58,7 @@
 #include "detail/flat/qv.h"
 #include "detail/ivf/index.h"
 
-enum class kmeans_init { kmeanspp, random };
+enum class kmeans_init { none, kmeanspp, random };
 
 template <class T, class shuffled_ids_type = size_t, class indices_type = size_t>
 class kmeans_index {
@@ -261,8 +261,8 @@ class kmeans_index {
       auto min = *mm.first;
       auto max = *mm.second;
       auto diff = max - min;
-      std::cout << "avg: " << average << " sum: " << sum << " min: " << min
-                << " max: " << max << " diff: " << diff << std::endl;
+      // std::cout << "avg: " << average << " sum: " << sum << " min: " << min
+      //          << " max: " << max << " diff: " << diff  << std::endl;
 
       // @todo parallelize
 
@@ -331,11 +331,40 @@ class kmeans_index {
   }
 
   void train(const ColMajorMatrix<T>& training_set, kmeans_init init) {
-    if (init == kmeans_init::random)
-	  kmeans_random_init(training_set);
-    else
-      kmeans_pp(training_set);
+    switch(init) {
+    case(kmeans_init::none):
+      break;
+      case(kmeans_init::kmeanspp):
+        kmeans_pp(training_set);
+        break;
+      case(kmeans_init::random):
+        kmeans_random_init(training_set);
+        break;
+    };
+
+#if 0
+    std::cout << "\nCentroids Before:\n" << std::endl;
+    for (size_t j = 0; j < centroids_.num_cols(); ++j) {
+      for (size_t i = 0; i < dimension_; ++i) {
+        std::cout << centroids_[j][i] << " ";
+      }
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+#endif
+
     train_no_init(training_set);
+
+#if 0
+    std::cout << "\nCentroids After:\n" << std::endl;
+    for (size_t j = 0; j < centroids_.num_cols(); ++j) {
+      for (size_t i = 0; i < dimension_; ++i) {
+        std::cout << centroids_[j][i] << " ";
+      }
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+#endif
   }
 
 #if 0
@@ -378,9 +407,14 @@ class kmeans_index {
   }
 #endif
 
+  auto set_centroids(const ColMajorMatrix<T>& centroids) {
+    std::copy(centroids.data(), centroids.data() + centroids.num_rows() * centroids.num_cols(), centroids_.data());
+  }
+
   auto& get_centroids() {
     return centroids_;
   }
+
 };
 
 #endif  // TILEDB_IVF_INDEX_H
