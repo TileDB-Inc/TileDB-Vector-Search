@@ -1,4 +1,5 @@
-import multiprocessing as mp
+import concurrent.futures as futures
+import os
 import numpy as np
 import sys
 
@@ -38,6 +39,7 @@ class Index:
         self.storage_version = self.group.meta.get("storage_version", "0.1")
         self.update_arrays_uri = None
         self.index_version = self.group.meta.get("index_version", "")
+        self.thread_executor = futures.ThreadPoolExecutor()
 
     def query(self, queries: np.ndarray, k, **kwargs):
         if self.update_arrays_uri is None:
@@ -46,25 +48,19 @@ class Index:
         # Query with updates
         # Perform the queries in parallel
         retrieval_k = 2 * k
-        kwargs["nthreads"] = int(mp.cpu_count() / 2)
-        parent_conn, child_conn = mp.Pipe()
-        p = mp.Process(
-            target=Index.query_additions,
-            args=(
-                child_conn,
-                queries,
-                k,
-                self.dtype,
-                self.update_arrays_uri,
-                int(mp.cpu_count() / 2),
-            ),
+        kwargs["nthreads"] = int(os.cpu_count() / 2)
+        future = self.thread_executor.submit(
+            Index.query_additions,
+            queries,
+            k,
+            self.dtype,
+            self.update_arrays_uri,
+            int(os.cpu_count() / 2),
         )
-        p.start()
         internal_results_d, internal_results_i = self.query_internal(
             queries, retrieval_k, **kwargs
         )
-        addition_results_d, addition_results_i, updated_ids = parent_conn.recv()
-        p.join()
+        addition_results_d, addition_results_i, updated_ids = future.result()
 
         # Filter updated vectors
         query_id = 0
@@ -106,16 +102,14 @@ class Index:
 
     @staticmethod
     def query_additions(
-        conn, queries: np.ndarray, k, dtype, update_arrays_uri, nthreads=8
+        queries: np.ndarray, k, dtype, update_arrays_uri, nthreads=8
     ):
         assert queries.dtype == np.float32
         additions_vectors, additions_external_ids, updated_ids = Index.read_additions(
             update_arrays_uri
         )
         if additions_vectors is None:
-            conn.send(None, None, updated_ids)
-            conn.close()
-            return
+            return None, None, updated_ids
 
         queries_m = array_to_matrix(np.transpose(queries))
         d, i = query_vq_heap_pyarray(
@@ -125,8 +119,7 @@ class Index:
             k,
             nthreads,
         )
-        conn.send((np.transpose(np.array(d)), np.transpose(np.array(i)), updated_ids))
-        conn.close()
+        return np.transpose(np.array(d)), np.transpose(np.array(i)), updated_ids
 
     @staticmethod
     def read_additions(update_arrays_uri) -> (np.ndarray, np.array):
