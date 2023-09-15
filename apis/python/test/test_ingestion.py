@@ -377,7 +377,7 @@ def test_kmeans():
     n = k * k
     max_iter = 16
     n_init = 10
-    verbose = True
+    verbose = False
 
     import sklearn.model_selection
     from sklearn.datasets import make_blobs
@@ -390,20 +390,15 @@ def test_kmeans():
         X, test_size=0.1, random_state=1
     )
 
-    data_x = np.array( [[ 1.0573647,   5.082087  ],
-                      [-6.229642,  -1.3590931 ],
-                      [ 0.7446737,   6.3828287 ],
-                     [-7.698864,   -3.0493321 ],
-                     [ 2.1362762,  -4.4448104 ],
-                     [ 1.04019,    -4.0389647 ],
-                     [ 0.38996044,  5.7235265 ],
-    [ 1.7470839,  -4.717076  ]]).astype("float32")
+    data_x = np.array([[1.0573647,   5.082087],
+                      [-6.229642,   -1.3590931],
+                      [0.7446737,    6.3828287],
+                      [-7.698864,   -3.0493321],
+                      [2.1362762,   -4.4448104],
+                      [1.04019,     -4.0389647],
+                      [0.38996044,   5.7235265],
+    [1.7470839,  -4.717076]]).astype("float32")
     queries_x = np.array([[-7.3712273, -1.1178735]]).astype("float32")
-
-    #print(f"data:\n {data}\n")
-    #print(f"queries:\n {queries}\n")
-    #print(f"data^T:\n {np.transpose(data)}\n")
-    #print(f"queries^T:\n {np.transpose(queries)}\n")
 
     km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init="random")
     km.fit(data)
@@ -450,9 +445,3 @@ def test_kmeans():
     print(f"tiledb score: {tdb_score}")
 
     # assert tdb_score < 1.5 * sklearn_score
-
-    #print(f"sklearn results: {results_sk}")
-    #print(f"tiledb results: {results_tdb_np}")
-
-    #print(f"sklearn centroids:\n {centroids_sk}")
-    #print(f"tiledb centroids:\n {centroids_tdb_np}")
