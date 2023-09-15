@@ -28,6 +28,7 @@ def ingest(
     input_vectors_per_work_item: int = -1,
     verbose: bool = False,
     trace_id: Optional[str] = None,
+    use_sklearn: bool = False,
     mode: Mode = Mode.LOCAL,
 ):
     """
@@ -79,6 +80,9 @@ def ingest(
         verbose logging, defaults to False
     trace_id: Optional[str]
         trace ID for logging, defaults to None
+    use_sklearn: bool
+        Whether to use scikit-learn's implementation of k-means clustering instead of
+        tiledb.vector_search's. Defaults to false.
     mode: Mode
         execution mode, defaults to LOCAL use BATCH for distributed execution
     """
@@ -849,7 +853,10 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
+        use_sklearn: bool = False
     ):
+        from sklearn.cluster import KMeans
+
         from tiledb.vector_search.module import (
             array_to_matrix,
             kmeans_fit,
@@ -870,8 +877,19 @@ def ingest(
                 trace_id=trace_id,
             ).astype(np.float32)
             logger.debug("Start kmeans training")
-            clusters = kmeans_fit(partitions, init, max_iter, verbose, n_init, array_to_matrix(np.transpose(sample_vectors)))
-            clusters = np.array(clusters)
+            if use_sklearn:
+                km = KMeans(
+                    n_clusters=partitions,
+                    init=init,
+                    max_iter=max_iter,
+                    verbose=3 if verbose else 0,
+                    n_init=n_init,
+                )
+                km.fit(np.transpose(sample_vectors))
+                clusters = km.cluster_centers_
+            else:
+                clusters = kmeans_fit(partitions, init, max_iter, verbose, n_init, array_to_matrix(np.transpose(sample_vectors)))
+                clusters = np.array(clusters)
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w") as A:
                 A[0:dimensions, 0:partitions] = clusters
@@ -919,7 +937,10 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
+        use_sklearn: bool = False,
     ):
+        from sklearn.cluster import KMeans
+
         import tiledb.cloud
 
         def generate_new_centroid_per_thread(
@@ -1016,7 +1037,13 @@ def ingest(
             )
             logger.debug("Input centroids: %s", centroids[0:5])
             logger.debug("Assigning vectors to centroids")
-            assignments = kmeans_predict(centroids, vectors)
+            if use_sklearn:
+                km = KMeans()
+                km.n_threads_ = threads
+                km.cluster_centers_ = centroids
+                assignments = km.predict(vectors)
+            else:
+                assignments = kmeans_predict(centroids, vectors)
             logger.debug("Assignments: %s", assignments[0:100])
             partial_new_centroids = update_centroids()
             logger.debug("New centroids: %s", partial_new_centroids[0:5])
@@ -1451,6 +1478,7 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
+        use_sklearn: bool = False,
         mode: Mode = Mode.LOCAL,
     ) -> dag.DAG:
         if mode == Mode.BATCH:
@@ -1536,6 +1564,7 @@ def ingest(
                         config=config,
                         verbose=verbose,
                         trace_id=trace_id,
+                        use_sklearn=use_sklearn,
                         name="kmeans",
                         resources={"cpu": "8", "memory": "32Gi"},
                         image_name=DEFAULT_IMG_NAME,
@@ -1581,6 +1610,7 @@ def ingest(
                                     config=config,
                                     verbose=verbose,
                                     trace_id=trace_id,
+                                    use_sklearn=use_sklearn,
                                     name="k-means-part-" + str(task_id),
                                     resources={"cpu": str(threads), "memory": "12Gi"},
                                     image_name=DEFAULT_IMG_NAME,
@@ -1889,6 +1919,7 @@ def ingest(
             config=config,
             verbose=verbose,
             trace_id=trace_id,
+            use_sklearn=use_sklearn,
             mode=mode,
         )
         logger.debug("Submitting ingestion graph")

@@ -22,10 +22,11 @@ dependencies = [
     "tiledb-cloud>=0.10.5",
     "tiledb>=0.15.2",
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
+    "scikit-learn",
 ]
 
 [project.optional-dependencies]
-test = ["pytest", "scikit-learn"]
+test = ["pytest"]
 
 
 [project.urls]
