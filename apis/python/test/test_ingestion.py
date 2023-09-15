@@ -383,7 +383,7 @@ def test_kmeans():
     from sklearn.datasets import make_blobs
     from sklearn.cluster import KMeans
 
-    X, _, centers = make_blobs(n_samples=n, n_features=d, centers=k, return_centers=True)
+    X, _, centers = make_blobs(n_samples=n, n_features=d, centers=k, return_centers=True, random_state=1)
     X = X.astype("float32")
 
     data, queries = sklearn.model_selection.train_test_split(
@@ -400,13 +400,13 @@ def test_kmeans():
     [1.7470839,  -4.717076]]).astype("float32")
     queries_x = np.array([[-7.3712273, -1.1178735]]).astype("float32")
 
-    km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init="random")
+    km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init="random", random_state=1)
     km.fit(data)
     centroids_sk = km.cluster_centers_
     results_sk = km.predict(queries)
 
     centroids_tdb = kmeans_fit(
-        k, "random", max_iter, verbose, n_init, array_to_matrix(np.transpose(data))
+        k, "random", max_iter, verbose, n_init, array_to_matrix(np.transpose(data)), seed=1
     )
     centroids_tdb_np = np.transpose(np.array(centroids_tdb))
     results_tdb = kmeans_predict(centroids_tdb, array_to_matrix(np.transpose(queries)))
@@ -424,7 +424,7 @@ def test_kmeans():
     print(f"sklearn score: {sklearn_score}")
     print(f"tiledb score: {tdb_score}")
 
-    km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init="k-means++")
+    km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init="k-means++", random_state=1)
     km.fit(data)
     centroids_sk = km.cluster_centers_
     results_sk = km.predict(queries)
@@ -432,7 +432,7 @@ def test_kmeans():
     # assert tdb_score < 1.5 * sklearn_score
 
     centroids_tdb = kmeans_fit(
-        k, "k-means++", max_iter, verbose, n_init, array_to_matrix(np.transpose(data))
+        k, "k-means++", max_iter, verbose, n_init, array_to_matrix(np.transpose(data)), seed=1
     )
     centroids_tdb_np = np.transpose(np.array(centroids_tdb))
     results_tdb = kmeans_predict(centroids_tdb, array_to_matrix(np.transpose(queries)))
