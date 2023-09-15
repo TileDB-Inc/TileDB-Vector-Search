@@ -429,7 +429,7 @@ def test_kmeans():
     centroids_sk = km.cluster_centers_
     results_sk = km.predict(queries)
 
-    # assert tdb_score < 1.5 * sklearn_score
+    assert tdb_score < 1.5 * sklearn_score
 
     centroids_tdb = kmeans_fit(
         k, "k-means++", max_iter, verbose, n_init, array_to_matrix(np.transpose(data)), seed=1
@@ -444,4 +444,4 @@ def test_kmeans():
     print(f"sklearn score: {sklearn_score}")
     print(f"tiledb score: {tdb_score}")
 
-    # assert tdb_score < 1.5 * sklearn_score
+    assert tdb_score < 1.5 * sklearn_score
