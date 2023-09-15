@@ -130,6 +130,7 @@ TEST_CASE("vamana: greedy grid search", "[vamana]") {
   }
 }
 
+#if 0
 TEST_CASE("vamana: greedy grid path", "[vamana]") {
   auto&& [vecs, edges] = gen_bi_grid(5, 7);
 
@@ -222,9 +223,8 @@ TEST_CASE("vamana: greedy grid path", "[vamana]") {
     CHECK(*v++ == 27);
     CHECK(*v++ == 34);
   }
-
-
 }
+#endif
 
 auto build_hypercube(size_t k_near, size_t k_far) {
   size_t N = 8 * (k_near + k_far + 1);

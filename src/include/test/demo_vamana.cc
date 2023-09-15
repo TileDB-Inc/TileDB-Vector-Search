@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
   auto X = random_geometric_2D(num_nodes);
   dump_coordinates("coords.txt", X);
   auto g = ::detail::graph::init_random_nn_graph<float>(X, 2*R);
-  std::cout << "num_vertices " << g.num_vertices() << std::endl;
+  // std::cout << "num_vertices " << g.num_vertices() << std::endl;
 
   std::vector<std::tuple<size_t, size_t>> edges;
   for (size_t i = 0; i < g.num_vertices(); ++i) {

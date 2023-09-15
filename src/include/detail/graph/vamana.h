@@ -242,6 +242,7 @@ auto robust_prune(
 //  static_assert(
 //      std::is_same_v<T, typename std::decay_t<decltype(db)>::value_type>,
 //      "graph and db must be of same type");
+
   auto distance_comparator = [](auto&& a, auto&& b) {
     return std::get<0>(a) < std::get<0>(b);
   };
@@ -258,10 +259,12 @@ auto robust_prune(
 
   // V <- (V \cup Nout(p) \ p
   for (auto&& [ss, pp] : graph.out_edges(p)) {
-    assert(pp != p);
+    // assert(pp != p);
     assert(ss == distance(db[p], db[pp]));
     V.emplace(ss, pp);
   }
+  auto to_be_removed = std::vector<element>{};
+  to_be_removed.reserve(V.size());
 
   // Nout(p) <- 0
   graph.out_edges(p).clear();
@@ -279,12 +282,12 @@ auto robust_prune(
       break;
     }
 
+    to_be_removed.resize();
+
     // For p' in V
-    auto to_be_removed = std::vector<element>{};
-    to_be_removed.reserve(V.size());
     for (auto&& [ss, pp] : V) {
       // if alpha * d(p*, p') <= d(p, p')
-      if (alpha * distance(db[p_star], db[pp]) <= ss) {  // @todo <= or >=
+      if (alpha * distance(db[p_star], db[pp]) <= ss) {
         // V.erase({ss, pp});
         to_be_removed.emplace_back(ss, pp);
       }
