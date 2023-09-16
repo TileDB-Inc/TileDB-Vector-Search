@@ -345,7 +345,7 @@ class vamana_index {
   size_t B_backtrack_{0};   // diskANN paper says default = 10
   float alpha_min_ {1.0};   // per diskANN paper
   float alpha_max_ {1.2};   // per diskANN paper
-  ::detail::graph::nn_graph<attribute_type, indices_type> graph_;
+  ::detail::graph::adj_list<attribute_type, indices_type> graph_;
   size_t medioid_{0};
 
  public:
@@ -358,7 +358,8 @@ class vamana_index {
 
   ~vamana_index() = default;
 
-  vamana_index(size_t L, size_t R, size_t B) : L_build_{L}, R_max_degree_{R}, B_backtrack_{B} {
+  vamana_index(size_t num_nodes, size_t L, size_t R, size_t B) :
+      num_vectors_{num_nodes}, L_build_{L}, R_max_degree_{R}, B_backtrack_{B}, graph_{num_vectors_} {
   }
 
   template <feature_vector_array V>
@@ -366,22 +367,38 @@ class vamana_index {
     feature_vectors_ = std::move(training_set);
 
     dimension_ = _cpo::dimension(feature_vectors_);
-    num_vectors_ = _cpo::num_vectors(training_set);
-    graph_ = ::detail::graph::init_random_nn_graph<float>(
-        training_set, R_max_degree_);
+    num_vectors_ = _cpo::num_vectors(feature_vectors_);
+    graph_ = ::detail::graph::init_random_adj_list<float>(
+        feature_vectors_, R_max_degree_);
 
-    medioid_ = medioid(training_set);
+    dump_edgelist("edges_" + std::to_string(0) + ".txt", graph_);
 
+    medioid_ = medioid(feature_vectors_);
+
+    size_t counter {0};
     for (float alpha : {alpha_min_, alpha_max_}) {
       for (size_t p = 0; p < num_vectors_; ++p) {
+        ++counter;
         auto&& [top_k_scores, top_k, visited] =
-            greedy_search(graph_, training_set, medioid_, training_set[p], 1, L_build_);
-        robust_prune(graph_, training_set, p, visited, alpha, R_max_degree_);
+            greedy_search(graph_, feature_vectors_, medioid_, feature_vectors_[p], 1, L_build_);
+        robust_prune(graph_, feature_vectors_, p, visited, alpha, R_max_degree_);
         for (auto&& [i, j] : graph_.out_edges(p)) {
-          if (graph_.out_degree(j) >= R_max_degree_) {
-            robust_prune(
-                graph_, training_set, j, training_set[j], alpha, R_max_degree_);
+
+          // @todo Do this without copying -- prune should take vector of tuples and p (it copies anyway)
+          auto tmp = std::vector <size_t> (graph_.out_degree(j) + 1);
+          tmp.push_back(p);
+          for (auto&& [_, k] : graph_.out_edges(j)) {
+            tmp.push_back(k);
           }
+
+          if (size(tmp) > R_max_degree_) {
+            robust_prune(graph_, feature_vectors_, j, tmp, alpha, R_max_degree_);
+          } else {
+            graph_.add_edge(j, p, sum_of_squares_distance()(feature_vectors_[p], feature_vectors_[j]));
+          }
+        }
+        if ((counter) % 10 == 0) {
+          dump_edgelist("edges_" + std::to_string(counter) + ".txt", graph_);
         }
       }
     }
@@ -416,7 +433,7 @@ class vamana_index {
   auto ntotal(){}
 
   auto num_vectors(){}
-  
+
 };
 
 

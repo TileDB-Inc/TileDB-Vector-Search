@@ -80,6 +80,13 @@ int main(int argc, char* argv[]) {
 #if 1
   auto X = random_geometric_2D(num_nodes);
   dump_coordinates("coords.txt", X);
+  auto idx = vamana_index<float, size_t, size_t>(num_nodes, L, R, 0);
+  idx.train(X);
+
+#else
+#if 1
+  auto X = random_geometric_2D(num_nodes);
+  dump_coordinates("coords.txt", X);
 
   auto g = ::detail::graph::init_random_adj_list<float, size_t>(X, R);
   // std::cout << "num_vertices " << g.num_vertices() << std::endl;
@@ -146,4 +153,5 @@ int main(int argc, char* argv[]) {
       }
     }
   }
+#endif
 }
