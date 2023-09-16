@@ -60,7 +60,6 @@ static constexpr const char USAGE[] =
 )";
 
 
-
 int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
   auto args = docopt::docopt(USAGE, strings, true);
@@ -78,11 +77,31 @@ int main(int argc, char* argv[]) {
   float alpha_0 = 1.0;
   size_t num_nodes{200};
 
+#if 1
   auto X = random_geometric_2D(num_nodes);
   dump_coordinates("coords.txt", X);
 
   auto g = ::detail::graph::init_random_adj_list<float, size_t>(X, R);
   // std::cout << "num_vertices " << g.num_vertices() << std::endl;
+#else
+  size_t M = 5;
+  size_t N = 7;
+  int one_two = 3;
+  auto&& [X, edges] = ([one_two, M, N]() {
+    if (one_two == 1) {
+      return gen_uni_grid(M, N);
+    } else if (one_two == 2) {
+      return gen_bi_grid(M, N);
+    } else {
+      return gen_star_grid(M, N);
+    }
+  })();
+  dump_coordinates("coords.txt", X);
+  detail::graph::adj_list<float, size_t> g(M*N);
+  for (auto&& [src, dst] : edges) {
+    g.add_edge(src, dst, sum_of_squares_distance{}(X[src], X[dst]));
+  }
+#endif
 
   dump_edgelist("edges_" + std::to_string(0) + ".txt", g);
 
@@ -118,11 +137,11 @@ int main(int argc, char* argv[]) {
           // prune Nout(j) \cup p
           robust_prune(g, X, j, tmp, alpha, R);
         } else {
-          g.add_edge(p, j, sum_of_squares_distance()(X[p], X[j]));
+          g.add_edge(j, p, sum_of_squares_distance()(X[p], X[j]));
         }
       }
 
-      if ((img_count) % 20 == 0) {
+      if ((img_count) % 10 == 0) {
         dump_edgelist("edges_" + std::to_string(img_count) + ".txt", g);
       }
     }

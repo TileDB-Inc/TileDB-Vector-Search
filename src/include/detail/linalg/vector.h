@@ -37,6 +37,7 @@
 #include <span>
 #include <tiledb/tiledb>
 #include <vector>
+#include "concepts.h"
 
 template <class M>
 concept is_view = requires(M) {
@@ -148,5 +149,23 @@ class Vector : public std::span<T> {
     return storage_.get();
   }
 };
+
+template <feature_vector V>
+void debug_vector(const V& v, const std::string& msg = "") {
+  std::cout << msg;
+  for (size_t i = 0; i < v.num_rows(); ++i) {
+    std::cout << v(i) << " ";
+  }
+  std::cout << "\n";
+}
+
+template <std::ranges::forward_range V>
+void debug_vector(const V& v, const std::string& msg = "") {
+  std::cout << msg;
+  for (auto&& i : v) {
+    std::cout << i << " ";
+  }
+  std::cout << "\n";
+}
 
 #endif  // TILEDB_VECTOR_H

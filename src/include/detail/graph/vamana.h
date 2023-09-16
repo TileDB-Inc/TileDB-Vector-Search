@@ -108,14 +108,8 @@ auto greedy_search(
   // while L\V is not empty
   while (!q1.empty()) {
 
-
     if (noisy) std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
-
-    if (noisy) std::cout << "q1: " ;
-    for (auto&& q : q1) {
-      if (noisy) std::cout << std::get<1>(q) << " ";
-    }
-    if (noisy) std::cout << std::endl;
+    if (noisy) debug_min_heap(q1, "q1: ", 1);
 
     // p* <- argmin_{p \in L\V} distance(p, q)
 
@@ -147,17 +141,8 @@ auto greedy_search(
     // V <- V \cup {p*} ; L\V <- L\V \ p*
     visited_vertices.insert(p_star);
 
-    if (noisy) std::cout << "visited: " ;
-    for (auto&& q : visited_vertices) {
-      if (noisy) std::cout << q << " ";
-    }
-    if (noisy) std::cout << std::endl;
-
-    if (noisy) std::cout << "Nout(p*): " ;
-    for (auto&& q: graph.out_edges(p_star)) {
-      if (noisy) std::cout << std::get<1>(q) << " ";
-    }
-    if (noisy) std::cout << std::endl;
+    if (noisy) debug_vector(visited_vertices, "visited_vertices: ");
+    if (noisy) debug_min_heap(graph.out_edges(p_star), "Nout(p*): ", 1);
 
     // @todo -- needed?
     // q1.clear(); // Or remove newly visited
@@ -174,15 +159,8 @@ auto greedy_search(
       }
     }
 
-    if (noisy) std::cout << "result: " ;
-    for (auto&& q: result) {
-      if (noisy) std::cout << std::get<1>(q) << " ";
-    }
-    if (noisy) std::cout << " ( " ;
-    for (auto&& q: result) {
-      if (noisy) std::cout << std::get<0>(q) << " ";
-    }
-    if (noisy) std::cout << " )" << std::endl;
+    if (noisy) debug_min_heap(result, "result, aka Ell: ", 1);
+    if (noisy) debug_min_heap(result, "result, aka Ell: ", 0);
   }
 
   // auto top_k = Vector<index_type>(k_nn);
@@ -252,11 +230,16 @@ auto robust_prune(
     float alpha,
     size_t R,
     Distance&& distance = Distance{}) {
+
+  constexpr bool noisy = false;
+
   using value_type = typename std::decay_t<decltype(graph)>::value_type;
   using index_type = typename std::decay_t<decltype(graph)>::index_type;
 
   std::vector<std::tuple<value_type, index_type>> V;
   V.reserve(V_in.size() + graph.out_degree(p));
+  std::vector<std::tuple<float, size_t>> new_V;
+  new_V.reserve(V.size());
 
   for (auto&& v : V_in) {
     if (v != p) {
@@ -272,36 +255,37 @@ auto robust_prune(
   for (auto&& [ss, pp] : graph.out_edges(p)) {
     // assert(pp != p);
     if (pp != p) {
-      auto dbg_pp = pp;
-      auto dbg_p = p;
-      auto dbg_ss = ss;
-      auto dbg_s = distance(db[pp], db[p]);
-
       assert(ss == distance(db[p], db[pp]));
       V.emplace_back(ss, pp);
     }
   }
 
+  if (noisy) debug_min_heap(V, "V: ", 1);
+
   // Nout(p) <- 0
   graph.out_edges(p).clear();
 
+  size_t counter {0};
   // while V != 0
   while (!V.empty()) {
+    if (noisy) std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
+
     // p* <- argmin_{pp \in V} distance(p, pp)
     auto&& [s_star, p_star] = *(std::min_element(begin(V), end(V),[](auto&& a, auto&& b) {
       return std::get<0>(a) < std::get<0>(b);
     }));
     assert(p_star != p);
+    if (noisy) std::cout << "::::" << p_star << std::endl;
+    if (noisy) debug_min_heap(V, "V: ", 1);
 
     // Nout(p) <- Nout(p) \cup p*
     graph.add_edge(p, p_star, s_star);
 
+    if (noisy) debug_min_heap(graph.out_edges(p), "Nout(p): ", 1);
+
     if (graph.out_edges(p).size() == R) {
       break;
     }
-
-    std::vector<std::tuple<float, size_t>> new_V;
-    new_V.reserve(V.size());
 
     // For p' in V
     for (auto&& [ss, pp] : V) {
@@ -316,7 +300,10 @@ auto robust_prune(
         }
       }
     }
+    if (noisy) debug_min_heap(V, "after prune V: ", 1);
+
     std::swap(V, new_V);
+    new_V.clear();
     // V.unfiltered_heapify();
   }
 }

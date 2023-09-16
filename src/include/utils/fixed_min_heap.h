@@ -228,6 +228,28 @@ class threshold_min_pair_heap : public std::vector<std::tuple<T, U>> {
 template <class T, class U>
 using threshold_heap = threshold_min_pair_heap<T, U>;
 
+template <class Heap>
+void debug_min_heap(const Heap& heap, const std::string& msg = "", int which = 2) {
+  std::cout << msg << std::endl;
+
+  if (which == 0) {
+    for (auto&& [score, id] : heap) {
+      std::cout << score << " ";
+    }
+    std::cout << std::endl;
+  } else if (which == 1) {
+    for (auto&& [score, id] : heap) {
+      std::cout << score << " ";
+    }
+    std::cout << std::endl;
+  } else {
+    for (auto&& [score, id] : heap) {
+      std::cout << "( " << score << ", " << id << " ) ";
+    }
+    std::cout << std::endl;
+  }
+}
+
 template <class T, class Compare = std::greater<>>
 void max_heapify(std::vector<T>& heap, int i, int heap_size, Compare comp = Compare()) {
   int largest = i;

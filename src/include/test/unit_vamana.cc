@@ -314,7 +314,7 @@ auto build_hypercube(size_t k_near, size_t k_far) {
 }
 
 
-TEST_CASE("vamana: greedy search", "[vamana]") {
+TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
   size_t k_near = 5;
   size_t k_far = 5;
   size_t L = 5;
@@ -543,7 +543,7 @@ TEST_CASE("vamana: fmnist", "[vamana]") {
 
 }
 
-TEST_CASE("vamana: robust prune", "[vamana]") {
+TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
   size_t k_near = 5;
   size_t k_far = 5;
   size_t L = 7;
@@ -769,4 +769,51 @@ TEST_CASE("vamana: vamana_index", "[vamana]") {
   // 14
   auto&& [s0, v0] = index.query(x0, 5);
   CHECK(v0[0] == 0);
+}
+
+TEST_CASE("vamana: vamana random index", "[vamana]") {
+  size_t num_nodes = 20;
+
+  float alpha_0 = 1.0;
+  float alpha_1 = 1.2;
+
+  size_t L_build_ = 2;
+  size_t R_max_degree_ = 2;
+
+  auto training_set_ = random_geometric_2D(num_nodes);
+  dump_coordinates("coords.txt", training_set_);
+
+  auto g = ::detail::graph::init_random_adj_list<float, size_t>(training_set_, R_max_degree_);
+
+  auto dimension_ = _cpo::dimension(training_set_);
+  auto num_vectors_ = _cpo::num_vectors(training_set_);
+  auto graph_ = ::detail::graph::init_random_nn_graph<float>(
+      training_set_, R_max_degree_);
+
+  auto medioid_ = medioid(training_set_);
+  std::cout << "medioid: " << medioid_ << std::endl;
+
+  size_t counter {0};
+  for (float alpha : {alpha_0, alpha_1}) {
+    for (size_t p = 0; p < num_vectors_; ++p) {
+      dump_edgelist("edges_" + std::to_string(counter++) + ".txt", graph_);
+
+      auto&& [top_k_scores, top_k, visited] =
+          greedy_search(graph_, training_set_, medioid_, training_set_[p], 1, L_build_);
+
+      std::cout << ":::: Post search prune" << std::endl;
+      robust_prune(graph_, training_set_, p, visited, alpha, R_max_degree_);
+
+      for (auto&& [i, j] : graph_.out_edges(p)) {
+        std::cout << ":::: Checking neighbor " << j << std::endl;
+
+        if (graph_.out_degree(j) >= R_max_degree_) {
+
+          std::cout << ":::: Pruning neighbor " << j << std::endl;
+          robust_prune(
+              graph_, training_set_, j, training_set_[j], alpha, R_max_degree_);
+        }
+      }
+    }
+  }
 }
