@@ -87,12 +87,10 @@ auto gen_uni_grid(size_t M, size_t N) {
 
   auto vec_array = ColMajorMatrix<size_t>(dim, nvectors);
 
-  size_t k = 0;
   for (size_t i = 0; i < M; ++i) {
     for (size_t j = 0; j < N; ++j) {
       vec_array(0, i * N + j) = i;
       vec_array(1, i * N + j) = j;
-      ++k;
     }
   }
 
@@ -108,7 +106,6 @@ auto gen_uni_grid(size_t M, size_t N) {
     }
   }
 
-
   return std::make_tuple(std::move(vec_array), edges);
 }
 
@@ -122,12 +119,10 @@ auto gen_bi_grid(size_t M, size_t N) {
 
   auto vec_array = ColMajorMatrix<size_t>(dim, nvectors);
 
-  size_t k = 0;
   for (size_t i = 0; i < M; ++i) {
     for (size_t j = 0; j < N; ++j) {
       vec_array(0, i * N + j) = i;
       vec_array(1, i * N + j) = j;
-      ++k;
     }
   }
 

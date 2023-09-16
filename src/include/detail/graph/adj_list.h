@@ -35,18 +35,20 @@
 #include <vector>
 #include <list>
 #include <initializer_list>
+#include "scoring.h"
 
-
+namespace detail::graph {
 template <class I = size_t>
 class index_adj_list : public std::vector<std::list<I>> {
-
   using Base = std::vector<std::list<I>>;
 
  public:
   using value_type = I;
   using index_type = size_t;
 
-  index_adj_list(size_t num_vertices) : Base(num_vertices) {}
+  index_adj_list(size_t num_vertices)
+      : Base(num_vertices) {
+  }
 
 #if 0
   template <class EdgeList>
@@ -58,7 +60,8 @@ class index_adj_list : public std::vector<std::list<I>> {
 #endif
 
   template <class AdjList>
-  index_adj_list(AdjList&& l) : Base(size(l)) {
+  index_adj_list(AdjList&& l)
+      : Base(size(l)) {
     for (size_t i = 0; i < size(l); ++i) {
       for (auto& dst : l[i]) {
         add_edge(i, dst);
@@ -66,24 +69,37 @@ class index_adj_list : public std::vector<std::list<I>> {
     }
   }
 
-  auto add_edge(I src, I dst) { Base::operator[](src).push_back(dst); }
+  auto add_edge(I src, I dst) {
+    Base::operator[](src).push_back(dst);
+  }
 
-  auto& out_edges(I i) { return Base::operator[](i); }
+  auto& out_edges(I i) {
+    return Base::operator[](i);
+  }
 
-  auto& out_degree(I i) { return Base::operator[](i).size(); }
+  auto& out_degree(I i) {
+    return Base::operator[](i).size();
+  }
 
-  auto& num_vertices() { return Base::size(); }
-
+  auto& num_vertices() {
+    return Base::size();
+  }
 };
 
 template <class I = size_t>
-auto num_vertices(index_adj_list<I>& g) { return g.num_vertices(); }
+auto num_vertices(index_adj_list<I>& g) {
+  return g.num_vertices();
+}
 
 template <class I = size_t>
-auto& out_edges(index_adj_list<I>& g, I i) { return g.out_edges(i); }
+auto& out_edges(index_adj_list<I>& g, I i) {
+  return g.out_edges(i);
+}
 
 template <class I = size_t>
-auto& out_degree(index_adj_list<I>& g, I i) { return g.out_degree(i); }
+auto& out_degree(index_adj_list<I>& g, I i) {
+  return g.out_degree(i);
+}
 
 /**
  *
@@ -91,14 +107,15 @@ auto& out_degree(index_adj_list<I>& g, I i) { return g.out_degree(i); }
  */
 template <class T, class I = size_t>
 class adj_list : public std::vector<std::list<std::tuple<T, I>>> {
-
   using Base = std::vector<std::list<std::tuple<T, I>>>;
 
  public:
-  using value_type = I;
-  using index_type = size_t;
+  using value_type = T;
+  using index_type = I;
 
-  adj_list(size_t num_vertices) : Base(num_vertices) {}
+  adj_list(size_t num_vertices)
+      : Base(num_vertices) {
+  }
 
 #if 0
   template <class EdgeList>
@@ -110,8 +127,9 @@ class adj_list : public std::vector<std::list<std::tuple<T, I>>> {
 #endif
 
   template <class AdjList>
-  requires (!std::integral<AdjList>)
-  adj_list(AdjList&& l) : Base(size(l)) {
+    requires(!std::integral<AdjList>)
+  adj_list(AdjList&& l)
+      : Base(size(l)) {
     for (size_t i = 0; i < size(l); ++i) {
       for (auto&& [dst, val] : l[i]) {
         add_edge(i, dst, val);
@@ -119,22 +137,67 @@ class adj_list : public std::vector<std::list<std::tuple<T, I>>> {
     }
   }
 
-  auto add_edge(I src, I dst, const T& val) { Base::operator[](src).emplace_back(val, dst); }
+  auto add_edge(I src, I dst, const T& val) {
+    Base::operator[](src).emplace_back(val, dst);
+  }
 
-  auto& out_edges(I i) { return Base::operator[](i); }
+  auto& out_edges(I i) {
+    return Base::operator[](i);
+  }
 
-  auto& out_degree(I i) { return Base::operator[](i).size(); }
+  auto& out_edges(I i) const {
+    return Base::operator[](i);
+  }
 
-  auto& num_vertices() { return Base::size(); }
+  auto out_degree(I i) {
+    return Base::operator[](i).size();
+  }
+
+  auto out_degree(I i) const {
+    return Base::operator[](i).size();
+  }
+
+  auto num_vertices() const {
+    return Base::size();
+  }
 };
 
 template <class T, class I = size_t>
-auto num_vertices(adj_list<T, I>& g) { return g.num_vertices(); }
+auto num_vertices(const adj_list<T, I>& g) {
+  return g.num_vertices();
+}
 
 template <class T, class I = size_t>
-auto& out_edges(adj_list<T, I>& g, I i) { return g.out_edges(i); }
+auto& out_edges(const adj_list<T, I>& g, I i) {
+  return g.out_edges(i);
+}
 
 template <class T, class I = size_t>
-auto& out_degree(adj_list<T, I>& g, I i) { return g.out_degree(i); }
+auto& out_degree(adj_list<T, I>& g, I i) {
+  return g.out_degree(i);
+}
 
+template <class T, class I = size_t, class Distance = sum_of_squares_distance>
+auto init_random_adj_list(auto&& db, size_t R, Distance distance = Distance()) {
+  auto num_vertices = db.num_cols();
+  adj_list<T, I> g(num_vertices);
+  std::random_device rd;
+  std::mt19937 gen(rd());
+
+  std::uniform_int_distribution<size_t> dis(0, num_vertices - 1);
+
+  for (size_t i = 0; i < num_vertices; ++i) {
+    for (size_t j = 0; j < R; ++j) {
+      auto nbr = dis(gen);
+      while (nbr == i) {
+        nbr = dis(gen);
+      }
+      auto score = distance(db[i], db[nbr]);
+      g.add_edge(i, nbr, score);
+    }
+  }
+  return g;
+}
+
+} // namespace detail::graph
 #endif //TDB_ADJ_LIST_H

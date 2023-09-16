@@ -79,18 +79,7 @@ static constexpr const char USAGE[] =
 )";
 
 
-template <class Graph>
-void dump_edgelist(const std::string& filename, const Graph& graph) {
-  std::ofstream out(filename);
 
-  out << "# source target\n";
-  for (size_t i = 0; i < graph.num_vertices(); ++i) {
-    for (auto&& [_, j] : out_edges(graph, i)) {
-      out << i << " " << j << "\n";
-    }
-  }
-  out.close();
-}
 
 int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);

@@ -143,6 +143,12 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
     this->pop_back();
   }
 
+  void self_sort() {
+    std::sort_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      return std::get<0>(a) < std::get<0>(b);
+    });
+  }
+
 };
 
 template <class T, class U>

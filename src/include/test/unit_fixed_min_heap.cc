@@ -170,6 +170,49 @@ TEST_CASE("fixed_min_heap: initializer constructor", "[fixed_min_heap]") {
     return std::get<0>(a) < std::get<0>(b);
   }));
 
+  SECTION("pop") {
+    CHECK(a.size() == 5);
+    // Note that the "fixed_min_heap" is a max heap, so the first element
+    // is actually the largest.
+    CHECK(std::get<0>(*(begin(a))) == 5);
+    CHECK(std::get<0>(a.front()) == 5);
+    a.pop();
+    CHECK(std::get<0>(*(begin(a))) == 4);
+    CHECK(std::get<0>(a.front()) == 4);
+    a.pop();
+    CHECK(std::get<0>(*(begin(a))) == 3);
+    CHECK(std::get<0>(a.front()) == 3);
+    a.pop();
+    CHECK(std::get<0>(*(begin(a))) == 2);
+    CHECK(std::get<0>(a.front()) == 2);
+    a.pop();
+    CHECK(std::get<0>(*(begin(a))) == 1);
+    CHECK(std::get<0>(a.front()) == 1);
+    a.pop();
+    CHECK(a.empty());
+  }
+
+  SECTION("pop and insert") {
+    CHECK(a.size() == 5);
+    // Note that the "fixed_min_heap" is a max heap, so the first element
+    // is actually the largest.
+    CHECK(std::get<0>(*(begin(a))) == 5);
+    CHECK(std::get<0>(a.front()) == 5);
+    a.pop();
+    CHECK(std::get<0>(*(begin(a))) == 4);
+    CHECK(std::get<0>(a.front()) == 4);
+    a.insert(10, 10);
+    CHECK(std::get<0>(*(begin(a))) == 10);
+    CHECK(std::get<0>(a.front()) == 10);
+    a.insert(3.3, 33);
+    CHECK(std::get<0>(*(begin(a))) == 4);
+    CHECK(std::get<0>(a.front()) == 4);
+    a.pop();
+    CHECK(std::get<0>(*(begin(a))) == 3.3F);
+    CHECK(std::get<0>(a.front()) == 3.3F);
+    CHECK(std::get<1>(a.front()) == 33);
+  }
+
   SECTION("sort") {
     std::sort(begin(a), end(a));
     CHECK(std::get<0>(*(begin(a))) == 1);
@@ -253,17 +296,23 @@ TEST_CASE(
 
   std::vector<element> a2(begin(a), end(a));
   std::sort(begin(a2), end(a2));
+  CHECK(a2.size() == 7);
 
   std::vector<element> u(v.begin(), v.begin() + 7);
+  CHECK(u.size() == 7);
 
   std::nth_element(v.begin(), v.begin() + 7, v.end());
   std::vector<element> w(v.begin(), v.begin() + 7);
+  CHECK(w.size() == 7);
 
   CHECK(u != w);
 
   std::vector<element> v3(v.begin(), v.begin() + 7);
   std::sort(begin(v3), end(v3));
   CHECK(a2 == v3);
+
+  std::sort_heap(begin(a), end(a), first_less<element>{});
+  CHECK(a == a2);
 }
 
 TEMPLATE_TEST_CASE("fixed_min_heap: first_less", "[fixed_min_heap]", float, double, int, unsigned) {

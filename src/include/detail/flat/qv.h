@@ -120,7 +120,7 @@ template <feature_vector_array DB, query_vector_array Q>
 template <class T, feature_vector_array DB, feature_vector_array Q, class Index>
 auto qv_query_heap(
     T,
-    DB& db,
+    const DB& db,
     const Q& query,
     const std::vector<Index>& ids,
     int k_nn,

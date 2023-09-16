@@ -35,9 +35,11 @@
 #include <matplot/matplot.h>
 #include <cmath>
 #include <random>
+#include "detail/graph/adj_list.h"
 #include "detail/graph/nn-graph.h"
 #include "detail/graph/vamana.h"
 #include "detail/linalg/matrix.h"
+#include "scoring.h"
 
 #include "gen_graphs.h"
 
@@ -78,38 +80,50 @@ int main(int argc, char* argv[]) {
 
   auto X = random_geometric_2D(num_nodes);
   dump_coordinates("coords.txt", X);
-  auto g = ::detail::graph::init_random_nn_graph<float>(X, 2*R);
+
+  auto g = ::detail::graph::init_random_adj_list<float, size_t>(X, R);
   // std::cout << "num_vertices " << g.num_vertices() << std::endl;
 
-  std::vector<std::tuple<size_t, size_t>> edges;
-  for (size_t i = 0; i < g.num_vertices(); ++i) {
-    for (auto&& [_, j] : out_edges(g, i)) {
-      edges.emplace_back(i, j);
-    }
-  }
+  dump_edgelist("edges_" + std::to_string(0) + ".txt", g);
 
-  dump_edgelist("edges_" + std::to_string(0) + ".txt", edges);
+  size_t img_count = 0;
+  auto start = medioid(X);
 
   for (float alpha : {alpha_0, alpha_1}) {
-    auto start = medioid(X);
     for (size_t p = 0; p < X.num_cols(); ++p) {
+      ++img_count;
 
-      auto nbd = std::vector<size_t>(k_nn);
-      auto V = greedy_search(g, X, start, X[p], k_nn, L, nbd);
+      auto&& [top_k_scores, top_k, V] = greedy_search(g, X, start, X[p], 1, L);
       robust_prune(g, X, p, V, alpha, R);
-      for (auto&& [i, j] : g.out_edges(p)) {
-        if (g.out_degree(j) >= R) {
-          robust_prune(g, X, j, X[j], alpha, R);
+
+      auto tmp_p = std::vector<size_t>();
+      for (auto&& [qq, pp] : g.out_edges(p)) {
+        tmp_p.push_back(pp);
+      }
+
+      for (auto&& j : tmp_p) {
+        if (j == p) {
+          continue;
+        }
+
+        // out_degree of j \cup p
+        std::vector <size_t> tmp;
+        tmp.push_back(p);
+        for (auto&& [_, k] : g.out_edges(j)) {
+          tmp.push_back(k);
+        }
+
+        if (tmp.size() > R) {
+
+          // prune Nout(j) \cup p
+          robust_prune(g, X, j, tmp, alpha, R);
+        } else {
+          g.add_edge(p, j, sum_of_squares_distance()(X[p], X[j]));
         }
       }
-      if ((p+1) % 20 == 0) {
-        std::vector<std::tuple<size_t, size_t>> edges;
-        for (size_t i = 0; i < g.num_vertices(); ++i) {
-          for (auto&& [_, j] : out_edges(g, i)) {
-            edges.emplace_back(i, j);
-          }
-          dump_edgelist("edges_" + std::to_string(p + 1) + ".txt", edges);
-        }
+
+      if ((img_count) % 20 == 0) {
+        dump_edgelist("edges_" + std::to_string(img_count) + ".txt", g);
       }
     }
   }

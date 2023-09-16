@@ -327,18 +327,37 @@ inline auto get_top_k(std::vector<std::vector<Heap>>& scores, size_t k_nn) {
 
 inline void get_top_k_with_scores_from_heap(
     auto&& min_scores, auto&& top_k, auto&& top_k_scores) {
+
+  assert(size(top_k) == size(top_k_scores));
+  size_t k = std::min(size(top_k), size(min_scores));
+
   std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&& b) {
     return std::get<0>(a) < std::get<0>(b);
   });
   std::transform(
-      begin(min_scores), end(min_scores), begin(top_k_scores), ([](auto&& e) {
+      begin(min_scores), begin(min_scores) + k, begin(top_k_scores), ([](auto&& e) {
         return std::get<0>(e);
       }));
   std::transform(
-      begin(min_scores), end(min_scores), begin(top_k), ([](auto&& e) {
+      begin(min_scores), begin(min_scores) + k, begin(top_k), ([](auto&& e) {
         return std::get<1>(e);
       }));
 }
+
+template <class Heap>
+inline void get_top_k_with_scores_from_heap(const Heap& min_scores, size_t k) {
+  using element_type = std::remove_cvref_t<decltype(*(min_scores.begin()))>;/*typename Heap::value_type;*/
+  using value_type = typename std::tuple_element<0, element_type>::type;
+  using index_type = typename std::tuple_element<1, element_type>::type;
+
+  auto top_k = Vector<index_type>(k);
+  auto top_k_scores = Vector<value_type>(k);
+
+  get_top_k_with_scores_from_heap(min_scores, top_k, top_k_scores);
+  return std::make_tuple(std::move(top_k_scores), std::move(top_k));
+}
+
+
 
 // Overload for one-d scores
 template <class Heap>

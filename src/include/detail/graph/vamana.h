@@ -43,6 +43,9 @@
 #include "utils/fixed_min_heap.h"
 #include "utils/print_types.h"
 
+#include "detail/graph/graph_utils.h"
+
+
 namespace {
   enum class SearchPath { path_and_search, path_only };
 }
@@ -69,25 +72,30 @@ namespace {
  * keep L closest points to query
  * 3. Copy the result list to the output
  */
-template <SearchPath SP, class I = size_t, class Distance = sum_of_squares_distance>
+template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
 auto greedy_search(
     auto&& graph,
     auto&& db,
-    I source,
+    typename std::decay_t<decltype(graph)>::index_type source,
     auto&& query,
-    size_t k,
+    size_t k_nn,
     size_t L,
-    auto&& nbd,
     Distance&& distance = Distance{}) {
-  using value_type = typename std::decay_t<decltype(graph)>::value_type;
 
-  std::set<I> visited_vertices;
+  constexpr bool noisy = false;
+
+  using value_type = typename std::decay_t<decltype(graph)>::value_type;
+  using index_type = typename std::decay_t<decltype(graph)>::index_type;
+
+  assert(L >= k_nn);
+
+  std::set<index_type> visited_vertices;
   auto visited = [&visited_vertices](auto&& v) {
     return visited_vertices.find(v) != visited_vertices.end();
   };
 
-  auto result = k_min_heap<value_type, I>{k};
-  auto q1 = k_min_heap<value_type, I>{L};
+  auto result = k_min_heap<value_type, index_type>{L};  // Ell: |Ell| <= L
+  auto q1 = k_min_heap<value_type, index_type>{L};  // Ell \ V
 
   // L <- {s} and V <- empty`
   result.insert(distance(db[source], query), source);
@@ -99,13 +107,15 @@ auto greedy_search(
 
   // while L\V is not empty
   while (!q1.empty()) {
-//    std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
 
-//    std::cout << "q1: " ;
+
+    if (noisy) std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
+
+    if (noisy) std::cout << "q1: " ;
     for (auto&& q : q1) {
-//      std::cout << std::get<1>(q) << " ";
+      if (noisy) std::cout << std::get<1>(q) << " ";
     }
-//    std::cout << std::endl;
+    if (noisy) std::cout << std::endl;
 
     // p* <- argmin_{p \in L\V} distance(p, q)
 
@@ -123,7 +133,7 @@ auto greedy_search(
     auto [s_star, p_star] = q1.back();
     q1.pop_back();
 
-//    std::cout << "p*: " << p_star << std::endl;
+    if (noisy) std::cout << "p*: " << p_star << std::endl;
 
     // Change back to max heap
     std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
@@ -136,20 +146,21 @@ auto greedy_search(
 
     // V <- V \cup {p*} ; L\V <- L\V \ p*
     visited_vertices.insert(p_star);
-    //std::cout << "visited: " ;
-    for (auto&& q : visited_vertices) {
-      //std::cout << q << " ";
-    }
-    //std::cout << std::endl;
 
-    //std::cout << "Nout(p*): " ;
-    for (auto&& q: graph.out_edges(p_star)) {
-      //std::cout << std::get<1>(q) << " ";
+    if (noisy) std::cout << "visited: " ;
+    for (auto&& q : visited_vertices) {
+      if (noisy) std::cout << q << " ";
     }
-    //std::cout << std::endl;
+    if (noisy) std::cout << std::endl;
+
+    if (noisy) std::cout << "Nout(p*): " ;
+    for (auto&& q: graph.out_edges(p_star)) {
+      if (noisy) std::cout << std::get<1>(q) << " ";
+    }
+    if (noisy) std::cout << std::endl;
 
     // @todo -- needed?
-    q1.clear(); // Or remove newly visited
+    // q1.clear(); // Or remove newly visited
 
     // L <- L \cup Nout(p*)  ; L \ V <- L \ V \cup Nout(p*)
     for (auto&& [_, p] : graph.out_edges(p_star)) {
@@ -163,24 +174,27 @@ auto greedy_search(
       }
     }
 
-    //std::cout << "result: " ;
+    if (noisy) std::cout << "result: " ;
     for (auto&& q: result) {
-//      std::cout << std::get<1>(q) << " ";
+      if (noisy) std::cout << std::get<1>(q) << " ";
     }
-  //  std::cout << " ( " ;
+    if (noisy) std::cout << " ( " ;
     for (auto&& q: result) {
-    //  std::cout << std::get<0>(q) << " ";
+      if (noisy) std::cout << std::get<0>(q) << " ";
     }
-    //std::cout << " )" << std::endl;
-
+    if (noisy) std::cout << " )" << std::endl;
   }
 
-  if constexpr (SP == SearchPath::path_and_search) {
-    get_top_k_from_heap(result, nbd, k);
-  }
-  return visited_vertices;
+  // auto top_k = Vector<index_type>(k_nn);
+  // auto top_k_scores = Vector<value_type>(k_nn);
+  auto top_k = std::vector<index_type>(k_nn);
+  auto top_k_scores = std::vector<value_type>(k_nn);
+
+  get_top_k_with_scores_from_heap(result, top_k, top_k_scores);
+  return std::make_tuple(std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
 }
 
+#if 0
 template <class I = size_t, class Distance = sum_of_squares_distance>
 auto greedy_path(
     auto&& graph,
@@ -200,10 +214,10 @@ auto greedy_search(
     auto&& query,
     size_t k,
     size_t L,
-    auto&& nbd,
     Distance&& distance = Distance{}) {
-  return greedy_search<SearchPath::path_and_search>(graph, db, source, query, k, L, nbd, distance);
+  return greedy_search<SearchPath::path_and_search>(graph, db, source, query, k, L, distance);
 }
+#endif
 
 /**
  * @brief RobustPrune(p, vee, alpha, R)
@@ -238,33 +252,35 @@ auto robust_prune(
     float alpha,
     size_t R,
     Distance&& distance = Distance{}) {
-  using T = typename std::decay_t<decltype(graph)>::value_type;
-//  static_assert(
-//      std::is_same_v<T, typename std::decay_t<decltype(db)>::value_type>,
-//      "graph and db must be of same type");
+  using value_type = typename std::decay_t<decltype(graph)>::value_type;
+  using index_type = typename std::decay_t<decltype(graph)>::index_type;
 
-  auto distance_comparator = [](auto&& a, auto&& b) {
-    return std::get<0>(a) < std::get<0>(b);
-  };
-  using element = std::tuple<T, I>;
-  auto V = std::set<element, std::function<bool(element, element)>>(
-      distance_comparator);
+  std::vector<std::tuple<value_type, index_type>> V;
+  V.reserve(V_in.size() + graph.out_degree(p));
 
   for (auto&& v : V_in) {
     if (v != p) {
       auto score = distance(db[v], db[p]);
-      V.emplace(score, v);
+      V.emplace_back(score, v);
     }
   }
+
+  auto valid = validate_graph(graph, db);
+  assert(valid.size() == 0);
 
   // V <- (V \cup Nout(p) \ p
   for (auto&& [ss, pp] : graph.out_edges(p)) {
     // assert(pp != p);
-    assert(ss == distance(db[p], db[pp]));
-    V.emplace(ss, pp);
+    if (pp != p) {
+      auto dbg_pp = pp;
+      auto dbg_p = p;
+      auto dbg_ss = ss;
+      auto dbg_s = distance(db[pp], db[p]);
+
+      assert(ss == distance(db[p], db[pp]));
+      V.emplace_back(ss, pp);
+    }
   }
-  auto to_be_removed = std::vector<element>{};
-  to_be_removed.reserve(V.size());
 
   // Nout(p) <- 0
   graph.out_edges(p).clear();
@@ -272,7 +288,9 @@ auto robust_prune(
   // while V != 0
   while (!V.empty()) {
     // p* <- argmin_{pp \in V} distance(p, pp)
-    auto&& [s_star, p_star] = *(V.begin()); /* V.top(); */
+    auto&& [s_star, p_star] = *(std::min_element(begin(V), end(V),[](auto&& a, auto&& b) {
+      return std::get<0>(a) < std::get<0>(b);
+    }));
     assert(p_star != p);
 
     // Nout(p) <- Nout(p) \cup p*
@@ -282,19 +300,24 @@ auto robust_prune(
       break;
     }
 
-    to_be_removed.resize();
+    std::vector<std::tuple<float, size_t>> new_V;
+    new_V.reserve(V.size());
 
     // For p' in V
     for (auto&& [ss, pp] : V) {
       // if alpha * d(p*, p') <= d(p, p')
+      assert(ss == distance(db[p], db[pp]));
       if (alpha * distance(db[p_star], db[pp]) <= ss) {
         // V.erase({ss, pp});
-        to_be_removed.emplace_back(ss, pp);
+        ;
+      } else {
+        if (pp != p) {
+          new_V.emplace_back(ss, pp);
+        }
       }
     }
-    for (auto&& [ss, pp] : to_be_removed) {
-      V.erase({ss, pp});
-    }
+    std::swap(V, new_V);
+    // V.unfiltered_heapify();
   }
 }
 
@@ -311,6 +334,7 @@ auto medioid(auto&& P, Distance distance = Distance{}) {
   for (size_t i = 0; i < centroid.size(); ++i) {
     centroid[i] /= P.num_cols();
   }
+  std::vector<float> tmp{begin(centroid), end(centroid)};
   auto min = std::numeric_limits<float>::max();
   auto med = 0UL;
   for (size_t i = 0; i < n; ++i) {
@@ -363,8 +387,8 @@ class vamana_index {
 
     for (float alpha : {alpha_min_, alpha_max_}) {
       for (size_t p = 0; p < num_vectors_; ++p) {
-        auto visited =
-            greedy_path(graph_, training_set, medioid_, training_set[p], L_build_);
+        auto&& [top_k_scores, top_k, visited] =
+            greedy_search(graph_, training_set, medioid_, training_set[p], 1, L_build_);
         robust_prune(graph_, training_set, p, visited, alpha, R_max_degree_);
         for (auto&& [i, j] : graph_.out_edges(p)) {
           if (graph_.out_degree(j) >= R_max_degree_) {
@@ -392,9 +416,8 @@ class vamana_index {
   template <query_vector Q>
   auto query(const Q& query_vec, size_t k) {
 
-    auto top_k = std::vector<size_t>(k);
-    greedy_search(graph_, feature_vectors_, medioid_, query_vec, k, L_build_, top_k);
-    return top_k;
+    auto&& [top_k_scores, top_k, V] = greedy_search(graph_, feature_vectors_, medioid_, query_vec, k, L_build_);
+    return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
 
   auto remove(){}
