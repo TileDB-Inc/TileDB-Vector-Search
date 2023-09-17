@@ -152,7 +152,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         Catch::rngSeed());
     index.set_centroids(sklearn_centroids);
     index.train(training_data, kmeans_init::none);
-    // debug_centroids(index);
+    debug_centroids(index);
   }
 
   SECTION("two iterations") {
@@ -166,7 +166,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         Catch::rngSeed());
     index.set_centroids(sklearn_centroids);
     index.train(training_data, kmeans_init::none);
-    // debug_centroids(index);
+    debug_centroids(index);
   }
 
   SECTION("five iterations") {
@@ -180,7 +180,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         Catch::rngSeed());
     index.set_centroids(sklearn_centroids);
     index.train(training_data, kmeans_init::none);
-    // debug_centroids(index);
+    debug_centroids(index);
   }
 
   SECTION("five iterations, perturbed") {
@@ -191,7 +191,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
       }
     }
 
-//    sklearn_centroids(0, 0) += 0.25;
+    sklearn_centroids(0, 0) += 0.25;
     auto index = kmeans_index<float, size_t, size_t>(
         sklearn_centroids.num_rows(),
         sklearn_centroids.num_cols(),
@@ -201,7 +201,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         Catch::rngSeed());
     index.set_centroids(sklearn_centroids);
     index.train(training_data, kmeans_init::none);
-    // debug_centroids(index);
+    debug_centroids(index);
   }
 
   SECTION("five iterations") {
@@ -214,7 +214,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         1,
         Catch::rngSeed());
     index.train(training_data, kmeans_init::random);
-    // debug_centroids(index);
+    debug_centroids(index);
   }
 }
 
