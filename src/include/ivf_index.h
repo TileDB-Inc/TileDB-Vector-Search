@@ -232,13 +232,14 @@ class kmeans_index {
 
     // @todo add convergence criteria
     for (size_t iter = 0; iter < max_iter_; ++iter) {
-      auto [scores, parts] =
-          detail::flat::qv_partition_with_scores(centroids_, training_set, nthreads_);
+//      auto [scores, parts] =
+//          detail::flat::qv_partition_with_scores(centroids_, training_set, nthreads_);
+      auto parts = detail::flat::qv_partition(centroids_, training_set, nthreads_);
 
       std::fill(centroids_.data(), centroids_.data() + centroids_.num_rows() * centroids_.num_cols(), 0.0);
       std::fill(begin(degrees), end(degrees), 0);
 
-      auto high_scores = fixed_min_pair_heap<value_type, index_type> (nlist_/100 + 5, std::greater<value_type>());
+ //     auto high_scores = fixed_min_pair_heap<value_type, index_type, std::greater<value_type>> (nlist_/100 + 5, std::greater<value_type>());
       auto low_degrees = fixed_min_pair_heap<index_type, index_type> (nlist_/100 + 5);
 
       // @todo parallelize -- use a temp centroid matrix for each thread
@@ -248,9 +249,11 @@ class kmeans_index {
         auto vector = training_set[i];
         std::copy(begin(vector), end(vector), begin(centroid));
         ++degrees[part];
-        low_degrees.insert(degrees[part], part);
-        high_scores.insert(scores[i], i);
+//        low_degrees.insert(degrees[part], part);
+//        high_scores.insert(scores[i], i);
       }
+
+#if 0
 
       // Fix zero sized clusters by moving vectors with high scores to replace zero-degree centroids
       std::sort_heap(begin(low_degrees), end(low_degrees));
@@ -264,7 +267,7 @@ class kmeans_index {
         ++degrees[zero_part];
         --degrees[parts[high_vector_id]];
       }
-
+#endif
       // @todo parallelize
       for (size_t j = 0; j < nlist_; ++j) {
         auto centroid = centroids_[j];
@@ -282,8 +285,8 @@ class kmeans_index {
       auto min = *mm.first;
       auto max = *mm.second;
       auto diff = max - min;
-      // std::cout << "avg: " << average << " sum: " << sum << " min: " << min
-      //          << " max: " << max << " diff: " << diff  << std::endl;
+      std::cout << "avg: " << average << " sum: " << sum << " min: " << min
+                << " max: " << max << " diff: " << diff  << std::endl;
 
     }
 
