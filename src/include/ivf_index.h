@@ -76,6 +76,9 @@ class kmeans_index {
   ColMajorMatrix<T> shuffled_db_;
 
  public:
+  using value_type = T;
+  using index_type = indices_type;
+
   kmeans_index(
       size_t dimension,
       size_t nlist,
@@ -227,31 +230,49 @@ class kmeans_index {
 
     std::vector<size_t> degrees(nlist_, 0);
 
+    // @todo add convergence criteria
     for (size_t iter = 0; iter < max_iter_; ++iter) {
-      auto parts =
-          detail::flat::qv_partition(centroids_, training_set, nthreads_);
+      auto [scores, parts] =
+          detail::flat::qv_partition_with_scores(centroids_, training_set, nthreads_);
 
-      // for (auto & p : parts) {
-      //   std::cout << p << " ";
-      // }
-      // std::cout << std::endl;
-
-      for (size_t j = 0; j < nlist_; ++j) {
-        std::fill(begin(centroids_[j]), end(centroids_[j]), 0.0);
-      }
+      std::fill(centroids_.data(), centroids_.data() + centroids_.num_rows() * centroids_.num_cols(), 0.0);
       std::fill(begin(degrees), end(degrees), 0);
 
-      stdx::execution::indexed_parallel_policy par{nthreads_};
+      auto high_scores = fixed_min_pair_heap<value_type, index_type> (nlist_/100 + 5, std::greater<value_type>());
+      auto low_degrees = fixed_min_pair_heap<index_type, index_type> (nlist_/100 + 5);
 
       // @todo parallelize -- use a temp centroid matrix for each thread
       for (size_t i = 0; i < training_set.num_cols(); ++i) {
         auto part = parts[i];
         auto centroid = centroids_[part];
         auto vector = training_set[i];
-        for (size_t j = 0; j < dimension_; ++j) {
-          centroid[j] += vector[j];
-        }
+        std::copy(begin(vector), end(vector), begin(centroid));
         ++degrees[part];
+        low_degrees.insert(degrees[part], part);
+        high_scores.insert(scores[i], i);
+      }
+
+      // Fix zero sized clusters by moving vectors with high scores to replace zero-degree centroids
+      std::sort_heap(begin(low_degrees), end(low_degrees));
+      std::sort_heap(begin(high_scores), end(high_scores), [](auto a, auto b) { return std::get<0>(a) > std::get<0>(b); });
+      for (size_t i = 0; std::find(begin(degrees), end(degrees), 0) != end(degrees) && i < nlist_/100+5; ++i) {
+        auto [degree, zero_part] = low_degrees[i];
+        auto [score, high_vector_id] = high_scores[i];
+        auto low_centroid = centroids_[zero_part];
+        auto high_vector = training_set[high_vector_id];
+        std::copy(begin(high_vector), end(high_vector), begin(low_centroid));
+        ++degrees[zero_part];
+        --degrees[parts[high_vector_id]];
+      }
+
+      // @todo parallelize
+      for (size_t j = 0; j < nlist_; ++j) {
+        auto centroid = centroids_[j];
+        for (size_t k = 0; k < dimension_; ++k) {
+          if (degrees[j] != 0) {
+            centroid[k] /= degrees[j];
+          }
+        }
       }
 
       auto mm = std::minmax_element(begin(degrees), end(degrees));
@@ -264,16 +285,6 @@ class kmeans_index {
       // std::cout << "avg: " << average << " sum: " << sum << " min: " << min
       //          << " max: " << max << " diff: " << diff  << std::endl;
 
-      // @todo parallelize
-
-      for (size_t j = 0; j < nlist_; ++j) {
-        auto centroid = centroids_[j];
-        for (size_t k = 0; k < dimension_; ++k) {
-          if (degrees[j] != 0) {
-            centroid[k] /= degrees[j];
-          }
-        }
-      }
     }
 
     // Debugging
