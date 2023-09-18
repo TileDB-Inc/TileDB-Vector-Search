@@ -35,7 +35,9 @@
 #include <cmath>
 #include "detail/graph/nn-graph.h"
 #include "detail/graph/vamana.h"
+#include "detail/linalg/vector.h"
 #include "detail/linalg/matrix.h"
+#include "detail/linalg/tdb_matrix.h"
 
 bool verbose = false;
 bool debug = false;
@@ -57,7 +59,7 @@ static constexpr const char USAGE[] =
   Usage:
       vamana (-h | --help)
       vamana --db_uri URI --query_uri URI [--groundtruth_uri URI] [--k NN] [--nqueries NN]
-             [--max_degree NN] [--Lbuild NN] [--alpha FF] [--k_nn NN]
+             [--max_degree NN] [--Lbuild NN] [--backtrack NN] [--alpha FF] [--k_nn NN]
              [--nthreads NN] [--validate] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
   Options:
@@ -67,6 +69,7 @@ static constexpr const char USAGE[] =
       --groundtruth_uri URI   ground truth URI
       -R, --max_degree NN     maximum degree of graph [default: 64]
       -L, --Lbuild NN         size of search list while building [default: 100]
+      -B, --bactrack NN       size of backtrack list [default: 100]
       -a, --alpha FF          pruning parameter [default: 1.2]
       -k, --k NN              number of nearest neighbors [default: 1]
       --nqueries NN           size of queries subset to compare (0 = all) [default: 0]
@@ -92,8 +95,9 @@ int main(int argc, char* argv[]) {
 
   float alpha_0 = 1.0;
 
-  size_t L = args["--Lbuild"].asLong();
-  size_t R = args["--max_degree"].asLong();
+  size_t Lbuild = args["--Lbuild"].asLong();
+  size_t max_degree = args["--max_degree"].asLong();
+  size_t backtrack = args["--backtrack"].asLong();
   std::string alpha_str = args["--alpha"].asString();
   float alpha_1 = std::atof(alpha_str.c_str());
 
@@ -112,32 +116,12 @@ int main(int argc, char* argv[]) {
 
   tiledb::Context ctx;
   auto X = tdbColMajorMatrix<db_type>(ctx, db_uri);
-  auto start = medioid(X);
+  X.load();
 
-  auto g = ::detail::graph::init_random_nn_graph<float>(X, R);
-
-  for (float alpha : {alpha_0, alpha_1}) {
-    for (size_t p = 0; p < num_vectors(X); ++p) {
-      auto V = greedy_path(g, X, start, X[p], L);
-      robust_prune(g, X, p, V, alpha, R);
-      for (auto&& [i, j] : g.out_edges(p)) {
-        if (g.out_degree(j) >= R) {
-          robust_prune(g, X, j, X[j], alpha, R);
-        }
-      }
-      if (dump != 0 && ((p+1) % dump == 0)) {
-        dump_edgelist("edges_" + std::to_string(p + 1) + ".txt", g);
-      }
-    }
-  }
-
+  auto idx = detail::graph::vamana_index<float>(num_vectors(X), Lbuild, max_degree, backtrack);
+  idx.train(X);
   nqueries = 1;
-  auto nbd = std::vector<size_t>(k_nn);
-  greedy_search(g, X, start, X[0], k_nn, L, nbd);
-  auto top_k = ColMajorMatrix<size_t>(k_nn, nqueries);
-  for (size_t i = 0; i < k_nn; ++i) {
-    top_k(i, 0) = nbd[i];
-  }
+  auto&& [top_k_scores, top_k] = idx.query(X[0], k_nn);
 
   if (args["--groundtruth_uri"]) {
     auto groundtruth_uri = args["--groundtruth_uri"].asString();
@@ -160,16 +144,27 @@ int main(int argc, char* argv[]) {
     }
 
     size_t total_intersected{0};
-    size_t total_groundtruth = top_k.num_cols() * top_k.num_rows();
+    size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
 
-    for (size_t i = 0; i < top_k.num_cols(); ++i) {
-      std::sort(begin(top_k[i]), end(top_k[i]));
-      std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
+    if constexpr (feature_vector_array<decltype(top_k)>) {
+      for (size_t i = 0; i < num_vectors(top_k); ++i) {
+        std::sort(begin(top_k[i]), end(top_k[i]));
+        std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
+        total_intersected += std::set_intersection(
+            begin(top_k[i]),
+            end(top_k[i]),
+            begin(groundtruth[i]),
+            end(groundtruth[i]),
+            assignment_counter{});
+      }
+    } else {
+      std::sort(begin(top_k), end(top_k));
+      std::sort(begin(groundtruth[0]), begin(groundtruth[0]) + k_nn);
       total_intersected += std::set_intersection(
-          begin(top_k[i]),
-          end(top_k[i]),
-          begin(groundtruth[i]),
-          end(groundtruth[i]),
+          begin(top_k),
+          end(top_k),
+          begin(groundtruth[0]),
+          end(groundtruth[0]),
           assignment_counter{});
     }
 

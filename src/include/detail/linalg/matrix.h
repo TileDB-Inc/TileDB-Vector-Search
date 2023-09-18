@@ -41,6 +41,7 @@
 #include <iostream>
 #include "mdspan/mdspan.hpp"
 #include "tdb_defs.h"
+#include "concepts.h"
 
 #include "utils/timer.h"
 
@@ -419,9 +420,9 @@ void debug_matrix(const Matrix& A, const std::string& msg = "") {
   }
 }
 
-template <class Matrix>
+template <feature_vector_array M>
 void debug_slice(
-    const Matrix& A,
+    const M& A,
     const std::string& msg = "",
     size_t rows = 5,
     size_t cols = 15) {

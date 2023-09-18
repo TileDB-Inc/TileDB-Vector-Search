@@ -44,10 +44,11 @@
 #include "utils/print_types.h"
 
 #include "detail/graph/graph_utils.h"
+#include "detail/graph/adj_list.h"
 
-
+namespace detail::graph {
 namespace {
-  enum class SearchPath { path_and_search, path_only };
+enum class SearchPath { path_and_search, path_only };
 }
 
 /**
@@ -81,7 +82,6 @@ auto greedy_search(
     size_t k_nn,
     size_t L,
     Distance&& distance = Distance{}) {
-
   constexpr bool noisy = false;
 
   using value_type = typename std::decay_t<decltype(graph)>::value_type;
@@ -95,7 +95,7 @@ auto greedy_search(
   };
 
   auto result = k_min_heap<value_type, index_type>{L};  // Ell: |Ell| <= L
-  auto q1 = k_min_heap<value_type, index_type>{L};  // Ell \ V
+  auto q1 = k_min_heap<value_type, index_type>{L};      // Ell \ V
 
   // L <- {s} and V <- empty`
   result.insert(distance(db[source], query), source);
@@ -103,13 +103,14 @@ auto greedy_search(
   // q1 = L \ V = {s}
   q1.insert(distance(db[source], query), source);
 
-  size_t counter {0};
+  size_t counter{0};
 
   // while L\V is not empty
   while (!q1.empty()) {
-
-    if (noisy) std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
-    if (noisy) debug_min_heap(q1, "q1: ", 1);
+    if (noisy)
+      std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
+    if (noisy)
+      debug_min_heap(q1, "q1: ", 1);
 
     // p* <- argmin_{p \in L\V} distance(p, q)
 
@@ -127,7 +128,8 @@ auto greedy_search(
     auto [s_star, p_star] = q1.back();
     q1.pop_back();
 
-    if (noisy) std::cout << "p*: " << p_star << std::endl;
+    if (noisy)
+      std::cout << "p*: " << p_star << std::endl;
 
     // Change back to max heap
     std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
@@ -141,15 +143,16 @@ auto greedy_search(
     // V <- V \cup {p*} ; L\V <- L\V \ p*
     visited_vertices.insert(p_star);
 
-    if (noisy) debug_vector(visited_vertices, "visited_vertices: ");
-    if (noisy) debug_min_heap(graph.out_edges(p_star), "Nout(p*): ", 1);
+    if (noisy)
+      debug_vector(visited_vertices, "visited_vertices: ");
+    if (noisy)
+      debug_min_heap(graph.out_edges(p_star), "Nout(p*): ", 1);
 
     // @todo -- needed?
     // q1.clear(); // Or remove newly visited
 
     // L <- L \cup Nout(p*)  ; L \ V <- L \ V \cup Nout(p*)
     for (auto&& [_, p] : graph.out_edges(p_star)) {
-
       // assert(p != p_star);
       if (!visited(p)) {
         auto score = distance(db[p], query);
@@ -159,8 +162,10 @@ auto greedy_search(
       }
     }
 
-    if (noisy) debug_min_heap(result, "result, aka Ell: ", 1);
-    if (noisy) debug_min_heap(result, "result, aka Ell: ", 0);
+    if (noisy)
+      debug_min_heap(result, "result, aka Ell: ", 1);
+    if (noisy)
+      debug_min_heap(result, "result, aka Ell: ", 0);
   }
 
   // auto top_k = Vector<index_type>(k_nn);
@@ -169,7 +174,8 @@ auto greedy_search(
   auto top_k_scores = std::vector<value_type>(k_nn);
 
   get_top_k_with_scores_from_heap(result, top_k, top_k_scores);
-  return std::make_tuple(std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
+  return std::make_tuple(
+      std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
 }
 
 #if 0
@@ -230,7 +236,6 @@ auto robust_prune(
     float alpha,
     size_t R,
     Distance&& distance = Distance{}) {
-
   constexpr bool noisy = false;
 
   using value_type = typename std::decay_t<decltype(graph)>::value_type;
@@ -260,28 +265,34 @@ auto robust_prune(
     }
   }
 
-  if (noisy) debug_min_heap(V, "V: ", 1);
+  if (noisy)
+    debug_min_heap(V, "V: ", 1);
 
   // Nout(p) <- 0
   graph.out_edges(p).clear();
 
-  size_t counter {0};
+  size_t counter{0};
   // while V != 0
   while (!V.empty()) {
-    if (noisy) std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
+    if (noisy)
+      std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
 
     // p* <- argmin_{pp \in V} distance(p, pp)
-    auto&& [s_star, p_star] = *(std::min_element(begin(V), end(V),[](auto&& a, auto&& b) {
-      return std::get<0>(a) < std::get<0>(b);
-    }));
+    auto&& [s_star, p_star] =
+        *(std::min_element(begin(V), end(V), [](auto&& a, auto&& b) {
+          return std::get<0>(a) < std::get<0>(b);
+        }));
     assert(p_star != p);
-    if (noisy) std::cout << "::::" << p_star << std::endl;
-    if (noisy) debug_min_heap(V, "V: ", 1);
+    if (noisy)
+      std::cout << "::::" << p_star << std::endl;
+    if (noisy)
+      debug_min_heap(V, "V: ", 1);
 
     // Nout(p) <- Nout(p) \cup p*
     graph.add_edge(p, p_star, s_star);
 
-    if (noisy) debug_min_heap(graph.out_edges(p), "Nout(p): ", 1);
+    if (noisy)
+      debug_min_heap(graph.out_edges(p), "Nout(p): ", 1);
 
     if (graph.out_edges(p).size() == R) {
       break;
@@ -300,7 +311,8 @@ auto robust_prune(
         }
       }
     }
-    if (noisy) debug_min_heap(V, "after prune V: ", 1);
+    if (noisy)
+      debug_min_heap(V, "after prune V: ", 1);
 
     std::swap(V, new_V);
     new_V.clear();
@@ -334,7 +346,7 @@ auto medioid(auto&& P, Distance distance = Distance{}) {
   return med;
 }
 
-template <class attribute_type, class shuffled_ids_type, class indices_type>
+template <class attribute_type, class shuffled_ids_type = size_t, class indices_type = size_t>
 class vamana_index {
   ColMajorMatrix<attribute_type> feature_vectors_;
 
@@ -342,9 +354,9 @@ class vamana_index {
   size_t num_vectors_{0};
   size_t L_build_{0};       // diskANN paper says default = 100
   size_t R_max_degree_{0};  // diskANN paper says default = 64
-  size_t B_backtrack_{0};   // diskANN paper says default = 10
-  float alpha_min_ {1.0};   // per diskANN paper
-  float alpha_max_ {1.2};   // per diskANN paper
+  size_t B_backtrack_{0};   //
+  float alpha_min_{1.0};    // per diskANN paper
+  float alpha_max_{1.2};    // per diskANN paper
   ::detail::graph::adj_list<attribute_type, indices_type> graph_;
   size_t medioid_{0};
 
@@ -358,8 +370,12 @@ class vamana_index {
 
   ~vamana_index() = default;
 
-  vamana_index(size_t num_nodes, size_t L, size_t R, size_t B) :
-      num_vectors_{num_nodes}, L_build_{L}, R_max_degree_{R}, B_backtrack_{B}, graph_{num_vectors_} {
+  vamana_index(size_t num_nodes, size_t L, size_t R, size_t B = 0)
+      : num_vectors_{num_nodes}
+      , L_build_{L}
+      , R_max_degree_{R}
+      , B_backtrack_{B == 0 ? L_build_ : B}
+      , graph_{num_vectors_} {
   }
 
   template <feature_vector_array V>
@@ -375,26 +391,36 @@ class vamana_index {
 
     medioid_ = medioid(feature_vectors_);
 
-    size_t counter {0};
+    size_t counter{0};
     for (float alpha : {alpha_min_, alpha_max_}) {
       for (size_t p = 0; p < num_vectors_; ++p) {
         ++counter;
-        auto&& [top_k_scores, top_k, visited] =
-            greedy_search(graph_, feature_vectors_, medioid_, feature_vectors_[p], 1, L_build_);
-        robust_prune(graph_, feature_vectors_, p, visited, alpha, R_max_degree_);
+        auto&& [top_k_scores, top_k, visited] = greedy_search(
+            graph_,
+            feature_vectors_,
+            medioid_,
+            feature_vectors_[p],
+            1,
+            L_build_);
+        robust_prune(
+            graph_, feature_vectors_, p, visited, alpha, R_max_degree_);
         for (auto&& [i, j] : graph_.out_edges(p)) {
-
           // @todo Do this without copying -- prune should take vector of tuples and p (it copies anyway)
-          auto tmp = std::vector <size_t> (graph_.out_degree(j) + 1);
+          auto tmp = std::vector<size_t>(graph_.out_degree(j) + 1);
           tmp.push_back(p);
           for (auto&& [_, k] : graph_.out_edges(j)) {
             tmp.push_back(k);
           }
 
           if (size(tmp) > R_max_degree_) {
-            robust_prune(graph_, feature_vectors_, j, tmp, alpha, R_max_degree_);
+            robust_prune(
+                graph_, feature_vectors_, j, tmp, alpha, R_max_degree_);
           } else {
-            graph_.add_edge(j, p, sum_of_squares_distance()(feature_vectors_[p], feature_vectors_[j]));
+            graph_.add_edge(
+                j,
+                p,
+                sum_of_squares_distance()(
+                    feature_vectors_[p], feature_vectors_[j]));
           }
         }
         if ((counter) % 10 == 0) {
@@ -405,37 +431,49 @@ class vamana_index {
   }
 
   template <query_vector_array Q>
-  void add(const Q& database){}
+  void add(const Q& database) {
+  }
 
   template <query_vector_array Q>
   auto query(const Q& query_set, size_t k) {
-
     auto top_k = ColMajorMatrix<size_t>(k, num_queries(query_set));
     for (size_t i = 0; i < num_queries(query_set); ++i) {
-      greedy_search(graph_, *feature_vectors_, medioid, query_set[i], k, L_build_, top_k[i]);
+      greedy_search(
+          graph_,
+          *feature_vectors_,
+          medioid,
+          query_set[i],
+          k,
+          L_build_,
+          top_k[i]);
     }
     return top_k;
   }
 
   template <query_vector Q>
   auto query(const Q& query_vec, size_t k) {
-
-    auto&& [top_k_scores, top_k, V] = greedy_search(graph_, feature_vectors_, medioid_, query_vec, k, L_build_);
+    auto&& [top_k_scores, top_k, V] = greedy_search(
+        graph_, feature_vectors_, medioid_, query_vec, k, L_build_);
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
 
-  auto remove(){}
+  auto remove() {
+  }
 
-  auto update(){}
+  auto update() {
+  }
 
-  auto dimension(){}
+  constexpr auto dimension() const {
+    return dimension_;
+  }
 
-  auto ntotal(){}
+  constexpr auto ntotal() const {
+    return num_vectors_;
+  }
 
-  auto num_vectors(){}
-
+  auto num_vectors() {
+  }
 };
 
-
-
+}  // namespace detail::graph
 #endif  // TDB_VAMANA_H

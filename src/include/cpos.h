@@ -179,6 +179,12 @@ struct _fn {
       const stdx::mdspan<T, I, stdx::layout_right>& m) const noexcept {
     return m.extent(0);
   }
+
+  template <class V>
+    requires (!_member_num_cols<V>)&&std::is_arithmetic_v<std::ranges::range_value_t<V>> auto constexpr
+  operator()(V&& v) const noexcept {
+    return 1;
+  }
 };
 }  // namespace _num_vectors
 

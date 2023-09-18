@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
 #if 1
   auto X = random_geometric_2D(num_nodes);
   dump_coordinates("coords.txt", X);
-  auto idx = vamana_index<float, size_t, size_t>(num_nodes, L, R, 0);
+  auto idx = detail::graph::vamana_index<float, size_t, size_t>(num_nodes, L, R, 0);
   idx.train(X);
 
 #else
