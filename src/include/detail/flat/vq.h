@@ -83,10 +83,10 @@ auto vq_query_heap(
     unsigned nthreads) {
   // @todo Need to get the total number of queries, not just the first block
   // @todo Use Matrix here rather than vector of vectors
-  std::vector<std::vector<fixed_min_pair_heap<float, unsigned>>> scores(
+  std::vector<std::vector<fixed_min_pair_heap<float, Index>>> scores(
       nthreads,
-      std::vector<fixed_min_pair_heap<float, unsigned>>(
-          size(q), fixed_min_pair_heap<float, unsigned>(k_nn)));
+      std::vector<fixed_min_pair_heap<float, Index>>(
+          size(q), fixed_min_pair_heap<float, Index>(k_nn)));
 
   unsigned size_q = size(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
@@ -184,10 +184,10 @@ auto vq_query_heap_tiled(
     unsigned nthreads) {
   // @todo Need to get the total number of queries, not just the first block
   // @todo Use Matrix here rather than vector of vectors
-  std::vector<std::vector<fixed_min_pair_heap<float, unsigned>>> scores(
+  std::vector<std::vector<fixed_min_pair_heap<float, Index>>> scores(
       nthreads,
-      std::vector<fixed_min_pair_heap<float, unsigned>>(
-          size(q), fixed_min_pair_heap<float, unsigned>(k_nn)));
+      std::vector<fixed_min_pair_heap<float, Index>>(
+          size(q), fixed_min_pair_heap<float, Index>(k_nn)));
 
   unsigned size_q = size(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
@@ -261,10 +261,10 @@ auto vq_query_heap_2(
     unsigned nthreads) {
   // @todo Need to get the total number of queries, not just the first block
   // @todo Use Matrix here rather than vector of vectors
-  std::vector<std::vector<fixed_min_pair_heap<float, size_t>>> scores(
+  std::vector<std::vector<fixed_min_pair_heap<float, Index>>> scores(
       nthreads,
-      std::vector<fixed_min_pair_heap<float, size_t>>(
-          size(q), fixed_min_pair_heap<float, size_t>(k_nn)));
+      std::vector<fixed_min_pair_heap<float, Index>>(
+          size(q), fixed_min_pair_heap<float, Index>(k_nn)));
 
   unsigned size_q = size(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
