@@ -70,6 +70,12 @@ class Index:
                 if res in updated_ids:
                     internal_results_d[query_id, res_id] = MAX_FLOAT_32
                     internal_results_i[query_id, res_id] = MAX_UINT64
+                if (
+                    internal_results_d[query_id, res_id] == 0
+                    and internal_results_i[query_id, res_id] == 0
+                ):
+                    internal_results_d[query_id, res_id] = MAX_FLOAT_32
+                    internal_results_i[query_id, res_id] = MAX_UINT64
                 res_id += 1
             query_id += 1
         sort_index = np.argsort(internal_results_d, axis=1)
