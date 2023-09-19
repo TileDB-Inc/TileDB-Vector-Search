@@ -862,7 +862,7 @@ TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
 }
 
 TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
-  size_t num_nodes = 1000;
+  size_t num_nodes = 10000;
   size_t num_queries = 200;
 
   float alpha_0 = 1.0;

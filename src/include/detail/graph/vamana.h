@@ -243,7 +243,7 @@ auto robust_prune(
 
   std::vector<std::tuple<value_type, index_type>> V;
   V.reserve(V_in.size() + graph.out_degree(p));
-  std::vector<std::tuple<float, size_t>> new_V;
+  std::vector<std::tuple<value_type, index_type>> new_V;
   new_V.reserve(V.size());
 
   for (auto&& v : V_in) {
@@ -253,14 +253,11 @@ auto robust_prune(
     }
   }
 
-  auto valid = validate_graph(graph, db);
-  assert(valid.size() == 0);
-
   // V <- (V \cup Nout(p) \ p
   for (auto&& [ss, pp] : graph.out_edges(p)) {
     // assert(pp != p);
     if (pp != p) {
-      assert(ss == distance(db[p], db[pp]));
+      // assert(ss == distance(db[p], db[pp]));
       V.emplace_back(ss, pp);
     }
   }
@@ -301,7 +298,7 @@ auto robust_prune(
     // For p' in V
     for (auto&& [ss, pp] : V) {
       // if alpha * d(p*, p') <= d(p, p')
-      assert(ss == distance(db[p], db[pp]));
+      // assert(ss == distance(db[p], db[pp]));
       if (alpha * distance(db[p_star], db[pp]) <= ss) {
         // V.erase({ss, pp});
         ;

@@ -44,19 +44,13 @@
 #include <set>
 #include <concepts>
 
+#include "functional.h"
+
 namespace {
 class not_unique {};
 class unique_id {};
 class unique_score {};
 class unique_both {};
-
-template <class T>
-struct first_less {
-  bool operator()(const T& lhs, const T& rhs)  const  {
-    return std::get<0>(lhs) < std::get<0>(rhs);
-  }
-};
-
 }  // namespace
 
 
