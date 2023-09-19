@@ -32,16 +32,16 @@
 
 #include <catch2/catch_all.hpp>
 
+#include "cpos.h"
 #include "detail/flat/qv.h"
+#include "detail/graph/adj_list.h"
 #include "detail/graph/nn-descent.h"
 #include "detail/graph/nn-graph.h"
 #include "detail/graph/vamana.h"
-#include "detail/graph/adj_list.h"
+#include "gen_graphs.h"
+#include "graphs/tiny.h"
 #include "query_common.h"
 #include "utils/logging.h"
-#include "graphs/tiny.h"
-#include "gen_graphs.h"
-#include "cpos.h"
 
 #include <tiledb/tiledb>
 
@@ -75,10 +75,10 @@ TEST_CASE("vamana: greedy grid search", "[vamana]") {
     } else {
       return gen_bi_grid(M, N);
     }
-    })();
+  })();
 
-  auto expected_size = ((M-1) * N + M*(N-1)) * one_two;
-  CHECK(num_vectors(vecs) == M*N);
+  auto expected_size = ((M - 1) * N + M * (N - 1)) * one_two;
+  CHECK(num_vectors(vecs) == M * N);
   CHECK(edges.size() == expected_size);
 
   detail::graph::adj_list<float, size_t> A(35);
@@ -95,29 +95,34 @@ TEST_CASE("vamana: greedy grid search", "[vamana]") {
   // (4, 6): 33 -> {27, 33, 34}
 
   using expt_type = std::tuple<
-      std::vector<size_t>, size_t,
-      std::vector<size_t>, size_t,
+      std::vector<size_t>,
       size_t,
-        std::vector<size_t>>;
+      std::vector<size_t>,
+      size_t,
+      size_t,
+      std::vector<size_t>>;
   std::vector<expt_type> expts{
-      {{0, 0}, 0, {2, 3}, 17,  7, {10, 16, 17, 18, 24}},
-      {{0, 0}, 0, {3, 4}, 25,  9, {18, 24, 25, 26, 32}},
+      {{0, 0}, 0, {2, 3}, 17, 7, {10, 16, 17, 18, 24}},
+      {{0, 0}, 0, {3, 4}, 25, 9, {18, 24, 25, 26, 32}},
       {{0, 0}, 0, {3, 6}, 27, 11, {20, 26, 27, 34}},  // 33
       {{0, 0}, 0, {4, 5}, 33, 11, {26, 32, 33, 34}},  // 25
-      {{0, 0}, 0, {4, 6}, 34, 11, {27, 33, 34}},  // 26 32
+      {{0, 0}, 0, {4, 6}, 34, 11, {27, 33, 34}},      // 26 32
   };
 
   size_t count = 0;
-  for (auto&& [source_vec, source_coord, query_vec, query_coord, path_length, expected] :
-       expts) {
+  for (
+      auto&& [source_vec, source_coord, query_vec, query_coord, path_length, expected] :
+      expts) {
     size_t k = 5;
     size_t L = 5;  // --> L must be >= k
-    size_t expected_length = query_vec[0] - source_vec[0] + query_vec[1] - source_vec[1] + 2;
+    size_t expected_length =
+        query_vec[0] - source_vec[0] + query_vec[1] - source_vec[1] + 2;
 
-    auto&& [top_k_scores, top_k, V] = greedy_search(A, vecs, source_coord, query_vec, size(expected), L);
+    auto&& [top_k_scores, top_k, V] =
+        greedy_search(A, vecs, source_coord, query_vec, size(expected), L);
 
-//    CHECK(V.size() == path_length);
-//    CHECK(V.size() == expected_length);
+    //    CHECK(V.size() == path_length);
+    //    CHECK(V.size() == expected_length);
 
 #if 0
     auto tks_dbg = std::move(top_k_scores);
@@ -313,7 +318,6 @@ auto build_hypercube(size_t k_near, size_t k_far) {
   return nn_hypercube;
 }
 
-
 TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
   size_t k_near = 5;
   size_t k_far = 5;
@@ -324,8 +328,9 @@ TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
   auto g = detail::graph::init_random_nn_graph<float>(nn_hypercube, k_near);
 
   for (float kk : {-1, 1}) {
-    auto query = Vector<float>{kk*1.05f, kk*0.95f, 1.09};
-    auto [top_k_scores, top_k, V] = greedy_search(g, nn_hypercube, 2, query, k_near, L);
+    auto query = Vector<float>{kk * 1.05f, kk * 0.95f, 1.09};
+    auto [top_k_scores, top_k, V] =
+        greedy_search(g, nn_hypercube, 2, query, k_near, L);
 
     std::cout << "Nearest neighbors:" << std::endl;
     for (auto&& n : top_k) {
@@ -357,7 +362,6 @@ TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
   }
 }
 
-
 TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
   size_t k_near = 5;
   size_t k_far = 5;
@@ -372,9 +376,10 @@ TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
   CHECK(valid.size() == 0);
 
   for (size_t kk : {-1, 1}) {
-    auto query = Vector<float>{kk*1.05f, kk*0.95f, 1.09f};
+    auto query = Vector<float>{kk * 1.05f, kk * 0.95f, 1.09f};
 
-    auto&& [top_k_scores, top_k, V] = greedy_search(g, nn_hypercube, 0UL, query, k_near, L);
+    auto&& [top_k_scores, top_k, V] =
+        greedy_search(g, nn_hypercube, 0UL, query, k_near, L);
     std::cout << "size(V): " << size(V) << std::endl;
 
     for (size_t i = 0; i < 4; ++i) {
@@ -383,7 +388,8 @@ TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
       if (num_updates == 0) {
         break;
       }
-      auto&& [top_k_scores, top_k, V] = greedy_search(g, nn_hypercube, 0UL, query, k_near, L);
+      auto&& [top_k_scores, top_k, V] =
+          greedy_search(g, nn_hypercube, 0UL, query, k_near, L);
       std::cout << "size(V): " << size(V) << std::endl;
     }
 
@@ -392,21 +398,18 @@ TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
     }
     std::cout << std::endl;
 
-
     std::cout << "Nearest neighbors:" << std::endl;
     for (auto&& n : top_k) {
       std::cout << n << " (" << nn_hypercube(0, n) << ", " << nn_hypercube(1, n)
                 << ", " << nn_hypercube(2, n) << "), "
-                << sum_of_squares_distance{}(nn_hypercube[n], query) <<std::endl;
+                << sum_of_squares_distance{}(nn_hypercube[n], query)
+                << std::endl;
     }
     std::cout << "-----\n";
-
-
   }
 }
 
 TEST_CASE("vamana: diskann fbin", "[vamana]") {
-
   size_t k_nn = 5;
   size_t L = 5;
 
@@ -427,7 +430,7 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
 
   auto x = ColMajorMatrix<float>(ndim, npoints);
 
-  binary_file.read((char*)x.data(), npoints*ndim);
+  binary_file.read((char*)x.data(), npoints * ndim);
   binary_file.close();
 
   SECTION("vary starts") {
@@ -435,9 +438,9 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
 
     auto g = detail::graph::init_random_nn_graph<float>(x, k_nn);
 
-    auto&& [top_k_scores, top_k, V] = greedy_search(g, x, start, x[start], k_nn, L);
+    auto&& [top_k_scores, top_k, V] =
+        greedy_search(g, x, start, x[start], k_nn, L);
     std::sort(begin(top_k), end(top_k));
-
 
     // CHECK(top_k[0] == start);
     CHECK(std::find(begin(top_k), end(top_k), start) != end(top_k));
@@ -476,7 +479,7 @@ TEST_CASE("vamana: fmnist", "[vamana]") {
   }
   std::cout << "\nDistances: ";
   for (size_t i = 0; i < k_nn; ++i) {
-    std::cout << sum_of_squares_distance{}(db[qv_top_k(i,0)], query) << " ";
+    std::cout << sum_of_squares_distance{}(db[qv_top_k(i, 0)], query) << " ";
   }
   std::cout << "\n-----\n";
 
@@ -500,7 +503,8 @@ TEST_CASE("vamana: fmnist", "[vamana]") {
     auto num_intersected = count_intersections(top_n, qv_top_k, k_nn);
     std::cout << "num_intersected: " << num_intersected << " / " << k_nn
               << " = "
-              << ((double) num_intersected) / ((double) query_mat.num_cols() * k_nn)
+              << ((double)num_intersected) /
+                     ((double)query_mat.num_cols() * k_nn)
               << std::endl;
 
     std::cout << "Greedy nearest neighbors: ";
@@ -521,9 +525,8 @@ TEST_CASE("vamana: fmnist", "[vamana]") {
   auto&& [s, t] = nn_descent_1_query(g, db, query_mat, k_nn, k_nn + 5, 3);
 
   auto num_intersected = count_intersections(t, qv_top_k, k_nn);
-  std::cout << "num_intersected: " << num_intersected << " / " << k_nn
-            << " = "
-            << ((double) num_intersected) / ((double) query_mat.num_cols() * k_nn)
+  std::cout << "num_intersected: " << num_intersected << " / " << k_nn << " = "
+            << ((double)num_intersected) / ((double)query_mat.num_cols() * k_nn)
             << std::endl;
 
   std::cout << "NN-descent nearest neighbors: ";
@@ -533,14 +536,13 @@ TEST_CASE("vamana: fmnist", "[vamana]") {
 
   std::cout << "\nNN-descent returned distances: ";
   for (size_t i = 0; i < k_nn; ++i) {
-    std::cout << s(i,0) << " ";
+    std::cout << s(i, 0) << " ";
   }
   std::cout << "\nNN-descent computed distances: ";
   for (size_t i = 0; i < k_nn; ++i) {
-    std::cout << sum_of_squares_distance{}(db[t(i,0)], query) << " ";
+    std::cout << sum_of_squares_distance{}(db[t(i, 0)], query) << " ";
   }
   std::cout << std::endl;
-
 }
 
 TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
@@ -552,7 +554,7 @@ TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
   float alpha = 1.0;
 
   auto nn_hypercube = build_hypercube(k_near, k_far);
-  auto start = medioid(nn_hypercube);
+  auto start = detail::graph::medioid(nn_hypercube);
   for (auto&& s : nn_hypercube[start]) {
     std::cout << s << ", ";
   }
@@ -564,7 +566,6 @@ TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
   auto valid = validate_graph(g, nn_hypercube);
   CHECK(valid.size() == 0);
 
-
   auto query = Vector<float>{1.05, 0.95, 1.09};
 
   SECTION("One node") {
@@ -575,7 +576,8 @@ TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
     }
     std::cout << std::endl;
 
-    auto&& [top_k_scores, top_k, V] = greedy_search(g, nn_hypercube, start, nn_hypercube[p], k_near, L);
+    auto&& [top_k_scores, top_k, V] =
+        greedy_search(g, nn_hypercube, start, nn_hypercube[p], k_near, L);
     robust_prune(g, nn_hypercube, p, V, alpha, R);
 
     for (auto&& [s, t] : g.out_edges(8UL)) {
@@ -585,14 +587,14 @@ TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
   }
 
   SECTION("One pass") {
-
     for (size_t p = 0; p < nn_hypercube.num_cols(); ++p) {
       for (auto&& [s, t] : g.out_edges(p)) {
         std::cout << " ( " << t << ", " << s << " ) ";
       }
       std::cout << std::endl;
 
-      auto&& [top_k_scores, top_k, V] = greedy_search(g, nn_hypercube, start, nn_hypercube[p], k_near, L);
+      auto&& [top_k_scores, top_k, V] =
+          greedy_search(g, nn_hypercube, start, nn_hypercube[p], k_near, L);
 
       auto valid = validate_graph(g, nn_hypercube);
       CHECK(valid.size() == 0);
@@ -608,12 +610,11 @@ TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
       std::cout << std::endl;
     }
 
-    auto&& [top_k_scores, top_k, V] = greedy_search(g, nn_hypercube, start, query, k_near, L);
+    auto&& [top_k_scores, top_k, V] =
+        greedy_search(g, nn_hypercube, start, query, k_near, L);
 
     auto valid = validate_graph(g, nn_hypercube);
     CHECK(valid.size() == 0);
-
-
 
     std::cout << "V.size: " << size(V) << std::endl;
     for (auto&& v : V) {
@@ -623,11 +624,11 @@ TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
     for (auto&& n : top_k) {
       std::cout << n << " (" << nn_hypercube(0, n) << ", " << nn_hypercube(1, n)
                 << ", " << nn_hypercube(2, n) << "), "
-                << sum_of_squares_distance{}(nn_hypercube[n], query) << std::endl;
+                << sum_of_squares_distance{}(nn_hypercube[n], query)
+                << std::endl;
     }
   }
 }
-
 
 TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
   size_t nthreads = 1;
@@ -648,7 +649,7 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
 
   auto x = std::accumulate(begin(db[0]), end(db[0]), 0.0F);
 
-  auto query = db[N/2 + 3];
+  auto query = db[N / 2 + 3];
   std::vector<float> query_vec(begin(query), end(query));
 
   auto query_mat = ColMajorMatrix<float>(size(query), 1);
@@ -668,7 +669,7 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
   auto valid2 = validate_graph(g, db);
   REQUIRE(valid2.size() == 0);
 
-  auto start = medioid(db);
+  auto start = detail::graph::medioid(db);
 
   for (float alpha : {1.0, 1.25}) {
     std::cout << ":::: alpha: " << alpha << std::endl;
@@ -676,7 +677,8 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
       auto valid3 = validate_graph(g, db);
       REQUIRE(valid3.size() == 0);
 
-      auto&& [top_k_scores, top_k, V] = greedy_search(g, db, start, db[p], k_nn, L);
+      auto&& [top_k_scores, top_k, V] =
+          greedy_search(g, db, start, db[p], k_nn, L);
 
       auto valid4 = validate_graph(g, db);
       CHECK(valid4.size() == 0);
@@ -685,7 +687,6 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
 
       auto valid5 = validate_graph(g, db);
       CHECK(valid5.size() == 0);
-
     }
   }
 
@@ -705,9 +706,8 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
   }
 
   auto num_intersected = count_intersections(top_n, qv_top_k, k_nn);
-  std::cout << "num_intersected: " << num_intersected << " / " << k_nn
-            << " = "
-            << ((double) num_intersected) / ((double) query_mat.num_cols() * k_nn)
+  std::cout << "num_intersected: " << num_intersected << " / " << k_nn << " = "
+            << ((double)num_intersected) / ((double)query_mat.num_cols() * k_nn)
             << std::endl;
 
   std::cout << "Greedy nearest neighbors: ";
@@ -733,7 +733,7 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
 #endif
 }
 
-TEST_CASE("vamana: vamana_index", "[vamana]") {
+TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
   // should be dim = 128, num = 256
   // npoints, ndims
   uint32_t npoints{0};
@@ -751,27 +751,28 @@ TEST_CASE("vamana: vamana_index", "[vamana]") {
 
   auto x = ColMajorMatrix<float>(ndim, npoints);
 
-  binary_file.read((char*)x.data(), npoints*ndim);
+  binary_file.read((char*)x.data(), npoints * ndim);
   binary_file.close();
 
   size_t L = 100;
   size_t R = 100;
   size_t B = 2;
-  auto index = vamana_index<float, size_t, size_t>(L, R, B);
+  auto index =
+      detail::graph::vamana_index<decltype(x)>(num_vectors(x), L, R, B);
 
   auto x0 = std::vector<float>(ndim);
   std::copy(x.data(), x.data() + ndim, begin(x0));
 
   index.train(x);
 
-      // x, 5, 7, 7, 1.0, 1, 1);
+  // x, 5, 7, 7, 1.0, 1, 1);
   // 0
   // 14
   auto&& [s0, v0] = index.query(x0, 5);
   CHECK(v0[0] == 0);
 }
 
-TEST_CASE("vamana: vamana random index", "[vamana]") {
+TEST_CASE("vamana: vamana by hand random index", "[vamana]") {
   size_t num_nodes = 20;
 
   float alpha_0 = 1.0;
@@ -783,23 +784,24 @@ TEST_CASE("vamana: vamana random index", "[vamana]") {
   auto training_set_ = random_geometric_2D(num_nodes);
   dump_coordinates("coords.txt", training_set_);
 
-  auto g = ::detail::graph::init_random_adj_list<float, size_t>(training_set_, R_max_degree_);
+  auto g = ::detail::graph::init_random_adj_list<float, size_t>(
+      training_set_, R_max_degree_);
 
   auto dimension_ = _cpo::dimension(training_set_);
   auto num_vectors_ = _cpo::num_vectors(training_set_);
   auto graph_ = ::detail::graph::init_random_nn_graph<float>(
       training_set_, R_max_degree_);
 
-  auto medioid_ = medioid(training_set_);
+  auto medioid_ = detail::graph::medioid(training_set_);
   std::cout << "medioid: " << medioid_ << std::endl;
 
-  size_t counter {0};
+  size_t counter{0};
   for (float alpha : {alpha_0, alpha_1}) {
     for (size_t p = 0; p < num_vectors_; ++p) {
       dump_edgelist("edges_" + std::to_string(counter++) + ".txt", graph_);
 
-      auto&& [top_k_scores, top_k, visited] =
-          greedy_search(graph_, training_set_, medioid_, training_set_[p], 1, L_build_);
+      auto&& [top_k_scores, top_k, visited] = greedy_search(
+          graph_, training_set_, medioid_, training_set_[p], 1, L_build_);
 
       std::cout << ":::: Post search prune" << std::endl;
       robust_prune(graph_, training_set_, p, visited, alpha, R_max_degree_);
@@ -808,7 +810,6 @@ TEST_CASE("vamana: vamana random index", "[vamana]") {
         std::cout << ":::: Checking neighbor " << j << std::endl;
 
         if (graph_.out_degree(j) >= R_max_degree_) {
-
           std::cout << ":::: Pruning neighbor " << j << std::endl;
           robust_prune(
               graph_, training_set_, j, training_set_[j], alpha, R_max_degree_);
@@ -816,4 +817,86 @@ TEST_CASE("vamana: vamana random index", "[vamana]") {
       }
     }
   }
+}
+
+TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
+  size_t num_nodes = 200;
+
+  float alpha_0 = 1.0;
+  float alpha_1 = 1.2;
+
+  size_t L_build = 15;
+  size_t R_max_degree = 15;
+
+  size_t k_nn = 5;
+
+  auto training_set = random_geometric_2D(num_nodes);
+
+  auto idx = detail::graph::vamana_index<decltype(training_set)>(
+      num_vectors(training_set), L_build, R_max_degree, 0);
+  idx.train(training_set);
+
+  auto query = training_set[17];
+  auto&& [scores, top_k] = idx.query(query, k_nn);
+  CHECK(top_k[0] == 17);
+
+  auto query_mat = ColMajorMatrix<float>(dimension(training_set), 7);
+  size_t counter{0};
+  for (size_t i : {17, 19, 23, 37, 49, 50, 195}) {
+    std::copy(
+        training_set[i].data(),
+        training_set[i].data() + dimension(training_set),
+        query_mat[counter++].data());
+  }
+
+  auto&& [qv_scores, qv_top_k] =
+      detail::flat::qv_query_heap(training_set, query_mat, k_nn, 4);
+  auto&& [mat_scores, mat_top_k] = idx.query(query_mat, k_nn);
+  size_t total_intersected = count_intersections(mat_top_k, qv_top_k, k_nn);
+
+  std::cout << total_intersected << " / " << k_nn * num_vectors(query_mat)
+            << " = "
+            << ((double)total_intersected) /
+                   ((double)k_nn * num_vectors(query_mat))
+            << std::endl;
+}
+
+TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
+  size_t num_nodes = 1000;
+  size_t num_queries = 200;
+
+  float alpha_0 = 1.0;
+  float alpha_1 = 1.2;
+
+  size_t L_build = 15;
+  size_t R_max_degree = 12;
+
+  size_t k_nn = 10;
+
+  tiledb::Context ctx;
+  auto training_set =
+      tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, num_nodes);
+  training_set.load();
+  auto queries =
+      tdbColMajorMatrix<float>(ctx, siftsmall_query_uri, num_queries);
+  queries.load();
+
+  auto idx = detail::graph::vamana_index<decltype(training_set)>(
+      num_vectors(training_set), L_build, R_max_degree, 0);
+  idx.train(training_set);
+
+  auto&& [qv_scores, qv_top_k] =
+      detail::flat::qv_query_heap(training_set, queries, k_nn, 4);
+  auto&& [mat_scores, mat_top_k] = idx.query(queries, k_nn);
+  size_t total_intersected = count_intersections(mat_top_k, qv_top_k, k_nn);
+
+  auto recall =
+      ((double)total_intersected) / ((double)k_nn * num_vectors(queries));
+  CHECK(recall > 0.95);
+
+  std::cout << total_intersected << " / " << k_nn * num_vectors(queries)
+            << " = "
+            << ((double)total_intersected) /
+                   ((double)k_nn * num_vectors(queries))
+            << std::endl;
 }

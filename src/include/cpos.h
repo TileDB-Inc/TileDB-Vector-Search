@@ -273,10 +273,17 @@ inline constexpr auto extents = _extents::_fn{};
 namespace _load {
 void load(auto&) = delete;
 void load(auto&&) = delete;
+void num_loads(auto&) = delete;
+void num_loads(auto&&) = delete;
 
 template <class T>
 concept _member_load = requires(T&& t) {
   { t.load() } -> std::convertible_to<bool>;
+};
+
+template <class T>
+concept _member_num_loads = requires(T&& t) {
+  { t.num_loads() } -> semi_integral;
 };
 
 struct _fn {
@@ -291,9 +298,23 @@ struct _fn {
     return false;
   }
 };
+
+struct _gn {
+  template <_member_num_loads T>
+  auto constexpr operator()(T&& t) const noexcept {
+    return t.num_loads();
+  }
+
+  // Assume that if the thing does not have num_loads, that it is loaded
+  template <class T>
+    requires(!_member_num_loads<T>) auto constexpr operator()(T&& t) const noexcept {
+    return 1;
+  }
+};
 }  // namespace _load
 inline namespace _cpo {
 inline constexpr auto load = _load::_fn{};
+inline constexpr auto num_loads = _load::_gn{};
 }  // namespace _cpo
 
 // ----------------------------------------------------------------------------
@@ -306,21 +327,60 @@ concept _member_col_offset = requires(T t) {
   { t.col_offset() } -> semi_integral;
 };
 
+template <class T>
+concept _member_col_part_offset = requires(T t) {
+  { t.col_part_offset() } -> semi_integral;
+};
+
+template <class T>
+concept _member_num_col_parts = requires(T t) {
+  { t.num_col_parts() } -> semi_integral;
+};
+
 struct _fn {
   template <_member_col_offset T>
   auto constexpr operator()(T&& t) const noexcept {
-    return t.col_offsets();
+    return t.col_offset();
   }
 
   template <class T>
-  requires(!_member_col_offset<T>) auto constexpr operator()(
+    requires(!_member_col_offset<T>)
+  auto constexpr operator()(T&& t) const noexcept {
+    return 0;
+  }
+};
+
+struct _gn {
+  template <_member_col_part_offset T>
+  auto constexpr operator()(T&& t) const noexcept {
+    return t.col_part_offset();
+  }
+
+  template <class T>
+    requires(!_member_col_part_offset<T>)
+  auto constexpr operator()(T&& t) const noexcept {
+    return 0;
+  }
+};
+
+struct _hn {
+  template <_member_num_col_parts T>
+  auto constexpr operator()(T&& t) const noexcept {
+    return t.num_col_parts();
+  }
+
+  template <class T>
+    requires(!_member_num_col_parts<T>) auto constexpr operator()(
       T&& t) const noexcept {
     return 0;
   }
 };
+
 }  // namespace _col_offset
 inline namespace _cpo {
 inline constexpr auto col_offset = _col_offset::_fn{};
+inline constexpr auto num_col_parts = _col_offset::_gn{};
+inline constexpr auto col_part_offset = _col_offset::_hn{};
 }  // namespace _cpo
 
 // ----------------------------------------------------------------------------

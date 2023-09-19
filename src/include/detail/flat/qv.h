@@ -54,6 +54,8 @@
 #include "utils/fixed_min_heap.h"
 #include "utils/timer.h"
 
+#include "utils/print_types.h"
+
 namespace detail::flat {
 
 /**

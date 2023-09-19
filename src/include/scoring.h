@@ -212,7 +212,9 @@ template <
     std::ranges::random_access_range V,
     std::ranges::random_access_range L>
 auto get_top_k_from_scores(V const& scores, L&& top_k, int k) {
-  fixed_min_pair_heap<float, unsigned> s(k);
+  using index_type = typename L::index_type;
+
+  fixed_min_pair_heap<float, index_type> s(k);
 
   auto num_scores = scores.size();
   for (size_t i = 0; i < num_scores; ++i) {
@@ -479,23 +481,41 @@ bool validate_top_k(TK& top_k, const G& g) {
 
 auto count_intersections(auto&& I, auto&& groundtruth, size_t k_nn) {
   size_t total_intersected = 0;
-  for (size_t i = 0; i < I.num_cols(); ++i) {
-    std::sort(begin(I[i]), end(I[i]));
-    std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
 
-    // @todo remove -- for debugging only
-    std::vector<size_t> x(begin(I[i]), end(I[i]));
-    std::vector<size_t> y(begin(groundtruth[i]), end(groundtruth[i]));
+  if constexpr (feature_vector_array<std::remove_cvref_t<decltype(I)>>) {
+    for (size_t i = 0; i < I.num_cols(); ++i) {
+      std::sort(begin(I[i]), end(I[i]));
+      std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
 
-    total_intersected += std::set_intersection(
-        begin(I[i]),
-        end(I[i]),
-        begin(groundtruth[i]),
-        /*end(groundtruth[i]*/ begin(groundtruth[i]) + k_nn,
-        assignment_counter{});
+      // @todo remove -- for debugging only
+      std::vector<size_t> x(begin(I[i]), end(I[i]));
+      std::vector<size_t> y(begin(groundtruth[i]), end(groundtruth[i]));
+
+      total_intersected += std::set_intersection(
+          begin(I[i]),
+          end(I[i]),
+          begin(groundtruth[i]),
+          /*end(groundtruth[i]*/ begin(groundtruth[i]) + k_nn,
+          assignment_counter{});
+    }
+  } else {
+    if constexpr (feature_vector<std::remove_cvref_t<decltype(I)>>) {
+      std::sort(begin(I), end(I));
+      std::sort(begin(groundtruth), begin(groundtruth) + k_nn);
+
+      total_intersected += std::set_intersection(
+          begin(I),
+          end(I),
+          begin(groundtruth),
+          /*end(groundtruth)*/ begin(groundtruth) + k_nn,
+          assignment_counter{});
+    } else {
+      static_assert(
+              always_false<std::remove_cvref_t<decltype(I)>>, "T must be a feature_vector or feature_vector_array");
+    }
   }
   return total_intersected;
-};
+}
 
 #ifdef TILEDB_VS_ENABLE_BLAS
 

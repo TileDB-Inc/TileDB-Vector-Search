@@ -46,7 +46,7 @@ bool global_debug = false;
 bool enable_stats = false;
 std::vector<json> core_stats;
 
-#if 1
+#if 0
 using db_type = uint8_t;
 #else
 using db_type = float;
@@ -69,7 +69,7 @@ static constexpr const char USAGE[] =
       --groundtruth_uri URI   ground truth URI
       -R, --max_degree NN     maximum degree of graph [default: 64]
       -L, --Lbuild NN         size of search list while building [default: 100]
-      -B, --bactrack NN       size of backtrack list [default: 100]
+      -B, --backtrack NN      size of backtrack list [default: 100]
       -a, --alpha FF          pruning parameter [default: 1.2]
       -k, --k NN              number of nearest neighbors [default: 1]
       --nqueries NN           size of queries subset to compare (0 = all) [default: 0]
@@ -80,9 +80,6 @@ static constexpr const char USAGE[] =
       -d, --debug             run in debug mode [default: false]
       -v, --verbose           run in verbose mode [default: false]
 )";
-
-
-
 
 int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
@@ -118,10 +115,10 @@ int main(int argc, char* argv[]) {
   auto X = tdbColMajorMatrix<db_type>(ctx, db_uri);
   X.load();
 
-  auto idx = detail::graph::vamana_index<float>(num_vectors(X), Lbuild, max_degree, backtrack);
+  auto idx = detail::graph::vamana_index<decltype(X)>(num_vectors(X), Lbuild, max_degree, backtrack);
   idx.train(X);
-  nqueries = 1;
-  auto&& [top_k_scores, top_k] = idx.query(X[0], k_nn);
+  auto queries = tdbColMajorMatrix<db_type>(ctx, query_uri, nqueries);
+  auto&& [top_k_scores, top_k] = idx.query(queries, k_nn);
 
   if (args["--groundtruth_uri"]) {
     auto groundtruth_uri = args["--groundtruth_uri"].asString();
@@ -143,30 +140,9 @@ int main(int argc, char* argv[]) {
       std::cout << std::endl;
     }
 
-    size_t total_intersected{0};
     size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
 
-    if constexpr (feature_vector_array<decltype(top_k)>) {
-      for (size_t i = 0; i < num_vectors(top_k); ++i) {
-        std::sort(begin(top_k[i]), end(top_k[i]));
-        std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
-        total_intersected += std::set_intersection(
-            begin(top_k[i]),
-            end(top_k[i]),
-            begin(groundtruth[i]),
-            end(groundtruth[i]),
-            assignment_counter{});
-      }
-    } else {
-      std::sort(begin(top_k), end(top_k));
-      std::sort(begin(groundtruth[0]), begin(groundtruth[0]) + k_nn);
-      total_intersected += std::set_intersection(
-          begin(top_k),
-          end(top_k),
-          begin(groundtruth[0]),
-          end(groundtruth[0]),
-          assignment_counter{});
-    }
+    size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
 
     float recall = ((float)total_intersected) / ((float)total_groundtruth);
     std::cout << "# total intersected = " << total_intersected << " of "

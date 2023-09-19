@@ -61,7 +61,8 @@
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "flat_query.h"
 #include "linalg.h"
-#include "old_concepts.h"
+#include "concepts.h"
+#include "cpos.h"
 #include "scoring.h"
 
 #include "utils/print_types.h"
@@ -222,7 +223,7 @@ auto qv_query_heap_infinite_ram(
       detail::flat::qv_query_heap_0(centroids, q, nprobe, nthreads);
 
   auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-      size(q), fixed_min_pair_heap<float, size_t>(k_nn));
+      num_vectors(q), fixed_min_pair_heap<float, size_t>(k_nn));
 
   // Parallelizing over q is not going to be very efficient
   {
@@ -340,7 +341,7 @@ auto nuv_query_heap_infinite_ram(
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);
@@ -498,7 +499,7 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   // @todo Maybe we don't want to do new_indices in partition_ivf_index after
   //  all since they aren't used in this function
@@ -506,7 +507,7 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
       partition_ivf_index(centroids, query, nprobe, nthreads);
 
   // auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-  //     size(q), fixed_min_pair_heap<float, size_t>(k_nn));
+  //     num_vectors(q), fixed_min_pair_heap<float, size_t>(k_nn));
 
   std::vector<std::vector<fixed_min_pair_heap<float, size_t>>> min_scores(
       nthreads,
@@ -730,7 +731,7 @@ auto qv_query_heap_finite_ram(
   // Check that the size of the indices vector is correct
   assert(size(indices) == centroids.num_cols() + 1);
 
-  size_t num_queries = size(query);
+  size_t num_queries = num_vectors(query);
 
   // get closest centroid for each query vector
   auto top_centroids =
@@ -794,7 +795,7 @@ auto qv_query_heap_finite_ram(
   debug_matrix(partitioned_db.ids(), "partitioned_db.ids()");
 
   // auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-  //       size(q), fixed_min_pair_heap<float, size_t>(k_nn));
+  //       num_vectors(q), fixed_min_pair_heap<float, size_t>(k_nn));
 
   std::vector<std::vector<fixed_min_pair_heap<float, size_t>>> min_scores(
       nthreads,
@@ -1023,7 +1024,7 @@ auto nuv_query_heap_finite_ram(
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);
@@ -1064,7 +1065,7 @@ auto nuv_query_heap_finite_ram(
   debug_matrix(partitioned_db.ids(), "partitioned_db.ids()");
 
   // auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-  //       size(q), fixed_min_pair_heap<float, size_t>(k_nn));
+  //       num_vectors(q), fixed_min_pair_heap<float, size_t>(k_nn));
 
   std::vector<std::vector<fixed_min_pair_heap<float, size_t>>> min_scores(
       nthreads,
@@ -1198,7 +1199,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);
@@ -1239,7 +1240,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
   debug_matrix(partitioned_db.ids(), "partitioned_db.ids()");
 
   // auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-  //       size(q), fixed_min_pair_heap<float, size_t>(k_nn));
+  //       num_vectors(q), fixed_min_pair_heap<float, size_t>(k_nn));
 
   std::vector<std::vector<fixed_min_pair_heap<float, size_t>>> min_scores(
       nthreads,
@@ -1276,12 +1277,9 @@ auto nuv_query_heap_finite_ram_reg_blocked(
              n,
              first_part,
              last_part]() {
-              size_t part_offset = 0;
-              size_t col_offset = 0;
-              if constexpr (has_num_col_parts<decltype(partitioned_db)>) {
-                part_offset = partitioned_db.col_part_offset();
-                col_offset = partitioned_db.col_offset();
-              }
+              size_t col_offset = _cpo::col_offset(partitioned_db);
+              size_t part_offset = col_part_offset(partitioned_db);
+
               /*
                * For each partition, process the queries that have that
                * partition as their top centroid.
@@ -1290,10 +1288,12 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                 auto partno = p + part_offset;
 
                 auto quartno = partno;
-                if constexpr (!has_num_col_parts<decltype(partitioned_db)>) {
-                  quartno = active_partitions[partno];
-                }
-                (void)active_partitions;
+                //                if constexpr
+                //                (!has_num_col_parts<std::remove_cvref_t<decltype(partitioned_db)>>)
+                //                {
+                quartno = active_partitions[partno];
+                //                }
+                (void)active_partitions;  // Silence unused warning
 
                 auto start = new_indices[quartno] - col_offset;
                 auto stop = new_indices[quartno + 1] - col_offset;
@@ -1408,25 +1408,23 @@ auto apply_query(
     size_t last_part) {
   //  print_types(query, partitioned_db, new_indices, active_queries);
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
   auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
       num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
   size_t part_offset = 0;
   size_t col_offset = 0;
-  if constexpr (has_num_col_parts<decltype(partitioned_db)>) {
-    part_offset = partitioned_db.col_part_offset();
-    col_offset = partitioned_db.col_offset();
-  }
+  col_offset = _cpo::col_offset(partitioned_db);
+  part_offset = col_part_offset(partitioned_db);
 
   for (size_t p = first_part; p < last_part; ++p) {
     auto partno = p + part_offset;
 
     // @todo this is a bit of a hack
     auto quartno = partno;
-    if constexpr (!has_num_col_parts<decltype(partitioned_db)>) {
+//    if constexpr (!has_num_col_parts<decltype(partitioned_db)>) {
       quartno = active_partitions[partno];
-    }
+//    }
 
     auto start = new_indices[quartno] - col_offset;
     auto stop = new_indices[quartno + 1] - col_offset;
@@ -1550,7 +1548,7 @@ auto query_finite_ram(
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);
@@ -1701,7 +1699,7 @@ auto query_infinite_ram(
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   // @todo Maybe we don't want to do new_indices in partition_ivf_index after
   //  all since they aren't used in this function

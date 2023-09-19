@@ -184,6 +184,9 @@ static std::string fmnist_train { m1_gp3_root + "fmnist/fmnist_train.tdb" };
 
 static std::string diskann_test_256bin { m1_gp3_root + "diskann/siftsmall_learn_256pts.fbin" };
 
+static std::string siftsmall_base_uri{m1_root + "siftsmall/siftsmall_base"};
+static std::string siftsmall_groundtruth_uri{m1_root + "siftsmall/siftsmall_groundtruth"};
+static std::string siftsmall_query_uri{m1_root + "siftsmall/siftsmall_query"};
 
 #endif
 

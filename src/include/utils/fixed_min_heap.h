@@ -39,6 +39,7 @@
 #define TILEDB_FIXED_MIN_QUEUES_H
 
 #include <functional>
+#include <iostream>
 #include <initializer_list>
 #include <set>
 #include <concepts>

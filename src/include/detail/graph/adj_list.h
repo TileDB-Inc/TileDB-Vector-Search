@@ -179,7 +179,7 @@ auto& out_degree(adj_list<T, I>& g, I i) {
 
 template <class T, class I = size_t, class Distance = sum_of_squares_distance>
 auto init_random_adj_list(auto&& db, size_t R, Distance distance = Distance()) {
-  auto num_vertices = db.num_cols();
+  auto num_vertices = num_vectors(db);
   adj_list<T, I> g(num_vertices);
   std::random_device rd;
   std::mt19937 gen(rd());

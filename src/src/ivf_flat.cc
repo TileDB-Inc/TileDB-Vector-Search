@@ -462,7 +462,7 @@ int main(int argc, char* argv[]) {
     dump_logs(
         args["--log"].asString(),
         algorithm,
-        (nqueries == 0 ? size(q) : nqueries),
+        (nqueries == 0 ? num_vectors(q) : nqueries),
         nprobe,
         k_nn,
         nthreads,

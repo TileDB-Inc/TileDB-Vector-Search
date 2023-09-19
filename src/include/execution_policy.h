@@ -119,7 +119,7 @@ ForwardIt adjacent_find(ExecutionPolicy&& policy, ForwardIt first, ForwardIt las
 
 #else
 
-#warning "Parallel execution not supported!"
+#warning "Parallel execution policies and parallel standard library not supported!"
 namespace execution {
 constexpr size_t seq{0xdeadbeef};
 constexpr size_t par_unseq{0xdeadbeef};

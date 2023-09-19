@@ -314,6 +314,8 @@ auto robust_prune(
     if (noisy)
       debug_min_heap(V, "after prune V: ", 1);
 
+    // print_types(V, new_V);
+
     std::swap(V, new_V);
     new_V.clear();
     // V.unfiltered_heapify();
@@ -346,9 +348,20 @@ auto medioid(auto&& P, Distance distance = Distance{}) {
   return med;
 }
 
-template <class attribute_type, class shuffled_ids_type = size_t, class indices_type = size_t>
+
+/**
+ * @brief
+ * @tparam Array
+ */
+template <feature_vector_array Array>
 class vamana_index {
-  ColMajorMatrix<attribute_type> feature_vectors_;
+
+  // Array feature_vectors_;
+  using index_type = typename Array::index_type;
+  using feature_value_type = typename Array::value_type;
+  using score_value_type = float;
+
+  ColMajorMatrix<feature_value_type> feature_vectors_;
 
   size_t dimension_{0};
   size_t num_vectors_{0};
@@ -357,7 +370,7 @@ class vamana_index {
   size_t B_backtrack_{0};   //
   float alpha_min_{1.0};    // per diskANN paper
   float alpha_max_{1.2};    // per diskANN paper
-  ::detail::graph::adj_list<attribute_type, indices_type> graph_;
+  ::detail::graph::adj_list<score_value_type, index_type> graph_;
   size_t medioid_{0};
 
  public:
@@ -378,16 +391,16 @@ class vamana_index {
       , graph_{num_vectors_} {
   }
 
-  template <feature_vector_array V>
-  void train(V& training_set) {
-    feature_vectors_ = std::move(training_set);
+  void train(const Array& training_set) {
+    feature_vectors_ = std::move(ColMajorMatrix<feature_value_type> (_cpo::dimension(training_set), _cpo::num_vectors(training_set)));
+    std::copy(training_set.data(), training_set.data() + _cpo::dimension(training_set)*_cpo::num_vectors(training_set), feature_vectors_.data());
 
     dimension_ = _cpo::dimension(feature_vectors_);
     num_vectors_ = _cpo::num_vectors(feature_vectors_);
     graph_ = ::detail::graph::init_random_adj_list<float>(
         feature_vectors_, R_max_degree_);
 
-    dump_edgelist("edges_" + std::to_string(0) + ".txt", graph_);
+    // dump_edgelist("edges_" + std::to_string(0) + ".txt", graph_);
 
     medioid_ = medioid(feature_vectors_);
 
@@ -424,7 +437,7 @@ class vamana_index {
           }
         }
         if ((counter) % 10 == 0) {
-          dump_edgelist("edges_" + std::to_string(counter) + ".txt", graph_);
+          // dump_edgelist("edges_" + std::to_string(counter) + ".txt", graph_);
         }
       }
     }
@@ -436,18 +449,20 @@ class vamana_index {
 
   template <query_vector_array Q>
   auto query(const Q& query_set, size_t k) {
-    auto top_k = ColMajorMatrix<size_t>(k, num_queries(query_set));
-    for (size_t i = 0; i < num_queries(query_set); ++i) {
-      greedy_search(
+    auto top_k = ColMajorMatrix<size_t>(k, ::num_vectors(query_set));
+    auto top_k_scores = ColMajorMatrix<float>(k, ::num_vectors(query_set));
+    for (size_t i = 0; i < ::num_vectors(query_set); ++i) {
+      auto&& [_top_k_scores, _top_k, V] = greedy_search(
           graph_,
-          *feature_vectors_,
-          medioid,
+          feature_vectors_,
+          medioid_,
           query_set[i],
           k,
-          L_build_,
-          top_k[i]);
+          L_build_);
+      std::copy(_top_k_scores.data(), _top_k_scores.data() + k, top_k_scores[i].data());
+      std::copy(_top_k.data(), _top_k.data() + k, top_k[i].data());
     }
-    return top_k;
+    return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
 
   template <query_vector Q>
