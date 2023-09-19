@@ -138,7 +138,7 @@ auto vq_query_heap(
   }
 
   consolidate_scores(scores);
-  auto top_k = get_top_k_with_scores(scores, k_nn);
+  auto top_k = get_top_k_with_scores<fixed_min_pair_heap<float, Index>, Index>(scores, k_nn);
 
   return top_k;
 }
@@ -223,7 +223,7 @@ auto vq_query_heap_tiled(
   } while (load(db));
 
   consolidate_scores(scores);
-  auto top_k = get_top_k_with_scores(scores, k_nn);
+  auto top_k = get_top_k_with_scores<fixed_min_pair_heap<float, Index>, Index>(scores, k_nn);
 
   return top_k;
 }
@@ -300,7 +300,7 @@ auto vq_query_heap_2(
   } while (load(db));
 
   consolidate_scores(scores);
-  auto top_k = get_top_k_with_scores(scores, k_nn);
+  auto top_k = get_top_k_with_scores<fixed_min_pair_heap<float, Index>, Index>(scores, k_nn);
 
   return top_k;
 }

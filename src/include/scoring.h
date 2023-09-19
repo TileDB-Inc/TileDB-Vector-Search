@@ -47,6 +47,7 @@
 #include <cmath>
 #include <future>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <numeric>
 #include <queue>
@@ -58,9 +59,6 @@
 #include "linalg.h"
 #include "utils/fixed_min_heap.h"
 #include "utils/timer.h"
-
-
-
 
 // ----------------------------------------------------------------------------
 // Helper utilities
@@ -292,7 +290,7 @@ inline auto get_top_k(std::vector<std::vector<Heap>>& scores, size_t k_nn) {
 // ----------------------------------------------------------------------------
 // Functions for computing top k neighbors with scores
 // ----------------------------------------------------------------------------
-
+template <class Index = size_t, class score_type = float>
 inline void get_top_k_with_scores_from_heap(
     auto&& min_scores, auto&& top_k, auto&& top_k_scores) {
   std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&& b) {
@@ -306,6 +304,10 @@ inline void get_top_k_with_scores_from_heap(
       begin(min_scores), end(min_scores), begin(top_k), ([](auto&& e) {
         return std::get<1>(e);
       }));
+  for (size_t i = min_scores.size(); i < top_k.size(); ++i) {
+    top_k[i] = std::numeric_limits<Index>::max();
+    top_k_scores[i] = std::numeric_limits<score_type>::max();
+  }
 }
 
 // Overload for one-d scores
@@ -320,7 +322,7 @@ inline auto get_top_k_with_scores(std::vector<Heap>& scores, size_t k_nn) {
   ColMajorMatrix<score_type> top_scores(k_nn, num_queries);
 
   for (size_t j = 0; j < num_queries; ++j) {
-    get_top_k_with_scores_from_heap(scores[j], top_k[j], top_scores[j]);
+    get_top_k_with_scores_from_heap<Index, score_type>(scores[j], top_k[j], top_scores[j]);
   }
   return std::make_tuple(std::move(top_scores), std::move(top_k));
 }

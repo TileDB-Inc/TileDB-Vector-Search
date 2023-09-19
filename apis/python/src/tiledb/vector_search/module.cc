@@ -126,7 +126,7 @@ static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string&
          size_t k_nn,
          size_t nthreads) -> py::tuple { //std::pair<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
-        auto r = detail::ivf::qv_query_heap_infinite_ram(
+        auto r = detail::ivf::qv_query_heap_infinite_ram<Id_Type>(
             parts,
             centroids,
             query_vectors,

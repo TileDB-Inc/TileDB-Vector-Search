@@ -78,6 +78,7 @@ namespace detail::ivf {
  * Overload for already opened arrays.  Since the array is already opened, we
  * don't need to specify its type with a template parameter.
  */
+template <class ids_type = size_t>
 auto qv_query_heap_infinite_ram(
     auto&& partitioned_db,
     auto&& centroids,
@@ -113,7 +114,7 @@ auto qv_query_heap_infinite_ram(
   auto partitioned_db = tdbColMajorMatrix<T>(ctx, part_uri);
   auto partitioned_ids = read_vector<partitioned_ids_type>(ctx, id_uri);
 
-  return qv_query_heap_infinite_ram(
+  return qv_query_heap_infinite_ram<partitioned_ids_type>(
       partitioned_db,
       centroids,
       q,
@@ -148,6 +149,7 @@ auto qv_query_heap_infinite_ram(
  * @param nthreads How many threads to use for parallel execution
  * @return The indices of the top_k neighbors for each query vector
  */
+template <class ids_type = size_t>
 auto qv_query_heap_infinite_ram(
     const std::string& part_uri,
     auto&& centroids,
@@ -158,7 +160,7 @@ auto qv_query_heap_infinite_ram(
     size_t k_nn,
     size_t nthreads) {
   tiledb::Context ctx;
-  return qv_query_heap_infinite_ram(
+  return qv_query_heap_infinite_ram<ids_type>(
       ctx, part_uri, centroids, q, indices, id_uri, nprobe, k_nn, nthreads);
 }
 
@@ -188,6 +190,7 @@ auto qv_query_heap_infinite_ram(
  * @return The indices of the top_k neighbors for each query vector
  */
 // @todo We should still order the queries so partitions are searched in order
+template <class ids_type>
 auto qv_query_heap_infinite_ram(
     auto&& partitioned_db,
     auto&& centroids,
@@ -221,8 +224,8 @@ auto qv_query_heap_infinite_ram(
   auto top_centroids =
       detail::flat::qv_query_heap_0(centroids, q, nprobe, nthreads);
 
-  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-      size(q), fixed_min_pair_heap<float, size_t>(k_nn));
+  auto min_scores = std::vector<fixed_min_pair_heap<float, ids_type>>(
+      size(q), fixed_min_pair_heap<float, ids_type>(k_nn));
 
   // Parallelizing over q is not going to be very efficient
   {
@@ -244,7 +247,7 @@ auto qv_query_heap_infinite_ram(
         });
   }
 
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
+  auto top_k = get_top_k_with_scores<fixed_min_pair_heap<float, ids_type>, ids_type>(min_scores, k_nn);
   return top_k;
 }
 

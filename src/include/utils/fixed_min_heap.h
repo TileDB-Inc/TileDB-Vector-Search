@@ -57,11 +57,8 @@ class fixed_min_set_heap_1 : public std::vector<T> {
 
   void insert(T const& x) {
     if (Base::size() < max_size) {
-      Base::push_back(x);
-      // std::push_heap(begin(*this), end(*this), std::less<T>());
-      if (Base::size() == max_size) {
-        std::make_heap(begin(*this), end(*this), std::less<T>());
-      }
+      this->push_back(x);
+      std::push_heap(begin(*this), end(*this), std::less<T>());
     } else if (x < this->front()) {
       std::pop_heap(begin(*this), end(*this), std::less<T>());
       this->pop_back();
@@ -91,12 +88,8 @@ class fixed_min_set_heap_2 : public std::vector<T> {
 
   void insert(T const& x) {
     if (Base::size() < max_size) {
-      Base::push_back(x);
-      // std::push_heap(begin(*this), end(*this), std::less<T>());
-      if (Base::size() == max_size) {
-        // std::make_heap(begin(*this), end(*this), std::less<T>());
-        std::make_heap(begin(*this), end(*this));
-      }
+      this->push_back(x);
+      std::push_heap(begin(*this), end(*this));
     } else if (x < this->front()) {
       // std::pop_heap(begin(*this), end(*this), std::less<T>());
       std::pop_heap(begin(*this), end(*this));
@@ -138,13 +131,10 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
 
   void insert(const T& x, const U& y) {
     if (Base::size() < max_size) {
-      Base::emplace_back(x, y);
-      // std::push_heap(begin(*this), end(*this), std::less<T>());
-      if (Base::size() == max_size) {
-        std::make_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
-          return std::get<0>(a) < std::get<0>(b);
-        });
-      }
+      this->emplace_back(x, y);
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return std::get<0>(a) < std::get<0>(b);
+      });
     } else if (x < std::get<0>(this->front())) {
       std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
         return std::get<0>(a) < std::get<0>(b);
