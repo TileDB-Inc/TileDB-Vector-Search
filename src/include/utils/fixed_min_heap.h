@@ -109,6 +109,7 @@ class fixed_min_set_heap_2 : public std::vector<T> {
 template <class T, class U>
 class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   using Base = std::vector<std::tuple<T, U>>;
+
   // using Base::Base;
   unsigned max_size{0};
 
@@ -147,6 +148,20 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
     }
   }
 };
+
+template <class Heap>
+struct heap_traits {
+  using value_type = typename Heap::value_type;
+  using score_type = typename std::tuple_element<0, typename Heap::value_type>::type;
+  using index_type = typename std::tuple_element<1, typename Heap::value_type>::type;
+};
+
+template <class Heap>
+using heap_score_t = typename heap_traits<Heap>::score_type;
+
+template <class Heap>
+using heap_index_t = typename heap_traits<Heap>::index_type;
+
 
 // template <class T>
 // using fixed_min_heap = fixed_min_set_heap_1<T>;
