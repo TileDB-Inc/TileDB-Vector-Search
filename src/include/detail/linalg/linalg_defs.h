@@ -33,12 +33,7 @@
 #define TDB_LINALG_DEFS_H
 
 #include <string>
-#include <tiledb/tiledb>
 #include "mdspan/mdspan.hpp"
-
-extern bool global_verbose;
-extern bool global_debug;
-extern std::string global_region;
 
 namespace stdx {
 using namespace Kokkos;

@@ -51,9 +51,6 @@ void create_matrix(
     const tiledb::Context& ctx,
     const Matrix<T, LayoutPolicy, I>& A,
     const std::string& uri) {
-  if (global_debug) {
-    std::cerr << "# Creating Matrix: " << uri << std::endl;
-  }
 
   // @todo: make this a parameter
   size_t num_parts = 10;
@@ -92,9 +89,6 @@ void write_matrix(
     size_t start_pos = 0,
     bool create = true) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
-  if (global_debug) {
-    std::cerr << "# Writing Matrix: " << uri << std::endl;
-  }
 
   if (create) {
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri);
@@ -130,9 +124,6 @@ void write_matrix(
 template <class T>
 void create_vector(
     const tiledb::Context& ctx, std::vector<T>& v, const std::string& uri) {
-  if (global_debug) {
-    std::cerr << "# Creating std::vector: " << uri << std::endl;
-  }
 
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
@@ -161,10 +152,6 @@ void write_vector(
     size_t start_pos = 0,
     bool create = true) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
-
-  if (global_debug) {
-    std::cerr << "# Writing std::vector: " << uri << std::endl;
-  }
 
   if (create) {
     create_vector<T>(ctx, v, uri);
@@ -202,10 +189,6 @@ std::vector<T> read_vector(
     size_t start_pos = 0,
     size_t end_pos = 0) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
-
-  if (global_debug) {
-    std::cerr << "# Reading std::vector: " << uri << std::endl;
-  }
 
   tiledb::Array array_ =
       tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);

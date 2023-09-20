@@ -92,7 +92,6 @@
 
 bool verbose = false;
 bool debug = false;
-bool global_debug = false;
 
 bool enable_stats = false;
 std::vector<json> core_stats;
@@ -145,7 +144,7 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  global_debug = debug = args["--debug"].asBool();
+  // global_debug = debug = args["--debug"].asBool();
   verbose = args["--verbose"].asBool();
   enable_stats = args["--stats"].asBool();
 
@@ -172,6 +171,7 @@ int main(int argc, char* argv[]) {
   tiledb::Context ctx;
 
   auto db = tdbColMajorMatrix<db_type>(ctx, db_uri, blocksize);  // blocked
+  db.load();
 
   auto query =
       tdbColMajorMatrix<uint8_t>(ctx, query_uri, nqueries);  // just a slice
@@ -181,7 +181,7 @@ int main(int argc, char* argv[]) {
   std::cout << load_time << std::endl;
 
   // @todo decide on what the type of top_k::value should be
-  auto [top_k, top_k_scores] = [&]() {
+  auto [top_k_scores, top_k] = [&]() {
     if (alg_name == "vq_heap" || alg_name == "vq") {
       if (verbose) {
         std::cout << "# Using vq_heap" << std::endl;
