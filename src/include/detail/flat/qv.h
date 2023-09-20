@@ -161,7 +161,7 @@ auto qv_query_heap(
   // yet have iterators.
   // @todo Implement iterator interface to `Matrix` class
 
-  auto size_db = db.num_cols();
+  auto size_db = num_vectors(db);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
   stdx::range_for_each(
       std::move(par),
