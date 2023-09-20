@@ -79,7 +79,7 @@ template <feature_vector_array DB, query_vector_array Q>
   using id_type = size_t;
   using score_type = float;
 
-  ColMajorMatrix<id_type> top_k(k_nn, size(q));
+  ColMajorMatrix<id_type> top_k(k_nn, num_vectors(q));
 
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
   stdx::range_for_each(
@@ -214,27 +214,6 @@ auto qv_query_heap(
  * @return A matrix of size k x #queries containing the top k results for each
  * query.
  */
-template <class T, feature_vector_array DB, feature_vector_array Q, class ID>
-auto qv_query_heap_tiled(
-    T,
-    DB& db,
-    const Q& q,
-    const ID& ids,
-    int k_nn,
-    unsigned nthreads);
-
-template <feature_vector_array DB, feature_vector_array Q>
-auto qv_query_heap_tiled(DB& db, const Q& q, int k_nn, unsigned nthreads) {
-  return qv_query_heap_tiled(
-      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
-}
-
-template <class feature_vector_array, feature_vector_array Q, class ID>
-auto qv_query_heap_tiled(
-    DB& db, Q& q, const ID& ids, int k_nn, unsigned nthreads) {
-  return qv_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads);
-}
-
 template <class T, class DB, class Q, class ID>
 auto qv_query_heap_tiled(
     T,
@@ -250,6 +229,11 @@ auto qv_query_heap_tiled(
 
   scoped_timer _{tdb_func__};
 
+  // using feature_type = typename
+  // std::remove_reference_t<decltype(db)>::value_type;
+  using id_type = typename std::remove_reference_t<decltype(ids)>::value_type;
+  using score_type = float;
+
   // Have to do explicit asynchronous threading here, as the current parallel
   // algorithms have iterator-based interaces, and the `Matrix` class does not
   // yet have iterators.
@@ -262,7 +246,7 @@ auto qv_query_heap_tiled(
   futs.reserve(nthreads);
 
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
-      size(query), fixed_min_pair_heap<score_type, id_type>(k_nn));
+      num_vectors(query), fixed_min_pair_heap<score_type, id_type>(k_nn));
 
   // @todo: Use range::for_each
   for (size_t n = 0; n < nthreads; ++n) {

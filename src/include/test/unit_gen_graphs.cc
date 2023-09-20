@@ -42,7 +42,16 @@ TEST_CASE("gen_graphs: test test", "[gen_graphs]") {
 }
 
 TEST_CASE("gen_graphs: grid", "[gen_graphs]") {
-  auto&& [vecs, edges] = gen_grid(5, 7);
+  auto&& [vecs, edges] = gen_uni_grid(5, 7);
+
+  // print_types (vecs, edges);
+
+  dump_coordinates("coords.txt", vecs);
+  dump_edgelist("edges.txt", edges);
+}
+
+TEST_CASE("gen_graphs: grid", "[gen_graphs]") {
+  auto&& [vecs, edges] = gen_bi_grid(5, 7);
 
   // print_types (vecs, edges);
 

@@ -40,7 +40,7 @@ TEST_CASE("adj_list: test test", "[adj_list]") {
 }
 
 TEST_CASE("adj_list: initializer_list", "[adj_list]") {
-  auto A = index_adj_list {tiny_index_adj_list};
+  auto A = detail::graph::index_adj_list {tiny_index_adj_list};
 
   CHECK(A.size() == 6);
   CHECK(A[0].size() == 1);

@@ -210,18 +210,27 @@ public:
  /**
   * Copying constructor from COO matrix.  Demonstrates non-sorting approach to constructing CSR matrix.
   */
- csr_matrix(const coo_matrix<ValueType, IndexType>& coo, bool relabel = false) : nnz_(coo.nnz_), col_idx_(nnz_), values_(nnz_) {
-   scoped_timer _ { "csr_matrix copy constructor", noisy_ };
-   // Make a copy of the row index array -- we only need this in the case of relabeling
+ csr_matrix(const coo_matrix<ValueType, IndexType>& coo, bool relabel = false)
+     : nnz_(coo.nnz_)
+     , col_idx_(nnz_)
+     , values_(nnz_) {
+   scoped_timer _{"csr_matrix copy constructor", noisy_};
+   // Make a copy of the row index array -- we only need this in the case of
+   // relabeling
    // @todo Be more clever -- don't copy if we don't relabel
    auto row_idx = Vector<index_type>(nnz_);
-   stdx::copy(stdx::execution::par_unseq, coo.row_idx_.begin(), coo.row_idx_.end(), row_idx.begin());
+   stdx::copy(
+       stdx::execution::par_unseq,
+       coo.row_idx_.begin(),
+       coo.row_idx_.end(),
+       row_idx.begin());
 
    if (relabel) {
      relabel_indices(row_idx);
    } else {
-     auto&& [lo, hi] = stdx::minmax_element(stdx::execution::par_unseq, begin(coo.row_idx_), end(coo.row_idx_));
-     num_rows_       = *hi - *lo + 1;
+     auto&& [lo, hi] = stdx::minmax_element(
+         stdx::execution::par_unseq, begin(coo.row_idx_), end(coo.row_idx_));
+     num_rows_ = *hi - *lo + 1;
    }
 
    if (debug_) {
@@ -246,18 +255,19 @@ public:
    /*
     * The below is kind of a counting sort, which should be parallelizable.
     * @todo Parallelize this without requiring temporary storage
-    * (though if size(row_ptr) << nthreads * size(row_idx)then even with temp storage it could be a win)
+    * (though if size(row_ptr) << nthreads * size(row_idx)then even with temp
+    * storage it could be a win)
     */
 #if 1
    {
-     scoped_timer _ { "count sort 1", noisy_ };
+     scoped_timer _{"count sort 1", noisy_};
      // Set up row_ptr_ to be the number of nonzeros in previous row
      for (int i = 0; i < nnz_; ++i) {
        ++row_ptr_(row_idx(i) + 1);
      }
    }
 #else
-   auto par    = stdx::execution::indexed_parallel_policy();
+   auto par = stdx::execution::indexed_parallel_policy();
 
    std::cout << "nthreads: " << par.nthreads_ << "\n";
 
@@ -267,7 +277,10 @@ public:
      stdx::fill(stdx::execution::par_unseq, begin(tmps[n]), end(tmps[n]), 0);
    }
 
-   stdx::range_for_each(std::move(par), row_idx, [&tmps](auto&& v, auto&& n, auto&& i) { ++tmps[n](v + 1); });
+   stdx::range_for_each(
+       std::move(par), row_idx, [&tmps](auto&& v, auto&& n, auto&& i) {
+         ++tmps[n](v + 1);
+       });
    for (size_t n = 0; n < par.nthreads_; ++n) {
      for (size_t i = 0; i < size(row_ptr_); ++i) {
        row_ptr_(i) += tmps[n](i);
@@ -275,7 +288,11 @@ public:
    }
 #endif
 
-   stdx:inclusive_scan(stdx::execution::par_unseq, begin(row_ptr_), end(row_ptr_), begin(row_ptr_));
+   stdx::inclusive_scan(
+       stdx::execution::par_unseq,
+       begin(row_ptr_),
+       end(row_ptr_),
+       begin(row_ptr_));
 
    {
      scoped_timer cs2("count sort 2", noisy_);
@@ -283,7 +300,7 @@ public:
      // @todo parallelize?
      for (int i = 0; i < nnz_; ++i) {
        col_idx_(row_ptr_(row_idx(i))) = coo.col_idx_(i);
-       values_(row_ptr_(row_idx(i)))  = coo.values_(i);
+       values_(row_ptr_(row_idx(i))) = coo.values_(i);
        ++row_ptr_(row_idx(i));
      }
    }

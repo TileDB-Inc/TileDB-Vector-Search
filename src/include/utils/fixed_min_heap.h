@@ -35,14 +35,14 @@
  * scores during similarity search.
  */
 
-#ifndef TILEDB_FIXED_MIN_QUEUES_H
-#define TILEDB_FIXED_MIN_QUEUES_H
+#ifndef TILEDB_FIXED_MIN_HEAP_H
+#define TILEDB_FIXED_MIN_HEAP_H
 
-#include <functional>
-#include <iostream>
-#include <initializer_list>
-#include <set>
 #include <concepts>
+#include <functional>
+#include <initializer_list>
+#include <iostream>
+#include <set>
 
 #include "functional.h"
 
@@ -53,6 +53,20 @@ class unique_score {};
 class unique_both {};
 }  // namespace
 
+
+
+template <class Heap>
+struct heap_traits {
+  using value_type = typename Heap::value_type;
+  using score_type = typename std::tuple_element<0, typename Heap::value_type>::type;
+  using index_type = typename std::tuple_element<1, typename Heap::value_type>::type;
+};
+
+template <class Heap>
+using heap_score_t = typename heap_traits<Heap>::score_type;
+
+template <class Heap>
+using heap_index_t = typename heap_traits<Heap>::index_type;
 
 /**
  * Heap to store a pair of values, ordered by the first element.
@@ -299,9 +313,62 @@ void convert_to_min_heap(std::vector<int>& heap) {
 }
 
 
-#ifdef ALLHEAPS  // Kept here for historical comparison reasons.
+#ifdef ALLHEAPS
 
+// Original simple heap
+#if 0
+/**
+ * Heap to store a pair of values, ordered by the first element.
+ * @tparam T Type of first element
+ * @tparam U Type of second element
+ */
+template <class T, class U>
+class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
+  using Base = std::vector<std::tuple<T, U>>;
+
+  // using Base::Base;
+  unsigned max_size{0};
+
+ public:
+  explicit fixed_min_pair_heap(unsigned k)
+      : Base(0)
+      , max_size{k} {
+    Base::reserve(k);
+  }
+
+  explicit fixed_min_pair_heap(
+      unsigned k, std::initializer_list<std::tuple<T, U>> l)
+      : Base(0)
+      , max_size{k} {
+    Base::reserve(k);
+    for (auto& p : l) {
+      insert(std::get<0>(p), std::get<1>(p));
+    }
+  }
+
+  void insert(const T& x, const U& y) {
+    if (Base::size() < max_size) {
+      this->emplace_back(x, y);
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return std::get<0>(a) < std::get<0>(b);
+      });
+    } else if (x < std::get<0>(this->front())) {
+      std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return std::get<0>(a) < std::get<0>(b);
+      });
+      this->pop_back();
+      this->emplace_back(x, y);
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return std::get<0>(a) < std::get<0>(b);
+      });
+    }
+  }
+};
+#endif
+
+// Kept here for historical comparison reasons.
 // These are okay
+
 template <class T>
 class fixed_min_set_heap_1 : public std::vector<T> {
   using Base = std::vector<T>;
@@ -361,74 +428,9 @@ class fixed_min_set_heap_2 : public std::vector<T> {
   }
 };
 
-// Original simple heap
-#if 0
-/**
- * Heap to store a pair of values, ordered by the first element.
- * @tparam T Type of first element
- * @tparam U Type of second element
- */
-template <class T, class U>
-class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
-  using Base = std::vector<std::tuple<T, U>>;
-
-  // using Base::Base;
-  unsigned max_size{0};
-
- public:
-  explicit fixed_min_pair_heap(unsigned k)
-      : Base(0)
-      , max_size{k} {
-    Base::reserve(k);
-  }
-
-  explicit fixed_min_pair_heap(
-      unsigned k, std::initializer_list<std::tuple<T, U>> l)
-      : Base(0)
-      , max_size{k} {
-    Base::reserve(k);
-    for (auto& p : l) {
-      insert(std::get<0>(p), std::get<1>(p));
-    }
-  }
-
-  void insert(const T& x, const U& y) {
-    if (Base::size() < max_size) {
-      this->emplace_back(x, y);
-      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
-        return std::get<0>(a) < std::get<0>(b);
-      });
-    } else if (x < std::get<0>(this->front())) {
-      std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
-        return std::get<0>(a) < std::get<0>(b);
-      });
-      this->pop_back();
-      this->emplace_back(x, y);
-      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
-        return std::get<0>(a) < std::get<0>(b);
-      });
-    }
-  }
-};
-#endif
-template <class Heap>
-struct heap_traits {
-  using value_type = typename Heap::value_type;
-  using score_type = typename std::tuple_element<0, typename Heap::value_type>::type;
-  using index_type = typename std::tuple_element<1, typename Heap::value_type>::type;
-};
-
-template <class Heap>
-using heap_score_t = typename heap_traits<Heap>::score_type;
-
-template <class Heap>
-using heap_index_t = typename heap_traits<Heap>::index_type;
 
 
-// template <class T>
-// using fixed_min_heap = fixed_min_set_heap_1<T>;
-
-#ifdef ALLHEAPS  // Kept here for historical comparison reasons.  They are
+  // Kept here for historical comparison reasons.  They are
                  // really slow.
 template <class T, class Compare = std::less<T>>
 class fixed_min_set_heap_3 : public std::vector<T> {
@@ -496,5 +498,6 @@ struct fixed_min_set_set : public std::set<T, Compare, Allocator> {
     }
   }
 };
-#endif
-#endif  // TILEDB_FIXED_MIN_QUEUES_H
+
+#endif  // ALLHEAPS
+#endif  // TILEDB_FIXED_MIN_HEAP_H

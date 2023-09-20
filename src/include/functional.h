@@ -36,9 +36,21 @@
 
 #include <functional>
 
-namespace stdx {
+namespace stdx {}  // namespace stdx
 
+template <class T = void>
+struct first_less {
+  constexpr bool operator()(const T& lhs, const T& rhs)  const  {
+    return std::get<0>(lhs) < std::get<0>(rhs);
+  }
+};
 
-}  // namespace stdx
+template <>
+struct first_less<void> {
+  template <class T1, class T2>
+  constexpr bool operator()(const T1& lhs, const T2& rhs)  const  {
+    return std::get<0>(lhs) < std::get<0>(rhs);
+  }
+};
 
 #endif

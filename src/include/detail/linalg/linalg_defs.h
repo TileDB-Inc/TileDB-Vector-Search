@@ -33,6 +33,7 @@
 #define TDB_LINALG_DEFS_H
 
 #include <string>
+#include <tiledb/tiledb>
 #include "mdspan/mdspan.hpp"
 
 namespace stdx {

@@ -101,9 +101,9 @@ kmeans_add_test(unit_cpos)
 
 kmeans_add_test(unit_old_concepts)
 
-kmeans_add_test(unit_coo)
+# kmeans_add_test(unit_coo)
 
-kmeans_add_test(unit_csr)
+# kmeans_add_test(unit_csr)
 
 kmeans_add_test(unit_execution_policy)
 

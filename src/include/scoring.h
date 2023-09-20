@@ -56,7 +56,7 @@
 #include <span>
 // #include <execution>
 
-#include "linalg.h"
+#include "detail/linalg/linalg_defs.h"
 #include "tdb_defs.h"
 #include "utils/fixed_min_heap.h"
 #include "utils/timer.h"
@@ -67,8 +67,6 @@
 namespace {
 class with_ids {};
 class without_ids {};
-template <class... T>
-constexpr bool always_false = false;
 }  // namespace
 
 // ----------------------------------------------------------------------------
@@ -311,9 +309,9 @@ void consolidate_scores(std::vector<std::vector<Heap>>& min_scores) {
  * @param top_k
  */
 template <class Heap>
-inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k)
-  requires(!std::is_same_v<Heap, std::vector<Heap>>)
-{
+inline void get_top_k_from_heap(
+    Heap& min_scores,
+    auto&& top_k) requires(!std::is_same_v<Heap, std::vector<Heap>>) {
   std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&& b) {
     return std::get<0>(a) < std::get<0>(b);
   });
@@ -325,11 +323,7 @@ inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k)
   pad_with_sentinels(k_nn, top_k);
 }
 
-template <class Heap>
-inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k) requires(
-      !std::is_same_v<Heap, std::vector<Heap>>) {
-  get_top_k_from_heap(min_scores, top_k, size(min_scores));
-}
+
 
 /**
  * @brief Utility function to extract the top k scores from a vector of min

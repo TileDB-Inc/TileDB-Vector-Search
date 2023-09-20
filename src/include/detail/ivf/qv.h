@@ -137,7 +137,7 @@ auto qv_query_heap_infinite_ram(
       detail::flat::qv_query_heap_0(centroids, q, nprobe, nthreads);
 
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
-      size(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
+      num_vectors(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
 
   // Parallelizing over q is not going to be very efficient
   {

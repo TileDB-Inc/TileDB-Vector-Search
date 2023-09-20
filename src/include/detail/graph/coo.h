@@ -229,21 +229,24 @@ class tdb_coo_matrix : public coo_matrix<ValueType, IndexType> {
    * @param ctx
    * @param uri
    */
-  tdb_coo_matrix(const tiledb::Context& ctx, const std::string& uri) : uri_(uri) {
-    tiledb::Array array_  = tiledb::Array(ctx, uri, TILEDB_READ);
-    auto          schema_ = array_.schema();
-
+  tdb_coo_matrix(const tiledb::Context& ctx, const std::string& uri)
+      : uri_(uri) {
+    tiledb::Array array_ = tiledb::Array(ctx, uri, TILEDB_READ);
+    auto schema_ = array_.schema();
 
     /*
  *     schema_.dump(stdout);
 
     ArraySchema(
         domain=Domain(*[
-          Dim(name='soma_dim_0', domain=(0, 2147483645), tile=2048, dtype='int64', filters=FilterList([ZstdFilter(level=3), ])),
-          Dim(name='soma_dim_1', domain=(0, 2147483645), tile=2048, dtype='int64', filters=FilterList([ZstdFilter(level=3), ])),
+          Dim(name='soma_dim_0', domain=(0, 2147483645), tile=2048,
+ dtype='int64', filters=FilterList([ZstdFilter(level=3), ])),
+          Dim(name='soma_dim_1', domain=(0, 2147483645), tile=2048,
+ dtype='int64', filters=FilterList([ZstdFilter(level=3), ])),
         ]),
         attrs=[
-          Attr(name='soma_data', dtype='float32', var=False, nullable=False, filters=FilterList([ZstdFilter(level=-1), ])),
+          Attr(name='soma_data', dtype='float32', var=False, nullable=False,
+ filters=FilterList([ZstdFilter(level=-1), ])),
         ],
         cell_order='row-major',
         tile_order='row-major',
@@ -253,54 +256,66 @@ class tdb_coo_matrix : public coo_matrix<ValueType, IndexType> {
         )
 */
 
-    using dim_type  = int64_t;
-    using attr_type = float;
+    // using dim_type  = int64_t;
+    // using attr_type = float;
 
-    auto domain { schema_.domain() };
+    auto domain{schema_.domain()};
 
-    auto dim_num { domain.ndim() };
+    auto dim_num{domain.ndim()};
     if (dim_num != 2) {
-      throw std::runtime_error("Expected 2 dimensions, got " + std::to_string(dim_num));
+      throw std::runtime_error(
+          "Expected 2 dimensions, got " + std::to_string(dim_num));
     }
 
-    auto attr_num { schema_.attribute_num() };
+    auto attr_num{schema_.attribute_num()};
     if (attr_num != 1) {
-      throw std::runtime_error("Expected 1 attribute, got " + std::to_string(attr_num));
+      throw std::runtime_error(
+          "Expected 1 attribute, got " + std::to_string(attr_num));
     }
 
-    auto row_dim  = domain.dimension(0);
-    auto col_dim  = domain.dimension(1);
+    auto row_dim = domain.dimension(0);
+    auto col_dim = domain.dimension(1);
     auto val_attr = schema_.attribute(0);
 
-    auto row_dim_name  = row_dim.name();
-    auto col_dim_name  = col_dim.name();
+    auto row_dim_name = row_dim.name();
+    auto col_dim_name = col_dim.name();
     auto val_attr_name = val_attr.name();
-    if (row_dim_name != "soma_dim_0" && col_dim_name != "soma_dim_1" && val_attr_name != "soma_data") {
+    if (row_dim_name != "soma_dim_0" && col_dim_name != "soma_dim_1" &&
+        val_attr_name != "soma_data") {
       throw std::runtime_error("Attribute name mismatch");
     }
 
-    tiledb_datatype_t row_dim_type  = row_dim.type();
-    tiledb_datatype_t col_dim_type  = col_dim.type();
+    tiledb_datatype_t row_dim_type = row_dim.type();
+    tiledb_datatype_t col_dim_type = col_dim.type();
     tiledb_datatype_t val_attr_type = val_attr.type();
     if (row_dim_type != tiledb::impl::type_to_tiledb<index_type>::tiledb_type) {
-      throw std::runtime_error("Attribute type mismatch: " + std::to_string(row_dim_type) +
-                               " != " + std::to_string(tiledb::impl::type_to_tiledb<index_type>::tiledb_type));
+      throw std::runtime_error(
+          "Attribute type mismatch: " + std::to_string(row_dim_type) + " != " +
+          std::to_string(
+              tiledb::impl::type_to_tiledb<index_type>::tiledb_type));
     }
     if (col_dim_type != tiledb::impl::type_to_tiledb<index_type>::tiledb_type) {
-      throw std::runtime_error("Attribute type mismatch: " + std::to_string(col_dim_type) +
-                               " != " + std::to_string(tiledb::impl::type_to_tiledb<index_type>::tiledb_type));
+      throw std::runtime_error(
+          "Attribute type mismatch: " + std::to_string(col_dim_type) + " != " +
+          std::to_string(
+              tiledb::impl::type_to_tiledb<index_type>::tiledb_type));
     }
-    if (val_attr_type != tiledb::impl::type_to_tiledb<value_type>::tiledb_type) {
-      throw std::runtime_error("Attribute type mismatch: " + std::to_string(val_attr_type) +
-                               " != " + std::to_string(tiledb::impl::type_to_tiledb<value_type>::tiledb_type));
+    if (val_attr_type !=
+        tiledb::impl::type_to_tiledb<value_type>::tiledb_type) {
+      throw std::runtime_error(
+          "Attribute type mismatch: " + std::to_string(val_attr_type) + " != " +
+          std::to_string(
+              tiledb::impl::type_to_tiledb<value_type>::tiledb_type));
     }
 
     tiledb::Query query(ctx, array_);
-    auto          row_result_size = query.est_result_size(row_dim_name);
-    auto          col_result_size = query.est_result_size(col_dim_name);
-    auto          val_result_size = query.est_result_size(val_attr_name);
+    auto row_result_size = query.est_result_size(row_dim_name);
+    auto col_result_size = query.est_result_size(col_dim_name);
+    auto val_result_size = query.est_result_size(val_attr_name);
 
-    assert(row_result_size == col_result_size && col_result_size == 2 * val_result_size);
+    assert(
+        row_result_size == col_result_size &&
+        col_result_size == 2 * val_result_size);
 
     auto row_ptr = Vector<index_type>(row_result_size / sizeof(index_type));
     auto col_ptr = Vector<index_type>(col_result_size / sizeof(index_type));
@@ -346,8 +361,9 @@ class tdb_coo_matrix : public coo_matrix<ValueType, IndexType> {
 
     assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
-    Base::operator=(Base { std::move(row_ptr), std::move(col_ptr), std::move(val_ptr) });
+    Base::operator=
+        (Base{std::move(row_ptr), std::move(col_ptr), std::move(val_ptr)});
   }
 };
 
-#endif    // TILEDB_COO_H
+#endif  // TILEDB_COO_H

@@ -41,5 +41,5 @@ TEST_CASE("index: test test", "[index]") {
 
 TEST_CASE("index: uri constructor", "[index]") {
   tiledb::Context ctx;
-  auto index = Index(ctx, sift_base);
+  auto index = flat_index<float>(ctx, sift_base_uri);
 }
