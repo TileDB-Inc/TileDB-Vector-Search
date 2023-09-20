@@ -36,9 +36,6 @@
 #include "detail/linalg/tdb_io.h"
 #include "query_common.h"
 
-bool global_verbose = false;
-bool global_debug = true;
-
 TEST_CASE("qv: test test", "[qv]") {
   REQUIRE(true);
 }

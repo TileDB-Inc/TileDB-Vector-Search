@@ -11,8 +11,6 @@
 namespace py = pybind11;
 using Ctx = tiledb::Context;
 
-bool global_debug = false;
-
 bool enable_stats = false;
 std::vector<json> core_stats;
 
@@ -535,9 +533,11 @@ PYBIND11_MODULE(_tiledbvspy, m) {
     return json{core_stats}.dump();
   });
 
+#if 0
   m.def("set_debug", [](bool debug) {
     global_debug = debug;
   });
+#endif
 
   declare_vq_query_heap<uint8_t>(m, "u8");
   declare_vq_query_heap<float>(m, "f32");

@@ -91,7 +91,6 @@
 
 bool verbose = false;
 bool debug = false;
-bool global_debug = false;
 
 bool enable_stats = false;
 std::vector<json> core_stats;
@@ -144,7 +143,7 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  global_debug = debug = args["--debug"].asBool();
+  // global_debug = debug = args["--debug"].asBool();
   verbose = args["--verbose"].asBool();
   enable_stats = args["--stats"].asBool();
 
