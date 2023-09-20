@@ -128,7 +128,7 @@ auto qv_query_heap(
 template <class DB, class Q>
 auto qv_query_heap(const DB& db, const Q& q, int k_nn, unsigned nthreads) {
   return qv_query_heap(
-      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
 }
 
 template <class DB, class Q, class ID>
@@ -209,7 +209,7 @@ auto qv_query_heap_tiled(
 template <class DB, class Q>
 auto qv_query_heap_tiled(DB& db, const Q& q, int k_nn, unsigned nthreads) {
   return qv_query_heap_tiled(
-      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
 }
 
 template <class DB, class Q, class ID>
@@ -226,11 +226,11 @@ auto qv_query_heap_tiled(
     [[maybe_unused]] const ID& ids,
     int k_nn,
     unsigned nthreads) {
-  
+
   // using feature_type = typename std::remove_reference_t<decltype(db)>::value_type;
   using id_type = typename std::remove_reference_t<decltype(ids)>::value_type;
   using score_type = float;
-  
+
   if constexpr (is_loadable_v<decltype(db)>) {
     db.load();
   }

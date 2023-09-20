@@ -279,7 +279,7 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
         }, py::keep_alive<1,2>());
 }
 
-template <class T=float, class U=size_t>
+template <class T=float, class U=uint64_t>
 static void declareFixedMinPairHeap(py::module& mod) {
   using PyFixedMinPairHeap = py::class_<fixed_min_pair_heap<T, U>>;
   PyFixedMinPairHeap cls(mod, "FixedMinPairHeap", py::buffer_protocol());
@@ -356,7 +356,7 @@ void declareStdVector(py::module& m, const std::string& suffix) {
     });
 }
 
-template <typename T, typename indices_type = size_t>
+template <typename T, typename indices_type = uint64_t>
 void declarePartitionIvfIndex(py::module& m, const std::string& suffix) {
   m.def(("partition_ivf_index_" + suffix).c_str(),
         [](ColMajorMatrix<float>& centroids,
@@ -496,7 +496,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         [](ColMajorMatrix<float>& data,
            ColMajorMatrix<float>& query_vectors,
            int k,
-           size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> {
+           size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
           auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
           return r;
         });
@@ -505,13 +505,13 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         [](tdbColMajorMatrix<uint8_t>& data,
            ColMajorMatrix<float>& query_vectors,
            int k,
-           size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> {
+           size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
           auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
           return r;
         });
 
   m.def("validate_top_k_u64",
-      [](const ColMajorMatrix<size_t>& top_k,
+      [](const ColMajorMatrix<uint64_t>& top_k,
          const ColMajorMatrix<int32_t>& ground_truth) -> bool {
         return validate_top_k(top_k, ground_truth);
       });

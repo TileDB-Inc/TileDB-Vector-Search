@@ -63,7 +63,7 @@ auto vq_query_heap(
 template <class DB, class Q>
 auto vq_query_heap(DB& db, const Q& q, int k_nn, unsigned nthreads) {
   return vq_query_heap(
-      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
 }
 
 template <class DB, class Q, class ID>
@@ -83,11 +83,11 @@ auto vq_query_heap(
     unsigned nthreads) {
   // @todo Need to get the total number of queries, not just the first block
   // @todo Use Matrix here rather than vector of vectors
-  
+
   // using feature_type = typename std::remove_reference_t<decltype(db)>::value_type;
   using id_type = typename std::remove_reference_t<decltype(ids)>::value_type;
   using score_type = float;
-  
+
   std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>> scores(
       nthreads,
       std::vector<fixed_min_pair_heap<score_type, id_type>>(
@@ -173,7 +173,7 @@ auto vq_query_heap_tiled(
 template <class DB, class Q>
 auto vq_query_heap_tiled(DB& db, const Q& q, int k_nn, unsigned nthreads) {
   return vq_query_heap_tiled(
-      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
 }
 
 template <class DB, class Q, class ID>
@@ -192,11 +192,11 @@ auto vq_query_heap_tiled(
     unsigned nthreads) {
   // @todo Need to get the total number of queries, not just the first block
   // @todo Use Matrix here rather than vector of vectors
-  
+
   // using feature_type = typename std::remove_reference_t<decltype(db)>::value_type;
   using id_type = typename std::remove_reference_t<decltype(ids)>::value_type;
   using score_type = float;
-  
+
   std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>> scores(
       nthreads,
       std::vector<fixed_min_pair_heap<score_type, id_type>>(
@@ -255,7 +255,7 @@ auto vq_query_heap_2(
 template <class DB, class Q>
 auto vq_query_heap_2(DB& db, const Q& q, int k_nn, unsigned nthreads) {
   return vq_query_heap_2(
-      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
 }
 
 template <class DB, class Q, class ID>
