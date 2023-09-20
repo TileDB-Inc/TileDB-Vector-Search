@@ -124,7 +124,8 @@ static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string&
          size_t k_nn,
          size_t nthreads) -> py::tuple { //std::pair<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
-        auto r = detail::ivf::qv_query_heap_infinite_ram<Id_Type>(
+        // auto r = detail::ivf::qv_query_heap_infinite_ram(
+        auto r = detail::ivf::query_infinite_ram(
             parts,
             centroids,
             query_vectors,
@@ -176,7 +177,7 @@ static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string
          std::vector<Id_Type>& ids,
          size_t nprobe,
          size_t k_nn,
-         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
+         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> { // TODO change return type
 
         auto r = detail::ivf::nuv_query_heap_infinite_ram_reg_blocked(
             parts,
@@ -203,7 +204,7 @@ static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& 
          size_t nprobe,
          size_t k_nn,
          size_t upper_bound,
-         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
+         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> { // TODO change return type
 
         auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
             ctx,
@@ -399,8 +400,8 @@ static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
            ColMajorMatrix<float>& query_vectors,
            const std::vector<uint64_t> &ids,
            int k,
-           size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> {
-          auto r = detail::flat::vq_query_heap<tdbColMajorMatrix<T>, ColMajorMatrix<float>, uint64_t>(data, query_vectors, ids, k, nthreads);
+           size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
+          auto r = detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads);
           return r;
         });
 }
@@ -412,8 +413,8 @@ static void declare_vq_query_heap_pyarray(py::module& m, const std::string& suff
            ColMajorMatrix<float>& query_vectors,
            const std::vector<uint64_t> &ids,
            int k,
-           size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> {
-          auto r = detail::flat::vq_query_heap<ColMajorMatrix<T>, ColMajorMatrix<float>, uint64_t>(data, query_vectors, ids, k, nthreads);
+           size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
+          auto r = detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads);
           return r;
         });
 }
