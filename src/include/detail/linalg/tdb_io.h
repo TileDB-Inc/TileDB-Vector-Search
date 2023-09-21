@@ -45,6 +45,7 @@
 #include "detail/linalg/tdb_helpers.h"
 #include "utils/logging.h"
 #include "utils/timer.h"
+#include "utils/print_types.h"
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 void create_matrix(
@@ -121,9 +122,10 @@ void write_matrix(
   array.close();
 }
 
-template <class T>
+template <std::ranges::contiguous_range V>
 void create_vector(
-    const tiledb::Context& ctx, std::vector<T>& v, const std::string& uri) {
+    const tiledb::Context& ctx, const V& v, const std::string& uri) {
+  using value_type = std::ranges::range_value_t<V>;
 
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
@@ -135,7 +137,7 @@ void create_vector(
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
   schema.set_domain(domain).set_order({{TILEDB_ROW_MAJOR, TILEDB_ROW_MAJOR}});
 
-  schema.add_attribute(tiledb::Attribute::create<T>(ctx, "values"));
+  schema.add_attribute(tiledb::Attribute::create<value_type>(ctx, "values"));
 
   tiledb::Array::create(uri, schema);
 }
@@ -144,17 +146,19 @@ void create_vector(
  * Write the contents of a std::vector to a TileDB array.
  * @todo change the naming of this function to something more appropriate
  */
-template <class T>
+template <std::ranges::contiguous_range V>
 void write_vector(
     const tiledb::Context& ctx,
-    std::vector<T>& v,
+    V& v,
     const std::string& uri,
     size_t start_pos = 0,
     bool create = true) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
+  // using value_type = std::ranges::range_value_t<V>;
+
   if (create) {
-    create_vector<T>(ctx, v, uri);
+    create_vector(ctx, v, uri);
   }
   // Set the subarray to write into
   std::vector<int32_t> subarray_vals{
@@ -169,7 +173,7 @@ void write_vector(
 
   tiledb::Query query(ctx, array);
   query.set_layout(TILEDB_ROW_MAJOR)
-      .set_data_buffer("values", v)
+      .set_data_buffer("values", v.data(), size(v))
       .set_subarray(subarray);
 
   query.submit();

@@ -46,6 +46,9 @@
 #include "detail/graph/graph_utils.h"
 #include "detail/graph/adj_list.h"
 
+#include <tiledb/tiledb>
+#include <tiledb/group_experimental.h>
+
 namespace detail::graph {
 namespace {
 enum class SearchPath { path_and_search, path_only };
@@ -345,30 +348,29 @@ auto medioid(auto&& P, Distance distance = Distance{}) {
   return med;
 }
 
-
 /**
  * @brief
  * @tparam Array
  */
 template <feature_vector_array Array>
 class vamana_index {
-
   // Array feature_vectors_;
   using index_type = typename Array::index_type;
-  using feature_value_type = typename Array::value_type;
-  using score_value_type = float;
+  using feature_type = typename Array::value_type;
+  using id_type = typename Array::index_type;
+  using score_type = float;
 
-  ColMajorMatrix<feature_value_type> feature_vectors_;
+  ColMajorMatrix<feature_type> feature_vectors_;
 
-  size_t dimension_{0};
-  size_t num_vectors_{0};
-  size_t L_build_{0};       // diskANN paper says default = 100
-  size_t R_max_degree_{0};  // diskANN paper says default = 64
-  size_t B_backtrack_{0};   //
-  float alpha_min_{1.0};    // per diskANN paper
-  float alpha_max_{1.2};    // per diskANN paper
-  ::detail::graph::adj_list<score_value_type, index_type> graph_;
-  size_t medioid_{0};
+  uint64_t dimension_{0};
+  uint64_t num_vectors_{0};
+  uint64_t L_build_{0};       // diskANN paper says default = 100
+  uint64_t R_max_degree_{0};  // diskANN paper says default = 64
+  uint64_t B_backtrack_{0};   //
+  float alpha_min_{1.0};      // per diskANN paper
+  float alpha_max_{1.2};      // per diskANN paper
+  ::detail::graph::adj_list<score_type, index_type> graph_;
+  index_type medioid_{0};
 
  public:
   vamana_index() = delete;
@@ -389,8 +391,13 @@ class vamana_index {
   }
 
   void train(const Array& training_set) {
-    feature_vectors_ = std::move(ColMajorMatrix<feature_value_type> (_cpo::dimension(training_set), _cpo::num_vectors(training_set)));
-    std::copy(training_set.data(), training_set.data() + _cpo::dimension(training_set)*_cpo::num_vectors(training_set), feature_vectors_.data());
+    feature_vectors_ = std::move(ColMajorMatrix<feature_type>(
+        _cpo::dimension(training_set), _cpo::num_vectors(training_set)));
+    std::copy(
+        training_set.data(),
+        training_set.data() +
+            _cpo::dimension(training_set) * _cpo::num_vectors(training_set),
+        feature_vectors_.data());
 
     dimension_ = _cpo::dimension(feature_vectors_);
     num_vectors_ = _cpo::num_vectors(feature_vectors_);
@@ -440,8 +447,8 @@ class vamana_index {
     }
   }
 
-  template <query_vector_array Q>
-  void add(const Q& database) {
+  template <feature_vector_array A>
+  void add(const A& database) {
   }
 
   template <query_vector_array Q>
@@ -450,13 +457,11 @@ class vamana_index {
     auto top_k_scores = ColMajorMatrix<float>(k, ::num_vectors(query_set));
     for (size_t i = 0; i < ::num_vectors(query_set); ++i) {
       auto&& [_top_k_scores, _top_k, V] = greedy_search(
-          graph_,
-          feature_vectors_,
-          medioid_,
-          query_set[i],
-          k,
-          L_build_);
-      std::copy(_top_k_scores.data(), _top_k_scores.data() + k, top_k_scores[i].data());
+          graph_, feature_vectors_, medioid_, query_set[i], k, L_build_);
+      std::copy(
+          _top_k_scores.data(),
+          _top_k_scores.data() + k,
+          top_k_scores[i].data());
       std::copy(_top_k.data(), _top_k.data() + k, top_k[i].data());
     }
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
@@ -483,7 +488,76 @@ class vamana_index {
     return num_vectors_;
   }
 
-  auto num_vectors() {
+  using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
+  std::vector<metadata_element> metadata{
+      {"dimension", &dimension_, TILEDB_UINT64},
+      {"ntotal", &num_vectors_, TILEDB_UINT64},
+      {"L", &L_build_, TILEDB_UINT64},
+      {"R", &R_max_degree_, TILEDB_UINT64},
+      {"B", &B_backtrack_, TILEDB_UINT64},
+      {"alpha_min", &alpha_min_, TILEDB_FLOAT32},
+      {"alpha_max", &alpha_max_, TILEDB_FLOAT32},
+      {"medioid", &medioid_, TILEDB_UINT64},
+  };
+
+  template <class ValueType, class IndexType>
+  auto write_index(const std::string& group_uri, bool overwrite = false) {
+    // copilot ftw!
+    // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medioid
+    // Save as a group: metadata, feature_vectors, graph edges, offsets
+
+    tiledb::Context ctx;
+    tiledb::VFS vfs(ctx);
+    if (vfs.is_dir(group_uri)) {
+      if (overwrite == false) {
+        return false;
+      }
+      vfs.remove_dir(group_uri);
+    }
+
+    tiledb::Config cfg;
+    tiledb::Group::create(ctx, group_uri);
+    auto write_group = tiledb::Group(ctx, group_uri, TILEDB_WRITE, cfg);
+
+    for (auto&& [name, value, type] : metadata) {
+      write_group.put_metadata(name, type, 1, value);
+    }
+
+    // feature_vectors
+    auto feature_vectors_uri = group_uri + "/feature_vectors";
+    write_matrix(ctx, feature_vectors_, feature_vectors_uri);
+    write_group.add_member(feature_vectors_uri, true, "feature_vectors");
+
+    // adj_list
+    auto adj_scores_uri = group_uri + "/adj_scores";
+    auto adj_ids_uri = group_uri + "/adj_ids";
+    auto adj_index_uri = group_uri + "/adj_index";
+    auto adj_scores = Vector<score_type> {graph_.num_edges()};
+    auto adj_ids = Vector<id_type> {graph_.num_edges()};
+    auto adj_index = Vector<uint64_t> (graph_.num_vertices() + 1);
+
+    size_t edge_offset{0};
+    for (size_t i = 0; i < num_vertices(graph_); ++i) {
+      adj_index[i] = edge_offset;
+      for (auto&& [score, id] : graph_.out_edges(i)) {
+        adj_scores[edge_offset] = score;
+        adj_ids[edge_offset] = id;
+        ++edge_offset;
+      }
+    }
+    adj_index.back() = edge_offset;
+
+    write_vector(ctx, adj_scores, adj_scores_uri);
+    write_group.add_member(adj_scores_uri, true, "adj_scores");
+
+    write_vector(ctx, adj_ids, adj_ids_uri);
+    write_group.add_member(adj_ids_uri, true, "adj_ids");
+
+    write_vector(ctx, adj_index, adj_index_uri);
+    write_group.add_member(adj_index_uri, true, "adj_index");
+
+    write_group.close();
+    return true;
   }
 };
 

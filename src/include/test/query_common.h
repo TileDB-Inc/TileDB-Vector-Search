@@ -171,6 +171,12 @@ static std::string groundtruth_uri{m1_root + "sift/sift_groundtruth"};
 static std::string bigann1M_base_uri{m1_root + "1M/bigann1M_base"};
 static std::string bigann1M_query_uri{m1_root + "1M/query_public_10k"};
 static std::string bigann1M_groundtruth_uri{m1_root + "1M/bigann_1M_GT_nnids"};
+static std::string bigann1M_centroids_uri{m1_root + "1M/centroids.tdb"};
+static std::string bigann1M_ids_uri{m1_root + "1M/ids.tdb"};
+static std::string bigann1M_index_uri{m1_root + "1M/index.tdb"};
+static std::string bigann1M_index_size_uri{m1_root + "1M/index_size.tdb"};
+static std::string bigann1M_parts_uri{m1_root + "1M/parts.tdb"};
+
 
 static std::string fmnist_train_uri{m1_root + "fmnist/fmnist_train.tdb"};
 static std::string fmnist_test_uri{m1_root + "fmnist/fmnist_test.tdb"};
@@ -188,6 +194,21 @@ static std::string siftsmall_base_uri{m1_root + "siftsmall/siftsmall_base"};
 static std::string siftsmall_groundtruth_uri{m1_root + "siftsmall/siftsmall_groundtruth"};
 static std::string siftsmall_query_uri{m1_root + "siftsmall/siftsmall_query"};
 
+/*
+ * siftsmall_base
+ ArraySchema(
+    domain=Domain(*[
+      Dim(name='rows', domain=(0, 127), tile=128, dtype='int32'),
+      Dim(name='cols', domain=(0, 9999), tile=10000, dtype='int32'),
+    ]),
+    attrs=[
+      Attr(name='a', dtype='float32', var=False, nullable=False),
+    ],
+    cell_order='col-major',
+    tile_order='col-major',
+    sparse=False,
+ )
+ */
 #endif
 
 #endif  // TILEDB_QUERY_COMMON_H
