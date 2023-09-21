@@ -40,27 +40,30 @@
 
 namespace detail::graph {
 
-template <class T, class I = size_t>
+template <class SC, std::integral ID>
 class nn_graph {
+ public:
+  using id_type = ID;
+  using score_type = SC;
+
+ private:
   size_t num_vertices_{0};
   size_t k_nn_{0};
 
-  std::vector<fixed_min_pair_heap<T, I>> out_edges_;
-  std::vector<std::set<I>> in_edges_;
-  std::vector<fixed_min_pair_heap<T, I>> update_edges_;
+  std::vector<fixed_min_pair_heap<score_type, id_type>> out_edges_;
+  std::vector<std::set<ID>> in_edges_;
+  std::vector<fixed_min_pair_heap<score_type, id_type>> update_edges_;
 
-public:
-  using value_type = T;
-  using index_type = I;
+ public:
 
   nn_graph() = default;
 
   nn_graph(size_t num_vertices, size_t k_nn)
           : num_vertices_{num_vertices}
           , k_nn_{k_nn}
-          , out_edges_(num_vertices, fixed_min_pair_heap<T, I>(k_nn))
+          , out_edges_(num_vertices, fixed_min_pair_heap<score_type, id_type>(k_nn))
           , in_edges_(num_vertices)
-          , update_edges_(num_vertices, fixed_min_pair_heap<T, I>(k_nn))
+          , update_edges_(num_vertices, fixed_min_pair_heap<score_type, id_type>(k_nn))
   { }
 
 
@@ -72,7 +75,7 @@ public:
    * @param dst
    * @param score
    */
-  auto add_edge(I src, I dst, T score) {
+  auto add_edge(id_type src, id_type dst, score_type score) {
     // return out_edges_[src]. template insert<typename std::remove_cvref_t<decltype(out_edges_[src])>::unique_id>(score, dst);
     return out_edges_[src]. template insert<unique_id>(score, dst);
   }
@@ -85,7 +88,7 @@ public:
    * @param dst
    * @param score
    */
-  auto add_update_edge(I src, I dst, T score) {
+  auto add_update_edge(id_type src, id_type dst, score_type score) {
     return update_edges_[src]. template insert<typename std::remove_cvref_t<decltype(out_edges_[src])>::unique_id>(score, dst);
   }
 
@@ -97,17 +100,17 @@ public:
     }
   }
 
-  auto swap_update_edges(I i) {
+  auto swap_update_edges(id_type i) {
     out_edges_[i].swap(update_edges_[i]);
   }
 
   auto swap_all_update_edges() {
-    for (I i = 0; i < num_vertices_; ++i) {
+    for (id_type i = 0; i < num_vertices_; ++i) {
       swap_update_edges(i);
     }
   }
 
-  auto sort_edges(I i) {
+  auto sort_edges(id_type i) {
 
   }
 
@@ -122,8 +125,8 @@ public:
     }
   }
 
-  auto entire_neighborhood(I i) const {
-    std::vector<I> nbrs;
+  auto entire_neighborhood(id_type i) const {
+    std::vector<id_type> nbrs;
     nbrs.reserve(size(out_edges_[i]) + size(in_edges_[i]));
     for (auto&& [s, e] : out_edges_[i]) {
       nbrs.push_back(e);
@@ -134,15 +137,15 @@ public:
     return nbrs;
   }
 
-  auto& out_edges(I src) const {
+  auto& out_edges(id_type src) const {
     return out_edges_[src];
   }
 
-  auto& out_edges(I src)  {
+  auto& out_edges(id_type src)  {
     return out_edges_[src];
   }
 
-  auto& in_edges(I dst) const {
+  auto& in_edges(id_type dst) const {
     return in_edges_[dst];
   }
 
@@ -150,36 +153,36 @@ public:
     return num_vertices_;
   }
 
-  auto out_degree(I src) const {
+  auto out_degree(id_type src) const {
     return out_edges_[src].size();
   }
 
-  auto in_degree(I dst) const {
+  auto in_degree(id_type dst) const {
     return in_edges_[dst].size();
   }
 };
 
-template <class T, class I>
+template <class T, std::integral I>
 auto num_vertices(const nn_graph<T, I>& g) {
   return g.num_vertices();
 }
 
-template <class T, class I>
+template <class T, std::integral I>
 auto out_edges(const nn_graph<T, I>& g, size_t i) {
   return g.out_edges(i);
 }
 
-template <class T, class I>
+template <class T, std::integral I>
 auto in_edges(const nn_graph<T, I>& g, size_t i) {
   return g.in_edges(i);
 }
 
-template <class T, class I>
+template <class T, std::integral I>
 auto out_degree(const nn_graph<T, I>& g, size_t i) {
   return g.out_degree(i);
 }
 
-template <class T, class I>
+template <class T, std::integral I>
 auto in_degree(const nn_graph<T, I>& g, size_t i) {
   return g.in_degree(i);
 }
@@ -196,10 +199,10 @@ auto in_degree(const nn_graph<T, I>& g, size_t i) {
  * @param k_nn
  * @return
  */
-template <class T, class I = size_t, class Distance = sum_of_squares_distance>
+template <class T, std::integral ID, class Distance = sum_of_squares_distance>
 auto init_random_nn_graph(auto&& db, size_t L, Distance distance = Distance()) {
   auto num_vertices = db.num_cols();
-  nn_graph<T, I> g(num_vertices, L);
+  nn_graph<T, ID> g(num_vertices, L);
   std::random_device rd;
   std::mt19937 gen(rd());
 

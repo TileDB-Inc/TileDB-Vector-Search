@@ -80,25 +80,28 @@ template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
 auto greedy_search(
     auto&& graph,
     auto&& db,
-    typename std::decay_t<decltype(graph)>::index_type source,
+    typename std::decay_t<decltype(graph)>::id_type source,
     auto&& query,
     size_t k_nn,
     size_t L,
     Distance&& distance = Distance{}) {
   constexpr bool noisy = false;
 
-  using value_type = typename std::decay_t<decltype(graph)>::value_type;
-  using index_type = typename std::decay_t<decltype(graph)>::index_type;
+  // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
+  using id_type = typename std::decay_t<decltype(graph)>::id_type;
+  using score_type = typename std::decay_t<decltype(graph)>::score_type;
+
+  static_assert(std::integral<id_type>);
 
   assert(L >= k_nn);
 
-  std::set<index_type> visited_vertices;
+  std::set<id_type> visited_vertices;
   auto visited = [&visited_vertices](auto&& v) {
     return visited_vertices.find(v) != visited_vertices.end();
   };
 
-  auto result = k_min_heap<value_type, index_type>{L};  // Ell: |Ell| <= L
-  auto q1 = k_min_heap<value_type, index_type>{L};      // Ell \ V
+  auto result = k_min_heap<score_type, id_type>{L};  // Ell: |Ell| <= L
+  auto q1 = k_min_heap<score_type, id_type>{L};      // Ell \ V
 
   // L <- {s} and V <- empty`
   result.insert(distance(db[source], query), source);
@@ -171,10 +174,10 @@ auto greedy_search(
       debug_min_heap(result, "result, aka Ell: ", 0);
   }
 
-  // auto top_k = Vector<index_type>(k_nn);
-  // auto top_k_scores = Vector<value_type>(k_nn);
-  auto top_k = std::vector<index_type>(k_nn);
-  auto top_k_scores = std::vector<value_type>(k_nn);
+  // auto top_k = Vector<id_type>(k_nn);
+  // auto top_k_scores = Vector<score_type>(k_nn);
+  auto top_k = std::vector<id_type>(k_nn);
+  auto top_k_scores = std::vector<score_type>(k_nn);
 
   get_top_k_with_scores_from_heap(result, top_k, top_k_scores);
   return std::make_tuple(
@@ -241,12 +244,13 @@ auto robust_prune(
     Distance&& distance = Distance{}) {
   constexpr bool noisy = false;
 
-  using value_type = typename std::decay_t<decltype(graph)>::value_type;
-  using index_type = typename std::decay_t<decltype(graph)>::index_type;
+  // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
+  using id_type = typename std::decay_t<decltype(graph)>::id_type;
+  using score_type = typename std::decay_t<decltype(graph)>::score_type;
 
-  std::vector<std::tuple<value_type, index_type>> V;
+  std::vector<std::tuple<score_type, id_type>> V;
   V.reserve(V_in.size() + graph.out_degree(p));
-  std::vector<std::tuple<value_type, index_type>> new_V;
+  std::vector<std::tuple<score_type, id_type>> new_V;
   new_V.reserve(V.size());
 
   for (auto&& v : V_in) {
@@ -352,12 +356,11 @@ auto medioid(auto&& P, Distance distance = Distance{}) {
  * @brief
  * @tparam Array
  */
-template <feature_vector_array Array>
+template <class feature_type, class id_type>
 class vamana_index {
   // Array feature_vectors_;
-  using index_type = typename Array::index_type;
-  using feature_type = typename Array::value_type;
-  using id_type = typename Array::index_type;
+  // using feature_type = typename Array::score_type;
+  // using id_type = typename Array::id_type;
   using score_type = float;
 
   ColMajorMatrix<feature_type> feature_vectors_;
@@ -369,8 +372,8 @@ class vamana_index {
   uint64_t B_backtrack_{0};   //
   float alpha_min_{1.0};      // per diskANN paper
   float alpha_max_{1.2};      // per diskANN paper
-  ::detail::graph::adj_list<score_type, index_type> graph_;
-  index_type medioid_{0};
+  ::detail::graph::adj_list<score_type, id_type> graph_;
+  id_type medioid_{0};
 
  public:
   vamana_index() = delete;
@@ -390,7 +393,7 @@ class vamana_index {
       , graph_{num_vectors_} {
   }
 
-  vamana_index(tiledb::Context ctx, const std::string group_uri) {
+  vamana_index(tiledb::Context ctx, const std::string& group_uri) {
     tiledb::Config cfg;
     auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
 
@@ -410,8 +413,11 @@ class vamana_index {
       }
     }
     feature_vectors_ = tdbColMajorMatrix<feature_type>(ctx, group_uri + "/feature_vectors");
-    feature_vectors_.load();
-    graph_ = ::detail::graph::adj_list<score_type, index_type>(num_vectors_);
+    ::load(feature_vectors_);
+
+    assert(num_vectors_ == ::num_vectors(feature_vectors_));
+    graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
+
     auto adj_scores = read_vector<score_type>(ctx, group_uri + "/adj_scores");
     auto adj_ids = read_vector<id_type>(ctx, group_uri + "/adj_ids");
     auto adj_index = read_vector<id_type>(ctx, group_uri + "/adj_index");
@@ -425,6 +431,7 @@ class vamana_index {
     }
   }
 
+  template <feature_vector_array Array>
   void train(const Array& training_set) {
     feature_vectors_ = std::move(ColMajorMatrix<feature_type>(
         ::dimension(training_set), ::num_vectors(training_set)));
@@ -436,7 +443,7 @@ class vamana_index {
 
     dimension_ = ::dimension(feature_vectors_);
     num_vectors_ = ::num_vectors(feature_vectors_);
-    graph_ = ::detail::graph::init_random_adj_list<float>(
+    graph_ = ::detail::graph::init_random_adj_list<feature_type, id_type>(
         feature_vectors_, R_max_degree_);
 
     // dump_edgelist("edges_" + std::to_string(0) + ".txt", graph_);
@@ -535,7 +542,6 @@ class vamana_index {
       {"medioid", &medioid_, TILEDB_UINT64},
   };
 
-  template <class ValueType, class IndexType>
   auto write_index(const std::string& group_uri, bool overwrite = false) {
     // copilot ftw!
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medioid
@@ -561,14 +567,14 @@ class vamana_index {
     // feature_vectors
     auto feature_vectors_uri = group_uri + "/feature_vectors";
     write_matrix(ctx, feature_vectors_, feature_vectors_uri);
-    write_group.add_member(feature_vectors_uri, true, "feature_vectors");
+    write_group.add_member("feature_vectors", true, "feature_vectors");
 
     // adj_list
     auto adj_scores_uri = group_uri + "/adj_scores";
     auto adj_ids_uri = group_uri + "/adj_ids";
     auto adj_index_uri = group_uri + "/adj_index";
-    auto adj_scores = Vector<score_type> {graph_.num_edges()};
-    auto adj_ids = Vector<id_type> {graph_.num_edges()};
+    auto adj_scores = Vector<score_type> (graph_.num_edges());
+    auto adj_ids = Vector<id_type> (graph_.num_edges());
     auto adj_index = Vector<uint64_t> (graph_.num_vertices() + 1);
 
     size_t edge_offset{0};
@@ -583,15 +589,53 @@ class vamana_index {
     adj_index.back() = edge_offset;
 
     write_vector(ctx, adj_scores, adj_scores_uri);
-    write_group.add_member(adj_scores_uri, true, "adj_scores");
+    write_group.add_member("adj_scores", true, "adj_scores");
 
     write_vector(ctx, adj_ids, adj_ids_uri);
-    write_group.add_member(adj_ids_uri, true, "adj_ids");
+    write_group.add_member("adj_ids", true, "adj_ids");
 
     write_vector(ctx, adj_index, adj_index_uri);
-    write_group.add_member(adj_index_uri, true, "adj_index");
+    write_group.add_member("adj_index", true, "adj_index");
 
     write_group.close();
+    return true;
+  }
+
+  bool compare_metadata(const vamana_index& rhs) {
+        if (dimension_ != rhs.dimension_) {
+          std::cout << "dimension_ != rhs.dimension_" << dimension_ << " ! = " << rhs.dimension_ <std::endl;
+          return false;
+        }
+        if (num_vectors_ != rhs.num_vectors_) {
+          std::cout << "num_vectors_ != rhs.num_vectors_" << num_vectors_ << " ! = " << rhs.num_vectors_ <std::endl;
+          return false;
+        }
+        if (L_build_ != rhs.L_build_) {
+          std::cout << "L_build_ != rhs.L_build_" << L_build_ << " ! = " << rhs.L_build_ <std::endl;
+          return false;
+        }
+        if (R_max_degree_ != rhs.R_max_degree_) {
+          std::cout << "R_max_degree_ != rhs.R_max_degree_" << R_max_degree_ << " ! = " << rhs.R_max_degree_ <std::endl;
+          return false;
+        }
+        if (B_backtrack_ != rhs.B_backtrack_) {
+          std::cout << "B_backtrack_ != rhs.B_backtrack_" << B_backtrack_ << " ! = " << rhs.B_backtrack_ <std::endl;
+          return false;
+        }
+        if (alpha_min_ != rhs.alpha_min_) {
+          std::cout << "alpha_min_ != rhs.alpha_min_" << alpha_min_ << " ! = " << rhs.alpha_min_ <std::endl;
+          return false;
+        }
+        if (alpha_max_ != rhs.alpha_max_) {
+          std::cout << "alpha_max_ != rhs.alpha_max_" << alpha_max_ << " ! = " << rhs.alpha_max_ <std::endl;
+          return false;
+        }
+        if (medioid_ != rhs.medioid_) {
+          std::cout << "medioid_ != rhs.medioid_" << medioid_ << " ! = " << rhs.medioid_ <std::endl;
+          return false;
+        }
+
+
     return true;
   }
 };

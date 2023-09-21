@@ -66,8 +66,8 @@ the graph
 
 
 
-template <class I = size_t, class Distance = sum_of_squares_distance>
-auto nn_descent_0_step(auto&& g, auto&& db, I i, I j, Distance distance = Distance()) {
+template <std::integral I, std::integral J, class Distance = sum_of_squares_distance>
+auto nn_descent_0_step(auto&& g, auto&& db, I i, J j, Distance distance = Distance()) {
   size_t num_updates {0};
   for (auto&& [_, k] : out_edges(g, j)) {  // _ is dist(j, k)
     if (k == i) {
@@ -115,8 +115,8 @@ auto nn_descent_0_step_all(auto&& g, auto&& db, Distance distance = Distance()) 
 
 
 // Local join
-template <class I = size_t, class Distance = sum_of_squares_distance>
-auto nn_descent_1_step(auto&& g, auto&& db, I i, I j, Distance distance = Distance()) {
+template <std::integral I, std::integral J, class Distance = sum_of_squares_distance>
+auto nn_descent_1_step(auto&& g, auto&& db, I i, J j, Distance distance = Distance()) {
   size_t num_updates {0};
 
   for (auto&& [_, k] : out_edges(g, i)) {  // _ is dist(j, k)
@@ -158,6 +158,7 @@ auto nn_descent_1_step_all(auto&& g, auto&& db, Distance distance = Distance()) 
 
   for (size_t i = 0; i < nvertices; ++i) {
     for (auto&& [_, j] : out_edges(g, i)) {
+      // print_types(i, j);
       num_updates += nn_descent_1_step(g, db, i, j);
     }
 
@@ -262,9 +263,9 @@ auto bfs(nn_graph<T, I>& graph, I root) {
 
 
 
-template <class T, class I = size_t, class Distance = sum_of_squares_distance>
-auto nn_descent_1_query(const detail::graph::nn_graph<T, I>& graph, auto&& db, auto&& query, I k_nn, I num_seeds, size_t nthreads, Distance distance = Distance()) {
-  using vertex_id_type = I;
+template <class T, std::integral ID, class Distance = sum_of_squares_distance>
+auto nn_descent_1_query(const detail::graph::nn_graph<T, ID>& graph, auto&& db, auto&& query, size_t k_nn, size_t num_seeds, size_t nthreads, Distance distance = Distance()) {
+  using vertex_id_type = ID;
 
   auto num_queries = query.num_cols();
 
@@ -324,10 +325,10 @@ auto nn_descent_1_query(const detail::graph::nn_graph<T, I>& graph, auto&& db, a
   return get_top_k_with_scores(top_k, k_nn);
 }
 
-template <class T, class I = size_t, class Distance = sum_of_squares_distance>
+template <class T, std::integral ID, class Distance = sum_of_squares_distance>
 auto nn_descent_1(auto&& db, size_t k_nn, Distance distance = Distance()) {
   auto g =
-      init_random_nn_graph<T, I, Distance>(db, k_nn, distance);
+      init_random_nn_graph<T, ID, Distance>(db, k_nn, distance);
 
   size_t num_updates{0};
   do {
@@ -339,8 +340,8 @@ auto nn_descent_1(auto&& db, size_t k_nn, Distance distance = Distance()) {
 }
 
 
-template <class I = size_t>
-auto nn_descent_step(auto&& g, I i, I j, std::unordered_set<I>& s) {
+template <std::integral I, std::integral J, std::integral ID>
+auto nn_descent_step(auto&& g, I i, J j, std::unordered_set<ID>& s) {
 
   auto num_visited = 0;
 
@@ -445,10 +446,10 @@ auto nn_descent_step_full_all(auto&& g, auto&& db, Distance distance = Distance(
 }
 
 
-template <class T, class I = size_t, class Distance = sum_of_squares_distance>
+template <class T, std::integral ID, class Distance = sum_of_squares_distance>
 auto nn_descent(auto&& db, size_t k_nn, Distance distance = Distance()) {
   auto g =
-      init_random_nn_graph<T, I, Distance>(db, k_nn, distance);
+      init_random_nn_graph<T, ID, Distance>(db, k_nn, distance);
 
   size_t num_updates{0};
   do {

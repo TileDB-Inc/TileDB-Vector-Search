@@ -67,6 +67,10 @@ TEST_CASE("vamana: tiny greedy search", "[vamana]") {
 TEST_CASE("vamana: greedy grid search", "[vamana]") {
   const bool debug = false;
 
+  // using feature_type = uint8_t;
+  using id_type = uint32_t;
+  using score_type = float;
+
   size_t M = 5;
   size_t N = 7;
 
@@ -83,7 +87,7 @@ TEST_CASE("vamana: greedy grid search", "[vamana]") {
   CHECK(num_vectors(vecs) == M * N);
   CHECK(edges.size() == expected_size);
 
-  detail::graph::adj_list<float, size_t> A(35);
+  detail::graph::adj_list<score_type, id_type> A(35);
   for (auto&& [src, dst] : edges) {
     CHECK(src < A.num_vertices());
     CHECK(dst < A.num_vertices());
@@ -97,12 +101,12 @@ TEST_CASE("vamana: greedy grid search", "[vamana]") {
   // (4, 6): 33 -> {27, 33, 34}
 
   using expt_type = std::tuple<
-      std::vector<size_t>,
-      size_t,
-      std::vector<size_t>,
-      size_t,
-      size_t,
-      std::vector<size_t>>;
+      std::vector<id_type>,
+      id_type,
+      std::vector<id_type>,
+      id_type,
+      id_type,
+      std::vector<id_type>>;
   std::vector<expt_type> expts{
       {{0, 0}, 0, {2, 3}, 17, 7, {10, 16, 17, 18, 24}},
       {{0, 0}, 0, {3, 4}, 25, 9, {18, 24, 25, 26, 32}},
@@ -154,7 +158,7 @@ TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
 
   auto nn_hypercube = build_hypercube(k_near, k_far);
 
-  auto g = detail::graph::init_random_nn_graph<float>(nn_hypercube, k_near);
+  auto g = detail::graph::init_random_nn_graph<float, uint32_t>(nn_hypercube, k_near);
 
   for (float kk : {-1, 1}) {
     auto query = Vector<float>{kk * 1.05f, kk * 0.95f, 1.09};
@@ -207,7 +211,7 @@ TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
   auto nn_hypercube = build_hypercube(k_near, k_far);
 
   std::vector<std::tuple<float, size_t>> top_k(k_near);
-  auto g = detail::graph::init_random_nn_graph<float>(nn_hypercube, k_near);
+  auto g = detail::graph::init_random_nn_graph<float, uint32_t>(nn_hypercube, k_near);
 
   auto valid = validate_graph(g, nn_hypercube);
   CHECK(valid.size() == 0);
@@ -283,7 +287,7 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
   SECTION("vary starts") {
     auto start = GENERATE(0, 17, 127, 128, 129, 254, 255);
 
-    auto g = detail::graph::init_random_nn_graph<float>(x, k_nn);
+    auto g = detail::graph::init_random_nn_graph<float, uint32_t>(x, k_nn);
 
     auto&& [top_k_scores, top_k, V] =
         greedy_search(g, x, start, x[start], k_nn, L);
@@ -298,6 +302,10 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
 TEST_CASE("vamana: fmnist", "[vamana]") {
   const bool debug = false;
 
+  using feature_type = float;
+  using score_type = float;
+  using id_type = uint32_t;
+
   size_t nthreads = 1;
   size_t L = 7;
   size_t k_nn = L;
@@ -307,14 +315,14 @@ TEST_CASE("vamana: fmnist", "[vamana]") {
   tiledb::Context ctx;
   auto db = tdbColMajorMatrix<db_type>(ctx, fmnist_test, N);
   db.load();
-  auto g = detail::graph::init_random_nn_graph<float>(db, L);
+  auto g = detail::graph::init_random_nn_graph<score_type, id_type>(db, L);
 
   auto valid = validate_graph(g, db);
   CHECK(valid.size() == 0);
 
   auto query = db[599];
 
-  auto query_mat = ColMajorMatrix<float>(size(query), 1);
+  auto query_mat = ColMajorMatrix<feature_type>(size(query), 1);
   for (size_t i = 0; i < size(query); ++i) {
     query_mat(i, 0) = query[i];
   }
@@ -434,7 +442,7 @@ TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
   }
 
   std::vector<std::tuple<float, size_t>> top_k(k_near);
-  auto g = detail::graph::init_random_nn_graph<float>(nn_hypercube, R);
+  auto g = detail::graph::init_random_nn_graph<float, uint32_t>(nn_hypercube, R);
 
   auto valid = validate_graph(g, nn_hypercube);
   CHECK(valid.size() == 0);
@@ -527,7 +535,7 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
   tiledb::Context ctx;
   auto db = tdbColMajorMatrix<db_type>(ctx, fmnist_test, N);
   db.load();
-  auto g = detail::graph::init_random_nn_graph<float>(db, L);
+  auto g = detail::graph::init_random_nn_graph<float, uint64_t>(db, L);
 
   auto valid = validate_graph(g, db);
   REQUIRE(valid.size() == 0);
@@ -654,7 +662,7 @@ TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
   size_t R = 100;
   size_t B = 2;
   auto index =
-      detail::graph::vamana_index<decltype(x)>(num_vectors(x), L, R, B);
+      detail::graph::vamana_index<float, uint64_t>(num_vectors(x), L, R, B);
 
   auto x0 = std::vector<float>(ndim);
   std::copy(x.data(), x.data() + ndim, begin(x0));
@@ -682,12 +690,12 @@ TEST_CASE("vamana: vamana by hand random index", "[vamana]") {
   auto training_set_ = random_geometric_2D(num_nodes);
   dump_coordinates("coords.txt", training_set_);
 
-  auto g = ::detail::graph::init_random_adj_list<float, size_t>(
+  auto g = ::detail::graph::init_random_adj_list<float, uint32_t>(
       training_set_, R_max_degree_);
 
   auto dimension_ = ::dimension(training_set_);
   auto num_vectors_ = ::num_vectors(training_set_);
-  auto graph_ = ::detail::graph::init_random_nn_graph<float>(
+  auto graph_ = ::detail::graph::init_random_nn_graph<float, uint64_t>(
       training_set_, R_max_degree_);
 
   auto medioid_ = detail::graph::medioid(training_set_);
@@ -760,7 +768,7 @@ TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
 
   auto training_set = random_geometric_2D(num_nodes);
 
-  auto idx = detail::graph::vamana_index<decltype(training_set)>(
+  auto idx = detail::graph::vamana_index<float, uint64_t>(
       num_vectors(training_set), L_build, R_max_degree, 0);
   idx.train(training_set);
 
@@ -813,7 +821,7 @@ TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
       tdbColMajorMatrix<float>(ctx, siftsmall_query_uri, num_queries);
   queries.load();
 
-  auto idx = detail::graph::vamana_index<decltype(training_set)>(
+  auto idx = detail::graph::vamana_index<float, uint64_t>(
       num_vectors(training_set), L_build, R_max_degree, 0);
   idx.train(training_set);
 
@@ -833,4 +841,23 @@ TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
                      ((double)k_nn * num_vectors(queries))
               << std::endl;
   }
+}
+
+TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
+  size_t L_build{37};
+  size_t R_max_degree{41};
+  size_t k_nn{10};
+  size_t Backtrack{3};
+
+  tiledb::Context ctx;
+  std::string vamana_index_uri = "/tmp/tmp_vamana_index";
+  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
+  load(training_set);
+
+  auto idx = detail::graph::vamana_index<float, uint64_t>(
+      num_vectors(training_set), L_build, R_max_degree, Backtrack);
+  idx.train(training_set);
+
+  idx.write_index(vamana_index_uri, true);
+  auto idx2 = detail::graph::vamana_index<float, uint64_t>(ctx, vamana_index_uri);
 }

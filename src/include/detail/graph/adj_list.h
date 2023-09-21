@@ -38,13 +38,12 @@
 #include "scoring.h"
 
 namespace detail::graph {
-template <class I = size_t>
+template <class I>
 class index_adj_list : public std::vector<std::list<I>> {
   using Base = std::vector<std::list<I>>;
 
  public:
-  using value_type = I;
-  using index_type = size_t;
+  using id_type = I;
 
   index_adj_list(size_t num_vertices)
       : Base(num_vertices) {
@@ -102,18 +101,22 @@ auto& out_degree(index_adj_list<I>& g, I i) {
 }
 
 /**
+ * Naive adjacency list graph
  *
  * @tparam I
+ *
+ * @todo Optimize for performance
  */
-template <class T, class I = size_t>
-class adj_list : public std::vector<std::list<std::tuple<T, I>>> {
-  using Base = std::vector<std::list<std::tuple<T, I>>>;
+ template <class SC, std::integral ID>
+class adj_list : public std::vector<std::list<std::tuple<SC, ID>>> {
+  using Base = std::vector<std::list<std::tuple<SC, ID>>>;
+  size_t num_edges_ {0};
 
  public:
-  using value_type = T;
-  using index_type = I;
+  using id_type = ID;
+  using score_type = SC;
 
-  explicit adj_list(size_t num_vertices)
+  explicit adj_list(size_t num_vertices = 0)
       : Base(num_vertices) {
   }
 
@@ -137,50 +140,55 @@ class adj_list : public std::vector<std::list<std::tuple<T, I>>> {
     }
   }
 
-  auto add_edge(I src, I dst, const T& val) {
+  auto add_edge(id_type src, id_type dst, const score_type& val) {
     Base::operator[](src).emplace_back(val, dst);
+    ++num_edges_;
   }
 
-  auto& out_edges(I i) {
+  constexpr auto& out_edges(id_type i) {
     return Base::operator[](i);
   }
 
-  auto& out_edges(I i) const {
+  constexpr auto& out_edges(id_type i) const {
     return Base::operator[](i);
   }
 
-  auto out_degree(I i) {
+  constexpr auto out_degree(id_type i) {
     return Base::operator[](i).size();
   }
 
-  auto out_degree(I i) const {
+  constexpr auto out_degree(id_type i) const {
     return Base::operator[](i).size();
   }
 
-  auto num_vertices() const {
+  constexpr auto num_vertices() const {
     return Base::size();
+  }
+
+  constexpr auto num_edges() const {
+    return num_edges_;
   }
 };
 
-template <class T, class I = size_t>
+template <class T, std::integral I>
 auto num_vertices(const adj_list<T, I>& g) {
   return g.num_vertices();
 }
 
-template <class T, class I = size_t>
+template <class T, std::integral I>
 auto& out_edges(const adj_list<T, I>& g, I i) {
   return g.out_edges(i);
 }
 
-template <class T, class I = size_t>
-auto& out_degree(adj_list<T, I>& g, I i) {
+template <class T, std::integral ID>
+auto& out_degree(adj_list<T, ID>& g, ID i) {
   return g.out_degree(i);
 }
 
-template <class T, class I = size_t, class Distance = sum_of_squares_distance>
+template <class T, std::integral ID, class Distance = sum_of_squares_distance>
 auto init_random_adj_list(auto&& db, size_t R, Distance distance = Distance()) {
   auto num_vertices = num_vectors(db);
-  adj_list<T, I> g(num_vertices);
+  adj_list<T, ID> g(num_vertices);
   std::random_device rd;
   std::mt19937 gen(rd());
 

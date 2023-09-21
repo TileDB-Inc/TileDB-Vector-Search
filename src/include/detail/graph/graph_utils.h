@@ -52,10 +52,10 @@ void dump_edgelist(const std::string& filename, const Graph& graph) {
 
 template <class Distance = sum_of_squares_distance>
 auto validate_graph(auto&& graph, auto&& X, Distance distance = Distance()) {
-  using value_type = typename std::decay_t<decltype(graph)>::value_type;
-  using index_type = typename std::decay_t<decltype(graph)>::index_type;
+  using score_type = typename std::decay_t<decltype(graph)>::score_type;
+  using id_type = typename std::decay_t<decltype(graph)>::id_type;
 
-  using return_type = std::tuple<index_type, index_type, value_type, value_type>;
+  using return_type = std::tuple<id_type, id_type, score_type, score_type>;
   auto return_vec = std::vector<return_type>{};
   for (size_t i = 0; i < graph.num_vertices(); ++i) {
     for (auto&& [s, j] : out_edges(graph, i)) {
