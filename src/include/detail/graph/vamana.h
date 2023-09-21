@@ -390,17 +390,52 @@ class vamana_index {
       , graph_{num_vectors_} {
   }
 
+  vamana_index(tiledb::Context ctx, const std::string group_uri) {
+    tiledb::Config cfg;
+    auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
+
+    for (auto& [name, value, datatype] : metadata) {
+      if (!read_group.has_metadata(name, &datatype)) {
+        throw std::runtime_error("Missing metadata: " + name);
+      }
+      uint32_t count;
+      void* addr;
+      read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
+      if (datatype == TILEDB_UINT64) {
+        *reinterpret_cast<uint64_t*>(value) = *reinterpret_cast<uint64_t*>(addr);
+      } else if (datatype == TILEDB_FLOAT32) {
+        *reinterpret_cast<float*>(value) = *reinterpret_cast<float*>(addr);
+      } else {
+        throw std::runtime_error("Unsupported datatype");
+      }
+    }
+    feature_vectors_ = tdbColMajorMatrix<feature_type>(ctx, group_uri + "/feature_vectors");
+    feature_vectors_.load();
+    graph_ = ::detail::graph::adj_list<score_type, index_type>(num_vectors_);
+    auto adj_scores = read_vector<score_type>(ctx, group_uri + "/adj_scores");
+    auto adj_ids = read_vector<id_type>(ctx, group_uri + "/adj_ids");
+    auto adj_index = read_vector<id_type>(ctx, group_uri + "/adj_index");
+
+    for (size_t i = 0; i < num_vectors_; ++i) {
+      auto start = adj_index[i];
+      auto end = adj_index[i + 1];
+      for (size_t j = start; j < end; ++j) {
+        graph_.add_edge(i, adj_ids[j], adj_scores[j]);
+      }
+    }
+  }
+
   void train(const Array& training_set) {
     feature_vectors_ = std::move(ColMajorMatrix<feature_type>(
-        _cpo::dimension(training_set), _cpo::num_vectors(training_set)));
+        ::dimension(training_set), ::num_vectors(training_set)));
     std::copy(
         training_set.data(),
         training_set.data() +
-            _cpo::dimension(training_set) * _cpo::num_vectors(training_set),
+            ::dimension(training_set) * ::num_vectors(training_set),
         feature_vectors_.data());
 
-    dimension_ = _cpo::dimension(feature_vectors_);
-    num_vectors_ = _cpo::num_vectors(feature_vectors_);
+    dimension_ = ::dimension(feature_vectors_);
+    num_vectors_ = ::num_vectors(feature_vectors_);
     graph_ = ::detail::graph::init_random_adj_list<float>(
         feature_vectors_, R_max_degree_);
 
