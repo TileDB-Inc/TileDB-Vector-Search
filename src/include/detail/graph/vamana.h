@@ -457,7 +457,7 @@ class vamana_index {
         robust_prune(
             graph_, feature_vectors_, p, visited, alpha, R_max_degree_);
         for (auto&& [i, j] : graph_.out_edges(p)) {
-          // @todo Do this without copying -- prune should take vector of tuples and p (it copies anyway)
+          // @todo Do this without copying -- prune should take vector of tuples and p (it copies anyway) maybe scan for p and then only build tmp after if?
           auto tmp = std::vector<size_t>(graph_.out_degree(j) + 1);
           tmp.push_back(p);
           for (auto&& [_, k] : graph_.out_edges(j)) {

@@ -87,6 +87,8 @@ kmeans_add_exe(time_insert)
 
 kmeans_add_exe(time_abstraction_penalty)
 
+kmeans_add_test(unit_vamana)
+
 kmeans_add_test(unit_adj_list)
 
 kmeans_add_test(unit_algorithm)
@@ -158,8 +160,6 @@ kmeans_add_test(unit_stl)
 kmeans_add_test(unit_tdb_io)
 
 kmeans_add_test(unit_utils)
-
-kmeans_add_test(unit_vamana)
 
 kmeans_add_test(unit_vector)
 

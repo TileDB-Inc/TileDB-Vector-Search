@@ -113,7 +113,7 @@ class adj_list : public std::vector<std::list<std::tuple<T, I>>> {
   using value_type = T;
   using index_type = I;
 
-  adj_list(size_t num_vertices)
+  explicit adj_list(size_t num_vertices)
       : Base(num_vertices) {
   }
 
@@ -127,10 +127,10 @@ class adj_list : public std::vector<std::list<std::tuple<T, I>>> {
 #endif
 
   template <class AdjList>
-    requires(!std::integral<AdjList>)
+    requires(!std::integral<std::remove_cvref_t<AdjList>>)
   adj_list(AdjList&& l)
-      : Base(size(l)) {
-    for (size_t i = 0; i < size(l); ++i) {
+      : Base(l.size()) {
+    for (size_t i = 0; i < l.size(); ++i) {
       for (auto&& [dst, val] : l[i]) {
         add_edge(i, dst, val);
       }

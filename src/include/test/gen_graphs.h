@@ -202,9 +202,80 @@ auto gen_star_grid(size_t M, size_t N) {
     }
   }
 
-
   return std::make_tuple(std::move(vec_array), edges);
 }
+
+auto build_hypercube(size_t k_near, size_t k_far) {
+  const bool debug = false;
+
+  size_t N = 8 * (k_near + k_far + 1);
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<float> dist_near(-0.1, 0.1);
+  std::uniform_real_distribution<float> dist_far(0.2, 0.3);
+  std::uniform_int_distribution<int> heads(0, 1);
+
+  ColMajorMatrix<float> nn_hypercube(3, N + 1);
+  size_t n{0};
+  nn_hypercube(0, n) = 0;
+  nn_hypercube(1, n) = 0;
+  nn_hypercube(2, n) = 0;
+  ++n;
+
+  for (auto i : {-1, 1}) {
+    for (auto j : {-1, 1}) {
+      for (auto k : {-1, 1}) {
+        nn_hypercube(0, n) = i;
+        nn_hypercube(1, n) = j;
+        nn_hypercube(2, n) = k;
+        ++n;
+      }
+    }
+  }
+
+  for (size_t m = 0; m < k_near; ++m) {
+    for (auto i : {-1, 1}) {
+      for (auto j : {-1, 1}) {
+        for (auto k : {-1, 1}) {
+          nn_hypercube(0, n) = i + dist_near(gen);
+          nn_hypercube(1, n) = j + dist_near(gen);
+          nn_hypercube(2, n) = k + dist_near(gen);
+          ++n;
+        }
+      }
+    }
+  }
+
+  for (size_t m = 0; m < k_far; ++m) {
+    for (auto i : {-1, 1}) {
+      for (auto j : {-1, 1}) {
+        for (auto k : {-1, 1}) {
+          nn_hypercube(0, n) = i + (heads(gen) ? 1 : -1) * dist_far(gen);
+          nn_hypercube(1, n) = j + (heads(gen) ? 1 : -1) * dist_far(gen);
+          nn_hypercube(2, n) = k + (heads(gen) ? 1 : -1) * dist_far(gen);
+          ++n;
+        }
+      }
+    }
+  }
+
+  if (debug) {
+    std::cout << "Hypercube stats:" << std::endl;
+    std::cout << "  num_rows: " << nn_hypercube.num_rows() << " ";
+    std::cout << "  num_cols: " << nn_hypercube.num_cols() << std::endl;
+
+    std::cout << "Hypercube (transpose):" << std::endl;
+    for (size_t j = 0; j < nn_hypercube.num_cols(); ++j) {
+      for (size_t i = 0; i < nn_hypercube.num_rows(); ++i) {
+        std::cout << nn_hypercube(i, j) << ", ";
+      }
+      std::cout << std::endl;
+    }
+  }
+  return nn_hypercube;
+}
+
 
 
 
