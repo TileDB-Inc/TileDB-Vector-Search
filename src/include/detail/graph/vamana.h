@@ -393,7 +393,9 @@ class vamana_index {
       , graph_{num_vectors_} {
   }
 
-  vamana_index(tiledb::Context ctx, const std::string& group_uri) {
+  vamana_index(tiledb::Context ctx, const std::string& group_uri)
+          : feature_vectors_ { std::move(tdbPreLoadMatrix<feature_type, stdx::layout_left>(ctx, group_uri + "/feature_vectors")) }
+  {
     tiledb::Config cfg;
     auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
 
@@ -412,10 +414,11 @@ class vamana_index {
         throw std::runtime_error("Unsupported datatype");
       }
     }
-    feature_vectors_ = tdbColMajorMatrix<feature_type>(ctx, group_uri + "/feature_vectors");
-    ::load(feature_vectors_);
 
+    ::load(feature_vectors_);
+    auto v = std::vector<feature_type> (begin(feature_vectors_[0]), end(feature_vectors_[0]));
     assert(num_vectors_ == ::num_vectors(feature_vectors_));
+
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
 
     auto adj_scores = read_vector<score_type>(ctx, group_uri + "/adj_scores");
@@ -603,40 +606,99 @@ class vamana_index {
 
   bool compare_metadata(const vamana_index& rhs) {
         if (dimension_ != rhs.dimension_) {
-          std::cout << "dimension_ != rhs.dimension_" << dimension_ << " ! = " << rhs.dimension_ <std::endl;
+          std::cout << "dimension_ != rhs.dimension_" << dimension_ << " ! = " << rhs.dimension_ <<std::endl;
           return false;
         }
         if (num_vectors_ != rhs.num_vectors_) {
-          std::cout << "num_vectors_ != rhs.num_vectors_" << num_vectors_ << " ! = " << rhs.num_vectors_ <std::endl;
+          std::cout << "num_vectors_ != rhs.num_vectors_" << num_vectors_ << " ! = " << rhs.num_vectors_ <<std::endl;
           return false;
         }
         if (L_build_ != rhs.L_build_) {
-          std::cout << "L_build_ != rhs.L_build_" << L_build_ << " ! = " << rhs.L_build_ <std::endl;
+          std::cout << "L_build_ != rhs.L_build_" << L_build_ << " ! = " << rhs.L_build_ <<std::endl;
           return false;
         }
         if (R_max_degree_ != rhs.R_max_degree_) {
-          std::cout << "R_max_degree_ != rhs.R_max_degree_" << R_max_degree_ << " ! = " << rhs.R_max_degree_ <std::endl;
+          std::cout << "R_max_degree_ != rhs.R_max_degree_" << R_max_degree_ << " ! = " << rhs.R_max_degree_ <<std::endl;
           return false;
         }
         if (B_backtrack_ != rhs.B_backtrack_) {
-          std::cout << "B_backtrack_ != rhs.B_backtrack_" << B_backtrack_ << " ! = " << rhs.B_backtrack_ <std::endl;
+          std::cout << "B_backtrack_ != rhs.B_backtrack_" << B_backtrack_ << " ! = " << rhs.B_backtrack_ <<std::endl;
           return false;
         }
         if (alpha_min_ != rhs.alpha_min_) {
-          std::cout << "alpha_min_ != rhs.alpha_min_" << alpha_min_ << " ! = " << rhs.alpha_min_ <std::endl;
+          std::cout << "alpha_min_ != rhs.alpha_min_" << alpha_min_ << " ! = " << rhs.alpha_min_ <<std::endl;
           return false;
         }
         if (alpha_max_ != rhs.alpha_max_) {
-          std::cout << "alpha_max_ != rhs.alpha_max_" << alpha_max_ << " ! = " << rhs.alpha_max_ <std::endl;
+          std::cout << "alpha_max_ != rhs.alpha_max_" << alpha_max_ << " ! = " << rhs.alpha_max_ <<std::endl;
           return false;
         }
         if (medioid_ != rhs.medioid_) {
-          std::cout << "medioid_ != rhs.medioid_" << medioid_ << " ! = " << rhs.medioid_ <std::endl;
+          std::cout << "medioid_ != rhs.medioid_" << medioid_ << " ! = " << rhs.medioid_ <<std::endl;
           return false;
         }
 
 
     return true;
+  }
+
+  bool compare_adj_scores(const vamana_index& rhs) {
+    for (size_t i = 0; i < num_vertices(graph_); ++i) {
+      auto start = graph_.out_edges(i).begin();
+      auto end = graph_.out_edges(i).end();
+      auto rhs_start = rhs.graph_.out_edges(i).begin();
+      auto rhs_end = rhs.graph_.out_edges(i).end();
+      if (std::distance(start, end) != std::distance(rhs_start, rhs_end)) {
+        std::cout << "std::distance(start, end) != std::distance(rhs_start, rhs_end)" << std::endl;
+        return false;
+      }
+      for (; start != end; ++start, ++rhs_start) {
+        if (std::get<0>(*start) != std::get<0>(*rhs_start)) {
+          std::cout << "std::get<0>(*start) != std::get<0>(*rhs_start)" << std::endl;
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  bool compare_adj_ids(const vamana_index& rhs) {
+    for (size_t i = 0; i < num_vertices(graph_); ++i ) {
+      auto start = graph_.out_edges(i).begin();
+      auto end = graph_.out_edges(i).end();
+      auto rhs_start = rhs.graph_.out_edges(i).begin();
+      auto rhs_end = rhs.graph_.out_edges(i).end();
+      if (std::distance(start, end) != std::distance(rhs_start, rhs_end)) {
+        std::cout << "std::distance(start, end) != std::distance(rhs_start, rhs_end)" << std::endl;
+        return false;
+      }
+      for (; start != end; ++start, ++rhs_start) {
+        if (std::get<1>(*start) != std::get<1>(*rhs_start)) {
+          std::cout << "std::get<1>(*start) != std::get<1>(*rhs_start)" << std::endl;
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  bool compare_feature_vectors(const vamana_index& rhs) {
+
+    for (size_t i = 0; i < ::num_vectors(feature_vectors_); ++i) {
+      for (size_t j = 0; j < ::dimension(feature_vectors_); ++j) {
+        auto lhs_val = feature_vectors_(j, i);
+        auto rhs_val = rhs.feature_vectors_(j, i);
+        if (lhs_val != rhs_val) {
+          std::cout << "lhs_val != rhs_val" << std::endl;
+          // return false;
+        }
+      }
+    }
+
+    return std::equal(
+        feature_vectors_.data(),
+        feature_vectors_.data() + ::dimension(feature_vectors_) * ::num_vectors(feature_vectors_),
+        rhs.feature_vectors_.data());
   }
 };
 

@@ -860,4 +860,9 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
 
   idx.write_index(vamana_index_uri, true);
   auto idx2 = detail::graph::vamana_index<float, uint64_t>(ctx, vamana_index_uri);
+
+  CHECK(idx.compare_metadata(idx2));
+  CHECK(idx.compare_feature_vectors(idx2));
+  CHECK(idx.compare_adj_scores(idx2));
+  CHECK(idx.compare_adj_ids(idx2));
 }
