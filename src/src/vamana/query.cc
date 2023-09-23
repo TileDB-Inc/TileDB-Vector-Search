@@ -1,5 +1,5 @@
 /**
-* @file   flat.cc
+* @file   vamana/query.cc
 *
 * @section LICENSE
 *
@@ -27,10 +27,10 @@
 *
 * @section DESCRIPTION
  *
- * Driver for vamana index.
+ * Driver for making a query against a vamana index.
 */
 
-#include <docopt.h>
+#include "docopt.h"
 
 #include <cmath>
 #include "detail/graph/nn-graph.h"
@@ -41,40 +41,35 @@
 
 bool verbose = false;
 bool debug = false;
-bool global_debug = false;
 
 bool enable_stats = false;
 std::vector<json> core_stats;
 
-#if 0
-using db_type = uint8_t;
+#if 1
+using feature_type = uint8_t;
 #else
-using db_type = float;
+using feature_type = float;
 #endif
+using id_type = uint64_t;
+using score_type = float;
 
 using groundtruth_type = int32_t;
 
 static constexpr const char USAGE[] =
-    R"(vamana: test vamana index
+    R"(vamana: C++ cli for vamana query
   Usage:
       vamana (-h | --help)
-      vamana --db_uri URI --query_uri URI [--groundtruth_uri URI] [--k NN] [--nqueries NN]
-             [--max_degree NN] [--Lbuild NN] [--backtrack NN] [--alpha FF] [--k_nn NN]
+      vamana --index_uri URI --query_uri URI [--groundtruth_uri URI] [--nqueries NN] [--k NN]
              [--nthreads NN] [--validate] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
   Options:
       -h, --help              show this screen
-      --db_uri URI            database URI with feature vectors
+      --index_uri URI         group URI ov vamana index
       --query_uri URI         query URI with feature vectors to search for
       --groundtruth_uri URI   ground truth URI
-      -R, --max_degree NN     maximum degree of graph [default: 64]
-      -L, --Lbuild NN         size of search list while building [default: 100]
-      -B, --backtrack NN      size of backtrack list [default: 100]
-      -a, --alpha FF          pruning parameter [default: 1.2]
       -k, --k NN              number of nearest neighbors [default: 1]
       --nqueries NN           size of queries subset to compare (0 = all) [default: 0]
       --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
-      -D, --dump NN           dump Nth iteration graph to file (0 = none) [default: 0]
       --log FILE              log info to FILE (- for stdout)
       --stats                 log TileDB stats [default: false]
       -d, --debug             run in debug mode [default: false]
@@ -90,34 +85,21 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  float alpha_0 = 1.0;
-
-  size_t Lbuild = args["--Lbuild"].asLong();
-  size_t max_degree = args["--max_degree"].asLong();
-  size_t backtrack = args["--backtrack"].asLong();
-  std::string alpha_str = args["--alpha"].asString();
-  float alpha_1 = std::atof(alpha_str.c_str());
-
-  global_debug = debug = args["--debug"].asBool();
+  debug = args["--debug"].asBool();
   verbose = args["--verbose"].asBool();
   enable_stats = args["--stats"].asBool();
 
-  std::string db_uri = args["--db_uri"].asString();
+  std::string index_uri = args["--index_uri"].asString();
   std::string query_uri = args["--query_uri"].asString();
 
   size_t k_nn = args["--k"].asLong();
   size_t nqueries = args["--nqueries"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
 
-  size_t dump = args["--dump"].asLong();
-
   tiledb::Context ctx;
-  auto X = tdbColMajorMatrix<db_type>(ctx, db_uri);
-  X.load();
-
-  auto idx = detail::graph::vamana_index<decltype(X)>(num_vectors(X), Lbuild, max_degree, backtrack);
-  idx.train(X);
-  auto queries = tdbColMajorMatrix<db_type>(ctx, query_uri, nqueries);
+  auto idx = detail::graph::vamana_index<score_type, id_type>(ctx, index_uri);
+  auto queries = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
+  queries.load();
   auto&& [top_k_scores, top_k] = idx.query(queries, k_nn);
 
   if (args["--groundtruth_uri"]) {
@@ -127,7 +109,7 @@ int main(int argc, char* argv[]) {
         tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
     groundtruth.load();
 
-    if (global_debug) {
+    if (debug) {
       std::cout << std::endl;
 
       debug_matrix(groundtruth, "groundtruth");
@@ -141,7 +123,6 @@ int main(int argc, char* argv[]) {
     }
 
     size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
-
     size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
 
     float recall = ((float)total_intersected) / ((float)total_groundtruth);
