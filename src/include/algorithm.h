@@ -47,6 +47,7 @@
 
 #include "concepts.h"
 #include "cpos.h"
+#include "utils/logging.h"
 
 #include "execution_policy.h"
 
@@ -153,6 +154,8 @@ void for_each(
            start,
            stop,
            f = std::forward<UnaryFunction>(f)]() mutable {
+            scoped_timer __{tdb_func__ + std::string{" (lambda)"}, true};
+
             for (size_t i = start; i < stop; ++i) {
               std::forward<UnaryFunction>(f)(begin[i], n, i);
             }
@@ -191,6 +194,8 @@ void range_for_each(
            start,
            stop,
            f = std::forward<UnaryFunction>(f)]() mutable {
+            scoped_timer __{tdb_func__ + std::string{" (lambda)"}, true};
+
             for (size_t i = start; i < stop; ++i) {
               std::forward<UnaryFunction>(f)(range[i], n, i);
             }

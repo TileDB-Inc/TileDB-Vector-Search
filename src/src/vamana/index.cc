@@ -46,7 +46,7 @@ bool enable_stats = false;
 std::vector<json> core_stats;
 
 // @todo Use type erased version of index
-#if 1
+#if 0
 using feature_type = uint8_t;
 #else
 using feature_type = float;
@@ -118,7 +118,15 @@ int main(int argc, char* argv[]) {
   idx.write_index(index_uri, overwrite);
 
   if (args["--log"]) {
-    ; //
+    idx.log_index();
+    dump_logs(
+        args["--log"].asString(),
+        "vamana",
+        {},
+        {},
+        {},
+        {},
+        {});
   }
   if (enable_stats) {
     std::cout << json{core_stats}.dump() << std::endl;

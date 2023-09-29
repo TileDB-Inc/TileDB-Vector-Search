@@ -45,7 +45,7 @@ bool debug = false;
 bool enable_stats = false;
 std::vector<json> core_stats;
 
-#if 1
+#if 0
 using feature_type = uint8_t;
 #else
 using feature_type = float;
@@ -100,7 +100,10 @@ int main(int argc, char* argv[]) {
   auto idx = detail::graph::vamana_index<score_type, id_type>(ctx, index_uri);
   auto queries = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
   queries.load();
+
+  auto query_time = log_timer("query time", true);
   auto&& [top_k_scores, top_k] = idx.query(queries, k_nn);
+  query_time.stop();
 
   if (args["--groundtruth_uri"]) {
     auto groundtruth_uri = args["--groundtruth_uri"].asString();
@@ -126,9 +129,21 @@ int main(int argc, char* argv[]) {
     size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
 
     float recall = ((float)total_intersected) / ((float)total_groundtruth);
-    std::cout << "# total intersected = " << total_intersected << " of "
-              << total_groundtruth << " = "
-              << "R@" << k_nn << " of " << recall << std::endl;
+    //std::cout << "# total intersected = " << total_intersected << " of "
+    //          << total_groundtruth << " = "
+    //          << "R@" << k_nn << " of " << recall << std::endl;
+
+    if (args["--log"]) {
+      idx.log_index();
+      dump_logs(
+          args["--log"].asString(),
+          "vamana",
+          nqueries,
+          {},
+          k_nn,
+          nthreads,
+          recall);
+    }
   }
 }
 

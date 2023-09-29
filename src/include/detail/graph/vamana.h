@@ -40,6 +40,7 @@
 #include <set>
 
 #include "scoring.h"
+#include "stats.h"
 #include "utils/fixed_min_heap.h"
 #include "utils/print_types.h"
 
@@ -498,8 +499,22 @@ class vamana_index {
 
   template <query_vector_array Q>
   auto query(const Q& query_set, size_t k) {
+    scoped_timer __{tdb_func__ + std::string{" (outer)"}, true};
+
     auto top_k = ColMajorMatrix<size_t>(k, ::num_vectors(query_set));
     auto top_k_scores = ColMajorMatrix<float>(k, ::num_vectors(query_set));
+
+    size_t nthreads = std::thread::hardware_concurrency();
+    auto par = stdx::execution::indexed_parallel_policy{nthreads};
+
+    stdx::range_for_each(std::move(par), query_set, [&](auto&& query_vec, auto n, auto i) {
+      auto&& [tk_scores, tk, V] = greedy_search(
+          graph_, feature_vectors_, medioid_, query_vec, k, L_build_);
+      std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
+      std::copy(tk.data(), tk.data() + k, top_k[i].data());
+    });
+
+#if 0
     for (size_t i = 0; i < ::num_vectors(query_set); ++i) {
       auto&& [_top_k_scores, _top_k, V] = greedy_search(
           graph_, feature_vectors_, medioid_, query_set[i], k, L_build_);
@@ -509,6 +524,8 @@ class vamana_index {
           top_k_scores[i].data());
       std::copy(_top_k.data(), _top_k.data() + k, top_k[i].data());
     }
+#endif
+
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
 
@@ -516,6 +533,7 @@ class vamana_index {
   auto query(const Q& query_vec, size_t k) {
     auto&& [top_k_scores, top_k, V] = greedy_search(
         graph_, feature_vectors_, medioid_, query_vec, k, L_build_);
+
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
 
@@ -602,6 +620,22 @@ class vamana_index {
 
     write_group.close();
     return true;
+  }
+
+  void log_index() {
+    _count_data.insert_entry("dimension", dimension_);
+    _count_data.insert_entry("num_vectors", num_vectors_);
+    _count_data.insert_entry("L_build", L_build_);
+    _count_data.insert_entry("R_max_degree", R_max_degree_);
+    _count_data.insert_entry("num_edges", graph_.num_edges());
+
+    auto&& [min_degree, max_degree] =
+        minmax_element(begin(graph_), end(graph_), [](auto&& a, auto&& b) {
+          return a.size() < b.size();
+        });
+    _count_data.insert_entry("min_degree", min_degree->size());
+    _count_data.insert_entry("max_degree", max_degree->size());
+    _count_data.insert_entry("avg_degree", (double)graph_.num_edges() / (double)num_vertices(graph_));
   }
 
   bool compare_metadata(const vamana_index& rhs) {
