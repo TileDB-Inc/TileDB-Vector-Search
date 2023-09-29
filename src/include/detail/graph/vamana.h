@@ -498,8 +498,12 @@ class vamana_index {
   }
 
   template <query_vector_array Q>
-  auto query(const Q& query_set, size_t k) {
+  auto query(const Q& query_set, size_t k, std::optional<size_t> opt_L = std::nullopt) {
     scoped_timer __{tdb_func__ + std::string{" (outer)"}, true};
+
+    size_t L = opt_L ? *opt_L : L_build_;
+    // L = std::min<size_t>(L, L_build_);
+    _count_data.insert_entry("L_query", L);
 
     auto top_k = ColMajorMatrix<size_t>(k, ::num_vectors(query_set));
     auto top_k_scores = ColMajorMatrix<float>(k, ::num_vectors(query_set));
@@ -509,7 +513,7 @@ class vamana_index {
 
     stdx::range_for_each(std::move(par), query_set, [&](auto&& query_vec, auto n, auto i) {
       auto&& [tk_scores, tk, V] = greedy_search(
-          graph_, feature_vectors_, medioid_, query_vec, k, L_build_);
+          graph_, feature_vectors_, medioid_, query_vec, k, L);
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
     });
@@ -530,9 +534,10 @@ class vamana_index {
   }
 
   template <query_vector Q>
-  auto query(const Q& query_vec, size_t k) {
+  auto query(const Q& query_vec, size_t k, size_t L) {
+
     auto&& [top_k_scores, top_k, V] = greedy_search(
-        graph_, feature_vectors_, medioid_, query_vec, k, L_build_);
+        graph_, feature_vectors_, medioid_, query_vec, k, L);
 
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }

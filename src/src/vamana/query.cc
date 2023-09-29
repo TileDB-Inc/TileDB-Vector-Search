@@ -59,7 +59,8 @@ static constexpr const char USAGE[] =
     R"(vamana: C++ cli for vamana query
   Usage:
       vamana (-h | --help)
-      vamana --index_uri URI --query_uri URI [--groundtruth_uri URI] [--nqueries NN] [--k NN]
+      vamana --index_uri URI --query_uri URI [--groundtruth_uri URI]
+             [--Lbuild NN] [--nqueries NN] [--k NN]
              [--nthreads NN] [--validate] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
   Options:
@@ -67,6 +68,7 @@ static constexpr const char USAGE[] =
       --index_uri URI         group URI ov vamana index
       --query_uri URI         query URI with feature vectors to search for
       --groundtruth_uri URI   ground truth URI
+      -L, --Lbuild NN         size of search list
       -k, --k NN              number of nearest neighbors [default: 1]
       --nqueries NN           size of queries subset to compare (0 = all) [default: 0]
       --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
@@ -92,6 +94,7 @@ int main(int argc, char* argv[]) {
   std::string index_uri = args["--index_uri"].asString();
   std::string query_uri = args["--query_uri"].asString();
 
+
   size_t k_nn = args["--k"].asLong();
   size_t nqueries = args["--nqueries"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
@@ -102,7 +105,10 @@ int main(int argc, char* argv[]) {
   queries.load();
 
   auto query_time = log_timer("query time", true);
-  auto&& [top_k_scores, top_k] = idx.query(queries, k_nn);
+
+  auto Lbuild = args["--Lbuild"]? std::optional<size_t>(args["--Lbuild"].asLong()) : std::nullopt;
+  auto&& [top_k_scores, top_k] = idx.query(queries, k_nn, Lbuild);
+
   query_time.stop();
 
   if (args["--groundtruth_uri"]) {
