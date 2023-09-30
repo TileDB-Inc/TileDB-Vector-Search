@@ -519,7 +519,7 @@ class vamana_index {
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
     });
 #else
-    for (size_t i = 0; i < num_queries(query_set); ++i) {
+    for (size_t i = 0; i < num_vectors(query_set); ++i) {
       auto&& [tk_scores, tk, V] = greedy_search(
           graph_, feature_vectors_, medioid_, query_set[i], k, L);
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
