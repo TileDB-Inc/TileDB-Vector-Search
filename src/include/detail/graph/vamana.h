@@ -499,9 +499,21 @@ class vamana_index {
 
   size_t num_visited_vertices_ {0};
   size_t num_visited_edges_ {0};
+  static size_t num_comps_ ;
   size_t num_visited_vertices() const {
     return num_visited_vertices_;
   }
+  size_t num_comps() const {
+    return num_comps_;
+  }
+
+  struct counting_sum_of_squares_distance {
+    template <class V, class U>
+    constexpr auto operator()(const V& a, const U& b) const {
+      ++num_comps_;
+      return sum_of_squares(a, b);
+    }
+  };
 
   template <query_vector_array Q>
   auto query(const Q& query_set, size_t k, std::optional<size_t> opt_L = std::nullopt) {
@@ -527,7 +539,7 @@ class vamana_index {
 #else
     for (size_t i = 0; i < num_vectors(query_set); ++i) {
       auto&& [tk_scores, tk, V] = greedy_search(
-          graph_, feature_vectors_, medioid_, query_set[i], k, L);
+          graph_, feature_vectors_, medioid_, query_set[i], k, L, counting_sum_of_squares_distance());
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
       num_visited_vertices_ += V.size();
@@ -651,6 +663,7 @@ class vamana_index {
     _count_data.insert_entry("L_build", L_build_);
     _count_data.insert_entry("R_max_degree", R_max_degree_);
     _count_data.insert_entry("num_edges", graph_.num_edges());
+    _count_data.insert_entry("num_comps", num_comps());
     _count_data.insert_entry("num_visited_vertices", num_visited_vertices());
 
     auto&& [min_degree, max_degree] =
@@ -759,6 +772,9 @@ class vamana_index {
         rhs.feature_vectors_.data());
   }
 };
+
+template <class feature_type, class id_type>
+size_t vamana_index<feature_type, id_type>::num_comps_ = 0;
 
 }  // namespace detail::graph
 #endif  // TDB_VAMANA_H
