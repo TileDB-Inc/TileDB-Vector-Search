@@ -497,6 +497,12 @@ class vamana_index {
   void add(const A& database) {
   }
 
+  size_t num_visited_vertices_ {0};
+  size_t num_visited_edges_ {0};
+  size_t num_visited_vertices() const {
+    return num_visited_vertices_;
+  }
+
   template <query_vector_array Q>
   auto query(const Q& query_set, size_t k, std::optional<size_t> opt_L = std::nullopt) {
     scoped_timer __{tdb_func__ + std::string{" (outer)"}, true};
@@ -524,6 +530,7 @@ class vamana_index {
           graph_, feature_vectors_, medioid_, query_set[i], k, L);
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
+      num_visited_vertices_ += V.size();
     }
 #endif
 
@@ -644,6 +651,7 @@ class vamana_index {
     _count_data.insert_entry("L_build", L_build_);
     _count_data.insert_entry("R_max_degree", R_max_degree_);
     _count_data.insert_entry("num_edges", graph_.num_edges());
+    _count_data.insert_entry("num_visited_vertices", num_visited_vertices());
 
     auto&& [min_degree, max_degree] =
         minmax_element(begin(graph_), end(graph_), [](auto&& a, auto&& b) {

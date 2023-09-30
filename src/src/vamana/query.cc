@@ -94,7 +94,6 @@ int main(int argc, char* argv[]) {
   std::string index_uri = args["--index_uri"].asString();
   std::string query_uri = args["--query_uri"].asString();
 
-
   size_t k_nn = args["--k"].asLong();
   size_t nqueries = args["--nqueries"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
