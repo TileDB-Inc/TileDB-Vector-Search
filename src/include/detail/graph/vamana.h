@@ -508,6 +508,7 @@ class vamana_index {
     auto top_k = ColMajorMatrix<size_t>(k, ::num_vectors(query_set));
     auto top_k_scores = ColMajorMatrix<float>(k, ::num_vectors(query_set));
 
+#if 0
     size_t nthreads = std::thread::hardware_concurrency();
     auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
@@ -517,6 +518,14 @@ class vamana_index {
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
     });
+#else
+    for (size_t i = 0; i < num_queries(query_set); ++i) {
+      auto&& [tk_scores, tk, V] = greedy_search(
+          graph_, feature_vectors_, medioid_, query_vec, k, L);
+      std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
+      std::copy(tk.data(), tk.data() + k, top_k[i].data());
+    }
+#endif
 
 #if 0
     for (size_t i = 0; i < ::num_vectors(query_set); ++i) {
@@ -534,7 +543,9 @@ class vamana_index {
   }
 
   template <query_vector Q>
-  auto query(const Q& query_vec, size_t k, size_t L) {
+  auto query(const Q& query_vec, size_t k, std::optional<size_t> opt_L = std::nullopt) {
+
+    size_t L = opt_L ? *opt_L : L_build_;
 
     auto&& [top_k_scores, top_k, V] = greedy_search(
         graph_, feature_vectors_, medioid_, query_vec, k, L);
