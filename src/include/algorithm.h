@@ -194,7 +194,7 @@ void range_for_each(
            start,
            stop,
            f = std::forward<UnaryFunction>(f)]() mutable {
-            scoped_timer __{tdb_func__ + std::string{" (lambda)"}, true};
+            //scoped_timer __{tdb_func__ + std::string{" (lambda)"}, true};
 
             for (size_t i = start; i < stop; ++i) {
               std::forward<UnaryFunction>(f)(range[i], n, i);

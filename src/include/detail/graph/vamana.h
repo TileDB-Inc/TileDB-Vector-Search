@@ -55,6 +55,25 @@ namespace {
 enum class SearchPath { path_and_search, path_only };
 }
 
+struct counting_sum_of_squares_distance {
+  size_t num_comps_{0};
+  std::string msg_{""};
+
+  counting_sum_of_squares_distance() = default;
+  counting_sum_of_squares_distance(const std::string& msg)
+      : msg_(msg) {
+  }
+
+  template <class V, class U>
+  constexpr auto operator()(const V& a, const U& b) {
+    ++num_comps_;
+    return sum_of_squares(a, b);
+  }
+  ~counting_sum_of_squares_distance() {
+    _count_data.insert_entry(msg_ + " num_ss_comps", num_comps_);
+  }
+};
+
 /**
  * @brief
  * @tparam T
@@ -86,6 +105,7 @@ auto greedy_search(
     size_t k_nn,
     size_t L,
     Distance&& distance = Distance{}) {
+  scoped_timer _("greedy search");
   constexpr bool noisy = false;
 
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
@@ -102,7 +122,9 @@ auto greedy_search(
   };
 
   auto result = k_min_heap<score_type, id_type>{L};  // Ell: |Ell| <= L
+  // auto result = std::set<id_type>{};
   auto q1 = k_min_heap<score_type, id_type>{L};      // Ell \ V
+  auto q2 = k_min_heap<score_type, id_type>{L};      // Ell \ V
 
   // L <- {s} and V <- empty`
   result.insert(distance(db[source], query), source);
@@ -114,6 +136,7 @@ auto greedy_search(
 
   // while L\V is not empty
   while (!q1.empty()) {
+    _count_data.insert_entry("q1_counts_", 1);
     if (noisy)
       std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
     if (noisy)
@@ -121,7 +144,6 @@ auto greedy_search(
 
     // p* <- argmin_{p \in L\V} distance(p, q)
 
-    // @todo: There must be a better way to do this
     // Change to min_heap
     std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
       return std::get<0>(a) > std::get<0>(b);
@@ -143,6 +165,9 @@ auto greedy_search(
       return std::get<0>(a) < std::get<0>(b);
     });
 
+    if (noisy)
+      std::cout << "p*: " << p_star << std::endl;
+
     if (visited(p_star)) {
       continue;
     }
@@ -158,13 +183,19 @@ auto greedy_search(
     // @todo -- needed?
     // q1.clear(); // Or remove newly visited
 
+    for (auto&& [s, p] : result) {
+      if (!visited(p)) {
+        q2.insert(s, p);
+      }
+    }
+
     // L <- L \cup Nout(p*)  ; L \ V <- L \ V \cup Nout(p*)
     for (auto&& [_, p] : graph.out_edges(p_star)) {
       // assert(p != p_star);
       if (!visited(p)) {
         auto score = distance(db[p], query);
         if (result.template insert<unique_id>(score, p)) {
-          q1.template insert<unique_id>(score, p);
+          q2.template insert<unique_id>(score, p);
         }
       }
     }
@@ -173,6 +204,8 @@ auto greedy_search(
       debug_min_heap(result, "result, aka Ell: ", 1);
     if (noisy)
       debug_min_heap(result, "result, aka Ell: ", 0);
+    q1.swap(q2);
+    q2.clear();
   }
 
   // auto top_k = Vector<id_type>(k_nn);
@@ -244,6 +277,7 @@ auto robust_prune(
     size_t R,
     Distance&& distance = Distance{}) {
   constexpr bool noisy = false;
+  scoped_timer _("robust prune");
 
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
@@ -454,8 +488,12 @@ class vamana_index {
 
     medioid_ = medioid(feature_vectors_);
 
+    debug_index();
+
     size_t counter{0};
     for (float alpha : {alpha_min_, alpha_max_}) {
+      scoped_timer _("train " + std::to_string(counter), true);
+      size_t total_visited{0};
       for (size_t p = 0; p < num_vectors_; ++p) {
         ++counter;
         auto&& [top_k_scores, top_k, visited] = greedy_search(
@@ -464,32 +502,39 @@ class vamana_index {
             medioid_,
             feature_vectors_[p],
             1,
-            L_build_);
-        robust_prune(
-            graph_, feature_vectors_, p, visited, alpha, R_max_degree_);
-        for (auto&& [i, j] : graph_.out_edges(p)) {
-          // @todo Do this without copying -- prune should take vector of tuples and p (it copies anyway) maybe scan for p and then only build tmp after if?
-          auto tmp = std::vector<size_t>(graph_.out_degree(j) + 1);
-          tmp.push_back(p);
-          for (auto&& [_, k] : graph_.out_edges(j)) {
-            tmp.push_back(k);
-          }
+            L_build_, counting_sum_of_squares_distance("index greedy_search"));
+        total_visited += visited.size();
 
-          if (size(tmp) > R_max_degree_) {
-            robust_prune(
-                graph_, feature_vectors_, j, tmp, alpha, R_max_degree_);
-          } else {
-            graph_.add_edge(
-                j,
-                p,
-                sum_of_squares_distance()(
-                    feature_vectors_[p], feature_vectors_[j]));
+        robust_prune(
+            graph_, feature_vectors_, p, visited, alpha, R_max_degree_, counting_sum_of_squares_distance("index init robust_prune"));
+        {
+          scoped_timer _{"post search prune"};
+          for (auto&& [i, j] : graph_.out_edges(p)) {
+            // @todo Do this without copying -- prune should take vector of tuples and p (it copies anyway) maybe scan for p and then only build tmp after if?
+            auto tmp = std::vector<size_t>(graph_.out_degree(j) + 1);
+            tmp.push_back(p);
+            for (auto&& [_, k] : graph_.out_edges(j)) {
+              tmp.push_back(k);
+            }
+
+            if (size(tmp) > R_max_degree_) {
+              robust_prune(
+                  graph_, feature_vectors_, j, tmp, alpha, R_max_degree_, counting_sum_of_squares_distance("index post search robust_prune"));
+            } else {
+              graph_.add_edge(
+                  j,
+                  p,
+                  sum_of_squares_distance()(
+                      feature_vectors_[p], feature_vectors_[j]));
+            }
           }
         }
         if ((counter) % 10 == 0) {
           // dump_edgelist("edges_" + std::to_string(counter) + ".txt", graph_);
         }
       }
+      _count_data.insert_entry("total_visited_" + std::to_string(counter), total_visited);
+      debug_index();
     }
   }
 
@@ -507,13 +552,7 @@ class vamana_index {
     return num_comps_;
   }
 
-  struct counting_sum_of_squares_distance {
-    template <class V, class U>
-    constexpr auto operator()(const V& a, const U& b) const {
-      ++num_comps_;
-      return sum_of_squares(a, b);
-    }
-  };
+
 
   template <query_vector_array Q>
   auto query(const Q& query_set, size_t k, std::optional<size_t> opt_L = std::nullopt) {
@@ -539,7 +578,7 @@ class vamana_index {
 #else
     for (size_t i = 0; i < num_vectors(query_set); ++i) {
       auto&& [tk_scores, tk, V] = greedy_search(
-          graph_, feature_vectors_, medioid_, query_set[i], k, L, counting_sum_of_squares_distance());
+          graph_, feature_vectors_, medioid_, query_set[i], k, L, counting_sum_of_squares_distance("greedy_search"));
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
       num_visited_vertices_ += V.size();
@@ -674,6 +713,24 @@ class vamana_index {
     _count_data.insert_entry("max_degree", max_degree->size());
     _count_data.insert_entry("avg_degree", (double)graph_.num_edges() / (double)num_vertices(graph_));
   }
+
+  void debug_index() {
+    auto&& [min_degree, max_degree] =
+        minmax_element(begin(graph_), end(graph_), [](auto&& a, auto&& b) {
+          return a.size() < b.size();
+        });
+
+    size_t counted_edges{0};
+    for (size_t i = 0; i < num_vertices(graph_); ++i) {
+      counted_edges += graph_.out_edges(i).size();
+    }
+    std::cout << "# counted edges " << counted_edges << std::endl;
+    std::cout << "# num_edges " << graph_.num_edges() << std::endl;
+    std::cout << "# min degree " << min_degree->size() << std::endl;
+    std::cout << "# max degree " << max_degree->size() << std::endl;
+    std::cout << "# avg degree " << (double)counted_edges / (double)num_vertices(graph_) << std::endl;
+  }
+
 
   bool compare_metadata(const vamana_index& rhs) {
         if (dimension_ != rhs.dimension_) {

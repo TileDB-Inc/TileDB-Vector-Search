@@ -239,7 +239,7 @@ using threshold_heap = threshold_min_pair_heap<T, U>;
 
 template <class Heap>
 void debug_min_heap(const Heap& heap, const std::string& msg = "", int which = 2) {
-  std::cout << msg << std::endl;
+  std::cout << msg;
 
   if (which == 0) {
     for (auto&& [score, id] : heap) {
@@ -248,7 +248,7 @@ void debug_min_heap(const Heap& heap, const std::string& msg = "", int which = 2
     std::cout << std::endl;
   } else if (which == 1) {
     for (auto&& [score, id] : heap) {
-      std::cout << score << " ";
+      std::cout << id << " ";
     }
     std::cout << std::endl;
   } else {

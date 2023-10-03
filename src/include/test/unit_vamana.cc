@@ -65,7 +65,7 @@ TEST_CASE("vamana: tiny greedy search", "[vamana]") {
 #endif
 
 TEST_CASE("vamana: greedy grid search", "[vamana]") {
-  const bool debug = false;
+  const bool debug = true;
 
   // using feature_type = uint8_t;
   using id_type = uint32_t;
