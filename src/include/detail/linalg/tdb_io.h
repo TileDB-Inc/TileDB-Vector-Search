@@ -35,6 +35,7 @@
 #include <numeric>
 #include <vector>
 #include <fcntl.h>
+#include <filesystem>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>

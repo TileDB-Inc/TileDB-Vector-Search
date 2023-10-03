@@ -15,20 +15,19 @@ fi
 echo "VECTOR_SEARCH is ${VECTOR_SEARCH}"
 
 
-export DISKANNROOT=${VECTOR_SEARCH}/external/DiskANN
+export DISKANNROOT=${VECTOR_SEARCH}/src/
 
 export SIFT=siftsmall
-export SIFTPATH=${VECTOR_SEARCH}/external/data/bins/${SIFT}
+export SIFTPATH=${VECTOR_SEARCH}/external/data/gp3/${SIFT}
 export DATAPATH=${SIFTPATH}
 
-export DISKANNPATH=${DISKANNROOT}/build/apps
+export DISKANNPATH=${DISKANNROOT}/cmake-build-relwithdebinfo/libtiledbvectorsearch/src/vamana
 
-export SIFT_LEARN=${SIFTPATH}/${SIFT}_learn.fbin
-export SIFT_QUERY=${SIFTPATH}/${SIFT}_query.fbin
-export SIFT_GROUNDTRUTH=${SIFTPATH}/${SIFT}_groundtruth.ibin
+export SIFT_LEARN=${SIFTPATH}/${SIFT}_learn
+export SIFT_QUERY=${SIFTPATH}/${SIFT}_query
+export SIFT_GROUNDTRUTH=${SIFTPATH}/${SIFT}_groundtruth
 
-
-echo ${DISKANNPATH}/utils/compute_groundtruth  --data_type float --dist_fn l2 --base_file ${SIFT_LEARN} --query_file  ${SIFT_QUERY} --gt_file ${SIFT_GROUNDTRUTH} --K 100
+# echo ${DISKANNPATH}/utils/compute_groundtruth  --data_type float --dist_fn l2 --base_file ${SIFT_LEARN} --query_file  ${SIFT_QUERY} --gt_file ${SIFT_GROUNDTRUTH} --K 100
 
 Rs=(32 64)
 Ls=(50 100)
@@ -60,9 +59,9 @@ for T in ${Ts[@]}; do
 	echo "----------------------------------------------------------------"
 	for L in ${Ls[@]}; do
 	    export SIFT_INDEX=${SIFTPATH}/index_${SIFT}_learn_R${R}_L${L}_A1.2
-	    cmd="${DISKANNPATH}/build_memory_index  --data_type float --dist_fn l2 --data_path ${SIFT_LEARN}  --index_path_prefix ${SIFT_INDEX} -R ${R} -L ${L} --alpha 1.2 -T ${T}"
+	    cmd="${DISKANNPATH}/index --db_uri ${SIFT_LEARN}  --index_uri ${SIFT_INDEX} -R ${R} -L ${L} --alpha 1.2 --nthreads ${T} -v -d --log - --force"
 	    echo ${cmd}
-	    time ${cmd}
+#	    time ${cmd}
 	done
     done
     echo "================================================================"
@@ -70,9 +69,9 @@ for T in ${Ts[@]}; do
 	echo "----------------------------------------------------------------"
 	for L in ${Ls[@]}; do
 	    export SIFT_INDEX=${SIFTPATH}/index_${SIFT}_learn_R${R}_L${L}_A1.2
-	    cmd="${DISKANNPATH}/search_memory_index  --data_type float --dist_fn l2 --index_path_prefix ${SIFT_INDEX} --query_file ${SIFT_QUERY}  --gt_file ${SIFT_GROUNDTRUTH}  -K 10 -L 10 20 30 40 50 100 --result_path ${SIFTPATH}/res -T ${T}"
+	    cmd="${DISKANNPATH}/query  --index_uri ${SIFT_INDEX} --query_uri ${SIFT_QUERY}  --groundtruth_uri ${SIFT_GROUNDTRUTH}  -k 10 -L ${L} -T ${T} -v -d --log -"
 	    echo ${cmd}
-	    time ${cmd}
+#	    time ${cmd}
 	done
     done
 done

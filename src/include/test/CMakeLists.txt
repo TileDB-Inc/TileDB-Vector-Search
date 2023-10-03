@@ -62,7 +62,7 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 # kmeans_add_test(gen_queries)
 # kmeans_add_test(time_queries)
 
-find_package(Matplot++ REQUIRED)
+# find_package(Matplot++ REQUIRED)
 # find_package(Casablanca REQUIRED)
 
 # kmeans_add_exe(demo_cytoscape)
@@ -71,17 +71,17 @@ find_package(Matplot++ REQUIRED)
 # kmeans_add_exe(demo_high_five)
 # target_link_libraries(demo_high_five PRIVATE HighFive)
 
-kmeans_add_exe(demo_matplot)
-target_link_libraries(demo_matplot PUBLIC Matplot++::matplot)
+# kmeans_add_exe(demo_matplot)
+# target_link_libraries(demo_matplot PUBLIC Matplot++::matplot)
 
-kmeans_add_exe(demo_nn-descent)
-target_link_libraries(demo_nn-descent PUBLIC Matplot++::matplot)
+# kmeans_add_exe(demo_nn-descent)
+# target_link_libraries(demo_nn-descent PUBLIC Matplot++::matplot)
 
-kmeans_add_exe(demo_nn-graph)
-target_link_libraries(demo_nn-graph PUBLIC Matplot++::matplot)
+# kmeans_add_exe(demo_nn-graph)
+# target_link_libraries(demo_nn-graph PUBLIC Matplot++::matplot)
 
-kmeans_add_exe(demo_vamana)
-target_link_libraries(demo_vamana PUBLIC Matplot++::matplot)
+# kmeans_add_exe(demo_vamana)
+# target_link_libraries(demo_vamana PUBLIC Matplot++::matplot)
 
 kmeans_add_exe(time_insert)
 
