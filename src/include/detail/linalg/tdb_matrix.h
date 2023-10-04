@@ -59,7 +59,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   using Base = Matrix<T, LayoutPolicy, I>;
   using Base::Base;
 
- public:
+  public:
   using value_type = typename Base::value_type;
   using index_type = typename Base::index_type;
   using size_type = typename Base::size_type;
@@ -69,7 +69,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
- private:
+  private:
   using row_domain_type = int32_t;
   using col_domain_type = int32_t;
 
@@ -102,7 +102,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   // size_t pending_row_offset{0};
   // size_t pending_col_offset{0};
 
- public:
+  public:
   ~tdbBlockedMatrix() noexcept {
     array_.close();
   }
@@ -116,8 +116,17 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param uri URI of the TileDB array to read.
    */
   tdbBlockedMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : tdbBlockedMatrix(ctx, uri, 0) {
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : tdbBlockedMatrix(ctx, uri, 0, tiledb::TemporalPolicy()) {
+  }
+
+  tdbBlockedMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t upper_bound,
+      uint64_t timestamp = 0)
+      : tdbBlockedMatrix(ctx, uri, upper_bound, 
+          (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1)) {
   }
 
   /**
@@ -128,16 +137,15 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
    * @param upper_bound The maximum number of vectors to read.
+   * @param temporal_policy The TemporalPolicy to use for reading the array data.
    */
   tdbBlockedMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
-      size_t upper_bound)  // noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : ctx_{ctx}
-      , uri_{uri}
-      , array_{tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ)}
-      , schema_{array_.schema()} {
+      size_t upper_bound,
+      const tiledb::TemporalPolicy temporal_policy)  // noexcept
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : ctx_{ctx}, uri_{uri}, array_{tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ, temporal_policy)}, schema_{array_.schema()} {
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + " " + uri};
 
@@ -271,11 +279,9 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t row_begin,
       size_t row_end,
       size_t col_begin,
-      size_t col_end)  // noexcept
-      : ctx_{ctx}
-      , uri_{uri}
-      , array_{tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ)}
-      , schema_{array_.schema()} {
+      size_t col_end,
+      const tiledb::TemporalPolicy temporal_policy = {})  // noexcept
+      : ctx_{ctx}, uri_{uri}, array_{tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ, temporal_policy)}, schema_{array_.schema()} {
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + uri};
 
@@ -379,9 +385,9 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
   using Base = tdbBlockedMatrix<T, LayoutPolicy, I>;
   using Base::Base;
 
- public:
+  public:
   tdbPreLoadMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(ctx, uri, 0) {
     Base::load();
   }

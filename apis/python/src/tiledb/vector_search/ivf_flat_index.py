@@ -33,9 +33,10 @@ class IVFFlatIndex(Index):
         self,
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
+        timestamp=None,
         memory_budget: int = -1,
     ):
-        super().__init__(uri=uri, config=config)
+        super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = "IVF_FLAT"
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"] + self.index_version
@@ -52,9 +53,9 @@ class IVFFlatIndex(Index):
         self.memory_budget = memory_budget
 
         self._centroids = load_as_matrix(
-            self.centroids_uri, ctx=self.ctx, config=config
+            self.centroids_uri, ctx=self.ctx, config=config, timestamp=self.base_array_timestamp
         )
-        self._index = read_vector_u64(self.ctx, self.index_array_uri, 0, 0)
+        self._index = read_vector_u64(self.ctx, self.index_array_uri, 0, 0, self.base_array_timestamp)
 
 
         dtype = self.group.meta.get("dtype", None)
@@ -78,8 +79,8 @@ class IVFFlatIndex(Index):
 
         # TODO pass in a context
         if self.memory_budget == -1:
-            self._db = load_as_matrix(self.db_uri, ctx=self.ctx, config=config, size=self.size)
-            self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, self.size)
+            self._db = load_as_matrix(self.db_uri, ctx=self.ctx, config=config, size=self.size, timestamp=self.base_array_timestamp)
+            self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, self.size, self.base_array_timestamp)
 
     def query_internal(
         self,
@@ -157,6 +158,7 @@ class IVFFlatIndex(Index):
                     nthreads=nthreads,
                     ctx=self.ctx,
                     use_nuv_implementation=use_nuv_implementation,
+                    timestamp=self.base_array_timestamp,
                 )
 
             return np.transpose(np.array(d)), np.transpose(np.array(i))
@@ -229,6 +231,7 @@ class IVFFlatIndex(Index):
             indices: np.array,
             k_nn: int,
             config: Optional[Mapping[str, Any]] = None,
+            timestamp: int = 0,
         ):
             queries_m = array_to_matrix(np.transpose(query_vectors))
             r = dist_qv(
@@ -241,6 +244,7 @@ class IVFFlatIndex(Index):
                 indices=indices,
                 k_nn=k_nn,
                 ctx=Ctx(config),
+                timestamp=timestamp,
             )
             results = []
             for q in range(len(r)):
@@ -308,6 +312,7 @@ class IVFFlatIndex(Index):
                     indices=np.array(self._index),
                     k_nn=k,
                     config=config,
+                    timestamp=self.base_array_timestamp,
                     resource_class="large",
                     image_name="3.9-vectorsearch",
                 )

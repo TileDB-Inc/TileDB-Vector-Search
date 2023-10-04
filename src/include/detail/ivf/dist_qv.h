@@ -75,11 +75,12 @@ auto dist_qv_finite_ram_part(
     auto&& indices,
     const std::string& id_uri,
     size_t k_nn,
+    uint64_t timestamp = 0,
     size_t nthreads = std::thread::hardware_concurrency()) {
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
-
+  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1);
 
   using score_type = float;
   using parts_type =
@@ -93,7 +94,7 @@ auto dist_qv_finite_ram_part(
       feature_type,
       shuffled_ids_type,
       indices_type,
-      parts_type>(ctx, part_uri, indices, active_partitions, id_uri, 0);
+      parts_type>(ctx, part_uri, indices, active_partitions, id_uri, 0, temporal_policy);
 
   // We are assuming that we are not doing out of core computation here.
   // (It is easy enough to change this if we need to.)
@@ -249,7 +250,8 @@ auto dist_qv_finite_ram(
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads,
-    size_t num_nodes) {
+    size_t num_nodes,
+    uint64_t timestamp = 0) {
   scoped_timer _{tdb_func__ + " " + part_uri};
 
   // Check that the size of the indices vector is correct
@@ -305,7 +307,8 @@ auto dist_qv_finite_ram(
           indices,
           id_uri,
           k_nn,
-          nthreads);
+          nthreads,
+          timestamp);
 
       /*
        * Merge the min_scores from each compute node.

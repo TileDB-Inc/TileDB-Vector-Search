@@ -150,7 +150,8 @@ static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& s
          size_t nprobe,
          size_t k_nn,
          size_t upper_bound,
-         size_t nthreads) -> py::tuple { //std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
+         size_t nthreads,
+         uint64_t timestamp) -> py::tuple { //std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
         auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
             ctx,
@@ -162,7 +163,8 @@ static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& s
             nprobe,
             k_nn,
             upper_bound,
-            nthreads);
+            nthreads,
+            timestamp);
         return make_python_pair(std::move(r));
         }, py::keep_alive<1,2>());
 }
@@ -204,7 +206,8 @@ static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& 
          size_t nprobe,
          size_t k_nn,
          size_t upper_bound,
-         size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> { // TODO change return type
+         size_t nthreads,
+         uint64_t timestamp) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> { // TODO change return type
 
         auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
             ctx,
@@ -216,7 +219,8 @@ static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& 
             nprobe,
             k_nn,
             upper_bound,
-            nthreads);
+            nthreads,
+            timestamp);
         return r;
         }, py::keep_alive<1,2>());
 }
@@ -234,7 +238,8 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
         const std::string& id_uri,
         size_t start_pos,
         size_t end_pos,
-        size_t nthreads) -> int {
+        size_t nthreads,
+        uint64_t timestamp) -> int {
             return detail::ivf::ivf_index<T, uint64_t, float>(
                 ctx,
                 db,
@@ -246,7 +251,8 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
                 id_uri,
                 start_pos,
                 end_pos,
-                nthreads);
+                nthreads,
+                timestamp);
         }, py::keep_alive<1,2>());
 }
 
@@ -263,7 +269,8 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
         const std::string& id_uri,
         size_t start_pos,
         size_t end_pos,
-        size_t nthreads) -> int {
+        size_t nthreads,
+        uint64_t timestamp) -> int {
             return detail::ivf::ivf_index<T, uint64_t, float>(
                 ctx,
                 db_uri,
@@ -275,7 +282,8 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
                 id_uri,
                 start_pos,
                 end_pos,
-                nthreads);
+                nthreads,
+                timestamp);
         }, py::keep_alive<1,2>());
 }
 
@@ -302,7 +310,7 @@ static void declareColMajorMatrixSubclass(py::module& mod,
   // TODO auto-namify
   PyTMatrix cls(mod, (name + suffix).c_str(), py::buffer_protocol());
 
-  cls.def(py::init<const Ctx&, std::string, size_t>(),  py::keep_alive<1,2>());
+  cls.def(py::init<const Ctx&, std::string, size_t, uint64_t>(),  py::keep_alive<1,2>());
 
   if constexpr (std::is_same<P, tdbColMajorMatrix<T>>::value) {
     cls.def("load", &TMatrix::load);
@@ -378,7 +386,8 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
         std::vector<std::vector<int>>& active_queries,
         std::vector<shuffled_ids_type>& indices,
         const std::string& id_uri,
-        size_t k_nn
+        size_t k_nn,
+        uint64_t timestamp
         /* size_t nthreads TODO: optional arg w/ fallback to C++ default arg */
         ) { /* TODO return type */
             return detail::ivf::dist_qv_finite_ram_part<T, shuffled_ids_type>(
@@ -389,7 +398,8 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
                 active_queries,
                 indices,
                 id_uri,
-                k_nn);
+                k_nn,
+                timestamp);
         }, py::keep_alive<1,2>());
 }
 
@@ -448,8 +458,26 @@ PYBIND11_MODULE(_tiledbvspy, m) {
     declareStdVector<size_t>(m, "szt");
   }
 
-  m.def("read_vector_u32", &read_vector<uint32_t>, "Read a vector from TileDB");
-  m.def("read_vector_u64", &read_vector<uint64_t>, "Read a vector from TileDB");
+  m.def("read_vector_u32",
+    [](const tiledb::Context& ctx,
+        const std::string& uri,
+        size_t start_pos,
+        size_t end_pos,
+        uint64_t timestamp) -> std::vector<uint32_t> {
+      auto r = read_vector<uint32_t>(ctx, uri, start_pos, end_pos, timestamp);
+      return r;
+    });
+  m.def("read_vector_u64",
+    [](const tiledb::Context& ctx,
+        const std::string& uri,
+        size_t start_pos,
+        size_t end_pos,
+        uint64_t timestamp) -> std::vector<uint64_t> {
+      auto r = read_vector<uint64_t>(ctx, uri, start_pos, end_pos, timestamp);
+      return r;
+    });
+//  m.def("read_vector_u32", &read_vector<uint32_t>, "Read a vector from TileDB");
+//  m.def("read_vector_u64", &read_vector<uint64_t>, "Read a vector from TileDB");
 
   m.def("_create_vector_u64", []() {
     auto v = std::vector<uint64_t>(10);

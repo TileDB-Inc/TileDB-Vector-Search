@@ -64,11 +64,14 @@ int ivf_index(
     const std::string& id_uri,
     size_t start_pos,
     size_t end_pos,
-    size_t nthreads) {
+    size_t nthreads,
+    uint64_t timestamp) {
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
-  auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
+  auto read_temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1);
+  auto write_temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+  auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri, 0, read_temporal_policy);
   centroids.load();
   auto parts = detail::flat::qv_partition(centroids, db, nthreads);
   debug_matrix(parts, "parts");
@@ -162,13 +165,13 @@ int ivf_index(
     // Write out the arrays
     if (parts_uri != "") {
       write_matrix<T, stdx::layout_left, size_t>(
-          ctx, shuffled_db, parts_uri, start_pos, false);
+          ctx, shuffled_db, parts_uri, start_pos, false, write_temporal_policy);
     }
     if (index_uri != "") {
-      write_vector<ids_type>(ctx, indices, index_uri, 0, false);
+      write_vector<ids_type>(ctx, indices, index_uri, 0, false, write_temporal_policy);
     }
     if (id_uri != "") {
-      write_vector<ids_type>(ctx, shuffled_ids, id_uri, start_pos, false);
+      write_vector<ids_type>(ctx, shuffled_ids, id_uri, start_pos, false, write_temporal_policy);
     }
   }
   return 0;
@@ -186,7 +189,8 @@ int ivf_index(
     const std::string& id_uri,
     size_t start_pos = 0,
     size_t end_pos = 0,
-    size_t nthreads = 0) {
+    size_t nthreads = 0,
+    uint64_t timestamp = 0) {
   auto db = tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos);
   db.load();
   std::vector<ids_type> external_ids;
@@ -194,8 +198,9 @@ int ivf_index(
     external_ids = std::vector<ids_type>(db.num_cols());
     std::iota(begin(external_ids), end(external_ids), start_pos);
   } else {
+    auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1);
     external_ids =
-        read_vector<ids_type>(ctx, external_ids_uri, start_pos, end_pos);
+        read_vector<ids_type>(ctx, external_ids_uri, start_pos, end_pos, temporal_policy);
   }
   return ivf_index<T, ids_type, centroids_type>(
       ctx,
@@ -208,7 +213,8 @@ int ivf_index(
       id_uri,
       start_pos,
       end_pos,
-      nthreads);
+      nthreads,
+      timestamp);
 }
 
 template <typename T, class ids_type, class centroids_type>
@@ -223,8 +229,10 @@ int ivf_index(
     const std::string& id_uri,
     size_t start_pos = 0,
     size_t end_pos = 0,
-    size_t nthreads = 0) {
-  auto db = tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos);
+    size_t nthreads = 0,
+    uint64_t timestamp = 0) {
+  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1);
+  auto db = tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos, temporal_policy);
   db.load();
   return ivf_index<T, ids_type, centroids_type>(
       ctx,
@@ -237,7 +245,8 @@ int ivf_index(
       id_uri,
       start_pos,
       end_pos,
-      nthreads);
+      nthreads,
+      timestamp);
 }
 
 template <typename T, class ids_type, class centroids_type>
@@ -252,14 +261,15 @@ int ivf_index(
     const std::string& id_uri,
     size_t start_pos = 0,
     size_t end_pos = 0,
-    size_t nthreads = 0) {
+    size_t nthreads = 0,
+    uint64_t timestamp = 0) {
   std::vector<ids_type> external_ids;
   if (external_ids_uri.empty()) {
     external_ids = std::vector<ids_type>(db.num_cols());
     std::iota(begin(external_ids), end(external_ids), start_pos);
   } else {
-    external_ids =
-        read_vector<ids_type>(ctx, external_ids_uri, start_pos, end_pos);
+    auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1);
+    external_ids = read_vector<ids_type>(ctx, external_ids_uri, start_pos, end_pos, temporal_policy);
   }
   return ivf_index<T, ids_type, centroids_type>(
       ctx,
@@ -272,7 +282,8 @@ int ivf_index(
       id_uri,
       start_pos,
       end_pos,
-      nthreads);
+      nthreads,
+      timestamp);
 }
 
 }  // namespace detail::ivf

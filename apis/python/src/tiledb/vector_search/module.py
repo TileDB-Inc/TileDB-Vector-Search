@@ -12,7 +12,8 @@ def load_as_matrix(
     path: str,
     ctx: "Ctx" = None,
     config: Optional[Mapping[str, Any]] = None,
-    size: int = 0
+    size: int = 0,
+    timestamp: int = 0,
 ):
     """
     Load array as Matrix class
@@ -36,17 +37,17 @@ def load_as_matrix(
     a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
     if dtype == np.float32:
-        m = tdbColMajorMatrix_f32(ctx, path, size)
+        m = tdbColMajorMatrix_f32(ctx, path, size, timestamp)
     elif dtype == np.float64:
-        m = tdbColMajorMatrix_f64(ctx, path, size)
+        m = tdbColMajorMatrix_f64(ctx, path, size, timestamp)
     elif dtype == np.int32:
-        m = tdbColMajorMatrix_i32(ctx, path, size)
+        m = tdbColMajorMatrix_i32(ctx, path, size, timestamp)
     elif dtype == np.int32:
-        m = tdbColMajorMatrix_i64(ctx, path, size)
+        m = tdbColMajorMatrix_i64(ctx, path, size, timestamp)
     elif dtype == np.uint8:
-        m = tdbColMajorMatrix_u8(ctx, path, size)
+        m = tdbColMajorMatrix_u8(ctx, path, size, timestamp)
     # elif dtype == np.uint64:
-    #     return tdbColMajorMatrix_u64(ctx, path, size)
+    #     return tdbColMajorMatrix_u64(ctx, path, size, timestamp)
     else:
         raise ValueError("Unsupported Matrix dtype: {}".format(a.attr(0).dtype))
     m.load()
@@ -148,6 +149,7 @@ def ivf_index_tdb(
     start: int = 0,
     end: int = 0,
     nthreads: int = 0,
+    timestamp: int = 0,
     config: Dict = None,
 ):
     if config is None:
@@ -156,7 +158,7 @@ def ivf_index_tdb(
         ctx = Ctx(config)
 
     args = tuple(
-        [ctx, db_uri, external_ids_uri, deleted_ids, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads]
+        [ctx, db_uri, external_ids_uri, deleted_ids, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads, timestamp]
     )
 
     if dtype == np.float32:
@@ -179,6 +181,7 @@ def ivf_index(
     start: int = 0,
     end: int = 0,
     nthreads: int = 0,
+    timestamp: int = 0,
     config: Dict = None,
 ):
     if config is None:
@@ -187,7 +190,7 @@ def ivf_index(
         ctx = Ctx(config)
 
     args = tuple(
-        [ctx, db, external_ids, deleted_ids, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads]
+        [ctx, db, external_ids, deleted_ids, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads, timestamp]
     )
 
     if dtype == np.float32:
@@ -280,6 +283,7 @@ def ivf_query(
     nthreads: int,
     ctx: "Ctx" = None,
     use_nuv_implementation: bool = False,
+    timestamp: int = 0,
 ):
     """
     Run IVF vector query using a memory budget
@@ -308,6 +312,8 @@ def ivf_query(
         Number of theads
     ctx: Ctx
         Tiledb Context
+    timestamp: int
+        Read timestamp
     """
     if ctx is None:
         ctx = Ctx({})
@@ -324,6 +330,7 @@ def ivf_query(
             k_nn,
             memory_budget,
             nthreads,
+            timestamp,
         ]
     )
 
@@ -360,6 +367,7 @@ def dist_qv(
     indices: np.array,
     k_nn: int,
     ctx: "Ctx" = None,
+    timestamp: int = 0,
 ):
     if ctx is None:
         ctx = Ctx({})
@@ -373,6 +381,7 @@ def dist_qv(
             StdVector_u64(indices),
             ids_uri,
             k_nn,
+            timestamp,
         ]
     )
     if dtype == np.float32:

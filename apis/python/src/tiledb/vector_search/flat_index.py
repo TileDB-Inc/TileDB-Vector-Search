@@ -22,8 +22,9 @@ class FlatIndex(Index):
         self,
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
+        timestamp=None,
     ):
-        super().__init__(uri=uri, config=config)
+        super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = "FLAT"
         self._index = None
         self.db_uri = self.group[storage_formats[self.storage_version]["PARTS_ARRAY_NAME"] + self.index_version].uri
@@ -35,12 +36,13 @@ class FlatIndex(Index):
             self.db_uri,
             ctx=self.ctx,
             config=config,
+            timestamp=self.base_array_timestamp,
         )
         self.ids_uri = self.group[
             storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version
         ].uri
         if tiledb.array_exists(self.ids_uri, self.ctx):
-            self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, 0)
+            self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, 0, self.base_array_timestamp)
         else:
             self._ids = StdVector_u64(np.arange(self.size).astype(np.uint64))
 
