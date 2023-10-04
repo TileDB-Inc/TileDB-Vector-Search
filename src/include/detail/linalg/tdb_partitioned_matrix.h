@@ -62,10 +62,6 @@ using namespace Kokkos;
 using namespace Kokkos::Experimental;
 }  // namespace stdx
 
-extern bool global_verbose;
-extern bool global_debug;
-extern std::string global_region;
-
 /**
  *
  * @note The template parameters indices_type and parts_type are deduced using

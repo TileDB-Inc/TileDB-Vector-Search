@@ -36,9 +36,6 @@
 #include "detail/linalg/tdb_io.h"
 #include "query_common.h"
 
-bool global_verbose = false;
-bool global_debug = true;
-
 TEST_CASE("qv: test test", "[qv]") {
   REQUIRE(true);
 }
@@ -291,7 +288,6 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D04.data()));
 
 #if 1
-
     SECTION("dist_qv_finite_ram") {
       auto num_nodes = GENERATE(5 /*, 1,*/);
       std::cout << "num nodes " << num_nodes << std::endl;
