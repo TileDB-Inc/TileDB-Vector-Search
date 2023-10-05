@@ -445,3 +445,5 @@ def test_kmeans():
     print(f"tiledb score: {tdb_score}")
 
     assert tdb_score < 1.5 * sklearn_score
+
+test_kmeans()
