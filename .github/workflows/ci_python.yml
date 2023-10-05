@@ -35,4 +35,7 @@ jobs:
           #pip uninstall -y tiledb.vector_search
           #pip install -e .
           #pytest
+	  pytest --nbmake "./test/ipynb"
+        env:
+          TILEDB_REST_TOKEN: ${{ secrets.TILEDB_CLOUD_HELPER_VAR }}
         shell: bash -el {0}

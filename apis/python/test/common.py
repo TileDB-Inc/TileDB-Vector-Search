@@ -2,6 +2,8 @@ import os
 
 import numpy as np
 
+import random
+import string
 import tiledb
 
 
@@ -183,3 +185,8 @@ def accuracy(result, gt, external_ids_offset=0, updated_ids=None):
         total += len(temp_result)
         found += len(np.intersect1d(temp_result, gt[i]))
     return found / total
+
+
+def random_name(name: str) -> str:
+    suffix = "".join(random.choices(string.ascii_letters, k=10))
+    return f"zzz_unittest_{name}_{suffix}"
