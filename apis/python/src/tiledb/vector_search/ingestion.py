@@ -1743,14 +1743,12 @@ def ingest(
             conf = tiledb.Config(config)
             conf["sm.consolidation.mode"] = mode
             conf["sm.vacuum.mode"] = mode
-            # TODO consolidate remote arrays when this is supported in tiledb API
-            if not index_group_uri.startswith("tiledb://"):
-                ids_uri = group[IDS_ARRAY_NAME].uri
-                parts_uri = group[PARTS_ARRAY_NAME].uri
-                tiledb.consolidate(parts_uri, config=conf)
-                tiledb.vacuum(parts_uri, config=conf)
-                tiledb.consolidate(ids_uri, config=conf)
-                tiledb.vacuum(ids_uri, config=conf)
+            ids_uri = group[IDS_ARRAY_NAME].uri
+            parts_uri = group[PARTS_ARRAY_NAME].uri
+            tiledb.consolidate(parts_uri, config=conf)
+            tiledb.vacuum(parts_uri, config=conf)
+            tiledb.consolidate(ids_uri, config=conf)
+            tiledb.vacuum(ids_uri, config=conf)
 
         # TODO remove temp data for tiledb URIs
         if not index_group_uri.startswith("tiledb://"):

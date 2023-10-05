@@ -13,10 +13,11 @@ MINIMUM_ACCURACY = 0.85
 class CloudTests(unittest.TestCase):
     def setUp(self):
         super().setUp()
+        tiledb.cloud.login(token=os.getenv("TILEDB_REST_TOKEN"))
         self.namespace, storage_path, _ = groups._default_ns_path_cred()
+        storage_path = storage_path.replace("//", "/").replace("/", "//", 1)
         rand_name = random_name("vector_search")
         self.test_path = f"tiledb://{self.namespace}/{storage_path}/{rand_name}"
-        tiledb.cloud.login(token=os.getenv("TILEDB_REST_TOKEN"))
         self.config = tiledb.cloud.Config()
         self.config_dict = self.config.dict()
 
