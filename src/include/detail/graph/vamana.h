@@ -283,15 +283,12 @@ auto robust_prune(
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
   using score_type = typename std::decay_t<decltype(graph)>::score_type;
 
-  std::vector<std::tuple<score_type, id_type>> V;
-  V.reserve(V_in.size() + graph.out_degree(p));
-  std::vector<std::tuple<score_type, id_type>> new_V;
-  new_V.reserve(V.size());
+  std::unordered_map<id_type, score_type> V_map;
 
   for (auto&& v : V_in) {
     if (v != p) {
       auto score = distance(db[v], db[p]);
-      V.emplace_back(score, v);
+      V_map.try_emplace(v, score);
     }
   }
 
@@ -300,9 +297,19 @@ auto robust_prune(
     // assert(pp != p);
     if (pp != p) {
       // assert(ss == distance(db[p], db[pp]));
-      V.emplace_back(ss, pp);
+      V_map.try_emplace(pp, ss);
     }
   }
+
+  std::vector<std::tuple<score_type, id_type>> V;
+  V.reserve(V_map.size());
+  std::vector<std::tuple<score_type, id_type>> new_V;
+  new_V.reserve(V_map.size());
+
+  for (auto&& v : V_map) {
+    V.emplace_back(v.second, v.first);
+  }
+
 
   if (noisy)
     debug_min_heap(V, "V: ", 1);
