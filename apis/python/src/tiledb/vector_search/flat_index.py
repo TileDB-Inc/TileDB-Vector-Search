@@ -36,6 +36,9 @@ class FlatIndex(Index):
             ctx=self.ctx,
             config=config,
         )
+
+        # Check for existence of ids array. Previous versions were not using external_ids in the ingestion assuming
+        # that the external_ids were the position of the vector in the array.
         if storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version in self.group:
             self.ids_uri = self.group[
                 storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version
