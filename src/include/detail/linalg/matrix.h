@@ -201,6 +201,13 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   auto num_cols() const noexcept {
     return num_cols_;
   }
+
+  auto swap(Matrix& rhs) noexcept {
+    std::swap(num_rows_, rhs.num_rows_);
+    std::swap(num_cols_, rhs.num_cols_);
+    std::swap(storage_, rhs.storage_);
+    std::swap(static_cast<Base&>(*this), static_cast<Base&>(rhs));
+  }
 };
 
 /**
