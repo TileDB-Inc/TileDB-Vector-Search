@@ -202,12 +202,12 @@ TEST_CASE("ivf vq: finite all or none", "[ivf vq][ci-skip]") {
     CHECK(I00.num_rows() == I02.num_rows());
     CHECK(I00.num_cols() == I02.num_cols());
 
-    auto intersections00 = count_intersections(I00, groundtruth, k_nn);
-    auto intersections01 = count_intersections(I01, groundtruth, k_nn);
-    auto intersections02 = count_intersections(I02, groundtruth, k_nn);
-    auto intersections03 = count_intersections(I03, groundtruth, k_nn);
+    auto intersections00 = (long) count_intersections(I00, groundtruth, k_nn);
+    auto intersections01 = (long) count_intersections(I01, groundtruth, k_nn);
+    auto intersections02 = (long) count_intersections(I02, groundtruth, k_nn);
+    auto intersections03 = (long) count_intersections(I03, groundtruth, k_nn);
 
-    CHECK((size_t) intersections00 != 0UL);
+    CHECK((size_t) intersections00 != 0);
     CHECK(std::labs(intersections00 - intersections01) < 12);
     CHECK(std::labs(intersections00 - intersections02) < 12);
     CHECK(std::labs(intersections00 - intersections03) < 12);
