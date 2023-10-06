@@ -269,10 +269,10 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
     if (nprobe != 1 && k_nn != 1 && num_queries != 1) {
       CHECK(intersections00 != 0);
     }
-    CHECK(std::abs<size_t>(intersections00 - intersections01) < 12);
-    CHECK(std::abs<size_t>(intersections00 - intersections02) < 12);
-    CHECK(std::abs<size_t>(intersections00 - intersections03) < 12);
-    CHECK(std::abs<size_t>(intersections00 - intersections04) < 12);
+    CHECK(std::labs(intersections00 - intersections01) < 12);
+    CHECK(std::labs(intersections00 - intersections02) < 12);
+    CHECK(std::labs(intersections00 - intersections03) < 12);
+    CHECK(std::labs(intersections00 - intersections04) < 12);
 
     // debug_slices_diff(D00, D01, "D00 vs D01");
     // debug_slices_diff(D00, D02, "D00 vs D02");
@@ -308,7 +308,7 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
 
       check_size(D05, I05);
       auto intersections05 = count_intersections(I05, groundtruth, k_nn);
-      CHECK(std::abs<size_t>(intersections00 - intersections05) < 12);
+      CHECK(std::labs(intersections00 - intersections05) < 12);
       // debug_slices_diff(D00, D05, "D00 vs D05");
       CHECK(std::equal(D00.data(), D00.data() + D00.size(), D05.data()));
     }
