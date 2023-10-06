@@ -5,7 +5,6 @@ import os
 from common import *
 from tiledb.cloud import groups
 from tiledb.cloud.dag import Mode
-from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.utils import load_fvecs
 
 MINIMUM_ACCURACY = 0.85
@@ -20,12 +19,18 @@ class CloudTests(unittest.TestCase):
         self.test_path = f"tiledb://{self.namespace}/{storage_path}/{rand_name}"
         self.config = tiledb.cloud.Config()
         self.config_dict = self.config.dict()
+        self.flat_index_uri = f"{self.test_path}/test_flat_array"
+        self.ivf_flat_index_uri = f"{self.test_path}/test_ivf_flat_array"
+
+    def tearDown(self):
+        vs.Index.delete_index(uri=self.flat_index_uri, config=self.config)
+        vs.Index.delete_index(uri=self.ivf_flat_index_uri, config=self.config)
 
     def test_cloud_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
         queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
         gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
-        index_uri = f"{self.test_path}/ivf_flat_array"
+        index_uri = self.flat_index_uri
         k = 100
         nqueries = 100
 
@@ -46,7 +51,7 @@ class CloudTests(unittest.TestCase):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
         queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
         gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
-        index_uri = f"{self.test_path}/ivf_flat_array"
+        index_uri = self.ivf_flat_index_uri
         k = 100
         partitions = 100
         nqueries = 100

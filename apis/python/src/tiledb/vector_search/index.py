@@ -236,3 +236,15 @@ class Index:
         self.group.remove(self.update_arrays_uri)
         self.group.close()
         return new_index
+
+    @staticmethod
+    def delete_index(uri, config):
+        try:
+            group = tiledb.Group(uri, "m", config=config)
+        except tiledb.TileDBError as err:
+            message = str(err)
+            if "group does not exist" in message:
+                return
+            else:
+                raise err
+        group.delete()
