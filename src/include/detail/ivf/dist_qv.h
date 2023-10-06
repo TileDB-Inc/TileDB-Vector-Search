@@ -65,7 +65,7 @@ namespace detail::ivf {
  * Should be able to use only the indices and the query vectors that are active
  * on this node, and return only the min heaps for the active query vectors
  */
-template <class feature_type, class shuffled_ids_type>
+template <typename T, class shuffled_ids_type>
 auto dist_qv_finite_ram_part(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -80,8 +80,6 @@ auto dist_qv_finite_ram_part(
     nthreads = std::thread::hardware_concurrency();
   }
 
-
-  using score_type = float;
   using parts_type =
       typename std::remove_reference_t<decltype(active_partitions)>::value_type;
   using indices_type =
@@ -90,7 +88,7 @@ auto dist_qv_finite_ram_part(
   size_t num_queries = size(query);
 
   auto shuffled_db = tdbColMajorPartitionedMatrix<
-      feature_type,
+      T,
       shuffled_ids_type,
       indices_type,
       parts_type>(ctx, part_uri, indices, active_partitions, id_uri, 0);
@@ -113,8 +111,8 @@ auto dist_qv_finite_ram_part(
   }
   assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
 
-  auto min_scores = std::vector<fixed_min_pair_heap<score_type, shuffled_ids_type>>(
-      num_queries, fixed_min_pair_heap<score_type, shuffled_ids_type>(k_nn));
+  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
+      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
   auto current_part_size = shuffled_db.num_col_parts();
 
@@ -167,10 +165,10 @@ auto dist_qv_finite_ram_part(
 
 #if 0
   auto min_scores =
-      std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>>(
+      std::vector<std::vector<fixed_min_pair_heap<float, size_t>>>(
           nthreads,
-          std::vector<fixed_min_pair_heap<score_type, id_type>>(
-              num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn)));
+          std::vector<fixed_min_pair_heap<float, size_t>>(
+              num_queries, fixed_min_pair_heap<float, size_t>(k_nn)));
 
   size_t parts_per_thread =
       (shuffled_db.num_col_parts() + nthreads - 1) / nthreads;
@@ -223,8 +221,8 @@ auto dist_qv_finite_ram_part(
     futs[n].get();
   }
 
-  auto min_min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
-      num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
+  auto min_min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
+      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
   for (size_t j = 0; j < num_queries; ++j) {
     for (size_t n = 0; n < nthreads; ++n) {
@@ -237,7 +235,7 @@ auto dist_qv_finite_ram_part(
   return min_min_scores;
 #endif
 
-template <class feature_type, class shuffled_ids_type>
+template <typename T, class shuffled_ids_type>
 auto dist_qv_finite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -255,7 +253,6 @@ auto dist_qv_finite_ram(
   // Check that the size of the indices vector is correct
   assert(size(indices) == centroids.num_cols() + 1);
 
-  using score_type = float;
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
@@ -271,8 +268,8 @@ auto dist_qv_finite_ram(
   auto num_parts = size(active_partitions);
   using parts_type = typename decltype(active_partitions)::value_type;
 
-  std::vector<fixed_min_pair_heap<score_type, shuffled_ids_type>> min_scores(
-      num_queries, fixed_min_pair_heap<score_type, shuffled_ids_type>(k_nn));
+  std::vector<fixed_min_pair_heap<float, size_t>> min_scores(
+      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
 
   size_t parts_per_node = (num_parts + num_nodes - 1) / num_nodes;
 
@@ -296,7 +293,7 @@ auto dist_qv_finite_ram(
       /*
        * Each compute node returns a min_heap of its own min_scores
        */
-      auto dist_min_scores = dist_qv_finite_ram_part<feature_type, shuffled_ids_type>(
+      auto dist_min_scores = dist_qv_finite_ram_part<T, shuffled_ids_type>(
           ctx,
           part_uri,
           dist_partitions,

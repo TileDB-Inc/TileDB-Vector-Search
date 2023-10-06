@@ -38,7 +38,7 @@ TEST_CASE("qv test test", "[qv]") {
 }
 
 // @todo: test with tdbMatrix
-TEST_CASE("flat qv all or nothing", "[flat vq]") {
+TEST_CASE("flat vq all or nothing", "[flat vq]") {
   auto ids = std::vector<size_t>(sift_base.num_cols());
   std::iota(ids.rbegin(), ids.rend(), 9);
 

@@ -40,4 +40,8 @@ using namespace Kokkos;
 using namespace Kokkos::Experimental;
 }  // namespace stdx
 
+extern bool global_verbose;
+extern bool global_debug;
+extern std::string global_region;
+
 #endif  // TDB_LINALG_DEFS_H
