@@ -83,17 +83,6 @@ class kmeans_index {
   using value_type = T;
   using index_type = indices_type;
 
-  /**
-   * @brief Construct a new kmeans index object, setting a number of parameters
-   * to be used subsequently in training.
-   * @param dimension Dimension of the vectors comprising the training set and
-   * the data set.
-   * @param nlist Number of centroids / partitions to compute.
-   * @param max_iter Maximum number of iterations for kmans algorithm.
-   * @param tol Convergence tolerance for kmeans algorithm.
-   * @param nthreads Number of threads to use when executing in parallel.
-   * @param seed Seed for random number generator.
-   */
   kmeans_index(
       size_t dimension,
       size_t nlist,
@@ -111,28 +100,7 @@ class kmeans_index {
   }
 
   /**
-   * @brief Use the kmeans++ algorithm to choose initial centroids.
-   * The current implementation follows the algorithm described in
-   * the literature (Arthur and Vassilvitskii, 2007):
-   *
-   *  1a. Choose an initial centroid uniformly at random from the training set
-   *  1b. Choose the next centroid from the training set
-   *      2b. For each data point x not chosen yet, compute D(x), the distance
-   *          between x and the nearest centroid that has already been chosen.
-   *      3b. Choose one new data point at random as a new centroid, using a
-   *          weighted probability distribution where a point x is chosen
-   *          with probability proportional to D(x)2.
-   *  3. Repeat Steps 2b and 3b until k centers have been chosen.
-   *
-   *  The initial centroids are stored in the member variable `centroids_`.
-   *  It is expected that the centroids will be further refined by the
-   *  kmeans algorithm.
-   *
-   * @param training_set Array of vectors to cluster.
-   *
-   * @todo Implement greedy kmeans++: choose several new centers during each
-   * iteration, and then greedily chose the one that most decreases φ
-   * @todo Finish implementation using triangle inequality.
+   * @brief Use kmeans++ algorithm to choose initial centroids.
    */
   void kmeans_pp(const ColMajorMatrix<T>& training_set) {
     scoped_timer _{__FUNCTION__};
@@ -145,9 +113,21 @@ class kmeans_index {
         end(training_set[choice]),
         begin(centroids_[0]));
 
-    // Initialize distances, leaving some room to grow
+    //        Choose one center uniformly at random among the data points.
+    //        For each data point x not chosen yet, compute D(x), the distance
+    //        between x and the nearest center that has already been chosen.
+    //            Choose one new data point at random as a new center, using a
+    //            weighted probability distribution where a point x is chosen
+    //            with probability proportional to D(x)2.
+    //        Repeat Steps 2 and 3 until k centers have been chosen.
+    //        Now that the initial centers have been chosen, proceed using
+    //        standard k-means clustering.
+
+    // @todo Implement greedy kmeans++: choose several new centers during each
+    //  iteration, and then greedily chose the one that most decreases φ
+
     std::vector<double> distances(
-        training_set.num_cols(), std::numeric_limits<double>::max() / 8192);
+        training_set.num_cols(), std::numeric_limits<double>::max() / 8);
 
 #ifdef _TRIANGLE_INEQUALITY
     std::vector<double> centroid_centroid(nlist_, 0.0);
@@ -162,7 +142,7 @@ class kmeans_index {
           training_set,
           [this, &distances, i](auto&& vec, size_t n, size_t j) {
 
-      // Note: centroid i-1 is the newest centroid
+      // centroid i-1 is the newest centroid
 
 #ifdef _TRIANGLE_INEQUALITY
             // using triangle inequality, only need to calculate distance to the
@@ -187,8 +167,8 @@ class kmeans_index {
           });
 
       // Select the next centroid based on the probability proportional to
-      // distance squared -- note we did not normalize the vectors ourselves
-      // since `discrete_distribution` implicitly does that for us
+      // distance squared -- note we did not explicitly normalize since
+      // discrete_distribution implicitly does that for us
       std::discrete_distribution<size_t> probabilityDistribution(
           distances.begin(), distances.end());
       size_t nextIndex = probabilityDistribution(gen);
@@ -211,7 +191,6 @@ class kmeans_index {
 
   /**
    * @brief Initialize centroids by choosing them at random from training set.
-   * @param training_set Array of vectors to cluster.
    */
   void kmeans_random_init(const ColMajorMatrix<T>& training_set) {
     scoped_timer _{__FUNCTION__};
@@ -239,14 +218,7 @@ class kmeans_index {
   }
 
   /**
-   * @brief Use kmeans algorithm to cluster vectors into centroids.  Beginning
-   * with an initial set of centroids, the algorithm iteratively partitions
-   * the training_set into clusters, and then recomputes new centroids based
-   * on the clusters.  The algorithm terminates when the change in centroids
-   * is less than a threshold tolerance, or when a maximum number of
-   * iterations is reached.
-   *
-   * @param training_set Array of vectors to cluster.
+   * @brief Use kmeans algorithm to cluster vectors into centroids.
    */
   void train_no_init(const ColMajorMatrix<T>& training_set) {
     scoped_timer _{__FUNCTION__};
@@ -436,12 +408,6 @@ class kmeans_index {
     return indices;
   }
 
-  /**
-   * Compute centroids and partitions of the training set data.
-   * @param training_set Array of vectors to cluster.
-   * @param init Specify which initialization algorithm to use,
-   * random (`random`) or kmeans++ (`kmeanspp`).
-   */
   void train(const ColMajorMatrix<T>& training_set, kmeans_init init) {
     switch (init) {
       case (kmeans_init::none):
