@@ -57,11 +57,8 @@ class fixed_min_set_heap_1 : public std::vector<T> {
 
   void insert(T const& x) {
     if (Base::size() < max_size) {
-      Base::push_back(x);
-      // std::push_heap(begin(*this), end(*this), std::less<T>());
-      if (Base::size() == max_size) {
-        std::make_heap(begin(*this), end(*this), std::less<T>());
-      }
+      this->push_back(x);
+      std::push_heap(begin(*this), end(*this), std::less<T>());
     } else if (x < this->front()) {
       std::pop_heap(begin(*this), end(*this), std::less<T>());
       this->pop_back();
@@ -91,12 +88,8 @@ class fixed_min_set_heap_2 : public std::vector<T> {
 
   void insert(T const& x) {
     if (Base::size() < max_size) {
-      Base::push_back(x);
-      // std::push_heap(begin(*this), end(*this), std::less<T>());
-      if (Base::size() == max_size) {
-        // std::make_heap(begin(*this), end(*this), std::less<T>());
-        std::make_heap(begin(*this), end(*this));
-      }
+      this->push_back(x);
+      std::push_heap(begin(*this), end(*this));
     } else if (x < this->front()) {
       // std::pop_heap(begin(*this), end(*this), std::less<T>());
       std::pop_heap(begin(*this), end(*this));
@@ -116,6 +109,7 @@ class fixed_min_set_heap_2 : public std::vector<T> {
 template <class T, class U, class Compare = std::less<T>>
 class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   using Base = std::vector<std::tuple<T, U>>;
+
   // using Base::Base;
   unsigned max_size{0};
   Compare compare_;
@@ -142,14 +136,11 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   }
 
   void insert(const T& x, const U& y) {
-    if (Base::size() < max_size) {
-      Base::emplace_back(x, y);
-      // std::push_heap(begin(*this), end(*this), std::less<T>());
-      if (Base::size() == max_size) {
-        std::make_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
-          return compare_(std::get<0>(a), std::get<0>(b));
-        });
-      }
+    if (compare_(Base::size(), max_size)) {
+      this->emplace_back(x, y);
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return std::get<0>(a) < std::get<0>(b);
+      });
     } else if (compare_(x, std::get<0>(this->front()))) {
       std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
@@ -162,6 +153,20 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
     }
   }
 };
+
+template <class Heap>
+struct heap_traits {
+  using value_type = typename Heap::value_type;
+  using score_type = typename std::tuple_element<0, typename Heap::value_type>::type;
+  using index_type = typename std::tuple_element<1, typename Heap::value_type>::type;
+};
+
+template <class Heap>
+using heap_score_t = typename heap_traits<Heap>::score_type;
+
+template <class Heap>
+using heap_index_t = typename heap_traits<Heap>::index_type;
+
 
 // template <class T>
 // using fixed_min_heap = fixed_min_set_heap_1<T>;

@@ -37,8 +37,6 @@
 #include "linalg.h"
 #include "utils/utils.h"
 
-bool global_debug = false;
-
 using TestTypes =
     std::tuple<float, uint8_t, double, int, char, size_t, uint32_t>;
 

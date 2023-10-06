@@ -38,9 +38,6 @@
 #include "query_common.h"
 #include "utils/utils.h"
 
-bool global_verbose = false;
-bool global_debug = false;
-
 TEST_CASE("vq: test test", "[ivf vq]") {
   REQUIRE(true);
 }
