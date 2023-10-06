@@ -109,6 +109,7 @@ _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 
 /**
  *  Macro holding the name of the function in which it is called.

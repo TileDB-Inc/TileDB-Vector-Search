@@ -29,9 +29,13 @@ export SIFT_GROUNDTRUTH=${SIFTPATH}/${SIFT}_groundtruth
 
 # echo ${DISKANNPATH}/utils/compute_groundtruth  --data_type float --dist_fn l2 --base_file ${SIFT_LEARN} --query_file  ${SIFT_QUERY} --gt_file ${SIFT_GROUNDTRUTH} --K 100
 
-Rs=(32 64)
-Ls=(50 100)
-Ts=(1 `nproc`)
+# Rs=(32 64)
+# Ls=(50 100)
+# Ts=(1 `nproc`)
+
+Rs=(16)
+Ls=(16)
+Ts=(1)
 
 for R in ${Rs[@]}; do
     for L in ${Ls[@]}; do
@@ -61,7 +65,7 @@ for T in ${Ts[@]}; do
 	    export SIFT_INDEX=${SIFTPATH}/index_${SIFT}_learn_R${R}_L${L}_A1.2
 	    cmd="${DISKANNPATH}/index --db_uri ${SIFT_LEARN}  --index_uri ${SIFT_INDEX} -R ${R} -L ${L} --alpha 1.2 --nthreads ${T} -v -d --log - --force"
 	    echo ${cmd}
-#	    time ${cmd}
+	    time ${cmd}
 	done
     done
     echo "================================================================"
@@ -69,9 +73,9 @@ for T in ${Ts[@]}; do
 	echo "----------------------------------------------------------------"
 	for L in ${Ls[@]}; do
 	    export SIFT_INDEX=${SIFTPATH}/index_${SIFT}_learn_R${R}_L${L}_A1.2
-	    cmd="${DISKANNPATH}/query  --index_uri ${SIFT_INDEX} --query_uri ${SIFT_QUERY}  --groundtruth_uri ${SIFT_GROUNDTRUTH}  -k 10 -L ${L} -T ${T} -v -d --log -"
+	    cmd="${DISKANNPATH}/query  --index_uri ${SIFT_INDEX} --query_uri ${SIFT_QUERY}  --groundtruth_uri ${SIFT_GROUNDTRUTH}  -k 10 -L ${L} --nthreads ${T} -v -d --log -"
 	    echo ${cmd}
-#	    time ${cmd}
+	    time ${cmd}
 	done
     done
 done

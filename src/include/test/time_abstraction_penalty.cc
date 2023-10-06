@@ -47,4 +47,6 @@ int main(){
     schema.dump();
   }
 }
+#else
+int main() {}
 #endif

@@ -30,9 +30,14 @@ export SIFT_GROUNDTRUTH=${SIFTPATH}/${SIFT}_groundtruth.ibin
 
 echo ${DISKANNPATH}/utils/compute_groundtruth  --data_type float --dist_fn l2 --base_file ${SIFT_LEARN} --query_file  ${SIFT_QUERY} --gt_file ${SIFT_GROUNDTRUTH} --K 100
 
-Rs=(32 64)
-Ls=(50 100)
-Ts=(1 `nproc`)
+# Rs=(32 64)
+# Ls=(50 100)
+# Ts=(1 `nproc`)
+
+Rs=(16)
+Ls=(16)
+Ts=(1)
+
 
 for R in ${Rs[@]}; do
     for L in ${Ls[@]}; do
