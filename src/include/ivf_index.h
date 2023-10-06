@@ -244,8 +244,7 @@ class kmeans_index {
       auto high_scores =
           fixed_min_pair_heap<value_type, index_type, std::greater<value_type>>(
               heap_size, std::greater<value_type>());
-      auto low_degrees =
-          fixed_min_pair_heap<index_type, index_type>(heap_size);
+      auto low_degrees = fixed_min_pair_heap<index_type, index_type>(heap_size);
 
       // @todo parallelize -- by partition
       for (size_t i = 0; i < training_set.num_cols(); ++i) {
@@ -330,10 +329,12 @@ class kmeans_index {
         max_diff = std::max<double>(max_diff, diff);
       }
       centroids_.swap(new_centroids);
-      // std::cout << "max_diff: " << max_diff << " total_weight: " << total_weight
+      // std::cout << "max_diff: " << max_diff << " total_weight: " <<
+      // total_weight
       //          << std::endl;
       if (max_diff < tol_ * total_weight) {
-        // std::cout << "Converged after " << iter << " iterations." << std::endl;
+        // std::cout << "Converged after " << iter << " iterations." <<
+        // std::endl;
         break;
       }
 

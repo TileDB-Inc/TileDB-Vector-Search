@@ -206,7 +206,8 @@ TEST_CASE(
     "fixed_min_heap: fixed_max_heap with a large vector", "[fixed_min_heap]") {
   using element = std::tuple<float, int>;
 
-  fixed_min_pair_heap<float, int, std::greater<float>> a(7, std::greater<float>{});
+  fixed_min_pair_heap<float, int, std::greater<float>> a(
+      7, std::greater<float>{});
 
   std::vector<element> v(5500);
   for (auto&& i : v) {

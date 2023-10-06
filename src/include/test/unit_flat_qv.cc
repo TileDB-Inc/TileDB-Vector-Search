@@ -60,7 +60,6 @@ TEST_CASE("flat vq all or nothing", "[flat vq]") {
   CHECK(std::equal(I10.data(), I10.data() + I10.size(), I11.data()));
 }
 
-
 TEST_CASE("flat qv: qv_partition vs qv_partition_with_scores", "[flat_qv]") {
   CHECK(true);
 }

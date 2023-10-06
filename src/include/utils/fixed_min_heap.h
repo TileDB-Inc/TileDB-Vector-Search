@@ -118,7 +118,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   using Base = std::vector<std::tuple<T, U>>;
   // using Base::Base;
   unsigned max_size{0};
-  Compare  compare_;
+  Compare compare_;
 
  public:
   explicit fixed_min_pair_heap(unsigned k, Compare compare = Compare())
@@ -129,7 +129,9 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   }
 
   explicit fixed_min_pair_heap(
-      unsigned k, std::initializer_list<std::tuple<T, U>> l, Compare compare = Compare())
+      unsigned k,
+      std::initializer_list<std::tuple<T, U>> l,
+      Compare compare = Compare())
       : Base(0)
       , max_size{k}
       , compare_{std::move(compare)} {

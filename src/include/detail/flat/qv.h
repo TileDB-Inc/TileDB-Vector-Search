@@ -429,7 +429,6 @@ auto qv_partition_with_scores(const DB& db, const Q& q, unsigned nthreads) {
   return std::make_tuple(top_k_scores, top_k);
 }
 
-
 }  // namespace detail::flat
 
 #endif  // TILEDB_FLAT_QV_H
