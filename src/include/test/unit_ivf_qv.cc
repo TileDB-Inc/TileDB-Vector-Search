@@ -293,7 +293,7 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
 #if 1
 
     SECTION("dist_qv_finite_ram") {
-      auto num_nodes = GENERATE(5 /*, 1,*/);
+      auto num_nodes = GENERATE(1 /*, 5 */);
       std::cout << "num nodes " << num_nodes << std::endl;
 
       auto&& [D05, I05] = detail::ivf::dist_qv_finite_ram<db_type, ids_type>(

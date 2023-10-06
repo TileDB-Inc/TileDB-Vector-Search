@@ -140,8 +140,7 @@ class kmeans_index {
       stdx::range_for_each(
           std::move(par),
           training_set,
-          [this, &distances, i](
-              auto&& vec, size_t n, size_t j) {
+          [this, &distances, i](auto&& vec, size_t n, size_t j) {
 
       // centroid i-1 is the newest centroid
 
@@ -227,7 +226,6 @@ class kmeans_index {
     std::vector<size_t> degrees(nlist_, 0);
     ColMajorMatrix<T> new_centroids(dimension_, nlist_);
 
-    // @todo add convergence criteria
     for (size_t iter = 0; iter < max_iter_; ++iter) {
       auto [scores, parts] = detail::flat::qv_partition_with_scores(
           centroids_, training_set, nthreads_);
@@ -236,17 +234,20 @@ class kmeans_index {
 
       std::fill(
           new_centroids.data(),
-          new_centroids.data() + new_centroids.num_rows() * new_centroids.num_cols(),
+          new_centroids.data() +
+              new_centroids.num_rows() * new_centroids.num_cols(),
           0.0);
       std::fill(begin(degrees), end(degrees), 0);
 
+      // How many centroids should we try to fix up
+      size_t heap_size = std::ceil(reassign_ratio_ * nlist_) + 5;
       auto high_scores =
           fixed_min_pair_heap<value_type, index_type, std::greater<value_type>>(
-              nlist_ / 100 + 5, std::greater<value_type>());
+              heap_size, std::greater<value_type>());
       auto low_degrees =
-          fixed_min_pair_heap<index_type, index_type>(nlist_ / 100 + 5);
+          fixed_min_pair_heap<index_type, index_type>(heap_size);
 
-      // @todo parallelize -- use a temp centroid matrix for each thread
+      // @todo parallelize -- by partition
       for (size_t i = 0; i < training_set.num_cols(); ++i) {
         auto part = parts[i];
         auto centroid = new_centroids[part];
@@ -265,10 +266,10 @@ class kmeans_index {
         max_degree = std::max<size_t>(max_degree, degree);
         low_degrees.insert(degree, i);
       }
-      size_t lower_degree_bound = max_degree * reassign_ratio_;
+      size_t lower_degree_bound = std::ceil(max_degree * reassign_ratio_);
 
+      // Don't reassign if we are on last iteration
       if (iter != max_iter_ - 1) {
-
 #if 0
         // Pick a random vector to be a new centroid
         std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
@@ -283,20 +284,22 @@ class kmeans_index {
             }
           }
         }
-#else
-        // Movie vectors with high scores to replace zero-degree partitions
+#endif
+        // Move vectors with high scores to replace zero-degree partitions
         std::sort_heap(begin(low_degrees), end(low_degrees));
         std::sort_heap(
             begin(high_scores), end(high_scores), [](auto a, auto b) {
               return std::get<0>(a) > std::get<0>(b);
             });
-        for (size_t i = 0; i < size(low_degrees) && std::get<0>(low_degrees[i]) <= lower_degree_bound; ++i) {
-          std::cout << "i: " << i << " low_degrees: ("
-                    << std::get<1>(low_degrees[i]) << " "
-                    << std::get<0>(low_degrees[i]) << ") high_scores: ("
-                    << parts[std::get<1>(high_scores[i])] << " "
-                    << std::get<1>(high_scores[i]) << " "
-                    << std::get<0>(high_scores[i]) << ")" << std::endl;
+        for (size_t i = 0; i < size(low_degrees) &&
+                           std::get<0>(low_degrees[i]) <= lower_degree_bound;
+             ++i) {
+          // std::cout << "i: " << i << " low_degrees: ("
+          //           << std::get<1>(low_degrees[i]) << " "
+          //           << std::get<0>(low_degrees[i]) << ") high_scores: ("
+          //           << parts[std::get<1>(high_scores[i])] << " "
+          //          << std::get<1>(high_scores[i]) << " "
+          //          << std::get<0>(high_scores[i]) << ")" << std::endl;
           auto [degree, zero_part] = low_degrees[i];
           auto [score, high_vector_id] = high_scores[i];
           auto low_centroid = new_centroids[zero_part];
@@ -308,10 +311,34 @@ class kmeans_index {
           ++degrees[zero_part];
           --degrees[parts[high_vector_id]];
         }
-#endif
+      }
+      /**
+       * Check for convergence
+       */
+      // @todo parallelize?
+      double max_diff = 0.0;
+      double total_weight = 0.0;
+      for (size_t j = 0; j < nlist_; ++j) {
+        if (degrees[j] != 0) {
+          auto centroid = new_centroids[j];
+          for (size_t k = 0; k < dimension_; ++k) {
+            centroid[k] /= degrees[j];
+            total_weight += centroid[k] * centroid[k];
+          }
         }
+        auto diff = sum_of_squares(centroids_[j], new_centroids[j]);
+        max_diff = std::max<double>(max_diff, diff);
+      }
+      centroids_.swap(new_centroids);
+      // std::cout << "max_diff: " << max_diff << " total_weight: " << total_weight
+      //          << std::endl;
+      if (max_diff < tol_ * total_weight) {
+        // std::cout << "Converged after " << iter << " iterations." << std::endl;
+        break;
+      }
 
 #if 0
+      // Debugging
         auto mm = std::minmax_element(begin(degrees), end(degrees));
         double sum = std::accumulate(begin(degrees), end(degrees), 0);
         double average = sum / (double)size(degrees);
@@ -322,96 +349,75 @@ class kmeans_index {
         std::cout << "avg: " << average << " sum: " << sum << " min: " << min
                   << " max: " << max << " diff: " << diff << std::endl;
 #endif
+    }
 
-        // @todo parallelize?
-        double max_diff = 0.0;
-        double total_weight = 0.0;
-        for (size_t j = 0; j < nlist_; ++j) {
-          if (degrees[j] != 0) {
-            auto centroid = new_centroids[j];
-            for (size_t k = 0; k < dimension_; ++k) {
-              centroid[k] /= degrees[j];
-              total_weight += centroid[k] * centroid[k];
-            }
-          }
-          auto diff = sum_of_squares(centroids_[j], new_centroids[j]);
-          max_diff = std::max<double>(max_diff, diff);
-        }
-        centroids_.swap(new_centroids);
-        std::cout << "max_diff: " << max_diff << " total_weight: " << total_weight << std::endl;
-        if (max_diff < tol_ * total_weight) {
-          std::cout << "Converged after " << iter << " iterations." << std::endl;
-          break;
-        }
-      }
-
-      // Debugging
+    // Debugging
 #ifdef _SAVE_PARTITIONS
-      {
-        char tempFileName[L_tmpnam];
-        tmpnam(tempFileName);
+    {
+      char tempFileName[L_tmpnam];
+      tmpnam(tempFileName);
 
-        std::ofstream file(tempFileName);
-        if (!file) {
-          std::cout << "Error opening the file." << std::endl;
-          return;
-        }
-
-        for (const auto& element : degrees) {
-          file << element << ',';
-        }
-        file << std::endl;
-
-        for (auto s = 0; s < training_set.num_cols(); ++s) {
-          for (auto t = 0; t < training_set.num_rows(); ++t) {
-            file << std::to_string(training_set(t, s)) << ',';
-          }
-          file << std::endl;
-        }
-        file << std::endl;
-
-        for (auto s = 0; s < centroids_.num_cols(); ++s) {
-          for (auto t = 0; t < centroids_.num_rows(); ++t) {
-            file << std::to_string(centroids_(t, s)) << ',';
-          }
-          file << std::endl;
-        }
-
-        file.close();
-
-        std::cout << "Data written to file: " << tempFileName << std::endl;
+      std::ofstream file(tempFileName);
+      if (!file) {
+        std::cout << "Error opening the file." << std::endl;
+        return;
       }
+
+      for (const auto& element : degrees) {
+        file << element << ',';
+      }
+      file << std::endl;
+
+      for (auto s = 0; s < training_set.num_cols(); ++s) {
+        for (auto t = 0; t < training_set.num_rows(); ++t) {
+          file << std::to_string(training_set(t, s)) << ',';
+        }
+        file << std::endl;
+      }
+      file << std::endl;
+
+      for (auto s = 0; s < centroids_.num_cols(); ++s) {
+        for (auto t = 0; t < centroids_.num_rows(); ++t) {
+          file << std::to_string(centroids_(t, s)) << ',';
+        }
+        file << std::endl;
+      }
+
+      file.close();
+
+      std::cout << "Data written to file: " << tempFileName << std::endl;
+    }
 #endif
-    }
+  }
 
-    static std::vector<indices_type> predict(
-        const ColMajorMatrix<T>& centroids, const ColMajorMatrix<T>& vectors) {
-      // Return a vector of indices of the nearest centroid for each vector in
-      // the matrix. Write the code below:
-      auto nClusters = centroids.num_cols();
-      std::vector<indices_type> indices(vectors.num_cols());
-      std::vector<T> distances(nClusters);
-      for (size_t i = 0; i < vectors.num_cols(); ++i) {
-        for (size_t j = 0; j < nClusters; ++j) {
-          distances[j] = sum_of_squares(vectors[i], centroids[j]);
-        }
-        indices[i] = std::min_element(begin(distances), end(distances)) -
-                     begin(distances);
+  static std::vector<indices_type> predict(
+      const ColMajorMatrix<T>& centroids, const ColMajorMatrix<T>& vectors) {
+    // Return a vector of indices of the nearest centroid for each vector in
+    // the matrix. Write the code below:
+    auto nClusters = centroids.num_cols();
+    std::vector<indices_type> indices(vectors.num_cols());
+    std::vector<T> distances(nClusters);
+    for (size_t i = 0; i < vectors.num_cols(); ++i) {
+      for (size_t j = 0; j < nClusters; ++j) {
+        distances[j] = sum_of_squares(vectors[i], centroids[j]);
       }
-      return indices;
+      indices[i] =
+          std::min_element(begin(distances), end(distances)) - begin(distances);
     }
+    return indices;
+  }
 
-    void train(const ColMajorMatrix<T>& training_set, kmeans_init init) {
-      switch (init) {
-        case (kmeans_init::none):
-          break;
-        case (kmeans_init::kmeanspp):
-          kmeans_pp(training_set);
-          break;
-        case (kmeans_init::random):
-          kmeans_random_init(training_set);
-          break;
-      };
+  void train(const ColMajorMatrix<T>& training_set, kmeans_init init) {
+    switch (init) {
+      case (kmeans_init::none):
+        break;
+      case (kmeans_init::kmeanspp):
+        kmeans_pp(training_set);
+        break;
+      case (kmeans_init::random):
+        kmeans_random_init(training_set);
+        break;
+    };
 
 #if 0
     std::cout << "\nCentroids Before:\n" << std::endl;
@@ -424,7 +430,7 @@ class kmeans_index {
     std::cout << std::endl;
 #endif
 
-      train_no_init(training_set);
+    train_no_init(training_set);
 
 #if 0
     std::cout << "\nCentroids After:\n" << std::endl;
@@ -436,7 +442,7 @@ class kmeans_index {
     }
     std::cout << std::endl;
 #endif
-    }
+  }
 
 #if 0
   // @todo WIP
@@ -478,16 +484,16 @@ class kmeans_index {
   }
 #endif
 
-    auto set_centroids(const ColMajorMatrix<T>& centroids) {
-      std::copy(
-          centroids.data(),
-          centroids.data() + centroids.num_rows() * centroids.num_cols(),
-          centroids_.data());
-    }
+  auto set_centroids(const ColMajorMatrix<T>& centroids) {
+    std::copy(
+        centroids.data(),
+        centroids.data() + centroids.num_rows() * centroids.num_cols(),
+        centroids_.data());
+  }
 
-    auto& get_centroids() {
-      return centroids_;
-    }
-  };
+  auto& get_centroids() {
+    return centroids_;
+  }
+};
 
 #endif  // TILEDB_IVF_INDEX_H
