@@ -52,7 +52,6 @@ namespace detail::flat {
  * @todo Unify out of core and not out of core versions.
  */
 
-
 // @todo Support out of core
 template <class T, class DB, class Q, class ID>
 auto vq_query_heap(

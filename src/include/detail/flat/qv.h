@@ -128,7 +128,7 @@ auto qv_query_heap(
 template <class DB, class Q>
 auto qv_query_heap(const DB& db, const Q& q, int k_nn, unsigned nthreads) {
   return qv_query_heap(
-      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
 }
 
 template <class DB, class Q, class ID>
