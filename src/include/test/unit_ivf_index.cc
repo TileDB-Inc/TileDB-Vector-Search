@@ -38,7 +38,9 @@
 #include "../ivf_index.h"
 #include "../linalg.h"
 
-bool global_debug = false;
+TEST_CASE("ivf_index: test test", "[ivf_index]") {
+  REQUIRE(true);
+}
 
 // kmeans and kmeans indexing still WIP
 

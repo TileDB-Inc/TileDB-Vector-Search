@@ -700,11 +700,11 @@ def ingest(
         logger.debug(
             "Reading additions vectors"
         )
-        updates_array = tiledb.open(updates_uri, mode="r")
-        q = updates_array.query(attrs=('vector',), coords=True)
-        data = q[:]
-        additions_filter = [len(item) > 0 for item in data["vector"]]
-        return np.vstack(data["vector"][additions_filter]), data["external_id"][additions_filter]
+        with tiledb.open(updates_uri, mode="r") as updates_array:
+            q = updates_array.query(attrs=('vector',), coords=True)
+            data = q[:]
+            additions_filter = [len(item) > 0 for item in data["vector"]]
+            return np.vstack(data["vector"][additions_filter]), data["external_id"][additions_filter]
 
     def read_updated_ids(
         updates_uri: str,
@@ -718,10 +718,10 @@ def ingest(
         logger.debug(
             "Reading updated vector ids"
         )
-        updates_array = tiledb.open(updates_uri, mode="r")
-        q = updates_array.query(attrs=('vector',), coords=True)
-        data = q[:]
-        return data["external_id"]
+        with tiledb.open(updates_uri, mode="r") as updates_array:
+            q = updates_array.query(attrs=('vector',), coords=True)
+            data = q[:]
+            return data["external_id"]
 
     def read_input_vectors(
         source_uri: str,
@@ -1745,11 +1745,16 @@ def ingest(
         index_group_uri: str,
         config: Optional[Mapping[str, Any]] = None,
     ):
-        group = tiledb.Group(index_group_uri, config=config)
-        if INPUT_VECTORS_ARRAY_NAME in group:
-            tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
-        if EXTERNAL_IDS_ARRAY_NAME in group:
-            tiledb.Array.delete_array(group[EXTERNAL_IDS_ARRAY_NAME].uri)
+        group = tiledb.Group(index_group_uri)
+        try:
+            if INPUT_VECTORS_ARRAY_NAME in group:
+                tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
+            if EXTERNAL_IDS_ARRAY_NAME in group:
+                tiledb.Array.delete_array(group[EXTERNAL_IDS_ARRAY_NAME].uri)
+        except tiledb.TileDBError as err:
+            message = str(err)
+            if "does not exist" not in message:
+                raise err
         modes = ["fragment_meta", "commits", "array_meta"]
         for mode in modes:
             conf = tiledb.Config(config)

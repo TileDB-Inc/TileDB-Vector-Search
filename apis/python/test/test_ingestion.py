@@ -10,6 +10,7 @@ from tiledb.vector_search.module import array_to_matrix, kmeans_fit, kmeans_pred
 from tiledb.cloud.dag import Mode
 
 MINIMUM_ACCURACY = 0.85
+MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 
 
 def test_flat_ingestion_u8(tmp_path):
@@ -308,11 +309,12 @@ def test_ivf_flat_ingestion_with_updates(tmp_path):
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    update_ids_offset = MAX_UINT64-size
     updated_ids = {}
     for i in range(100):
         index.delete(external_id=i)
-        index.update(vector=data[i].astype(dtype), external_id=i + 1000000)
-        updated_ids[i + 1000000] = i
+        index.update(vector=data[i].astype(dtype), external_id=i + update_ids_offset)
+        updated_ids[i + update_ids_offset] = i
 
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, updated_ids=updated_ids) > MINIMUM_ACCURACY
@@ -347,9 +349,10 @@ def test_ivf_flat_ingestion_with_batch_updates(tmp_path):
 
     update_ids = {}
     updated_ids = {}
+    update_ids_offset = MAX_UINT64 - size
     for i in range(0, 100000, 2):
-        update_ids[i] = i + 1000000
-        updated_ids[i + 1000000] = i
+        update_ids[i] = i + update_ids_offset
+        updated_ids[i + update_ids_offset] = i
     external_ids = np.zeros((len(update_ids) * 2), dtype=np.uint64)
     updates = np.empty((len(update_ids) * 2), dtype='O')
     id = 0

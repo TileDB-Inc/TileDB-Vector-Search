@@ -34,8 +34,6 @@
 #include <vector>
 #include "detail/linalg/matrix.h"
 
-bool global_debug = false;
-
 using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 
 TEST_CASE("matrix: test test", "[matrix]") {
