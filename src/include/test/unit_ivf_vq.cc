@@ -208,9 +208,9 @@ TEST_CASE("ivf vq: finite all or none", "[ivf vq][ci-skip]") {
     auto intersections03 = count_intersections(I03, groundtruth, k_nn);
 
     CHECK((size_t) intersections00 != 0UL);
-    CHECK(std::abs<size_t>(intersections00 - intersections01) < 12);
-    CHECK(std::abs<size_t>(intersections00 - intersections02) < 12);
-    CHECK(std::abs<size_t>(intersections00 - intersections03) < 12);
+    CHECK(std::labs(intersections00 - intersections01) < 12);
+    CHECK(std::labs(intersections00 - intersections02) < 12);
+    CHECK(std::labs(intersections00 - intersections03) < 12);
 
     debug_slices_diff(D00, D01, "D00 vs D01");
     debug_slices_diff(D00, D02, "D00 vs D02");
