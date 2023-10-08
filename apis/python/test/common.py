@@ -186,7 +186,7 @@ def accuracy(result, gt, external_ids_offset=0, updated_ids=None):
         found += len(np.intersect1d(temp_result, gt[i]))
     return found / total
 
-
+# Generate random names for test array uris
 def random_name(name: str) -> str:
     suffix = "".join(random.choices(string.ascii_letters, k=10))
     return f"zzz_unittest_{name}_{suffix}"
