@@ -46,7 +46,11 @@ must be licensed under the repository's [MIT License](../LICENSE).
 # Testing
 
 * Unit tests: `pytest`
-* Demo notebooks: `pytest --nbmake "./test/ipynb"`
+* Demo notebooks:
+  * ```
+    pip install -r test/ipynb/requirements.txt
+    pytest --nbmake test/ipynb
+    ```
 * Credentials:
   * Some tests run on TileDB Cloud using your current environment variable `TILEDB_REST_TOKEN` -- you will need a valid API token for the tests to pass 
   * For continuous integration, the token is configured for the `unittest` user and all tests should pass

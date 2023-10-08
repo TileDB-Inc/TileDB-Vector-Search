@@ -1,0 +1,4 @@
+efficientnet
+ipywidgets
+panel
+tensorflow

@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest", "nbmake"]
+test = ["nbmake", "pytest"]
 
 
 [project.urls]
