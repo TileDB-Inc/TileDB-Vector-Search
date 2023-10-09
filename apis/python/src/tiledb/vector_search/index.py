@@ -29,7 +29,7 @@ class Index:
         self,
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
-        timestamp: int = None,
+        timestamp=None,
     ):
         # If the user passes a tiledb python Config object convert to a dictionary
         if isinstance(config, tiledb.Config):
@@ -40,13 +40,14 @@ class Index:
         self.ctx = Ctx(config)
         self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
         self.storage_version = self.group.meta.get("storage_version", "0.1")
-        self.update_arrays_uri = None
+        updates_array_name = storage_formats[self.storage_version][
+            "UPDATES_ARRAY_NAME"
+        ]
+        self.updates_array_uri = f"{self.group.uri}/{updates_array_name}"
         self.index_version = self.group.meta.get("index_version", "")
-
         self.ingestion_timestamps = list(json.loads(self.group.meta.get("ingestion_timestamps", "[]")))
-        print(f"ingestion_timestamps: {self.ingestion_timestamps}")
-        self.base_array_timestamp = self.ingestion_timestamps[len(self.ingestion_timestamps)-1]
-        print(f"base_array_timestamp: {self.base_array_timestamp}")
+        self.latest_ingestion_timestamp = self.ingestion_timestamps[len(self.ingestion_timestamps)-1]
+        self.base_array_timestamp = self.latest_ingestion_timestamp
         self.query_base_array = True
         self.update_array_timestamp = (self.base_array_timestamp+1, None)
         if timestamp is not None:
@@ -70,13 +71,14 @@ class Index:
                 self.update_array_timestamp = (self.base_array_timestamp+1, timestamp)
             else:
                 raise TypeError("Unexpected argument type for 'timestamp' keyword argument")
-        print(f"base_array_timestamp: {self.base_array_timestamp}")
-        print(f"update_array_timestamp: {self.update_array_timestamp}")
         self.thread_executor = futures.ThreadPoolExecutor()
 
     def query(self, queries: np.ndarray, k, **kwargs):
-        if self.update_arrays_uri is None:
-            return self.query_internal(queries, k, **kwargs)
+        if not tiledb.array_exists(self.updates_array_uri):
+            if self.query_base_array:
+                return self.query_internal(queries, k, **kwargs)
+            else:
+                return np.full((queries.shape[0], k), MAX_FLOAT_32), np.full((queries.shape[0], k), MAX_UINT64)
 
         # Query with updates
         # Perform the queries in parallel
@@ -87,13 +89,17 @@ class Index:
             queries,
             k,
             self.dtype,
-            self.update_arrays_uri,
+            self.updates_array_uri,
             int(os.cpu_count() / 2),
             self.update_array_timestamp,
         )
-        internal_results_d, internal_results_i = self.query_internal(
-            queries, retrieval_k, **kwargs
-        )
+        if self.query_base_array:
+            internal_results_d, internal_results_i = self.query_internal(
+                queries, retrieval_k, **kwargs
+            )
+        else:
+            internal_results_d = np.full((queries.shape[0], k), MAX_FLOAT_32)
+            internal_results_i = np.full((queries.shape[0], k), MAX_UINT64)
         addition_results_d, addition_results_i, updated_ids = future.result()
 
         # Filter updated vectors
@@ -142,11 +148,11 @@ class Index:
 
     @staticmethod
     def query_additions(
-        queries: np.ndarray, k, dtype, update_arrays_uri, nthreads=8, timestamp=None
+        queries: np.ndarray, k, dtype, updates_array_uri, nthreads=8, timestamp=None
     ):
         assert queries.dtype == np.float32
         additions_vectors, additions_external_ids, updated_ids = Index.read_additions(
-            update_arrays_uri, timestamp
+            updates_array_uri, timestamp
         )
         if additions_vectors is None:
             return None, None, updated_ids
@@ -162,10 +168,10 @@ class Index:
         return np.transpose(np.array(d)), np.transpose(np.array(i)), updated_ids
 
     @staticmethod
-    def read_additions(update_arrays_uri, timestamp=None) -> (np.ndarray, np.array):
-        if update_arrays_uri is None:
+    def read_additions(updates_array_uri, timestamp=None) -> (np.ndarray, np.array):
+        if updates_array_uri is None:
             return None, None, np.array([], np.uint64)
-        updates_array = tiledb.open(update_arrays_uri, mode="r", timestamp=timestamp)
+        updates_array = tiledb.open(updates_array_uri, mode="r", timestamp=timestamp)
         q = updates_array.query(attrs=("vector",), coords=True)
         data = q[:]
         updates_array.close()
@@ -215,22 +221,22 @@ class Index:
         self.consolidate_update_fragments()
 
     def consolidate_update_fragments(self):
-        fragments_info = tiledb.array_fragments(self.update_arrays_uri)
+        fragments_info = tiledb.array_fragments(self.updates_array_uri)
         if len(fragments_info) > 10:
-            tiledb.consolidate(self.update_arrays_uri)
-            tiledb.vacuum(self.update_arrays_uri)
+            tiledb.consolidate(self.updates_array_uri)
+            tiledb.vacuum(self.updates_array_uri)
 
     def get_updates_uri(self):
-        return self.update_arrays_uri
+        return self.updates_array_uri
 
     def open_updates_array(self, timestamp: int = None):
-        if self.update_arrays_uri is None:
+        if timestamp is not None and timestamp <= self.latest_ingestion_timestamp:
+            raise ValueError(f"Updates at a timestamp before the latest_ingestion_timestamp are not supported. "
+                             f"timestamp: {timestamp}, latest_ingestion_timestamp: {self.latest_ingestion_timestamp}")
+        if not tiledb.array_exists(self.updates_array_uri):
             updates_array_name = storage_formats[self.storage_version][
                 "UPDATES_ARRAY_NAME"
             ]
-            updates_array_uri = f"{self.group.uri}/{updates_array_name}"
-            if tiledb.array_exists(updates_array_uri):
-                raise RuntimeError(f"Array {updates_array_uri} already exists.")
             external_id_dim = tiledb.Dim(
                 name="external_id",
                 domain=(0, MAX_UINT64 - 1),
@@ -244,27 +250,32 @@ class Index:
                 attrs=[vector_attr],
                 allows_duplicates=False,
             )
-            tiledb.Array.create(updates_array_uri, updates_schema)
+            tiledb.Array.create(self.updates_array_uri, updates_schema)
             self.group.close()
             self.group = tiledb.Group(self.uri, "w", ctx=tiledb.Ctx(self.config))
-            self.group.add(updates_array_uri, name=updates_array_name)
+            self.group.add(self.updates_array_uri, name=updates_array_name)
             self.group.close()
             self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(self.config))
-            self.update_arrays_uri = updates_array_uri
         if timestamp is None:
             timestamp = int(time.time() * 1000)
-        return tiledb.open(self.update_arrays_uri, mode="w", timestamp=timestamp)
+        return tiledb.open(self.updates_array_uri, mode="w", timestamp=timestamp)
 
     def consolidate_updates(self):
         from tiledb.vector_search.ingestion import ingest
 
+        fragments_info = tiledb.array_fragments(self.updates_array_uri, ctx=tiledb.Ctx(self.config))
+        max_timestamp = self.base_array_timestamp
+        for fragment_info in fragments_info:
+            if fragment_info.timestamp_range[1] > max_timestamp:
+                max_timestamp = fragment_info.timestamp_range[1]
         new_index = ingest(
             index_type=self.index_type,
             index_uri=self.uri,
             size=self.size,
             source_uri=self.db_uri,
             external_ids_uri=self.ids_uri,
-            updates_uri=self.update_arrays_uri,
+            updates_uri=self.updates_array_uri,
+            index_timestamp=max_timestamp,
+            config=self.config,
         )
-        new_index.update_arrays_uri = self.update_arrays_uri
         return new_index

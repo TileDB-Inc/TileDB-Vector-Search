@@ -1785,8 +1785,14 @@ def ingest(
         ingestion_timestamps = list(json.loads(group.meta.get("ingestion_timestamps", "[]")))
         if partitions == -1:
             partitions = int(group.meta.get("partitions", "-1"))
+
+        if len(ingestion_timestamps) > 0:
+            previous_ingestion_timestamp = ingestion_timestamps[len(ingestion_timestamps)-1]
+            if index_timestamp <= previous_ingestion_timestamp:
+                raise ValueError(f"New ingestion timestamp: {index_timestamp} can't be smaller that the latest ingestion "
+                                 f"timestamp: {previous_ingestion_timestamp}")
+
         ingestion_timestamps.append(index_timestamp)
-        print(f"ingestion_timestamps: {ingestion_timestamps}")
         group.close()
         group = tiledb.Group(index_group_uri, "w")
 
