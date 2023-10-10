@@ -76,9 +76,14 @@ class index_adj_list : public std::vector<std::list<I>> {
     return Base::operator[](i);
   }
 
-  auto& out_degree(I i) {
+  auto out_degree(I i) const {
     return Base::operator[](i).size();
   }
+
+  auto out_degree(I i) {
+    return Base::operator[](i).size();
+  }
+
 
   auto& num_vertices() {
     return Base::size();

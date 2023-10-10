@@ -209,6 +209,22 @@ static std::string siftsmall_query_uri{m1_root + "siftsmall/siftsmall_query"};
     sparse=False,
  )
  */
+
+
+// /Users/lums/TileDB/TileDB-Vector-Search/external/DiskANN/rust/diskann/tests/data/
+
+static std::string m1_diskann_root = "/Users/lums/TileDB/TileDB-Vector-Search/external/DiskANN/";
+static std::string m1_diskann_rust_tests_root = m1_diskann_root + "rust/diskann/tests/";
+static std::string m1_diskann_rust_test_data_root = m1_diskann_rust_tests_root + "data/";
+
+static std::string diskann_test_data_file = m1_diskann_rust_test_data_root + "siftsmall_learn_256pts.fbin";
+static std::string diskann_disk_index_path_prefix = m1_diskann_rust_test_data_root + "disk_index_siftsmall_learn_256pts_R4_L50_A1.2";
+static std::string diskann_truth_disk_layout = m1_diskann_rust_test_data_root + "truth_disk_index_siftsmall_learn_256pts_R4_L50_A1.2_disk.index";
+static std::string diskann_disk_index = diskann_disk_index_path_prefix + "_disk.index";
+static std::string diskann_mem_index = diskann_disk_index_path_prefix + "_mem.index";
+static std::string diskann_truth_index_data = m1_diskann_rust_test_data_root + "truth_index_siftsmall_learn_256pts_R4_L50_A1.2.data";
+// static std::string diskann_truth_mem_layout = m1_diskann_rust_test_data_root + "truth_disk_index_siftsmall_learn_256pts_R4_L50_A1.2_mem.index";
+
 #endif
 
 #endif  // TILEDB_QUERY_COMMON_H
