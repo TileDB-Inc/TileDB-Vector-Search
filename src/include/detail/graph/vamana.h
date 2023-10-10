@@ -55,6 +55,7 @@ namespace {
 enum class SearchPath { path_and_search, path_only };
 }
 
+#if 0
 struct counting_sum_of_squares_distance {
   size_t num_comps_{0};
   std::string msg_{""};
@@ -73,6 +74,7 @@ struct counting_sum_of_squares_distance {
     _count_data.insert_entry(msg_ + " num_ss_comps", num_comps_);
   }
 };
+#endif
 
 /**
  * @brief
@@ -105,7 +107,6 @@ auto greedy_search(
     size_t k_nn,
     size_t L,
     Distance&& distance = Distance{}) {
-  scoped_timer _("greedy search");
   constexpr bool noisy = false;
 
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
@@ -136,7 +137,6 @@ auto greedy_search(
 
   // while L\V is not empty
   while (!q1.empty()) {
-    _count_data.insert_entry("q1_counts_", 1);
     if (noisy)
       std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
     if (noisy)
@@ -277,7 +277,6 @@ auto robust_prune(
     size_t R,
     Distance&& distance = Distance{}) {
   constexpr bool noisy = false;
-  scoped_timer _("robust prune");
 
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
@@ -517,10 +516,10 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
           medioid_,
           feature_vectors_[p],
           1,
-          L_build_, counting_sum_of_squares_distance("index greedy_search"));
+          L_build_, sum_of_squares_distance{});
       auto foo = visited;
       robust_prune(
-          graph_, feature_vectors_, p, visited, alpha, R_max_degree_, counting_sum_of_squares_distance("index init robust_prune"));
+          graph_, feature_vectors_, p, visited, alpha, R_max_degree_, sum_of_squares_distance{});
      auto& g { graph_};
     }
   }
@@ -559,11 +558,11 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
             medioid_,
             feature_vectors_[p],
             1,
-            L_build_, counting_sum_of_squares_distance("index greedy_search"));
+            L_build_, sum_of_squares_distance{});
         total_visited += visited.size();
 
         robust_prune(
-            graph_, feature_vectors_, p, visited, alpha, R_max_degree_, counting_sum_of_squares_distance("index init robust_prune"));
+            graph_, feature_vectors_, p, visited, alpha, R_max_degree_, sum_of_squares_distance{});
         {
           scoped_timer _{"post search prune"};
           for (auto&& [i, j] : graph_.out_edges(p)) {
@@ -576,7 +575,7 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
 
             if (size(tmp) > R_max_degree_) {
               robust_prune(
-                  graph_, feature_vectors_, j, tmp, alpha, R_max_degree_, counting_sum_of_squares_distance("index post search robust_prune"));
+                  graph_, feature_vectors_, j, tmp, alpha, R_max_degree_, sum_of_squares_distance{});
             } else {
               graph_.add_edge(
                   j,
@@ -590,7 +589,6 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
           // dump_edgelist("edges_" + std::to_string(counter) + ".txt", graph_);
         }
       }
-      _count_data.insert_entry("total_visited_" + std::to_string(counter), total_visited);
       debug_index();
     }
   }
@@ -617,7 +615,6 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
 
     size_t L = opt_L ? *opt_L : L_build_;
     // L = std::min<size_t>(L, L_build_);
-    _count_data.insert_entry("L_query", L);
 
     auto top_k = ColMajorMatrix<size_t>(k, ::num_vectors(query_set));
     auto top_k_scores = ColMajorMatrix<float>(k, ::num_vectors(query_set));
@@ -635,7 +632,7 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
 #else
     for (size_t i = 0; i < num_vectors(query_set); ++i) {
       auto&& [tk_scores, tk, V] = greedy_search(
-          graph_, feature_vectors_, medioid_, query_set[i], k, L, counting_sum_of_squares_distance("greedy_search"));
+          graph_, feature_vectors_, medioid_, query_set[i], k, L, sum_of_squares_distance{});
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
       num_visited_vertices_ += V.size();
