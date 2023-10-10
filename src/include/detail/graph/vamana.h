@@ -37,7 +37,7 @@
 
 #include <functional>
 #include <queue>
-#include <set>
+#include <unordered_set>
 
 #include "scoring.h"
 #include "stats.h"
@@ -116,7 +116,7 @@ auto greedy_search(
 
   assert(L >= k_nn);
 
-  std::set<id_type> visited_vertices;
+  std::unordered_set<id_type> visited_vertices;
   auto visited = [&visited_vertices](auto&& v) {
     return visited_vertices.find(v) != visited_vertices.end();
   };
@@ -370,27 +370,29 @@ auto robust_prune(
 
 template <class Distance = sum_of_squares_distance>
 auto medioid(auto&& P, Distance distance = Distance{}) {
-  auto n = P.num_cols();
+  auto n = num_vectors(P);
   auto centroid = Vector<float>(P[0].size());
-  for (size_t j = 0; j < P.num_cols(); ++j) {
+  for (size_t j = 0; j < n; ++j) {
     auto p = P[j];
     for (size_t i = 0; i < p.size(); ++i) {
       centroid[i] += p[i];
     }
   }
   for (size_t i = 0; i < centroid.size(); ++i) {
-    centroid[i] /= P.num_cols();
+    centroid[i] /= (float) num_vectors(P);
   }
+
   std::vector<float> tmp{begin(centroid), end(centroid)};
-  auto min = std::numeric_limits<float>::max();
+  auto min_score = std::numeric_limits<float>::max();
   auto med = 0UL;
   for (size_t i = 0; i < n; ++i) {
     auto score = distance(P[i], centroid);
-    if (score < min) {
-      min = score;
+    if (score < min_score) {
+      min_score = score;
       med = i;
     }
   }
+
   return med;
 }
 
@@ -477,6 +479,53 @@ class vamana_index {
   }
 
   template <feature_vector_array Array>
+  void newt_rain(const Array& training_set) {
+    /*
+     * Initialize G to an empty graph
+Let s denote the medoid of P
+Let st (f) denote the start node for filter label f for every f∈F
+Let σ be a random permutation of [n]
+Let F_x be the label-set for every x∈P
+foreach i∈[n] do
+  Let S_(F_(x_(σ(i)) ) )={st⁡(f):f∈F_(x_(σ(i)) ) }
+  Let [∅;V_(F_(x_(σ(i)) ) ) ]← FilteredGreedySearch (S_(F_(x_(σ(i)) ) ) ┤,
+      (├ x_(σ(i)),0,L,F_(x_(σ(i)) ) )@V←V∪V_(F_(x_(σ(i)) ) ) )
+  Run FilteredRobustPrune (σ(i),V_(F_(x_(σ(i)) ) ),α,R) to update out-neighbors
+of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
+(j)∪{σ(i)} if |N_"out "  (j)|>R then Run FilteredRobustPrune (j,N_"out "
+(j),α,R) to update out-neighbors of j.
+     */
+
+    feature_vectors_ = std::move(ColMajorMatrix<feature_type>(
+        ::dimension(training_set), ::num_vectors(training_set)));
+    std::copy(
+        training_set.data(),
+        training_set.data() +
+            ::dimension(training_set) * ::num_vectors(training_set),
+        feature_vectors_.data());
+
+    dimension_ = ::dimension(feature_vectors_);
+    num_vectors_ = ::num_vectors(feature_vectors_);
+
+    graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
+    medioid_ = medioid(feature_vectors_);
+    double alpha = 1.0;
+    for (size_t p = 0; p < num_vectors_; ++p) {
+      auto&& [top_k_scores, top_k, visited] = greedy_search(
+          graph_,
+          feature_vectors_,
+          medioid_,
+          feature_vectors_[p],
+          1,
+          L_build_, counting_sum_of_squares_distance("index greedy_search"));
+      auto foo = visited;
+      robust_prune(
+          graph_, feature_vectors_, p, visited, alpha, R_max_degree_, counting_sum_of_squares_distance("index init robust_prune"));
+     auto& g { graph_};
+    }
+  }
+
+  template <feature_vector_array Array>
   void train(const Array& training_set) {
     feature_vectors_ = std::move(ColMajorMatrix<feature_type>(
         ::dimension(training_set), ::num_vectors(training_set)));
@@ -488,17 +537,18 @@ class vamana_index {
 
     dimension_ = ::dimension(feature_vectors_);
     num_vectors_ = ::num_vectors(feature_vectors_);
-    graph_ = ::detail::graph::init_random_adj_list<feature_type, id_type>(
-        feature_vectors_, R_max_degree_);
+    // graph_ = ::detail::graph::init_random_adj_list<feature_type, id_type>(
+    //     feature_vectors_, R_max_degree_);
+    graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
 
     // dump_edgelist("edges_" + std::to_string(0) + ".txt", graph_);
 
     medioid_ = medioid(feature_vectors_);
 
     debug_index();
-
     size_t counter{0};
-    for (float alpha : {alpha_min_, alpha_max_}) {
+//    for (float alpha : {alpha_min_, alpha_max_}) {
+    for (float alpha : {alpha_min_}) {
       scoped_timer _("train " + std::to_string(counter), true);
       size_t total_visited{0};
       for (size_t p = 0; p < num_vectors_; ++p) {
