@@ -9,28 +9,31 @@ from tiledb.vector_search.utils import load_fvecs
 
 MINIMUM_ACCURACY = 0.85
 
+
 class CloudTests(unittest.TestCase):
-    def setUp(self):
-        super().setUp()
+    flat_index_uri = ""
+    ivf_flat_index_uri = ""
+
+    @classmethod
+    def setUpClass(cls):
         tiledb.cloud.login(token=os.getenv("TILEDB_REST_TOKEN"))
-        self.namespace, storage_path, _ = groups._default_ns_path_cred()
+        namespace, storage_path, _ = groups._default_ns_path_cred()
         storage_path = storage_path.replace("//", "/").replace("/", "//", 1)
         rand_name = random_name("vector_search")
-        self.test_path = f"tiledb://{self.namespace}/{storage_path}/{rand_name}"
-        self.config = tiledb.cloud.Config()
-        self.config_dict = self.config.dict()
-        self.flat_index_uri = f"{self.test_path}/test_flat_array"
-        self.ivf_flat_index_uri = f"{self.test_path}/test_ivf_flat_array"
+        test_path = f"tiledb://{namespace}/{storage_path}/{rand_name}"
+        cls.flat_index_uri = f"{test_path}/test_flat_array"
+        cls.ivf_flat_index_uri = f"{test_path}/test_ivf_flat_array"
 
-    def tearDown(self):
-        vs.Index.delete_index(uri=self.flat_index_uri, config=self.config)
-        vs.Index.delete_index(uri=self.ivf_flat_index_uri, config=self.config)
+    @classmethod
+    def tearDownClass(cls):
+        vs.Index.delete_index(uri=cls.flat_index_uri, config=tiledb.cloud.Config())
+        vs.Index.delete_index(uri=cls.ivf_flat_index_uri, config=tiledb.cloud.Config())
 
     def test_cloud_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
         queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
         gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
-        index_uri = self.flat_index_uri
+        index_uri = CloudTests.flat_index_uri
         k = 100
         nqueries = 100
 
@@ -41,7 +44,7 @@ class CloudTests(unittest.TestCase):
             index_type="FLAT",
             index_uri=index_uri,
             source_uri=source_uri,
-            config=self.config_dict,
+            config=tiledb.cloud.Config().dict(),
             mode=Mode.BATCH,
         )
         _, result_i = index.query(query_vectors, k=k)
@@ -51,7 +54,7 @@ class CloudTests(unittest.TestCase):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
         queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
         gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
-        index_uri = self.ivf_flat_index_uri
+        index_uri = CloudTests.ivf_flat_index_uri
         k = 100
         partitions = 100
         nqueries = 100
@@ -66,7 +69,7 @@ class CloudTests(unittest.TestCase):
             source_uri=source_uri,
             partitions=partitions,
             input_vectors_per_work_item=5000,
-            config=self.config_dict,
+            config=tiledb.cloud.Config().dict(),
             mode=Mode.BATCH,
         )
         _, result_i = index.query(query_vectors, k=k, nprobe=nprobe)
