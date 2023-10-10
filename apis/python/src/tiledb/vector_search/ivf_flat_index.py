@@ -236,18 +236,31 @@ class IVFFlatIndex(Index):
             timestamp: int = 0,
         ):
             queries_m = array_to_matrix(np.transpose(query_vectors))
-            r = dist_qv(
-                dtype=dtype,
-                parts_uri=parts_uri,
-                ids_uri=ids_uri,
-                query_vectors=queries_m,
-                active_partitions=active_partitions,
-                active_queries=active_queries,
-                indices=indices,
-                k_nn=k_nn,
-                ctx=Ctx(config),
-                timestamp=timestamp,
-            )
+            if timestamp == 0:
+                r = dist_qv(
+                    dtype=dtype,
+                    parts_uri=parts_uri,
+                    ids_uri=ids_uri,
+                    query_vectors=queries_m,
+                    active_partitions=active_partitions,
+                    active_queries=active_queries,
+                    indices=indices,
+                    k_nn=k_nn,
+                    ctx=Ctx(config),
+                )
+            else:
+                r = dist_qv(
+                    dtype=dtype,
+                    parts_uri=parts_uri,
+                    ids_uri=ids_uri,
+                    query_vectors=queries_m,
+                    active_partitions=active_partitions,
+                    active_queries=active_queries,
+                    indices=indices,
+                    k_nn=k_nn,
+                    ctx=Ctx(config),
+                    timestamp=timestamp,
+                )
             results = []
             for q in range(len(r)):
                 tmp_results = []
