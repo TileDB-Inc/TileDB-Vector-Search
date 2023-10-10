@@ -119,7 +119,8 @@ auto greedy_search(
 
   std::unordered_set<id_type> visited_vertices;
   auto visited = [&visited_vertices](auto&& v) {
-    return visited_vertices.find(v) != visited_vertices.end();
+    // return visited_vertices.find(v) != visited_vertices.end();
+    return visited_vertices.contains(v);
   };
 
   auto result = k_min_heap<score_type, id_type>{L};  // Ell: |Ell| <= L
@@ -194,7 +195,9 @@ auto greedy_search(
       // assert(p != p_star);
       if (!visited(p)) {
         auto score = distance(db[p], query);
-        if (result.template insert<unique_id>(score, p)) {
+
+        // unique id or not does not seem to make a difference
+        if (result.template insert/*<unique_id>*/(score, p)) {
           q2.template insert<unique_id>(score, p);
         }
       }
@@ -301,14 +304,13 @@ auto robust_prune(
   }
 
   std::vector<std::tuple<score_type, id_type>> V;
-  V.reserve(V_map.size());
+  V.reserve(V_map.size() + R);
   std::vector<std::tuple<score_type, id_type>> new_V;
-  new_V.reserve(V_map.size());
+  new_V.reserve(V_map.size() + R);
 
   for (auto&& v : V_map) {
     V.emplace_back(v.second, v.first);
   }
-
 
   if (noisy)
     debug_min_heap(V, "V: ", 1);
