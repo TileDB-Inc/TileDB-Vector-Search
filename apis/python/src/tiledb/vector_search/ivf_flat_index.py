@@ -74,8 +74,10 @@ class IVFFlatIndex(Index):
             )
             self.partitions = schema.domain.dim("cols").domain[1] + 1
 
-        self.size = self._index[self.partitions]
-
+        if self.base_size == -1:
+            self.size = self._index[self.partitions]
+        else:
+            self.size = self.base_size
 
         # TODO pass in a context
         if self.memory_budget == -1:

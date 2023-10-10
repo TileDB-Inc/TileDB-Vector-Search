@@ -341,7 +341,7 @@ def ingest(
                 logger.debug("Creating ids array")
                 ids_array_rows_dim = tiledb.Dim(
                     name="rows",
-                    domain=(0, size - 1),
+                    domain=(0, MAX_INT32),
                     tile=int(size / partitions),
                     dtype=np.dtype(np.int32),
                 )
@@ -373,7 +373,7 @@ def ingest(
                 )
                 parts_array_cols_dim = tiledb.Dim(
                     name="cols",
-                    domain=(0, size - 1),
+                    domain=(0, MAX_INT32),
                     tile=int(size / partitions),
                     dtype=np.dtype(np.int32),
                 )
@@ -1784,6 +1784,7 @@ def ingest(
                 raise err
         group = tiledb.Group(index_group_uri, "r")
         ingestion_timestamps = list(json.loads(group.meta.get("ingestion_timestamps", "[]")))
+        base_sizes = list(json.loads(group.meta.get("base_sizes", "[]")))
         if partitions == -1:
             partitions = int(group.meta.get("partitions", "-1"))
 
@@ -1820,6 +1821,7 @@ def ingest(
             size = in_size
         if size > in_size:
             size = in_size
+        base_sizes.append(size)
         logger.debug("Input dataset size %d", size)
         logger.debug("Input dataset dimensions %d", dimensions)
         logger.debug("Vector dimension type %s", vector_type)
@@ -1840,6 +1842,7 @@ def ingest(
         group.meta["partitions"] = partitions
         group.meta["storage_version"] = STORAGE_VERSION
         group.meta["ingestion_timestamps"] = json.dumps(ingestion_timestamps)
+        group.meta["base_sizes"] = json.dumps(base_sizes)
 
         if external_ids is not None:
             external_ids_uri = write_external_ids(

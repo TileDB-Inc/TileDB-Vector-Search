@@ -31,11 +31,15 @@ class FlatIndex(Index):
         schema = tiledb.ArraySchema.load(
             self.db_uri, ctx=tiledb.Ctx(self.config)
         )
-        self.size = schema.domain.dim(1).domain[1]+1
+        if self.base_size == -1:
+            self.size = schema.domain.dim(1).domain[1] + 1
+        else:
+            self.size = self.base_size
         self._db = load_as_matrix(
             self.db_uri,
             ctx=self.ctx,
             config=config,
+            size=self.size,
             timestamp=self.base_array_timestamp,
         )
         # Check for existence of ids array. Previous versions were not using external_ids in the ingestion assuming
@@ -44,8 +48,9 @@ class FlatIndex(Index):
             self.ids_uri = self.group[
                 storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version
             ].uri
-            self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, 0, self.base_array_timestamp)
+            self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, self.size, self.base_array_timestamp)
         else:
+            self.ids_uri = ""
             self._ids = StdVector_u64(np.arange(self.size).astype(np.uint64))
 
         dtype = self.group.meta.get("dtype", None)

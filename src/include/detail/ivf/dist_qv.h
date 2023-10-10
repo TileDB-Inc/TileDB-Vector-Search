@@ -80,7 +80,7 @@ auto dist_qv_finite_ram_part(
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
-  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1);
+  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   using score_type = float;
   using parts_type =

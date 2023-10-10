@@ -125,8 +125,8 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       const std::string& uri,
       size_t upper_bound,
       uint64_t timestamp = 0)
-      : tdbBlockedMatrix(ctx, uri, upper_bound, 
-          (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1)) {
+      : tdbBlockedMatrix(ctx, uri, upper_bound,
+                         (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)) {
   }
 
   /**
@@ -259,6 +259,18 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   index_type num_loads() const {
     return num_loads_;
+  }
+
+  tdbBlockedMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t row_begin,
+      size_t row_end,
+      size_t col_begin,
+      size_t col_end,
+      uint64_t timestamp = 0)
+      : tdbBlockedMatrix(ctx, uri, row_begin, row_end, col_begin, col_end,
+                         (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)) {
   }
 
   /**

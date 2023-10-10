@@ -370,6 +370,7 @@ def test_ivf_flat_ingestion_with_batch_updates(tmp_path):
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, updated_ids=updated_ids) > 0.99
 
+
 def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
@@ -463,3 +464,42 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 1))
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) == 1.0
+
+
+def test_ivf_flat_ingestion_with_additions_and_timetravel(tmp_path):
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    index_uri = os.path.join(tmp_path, "array")
+    k = 100
+    size = 100
+    partitions = 1
+    dimensions = 128
+    nqueries = 1
+    nprobe = 1
+    data = create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
+    dtype = np.uint8
+
+    query_vectors = get_queries(dataset_dir, dtype=dtype)
+    gt_i, gt_d = get_groundtruth(dataset_dir, k)
+    index = ingest(
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
+        source_uri=os.path.join(dataset_dir, "data.u8bin"),
+        partitions=partitions,
+        index_timestamp=1,
+    )
+    _, result = index.query(query_vectors, k=k)
+    assert accuracy(result, gt_i) == 1.0
+
+    update_ids_offset = MAX_UINT64-size
+    updated_ids = {}
+    for i in range(100):
+        index.update(vector=data[i].astype(dtype), external_id=i + update_ids_offset, timestamp=i+2)
+        updated_ids[i] = i + update_ids_offset
+
+    index = IVFFlatIndex(uri=index_uri)
+    _, result = index.query(query_vectors, k=k)
+    assert 0.45 < accuracy(result, gt_i) < 0.55
+
+    index = index.consolidate_updates()
+    _, result = index.query(query_vectors, k=k)
+    assert 0.45 < accuracy(result, gt_i) < 0.55

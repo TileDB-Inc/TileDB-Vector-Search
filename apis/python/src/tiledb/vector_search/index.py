@@ -46,7 +46,15 @@ class Index:
         self.updates_array_uri = f"{self.group.uri}/{updates_array_name}"
         self.index_version = self.group.meta.get("index_version", "")
         self.ingestion_timestamps = list(json.loads(self.group.meta.get("ingestion_timestamps", "[]")))
-        self.latest_ingestion_timestamp = self.ingestion_timestamps[len(self.ingestion_timestamps)-1]
+        if len(self.ingestion_timestamps) > 0:
+            self.latest_ingestion_timestamp = self.ingestion_timestamps[len(self.ingestion_timestamps)-1]
+        else:
+            self.latest_ingestion_timestamp = MAX_UINT64
+        self.base_sizes = list(json.loads(self.group.meta.get("base_sizes", "[]")))
+        if len(self.base_sizes) > 0:
+            self.base_size = self.base_sizes[len(self.ingestion_timestamps)-1]
+        else:
+            self.base_size = -1
         self.base_array_timestamp = self.latest_ingestion_timestamp
         self.query_base_array = True
         self.update_array_timestamp = (self.base_array_timestamp+1, None)
@@ -59,15 +67,20 @@ class Index:
                         self.query_base_array = False
                         self.update_array_timestamp = timestamp
                     else:
+                        self.base_size = self.base_sizes[0]
                         self.base_array_timestamp = self.ingestion_timestamps[0]
                         self.update_array_timestamp = (self.base_array_timestamp+1, timestamp[1])
                 else:
+                    self.base_size = self.base_sizes[0]
                     self.base_array_timestamp = self.ingestion_timestamps[0]
                     self.update_array_timestamp = (self.base_array_timestamp+1, timestamp[1])
             elif isinstance(timestamp, int):
+                i = 0
                 for ingestion_timestamp in self.ingestion_timestamps:
                     if ingestion_timestamp <= timestamp:
                         self.base_array_timestamp = ingestion_timestamp
+                        self.base_size = self.base_sizes[i]
+                    i += 1
                 self.update_array_timestamp = (self.base_array_timestamp+1, timestamp)
             else:
                 raise TypeError("Unexpected argument type for 'timestamp' keyword argument")
@@ -274,6 +287,7 @@ class Index:
             size=self.size,
             source_uri=self.db_uri,
             external_ids_uri=self.ids_uri,
+            external_ids_type="TILEDB_ARRAY",
             updates_uri=self.updates_array_uri,
             index_timestamp=max_timestamp,
             config=self.config,

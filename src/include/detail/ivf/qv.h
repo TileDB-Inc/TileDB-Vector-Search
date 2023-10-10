@@ -422,7 +422,7 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
     size_t nthreads,
     uint64_t timestamp = 0) {
   scoped_timer _{tdb_func__};
-  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1);
+  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   // Read the shuffled database and ids
   // @todo To this more systematically
@@ -647,7 +647,7 @@ auto qv_query_heap_finite_ram(
     size_t nthreads,
     uint64_t timestamp = 0) {
   tiledb::Context ctx;
-  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1);
+  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri, 0, temporal_policy);
   centroids.load();
@@ -722,7 +722,7 @@ auto qv_query_heap_finite_ram(
     size_t nthreads,
     uint64_t timestamp) {
   scoped_timer _{tdb_func__};
-  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1);
+  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   using score_type = float;
   using indices_type =
@@ -1194,7 +1194,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
     size_t nthreads,
     uint64_t timestamp = 0) {
   scoped_timer _{tdb_func__ + " " + part_uri};
-  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1);
+  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   // Check that the size of the indices vector is correct
   assert(size(indices) == centroids.num_cols() + 1);

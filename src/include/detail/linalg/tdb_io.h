@@ -195,8 +195,10 @@ std::vector<T> read_vector(
   auto dim_num_{domain_.ndim()};
   auto array_rows_{domain_.dimension(0)};
 
-  if (start_pos == 0 && end_pos == 0) {
+  if (start_pos == 0) {
     start_pos = array_rows_.template domain<domain_type>().first;
+  }
+  if (end_pos == 0) {
     end_pos = array_rows_.template domain<domain_type>().second + 1;
   }
 
@@ -248,7 +250,7 @@ std::vector<T> read_vector(
       uri,
       start_pos,
       end_pos,
-      (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1));
+      (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp));
 }
 
 template <class T>

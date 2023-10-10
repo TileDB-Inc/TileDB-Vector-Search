@@ -69,7 +69,7 @@ int ivf_index(
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
-  auto read_temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1);
+  auto read_temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
   auto write_temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
   auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri, 0, read_temporal_policy);
   centroids.load();
@@ -191,14 +191,14 @@ int ivf_index(
     size_t end_pos = 0,
     size_t nthreads = 0,
     uint64_t timestamp = 0) {
-  auto db = tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos);
+  auto db = tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos, timestamp);
   db.load();
   std::vector<ids_type> external_ids;
   if (external_ids_uri.empty()) {
     external_ids = std::vector<ids_type>(db.num_cols());
     std::iota(begin(external_ids), end(external_ids), start_pos);
   } else {
-    auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1);
+    auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
     external_ids =
         read_vector<ids_type>(ctx, external_ids_uri, start_pos, end_pos, temporal_policy);
   }
@@ -231,7 +231,7 @@ int ivf_index(
     size_t end_pos = 0,
     size_t nthreads = 0,
     uint64_t timestamp = 0) {
-  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1);
+  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
   auto db = tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos, temporal_policy);
   db.load();
   return ivf_index<T, ids_type, centroids_type>(
@@ -268,7 +268,7 @@ int ivf_index(
     external_ids = std::vector<ids_type>(db.num_cols());
     std::iota(begin(external_ids), end(external_ids), start_pos);
   } else {
-    auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp+1);
+    auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
     external_ids = read_vector<ids_type>(ctx, external_ids_uri, start_pos, end_pos, temporal_policy);
   }
   return ivf_index<T, ids_type, centroids_type>(

@@ -310,7 +310,7 @@ static void declareColMajorMatrixSubclass(py::module& mod,
   // TODO auto-namify
   PyTMatrix cls(mod, (name + suffix).c_str(), py::buffer_protocol());
 
-  cls.def(py::init<const Ctx&, std::string, size_t, uint64_t>(),  py::keep_alive<1,2>());
+  cls.def(py::init<const Ctx&, std::string, size_t, size_t, size_t, size_t, uint64_t>(),  py::keep_alive<1,2>());
 
   if constexpr (std::is_same<P, tdbColMajorMatrix<T>>::value) {
     cls.def("load", &TMatrix::load);
