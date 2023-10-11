@@ -17,13 +17,13 @@ echo "VECTOR_SEARCH is ${VECTOR_SEARCH}"
 
 export DISKANNROOT=${VECTOR_SEARCH}/src/
 
-export SIFT=siftsmall
+export SIFT=sift
 export SIFTPATH=${VECTOR_SEARCH}/external/data/gp3/${SIFT}
 export DATAPATH=${SIFTPATH}
 
 export DISKANNPATH=${DISKANNROOT}/cmake-build-relwithdebinfo/libtiledbvectorsearch/src/vamana
 
-export SIFT_LEARN=${SIFTPATH}/${SIFT}_learn
+export SIFT_LEARN=${SIFTPATH}/${SIFT}_base
 export SIFT_QUERY=${SIFTPATH}/${SIFT}_query
 export SIFT_GROUNDTRUTH=${SIFTPATH}/${SIFT}_groundtruth
 
@@ -33,8 +33,8 @@ export SIFT_GROUNDTRUTH=${SIFTPATH}/${SIFT}_groundtruth
 # Ls=(50 100)
 # Ts=(1 `nproc`)
 
-Rs=(16)
-Ls=(16)
+Rs=(64)
+Ls=(100)
 Ts=(1)
 
 for R in ${Rs[@]}; do

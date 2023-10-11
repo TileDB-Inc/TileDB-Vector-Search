@@ -17,13 +17,14 @@ echo "VECTOR_SEARCH is ${VECTOR_SEARCH}"
 
 export DISKANNROOT=${VECTOR_SEARCH}/external/DiskANN
 
-export SIFT=siftsmall
+# export SIFT=siftsmall
+export SIFT=sift
 export SIFTPATH=${VECTOR_SEARCH}/external/data/bins/${SIFT}
 export DATAPATH=${SIFTPATH}
 
 export DISKANNPATH=${DISKANNROOT}/build/apps
 
-export SIFT_LEARN=${SIFTPATH}/${SIFT}_learn.fbin
+export SIFT_LEARN=${SIFTPATH}/${SIFT}_base.fbin
 export SIFT_QUERY=${SIFTPATH}/${SIFT}_query.fbin
 export SIFT_GROUNDTRUTH=${SIFTPATH}/${SIFT}_groundtruth.ibin
 
@@ -34,8 +35,8 @@ echo ${DISKANNPATH}/utils/compute_groundtruth  --data_type float --dist_fn l2 --
 # Ls=(50 100)
 # Ts=(1 `nproc`)
 
-Rs=(16)
-Ls=(16)
+Rs=(64)
+Ls=(100)
 Ts=(1)
 
 

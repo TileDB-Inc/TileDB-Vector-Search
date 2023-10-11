@@ -31,6 +31,7 @@
  *
  */
 
+#include <algorithm>
 #include <numeric>
 #include <random>
 #include "utils/logging.h"
