@@ -40,8 +40,12 @@ TEST_CASE("nn-graph: test test", "[nn-graph]") {
 }
 
 TEST_CASE("nn-graph: init_random_graph", "[nn-graph]") {
-  auto k_nn = 5;
-  auto g = ::detail::graph::init_random_nn_graph<float>(sift_base, k_nn);
+  using feature_type = float;
+  using id_type = uint32_t;
+
+  auto k_nn = 5UL;
+  auto g = ::detail::graph::init_random_nn_graph<feature_type, id_type>(
+      sift_base, k_nn);
 
   CHECK(g.num_vertices() == sift_base.num_cols());
   size_t total_degree = 0;
@@ -54,8 +58,12 @@ TEST_CASE("nn-graph: init_random_graph", "[nn-graph]") {
 }
 
 TEST_CASE("nn-graph: reverse random graph", "[nn-graph]") {
-  auto k_nn = 5;
-  auto g = ::detail::graph::init_random_nn_graph<float>(sift_base, k_nn);
+  using feature_type = float;
+  using id_type = uint32_t;
+
+  auto k_nn = 5UL;
+  auto g = ::detail::graph::init_random_nn_graph<feature_type, id_type>(
+      sift_base, k_nn);
   CHECK(g.num_vertices() == sift_base.num_cols());
   size_t total_out_degree = 0;
   for (size_t i = 0; i < g.num_vertices(); ++i) {

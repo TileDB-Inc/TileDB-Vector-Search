@@ -29,9 +29,10 @@
  *
  */
 
+#include <tiledb/tiledb>
+
 #include <tiledb/group_experimental.h>
 #include <catch2/catch_all.hpp>
-#include <tiledb/tiledb>
 #include "concepts.h"
 #include "cpos.h"
 #include "detail/linalg/tdb_io.h"

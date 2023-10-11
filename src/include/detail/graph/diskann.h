@@ -88,7 +88,7 @@ auto read_diskann_mem_index(const std::string& index) {
       g.add_edge(node, id);
     }
     // @todo ??? Is this right ???
-    binary_file.seekg(max_degree - num_neighbors, std::ios_base::seekdir::cur);
+    binary_file.seekg(max_degree - num_neighbors, std::ios_base::cur);
   }
   binary_file.close();
 
@@ -127,7 +127,7 @@ auto read_diskann_mem_index_with_scores(
       g.add_edge(node, id, sum_of_squares(x[node], x[id]));
     }
     // @todo ??? Is this right ???
-    binary_file.seekg(max_degree - num_neighbors, std::ios_base::seekdir::cur);
+    binary_file.seekg(max_degree - num_neighbors, std::ios_base::cur);
   }
   binary_file.close();
 
