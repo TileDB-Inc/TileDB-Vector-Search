@@ -221,6 +221,121 @@ auto greedy_search(
       std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
 }
 
+template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
+auto greedy_path(
+    auto&& graph,
+    auto&& db,
+    typename std::decay_t<decltype(graph)>::id_type source,
+    auto&& query,
+    size_t L,
+    Distance&& distance = Distance{}) {
+  constexpr bool noisy = false;
+
+  // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
+  using id_type = typename std::decay_t<decltype(graph)>::id_type;
+  using score_type = typename std::decay_t<decltype(graph)>::score_type;
+
+  static_assert(std::integral<id_type>);
+
+
+  std::unordered_set<id_type> visited_vertices;
+  auto visited = [&visited_vertices](auto&& v) {
+    // return visited_vertices.find(v) != visited_vertices.end();
+    return visited_vertices.contains(v);
+  };
+
+  auto result = k_min_heap<score_type, id_type>{L};  // Ell: |Ell| <= L
+  // auto result = std::set<id_type>{};
+  auto q1 = k_min_heap<score_type, id_type>{L};      // Ell \ V
+  auto q2 = k_min_heap<score_type, id_type>{L};      // Ell \ V
+
+  // L <- {s} and V <- empty`
+  result.insert(distance(db[source], query), source);
+
+  // q1 = L \ V = {s}
+  q1.insert(distance(db[source], query), source);
+
+  size_t counter{0};
+
+  // while L\V is not empty
+  while (!q1.empty()) {
+    if (noisy)
+      std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
+    if (noisy)
+      debug_min_heap(q1, "q1: ", 1);
+
+    // p* <- argmin_{p \in L\V} distance(p, q)
+
+    // Change to min_heap
+    std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
+      return std::get<0>(a) > std::get<0>(b);
+    });
+
+    // Get and pop the min element
+    std::pop_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
+      return std::get<0>(a) > std::get<0>(b);
+    });
+
+    auto [s_star, p_star] = q1.back();
+    q1.pop_back();
+
+    if (noisy)
+      std::cout << "p*: " << p_star << std::endl;
+
+    // Change back to max heap
+    std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
+      return std::get<0>(a) < std::get<0>(b);
+    });
+
+    if (noisy)
+      std::cout << "p*: " << p_star << std::endl;
+
+    if (visited(p_star)) {
+      continue;
+    }
+
+    // V <- V \cup {p*} ; L\V <- L\V \ p*
+    visited_vertices.insert(p_star);
+
+    if (noisy)
+      debug_vector(visited_vertices, "visited_vertices: ");
+    if (noisy)
+      debug_min_heap(graph.out_edges(p_star), "Nout(p*): ", 1);
+
+    // @todo -- needed?
+    // q1.clear(); // Or remove newly visited
+
+    // q2 < L \ V
+    for (auto&& [s, p] : q1) {
+      if (!visited(p)) {
+        q2.insert(s, p);
+      }
+    }
+
+    // L <- L \cup Nout(p*)  ; L \ V <- L \ V \cup Nout(p*)
+    for (auto&& [_, p] : graph.out_edges(p_star)) {
+      // assert(p != p_star);
+      if (!visited(p)) {
+        auto score = distance(db[p], query);
+
+        // unique id or not does not seem to make a difference
+        if (result.template insert/*<unique_id>*/(score, p)) {
+          q2.template insert<unique_id>(score, p);
+        }
+      }
+    }
+
+    if (noisy)
+      debug_min_heap(result, "result, aka Ell: ", 1);
+    if (noisy)
+      debug_min_heap(result, "result, aka Ell: ", 0);
+    q1.swap(q2);
+    q2.clear();
+  }
+
+  return visited_vertices;
+}
+
 #if 0
 template <class I = size_t, class Distance = sum_of_squares_distance>
 auto greedy_path(
@@ -549,7 +664,7 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
     debug_index();
     size_t counter{0};
 //    for (float alpha : {alpha_min_, alpha_max_}) {
-    for (float alpha : {alpha_min_}) {
+    for (float alpha : {alpha_max_}) {
       scoped_timer _("train " + std::to_string(counter), true);
       size_t total_visited{0};
       for (size_t p = 0; p < num_vectors_; ++p) {
