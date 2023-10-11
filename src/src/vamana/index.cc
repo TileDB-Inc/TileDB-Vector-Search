@@ -1,31 +1,31 @@
 /**
-* @file   vamana/index.cc
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
+ * @file   vamana/index.cc
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
  *
  * Driver for building vamana index.
  */
@@ -35,9 +35,9 @@
 #include <cmath>
 #include "detail/graph/nn-graph.h"
 #include "detail/graph/vamana.h"
-#include "detail/linalg/vector.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_matrix.h"
+#include "detail/linalg/vector.h"
 
 bool verbose = false;
 bool debug = false;
@@ -113,23 +113,16 @@ int main(int argc, char* argv[]) {
   auto X = tdbColMajorMatrix<feature_type>(ctx, db_uri);
   X.load();
 
-  auto idx = detail::graph::vamana_index<score_type, id_type>(num_vectors(X), Lbuild, max_degree, backtrack);
+  auto idx = detail::graph::vamana_index<score_type, id_type>(
+      num_vectors(X), Lbuild, max_degree, backtrack);
   idx.train(X);
   idx.write_index(index_uri, overwrite);
 
   if (args["--log"]) {
     idx.log_index();
-    dump_logs(
-        args["--log"].asString(),
-        "vamana",
-        {},
-        {},
-        {},
-        {},
-        {});
+    dump_logs(args["--log"].asString(), "vamana", {}, {}, {}, {}, {});
   }
   if (enable_stats) {
     std::cout << json{core_stats}.dump() << std::endl;
   }
 }
-

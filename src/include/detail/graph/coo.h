@@ -1,49 +1,50 @@
 /**
-* @file   coo.h
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
-*
+ * @file   coo.h
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
  */
 
 #ifndef TILEDB_COO_H
 #define TILEDB_COO_H
 
-#include "csr.h"
-#include "detail/linalg/vector.h"
 #include <initializer_list>
 #include <random>
 #include <tiledb/tiledb>
+#include "csr.h"
+#include "detail/linalg/vector.h"
 
 template <class ValueType, class IndexType>
 class csr_matrix;
 
 /**
- * Simple COO matrix class.  This is a simple wrapper around three vectors that respectively store row, column, and
- * value data.  The vectors are assumed to be the same size, and the i-th element of each vector is assumed to
+ * Simple COO matrix class.  This is a simple wrapper around three vectors that
+ * respectively store row, column, and value data.  The vectors are assumed to
+ * be the same size, and the i-th element of each vector is assumed to
  * correspond to the (row(i), col(i)) element of the matrix.
  * @tparam ValueType
  * @tparam IndexType
@@ -58,7 +59,7 @@ class coo_matrix {
  private:
   friend class csr_matrix<ValueType, IndexType>;
 
-  size_t             nnz_ { 0 };
+  size_t nnz_{0};
   Vector<index_type> row_idx_;
   Vector<index_type> col_idx_;
   Vector<value_type> values_;
@@ -66,7 +67,11 @@ class coo_matrix {
  public:
   coo_matrix() = default;
 
-  coo_matrix(size_t nnz) : nnz_(nnz), row_idx_(nnz), col_idx_(nnz), values_(nnz) {
+  coo_matrix(size_t nnz)
+      : nnz_(nnz)
+      , row_idx_(nnz)
+      , col_idx_(nnz)
+      , values_(nnz) {
   }
 
   /**
@@ -75,8 +80,14 @@ class coo_matrix {
    * @param col_idx
    * @param values
    */
-  coo_matrix(Vector<index_type>&& row_idx, Vector<index_type>&& col_idx, Vector<value_type>&& values)
-      : nnz_(row_idx.size()), row_idx_(std::move(row_idx)), col_idx_(std::move(col_idx)), values_(std::move(values)) {
+  coo_matrix(
+      Vector<index_type>&& row_idx,
+      Vector<index_type>&& col_idx,
+      Vector<value_type>&& values)
+      : nnz_(row_idx.size())
+      , row_idx_(std::move(row_idx))
+      , col_idx_(std::move(col_idx))
+      , values_(std::move(values)) {
     assert(row_idx.size() == col_idx.size() && col_idx.size() == values.size());
   }
 
@@ -86,9 +97,10 @@ class coo_matrix {
    * @param unlabel
    */
   coo_matrix(csr_matrix<value_type, index_type>&& csr, bool unlabel = false)
-      : nnz_(csr.nnz_), col_idx_(std::move(csr.col_idx_)), values_(std::move(csr.values_)), row_idx_(nnz_) {
-
-
+      : nnz_(csr.nnz_)
+      , col_idx_(std::move(csr.col_idx_))
+      , values_(std::move(csr.values_))
+      , row_idx_(nnz_) {
     if (unlabel) {
       // @todo Undo relabeling (WIP)
     }
@@ -106,21 +118,29 @@ class coo_matrix {
    * @param rhs
    */
   coo_matrix(coo_matrix&& rhs) noexcept
-      : nnz_(rhs.nnz_), row_idx_(std::move(rhs.row_idx_)), col_idx_(std::move(rhs.col_idx_)), values_(std::move(rhs.values_)) {
+      : nnz_(rhs.nnz_)
+      , row_idx_(std::move(rhs.row_idx_))
+      , col_idx_(std::move(rhs.col_idx_))
+      , values_(std::move(rhs.values_)) {
   }
 
   /**
    * @brief Construct a new coo matrix object from an initializer list
    * @param lst
    */
-  coo_matrix(const std::initializer_list<std::tuple<IndexType, IndexType, ValueType>>& lst)
-      : nnz_(lst.size()), row_idx_(lst.size()), col_idx_(lst.size()), values_(lst.size()) {
-
+  coo_matrix(
+      const std::initializer_list<std::tuple<IndexType, IndexType, ValueType>>&
+          lst)
+      : nnz_(lst.size())
+      , row_idx_(lst.size())
+      , col_idx_(lst.size())
+      , values_(lst.size()) {
     auto row_ptr = row_idx_.data();
     auto col_ptr = col_idx_.data();
     auto val_ptr = values_.data();
 
-    // Initializer lists are presumed to be small, so no point parallelizing this
+    // Initializer lists are presumed to be small, so no point parallelizing
+    // this
     for (auto& [row, col, val] : lst) {
       *row_ptr++ = row;
       *col_ptr++ = col;
@@ -132,14 +152,18 @@ class coo_matrix {
    * @brief Construct a new coo matrix object from a container of tuples
    * @param lst
    */
-  coo_matrix(const std::vector<std::tuple<IndexType, IndexType, ValueType>>& lst)
-      : nnz_(lst.size()), row_idx_(lst.size()), col_idx_(lst.size()), values_(lst.size()) {
-
+  coo_matrix(
+      const std::vector<std::tuple<IndexType, IndexType, ValueType>>& lst)
+      : nnz_(lst.size())
+      , row_idx_(lst.size())
+      , col_idx_(lst.size())
+      , values_(lst.size()) {
     auto row_ptr = row_idx_.data();
     auto col_ptr = col_idx_.data();
     auto val_ptr = values_.data();
 
-    // Initializer lists are presumed to be small, so no point parallelizing this
+    // Initializer lists are presumed to be small, so no point parallelizing
+    // this
     for (auto& [row, col, val] : lst) {
       *row_ptr++ = row;
       *col_ptr++ = col;
@@ -153,10 +177,10 @@ class coo_matrix {
    * @return
    */
   auto& operator=(coo_matrix&& rhs) noexcept {
-    nnz_     = rhs.nnz_;
+    nnz_ = rhs.nnz_;
     row_idx_ = std::move(rhs.row_idx_);
     col_idx_ = std::move(rhs.col_idx_);
-    values_  = std::move(rhs.values_);
+    values_ = std::move(rhs.values_);
 
     return *this;
   }
@@ -167,11 +191,11 @@ class coo_matrix {
    * @return A tuple of elements comprising the i-th row of each vector
    */
   auto operator()(size_t i) {
-    return std::tuple { row_idx_(i), col_idx_(i), values_(i) };
+    return std::tuple{row_idx_(i), col_idx_(i), values_(i)};
   }
 
   auto operator()(size_t i) const {
-    return std::tuple { row_idx_(i), col_idx_(i), values_(i) };
+    return std::tuple{row_idx_(i), col_idx_(i), values_(i)};
   }
 
   /**
@@ -179,26 +203,29 @@ class coo_matrix {
    * @return A tuple of elements comprising pointers of the underlying
    */
   auto data() const noexcept {
-    return std::tuple { row_idx_.data(), col_idx_.data(), values_.data() };
+    return std::tuple{row_idx_.data(), col_idx_.data(), values_.data()};
   }
 
   /**
-   * @brief Get the number of elements in each vector (the sizes of each vector are the same)
+   * @brief Get the number of elements in each vector (the sizes of each vector
+   * are the same)
    * @return
    */
   auto nnz() const noexcept {
-    //  assert(row_idx_.size() == col_idx_.size() && col_idx_.size() == values_.size());
+    //  assert(row_idx_.size() == col_idx_.size() && col_idx_.size() ==
+    //  values_.size());
     //    return row_idx_.size();
     return nnz_;
   }
 
   /**
-   * @brief Shuffle the elements in the row vector.  Used only for debugging and testing.
+   * @brief Shuffle the elements in the row vector.  Used only for debugging and
+   * testing.
    * @return
    */
   auto shuffle_rows() {
     std::random_device rd;
-    std::mt19937       gen(rd());
+    std::mt19937 gen(rd());
 
     // Shuffle the elements in the vector
     std::shuffle(begin(row_idx_), end(row_idx_), gen);
@@ -206,14 +233,14 @@ class coo_matrix {
 };
 
 /**
- * @brief Simple COO class that reads its data from a sparse TileDB array.  The row and column
- * vectors are read from the array dimensions, and the values are read from the array attribute.
+ * @brief Simple COO class that reads its data from a sparse TileDB array.  The
+ * row and column vectors are read from the array dimensions, and the values are
+ * read from the array attribute.
  * @tparam ValueType
  * @tparam IndexType
  */
 template <class ValueType, class IndexType = size_t>
 class tdb_coo_matrix : public coo_matrix<ValueType, IndexType> {
-
   using Base = coo_matrix<ValueType, IndexType>;
   using Base::Base;
 

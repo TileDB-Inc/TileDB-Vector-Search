@@ -80,7 +80,6 @@ auto dist_qv_finite_ram_part(
     nthreads = std::thread::hardware_concurrency();
   }
 
-
   using score_type = float;
   using parts_type =
       typename std::remove_reference_t<decltype(active_partitions)>::value_type;
@@ -113,8 +112,10 @@ auto dist_qv_finite_ram_part(
   }
   assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
 
-  auto min_scores = std::vector<fixed_min_pair_heap<score_type, shuffled_ids_type>>(
-      num_queries, fixed_min_pair_heap<score_type, shuffled_ids_type>(k_nn));
+  auto min_scores =
+      std::vector<fixed_min_pair_heap<score_type, shuffled_ids_type>>(
+          num_queries,
+          fixed_min_pair_heap<score_type, shuffled_ids_type>(k_nn));
 
   auto current_part_size = shuffled_db.num_col_parts();
 
@@ -296,16 +297,17 @@ auto dist_qv_finite_ram(
       /*
        * Each compute node returns a min_heap of its own min_scores
        */
-      auto dist_min_scores = dist_qv_finite_ram_part<feature_type, shuffled_ids_type>(
-          ctx,
-          part_uri,
-          dist_partitions,
-          query,
-          dist_active_queries,
-          indices,
-          id_uri,
-          k_nn,
-          nthreads);
+      auto dist_min_scores =
+          dist_qv_finite_ram_part<feature_type, shuffled_ids_type>(
+              ctx,
+              part_uri,
+              dist_partitions,
+              query,
+              dist_active_queries,
+              indices,
+              id_uri,
+              k_nn,
+              nthreads);
 
       /*
        * Merge the min_scores from each compute node.

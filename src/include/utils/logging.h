@@ -590,8 +590,6 @@ inline count_data& get_count_data_instance() {
 
 static count_data& _count_data{get_count_data_instance()};
 
-
-
 #if 0
 class stats_data {
   public:

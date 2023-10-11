@@ -1,43 +1,43 @@
 /**
-* @file   vamana/query.cc
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
+ * @file   vamana/query.cc
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
  *
  * Driver for making a query against a vamana index.
-*/
+ */
 
 #include "docopt.h"
 
 #include <cmath>
 #include "detail/graph/nn-graph.h"
 #include "detail/graph/vamana.h"
-#include "detail/linalg/vector.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_matrix.h"
+#include "detail/linalg/vector.h"
 
 bool verbose = false;
 bool debug = false;
@@ -105,7 +105,9 @@ int main(int argc, char* argv[]) {
 
   auto query_time = log_timer("query time", true);
 
-  auto Lbuild = args["--Lbuild"]? std::optional<size_t>(args["--Lbuild"].asLong()) : std::nullopt;
+  auto Lbuild = args["--Lbuild"] ?
+                    std::optional<size_t>(args["--Lbuild"].asLong()) :
+                    std::nullopt;
   auto&& [top_k_scores, top_k] = idx.query(queries, k_nn, Lbuild);
 
   query_time.stop();
@@ -134,9 +136,9 @@ int main(int argc, char* argv[]) {
     size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
 
     float recall = ((float)total_intersected) / ((float)total_groundtruth);
-    //std::cout << "# total intersected = " << total_intersected << " of "
-    //          << total_groundtruth << " = "
-    //          << "R@" << k_nn << " of " << recall << std::endl;
+    // std::cout << "# total intersected = " << total_intersected << " of "
+    //           << total_groundtruth << " = "
+    //           << "R@" << k_nn << " of " << recall << std::endl;
 
     if (args["--log"]) {
       idx.log_index();
@@ -151,4 +153,3 @@ int main(int argc, char* argv[]) {
     }
   }
 }
-

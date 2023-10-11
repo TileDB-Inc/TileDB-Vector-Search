@@ -194,7 +194,7 @@ void range_for_each(
            start,
            stop,
            f = std::forward<UnaryFunction>(f)]() mutable {
-            //scoped_timer __{tdb_func__ + std::string{" (lambda)"}, true};
+            // scoped_timer __{tdb_func__ + std::string{" (lambda)"}, true};
 
             for (size_t i = start; i < stop; ++i) {
               std::forward<UnaryFunction>(f)(range[i], n, i);
@@ -207,12 +207,14 @@ void range_for_each(
   }
 }
 
-
 /**
  * Execute a function in parallel over a range of elements as specified
  * by a begin and end iterator.
  */
-template <std::random_access_iterator InputIt, std::random_access_iterator OutputIt, class UnaryOperation>
+template <
+    std::random_access_iterator InputIt,
+    std::random_access_iterator OutputIt,
+    class UnaryOperation>
 void transform(
     stdx::execution::parallel_policy&& par,
     InputIt begin,
@@ -243,13 +245,15 @@ void transform(
   }
 }
 
-
 /**
  * Execute a function in parallel over a range of elements as specified
  * by a begin and end iterator.  We also pass the thread number and the
  * current iteration number to the function.
  */
-template <std::random_access_iterator InputIt, std::random_access_iterator OutputIt, class UnaryOperation>
+template <
+    std::random_access_iterator InputIt,
+    std::random_access_iterator OutputIt,
+    class UnaryOperation>
 void transform(
     stdx::execution::indexed_parallel_policy&& par,
     InputIt begin,
@@ -287,8 +291,10 @@ void transform(
   }
 }
 
-
-template <std::random_access_iterator InputIt, std::random_access_iterator OutputIt, class UnaryOperation>
+template <
+    std::random_access_iterator InputIt,
+    std::random_access_iterator OutputIt,
+    class UnaryOperation>
 auto copy(
     stdx::execution::parallel_policy&& par,
     InputIt begin,
@@ -298,17 +304,14 @@ auto copy(
   return out + (end - begin);
 }
 
-
-template <std::random_access_iterator InputIt, std::random_access_iterator OutputIt, class T>
+template <
+    std::random_access_iterator InputIt,
+    std::random_access_iterator OutputIt,
+    class T>
 void fill(
-    stdx::execution::parallel_policy&& par,
-    InputIt begin,
-    InputIt end,
-    T val) {
+    stdx::execution::parallel_policy&& par, InputIt begin, InputIt end, T val) {
   for_each(std::move(par), begin, end, [val](auto& v) { v = val; });
 }
-
-
 
 }  // namespace stdx
 

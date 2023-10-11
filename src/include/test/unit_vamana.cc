@@ -35,10 +35,10 @@
 #include "cpos.h"
 #include "detail/flat/qv.h"
 #include "detail/graph/adj_list.h"
+#include "detail/graph/diskann.h"
 #include "detail/graph/nn-descent.h"
 #include "detail/graph/nn-graph.h"
 #include "detail/graph/vamana.h"
-#include "detail/graph/diskann.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
 #include "gen_graphs.h"
@@ -72,9 +72,12 @@ TEST_CASE("vamana: tiny greedy search", "[vamana]") {
 #endif
 
 TEST_CASE("vamana: diskann", "[vamana]") {
-
-  for (auto&& s : {diskann_test_data_file, diskann_disk_index, diskann_mem_index,
-                   diskann_truth_disk_layout, diskann_truth_index_data}) {
+  for (auto&& s :
+       {diskann_test_data_file,
+        diskann_disk_index,
+        diskann_mem_index,
+        diskann_truth_disk_layout,
+        diskann_truth_index_data}) {
     // std::cout << s << std::endl;
     CHECK(local_file_exists(s));
   }
@@ -114,16 +117,19 @@ TEST_CASE("vamana: diskann", "[vamana]") {
     CHECK(g.out_degree(i) == 4);
   }
 
-  auto h = read_diskann_mem_index_with_scores(diskann_mem_index, diskann_test_data_file);
+  auto h = read_diskann_mem_index_with_scores(
+      diskann_mem_index, diskann_test_data_file);
   CHECK(h.size() == 256);
 
   for (size_t i = 0; i < h.size(); ++i) {
     CHECK(h.out_degree(i) == 4);
   }
   for (size_t i = 0; i < h.size(); ++i) {
-    CHECK(std::equal(begin(g.out_edges(i)), end(g.out_edges(i)),
-                     begin(h.out_edges(i)),
-                     [](auto&& a, auto&& b) { return a == std::get<1>(b); }));
+    CHECK(std::equal(
+        begin(g.out_edges(i)),
+        end(g.out_edges(i)),
+        begin(h.out_edges(i)),
+        [](auto&& a, auto&& b) { return a == std::get<1>(b); }));
   }
 
   auto f = read_diskann_data(diskann_test_data_file);
@@ -133,13 +139,14 @@ TEST_CASE("vamana: diskann", "[vamana]") {
   std::cout << "med " << med << std::endl;
   CHECK(med == 72);
   // tiledb::Context ctx;
-   // write_matrix(ctx, f, "/tmp/diskann_test_data_file.tdb");
+  // write_matrix(ctx, f, "/tmp/diskann_test_data_file.tdb");
 }
 
 TEST_CASE("vamana: small256 build index", "[vamana]") {
   auto vindex = detail::graph::vamana_index<float, uint32_t>(256, 50, 0);
   auto x = read_diskann_data(diskann_test_data_file);
-  auto graph = read_diskann_mem_index_with_scores(diskann_mem_index, diskann_test_data_file);
+  auto graph = read_diskann_mem_index_with_scores(
+      diskann_mem_index, diskann_test_data_file);
 
   vindex.train(x);
 
@@ -242,7 +249,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   auto query_id = 14;
   size_t k = 15;
   // auto med = detail::graph::medioid(x);
-//  int med = GENERATE(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 72);
+  //  int med = GENERATE(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 72);
   int med = 72;
   std::cout << "med " << med << std::endl;
 

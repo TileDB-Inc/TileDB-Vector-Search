@@ -468,7 +468,6 @@ TEMPLATE_LIST_TEST_CASE("scoring: get_top_k", "[scoring]", scoring_typelist) {
           std::vector<score_type>(
               k_nn - l_nn, std::numeric_limits<score_type>::max())
               .begin()));
-
     }
   }
 

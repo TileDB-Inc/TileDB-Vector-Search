@@ -44,18 +44,25 @@
 #include "utils/fixed_min_heap.h"
 #include "utils/print_types.h"
 
-#include "detail/graph/graph_utils.h"
 #include "detail/graph/adj_list.h"
+#include "detail/graph/graph_utils.h"
 
-#include <tiledb/tiledb>
 #include <tiledb/group_experimental.h>
+#include <tiledb/tiledb>
 
 namespace detail::graph {
 namespace {
-enum class SearchPath { path_and_search, path_only };
-}
 
-#if 0
+/**
+ * A tag to determine whether to return the top k results of the search or just
+ * the path taken.
+ */
+enum class SearchPath { path_and_search, path_only };
+
+/**
+ * An augmented distance functor that counts the number of distance
+ * invocations.
+ */
 struct counting_sum_of_squares_distance {
   size_t num_comps_{0};
   std::string msg_{""};
@@ -74,13 +81,12 @@ struct counting_sum_of_squares_distance {
     _count_data.insert_entry(msg_ + " num_ss_comps", num_comps_);
   }
 };
-#endif
+}  // namespace
 
 /**
- * @brief
- * @tparam T
- * @tparam I
- * @param graph
+ * @brief Truncated best-first search
+ * @tparam Distance The distance function used to compare vectors
+ * @param graph Graph to be searched
  * @param source start node index
  * @param query query node index
  * @param k result size
@@ -88,15 +94,22 @@ struct counting_sum_of_squares_distance {
  * @return result set ell containing k-approximate nearest neighbors to query
  * and set vee containing all the visited nodes
  *
- * Per the paper, the algorithm is as follows:
+ * Per the DiskANN paper, the algorithm is as follows:
  * 1. Initialize the result list with the source node and visited list with
- * empty
+ *    empty
  * 2. While the result list \ visited list is not empty
  *    a. Find p* in the result list \ visited list with the smallest distance to
- * the query b. update the result list with the out neighbors of p* c. Add p* to
- * the visited list d. If size of the result list > L, trim the result list to
- * keep L closest points to query
+ *       the query
+ *    b. update the result list with the out neighbors of p*
+ *    c. Add p* to the visited list d. If size of the result list > L, trim
+ *      the result list to keep L closest points to query
  * 3. Copy the result list to the output
+ *
+ * This is essentially a best-first search with a fixed size priority queue
+ *
+ * @todo -- add a `SearchPath `template parameter to determine whether to
+ * return the top k results of the search or just the path taken.
+ * @todo -- remove printf debugging code
  */
 template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
 auto greedy_search(
@@ -119,14 +132,13 @@ auto greedy_search(
 
   std::unordered_set<id_type> visited_vertices;
   auto visited = [&visited_vertices](auto&& v) {
-    // return visited_vertices.find(v) != visited_vertices.end();
     return visited_vertices.contains(v);
   };
 
   auto result = k_min_heap<score_type, id_type>{L};  // Ell: |Ell| <= L
   // auto result = std::set<id_type>{};
-  auto q1 = k_min_heap<score_type, id_type>{L};      // Ell \ V
-  auto q2 = k_min_heap<score_type, id_type>{L};      // Ell \ V
+  auto q1 = k_min_heap<score_type, id_type>{L};  // Ell \ V
+  auto q2 = k_min_heap<score_type, id_type>{L};  // Ell \ V
 
   // L <- {s} and V <- empty`
   result.insert(distance(db[source], query), source);
@@ -138,14 +150,22 @@ auto greedy_search(
 
   // while L\V is not empty
   while (!q1.empty()) {
-    if (noisy)
+    if (noisy) {
       std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
-    if (noisy)
       debug_min_heap(q1, "q1: ", 1);
+    }
 
     // p* <- argmin_{p \in L\V} distance(p, q)
 
-    // Change to min_heap
+    // Although we use the name `k_min_heap` -- it actually stores a finite
+    // number of elements in a max heap (we remove the max element
+    // every time we have a smaller element to insert).  Since we are using
+    // a `k_min_heap` for q1, to get and pop the min element, we have to
+    // change it to a min heap, get the min element, and then change it back
+    // to a max heap.
+    // @todo -- There must be a better way of doing this
+
+    // Change q1 into a min_heap
     std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
       return std::get<0>(a) > std::get<0>(b);
     });
@@ -158,16 +178,14 @@ auto greedy_search(
     auto [s_star, p_star] = q1.back();
     q1.pop_back();
 
-    if (noisy)
+    if (noisy) {
       std::cout << "p*: " << p_star << std::endl;
+    }
 
     // Change back to max heap
     std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
       return std::get<0>(a) < std::get<0>(b);
     });
-
-    if (noisy)
-      std::cout << "p*: " << p_star << std::endl;
 
     if (visited(p_star)) {
       continue;
@@ -176,14 +194,15 @@ auto greedy_search(
     // V <- V \cup {p*} ; L\V <- L\V \ p*
     visited_vertices.insert(p_star);
 
-    if (noisy)
+    if (noisy) {
       debug_vector(visited_vertices, "visited_vertices: ");
-    if (noisy)
       debug_min_heap(graph.out_edges(p_star), "Nout(p*): ", 1);
+    }
 
-    // @todo -- needed?
-    // q1.clear(); // Or remove newly visited
-
+    // q2 <- L \ V
+    // @todo Is there a better way to do this?  By somehow removing
+    // elements from q1?  We can probably make the insertion into q2
+    // more efficient -- have a batch interface to insert into q2
     for (auto&& [s, p] : result) {
       if (!visited(p)) {
         q2.insert(s, p);
@@ -191,22 +210,26 @@ auto greedy_search(
     }
 
     // L <- L \cup Nout(p*)  ; L \ V <- L \ V \cup Nout(p*)
+
+    // In looking at profiling, a majority of time is spent in this loop,
+    // in visited() and in result.insert()
     for (auto&& [_, p] : graph.out_edges(p_star)) {
       // assert(p != p_star);
       if (!visited(p)) {
         auto score = distance(db[p], query);
 
         // unique id or not does not seem to make a difference
-        if (result.template insert/*<unique_id>*/(score, p)) {
+        if (result.template insert /*<unique_id>*/ (score, p)) {
           q2.template insert<unique_id>(score, p);
         }
       }
     }
 
-    if (noisy)
+    if (noisy) {
       debug_min_heap(result, "result, aka Ell: ", 1);
-    if (noisy)
       debug_min_heap(result, "result, aka Ell: ", 0);
+    }
+
     q1.swap(q2);
     q2.clear();
   }
@@ -221,146 +244,6 @@ auto greedy_search(
       std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
 }
 
-template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
-auto greedy_path(
-    auto&& graph,
-    auto&& db,
-    typename std::decay_t<decltype(graph)>::id_type source,
-    auto&& query,
-    size_t L,
-    Distance&& distance = Distance{}) {
-  constexpr bool noisy = false;
-
-  // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
-  using id_type = typename std::decay_t<decltype(graph)>::id_type;
-  using score_type = typename std::decay_t<decltype(graph)>::score_type;
-
-  static_assert(std::integral<id_type>);
-
-
-  std::unordered_set<id_type> visited_vertices;
-  auto visited = [&visited_vertices](auto&& v) {
-    // return visited_vertices.find(v) != visited_vertices.end();
-    return visited_vertices.contains(v);
-  };
-
-  auto result = k_min_heap<score_type, id_type>{L};  // Ell: |Ell| <= L
-  // auto result = std::set<id_type>{};
-  auto q1 = k_min_heap<score_type, id_type>{L};      // Ell \ V
-  auto q2 = k_min_heap<score_type, id_type>{L};      // Ell \ V
-
-  // L <- {s} and V <- empty`
-  result.insert(distance(db[source], query), source);
-
-  // q1 = L \ V = {s}
-  q1.insert(distance(db[source], query), source);
-
-  size_t counter{0};
-
-  // while L\V is not empty
-  while (!q1.empty()) {
-    if (noisy)
-      std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
-    if (noisy)
-      debug_min_heap(q1, "q1: ", 1);
-
-    // p* <- argmin_{p \in L\V} distance(p, q)
-
-    // Change to min_heap
-    std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
-      return std::get<0>(a) > std::get<0>(b);
-    });
-
-    // Get and pop the min element
-    std::pop_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
-      return std::get<0>(a) > std::get<0>(b);
-    });
-
-    auto [s_star, p_star] = q1.back();
-    q1.pop_back();
-
-    if (noisy)
-      std::cout << "p*: " << p_star << std::endl;
-
-    // Change back to max heap
-    std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
-      return std::get<0>(a) < std::get<0>(b);
-    });
-
-    if (noisy)
-      std::cout << "p*: " << p_star << std::endl;
-
-    if (visited(p_star)) {
-      continue;
-    }
-
-    // V <- V \cup {p*} ; L\V <- L\V \ p*
-    visited_vertices.insert(p_star);
-
-    if (noisy)
-      debug_vector(visited_vertices, "visited_vertices: ");
-    if (noisy)
-      debug_min_heap(graph.out_edges(p_star), "Nout(p*): ", 1);
-
-    // @todo -- needed?
-    // q1.clear(); // Or remove newly visited
-
-    // q2 < L \ V
-    for (auto&& [s, p] : q1) {
-      if (!visited(p)) {
-        q2.insert(s, p);
-      }
-    }
-
-    // L <- L \cup Nout(p*)  ; L \ V <- L \ V \cup Nout(p*)
-    for (auto&& [_, p] : graph.out_edges(p_star)) {
-      // assert(p != p_star);
-      if (!visited(p)) {
-        auto score = distance(db[p], query);
-
-        // unique id or not does not seem to make a difference
-        if (result.template insert/*<unique_id>*/(score, p)) {
-          q2.template insert<unique_id>(score, p);
-        }
-      }
-    }
-
-    if (noisy)
-      debug_min_heap(result, "result, aka Ell: ", 1);
-    if (noisy)
-      debug_min_heap(result, "result, aka Ell: ", 0);
-    q1.swap(q2);
-    q2.clear();
-  }
-
-  return visited_vertices;
-}
-
-#if 0
-template <class I = size_t, class Distance = sum_of_squares_distance>
-auto greedy_path(
-    auto&& graph,
-    auto&& db,
-    I source,
-    auto&& query,
-    size_t L,
-    Distance&& distance = Distance{}) {
-  return greedy_search<SearchPath::path_only>(graph, db, source, query, 1, L, std::vector<I>(1), distance);
-}
-
-template <class I = size_t, class Distance = sum_of_squares_distance>
-auto greedy_search(
-    auto&& graph,
-    auto&& db,
-    I source,
-    auto&& query,
-    size_t k,
-    size_t L,
-    Distance&& distance = Distance{}) {
-  return greedy_search<SearchPath::path_and_search>(graph, db, source, query, k, L, distance);
-}
-#endif
-
 /**
  * @brief RobustPrune(p, vee, alpha, R)
  * @tparam I index type
@@ -371,6 +254,7 @@ auto greedy_search(
  * @param alpha distance threshold >= 1
  * @param R Degree bound
  *
+ * From the DiskANN paper:
  * V <- (V \cup Nout(p) \ p
  * Nout(p) < 0
  * while (!V.empty()) {
@@ -427,8 +311,9 @@ auto robust_prune(
     V.emplace_back(v.second, v.first);
   }
 
-  if (noisy)
+  if (noisy) {
     debug_min_heap(V, "V: ", 1);
+  }
 
   // Nout(p) <- 0
   graph.out_edges(p).clear();
@@ -436,25 +321,28 @@ auto robust_prune(
   size_t counter{0};
   // while V != 0
   while (!V.empty()) {
-    if (noisy)
+    if (noisy) {
       std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
+    }
 
     // p* <- argmin_{pp \in V} distance(p, pp)
     auto&& [s_star, p_star] =
         *(std::min_element(begin(V), end(V), [](auto&& a, auto&& b) {
           return std::get<0>(a) < std::get<0>(b);
         }));
+
     assert(p_star != p);
-    if (noisy)
+    if (noisy) {
       std::cout << "::::" << p_star << std::endl;
-    if (noisy)
       debug_min_heap(V, "V: ", 1);
+    }
 
     // Nout(p) <- Nout(p) \cup p*
     graph.add_edge(p, p_star, s_star);
 
-    if (noisy)
+    if (noisy) {
       debug_min_heap(graph.out_edges(p), "Nout(p): ", 1);
+    }
 
     if (graph.out_edges(p).size() == R) {
       break;
@@ -473,17 +361,22 @@ auto robust_prune(
         }
       }
     }
-    if (noisy)
+    if (noisy) {
       debug_min_heap(V, "after prune V: ", 1);
-
-    // print_types(V, new_V);
+    }
 
     std::swap(V, new_V);
     new_V.clear();
-    // V.unfiltered_heapify();
   }
 }
 
+/**
+ * Find the vector that is closest to the centroid of the set of vectors P.
+ * @tparam Distance The distance functor used to compare vectors
+ * @param P The set of vectors to be computed over
+ * @param distance The distance functor used to compare vectors
+ * @return The index of the vector in P that is closest to the centroid of P
+ */
 template <class Distance = sum_of_squares_distance>
 auto medioid(auto&& P, Distance distance = Distance{}) {
   auto n = num_vectors(P);
@@ -495,7 +388,7 @@ auto medioid(auto&& P, Distance distance = Distance{}) {
     }
   }
   for (size_t i = 0; i < centroid.size(); ++i) {
-    centroid[i] /= (float) num_vectors(P);
+    centroid[i] /= (float)num_vectors(P);
   }
 
   std::vector<float> tmp{begin(centroid), end(centroid)};
@@ -513,8 +406,9 @@ auto medioid(auto&& P, Distance distance = Distance{}) {
 }
 
 /**
- * @brief
- * @tparam Array
+ * @brief Index class for vamana search
+ * @tparam feature_type Type of the elements in the feature vectors
+ * @tparam id_type Type of the ids of the feature vectors
  */
 template <class feature_type, class id_type>
 class vamana_index {
@@ -523,6 +417,9 @@ class vamana_index {
   // using id_type = typename Array::id_type;
   using score_type = float;
 
+  // A copy of the original feature vectors
+  // @todo -- this is a waste of memory -- we could also do queries against
+  // the original feature vectors (supplied by user)
   ColMajorMatrix<feature_type> feature_vectors_;
 
   uint64_t dimension_{0};
@@ -553,9 +450,15 @@ class vamana_index {
       , graph_{num_vectors_} {
   }
 
+  /**
+   * @brief Load a vamana graph index from a TileDB group
+   * @param ctx TileDB context
+   * @param group_uri URI of the group containing the index
+   */
   vamana_index(tiledb::Context ctx, const std::string& group_uri)
-          : feature_vectors_ { std::move(tdbPreLoadMatrix<feature_type, stdx::layout_left>(ctx, group_uri + "/feature_vectors")) }
-  {
+      : feature_vectors_{
+            std::move(tdbPreLoadMatrix<feature_type, stdx::layout_left>(
+                ctx, group_uri + "/feature_vectors"))} {
     tiledb::Config cfg;
     auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
 
@@ -567,7 +470,8 @@ class vamana_index {
       void* addr;
       read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
       if (datatype == TILEDB_UINT64) {
-        *reinterpret_cast<uint64_t*>(value) = *reinterpret_cast<uint64_t*>(addr);
+        *reinterpret_cast<uint64_t*>(value) =
+            *reinterpret_cast<uint64_t*>(addr);
       } else if (datatype == TILEDB_FLOAT32) {
         *reinterpret_cast<float*>(value) = *reinterpret_cast<float*>(addr);
       } else {
@@ -576,7 +480,8 @@ class vamana_index {
     }
 
     ::load(feature_vectors_);
-    auto v = std::vector<feature_type> (begin(feature_vectors_[0]), end(feature_vectors_[0]));
+    auto v = std::vector<feature_type>(
+        begin(feature_vectors_[0]), end(feature_vectors_[0]));
     assert(num_vectors_ == ::num_vectors(feature_vectors_));
 
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
@@ -594,53 +499,26 @@ class vamana_index {
     }
   }
 
-  template <feature_vector_array Array>
-  void newt_rain(const Array& training_set) {
-    /*
-     * Initialize G to an empty graph
-Let s denote the medoid of P
-Let st (f) denote the start node for filter label f for every f∈F
-Let σ be a random permutation of [n]
-Let F_x be the label-set for every x∈P
-foreach i∈[n] do
-  Let S_(F_(x_(σ(i)) ) )={st⁡(f):f∈F_(x_(σ(i)) ) }
-  Let [∅;V_(F_(x_(σ(i)) ) ) ]← FilteredGreedySearch (S_(F_(x_(σ(i)) ) ) ┤,
-      (├ x_(σ(i)),0,L,F_(x_(σ(i)) ) )@V←V∪V_(F_(x_(σ(i)) ) ) )
-  Run FilteredRobustPrune (σ(i),V_(F_(x_(σ(i)) ) ),α,R) to update out-neighbors
-of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
-(j)∪{σ(i)} if |N_"out "  (j)|>R then Run FilteredRobustPrune (j,N_"out "
-(j),α,R) to update out-neighbors of j.
-     */
-
-    feature_vectors_ = std::move(ColMajorMatrix<feature_type>(
-        ::dimension(training_set), ::num_vectors(training_set)));
-    std::copy(
-        training_set.data(),
-        training_set.data() +
-            ::dimension(training_set) * ::num_vectors(training_set),
-        feature_vectors_.data());
-
-    dimension_ = ::dimension(feature_vectors_);
-    num_vectors_ = ::num_vectors(feature_vectors_);
-
-    graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
-    medioid_ = medioid(feature_vectors_);
-    double alpha = 1.0;
-    for (size_t p = 0; p < num_vectors_; ++p) {
-      auto&& [top_k_scores, top_k, visited] = greedy_search(
-          graph_,
-          feature_vectors_,
-          medioid_,
-          feature_vectors_[p],
-          1,
-          L_build_, sum_of_squares_distance{});
-      auto foo = visited;
-      robust_prune(
-          graph_, feature_vectors_, p, visited, alpha, R_max_degree_, sum_of_squares_distance{});
-     auto& g { graph_};
-    }
-  }
-
+  /**
+   * @brief Build a vamana graph index.  This is algorithm is from the Filtered
+   * Fresh DiskAnn paper -- which is a different training process than the
+   * original DiskAnn paper. The Filtered Fresh DiskAnn paper
+   * (https://arxiv.org/pdf/2103.01937.pdf):
+   *
+   * Initialize G to an empty graph
+   * Let s denote the medoid of P
+   * Let st (f) denote the start node for filter label f for every f∈F
+   * Let σ be a random permutation of [n]
+   * Let F_x be the label-set for every x∈P
+   * foreach i∈[n] do
+   * Let S_(F_(x_(σ(i)) ) )={st⁡(f):f∈F_(x_(σ(i)) ) }
+   * Let [∅;V_(F_(x_(σ(i)) ) ) ]← FilteredGreedySearch (S_(F_(x_(σ(i)) ) ) ┤,
+   *     (├ x_(σ(i)),0,L,F_(x_(σ(i)) ) )@V←V∪V_(F_(x_(σ(i)) ) ) )
+   * Run FilteredRobustPrune (σ(i),V_(F_(x_(σ(i)) ) ),α,R) to update
+   * out-neighbors of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "
+   * (j)←N_"out " (j)∪{σ(i)} if |N_"out "  (j)|>R then Run FilteredRobustPrune
+   * (j,N_"out " (j),α,R) to update out-neighbors of j.
+   */
   template <feature_vector_array Array>
   void train(const Array& training_set) {
     feature_vectors_ = std::move(ColMajorMatrix<feature_type>(
@@ -655,35 +533,47 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
     num_vectors_ = ::num_vectors(feature_vectors_);
     // graph_ = ::detail::graph::init_random_adj_list<feature_type, id_type>(
     //     feature_vectors_, R_max_degree_);
-    graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
 
+    graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
     // dump_edgelist("edges_" + std::to_string(0) + ".txt", graph_);
 
     medioid_ = medioid(feature_vectors_);
 
     debug_index();
     size_t counter{0};
-//    for (float alpha : {alpha_min_, alpha_max_}) {
+    //    for (float alpha : {alpha_min_, alpha_max_}) {
+    // Just use one value of alpha
     for (float alpha : {alpha_max_}) {
       scoped_timer _("train " + std::to_string(counter), true);
       size_t total_visited{0};
       for (size_t p = 0; p < num_vectors_; ++p) {
         ++counter;
+
+        // Do not need top_k or top_k scores here -- use path_only enum
         auto&& [top_k_scores, top_k, visited] = greedy_search(
             graph_,
             feature_vectors_,
             medioid_,
             feature_vectors_[p],
             1,
-            L_build_, sum_of_squares_distance{});
+            L_build_,
+            sum_of_squares_distance{});
         total_visited += visited.size();
 
         robust_prune(
-            graph_, feature_vectors_, p, visited, alpha, R_max_degree_, sum_of_squares_distance{});
+            graph_,
+            feature_vectors_,
+            p,
+            visited,
+            alpha,
+            R_max_degree_,
+            sum_of_squares_distance{});
         {
           scoped_timer _{"post search prune"};
           for (auto&& [i, j] : graph_.out_edges(p)) {
-            // @todo Do this without copying -- prune should take vector of tuples and p (it copies anyway) maybe scan for p and then only build tmp after if?
+            // @todo Do this without copying -- prune should take vector of
+            //  tuples and p (it copies anyway) maybe scan for p and then only
+            //  build tmp after if?
             auto tmp = std::vector<size_t>(graph_.out_degree(j) + 1);
             tmp.push_back(p);
             for (auto&& [_, k] : graph_.out_edges(j)) {
@@ -692,7 +582,13 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
 
             if (size(tmp) > R_max_degree_) {
               robust_prune(
-                  graph_, feature_vectors_, j, tmp, alpha, R_max_degree_, sum_of_squares_distance{});
+                  graph_,
+                  feature_vectors_,
+                  j,
+                  tmp,
+                  alpha,
+                  R_max_degree_,
+                  sum_of_squares_distance{});
             } else {
               graph_.add_edge(
                   j,
@@ -710,24 +606,45 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
     }
   }
 
+  /**
+   * @brief Add a set of vectors to the index (the vectors that will be
+   * searched over in subsequent queries).  This is a no-op for vamana.
+   *
+   * @tparam A Type of the array of vectors to be added
+   * @param database The vectors to be added
+   */
   template <feature_vector_array A>
   void add(const A& database) {
   }
 
-  size_t num_visited_vertices_ {0};
-  size_t num_visited_edges_ {0};
-  static size_t num_comps_ ;
+  /*
+   * Some diagnostic variables and accessors
+   */
+  size_t num_visited_vertices_{0};
+  size_t num_visited_edges_{0};
+  static size_t num_comps_;
+
   size_t num_visited_vertices() const {
     return num_visited_vertices_;
   }
+
   size_t num_comps() const {
     return num_comps_;
   }
 
-
-
+  /**
+   * @brief Query the index for the top k nearest neighbors of the query set
+   * @tparam Q Type of query set
+   * @param query_set Container of query vectors
+   * @param k How many nearest neighbors to return
+   * @param opt_L How deep to search
+   * @return Tuple of top k scores and top k ids
+   */
   template <query_vector_array Q>
-  auto query(const Q& query_set, size_t k, std::optional<size_t> opt_L = std::nullopt) {
+  auto query(
+      const Q& query_set,
+      size_t k,
+      std::optional<size_t> opt_L = std::nullopt) {
     scoped_timer __{tdb_func__ + std::string{" (outer)"}, true};
 
     size_t L = opt_L ? *opt_L : L_build_;
@@ -737,6 +654,8 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
     auto top_k_scores = ColMajorMatrix<float>(k, ::num_vectors(query_set));
 
 #if 0
+    // Parallelized implementation -- we stay single-threaded for now
+    // for purposes of comparison
     size_t nthreads = std::thread::hardware_concurrency();
     auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
@@ -749,7 +668,13 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
 #else
     for (size_t i = 0; i < num_vectors(query_set); ++i) {
       auto&& [tk_scores, tk, V] = greedy_search(
-          graph_, feature_vectors_, medioid_, query_set[i], k, L, sum_of_squares_distance{});
+          graph_,
+          feature_vectors_,
+          medioid_,
+          query_set[i],
+          k,
+          L,
+          sum_of_squares_distance{});
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
       num_visited_vertices_ += V.size();
@@ -771,13 +696,24 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
 
+  /**
+   * @brief Query the index for the top k nearest neighbors of a single
+   * query vector
+   * @tparam Q Type of query vector
+   * @param query_vec The vector to query
+   * @param k How many nearest neighbors to return
+   * @param opt_L How deep to search
+   * @return Top k scores and top k ids
+   */
   template <query_vector Q>
-  auto query(const Q& query_vec, size_t k, std::optional<size_t> opt_L = std::nullopt) {
-
+  auto query(
+      const Q& query_vec,
+      size_t k,
+      std::optional<size_t> opt_L = std::nullopt) {
     size_t L = opt_L ? *opt_L : L_build_;
 
-    auto&& [top_k_scores, top_k, V] = greedy_search(
-        graph_, feature_vectors_, medioid_, query_vec, k, L);
+    auto&& [top_k_scores, top_k, V] =
+        greedy_search(graph_, feature_vectors_, medioid_, query_vec, k, L);
 
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
@@ -796,6 +732,9 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
     return num_vectors_;
   }
 
+  /**
+   * Table of metadata to be saved with the index.
+   */
   using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
   std::vector<metadata_element> metadata{
       {"dimension", &dimension_, TILEDB_UINT64},
@@ -808,6 +747,17 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
       {"medioid", &medioid_, TILEDB_UINT64},
   };
 
+  /**
+   * @brief Write the index to a TileDB group
+   * @param group_uri The URI of the TileDB group where the index will be saved
+   * @param overwrite Whether to overwrite an existing group
+   * @return Whether the write was successful
+   *
+   * The group consists of the original feature vectors, and the graph index,
+   * which comprises the adjacency scores and adjacency ids, written
+   * contiguously, along with an offset (adj_index) to the start of each
+   * adjacency list.
+   */
   auto write_index(const std::string& group_uri, bool overwrite = false) {
     // copilot ftw!
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medioid
@@ -839,9 +789,9 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
     auto adj_scores_uri = group_uri + "/adj_scores";
     auto adj_ids_uri = group_uri + "/adj_ids";
     auto adj_index_uri = group_uri + "/adj_index";
-    auto adj_scores = Vector<score_type> (graph_.num_edges());
-    auto adj_ids = Vector<id_type> (graph_.num_edges());
-    auto adj_index = Vector<uint64_t> (graph_.num_vertices() + 1);
+    auto adj_scores = Vector<score_type>(graph_.num_edges());
+    auto adj_ids = Vector<id_type>(graph_.num_edges());
+    auto adj_index = Vector<uint64_t>(graph_.num_vertices() + 1);
 
     size_t edge_offset{0};
     for (size_t i = 0; i < num_vertices(graph_); ++i) {
@@ -867,6 +817,9 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
     return true;
   }
 
+  /**
+   * @brief Log statistics about the index
+   */
   void log_index() {
     _count_data.insert_entry("dimension", dimension_);
     _count_data.insert_entry("num_vectors", num_vectors_);
@@ -882,9 +835,14 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
         });
     _count_data.insert_entry("min_degree", min_degree->size());
     _count_data.insert_entry("max_degree", max_degree->size());
-    _count_data.insert_entry("avg_degree", (double)graph_.num_edges() / (double)num_vertices(graph_));
+    _count_data.insert_entry(
+        "avg_degree",
+        (double)graph_.num_edges() / (double)num_vertices(graph_));
   }
 
+  /**
+   * Print debugging information about the index
+   */
   void debug_index() {
     auto&& [min_degree, max_degree] =
         minmax_element(begin(graph_), end(graph_), [](auto&& a, auto&& b) {
@@ -899,48 +857,68 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
     std::cout << "# num_edges " << graph_.num_edges() << std::endl;
     std::cout << "# min degree " << min_degree->size() << std::endl;
     std::cout << "# max degree " << max_degree->size() << std::endl;
-    std::cout << "# avg degree " << (double)counted_edges / (double)num_vertices(graph_) << std::endl;
+    std::cout << "# avg degree "
+              << (double)counted_edges / (double)num_vertices(graph_)
+              << std::endl;
   }
 
-
+  /**
+   * @brief Compare the metadata of two vamana_index objects -- useful for
+   * testing
+   * @param rhs The other vamana_index to compare with
+   * @return True if the metadata is the same, false otherwise
+   */
   bool compare_metadata(const vamana_index& rhs) {
-        if (dimension_ != rhs.dimension_) {
-          std::cout << "dimension_ != rhs.dimension_" << dimension_ << " ! = " << rhs.dimension_ <<std::endl;
-          return false;
-        }
-        if (num_vectors_ != rhs.num_vectors_) {
-          std::cout << "num_vectors_ != rhs.num_vectors_" << num_vectors_ << " ! = " << rhs.num_vectors_ <<std::endl;
-          return false;
-        }
-        if (L_build_ != rhs.L_build_) {
-          std::cout << "L_build_ != rhs.L_build_" << L_build_ << " ! = " << rhs.L_build_ <<std::endl;
-          return false;
-        }
-        if (R_max_degree_ != rhs.R_max_degree_) {
-          std::cout << "R_max_degree_ != rhs.R_max_degree_" << R_max_degree_ << " ! = " << rhs.R_max_degree_ <<std::endl;
-          return false;
-        }
-        if (B_backtrack_ != rhs.B_backtrack_) {
-          std::cout << "B_backtrack_ != rhs.B_backtrack_" << B_backtrack_ << " ! = " << rhs.B_backtrack_ <<std::endl;
-          return false;
-        }
-        if (alpha_min_ != rhs.alpha_min_) {
-          std::cout << "alpha_min_ != rhs.alpha_min_" << alpha_min_ << " ! = " << rhs.alpha_min_ <<std::endl;
-          return false;
-        }
-        if (alpha_max_ != rhs.alpha_max_) {
-          std::cout << "alpha_max_ != rhs.alpha_max_" << alpha_max_ << " ! = " << rhs.alpha_max_ <<std::endl;
-          return false;
-        }
-        if (medioid_ != rhs.medioid_) {
-          std::cout << "medioid_ != rhs.medioid_" << medioid_ << " ! = " << rhs.medioid_ <<std::endl;
-          return false;
-        }
-
+    if (dimension_ != rhs.dimension_) {
+      std::cout << "dimension_ != rhs.dimension_" << dimension_
+                << " ! = " << rhs.dimension_ << std::endl;
+      return false;
+    }
+    if (num_vectors_ != rhs.num_vectors_) {
+      std::cout << "num_vectors_ != rhs.num_vectors_" << num_vectors_
+                << " ! = " << rhs.num_vectors_ << std::endl;
+      return false;
+    }
+    if (L_build_ != rhs.L_build_) {
+      std::cout << "L_build_ != rhs.L_build_" << L_build_
+                << " ! = " << rhs.L_build_ << std::endl;
+      return false;
+    }
+    if (R_max_degree_ != rhs.R_max_degree_) {
+      std::cout << "R_max_degree_ != rhs.R_max_degree_" << R_max_degree_
+                << " ! = " << rhs.R_max_degree_ << std::endl;
+      return false;
+    }
+    if (B_backtrack_ != rhs.B_backtrack_) {
+      std::cout << "B_backtrack_ != rhs.B_backtrack_" << B_backtrack_
+                << " ! = " << rhs.B_backtrack_ << std::endl;
+      return false;
+    }
+    if (alpha_min_ != rhs.alpha_min_) {
+      std::cout << "alpha_min_ != rhs.alpha_min_" << alpha_min_
+                << " ! = " << rhs.alpha_min_ << std::endl;
+      return false;
+    }
+    if (alpha_max_ != rhs.alpha_max_) {
+      std::cout << "alpha_max_ != rhs.alpha_max_" << alpha_max_
+                << " ! = " << rhs.alpha_max_ << std::endl;
+      return false;
+    }
+    if (medioid_ != rhs.medioid_) {
+      std::cout << "medioid_ != rhs.medioid_" << medioid_
+                << " ! = " << rhs.medioid_ << std::endl;
+      return false;
+    }
 
     return true;
   }
 
+  /**
+   * @brief Compare the scores of adjacency lists of two vamana_index
+   * objects -- useful for testing
+   * @param rhs The other vamana_index to compare with
+   * @return True if the adjacency lists are the same, false otherwise
+   */
   bool compare_adj_scores(const vamana_index& rhs) {
     for (size_t i = 0; i < num_vertices(graph_); ++i) {
       auto start = graph_.out_edges(i).begin();
@@ -948,12 +926,15 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
       auto rhs_start = rhs.graph_.out_edges(i).begin();
       auto rhs_end = rhs.graph_.out_edges(i).end();
       if (std::distance(start, end) != std::distance(rhs_start, rhs_end)) {
-        std::cout << "std::distance(start, end) != std::distance(rhs_start, rhs_end)" << std::endl;
+        std::cout
+            << "std::distance(start, end) != std::distance(rhs_start, rhs_end)"
+            << std::endl;
         return false;
       }
       for (; start != end; ++start, ++rhs_start) {
         if (std::get<0>(*start) != std::get<0>(*rhs_start)) {
-          std::cout << "std::get<0>(*start) != std::get<0>(*rhs_start)" << std::endl;
+          std::cout << "std::get<0>(*start) != std::get<0>(*rhs_start)"
+                    << std::endl;
           return false;
         }
       }
@@ -961,19 +942,27 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
     return true;
   }
 
+  /**
+   * @brief Compare the ids of adjacency lists of two vamana_index
+   * @param rhs The other vamana_index to compare with
+   * @return True if the adjacency lists are the same, false otherwise
+   */
   bool compare_adj_ids(const vamana_index& rhs) {
-    for (size_t i = 0; i < num_vertices(graph_); ++i ) {
+    for (size_t i = 0; i < num_vertices(graph_); ++i) {
       auto start = graph_.out_edges(i).begin();
       auto end = graph_.out_edges(i).end();
       auto rhs_start = rhs.graph_.out_edges(i).begin();
       auto rhs_end = rhs.graph_.out_edges(i).end();
       if (std::distance(start, end) != std::distance(rhs_start, rhs_end)) {
-        std::cout << "std::distance(start, end) != std::distance(rhs_start, rhs_end)" << std::endl;
+        std::cout
+            << "std::distance(start, end) != std::distance(rhs_start, rhs_end)"
+            << std::endl;
         return false;
       }
       for (; start != end; ++start, ++rhs_start) {
         if (std::get<1>(*start) != std::get<1>(*rhs_start)) {
-          std::cout << "std::get<1>(*start) != std::get<1>(*rhs_start)" << std::endl;
+          std::cout << "std::get<1>(*start) != std::get<1>(*rhs_start)"
+                    << std::endl;
           return false;
         }
       }
@@ -981,8 +970,13 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
     return true;
   }
 
+  /**
+   * @brief Compare the feature vectors of two vamana_index objects -- useful
+   * for testing.
+   * @param rhs The other vamana_index to compare with
+   * @return True if the feature vectors are the same, false otherwise
+   */
   bool compare_feature_vectors(const vamana_index& rhs) {
-
     for (size_t i = 0; i < ::num_vectors(feature_vectors_); ++i) {
       for (size_t j = 0; j < ::dimension(feature_vectors_); ++j) {
         auto lhs_val = feature_vectors_(j, i);
@@ -996,11 +990,18 @@ of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "  (j)←N_"out "
 
     return std::equal(
         feature_vectors_.data(),
-        feature_vectors_.data() + ::dimension(feature_vectors_) * ::num_vectors(feature_vectors_),
+        feature_vectors_.data() +
+            ::dimension(feature_vectors_) * ::num_vectors(feature_vectors_),
         rhs.feature_vectors_.data());
   }
 };
 
+/**
+ * @brief Variable to count the number of comparisons made during training
+ * and querying
+ * @tparam feature_type Type of element of feature vectors
+ * @tparam id_type Type of id of feature vectors
+ */
 template <class feature_type, class id_type>
 size_t vamana_index<feature_type, id_type>::num_comps_ = 0;
 

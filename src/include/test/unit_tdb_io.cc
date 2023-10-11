@@ -1,42 +1,42 @@
 /**
-* @file   unit_tdb_io.cc
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
-*
-*/
+ * @file   unit_tdb_io.cc
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
+ */
 
+#include <tiledb/group_experimental.h>
 #include <catch2/catch_all.hpp>
-#include "detail/linalg/tdb_io.h"
-#include "detail/linalg/tdb_matrix.h"
+#include <tiledb/tiledb>
 #include "concepts.h"
 #include "cpos.h"
+#include "detail/linalg/tdb_io.h"
+#include "detail/linalg/tdb_matrix.h"
 #include "query_common.h"
-#include <tiledb/tiledb>
-#include <tiledb/group_experimental.h>
 
 TEST_CASE("tdb_io: test test", "[tdb_io]") {
   REQUIRE(true);
@@ -110,10 +110,11 @@ TEMPLATE_TEST_CASE("tdb_io: write matrix", "[tdb_io]", float, uint8_t) {
 
   CHECK(num_vectors(Y) == num_vectors(X));
   CHECK(dimension(Y) == dimension(X));
-  CHECK(std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+  CHECK(
+      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
   for (size_t i = 0; i < 5; ++i) {
     for (size_t j = 0; j < 5; ++j) {
-    CHECK(X(i, j) == Y(i, j));
+      CHECK(X(i, j) == Y(i, j));
     }
   }
 }
@@ -141,7 +142,8 @@ TEST_CASE("tdb_io: create group", "[tdb_io]") {
   write_vector(ctx, v, tmp_group_uri + "/" + ids_name);
   write_group.add_member(ids_name, true, "ids");
 
-  auto w_type = tiledb::impl::type_to_tiledb<std::remove_reference_t<decltype(w[0])>>::tiledb_type;
+  auto w_type = tiledb::impl::type_to_tiledb<
+      std::remove_reference_t<decltype(w[0])>>::tiledb_type;
   CHECK(std::is_same_v<std::remove_reference_t<decltype(w[0])>, uint32_t>);
   CHECK(std::is_same_v<std::remove_reference_t<decltype(v[0])>, uint32_t>);
   CHECK(w_type == TILEDB_UINT32);
@@ -163,9 +165,9 @@ TEST_CASE("tdb_io: create group", "[tdb_io]") {
   CHECK(!read_group.has_metadata("w[1]", &w_type));
   CHECK(read_group.has_metadata("w[1-16]", &w_type));
 
-  uint32_t* w0 {nullptr};
-  uint32_t* w2 {nullptr};
-  tiledb_datatype_t r_type {TILEDB_ANY};
+  uint32_t* w0{nullptr};
+  uint32_t* w2{nullptr};
+  tiledb_datatype_t r_type{TILEDB_ANY};
 
   uint32_t one{1};
   read_group.get_metadata("w[0]", &w_type, &one, (const void**)&w0);

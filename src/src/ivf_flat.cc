@@ -73,7 +73,6 @@
 #include "utils/timer.h"
 #include "utils/utils.h"
 
-
 bool enable_stats = false;
 std::vector<json> core_stats;
 

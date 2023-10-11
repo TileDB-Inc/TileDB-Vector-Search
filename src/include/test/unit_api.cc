@@ -390,7 +390,6 @@ void yack() {
   //    _yack(std::move(g));
 }
 
-
 TEST_CASE("api: query checks", "[api][index]") {
   tiledb::Context ctx;
   size_t k_nn = 10;
@@ -427,13 +426,8 @@ TEST_CASE("api: queries", "[api][index]") {
   size_t k_nn = 10;
   size_t nthreads = 8;
   size_t num_queries = 50;
-    auto sift_test_tuple = std::make_tuple(
-      db_uri,
-      groundtruth_uri,
-      query_uri,
-      TILEDB_FLOAT32,
-      128,
-      1'000'000);
+  auto sift_test_tuple = std::make_tuple(
+      db_uri, groundtruth_uri, query_uri, TILEDB_FLOAT32, 128, 1'000'000);
 
   auto bigann1M_tuple = std::make_tuple(
       bigann1M_base_uri,
@@ -451,11 +445,14 @@ TEST_CASE("api: queries", "[api][index]") {
       784,
       60'000);
 
-  std::vector<std::tuple<std::string, std::string, std::string, tiledb_datatype_t, size_t, size_t>> tuples {
-    sift_test_tuple,
-    bigann1M_tuple,
-    fmnist_tuple
-  };
+  std::vector<std::tuple<
+      std::string,
+      std::string,
+      std::string,
+      tiledb_datatype_t,
+      size_t,
+      size_t>>
+      tuples{sift_test_tuple, bigann1M_tuple, fmnist_tuple};
 
   SECTION("FeatureVectorArray - queries") {
     for (auto&& t : tuples) {

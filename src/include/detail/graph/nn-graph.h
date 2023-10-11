@@ -1,42 +1,41 @@
 /**
-* @file   graph.h
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
-*
-*
+ * @file   graph.h
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
+ *
  */
-
 
 #ifndef TILEDB_GRAPH_H
 #define TILEDB_GRAPH_H
 
+#include <vector>
 #include "scoring.h"
 #include "utils/fixed_min_heap.h"
-#include <vector>
 
 namespace detail::graph {
 
@@ -55,41 +54,44 @@ class nn_graph {
   std::vector<fixed_min_pair_heap<score_type, id_type>> update_edges_;
 
  public:
-
   nn_graph() = default;
 
   nn_graph(size_t num_vertices, size_t k_nn)
-          : num_vertices_{num_vertices}
-          , k_nn_{k_nn}
-          , out_edges_(num_vertices, fixed_min_pair_heap<score_type, id_type>(k_nn))
-          , in_edges_(num_vertices)
-          , update_edges_(num_vertices, fixed_min_pair_heap<score_type, id_type>(k_nn))
-  { }
-
+      : num_vertices_{num_vertices}
+      , k_nn_{k_nn}
+      , out_edges_(num_vertices, fixed_min_pair_heap<score_type, id_type>(k_nn))
+      , in_edges_(num_vertices)
+      , update_edges_(
+            num_vertices, fixed_min_pair_heap<score_type, id_type>(k_nn)) {
+  }
 
   /**
-   * Attempt to add edge to out_edge neighbor list.  Note that we can't add a corresponding edge to
-   * the in_edges_ list because we don't know which edge may have been displaced if the insert was
-   * successful.
+   * Attempt to add edge to out_edge neighbor list.  Note that we can't add a
+   * corresponding edge to the in_edges_ list because we don't know which edge
+   * may have been displaced if the insert was successful.
    * @param src
    * @param dst
    * @param score
    */
   auto add_edge(id_type src, id_type dst, score_type score) {
-    // return out_edges_[src]. template insert<typename std::remove_cvref_t<decltype(out_edges_[src])>::unique_id>(score, dst);
-    return out_edges_[src]. template insert<unique_id>(score, dst);
+    // return out_edges_[src]. template insert<typename
+    // std::remove_cvref_t<decltype(out_edges_[src])>::unique_id>(score, dst);
+    return out_edges_[src].template insert<unique_id>(score, dst);
   }
 
   /**
-   * Attempt to add edge to update_edge neighbor list.  Note that we can't add a corresponding edge to
-   * the in_edges_ list because we don't know which edge may have been displaced if the insert was
-   * successful.
+   * Attempt to add edge to update_edge neighbor list.  Note that we can't add a
+   * corresponding edge to the in_edges_ list because we don't know which edge
+   * may have been displaced if the insert was successful.
    * @param src
    * @param dst
    * @param score
    */
   auto add_update_edge(id_type src, id_type dst, score_type score) {
-    return update_edges_[src]. template insert<typename std::remove_cvref_t<decltype(out_edges_[src])>::unique_id>(score, dst);
+    return update_edges_[src]
+        .template insert<
+            typename std::remove_cvref_t<decltype(out_edges_[src])>::unique_id>(
+            score, dst);
   }
 
   auto copy_to_update_edges() {
@@ -111,7 +113,6 @@ class nn_graph {
   }
 
   auto sort_edges(id_type i) {
-
   }
 
   auto build_in_edges() {
@@ -119,7 +120,7 @@ class nn_graph {
       in_edges_[i].clear();
     }
     for (size_t i = 0; i < num_vertices_; ++i) {
-      for (auto && [s, e] : out_edges_[i]) {
+      for (auto&& [s, e] : out_edges_[i]) {
         in_edges_[e].insert(i);
       }
     }
@@ -141,7 +142,7 @@ class nn_graph {
     return out_edges_[src];
   }
 
-  auto& out_edges(id_type src)  {
+  auto& out_edges(id_type src) {
     return out_edges_[src];
   }
 
@@ -187,12 +188,10 @@ auto in_degree(const nn_graph<T, I>& g, size_t i) {
   return g.in_degree(i);
 }
 
-
-
 /**
- * @brief Initialize a random graph with k_nn edges per vertex.  Each vertex is connected to another
- * vertex chosen at random with a uniform probablity.  The graph is a directed graph, so the edges are
- * the out edges of each vertex.
+ * @brief Initialize a random graph with k_nn edges per vertex.  Each vertex is
+ * connected to another vertex chosen at random with a uniform probablity.  The
+ * graph is a directed graph, so the edges are the out edges of each vertex.
  * @tparam T
  * @tparam I
  * @param db
@@ -227,8 +226,6 @@ auto init_random_nn_graph(auto&& db, size_t L, Distance distance = Distance()) {
   return g;
 }
 
-
 }  // namespace detail::graph
-
 
 #endif  // TILEDB_GRAPH_H

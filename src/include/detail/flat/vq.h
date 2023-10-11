@@ -131,12 +131,7 @@ auto vq_query_heap(
  */
 template <class T, class DB, class Q, class ID>
 auto vq_query_heap_tiled(
-    T,
-    DB& db,
-    const Q& q,
-    const ID& ids,
-    int k_nn,
-    unsigned nthreads);
+    T, DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads);
 
 template <class DB, class Q>
 auto vq_query_heap_tiled(DB& db, const Q& q, int k_nn, unsigned nthreads) {
@@ -205,12 +200,7 @@ auto vq_query_heap_tiled(
 
 template <class T, class DB, class Q, class ID>
 auto vq_query_heap_2(
-    T,
-    DB& db,
-    const Q& q,
-    const ID& ids,
-    int k_nn,
-    unsigned nthreads);
+    T, DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads);
 
 template <class DB, class Q>
 auto vq_query_heap_2(DB& db, const Q& q, int k_nn, unsigned nthreads) {

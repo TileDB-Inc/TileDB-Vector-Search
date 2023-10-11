@@ -53,13 +53,13 @@ class unique_score {};
 class unique_both {};
 }  // namespace
 
-
-
 template <class Heap>
 struct heap_traits {
   using value_type = typename Heap::value_type;
-  using score_type = typename std::tuple_element<0, typename Heap::value_type>::type;
-  using index_type = typename std::tuple_element<1, typename Heap::value_type>::type;
+  using score_type =
+      typename std::tuple_element<0, typename Heap::value_type>::type;
+  using index_type =
+      typename std::tuple_element<1, typename Heap::value_type>::type;
 };
 
 template <class Heap>
@@ -80,9 +80,9 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   unsigned max_size{0};
 
  public:
-  explicit fixed_min_pair_heap(std::integral auto  k)
+  explicit fixed_min_pair_heap(std::integral auto k)
       : Base(0)
-      , max_size{(unsigned) k} {
+      , max_size{(unsigned)k} {
     Base::reserve(k);
   }
 
@@ -157,7 +157,6 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
       return std::get<0>(a) < std::get<0>(b);
     });
   }
-
 };
 
 template <class T, class U>
@@ -169,7 +168,7 @@ class threshold_min_pair_heap : public std::vector<std::tuple<T, U>> {
   using element = std::tuple<T, U>;
   using Base = std::vector<element>;
 
-  T threshold_ {std::numeric_limits<T>::max()};
+  T threshold_{std::numeric_limits<T>::max()};
 
   void rebuild_heap() {
     std::vector<element> new_heap;
@@ -186,7 +185,9 @@ class threshold_min_pair_heap : public std::vector<std::tuple<T, U>> {
 
  public:
   threshold_min_pair_heap() = default;
-  threshold_min_pair_heap(T threshold) : threshold_(threshold) {}
+  threshold_min_pair_heap(T threshold)
+      : threshold_(threshold) {
+  }
 
   void set_threshold(T new_threshold) {
     if (new_threshold < threshold_) {
@@ -231,14 +232,14 @@ class threshold_min_pair_heap : public std::vector<std::tuple<T, U>> {
   void filtered_heapify() {
     rebuild_heap();
   }
-
 };
 
 template <class T, class U>
 using threshold_heap = threshold_min_pair_heap<T, U>;
 
 template <class Heap>
-void debug_min_heap(const Heap& heap, const std::string& msg = "", int which = 2) {
+void debug_min_heap(
+    const Heap& heap, const std::string& msg = "", int which = 2) {
   std::cout << msg;
 
   if (which == 0) {
@@ -260,7 +261,8 @@ void debug_min_heap(const Heap& heap, const std::string& msg = "", int which = 2
 }
 
 template <class T, class Compare = std::greater<>>
-void max_heapify(std::vector<T>& heap, int i, int heap_size, Compare comp = Compare()) {
+void max_heapify(
+    std::vector<T>& heap, int i, int heap_size, Compare comp = Compare()) {
   int largest = i;
   int left = 2 * i + 1;
   int right = 2 * i + 2;
@@ -287,7 +289,8 @@ void convert_to_max_heap(std::vector<T>& heap, Compare comp = Compare()) {
 }
 
 template <class T, class Compare = std::less<>>
-void min_heapify(std::vector<T>& heap, int i, int heap_size, Compare comp = Compare()) {
+void min_heapify(
+    std::vector<T>& heap, int i, int heap_size, Compare comp = Compare()) {
   int smallest = i;
   int left = 2 * i + 1;
   int right = 2 * i + 2;
@@ -311,7 +314,6 @@ void convert_to_min_heap(std::vector<int>& heap) {
     min_heapify(heap, i, heap.size());
   }
 }
-
 
 #ifdef ALLHEAPS
 
@@ -428,10 +430,8 @@ class fixed_min_set_heap_2 : public std::vector<T> {
   }
 };
 
-
-
-  // Kept here for historical comparison reasons.  They are
-                 // really slow.
+// Kept here for historical comparison reasons.  They are
+// really slow.
 template <class T, class Compare = std::less<T>>
 class fixed_min_set_heap_3 : public std::vector<T> {
   using Base = std::vector<T>;
