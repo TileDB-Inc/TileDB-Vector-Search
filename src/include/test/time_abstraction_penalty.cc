@@ -34,19 +34,20 @@
 #include <tiledb/tiledb>
 #include "utils/timer.h"
 
-#if 0
+#if 1
+int main() {
+}
+#else
 // Quick and dirty program to read pytest generated arrays
-int main(){
+int main() {
   tiledb::Context ctx;
   for (size_t i = 0; i < 25; ++i) {
     auto uri = std::string("/tmp/test_vector_") + std::to_string(i);
-    auto array =  tiledb::Array(ctx, uri, TILEDB_READ);
+    auto array = tiledb::Array(ctx, uri, TILEDB_READ);
     auto schema = array.schema();
     std::cout << "=============================" << std::endl;
     std::cout << uri << std::endl;
     schema.dump();
   }
 }
-#else
-int main() {}
 #endif

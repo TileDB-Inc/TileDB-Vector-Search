@@ -1,40 +1,40 @@
 /**
-* @file   adj_list.h
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
-*
+ * @file   adj_list.h
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
  */
 
 #ifndef TDB_ADJ_LIST_H
 #define TDB_ADJ_LIST_H
 
-#include <vector>
-#include <list>
 #include <initializer_list>
+#include <list>
+#include <vector>
 #include "scoring.h"
 
 namespace detail::graph {
@@ -84,7 +84,6 @@ class index_adj_list : public std::vector<std::list<I>> {
     return Base::operator[](i).size();
   }
 
-
   auto& num_vertices() {
     return Base::size();
   }
@@ -112,10 +111,10 @@ auto& out_degree(index_adj_list<I>& g, I i) {
  *
  * @todo Optimize for performance
  */
- template <class SC, std::integral ID>
+template <class SC, std::integral ID>
 class adj_list : public std::vector<std::list<std::tuple<SC, ID>>> {
   using Base = std::vector<std::list<std::tuple<SC, ID>>>;
-  size_t num_edges_ {0};
+  size_t num_edges_{0};
 
  public:
   using id_type = ID;
@@ -135,8 +134,7 @@ class adj_list : public std::vector<std::list<std::tuple<SC, ID>>> {
 #endif
 
   template <class AdjList>
-    requires(!std::integral<std::remove_cvref_t<AdjList>>)
-  adj_list(AdjList&& l)
+  requires(!std::integral<std::remove_cvref_t<AdjList>>) adj_list(AdjList&& l)
       : Base(l.size()) {
     for (size_t i = 0; i < l.size(); ++i) {
       for (auto&& [dst, val] : l[i]) {
@@ -212,5 +210,5 @@ auto init_random_adj_list(auto&& db, size_t R, Distance distance = Distance()) {
   return g;
 }
 
-} // namespace detail::graph
-#endif //TDB_ADJ_LIST_H
+}  // namespace detail::graph
+#endif  // TDB_ADJ_LIST_H

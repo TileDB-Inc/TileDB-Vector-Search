@@ -118,12 +118,7 @@ template <feature_vector_array DB, query_vector_array Q>
  */
 template <class T, class DB, class Q, class ID>
 auto qv_query_heap(
-    T,
-    const DB& db,
-    const Q& q,
-    const ID& ids,
-    int k_nn,
-    unsigned nthreads);
+    T, const DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads);
 
 template <class DB, class Q>
 auto qv_query_heap(const DB& db, const Q& q, int k_nn, unsigned nthreads) {
@@ -149,7 +144,8 @@ auto qv_query_heap(
   scoped_timer _{tdb_func__};
   // load(db);
 
-  // using feature_type = typename std::remove_reference_t<decltype(db)>::value_type;
+  // using feature_type = typename
+  // std::remove_reference_t<decltype(db)>::value_type;
   using id_type = typename std::remove_reference_t<decltype(ids)>::value_type;
   using score_type = float;
 
@@ -392,7 +388,8 @@ template <feature_vector_array DB, feature_vector_array Q>
 auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
   scoped_timer _{tdb_func__};
 
-  // Just need a single vector -- creating an index, not ids, so hardcoded size_t is okay to use here
+  // Just need a single vector -- creating an index, not ids, so hardcoded
+  // size_t is okay to use here
   using id_type = size_t;
   using score_type = float;
   auto size_db = num_vectors(db);

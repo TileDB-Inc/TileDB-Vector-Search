@@ -181,8 +181,9 @@ struct _fn {
   }
 
   template <class V>
-    requires (!_member_num_cols<V>)&&std::is_arithmetic_v<std::ranges::range_value_t<V>> auto constexpr
-  operator()(V&& v) const noexcept {
+  requires(!_member_num_cols<V>) &&
+      std::is_arithmetic_v<std::ranges::range_value_t<V>> auto constexpr
+      operator()(V&& v) const noexcept {
     return 1;
   }
 };
@@ -307,7 +308,8 @@ struct _gn {
 
   // Assume that if the thing does not have num_loads, that it is loaded
   template <class T>
-    requires(!_member_num_loads<T>) auto constexpr operator()(T&& t) const noexcept {
+  requires(!_member_num_loads<T>) auto constexpr operator()(
+      T&& t) const noexcept {
     return 1;
   }
 };
@@ -344,8 +346,8 @@ struct _fn {
   }
 
   template <class T>
-    requires(!_member_col_offset<T>)
-  auto constexpr operator()(T&& t) const noexcept {
+  requires(!_member_col_offset<T>) auto constexpr operator()(
+      T&& t) const noexcept {
     return 0;
   }
 };
@@ -357,8 +359,8 @@ struct _gn {
   }
 
   template <class T>
-    requires(!_member_col_part_offset<T>)
-  auto constexpr operator()(T&& t) const noexcept {
+  requires(!_member_col_part_offset<T>) auto constexpr operator()(
+      T&& t) const noexcept {
     return 0;
   }
 };
@@ -370,7 +372,7 @@ struct _hn {
   }
 
   template <class T>
-    requires(!_member_num_col_parts<T>) auto constexpr operator()(
+  requires(!_member_num_col_parts<T>) auto constexpr operator()(
       T&& t) const noexcept {
     return 0;
   }

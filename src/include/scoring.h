@@ -106,11 +106,12 @@ inline auto sum_of_squares(V const& a, U const& b) {
   float sum{0.0};
   size_t size_a = size(a);
 
-  if constexpr (std::unsigned_integral<std::remove_reference_t<decltype(a[0])>>
-      || std::unsigned_integral<std::remove_reference_t<decltype(b[0])>>) {
+  if constexpr (
+      std::unsigned_integral<std::remove_reference_t<decltype(a[0])>> ||
+      std::unsigned_integral<std::remove_reference_t<decltype(b[0])>>) {
     for (size_t i = 0; i < size_a; ++i) {
       // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = (float) a[i] - (float) b[i];
+      float diff = (float)a[i] - (float)b[i];
       sum += diff * diff;
     }
   } else {
@@ -178,7 +179,6 @@ inline auto dot(U const& a, V const& b) {
   return sum;
 }
 
-
 // ----------------------------------------------------------------------------
 // Function objects for computing distances
 // ----------------------------------------------------------------------------
@@ -192,7 +192,6 @@ struct sum_of_squares_distance {
 
 using l2_distance = sum_of_squares_distance;
 using L2_distance = sum_of_squares_distance;
-
 
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn
@@ -245,7 +244,9 @@ void trim_top_k(size_t start, U& top_k, V& top_k_scores) {
  * @return
  */
 
-template <std::ranges::random_access_range V, std::ranges::random_access_range L>
+template <
+    std::ranges::random_access_range V,
+    std::ranges::random_access_range L>
 auto get_top_k_from_scores(V const& scores, L&& top_k, size_t k = 0) {
   using value_type = typename V::value_type;
   using index_type = typename std::remove_reference_t<L>::value_type;
@@ -309,9 +310,8 @@ void consolidate_scores(std::vector<std::vector<Heap>>& min_scores) {
  * @param top_k
  */
 template <class Heap>
-inline void get_top_k_from_heap(
-    Heap& min_scores,
-    auto&& top_k) requires(!std::is_same_v<Heap, std::vector<Heap>>) {
+inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k) requires(
+    !std::is_same_v<Heap, std::vector<Heap>>) {
   std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&& b) {
     return std::get<0>(a) < std::get<0>(b);
   });
@@ -322,8 +322,6 @@ inline void get_top_k_from_heap(
       }));
   pad_with_sentinels(k_nn, top_k);
 }
-
-
 
 /**
  * @brief Utility function to extract the top k scores from a vector of min
@@ -391,7 +389,8 @@ inline void get_top_k_with_scores_from_heap(
 
 template <class Heap>
 inline void get_top_k_with_scores_from_heap(const Heap& min_scores, size_t k) {
-  using element_type = std::remove_cvref_t<decltype(*(min_scores.begin()))>;/*typename Heap::value_type;*/
+  using element_type = std::remove_cvref_t<decltype(*(
+      min_scores.begin()))>; /*typename Heap::value_type;*/
   using value_type = typename std::tuple_element<0, element_type>::type;
   using index_type = typename std::tuple_element<1, element_type>::type;
 
@@ -401,8 +400,6 @@ inline void get_top_k_with_scores_from_heap(const Heap& min_scores, size_t k) {
   get_top_k_with_scores_from_heap(min_scores, top_k, top_k_scores);
   return std::make_tuple(std::move(top_k_scores), std::move(top_k));
 }
-
-
 
 // Overload for one-d scores
 template <class Heap>
@@ -555,7 +552,8 @@ auto count_intersections(auto&& I, auto&& groundtruth, size_t k_nn) {
           assignment_counter{});
     } else {
       static_assert(
-              always_false<std::remove_cvref_t<decltype(I)>>, "T must be a feature_vector or feature_vector_array");
+          always_false<std::remove_cvref_t<decltype(I)>>,
+          "T must be a feature_vector or feature_vector_array");
     }
   }
   return total_intersected;
@@ -617,13 +615,10 @@ auto mat_col_sum(
  * as vq_ew for small numbers of query vectors.
  */
 template <class Matrix1, class Matrix2, class Matrix3>
-void gemm_scores(
-    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
-  requires(
-      (std::is_same_v<typename Matrix1::value_type, float> &&
-       std::is_same_v<typename Matrix2::value_type, float> &&
-       std::is_same_v<typename Matrix3::value_type, float>))
-{
+void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads) requires(
+    (std::is_same_v<typename Matrix1::value_type, float> &&
+     std::is_same_v<typename Matrix2::value_type, float> &&
+     std::is_same_v<typename Matrix3::value_type, float>)) {
   using T = typename Matrix1::value_type;
 
   size_t M = A.num_cols();  // Vector dimension
@@ -669,13 +664,10 @@ void gemm_scores(
 }
 
 template <class Matrix1, class Matrix2, class Matrix3>
-void gemm_scores(
-    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
-  requires(
-      ((!std::is_same_v<typename Matrix1::value_type, float>)&&std::
-           is_same_v<typename Matrix2::value_type, float> &&
-       std::is_same_v<typename Matrix3::value_type, float>))
-{
+void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads) requires(
+    ((!std::is_same_v<typename Matrix1::value_type, float>)&&std::
+         is_same_v<typename Matrix2::value_type, float> &&
+     std::is_same_v<typename Matrix3::value_type, float>)) {
   ColMajorMatrix<float> A_f(A.num_rows(), A.num_cols());
   std::copy(A.data(), A.data() + A.num_rows() * A.num_cols(), A_f.data());
 
@@ -684,11 +676,20 @@ void gemm_scores(
 
 template <class Matrix1, class Matrix2, class Matrix3>
 void gemm_scores(
-    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
-  requires(((!std::is_same_v<typename Matrix1::value_type, float>)&&(
-      !std::is_same_v<typename Matrix2::value_type, float>)&&std::
-                is_same_v<typename Matrix3::value_type, float>))
-{
+    const Matrix1& A,
+    const Matrix2& B,
+    Matrix3& C,
+    unsigned nthreads) requires(((!std::
+                                      is_same_v<
+                                          typename Matrix1::value_type,
+                                          float>)&&(!std::
+                                                        is_same_v<
+                                                            typename Matrix2::
+                                                                value_type,
+                                                            float>)&&std::
+                                     is_same_v<
+                                         typename Matrix3::value_type,
+                                         float>)) {
   ColMajorMatrix<float> A_f(A.num_rows(), A.num_cols());
   std::copy(A.data(), A.data() + A.num_rows() * A.num_cols(), A_f.data());
 

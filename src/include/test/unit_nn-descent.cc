@@ -47,11 +47,19 @@ TEST_CASE("nn-descent: test test", "[nn-descent]") {
   REQUIRE(true);
 }
 
-TEST_CASE("nn-descent: accuracy", "[nn-descent]") {
+TEMPLATE_TEST_CASE(
+    "nn-descent: accuracy",
+    "[nn-descent]",
+    uint32_t,
+    int32_t,
+    uint64_t,
+    int64_t) {
   size_t k_nn = 10;
 
+  using feature_type = float;
+
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<db_type>(ctx, fmnist_test, N);
+  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnist_test, N);
   db.load();
   //  auto db = std::move(sift_base);
   //  N = db.num_cols();
@@ -67,7 +75,8 @@ TEST_CASE("nn-descent: accuracy", "[nn-descent]") {
 
   {
     scoped_timer _{"nn_descent", true};
-    auto g = ::detail::graph::init_random_nn_graph<float>(db, k_nn);
+    auto g =
+        ::detail::graph::init_random_nn_graph<feature_type, uint32_t>(db, k_nn);
     for (size_t i = 0; i < 4; ++i) {
       auto num_updates = nn_descent_1_step_all(g, db);
       std::cout << "num_updates: " << num_updates << std::endl;
@@ -87,25 +96,38 @@ TEST_CASE("nn-descent: accuracy", "[nn-descent]") {
   }
 }
 
-TEST_CASE("nn-descent: connectivity", "[nn-descent]") {
+TEMPLATE_TEST_CASE(
+    "nn-descent: connectivity",
+    "[nn-descent]",
+    int32_t,
+    uint32_t,
+    int64_t,
+    uint64_t) {
   size_t k_nn = 10;
 
+  using feature_type = float;
+  using id_type = TestType;
+
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<db_type>(ctx, fmnist_test, N);
+  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnist_test, N);
   db.load();
-  auto g = detail::graph::nn_descent_1<db_type>(db, k_nn);
-  bfs(g, 0UL);
+  auto g = detail::graph::nn_descent_1<feature_type, id_type>(db, k_nn);
+
+  bfs(g, TestType{0});
 }
 
 TEST_CASE("nn-descent: nn_descent_1", "[nn-descent]") {
+  using feature_type = float;
+  using id_type = uint32_t;
+
   size_t nthreads = 1;
   size_t k_nn = 10;
   size_t num_queries = 10;
 
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<db_type>(ctx, fmnist_test, N);
+  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnist_test, N);
   db.load();
-  auto g = detail::graph::nn_descent_1<db_type>(db, k_nn);
+  auto g = detail::graph::nn_descent_1<feature_type, id_type>(db, k_nn);
   auto query = ColMajorMatrix<float>(db.num_rows(), num_queries);
   for (size_t i = 0; i < db.num_rows(); ++i) {
     query(i, 0) = db(i, 0);
@@ -158,23 +180,26 @@ TEST_CASE("nn-descent: nn_descent_1", "[nn-descent]") {
 }
 
 TEST_CASE("nn-descent: nn_descent_1 vs ivf", "[nn-descent]") {
+  using feature_type = float;
+  using id_type = uint32_t;
+
   size_t nthreads = 1;
   size_t k_nn = 10;
   size_t num_queries = 50;
 
   tiledb::Context ctx;
 
-  auto db = tdbColMajorMatrix<db_type>(ctx, db_uri);
+  auto db = tdbColMajorMatrix<feature_type>(ctx, db_uri);
   db.load();
-  auto centroids = tdbColMajorMatrix<db_type>(ctx, centroids_uri);
+  auto centroids = tdbColMajorMatrix<feature_type>(ctx, centroids_uri);
   centroids.load();
-  auto query = tdbColMajorMatrix<db_type>(ctx, query_uri, num_queries);
+  auto query = tdbColMajorMatrix<feature_type>(ctx, query_uri, num_queries);
   query.load();
   auto index = read_vector<indices_type>(ctx, index_uri);
   auto groundtruth = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
   groundtruth.load();
 
-  auto parts = tdbColMajorMatrix<db_type>(ctx, parts_uri);
+  auto parts = tdbColMajorMatrix<feature_type>(ctx, parts_uri);
   parts.load();
   auto ids = read_vector<uint64_t>(ctx, ids_uri);
 
@@ -190,7 +215,7 @@ TEST_CASE("nn-descent: nn_descent_1 vs ivf", "[nn-descent]") {
   ivf_timer.stop();
 
   log_timer graph_timer{"nn_descent_1", true};
-  auto g = detail::graph::nn_descent_1<db_type>(db, k_nn);
+  auto g = detail::graph::nn_descent_1<feature_type, id_type>(db, k_nn);
   graph_timer.stop();
 
   log_timer query_timer{"nn_descent_1_query", true};

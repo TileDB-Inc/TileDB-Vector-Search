@@ -33,9 +33,9 @@
 #ifndef TILEDB_NN_DESCENT_H
 #define TILEDB_NN_DESCENT_H
 
-#include "scoring.h"
-#include "detail/graph/nn-graph.h"
 #include <unordered_set>
+#include "detail/graph/nn-graph.h"
+#include "scoring.h"
 #include "utils/print_types.h"
 
 namespace detail::graph {
@@ -64,11 +64,13 @@ the graph
    stop
  */
 
-
-
-template <std::integral I, std::integral J, class Distance = sum_of_squares_distance>
-auto nn_descent_0_step(auto&& g, auto&& db, I i, J j, Distance distance = Distance()) {
-  size_t num_updates {0};
+template <
+    std::integral I,
+    std::integral J,
+    class Distance = sum_of_squares_distance>
+auto nn_descent_0_step(
+    auto&& g, auto&& db, I i, J j, Distance distance = Distance()) {
+  size_t num_updates{0};
   for (auto&& [_, k] : out_edges(g, j)) {  // _ is dist(j, k)
     if (k == i) {
       continue;
@@ -92,7 +94,8 @@ auto nn_descent_0_step(auto&& g, auto&& db, I i, J j, Distance distance = Distan
 }
 
 template <class Distance = sum_of_squares_distance>
-auto nn_descent_0_step_all(auto&& g, auto&& db, Distance distance = Distance()) {
+auto nn_descent_0_step_all(
+    auto&& g, auto&& db, Distance distance = Distance()) {
   size_t num_updates{0};
   size_t nvertices{num_vertices(g)};
   // g.copy_to_update_edges();
@@ -113,11 +116,14 @@ auto nn_descent_0_step_all(auto&& g, auto&& db, Distance distance = Distance()) 
   return num_updates;
 }
 
-
 // Local join
-template <std::integral I, std::integral J, class Distance = sum_of_squares_distance>
-auto nn_descent_1_step(auto&& g, auto&& db, I i, J j, Distance distance = Distance()) {
-  size_t num_updates {0};
+template <
+    std::integral I,
+    std::integral J,
+    class Distance = sum_of_squares_distance>
+auto nn_descent_1_step(
+    auto&& g, auto&& db, I i, J j, Distance distance = Distance()) {
+  size_t num_updates{0};
 
   for (auto&& [_, k] : out_edges(g, i)) {  // _ is dist(j, k)
     if (k <= j) {
@@ -149,7 +155,8 @@ auto nn_descent_1_step(auto&& g, auto&& db, I i, J j, Distance distance = Distan
 }
 
 template <class Distance = sum_of_squares_distance>
-auto nn_descent_1_step_all(auto&& g, auto&& db, Distance distance = Distance()) {
+auto nn_descent_1_step_all(
+    auto&& g, auto&& db, Distance distance = Distance()) {
   size_t num_updates{0};
   size_t nvertices{num_vertices(g)};
   // g.copy_to_update_edges();
@@ -170,8 +177,6 @@ auto nn_descent_1_step_all(auto&& g, auto&& db, Distance distance = Distance()) 
 
   return num_updates;
 }
-
-
 
 #if 0
 template <adjacency_list_graph Graph>
@@ -225,26 +230,28 @@ template <class T, class I>
 auto bfs(nn_graph<T, I>& graph, I root) {
   using vertex_id_type = I;
 
-  std::deque<vertex_id_type>  q1, q2;
-  std::vector<vertex_id_type> level(num_vertices(graph), std::numeric_limits<vertex_id_type>::max());
-  std::vector<vertex_id_type> parents(num_vertices(graph), std::numeric_limits<vertex_id_type>::max());
-  size_t                      lvl = 0;
+  std::deque<vertex_id_type> q1, q2;
+  std::vector<vertex_id_type> level(
+      num_vertices(graph), std::numeric_limits<vertex_id_type>::max());
+  std::vector<vertex_id_type> parents(
+      num_vertices(graph), std::numeric_limits<vertex_id_type>::max());
+  size_t lvl = 0;
 
   q1.push_back(root);
-  level[root]   = lvl++;
+  level[root] = lvl++;
   parents[root] = root;
 
   while (!q1.empty()) {
-
     std::for_each(q1.begin(), q1.end(), [&](vertex_id_type u) {
-      std::for_each(graph.out_edges(u).begin(), graph.out_edges(u).end(), [&](auto&& x) {
-        auto&& [_, v] = x;
-        if (level[v] == std::numeric_limits<vertex_id_type>::max()) {
-          q2.push_back(v);
-          level[v]   = lvl;
-          parents[v] = u;
-        }
-      });
+      std::for_each(
+          graph.out_edges(u).begin(), graph.out_edges(u).end(), [&](auto&& x) {
+            auto&& [_, v] = x;
+            if (level[v] == std::numeric_limits<vertex_id_type>::max()) {
+              q2.push_back(v);
+              level[v] = lvl;
+              parents[v] = u;
+            }
+          });
     });
     std::swap(q1, q2);
     q2.clear();
@@ -261,10 +268,15 @@ auto bfs(nn_graph<T, I>& graph, I root) {
   return parents;
 }
 
-
-
 template <class T, std::integral ID, class Distance = sum_of_squares_distance>
-auto nn_descent_1_query(const detail::graph::nn_graph<T, ID>& graph, auto&& db, auto&& query, size_t k_nn, size_t num_seeds, size_t nthreads, Distance distance = Distance()) {
+auto nn_descent_1_query(
+    const detail::graph::nn_graph<T, ID>& graph,
+    auto&& db,
+    auto&& query,
+    size_t k_nn,
+    size_t num_seeds,
+    size_t nthreads,
+    Distance distance = Distance()) {
   using vertex_id_type = ID;
 
   auto num_queries = query.num_cols();
@@ -274,7 +286,8 @@ auto nn_descent_1_query(const detail::graph::nn_graph<T, ID>& graph, auto&& db, 
       num_queries, fixed_min_pair_heap<float, vertex_id_type>(k_nn));
 
   for (size_t i = 0; i < num_queries; ++i) {
-    q1.clear(); q2.clear();
+    q1.clear();
+    q2.clear();
     auto q = query[i];
 
     std::vector<vertex_id_type> level(
@@ -282,17 +295,15 @@ auto nn_descent_1_query(const detail::graph::nn_graph<T, ID>& graph, auto&& db, 
 
     for (size_t j = 0; j < num_seeds; ++j) {
       auto gen = std::mt19937_64(std::random_device()());
-      auto root =
-          std::uniform_int_distribution<size_t>(0, num_vertices(graph) - 1)(gen);
-        q1.insert(distance(db[root], q), root);
-        top_k[i].insert(distance(db[root], q), root);
-        level[root] = 0;
+      auto root = std::uniform_int_distribution<size_t>(
+          0, num_vertices(graph) - 1)(gen);
+      q1.insert(distance(db[root], q), root);
+      top_k[i].insert(distance(db[root], q), root);
+      level[root] = 0;
     }
     size_t lvl = 1;
 
-
     while (!q1.empty()) {
-
       auto start = q1.begin();
       auto stop = q1.end();
       if (lvl != 0) {
@@ -302,21 +313,21 @@ auto nn_descent_1_query(const detail::graph::nn_graph<T, ID>& graph, auto&& db, 
 
       std::for_each(start, stop, [&](auto&& x) {
         auto&& [_, u] = x;
-//       auto&& [_, u] = q1.front(); // this is going to be max element
+        //       auto&& [_, u] = q1.front(); // this is going to be max element
 
-        auto nbd {graph.entire_neighborhood(u)};
+        auto nbd{graph.entire_neighborhood(u)};
         auto in_start = begin(nbd);
         auto in_stop = end(nbd);
 
         std::for_each(in_start, in_stop, [&](auto&& v) {
           if (level[v] == std::numeric_limits<vertex_id_type>::max()) {
             auto dist = distance(db[v], q);
-            q2. template insert<unique_id>(dist, v);
+            q2.template insert<unique_id>(dist, v);
             level[v] = lvl;
             top_k[i].insert(dist, v);
           }
         });
-       });
+      });
       std::swap(q1, q2);
       q2.clear();
       ++lvl;
@@ -327,22 +338,19 @@ auto nn_descent_1_query(const detail::graph::nn_graph<T, ID>& graph, auto&& db, 
 
 template <class T, std::integral ID, class Distance = sum_of_squares_distance>
 auto nn_descent_1(auto&& db, size_t k_nn, Distance distance = Distance()) {
-  auto g =
-      init_random_nn_graph<T, ID, Distance>(db, k_nn, distance);
+  auto g = init_random_nn_graph<T, ID, Distance>(db, k_nn, distance);
 
   size_t num_updates{0};
   do {
     num_updates = nn_descent_1_step_all(g, db);
     std::cout << num_updates << std::endl;
-  } while(num_updates > (k_nn * num_vertices(g)) / 100);
+  } while (num_updates > (k_nn * num_vertices(g)) / 100);
 
   return g;
 }
 
-
 template <std::integral I, std::integral J, std::integral ID>
 auto nn_descent_step(auto&& g, I i, J j, std::unordered_set<ID>& s) {
-
   auto num_visited = 0;
 
   for (auto&& [_, k] : out_edges(g, j)) {  // _ is dist(j, k)
@@ -361,7 +369,6 @@ auto nn_descent_step(auto&& g, I i, J j, std::unordered_set<ID>& s) {
   }
   return num_visited;
 }
-
 
 template <class Distance = sum_of_squares_distance>
 auto nn_descent_step_all(auto&& g, auto&& db, Distance distance = Distance()) {
@@ -398,15 +405,15 @@ auto nn_descent_step_all(auto&& g, auto&& db, Distance distance = Distance()) {
 
   t.stop();
 
-  std::cout << num_visited << ", " << num_updates << ", " << num_candidates << std::endl;
+  std::cout << num_visited << ", " << num_updates << ", " << num_candidates
+            << std::endl;
 
   return num_updates;
 }
 
-
-
 template <class Distance = sum_of_squares_distance>
-auto nn_descent_step_full_all(auto&& g, auto&& db, Distance distance = Distance()) {
+auto nn_descent_step_full_all(
+    auto&& g, auto&& db, Distance distance = Distance()) {
   scoped_timer t("nn_descent_step_full_all", true);
   size_t num_candidates{0};
   size_t num_updates{0};
@@ -440,26 +447,23 @@ auto nn_descent_step_full_all(auto&& g, auto&& db, Distance distance = Distance(
 
   t.stop();
 
-  std::cout << num_visited << ", " << num_updates << ", " << num_candidates << std::endl;
+  std::cout << num_visited << ", " << num_updates << ", " << num_candidates
+            << std::endl;
 
   return num_updates;
 }
 
-
 template <class T, std::integral ID, class Distance = sum_of_squares_distance>
 auto nn_descent(auto&& db, size_t k_nn, Distance distance = Distance()) {
-  auto g =
-      init_random_nn_graph<T, ID, Distance>(db, k_nn, distance);
+  auto g = init_random_nn_graph<T, ID, Distance>(db, k_nn, distance);
 
   size_t num_updates{0};
   do {
     num_updates = nn_descent_step_all(g, db);
-  } while(num_updates > (k_nn * num_vertices(g)) / 100);
+  } while (num_updates > (k_nn * num_vertices(g)) / 100);
 
   return g;
 }
-
-
 
 }  // namespace detail::graph
 

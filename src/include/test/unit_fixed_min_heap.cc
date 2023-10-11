@@ -29,13 +29,13 @@
  *
  */
 
+#include <algorithm>
 #include <catch2/catch_all.hpp>
+#include <iostream>
 #include <set>
 #include <span>
 #include <vector>
 #include "utils/fixed_min_heap.h"
-#include <algorithm>
-#include <iostream>
 
 TEST_CASE("fixed_min_heap: test test", "[fixed_min_heap]") {
   REQUIRE(true);
@@ -44,7 +44,7 @@ TEST_CASE("fixed_min_heap: test test", "[fixed_min_heap]") {
 TEST_CASE("fixed_min_heap: std::heap", "[fixed_min_heap]") {
   std::vector<int> v{3, 1, 4, 1, 5, 9};
 
-  std::cout << "initial vector  : " ;
+  std::cout << "initial vector  : ";
   for (auto a : v) {
     std::cout << a << ' ';
   }
@@ -53,14 +53,14 @@ TEST_CASE("fixed_min_heap: std::heap", "[fixed_min_heap]") {
   std::make_heap(v.begin(), v.end());
   CHECK(std::is_heap(v.begin(), v.end(), std::less<>()));
 
-  std::cout << "initial max heap   : " ;
+  std::cout << "initial max heap   : ";
   for (auto a : v) {
     std::cout << a << ' ';
   }
   std::cout << '\n';
 
   std::pop_heap(v.begin(), v.end());
-  std::cout << "max heap after pop heap: " ;
+  std::cout << "max heap after pop heap: ";
   for (auto a : v) {
     std::cout << a << ' ';
   }
@@ -69,7 +69,7 @@ TEST_CASE("fixed_min_heap: std::heap", "[fixed_min_heap]") {
   v.pop_back();
   CHECK(std::is_heap(v.begin(), v.end(), std::less<>()));
 
-  std::cout << "max heap after pop back: " ;
+  std::cout << "max heap after pop back: ";
   for (auto a : v) {
     std::cout << a << ' ';
   }
@@ -315,7 +315,13 @@ TEST_CASE(
   CHECK(a == a2);
 }
 
-TEMPLATE_TEST_CASE("fixed_min_heap: first_less", "[fixed_min_heap]", float, double, int, unsigned) {
+TEMPLATE_TEST_CASE(
+    "fixed_min_heap: first_less",
+    "[fixed_min_heap]",
+    float,
+    double,
+    int,
+    unsigned) {
   first_less<std::tuple<TestType, size_t>> a;
   auto v = std::vector<std::tuple<TestType, size_t>>{
       {0, 0},
@@ -335,8 +341,8 @@ TEMPLATE_TEST_CASE("fixed_min_heap: first_less", "[fixed_min_heap]", float, doub
   CHECK(!a(v[1], v[2]));
 }
 
-
-TEST_CASE("threshold_heap: threshold_heap", "[fixed_min_heap][threshold_heap]") {
+TEST_CASE(
+    "threshold_heap: threshold_heap", "[fixed_min_heap][threshold_heap]") {
   threshold_heap<float, int> a(5);
 
   SECTION("insert in ascending order") {
@@ -389,8 +395,7 @@ TEST_CASE(
   }
 }
 
-TEST_CASE(
-    "threshold_heap: new threshold", "[threshold_heap]") {
+TEST_CASE("threshold_heap: new threshold", "[threshold_heap]") {
   using element = std::tuple<float, int>;
 
   float thresh = std::rand();
@@ -416,4 +421,3 @@ TEST_CASE(
     CHECK(e < thresh);
   }
 }
-

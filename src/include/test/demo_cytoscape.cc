@@ -1,23 +1,27 @@
-#include <iostream>
 #include <cpprest/http_client.h>
+#include <iostream>
 
 using namespace web::http;
 using namespace web::http::client;
 
 int main() {
   // Define your Cytoscape server information
-  const std::string cytoscapeHost = "http://localhost:1234"; // Replace with actual server address
+  const std::string cytoscapeHost =
+      "http://localhost:1234";  // Replace with actual server address
 
   // Create a Cytoscape node
   http_client client(cytoscapeHost);
   uri_builder builder(U("/v1/networks"));
-  http_response response = client.request(methods::POST, builder.to_string(), U(R"(
+  http_response response =
+      client
+          .request(methods::POST, builder.to_string(), U(R"(
         {
             "data": {
                 "name": "GeometricGraph"
             }
         }
-    )")).get();
+    )"))
+          .get();
 
   // Check the response status and get the network ID
   if (response.status_code() != status_codes::OK) {
@@ -29,10 +33,13 @@ int main() {
   networkId = networkId.substr(1, networkId.size() - 2);
 
   // Create nodes and edges
-  builder.set_path(U("/v1/networks/") + utility::conversions::to_string_t(networkId) + U("/elements"));
+  builder.set_path(
+      U("/v1/networks/") + utility::conversions::to_string_t(networkId) +
+      U("/elements"));
 
   // Create nodes
-  client.request(methods::POST, builder.to_string(), U(R"(
+  client
+      .request(methods::POST, builder.to_string(), U(R"(
         [
             {
                 "data": {
@@ -47,10 +54,12 @@ int main() {
                 }
             }
         ]
-    )")).wait();
+    )"))
+      .wait();
 
   // Create edges
-  client.request(methods::POST, builder.to_string(), U(R"(
+  client
+      .request(methods::POST, builder.to_string(), U(R"(
         [
             {
                 "data": {
@@ -60,7 +69,8 @@ int main() {
                 }
             }
         ]
-    )")).wait();
+    )"))
+      .wait();
 
   std::cout << "Graph visualization created in Cytoscape." << std::endl;
 

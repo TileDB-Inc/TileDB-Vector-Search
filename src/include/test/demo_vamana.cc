@@ -59,7 +59,6 @@ static constexpr const char USAGE[] =
       -k, --k_nn NN           number of nearest neighbors [default: 1]
 )";
 
-
 int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
   auto args = docopt::docopt(USAGE, strings, true);
@@ -80,7 +79,8 @@ int main(int argc, char* argv[]) {
 #if 1
   auto X = random_geometric_2D(num_nodes);
   dump_coordinates("coords.txt", X);
-  auto idx = detail::graph::vamana_index<float, size_t, size_t>(num_nodes, L, R, 0);
+  auto idx =
+      detail::graph::vamana_index<float, size_t, size_t>(num_nodes, L, R, 0);
   idx.train(X);
 
 #else
@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
     }
   })();
   dump_coordinates("coords.txt", X);
-  detail::graph::adj_list<float, size_t> g(M*N);
+  detail::graph::adj_list<float, size_t> g(M * N);
   for (auto&& [src, dst] : edges) {
     g.add_edge(src, dst, sum_of_squares_distance{}(X[src], X[dst]));
   }
@@ -133,14 +133,13 @@ int main(int argc, char* argv[]) {
         }
 
         // out_degree of j \cup p
-        std::vector <size_t> tmp;
+        std::vector<size_t> tmp;
         tmp.push_back(p);
         for (auto&& [_, k] : g.out_edges(j)) {
           tmp.push_back(k);
         }
 
         if (tmp.size() > R) {
-
           // prune Nout(j) \cup p
           robust_prune(g, X, j, tmp, alpha, R);
         } else {

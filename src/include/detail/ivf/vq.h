@@ -121,9 +121,9 @@ auto vq_apply_query(
 
     // @todo this is a bit of a hack
     auto quartno = partno;
-//    if constexpr (!has_num_col_parts<decltype(partitioned_db)>) {
-      quartno = active_partitions[partno];
-//    }
+    //    if constexpr (!has_num_col_parts<decltype(partitioned_db)>) {
+    quartno = active_partitions[partno];
+    //    }
 
     auto start = new_indices[quartno] - col_offset;
     auto stop = new_indices[quartno + 1] - col_offset;
@@ -325,7 +325,14 @@ auto vq_query_infinite_ram(
   auto partitioned_ids = read_vector<id_type>(ctx, id_uri);
 
   return vq_query_infinite_ram(
-      partitioned_db, centroids, q, indices, partitioned_ids, nprobe, k_nn, nthreads);
+      partitioned_db,
+      centroids,
+      q,
+      indices,
+      partitioned_ids,
+      nprobe,
+      k_nn,
+      nthreads);
 }
 
 /**
@@ -349,8 +356,10 @@ auto vq_query_infinite_ram_2(
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
 
-  // using feature_type = typename std::remove_reference<decltype(partitioned_db)>::value_type;
-  using id_type = typename std::remove_reference<decltype(partitioned_ids)>::value_type;
+  // using feature_type = typename
+  // std::remove_reference<decltype(partitioned_db)>::value_type;
+  using id_type =
+      typename std::remove_reference<decltype(partitioned_ids)>::value_type;
   using score_type = float;
 
   auto num_queries = num_vectors(query);
@@ -461,7 +470,14 @@ auto vq_query_infinite_ram_2(
   auto partitioned_ids = read_vector<id_type>(ctx, id_uri);
 
   return vq_query_infinite_ram(
-      partitioned_db, centroids, q, indices, partitioned_ids, nprobe, k_nn, nthreads);
+      partitioned_db,
+      centroids,
+      q,
+      indices,
+      partitioned_ids,
+      nprobe,
+      k_nn,
+      nthreads);
 }
 
 /*

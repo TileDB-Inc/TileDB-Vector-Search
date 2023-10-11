@@ -101,9 +101,11 @@ class empty_timer {
 class life_timer : public empty_timer, public ms_timer {
  private:
   bool debug_{false};
+
  public:
   explicit life_timer(const std::string& msg = "", bool debug = false)
-      : ms_timer(msg), debug_(debug) {
+      : ms_timer(msg)
+      , debug_(debug) {
     if (debug_) {
       std::cout << "# [ " + msg + " ]: starting timer" << std::endl;
     }

@@ -3,40 +3,38 @@
 
 #include <vector>
 
-auto tiny_vectors = std::vector<std::vector<size_t>> {
-    { 0, 0 }, // 0
-    { 2, 0 }, // 1
-    { 8, 0 }, // 2
-    { 1, 1 }, // 3
-    { 2, 2 }, // 4
-    { 2, 3 }, // 5
-    { 8, 2 }, // 6
+auto tiny_vectors = std::vector<std::vector<size_t>>{
+    {0, 0},  // 0
+    {2, 0},  // 1
+    {8, 0},  // 2
+    {1, 1},  // 3
+    {2, 2},  // 4
+    {2, 3},  // 5
+    {8, 2},  // 6
 };
 
-auto tiny_index_edge_list = std::vector<std::tuple<size_t, size_t>> {
-    { 0, 1 },
-    { 1, 2 },
-    { 1, 3 },
-    { 2, 3 },
-    { 2, 6 },
-    { 3, 5 },
-    { 3, 6 },
-    { 4, 3 },
-    { 5, 4 },
+auto tiny_index_edge_list = std::vector<std::tuple<size_t, size_t>>{
+    {0, 1},
+    {1, 2},
+    {1, 3},
+    {2, 3},
+    {2, 6},
+    {3, 5},
+    {3, 6},
+    {4, 3},
+    {5, 4},
 };
 
-
-std::vector<std::vector<size_t>> tiny_index_adj_list {
-    { 1 },
-    { 2, 3 },
-    { 3, 6 },
-    { 5, 6 },
-    { 3 },
-    { 4 },
+std::vector<std::vector<size_t>> tiny_index_adj_list{
+    {1},
+    {2, 3},
+    {3, 6},
+    {5, 6},
+    {3},
+    {4},
 };
 
-
-std::vector<std::tuple<size_t, float>> tiny_best {
+std::vector<std::tuple<size_t, float>> tiny_best{
     {2, 120899.0},
     {8, 145538.0},
     {72, 146046.0},
@@ -61,7 +59,4 @@ std::vector<std::tuple<size_t, float>> tiny_best {
 // assert_eq!(visited_nodes.len(), 15);
 // assert_eq!(scratch.best_candidates.size(), 15);
 
-
-
-
-#endif // DISKANN_GRAPH_HPP
+#endif  // DISKANN_GRAPH_HPP

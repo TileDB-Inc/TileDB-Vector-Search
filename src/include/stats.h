@@ -112,7 +112,8 @@ auto dump_logs = [](std::string filename,
                     std::optional<size_t> k_nn,
                     std::optional<size_t> nthreads,
                     std::optional<double> recall) {
-  // Quick and dirty way to get log info into a summarizable and useful form -- fixed-width columns
+  // Quick and dirty way to get log info into a summarizable and useful form --
+  // fixed-width columns
   // @todo encapsulate this as a function that can be customized
 
   // I don't know why this has to be done in two steps like this but oh well
@@ -130,14 +131,13 @@ auto dump_logs = [](std::string filename,
   output << "# [compiler version ]: " << CXX_VERSION << std::endl;
   output << "# [c++ flags]: " << CMAKE_CXX_FLAGS << std::endl;
   output << "# [c++ debug flags ]: " << CMAKE_CXX_FLAGS_DEBUG << std::endl;
-  output << "# [c++ release flags ]: " << CMAKE_CXX_FLAGS_RELEASE
+  output << "# [c++ release flags ]: " << CMAKE_CXX_FLAGS_RELEASE << std::endl;
+  output << "# [c++ relwithdebinfo flags]: " << CMAKE_CXX_FLAGS_RELWITHDEBINFO
          << std::endl;
-  output << "# [c++ relwithdebinfo flags]: "
-         << CMAKE_CXX_FLAGS_RELWITHDEBINFO << std::endl;
 
   output << std::setw(5) << "-|-";
   output << std::setw(12) << "Algorithm";
-  if (nqueries){
+  if (nqueries) {
     output << std::setw(9) << "Queries";
   }
   if (nprobe) {
