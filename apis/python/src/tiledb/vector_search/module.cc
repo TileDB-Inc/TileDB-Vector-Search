@@ -421,6 +421,7 @@ static void declare_vq_query_heap_pyarray(py::module& m, const std::string& suff
 
 } // anonymous namespace
 
+void init_kmeans(py::module&);
 
 PYBIND11_MODULE(_tiledbvspy, m) {
 
@@ -568,4 +569,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declare_dist_qv<uint8_t>(m, "u8");
   declare_dist_qv<float>(m, "f32");
   declareFixedMinPairHeap(m);
+
+  init_kmeans(m);
 }

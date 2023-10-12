@@ -403,6 +403,46 @@ auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
   return top_k;
 }
 
+/**
+ * @brief Find the single nearest neighbor of each query vector in the database.
+ * This is essentially qv_query_heap, specialized for k = 1.
+ * @tparam DB
+ * @tparam Q
+ * @param db
+ * @param q
+ * @param nthreads
+ * @return
+ */
+template <class DB, class Q>
+auto qv_partition_with_scores(const DB& db, const Q& q, unsigned nthreads) {
+  scoped_timer _{tdb_func__};
+
+  auto size_db = size(db);
+
+  // Just need a single vector
+  std::vector<size_t> top_k(q.num_cols());
+  std::vector<size_t> top_k_scores(q.num_cols());
+
+  auto par = stdx::execution::indexed_parallel_policy{(size_t)nthreads};
+  stdx::range_for_each(
+      std::move(par), q, [&, size_db](auto&& qvec, auto&& n = 0, auto&& j = 0) {
+        float min_score = std::numeric_limits<float>::max();
+        size_t idx = 0;
+
+        for (size_t i = 0; i < size_db; ++i) {
+          auto score = L2(qvec, db[i]);
+          if (score < min_score) {
+            min_score = score;
+            idx = i;
+          }
+        }
+        top_k[j] = idx;
+        top_k_scores[j] = min_score;
+      });
+
+  return std::make_tuple(top_k_scores, top_k);
+}
+
 }  // namespace detail::flat
 
 #endif  // TILEDB_FLAT_QV_H

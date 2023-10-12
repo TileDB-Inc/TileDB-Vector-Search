@@ -49,7 +49,10 @@ find_package(pybind11 CONFIG REQUIRED)
 
 set(VSPY_TARGET_NAME _tiledbvspy)
 
-python_add_library(${VSPY_TARGET_NAME} MODULE "src/tiledb/vector_search/module.cc" WITH_SOABI)
+python_add_library(${VSPY_TARGET_NAME} MODULE
+    "src/tiledb/vector_search/module.cc"
+    "src/tiledb/vector_search/kmeans.cc"
+    WITH_SOABI)
 
 target_link_libraries(${VSPY_TARGET_NAME}
   PRIVATE

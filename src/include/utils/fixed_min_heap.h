@@ -106,24 +106,29 @@ class fixed_min_set_heap_2 : public std::vector<T> {
  * @tparam T Type of first element
  * @tparam U Type of second element
  */
-template <class T, class U>
+template <class T, class U, class Compare = std::less<T>>
 class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   using Base = std::vector<std::tuple<T, U>>;
 
   // using Base::Base;
   unsigned max_size{0};
+  Compare compare_;
 
  public:
-  explicit fixed_min_pair_heap(unsigned k)
+  explicit fixed_min_pair_heap(unsigned k, Compare compare = Compare())
       : Base(0)
-      , max_size{k} {
+      , max_size{k}
+      , compare_{std::move(compare)} {
     Base::reserve(k);
   }
 
   explicit fixed_min_pair_heap(
-      unsigned k, std::initializer_list<std::tuple<T, U>> l)
+      unsigned k,
+      std::initializer_list<std::tuple<T, U>> l,
+      Compare compare = Compare())
       : Base(0)
-      , max_size{k} {
+      , max_size{k}
+      , compare_{std::move(compare)} {
     Base::reserve(k);
     for (auto& p : l) {
       insert(std::get<0>(p), std::get<1>(p));
@@ -134,16 +139,16 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
     if (Base::size() < max_size) {
       this->emplace_back(x, y);
       std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
-        return std::get<0>(a) < std::get<0>(b);
+        return compare_(std::get<0>(a), std::get<0>(b));
       });
-    } else if (x < std::get<0>(this->front())) {
+    } else if (compare_(x, std::get<0>(this->front()))) {
       std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
-        return std::get<0>(a) < std::get<0>(b);
+        return compare_(std::get<0>(a), std::get<0>(b));
       });
       this->pop_back();
       this->emplace_back(x, y);
       std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
-        return std::get<0>(a) < std::get<0>(b);
+        return compare_(std::get<0>(a), std::get<0>(b));
       });
     }
   }

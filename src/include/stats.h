@@ -104,13 +104,13 @@ class StatsCollectionScope final {
 #endif
 };
 
-auto dump_logs = [](std::string filename,
-                    const std::string algorithm,
-                    size_t nqueries,
-                    size_t nprobe,
-                    size_t k_nn,
-                    size_t nthreads,
-                    double recall) {
+static auto dump_logs = [](std::string filename,
+                           const std::string algorithm,
+                           size_t nqueries,
+                           size_t nprobe,
+                           size_t k_nn,
+                           size_t nthreads,
+                           double recall) {
   // Quick and dirty way to get log info into a summarizable and useful form --
   // fixed-width columns
   // @todo encapsulate this as a function that can be customized
@@ -223,7 +223,7 @@ auto dump_logs = [](std::string filename,
 };
 
 #ifdef JSON_LOGGING
-auto config_log(const std::string& program_name) {
+static auto config_log(const std::string& program_name) {
   std::string uuid_;
   char host_[16];
   std::string date_;

@@ -38,6 +38,8 @@
 #include <regex>
 #include <string>
 
+namespace {
+
 bool is_http_address(const std::string& filename) {
   std::regex httpRegex("^https?://.*");
   return std::regex_match(filename, httpRegex);
@@ -91,7 +93,7 @@ bool local_file_exists(const std::string& filename) {
   return std::filesystem::is_regular_file(filePath);
 }
 
-bool is_local_file(const std::string& filename) {
+[[maybe_unused]] bool is_local_file(const std::string& filename) {
   return local_file_exists(filename);
 }
 
@@ -101,7 +103,7 @@ bool local_array_exists(const std::string& array_uri) {
          subdirectory_exists(array_uri, "__schema");
 }
 
-bool is_local_array(const std::string& array_uri) {
+[[maybe_unused]] bool is_local_array(const std::string& array_uri) {
   return local_array_exists(array_uri);
 }
 
@@ -145,5 +147,7 @@ struct counter {
     return *this;
   }
 };
+
+}  // anonymous namespace
 
 #endif
