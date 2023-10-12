@@ -1886,6 +1886,7 @@ def ingest(
         group.meta["dtype"] = np.dtype(vector_type).name
         group.meta["partitions"] = partitions
         group.meta["storage_version"] = STORAGE_VERSION
+        group.meta["index_type"] = index_type
         group.meta["base_sizes"] = json.dumps(base_sizes)
 
         if external_ids is not None:

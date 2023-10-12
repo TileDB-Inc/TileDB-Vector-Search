@@ -40,17 +40,21 @@ class Index:
         self.ctx = Ctx(config)
         self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
         self.storage_version = self.group.meta.get("storage_version", "0.1")
+        if not storage_formats[self.storage_version]["SUPPORT_TIMETRAVEL"] and timestamp is not None:
+            raise ValueError(f"Time traveling is not supported for index storage_version={self.storage_version}")
+
         updates_array_name = storage_formats[self.storage_version][
             "UPDATES_ARRAY_NAME"
         ]
         self.updates_array_uri = f"{self.group.uri}/{updates_array_name}"
         self.index_version = self.group.meta.get("index_version", "")
-        self.ingestion_timestamps = list(json.loads(self.group.meta.get("ingestion_timestamps", "[]")))
+        self.ingestion_timestamps = [int(x) for x in
+                                     list(json.loads(self.group.meta.get("ingestion_timestamps", "[]")))]
         if len(self.ingestion_timestamps) > 0:
             self.latest_ingestion_timestamp = self.ingestion_timestamps[len(self.ingestion_timestamps)-1]
         else:
             self.latest_ingestion_timestamp = MAX_UINT64
-        self.base_sizes = list(json.loads(self.group.meta.get("base_sizes", "[]")))
+        self.base_sizes = [int(x) for x in list(json.loads(self.group.meta.get("base_sizes", "[]")))]
         if len(self.base_sizes) > 0:
             self.base_size = self.base_sizes[len(self.ingestion_timestamps)-1]
         else:
@@ -245,9 +249,12 @@ class Index:
         return self.updates_array_uri
 
     def open_updates_array(self, timestamp: int = None):
-        if timestamp is not None and timestamp <= self.latest_ingestion_timestamp:
-            raise ValueError(f"Updates at a timestamp before the latest_ingestion_timestamp are not supported. "
-                             f"timestamp: {timestamp}, latest_ingestion_timestamp: {self.latest_ingestion_timestamp}")
+        if timestamp is not None:
+            if not storage_formats[self.storage_version]["SUPPORT_TIMETRAVEL"]:
+                raise ValueError(f"Time traveling is not supported for index storage_version={self.storage_version}")
+            if timestamp <= self.latest_ingestion_timestamp:
+                raise ValueError(f"Updates at a timestamp before the latest_ingestion_timestamp are not supported. "
+                                 f"timestamp: {timestamp}, latest_ingestion_timestamp: {self.latest_ingestion_timestamp}")
         if not tiledb.array_exists(self.updates_array_uri):
             updates_array_name = storage_formats[self.storage_version][
                 "UPDATES_ARRAY_NAME"

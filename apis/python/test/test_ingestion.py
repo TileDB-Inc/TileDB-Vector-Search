@@ -4,6 +4,7 @@ from common import *
 
 from tiledb.vector_search.utils import load_fvecs
 from tiledb.vector_search.ingestion import ingest
+from tiledb.vector_search.index import Index
 from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.cloud.dag import Mode
