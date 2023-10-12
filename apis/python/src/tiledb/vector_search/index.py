@@ -241,9 +241,15 @@ class Index:
 
     def consolidate_update_fragments(self):
         fragments_info = tiledb.array_fragments(self.updates_array_uri)
-        if len(fragments_info) > 10:
-            tiledb.consolidate(self.updates_array_uri)
-            tiledb.vacuum(self.updates_array_uri)
+        count_fragments = 0
+        for timestamp_range in fragments_info.timestamp_range:
+            if timestamp_range[1] > self.latest_ingestion_timestamp:
+                count_fragments += 1
+        if count_fragments > 10:
+            conf = tiledb.Config(self.config)
+            conf["sm.consolidation.timestamp_start"] = self.latest_ingestion_timestamp
+            tiledb.consolidate(self.updates_array_uri, config=conf)
+            tiledb.vacuum(self.updates_array_uri, config=conf)
 
     def get_updates_uri(self):
         return self.updates_array_uri
@@ -290,6 +296,13 @@ class Index:
         for fragment_info in fragments_info:
             if fragment_info.timestamp_range[1] > max_timestamp:
                 max_timestamp = fragment_info.timestamp_range[1]
+        max_timestamp += 1
+        conf = tiledb.Config(self.config)
+        conf["sm.consolidation.timestamp_start"] = self.latest_ingestion_timestamp
+        conf["sm.consolidation.timestamp_end"] = max_timestamp
+        tiledb.consolidate(self.updates_array_uri, config=conf)
+        tiledb.vacuum(self.updates_array_uri, config=conf)
+
         new_index = ingest(
             index_type=self.index_type,
             index_uri=self.uri,
@@ -314,3 +327,64 @@ class Index:
             else:
                 raise err
         group.delete()
+
+    @staticmethod
+    def clear_history(
+        uri: str,
+        timestamp: int,
+        config: Optional[Mapping[str, Any]] = None,
+    ):
+        group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(config))
+        storage_version = group.meta.get("storage_version", "0.1")
+        if not storage_formats[storage_version]["SUPPORT_TIMETRAVEL"]:
+            raise ValueError(f"Time traveling is not supported for index storage_version={storage_version}")
+        ingestion_timestamps = [int(x) for x in
+                                     list(json.loads(group.meta.get("ingestion_timestamps", "[]")))]
+        base_sizes = [int(x) for x in list(json.loads(group.meta.get("base_sizes", "[]")))]
+        new_ingestion_timestamps = []
+        new_base_sizes = []
+        i = 0
+        for ingestion_timestamp in ingestion_timestamps:
+            if ingestion_timestamp > timestamp:
+                new_ingestion_timestamps.append(ingestion_timestamp)
+                new_base_sizes.append(base_sizes[i])
+            i += 1
+        if len(new_ingestion_timestamps) == 0:
+            new_ingestion_timestamps = [0]
+            new_base_sizes = [1]
+        index_type = group.meta.get("index_type", "")
+        group.close()
+
+        group = tiledb.Group(uri, "w", ctx=tiledb.Ctx(config))
+        group.meta["ingestion_timestamps"] = json.dumps(new_ingestion_timestamps)
+        group.meta["base_sizes"] = json.dumps(new_base_sizes)
+        group.close()
+
+        group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(config))
+        if storage_formats[storage_version]["UPDATES_ARRAY_NAME"] in group:
+            updates_array_uri = group[storage_formats[storage_version]["UPDATES_ARRAY_NAME"]].uri
+            with tiledb.open(updates_array_uri, 'm') as A:
+                A.delete_fragments(0, timestamp)
+
+        if index_type == "FLAT":
+            db_uri = group[storage_formats[storage_version]["PARTS_ARRAY_NAME"]].uri
+            with tiledb.open(db_uri, 'm') as A:
+                A.delete_fragments(0, timestamp)
+            if storage_formats[storage_version]["IDS_ARRAY_NAME"] in group:
+                ids_uri = group[storage_formats[storage_version]["IDS_ARRAY_NAME"]].uri
+                with tiledb.open(ids_uri, 'm') as A:
+                    A.delete_fragments(0, timestamp)
+        elif index_type == "IVF_FLAT":
+            db_uri = group[storage_formats[storage_version]["PARTS_ARRAY_NAME"]].uri
+            centroids_uri = group[storage_formats[storage_version]["CENTROIDS_ARRAY_NAME"]].uri
+            index_array_uri = group[storage_formats[storage_version]["INDEX_ARRAY_NAME"]].uri
+            ids_uri = group[storage_formats[storage_version]["IDS_ARRAY_NAME"]].uri
+            with tiledb.open(db_uri, 'm') as A:
+                A.delete_fragments(0, timestamp)
+            with tiledb.open(centroids_uri, 'm') as A:
+                A.delete_fragments(0, timestamp)
+            with tiledb.open(index_array_uri, 'm') as A:
+                A.delete_fragments(0, timestamp)
+            with tiledb.open(ids_uri, 'm') as A:
+                A.delete_fragments(0, timestamp)
+        group.close()
