@@ -80,3 +80,61 @@ TEST_CASE("mdspan: basic construction", "[mdspan]") {
     CHECK(sbm(1, 1) == 40);
   }
 }
+
+
+TEST_CASE("mdspan: rectangular", "[mdspan]") {
+  std::vector<int> v(187);
+  std::iota(v.begin(), v.end(), 17);
+
+  // Row-oriented
+  stdx::mdspan<
+      int,
+      stdx::extents<size_t, stdx::dynamic_extent, stdx::dynamic_extent>>
+      m(v.data(), 11, 17);
+
+  // Column-oriented
+  stdx::mdspan<
+      int,
+      stdx::extents<size_t, stdx::dynamic_extent, stdx::dynamic_extent>,
+      stdx::layout_left>
+      n(v.data(), 11, 17);
+
+  SECTION("check extents") {
+    CHECK(m.extent(0) == 11);
+    CHECK(m.extent(1) == 17);
+    CHECK(n.extent(0) == 11);
+    CHECK(n.extent(1) == 17);
+  }
+
+  SECTION("check access") {
+    CHECK(m(0, 0) == 17);
+    CHECK(m(0, 1) == 18);
+    CHECK(m(1, 0) == 34);
+    CHECK(n(0, 0) == 17);
+    CHECK(n(1, 0) == 18);
+    CHECK(n(0, 1) == 28);
+  }
+
+  SECTION("submdspan, row") {
+    auto sbm = stdx::submdspan(m, std::pair{3, 5}, std::pair{2, 5});
+    CHECK(sbm(0, 0) == 70);
+    CHECK(sbm(0, 1) == 71);
+    CHECK(sbm(1, 0) == 87);
+    CHECK(sbm(1, 1) == 88);
+
+    CHECK(sbm.extent(0) == 2);
+    CHECK(sbm.extent(1) == 3);
+
+  }
+
+  SECTION("submdspan, col") {
+    auto sbn = stdx::submdspan(n, std::pair{3, 5}, std::pair{2, 5});
+    CHECK(sbn(0, 0) == 42);
+    CHECK(sbn(0, 1) == 53);
+    CHECK(sbn(1, 0) == 43);
+    CHECK(sbn(1, 1) == 54);
+
+    CHECK(sbn.extent(0) == 2);
+    CHECK(sbn.extent(1) == 3);
+  }
+}

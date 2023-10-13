@@ -137,3 +137,47 @@ TEST_CASE("matrix: vector of matrix", "[matrix]") {
     CHECK(A.data() == nullptr);
   }
 }
+
+
+TEST_CASE("matrix: sub matrix view", "[matrix]") {
+  auto m = RowMajorMatrix<int>(11, 17);
+  auto n = ColMajorMatrix<int>(11, 17);
+
+  std::iota(m.data(), m.data() + m.num_rows() * m.num_cols(), 17);
+  std::iota(n.data(), n.data() + n.num_rows() * n.num_cols(), 17);
+
+  SECTION("check access") {
+    CHECK(m(0, 0) == 17);
+    CHECK(m(0, 1) == 18);
+    CHECK(m(1, 0) == 34);
+    CHECK(n(0, 0) == 17);
+    CHECK(n(1, 0) == 18);
+    CHECK(n(0, 1) == 28);
+  }
+
+    SECTION("submatrix, row") {
+      auto sbm = SubMatrix(m, std::pair{3, 5}, std::pair{2, 5});
+      CHECK(sbm(0, 0) == 70);
+      CHECK(sbm(0, 1) == 71);
+      CHECK(sbm(1, 0) == 87);
+      CHECK(sbm(1, 1) == 88);
+
+      CHECK(sbm.extent(0) == 2);
+      CHECK(sbm.extent(1) == 3);
+
+    }
+
+    SECTION("submdspan, col") {
+      auto sbn = stdx::submdspan(n, std::pair{3, 5}, std::pair{2, 5});
+      CHECK(sbn(0, 0) == 42);
+      CHECK(sbn(0, 1) == 53);
+      CHECK(sbn(1, 0) == 43);
+      CHECK(sbn(1, 1) == 54);
+
+      CHECK(sbn.extent(0) == 2);
+      CHECK(sbn.extent(1) == 3);
+    }
+
+
+
+}
