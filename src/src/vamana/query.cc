@@ -28,6 +28,8 @@
  * @section DESCRIPTION
  *
  * Driver for making a query against a vamana index, as given by the index_uri.
+ *
+ * The driver searches using a previously-stored index.
  */
 
 #include "docopt.h"

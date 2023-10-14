@@ -757,6 +757,10 @@ class vamana_index {
    * which comprises the adjacency scores and adjacency ids, written
    * contiguously, along with an offset (adj_index) to the start of each
    * adjacency list.
+   *
+   * @todo Do we need to copy and/or write out the original vectors since
+   * those will presumably be in a known array that can be made part of
+   * the group?
    */
   auto write_index(const std::string& group_uri, bool overwrite = false) {
     // copilot ftw!

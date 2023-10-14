@@ -30,6 +30,9 @@
  * Driver for building vamana index.
  *
  * The driver will build a vamana index and store it in the given TileDB group.
+ * The type of the feature vectors and ids can be specified using the --ftype
+ * and --idtype options. The default feature type is float and the default id
+ * type is uint64.
  */
 
 #include "docopt.h"
