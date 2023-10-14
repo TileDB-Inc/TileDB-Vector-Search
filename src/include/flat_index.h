@@ -1,4 +1,4 @@
- /**
+/**
  * @file   flat_index.h
  *
  * @section LICENSE
@@ -27,53 +27,98 @@
  *
  * @section DESCRIPTION
  *
- * Header-only library of class that implements a flat index.
+ * Concrete index classes.
  *
- * The basic use case is:
- * - Create an instance of the index
- * - Call train() to build the index (nullop for flat index)
- * - OR Call load() to load the index from TileDB arrays
- * - Call add() to add vectors to the index (alt. add with ids)
- * - Call search() to query the index, returning the ids of the nearest vectors,
- *   and optionally the distances.
- * - Compute the recall of the search results.
- *
- * - Call save() to save the index to disk
- * - Call reset() to clear the index
- *
- * In general, we will neither be able to have the entire index in memory,
- * nor the original vectors.  Thus, we either construct the index from
- * URIs (and the index uses out-of-core data structures), or we construct
- * the requisite data structures and pass them to the index, again using
- * out-of-core data structures as necessary.
  */
 
 #ifndef TILEDB_FLAT_INDEX_H
 #define TILEDB_FLAT_INDEX_H
 
-#include <cstddef>
-
+#include <tiledb/tiledb>
+#include "concepts.h"
+#include "cpos.h"
 #include "detail/flat/qv.h"
+#include "detail/flat/vq.h"
+#include "detail/linalg/tdb_matrix.h"
 
+/**
+ *
+ * @tparam DB
+ * @tparam Q
+ * @tparam Index
+ *
+ * @todo Should these be contiguous?  Doesn't seem necessary
+ */
 
-template <
-    class T,
-    class shuffled_ids_type = size_t,
-    class indices_type = size_t>
+// tiledb::tiledb_to_type
+
+// In the arrays we have created, V is float or uint8_t, Index uint64
+// We can standardize on this schema -- though we may want to consider int32
+// Other external arrays (fmnist, sift) have int32
+template <class attribute_type>
 class flat_index {
+ private:
+  std::unique_ptr<tdbColMajorMatrix<attribute_type>> feature_vectors_;
 
-  auto train() {
+ public:
+  flat_index() = delete;
+  flat_index(const flat_index& index) = delete;
+  flat_index& operator=(const flat_index& index) = delete;
 
+  flat_index(flat_index&& index) {
+  }
+  flat_index& operator=(flat_index&& index) = default;
+
+  ~flat_index() = default;
+
+  /**
+   * @brief Construct a new flat index object from the array at the given URI.
+   */
+  flat_index(const tiledb::Context& ctx, const std::string& uri)
+      : feature_vectors_{
+            std::make_unique<tdbColMajorMatrix<attribute_type>>(ctx, uri)} {
   }
 
-  auto add() {
-
+  template <query_vector_array M>
+  auto query(
+      const M& query,
+      size_t k_nn,
+      size_t nthreads = std::thread::hardware_concurrency()) const {
+    return detail::flat::qv_query_heap_tiled(
+        *feature_vectors_, query, k_nn, nthreads);
   }
 
-  auto query() {
-
+  constexpr auto load() {
+    feature_vectors_->load();
   }
 
+  auto store() {
+    // @todo
+  }
+
+  void remove() {
+    // @todo
+  }
+
+  void update(const std::string& uri) {
+    // @todo
+  }
+
+  auto dimension() const {
+    return _cpo::dimension(*feature_vectors_);
+  }
+
+  auto ntotal() const {
+    return _cpo::num_vectors(*feature_vectors_);
+  }
+
+  auto num_vectors() const {
+    return _cpo::num_vectors(*feature_vectors_);
+  }
+
+  auto num_rows() const {
+    return _cpo::dimension(*feature_vectors_);
+  }
 };
 
-#endif TILEDB_FLAT_INDEX_H
+#endif  // TILEDB_FLAT_INDEX_H

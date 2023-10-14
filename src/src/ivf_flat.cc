@@ -1,5 +1,5 @@
 /**
- * @file   ivf_hack.cc
+ * @file   ivf_flat.cc
  *
  * @section LICENSE
  *
@@ -72,7 +72,6 @@
 #include "utils/logging.h"
 #include "utils/timer.h"
 #include "utils/utils.h"
-
 
 bool enable_stats = false;
 std::vector<json> core_stats;
@@ -441,7 +440,7 @@ int main(int argc, char* argv[]) {
           end(top_k[i]),
           begin(groundtruth[i]),
           end(groundtruth[i]),
-          counter{});
+          assignment_counter{});
     }
 
     recall = ((float)total_intersected) / ((float)total_groundtruth);
@@ -460,7 +459,7 @@ int main(int argc, char* argv[]) {
     dump_logs(
         args["--log"].asString(),
         algorithm,
-        (nqueries == 0 ? size(q) : nqueries),
+        (nqueries == 0 ? num_vectors(q) : nqueries),
         nprobe,
         k_nn,
         nthreads,

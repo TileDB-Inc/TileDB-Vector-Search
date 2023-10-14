@@ -479,7 +479,7 @@ class kmeans_index {
 #endif
   }
 
-#if 0
+#if 1
   // @todo WIP
   void add(const ColMajorMatrix<T>& db) {
     auto parts = detail::flat::qv_partition(centroids_, db, nthreads_);

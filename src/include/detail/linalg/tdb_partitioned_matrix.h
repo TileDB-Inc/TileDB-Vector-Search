@@ -49,11 +49,12 @@
 #include <thread>
 #include <type_traits>
 #include <vector>
+#include <version>
 
 #include <tiledb/tiledb>
 #include "mdspan/mdspan.hpp"
 
-#include "detail/linalg/tdb_defs.h"
+#include "tdb_defs.h"
 
 #include "utils/timer.h"
 
@@ -252,7 +253,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       ids_.resize(max_cols_);
     }
 
-#ifndef __APPLE__
+#ifdef __cpp_lib_smart_ptr_for_overwrite
     auto data_ = std::make_unique_for_overwrite<T[]>(dimension * max_cols_);
 #else
     auto data_ = std::unique_ptr<T[]>(new T[dimension * max_cols_]);

@@ -42,6 +42,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <optional>
 #include <random>
 #include <string>
 
@@ -104,13 +105,13 @@ class StatsCollectionScope final {
 #endif
 };
 
-static auto dump_logs = [](std::string filename,
-                           const std::string algorithm,
-                           size_t nqueries,
-                           size_t nprobe,
-                           size_t k_nn,
-                           size_t nthreads,
-                           double recall) {
+auto dump_logs = [](std::string filename,
+                    const std::string algorithm,
+                    std::optional<size_t> nqueries,
+                    std::optional<size_t> nprobe,
+                    std::optional<size_t> k_nn,
+                    std::optional<size_t> nthreads,
+                    std::optional<double> recall) {
   // Quick and dirty way to get log info into a summarizable and useful form --
   // fixed-width columns
   // @todo encapsulate this as a function that can be customized
@@ -136,36 +137,49 @@ static auto dump_logs = [](std::string filename,
 
   output << std::setw(5) << "-|-";
   output << std::setw(12) << "Algorithm";
-  output << std::setw(9) << "Queries";
-  output << std::setw(8) << "nprobe";
-  output << std::setw(8) << "k_nn";
-  output << std::setw(8) << "thrds";
-  output << std::setw(8) << "recall";
+  if (nqueries) {
+    output << std::setw(9) << "Queries";
+  }
+  if (nprobe) {
+    output << std::setw(8) << "nprobe";
+  }
+  if (k_nn) {
+    output << std::setw(8) << "k_nn";
+  }
+  if (nthreads) {
+    output << std::setw(8) << "thrds";
+  }
+  if (recall) {
+    output << std::setw(8) << "recall";
+  }
 
   // Table of contents -- quantities with long identifiers are marked with a
   // letter in their column and the key is printed out after the line is logged.
   std::map<std::string, std::string> toc;
   char tag = 'A';
 
-  // A bit of a hack -- first set units to seconds
-  auto units = std::string(" (s)");
   for (auto& timers :
-       {_timing_data.get_timer_names(), _memory_data.get_usage_names()}) {
-    for (auto& timer : timers) {
+       {std::make_tuple(_timing_data.get_timer_names(), "(s)"),
+        std::make_tuple(_memory_data.get_usage_names(), "(MiB)"),
+        std::make_tuple(_count_data.get_usage_names(), "")}) {
+    auto units = std::get<1>(timers);
+    for (auto& timer : std::get<0>(timers)) {
       std::string text;
       if (size(timer) < 3) {
         text = timer;
       } else {
         std::string key =
             std::string("[") + std::string(1, tag) + std::string("]");
-        toc[key] = timer + units;
+        if (!timer.empty()) {
+          toc[key] = timer + " " + units;
+        } else {
+          toc[key] = timer;
+        }
         ++tag;
         text = key;
       }
       output << std::setw(12) << text;
     }
-    // hack, continued -- set units to MiB at bottom of loop
-    units = std::string(" (MiB)");  // copilot scares me
   }
 
   output << std::endl;
@@ -174,15 +188,23 @@ static auto dump_logs = [](std::string filename,
 
   output << std::setw(5) << "-|-";
   output << std::setw(12) << algorithm;
-  output << std::setw(9) << nqueries;
-  output << std::setw(8) << nprobe;
-  output << std::setw(8) << k_nn;
-  output << std::setw(8) << nthreads;
-  output << std::fixed << std::setprecision(3);
-  output << std::setw(8) << recall;
-
-  output.precision(original_precision);
-  output << std::fixed << std::setprecision(3);
+  if (nqueries) {
+    output << std::setw(9) << nqueries.value();
+  }
+  if (nprobe) {
+    output << std::setw(8) << nprobe.value();
+  }
+  if (k_nn) {
+    output << std::setw(8) << k_nn.value();
+  }
+  if (nthreads) {
+    output << std::setw(8) << nthreads.value();
+  }
+  if (recall) {
+    output << std::fixed << std::setprecision(3);
+    output << std::setw(8) << recall.value();
+    output.precision(original_precision);
+  }
   auto timers = _timing_data.get_timer_names();
   for (auto& timer : timers) {
     auto ms = _timing_data.get_entries_summed<std::chrono::microseconds>(timer);
@@ -214,6 +236,14 @@ static auto dump_logs = [](std::string filename,
     }
     output << std::setw(12) << _memory_data.get_entries_summed(usage);
   }
+  output << std::setprecision(original_precision);
+
+  auto counts = _count_data.get_usage_names();
+  output << std::fixed << std::setprecision(0);
+  for (auto& count : counts) {
+    auto c = _count_data.get_entries_summed(count);
+    output << std::setw(12) << c;
+  }
   output << std::endl;
   output << std::setprecision(original_precision);
 
@@ -223,7 +253,7 @@ static auto dump_logs = [](std::string filename,
 };
 
 #ifdef JSON_LOGGING
-static auto config_log(const std::string& program_name) {
+auto config_log(const std::string& program_name) {
   std::string uuid_;
   char host_[16];
   std::string date_;
