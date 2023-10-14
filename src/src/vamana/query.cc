@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
   size_t nqueries = args["--nqueries"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
 
-  auto run_query = [&]<class feature_type, class id_type> () {
+  auto run_query = [&]<class feature_type, class id_type>() {
     tiledb::Context ctx;
     auto idx =
         detail::graph::vamana_index<feature_type, id_type>(ctx, index_uri);
@@ -173,7 +173,7 @@ int main(int argc, char* argv[]) {
   } else if (feature_type == "uint8" && id_type == "uint32") {
     run_query.operator()<uint8_t, uint32_t>();
   } else {
-    std::cout << "Unsupported feature type " << feature_type ;
+    std::cout << "Unsupported feature type " << feature_type;
     std::cout << " and/or unsupported id_type " << id_type << std::endl;
     return 1;
   }

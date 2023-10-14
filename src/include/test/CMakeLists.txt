@@ -63,10 +63,6 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 # kmeans_add_test(time_queries)
 
 # find_package(Matplot++ REQUIRED)
-# find_package(Casablanca REQUIRED)
-
-# kmeans_add_exe(demo_cytoscape)
-# target_link_libraries(demo_cytoscape PRIVATE cpprestsdk::cpprest)
 
 # kmeans_add_exe(demo_high_five)
 # target_link_libraries(demo_high_five PRIVATE HighFive)
@@ -101,7 +97,7 @@ kmeans_add_test(unit_concepts_vs)
 
 kmeans_add_test(unit_cpos)
 
-kmeans_add_test(unit_old_concepts)
+# kmeans_add_test(unit_old_concepts)
 
 # kmeans_add_test(unit_coo)
 
@@ -117,7 +113,7 @@ kmeans_add_test(unit_flat_vq)
 
 kmeans_add_test(unit_gen_graphs)
 
-kmeans_add_test(unit_index)
+kmeans_add_test(unit_flat_index)
 
 # kmeans_add_test(unit_high_five)
 # target_link_libraries(unit_high_five PRIVATE HighFive)

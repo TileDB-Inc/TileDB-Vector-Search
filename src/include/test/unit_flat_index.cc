@@ -32,7 +32,7 @@
 
 #include <catch2/catch_all.hpp>
 #include "api.h"
-#include "index.h"
+#include "flat_index.h"
 #include "query_common.h"
 
 TEST_CASE("index: test test", "[index]") {

@@ -33,6 +33,7 @@
 #include <catch2/catch_all.hpp>
 #include <filesystem>
 #include "api.h"
+#include "detail/flat/qv.h"
 #include "detail/linalg/tdb_io.h"
 #include "detail/linalg/tdb_vector.h"
 #include "detail/linalg/vector.h"

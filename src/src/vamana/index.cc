@@ -79,8 +79,6 @@ static constexpr const char USAGE[] =
       -v, --verbose           run in verbose mode [default: false]
 )";
 
-
-
 int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
   auto args = docopt::docopt(USAGE, strings, true);
@@ -148,7 +146,7 @@ int main(int argc, char* argv[]) {
   } else if (feature_type == "uint8" && id_type == "uint32") {
     run_index.operator()<uint8_t, uint32_t>();
   } else {
-    std::cout << "Unsupported feature type " << feature_type ;
+    std::cout << "Unsupported feature type " << feature_type;
     std::cout << " and/or unsupported id_type " << id_type << std::endl;
     return 1;
   }

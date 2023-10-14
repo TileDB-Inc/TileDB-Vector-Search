@@ -55,7 +55,7 @@
 #include "concepts.h"
 #include "cpos.h"
 #include "detail/linalg/tdb_vector.h"
-#include "index.h"
+#include "flat_index.h"
 
 #include "utils/print_types.h"
 

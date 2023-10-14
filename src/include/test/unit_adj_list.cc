@@ -29,8 +29,6 @@
  *
  */
 
-#include "detail/graph/coo.h"
-
 #include <catch2/catch_all.hpp>
 #include "detail/graph/adj_list.h"
 #include "graphs/tiny.h"
