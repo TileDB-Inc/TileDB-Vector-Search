@@ -27,7 +27,7 @@
  *
  * @section DESCRIPTION
  *
- * Driver for making a query against a vamana index.
+ * Driver for making a query against a vamana index, as given by the index_uri.
  */
 
 #include "docopt.h"
@@ -45,21 +45,14 @@ bool debug = false;
 bool enable_stats = false;
 std::vector<json> core_stats;
 
-#if 0
-using feature_type = uint8_t;
-#else
-using feature_type = float;
-#endif
-using id_type = uint64_t;
 using score_type = float;
-
 using groundtruth_type = int32_t;
 
 static constexpr const char USAGE[] =
     R"(vamana: C++ cli for vamana query
   Usage:
       vamana (-h | --help)
-      vamana --index_uri URI --query_uri URI [--groundtruth_uri URI]
+      vamana --index_uri URI --query_uri URI [--ftype TYPE] [--idtype TYPE] [--groundtruth_uri URI]
              [--Lbuild NN] [--nqueries NN] [--k NN]
              [--nthreads NN] [--validate] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
@@ -67,6 +60,8 @@ static constexpr const char USAGE[] =
       -h, --help              show this screen
       --index_uri URI         group URI ov vamana index
       --query_uri URI         query URI with feature vectors to search for
+      --ftype TYPE            data type of feature vectors [default: float]
+      --idtype TYPE           data type of ids [default: uint64]
       --groundtruth_uri URI   ground truth URI
       -L, --Lbuild NN         size of search list
       -k, --k NN              number of nearest neighbors [default: 1]
@@ -98,58 +93,86 @@ int main(int argc, char* argv[]) {
   size_t nqueries = args["--nqueries"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
 
-  tiledb::Context ctx;
-  auto idx = detail::graph::vamana_index<score_type, id_type>(ctx, index_uri);
-  auto queries = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
-  queries.load();
+  auto run_query = [&]<class feature_type, class id_type> () {
+    tiledb::Context ctx;
+    auto idx =
+        detail::graph::vamana_index<feature_type, id_type>(ctx, index_uri);
+    auto queries = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
+    queries.load();
 
-  auto query_time = log_timer("query time", true);
+    auto query_time = log_timer("query time", true);
 
-  auto Lbuild = args["--Lbuild"] ?
-                    std::optional<size_t>(args["--Lbuild"].asLong()) :
-                    std::nullopt;
-  auto&& [top_k_scores, top_k] = idx.query(queries, k_nn, Lbuild);
+    auto Lbuild = args["--Lbuild"] ?
+                      std::optional<size_t>(args["--Lbuild"].asLong()) :
+                      std::nullopt;
+    auto&& [top_k_scores, top_k] = idx.query(queries, k_nn, Lbuild);
 
-  query_time.stop();
+    query_time.stop();
 
-  if (args["--groundtruth_uri"]) {
-    auto groundtruth_uri = args["--groundtruth_uri"].asString();
+    if (args["--groundtruth_uri"]) {
+      auto groundtruth_uri = args["--groundtruth_uri"].asString();
 
-    auto groundtruth =
-        tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
-    groundtruth.load();
+      auto groundtruth =
+          tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
+      groundtruth.load();
 
-    if (debug) {
-      std::cout << std::endl;
+      if (debug) {
+        std::cout << std::endl;
 
-      debug_matrix(groundtruth, "groundtruth");
-      debug_slice(groundtruth, "groundtruth");
+        debug_matrix(groundtruth, "groundtruth");
+        debug_slice(groundtruth, "groundtruth");
 
-      std::cout << std::endl;
-      debug_matrix(top_k, "top_k");
-      debug_slice(top_k, "top_k");
+        std::cout << std::endl;
+        debug_matrix(top_k, "top_k");
+        debug_slice(top_k, "top_k");
 
-      std::cout << std::endl;
+        std::cout << std::endl;
+      }
+
+      size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
+      size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
+
+      float recall = ((float)total_intersected) / ((float)total_groundtruth);
+      // std::cout << "# total intersected = " << total_intersected << " of "
+      //           << total_groundtruth << " = "
+      //           << "R@" << k_nn << " of " << recall << std::endl;
+
+      if (args["--log"]) {
+        idx.log_index();
+        dump_logs(
+            args["--log"].asString(),
+            "vamana",
+            nqueries,
+            {},
+            k_nn,
+            nthreads,
+            recall);
+      }
     }
+  };
+  auto feature_type = args["--ftype"].asString();
+  auto id_type = args["--idtype"].asString();
 
-    size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
-    size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
+  if (feature_type != "float" && feature_type != "uint8") {
+    std::cout << "Unsupported feature type " << feature_type << std::endl;
+    return 1;
+  }
+  if (id_type != "uint64" && id_type != "uint32") {
+    std::cout << "Unsupported id type " << id_type << std::endl;
+    return 1;
+  }
 
-    float recall = ((float)total_intersected) / ((float)total_groundtruth);
-    // std::cout << "# total intersected = " << total_intersected << " of "
-    //           << total_groundtruth << " = "
-    //           << "R@" << k_nn << " of " << recall << std::endl;
-
-    if (args["--log"]) {
-      idx.log_index();
-      dump_logs(
-          args["--log"].asString(),
-          "vamana",
-          nqueries,
-          {},
-          k_nn,
-          nthreads,
-          recall);
-    }
+  if (feature_type == "float" && id_type == "uint64") {
+    run_query.operator()<float, uint64_t>();
+  } else if (feature_type == "float" && id_type == "uint32") {
+    run_query.operator()<float, uint32_t>();
+  } else if (feature_type == "uint8" && id_type == "uint64") {
+    run_query.operator()<uint8_t, uint64_t>();
+  } else if (feature_type == "uint8" && id_type == "uint32") {
+    run_query.operator()<uint8_t, uint32_t>();
+  } else {
+    std::cout << "Unsupported feature type " << feature_type ;
+    std::cout << " and/or unsupported id_type " << id_type << std::endl;
+    return 1;
   }
 }

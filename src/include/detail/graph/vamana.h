@@ -410,7 +410,7 @@ auto medioid(auto&& P, Distance distance = Distance{}) {
  * @tparam feature_type Type of the elements in the feature vectors
  * @tparam id_type Type of the ids of the feature vectors
  */
-template <class feature_type, class id_type>
+template <class feature_type, class id_type, class index_type = uint32_t>
 class vamana_index {
   // Array feature_vectors_;
   // using feature_type = typename Array::score_type;
@@ -488,7 +488,7 @@ class vamana_index {
 
     auto adj_scores = read_vector<score_type>(ctx, group_uri + "/adj_scores");
     auto adj_ids = read_vector<id_type>(ctx, group_uri + "/adj_ids");
-    auto adj_index = read_vector<id_type>(ctx, group_uri + "/adj_index");
+    auto adj_index = read_vector<index_type>(ctx, group_uri + "/adj_index");
 
     for (size_t i = 0; i < num_vectors_; ++i) {
       auto start = adj_index[i];
@@ -791,7 +791,7 @@ class vamana_index {
     auto adj_index_uri = group_uri + "/adj_index";
     auto adj_scores = Vector<score_type>(graph_.num_edges());
     auto adj_ids = Vector<id_type>(graph_.num_edges());
-    auto adj_index = Vector<uint64_t>(graph_.num_vertices() + 1);
+    auto adj_index = Vector<index_type>(graph_.num_vertices() + 1);
 
     size_t edge_offset{0};
     for (size_t i = 0; i < num_vertices(graph_); ++i) {
@@ -1002,8 +1002,8 @@ class vamana_index {
  * @tparam feature_type Type of element of feature vectors
  * @tparam id_type Type of id of feature vectors
  */
-template <class feature_type, class id_type>
-size_t vamana_index<feature_type, id_type>::num_comps_ = 0;
+template <class feature_type, class id_type, class index_type>
+size_t vamana_index<feature_type, id_type, index_type>::num_comps_ = 0;
 
 }  // namespace detail::graph
 #endif  // TDB_VAMANA_H
