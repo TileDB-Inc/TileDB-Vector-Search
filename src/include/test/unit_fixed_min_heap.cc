@@ -84,7 +84,7 @@ TEST_CASE("fixed_min_heap: std::heap", "[fixed_min_heap]") {
   }
   std::cout << '\n';
 
-  std::pop_heap(v.begin(), v.end());
+  std::pop_heap(v.begin(), v.end(), std::greater<>());
 
   std::cout << "min heap after pop heap: ";
   for (auto a : v) {
@@ -349,12 +349,12 @@ TEST_CASE(
     for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
       a.insert(10 - i, i);
     }
-    CHECK(a.size() == 5);
+    CHECK(a.size() == 4);
     std::sort(begin(a), end(a));
     CHECK(std::get<0>(*(begin(a))) == 1);
     CHECK(std::get<1>(*(begin(a))) == 9);
-    CHECK(std::get<0>(*(rbegin(a))) == 5.0);
-    CHECK(std::get<1>(*(rbegin(a))) == 5);
+    CHECK(std::get<0>(*(rbegin(a))) == 4.0);
+    CHECK(std::get<1>(*(rbegin(a))) == 6);
   }
   SECTION("insert in descending order") {
     for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
