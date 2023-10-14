@@ -123,6 +123,29 @@ inline auto sum_of_squares(V const& a, U const& b) {
   }
   return sum;
 }
+
+template <class V, class U>
+inline auto sub_sum_of_squares(
+    V const& a, U const& b, size_t start, size_t end) {
+  float sum{0.0};
+
+  if constexpr (
+      std::unsigned_integral<std::remove_reference_t<decltype(a[0])>> ||
+      std::unsigned_integral<std::remove_reference_t<decltype(b[0])>>) {
+    for (size_t i = start; i < end; ++i) {
+      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
+      float diff = (float)a[i] - (float)b[i];
+      sum += diff * diff;
+    }
+  } else {
+    for (size_t i = start; i < end; ++i) {
+      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
+      float diff = a[i] - b[i];
+      sum += diff * diff;
+    }
+  }
+  return sum;
+}
 #endif
 
 /**
@@ -192,6 +215,25 @@ struct sum_of_squares_distance {
 
 using l2_distance = sum_of_squares_distance;
 using L2_distance = sum_of_squares_distance;
+
+struct sub_sum_of_squares_distance {
+ private:
+  size_t start_{0};
+  size_t stop_{0};
+
+ public:
+  sub_sum_of_squares_distance(size_t start, size_t stop)
+      : start_(start)
+      , stop_(stop) {
+  }
+  template <class V, class U>
+  constexpr auto operator()(const V& a, const U& b) const {
+    return sub_sum_of_squares(a, b, start_, stop_);
+  }
+};
+
+using sub_l2_distance = sub_sum_of_squares_distance;
+using sub_L2_distance = sub_sum_of_squares_distance;
 
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn

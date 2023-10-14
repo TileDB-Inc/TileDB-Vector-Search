@@ -36,9 +36,91 @@
 #include "detail/linalg/matrix.h"
 #include "scoring.h"
 
+TEST_CASE("scoring: vector test", "[scoring]") {
+  auto a = std::vector<float>(10);
+  auto b = std::vector<float>(10);
+  auto c = std::vector<float>(10);
+  auto d = std::vector<float>(10);
+  auto z = std::vector<float>(10);
+
+  std::iota(begin(a), end(a), 5);
+  std::iota(begin(b), end(b), 5);
+  std::iota(begin(c), end(c), 4);
+  std::iota(begin(d), end(d), 6);
+  std::fill(begin(z), end(z), 0);
+
+  REQUIRE(!std::equal(begin(a), end(a), begin(z)));
+  REQUIRE(!std::equal(begin(b), end(b), begin(z)));
+  REQUIRE(!std::equal(begin(c), end(c), begin(z)));
+  REQUIRE(!std::equal(begin(d), end(d), begin(z)));
+
+  SECTION("sum_of_squares function") {
+    CHECK(sum_of_squares(a, b) == 0);
+    CHECK(sum_of_squares(a, c) == 10);
+    CHECK(sum_of_squares(c, a) == 10);
+    CHECK(sum_of_squares(a, d) == 10);
+    CHECK(sum_of_squares(d, a) == 10);
+    CHECK(sum_of_squares(a, z) == 985);
+  }
+
+  SECTION("sum_of_squares_distance function object") {
+    CHECK(sum_of_squares_distance{}(a, b) == 0);
+    CHECK(sum_of_squares_distance{}(a, c) == 10);
+    CHECK(sum_of_squares_distance{}(c, a) == 10);
+    CHECK(sum_of_squares_distance{}(a, d) == 10);
+    CHECK(sum_of_squares_distance{}(d, a) == 10);
+    CHECK(sum_of_squares_distance{}(a, z) == 985);
+  }
+  SECTION("sub_sum_of_squares function") {
+    CHECK(sub_sum_of_squares(a, b, 0, size(a)) == 0);
+    CHECK(sub_sum_of_squares(a, c, 0, size(a)) == 10);
+    CHECK(sub_sum_of_squares(c, a, 0, size(a)) == 10);
+    CHECK(sub_sum_of_squares(a, d, 0, size(a)) == 10);
+    CHECK(sub_sum_of_squares(d, a, 0, size(a)) == 10);
+    CHECK(sub_sum_of_squares(a, z, 0, size(a)) == 985);
+
+    CHECK(sub_sum_of_squares(a, b, 0, size(a) / 2) == 0);
+    CHECK(sub_sum_of_squares(a, c, 0, size(a) / 2) == 5);
+    CHECK(sub_sum_of_squares(c, a, 0, size(a) / 2) == 5);
+    CHECK(sub_sum_of_squares(a, d, 0, size(a) / 2) == 5);
+    CHECK(sub_sum_of_squares(d, a, 0, size(a) / 2) == 5);
+    CHECK(sub_sum_of_squares(a, z, 0, size(a) / 2) == 255);
+
+    CHECK(sub_sum_of_squares(a, b, size(a) / 2, size(a)) == 0);
+    CHECK(sub_sum_of_squares(a, c, size(a) / 2, size(a)) == 5);
+    CHECK(sub_sum_of_squares(c, a, size(a) / 2, size(a)) == 5);
+    CHECK(sub_sum_of_squares(a, d, size(a) / 2, size(a)) == 5);
+    CHECK(sub_sum_of_squares(d, a, size(a) / 2, size(a)) == 5);
+    CHECK(sub_sum_of_squares(a, z, size(a) / 2, size(a)) == 730);
+  }
+
+  SECTION("sub_sum_of_squares_distance{} function object") {
+    CHECK(sub_sum_of_squares_distance{0, size(a)}(a, b) == 0);
+    CHECK(sub_sum_of_squares_distance{0, size(a)}(a, c) == 10);
+    CHECK(sub_sum_of_squares_distance{0, size(a)}(c, a) == 10);
+    CHECK(sub_sum_of_squares_distance{0, size(a)}(a, d) == 10);
+    CHECK(sub_sum_of_squares_distance{0, size(a)}(d, a) == 10);
+    CHECK(sub_sum_of_squares_distance{0, size(a)}(a, z) == 985);
+
+    CHECK(sub_sum_of_squares_distance{0, size(a) / 2}(a, b) == 0);
+    CHECK(sub_sum_of_squares_distance{0, size(a) / 2}(a, c) == 5);
+    CHECK(sub_sum_of_squares_distance{0, size(a) / 2}(c, a) == 5);
+    CHECK(sub_sum_of_squares_distance{0, size(a) / 2}(a, d) == 5);
+    CHECK(sub_sum_of_squares_distance{0, size(a) / 2}(d, a) == 5);
+    CHECK(sub_sum_of_squares_distance{0, size(a) / 2}(a, z) == 255);
+
+    CHECK(sub_sum_of_squares_distance{size(a) / 2, size(a)}(a, b) == 0);
+    CHECK(sub_sum_of_squares_distance{size(a) / 2, size(a)}(a, c) == 5);
+    CHECK(sub_sum_of_squares_distance{size(a) / 2, size(a)}(c, a) == 5);
+    CHECK(sub_sum_of_squares_distance{size(a) / 2, size(a)}(a, d) == 5);
+    CHECK(sub_sum_of_squares_distance{size(a) / 2, size(a)}(d, a) == 5);
+    CHECK(sub_sum_of_squares_distance{size(a) / 2, size(a)}(a, z) == 730);
+  }
+}
+
 #ifdef TILEDB_VS_ENABLE_BLAS
 
-TEST_CASE("scoring: vector test", "[scoring]") {
+TEST_CASE("scoring: col_sum test", "[scoring]") {
   std::vector<std::vector<float>> a{
       {1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}};
   std::vector<float> b{0, 0, 0, 0};

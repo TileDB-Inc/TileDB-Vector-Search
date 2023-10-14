@@ -39,33 +39,66 @@
 
 #include "detail/flat/qv.h"
 
+/**
+ * @brief Run kmeans on a subspace
+ * @tparam T Data type of the input vectors
+ * @param sub_begin Beginning of the subspace
+ * @param sub_end End of the subspace
+ * @param num_clusters Number of clusters to find
+ * @return
+ *
+ * @todo update with concepts
+ */
+template <class T>
+auto sub_kmeans(
+    ColMajorMatrix<T> training_set,
+    size_t sub_begin,
+    size_t sub_end,
+    size_t num_clusters) {
+}
+
+/**
+ * @brief Flat index that uses product quantization
+ *
+ * @tparam T Data type of the input vectors
+ * @tparam shuffled_ids_type Data type of the shuffled ids
+ * @tparam indices_type Data type of the indices
+ */
 template <
     class T,
     class shuffled_ids_type = size_t,
     class indices_type = size_t>
 class flat_index {
   size_t dimension_{0};
-  size_t num_subquantizers_{0};
-  size_t bits_per_subquantizer_{0};
+  size_t num_subspaces_{0};
+  size_t bits_per_subspace_{8};
 
  public:
   /**
    * @brief Construct a new flat index object
    * @param dimension Dimensionality of the input vectors
-   * @param num_subquantizers Number of subquantizers (number of sections of the
+   * @param num_subspaces Number of subspaces (number of sections of the
    *       vector to quantize)
-   * @param bits_per_subquantizer Number of bits per section (per subvector)
+   * @param bits_per_subspace Number of bits per section (per subspace)
    *
    * @todo We don't really need dimension as an argument for any of our indexes
    */
   flat_index(
-      size_t dimension, size_t num_subquantizers, size_t bits_per_subquantizer)
+      size_t dimension, size_t num_subspaces, size_t bits_per_subspace = 8)
       : dimension_(dimension)
-      , num_subquantizers_(num_subquantizers)
-      , bits_per_subquantizer_(bits_per_subquantizer) {
+      , num_subspaces_(num_subspaces)
+      , bits_per_subspace_(bits_per_subspace) {
+    // Number of subspaces must evenly divide dimension of vector
+    assert(dimension_ % num_subspaces_ == 0);
   }
 
-  auto train() {
+  /**
+   * @brief Train the index on a training set.  Run kmeans on each subspace and
+   * create codewords from the centroids.
+   *
+   * @param training_set Training set
+   */
+  auto train(const ColMajorMatrix<T>& training_set) {
   }
 
   auto add() {
@@ -75,12 +108,10 @@ class flat_index {
   }
 
   auto encode() {
-
   }
 
-  auto decode () {
-
+  auto decode() {
   }
 };
 
-#endif // TILEDB_FLATPQ_INDEX_H
+#endif  // TILEDB_FLATPQ_INDEX_H

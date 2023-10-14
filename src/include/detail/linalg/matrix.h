@@ -122,7 +122,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
-   using view_type = Matrix;
+  using view_type = Matrix;
 
  protected:
   size_type num_rows_{0};
@@ -397,13 +397,13 @@ std::string matrix_info(const Matrix& A, const std::string& msg = "") {
  *
  **********************************************************************/
 
-namespace {
-template <class... T>
-constexpr bool always_false = false;
-}
-
-template <class ElementType, class Extents, class LayoutPolicy, class AccessorPolicy>
-class SubMatrixView: public stdx::mdspan<ElementType, Extents, LayoutPolicy, AccessorPolicy> {
+template <
+    class ElementType,
+    class Extents,
+    class LayoutPolicy,
+    class AccessorPolicy>
+class SubMatrixView
+    : public stdx::mdspan<ElementType, Extents, LayoutPolicy, AccessorPolicy> {
   using Base = stdx::mdspan<ElementType, Extents, LayoutPolicy, AccessorPolicy>;
 
   using index_type = typename Base::index_type;
@@ -416,8 +416,11 @@ class SubMatrixView: public stdx::mdspan<ElementType, Extents, LayoutPolicy, Acc
  public:
   SubMatrixView() noexcept = delete;
 
-  SubMatrixView(const stdx::mdspan<ElementType, Extents, LayoutPolicy, AccessorPolicy>& m)
-      : Base{m}, num_rows_{this->extent(0)}, num_cols_{this->extent(1)}  {
+  SubMatrixView(
+      const stdx::mdspan<ElementType, Extents, LayoutPolicy, AccessorPolicy>& m)
+      : Base{m}
+      , num_rows_{this->extent(0)}
+      , num_cols_{this->extent(1)} {
   }
 
   auto data() {
@@ -457,12 +460,19 @@ class SubMatrixView: public stdx::mdspan<ElementType, Extents, LayoutPolicy, Acc
   }
 };
 
-template <class ElementType, class Extents, class LayoutPolicy, class AccessorPolicy, class R, class C>
-constexpr auto
-SubMatrix(const stdx::mdspan<ElementType, Extents, LayoutPolicy, AccessorPolicy>& m, R rows, C cols) {
+template <
+    class ElementType,
+    class Extents,
+    class LayoutPolicy,
+    class AccessorPolicy,
+    class R,
+    class C>
+constexpr auto SubMatrix(
+    const stdx::mdspan<ElementType, Extents, LayoutPolicy, AccessorPolicy>& m,
+    R rows,
+    C cols) {
   return SubMatrixView(stdx::submdspan(m, rows, cols));
 }
-
 
 /**********************************************************************
  *

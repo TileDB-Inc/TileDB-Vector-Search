@@ -384,8 +384,15 @@ auto qv_query_heap_tiled(
  * @param nthreads
  * @return
  */
-template <feature_vector_array DB, feature_vector_array Q>
-auto qv_partition(const DB& db, const Q& q, unsigned nthreads) {
+template <
+    feature_vector_array DB,
+    feature_vector_array Q,
+    class Distance = sum_of_squares_distance>
+auto qv_partition(
+    const DB& db,
+    const Q& q,
+    unsigned nthreads,
+    Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
 
   // Just need a single vector -- creating an index, not ids, so hardcoded

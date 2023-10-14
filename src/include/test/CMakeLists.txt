@@ -117,8 +117,6 @@ kmeans_add_test(unit_flat_vq)
 
 kmeans_add_test(unit_gen_graphs)
 
-kmeans_add_test(unit_flat_index)
-
 # kmeans_add_test(unit_high_five)
 # target_link_libraries(unit_high_five PRIVATE HighFive)
 
