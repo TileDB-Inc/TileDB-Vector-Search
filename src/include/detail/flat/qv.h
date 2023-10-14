@@ -410,7 +410,7 @@ auto qv_partition(
         size_t idx = 0;
 
         for (size_t i = 0; i < size_db; ++i) {
-          auto score = L2(qvec, db[i]);
+          auto score = distance(qvec, db[i]);
           if (score < min_score) {
             min_score = score;
             idx = i;
