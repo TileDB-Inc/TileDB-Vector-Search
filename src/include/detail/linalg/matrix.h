@@ -272,6 +272,11 @@ std::string matrix_info(const Matrix& A, const std::string& msg = "") {
  *
  **********************************************************************/
 
+namespace {
+template <class... T>
+constexpr bool always_false = false;
+}
+
 template <class ElementType, class Extents, class LayoutPolicy, class AccessorPolicy>
 class SubMatrixView: public stdx::mdspan<ElementType, Extents, LayoutPolicy, AccessorPolicy> {
   using Base = stdx::mdspan<ElementType, Extents, LayoutPolicy, AccessorPolicy>;
@@ -301,16 +306,20 @@ class SubMatrixView: public stdx::mdspan<ElementType, Extents, LayoutPolicy, Acc
   auto operator[](index_type i) {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
       return std::span(&Base::operator()(i, 0), num_cols_);
-    } else {
+    } else if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_left>) {
       return std::span(&Base::operator()(0, i), num_rows_);
+    } else {
+      static_assert(always_false<ElementType>, "Unknown layout policy");
     }
   }
 
   auto operator[](index_type i) const {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
       return std::span(&Base::operator()(i, 0), num_cols_);
-    } else {
+    } else if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_left>) {
       return std::span(&Base::operator()(0, i), num_rows_);
+    } else {
+      static_assert(always_false<ElementType>, "Unknown layout policy");
     }
   }
 

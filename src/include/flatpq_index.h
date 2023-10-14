@@ -1,5 +1,5 @@
- /**
- * @file   flat_index.h
+/**
+ * @file   flatpq_index.h
  *
  * @section LICENSE
  *
@@ -27,53 +27,60 @@
  *
  * @section DESCRIPTION
  *
- * Header-only library of class that implements a flat index.
+ * Header-only library of class that implements a flat index that used product
+ * quantization.
  *
- * The basic use case is:
- * - Create an instance of the index
- * - Call train() to build the index (nullop for flat index)
- * - OR Call load() to load the index from TileDB arrays
- * - Call add() to add vectors to the index (alt. add with ids)
- * - Call search() to query the index, returning the ids of the nearest vectors,
- *   and optionally the distances.
- * - Compute the recall of the search results.
- *
- * - Call save() to save the index to disk
- * - Call reset() to clear the index
- *
- * In general, we will neither be able to have the entire index in memory,
- * nor the original vectors.  Thus, we either construct the index from
- * URIs (and the index uses out-of-core data structures), or we construct
- * the requisite data structures and pass them to the index, again using
- * out-of-core data structures as necessary.
  */
 
-#ifndef TILEDB_FLAT_INDEX_H
-#define TILEDB_FLAT_INDEX_H
+#ifndef TILEDB_FLATPQ_INDEX_H
+#define TILEDB_FLATPQ_INDEX_H
 
 #include <cstddef>
 
 #include "detail/flat/qv.h"
-
 
 template <
     class T,
     class shuffled_ids_type = size_t,
     class indices_type = size_t>
 class flat_index {
+  size_t dimension_{0};
+  size_t num_subquantizers_{0};
+  size_t bits_per_subquantizer_{0};
+
+ public:
+  /**
+   * @brief Construct a new flat index object
+   * @param dimension Dimensionality of the input vectors
+   * @param num_subquantizers Number of subquantizers (number of sections of the
+   *       vector to quantize)
+   * @param bits_per_subquantizer Number of bits per section (per subvector)
+   *
+   * @todo We don't really need dimension as an argument for any of our indexes
+   */
+  flat_index(
+      size_t dimension, size_t num_subquantizers, size_t bits_per_subquantizer)
+      : dimension_(dimension)
+      , num_subquantizers_(num_subquantizers)
+      , bits_per_subquantizer_(bits_per_subquantizer) {
+  }
 
   auto train() {
-
   }
 
   auto add() {
-
   }
 
   auto query() {
+  }
+
+  auto encode() {
 
   }
 
+  auto decode () {
+
+  }
 };
 
-#endif TILEDB_FLAT_INDEX_H
+#endif // TILEDB_FLATPQ_INDEX_H

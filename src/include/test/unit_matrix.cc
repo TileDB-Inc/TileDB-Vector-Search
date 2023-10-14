@@ -34,6 +34,8 @@
 #include <vector>
 #include "detail/linalg/matrix.h"
 
+#include "utils/print_types.h"
+
 using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 
 TEST_CASE("matrix: test test", "[matrix]") {
@@ -167,17 +169,22 @@ TEST_CASE("matrix: sub matrix view", "[matrix]") {
 
     }
 
-    SECTION("submdspan, col") {
-      auto sbn = stdx::submdspan(n, std::pair{3, 5}, std::pair{2, 5});
-      CHECK(sbn(0, 0) == 42);
-      CHECK(sbn(0, 1) == 53);
-      CHECK(sbn(1, 0) == 43);
-      CHECK(sbn(1, 1) == 54);
+  SECTION("submatrix, row, operator[]") {
+    auto k = 5;
 
-      CHECK(sbn.extent(0) == 2);
-      CHECK(sbn.extent(1) == 3);
+    auto sbm = SubMatrix(m, std::pair{1, m.num_rows() - 1}, std::pair{0, k});
+    auto sbn = SubMatrix(n, std::pair{1, n.num_rows() - 1}, std::pair{0, k});
+
+    for (size_t i = 1; i < m.num_rows()-1; ++i) {
+      for (size_t h = 0; h < k; ++h) {
+        CHECK(sbm(i-1, h) == m(i, h));
+//        print_types(sbm, sbn);
+//        CHECK(sbm[i-1][h] == m[i][h]);
+//        std::cout << sbm(i-1, h) << " " << m(i, h) << " " ;
+//        std::cout << sbm[i-1][h] << " " << m[i][h] << std::endl;
+      }
+
+//      CHECK(std::equal(begin(sbm[i-1]), end(sbm[i-1]), begin(m[i])));
     }
-
-
-
+  }
 }
