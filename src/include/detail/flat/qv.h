@@ -401,7 +401,7 @@ auto qv_partition(
   using score_type = float;
   auto size_db = num_vectors(db);
 
-  std::vector<id_type> top_k(q.num_cols());
+  std::vector<id_type> top_k(num_vectors(q));
 
   auto par = stdx::execution::indexed_parallel_policy{(size_t)nthreads};
   stdx::range_for_each(

@@ -48,13 +48,78 @@
  * @return
  *
  * @todo update with concepts
+ * @todo fix up zero sized partitions
+ * @todo this would be more cache friendly to do sub_begin and sub_end
+ * in an inner loop
  */
 template <class T>
 auto sub_kmeans(
-    ColMajorMatrix<T> training_set,
+    const ColMajorMatrix<T>& training_set,
+    ColMajorMatrix<T>& centroids,
     size_t sub_begin,
     size_t sub_end,
-    size_t num_clusters) {
+    size_t num_clusters,
+    double tol,
+    size_t max_iter,
+    size_t num_threads) {
+  size_t sub_dimension_ = sub_end - sub_begin;
+
+  std::vector<size_t> degrees(num_clusters, 0);
+
+  // Copy centroids to new centroids -- note only one subspace will be changing
+  // @todo Keep new_centroids outside function so we don't need to copy all
+  ColMajorMatrix<T> new_centroids(dimension(centroids), num_vectors(centroids));
+  for (size_t i = 0; i < num_vectors(new_centroids); ++i) {
+    for (size_t j = 0; j < dimension(new_centroids); ++j) {
+      new_centroids(j, i) = centroids(j, i);
+    }
+  }
+
+  for (size_t iter = 0; iter < max_iter; ++iter) {
+    auto parts = detail::flat::qv_partition(
+        centroids,
+        training_set,
+        num_threads,
+        sub_sum_of_squares_distance{sub_begin, sub_end});
+
+    for (size_t j = 0; j < num_vectors(new_centroids); ++j) {
+      for (size_t i = sub_begin; i < sub_end; ++i) {
+        new_centroids(i, j) = 0;
+      }
+    }
+    std::fill(begin(degrees), end(degrees), 0);
+
+    for (size_t i = 0; i < num_vectors(training_set); ++i) {
+      auto part = parts[i];
+      auto centroid = new_centroids[part];
+      auto vector = training_set[i];
+
+      for (size_t j = sub_begin; j < sub_end; ++j) {
+        centroid[j] += vector[j];
+      }
+      ++degrees[part];
+    }
+
+    double max_diff = 0.0;
+    double total_weight = 0.0;
+    for (size_t j = 0; j < num_vectors(centroids); ++j) {
+      if (degrees[j] != 0) {
+        auto centroid = new_centroids[j];
+        for (size_t k = sub_begin; k < sub_end; ++k) {
+          centroid[k] /= degrees[j];
+          total_weight += centroid[k] * centroid[k];
+        }
+      }
+      auto diff = sub_sum_of_squares(
+          centroids[j], new_centroids[j], sub_begin, sub_end);
+      max_diff = std::max<double>(max_diff, diff);
+    }
+    centroids.swap(new_centroids);
+
+    if (max_diff < tol * total_weight) {
+      break;
+    }
+  }
 }
 
 /**

@@ -200,13 +200,13 @@ auto gen_star_grid(size_t M, size_t N) {
   return std::make_tuple(std::move(vec_array), edges);
 }
 
-auto build_hypercube(size_t k_near, size_t k_far) {
+auto build_hypercube(size_t k_near, size_t k_far, size_t seed = 0) {
   const bool debug = false;
 
   size_t N = 8 * (k_near + k_far + 1);
 
   std::random_device rd;
-  std::mt19937 gen(rd());
+  std::mt19937 gen(seed == 0 ? rd() : seed);
   std::uniform_real_distribution<float> dist_near(-0.1, 0.1);
   std::uniform_real_distribution<float> dist_far(0.2, 0.3);
   std::uniform_int_distribution<int> heads(0, 1);
