@@ -296,5 +296,90 @@ TEST_CASE("flatpq_index: flat qv_partition hypercude", "[flatpq_index]") {
       }
     }
   }
+}
 
+TEST_CASE("flatpq_index: create flatpq_index", "[flatpq_index]") {
+  auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(128, 16, 8);
+  REQUIRE(true);
+}
+
+
+TEST_CASE("flatpq_index: train flatpq_index", "[flatpq_index]") {
+  size_t k_near = 32;
+  size_t k_far = 32;
+
+  auto hypercube = build_hypercube(k_near, k_far, 0xdeadbeef);
+
+  auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(3, 1, 8);
+  pq_idx.train(hypercube);
+
+  REQUIRE(true);
+}
+
+TEST_CASE("flatpq_index: add flatpq_index", "[flatpq_index]") {
+  size_t k_near = 32;
+  size_t k_far = 32;
+
+  auto hypercube = build_hypercube(k_near, k_far, 0xdeadbeef);
+
+  auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(3, 1, 8);
+  pq_idx.train(hypercube);
+  pq_idx.add(hypercube);
+
+  REQUIRE(true);
+}
+
+TEST_CASE("flatpq_index: verify flatpq_index with hypercube", "[flatpq_index]") {
+  size_t k_near = 32;
+  size_t k_far = 32;
+
+  auto hypercube = build_hypercube(k_near, k_far, 0xdeadbeef);
+
+  auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(3, 1, 8);
+  pq_idx.train(hypercube);
+  pq_idx.add(hypercube);
+  auto avg_error = pq_idx.verify_pq(hypercube);
+
+  CHECK(avg_error < 0.02);
+}
+
+
+TEST_CASE("flatpq_index: verify flatpq_index with stacked hypercube", "[flatpq_index]") {
+  size_t k_near = 32;
+  size_t k_far = 32;
+
+  auto hypercube0 = build_hypercube(k_near, k_far, 0xdeadbeef);
+  auto hypercube1 = build_hypercube(k_near, k_far, 0xbeefdead);
+
+  auto hypercube4 = ColMajorMatrix<float>(12, num_vectors(hypercube0));
+  auto centroids2 = ColMajorMatrix<float>(12, 8);
+
+  for (size_t j = 0; j < 3; ++j) {
+    for (size_t i = 0; i < num_vectors(hypercube4); ++i) {
+      hypercube4(j, i) = hypercube0(j, i);
+      hypercube4(j+3, i) = hypercube1(j, i);
+      hypercube4(j+6, i) = hypercube0(j, i);
+      hypercube4(j+9, i) = hypercube1(j, i);
+    }
+  }
+
+  auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(12, 4, 8, 32);
+  pq_idx.train(hypercube4);
+  pq_idx.add(hypercube4);
+  auto avg_error = pq_idx.verify_pq(hypercube4);
+
+  CHECK(avg_error < 0.02);
+}
+
+TEST_CASE("flatpq_index: verify flatpq_index with siftsmall", "[flatpq_index]") {
+  tiledb::Context ctx;
+  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
+  training_set.load();
+
+  auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(128, 16, 8, 256);
+  pq_idx.train(training_set);
+  pq_idx.add(training_set);
+  auto avg_error = pq_idx.verify_pq(training_set);
+
+  CHECK(avg_error < 0.05);
 }

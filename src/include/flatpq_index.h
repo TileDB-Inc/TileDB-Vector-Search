@@ -36,12 +36,55 @@
 #define TILEDB_FLATPQ_INDEX_H
 
 #include <cstddef>
+#include <unordered_set>
 
 #include "detail/flat/qv.h"
+
+template <class T, class U>
+void sub_kmeans_random_init(
+    const ColMajorMatrix<T>& training_set,
+    ColMajorMatrix<U>& centroids,
+    size_t sub_begin,
+    size_t sub_end) {
+  scoped_timer _{__FUNCTION__};
+
+  if (num_vectors(training_set) < num_vectors(centroids)) {
+    throw std::invalid_argument(
+        "Number of vectors in training set must be greater than or equal to "
+        "number of centroids");
+  }
+
+  std::mt19937 gen;
+  std::uniform_int_distribution<> dis(0, num_vectors(training_set) - 1);
+
+  size_t num_clusters = num_vectors(centroids);
+
+  std::vector<size_t> indices(num_clusters);
+  std::unordered_set<size_t> visited;
+  for (size_t i = 0; i < num_clusters; ++i) {
+    size_t index;
+    do {
+      index = dis(gen);
+    } while (visited.contains(index));
+    indices[i] = index;
+    visited.insert(index);
+  }
+  // std::iota(begin(indices), end(indices), 0);
+  // std::shuffle(begin(indices), end(indices), gen);
+
+  for (size_t i = 0; i < num_clusters; ++i) {
+    for (size_t j = sub_begin; j < sub_end; ++j) {
+      centroids(j, i) = training_set(j, indices[i]);
+    }
+  }
+}
 
 /**
  * @brief Run kmeans on a subspace
  * @tparam T Data type of the input vectors
+ * @param training_set Training set
+ * @param centroids Initial locations of centroids.  Will be updated in
+ * locations [sub_begin, sub_end).
  * @param sub_begin Beginning of the subspace
  * @param sub_end End of the subspace
  * @param num_clusters Number of clusters to find
@@ -51,6 +94,7 @@
  * @todo fix up zero sized partitions
  * @todo this would be more cache friendly to do sub_begin and sub_end
  * in an inner loop
+ * @todo We can probably just reuse plain kmeans at some point.
  */
 template <class T>
 auto sub_kmeans(
@@ -75,7 +119,10 @@ auto sub_kmeans(
     }
   }
 
-  for (size_t iter = 0; iter < max_iter; ++iter) {
+  size_t iter = 0;
+  double max_diff = 0.0;
+  double total_weight = 0.0;
+  for (iter = 0; iter < max_iter; ++iter) {
     auto parts = detail::flat::qv_partition(
         centroids,
         training_set,
@@ -100,8 +147,8 @@ auto sub_kmeans(
       ++degrees[part];
     }
 
-    double max_diff = 0.0;
-    double total_weight = 0.0;
+    max_diff = 0;
+    total_weight = 0;
     for (size_t j = 0; j < num_vectors(centroids); ++j) {
       if (degrees[j] != 0) {
         auto centroid = new_centroids[j];
@@ -120,6 +167,7 @@ auto sub_kmeans(
       break;
     }
   }
+  return std::make_tuple(iter, max_diff/ total_weight);
 }
 
 /**
@@ -133,10 +181,18 @@ template <
     class T,
     class shuffled_ids_type = size_t,
     class indices_type = size_t>
-class flat_index {
+class flatpq_index {
   size_t dimension_{0};
   size_t num_subspaces_{0};
+  size_t sub_dimension_{0};
   size_t bits_per_subspace_{8};
+  size_t num_clusters_{256};
+  double tol_ = 0.001;
+  double max_iter_ = 16;
+  size_t num_threads_ = std::thread::hardware_concurrency();
+  ColMajorMatrix<float> centroids_;
+  std::vector<ColMajorMatrix<float>> distance_tables_;
+  ColMajorMatrix<uint8_t> pq_vectors_;
 
  public:
   /**
@@ -148,13 +204,36 @@ class flat_index {
    *
    * @todo We don't really need dimension as an argument for any of our indexes
    */
-  flat_index(
-      size_t dimension, size_t num_subspaces, size_t bits_per_subspace = 8)
+  flatpq_index(
+      size_t dimension, size_t num_subspaces, size_t bits_per_subspace = 8, size_t num_clusters = 256)
       : dimension_(dimension)
       , num_subspaces_(num_subspaces)
-      , bits_per_subspace_(bits_per_subspace) {
+      , bits_per_subspace_(bits_per_subspace),
+        num_clusters_(num_clusters) {
     // Number of subspaces must evenly divide dimension of vector
-    assert(dimension_ % num_subspaces_ == 0);
+    if ((dimension_ % num_subspaces_) != 0) {
+      throw std::invalid_argument(
+          "Number of subspaces must evenly divide dimension of vector");
+    }
+    sub_dimension_ = dimension_ / num_subspaces_;
+
+
+#if 0
+    switch (bits_per_subspace) {
+      case 8: {
+        num_clusters_ = 256;
+        break;
+      }
+      case 16: {
+        // @todo -- allow setting to smaller value
+        // num_clusters_ = 65536;
+        num_clusters_ = 2048;
+        break;
+      }
+        throw std::invalid_argument(
+            "bits_per_subspace must be equal to 8 or 16");
+    }
+#endif
   }
 
   /**
@@ -164,9 +243,95 @@ class flat_index {
    * @param training_set Training set
    */
   auto train(const ColMajorMatrix<T>& training_set) {
+    centroids_ = std::move(ColMajorMatrix<T>(dimension_, num_clusters_));
+    distance_tables_ = std::vector<ColMajorMatrix<float>>(num_subspaces_);
+    for (size_t i = 0; i < num_subspaces_; ++i) {
+      distance_tables_[i] = std::move(ColMajorMatrix<float>(num_clusters_, num_clusters_));
+    }
+
+    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      auto sub_begin = subspace * dimension_ / num_subspaces_;
+      auto sub_end = (subspace + 1) * dimension_ / num_subspaces_;
+
+      sub_kmeans_random_init(training_set, centroids_, sub_begin, sub_end);
+      size_t iters;
+      double conv;
+      std::tie(iters, conv) =
+      sub_kmeans(
+          training_set,
+          centroids_,
+          sub_begin,
+          sub_end,
+          num_clusters_,
+          tol_,
+          max_iter_,
+          num_threads_);
+
+      auto x = 0;
+    }
+
+    // Create table
+    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      for (size_t i = 0; i < num_clusters_; ++i) {
+        for (size_t j = 0; j < num_clusters_; ++j) {
+          float distance = 0.0;
+          auto sub_begin = subspace * dimension_ / num_subspaces_;
+          auto sub_end = (subspace + 1) * dimension_ / num_subspaces_;
+          auto sub_distance = sub_sum_of_squares(
+              centroids_[i], centroids_[j], sub_begin, sub_end);
+          distance_tables_[subspace](i, j) = distance;
+        }
+      }
+    }
   }
 
-  auto add() {
+  auto add(const ColMajorMatrix<T>& feature_vectors) {
+    pq_vectors_ = std::move(ColMajorMatrix<uint8_t>(num_subspaces_, num_vectors(feature_vectors)));
+
+    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      auto sub_begin = sub_dimension_ * subspace;
+      auto sub_end = sub_dimension_ * (subspace + 1);
+
+      auto x = detail::flat::qv_partition(
+          centroids_,
+          feature_vectors,
+          num_threads_,
+          sub_sum_of_squares_distance{sub_begin, sub_end});
+
+      for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
+        pq_vectors_(subspace, i) = x[i];
+
+        std::vector<float> a(begin(feature_vectors[i]), end(feature_vectors[i]));
+        std::vector<float> b {begin(pq_vectors_[i]), end(pq_vectors_[i])};
+        std::vector<float> c {begin(centroids_[i]), end(centroids_[i])};
+        auto foo = 0;
+      }
+    }
+  }
+
+  auto verify_pq(const ColMajorMatrix<T>& feature_vectors) {
+    double total_distance = 0.0;
+    double total_normalizer = 0.0;
+    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
+      auto re = std::vector<float>(dimension_);
+      for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+        auto sub_begin = sub_dimension_ * subspace;
+        auto sub_end = sub_dimension_ * (subspace + 1);
+        auto centroid = centroids_[pq_vectors_(subspace, i)];
+
+        std::vector<float> x(begin(feature_vectors[i]), end(feature_vectors[i]));
+        std::vector<float> y {begin(pq_vectors_[i]), end(pq_vectors_[i])};
+        std::vector<float> z {begin(centroid), end(centroid)};
+
+        for (size_t j = sub_begin; j < sub_end; ++j) {
+          re[j] = centroid[j];
+        }
+      }
+      auto distance = sum_of_squares(feature_vectors[i], re);
+      total_distance += distance;
+      total_normalizer += sum_of_squares(feature_vectors[i]);
+    }
+    return total_distance / total_normalizer;
   }
 
   auto query() {
