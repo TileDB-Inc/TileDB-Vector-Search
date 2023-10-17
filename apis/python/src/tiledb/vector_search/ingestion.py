@@ -1,3 +1,4 @@
+import json
 from typing import Optional, Tuple
 from functools import partial
 
@@ -17,6 +18,7 @@ def ingest(
     external_ids_uri: str = "",
     external_ids_type: str = None,
     updates_uri: str = None,
+    index_timestamp: int = None,
     config=None,
     namespace: Optional[str] = None,
     size: int = -1,
@@ -67,7 +69,7 @@ def ingest(
         if not provided, centroids are build running kmeans
     training_sample_size: int = -1
         vector sample size to train centroids with,
-        if not provided, is auto-configured based on the dataset size
+        if not provided, is auto-configured based on the dataset sizes
     workers: int = -1
         number of workers for vector ingestion,
         if not provided, is auto-configured based on the dataset size
@@ -82,10 +84,12 @@ def ingest(
         execution mode, defaults to LOCAL use BATCH for distributed execution
     """
     import enum
+    import json
     import logging
     import math
     from typing import Any, Mapping
     from datetime import datetime
+    import time
     import multiprocessing
     import os
 
@@ -103,21 +107,20 @@ def ingest(
 
     # use index_group_uri for internal clarity
     index_group_uri = index_uri
-    index_version = "_" + datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
-    CENTROIDS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["CENTROIDS_ARRAY_NAME"] + index_version
-    INDEX_ARRAY_NAME = storage_formats[STORAGE_VERSION]["INDEX_ARRAY_NAME"] + index_version
-    IDS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["IDS_ARRAY_NAME"] + index_version
-    PARTS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["PARTS_ARRAY_NAME"] + index_version
+    CENTROIDS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["CENTROIDS_ARRAY_NAME"]
+    INDEX_ARRAY_NAME = storage_formats[STORAGE_VERSION]["INDEX_ARRAY_NAME"]
+    IDS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["IDS_ARRAY_NAME"]
+    PARTS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["PARTS_ARRAY_NAME"]
     INPUT_VECTORS_ARRAY_NAME = storage_formats[STORAGE_VERSION][
         "INPUT_VECTORS_ARRAY_NAME"
-    ] + index_version
+    ]
     EXTERNAL_IDS_ARRAY_NAME = storage_formats[STORAGE_VERSION][
         "EXTERNAL_IDS_ARRAY_NAME"
-    ] + index_version
+    ]
     PARTIAL_WRITE_ARRAY_DIR = storage_formats[STORAGE_VERSION][
         "PARTIAL_WRITE_ARRAY_DIR"
-    ] + index_version
+    ]
     DEFAULT_ATTR_FILTERS = storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"]
     VECTORS_PER_WORK_ITEM = 20000000
     MAX_TASKS_PER_STAGE = 100
@@ -272,7 +275,7 @@ def ingest(
         tiledb.Array.create(input_vectors_array_uri, input_vectors_array_schema)
         group.add(input_vectors_array_uri, name=INPUT_VECTORS_ARRAY_NAME)
 
-        input_vectors_array = tiledb.open(input_vectors_array_uri, "w")
+        input_vectors_array = tiledb.open(input_vectors_array_uri, "w", timestamp=index_timestamp)
         input_vectors_array[:, :] = np.transpose(input_vectors)
         input_vectors_array.close()
 
@@ -313,7 +316,7 @@ def ingest(
         tiledb.Array.create(external_ids_array_uri, ids_schema)
         group.add(external_ids_array_uri, name=IDS_ARRAY_NAME)
 
-        external_ids_array = tiledb.open(external_ids_array_uri, "w")
+        external_ids_array = tiledb.open(external_ids_array_uri, "w", timestamp=index_timestamp)
         external_ids_array[:] = external_ids
         external_ids_array.close()
 
@@ -336,7 +339,7 @@ def ingest(
                 logger.debug("Creating ids array")
                 ids_array_rows_dim = tiledb.Dim(
                     name="rows",
-                    domain=(0, size - 1),
+                    domain=(0, MAX_INT32),
                     tile=int(size / partitions),
                     dtype=np.dtype(np.int32),
                 )
@@ -368,7 +371,7 @@ def ingest(
                 )
                 parts_array_cols_dim = tiledb.Dim(
                     name="cols",
-                    domain=(0, size - 1),
+                    domain=(0, MAX_INT32),
                     tile=int(size / partitions),
                     dtype=np.dtype(np.int32),
                 )
@@ -666,7 +669,7 @@ def ingest(
         if external_ids_uri == "":
             return np.arange(start_pos, end_pos).astype(np.uint64)
         if external_ids_type == "TILEDB_ARRAY":
-            with tiledb.open(external_ids_uri, mode="r") as external_ids_array:
+            with tiledb.open(external_ids_uri, mode="r", timestamp=index_timestamp) as external_ids_array:
                 return external_ids_array[start_pos:end_pos]["values"]
         elif external_ids_type == "U64BIN":
             vfs = tiledb.VFS()
@@ -695,7 +698,7 @@ def ingest(
         logger.debug(
             "Reading additions vectors"
         )
-        with tiledb.open(updates_uri, mode="r") as updates_array:
+        with tiledb.open(updates_uri, mode="r", timestamp=index_timestamp) as updates_array:
             q = updates_array.query(attrs=('vector',), coords=True)
             data = q[:]
             additions_filter = [len(item) > 0 for item in data["vector"]]
@@ -713,7 +716,7 @@ def ingest(
         logger.debug(
             "Reading updated vector ids"
         )
-        with tiledb.open(updates_uri, mode="r") as updates_array:
+        with tiledb.open(updates_uri, mode="r", timestamp=index_timestamp) as updates_array:
             q = updates_array.query(attrs=('vector',), coords=True)
             data = q[:]
             return data["external_id"]
@@ -734,7 +737,7 @@ def ingest(
             "Reading input vectors start_pos: %i, end_pos: %i", start_pos, end_pos
         )
         if source_type == "TILEDB_ARRAY":
-            with tiledb.open(source_uri, mode="r") as src_array:
+            with tiledb.open(source_uri, mode="r", timestamp=index_timestamp) as src_array:
                 return np.transpose(
                     src_array[0:dimensions, start_pos:end_pos]["values"]
                 ).copy(order="C")
@@ -825,7 +828,7 @@ def ingest(
             "Copying centroids from: %s, to: %s", copy_centroids_uri, centroids_uri
         )
         src = tiledb.open(copy_centroids_uri, mode="r")
-        dest = tiledb.open(centroids_uri, mode="w")
+        dest = tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp)
         src_centroids = src[:, :]
         dest[:, :] = src_centroids
         logger.debug(src_centroids)
@@ -879,7 +882,7 @@ def ingest(
             )
             km.fit_predict(sample_vectors)
             logger.debug("Writing centroids to array %s", centroids_uri)
-            with tiledb.open(centroids_uri, mode="w") as A:
+            with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
                 A[0:dimensions, 0:partitions] = np.transpose(
                     np.array(km.cluster_centers_)
                 )
@@ -1064,8 +1067,8 @@ def ingest(
             group = tiledb.Group(index_group_uri)
             parts_array_uri = group[PARTS_ARRAY_NAME].uri
             ids_array_uri = group[IDS_ARRAY_NAME].uri
-            parts_array = tiledb.open(parts_array_uri, mode="w")
-            ids_array = tiledb.open(ids_array_uri, mode="w")
+            parts_array = tiledb.open(parts_array_uri, mode="w", timestamp=index_timestamp)
+            ids_array = tiledb.open(ids_array_uri, mode="w", timestamp=index_timestamp)
             logger.debug("Input vectors start_pos: %d, end_pos: %d", start, end)
 
             for part in range(start, end, batch):
@@ -1117,7 +1120,7 @@ def ingest(
             group = tiledb.Group(index_group_uri)
             centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
             logger.debug("Writing centroids to array %s", centroids_uri)
-            with tiledb.open(centroids_uri, mode="w") as A:
+            with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
                 A[0:dimensions, 0:partitions] = np.transpose(np.array(centroids))
 
     # --------------------------------------------------------------------
@@ -1182,20 +1185,37 @@ def ingest(
                     )
             if source_type == "TILEDB_ARRAY":
                 logger.debug("Start indexing")
-                ivf_index_tdb(
-                    dtype=vector_type,
-                    db_uri=source_uri,
-                    external_ids_uri=external_ids_uri,
-                    deleted_ids=StdVector_u64(updated_ids),
-                    centroids_uri=centroids_uri,
-                    parts_uri=partial_write_array_parts_uri,
-                    index_array_uri=partial_write_array_index_uri,
-                    id_uri=partial_write_array_ids_uri,
-                    start=part,
-                    end=part_end,
-                    nthreads=threads,
-                    config=config,
-                )
+                if index_timestamp is None:
+                    ivf_index_tdb(
+                        dtype=vector_type,
+                        db_uri=source_uri,
+                        external_ids_uri=external_ids_uri,
+                        deleted_ids=StdVector_u64(updated_ids),
+                        centroids_uri=centroids_uri,
+                        parts_uri=partial_write_array_parts_uri,
+                        index_array_uri=partial_write_array_index_uri,
+                        id_uri=partial_write_array_ids_uri,
+                        start=part,
+                        end=part_end,
+                        nthreads=threads,
+                        config=config,
+                    )
+                else:
+                    ivf_index_tdb(
+                        dtype=vector_type,
+                        db_uri=source_uri,
+                        external_ids_uri=external_ids_uri,
+                        deleted_ids=StdVector_u64(updated_ids),
+                        centroids_uri=centroids_uri,
+                        parts_uri=partial_write_array_parts_uri,
+                        index_array_uri=partial_write_array_index_uri,
+                        id_uri=partial_write_array_ids_uri,
+                        start=part,
+                        end=part_end,
+                        nthreads=threads,
+                        timestamp=index_timestamp,
+                        config=config,
+                    )
             else:
                 in_vectors = read_input_vectors(
                     source_uri=source_uri,
@@ -1218,20 +1238,37 @@ def ingest(
                     trace_id=trace_id,
                 )
                 logger.debug("Start indexing")
-                ivf_index(
-                    dtype=vector_type,
-                    db=array_to_matrix(np.transpose(in_vectors).astype(vector_type)),
-                    external_ids=StdVector_u64(external_ids),
-                    deleted_ids=StdVector_u64(updated_ids),
-                    centroids_uri=centroids_uri,
-                    parts_uri=partial_write_array_parts_uri,
-                    index_array_uri=partial_write_array_index_uri,
-                    id_uri=partial_write_array_ids_uri,
-                    start=part,
-                    end=part_end,
-                    nthreads=threads,
-                    config=config,
-                )
+                if index_timestamp is None:
+                    ivf_index(
+                        dtype=vector_type,
+                        db=array_to_matrix(np.transpose(in_vectors).astype(vector_type)),
+                        external_ids=StdVector_u64(external_ids),
+                        deleted_ids=StdVector_u64(updated_ids),
+                        centroids_uri=centroids_uri,
+                        parts_uri=partial_write_array_parts_uri,
+                        index_array_uri=partial_write_array_index_uri,
+                        id_uri=partial_write_array_ids_uri,
+                        start=part,
+                        end=part_end,
+                        nthreads=threads,
+                        config=config,
+                    )
+                else:
+                    ivf_index(
+                        dtype=vector_type,
+                        db=array_to_matrix(np.transpose(in_vectors).astype(vector_type)),
+                        external_ids=StdVector_u64(external_ids),
+                        deleted_ids=StdVector_u64(updated_ids),
+                        centroids_uri=centroids_uri,
+                        parts_uri=partial_write_array_parts_uri,
+                        index_array_uri=partial_write_array_index_uri,
+                        id_uri=partial_write_array_ids_uri,
+                        start=part,
+                        end=part_end,
+                        nthreads=threads,
+                        timestamp=index_timestamp,
+                        config=config,
+                    )
 
     def ingest_additions_udf(
         index_group_uri: str,
@@ -1274,20 +1311,37 @@ def ingest(
             trace_id=trace_id,
         )
         logger.debug(f"Ingesting additions {partial_write_array_index_uri}")
-        ivf_index(
-            dtype=vector_type,
-            db=array_to_matrix(np.transpose(additions_vectors).astype(vector_type)),
-            external_ids=StdVector_u64(additions_external_ids),
-            deleted_ids=StdVector_u64(np.array([], np.uint64)),
-            centroids_uri=centroids_uri,
-            parts_uri=partial_write_array_parts_uri,
-            index_array_uri=partial_write_array_index_uri,
-            id_uri=partial_write_array_ids_uri,
-            start=write_offset,
-            end=0,
-            nthreads=threads,
-            config=config,
-        )
+        if index_timestamp is None:
+            ivf_index(
+                dtype=vector_type,
+                db=array_to_matrix(np.transpose(additions_vectors).astype(vector_type)),
+                external_ids=StdVector_u64(additions_external_ids),
+                deleted_ids=StdVector_u64(np.array([], np.uint64)),
+                centroids_uri=centroids_uri,
+                parts_uri=partial_write_array_parts_uri,
+                index_array_uri=partial_write_array_index_uri,
+                id_uri=partial_write_array_ids_uri,
+                start=write_offset,
+                end=0,
+                nthreads=threads,
+                config=config,
+            )
+        else:
+            ivf_index(
+                dtype=vector_type,
+                db=array_to_matrix(np.transpose(additions_vectors).astype(vector_type)),
+                external_ids=StdVector_u64(additions_external_ids),
+                deleted_ids=StdVector_u64(np.array([], np.uint64)),
+                centroids_uri=centroids_uri,
+                parts_uri=partial_write_array_parts_uri,
+                index_array_uri=partial_write_array_index_uri,
+                id_uri=partial_write_array_ids_uri,
+                start=write_offset,
+                end=0,
+                nthreads=threads,
+                timestamp=index_timestamp,
+                config=config,
+            )
 
     def compute_partition_indexes_udf(
         index_group_uri: str,
@@ -1313,7 +1367,7 @@ def ingest(
             for part in partial_write_array_index_group:
                 partial_index_array_uri = part.uri
                 if tiledb.array_exists(partial_index_array_uri):
-                    partial_index_array = tiledb.open(partial_index_array_uri, mode="r")
+                    partial_index_array = tiledb.open(partial_index_array_uri, mode="r", timestamp=index_timestamp)
                     partial_indexes = partial_index_array[:]["values"]
                     i = 0
                     prev_index = partial_indexes[0]
@@ -1330,7 +1384,7 @@ def ingest(
                 i += 1
             indexes[i] = _sum
             logger.debug(f"Partition indexes: {indexes}")
-            index_array = tiledb.open(index_array_uri, mode="w")
+            index_array = tiledb.open(index_array_uri, mode="w", timestamp=index_timestamp)
             index_array[:] = indexes
 
     def consolidate_partition_udf(
@@ -1370,7 +1424,7 @@ def ingest(
             for part in partial_write_array_index_group:
                 partial_index_array_uri = part.uri
                 if tiledb.array_exists(partial_index_array_uri):
-                    partial_index_array = tiledb.open(partial_index_array_uri, mode="r")
+                    partial_index_array = tiledb.open(partial_index_array_uri, mode="r", timestamp=index_timestamp)
                     partial_indexes = partial_index_array[:]["values"]
                     prev_index = partial_indexes[0]
                     i = 0
@@ -1382,14 +1436,14 @@ def ingest(
                         i += 1
 
             partial_write_array_ids_array = tiledb.open(
-                partial_write_array_ids_uri, mode="r"
+                partial_write_array_ids_uri, mode="r", timestamp=index_timestamp
             )
             partial_write_array_parts_array = tiledb.open(
-                partial_write_array_parts_uri, mode="r"
+                partial_write_array_parts_uri, mode="r", timestamp=index_timestamp
             )
-            index_array = tiledb.open(index_array_uri, mode="r")
-            ids_array = tiledb.open(ids_array_uri, mode="w")
-            parts_array = tiledb.open(parts_array_uri, mode="w")
+            index_array = tiledb.open(index_array_uri, mode="r", timestamp=index_timestamp)
+            ids_array = tiledb.open(ids_array_uri, mode="w", timestamp=index_timestamp)
+            parts_array = tiledb.open(parts_array_uri, mode="w", timestamp=index_timestamp)
             logger.debug(
                 "Partitions start: %d end: %d", partition_id_start, partition_id_end
             )
@@ -1774,7 +1828,21 @@ def ingest(
                 logger.debug(f"Group '{index_group_uri}' already exists")
             else:
                 raise err
+        group = tiledb.Group(index_group_uri, "r")
+        ingestion_timestamps = list(json.loads(group.meta.get("ingestion_timestamps", "[]")))
+        base_sizes = list(json.loads(group.meta.get("base_sizes", "[]")))
+        if partitions == -1:
+            partitions = int(group.meta.get("partitions", "-1"))
+
+        if len(ingestion_timestamps) > 0:
+            previous_ingestion_timestamp = ingestion_timestamps[len(ingestion_timestamps)-1]
+            if index_timestamp <= previous_ingestion_timestamp:
+                raise ValueError(f"New ingestion timestamp: {index_timestamp} can't be smaller that the latest ingestion "
+                                 f"timestamp: {previous_ingestion_timestamp}")
+
+        group.close()
         group = tiledb.Group(index_group_uri, "w")
+
 
         if input_vectors is not None:
             in_size = input_vectors.shape[0]
@@ -1795,9 +1863,10 @@ def ingest(
                 source_uri=source_uri, source_type=source_type
             )
         if size == -1:
-            size = in_size
+            size = int(in_size)
         if size > in_size:
-            size = in_size
+            size = int(in_size)
+        base_sizes.append(size)
         logger.debug("Input dataset size %d", size)
         logger.debug("Input dataset dimensions %d", dimensions)
         logger.debug("Vector dimension type %s", vector_type)
@@ -1817,7 +1886,8 @@ def ingest(
         group.meta["dtype"] = np.dtype(vector_type).name
         group.meta["partitions"] = partitions
         group.meta["storage_version"] = STORAGE_VERSION
-        group.meta["index_version"] = index_version
+        group.meta["index_type"] = index_type
+        group.meta["base_sizes"] = json.dumps(base_sizes)
 
         if external_ids is not None:
             external_ids_uri = write_external_ids(
@@ -1914,6 +1984,13 @@ def ingest(
         d.compute()
         logger.debug("Submitted ingestion graph")
         d.wait()
+
+        group = tiledb.Group(index_group_uri, "w")
+        if index_timestamp is None:
+            index_timestamp = int(time.time() * 1000)
+        ingestion_timestamps.append(index_timestamp)
+        group.meta["ingestion_timestamps"] = json.dumps(ingestion_timestamps)
+        group.close()
         consolidate_and_vacuum(index_group_uri=index_group_uri, config=config)
 
         if index_type == "FLAT":
