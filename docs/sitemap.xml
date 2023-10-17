@@ -2,34 +2,34 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/Benchmarks.html</loc>
-    <lastmod>2023-10-09T06:21:49.554Z</lastmod>
+    <lastmod>2023-10-17T15:31:19.287Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/index.html</loc>
-    <lastmod>2023-10-09T06:21:48.726Z</lastmod>
+    <lastmod>2023-10-17T15:31:18.315Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/ingestion.html</loc>
-    <lastmod>2023-10-09T06:21:48.094Z</lastmod>
+    <lastmod>2023-10-17T15:31:17.535Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/Building.html</loc>
-    <lastmod>2023-10-09T06:21:47.254Z</lastmod>
+    <lastmod>2023-10-17T15:31:16.375Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/index.html</loc>
-    <lastmod>2023-10-09T06:21:46.574Z</lastmod>
+    <lastmod>2023-10-17T15:31:14.523Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/flat_index.FlatIndex.html</loc>
-    <lastmod>2023-10-09T06:21:47.618Z</lastmod>
+    <lastmod>2023-10-17T15:31:16.887Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/index.Index.html</loc>
-    <lastmod>2023-10-09T06:21:48.406Z</lastmod>
+    <lastmod>2023-10-17T15:31:17.923Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/ivf_flat_index.IVFFlatIndex.html</loc>
-    <lastmod>2023-10-09T06:21:49.234Z</lastmod>
+    <lastmod>2023-10-17T15:31:18.923Z</lastmod>
   </url>
 </urlset>

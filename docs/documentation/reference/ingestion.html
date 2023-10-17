@@ -202,7 +202,7 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="tiledb.vector_search.ingestion.ingest" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.ingestion.ingest">ingest</h3>
-<p><code>vector_search.ingestion.ingest(index_type, index_uri, *, input_vectors=None, source_uri=None, source_type=None, external_ids=None, external_ids_uri='', external_ids_type=None, updates_uri=None, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, input_vectors_per_work_item=-1, verbose=False, trace_id=None, mode=Mode.LOCAL)</code></p>
+<p><code>vector_search.ingestion.ingest(index_type, index_uri, *, input_vectors=None, source_uri=None, source_type=None, external_ids=None, external_ids_uri='', external_ids_type=None, updates_uri=None, index_timestamp=None, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, input_vectors_per_work_item=-1, verbose=False, trace_id=None, mode=Mode.LOCAL)</code></p>
 <p>Ingest vectors into TileDB.</p>
 <section id="parameters" class="level4">
 <h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
@@ -309,7 +309,7 @@ ul.task-list li input[type="checkbox"] {
 <tr class="odd">
 <td><code>training_sample_size</code></td>
 <td>int</td>
-<td>vector sample size to train centroids with, if not provided, is auto-configured based on the dataset size</td>
+<td>vector sample size to train centroids with, if not provided, is auto-configured based on the dataset sizes</td>
 <td><code>-1</code></td>
 </tr>
 <tr class="even">
