@@ -1,12 +1,17 @@
 import numpy as np
+import json
 
 from tiledb.vector_search.module import *
-from tiledb.vector_search.storage_formats import storage_formats
-from tiledb.vector_search.index import Index
+from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSION
+from tiledb.vector_search import index
 from typing import Any, Mapping
 
+MAX_INT32 = np.iinfo(np.dtype("int32")).max
+TILE_SIZE_BYTES = 128000000  # 128MB
+INDEX_TYPE = "FLAT"
 
-class FlatIndex(Index):
+
+class FlatIndex(index.Index):
     """
     Open a flat index
 
@@ -25,7 +30,7 @@ class FlatIndex(Index):
         timestamp=None,
     ):
         super().__init__(uri=uri, config=config, timestamp=timestamp)
-        self.index_type = "FLAT"
+        self.index_type = INDEX_TYPE
         self._index = None
         self.db_uri = self.group[storage_formats[self.storage_version]["PARTS_ARRAY_NAME"] + self.index_version].uri
         schema = tiledb.ArraySchema.load(
@@ -35,29 +40,30 @@ class FlatIndex(Index):
             self.size = schema.domain.dim(1).domain[1] + 1
         else:
             self.size = self.base_size
-        self._db = load_as_matrix(
-            self.db_uri,
-            ctx=self.ctx,
-            config=config,
-            size=self.size,
-            timestamp=self.base_array_timestamp,
-        )
-        # Check for existence of ids array. Previous versions were not using external_ids in the ingestion assuming
-        # that the external_ids were the position of the vector in the array.
+
+        self.dtype = np.dtype(self.group.meta.get("dtype", None))
         if storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version in self.group:
             self.ids_uri = self.group[
                 storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version
-            ].uri
-            self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, self.size, self.base_array_timestamp)
+                ].uri
         else:
             self.ids_uri = ""
-            self._ids = StdVector_u64(np.arange(self.size).astype(np.uint64))
-
-        dtype = self.group.meta.get("dtype", None)
-        if dtype is None:
-            self.dtype = self._db.dtype
-        else:
-            self.dtype = np.dtype(dtype)
+        if self.size > 0:
+            self._db = load_as_matrix(
+                self.db_uri,
+                ctx=self.ctx,
+                config=config,
+                size=self.size,
+                timestamp=self.base_array_timestamp,
+            )
+            if self.dtype is None:
+                self.dtype = self._db.dtype
+            # Check for existence of ids array. Previous versions were not using external_ids in the ingestion assuming
+            # that the external_ids were the position of the vector in the array.
+            if self.ids_uri == "":
+                self._ids = StdVector_u64(np.arange(self.size).astype(np.uint64))
+            else:
+                self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, self.size, self.base_array_timestamp)
 
     def query_internal(
         self,
@@ -80,6 +86,8 @@ class FlatIndex(Index):
         # TODO:
         # - typecheck queries
         # - add all the options and query strategies
+        if self.size == 0:
+            return np.full((queries.shape[0], k), index.MAX_FLOAT_32), np.full((queries.shape[0], k), index.MAX_UINT64)
 
         assert queries.dtype == np.float32
 
@@ -87,3 +95,87 @@ class FlatIndex(Index):
         d, i = query_vq_heap(self._db, queries_m, self._ids, k, nthreads)
 
         return np.transpose(np.array(d)), np.transpose(np.array(i))
+
+
+def create(
+    uri: str,
+    dimensions: int,
+    vector_type: np.dtype,
+    config: Optional[Mapping[str, Any]] = None,
+    **kwargs
+) -> FlatIndex:
+    with tiledb.scope_ctx(ctx_or_config=config):
+        try:
+            tiledb.group_create(uri)
+        except tiledb.TileDBError as err:
+            message = str(err)
+            if "already exists" not in message:
+                raise err
+        group = tiledb.Group(uri, "w")
+        group.meta["dataset_type"] = index.DATASET_TYPE
+        group.meta["dtype"] = np.dtype(vector_type).name
+        group.meta["storage_version"] = STORAGE_VERSION
+        group.meta["index_type"] = INDEX_TYPE
+        group.meta["base_sizes"] = json.dumps([0])
+        group.meta["ingestion_timestamps"] = json.dumps([0])
+        tile_size = TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions
+
+        ids_array_name = storage_formats[STORAGE_VERSION]["IDS_ARRAY_NAME"]
+        parts_array_name = storage_formats[STORAGE_VERSION]["PARTS_ARRAY_NAME"]
+        ids_uri = f"{uri}/{ids_array_name}"
+        parts_uri = f"{uri}/{parts_array_name}"
+
+        if not tiledb.array_exists(ids_uri):
+            ids_array_rows_dim = tiledb.Dim(
+                name="rows",
+                domain=(0, MAX_INT32),
+                tile=tile_size,
+                dtype=np.dtype(np.int32),
+            )
+            ids_array_dom = tiledb.Domain(ids_array_rows_dim)
+            ids_attr = tiledb.Attr(
+                name="values",
+                dtype=np.dtype(np.uint64),
+                filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
+            )
+            ids_schema = tiledb.ArraySchema(
+                domain=ids_array_dom,
+                sparse=False,
+                attrs=[ids_attr],
+                cell_order="col-major",
+                tile_order="col-major",
+            )
+            tiledb.Array.create(ids_uri, ids_schema)
+            group.add(ids_uri, name=ids_array_name)
+
+        if not tiledb.array_exists(parts_uri):
+            parts_array_rows_dim = tiledb.Dim(
+                name="rows",
+                domain=(0, dimensions - 1),
+                tile=dimensions,
+                dtype=np.dtype(np.int32),
+            )
+            parts_array_cols_dim = tiledb.Dim(
+                name="cols",
+                domain=(0, MAX_INT32),
+                tile=tile_size,
+                dtype=np.dtype(np.int32),
+            )
+            parts_array_dom = tiledb.Domain(
+                parts_array_rows_dim, parts_array_cols_dim
+            )
+            parts_attr = tiledb.Attr(
+                name="values", dtype=vector_type, filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"]
+            )
+            parts_schema = tiledb.ArraySchema(
+                domain=parts_array_dom,
+                sparse=False,
+                attrs=[parts_attr],
+                cell_order="col-major",
+                tile_order="col-major",
+            )
+            tiledb.Array.create(parts_uri, parts_schema)
+            group.add(parts_uri, name=parts_array_name)
+
+        group.close()
+        return FlatIndex(uri=uri, config=config)

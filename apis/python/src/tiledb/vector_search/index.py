@@ -6,14 +6,17 @@ import sys
 import time
 
 from tiledb.vector_search.module import *
-from tiledb.vector_search.storage_formats import storage_formats
+from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSION
 from typing import Any, Mapping, Optional
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
+MAX_INT32 = np.iinfo(np.dtype("int32")).max
 MAX_FLOAT_32 = np.finfo(np.dtype("float32")).max
+DATASET_TYPE = "vector_search"
 
 
 class Index:
+
     """
     Open a Vector index
 
@@ -23,8 +26,10 @@ class Index:
         URI of the index
     config: Optional[Mapping[str, Any]]
         config dictionary, defaults to None
+    timestamp: int or tuple(int)
+        (default None) If int, open the index at a given timestamp.
+        If tuple, open at the given start and end timestamps.
     """
-
     def __init__(
         self,
         uri: str,
@@ -62,9 +67,7 @@ class Index:
         self.base_array_timestamp = self.latest_ingestion_timestamp
         self.query_base_array = True
         self.update_array_timestamp = (self.base_array_timestamp+1, None)
-        if timestamp is None:
-            self.base_array_timestamp = 0
-        else:
+        if timestamp is not None:
             if isinstance(timestamp, tuple):
                 if len(timestamp) != 2:
                     raise ValueError("'timestamp' argument expects either int or tuple(start: int, end: int)")
