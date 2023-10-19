@@ -328,7 +328,7 @@ class IVFFlatIndex(Index):
                     k_nn=k,
                     config=config,
                     timestamp=self.base_array_timestamp,
-                    resource_class="large",
+                    resource_class="large" if mode == Mode.REALTIME else None,
                     image_name="3.9-vectorsearch",
                 )
             )
