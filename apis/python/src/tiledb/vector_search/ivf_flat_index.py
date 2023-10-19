@@ -375,27 +375,15 @@ def create(
     uri: str,
     dimensions: int,
     vector_type: np.dtype,
+    group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
     **kwargs
 ) -> IVFFlatIndex:
+    index.create_metadata(uri=uri, dimensions=dimensions, vector_type=vector_type, index_type=INDEX_TYPE, group_exists=group_exists, config=config)
     with tiledb.scope_ctx(ctx_or_config=config):
-        try:
-            tiledb.group_create(uri)
-        except tiledb.TileDBError as err:
-            message = str(err)
-            if "already exists" not in message:
-                raise err
         group = tiledb.Group(uri, "w")
-        group.meta["dataset_type"] = "vector_search"
-        group.meta["dataset_type"] = index.DATASET_TYPE
-        group.meta["dtype"] = np.dtype(vector_type).name
-        group.meta["storage_version"] = STORAGE_VERSION
-        group.meta["index_type"] = INDEX_TYPE
-        group.meta["base_sizes"] = json.dumps([0])
-        group.meta["ingestion_timestamps"] = json.dumps([0])
-        group.meta["partition_history"] = json.dumps([0])
         tile_size = int(TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions)
-
+        group.meta["partition_history"] = json.dumps([0])
         centroids_array_name = storage_formats[STORAGE_VERSION]["CENTROIDS_ARRAY_NAME"]
         index_array_name = storage_formats[STORAGE_VERSION]["INDEX_ARRAY_NAME"]
         ids_array_name = storage_formats[STORAGE_VERSION]["IDS_ARRAY_NAME"]
@@ -405,111 +393,107 @@ def create(
         ids_uri = f"{uri}/{ids_array_name}"
         parts_uri = f"{uri}/{parts_array_name}"
 
-        if not tiledb.array_exists(centroids_uri):
-            centroids_array_rows_dim = tiledb.Dim(
-                name="rows",
-                domain=(0, dimensions - 1),
-                tile=dimensions,
-                dtype=np.dtype(np.int32),
-            )
-            centroids_array_cols_dim = tiledb.Dim(
-                name="cols",
-                domain=(0, MAX_INT32),
-                tile=100000,
-                dtype=np.dtype(np.int32),
-            )
-            centroids_array_dom = tiledb.Domain(
-                centroids_array_rows_dim, centroids_array_cols_dim
-            )
-            centroids_attr = tiledb.Attr(
-                name="centroids",
-                dtype=np.dtype(np.float32),
-                filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
-            )
-            centroids_schema = tiledb.ArraySchema(
-                domain=centroids_array_dom,
-                sparse=False,
-                attrs=[centroids_attr],
-                cell_order="col-major",
-                tile_order="col-major",
-            )
-            tiledb.Array.create(centroids_uri, centroids_schema)
-            group.add(centroids_uri, name=centroids_array_name)
+        centroids_array_rows_dim = tiledb.Dim(
+            name="rows",
+            domain=(0, dimensions - 1),
+            tile=dimensions,
+            dtype=np.dtype(np.int32),
+        )
+        centroids_array_cols_dim = tiledb.Dim(
+            name="cols",
+            domain=(0, MAX_INT32),
+            tile=100000,
+            dtype=np.dtype(np.int32),
+        )
+        centroids_array_dom = tiledb.Domain(
+            centroids_array_rows_dim, centroids_array_cols_dim
+        )
+        centroids_attr = tiledb.Attr(
+            name="centroids",
+            dtype=np.dtype(np.float32),
+            filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
+        )
+        centroids_schema = tiledb.ArraySchema(
+            domain=centroids_array_dom,
+            sparse=False,
+            attrs=[centroids_attr],
+            cell_order="col-major",
+            tile_order="col-major",
+        )
+        tiledb.Array.create(centroids_uri, centroids_schema)
+        group.add(centroids_uri, name=centroids_array_name)
 
-        if not tiledb.array_exists(index_array_uri):
-            index_array_rows_dim = tiledb.Dim(
-                name="rows",
-                domain=(0, MAX_INT32),
-                tile=100000,
-                dtype=np.dtype(np.int32),
-            )
-            index_array_dom = tiledb.Domain(index_array_rows_dim)
-            index_attr = tiledb.Attr(
-                name="values",
-                dtype=np.dtype(np.uint64),
-                filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
-            )
-            index_schema = tiledb.ArraySchema(
-                domain=index_array_dom,
-                sparse=False,
-                attrs=[index_attr],
-                cell_order="col-major",
-                tile_order="col-major",
-            )
-            tiledb.Array.create(index_array_uri, index_schema)
-            group.add(index_array_uri, name=index_array_name)
+        index_array_rows_dim = tiledb.Dim(
+            name="rows",
+            domain=(0, MAX_INT32),
+            tile=100000,
+            dtype=np.dtype(np.int32),
+        )
+        index_array_dom = tiledb.Domain(index_array_rows_dim)
+        index_attr = tiledb.Attr(
+            name="values",
+            dtype=np.dtype(np.uint64),
+            filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
+        )
+        index_schema = tiledb.ArraySchema(
+            domain=index_array_dom,
+            sparse=False,
+            attrs=[index_attr],
+            cell_order="col-major",
+            tile_order="col-major",
+        )
+        tiledb.Array.create(index_array_uri, index_schema)
+        group.add(index_array_uri, name=index_array_name)
 
-        if not tiledb.array_exists(ids_uri):
-            ids_array_rows_dim = tiledb.Dim(
-                name="rows",
-                domain=(0, MAX_INT32),
-                tile=tile_size,
-                dtype=np.dtype(np.int32),
-            )
-            ids_array_dom = tiledb.Domain(ids_array_rows_dim)
-            ids_attr = tiledb.Attr(
-                name="values",
-                dtype=np.dtype(np.uint64),
-                filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
-            )
-            ids_schema = tiledb.ArraySchema(
-                domain=ids_array_dom,
-                sparse=False,
-                attrs=[ids_attr],
-                cell_order="col-major",
-                tile_order="col-major",
-            )
-            tiledb.Array.create(ids_uri, ids_schema)
-            group.add(ids_uri, name=ids_array_name)
+        ids_array_rows_dim = tiledb.Dim(
+            name="rows",
+            domain=(0, MAX_INT32),
+            tile=tile_size,
+            dtype=np.dtype(np.int32),
+        )
+        ids_array_dom = tiledb.Domain(ids_array_rows_dim)
+        ids_attr = tiledb.Attr(
+            name="values",
+            dtype=np.dtype(np.uint64),
+            filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
+        )
+        ids_schema = tiledb.ArraySchema(
+            domain=ids_array_dom,
+            sparse=False,
+            attrs=[ids_attr],
+            cell_order="col-major",
+            tile_order="col-major",
+        )
+        tiledb.Array.create(ids_uri, ids_schema)
+        group.add(ids_uri, name=ids_array_name)
 
-        if not tiledb.array_exists(parts_uri):
-            parts_array_rows_dim = tiledb.Dim(
-                name="rows",
-                domain=(0, dimensions - 1),
-                tile=dimensions,
-                dtype=np.dtype(np.int32),
-            )
-            parts_array_cols_dim = tiledb.Dim(
-                name="cols",
-                domain=(0, MAX_INT32),
-                tile=tile_size,
-                dtype=np.dtype(np.int32),
-            )
-            parts_array_dom = tiledb.Domain(
-                parts_array_rows_dim, parts_array_cols_dim
-            )
-            parts_attr = tiledb.Attr(
-                name="values", dtype=vector_type, filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
-            )
-            parts_schema = tiledb.ArraySchema(
-                domain=parts_array_dom,
-                sparse=False,
-                attrs=[parts_attr],
-                cell_order="col-major",
-                tile_order="col-major",
-            )
-            tiledb.Array.create(parts_uri, parts_schema)
-            group.add(parts_uri, name=parts_array_name)
+        parts_array_rows_dim = tiledb.Dim(
+            name="rows",
+            domain=(0, dimensions - 1),
+            tile=dimensions,
+            dtype=np.dtype(np.int32),
+        )
+        parts_array_cols_dim = tiledb.Dim(
+            name="cols",
+            domain=(0, MAX_INT32),
+            tile=tile_size,
+            dtype=np.dtype(np.int32),
+        )
+        parts_array_dom = tiledb.Domain(
+            parts_array_rows_dim, parts_array_cols_dim
+        )
+        parts_attr = tiledb.Attr(
+            name="values", dtype=vector_type, filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
+        )
+        parts_schema = tiledb.ArraySchema(
+            domain=parts_array_dom,
+            sparse=False,
+            attrs=[parts_attr],
+            cell_order="col-major",
+            tile_order="col-major",
+        )
+        tiledb.Array.create(parts_uri, parts_schema)
+        group.add(parts_uri, name=parts_array_name)
 
         group.close()
         return IVFFlatIndex(uri=uri, config=config, memory_budget=1000000)

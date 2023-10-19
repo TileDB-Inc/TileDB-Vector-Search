@@ -405,3 +405,27 @@ class Index:
             with tiledb.open(ids_uri, 'm') as A:
                 A.delete_fragments(0, timestamp)
         group.close()
+
+
+def create_metadata(
+    uri: str,
+    dimensions: int,
+    vector_type: np.dtype,
+    index_type: str,
+    group_exists: bool = False,
+    config: Optional[Mapping[str, Any]] = None,
+):
+    with tiledb.scope_ctx(ctx_or_config=config):
+        if not group_exists:
+            try:
+                tiledb.group_create(uri)
+            except tiledb.TileDBError as err:
+                raise err
+        group = tiledb.Group(uri, "w")
+        group.meta["dataset_type"] = DATASET_TYPE
+        group.meta["dtype"] = np.dtype(vector_type).name
+        group.meta["storage_version"] = STORAGE_VERSION
+        group.meta["index_type"] = index_type
+        group.meta["base_sizes"] = json.dumps([0])
+        group.meta["ingestion_timestamps"] = json.dumps([0])
+        group.close()

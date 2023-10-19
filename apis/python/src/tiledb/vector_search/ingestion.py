@@ -249,6 +249,7 @@ def ingest(
         input_vectors_array_uri = f"{group.uri}/{INPUT_VECTORS_ARRAY_NAME}"
         if tiledb.array_exists(input_vectors_array_uri):
             raise ValueError(f"Array exists {input_vectors_array_uri}")
+        tile_size = min(size, int(flat_index.TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions))
 
         logger.debug("Creating input vectors array")
         input_vectors_array_rows_dim = tiledb.Dim(
@@ -260,7 +261,7 @@ def ingest(
         input_vectors_array_cols_dim = tiledb.Dim(
             name="cols",
             domain=(0, size - 1),
-            tile=int(size / partitions),
+            tile=tile_size,
             dtype=np.dtype(np.int32),
         )
         input_vectors_array_dom = tiledb.Domain(
@@ -329,6 +330,7 @@ def ingest(
 
     def create_arrays(
         group: tiledb.Group,
+        arrays_created: bool,
         index_type: str,
         size: int,
         dimensions: int,
@@ -337,9 +339,11 @@ def ingest(
         logger: logging.Logger,
     ) -> None:
         if index_type == "FLAT":
-            flat_index.create(uri=group.uri, dimensions=dimensions, vector_type=vector_type, config=config)
+            if not arrays_created:
+                flat_index.create(uri=group.uri, dimensions=dimensions, vector_type=vector_type, group_exists=True, config=config)
         elif index_type == "IVF_FLAT":
-            ivf_flat_index.create(uri=group.uri, dimensions=dimensions, vector_type=vector_type, config=config)
+            if not arrays_created:
+                ivf_flat_index.create(uri=group.uri, dimensions=dimensions, vector_type=vector_type, group_exists=True, config=config)
             tile_size = int(ivf_flat_index.TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions)
             partial_write_array_dir_uri = f"{group.uri}/{PARTIAL_WRITE_ARRAY_DIR}"
             partial_write_array_index_uri = (
@@ -1679,11 +1683,13 @@ def ingest(
     with tiledb.scope_ctx(ctx_or_config=config):
         logger = setup(config, verbose)
         logger.debug("Ingesting Vectors into %r", index_group_uri)
+        arrays_created = False
         try:
             tiledb.group_create(index_group_uri)
         except tiledb.TileDBError as err:
             message = str(err)
             if "already exists" in message:
+                arrays_created = True
                 logger.debug(f"Group '{index_group_uri}' already exists")
             else:
                 raise err
@@ -1800,6 +1806,7 @@ def ingest(
         logger.debug("Creating arrays")
         create_arrays(
             group=group,
+            arrays_created=arrays_created,
             index_type=index_type,
             size=size,
             dimensions=dimensions,
