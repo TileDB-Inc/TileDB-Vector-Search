@@ -488,7 +488,6 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     assert accuracy(result, gt_i) == 1.0
 
     # Clear history before the latest ingestion
-    print("clear_history")
     Index.clear_history(uri=index_uri, timestamp=index.latest_ingestion_timestamp-1)
     index = IVFFlatIndex(uri=index_uri, timestamp=1)
     _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
@@ -522,7 +521,6 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
     # Clear all history
-    print("clear_history")
     Index.clear_history(uri=index_uri, timestamp=index.latest_ingestion_timestamp)
     index = IVFFlatIndex(uri=index_uri, timestamp=1)
     _, result = index.query(query_vectors, k=k, nprobe=index.partitions)

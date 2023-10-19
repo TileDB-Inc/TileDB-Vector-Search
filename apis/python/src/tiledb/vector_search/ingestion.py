@@ -4,6 +4,7 @@ from functools import partial
 
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search._tiledbvspy import *
+from tiledb.vector_search.storage_formats import STORAGE_VERSION
 import numpy as np
 
 
@@ -27,6 +28,7 @@ def ingest(
     training_sample_size: int = -1,
     workers: int = -1,
     input_vectors_per_work_item: int = -1,
+    storage_version: str = STORAGE_VERSION,
     verbose: bool = False,
     trace_id: Optional[str] = None,
     mode: Mode = Mode.LOCAL,
@@ -54,6 +56,8 @@ def ingest(
         File type of external_ids_uri. If left empty it is auto-detected from the suffix of external_ids_uri
     updates_uri: str
         Updates
+    index_timestamp: int
+        Timestamp to use for writing and reading data. By default it sues the current unix ms timestamp.
     config: None
         config dictionary, defaults to None
     namespace: str
@@ -76,6 +80,8 @@ def ingest(
     input_vectors_per_work_item: int = -1
         number of vectors per ingestion work item,
         if not provided, is auto-configured
+    storage_version: str
+        Vector index storage format version.
     verbose: bool
         verbose logging, defaults to False
     trace_id: Optional[str]
@@ -100,27 +106,27 @@ def ingest(
     from tiledb.cloud.rest_api import models
     from tiledb.cloud.utilities import get_logger
     from tiledb.cloud.utilities import set_aws_context
-    from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSION
     from tiledb.vector_search.index import Index
+    from tiledb.vector_search.storage_formats import storage_formats
     from tiledb.vector_search import flat_index, ivf_flat_index
 
     # use index_group_uri for internal clarity
     index_group_uri = index_uri
 
-    CENTROIDS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["CENTROIDS_ARRAY_NAME"]
-    INDEX_ARRAY_NAME = storage_formats[STORAGE_VERSION]["INDEX_ARRAY_NAME"]
-    IDS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["IDS_ARRAY_NAME"]
-    PARTS_ARRAY_NAME = storage_formats[STORAGE_VERSION]["PARTS_ARRAY_NAME"]
-    INPUT_VECTORS_ARRAY_NAME = storage_formats[STORAGE_VERSION][
+    CENTROIDS_ARRAY_NAME = storage_formats[storage_version]["CENTROIDS_ARRAY_NAME"]
+    INDEX_ARRAY_NAME = storage_formats[storage_version]["INDEX_ARRAY_NAME"]
+    IDS_ARRAY_NAME = storage_formats[storage_version]["IDS_ARRAY_NAME"]
+    PARTS_ARRAY_NAME = storage_formats[storage_version]["PARTS_ARRAY_NAME"]
+    INPUT_VECTORS_ARRAY_NAME = storage_formats[storage_version][
         "INPUT_VECTORS_ARRAY_NAME"
     ]
-    EXTERNAL_IDS_ARRAY_NAME = storage_formats[STORAGE_VERSION][
+    EXTERNAL_IDS_ARRAY_NAME = storage_formats[storage_version][
         "EXTERNAL_IDS_ARRAY_NAME"
     ]
-    PARTIAL_WRITE_ARRAY_DIR = storage_formats[STORAGE_VERSION][
+    PARTIAL_WRITE_ARRAY_DIR = storage_formats[storage_version][
         "PARTIAL_WRITE_ARRAY_DIR"
     ]
-    DEFAULT_ATTR_FILTERS = storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"]
+    DEFAULT_ATTR_FILTERS = storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"]
     VECTORS_PER_WORK_ITEM = 20000000
     MAX_TASKS_PER_STAGE = 100
     CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 1000000

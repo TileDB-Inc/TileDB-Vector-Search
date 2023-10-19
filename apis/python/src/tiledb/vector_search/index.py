@@ -322,6 +322,7 @@ class Index:
             external_ids_type="TILEDB_ARRAY",
             updates_uri=self.updates_array_uri,
             index_timestamp=max_timestamp,
+            storage_version=self.storage_version,
             config=self.config,
             **kwargs
         )
