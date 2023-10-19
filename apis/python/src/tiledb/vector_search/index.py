@@ -67,7 +67,9 @@ class Index:
         self.base_array_timestamp = self.latest_ingestion_timestamp
         self.query_base_array = True
         self.update_array_timestamp = (self.base_array_timestamp+1, None)
-        if timestamp is not None:
+        if timestamp is None:
+            self.base_array_timestamp = 0
+        else:
             if isinstance(timestamp, tuple):
                 if len(timestamp) != 2:
                     raise ValueError("'timestamp' argument expects either int or tuple(start: int, end: int)")
