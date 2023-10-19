@@ -1,5 +1,5 @@
 import json
-from typing import Optional, Tuple
+from typing import Any, Mapping, Optional, Tuple
 from functools import partial
 
 from tiledb.cloud.dag import Mode
@@ -19,7 +19,7 @@ def ingest(
     external_ids_type: str = None,
     updates_uri: str = None,
     index_timestamp: int = None,
-    config=None,
+    config: Optional[Mapping[str, Any]] = None,
     namespace: Optional[str] = None,
     size: int = -1,
     partitions: int = -1,
@@ -326,7 +326,6 @@ def ingest(
         index_type: str,
         size: int,
         dimensions: int,
-        partitions: int,
         input_vectors_work_tasks: int,
         vector_type: np.dtype,
         logger: logging.Logger,
@@ -334,7 +333,7 @@ def ingest(
         if index_type == "FLAT":
             flat_index.create(uri=group.uri, dimensions=dimensions, vector_type=vector_type, config=config)
         elif index_type == "IVF_FLAT":
-            ivf_flat_index.create(uri=group.uri, dimensions=dimensions, vector_type=vector_type, partitions=partitions, config=config)
+            ivf_flat_index.create(uri=group.uri, dimensions=dimensions, vector_type=vector_type, config=config)
             tile_size = int(ivf_flat_index.TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions)
             partial_write_array_dir_uri = f"{group.uri}/{PARTIAL_WRITE_ARRAY_DIR}"
             partial_write_array_index_uri = (
@@ -1246,7 +1245,7 @@ def ingest(
             group.close()
             logger.debug(f"Partition indexes: {indexes}")
             index_array = tiledb.open(index_array_uri, mode="w", timestamp=index_timestamp)
-            index_array[:] = indexes
+            index_array[0:partitions+1] = indexes
 
     def consolidate_partition_udf(
         index_group_uri: str,
@@ -1685,6 +1684,7 @@ def ingest(
         group = tiledb.Group(index_group_uri, "r")
         ingestion_timestamps = list(json.loads(group.meta.get("ingestion_timestamps", "[]")))
         base_sizes = list(json.loads(group.meta.get("base_sizes", "[]")))
+        partition_history = list(json.loads(group.meta.get("partition_history", "[]")))
         if partitions == -1:
             partitions = int(group.meta.get("partitions", "-1"))
 
@@ -1797,7 +1797,6 @@ def ingest(
             index_type=index_type,
             size=size,
             dimensions=dimensions,
-            partitions=partitions,
             input_vectors_work_tasks=input_vectors_work_tasks,
             vector_type=vector_type,
             logger=logger,
@@ -1842,6 +1841,8 @@ def ingest(
             index_timestamp = int(time.time() * 1000)
         ingestion_timestamps.append(index_timestamp)
         base_sizes.append(temp_size)
+        partition_history.append(partitions)
+        group.meta["partition_history"] = json.dumps(partition_history)
         group.meta["base_sizes"] = json.dumps(base_sizes)
         group.meta["ingestion_timestamps"] = json.dumps(ingestion_timestamps)
         group.close()

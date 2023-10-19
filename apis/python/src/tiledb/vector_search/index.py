@@ -55,13 +55,14 @@ class Index:
         self.index_version = self.group.meta.get("index_version", "")
         self.ingestion_timestamps = [int(x) for x in
                                      list(json.loads(self.group.meta.get("ingestion_timestamps", "[]")))]
-        if len(self.ingestion_timestamps) > 0:
-            self.latest_ingestion_timestamp = self.ingestion_timestamps[len(self.ingestion_timestamps)-1]
+        self.history_index = len(self.ingestion_timestamps)-1
+        if self.history_index > -1:
+            self.latest_ingestion_timestamp = self.ingestion_timestamps[self.history_index]
         else:
             self.latest_ingestion_timestamp = MAX_UINT64
         self.base_sizes = [int(x) for x in list(json.loads(self.group.meta.get("base_sizes", "[]")))]
         if len(self.base_sizes) > 0:
-            self.base_size = self.base_sizes[len(self.ingestion_timestamps)-1]
+            self.base_size = self.base_sizes[self.history_index]
         else:
             self.base_size = -1
         self.base_array_timestamp = self.latest_ingestion_timestamp
@@ -78,19 +79,23 @@ class Index:
                         self.query_base_array = False
                         self.update_array_timestamp = timestamp
                     else:
-                        self.base_size = self.base_sizes[0]
-                        self.base_array_timestamp = self.ingestion_timestamps[0]
+                        self.history_index = 0
+                        self.base_size = self.base_sizes[self.history_index]
+                        self.base_array_timestamp = self.ingestion_timestamps[self.history_index]
                         self.update_array_timestamp = (self.base_array_timestamp+1, timestamp[1])
                 else:
-                    self.base_size = self.base_sizes[0]
-                    self.base_array_timestamp = self.ingestion_timestamps[0]
+                    self.history_index = 0
+                    self.base_size = self.base_sizes[self.history_index]
+                    self.base_array_timestamp = self.ingestion_timestamps[self.history_index]
                     self.update_array_timestamp = (self.base_array_timestamp+1, timestamp[1])
             elif isinstance(timestamp, int):
+                self.history_index = 0
                 i = 0
                 for ingestion_timestamp in self.ingestion_timestamps:
                     if ingestion_timestamp <= timestamp:
                         self.base_array_timestamp = ingestion_timestamp
-                        self.base_size = self.base_sizes[i]
+                        self.history_index = i
+                        self.base_size = self.base_sizes[self.history_index]
                     i += 1
                 self.update_array_timestamp = (self.base_array_timestamp+1, timestamp)
             else:
@@ -293,7 +298,7 @@ class Index:
             timestamp = int(time.time() * 1000)
         return tiledb.open(self.updates_array_uri, mode="w", timestamp=timestamp)
 
-    def consolidate_updates(self):
+    def consolidate_updates(self, **kwargs):
         from tiledb.vector_search.ingestion import ingest
 
         fragments_info = tiledb.array_fragments(self.updates_array_uri, ctx=tiledb.Ctx(self.config))
@@ -318,6 +323,7 @@ class Index:
             updates_uri=self.updates_array_uri,
             index_timestamp=max_timestamp,
             config=self.config,
+            **kwargs
         )
         return new_index
 
@@ -346,23 +352,28 @@ class Index:
         ingestion_timestamps = [int(x) for x in
                                      list(json.loads(group.meta.get("ingestion_timestamps", "[]")))]
         base_sizes = [int(x) for x in list(json.loads(group.meta.get("base_sizes", "[]")))]
+        partition_history = [int(x) for x in list(json.loads(group.meta.get("partition_history", "[]")))]
         new_ingestion_timestamps = []
         new_base_sizes = []
+        new_partition_history = []
         i = 0
         for ingestion_timestamp in ingestion_timestamps:
             if ingestion_timestamp > timestamp:
                 new_ingestion_timestamps.append(ingestion_timestamp)
                 new_base_sizes.append(base_sizes[i])
+                new_partition_history.append(partition_history[i])
             i += 1
         if len(new_ingestion_timestamps) == 0:
             new_ingestion_timestamps = [0]
-            new_base_sizes = [1]
+            new_base_sizes = [0]
+            new_partition_history = [0]
         index_type = group.meta.get("index_type", "")
         group.close()
 
         group = tiledb.Group(uri, "w", ctx=tiledb.Ctx(config))
         group.meta["ingestion_timestamps"] = json.dumps(new_ingestion_timestamps)
         group.meta["base_sizes"] = json.dumps(new_base_sizes)
+        group.meta["partition_history"] = json.dumps(new_partition_history)
         group.close()
 
         group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(config))

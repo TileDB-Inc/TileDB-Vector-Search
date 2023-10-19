@@ -68,19 +68,22 @@ class IVFFlatIndex(index.Index):
 
         if self.base_size == 0:
             self.size = 0
+            self.partitions = 0
             return
 
-        self._centroids = load_as_matrix(
-            self.centroids_uri, ctx=self.ctx, config=config, timestamp=self.base_array_timestamp
-        )
-        self._index = read_vector_u64(self.ctx, self.index_array_uri, 0, 0, self.base_array_timestamp)
-
-        self.partitions = self.group.meta.get("partitions", -1)
-        if self.partitions == -1:
+        self.partition_history = [int(x) for x in list(json.loads(self.group.meta.get("partition_history", "[]")))]
+        if len(self.partition_history) == 0:
             schema = tiledb.ArraySchema.load(
                 self.centroids_uri, ctx=tiledb.Ctx(self.config)
             )
             self.partitions = schema.domain.dim("cols").domain[1] + 1
+        else:
+            self.partitions = self.partition_history[self.history_index]
+
+        self._centroids = load_as_matrix(
+            self.centroids_uri, ctx=self.ctx, size=self.partitions, config=config, timestamp=self.base_array_timestamp
+        )
+        self._index = read_vector_u64(self.ctx, self.index_array_uri, 0, self.partitions+1, self.base_array_timestamp)
 
         if self.base_size == -1:
             self.size = self._index[self.partitions]
@@ -372,7 +375,6 @@ def create(
     uri: str,
     dimensions: int,
     vector_type: np.dtype,
-    partitions: int = 10,
     config: Optional[Mapping[str, Any]] = None,
     **kwargs
 ) -> IVFFlatIndex:
@@ -391,7 +393,7 @@ def create(
         group.meta["index_type"] = INDEX_TYPE
         group.meta["base_sizes"] = json.dumps([0])
         group.meta["ingestion_timestamps"] = json.dumps([0])
-        group.meta["partitions"] = partitions
+        group.meta["partition_history"] = json.dumps([0])
         tile_size = int(TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions)
 
         centroids_array_name = storage_formats[STORAGE_VERSION]["CENTROIDS_ARRAY_NAME"]
@@ -412,8 +414,8 @@ def create(
             )
             centroids_array_cols_dim = tiledb.Dim(
                 name="cols",
-                domain=(0, partitions - 1),
-                tile=partitions,
+                domain=(0, MAX_INT32),
+                tile=100000,
                 dtype=np.dtype(np.int32),
             )
             centroids_array_dom = tiledb.Domain(
@@ -428,7 +430,6 @@ def create(
                 domain=centroids_array_dom,
                 sparse=False,
                 attrs=[centroids_attr],
-                capacity=dimensions * partitions,
                 cell_order="col-major",
                 tile_order="col-major",
             )
@@ -438,8 +439,8 @@ def create(
         if not tiledb.array_exists(index_array_uri):
             index_array_rows_dim = tiledb.Dim(
                 name="rows",
-                domain=(0, partitions),
-                tile=partitions,
+                domain=(0, MAX_INT32),
+                tile=100000,
                 dtype=np.dtype(np.int32),
             )
             index_array_dom = tiledb.Domain(index_array_rows_dim)

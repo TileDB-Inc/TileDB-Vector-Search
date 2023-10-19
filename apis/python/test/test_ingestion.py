@@ -318,8 +318,8 @@ def test_ivf_flat_ingestion_with_updates(tmp_path):
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
-    index = index.consolidate_updates()
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    index = index.consolidate_updates(partitions=20)
+    _, result = index.query(query_vectors, k=k, nprobe=20)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
 def test_ivf_flat_ingestion_with_batch_updates(tmp_path):
@@ -393,7 +393,7 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
         partitions=partitions,
         index_timestamp=1,
     )
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i) == 1.0
 
     update_ids_offset = MAX_UINT64-size
@@ -404,25 +404,25 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
         updated_ids[i] = i + update_ids_offset
 
     index = IVFFlatIndex(uri=index_uri)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=101)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 101))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, None))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 101))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert 0.05 <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True) <= 0.15
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, None))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert 0.05 <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True) <= 0.15
 
     # Timetravel with partial read from updates table
@@ -430,39 +430,39 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     for i in range(2, 52):
         updated_ids_part[i] = i + update_ids_offset
     index = IVFFlatIndex(uri=index_uri, timestamp=51)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 51))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 51))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert 0.02 <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True) <= 0.07
 
     # Timetravel at previous ingestion timestamp
     index = IVFFlatIndex(uri=index_uri, timestamp=1)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i) == 1.0
 
     # Consolidate updates
     index = index.consolidate_updates()
     index = IVFFlatIndex(uri=index_uri)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=101)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 101))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, None))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 101))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert 0.05 <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True) <= 0.15
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, None))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert 0.05 <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True) <= 0.15
 
     # Timetravel with partial read from updates table
@@ -470,87 +470,89 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     for i in range(2, 52):
         updated_ids_part[i] = i + update_ids_offset
     index = IVFFlatIndex(uri=index_uri, timestamp=51)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 51))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 51))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert 0.02 <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True) <= 0.07
 
     # Timetravel at previous ingestion timestamp
     index = IVFFlatIndex(uri=index_uri, timestamp=1)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 1))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i) == 1.0
 
     # Clear history before the latest ingestion
+    print("clear_history")
     Index.clear_history(uri=index_uri, timestamp=index.latest_ingestion_timestamp-1)
     index = IVFFlatIndex(uri=index_uri, timestamp=1)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=51)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=101)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 51))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 101))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, None))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 51))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 101))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, None))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
     # Clear all history
+    print("clear_history")
     Index.clear_history(uri=index_uri, timestamp=index.latest_ingestion_timestamp)
     index = IVFFlatIndex(uri=index_uri, timestamp=1)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
     index = IVFFlatIndex(uri=index_uri, timestamp=51)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
     index = IVFFlatIndex(uri=index_uri, timestamp=101)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
     index = IVFFlatIndex(uri=index_uri)
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 51))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 101))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, None))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 51))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 101))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, None))
-    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
 
 
@@ -559,10 +561,9 @@ def test_ivf_flat_ingestion_with_additions_and_timetravel(tmp_path):
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     size = 100
-    partitions = 1
+    partitions = 10
     dimensions = 128
     nqueries = 1
-    nprobe = 1
     data = create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
     dtype = np.uint8
 
@@ -575,7 +576,7 @@ def test_ivf_flat_ingestion_with_additions_and_timetravel(tmp_path):
         partitions=partitions,
         index_timestamp=1,
     )
-    _, result = index.query(query_vectors, k=k)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i) == 1.0
 
     update_ids_offset = MAX_UINT64-size
@@ -585,9 +586,9 @@ def test_ivf_flat_ingestion_with_additions_and_timetravel(tmp_path):
         updated_ids[i] = i + update_ids_offset
 
     index = IVFFlatIndex(uri=index_uri)
-    _, result = index.query(query_vectors, k=k)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert 0.45 < accuracy(result, gt_i) < 0.55
 
     index = index.consolidate_updates()
-    _, result = index.query(query_vectors, k=k)
+    _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert 0.45 < accuracy(result, gt_i) < 0.55
