@@ -1,10 +1,12 @@
-import numpy as np
 import json
-
-from tiledb.vector_search.module import *
-from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSION
-from tiledb.vector_search import index
 from typing import Any, Mapping
+
+import numpy as np
+
+from tiledb.vector_search import index
+from tiledb.vector_search.module import *
+from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
+                                                  storage_formats)
 
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
 TILE_SIZE_BYTES = 128000000  # 128MB
@@ -32,20 +34,25 @@ class FlatIndex(index.Index):
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
         self._index = None
-        self.db_uri = self.group[storage_formats[self.storage_version]["PARTS_ARRAY_NAME"] + self.index_version].uri
-        schema = tiledb.ArraySchema.load(
-            self.db_uri, ctx=tiledb.Ctx(self.config)
-        )
+        self.db_uri = self.group[
+            storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
+            + self.index_version
+        ].uri
+        schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
         if self.base_size == -1:
             self.size = schema.domain.dim(1).domain[1] + 1
         else:
             self.size = self.base_size
 
         self.dtype = np.dtype(self.group.meta.get("dtype", None))
-        if storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version in self.group:
+        if (
+            storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version
+            in self.group
+        ):
             self.ids_uri = self.group[
-                storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version
-                ].uri
+                storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
+                + self.index_version
+            ].uri
         else:
             self.ids_uri = ""
         if self.size > 0:
@@ -63,7 +70,9 @@ class FlatIndex(index.Index):
             if self.ids_uri == "":
                 self._ids = StdVector_u64(np.arange(self.size).astype(np.uint64))
             else:
-                self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, self.size, self.base_array_timestamp)
+                self._ids = read_vector_u64(
+                    self.ctx, self.ids_uri, 0, self.size, self.base_array_timestamp
+                )
 
     def query_internal(
         self,
@@ -87,7 +96,9 @@ class FlatIndex(index.Index):
         # - typecheck queries
         # - add all the options and query strategies
         if self.size == 0:
-            return np.full((queries.shape[0], k), index.MAX_FLOAT_32), np.full((queries.shape[0], k), index.MAX_UINT64)
+            return np.full((queries.shape[0], k), index.MAX_FLOAT_32), np.full(
+                (queries.shape[0], k), index.MAX_UINT64
+            )
 
         assert queries.dtype == np.float32
 
@@ -103,9 +114,16 @@ def create(
     vector_type: np.dtype,
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
-    **kwargs
+    **kwargs,
 ) -> FlatIndex:
-    index.create_metadata(uri=uri, dimensions=dimensions, vector_type=vector_type, index_type=INDEX_TYPE, group_exists=group_exists, config=config)
+    index.create_metadata(
+        uri=uri,
+        dimensions=dimensions,
+        vector_type=vector_type,
+        index_type=INDEX_TYPE,
+        group_exists=group_exists,
+        config=config,
+    )
     with tiledb.scope_ctx(ctx_or_config=config):
         group = tiledb.Group(uri, "w")
         tile_size = TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions
@@ -148,11 +166,11 @@ def create(
             tile=tile_size,
             dtype=np.dtype(np.int32),
         )
-        parts_array_dom = tiledb.Domain(
-            parts_array_rows_dim, parts_array_cols_dim
-        )
+        parts_array_dom = tiledb.Domain(parts_array_rows_dim, parts_array_cols_dim)
         parts_attr = tiledb.Attr(
-            name="values", dtype=vector_type, filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"]
+            name="values",
+            dtype=vector_type,
+            filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
         )
         parts_schema = tiledb.ArraySchema(
             domain=parts_array_dom,

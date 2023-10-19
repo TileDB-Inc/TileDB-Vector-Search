@@ -1,13 +1,12 @@
 import numpy as np
-
 from common import *
-
-from tiledb.vector_search.utils import load_fvecs
-from tiledb.vector_search.ingestion import ingest
-from tiledb.vector_search.index import Index
-from tiledb.vector_search.flat_index import FlatIndex
-from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.cloud.dag import Mode
+
+from tiledb.vector_search.flat_index import FlatIndex
+from tiledb.vector_search.index import Index
+from tiledb.vector_search.ingestion import ingest
+from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
+from tiledb.vector_search.utils import load_fvecs
 
 MINIMUM_ACCURACY = 0.85
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
@@ -66,16 +65,21 @@ def test_flat_ingestion_external_id_u8(tmp_path):
 
     query_vectors = get_queries(dataset_dir, dtype=dtype)
     gt_i, gt_d = get_groundtruth(dataset_dir, k)
-    external_ids = np.array([range(external_ids_offset, size+external_ids_offset)], np.uint64)
+    external_ids = np.array(
+        [range(external_ids_offset, size + external_ids_offset)], np.uint64
+    )
 
     index = ingest(
         index_type="FLAT",
         index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.u8bin"),
-        external_ids=external_ids
+        external_ids=external_ids,
     )
     _, result = index.query(query_vectors, k=k)
-    assert accuracy(result, gt_i, external_ids_offset=external_ids_offset) > MINIMUM_ACCURACY
+    assert (
+        accuracy(result, gt_i, external_ids_offset=external_ids_offset)
+        > MINIMUM_ACCURACY
+    )
 
 
 def test_ivf_flat_ingestion_u8(tmp_path):
@@ -273,13 +277,15 @@ def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
 
     query_vectors = load_fvecs(queries_uri)
     gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
-    external_ids = np.array([range(external_ids_offset, size+external_ids_offset)], np.uint64)
+    external_ids = np.array(
+        [range(external_ids_offset, size + external_ids_offset)], np.uint64
+    )
     index = ingest(
         index_type="IVF_FLAT",
         index_uri=index_uri,
         input_vectors=input_vectors,
         partitions=partitions,
-        external_ids=external_ids
+        external_ids=external_ids,
     )
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, external_ids_offset) > MINIMUM_ACCURACY
@@ -294,7 +300,9 @@ def test_ivf_flat_ingestion_with_updates(tmp_path):
     dimensions = 128
     nqueries = 100
     nprobe = 10
-    data = create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
+    data = create_random_dataset_u8(
+        nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir
+    )
     dtype = np.uint8
 
     query_vectors = get_queries(dataset_dir, dtype=dtype)
@@ -308,7 +316,7 @@ def test_ivf_flat_ingestion_with_updates(tmp_path):
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) == 1.0
 
-    update_ids_offset = MAX_UINT64-size
+    update_ids_offset = MAX_UINT64 - size
     updated_ids = {}
     for i in range(100):
         index.delete(external_id=i)
@@ -322,6 +330,7 @@ def test_ivf_flat_ingestion_with_updates(tmp_path):
     _, result = index.query(query_vectors, k=k, nprobe=20)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
+
 def test_ivf_flat_ingestion_with_batch_updates(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
@@ -331,7 +340,9 @@ def test_ivf_flat_ingestion_with_batch_updates(tmp_path):
     dimensions = 128
     nqueries = 100
     nprobe = 100
-    data = create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
+    data = create_random_dataset_u8(
+        nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir
+    )
     dtype = np.uint8
 
     query_vectors = get_queries(dataset_dir, dtype=dtype)
@@ -353,7 +364,7 @@ def test_ivf_flat_ingestion_with_batch_updates(tmp_path):
         updated_ids[i] = i + update_ids_offset
         update_ids[i + update_ids_offset] = i
     external_ids = np.zeros((len(updated_ids) * 2), dtype=np.uint64)
-    updates = np.empty((len(updated_ids) * 2), dtype='O')
+    updates = np.empty((len(updated_ids) * 2), dtype="O")
     id = 0
     for prev_id, new_id in updated_ids.items():
         external_ids[id] = prev_id
@@ -381,7 +392,9 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     dimensions = 128
     nqueries = 100
     nprobe = 10
-    data = create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
+    data = create_random_dataset_u8(
+        nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir
+    )
     dtype = np.uint8
 
     query_vectors = get_queries(dataset_dir, dtype=dtype)
@@ -396,11 +409,13 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i) == 1.0
 
-    update_ids_offset = MAX_UINT64-size
+    update_ids_offset = MAX_UINT64 - size
     updated_ids = {}
     for i in range(2, 102):
         index.delete(external_id=i, timestamp=i)
-        index.update(vector=data[i].astype(dtype), external_id=i + update_ids_offset, timestamp=i)
+        index.update(
+            vector=data[i].astype(dtype), external_id=i + update_ids_offset, timestamp=i
+        )
         updated_ids[i] = i + update_ids_offset
 
     index = IVFFlatIndex(uri=index_uri)
@@ -420,10 +435,18 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 101))
     _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
-    assert 0.05 <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True) <= 0.15
+    assert (
+        0.05
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.15
+    )
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, None))
     _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
-    assert 0.05 <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True) <= 0.15
+    assert (
+        0.05
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.15
+    )
 
     # Timetravel with partial read from updates table
     updated_ids_part = {}
@@ -437,7 +460,11 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 51))
     _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
-    assert 0.02 <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True) <= 0.07
+    assert (
+        0.02
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.07
+    )
 
     # Timetravel at previous ingestion timestamp
     index = IVFFlatIndex(uri=index_uri, timestamp=1)
@@ -460,10 +487,18 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 101))
     _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
-    assert 0.05 <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True) <= 0.15
+    assert (
+        0.05
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.15
+    )
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, None))
     _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
-    assert 0.05 <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True) <= 0.15
+    assert (
+        0.05
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.15
+    )
 
     # Timetravel with partial read from updates table
     updated_ids_part = {}
@@ -477,7 +512,11 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 51))
     _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
-    assert 0.02 <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True) <= 0.07
+    assert (
+        0.02
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.07
+    )
 
     # Timetravel at previous ingestion timestamp
     index = IVFFlatIndex(uri=index_uri, timestamp=1)
@@ -488,7 +527,7 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     assert accuracy(result, gt_i) == 1.0
 
     # Clear history before the latest ingestion
-    Index.clear_history(uri=index_uri, timestamp=index.latest_ingestion_timestamp-1)
+    Index.clear_history(uri=index_uri, timestamp=index.latest_ingestion_timestamp - 1)
     index = IVFFlatIndex(uri=index_uri, timestamp=1)
     _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
@@ -562,7 +601,9 @@ def test_ivf_flat_ingestion_with_additions_and_timetravel(tmp_path):
     partitions = 10
     dimensions = 128
     nqueries = 1
-    data = create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
+    data = create_random_dataset_u8(
+        nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir
+    )
     dtype = np.uint8
 
     query_vectors = get_queries(dataset_dir, dtype=dtype)
@@ -577,10 +618,14 @@ def test_ivf_flat_ingestion_with_additions_and_timetravel(tmp_path):
     _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i) == 1.0
 
-    update_ids_offset = MAX_UINT64-size
+    update_ids_offset = MAX_UINT64 - size
     updated_ids = {}
     for i in range(100):
-        index.update(vector=data[i].astype(dtype), external_id=i + update_ids_offset, timestamp=i+2)
+        index.update(
+            vector=data[i].astype(dtype),
+            external_id=i + update_ids_offset,
+            timestamp=i + 2,
+        )
         updated_ids[i] = i + update_ids_offset
 
     index = IVFFlatIndex(uri=index_uri)

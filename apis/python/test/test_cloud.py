@@ -1,10 +1,11 @@
-import unittest
-import tiledb.vector_search as vs
 import os
+import unittest
 
 from common import *
 from tiledb.cloud import groups
 from tiledb.cloud.dag import Mode
+
+import tiledb.vector_search as vs
 from tiledb.vector_search.utils import load_fvecs
 
 MINIMUM_ACCURACY = 0.85
@@ -78,5 +79,7 @@ class CloudTests(unittest.TestCase):
         _, result_i = index.query(query_vectors, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
-        _, result_i = index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, num_partitions=2)
+        _, result_i = index.query(
+            query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, num_partitions=2
+        )
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY

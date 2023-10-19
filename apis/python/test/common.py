@@ -1,9 +1,9 @@
 import os
+import random
+import string
 
 import numpy as np
 
-import random
-import string
 import tiledb
 
 
@@ -164,7 +164,9 @@ def create_array(path: str, data):
         A[:] = data
 
 
-def accuracy(result, gt, external_ids_offset=0, updated_ids=None, only_updated_ids=False):
+def accuracy(
+    result, gt, external_ids_offset=0, updated_ids=None, only_updated_ids=False
+):
     found = 0
     total = 0
     if updated_ids is not None:
@@ -175,15 +177,19 @@ def accuracy(result, gt, external_ids_offset=0, updated_ids=None, only_updated_i
         if external_ids_offset != 0:
             temp_result = []
             for j in range(len(result[i])):
-                temp_result.append(int(result[i][j]-external_ids_offset))
+                temp_result.append(int(result[i][j] - external_ids_offset))
         elif updated_ids is not None:
             temp_result = []
             for j in range(len(result[i])):
                 if result[i][j] in updated_ids:
-                    raise ValueError(f"Found updated id {result[i][j]} in query results.")
+                    raise ValueError(
+                        f"Found updated id {result[i][j]} in query results."
+                    )
                 if only_updated_ids:
                     if result[i][j] not in updated_ids_rev:
-                        raise ValueError(f"Found not_updated_id {result[i][j]} in query results while expecting only_updated_ids.")
+                        raise ValueError(
+                            f"Found not_updated_id {result[i][j]} in query results while expecting only_updated_ids."
+                        )
                 uid = updated_ids_rev.get(result[i][j])
                 if uid is not None:
                     temp_result.append(int(uid))
@@ -194,6 +200,7 @@ def accuracy(result, gt, external_ids_offset=0, updated_ids=None, only_updated_i
         total += len(temp_result)
         found += len(np.intersect1d(temp_result, gt[i]))
     return found / total
+
 
 # Generate random names for test array uris
 def random_name(name: str) -> str:

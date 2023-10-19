@@ -1,13 +1,15 @@
 import concurrent.futures as futures
 import json
 import os
-import numpy as np
 import sys
 import time
+from typing import Any, Mapping, Optional
+
+import numpy as np
 
 from tiledb.vector_search.module import *
-from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSION
-from typing import Any, Mapping, Optional
+from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
+                                                  storage_formats)
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
@@ -30,6 +32,7 @@ class Index:
         (default None) If int, open the index at a given timestamp.
         If tuple, open at the given start and end timestamps.
     """
+
     def __init__(
         self,
         uri: str,
@@ -45,35 +48,46 @@ class Index:
         self.ctx = Ctx(config)
         self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
         self.storage_version = self.group.meta.get("storage_version", "0.1")
-        if not storage_formats[self.storage_version]["SUPPORT_TIMETRAVEL"] and timestamp is not None:
-            raise ValueError(f"Time traveling is not supported for index storage_version={self.storage_version}")
+        if (
+            not storage_formats[self.storage_version]["SUPPORT_TIMETRAVEL"]
+            and timestamp is not None
+        ):
+            raise ValueError(
+                f"Time traveling is not supported for index storage_version={self.storage_version}"
+            )
 
-        updates_array_name = storage_formats[self.storage_version][
-            "UPDATES_ARRAY_NAME"
-        ]
+        updates_array_name = storage_formats[self.storage_version]["UPDATES_ARRAY_NAME"]
         self.updates_array_uri = f"{self.group.uri}/{updates_array_name}"
         self.index_version = self.group.meta.get("index_version", "")
-        self.ingestion_timestamps = [int(x) for x in
-                                     list(json.loads(self.group.meta.get("ingestion_timestamps", "[]")))]
-        self.history_index = len(self.ingestion_timestamps)-1
+        self.ingestion_timestamps = [
+            int(x)
+            for x in list(json.loads(self.group.meta.get("ingestion_timestamps", "[]")))
+        ]
+        self.history_index = len(self.ingestion_timestamps) - 1
         if self.history_index > -1:
-            self.latest_ingestion_timestamp = self.ingestion_timestamps[self.history_index]
+            self.latest_ingestion_timestamp = self.ingestion_timestamps[
+                self.history_index
+            ]
         else:
             self.latest_ingestion_timestamp = MAX_UINT64
-        self.base_sizes = [int(x) for x in list(json.loads(self.group.meta.get("base_sizes", "[]")))]
+        self.base_sizes = [
+            int(x) for x in list(json.loads(self.group.meta.get("base_sizes", "[]")))
+        ]
         if len(self.base_sizes) > 0:
             self.base_size = self.base_sizes[self.history_index]
         else:
             self.base_size = -1
         self.base_array_timestamp = self.latest_ingestion_timestamp
         self.query_base_array = True
-        self.update_array_timestamp = (self.base_array_timestamp+1, None)
+        self.update_array_timestamp = (self.base_array_timestamp + 1, None)
         if timestamp is None:
             self.base_array_timestamp = 0
         else:
             if isinstance(timestamp, tuple):
                 if len(timestamp) != 2:
-                    raise ValueError("'timestamp' argument expects either int or tuple(start: int, end: int)")
+                    raise ValueError(
+                        "'timestamp' argument expects either int or tuple(start: int, end: int)"
+                    )
                 if timestamp[0] is not None:
                     if timestamp[0] > self.ingestion_timestamps[0]:
                         self.query_base_array = False
@@ -81,13 +95,23 @@ class Index:
                     else:
                         self.history_index = 0
                         self.base_size = self.base_sizes[self.history_index]
-                        self.base_array_timestamp = self.ingestion_timestamps[self.history_index]
-                        self.update_array_timestamp = (self.base_array_timestamp+1, timestamp[1])
+                        self.base_array_timestamp = self.ingestion_timestamps[
+                            self.history_index
+                        ]
+                        self.update_array_timestamp = (
+                            self.base_array_timestamp + 1,
+                            timestamp[1],
+                        )
                 else:
                     self.history_index = 0
                     self.base_size = self.base_sizes[self.history_index]
-                    self.base_array_timestamp = self.ingestion_timestamps[self.history_index]
-                    self.update_array_timestamp = (self.base_array_timestamp+1, timestamp[1])
+                    self.base_array_timestamp = self.ingestion_timestamps[
+                        self.history_index
+                    ]
+                    self.update_array_timestamp = (
+                        self.base_array_timestamp + 1,
+                        timestamp[1],
+                    )
             elif isinstance(timestamp, int):
                 self.history_index = 0
                 i = 0
@@ -97,9 +121,11 @@ class Index:
                         self.history_index = i
                         self.base_size = self.base_sizes[self.history_index]
                     i += 1
-                self.update_array_timestamp = (self.base_array_timestamp+1, timestamp)
+                self.update_array_timestamp = (self.base_array_timestamp + 1, timestamp)
             else:
-                raise TypeError("Unexpected argument type for 'timestamp' keyword argument")
+                raise TypeError(
+                    "Unexpected argument type for 'timestamp' keyword argument"
+                )
         self.thread_executor = futures.ThreadPoolExecutor()
 
     def query(self, queries: np.ndarray, k, **kwargs):
@@ -107,7 +133,9 @@ class Index:
             if self.query_base_array:
                 return self.query_internal(queries, k, **kwargs)
             else:
-                return np.full((queries.shape[0], k), MAX_FLOAT_32), np.full((queries.shape[0], k), MAX_UINT64)
+                return np.full((queries.shape[0], k), MAX_FLOAT_32), np.full(
+                    (queries.shape[0], k), MAX_UINT64
+                )
 
         # Query with updates
         # Perform the queries in parallel
@@ -210,7 +238,7 @@ class Index:
             return (
                 np.vstack(data["vector"][additions_filter]),
                 data["external_id"][additions_filter],
-                updated_ids
+                updated_ids,
             )
         else:
             return None, None, updated_ids
@@ -226,7 +254,9 @@ class Index:
         updates_array.close()
         self.consolidate_update_fragments()
 
-    def update_batch(self, vectors: np.ndarray, external_ids: np.array, timestamp: int = None):
+    def update_batch(
+        self, vectors: np.ndarray, external_ids: np.array, timestamp: int = None
+    ):
         updates_array = self.open_updates_array(timestamp=timestamp)
         updates_array[external_ids] = {"vector": vectors}
         updates_array.close()
@@ -267,10 +297,14 @@ class Index:
     def open_updates_array(self, timestamp: int = None):
         if timestamp is not None:
             if not storage_formats[self.storage_version]["SUPPORT_TIMETRAVEL"]:
-                raise ValueError(f"Time traveling is not supported for index storage_version={self.storage_version}")
+                raise ValueError(
+                    f"Time traveling is not supported for index storage_version={self.storage_version}"
+                )
             if timestamp <= self.latest_ingestion_timestamp:
-                raise ValueError(f"Updates at a timestamp before the latest_ingestion_timestamp are not supported. "
-                                 f"timestamp: {timestamp}, latest_ingestion_timestamp: {self.latest_ingestion_timestamp}")
+                raise ValueError(
+                    f"Updates at a timestamp before the latest_ingestion_timestamp are not supported. "
+                    f"timestamp: {timestamp}, latest_ingestion_timestamp: {self.latest_ingestion_timestamp}"
+                )
         if not tiledb.array_exists(self.updates_array_uri):
             updates_array_name = storage_formats[self.storage_version][
                 "UPDATES_ARRAY_NAME"
@@ -301,7 +335,9 @@ class Index:
     def consolidate_updates(self, **kwargs):
         from tiledb.vector_search.ingestion import ingest
 
-        fragments_info = tiledb.array_fragments(self.updates_array_uri, ctx=tiledb.Ctx(self.config))
+        fragments_info = tiledb.array_fragments(
+            self.updates_array_uri, ctx=tiledb.Ctx(self.config)
+        )
         max_timestamp = self.base_array_timestamp
         for fragment_info in fragments_info:
             if fragment_info.timestamp_range[1] > max_timestamp:
@@ -324,7 +360,7 @@ class Index:
             index_timestamp=max_timestamp,
             storage_version=self.storage_version,
             config=self.config,
-            **kwargs
+            **kwargs,
         )
         return new_index
 
@@ -349,11 +385,19 @@ class Index:
         group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(config))
         storage_version = group.meta.get("storage_version", "0.1")
         if not storage_formats[storage_version]["SUPPORT_TIMETRAVEL"]:
-            raise ValueError(f"Time traveling is not supported for index storage_version={storage_version}")
-        ingestion_timestamps = [int(x) for x in
-                                     list(json.loads(group.meta.get("ingestion_timestamps", "[]")))]
-        base_sizes = [int(x) for x in list(json.loads(group.meta.get("base_sizes", "[]")))]
-        partition_history = [int(x) for x in list(json.loads(group.meta.get("partition_history", "[]")))]
+            raise ValueError(
+                f"Time traveling is not supported for index storage_version={storage_version}"
+            )
+        ingestion_timestamps = [
+            int(x)
+            for x in list(json.loads(group.meta.get("ingestion_timestamps", "[]")))
+        ]
+        base_sizes = [
+            int(x) for x in list(json.loads(group.meta.get("base_sizes", "[]")))
+        ]
+        partition_history = [
+            int(x) for x in list(json.loads(group.meta.get("partition_history", "[]")))
+        ]
         new_ingestion_timestamps = []
         new_base_sizes = []
         new_partition_history = []
@@ -379,30 +423,36 @@ class Index:
 
         group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(config))
         if storage_formats[storage_version]["UPDATES_ARRAY_NAME"] in group:
-            updates_array_uri = group[storage_formats[storage_version]["UPDATES_ARRAY_NAME"]].uri
-            with tiledb.open(updates_array_uri, 'm') as A:
+            updates_array_uri = group[
+                storage_formats[storage_version]["UPDATES_ARRAY_NAME"]
+            ].uri
+            with tiledb.open(updates_array_uri, "m") as A:
                 A.delete_fragments(0, timestamp)
 
         if index_type == "FLAT":
             db_uri = group[storage_formats[storage_version]["PARTS_ARRAY_NAME"]].uri
-            with tiledb.open(db_uri, 'm') as A:
+            with tiledb.open(db_uri, "m") as A:
                 A.delete_fragments(0, timestamp)
             if storage_formats[storage_version]["IDS_ARRAY_NAME"] in group:
                 ids_uri = group[storage_formats[storage_version]["IDS_ARRAY_NAME"]].uri
-                with tiledb.open(ids_uri, 'm') as A:
+                with tiledb.open(ids_uri, "m") as A:
                     A.delete_fragments(0, timestamp)
         elif index_type == "IVF_FLAT":
             db_uri = group[storage_formats[storage_version]["PARTS_ARRAY_NAME"]].uri
-            centroids_uri = group[storage_formats[storage_version]["CENTROIDS_ARRAY_NAME"]].uri
-            index_array_uri = group[storage_formats[storage_version]["INDEX_ARRAY_NAME"]].uri
+            centroids_uri = group[
+                storage_formats[storage_version]["CENTROIDS_ARRAY_NAME"]
+            ].uri
+            index_array_uri = group[
+                storage_formats[storage_version]["INDEX_ARRAY_NAME"]
+            ].uri
             ids_uri = group[storage_formats[storage_version]["IDS_ARRAY_NAME"]].uri
-            with tiledb.open(db_uri, 'm') as A:
+            with tiledb.open(db_uri, "m") as A:
                 A.delete_fragments(0, timestamp)
-            with tiledb.open(centroids_uri, 'm') as A:
+            with tiledb.open(centroids_uri, "m") as A:
                 A.delete_fragments(0, timestamp)
-            with tiledb.open(index_array_uri, 'm') as A:
+            with tiledb.open(index_array_uri, "m") as A:
                 A.delete_fragments(0, timestamp)
-            with tiledb.open(ids_uri, 'm') as A:
+            with tiledb.open(ids_uri, "m") as A:
                 A.delete_fragments(0, timestamp)
         group.close()
 
