@@ -36,9 +36,17 @@
 #define TILEDB_FLATPQ_INDEX_H
 
 #include <cstddef>
+#include <iostream>
+#include <sstream>
+#include <string>
 #include <unordered_set>
 
 #include "detail/flat/qv.h"
+#include "detail/linalg/matrix.h"
+#include "detail/linalg/tdb_io.h"
+
+#include <tiledb/group_experimental.h>
+#include <tiledb/tiledb>
 
 template <class T, class U>
 void sub_kmeans_random_init(
@@ -195,14 +203,29 @@ class flatpq_index {
  // @todo Temporary only!!
  public:
 
+  // metadata
   size_t dimension_{0};
   size_t num_subspaces_{0};
   size_t sub_dimension_{0};
   size_t bits_per_subspace_{8};
   size_t num_clusters_{256};
-  double tol_ = 0.001;
-  double max_iter_ = 16;
+  float tol_ = 0.001;
+  size_t max_iter_ = 16;
   size_t num_threads_ = std::thread::hardware_concurrency();
+
+  using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
+  std::vector<metadata_element> metadata {
+      {"dimension", &dimension_, TILEDB_UINT64},
+      {"num_subspaces", &num_subspaces_, TILEDB_UINT64},
+      {"sub_dimension", &sub_dimension_, TILEDB_UINT64},
+      {"bits_per_subspace", &bits_per_subspace_, TILEDB_UINT64},
+      {"num_clusters", &num_clusters_, TILEDB_UINT64},
+      {"tol", &tol_, TILEDB_FLOAT32},
+      {"max_iter", &max_iter_, TILEDB_UINT64},
+      {"num_threads", &num_threads_, TILEDB_UINT64},
+  };
+
+  // array data
   ColMajorMatrix<centroid_feature_type> centroids_;
   std::vector<ColMajorMatrix<score_type>> distance_tables_;
   ColMajorMatrix<code_type> pq_vectors_;
@@ -227,6 +250,11 @@ class flatpq_index {
       , bits_per_subspace_(bits_per_subspace)
       , num_clusters_(num_clusters) {
     // Number of subspaces must evenly divide dimension of vector
+    if (dimension_ == 0 || num_subspaces_ == 0 || bits_per_subspace_ == 0) {
+      throw std::invalid_argument(
+          "dimension, num_subspaces, and bits_per_subspace must be greater "
+          "than zero");
+    }
     if ((dimension_ % num_subspaces_) != 0) {
       throw std::invalid_argument(
           "Number of subspaces must evenly divide dimension of vector");
@@ -250,6 +278,47 @@ class flatpq_index {
     }
 #endif
   }
+
+  /**
+   * Load constructor
+   */
+   flatpq_index(tiledb::Context ctx, const std::string& group_uri) {
+
+    // ColMajorMatrix<centroid_feature_type> centroids_;
+    // std::vector<ColMajorMatrix<score_type>> distance_tables_;
+    // ColMajorMatrix<code_type> pq_vectors_;
+
+    tiledb::Config cfg;
+    auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
+
+    for (auto& [name, value, datatype] : metadata) {
+      if (!read_group.has_metadata(name, &datatype)) {
+        throw std::runtime_error("Missing metadata: " + name);
+      }
+      uint32_t count;
+      void* addr;
+      read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
+      if (datatype == TILEDB_UINT64) {
+        *reinterpret_cast<uint64_t*>(value) =
+            *reinterpret_cast<uint64_t*>(addr);
+      } else if (datatype == TILEDB_FLOAT32) {
+        *reinterpret_cast<float*>(value) = *reinterpret_cast<float*>(addr);
+      } else {
+        throw std::runtime_error("Unsupported datatype");
+      }
+    }
+
+    centroids_ = std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(ctx, group_uri + "/centroids"));
+    pq_vectors_ = std::move(tdbPreLoadMatrix<code_type, stdx::layout_left>(ctx, group_uri + "/pq_vectors"));
+    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      std::ostringstream oss;
+      oss << std::setw(2) << std::setfill('0') << subspace;
+      std::string number = oss.str();
+      distance_tables_.emplace_back(
+            std::move(tdbPreLoadMatrix<score_type, stdx::layout_left>(
+                  ctx, group_uri + "/distance_table_" + number)));
+    }
+   }
 
   /**
    * @brief Train the index on a training set.  Run kmeans on each subspace and
@@ -376,16 +445,21 @@ class flatpq_index {
       for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
         auto real_distance =
             sum_of_squares(feature_vectors[i], feature_vectors[j]);
+        total_normalizer += real_distance;
 
         auto pq_distance = 0.0;
+
+#if 0
         auto pq_distance_too = 0.0;
         auto re_i = std::vector<float>(dimension_);
         auto re_j = std::vector<float>(dimension_);
+#endif
 
         for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
           auto sub_distance = distance_tables_[subspace](pq_vectors_(subspace, i), pq_vectors_(subspace, j));
           pq_distance += sub_distance;
 
+#if 0
           auto sub_begin = subspace * sub_dimension_;
           auto sub_end = (subspace + 1) * sub_dimension_;
           auto sub_distance_too = sub_sum_of_squares(
@@ -403,8 +477,10 @@ class flatpq_index {
             re_i[k] = centroids_[pq_vectors_(subspace, i)][k];
             re_j[k] = centroids_[pq_vectors_(subspace, j)][k];
           }
+#endif
         }
 
+#if 0
         std::vector<float> x_i(
             begin(feature_vectors[i]), end(feature_vectors[i]));
         std::vector<float> x_j(
@@ -413,20 +489,23 @@ class flatpq_index {
         std::vector<float> y_j{begin(pq_vectors_[j]), end(pq_vectors_[j])};
         std::vector<float> z_i{begin(centroids_[i]), end(centroids_[i])};
         std::vector<float> z_j{begin(centroids_[j]), end(centroids_[j])};
-        auto ydiff_i = sum_of_squares(feature_vectors[i], re_i);
-        auto ydiff_j = sum_of_squares(feature_vectors[j], re_j);
 
-        auto zdiff_i = sum_of_squares(feature_vectors[i], feature_vectors[j]);
-        auto zdiff_j = sum_of_squares(re_i, re_j);
+        auto re_diff_i = sum_of_squares(feature_vectors[i], re_i);
+        auto re_diff_j = sum_of_squares(feature_vectors[j], re_j);
+        auto re_diff_ij = sum_of_squares(re_i, re_j);
+
+//        auto zdiff_i = sum_of_squares(feature_vectors[i], feature_vectors[j]);
+
 
         auto xdiff = std::abs(pq_distance - pq_distance_too);
-
+#endif
         auto diff = std::abs(real_distance - pq_distance);
         total_diff += diff;
       }
     }
-    return total_diff / (num_vectors(feature_vectors) *
-                         (num_vectors(feature_vectors) - 1) / 2);
+    return total_diff / total_normalizer;
+//    return total_diff / (num_vectors(feature_vectors) *
+//                         (num_vectors(feature_vectors) - 1) / 2);
   }
 
   float sub_distance_symmetric(auto&& a, auto&& b) {
@@ -539,8 +618,141 @@ class flatpq_index {
     return un_pq;
   }
 
-  auto write_index(const std::string& uri, bool overwrite) {
+  auto write_index(const std::string& group_uri, bool overwrite) {
+    tiledb::Context ctx;
+    tiledb::VFS vfs(ctx);
+    if (vfs.is_dir(group_uri)) {
+      if (overwrite == false) {
+        return false;
+      }
+      vfs.remove_dir(group_uri);
+    }
 
+    tiledb::Config cfg;
+    tiledb::Group::create(ctx, group_uri);
+    auto write_group = tiledb::Group(ctx, group_uri, TILEDB_WRITE, cfg);
+
+    for (auto&& [name, value, type] : metadata) {
+      write_group.put_metadata(name, type, 1, value);
+    }
+
+    // ColMajorMatrix<centroid_feature_type> centroids_;
+    // std::vector<ColMajorMatrix<score_type>> distance_tables_;
+    // ColMajorMatrix<code_type> pq_vectors_;
+
+    auto centroids_uri = group_uri + "/centroids";
+    write_matrix(ctx, centroids_, centroids_uri);
+    write_group.add_member("centroids", true, "centroids");
+
+    auto pq_vectors_uri = group_uri + "/pq_vectors";
+    write_matrix(ctx, pq_vectors_, pq_vectors_uri);
+    write_group.add_member("pq_vectors", true, "pq_vectors");
+
+    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      std::ostringstream oss;
+      oss << std::setw(2) << std::setfill('0') << subspace;
+      std::string number = oss.str();
+
+      auto distance_table_uri = group_uri + "/distance_table_" + number;
+      write_matrix(ctx, distance_tables_[subspace], distance_table_uri);
+      write_group.add_member(
+          "distance_table_" + number, true, "distance_table_" + number);
+    }
+    write_group.close();
+    return true;
+  }
+
+  bool compare_metadata(const flatpq_index& rhs) {
+    if (dimension_ != rhs.dimension_) {
+      std::cout << "dimension_ " << dimension_ << " != " << rhs.dimension_
+                << std::endl;
+      return false;
+    }
+    if (num_subspaces_ != rhs.num_subspaces_) {
+      std::cout << "num_subspaces_ " << num_subspaces_
+                << " != " << rhs.num_subspaces_ << std::endl;
+      return false;
+    }
+    if (sub_dimension_ != rhs.sub_dimension_) {
+      std::cout << "sub_dimension_ " << sub_dimension_
+                << " != " << rhs.sub_dimension_ << std::endl;
+      return false;
+    }
+    if (bits_per_subspace_ != rhs.bits_per_subspace_) {
+      std::cout << "bits_per_subspace_ " << bits_per_subspace_
+                << " != " << rhs.bits_per_subspace_ << std::endl;
+      return false;
+    }
+    if (num_clusters_ != rhs.num_clusters_) {
+      std::cout << "num_clusters_ " << num_clusters_
+                << " != " << rhs.num_clusters_ << std::endl;
+      return false;
+    }
+    if (tol_ != rhs.tol_) {
+      std::cout << "tol_ " << tol_ << " != " << rhs.tol_ << std::endl;
+      return false;
+    }
+    if (max_iter_ != rhs.max_iter_) {
+      std::cout << "max_iter_ " << max_iter_ << " != " << rhs.max_iter_
+                << std::endl;
+      return false;
+    }
+    if (num_threads_ != rhs.num_threads_) {
+      std::cout << "num_threads_ " << num_threads_ << " != " << rhs.num_threads_
+                << std::endl;
+      return false;
+    }
+    return true;
+  }
+
+  auto compare_pq_vectors(const flatpq_index& rhs) {
+    // @todo use std::equal
+    if (pq_vectors_.size() != rhs.pq_vectors_.size()) {
+      std::cout << "pq_vectors_.size() " << pq_vectors_.size()
+                << " != " << rhs.pq_vectors_.size() << std::endl;
+      return false;
+    }
+    for (size_t i = 0; i < pq_vectors_.size(); ++i) {
+      if (pq_vectors_[i] != rhs.pq_vectors_[i]) {
+        std::cout << "pq_vectors_[" << i << "] != rhs.pq_vectors_[" << i
+                  << "]" << std::endl;
+        return false;
+      }
+    }
+    return true;
+  }
+
+  auto compare_centroids(const flatpq_index& rhs) {
+    // @todo use std::equal
+    if (centroids_.size() != rhs.centroids_.size()) {
+      std::cout << "centroids_.size() " << centroids_.size()
+                << " != " << rhs.centroids_.size() << std::endl;
+      return false;
+    }
+    for (size_t i = 0; i < centroids_.size(); ++i) {
+      if (centroids_[i] != rhs.centroids_[i]) {
+        std::cout << "centroids_[" << i << "] != rhs.centroids_[" << i
+                  << "]" << std::endl;
+        return false;
+      }
+    }
+    return true;
+  }
+
+  auto compare_distance_tables(const flatpq_index& rhs) {
+    if (distance_tables_.size() != rhs.distance_tables_.size()) {
+      std::cout << "distance_tables_.size() " << distance_tables_.size()
+                << " != " << rhs.distance_tables_.size() << std::endl;
+      return false;
+    }
+    for (size_t i = 0; i < distance_tables_.size(); ++i) {
+      if (distance_tables_[i] != rhs.distance_tables_[i]) {
+        std::cout << "distance_tables_[" << i << "] != rhs.distance_tables_["
+                  << i << "]" << std::endl;
+        return false;
+      }
+    }
+    return true;
   }
 };
 

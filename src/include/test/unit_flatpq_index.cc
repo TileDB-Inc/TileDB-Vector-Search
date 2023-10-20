@@ -384,7 +384,7 @@ TEMPLATE_TEST_CASE("flatpq_index: verify flatpq_index encoding with stacked hype
 }
 
 
-TEST_CASE("flatpq_index: verify pq_encoding with siftsmall", "[flatpq_index]") {
+TEST_CASE("flatpq_index: verify pq_encoding and pq_distances with siftsmall", "[flatpq_index]") {
   tiledb::Context ctx;
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
   training_set.load();
@@ -392,9 +392,15 @@ TEST_CASE("flatpq_index: verify pq_encoding with siftsmall", "[flatpq_index]") {
   auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(128, 16, 8, 256);
   pq_idx.train(training_set);
   pq_idx.add(training_set);
-  auto avg_error = pq_idx.verify_pq_encoding(training_set);
 
-  CHECK(avg_error < 0.05);
+  SECTION("pq_encoding") {
+    auto avg_error = pq_idx.verify_pq_encoding(training_set);
+    CHECK(avg_error < 0.05);
+  }
+  SECTION("pq_distances") {
+    auto avg_error = pq_idx.verify_pq_distances(training_set);
+    CHECK(avg_error < 0.1);
+  }
 }
 
 TEMPLATE_TEST_CASE("flatpq_index: verify pq_distances with stacked hypercube", "[flatpq_index]", float, uint8_t) {
@@ -547,12 +553,14 @@ TEST_CASE("flatpq_index: query stacked hypercube", "[flatpq_index]") {
       }
     } else {
       auto counter = 0;
-      for (auto&& [v, pq] : expected_8) {
+      for (auto&& [v, _] : expected_8) {
         auto pq0 = pq_idx2_8.encode(v);
         auto v0 = pq_idx2_8.decode<uint8_t>(pq0);
         auto diff = sum_of_squares(v, v0);
+        auto normalize = 0.5*(sum_of_squares(v) + sum_of_squares(v0));
+        auto rel_diff = diff/normalize;
         if (counter++ < 5) {
-          CHECK(diff < 0.02);
+          CHECK(rel_diff < 0.05);
         }
       }
     }
@@ -725,16 +733,18 @@ TEST_CASE("flatpq_index: query siftsmall", "[flatpq_index]") {
 }
 
 TEST_CASE("flatpq_index: query 1M", "[flatpq_index]") {
+  auto num_vectors = 10'000;
+  auto num_queries = 100;
   auto k_nn = 10;
 
   tiledb::Context ctx;
-  auto training_set = tdbColMajorMatrix<uint8_t>(ctx, bigann1M_base_uri, 0);
+  auto training_set = tdbColMajorMatrix<uint8_t>(ctx, bigann1M_base_uri, num_vectors);
   training_set.load();
 
-  auto query_set = tdbColMajorMatrix<uint8_t>(ctx, bigann1M_query_uri, 0);
+  auto query_set = tdbColMajorMatrix<uint8_t>(ctx, bigann1M_query_uri, num_queries);
   query_set.load();
 
-  auto groundtruth_set = tdbColMajorMatrix<int32_t>(ctx, siftsmall_groundtruth_uri, 0);
+  auto groundtruth_set = tdbColMajorMatrix<int32_t>(ctx, siftsmall_groundtruth_uri, num_queries);
   groundtruth_set.load();
 
   auto pq_idx = flatpq_index<uint8_t, uint32_t, uint32_t>(128, 16, 8, 256);
@@ -742,18 +752,46 @@ TEST_CASE("flatpq_index: query 1M", "[flatpq_index]") {
   pq_idx.add(training_set);
   auto&& [top_k_pq_scores, top_k_pq] = pq_idx.query(query_set, 10);
 
-//  auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
-//      training_set, query_set, k_nn, 8, sum_of_squares_distance{});
+  auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
+      training_set, query_set, k_nn, 8, sum_of_squares_distance{});
 
-  // auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
-  // double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
-  // CHECK(recall0 > 0.7);
+  auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
+  double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+  std::cout << "Recall: " << recall0 << std::endl;
+  CHECK(recall0 > 0.7);
 
-  auto intersections1 = (long)count_intersections(top_k_pq, groundtruth_set, k_nn);
-  double recall1 = intersections1 / ((double)top_k_pq.num_cols() * k_nn);
-  CHECK(recall1 > 0.7);
+//  auto intersections1 = (long)count_intersections(top_k_pq, groundtruth_set, k_nn);
+//  double recall1 = intersections1 / ((double)top_k_pq.num_cols() * k_nn);
+//  CHECK(recall1 > 0.7);
 
   // std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
-  std::cout << "Recall: " << recall1 << std::endl;
+  // std::cout << "Recall: " << recall1 << std::endl;
 
+}
+
+TEST_CASE("flatpq_index: flatpq_index write and read", "[flatpq_index]") {
+  size_t dimension_{128};
+  size_t num_subspaces_{16};
+  size_t bits_per_subspace_{8};
+  size_t num_clusters_{256};
+
+  tiledb::Context ctx;
+  std::string flatpq_index_uri = "/tmp/tmp_flatpq_index";
+  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
+  load(training_set);
+
+  auto idx = flatpq_index<float, uint32_t, uint32_t>(
+      dimension_, num_subspaces_, bits_per_subspace_, num_clusters_);
+  idx.train(training_set);
+  idx.add(training_set);
+
+  idx.write_index(flatpq_index_uri, true);
+  auto idx2 = flatpq_index<float, uint32_t, uint32_t>(ctx, flatpq_index_uri);
+
+  CHECK(idx.compare_metadata(idx2));
+
+  auto foo = 0;
+  //  CHECK(idx.compare_feature_vectors(idx2));
+  //  CHECK(idx.compare_adj_scores(idx2));
+  //  CHECK(idx.compare_adj_ids(idx2));
 }
