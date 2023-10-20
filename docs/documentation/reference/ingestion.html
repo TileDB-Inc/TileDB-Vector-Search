@@ -202,16 +202,16 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="tiledb.vector_search.ingestion.ingest" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.ingestion.ingest">ingest</h3>
-<p><code>vector_search.ingestion.ingest(index_type, index_uri, *, input_vectors=None, source_uri=None, source_type=None, external_ids=None, external_ids_uri='', external_ids_type=None, updates_uri=None, index_timestamp=None, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, input_vectors_per_work_item=-1, verbose=False, trace_id=None, mode=Mode.LOCAL)</code></p>
+<p><code>vector_search.ingestion.ingest(index_type, index_uri, *, input_vectors=None, source_uri=None, source_type=None, external_ids=None, external_ids_uri='', external_ids_type=None, updates_uri=None, index_timestamp=None, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, input_vectors_per_work_item=-1, storage_version=STORAGE_VERSION, verbose=False, trace_id=None, mode=Mode.LOCAL, **kwargs)</code></p>
 <p>Ingest vectors into TileDB.</p>
 <section id="parameters" class="level4">
 <h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
 <table class="table">
 <colgroup>
-<col style="width: 17%">
+<col style="width: 15%">
+<col style="width: 16%">
+<col style="width: 57%">
 <col style="width: 9%">
-<col style="width: 64%">
-<col style="width: 8%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -277,52 +277,64 @@ ul.task-list li input[type="checkbox"] {
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>config</code></td>
-<td></td>
-<td>config dictionary, defaults to None</td>
+<td><code>index_timestamp</code></td>
+<td>int</td>
+<td>Timestamp to use for writing and reading data. By default it sues the current unix ms timestamp.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
+<td><code>config</code></td>
+<td>Optional[Mapping[str, Any]]</td>
+<td>config dictionary, defaults to None</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
 <td><code>namespace</code></td>
 <td>Optional[str]</td>
 <td>TileDB-Cloud namespace, defaults to None</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>size</code></td>
 <td>int</td>
 <td>Number of input vectors, if not provided use the full size of the input dataset</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>partitions</code></td>
 <td>int</td>
 <td>Number of partitions to load the data with, if not provided, is auto-configured based on the dataset size</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>copy_centroids_uri</code></td>
 <td>str</td>
 <td>TileDB array URI to copy centroids from, if not provided, centroids are build running kmeans</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>training_sample_size</code></td>
 <td>int</td>
 <td>vector sample size to train centroids with, if not provided, is auto-configured based on the dataset sizes</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>workers</code></td>
 <td>int</td>
 <td>number of workers for vector ingestion, if not provided, is auto-configured based on the dataset size</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>input_vectors_per_work_item</code></td>
 <td>int</td>
 <td>number of vectors per ingestion work item, if not provided, is auto-configured</td>
 <td><code>-1</code></td>
+</tr>
+<tr class="odd">
+<td><code>storage_version</code></td>
+<td>str</td>
+<td>Vector index storage format version.</td>
+<td><code>STORAGE_VERSION</code></td>
 </tr>
 <tr class="even">
 <td><code>verbose</code></td>
