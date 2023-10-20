@@ -1,11 +1,9 @@
-from typing import Dict
+from typing import Any, Dict, Mapping, Optional
 
 import numpy as np
 
 import tiledb
 from tiledb.vector_search._tiledbvspy import *
-
-from typing import Optional, Mapping, Any
 
 
 def load_as_matrix(
@@ -119,6 +117,7 @@ def query_vq_heap(db: "colMajorMatrix", *args):
     else:
         raise TypeError("Unknown type!")
 
+
 def query_vq_heap_pyarray(db: "colMajorMatrix", *args):
     """
     Run vector query
@@ -136,6 +135,7 @@ def query_vq_heap_pyarray(db: "colMajorMatrix", *args):
         return vq_query_heap_pyarray_u8(db, *args)
     else:
         raise TypeError("Unknown type!")
+
 
 def ivf_index_tdb(
     dtype: np.dtype,
@@ -158,7 +158,20 @@ def ivf_index_tdb(
         ctx = Ctx(config)
 
     args = tuple(
-        [ctx, db_uri, external_ids_uri, deleted_ids, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads, timestamp]
+        [
+            ctx,
+            db_uri,
+            external_ids_uri,
+            deleted_ids,
+            centroids_uri,
+            parts_uri,
+            index_array_uri,
+            id_uri,
+            start,
+            end,
+            nthreads,
+            timestamp,
+        ]
     )
 
     if dtype == np.float32:
@@ -190,7 +203,20 @@ def ivf_index(
         ctx = Ctx(config)
 
     args = tuple(
-        [ctx, db, external_ids, deleted_ids, centroids_uri, parts_uri, index_array_uri, id_uri, start, end, nthreads, timestamp]
+        [
+            ctx,
+            db,
+            external_ids,
+            deleted_ids,
+            centroids_uri,
+            parts_uri,
+            index_array_uri,
+            id_uri,
+            start,
+            end,
+            nthreads,
+            timestamp,
+        ]
     )
 
     if dtype == np.float32:

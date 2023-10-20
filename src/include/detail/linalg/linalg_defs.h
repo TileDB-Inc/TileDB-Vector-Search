@@ -32,12 +32,11 @@
 #ifndef TDB_LINALG_DEFS_H
 #define TDB_LINALG_DEFS_H
 
-#include <string>
 #include "mdspan/mdspan.hpp"
+#include <string>
 
 namespace stdx {
 using namespace Kokkos;
-using namespace Kokkos::Experimental;
 }  // namespace stdx
 
 #endif  // TDB_LINALG_DEFS_H

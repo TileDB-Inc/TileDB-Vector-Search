@@ -70,9 +70,12 @@ int ivf_index(
     nthreads = std::thread::hardware_concurrency();
   }
   auto read_temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+  auto centroid_read_temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimestampStartEnd, timestamp, timestamp);
   auto write_temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
-  auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri, 0, read_temporal_policy);
-  centroids.load();
+  tiledb::Array array(ctx, centroids_uri, TILEDB_READ, centroid_read_temporal_policy);
+  auto non_empty = array.non_empty_domain<int32_t>();
+  auto partitions = non_empty[1].second.second + 1;
+  auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri, 0, 0, 0, partitions, centroid_read_temporal_policy);
   auto parts = detail::flat::qv_partition(centroids, db, nthreads);
   debug_matrix(parts, "parts");
   {
