@@ -290,7 +290,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     std::swap(static_cast<Base&>(*this), static_cast<Base&>(rhs));
   }
 
-  auto operator==(const Matrix& rhs) const noexcept {
+  bool operator==(const Matrix& rhs) const noexcept {
     return this->data() == rhs.data() || (num_rows_ == rhs.num_rows_ && num_cols_ == rhs.num_cols_ &&
                                          std::equal(raveled().begin(), raveled().end(), rhs.raveled().begin()));
   }

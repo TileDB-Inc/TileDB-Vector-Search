@@ -790,8 +790,9 @@ TEST_CASE("flatpq_index: flatpq_index write and read", "[flatpq_index]") {
 
   CHECK(idx.compare_metadata(idx2));
 
+  CHECK(idx.compare_pq_vectors(idx2));
+  CHECK(idx.compare_centroids(idx2));
+  CHECK(idx.compare_distance_tables(idx2));
   auto foo = 0;
-  //  CHECK(idx.compare_feature_vectors(idx2));
-  //  CHECK(idx.compare_adj_scores(idx2));
-  //  CHECK(idx.compare_adj_ids(idx2));
+
 }

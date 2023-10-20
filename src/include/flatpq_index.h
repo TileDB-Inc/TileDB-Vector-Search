@@ -707,13 +707,13 @@ class flatpq_index {
 
   auto compare_pq_vectors(const flatpq_index& rhs) {
     // @todo use std::equal
-    if (pq_vectors_.size() != rhs.pq_vectors_.size()) {
+    if (pq_vectors_.size() != rhs.pq_vectors_.size() || num_vectors(pq_vectors_) != num_vectors(rhs.pq_vectors_)) {
       std::cout << "pq_vectors_.size() " << pq_vectors_.size()
                 << " != " << rhs.pq_vectors_.size() << std::endl;
       return false;
     }
-    for (size_t i = 0; i < pq_vectors_.size(); ++i) {
-      if (pq_vectors_[i] != rhs.pq_vectors_[i]) {
+    for (size_t i = 0; i < num_vectors(pq_vectors_); ++i) {
+      if (!std::equal(begin(pq_vectors_[i]), end(pq_vectors_[i]), begin(rhs.pq_vectors_[i]))) {
         std::cout << "pq_vectors_[" << i << "] != rhs.pq_vectors_[" << i
                   << "]" << std::endl;
         return false;
@@ -724,13 +724,13 @@ class flatpq_index {
 
   auto compare_centroids(const flatpq_index& rhs) {
     // @todo use std::equal
-    if (centroids_.size() != rhs.centroids_.size()) {
+    if (centroids_.size() != rhs.centroids_.size() || num_vectors(centroids_) != num_vectors(rhs.centroids_)) {
       std::cout << "centroids_.size() " << centroids_.size()
                 << " != " << rhs.centroids_.size() << std::endl;
       return false;
     }
-    for (size_t i = 0; i < centroids_.size(); ++i) {
-      if (centroids_[i] != rhs.centroids_[i]) {
+    for (size_t i = 0; i < num_vectors(centroids_); ++i) {
+      if (!std::equal(begin(centroids_[i]), end(centroids_[i]), begin(rhs.centroids_[i]))) {
         std::cout << "centroids_[" << i << "] != rhs.centroids_[" << i
                   << "]" << std::endl;
         return false;
