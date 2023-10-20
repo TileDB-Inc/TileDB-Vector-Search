@@ -290,8 +290,8 @@ class flatpq_index {
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       for (size_t i = 0; i < num_clusters_; ++i) {
         for (size_t j = 0; j < num_clusters_; ++j) {
-          auto sub_begin = subspace * dimension_ / num_subspaces_;
-          auto sub_end = (subspace + 1) * dimension_ / num_subspaces_;
+          auto sub_begin = subspace * sub_dimension_;
+          auto sub_end = (subspace + 1) * sub_dimension_;
           auto sub_distance = sub_sum_of_squares(
               centroids_[i], centroids_[j], sub_begin, sub_end);
           distance_tables_[subspace](i, j) = sub_distance;
@@ -383,13 +383,13 @@ class flatpq_index {
         auto re_j = std::vector<float>(dimension_);
 
         for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-          auto sub_distance = distance_tables_[subspace](i, j);
+          auto sub_distance = distance_tables_[subspace](pq_vectors_(subspace, i), pq_vectors_(subspace, j));
           pq_distance += sub_distance;
 
           auto sub_begin = subspace * sub_dimension_;
           auto sub_end = (subspace + 1) * sub_dimension_;
           auto sub_distance_too = sub_sum_of_squares(
-              centroids_[i], centroids_[j], sub_begin, sub_end);
+              centroids_[pq_vectors_(subspace, i)], centroids_[pq_vectors_(subspace, j)], sub_begin, sub_end);
           pq_distance_too += sub_distance_too;
 
           auto centroid = centroids_[pq_vectors_(subspace, i)];
