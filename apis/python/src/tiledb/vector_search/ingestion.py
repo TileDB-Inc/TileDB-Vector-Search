@@ -33,6 +33,7 @@ def ingest(
     verbose: bool = False,
     trace_id: Optional[str] = None,
     mode: Mode = Mode.LOCAL,
+    **kwargs,
 ):
     """
     Ingest vectors into TileDB.

@@ -30,6 +30,7 @@ class FlatIndex(index.Index):
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
+        **kwargs,
     ):
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE

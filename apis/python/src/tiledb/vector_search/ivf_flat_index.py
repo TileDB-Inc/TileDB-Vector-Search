@@ -42,6 +42,7 @@ class IVFFlatIndex(index.Index):
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
         memory_budget: int = -1,
+        **kwargs,
     ):
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
