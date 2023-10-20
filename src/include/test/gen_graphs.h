@@ -200,6 +200,26 @@ auto gen_star_grid(size_t M, size_t N) {
   return std::make_tuple(std::move(vec_array), edges);
 }
 
+
+template <class F = float, class T = uint8_t>
+auto normalize_matrix(const ColMajorMatrix<F>& from) {
+  auto&& [min_loc, max_loc] = std::minmax_element(from.data(), from.data() + from.num_rows()*from.num_cols());
+  auto min = *min_loc;
+  auto max = *max_loc;
+  auto to = ColMajorMatrix<T>(from.num_rows(), from.num_cols());
+  for (size_t i = 0; i < from.num_rows(); ++i) {
+    for (size_t j = 0; j < from.num_cols(); ++j) {
+      auto foo = from(i,j) - min;
+      auto bar = max - min;
+      auto baz = foo/bar;
+      to(i, j) = (T)((from(i, j) - min) / (max - min) * ((F)std::numeric_limits<T>::max())) / F{2};
+    }
+  }
+  return to;
+}
+
+
+template <class T = float>
 auto build_hypercube(size_t k_near, size_t k_far, size_t seed = 0) {
   const bool debug = false;
 
@@ -268,7 +288,12 @@ auto build_hypercube(size_t k_near, size_t k_far, size_t seed = 0) {
       std::cout << std::endl;
     }
   }
-  return nn_hypercube;
+  if constexpr(std::is_same_v<T, float>) {
+    return nn_hypercube;
+  } else if constexpr(std::is_same_v<T, uint8_t>) {
+    return normalize_matrix(nn_hypercube);
+  }
 }
+
 
 #endif  // TDB_GEN_GRAPHS_H

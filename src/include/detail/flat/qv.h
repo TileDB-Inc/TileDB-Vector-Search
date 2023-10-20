@@ -133,14 +133,16 @@ auto qv_query_heap(
 }
 
 // @todo Add to out of core
-template <class T, feature_vector_array DB, feature_vector_array Q, class ID>
+template <class T, feature_vector_array DB, feature_vector_array Q, class ID,
+          class Distance = sum_of_squares_distance>
 auto qv_query_heap(
     T,
     const DB& db,
     const Q& query,
     const ID& ids,
     int k_nn,
-    unsigned nthreads) {
+    unsigned nthreads,
+    Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
   // load(db);
 
@@ -166,7 +168,7 @@ auto qv_query_heap(
         fixed_min_pair_heap<score_type, id_type> min_scores(k_nn);
 
         for (size_t i = 0; i < size_db; ++i) {
-          auto score = L2(q_vec, db[i]);
+          auto score = distance(q_vec, db[i]);
           if constexpr (std::is_same_v<T, with_ids>) {
             min_scores.insert(score, ids[i]);
           } else if constexpr (std::is_same_v<T, without_ids>) {
@@ -182,20 +184,21 @@ auto qv_query_heap(
   return std::make_tuple(std::move(top_k_scores), std::move(top_k));
 }
 
-template <feature_vector_array DB, feature_vector_array Q>
-auto qv_query_heap(DB& db, const Q& q, int k_nn, unsigned nthreads) {
+template <feature_vector_array DB, feature_vector_array Q, class Distance = sum_of_squares_distance>
+auto qv_query_heap(DB& db, const Q& q, int k_nn, unsigned nthreads, Distance distance = Distance{}) {
   return qv_query_heap(
-      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);  /// ????
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads, distance);  /// ????
 }
 
-template <feature_vector_array DB, feature_vector_array Q, class Index>
+template <feature_vector_array DB, feature_vector_array Q, class Index, class Distance = sum_of_squares_distance>
 auto qv_query_heap(
     DB& db,
     const Q& q,
     const std::vector<Index>& ids,
     int k_nn,
-    unsigned nthreads) {
-  return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads);
+    unsigned nthreads,
+    Distance distance = Distance{}) {
+  return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads, distance);
 }
 
 /**

@@ -298,61 +298,114 @@ TEST_CASE("flatpq_index: flat qv_partition hypercude", "[flatpq_index]") {
   }
 }
 
-TEST_CASE("flatpq_index: create flatpq_index", "[flatpq_index]") {
-  auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(128, 16, 8);
+TEST_CASE("normalize matrix", "[flatpq_index]") {
+  auto hypercube = build_hypercube<float>(2, 2, 0xdeadbeef);
+  auto normalized = normalize_matrix(hypercube);
+
+  debug_slice(hypercube);
+  debug_slice(normalized);
+}
+
+TEMPLATE_TEST_CASE("flatpq_index: create flatpq_index", "[flatpq_index]", float, uint8_t) {
+  auto pq_idx = flatpq_index<TestType, uint32_t, uint32_t>(128, 16, 8);
   REQUIRE(true);
 }
 
 
-TEST_CASE("flatpq_index: train flatpq_index", "[flatpq_index]") {
+TEMPLATE_TEST_CASE("flatpq_index: train flatpq_index", "[flatpq_index]", float, uint8_t) {
   size_t k_near = 32;
   size_t k_far = 32;
 
-  auto hypercube = build_hypercube(k_near, k_far, 0xdeadbeef);
+  auto hypercube = build_hypercube<TestType>(k_near, k_far, 0xdeadbeef);
 
-  auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(3, 1, 8);
+  auto pq_idx = flatpq_index<TestType, uint32_t, uint32_t>(3, 1, 8);
   pq_idx.train(hypercube);
 
   REQUIRE(true);
 }
 
-TEST_CASE("flatpq_index: add flatpq_index", "[flatpq_index]") {
+TEMPLATE_TEST_CASE("flatpq_index: add flatpq_index", "[flatpq_index]", float, uint8_t) {
   size_t k_near = 32;
   size_t k_far = 32;
 
-  auto hypercube = build_hypercube(k_near, k_far, 0xdeadbeef);
+  auto hypercube = build_hypercube<TestType>(k_near, k_far, 0xdeadbeef);
 
-  auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(3, 1, 8);
-  pq_idx.train(hypercube);
-  pq_idx.add(hypercube);
-
-  REQUIRE(true);
-}
-
-TEST_CASE("flatpq_index: verify flatpq_index with hypercube", "[flatpq_index]") {
-  size_t k_near = 32;
-  size_t k_far = 32;
-
-  auto hypercube = build_hypercube(k_near, k_far, 0xdeadbeef);
-
-  auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(3, 1, 8);
+  auto pq_idx = flatpq_index<TestType, uint32_t, uint32_t>(3, 1, 8);
   pq_idx.train(hypercube);
   pq_idx.add(hypercube);
-  auto avg_error = pq_idx.verify_pq(hypercube);
+
+  REQUIRE(true);
+}
+
+TEMPLATE_TEST_CASE("flatpq_index: verify flatpq_index encoding with hypercube", "[flatpq_index]", float, uint8_t) {
+  size_t k_near = 32;
+  size_t k_far = 32;
+
+  auto hypercube = build_hypercube<TestType>(k_near, k_far, 0xdeadbeef);
+
+  auto pq_idx = flatpq_index<TestType, uint32_t, uint32_t>(3, 1, 8);
+  pq_idx.train(hypercube);
+  pq_idx.add(hypercube);
+  auto avg_error = pq_idx.verify_pq_encoding(hypercube);
 
   CHECK(avg_error < 0.02);
 }
 
 
-TEST_CASE("flatpq_index: verify flatpq_index with stacked hypercube", "[flatpq_index]") {
+TEMPLATE_TEST_CASE("flatpq_index: verify flatpq_index encoding with stacked hypercube", "[flatpq_index]", float, uint8_t) {
+  size_t k_near = 0;
+  size_t k_far = 0;
+
+  auto hypercube0 = build_hypercube<TestType>(k_near, k_far, 0xdeadbeef);
+  auto hypercube1 = build_hypercube<TestType>(k_near, k_far, 0xbeefdead);
+
+  auto hypercube2 = ColMajorMatrix<TestType>(6, num_vectors(hypercube0));
+  auto hypercube4 = ColMajorMatrix<TestType>(12, num_vectors(hypercube0));
+
+  for (size_t j = 0; j < 3; ++j) {
+    for (size_t i = 0; i < num_vectors(hypercube4); ++i) {
+      hypercube2(j, i) = hypercube0(j, i);
+      hypercube2(j+3, i) = hypercube1(j, i);
+      hypercube4(j, i) = hypercube0(j, i);
+      hypercube4(j+3, i) = hypercube1(j, i);
+      hypercube4(j+6, i) = hypercube0(j, i);
+      hypercube4(j+9, i) = hypercube1(j, i);
+    }
+  }
+
+  auto pq_idx = flatpq_index<TestType, uint32_t, uint32_t>(6, 2, 8, 8);
+  pq_idx.train(hypercube2);
+  pq_idx.add(hypercube2);
+  auto avg_error = pq_idx.verify_pq_encoding(hypercube2);
+  CHECK(avg_error < 0.02);
+
+  auto avg_dist = pq_idx.verify_pq_distances(hypercube2);
+  CHECK(avg_dist < 0.02);
+}
+
+
+TEST_CASE("flatpq_index: verify pq_encoding with siftsmall", "[flatpq_index]") {
+  tiledb::Context ctx;
+  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
+  training_set.load();
+
+  auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(128, 16, 8, 256);
+  pq_idx.train(training_set);
+  pq_idx.add(training_set);
+  auto avg_error = pq_idx.verify_pq_encoding(training_set);
+
+  CHECK(avg_error < 0.05);
+}
+
+TEMPLATE_TEST_CASE("flatpq_index: verify pq_distances with stacked hypercube", "[flatpq_index]", float, uint8_t) {
   size_t k_near = 32;
   size_t k_far = 32;
 
-  auto hypercube0 = build_hypercube(k_near, k_far, 0xdeadbeef);
-  auto hypercube1 = build_hypercube(k_near, k_far, 0xbeefdead);
+  auto hypercube0 = build_hypercube<TestType>(k_near, k_far, 0xdeadbeef);
+  auto hypercube1 = build_hypercube<TestType>(k_near, k_far, 0xbeefdead);
 
-  auto hypercube4 = ColMajorMatrix<float>(12, num_vectors(hypercube0));
-  auto centroids2 = ColMajorMatrix<float>(12, 8);
+  auto hypercube4 = ColMajorMatrix<TestType>(12, num_vectors(hypercube0));
+  auto centroids2 = ColMajorMatrix<TestType>(12, 8);
 
   for (size_t j = 0; j < 3; ++j) {
     for (size_t i = 0; i < num_vectors(hypercube4); ++i) {
@@ -363,23 +416,344 @@ TEST_CASE("flatpq_index: verify flatpq_index with stacked hypercube", "[flatpq_i
     }
   }
 
-  auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(12, 4, 8, 32);
+  auto pq_idx = flatpq_index<TestType, uint32_t, uint32_t>(12, 4, 8, 32);
   pq_idx.train(hypercube4);
   pq_idx.add(hypercube4);
-  auto avg_error = pq_idx.verify_pq(hypercube4);
+  auto avg_error = pq_idx.verify_pq_distances(hypercube4);
 
   CHECK(avg_error < 0.02);
 }
 
-TEST_CASE("flatpq_index: verify flatpq_index with siftsmall", "[flatpq_index]") {
+TEST_CASE("flatpq_index: query stacked hypercube", "[flatpq_index]") {
+  size_t k_dist = GENERATE(0,  32);
+
+  size_t k_near = k_dist;
+  size_t k_far = k_dist;
+
+  auto hypercube0 = build_hypercube(k_near, k_far, 0xdeadbeef);
+  auto hypercube1 = build_hypercube(k_near, k_far, 0xbeefdead);
+
+  auto hypercube2 = ColMajorMatrix<float>(6, num_vectors(hypercube0));
+  auto centroids2 = ColMajorMatrix<float>(6, 8);
+
+  auto hypercube4 = ColMajorMatrix<float>(12, num_vectors(hypercube0));
+  auto centroids4 = ColMajorMatrix<float>(12, 8);
+
+  for (size_t j = 0; j < 3; ++j) {
+    for (size_t i = 0; i < num_vectors(hypercube4); ++i) {
+      hypercube2(j, i) = hypercube0(j, i);
+      hypercube2(j+3, i) = hypercube1(j, i);
+
+      hypercube4(j, i) = hypercube0(j, i);
+      hypercube4(j+3, i) = hypercube1(j, i);
+      hypercube4(j+6, i) = hypercube0(j, i);
+      hypercube4(j+9, i) = hypercube1(j, i);
+    }
+  }
+
+  auto pq_idx2 = flatpq_index<float, uint32_t, uint32_t>(6, 2, 8, k_dist == 0 ? 8: 16);
+  pq_idx2.train(hypercube2);
+  pq_idx2.add(hypercube2);
+
+  auto pq_idx4 = flatpq_index<float, uint32_t, uint32_t>(12, 4, 8, k_dist == 0 ? 8 : 16);
+  pq_idx4.train(hypercube4);
+  pq_idx4.add(hypercube4);
+
+// centroids
+//  1	-1	-1	1	1	-1	0.5	-1
+//  1	-1	-1	-1	1	1	-0.5	1
+//  1	-1	1	-1	-1	1	0.5	-1
+//  1	-1	-1	1	1	-1	0.5	-1
+//  1	-1	-1	-1	1	1	-0.5	1
+//  1	-1	1	-1	-1	1	0.5	-1
+//
+// feature vectors
+//  0	-1	-1	-1	-1	1	1	1	1
+//  0	-1	-1	1	1	-1	-1	1	1
+//  0	-1	1	-1	1	-1	1	-1	1
+//  0	-1	-1	-1	-1	1	1	1	1
+//  0	-1	-1	1	1	-1	-1	1	1
+//  0	-1	1	-1	1	-1	1	-1	1
+//
+// reconstructed
+//  0.5	-1	-1	-1	-1	1	0.5	1	1
+//  -0.5	-1	-1	1	1	-1	-0.5	1	1
+//  0.5	-1	1	-1	1	-1	0.5	-1	1
+//  0.5	-1	-1	-1	-1	1	0.5	1	1
+//  -0.5	-1	-1	1	1	-1	-0.5	1	1
+//  0.5	-1	1	-1	1	-1	0.5	-1	1
+
+  using enc_type = std::tuple<std::vector<float>, std::vector<float>>;
+  auto expected = std::vector<enc_type> {
+      {{ 1,  1,  1,  1,  1,  1}, {0, 0}},
+      {{ 1,  1,  1, -1, -1, -1}, {0, 1}},
+      {{ 1,  1, -1, -1, -1,  1}, {4, 2}},
+      {{-1,  1, -1,  1,  1,  1}, {7, 0}},
+      {{ 1,  1,  1, -1,  1, -1}, {0, 7}},
+      {{ 1, -1, -1, .5, -.5, .5}, {3, 6}},
+      {{.5, -.5, .5, -1,  1,  1}, {6, 5}},
+  };
+
+  SECTION("Test encode + decode") {
+
+    if (k_dist == 0) {
+      for (auto&& [v, pq] : expected) {
+        auto pq0 = pq_idx2.encode(v);
+        CHECK(std::equal(pq0.begin(), pq0.end(), pq.begin()));
+
+        auto v0 = pq_idx2.decode<float>(pq0);
+        CHECK(std::equal(v0.begin(), v0.end(), v.begin()));
+      }
+    } else {
+      auto counter = 0;
+      for (auto&& [v, pq] : expected) {
+        auto pq0 = pq_idx2.encode(v);
+        auto v0 = pq_idx2.decode<float>(pq0);
+        auto diff = sum_of_squares(v, v0);
+        if (counter++ < 5) {
+          CHECK(diff < 0.02);
+        }
+      }
+    }
+  }
+
+  SECTION("Test encode + decode, uint8_t") {
+    using enc_type_8 = std::tuple<std::vector<uint8_t>, std::vector<uint8_t>>;
+    auto expected_8 = std::vector<enc_type> {
+        {{ 127,  127,  127,  127,  127,  127}, {0, 0}},
+        {{ 127,  127,  127, 0, 0, 0}, {0, 1}},
+        {{ 127,  127, 0, 0, 0,  127}, {4, 2}},
+        {{0,  127, 0,  127,  127,  127}, {7, 0}},
+        {{ 127,  127,  127, 0,  127, 0}, {0, 7}},
+        {{ 127, 0, 0, 95, 31, 95}, {3, 6}},
+        {{95, 31, 95, 0,  127,  127}, {6, 5}},
+    };
+
+    auto pq_idx2_8 = flatpq_index<uint8_t, uint32_t, uint32_t>(6, 2, 8, k_dist == 0 ? 8: 16);
+    auto hypercube2_8 = normalize_matrix(hypercube2);
+
+    pq_idx2_8.train(hypercube2_8);
+    pq_idx2_8.add(hypercube2_8);
+
+    debug_slice(pq_idx2_8.centroids_, "\npq_idx2_8 centroids");
+
+    if (k_dist == 0) {
+      for (auto&& [v, pq] : expected_8) {
+        auto pq0 = pq_idx2_8.encode(v);
+        CHECK(std::equal(pq0.begin(), pq0.end(), pq.begin()));
+
+        auto v0 = pq_idx2_8.decode<uint8_t>(pq0);
+        CHECK(std::equal(v0.begin(), v0.end(), v.begin()));
+      }
+    } else {
+      auto counter = 0;
+      for (auto&& [v, pq] : expected_8) {
+        auto pq0 = pq_idx2_8.encode(v);
+        auto v0 = pq_idx2_8.decode<uint8_t>(pq0);
+        auto diff = sum_of_squares(v, v0);
+        if (counter++ < 5) {
+          CHECK(diff < 0.02);
+        }
+      }
+    }
+  }
+
+  SECTION("Test sub_distance_asymmetric") {
+    // debug_slice(pq_idx2.centroids_, "\npq_idx2 centroids");
+
+    // k == 32 centroids[0] and centroids[10]
+    //    1.00693       0.966238
+    //   -1.03368       1.02702
+    //    0.961354      1.00195
+    //    1.03518       1.01545
+    //   -0.998946      0.998451
+    //    0.996525      1.00204
+
+    auto counter = 0;
+    for (auto&& [vx, _] : expected) {
+      auto pq0 = pq_idx2.encode(vx);
+      auto v1 = pq_idx2.decode<float>(pq0);
+
+      auto diffx1 = sum_of_squares(vx, v1);
+
+      auto sub_diffx0 = pq_idx2.sub_distance_asymmetric(vx, pq0);
+      auto sub_diff10 = pq_idx2.sub_distance_asymmetric(v1, pq0);
+
+      auto rel_diff = [](auto&& diff1, auto&& diff2, auto&& v1, auto&& v2) {
+        auto d = 0.5 * (sum_of_squares(v1) + sum_of_squares(v2));
+        if (d == 0.0) {
+          d = 1.0;
+        }
+        return (std::abs(diff1 - diff2) / d);
+      };
+
+      if (k_dist == 0 || counter++ < 5) {
+        CHECK(rel_diff(diffx1, sub_diffx0, vx, v1) < 0.005);
+        CHECK(rel_diff(diffx1, sub_diff10, vx, v1) < 0.005);
+      }
+    }
+  }
+
+#if 0
+  SECTION("Test sub_distance_symmetric") {
+    for (auto&& [v, pq] : expected) {
+      auto pq0 = pq_idx2.encode(v);
+      auto v0 = pq_idx2.decode<float>(pq0);
+      auto diff = sum_of_squares(v, v0);
+      auto sub_diff = pq_idx2.sub_distance_symmetric(pq, pq0);
+      auto d = 0.5 * (diff + sub_diff);
+      if (d == 0.0) {
+        d = 1.0;
+      }
+      CHECK((std::abs(diff - sub_diff) / d) < 0.002);
+    }
+  }
+#endif
+
+  SECTION("Test query 2") {
+    auto query =
+        ColMajorMatrix<float>{{-1, -1, -1, -1, -1, -1 }};
+    auto&& [top_k_pq_scores, top_k_pq] = pq_idx2.query(query, 4);
+
+    auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
+        hypercube2, query, 4, 8, sum_of_squares_distance{});
+
+    for (size_t i = 0; i < num_vectors(top_k); ++i) {
+      std::sort(begin(top_k[i]), end(top_k[i]));
+      for (size_t j = 0; j < top_k.num_rows(); ++j) {
+        std::cout << top_k(j, i) << " ";
+      }
+      std::cout << std::endl;
+    }
+    for (size_t i = 0; i < num_vectors(top_k); ++i) {
+      std::sort(begin(top_k_pq[i]), end(top_k_pq[i]));
+      for (size_t j = 0; j < top_k.num_rows(); ++j) {
+        std::cout << top_k_pq(j, i) << " ";
+      }
+      std::cout << std::endl;
+    }
+    for (size_t i = 0; i < num_vectors(top_k); ++i) {
+      std::sort(begin(top_k_scores[i]), end(top_k_scores[i]));
+      for (size_t j = 0; j < top_k.num_rows(); ++j) {
+        std::cout << top_k_scores(j, i) << " ";
+      }
+      std::cout << std::endl;
+    }
+    for (size_t i = 0; i < num_vectors(top_k); ++i) {
+      std::sort(begin(top_k_pq_scores[i]), end(top_k_pq_scores[i]));
+      for (size_t j = 0; j < top_k.num_rows(); ++j) {
+        std::cout << top_k_pq_scores(j, i) << " ";
+      }
+      std::cout << std::endl;
+    }
+  }
+
+#if 0
+  SECTION("Test query 4") {
+    auto query =
+        ColMajorMatrix<float>{{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}};
+    auto&& [top_k_pq_scores, top_k_pq] = pq_idx4.query(query, 8);
+
+    auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
+        hypercube4, query, 8, 8, sum_of_squares_distance{});
+
+    for (size_t i = 0; i < num_vectors(top_k); ++i) {
+      std::sort(begin(top_k[i]), end(top_k[i]));
+      for (size_t j = 0; j < top_k.num_rows(); ++j) {
+        std::cout << top_k(j, i) << " ";
+      }
+      std::cout << std::endl;
+    }
+    for (size_t i = 0; i < num_vectors(top_k); ++i) {
+      std::sort(begin(top_k_pq[i]), end(top_k_pq[i]));
+      for (size_t j = 0; j < top_k.num_rows(); ++j) {
+        std::cout << top_k_pq(j, i) << " ";
+      }
+      std::cout << std::endl;
+    }
+    for (size_t i = 0; i < num_vectors(top_k); ++i) {
+      std::sort(begin(top_k_scores[i]), end(top_k_scores[i]));
+      for (size_t j = 0; j < top_k.num_rows(); ++j) {
+        std::cout << top_k_scores(j, i) << " ";
+      }
+      std::cout << std::endl;
+    }
+    for (size_t i = 0; i < num_vectors(top_k); ++i) {
+      std::sort(begin(top_k_pq_scores[i]), end(top_k_pq_scores[i]));
+      for (size_t j = 0; j < top_k.num_rows(); ++j) {
+        std::cout << top_k_pq_scores(j, i) << " ";
+      }
+      std::cout << std::endl;
+    }
+  }
+#endif
+
+  REQUIRE(true);
+
+}
+
+TEST_CASE("flatpq_index: query siftsmall", "[flatpq_index]") {
+  auto k_nn = 10;
+
   tiledb::Context ctx;
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
   training_set.load();
 
+  auto query_set = tdbColMajorMatrix<float>(ctx, siftsmall_query_uri, 0);
+  query_set.load();
+
+  auto groundtruth_set = tdbColMajorMatrix<int32_t>(ctx, siftsmall_groundtruth_uri, 0);
+  groundtruth_set.load();
+
   auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(128, 16, 8, 256);
   pq_idx.train(training_set);
   pq_idx.add(training_set);
-  auto avg_error = pq_idx.verify_pq(training_set);
+  auto&& [top_k_pq_scores, top_k_pq] = pq_idx.query(query_set, 10);
 
-  CHECK(avg_error < 0.05);
+  auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
+      training_set, query_set, k_nn, 1, sum_of_squares_distance{});
+
+  auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
+  double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+  CHECK(recall0 > 0.7);
+
+  auto intersections1 = (long)count_intersections(top_k_pq, groundtruth_set, k_nn);
+  double recall1 = intersections1 / ((double)top_k_pq.num_cols() * k_nn);
+  CHECK(recall1 > 0.7);
+
+  std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
+}
+
+TEST_CASE("flatpq_index: query 1M", "[flatpq_index]") {
+  auto k_nn = 10;
+
+  tiledb::Context ctx;
+  auto training_set = tdbColMajorMatrix<uint8_t>(ctx, bigann1M_base_uri, 0);
+  training_set.load();
+
+  auto query_set = tdbColMajorMatrix<uint8_t>(ctx, bigann1M_query_uri, 0);
+  query_set.load();
+
+  auto groundtruth_set = tdbColMajorMatrix<int32_t>(ctx, siftsmall_groundtruth_uri, 0);
+  groundtruth_set.load();
+
+  auto pq_idx = flatpq_index<uint8_t, uint32_t, uint32_t>(128, 16, 8, 256);
+  pq_idx.train(training_set);
+  pq_idx.add(training_set);
+  auto&& [top_k_pq_scores, top_k_pq] = pq_idx.query(query_set, 10);
+
+//  auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
+//      training_set, query_set, k_nn, 8, sum_of_squares_distance{});
+
+  // auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
+  // double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+  // CHECK(recall0 > 0.7);
+
+  auto intersections1 = (long)count_intersections(top_k_pq, groundtruth_set, k_nn);
+  double recall1 = intersections1 / ((double)top_k_pq.num_cols() * k_nn);
+  CHECK(recall1 > 0.7);
+
+  // std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
+  std::cout << "Recall: " << recall1 << std::endl;
+
 }

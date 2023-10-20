@@ -508,7 +508,7 @@ std::string matrix_info(const std::span<T>& A, const std::string& msg = "") {
   return str;
 }
 
-static bool matrix_printf = false;
+static bool matrix_printf = true;
 
 template <class Matrix>
 void debug_matrix(const Matrix& A, const std::string& msg = "") {
@@ -521,8 +521,8 @@ template <feature_vector_array M>
 void debug_slice(
     const M& A,
     const std::string& msg = "",
-    size_t rows = 5,
-    size_t cols = 15) {
+    size_t rows = 6,
+    size_t cols = 18) {
   if (matrix_printf) {
     rows = std::min(rows, A.num_rows());
     cols = std::min(cols, A.num_cols());

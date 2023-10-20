@@ -60,7 +60,7 @@
 
 namespace stdx {
 using namespace Kokkos;
-using namespace Kokkos::Experimental;
+// using namespace Kokkos::Experimental;
 }  // namespace stdx
 
 /**

@@ -65,6 +65,11 @@ template <
     class shuffled_ids_type = size_t,
     class indices_type = size_t>
 class kmeans_index {
+  using feature_type = T;
+  using id_type = shuffled_ids_type;
+  using score_type = float;
+  using centroid_feature_type = float;
+
   std::mt19937 gen;
 
   size_t dimension_{0};
@@ -74,13 +79,13 @@ class kmeans_index {
   double reassign_ratio_{0.075};
   size_t nthreads_{std::thread::hardware_concurrency()};
 
-  ColMajorMatrix<T> centroids_;
+  ColMajorMatrix<centroid_feature_type> centroids_;
   std::vector<indices_type> indices_;
   std::vector<shuffled_ids_type> shuffled_ids_;
   ColMajorMatrix<T> shuffled_db_;
 
  public:
-  using value_type = T;
+  using value_type = feature_type;
   using index_type = indices_type;
 
   /**
@@ -146,8 +151,8 @@ class kmeans_index {
         begin(centroids_[0]));
 
     // Initialize distances, leaving some room to grow
-    std::vector<double> distances(
-        training_set.num_cols(), std::numeric_limits<double>::max() / 8192);
+    std::vector<score_type> distances(
+        training_set.num_cols(), std::numeric_limits<score_type>::max() / 8192);
 
 #ifdef _TRIANGLE_INEQUALITY
     std::vector<double> centroid_centroid(nlist_, 0.0);
@@ -180,7 +185,7 @@ class kmeans_index {
               }
             }
 #else
-            double distance = sum_of_squares(vec, centroids_[i - 1]);
+            auto distance = sum_of_squares(vec, centroids_[i - 1]);
             auto min_distance = std::min(distances[j], distance);
             distances[j] = min_distance;
 #endif
@@ -270,8 +275,8 @@ class kmeans_index {
       // How many centroids should we try to fix up
       size_t heap_size = std::ceil(reassign_ratio_ * nlist_) + 5;
       auto high_scores =
-          fixed_min_pair_heap<value_type, index_type, std::greater<value_type>>(
-              heap_size, std::greater<value_type>());
+          fixed_min_pair_heap<feature_type, index_type, std::greater<feature_type>>(
+              heap_size, std::greater<feature_type>());
       auto low_degrees = fixed_min_pair_heap<index_type, index_type>(heap_size);
 
       // @todo parallelize -- by partition

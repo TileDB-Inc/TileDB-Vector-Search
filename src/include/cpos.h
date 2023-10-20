@@ -43,7 +43,7 @@ concept semi_integral = std::integral<T> && !std::same_as<T, bool>;
 #include "mdspan/mdspan.hpp"
 namespace stdx {
 using namespace Kokkos;
-using namespace Kokkos::Experimental;
+// using namespace Kokkos::Experimental;
 }  // namespace stdx
 
 // ----------------------------------------------------------------------------
