@@ -81,16 +81,18 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   constexpr const static Compare compare_{};
 
  public:
-  explicit fixed_min_pair_heap(std::integral auto k, Compare compare = Compare{})
+  explicit fixed_min_pair_heap(
+      std::integral auto k, Compare compare = Compare{})
       : Base(0)
-      , max_size{(unsigned)k}
-  //    , compare_{std::move(compare)}
+      , max_size{(unsigned)k}  //    , compare_{std::move(compare)}
   {
     Base::reserve(k);
   }
 
   explicit fixed_min_pair_heap(
-      unsigned k, std::initializer_list<std::tuple<T, U>> l, Compare compare = Compare{})
+      unsigned k,
+      std::initializer_list<std::tuple<T, U>> l,
+      Compare compare = Compare{})
       : Base(0)
       , max_size{k} {
     Base::reserve(k);

@@ -168,11 +168,12 @@ int main(int argc, char* argv[]) {
 
     tiledb::Context ctx;
 
-    auto db = tdbColMajorMatrix<feature_type>(ctx, db_uri, blocksize);  // blocked
+    auto db =
+        tdbColMajorMatrix<feature_type>(ctx, db_uri, blocksize);  // blocked
     db.load();
 
-    auto query =
-        tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);  // just a slice
+    auto query = tdbColMajorMatrix<feature_type>(
+        ctx, query_uri, nqueries);  // just a slice
     query.load();
 
     load_time.stop();

@@ -88,6 +88,8 @@ void sub_kmeans_random_init(
   }
 }
 
+// #define REASSIGN
+
 /**
  * @brief Run kmeans on a subspace
  * @tparam T Data type of the input vectors
@@ -114,7 +116,12 @@ auto sub_kmeans(
     size_t num_clusters,
     double tol,
     size_t max_iter,
-    size_t num_threads) {
+    size_t num_threads,
+    float reassign_ratio = 0.05) {
+  using feature_type = T;
+  using centroids_feature_type = U;
+  using index_type = size_t;
+
   size_t sub_dimension_ = sub_end - sub_begin;
 
   std::vector<size_t> degrees(num_clusters, 0);
@@ -132,11 +139,19 @@ auto sub_kmeans(
   double max_diff = 0.0;
   double total_weight = 0.0;
   for (iter = 0; iter < max_iter; ++iter) {
+#ifdef REASSIGN
+    auto [scores, parts] = detail::flat::qv_partition_with_scores(
+        centroids,
+        training_set,
+        num_threads,
+        sub_sum_of_squares_distance{sub_begin, sub_end});
+#else
     auto parts = detail::flat::qv_partition(
         centroids,
         training_set,
         num_threads,
         sub_sum_of_squares_distance{sub_begin, sub_end});
+#endif
 
     for (size_t j = 0; j < num_vectors(new_centroids); ++j) {
       for (size_t i = sub_begin; i < sub_end; ++i) {
@@ -144,6 +159,16 @@ auto sub_kmeans(
       }
     }
     std::fill(begin(degrees), end(degrees), 0);
+
+#ifdef REASSIGN
+    // How many centroids should we try to fix up
+    size_t heap_size = std::ceil(reassign_ratio * num_clusters) + 5;
+    auto high_scores = fixed_min_pair_heap<
+        feature_type,
+        index_type,
+        std::greater<feature_type>>(heap_size, std::greater<feature_type>());
+    auto low_degrees = fixed_min_pair_heap<index_type, index_type>(heap_size);
+#endif
 
     for (size_t i = 0; i < num_vectors(training_set); ++i) {
       auto part = parts[i];
@@ -154,8 +179,71 @@ auto sub_kmeans(
         centroid[j] += vector[j];
       }
       ++degrees[part];
+#ifdef REASSIGN
+      high_scores.insert(scores[i], i);
+#endif
     }
 
+#ifdef REASSIGN
+    size_t max_degree = 0;
+
+    for (size_t i = 0; i < num_clusters; ++i) {
+      auto degree = degrees[i];
+      max_degree = std::max<size_t>(max_degree, degree);
+      low_degrees.insert(degree, i);
+    }
+    size_t lower_degree_bound = std::ceil(max_degree * reassign_ratio);
+
+    if (iter != max_iter - 1) {
+#if 0
+        // Pick a random vector to be a new centroid
+        std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
+        for (auto&& [degree, zero_part] : low_degrees) {
+          if (degree < lower_degree_bound) {
+            auto index = dis(gen);
+            auto rand_vector = training_set[index];
+            auto low_centroid = new_centroids[zero_part];
+            std::copy(begin(rand_vector), end(rand_vector), begin(low_centroid));
+            for (size_t i = 0; i < dimension_; ++i) {
+              new_centroids[parts[index]][i] -= rand_vector[i];
+            }
+          }
+        }
+#endif
+      // Move vectors with high scores to replace zero-degree partitions
+      std::sort_heap(begin(low_degrees), end(low_degrees));
+      std::sort_heap(begin(high_scores), end(high_scores), [](auto a, auto b) {
+        return std::get<0>(a) > std::get<0>(b);
+      });
+      for (size_t i = 0; i < size(low_degrees) &&
+                         std::get<0>(low_degrees[i]) <= lower_degree_bound;
+           ++i) {
+        // std::cout << "i: " << i << " low_degrees: ("
+        //           << std::get<1>(low_degrees[i]) << " "
+        //           << std::get<0>(low_degrees[i]) << ") high_scores: ("
+        //           << parts[std::get<1>(high_scores[i])] << " "
+        //          << std::get<1>(high_scores[i]) << " "
+        //          << std::get<0>(high_scores[i]) << ")" << std::endl;
+
+        auto [degree, zero_part] = low_degrees[i];
+        auto [score, high_vector_id] = high_scores[i];
+        auto low_centroid = new_centroids[zero_part];
+        auto high_vector = training_set[high_vector_id];
+
+        for (size_t i = sub_begin; i < sub_end; ++i) {
+          low_centroid[i] = high_vector[i];
+        }
+        for (size_t i = sub_begin; i < sub_end; ++i) {
+          new_centroids[parts[high_vector_id]][i] -= high_vector[i];
+        }
+
+        ++degrees[zero_part];
+        --degrees[parts[high_vector_id]];
+      }
+    }
+#endif
+
+    // Check for convergence
     max_diff = 0;
     total_weight = 0;
     for (size_t j = 0; j < num_vectors(centroids); ++j) {
@@ -176,7 +264,7 @@ auto sub_kmeans(
       break;
     }
   }
-  return std::make_tuple(iter, max_diff/ total_weight);
+  return std::make_tuple(iter, max_diff / total_weight);
 }
 
 /**
@@ -191,7 +279,6 @@ template <
     class shuffled_ids_type = size_t,
     class indices_type = size_t>
 class flatpq_index {
-
   // using feature_type = typename
   // std::remove_reference_t<decltype(partitioned_db)>::value_type;
   using feature_type = T;
@@ -200,9 +287,8 @@ class flatpq_index {
   using centroid_feature_type = float;
   using code_type = uint8_t;
 
- // @todo Temporary only!!
+  // @todo Temporary only!!
  public:
-
   // metadata
   size_t dimension_{0};
   size_t num_subspaces_{0};
@@ -214,7 +300,7 @@ class flatpq_index {
   size_t num_threads_ = std::thread::hardware_concurrency();
 
   using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
-  std::vector<metadata_element> metadata {
+  std::vector<metadata_element> metadata{
       {"dimension", &dimension_, TILEDB_UINT64},
       {"num_subspaces", &num_subspaces_, TILEDB_UINT64},
       {"sub_dimension", &sub_dimension_, TILEDB_UINT64},
@@ -282,8 +368,7 @@ class flatpq_index {
   /**
    * Load constructor
    */
-   flatpq_index(tiledb::Context ctx, const std::string& group_uri) {
-
+  flatpq_index(tiledb::Context ctx, const std::string& group_uri) {
     // ColMajorMatrix<centroid_feature_type> centroids_;
     // std::vector<ColMajorMatrix<score_type>> distance_tables_;
     // ColMajorMatrix<code_type> pq_vectors_;
@@ -308,17 +393,20 @@ class flatpq_index {
       }
     }
 
-    centroids_ = std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(ctx, group_uri + "/centroids"));
-    pq_vectors_ = std::move(tdbPreLoadMatrix<code_type, stdx::layout_left>(ctx, group_uri + "/pq_vectors"));
+    centroids_ =
+        std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
+            ctx, group_uri + "/centroids"));
+    pq_vectors_ = std::move(tdbPreLoadMatrix<code_type, stdx::layout_left>(
+        ctx, group_uri + "/pq_vectors"));
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       std::ostringstream oss;
       oss << std::setw(2) << std::setfill('0') << subspace;
       std::string number = oss.str();
       distance_tables_.emplace_back(
-            std::move(tdbPreLoadMatrix<score_type, stdx::layout_left>(
-                  ctx, group_uri + "/distance_table_" + number)));
+          std::move(tdbPreLoadMatrix<score_type, stdx::layout_left>(
+              ctx, group_uri + "/distance_table_" + number)));
     }
-   }
+  }
 
   /**
    * @brief Train the index on a training set.  Run kmeans on each subspace and
@@ -327,11 +415,12 @@ class flatpq_index {
    * @param training_set Training set
    */
   auto train(const ColMajorMatrix<feature_type>& training_set) {
-    centroids_ = std::move(ColMajorMatrix<centroid_feature_type>(dimension_, num_clusters_));
+    centroids_ = std::move(
+        ColMajorMatrix<centroid_feature_type>(dimension_, num_clusters_));
     distance_tables_ = std::vector<ColMajorMatrix<score_type>>(num_subspaces_);
     for (size_t i = 0; i < num_subspaces_; ++i) {
-      distance_tables_[i] =
-          std::move(ColMajorMatrix<centroid_feature_type>(num_clusters_, num_clusters_));
+      distance_tables_[i] = std::move(
+          ColMajorMatrix<centroid_feature_type>(num_clusters_, num_clusters_));
     }
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
@@ -370,8 +459,8 @@ class flatpq_index {
   }
 
   auto add(const ColMajorMatrix<feature_type>& feature_vectors) {
-    pq_vectors_ = std::move(
-        ColMajorMatrix<code_type>(num_subspaces_, num_vectors(feature_vectors)));
+    pq_vectors_ = std::move(ColMajorMatrix<code_type>(
+        num_subspaces_, num_vectors(feature_vectors)));
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimension_ * subspace;
@@ -396,118 +485,6 @@ class flatpq_index {
     }
   }
 
-  auto verify_pq_encoding(const ColMajorMatrix<feature_type>& feature_vectors) {
-    double total_distance = 0.0;
-    double total_normalizer = 0.0;
-
-    debug_slice(centroids_, "verify pq encoding centroids");
-    debug_slice(feature_vectors, "verify pq encoding feature vectors");
-
-    auto debug_vectors =
-        ColMajorMatrix<float>(dimension_, num_vectors(feature_vectors));
-
-    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
-      auto re = std::vector<float>(dimension_);
-      for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-        auto sub_begin = sub_dimension_ * subspace;
-        auto sub_end = sub_dimension_ * (subspace + 1);
-        auto centroid = centroids_[pq_vectors_(subspace, i)];
-
-        std::vector<float> x(
-            begin(feature_vectors[i]), end(feature_vectors[i]));
-        std::vector<float> y{begin(pq_vectors_[i]), end(pq_vectors_[i])};
-        std::vector<float> z{begin(centroid), end(centroid)};
-
-        for (size_t j = sub_begin; j < sub_end; ++j) {
-          re[j] = centroid[j];
-        }
-      }
-      for (size_t j = 0; j < dimension_; ++j) {
-        debug_vectors(j, i) = re[j];
-      }
-
-      std::vector<float> x(begin(feature_vectors[i]), end(feature_vectors[i]));
-
-      auto distance = sum_of_squares(feature_vectors[i], re);
-      total_distance += distance;
-      total_normalizer += sum_of_squares(feature_vectors[i]);
-    }
-    debug_slice(debug_vectors, "verify pq encoding re");
-
-    return total_distance / total_normalizer;
-  }
-
-  auto verify_pq_distances(const ColMajorMatrix<feature_type>& feature_vectors) {
-    double total_diff = 0.0;
-    double total_normalizer = 0.0;
-
-    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
-      for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
-        auto real_distance =
-            sum_of_squares(feature_vectors[i], feature_vectors[j]);
-        total_normalizer += real_distance;
-
-        auto pq_distance = 0.0;
-
-#if 0
-        auto pq_distance_too = 0.0;
-        auto re_i = std::vector<float>(dimension_);
-        auto re_j = std::vector<float>(dimension_);
-#endif
-
-        for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-          auto sub_distance = distance_tables_[subspace](pq_vectors_(subspace, i), pq_vectors_(subspace, j));
-          pq_distance += sub_distance;
-
-#if 0
-          auto sub_begin = subspace * sub_dimension_;
-          auto sub_end = (subspace + 1) * sub_dimension_;
-          auto sub_distance_too = sub_sum_of_squares(
-              centroids_[pq_vectors_(subspace, i)], centroids_[pq_vectors_(subspace, j)], sub_begin, sub_end);
-          pq_distance_too += sub_distance_too;
-
-          auto centroid = centroids_[pq_vectors_(subspace, i)];
-
-          std::vector<float> x(
-              begin(feature_vectors[i]), end(feature_vectors[i]));
-          std::vector<float> y{begin(pq_vectors_[i]), end(pq_vectors_[i])};
-          std::vector<float> z{begin(centroid), end(centroid)};
-
-          for (size_t k = sub_begin; k < sub_end; ++k) {
-            re_i[k] = centroids_[pq_vectors_(subspace, i)][k];
-            re_j[k] = centroids_[pq_vectors_(subspace, j)][k];
-          }
-#endif
-        }
-
-#if 0
-        std::vector<float> x_i(
-            begin(feature_vectors[i]), end(feature_vectors[i]));
-        std::vector<float> x_j(
-            begin(feature_vectors[j]), end(feature_vectors[j]));
-        std::vector<float> y_i{begin(pq_vectors_[i]), end(pq_vectors_[i])};
-        std::vector<float> y_j{begin(pq_vectors_[j]), end(pq_vectors_[j])};
-        std::vector<float> z_i{begin(centroids_[i]), end(centroids_[i])};
-        std::vector<float> z_j{begin(centroids_[j]), end(centroids_[j])};
-
-        auto re_diff_i = sum_of_squares(feature_vectors[i], re_i);
-        auto re_diff_j = sum_of_squares(feature_vectors[j], re_j);
-        auto re_diff_ij = sum_of_squares(re_i, re_j);
-
-//        auto zdiff_i = sum_of_squares(feature_vectors[i], feature_vectors[j]);
-
-
-        auto xdiff = std::abs(pq_distance - pq_distance_too);
-#endif
-        auto diff = std::abs(real_distance - pq_distance);
-        total_diff += diff;
-      }
-    }
-    return total_diff / total_normalizer;
-//    return total_diff / (num_vectors(feature_vectors) *
-//                         (num_vectors(feature_vectors) - 1) / 2);
-  }
-
   float sub_distance_symmetric(auto&& a, auto&& b) {
     float pq_distance = 0.0;
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
@@ -521,7 +498,7 @@ class flatpq_index {
   }
 
   auto make_pq_distance_symmetric() {
-    using A = decltype(centroids_[0]);
+    using A = decltype(pq_vectors_[0]);
     using B = decltype(pq_vectors_[0]);
     struct pq_distance {
       flatpq_index* outer_;
@@ -546,8 +523,7 @@ class flatpq_index {
       auto sub_end = (subspace + 1) * sub_dimension_;
       auto i = b[subspace];
 
-      pq_distance += sub_sum_of_squares(
-          a, centroids_[i], sub_begin, sub_end);
+      pq_distance += sub_sum_of_squares(a, centroids_[i], sub_begin, sub_end);
     }
 
     return pq_distance;
@@ -568,7 +544,7 @@ class flatpq_index {
   }
 
   template <feature_vector_array Q>
-  auto query(const Q& query_vectors, size_t k_nn) {
+  auto asymmetric_query(const Q& query_vectors, size_t k_nn) {
     return detail::flat::qv_query_heap(
         pq_vectors_,
         query_vectors,
@@ -577,16 +553,24 @@ class flatpq_index {
         make_pq_distance_asymmetric());
   }
 
-  template <feature_vector V>
-  auto encode(const V& v) {
-    using value_type = typename V::value_type;
-    auto pq = std::vector<score_type>(num_subspaces_);
+  template <feature_vector_array Q>
+  auto symmetric_query(const Q& query_vectors, size_t k_nn) {
+    auto encoded_query = encode(query_vectors);
+    return detail::flat::qv_query_heap(
+        pq_vectors_,
+        encoded_query,
+        k_nn,
+        num_threads_,
+        make_pq_distance_symmetric());
+  }
 
-    debug_slice(centroids_, "centroids");
+  template <feature_vector V, feature_vector W>
+  auto encode(const V& v, W&& pq) {
+    using value_type = typename V::value_type;
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimension_ * subspace;
-      auto sub_end = sub_dimension_ * (subspace + 1);
+      auto sub_end = sub_begin + sub_dimension_;
 
       auto min_score = std::numeric_limits<value_type>::max();
       size_t idx{0};
@@ -599,18 +583,39 @@ class flatpq_index {
       }
       pq[subspace] = idx;
     }
+  }
+
+  template <feature_vector V>
+  auto encode(const V& v) {
+    // auto pq = Vector<score_type>(num_subspaces_);
+    auto pq = std::vector<code_type>(num_subspaces_);
+    encode(v, pq);
+    return pq;
+  }
+
+  template <feature_vector_array V>
+  auto encode(const V& v) {
+    auto pq = ColMajorMatrix<code_type>(num_subspaces_, num_vectors(v));
+    for (size_t i = 0; i < num_vectors(pq); ++i) {
+      encode(v[i], std::move(pq[i]));
+    }
+
     return pq;
   }
 
   template <class F = feature_type, feature_vector PQ>
   auto decode(const PQ& pq) {
     using local_feature_type = F;
+    // auto un_pq = Vector<local_feature_type>(dimension_);
     auto un_pq = std::vector<local_feature_type>(dimension_);
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = subspace * sub_dimension_;
       auto sub_end = (subspace + 1) * sub_dimension_;
       auto i = pq[subspace];
+
+      // Copy the centroid into the appropriate subspace portion of the
+      // decoded vector
       for (size_t j = sub_begin; j < sub_end; ++j) {
         un_pq[j] = centroids_(j, i);
       }
@@ -662,6 +667,146 @@ class flatpq_index {
     return true;
   }
 
+  /***************************************************************************
+   * Methods to aid Testing and Debugging
+   **************************************************************************/
+
+  /**
+   * @brief Verify that the pq encoding is correct by comparing every feature
+   * vector against the corresponding pq encoded value
+   * @param feature_vectors
+   * @return
+   */
+  auto verify_pq_encoding(const ColMajorMatrix<feature_type>& feature_vectors) {
+    double total_distance = 0.0;
+    double total_normalizer = 0.0;
+
+    debug_slice(centroids_, "verify pq encoding centroids");
+    debug_slice(feature_vectors, "verify pq encoding feature vectors");
+
+    auto debug_vectors =
+        ColMajorMatrix<float>(dimension_, num_vectors(feature_vectors));
+
+    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
+      auto re = std::vector<float>(dimension_);
+      for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+        auto sub_begin = sub_dimension_ * subspace;
+        auto sub_end = sub_dimension_ * (subspace + 1);
+        auto centroid = centroids_[pq_vectors_(subspace, i)];
+
+        std::vector<float> x(
+            begin(feature_vectors[i]), end(feature_vectors[i]));
+
+        // Reconstruct the encoded vector
+        for (size_t j = sub_begin; j < sub_end; ++j) {
+          re[j] = centroid[j];
+        }
+      }
+
+      // Measure the distance between the original vector and the reconstructed
+      // vector and accumulate into the total distance as well as the total
+      // weight of the feature vector
+      auto distance = sum_of_squares(feature_vectors[i], re);
+      total_distance += distance;
+      total_normalizer += sum_of_squares(feature_vectors[i]);
+    }
+    debug_slice(debug_vectors, "verify pq encoding re");
+
+    // Return the total accumulated distance between the encoded and original
+    // vectors, divided by the total weight of the original feature vectors
+    return total_distance / total_normalizer;
+  }
+
+  /**
+   * @brief Verify that recorded distances between centroids are correct by
+   * comparing the distance between every pair of pq vectors against the
+   * distance between every pair of the original feature vectors.
+   * @param feature_vectors
+   * @return
+   */
+  auto verify_pq_distances(
+      const ColMajorMatrix<feature_type>& feature_vectors) {
+    double total_diff = 0.0;
+    double total_normalizer = 0.0;
+
+    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
+      for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
+        auto real_distance =
+            sum_of_squares(feature_vectors[i], feature_vectors[j]);
+        total_normalizer += real_distance;
+        auto pq_distance = 0.0;
+
+        for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+          auto sub_distance = distance_tables_[subspace](
+              pq_vectors_(subspace, i), pq_vectors_(subspace, j));
+          pq_distance += sub_distance;
+        }
+
+        auto diff = std::abs(real_distance - pq_distance);
+        total_diff += diff;
+      }
+    }
+
+    return total_diff / total_normalizer;
+  }
+
+  auto verify_asymmetric_pq_distances(
+      const ColMajorMatrix<feature_type>& feature_vectors) {
+    double total_diff = 0.0;
+    double total_normalizer = 0.0;
+
+    score_type diff_max = 0.0;
+    score_type vec_max = 0.0;
+    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
+      for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
+        auto real_distance =
+            sum_of_squares(feature_vectors[i], feature_vectors[j]);
+        total_normalizer += real_distance;
+
+        auto pq_distance =
+            this->sub_distance_asymmetric(feature_vectors[i], pq_vectors_[j]);
+
+        auto diff = std::abs(real_distance - pq_distance);
+        diff_max = std::max(diff_max, diff);
+        total_diff += diff;
+      }
+      vec_max = std::max(vec_max, sum_of_squares(feature_vectors[i]));
+    }
+
+    return std::make_tuple(diff_max / vec_max, total_diff / total_normalizer);
+  }
+
+  auto verify_symmetric_pq_distances(
+      const ColMajorMatrix<feature_type>& feature_vectors) {
+    double total_diff = 0.0;
+    double total_normalizer = 0.0;
+
+    score_type diff_max = 0.0;
+    score_type vec_max = 0.0;
+    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
+      for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
+        auto real_distance =
+            sum_of_squares(feature_vectors[i], feature_vectors[j]);
+        total_normalizer += real_distance;
+
+        auto pq_distance =
+            this->sub_distance_symmetric(pq_vectors_[i], pq_vectors_[j]);
+
+        auto diff = std::abs(real_distance - pq_distance);
+        diff_max = std::max(diff_max, diff);
+        total_diff += diff;
+      }
+      vec_max = std::max(vec_max, sum_of_squares(feature_vectors[i]));
+    }
+
+    return std::make_tuple(diff_max / vec_max, total_diff / total_normalizer);
+  }
+
+  /**
+   * @brief Compare the metadata information between two flatpq_index
+   * @param rhs
+   * @return
+   */
   bool compare_metadata(const flatpq_index& rhs) {
     if (dimension_ != rhs.dimension_) {
       std::cout << "dimension_ " << dimension_ << " != " << rhs.dimension_
@@ -705,40 +850,63 @@ class flatpq_index {
     return true;
   }
 
+  /**
+   * @brief Compare the pq vectors information between two flatpq_index
+   * @param rhs
+   * @return
+   */
   auto compare_pq_vectors(const flatpq_index& rhs) {
     // @todo use std::equal
-    if (pq_vectors_.size() != rhs.pq_vectors_.size() || num_vectors(pq_vectors_) != num_vectors(rhs.pq_vectors_)) {
+    if (pq_vectors_.size() != rhs.pq_vectors_.size() ||
+        num_vectors(pq_vectors_) != num_vectors(rhs.pq_vectors_)) {
       std::cout << "pq_vectors_.size() " << pq_vectors_.size()
                 << " != " << rhs.pq_vectors_.size() << std::endl;
       return false;
     }
     for (size_t i = 0; i < num_vectors(pq_vectors_); ++i) {
-      if (!std::equal(begin(pq_vectors_[i]), end(pq_vectors_[i]), begin(rhs.pq_vectors_[i]))) {
-        std::cout << "pq_vectors_[" << i << "] != rhs.pq_vectors_[" << i
-                  << "]" << std::endl;
+      if (!std::equal(
+              begin(pq_vectors_[i]),
+              end(pq_vectors_[i]),
+              begin(rhs.pq_vectors_[i]))) {
+        std::cout << "pq_vectors_[" << i << "] != rhs.pq_vectors_[" << i << "]"
+                  << std::endl;
         return false;
       }
     }
     return true;
   }
 
+  /**
+   * @brief Compare the centroids information between two flatpq_index
+   * @param rhs
+   * @return
+   */
   auto compare_centroids(const flatpq_index& rhs) {
     // @todo use std::equal
-    if (centroids_.size() != rhs.centroids_.size() || num_vectors(centroids_) != num_vectors(rhs.centroids_)) {
+    if (centroids_.size() != rhs.centroids_.size() ||
+        num_vectors(centroids_) != num_vectors(rhs.centroids_)) {
       std::cout << "centroids_.size() " << centroids_.size()
                 << " != " << rhs.centroids_.size() << std::endl;
       return false;
     }
     for (size_t i = 0; i < num_vectors(centroids_); ++i) {
-      if (!std::equal(begin(centroids_[i]), end(centroids_[i]), begin(rhs.centroids_[i]))) {
-        std::cout << "centroids_[" << i << "] != rhs.centroids_[" << i
-                  << "]" << std::endl;
+      if (!std::equal(
+              begin(centroids_[i]),
+              end(centroids_[i]),
+              begin(rhs.centroids_[i]))) {
+        std::cout << "centroids_[" << i << "] != rhs.centroids_[" << i << "]"
+                  << std::endl;
         return false;
       }
     }
     return true;
   }
 
+  /**
+   * @brief Compare the distance table information between two flatpq_index
+   * @param rhs
+   * @return
+   */
   auto compare_distance_tables(const flatpq_index& rhs) {
     if (distance_tables_.size() != rhs.distance_tables_.size()) {
       std::cout << "distance_tables_.size() " << distance_tables_.size()

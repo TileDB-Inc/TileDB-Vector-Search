@@ -129,8 +129,8 @@ inline auto sum_of_squares(V const& a) {
   float sum{0.0};
   size_t size_a = size(a);
 
-  if constexpr (
-      std::unsigned_integral<std::remove_reference_t<decltype(a[0])>> ) {
+  if constexpr (std::unsigned_integral<
+                    std::remove_reference_t<decltype(a[0])>>) {
     for (size_t i = 0; i < size_a; ++i) {
       // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
       float diff = (float)a[i];
@@ -168,7 +168,6 @@ inline auto sub_sum_of_squares(
   }
   return sum;
 }
-
 
 #endif
 

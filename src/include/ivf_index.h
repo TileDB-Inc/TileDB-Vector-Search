@@ -274,13 +274,14 @@ class kmeans_index {
 
       // How many centroids should we try to fix up
       size_t heap_size = std::ceil(reassign_ratio_ * nlist_) + 5;
-      auto high_scores =
-          fixed_min_pair_heap<feature_type, index_type, std::greater<feature_type>>(
-              heap_size, std::greater<feature_type>());
+      auto high_scores = fixed_min_pair_heap<
+          feature_type,
+          index_type,
+          std::greater<feature_type>>(heap_size, std::greater<feature_type>());
       auto low_degrees = fixed_min_pair_heap<index_type, index_type>(heap_size);
 
       // @todo parallelize -- by partition
-      for (size_t i = 0; i < training_set.num_cols(); ++i) {
+      for (size_t i = 0; i < num_vectors(training_set); ++i) {
         auto part = parts[i];
         auto centroid = new_centroids[part];
         auto vector = training_set[i];

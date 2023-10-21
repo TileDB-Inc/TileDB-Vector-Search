@@ -133,8 +133,12 @@ auto qv_query_heap(
 }
 
 // @todo Add to out of core
-template <class T, feature_vector_array DB, feature_vector_array Q, class ID,
-          class Distance = sum_of_squares_distance>
+template <
+    class T,
+    feature_vector_array DB,
+    feature_vector_array Q,
+    class ID,
+    class Distance = sum_of_squares_distance>
 auto qv_query_heap(
     T,
     const DB& db,
@@ -184,13 +188,31 @@ auto qv_query_heap(
   return std::make_tuple(std::move(top_k_scores), std::move(top_k));
 }
 
-template <feature_vector_array DB, feature_vector_array Q, class Distance = sum_of_squares_distance>
-auto qv_query_heap(DB& db, const Q& q, int k_nn, unsigned nthreads, Distance distance = Distance{}) {
+template <
+    feature_vector_array DB,
+    feature_vector_array Q,
+    class Distance = sum_of_squares_distance>
+auto qv_query_heap(
+    DB& db,
+    const Q& q,
+    int k_nn,
+    unsigned nthreads,
+    Distance distance = Distance{}) {
   return qv_query_heap(
-      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads, distance);  /// ????
+      without_ids{},
+      db,
+      q,
+      std::vector<uint64_t>{},
+      k_nn,
+      nthreads,
+      distance);  /// ????
 }
 
-template <feature_vector_array DB, feature_vector_array Q, class Index, class Distance = sum_of_squares_distance>
+template <
+    feature_vector_array DB,
+    feature_vector_array Q,
+    class Index,
+    class Distance = sum_of_squares_distance>
 auto qv_query_heap(
     DB& db,
     const Q& q,
@@ -435,11 +457,18 @@ auto qv_partition(
  * @param nthreads
  * @return
  */
-template <class DB, class Q>
-auto qv_partition_with_scores(const DB& db, const Q& q, unsigned nthreads) {
+template <
+    feature_vector_array DB,
+    feature_vector_array Q,
+    class Distance = sum_of_squares_distance>
+auto qv_partition_with_scores(
+    const DB& db,
+    const Q& q,
+    unsigned nthreads,
+    Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
 
-  auto size_db = size(db);
+  auto size_db = num_vectors(db);
 
   // Just need a single vector
   std::vector<size_t> top_k(q.num_cols());
@@ -452,7 +481,7 @@ auto qv_partition_with_scores(const DB& db, const Q& q, unsigned nthreads) {
         size_t idx = 0;
 
         for (size_t i = 0; i < size_db; ++i) {
-          auto score = L2(qvec, db[i]);
+          auto score = distance(qvec, db[i]);
           if (score < min_score) {
             min_score = score;
             idx = i;
