@@ -149,6 +149,7 @@ if (TILEDB_VS_ENABLE_BLAS OR TRUE)
   target_compile_definitions(index PUBLIC TILEDB_VS_ENABLE_STATS)
 
   add_subdirectory(vamana)
+  add_subdirectory(pq)
 else()
   message(STATUS "Disabling demo executables build because BLAS is disabled (TILEDBVS_ENABLE_BLAS).")
 endif()

@@ -1,5 +1,5 @@
 /**
-* @file   pq/flat_pq_index.cc
+* @file   vamana/flat_pq_index.cc
 *
 * @section LICENSE
 *
@@ -27,12 +27,9 @@
 *
 * @section DESCRIPTION
 *
-* Driver for building vamana index.
+* Driver for making a query against a vamana index, as given by the index_uri.
 *
-* The driver will build a vamana index and store it in the given TileDB group.
-* The type of the feature vectors and ids can be specified using the --ftype
-* and --idtype options. The default feature type is float and the default id
-* type is uint64.
+* The driver searches using a previously-stored index.
 */
 
 #include "docopt.h"
@@ -50,25 +47,25 @@ bool enable_stats = false;
 std::vector<json> core_stats;
 
 using score_type = float;
+using groundtruth_type = int32_t;
 
 static constexpr const char USAGE[] =
-   R"(flat_pq_index: C++ cli for creating vamana index
+   R"(flat_pq: C++ cli for flat pq query
  Usage:
-     flat_pq_index (-h | --help)
-     flat_pq_index --db_uri URI --index_uri URI [--ftype TYPE] [--idtype TYPE] [--force]
-                  [--num_subspaces NN] [--bits_per_subspace NN] [--num_clusters NN]
-                  [--nthreads NN] [--log FILE] [--stats] [-d] [-v] [--dump NN]
+     flat_pq_query (-h | --help)
+     flat_pq_query --index_uri URI --query_uri URI [--ftype TYPE] [--idtype TYPE] [--groundtruth_uri URI]
+                  [--nqueries NN] [--k NN]
+                  [--nthreads NN] [--validate] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
  Options:
      -h, --help              show this screen
-     --db_uri URI            database URI with feature vectors
-     --index_uri URI         group URI for storing vamana index
+     --index_uri URI         group URI ov vamana index
+     --query_uri URI         query URI with feature vectors to search for
      --ftype TYPE            data type of feature vectors [default: float]
      --idtype TYPE           data type of ids [default: uint64]
-     -f, --force             overwrite index if it exists [default:false]
-     --num_subspaces NN      number of subspaces [default: 16]
-     --bits_per_subspace NN  number of bits per subspace [default: 8]
-     --num_clusters NN       number of clusters [default: 256]
+     --groundtruth_uri URI   ground truth URI
+     -k, --k NN              number of nearest neighbors [default: 1]
+     --nqueries NN           size of queries subset to compare (0 = all) [default: 0]
      --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
      --log FILE              log info to FILE (- for stdout)
      --stats                 log TileDB stats [default: false]
@@ -85,39 +82,72 @@ int main(int argc, char* argv[]) {
    return 0;
  }
 
- float alpha_0 = 1.0;
-
- size_t num_subspaces = args["--num_subspaces"].asLong();
- size_t bits_per_subspace = args["--bits_per_subspace"].asLong();
- size_t num_clusters = args["--num_clusters"].asLong();
-
- bool overwrite = args["--force"].asBool();
  debug = args["--debug"].asBool();
  verbose = args["--verbose"].asBool();
  enable_stats = args["--stats"].asBool();
 
- std::string db_uri = args["--db_uri"].asString();
  std::string index_uri = args["--index_uri"].asString();
+ std::string query_uri = args["--query_uri"].asString();
+
+ size_t k_nn = args["--k"].asLong();
+ size_t nqueries = args["--nqueries"].asLong();
  size_t nthreads = args["--nthreads"].asLong();
 
- size_t dump = args["--dump"].asLong();
-
- auto run_index = [&]<class feature_type, class id_type>() {
+ auto run_query = [&]<class feature_type, class id_type>() {
    tiledb::Context ctx;
-   auto X = tdbColMajorMatrix<feature_type>(ctx, db_uri);
-   X.load();
+   auto idx =
+       flatpq_index<feature_type, id_type, uint32_t>(ctx, index_uri);
+   auto queries = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
+   queries.load();
 
-   auto idx = flatpq_index<feature_type, id_type, uint32_t>(128, num_subspaces, bits_per_subspace, num_clusters);
-   idx.train(X);
-   idx.add(X);
-   idx.write_index(index_uri, overwrite);
+   auto query_time = log_timer("query time", true);
 
-   if (args["--log"]) {
-//     idx.log_index();
-     dump_logs(args["--log"].asString(), "flat_pq", {}, {}, {}, {}, {});
-   }
-   if (enable_stats) {
-     std::cout << json{core_stats}.dump() << std::endl;
+   auto Lbuild = args["--Lbuild"] ?
+                     std::optional<size_t>(args["--Lbuild"].asLong()) :
+                     std::nullopt;
+   auto&& [top_k_scores, top_k] = idx.query(queries, k_nn);
+
+   query_time.stop();
+
+   if (args["--groundtruth_uri"]) {
+     auto groundtruth_uri = args["--groundtruth_uri"].asString();
+
+     auto groundtruth =
+         tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
+     groundtruth.load();
+
+     if (debug) {
+       std::cout << std::endl;
+
+       debug_matrix(groundtruth, "groundtruth");
+       debug_slice(groundtruth, "groundtruth");
+
+       std::cout << std::endl;
+       debug_matrix(top_k, "top_k");
+       debug_slice(top_k, "top_k");
+
+       std::cout << std::endl;
+     }
+
+     size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
+     size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
+
+     float recall = ((float)total_intersected) / ((float)total_groundtruth);
+     // std::cout << "# total intersected = " << total_intersected << " of "
+     //           << total_groundtruth << " = "
+     //           << "R@" << k_nn << " of " << recall << std::endl;
+
+     if (args["--log"]) {
+       // idx.log_index();
+       dump_logs(
+           args["--log"].asString(),
+           "vamana",
+           nqueries,
+           {},
+           k_nn,
+           nthreads,
+           recall);
+     }
    }
  };
  auto feature_type = args["--ftype"].asString();
@@ -133,13 +163,13 @@ int main(int argc, char* argv[]) {
  }
 
  if (feature_type == "float" && id_type == "uint64") {
-   run_index.operator()<float, uint64_t>();
+   run_query.operator()<float, uint64_t>();
  } else if (feature_type == "float" && id_type == "uint32") {
-   run_index.operator()<float, uint32_t>();
+   run_query.operator()<float, uint32_t>();
  } else if (feature_type == "uint8" && id_type == "uint64") {
-   run_index.operator()<uint8_t, uint64_t>();
+   run_query.operator()<uint8_t, uint64_t>();
  } else if (feature_type == "uint8" && id_type == "uint32") {
-   run_index.operator()<uint8_t, uint32_t>();
+   run_query.operator()<uint8_t, uint32_t>();
  } else {
    std::cout << "Unsupported feature type " << feature_type;
    std::cout << " and/or unsupported id_type " << id_type << std::endl;
