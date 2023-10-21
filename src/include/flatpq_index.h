@@ -566,14 +566,13 @@ class flatpq_index {
 
   template <feature_vector V, feature_vector W>
   auto encode(const V& v, W&& pq) {
-    using value_type = typename V::value_type;
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimension_ * subspace;
       auto sub_end = sub_begin + sub_dimension_;
 
-      auto min_score = std::numeric_limits<value_type>::max();
-      size_t idx{0};
+      auto min_score = std::numeric_limits<score_type>::max();
+      code_type idx{0};
       for (size_t i = 0; i < num_vectors(centroids_); ++i) {
         auto score = sub_sum_of_squares(v, centroids_[i], sub_begin, sub_end);
         if (score < min_score) {

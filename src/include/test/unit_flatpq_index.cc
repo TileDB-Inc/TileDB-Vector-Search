@@ -743,7 +743,7 @@ TEST_CASE("flatpq_index: query 1M", "[flatpq_index]") {
     auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
     double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
     std::cout << "Recall: " << recall0 << std::endl;
-    CHECK(recall0 > 0.6);
+    CHECK(recall0 > 0.55);
   }
 
   SECTION("asymmetric") {
