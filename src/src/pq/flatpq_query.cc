@@ -102,9 +102,8 @@ int main(int argc, char* argv[]) {
 
    auto query_time = log_timer("query time", true);
 
-   auto Lbuild = args["--Lbuild"] ?
-                     std::optional<size_t>(args["--Lbuild"].asLong()) :
-                     std::nullopt;
+
+   auto foo = 0;
    auto&& [top_k_scores, top_k] = idx.query(queries, k_nn);
 
    query_time.stop();

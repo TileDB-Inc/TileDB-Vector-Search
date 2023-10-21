@@ -78,7 +78,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   using Base = std::vector<std::tuple<T, U>>;
   // using Base::Base;
   unsigned max_size{0};
-  constexpr const static Compare compare_;
+  constexpr const static Compare compare_{};
 
  public:
   explicit fixed_min_pair_heap(std::integral auto k, Compare compare = Compare{})
