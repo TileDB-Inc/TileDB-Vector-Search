@@ -54,7 +54,7 @@ static constexpr const char USAGE[] =
  Usage:
      flat_pq_query (-h | --help)
      flat_pq_query --index_uri URI --query_uri URI [--ftype TYPE] [--idtype TYPE] [--groundtruth_uri URI]
-                  [--nqueries NN] [--k NN]
+                  [--nqueries NN] [--k NN] [--asymmetric]
                   [--nthreads NN] [--validate] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
  Options:
@@ -65,6 +65,7 @@ static constexpr const char USAGE[] =
      --idtype TYPE           data type of ids [default: uint64]
      --groundtruth_uri URI   ground truth URI
      -k, --k NN              number of nearest neighbors [default: 1]
+     --asymmetric            use asymmetric distance [default: false]
      --nqueries NN           size of queries subset to compare (0 = all) [default: 0]
      --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
      --log FILE              log info to FILE (- for stdout)
@@ -92,6 +93,7 @@ int main(int argc, char* argv[]) {
   size_t k_nn = args["--k"].asLong();
   size_t nqueries = args["--nqueries"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
+  bool asymmetric = args["--asymmetric"].asBool();
 
   auto run_query = [&]<class feature_type, class id_type>() {
     tiledb::Context ctx;
@@ -101,8 +103,9 @@ int main(int argc, char* argv[]) {
 
     auto query_time = log_timer("query time", true);
 
-    auto foo = 0;
-    auto&& [top_k_scores, top_k] = idx.query(queries, k_nn);
+    auto&& [top_k_scores, top_k] = asymmetric
+                                       ? idx.asymmetric_query(queries, k_nn)
+                                       : idx.symmetric_query(queries, k_nn);
 
     query_time.stop();
 
