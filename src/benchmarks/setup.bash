@@ -50,6 +50,9 @@ ivf_flat_2=${tdb_vector_search_root_2}/${ivf_flat_tail}
 flat_l2_tail="src/cmake-build-release/libtiledbvectorsearch/src/flat_l2"
 flat_l2_1=${tdb_vector_search_root_1}/${flat_l2_tail}
 flat_l2_2=${tdb_vector_search_root_2}/${flat_l2_tail}
+flat_pq_tail="src/cmake-build-release/libtiledbvectorsearch/src/pq/flatpq_query"
+flat_pq_1=${tdb_vector_search_root_1}/${flat_pq_tail}
+flat_pq_2=${tdb_vector_search_root_2}/${flat_pq_tail}
 
 if [ -f "${ivf_query}" ]; then
     ivf_query="${ivf_query}"
@@ -61,7 +64,7 @@ else
     echo "Neither ivf_flat executable file exists"
 fi
 
-if [ -f flat_query ]; then
+if [ -f "${flat_query}" ]; then
     flat_query="${flat_query}"
 elif [ -f "${flat_l2_1}" ]; then
     flat_query="${flat_l2_1}"
@@ -70,6 +73,19 @@ elif [ -f "${flat_l2_2}" ]; then
 else
     echo "Neither flat_l2 executable file exists"
 fi
+
+if [ -f "${flatpq_query}" ]; then
+    flatpq_query="${flatpq_query}"
+elif [ -f "${flat_pq_1}" ]; then
+    flatpq_query="${flat_pq_1}"
+elif [ -f "${flat_pq_2}" ]; then
+    flatpq_query="${flat_pq_2}"
+else
+    echo "Neither flatpq executable file exists"
+fi
+echo "${flat_pq_1}"
+echo "${flat_pq_2}"
+
 
 nvme_root=/mnt/ssd
 
@@ -109,6 +125,7 @@ function init_1M_s3 () {
 
 function init_1M_gp3 () {
     db_uri="${gp3_root}/1M/bigann1M_base"
+    flatpq_index_uri="${gp3_root}/1M/flatpq_index_bigann1M_base"
     centroids_uri="${gp3_root}/1M/centroids.tdb"
     parts_uri="${gp3_root}/1M/parts.tdb"
     index_uri="${gp3_root}/1M/index.tdb"
@@ -253,6 +270,7 @@ function init_sift_s3 () {
 
 function init_sift_gp3 () {
     db_uri="${gp3_root}/sift/sift_base"
+    platpq_index_uri="${gp3_root}/sift/flatpq_index_sift_base"
     centroids_uri="${gp3_root}/sift/centroids"
     parts_uri="${gp3_root}/sift/parts"
     index_uri="${gp3_root}/sift/index"
@@ -429,6 +447,10 @@ function ivf_query() {
 		local _nqueries="--nqueries ${2}"
 		shift 2
 		;;
+	    --ftype)
+		local _ftype="--ftype ${2}"
+		shift 2
+		;;
 	    --nthreads)
 		local _nthreads="--nthreads ${2}"
 		shift 2
@@ -482,6 +504,7 @@ ${ivf_query} \
 ${_algorithm} \
 ${_k_nn} \
 ${_nqueries} \
+${_ftype} \
 ${_nthreads} \
 ${_cluster} \
 ${_blocksize} \
@@ -519,6 +542,10 @@ function flat_query() {
 		local _verbose="-v"
 		shift 1
 		;;
+	    --ftype)
+		local _ftype="--ftype ${2}"
+		shift 2
+		;;
 	    --nqueries)
 		local _nqueries="--nqueries ${2}"
 		shift 2
@@ -530,10 +557,6 @@ function flat_query() {
 	    --block|--blocksize)
 		local _blocksize="--blocksize ${2}"
 		shift 2
-		;;
-	    --nth)
-		local _nth="--nth"
-		shift 1
 		;;
 	    --log)
 		local _log="--log ${2}"
@@ -561,7 +584,90 @@ ${_algorithm} \
 ${_nqueries} \
 ${_nthreads} \
 ${_blocksize} \
-${_nth} \
+${_ftype} \
+${_log} \
+${_verbose} \
+${_debug}"
+
+    printf "================================================================\n"
+    printf "=\n=\n"
+    printf "${query}\n"
+    eval "${query}"
+}
+
+function flatpq_query() {
+    while [ "$#" -gt 0 ]; do
+	case "$1" in
+	    -x|--exec)
+		local flatpq_query=${2}
+		shift 2
+		;;
+	    -a|--alg|--algorithm)
+		local _algorithm="--alg ${2}"
+		shift 2
+		;;
+	    --k|--knn|--k_nn)
+		local _k_nn="--k ${2}"
+		shift 2
+		;;
+	    --ftype)
+		local _ftype="--ftype ${2}"
+		shift 2
+		;;
+      -a|--asymmetric)
+		shift 1
+		;;
+      -h|--help)
+		shift 1
+		;;
+	    -d|--debug)
+		local _debug="-d"
+		shift 1
+		;;
+	    -v|--verbose)
+		local _verbose="-v"
+		shift 1
+		;;
+	    --nqueries)
+		local _nqueries="--nqueries ${2}"
+		shift 2
+		;;
+	    --nthreads)
+		local _nthreads="--nthreads ${2}"
+		shift 2
+		;;
+	    --block|--blocksize)
+		local _blocksize="--blocksize ${2}"
+		shift 2
+		;;
+	    --log)
+		local _log="--log ${2}"
+		shift 2
+		;;
+	    *)
+		echo "Unknown option: $1"
+		return 1
+		;;
+	esac
+    done
+
+    if [ -z "${flatpq_query}" ];
+    then
+	echo "flatpq_query executable not set"
+	return 255
+    fi
+
+    local query="\
+${flatpq_query} \
+--index_uri ${flatpq_index_uri} \
+--query_uri ${query_uri} \
+--groundtruth_uri ${groundtruth_uri} \
+${_algorithm} \
+${_k_nn} \
+${_ftype} \
+${_nqueries} \
+${_nthreads} \
+${_blocksize} \
 ${_log} \
 ${_verbose} \
 ${_debug}"

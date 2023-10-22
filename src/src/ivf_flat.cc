@@ -82,15 +82,10 @@ std::vector<json> core_stats;
  * Specify some types for the demo.  For now the types associated with the
  * vector db to be queried are hard-coded.
  */
-#if 1
-using db_type = uint8_t;
-#else
-using db_type = float;
-#endif
 
+using score_type = float;
 using groundtruth_type = int32_t;
 using centroids_type = float;
-using shuffled_ids_type = uint64_t;
 using indices_type = uint64_t;
 
 static constexpr const char USAGE[] =
@@ -99,6 +94,7 @@ Usage:
     ivf_flat (-h | --help)
     ivf_flat --centroids_uri URI --parts_uri URI (--index_uri URI | --sizes_uri URI)
              --ids_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
+            [--ftype TYPE] [--idtype TYPE]
             [--k NN][--nprobe NN] [--nqueries NN] [--alg ALGO] [--infinite] [--finite] [--blocksize NN]
             [--nthreads NN] [--ppt NN] [--vpt NN] [--nodes NN] [--region REGION] [--stats] [--log FILE] [-d] [-v]
 
@@ -112,6 +108,8 @@ Options:
     --query_uri URI       URI storing query vectors
     --groundtruth_uri URI URI storing ground truth vectors
     --output_uri URI      URI to store search results
+    --ftype TYPE          data type of feature vectors [default: float]
+    --idtype TYPE         data type of ids [default: uint64]
     --k NN                number of nearest neighbors to search for [default: 10]
     --nprobe NN           number of centroid partitions to use [default: 100]
     --nqueries NN         number of query vectors to use (0 = all) [default: 0]
@@ -196,8 +194,8 @@ int main(int argc, char* argv[]) {
   // reporting
 
   // @todo Encapsulate these arrays into a single ivf_index class (WIP)
-  // auto shuffled_db = tdbColMajorMatrix<db_type>(part_uri);
-  // auto shuffled_ids = read_vector<shuffled_ids_type>(id_uri);
+  // auto shuffled_db = tdbColMajorMatrix<feature_type>(part_uri);
+  // auto shuffled_ids = read_vector<id_type>(id_uri);
   // debug_matrix(shuffled_db, "shuffled_db");
   // debug_matrix(shuffled_ids, "shuffled_ids");
 
@@ -207,148 +205,145 @@ int main(int argc, char* argv[]) {
   }
   debug_matrix(indices, "indices");
 
-  auto q =
-      tdbColMajorMatrix<db_type, shuffled_ids_type>(ctx, query_uri, nqueries);
-  q.load();
-  debug_matrix(q, "q");
+  auto run_query = [&]<class feature_type, class id_type>() {
+    auto q = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
+    q.load();
+    debug_matrix(q, "q");
 
-  auto&& [top_k_scores, top_k] = [&]() {
-    if (algorithm == "reg") {
-      if (finite) {
-        return detail::ivf::
-            nuv_query_heap_finite_ram_reg_blocked<db_type, shuffled_ids_type>(
-                ctx,
-                part_uri,
-                centroids,
-                q,
-                indices,
-                id_uri,
-                nprobe,
-                k_nn,
-                blocksize,
-                nthreads);
-      } else {
-        return detail::ivf::
-            nuv_query_heap_infinite_ram_reg_blocked<db_type, shuffled_ids_type>(
-                ctx,
-                part_uri,
-                centroids,
-                q,
-                indices,
-                id_uri,
-                nprobe,
-                k_nn,
-                nthreads);
-      }
-    } else if (algorithm == "final" || algorithm == "fin") {
-      if (finite) {
-        return detail::ivf::query_finite_ram<db_type, shuffled_ids_type>(
-            ctx,
-            part_uri,
-            centroids,
-            q,
-            indices,
-            id_uri,
-            nprobe,
-            k_nn,
-            blocksize,
-            nthreads,
-            ppt);
-      } else {
-        return detail::ivf::query_infinite_ram<db_type, shuffled_ids_type>(
-            ctx,
-            part_uri,
-            centroids,
-            q,
-            indices,
-            id_uri,
-            nprobe,
-            k_nn,
-            nthreads);
-      }
-    } else if (algorithm == "nuv_heap" || algorithm == "nuv") {
-      if (finite) {
-        return detail::ivf::
-            nuv_query_heap_finite_ram<db_type, shuffled_ids_type>(
-                ctx,
-                part_uri,
-                centroids,
-                q,
-                indices,
-                id_uri,
-                nprobe,
-                k_nn,
-                blocksize,
-                nthreads);
-      } else {
-        return detail::ivf::
-            nuv_query_heap_infinite_ram<db_type, shuffled_ids_type>(
-                ctx,
-                part_uri,
-                centroids,
-                q,
-                indices,
-                id_uri,
-                nprobe,
-                k_nn,
-                nthreads);
-      }
-    } else if (algorithm == "qv_heap" || algorithm == "qv") {
-      if (finite) {
-        return detail::ivf::
-            qv_query_heap_finite_ram<db_type, shuffled_ids_type>(
-                ctx,
-                part_uri,
-                centroids,
-                q,
-                indices,
-                id_uri,
-                nprobe,
-                k_nn,
-                blocksize,
-                nthreads);
-      } else {
-        return detail::ivf::
-            qv_query_heap_infinite_ram<db_type, shuffled_ids_type>(
-                ctx,
-                part_uri,
-                centroids,
-                q,
-                indices,
-                id_uri,
-                nprobe,
-                k_nn,
-                nthreads);
-      }
-    } else if (algorithm == "vq_heap" || algorithm == "vq") {
-      if (finite) {
-        return detail::ivf::vq_query_finite_ram<db_type, shuffled_ids_type>(
-            ctx,
-            part_uri,
-            centroids,
-            q,
-            indices,
-            id_uri,
-            nprobe,
-            k_nn,
-            blocksize,
-            nthreads);
-      } else {
-        return detail::ivf::vq_query_infinite_ram<db_type, shuffled_ids_type>(
-            ctx,
-            part_uri,
-            centroids,
-            q,
-            indices,
-            id_uri,
-            nprobe,
-            k_nn,
-            nthreads);
-      }
+    auto&& [top_k_scores, top_k] = [&]() {
+      if (algorithm == "reg") {
+        if (finite) {
+          return detail::ivf::
+              nuv_query_heap_finite_ram_reg_blocked<feature_type, id_type>(
+                  ctx,
+                  part_uri,
+                  centroids,
+                  q,
+                  indices,
+                  id_uri,
+                  nprobe,
+                  k_nn,
+                  blocksize,
+                  nthreads);
+        } else {
+          return detail::ivf::
+              nuv_query_heap_infinite_ram_reg_blocked<feature_type, id_type>(
+                  ctx,
+                  part_uri,
+                  centroids,
+                  q,
+                  indices,
+                  id_uri,
+                  nprobe,
+                  k_nn,
+                  nthreads);
+        }
+      } else if (algorithm == "final" || algorithm == "fin") {
+        if (finite) {
+          return detail::ivf::query_finite_ram<feature_type, id_type>(
+              ctx,
+              part_uri,
+              centroids,
+              q,
+              indices,
+              id_uri,
+              nprobe,
+              k_nn,
+              blocksize,
+              nthreads,
+              ppt);
+        } else {
+          return detail::ivf::query_infinite_ram<feature_type, id_type>(
+              ctx,
+              part_uri,
+              centroids,
+              q,
+              indices,
+              id_uri,
+              nprobe,
+              k_nn,
+              nthreads);
+        }
+      } else if (algorithm == "nuv_heap" || algorithm == "nuv") {
+        if (finite) {
+          return detail::ivf::nuv_query_heap_finite_ram<feature_type, id_type>(
+              ctx,
+              part_uri,
+              centroids,
+              q,
+              indices,
+              id_uri,
+              nprobe,
+              k_nn,
+              blocksize,
+              nthreads);
+        } else {
+          return detail::ivf::
+              nuv_query_heap_infinite_ram<feature_type, id_type>(
+                  ctx,
+                  part_uri,
+                  centroids,
+                  q,
+                  indices,
+                  id_uri,
+                  nprobe,
+                  k_nn,
+                  nthreads);
+        }
+      } else if (algorithm == "qv_heap" || algorithm == "qv") {
+        if (finite) {
+          return detail::ivf::qv_query_heap_finite_ram<feature_type, id_type>(
+              ctx,
+              part_uri,
+              centroids,
+              q,
+              indices,
+              id_uri,
+              nprobe,
+              k_nn,
+              blocksize,
+              nthreads);
+        } else {
+          return detail::ivf::qv_query_heap_infinite_ram<feature_type, id_type>(
+              ctx,
+              part_uri,
+              centroids,
+              q,
+              indices,
+              id_uri,
+              nprobe,
+              k_nn,
+              nthreads);
+        }
+      } else if (algorithm == "vq_heap" || algorithm == "vq") {
+        if (finite) {
+          return detail::ivf::vq_query_finite_ram<feature_type, id_type>(
+              ctx,
+              part_uri,
+              centroids,
+              q,
+              indices,
+              id_uri,
+              nprobe,
+              k_nn,
+              blocksize,
+              nthreads);
+        } else {
+          return detail::ivf::vq_query_infinite_ram<feature_type, id_type>(
+              ctx,
+              part_uri,
+              centroids,
+              q,
+              indices,
+              id_uri,
+              nprobe,
+              k_nn,
+              nthreads);
+        }
 #if 0
       else {
         return detail::ivf::
-            vq_query_heap_infinite_ram<db_type, shuffled_ids_type>(
+            vq_query_heap_infinite_ram<feature_type, id_type>(
                 ctx,
                 part_uri,
                 centroids,
@@ -361,9 +356,35 @@ int main(int argc, char* argv[]) {
                 nthreads);
       }
 #endif
-    } else if (algorithm == "vq_heap_2" || algorithm == "vq2") {
-      if (finite) {
-        return detail::ivf::vq_query_finite_ram_2<db_type, shuffled_ids_type>(
+      } else if (algorithm == "vq_heap_2" || algorithm == "vq2") {
+        if (finite) {
+          return detail::ivf::vq_query_finite_ram_2<feature_type, id_type>(
+              ctx,
+              part_uri,
+              centroids,
+              q,
+              indices,
+              id_uri,
+              nprobe,
+              k_nn,
+              blocksize,
+              nthreads);
+        } else {
+          {
+            return detail::ivf::vq_query_infinite_ram_2<feature_type, id_type>(
+                ctx,
+                part_uri,
+                centroids,
+                q,
+                indices,
+                id_uri,
+                nprobe,
+                k_nn,
+                nthreads);
+          }
+        }
+      } else if (algorithm == "dist_nuv_heap" || algorithm == "dist") {
+        return detail::ivf::dist_qv_finite_ram<feature_type, id_type>(
             ctx,
             part_uri,
             centroids,
@@ -373,99 +394,100 @@ int main(int argc, char* argv[]) {
             nprobe,
             k_nn,
             blocksize,
-            nthreads);
-      } else {
-        {
-          return detail::ivf::
-              vq_query_infinite_ram_2<db_type, shuffled_ids_type>(
-                  ctx,
-                  part_uri,
-                  centroids,
-                  q,
-                  indices,
-                  id_uri,
-                  nprobe,
-                  k_nn,
-                  nthreads);
-        }
+            nthreads,
+            num_nodes);
       }
-    } else if (algorithm == "dist_nuv_heap" || algorithm == "dist") {
-      return detail::ivf::dist_qv_finite_ram<db_type, shuffled_ids_type>(
-          ctx,
-          part_uri,
-          centroids,
-          q,
-          indices,
-          id_uri,
+      throw std::runtime_error(
+          "incorrect or unset algorithm type: " + algorithm);
+    }();
+
+    debug_matrix(top_k, "top_k");
+
+    // @todo encapsulate as a function
+    if (args["--groundtruth_uri"]) {
+      auto groundtruth_uri = args["--groundtruth_uri"].asString();
+
+      auto groundtruth =
+          tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
+      groundtruth.load();
+
+      if (false) {
+        std::cout << std::endl;
+
+        debug_matrix(groundtruth, "groundtruth");
+        debug_slice(groundtruth, "groundtruth");
+
+        std::cout << std::endl;
+        debug_matrix(top_k, "top_k");
+        debug_slice(top_k, "top_k");
+
+        std::cout << std::endl;
+      }
+
+      size_t total_intersected{0};
+      size_t total_groundtruth = top_k.num_cols() * top_k.num_rows();
+
+      for (size_t i = 0; i < top_k.num_cols(); ++i) {
+        std::sort(begin(top_k[i]), end(top_k[i]));
+        std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
+        total_intersected += std::set_intersection(
+            begin(top_k[i]),
+            end(top_k[i]),
+            begin(groundtruth[i]),
+            end(groundtruth[i]),
+            assignment_counter{});
+      }
+
+      recall = ((float)total_intersected) / ((float)total_groundtruth);
+      std::cout << "# total intersected = " << total_intersected << " of "
+                << total_groundtruth << " = "
+                << "R@" << k_nn << " of " << recall << std::endl;
+    }
+
+    if (args["--output_uri"]) {
+      write_matrix(ctx, top_k, args["--output_uri"].asString());
+    }
+
+    _.stop();
+
+    if (args["--log"]) {
+      dump_logs(
+          args["--log"].asString(),
+          algorithm,
+          (nqueries == 0 ? num_vectors(q) : nqueries),
           nprobe,
           k_nn,
-          blocksize,
           nthreads,
-          num_nodes);
+          recall);
     }
-    throw std::runtime_error("incorrect or unset algorithm type: " + algorithm);
-  }();
-
-  debug_matrix(top_k, "top_k");
-
-  // @todo encapsulate as a function
-  if (args["--groundtruth_uri"]) {
-    auto groundtruth_uri = args["--groundtruth_uri"].asString();
-
-    auto groundtruth =
-        tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
-    groundtruth.load();
-
-    if (false) {
-      std::cout << std::endl;
-
-      debug_matrix(groundtruth, "groundtruth");
-      debug_slice(groundtruth, "groundtruth");
-
-      std::cout << std::endl;
-      debug_matrix(top_k, "top_k");
-      debug_slice(top_k, "top_k");
-
-      std::cout << std::endl;
+    if (enable_stats) {
+      std::cout << json{core_stats}.dump() << std::endl;
     }
+  };
 
-    size_t total_intersected{0};
-    size_t total_groundtruth = top_k.num_cols() * top_k.num_rows();
+  auto feature_type = args["--ftype"].asString();
+  auto id_type = args["--idtype"].asString();
 
-    for (size_t i = 0; i < top_k.num_cols(); ++i) {
-      std::sort(begin(top_k[i]), end(top_k[i]));
-      std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
-      total_intersected += std::set_intersection(
-          begin(top_k[i]),
-          end(top_k[i]),
-          begin(groundtruth[i]),
-          end(groundtruth[i]),
-          assignment_counter{});
-    }
-
-    recall = ((float)total_intersected) / ((float)total_groundtruth);
-    std::cout << "# total intersected = " << total_intersected << " of "
-              << total_groundtruth << " = "
-              << "R@" << k_nn << " of " << recall << std::endl;
+  if (feature_type != "float" && feature_type != "uint8") {
+    std::cout << "Unsupported feature type " << feature_type << std::endl;
+    return 1;
+  }
+  if (id_type != "uint64" && id_type != "uint32") {
+    std::cout << "Unsupported id type " << id_type << std::endl;
+    return 1;
   }
 
-  if (args["--output_uri"]) {
-    write_matrix(ctx, top_k, args["--output_uri"].asString());
-  }
-
-  _.stop();
-
-  if (args["--log"]) {
-    dump_logs(
-        args["--log"].asString(),
-        algorithm,
-        (nqueries == 0 ? num_vectors(q) : nqueries),
-        nprobe,
-        k_nn,
-        nthreads,
-        recall);
-  }
-  if (enable_stats) {
-    std::cout << json{core_stats}.dump() << std::endl;
+  if (feature_type == "float" && id_type == "uint64") {
+    run_query.operator()<float, uint64_t>();
+  } else if (feature_type == "float" && id_type == "uint32") {
+    run_query.operator()<float, uint32_t>();
+  } else if (feature_type == "uint8" && id_type == "uint64") {
+    run_query.operator()<uint8_t, uint64_t>();
+  } else if (feature_type == "uint8" && id_type == "uint32") {
+    run_query.operator()<uint8_t, uint32_t>();
+  } else {
+    std::cout << "Unsupported feature type " << feature_type;
+    std::cout << " and/or unsupported id_type " << id_type << std::endl;
+    return 1;
   }
 }
