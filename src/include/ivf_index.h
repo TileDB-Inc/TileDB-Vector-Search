@@ -58,6 +58,9 @@
 #include "detail/flat/qv.h"
 #include "detail/ivf/index.h"
 
+#include <tiledb/group_experimental.h>
+#include <tiledb/tiledb>
+
 enum class kmeans_init { none, kmeanspp, random };
 
 template <
@@ -75,9 +78,19 @@ class kmeans_index {
   size_t dimension_{0};
   size_t nlist_;
   size_t max_iter_;
-  double tol_;
-  double reassign_ratio_{0.075};
-  size_t nthreads_{std::thread::hardware_concurrency()};
+  float tol_;
+  float reassign_ratio_{0.075};
+  size_t num_threads_{std::thread::hardware_concurrency()};
+
+  using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
+  std::vector<metadata_element> metadata{
+      {"dimension", &dimension_, TILEDB_UINT64},
+      {"num_partitions", &nlist_, TILEDB_UINT64},
+      {"max_iter", &max_iter_, TILEDB_UINT64},
+      {"tol", &tol_, TILEDB_FLOAT32},
+      {"reassign_ration", &reassign_ratio_, TILEDB_FLOAT32},
+      {"num_threads", &num_threads_, TILEDB_UINT64},
+  };
 
   ColMajorMatrix<centroid_feature_type> centroids_;
   std::vector<indices_type> indices_;
@@ -96,23 +109,28 @@ class kmeans_index {
    * @param nlist Number of centroids / partitions to compute.
    * @param max_iter Maximum number of iterations for kmans algorithm.
    * @param tol Convergence tolerance for kmeans algorithm.
-   * @param nthreads Number of threads to use when executing in parallel.
+   * @param num_threads Number of threads to use when executing in parallel.
    * @param seed Seed for random number generator.
    */
   kmeans_index(
       size_t dimension,
       size_t nlist,
       size_t max_iter,
-      double tol = 0.000025,
-      std::optional<size_t> nthreads = std::nullopt,
+      float tol = 0.000025,
+      std::optional<size_t> num_threads = std::nullopt,
       std::optional<unsigned int> seed = std::nullopt)
       : gen(seed ? *seed : std::random_device{}())
       , dimension_(dimension)
       , nlist_(nlist)
       , max_iter_(max_iter)
       , tol_(tol)
-      , nthreads_(nthreads ? *nthreads : std::thread::hardware_concurrency())
+      , num_threads_(
+            num_threads ? *num_threads : std::thread::hardware_concurrency())
       , centroids_(dimension, nlist) {
+  }
+
+  kmeans_index(tiledb::Context& ctx, const std::string& uri) {
+    read_index(ctx, uri);
   }
 
   /**
@@ -155,13 +173,13 @@ class kmeans_index {
         training_set.num_cols(), std::numeric_limits<score_type>::max() / 8192);
 
 #ifdef _TRIANGLE_INEQUALITY
-    std::vector<double> centroid_centroid(nlist_, 0.0);
-    std::vector<size_t> nearest_centroid(training_set.num_cols(), 0);
+    std::vector<centroid_feature_type> centroid_centroid(nlist_, 0.0);
+    std::vector<index_type> nearest_centroid(training_set.num_cols(), 0);
 #endif
 
     // Calculate the remaining centroids using K-means++ algorithm
     for (size_t i = 1; i < nlist_; ++i) {
-      stdx::execution::indexed_parallel_policy par{nthreads_};
+      stdx::execution::indexed_parallel_policy par{num_threads_};
       stdx::range_for_each(
           std::move(par),
           training_set,
@@ -175,9 +193,9 @@ class kmeans_index {
             // centroid is greater than half the distance between the newest
             // centroid and vectors nearest centroid (1/4 distance squared)
 
-            double min_distance = distances[j];
+            float min_distance = distances[j];
             if (centroid_centroid[nearest_centroid[j]] < 4 * min_distance) {
-              double distance = sum_of_squares(vec, centroids_[i - 1]);
+              float distance = sum_of_squares(vec, centroids_[i - 1]);
               if (distance < min_distance) {
                 min_distance = distance;
                 nearest_centroid[j] = i - 1;
@@ -221,7 +239,7 @@ class kmeans_index {
   void kmeans_random_init(const ColMajorMatrix<T>& training_set) {
     scoped_timer _{__FUNCTION__};
 
-    std::vector<size_t> indices(nlist_);
+    std::vector<indices_type> indices(nlist_);
     std::vector<bool> visited(training_set.num_cols(), false);
     std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
     for (size_t i = 0; i < nlist_; ++i) {
@@ -261,9 +279,9 @@ class kmeans_index {
 
     for (size_t iter = 0; iter < max_iter_; ++iter) {
       auto [scores, parts] = detail::flat::qv_partition_with_scores(
-          centroids_, training_set, nthreads_);
+          centroids_, training_set, num_threads_);
       // auto parts = detail::flat::qv_partition(centroids_, training_set,
-      // nthreads_);
+      // num_threads_);
 
       std::fill(
           new_centroids.data(),
@@ -303,6 +321,7 @@ class kmeans_index {
 
       // Don't reassign if we are on last iteration
       if (iter != max_iter_ - 1) {
+// Experiment with random reassignment
 #if 0
         // Pick a random vector to be a new centroid
         std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
@@ -349,8 +368,8 @@ class kmeans_index {
        * Check for convergence
        */
       // @todo parallelize?
-      double max_diff = 0.0;
-      double total_weight = 0.0;
+      float max_diff = 0.0;
+      float total_weight = 0.0;
       for (size_t j = 0; j < nlist_; ++j) {
         if (degrees[j] != 0) {
           auto centroid = new_centroids[j];
@@ -360,7 +379,7 @@ class kmeans_index {
           }
         }
         auto diff = sum_of_squares(centroids_[j], new_centroids[j]);
-        max_diff = std::max<double>(max_diff, diff);
+        max_diff = std::max<float>(max_diff, diff);
       }
       centroids_.swap(new_centroids);
       // std::cout << "max_diff: " << max_diff << " total_weight: " <<
@@ -372,11 +391,11 @@ class kmeans_index {
         break;
       }
 
+// Temporary printf debugging
 #if 0
-      // Debugging
         auto mm = std::minmax_element(begin(degrees), end(degrees));
-        double sum = std::accumulate(begin(degrees), end(degrees), 0);
-        double average = sum / (double)size(degrees);
+        float sum = std::accumulate(begin(degrees), end(degrees), 0);
+        float average = sum / (float)size(degrees);
 
         auto min = *mm.first;
         auto max = *mm.second;
@@ -386,7 +405,7 @@ class kmeans_index {
 #endif
     }
 
-    // Debugging
+// Temporary printf debugging
 #ifdef _SAVE_PARTITIONS
     {
       char tempFileName[L_tmpnam];
@@ -460,6 +479,7 @@ class kmeans_index {
         break;
     };
 
+// Temporary printf debugging
 #if 0
     std::cout << "\nCentroids Before:\n" << std::endl;
     for (size_t j = 0; j < centroids_.num_cols(); ++j) {
@@ -473,6 +493,7 @@ class kmeans_index {
 
     train_no_init(training_set);
 
+// Temporary printf debugging
 #if 0
     std::cout << "\nCentroids After:\n" << std::endl;
     for (size_t j = 0; j < centroids_.num_cols(); ++j) {
@@ -485,16 +506,32 @@ class kmeans_index {
 #endif
   }
 
+  /****************************************************************************
+   * Methods for building, writing, and reading the complete index
+   ****************************************************************************/
 #if 1
-  // @todo WIP
-  void add(const ColMajorMatrix<T>& db) {
-    auto parts = detail::flat::qv_partition(centroids_, db, nthreads_);
+  /**
+   * @brief Build the index from a training set, given the centroids.  This
+   * will partition the training set into a contiguous array, with one
+   * partition per centroid.  It will also create an array to save the original
+   * locations of each vector (their ids) as well as an array demarcating
+   * the bounaries of each partition (inluding the very end of the array).
+   *
+   * @param training_set Array of vectors to cluster.
+   * @param init Specify which initialization algorithm to use,
+   * random (`random`) or kmeans++ (`kmeanspp`).
+   */
+  void add(const ColMajorMatrix<T>& training_set) {
+    auto parts =
+        detail::flat::qv_partition(centroids_, training_set, num_threads_);
     std::vector<size_t> degrees(centroids_.num_cols());
     std::vector<indices_type> indices(centroids_.num_cols() + 1);
-    std::vector shuffled_ids = std::vector<shuffled_ids_type>(db.num_cols());
-    auto shuffled_db = ColMajorMatrix<T>{db.num_rows(), db.num_cols()};
+    std::vector shuffled_ids =
+        std::vector<shuffled_ids_type>(num_vectors(training_set));
+    auto shuffled_db =
+        ColMajorMatrix<T>{dimension(training_set), num_vectors(training_set)};
 
-    for (size_t i = 0; i < db.num_cols(); ++i) {
+    for (size_t i = 0; i < num_vectors(training_set); ++i) {
       auto j = parts[i];
       ++degrees[j];
     }
@@ -503,15 +540,15 @@ class kmeans_index {
 
     std::iota(begin(shuffled_ids), end(shuffled_ids), 0);
 
-    for (size_t i = 0; i < db.num_cols(); ++i) {
+    for (size_t i = 0; i < num_vectors(training_set); ++i) {
       size_t bin = parts[i];
       size_t ibin = indices[bin];
 
       shuffled_ids[ibin] = i;
 
       assert(ibin < shuffled_db.num_cols());
-      for (size_t j = 0; j < db.num_rows(); ++j) {
-        shuffled_db(j, ibin) = db(j, i);
+      for (size_t j = 0; j < dimension(training_set); ++j) {
+        shuffled_db(j, ibin) = training_set(j, i);
       }
       ++indices[bin];
     }
@@ -523,7 +560,178 @@ class kmeans_index {
     shuffled_ids_ = std::move(shuffled_ids);
     shuffled_db_ = std::move(shuffled_db);
   }
+
+  auto write_index(const std::string& group_uri, bool overwrite) {
+    tiledb::Context ctx;
+    tiledb::VFS vfs(ctx);
+    if (vfs.is_dir(group_uri)) {
+      if (overwrite == false) {
+        return false;
+      }
+      vfs.remove_dir(group_uri);
+    }
+
+    tiledb::Config cfg;
+    tiledb::Group::create(ctx, group_uri);
+    auto write_group = tiledb::Group(ctx, group_uri, TILEDB_WRITE, cfg);
+
+    for (auto&& [name, value, type] : metadata) {
+      write_group.put_metadata(name, type, 1, value);
+    }
+
+    // Temporary names!
+    // @todo Name per existing names
+    auto centroids_uri = group_uri + "/centroids";
+    write_matrix(ctx, centroids_, centroids_uri);
+    write_group.add_member("centroids", true, "centroids");
+
+    auto indices_uri = group_uri + "/indices";
+    write_vector(ctx, indices_, indices_uri);
+    write_group.add_member("indices", true, "indices");
+
+    auto shuffled_ids_uri = group_uri + "/shuffled_ids";
+    write_vector(ctx, shuffled_ids_, shuffled_ids_uri);
+    write_group.add_member("shuffled_ids", true, "shuffled_ids");
+
+    auto shuffled_db_uri = group_uri + "/shuffled_db";
+    write_matrix(ctx, shuffled_db_, shuffled_db_uri);
+    write_group.add_member("shuffled_db", true, "shuffled_db");
+
+    write_group.close();
+    return true;
+  }
 #endif
+
+  auto read_index(tiledb::Context, const std::string& group_uri) {
+    tiledb::Context ctx;
+    tiledb::Config cfg;
+    tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
+
+    for (auto& [name, value, datatype] : metadata) {
+      if (!read_group.has_metadata(name, &datatype)) {
+        throw std::runtime_error("Missing metadata: " + name);
+      }
+      uint32_t count;
+      void* addr;
+      read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
+      if (datatype == TILEDB_UINT64) {
+        *reinterpret_cast<uint64_t*>(value) =
+            *reinterpret_cast<uint64_t*>(addr);
+      } else if (datatype == TILEDB_FLOAT32) {
+        *reinterpret_cast<float*>(value) = *reinterpret_cast<float*>(addr);
+      } else {
+        throw std::runtime_error("Unsupported datatype");
+      }
+    }
+
+    centroids_ =
+        std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
+            ctx, group_uri + "/centroids"));
+    indices_ = std::move(read_vector<indices_type>(
+        ctx, group_uri + "/indices"));
+    shuffled_ids_ =
+        std::move(read_vector<shuffled_ids_type>(ctx, group_uri + "/shuffled_ids"));
+    shuffled_db_ = std::move(tdbPreLoadMatrix<T, stdx::layout_left>(
+        ctx, group_uri + "/shuffled_db"));
+  }
+
+  /***************************************************************************
+   * Methods to aid Testing and Debugging
+   *
+   * @todo -- As elsewhere in this class, there is huge code duplication here
+   *
+   **************************************************************************/
+
+  bool compare_metadata(const kmeans_index& rhs) {
+    if (dimension_ != rhs.dimension_) {
+      std::cout << "dimension_ != rhs.dimension_ (" << dimension_
+                << " != " << rhs.dimension_ << ")" << std::endl;
+      return false;
+    }
+    if (nlist_ != rhs.nlist_) {
+      std::cout << "nlist_ != rhs.nlist_ (" << nlist_ << " != " << rhs.nlist_
+                << ")" << std::endl;
+      return false;
+    }
+    if (max_iter_ != rhs.max_iter_) {
+      std::cout << "max_iter_ != rhs.max_iter_ (" << max_iter_
+                << " != " << rhs.max_iter_ << ")" << std::endl;
+      return false;
+    }
+    if (tol_ != rhs.tol_) {
+      std::cout << "tol_ != rhs.tol_ (" << tol_ << " != " << rhs.tol_ << ")"
+                << std::endl;
+      return false;
+    }
+    if (reassign_ratio_ != rhs.reassign_ratio_) {
+      std::cout << "reassign_ratio_ != rhs.reassign_ratio_ (" << reassign_ratio_
+                << " != " << rhs.reassign_ratio_ << ")" << std::endl;
+      return false;
+    }
+    if (num_threads_ != rhs.num_threads_) {
+      std::cout << "num_threads_ != rhs.num_threads_ (" << num_threads_
+                << " != " << rhs.num_threads_ << ")" << std::endl;
+      return false;
+    }
+    return true;
+  }
+
+  template <feature_vector_array L, feature_vector_array R>
+  auto compare_feature_vector_arrays(const L& lhs, const R& rhs) {
+    if (num_vectors(lhs) != num_vectors(rhs) ||
+        dimension(lhs) != dimension(rhs)) {
+      std::cout << "num_vectors(lhs) != num_vectors(rhs) || dimension(lhs) != "
+                   "dimension(rhs)n"
+                << std::endl;
+      std::cout << "num_vectors(lhs): " << num_vectors(lhs)
+                << " num_vectors(rhs): " << num_vectors(rhs) << std::endl;
+      std::cout << "dimension(lhs): " << dimension(lhs)
+                << " dimension(rhs): " << dimension(rhs) << std::endl;
+      return false;
+    }
+    for (size_t i = 0; i < num_vectors(lhs); ++i) {
+      if (!std::equal(begin(lhs[i]), end(lhs[i]), begin(rhs[i]))) {
+        std::cout << "lhs[" << i << "] != rhs[" << i << "]" << std::endl;
+        std::cout << "lhs[" << i << "]: ";
+        for (size_t j = 0; j < dimension(lhs); ++j) {
+          std::cout << lhs[i][j] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "rhs[" << i << "]: ";
+        for (size_t j = 0; j < dimension(rhs); ++j) {
+          std::cout << rhs[i][j] << " ";
+        }
+        return false;
+      }
+    }
+    return true;
+  }
+
+  template <feature_vector L, feature_vector R>
+  auto compare_vectors(const L& lhs, const R& rhs) {
+    if (dimension(lhs) != dimension(rhs)) {
+      std::cout << "dimension(lhs) != dimension(rhs) (" << dimension(lhs)
+                << " != " << dimension(rhs) << ")" << std::endl;
+      return false;
+    }
+    return std::equal(begin(lhs), end(lhs), begin(rhs));
+  }
+
+  auto compare_centroids(const kmeans_index& rhs) {
+    return compare_feature_vector_arrays(centroids_, rhs.centroids_);
+  }
+
+  auto compare_feature_vectors(const kmeans_index& rhs) {
+    return compare_feature_vector_arrays(shuffled_db_, rhs.shuffled_db_);
+  }
+
+  auto compare_indices(const kmeans_index& rhs) {
+    return compare_vectors(indices_, rhs.indices_);
+  }
+
+  auto compare_shuffled_ids(const kmeans_index& rhs) {
+    return compare_vectors(shuffled_ids_, rhs.shuffled_ids_);
+  }
 
   auto set_centroids(const ColMajorMatrix<T>& centroids) {
     std::copy(

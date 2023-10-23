@@ -37,6 +37,7 @@
 
 #include "../ivf_index.h"
 #include "../linalg.h"
+#include "query_common.h"
 
 TEST_CASE("ivf_index: test test", "[ivf_index]") {
   REQUIRE(true);
@@ -220,6 +221,9 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
   }
 }
 
+
+
+
 // kmeans and kmeans indexing still WIP
 #if 0
 
@@ -268,3 +272,33 @@ TEST_CASE("ivf_index: also not a unit test per se", "[ivf_index]") {
 
 }
 #endif
+
+
+TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
+  size_t dimension_{128};
+  size_t num_subspaces_{16};
+  size_t bits_per_subspace_{8};
+  size_t num_clusters_{256};
+
+  tiledb::Context ctx;
+  std::string ivf_index_uri = "/tmp/tmp_ivf_index";
+  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
+  load(training_set);
+
+  auto idx = kmeans_index<float, uint32_t, uint32_t>(
+      dimension_, num_subspaces_, bits_per_subspace_, num_clusters_);
+  idx.train(training_set, kmeans_init::kmeanspp);
+  idx.add(training_set);
+
+  idx.write_index(ivf_index_uri, true);
+  auto idx2 = kmeans_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
+
+  CHECK(idx.compare_metadata(idx2));
+
+  CHECK(idx.compare_centroids(idx2));
+  CHECK(idx.compare_feature_vectors(idx2));
+  CHECK(idx.compare_indices(idx2));
+  CHECK(idx.compare_shuffled_ids(idx2));
+
+  auto foo = 0;
+}
