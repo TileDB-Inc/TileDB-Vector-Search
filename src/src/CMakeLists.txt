@@ -144,9 +144,9 @@ if (TILEDB_VS_ENABLE_BLAS OR TRUE)
   target_link_libraries(ivf_flat PUBLIC kmeans_lib)
   target_compile_definitions(ivf_flat PUBLIC TILEDB_VS_ENABLE_STATS)
 
-  add_executable(index index.cc)
-  target_link_libraries(index PUBLIC kmeans_lib)
-  target_compile_definitions(index PUBLIC TILEDB_VS_ENABLE_STATS)
+  add_executable(ivf_index ivf_index.cc)
+  target_link_libraries(ivf_index PUBLIC kmeans_lib)
+  target_compile_definitions(ivf_index PUBLIC TILEDB_VS_ENABLE_STATS)
 
   add_subdirectory(vamana)
   add_subdirectory(pq)

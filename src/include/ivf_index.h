@@ -67,7 +67,7 @@ template <
     class T,
     class shuffled_ids_type = size_t,
     class indices_type = size_t>
-class kmeans_index {
+class ivf_index {
   using feature_type = T;
   using id_type = shuffled_ids_type;
   using score_type = float;
@@ -112,7 +112,7 @@ class kmeans_index {
    * @param num_threads Number of threads to use when executing in parallel.
    * @param seed Seed for random number generator.
    */
-  kmeans_index(
+  ivf_index(
       size_t dimension,
       size_t nlist,
       size_t max_iter,
@@ -129,7 +129,7 @@ class kmeans_index {
       , centroids_(dimension, nlist) {
   }
 
-  kmeans_index(tiledb::Context& ctx, const std::string& uri) {
+  ivf_index(tiledb::Context& ctx, const std::string& uri) {
     read_index(ctx, uri);
   }
 
@@ -275,7 +275,7 @@ class kmeans_index {
     scoped_timer _{__FUNCTION__};
 
     std::vector<size_t> degrees(nlist_, 0);
-    ColMajorMatrix<T> new_centroids(dimension_, nlist_);
+    auto new_centroids = ColMajorMatrix<centroid_feature_type> (dimension_, nlist_);
 
     for (size_t iter = 0; iter < max_iter_; ++iter) {
       auto [scores, parts] = detail::flat::qv_partition_with_scores(
@@ -450,7 +450,7 @@ class kmeans_index {
     // the matrix. Write the code below:
     auto nClusters = centroids.num_cols();
     std::vector<indices_type> indices(vectors.num_cols());
-    std::vector<T> distances(nClusters);
+    std::vector<score_type> distances(nClusters);
     for (size_t i = 0; i < vectors.num_cols(); ++i) {
       for (size_t j = 0; j < nClusters; ++j) {
         distances[j] = sum_of_squares(vectors[i], centroids[j]);
@@ -642,7 +642,7 @@ class kmeans_index {
    *
    **************************************************************************/
 
-  bool compare_metadata(const kmeans_index& rhs) {
+  bool compare_metadata(const ivf_index& rhs) {
     if (dimension_ != rhs.dimension_) {
       std::cout << "dimension_ != rhs.dimension_ (" << dimension_
                 << " != " << rhs.dimension_ << ")" << std::endl;
@@ -717,19 +717,19 @@ class kmeans_index {
     return std::equal(begin(lhs), end(lhs), begin(rhs));
   }
 
-  auto compare_centroids(const kmeans_index& rhs) {
+  auto compare_centroids(const ivf_index& rhs) {
     return compare_feature_vector_arrays(centroids_, rhs.centroids_);
   }
 
-  auto compare_feature_vectors(const kmeans_index& rhs) {
+  auto compare_feature_vectors(const ivf_index& rhs) {
     return compare_feature_vector_arrays(shuffled_db_, rhs.shuffled_db_);
   }
 
-  auto compare_indices(const kmeans_index& rhs) {
+  auto compare_indices(const ivf_index& rhs) {
     return compare_vectors(indices_, rhs.indices_);
   }
 
-  auto compare_shuffled_ids(const kmeans_index& rhs) {
+  auto compare_shuffled_ids(const ivf_index& rhs) {
     return compare_vectors(shuffled_ids_, rhs.shuffled_ids_);
   }
 
