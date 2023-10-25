@@ -63,7 +63,7 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
   ColMajorMatrix<float> training_data(4, 8);
   std::copy(begin(data), end(data), training_data.data());
 
-  auto index = kmeans_index<float, uint32_t, uint32_t>(
+  auto index = ivf_index<float, uint32_t, uint32_t>(
       4, 3, 10, 1e-4, 1, Catch::rngSeed());
 
   SECTION("random") {
@@ -113,7 +113,7 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
   std::copy(begin(data), end(data), training_data.data());
 
   auto index =
-      kmeans_index<float, size_t, size_t>(4, 3, 10, 1e-4, 1, Catch::rngSeed());
+      ivf_index<float, size_t, size_t>(4, 3, 10, 1e-4, 1, Catch::rngSeed());
 
   SECTION("random") {
     std::cout << "random" << std::endl;
@@ -146,7 +146,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
 
   SECTION("one iteration") {
     std::cout << "one iteration" << std::endl;
-    auto index = kmeans_index<float, size_t, size_t>(
+    auto index = ivf_index<float, size_t, size_t>(
         sklearn_centroids.num_rows(),
         sklearn_centroids.num_cols(),
         1,
@@ -160,7 +160,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
 
   SECTION("two iterations") {
     std::cout << "two iterations" << std::endl;
-    auto index = kmeans_index<float, size_t, size_t>(
+    auto index = ivf_index<float, size_t, size_t>(
         sklearn_centroids.num_rows(),
         sklearn_centroids.num_cols(),
         2,
@@ -174,7 +174,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
 
   SECTION("five iterations") {
     std::cout << "five iterations" << std::endl;
-    auto index = kmeans_index<float, size_t, size_t>(
+    auto index = ivf_index<float, size_t, size_t>(
         sklearn_centroids.num_rows(),
         sklearn_centroids.num_cols(),
         5,
@@ -195,7 +195,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
     }
 
     sklearn_centroids(0, 0) += 0.25;
-    auto index = kmeans_index<float, size_t, size_t>(
+    auto index = ivf_index<float, size_t, size_t>(
         sklearn_centroids.num_rows(),
         sklearn_centroids.num_cols(),
         5,
@@ -209,7 +209,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
 
   SECTION("five iterations") {
     std::cout << "five iterations" << std::endl;
-    auto index = kmeans_index<float, size_t, size_t>(
+    auto index = ivf_index<float, size_t, size_t>(
         sklearn_centroids.num_rows(),
         sklearn_centroids.num_cols(),
         5,
@@ -239,7 +239,7 @@ TEST_CASE("ivf_index: not a unit test per se", "[ivf_index]") {
   CHECK(A.num_rows() == 128);
   CHECK(A.num_cols() == 10'000);
   auto index =
-      kmeans_index<float, uint32_t, size_t>(A.num_rows(), 1000, 10, 1e-4, 8);
+      ivf_index<float, uint32_t, size_t>(A.num_rows(), 1000, 10, 1e-4, 8);
 
   SECTION("kmeans++") {
     index.kmeans_pp(A);
@@ -258,7 +258,7 @@ TEST_CASE("ivf_index: also not a unit test per se", "[ivf_index]") {
 
   CHECK(A.num_rows() == 128);
   CHECK(A.num_cols() == 10'000);
-  auto index = kmeans_index<float>(A.num_rows(), 1000, 10, 1e-4, 8);
+  auto index = ivf_index<float>(A.num_rows(), 1000, 10, 1e-4, 8);
 
   //SECTION("kmeans++") {
   //  index.kmeans_pp(A);
@@ -285,20 +285,61 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
   load(training_set);
 
-  auto idx = kmeans_index<float, uint32_t, uint32_t>(
+  auto idx = ivf_index<float, uint32_t, uint32_t>(
       dimension_, num_subspaces_, bits_per_subspace_, num_clusters_);
   idx.train(training_set, kmeans_init::kmeanspp);
   idx.add(training_set);
 
   idx.write_index(ivf_index_uri, true);
-  auto idx2 = kmeans_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
+  auto idx2 = ivf_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
+  idx2.read_index_infinite();
 
   CHECK(idx.compare_metadata(idx2));
 
   CHECK(idx.compare_centroids(idx2));
   CHECK(idx.compare_feature_vectors(idx2));
   CHECK(idx.compare_indices(idx2));
-  CHECK(idx.compare_shuffled_ids(idx2));
+  CHECK(idx.compare_partitioned_ids(idx2));
+}
 
-  auto foo = 0;
+TEST_CASE("flatpq_index: query siftsmall", "[flatpq_index]") {
+  tiledb::Context ctx;
+
+  // "learn" is 25k, "base" is 10k -- nlist should be 100, nprobe should be 10
+  size_t nlist = 100;
+  size_t nprobe = 10;
+
+  auto k_nn = 10;
+
+  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
+  training_set.load();
+
+  auto query_set = tdbColMajorMatrix<float>(ctx, siftsmall_query_uri, 0);
+  query_set.load();
+
+  auto groundtruth_set =
+      tdbColMajorMatrix<int32_t>(ctx, siftsmall_groundtruth_uri, 0);
+  groundtruth_set.load();
+
+  auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
+      training_set, query_set, k_nn, 1, sum_of_squares_distance{});
+
+  auto idx = ivf_index<float, uint32_t, uint32_t>(128, nlist, 8);
+  idx.train(training_set);
+  idx.add(training_set);
+
+  SECTION("infinite") {
+    auto&& [top_k_pq_scores, top_k_pq] = idx.query_infinite_ram(query_set, 10, 10);
+
+    auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
+    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    CHECK(recall0 > .975);
+
+    auto intersections1 =
+        (long)count_intersections(top_k_pq, groundtruth_set, k_nn);
+    double recall1 = intersections1 / ((double)top_k_pq.num_cols() * k_nn);
+    CHECK(recall1 > 0.975);
+
+    std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
+  }
 }

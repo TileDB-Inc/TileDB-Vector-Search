@@ -118,20 +118,20 @@ class ivf_index {
    * @param seed Seed for random number generator.
    */
   ivf_index(
-      size_t dimension,
+      size_t dim,
       size_t nlist,
       size_t max_iter,
       float tol = 0.000025,
       std::optional<size_t> num_threads = std::nullopt,
       std::optional<unsigned int> seed = std::nullopt)
       : gen(seed ? *seed : std::random_device{}())
-      , dimension_(dimension)
+      , dimension_(dim)
       , nlist_(nlist)
       , max_iter_(max_iter)
       , tol_(tol)
       , num_threads_(
             num_threads ? *num_threads : std::thread::hardware_concurrency())
-      , centroids_(dimension, nlist) {
+      , centroids_(dim, nlist) {
   }
 
   ivf_index(tiledb::Context& ctx, const std::string& uri) {
@@ -472,7 +472,7 @@ class ivf_index {
    * @param init Specify which initialization algorithm to use,
    * random (`random`) or kmeans++ (`kmeanspp`).
    */
-  void train(const ColMajorMatrix<T>& training_set, kmeans_init init) {
+  void train(const ColMajorMatrix<T>& training_set, kmeans_init init = kmeans_init::random) {
     switch (init) {
       case (kmeans_init::none):
         break;
@@ -590,7 +590,7 @@ class ivf_index {
 
   template <feature_vector_array Q>
   auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
-    read_index_infinite();
+
     return detail::ivf::query_infinite_ram(
         partitioned_vectors_,
         centroids_,
