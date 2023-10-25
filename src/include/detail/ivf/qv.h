@@ -99,10 +99,11 @@ namespace detail::ivf {
  * @return The indices of the top_k neighbors for each query vector
  */
 // @todo We should still order the queries so partitions are searched in order
+template <feature_vector_array F, feature_vector_array C, query_vector_array Q>
 auto qv_query_heap_infinite_ram(
-    auto&& partitioned_db,
-    auto&& centroids,
-    auto&& q,
+    const F& partitioned_db,
+    const C& centroids,
+    const Q& q,
     auto&& indices,
     auto&& partitioned_ids,
     size_t nprobe,
@@ -242,10 +243,11 @@ auto qv_query_heap_infinite_ram(
 // Functions for searching with infinite RAM, new qv (nuv) ordering
 // ----------------------------------------------------------------------------
 
+template <feature_vector_array F, query_vector_array Q, feature_vector_array C>
 auto nuv_query_heap_infinite_ram(
-    auto&& partitioned_db,
-    auto&& centroids,
-    auto&& query,
+    const F& partitioned_db,
+    const C& centroids,
+    const Q& query,
     auto&& indices,
     auto&& partitioned_ids,
     size_t nprobe,
@@ -306,10 +308,11 @@ auto nuv_query_heap_infinite_ram(
  * @param nthreads How many threads to use for parallel execution
  * @return The indices of the top_k neighbors for each query vector
  */
+template <feature_vector_array F, query_vector_array Q, feature_vector_array C>
 auto nuv_query_heap_infinite_ram(
-    auto&& partitioned_db,
-    auto&& centroids,
-    auto&& query,
+    const F& partitioned_db,
+    const C& centroids,
+    const Q& query,
     auto&& indices,
     auto&& partitioned_ids,
     size_t nprobe,
@@ -405,10 +408,11 @@ auto nuv_query_heap_infinite_ram(
   return top_k;
 }
 
+template <feature_vector_array F, query_vector_array Q, feature_vector_array C>
 auto nuv_query_heap_infinite_ram_reg_blocked(
-    auto&& partitioned_db,
-    auto&& centroids,
-    auto&& query,
+    const F& partitioned_db,
+    const C& centroids,
+    const Q& query,
     auto&& indices,
     auto&& partitioned_ids,
     size_t nprobe,
@@ -474,10 +478,11 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
  *
  * @todo We should still order the queries so partitions are searched in order
  */
+template <feature_vector_array F, query_vector_array Q, feature_vector_array C>
 auto nuv_query_heap_infinite_ram_reg_blocked(
-    auto&& partitioned_db,
-    auto&& centroids,
-    auto&& query,
+    const F& partitioned_db,
+    const C& centroids,
+    const Q& query,
     auto&& indices,
     auto&& partitioned_ids,
     size_t nprobe,

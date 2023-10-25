@@ -302,7 +302,7 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   CHECK(idx.compare_partitioned_ids(idx2));
 }
 
-TEST_CASE("flatpq_index: query siftsmall", "[flatpq_index]") {
+TEST_CASE("flativf_index: query siftsmall", "[flativf_index]") {
   tiledb::Context ctx;
 
   // "learn" is 25k, "base" is 10k -- nlist should be 100, nprobe should be 10
@@ -324,22 +324,84 @@ TEST_CASE("flatpq_index: query siftsmall", "[flatpq_index]") {
   auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
       training_set, query_set, k_nn, 1, sum_of_squares_distance{});
 
-  auto idx = ivf_index<float, uint32_t, uint32_t>(128, nlist, 8);
-  idx.train(training_set);
-  idx.add(training_set);
+  auto top_k_ivf_scores = ColMajorMatrix<float>();
+  auto top_k_ivf = ColMajorMatrix<unsigned>();
 
-  SECTION("infinite") {
-    auto&& [top_k_pq_scores, top_k_pq] = idx.query_infinite_ram(query_set, 10, 10);
+  SECTION("Build index and query in place") {
+    auto idx = ivf_index<float, uint32_t, uint32_t>(128, nlist, 8);
+    idx.train(training_set);
+    idx.add(training_set);
 
-    auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
-    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
-    CHECK(recall0 > .975);
+    SECTION("infinite") {
+      INFO("infinite");
+      std::tie(top_k_ivf_scores, top_k_ivf) =
+          idx.query_infinite_ram(query_set, 10, 10);
+    }
 
-    auto intersections1 =
-        (long)count_intersections(top_k_pq, groundtruth_set, k_nn);
-    double recall1 = intersections1 / ((double)top_k_pq.num_cols() * k_nn);
-    CHECK(recall1 > 0.975);
+    SECTION("qv_infinite") {
+      INFO("qv_infinite");
+      std::tie(top_k_ivf_scores, top_k_ivf) =
+          idx.qv_query_heap_infinite_ram(query_set, 10, 10);
+    }
 
-    std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
+    SECTION("nuv_infinite") {
+      INFO("nuv_infinite");
+      std::tie(top_k_ivf_scores, top_k_ivf) =
+          idx.qv_query_heap_infinite_ram(query_set, 10, 10);
+    }
+
+    SECTION("nuv_infinite_reg_blocked") {
+      INFO("nuv_infinite_reg_blocked");
+      std::tie(top_k_ivf_scores, top_k_ivf) =
+          idx.qv_query_heap_infinite_ram(query_set, 10, 10);
+    }
   }
+  SECTION("Build index, write, read and query") {
+    auto idx0 = ivf_index<float, uint32_t, uint32_t>(128, nlist, 8);
+    idx0.train(training_set);
+    idx0.add(training_set);
+
+    tiledb::Context ctx;
+    std::string ivf_index_uri = "/tmp/tmp_ivf_index";
+    idx0.write_index(ivf_index_uri, true);
+
+    auto idx = ivf_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
+
+    SECTION("infinite") {
+      INFO("infinite");
+      std::tie(top_k_ivf_scores, top_k_ivf) =
+          idx.query_infinite_ram(query_set, 10, 10);
+    }
+
+    SECTION("qv_infinite") {
+      INFO("qv_infinite");
+      std::tie(top_k_ivf_scores, top_k_ivf) =
+          idx.qv_query_heap_infinite_ram(query_set, 10, 10);
+    }
+
+    SECTION("nuv_infinite") {
+      INFO("nuv_infinite");
+      std::tie(top_k_ivf_scores, top_k_ivf) =
+          idx.qv_query_heap_infinite_ram(query_set, 10, 10);
+    }
+
+    SECTION("nuv_infinite_reg_blocked") {
+      INFO("nuv_infinite_reg_blocked");
+      std::tie(top_k_ivf_scores, top_k_ivf) =
+          idx.qv_query_heap_infinite_ram(query_set, 10, 10);
+    }
+  }
+
+  // @todo Should these all be equal to each other?  (They seem to differ
+  // a little bit from run to run -- a data race somewhere?)
+  auto intersections0 = (long)count_intersections(top_k_ivf, top_k, k_nn);
+  double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+  CHECK(recall0 > .971);
+
+  auto intersections1 =
+      (long)count_intersections(top_k_ivf, groundtruth_set, k_nn);
+  double recall1 = intersections1 / ((double)top_k_ivf.num_cols() * k_nn);
+  CHECK(recall1 > 0.971);
+
+  std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
 }

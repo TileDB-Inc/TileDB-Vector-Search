@@ -590,7 +590,9 @@ class ivf_index {
 
   template <feature_vector_array Q>
   auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
-
+    if (num_vectors(partitioned_vectors_) == 0) {
+      read_index_infinite();
+    }
     return detail::ivf::query_infinite_ram(
         partitioned_vectors_,
         centroids_,
@@ -604,8 +606,10 @@ class ivf_index {
 
   template <feature_vector_array Q>
   auto qv_query_heap_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
-    read_index_infinite();
-    return detail::ivf::qv_query_heap_infinite_ram<feature_type, id_type>(
+    if (num_vectors(partitioned_vectors_) == 0) {
+      read_index_infinite();
+    }
+    return detail::ivf::qv_query_heap_infinite_ram(
         partitioned_vectors_,
         centroids_,
         query_vectors,
@@ -618,8 +622,10 @@ class ivf_index {
 
   template <feature_vector_array Q>
   auto nuv_query_heap_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
-    read_index_infinite();
-    return detail::ivf::nuv_query_heap_infinite_ram<feature_type, id_type>(
+    if (num_vectors(partitioned_vectors_) == 0) {
+      read_index_infinite();
+    }
+    return detail::ivf::nuv_query_heap_infinite_ram(
         partitioned_vectors_,
         centroids_,
         query_vectors,
@@ -632,7 +638,9 @@ class ivf_index {
 
   template <feature_vector_array Q>
   auto nuv_query_heap_infinite_ram_reg_blocked(const Q& query_vectors, size_t k_nn, size_t nprobe) {
-    read_index_infinite();
+    if (num_vectors(partitioned_vectors_) == 0) {
+      read_index_infinite();
+    }
     return detail::ivf::nuv_query_heap_infinite_ram_reg_blocked<feature_type, id_type>(
         partitioned_vectors_,
         centroids_,
