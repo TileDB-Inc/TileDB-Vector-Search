@@ -52,11 +52,11 @@ namespace detail::ivf {
  * the results from each compute node and returns the final result.
  *
  */
+template <feature_vector_array C, feature_vector_array Q>
 auto partition_ivf_index(
-    auto&& centroids, auto&& query, size_t nprobe, size_t nthreads) {
+    const C& centroids, const Q& query, size_t nprobe, size_t nthreads) {
   scoped_timer _{tdb_func__};
 
-  size_t dimension = centroids.num_rows();
   size_t num_queries = num_vectors(query);
 
   // get closest centroid for each query vector

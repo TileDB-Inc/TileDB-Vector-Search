@@ -135,21 +135,13 @@ endif()
 
 #---[ Demos ]------------------------------------------------------------
 if (TILEDB_VS_ENABLE_BLAS OR TRUE)
-  # requires BLAS
-  add_executable(flat_l2 flat_l2.cc)
-  target_link_libraries(flat_l2 PUBLIC kmeans_lib nlohmann_json::nlohmann_json)
-  target_compile_definitions(flat_l2 PUBLIC TILEDB_VS_ENABLE_STATS)
+  # these don't really requires BLAS any longer
 
-  add_executable(ivf_flat ivf_flat.cc)
-  target_link_libraries(ivf_flat PUBLIC kmeans_lib)
-  target_compile_definitions(ivf_flat PUBLIC TILEDB_VS_ENABLE_STATS)
-
-  add_executable(ivf_index ivf_index.cc)
-  target_link_libraries(ivf_index PUBLIC kmeans_lib)
-  target_compile_definitions(ivf_index PUBLIC TILEDB_VS_ENABLE_STATS)
-
-  add_subdirectory(vamana)
+  add_subdirectory(flat)
+  add_subdirectory(ivf)
   add_subdirectory(pq)
+  add_subdirectory(vamana)
+
 else()
   message(STATUS "Disabling demo executables build because BLAS is disabled (TILEDBVS_ENABLE_BLAS).")
 endif()

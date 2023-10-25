@@ -63,7 +63,7 @@
 #include <tuple>
 #include <vector>
 
-#include <docopt.h>
+#include "docopt.h"
 
 #include "config.h"
 #include "ivf_query.h"

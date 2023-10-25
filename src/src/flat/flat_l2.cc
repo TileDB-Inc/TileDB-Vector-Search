@@ -83,7 +83,7 @@
 #include <thread>
 #include <vector>
 
-#include <docopt.h>
+#include "docopt.h"
 
 #include "flat_query.h"
 #include "stats.h"

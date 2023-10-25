@@ -1693,12 +1693,14 @@ auto query_finite_ram(
  * @param min_parts_per_thread Unused (WIP for threading heuristics)
  * @return The indices of the top_k neighbors for each query vector
  */
+template <feature_vector_array F, feature_vector_array C, feature_vector_array Q,
+          feature_vector I, feature_vector P>
 auto query_infinite_ram(
-    auto&& partitioned_db,
-    auto&& centroids,
-    auto&& query,
-    auto&& indices,
-    auto&& partitioned_ids,
+    const F& partitioned_db,
+    const C& centroids,
+    const Q& query,
+    const I& indices,
+    const P& partitioned_ids,
     size_t nprobe,
     size_t k_nn,
     size_t nthreads) {
