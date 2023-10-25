@@ -1,7 +1,6 @@
 [project]
 name = "tiledb-vector-search"
-version = "0.0.14"
-#dynamic = ["version"]
+dynamic = ["version"]
 description = "TileDB Vector Search Python client"
 license = { text = "MIT" }
 readme = "README.md"
@@ -19,7 +18,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "tiledb-cloud>=0.10.24",
+    "tiledb-cloud>=0.11",
     "tiledb>=0.23.1",
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
     "scikit-learn",
@@ -47,7 +46,7 @@ zip-safe = false
 
 [tool.setuptools_scm]
 root = "../.."
-#write_to = "apis/python/src/tiledb/vector_search/version.py"
+write_to = "apis/python/src/tiledb/vector_search/version.py"
 
 [tool.ruff]
 extend-select = ["I"]
