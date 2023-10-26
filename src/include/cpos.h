@@ -269,7 +269,7 @@ inline constexpr auto extents = _extents::_fn{};
 }  // namespace _cpo
 
 // ----------------------------------------------------------------------------
-// num_partitions CPO
+// load CPO
 // ----------------------------------------------------------------------------
 namespace _load {
 void load(auto&) = delete;

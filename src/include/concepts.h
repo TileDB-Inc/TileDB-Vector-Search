@@ -116,7 +116,9 @@ concept vectorable = requires(const T& t) {
 
 template <class T>
 concept partitionable = requires(const T& t) {
-  { num_partitions(t) } -> semi_integral;
+//  { num_partitions(t) } -> semi_integral;
+  {t.indices()};
+  {t.ids()};
 };
 
 // ----------------------------------------------------------------------------
@@ -153,6 +155,7 @@ concept feature_vector_array =
     // */ subscriptable_range<D> && requires(D d, const
     // std::iter_difference_t<std::ranges::iterator_t<D>> n) {
     requires(D d, size_t n) {
+//      typename D::feature_type;
   { num_vectors(d) } -> semi_integral;
   { dimension(d) } -> semi_integral;
   //{
@@ -187,10 +190,19 @@ concept contiguous_query_vector_array = contiguous_feature_vector_array<T>;
 template <class D>
 concept partitioned_feature_vector_array =
     feature_vector_array<D> && partitionable<D>;
+//    && requires(D d) {
+//      typename D::id_type;
+//      typename D::indices_type;
+//    };
 
 template <class D>
 concept contiguous_partitioned_feature_vector_array =
-    partitioned_feature_vector_array<D> && std::ranges::contiguous_range<D>;
+    partitioned_feature_vector_array<D> && std::ranges::contiguous_range<D> &&
+    requires (D d) {
+      { d.vectors() };
+      { d.indices() };
+      { d.ids() };
+    };
 
 // ----------------------------------------------------------------------------
 // partition_index concept (WIP)
