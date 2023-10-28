@@ -357,7 +357,6 @@ TEMPLATE_TEST_CASE(
     "[flatpq_index]",
     float,
     uint8_t) {
-
   /*
    * Note -- Reassignment breaks this small example if k_near and k_far
    * are equal to zero because some of the centroids are duplicates of one
@@ -406,16 +405,20 @@ TEMPLATE_TEST_CASE(
   }
 
   SECTION("asymmetric_pq_distances") {
-    auto [max_error2, avg_error2] = pq_idx2.verify_asymmetric_pq_distances(hypercube2);
+    auto [max_error2, avg_error2] =
+        pq_idx2.verify_asymmetric_pq_distances(hypercube2);
     CHECK(avg_error2 < 0.075);
-    auto [max_erro4, avg_error4] = pq_idx4.verify_asymmetric_pq_distances(hypercube4);
+    auto [max_erro4, avg_error4] =
+        pq_idx4.verify_asymmetric_pq_distances(hypercube4);
     CHECK(avg_error4 < 0.075);
   }
 
   SECTION("symmetric_pq_distances") {
-    auto [max_error2, avg_error2] = pq_idx2.verify_symmetric_pq_distances(hypercube2);
+    auto [max_error2, avg_error2] =
+        pq_idx2.verify_symmetric_pq_distances(hypercube2);
     CHECK(avg_error2 < 0.1);
-    auto [max_erro4, avg_error4] = pq_idx4.verify_symmetric_pq_distances(hypercube4);
+    auto [max_erro4, avg_error4] =
+        pq_idx4.verify_symmetric_pq_distances(hypercube4);
     CHECK(avg_error4 < 0.1);
   }
 }
@@ -450,8 +453,6 @@ TEST_CASE(
     CHECK(avg_error < 0.15);
   }
 }
-
-
 
 TEMPLATE_TEST_CASE(
     "flatpq_index: query stacked hypercube", "[flatpq_index]", float, uint8_t) {
@@ -513,14 +514,14 @@ TEMPLATE_TEST_CASE(
       auto a_vx_pqx2 = pq_idx2.sub_distance_asymmetric(vx, pqx);
       auto a_dpqx_evx2 = pq_idx2.sub_distance_asymmetric(
           pq_idx2.decode(pqx), pq_idx2.encode(vx));
-      auto s_evx_pqx2 = pq_idx2.sub_distance_symmetric(
-          pq_idx2.encode(vx), pqx);
+      auto s_evx_pqx2 = pq_idx2.sub_distance_symmetric(pq_idx2.encode(vx), pqx);
       auto ss_vx_dpqx2 = sum_of_squares(vx, pq_idx2.decode(pqx));
       auto s_evx_edpqx2 = pq_idx2.sub_distance_symmetric(
           pq_idx2.encode(vx), pq_idx2.encode(pq_idx2.decode(pqx)));
       auto a_evx_edpqx2 = pq_idx2.sub_distance_asymmetric(
           pq_idx2.decode(pq_idx2.encode(vx)), pqx);
-      auto ss_devx_dpqx2 = sum_of_squares(pq_idx2.decode(pq_idx2.encode(vx)), pq_idx2.decode(pqx));
+      auto ss_devx_dpqx2 = sum_of_squares(
+          pq_idx2.decode(pq_idx2.encode(vx)), pq_idx2.decode(pqx));
       auto ss_devx_vx2 = sum_of_squares(pq_idx2.decode(pq_idx2.encode(vx)), vx);
 
       auto scale = sum_of_squares(vx);
@@ -540,20 +541,18 @@ TEMPLATE_TEST_CASE(
   }
 
   SECTION("Test sub_distance_*symmetric, hypercube4") {
-
     for (auto&& [vx, pqx] : expected) {
-
       auto a_vx_pqx4 = pq_idx4.sub_distance_asymmetric(vx, pqx);
       auto a_dpqx_evx4 = pq_idx4.sub_distance_asymmetric(
           pq_idx4.decode(pqx), pq_idx4.encode(vx));
-      auto s_evx_pqx4 = pq_idx4.sub_distance_symmetric(
-          pq_idx4.encode(vx), pqx);
+      auto s_evx_pqx4 = pq_idx4.sub_distance_symmetric(pq_idx4.encode(vx), pqx);
       auto ss_vx_dpqx4 = sum_of_squares(vx, pq_idx4.decode(pqx));
       auto s_evx_edpqx4 = pq_idx4.sub_distance_symmetric(
           pq_idx4.encode(vx), pq_idx4.encode(pq_idx4.decode(pqx)));
       auto a_evx_edpqx4 = pq_idx4.sub_distance_symmetric(
           pq_idx4.decode(pq_idx4.encode(vx)), pqx);
-      auto ss_devx_dpqx4 = sum_of_squares(pq_idx4.decode(pq_idx4.encode(vx)), pq_idx4.decode(pqx));
+      auto ss_devx_dpqx4 = sum_of_squares(
+          pq_idx4.decode(pq_idx4.encode(vx)), pq_idx4.decode(pqx));
       auto ss_devx_vx4 = sum_of_squares(pq_idx4.decode(pq_idx4.encode(vx)), vx);
 
       auto scale = sum_of_squares(vx);
@@ -562,11 +561,11 @@ TEMPLATE_TEST_CASE(
       }
 
       CHECK(a_vx_pqx4 / scale < 0.0005);
-      CHECK(a_dpqx_evx4  / scale < 0.0005);
-      CHECK(s_evx_pqx4  / scale < 0.0005);
+      CHECK(a_dpqx_evx4 / scale < 0.0005);
+      CHECK(s_evx_pqx4 / scale < 0.0005);
       CHECK(ss_vx_dpqx4 / scale < 0.0005);
       CHECK(s_evx_edpqx4 / scale < 0.0005);
-      CHECK(a_evx_edpqx4  / scale < 0.0005);
+      CHECK(a_evx_edpqx4 / scale < 0.0005);
       CHECK(ss_devx_dpqx4 / scale < 0.0005);
       CHECK(ss_devx_vx4 / scale < 0.0005);
     }
@@ -648,7 +647,6 @@ TEMPLATE_TEST_CASE(
     }
   }
 #endif
-
 }
 
 TEST_CASE("flatpq_index: query siftsmall", "[flatpq_index]") {

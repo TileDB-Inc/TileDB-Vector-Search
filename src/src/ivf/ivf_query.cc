@@ -106,14 +106,12 @@ int main(int argc, char* argv[]) {
 
     auto idx = ivf_index<feature_type, id_type, uint32_t>(ctx, index_uri);
 
-    auto queries =
-        tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
+    auto queries = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
     queries.load();
 
     auto query_time = log_timer("query time", true);
 
     if (algorithm == "reg" && finite) {
-
     }
     if (algorithm == "reg" && !finite) {
     }
@@ -146,46 +144,46 @@ int main(int argc, char* argv[]) {
     query_time.stop();
   };
 
-    if (args["--groundtruth_uri"]) {
-      auto groundtruth_uri = args["--groundtruth_uri"].asString();
+  if (args["--groundtruth_uri"]) {
+    auto groundtruth_uri = args["--groundtruth_uri"].asString();
 
-      auto groundtruth =
-          tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
-      groundtruth.load();
+    auto groundtruth =
+        tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
+    groundtruth.load();
 
-      if (debug) {
-        std::cout << std::endl;
+    if (debug) {
+      std::cout << std::endl;
 
-        debug_matrix(groundtruth, "groundtruth");
-        debug_slice(groundtruth, "groundtruth");
+      debug_matrix(groundtruth, "groundtruth");
+      debug_slice(groundtruth, "groundtruth");
 
-        std::cout << std::endl;
-        debug_matrix(top_k, "top_k");
-        debug_slice(top_k, "top_k");
+      std::cout << std::endl;
+      debug_matrix(top_k, "top_k");
+      debug_slice(top_k, "top_k");
 
-        std::cout << std::endl;
-      }
-
-      size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
-      size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
-
-      float recall = ((float)total_intersected) / ((float)total_groundtruth);
-      // std::cout << "# total intersected = " << total_intersected << " of "
-      //           << total_groundtruth << " = "
-      //           << "R@" << k_nn << " of " << recall << std::endl;
-
-      if (args["--log"]) {
-        // idx.log_index();
-        dump_logs(
-            args["--log"].asString(),
-            "vamana",
-            nqueries,
-            {},
-            k_nn,
-            nthreads,
-            recall);
-      }
+      std::cout << std::endl;
     }
+
+    size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
+    size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
+
+    float recall = ((float)total_intersected) / ((float)total_groundtruth);
+    // std::cout << "# total intersected = " << total_intersected << " of "
+    //           << total_groundtruth << " = "
+    //           << "R@" << k_nn << " of " << recall << std::endl;
+
+    if (args["--log"]) {
+      // idx.log_index();
+      dump_logs(
+          args["--log"].asString(),
+          "vamana",
+          nqueries,
+          {},
+          k_nn,
+          nthreads,
+          recall);
+    }
+  }
 
   auto feature_type = args["--ftype"].asString();
   auto id_type = args["--idtype"].asString();

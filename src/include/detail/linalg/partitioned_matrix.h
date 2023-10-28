@@ -1,42 +1,44 @@
 /**
-* @file   partitioned_matrix.h
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
-*
-* Class the provides a matrix view to a partitioned TileDB array (as
-* partitioned by IVF indexing).
-*
-* The class requires the URI of a partitioned TileDB array and partitioned set of
-* vector identifiers.  The class will provide a view of the requested
-* partitions and the corresponding vector identifiers.
-*
-* Also provides support for out-of-core operation.
-*
-*/
+ * @file   partitioned_matrix.h
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
+ * Partitioned Matrix class.  It comprises a matrix (an array of feature
+ * vectors), an array of identifiers (ids), one for each vector, and an
+ * array of partition indices (part_index_).  The partition indices indicate
+ * partitions are stored contiguously and the ith index value indicates the
+ * first element of the ith partition (equivalently, one past the end of the
+ * (i-1)th partition.  The last index value is one past the end of the last
+ * partition.
+ *
+ * This format is very similar to the linear algebra compressed sparse row
+ * format.
+ *
+ */
 
 #ifndef PARTITIONED_MATRIX_H
 #define PARTITIONED_MATRIX_H
@@ -44,87 +46,168 @@
 #include <cstddef>
 #include "detail/linalg/matrix.h"
 
+/**
+ * @brief Partitioned matrix class.
+ * @tparam T
+ * @tparam IdType
+ * @tparam PartIndexType
+ * @tparam PartsType
+ * @tparam LayoutPolicy
+ * @tparam I
+ *
+ * Note:  The Matrix base class may have larger capacity than the vectors
+ * being stored (similarly ids_ and part_index_).  The member data num_vectors_
+ * and num_parts_ store the number of valid vectors and partitions being
+ * stored.
+ */
 template <
     class T,
     class IdType,
-    class IndicesType,
+    class PartIndexType,
     class PartsType,
     class LayoutPolicy = stdx::layout_right,
     class I = size_t>
 class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
-
   using Base = Matrix<T, LayoutPolicy, I>;
-  using Base::Base;
+  // using Base::Base;
+
+  // Make these private so they aren't accidentally used for sizing the
+  // derived class
+  using Base::num_cols;
+  using Base::num_rows;
 
  public:
   using value_type = typename Base::value_type;  // should be same as T
   using typename Base::index_type;
   using typename Base::reference;
   using typename Base::size_type;
-
   using id_type = IdType;
-  using indices_type = IndicesType;
+
+ private:
+  using part_index_type = PartIndexType;
   using parts_type = PartsType;
 
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
+  // Stores the number of valid vectors being stored
+  size_t num_vectors_{0};
+
+  // Stores the number of valid partitions being stored
+  size_t num_parts_{0};
+
+ protected:
   // Index for partitioned vectors
-  std::vector<indices_type> indices_;       // @todo pointer and span?
+  std::vector<part_index_type> part_index_;  // @todo pointer and span?
 
   // ids for the partitioned vectors
-  std::vector<id_type> ids_;
+  std::vector<id_type> ids_;  // @todo pointer and span?
+
+ public:
+  PartitionedMatrix() = default;
+
+  /**
+   * @brief Construct a partitioned matrix with a given dimension, maximum
+   * number of vectors, and maximum number of partitions.
+   *
+   * @param dim The dimension of the vectors
+   * @param max_num_vecs The maximum number of vectors
+   * @param max_num_parts The maximum number of partitions
+   */
+  PartitionedMatrix(size_t dim, size_t max_num_vecs, size_t max_num_parts)
+      : Base(dim, max_num_vecs)
+      , part_index_(max_num_parts + 1)
+      , ids_(max_num_vecs) {
+  }
 
   /**
    * @brief Construct a partitioned matrix in place from a training set of data
-   * and an array mapping each vector of the training set to a partition.  By
-   * definition, this will only be suitable for infinite memory use, and
-   * the data is already loaded, so we probably don't need to set up all the
-   * machinery to do loading, etc.  But we set them up anyway.
+   * and an array of labels that maps each vector of the training set to a
+   * partition.
    *
-   * @tparam F
-   * @tparam C
-   * @tparam V
-   * @param training_set
-   * @param parts
-   * @param num_parts
-   * @param num_threads_
+   * @tparam F A feature vector array (of the training set)
+   * @tparam V A contiguous range of size_t
+   * @param training_set The training set of data
+   * @param part_labels A vector of size num_vectors(training_set) that maps
+   * each vector of the training set to a partition.
+   * @param num_parts The number of partitions
+   * @param num_threads_ The number of threads to use for parallel operations
    */
-  template <feature_vector_array F, feature_vector_array C, std::ranges::contiguous_range V>
-  PartitionedMatrix(const F& training_set, const V& parts, size_t num_parts, size_t num_threads_)
+  template <feature_vector_array F, std::ranges::contiguous_range V>
+  PartitionedMatrix(
+      const F& training_set,
+      const V& part_labels,
+      size_t num_parts,
+      size_t num_threads_)
       : Base(::dimension(training_set), ::num_vectors(training_set))
-      , indices_{num_parts + 1}
-      , ids_{::num_vectors(training_set)}
-  {
+      , num_vectors_{::num_vectors(training_set)}
+      , num_parts_{num_parts}
+      , part_index_(num_parts_ + 1)
+      , ids_(num_vectors_) {
     auto degrees = std::vector<size_t>(num_parts);
 
-    auto partitioned_vectors =
-        ColMajorMatrix<T>{dimension(training_set), num_vectors(training_set)};
-
     for (size_t i = 0; i < ::num_vectors(training_set); ++i) {
-      auto j = parts[i];
+      auto j = part_labels[i];
       ++degrees[j];
     }
-    indices_[0] = 0;
-    std::inclusive_scan(begin(degrees), end(degrees), begin(indices_) + 1);
+    part_index_[0] = 0;
+    std::inclusive_scan(begin(degrees), end(degrees), begin(part_index_) + 1);
 
     for (size_t i = 0; i < ::num_vectors(training_set); ++i) {
-      size_t bin = parts[i];
-      size_t ibin = indices_[bin];
+      size_t bin = part_labels[i];
+      size_t ibin = part_index_[bin];
 
       ids_[ibin] = i;
 
-      assert(ibin < partitioned_vectors.num_cols());
+      assert(ibin < this->num_cols());
       for (size_t j = 0; j < dimension(training_set); ++j) {
-        partitioned_vectors(j, ibin) = training_set(j, i);
+        this->operator()(j, ibin) = training_set(j, i);
       }
-      ++indices_[bin];
+      ++part_index_[bin];
     }
 
-    std::shift_right(begin(indices_), end(indices_), 1);
-    indices_[0] = 0;
+    std::shift_right(begin(part_index_), end(part_index_), 1);
+    part_index_[0] = 0;
+  }
+
+  PartitionedMatrix(const PartitionedMatrix&) = delete;
+  PartitionedMatrix& operator=(const PartitionedMatrix&) = delete;
+  PartitionedMatrix(PartitionedMatrix&&) = delete;
+
+  PartitionedMatrix& operator=(PartitionedMatrix&&) = default;
+
+  virtual ~PartitionedMatrix() = default;
+
+  constexpr auto& num_vectors() {
+    return num_vectors_;
+  }
+
+  constexpr auto& num_vectors() const {
+    return num_vectors_;
+  }
+
+  constexpr auto& num_parts() const {
+    return num_parts_;
+  }
+  constexpr auto& num_parts() {
+    return num_parts_;
+  }
+
+  auto& ids() const {
+    return ids_;
+  }
+
+  auto& indices() const {
+    return part_index_;
+  }
+
+  auto& indices() {
+    return part_index_;
+  }
+
+  virtual bool load() {
+    return false;
   }
 };
-
 
 /**
  * Convenience class for row-major matrices.
@@ -132,13 +215,13 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 template <
     class T,
     class partitioned_ids_type,
-    class indices_type,
+    class part_index_type,
     class parts_type,
     class I = size_t>
 using RowMajorPartitionedMatrix = PartitionedMatrix<
     T,
     partitioned_ids_type,
-    indices_type,
+    part_index_type,
     parts_type,
     stdx::layout_right,
     I>;
@@ -149,16 +232,15 @@ using RowMajorPartitionedMatrix = PartitionedMatrix<
 template <
     class T,
     class partitioned_ids_type,
-    class indices_type,
+    class part_index_type,
     class parts_type,
     class I = size_t>
 using ColMajorPartitionedMatrix = PartitionedMatrix<
     T,
     partitioned_ids_type,
-    indices_type,
+    part_index_type,
     parts_type,
     stdx::layout_left,
     I>;
-
 
 #endif  // PARTITIONED_MATRIX_H

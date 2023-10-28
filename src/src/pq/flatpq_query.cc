@@ -103,9 +103,9 @@ int main(int argc, char* argv[]) {
 
     auto query_time = log_timer("query time", true);
 
-    auto&& [top_k_scores, top_k] = asymmetric
-                                       ? idx.asymmetric_query(queries, k_nn)
-                                       : idx.symmetric_query(queries, k_nn);
+    auto&& [top_k_scores, top_k] = asymmetric ?
+                                       idx.asymmetric_query(queries, k_nn) :
+                                       idx.symmetric_query(queries, k_nn);
 
     query_time.stop();
 

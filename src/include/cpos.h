@@ -330,13 +330,13 @@ concept _member_col_offset = requires(T t) {
 };
 
 template <class T>
-concept _member_col_part_offset = requires(T t) {
-  { t.col_part_offset() } -> semi_integral;
+concept _member_resident_part_offset = requires(T t) {
+  { t.resident_part_offset() } -> semi_integral;
 };
 
 template <class T>
-concept _member_num_col_parts = requires(T t) {
-  { t.num_col_parts() } -> semi_integral;
+concept _member_num_resident_parts = requires(T t) {
+  { t.num_resident_parts() } -> semi_integral;
 };
 
 struct _fn {
@@ -353,26 +353,26 @@ struct _fn {
 };
 
 struct _gn {
-  template <_member_col_part_offset T>
+  template <_member_resident_part_offset T>
   auto constexpr operator()(T&& t) const noexcept {
-    return t.col_part_offset();
+    return t.resident_part_offset();
   }
 
   template <class T>
-  requires(!_member_col_part_offset<T>) auto constexpr operator()(
+  requires(!_member_resident_part_offset<T>) auto constexpr operator()(
       T&& t) const noexcept {
     return 0;
   }
 };
 
 struct _hn {
-  template <_member_num_col_parts T>
+  template <_member_num_resident_parts T>
   auto constexpr operator()(T&& t) const noexcept {
-    return t.num_col_parts();
+    return t.num_resident_parts();
   }
 
   template <class T>
-  requires(!_member_num_col_parts<T>) auto constexpr operator()(
+  requires(!_member_num_resident_parts<T>) auto constexpr operator()(
       T&& t) const noexcept {
     return 0;
   }
@@ -381,8 +381,8 @@ struct _hn {
 }  // namespace _col_offset
 inline namespace _cpo {
 inline constexpr auto col_offset = _col_offset::_fn{};
-inline constexpr auto num_col_parts = _col_offset::_gn{};
-inline constexpr auto col_part_offset = _col_offset::_hn{};
+inline constexpr auto num_resident_parts = _col_offset::_gn{};
+inline constexpr auto resident_part_offset = _col_offset::_hn{};
 }  // namespace _cpo
 
 // ----------------------------------------------------------------------------

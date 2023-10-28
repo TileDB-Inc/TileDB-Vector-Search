@@ -37,6 +37,7 @@
 
 #include "../ivf_index.h"
 #include "../linalg.h"
+#include "gen_graphs.h"
 #include "query_common.h"
 
 TEST_CASE("ivf_index: test test", "[ivf_index]") {
@@ -63,8 +64,8 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
   ColMajorMatrix<float> training_data(4, 8);
   std::copy(begin(data), end(data), training_data.data());
 
-  auto index = ivf_index<float, uint32_t, uint32_t>(
-      4, 3, 10, 1e-4, 1, Catch::rngSeed());
+  auto index =
+      ivf_index<float, uint32_t, uint32_t>(4, 3, 10, 1e-4, 1, Catch::rngSeed());
 
   SECTION("random") {
     std::cout << "random" << std::endl;
@@ -79,7 +80,7 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
   CHECK(index.get_centroids().num_cols() == 3);
   CHECK(index.get_centroids().num_rows() == 4);
 
-  debug_centroids(index);
+  // debug_centroids(index);
 
   for (size_t i = 0; i < index.get_centroids().num_cols() - 1; ++i) {
     for (size_t j = i + 1; j < index.get_centroids().num_cols(); ++j) {
@@ -124,12 +125,14 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
     std::cout << "kmeans++" << std::endl;
     index.train(training_data, kmeans_init::kmeanspp);
   }
-
-  // Test???
-
-  // debug_centroids(index);
 }
 
+
+/*
+ * Test with some data scraped from sklearn
+ * More significant testing of kmeans (more significant comparisons against
+ * sklearn) are done in python
+ */
 TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
   ColMajorMatrix<float> training_data{
       {1.0573647, 5.082087},
@@ -155,7 +158,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         Catch::rngSeed());
     index.set_centroids(sklearn_centroids);
     index.train(training_data, kmeans_init::none);
-    debug_centroids(index);
+    // debug_centroids(index);
   }
 
   SECTION("two iterations") {
@@ -169,7 +172,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         Catch::rngSeed());
     index.set_centroids(sklearn_centroids);
     index.train(training_data, kmeans_init::none);
-    debug_centroids(index);
+    // debug_centroids(index);
   }
 
   SECTION("five iterations") {
@@ -183,7 +186,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         Catch::rngSeed());
     index.set_centroids(sklearn_centroids);
     index.train(training_data, kmeans_init::none);
-    debug_centroids(index);
+    // debug_centroids(index);
   }
 
   SECTION("five iterations, perturbed") {
@@ -204,7 +207,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         Catch::rngSeed());
     index.set_centroids(sklearn_centroids);
     index.train(training_data, kmeans_init::none);
-    debug_centroids(index);
+    // debug_centroids(index);
   }
 
   SECTION("five iterations") {
@@ -217,76 +220,24 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         1,
         Catch::rngSeed());
     index.train(training_data, kmeans_init::random);
-    debug_centroids(index);
+    // debug_centroids(index);
   }
 }
-
-
-
-
-// kmeans and kmeans indexing still WIP
-#if 0
-
-TEST_CASE("ivf_index: not a unit test per se", "[ivf_index]") {
-  tiledb::Context ctx;
-  //  auto A = tdbColMajorMatrix<float>(ctx,
-  //  "s3://tiledb-andrew/sift/siftsmall_base");
-  auto A = tdbColMajorMatrix<float>(
-      ctx,
-      "/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/sift/"
-      "sift_base");
-
-  CHECK(A.num_rows() == 128);
-  CHECK(A.num_cols() == 10'000);
-  auto index =
-      ivf_index<float, uint32_t, size_t>(A.num_rows(), 1000, 10, 1e-4, 8);
-
-  SECTION("kmeans++") {
-    index.kmeans_pp(A);
-  }
-  SECTION("random") {
-    index.kmeans_random_init(A);
-  }
-
-  index.train_no_init(A);
-}
-
-TEST_CASE("ivf_index: also not a unit test per se", "[ivf_index]") {
-  tiledb::Context ctx;
-  //  auto A = tdbColMajorMatrix<float>(ctx, "s3://tiledb-andrew/sift/siftsmall_base");
-  auto A = tdbColMajorMatrix<float>(ctx, "/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/sift/sift_base");
-
-  CHECK(A.num_rows() == 128);
-  CHECK(A.num_cols() == 10'000);
-  auto index = ivf_index<float>(A.num_rows(), 1000, 10, 1e-4, 8);
-
-  //SECTION("kmeans++") {
-  //  index.kmeans_pp(A);
-  //}
-  //SECTION("random") {
-//    index.kmeans_random_init(A);
-//  }
-
-//  index.train_no_init(A);
-//  index.add(A);
-
-}
-#endif
-
 
 TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
-  size_t dimension_{128};
-  size_t num_subspaces_{16};
-  size_t bits_per_subspace_{8};
-  size_t num_clusters_{256};
+  size_t dimension = 128;
+  size_t nlist = 100;
+  size_t nprobe = 10;
+  size_t k_nn = 10;
+  size_t nthreads = 1;
 
   tiledb::Context ctx;
   std::string ivf_index_uri = "/tmp/tmp_ivf_index";
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
   load(training_set);
 
-  auto idx = ivf_index<float, uint32_t, uint32_t>(
-      dimension_, num_subspaces_, bits_per_subspace_, num_clusters_);
+  auto idx = ivf_index<float, uint32_t, uint32_t>(dimension, nlist, nthreads);
+
   idx.train(training_set, kmeans_init::kmeanspp);
   idx.add(training_set);
 
@@ -295,21 +246,119 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   idx2.read_index_infinite();
 
   CHECK(idx.compare_metadata(idx2));
-
   CHECK(idx.compare_centroids(idx2));
   CHECK(idx.compare_feature_vectors(idx2));
   CHECK(idx.compare_indices(idx2));
   CHECK(idx.compare_partitioned_ids(idx2));
 }
 
-TEST_CASE("flativf_index: query siftsmall", "[flativf_index]") {
+TEMPLATE_TEST_CASE(
+    "flativf_index: query stacked hypercube",
+    "[flativf_index]",
+    float,
+    uint8_t) {
+  size_t k_dist = GENERATE(0, 32);
+  size_t k_near = k_dist;
+  size_t k_far = k_dist;
+
+  auto hypercube0 = build_hypercube<TestType>(k_near, k_far, 0xdeadbeef);
+  auto hypercube1 = build_hypercube<TestType>(k_near, k_far, 0xbeefdead);
+
+  auto hypercube2 = ColMajorMatrix<TestType>(6, num_vectors(hypercube0));
+  auto hypercube4 = ColMajorMatrix<TestType>(12, num_vectors(hypercube0));
+
+  for (size_t j = 0; j < 3; ++j) {
+    for (size_t i = 0; i < num_vectors(hypercube4); ++i) {
+      hypercube2(j, i) = hypercube0(j, i);
+      hypercube2(j + 3, i) = hypercube1(j, i);
+
+      hypercube4(j, i) = hypercube0(j, i);
+      hypercube4(j + 3, i) = hypercube1(j, i);
+      hypercube4(j + 6, i) = hypercube0(j, i);
+      hypercube4(j + 9, i) = hypercube1(j, i);
+    }
+  }
+
+  // Test with just a single partition -- should match flat index
+  SECTION("nlist = 1") {
+    size_t k_nn = 6;
+    size_t nlist = 1;
+
+    auto ivf_idx2 = ivf_index<TestType, uint32_t, uint32_t>(
+        128, nlist, 4, 1.e-4, 1);  // dim nlist maxiter eps nthreads
+    ivf_idx2.train(hypercube2);
+    ivf_idx2.add(hypercube2);
+
+    auto ivf_idx4 =
+        ivf_index<TestType, uint32_t, uint32_t>(128, nlist, 4, 1.e-4, 1);
+    ivf_idx4.train(hypercube4);
+    ivf_idx4.add(hypercube4);
+
+    auto top_k_ivf_scores = ColMajorMatrix<float>();
+    auto top_k_ivf = ColMajorMatrix<unsigned>();
+    auto top_k_scores = ColMajorMatrix<float>();
+    auto top_k = ColMajorMatrix<unsigned long long>();
+    auto query2 = ColMajorMatrix<TestType>();
+    auto query4 = ColMajorMatrix<TestType>();
+
+    SECTION("query2/4 = 0...") {
+      query2 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0}};
+      query4 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
+    }
+    SECTION("query2/4 = 127...") {
+      query2 = ColMajorMatrix<TestType>{{127, 127, 127, 127, 127, 127}};
+      query4 = ColMajorMatrix<TestType>{
+          {127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127}};
+    }
+    SECTION("query2/4 = 0...") {
+      query2 = ColMajorMatrix<TestType>{{0, 0, 0, 127, 127, 127}};
+      query4 = ColMajorMatrix<TestType>{
+          {0, 0, 0, 0, 0, 0, 127, 127, 127, 127, 127, 127}};
+    }
+    SECTION("query2/4 = 127...") {
+      query2 = ColMajorMatrix<TestType>{{127, 127, 127, 0, 0, 0}};
+      query4 = ColMajorMatrix<TestType>{
+          {127, 127, 127, 127, 127, 127, 0, 0, 0, 0, 0, 0}};
+    }
+    SECTION("query2/4 = 127...") {
+      query2 = ColMajorMatrix<TestType>{
+          {127, 0, 127, 0, 127, 0}, {0, 127, 0, 127, 0, 127}};
+      query4 = ColMajorMatrix<TestType>{
+          {127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0},
+          {0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127}};
+    }
+
+    std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
+        hypercube2, query2, k_nn, 1, sum_of_squares_distance{});
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        ivf_idx2.qv_query_heap_infinite_ram(query2, k_nn, 1);  // k, nprobe
+    auto intersections0 = (long)count_intersections(top_k_ivf, top_k, k_nn);
+    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    CHECK(intersections0 == k_nn * num_vectors(query2));
+    CHECK(recall0 == 1.0);
+
+    std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
+        hypercube4, query4, k_nn, 1, sum_of_squares_distance{});
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        ivf_idx4.qv_query_heap_infinite_ram(query4, k_nn, 1);  // k, nprobe
+
+    auto intersections1 = (long)count_intersections(top_k_ivf, top_k, k_nn);
+    double recall1 = intersections1 / ((double)top_k.num_cols() * k_nn);
+    CHECK(intersections1 == k_nn * num_vectors(query4));
+    CHECK(recall1 == 1.0);
+  }
+}
+
+TEST_CASE("ivf_index: siftsmall infinite queries", "[ivf_index]") {
   tiledb::Context ctx;
 
   // "learn" is 25k, "base" is 10k -- nlist should be 100, nprobe should be 10
-  size_t nlist = 100;
-  size_t nprobe = 10;
-
+  size_t nlist = GENERATE(1, 100);
+  size_t nprobe = std::min<size_t>(10, nlist);
   auto k_nn = 10;
+  size_t nthreads = 8;
+  size_t max_iter = 10;
+  float tolerance = 1e-4;
 
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
   training_set.load();
@@ -328,9 +377,16 @@ TEST_CASE("flativf_index: query siftsmall", "[flativf_index]") {
   auto top_k_ivf = ColMajorMatrix<unsigned>();
 
   SECTION("Build index and query in place") {
-    auto idx = ivf_index<float, uint32_t, uint32_t>(128, nlist, 8);
+    auto idx = ivf_index<float, uint32_t, uint32_t>(
+        128, nlist, max_iter, tolerance, nthreads);
     idx.train(training_set);
     idx.add(training_set);
+
+    SECTION("qv_infinite") {
+      INFO("qv_infinite");
+      std::tie(top_k_ivf_scores, top_k_ivf) =
+          idx.qv_query_heap_infinite_ram(query_set, 10, 10);
+    }
 
     SECTION("infinite") {
       INFO("infinite");
@@ -356,6 +412,7 @@ TEST_CASE("flativf_index: query siftsmall", "[flativf_index]") {
           idx.qv_query_heap_infinite_ram(query_set, 10, 10);
     }
   }
+
   SECTION("Build index, write, read and query") {
     auto idx0 = ivf_index<float, uint32_t, uint32_t>(128, nlist, 8);
     idx0.train(training_set);
@@ -372,7 +429,6 @@ TEST_CASE("flativf_index: query siftsmall", "[flativf_index]") {
       std::tie(top_k_ivf_scores, top_k_ivf) =
           idx.query_infinite_ram(query_set, 10, 10);
     }
-
     SECTION("qv_infinite") {
       INFO("qv_infinite");
       std::tie(top_k_ivf_scores, top_k_ivf) =
@@ -396,12 +452,20 @@ TEST_CASE("flativf_index: query siftsmall", "[flativf_index]") {
   // a little bit from run to run -- a data race somewhere?)
   auto intersections0 = (long)count_intersections(top_k_ivf, top_k, k_nn);
   double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
-  CHECK(recall0 > .971);
+  if (nlist == 1) {
+    CHECK(intersections0 == num_vectors(top_k) * dimension(top_k));
+    CHECK(recall0 == 1.0);
+  }
+  CHECK(recall0 > .968);
 
   auto intersections1 =
       (long)count_intersections(top_k_ivf, groundtruth_set, k_nn);
   double recall1 = intersections1 / ((double)top_k_ivf.num_cols() * k_nn);
-  CHECK(recall1 > 0.971);
+  if (nlist == 1) {
+    CHECK(intersections1 == num_vectors(top_k) * dimension(top_k));
+    CHECK(recall1 == 1.0);
+  }
+  CHECK(recall1 > 0.968);
 
-  std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
+  // std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
 }

@@ -148,13 +148,13 @@ void create_vector(
 template <std::ranges::contiguous_range V>
 void write_vector(
     const tiledb::Context& ctx,
-    V& v,
+    const V& v,
     const std::string& uri,
     size_t start_pos = 0,
     bool create = true) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
-  // using value_type = std::ranges::range_value_t<V>;
+  using value_type = std::remove_const_t<std::ranges::range_value_t<V>>;
 
   if (create) {
     create_vector(ctx, v, uri);
@@ -170,9 +170,11 @@ void write_vector(
   tiledb::Subarray subarray(ctx, array);
   subarray.set_subarray(subarray_vals);
 
+  // print_types(v, v.data(), v.size());
+
   tiledb::Query query(ctx, array);
   query.set_layout(TILEDB_ROW_MAJOR)
-      .set_data_buffer("values", v.data(), size(v))
+      .set_data_buffer("values", const_cast<value_type*>(v.data()), size(v))
       .set_subarray(subarray);
 
   query.submit();

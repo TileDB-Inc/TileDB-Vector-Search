@@ -566,7 +566,6 @@ class flatpq_index {
 
   template <feature_vector V, feature_vector W>
   auto encode(const V& v, W&& pq) {
-
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimension_ * subspace;
       auto sub_end = sub_begin + sub_dimension_;
