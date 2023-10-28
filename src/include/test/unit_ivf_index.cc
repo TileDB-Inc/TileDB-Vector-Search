@@ -127,7 +127,6 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
   }
 }
 
-
 /*
  * Test with some data scraped from sklearn
  * More significant testing of kmeans (more significant comparisons against
@@ -376,7 +375,7 @@ TEST_CASE("ivf_index: siftsmall infinite queries", "[ivf_index]") {
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<unsigned>();
 
-    // Temporarily disable while testing finite
+  // Temporarily disable while testing finite
   // Note:  In-place only makes sense for infinite ram case
   SECTION("Build index and query in place, infinite") {
     auto idx = ivf_index<float, uint32_t, uint32_t>(

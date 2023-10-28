@@ -319,7 +319,7 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
 
   auto num_queries = num_vectors(query);
 
-    auto min_scores =
+  auto min_scores =
       std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>>(
           nthreads,
           std::vector<fixed_min_pair_heap<score_type, id_type>>(
@@ -693,7 +693,7 @@ auto nuv_query_heap_finite_ram(
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads) {
-  scoped_timer _{tdb_func__ };
+  scoped_timer _{tdb_func__};
 
   using id_type = typename F::id_type;
   using score_type = float;
@@ -734,12 +734,11 @@ auto nuv_query_heap_finite_ram(
                * partition as their top centroid.
                */
               for (size_t p = first_part; p < last_part; ++p) {
-
                 // @todo this may not be correct -- resident_part_offset is
                 // part of tdbPartitionedMatrix, not PartitionedMatrix
                 auto partno = p + resident_part_offset(partitioned_vectors);
-                auto start = indices[p]; //[partno];
-                auto stop = indices[p+1]; //[partno+1];
+                auto start = indices[p];     //[partno];
+                auto stop = indices[p + 1];  //[partno+1];
 
                 /*
                  * Get the queries associated with this partition.
@@ -829,7 +828,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads) {
-  scoped_timer _{tdb_func__ };
+  scoped_timer _{tdb_func__};
 
   using id_type = typename F::id_type;
   using score_type = float;
@@ -872,7 +871,6 @@ auto nuv_query_heap_finite_ram_reg_blocked(
              n,
              first_part,
              last_part]() {
-
               /*
                * For each partition, process the queries that have that
                * partition as their top centroid.
@@ -880,12 +878,11 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                * Assumption: Each partition is an active partition
                */
               for (size_t p = first_part; p < last_part; ++p) {
-
                 // @todo this may not be correct -- resident_part_offset is
                 // part of tdbPartitionedMatrix, not PartitionedMatrix
                 auto partno = p + resident_part_offset(partitioned_vectors);
                 auto start = indices[p];
-                auto stop = indices[p+1];
+                auto stop = indices[p + 1];
 
                 auto kstep = stop - start;
                 auto kstop = start + 2 * (kstep / 2);
@@ -989,13 +986,13 @@ auto nuv_query_heap_finite_ram_reg_blocked(
 template <partitioned_feature_vector_array P, query_vector_array Q, class A>
 auto apply_query(
     const P& partitioned_vectors,
-    const std::optional<A>& active_partitions,  // Need for infinite case, not finite
+    const std::optional<A>&
+        active_partitions,  // Need for infinite case, not finite
     const Q& query,
     auto&& active_queries,
     size_t k_nn,
     size_t first_active_part,
     size_t last_active_part) {
-
   using id_type = typename P::id_type;
   using score_type = float;
 
@@ -1009,7 +1006,6 @@ auto apply_query(
 
   // Iterate through the active partitions
   for (size_t partno = first_active_part; partno < last_active_part; ++partno) {
-
     // Note that in the infinite case, the active_partitions are a subset
     // of all the partitions.  In the finite case, all partitions are active.
     // auto quartno = active_partitions[partno];
@@ -1133,7 +1129,8 @@ auto query_finite_ram(
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads,
-    size_t min_parts_per_thread = 0) {}
+    size_t min_parts_per_thread = 0) {
+}
 
 template <
     feature_vector_array F,
@@ -1299,7 +1296,7 @@ auto query_infinite_ram(
            last_part]() {
             return apply_query(
                 partitioned_vectors,
-                std::optional { active_partitions },
+                std::optional{active_partitions},
                 query,
                 active_queries,
                 k_nn,
@@ -1324,7 +1321,6 @@ auto query_infinite_ram(
 
   return top_k;
 }
-
 
 }  // namespace detail::ivf
 

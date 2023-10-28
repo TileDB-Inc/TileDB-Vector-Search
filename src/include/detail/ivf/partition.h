@@ -50,8 +50,9 @@ namespace detail::ivf {
  * @param nthreads
  * @return The top nprobe centroids for each query vector.
  */
-template<feature_vector_array C, query_vector_array Q>
-auto ivf_top_centroids(const C& centroids, const Q&query, size_t nprobe, size_t nthreads) {
+template <feature_vector_array C, query_vector_array Q>
+auto ivf_top_centroids(
+    const C& centroids, const Q& query, size_t nprobe, size_t nthreads) {
   return detail::flat::qv_query_heap_0(centroids, query, nprobe, nthreads);
 }
 
@@ -78,7 +79,7 @@ auto partition_ivf_index(
 
   // Get the closest centroid for each query vector
   // There may be duplicates
-    auto top_centroids = ivf_top_centroids(centroids, query, nprobe, nthreads);
+  auto top_centroids = ivf_top_centroids(centroids, query, nprobe, nthreads);
 
   /*
    * `top_centroids` maps from rank X query index to the centroid *index*.
@@ -94,7 +95,7 @@ auto partition_ivf_index(
   for (size_t j = 0; j < num_queries; ++j) {
     for (size_t p = 0; p < nprobe; ++p) {
       auto tmp = top_centroids(p, j);
-      //assert(tmp == 0);
+      // assert(tmp == 0);
       centroid_query.emplace(top_centroids(p, j), j);
       active_centroids.emplace(top_centroids(p, j));
     }

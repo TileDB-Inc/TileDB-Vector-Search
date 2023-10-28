@@ -100,7 +100,6 @@ template <feature_vector_array DB, query_vector_array Q>
         get_top_k_from_scores(scores, top_k[j], k_nn);
       });
 
-
   // This shows uninitialized matrix when k_nn = 10 and num_vectors(db) = 1
   // std::cout << "======\n";
   // debug_slice(top_k);
