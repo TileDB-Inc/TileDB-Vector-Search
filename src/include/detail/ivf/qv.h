@@ -106,16 +106,17 @@ template <
     feature_vector_array C,
     query_vector_array Q>
 auto qv_query_heap_infinite_ram(
-    const F& partitioned_vectors,
     const C& centroids,
-    const Q& q,
+    auto&& top_centroids,
+    const F& partitioned_vectors,
+    const Q& query,
     size_t nprobe,
     size_t k_nn,
     size_t nthreads) {
   if (num_loads(partitioned_vectors) == 0) {
     load(partitioned_vectors);
   }
-  scoped_timer _{"Total time " + tdb_func__};
+  scoped_timer _{tdb_func__};
 
   using id_type = typename F::id_type;
   auto indices = partitioned_vectors.indices();
@@ -123,21 +124,15 @@ auto qv_query_heap_infinite_ram(
 
   using score_type = float;
 
-  // @todo is this the best (fastest) algorithm to use?  (it takes miniscule
-  // time at rate)
-  auto top_centroids =
-      detail::flat::qv_query_heap_0(centroids, q, nprobe, nthreads);
-
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
-      num_vectors(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
+      num_vectors(query), fixed_min_pair_heap<score_type, id_type>(k_nn));
 
-  // Parallelizing over q is not going to be the most efficient
+  // Parallelize over the queries
   {
-    scoped_timer __{tdb_func__ + std::string{"_in_ram"}};
     auto par = stdx::execution::indexed_parallel_policy{nthreads};
     stdx::range_for_each(
         std::move(par),
-        q,
+        query,
         [&, nprobe](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
           for (size_t p = 0; p < nprobe; ++p) {
             size_t start = indices[top_centroids(p, j)];
@@ -185,9 +180,11 @@ template <
     feature_vector_array C,
     query_vector_array Q>
 auto nuv_query_heap_infinite_ram(
-    const F& partitioned_vectors,
     const C& centroids,
+    const F& partitioned_vectors,
+    auto&& active_partitions,
     const Q& query,
+    auto&& active_queries,
     size_t nprobe,
     size_t k_nn,
     size_t nthreads) {
@@ -197,15 +194,12 @@ auto nuv_query_heap_infinite_ram(
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
   using id_type = typename F::id_type;
-  auto indices = partitioned_vectors.indices();
-  auto partitioned_ids = partitioned_vectors.ids();
-
   using score_type = float;
 
-  auto num_queries = num_vectors(query);
+  auto partitioned_ids = partitioned_vectors.ids();
+  auto indices = partitioned_vectors.indices();
 
-  auto&& [active_partitions, active_queries] =
-      partition_ivf_index(centroids, query, nprobe, nthreads);
+  auto num_queries = num_vectors(query);
 
   auto min_scores =
       std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>>(
@@ -304,9 +298,11 @@ auto nuv_query_heap_infinite_ram(
  */
 template <feature_vector_array F, query_vector_array Q, feature_vector_array C>
 auto nuv_query_heap_infinite_ram_reg_blocked(
-    const F& partitioned_vectors,
     const C& centroids,
+    const F& partitioned_vectors,
+    auto&& active_partitions,
     const Q& query,
+    auto&& active_queries,
     size_t nprobe,
     size_t k_nn,
     size_t nthreads) {
@@ -316,22 +312,14 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
   using id_type = typename F::id_type;
-  auto indices = partitioned_vectors.indices();
-  auto partitioned_ids = partitioned_vectors.ids();
-
   using score_type = float;
+
+  auto partitioned_ids = partitioned_vectors.ids();
+  auto indices = partitioned_vectors.indices();
 
   auto num_queries = num_vectors(query);
 
-  // @todo Maybe we don't want to do new_indices in partition_ivf_index after
-  //  all since they aren't used in this function
-  auto&& [active_partitions, active_queries] =
-      partition_ivf_index(centroids, query, nprobe, nthreads);
-
-  // auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
-  //     size(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
-
-  auto min_scores =
+    auto min_scores =
       std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>>(
           nthreads,
           std::vector<fixed_min_pair_heap<score_type, id_type>>(
@@ -654,89 +642,6 @@ auto qv_query_heap_finite_ram(
 // Functions for searching with finite RAM, new qv (nuv) ordering
 // ----------------------------------------------------------------------------
 
-template <class feature_type, class id_type>
-auto nuv_query_heap_finite_ram(
-    tiledb::Context& ctx,
-    const std::string& part_uri,
-    auto&& centroids,
-    auto&& query,
-    auto&& indices,
-    const std::string& id_uri,
-    size_t nprobe,
-    size_t k_nn,
-    size_t upper_bound,
-    size_t nthreads);
-
-/**
- * Interface with uris for all arguments.
- */
-template <
-    typename feature_type,
-    class id_type,
-    class centroids_type,
-    class indices_type>
-auto nuv_query_heap_finite_ram(
-    const std::string& part_uri,
-    const std::string& centroids_uri,
-    const std::string& query_uri,
-    const std::string& indices_uri,
-    const std::string& id_uri,
-    size_t nqueries,
-    size_t nprobe,
-    size_t k_nn,
-    size_t upper_bound,
-    size_t nthreads) {
-  tiledb::Context ctx;
-
-  // using centroid_type =
-  // std::invoke_result_t<tdbColMajorMatrix<centroids_type>>;
-  using query_type = std::invoke_result_t<tdbColMajorMatrix<feature_type>>;
-  using idx_type = std::invoke_result_t<tdbColMajorMatrix<indices_type>>;
-
-  std::future<centroids_type> centroids_future =
-      std::async(std::launch::async, [&]() {
-        auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
-        centroids.load();
-        return centroids;
-      });
-  // auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
-  // centroids.load();
-
-  std::future<query_type> query_future = std::async(std::launch::async, [&]() {
-    auto query =
-        tdbColMajorMatrix<feature_type, id_type>(ctx, query_uri, nqueries);
-    query.load();
-    return query;
-  });
-  // auto query =
-  //      tdbColMajorMatrix<db_type, id_type>(ctx, query_uri,
-  //      nqueries);
-  // query.load();
-
-  std::future<idx_type> indices_future = std::async(std::launch::async, [&]() {
-    auto indices = read_vector<indices_type>(ctx, indices_uri);
-    return indices;
-  });
-  //  auto indices = read_vector<indices_type>(ctx, indices_uri);
-
-  // Wait for completion in order of expected access time
-  auto indices = indices_future.get();
-  auto query = query_future.get();
-  auto centroids = centroids_future.get();
-
-  return nuv_query_heap_finite_ram(
-      ctx,
-      part_uri,
-      centroids,
-      query,
-      indices,
-      id_uri,
-      nprobe,
-      k_nn,
-      upper_bound,
-      nthreads);
-}
-
 /**
  * @brief OG Implementation of finite RAM using the new qv (nuv) ordering.
  * Queries a set of query vectors against an indexed vector database. The
@@ -774,70 +679,26 @@ auto nuv_query_heap_finite_ram(
  * @param nthreads How many threads to use for parallel execution
  * @return The indices of the top_k neighbors for each query vector
  */
-template <class feature_type, class id_type>
+
+template <
+    feature_vector_array F,
+    feature_vector_array C,
+    feature_vector_array Q>
 auto nuv_query_heap_finite_ram(
-    tiledb::Context& ctx,
-    const std::string& part_uri,
-    auto&& centroids,
-    auto&& query,
-    auto&& indices,
-    const std::string& id_uri,
+    const C& centroids,
+    F& partitioned_vectors,
+    const Q& query,
+    auto&& active_queries,
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads) {
-  scoped_timer _{tdb_func__ + " " + part_uri};
+  scoped_timer _{tdb_func__ };
 
-  // Check that the size of the indices vector is correct
-  assert(size(indices) == centroids.num_cols() + 1);
-
+  using id_type = typename F::id_type;
   using score_type = float;
-  using indices_type =
-      typename std::remove_reference_t<decltype(indices)>::value_type;
 
   auto num_queries = num_vectors(query);
-
-  auto&& [active_partitions, active_queries] =
-      partition_ivf_index(centroids, query, nprobe, nthreads);
-
-  using parts_type = typename decltype(active_partitions)::value_type;
-
-  auto partitioned_vectors = tdbColMajorPartitionedMatrix<
-      feature_type,
-      id_type,
-      indices_type,
-      parts_type>(
-      ctx, part_uri, indices, active_partitions, id_uri, upper_bound);
-
-  std::vector<parts_type> new_indices(size(active_partitions) + 1);
-  new_indices[0] = 0;
-  for (size_t i = 0; i < size(active_partitions); ++i) {
-    new_indices[i + 1] = new_indices[i] + indices[active_partitions[i] + 1] -
-                         indices[active_partitions[i]];
-  }
-
-  {
-    // Record some memory usage stats
-    size_t max_partition_size{0};
-    for (size_t i = 0; i < size(new_indices) - 1; ++i) {
-      auto partition_size = new_indices[i + 1] - new_indices[i];
-      max_partition_size = std::max<size_t>(max_partition_size, partition_size);
-      _memory_data.insert_entry(
-          tdb_func__ + " (predicted)",
-          partition_size * sizeof(feature_type) *
-              partitioned_vectors.num_rows());
-    }
-    _memory_data.insert_entry(
-        tdb_func__ + " (upper bound)",
-        nprobe * num_queries * sizeof(feature_type) * max_partition_size);
-  }
-
-  assert(partitioned_vectors.num_cols() == size(partitioned_vectors.ids()));
-  debug_matrix(partitioned_vectors, "partitioned_vectors");
-  debug_matrix(partitioned_vectors.ids(), "partitioned_vectors.ids()");
-
-  // auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
-  //       size(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
 
   std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>> min_scores(
       nthreads,
@@ -849,8 +710,10 @@ auto nuv_query_heap_finite_ram(
   while (partitioned_vectors.load()) {
     _i.start();
 
-    auto current_part_size = partitioned_vectors.num_resident_parts();
+    auto indices = partitioned_vectors.indices();
+    auto partitioned_ids = partitioned_vectors.ids();
 
+    auto current_part_size = ::num_partitions(partitioned_vectors);
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
     std::vector<std::future<void>> futs;
@@ -871,12 +734,12 @@ auto nuv_query_heap_finite_ram(
                * partition as their top centroid.
                */
               for (size_t p = first_part; p < last_part; ++p) {
+
+                // @todo this may not be correct -- resident_part_offset is
+                // part of tdbPartitionedMatrix, not PartitionedMatrix
                 auto partno = p + resident_part_offset(partitioned_vectors);
-                auto start =
-                    new_indices[partno] - col_offset(partitioned_vectors);
-                auto stop =
-                    new_indices[partno + 1] - col_offset(partitioned_vectors);
-                ;
+                auto start = indices[p]; //[partno];
+                auto stop = indices[p+1]; //[partno+1];
 
                 /*
                  * Get the queries associated with this partition.
@@ -953,70 +816,25 @@ auto nuv_query_heap_finite_ram(
  * @param nthreads How many threads to use for parallel execution
  * @return The indices of the top_k neighbors for each query vector
  */
-template <class feature_type, class id_type>
+template <
+    feature_vector_array F,
+    feature_vector_array C,
+    feature_vector_array Q>
 auto nuv_query_heap_finite_ram_reg_blocked(
-    tiledb::Context& ctx,
-    const std::string& part_uri,
-    auto&& centroids,
-    auto&& query,
-    auto&& indices,
-    const std::string& id_uri,
+    const C& centroids,
+    F& partitioned_vectors,
+    const Q& query,
+    auto&& active_queries,
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads) {
-  scoped_timer _{tdb_func__ + " " + part_uri};
+  scoped_timer _{tdb_func__ };
 
-  // Check that the size of the indices vector is correct
-  assert(size(indices) == centroids.num_cols() + 1);
-
+  using id_type = typename F::id_type;
   using score_type = float;
-  using indices_type =
-      typename std::remove_reference_t<decltype(indices)>::value_type;
 
   auto num_queries = num_vectors(query);
-
-  auto&& [active_partitions, active_queries] =
-      partition_ivf_index(centroids, query, nprobe, nthreads);
-
-  using parts_type = typename decltype(active_partitions)::value_type;
-
-  auto partitioned_vectors = tdbColMajorPartitionedMatrix<
-      feature_type,
-      id_type,
-      indices_type,
-      parts_type>(
-      ctx, part_uri, indices, active_partitions, id_uri, upper_bound);
-
-  std::vector<parts_type> new_indices(size(active_partitions) + 1);
-  new_indices[0] = 0;
-  for (size_t i = 0; i < size(active_partitions); ++i) {
-    new_indices[i + 1] = new_indices[i] + indices[active_partitions[i] + 1] -
-                         indices[active_partitions[i]];
-  }
-
-  {
-    // Record some memory usage stats
-    size_t max_partition_size{0};
-    for (size_t i = 0; i < size(new_indices) - 1; ++i) {
-      auto partition_size = new_indices[i + 1] - new_indices[i];
-      max_partition_size = std::max<size_t>(max_partition_size, partition_size);
-      _memory_data.insert_entry(
-          tdb_func__ + " (predicted)",
-          partition_size * sizeof(feature_type) *
-              partitioned_vectors.num_rows());
-    }
-    _memory_data.insert_entry(
-        tdb_func__ + " (upper bound)",
-        nprobe * num_queries * sizeof(feature_type) * max_partition_size);
-  }
-
-  assert(partitioned_vectors.num_cols() == size(partitioned_vectors.ids()));
-  debug_matrix(partitioned_vectors, "partitioned_vectors");
-  debug_matrix(partitioned_vectors.ids(), "partitioned_vectors.ids()");
-
-  // auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
-  //       size(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
 
   std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>> min_scores(
       nthreads,
@@ -1028,8 +846,10 @@ auto nuv_query_heap_finite_ram_reg_blocked(
   while (partitioned_vectors.load()) {
     _i.start();
 
-    auto current_part_size = partitioned_vectors.num_resident_parts();
+    auto indices = partitioned_vectors.indices();
+    auto partitioned_ids = partitioned_vectors.ids();
 
+    auto current_part_size = ::num_partitions(partitioned_vectors);
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
     std::vector<std::future<void>> futs;
@@ -1047,32 +867,26 @@ auto nuv_query_heap_finite_ram_reg_blocked(
             [&min_scores,
              &query,
              &partitioned_vectors,
-             &new_indices,
+             &indices,
              &active_queries = active_queries,
-             &active_partitions = active_partitions,
              n,
              first_part,
              last_part]() {
-              size_t col_offset = _cpo::col_offset(partitioned_vectors);
-              size_t part_offset = resident_part_offset(partitioned_vectors);
 
               /*
                * For each partition, process the queries that have that
                * partition as their top centroid.
+               *
+               * Assumption: Each partition is an active partition
                */
               for (size_t p = first_part; p < last_part; ++p) {
-                auto partno = p + part_offset;
 
-                auto quartno = partno;
-                //                if constexpr
-                //                (!has_num_resident_parts<std::remove_cvref_t<decltype(partitioned_vectors)>>)
-                //                {
-                quartno = active_partitions[partno];
-                //                }
-                (void)active_partitions;  // Silence unused warning
+                // @todo this may not be correct -- resident_part_offset is
+                // part of tdbPartitionedMatrix, not PartitionedMatrix
+                auto partno = p + resident_part_offset(partitioned_vectors);
+                auto start = indices[p];
+                auto stop = indices[p+1];
 
-                auto start = new_indices[quartno] - col_offset;
-                auto stop = new_indices[quartno + 1] - col_offset;
                 auto kstep = stop - start;
                 auto kstop = start + 2 * (kstep / 2);
 
@@ -1172,46 +986,40 @@ auto nuv_query_heap_finite_ram_reg_blocked(
  * @param last_part One past the last partition to query
  * @return
  */
-template <query_vector_array Q, partitioned_feature_vector_array P>
+template <partitioned_feature_vector_array P, query_vector_array Q, class A>
 auto apply_query(
-    const Q& query,
     const P& partitioned_vectors,
-    auto&& new_indices,
+    const std::optional<A>& active_partitions,  // Need for infinite case, not finite
+    const Q& query,
     auto&& active_queries,
-    auto&& ids,
-    auto&& active_partitions,
     size_t k_nn,
-    size_t first_part,
-    size_t last_part) {
-  //  print_types(query, partitioned_vectors, new_indices, active_queries);
+    size_t first_active_part,
+    size_t last_active_part) {
 
-  // using feature_type = typename
-  // std::remove_reference_t<decltype(partitioned_vectors)>::value_type;
-  using id_type = typename std::remove_reference_t<decltype(ids)>::value_type;
+  using id_type = typename P::id_type;
   using score_type = float;
 
+  auto partitioned_ids = partitioned_vectors.ids();
+  auto indices = partitioned_vectors.indices();
+
   auto num_queries = num_vectors(query);
+
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
       num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
 
-  size_t part_offset = 0;
-  size_t col_offset = 0;
-  col_offset = _cpo::col_offset(partitioned_vectors);
-  part_offset = resident_part_offset(partitioned_vectors);
+  // Iterate through the active partitions
+  for (size_t partno = first_active_part; partno < last_active_part; ++partno) {
 
-  for (size_t p = first_part; p < last_part; ++p) {
-    auto partno = p + part_offset;
+    // Note that in the infinite case, the active_partitions are a subset
+    // of all the partitions.  In the finite case, all partitions are active.
+    // auto quartno = active_partitions[partno];
+    auto active_partno = partno;
+    if (active_partitions) {
+      active_partno = active_partitions.value()[partno];
+    }
 
-    // @todo this is a bit of a hack
-    auto quartno = partno;
-    //    if constexpr (!has_num_resident_parts<decltype(partitioned_vectors)>)
-    //    {
-    quartno = active_partitions[partno];
-    //    }
-
-    // We don't need col_offset fixup any longer
-    auto start = new_indices[quartno];     // - col_offset;
-    auto stop = new_indices[quartno + 1];  // - col_offset;
+    auto start = indices[active_partno];
+    auto stop = indices[active_partno + 1];
 
     auto kstep = stop - start;
     auto kstop = start + 2 * (kstep / 2);
@@ -1231,10 +1039,10 @@ auto apply_query(
         auto score_10 = L2(q_vec_1, partitioned_vectors[kp + 0]);
         auto score_11 = L2(q_vec_1, partitioned_vectors[kp + 1]);
 
-        min_scores[j0].insert(score_00, ids[kp + 0]);
-        min_scores[j0].insert(score_01, ids[kp + 1]);
-        min_scores[j1].insert(score_10, ids[kp + 0]);
-        min_scores[j1].insert(score_11, ids[kp + 1]);
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0]);
+        min_scores[j0].insert(score_01, partitioned_ids[kp + 1]);
+        min_scores[j1].insert(score_10, partitioned_ids[kp + 0]);
+        min_scores[j1].insert(score_11, partitioned_ids[kp + 1]);
       }
 
       /*
@@ -1243,8 +1051,8 @@ auto apply_query(
       for (size_t kp = kstop; kp < stop; ++kp) {
         auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
         auto score_10 = L2(q_vec_1, partitioned_vectors[kp + 0]);
-        min_scores[j0].insert(score_00, ids[kp + 0]);
-        min_scores[j1].insert(score_10, ids[kp + 0]);
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0]);
+        min_scores[j1].insert(score_10, partitioned_ids[kp + 0]);
       }
     }
 
@@ -1259,15 +1067,16 @@ auto apply_query(
         auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
         auto score_01 = L2(q_vec_0, partitioned_vectors[kp + 1]);
 
-        min_scores[j0].insert(score_00, ids[kp + 0]);
-        min_scores[j0].insert(score_01, ids[kp + 1]);
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0]);
+        min_scores[j0].insert(score_01, partitioned_ids[kp + 1]);
       }
       for (size_t kp = kstop; kp < stop; ++kp) {
         auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
-        min_scores[j0].insert(score_00, ids[kp + 0]);
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0]);
       }
     }
   }
+
   return min_scores;
 }
 
@@ -1324,67 +1133,39 @@ auto query_finite_ram(
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads,
-    size_t min_parts_per_thread = 0) {
-  scoped_timer _{tdb_func__ + " " + part_uri};
+    size_t min_parts_per_thread = 0) {}
 
-  // Check that the size of the indices vector is correct
-  assert(size(indices) == centroids.num_cols() + 1);
+template <
+    feature_vector_array F,
+    feature_vector_array C,
+    feature_vector_array Q>
+auto query_finite_ram(
+    const C& centroids,
+    F& partitioned_vectors,
+    const Q& query,
+    auto&& active_queries,
+    size_t nprobe,
+    size_t k_nn,
+    size_t upper_bound,
+    size_t nthreads) {
+  scoped_timer _{tdb_func__};
 
+  using id_type = typename F::id_type;
   using score_type = float;
-  using indices_type =
-      typename std::remove_reference_t<decltype(indices)>::value_type;
 
   auto num_queries = num_vectors(query);
-
-  auto&& [active_partitions, active_queries] =
-      partition_ivf_index(centroids, query, nprobe, nthreads);
-
-  using parts_type = typename decltype(active_partitions)::value_type;
-
-  auto partitioned_vectors = tdbColMajorPartitionedMatrix<
-      feature_type,
-      id_type,
-      indices_type,
-      parts_type>(
-      ctx, part_uri, indices, active_partitions, id_uri, upper_bound);
-
-  log_timer _i{tdb_func__ + " in RAM"};
-
-  std::vector<parts_type> new_indices(size(active_partitions) + 1);
-  new_indices[0] = 0;
-  for (size_t i = 0; i < size(active_partitions); ++i) {
-    new_indices[i + 1] = new_indices[i] + indices[active_partitions[i] + 1] -
-                         indices[active_partitions[i]];
-  }
-
-  {
-    // Record some memory usage stats
-    size_t max_partition_size{0};
-    for (size_t i = 0; i < size(new_indices) - 1; ++i) {
-      auto partition_size = new_indices[i + 1] - new_indices[i];
-      max_partition_size = std::max<size_t>(max_partition_size, partition_size);
-      _memory_data.insert_entry(
-          tdb_func__ + " (predicted)",
-          partition_size * sizeof(feature_type) *
-              partitioned_vectors.num_rows());
-    }
-    _memory_data.insert_entry(
-        tdb_func__ + " (upper bound)",
-        nprobe * num_queries * sizeof(feature_type) * max_partition_size);
-  }
-
-  assert(partitioned_vectors.num_cols() == size(partitioned_vectors.ids()));
-  debug_matrix(partitioned_vectors, "partitioned_vectors");
-  debug_matrix(partitioned_vectors.ids(), "partitioned_vectors.ids()");
 
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
       num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
 
+  log_timer _i{tdb_func__ + " in RAM"};
   while (partitioned_vectors.load()) {
     _i.start();
 
-    auto current_part_size = partitioned_vectors.num_resident_parts();
+    auto indices = partitioned_vectors.indices();
+    auto partitioned_ids = partitioned_vectors.ids();
 
+    auto current_part_size = ::num_partitions(partitioned_vectors);
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
     {
@@ -1402,19 +1183,16 @@ auto query_finite_ram(
               std::launch::async,
               [&query,
                &partitioned_vectors,
-               &new_indices,
+               &indices,
                &active_queries = active_queries,
-               &active_partitions = active_partitions,
                k_nn,
                first_part,
                last_part]() {
                 return apply_query(
-                    query,
                     partitioned_vectors,
-                    new_indices,
+                    std::optional<std::vector<int>>{},
+                    query,
                     active_queries,
-                    partitioned_vectors.ids(),
-                    active_partitions,
                     k_nn,
                     first_part,
                     last_part);
@@ -1475,33 +1253,23 @@ template <
     feature_vector_array C,
     feature_vector_array Q>
 auto query_infinite_ram(
-    const F& partitioned_vectors,
     const C& centroids,
+    const F& partitioned_vectors,
+    auto&& active_partitions,
     const Q& query,
+    auto&& active_queries,
     size_t nprobe,
     size_t k_nn,
     size_t nthreads) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
+  using id_type = typename F::id_type;
+  using score_type = float;
+
   auto partitioned_ids = partitioned_vectors.ids();
   auto indices = partitioned_vectors.indices();
 
-  // using feature_type = typename
-  // std::remove_reference_t<decltype(partitioned_vectors)>::value_type;
-  using id_type =
-      typename std::remove_reference_t<decltype(partitioned_ids)>::value_type;
-  using score_type = float;
-
-  // Check that the sizes of the index constituents are correct
-  assert(num_vectors(partitioned_vectors) == partitioned_ids.size());
-  assert(size(indices) == num_vectors(centroids) + 1);
-
   auto num_queries = num_vectors(query);
-
-  auto&& [active_partitions, active_queries] =
-      partition_ivf_index(centroids, query, nprobe, nthreads);
-
-  using parts_type = typename decltype(active_partitions)::value_type;
 
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
       num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
@@ -1530,12 +1298,10 @@ auto query_infinite_ram(
            first_part,
            last_part]() {
             return apply_query(
-                query,
                 partitioned_vectors,
-                indices,
+                std::optional { active_partitions },
+                query,
                 active_queries,
-                partitioned_ids,
-                active_partitions,
                 k_nn,
                 first_part,
                 last_part);
@@ -1559,35 +1325,6 @@ auto query_infinite_ram(
   return top_k;
 }
 
-template <class feature_type, class id_type>
-auto query_infinite_ram(
-    tiledb::Context& ctx,
-    const std::string& part_uri,
-    auto&& centroids,
-    auto&& q,
-    auto&& indices,
-    const std::string& id_uri,
-    size_t nprobe,
-    size_t k_nn,
-    size_t nthreads) {
-  scoped_timer _{tdb_func__};
-
-  // Read the shuffled database and ids
-  // @todo To this more systematically
-  auto partitioned_vectors = tdbColMajorMatrix<feature_type>(ctx, part_uri);
-  partitioned_vectors.load();
-  auto partitioned_ids = read_vector<id_type>(ctx, id_uri);
-
-  return query_infinite_ram(
-      partitioned_vectors,
-      centroids,
-      q,
-      indices,
-      partitioned_ids,
-      nprobe,
-      k_nn,
-      nthreads);
-}
 
 }  // namespace detail::ivf
 

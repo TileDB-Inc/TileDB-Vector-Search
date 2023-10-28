@@ -339,7 +339,7 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
     Base::operator=(
         std::move(Base{dimension, column_capacity, max_resident_parts}));
     this->num_vectors() = 0;
-    this->num_parts() = 0;
+    this->num_partitions() = 0;
   }
 
   /**
@@ -505,7 +505,7 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
     }
 
     this->num_vectors() = num_resident_cols_;
-    this->num_parts() = num_resident_parts_;
+    this->num_partitions() = num_resident_parts_;
 
     num_loads_++;
     return true;

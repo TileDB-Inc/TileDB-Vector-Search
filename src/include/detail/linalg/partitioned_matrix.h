@@ -82,10 +82,10 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   using typename Base::reference;
   using typename Base::size_type;
   using id_type = IdType;
+  using parts_type = PartsType;
 
  private:
   using part_index_type = PartIndexType;
-  using parts_type = PartsType;
 
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
@@ -185,10 +185,10 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
     return num_vectors_;
   }
 
-  constexpr auto& num_parts() const {
+  constexpr auto& num_partitions() const {
     return num_parts_;
   }
-  constexpr auto& num_parts() {
+  constexpr auto& num_partitions() {
     return num_parts_;
   }
 

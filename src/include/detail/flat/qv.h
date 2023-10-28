@@ -79,7 +79,11 @@ template <feature_vector_array DB, query_vector_array Q>
   using id_type = size_t;
   using score_type = float;
 
-  ColMajorMatrix<id_type> top_k(k_nn, num_vectors(q));
+  // @todo This should work with num_top_k as min, rather than k_nn if
+  // k_nn < num_vectors(db) but somehow it doesn't
+  // A matrix with many uninitialized values is created....
+  auto num_top_k = std::min<decltype(k_nn)>(k_nn, num_vectors(db));
+  ColMajorMatrix<id_type> top_k(k_nn, /*num_top_k,*/ num_vectors(q));
 
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
   stdx::range_for_each(
@@ -95,6 +99,12 @@ template <feature_vector_array DB, query_vector_array Q>
         }
         get_top_k_from_scores(scores, top_k[j], k_nn);
       });
+
+
+  // This shows uninitialized matrix when k_nn = 10 and num_vectors(db) = 1
+  // std::cout << "======\n";
+  // debug_slice(top_k);
+  // std::cout << "======\n";
 
   return top_k;
 }

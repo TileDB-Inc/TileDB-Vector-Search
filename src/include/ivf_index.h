@@ -59,6 +59,7 @@
 
 #include "detail/flat/qv.h"
 #include "detail/ivf/index.h"
+#include "detail/ivf/partition.h"
 
 #include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
@@ -574,68 +575,145 @@ class ivf_index {
    *
    ****************************************************************************/
 
+  // Seems to use active partitions and active queries
   template <feature_vector_array Q>
   auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
+    auto&& [active_partitions, active_queries] =
+        detail::ivf::partition_ivf_index<parts_type>(centroids_, query_vectors, nprobe, num_threads_);
     return detail::ivf::query_infinite_ram(
-        *partitioned_vectors_,
         centroids_,
+        *partitioned_vectors_,
+        active_partitions,
         query_vectors,
+        active_queries,
         nprobe,
         k_nn,
         num_threads_);
   }
 
+  // Requires only top_centroids -- don't need complete partition_ivf_index
   template <feature_vector_array Q>
   auto qv_query_heap_infinite_ram(
       const Q& query_vectors, size_t k_nn, size_t nprobe) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
+    auto top_centroids = detail::ivf::ivf_top_centroids(centroids_, query_vectors, nprobe, num_threads_);
     return detail::ivf::qv_query_heap_infinite_ram(
-        *partitioned_vectors_,
         centroids_,
+        top_centroids,
+        *partitioned_vectors_,
         query_vectors,
         nprobe,
         k_nn,
         num_threads_);
   }
 
+  // Seems to use active partitions and active queries
   template <feature_vector_array Q>
   auto nuv_query_heap_infinite_ram(
       const Q& query_vectors, size_t k_nn, size_t nprobe) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
+    auto&& [active_partitions, active_queries] =
+        detail::ivf::partition_ivf_index<parts_type>(centroids_, query_vectors, nprobe, num_threads_);
     return detail::ivf::nuv_query_heap_infinite_ram(
-        *partitioned_vectors_,
         centroids_,
+        *partitioned_vectors_,
+        active_partitions,
         query_vectors,
+        active_queries,
         nprobe,
         k_nn,
         num_threads_);
   }
 
+  // Seems to use active partitions and active queries
   template <feature_vector_array Q>
   auto nuv_query_heap_infinite_ram_reg_blocked(
       const Q& query_vectors, size_t k_nn, size_t nprobe) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
+    auto&& [active_partitions, active_queries] =
+        detail::ivf::partition_ivf_index<parts_type>(centroids_, query_vectors, nprobe, num_threads_);
     return detail::ivf::
         nuv_query_heap_infinite_ram_reg_blocked<feature_type, id_type>(
-            *partitioned_vectors_,
             centroids_,
+            *partitioned_vectors_,
+            active_partitions,
             query_vectors,
+            active_queries,
             nprobe,
             k_nn,
             num_threads_);
   }
 
-// Temporarily disable finite queries
-#if 0
+  template <feature_vector_array Q>
+  auto nuv_query_heap_finite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe, size_t upper_bound = 0) {
+    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
+      std::throw_with_nested(std::runtime_error(
+          "Vectors are already loaded. Cannot load twice. "
+          "Cannot do finite query on in-memory index."));
+    }
+    auto&& [active_partitions, active_queries] = read_index_finite(query_vectors, nprobe, upper_bound);
+
+    return detail::ivf::nuv_query_heap_finite_ram(
+        centroids_,
+        *partitioned_vectors_,
+        query_vectors,
+        active_queries,
+        nprobe,
+        k_nn,
+        upper_bound,
+        num_threads_);
+  }
+
+  template <feature_vector_array Q>
+  auto nuv_query_heap_finite_ram_reg_blocked(const Q& query_vectors, size_t k_nn, size_t nprobe, size_t upper_bound = 0) {
+    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
+      std::throw_with_nested(std::runtime_error(
+          "Vectors are already loaded. Cannot load twice. "
+          "Cannot do finite query on in-memory index."));
+    }
+    auto&& [active_partitions, active_queries] = read_index_finite(query_vectors, nprobe, upper_bound);
+
+    return detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
+        centroids_,
+        *partitioned_vectors_,
+        query_vectors,
+        active_queries,
+        nprobe,
+        k_nn,
+        upper_bound,
+        num_threads_);
+  }
+
+
+  template <feature_vector_array Q>
+  auto query_finite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe, size_t upper_bound = 0) {
+    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
+      std::throw_with_nested(std::runtime_error(
+          "Vectors are already loaded. Cannot load twice. "
+          "Cannot do finite query on in-memory index."));
+    }
+    auto&& [active_partitions, active_queries] = read_index_finite(query_vectors, nprobe, upper_bound);
+
+    return detail::ivf::query_finite_ram(
+        centroids_,
+        *partitioned_vectors_,
+        query_vectors,
+        active_queries,
+        nprobe,
+        k_nn,
+        upper_bound,
+        num_threads_);
+  }
+
   /* It doesn't really make sense to do a finite query on an in-place index
    * (i.e., one that was created and kept in memory, rather than created and
    * saved to an array).  And it certainly does not make sense to do that if
@@ -644,6 +722,11 @@ class ivf_index {
    * @todo Should we have two index classes, one for finite and one for
    * infinite?
    */
+
+
+// Temporarily disable finite queries
+#if 0
+
 
   template <feature_vector_array Q>
   auto query_finite_ram(
@@ -661,35 +744,8 @@ class ivf_index {
         num_threads_);
   }
 
-// Temporarily disable finite queries
 
-  template <feature_vector_array Q>
-  auto qv_query_heap_finite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe, size_t upper_bound) {
-    return detail::ivf::qv_query_heap_finite_ram<feature_type, id_type>(
-        partitioned_vectors_,
-        centroids_,
-        query_vectors,
-        indices_,
-        partitioned_ids_,
-        nprobe,
-        k_nn,
-        upper_bound,
-        num_threads_);
-  }
 
-  template <feature_vector_array Q>
-  auto nuv_query_heap_finite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe, size_t upper_bound) {
-    return detail::ivf::nuv_query_heap_finite_ram<feature_type, id_type>(
-        partitioned_vectors_,
-        centroids_,
-        query_vectors,
-        indices_,
-        partitioned_ids_,
-        nprobe,
-        k_nn,
-        upper_bound,
-        num_threads_);
-  }
 
   template <feature_vector_array Q>
   auto nuv_query_heap_finite_ram_reg_blocked(const Q& query_vectors, size_t k_nn, size_t nprobe, size_t upper_bound) {
@@ -820,6 +876,7 @@ class ivf_index {
       throw std::runtime_error("Index already loaded");
     }
 
+    // Load all partitions for infinite query
     // Note that the constructor will move the infinite_parts vector
     auto infinite_parts = std::vector<parts_type>(::num_vectors(centroids_));
     std::iota(begin(infinite_parts), end(infinite_parts), 0);
@@ -830,11 +887,13 @@ class ivf_index {
         group_uri_ + "/partitioned_ids",
         infinite_parts,
         0);
+
     partitioned_vectors_->load();
+
+    assert(::num_vectors(*partitioned_vectors_) == size(partitioned_vectors_->ids()));
+    assert(size(partitioned_vectors_->indices()) == ::num_vectors(centroids_) + 1);
   }
 
-// Disable for now
-#if 0
   /**
    * @brief Open the index from the arrays contained in the group_uri.
    * The "finite" queries only load as much data (ids and vectors) as are
@@ -849,80 +908,29 @@ class ivf_index {
   template <feature_vector_array Q>
   auto read_index_finite(
       const Q& query_vectors, size_t nprobe, size_t upper_bound) {
-    if (partitioned_vectors_ && (::num_vectors(partitioned_vectors_) != 0 ||
-        ::num_vectors(partitioned_ids_) != 0)) {
+
+    if (partitioned_vectors_ && (::num_vectors(*partitioned_vectors_) != 0 ||
+                                 ::num_vectors(partitioned_vectors_->ids()) != 0)) {
       throw std::runtime_error("Index already loaded");
     }
 
-    auto num_queries = ::num_vectors(query_vectors);
-
     auto&& [active_partitions, active_queries] =
-        partition_ivf_index(centroids_, query_vectors, nprobe, num_threads_);
+        detail::ivf::partition_ivf_index<parts_type>(centroids_, query_vectors, nprobe, num_threads_);
 
-    // Hmm.  This ultimately gets set by whatever function partition_ivf_index
-    // calls for doing the partitioning -- right now it is set to size_t in
-    // qv_query_0.  We should probably set it another way?  Maybe just use
-    // id_type (which kind of makes sense)?
-    using parts_type = typename decltype(active_partitions)::value_type;
-
-    auto ids_uri = group_uri_ + "/partitioned_ids";
-    auto partitioned_vectors_uri = group_uri_ + "/partitioned_vectors";
-
-    // @todo Warning warning!  Danger danger!
-    // Need to make sure that we are actually storing a partitioned
-    // matrix.  Do we need two index classes?  One for infinite and one
-    // for finite?
-    partitioned_vectors_ = std::move(tdbColMajorPartitionedMatrix<
-                                     feature_type,
-                                     id_type,
-                                     indices_type,
-                                     parts_type>(
+    partitioned_vectors_ = std::make_unique<tdb_storage_type>(
         cached_ctx_,
-        partitioned_vectors_uri,
-        indices_,
+        group_uri_ + "/partitioned_vectors",
+        group_uri_ + "/indices",
+        group_uri_ + "/partitioned_ids",
         active_partitions,
-        ids_uri,
-        upper_bound));
+        upper_bound);
 
-    std::vector<indices_type> new_indices(size(active_partitions) + 1);
-    new_indices[0] = 0;
-    for (size_t i = 0; i < size(active_partitions); ++i) {
-      new_indices[i + 1] = new_indices[i] + indices_[active_partitions[i] + 1] -
-                           indices_[active_partitions[i]];
-    }
+    // NB: We don't load the partitioned_vectors here.  We will load them
+    // when we do the query.
 
-    tiledb::Context ctx;
-    tiledb::Config cfg;
-    tiledb::Group read_group(ctx, group_uri_, TILEDB_READ, cfg);
-
-    for (auto& [name, value, datatype] : metadata) {
-      if (!read_group.has_metadata(name, &datatype)) {
-        throw std::runtime_error("Missing metadata: " + name);
-      }
-      uint32_t count;
-      void* addr;
-      read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
-      if (datatype == TILEDB_UINT64) {
-        *reinterpret_cast<uint64_t*>(value) =
-            *reinterpret_cast<uint64_t*>(addr);
-      } else if (datatype == TILEDB_FLOAT32) {
-        *reinterpret_cast<float*>(value) = *reinterpret_cast<float*>(addr);
-      } else {
-        throw std::runtime_error("Unsupported datatype");
-      }
-    }
-
-    centroids_ =
-        std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
-            ctx, group_uri_ + "/centroids"));
-    indices_ =
-        std::move(read_vector<indices_type>(ctx, group_uri_ + "/indices"));
-    partitioned_ids_ = std::move(read_vector<partitioned_ids_type>(
-        ctx, group_uri_ + "/partitioned_ids"));
-    partitioned_vectors_ = std::move(tdbPreLoadMatrix<T, stdx::layout_left>(
-        ctx, group_uri + +"/partitioned_vectors"));
+    return std::make_tuple(std::move(active_partitions), std::move(active_queries));
   }
-#endif
+
   /***************************************************************************
    * Methods to aid Testing and Debugging
    *
@@ -1019,12 +1027,12 @@ class ivf_index {
                 << std::endl;
       return false;
     }
-    if (partitioned_vectors_->num_parts() !=
-        rhs.partitioned_vectors_->num_parts()) {
+    if (partitioned_vectors_->num_partitions() !=
+        rhs.partitioned_vectors_->num_partitions()) {
       std::cout << "partitioned_vectors_->num_parts() != "
                    "rhs.partitioned_vectors_->num_parts() ("
-                << partitioned_vectors_->num_parts()
-                << " != " << rhs.partitioned_vectors_->num_parts() << ")"
+                << partitioned_vectors_->num_partitions()
+                << " != " << rhs.partitioned_vectors_->num_partitions() << ")"
                 << std::endl;
       return false;
     }
