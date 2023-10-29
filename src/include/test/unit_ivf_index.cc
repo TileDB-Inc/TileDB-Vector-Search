@@ -363,17 +363,15 @@ struct siftsmall_test_init {
       : ctx_{ctx}
       , nlist(nl)
       , nprobe(std::min<size_t>(10, nlist))
-      , training_set(
-            tdbColMajorMatrix<float>(ctx_, siftsmall_base_uri))
-      , query_set(
-            tdbColMajorMatrix<float>(ctx_, siftsmall_query_uri))
-      , groundtruth_set(tdbColMajorMatrix<int32_t>(
-            ctx_, siftsmall_groundtruth_uri))
-      , idx (128, nlist, max_iter, tolerance, nthreads){
+      , training_set(tdbColMajorMatrix<float>(ctx_, siftsmall_base_uri))
+      , query_set(tdbColMajorMatrix<float>(ctx_, siftsmall_query_uri))
+      , groundtruth_set(
+            tdbColMajorMatrix<int32_t>(ctx_, siftsmall_groundtruth_uri))
+      , idx(128, nlist, max_iter, tolerance, nthreads) {
     training_set.load();
     query_set.load();
     groundtruth_set.load();
-    std::tie(top_k_scores, top_k)  = detail::flat::qv_query_heap(
+    std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
         training_set, query_set, k_nn, 1, sum_of_squares_distance{});
 
     idx.train(training_set);
@@ -394,13 +392,13 @@ struct siftsmall_test_init {
   ColMajorMatrix<unsigned long long> top_k;
   ivf_index<float, uint32_t, uint32_t> idx;
 
-
   auto verify(auto&& top_k_ivf) {
     // These are helpful for debugging
     // debug_slice(top_k_ivf, "top_k_ivf");
     // debug_slice(top_k_ivf_scores, "top_k_ivf_scores");
 
-    auto intersectionsm1 = (long)count_intersections(top_k, groundtruth_set, k_nn);
+    auto intersectionsm1 =
+        (long)count_intersections(top_k, groundtruth_set, k_nn);
     double recallm1 = intersectionsm1 / ((double)top_k.num_cols() * k_nn);
     if (nlist == 1) {
       CHECK(intersectionsm1 == num_vectors(top_k) * dimension(top_k));
@@ -441,8 +439,8 @@ TEST_CASE(
 
   auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
       init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
-  auto&& [idx, training_set, query_set, groundtruth_set] =
-      std::tie(init.idx, init.training_set, init.query_set, init.groundtruth_set);
+  auto&& [idx, training_set, query_set, groundtruth_set] = std::tie(
+      init.idx, init.training_set, init.query_set, init.groundtruth_set);
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<unsigned>();
@@ -473,7 +471,6 @@ TEST_CASE(
   init.verify(top_k_ivf);
 }
 
-
 TEST_CASE("Build index, write, read and query, infinite", "[ivf_index]") {
   tiledb::Context ctx;
   size_t nlist = GENERATE(1, 100);
@@ -482,8 +479,8 @@ TEST_CASE("Build index, write, read and query, infinite", "[ivf_index]") {
 
   auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
       init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
-  auto&& [_, training_set, query_set, groundtruth_set] =
-      std::tie(init.idx, init.training_set, init.query_set, init.groundtruth_set);
+  auto&& [_, training_set, query_set, groundtruth_set] = std::tie(
+      init.idx, init.training_set, init.query_set, init.groundtruth_set);
   auto idx = init.get_write_read_idx();
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
@@ -523,8 +520,8 @@ TEST_CASE("Build index, write, read and query, finite", "ivf_index") {
 
   auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
       init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
-  auto&& [_, training_set, query_set, groundtruth_set] =
-      std::tie(init.idx, init.training_set, init.query_set, init.groundtruth_set);
+  auto&& [_, training_set, query_set, groundtruth_set] = std::tie(
+      init.idx, init.training_set, init.query_set, init.groundtruth_set);
   auto idx = init.get_write_read_idx();
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
@@ -552,7 +549,6 @@ TEST_CASE("Build index, write, read and query, finite", "ivf_index") {
 
 TEST_CASE(
     "Build index, write, read and query, finite, out of core", "[ivf_index]") {
-
   tiledb::Context ctx;
   size_t nlist = 100;
   size_t upper_bound = 5000;
@@ -561,13 +557,12 @@ TEST_CASE(
 
   auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
       init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
-  auto&& [_, training_set, query_set, groundtruth_set] =
-      std::tie(init.idx, init.training_set, init.query_set, init.groundtruth_set);
+  auto&& [_, training_set, query_set, groundtruth_set] = std::tie(
+      init.idx, init.training_set, init.query_set, init.groundtruth_set);
   auto idx = init.get_write_read_idx();
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<unsigned>();
-
 
   SECTION("nuv_finite") {
     INFO("nuv_finite");

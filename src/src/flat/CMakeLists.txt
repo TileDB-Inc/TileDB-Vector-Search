@@ -20,10 +20,10 @@
 # THE SOFTWARE.
 #
 
-add_executable(ivf_flat ivf_flat.cc)
-target_link_libraries(ivf_flat PUBLIC kmeans_lib)
-target_compile_definitions(ivf_flat PUBLIC TILEDB_VS_ENABLE_STATS)
+# add_executable(ivf_flat ivf_flat.cc)
+# target_link_libraries(ivf_flat PUBLIC kmeans_lib)
+# target_compile_definitions(ivf_flat PUBLIC TILEDB_VS_ENABLE_STATS)
 
-add_executable(flat_l2 flat_l2.cc)
-target_link_libraries(flat_l2 PUBLIC kmeans_lib)
-target_compile_definitions(flat_l2 PUBLIC TILEDB_VS_ENABLE_STATS)
+# add_executable(flat_l2 flat_l2.cc)
+# target_link_libraries(flat_l2 PUBLIC kmeans_lib)
+# target_compile_definitions(flat_l2 PUBLIC TILEDB_VS_ENABLE_STATS)

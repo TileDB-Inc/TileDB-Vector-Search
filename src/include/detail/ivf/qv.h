@@ -729,7 +729,12 @@ auto nuv_query_heap_finite_ram(
       if (first_part != last_part) {
         futs.emplace_back(std::async(
             std::launch::async,
-            [&, &active_queries = active_queries, n, first_part, last_part, part_offset]() {
+            [&,
+             &active_queries = active_queries,
+             n,
+             first_part,
+             last_part,
+             part_offset]() {
               /*
                * For each partition, process the queries that have that
                * partition as their top centroid.
@@ -737,7 +742,9 @@ auto nuv_query_heap_finite_ram(
               for (size_t p = first_part; p < last_part; ++p) {
                 // @todo this may not be correct -- resident_part_offset is
                 // part of tdbPartitionedMatrix, not PartitionedMatrix
-                auto partno = p + part_offset; // resident_part_offset(partitioned_vectors);
+                auto partno =
+                    p +
+                    part_offset;  // resident_part_offset(partitioned_vectors);
                 auto start = indices[p];     //[partno];
                 auto stop = indices[p + 1];  //[partno+1];
 
@@ -873,7 +880,8 @@ auto nuv_query_heap_finite_ram_reg_blocked(
              &active_queries = active_queries,
              n,
              first_part,
-             last_part, part_offset]() {
+             last_part,
+             part_offset]() {
               /*
                * For each partition, process the queries that have that
                * partition as their top centroid.
@@ -883,7 +891,9 @@ auto nuv_query_heap_finite_ram_reg_blocked(
               for (size_t p = first_part; p < last_part; ++p) {
                 // @todo this may not be correct -- resident_part_offset is
                 // part of tdbPartitionedMatrix, not PartitionedMatrix
-                auto partno = p + part_offset; // resident_part_offset(partitioned_vectors);
+                auto partno =
+                    p +
+                    part_offset;  // resident_part_offset(partitioned_vectors);
                 auto start = indices[p];
                 auto stop = indices[p + 1];
 
@@ -996,7 +1006,8 @@ auto apply_query(
     auto&& active_queries,
     size_t k_nn,
     size_t first_active_part,
-    size_t last_active_part, size_t part_offset = 0){
+    size_t last_active_part,
+    size_t part_offset = 0) {
   using id_type = typename P::id_type;
   using score_type = float;
 
@@ -1177,11 +1188,11 @@ auto query_finite_ram(
               std::launch::async,
               [&query,
                &partitioned_vectors,
-               &indices,
                &active_queries = active_queries,
                k_nn,
                first_part,
-               last_part, part_offset]() {
+               last_part,
+               part_offset]() {
                 return apply_query(
                     partitioned_vectors,
                     std::optional<std::vector<int>>{},
@@ -1189,7 +1200,8 @@ auto query_finite_ram(
                     active_queries,
                     k_nn,
                     first_part,
-                    last_part, part_offset);
+                    last_part,
+                    part_offset);
               }));
         }
       }
@@ -1284,10 +1296,8 @@ auto query_infinite_ram(
           std::launch::async,
           [&query,
            &partitioned_vectors,
-           &indices,
            &active_queries = active_queries,
            &active_partitions = active_partitions,
-           &partitioned_ids,
            k_nn,
            first_part,
            last_part]() {

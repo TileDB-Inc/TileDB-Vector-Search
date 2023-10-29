@@ -20,10 +20,10 @@
 # THE SOFTWARE.
 #
 
-add_executable(ivf_query ivf_query.cc)
-target_link_libraries(ivf_query PUBLIC kmeans_lib)
-target_compile_definitions(ivf_query PUBLIC TILEDB_VS_ENABLE_STATS)
+# add_executable(ivf_query ivf_query.cc)
+# target_link_libraries(ivf_query PUBLIC kmeans_lib)
+# target_compile_definitions(ivf_query PUBLIC TILEDB_VS_ENABLE_STATS)
 
-add_executable(ivf_index ivf_index.cc)
-target_link_libraries(ivf_index PUBLIC kmeans_lib)
-target_compile_definitions(ivf_index PUBLIC TILEDB_VS_ENABLE_STATS)
+# add_executable(ivf_index ivf_index.cc)
+# target_link_libraries(ivf_index PUBLIC kmeans_lib)
+# target_compile_definitions(ivf_index PUBLIC TILEDB_VS_ENABLE_STATS)

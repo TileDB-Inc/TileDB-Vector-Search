@@ -657,6 +657,34 @@ class ivf_index {
             num_threads_);
   }
 
+  // WIP
+#if 0
+  template <feature_vector_array Q>
+  auto qv_query_heap_finite_ram(
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      size_t upper_bound = 0) {
+    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
+      std::throw_with_nested(
+          std::runtime_error("Vectors are already loaded. Cannot load twice. "
+                             "Cannot do finite query on in-memory index."));
+    }
+    auto&& [active_partitions, active_queries] =
+        read_index_finite(query_vectors, nprobe, upper_bound);
+
+    return detail::ivf::qv_query_heap_finite_ram(
+        centroids_,
+        *partitioned_vectors_,
+        query_vectors,
+        active_queries,
+        nprobe,
+        k_nn,
+        upper_bound,
+        num_threads_);
+  }
+#endif  // 0
+
   template <feature_vector_array Q>
   auto nuv_query_heap_finite_ram(
       const Q& query_vectors,

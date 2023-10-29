@@ -118,9 +118,9 @@ auto sub_kmeans(
     size_t max_iter,
     size_t num_threads,
     float reassign_ratio = 0.05) {
-  using feature_type = T;
-  using centroids_feature_type = U;
-  using index_type = size_t;
+  // using feature_type = T;
+  // using centroids_feature_type = U;
+  // using index_type = size_t;
 
   size_t sub_dimension_ = sub_end - sub_begin;
 
