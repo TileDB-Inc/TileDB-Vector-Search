@@ -1016,7 +1016,7 @@ auto apply_query(
     auto partno = p + part_offset;
     auto active_partno = p;
     if (active_partitions) {
-      active_partno = (*active_partitions)[pc];
+      active_partno = (*active_partitions)[p];
     }
 
     // active_partitions is only for infinite case -- no offset
