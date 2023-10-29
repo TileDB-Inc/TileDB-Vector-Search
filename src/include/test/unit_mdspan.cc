@@ -35,7 +35,6 @@
 
 namespace stdx {
 using namespace Kokkos;
-using namespace Kokkos::Experimental;
 }  // namespace stdx
 
 TEST_CASE("mdspan: test test", "[mdspan]") {

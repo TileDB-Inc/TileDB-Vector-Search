@@ -43,8 +43,8 @@
 
 #include "detail/linalg/linalg_defs.h"
 #include "detail/linalg/matrix.h"
+#include "detail/linalg/tdb_defs.h"
 #include "detail/linalg/tdb_helpers.h"
-#include "tdb_defs.h"
 
 /**
  * Derived from `Matrix`.  Initialized in construction by filling from a given
@@ -54,13 +54,12 @@
  * it is sufficient to simply have one Matrix class and have a factory that
  * creates them by reading from TileDB.
  */
-
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   using Base = Matrix<T, LayoutPolicy, I>;
   using Base::Base;
 
- public:
+  public:
   using value_type = typename Base::value_type;
   using index_type = typename Base::index_type;
   using size_type = typename Base::size_type;
@@ -70,7 +69,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
- private:
+  private:
   using row_domain_type = int32_t;
   using col_domain_type = int32_t;
 
@@ -78,7 +77,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   std::reference_wrapper<const tiledb::Context> ctx_;
   std::string uri_;
-  std::unique_ptr<tiledb::Array> array_;
+  tiledb::Array array_;
   tiledb::ArraySchema schema_;
   size_t num_array_rows_{0};
   size_t num_array_cols_{0};
@@ -103,26 +102,11 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   // size_t pending_row_offset{0};
   // size_t pending_col_offset{0};
 
- public:
+  public:
   ~tdbBlockedMatrix() noexcept {
-    // @todo This seems like a hack
-    if (array_ && array_->is_open()) {
-      array_->close();
-    }
+    array_.close();
   }
 
-  tdbBlockedMatrix(const tdbBlockedMatrix&) = delete;
-  tdbBlockedMatrix& operator=(tdbBlockedMatrix&&) = default;
-#if 1
-  tdbBlockedMatrix(tdbBlockedMatrix&&) = default;
-#else
-  tdbBlockedMatrix(tdbBlockedMatrix&& rhs)
-      : ctx_{std::move(rhs.ctx_)}
-      , schema_{std::move(
-            rhs.schema_)} {  //: Base(std::forward<tdbBlockedMatrix>(rhs)) {
-    *this = std::move(rhs);
-  }
-#endif
   /**
    * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
    * vectors. In this case, the `Matrix` is row-major, so the number of vectors
@@ -132,8 +116,17 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param uri URI of the TileDB array to read.
    */
   tdbBlockedMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : tdbBlockedMatrix(ctx, uri, 0) {
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : tdbBlockedMatrix(ctx, uri, 0, tiledb::TemporalPolicy()) {
+  }
+
+  tdbBlockedMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t upper_bound,
+      uint64_t timestamp = 0)
+      : tdbBlockedMatrix(ctx, uri, upper_bound,
+                         (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)) {
   }
 
   /**
@@ -144,16 +137,15 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
    * @param upper_bound The maximum number of vectors to read.
+   * @param temporal_policy The TemporalPolicy to use for reading the array data.
    */
   tdbBlockedMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
-      size_t upper_bound)  // noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : ctx_{ctx}
-      , uri_{uri}
-      , array_{std::make_unique<tiledb::Array>(ctx, uri, TILEDB_READ)}
-      , schema_{array_->schema()} {
+      size_t upper_bound,
+      const tiledb::TemporalPolicy temporal_policy)  // noexcept
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : ctx_{ctx}, uri_{uri}, array_{tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ, temporal_policy)}, schema_{array_.schema()} {
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + " " + uri};
 
@@ -191,9 +183,10 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       blocksize_ = upper_bound;
     }
 
-#ifdef __cpp_lib_smart_ptr_for_overwrite
+#ifndef __APPLE__
     auto data_ = std::make_unique_for_overwrite<T[]>(dimension * blocksize_);
 #else
+    // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
     auto data_ = std::unique_ptr<T[]>(new T[dimension * blocksize_]);
 #endif
 
@@ -237,7 +230,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     assert(std::get<1>(col_view_) <= num_array_cols_);
 
     // Create a subarray for the next block of columns
-    tiledb::Subarray subarray(ctx_, *array_);
+    tiledb::Subarray subarray(ctx_, array_);
     subarray.add_range(0, 0, (int)dimension - 1);
     subarray.add_range(
         1, (int)std::get<0>(col_view_), (int)std::get<1>(col_view_) - 1);
@@ -245,7 +238,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     auto layout_order = schema_.cell_order();
 
     // Create a query
-    tiledb::Query query(ctx_, *array_);
+    tiledb::Query query(ctx_, array_);
     query.set_subarray(subarray)
         .set_layout(layout_order)
         .set_data_buffer(attr_name, this->data(), num_cols_ * dimension);
@@ -268,6 +261,18 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     return num_loads_;
   }
 
+  tdbBlockedMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t row_begin,
+      size_t row_end,
+      size_t col_begin,
+      size_t col_end,
+      uint64_t timestamp = 0)
+      : tdbBlockedMatrix(ctx, uri, row_begin, row_end, col_begin, col_end,
+                         (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)) {
+  }
+
   /**
    * @brief General constructor.  Read a view of the array, delimited by the
    * given row and column indices.
@@ -279,7 +284,6 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param col_end
    *
    * @todo Make this compatible with various schemas we are using
-   * @todo Why do we even have this?  Obsoleted by upper bound constructor?
    */
   tdbBlockedMatrix(
       const tiledb::Context& ctx,
@@ -287,11 +291,9 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t row_begin,
       size_t row_end,
       size_t col_begin,
-      size_t col_end)  // noexcept
-      : ctx_{ctx}
-      , uri_{uri}
-      , array_{std::make_unique<tiledb::Array>(ctx, uri, TILEDB_READ)}
-      , schema_{array_->schema()} {
+      size_t col_end,
+      const tiledb::TemporalPolicy temporal_policy = {})  // noexcept
+      : ctx_{ctx}, uri_{uri}, array_{tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ, temporal_policy)}, schema_{array_.schema()} {
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + uri};
 
@@ -339,9 +341,10 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     auto num_rows = row_end - row_begin;
     auto num_cols = col_end - col_begin;
 
-#ifdef __cpp_lib_smart_ptr_for_overwrite
+#ifndef __APPLE__
     auto data_ = std::make_unique_for_overwrite<T[]>(num_rows * num_cols);
 #else
+    // auto data_ = std::make_unique<T[]>(new T[mat_rows_ * mat_cols_]);
     auto data_ = std::unique_ptr<T[]>(new T[num_rows * num_cols]);
 #endif
 
@@ -362,12 +365,12 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
         (int32_t)row_end - 1,
         (int32_t)col_begin,
         (int32_t)col_end - 1};
-    tiledb::Subarray subarray(ctx_, *array_);
+    tiledb::Subarray subarray(ctx_, array_);
     subarray.set_subarray(subarray_vals);
 
     auto layout_order = cell_order;
 
-    tiledb::Query query(ctx_, *array_);
+    tiledb::Query query(ctx_, array_);
 
     query.set_subarray(subarray)
         .set_layout(layout_order)
@@ -394,9 +397,9 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
   using Base = tdbBlockedMatrix<T, LayoutPolicy, I>;
   using Base::Base;
 
- public:
+  public:
   tdbPreLoadMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(ctx, uri, 0) {
     Base::load();
   }

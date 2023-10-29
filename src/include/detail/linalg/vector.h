@@ -39,6 +39,15 @@
 #include <vector>
 #include "concepts.h"
 
+template <class T>
+std::vector<T> read_vector(
+    const tiledb::Context& ctx,
+    const std::string&,
+    size_t start_pos,
+    size_t end_pos,
+    uint64_t timestamp);
+
+
 template <class M>
 concept is_view = requires(M) {
   typename M::view_type;
@@ -63,7 +72,7 @@ class Vector : public std::span<T> {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
- private:
+  private:
   size_type nrows_;
   std::unique_ptr<T[]> storage_;
 
@@ -81,8 +90,7 @@ class Vector : public std::span<T> {
   }
 
   Vector(index_type nrows, std::unique_ptr<T[]> storage)
-      : nrows_(nrows)
-      , storage_{std::move(storage)} {
+      : nrows_(nrows), storage_{std::move(storage)} {
     Base::operator=(Base{storage_.get(), nrows_});
   }
 

@@ -75,10 +75,12 @@ auto dist_qv_finite_ram_part(
     auto&& indices,
     const std::string& id_uri,
     size_t k_nn,
+    uint64_t timestamp = 0,
     size_t nthreads = std::thread::hardware_concurrency()) {
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
+  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   using score_type = float;
   using parts_type =
@@ -86,13 +88,13 @@ auto dist_qv_finite_ram_part(
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
-  size_t num_queries = num_vectors(query);
+  size_t num_queries = size(query);
 
   auto shuffled_db = tdbColMajorPartitionedMatrix<
       feature_type,
       shuffled_ids_type,
       indices_type,
-      parts_type>(ctx, part_uri, indices, active_partitions, id_uri, 0);
+      parts_type>(ctx, part_uri, indices, active_partitions, id_uri, 0, temporal_policy);
 
   // We are assuming that we are not doing out of core computation here.
   // (It is easy enough to change this if we need to.)
@@ -112,10 +114,8 @@ auto dist_qv_finite_ram_part(
   }
   assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
 
-  auto min_scores =
-      std::vector<fixed_min_pair_heap<score_type, shuffled_ids_type>>(
-          num_queries,
-          fixed_min_pair_heap<score_type, shuffled_ids_type>(k_nn));
+  auto min_scores = std::vector<fixed_min_pair_heap<score_type, shuffled_ids_type>>(
+      num_queries, fixed_min_pair_heap<score_type, shuffled_ids_type>(k_nn));
 
   auto current_part_size = shuffled_db.num_col_parts();
 
@@ -250,7 +250,8 @@ auto dist_qv_finite_ram(
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads,
-    size_t num_nodes) {
+    size_t num_nodes,
+    uint64_t timestamp = 0) {
   scoped_timer _{tdb_func__ + " " + part_uri};
 
   // Check that the size of the indices vector is correct
@@ -260,7 +261,7 @@ auto dist_qv_finite_ram(
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
-  auto num_queries = num_vectors(query);
+  auto num_queries = size(query);
 
   /*
    * Select the relevant partitions from the array, along with the queries
@@ -297,17 +298,17 @@ auto dist_qv_finite_ram(
       /*
        * Each compute node returns a min_heap of its own min_scores
        */
-      auto dist_min_scores =
-          dist_qv_finite_ram_part<feature_type, shuffled_ids_type>(
-              ctx,
-              part_uri,
-              dist_partitions,
-              query,
-              dist_active_queries,
-              indices,
-              id_uri,
-              k_nn,
-              nthreads);
+      auto dist_min_scores = dist_qv_finite_ram_part<feature_type, shuffled_ids_type>(
+          ctx,
+          part_uri,
+          dist_partitions,
+          query,
+          dist_active_queries,
+          indices,
+          id_uri,
+          k_nn,
+          nthreads,
+          timestamp);
 
       /*
        * Merge the min_scores from each compute node.
