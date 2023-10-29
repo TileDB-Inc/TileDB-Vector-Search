@@ -348,154 +348,245 @@ TEMPLATE_TEST_CASE(
   }
 }
 
-TEST_CASE("ivf_index: siftsmall infinite queries", "[ivf_index]") {
-  tiledb::Context ctx;
+// base is 10k, learn is 25k
+struct siftsmall_test_init {
+  tiledb::Context ctx_;
+  size_t nlist;
+  size_t nprobe;
 
-  // "learn" is 25k, "base" is 10k -- nlist should be 100, nprobe should be 10
-  size_t nlist = GENERATE(1, 100);
-  size_t nprobe = std::min<size_t>(10, nlist);
-  auto k_nn = 10;
+  size_t k_nn = 10;
   size_t nthreads = 8;
   size_t max_iter = 10;
   float tolerance = 1e-4;
 
-  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
-  training_set.load();
+  siftsmall_test_init(tiledb::Context ctx, size_t nl)
+      : ctx_{ctx}
+      , nlist(nl)
+      , nprobe(std::min<size_t>(10, nlist))
+      , training_set(
+            tdbColMajorMatrix<float>(ctx_, siftsmall_base_uri))
+      , query_set(
+            tdbColMajorMatrix<float>(ctx_, siftsmall_query_uri))
+      , groundtruth_set(tdbColMajorMatrix<int32_t>(
+            ctx_, siftsmall_groundtruth_uri))
+      , idx (128, nlist, max_iter, tolerance, nthreads){
+    training_set.load();
+    query_set.load();
+    groundtruth_set.load();
+    std::tie(top_k_scores, top_k)  = detail::flat::qv_query_heap(
+        training_set, query_set, k_nn, 1, sum_of_squares_distance{});
 
-  auto query_set = tdbColMajorMatrix<float>(ctx, siftsmall_query_uri, 0);
-  query_set.load();
+    idx.train(training_set);
+    idx.add(training_set);
+  }
 
-  auto groundtruth_set =
-      tdbColMajorMatrix<int32_t>(ctx, siftsmall_groundtruth_uri, 0);
-  groundtruth_set.load();
+  auto get_write_read_idx() {
+    std::string tmp_ivf_index_uri = "/tmp/tmp_ivf_index";
+    idx.write_index(tmp_ivf_index_uri, true);
+    auto idx0 = ivf_index<float, uint32_t, uint32_t>(ctx_, tmp_ivf_index_uri);
+    return idx0;
+  }
 
-  auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
-      training_set, query_set, k_nn, 1, sum_of_squares_distance{});
+  tdbColMajorMatrix<float> training_set;
+  tdbColMajorMatrix<float> query_set;
+  tdbColMajorMatrix<int32_t> groundtruth_set;
+  ColMajorMatrix<float> top_k_scores;
+  ColMajorMatrix<unsigned long long> top_k;
+  ivf_index<float, uint32_t, uint32_t> idx;
+
+
+  auto verify(auto&& top_k_ivf) {
+    // These are helpful for debugging
+    // debug_slice(top_k_ivf, "top_k_ivf");
+    // debug_slice(top_k_ivf_scores, "top_k_ivf_scores");
+
+    auto intersectionsm1 = (long)count_intersections(top_k, groundtruth_set, k_nn);
+    double recallm1 = intersectionsm1 / ((double)top_k.num_cols() * k_nn);
+    if (nlist == 1) {
+      CHECK(intersectionsm1 == num_vectors(top_k) * dimension(top_k));
+      CHECK(recallm1 == 1.0);
+    }
+    CHECK(recallm1 > .99);
+
+    // @todo There is randomness in initialization of kmeans, use a fixed seed
+    auto intersections0 = (long)count_intersections(top_k_ivf, top_k, k_nn);
+    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    if (nlist == 1) {
+      CHECK(intersections0 == num_vectors(top_k) * dimension(top_k));
+      CHECK(recall0 == 1.0);
+    }
+    CHECK(recall0 > .965);
+
+    auto intersections1 =
+        (long)count_intersections(top_k_ivf, groundtruth_set, k_nn);
+    double recall1 = intersections1 / ((double)top_k_ivf.num_cols() * k_nn);
+    if (nlist == 1) {
+      CHECK(intersections1 == num_vectors(top_k) * dimension(top_k));
+      CHECK(recall1 == 1.0);
+    }
+    CHECK(recall1 > 0.965);
+
+    // std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
+  }
+};
+
+// Note:  In-place only makes sense for infinite ram case
+// @todo Use a fixed seed for initializing kmeans
+TEST_CASE(
+    "ivf_index: Build index and query in place, infinite", "[ivf_index]") {
+  tiledb::Context ctx;
+  size_t nlist = GENERATE(1, 100);
+
+  auto init = siftsmall_test_init(ctx, nlist);
+
+  auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
+      init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
+  auto&& [idx, training_set, query_set, groundtruth_set] =
+      std::tie(init.idx, init.training_set, init.query_set, init.groundtruth_set);
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<unsigned>();
 
-  // Temporarily disable while testing finite
-  // Note:  In-place only makes sense for infinite ram case
-  SECTION("Build index and query in place, infinite") {
-    auto idx = ivf_index<float, uint32_t, uint32_t>(
-        128, nlist, max_iter, tolerance, nthreads);
-    idx.train(training_set);
-    idx.add(training_set);
-
-    SECTION("infinite") {
-      INFO("infinite");
-      std::tie(top_k_ivf_scores, top_k_ivf) =
-          idx.query_infinite_ram(query_set, k_nn, nprobe);
-    }
-
-    SECTION("qv_infinite") {
-      INFO("qv_infinite");
-      std::tie(top_k_ivf_scores, top_k_ivf) =
-          idx.qv_query_heap_infinite_ram(query_set, k_nn, nprobe);
-    }
-
-    SECTION("nuv_infinite") {
-      INFO("nuv_infinite");
-      std::tie(top_k_ivf_scores, top_k_ivf) =
-          idx.qv_query_heap_infinite_ram(query_set, k_nn, nprobe);
-    }
-
-    SECTION("nuv_infinite_reg_blocked") {
-      INFO("nuv_infinite_reg_blocked");
-      std::tie(top_k_ivf_scores, top_k_ivf) =
-          idx.qv_query_heap_infinite_ram(query_set, k_nn, nprobe);
-    }
+  SECTION("infinite") {
+    INFO("infinite");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
 
-  SECTION("Build index, write, read and query, infinite") {
-    auto idx0 = ivf_index<float, uint32_t, uint32_t>(128, nlist, 8);
-    idx0.train(training_set);
-    idx0.add(training_set);
-
-    tiledb::Context ctx;
-    std::string ivf_index_uri = "/tmp/tmp_ivf_index";
-    idx0.write_index(ivf_index_uri, true);
-
-    auto idx = ivf_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
-
-    SECTION("infinite") {
-      INFO("infinite");
-      std::tie(top_k_ivf_scores, top_k_ivf) =
-          idx.query_infinite_ram(query_set, k_nn, nprobe);
-    }
-
-    SECTION("qv_infinite") {
-      INFO("qv_infinite");
-      std::tie(top_k_ivf_scores, top_k_ivf) =
-          idx.qv_query_heap_infinite_ram(query_set, 10, 10);
-    }
-
-    SECTION("nuv_infinite") {
-      INFO("nuv_infinite");
-      std::tie(top_k_ivf_scores, top_k_ivf) =
-          idx.qv_query_heap_infinite_ram(query_set, 10, 10);
-    }
-
-    SECTION("nuv_infinite_reg_blocked") {
-      INFO("nuv_infinite_reg_blocked");
-      std::tie(top_k_ivf_scores, top_k_ivf) =
-          idx.qv_query_heap_infinite_ram(query_set, 10, 10);
-    }
+  SECTION("qv_infinite") {
+    INFO("qv_infinite");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.qv_query_heap_infinite_ram(query_set, k_nn, nprobe);
   }
 
-  SECTION("Build index, write, read and query, finite") {
-    auto idx0 = ivf_index<float, uint32_t, uint32_t>(128, nlist, 8);
-    idx0.train(training_set);
-    idx0.add(training_set);
-
-    tiledb::Context ctx;
-    std::string ivf_index_uri = "/tmp/tmp_ivf_index";
-    idx0.write_index(ivf_index_uri, true);
-
-    auto idx = ivf_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
-
-    SECTION("finite") {
-      INFO("finite");
-      std::tie(top_k_ivf_scores, top_k_ivf) =
-          idx.query_finite_ram(query_set, k_nn, nprobe);
-    }
-
-    SECTION("nuv_finite") {
-      INFO("nuv_finite");
-      std::tie(top_k_ivf_scores, top_k_ivf) =
-          idx.nuv_query_heap_finite_ram(query_set, k_nn, nprobe);
-    }
-
-    SECTION("nuv_finite_reg_blocked") {
-      INFO("nuv_finite_reg_blocked");
-      std::tie(top_k_ivf_scores, top_k_ivf) =
-          idx.nuv_query_heap_finite_ram_reg_blocked(query_set, k_nn, nprobe);
-    }
+  SECTION("nuv_infinite") {
+    INFO("nuv_infinite");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.qv_query_heap_infinite_ram(query_set, k_nn, nprobe);
   }
 
-  // These are helpful for debugging
-  // debug_slice(top_k_ivf, "top_k_ivf");
-  // debug_slice(top_k_ivf_scores, "top_k_ivf_scores");
-
-  // @todo Should these all be equal to each other?  (They seem to differ
-  // a little bit from run to run -- a data race somewhere?)
-  auto intersections0 = (long)count_intersections(top_k_ivf, top_k, k_nn);
-  double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
-  if (nlist == 1) {
-    CHECK(intersections0 == num_vectors(top_k) * dimension(top_k));
-    CHECK(recall0 == 1.0);
+  SECTION("nuv_infinite_reg_blocked") {
+    INFO("nuv_infinite_reg_blocked");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.qv_query_heap_infinite_ram(query_set, k_nn, nprobe);
   }
-  CHECK(recall0 > .965);
+  init.verify(top_k_ivf);
+}
 
-  auto intersections1 =
-      (long)count_intersections(top_k_ivf, groundtruth_set, k_nn);
-  double recall1 = intersections1 / ((double)top_k_ivf.num_cols() * k_nn);
-  if (nlist == 1) {
-    CHECK(intersections1 == num_vectors(top_k) * dimension(top_k));
-    CHECK(recall1 == 1.0);
+
+TEST_CASE("Build index, write, read and query, infinite", "[ivf_index]") {
+  tiledb::Context ctx;
+  size_t nlist = GENERATE(1, 100);
+
+  auto init = siftsmall_test_init(ctx, nlist);
+
+  auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
+      init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
+  auto&& [_, training_set, query_set, groundtruth_set] =
+      std::tie(init.idx, init.training_set, init.query_set, init.groundtruth_set);
+  auto idx = init.get_write_read_idx();
+
+  auto top_k_ivf_scores = ColMajorMatrix<float>();
+  auto top_k_ivf = ColMajorMatrix<unsigned>();
+
+  SECTION("infinite") {
+    INFO("infinite");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
-  CHECK(recall1 > 0.965);
 
-  // std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
+  SECTION("qv_infinite") {
+    INFO("qv_infinite");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.qv_query_heap_infinite_ram(query_set, 10, 10);
+  }
+
+  SECTION("nuv_infinite") {
+    INFO("nuv_infinite");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.qv_query_heap_infinite_ram(query_set, 10, 10);
+  }
+
+  SECTION("nuv_infinite_reg_blocked") {
+    INFO("nuv_infinite_reg_blocked");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.qv_query_heap_infinite_ram(query_set, 10, 10);
+  }
+  init.verify(top_k_ivf);
+}
+
+TEST_CASE("Build index, write, read and query, finite", "ivf_index") {
+  tiledb::Context ctx;
+  size_t nlist = GENERATE(1, 100);
+
+  auto init = siftsmall_test_init(ctx, nlist);
+
+  auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
+      init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
+  auto&& [_, training_set, query_set, groundtruth_set] =
+      std::tie(init.idx, init.training_set, init.query_set, init.groundtruth_set);
+  auto idx = init.get_write_read_idx();
+
+  auto top_k_ivf_scores = ColMajorMatrix<float>();
+  auto top_k_ivf = ColMajorMatrix<unsigned>();
+
+  SECTION("finite") {
+    INFO("finite");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.query_finite_ram(query_set, k_nn, nprobe);
+  }
+
+  SECTION("nuv_finite") {
+    INFO("nuv_finite");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.nuv_query_heap_finite_ram(query_set, k_nn, nprobe);
+  }
+
+  SECTION("nuv_finite_reg_blocked") {
+    INFO("nuv_finite_reg_blocked");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.nuv_query_heap_finite_ram_reg_blocked(query_set, k_nn, nprobe);
+  }
+  init.verify(top_k_ivf);
+}
+
+TEST_CASE(
+    "Build index, write, read and query, finite, out of core", "[ivf_index]") {
+
+  tiledb::Context ctx;
+  size_t nlist = 100;
+  size_t upper_bound = 5000;
+
+  auto init = siftsmall_test_init(ctx, nlist);
+
+  auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
+      init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
+  auto&& [_, training_set, query_set, groundtruth_set] =
+      std::tie(init.idx, init.training_set, init.query_set, init.groundtruth_set);
+  auto idx = init.get_write_read_idx();
+
+  auto top_k_ivf_scores = ColMajorMatrix<float>();
+  auto top_k_ivf = ColMajorMatrix<unsigned>();
+
+
+  SECTION("nuv_finite") {
+    INFO("nuv_finite");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.nuv_query_heap_finite_ram(query_set, k_nn, nprobe, upper_bound);
+  }
+
+  SECTION("nuv_finite_reg_blocked") {
+    INFO("nuv_finite_reg_blocked");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.nuv_query_heap_finite_ram_reg_blocked(
+            query_set, k_nn, nprobe, upper_bound);
+  }
+
+  SECTION("finite") {
+    INFO("finite");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.query_finite_ram(query_set, k_nn, nprobe, upper_bound);
+  }
+
+  init.verify(top_k_ivf);
 }
