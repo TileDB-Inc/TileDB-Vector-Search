@@ -101,89 +101,116 @@ int main(int argc, char* argv[]) {
   bool finite = !(args["--infinite"].asBool());
   auto algorithm = args["--alg"].asString();
 
+  if ((algorithm == "qv" || algorithm == "qv_heap") && finite) {
+    std::cout << algorithm << " is still WIP" << std::endl;
+    return 1;
+  }
+  if ((algorithm == "vq" || algorithm == "vq_heap") && finite) {
+    std::cout << algorithm << " is still WIP" << std::endl;
+    return 1;
+  }
+  if ((algorithm == "vq" || algorithm == "vq_heap") && !finite) {
+    std::cout << algorithm << " is still WIP" << std::endl;
+    return 1;
+  }
+  if ((algorithm == "vq2" || algorithm == "vq2_heap") && finite) {
+    std::cout << algorithm << " is still WIP" << std::endl;
+    return 1;
+  }
+  if ((algorithm == "vq2" || algorithm == "vq2_heap") && !finite) {
+    std::cout << algorithm << " is still WIP" << std::endl;
+    return 1;
+  }
+  if ((algorithm == "dist" || algorithm == "dist_nuv_heap") && finite) {
+    std::cout << algorithm << " is still WIP" << std::endl;
+    return 1;
+  }
+
   auto run_query = [&]<class feature_type, class id_type>() {
     tiledb::Context ctx;
 
-    auto idx = ivf_index<feature_type, id_type, uint32_t>(ctx, index_uri);
+    auto&& [top_k_scores, top_k] = [&]() {
+      ;
+      auto idx = ivf_index<feature_type, id_type, uint32_t>(ctx, index_uri);
 
-    auto queries = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
-    queries.load();
+      auto queries =
+          tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
+      queries.load();
 
-    auto query_time = log_timer("query time", true);
+      auto query_time = log_timer("query time", true);
 
-    if (algorithm == "reg" && finite) {
-    }
-    if (algorithm == "reg" && !finite) {
-    }
-    if ((algorithm == "qv" || algorithm == "qv_heap") && finite) {
-    }
-    if ((algorithm == "qv" || algorithm == "qv_heap") && !finite) {
-    }
-    if ((algorithm == "nuv" || algorithm == "nuv_heap") && finite) {
-    }
-    if ((algorithm == "nuv" || algorithm == "nuv_heap") && !finite) {
-    }
-    if ((algorithm == "fin" || algorithm == "final") && finite) {
-    }
-    if ((algorithm == "fin" || algorithm == "final") && !finite) {
-      return idx.query_infinite_ram(queries, k_nn, nprobe);
-    }
-    if ((algorithm == "vq" || algorithm == "vq_heap") && finite) {
-    }
-    if ((algorithm == "vq" || algorithm == "vq_heap") && !finite) {
-    }
-    if ((algorithm == "vq2" || algorithm == "vq2_heap") && finite) {
-    }
-    if ((algorithm == "vq2" || algorithm == "vq2_heap") && !finite) {
-    }
-    if ((algorithm == "dist" || algorithm == "dist_nuv_heap") && finite) {
-    }
+      if (algorithm == "reg" && finite) {
+        return idx.nuv_query_heap_finite_ram_reg_blocked(
+            queries, k_nn, nprobe);
+      }
+      if (algorithm == "reg" && !finite) {
+        return idx.nuv_query_heap_infinite_ram_reg_blocked(
+            queries, k_nn, nprobe);
+      }
+      if ((algorithm == "qv" || algorithm == "qv_heap") && !finite) {
+        return idx.qv_query_heap_infinite_ram(queries, k_nn, nprobe);
+      }
+      if ((algorithm == "nuv" || algorithm == "nuv_heap") && finite) {
+        return idx.nuv_query_heap_finite_ram(queries, k_nn, nprobe);
+      }
+      if ((algorithm == "nuv" || algorithm == "nuv_heap") && !finite) {
+        return idx.nuv_query_heap_infinite_ram(queries, k_nn, nprobe);
+      }
+      if ((algorithm == "fin" || algorithm == "final") && finite) {
+        return idx.query_finite_ram(queries, k_nn, nprobe, blocksize);
+      }
+      if ((algorithm == "fin" || algorithm == "final") && !finite) {
+        return idx.query_infinite_ram(queries, k_nn, nprobe);
+      } else {
+        throw std::runtime_error("Unsupported algorithm " + algorithm);
+      }
+      query_time.stop();
+    }();
 
-    auto&& [top_k_scores, top_k] = idx.query(queries, k_nn);
+    if (args["--groundtruth_uri"]) {
+      auto groundtruth_uri = args["--groundtruth_uri"].asString();
 
-    query_time.stop();
+      auto groundtruth = tdbColMajorMatrix<groundtruth_type>(
+          ctx, groundtruth_uri, nqueries);
+      groundtruth.load();
+
+      if (debug) {
+        std::cout << std::endl;
+
+        debug_matrix(groundtruth, "groundtruth");
+        debug_slice(groundtruth, "groundtruth");
+
+        std::cout << std::endl;
+        debug_matrix(top_k, "top_k");
+        debug_slice(top_k, "top_k");
+
+        std::cout << std::endl;
+      }
+
+      size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
+      size_t total_intersected =
+          count_intersections(top_k, groundtruth, k_nn);
+
+      float recall =
+          ((float)total_intersected) / ((float)total_groundtruth);
+      // std::cout << "# total intersected = " << total_intersected << " of "
+      //           << total_groundtruth << " = "
+      //           << "R@" << k_nn << " of " << recall << std::endl;
+
+      if (args["--log"]) {
+        // idx.log_index();
+        dump_logs(
+            args["--log"].asString(),
+            "vamana",
+            nqueries,
+            {},
+            k_nn,
+            nthreads,
+            recall);
+      }
+    }
   };
 
-  if (args["--groundtruth_uri"]) {
-    auto groundtruth_uri = args["--groundtruth_uri"].asString();
-
-    auto groundtruth =
-        tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
-    groundtruth.load();
-
-    if (debug) {
-      std::cout << std::endl;
-
-      debug_matrix(groundtruth, "groundtruth");
-      debug_slice(groundtruth, "groundtruth");
-
-      std::cout << std::endl;
-      debug_matrix(top_k, "top_k");
-      debug_slice(top_k, "top_k");
-
-      std::cout << std::endl;
-    }
-
-    size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
-    size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
-
-    float recall = ((float)total_intersected) / ((float)total_groundtruth);
-    // std::cout << "# total intersected = " << total_intersected << " of "
-    //           << total_groundtruth << " = "
-    //           << "R@" << k_nn << " of " << recall << std::endl;
-
-    if (args["--log"]) {
-      // idx.log_index();
-      dump_logs(
-          args["--log"].asString(),
-          "vamana",
-          nqueries,
-          {},
-          k_nn,
-          nthreads,
-          recall);
-    }
-  }
 
   auto feature_type = args["--ftype"].asString();
   auto id_type = args["--idtype"].asString();

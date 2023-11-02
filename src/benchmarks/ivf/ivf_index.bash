@@ -19,13 +19,13 @@ export SIFT=sift
 export SIFTPATH=${VECTOR_SEARCH}/external/data/gp3/${SIFT}
 export DATAPATH=${SIFTPATH}
 
-export IVFPATH=$SRCROOT}/cmake-build-relwithdebinfo/libtiledbvectorsearch/src/ivf/
+export IVFPATH=${SRCROOT}/cmake-build-relwithdebinfo/libtiledbvectorsearch/src/ivf/
 
 export SIFT_LEARN=${SIFTPATH}/${SIFT}_base
 export SIFT_QUERY=${SIFTPATH}/${SIFT}_query
 export SIFT_GROUNDTRUTH=${SIFTPATH}/${SIFT}_groundtruth
 
-export SIFT_INDEX=${SIFTPATH}/flatIVF_index_${SIFT}_learn
+export SIFT_INDEX=${SIFTPATH}/flatIVF_index_${SIFT}_base
 
 if [ ! -e ${SIFT_LEARN} ]; then
   echo "File ${SIFT_LEARN} does not exist!"
@@ -33,14 +33,14 @@ fi
 if [ ! -e ${SIFT_QUERY} ]; then
   echo "File ${SIFT_QUERY} does not exist!"
 fi
-if [ ! -e ${SIFT_INDEX} ]; then
-  echo "File ${SIFT_INDEX} does not exist!"
-fi
+# if [ ! -e ${SIFT_INDEX} ]; then
+#   echo "File ${SIFT_INDEX} does not exist!"
+# fi
 if [ ! -e ${SIFT_GROUNDTRUTH} ]; then
   echo "File ${SIFT_GROUNDTRUTH} does not exist!"
 fi
 
-cmd="${IVFPATH}/ivf_index --db_uri ${SIFT_LEARN}  --index_uri ${SIFT_INDEX} -v -d --log - --force"
+cmd="${IVFPATH}/ivf_index --db_uri ${SIFT_LEARN}  --ftype float --index_uri ${SIFT_INDEX} --idtype uint64 -v -d --log - --force"
 echo ${cmd}
 time ${cmd}
 

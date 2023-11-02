@@ -296,6 +296,8 @@ class ivf_index {
   void train_no_init(const ColMajorMatrix<T>& training_set) {
     scoped_timer _{__FUNCTION__};
 
+
+
     std::vector<size_t> degrees(nlist_, 0);
     auto new_centroids =
         ColMajorMatrix<centroid_feature_type>(dimension_, nlist_);
@@ -485,6 +487,11 @@ class ivf_index {
   void train(
       const ColMajorMatrix<T>& training_set,
       kmeans_init init = kmeans_init::random) {
+
+    if (nlist_ == 0) {
+      nlist_ = std::sqrt(num_vectors(training_set));
+      centroids_ = ColMajorMatrix<centroid_feature_type>(dimension_, nlist_);
+    }
     switch (init) {
       case (kmeans_init::none):
         break;
@@ -573,6 +580,8 @@ class ivf_index {
    * so the actual number of vectors in memory at any one time will generally
    * be less than the upper bound.
    *
+   * @todo Add vq and dist queries (should dist be its own index?) d
+   *
    ****************************************************************************/
 
   // Seems to use active partitions and active queries
@@ -646,7 +655,7 @@ class ivf_index {
         detail::ivf::partition_ivf_index<parts_type>(
             centroids_, query_vectors, nprobe, num_threads_);
     return detail::ivf::
-        nuv_query_heap_infinite_ram_reg_blocked<feature_type, id_type>(
+        nuv_query_heap_infinite_ram_reg_blocked(
             centroids_,
             *partitioned_vectors_,
             active_partitions,
@@ -656,6 +665,7 @@ class ivf_index {
             k_nn,
             num_threads_);
   }
+
 
   // WIP
 #if 0
@@ -760,52 +770,6 @@ class ivf_index {
         num_threads_);
   }
 
-  /* It doesn't really make sense to do a finite query on an in-place index
-   * (i.e., one that was created and kept in memory, rather than created and
-   * saved to an array).  And it certainly does not make sense to do that if
-   * we are wanting to do out of core
-   *
-   * @todo Should we have two index classes, one for finite and one for
-   * infinite?
-   */
-
-// Temporarily disable finite queries
-#if 0
-
-
-  template <feature_vector_array Q>
-  auto query_finite_ram(
-      const Q& query_vectors, size_t k_nn, size_t nprobe, size_t upper_bound) {
-    read_index_finite();
-    return detail::ivf::qv_query_heap_finite_ram<feature_type, id_type>(
-        partitioned_vectors_,
-        centroids_,
-        query_vectors,
-        indices_,
-        partitioned_ids_,
-        nprobe,
-        k_nn,
-        upper_bound,
-        num_threads_);
-  }
-
-
-
-
-  template <feature_vector_array Q>
-  auto nuv_query_heap_finite_ram_reg_blocked(const Q& query_vectors, size_t k_nn, size_t nprobe, size_t upper_bound) {
-    return detail::ivf::nuv_query_heap_finite_ram_reg_blocked<feature_type, id_type>(
-        partitioned_vectors_,
-        centroids_,
-        query_vectors,
-        indices_,
-        partitioned_ids_,
-        nprobe,
-        k_nn,
-        upper_bound,
-        num_threads_);
-  }
-#endif
 
   /*****************************************************************************
    * Methods for writing and reading the index

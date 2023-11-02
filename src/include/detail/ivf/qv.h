@@ -176,7 +176,7 @@ auto qv_query_heap_infinite_ram(
  * @return The indices of the top_k neighbors for each query vector
  */
 template <
-    contiguous_partitioned_feature_vector_array F,
+    partitioned_feature_vector_array F,
     feature_vector_array C,
     query_vector_array Q>
 auto nuv_query_heap_infinite_ram(
@@ -476,8 +476,12 @@ auto qv_query_heap_finite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
-    size_t nthreads) {
+    size_t nthreads,
+    uint64_t timestamp) {
   scoped_timer _{tdb_func__};
+  auto temporal_policy =
+      (timestamp == 0) ? tiledb::TemporalPolicy() :
+                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   using score_type = float;
   using indices_type =
@@ -512,7 +516,6 @@ auto qv_query_heap_finite_ram(
       active_centroids.emplace(top_centroids(p, j));
     }
   }
-
   auto active_partitions =
       std::vector<parts_type>(begin(active_centroids), end(active_centroids));
 
@@ -521,7 +524,13 @@ auto qv_query_heap_finite_ram(
       id_type,
       indices_type,
       parts_type>(
-      ctx, part_uri, indices, active_partitions, id_uri, upper_bound);
+      ctx,
+      part_uri,
+      indices,
+      active_partitions,
+      id_uri,
+      upper_bound,
+      temporal_policy);
 
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
   new_indices[0] = 0;
@@ -601,7 +610,6 @@ auto qv_query_heap_finite_ram(
 
                 auto start = new_indices[partno];
                 auto stop = new_indices[partno + 1];
-
                 /*
                  * Get the queries associated with this partition.
                  */

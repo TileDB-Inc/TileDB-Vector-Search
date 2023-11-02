@@ -52,17 +52,17 @@ std::vector<json> core_stats;
 using score_type = float;
 
 static constexpr const char USAGE[] =
-    R"(flat_pq_index: C++ cli for creating vamana index
+    R"(ivf_index: C++ cli for creating ivf index
 Usage:
-    flat_pq_index (-h | --help)
-    flat_pq_index --db_uri URI --index_uri URI [--ftype TYPE] [--idtype TYPE] [--force]
+    ivf_index (-h | --help)
+    ivf_index --db_uri URI --index_uri URI [--ftype TYPE] [--idtype TYPE] [--force]
                  [--init TYPE] [--num_clusters NN] [--max_iter NN] [--tol NN]
                  [--nthreads NN] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
 Options:
     -h, --help              show this screen
     --db_uri URI            database URI with feature vectors
-    --index_uri URI         group URI for storing vamana index
+    --index_uri URI         group URI for storing ivf index
     --ftype TYPE            data type of feature vectors [default: float]
     --idtype TYPE           data type of ids [default: uint64]
     -f, --force             overwrite index if it exists [default:false]
