@@ -47,6 +47,8 @@ TEST_CASE("api: test test", "[api]") {
   REQUIRE(true);
 }
 
+
+
 // ----------------------------------------------------------------------------
 // FeatureVector tests
 // ----------------------------------------------------------------------------
@@ -370,27 +372,6 @@ TEST_CASE("api: types", "[types]") {
   CHECK(tiledb::impl::type_to_tiledb<size_t>::name != std::string("UINT64"));
 }
 
-template <_load::_member_load T>
-void _yack(T&& t) {
-  auto x = load(t);
-}
-
-void yack() {
-  tiledb::Context ctx;
-  //  _yack(tdbColMajorMatrix<float>{ctx, "17"});
-
-  auto f = FeatureVectorArray(tdbColMajorMatrix<float>{ctx, "17"});
-  //_yack(f);
-
-  //  auto k = tdbColMajorMatrix<float>{ctx, "17"};
-  //  _yack(k);
-
-  //    auto g = FeatureVectorArray(k);
-  //    _yack(g);
-
-  //    _yack(std::move(g));
-}
-
 TEST_CASE("api: query checks", "[api][index]") {
   tiledb::Context ctx;
   size_t k_nn = 10;
@@ -420,6 +401,13 @@ TEST_CASE("api: query checks", "[api][index]") {
     auto ok = validate_top_k(ck_top_k, gk);
     CHECK(ok);
   }
+}
+
+TEST_CASE("api: index", "[api][index]") {
+  tiledb::Context ctx;
+  auto a = Index(ctx, fmnist_train_uri);
+  auto b = Index(ctx, fmnist_train_uri, IndexType::FlatL2);
+  // auto c = Index(ctx, fmnist_train_uri, IndexType::IVFFlat);
 }
 
 TEST_CASE("api: queries", "[api][index]") {

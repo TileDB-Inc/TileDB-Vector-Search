@@ -5,8 +5,6 @@
 #include <pybind11/stl.h>
 
 #include "linalg.h"
-#include "ivf_query.h"
-#include "flat_query.h"
 
 namespace py = pybind11;
 using Ctx = tiledb::Context;

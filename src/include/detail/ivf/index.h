@@ -44,8 +44,6 @@
 #include <docopt.h>
 
 #include "detail/linalg/tdb_matrix.h"
-#include "flat_query.h"
-#include "ivf_query.h"
 #include "utils/utils.h"
 
 using namespace detail::flat;

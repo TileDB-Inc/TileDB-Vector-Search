@@ -56,6 +56,7 @@
 #include "cpos.h"
 #include "detail/linalg/tdb_vector.h"
 #include "flat_index.h"
+#include "ivf_index.h"
 
 #include "utils/print_types.h"
 
@@ -98,7 +99,7 @@ class FeatureVector {
   template <feature_vector T>
   explicit FeatureVector(T&& vec)
       : vector_(std::make_unique<vector_impl<T>>(std::forward<T>(vec))) {
-    datatype_ = tiledb::impl::type_to_tiledb<
+    feature_type_ = tiledb::impl::type_to_tiledb<
         typename std::remove_cvref_t<T>::value_type>::tiledb_type;
   }
 
@@ -109,13 +110,13 @@ class FeatureVector {
    */
   FeatureVector(const tiledb::Context& ctx, const std::string& uri) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
-    datatype_ = get_array_datatype(array);
+    feature_type_ = get_array_datatype(array);
     array.close();  // @todo create Matrix constructor that takes opened array
 
     /*
      * Dispatch to the appropriate concrete class based on the datatype.
      */
-    switch (datatype_) {
+    switch (feature_type_) {
       case TILEDB_FLOAT32:
         vector_ = std::make_unique<vector_impl<tdbVector<float>>>(ctx, uri);
         break;
@@ -157,8 +158,8 @@ class FeatureVector {
    * @brief Returns the TileDB datatype of the vector
    * @return
    */
-  [[nodiscard]] tiledb_datatype_t datatype() const {
-    return datatype_;
+  [[nodiscard]] tiledb_datatype_t feature_type() const {
+    return feature_type_;
   }
 
   /**
@@ -200,7 +201,7 @@ class FeatureVector {
   };
 
  private:
-  tiledb_datatype_t datatype_{TILEDB_ANY};
+  tiledb_datatype_t feature_type_{TILEDB_ANY};
   std::unique_ptr<const vector_base> vector_;
 };
 
@@ -225,7 +226,7 @@ class FeatureVectorArray {
   explicit FeatureVectorArray(T&& obj)
       : vector_array(
             std::make_unique<vector_array_impl<T>>(std::forward<T>(obj))) {
-    datatype_ = tiledb::impl::type_to_tiledb<
+    feature_type_ = tiledb::impl::type_to_tiledb<
         typename std::remove_cvref_t<T>::value_type>::tiledb_type;
   }
 
@@ -234,7 +235,7 @@ class FeatureVectorArray {
       const std::string& uri,
       size_t num_vectors = 0) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
-    datatype_ = get_array_datatype(array);
+    feature_type_ = get_array_datatype(array);
     array.close();  // @todo create Matrix constructor that takes opened array
 
     /**
@@ -244,7 +245,7 @@ class FeatureVectorArray {
      * happen with either orientation, and so will work at the other end with
      * either orientation since we are just passing a pointer to the data.
      */
-    switch (datatype_) {
+    switch (feature_type_) {
       case TILEDB_FLOAT32:
         vector_array =
             std::make_unique<vector_array_impl<tdbColMajorMatrix<float>>>(
@@ -303,8 +304,8 @@ class FeatureVectorArray {
     return _cpo::num_vectors(*vector_array);
   }
 
-  [[nodiscard]] tiledb_datatype_t datatype() const {
-    return datatype_;
+  [[nodiscard]] tiledb_datatype_t feature_type() const {
+    return feature_type_;
   }
 
   /**
@@ -350,7 +351,7 @@ class FeatureVectorArray {
   };
 
  private:
-  tiledb_datatype_t datatype_{TILEDB_ANY};
+  tiledb_datatype_t feature_type_{TILEDB_ANY};
 
   // @todo const????
   std::unique_ptr</*const*/ vector_array_base> vector_array;
@@ -362,12 +363,55 @@ using QueryVectorArray = FeatureVectorArray;
 // Index
 //------------------------------------------------------------------------------
 
+enum class IndexType { FlatL2, IVFFlat, FlatPQ, IVFPQ, NNDESCENT, VAMANA };
+
 // Some fake types and type aliases for now
 using URI = std::string;
 using StringMap = std::map<std::string, std::string>;
 
 using IndexOptions = std::map<std::string, std::string>;
 using UpdateOptions = std::map<std::string, std::string>;
+
+tiledb_datatype_t string_to_datatype(const std::string& str) {
+  if (str == "float32") {
+    return TILEDB_FLOAT32;
+  }
+  if (str == "uint8") {
+    return TILEDB_UINT8;
+  }
+  if (str == "int32") {
+    return TILEDB_INT32;
+  }
+  if (str == "uint32") {
+    return TILEDB_UINT32;
+  }
+  if (str == "int64") {
+    return TILEDB_INT64;
+  }
+  if (str == "uint64") {
+    return TILEDB_UINT64;
+  }
+  throw std::runtime_error("Unsupported datatype");
+}
+
+std::string datatype_to_string(tiledb_datatype_t datatype) {
+  switch (datatype) {
+    case TILEDB_FLOAT32:
+      return "float32";
+    case TILEDB_UINT8:
+      return "uint8";
+    case TILEDB_INT32:
+      return "int32";
+    case TILEDB_UINT32:
+      return "uint32";
+    case TILEDB_INT64:
+      return "int64";
+    case TILEDB_UINT64:
+      return "uint64";
+    default:
+      throw std::runtime_error("Unsupported datatype");
+  }
+}
 
 /**
  * A type-erased index class. An index class is provides
@@ -395,21 +439,48 @@ class Index {
       : ctx_{ctx} {
     auto array =
         tiledb_helpers::open_array(tdb_func__, ctx_, index_uri, TILEDB_READ);
-    datatype_ = get_array_datatype(array);
+    feature_type_ = get_array_datatype(array);
+
     array.close();
 
     // @todo Constructors that take open arrays
-    switch (datatype_) {
-      case TILEDB_FLOAT32:
-        index_ = std::make_unique<index_impl<flat_index<float>>>(
-            ctx_, index_uri, config);
+    auto set_index = [&]<template <class> class Idx>() {
+      switch (feature_type_) {
+        case TILEDB_FLOAT32:
+          index_ = std::make_unique<index_impl<flat_index<float>>>(
+              ctx_, index_uri, config);
+          break;
+        case TILEDB_UINT8:
+          index_ = std::make_unique<index_impl<flat_index<uint8_t>>>(
+              ctx_, index_uri, config);
+          break;
+        default:
+          throw std::runtime_error("Unsupported attribute type");
+      }
+    };
+    switch (index_type) {
+      case IndexType::FlatL2:
+        set_index.operator()<flat_index>();
         break;
-      case TILEDB_UINT8:
-        index_ = std::make_unique<index_impl<flat_index<uint8_t>>>(
-            ctx_, index_uri, config);
+#if 0
+      case IndexType::IVFFlat:
+        set_index.operator()<ivf_index>();
         break;
+      case IndexType::FlatPQ:
+        set_index.operator()<flat_pq_index>();
+        break;
+      case IndexType::IVFPQ:
+        set_index.operator()<ivfpq_index>();
+        break;
+      case IndexType::NNDESCENT:
+        set_index.operator()<nndescent_index>();
+        break;
+      case IndexType::VAMANA:
+        set_index.operator()<vamana_index>();
+        break;
+#endif
       default:
-        throw std::runtime_error("Unsupported attribute type");
+        throw std::runtime_error("Unsupported index type");
     }
   }
 
@@ -484,8 +555,8 @@ class Index {
     return _cpo::num_vectors(*index_);
   }
 
-  auto datatype() {
-    return datatype_;
+  auto feature_type() {
+    return feature_type_;
   }
 
   /**
@@ -570,7 +641,7 @@ class Index {
         const QueryVectorArray& vectors, size_t k_nn) const override {
       // @todo using index_type = size_t;
 
-      auto dtype = vectors.datatype();
+      auto dtype = vectors.feature_type();
 
       // @note We need to maintain same layout -> or swap extents
       switch (dtype) {
@@ -644,7 +715,9 @@ class Index {
 
   // @todo Who should own the context?
   tiledb::Context ctx_{};
-  tiledb_datatype_t datatype_{TILEDB_ANY};
+  tiledb_datatype_t feature_type_{TILEDB_ANY};
+  tiledb_datatype_t id_type_{TILEDB_ANY};
+  tiledb_datatype_t ptx_type_{TILEDB_ANY};
   std::unique_ptr<const index_base> index_;
 };
 
@@ -652,7 +725,7 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
   // assert(a.datatype() == b.datatype());
 
   auto proc_b = [&b](auto& aview) {
-    switch (b.datatype()) {
+    switch (b.feature_type()) {
       case TILEDB_INT32: {
         auto bview = MatrixView<int32_t, stdx::layout_left>{
             (int32_t*)b.data(), extents(b)[0], extents(b)[1]};
@@ -678,7 +751,7 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
     }
   };
 
-  switch (a.datatype()) {
+  switch (a.feature_type()) {
     case TILEDB_INT32: {
       auto aview = MatrixView<int32_t, stdx::layout_left>{
           (int32_t*)a.data(), extents(a)[0], extents(a)[1]};

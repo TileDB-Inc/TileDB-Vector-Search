@@ -122,7 +122,7 @@ kmeans_add_test(unit_gen_graphs)
 
 kmeans_add_test(unit_ivf_index)
 
-kmeans_add_test(unit_ivf_query)
+# kmeans_add_test(unit_ivf_query)
 
 # kmeans_add_test(unit_ivf_qv)
 

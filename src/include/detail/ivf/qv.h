@@ -61,7 +61,6 @@
 #include "detail/ivf/partition.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
-#include "flat_query.h"
 #include "linalg.h"
 #include "scoring.h"
 

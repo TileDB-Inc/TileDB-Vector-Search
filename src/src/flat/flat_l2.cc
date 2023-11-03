@@ -85,7 +85,6 @@
 
 #include "docopt.h"
 
-#include "flat_query.h"
 #include "stats.h"
 #include "utils/print_types.h"
 #include "utils/timer.h"

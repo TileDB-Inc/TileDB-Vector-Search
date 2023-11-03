@@ -60,6 +60,7 @@
 #include "detail/flat/qv.h"
 #include "detail/ivf/index.h"
 #include "detail/ivf/partition.h"
+#include "detail/ivf/qv.h"
 
 #include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>

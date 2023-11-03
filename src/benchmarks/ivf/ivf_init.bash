@@ -17,6 +17,7 @@ export SRCROOT=${VECTOR_SEARCH}/src/
 
 export SIFT=siftsmall
 export SIFTPATH=${VECTOR_SEARCH}/external/data/gp3/${SIFT}
+export GP3=${VECTOR_SEARCH}/external/data/gp3/
 export DATAPATH=${SIFTPATH}
 
 export IVFPATH=${SRCROOT}/cmake-build-relwithdebinfo/libtiledbvectorsearch/src/ivf/

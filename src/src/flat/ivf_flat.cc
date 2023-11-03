@@ -66,7 +66,6 @@
 #include "docopt.h"
 
 #include "config.h"
-#include "ivf_query.h"
 #include "linalg.h"
 #include "stats.h"
 #include "utils/logging.h"
