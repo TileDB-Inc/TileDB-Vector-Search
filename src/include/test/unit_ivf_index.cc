@@ -350,12 +350,16 @@ TEMPLATE_TEST_CASE(
 
 // base is 10k, learn is 25k
 struct siftsmall_test_init {
+  using feature_type = float;
+  using id_type = uint32_t;
+  using px_type = uint64_t;
+
   tiledb::Context ctx_;
   size_t nlist;
   size_t nprobe;
 
   size_t k_nn = 10;
-  size_t nthreads = 8;
+  size_t nthreads = 0;
   size_t max_iter = 10;
   float tolerance = 1e-4;
 
@@ -363,11 +367,11 @@ struct siftsmall_test_init {
       : ctx_{ctx}
       , nlist(nl)
       , nprobe(std::min<size_t>(10, nlist))
-      , training_set(tdbColMajorMatrix<float>(ctx_, siftsmall_base_uri))
-      , query_set(tdbColMajorMatrix<float>(ctx_, siftsmall_query_uri))
+      , training_set(tdbColMajorMatrix<feature_type>(ctx_, siftsmall_base_uri))
+      , query_set(tdbColMajorMatrix<feature_type>(ctx_, siftsmall_query_uri))
       , groundtruth_set(
             tdbColMajorMatrix<int32_t>(ctx_, siftsmall_groundtruth_uri))
-      , idx(128, nlist, max_iter, tolerance, nthreads) {
+      , idx(128, nlist, max_iter, tolerance, nthreads, 0xdeadbeef) {
     training_set.load();
     query_set.load();
     groundtruth_set.load();
@@ -381,7 +385,7 @@ struct siftsmall_test_init {
   auto get_write_read_idx() {
     std::string tmp_ivf_index_uri = "/tmp/tmp_ivf_index";
     idx.write_index(tmp_ivf_index_uri, true);
-    auto idx0 = ivf_index<float, uint32_t, uint32_t>(ctx_, tmp_ivf_index_uri);
+    auto idx0 = ivf_index<feature_type, id_type, px_type>(ctx_, tmp_ivf_index_uri);
     return idx0;
   }
 
@@ -390,7 +394,7 @@ struct siftsmall_test_init {
   tdbColMajorMatrix<int32_t> groundtruth_set;
   ColMajorMatrix<float> top_k_scores;
   ColMajorMatrix<unsigned long long> top_k;
-  ivf_index<float, uint32_t, uint32_t> idx;
+  ivf_index<feature_type, id_type, px_type> idx;
 
   auto verify(auto&& top_k_ivf) {
     // These are helpful for debugging
@@ -484,7 +488,7 @@ TEST_CASE("Build index, write, read and query, infinite", "[ivf_index]") {
   auto idx = init.get_write_read_idx();
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
-  auto top_k_ivf = ColMajorMatrix<unsigned>();
+  auto top_k_ivf = ColMajorMatrix<typename decltype(init)::id_type>();
 
   SECTION("infinite") {
     INFO("infinite");
@@ -584,4 +588,73 @@ TEST_CASE(
   }
 
   init.verify(top_k_ivf);
+}
+
+
+TEST_CASE("Read from externally written index", "[ivf_index]") {
+// f_type: float
+// id_type: uint32
+// px_type: uint64
+  using feature_type = typename siftsmall_test_init::feature_type;
+  using id_type = typename siftsmall_test_init::id_type;
+  using px_type = typename siftsmall_test_init::px_type;
+
+  auto k_nn = 10;
+  auto nprobe = 20;
+  auto nlist = 100;
+
+  tiledb::Context ctx;
+  auto query_set = tdbColMajorMatrix<float>(ctx, siftsmall_query_uri);
+  query_set.load();
+  auto groundtruth_set = tdbColMajorMatrix<int32_t>(ctx, siftsmall_groundtruth_uri);
+  groundtruth_set.load();
+
+  auto top_k_ivf_scores = ColMajorMatrix<float>();
+  auto top_k_ivf = ColMajorMatrix<id_type>();
+
+  auto init = siftsmall_test_init(ctx, nlist);
+  std::string tmp_ivf_index_uri = "/tmp/tmp_ivf_index";
+  init.idx.write_index(tmp_ivf_index_uri, true);
+#if 0
+  SECTION("compare cli and init") {
+    auto idx1 = ivf_index<feature_type, id_type, px_type>(ctx, siftsmall_flatIVF_index_uri);
+    idx1.open_index(ctx, siftsmall_flatIVF_index_uri);
+    idx1.read_index_infinite();
+
+    auto idx2 = ivf_index<feature_type, id_type, px_type>(ctx, tmp_ivf_index_uri);
+    idx2.open_index(ctx, tmp_ivf_index_uri);
+    idx2.read_index_infinite();
+
+    CHECK(idx1.compare_metadata(idx2));
+    CHECK(idx1.compare_centroids(idx2));
+    CHECK(idx1.compare_feature_vectors(idx2));
+    CHECK(idx1.compare_indices(idx2));
+    CHECK(idx1.compare_partitioned_ids(idx2));
+  }
+#endif
+#if 1
+  SECTION("read cli generated") {
+    INFO("infinite cli");
+    auto idx = ivf_index<feature_type, id_type, px_type>(ctx, siftsmall_flatIVF_index_uri);
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.query_infinite_ram(query_set, k_nn, nprobe);
+  }
+#endif
+#if 0
+  SECTION("read init generated") {
+    INFO("infinite init");
+    auto idx = ivf_index<feature_type, id_type, px_type>(ctx, tmp_ivf_index_uri);
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.query_infinite_ram(query_set, k_nn, nprobe);
+  }
+#endif
+
+  auto intersections1 =
+      (long)count_intersections(top_k_ivf, groundtruth_set, k_nn);
+  double recall1 = intersections1 / ((double)top_k_ivf.num_cols() * k_nn);
+  if (nlist == 1) {
+    CHECK(intersections1 == num_vectors(top_k_ivf) * dimension(top_k_ivf));
+    CHECK(recall1 == 1.0);
+  }
+  CHECK(recall1 > 0.965);
 }

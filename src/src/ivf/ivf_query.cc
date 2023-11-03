@@ -54,7 +54,7 @@ static constexpr const char USAGE[] =
  Usage:
      ivf_query (-h | --help)
      ivf_query --index_uri URI --query_uri URI [--ftype TYPE] [--idtype TYPE] [--groundtruth_uri URI]
-                  [--nqueries NN] [--k NN] [--nqueries NN] [--alg ALGO] [--infinite] [--blocksize NN]
+                  [--nqueries NN] [--k NN] [--nprobe NN] [--alg ALGO] [--infinite] [--blocksize NN]
                   [--nthreads NN] [--validate] [--log FILE] [--stats] [-d] [-v]
 
  Options:
@@ -67,7 +67,7 @@ static constexpr const char USAGE[] =
      -k, --k NN              number of nearest neighbors [default: 1]
      --nprobe NN             number of centroid partitions to use [default: 100]
      --nqueries NN           number of query vectors to use (0 = all) [default: 0]
-     --alg ALGO              which algorithm to use for query [default: qv_heap]
+     --alg ALGO              which algorithm to use for query [default: final]
      --infinite              use infinite RAM algorithm [default: false]
      --blocksize NN          number of vectors to process in an out of core block (0 = all) [default: 0]
      --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
@@ -201,7 +201,7 @@ int main(int argc, char* argv[]) {
         // idx.log_index();
         dump_logs(
             args["--log"].asString(),
-            "vamana",
+            algorithm,
             nqueries,
             {},
             k_nn,

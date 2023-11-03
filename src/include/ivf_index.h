@@ -146,9 +146,12 @@ class ivf_index {
       , nlist_(nlist)
       , max_iter_(max_iter)
       , tol_(tol)
-      , num_threads_(
-            num_threads ? *num_threads : std::thread::hardware_concurrency())
       , centroids_(dim, nlist) {
+    if (num_threads && *num_threads > 0) {
+      num_threads_ = *num_threads;
+    } else {
+      num_threads_ = std::thread::hardware_concurrency();
+    }
   }
 
   ivf_index(tiledb::Context& ctx, const std::string& uri) {

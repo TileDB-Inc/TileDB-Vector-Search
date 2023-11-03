@@ -55,8 +55,8 @@ static constexpr const char USAGE[] =
     R"(ivf_index: C++ cli for creating ivf index
 Usage:
     ivf_index (-h | --help)
-    ivf_index --db_uri URI --index_uri URI [--ftype TYPE] [--idtype TYPE] [--force]
-                 [--init TYPE] [--num_clusters NN] [--max_iter NN] [--tol NN]
+    ivf_index --db_uri URI --index_uri URI [--ftype TYPE] [--idtype TYPE] [--pxtype TYPE]
+                 [--init TYPE] [--num_clusters NN] [--max_iter NN] [--tol NN] [--force]
                  [--nthreads NN] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
 Options:
@@ -65,10 +65,11 @@ Options:
     --index_uri URI         group URI for storing ivf index
     --ftype TYPE            data type of feature vectors [default: float]
     --idtype TYPE           data type of ids [default: uint64]
+    --pxtype TYPE           data type of partition index [default: uint64]
     -f, --force             overwrite index if it exists [default:false]
     -i, --init TYPE         initialization type, kmeans++ or random [default: random]
     --num_clusters NN       number of clusters/partitions, 0 = sqrt(N) [default: 0]
-    --max_iter NN           max number of iterations for kmeans [default: 8]
+    --max_iter NN           max number of iterations for kmeans [default: 10]
     --tol NN                tolerance for kmeans [default: 1e-4]
     --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
     --log FILE              log info to FILE (- for stdout)
@@ -103,22 +104,22 @@ int main(int argc, char* argv[]) {
                        kmeans_init::random :
                        kmeans_init::kmeanspp;
 
-  auto run_index = [&]<class feature_type, class id_type>() {
+  auto run_index = [&]<class feature_type, class id_type, class px_type>() {
     tiledb::Context ctx;
     auto X = tdbColMajorMatrix<feature_type>(ctx, db_uri);
     X.load();
 
     auto dim = dimension(X);
 
-    auto idx = ivf_index<feature_type, id_type, uint32_t>(
-        dim, num_clusters, max_iter, tolerance, nthreads);
+    auto idx = ivf_index<feature_type, id_type, px_type>(
+        dim, num_clusters, max_iter, tolerance, nthreads, 0xdeadbeef);
     idx.train(X, init_type);
     idx.add(X);
     idx.write_index(index_uri, overwrite);
 
     if (args["--log"]) {
       //     idx.log_index();
-      dump_logs(args["--log"].asString(), "flat_pq", {}, {}, {}, {}, {});
+      dump_logs(args["--log"].asString(), "ivf", {}, {}, {}, {}, {});
     }
     if (enable_stats) {
       std::cout << json{core_stats}.dump() << std::endl;
@@ -126,6 +127,7 @@ int main(int argc, char* argv[]) {
   };
   auto feature_type = args["--ftype"].asString();
   auto id_type = args["--idtype"].asString();
+  auto px_type = args["--pxtype"].asString();
 
   if (feature_type != "float" && feature_type != "uint8") {
     std::cout << "Unsupported feature type " << feature_type << std::endl;
@@ -135,15 +137,27 @@ int main(int argc, char* argv[]) {
     std::cout << "Unsupported id type " << id_type << std::endl;
     return 1;
   }
+  if (px_type != "uint64" && px_type != "uint32") {
+    std::cout << "Unsupported px type " << id_type << std::endl;
+    return 1;
+  }
 
-  if (feature_type == "float" && id_type == "uint64") {
-    run_index.operator()<float, uint64_t>();
-  } else if (feature_type == "float" && id_type == "uint32") {
-    run_index.operator()<float, uint32_t>();
-  } else if (feature_type == "uint8" && id_type == "uint64") {
-    run_index.operator()<uint8_t, uint64_t>();
-  } else if (feature_type == "uint8" && id_type == "uint32") {
-    run_index.operator()<uint8_t, uint32_t>();
+  if (feature_type == "float" && id_type == "uint64" && px_type == "uint64") {
+    run_index.operator()<float, uint64_t, uint64_t>();
+  } else if (feature_type == "float" && id_type == "uint32" && px_type == "uint64") {
+    run_index.operator()<float, uint32_t, uint64_t>();
+  } else if (feature_type == "uint8" && id_type == "uint64" && px_type == "uint64") {
+    run_index.operator()<uint8_t, uint64_t, uint64_t>();
+  } else if (feature_type == "uint8" && id_type == "uint32" && px_type == "uint64") {
+    run_index.operator()<uint8_t, uint32_t, uint64_t>();
+  } else if (feature_type == "float" && id_type == "uint64" && px_type == "uint32") {
+    run_index.operator()<float, uint64_t, uint32_t>();
+  } else if (feature_type == "float" && id_type == "uint32" && px_type == "uint32") {
+    run_index.operator()<float, uint32_t, uint32_t>();
+  } else if (feature_type == "uint8" && id_type == "uint64" && px_type == "uint32") {
+    run_index.operator()<uint8_t, uint64_t, uint32_t>();
+  } else if (feature_type == "uint8" && id_type == "uint32" && px_type == "uint32") {
+    run_index.operator()<uint8_t, uint32_t, uint32_t>();
   } else {
     std::cout << "Unsupported feature type " << feature_type;
     std::cout << " and/or unsupported id_type " << id_type << std::endl;
