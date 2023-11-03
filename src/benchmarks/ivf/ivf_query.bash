@@ -14,6 +14,6 @@ if [ ! -e ${SIFT_GROUNDTRUTH} ]; then
   echo "File ${SIFT_GROUNDTRUTH} does not exist!"
 fi
 
-cmd="${IVFPATH}/ivf_query  --index_uri ${SIFT_INDEX} --query_uri ${SIFT_QUERY}  --groundtruth_uri ${SIFT_GROUNDTRUTH}  -k 10 -v -d --log -"
+cmd="${IVFPATH}/ivf_query  --index_uri ${SIFT_INDEX} --query_uri ${SIFT_QUERY} --ftype ${F_TYPE}  --pxtype ${PX_TYPE} --groundtruth_uri ${SIFT_GROUNDTRUTH}  --idtype ${ID_TYPE}  -k 10 -v -d --log -"
 echo ${cmd}
 time ${cmd}

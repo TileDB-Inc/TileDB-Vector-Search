@@ -615,6 +615,8 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   auto init = siftsmall_test_init(ctx, nlist);
   std::string tmp_ivf_index_uri = "/tmp/tmp_ivf_index";
   init.idx.write_index(tmp_ivf_index_uri, true);
+
+// Just some sanity checking and for interactive debugging
 #if 0
   SECTION("compare cli and init") {
     auto idx1 = ivf_index<feature_type, id_type, px_type>(ctx, siftsmall_flatIVF_index_uri);
@@ -632,22 +634,20 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
     CHECK(idx1.compare_partitioned_ids(idx2));
   }
 #endif
-#if 1
+
   SECTION("read cli generated") {
     INFO("infinite cli");
     auto idx = ivf_index<feature_type, id_type, px_type>(ctx, siftsmall_flatIVF_index_uri);
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
-#endif
-#if 0
+
   SECTION("read init generated") {
     INFO("infinite init");
     auto idx = ivf_index<feature_type, id_type, px_type>(ctx, tmp_ivf_index_uri);
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
-#endif
 
   auto intersections1 =
       (long)count_intersections(top_k_ivf, groundtruth_set, k_nn);

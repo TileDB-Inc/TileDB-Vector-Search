@@ -53,7 +53,7 @@ static constexpr const char USAGE[] =
     R"(ivf: C++ cli for flat pq query
  Usage:
      ivf_query (-h | --help)
-     ivf_query --index_uri URI --query_uri URI [--ftype TYPE] [--idtype TYPE] [--groundtruth_uri URI]
+     ivf_query --index_uri URI --query_uri URI [--ftype TYPE] [--idtype TYPE] [--pxtype TYPE] [--groundtruth_uri URI]
                   [--nqueries NN] [--k NN] [--nprobe NN] [--alg ALGO] [--infinite] [--blocksize NN]
                   [--nthreads NN] [--validate] [--log FILE] [--stats] [-d] [-v]
 
@@ -63,6 +63,7 @@ static constexpr const char USAGE[] =
      --query_uri URI         query URI with feature vectors to search for
      --ftype TYPE            data type of feature vectors [default: float]
      --idtype TYPE           data type of ids [default: uint64]
+     --pxtype TYPE           data type of partition indices [default: uint64]
      --groundtruth_uri URI   ground truth URI
      -k, --k NN              number of nearest neighbors [default: 1]
      --nprobe NN             number of centroid partitions to use [default: 100]
@@ -126,12 +127,12 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  auto run_query = [&]<class feature_type, class id_type>() {
+  auto run_query = [&]<class feature_type, class id_type, class px_type>() {
     tiledb::Context ctx;
 
     auto&& [top_k_scores, top_k] = [&]() {
       ;
-      auto idx = ivf_index<feature_type, id_type, uint32_t>(ctx, index_uri);
+      auto idx = ivf_index<feature_type, id_type, px_type>(ctx, index_uri);
 
       auto queries =
           tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
@@ -214,6 +215,7 @@ int main(int argc, char* argv[]) {
 
   auto feature_type = args["--ftype"].asString();
   auto id_type = args["--idtype"].asString();
+  auto px_type = args["--pxtype"].asString();
 
   if (feature_type != "float" && feature_type != "uint8") {
     std::cout << "Unsupported feature type " << feature_type << std::endl;
@@ -223,15 +225,27 @@ int main(int argc, char* argv[]) {
     std::cout << "Unsupported id type " << id_type << std::endl;
     return 1;
   }
+  if (px_type != "uint64" && px_type != "uint32") {
+    std::cout << "Unsupported px type " << px_type << std::endl;
+    return 1;
+  }
 
-  if (feature_type == "float" && id_type == "uint64") {
-    run_query.operator()<float, uint64_t>();
-  } else if (feature_type == "float" && id_type == "uint32") {
-    run_query.operator()<float, uint32_t>();
-  } else if (feature_type == "uint8" && id_type == "uint64") {
-    run_query.operator()<uint8_t, uint64_t>();
-  } else if (feature_type == "uint8" && id_type == "uint32") {
-    run_query.operator()<uint8_t, uint32_t>();
+  if (feature_type == "float" && id_type == "uint64" && px_type == "uint64") {
+    run_query.operator()<float, uint64_t, uint64_t>();
+  } else if (feature_type == "float" && id_type == "uint32" && px_type == "uint64") {
+    run_query.operator()<float, uint32_t, uint64_t>();
+  } else if (feature_type == "uint8" && id_type == "uint64" && px_type == "uint64") {
+    run_query.operator()<uint8_t, uint64_t, uint64_t>();
+  } else if (feature_type == "uint8" && id_type == "uint32" && px_type == "uint64") {
+    run_query.operator()<uint8_t, uint32_t, uint64_t>();
+  } else if (feature_type == "float" && id_type == "uint64" && px_type == "uint32") {
+    run_query.operator()<float, uint64_t, uint32_t>();
+  } else if (feature_type == "float" && id_type == "uint32" && px_type == "uint32") {
+    run_query.operator()<float, uint32_t, uint32_t>();
+  } else if (feature_type == "uint8" && id_type == "uint64" && px_type == "uint32") {
+    run_query.operator()<uint8_t, uint64_t, uint32_t>();
+  } else if (feature_type == "uint8" && id_type == "uint32" && px_type == "uint32") {
+    run_query.operator()<uint8_t, uint32_t, uint32_t>();
   } else {
     std::cout << "Unsupported feature type " << feature_type;
     std::cout << " and/or unsupported id_type " << id_type << std::endl;

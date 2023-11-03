@@ -138,7 +138,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   if (px_type != "uint64" && px_type != "uint32") {
-    std::cout << "Unsupported px type " << id_type << std::endl;
+    std::cout << "Unsupported px type " << px_type << std::endl;
     return 1;
   }
 
