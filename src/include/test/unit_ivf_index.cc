@@ -385,7 +385,8 @@ struct siftsmall_test_init {
   auto get_write_read_idx() {
     std::string tmp_ivf_index_uri = "/tmp/tmp_ivf_index";
     idx.write_index(tmp_ivf_index_uri, true);
-    auto idx0 = ivf_index<feature_type, id_type, px_type>(ctx_, tmp_ivf_index_uri);
+    auto idx0 =
+        ivf_index<feature_type, id_type, px_type>(ctx_, tmp_ivf_index_uri);
     return idx0;
   }
 
@@ -590,11 +591,10 @@ TEST_CASE(
   init.verify(top_k_ivf);
 }
 
-
 TEST_CASE("Read from externally written index", "[ivf_index]") {
-// f_type: float
-// id_type: uint32
-// px_type: uint64
+  // f_type: float
+  // id_type: uint32
+  // px_type: uint64
   using feature_type = typename siftsmall_test_init::feature_type;
   using id_type = typename siftsmall_test_init::id_type;
   using px_type = typename siftsmall_test_init::px_type;
@@ -606,7 +606,8 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   tiledb::Context ctx;
   auto query_set = tdbColMajorMatrix<float>(ctx, siftsmall_query_uri);
   query_set.load();
-  auto groundtruth_set = tdbColMajorMatrix<int32_t>(ctx, siftsmall_groundtruth_uri);
+  auto groundtruth_set =
+      tdbColMajorMatrix<int32_t>(ctx, siftsmall_groundtruth_uri);
   groundtruth_set.load();
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
@@ -637,14 +638,16 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
 
   SECTION("read cli generated") {
     INFO("infinite cli");
-    auto idx = ivf_index<feature_type, id_type, px_type>(ctx, siftsmall_flatIVF_index_uri);
+    auto idx = ivf_index<feature_type, id_type, px_type>(
+        ctx, siftsmall_flatIVF_index_uri);
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
 
   SECTION("read init generated") {
     INFO("infinite init");
-    auto idx = ivf_index<feature_type, id_type, px_type>(ctx, tmp_ivf_index_uri);
+    auto idx =
+        ivf_index<feature_type, id_type, px_type>(ctx, tmp_ivf_index_uri);
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }

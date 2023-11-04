@@ -35,11 +35,13 @@
  *
  * There are two types of implementation here: infinite RAM and finite RAM.  The
  * infinite RAM case loads the entire partitioned database into memory, and then
- * searches in the partitions as indicated by the nearest centroids to the
- * queries.  The infinite RAM case does not perform any out-of-core operations.
- * The finite RAM case only loads the partitions into memory that are necessary
- * for the search. The user can specify an upper bound on the amount of RAM to
- * be used for holding the queries being searched.  The searches are ordered so
+ * searches in the partitions indicated by the given active partitions.
+ * The infinite RAM case does not perform any out-of-core operations.
+ * The finite RAM only loads the partitions into memory that are necessary
+ * for the search, i.e., all partitions are active partitions. The user can
+ * also specify an upper bound on the amount of RAM to be used for holding the
+ * partitions to be searched (i.e., can specify amount of RAM to be used,
+ * resulting in out of core operation.  The queries are ordered so
  * that the partitions can be loaded into memory in the order they are laid out
  * in the array.
  *
@@ -76,37 +78,30 @@ namespace detail::ivf {
 
 /**
  * @brief The OG version of querying with qv loop ordering.
- * Queries a set of query vectors against an indexed vector database. The
- * arrays part_uri, centroids, indices, and id_uri comprise the index.  The
- * partitioned database is stored in part_uri, the centroids are stored in
- * centroids, the indices demarcating partitions is stored in indices, and the
- * labels for the vectors in the original database are stored in id_uri.
- * The query is stored in q.
+ * Applies a set of query vectors against a partitioned vector database.
+ * Since this is an infinite ram algorithm, all of the partitions have been
+ * loaded into memory. The partitions to apply the query to are inferred from
+ * the top centroids.
  *
- * * "Infinite RAM" means the entire index is loaded into memory before any
- * queries are applied, regardless of which partitions are to be queried.
- *
- * @param partitioned_vectors Partitioned database
- * @param centroids Centroids of the vectors in the original database (and
- * the partitioned database).  The ith centroid is the centroid of the ith
- * partition.
- * @param q The query to be searched
- * @param indices The demarcations of partitions
- * @param partitioned_ids Labels for the vectors in the original database
+ * @tparam F Type of the feature vectors
+ * @tparam C Type of the top centroids
+ * @tparam Q Type of the query
+ * @param top_centroids The centroids involved in the query
+ * @param partitioned_vectors The partitioned database (all vectors)
+ * @param query The query to be applied
  * @param nprobe How many partitions to search
  * @param k_nn How many nearest neighbors to return
- * @param nth Unused
- * @param nthreads How many threads to use for parallel execution
- * @return The indices of the top_k neighbors for each query vector
+ * @param nthreads How many threads to parallelize with
+ * @return tuple of the top_k scores and the top_k indices
+ *
+ * @todo Can we active partitions rather than top_centroids?
  */
-// @todo We should still order the queries so partitions are searched in order
 template <
-    partitioned_feature_vector_array F,
     feature_vector_array C,
+    partitioned_feature_vector_array F,
     query_vector_array Q>
 auto qv_query_heap_infinite_ram(
-    const C& centroids,
-    auto&& top_centroids,
+    const C& top_centroids,
     const F& partitioned_vectors,
     const Q& query,
     size_t nprobe,
@@ -150,36 +145,26 @@ auto qv_query_heap_infinite_ram(
 }
 
 /**
- * @brief Implementation with the new qv (nuv) loop ordering.
- * Queries a set of query vectors against an indexed vector database. The
- * arrays part_uri, centroids, indices, and id_uri comprise the index.  The
- * partitioned database is stored in part_uri, the centroids are stored in
- * centroids, the indices demarcating partitions is stored in indices, and the
- * labels for the vectors in the original database are stored in id_uri.
- * The query is stored in q.
+ * @brief Query using the new qv (nuv) loop ordering.
+ * Applies a set of query vectors against a partitioned vector database.
+ * Since this is an infinite ram algorithm, all of the partitions have been
+ * loaded into memory. The partitions to apply the query to are inferred from
+ * the top centroids.
  *
- * "Infinite RAM" means the entire index is loaded into memory before any
- * queries are applied, regardless of which partitions are to be queried.
- *
- * @param partitioned_vectors Partitioned database
- * @param centroids Centroids of the vectors in the original database (and
- * the partitioned database).  The ith centroid is the centroid of the ith
- * partition.
- * @param q The query to be searched
- * @param indices The demarcations of partitions
- * @param partitioned_ids Labels for the vectors in the original database
+ * @tparam F Type of the feature vectors
+ * @tparam Q Type of the query
+ * @param partitioned_vectors The partitioned database (all vectors)
+ * @param active_partitions The partitions to which queries will be applied
+ * @param query The query to be applied
+ * @param active_queries The queries associated with each (active) partition
  * @param nprobe How many partitions to search
  * @param k_nn How many nearest neighbors to return
- * @param nth Unused
- * @param nthreads How many threads to use for parallel execution
- * @return The indices of the top_k neighbors for each query vector
+ * @param nthreads How many threads to parallelize with
+ * @return tuple of the top_k scores and the top_k indices
+ *
  */
-template <
-    partitioned_feature_vector_array F,
-    feature_vector_array C,
-    query_vector_array Q>
+template <partitioned_feature_vector_array F, query_vector_array Q>
 auto nuv_query_heap_infinite_ram(
-    const C& centroids,
     const F& partitioned_vectors,
     auto&& active_partitions,
     const Q& query,
@@ -227,8 +212,7 @@ auto nuv_query_heap_infinite_ram(
            first_part,
            last_part]() {
             /*
-             * For each partition, process the queries that have that
-             * partition as their top centroid.
+             * For each partition, process the associated queries
              */
             for (size_t p = first_part; p < last_part; ++p) {
               auto partno = active_partitions[p];
@@ -266,38 +250,28 @@ auto nuv_query_heap_infinite_ram(
 }
 
 /**
- * @brief Implementation with the new qv (nuv) loop ordering.  In this function
- * we apply a tiling to the inner loop (similar to the approach used in
- * matrix-matrix product).
+ * @brief Query using the new qv (nuv) loop ordering, with 2 by 2 blocking.  The
+ * blocking is applied in order to increase locality.
  *
- * Queries a set of query vectors against an indexed vector database. The
- * arrays part_uri, centroids, indices, and id_uri comprise the index.  The
- * partitioned database is stored in part_uri, the centroids are stored in
- * centroids, the indices demarcating partitions is stored in indices, and the
- * labels for the vectors in the original database are stored in id_uri.
- * The query is stored in q.
+ * Applies a set of query vectors against a partitioned vector database.
+ * Since this is an infinite ram algorithm, all of the partitions have been
+ * loaded into memory. The partitions to apply the query to are inferred from
+ * the top centroids.
  *
- * "Infinite RAM" means the entire index is loaded into memory before any
- * queries are applied, regardless of which partitions are to be queried.
- *
- * @param partitioned_vectors Partitioned database
- * @param centroids Centroids of the vectors in the original database (and
- * the partitioned database).  The ith centroid is the centroid of the ith
- * partition.
- * @param q The query to be searched
- * @param indices The demarcations of partitions
- * @param partitioned_ids Labels for the vectors in the original database
+ * @tparam F Type of the feature vectors
+ * @tparam Q Type of the query
+ * @param partitioned_vectors The partitioned database (all vectors)
+ * @param active_partitions The partitions to which queries will be applied
+ * @param query The query to be applied
+ * @param active_queries The queries associated with each (active) partition
  * @param nprobe How many partitions to search
  * @param k_nn How many nearest neighbors to return
- * @param nth Unused
- * @param nthreads How many threads to use for parallel execution
- * @return The indices of the top_k neighbors for each query vector
+ * @param nthreads How many threads to parallelize with
+ * @return tuple of the top_k scores and the top_k indices
  *
- * @todo We should still order the queries so partitions are searched in order
  */
-template <feature_vector_array F, query_vector_array Q, feature_vector_array C>
+template <feature_vector_array F, query_vector_array Q>
 auto nuv_query_heap_infinite_ram_reg_blocked(
-    const C& centroids,
     const F& partitioned_vectors,
     auto&& active_partitions,
     const Q& query,
@@ -345,10 +319,8 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
            first_part,
            last_part]() {
             /*
-             * For each partition, process the queries that have that
-             * partition as their top centroid.
+             * For each partition, process the associated queries
              */
-
             auto& mscores = min_scores[n];
             for (size_t partno = first_part; partno < last_part; ++partno) {
               auto quartno = active_partitions[partno];
@@ -423,11 +395,13 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
 
 /*******************************************************************************
  *
- * Functions for searching with infinite RAM
+ * Functions for searching with finite RAM
  *
  ******************************************************************************/
 
 /**
+ * @todo Modify for new ivf_index api
+ *
  * @brief OG Implementation of finite RAM qv query.
  * Queries a set of query vectors against an indexed vector database. The
  * arrays part_uri, centroids, indices, and id_uri comprise the index.  The
@@ -649,50 +623,35 @@ auto qv_query_heap_finite_ram(
 // Functions for searching with finite RAM, new qv (nuv) ordering
 // ----------------------------------------------------------------------------
 
-/**
- * @brief OG Implementation of finite RAM using the new qv (nuv) ordering.
- * Queries a set of query vectors against an indexed vector database. The
- * arrays part_uri, centroids, indices, and id_uri comprise the index.  The
- * partitioned database is stored in part_uri, the centroids are stored in
- * centroids, the indices demarcating partitions is stored in indices, and the
- * labels for the vectors in the original database are stored in id_uri.
- * The query is stored in q.
+/*
+ * Queries a set of query vectors against an indexed vector database, using
+ * the "nuv" ordering.
  *
  * "Finite RAM" means the only the partitions necessary for the search will
  * be loaded into memory.  Moreover, the `upper_bound` parameter controls
  * how many vectors will be loaded into memory at any one time.  If all of
- * the partitions can be loaded into memory at once, then batches of them
- * will be loaded, and the search will be performed on the batches.  (That is
- * the search will be performed "out of core".)
+ * the partitions cannot be loaded into memory at once, then batches of them
+ * will be loaded, and the search will be performed on the batches.  (That is,
+ * the search will be performed "out of core".)  An upper_bound of 0 will load
+ * only the partitions necessary to answer the query, but it will load all of
+ * them.
  *
  * The function loads partitions in the order they are stored in the array.
  *
- * Note that an upper_bound of 0 means that all relevant partitions will be
- * loaded. This differs from infinite RAM, which loads the entire partitioned
- * database.  An upper_bound of 0 will load only the partitions necessary
- * to answer the query, but it will load all of those.
- *
- * @param part_uri The URI of the partitioned database
- * @param centroids Centroids of the vectors in the original database (and
- * the partitioned database).  The ith centroid is the centroid of the ith
- * partition.
- * @param q The query to be searched
- * @param indices The demarcations of partitions
- * @param id_uri URI for the labels for the vectors in the original database
+ * @tparam F Type of the feature vectors
+ * @tparam Q Type of the query
+ * @param partitioned_vectors The partitioned database (all vectors)
+ * @param active_partitions The partitions to which queries will be applied
+ * @param query The query to be applied
+ * @param active_queries The queries associated with each (active) partition
  * @param nprobe How many partitions to search
  * @param k_nn How many nearest neighbors to return
- * @param upper_bound Limit of how many vectors to load into memory at one time
- * @param nth Unused
- * @param nthreads How many threads to use for parallel execution
- * @return The indices of the top_k neighbors for each query vector
+ * @param nthreads How many threads to parallelize with
+ * @return tuple of the top_k scores and the top_k indices
+ *
  */
-
-template <
-    feature_vector_array F,
-    feature_vector_array C,
-    feature_vector_array Q>
+template <feature_vector_array F, feature_vector_array Q>
 auto nuv_query_heap_finite_ram(
-    const C& centroids,
     F& partitioned_vectors,
     const Q& query,
     auto&& active_queries,
@@ -743,8 +702,7 @@ auto nuv_query_heap_finite_ram(
              last_part,
              part_offset]() {
               /*
-               * For each partition, process the queries that have that
-               * partition as their top centroid.
+               * For each partition, process the associated queries
                */
               for (size_t p = first_part; p < last_part; ++p) {
                 // @todo this may not be correct -- resident_part_offset is
@@ -791,52 +749,35 @@ auto nuv_query_heap_finite_ram(
 }
 
 /**
- * @brief OG Implementation of finite RAM using the new qv (nuv) ordering.
- * In this function
- * we apply a tiling to the inner loop (similar to the approach used in
- * matrix-matrix product).
- *
- * Queries a set of query vectors against an indexed vector database. The
- * arrays part_uri, centroids, indices, and id_uri comprise the index.  The
- * partitioned database is stored in part_uri, the centroids are stored in
- * centroids, the indices demarcating partitions is stored in indices, and the
- * labels for the vectors in the original database are stored in id_uri.
- * The query is stored in q.
+ * Queries a set of query vectors against an indexed vector database, using
+ * "nuv" ordering and 2 by 2 blocking.  The blocking is used in order to
+ * increase locality.
  *
  * "Finite RAM" means the only the partitions necessary for the search will
  * be loaded into memory.  Moreover, the `upper_bound` parameter controls
  * how many vectors will be loaded into memory at any one time.  If all of
- * the partitions can be loaded into memory at once, then batches of them
- * will be loaded, and the search will be performed on the batches.  (That is
- * the search will be performed "out of core".)
+ * the partitions cannot be loaded into memory at once, then batches of them
+ * will be loaded, and the search will be performed on the batches.  (That is,
+ * the search will be performed "out of core".)  An upper_bound of 0 will load
+ * only the partitions necessary to answer the query, but it will load all of
+ * them.
  *
  * The function loads partitions in the order they are stored in the array.
  *
- * Note that an upper_bound of 0 means that all relevant partitions will be
- * loaded. This differs from infinite RAM, which loads the entire partitioned
- * database.  An upper_bound of 0 will load only the partitions necessary
- * to answer the query, but it will load all of those.
- *
- * @param part_uri The URI of the partitioned database
- * @param centroids Centroids of the vectors in the original database (and
- * the partitioned database).  The ith centroid is the centroid of the ith
- * partition.
- * @param q The query to be searched
- * @param indices The demarcations of partitions
- * @param id_uri URI for the labels for the vectors in the original database
+ * @tparam F Type of the feature vectors
+ * @tparam Q Type of the query
+ * @param partitioned_vectors The partitioned database (all vectors)
+ * @param active_partitions The partitions to which queries will be applied
+ * @param query The query to be applied
+ * @param active_queries The queries associated with each (active) partition
  * @param nprobe How many partitions to search
  * @param k_nn How many nearest neighbors to return
- * @param upper_bound Limit of how many vectors to load into memory at one time
- * @param nth Unused
- * @param nthreads How many threads to use for parallel execution
- * @return The indices of the top_k neighbors for each query vector
+ * @param nthreads How many threads to parallelize with
+ * @return tuple of the top_k scores and the top_k indices
+ *
  */
-template <
-    feature_vector_array F,
-    feature_vector_array C,
-    feature_vector_array Q>
+template <feature_vector_array F, feature_vector_array Q>
 auto nuv_query_heap_finite_ram_reg_blocked(
-    const C& centroids,
     F& partitioned_vectors,
     const Q& query,
     auto&& active_queries,
@@ -890,8 +831,8 @@ auto nuv_query_heap_finite_ram_reg_blocked(
              last_part,
              part_offset]() {
               /*
-               * For each partition, process the queries that have that
-               * partition as their top centroid.
+               * For each partition, process the associated queries that have
+               * that
                *
                * Assumption: Each partition is an active partition
                */
@@ -986,29 +927,40 @@ auto nuv_query_heap_finite_ram_reg_blocked(
 }
 
 /**
- * @brief Component function for querying a portion of an IVF index.  It is
- * designed to be used in a parallel (and/or distributed) fashion.
- * @param query The entire set of queries being applied
- * @param partitioned_vectors The partitions loaded from the index. These are
- * the partitions that have at least one query associated with them.  Note that
- * we are loading partitions into contiguous memory, but they are not
- * necessarily contiguous in the original array. As a result, we can't use the
- * original indices to access the partitions.
- * @param new_indices Indices for demarcating partitions in partitioned_vectors.
- * @param active_queries For each centroid, the ids of the subset of queries
- * associated with that centroid.
- * @param ids The original labels of the vectors in the partitioned_vectors
- * @param active_partitions The set of partitions having at least one query
- * @param k_nn How many neigbors to return
- * @param first_part The first partition to query
- * @param last_part One past the last partition to query
- * @return
+ * Queries a set of query vectors against an indexed vector database, using
+ * "nuv" ordering and 2 by 2 blocking.  The blocking is used in order to
+ * increase locality.
+ *
+ * This function is the "definitive" finite ram query.
+ *
+ * "Finite RAM" means the only the partitions necessary for the search will
+ * be loaded into memory.  Moreover, the `upper_bound` parameter controls
+ * how many vectors will be loaded into memory at any one time.  If all of
+ * the partitions cannot be loaded into memory at once, then batches of them
+ * will be loaded, and the search will be performed on the batches.  (That is,
+ * the search will be performed "out of core".)  An upper_bound of 0 will load
+ * only the partitions necessary to answer the query, but it will load all of
+ * them.
+ *
+ * The function loads partitions in the order they are stored in the array.
+ *
+ * @tparam F Type of the feature vectors
+ * @tparam Q Type of the query
+ * @param partitioned_vectors The partitioned database (all vectors)
+ * @param active_partitions The partitions to which queries will be applied
+ * @param query The query to be applied
+ * @param active_queries The queries associated with each (active) partition
+ * @param nprobe How many partitions to search
+ * @param k_nn How many nearest neighbors to return
+ * @param nthreads How many threads to parallelize with
+ * @return tuple of the top_k scores and the top_k indices
+ *
  */
 template <partitioned_feature_vector_array P, query_vector_array Q, class A>
 auto apply_query(
     const P& partitioned_vectors,
     const std::optional<A>&
-        active_partitions,  // Need for infinite case, not finite
+        active_partitions,  // Needed for infinite case, not finite
     const Q& query,
     auto&& active_queries,
     size_t k_nn,
@@ -1145,12 +1097,8 @@ auto apply_query(
  * @param min_parts_per_thread Unused (WIP for threading heuristics)
  * @return The indices of the top_k neighbors for each query vector
  */
-template <
-    feature_vector_array F,
-    feature_vector_array C,
-    feature_vector_array Q>
+template <feature_vector_array F, feature_vector_array Q>
 auto query_finite_ram(
-    const C& centroids,
     F& partitioned_vectors,
     const Q& query,
     auto&& active_queries,
@@ -1233,40 +1181,28 @@ auto query_finite_ram(
 }
 
 /**
- * @brief Reference implementation of infinite RAM query using qv ordering.
- * It incorporates all of the empircally determined optimizations from the
- * other implementations in this file.
+ * @brief Query using the new qv (nuv) loop ordering.
+ * Applies a set of query vectors against a partitioned vector database.
+ * Since this is an infinite ram algorithm, all of the partitions have been
+ * loaded into memory. The partitions to apply the query to are inferred from
+ * the top centroids.
  *
- * Queries a set of query vectors against an indexed vector database. The
- * arrays part_uri, centroids, indices, and id_uri comprise the index.  The
- * partitioned database is stored in part_uri, the centroids are stored in
- * centroids, the indices demarcating partitions is stored in indices, and the
- * labels for the vectors in the original database are stored in id_uri.
- * The query is stored in q.
+ * This function is the definitive infinite ram query.
  *
- * "Infinite RAM" means the entire partitioned database is loaded into RAM.
- *
- * @param part_uri The URI of the partitioned database
- * @param centroids Centroids of the vectors in the original database (and
- * the partitioned database).  The ith centroid is the centroid of the ith
- * partition.
- * @param q The query to be searched
- * @param indices The demarcations of partitions
- * @param id_uri URI for the labels for the vectors in the original database
+ * @tparam F Type of the feature vectors
+ * @tparam Q Type of the query
+ * @param partitioned_vectors The partitioned database (all vectors)
+ * @param active_partitions The partitions to which queries will be applied
+ * @param query The query to be applied
+ * @param active_queries The queries associated with each (active) partition
  * @param nprobe How many partitions to search
  * @param k_nn How many nearest neighbors to return
- * @param upper_bound Limit of how many vectors to load into memory at one time
- * @param nth Unused
- * @param nthreads How many threads to use for parallel execution
- * @param min_parts_per_thread Unused (WIP for threading heuristics)
- * @return The indices of the top_k neighbors for each query vector
+ * @param nthreads How many threads to parallelize with
+ * @return tuple of the top_k scores and the top_k indices
+ *
  */
-template <
-    feature_vector_array F,
-    feature_vector_array C,
-    feature_vector_array Q>
+template <feature_vector_array F, feature_vector_array Q>
 auto query_infinite_ram(
-    const C& centroids,
     const F& partitioned_vectors,
     auto&& active_partitions,
     const Q& query,

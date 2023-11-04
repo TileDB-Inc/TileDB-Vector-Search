@@ -56,6 +56,7 @@
 #include "cpos.h"
 #include "detail/linalg/tdb_vector.h"
 #include "flat_index.h"
+#include "index_defs.h"
 #include "ivf_index.h"
 
 #include "utils/print_types.h"
@@ -363,55 +364,12 @@ using QueryVectorArray = FeatureVectorArray;
 // Index
 //------------------------------------------------------------------------------
 
-enum class IndexType { FlatL2, IVFFlat, FlatPQ, IVFPQ, NNDESCENT, VAMANA };
-
 // Some fake types and type aliases for now
 using URI = std::string;
 using StringMap = std::map<std::string, std::string>;
 
 using IndexOptions = std::map<std::string, std::string>;
 using UpdateOptions = std::map<std::string, std::string>;
-
-tiledb_datatype_t string_to_datatype(const std::string& str) {
-  if (str == "float32") {
-    return TILEDB_FLOAT32;
-  }
-  if (str == "uint8") {
-    return TILEDB_UINT8;
-  }
-  if (str == "int32") {
-    return TILEDB_INT32;
-  }
-  if (str == "uint32") {
-    return TILEDB_UINT32;
-  }
-  if (str == "int64") {
-    return TILEDB_INT64;
-  }
-  if (str == "uint64") {
-    return TILEDB_UINT64;
-  }
-  throw std::runtime_error("Unsupported datatype");
-}
-
-std::string datatype_to_string(tiledb_datatype_t datatype) {
-  switch (datatype) {
-    case TILEDB_FLOAT32:
-      return "float32";
-    case TILEDB_UINT8:
-      return "uint8";
-    case TILEDB_INT32:
-      return "int32";
-    case TILEDB_UINT32:
-      return "uint32";
-    case TILEDB_INT64:
-      return "int64";
-    case TILEDB_UINT64:
-      return "uint64";
-    default:
-      throw std::runtime_error("Unsupported datatype");
-  }
-}
 
 /**
  * A type-erased index class. An index class is provides
@@ -428,77 +386,47 @@ class Index {
   // @todo Who owns the context?
   Index(
       const URI& index_uri,
-      const std::optional<StringMap>& config = std::nullopt)
+      const std::optional<IndexOptions>& config = std::nullopt)
       : Index(tiledb::Context{}, index_uri, config) {
   }
 
+  // @todo Use group metadata to determine index type and associated array types
   Index(
       const tiledb::Context& ctx,
       const URI& index_uri,
-      const std::optional<StringMap>& config = std::nullopt)
+      const std::optional<IndexOptions>& config = std::nullopt)
       : ctx_{ctx} {
     auto array =
         tiledb_helpers::open_array(tdb_func__, ctx_, index_uri, TILEDB_READ);
     feature_type_ = get_array_datatype(array);
-
     array.close();
 
-    // @todo Constructors that take open arrays
-    auto set_index = [&]<template <class> class Idx>() {
-      switch (feature_type_) {
-        case TILEDB_FLOAT32:
-          index_ = std::make_unique<index_impl<flat_index<float>>>(
-              ctx_, index_uri, config);
-          break;
-        case TILEDB_UINT8:
-          index_ = std::make_unique<index_impl<flat_index<uint8_t>>>(
-              ctx_, index_uri, config);
-          break;
-        default:
-          throw std::runtime_error("Unsupported attribute type");
-      }
-    };
-    switch (index_type) {
-      case IndexType::FlatL2:
-        set_index.operator()<flat_index>();
+    switch (feature_type_) {
+      case TILEDB_FLOAT32:
+        index_ = std::make_unique<index_impl<flat_index<float>>>(
+            ctx_, index_uri, config);
         break;
-#if 0
-      case IndexType::IVFFlat:
-        set_index.operator()<ivf_index>();
+      case TILEDB_UINT8:
+        index_ = std::make_unique<index_impl<flat_index<uint8_t>>>(
+            ctx_, index_uri, config);
         break;
-      case IndexType::FlatPQ:
-        set_index.operator()<flat_pq_index>();
-        break;
-      case IndexType::IVFPQ:
-        set_index.operator()<ivfpq_index>();
-        break;
-      case IndexType::NNDESCENT:
-        set_index.operator()<nndescent_index>();
-        break;
-      case IndexType::VAMANA:
-        set_index.operator()<vamana_index>();
-        break;
-#endif
       default:
-        throw std::runtime_error("Unsupported index type");
+        throw std::runtime_error("Unsupported attribute type");
     }
-  }
+  };
 
   template <feature_vector_array V>
   Index(
       const URI& index_uri,
       const V& vectors,
-      const IndexOptions& options,
-      const std::optional<StringMap>& config = std::nullopt) {
-    // @todo
+      const std::optional<IndexOptions>& config = std::nullopt) {
   }
 
   // Create from input URI
   Index(
       const URI& index_uri,
       const URI& vectors_uri,
-      const IndexOptions& options,
-      const std::optional<StringMap>& config = std::nullopt) {
+      const std::optional<IndexOptions>& config = std::nullopt) {
     // @todo
   }
 

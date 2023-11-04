@@ -6,6 +6,12 @@
 
 #include "linalg.h"
 
+// @todo Replace
+#include "detail/flat/qv.h"
+#include "detail/flat/vq.h"
+#include "detail/ivf/qv.h"
+#include "detail/ivf/vq.h"
+
 namespace py = pybind11;
 using Ctx = tiledb::Context;
 

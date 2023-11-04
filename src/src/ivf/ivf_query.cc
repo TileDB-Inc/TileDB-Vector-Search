@@ -134,15 +134,13 @@ int main(int argc, char* argv[]) {
       ;
       auto idx = ivf_index<feature_type, id_type, px_type>(ctx, index_uri);
 
-      auto queries =
-          tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
+      auto queries = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
       queries.load();
 
       auto query_time = log_timer("query time", true);
 
       if (algorithm == "reg" && finite) {
-        return idx.nuv_query_heap_finite_ram_reg_blocked(
-            queries, k_nn, nprobe);
+        return idx.nuv_query_heap_finite_ram_reg_blocked(queries, k_nn, nprobe);
       }
       if (algorithm == "reg" && !finite) {
         return idx.nuv_query_heap_infinite_ram_reg_blocked(
@@ -171,8 +169,8 @@ int main(int argc, char* argv[]) {
     if (args["--groundtruth_uri"]) {
       auto groundtruth_uri = args["--groundtruth_uri"].asString();
 
-      auto groundtruth = tdbColMajorMatrix<groundtruth_type>(
-          ctx, groundtruth_uri, nqueries);
+      auto groundtruth =
+          tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
       groundtruth.load();
 
       if (debug) {
@@ -189,11 +187,9 @@ int main(int argc, char* argv[]) {
       }
 
       size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
-      size_t total_intersected =
-          count_intersections(top_k, groundtruth, k_nn);
+      size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
 
-      float recall =
-          ((float)total_intersected) / ((float)total_groundtruth);
+      float recall = ((float)total_intersected) / ((float)total_groundtruth);
       // std::cout << "# total intersected = " << total_intersected << " of "
       //           << total_groundtruth << " = "
       //           << "R@" << k_nn << " of " << recall << std::endl;
@@ -211,7 +207,6 @@ int main(int argc, char* argv[]) {
       }
     }
   };
-
 
   auto feature_type = args["--ftype"].asString();
   auto id_type = args["--idtype"].asString();
@@ -232,19 +227,26 @@ int main(int argc, char* argv[]) {
 
   if (feature_type == "float" && id_type == "uint64" && px_type == "uint64") {
     run_query.operator()<float, uint64_t, uint64_t>();
-  } else if (feature_type == "float" && id_type == "uint32" && px_type == "uint64") {
+  } else if (
+      feature_type == "float" && id_type == "uint32" && px_type == "uint64") {
     run_query.operator()<float, uint32_t, uint64_t>();
-  } else if (feature_type == "uint8" && id_type == "uint64" && px_type == "uint64") {
+  } else if (
+      feature_type == "uint8" && id_type == "uint64" && px_type == "uint64") {
     run_query.operator()<uint8_t, uint64_t, uint64_t>();
-  } else if (feature_type == "uint8" && id_type == "uint32" && px_type == "uint64") {
+  } else if (
+      feature_type == "uint8" && id_type == "uint32" && px_type == "uint64") {
     run_query.operator()<uint8_t, uint32_t, uint64_t>();
-  } else if (feature_type == "float" && id_type == "uint64" && px_type == "uint32") {
+  } else if (
+      feature_type == "float" && id_type == "uint64" && px_type == "uint32") {
     run_query.operator()<float, uint64_t, uint32_t>();
-  } else if (feature_type == "float" && id_type == "uint32" && px_type == "uint32") {
+  } else if (
+      feature_type == "float" && id_type == "uint32" && px_type == "uint32") {
     run_query.operator()<float, uint32_t, uint32_t>();
-  } else if (feature_type == "uint8" && id_type == "uint64" && px_type == "uint32") {
+  } else if (
+      feature_type == "uint8" && id_type == "uint64" && px_type == "uint32") {
     run_query.operator()<uint8_t, uint64_t, uint32_t>();
-  } else if (feature_type == "uint8" && id_type == "uint32" && px_type == "uint32") {
+  } else if (
+      feature_type == "uint8" && id_type == "uint32" && px_type == "uint32") {
     run_query.operator()<uint8_t, uint32_t, uint32_t>();
   } else {
     std::cout << "Unsupported feature type " << feature_type;

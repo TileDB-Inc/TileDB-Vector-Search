@@ -122,6 +122,8 @@ kmeans_add_test(unit_gen_graphs)
 
 kmeans_add_test(unit_ivf_index)
 
+kmeans_add_test(unit_index_defs)
+
 # kmeans_add_test(unit_ivf_query)
 
 # kmeans_add_test(unit_ivf_qv)
@@ -163,11 +165,9 @@ kmeans_add_test(unit_utils)
 
 kmeans_add_test(unit_vector)
 
-if (TILEDB_VS_ENABLE_BLAS)
-  kmeans_add_test(unit_queries)
-  kmeans_add_test(unit_gemm)
-  target_link_libraries(unit_gemm PRIVATE flat_blas)
-endif()
+kmeans_add_test(unit_queries)
+kmeans_add_test(unit_gemm)
+target_link_libraries(unit_gemm PRIVATE flat_blas)
 
 # Create the subdirectory for the extracted files
 file(MAKE_DIRECTORY ${SIFT_TEST_DIR}/siftsmall)

@@ -47,8 +47,6 @@ TEST_CASE("api: test test", "[api]") {
   REQUIRE(true);
 }
 
-
-
 // ----------------------------------------------------------------------------
 // FeatureVector tests
 // ----------------------------------------------------------------------------
@@ -164,22 +162,22 @@ TEST_CASE("api: feature vector array open", "[api]") {
   tiledb::Context ctx;
 
   auto a = FeatureVectorArray(ctx, db_uri);
-  CHECK(a.datatype() == TILEDB_FLOAT32);
+  CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(a) == 128);
   CHECK(num_vectors(a) == 1'000'000);
 
   auto b = FeatureVectorArray(ctx, bigann1M_base_uri);
-  CHECK(b.datatype() == TILEDB_UINT8);
+  CHECK(b.feature_type() == TILEDB_UINT8);
   CHECK(dimension(b) == 128);
   CHECK(num_vectors(b) == 1'000'000);
 
   auto c = FeatureVectorArray(ctx, fmnist_train_uri);
-  CHECK(c.datatype() == TILEDB_FLOAT32);
+  CHECK(c.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(c) == 784);
   CHECK(num_vectors(c) == 60'000);
 
   auto d = FeatureVectorArray(ctx, sift_base_uri);
-  CHECK(d.datatype() == TILEDB_FLOAT32);
+  CHECK(d.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(d) == 128);
   CHECK(num_vectors(d) == 1'000'000);
 }
@@ -191,44 +189,44 @@ TEST_CASE("api: uri index constructors, context", "[api][index]") {
   tiledb::Context ctx;
 
   auto a = Index(ctx, db_uri);
-  CHECK(a.datatype() == TILEDB_FLOAT32);
+  CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(a) == 128);
   CHECK(num_vectors(a) == 1'000'000);
 
   auto b = Index(ctx, bigann1M_base_uri);
-  CHECK(b.datatype() == TILEDB_UINT8);
+  CHECK(b.feature_type() == TILEDB_UINT8);
   CHECK(dimension(b) == 128);
   CHECK(num_vectors(b) == 1'000'000);
 
   auto c = Index(ctx, fmnist_train_uri);
-  CHECK(c.datatype() == TILEDB_FLOAT32);
+  CHECK(c.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(c) == 784);
   CHECK(num_vectors(c) == 60'000);
 
   auto d = Index(ctx, sift_base_uri);
-  CHECK(d.datatype() == TILEDB_FLOAT32);
+  CHECK(d.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(d) == 128);
   CHECK(num_vectors(d) == 1'000'000);
 }
 
 TEST_CASE("api: uri index constructors, no context", "[api][index]") {
   auto a = Index(db_uri);
-  CHECK(a.datatype() == TILEDB_FLOAT32);
+  CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(a) == 128);
   CHECK(num_vectors(a) == 1'000'000);
 
   auto b = Index(bigann1M_base_uri);
-  CHECK(b.datatype() == TILEDB_UINT8);
+  CHECK(b.feature_type() == TILEDB_UINT8);
   CHECK(dimension(b) == 128);
   CHECK(num_vectors(b) == 1'000'000);
 
   auto c = Index(fmnist_train_uri);
-  CHECK(c.datatype() == TILEDB_FLOAT32);
+  CHECK(c.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(c) == 784);
   CHECK(num_vectors(c) == 60'000);
 
   auto d = Index(sift_base_uri);
-  CHECK(d.datatype() == TILEDB_FLOAT32);
+  CHECK(d.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(d) == 128);
   CHECK(num_vectors(d) == 1'000'000);
 }
@@ -250,7 +248,7 @@ TEST_CASE("api: Matrix constructors and destructors", "[api]") {
 }
 
 TEMPLATE_TEST_CASE(
-    "api: FeatureVector datatype",
+    "api: FeatureVector feature_type",
     "[api]",
     int,
     uint8_t,
@@ -261,24 +259,24 @@ TEMPLATE_TEST_CASE(
 
   auto a = std::vector<TestType>{1, 2, 3};
   auto b = FeatureVector(a);
-  CHECK(b.datatype() == t);
+  CHECK(b.feature_type() == t);
 
   auto c = FeatureVector{std::vector<TestType>{1, 2, 3}};
-  CHECK(c.datatype() == t);
+  CHECK(c.feature_type() == t);
 
   auto f = std::vector<TestType>{1, 2, 3};
   auto d = FeatureVector{std::move(f)};
-  CHECK(d.datatype() == t);
+  CHECK(d.feature_type() == t);
 
   auto e = FeatureVector{std::move(std::vector<TestType>{1, 2, 3})};
-  CHECK(e.datatype() == t);
+  CHECK(e.feature_type() == t);
 
   auto g = std::move(e);
-  CHECK(g.datatype() == t);
+  CHECK(g.feature_type() == t);
 }
 
 TEMPLATE_TEST_CASE(
-    "api: FeatureVectorArray datatype",
+    "api: FeatureVectorArray feature_type",
     "[api]",
     int,
     uint8_t,
@@ -290,20 +288,20 @@ TEMPLATE_TEST_CASE(
   auto a = ColMajorMatrix<TestType>{3, 17};
   auto b = FeatureVectorArray(a);
 
-  CHECK(b.datatype() == t);
+  CHECK(b.feature_type() == t);
 
   auto c = FeatureVectorArray{ColMajorMatrix<TestType>{17, 3}};
-  CHECK(c.datatype() == t);
+  CHECK(c.feature_type() == t);
 
   auto f = ColMajorMatrix<TestType>{3, 17};
   auto d = FeatureVectorArray{std::move(f)};
-  CHECK(d.datatype() == t);
+  CHECK(d.feature_type() == t);
 
   auto e = FeatureVectorArray{std::move(ColMajorMatrix<TestType>{3, 9})};
-  CHECK(e.datatype() == t);
+  CHECK(e.feature_type() == t);
 
   auto g = std::move(e);
-  CHECK(g.datatype() == t);
+  CHECK(g.feature_type() == t);
 }
 
 TEST_CASE("api: tdbMatrix constructors and destructors", "[api]") {
@@ -323,7 +321,7 @@ TEST_CASE("api: tdbMatrix constructors and destructors", "[api]") {
 }
 
 TEMPLATE_TEST_CASE(
-    "api: tdb FeatureVectorArray datatype",
+    "api: tdb FeatureVectorArray feature_type",
     "[api]",
     int,
     uint8_t,
@@ -342,20 +340,20 @@ TEMPLATE_TEST_CASE(
   auto a = tdbColMajorMatrix<TestType>{ctx, uri};
   auto b = FeatureVectorArray(a);
 
-  CHECK(b.datatype() == t);
+  CHECK(b.feature_type() == t);
 
   auto c = FeatureVectorArray{tdbColMajorMatrix<TestType>{ctx, uri}};
-  CHECK(c.datatype() == t);
+  CHECK(c.feature_type() == t);
 
   auto f = tdbColMajorMatrix<TestType>{ctx, uri};
   auto d = FeatureVectorArray{std::move(f)};
-  CHECK(d.datatype() == t);
+  CHECK(d.feature_type() == t);
 
   auto e = FeatureVectorArray{std::move(tdbColMajorMatrix<TestType>{ctx, uri})};
-  CHECK(e.datatype() == t);
+  CHECK(e.feature_type() == t);
 
   auto g = std::move(e);
-  CHECK(g.datatype() == t);
+  CHECK(g.feature_type() == t);
 }
 
 TEST_CASE("api: types", "[types]") {
@@ -406,8 +404,8 @@ TEST_CASE("api: query checks", "[api][index]") {
 TEST_CASE("api: index", "[api][index]") {
   tiledb::Context ctx;
   auto a = Index(ctx, fmnist_train_uri);
-  auto b = Index(ctx, fmnist_train_uri, IndexType::FlatL2);
-  // auto c = Index(ctx, fmnist_train_uri, IndexType::IVFFlat);
+  // auto b = Index(ctx, fmnist_train_uri, IndexKind::FlatL2);
+  // auto c = Index(ctx, fmnist_train_uri, IndexKind::IVFFlat);
 }
 
 TEST_CASE("api: queries", "[api][index]") {
@@ -448,7 +446,7 @@ TEST_CASE("api: queries", "[api][index]") {
       auto [uri, gt_uri, q_uri, dtype, dim, numv] = t;
       auto a = Index(ctx, uri);
 
-      CHECK(a.datatype() == dtype);
+      CHECK(a.feature_type() == dtype);
       CHECK(dimension(a) == dim);
       CHECK(num_vectors(a) == numv);
 

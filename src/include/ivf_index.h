@@ -55,6 +55,7 @@
 #include "algorithm.h"
 #include "concepts.h"
 #include "cpos.h"
+#include "index_defs.h"
 #include "linalg.h"
 
 #include "detail/flat/qv.h"
@@ -93,6 +94,7 @@ class ivf_index {
 
   std::mt19937 gen;
 
+  IndexKind index_kind_ = IndexKind::IVFFlat;
   size_t dimension_{0};
   size_t nlist_;
   size_t max_iter_;
@@ -102,6 +104,7 @@ class ivf_index {
 
   using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
   std::vector<metadata_element> metadata{
+      {"index_type", &index_kind_, TILEDB_UINT64},
       {"dimension", &dimension_, TILEDB_UINT64},
       {"num_partitions", &nlist_, TILEDB_UINT64},
       {"max_iter", &max_iter_, TILEDB_UINT64},
@@ -120,7 +123,7 @@ class ivf_index {
 
  public:
   using value_type = feature_type;
-  using index_type = indices_type;  // @todo This isn't right
+  using index_type = partitioning_index_type;  // @todo This isn't right
 
   /**
    * @brief Construct a new `ivf_index` object, setting a number of parameters
@@ -299,8 +302,6 @@ class ivf_index {
    */
   void train_no_init(const ColMajorMatrix<T>& training_set) {
     scoped_timer _{__FUNCTION__};
-
-
 
     std::vector<size_t> degrees(nlist_, 0);
     auto new_centroids =
@@ -483,7 +484,11 @@ class ivf_index {
   }
 
   /**
-   * Compute centroids and partitions of the training set data.
+   * Compute centroids of the training set data, using the kmeans algorithm.
+   * The initialization algorithm used to generate the starting centroids
+   * for kmeans is specified by the `init` parameter.  Either random
+   * initialization or kmeans++ initialization can be used.
+   *
    * @param training_set Array of vectors to cluster.
    * @param init Specify which initialization algorithm to use,
    * random (`random`) or kmeans++ (`kmeanspp`).
@@ -491,7 +496,6 @@ class ivf_index {
   void train(
       const ColMajorMatrix<T>& training_set,
       kmeans_init init = kmeans_init::random) {
-
     if (nlist_ == 0) {
       nlist_ = std::sqrt(num_vectors(training_set));
       centroids_ = ColMajorMatrix<centroid_feature_type>(dimension_, nlist_);
@@ -540,13 +544,12 @@ class ivf_index {
   /**
    * @brief Build the index from a training set, given the centroids.  This
    * will partition the training set into a contiguous array, with one
-   * partition per centroid.  It will also create an array to save the original
-   * locations of each vector (their ids) as well as an array demarcating
-   * the boundaries of each partition (including the very end of the array).
+   * partition per centroid.  It will also create an array to record the
+   * original ids locations of each vector (their locations in the original
+   * training set) as well as a partitioning index array demarcating the
+   * boundaries of each partition (including the very end of the array).
    *
-   * @param training_set Array of vectors to cluster.
-   * @param init Specify which initialization algorithm to use,
-   * random (`random`) or kmeans++ (`kmeanspp`).
+   * @param training_set Array of vectors to partition.
    *
    * @todo Create and write index that is larger than RAM
    */
@@ -584,11 +587,30 @@ class ivf_index {
    * so the actual number of vectors in memory at any one time will generally
    * be less than the upper bound.
    *
-   * @todo Add vq and dist queries (should dist be its own index?) d
+   * @todo Add vq and dist queries (should dist be its own index?)
+   * @todo Order queries so that partitions are queried in order
    *
    ****************************************************************************/
 
-  // Seems to use active partitions and active queries
+  /**
+   * @brief Perform a query on the index, returning the nearest neighbors
+   * and distances.  The function returns a matrix containing k_nn nearest
+   * neighbors for each given query and a matrix containing the distances
+   * corresponding to each returned neighbor.
+   *
+   * This function searches for the nearest neighbors using "infinite RAM",
+   * that is, it loads the entire IVF index into memory and then applies the
+   * query.
+   *
+   * @tparam Q Type of query vectors.
+   * @param query_vectors Array of vectors to query.
+   * @param k_nn Number of nearest neighbors to return.
+   * @param nprobe Number of centroids to search.
+   *
+   * @return A tuple containing a matrix of nearest neighbors and a matrix
+   * of the corresponding distances.
+   *
+   */
   template <feature_vector_array Q>
   auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
@@ -598,7 +620,6 @@ class ivf_index {
         detail::ivf::partition_ivf_index<parts_type>(
             centroids_, query_vectors, nprobe, num_threads_);
     return detail::ivf::query_infinite_ram(
-        centroids_,
         *partitioned_vectors_,
         active_partitions,
         query_vectors,
@@ -608,7 +629,12 @@ class ivf_index {
         num_threads_);
   }
 
-  // Requires only top_centroids -- don't need complete partition_ivf_index
+  /**
+   * @brief Same as query_infinite_ram, but using the qv_query_heap_infinite_ram
+   * function.
+   * See the documentation for that function in detail/ivf/qv.h
+   * for more details.
+   */
   template <feature_vector_array Q>
   auto qv_query_heap_infinite_ram(
       const Q& query_vectors, size_t k_nn, size_t nprobe) {
@@ -618,7 +644,6 @@ class ivf_index {
     auto top_centroids = detail::ivf::ivf_top_centroids(
         centroids_, query_vectors, nprobe, num_threads_);
     return detail::ivf::qv_query_heap_infinite_ram(
-        centroids_,
         top_centroids,
         *partitioned_vectors_,
         query_vectors,
@@ -627,7 +652,12 @@ class ivf_index {
         num_threads_);
   }
 
-  // Seems to use active partitions and active queries
+  /**
+   * @brief Same as query_infinite_ram, but using the
+   * nuv_query_heap_infinite_ram function.
+   * See the documentation for that function in detail/ivf/qv.h
+   * for more details.
+   */
   template <feature_vector_array Q>
   auto nuv_query_heap_infinite_ram(
       const Q& query_vectors, size_t k_nn, size_t nprobe) {
@@ -638,7 +668,6 @@ class ivf_index {
         detail::ivf::partition_ivf_index<parts_type>(
             centroids_, query_vectors, nprobe, num_threads_);
     return detail::ivf::nuv_query_heap_infinite_ram(
-        centroids_,
         *partitioned_vectors_,
         active_partitions,
         query_vectors,
@@ -648,7 +677,12 @@ class ivf_index {
         num_threads_);
   }
 
-  // Seems to use active partitions and active queries
+  /**
+   * @brief Same as query_infinite_ram, but using the
+   * nuv_query_heap_infinite_ram_reg_blocked function.
+   * See the documentation for that function in detail/ivf/qv.h
+   * for more details.
+   */
   template <feature_vector_array Q>
   auto nuv_query_heap_infinite_ram_reg_blocked(
       const Q& query_vectors, size_t k_nn, size_t nprobe) {
@@ -658,18 +692,15 @@ class ivf_index {
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_index<parts_type>(
             centroids_, query_vectors, nprobe, num_threads_);
-    return detail::ivf::
-        nuv_query_heap_infinite_ram_reg_blocked(
-            centroids_,
-            *partitioned_vectors_,
-            active_partitions,
-            query_vectors,
-            active_queries,
-            nprobe,
-            k_nn,
-            num_threads_);
+    return detail::ivf::nuv_query_heap_infinite_ram_reg_blocked(
+        *partitioned_vectors_,
+        active_partitions,
+        query_vectors,
+        active_queries,
+        nprobe,
+        k_nn,
+        num_threads_);
   }
-
 
   // WIP
 #if 0
@@ -699,56 +730,34 @@ class ivf_index {
   }
 #endif  // 0
 
-  template <feature_vector_array Q>
-  auto nuv_query_heap_finite_ram(
-      const Q& query_vectors,
-      size_t k_nn,
-      size_t nprobe,
-      size_t upper_bound = 0) {
-    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
-      std::throw_with_nested(
-          std::runtime_error("Vectors are already loaded. Cannot load twice. "
-                             "Cannot do finite query on in-memory index."));
-    }
-    auto&& [active_partitions, active_queries] =
-        read_index_finite(query_vectors, nprobe, upper_bound);
-
-    return detail::ivf::nuv_query_heap_finite_ram(
-        centroids_,
-        *partitioned_vectors_,
-        query_vectors,
-        active_queries,
-        nprobe,
-        k_nn,
-        upper_bound,
-        num_threads_);
-  }
-
-  template <feature_vector_array Q>
-  auto nuv_query_heap_finite_ram_reg_blocked(
-      const Q& query_vectors,
-      size_t k_nn,
-      size_t nprobe,
-      size_t upper_bound = 0) {
-    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
-      std::throw_with_nested(
-          std::runtime_error("Vectors are already loaded. Cannot load twice. "
-                             "Cannot do finite query on in-memory index."));
-    }
-    auto&& [active_partitions, active_queries] =
-        read_index_finite(query_vectors, nprobe, upper_bound);
-
-    return detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
-        centroids_,
-        *partitioned_vectors_,
-        query_vectors,
-        active_queries,
-        nprobe,
-        k_nn,
-        upper_bound,
-        num_threads_);
-  }
-
+  /**
+   * @brief Perform a query on the index, returning the nearest neighbors
+   * and distances.  The function returns a matrix containing k_nn nearest
+   * neighbors for each given query and a matrix containing the distances
+   * corresponding to each returned neighbor.
+   *
+   * This function searches for the nearest neighbors using "finite RAM",
+   * that is, it only loads that portion of the IVF index into memory that
+   * is necessary for the given query.  In addition, it supports out of core
+   * operation, meaning that only a subset of the necessary partitions are
+   * loaded into memory at any one time.
+   *
+   * See the documentation for that function in detail/ivf/qv.h
+   * for more details.
+   *
+   * @param query_vectors Array of vectors to query.
+   * @param k_nn Number of nearest neighbors to return.
+   * @param nprobe Number of centroids to search.
+   *
+   * @return A tuple containing a matrix of nearest neighbors and a matrix
+   * of the corresponding distances.
+   *
+   * @tparam Q
+   * @param query_vectors
+   * @param k_nn
+   * @param nprobe
+   * @return
+   */
   template <feature_vector_array Q>
   auto query_finite_ram(
       const Q& query_vectors,
@@ -764,7 +773,6 @@ class ivf_index {
         read_index_finite(query_vectors, nprobe, upper_bound);
 
     return detail::ivf::query_finite_ram(
-        centroids_,
         *partitioned_vectors_,
         query_vectors,
         active_queries,
@@ -774,6 +782,65 @@ class ivf_index {
         num_threads_);
   }
 
+  /**
+   * @brief Same as query_finite_ram, but using the
+   * nuv_query_heap_infinite_ram function.
+   * See the documentation for that function in detail/ivf/qv.h
+   * for more details.
+   */
+  template <feature_vector_array Q>
+  auto nuv_query_heap_finite_ram(
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      size_t upper_bound = 0) {
+    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
+      std::throw_with_nested(
+          std::runtime_error("Vectors are already loaded. Cannot load twice. "
+                             "Cannot do finite query on in-memory index."));
+    }
+    auto&& [active_partitions, active_queries] =
+        read_index_finite(query_vectors, nprobe, upper_bound);
+
+    return detail::ivf::nuv_query_heap_finite_ram(
+        *partitioned_vectors_,
+        query_vectors,
+        active_queries,
+        nprobe,
+        k_nn,
+        upper_bound,
+        num_threads_);
+  }
+
+  /**
+   * @brief Same as query_finite_ram, but using the
+   * nuv_query_heap_infinite_ram_reg_blocked function.
+   * See the documentation for that function in detail/ivf/qv.h
+   * for more details.
+   */
+  template <feature_vector_array Q>
+  auto nuv_query_heap_finite_ram_reg_blocked(
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      size_t upper_bound = 0) {
+    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
+      std::throw_with_nested(
+          std::runtime_error("Vectors are already loaded. Cannot load twice. "
+                             "Cannot do finite query on in-memory index."));
+    }
+    auto&& [active_partitions, active_queries] =
+        read_index_finite(query_vectors, nprobe, upper_bound);
+
+    return detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
+        *partitioned_vectors_,
+        query_vectors,
+        active_queries,
+        nprobe,
+        k_nn,
+        upper_bound,
+        num_threads_);
+  }
 
   /*****************************************************************************
    * Methods for writing and reading the index

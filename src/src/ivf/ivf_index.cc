@@ -144,19 +144,26 @@ int main(int argc, char* argv[]) {
 
   if (feature_type == "float" && id_type == "uint64" && px_type == "uint64") {
     run_index.operator()<float, uint64_t, uint64_t>();
-  } else if (feature_type == "float" && id_type == "uint32" && px_type == "uint64") {
+  } else if (
+      feature_type == "float" && id_type == "uint32" && px_type == "uint64") {
     run_index.operator()<float, uint32_t, uint64_t>();
-  } else if (feature_type == "uint8" && id_type == "uint64" && px_type == "uint64") {
+  } else if (
+      feature_type == "uint8" && id_type == "uint64" && px_type == "uint64") {
     run_index.operator()<uint8_t, uint64_t, uint64_t>();
-  } else if (feature_type == "uint8" && id_type == "uint32" && px_type == "uint64") {
+  } else if (
+      feature_type == "uint8" && id_type == "uint32" && px_type == "uint64") {
     run_index.operator()<uint8_t, uint32_t, uint64_t>();
-  } else if (feature_type == "float" && id_type == "uint64" && px_type == "uint32") {
+  } else if (
+      feature_type == "float" && id_type == "uint64" && px_type == "uint32") {
     run_index.operator()<float, uint64_t, uint32_t>();
-  } else if (feature_type == "float" && id_type == "uint32" && px_type == "uint32") {
+  } else if (
+      feature_type == "float" && id_type == "uint32" && px_type == "uint32") {
     run_index.operator()<float, uint32_t, uint32_t>();
-  } else if (feature_type == "uint8" && id_type == "uint64" && px_type == "uint32") {
+  } else if (
+      feature_type == "uint8" && id_type == "uint64" && px_type == "uint32") {
     run_index.operator()<uint8_t, uint64_t, uint32_t>();
-  } else if (feature_type == "uint8" && id_type == "uint32" && px_type == "uint32") {
+  } else if (
+      feature_type == "uint8" && id_type == "uint32" && px_type == "uint32") {
     run_index.operator()<uint8_t, uint32_t, uint32_t>();
   } else {
     std::cout << "Unsupported feature type " << feature_type;

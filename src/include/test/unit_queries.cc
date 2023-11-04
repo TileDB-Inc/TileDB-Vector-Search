@@ -37,6 +37,8 @@
 
 #include "linalg.h"
 
+#include "detail/flat/qv.h"
+#include "detail/flat/vq.h"
 using namespace detail::flat;
 
 TEST_CASE("test queries", "[queries]") {
@@ -111,6 +113,7 @@ TEST_CASE("test queries", "[queries]") {
       }
     }
 
+#ifdef TILEDB_VS_ENABLE_BLAS
     SECTION("gemm, nth = " + std::to_string(nth)) {
       auto top_k = gemm_query(db_mat, q_mat, k, nth, nthreads);
       CHECK(top_k.num_rows() == k);
@@ -127,6 +130,7 @@ TEST_CASE("test queries", "[queries]") {
       CHECK(top_k.num_cols() == num_queries);
       CHECK(top_k(0, 0) == 333);  // FIXME: this is broken (maybe)
     }
+#endif  // TILEDB_VS_ENABLE_BLAS
   }
 #endif
 }
