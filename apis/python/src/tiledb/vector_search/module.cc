@@ -5,8 +5,12 @@
 #include <pybind11/stl.h>
 
 #include "linalg.h"
-#include "ivf_query.h"
-#include "flat_query.h"
+
+// @todo Replace
+#include "detail/flat/qv.h"
+#include "detail/flat/vq.h"
+#include "detail/ivf/qv.h"
+#include "detail/ivf/vq.h"
 
 namespace py = pybind11;
 using Ctx = tiledb::Context;
@@ -431,6 +435,7 @@ static void declare_vq_query_heap_pyarray(py::module& m, const std::string& suff
 
 } // anonymous namespace
 
+void init_kmeans(py::module&);
 
 PYBIND11_MODULE(_tiledbvspy, m) {
 
@@ -596,4 +601,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declare_dist_qv<uint8_t>(m, "u8");
   declare_dist_qv<float>(m, "f32");
   declareFixedMinPairHeap(m);
+
+  init_kmeans(m);
 }

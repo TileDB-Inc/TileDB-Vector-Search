@@ -53,45 +53,138 @@
 #include <thread>
 
 #include "algorithm.h"
+#include "concepts.h"
+#include "cpos.h"
+#include "index_defs.h"
 #include "linalg.h"
 
 #include "detail/flat/qv.h"
 #include "detail/ivf/index.h"
+#include "detail/ivf/partition.h"
+#include "detail/ivf/qv.h"
 
-template <class T, class shuffled_ids_type, class indices_type>
-class kmeans_index {
-  // Random device to seed the random number generator
-  std::random_device rd;
-  std::mt19937 gen{rd()};
+#include <tiledb/group_experimental.h>
+#include <tiledb/tiledb>
 
+enum class kmeans_init { none, kmeanspp, random };
+
+template <
+    class T,
+    class partitioned_ids_type = size_t,
+    class partitioning_index_type = size_t>
+class ivf_index {
+  using feature_type = T;
+  using id_type = partitioned_ids_type;
+  using parts_type = id_type;
+  using indices_type = partitioning_index_type;
+  using score_type = float;
+  using centroid_feature_type = score_type;
+
+  using storage_type = ColMajorPartitionedMatrix<
+      feature_type,
+      partitioned_ids_type,
+      indices_type,
+      parts_type>;
+
+  using tdb_storage_type = tdbColMajorPartitionedMatrix<
+      feature_type,
+      partitioned_ids_type,
+      indices_type,
+      parts_type>;
+
+  std::mt19937 gen;
+
+  IndexKind index_kind_ = IndexKind::IVFFlat;
   size_t dimension_{0};
   size_t nlist_;
   size_t max_iter_;
-  double tol_;
-  size_t nthreads_{std::thread::hardware_concurrency()};
+  float tol_;
+  float reassign_ratio_{0.075};
+  size_t num_threads_{std::thread::hardware_concurrency()};
 
-  ColMajorMatrix<T> centroids_;
-  std::vector<indices_type> indices_;
-  std::vector<shuffled_ids_type> shuffled_ids_;
-  ColMajorMatrix<T> shuffled_db_;
+  using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
+  std::vector<metadata_element> metadata{
+      {"index_type", &index_kind_, TILEDB_UINT64},
+      {"dimension", &dimension_, TILEDB_UINT64},
+      {"num_partitions", &nlist_, TILEDB_UINT64},
+      {"max_iter", &max_iter_, TILEDB_UINT64},
+      {"tol", &tol_, TILEDB_FLOAT32},
+      {"reassign_ratio", &reassign_ratio_, TILEDB_FLOAT32},
+      {"num_threads", &num_threads_, TILEDB_UINT64},
+  };
+
+  std::string group_uri_;
+  tiledb::Context cached_ctx_;
+
+  ColMajorMatrix<centroid_feature_type> centroids_;
+
+  // The PartitionedMatrix has indices and ids internally
+  std::unique_ptr<storage_type> partitioned_vectors_;
 
  public:
-  kmeans_index(
-      size_t dimension,
+  using value_type = feature_type;
+  using index_type = partitioning_index_type;  // @todo This isn't right
+
+  /**
+   * @brief Construct a new `ivf_index` object, setting a number of parameters
+   * to be used subsequently in training.  To fully create an index we will
+   * need to call `train()` and `add()`.
+   *
+   * @param dimension Dimension of the vectors comprising the training set and
+   * the data set.
+   * @param nlist Number of centroids / partitions to compute.
+   * @param max_iter Maximum number of iterations for kmans algorithm.
+   * @param tol Convergence tolerance for kmeans algorithm.
+   * @param num_threads Number of threads to use when executing in parallel.
+   * @param seed Seed for random number generator.
+   */
+  ivf_index(
+      size_t dim,
       size_t nlist,
       size_t max_iter,
-      double tol,
-      size_t nthreads)
-      : dimension_(dimension)
+      float tol = 0.000025,
+      std::optional<size_t> num_threads = std::nullopt,
+      std::optional<unsigned int> seed = std::nullopt)
+      : gen(seed ? *seed : std::random_device{}())
+      , dimension_(dim)
       , nlist_(nlist)
       , max_iter_(max_iter)
       , tol_(tol)
-      , nthreads_(nthreads)
-      , centroids_(dimension, nlist) {
+      , centroids_(dim, nlist) {
+    if (num_threads && *num_threads > 0) {
+      num_threads_ = *num_threads;
+    } else {
+      num_threads_ = std::thread::hardware_concurrency();
+    }
+  }
+
+  ivf_index(tiledb::Context& ctx, const std::string& uri) {
+    open_index(ctx, uri);
   }
 
   /**
-   * @brief Use kmeans++ algorithm to choose initial centroids.
+   * @brief Use the kmeans++ algorithm to choose initial centroids.
+   * The current implementation follows the algorithm described in
+   * the literature (Arthur and Vassilvitskii, 2007):
+   *
+   *  1a. Choose an initial centroid uniformly at random from the training set
+   *  1b. Choose the next centroid from the training set
+   *      2b. For each data point x not chosen yet, compute D(x), the distance
+   *          between x and the nearest centroid that has already been chosen.
+   *      3b. Choose one new data point at random as a new centroid, using a
+   *          weighted probability distribution where a point x is chosen
+   *          with probability proportional to D(x)2.
+   *  3. Repeat Steps 2b and 3b until k centers have been chosen.
+   *
+   *  The initial centroids are stored in the member variable `centroids_`.
+   *  It is expected that the centroids will be further refined by the
+   *  kmeans algorithm.
+   *
+   * @param training_set Array of vectors to cluster.
+   *
+   * @todo Implement greedy kmeans++: choose several new centers during each
+   * iteration, and then greedily chose the one that most decreases φ
+   * @todo Finish implementation using triangle inequality.
    */
   void kmeans_pp(const ColMajorMatrix<T>& training_set) {
     scoped_timer _{__FUNCTION__};
@@ -104,36 +197,24 @@ class kmeans_index {
         end(training_set[choice]),
         begin(centroids_[0]));
 
-    //        Choose one center uniformly at random among the data points.
-    //        For each data point x not chosen yet, compute D(x), the distance
-    //        between x and the nearest center that has already been chosen.
-    //            Choose one new data point at random as a new center, using a
-    //            weighted probability distribution where a point x is chosen
-    //            with probability proportional to D(x)2.
-    //        Repeat Steps 2 and 3 until k centers have been chosen.
-    //        Now that the initial centers have been chosen, proceed using
-    //        standard k-means clustering.
-
-    std::vector<double> distances(
-        training_set.num_cols(), std::numeric_limits<double>::max() / 8);
+    // Initialize distances, leaving some room to grow
+    std::vector<score_type> distances(
+        training_set.num_cols(), std::numeric_limits<score_type>::max() / 8192);
 
 #ifdef _TRIANGLE_INEQUALITY
-    std::vector<double> centroid_centroid(nlist_, 0.0);
-    std::vector<size_t> nearest_centroid(training_set.num_cols(), 0);
+    std::vector<centroid_feature_type> centroid_centroid(nlist_, 0.0);
+    std::vector<index_type> nearest_centroid(training_set.num_cols(), 0);
 #endif
 
     // Calculate the remaining centroids using K-means++ algorithm
     for (size_t i = 1; i < nlist_; ++i) {
-      std::vector<double> totalDistance(nthreads_, 0.0);
-      stdx::execution::indexed_parallel_policy par{nthreads_};
-
+      stdx::execution::indexed_parallel_policy par{num_threads_};
       stdx::range_for_each(
           std::move(par),
           training_set,
-          [this, &distances, &totalDistance, i](
-              auto&& vec, size_t n, size_t j) {
+          [this, &distances, i](auto&& vec, size_t n, size_t j) {
 
-      // centroid i-1 is the newest centroid
+      // Note: centroid i-1 is the newest centroid
 
 #ifdef _TRIANGLE_INEQUALITY
             // using triangle inequality, only need to calculate distance to the
@@ -141,9 +222,9 @@ class kmeans_index {
             // centroid is greater than half the distance between the newest
             // centroid and vectors nearest centroid (1/4 distance squared)
 
-            double min_distance = distances[j];
+            float min_distance = distances[j];
             if (centroid_centroid[nearest_centroid[j]] < 4 * min_distance) {
-              double distance = sum_of_squares(vec, centroids_[i - 1]);
+              float distance = sum_of_squares(vec, centroids_[i - 1]);
               if (distance < min_distance) {
                 min_distance = distance;
                 nearest_centroid[j] = i - 1;
@@ -151,23 +232,15 @@ class kmeans_index {
               }
             }
 #else
-            double distance = sum_of_squares(vec, centroids_[i - 1]);
+            auto distance = sum_of_squares(vec, centroids_[i - 1]);
             auto min_distance = std::min(distances[j], distance);
             distances[j] = min_distance;
-            totalDistance[n] += min_distance;
 #endif
           });
-      double total =
-          std::accumulate(begin(totalDistance), end(totalDistance), 0.0);
-
-      // This isn't really necessary for the discrete_distribution
-      // std::for_each(begin(distances), end(distances), [total](auto& element)
-      // {
-      //   element /= total;  // Normalize
-      // });
 
       // Select the next centroid based on the probability proportional to
-      // distance squared
+      // distance squared -- note we did not normalize the vectors ourselves
+      // since `discrete_distribution` implicitly does that for us
       std::discrete_distribution<size_t> probabilityDistribution(
           distances.begin(), distances.end());
       size_t nextIndex = probabilityDistribution(gen);
@@ -190,14 +263,21 @@ class kmeans_index {
 
   /**
    * @brief Initialize centroids by choosing them at random from training set.
+   * @param training_set Array of vectors to cluster.
    */
   void kmeans_random_init(const ColMajorMatrix<T>& training_set) {
     scoped_timer _{__FUNCTION__};
 
-    std::vector<size_t> indices(nlist_);
+    std::vector<indices_type> indices(nlist_);
+    std::vector<bool> visited(training_set.num_cols(), false);
     std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
     for (size_t i = 0; i < nlist_; ++i) {
-      indices[i] = dis(gen);
+      size_t index;
+      do {
+        index = dis(gen);
+      } while (visited[index]);
+      indices[i] = index;
+      visited[index] = true;
     }
     // std::iota(begin(indices), end(indices), 0);
     // std::shuffle(begin(indices), end(indices), gen);
@@ -211,63 +291,143 @@ class kmeans_index {
   }
 
   /**
-   * @brief Use kmeans algorithm to cluster vectors into centroids.
+   * @brief Use kmeans algorithm to cluster vectors into centroids.  Beginning
+   * with an initial set of centroids, the algorithm iteratively partitions
+   * the training_set into clusters, and then recomputes new centroids based
+   * on the clusters.  The algorithm terminates when the change in centroids
+   * is less than a threshold tolerance, or when a maximum number of
+   * iterations is reached.
+   *
+   * @param training_set Array of vectors to cluster.
    */
   void train_no_init(const ColMajorMatrix<T>& training_set) {
     scoped_timer _{__FUNCTION__};
 
     std::vector<size_t> degrees(nlist_, 0);
+    auto new_centroids =
+        ColMajorMatrix<centroid_feature_type>(dimension_, nlist_);
 
     for (size_t iter = 0; iter < max_iter_; ++iter) {
-      auto parts =
-          detail::flat::qv_partition(centroids_, training_set, nthreads_);
+      auto [scores, parts] = detail::flat::qv_partition_with_scores(
+          centroids_, training_set, num_threads_);
 
-      // for (auto & p : parts) {
-      //   std::cout << p << " ";
-      // }
-      // std::cout << std::endl;
-
-      for (size_t j = 0; j < nlist_; ++j) {
-        std::fill(begin(centroids_[j]), end(centroids_[j]), 0.0);
-      }
+      std::fill(
+          new_centroids.data(),
+          new_centroids.data() +
+              new_centroids.num_rows() * new_centroids.num_cols(),
+          0.0);
       std::fill(begin(degrees), end(degrees), 0);
 
-      stdx::execution::indexed_parallel_policy par{nthreads_};
+      // How many centroids should we try to fix up
+      size_t heap_size = std::ceil(reassign_ratio_ * nlist_) + 5;
+      auto high_scores = fixed_min_pair_heap<
+          feature_type,
+          index_type,
+          std::greater<feature_type>>(heap_size, std::greater<feature_type>());
+      auto low_degrees = fixed_min_pair_heap<index_type, index_type>(heap_size);
 
-      // @todo parallelize -- use a temp centroid matrix for each thread
-      for (size_t i = 0; i < training_set.num_cols(); ++i) {
+      // @todo parallelize -- by partition
+      for (size_t i = 0; i < ::num_vectors(training_set); ++i) {
         auto part = parts[i];
-        auto centroid = centroids_[part];
+        auto centroid = new_centroids[part];
         auto vector = training_set[i];
         for (size_t j = 0; j < dimension_; ++j) {
           centroid[j] += vector[j];
         }
         ++degrees[part];
+        high_scores.insert(scores[i], i);
       }
 
-      auto mm = std::minmax_element(begin(degrees), end(degrees));
-      double sum = std::accumulate(begin(degrees), end(degrees), 0);
-      double average = sum / (double)size(degrees);
+      size_t max_degree = 0;
+      for (size_t i = 0; i < nlist_; ++i) {
+        auto degree = degrees[i];
+        max_degree = std::max<size_t>(max_degree, degree);
+        low_degrees.insert(degree, i);
+      }
+      size_t lower_degree_bound = std::ceil(max_degree * reassign_ratio_);
 
-      auto min = *mm.first;
-      auto max = *mm.second;
-      auto diff = max - min;
-      std::cout << "avg: " << average << " sum: " << sum << " min: " << min
-                << " max: " << max << " diff: " << diff << std::endl;
-
-      // @todo parallelize
-
-      for (size_t j = 0; j < nlist_; ++j) {
-        auto centroid = centroids_[j];
-        for (size_t k = 0; k < dimension_; ++k) {
-          if (degrees[j] != 0) {
-            centroid[k] /= degrees[j];
+      // Don't reassign if we are on last iteration
+      if (iter != max_iter_ - 1) {
+// Experiment with random reassignment
+#if 0
+        // Pick a random vector to be a new centroid
+        std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
+        for (auto&& [degree, zero_part] : low_degrees) {
+          if (degree < lower_degree_bound) {
+            auto index = dis(gen);
+            auto rand_vector = training_set[index];
+            auto low_centroid = new_centroids[zero_part];
+            std::copy(begin(rand_vector), end(rand_vector), begin(low_centroid));
+            for (size_t i = 0; i < dimension_; ++i) {
+              new_centroids[parts[index]][i] -= rand_vector[i];
+            }
           }
         }
+#endif
+        // Move vectors with high scores to replace zero-degree partitions
+        std::sort_heap(begin(low_degrees), end(low_degrees));
+        std::sort_heap(
+            begin(high_scores), end(high_scores), [](auto a, auto b) {
+              return std::get<0>(a) > std::get<0>(b);
+            });
+        for (size_t i = 0; i < size(low_degrees) &&
+                           std::get<0>(low_degrees[i]) <= lower_degree_bound;
+             ++i) {
+          // std::cout << "i: " << i << " low_degrees: ("
+          //           << std::get<1>(low_degrees[i]) << " "
+          //           << std::get<0>(low_degrees[i]) << ") high_scores: ("
+          //           << parts[std::get<1>(high_scores[i])] << " "
+          //          << std::get<1>(high_scores[i]) << " "
+          //          << std::get<0>(high_scores[i]) << ")" << std::endl;
+          auto [degree, zero_part] = low_degrees[i];
+          auto [score, high_vector_id] = high_scores[i];
+          auto low_centroid = new_centroids[zero_part];
+          auto high_vector = training_set[high_vector_id];
+          std::copy(begin(high_vector), end(high_vector), begin(low_centroid));
+          for (size_t i = 0; i < dimension_; ++i) {
+            new_centroids[parts[high_vector_id]][i] -= high_vector[i];
+          }
+          ++degrees[zero_part];
+          --degrees[parts[high_vector_id]];
+        }
       }
+      /**
+       * Check for convergence
+       */
+      // @todo parallelize?
+      float max_diff = 0.0;
+      float total_weight = 0.0;
+      for (size_t j = 0; j < nlist_; ++j) {
+        if (degrees[j] != 0) {
+          auto centroid = new_centroids[j];
+          for (size_t k = 0; k < dimension_; ++k) {
+            centroid[k] /= degrees[j];
+            total_weight += centroid[k] * centroid[k];
+          }
+        }
+        auto diff = sum_of_squares(centroids_[j], new_centroids[j]);
+        max_diff = std::max<float>(max_diff, diff);
+      }
+      centroids_.swap(new_centroids);
+      if (max_diff < tol_ * total_weight) {
+        break;
+      }
+
+// Temporary printf debugging
+#if 0
+        auto mm = std::minmax_element(begin(degrees), end(degrees));
+        float sum = std::accumulate(begin(degrees), end(degrees), 0);
+        float average = sum / (float)size(degrees);
+
+        auto min = *mm.first;
+        auto max = *mm.second;
+        auto diff = max - min;
+        std::cout << "avg: " << average << " sum: " << sum << " min: " << min
+                  << " max: " << max << " diff: " << diff << std::endl;
+#endif
     }
 
-    // Debugging
+// Temporary printf debugging
 #ifdef _SAVE_PARTITIONS
     {
       char tempFileName[L_tmpnam];
@@ -284,6 +444,21 @@ class kmeans_index {
       }
       file << std::endl;
 
+      for (auto s = 0; s < training_set.num_cols(); ++s) {
+        for (auto t = 0; t < training_set.num_rows(); ++t) {
+          file << std::to_string(training_set(t, s)) << ',';
+        }
+        file << std::endl;
+      }
+      file << std::endl;
+
+      for (auto s = 0; s < centroids_.num_cols(); ++s) {
+        for (auto t = 0; t < centroids_.num_rows(); ++t) {
+          file << std::to_string(centroids_(t, s)) << ',';
+        }
+        file << std::endl;
+      }
+
       file.close();
 
       std::cout << "Data written to file: " << tempFileName << std::endl;
@@ -291,50 +466,682 @@ class kmeans_index {
 #endif
   }
 
-  void train(const ColMajorMatrix<T>& training_set) {
-    kmeans_pp(training_set);
-    train_no_init(training_set);
-  }
-
-#if 0
-  // @todo WIP
-  void add(const ColMajorMatrix<T>& db) {
-    auto parts = detail::flat::qv_partition(centroids_, db, nthreads_);
-    std::vector<size_t> degrees(centroids_.num_cols());
-    std::vector<indices_type> indices(centroids_.num_cols() + 1);
-    std::vector shuffled_ids = std::vector<shuffled_ids_type>(db.num_cols());
-    auto shuffled_db = ColMajorMatrix<T>{db.num_rows(), db.num_cols()};
-
-    for (size_t i = 0; i < db.num_cols(); ++i) {
-      auto j = parts[i];
-      ++degrees[j];
-    }
-    indices[0] = 0;
-    std::inclusive_scan(begin(degrees), end(degrees), begin(indices) + 1);
-
-    std::iota(begin(shuffled_ids), end(shuffled_ids), 0);
-
-    for (size_t i = 0; i < db.num_cols(); ++i) {
-      size_t bin = parts[i];
-      size_t ibin = indices[bin];
-
-      shuffled_ids[ibin] = i;
-
-      assert(ibin < shuffled_db.num_cols());
-      for (size_t j = 0; j < db.num_rows(); ++j) {
-        shuffled_db(j, ibin) = db(j, i);
+  static std::vector<indices_type> predict(
+      const ColMajorMatrix<T>& centroids, const ColMajorMatrix<T>& vectors) {
+    // Return a vector of indices of the nearest centroid for each vector in
+    // the matrix. Write the code below:
+    auto nClusters = centroids.num_cols();
+    std::vector<indices_type> indices(vectors.num_cols());
+    std::vector<score_type> distances(nClusters);
+    for (size_t i = 0; i < vectors.num_cols(); ++i) {
+      for (size_t j = 0; j < nClusters; ++j) {
+        distances[j] = sum_of_squares(vectors[i], centroids[j]);
       }
-      ++indices[bin];
+      indices[i] =
+          std::min_element(begin(distances), end(distances)) - begin(distances);
+    }
+    return indices;
+  }
+
+  /**
+   * Compute centroids of the training set data, using the kmeans algorithm.
+   * The initialization algorithm used to generate the starting centroids
+   * for kmeans is specified by the `init` parameter.  Either random
+   * initialization or kmeans++ initialization can be used.
+   *
+   * @param training_set Array of vectors to cluster.
+   * @param init Specify which initialization algorithm to use,
+   * random (`random`) or kmeans++ (`kmeanspp`).
+   */
+  void train(
+      const ColMajorMatrix<T>& training_set,
+      kmeans_init init = kmeans_init::random) {
+    if (nlist_ == 0) {
+      nlist_ = std::sqrt(num_vectors(training_set));
+      centroids_ = ColMajorMatrix<centroid_feature_type>(dimension_, nlist_);
+    }
+    switch (init) {
+      case (kmeans_init::none):
+        break;
+      case (kmeans_init::kmeanspp):
+        kmeans_pp(training_set);
+        break;
+      case (kmeans_init::random):
+        kmeans_random_init(training_set);
+        break;
+    };
+
+// Temporary printf debugging
+#if 0
+    std::cout << "\nCentroids Before:\n" << std::endl;
+    for (size_t j = 0; j < centroids_.num_cols(); ++j) {
+      for (size_t i = 0; i < dimension_; ++i) {
+        std::cout << centroids_[j][i] << " ";
+      }
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+#endif
+
+    train_no_init(training_set);
+
+// Temporary printf debugging
+#if 0
+    std::cout << "\nCentroids After:\n" << std::endl;
+    for (size_t j = 0; j < centroids_.num_cols(); ++j) {
+      for (size_t i = 0; i < dimension_; ++i) {
+        std::cout << centroids_[j][i] << " ";
+      }
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+#endif
+  }
+
+  /****************************************************************************
+   * Methods for building, writing, and reading the complete index
+   ****************************************************************************/
+  /**
+   * @brief Build the index from a training set, given the centroids.  This
+   * will partition the training set into a contiguous array, with one
+   * partition per centroid.  It will also create an array to record the
+   * original ids locations of each vector (their locations in the original
+   * training set) as well as a partitioning index array demarcating the
+   * boundaries of each partition (including the very end of the array).
+   *
+   * @param training_set Array of vectors to partition.
+   *
+   * @todo Create and write index that is larger than RAM
+   */
+  void add(const ColMajorMatrix<T>& training_set) {
+    auto partition_labels =
+        detail::flat::qv_partition(centroids_, training_set, num_threads_);
+
+    // @note parts is a vector containing the partition label for each
+    // vector in training_set.  num_parts is how many unique labels there
+    // are
+    auto num_unique_labels = ::num_vectors(centroids_);
+
+    // @todo Should we have a move here?
+    partitioned_vectors_ = std::make_unique<storage_type>(
+        training_set, partition_labels, num_unique_labels, num_threads_);
+  }
+
+  /*****************************************************************************
+   *
+   * Queries, infinite and finite.
+   *
+   * An "infinite" query assumes there is enough RAM to load the entire array
+   * of partitioned vectors into memory.  The query function then searches in
+   * the appropriate partitions of the array for the query vectors.
+   *
+   * A "finite" query, on the other hand, examines the query and only loads
+   * the partitions that are necessary for that particular search.  A finite
+   * query also supports out of core operation, meaning that only a subset of
+   * the necessary partitions are loaded into memory at any one time.  The
+   * query is applied to each subset until all of the necessary partitions to
+   * satisfy the query have been read in . The number of partitions to be held
+   * in memory is controlled by an upper bound parameter that the user can set.
+   * The upper bound limits the total number of vectors that will he held in
+   * memory as the partitions are loaded.  Only complete partitions are loaded,
+   * so the actual number of vectors in memory at any one time will generally
+   * be less than the upper bound.
+   *
+   * @todo Add vq and dist queries (should dist be its own index?)
+   * @todo Order queries so that partitions are queried in order
+   *
+   ****************************************************************************/
+
+  /**
+   * @brief Perform a query on the index, returning the nearest neighbors
+   * and distances.  The function returns a matrix containing k_nn nearest
+   * neighbors for each given query and a matrix containing the distances
+   * corresponding to each returned neighbor.
+   *
+   * This function searches for the nearest neighbors using "infinite RAM",
+   * that is, it loads the entire IVF index into memory and then applies the
+   * query.
+   *
+   * @tparam Q Type of query vectors.
+   * @param query_vectors Array of vectors to query.
+   * @param k_nn Number of nearest neighbors to return.
+   * @param nprobe Number of centroids to search.
+   *
+   * @return A tuple containing a matrix of nearest neighbors and a matrix
+   * of the corresponding distances.
+   *
+   */
+  template <feature_vector_array Q>
+  auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
+    if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
+      read_index_infinite();
+    }
+    auto&& [active_partitions, active_queries] =
+        detail::ivf::partition_ivf_index<parts_type>(
+            centroids_, query_vectors, nprobe, num_threads_);
+    return detail::ivf::query_infinite_ram(
+        *partitioned_vectors_,
+        active_partitions,
+        query_vectors,
+        active_queries,
+        nprobe,
+        k_nn,
+        num_threads_);
+  }
+
+  /**
+   * @brief Same as query_infinite_ram, but using the qv_query_heap_infinite_ram
+   * function.
+   * See the documentation for that function in detail/ivf/qv.h
+   * for more details.
+   */
+  template <feature_vector_array Q>
+  auto qv_query_heap_infinite_ram(
+      const Q& query_vectors, size_t k_nn, size_t nprobe) {
+    if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
+      read_index_infinite();
+    }
+    auto top_centroids = detail::ivf::ivf_top_centroids(
+        centroids_, query_vectors, nprobe, num_threads_);
+    return detail::ivf::qv_query_heap_infinite_ram(
+        top_centroids,
+        *partitioned_vectors_,
+        query_vectors,
+        nprobe,
+        k_nn,
+        num_threads_);
+  }
+
+  /**
+   * @brief Same as query_infinite_ram, but using the
+   * nuv_query_heap_infinite_ram function.
+   * See the documentation for that function in detail/ivf/qv.h
+   * for more details.
+   */
+  template <feature_vector_array Q>
+  auto nuv_query_heap_infinite_ram(
+      const Q& query_vectors, size_t k_nn, size_t nprobe) {
+    if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
+      read_index_infinite();
+    }
+    auto&& [active_partitions, active_queries] =
+        detail::ivf::partition_ivf_index<parts_type>(
+            centroids_, query_vectors, nprobe, num_threads_);
+    return detail::ivf::nuv_query_heap_infinite_ram(
+        *partitioned_vectors_,
+        active_partitions,
+        query_vectors,
+        active_queries,
+        nprobe,
+        k_nn,
+        num_threads_);
+  }
+
+  /**
+   * @brief Same as query_infinite_ram, but using the
+   * nuv_query_heap_infinite_ram_reg_blocked function.
+   * See the documentation for that function in detail/ivf/qv.h
+   * for more details.
+   */
+  template <feature_vector_array Q>
+  auto nuv_query_heap_infinite_ram_reg_blocked(
+      const Q& query_vectors, size_t k_nn, size_t nprobe) {
+    if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
+      read_index_infinite();
+    }
+    auto&& [active_partitions, active_queries] =
+        detail::ivf::partition_ivf_index<parts_type>(
+            centroids_, query_vectors, nprobe, num_threads_);
+    return detail::ivf::nuv_query_heap_infinite_ram_reg_blocked(
+        *partitioned_vectors_,
+        active_partitions,
+        query_vectors,
+        active_queries,
+        nprobe,
+        k_nn,
+        num_threads_);
+  }
+
+  // WIP
+#if 0
+  template <feature_vector_array Q>
+  auto qv_query_heap_finite_ram(
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      size_t upper_bound = 0) {
+    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
+      std::throw_with_nested(
+          std::runtime_error("Vectors are already loaded. Cannot load twice. "
+                             "Cannot do finite query on in-memory index."));
+    }
+    auto&& [active_partitions, active_queries] =
+        read_index_finite(query_vectors, nprobe, upper_bound);
+
+    return detail::ivf::qv_query_heap_finite_ram(
+        centroids_,
+        *partitioned_vectors_,
+        query_vectors,
+        active_queries,
+        nprobe,
+        k_nn,
+        upper_bound,
+        num_threads_);
+  }
+#endif  // 0
+
+  /**
+   * @brief Perform a query on the index, returning the nearest neighbors
+   * and distances.  The function returns a matrix containing k_nn nearest
+   * neighbors for each given query and a matrix containing the distances
+   * corresponding to each returned neighbor.
+   *
+   * This function searches for the nearest neighbors using "finite RAM",
+   * that is, it only loads that portion of the IVF index into memory that
+   * is necessary for the given query.  In addition, it supports out of core
+   * operation, meaning that only a subset of the necessary partitions are
+   * loaded into memory at any one time.
+   *
+   * See the documentation for that function in detail/ivf/qv.h
+   * for more details.
+   *
+   * @param query_vectors Array of vectors to query.
+   * @param k_nn Number of nearest neighbors to return.
+   * @param nprobe Number of centroids to search.
+   *
+   * @return A tuple containing a matrix of nearest neighbors and a matrix
+   * of the corresponding distances.
+   *
+   * @tparam Q
+   * @param query_vectors
+   * @param k_nn
+   * @param nprobe
+   * @return
+   */
+  template <feature_vector_array Q>
+  auto query_finite_ram(
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      size_t upper_bound = 0) {
+    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
+      std::throw_with_nested(
+          std::runtime_error("Vectors are already loaded. Cannot load twice. "
+                             "Cannot do finite query on in-memory index."));
+    }
+    auto&& [active_partitions, active_queries] =
+        read_index_finite(query_vectors, nprobe, upper_bound);
+
+    return detail::ivf::query_finite_ram(
+        *partitioned_vectors_,
+        query_vectors,
+        active_queries,
+        nprobe,
+        k_nn,
+        upper_bound,
+        num_threads_);
+  }
+
+  /**
+   * @brief Same as query_finite_ram, but using the
+   * nuv_query_heap_infinite_ram function.
+   * See the documentation for that function in detail/ivf/qv.h
+   * for more details.
+   */
+  template <feature_vector_array Q>
+  auto nuv_query_heap_finite_ram(
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      size_t upper_bound = 0) {
+    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
+      std::throw_with_nested(
+          std::runtime_error("Vectors are already loaded. Cannot load twice. "
+                             "Cannot do finite query on in-memory index."));
+    }
+    auto&& [active_partitions, active_queries] =
+        read_index_finite(query_vectors, nprobe, upper_bound);
+
+    return detail::ivf::nuv_query_heap_finite_ram(
+        *partitioned_vectors_,
+        query_vectors,
+        active_queries,
+        nprobe,
+        k_nn,
+        upper_bound,
+        num_threads_);
+  }
+
+  /**
+   * @brief Same as query_finite_ram, but using the
+   * nuv_query_heap_infinite_ram_reg_blocked function.
+   * See the documentation for that function in detail/ivf/qv.h
+   * for more details.
+   */
+  template <feature_vector_array Q>
+  auto nuv_query_heap_finite_ram_reg_blocked(
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      size_t upper_bound = 0) {
+    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
+      std::throw_with_nested(
+          std::runtime_error("Vectors are already loaded. Cannot load twice. "
+                             "Cannot do finite query on in-memory index."));
+    }
+    auto&& [active_partitions, active_queries] =
+        read_index_finite(query_vectors, nprobe, upper_bound);
+
+    return detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
+        *partitioned_vectors_,
+        query_vectors,
+        active_queries,
+        nprobe,
+        k_nn,
+        upper_bound,
+        num_threads_);
+  }
+
+  /*****************************************************************************
+   * Methods for writing and reading the index
+   *****************************************************************************/
+
+  /**
+   * @brief Write the index to disk.  This will write the centroids, indices,
+   * partitioned_ids, and partitioned_vectors to disk, along with metadata to
+   * a group_uri.
+   *
+   * We assume we have all of the data in memory, and that we are writing
+   * all of it to a TileDB group.  Since we have all of it in memory,
+   * we write from the PartitionedMatrix base class.
+   *
+   * @param group_uri
+   * @param overwrite
+   * @return bool indicating success or failure
+   */
+  auto write_index(const std::string& group_uri, bool overwrite) {
+    tiledb::Context ctx;
+    tiledb::VFS vfs(ctx);
+    if (vfs.is_dir(group_uri)) {
+      if (overwrite == false) {
+        return false;
+      }
+      vfs.remove_dir(group_uri);
     }
 
-    std::shift_right(begin(indices), end(indices), 1);
-    indices[0] = 0;
+    tiledb::Config cfg;
+    tiledb::Group::create(ctx, group_uri);
+    auto write_group = tiledb::Group(ctx, group_uri, TILEDB_WRITE, cfg);
 
-    indices_ = std::move(indices);
-    shuffled_ids_ = std::move(shuffled_ids);
-    shuffled_db_ = std::move(shuffled_db);
+    // Write metadata for the ivf_index.  The member data for the
+    // PartitionedMatrix is created when the PartitionedMatrix is
+    // constructed.
+    for (auto&& [name, value, type] : metadata) {
+      write_group.put_metadata(name, type, 1, value);
+    }
+
+    // Temporary names!
+    // @todo Name per schema in ingestion.py
+    auto centroids_uri = group_uri + "/centroids";
+    write_matrix(ctx, centroids_, centroids_uri);
+    write_group.add_member("centroids", true, "centroids");
+
+    auto indices_uri = group_uri + "/indices";
+    write_vector(ctx, partitioned_vectors_->indices(), indices_uri);
+    write_group.add_member("indices", true, "indices");
+
+    auto partitioned_ids_uri = group_uri + "/partitioned_ids";
+    write_vector(ctx, partitioned_vectors_->ids(), partitioned_ids_uri);
+    write_group.add_member("partitioned_ids", true, "partitioned_ids");
+
+    auto partitioned_vectors_uri = group_uri + "/partitioned_vectors";
+    write_matrix(ctx, *partitioned_vectors_, partitioned_vectors_uri);
+    write_group.add_member("partitioned_vectors", true, "partitioned_vectors");
+
+    write_group.close();
+    return true;
   }
-#endif
+
+  /**
+   * @brief Open the index and pre-load the arrays common to both infinite
+   * and finite queries (i.e., metadata, centroids, and indices).  We load
+   * the centroids here, but defer loading the info for the PartitionedMatrix
+   * until we know what kind of open we will need for that (finite or infinite).
+   *
+   * @param group_uri
+   * @return
+   */
+  auto open_index(tiledb::Context ctx, const std::string& group_uri) {
+    cached_ctx_ = ctx;
+    group_uri_ = group_uri;
+
+    tiledb::Config cfg;
+    tiledb::Group read_group(cached_ctx_, group_uri, TILEDB_READ, cfg);
+
+    for (auto& [name, value, datatype] : metadata) {
+      if (!read_group.has_metadata(name, &datatype)) {
+        throw std::runtime_error("Missing metadata: " + name);
+      }
+      uint32_t count;
+      void* addr;
+      read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
+      if (datatype == TILEDB_UINT64) {
+        *reinterpret_cast<uint64_t*>(value) =
+            *reinterpret_cast<uint64_t*>(addr);
+      } else if (datatype == TILEDB_FLOAT32) {
+        *reinterpret_cast<float*>(value) = *reinterpret_cast<float*>(addr);
+      } else {
+        throw std::runtime_error("Unsupported datatype");
+      }
+    }
+
+    centroids_ =
+        std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
+            cached_ctx_, group_uri + "/centroids"));
+  }
+
+  /**
+   * @brief Read the the complete index arrays into ("infinite") memory.
+   * This will read the centroids, indices, partitioned_ids, and
+   * and the complete set of partitioned_vectors, along with metadata
+   * from a group_uri.
+   *
+   * @param group_uri
+   * @return bool indicating success or failure of read
+   */
+  auto read_index_infinite() {
+    if (partitioned_vectors_ &&
+        (::num_vectors(*partitioned_vectors_) != 0 ||
+         ::num_vectors(partitioned_vectors_->ids()) != 0)) {
+      throw std::runtime_error("Index already loaded");
+    }
+
+    // Load all partitions for infinite query
+    // Note that the constructor will move the infinite_parts vector
+    auto infinite_parts = std::vector<parts_type>(::num_vectors(centroids_));
+    std::iota(begin(infinite_parts), end(infinite_parts), 0);
+    partitioned_vectors_ = std::make_unique<tdb_storage_type>(
+        cached_ctx_,
+        group_uri_ + "/partitioned_vectors",
+        group_uri_ + "/indices",
+        group_uri_ + "/partitioned_ids",
+        infinite_parts,
+        0);
+
+    partitioned_vectors_->load();
+
+    assert(
+        ::num_vectors(*partitioned_vectors_) ==
+        size(partitioned_vectors_->ids()));
+    assert(
+        size(partitioned_vectors_->indices()) == ::num_vectors(centroids_) + 1);
+  }
+
+  /**
+   * @brief Open the index from the arrays contained in the group_uri.
+   * The "finite" queries only load as much data (ids and vectors) as are
+   * necessary for a given query -- so we can't load any data until we
+   * know what the query is.  So, here we would have read the centroids and
+   * indices into memory, when creating the index but would not have read
+   * the partitioned_ids or partitioned_vectors.
+   *
+   * @param group_uri
+   * @return bool indicating success or failure of read
+   */
+  template <feature_vector_array Q>
+  auto read_index_finite(
+      const Q& query_vectors, size_t nprobe, size_t upper_bound) {
+    if (partitioned_vectors_ &&
+        (::num_vectors(*partitioned_vectors_) != 0 ||
+         ::num_vectors(partitioned_vectors_->ids()) != 0)) {
+      throw std::runtime_error("Index already loaded");
+    }
+
+    auto&& [active_partitions, active_queries] =
+        detail::ivf::partition_ivf_index<parts_type>(
+            centroids_, query_vectors, nprobe, num_threads_);
+
+    partitioned_vectors_ = std::make_unique<tdb_storage_type>(
+        cached_ctx_,
+        group_uri_ + "/partitioned_vectors",
+        group_uri_ + "/indices",
+        group_uri_ + "/partitioned_ids",
+        active_partitions,
+        upper_bound);
+
+    // NB: We don't load the partitioned_vectors here.  We will load them
+    // when we do the query.
+
+    return std::make_tuple(
+        std::move(active_partitions), std::move(active_queries));
+  }
+
+  /***************************************************************************
+   * Methods to aid Testing and Debugging
+   *
+   * @todo -- As elsewhere in this class, there is huge code duplication here
+   *
+   **************************************************************************/
+
+  bool compare_metadata(const ivf_index& rhs) {
+    if (dimension_ != rhs.dimension_) {
+      std::cout << "dimension_ != rhs.dimension_ (" << dimension_
+                << " != " << rhs.dimension_ << ")" << std::endl;
+      return false;
+    }
+    if (nlist_ != rhs.nlist_) {
+      std::cout << "nlist_ != rhs.nlist_ (" << nlist_ << " != " << rhs.nlist_
+                << ")" << std::endl;
+      return false;
+    }
+    if (max_iter_ != rhs.max_iter_) {
+      std::cout << "max_iter_ != rhs.max_iter_ (" << max_iter_
+                << " != " << rhs.max_iter_ << ")" << std::endl;
+      return false;
+    }
+    if (tol_ != rhs.tol_) {
+      std::cout << "tol_ != rhs.tol_ (" << tol_ << " != " << rhs.tol_ << ")"
+                << std::endl;
+      return false;
+    }
+    if (reassign_ratio_ != rhs.reassign_ratio_) {
+      std::cout << "reassign_ratio_ != rhs.reassign_ratio_ (" << reassign_ratio_
+                << " != " << rhs.reassign_ratio_ << ")" << std::endl;
+      return false;
+    }
+    if (num_threads_ != rhs.num_threads_) {
+      std::cout << "num_threads_ != rhs.num_threads_ (" << num_threads_
+                << " != " << rhs.num_threads_ << ")" << std::endl;
+      return false;
+    }
+    return true;
+  }
+
+  template <feature_vector_array L, feature_vector_array R>
+  auto compare_feature_vector_arrays(const L& lhs, const R& rhs) {
+    if (::num_vectors(lhs) != ::num_vectors(rhs) ||
+        dimension(lhs) != dimension(rhs)) {
+      std::cout << "num_vectors(lhs) != num_vectors(rhs) || dimension(lhs) != "
+                   "dimension(rhs)n"
+                << std::endl;
+      std::cout << "num_vectors(lhs): " << ::num_vectors(lhs)
+                << " num_vectors(rhs): " << ::num_vectors(rhs) << std::endl;
+      std::cout << "dimension(lhs): " << ::dimension(lhs)
+                << " dimension(rhs): " << ::dimension(rhs) << std::endl;
+      return false;
+    }
+    for (size_t i = 0; i < ::num_vectors(lhs); ++i) {
+      if (!std::equal(begin(lhs[i]), end(lhs[i]), begin(rhs[i]))) {
+        std::cout << "lhs[" << i << "] != rhs[" << i << "]" << std::endl;
+        std::cout << "lhs[" << i << "]: ";
+        for (size_t j = 0; j < dimension(lhs); ++j) {
+          std::cout << lhs[i][j] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "rhs[" << i << "]: ";
+        for (size_t j = 0; j < dimension(rhs); ++j) {
+          std::cout << rhs[i][j] << " ";
+        }
+        return false;
+      }
+    }
+    return true;
+  }
+
+  template <feature_vector L, feature_vector R>
+  auto compare_vectors(const L& lhs, const R& rhs) {
+    if (dimension(lhs) != dimension(rhs)) {
+      std::cout << "dimension(lhs) != dimension(rhs) (" << dimension(lhs)
+                << " != " << dimension(rhs) << ")" << std::endl;
+      return false;
+    }
+    return std::equal(begin(lhs), end(lhs), begin(rhs));
+  }
+
+  auto compare_centroids(const ivf_index& rhs) {
+    return compare_feature_vector_arrays(centroids_, rhs.centroids_);
+  }
+
+  auto compare_feature_vectors(const ivf_index& rhs) {
+    if (partitioned_vectors_->num_vectors() !=
+        rhs.partitioned_vectors_->num_vectors()) {
+      std::cout << "partitioned_vectors_->num_vectors() != "
+                   "rhs.partitioned_vectors_->num_vectors() ("
+                << partitioned_vectors_->num_vectors()
+                << " != " << rhs.partitioned_vectors_->num_vectors() << ")"
+                << std::endl;
+      return false;
+    }
+    if (partitioned_vectors_->num_partitions() !=
+        rhs.partitioned_vectors_->num_partitions()) {
+      std::cout << "partitioned_vectors_->num_parts() != "
+                   "rhs.partitioned_vectors_->num_parts() ("
+                << partitioned_vectors_->num_partitions()
+                << " != " << rhs.partitioned_vectors_->num_partitions() << ")"
+                << std::endl;
+      return false;
+    }
+
+    return compare_feature_vector_arrays(
+        *partitioned_vectors_, *(rhs.partitioned_vectors_));
+  }
+
+  auto compare_indices(const ivf_index& rhs) {
+    return compare_vectors(
+        partitioned_vectors_->indices(), rhs.partitioned_vectors_->indices());
+  }
+
+  auto compare_partitioned_ids(const ivf_index& rhs) {
+    return compare_vectors(
+        partitioned_vectors_->ids(), rhs.partitioned_vectors_->ids());
+  }
+
+  auto set_centroids(const ColMajorMatrix<T>& centroids) {
+    std::copy(
+        centroids.data(),
+        centroids.data() + centroids.num_rows() * centroids.num_cols(),
+        centroids_.data());
+  }
 
   auto& get_centroids() {
     return centroids_;

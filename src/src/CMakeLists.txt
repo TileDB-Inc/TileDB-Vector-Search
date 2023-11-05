@@ -102,8 +102,8 @@ target_sources(kmeans_queries INTERFACE
 
 add_library(kmeans_lib INTERFACE)
 target_sources(kmeans_lib INTERFACE
-        ../include/flat_query.h ../include/ivf_query.h ../include/scoring.h ../include/utils/fixed_min_heap.h
-        ../include/scoring.h ../include/algorithm.h ../include/concepts.h ../include/stats.h
+        ../include/scoring.h ../include/utils/fixed_min_heap.h
+        ../include/scoring.h ../include/algorithm.h ../include/stats.h
         ../include/utils/timer.h ../include/utils/logging.h ../include/utils/print_types.h
         ../include/flat_index.h ../include/ivf_index.h
         )
@@ -134,22 +134,17 @@ endif()
 
 
 #---[ Demos ]------------------------------------------------------------
-# if (TILEDB_VS_ENABLE_BLAS)
-  # requires BLAS
-  add_executable(flat_l2 flat_l2.cc)
-  target_link_libraries(flat_l2 PUBLIC kmeans_lib nlohmann_json::nlohmann_json)
-  target_compile_definitions(flat_l2 PUBLIC TILEDB_VS_ENABLE_STATS)
+if (TILEDB_VS_ENABLE_BLAS OR TRUE)
+  # these don't really requires BLAS any longer
 
-  add_executable(ivf_flat ivf_flat.cc)
-  target_link_libraries(ivf_flat PUBLIC kmeans_lib)
-  target_compile_definitions(ivf_flat PUBLIC TILEDB_VS_ENABLE_STATS)
+  add_subdirectory(flat)
+  add_subdirectory(ivf)
+  add_subdirectory(pq)
+  add_subdirectory(vamana)
 
-  add_executable(index index.cc)
-  target_link_libraries(index PUBLIC kmeans_lib)
-  target_compile_definitions(index PUBLIC TILEDB_VS_ENABLE_STATS)
-#else()
-#  message(STATUS "Disabling demo executables build because BLAS is disabled (TILEDBVS_ENABLE_BLAS).")
-#endif()
+else()
+  message(STATUS "Disabling demo executables build because BLAS is disabled (TILEDBVS_ENABLE_BLAS).")
+endif()
 
 #---[ TBD ]------------------------------------------------------------
 if (FALSE)

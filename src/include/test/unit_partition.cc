@@ -45,7 +45,8 @@ TEST_CASE("partition: partition_ivf_index", "[partition]") {
   auto nthreads = GENERATE(3);
 
   auto&& [active_partitions, active_queries] =
-      detail::ivf::partition_ivf_index(centroids, query, nprobe, nthreads);
+      detail::ivf::partition_ivf_index<uint32_t>(
+          centroids, query, nprobe, nthreads);
 
   auto x = active_partitions;
   auto y = active_queries;
