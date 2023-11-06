@@ -149,21 +149,22 @@ class ivf_flat_index {
    * @param seed Seed for random number generator.
    */
   ivf_flat_index(
-      size_t dim,
+      // size_t dim,
       size_t nlist,
       size_t max_iter,
       float tol = 0.000025,
       std::optional<size_t> num_threads = std::nullopt,
       std::optional<unsigned int> seed = std::nullopt)
       : gen(seed ? *seed : std::random_device{}())
-      , dimension_(dim)
+      // , dimension_(dim)
       , nlist_(nlist)
       , max_iter_(max_iter)
       , tol_(tol)
       , feature_datatype_(type_to_tiledb_t<feature_type>)
       , id_datatype_(type_to_tiledb_t<id_type>)
       , ptx_datatype_(type_to_tiledb_t<indices_type>)
-      , centroids_(dim, nlist) {
+      // , centroids_(dim, nlist)
+  {
     if (num_threads && *num_threads > 0) {
       num_threads_ = *num_threads;
     } else {
@@ -509,10 +510,12 @@ class ivf_flat_index {
   void train(
       const ColMajorMatrix<T>& training_set,
       kmeans_init init = kmeans_init::random) {
+    dimension_ = ::dimension(training_set);
     if (nlist_ == 0) {
       nlist_ = std::sqrt(num_vectors(training_set));
-      centroids_ = ColMajorMatrix<centroid_feature_type>(dimension_, nlist_);
     }
+
+    centroids_ = ColMajorMatrix<centroid_feature_type>(dimension_, nlist_);
     switch (init) {
       case (kmeans_init::none):
         break;
@@ -1177,6 +1180,7 @@ class ivf_flat_index {
   }
 
   auto set_centroids(const ColMajorMatrix<T>& centroids) {
+    centroids_ = ColMajorMatrix<T>(::dimension(centroids), ::num_vectors(centroids));
     std::copy(
         centroids.data(),
         centroids.data() + centroids.num_rows() * centroids.num_cols(),
@@ -1189,6 +1193,10 @@ class ivf_flat_index {
 
   auto dimension() const {
     return dimension_;
+  }
+
+  auto num_partitions() const {
+    return ::num_vectors(centroids_);
   }
 };
 

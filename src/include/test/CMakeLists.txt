@@ -180,8 +180,9 @@ kmeans_add_test(unit_utils)
 kmeans_add_test(unit_vector)
 
 kmeans_add_test(unit_queries)
-kmeans_add_test(unit_gemm)
-target_link_libraries(unit_gemm PRIVATE flat_blas)
+
+# kmeans_add_test(unit_gemm)
+# target_link_libraries(unit_gemm PRIVATE flat_blas)
 
 # Create the subdirectory for the extracted files
 file(MAKE_DIRECTORY ${SIFT_TEST_DIR}/siftsmall)

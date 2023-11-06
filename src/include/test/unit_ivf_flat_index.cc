@@ -65,7 +65,9 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
   std::copy(begin(data), end(data), training_data.data());
 
   auto index = ivf_flat_index<float, uint32_t, uint32_t>(
-      4, 3, 10, 1e-4, 1, Catch::rngSeed());
+      /*4,*/ 3, 10, 1e-4, 1, Catch::rngSeed());
+
+  index.set_centroids(ColMajorMatrix<float>(4, 3));
 
   SECTION("random") {
     std::cout << "random" << std::endl;
@@ -114,7 +116,7 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
   std::copy(begin(data), end(data), training_data.data());
 
   auto index = ivf_flat_index<float, size_t, size_t>(
-      4, 3, 10, 1e-4, 1, Catch::rngSeed());
+      /*4,*/ 3, 10, 1e-4, 1, Catch::rngSeed());
 
   SECTION("random") {
     std::cout << "random" << std::endl;
@@ -148,7 +150,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
   SECTION("one iteration") {
     std::cout << "one iteration" << std::endl;
     auto index = ivf_flat_index<float, size_t, size_t>(
-        sklearn_centroids.num_rows(),
+        /*sklearn_centroids.num_rows(),*/
         sklearn_centroids.num_cols(),
         1,
         1e-4,
@@ -162,7 +164,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
   SECTION("two iterations") {
     std::cout << "two iterations" << std::endl;
     auto index = ivf_flat_index<float, size_t, size_t>(
-        sklearn_centroids.num_rows(),
+        /*sklearn_centroids.num_rows(),*/
         sklearn_centroids.num_cols(),
         2,
         1e-4,
@@ -176,7 +178,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
   SECTION("five iterations") {
     std::cout << "five iterations" << std::endl;
     auto index = ivf_flat_index<float, size_t, size_t>(
-        sklearn_centroids.num_rows(),
+        /* sklearn_centroids.num_rows(), */
         sklearn_centroids.num_cols(),
         5,
         1e-4,
@@ -197,7 +199,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
 
     sklearn_centroids(0, 0) += 0.25;
     auto index = ivf_flat_index<float, size_t, size_t>(
-        sklearn_centroids.num_rows(),
+        /* sklearn_centroids.num_rows(), */
         sklearn_centroids.num_cols(),
         5,
         1e-4,
@@ -211,7 +213,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
   SECTION("five iterations") {
     std::cout << "five iterations" << std::endl;
     auto index = ivf_flat_index<float, size_t, size_t>(
-        sklearn_centroids.num_rows(),
+        /* sklearn_centroids.num_rows(), */
         sklearn_centroids.num_cols(),
         5,
         1e-4,
@@ -235,7 +237,7 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   load(training_set);
 
   auto idx =
-      ivf_flat_index<float, uint32_t, uint32_t>(dimension, nlist, nthreads);
+      ivf_flat_index<float, uint32_t, uint32_t>(/*dimension,*/ nlist, nthreads);
 
   idx.train(training_set, kmeans_init::kmeanspp);
   idx.add(training_set);
@@ -284,12 +286,12 @@ TEMPLATE_TEST_CASE(
     size_t nlist = 1;
 
     auto ivf_idx2 = ivf_flat_index<TestType, uint32_t, uint32_t>(
-        128, nlist, 4, 1.e-4, 1);  // dim nlist maxiter eps nthreads
+        /*128,*/ nlist, 4, 1.e-4, 1);  // dim nlist maxiter eps nthreads
     ivf_idx2.train(hypercube2);
     ivf_idx2.add(hypercube2);
 
     auto ivf_idx4 =
-        ivf_flat_index<TestType, uint32_t, uint32_t>(128, nlist, 4, 1.e-4, 1);
+        ivf_flat_index<TestType, uint32_t, uint32_t>(/*128,*/ nlist, 4, 1.e-4, 1);
     ivf_idx4.train(hypercube4);
     ivf_idx4.add(hypercube4);
 
@@ -371,7 +373,7 @@ struct siftsmall_test_init {
       , query_set(tdbColMajorMatrix<feature_type>(ctx_, siftsmall_query_uri))
       , groundtruth_set(
             tdbColMajorMatrix<int32_t>(ctx_, siftsmall_groundtruth_uri))
-      , idx(128, nlist, max_iter, tolerance, nthreads, 0xdeadbeef) {
+      , idx(/*128,*/ nlist, max_iter, tolerance, nthreads, 0xdeadbeef) {
     training_set.load();
     query_set.load();
     groundtruth_set.load();
