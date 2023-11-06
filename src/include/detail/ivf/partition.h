@@ -69,7 +69,7 @@ auto ivf_top_centroids(
  *
  */
 template <class parts_type, feature_vector_array C, feature_vector_array Q>
-auto partition_ivf_index(
+auto partition_ivf_flat_index(
     const C& centroids, const Q& query, size_t nprobe, size_t nthreads) {
   scoped_timer _{tdb_func__};
 

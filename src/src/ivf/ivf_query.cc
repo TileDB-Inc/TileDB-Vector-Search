@@ -38,7 +38,7 @@
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/vector.h"
-#include "ivf_index.h"
+#include "index/ivf_flat_index.h"
 
 bool verbose = false;
 bool debug = false;
@@ -132,7 +132,7 @@ int main(int argc, char* argv[]) {
 
     auto&& [top_k_scores, top_k] = [&]() {
       ;
-      auto idx = ivf_index<feature_type, id_type, px_type>(ctx, index_uri);
+      auto idx = ivf_flat_index<feature_type, id_type, px_type>(ctx, index_uri);
 
       auto queries = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
       queries.load();

@@ -1,5 +1,5 @@
 /**
- * @file   flat_index.h
+ * @file   flat_l2_index.h
  *
  * @section LICENSE
  *
@@ -56,25 +56,25 @@
 // We can standardize on this schema -- though we may want to consider int32
 // Other external arrays (fmnist, sift) have int32
 template <class attribute_type>
-class flat_index {
+class flat_l2_index {
  private:
   std::unique_ptr<tdbColMajorMatrix<attribute_type>> feature_vectors_;
 
  public:
-  flat_index() = delete;
-  flat_index(const flat_index& index) = delete;
-  flat_index& operator=(const flat_index& index) = delete;
+  flat_l2_index() = delete;
+  flat_l2_index(const flat_l2_index& index) = delete;
+  flat_l2_index& operator=(const flat_l2_index& index) = delete;
 
-  flat_index(flat_index&& index) {
+  flat_l2_index(flat_l2_index&& index) {
   }
-  flat_index& operator=(flat_index&& index) = default;
+  flat_l2_index& operator=(flat_l2_index&& index) = default;
 
-  ~flat_index() = default;
+  ~flat_l2_index() = default;
 
   /**
    * @brief Construct a new flat index object from the array at the given URI.
    */
-  flat_index(const tiledb::Context& ctx, const std::string& uri)
+  flat_l2_index(const tiledb::Context& ctx, const std::string& uri)
       : feature_vectors_{
             std::make_unique<tdbColMajorMatrix<attribute_type>>(ctx, uri)} {
   }

@@ -105,7 +105,7 @@ target_sources(kmeans_lib INTERFACE
         ../include/scoring.h ../include/utils/fixed_min_heap.h
         ../include/scoring.h ../include/algorithm.h ../include/stats.h
         ../include/utils/timer.h ../include/utils/logging.h ../include/utils/print_types.h
-        ../include/flat_index.h ../include/ivf_index.h
+        ../include/index/flat_l2_index.h ../include/index/ivf_flat_index.h
         )
 
 target_include_directories(kmeans_lib INTERFACE

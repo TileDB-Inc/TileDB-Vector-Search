@@ -41,7 +41,7 @@
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/vector.h"
-#include "flatpq_index.h"
+#include "index/flatpq_index.h"
 
 bool verbose = false;
 bool debug = false;

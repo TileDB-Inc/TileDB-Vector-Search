@@ -32,7 +32,7 @@
 
 #include <catch2/catch_all.hpp>
 #include "api.h"
-#include "flat_index.h"
+#include "index/flat_l2_index.h"
 #include "query_common.h"
 
 TEST_CASE("index: test test", "[index]") {
@@ -41,5 +41,5 @@ TEST_CASE("index: test test", "[index]") {
 
 TEST_CASE("index: uri constructor", "[index]") {
   tiledb::Context ctx;
-  auto index = flat_index<float>(ctx, sift_base_uri);
+  auto index = flat_l2_index<float>(ctx, sift_base_uri);
 }

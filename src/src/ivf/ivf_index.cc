@@ -41,7 +41,7 @@
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/vector.h"
-#include "ivf_index.h"
+#include "index/ivf_flat_index.h"
 
 bool verbose = false;
 bool debug = false;
@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
 
     auto dim = dimension(X);
 
-    auto idx = ivf_index<feature_type, id_type, px_type>(
+    auto idx = ivf_flat_index<feature_type, id_type, px_type>(
         dim, num_clusters, max_iter, tolerance, nthreads, 0xdeadbeef);
     idx.train(X, init_type);
     idx.add(X);

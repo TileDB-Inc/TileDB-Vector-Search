@@ -32,7 +32,9 @@
  */
 #include <catch2/catch_all.hpp>
 #include <filesystem>
-#include "api.h"
+#include "api/feature_vector.h"
+#include "api/feature_vector_array.h"
+#include "api/flat_l2_index.h"
 #include "detail/flat/qv.h"
 #include "detail/linalg/tdb_io.h"
 #include "detail/linalg/tdb_vector.h"

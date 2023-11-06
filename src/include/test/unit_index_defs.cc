@@ -33,7 +33,8 @@
 
 #include <catch2/catch_all.hpp>
 #include <type_traits>
-#include "index_defs.h"
+#include "index/index_defs.h"
+#include "tdb_defs.h"
 
 TEST_CASE("index_defs: test test", "[index_defs]") {
   REQUIRE(true);

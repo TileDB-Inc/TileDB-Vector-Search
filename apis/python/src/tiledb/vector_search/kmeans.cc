@@ -4,8 +4,8 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
+#include "index/ivf_flat_index.h"
 #include "linalg.h"
-#include "ivf_index.h"
 
 namespace py = pybind11;
 using Ctx = tiledb::Context;

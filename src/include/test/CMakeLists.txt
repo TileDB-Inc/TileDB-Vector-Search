@@ -91,6 +91,20 @@ kmeans_add_test(unit_algorithm)
 
 kmeans_add_test(unit_api)
 
+kmeans_add_test(unit_api_feature_vector)
+
+kmeans_add_test(unit_api_feature_vector_array)
+
+kmeans_add_test(unit_api_flat_l2_index)
+
+kmeans_add_test(unit_api_flat_pq_index)
+
+kmeans_add_test(unit_api_ivf_flat_index)
+
+kmeans_add_test(unit_api_ivf_pq_index)
+
+kmeans_add_test(unit_api_vamana_index)
+
 kmeans_add_test(unit_concepts)
 
 kmeans_add_test(unit_concepts_vs)
@@ -107,7 +121,7 @@ kmeans_add_test(unit_execution_policy)
 
 kmeans_add_test(unit_fixed_min_heap)
 
-kmeans_add_test(unit_flat_index)
+kmeans_add_test(unit_flat_l2_index)
 
 kmeans_add_test(unit_flatpq_index)
 
@@ -120,7 +134,7 @@ kmeans_add_test(unit_gen_graphs)
 # kmeans_add_test(unit_high_five)
 # target_link_libraries(unit_high_five PRIVATE HighFive)
 
-kmeans_add_test(unit_ivf_index)
+kmeans_add_test(unit_ivf_flat_index)
 
 kmeans_add_test(unit_index_defs)
 

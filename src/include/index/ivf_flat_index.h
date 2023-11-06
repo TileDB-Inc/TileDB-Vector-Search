@@ -1,5 +1,5 @@
 /**
- * @file   ivf_index.h
+ * @file   ivf_flat_index.h
  *
  * @section LICENSE
  *
@@ -45,8 +45,8 @@
  * Still WIP.
  */
 
-#ifndef TILEDB_IVF_INDEX_H
-#define TILEDB_IVF_INDEX_H
+#ifndef TILEDB_ivf_flat_index_H
+#define TILEDB_ivf_flat_index_H
 
 #include <atomic>
 #include <random>
@@ -55,7 +55,7 @@
 #include "algorithm.h"
 #include "concepts.h"
 #include "cpos.h"
-#include "index_defs.h"
+#include "index/index_defs.h"
 #include "linalg.h"
 
 #include "detail/flat/qv.h"
@@ -66,13 +66,15 @@
 #include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 
+#include "index/index_defs.h"
+
 enum class kmeans_init { none, kmeanspp, random };
 
 template <
     class T,
     class partitioned_ids_type = size_t,
     class partitioning_index_type = size_t>
-class ivf_index {
+class ivf_flat_index {
   using feature_type = T;
   using id_type = partitioned_ids_type;
   using parts_type = id_type;
@@ -134,7 +136,7 @@ class ivf_index {
   using index_type = partitioning_index_type;  // @todo This isn't right
 
   /**
-   * @brief Construct a new `ivf_index` object, setting a number of parameters
+   * @brief Construct a new `ivf_flat_index` object, setting a number of parameters
    * to be used subsequently in training.  To fully create an index we will
    * need to call `train()` and `add()`.
    *
@@ -146,7 +148,7 @@ class ivf_index {
    * @param num_threads Number of threads to use when executing in parallel.
    * @param seed Seed for random number generator.
    */
-  ivf_index(
+  ivf_flat_index(
       size_t dim,
       size_t nlist,
       size_t max_iter,
@@ -169,7 +171,7 @@ class ivf_index {
     }
   }
 
-  ivf_index(const tiledb::Context& ctx, const std::string& uri) {
+  ivf_flat_index(const tiledb::Context& ctx, const std::string& uri) {
     open_index(ctx, uri);
   }
 
@@ -628,7 +630,7 @@ class ivf_index {
       read_index_infinite();
     }
     auto&& [active_partitions, active_queries] =
-        detail::ivf::partition_ivf_index<parts_type>(
+        detail::ivf::partition_ivf_flat_index<parts_type>(
             centroids_, query_vectors, nprobe, num_threads_);
     return detail::ivf::query_infinite_ram(
         *partitioned_vectors_,
@@ -676,7 +678,7 @@ class ivf_index {
       read_index_infinite();
     }
     auto&& [active_partitions, active_queries] =
-        detail::ivf::partition_ivf_index<parts_type>(
+        detail::ivf::partition_ivf_flat_index<parts_type>(
             centroids_, query_vectors, nprobe, num_threads_);
     return detail::ivf::nuv_query_heap_infinite_ram(
         *partitioned_vectors_,
@@ -701,7 +703,7 @@ class ivf_index {
       read_index_infinite();
     }
     auto&& [active_partitions, active_queries] =
-        detail::ivf::partition_ivf_index<parts_type>(
+        detail::ivf::partition_ivf_flat_index<parts_type>(
             centroids_, query_vectors, nprobe, num_threads_);
     return detail::ivf::nuv_query_heap_infinite_ram_reg_blocked(
         *partitioned_vectors_,
@@ -870,7 +872,7 @@ class ivf_index {
    * @param overwrite
    * @return bool indicating success or failure
    */
-  auto write_index(const std::string& group_uri, bool overwrite) {
+  auto write_index(const std::string& group_uri, bool overwrite) const {
     tiledb::Context ctx;
     tiledb::VFS vfs(ctx);
     if (vfs.is_dir(group_uri)) {
@@ -884,11 +886,11 @@ class ivf_index {
     tiledb::Group::create(ctx, group_uri);
     auto write_group = tiledb::Group(ctx, group_uri, TILEDB_WRITE, cfg);
 
-    // Write metadata for the ivf_index
+    // Write metadata for the ivf_flat_index
     IndexKind index_kind = index_kind_;
     write_group.put_metadata("index_kind", TILEDB_UINT32, 1, &index_kind);
 
-    // Write metadata for the ivf_index.  The member data for the
+    // Write metadata for the ivf_flat_index.  The member data for the
     // PartitionedMatrix is created when the PartitionedMatrix is
     // constructed.
     for (auto&& [name, value, type] : metadata) {
@@ -1036,7 +1038,7 @@ class ivf_index {
     }
 
     auto&& [active_partitions, active_queries] =
-        detail::ivf::partition_ivf_index<parts_type>(
+        detail::ivf::partition_ivf_flat_index<parts_type>(
             centroids_, query_vectors, nprobe, num_threads_);
 
     partitioned_vectors_ = std::make_unique<tdb_storage_type>(
@@ -1061,7 +1063,7 @@ class ivf_index {
    *
    **************************************************************************/
 
-  bool compare_metadata(const ivf_index& rhs) {
+  bool compare_metadata(const ivf_flat_index& rhs) {
     if (dimension_ != rhs.dimension_) {
       std::cout << "dimension_ != rhs.dimension_ (" << dimension_
                 << " != " << rhs.dimension_ << ")" << std::endl;
@@ -1098,7 +1100,7 @@ class ivf_index {
   template <feature_vector_array L, feature_vector_array R>
   auto compare_feature_vector_arrays(const L& lhs, const R& rhs) {
     if (::num_vectors(lhs) != ::num_vectors(rhs) ||
-        dimension(lhs) != dimension(rhs)) {
+        ::dimension(lhs) != ::dimension(rhs)) {
       std::cout << "num_vectors(lhs) != num_vectors(rhs) || dimension(lhs) != "
                    "dimension(rhs)n"
                 << std::endl;
@@ -1112,12 +1114,12 @@ class ivf_index {
       if (!std::equal(begin(lhs[i]), end(lhs[i]), begin(rhs[i]))) {
         std::cout << "lhs[" << i << "] != rhs[" << i << "]" << std::endl;
         std::cout << "lhs[" << i << "]: ";
-        for (size_t j = 0; j < dimension(lhs); ++j) {
+        for (size_t j = 0; j < ::dimension(lhs); ++j) {
           std::cout << lhs[i][j] << " ";
         }
         std::cout << std::endl;
         std::cout << "rhs[" << i << "]: ";
-        for (size_t j = 0; j < dimension(rhs); ++j) {
+        for (size_t j = 0; j < ::dimension(rhs); ++j) {
           std::cout << rhs[i][j] << " ";
         }
         return false;
@@ -1128,19 +1130,19 @@ class ivf_index {
 
   template <feature_vector L, feature_vector R>
   auto compare_vectors(const L& lhs, const R& rhs) {
-    if (dimension(lhs) != dimension(rhs)) {
-      std::cout << "dimension(lhs) != dimension(rhs) (" << dimension(lhs)
-                << " != " << dimension(rhs) << ")" << std::endl;
+    if (::dimension(lhs) != ::dimension(rhs)) {
+      std::cout << "dimension(lhs) != dimension(rhs) (" << ::dimension(lhs)
+                << " != " << ::dimension(rhs) << ")" << std::endl;
       return false;
     }
     return std::equal(begin(lhs), end(lhs), begin(rhs));
   }
 
-  auto compare_centroids(const ivf_index& rhs) {
+  auto compare_centroids(const ivf_flat_index& rhs) {
     return compare_feature_vector_arrays(centroids_, rhs.centroids_);
   }
 
-  auto compare_feature_vectors(const ivf_index& rhs) {
+  auto compare_feature_vectors(const ivf_flat_index& rhs) {
     if (partitioned_vectors_->num_vectors() !=
         rhs.partitioned_vectors_->num_vectors()) {
       std::cout << "partitioned_vectors_->num_vectors() != "
@@ -1164,12 +1166,12 @@ class ivf_index {
         *partitioned_vectors_, *(rhs.partitioned_vectors_));
   }
 
-  auto compare_indices(const ivf_index& rhs) {
+  auto compare_indices(const ivf_flat_index& rhs) {
     return compare_vectors(
         partitioned_vectors_->indices(), rhs.partitioned_vectors_->indices());
   }
 
-  auto compare_partitioned_ids(const ivf_index& rhs) {
+  auto compare_partitioned_ids(const ivf_flat_index& rhs) {
     return compare_vectors(
         partitioned_vectors_->ids(), rhs.partitioned_vectors_->ids());
   }
@@ -1190,4 +1192,4 @@ class ivf_index {
   }
 };
 
-#endif  // TILEDB_IVF_INDEX_H
+#endif  // TILEDB_ivf_flat_index_H

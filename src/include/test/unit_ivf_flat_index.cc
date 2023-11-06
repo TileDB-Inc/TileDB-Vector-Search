@@ -35,9 +35,9 @@
 #include <iostream>
 #include <vector>
 
-#include "../ivf_index.h"
 #include "../linalg.h"
 #include "gen_graphs.h"
+#include "index/ivf_flat_index.h"
 #include "query_common.h"
 
 TEST_CASE("ivf_index: test test", "[ivf_index]") {
@@ -64,8 +64,8 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
   ColMajorMatrix<float> training_data(4, 8);
   std::copy(begin(data), end(data), training_data.data());
 
-  auto index =
-      ivf_index<float, uint32_t, uint32_t>(4, 3, 10, 1e-4, 1, Catch::rngSeed());
+  auto index = ivf_flat_index<float, uint32_t, uint32_t>(
+      4, 3, 10, 1e-4, 1, Catch::rngSeed());
 
   SECTION("random") {
     std::cout << "random" << std::endl;
@@ -113,8 +113,8 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
   ColMajorMatrix<float> training_data(4, 8);
   std::copy(begin(data), end(data), training_data.data());
 
-  auto index =
-      ivf_index<float, size_t, size_t>(4, 3, 10, 1e-4, 1, Catch::rngSeed());
+  auto index = ivf_flat_index<float, size_t, size_t>(
+      4, 3, 10, 1e-4, 1, Catch::rngSeed());
 
   SECTION("random") {
     std::cout << "random" << std::endl;
@@ -133,22 +133,21 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
  * sklearn) are done in python
  */
 TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
-  ColMajorMatrix<float> training_data{
-      {1.0573647, 5.082087},
-      {-6.229642, -1.3590931},
-      {0.7446737, 6.3828287},
-      {-7.698864, -3.0493321},
-      {2.1362762, -4.4448104},
-      {1.04019, -4.0389647},
-      {0.38996044, 5.7235265},
-      {1.7470839, -4.717076}};
+  ColMajorMatrix<float> training_data{{1.0573647, 5.082087},
+                                      {-6.229642, -1.3590931},
+                                      {0.7446737, 6.3828287},
+                                      {-7.698864, -3.0493321},
+                                      {2.1362762, -4.4448104},
+                                      {1.04019, -4.0389647},
+                                      {0.38996044, 5.7235265},
+                                      {1.7470839, -4.717076}};
   ColMajorMatrix<float> queries{{-7.3712273, -1.1178735}};
   ColMajorMatrix<float> sklearn_centroids{
       {-6.964253, -2.2042127}, {1.6411834, -4.400284}, {0.7306664, 5.7294807}};
 
   SECTION("one iteration") {
     std::cout << "one iteration" << std::endl;
-    auto index = ivf_index<float, size_t, size_t>(
+    auto index = ivf_flat_index<float, size_t, size_t>(
         sklearn_centroids.num_rows(),
         sklearn_centroids.num_cols(),
         1,
@@ -162,7 +161,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
 
   SECTION("two iterations") {
     std::cout << "two iterations" << std::endl;
-    auto index = ivf_index<float, size_t, size_t>(
+    auto index = ivf_flat_index<float, size_t, size_t>(
         sklearn_centroids.num_rows(),
         sklearn_centroids.num_cols(),
         2,
@@ -176,7 +175,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
 
   SECTION("five iterations") {
     std::cout << "five iterations" << std::endl;
-    auto index = ivf_index<float, size_t, size_t>(
+    auto index = ivf_flat_index<float, size_t, size_t>(
         sklearn_centroids.num_rows(),
         sklearn_centroids.num_cols(),
         5,
@@ -197,7 +196,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
     }
 
     sklearn_centroids(0, 0) += 0.25;
-    auto index = ivf_index<float, size_t, size_t>(
+    auto index = ivf_flat_index<float, size_t, size_t>(
         sklearn_centroids.num_rows(),
         sklearn_centroids.num_cols(),
         5,
@@ -211,7 +210,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
 
   SECTION("five iterations") {
     std::cout << "five iterations" << std::endl;
-    auto index = ivf_index<float, size_t, size_t>(
+    auto index = ivf_flat_index<float, size_t, size_t>(
         sklearn_centroids.num_rows(),
         sklearn_centroids.num_cols(),
         5,
@@ -235,13 +234,14 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
   load(training_set);
 
-  auto idx = ivf_index<float, uint32_t, uint32_t>(dimension, nlist, nthreads);
+  auto idx =
+      ivf_flat_index<float, uint32_t, uint32_t>(dimension, nlist, nthreads);
 
   idx.train(training_set, kmeans_init::kmeanspp);
   idx.add(training_set);
 
   idx.write_index(ivf_index_uri, true);
-  auto idx2 = ivf_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
+  auto idx2 = ivf_flat_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
   idx2.read_index_infinite();
 
   CHECK(idx.compare_metadata(idx2));
@@ -283,13 +283,13 @@ TEMPLATE_TEST_CASE(
     size_t k_nn = 6;
     size_t nlist = 1;
 
-    auto ivf_idx2 = ivf_index<TestType, uint32_t, uint32_t>(
+    auto ivf_idx2 = ivf_flat_index<TestType, uint32_t, uint32_t>(
         128, nlist, 4, 1.e-4, 1);  // dim nlist maxiter eps nthreads
     ivf_idx2.train(hypercube2);
     ivf_idx2.add(hypercube2);
 
     auto ivf_idx4 =
-        ivf_index<TestType, uint32_t, uint32_t>(128, nlist, 4, 1.e-4, 1);
+        ivf_flat_index<TestType, uint32_t, uint32_t>(128, nlist, 4, 1.e-4, 1);
     ivf_idx4.train(hypercube4);
     ivf_idx4.add(hypercube4);
 
@@ -320,8 +320,8 @@ TEMPLATE_TEST_CASE(
           {127, 127, 127, 127, 127, 127, 0, 0, 0, 0, 0, 0}};
     }
     SECTION("query2/4 = 127...") {
-      query2 = ColMajorMatrix<TestType>{
-          {127, 0, 127, 0, 127, 0}, {0, 127, 0, 127, 0, 127}};
+      query2 = ColMajorMatrix<TestType>{{127, 0, 127, 0, 127, 0},
+                                        {0, 127, 0, 127, 0, 127}};
       query4 = ColMajorMatrix<TestType>{
           {127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0},
           {0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127}};
@@ -386,7 +386,7 @@ struct siftsmall_test_init {
     std::string tmp_ivf_index_uri = "/tmp/tmp_ivf_index";
     idx.write_index(tmp_ivf_index_uri, true);
     auto idx0 =
-        ivf_index<feature_type, id_type, px_type>(ctx_, tmp_ivf_index_uri);
+        ivf_flat_index<feature_type, id_type, px_type>(ctx_, tmp_ivf_index_uri);
     return idx0;
   }
 
@@ -395,7 +395,7 @@ struct siftsmall_test_init {
   tdbColMajorMatrix<int32_t> groundtruth_set;
   ColMajorMatrix<float> top_k_scores;
   ColMajorMatrix<unsigned long long> top_k;
-  ivf_index<feature_type, id_type, px_type> idx;
+  ivf_flat_index<feature_type, id_type, px_type> idx;
 
   auto verify(auto&& top_k_ivf) {
     // These are helpful for debugging
@@ -638,7 +638,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
 
   SECTION("read cli generated") {
     INFO("infinite cli");
-    auto idx = ivf_index<feature_type, id_type, px_type>(
+    auto idx = ivf_flat_index<feature_type, id_type, px_type>(
         ctx, siftsmall_flatIVF_index_uri);
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
@@ -647,7 +647,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   SECTION("read init generated") {
     INFO("infinite init");
     auto idx =
-        ivf_index<feature_type, id_type, px_type>(ctx, tmp_ivf_index_uri);
+        ivf_flat_index<feature_type, id_type, px_type>(ctx, tmp_ivf_index_uri);
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }

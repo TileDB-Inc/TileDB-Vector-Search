@@ -32,8 +32,8 @@
 #include <catch2/catch_all.hpp>
 
 #include "detail/flat/qv.h"
-#include "flatpq_index.h"
 #include "gen_graphs.h"
+#include "index/flatpq_index.h"
 #include "query_common.h"
 #include "scoring.h"
 
