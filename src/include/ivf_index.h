@@ -169,7 +169,7 @@ class ivf_index {
     }
   }
 
-  ivf_index(tiledb::Context& ctx, const std::string& uri) {
+  ivf_index(const tiledb::Context& ctx, const std::string& uri) {
     open_index(ctx, uri);
   }
 
@@ -1183,6 +1183,10 @@ class ivf_index {
 
   auto& get_centroids() {
     return centroids_;
+  }
+
+  auto dimension() const {
+    return dimension_;
   }
 };
 

@@ -649,17 +649,14 @@ class IndexFlatL2 {
   std::unique_ptr<const index_base> index_;
 };
 
-
 /*******************************************************************************
  * IndexFlatPQ
  ******************************************************************************/
 
-
-
 /*******************************************************************************
  * IndexIVFFlat
  ******************************************************************************/
- // OK -- this one weirded me out
+// OK -- this one weirded me out
 /**
  * A type-erased index class. An index class is provides
  *   - URI-based constructor
@@ -672,7 +669,6 @@ class IndexFlatL2 {
  */
 class IndexIVFFlat {
  public:
-
   // @todo Who owns the context?
   IndexIVFFlat(
       const URI& group_uri,
@@ -683,34 +679,89 @@ class IndexIVFFlat {
   /**
    * @brief Open an existing index.
    *
-   * @note This will be able to infer all of its types to create the internal
-   * ivf_index object.
+   * @note This will be able to infer all of its types using the group metadata
+   * to create the internal ivf_index object.
    *
    * @param ctx
    * @param group_uri
    * @param config
    */
-  // @todo Use group metadata to determine index type and associated array types
   IndexIVFFlat(
       const tiledb::Context& ctx,
       const URI& group_uri,
       const std::optional<IndexOptions>& config = std::nullopt)
       : ctx_{ctx} {
+    using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
+    std::vector<metadata_element> metadata{
+        {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
+        {"id_datatype", &id_datatype_, TILEDB_UINT32},
+        {"ptx_datatype", &ptx_datatype_, TILEDB_UINT32}};
 
-    // Open group and get metadata for types
-    auto array =
-        tiledb_helpers::open_array(tdb_func__, ctx_, group_uri, TILEDB_READ);
-    feature_type_ = get_array_datatype(array);
-    array.close();
+    tiledb::Config cfg;
+    tiledb::Group read_group(ctx_, group_uri, TILEDB_READ, cfg);
 
+    for (auto& [name, value, datatype] : metadata) {
+      if (!read_group.has_metadata(name, &datatype)) {
+        throw std::runtime_error("Missing metadata: " + name);
+      }
+      uint32_t count;
+      void* addr;
+      read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
+      if (datatype == TILEDB_UINT32) {
+        *reinterpret_cast<uint32_t*>(value) =
+            *reinterpret_cast<uint32_t*>(addr);
+      } else {
+        throw std::runtime_error("Unsupported datatype for metadata: " + name);
+      }
+    }
 
-
-    if (feature_type_ == TILEDB_UINT8 && id_type_ == TILEDB_UINT32 && ptx_type_ == TILEDB_UINT32) {
-      index_ = std::make_unique<index_impl<ivf_index<uint8_t, uint32_t, uint32_t>>>(
-            ctx_, group_uri, config);
-    } else if (feature_type_ == TILEDB_FLOAT32 && id_type_ == TILEDB_UINT32 && ptx_type_ == TILEDB_UINT32) {
-      index_ = std::make_unique<index_impl<ivf_index<float, uint32_t, uint32_t>>>(
-            ctx_, group_uri, config);
+    if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
+        ptx_datatype_ == TILEDB_UINT32) {
+      index_ =
+          std::make_unique<index_impl<ivf_index<uint8_t, uint32_t, uint32_t>>>(
+              ctx_, group_uri, config);
+    } else if (
+        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
+        ptx_datatype_ == TILEDB_UINT32) {
+      index_ =
+          std::make_unique<index_impl<ivf_index<float, uint32_t, uint32_t>>>(
+              ctx_, group_uri, config);
+    } else if (
+        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
+        ptx_datatype_ == TILEDB_UINT64) {
+      index_ =
+          std::make_unique<index_impl<ivf_index<uint8_t, uint32_t, uint64_t>>>(
+              ctx_, group_uri, config);
+    } else if (
+        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
+        ptx_datatype_ == TILEDB_UINT64) {
+      index_ =
+          std::make_unique<index_impl<ivf_index<float, uint32_t, uint64_t>>>(
+              ctx_, group_uri, config);
+    } else if (
+        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
+        ptx_datatype_ == TILEDB_UINT32) {
+      index_ =
+          std::make_unique<index_impl<ivf_index<uint8_t, uint64_t, uint32_t>>>(
+              ctx_, group_uri, config);
+    } else if (
+        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
+        ptx_datatype_ == TILEDB_UINT32) {
+      index_ =
+          std::make_unique<index_impl<ivf_index<float, uint64_t, uint32_t>>>(
+              ctx_, group_uri, config);
+    } else if (
+        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
+        ptx_datatype_ == TILEDB_UINT64) {
+      index_ =
+          std::make_unique<index_impl<ivf_index<uint8_t, uint64_t, uint64_t>>>(
+              ctx_, group_uri, config);
+    } else if (
+        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
+        ptx_datatype_ == TILEDB_UINT64) {
+      index_ =
+          std::make_unique<index_impl<ivf_index<float, uint64_t, uint64_t>>>(
+              ctx_, group_uri, config);
     }
   }
 
@@ -746,9 +797,14 @@ class IndexIVFFlat {
   }
 
   // todo query() or search() -- or both?
-  [[nodiscard]] auto query(
-      const QueryVectorArray& vectors, size_t top_k) const {
-    return index_->query(vectors, top_k);
+  [[nodiscard]] auto query_infinite_ram(
+      const QueryVectorArray& vectors, size_t top_k, size_t nprobe)  {
+    return index_->query_infinite_ram(vectors, top_k, nprobe);
+  }
+
+  [[nodiscard]] auto query_finite_ram(
+      const QueryVectorArray& vectors, size_t top_k, size_t nprobe)  {
+    return index_->query_finite_ram(vectors, top_k, nprobe);
   }
 
   void update(
@@ -773,6 +829,8 @@ class IndexIVFFlat {
     return _cpo::dimension(*index_);
   }
 
+// Don't think we need thi
+#if 0
   size_t ntotal() const {
     // @todo
     return 0;
@@ -781,9 +839,10 @@ class IndexIVFFlat {
   auto num_vectors() {
     return _cpo::num_vectors(*index_);
   }
+#endif
 
   auto feature_type() {
-    return feature_type_;
+    return feature_datatype_;
   }
 
   /**
@@ -793,7 +852,10 @@ class IndexIVFFlat {
     virtual ~index_base() = default;
 
     [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
-    query(const QueryVectorArray& vectors, size_t top_k) const = 0;
+    query_infinite_ram(const QueryVectorArray& vectors, size_t top_k, size_t nprobe)  = 0;
+
+    [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
+    query_finite_ram(const QueryVectorArray& vectors, size_t top_k, size_t nprobe)  = 0;
 
     virtual void update(
         const FeatureVectorArray&,
@@ -809,9 +871,12 @@ class IndexIVFFlat {
 
     virtual size_t dimension() const = 0;
 
+// Don't think we need these
+#if 0
     virtual size_t ntotal() const = 0;
 
     virtual size_t num_vectors() const = 0;
+#endif
   };
 
   /**
@@ -849,11 +914,15 @@ class IndexIVFFlat {
         : impl_index_(index_uri, vectors_uri, options, config) {
     }
 
-    [[nodiscard]] auto query(
-        tiledb::Context ctx, const URI& uri, size_t top_k) const {
-      return impl_index_.query(ctx, uri, top_k);
+    [[nodiscard]] auto query_infinite_ram(
+        tiledb::Context ctx, const URI& uri, size_t top_k, size_t nprobe)  {
+      return impl_index_.query_infinite_ram(ctx, uri, top_k, nprobe);
     }
 
+    [[nodiscard]] auto query_finite_ram(
+        tiledb::Context ctx, const URI& uri, size_t top_k, size_t nprobe)  {
+      return impl_index_.query_finite_ram(ctx, uri, top_k, nprobe);
+    }
     /**
      * @brief Query the index with the given vectors.  The concrete query
      * function returns a tuple of arrays, which are type erased and returned as
@@ -864,8 +933,8 @@ class IndexIVFFlat {
      *
      * @todo Make sure the extents of the returned arrays are used correctly.
      */
-    [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
-        const QueryVectorArray& vectors, size_t k_nn) const override {
+    [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query_infinite_ram(
+        const QueryVectorArray& vectors, size_t k_nn, size_t nprobe)  override {
       // @todo using index_type = size_t;
 
       auto dtype = vectors.feature_type();
@@ -877,7 +946,7 @@ class IndexIVFFlat {
               (float*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] = impl_index_.query(qspan, k_nn);
+          auto [s, t] = impl_index_.query_infinite_ram(qspan, k_nn, nprobe);
           debug_slice(t);
           auto& ss = s;
           auto& tt = t;
@@ -890,7 +959,43 @@ class IndexIVFFlat {
               (uint8_t*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] = impl_index_.query(qspan, k_nn);
+          auto [s, t] = impl_index_.query_infinite_ram(qspan, k_nn, nprobe);
+          auto x = FeatureVectorArray{std::move(s)};
+          auto y = FeatureVectorArray{std::move(t)};
+          return {std::move(x), std::move(y)};
+        }
+        default:
+          throw std::runtime_error("Unsupported attribute type");
+      }
+    }
+
+    [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query_finite_ram(
+        const QueryVectorArray& vectors, size_t k_nn, size_t nprobe)  override {
+      // @todo using index_type = size_t;
+
+      auto dtype = vectors.feature_type();
+
+      // @note We need to maintain same layout -> or swap extents
+      switch (dtype) {
+        case TILEDB_FLOAT32: {
+          auto qspan = MatrixView<float, stdx::layout_left>{
+              (float*)vectors.data(),
+              extents(vectors)[0],
+              extents(vectors)[1]};  // @todo ??
+          auto [s, t] = impl_index_.query_finite_ram(qspan, k_nn, nprobe);
+          debug_slice(t);
+          auto& ss = s;
+          auto& tt = t;
+          auto x = FeatureVectorArray{std::move(s)};
+          auto y = FeatureVectorArray{std::move(t)};
+          return {std::move(x), std::move(y)};
+        }
+        case TILEDB_UINT8: {
+          auto qspan = MatrixView<uint8_t, stdx::layout_left>{
+              (uint8_t*)vectors.data(),
+              extents(vectors)[0],
+              extents(vectors)[1]};  // @todo ??
+          auto [s, t] = impl_index_.query_finite_ram(qspan, k_nn, nprobe);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -922,16 +1027,19 @@ class IndexIVFFlat {
     }
 
     size_t dimension() const override {
-      return _cpo::dimension(impl_index_);
+      return ::dimension(impl_index_);
     }
 
+    // Don't think we need these
+#if 0
     size_t ntotal() const override {
-      return _cpo::num_vectors(impl_index_);
+      return ::num_vectors(impl_index_);
     }
 
     size_t num_vectors() const override {
-      return _cpo::num_vectors(impl_index_);
+      return ::num_vectors(impl_index_);
     }
+#endif
 
    private:
     /**
@@ -942,29 +1050,24 @@ class IndexIVFFlat {
 
   // @todo Who should own the context?
   tiledb::Context ctx_{};
-  tiledb_datatype_t feature_type_{TILEDB_ANY};
-  tiledb_datatype_t id_type_{TILEDB_ANY};
-  tiledb_datatype_t ptx_type_{TILEDB_ANY};
-  std::unique_ptr<const index_base> index_;
+  tiledb_datatype_t feature_datatype_{TILEDB_ANY};
+  tiledb_datatype_t id_datatype_{TILEDB_ANY};
+  tiledb_datatype_t ptx_datatype_{TILEDB_ANY};
+  std::unique_ptr</* const */ index_base> index_;
 };
 
 /*******************************************************************************
  * IndexIVFPQ
  ******************************************************************************/
- // OMG -- this one is even weirder
-
-
-
+// OMG -- this one is even weirder
 
 /*******************************************************************************
  * IndexVamana
  ******************************************************************************/
 
-
 /*******************************************************************************
  * Testing functions
  ******************************************************************************/
-
 
 bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
   // assert(a.datatype() == b.datatype());
