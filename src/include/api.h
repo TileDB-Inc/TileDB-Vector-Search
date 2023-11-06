@@ -361,7 +361,7 @@ class FeatureVectorArray {
 using QueryVectorArray = FeatureVectorArray;
 
 //------------------------------------------------------------------------------
-// Index
+// Type-erased index classes
 //------------------------------------------------------------------------------
 
 // Some fake types and type aliases for now
@@ -381,17 +381,17 @@ using UpdateOptions = std::map<std::string, std::string>;
  *   - An update method
  *   - A remove method
  */
-class Index {
+class IndexFlatL2 {
  public:
   // @todo Who owns the context?
-  Index(
+  IndexFlatL2(
       const URI& index_uri,
       const std::optional<IndexOptions>& config = std::nullopt)
-      : Index(tiledb::Context{}, index_uri, config) {
+      : IndexFlatL2(tiledb::Context{}, index_uri, config) {
   }
 
   // @todo Use group metadata to determine index type and associated array types
-  Index(
+  IndexFlatL2(
       const tiledb::Context& ctx,
       const URI& index_uri,
       const std::optional<IndexOptions>& config = std::nullopt)
@@ -416,14 +416,14 @@ class Index {
   };
 
   template <feature_vector_array V>
-  Index(
+  IndexFlatL2(
       const URI& index_uri,
       const V& vectors,
       const std::optional<IndexOptions>& config = std::nullopt) {
   }
 
   // Create from input URI
-  Index(
+  IndexFlatL2(
       const URI& index_uri,
       const URI& vectors_uri,
       const std::optional<IndexOptions>& config = std::nullopt) {
@@ -648,6 +648,323 @@ class Index {
   tiledb_datatype_t ptx_type_{TILEDB_ANY};
   std::unique_ptr<const index_base> index_;
 };
+
+
+/*******************************************************************************
+ * IndexFlatPQ
+ ******************************************************************************/
+
+
+
+/*******************************************************************************
+ * IndexIVFFlat
+ ******************************************************************************/
+ // OK -- this one weirded me out
+/**
+ * A type-erased index class. An index class is provides
+ *   - URI-based constructor
+ *   - Array-based constructor
+ *   - A train method
+ *   - An add method
+ *   - A query method
+ *   - An update method
+ *   - A remove method
+ */
+class IndexIVFFlat {
+ public:
+
+  // @todo Who owns the context?
+  IndexIVFFlat(
+      const URI& group_uri,
+      const std::optional<IndexOptions>& config = std::nullopt)
+      : IndexIVFFlat(tiledb::Context{}, group_uri, config) {
+  }
+
+  /**
+   * @brief Open an existing index.
+   *
+   * @note This will be able to infer all of its types to create the internal
+   * ivf_index object.
+   *
+   * @param ctx
+   * @param group_uri
+   * @param config
+   */
+  // @todo Use group metadata to determine index type and associated array types
+  IndexIVFFlat(
+      const tiledb::Context& ctx,
+      const URI& group_uri,
+      const std::optional<IndexOptions>& config = std::nullopt)
+      : ctx_{ctx} {
+
+    // Open group and get metadata for types
+    auto array =
+        tiledb_helpers::open_array(tdb_func__, ctx_, group_uri, TILEDB_READ);
+    feature_type_ = get_array_datatype(array);
+    array.close();
+
+
+
+    if (feature_type_ == TILEDB_UINT8 && id_type_ == TILEDB_UINT32 && ptx_type_ == TILEDB_UINT32) {
+      index_ = std::make_unique<index_impl<ivf_index<uint8_t, uint32_t, uint32_t>>>(
+            ctx_, group_uri, config);
+    } else if (feature_type_ == TILEDB_FLOAT32 && id_type_ == TILEDB_UINT32 && ptx_type_ == TILEDB_UINT32) {
+      index_ = std::make_unique<index_impl<ivf_index<float, uint32_t, uint32_t>>>(
+            ctx_, group_uri, config);
+    }
+  }
+
+  template <feature_vector_array V>
+  IndexIVFFlat(
+      const URI& group_uri,
+      const V& vectors,
+      const std::optional<IndexOptions>& config = std::nullopt) {
+  }
+
+  // Create from input URI
+  IndexIVFFlat(
+      const URI& group_uri,
+      const URI& vectors_uri,
+      const std::optional<IndexOptions>& config = std::nullopt) {
+    // @todo
+  }
+
+  void add() const {
+    // @todo
+  }
+
+  void add_with_ids() const {
+    // @todo
+  }
+
+  void train() const {
+    // @todo
+  }
+
+  void save() const {
+    // @todo
+  }
+
+  // todo query() or search() -- or both?
+  [[nodiscard]] auto query(
+      const QueryVectorArray& vectors, size_t top_k) const {
+    return index_->query(vectors, top_k);
+  }
+
+  void update(
+      const FeatureVectorArray& vectors,
+      const std::optional<IdVector>& ids = std::nullopt,
+      const std::optional<UpdateOptions>& options = std::nullopt) const {
+    index_->update(vectors, ids, options);
+  }
+
+  void update(
+      const URI& vectors_uri,
+      const std::optional<IdVector>& ids = std::nullopt,
+      const std::optional<UpdateOptions>& options = std::nullopt) const {
+    index_->update(vectors_uri, ids, options);
+  }
+
+  virtual void remove(const IdVector& ids) const {
+    index_->remove(ids);
+  }
+
+  auto dimension() {
+    return _cpo::dimension(*index_);
+  }
+
+  size_t ntotal() const {
+    // @todo
+    return 0;
+  }
+
+  auto num_vectors() {
+    return _cpo::num_vectors(*index_);
+  }
+
+  auto feature_type() {
+    return feature_type_;
+  }
+
+  /**
+   * Non-type parameterized base class (for type erasure).
+   */
+  struct index_base {
+    virtual ~index_base() = default;
+
+    [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
+    query(const QueryVectorArray& vectors, size_t top_k) const = 0;
+
+    virtual void update(
+        const FeatureVectorArray&,
+        const std::optional<IdVector>& ids,
+        const std::optional<UpdateOptions>& options) const = 0;
+
+    virtual void update(
+        const URI& vectors_uri,
+        const std::optional<IdVector>& ids,
+        const std::optional<UpdateOptions>& options) const = 0;
+
+    virtual void remove(const IdVector& ids) const = 0;
+
+    virtual size_t dimension() const = 0;
+
+    virtual size_t ntotal() const = 0;
+
+    virtual size_t num_vectors() const = 0;
+  };
+
+  /**
+   * @brief Type-parameterize implementation class.
+   * @tparam T Type of the concrete class that is being type-erased.
+   */
+  template <typename T>
+  struct index_impl : index_base {
+    explicit index_impl(T&& t)
+        : impl_index_(std::forward<T>(t)) {
+    }
+
+    index_impl(
+        const tiledb::Context& ctx,
+        const URI& index_uri,
+        const std::optional<StringMap>& config = std::nullopt)
+        : impl_index_(ctx, index_uri) {
+    }
+
+    template <feature_vector_array V>
+    index_impl(
+        const URI& index_uri,
+        const V& vectors,
+        const IndexOptions& options,
+        const std::optional<StringMap>& config = std::nullopt)
+        : impl_index_(index_uri, vectors, options, config) {
+    }
+
+    // Create from input URI
+    index_impl(
+        const URI& index_uri,
+        const URI& vectors_uri,
+        const IndexOptions& options,
+        std::optional<StringMap> config = std::nullopt)
+        : impl_index_(index_uri, vectors_uri, options, config) {
+    }
+
+    [[nodiscard]] auto query(
+        tiledb::Context ctx, const URI& uri, size_t top_k) const {
+      return impl_index_.query(ctx, uri, top_k);
+    }
+
+    /**
+     * @brief Query the index with the given vectors.  The concrete query
+     * function returns a tuple of arrays, which are type erased and returned as
+     * a tuple of FeatureVectorArrays.
+     * @param vectors
+     * @param k_nn
+     * @return
+     *
+     * @todo Make sure the extents of the returned arrays are used correctly.
+     */
+    [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
+        const QueryVectorArray& vectors, size_t k_nn) const override {
+      // @todo using index_type = size_t;
+
+      auto dtype = vectors.feature_type();
+
+      // @note We need to maintain same layout -> or swap extents
+      switch (dtype) {
+        case TILEDB_FLOAT32: {
+          auto qspan = MatrixView<float, stdx::layout_left>{
+              (float*)vectors.data(),
+              extents(vectors)[0],
+              extents(vectors)[1]};  // @todo ??
+          auto [s, t] = impl_index_.query(qspan, k_nn);
+          debug_slice(t);
+          auto& ss = s;
+          auto& tt = t;
+          auto x = FeatureVectorArray{std::move(s)};
+          auto y = FeatureVectorArray{std::move(t)};
+          return {std::move(x), std::move(y)};
+        }
+        case TILEDB_UINT8: {
+          auto qspan = MatrixView<uint8_t, stdx::layout_left>{
+              (uint8_t*)vectors.data(),
+              extents(vectors)[0],
+              extents(vectors)[1]};  // @todo ??
+          auto [s, t] = impl_index_.query(qspan, k_nn);
+          auto x = FeatureVectorArray{std::move(s)};
+          auto y = FeatureVectorArray{std::move(t)};
+          return {std::move(x), std::move(y)};
+        }
+        default:
+          throw std::runtime_error("Unsupported attribute type");
+      }
+    }
+
+    // WIP
+    void update(
+        const FeatureVectorArray& vectors,
+        const std::optional<IdVector>& ids,
+        const std::optional<UpdateOptions>& options) const override {
+      //      index_.update(vectors, ids, options);
+    }
+
+    // WIP
+    void update(
+        const URI& vectors_uri,
+        const std::optional<IdVector>& ids,
+        const std::optional<UpdateOptions>& options) const override {
+      //      index_.update(vectors_uri, ids, options);
+    }
+
+    // WIP
+    void remove(const IdVector& ids) const override {
+      //      index_.remove(ids);
+    }
+
+    size_t dimension() const override {
+      return _cpo::dimension(impl_index_);
+    }
+
+    size_t ntotal() const override {
+      return _cpo::num_vectors(impl_index_);
+    }
+
+    size_t num_vectors() const override {
+      return _cpo::num_vectors(impl_index_);
+    }
+
+   private:
+    /**
+     * @brief Instance of the concrete class.
+     */
+    T impl_index_;
+  };
+
+  // @todo Who should own the context?
+  tiledb::Context ctx_{};
+  tiledb_datatype_t feature_type_{TILEDB_ANY};
+  tiledb_datatype_t id_type_{TILEDB_ANY};
+  tiledb_datatype_t ptx_type_{TILEDB_ANY};
+  std::unique_ptr<const index_base> index_;
+};
+
+/*******************************************************************************
+ * IndexIVFPQ
+ ******************************************************************************/
+ // OMG -- this one is even weirder
+
+
+
+
+/*******************************************************************************
+ * IndexVamana
+ ******************************************************************************/
+
+
+/*******************************************************************************
+ * Testing functions
+ ******************************************************************************/
+
 
 bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
   // assert(a.datatype() == b.datatype());

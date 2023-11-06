@@ -94,7 +94,8 @@ class ivf_index {
 
   std::mt19937 gen;
 
-  IndexKind index_kind_ = IndexKind::IVFFlat;
+  constexpr static const IndexKind index_kind_ = IndexKind::IVFFlat;
+
   size_t dimension_{0};
   size_t nlist_;
   size_t max_iter_;
@@ -102,9 +103,16 @@ class ivf_index {
   float reassign_ratio_{0.075};
   size_t num_threads_{std::thread::hardware_concurrency()};
 
+  tiledb_datatype_t feature_datatype_ {TILEDB_ANY};
+  tiledb_datatype_t id_datatype_ {TILEDB_ANY};
+  tiledb_datatype_t ptx_datatype_ {TILEDB_ANY};
+
+  //  Metadata for the class. index_kind_ is handled separately
   using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
   std::vector<metadata_element> metadata{
-      {"index_type", &index_kind_, TILEDB_UINT64},
+      {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
+      {"id_datatype", &id_datatype_, TILEDB_UINT32},
+      {"ptx_datatype", &ptx_datatype_, TILEDB_UINT32},
       {"dimension", &dimension_, TILEDB_UINT64},
       {"num_partitions", &nlist_, TILEDB_UINT64},
       {"max_iter", &max_iter_, TILEDB_UINT64},
@@ -150,6 +158,9 @@ class ivf_index {
       , nlist_(nlist)
       , max_iter_(max_iter)
       , tol_(tol)
+      , feature_datatype_(type_to_tiledb_t<feature_type>)
+      , id_datatype_(type_to_tiledb_t<id_type>)
+      , ptx_datatype_(type_to_tiledb_t<indices_type>)
       , centroids_(dim, nlist) {
     if (num_threads && *num_threads > 0) {
       num_threads_ = *num_threads;
@@ -873,6 +884,10 @@ class ivf_index {
     tiledb::Group::create(ctx, group_uri);
     auto write_group = tiledb::Group(ctx, group_uri, TILEDB_WRITE, cfg);
 
+    // Write metadata for the ivf_index
+    IndexKind index_kind = index_kind_;
+    write_group.put_metadata("index_kind", TILEDB_UINT32, 1, &index_kind);
+
     // Write metadata for the ivf_index.  The member data for the
     // PartitionedMatrix is created when the PartitionedMatrix is
     // constructed.
@@ -918,6 +933,26 @@ class ivf_index {
     tiledb::Config cfg;
     tiledb::Group read_group(cached_ctx_, group_uri, TILEDB_READ, cfg);
 
+    tiledb_datatype_t index_kind_type;
+    if (!read_group.has_metadata("index_kind", &index_kind_type)) {
+      throw std::runtime_error("Missing index_kind metadata");
+    }
+    if (index_kind_type != TILEDB_UINT32) {
+      throw std::runtime_error("Wrong type for index_kind");
+    }
+    uint32_t index_kind_value;
+    void* index_kind_addr;
+    read_group.get_metadata(
+        "index_kind",
+        &index_kind_type,
+        &index_kind_value,
+        (const void**)&index_kind_addr);
+    *reinterpret_cast<IndexKind*>(&index_kind_value) =
+        *reinterpret_cast<IndexKind*>(index_kind_addr);
+    if (index_kind_value != (uint32_t)index_kind_) {
+      throw std::runtime_error("Wrong value for index_kind");
+    }
+
     for (auto& [name, value, datatype] : metadata) {
       if (!read_group.has_metadata(name, &datatype)) {
         throw std::runtime_error("Missing metadata: " + name);
@@ -925,7 +960,10 @@ class ivf_index {
       uint32_t count;
       void* addr;
       read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
-      if (datatype == TILEDB_UINT64) {
+      if (datatype == TILEDB_UINT32) {
+        *reinterpret_cast<uint32_t*>(value) =
+            *reinterpret_cast<uint32_t*>(addr);
+      } else if (datatype == TILEDB_UINT64) {
         *reinterpret_cast<uint64_t*>(value) =
             *reinterpret_cast<uint64_t*>(addr);
       } else if (datatype == TILEDB_FLOAT32) {
