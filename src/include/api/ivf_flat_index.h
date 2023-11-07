@@ -61,19 +61,101 @@ class IndexIVFFlat {
   /**
    * Create empty index
    */
-  IndexIVFFlat() = delete;
+  // IndexIVFFlat() = delete;
   IndexIVFFlat(const IndexIVFFlat&) = delete;
   IndexIVFFlat(IndexIVFFlat&&) = default;
   IndexIVFFlat& operator=(const IndexIVFFlat&) = delete;
   IndexIVFFlat& operator=(IndexIVFFlat&&) = default;
 
 
-  auto process_config(const std::optional<IndexOptions>& config) {
+  explicit IndexIVFFlat(const std::optional<IndexOptions>& config = std::nullopt) {
 
-  }
+    size_t nlist = 0;
+    size_t max_iter = 2;
+    float tolerance = 1e-4;
+    std::optional<size_t> num_threads = std::nullopt;
+    feature_datatype_ = TILEDB_FLOAT32;
+    id_datatype_ = TILEDB_UINT32;
+    px_datatype_ = TILEDB_UINT32;
 
-  IndexIVFFlat(const std::optional<IndexOptions>& config = std::nullopt) {
-    process_config(config);
+    if (config) {
+      for (auto&& c : *config) {
+        auto key = c.first;
+        auto value = c.second;
+        if (key == "nlist") {
+          nlist = std::stol(value);
+        } else if (key == "max_iter") {
+          max_iter = std::stol(value);
+        } else if (key == "tolerance") {
+          tolerance = std::stof(value);
+        } else if (key == "num_threads") {
+          num_threads = std::make_optional<size_t>(std::stol(value));
+        } else if (key == "feature_type") {
+          feature_datatype_ = string_to_datatype(value);
+        } else if (key == "id_type") {
+          id_datatype_ = string_to_datatype(value);
+        } else if (key == "px_type") {
+          px_datatype_ = string_to_datatype(value);
+        } else {
+          throw std::runtime_error("Invalid index config key: " + key);
+        }
+      }
+    }
+    /**
+     * We support all combinations of the following types for feature,
+     * id, and px datatypes:
+     *   feature_type: uint8 or float
+     *   id_type: uint32 or uint64
+     *   px_type: uint32 or uint64
+     */
+    if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
+        px_datatype_ == TILEDB_UINT32) {
+      index_ =
+          std::make_unique<index_impl<ivf_flat_index<uint8_t, uint32_t, uint32_t>>>(
+              nlist, max_iter, tolerance, num_threads);
+    } else if (
+        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
+        px_datatype_ == TILEDB_UINT32) {
+      index_ =
+          std::make_unique<index_impl<ivf_flat_index<float, uint32_t, uint32_t>>>(
+              nlist, max_iter, tolerance, num_threads);
+    } else if (
+        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
+        px_datatype_ == TILEDB_UINT64) {
+      index_ =
+          std::make_unique<index_impl<ivf_flat_index<uint8_t, uint32_t, uint64_t>>>(
+              nlist, max_iter, tolerance, num_threads);
+    } else if (
+        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
+        px_datatype_ == TILEDB_UINT64) {
+      index_ =
+          std::make_unique<index_impl<ivf_flat_index<float, uint32_t, uint64_t>>>(
+              nlist, max_iter, tolerance, num_threads);
+    } else if (
+        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
+        px_datatype_ == TILEDB_UINT32) {
+      index_ =
+          std::make_unique<index_impl<ivf_flat_index<uint8_t, uint64_t, uint32_t>>>(
+              nlist, max_iter, tolerance, num_threads);
+    } else if (
+        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
+        px_datatype_ == TILEDB_UINT32) {
+      index_ =
+          std::make_unique<index_impl<ivf_flat_index<float, uint64_t, uint32_t>>>(
+              nlist, max_iter, tolerance, num_threads);
+    } else if (
+        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
+        px_datatype_ == TILEDB_UINT64) {
+      index_ =
+          std::make_unique<index_impl<ivf_flat_index<uint8_t, uint64_t, uint64_t>>>(
+              nlist, max_iter, tolerance, num_threads);
+    } else if (
+        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
+        px_datatype_ == TILEDB_UINT64) {
+      index_ =
+          std::make_unique<index_impl<ivf_flat_index<float, uint64_t, uint64_t>>>(
+              nlist, max_iter, tolerance, num_threads);
+    }
   }
 
   // @todo Who owns the context?
@@ -211,13 +293,13 @@ class IndexIVFFlat {
   }
 
   // todo query() or search() -- or both?
-  [[nodiscard]] auto query_infinite_ram(
-      const QueryVectorArray& vectors, size_t top_k, size_t nprobe)  {
+  [[nodiscard]] auto query_infinite_ram (
+      const QueryVectorArray& vectors, size_t top_k, size_t nprobe)  const {
     return index_->query_infinite_ram(vectors, top_k, nprobe);
   }
 
   [[nodiscard]] auto query_finite_ram(
-      const QueryVectorArray& vectors, size_t top_k, size_t nprobe)  {
+      const QueryVectorArray& vectors, size_t top_k, size_t nprobe) const  {
     return index_->query_finite_ram(vectors, top_k, nprobe);
   }
 
@@ -239,28 +321,36 @@ class IndexIVFFlat {
     index_->remove(ids);
   }
 
-  auto dimension() {
+  constexpr auto dimension() const {
     return ::dimension(*index_);
   }
 
-  auto num_partitions() {
+  constexpr auto num_partitions() const {
     return ::num_partitions(*index_);
   }
 
 // Don't think we need thi
 #if 0
-  size_t ntotal() const {
+  constexpr size_t ntotal() const {
     // @todo
     return 0;
   }
 
-  auto num_vectors() {
+  constexpr auto num_vectors() const {
     return _cpo::num_vectors(*index_);
   }
 #endif
 
-  auto feature_type() {
+  constexpr auto feature_type() const {
     return feature_datatype_;
+  }
+
+  constexpr auto id_type() const {
+    return id_datatype_;
+  }
+
+  constexpr auto px_type() const {
+    return px_datatype_;
   }
 
   /**
@@ -289,9 +379,9 @@ class IndexIVFFlat {
 
     virtual void remove(const IdVector& ids) const = 0;
 
-    virtual size_t dimension() const = 0;
+    [[nodiscard]] virtual size_t dimension() const = 0;
 
-    virtual size_t num_partitions() const = 0;
+    [[nodiscard]] virtual size_t num_partitions() const = 0;
 
 // Don't think we need these
 #if 0
@@ -309,6 +399,13 @@ class IndexIVFFlat {
   struct index_impl : index_base {
     explicit index_impl(T&& t)
         : impl_index_(std::forward<T>(t)) {
+    }
+
+    index_impl(
+        size_t nlist,
+        size_t max_iter,
+        float tolerance,
+        std::optional<size_t> num_threads) : impl_index_(nlist, max_iter, tolerance, num_threads) {
     }
 
     index_impl(

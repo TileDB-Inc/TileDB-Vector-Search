@@ -38,3 +38,91 @@ TEST_CASE("api_ivf_flat_index: test test", "[api_ivf_flat_index]") {
   REQUIRE(true);
 }
 
+TEST_CASE("api_ivf_flat_index: init constructor", "[api_ivf_flat_index]") {
+
+  SECTION("default") {
+    auto a = IndexIVFFlat();
+    CHECK(a.feature_type() == TILEDB_FLOAT32);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.px_type() == TILEDB_UINT32);
+    CHECK(dimension(a) == 0);
+    CHECK(num_partitions(a) == 0);
+  }
+
+  SECTION("float uint32 uint32") {
+    auto a = IndexIVFFlat(std::make_optional<IndexOptions>({{"feature_type", "float32"},
+                                                            {"id_type", "uint32"},
+                                                            {"px_type", "uint32"}}));
+    CHECK(a.feature_type() == TILEDB_FLOAT32);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.px_type() == TILEDB_UINT32);
+    CHECK(dimension(a) == 0);
+    CHECK(num_partitions(a) == 0);
+  }
+
+  SECTION("uint8 uint32 uint32") {
+    auto a = IndexIVFFlat(std::make_optional<IndexOptions>({{"feature_type", "uint8"},
+                                                            {"id_type", "uint32"},
+                                                            {"px_type", "uint32"}}));
+    CHECK(a.feature_type() == TILEDB_UINT8);
+        CHECK(a.id_type() == TILEDB_UINT32);
+        CHECK(a.px_type() == TILEDB_UINT32);
+
+  }
+
+  SECTION("float uint64 uint32") {
+        auto a = IndexIVFFlat(std::make_optional<IndexOptions>({{"feature_type", "float32"},
+                                                                {"id_type", "uint64"},
+                                                                {"px_type", "uint32"}}));
+        CHECK(a.feature_type() == TILEDB_FLOAT32);
+        CHECK(a.id_type() == TILEDB_UINT64);
+        CHECK(a.px_type() == TILEDB_UINT32);
+  }
+
+  SECTION("float uint32 uint64") {
+        auto a = IndexIVFFlat(std::make_optional<IndexOptions>({{"feature_type", "float32"},
+                                                                {"id_type", "uint32"},
+                                                                {"px_type", "uint64"}}));
+        CHECK(a.feature_type() == TILEDB_FLOAT32);
+        CHECK(a.id_type() == TILEDB_UINT32);
+        CHECK(a.px_type() == TILEDB_UINT64);
+  }
+
+  SECTION("uint8 uint64 uint32") {
+        auto a = IndexIVFFlat(std::make_optional<IndexOptions>({{"feature_type", "uint8"},
+                                                                {"id_type", "uint64"},
+                                                                {"px_type", "uint32"}}));
+        CHECK(a.feature_type() == TILEDB_UINT8);
+        CHECK(a.id_type() == TILEDB_UINT64);
+        CHECK(a.px_type() == TILEDB_UINT32);
+  }
+
+  SECTION("uint8 uint32 uint64") {
+        auto a = IndexIVFFlat(std::make_optional<IndexOptions>({{"feature_type", "uint8"},
+                                                                {"id_type", "uint32"},
+                                                                {"px_type", "uint64"}}));
+        CHECK(a.feature_type() == TILEDB_UINT8);
+        CHECK(a.id_type() == TILEDB_UINT32);
+        CHECK(a.px_type() == TILEDB_UINT64);
+  }
+
+  SECTION("float uint64 uint64") {
+        auto a = IndexIVFFlat(std::make_optional<IndexOptions>({{"feature_type", "float32"},
+                                                                {"id_type", "uint64"},
+                                                                {"px_type", "uint64"}}));
+        CHECK(a.feature_type() == TILEDB_FLOAT32);
+        CHECK(a.id_type() == TILEDB_UINT64);
+        CHECK(a.px_type() == TILEDB_UINT64);
+  }
+
+  SECTION("uint8 uint64 uint64") {
+        auto a = IndexIVFFlat(std::make_optional<IndexOptions>({{"feature_type", "uint8"},
+                                                                {"id_type", "uint64"},
+                                                                {"px_type", "uint64"}}));
+        CHECK(a.feature_type() == TILEDB_UINT8);
+        CHECK(a.id_type() == TILEDB_UINT64);
+        CHECK(a.px_type() == TILEDB_UINT64);
+  }
+
+
+}

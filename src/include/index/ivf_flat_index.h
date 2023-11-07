@@ -150,8 +150,8 @@ class ivf_flat_index {
    */
   ivf_flat_index(
       // size_t dim,
-      size_t nlist,
-      size_t max_iter,
+      size_t nlist = 0,
+      size_t max_iter = 2,
       float tol = 0.000025,
       std::optional<size_t> num_threads = std::nullopt,
       std::optional<unsigned int> seed = std::nullopt)
