@@ -33,8 +33,8 @@
 #ifndef TILEDB_TDB_DEFS_H
 #define TILEDB_TDB_DEFS_H
 
-#include <tiledb/tiledb>
 #include <string>
+#include <tiledb/tiledb>
 
 template <class... T>
 constexpr bool always_false = false;

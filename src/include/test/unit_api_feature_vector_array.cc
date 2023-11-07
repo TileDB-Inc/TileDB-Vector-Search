@@ -1,43 +1,42 @@
 /**
-* @file   unit_api_feature_vector_array.cc
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
-*
+ * @file   unit_api_feature_vector_array.cc
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
  */
 
 #include "api/feature_vector_array.h"
 #include "catch2/catch_all.hpp"
-#include "query_common.h"
 #include "detail/ivf/qv.h"
+#include "query_common.h"
 
 TEST_CASE("api_feature_vector_array: test test", "[api_feature_vector_array]") {
   REQUIRE(true);
 }
-
 
 // ----------------------------------------------------------------------------
 // FeatureVectorArray tests
@@ -82,9 +81,6 @@ TEST_CASE("api: Matrix constructors and destructors", "[api]") {
   auto c = ColMajorMatrix<int>(3, 7);
   auto d = FeatureVectorArray(std::move(c));
 }
-
-
-
 
 TEMPLATE_TEST_CASE(
     "api: FeatureVectorArray feature_type",
@@ -166,8 +162,6 @@ TEMPLATE_TEST_CASE(
   auto g = std::move(e);
   CHECK(g.feature_type() == t);
 }
-
-
 
 TEST_CASE("api: query checks", "[api][index]") {
   tiledb::Context ctx;

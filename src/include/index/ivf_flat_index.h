@@ -105,9 +105,9 @@ class ivf_flat_index {
   float reassign_ratio_{0.075};
   size_t num_threads_{std::thread::hardware_concurrency()};
 
-  tiledb_datatype_t feature_datatype_ {TILEDB_ANY};
-  tiledb_datatype_t id_datatype_ {TILEDB_ANY};
-  tiledb_datatype_t ptx_datatype_ {TILEDB_ANY};
+  tiledb_datatype_t feature_datatype_{TILEDB_ANY};
+  tiledb_datatype_t id_datatype_{TILEDB_ANY};
+  tiledb_datatype_t ptx_datatype_{TILEDB_ANY};
 
   //  Metadata for the class. index_kind_ is handled separately
   using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
@@ -136,9 +136,9 @@ class ivf_flat_index {
   using index_type = partitioning_index_type;  // @todo This isn't right
 
   /**
-   * @brief Construct a new `ivf_flat_index` object, setting a number of parameters
-   * to be used subsequently in training.  To fully create an index we will
-   * need to call `train()` and `add()`.
+   * @brief Construct a new `ivf_flat_index` object, setting a number of
+   * parameters to be used subsequently in training.  To fully create an index
+   * we will need to call `train()` and `add()`.
    *
    * @param dimension Dimension of the vectors comprising the training set and
    * the data set.
@@ -163,7 +163,7 @@ class ivf_flat_index {
       , feature_datatype_(type_to_tiledb_t<feature_type>)
       , id_datatype_(type_to_tiledb_t<id_type>)
       , ptx_datatype_(type_to_tiledb_t<indices_type>)
-      // , centroids_(dim, nlist)
+  // , centroids_(dim, nlist)
   {
     if (num_threads && *num_threads > 0) {
       num_threads_ = *num_threads;
@@ -1180,7 +1180,8 @@ class ivf_flat_index {
   }
 
   auto set_centroids(const ColMajorMatrix<T>& centroids) {
-    centroids_ = ColMajorMatrix<T>(::dimension(centroids), ::num_vectors(centroids));
+    centroids_ =
+        ColMajorMatrix<T>(::dimension(centroids), ::num_vectors(centroids));
     std::copy(
         centroids.data(),
         centroids.data() + centroids.num_rows() * centroids.num_cols(),

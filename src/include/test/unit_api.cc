@@ -33,7 +33,6 @@
 #include <catch2/catch_all.hpp>
 #include "tdb_defs.h"
 
-
 TEST_CASE("api: test test", "[api]") {
   REQUIRE(true);
 }

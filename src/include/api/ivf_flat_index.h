@@ -1,44 +1,43 @@
 /**
-* * @file   api/ivf_flat_index.h
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
-*
+ * * @file   api/ivf_flat_index.h
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ *
  */
 
 #ifndef TILEDB_API_IVF_FLAT_INDEX_H
 #define TILEDB_API_IVF_FLAT_INDEX_H
 
-#include "api_defs.h"
-#include "index/ivf_flat_index.h"
+#include <tiledb/group_experimental.h>
+#include <tiledb/tiledb>
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
-#include <tiledb/tiledb>
-#include <tiledb/group_experimental.h>
-
+#include "api_defs.h"
+#include "index/ivf_flat_index.h"
 
 /*******************************************************************************
  * IndexIVFFlat
@@ -57,7 +56,6 @@
  */
 class IndexIVFFlat {
  public:
-
   /**
    * Create empty index
    */
@@ -67,9 +65,8 @@ class IndexIVFFlat {
   IndexIVFFlat& operator=(const IndexIVFFlat&) = delete;
   IndexIVFFlat& operator=(IndexIVFFlat&&) = default;
 
-
-  explicit IndexIVFFlat(const std::optional<IndexOptions>& config = std::nullopt) {
-
+  explicit IndexIVFFlat(
+      const std::optional<IndexOptions>& config = std::nullopt) {
     size_t nlist = 0;
     size_t max_iter = 2;
     float tolerance = 1e-4;
@@ -110,51 +107,51 @@ class IndexIVFFlat {
      */
     if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<uint8_t, uint32_t, uint32_t>>>(
-              nlist, max_iter, tolerance, num_threads);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<uint8_t, uint32_t, uint32_t>>>(
+          nlist, max_iter, tolerance, num_threads);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<float, uint32_t, uint32_t>>>(
-              nlist, max_iter, tolerance, num_threads);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<float, uint32_t, uint32_t>>>(
+          nlist, max_iter, tolerance, num_threads);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<uint8_t, uint32_t, uint64_t>>>(
-              nlist, max_iter, tolerance, num_threads);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<uint8_t, uint32_t, uint64_t>>>(
+          nlist, max_iter, tolerance, num_threads);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<float, uint32_t, uint64_t>>>(
-              nlist, max_iter, tolerance, num_threads);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<float, uint32_t, uint64_t>>>(
+          nlist, max_iter, tolerance, num_threads);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<uint8_t, uint64_t, uint32_t>>>(
-              nlist, max_iter, tolerance, num_threads);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<uint8_t, uint64_t, uint32_t>>>(
+          nlist, max_iter, tolerance, num_threads);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<float, uint64_t, uint32_t>>>(
-              nlist, max_iter, tolerance, num_threads);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<float, uint64_t, uint32_t>>>(
+          nlist, max_iter, tolerance, num_threads);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<uint8_t, uint64_t, uint64_t>>>(
-              nlist, max_iter, tolerance, num_threads);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<uint8_t, uint64_t, uint64_t>>>(
+          nlist, max_iter, tolerance, num_threads);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<float, uint64_t, uint64_t>>>(
-              nlist, max_iter, tolerance, num_threads);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<float, uint64_t, uint64_t>>>(
+          nlist, max_iter, tolerance, num_threads);
     }
   }
 
@@ -213,51 +210,51 @@ class IndexIVFFlat {
      */
     if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<uint8_t, uint32_t, uint32_t>>>(
-              ctx_, group_uri, config);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<uint8_t, uint32_t, uint32_t>>>(
+          ctx_, group_uri, config);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<float, uint32_t, uint32_t>>>(
-              ctx_, group_uri, config);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<float, uint32_t, uint32_t>>>(
+          ctx_, group_uri, config);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<uint8_t, uint32_t, uint64_t>>>(
-              ctx_, group_uri, config);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<uint8_t, uint32_t, uint64_t>>>(
+          ctx_, group_uri, config);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<float, uint32_t, uint64_t>>>(
-              ctx_, group_uri, config);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<float, uint32_t, uint64_t>>>(
+          ctx_, group_uri, config);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<uint8_t, uint64_t, uint32_t>>>(
-              ctx_, group_uri, config);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<uint8_t, uint64_t, uint32_t>>>(
+          ctx_, group_uri, config);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<float, uint64_t, uint32_t>>>(
-              ctx_, group_uri, config);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<float, uint64_t, uint32_t>>>(
+          ctx_, group_uri, config);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<uint8_t, uint64_t, uint64_t>>>(
-              ctx_, group_uri, config);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<uint8_t, uint64_t, uint64_t>>>(
+          ctx_, group_uri, config);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
-      index_ =
-          std::make_unique<index_impl<ivf_flat_index<float, uint64_t, uint64_t>>>(
-              ctx_, group_uri, config);
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<float, uint64_t, uint64_t>>>(
+          ctx_, group_uri, config);
     }
   }
 
@@ -293,13 +290,13 @@ class IndexIVFFlat {
   }
 
   // todo query() or search() -- or both?
-  [[nodiscard]] auto query_infinite_ram (
-      const QueryVectorArray& vectors, size_t top_k, size_t nprobe)  const {
+  [[nodiscard]] auto query_infinite_ram(
+      const QueryVectorArray& vectors, size_t top_k, size_t nprobe) const {
     return index_->query_infinite_ram(vectors, top_k, nprobe);
   }
 
   [[nodiscard]] auto query_finite_ram(
-      const QueryVectorArray& vectors, size_t top_k, size_t nprobe) const  {
+      const QueryVectorArray& vectors, size_t top_k, size_t nprobe) const {
     return index_->query_finite_ram(vectors, top_k, nprobe);
   }
 
@@ -360,10 +357,12 @@ class IndexIVFFlat {
     virtual ~index_base() = default;
 
     [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
-    query_infinite_ram(const QueryVectorArray& vectors, size_t top_k, size_t nprobe)  = 0;
+    query_infinite_ram(
+        const QueryVectorArray& vectors, size_t top_k, size_t nprobe) = 0;
 
     [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
-    query_finite_ram(const QueryVectorArray& vectors, size_t top_k, size_t nprobe)  = 0;
+    query_finite_ram(
+        const QueryVectorArray& vectors, size_t top_k, size_t nprobe) = 0;
 
     virtual void update(
         const FeatureVectorArray&,
@@ -375,7 +374,8 @@ class IndexIVFFlat {
         const std::optional<IdVector>& ids,
         const std::optional<UpdateOptions>& options) const = 0;
 
-    virtual void write_index(const std::string& group_uri, bool overwrite) const = 0;
+    virtual void write_index(
+        const std::string& group_uri, bool overwrite) const = 0;
 
     virtual void remove(const IdVector& ids) const = 0;
 
@@ -405,7 +405,8 @@ class IndexIVFFlat {
         size_t nlist,
         size_t max_iter,
         float tolerance,
-        std::optional<size_t> num_threads) : impl_index_(nlist, max_iter, tolerance, num_threads) {
+        std::optional<size_t> num_threads)
+        : impl_index_(nlist, max_iter, tolerance, num_threads) {
     }
 
     index_impl(
@@ -434,12 +435,12 @@ class IndexIVFFlat {
     }
 
     [[nodiscard]] auto query_infinite_ram(
-        tiledb::Context ctx, const URI& uri, size_t top_k, size_t nprobe)  {
+        tiledb::Context ctx, const URI& uri, size_t top_k, size_t nprobe) {
       return impl_index_.query_infinite_ram(ctx, uri, top_k, nprobe);
     }
 
     [[nodiscard]] auto query_finite_ram(
-        tiledb::Context ctx, const URI& uri, size_t top_k, size_t nprobe)  {
+        tiledb::Context ctx, const URI& uri, size_t top_k, size_t nprobe) {
       return impl_index_.query_finite_ram(ctx, uri, top_k, nprobe);
     }
     /**
@@ -452,8 +453,9 @@ class IndexIVFFlat {
      *
      * @todo Make sure the extents of the returned arrays are used correctly.
      */
-    [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query_infinite_ram(
-        const QueryVectorArray& vectors, size_t k_nn, size_t nprobe)  override {
+    [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray>
+    query_infinite_ram(
+        const QueryVectorArray& vectors, size_t k_nn, size_t nprobe) override {
       // @todo using index_type = size_t;
 
       auto dtype = vectors.feature_type();
@@ -485,8 +487,9 @@ class IndexIVFFlat {
       }
     }
 
-    [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query_finite_ram(
-        const QueryVectorArray& vectors, size_t k_nn, size_t nprobe)  override {
+    [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray>
+    query_finite_ram(
+        const QueryVectorArray& vectors, size_t k_nn, size_t nprobe) override {
       // @todo using index_type = size_t;
 
       auto dtype = vectors.feature_type();
@@ -534,7 +537,8 @@ class IndexIVFFlat {
       //      index_.update(vectors_uri, ids, options);
     }
 
-    void write_index(const std::string& group_uri, bool overwrite) const override {
+    void write_index(
+        const std::string& group_uri, bool overwrite) const override {
       impl_index_.write_index(group_uri, overwrite);
     }
 
@@ -577,5 +581,4 @@ class IndexIVFFlat {
   std::unique_ptr</* const */ index_base> index_;
 };
 
-
-#endif // TILEDB_API_IVF_FLAT_INDEX_H
+#endif  // TILEDB_API_IVF_FLAT_INDEX_H
