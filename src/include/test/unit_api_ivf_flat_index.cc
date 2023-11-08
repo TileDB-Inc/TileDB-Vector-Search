@@ -129,3 +129,13 @@ TEST_CASE("api_ivf_flat_index: init constructor", "[api_ivf_flat_index]") {
     CHECK(a.px_type() == TILEDB_UINT64);
   }
 }
+
+TEST_CASE("api_ivf_flat_index: api_ivf_flat_index write and read", "[api_ivf_flat_index]") {
+  auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
+      {{"feature_type", "float32"},
+       {"id_type", "uint32"},
+       {"px_type", "uint32"}}));
+  auto training_set = FeatureVectorArray(tiledb::Context{}, siftsmall_base_uri);
+
+ // a.train(training_set, kmeans_init::random);
+}

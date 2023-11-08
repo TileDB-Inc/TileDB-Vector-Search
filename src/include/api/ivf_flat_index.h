@@ -32,8 +32,9 @@
 #ifndef TILEDB_API_IVF_FLAT_INDEX_H
 #define TILEDB_API_IVF_FLAT_INDEX_H
 
-#include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
+
+#include <tiledb/group_experimental.h>
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
 #include "api_defs.h"
@@ -67,11 +68,8 @@ class IndexIVFFlat {
 
   explicit IndexIVFFlat(
       const std::optional<IndexOptions>& config = std::nullopt) {
-    size_t nlist = 0;
-    size_t max_iter = 2;
-    float tolerance = 1e-4;
-    std::optional<size_t> num_threads = std::nullopt;
-    feature_datatype_ = TILEDB_FLOAT32;
+
+    feature_datatype_ = TILEDB_ANY;
     id_datatype_ = TILEDB_UINT32;
     px_datatype_ = TILEDB_UINT32;
 
@@ -80,13 +78,13 @@ class IndexIVFFlat {
         auto key = c.first;
         auto value = c.second;
         if (key == "nlist") {
-          nlist = std::stol(value);
+          nlist_ = std::stol(value);
         } else if (key == "max_iter") {
-          max_iter = std::stol(value);
+          max_iter_ = std::stol(value);
         } else if (key == "tolerance") {
-          tolerance = std::stof(value);
+          tolerance_ = std::stof(value);
         } else if (key == "num_threads") {
-          num_threads = std::make_optional<size_t>(std::stol(value));
+          num_threads_ = std::make_optional<size_t>(std::stol(value));
         } else if (key == "feature_type") {
           feature_datatype_ = string_to_datatype(value);
         } else if (key == "id_type") {
@@ -98,65 +96,11 @@ class IndexIVFFlat {
         }
       }
     }
-    /**
-     * We support all combinations of the following types for feature,
-     * id, and px datatypes:
-     *   feature_type: uint8 or float
-     *   id_type: uint32 or uint64
-     *   px_type: uint32 or uint64
-     */
-    if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
-        px_datatype_ == TILEDB_UINT32) {
-      index_ = std::make_unique<
-          index_impl<ivf_flat_index<uint8_t, uint32_t, uint32_t>>>(
-          nlist, max_iter, tolerance, num_threads);
-    } else if (
-        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
-        px_datatype_ == TILEDB_UINT32) {
-      index_ = std::make_unique<
-          index_impl<ivf_flat_index<float, uint32_t, uint32_t>>>(
-          nlist, max_iter, tolerance, num_threads);
-    } else if (
-        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
-        px_datatype_ == TILEDB_UINT64) {
-      index_ = std::make_unique<
-          index_impl<ivf_flat_index<uint8_t, uint32_t, uint64_t>>>(
-          nlist, max_iter, tolerance, num_threads);
-    } else if (
-        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
-        px_datatype_ == TILEDB_UINT64) {
-      index_ = std::make_unique<
-          index_impl<ivf_flat_index<float, uint32_t, uint64_t>>>(
-          nlist, max_iter, tolerance, num_threads);
-    } else if (
-        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
-        px_datatype_ == TILEDB_UINT32) {
-      index_ = std::make_unique<
-          index_impl<ivf_flat_index<uint8_t, uint64_t, uint32_t>>>(
-          nlist, max_iter, tolerance, num_threads);
-    } else if (
-        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
-        px_datatype_ == TILEDB_UINT32) {
-      index_ = std::make_unique<
-          index_impl<ivf_flat_index<float, uint64_t, uint32_t>>>(
-          nlist, max_iter, tolerance, num_threads);
-    } else if (
-        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
-        px_datatype_ == TILEDB_UINT64) {
-      index_ = std::make_unique<
-          index_impl<ivf_flat_index<uint8_t, uint64_t, uint64_t>>>(
-          nlist, max_iter, tolerance, num_threads);
-    } else if (
-        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
-        px_datatype_ == TILEDB_UINT64) {
-      index_ = std::make_unique<
-          index_impl<ivf_flat_index<float, uint64_t, uint64_t>>>(
-          nlist, max_iter, tolerance, num_threads);
-    }
+
   }
 
   // @todo Who owns the context?
-  IndexIVFFlat(
+  explicit IndexIVFFlat(
       const URI& group_uri,
       const std::optional<IndexOptions>& config = std::nullopt)
       : IndexIVFFlat(tiledb::Context{}, group_uri, config) {
@@ -281,8 +225,70 @@ class IndexIVFFlat {
     // @todo
   }
 
-  void train() const {
-    // @todo
+  // @todo -- infer feature type from input
+  void train(const FeatureVectorArray& training_set, kmeans_init init = kmeans_init::random)  {
+
+    if (feature_datatype_ == TILEDB_ANY) {
+      feature_datatype_ = training_set.feature_type();
+    }
+
+    /**
+     * We support all combinations of the following types for feature,
+     * id, and px datatypes:
+     *   feature_type: uint8 or float
+     *   id_type: uint32 or uint64
+     *   px_type: uint32 or uint64
+     */
+    if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
+        px_datatype_ == TILEDB_UINT32) {
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<uint8_t, uint32_t, uint32_t>>>(
+          nlist_, max_iter_, tolerance_, num_threads_);
+    } else if (
+        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
+        px_datatype_ == TILEDB_UINT32) {
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<float, uint32_t, uint32_t>>>(
+          nlist_, max_iter_, tolerance_, num_threads_);
+    } else if (
+        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
+        px_datatype_ == TILEDB_UINT64) {
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<uint8_t, uint32_t, uint64_t>>>(
+          nlist_, max_iter_, tolerance_, num_threads_);
+    } else if (
+        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
+        px_datatype_ == TILEDB_UINT64) {
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<float, uint32_t, uint64_t>>>(
+          nlist_, max_iter_, tolerance_, num_threads_);
+    } else if (
+        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
+        px_datatype_ == TILEDB_UINT32) {
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<uint8_t, uint64_t, uint32_t>>>(
+          nlist_, max_iter_, tolerance_, num_threads_);
+    } else if (
+        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
+        px_datatype_ == TILEDB_UINT32) {
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<float, uint64_t, uint32_t>>>(
+          nlist_, max_iter_, tolerance_, num_threads_);
+    } else if (
+        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
+        px_datatype_ == TILEDB_UINT64) {
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<uint8_t, uint64_t, uint64_t>>>(
+          nlist_, max_iter_, tolerance_, num_threads_);
+    } else if (
+        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
+        px_datatype_ == TILEDB_UINT64) {
+      index_ = std::make_unique<
+          index_impl<ivf_flat_index<float, uint64_t, uint64_t>>>(
+          nlist_, max_iter_, tolerance_, num_threads_);
+    }
+
+    return index_->train(training_set, init);
   }
 
   void save(const std::string& group_uri, bool overwrite) const {
@@ -355,6 +361,8 @@ class IndexIVFFlat {
    */
   struct index_base {
     virtual ~index_base() = default;
+
+    virtual void train(const FeatureVectorArray& training_set, kmeans_init init = kmeans_init::random) = 0;
 
     [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
     query_infinite_ram(
@@ -433,6 +441,16 @@ class IndexIVFFlat {
         std::optional<StringMap> config = std::nullopt)
         : impl_index_(index_uri, vectors_uri, options, config) {
     }
+
+    void train(const FeatureVectorArray& training_set, kmeans_init init = kmeans_init::random) override {
+      using feature_type = typename T::value_type;
+      auto fspan = MatrixView<feature_type, stdx::layout_left>{
+          (feature_type*)training_set.data(),
+          extents(training_set)[0],
+          extents(training_set)[1]};
+      impl_index_.train(fspan, init);
+    }
+
 
     [[nodiscard]] auto query_infinite_ram(
         tiledb::Context ctx, const URI& uri, size_t top_k, size_t nprobe) {
@@ -575,6 +593,10 @@ class IndexIVFFlat {
 
   // @todo Who should own the context?
   tiledb::Context ctx_{};
+  size_t nlist_ = 0;
+  size_t max_iter_ = 2;
+  float tolerance_ = 1e-4;
+  std::optional<size_t> num_threads_ = std::nullopt;
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
   tiledb_datatype_t px_datatype_{TILEDB_ANY};

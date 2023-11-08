@@ -44,6 +44,41 @@ TEST_CASE("tdb_matrix: test test", "[tdb_matrix]") {
   REQUIRE(true);
 }
 
+
+TEMPLATE_TEST_CASE("tdb_matrix: constructors", "[tdb_matrix]", float, uint8_t) {
+  tiledb::Context ctx;
+  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+  int offset = 13;
+  size_t Mrows = 200;
+  size_t Ncols = 500;
+
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_matrix_uri)) {
+    vfs.remove_dir(tmp_matrix_uri);
+  }
+
+  auto X = ColMajorMatrix<TestType>(Mrows, Ncols);
+  std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
+  write_matrix(ctx, X, tmp_matrix_uri);
+
+  auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);
+  auto Z = tdbColMajorMatrix<TestType>(std::move(Y));
+
+  CHECK(num_vectors(Y) == num_vectors(X));
+  CHECK(dimension(Y) == dimension(X));
+
+  CHECK(num_vectors(Z) == num_vectors(X));
+  CHECK(dimension(Z) == dimension(X));
+
+  CHECK(
+      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Z.data()));
+  for (size_t i = 0; i < 5; ++i) {
+    for (size_t j = 0; j < 5; ++j) {
+      CHECK(X(i, j) == Z(i, j));
+    }
+  }
+}
+
 TEMPLATE_TEST_CASE(
     "tdb_matrix: assign to matrix", "[tdb_matrix]", float, uint8_t) {
   tiledb::Context ctx;
@@ -67,6 +102,12 @@ TEMPLATE_TEST_CASE(
     auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);
     Y.load();
     B = std::move(Y);
+  }
+
+
+
+  {
+    auto Y = tdbColMajorMatrix<TestType>(tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri));
   }
 
   auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);

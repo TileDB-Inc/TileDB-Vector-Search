@@ -127,6 +127,13 @@ TEST_CASE("api: tdbMatrix constructors and destructors", "[api]") {
   auto e = FeatureVectorArray(std::move(d));
 }
 
+TEST_CASE("api: Arrays going out of scope", "[api]") {
+// This fails with 2.16.0
+  auto ctx = tiledb::Context{};
+  auto foo = tiledb::Array(ctx, "/tmp/a", TILEDB_READ);
+  auto bar = std::move(foo);
+}
+
 TEMPLATE_TEST_CASE(
     "api: tdb FeatureVectorArray feature_type",
     "[api]",
@@ -144,12 +151,13 @@ TEMPLATE_TEST_CASE(
   std::filesystem::remove_all(uri);
   write_matrix(ctx, cc, uri);
 
-  auto a = tdbColMajorMatrix<TestType>{ctx, uri};
-  auto b = FeatureVectorArray(a);
+  {
+    auto a = tdbColMajorMatrix<TestType>{ctx, uri};
+    auto b = FeatureVectorArray(a);
+    CHECK(b.feature_type() == t);
+  }
 
-  CHECK(b.feature_type() == t);
-
-  auto c = FeatureVectorArray{tdbColMajorMatrix<TestType>{ctx, uri}};
+  auto c = FeatureVectorArray{tdbColMajorMatrix<TestType>{tiledb::Context{}, uri}};
   CHECK(c.feature_type() == t);
 
   auto f = tdbColMajorMatrix<TestType>{ctx, uri};

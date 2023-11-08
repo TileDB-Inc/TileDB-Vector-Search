@@ -200,7 +200,8 @@ class ivf_flat_index {
    * iteration, and then greedily chose the one that most decreases φ
    * @todo Finish implementation using triangle inequality.
    */
-  void kmeans_pp(const ColMajorMatrix<T>& training_set) {
+  template <feature_vector_array V>
+  void kmeans_pp(const V& training_set) {
     scoped_timer _{__FUNCTION__};
 
     std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
@@ -279,7 +280,8 @@ class ivf_flat_index {
    * @brief Initialize centroids by choosing them at random from training set.
    * @param training_set Array of vectors to cluster.
    */
-  void kmeans_random_init(const ColMajorMatrix<T>& training_set) {
+  template <feature_vector_array V>
+  void kmeans_random_init(const V& training_set) {
     scoped_timer _{__FUNCTION__};
 
     std::vector<indices_type> indices(nlist_);
@@ -314,7 +316,8 @@ class ivf_flat_index {
    *
    * @param training_set Array of vectors to cluster.
    */
-  void train_no_init(const ColMajorMatrix<T>& training_set) {
+  template <feature_vector_array V>
+  void train_no_init(const V& training_set) {
     scoped_timer _{__FUNCTION__};
 
     std::vector<size_t> degrees(nlist_, 0);
@@ -507,8 +510,10 @@ class ivf_flat_index {
    * @param init Specify which initialization algorithm to use,
    * random (`random`) or kmeans++ (`kmeanspp`).
    */
+  template <feature_vector_array V>
   void train(
-      const ColMajorMatrix<T>& training_set,
+      //       ColMajorMatrix<feature_type>& training_set,
+      const V& training_set,
       kmeans_init init = kmeans_init::random) {
     dimension_ = ::dimension(training_set);
     if (nlist_ == 0) {

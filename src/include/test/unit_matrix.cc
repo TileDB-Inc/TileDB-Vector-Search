@@ -88,8 +88,6 @@ TEST_CASE("matrix: assign", "[matrix]") {
 
 TEST_CASE("matrix: vector of matrix", "[matrix]") {
   std::vector<Matrix<float>> v;
-  std::vector<Matrix<float>> w;
-  w.reserve(10);
 
   auto A = Matrix<float>{{8, 6, 7}, {5, 3, 0}, {9, 5, 0}};
   auto B = Matrix<float>{{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
@@ -128,6 +126,8 @@ TEST_CASE("matrix: vector of matrix", "[matrix]") {
     std::vector<Matrix<float>> x;
 
     SECTION("operator[]") {
+      std::vector<Matrix<float>> w(1);
+      w.reserve(10);
       // w[0] = A; // Error: no matching construct_at
       w[0] = std::move(A);
       CHECK(w[0].data() == aptr);

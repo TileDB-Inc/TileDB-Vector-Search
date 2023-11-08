@@ -56,7 +56,7 @@ class FeatureVectorArray {
             std::make_unique<vector_array_impl<T>>(std::forward<T>(obj))) {
     feature_type_ = tiledb::impl::type_to_tiledb<
         typename std::remove_cvref_t<T>::value_type>::tiledb_type;
-  }
+   }
 
   FeatureVectorArray(
       const tiledb::Context& ctx,
@@ -151,8 +151,10 @@ class FeatureVectorArray {
   // @todo Create move constructors for Matrix and tdbMatrix?
   template <typename T>
   struct vector_array_impl : vector_array_base {
-    explicit vector_array_impl(T&& t)
-        : impl_vector_array(std::forward<T>(t)) {
+    // explicit vector_array_impl(T&& t)
+    //     : impl_vector_array(std::forward<T>(t)) {
+    explicit vector_array_impl(const T& t)
+         : impl_vector_array(t) {
     }
     vector_array_impl(
         const tiledb::Context& ctx, const std::string& uri, size_t num_vectors)

@@ -51,7 +51,7 @@ template <class I = size_t>
 using matrix_extents = stdx::dextents<I, 2>;
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-class MatrixView : public stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy> {
+class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using Base = stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy>;
   using Base::Base;
 
@@ -97,6 +97,20 @@ class MatrixView : public stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy> {
 
   ~MatrixView() = default;
 };
+
+/**
+ * Convenience class for row-major matrices.
+ */
+template <class T, class I = size_t>
+using RowMajorMatrixView = MatrixView<T, stdx::layout_right, I>;
+
+/**
+ * Convenience class for column-major matrices.
+ */
+template <class T, class I = size_t>
+using ColMajorMatrixView = MatrixView<T, stdx::layout_left, I>;
+
+
 /**
  * @brief A 2-D matrix class that owns its storage.  The interface is
  * that of mdspan.
@@ -109,12 +123,17 @@ class MatrixView : public stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy> {
  */
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
+class Matrix :
+#if 1
+    public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
   // using Base::Base;
-
+#else
+public MatrixView<T, LayoutPolicy, I> {
+  using Base = MatrixView<T, LayoutPolicy, I>;
   // So that the CPO for data() doesn't get confused
   // auto data_handle() = delete;
+#endif
 
  public:
   using layout_policy = LayoutPolicy;

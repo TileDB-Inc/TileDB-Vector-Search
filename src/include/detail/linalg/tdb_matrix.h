@@ -103,10 +103,12 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   // size_t pending_col_offset{0};
 
  public:
-  tdbBlockedMatrix(tdbBlockedMatrix&&) = default;
+  tdbBlockedMatrix(tdbBlockedMatrix&& rhs) = default;
 
   ~tdbBlockedMatrix() noexcept {
-    array_.close();
+  //  if (array_.is_open()) {
+  //    array_.close();
+  //  }
   }
 
   /**
