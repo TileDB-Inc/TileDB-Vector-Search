@@ -147,16 +147,19 @@ TEMPLATE_TEST_CASE(
   auto t = tiledb::impl::type_to_tiledb<TestType>::tiledb_type;
 
   tiledb::Context ctx;
+  auto uri = std::string{"/tmp/a"};
+
+#if 0
   auto cc = ColMajorMatrix<TestType>(3, 7);
 
-  auto uri = std::string{"/tmp/a"};
+
   std::filesystem::remove_all(uri);
   write_matrix(ctx, cc, uri);
 
   {
 
   }
-#if 0
+
   {
     auto a = tdbColMajorMatrix<TestType>{ctx, uri};
     auto b = FeatureVectorArray(a);
@@ -165,7 +168,7 @@ TEMPLATE_TEST_CASE(
 #endif
   {
     auto c =
-        FeatureVectorArray(tdbColMajorMatrix<TestType>{tiledb::Context{}, uri});
+        FeatureVectorArray(tdbColMajorMatrix<TestType>{ctx, uri});
     CHECK(c.feature_type() == t);
   }
 

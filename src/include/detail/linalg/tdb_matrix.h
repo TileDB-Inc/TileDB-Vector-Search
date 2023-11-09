@@ -105,7 +105,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
  public:
   tdbBlockedMatrix(tdbBlockedMatrix&& rhs) = default;
 
-  ~tdbBlockedMatrix() noexcept {
+  virtual ~tdbBlockedMatrix() noexcept {
   //  if (array_.is_open()) {
   //    array_.close();
   //  }

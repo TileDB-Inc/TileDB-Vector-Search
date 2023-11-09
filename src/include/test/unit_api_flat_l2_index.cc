@@ -31,7 +31,7 @@
 #include "api/flat_l2_index.h"
 #include "catch2/catch_all.hpp"
 #include "query_common.h"
-#include "api/feature_vector_array"
+#include "api/feature_vector_array.h"
 
 TEST_CASE("api_flat_l2_index: test test", "[api_flat_l2_index]") {
   REQUIRE(true);

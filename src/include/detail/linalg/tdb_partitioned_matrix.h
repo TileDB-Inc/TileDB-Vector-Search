@@ -409,7 +409,7 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
       /*
        * Set up the subarray to read the partitions
        */
-      tiledb::Subarray subarray(ctx_, this->partitioned_vectors_array_);
+      tiledb::Subarray subarray(ctx_, *(this->partitioned_vectors_array_));
 
       // Dimension 0 goes from 0 to 127
       subarray.add_range(0, 0, (int)dimension - 1);
@@ -438,7 +438,7 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
       auto cell_order = partitioned_vectors_schema_.cell_order();
       auto layout_order = cell_order;
 
-      tiledb::Query query(ctx_, this->partitioned_vectors_array_);
+      tiledb::Query query(ctx_, *(this->partitioned_vectors_array_));
 
       auto ptr = this->data();
       query.set_subarray(subarray)

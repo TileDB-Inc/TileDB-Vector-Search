@@ -40,6 +40,8 @@
 #include "detail/linalg/tdb_matrix.h"
 #include "scoring.h"
 
+#include "utils/print_types.h"
+
 class FeatureVectorArray {
  public:
   FeatureVectorArray(const FeatureVectorArray& other) = delete;

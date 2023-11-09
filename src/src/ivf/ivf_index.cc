@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
     auto dim = dimension(X);
 
     auto idx = ivf_flat_index<feature_type, id_type, px_type>(
-        dim, num_clusters, max_iter, tolerance, nthreads, 0xdeadbeef);
+        /* dim, */ num_clusters, max_iter, tolerance, nthreads, 0xdeadbeef);
     idx.train(X, init_type);
     idx.add(X);
     idx.write_index(index_uri, overwrite);

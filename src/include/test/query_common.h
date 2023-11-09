@@ -35,6 +35,7 @@
 
 #include <string>
 #include "linalg.h"
+#include "detail/flat/qv.h"
 
 // clang-format off
 

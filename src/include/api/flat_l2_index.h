@@ -58,8 +58,8 @@ class IndexFlatL2 {
       : ctx_{ctx} {
     auto array =
         tiledb_helpers::open_array(tdb_func__, ctx_, index_uri, TILEDB_READ);
-    feature_type_ = get_array_datatype(array);
-    array.close();
+    feature_type_ = get_array_datatype(*array);
+    array->close();
 
     switch (feature_type_) {
       case TILEDB_FLOAT32:

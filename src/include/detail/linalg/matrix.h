@@ -160,7 +160,7 @@ public MatrixView<T, LayoutPolicy, I> {
 
   Matrix(Matrix&&) = default;
   Matrix& operator=(Matrix&& rhs) = default;
-  ~Matrix() = default;
+  virtual ~Matrix() = default;
 
   Matrix(
       size_type nrows,
