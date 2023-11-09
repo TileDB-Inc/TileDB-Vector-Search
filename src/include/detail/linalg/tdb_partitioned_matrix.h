@@ -138,11 +138,11 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
   tiledb::Context ctx_;
 
   std::string partitioned_vectors_uri_;
-  tiledb::Array partitioned_vectors_array_;
+  std::unique_ptr<tiledb::Array> partitioned_vectors_array_;
   tiledb::ArraySchema partitioned_vectors_schema_;
 
   std::string partitioned_ids_uri_;
-  tiledb::Array partitioned_ids_array_;
+  std::unique_ptr<tiledb::Array> partitioned_ids_array_;
   tiledb::ArraySchema ids_schema_;
 
   /*****************************************************************************
@@ -229,17 +229,17 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
       const tiledb::TemporalPolicy temporal_policy = {})
       : ctx_{ctx}
       , partitioned_vectors_uri_{partitioned_vectors_uri}
-      , partitioned_vectors_array_{tiledb_helpers::open_array(
+      , partitioned_vectors_array_(tiledb_helpers::open_array(
             tdb_func__,
             ctx_,
             partitioned_vectors_uri_,
             TILEDB_READ,
-            temporal_policy)}
-      , partitioned_vectors_schema_{partitioned_vectors_array_.schema()}
+            temporal_policy))
+      , partitioned_vectors_schema_{partitioned_vectors_array_->schema()}
       , partitioned_ids_uri_{ids_uri}
-      , partitioned_ids_array_{tiledb_helpers::open_array(
-            tdb_func__, ctx_, partitioned_ids_uri_, TILEDB_READ)}
-      , ids_schema_{partitioned_ids_array_.schema()}
+      , partitioned_ids_array_(tiledb_helpers::open_array(
+            tdb_func__, ctx_, partitioned_ids_uri_, TILEDB_READ))
+      , ids_schema_{partitioned_ids_array_->schema()}
       , master_indices_{read_vector<indices_type>(ctx_, indices_uri)}
       , relevant_parts_(std::move(relevant_parts))
       , squashed_indices_(size(relevant_parts_) + 1)
@@ -465,7 +465,7 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
       auto ids_attr = ids_schema_.attribute(ids_attr_idx);
       std::string ids_attr_name = ids_attr.name();
 
-      tiledb::Subarray ids_subarray(ctx_, partitioned_ids_array_);
+      tiledb::Subarray ids_subarray(ctx_, *partitioned_ids_array_);
 
       size_t ids_col_count = 0;
       for (size_t j = std::get<0>(resident_part_view_);
@@ -485,7 +485,7 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
         throw std::runtime_error("Column count mismatch");
       }
 
-      tiledb::Query ids_query(ctx_, partitioned_ids_array_);
+      tiledb::Query ids_query(ctx_, *partitioned_ids_array_);
 
       auto ids_ptr = this->ids_.data();
       ids_query.set_subarray(ids_subarray)
@@ -540,11 +540,12 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
    * Destructor.  Closes arrays if they are open.
    */
   ~tdbPartitionedMatrix() {
-    if (partitioned_vectors_array_.is_open()) {
-      partitioned_vectors_array_.close();
+    // Don't really need these since tiledb::Array will close on destruction
+    if (partitioned_vectors_array_->is_open()) {
+      partitioned_vectors_array_->close();
     }
-    if (partitioned_ids_array_.is_open()) {
-      partitioned_ids_array_.close();
+    if (partitioned_ids_array_->is_open()) {
+      partitioned_ids_array_->close();
     }
   }
 };

@@ -63,8 +63,8 @@ class FeatureVectorArray {
       const std::string& uri,
       size_t num_vectors = 0) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
-    feature_type_ = get_array_datatype(array);
-    array.close();  // @todo create Matrix constructor that takes opened array
+    feature_type_ = get_array_datatype(*array);
+    array->close();  // @todo create Matrix constructor that takes opened array
 
     /**
      * Row and column orientation are kind of irrelevant?  We could dispatch
@@ -151,10 +151,10 @@ class FeatureVectorArray {
   // @todo Create move constructors for Matrix and tdbMatrix?
   template <typename T>
   struct vector_array_impl : vector_array_base {
-    // explicit vector_array_impl(T&& t)
-    //     : impl_vector_array(std::forward<T>(t)) {
-    explicit vector_array_impl(const T& t)
-         : impl_vector_array(t) {
+    explicit vector_array_impl(T&& t)
+        : impl_vector_array(std::forward<T>(t)) {
+    // explicit vector_array_impl(const T& t)
+    //     : impl_vector_array(t) {
     }
     vector_array_impl(
         const tiledb::Context& ctx, const std::string& uri, size_t num_vectors)

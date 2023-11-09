@@ -251,19 +251,28 @@ static std::string diskann_truth_index_data =
  * multiple different tests.
  */
 // base is 10k, learn is 25k
-struct siftsmall_test_init {
+struct siftsmall_test_init_defaults {
   using feature_type = float;
   using id_type = uint32_t;
   using px_type = uint64_t;
-
-  tiledb::Context ctx_;
-  size_t nlist;
-  size_t nprobe;
 
   size_t k_nn = 10;
   size_t nthreads = 0;
   size_t max_iter = 10;
   float tolerance = 1e-4;
+};
+
+template <class IndexType>
+struct siftsmall_test_init : public siftsmall_test_init_defaults {
+  using Base = siftsmall_test_init_defaults;
+
+  using feature_type = Base::feature_type;
+  using id_type = Base::id_type;
+  using px_type = Base::px_type;
+
+  tiledb::Context ctx_;
+  size_t nlist;
+  size_t nprobe;
 
   siftsmall_test_init(tiledb::Context ctx, size_t nl)
       : ctx_{ctx}
@@ -288,7 +297,8 @@ struct siftsmall_test_init {
     std::string tmp_ivf_index_uri = "/tmp/tmp_ivf_index";
     idx.write_index(tmp_ivf_index_uri, true);
     auto idx0 =
-        ivf_flat_index<feature_type, id_type, px_type>(ctx_, tmp_ivf_index_uri);
+        // ivf_flat_l2_index<feature_type, id_type, px_type>(ctx_, tmp_ivf_index_uri);
+        IndexType(ctx_, tmp_ivf_index_uri);
     return idx0;
   }
 
@@ -297,7 +307,8 @@ struct siftsmall_test_init {
   tdbColMajorMatrix<int32_t> groundtruth_set;
   ColMajorMatrix<float> top_k_scores;
   ColMajorMatrix<unsigned long long> top_k;
-  ivf_flat_index<feature_type, id_type, px_type> idx;
+  // ivf_flat_l2_index<feature_type, id_type, px_type> idx;
+  IndexType idx;
 
   auto verify(auto&& top_k_ivf) {
     // These are helpful for debugging

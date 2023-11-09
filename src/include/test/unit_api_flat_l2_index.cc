@@ -31,6 +31,7 @@
 #include "api/flat_l2_index.h"
 #include "catch2/catch_all.hpp"
 #include "query_common.h"
+#include "api/feature_vector_array"
 
 TEST_CASE("api_flat_l2_index: test test", "[api_flat_l2_index]") {
   REQUIRE(true);
@@ -40,14 +41,14 @@ TEST_CASE("api_flat_l2_index: test test", "[api_flat_l2_index]") {
 // Index tests
 // ----------------------------------------------------------------------------
 
-TEST_CASE("api: index", "[api][index]") {
+TEST_CASE("api: flat_l2_index", "[api][flat_l2_index]") {
   tiledb::Context ctx;
   auto a = IndexFlatL2(ctx, fmnist_train_uri);
   // auto b = Index(ctx, fmnist_train_uri, IndexKind::FlatL2);
   // auto c = Index(ctx, fmnist_train_uri, IndexKind::IVFFlat);
 }
 
-TEST_CASE("api: uri index constructors, context", "[api][index]") {
+TEST_CASE("api: uri flat_l2_index constructors, context", "[api][flat_l2_index]") {
   tiledb::Context ctx;
 
   auto a = IndexFlatL2(ctx, db_uri);
@@ -71,7 +72,7 @@ TEST_CASE("api: uri index constructors, context", "[api][index]") {
   CHECK(num_vectors(d) == 1'000'000);
 }
 
-TEST_CASE("api: uri index constructors, no context", "[api][index]") {
+TEST_CASE("api: uri flat_l2_index constructors, no context", "[api][flat_l2_index]") {
   auto a = IndexFlatL2(db_uri);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(a) == 128);
@@ -93,7 +94,7 @@ TEST_CASE("api: uri index constructors, no context", "[api][index]") {
   CHECK(num_vectors(d) == 1'000'000);
 }
 
-TEST_CASE("api: queries", "[api][index]") {
+TEST_CASE("api: queries", "[api][flat_l2_index]") {
   tiledb::Context ctx;
   size_t k_nn = 10;
   size_t nthreads = 8;

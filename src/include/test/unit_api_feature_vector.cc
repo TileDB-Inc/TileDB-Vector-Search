@@ -171,4 +171,10 @@ TEMPLATE_TEST_CASE(
 
   auto g = std::move(e);
   CHECK(g.feature_type() == t);
+
+  auto h = FeatureVector{FeatureVector(std::vector<TestType>{1, 2, 3})};
+  CHECK(h.feature_type() == t);
+
+  auto i = FeatureVector{FeatureVector(std::vector<TestType>{1, 2, 3})};
+  CHECK(i.feature_type() == t);
 }

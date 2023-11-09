@@ -359,8 +359,10 @@ TEST_CASE(
     "ivf_index: Build index and query in place, infinite", "[ivf_index]") {
   tiledb::Context ctx;
   size_t nlist = GENERATE(1, 100);
+  using s = siftsmall_test_init_defaults;
+  using index = ivf_flat_index<s::feature_type, s::id_type, s::px_type>;
 
-  auto init = siftsmall_test_init(ctx, nlist);
+  auto init = siftsmall_test_init<index>(ctx, nlist);
 
   auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
       init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
@@ -399,8 +401,10 @@ TEST_CASE(
 TEST_CASE("Build index, write, read and query, infinite", "[ivf_index]") {
   tiledb::Context ctx;
   size_t nlist = GENERATE(1, 100);
+  using s = siftsmall_test_init_defaults;
+  using index = ivf_flat_index<s::feature_type, s::id_type, s::px_type>;
 
-  auto init = siftsmall_test_init(ctx, nlist);
+  auto init = siftsmall_test_init<index>(ctx, nlist);
 
   auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
       init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
@@ -440,8 +444,10 @@ TEST_CASE("Build index, write, read and query, infinite", "[ivf_index]") {
 TEST_CASE("Build index, write, read and query, finite", "ivf_index") {
   tiledb::Context ctx;
   size_t nlist = GENERATE(1, 100);
+  using s = siftsmall_test_init_defaults;
+  using index = ivf_flat_index<s::feature_type, s::id_type, s::px_type>;
 
-  auto init = siftsmall_test_init(ctx, nlist);
+  auto init = siftsmall_test_init<index>(ctx, nlist);
 
   auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
       init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
@@ -477,8 +483,10 @@ TEST_CASE(
   tiledb::Context ctx;
   size_t nlist = 100;
   size_t upper_bound = 5000;
+  using s = siftsmall_test_init_defaults;
+  using index = ivf_flat_index<s::feature_type, s::id_type, s::px_type>;
 
-  auto init = siftsmall_test_init(ctx, nlist);
+  auto init = siftsmall_test_init<index>(ctx, nlist);
 
   auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
       init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
@@ -515,9 +523,9 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   // f_type: float
   // id_type: uint32
   // px_type: uint64
-  using feature_type = typename siftsmall_test_init::feature_type;
-  using id_type = typename siftsmall_test_init::id_type;
-  using px_type = typename siftsmall_test_init::px_type;
+  using feature_type = typename siftsmall_test_init_defaults::feature_type;
+  using id_type = typename siftsmall_test_init_defaults::id_type;
+  using px_type = typename siftsmall_test_init_defaults::px_type;
 
   auto k_nn = 10;
   auto nprobe = 20;
@@ -533,7 +541,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<id_type>();
 
-  auto init = siftsmall_test_init(ctx, nlist);
+  auto init = siftsmall_test_init<ivf_flat_index<feature_type, id_type, px_type>>(ctx, nlist);
   std::string tmp_ivf_index_uri = "/tmp/tmp_ivf_index";
   init.idx.write_index(tmp_ivf_index_uri, true);
 

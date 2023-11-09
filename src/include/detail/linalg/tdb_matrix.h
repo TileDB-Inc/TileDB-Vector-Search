@@ -77,7 +77,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   std::reference_wrapper<const tiledb::Context> ctx_;
   std::string uri_;
-  tiledb::Array array_;
+  std::unique_ptr<tiledb::Array> array_;
   tiledb::ArraySchema schema_;
   size_t num_array_rows_{0};
   size_t num_array_cols_{0};
@@ -157,9 +157,10 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : ctx_{ctx}
       , uri_{uri}
-      , array_{tiledb_helpers::open_array(
-            tdb_func__, ctx, uri, TILEDB_READ, temporal_policy)}
-      , schema_{array_.schema()} {
+      //      , array_(tiledb_helpers::open_array(
+      //            tdb_func__, ctx, uri, TILEDB_READ, temporal_policy))
+      , array_(std::make_unique<tiledb::Array>(ctx, uri, TILEDB_READ, temporal_policy))
+      , schema_{array_->schema()} {
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + " " + uri};
 
@@ -244,7 +245,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     assert(std::get<1>(col_view_) <= num_array_cols_);
 
     // Create a subarray for the next block of columns
-    tiledb::Subarray subarray(ctx_, array_);
+    tiledb::Subarray subarray(ctx_, *array_);
     subarray.add_range(0, 0, (int)dimension - 1);
     subarray.add_range(
         1, (int)std::get<0>(col_view_), (int)std::get<1>(col_view_) - 1);
@@ -252,7 +253,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     auto layout_order = schema_.cell_order();
 
     // Create a query
-    tiledb::Query query(ctx_, array_);
+    tiledb::Query query(ctx_, *array_);
     query.set_subarray(subarray)
         .set_layout(layout_order)
         .set_data_buffer(attr_name, this->data(), num_cols_ * dimension);
@@ -317,9 +318,10 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       const tiledb::TemporalPolicy temporal_policy = {})  // noexcept
       : ctx_{ctx}
       , uri_{uri}
-      , array_{tiledb_helpers::open_array(
-            tdb_func__, ctx, uri, TILEDB_READ, temporal_policy)}
-      , schema_{array_.schema()} {
+      //      , array_(std::make_unique<tiledb::Array>(tiledb_helpers::open_array(
+      //            tdb_func__, ctx, uri, TILEDB_READ, temporal_policy)))
+      , array_(std::make_unique<tiledb::Array>(ctx, uri, TILEDB_READ, temporal_policy))
+      , schema_{array_->schema()} {
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + uri};
 
@@ -391,12 +393,12 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
         (int32_t)row_end - 1,
         (int32_t)col_begin,
         (int32_t)col_end - 1};
-    tiledb::Subarray subarray(ctx_, array_);
+    tiledb::Subarray subarray(ctx_, *array_);
     subarray.set_subarray(subarray_vals);
 
     auto layout_order = cell_order;
 
-    tiledb::Query query(ctx_, array_);
+    tiledb::Query query(ctx_, *array_);
 
     query.set_subarray(subarray)
         .set_layout(layout_order)

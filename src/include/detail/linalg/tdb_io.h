@@ -101,13 +101,13 @@ void write_matrix(
       (int)start_pos + (int)A.num_cols() - 1};
 
   // Open array for writing
-  tiledb::Array array = tiledb_helpers::open_array(
+  auto array = tiledb_helpers::open_array(
       tdb_func__, ctx, uri, TILEDB_WRITE, temporal_policy);
 
-  tiledb::Subarray subarray(ctx, array);
+  tiledb::Subarray subarray(ctx, *array);
   subarray.set_subarray(subarray_vals);
 
-  tiledb::Query query(ctx, array);
+  tiledb::Query query(ctx, *array);
   auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
                    TILEDB_ROW_MAJOR :
                    TILEDB_COL_MAJOR;
@@ -119,7 +119,7 @@ void write_matrix(
 
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
-  array.close();
+  array->close();
 }
 
 template <std::ranges::contiguous_range V>
@@ -166,15 +166,15 @@ void write_vector(
       (int)start_pos, (int)start_pos + (int)size(v) - 1};
 
   // Open array for writing
-  tiledb::Array array = tiledb_helpers::open_array(
+  auto array = tiledb_helpers::open_array(
       tdb_func__, ctx, uri, TILEDB_WRITE, temporal_policy);
 
-  tiledb::Subarray subarray(ctx, array);
+  tiledb::Subarray subarray(ctx, *array);
   subarray.set_subarray(subarray_vals);
 
   // print_types(v, v.data(), v.size());
 
-  tiledb::Query query(ctx, array);
+  tiledb::Query query(ctx, *array);
   query.set_layout(TILEDB_ROW_MAJOR)
       .set_data_buffer("values", const_cast<value_type*>(v.data()), size(v))
       .set_subarray(subarray);
@@ -183,7 +183,7 @@ void write_vector(
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
   tiledb_helpers::submit_query(tdb_func__, uri, query);
 
-  array.close();
+  array->close();
 }
 
 /**
@@ -198,9 +198,9 @@ std::vector<T> read_vector(
     const tiledb::TemporalPolicy temporal_policy = {}) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
-  tiledb::Array array_ = tiledb_helpers::open_array(
+  auto array_ = tiledb_helpers::open_array(
       tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
-  auto schema_ = array_.schema();
+  auto schema_ = array_->schema();
 
   using domain_type = int32_t;
   const size_t idx = 0;
@@ -228,19 +228,19 @@ std::vector<T> read_vector(
   // Create a subarray that reads the array up to the specified subset.
   std::vector<int32_t> subarray_vals = {
       (int32_t)start_pos, (int32_t)end_pos - 1};
-  tiledb::Subarray subarray(ctx, array_);
+  tiledb::Subarray subarray(ctx, *array_);
   subarray.set_subarray(subarray_vals);
 
   // @todo: use something non-initializing
   std::vector<T> data_(vec_rows_);
 
-  tiledb::Query query(ctx, array_);
+  tiledb::Query query(ctx, *array_);
   query.set_subarray(subarray).set_data_buffer(
       attr_name, data_.data(), vec_rows_);
   tiledb_helpers::submit_query(tdb_func__, uri, query);
   _memory_data.insert_entry(tdb_func__, vec_rows_ * sizeof(T));
 
-  array_.close();
+  array_->close();
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
   return data_;
