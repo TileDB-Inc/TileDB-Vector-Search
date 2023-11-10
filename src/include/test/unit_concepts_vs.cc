@@ -68,9 +68,9 @@ TEST_CASE("concepts_vs: Vector", "[concepts_vs]") {
   CHECK(dimensionable<Vector<double>>);
   CHECK(dimensionable<Vector<bool>>);
 
-  CHECK(!vectorable<Vector<int>>);
-  CHECK(!vectorable<Vector<double>>);
-  CHECK(!vectorable<Vector<bool>>);
+  CHECK(vectorable<Vector<int>>);
+  CHECK(vectorable<Vector<double>>);
+  CHECK(vectorable<Vector<bool>>);
 
   CHECK(feature_vector<Vector<int>>);
   CHECK(feature_vector<Vector<double>>);

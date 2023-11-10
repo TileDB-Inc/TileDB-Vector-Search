@@ -62,7 +62,11 @@ TEMPLATE_TEST_CASE("tdb_matrix: constructors", "[tdb_matrix]", float, uint8_t) {
   write_matrix(ctx, X, tmp_matrix_uri);
 
   auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);
+  Y.load();
+
   auto Z = tdbColMajorMatrix<TestType>(std::move(Y));
+
+
 
   CHECK(num_vectors(Y) == num_vectors(X));
   CHECK(dimension(Y) == dimension(X));

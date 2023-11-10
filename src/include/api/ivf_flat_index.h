@@ -79,6 +79,8 @@ class IndexIVFFlat {
         auto value = c.second;
         if (key == "nlist") {
           nlist_ = std::stol(value);
+        } else if (key == "dimension") {
+          dimension_ = std::stol(value);
         } else if (key == "max_iter") {
           max_iter_ = std::stol(value);
         } else if (key == "tolerance") {
@@ -99,13 +101,6 @@ class IndexIVFFlat {
 
   }
 
-  // @todo Who owns the context?
-  explicit IndexIVFFlat(
-      const URI& group_uri,
-      const std::optional<IndexOptions>& config = std::nullopt)
-      : IndexIVFFlat(tiledb::Context{}, group_uri, config) {
-  }
-
   /**
    * @brief Open an existing index.
    *
@@ -120,7 +115,7 @@ class IndexIVFFlat {
       const tiledb::Context& ctx,
       const URI& group_uri,
       const std::optional<IndexOptions>& config = std::nullopt)
-      : ctx_{ctx} {
+       {
     using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
     std::vector<metadata_element> metadata{
         {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
@@ -128,7 +123,7 @@ class IndexIVFFlat {
         {"px_datatype", &px_datatype_, TILEDB_UINT32}};
 
     tiledb::Config cfg;
-    tiledb::Group read_group(ctx_, group_uri, TILEDB_READ, cfg);
+    tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
 
     for (auto& [name, value, datatype] : metadata) {
       if (!read_group.has_metadata(name, &datatype)) {
@@ -156,65 +151,62 @@ class IndexIVFFlat {
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<uint8_t, uint32_t, uint32_t>>>(
-          ctx_, group_uri, config);
+          ctx, group_uri, config);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<float, uint32_t, uint32_t>>>(
-          ctx_, group_uri, config);
+          ctx, group_uri, config);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<uint8_t, uint32_t, uint64_t>>>(
-          ctx_, group_uri, config);
+          ctx, group_uri, config);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<float, uint32_t, uint64_t>>>(
-          ctx_, group_uri, config);
+          ctx, group_uri, config);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<uint8_t, uint64_t, uint32_t>>>(
-          ctx_, group_uri, config);
+          ctx, group_uri, config);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<float, uint64_t, uint32_t>>>(
-          ctx_, group_uri, config);
+          ctx, group_uri, config);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<uint8_t, uint64_t, uint64_t>>>(
-          ctx_, group_uri, config);
+          ctx, group_uri, config);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<float, uint64_t, uint64_t>>>(
-          ctx_, group_uri, config);
+          ctx, group_uri, config);
     }
-  }
-
-  template <feature_vector_array V>
-  IndexIVFFlat(
-      const URI& group_uri,
-      const V& vectors,
-      const std::optional<IndexOptions>& config = std::nullopt) {
-  }
-
-  // Create from input URI
-  IndexIVFFlat(
-      const URI& group_uri,
-      const URI& vectors_uri,
-      const std::optional<IndexOptions>& config = std::nullopt) {
-    // @todo
+    if (dimension_ != 0 && dimension_ != index_->dimension()) {
+      throw std::runtime_error(
+          "Dimension mismatch: " + std::to_string(dimension_) + " != " +
+          std::to_string(index_->dimension()));
+    }
+    dimension_ = index_->dimension();
+    if (nlist_ != 0 && nlist_ != index_->num_partitions()) {
+      throw std::runtime_error(
+          "nlist mismatch: " + std::to_string(nlist_) + " != " +
+          std::to_string(index_->num_partitions()));
+    }
+    nlist_ = index_->num_partitions();
   }
 
   void add() const {
@@ -325,11 +317,11 @@ class IndexIVFFlat {
   }
 
   constexpr auto dimension() const {
-    return ::dimension(*index_);
+    return dimension_; //::dimension(*index_);
   }
 
   constexpr auto num_partitions() const {
-    return ::num_partitions(*index_);
+    return nlist_; // ::num_partitions(*index_);
   }
 
 // Don't think we need thi
@@ -453,12 +445,12 @@ class IndexIVFFlat {
 
 
     [[nodiscard]] auto query_infinite_ram(
-        tiledb::Context ctx, const URI& uri, size_t top_k, size_t nprobe) {
+        const tiledb::Context& ctx, const URI& uri, size_t top_k, size_t nprobe) {
       return impl_index_.query_infinite_ram(ctx, uri, top_k, nprobe);
     }
 
     [[nodiscard]] auto query_finite_ram(
-        tiledb::Context ctx, const URI& uri, size_t top_k, size_t nprobe) {
+        const tiledb::Context& ctx, const URI& uri, size_t top_k, size_t nprobe) {
       return impl_index_.query_finite_ram(ctx, uri, top_k, nprobe);
     }
     /**
@@ -591,8 +583,7 @@ class IndexIVFFlat {
     T impl_index_;
   };
 
-  // @todo Who should own the context?
-  tiledb::Context ctx_{};
+  size_t dimension_ = 0;
   size_t nlist_ = 0;
   size_t max_iter_ = 2;
   float tolerance_ = 1e-4;

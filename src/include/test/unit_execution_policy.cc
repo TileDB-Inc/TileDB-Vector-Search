@@ -29,17 +29,15 @@
  *
  */
 
+#include <catch2/catch_all.hpp>
+
 #include <version>
 #ifdef __cpp_lib_execution
 
-#include <catch2/catch_all.hpp>
 #include <mdspan/mdspan.hpp>
 #include <span>
 #include "../execution_policy.h"
 
-TEST_CASE("execution_policy: test test", "[execution_policy]") {
-  REQUIRE(true);
-}
 
 TEST_CASE("execution_policy: construct", "[execution_policy]") {
   std::execution::sequenced_policy p;
@@ -47,6 +45,11 @@ TEST_CASE("execution_policy: construct", "[execution_policy]") {
 
   std::vector<int> v(10);
   stdx::fill(std::execution::seq, v.begin(), v.end(), 0);
+}
+#else
+
+TEST_CASE("execution_policy: test test", "[execution_policy]") {
+  REQUIRE(true);
 }
 
 #endif

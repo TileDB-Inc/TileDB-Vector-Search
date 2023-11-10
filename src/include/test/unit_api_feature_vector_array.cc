@@ -205,6 +205,7 @@ TEST_CASE("api: query checks", "[api][index]") {
 
   SECTION("tdbMatrix") {
     auto ck = tdbColMajorMatrix<float>(ctx, db_uri);
+    ck.load();
 
     auto qk = tdbColMajorMatrix<float>(ctx, query_uri, num_queries);
     load(qk);

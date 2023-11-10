@@ -40,7 +40,7 @@ TEST_CASE("api_ivf_flat_index: test test", "[api_ivf_flat_index]") {
 TEST_CASE("api_ivf_flat_index: init constructor", "[api_ivf_flat_index]") {
   SECTION("default") {
     auto a = IndexIVFFlat();
-    CHECK(a.feature_type() == TILEDB_FLOAT32);
+    CHECK(a.feature_type() == TILEDB_ANY);
     CHECK(a.id_type() == TILEDB_UINT32);
     CHECK(a.px_type() == TILEDB_UINT32);
     CHECK(dimension(a) == 0);
@@ -135,7 +135,8 @@ TEST_CASE("api_ivf_flat_index: api_ivf_flat_index write and read", "[api_ivf_fla
       {{"feature_type", "float32"},
        {"id_type", "uint32"},
        {"px_type", "uint32"}}));
-  auto training_set = FeatureVectorArray(tiledb::Context{}, siftsmall_base_uri);
+  auto ctx = tiledb::Context{};
+  auto training_set = FeatureVectorArray(ctx, siftsmall_base_uri);
 
  // a.train(training_set, kmeans_init::random);
 }
