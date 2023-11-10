@@ -41,6 +41,22 @@
 namespace detail::ivf {
 
 /**
+ * @brief Get the top centroids for each query vector.
+ * @tparam C
+ * @tparam Q
+ * @param centroids
+ * @param query
+ * @param nprobe
+ * @param nthreads
+ * @return The top nprobe centroids for each query vector.
+ */
+template <feature_vector_array C, query_vector_array Q>
+auto ivf_top_centroids(
+    const C& centroids, const Q& query, size_t nprobe, size_t nthreads) {
+  return detail::flat::qv_query_heap_0(centroids, query, nprobe, nthreads);
+}
+
+/**
  * In order to execute a query in distributed fashion, we perform a
  * preprocessing step on a single node to determine the total set of
  * partitions that need to be queried.  The resulting set of partitions
@@ -52,20 +68,18 @@ namespace detail::ivf {
  * the results from each compute node and returns the final result.
  *
  */
-auto partition_ivf_index(
-    auto&& centroids, auto&& query, size_t nprobe, size_t nthreads) {
+template <class parts_type, feature_vector_array C, feature_vector_array Q>
+auto partition_ivf_flat_index(
+    const C& centroids, const Q& query, size_t nprobe, size_t nthreads) {
   scoped_timer _{tdb_func__};
 
-  size_t dimension = centroids.num_rows();
-  size_t num_queries = size(query);
+  assert(::num_vectors(centroids) >= nprobe);
 
-  // get closest centroid for each query vector
+  size_t num_queries = num_vectors(query);
+
+  // Get the closest centroid for each query vector
   // There may be duplicates
-  // @todo What is best algorithm to use here?
-  auto top_centroids =
-      detail::flat::qv_query_heap_0(centroids, query, nprobe, nthreads);
-
-  using parts_type = typename decltype(top_centroids)::value_type;
+  auto top_centroids = ivf_top_centroids(centroids, query, nprobe, nthreads);
 
   /*
    * `top_centroids` maps from rank X query index to the centroid *index*.
@@ -81,6 +95,7 @@ auto partition_ivf_index(
   for (size_t j = 0; j < num_queries; ++j) {
     for (size_t p = 0; p < nprobe; ++p) {
       auto tmp = top_centroids(p, j);
+      // assert(tmp == 0);
       centroid_query.emplace(top_centroids(p, j), j);
       active_centroids.emplace(top_centroids(p, j));
     }
