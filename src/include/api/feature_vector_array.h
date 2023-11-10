@@ -27,6 +27,12 @@
  *
  * @section DESCRIPTION
  *
+ * This file defines the `FeatureVectorArray` class, which is a type-erased
+ * wrapper of `tdbMatrix` that allows for runtime polymorphism of the
+ * `tdbMatrix` class template.
+ *
+ * See README.md for details on type erasure.
+ *
  */
 
 #ifndef TILEDB_API_FEATURE_VECTOR_ARRAY_H

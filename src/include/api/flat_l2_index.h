@@ -27,6 +27,11 @@
  *
  * @section DESCRIPTION
  *
+ * This file defines the `IndexFlatL2` class, which is a type-erased
+ * wrapper of `index_flat_l2` that allows for runtime polymorphism of the
+ * `index_flat_l2` class template.
+ *
+ * See README.md for details on type erasure.
  */
 
 #ifndef TILEDB_API_FLAT_L2_INDEX_H

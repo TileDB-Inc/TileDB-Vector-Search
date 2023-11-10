@@ -27,6 +27,11 @@
  *
  * @section DESCRIPTION
  *
+ *  This file defines the `VamanaIndex` class, which is a type-erased
+ * wrapper of `vamana_index` that allows for runtime polymorphism of the
+ * `vamana_index` class template.
+ *
+ * See README.md for details on type erasure.
  */
 
 #ifndef TILEDB_API_VAMANA_INDEX_H

@@ -27,6 +27,12 @@
  *
  * @section DESCRIPTION
  *
+ * This file defines the `FeatureVector` class, which is a type-erased wrapper
+ * of `tdbVector` that allows for runtime polymorphism of the `tdbVector`
+ * class template.
+ *
+ * See README.md for details on type erasure.
+ *
  */
 
 #ifndef TILEDB_API_FEATURE_VECTOR_H

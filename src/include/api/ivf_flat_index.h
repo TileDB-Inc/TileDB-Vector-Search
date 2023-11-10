@@ -26,7 +26,11 @@
  * THE SOFTWARE.
  *
  * @section DESCRIPTION
- *
+ * This file defines the `IndexIVFFlat` class, which is a type-erased
+* wrapper of `index_ivf_flat` that allows for runtime polymorphism of the
+* `index_ivf_flat` class template.
+*
+* See README.md for details on type erasure.
  */
 
 #ifndef TILEDB_API_IVF_FLAT_INDEX_H
