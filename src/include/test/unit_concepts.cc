@@ -33,6 +33,7 @@
 
 #include <catch2/catch_all.hpp>
 #include "concepts.h"
+#include "cpos.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/vector.h"
 #include "utils/print_types.h"
@@ -293,16 +294,16 @@ struct dummy_vectorable {
 
 TEST_CASE("concepts: vectorable", "[concepts]") {
   CHECK(!vectorable<int>);
-  CHECK(!vectorable<std::vector<int>>);
-  CHECK(!vectorable<std::vector<double>>);
+  CHECK(vectorable<std::vector<int>>);
+  CHECK(vectorable<std::vector<double>>);
   CHECK(!vectorable<std::vector<std::vector<int>>>);
-  CHECK(!vectorable<std::array<int, 3>>);
+  CHECK(vectorable<std::array<int, 3>>);
 
   int* d = nullptr;
   CHECK(!vectorable<decltype(d)>);
-  CHECK(!vectorable<std::span<int>>);
+  CHECK(vectorable<std::span<int>>);
 
-  CHECK(!vectorable<Vector<int>>);
+  CHECK(vectorable<Vector<int>>);
 
   CHECK(vectorable<dummy_vectorable>);
 }
@@ -321,15 +322,29 @@ TEST_CASE("concepts: partitionable", "[concepts]") {
   CHECK(!partitionable<Vector<int>>);
 }
 
+
+
 template <class T>
 class dummy_feature_vector : public std::vector<T> {
  public:
-  using std::vector<T>::vector;
+  using base = typename std::vector<T>::vector;
 
+ // If both size and dimension are available, dimension() cpo is ambiguous
+ private:
+  using base::size;
+ public:
   auto dimension() const {
     return this->size();
   }
 };
+
+template <feature_vector R>
+void foo(const R& r){}
+
+void bar() {
+  foo(dummy_feature_vector<int>{});
+}
+
 
 TEST_CASE("concepts: feature_vector", "[concepts]") {
   CHECK(!feature_vector<int>);
