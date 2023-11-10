@@ -247,4 +247,68 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
   }
 }
 
+template <feature_vector_array T>
+void foo(const T& t){}
+
+void bar() {
+  static_assert(feature_vector_array<MatrixView<int, stdx::layout_left>>);
+  foo(MatrixView<int32_t, stdx::layout_left>{});
+}
+
+auto count_intersections(const FeatureVectorArray& a, const FeatureVectorArray& b, size_t k_nn) {
+
+    auto proc_b = [&b, k_nn](auto& aview) {
+      switch (b.feature_type()) {
+        case TILEDB_INT32: {
+          auto bview = MatrixView<int32_t, stdx::layout_left>{
+              (int32_t*)b.data(), extents(b)[0], extents(b)[1]};
+          return count_intersections(aview, bview, k_nn);
+        }
+        case TILEDB_UINT32: {
+          auto bview = MatrixView<uint32_t, stdx::layout_left>{
+              (uint32_t*)b.data(), extents(b)[0], extents(b)[1]};
+          return count_intersections(aview, bview, k_nn);
+        }
+        case TILEDB_INT64: {
+          auto bview = MatrixView<int64_t, stdx::layout_left>{
+              (int64_t*)b.data(), extents(b)[0], extents(b)[1]};
+          return count_intersections(aview, bview, k_nn);
+        }
+        case TILEDB_UINT64: {
+          auto bview = MatrixView<uint64_t, stdx::layout_left>{
+              (uint64_t*)b.data(), extents(b)[0], extents(b)[1]};
+          return count_intersections(aview, bview, k_nn);
+        }
+        default:
+          throw std::runtime_error("Unsupported attribute type");
+      }
+    };
+
+    switch (a.feature_type()) {
+      case TILEDB_INT32: {
+        auto aview = MatrixView<int32_t, stdx::layout_left>{
+            (int32_t*)a.data(), extents(a)[0], extents(a)[1]};
+        return proc_b(aview);
+      }
+      case TILEDB_UINT32: {
+        auto aview = MatrixView<uint32_t, stdx::layout_left>{
+            (uint32_t*)a.data(), extents(a)[0], extents(a)[1]};
+        return proc_b(aview);
+      }
+      case TILEDB_INT64: {
+        auto aview = MatrixView<int64_t, stdx::layout_left>{
+            (int64_t*)a.data(), extents(a)[0], extents(a)[1]};
+        return proc_b(aview);
+      }
+      case TILEDB_UINT64: {
+        auto aview = MatrixView<uint64_t, stdx::layout_left>{
+            (uint64_t*)a.data(), extents(a)[0], extents(a)[1]};
+        return proc_b(aview);
+      }
+      default:
+        throw std::runtime_error("Unsupported attribute type");
+    }
+
+}
+
 #endif  // TILEDB_API_FEATURE_VECTOR_ARRAY_H

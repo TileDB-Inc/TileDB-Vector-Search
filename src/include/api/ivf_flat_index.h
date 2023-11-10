@@ -209,8 +209,14 @@ class IndexIVFFlat {
     nlist_ = index_->num_partitions();
   }
 
-  void add() const {
-    // @todo
+  void add(const FeatureVectorArray& data_set) {
+    if (feature_datatype_ != data_set.feature_type()) {
+      throw std::runtime_error(
+          "Feature datatype mismatch: " +
+          datatype_to_string(feature_datatype_) + " != " +
+          datatype_to_string(data_set.feature_type()));
+    }
+        index_->add(data_set);
   }
 
   void add_with_ids() const {
@@ -222,6 +228,11 @@ class IndexIVFFlat {
 
     if (feature_datatype_ == TILEDB_ANY) {
       feature_datatype_ = training_set.feature_type();
+    } else if (feature_datatype_ != training_set.feature_type()) {
+      throw std::runtime_error(
+          "Feature datatype mismatch: " +
+          datatype_to_string(feature_datatype_) + " != " +
+          datatype_to_string(training_set.feature_type()));
     }
 
     /**
@@ -280,7 +291,21 @@ class IndexIVFFlat {
           nlist_, max_iter_, tolerance_, num_threads_);
     }
 
-    return index_->train(training_set, init);
+    index_->train(training_set, init);
+
+    if (dimension_ != 0 && dimension_ != index_->dimension()) {
+      throw std::runtime_error(
+          "Dimension mismatch: " + std::to_string(dimension_) + " != " +
+          std::to_string(index_->dimension()));
+    }
+    dimension_ = index_->dimension();
+
+    if (nlist_ != 0 && nlist_ != index_->num_partitions()) {
+      throw std::runtime_error(
+          "nlist mismatch: " + std::to_string(nlist_) + " != " +
+          std::to_string(index_->num_partitions()));
+    }
+    nlist_ = index_->num_partitions();
   }
 
   void save(const std::string& group_uri, bool overwrite) const {
@@ -312,9 +337,15 @@ class IndexIVFFlat {
     index_->update(vectors_uri, ids, options);
   }
 
-  virtual void remove(const IdVector& ids) const {
+   void remove(const IdVector& ids) const {
     index_->remove(ids);
   }
+
+   void write_index(
+      const std::string& group_uri, bool overwrite = false) const {
+    index_->write_index(group_uri, overwrite);
+  }
+
 
   constexpr auto dimension() const {
     return dimension_; //::dimension(*index_);
@@ -356,6 +387,8 @@ class IndexIVFFlat {
 
     virtual void train(const FeatureVectorArray& training_set, kmeans_init init = kmeans_init::random) = 0;
 
+    virtual void add(const FeatureVectorArray& data_set) = 0;
+
     [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
     query_infinite_ram(
         const QueryVectorArray& vectors, size_t top_k, size_t nprobe) = 0;
@@ -374,10 +407,10 @@ class IndexIVFFlat {
         const std::optional<IdVector>& ids,
         const std::optional<UpdateOptions>& options) const = 0;
 
+    virtual void remove(const IdVector& ids) const = 0;
+
     virtual void write_index(
         const std::string& group_uri, bool overwrite) const = 0;
-
-    virtual void remove(const IdVector& ids) const = 0;
 
     [[nodiscard]] virtual size_t dimension() const = 0;
 
@@ -443,6 +476,14 @@ class IndexIVFFlat {
       impl_index_.train(fspan, init);
     }
 
+    void add(const FeatureVectorArray& data_set) override {
+      using feature_type = typename T::value_type;
+      auto fspan = MatrixView<feature_type, stdx::layout_left>{
+          (feature_type*)data_set.data(),
+          extents(data_set)[0],
+          extents(data_set)[1]};
+      impl_index_.add(fspan);
+    }
 
     [[nodiscard]] auto query_infinite_ram(
         const tiledb::Context& ctx, const URI& uri, size_t top_k, size_t nprobe) {

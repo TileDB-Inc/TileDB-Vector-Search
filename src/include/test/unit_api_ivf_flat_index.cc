@@ -130,13 +130,72 @@ TEST_CASE("api_ivf_flat_index: init constructor", "[api_ivf_flat_index]") {
   }
 }
 
+TEST_CASE("api_ivf_flat_index: infer feature type", "[api_ivf_flat_index]") {
+  auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
+      {{"id_type", "uint32"},
+       {"px_type", "uint32"}}));
+  auto ctx = tiledb::Context{};
+  auto training_set = FeatureVectorArray(ctx, siftsmall_base_uri);
+  a.train(training_set, kmeans_init::random);
+  CHECK(a.feature_type() == TILEDB_FLOAT32);
+  CHECK(a.id_type() == TILEDB_UINT32);
+  CHECK(a.px_type() == TILEDB_UINT32);
+}
+
+TEST_CASE("api_ivf_flat_index: infer dimension", "[api_ivf_flat_index]") {
+  auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
+      {{"id_type", "uint32"},
+       {"px_type", "uint32"}}));
+  auto ctx = tiledb::Context{};
+  auto training_set = FeatureVectorArray(ctx, siftsmall_base_uri);
+  CHECK(dimension(a) == 0);
+  a.train(training_set, kmeans_init::random);
+  CHECK(a.feature_type() == TILEDB_FLOAT32);
+  CHECK(a.id_type() == TILEDB_UINT32);
+  CHECK(a.px_type() == TILEDB_UINT32);
+  CHECK(dimension(a) == 128);
+}
+
 TEST_CASE("api_ivf_flat_index: api_ivf_flat_index write and read", "[api_ivf_flat_index]") {
+  auto ctx = tiledb::Context{};
+  std::string api_ivf_flat_index_uri = "/tmp/api_ivf_flat_index";
+
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
       {{"feature_type", "float32"},
        {"id_type", "uint32"},
        {"px_type", "uint32"}}));
-  auto ctx = tiledb::Context{};
   auto training_set = FeatureVectorArray(ctx, siftsmall_base_uri);
+  a.train(training_set, kmeans_init::random);
+  a.add(training_set);
+  a.write_index(api_ivf_flat_index_uri, true);
 
- // a.train(training_set, kmeans_init::random);
+  auto b = IndexIVFFlat(ctx, api_ivf_flat_index_uri);
+
+  CHECK(dimension(a) == dimension(b));
+  CHECK(a.feature_type() == b.feature_type());
+  CHECK(a.id_type() == b.id_type());
+  CHECK(a.px_type() == b.px_type());
+
+}
+
+TEST_CASE("api_ivf_flat_index: build index and query in place infinite", "[api_ivf_flat_index]") {
+  auto ctx = tiledb::Context{};
+  size_t k_nn = 10;
+  size_t nprobe = 55;
+
+  auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
+      {{"id_type", "uint32"},
+       {"px_type", "uint32"}}));
+  auto training_set = FeatureVectorArray(ctx, siftsmall_base_uri);
+  training_set.load();
+  auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
+  query_set.load();
+  auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
+  groundtruth_set.load();
+  a.train(training_set, kmeans_init::random);
+  a.add(training_set);
+  auto&& [s, t] = a.query_infinite_ram(query_set, k_nn, nprobe);
+
+  auto intersections = count_intersections(t, groundtruth_set, k_nn);
+  auto nt = num_vectors(t);
 }

@@ -107,14 +107,14 @@ class ivf_flat_index {
 
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
-  tiledb_datatype_t ptx_datatype_{TILEDB_ANY};
+  tiledb_datatype_t px_datatype_{TILEDB_ANY};
 
   //  Metadata for the class. index_kind_ is handled separately
   using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
   std::vector<metadata_element> metadata{
       {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
       {"id_datatype", &id_datatype_, TILEDB_UINT32},
-      {"ptx_datatype", &ptx_datatype_, TILEDB_UINT32},
+      {"px_datatype", &px_datatype_, TILEDB_UINT32},
       {"dimension", &dimension_, TILEDB_UINT64},
       {"num_partitions", &nlist_, TILEDB_UINT64},
       {"max_iter", &max_iter_, TILEDB_UINT64},
@@ -162,7 +162,7 @@ class ivf_flat_index {
       , tol_(tol)
       , feature_datatype_(type_to_tiledb_t<feature_type>)
       , id_datatype_(type_to_tiledb_t<id_type>)
-      , ptx_datatype_(type_to_tiledb_t<indices_type>)
+      , px_datatype_(type_to_tiledb_t<indices_type>)
   // , centroids_(dim, nlist)
   {
     if (num_threads && *num_threads > 0) {
@@ -574,7 +574,8 @@ class ivf_flat_index {
    *
    * @todo Create and write index that is larger than RAM
    */
-  void add(const ColMajorMatrix<T>& training_set) {
+   template <feature_vector_array V>
+  void add(const V& training_set) {
     auto partition_labels =
         detail::flat::qv_partition(centroids_, training_set, num_threads_);
 

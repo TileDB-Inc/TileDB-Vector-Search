@@ -61,6 +61,8 @@
 #include "utils/fixed_min_heap.h"
 #include "utils/timer.h"
 
+#include "utils/print_types.h"
+
 // ----------------------------------------------------------------------------
 // Helper utilities
 //----------------------------------------------------------------------------
@@ -590,7 +592,11 @@ bool validate_top_k(TK& top_k, const G& g) {
   return true;
 }
 
-auto count_intersections(auto&& I, auto&& groundtruth, size_t k_nn) {
+template <feature_vector_array U, feature_vector_array V>
+auto count_intersections(const U& I, const V& groundtruth, size_t k_nn) {
+
+  //print_types(I, groundtruth);
+
   size_t total_intersected = 0;
 
   if constexpr (feature_vector_array<std::remove_cvref_t<decltype(I)>>) {
