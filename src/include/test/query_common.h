@@ -202,6 +202,8 @@ static std::string siftsmall_groundtruth_uri{
 static std::string siftsmall_query_uri{m1_root + "siftsmall/siftsmall_query"};
 static std::string siftsmall_flatIVF_index_uri{
     m1_root + "siftsmall/flatIVF_index_siftsmall_base"};
+static std::string siftsmall_flatIVF_index_uri_32_64{
+    m1_root + "siftsmall/flatIVF_index_siftsmall_base_32_64"};
 /*
  * siftsmall_base
  ArraySchema(

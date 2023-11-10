@@ -319,8 +319,8 @@ class IndexIVFFlat {
   }
 
   [[nodiscard]] auto query_finite_ram(
-      const QueryVectorArray& vectors, size_t top_k, size_t nprobe) const {
-    return index_->query_finite_ram(vectors, top_k, nprobe);
+      const QueryVectorArray& vectors, size_t top_k, size_t nprobe, size_t upper_bound = 0) const {
+    return index_->query_finite_ram(vectors, top_k, nprobe, upper_bound);
   }
 
   void update(
@@ -395,7 +395,7 @@ class IndexIVFFlat {
 
     [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
     query_finite_ram(
-        const QueryVectorArray& vectors, size_t top_k, size_t nprobe) = 0;
+        const QueryVectorArray& vectors, size_t top_k, size_t nprobe, size_t upper_bound) = 0;
 
     virtual void update(
         const FeatureVectorArray&,
@@ -540,7 +540,7 @@ class IndexIVFFlat {
 
     [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray>
     query_finite_ram(
-        const QueryVectorArray& vectors, size_t k_nn, size_t nprobe) override {
+        const QueryVectorArray& vectors, size_t k_nn, size_t nprobe, size_t upper_bound = 0) override {
       // @todo using index_type = size_t;
 
       auto dtype = vectors.feature_type();
@@ -552,7 +552,7 @@ class IndexIVFFlat {
               (float*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] = impl_index_.query_finite_ram(qspan, k_nn, nprobe);
+          auto [s, t] = impl_index_.query_finite_ram(qspan, k_nn, nprobe, upper_bound);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -562,7 +562,7 @@ class IndexIVFFlat {
               (uint8_t*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] = impl_index_.query_finite_ram(qspan, k_nn, nprobe);
+          auto [s, t] = impl_index_.query_finite_ram(qspan, k_nn, nprobe, upper_bound);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};

@@ -109,12 +109,16 @@ class FeatureVectorArray {
       default:
         throw std::runtime_error("Unsupported attribute type");
     }
+    vector_array->load();
   }
 
+  // A FeatureVectorArray is always loaded
+#if 0
   auto load() const {
     // return _cpo::load(*vector_array);
     return vector_array->load();
   }
+#endif
 
   // @todo fix so niebloids work
   [[nodiscard]] auto data() const {
@@ -175,7 +179,7 @@ class FeatureVectorArray {
       return _cpo::extents(impl_vector_array);
     }
     bool load() override {
-      return _cpo::load(impl_vector_array);
+     return _cpo::load(impl_vector_array);
     }
 
    private:

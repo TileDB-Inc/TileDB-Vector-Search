@@ -787,9 +787,9 @@ class ivf_flat_index {
       size_t nprobe,
       size_t upper_bound = 0) {
     if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
-      std::throw_with_nested(
+      throw
           std::runtime_error("Vectors are already loaded. Cannot load twice. "
-                             "Cannot do finite query on in-memory index."));
+                             "Cannot do finite query on in-memory index.");
     }
     auto&& [active_partitions, active_queries] =
         read_index_finite(query_vectors, nprobe, upper_bound);
