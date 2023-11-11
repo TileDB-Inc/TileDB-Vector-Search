@@ -99,10 +99,14 @@ class empty_timer {
  * on destruction.
  */
 class life_timer : public empty_timer, public ms_timer {
+ private:
+  bool debug_{false};
+
  public:
   explicit life_timer(const std::string& msg = "", bool debug = false)
-      : ms_timer(msg) {
-    if (debug) {
+      : ms_timer(msg)
+      , debug_(debug) {
+    if (debug_) {
       std::cout << "# [ " + msg + " ]: starting timer" << std::endl;
     }
   }
@@ -111,8 +115,10 @@ class life_timer : public empty_timer, public ms_timer {
     stop();
 
     if (ms_timer::msg_ != "") {
-      std::cout << "# [ " + msg_ + " ]: ";
-      std::cout << elapsed() << " ms" << std::endl;
+      if (debug_) {
+        std::cout << "# [ " + msg_ + " ]: ";
+        std::cout << elapsed() << " ms" << std::endl;
+      }
     }
 
     //    if (ms_timer::msg_ != "") {
@@ -123,7 +129,10 @@ class life_timer : public empty_timer, public ms_timer {
   }
 };
 
-std::ostream& operator<<(std::ostream& os, const seconds_timer& t) {
+namespace {
+
+[[maybe_unused]] std::ostream& operator<<(
+    std::ostream& os, const seconds_timer& t) {
   std::string name = t.name();
   if (t.name() != "") {
     os << "# [ " + t.name() + " ]: ";
@@ -132,7 +141,7 @@ std::ostream& operator<<(std::ostream& os, const seconds_timer& t) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const ms_timer& t) {
+[[maybe_unused]] std::ostream& operator<<(std::ostream& os, const ms_timer& t) {
   std::string name = t.name();
   if (t.name() != "") {
     os << "# [ " + t.name() + " ]: ";
@@ -142,7 +151,7 @@ std::ostream& operator<<(std::ostream& os, const ms_timer& t) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const us_timer& t) {
+[[maybe_unused]] std::ostream& operator<<(std::ostream& os, const us_timer& t) {
   std::string name = t.name();
   if (t.name() != "") {
     os << "# [ " + t.name() + " ]: ";
@@ -150,6 +159,8 @@ std::ostream& operator<<(std::ostream& os, const us_timer& t) {
   os << t.elapsed() << " us";
   return os;
 }
+
+}  // anonymous namespace
 
 #ifndef tdb_func__
 #ifdef __cpp_lib_source_location
