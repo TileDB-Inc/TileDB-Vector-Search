@@ -1,6 +1,8 @@
-import tiledb
-import numpy as np
 import io
+
+import numpy as np
+
+import tiledb
 
 
 def _load_vecs_t(uri, dtype, ctx_or_config=None):

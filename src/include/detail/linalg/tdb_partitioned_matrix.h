@@ -59,7 +59,6 @@
 
 namespace stdx {
 using namespace Kokkos;
-using namespace Kokkos::Experimental;
 }  // namespace stdx
 
 /**
@@ -182,11 +181,12 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       const std::vector<parts_type>& in_parts,
       const std::string& ids_uri,
       // std::vector<shuffled_ids_type>& shuffled_ids,
-      size_t upper_bound)
+      size_t upper_bound,
+      const tiledb::TemporalPolicy temporal_policy = {})
       : constructor_timer{tdb_func__ + std::string{" constructor"}}
       , uri_{uri}
       , ctx_{ctx}
-      , array_{tiledb_helpers::open_array(tdb_func__, ctx_, uri, TILEDB_READ)}
+      , array_{tiledb_helpers::open_array(tdb_func__, ctx_, uri, TILEDB_READ, temporal_policy)}
       , schema_{array_.schema()}
       , ids_array_{tiledb_helpers::open_array(
             tdb_func__, ctx_, ids_uri, TILEDB_READ)}
