@@ -96,19 +96,24 @@ TEMPLATE_TEST_CASE(
   auto b = FeatureVectorArray(a);
 
   CHECK(b.feature_type() == t);
+  CHECK(b.feature_size() == sizeof(TestType));
 
   auto c = FeatureVectorArray{ColMajorMatrix<TestType>{17, 3}};
   CHECK(c.feature_type() == t);
+  CHECK(c.feature_size() == sizeof(TestType));
 
   auto f = ColMajorMatrix<TestType>{3, 17};
   auto d = FeatureVectorArray{std::move(f)};
   CHECK(d.feature_type() == t);
+  CHECK(d.feature_size() == sizeof(TestType));
 
   auto e = FeatureVectorArray{std::move(ColMajorMatrix<TestType>{3, 9})};
   CHECK(e.feature_type() == t);
+  CHECK(e.feature_size() == sizeof(TestType));
 
   auto g = std::move(e);
   CHECK(g.feature_type() == t);
+  CHECK(g.feature_size() == sizeof(TestType));
 }
 
 TEST_CASE("api: tdbMatrix constructors and destructors", "[api]") {

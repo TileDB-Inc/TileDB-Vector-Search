@@ -375,12 +375,24 @@ class IndexIVFFlat {
     return feature_datatype_;
   }
 
+  constexpr auto feature_type_string() const {
+    return datatype_to_string(feature_datatype_);
+  }
+
   constexpr auto id_type() const {
     return id_datatype_;
   }
 
+  constexpr auto id_type_string() const {
+    return datatype_to_string(id_datatype_);
+  }
+
   constexpr auto px_type() const {
     return px_datatype_;
+  }
+
+  constexpr auto px_type_string() const {
+    return datatype_to_string(px_datatype_);
   }
 
   /**

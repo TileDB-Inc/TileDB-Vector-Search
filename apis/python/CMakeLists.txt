@@ -50,8 +50,9 @@ find_package(pybind11 CONFIG REQUIRED)
 set(VSPY_TARGET_NAME _tiledbvspy)
 
 python_add_library(${VSPY_TARGET_NAME} MODULE
-    "src/tiledb/vector_search/module.cc"
-    "src/tiledb/vector_search/kmeans.cc"
+    #"src/tiledb/vector_search/module.cc"
+    "src/tiledb/vector_search/module2.cc"
+    #"src/tiledb/vector_search/kmeans.cc"
     WITH_SOABI)
 
 target_link_libraries(${VSPY_TARGET_NAME}
@@ -59,7 +60,8 @@ target_link_libraries(${VSPY_TARGET_NAME}
     pybind11::headers
     mdspan
     kmeans_lib
-    TileDB::tiledb_shared)
+#    TileDB::tiledb_shared
+)
 
 target_compile_definitions(${VSPY_TARGET_NAME} PRIVATE TILEDBVS_ENABLE_STATS VERSION_INFO=${PROJECT_VERSION})
 

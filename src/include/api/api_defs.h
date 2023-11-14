@@ -44,4 +44,6 @@ using StringMap = std::map<std::string, std::string>;
 using IndexOptions = std::map<std::string, std::string>;
 using UpdateOptions = std::map<std::string, std::string>;
 
+
+
 #endif  // TILEDB_API_API_DEFS_H

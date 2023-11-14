@@ -54,11 +54,24 @@ auto get_array_datatype(const tiledb::Array& array) {
   throw std::runtime_error("Could not determine datatype of array attributes");
 }
 
+// @todo Implement this with a map
 tiledb_datatype_t string_to_datatype(const std::string& str) {
   if (str == "float32") {
     return TILEDB_FLOAT32;
   }
+  if (str == "float64") {
+    return TILEDB_FLOAT64;
+  }
+  if (str == "int8") {
+    return TILEDB_INT8;
+  }
   if (str == "uint8") {
+    return TILEDB_UINT8;
+  }
+  if (str == "int16") {
+    return TILEDB_INT8;
+  }
+  if (str == "uint16") {
     return TILEDB_UINT8;
   }
   if (str == "int32") {
@@ -80,6 +93,10 @@ std::string datatype_to_string(tiledb_datatype_t datatype) {
   switch (datatype) {
     case TILEDB_FLOAT32:
       return "float32";
+    case TILEDB_FLOAT64:
+      return "float64";
+    case TILEDB_INT8:
+      return "int8";
     case TILEDB_UINT8:
       return "uint8";
     case TILEDB_INT32:
@@ -93,6 +110,29 @@ std::string datatype_to_string(tiledb_datatype_t datatype) {
     default:
       throw std::runtime_error("Unsupported datatype");
   }
+}
+
+size_t datatype_to_size(tiledb_datatype_t datatype) {
+        switch (datatype) {
+        case TILEDB_FLOAT32:
+        return sizeof(float);
+        case TILEDB_FLOAT64:
+        return sizeof(double);
+        case TILEDB_INT8:
+        return sizeof(int8_t);
+        case TILEDB_UINT8:
+        return sizeof(uint8_t);
+        case TILEDB_INT32:
+        return sizeof(int32_t);
+        case TILEDB_UINT32:
+        return sizeof(uint32_t);
+        case TILEDB_INT64:
+        return sizeof(int64_t);
+        case TILEDB_UINT64:
+        return sizeof(uint64_t);
+        default:
+        throw std::runtime_error("Unsupported datatype");
+        }
 }
 
 #endif  // TILEDB_TDB_DEFS_H

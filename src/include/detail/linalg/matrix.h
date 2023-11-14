@@ -158,7 +158,16 @@ public MatrixView<T, LayoutPolicy, I> {
   Matrix(const Matrix&) = delete;
   Matrix& operator=(const Matrix&) = delete;
 
+// Some diagnostic debugging to track move constructors
+#if 1
   Matrix(Matrix&&) = default;
+#else
+  Matrix(Matrix&& rhs) {
+    std::cout << "Move constructor\n";
+    *this = std::move(rhs);
+  }
+#endif
+
   Matrix& operator=(Matrix&& rhs) = default;
   virtual ~Matrix() = default;
 
@@ -174,6 +183,7 @@ public MatrixView<T, LayoutPolicy, I> {
       , storage_{new T[num_rows_ * num_cols_]}
 #endif
   {
+    // std::cout << "Empty constructor\n";
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
   }
 
@@ -185,6 +195,7 @@ public MatrixView<T, LayoutPolicy, I> {
       : num_rows_(nrows)
       , num_cols_(ncols)
       , storage_{std::move(storage)} {
+    // std::cout << "Constructor from storage\n";
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
   }
 

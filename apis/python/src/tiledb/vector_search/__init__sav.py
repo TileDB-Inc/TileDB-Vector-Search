@@ -1,12 +1,3 @@
-
-
-from  ._tiledbvspy import FeatureVector
-from  ._tiledbvspy import FeatureVectorArray
-from  ._tiledbvspy import IndexFlatL2
-from  ._tiledbvspy import IndexIVFFlat
-from  ._tiledbvspy import Ctx
-
-'''
 # Re-import mode from cloud.dag
 from tiledb.cloud.dag.mode import Mode
 
@@ -28,7 +19,7 @@ except ImportError:
 
 __all__ = [
     FeatureVector
-]
+    ]
 yack= [
     "FlatIndex",
     "IVFFlatIndex",
@@ -47,4 +38,3 @@ yack= [
     "partition_ivf_index",
     "utils",
 ]
-'''

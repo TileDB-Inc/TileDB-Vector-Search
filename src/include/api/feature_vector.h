@@ -58,6 +58,29 @@ class FeatureVector {
         typename std::remove_cvref_t<T>::value_type>::tiledb_type;
   }
 
+
+  /**
+   * @brief Construct from a dtype string and size.
+   * @param size
+   * @param dtype
+   */
+  FeatureVector(size_t N, const std::string& dtype) {
+    feature_type_ = string_to_datatype(dtype);
+    vector_from_datatype(N);
+  }
+
+  /**
+   * @brief Construct from a dtype string and size.
+   * @param size
+   * @param dtype
+   */
+  FeatureVector(size_t N, void*, const std::string& dtype) {
+    feature_type_ = string_to_datatype(dtype);
+
+    // Need constructor that takes void* and size and aliases the void*
+    vector_from_datatype(N);
+  }
+
   /**
    * @brief Constructs a feature vector from an array URI.
    * @param ctx
@@ -68,9 +91,37 @@ class FeatureVector {
     feature_type_ = get_array_datatype(*array);
     array->close();  // @todo create Matrix constructor that takes opened array
 
-    /*
-     * Dispatch to the appropriate concrete class based on the datatype.
-     */
+    tdb_vector_from_datatype(ctx, uri);
+  }
+
+  /*
+   * Dispatch to the appropriate concrete class based on the datatype.
+   */
+  void vector_from_datatype(size_t N) {
+    switch (feature_type_) {
+      case TILEDB_FLOAT32:
+        vector_ = std::make_unique<vector_impl<Vector<float>>>(N);
+        break;
+      case TILEDB_UINT8:
+        vector_ = std::make_unique<vector_impl<Vector<uint8_t>>>(N);
+        break;
+      case TILEDB_INT32:
+        vector_ = std::make_unique<vector_impl<Vector<int32_t>>>(N);
+        break;
+      case TILEDB_UINT32:
+        vector_ = std::make_unique<vector_impl<Vector<uint32_t>>>(N);
+        break;
+      case TILEDB_UINT64:
+        vector_ = std::make_unique<vector_impl<Vector<uint64_t>>>(N);
+        break;
+      default:
+        throw std::runtime_error("Unsupported attribute type");
+    }
+  }
+  /*
+   * Dispatch to the appropriate concrete class based on the datatype.
+   */
+  void tdb_vector_from_datatype(const tiledb::Context& ctx, const std::string& uri) {
     switch (feature_type_) {
       case TILEDB_FLOAT32:
         vector_ = std::make_unique<vector_impl<tdbVector<float>>>(ctx, uri);
@@ -117,6 +168,10 @@ class FeatureVector {
     return feature_type_;
   }
 
+  [[nodiscard]] std::string feature_type_string() const {
+    return datatype_to_string(feature_type_);
+  }
+
   /**
    * Non-type parameterized base class (for type erasure).
    */
@@ -135,6 +190,8 @@ class FeatureVector {
   struct vector_impl : vector_base {
     explicit vector_impl(T&& t)
         : vector_(std::forward<T>(t)) {
+    }
+    explicit vector_impl(size_t size) : vector_(size) {
     }
     vector_impl(const tiledb::Context& ctx, const std::string& uri)
         : vector_(ctx, uri) {

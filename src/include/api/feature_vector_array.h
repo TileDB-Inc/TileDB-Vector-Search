@@ -64,6 +64,7 @@ class FeatureVectorArray {
             std::make_unique<vector_array_impl<T>>(std::forward<T>(obj))) {
     feature_type_ = tiledb::impl::type_to_tiledb<
         typename std::remove_cvref_t<T>::value_type>::tiledb_type;
+    feature_size_ = datatype_to_size(feature_type_);
    }
 
   FeatureVectorArray(
@@ -73,6 +74,7 @@ class FeatureVectorArray {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
     feature_type_ = get_array_datatype(*array);
     array->close();  // @todo create Matrix constructor that takes opened array
+    feature_size_ = datatype_to_size(feature_type_);
 
     /**
      * Row and column orientation are kind of irrelevant?  We could dispatch
@@ -118,6 +120,43 @@ class FeatureVectorArray {
     vector_array->load();
   }
 
+  FeatureVectorArray(size_t rows, size_t cols, const std::string type_string) {
+    feature_type_ = string_to_datatype(type_string);
+    feature_size_ = datatype_to_size(feature_type_);
+        switch (feature_type_) {
+      case TILEDB_FLOAT32:
+        vector_array =
+            std::make_unique<vector_array_impl<ColMajorMatrix<float>>>(
+                rows, cols);
+        break;
+      case TILEDB_UINT8:
+        vector_array =
+            std::make_unique<vector_array_impl<ColMajorMatrix<uint8_t>>>(
+                 rows, cols);
+        break;
+      case TILEDB_INT32:
+        vector_array =
+            std::make_unique<vector_array_impl<ColMajorMatrix<int32_t>>>(
+                 rows, cols);
+        break;
+      case TILEDB_UINT32:
+        vector_array =
+            std::make_unique<vector_array_impl<ColMajorMatrix<uint32_t>>>(
+                rows, cols);
+        break;
+      case TILEDB_INT64:
+        vector_array =
+            std::make_unique<vector_array_impl<ColMajorMatrix<int64_t>>>(
+                 rows, cols);
+        break;
+      case TILEDB_UINT64:
+        vector_array =
+            std::make_unique<vector_array_impl<ColMajorMatrix<uint64_t>>>(
+                 rows, cols);
+        break;
+    }
+  }
+
   // A FeatureVectorArray is always loaded
 #if 0
   auto load() const {
@@ -148,6 +187,14 @@ class FeatureVectorArray {
     return feature_type_;
   }
 
+  [[nodiscard]] std::string feature_type_string() const {
+    return datatype_to_string(feature_type_);
+  }
+  
+  [[nodiscard]] size_t feature_size() const {
+    return feature_size_;
+  }
+
   /**
    * Non-type parameterized base class (for type erasure).
    */
@@ -172,6 +219,10 @@ class FeatureVectorArray {
         const tiledb::Context& ctx, const std::string& uri, size_t num_vectors)
         : impl_vector_array(ctx, uri, num_vectors) {
     }
+    vector_array_impl(
+        size_t rows, size_t cols)
+        : impl_vector_array(rows, cols) {
+    }
     [[nodiscard]] void* data() const override {
       return _cpo::data(impl_vector_array);
     }
@@ -194,6 +245,7 @@ class FeatureVectorArray {
 
  private:
   tiledb_datatype_t feature_type_{TILEDB_ANY};
+  size_t feature_size_{0};
 
   // @todo const????
   std::unique_ptr</*const*/ vector_array_base> vector_array;
