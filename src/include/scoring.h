@@ -47,7 +47,6 @@
 #include <cmath>
 #include <future>
 #include <iostream>
-#include <limits>
 #include <memory>
 #include <numeric>
 #include <queue>
@@ -59,6 +58,9 @@
 #include "linalg.h"
 #include "utils/fixed_min_heap.h"
 #include "utils/timer.h"
+
+
+
 
 // ----------------------------------------------------------------------------
 // Helper utilities
@@ -171,43 +173,6 @@ inline auto dot(U const& a, V const& b) {
 }
 
 // ----------------------------------------------------------------------------
-// Functions for dealing with the case of when size of scores < k_nn
-// ----------------------------------------------------------------------------
-
-// One-dimensional case
-template <class U>
-void pad_with_sentinels(size_t start, U& top_k) {
-  using index_type = typename U::value_type;
-  for (size_t i = start; i < top_k.size(); ++i) {
-    top_k[i] = std::numeric_limits<index_type>::max();
-  }
-}
-
-// One-dimensional case
-template <class U, class V>
-void pad_with_sentinels(size_t start, U& top_k, V& top_k_scores) {
-  using score_type = typename V::value_type;
-  using index_type = typename U::value_type;
-  for (size_t i = start; i < top_k.size(); ++i) {
-    top_k[i] = std::numeric_limits<index_type>::max();
-    top_k_scores[i] = std::numeric_limits<score_type>::max();
-  }
-}
-
-// One-dimensional case
-template <class U>
-void trim_top_k(size_t start, U& top_k) {
-  top_k.resize(start);
-}
-
-// One-dimensional case
-template <class U, class V>
-void trim_top_k(size_t start, U& top_k, V& top_k_scores) {
-  top_k.resize(start);
-  top_k_scores.resize(start);
-}
-
-// ----------------------------------------------------------------------------
 // Functions for extracting top k neighbors from a raw scores matrix
 // ----------------------------------------------------------------------------
 
@@ -222,30 +187,19 @@ void trim_top_k(size_t start, U& top_k, V& top_k_scores) {
  */
 
 template <class V, class L>
-auto get_top_k_from_scores(V const& scores, L&& top_k, size_t k = 0) {
-  using value_type = typename V::value_type;
-  using index_type = typename std::remove_reference_t<L>::value_type;
+auto get_top_k_from_scores(V const& scores, L&& top_k, int k) {
+  fixed_min_pair_heap<float, unsigned> s(k);
 
-  auto num_scores = size(scores);
-
-  if (k == 0) {
-    k = num_scores;
-  }
-
-  fixed_min_pair_heap<value_type, index_type> s(k);
-
+  auto num_scores = scores.size();
   for (size_t i = 0; i < num_scores; ++i) {
     s.insert(scores[i], i);
   }
   get_top_k_from_heap(s, top_k);
 }
 
-// Note that we cannot pad top_k with sentinels here because we don't know the
-// size of the valid ranges in the scores matrix.
-// @todo pad top_k with sentinel if scores has sentinel
-template <class I, class T>
+template <class T>
 auto get_top_k_from_scores(const ColMajorMatrix<T>& scores, int k_nn) {
-  auto top_k = ColMajorMatrix<I>(k_nn, scores.num_cols());
+  auto top_k = ColMajorMatrix<unsigned>(k_nn, scores.num_cols());
   for (size_t j = 0; j < scores.num_cols(); ++j) {
     get_top_k_from_scores(scores[j], top_k[j], k_nn);
   }
@@ -285,18 +239,15 @@ void consolidate_scores(std::vector<std::vector<Heap>>& min_scores) {
  * @param top_k
  */
 template <class Heap>
-inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k)
-  requires(!std::is_same_v<Heap, std::vector<Heap>>)
-{
+inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k) requires(
+    !std::is_same_v<Heap, std::vector<Heap>>) {
   std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&& b) {
     return std::get<0>(a) < std::get<0>(b);
   });
-  auto k_nn = std::min(size(min_scores), size(top_k));
   std::transform(
-      begin(min_scores), begin(min_scores) + k_nn, begin(top_k), ([](auto&& e) {
+      begin(min_scores), end(min_scores), begin(top_k), ([](auto&& e) {
         return std::get<1>(e);
       }));
-  pad_with_sentinels(k_nn, top_k);
 }
 
 /**
@@ -310,17 +261,14 @@ inline void get_top_k_from_heap(Heap& min_scores, auto&& top_k)
  * @return a Matrix of the top_k scores for each query.  Each column corresponds
  * to a query,
  */
-template <class Heap>
+template <class Heap, class Index = size_t>
 inline auto get_top_k(std::vector<Heap>& scores, size_t k_nn) {
-  // using score_type = heap_score_t<Heap>;
-  using index_type = heap_index_t<Heap>;
-
   auto num_queries = size(scores);
 
-  ColMajorMatrix<index_type> top_k(k_nn, num_queries);
+  ColMajorMatrix<Index> top_k(k_nn, num_queries);
 
   for (size_t j = 0; j < num_queries; ++j) {
-    get_top_k_from_heap(scores[j], top_k[j]);  // Will pad with sentinels
+    get_top_k_from_heap(scores[j], top_k[j]);
   }
   return top_k;
 }
@@ -336,7 +284,7 @@ inline auto get_top_k(std::vector<Heap>& scores, size_t k_nn) {
  * @return Matrix of the top k scores for each query.  Each column corresponds
  * to a query.
  */
-template <class Heap>
+template <class Heap, class Index = size_t>
 inline auto get_top_k(std::vector<std::vector<Heap>>& scores, size_t k_nn) {
   return get_top_k(scores[0], k_nn);
 }
@@ -344,38 +292,35 @@ inline auto get_top_k(std::vector<std::vector<Heap>>& scores, size_t k_nn) {
 // ----------------------------------------------------------------------------
 // Functions for computing top k neighbors with scores
 // ----------------------------------------------------------------------------
+
 inline void get_top_k_with_scores_from_heap(
     auto&& min_scores, auto&& top_k, auto&& top_k_scores) {
   std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&& b) {
     return std::get<0>(a) < std::get<0>(b);
   });
-  auto k_nn = std::min(size(min_scores), size(top_k));
   std::transform(
-      begin(min_scores),
-      begin(min_scores) + k_nn,
-      begin(top_k_scores),
-      ([](auto&& e) { return std::get<0>(e); }));
+      begin(min_scores), end(min_scores), begin(top_k_scores), ([](auto&& e) {
+        return std::get<0>(e);
+      }));
   std::transform(
-      begin(min_scores), begin(min_scores) + k_nn, begin(top_k), ([](auto&& e) {
+      begin(min_scores), end(min_scores), begin(top_k), ([](auto&& e) {
         return std::get<1>(e);
       }));
-  pad_with_sentinels(k_nn, top_k, top_k_scores);
 }
 
 // Overload for one-d scores
-template <class Heap>
+template <class Heap, class Index = size_t>
 inline auto get_top_k_with_scores(std::vector<Heap>& scores, size_t k_nn) {
-  using score_type = heap_score_t<Heap>;
-  using index_type = heap_index_t<Heap>;
-
   auto num_queries = size(scores);
 
-  ColMajorMatrix<index_type> top_k(k_nn, num_queries);
+  using score_type =
+      typename std::tuple_element<0, typename Heap::value_type>::type;
+
+  ColMajorMatrix<Index> top_k(k_nn, num_queries);
   ColMajorMatrix<score_type> top_scores(k_nn, num_queries);
 
   for (size_t j = 0; j < num_queries; ++j) {
-    get_top_k_with_scores_from_heap(
-        scores[j], top_k[j], top_scores[j]);  // Will pad with sentinels
+    get_top_k_with_scores_from_heap(scores[j], top_k[j], top_scores[j]);
   }
   return std::make_tuple(std::move(top_scores), std::move(top_k));
 }
@@ -410,8 +355,6 @@ auto verify_top_k_index(L const& top_k, I const& g, int k, int qno) {
  * @brief Check the computed top k vectors against the ground truth.
  * Useful only for exact search.
  * Prints diagnostic message if difference is found.
- * Used only for testing / benchmarking where sentinels have not been needed, so
- * we don't need to handle the case where top_k might have sentinels.
  * @todo Handle the error more systematically and succinctly.
  */
 template <class V, class L, class I>
@@ -556,13 +499,10 @@ auto mat_col_sum(
  * as vq_ew for small numbers of query vectors.
  */
 template <class Matrix1, class Matrix2, class Matrix3>
-void gemm_scores(
-    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
-  requires(
-      (std::is_same_v<typename Matrix1::value_type, float> &&
-       std::is_same_v<typename Matrix2::value_type, float> &&
-       std::is_same_v<typename Matrix3::value_type, float>))
-{
+void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads) requires(
+    (std::is_same_v<typename Matrix1::value_type, float> &&
+     std::is_same_v<typename Matrix2::value_type, float> &&
+     std::is_same_v<typename Matrix3::value_type, float>)) {
   using T = typename Matrix1::value_type;
 
   size_t M = A.num_cols();  // Vector dimension
@@ -608,13 +548,10 @@ void gemm_scores(
 }
 
 template <class Matrix1, class Matrix2, class Matrix3>
-void gemm_scores(
-    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
-  requires(
-      ((!std::is_same_v<typename Matrix1::value_type, float>)&&std::
-           is_same_v<typename Matrix2::value_type, float> &&
-       std::is_same_v<typename Matrix3::value_type, float>))
-{
+void gemm_scores(const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads) requires(
+    ((!std::is_same_v<typename Matrix1::value_type, float>)&&std::
+         is_same_v<typename Matrix2::value_type, float> &&
+     std::is_same_v<typename Matrix3::value_type, float>)) {
   ColMajorMatrix<float> A_f(A.num_rows(), A.num_cols());
   std::copy(A.data(), A.data() + A.num_rows() * A.num_cols(), A_f.data());
 
@@ -623,11 +560,20 @@ void gemm_scores(
 
 template <class Matrix1, class Matrix2, class Matrix3>
 void gemm_scores(
-    const Matrix1& A, const Matrix2& B, Matrix3& C, unsigned nthreads)
-  requires(((!std::is_same_v<typename Matrix1::value_type, float>)&&(
-      !std::is_same_v<typename Matrix2::value_type, float>)&&std::
-                is_same_v<typename Matrix3::value_type, float>))
-{
+    const Matrix1& A,
+    const Matrix2& B,
+    Matrix3& C,
+    unsigned nthreads) requires(((!std::
+                                      is_same_v<
+                                          typename Matrix1::value_type,
+                                          float>)&&(!std::
+                                                        is_same_v<
+                                                            typename Matrix2::
+                                                                value_type,
+                                                            float>)&&std::
+                                     is_same_v<
+                                         typename Matrix3::value_type,
+                                         float>)) {
   ColMajorMatrix<float> A_f(A.num_rows(), A.num_cols());
   std::copy(A.data(), A.data() + A.num_rows() * A.num_cols(), A_f.data());
 

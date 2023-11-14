@@ -45,8 +45,7 @@ std::vector<T> read_vector(
     const tiledb::Context& ctx,
     const std::string&,
     size_t start_pos,
-    size_t end_pos,
-    uint64_t timestamp);
+    size_t end_pos);
 
 template <class M>
 concept is_view = requires(M) {
@@ -67,28 +66,31 @@ class Vector : public std::span<T> {
   using Base = std::span<T>;
   using Base::Base;
 
-  public:
+ public:
   using index_type = typename Base::difference_type;
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
-  private:
+ private:
   size_type nrows_;
   std::unique_ptr<T[]> storage_;
 
-  public:
+ public:
   explicit Vector(index_type nrows) noexcept
-      : nrows_(nrows), storage_{new T[nrows_]} {
+      : nrows_(nrows)
+      , storage_{new T[nrows_]} {
     Base::operator=(Base{storage_.get(), nrows_});
   }
 
   Vector(index_type nrows, std::unique_ptr<T[]> storage)
-      : nrows_(nrows), storage_{std::move(storage)} {
+      : nrows_(nrows)
+      , storage_{std::move(storage)} {
     Base::operator=(Base{storage_.get(), nrows_});
   }
 
   Vector(Vector&& rhs) noexcept
-      : nrows_{rhs.nrows_}, storage_{std::move(rhs.storage_)} {
+      : nrows_{rhs.nrows_}
+      , storage_{std::move(rhs.storage_)} {
     Base::operator=(Base{storage_.get(), nrows_});
   }
 

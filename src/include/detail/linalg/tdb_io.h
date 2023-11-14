@@ -35,16 +35,19 @@
 #include <numeric>
 #include <vector>
 
+#include <tiledb/tiledb>
 #include "detail/linalg/matrix.h"
 #include "utils/logging.h"
 #include "utils/timer.h"
-#include <tiledb/tiledb>
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 void create_matrix(
     const tiledb::Context& ctx,
     const Matrix<T, LayoutPolicy, I>& A,
     const std::string& uri) {
+  if (global_debug) {
+    std::cerr << "# Creating Matrix: " << uri << std::endl;
+  }
 
   // @todo: make this a parameter
   size_t num_parts = 10;
@@ -63,7 +66,9 @@ void create_matrix(
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
 
-  auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ? TILEDB_ROW_MAJOR : TILEDB_COL_MAJOR;
+  auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
+                   TILEDB_ROW_MAJOR :
+                   TILEDB_COL_MAJOR;
   schema.set_domain(domain).set_order({{order, order}});
 
   schema.add_attribute(tiledb::Attribute::create<T>(ctx, "values"));
@@ -79,9 +84,11 @@ void write_matrix(
     const Matrix<T, LayoutPolicy, I>& A,
     const std::string& uri,
     size_t start_pos = 0,
-    bool create = true,
-    const tiledb::TemporalPolicy temporal_policy = {}) {
+    bool create = true) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
+  if (global_debug) {
+    std::cerr << "# Writing Matrix: " << uri << std::endl;
+  }
 
   if (create) {
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri);
@@ -94,13 +101,15 @@ void write_matrix(
 
   // Open array for writing
   tiledb::Array array =
-      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_WRITE, temporal_policy);
+      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_WRITE);
 
   tiledb::Subarray subarray(ctx, array);
   subarray.set_subarray(subarray_vals);
 
   tiledb::Query query(ctx, array);
-  auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ? TILEDB_ROW_MAJOR : TILEDB_COL_MAJOR;
+  auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
+                   TILEDB_ROW_MAJOR :
+                   TILEDB_COL_MAJOR;
   query.set_layout(order)
       .set_data_buffer(
           "values", &A(0, 0), (uint64_t)A.num_rows() * (uint64_t)A.num_cols())
@@ -115,6 +124,9 @@ void write_matrix(
 template <class T>
 void create_vector(
     const tiledb::Context& ctx, std::vector<T>& v, const std::string& uri) {
+  if (global_debug) {
+    std::cerr << "# Creating std::vector: " << uri << std::endl;
+  }
 
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
@@ -141,9 +153,12 @@ void write_vector(
     std::vector<T>& v,
     const std::string& uri,
     size_t start_pos = 0,
-    bool create = true,
-    const tiledb::TemporalPolicy temporal_policy = {}) {
+    bool create = true) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
+
+  if (global_debug) {
+    std::cerr << "# Writing std::vector: " << uri << std::endl;
+  }
 
   if (create) {
     create_vector<T>(ctx, v, uri);
@@ -154,7 +169,7 @@ void write_vector(
 
   // Open array for writing
   tiledb::Array array =
-      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_WRITE, temporal_policy);
+      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_WRITE);
 
   tiledb::Subarray subarray(ctx, array);
   subarray.set_subarray(subarray_vals);
@@ -178,13 +193,16 @@ template <class T>
 std::vector<T> read_vector(
     const tiledb::Context& ctx,
     const std::string& uri,
-    size_t start_pos,
-    size_t end_pos,
-    const tiledb::TemporalPolicy temporal_policy = {}) {
+    size_t start_pos = 0,
+    size_t end_pos = 0) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
+  if (global_debug) {
+    std::cerr << "# Reading std::vector: " << uri << std::endl;
+  }
+
   tiledb::Array array_ =
-      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
+      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
   auto schema_ = array_.schema();
 
   using domain_type = int32_t;
@@ -195,10 +213,8 @@ std::vector<T> read_vector(
   auto dim_num_{domain_.ndim()};
   auto array_rows_{domain_.dimension(0)};
 
-  if (start_pos == 0) {
+  if (start_pos == 0 && end_pos == 0) {
     start_pos = array_rows_.template domain<domain_type>().first;
-  }
-  if (end_pos == 0) {
     end_pos = array_rows_.template domain<domain_type>().second + 1;
   }
 
@@ -229,28 +245,6 @@ std::vector<T> read_vector(
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
   return data_;
-}
-
-template <class T>
-std::vector<T> read_vector(
-    const tiledb::Context& ctx,
-    const std::string& uri) {
-  return read_vector<T>(ctx, uri, 0, 0, tiledb::TemporalPolicy());
-}
-
-template <class T>
-std::vector<T> read_vector(
-    const tiledb::Context& ctx,
-    const std::string& uri,
-    size_t start_pos,
-    size_t end_pos,
-    uint64_t timestamp = 0) {
-  return read_vector<T>(
-      ctx,
-      uri,
-      start_pos,
-      end_pos,
-      (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp));
 }
 
 template <class T>

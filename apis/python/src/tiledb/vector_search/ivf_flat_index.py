@@ -1,18 +1,11 @@
-import json
 import multiprocessing
-from typing import Any, Mapping
-
 import numpy as np
-from tiledb.cloud.dag import Mode
 
-from tiledb.vector_search import index
 from tiledb.vector_search.module import *
-from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
-                                                  storage_formats)
-
-MAX_INT32 = np.iinfo(np.dtype("int32")).max
-TILE_SIZE_BYTES = 64000000  # 64MB
-INDEX_TYPE = "IVF_FLAT"
+from tiledb.vector_search.storage_formats import storage_formats
+from tiledb.vector_search.index import Index
+from tiledb.cloud.dag import Mode
+from typing import Any, Mapping
 
 
 def submit_local(d, func, *args, **kwargs):
@@ -22,7 +15,7 @@ def submit_local(d, func, *args, **kwargs):
     return d.submit_local(func, *args, **kwargs)
 
 
-class IVFFlatIndex(index.Index):
+class IVFFlatIndex(Index):
     """
     Open a IVF Flat index
 
@@ -40,85 +33,53 @@ class IVFFlatIndex(index.Index):
         self,
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
-        timestamp=None,
         memory_budget: int = -1,
-        **kwargs,
     ):
-        super().__init__(uri=uri, config=config, timestamp=timestamp)
-        self.index_type = INDEX_TYPE
+        super().__init__(uri=uri, config=config)
+        self.index_type = "IVF_FLAT"
         self.db_uri = self.group[
-            storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
-            + self.index_version
+            storage_formats[self.storage_version]["PARTS_ARRAY_NAME"] + self.index_version
         ].uri
         self.centroids_uri = self.group[
-            storage_formats[self.storage_version]["CENTROIDS_ARRAY_NAME"]
-            + self.index_version
+            storage_formats[self.storage_version]["CENTROIDS_ARRAY_NAME"] + self.index_version
         ].uri
         self.index_array_uri = self.group[
-            storage_formats[self.storage_version]["INDEX_ARRAY_NAME"]
-            + self.index_version
+            storage_formats[self.storage_version]["INDEX_ARRAY_NAME"] + self.index_version
         ].uri
         self.ids_uri = self.group[
             storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version
         ].uri
         self.memory_budget = memory_budget
 
-        self.dtype = self.group.meta.get("dtype", None)
-        if self.dtype is None:
-            schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
+        self._centroids = load_as_matrix(
+            self.centroids_uri, ctx=self.ctx, config=config
+        )
+        self._index = read_vector_u64(self.ctx, self.index_array_uri, 0, 0)
+
+
+        dtype = self.group.meta.get("dtype", None)
+        if dtype is None:
+            schema = tiledb.ArraySchema.load(
+                self.db_uri, ctx=tiledb.Ctx(self.config)
+            )
             self.dtype = np.dtype(schema.attr("values").dtype)
         else:
-            self.dtype = np.dtype(self.dtype)
+            self.dtype = np.dtype(dtype)
 
-        if self.base_size == 0:
-            self.size = 0
-            self.partitions = 0
-            return
-
-        self.partition_history = [
-            int(x)
-            for x in list(json.loads(self.group.meta.get("partition_history", "[]")))
-        ]
-        if len(self.partition_history) == 0:
+        self.partitions = self.group.meta.get("partitions", -1)
+        if self.partitions == -1:
             schema = tiledb.ArraySchema.load(
                 self.centroids_uri, ctx=tiledb.Ctx(self.config)
             )
             self.partitions = schema.domain.dim("cols").domain[1] + 1
-        else:
-            self.partitions = self.partition_history[self.history_index]
 
-        self._centroids = load_as_matrix(
-            self.centroids_uri,
-            ctx=self.ctx,
-            size=self.partitions,
-            config=config,
-            timestamp=self.base_array_timestamp,
-        )
-        self._index = read_vector_u64(
-            self.ctx,
-            self.index_array_uri,
-            0,
-            self.partitions + 1,
-            self.base_array_timestamp,
-        )
+        self.size = self._index[self.partitions]
 
-        if self.base_size == -1:
-            self.size = self._index[self.partitions]
-        else:
-            self.size = self.base_size
 
         # TODO pass in a context
         if self.memory_budget == -1:
-            self._db = load_as_matrix(
-                self.db_uri,
-                ctx=self.ctx,
-                config=config,
-                size=self.size,
-                timestamp=self.base_array_timestamp,
-            )
-            self._ids = read_vector_u64(
-                self.ctx, self.ids_uri, 0, self.size, self.base_array_timestamp
-            )
+            self._db = load_as_matrix(self.db_uri, ctx=self.ctx, config=config, size=self.size)
+            self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, self.size)
 
     def query_internal(
         self,
@@ -157,11 +118,6 @@ class IVFFlatIndex(index.Index):
             If provided, this is the number of workers to use for the query execution.
 
         """
-        if self.size == 0:
-            return np.full((queries.shape[0], k), index.MAX_FLOAT_32), np.full(
-                (queries.shape[0], k), index.MAX_UINT64
-            )
-
         assert queries.dtype == np.float32
 
         if queries.ndim == 1:
@@ -201,7 +157,6 @@ class IVFFlatIndex(index.Index):
                     nthreads=nthreads,
                     ctx=self.ctx,
                     use_nuv_implementation=use_nuv_implementation,
-                    timestamp=self.base_array_timestamp,
                 )
 
             return np.transpose(np.array(d)), np.transpose(np.array(i))
@@ -253,15 +208,16 @@ class IVFFlatIndex(index.Index):
         config: None
             config dictionary, defaults to None
         """
-        import math
-        from functools import partial
-
-        import numpy as np
         from tiledb.cloud import dag
         from tiledb.cloud.dag import Mode
-
-        from tiledb.vector_search.module import (array_to_matrix, dist_qv,
-                                                 partition_ivf_index)
+        from tiledb.vector_search.module import (
+            array_to_matrix,
+            partition_ivf_index,
+            dist_qv,
+        )
+        import math
+        import numpy as np
+        from functools import partial
 
         def dist_qv_udf(
             dtype: np.dtype,
@@ -273,34 +229,19 @@ class IVFFlatIndex(index.Index):
             indices: np.array,
             k_nn: int,
             config: Optional[Mapping[str, Any]] = None,
-            timestamp: int = 0,
         ):
             queries_m = array_to_matrix(np.transpose(query_vectors))
-            if timestamp == 0:
-                r = dist_qv(
-                    dtype=dtype,
-                    parts_uri=parts_uri,
-                    ids_uri=ids_uri,
-                    query_vectors=queries_m,
-                    active_partitions=active_partitions,
-                    active_queries=active_queries,
-                    indices=indices,
-                    k_nn=k_nn,
-                    ctx=Ctx(config),
-                )
-            else:
-                r = dist_qv(
-                    dtype=dtype,
-                    parts_uri=parts_uri,
-                    ids_uri=ids_uri,
-                    query_vectors=queries_m,
-                    active_partitions=active_partitions,
-                    active_queries=active_queries,
-                    indices=indices,
-                    k_nn=k_nn,
-                    ctx=Ctx(config),
-                    timestamp=timestamp,
-                )
+            r = dist_qv(
+                dtype=dtype,
+                parts_uri=parts_uri,
+                ids_uri=ids_uri,
+                query_vectors=queries_m,
+                active_partitions=active_partitions,
+                active_queries=active_queries,
+                indices=indices,
+                k_nn=k_nn,
+                ctx=Ctx(config),
+            )
             results = []
             for q in range(len(r)):
                 tmp_results = []
@@ -367,8 +308,7 @@ class IVFFlatIndex(index.Index):
                     indices=np.array(self._index),
                     k_nn=k,
                     config=config,
-                    timestamp=self.base_array_timestamp,
-                    resource_class="large" if mode == Mode.REALTIME else None,
+                    resource_class="large",
                     image_name="3.9-vectorsearch",
                 )
             )
@@ -392,145 +332,6 @@ class IVFFlatIndex(index.Index):
             tmp = sorted(tmp_results, key=lambda t: t[0])[0:k]
             for j in range(len(tmp), k):
                 tmp.append((float(0.0), int(0)))
-            results_per_query_d.append(
-                np.array(tmp, dtype=np.dtype("float,uint64"))["f0"]
-            )
-            results_per_query_i.append(
-                np.array(tmp, dtype=np.dtype("float,uint64"))["f1"]
-            )
+            results_per_query_d.append(np.array(tmp, dtype=np.dtype("float,uint64"))["f0"])
+            results_per_query_i.append(np.array(tmp, dtype=np.dtype("float,uint64"))["f1"])
         return np.array(results_per_query_d), np.array(results_per_query_i)
-
-
-def create(
-    uri: str,
-    dimensions: int,
-    vector_type: np.dtype,
-    group_exists: bool = False,
-    config: Optional[Mapping[str, Any]] = None,
-    **kwargs,
-) -> IVFFlatIndex:
-    index.create_metadata(
-        uri=uri,
-        dimensions=dimensions,
-        vector_type=vector_type,
-        index_type=INDEX_TYPE,
-        group_exists=group_exists,
-        config=config,
-    )
-    with tiledb.scope_ctx(ctx_or_config=config):
-        group = tiledb.Group(uri, "w")
-        tile_size = int(TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions)
-        group.meta["partition_history"] = json.dumps([0])
-        centroids_array_name = storage_formats[STORAGE_VERSION]["CENTROIDS_ARRAY_NAME"]
-        index_array_name = storage_formats[STORAGE_VERSION]["INDEX_ARRAY_NAME"]
-        ids_array_name = storage_formats[STORAGE_VERSION]["IDS_ARRAY_NAME"]
-        parts_array_name = storage_formats[STORAGE_VERSION]["PARTS_ARRAY_NAME"]
-        centroids_uri = f"{uri}/{centroids_array_name}"
-        index_array_uri = f"{uri}/{index_array_name}"
-        ids_uri = f"{uri}/{ids_array_name}"
-        parts_uri = f"{uri}/{parts_array_name}"
-
-        centroids_array_rows_dim = tiledb.Dim(
-            name="rows",
-            domain=(0, dimensions - 1),
-            tile=dimensions,
-            dtype=np.dtype(np.int32),
-        )
-        centroids_array_cols_dim = tiledb.Dim(
-            name="cols",
-            domain=(0, MAX_INT32),
-            tile=100000,
-            dtype=np.dtype(np.int32),
-        )
-        centroids_array_dom = tiledb.Domain(
-            centroids_array_rows_dim, centroids_array_cols_dim
-        )
-        centroids_attr = tiledb.Attr(
-            name="centroids",
-            dtype=np.dtype(np.float32),
-            filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
-        )
-        centroids_schema = tiledb.ArraySchema(
-            domain=centroids_array_dom,
-            sparse=False,
-            attrs=[centroids_attr],
-            cell_order="col-major",
-            tile_order="col-major",
-        )
-        tiledb.Array.create(centroids_uri, centroids_schema)
-        group.add(centroids_uri, name=centroids_array_name)
-
-        index_array_rows_dim = tiledb.Dim(
-            name="rows",
-            domain=(0, MAX_INT32),
-            tile=100000,
-            dtype=np.dtype(np.int32),
-        )
-        index_array_dom = tiledb.Domain(index_array_rows_dim)
-        index_attr = tiledb.Attr(
-            name="values",
-            dtype=np.dtype(np.uint64),
-            filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
-        )
-        index_schema = tiledb.ArraySchema(
-            domain=index_array_dom,
-            sparse=False,
-            attrs=[index_attr],
-            cell_order="col-major",
-            tile_order="col-major",
-        )
-        tiledb.Array.create(index_array_uri, index_schema)
-        group.add(index_array_uri, name=index_array_name)
-
-        ids_array_rows_dim = tiledb.Dim(
-            name="rows",
-            domain=(0, MAX_INT32),
-            tile=tile_size,
-            dtype=np.dtype(np.int32),
-        )
-        ids_array_dom = tiledb.Domain(ids_array_rows_dim)
-        ids_attr = tiledb.Attr(
-            name="values",
-            dtype=np.dtype(np.uint64),
-            filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
-        )
-        ids_schema = tiledb.ArraySchema(
-            domain=ids_array_dom,
-            sparse=False,
-            attrs=[ids_attr],
-            cell_order="col-major",
-            tile_order="col-major",
-        )
-        tiledb.Array.create(ids_uri, ids_schema)
-        group.add(ids_uri, name=ids_array_name)
-
-        parts_array_rows_dim = tiledb.Dim(
-            name="rows",
-            domain=(0, dimensions - 1),
-            tile=dimensions,
-            dtype=np.dtype(np.int32),
-        )
-        parts_array_cols_dim = tiledb.Dim(
-            name="cols",
-            domain=(0, MAX_INT32),
-            tile=tile_size,
-            dtype=np.dtype(np.int32),
-        )
-        parts_array_dom = tiledb.Domain(parts_array_rows_dim, parts_array_cols_dim)
-        parts_attr = tiledb.Attr(
-            name="values",
-            dtype=vector_type,
-            filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
-        )
-        parts_schema = tiledb.ArraySchema(
-            domain=parts_array_dom,
-            sparse=False,
-            attrs=[parts_attr],
-            cell_order="col-major",
-            tile_order="col-major",
-        )
-        tiledb.Array.create(parts_uri, parts_schema)
-        group.add(parts_uri, name=parts_array_name)
-
-        group.close()
-        return IVFFlatIndex(uri=uri, config=config, memory_budget=1000000)

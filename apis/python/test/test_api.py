@@ -1,10 +1,11 @@
 import numpy as np
-import pytest
 from common import *
 
 import tiledb
 import tiledb.vector_search as vs
 from tiledb.vector_search import _tiledbvspy as vspy
+
+import pytest
 
 
 def test_load_matrix(tmpdir):
