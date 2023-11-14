@@ -48,52 +48,30 @@
  */
 class IndexFlatL2 {
  public:
-  // @todo Who owns the context?
-  IndexFlatL2(
-      const URI& index_uri,
-      const std::optional<IndexOptions>& config = std::nullopt)
-      : IndexFlatL2(tiledb::Context{}, index_uri, config) {
-  }
 
   // @todo Use group metadata to determine index type and associated array types
   IndexFlatL2(
       const tiledb::Context& ctx,
       const URI& index_uri,
-      const std::optional<IndexOptions>& config = std::nullopt)
-      : ctx_{ctx} {
+      const std::optional<IndexOptions>& config = std::nullopt) {
     auto array =
-        tiledb_helpers::open_array(tdb_func__, ctx_, index_uri, TILEDB_READ);
-    feature_type_ = get_array_datatype(*array);
+        tiledb_helpers::open_array(tdb_func__, ctx, index_uri, TILEDB_READ);
+    feature_datatype_ = get_array_datatype(*array);
     array->close();
 
-    switch (feature_type_) {
+    switch (feature_datatype_) {
       case TILEDB_FLOAT32:
         index_ = std::make_unique<index_impl<flat_l2_index<float>>>(
-            ctx_, index_uri, config);
+            ctx, index_uri, config);
         break;
       case TILEDB_UINT8:
         index_ = std::make_unique<index_impl<flat_l2_index<uint8_t>>>(
-            ctx_, index_uri, config);
+            ctx, index_uri, config);
         break;
       default:
         throw std::runtime_error("Unsupported attribute type");
     }
   };
-
-  template <feature_vector_array V>
-  IndexFlatL2(
-      const URI& index_uri,
-      const V& vectors,
-      const std::optional<IndexOptions>& config = std::nullopt) {
-  }
-
-  // Create from input URI
-  IndexFlatL2(
-      const URI& index_uri,
-      const URI& vectors_uri,
-      const std::optional<IndexOptions>& config = std::nullopt) {
-    // @todo
-  }
 
   void add() const {
     // @todo
@@ -148,8 +126,12 @@ class IndexFlatL2 {
     return _cpo::num_vectors(*index_);
   }
 
-  auto feature_type() {
-    return feature_type_;
+  constexpr auto feature_type() const {
+    return feature_datatype_;
+  }
+  
+  constexpr auto feature_type_string() const {
+    return datatype_to_string(feature_datatype_);
   }
 
   /**
@@ -306,9 +288,7 @@ class IndexFlatL2 {
     T impl_index_;
   };
 
-  // @todo Who should own the context?
-  tiledb::Context ctx_{};
-  tiledb_datatype_t feature_type_{TILEDB_ANY};
+  tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_type_{TILEDB_ANY};
   tiledb_datatype_t ptx_type_{TILEDB_ANY};
   std::unique_ptr<const index_base> index_;

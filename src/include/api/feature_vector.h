@@ -178,8 +178,8 @@ class FeatureVector {
   struct vector_base {
     virtual ~vector_base() = default;
     [[nodiscard]] virtual size_t dimension() const = 0;
-    [[nodiscard]] virtual void* data() = 0;
-    [[nodiscard]] virtual const void* data() const = 0;
+    //[[nodiscard]] virtual void* data() = 0;
+    [[nodiscard]] virtual void* data() const = 0;
   };
 
   /**
@@ -196,11 +196,11 @@ class FeatureVector {
     vector_impl(const tiledb::Context& ctx, const std::string& uri)
         : vector_(ctx, uri) {
     }
-    [[nodiscard]] void* data() override {
-      return _cpo::data(vector_);
+    //[[nodiscard]] void* data() override {
+    //  return _cpo::data(vector_);
       // return vector_.data();
-    }
-    [[nodiscard]] const void* data() const override {
+    //}
+    [[nodiscard]] void* data() const override {
       return _cpo::data(vector_);
       // return vector_.data();
     }
