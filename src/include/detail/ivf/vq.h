@@ -78,7 +78,7 @@ namespace detail::ivf {
  * Note that this algorithm is essentially the transpose of the one in qv.h.
  *
  * @param query The set of all query vectors.
- * @param shuffled_db The partitioned set of vectors to be searched
+ * @param partitioned_db The partitioned set of vectors to be searched
  * @param new_indices The indices delimiting the partitions.
  * @param active_queries Indicates which queries to apply to each of the active
  * partitions.
@@ -92,7 +92,7 @@ namespace detail::ivf {
  */
 auto vq_apply_query(
     auto&& query,
-    auto&& shuffled_db,
+    auto&& partitioned_db,
     auto&& new_indices,
     auto&& active_queries,
     auto&& ids,
@@ -102,18 +102,20 @@ auto vq_apply_query(
     size_t last_part) {
   auto num_queries = size(query);
 
-  // std::cout << "thread " << n << " running " << first_part << " to " <<
-  // last_part << std::endl;
+  // using feature_type = typename
+  // std::remove_reference_t<decltype(partitioned_db)>::value_type;
+  using id_type = typename std::remove_reference_t<decltype(ids)>::value_type;
+  using score_type = float;
 
   size_t part_offset = 0;
   size_t col_offset = 0;
-  if constexpr (has_num_col_parts<decltype(shuffled_db)>) {
-    part_offset = shuffled_db.col_part_offset();
-    col_offset = shuffled_db.col_offset();
+  if constexpr (has_num_col_parts<decltype(partitioned_db)>) {
+    part_offset = partitioned_db.col_part_offset();
+    col_offset = partitioned_db.col_offset();
   }
 
-  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+  auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
+      num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
 
   /**
    * Loop over given partitons to be searched
@@ -123,7 +125,7 @@ auto vq_apply_query(
 
     // @todo this is a bit of a hack
     auto quartno = partno;
-    if constexpr (!has_num_col_parts<decltype(shuffled_db)>) {
+    if constexpr (!has_num_col_parts<decltype(partitioned_db)>) {
       quartno = active_partitions[partno];
     }
 
@@ -151,10 +153,10 @@ auto vq_apply_query(
         auto q_vec_0 = query[j0];
         auto q_vec_1 = query[j1];
 
-        auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
-        auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
-        auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
-        auto score_11 = L2(q_vec_1, shuffled_db[kp + 1]);
+        auto score_00 = L2(q_vec_0, partitioned_db[kp + 0]);
+        auto score_01 = L2(q_vec_0, partitioned_db[kp + 1]);
+        auto score_10 = L2(q_vec_1, partitioned_db[kp + 0]);
+        auto score_11 = L2(q_vec_1, partitioned_db[kp + 1]);
 
         min_scores[j0].insert(score_00, ids[kp + 0]);
         min_scores[j0].insert(score_01, ids[kp + 1]);
@@ -169,8 +171,8 @@ auto vq_apply_query(
         auto j0 = j[0];
         auto q_vec_0 = query[j0];
 
-        auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
-        auto score_01 = L2(q_vec_0, shuffled_db[kp + 1]);
+        auto score_00 = L2(q_vec_0, partitioned_db[kp + 0]);
+        auto score_01 = L2(q_vec_0, partitioned_db[kp + 1]);
         min_scores[j0].insert(score_00, ids[kp + 0]);
         min_scores[j0].insert(score_01, ids[kp + 1]);
       }
@@ -186,8 +188,8 @@ auto vq_apply_query(
         auto q_vec_0 = query[j0];
         auto q_vec_1 = query[j1];
 
-        auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
-        auto score_10 = L2(q_vec_1, shuffled_db[kp + 0]);
+        auto score_00 = L2(q_vec_0, partitioned_db[kp + 0]);
+        auto score_10 = L2(q_vec_1, partitioned_db[kp + 0]);
 
         min_scores[j0].insert(score_00, ids[kp + 0]);
         min_scores[j1].insert(score_10, ids[kp + 0]);
@@ -200,7 +202,7 @@ auto vq_apply_query(
         auto j0 = j[0];
         auto q_vec_0 = query[j0];
 
-        auto score_00 = L2(q_vec_0, shuffled_db[kp + 0]);
+        auto score_00 = L2(q_vec_0, partitioned_db[kp + 0]);
         min_scores[j0].insert(score_00, ids[kp + 0]);
       }
     }
@@ -214,17 +216,23 @@ auto vq_apply_query(
  * already have loaded all of its data.
  */
 auto vq_query_infinite_ram(
-    auto&& shuffled_db,
+    auto&& partitioned_db,
     auto&& centroids,
     auto&& query,
     auto&& indices,
-    auto&& shuffled_ids,
+    auto&& partitioned_ids,
     size_t nprobe,
     size_t k_nn,
     size_t nthreads) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
-  assert(shuffled_db.num_cols() == shuffled_ids.size());
+  // using feature_type = typename
+  // std::remove_reference_t<decltype(partitioned_db)>::value_type;
+  using id_type =
+      typename std::remove_reference_t<decltype(partitioned_ids)>::value_type;
+  using score_type = float;
+
+  assert(partitioned_db.num_cols() == partitioned_ids.size());
 
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
@@ -240,8 +248,8 @@ auto vq_query_infinite_ram(
 
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
 
-  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+  auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
+      num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
 
   size_t parts_per_thread = (size(active_partitions) + nthreads - 1) / nthreads;
 
@@ -258,20 +266,20 @@ auto vq_query_infinite_ram(
       futs.emplace_back(std::async(
           std::launch::async,
           [&query,
-           &shuffled_db,
+           &partitioned_db,
            &indices,
            &active_queries = active_queries,
            &active_partitions = active_partitions,
-           &shuffled_ids,
+           &partitioned_ids,
            k_nn,
            first_part,
            last_part]() {
             return vq_apply_query(
                 query,
-                shuffled_db,
+                partitioned_db,
                 indices,
                 active_queries,
-                shuffled_ids,
+                partitioned_ids,
                 active_partitions,
                 k_nn,
                 first_part,
@@ -301,7 +309,7 @@ auto vq_query_infinite_ram(
  * loads them each into a matrix, and then calls `vq_query_infinite_ram`
  * above.
  */
-template <typename T, class shuffled_ids_type>
+template <class feature_type, class id_type>
 auto vq_query_infinite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -314,14 +322,21 @@ auto vq_query_infinite_ram(
     size_t nthreads) {
   scoped_timer _{tdb_func__};
 
-  // Read the shuffled database and ids
+  // Read the partitioned database and ids
   // @todo To this more systematically
-  auto shuffled_db = tdbColMajorMatrix<T>(ctx, part_uri);
-  shuffled_db.load();
-  auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
+  auto partitioned_db = tdbColMajorMatrix<feature_type>(ctx, part_uri);
+  partitioned_db.load();
+  auto partitioned_ids = read_vector<id_type>(ctx, id_uri);
 
   return vq_query_infinite_ram(
-      shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nthreads);
+      partitioned_db,
+      centroids,
+      q,
+      indices,
+      partitioned_ids,
+      nprobe,
+      k_nn,
+      nthreads);
 }
 
 /**
@@ -330,20 +345,26 @@ auto vq_query_infinite_ram(
  * already have loaded all of its data.
  */
 auto vq_query_infinite_ram_2(
-    auto&& shuffled_db,
+    auto&& partitioned_db,
     auto&& centroids,
     auto&& query,
     auto&& indices,
-    auto&& shuffled_ids,
+    auto&& partitioned_ids,
     size_t nprobe,
     size_t k_nn,
     size_t nthreads) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
-  assert(shuffled_db.num_cols() == shuffled_ids.size());
+  assert(partitioned_db.num_cols() == partitioned_ids.size());
 
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
+
+  // using feature_type = typename
+  // std::remove_reference<decltype(partitioned_db)>::value_type;
+  using id_type =
+      typename std::remove_reference<decltype(partitioned_ids)>::value_type;
+  using score_type = float;
 
   auto num_queries = size(query);
 
@@ -356,8 +377,8 @@ auto vq_query_infinite_ram_2(
 
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
 
-  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+  auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
+      num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
 
   size_t parts_per_thread = (size(active_partitions) + nthreads - 1) / nthreads;
 
@@ -375,7 +396,7 @@ auto vq_query_infinite_ram_2(
           std::launch::async,
           [&query,
            &min_scores,
-           &shuffled_db,
+           &partitioned_db,
            &new_indices = indices,
            &active_queries = active_queries,
            &active_partitions = active_partitions,
@@ -396,15 +417,15 @@ auto vq_query_infinite_ram_2(
                */
 
               for (size_t k = start; k < stop; ++k) {
-                auto kp = k - shuffled_db.col_offset();
+                auto kp = k - partitioned_db.col_offset();
 
                 for (auto j : active_queries[partno]) {
                   // @todo shift start / stop back by the offset
 
-                  auto score = L2(query[j], shuffled_db[kp]);
+                  auto score = L2(query[j], partitioned_db[kp]);
 
                   // @todo any performance with apparent extra indirection?
-                  min_scores[j].insert(score, shuffled_db.ids()[kp]);
+                  min_scores[j].insert(score, partitioned_db.ids()[kp]);
                 }
               }
             }
@@ -433,7 +454,7 @@ auto vq_query_infinite_ram_2(
  * loads them each into a matrix, and then calls `vq_query_infinite_ram`
  * above.
  */
-template <typename T, class shuffled_ids_type>
+template <typename T, class id_type>
 auto vq_query_infinite_ram_2(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -446,14 +467,21 @@ auto vq_query_infinite_ram_2(
     size_t nthreads) {
   scoped_timer _{tdb_func__};
 
-  // Read the shuffled database and ids
+  // Read the partitioned database and ids
   // @todo To this more systematically
-  auto shuffled_db = tdbColMajorMatrix<T>(ctx, part_uri);
-  shuffled_db.load();
-  auto shuffled_ids = read_vector<shuffled_ids_type>(ctx, id_uri);
+  auto partitioned_db = tdbColMajorMatrix<T>(ctx, part_uri);
+  partitioned_db.load();
+  auto partitioned_ids = read_vector<id_type>(ctx, id_uri);
 
   return vq_query_infinite_ram(
-      shuffled_db, centroids, q, indices, shuffled_ids, nprobe, k_nn, nthreads);
+      partitioned_db,
+      centroids,
+      q,
+      indices,
+      partitioned_ids,
+      nprobe,
+      k_nn,
+      nthreads);
 }
 
 /*
@@ -465,7 +493,7 @@ auto vq_query_infinite_ram_2(
  * function then invoked `vq_apply_query` on the partitioned matrix in
  * parallel fashion, decomposing over the partitions.
  */
-template <class T, class shuffled_ids_type>
+template <class feature_type, class id_type>
 auto vq_query_finite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -483,6 +511,8 @@ auto vq_query_finite_ram(
   // Check that the size of the indices vector is correct
   assert(size(indices) == centroids.num_cols() + 1);
 
+  using score_type = float;
+
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
@@ -493,13 +523,13 @@ auto vq_query_finite_ram(
 
   using parts_type = typename decltype(active_partitions)::value_type;
 
-  auto shuffled_db = tdbColMajorPartitionedMatrix<
-      T,
-      shuffled_ids_type,
+  auto partitioned_db = tdbColMajorPartitionedMatrix<
+      feature_type,
+      id_type,
       indices_type,
       parts_type>(
       ctx, part_uri, indices, active_partitions, id_uri, upper_bound);
-  load(shuffled_db);
+  load(partitioned_db);
 
   log_timer _i{tdb_func__ + " in RAM"};
 
@@ -518,24 +548,24 @@ auto vq_query_finite_ram(
       max_partition_size = std::max<size_t>(max_partition_size, partition_size);
       _memory_data.insert_entry(
           tdb_func__ + " (predicted)",
-          partition_size * sizeof(T) * shuffled_db.num_rows());
+          partition_size * sizeof(feature_type) * partitioned_db.num_rows());
     }
     _memory_data.insert_entry(
         tdb_func__ + " (upper bound)",
-        nprobe * num_queries * sizeof(T) * max_partition_size);
+        nprobe * num_queries * sizeof(feature_type) * max_partition_size);
   }
 
-  assert(shuffled_db.num_cols() == size(shuffled_db.ids()));
-  debug_matrix(shuffled_db, "shuffled_db");
-  debug_matrix(shuffled_db.ids(), "shuffled_db.ids()");
+  assert(partitioned_db.num_cols() == size(partitioned_db.ids()));
+  debug_matrix(partitioned_db, "partitioned_db");
+  debug_matrix(partitioned_db.ids(), "partitioned_db.ids()");
 
-  auto min_scores = std::vector<fixed_min_pair_heap<float, size_t>>(
-      num_queries, fixed_min_pair_heap<float, size_t>(k_nn));
+  auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
+      num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
 
   do {
     _i.start();
 
-    auto current_part_size = shuffled_db.num_col_parts();
+    auto current_part_size = partitioned_db.num_col_parts();
 
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
@@ -553,7 +583,7 @@ auto vq_query_finite_ram(
           futs.emplace_back(std::async(
               std::launch::async,
               [&query,
-               &shuffled_db,
+               &partitioned_db,
                &new_indices,
                &active_queries = active_queries,
                &active_partitions = active_partitions,
@@ -562,10 +592,10 @@ auto vq_query_finite_ram(
                last_part]() {
                 return vq_apply_query(
                     query,
-                    shuffled_db,
+                    partitioned_db,
                     new_indices,
                     active_queries,
-                    shuffled_db.ids(),
+                    partitioned_db.ids(),
                     active_partitions,
                     k_nn,
                     first_part,
@@ -586,14 +616,14 @@ auto vq_query_finite_ram(
     }
 
     _i.stop();
-  } while (load(shuffled_db));
+  } while (load(partitioned_db));
 
   auto top_k = get_top_k_with_scores(min_scores, k_nn);
 
   return top_k;
 }
 
-template <class T, class shuffled_ids_type>
+template <class feature_type, class id_type>
 auto vq_query_finite_ram_2(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -608,6 +638,7 @@ auto vq_query_finite_ram_2(
     size_t min_parts_per_thread = 0) {
   scoped_timer _{tdb_func__ + " " + part_uri};
 
+  using score_type = float;
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
@@ -618,9 +649,9 @@ auto vq_query_finite_ram_2(
 
   using parts_type = typename decltype(active_partitions)::value_type;
 
-  auto shuffled_db = tdbColMajorPartitionedMatrix<
-      T,
-      shuffled_ids_type,
+  auto partitioned_db = tdbColMajorPartitionedMatrix<
+      feature_type,
+      id_type,
       indices_type,
       parts_type>(
       ctx, part_uri, indices, active_partitions, id_uri, upper_bound);
@@ -635,15 +666,15 @@ auto vq_query_finite_ram_2(
   }
 
   auto min_scores =
-      std::vector<std::vector<fixed_min_pair_heap<float, size_t>>>(
+      std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>>(
           nthreads,
-          std::vector<fixed_min_pair_heap<float, size_t>>(
-              num_queries, fixed_min_pair_heap<float, size_t>(k_nn)));
+          std::vector<fixed_min_pair_heap<score_type, id_type>>(
+              num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn)));
 
-  while (shuffled_db.load()) {
+  while (partitioned_db.load()) {
     _i.start();
 
-    auto current_part_size = shuffled_db.num_col_parts();
+    auto current_part_size = partitioned_db.num_col_parts();
 
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
@@ -662,7 +693,7 @@ auto vq_query_finite_ram_2(
               std::launch::async,
               [&query,
                &min_scores,
-               &shuffled_db,
+               &partitioned_db,
                &new_indices,
                &active_queries = active_queries,
                n,
@@ -673,7 +704,7 @@ auto vq_query_finite_ram_2(
                  * partition as their top centroid.
                  */
                 for (size_t p = first_part; p < last_part; ++p) {
-                  auto partno = p + shuffled_db.col_part_offset();
+                  auto partno = p + partitioned_db.col_part_offset();
 
                   auto start = new_indices[partno];
                   auto stop = new_indices[partno + 1];
@@ -683,15 +714,15 @@ auto vq_query_finite_ram_2(
                    */
 
                   for (size_t k = start; k < stop; ++k) {
-                    auto kp = k - shuffled_db.col_offset();
+                    auto kp = k - partitioned_db.col_offset();
 
                     for (auto j : active_queries[partno]) {
                       // @todo shift start / stop back by the offset
 
-                      auto score = L2(query[j], shuffled_db[kp]);
+                      auto score = L2(query[j], partitioned_db[kp]);
 
                       // @todo any performance with apparent extra indirection?
-                      min_scores[n][j].insert(score, shuffled_db.ids()[kp]);
+                      min_scores[n][j].insert(score, partitioned_db.ids()[kp]);
                     }
                   }
                 }

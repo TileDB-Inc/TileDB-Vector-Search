@@ -51,42 +51,38 @@ namespace detail::flat {
  *
  * @todo Unify out of core and not out of core versions.
  */
-template <class T, class DB, class Q, class Index>
+template <class T, class DB, class Q, class ID>
 auto vq_query_heap(
-    T,
-    DB& db,
-    Q& q,
-    const std::vector<Index>& ids,
-    int k_nn,
-    unsigned nthreads);
+    T, DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads);
 
 template <class DB, class Q>
-auto vq_query_heap(DB& db, Q& q, int k_nn, unsigned nthreads) {
+auto vq_query_heap(DB& db, const Q& q, int k_nn, unsigned nthreads) {
   return vq_query_heap(
-      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
 }
 
-template <class DB, class Q, class Index>
+template <class DB, class Q, class ID>
 auto vq_query_heap(
-    DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
+    DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads) {
   return vq_query_heap(with_ids{}, db, q, ids, k_nn, nthreads);
 }
 
 // @todo Support out of core
-template <class T, class DB, class Q, class Index>
+template <class T, class DB, class Q, class ID>
 auto vq_query_heap(
-    T,
-    DB& db,
-    Q& q,
-    const std::vector<Index>& ids,
-    int k_nn,
-    unsigned nthreads) {
+    T, DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads) {
   // @todo Need to get the total number of queries, not just the first block
   // @todo Use Matrix here rather than vector of vectors
-  std::vector<std::vector<fixed_min_pair_heap<float, unsigned>>> scores(
+
+  // using feature_type = typename
+  // std::remove_reference_t<decltype(db)>::value_type;
+  using id_type = typename std::remove_reference_t<decltype(ids)>::value_type;
+  using score_type = float;
+
+  std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>> scores(
       nthreads,
-      std::vector<fixed_min_pair_heap<float, unsigned>>(
-          size(q), fixed_min_pair_heap<float, unsigned>(k_nn)));
+      std::vector<fixed_min_pair_heap<score_type, id_type>>(
+          size(q), fixed_min_pair_heap<score_type, id_type>(k_nn)));
 
   unsigned size_q = size(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
@@ -140,6 +136,9 @@ auto vq_query_heap(
   consolidate_scores(scores);
   auto top_k = get_top_k_with_scores(scores, k_nn);
 
+  debug_slice(std::get<0>(top_k));
+  debug_slice(std::get<1>(top_k));
+
   return top_k;
 }
 
@@ -153,41 +152,37 @@ auto vq_query_heap(
  * @param nthreads
  * @return
  */
-template <class T, class DB, class Q, class Index>
+template <class T, class DB, class Q, class ID>
 auto vq_query_heap_tiled(
-    T,
-    DB& db,
-    Q& q,
-    const std::vector<Index>& ids,
-    int k_nn,
-    unsigned nthreads);
+    T, DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads);
 
 template <class DB, class Q>
-auto vq_query_heap_tiled(DB& db, Q& q, int k_nn, unsigned nthreads) {
+auto vq_query_heap_tiled(DB& db, const Q& q, int k_nn, unsigned nthreads) {
   return vq_query_heap_tiled(
-      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
 }
 
-template <class DB, class Q, class Index>
+template <class DB, class Q, class ID>
 auto vq_query_heap_tiled(
-    DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
+    DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads) {
   return vq_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads);
 }
 
-template <class T, class DB, class Q, class Index>
+template <class T, class DB, class Q, class ID>
 auto vq_query_heap_tiled(
-    T,
-    DB& db,
-    Q& q,
-    const std::vector<Index>& ids,
-    int k_nn,
-    unsigned nthreads) {
+    T, DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads) {
   // @todo Need to get the total number of queries, not just the first block
   // @todo Use Matrix here rather than vector of vectors
-  std::vector<std::vector<fixed_min_pair_heap<float, unsigned>>> scores(
+
+  // using feature_type = typename
+  // std::remove_reference_t<decltype(db)>::value_type;
+  using id_type = typename std::remove_reference_t<decltype(ids)>::value_type;
+  using score_type = float;
+
+  std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>> scores(
       nthreads,
-      std::vector<fixed_min_pair_heap<float, unsigned>>(
-          size(q), fixed_min_pair_heap<float, unsigned>(k_nn)));
+      std::vector<fixed_min_pair_heap<score_type, id_type>>(
+          size(q), fixed_min_pair_heap<score_type, id_type>(k_nn)));
 
   unsigned size_q = size(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
@@ -230,41 +225,37 @@ auto vq_query_heap_tiled(
 
 // ====================================================================================================
 
-template <class T, class DB, class Q, class Index>
+template <class T, class DB, class Q, class ID>
 auto vq_query_heap_2(
-    T,
-    DB& db,
-    Q& q,
-    const std::vector<Index>& ids,
-    int k_nn,
-    unsigned nthreads);
+    T, DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads);
 
 template <class DB, class Q>
-auto vq_query_heap_2(DB& db, Q& q, int k_nn, unsigned nthreads) {
+auto vq_query_heap_2(DB& db, const Q& q, int k_nn, unsigned nthreads) {
   return vq_query_heap_2(
-      without_ids{}, db, q, std::vector<size_t>{}, k_nn, nthreads);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
 }
 
-template <class DB, class Q, class Index>
+template <class DB, class Q, class ID>
 auto vq_query_heap_2(
-    DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
+    DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads) {
   return vq_query_heap_2(with_ids{}, db, q, ids, k_nn, nthreads);
 }
 
-template <class T, class DB, class Q, class Index>
+template <class T, class DB, class Q, class ID>
 auto vq_query_heap_2(
-    T,
-    DB& db,
-    Q& q,
-    const std::vector<Index>& ids,
-    int k_nn,
-    unsigned nthreads) {
+    T, DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads) {
   // @todo Need to get the total number of queries, not just the first block
   // @todo Use Matrix here rather than vector of vectors
-  std::vector<std::vector<fixed_min_pair_heap<float, size_t>>> scores(
+
+  // using feature_type = typename
+  // std::remove_reference_t<decltype(db)>::value_type;
+  using id_type = typename std::remove_reference_t<decltype(ids)>::value_type;
+  using score_type = float;
+
+  std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>> scores(
       nthreads,
-      std::vector<fixed_min_pair_heap<float, size_t>>(
-          size(q), fixed_min_pair_heap<float, size_t>(k_nn)));
+      std::vector<fixed_min_pair_heap<score_type, id_type>>(
+          size(q), fixed_min_pair_heap<score_type, id_type>(k_nn)));
 
   unsigned size_q = size(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};

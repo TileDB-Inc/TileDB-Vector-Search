@@ -1,6 +1,6 @@
 [project]
 name = "tiledb-vector-search"
-version = "0.0.10"
+version = "0.0.14"
 #dynamic = ["version"]
 description = "TileDB Vector Search Python client"
 license = { text = "MIT" }
@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["nbmake", "pytest"]
 
 
 [project.urls]

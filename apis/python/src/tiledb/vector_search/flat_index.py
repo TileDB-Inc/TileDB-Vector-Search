@@ -36,10 +36,13 @@ class FlatIndex(Index):
             ctx=self.ctx,
             config=config,
         )
-        self.ids_uri = self.group[
-            storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version
-        ].uri
-        if tiledb.array_exists(self.ids_uri, self.ctx):
+
+        # Check for existence of ids array. Previous versions were not using external_ids in the ingestion assuming
+        # that the external_ids were the position of the vector in the array.
+        if storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version in self.group:
+            self.ids_uri = self.group[
+                storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version
+            ].uri
             self._ids = read_vector_u64(self.ctx, self.ids_uri, 0, 0)
         else:
             self._ids = StdVector_u64(np.arange(self.size).astype(np.uint64))

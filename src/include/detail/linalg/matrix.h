@@ -201,6 +201,13 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   auto num_cols() const noexcept {
     return num_cols_;
   }
+
+  auto swap(Matrix& rhs) noexcept {
+    std::swap(num_rows_, rhs.num_rows_);
+    std::swap(num_cols_, rhs.num_cols_);
+    std::swap(storage_, rhs.storage_);
+    std::swap(static_cast<Base&>(*this), static_cast<Base&>(rhs));
+  }
 };
 
 /**
@@ -293,9 +300,11 @@ std::string matrix_info(const std::span<T>& A, const std::string& msg = "") {
   return str;
 }
 
+static bool matrix_printf = false;
+
 template <class Matrix>
 void debug_matrix(const Matrix& A, const std::string& msg = "") {
-  if (global_debug) {
+  if (matrix_printf) {
     std::cout << matrix_info(A, msg) << std::endl;
   }
 }
@@ -306,7 +315,7 @@ void debug_slice(
     const std::string& msg = "",
     size_t rows = 5,
     size_t cols = 15) {
-  if (global_debug) {
+  if (matrix_printf) {
     rows = std::min(rows, A.num_rows());
     cols = std::min(cols, A.num_cols());
 
@@ -328,7 +337,7 @@ void debug_slices_diff(
     const std::string& msg = "",
     size_t rows = 5,
     size_t cols = 15) {
-  if (global_debug) {
+  if (matrix_printf) {
     rows = std::min(rows, A.num_rows());
     cols = std::min(cols, A.num_cols());
 
