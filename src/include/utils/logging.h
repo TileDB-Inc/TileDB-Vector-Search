@@ -257,7 +257,7 @@ inline timing_data_class& get_timing_data_instance() {
   return timing_data_class::get_instance();
 }
 
-timing_data_class& _timing_data{get_timing_data_instance()};
+static timing_data_class& _timing_data{get_timing_data_instance()};
 
 /**
  * Timer class for logging timing data.  Internnally aintains a start time and a
@@ -468,7 +468,7 @@ inline memory_data& get_memory_data_instance() {
   return memory_data::get_instance();
 }
 
-memory_data& _memory_data{get_memory_data_instance()};
+static memory_data& _memory_data{get_memory_data_instance()};
 
 #if 0
 class stats_data {

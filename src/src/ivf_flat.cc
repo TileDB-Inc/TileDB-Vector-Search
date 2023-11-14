@@ -73,6 +73,8 @@
 #include "utils/timer.h"
 #include "utils/utils.h"
 
+bool global_verbose = false;
+bool global_debug = false;
 
 bool enable_stats = false;
 std::vector<json> core_stats;
@@ -142,8 +144,8 @@ int main(int argc, char* argv[]) {
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
-  // global_debug = args["--debug"].asBool();
-  // global_verbose = args["--verbose"].asBool();
+  global_debug = args["--debug"].asBool();
+  global_verbose = args["--verbose"].asBool();
   enable_stats = args["--stats"].asBool();
 
   auto part_uri = args["--parts_uri"].asString();
@@ -417,7 +419,7 @@ int main(int argc, char* argv[]) {
         tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
     groundtruth.load();
 
-    if (false) {
+    if (global_debug) {
       std::cout << std::endl;
 
       debug_matrix(groundtruth, "groundtruth");

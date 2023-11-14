@@ -293,11 +293,9 @@ std::string matrix_info(const std::span<T>& A, const std::string& msg = "") {
   return str;
 }
 
-static bool matrix_printf = false;
-
 template <class Matrix>
 void debug_matrix(const Matrix& A, const std::string& msg = "") {
-  if (matrix_printf) {
+  if (global_debug) {
     std::cout << matrix_info(A, msg) << std::endl;
   }
 }
@@ -308,7 +306,7 @@ void debug_slice(
     const std::string& msg = "",
     size_t rows = 5,
     size_t cols = 15) {
-  if (matrix_printf) {
+  if (global_debug) {
     rows = std::min(rows, A.num_rows());
     cols = std::min(cols, A.num_cols());
 
@@ -330,7 +328,7 @@ void debug_slices_diff(
     const std::string& msg = "",
     size_t rows = 5,
     size_t cols = 15) {
-  if (matrix_printf) {
+  if (global_debug) {
     rows = std::min(rows, A.num_rows());
     cols = std::min(cols, A.num_cols());
 

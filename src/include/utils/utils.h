@@ -38,6 +38,8 @@
 #include <regex>
 #include <string>
 
+namespace {
+
 bool is_http_address(const std::string& filename) {
   std::regex httpRegex("^https?://.*");
   return std::regex_match(filename, httpRegex);
@@ -145,5 +147,7 @@ struct counter {
     return *this;
   }
 };
+
+} // anonymous namespace
 
 #endif

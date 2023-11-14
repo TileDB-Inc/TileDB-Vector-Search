@@ -58,11 +58,11 @@
 #include "detail/flat/qv.h"
 #include "detail/ivf/index.h"
 
-template <class T, class shuffled_ids_type, class indices_type>
+enum class kmeans_init { none, kmeanspp, random };
+
+template <class T, class shuffled_ids_type = size_t, class indices_type = size_t>
 class kmeans_index {
-  // Random device to seed the random number generator
-  std::random_device rd;
-  std::mt19937 gen{rd()};
+  std::mt19937 gen;
 
   size_t dimension_{0};
   size_t nlist_;
@@ -80,13 +80,15 @@ class kmeans_index {
       size_t dimension,
       size_t nlist,
       size_t max_iter,
-      double tol,
-      size_t nthreads)
-      : dimension_(dimension)
+      double tol = 0.0001,
+      std::optional<size_t> nthreads = std::nullopt,
+      std::optional<unsigned int> seed = std::nullopt)
+      : gen(seed ? *seed : std::random_device{}())
+      , dimension_(dimension)
       , nlist_(nlist)
       , max_iter_(max_iter)
       , tol_(tol)
-      , nthreads_(nthreads)
+      , nthreads_(nthreads ? *nthreads : std::thread::hardware_concurrency())
       , centroids_(dimension, nlist) {
   }
 
@@ -195,9 +197,16 @@ class kmeans_index {
     scoped_timer _{__FUNCTION__};
 
     std::vector<size_t> indices(nlist_);
+    std::vector<bool> visited(training_set.num_cols(), false);
     std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
     for (size_t i = 0; i < nlist_; ++i) {
-      indices[i] = dis(gen);
+      size_t index;
+      do
+      {
+        index = dis(gen);
+      } while (visited[index]);
+      indices[i] = index;
+      visited[index] = true;
     }
     // std::iota(begin(indices), end(indices), 0);
     // std::shuffle(begin(indices), end(indices), gen);
@@ -252,8 +261,8 @@ class kmeans_index {
       auto min = *mm.first;
       auto max = *mm.second;
       auto diff = max - min;
-      std::cout << "avg: " << average << " sum: " << sum << " min: " << min
-                << " max: " << max << " diff: " << diff << std::endl;
+      // std::cout << "avg: " << average << " sum: " << sum << " min: " << min
+      //          << " max: " << max << " diff: " << diff  << std::endl;
 
       // @todo parallelize
 
@@ -284,6 +293,21 @@ class kmeans_index {
       }
       file << std::endl;
 
+      for (auto s = 0; s < training_set.num_cols(); ++s) {
+        for (auto t = 0; t < training_set.num_rows(); ++t) {
+          file << std::to_string(training_set(t, s)) << ',';
+        }
+        file << std::endl;
+      }
+      file << std::endl;
+
+      for (auto s = 0; s < centroids_.num_cols(); ++s) {
+        for (auto t = 0; t < centroids_.num_rows(); ++t) {
+          file << std::to_string(centroids_(t, s)) << ',';
+        }
+        file << std::endl;
+      }
+
       file.close();
 
       std::cout << "Data written to file: " << tempFileName << std::endl;
@@ -291,9 +315,56 @@ class kmeans_index {
 #endif
   }
 
-  void train(const ColMajorMatrix<T>& training_set) {
-    kmeans_pp(training_set);
+  static std::vector<indices_type> predict(const ColMajorMatrix<T>& centroids, const ColMajorMatrix<T>& vectors) {
+    // Return a vector of indices of the nearest centroid for each vector in the matrix.
+    // Write the code below:
+    auto nClusters = centroids.num_cols();
+    std::vector<indices_type> indices(vectors.num_cols());
+    std::vector<T> distances(nClusters);
+    for (size_t i = 0; i < vectors.num_cols(); ++i) {
+      for (size_t j = 0; j < nClusters; ++j) {
+        distances[j] = sum_of_squares(vectors[i], centroids[j]);
+      }
+      indices[i] = std::min_element(begin(distances), end(distances)) - begin(distances);
+    }
+    return indices;
+  }
+
+  void train(const ColMajorMatrix<T>& training_set, kmeans_init init) {
+    switch(init) {
+    case(kmeans_init::none):
+      break;
+      case(kmeans_init::kmeanspp):
+        kmeans_pp(training_set);
+        break;
+      case(kmeans_init::random):
+        kmeans_random_init(training_set);
+        break;
+    };
+
+#if 0
+    std::cout << "\nCentroids Before:\n" << std::endl;
+    for (size_t j = 0; j < centroids_.num_cols(); ++j) {
+      for (size_t i = 0; i < dimension_; ++i) {
+        std::cout << centroids_[j][i] << " ";
+      }
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+#endif
+
     train_no_init(training_set);
+
+#if 0
+    std::cout << "\nCentroids After:\n" << std::endl;
+    for (size_t j = 0; j < centroids_.num_cols(); ++j) {
+      for (size_t i = 0; i < dimension_; ++i) {
+        std::cout << centroids_[j][i] << " ";
+      }
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+#endif
   }
 
 #if 0
@@ -336,9 +407,14 @@ class kmeans_index {
   }
 #endif
 
+  auto set_centroids(const ColMajorMatrix<T>& centroids) {
+    std::copy(centroids.data(), centroids.data() + centroids.num_rows() * centroids.num_cols(), centroids_.data());
+  }
+
   auto& get_centroids() {
     return centroids_;
   }
+
 };
 
 #endif  // TILEDB_IVF_INDEX_H

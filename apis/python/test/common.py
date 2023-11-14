@@ -1,6 +1,4 @@
 import os
-import random
-import string
 
 import numpy as np
 
@@ -164,33 +162,18 @@ def create_array(path: str, data):
         A[:] = data
 
 
-def accuracy(
-    result, gt, external_ids_offset=0, updated_ids=None, only_updated_ids=False
-):
+def accuracy(result, gt, external_ids_offset=0, updated_ids=None):
     found = 0
     total = 0
-    if updated_ids is not None:
-        updated_ids_rev = {}
-        for updated_id in updated_ids:
-            updated_ids_rev[updated_ids[updated_id]] = updated_id
     for i in range(len(result)):
         if external_ids_offset != 0:
             temp_result = []
             for j in range(len(result[i])):
-                temp_result.append(int(result[i][j] - external_ids_offset))
+                temp_result.append(int(result[i][j]-external_ids_offset))
         elif updated_ids is not None:
             temp_result = []
             for j in range(len(result[i])):
-                if result[i][j] in updated_ids:
-                    raise ValueError(
-                        f"Found updated id {result[i][j]} in query results."
-                    )
-                if only_updated_ids:
-                    if result[i][j] not in updated_ids_rev:
-                        raise ValueError(
-                            f"Found not_updated_id {result[i][j]} in query results while expecting only_updated_ids."
-                        )
-                uid = updated_ids_rev.get(result[i][j])
+                uid = updated_ids.get(result[i][j])
                 if uid is not None:
                     temp_result.append(int(uid))
                 else:
@@ -200,9 +183,3 @@ def accuracy(
         total += len(temp_result)
         found += len(np.intersect1d(temp_result, gt[i]))
     return found / total
-
-
-# Generate random names for test array uris
-def random_name(name: str) -> str:
-    suffix = "".join(random.choices(string.ascii_letters, k=10))
-    return f"zzz_unittest_{name}_{suffix}"

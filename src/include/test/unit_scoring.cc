@@ -38,7 +38,7 @@
 
 #ifdef TILEDB_VS_ENABLE_BLAS
 
-TEST_CASE("scoring: vector test", "[scoring]") {
+TEST_CASE("defs: vector test", "[defs]") {
   std::vector<std::vector<float>> a{
       {1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}};
   std::vector<float> b{0, 0, 0, 0};
@@ -79,43 +79,22 @@ TEST_CASE("scoring: vector test", "[scoring]") {
 // cosine
 // dot
 // jaccard WIP
-using scoring_typelist = std::tuple<
-    std::tuple<float, int, int>,
-    std::tuple<float, unsigned, unsigned>,
-    std::tuple<float, size_t, size_t>,
-    std::tuple<float, unsigned, size_t>,
-    std::tuple<float, int, size_t>,
-    std::tuple<float, size_t, int>>;
-// get_top_k (heap) from scores array
-TEMPLATE_LIST_TEST_CASE(
-    "scoring: get_top_k_from_scores vector",
-    "[scoring][get_top_k]",
-    scoring_typelist) {
-  using score_type = std::tuple_element_t<0, TestType>;
-  using index_type = std::tuple_element_t<1, TestType>;
-  // using groundtruth_type = std::tuple_element_t<2, TestType>;
-  std::vector<score_type> scores = {8, 6, 7, 5, 3, 0, 9, 1, 2, 4, 3.14159};
 
-  std::vector<index_type> top_k(5);
-  get_top_k_from_scores(scores, top_k, 5);
-  CHECK(top_k.size() == 5);
-  CHECK(top_k[0] == 5);   // 0
-  CHECK(top_k[1] == 7);   // 1
-  CHECK(top_k[2] == 8);   // 2
-  CHECK(top_k[3] == 4);   // 3
-  CHECK(top_k[4] == 10);  // 3.14159
+// get_top_k (heap) from scores array
+TEST_CASE("get_top_k (heap) from scores array", "[get_top_k]") {
+  std::vector<float> scores = {8, 6, 7, 5, 3, 0, 9, 1, 2, 4};
+
+  std::vector<unsigned> top_k(3);
+  get_top_k_from_scores(scores, top_k, 3);
+  CHECK(top_k.size() == 3);
+  CHECK(top_k[0] == 5);  // 0
+  CHECK(top_k[1] == 7);  // 1
+  CHECK(top_k[2] == 8);  // 2
 }
 
 // get_top_k (heap) from scores matrix, parallel
-TEMPLATE_LIST_TEST_CASE(
-    "scoring: get_top_k_from_scores matrix",
-    "[scoring][get_top_k]",
-    scoring_typelist) {
-  using score_type = std::tuple_element_t<0, TestType>;
-  using index_type = std::tuple_element_t<1, TestType>;
-  using groundtruth_type = std::tuple_element_t<2, TestType>;
-
-  ColMajorMatrix<score_type> scores{
+TEST_CASE("get_top_k (heap) from scores matrix, parallel", "[get_top_k]") {
+  ColMajorMatrix<float> scores{
       //  0  1  2  3  4  5  6  7  8
       {8, 6, 7, 5, 3, 0, 9, 1, 2},
       {3, 1, 4, 1, 5, 9, 2, 6, 7},
@@ -137,18 +116,18 @@ TEMPLATE_LIST_TEST_CASE(
   // 2 2 3
   // 1 1 3
   // 0 1 1
-  std::vector<score_type> gt_scores{
+  std::vector<unsigned> gt_scores{
       0, 1, 2, 1, 1, 2, 1, 2, 3, 1, 2, 3, 2, 2, 3, 1, 1, 3, 0, 1, 1,
   };
-  std::vector<groundtruth_type> gt_neighbors{
+  std::vector<unsigned> gt_neighbors{
       5, 7, 8, 1, 3, 6, 0, 1, 2, 8, 7, 6, 7, 3, 6, 8, 6, 2, 3, 8, 5,
   };
 
   SECTION("single thread") {
-    auto top_k = get_top_k_from_scores<index_type>(scores, 3);
+    auto top_k = get_top_k_from_scores(scores, 3);
     CHECK(top_k.num_rows() == 3);
     CHECK(top_k.num_cols() == 7);
-    std::vector<index_type> foo(top_k.data(), top_k.data() + top_k.size());
+    std::vector<unsigned> foo(top_k.data(), top_k.data() + top_k.size());
     CHECK(std::equal(begin(gt_neighbors), end(gt_neighbors), top_k.data()));
   }
 // no multithreaded version WIP
@@ -164,14 +143,9 @@ TEMPLATE_LIST_TEST_CASE(
 }
 
 // consolidate scores
-TEMPLATE_LIST_TEST_CASE(
-    "scoring: consolidate scores", "[scoring]", scoring_typelist) {
-  using score_type = std::tuple_element_t<0, TestType>;
-  using index_type = std::tuple_element_t<1, TestType>;
-  // using groundtruth_type = std::tuple_element_t<2, TestType>;
-
-  std::vector<fixed_min_pair_heap<score_type, index_type>> scores00{
-      fixed_min_pair_heap<score_type, index_type>(
+TEST_CASE("scoring consolidate scores", "[scoring]") {
+  std::vector<fixed_min_pair_heap<float, unsigned>> scores00{
+      fixed_min_pair_heap<float, unsigned>(
           3,
           {
               {0.1, 0},
@@ -180,7 +154,7 @@ TEMPLATE_LIST_TEST_CASE(
               {0.4, 3},
               {0.5, 4},
           }),
-      fixed_min_pair_heap<score_type, index_type>(
+      fixed_min_pair_heap<float, unsigned>(
           3,
           {
               {0.9, 0},
@@ -189,7 +163,7 @@ TEMPLATE_LIST_TEST_CASE(
               {0.6, 3},
               {0.5, 4},
           }),
-      fixed_min_pair_heap<score_type, index_type>(
+      fixed_min_pair_heap<float, unsigned>(
           3,
           {
               {0.6, 5},
@@ -198,7 +172,7 @@ TEMPLATE_LIST_TEST_CASE(
               {0.9, 8},
               {1.0, 9},
           }),
-      fixed_min_pair_heap<score_type, index_type>(
+      fixed_min_pair_heap<float, unsigned>(
           3,
           {
               {0.4, 5},
@@ -208,8 +182,8 @@ TEMPLATE_LIST_TEST_CASE(
               {0.0, 9},
           }),
   };
-  std::vector<fixed_min_pair_heap<score_type, index_type>> scores01{
-      fixed_min_pair_heap<score_type, index_type>(
+  std::vector<fixed_min_pair_heap<float, unsigned>> scores01{
+      fixed_min_pair_heap<float, unsigned>(
           3,
           {
               {0.1, 4},
@@ -218,7 +192,7 @@ TEMPLATE_LIST_TEST_CASE(
               {0.4, 7},
               {0.5, 8},
           }),
-      fixed_min_pair_heap<score_type, index_type>(
+      fixed_min_pair_heap<float, unsigned>(
           3,
           {
               {0.6, 4},
@@ -227,7 +201,7 @@ TEMPLATE_LIST_TEST_CASE(
               {0.9, 7},
               {1.0, 8},
           }),
-      fixed_min_pair_heap<score_type, index_type>(
+      fixed_min_pair_heap<float, unsigned>(
           3,
           {
               {0.9, 0},
@@ -236,7 +210,7 @@ TEMPLATE_LIST_TEST_CASE(
               {0.6, 3},
               {0.5, 4},
           }),
-      fixed_min_pair_heap<score_type, index_type>(
+      fixed_min_pair_heap<float, unsigned>(
           3,
           {
               {0.4, 9},
@@ -246,288 +220,40 @@ TEMPLATE_LIST_TEST_CASE(
               {0.0, 6},
           }),
   };
-  auto scores =
-      std::vector<std::vector<fixed_min_pair_heap<score_type, index_type>>>{
-          scores00, scores01};
+  auto scores = std::vector<std::vector<fixed_min_pair_heap<float, unsigned>>>{
+      scores00, scores01};
   CHECK(scores.size() == 2);
   consolidate_scores(scores);
   CHECK(scores.size() == 2);
   auto s = scores[0];
-  CHECK(size(s) == 4);
-  for (auto& j : s) {
-    std::sort_heap(begin(j), end(j));
+  CHECK(s.size() == 4);
+  for (auto&& j : s) {
+    std::sort_heap(j.begin(), j.end());
   }
-
-  CHECK(size(s[0]) == 3);
-  CHECK(size(s[1]) == 3);
-  CHECK(size(s[2]) == 3);
-  CHECK(size(s[3]) == 3);
   CHECK(std::equal(
       begin(s[0]),
       end(s[0]),
-      std::vector<std::tuple<score_type, index_type>>(
-          {{0.1, 0}, {0.1, 4}, {0.2, 1}})
+      std::vector<std::tuple<float, unsigned>>({{0.1, 0}, {0.1, 4}, {0.2, 5}})
           .begin()));
   CHECK(std::equal(
       begin(s[1]),
       end(s[1]),
-      std::vector<std::tuple<score_type, index_type>>(
-          {{0.2, 5}, {0.5, 4}, {0.6, 4}})
+      std::vector<std::tuple<float, unsigned>>({{0.2, 5}, {0.5, 4}, {0.6, 4}})
           .begin()));
   CHECK(std::equal(
       begin(s[2]),
       end(s[2]),
-      std::vector<std::tuple<score_type, index_type>>(
-          {{0.5, 4}, {0.6, 3}, {0.6, 5}})
+      std::vector<std::tuple<float, unsigned>>({{0.5, 4}, {0.6, 3}, {0.6, 5}})
           .begin()));
   CHECK(std::equal(
       begin(s[3]),
       end(s[3]),
-      std::vector<std::tuple<score_type, index_type>>(
-          {{0.0, 6}, {0.0, 9}, {0.1, 5}})
+      std::vector<std::tuple<float, unsigned>>({{0.0, 6}, {0.0, 9}, {0.1, 5}})
           .begin()));
 }
 
-TEMPLATE_LIST_TEST_CASE(
-    "scoring: get_top_k_from_heap one min_heap",
-    "[scoring]",
-    scoring_typelist) {
-  using score_type = std::tuple_element_t<0, TestType>;
-  using index_type = std::tuple_element_t<1, TestType>;
-  using groundtruth_type = std::tuple_element_t<2, TestType>;
-
-  groundtruth_type k_nn = GENERATE(1, 3, 5);
-  groundtruth_type asize = GENERATE(1, 3, 5);
-
-  fixed_min_pair_heap<score_type, index_type> a(
-      asize,
-      {
-          {10, 0},
-          {9, 1},
-          {8, 2},
-          {7, 3},
-          {6, 4},
-          {5, 5},
-          {4, 6},
-          {3, 7},
-          {2, 8},
-          {1, 9},
-      });
-  std::vector<groundtruth_type> gt_neighbors{9, 8, 7, 6, 5, 4, 3, 2, 1};
-
-  SECTION("std::vector") {
-    std::vector<index_type> top_k(k_nn);
-    get_top_k_from_heap(a, top_k);
-    REQUIRE(top_k.size() == k_nn);
-    auto l_nn = std::min<size_t>(k_nn, a.size());
-    CHECK(std::equal(
-        begin(gt_neighbors), begin(gt_neighbors) + l_nn, top_k.begin()));
-  }
-
-  SECTION("std::span") {
-    std::vector<index_type> top_k(k_nn);
-    get_top_k_from_heap(a, std::span(top_k.data(), k_nn));
-    REQUIRE(top_k.size() == k_nn);
-    auto l_nn = std::min<size_t>(k_nn, a.size());
-    CHECK(std::equal(
-        begin(gt_neighbors), begin(gt_neighbors) + l_nn, top_k.begin()));
-  }
-
-  SECTION("std::vector, pad") {
-    groundtruth_type pad = 2;
-    std::vector<index_type> top_k(k_nn + pad);
-    get_top_k_from_heap(a, top_k);
-    REQUIRE(top_k.size() == k_nn + pad);
-    auto l_nn = std::min<size_t>(k_nn + pad, a.size());
-    CHECK(std::equal(
-        begin(gt_neighbors), begin(gt_neighbors) + l_nn, top_k.begin()));
-    CHECK(end(top_k) == begin(top_k) + k_nn + pad);
-    CHECK(end(top_k) - begin(top_k) == k_nn + pad);
-    CHECK(std::equal(
-        begin(top_k) + l_nn,
-        begin(top_k) + k_nn + pad,
-        std::vector<index_type>(
-            k_nn + pad - l_nn, std::numeric_limits<index_type>::max())
-            .begin()));
-  }
-
-  SECTION("std::span, pad") {
-    groundtruth_type pad = 2;
-    std::vector<index_type> top_k(k_nn + pad);
-    get_top_k_from_heap(a, std::span(top_k.data(), k_nn + pad));
-    REQUIRE(top_k.size() == k_nn + pad);
-    auto l_nn = std::min<size_t>(k_nn + pad, a.size());
-    CHECK(std::equal(
-        begin(gt_neighbors), begin(gt_neighbors) + l_nn, top_k.begin()));
-    CHECK(end(top_k) == begin(top_k) + k_nn + pad);
-    CHECK(end(top_k) - begin(top_k) == k_nn + pad);
-    CHECK(std::equal(
-        begin(top_k) + l_nn,
-        begin(top_k) + k_nn + pad,
-        std::vector<index_type>(
-            k_nn + pad - l_nn, std::numeric_limits<index_type>::max())
-            .begin()));
-  }
-}
-
-TEMPLATE_LIST_TEST_CASE("scoring: get_top_k", "[scoring]", scoring_typelist) {
-  using score_type = std::tuple_element_t<0, TestType>;
-  using index_type = std::tuple_element_t<1, TestType>;
-  using groundtruth_type = std::tuple_element_t<2, TestType>;
-
-  groundtruth_type k_nn = GENERATE(1, 3, 5);
-  groundtruth_type asize = GENERATE(1, 3, 5);
-  groundtruth_type bsize = GENERATE(0, 1);
-  size_t num_vectors{2};
-
-  std::vector<fixed_min_pair_heap<score_type, index_type>> scores00{
-      fixed_min_pair_heap<score_type, index_type>(
-          asize,
-          {
-              {0.1, 0},
-              {0.2, 1},
-              {0.3, 2},
-              {0.4, 3},
-              {0.5, 4},
-              {0.6, 5},
-              {0.7, 6},
-              {0.8, 7},
-              {0.9, 8},
-              {1.0, 9},
-          }),
-      fixed_min_pair_heap<score_type, index_type>(
-          asize + bsize,
-          {
-              {0.9, 0},
-              {0.8, 1},
-              {0.7, 2},
-              {0.6, 3},
-              {0.5, 4},
-              {0.4, 5},
-              {0.3, 6},
-              {0.2, 7},
-              {0.1, 8},
-              {0.0, 9},
-          })};
-
-  // Matrix not used
-  ColMajorMatrix<groundtruth_type> gt_neighbors_mat{
-      {0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
-      {9, 8, 7, 6, 5, 4, 3, 2, 1, 0},
-  };
-  ColMajorMatrix<score_type> gt_scores_mat{
-      {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0},
-      {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9},
-  };
-
-  SECTION("std::vector get_top_k") {
-    CHECK(size(scores00[0]) == asize);
-    CHECK(size(scores00[1]) == asize + bsize);
-
-    auto top_k = get_top_k(scores00, k_nn);
-
-    for (size_t i = 0; i < num_vectors; ++i) {
-      auto l_nn = std::min<size_t>(top_k[0].size(), scores00[i].size());
-      CHECK(std::equal(
-          begin(gt_neighbors_mat[i]),
-          begin(gt_neighbors_mat[i]) + l_nn,
-          begin(top_k[i])));
-      CHECK(std::equal(
-          begin(top_k[i]) + l_nn,
-          begin(top_k[i]) + k_nn,
-          std::vector<index_type>(
-              k_nn - l_nn, std::numeric_limits<index_type>::max())
-              .begin()));
-    }
-  }
-  SECTION("std::vector get_top_k_with_scores") {
-    CHECK(size(scores00[0]) == asize);
-    CHECK(size(scores00[1]) == asize + bsize);
-
-    auto&& [top_k_scores, top_k] = get_top_k_with_scores(scores00, k_nn);
-
-    for (size_t i = 0; i < num_vectors; ++i) {
-      auto l_nn = std::min<size_t>(top_k[0].size(), scores00[i].size());
-      CHECK(std::equal(
-          begin(gt_neighbors_mat[i]),
-          begin(gt_neighbors_mat[i]) + l_nn,
-          begin(top_k[i])));
-      CHECK(std::equal(
-          begin(top_k[i]) + l_nn,
-          begin(top_k[i]) + k_nn,
-          std::vector<index_type>(
-              k_nn - l_nn, std::numeric_limits<index_type>::max())
-              .begin()));
-      CHECK(std::equal(
-          begin(gt_scores_mat[i]),
-          begin(gt_scores_mat[i]) + l_nn,
-          begin(top_k_scores[i])));
-      CHECK(std::equal(
-          begin(top_k_scores[i]) + l_nn,
-          begin(top_k_scores[i]) + k_nn,
-          std::vector<score_type>(
-              k_nn - l_nn, std::numeric_limits<score_type>::max())
-              .begin()));
-
-    }
-  }
-
-#if 0
-  SECTION("std::span get_top_k") {
-    std::vector<index_type> top_k(k_nn);
-    get_top_k_from_heap(a, std::span(top_k.data(), k_nn));
-    REQUIRE(top_k.size() == k_nn);
-    auto l_nn = std::min<size_t>(k_nn, a.size());
-    CHECK(std::equal(
-        begin(gt_neighbors), begin(gt_neighbors) + l_nn, top_k.begin()));
-  }
-
-  SECTION("std::vector get_top_k, pad") {
-    groundtruth_type pad = 2;
-    std::vector<index_type> top_k(k_nn + pad);
-    get_top_k_from_heap(a, top_k);
-    REQUIRE(top_k.size() == k_nn + pad);
-    auto l_nn = std::min<size_t>(k_nn + pad, a.size());
-    CHECK(std::equal(
-        begin(gt_neighbors), begin(gt_neighbors) + l_nn, top_k.begin()));
-    CHECK(end(top_k) == begin(top_k) + k_nn + pad);
-    CHECK(end(top_k) - begin(top_k) == k_nn + pad);
-    CHECK(std::equal(
-        begin(top_k) + l_nn,
-        begin(top_k) + k_nn + pad,
-        std::vector<index_type>(
-            k_nn + pad - l_nn, std::numeric_limits<index_type>::max())
-            .begin()));
-  }
-
-  SECTION("std::span get_top_k, pad") {
-    groundtruth_type pad = 2;
-    std::vector<index_type> top_k(k_nn + pad);
-    get_top_k_from_heap(a, std::span(top_k.data(), k_nn + pad));
-    REQUIRE(top_k.size() == k_nn + pad);
-    auto l_nn = std::min<size_t>(k_nn + pad, a.size());
-    CHECK(std::equal(
-        begin(gt_neighbors), begin(gt_neighbors) + l_nn, top_k.begin()));
-    CHECK(end(top_k) == begin(top_k) + k_nn + pad);
-    CHECK(end(top_k) - begin(top_k) == k_nn + pad);
-    CHECK(std::equal(
-        begin(top_k) + l_nn,
-        begin(top_k) + k_nn + pad,
-        std::vector<index_type>(
-            k_nn + pad - l_nn, std::numeric_limits<index_type>::max())
-            .begin()));
-  }
-#endif
-}
-
-TEMPLATE_LIST_TEST_CASE(
-    "scoring: get_top_k_from_heap vector of min_heap",
-    "[scoring]",
-    scoring_typelist) {
-  using score_type = std::tuple_element_t<0, TestType>;
-  using index_type = std::tuple_element_t<1, TestType>;
-  using groundtruth_type = std::tuple_element_t<2, TestType>;
-  fixed_min_pair_heap<score_type, index_type> a(
+TEST_CASE("scoring get_top_k_from_heap one min_heap", "[scoring]") {
+  fixed_min_pair_heap<float, unsigned> a(
       5,
       {
           {10, 0},
@@ -541,7 +267,44 @@ TEMPLATE_LIST_TEST_CASE(
           {2, 8},
           {1, 9},
       });
-  fixed_min_pair_heap<score_type, index_type> b(
+  std::vector<unsigned> gt_neighbors{
+      9,
+      8,
+      7,
+      6,
+      5,
+  };
+
+  SECTION("std::vector") {
+    std::vector<unsigned> top_k(5);
+    get_top_k_from_heap(a, top_k);
+    CHECK(top_k.size() == 5);
+    CHECK(std::equal(begin(gt_neighbors), end(gt_neighbors), top_k.begin()));
+  }
+  SECTION("std::span") {
+    std::vector<unsigned> top_k(5);
+    get_top_k_from_heap(a, std::span(top_k.data(), 5));
+    CHECK(top_k.size() == 5);
+    CHECK(std::equal(begin(gt_neighbors), end(gt_neighbors), top_k.begin()));
+  }
+}
+
+TEST_CASE("scoring get_top_k_from_heap vector of min_heap", "[scoring]") {
+  fixed_min_pair_heap<float, unsigned> a(
+      5,
+      {
+          {10, 0},
+          {9, 1},
+          {8, 2},
+          {7, 3},
+          {6, 4},
+          {5, 5},
+          {4, 6},
+          {3, 7},
+          {2, 8},
+          {1, 9},
+      });
+  fixed_min_pair_heap<float, unsigned> b(
       5,
       {
           {2, 0},
@@ -555,7 +318,11 @@ TEMPLATE_LIST_TEST_CASE(
           {9, 8},
           {0, 9},
       });
-  std::vector<groundtruth_type> gt_neighbors_vec{
+  ColMajorMatrix<unsigned> gt_neighbors_mat{
+      {9, 8, 7, 6, 5},
+      {9, 4, 0, 5, 1},
+  };
+  std::vector<unsigned> gt_neighbors_vec{
       9,
       8,
       7,
@@ -567,7 +334,11 @@ TEMPLATE_LIST_TEST_CASE(
       5,
       1,
   };
-  std::vector<score_type> gt_scores_vec{
+  ColMajorMatrix<unsigned> gt_scores_mat{
+      {1, 2, 3, 4, 5},
+      {0, 1, 2, 3, 4},
+  };
+  std::vector<unsigned> gt_scores_vec{
       1,
       2,
       3,
@@ -579,17 +350,7 @@ TEMPLATE_LIST_TEST_CASE(
       3,
       4,
   };
-
-  // Matrix not used
-  ColMajorMatrix<groundtruth_type> gt_neighbors_mat{
-      {9, 8, 7, 6, 5},
-      {9, 4, 0, 5, 1},
-  };
-  ColMajorMatrix<score_type> gt_scores_mat{
-      {1, 2, 3, 4, 5},
-      {0, 1, 2, 3, 4},
-  };
-  std::vector<fixed_min_pair_heap<score_type, index_type>> scores{a, b};
+  std::vector<fixed_min_pair_heap<float, unsigned>> scores{a, b};
   SECTION("std::vector") {
     auto top_k = get_top_k(scores, 5);
     CHECK(top_k.num_rows() == 5);
@@ -624,53 +385,6 @@ TEMPLATE_LIST_TEST_CASE(
         begin(gt_scores_vec), end(gt_scores_vec), top_scores.data()));
   }
 }
-
-// test pad with sentinel
-TEMPLATE_LIST_TEST_CASE(
-    "scoring: pad_with_sentinels", "[scoring]", scoring_typelist) {
-  using score_type = std::tuple_element_t<0, TestType>;
-  using index_type = std::tuple_element_t<1, TestType>;
-  using groundtruth_type = std::tuple_element_t<2, TestType>;
-
-  auto v = std::vector<index_type>{8, 6, 7, 5, 3, 0, 9, 1, 2, 4, 3};
-  auto w = v;
-  auto x = std::vector<score_type>{
-      3.1, 4.1, 5.9, 2.6, 5.3, 5.8, 9.7, 9.3, 2.3, 8.4, 6.2};
-  auto y = x;
-  groundtruth_type start = GENERATE(1, 3, 9, 11);
-
-  SECTION("top_k") {
-    pad_with_sentinels(start, v);
-    CHECK(std::equal(begin(v), begin(v) + start, begin(w)));
-    CHECK(std::equal(
-        begin(v) + start,
-        end(v),
-        std::vector<index_type>(
-            size(v) - start, std::numeric_limits<index_type>::max())
-            .begin()));
-  }
-  SECTION("top_k_with_scores") {
-    pad_with_sentinels(start, v, x);
-    CHECK(std::equal(begin(v), begin(v) + start, begin(w)));
-    CHECK(std::equal(
-        begin(v) + start,
-        end(v),
-        std::vector<index_type>(
-            size(v) - start, std::numeric_limits<index_type>::max())
-            .begin()));
-
-    CHECK(std::equal(begin(x), begin(x) + start, begin(y)));
-    CHECK(std::equal(
-        begin(x) + start,
-        end(x),
-        std::vector<score_type>(
-            size(x) - start, std::numeric_limits<score_type>::max())
-            .begin()));
-  }
-}
-
-// test get_top_k_from_heap and get_top_k_from_heap_with_scores with padding
-// test get_top_k and get_top_k_with_scores with padding
 
 // get_top_k_from_heap (vector of vectors of min_heaps)
 // get_top_k_with_scores_from_heap (one min_heap)
