@@ -74,7 +74,8 @@ int ivf_index(
   debug_matrix(parts, "parts");
   {
     scoped_timer _{"shuffling data"};
-    std::unordered_set<ids_type> deleted_ids_set(deleted_ids.begin(), deleted_ids.end());
+    std::unordered_set<ids_type> deleted_ids_set(
+        deleted_ids.begin(), deleted_ids.end());
     std::vector<size_t> degrees(centroids.num_cols());
     std::vector<ids_type> indices(centroids.num_cols() + 1);
     if (deleted_ids.empty()) {
@@ -84,7 +85,8 @@ int ivf_index(
       }
     } else {
       for (size_t i = 0; i < db.num_cols(); ++i) {
-        if (auto iter = deleted_ids_set.find(external_ids[i]); iter == deleted_ids_set.end()) {
+        if (auto iter = deleted_ids_set.find(external_ids[i]);
+            iter == deleted_ids_set.end()) {
           auto j = parts[i];
           ++degrees[j];
         }
@@ -134,7 +136,8 @@ int ivf_index(
       }
     } else {
       for (size_t i = 0; i < db.num_cols(); ++i) {
-        if (auto iter = deleted_ids_set.find(external_ids[i]); iter == deleted_ids_set.end()) {
+        if (auto iter = deleted_ids_set.find(external_ids[i]);
+            iter == deleted_ids_set.end()) {
           size_t bin = parts[i];
           size_t ibin = indices[bin];
 

@@ -201,3 +201,41 @@ TEST_CASE(
   std::sort(begin(v3), end(v3));
   CHECK(a2 == v3);
 }
+
+TEST_CASE(
+    "fixed_min_heap: fixed_max_heap with a large vector", "[fixed_min_heap]") {
+  using element = std::tuple<float, int>;
+
+  fixed_min_pair_heap<float, int, std::greater<float>> a(
+      7, std::greater<float>{});
+
+  std::vector<element> v(5500);
+  for (auto&& i : v) {
+    i = {std::rand(), std::rand()};
+    CHECK(i != element{});
+  }
+  for (auto&& [e, f] : v) {
+    a.insert(e, f);
+  }
+  CHECK(a.size() == 7);
+
+  std::vector<element> a2(begin(a), end(a));
+  std::sort(begin(a2), end(a2), [](auto&& a, auto&& b) {
+    return std::get<0>(a) > std::get<0>(b);
+  });
+
+  std::vector<element> u(v.begin(), v.begin() + 7);
+
+  std::nth_element(v.begin(), v.begin() + 7, v.end(), [](auto&& a, auto&& b) {
+    return std::get<0>(a) > std::get<0>(b);
+  });
+  std::vector<element> w(v.begin(), v.begin() + 7);
+
+  CHECK(u != w);
+
+  std::vector<element> v3(v.begin(), v.begin() + 7);
+  std::sort(begin(v3), end(v3), [](auto&& a, auto&& b) {
+    return std::get<0>(a) > std::get<0>(b);
+  });
+  CHECK(a2 == v3);
+}

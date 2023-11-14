@@ -125,7 +125,8 @@ class life_timer : public empty_timer, public ms_timer {
 
 namespace {
 
-std::ostream& operator<<(std::ostream& os, const seconds_timer& t) {
+[[maybe_unused]] std::ostream& operator<<(
+    std::ostream& os, const seconds_timer& t) {
   std::string name = t.name();
   if (t.name() != "") {
     os << "# [ " + t.name() + " ]: ";
@@ -134,7 +135,7 @@ std::ostream& operator<<(std::ostream& os, const seconds_timer& t) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const ms_timer& t) {
+[[maybe_unused]] std::ostream& operator<<(std::ostream& os, const ms_timer& t) {
   std::string name = t.name();
   if (t.name() != "") {
     os << "# [ " + t.name() + " ]: ";
@@ -144,7 +145,7 @@ std::ostream& operator<<(std::ostream& os, const ms_timer& t) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const us_timer& t) {
+[[maybe_unused]] std::ostream& operator<<(std::ostream& os, const us_timer& t) {
   std::string name = t.name();
   if (t.name() != "") {
     os << "# [ " + t.name() + " ]: ";
@@ -153,7 +154,7 @@ std::ostream& operator<<(std::ostream& os, const us_timer& t) {
   return os;
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 #ifndef tdb_func__
 #ifdef __cpp_lib_source_location
