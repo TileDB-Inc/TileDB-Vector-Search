@@ -202,7 +202,7 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="tiledb.vector_search.ingestion.ingest" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.ingestion.ingest">ingest</h3>
-<p><code>vector_search.ingestion.ingest(index_type, index_uri, *, input_vectors=None, source_uri=None, source_type=None, external_ids=None, external_ids_uri='', external_ids_type=None, updates_uri=None, index_timestamp=None, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, input_vectors_per_work_item=-1, storage_version=STORAGE_VERSION, verbose=False, trace_id=None, mode=Mode.LOCAL, **kwargs)</code></p>
+<p><code>vector_search.ingestion.ingest(index_type, index_uri, *, input_vectors=None, source_uri=None, source_type=None, external_ids=None, external_ids_uri='', external_ids_type=None, updates_uri=None, index_timestamp=None, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, input_vectors_per_work_item=-1, storage_version=STORAGE_VERSION, verbose=False, trace_id=None, use_sklearn=False, mode=Mode.LOCAL, **kwargs)</code></p>
 <p>Ingest vectors into TileDB.</p>
 <section id="parameters" class="level4">
 <h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
@@ -210,7 +210,7 @@ ul.task-list li input[type="checkbox"] {
 <colgroup>
 <col style="width: 15%">
 <col style="width: 16%">
-<col style="width: 57%">
+<col style="width: 59%">
 <col style="width: 9%">
 </colgroup>
 <thead>
@@ -349,6 +349,12 @@ ul.task-list li input[type="checkbox"] {
 <td><code>None</code></td>
 </tr>
 <tr class="even">
+<td><code>use_sklearn</code></td>
+<td>bool</td>
+<td>Whether to use scikit-learn’s implementation of k-means clustering instead of tiledb.vector_search’s. Defaults to false.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="odd">
 <td><code>mode</code></td>
 <td>Mode</td>
 <td>execution mode, defaults to LOCAL use BATCH for distributed execution</td>
