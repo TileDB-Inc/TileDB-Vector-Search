@@ -47,8 +47,6 @@ siftsmall_flatIVF_index_uri_32_64 = m1_root + "siftsmall/flatIVF_index_siftsmall
 ctx = vspy.Ctx({})
 
 
-
-
 def test_construct_FeatureVector():
     a = vspy.FeatureVector(ctx, ids_uri);
     assert a.feature_type_string() == "uint64"
@@ -189,16 +187,28 @@ def test_query_IndexFlatL2():
     logging.info(f"u.dtype={u.dtype}, v.dtype={v.dtype}")
     assert (u == v[:,0:k_nn]).all()
 
-# ECK(dimension(aq_top_k) == k_nn);
-# CHECK(num_vectors(aq_scores) == num_queries);
-# CHECK(dimension(aq_scores) == k_nn);
-# auto hk = tdbColMajorMatrix<groundtruth_type>(ctx, gt_uri);
-# load(hk);
-# auto ok = validate_top_k(aq_top_k, FeatureVectorArray{std::move(hk)});
-# CHECK(ok);
-
 
 def test_construct_IndexIVFFlat():
+    a = vspy.IndexIVFFlat()
+    assert a.feature_type_string() == "any"
+    assert a.id_type_string() == "uint32"
+    assert a.px_type_string() == "uint32"
+
+    a = vspy.IndexIVFFlat(feature_type="float32")
+    assert a.feature_type_string() == "float32"
+    assert a.id_type_string() == "uint32"
+    assert a.px_type_string() == "uint32"
+
+    a = vspy.IndexIVFFlat(feature_type="uint8", id_type="uint64", px_type="int64")
+    assert a.feature_type_string() == "uint8"
+    assert a.id_type_string() == "uint64"
+    assert a.px_type_string() == "int64"
+
+    a = vspy.IndexIVFFlat(feature_type="float32", id_type="int64", px_type="uint64")
+    assert a.feature_type_string() == "float32"
+    assert a.id_type_string() == "int64"
+    assert a.px_type_string() == "uint64"
+
     a = vspy.IndexIVFFlat(ctx, siftsmall_flatIVF_index_uri_32_64)
     assert a.feature_type_string() == "float32"
     assert a.id_type_string() == "uint32"
@@ -210,3 +220,142 @@ def test_construct_IndexIVFFlat():
     assert a.id_type_string() == "uint64"
     assert a.px_type_string() == "uint32"
     assert a.dimension() == 128
+
+def test_inplace_build_infinite_query_IndexIVFFlat():
+    k_nn = 10
+    nprobe = 32
+    num_queries = 100
+
+    for nprobe in [ 8, 32]:
+        a = vspy.IndexIVFFlat(id_type="uint32", px_type="uint32")
+
+        training_set = vspy.FeatureVectorArray(ctx, siftsmall_base_uri)
+        assert training_set.feature_type_string() == "float32"
+
+        query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
+        assert query_set.feature_type_string() == "float32"
+
+        groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
+        assert groundtruth_set.feature_type_string() == "int32"
+
+        a.train(training_set, "random");
+        a.add(training_set);
+        s, t = a.query_infinite_ram(query_set, k_nn, nprobe)
+
+        intersections = vspy.count_intersections(t, groundtruth_set, k_nn);
+
+        nt = np.double(t.num_vectors()) * np.double(k_nn);
+        recall = intersections / nt
+
+        logging.info(f"nprobe = {nprobe}, recall={recall}")
+
+        if (nprobe == 8):
+            assert recall > 0.95
+        if (nprobe == 32):
+            assert recall == 1.0
+
+def test_read_index_and_infinite_query():
+    k_nn = 10
+    nprobe = 32
+    num_queries = 100
+
+    for nprobe in [ 8, 32]:
+        a = vspy.IndexIVFFlat(ctx, siftsmall_flatIVF_index_uri_32_64)
+        assert a.feature_type_string() == "float32"
+        assert a.id_type_string() == "uint32"
+        assert a.px_type_string() == "uint64"
+        assert a.dimension() == 128
+
+        query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
+        assert query_set.feature_type_string() == "float32"
+
+        groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
+        assert groundtruth_set.feature_type_string() == "int32"
+
+        s, t = a.query_infinite_ram(query_set, k_nn, nprobe)
+
+        intersections = vspy.count_intersections(t, groundtruth_set, k_nn);
+
+        nt = np.double(t.num_vectors()) * np.double(k_nn);
+        recall = intersections / nt
+
+        logging.info(f"nprobe = {nprobe}, recall={recall}")
+
+        if (nprobe == 8):
+            assert recall > 0.925
+        if (nprobe == 32):
+            assert recall == 1.0
+
+def test_read_index_and_finite_query_default_upper_bound():
+    k_nn = 10
+    nprobe = 32
+    num_queries = 100
+
+    for nprobe in [ 8, 32]:
+        a = vspy.IndexIVFFlat(ctx, siftsmall_flatIVF_index_uri_32_64)
+        query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
+        groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
+
+        s, t = a.query_finite_ram(query_set, k_nn, nprobe)
+
+        intersections = vspy.count_intersections(t, groundtruth_set, k_nn);
+
+        nt = np.double(t.num_vectors()) * np.double(k_nn);
+        recall = intersections / nt
+
+        logging.info(f"nprobe = {nprobe}, recall={recall}")
+
+        if (nprobe == 8):
+            assert recall > 0.925
+        if (nprobe == 32):
+            assert recall == 1.0
+
+
+def test_read_index_and_finite_query_0_upper_bound():
+    k_nn = 10
+    nprobe = 32
+    num_queries = 100
+
+    for nprobe in [ 8, 32]:
+        a = vspy.IndexIVFFlat(ctx, siftsmall_flatIVF_index_uri_32_64)
+        query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
+        groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
+
+        s, t = a.query_finite_ram(query_set, k_nn, nprobe, 0)
+
+        intersections = vspy.count_intersections(t, groundtruth_set, k_nn);
+
+        nt = np.double(t.num_vectors()) * np.double(k_nn);
+        recall = intersections / nt
+
+        logging.info(f"nprobe = {nprobe}, recall={recall}")
+
+        if (nprobe == 8):
+            assert recall > 0.925
+        if (nprobe == 32):
+            assert recall == 1.0
+
+
+def test_read_index_and_finite_query_1000_upper_bound():
+    k_nn = 10
+    nprobe = 32
+    num_queries = 100
+
+    for nprobe in [ 8, 32]:
+        a = vspy.IndexIVFFlat(ctx, siftsmall_flatIVF_index_uri_32_64)
+        query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
+        groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
+
+        s, t = a.query_finite_ram(query_set, k_nn, nprobe, 1000)
+
+        intersections = vspy.count_intersections(t, groundtruth_set, k_nn);
+
+        nt = np.double(t.num_vectors()) * np.double(k_nn);
+        recall = intersections / nt
+
+        logging.info(f"nprobe = {nprobe}, recall={recall}")
+
+        if (nprobe == 8):
+            assert recall > 0.925
+        if (nprobe == 32):
+            assert recall == 1.0

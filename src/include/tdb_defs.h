@@ -107,6 +107,8 @@ std::string datatype_to_string(tiledb_datatype_t datatype) {
       return "int64";
     case TILEDB_UINT64:
       return "uint64";
+    case TILEDB_ANY:
+      return "any";
     default:
       throw std::runtime_error("Unsupported datatype");
   }
