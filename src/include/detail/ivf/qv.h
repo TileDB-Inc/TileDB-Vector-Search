@@ -778,7 +778,7 @@ auto nuv_query_heap_finite_ram(
  */
 template <feature_vector_array F, feature_vector_array Q>
 auto nuv_query_heap_finite_ram_reg_blocked(
-    F& partitioned_vectors,
+    F& partitioned_vectors, // not const because of load()
     const Q& query,
     auto&& active_queries,
     size_t nprobe,
@@ -1099,7 +1099,7 @@ auto apply_query(
  */
 template <feature_vector_array F, feature_vector_array Q>
 auto query_finite_ram(
-    F& partitioned_vectors,
+    F& partitioned_vectors,   // not const because of load()
     const Q& query,
     auto&& active_queries,
     size_t nprobe,

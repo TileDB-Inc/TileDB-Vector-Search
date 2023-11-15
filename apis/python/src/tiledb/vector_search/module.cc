@@ -7,10 +7,15 @@
 #include "linalg.h"
 
 // @todo Replace
-#include "detail/flat/qv.h"
-#include "detail/flat/vq.h"
-#include "detail/ivf/qv.h"
-#include "detail/ivf/vq.h"
+#include "detail/flat/legacy/legacy_qv.h"
+#include "detail/flat/legacy/legacy_vq.h"
+#include "detail/ivf/legacy/legacy_dist_qv.h"
+#include "detail/ivf/legacy/legacy_qv.h"
+#include "detail/ivf/legacy/legacy_vq.h"
+#include "detail/ivf/legacy/legacy_index.h"
+#include "detail/linalg/legacy/legacy_tdb_partitioned_matrix.h"
+
+#include "utils/fixed_min_heap.h"
 
 namespace py = pybind11;
 using Ctx = tiledb::Context;
@@ -129,7 +134,7 @@ static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string&
          size_t nthreads) -> py::tuple { //std::pair<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
         // auto r = detail::ivf::qv_query_heap_infinite_ram(
-        auto r = detail::ivf::query_infinite_ram(
+        auto r = detail::ivf::legacy::query_infinite_ram(
             parts,
             centroids,
             query_vectors,
@@ -157,7 +162,7 @@ static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& s
          size_t nthreads,
          uint64_t timestamp) -> py::tuple { //std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
-        auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
+        auto r = detail::ivf::legacy::qv_query_heap_finite_ram<T, Id_Type>(
             ctx,
             parts_uri,
             centroids,
@@ -185,7 +190,7 @@ static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string
          size_t k_nn,
          size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> { // TODO change return type
 
-        auto r = detail::ivf::nuv_query_heap_infinite_ram_reg_blocked(
+        auto r = detail::ivf::legacy::nuv_query_heap_infinite_ram_reg_blocked(
             parts,
             centroids,
             query_vectors,
@@ -213,7 +218,7 @@ static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& 
          size_t nthreads,
          uint64_t timestamp) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> { // TODO change return type
 
-        auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
+        auto r = detail::ivf::legacy::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
             ctx,
             parts_uri,
             centroids,
@@ -244,7 +249,7 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
         size_t end_pos,
         size_t nthreads,
         uint64_t timestamp) -> int {
-            return detail::ivf::ivf_index<T, uint64_t, float>(
+            return detail::ivf::legacy::ivf_index<T, uint64_t, float>(
                 ctx,
                 db,
                 external_ids,
@@ -275,7 +280,7 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
         size_t end_pos,
         size_t nthreads,
         uint64_t timestamp) -> int {
-            return detail::ivf::ivf_index<T, uint64_t, float>(
+            return detail::ivf::legacy::ivf_index<T, uint64_t, float>(
                 ctx,
                 db_uri,
                 external_ids_uri,
@@ -297,7 +302,8 @@ static void declareFixedMinPairHeap(py::module& mod) {
   PyFixedMinPairHeap cls(mod, "FixedMinPairHeap", py::buffer_protocol());
 
   cls.def(py::init<unsigned>());
-  cls.def("insert", &fixed_min_pair_heap<T, U>::insert);
+  // cls.def("insert", &fixed_min_pair_heap<T, U>::insert);
+  cls.def("insert",[](fixed_min_pair_heap<T, U> &v, const T&t, const U& u) { return v.insert(t, u); });
   cls.def("__len__", [](const fixed_min_pair_heap<T, U> &v) { return v.size(); });
   cls.def("__getitem__", [](fixed_min_pair_heap<T, U>& v, size_t i) { return v[i]; });
 }
@@ -334,7 +340,7 @@ static void declarePartitionedMatrix(py::module& mod,
   cls.def(py::init<const tiledb::Context&,
                    const std::string&,      // db_uri
                    std::vector<uint64_t>&,  // partition array indices
-                   std::vector<uint64_t>&,  // partition list to load
+                   const std::vector<uint64_t>&,  // partition list to load
                    const std::string&>(),   // id_uri
                   py::keep_alive<1,2>());
   cls.def("load", &TMatrix::load);
@@ -375,7 +381,7 @@ void declarePartitionIvfIndex(py::module& m, const std::string& suffix) {
            ColMajorMatrix<T>& query,
            size_t nprobe,
            size_t nthreads) {
-          return detail::ivf::partition_ivf_index(centroids, query, nprobe, nthreads);
+          return detail::ivf::legacy::partition_ivf_index(centroids, query, nprobe, nthreads);
            }
         );
 }
@@ -394,7 +400,7 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
         uint64_t timestamp
         /* size_t nthreads TODO: optional arg w/ fallback to C++ default arg */
         ) { /* TODO return type */
-            return detail::ivf::dist_qv_finite_ram_part<T, shuffled_ids_type>(
+            return detail::ivf::legacy::dist_qv_finite_ram_part<T, shuffled_ids_type>(
                 ctx,
                 part_uri,
                 active_partitions,
@@ -415,7 +421,7 @@ static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
            const std::vector<uint64_t> &ids,
            int k,
            size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
-          auto r = detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads);
+          auto r = detail::flat::legacy::vq_query_heap(data, query_vectors, ids, k, nthreads);
           return r;
         });
 }
@@ -428,7 +434,7 @@ static void declare_vq_query_heap_pyarray(py::module& m, const std::string& suff
            const std::vector<uint64_t> &ids,
            int k,
            size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
-          auto r = detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads);
+          auto r = detail::flat::legacy::vq_query_heap(data, query_vectors, ids, k, nthreads);
           return r;
         });
 }
@@ -530,7 +536,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
            ColMajorMatrix<float>& query_vectors,
            int k,
            size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
-          auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
+          auto r = detail::flat::legacy::vq_query_heap(data, query_vectors, k, nthreads);
           return r;
         });
 
@@ -539,7 +545,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
            ColMajorMatrix<float>& query_vectors,
            int k,
            size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
-          auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
+          auto r = detail::flat::legacy::vq_query_heap(data, query_vectors, k, nthreads);
           return r;
         });
 
@@ -595,8 +601,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declarePartitionIvfIndex<uint8_t>(m, "u8");
   declarePartitionIvfIndex<float>(m, "f32");
 
-  declarePartitionedMatrix<tdbColMajorPartitionedMatrix<uint8_t, uint64_t, uint64_t, uint64_t > >(m, "tdbPartitionedMatrix", "u8");
-  declarePartitionedMatrix<tdbColMajorPartitionedMatrix<float, uint64_t, uint64_t, uint64_t> >(m, "tdbPartitionedMatrix", "f32");
+  declarePartitionedMatrix<detail::linalg::legacy::tdbColMajorPartitionedMatrix<uint8_t, uint64_t, uint64_t, uint64_t > >(m, "tdbPartitionedMatrix", "u8");
+  declarePartitionedMatrix<detail::linalg::legacy::tdbColMajorPartitionedMatrix<float, uint64_t, uint64_t, uint64_t> >(m, "tdbPartitionedMatrix", "f32");
 
   declare_dist_qv<uint8_t>(m, "u8");
   declare_dist_qv<float>(m, "f32");

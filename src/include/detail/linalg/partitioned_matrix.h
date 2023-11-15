@@ -119,6 +119,7 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       , ids_(max_num_vecs) {
   }
 
+
   /**
    * @brief Construct a partitioned matrix in place from a training set of data
    * and an array of labels that maps each vector of the training set to a
