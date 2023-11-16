@@ -189,6 +189,7 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
     // std::cout << upper_bound << " " << nprobe << " " << num_queries << " "
     //           << k_nn << " " << nthreads << std::endl;
 
+
     auto&& [D00, I00] = detail::ivf::legacy::query_infinite_ram<db_type, ids_type>(
         ctx,
         parts_uri,
@@ -297,7 +298,7 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D03.data()));
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D04.data()));
 
-#if 0
+#if 1
     SECTION("dist_qv_finite_ram") {
       auto num_nodes = GENERATE(5 /*, 1 */);
       // std::cout << "num nodes " << num_nodes << std::endl;

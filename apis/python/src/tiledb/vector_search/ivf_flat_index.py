@@ -1,6 +1,7 @@
 import json
 import multiprocessing
 from typing import Any, Mapping
+import logging
 
 import numpy as np
 from tiledb.cloud.dag import Mode
@@ -170,6 +171,7 @@ class IVFFlatIndex(index.Index):
         if nthreads == -1:
             nthreads = multiprocessing.cpu_count()
 
+        logging.info(f"mode is {mode}, self.memory_budget is {self.memory_budget}, use_nuv_implementation is {use_nuv_implementation}")
         nprobe = min(nprobe, self.partitions)
         if mode is None:
             queries_m = array_to_matrix(np.transpose(queries))

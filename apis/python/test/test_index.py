@@ -1,5 +1,7 @@
 import numpy as np
 from common import *
+import logging
+import pdb
 
 import tiledb.vector_search.index as ind
 from tiledb.vector_search import flat_index, ivf_flat_index
@@ -90,9 +92,14 @@ def test_ivf_flat_index(tmp_path):
     assert {0, 2, 4}.issubset(set(result_i[0]))
 
     index = index.consolidate_updates()
+
+    pdb.set_trace()
+
     result_d, result_i = index.query(
         np.array([[2, 2, 2]], dtype=np.float32), k=3, nprobe=partitions
     )
+    logging.info(result_i)
+
     assert {0, 2, 4}.issubset(set(result_i[0]))
 
     update_vectors = np.empty([2], dtype=object)
