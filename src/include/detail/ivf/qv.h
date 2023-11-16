@@ -1246,7 +1246,7 @@ auto query_infinite_ram(
            last_part]() {
             return apply_query(
                 partitioned_vectors,
-                std::optional{std::move(active_partitions)},
+                std::optional{active_partitions},
                 query,
                 active_queries,
                 k_nn,

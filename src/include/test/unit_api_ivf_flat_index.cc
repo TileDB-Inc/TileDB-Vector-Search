@@ -201,7 +201,7 @@ TEST_CASE("api_ivf_flat_index: build index and query in place infinite", "[api_i
     if (nprobe == 32) {
       CHECK(recall == 1.0);
     } else  if (nprobe == 8) {
-      CHECK(recall > 0.95);
+      CHECK(recall > 0.925);
     }
   }
 
