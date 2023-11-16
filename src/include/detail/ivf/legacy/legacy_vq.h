@@ -59,8 +59,8 @@
  *
  */
 
-#ifndef TILEDB_IVF_VQ_H
-#define TILEDB_IVF_VQ_H
+#ifndef TILEDB_IVF_LEGACY_VQ_H
+#define TILEDB_IVF_LEGACY_VQ_H
 
 #include <future>
 #include <limits>

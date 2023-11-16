@@ -39,7 +39,7 @@
 template <class... T>
 constexpr bool always_false = false;
 
-auto get_array_datatype(const tiledb::Array& array) {
+static auto get_array_datatype(const tiledb::Array& array) {
   auto schema = array.schema();
   auto num_attributes = schema.attribute_num();
   if (num_attributes == 1) {
@@ -55,7 +55,7 @@ auto get_array_datatype(const tiledb::Array& array) {
 }
 
 // @todo Implement this with a map
-tiledb_datatype_t string_to_datatype(const std::string& str) {
+static tiledb_datatype_t string_to_datatype(const std::string& str) {
   if (str == "float32") {
     return TILEDB_FLOAT32;
   }
@@ -89,7 +89,7 @@ tiledb_datatype_t string_to_datatype(const std::string& str) {
   throw std::runtime_error("Unsupported datatype");
 }
 
-std::string datatype_to_string(tiledb_datatype_t datatype) {
+static std::string datatype_to_string(tiledb_datatype_t datatype) {
   switch (datatype) {
     case TILEDB_FLOAT32:
       return "float32";
@@ -114,7 +114,7 @@ std::string datatype_to_string(tiledb_datatype_t datatype) {
   }
 }
 
-size_t datatype_to_size(tiledb_datatype_t datatype) {
+static size_t datatype_to_size(tiledb_datatype_t datatype) {
         switch (datatype) {
         case TILEDB_FLOAT32:
         return sizeof(float);

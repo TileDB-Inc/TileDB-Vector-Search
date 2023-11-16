@@ -38,8 +38,8 @@
  * @todo Are there other optimizations to apply?
  */
 
-#ifndef TILEDB_FLAT_QV_H
-#define TILEDB_FLAT_QV_H
+#ifndef TILEDB_LEGACY_FLAT_QV_H
+#define TILEDB_LEGACY_FLAT_QV_H
 
 #include <future>
 #include <limits>

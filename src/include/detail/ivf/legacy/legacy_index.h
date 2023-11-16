@@ -30,8 +30,8 @@
  *
  */
 
-#ifndef TILEDB_IVF_IVF_INDEX_H
-#define TILEDB_IVF_IVF_INDEX_H
+#ifndef TILEDB_IVF_IVF_LEGACY_INDEX_H
+#define TILEDB_IVF_IVF_LEGACY_INDEX_H
 
 #include <filesystem>
 #include <string>

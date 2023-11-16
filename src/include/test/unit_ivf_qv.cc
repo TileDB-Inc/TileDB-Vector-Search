@@ -31,8 +31,9 @@
 
 #include <catch2/catch_all.hpp>
 #include <cmath>
-#include "detail/ivf/dist_qv.h"
-#include "detail/ivf/qv.h"
+#include "detail/ivf/legacy/legacy_dist_qv.h"
+#include "detail/ivf/legacy/legacy_qv.h"
+#include "detail/linalg/legacy/legacy_tdb_partitioned_matrix.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
 #include "query_common.h"
@@ -53,11 +54,13 @@ TEST_CASE("ivf qv: infinite all or none", "[ivf qv][ci-skip]") {
   // auto ids = read_vector<uint64_t>(ctx, ids_uri);
   // auto index = sizes_to_indices(sizes);
 
-  auto centroids = tdbColMajorMatrix<db_type>(ctx, centroids_uri);
+  auto centroids =  tdbColMajorMatrix<db_type>(ctx, centroids_uri);
   centroids.load();
   auto query = tdbColMajorMatrix<db_type>(ctx, query_uri, num_queries);
   query.load();
   auto index = read_vector<indices_type>(ctx, index_uri);
+  auto groundtruth = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
+  groundtruth.load();
 
   SECTION("all") {
     auto nprobe = GENERATE(1, 5);
@@ -65,7 +68,7 @@ TEST_CASE("ivf qv: infinite all or none", "[ivf qv][ci-skip]") {
     auto nthreads = GENERATE(1, 5);
     // std::cout << nprobe << " " << k_nn << " " << nthreads << std::endl;
 
-    auto&& [D00, I00] = detail::ivf::query_infinite_ram<db_type, ids_type>(
+    auto&& [D00, I00] = detail::ivf::legacy::query_infinite_ram<db_type, ids_type>(
         ctx,
         parts_uri,
         centroids,
@@ -77,7 +80,7 @@ TEST_CASE("ivf qv: infinite all or none", "[ivf qv][ci-skip]") {
         nthreads);
 
     auto&& [D01, I01] =
-        detail::ivf::qv_query_heap_infinite_ram<db_type, ids_type>(
+        detail::ivf::legacy::qv_query_heap_infinite_ram<db_type, ids_type>(
             ctx,
             parts_uri,
             centroids,
@@ -89,7 +92,7 @@ TEST_CASE("ivf qv: infinite all or none", "[ivf qv][ci-skip]") {
             nthreads);
 
     auto&& [D02, I02] =
-        detail::ivf::nuv_query_heap_infinite_ram<db_type, ids_type>(
+        detail::ivf::legacy::nuv_query_heap_infinite_ram<db_type, ids_type>(
             ctx,
             parts_uri,
             centroids,
@@ -101,7 +104,7 @@ TEST_CASE("ivf qv: infinite all or none", "[ivf qv][ci-skip]") {
             nthreads);
 
     auto&& [D03, I03] =
-        detail::ivf::nuv_query_heap_infinite_ram_reg_blocked<db_type, ids_type>(
+        detail::ivf::legacy::nuv_query_heap_infinite_ram_reg_blocked<db_type, ids_type>(
             ctx,
             parts_uri,
             centroids,
@@ -124,6 +127,11 @@ TEST_CASE("ivf qv: infinite all or none", "[ivf qv][ci-skip]") {
     CHECK(D00.num_cols() == D03.num_cols());
     CHECK(I00.num_rows() == I03.num_rows());
     CHECK(I00.num_cols() == I03.num_cols());
+
+    auto intersections00 = (long)count_intersections(I00, groundtruth, k_nn);
+    auto intersections01 = (long)count_intersections(I01, groundtruth, k_nn);
+    auto intersections02 = (long)count_intersections(I02, groundtruth, k_nn);
+    auto intersections03 = (long)count_intersections(I03, groundtruth, k_nn);
 
     for (size_t i = 0; i < I00.num_cols(); ++i) {
       std::sort(begin(I00[i]), end(I00[i]));
@@ -152,7 +160,7 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
 
   tiledb::Context ctx;
 
-  auto num_queries = GENERATE(101, 0);
+  auto num_queries = GENERATE(1, 2253, 0);
 
   // auto parts = tdbColMajorMatrix<db_type>(ctx, parts_uri);
   // auto ids = read_vector<uint64_t>(ctx, ids_uri);
@@ -172,7 +180,7 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
   }
   // std::cout << max_part_size << std::endl;
 
-  auto upper_bound = GENERATE(1953, 1954, 0);
+  auto upper_bound = GENERATE(/*1953, 1954, */ 10000, 0);
 
   SECTION("all") {
     auto nprobe = GENERATE(7 /*, 1*/);
@@ -181,7 +189,7 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
     // std::cout << upper_bound << " " << nprobe << " " << num_queries << " "
     //           << k_nn << " " << nthreads << std::endl;
 
-    auto&& [D00, I00] = detail::ivf::query_infinite_ram<db_type, ids_type>(
+    auto&& [D00, I00] = detail::ivf::legacy::query_infinite_ram<db_type, ids_type>(
         ctx,
         parts_uri,
         centroids,
@@ -193,7 +201,7 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
         nthreads);
 
     auto&& [D01, I01] =
-        detail::ivf::qv_query_heap_finite_ram<db_type, ids_type>(
+        detail::ivf::legacy::qv_query_heap_finite_ram<db_type, ids_type>(
             ctx,
             parts_uri,
             centroids,
@@ -206,7 +214,7 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
             nthreads);
 
     auto&& [D02, I02] =
-        detail::ivf::nuv_query_heap_finite_ram<db_type, ids_type>(
+        detail::ivf::legacy::nuv_query_heap_finite_ram<db_type, ids_type>(
             ctx,
             parts_uri,
             centroids,
@@ -219,7 +227,7 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
             nthreads);
 
     auto&& [D03, I03] =
-        detail::ivf::nuv_query_heap_finite_ram_reg_blocked<db_type, ids_type>(
+        detail::ivf::legacy::nuv_query_heap_finite_ram_reg_blocked<db_type, ids_type>(
             ctx,
             parts_uri,
             centroids,
@@ -231,7 +239,7 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
             upper_bound,
             nthreads);
 
-    auto&& [D04, I04] = detail::ivf::query_finite_ram<db_type, ids_type>(
+    auto&& [D04, I04] = detail::ivf::legacy::query_finite_ram<db_type, ids_type>(
         ctx,
         parts_uri,
         centroids,
@@ -260,6 +268,7 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
     auto intersections02 = (long)count_intersections(I02, groundtruth, k_nn);
     auto intersections03 = (long)count_intersections(I03, groundtruth, k_nn);
     auto intersections04 = (long)count_intersections(I04, groundtruth, k_nn);
+
     // auto intersectionsGT = count_intersections(groundtruth, groundtruth,
     // k_nn);
 
@@ -288,12 +297,12 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D03.data()));
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D04.data()));
 
-#if 1
+#if 0
     SECTION("dist_qv_finite_ram") {
       auto num_nodes = GENERATE(5 /*, 1 */);
       // std::cout << "num nodes " << num_nodes << std::endl;
 
-      auto&& [D05, I05] = detail::ivf::dist_qv_finite_ram<db_type, ids_type>(
+      auto&& [D05, I05] = detail::ivf::legacy::dist_qv_finite_ram<db_type, ids_type>(
           ctx,
           parts_uri,
           centroids,

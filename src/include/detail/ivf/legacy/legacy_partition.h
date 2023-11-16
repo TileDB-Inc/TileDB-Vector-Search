@@ -29,8 +29,8 @@
  *
  */
 
-#ifndef TDB_IVF_PARTITION_H
-#define TDB_IVF_PARTITION_H
+#ifndef TDB_IVF_LEGACY_PARTITION_H
+#define TDB_IVF_LEGACY_PARTITION_H
 
 #include <map>
 #include <set>

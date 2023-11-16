@@ -48,8 +48,8 @@
  * of RAM.
  */
 
-#ifndef TILEDB_IVF_QV_H
-#define TILEDB_IVF_QV_H
+#ifndef TILEDB_IVF_LEGACY_QV_H
+#define TILEDB_IVF_LEGACY_QV_H
 
 #include <future>
 #include <limits>
@@ -632,7 +632,8 @@ auto qv_query_heap_finite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
-    size_t nthreads);
+    size_t nthreads,
+    uint64_t timestamp = 0);
 
 /**
  * Interface with uris for all arguments.
@@ -1040,7 +1041,7 @@ auto nuv_query_heap_finite_ram(
 
   using parts_type = typename decltype(active_partitions)::value_type;
 
-  auto partitioned_db = tdbColMajorPartitionedMatrix<
+  auto partitioned_db = detail::linalg::legacy::tdbColMajorPartitionedMatrix<
       feature_type,
       id_type,
       indices_type,
@@ -1108,7 +1109,7 @@ auto nuv_query_heap_finite_ram(
                * partition as their top centroid.
                */
               for (size_t p = first_part; p < last_part; ++p) {
-                auto partno = p + partitioned_db.col_part_offset();
+                auto partno = p + col_part_offset(partitioned_db);
                 auto start = new_indices[partno] - partitioned_db.col_offset();
                 auto stop =
                     new_indices[partno + 1] - partitioned_db.col_offset();
@@ -1290,7 +1291,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
              first_part,
              last_part]() {
               size_t col_offset = _cpo::col_offset(partitioned_db);
-              size_t part_offset = resident_part_offset(partitioned_db);
+              size_t part_offset = col_part_offset(partitioned_db);
 
               /*
                * For each partition, process the queries that have that
@@ -1303,7 +1304,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                 //                if constexpr
                 //                (!has_num_col_parts<std::remove_cvref_t<decltype(partitioned_db)>>)
                 //                {
-                quartno = active_partitions[partno];
+                //quartno = active_partitions[partno];
                 //                }
                 (void)active_partitions;  // Silence unused warning
 
@@ -1432,7 +1433,7 @@ auto apply_query(
   size_t part_offset = 0;
   size_t col_offset = 0;
   col_offset = _cpo::col_offset(partitioned_db);
-  part_offset = resident_part_offset(partitioned_db);
+  part_offset = col_part_offset(partitioned_db);
 
   for (size_t p = first_part; p < last_part; ++p) {
     auto partno = p + part_offset;
@@ -1440,8 +1441,11 @@ auto apply_query(
     // @todo this is a bit of a hack
     auto quartno = partno;
     //    if constexpr (!has_num_col_parts<decltype(partitioned_db)>) {
-    quartno = active_partitions[partno];
+    // quartno = active_partitions[partno];
     //    }
+    if (active_partitions.size() > 0) {
+      quartno = active_partitions[partno];
+    }
 
     auto start = new_indices[quartno] - col_offset;
     auto stop = new_indices[quartno + 1] - col_offset;
@@ -1573,7 +1577,7 @@ auto query_finite_ram(
 
   using parts_type = typename decltype(active_partitions)::value_type;
 
-  auto partitioned_db = tdbColMajorPartitionedMatrix<
+  auto partitioned_db = detail::linalg::legacy::tdbColMajorPartitionedMatrix<
       feature_type,
       id_type,
       indices_type,
@@ -1645,7 +1649,7 @@ auto query_finite_ram(
                     new_indices,
                     active_queries,
                     partitioned_db.ids(),
-                    active_partitions,
+                    std::vector<int>(0),
                     k_nn,
                     first_part,
                     last_part);

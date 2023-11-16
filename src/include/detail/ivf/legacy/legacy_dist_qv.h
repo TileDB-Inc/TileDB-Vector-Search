@@ -32,8 +32,8 @@
  * qv_finite_ram.
  */
 
-#ifndef TILEDB_IVF_DIST_QV_H
-#define TILEDB_IVF_DIST_QV_H
+#ifndef TILEDB_IVF_LEGACY_DIST_QV_H
+#define TILEDB_IVF_LEGACY_DIST_QV_H
 
 #include <future>
 #include <limits>

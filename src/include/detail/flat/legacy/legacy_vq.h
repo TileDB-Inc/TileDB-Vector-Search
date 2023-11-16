@@ -30,8 +30,8 @@
  *
  */
 
-#ifndef TILEDB_FLAT_VQ_H
-#define TILEDB_FLAT_VQ_H
+#ifndef TILEDB_LEGACY_FLAT_VQ_H
+#define TILEDB_LEGACY_FLAT_VQ_H
 
 #include <future>
 #include <limits>
