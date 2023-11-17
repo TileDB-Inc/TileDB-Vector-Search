@@ -228,6 +228,24 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
       const P& relevant_parts,
       size_t upper_bound,
       const tiledb::TemporalPolicy temporal_policy = {})
+  : tdbPartitionedMatrix(
+      ctx,
+      partitioned_vectors_uri,
+      read_vector<indices_type>(ctx, indices_uri),
+      ids_uri,
+      relevant_parts,
+      upper_bound,
+      temporal_policy) {}
+
+      template <std::ranges::contiguous_range P>
+      tdbPartitionedMatrix(
+          const tiledb::Context& ctx,
+          const std::string& partitioned_vectors_uri,
+          std::vector<indices_type>&& indices,
+          const std::string& ids_uri,
+          const P& relevant_parts,
+          size_t upper_bound,
+          const tiledb::TemporalPolicy temporal_policy = {})
       : ctx_{ctx}
       , partitioned_vectors_uri_{partitioned_vectors_uri}
       , partitioned_vectors_array_(tiledb_helpers::open_array(
@@ -241,7 +259,7 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
       , partitioned_ids_array_(tiledb_helpers::open_array(
             tdb_func__, ctx_, partitioned_ids_uri_, TILEDB_READ))
       , ids_schema_{partitioned_ids_array_->schema()}
-      , master_indices_{read_vector<indices_type>(ctx_, indices_uri)}
+      , master_indices_{std::move(indices)}
       , relevant_parts_(std::move(relevant_parts))
       , squashed_indices_(size(relevant_parts_) + 1)
       , resident_part_view_{0, 0} {

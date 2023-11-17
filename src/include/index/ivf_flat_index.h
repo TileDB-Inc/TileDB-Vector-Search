@@ -189,6 +189,15 @@ class ivf_flat_index {
     open_index(uri);
   }
 
+
+/**
+ * Transititional constructor to support backwards compatability with pre-ivf_index
+ * free-function queries.
+ * @param parts The vectors to be partitioned.  Must be loaded.
+ * @param centroids
+ * @param ids
+ * @param indices
+ */
   ivf_flat_index(
       tdbColMajorMatrix<T>& parts,
       centroids_storage_type& centroids,
@@ -197,6 +206,7 @@ class ivf_flat_index {
       : partitioned_vectors_{std::make_unique<storage_type>(
             parts, ids, indices)}
       , centroids_{std::move(centroids)}
+      , dimension_ {::dimension(*partitioned_vectors_)}
       , nlist_{::num_vectors(centroids_)}
       , feature_datatype_{type_to_tiledb_t<feature_type>}
       , id_datatype_{type_to_tiledb_t<id_type>}
@@ -695,9 +705,8 @@ class ivf_flat_index {
       const Q& query_vectors, size_t k_nn, size_t nprobe) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
-    } else if (::num_loads(*partitioned_vectors_) == 0) {
-      ::load(*partitioned_vectors_);
     }
+
     auto top_centroids = detail::ivf::ivf_top_centroids(
         centroids_, query_vectors, nprobe, num_threads_);
     return detail::ivf::qv_query_heap_infinite_ram(
