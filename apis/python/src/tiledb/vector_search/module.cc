@@ -141,7 +141,8 @@ static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string&
         return make_python_pair(std::move(r));
         }, py::keep_alive<1,2>());
 }
-#if 0
+
+// This hasn't been converted to new index scheme yet
 template <typename T, typename Id_Type = uint64_t>
 static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& suffix) {
   m.def(("qv_query_heap_finite_ram_" + suffix).c_str(),
@@ -198,6 +199,7 @@ static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string
         }, py::keep_alive<1,2>());
 }
 
+#if 0
 template <typename T, typename Id_Type = uint64_t>
 static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& suffix) {
   m.def(("nuv_query_heap_finite_ram_reg_blocked_" + suffix).c_str(),
@@ -213,6 +215,25 @@ static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& 
          size_t nthreads,
          uint64_t timestamp) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> { // TODO change return type
 
+auto vectors = tdb
+
+auto idx = ivf_flat_index();
+
+auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
+    ctx,
+    parts_uri,
+    centroids,
+    query_vectors,
+    indices,
+    ids_uri,
+    nprobe,
+    k_nn,
+    upper_bound,
+    nthreads,
+    timestamp);
+
+
+#if 0
         auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
             ctx,
             parts_uri,
@@ -225,6 +246,7 @@ static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& 
             upper_bound,
             nthreads,
             timestamp);
+#endif
         return r;
         }, py::keep_alive<1,2>());
 }

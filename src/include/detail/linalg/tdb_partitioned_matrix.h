@@ -200,7 +200,10 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
   size_t num_loads_{0};
 
  public:
+  tdbPartitionedMatrix(const tdbPartitionedMatrix&) = delete;
+  tdbPartitionedMatrix(tdbPartitionedMatrix&&) = default;
   tdbPartitionedMatrix& operator=(tdbPartitionedMatrix&&) = default;
+  tdbPartitionedMatrix& operator=(const tdbPartitionedMatrix&) = delete;
 
   /**
    * @brief Primary constructor.  Reads in vectors from a partitioned array,
@@ -237,6 +240,8 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
       upper_bound,
       temporal_policy) {}
 
+
+  tdbPartitionedMatrix(std::vector<indices_type>&) {}
       template <std::ranges::contiguous_range P>
       tdbPartitionedMatrix(
           const tiledb::Context& ctx,

@@ -106,6 +106,9 @@ class ivf_flat_index {
   std::unique_ptr<storage_type> partitioned_vectors_;
   centroids_storage_type centroids_;
 
+  std::string tmp_parts_uri_;
+  std::vector<indices_type> tmp_indices_;
+  std::string tmp_ids_uri_;
 
   /****************************************************************************
    * Metadata
@@ -129,7 +132,7 @@ class ivf_flat_index {
 
   //  Index metadata. index_kind_ is handled separately as a class variable
   using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
-  std::vector<metadata_element> metadata {
+  std::vector<metadata_element> metadata{
       {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
       {"id_datatype", &id_datatype_, TILEDB_UINT32},
       {"px_datatype", &px_datatype_, TILEDB_UINT32},
@@ -141,7 +144,6 @@ class ivf_flat_index {
       {"num_threads", &num_threads_, TILEDB_UINT64},
       // {"seed", &seed_, TILEDB_UINT64},
   };
-
 
  public:
   using value_type = feature_type;
@@ -189,15 +191,13 @@ class ivf_flat_index {
     open_index(uri);
   }
 
-
-/**
- * Transititional constructor to support backwards compatability with pre-ivf_index
- * free-function queries.
- * @param parts The vectors to be partitioned.  Must be loaded.
- * @param centroids
- * @param ids
- * @param indices
- */
+  /**
+   * Transitional constructor to support backwards compatibility with
+   * pre-ivf_index free-function queries.  This is for constructing "infinite
+   * ram" indices from arrays that are already all loaded into memory.
+   * @param parts The vectors to be partitioned.  Must be loaded for infinite
+   * queries.
+   */
   ivf_flat_index(
       tdbColMajorMatrix<T>& parts,
       centroids_storage_type& centroids,
@@ -206,11 +206,40 @@ class ivf_flat_index {
       : partitioned_vectors_{std::make_unique<storage_type>(
             parts, ids, indices)}
       , centroids_{std::move(centroids)}
-      , dimension_ {::dimension(*partitioned_vectors_)}
+      , dimension_{::dimension(*partitioned_vectors_)}
       , nlist_{::num_vectors(centroids_)}
       , feature_datatype_{type_to_tiledb_t<feature_type>}
       , id_datatype_{type_to_tiledb_t<id_type>}
       , px_datatype_{type_to_tiledb_t<indices_type>} {
+  }
+
+  /**
+   * Another transitional constructor to support backwards compatibility with
+   * pre-ivf_index free-function queries.  This is for constructing "finite
+   * ram" indices.  The indices can be loaded into memory, but the vectors
+   * and the ids are read on-demand.  Note that the template parameters
+   * cannot be deduced from the arguments, so they need to be explicitly
+   * specified.
+   * @param parts The vectors to be partitioned.  Must be loaded.
+   * @param ids
+   * @param indices
+   */
+  ivf_flat_index(
+      const tiledb::Context& ctx,
+      const std::string& parts_uri,
+      centroids_storage_type& centroids,
+      const std::string& ids_uri,
+      std::vector<partitioning_index_type>& indices)
+      : cached_ctx_{ctx}
+      , centroids_{std::move(centroids)}
+      , dimension_{::dimension(centroids_)} // @todo is dimension needed?
+      , nlist_{::num_vectors(centroids_)}
+      , feature_datatype_{type_to_tiledb_t<feature_type>}
+      , id_datatype_{type_to_tiledb_t<id_type>}
+      , px_datatype_{type_to_tiledb_t<indices_type>}
+      , tmp_parts_uri_(parts_uri)
+      , tmp_indices_(std::move(indices))
+      , tmp_ids_uri_(ids_uri) {
   }
 
   ivf_flat_index() = delete;
@@ -1095,13 +1124,24 @@ class ivf_flat_index {
         detail::ivf::partition_ivf_flat_index<indices_type>(
             centroids_, query_vectors, nprobe, num_threads_);
 
-    partitioned_vectors_ = std::make_unique<tdb_storage_type>(
-        *cached_ctx_,
-        group_uri_ + "/partitioned_vectors",
-        group_uri_ + "/indices",
-        group_uri_ + "/partitioned_ids",
-        active_partitions,
-        upper_bound);
+  if (size(tmp_indices_) != 0) {
+      partitioned_vectors_ = std::make_unique<tdb_storage_type>(
+          *cached_ctx_,
+          tmp_parts_uri_,
+          std::move(tmp_indices_),
+          tmp_ids_uri_,
+          active_partitions,
+          upper_bound);
+  } else {
+      partitioned_vectors_ = std::make_unique<tdb_storage_type>(
+          *cached_ctx_,
+          group_uri_ + "/partitioned_vectors",
+          group_uri_ + "/indices",
+          group_uri_ + "/partitioned_ids",
+          active_partitions,
+          upper_bound);
+  }
+
 
     // NB: We don't load the partitioned_vectors here.  We will load them
     // when we do the query.

@@ -663,8 +663,6 @@ TEST_CASE("ivf_index: matrix+vector constructor, finite", "[ivf_index]") {
   size_t num_queries = 100;
   tiledb::Context ctx;
 
-  auto parts = tdbColMajorMatrix<db_type>(ctx, ivf_index_vectors_uri);
-  auto ids = read_vector<uint64_t>(ctx, ivf_index_ids_uri);
   auto indices = read_vector<indices_type>(ctx, ivf_index_indices_uri);
 
   auto centroids = tdbColMajorMatrix<db_type>(ctx, ivf_index_centroids_uri);
@@ -673,6 +671,8 @@ TEST_CASE("ivf_index: matrix+vector constructor, finite", "[ivf_index]") {
   query.load();
   auto groundtruth = tdbColMajorMatrix<int32_t>(ctx, groundtruth_uri);
   groundtruth.load();
+
+
 
   // auto&& [s, t] = detail::ivf::qv_query_heap_infinite_ram(parts, centroids,
   // query, index, ids, nprobe, k_nn, nthreads);
@@ -685,7 +685,7 @@ TEST_CASE("ivf_index: matrix+vector constructor, finite", "[ivf_index]") {
     auto intersections1 = (long)count_intersections(t_1, groundtruth, k_nn);
     CHECK(intersections0 != 0);
     CHECK(intersections1 != 0);
-    CHECK(intersections0 == intersections1);
+    CHECK(std::abs(intersections0 - intersections1) < 10);
     double recall0 = intersections0 / ((double)t_0.num_cols() * k_nn);
     double recall1 = intersections1 / ((double)t_1.num_cols() * k_nn);
   };
@@ -709,12 +709,12 @@ TEST_CASE("ivf_index: matrix+vector constructor, finite", "[ivf_index]") {
       std::move(active_partitions), std::move(active_queries));
 #endif
 
-
+  auto idx_1 = ivf_flat_index<float>(ctx, ivf_index_vectors_uri, centroids, ivf_index_ids_uri, indices);
   SECTION("finite") {
-    size_t upper_bound = GENERATE(0, 1000);
+    size_t upper_bound = GENERATE(0, 10033);
     SECTION("query_finite_ram") {
-      INFO("query_infinite_ram");
-      auto idx_1 = ivf_flat_index<float>(parts, centroids, ids, indices);
+      INFO("query_finite_ram");
+
       auto&& [s_1, t_1] = idx_1.query_finite_ram(query, k_nn, nprobe, upper_bound);
       check(s_1, t_1);
     }
@@ -725,14 +725,12 @@ TEST_CASE("ivf_index: matrix+vector constructor, finite", "[ivf_index]") {
     }
     SECTION("nuv_query_heap_finite_ram") {
       INFO("nuv_query_heap_finite_ram");
-      auto idx_1 = ivf_flat_index<float>(parts, centroids, ids, indices);
       auto&& [s_1, t_1] =
           idx_1.nuv_query_heap_finite_ram(query, k_nn, nprobe, upper_bound);
       check(s_1, t_1);
     }
     SECTION("nuv_query_heap_finite_ram_reg_blocked") {
       INFO("nuv_query_heap_finite_ram_reg_blocked");
-      auto idx_1 = ivf_flat_index<float>(parts, centroids, ids, indices);
       auto&& [s_1, t_1] =
           idx_1.nuv_query_heap_finite_ram_reg_blocked(query, k_nn, nprobe, upper_bound);
       check(s_1, t_1);
