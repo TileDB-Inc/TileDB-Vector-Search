@@ -312,10 +312,6 @@ class IndexIVFFlat {
     nlist_ = index_->num_partitions();
   }
 
-  void save(const std::string& group_uri, bool overwrite) const {
-    index_->write_index(group_uri, overwrite);
-  }
-
   // todo query() or search() -- or both?
   [[nodiscard]] auto query_infinite_ram(
       const QueryVectorArray& vectors, size_t top_k, size_t nprobe) const {
@@ -345,9 +341,9 @@ class IndexIVFFlat {
     index_->remove(ids);
   }
 
-   void write_index(
+   void write_index(const tiledb::Context& ctx,
       const std::string& group_uri, bool overwrite = false) const {
-    index_->write_index(group_uri, overwrite);
+    index_->write_index(ctx, group_uri, overwrite);
   }
 
 
@@ -425,7 +421,7 @@ class IndexIVFFlat {
 
     virtual void remove(const IdVector& ids) const = 0;
 
-    virtual void write_index(
+    virtual void write_index(const tiledb::Context& ctx,
         const std::string& group_uri, bool overwrite) const = 0;
 
     [[nodiscard]] virtual size_t dimension() const = 0;
@@ -604,9 +600,9 @@ class IndexIVFFlat {
       //      index_.update(vectors_uri, ids, options);
     }
 
-    void write_index(
+    void write_index(const tiledb::Context& ctx,
         const std::string& group_uri, bool overwrite) const override {
-      impl_index_.write_index(group_uri, overwrite);
+      impl_index_.write_index(ctx, group_uri, overwrite);
     }
 
     // WIP

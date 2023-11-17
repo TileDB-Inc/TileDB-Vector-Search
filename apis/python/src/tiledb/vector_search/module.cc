@@ -141,7 +141,7 @@ static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string&
         return make_python_pair(std::move(r));
         }, py::keep_alive<1,2>());
 }
-
+#if 0
 template <typename T, typename Id_Type = uint64_t>
 static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& suffix) {
   m.def(("qv_query_heap_finite_ram_" + suffix).c_str(),
@@ -603,4 +603,5 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declareFixedMinPairHeap(m);
 
   init_kmeans(m);
+#endif
 }

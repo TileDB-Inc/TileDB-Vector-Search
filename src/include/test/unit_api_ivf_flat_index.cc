@@ -167,7 +167,7 @@ TEST_CASE("api_ivf_flat_index: api_ivf_flat_index write and read", "[api_ivf_fla
   auto training_set = FeatureVectorArray(ctx, siftsmall_base_uri);
   a.train(training_set, kmeans_init::random);
   a.add(training_set);
-  a.write_index(api_ivf_flat_index_uri, true);
+  a.write_index(ctx, api_ivf_flat_index_uri, true);
 
   auto b = IndexIVFFlat(ctx, api_ivf_flat_index_uri);
 
@@ -229,7 +229,7 @@ TEST_CASE("api_ivf_flat_index: read index and query infinite and finite", "[api_
   auto training_set = FeatureVectorArray(ctx, siftsmall_base_uri);
   a.train(training_set, kmeans_init::random);
   a.add(training_set);
-  a.write_index(api_ivf_flat_index_uri, true);
+  a.write_index(ctx, api_ivf_flat_index_uri, true);
   auto b = IndexIVFFlat(ctx, api_ivf_flat_index_uri);
 
   auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
@@ -291,5 +291,11 @@ TEST_CASE("api_ivf_flat_index: read index and query infinite and finite", "[api_
       CHECK(recall > 0.925);
     }
   }
+}
 
+TEST_CASE("foo", "[bar]") {
+  tiledb::Context ctx;
+  auto b = IndexIVFFlat(ctx, ivf_index_uri);
+
+  CHECK(b.feature_type() == TILEDB_FLOAT32);
 }

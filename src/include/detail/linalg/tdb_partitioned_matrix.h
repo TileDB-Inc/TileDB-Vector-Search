@@ -81,24 +81,24 @@ using namespace Kokkos;
 }  // namespace stdx
 
 /**
- * @note The template parameters indices_type and parts_type can be deduced
- * usingCTAD.  However, with the uri-based constructor, the type of the indices
- * and the partitioned_vectors array cannot be deduced.  Therefore, the user
- * must specify the type of the indices and the partitioned_ids array.  And
- * since CTAD is all or nothing, we have to pass in all of the types.
+ * @brief Class for maintaining a partitioned matrix (ala a CSR matrix), with
+ * TileDB arrays as the source of the data.
+ * @tparam T
+ * @tparam IdType
+ * @tparam IndicesType
+ * @tparam LayoutPolicy
+ * @tparam I
  */
 template <
     class T,
     class IdType,
     class IndicesType,
-    class PartsType,
     class LayoutPolicy = stdx::layout_right,
     class I = size_t>
 class tdbPartitionedMatrix : public PartitionedMatrix<
                                  T,
                                  IdType,
                                  IndicesType,
-                                 PartsType,
                                  LayoutPolicy,
                                  I> {
   /****************************************************************************
@@ -109,7 +109,7 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
    *
    ****************************************************************************/
   using Base =
-      PartitionedMatrix<T, IdType, IndicesType, PartsType, LayoutPolicy, I>;
+      PartitionedMatrix<T, IdType, IndicesType, LayoutPolicy, I>;
   // using Base::Base;
 
  public:
@@ -120,7 +120,6 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
 
   using id_type = IdType;
   using indices_type = IndicesType;
-  using parts_type = PartsType;
 
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
@@ -154,8 +153,10 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
   // to read from the partitioned TileDB array.
   std::vector<indices_type> master_indices_;  // @todo pointer and span?
 
-  // Vector of all the partitions that we want to load
-  std::vector<parts_type> relevant_parts_;  // @todo pointer and span?
+  // Vector of the partition numbers of all the partitions that we want to load
+  // This could be much smaller than the master indices, but is the same size
+  // as the squashed indices.  We use indices_type as its type.
+  std::vector<indices_type> relevant_parts_;  // @todo pointer and span?
 
   // Vector of indices for all of the partitions that will be loaded from the
   // TileDB array into contiguous memory.
@@ -343,8 +344,10 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
      */
     Base::operator=(
         std::move(Base{dimension, column_capacity, max_resident_parts}));
-    this->num_vectors() = 0;
-    this->num_partitions() = 0;
+    // this->num_vectors() = 0;
+    // this->num_partitions() = 0;
+    this->num_vectors_ = 0;
+    this->num_parts_ = 0;
   }
 
   /**
@@ -509,8 +512,10 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
       this->part_index_[i] = squashed_indices_[i + resident_part_offset_] - sub;
     }
 
-    this->num_vectors() = num_resident_cols_;
-    this->num_partitions() = num_resident_parts_;
+    // this->num_vectors() =
+    // this->num_partitions() =
+    this->num_vectors_ = num_resident_cols_;;
+    this->num_parts_ = num_resident_parts_;;
 
     num_loads_++;
     return true;
@@ -557,13 +562,11 @@ template <
     class T,
     class partitioned_ids_type,
     class indices_type,
-    class parts_type,
     class I = size_t>
 using tdbRowMajorPartitionedMatrix = tdbPartitionedMatrix<
     T,
     partitioned_ids_type,
     indices_type,
-    parts_type,
     stdx::layout_right,
     I>;
 
@@ -574,13 +577,11 @@ template <
     class T,
     class partitioned_ids_type,
     class indices_type,
-    class parts_type,
     class I = size_t>
 using tdbColMajorPartitionedMatrix = tdbPartitionedMatrix<
     T,
     partitioned_ids_type,
     indices_type,
-    parts_type,
     stdx::layout_left,
     I>;
 
