@@ -153,7 +153,7 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       , ids_(::num_vectors(training_set))
       , part_index_(num_parts + 1)
       , num_vectors_{::num_vectors(training_set)}
-      , num_parts_{size(part_index_)} {
+      , num_parts_{num_parts} {
     auto degrees = std::vector<size_t>(num_parts);
 
     for (size_t i = 0; i < ::num_vectors(training_set); ++i) {
