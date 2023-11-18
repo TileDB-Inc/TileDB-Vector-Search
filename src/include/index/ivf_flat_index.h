@@ -163,19 +163,15 @@ class ivf_flat_index {
    * @param nlist Number of centroids / partitions to compute.
    * @param max_iter Maximum number of iterations for kmans algorithm.
    * @param tol Convergence tolerance for kmeans algorithm.
-   * @param num_threads Number of threads to use when executing in parallel.
-   * @param seed Seed for random number generator.
    */
   ivf_flat_index(
       // size_t dim,
       size_t nlist = 0,
       size_t max_iter = 2,
-      float tol = 0.000025,
-      std::optional<size_t> num_threads = std::nullopt,
-      std::optional<unsigned int> seed = std::nullopt)
-      : gen_(seed ? *seed : std::random_device{}())
+      float tol = 0.000025)
+      :
       // , dimension_(dim)
-      , nlist_(nlist)
+       nlist_(nlist)
       , max_iter_(max_iter)
       , tol_(tol)
       , feature_datatype_(type_to_tiledb_t<feature_type>)
@@ -183,11 +179,6 @@ class ivf_flat_index {
       , px_datatype_(type_to_tiledb_t<indices_type>)
   // , centroids_(dim, nlist)
   {
-    if (num_threads && *num_threads > 0) {
-      num_threads_ = *num_threads;
-    } else {
-      num_threads_ = std::thread::hardware_concurrency();
-    }
   }
 
   ivf_flat_index(const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp = 0)
@@ -1083,7 +1074,7 @@ class ivf_flat_index {
 
     centroids_ =
         std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
-            *cached_ctx_, group_uri_ + "/centroids"));
+            *cached_ctx_, group_uri_ + "/centroids", 0, temporal_policy_));
   }
 
   /**
@@ -1112,7 +1103,8 @@ class ivf_flat_index {
         group_uri_ + "/indices",
         group_uri_ + "/partitioned_ids",
         infinite_parts,
-        0);
+        0,
+        temporal_policy_);
 
     partitioned_vectors_->load();
 
@@ -1154,7 +1146,8 @@ class ivf_flat_index {
           std::move(tmp_indices_),
           tmp_ids_uri_,
           active_partitions,
-          upper_bound);
+          upper_bound,
+          temporal_policy_);
   } else {
       partitioned_vectors_ = std::make_unique<tdb_storage_type>(
           *cached_ctx_,
@@ -1162,7 +1155,8 @@ class ivf_flat_index {
           group_uri_ + "/indices",
           group_uri_ + "/partitioned_ids",
           active_partitions,
-          upper_bound);
+          upper_bound,
+          temporal_policy_);
   }
 
 

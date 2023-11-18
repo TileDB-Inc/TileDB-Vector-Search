@@ -27,6 +27,8 @@ PYBIND11_MAKE_OPAQUE(std::vector<double>);
   PYBIND11_MAKE_OPAQUE(std::vector<size_t>);
 #endif
 
+void init_module2(py::module&);
+
 namespace {
 
 
@@ -128,7 +130,11 @@ static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string&
          size_t k_nn,
          size_t nthreads) -> py::tuple { //std::pair<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
-        // auto r = detail::ivf::qv_query_heap_infinite_ram(
+           auto idx = ivf_flat_index<T, Id_Type, Id_Type>(parts, centroids, ids, indices);
+           auto r = idx.qv_query_heap_infinite_ram(query_vectors, k_nn, nprobe);
+
+#if 0
+    // auto r = detail::ivf::qv_query_heap_infinite_ram(
         auto r = detail::ivf::query_infinite_ram(
             parts,
             centroids,
@@ -138,6 +144,7 @@ static void declare_qv_query_heap_infinite_ram(py::module& m, const std::string&
             nprobe,
             k_nn,
             nthreads);
+#endif
         return make_python_pair(std::move(r));
         }, py::keep_alive<1,2>());
 }
@@ -158,6 +165,9 @@ static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& s
          size_t nthreads,
          uint64_t timestamp) -> py::tuple { //std::tuple<ColMajorMatrix<float>, ColMajorMatrix<size_t>> { // TODO change return type
 
+          auto idx = ivf_flat_index<float>(ctx, parts_uri, centroids, ids_uri, indices);
+          auto r = idx.nuv_query_heap_finite_ram(query_vectors, k_nn, nprobe, upper_bound);
+#if 0
         auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
             ctx,
             parts_uri,
@@ -170,7 +180,9 @@ static void declare_qv_query_heap_finite_ram(py::module& m, const std::string& s
             upper_bound,
             nthreads,
             timestamp);
-        return make_python_pair(std::move(r));
+
+#endif
+          return make_python_pair(std::move(r));
         }, py::keep_alive<1,2>());
 }
 
@@ -186,6 +198,9 @@ static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string
          size_t k_nn,
          size_t nthreads) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> { // TODO change return type
 
+          auto idx = ivf_flat_index<T, Id_Type, Id_Type>(parts, centroids, ids, indices);
+          auto r = idx.qv_query_heap_infinite_ram_reg_blocked(query_vectors, k_nn, nprobe);
+#if 0
         auto r = detail::ivf::nuv_query_heap_infinite_ram_reg_blocked(
             parts,
             centroids,
@@ -195,11 +210,11 @@ static void declare_nuv_query_heap_infinite_ram(py::module& m, const std::string
             nprobe,
             k_nn,
             nthreads);
-        return r;
+#endif
+          return make_python_pair(std::move(r)); // return r;
         }, py::keep_alive<1,2>());
 }
 
-#if 0
 template <typename T, typename Id_Type = uint64_t>
 static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& suffix) {
   m.def(("nuv_query_heap_finite_ram_reg_blocked_" + suffix).c_str(),
@@ -215,10 +230,10 @@ static void declare_nuv_query_heap_finite_ram(py::module& m, const std::string& 
          size_t nthreads,
          uint64_t timestamp) -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> { // TODO change return type
 
-auto vectors = tdb
+auto idx = ivf_flat_index<float>(ctx, parts_uri, centroids, ids_uri, indices);
+auto r = idx.nuv_query_heap_finite_ram(query_vectors, k_nn, nprobe, upper_bound);
 
-auto idx = ivf_flat_index();
-
+#if 0
 auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
     ctx,
     parts_uri,
@@ -231,26 +246,13 @@ auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
     upper_bound,
     nthreads,
     timestamp);
-
-
-#if 0
-        auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
-            ctx,
-            parts_uri,
-            centroids,
-            query_vectors,
-            indices,
-            ids_uri,
-            nprobe,
-            k_nn,
-            upper_bound,
-            nthreads,
-            timestamp);
 #endif
-        return r;
+
+        return make_python_pair(std::move(r)); // return r;
         }, py::keep_alive<1,2>());
 }
 
+#if 0
 template <typename T>
 static void declare_ivf_index(py::module& m, const std::string& suffix) {
   m.def(("ivf_index_" + suffix).c_str(),
@@ -458,6 +460,7 @@ static void declare_vq_query_heap_pyarray(py::module& m, const std::string& suff
 } // anonymous namespace
 
 void init_kmeans(py::module&);
+void init_module2(py::module&);
 
 PYBIND11_MODULE(_tiledbvspy, m) {
 
@@ -626,4 +629,5 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   init_kmeans(m);
 #endif
+  init_module2(m);
 }
