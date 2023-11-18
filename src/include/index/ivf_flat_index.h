@@ -101,6 +101,7 @@ class ivf_flat_index {
   std::optional<std::reference_wrapper<const tiledb::Context>> cached_ctx_;
 
   std::string group_uri_;
+  tiledb::TemporalPolicy temporal_policy_;
 
   // The PartitionedMatrix has indices and ids internally
   std::unique_ptr<storage_type> partitioned_vectors_;
@@ -116,12 +117,14 @@ class ivf_flat_index {
 
   constexpr static const IndexKind index_kind_ = IndexKind::IVFFlat;
 
-  size_t dimension_{0};
-  size_t nlist_;
-  size_t max_iter_;
+  uint64_t dimension_{0};
+  uint64_t nlist_;
+  uint64_t max_iter_;
   float tol_;
   float reassign_ratio_{0.075};
-  size_t num_threads_{std::thread::hardware_concurrency()};
+  uint64_t num_threads_{std::thread::hardware_concurrency()};
+  uint64_t seed_{std::random_device{}()};
+  uint64_t timestamp_{0};
 
   // @todo store seed as metadata
   // size_t seed_ = std::random_device{}();
@@ -143,6 +146,7 @@ class ivf_flat_index {
       {"reassign_ratio", &reassign_ratio_, TILEDB_FLOAT32},
       {"num_threads", &num_threads_, TILEDB_UINT64},
       // {"seed", &seed_, TILEDB_UINT64},
+      // {"timestamp", &timestamp_, TILEDB_UINT64},
   };
 
  public:
@@ -186,9 +190,12 @@ class ivf_flat_index {
     }
   }
 
-  ivf_flat_index(const tiledb::Context& ctx, const std::string& uri)
-      : cached_ctx_{ctx} {
-    open_index(uri);
+  ivf_flat_index(const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp = 0)
+      : cached_ctx_{ctx}, group_uri_{uri}, temporal_policy_{(timestamp == 0) ?
+            tiledb::TemporalPolicy() :
+            tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)}
+  ,timestamp_{timestamp} {
+    open_index();
   }
 
   /**
@@ -197,6 +204,8 @@ class ivf_flat_index {
    * ram" indices from arrays that are already all loaded into memory.
    * @param parts The vectors to be partitioned.  Must be loaded for infinite
    * queries.
+   *
+   * No timestamping or temporal policy here since arrays are all opened.
    */
   ivf_flat_index(
       tdbColMajorMatrix<T>& parts,
@@ -220,6 +229,12 @@ class ivf_flat_index {
    * and the ids are read on-demand.  Note that the template parameters
    * cannot be deduced from the arguments, so they need to be explicitly
    * specified.
+   *
+   * Note that some args are passed in as URIs to be opened later, and some
+   * are already opened.  We are taking a timestamp, but the user must
+   * ensure that the indices array is compatible with the timestamp being
+   * passed in.
+   *
    * @param parts The vectors to be partitioned.  Must be loaded.
    * @param ids
    * @param indices
@@ -229,17 +244,22 @@ class ivf_flat_index {
       const std::string& parts_uri,
       centroids_storage_type& centroids,
       const std::string& ids_uri,
-      std::vector<partitioning_index_type>& indices)
+      std::vector<partitioning_index_type>& indices,
+      uint64_t timestamp = 0)
       : cached_ctx_{ctx}
+      , temporal_policy_{(timestamp == 0) ?
+            tiledb::TemporalPolicy() :
+            tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)}
       , centroids_{std::move(centroids)}
-      , dimension_{::dimension(centroids_)} // @todo is dimension needed?
-      , nlist_{::num_vectors(centroids_)}
-      , feature_datatype_{type_to_tiledb_t<feature_type>}
-      , id_datatype_{type_to_tiledb_t<id_type>}
-      , px_datatype_{type_to_tiledb_t<indices_type>}
       , tmp_parts_uri_(parts_uri)
       , tmp_indices_(std::move(indices))
-      , tmp_ids_uri_(ids_uri) {
+      , tmp_ids_uri_(ids_uri)
+      , dimension_{::dimension(centroids_)} // @todo is dimension needed?
+      , nlist_{::num_vectors(centroids_)}
+      , timestamp_{timestamp}
+      , feature_datatype_{type_to_tiledb_t<feature_type>}
+      , id_datatype_{type_to_tiledb_t<id_type>}
+      , px_datatype_{type_to_tiledb_t<indices_type>} {
   }
 
   ivf_flat_index() = delete;
@@ -966,6 +986,14 @@ class ivf_flat_index {
       vfs.remove_dir(group_uri);
     }
 
+    // Timestamp the index to be written at the current time
+    // @todo Do we need to do anything about the group itself?
+    size_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+                           std::chrono::system_clock::now().time_since_epoch()
+                               ).count();
+
+    auto write_temporal_policy = tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+
     tiledb::Config cfg;
     tiledb::Group::create(ctx, group_uri);
     auto write_group = tiledb::Group(ctx, group_uri, TILEDB_WRITE, cfg);
@@ -984,19 +1012,19 @@ class ivf_flat_index {
     // Temporary names!
     // @todo Name per schema in ingestion.py
     auto centroids_uri = group_uri + "/centroids";
-    write_matrix(ctx, centroids_, centroids_uri);
+    write_matrix(ctx, centroids_, centroids_uri, 0, overwrite, write_temporal_policy);
     write_group.add_member("centroids", true, "centroids");
 
     auto indices_uri = group_uri + "/indices";
-    write_vector(ctx, partitioned_vectors_->indices(), indices_uri);
+    write_vector(ctx, partitioned_vectors_->indices(), indices_uri, 0, overwrite, write_temporal_policy);
     write_group.add_member("indices", true, "indices");
 
     auto partitioned_ids_uri = group_uri + "/partitioned_ids";
-    write_vector(ctx, partitioned_vectors_->ids(), partitioned_ids_uri);
+    write_vector(ctx, partitioned_vectors_->ids(), partitioned_ids_uri, 0, overwrite, write_temporal_policy);
     write_group.add_member("partitioned_ids", true, "partitioned_ids");
 
     auto partitioned_vectors_uri = group_uri + "/partitioned_vectors";
-    write_matrix(ctx, *partitioned_vectors_, partitioned_vectors_uri);
+    write_matrix(ctx, *partitioned_vectors_, partitioned_vectors_uri, 0, overwrite, write_temporal_policy);
     write_group.add_member("partitioned_vectors", true, "partitioned_vectors");
 
     write_group.close();
@@ -1008,15 +1036,10 @@ class ivf_flat_index {
    * and finite queries (i.e., metadata, centroids, and indices).  We load
    * the centroids here, but defer loading the info for the PartitionedMatrix
    * until we know what kind of open we will need for that (finite or infinite).
-   *
-   * @param group_uri
-   * @return
    */
-  auto open_index(const std::string& group_uri) {
-    group_uri_ = group_uri;
-
+  auto open_index() {
     tiledb::Config cfg;
-    tiledb::Group read_group(cached_ctx_->get(), group_uri, TILEDB_READ, cfg);
+    tiledb::Group read_group(cached_ctx_->get(), group_uri_, TILEDB_READ, cfg);
 
     tiledb_datatype_t index_kind_type;
     if (!read_group.has_metadata("index_kind", &index_kind_type)) {
@@ -1060,7 +1083,7 @@ class ivf_flat_index {
 
     centroids_ =
         std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
-            *cached_ctx_, group_uri + "/centroids"));
+            *cached_ctx_, group_uri_ + "/centroids"));
   }
 
   /**

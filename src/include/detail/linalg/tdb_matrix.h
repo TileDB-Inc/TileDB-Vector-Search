@@ -153,7 +153,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       const tiledb::Context& ctx,
       const std::string& uri,
       size_t upper_bound,
-      const tiledb::TemporalPolicy temporal_policy)  // noexcept
+      const tiledb::TemporalPolicy& temporal_policy)  // noexcept
       requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : ctx_{ctx}
       , uri_{uri}
@@ -423,14 +423,10 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
   using Base = tdbBlockedMatrix<T, LayoutPolicy, I>;
-  using Base::Base;
+  // This just about did me in.
+  // using Base::Base;
 
  public:
-  tdbPreLoadMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : Base(ctx, uri, 0) {
-    Base::load();
-  }
 
   /**
    * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
@@ -442,7 +438,14 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
    * @param upper_bound The maximum number of vectors to read.
    */
   tdbPreLoadMatrix(
-      const tiledb::Context& ctx, const std::string& uri, size_t upper_bound)
+      const tiledb::Context& ctx, const std::string& uri, size_t upper_bound = 0, uint64_t timestamp = 0)
+      : tdbPreLoadMatrix(ctx, uri, upper_bound, (timestamp == 0) ?
+                                                    tiledb::TemporalPolicy() :
+                                                    tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)) {
+  }
+
+  tdbPreLoadMatrix(
+      const tiledb::Context& ctx, const std::string& uri, size_t upper_bound, const tiledb::TemporalPolicy& temporal_policy)
       : Base(ctx, uri, upper_bound) {
     Base::load();
   }
