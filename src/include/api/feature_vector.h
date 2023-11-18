@@ -201,7 +201,7 @@ class FeatureVector {
       // return vector_.data();
     //}
     [[nodiscard]] void* data() const override {
-      return _cpo::data(vector_);
+      return (void*)::data(vector_);
       // return vector_.data();
     }
     [[nodiscard]] size_t dimension() const override {

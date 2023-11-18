@@ -294,7 +294,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
       , query_set(tdbColMajorMatrix<feature_type>(ctx_, siftsmall_query_uri))
       , groundtruth_set(
             tdbColMajorMatrix<int32_t>(ctx_, siftsmall_groundtruth_uri))
-      , idx(/*128,*/ nlist, max_iter, tolerance, nthreads, 0xdeadbeef) {
+      , idx(/*128,*/ nlist, max_iter, tolerance) {
     training_set.load();
     query_set.load();
     groundtruth_set.load();

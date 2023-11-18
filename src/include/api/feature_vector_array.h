@@ -65,7 +65,7 @@ class FeatureVectorArray {
     feature_type_ = tiledb::impl::type_to_tiledb<
         typename std::remove_cvref_t<T>::value_type>::tiledb_type;
     feature_size_ = datatype_to_size(feature_type_);
-   }
+  }
 
   FeatureVectorArray(
       const tiledb::Context& ctx,
@@ -117,13 +117,13 @@ class FeatureVectorArray {
       default:
         throw std::runtime_error("Unsupported attribute type");
     }
-    vector_array->load();
+    (void) vector_array->load();
   }
 
   FeatureVectorArray(size_t rows, size_t cols, const std::string type_string) {
     feature_type_ = string_to_datatype(type_string);
     feature_size_ = datatype_to_size(feature_type_);
-        switch (feature_type_) {
+    switch (feature_type_) {
       case TILEDB_FLOAT32:
         vector_array =
             std::make_unique<vector_array_impl<ColMajorMatrix<float>>>(
@@ -132,12 +132,12 @@ class FeatureVectorArray {
       case TILEDB_UINT8:
         vector_array =
             std::make_unique<vector_array_impl<ColMajorMatrix<uint8_t>>>(
-                 rows, cols);
+                rows, cols);
         break;
       case TILEDB_INT32:
         vector_array =
             std::make_unique<vector_array_impl<ColMajorMatrix<int32_t>>>(
-                 rows, cols);
+                rows, cols);
         break;
       case TILEDB_UINT32:
         vector_array =
@@ -147,13 +147,15 @@ class FeatureVectorArray {
       case TILEDB_INT64:
         vector_array =
             std::make_unique<vector_array_impl<ColMajorMatrix<int64_t>>>(
-                 rows, cols);
+                rows, cols);
         break;
       case TILEDB_UINT64:
         vector_array =
             std::make_unique<vector_array_impl<ColMajorMatrix<uint64_t>>>(
-                 rows, cols);
+                rows, cols);
         break;
+      default:
+        throw std::runtime_error("Unsupported attribute type");
     }
   }
 
@@ -190,7 +192,7 @@ class FeatureVectorArray {
   [[nodiscard]] std::string feature_type_string() const {
     return datatype_to_string(feature_type_);
   }
-  
+
   [[nodiscard]] size_t feature_size() const {
     return feature_size_;
   }
@@ -212,15 +214,14 @@ class FeatureVectorArray {
   struct vector_array_impl : vector_array_base {
     explicit vector_array_impl(T&& t)
         : impl_vector_array(std::forward<T>(t)) {
-    // explicit vector_array_impl(const T& t)
-    //     : impl_vector_array(t) {
+      // explicit vector_array_impl(const T& t)
+      //     : impl_vector_array(t) {
     }
     vector_array_impl(
         const tiledb::Context& ctx, const std::string& uri, size_t num_vectors)
         : impl_vector_array(ctx, uri, num_vectors) {
     }
-    vector_array_impl(
-        size_t rows, size_t cols)
+    vector_array_impl(size_t rows, size_t cols)
         : impl_vector_array(rows, cols) {
     }
     [[nodiscard]] void* data() const override {
@@ -236,7 +237,7 @@ class FeatureVectorArray {
       return _cpo::extents(impl_vector_array);
     }
     bool load() override {
-     return _cpo::load(impl_vector_array);
+      return _cpo::load(impl_vector_array);
     }
 
    private:
@@ -310,67 +311,67 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
 }
 
 template <feature_vector_array T>
-void foo(const T& t){}
+void foo(const T& t) {
+}
 
 void bar() {
   static_assert(feature_vector_array<MatrixView<int, stdx::layout_left>>);
   foo(MatrixView<int32_t, stdx::layout_left>{});
 }
 
-auto count_intersections(const FeatureVectorArray& a, const FeatureVectorArray& b, size_t k_nn) {
-
-    auto proc_b = [&b, k_nn](auto& aview) {
-      switch (b.feature_type()) {
-        case TILEDB_INT32: {
-          auto bview = MatrixView<int32_t, stdx::layout_left>{
-              (int32_t*)b.data(), extents(b)[0], extents(b)[1]};
-          return count_intersections(aview, bview, k_nn);
-        }
-        case TILEDB_UINT32: {
-          auto bview = MatrixView<uint32_t, stdx::layout_left>{
-              (uint32_t*)b.data(), extents(b)[0], extents(b)[1]};
-          return count_intersections(aview, bview, k_nn);
-        }
-        case TILEDB_INT64: {
-          auto bview = MatrixView<int64_t, stdx::layout_left>{
-              (int64_t*)b.data(), extents(b)[0], extents(b)[1]};
-          return count_intersections(aview, bview, k_nn);
-        }
-        case TILEDB_UINT64: {
-          auto bview = MatrixView<uint64_t, stdx::layout_left>{
-              (uint64_t*)b.data(), extents(b)[0], extents(b)[1]};
-          return count_intersections(aview, bview, k_nn);
-        }
-        default:
-          throw std::runtime_error("Unsupported attribute type");
-      }
-    };
-
-    switch (a.feature_type()) {
+auto count_intersections(
+    const FeatureVectorArray& a, const FeatureVectorArray& b, size_t k_nn) {
+  auto proc_b = [&b, k_nn](auto& aview) {
+    switch (b.feature_type()) {
       case TILEDB_INT32: {
-        auto aview = MatrixView<int32_t, stdx::layout_left>{
-            (int32_t*)a.data(), extents(a)[0], extents(a)[1]};
-        return proc_b(aview);
+        auto bview = MatrixView<int32_t, stdx::layout_left>{
+            (int32_t*)b.data(), extents(b)[0], extents(b)[1]};
+        return count_intersections(aview, bview, k_nn);
       }
       case TILEDB_UINT32: {
-        auto aview = MatrixView<uint32_t, stdx::layout_left>{
-            (uint32_t*)a.data(), extents(a)[0], extents(a)[1]};
-        return proc_b(aview);
+        auto bview = MatrixView<uint32_t, stdx::layout_left>{
+            (uint32_t*)b.data(), extents(b)[0], extents(b)[1]};
+        return count_intersections(aview, bview, k_nn);
       }
       case TILEDB_INT64: {
-        auto aview = MatrixView<int64_t, stdx::layout_left>{
-            (int64_t*)a.data(), extents(a)[0], extents(a)[1]};
-        return proc_b(aview);
+        auto bview = MatrixView<int64_t, stdx::layout_left>{
+            (int64_t*)b.data(), extents(b)[0], extents(b)[1]};
+        return count_intersections(aview, bview, k_nn);
       }
       case TILEDB_UINT64: {
-        auto aview = MatrixView<uint64_t, stdx::layout_left>{
-            (uint64_t*)a.data(), extents(a)[0], extents(a)[1]};
-        return proc_b(aview);
+        auto bview = MatrixView<uint64_t, stdx::layout_left>{
+            (uint64_t*)b.data(), extents(b)[0], extents(b)[1]};
+        return count_intersections(aview, bview, k_nn);
       }
       default:
         throw std::runtime_error("Unsupported attribute type");
     }
+  };
 
+  switch (a.feature_type()) {
+    case TILEDB_INT32: {
+      auto aview = MatrixView<int32_t, stdx::layout_left>{
+          (int32_t*)a.data(), extents(a)[0], extents(a)[1]};
+      return proc_b(aview);
+    }
+    case TILEDB_UINT32: {
+      auto aview = MatrixView<uint32_t, stdx::layout_left>{
+          (uint32_t*)a.data(), extents(a)[0], extents(a)[1]};
+      return proc_b(aview);
+    }
+    case TILEDB_INT64: {
+      auto aview = MatrixView<int64_t, stdx::layout_left>{
+          (int64_t*)a.data(), extents(a)[0], extents(a)[1]};
+      return proc_b(aview);
+    }
+    case TILEDB_UINT64: {
+      auto aview = MatrixView<uint64_t, stdx::layout_left>{
+          (uint64_t*)a.data(), extents(a)[0], extents(a)[1]};
+      return proc_b(aview);
+    }
+    default:
+      throw std::runtime_error("Unsupported attribute type");
+  }
 }
 
 #endif  // TILEDB_API_FEATURE_VECTOR_ARRAY_H

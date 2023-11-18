@@ -112,10 +112,10 @@ int main(int argc, char* argv[]) {
     auto dim = dimension(X);
 
     auto idx = ivf_flat_index<feature_type, id_type, px_type>(
-        /* dim, */ num_clusters, max_iter, tolerance, nthreads, 0xdeadbeef);
+        /* dim, */ num_clusters, max_iter, tolerance);
     idx.train(X, init_type);
     idx.add(X);
-    idx.write_index(index_uri, overwrite);
+    idx.write_index(ctx, index_uri, overwrite);
 
     if (args["--log"]) {
       //     idx.log_index();

@@ -456,14 +456,13 @@ static void declare_vq_query_heap_pyarray(py::module& m, const std::string& suff
           return r;
         });
 }
-
+#endif
 } // anonymous namespace
 
 void init_kmeans(py::module&);
 void init_module2(py::module&);
 
 PYBIND11_MODULE(_tiledbvspy, m) {
-
   py::class_<tiledb::Context> (m, "Ctx", py::module_local())
     .def(py::init([](std::optional<py::dict> maybe_config) {
       tiledb::Config cfg;
@@ -475,6 +474,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       return tiledb::Context(cfg);
     }
   ));
+#if 0
 
   /* === Vector === */
 

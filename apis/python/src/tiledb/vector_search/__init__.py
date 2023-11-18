@@ -6,6 +6,8 @@ from  ._tiledbvspy import IndexFlatL2
 from  ._tiledbvspy import IndexIVFFlat
 from  ._tiledbvspy import Ctx
 
+
+
 '''
 # Re-import mode from cloud.dag
 from tiledb.cloud.dag.mode import Mode

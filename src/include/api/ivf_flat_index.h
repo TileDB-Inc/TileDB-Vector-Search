@@ -451,7 +451,7 @@ class IndexIVFFlat {
         size_t max_iter,
         float tolerance,
         std::optional<size_t> num_threads)
-        : impl_index_(nlist, max_iter, tolerance, num_threads) {
+        : impl_index_(nlist, max_iter, tolerance) {
     }
 
     index_impl(

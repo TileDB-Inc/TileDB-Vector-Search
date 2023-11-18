@@ -105,9 +105,11 @@ auto datatype_to_format(tiledb_datatype_t datatype) {
 
 // PYBIND11_MODULE(_tiledbvspy2, m) {
 void init_module2(py::module_& m) {
-  m.def("count_intersections", [](const FeatureVectorArray& a, const FeatureVectorArray& b, size_t k_nn) {
-    return count_intersections(a, b, k_nn);
-  });
+  m.def(
+      "count_intersections",
+      [](const FeatureVectorArray& a,
+         const FeatureVectorArray& b,
+         size_t k_nn) { return count_intersections(a, b, k_nn); });
 #if 0
   py::class_<tiledb::Context> (m, "Ctx", py::module_local())
       .def(py::init([](std::optional<py::dict> maybe_config) {
@@ -128,27 +130,31 @@ void init_module2(py::module_& m) {
       .def("dimension", &FeatureVector::dimension)
       .def("feature_type", &FeatureVector::feature_type)
       .def("feature_type_string", &FeatureVector::feature_type_string)
-      .def_buffer([](FeatureVector &v) -> py::buffer_info {
+      .def_buffer([](FeatureVector& v) -> py::buffer_info {
         return py::buffer_info(
-            v.data(),                               /* Pointer to buffer */
-            datatype_to_size(v.feature_type()),     /* Size of one scalar */
-            datatype_to_format(v.feature_type()),   /* Python struct-style format descriptor */
-            1,                                      /* Number of dimensions */
-            { v.dimension() },                      /* Buffer dimension */
-            { datatype_to_size(v.feature_type()) }   /* Strides (in bytes) for each index */
+            v.data(),                           /* Pointer to buffer */
+            datatype_to_size(v.feature_type()), /* Size of one scalar */
+            datatype_to_format(
+                v.feature_type()), /* Python struct-style format descriptor */
+            1,                     /* Number of dimensions */
+            {v.dimension()},       /* Buffer dimension */
+            {datatype_to_size(v.feature_type())}
+            /* Strides (in bytes) for each index */
         );
       })
       .def(py::init([](py::array b) {
-
         /* Request a buffer descriptor from Python */
         py::buffer_info info = b.request();
         if (info.ndim != 1)
-          throw std::runtime_error("Incompatible buffer dimension! Should be 1.");
+          throw std::runtime_error(
+              "Incompatible buffer dimension! Should be 1.");
 
         auto dtype_str = b.dtype().str();
         tiledb_datatype_t datatype = string_to_datatype(dtype_str);
         if (info.format != datatype_to_format(datatype))
-          throw std::runtime_error("Incompatible format: expected array of " + datatype_to_string(datatype));
+          throw std::runtime_error(
+              "Incompatible format: expected array of " +
+              datatype_to_string(datatype));
 
         size_t sz = datatype_to_size(datatype);
 
@@ -158,8 +164,7 @@ void init_module2(py::module_& m) {
         std::memcpy(data, (uint8_t*)info.ptr, info.shape[0] * sz);
 
         return v;
-      }))
-      ;
+      }));
 
   py::class_<FeatureVectorArray>(m, "FeatureVectorArray", py::buffer_protocol())
       .def(py::init<const tiledb::Context&, const std::string&>())
@@ -169,33 +174,38 @@ void init_module2(py::module_& m) {
       .def("num_vectors", &FeatureVectorArray::num_vectors)
       .def("feature_type", &FeatureVectorArray::feature_type)
       .def("feature_type_string", &FeatureVectorArray::feature_type_string)
-      .def_buffer([](FeatureVectorArray &v) -> py::buffer_info {
+      .def_buffer([](FeatureVectorArray& v) -> py::buffer_info {
         return py::buffer_info(
-            v.data(),                               /* Pointer to buffer */
-            datatype_to_size(v.feature_type()),     /* Size of one scalar */
-            datatype_to_format(v.feature_type()),   /* Python struct-style format descriptor */
-            2,                                      /* Number of dimensions */
-            { v.num_vectors(), v.dimension() },     /* Buffer dimensions -- row major */
-            { datatype_to_size(v.feature_type()) * v.dimension(),  /* Strides (in bytes) for each index */
-             datatype_to_size(v.feature_type()) }
-        );
+            v.data(),                           /* Pointer to buffer */
+            datatype_to_size(v.feature_type()), /* Size of one scalar */
+            datatype_to_format(
+                v.feature_type()), /* Python struct-style format descriptor */
+            2,                     /* Number of dimensions */
+            {v.num_vectors(),
+             v.dimension()}, /* Buffer dimensions -- row major */
+            {datatype_to_size(v.feature_type()) *
+                 v.dimension(), /* Strides (in bytes) for each index */
+             datatype_to_size(v.feature_type())});
       })
       .def(py::init([](py::array b) {
-
         /* Request a buffer descriptor from Python */
         py::buffer_info info = b.request();
         if (info.ndim != 2)
-          throw std::runtime_error("Incompatible buffer dimension! Should be 2.");
+          throw std::runtime_error(
+              "Incompatible buffer dimension! Should be 2.");
 
         auto dtype_str = b.dtype().str();
         tiledb_datatype_t datatype = string_to_datatype(dtype_str);
         if (info.format != datatype_to_format(datatype))
-          throw std::runtime_error("Incompatible format: expected array of " + datatype_to_string(datatype));
+          throw std::runtime_error(
+              "Incompatible format: expected array of " +
+              datatype_to_string(datatype));
 
         size_t sz = datatype_to_size(datatype);
 
         auto v = [&]() {
-          auto order = b.flags() & py::array::f_style ? TILEDB_COL_MAJOR : TILEDB_ROW_MAJOR;
+          auto order = b.flags() & py::array::f_style ? TILEDB_COL_MAJOR :
+                                                        TILEDB_ROW_MAJOR;
           if (order == TILEDB_COL_MAJOR) {
             return FeatureVectorArray(info.shape[0], info.shape[1], dtype_str);
           } else {
@@ -204,11 +214,11 @@ void init_module2(py::module_& m) {
         }();
 
         auto data = (uint8_t*)v.data();
-        std::memcpy(data, (uint8_t*)info.ptr, info.shape[0] * info.shape[1] * sz);
+        std::memcpy(
+            data, (uint8_t*)info.ptr, info.shape[0] * info.shape[1] * sz);
 
         return v;
-      }))
-  ;
+      }));
 
   py::class_<IndexFlatL2>(m, "IndexFlatL2")
       .def(py::init<const tiledb::Context&, const std::string&>())
@@ -218,11 +228,12 @@ void init_module2(py::module_& m) {
       .def("save", &IndexFlatL2::save)
       .def("feature_type_string", &IndexFlatL2::feature_type_string)
       .def("dimension", &IndexFlatL2::dimension)
-      .def("query", [](IndexFlatL2& index, FeatureVectorArray& vectors, size_t top_k) {
-        auto r = index.query(vectors, top_k);
-        return make_python_pair(std::move(r));
-      })
-      ;
+      .def(
+          "query",
+          [](IndexFlatL2& index, FeatureVectorArray& vectors, size_t top_k) {
+            auto r = index.query(vectors, top_k);
+            return make_python_pair(std::move(r));
+          });
 
   py::class_<kmeans_init>(m, "kmeans_init")
       .def(py::init([](const std::string& s) {
@@ -233,45 +244,66 @@ void init_module2(py::module_& m) {
         } else {
           throw std::runtime_error("Invalid kmeans_init value");
         }
-      }))
-      ;
+      }));
 
   py::class_<IndexIVFFlat>(m, "IndexIVFFlat")
       .def(py::init<const tiledb::Context&, const std::string&>())
-      .def("__init__",
-           [](IndexIVFFlat &instance, py::kwargs kwargs) {
-             auto args = kwargs_to_map(kwargs);
-             new (&instance) IndexIVFFlat(args);
-           }
-      )
-      .def("train", [](IndexIVFFlat& index, const FeatureVectorArray& vectors, py::str init_str) {
-        kmeans_init init = kmeans_init::random;
-        if (std::string(init_str) == "kmeans++") {
-          init = kmeans_init::kmeanspp;
-        } else if (std::string(init_str) == "random") {
-          init = kmeans_init::random;
-        } else {
-          throw std::runtime_error("Invalid kmeans_init value");
-        }
-        index.train(vectors, init);
-      }, py::arg("vectors"), py::arg("init") = "random")
-      .def("add", [](IndexIVFFlat& index, const FeatureVectorArray& vectors) {
-        index.add(vectors);
-      })
+      .def(
+          "__init__",
+          [](IndexIVFFlat& instance, py::kwargs kwargs) {
+            auto args = kwargs_to_map(kwargs);
+            new (&instance) IndexIVFFlat(args);
+          })
+      .def(
+          "train",
+          [](IndexIVFFlat& index,
+             const FeatureVectorArray& vectors,
+             py::str init_str) {
+            kmeans_init init = kmeans_init::random;
+            if (std::string(init_str) == "kmeans++") {
+              init = kmeans_init::kmeanspp;
+            } else if (std::string(init_str) == "random") {
+              init = kmeans_init::random;
+            } else {
+              throw std::runtime_error("Invalid kmeans_init value");
+            }
+            index.train(vectors, init);
+          },
+          py::arg("vectors"),
+          py::arg("init") = "random")
+      .def(
+          "add",
+          [](IndexIVFFlat& index, const FeatureVectorArray& vectors) {
+            index.add(vectors);
+          })
       .def("add_with_ids", &IndexIVFFlat::add_with_ids)
-      .def("save", &IndexIVFFlat::save)
-      .def("query_infinite_ram", [](IndexIVFFlat& index, const FeatureVectorArray& query, size_t top_k, size_t nprobe) {
-        auto r = index.query_infinite_ram(query, top_k, nprobe);
-        return make_python_pair(std::move(r));
-      }) //  , py::arg("vectors"), py::arg("top_k") = 1, py::arg("nprobe") = 10)
-      .def("query_finite_ram", [](IndexIVFFlat& index, const FeatureVectorArray& query, size_t top_k, size_t nprobe, size_t upper_bound) {
-        auto r = index.query_finite_ram(query, top_k, nprobe, upper_bound);
-        return make_python_pair(std::move(r));
-      }, py::arg("vectors"), py::arg("top_k") = 1, py::arg("nprobe") = 10, py::arg("upper_bound") = 0)
+      // .def("save", &IndexIVFFlat::save)
+      .def(
+          "query_infinite_ram",
+          [](IndexIVFFlat& index,
+             const FeatureVectorArray& query,
+             size_t top_k,
+             size_t nprobe) {
+            auto r = index.query_infinite_ram(query, top_k, nprobe);
+            return make_python_pair(std::move(r));
+          })  //  , py::arg("vectors"), py::arg("top_k") = 1, py::arg("nprobe")
+              //  = 10)
+      .def(
+          "query_finite_ram",
+          [](IndexIVFFlat& index,
+             const FeatureVectorArray& query,
+             size_t top_k,
+             size_t nprobe,
+             size_t upper_bound) {
+            auto r = index.query_finite_ram(query, top_k, nprobe, upper_bound);
+            return make_python_pair(std::move(r));
+          },
+          py::arg("vectors"),
+          py::arg("top_k") = 1,
+          py::arg("nprobe") = 10,
+          py::arg("upper_bound") = 0)
       .def("feature_type_string", &IndexIVFFlat::feature_type_string)
       .def("id_type_string", &IndexIVFFlat::id_type_string)
       .def("px_type_string", &IndexIVFFlat::px_type_string)
-      .def("dimension", &IndexIVFFlat::dimension)
-      ;
-
+      .def("dimension", &IndexIVFFlat::dimension);
 }

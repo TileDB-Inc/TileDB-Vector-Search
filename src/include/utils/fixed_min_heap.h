@@ -314,7 +314,8 @@ void min_heapify(
   }
 }
 
-void convert_to_min_heap(std::vector<int>& heap) {
+template <class T>
+void convert_to_min_heap(std::vector<T>& heap) {
   for (int i = heap.size() / 2 - 1; i >= 0; --i) {
     min_heapify(heap, i, heap.size());
   }
