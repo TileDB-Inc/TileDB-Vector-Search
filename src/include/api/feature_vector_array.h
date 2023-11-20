@@ -117,7 +117,7 @@ class FeatureVectorArray {
       default:
         throw std::runtime_error("Unsupported attribute type");
     }
-    (void) vector_array->load();
+    (void)vector_array->load();
   }
 
   FeatureVectorArray(size_t rows, size_t cols, const std::string type_string) {

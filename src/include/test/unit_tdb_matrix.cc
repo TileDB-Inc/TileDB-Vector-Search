@@ -44,7 +44,6 @@ TEST_CASE("tdb_matrix: test test", "[tdb_matrix]") {
   REQUIRE(true);
 }
 
-
 TEMPLATE_TEST_CASE("tdb_matrix: constructors", "[tdb_matrix]", float, uint8_t) {
   tiledb::Context ctx;
   std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
@@ -65,8 +64,6 @@ TEMPLATE_TEST_CASE("tdb_matrix: constructors", "[tdb_matrix]", float, uint8_t) {
   Y.load();
 
   auto Z = tdbColMajorMatrix<TestType>(std::move(Y));
-
-
 
   CHECK(num_vectors(Y) == num_vectors(X));
   CHECK(dimension(Y) == dimension(X));
@@ -108,10 +105,9 @@ TEMPLATE_TEST_CASE(
     B = std::move(Y);
   }
 
-
-
   {
-    auto Y = tdbColMajorMatrix<TestType>(tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri));
+    auto Y = tdbColMajorMatrix<TestType>(
+        tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri));
   }
 
   auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);

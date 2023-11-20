@@ -95,12 +95,8 @@ template <
     class IndicesType,
     class LayoutPolicy = stdx::layout_right,
     class I = size_t>
-class tdbPartitionedMatrix : public PartitionedMatrix<
-                                 T,
-                                 IdType,
-                                 IndicesType,
-                                 LayoutPolicy,
-                                 I> {
+class tdbPartitionedMatrix
+    : public PartitionedMatrix<T, IdType, IndicesType, LayoutPolicy, I> {
   /****************************************************************************
    *
    * Duplication from tdbMatrix
@@ -108,8 +104,7 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
    * @todo Unify duplicated code
    *
    ****************************************************************************/
-  using Base =
-      PartitionedMatrix<T, IdType, IndicesType, LayoutPolicy, I>;
+  using Base = PartitionedMatrix<T, IdType, IndicesType, LayoutPolicy, I>;
   // using Base::Base;
 
  public:
@@ -231,26 +226,27 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
       const P& relevant_parts,
       size_t upper_bound,
       const tiledb::TemporalPolicy temporal_policy = {})
-  : tdbPartitionedMatrix(
-      ctx,
-      partitioned_vectors_uri,
-      read_vector<indices_type>(ctx, indices_uri),
-      ids_uri,
-      relevant_parts,
-      upper_bound,
-      temporal_policy) {}
+      : tdbPartitionedMatrix(
+            ctx,
+            partitioned_vectors_uri,
+            read_vector<indices_type>(ctx, indices_uri),
+            ids_uri,
+            relevant_parts,
+            upper_bound,
+            temporal_policy) {
+  }
 
-
-  tdbPartitionedMatrix(std::vector<indices_type>&) {}
-      template <std::ranges::contiguous_range P>
-      tdbPartitionedMatrix(
-          const tiledb::Context& ctx,
-          const std::string& partitioned_vectors_uri,
-          std::vector<indices_type>&& indices,
-          const std::string& ids_uri,
-          const P& relevant_parts,
-          size_t upper_bound,
-          const tiledb::TemporalPolicy temporal_policy = {})
+  tdbPartitionedMatrix(std::vector<indices_type>&) {
+  }
+  template <std::ranges::contiguous_range P>
+  tdbPartitionedMatrix(
+      const tiledb::Context& ctx,
+      const std::string& partitioned_vectors_uri,
+      std::vector<indices_type>&& indices,
+      const std::string& ids_uri,
+      const P& relevant_parts,
+      size_t upper_bound,
+      const tiledb::TemporalPolicy temporal_policy = {})
       : ctx_{ctx}
       , partitioned_vectors_uri_{partitioned_vectors_uri}
       , partitioned_vectors_array_(tiledb_helpers::open_array(
@@ -537,8 +533,10 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
 
     // this->num_vectors() =
     // this->num_partitions() =
-    this->num_vectors_ = num_resident_cols_;;
-    this->num_parts_ = num_resident_parts_;;
+    this->num_vectors_ = num_resident_cols_;
+    ;
+    this->num_parts_ = num_resident_parts_;
+    ;
 
     num_loads_++;
     return true;

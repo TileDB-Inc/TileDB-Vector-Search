@@ -55,7 +55,8 @@ constexpr bool always_false = false;
 }
 
 // @todo Implement this with a map
-[[maybe_unused]] static tiledb_datatype_t string_to_datatype(const std::string& str) {
+[[maybe_unused]] static tiledb_datatype_t string_to_datatype(
+    const std::string& str) {
   if (str == "float32") {
     return TILEDB_FLOAT32;
   }
@@ -89,7 +90,8 @@ constexpr bool always_false = false;
   throw std::runtime_error("Unsupported datatype");
 }
 
-[[maybe_unused]] static std::string datatype_to_string(tiledb_datatype_t datatype) {
+[[maybe_unused]] static std::string datatype_to_string(
+    tiledb_datatype_t datatype) {
   switch (datatype) {
     case TILEDB_FLOAT32:
       return "float32";
@@ -115,26 +117,26 @@ constexpr bool always_false = false;
 }
 
 [[maybe_unused]] static size_t datatype_to_size(tiledb_datatype_t datatype) {
-        switch (datatype) {
-        case TILEDB_FLOAT32:
-        return sizeof(float);
-        case TILEDB_FLOAT64:
-        return sizeof(double);
-        case TILEDB_INT8:
-        return sizeof(int8_t);
-        case TILEDB_UINT8:
-        return sizeof(uint8_t);
-        case TILEDB_INT32:
-        return sizeof(int32_t);
-        case TILEDB_UINT32:
-        return sizeof(uint32_t);
-        case TILEDB_INT64:
-        return sizeof(int64_t);
-        case TILEDB_UINT64:
-        return sizeof(uint64_t);
-        default:
-        throw std::runtime_error("Unsupported datatype");
-        }
+  switch (datatype) {
+    case TILEDB_FLOAT32:
+      return sizeof(float);
+    case TILEDB_FLOAT64:
+      return sizeof(double);
+    case TILEDB_INT8:
+      return sizeof(int8_t);
+    case TILEDB_UINT8:
+      return sizeof(uint8_t);
+    case TILEDB_INT32:
+      return sizeof(int32_t);
+    case TILEDB_UINT32:
+      return sizeof(uint32_t);
+    case TILEDB_INT64:
+      return sizeof(int64_t);
+    case TILEDB_UINT64:
+      return sizeof(uint64_t);
+    default:
+      throw std::runtime_error("Unsupported datatype");
+  }
 }
 
 #endif  // TILEDB_TDB_DEFS_H

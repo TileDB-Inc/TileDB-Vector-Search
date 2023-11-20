@@ -110,7 +110,6 @@ using RowMajorMatrixView = MatrixView<T, stdx::layout_right, I>;
 template <class T, class I = size_t>
 using ColMajorMatrixView = MatrixView<T, stdx::layout_left, I>;
 
-
 /**
  * @brief A 2-D matrix class that owns its storage.  The interface is
  * that of mdspan.
@@ -129,7 +128,7 @@ class Matrix :
   using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
   // using Base::Base;
 #else
-public MatrixView<T, LayoutPolicy, I> {
+    public MatrixView<T, LayoutPolicy, I> {
   using Base = MatrixView<T, LayoutPolicy, I>;
   // So that the CPO for data() doesn't get confused
   // auto data_handle() = delete;

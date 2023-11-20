@@ -106,9 +106,9 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   tdbBlockedMatrix(tdbBlockedMatrix&& rhs) = default;
 
   virtual ~tdbBlockedMatrix() noexcept {
-  //  if (array_.is_open()) {
-  //    array_.close();
-  //  }
+    //  if (array_.is_open()) {
+    //    array_.close();
+    //  }
   }
 
   /**
@@ -159,7 +159,8 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       , uri_{uri}
       //      , array_(tiledb_helpers::open_array(
       //            tdb_func__, ctx, uri, TILEDB_READ, temporal_policy))
-      , array_(std::make_unique<tiledb::Array>(ctx, uri, TILEDB_READ, temporal_policy))
+      , array_(std::make_unique<tiledb::Array>(
+            ctx, uri, TILEDB_READ, temporal_policy))
       , schema_{array_->schema()} {
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + " " + uri};
@@ -318,9 +319,11 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       const tiledb::TemporalPolicy temporal_policy = {})  // noexcept
       : ctx_{ctx}
       , uri_{uri}
-      //      , array_(std::make_unique<tiledb::Array>(tiledb_helpers::open_array(
+      //      ,
+      //      array_(std::make_unique<tiledb::Array>(tiledb_helpers::open_array(
       //            tdb_func__, ctx, uri, TILEDB_READ, temporal_policy)))
-      , array_(std::make_unique<tiledb::Array>(ctx, uri, TILEDB_READ, temporal_policy))
+      , array_(std::make_unique<tiledb::Array>(
+            ctx, uri, TILEDB_READ, temporal_policy))
       , schema_{array_->schema()} {
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + uri};
@@ -427,7 +430,6 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
   // using Base::Base;
 
  public:
-
   /**
    * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
    * vectors. In this case, the `Matrix` is column-major, so the number of
@@ -438,14 +440,24 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
    * @param upper_bound The maximum number of vectors to read.
    */
   tdbPreLoadMatrix(
-      const tiledb::Context& ctx, const std::string& uri, size_t upper_bound = 0, uint64_t timestamp = 0)
-      : tdbPreLoadMatrix(ctx, uri, upper_bound, (timestamp == 0) ?
-                                                    tiledb::TemporalPolicy() :
-                                                    tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)) {
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t upper_bound = 0,
+      uint64_t timestamp = 0)
+      : tdbPreLoadMatrix(
+            ctx,
+            uri,
+            upper_bound,
+            (timestamp == 0) ?
+                tiledb::TemporalPolicy() :
+                tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)) {
   }
 
   tdbPreLoadMatrix(
-      const tiledb::Context& ctx, const std::string& uri, size_t upper_bound, const tiledb::TemporalPolicy& temporal_policy)
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t upper_bound,
+      const tiledb::TemporalPolicy& temporal_policy)
       : Base(ctx, uri, upper_bound) {
     Base::load();
   }

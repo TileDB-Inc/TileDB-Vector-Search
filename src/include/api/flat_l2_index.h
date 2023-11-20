@@ -48,7 +48,6 @@
  */
 class IndexFlatL2 {
  public:
-
   // @todo Use group metadata to determine index type and associated array types
   IndexFlatL2(
       const tiledb::Context& ctx,
@@ -129,7 +128,7 @@ class IndexFlatL2 {
   constexpr auto feature_type() const {
     return feature_datatype_;
   }
-  
+
   constexpr auto feature_type_string() const {
     return datatype_to_string(feature_datatype_);
   }

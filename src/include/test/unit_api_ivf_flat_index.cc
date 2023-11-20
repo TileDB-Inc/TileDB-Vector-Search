@@ -130,10 +130,10 @@ TEST_CASE("api_ivf_flat_index: init constructor", "[api_ivf_flat_index]") {
   }
 }
 
-TEST_CASE("api_ivf_flat_index: infer feature type", "[api_ivf_flat_index][ci-skip]") {
+TEST_CASE(
+    "api_ivf_flat_index: infer feature type", "[api_ivf_flat_index][ci-skip]") {
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
-      {{"id_type", "uint32"},
-       {"px_type", "uint32"}}));
+      {{"id_type", "uint32"}, {"px_type", "uint32"}}));
   auto ctx = tiledb::Context{};
   auto training_set = FeatureVectorArray(ctx, siftsmall_base_uri);
   a.train(training_set, kmeans_init::random);
@@ -142,10 +142,10 @@ TEST_CASE("api_ivf_flat_index: infer feature type", "[api_ivf_flat_index][ci-ski
   CHECK(a.px_type() == TILEDB_UINT32);
 }
 
-TEST_CASE("api_ivf_flat_index: infer dimension", "[api_ivf_flat_index][ci-skip]") {
+TEST_CASE(
+    "api_ivf_flat_index: infer dimension", "[api_ivf_flat_index][ci-skip]") {
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
-      {{"id_type", "uint32"},
-       {"px_type", "uint32"}}));
+      {{"id_type", "uint32"}, {"px_type", "uint32"}}));
   auto ctx = tiledb::Context{};
   auto training_set = FeatureVectorArray(ctx, siftsmall_base_uri);
   CHECK(dimension(a) == 0);
@@ -156,7 +156,9 @@ TEST_CASE("api_ivf_flat_index: infer dimension", "[api_ivf_flat_index][ci-skip]"
   CHECK(dimension(a) == 128);
 }
 
-TEST_CASE("api_ivf_flat_index: api_ivf_flat_index write and read", "[api_ivf_flat_index][ci-skip]") {
+TEST_CASE(
+    "api_ivf_flat_index: api_ivf_flat_index write and read",
+    "[api_ivf_flat_index][ci-skip]") {
   auto ctx = tiledb::Context{};
   std::string api_ivf_flat_index_uri = "/tmp/api_ivf_flat_index";
 
@@ -175,10 +177,11 @@ TEST_CASE("api_ivf_flat_index: api_ivf_flat_index write and read", "[api_ivf_fla
   CHECK(a.feature_type() == b.feature_type());
   CHECK(a.id_type() == b.id_type());
   CHECK(a.px_type() == b.px_type());
-
 }
 
-TEST_CASE("api_ivf_flat_index: build index and query in place infinite", "[api_ivf_flat_index][ci-skip]") {
+TEST_CASE(
+    "api_ivf_flat_index: build index and query in place infinite",
+    "[api_ivf_flat_index][ci-skip]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
   size_t nprobe = GENERATE(8, 32);
@@ -200,7 +203,7 @@ TEST_CASE("api_ivf_flat_index: build index and query in place infinite", "[api_i
     auto recall = ((double)intersections) / ((double)nt * k_nn);
     if (nprobe == 32) {
       CHECK(recall == 1.0);
-    } else  if (nprobe == 8) {
+    } else if (nprobe == 8) {
       CHECK(recall > 0.95);
     }
   }
@@ -214,8 +217,9 @@ TEST_CASE("api_ivf_flat_index: build index and query in place infinite", "[api_i
 #endif
 }
 
-
-TEST_CASE("api_ivf_flat_index: read index and query infinite and finite", "[api_ivf_flat_index][ci-skip]") {
+TEST_CASE(
+    "api_ivf_flat_index: read index and query infinite and finite",
+    "[api_ivf_flat_index][ci-skip]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
   size_t nprobe = GENERATE(8, 32);
@@ -235,8 +239,12 @@ TEST_CASE("api_ivf_flat_index: read index and query infinite and finite", "[api_
   auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
   auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
 
-  SECTION("finite all in core, default, nprobe = std::to_string(nprobe)" + std::to_string(nprobe)) {
-    INFO("finite all in core, default, nprobe = std::to_string(nprobe)" + std::to_string(nprobe));
+  SECTION(
+      "finite all in core, default, nprobe = std::to_string(nprobe)" +
+      std::to_string(nprobe)) {
+    INFO(
+        "finite all in core, default, nprobe = std::to_string(nprobe)" +
+        std::to_string(nprobe));
     auto&& [s, t] = a.query_infinite_ram(query_set, k_nn, nprobe);
     auto&& [u, v] = b.query_finite_ram(query_set, k_nn, nprobe);
 
@@ -246,16 +254,20 @@ TEST_CASE("api_ivf_flat_index: read index and query infinite and finite", "[api_
     auto nt = num_vectors(t);
     auto nv = num_vectors(v);
     CHECK(nt == nv);
-    auto recall = ((double) intersections_a) / ((double)nt * k_nn);
+    auto recall = ((double)intersections_a) / ((double)nt * k_nn);
     if (nprobe == 32) {
       CHECK(recall == 1.0);
-    } else  if (nprobe == 8) {
+    } else if (nprobe == 8) {
       CHECK(recall > 0.925);
     }
   }
 
-  SECTION("finite all in core, 0, nprobe = std::to_string(nprobe)" + std::to_string(nprobe)) {
-    INFO("finite all in core, 0, nprobe = std::to_string(nprobe)" + std::to_string(nprobe));
+  SECTION(
+      "finite all in core, 0, nprobe = std::to_string(nprobe)" +
+      std::to_string(nprobe)) {
+    INFO(
+        "finite all in core, 0, nprobe = std::to_string(nprobe)" +
+        std::to_string(nprobe));
     auto&& [s, t] = a.query_infinite_ram(query_set, k_nn, nprobe);
     auto&& [u, v] = b.query_finite_ram(query_set, k_nn, nprobe, 0);
 
@@ -265,16 +277,20 @@ TEST_CASE("api_ivf_flat_index: read index and query infinite and finite", "[api_
     auto nt = num_vectors(t);
     auto nv = num_vectors(v);
     CHECK(nt == nv);
-    auto recall = ((double) intersections_a) / ((double)nt * k_nn);
+    auto recall = ((double)intersections_a) / ((double)nt * k_nn);
     if (nprobe == 32) {
       CHECK(recall == 1.0);
-    } else  if (nprobe == 8) {
+    } else if (nprobe == 8) {
       CHECK(recall > 0.925);
     }
   }
 
-  SECTION("finite out of core, 1000, nprobe = std::to_string(nprobe)" + std::to_string(nprobe)) {
-    INFO("finite out of core, 1000, nprobe = std::to_string(nprobe)" + std::to_string(nprobe));
+  SECTION(
+      "finite out of core, 1000, nprobe = std::to_string(nprobe)" +
+      std::to_string(nprobe)) {
+    INFO(
+        "finite out of core, 1000, nprobe = std::to_string(nprobe)" +
+        std::to_string(nprobe));
     auto&& [s, t] = a.query_infinite_ram(query_set, k_nn, nprobe);
     auto&& [u, v] = b.query_finite_ram(query_set, k_nn, nprobe, 1000);
 
@@ -284,10 +300,10 @@ TEST_CASE("api_ivf_flat_index: read index and query infinite and finite", "[api_
     auto nt = num_vectors(t);
     auto nv = num_vectors(v);
     CHECK(nt == nv);
-    auto recall = ((double) intersections_a) / ((double)nt * k_nn);
+    auto recall = ((double)intersections_a) / ((double)nt * k_nn);
     if (nprobe == 32) {
       CHECK(recall == 1.0);
-    } else  if (nprobe == 8) {
+    } else if (nprobe == 8) {
       CHECK(recall > 0.925);
     }
   }

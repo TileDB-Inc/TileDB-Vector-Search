@@ -11,6 +11,7 @@
 #include "detail/flat/vq.h"
 #include "detail/ivf/qv.h"
 #include "detail/ivf/vq.h"
+#include "detail/ivf/index.h"
 
 namespace py = pybind11;
 using Ctx = tiledb::Context;
@@ -252,7 +253,7 @@ auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
         }, py::keep_alive<1,2>());
 }
 
-#if 0
+/** Calls the principal ivf_index in index.h */
 template <typename T>
 static void declare_ivf_index(py::module& m, const std::string& suffix) {
   m.def(("ivf_index_" + suffix).c_str(),
@@ -284,6 +285,7 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
         }, py::keep_alive<1,2>());
 }
 
+/** Calls the second ivf_index function in index.h */
 template <typename T>
 static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
   m.def(("ivf_index_tdb_" + suffix).c_str(),
@@ -392,6 +394,8 @@ void declareStdVector(py::module& m, const std::string& suffix) {
     });
 }
 
+
+
 template <typename T, typename indices_type = uint64_t>
 void declarePartitionIvfIndex(py::module& m, const std::string& suffix) {
   m.def(("partition_ivf_index_" + suffix).c_str(),
@@ -399,10 +403,12 @@ void declarePartitionIvfIndex(py::module& m, const std::string& suffix) {
            ColMajorMatrix<T>& query,
            size_t nprobe,
            size_t nthreads) {
-          return detail::ivf::partition_ivf_index(centroids, query, nprobe, nthreads);
+          return detail::ivf::partition_ivf_flat_index(centroids, query, nprobe, nthreads);
            }
         );
 }
+
+#if 0
 
 template <typename T, typename shuffled_ids_type = uint64_t>
 static void declare_dist_qv(py::module& m, const std::string& suffix) {

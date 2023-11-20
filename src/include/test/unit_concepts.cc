@@ -338,12 +338,12 @@ class dummy_feature_vector : public std::vector<T> {
 };
 
 template <feature_vector R>
-void foo(const R& r){}
+void foo(const R& r) {
+}
 
 void bar() {
   foo(dummy_feature_vector<int>{});
 }
-
 
 TEST_CASE("concepts: feature_vector", "[concepts]") {
   CHECK(!feature_vector<int>);

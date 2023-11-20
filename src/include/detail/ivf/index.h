@@ -50,16 +50,20 @@ using namespace detail::flat;
 
 namespace detail::ivf {
 
+/**
+ * Partitions a set of vectors, given a set of centroids.
+ * @return
+ */
 template <typename T, class ids_type, class centroids_type>
 int ivf_index(
     tiledb::Context& ctx,
-    const ColMajorMatrix<T>& db,
-    const std::vector<ids_type>& external_ids,
-    const std::vector<ids_type>& deleted_ids,
-    const std::string& centroids_uri,
-    const std::string& parts_uri,
-    const std::string& index_uri,
-    const std::string& id_uri,
+    const ColMajorMatrix<T>& db,                // IN
+    const std::vector<ids_type>& external_ids,  // IN
+    const std::vector<ids_type>& deleted_ids,   // IN
+    const std::string& centroids_uri,           // IN (from array centroids_uri)
+    const std::string& parts_uri,               // OUT (to array at parts_uri)
+    const std::string& index_uri,               // OUT (to array at index_uri)
+    const std::string& id_uri,                  // OUT (to array at id_uri)
     size_t start_pos,
     size_t end_pos,
     size_t nthreads,
@@ -192,6 +196,11 @@ int ivf_index(
   return 0;
 }
 
+/**
+ * Open db and set up external ids to either be a contiguous set of integers
+ * (i.e., the index of the vector in the db), or read from an external array.
+ * Call the main ivf_index function above.
+ */
 template <typename T, class ids_type, class centroids_type>
 int ivf_index(
     tiledb::Context& ctx,
@@ -236,6 +245,9 @@ int ivf_index(
       timestamp);
 }
 
+/**
+ * Open db and call main ivf_index function above.
+ */
 template <typename T, class ids_type, class centroids_type>
 int ivf_index(
     tiledb::Context& ctx,
@@ -271,6 +283,10 @@ int ivf_index(
       timestamp);
 }
 
+/*
+ * Set up external ids to be either the indices of the vectors in the db,
+ * or read from an external array.  Call the main ivf_index function above.
+ */
 template <typename T, class ids_type, class centroids_type>
 int ivf_index(
     tiledb::Context& ctx,

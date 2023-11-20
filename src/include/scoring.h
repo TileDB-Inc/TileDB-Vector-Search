@@ -594,8 +594,7 @@ bool validate_top_k(TK& top_k, const G& g) {
 
 template <feature_vector_array U, feature_vector_array V>
 auto count_intersections(const U& I, const V& groundtruth, size_t k_nn) {
-
-  //print_types(I, groundtruth);
+  // print_types(I, groundtruth);
 
   size_t total_intersected = 0;
 

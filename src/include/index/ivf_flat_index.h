@@ -169,9 +169,8 @@ class ivf_flat_index {
       size_t nlist = 0,
       size_t max_iter = 2,
       float tol = 0.000025)
-      :
-      // , dimension_(dim)
-       nlist_(nlist)
+      :  // , dimension_(dim)
+      nlist_(nlist)
       , max_iter_(max_iter)
       , tol_(tol)
       , feature_datatype_(type_to_tiledb_t<feature_type>)
@@ -181,11 +180,14 @@ class ivf_flat_index {
   {
   }
 
-  ivf_flat_index(const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp = 0)
-      : cached_ctx_{ctx}, group_uri_{uri}, temporal_policy_{(timestamp == 0) ?
-            tiledb::TemporalPolicy() :
-            tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)}
-  ,timestamp_{timestamp} {
+  ivf_flat_index(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      uint64_t timestamp = 0)
+      : cached_ctx_{ctx}
+      , group_uri_{uri}
+      , temporal_policy_{(timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)}
+      , timestamp_{timestamp} {
     open_index();
   }
 
@@ -238,14 +240,12 @@ class ivf_flat_index {
       std::vector<partitioning_index_type>& indices,
       uint64_t timestamp = 0)
       : cached_ctx_{ctx}
-      , temporal_policy_{(timestamp == 0) ?
-            tiledb::TemporalPolicy() :
-            tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)}
+      , temporal_policy_{(timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)}
       , centroids_{std::move(centroids)}
       , tmp_parts_uri_(parts_uri)
       , tmp_indices_(std::move(indices))
       , tmp_ids_uri_(ids_uri)
-      , dimension_{::dimension(centroids_)} // @todo is dimension needed?
+      , dimension_{::dimension(centroids_)}  // @todo is dimension needed?
       , nlist_{::num_vectors(centroids_)}
       , timestamp_{timestamp}
       , feature_datatype_{type_to_tiledb_t<feature_type>}
@@ -564,23 +564,6 @@ class ivf_flat_index {
       std::cout << "Data written to file: " << tempFileName << std::endl;
     }
 #endif
-  }
-
-  static std::vector<indices_type> predict(
-      const ColMajorMatrix<T>& centroids, const ColMajorMatrix<T>& vectors) {
-    // Return a vector of indices of the nearest centroid for each vector in
-    // the matrix. Write the code below:
-    auto nClusters = centroids.num_cols();
-    std::vector<indices_type> indices(vectors.num_cols());
-    std::vector<score_type> distances(nClusters);
-    for (size_t i = 0; i < vectors.num_cols(); ++i) {
-      for (size_t j = 0; j < nClusters; ++j) {
-        distances[j] = sum_of_squares(vectors[i], centroids[j]);
-      }
-      indices[i] =
-          std::min_element(begin(distances), end(distances)) - begin(distances);
-    }
-    return indices;
   }
 
   /**
@@ -980,10 +963,11 @@ class ivf_flat_index {
     // Timestamp the index to be written at the current time
     // @todo Do we need to do anything about the group itself?
     size_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-                           std::chrono::system_clock::now().time_since_epoch()
-                               ).count();
+                           std::chrono::system_clock::now().time_since_epoch())
+                           .count();
 
-    auto write_temporal_policy = tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+    auto write_temporal_policy =
+        tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
     tiledb::Config cfg;
     tiledb::Group::create(ctx, group_uri);
@@ -1003,19 +987,38 @@ class ivf_flat_index {
     // Temporary names!
     // @todo Name per schema in ingestion.py
     auto centroids_uri = group_uri + "/centroids";
-    write_matrix(ctx, centroids_, centroids_uri, 0, overwrite, write_temporal_policy);
+    write_matrix(
+        ctx, centroids_, centroids_uri, 0, overwrite, write_temporal_policy);
     write_group.add_member("centroids", true, "centroids");
 
     auto indices_uri = group_uri + "/indices";
-    write_vector(ctx, partitioned_vectors_->indices(), indices_uri, 0, overwrite, write_temporal_policy);
+    write_vector(
+        ctx,
+        partitioned_vectors_->indices(),
+        indices_uri,
+        0,
+        overwrite,
+        write_temporal_policy);
     write_group.add_member("indices", true, "indices");
 
     auto partitioned_ids_uri = group_uri + "/partitioned_ids";
-    write_vector(ctx, partitioned_vectors_->ids(), partitioned_ids_uri, 0, overwrite, write_temporal_policy);
+    write_vector(
+        ctx,
+        partitioned_vectors_->ids(),
+        partitioned_ids_uri,
+        0,
+        overwrite,
+        write_temporal_policy);
     write_group.add_member("partitioned_ids", true, "partitioned_ids");
 
     auto partitioned_vectors_uri = group_uri + "/partitioned_vectors";
-    write_matrix(ctx, *partitioned_vectors_, partitioned_vectors_uri, 0, overwrite, write_temporal_policy);
+    write_matrix(
+        ctx,
+        *partitioned_vectors_,
+        partitioned_vectors_uri,
+        0,
+        overwrite,
+        write_temporal_policy);
     write_group.add_member("partitioned_vectors", true, "partitioned_vectors");
 
     write_group.close();
@@ -1139,7 +1142,7 @@ class ivf_flat_index {
         detail::ivf::partition_ivf_flat_index<indices_type>(
             centroids_, query_vectors, nprobe, num_threads_);
 
-  if (size(tmp_indices_) != 0) {
+    if (size(tmp_indices_) != 0) {
       partitioned_vectors_ = std::make_unique<tdb_storage_type>(
           *cached_ctx_,
           tmp_parts_uri_,
@@ -1148,7 +1151,7 @@ class ivf_flat_index {
           active_partitions,
           upper_bound,
           temporal_policy_);
-  } else {
+    } else {
       partitioned_vectors_ = std::make_unique<tdb_storage_type>(
           *cached_ctx_,
           group_uri_ + "/partitioned_vectors",
@@ -1157,14 +1160,28 @@ class ivf_flat_index {
           active_partitions,
           upper_bound,
           temporal_policy_);
-  }
-
+    }
 
     // NB: We don't load the partitioned_vectors here.  We will load them
     // when we do the query.
 
     return std::make_tuple(
         std::move(active_partitions), std::move(active_queries));
+  }
+
+  /***************************************************************************
+   * Getters (copilot weirded me out again -- it suggested "Getters" based
+   * only on the comment string "/*" that I started, and with the two functions
+   * below.)
+   * Note that we don't have a `num_vectors` because it isn't clear what
+   * that means for a partitioned (possibly out-of-core) index.
+   ***************************************************************************/
+  auto dimension() const {
+    return dimension_;
+  }
+
+  auto num_partitions() const {
+    return ::num_vectors(centroids_);
   }
 
   /***************************************************************************
@@ -1296,16 +1313,25 @@ class ivf_flat_index {
         centroids_.data());
   }
 
+  static std::vector<indices_type> predict(
+      const ColMajorMatrix<T>& centroids, const ColMajorMatrix<T>& vectors) {
+    // Return a vector of indices of the nearest centroid for each vector in
+    // the matrix. Write the code below:
+    auto nClusters = centroids.num_cols();
+    std::vector<indices_type> indices(vectors.num_cols());
+    std::vector<score_type> distances(nClusters);
+    for (size_t i = 0; i < vectors.num_cols(); ++i) {
+      for (size_t j = 0; j < nClusters; ++j) {
+        distances[j] = sum_of_squares(vectors[i], centroids[j]);
+      }
+      indices[i] =
+          std::min_element(begin(distances), end(distances)) - begin(distances);
+    }
+    return indices;
+  }
+
   auto& get_centroids() {
     return centroids_;
-  }
-
-  auto dimension() const {
-    return dimension_;
-  }
-
-  auto num_partitions() const {
-    return ::num_vectors(centroids_);
   }
 };
 
