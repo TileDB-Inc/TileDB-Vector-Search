@@ -191,6 +191,7 @@ class ivf_flat_index {
     open_index();
   }
 
+#if 0
   /**
    * Transitional constructor to support backwards compatibility with
    * pre-ivf_index free-function queries.  This is for constructing "infinite
@@ -252,6 +253,7 @@ class ivf_flat_index {
       , id_datatype_{type_to_tiledb_t<id_type>}
       , px_datatype_{type_to_tiledb_t<indices_type>} {
   }
+#endif
 
   ivf_flat_index() = delete;
   ivf_flat_index(const ivf_flat_index& index) = delete;

@@ -5,7 +5,6 @@ import numpy as np
 import tiledb
 from tiledb.vector_search._tiledbvspy import *
 
-
 def load_as_matrix(
     path: str,
     ctx: "Ctx" = None,

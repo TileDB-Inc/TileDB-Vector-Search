@@ -108,7 +108,7 @@ class IndexFlatL2 {
     index_->update(vectors_uri, ids, options);
   }
 
-  virtual void remove(const IdVector& ids) const {
+  void remove(const IdVector& ids) const {
     index_->remove(ids);
   }
 

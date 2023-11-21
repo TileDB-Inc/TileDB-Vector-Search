@@ -140,7 +140,7 @@ kmeans_add_test(unit_index_defs)
 
 # kmeans_add_test(unit_ivf_query)
 
-# kmeans_add_test(unit_ivf_qv)
+kmeans_add_test(unit_ivf_qv)
 
 # kmeans_add_test(unit_ivf_vq)
 

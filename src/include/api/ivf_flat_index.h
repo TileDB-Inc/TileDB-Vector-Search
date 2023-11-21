@@ -132,7 +132,7 @@ class IndexIVFFlat {
    * @param ctx
    * @param group_uri TileDB group containing all the arrays comprising the
    * index.
-   * @param config pairs of strings indicating config parameters and values.
+
    */
   IndexIVFFlat(
       const tiledb::Context& ctx,

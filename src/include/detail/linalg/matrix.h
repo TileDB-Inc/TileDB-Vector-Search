@@ -420,8 +420,8 @@ std::string matrix_info(const Matrix& A, const std::string& msg = "") {
   if (!msg.empty()) {
     str += ": ";
   }
-  str += "Shape: ( " + std::to_string(A.num_rows()) + ", " +
-         std::to_string(A.num_cols()) + " )";
+  str += "Shape: ( " + std::to_string(::dimension(A)) + ", " +
+         std::to_string(::num_vectors(A)) + " )";
   str += std::string(" Layout: ") +
          (is_row_oriented(A) ? "row major" : "column major");
   return str;

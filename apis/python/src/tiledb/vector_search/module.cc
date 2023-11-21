@@ -6,12 +6,10 @@
 
 // @todo Replace
 #include "detail/flat/qv.h"
-// #include "detail/flat/vq.h"
+#include "detail/flat/vq.h"
 #include "detail/ivf/index.h"
 #include "detail/ivf/qv.h"
 // #include "detail/ivf/vq.h"
-
-#include "index/ivf_flat_index.h"
 
 namespace py = pybind11;
 using Ctx = tiledb::Context;
@@ -134,26 +132,15 @@ static void declare_qv_query_heap_infinite_ram(
          size_t nprobe,
          size_t k_nn,
          size_t nthreads) -> py::tuple {
+
         auto mat =
             ColMajorPartitionedMatrix<T, Id_Type, Id_Type>(parts, ids, indices);
+
         auto top_centroids = detail::ivf::ivf_top_centroids(
             centroids, query_vectors, nprobe, nthreads);
         auto r = detail::ivf::qv_query_heap_infinite_ram(
             top_centroids, mat, query_vectors, nprobe, k_nn, nthreads);
 
-    // Former call
-#if 0
-    // auto r = detail::ivf::qv_query_heap_infinite_ram(
-        auto r = detail::ivf::query_infinite_ram(
-            parts,
-            centroids,
-            query_vectors,
-            indices,
-            ids,
-            nprobe,
-            k_nn,
-            nthreads);
-#endif
         return make_python_pair(std::move(r));
       },
       py::keep_alive<1, 2>());
@@ -167,9 +154,9 @@ static void declare_qv_query_heap_finite_ram(
       ("qv_query_heap_finite_ram_" + suffix).c_str(),
       [](tiledb::Context& ctx,
          const std::string& parts_uri,
-         ColMajorMatrix<float>& centroids,
+         const ColMajorMatrix<float>& centroids,
          const ColMajorMatrix<float>& query_vectors,
-         std::vector<Id_Type>& indices,
+         const std::vector<Id_Type>& indices,
          const std::string& ids_uri,
          size_t nprobe,
          size_t k_nn,
@@ -179,12 +166,6 @@ static void declare_qv_query_heap_finite_ram(
           -> py::tuple {  // std::tuple<ColMajorMatrix<float>,
                           // ColMajorMatrix<size_t>> { //
                           // TODO change return type
-        auto idx =
-            ivf_flat_index<float>(ctx, parts_uri, centroids, ids_uri, indices);
-        auto r = idx.nuv_query_heap_finite_ram(
-            query_vectors, k_nn, nprobe, upper_bound);
-    // Former call
-#if 0
         auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
             ctx,
             parts_uri,
@@ -198,7 +179,6 @@ static void declare_qv_query_heap_finite_ram(
             nthreads,
             timestamp);
 
-#endif
         return make_python_pair(std::move(r));
       },
       py::keep_alive<1, 2>());
@@ -232,20 +212,7 @@ static void declare_nuv_query_heap_infinite_ram(
             active_queries,
             k_nn,
             nthreads);
-
-// Former call
-#if 0
-        auto r = detail::ivf::nuv_query_heap_infinite_ram_reg_blocked(
-            parts,
-            centroids,
-            query_vectors,
-            indices,
-            ids,
-            nprobe,
-            k_nn,
-            nthreads);
-#endif
-        return r;  // return r;
+        return r;
       },
       py::keep_alive<1, 2>());
 }
@@ -281,7 +248,7 @@ static void declare_nuv_query_heap_finite_ram(
         auto mat = tdbColMajorPartitionedMatrix<T, Id_Type, Id_Type>(
             ctx,
             parts_uri,
-            std::move(indices),
+            indices,
             ids_uri,
             active_partitions,
             upper_bound,
@@ -289,21 +256,6 @@ static void declare_nuv_query_heap_finite_ram(
 
         auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
             mat, query_vectors, active_queries, k_nn, upper_bound, nthreads);
-    // Former call
-#if 0
-auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked<T, Id_Type>(
-    ctx,
-    parts_uri,
-    centroids,
-    query_vectors,
-    indices,
-    ids_uri,
-    nprobe,
-    k_nn,
-    upper_bound,
-    nthreads,
-    timestamp);
-#endif
 
         return r;
       },
@@ -429,7 +381,7 @@ static void declarePartitionedMatrix(
   using PyTMatrix = py::class_<TMatrix>;
 
   PyTMatrix cls(mod, (name + "_" + suffix).c_str(), py::buffer_protocol());
-#if 1
+
   cls.def(
       py::init<
           const tiledb::Context&,
@@ -439,9 +391,7 @@ static void declarePartitionedMatrix(
           const std::string&,               // id_uri
           const std::vector<Indices_Type>&, // partition list to load
           size_t>(),                        // upper_bound
-#else
-  cls.def(py::init<std::vector<Indices_Type>&>(),
-#endif
+
       py::keep_alive<1, 2>());
   cls.def("load", &TMatrix::load);
 }
@@ -516,33 +466,17 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
               shuffled_ids_type>(
               ctx,
               part_uri,
-              std::move(indices),
+              indices,
               id_uri,
               active_partitions,
               upper_bound,
               temporal_policy);
           return detail::ivf::query_finite_ram(
               mat, query, active_queries, k_nn, upper_bound, nthreads);
-
-    // Former call
-#if 0
-            return detail::ivf::dist_qv_finite_ram_part<T, shuffled_ids_type>(
-                ctx,
-                part_uri,
-                active_partitions,
-                query,
-                active_queries,
-                indices,
-                id_uri,
-                k_nn,
-                timestamp);
-#endif
       },
       py::keep_alive<1, 2>());
 }
 
-#if 0
-// Unused
 template <class T, class shuffled_ids_type = uint64_t>
 static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
   m.def(("vq_query_heap_" + suffix).c_str(),
@@ -556,7 +490,6 @@ static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
         });
 }
 
-// Unused
 template <class T, class shuffled_ids_type = uint64_t>
 static void declare_vq_query_heap_pyarray(py::module& m, const std::string& suffix) {
   m.def(("vq_query_heap_pyarray_" + suffix).c_str(),
@@ -569,7 +502,7 @@ static void declare_vq_query_heap_pyarray(py::module& m, const std::string& suff
           return r;
         });
 }
-#endif
+
 }  // anonymous namespace
 
 void init_kmeans(py::module&);
@@ -666,8 +599,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   /* Query API */
 
-// Unused
-#if 0
   m.def("query_vq_f32",
         [](ColMajorMatrix<float>& data,
            ColMajorMatrix<float>& query_vectors,
@@ -685,7 +616,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
           auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
           return r;
         });
-#endif
 
   m.def(
       "validate_top_k_u64",
@@ -714,13 +644,10 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   });
 #endif
 
-// Unused
-#if 0
   declare_vq_query_heap<uint8_t>(m, "u8");
   declare_vq_query_heap<float>(m, "f32");
   declare_vq_query_heap_pyarray<uint8_t>(m, "u8");
   declare_vq_query_heap_pyarray<float>(m, "f32");
-#endif
 
   declare_qv_query_heap_infinite_ram<uint8_t>(m, "u8");
   declare_qv_query_heap_infinite_ram<float>(m, "f32");

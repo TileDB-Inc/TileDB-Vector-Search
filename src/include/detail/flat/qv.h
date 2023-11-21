@@ -76,7 +76,7 @@ template <feature_vector_array DB, query_vector_array Q>
     const DB& db, const Q& q, int k_nn, unsigned int nthreads) {
   scoped_timer _{tdb_func__};
 
-  using id_type = size_t;
+  using id_type = uint64_t;
   using score_type = float;
 
   // @todo This should work with num_top_k as min, rather than k_nn if

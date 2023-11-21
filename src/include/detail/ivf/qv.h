@@ -77,7 +77,7 @@ namespace detail::ivf {
  ******************************************************************************/
 
 /**
- * @brief The OG version of querying with qv loop ordering.
+ * @brief The (OG)^2 version of querying with qv loop ordering.
  * Applies a set of query vectors against a partitioned vector database.
  * Since this is an infinite ram algorithm, all of the partitions have been
  * loaded into memory. The partitions to apply the query to are inferred from
@@ -395,225 +395,7 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
  *
  ******************************************************************************/
 
-/**
- * @todo Modify for new ivf_index api
- *
- * @brief OG Implementation of finite RAM qv query.
- * Queries a set of query vectors against an indexed vector database. The
- * arrays part_uri, centroids, indices, and id_uri comprise the index.  The
- * partitioned database is stored in part_uri, the centroids are stored in
- * centroids, the indices demarcating partitions is stored in indices, and the
- * labels for the vectors in the original database are stored in id_uri.
- * The query is stored in q.
- *
- * "Finite RAM" means the only the partitions necessary for the search will
- * be loaded into memory.  Moreover, the `upper_bound` parameter controls
- * how many vectors will be loaded into memory at any one time.  If all of
- * the partitions can be loaded into memory at once, then batches of them
- * will be loaded, and the search will be performed on the batches.  (That is
- * the search will be performed "out of core".)
- *
- * The function loads partitions in the order they are stored in the array.
- *
- * Note that an upper_bound of 0 means that all relevant partitions will be
- * loaded. This differs from infinite RAM, which loads the entire partitioned
- * database.  An upper_bound of 0 will load only the partitions necessary
- * to answer the query, but it will load all of those.
- *
- * @param part_uri The URI of the partitioned database
- * @param centroids Centroids of the vectors in the original database (and
- * the partitioned database).  The ith centroid is the centroid of the ith
- * partition.
- * @param q The query to be searched
- * @param indices The demarcations of partitions
- * @param id_uri URI for the labels for the vectors in the original database
- * @param nprobe How many partitions to search
- * @param k_nn How many nearest neighbors to return
- * @param upper_bound Limit of how many vectors to load into memory at one time
- * @param nth Unused
- * @param nthreads How many threads to use for parallel execution
- * @return The indices of the top_k neighbors for each query vector
- */
-template <class feature_type, class id_type>
-auto qv_query_heap_finite_ram(
-    tiledb::Context& ctx,
-    const std::string& part_uri,
-    auto&& centroids,
-    auto&& query,
-    auto&& indices,
-    const std::string& id_uri,
-    size_t nprobe,
-    size_t k_nn,
-    size_t upper_bound,
-    size_t nthreads,
-    uint64_t timestamp) {
-  scoped_timer _{tdb_func__};
-  auto temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
-  using score_type = float;
-  using indices_type =
-      typename std::remove_reference_t<decltype(indices)>::value_type;
-
-  // Check that the size of the indices vector is correct
-  assert(size(indices) == num_vectors(centroids) + 1);
-
-  size_t num_queries = num_vectors(query);
-
-  // get closest centroid for each query vector
-  auto top_centroids =
-      detail::flat::qv_query_heap_0(centroids, query, nprobe, nthreads);
-
-  using parts_type = typename decltype(top_centroids)::value_type;
-
-  /*
-   * `top_centroids` maps from rank X query index to the centroid *index*.
-   *
-   * To process centroids (partitions) in order, we need to map from `centroid`
-   * to the set of queries having that centroid.
-   *
-   * We also need to know the "active" centroids, i.e., the ones having at
-   * least one query.
-   */
-  auto centroid_query = std::multimap<parts_type, id_type>{};
-  auto active_centroids = std::set<parts_type>{};
-  for (size_t j = 0; j < num_queries; ++j) {
-    for (size_t p = 0; p < nprobe; ++p) {
-      auto tmp = top_centroids(p, j);
-      centroid_query.emplace(top_centroids(p, j), j);
-      active_centroids.emplace(top_centroids(p, j));
-    }
-  }
-  auto active_partitions =
-      std::vector<parts_type>(begin(active_centroids), end(active_centroids));
-
-  auto partitioned_vectors = tdbColMajorPartitionedMatrix<
-      feature_type,
-      id_type,
-      indices_type,
-      parts_type>(
-      ctx,
-      part_uri,
-      indices,
-      active_partitions,
-      id_uri,
-      upper_bound,
-      temporal_policy);
-
-  std::vector<parts_type> new_indices(size(active_partitions) + 1);
-  new_indices[0] = 0;
-  for (size_t i = 0; i < size(active_partitions); ++i) {
-    new_indices[i + 1] = new_indices[i] + indices[active_partitions[i] + 1] -
-                         indices[active_partitions[i]];
-  }
-
-  {
-    size_t max_partition_size{0};
-    for (size_t i = 0; i < size(new_indices) - 1; ++i) {
-      auto partition_size = new_indices[i + 1] - new_indices[i];
-      max_partition_size = std::max<size_t>(max_partition_size, partition_size);
-      _memory_data.insert_entry(
-          tdb_func__ + " (predicted)",
-          partition_size * sizeof(feature_type) *
-              partitioned_vectors.num_rows());
-    }
-    _memory_data.insert_entry(
-        tdb_func__ + " (upper bound)",
-        nprobe * num_queries * sizeof(feature_type) * max_partition_size);
-  }
-
-  assert(partitioned_vectors.num_cols() == size(partitioned_vectors.ids()));
-
-  debug_matrix(partitioned_vectors, "partitioned_vectors");
-  debug_matrix(partitioned_vectors.ids(), "partitioned_vectors.ids()");
-
-  // auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
-  //       size(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
-
-  auto min_scores =
-      std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>>(
-          nthreads,
-          std::vector<fixed_min_pair_heap<score_type, id_type>>(
-              num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn)));
-
-  log_timer _i{tdb_func__ + " in RAM"};
-
-  while (partitioned_vectors.load()) {
-    _i.start();
-
-    auto current_part_size = partitioned_vectors.num_resident_parts();
-
-    // size_t block_size = (size(active_partitions) + nthreads - 1) / nthreads;
-    // size_t parts_per_thread =
-    //        (size(active_partitions) + nthreads - 1) / nthreads;
-    size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
-
-    std::vector<std::future<void>> futs;
-    futs.reserve(nthreads);
-
-    for (size_t n = 0; n < nthreads; ++n) {
-      auto first_part =
-          std::min<size_t>(n * parts_per_thread, current_part_size);
-      auto last_part =
-          std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
-
-      if (first_part != last_part) {
-        futs.emplace_back(std::async(
-            std::launch::async,
-            [&query,
-             &min_scores,
-             &partitioned_vectors,
-             &new_indices,
-             &centroid_query,
-             &active_partitions,
-             n,
-             first_part,
-             last_part]() {
-              /*
-               * For each partition, process the queries that have that
-               * partition as their top centroid.
-               */
-              for (size_t p = first_part; p < last_part; ++p) {
-                auto partno = p + resident_part_offset(partitioned_vectors);
-
-                auto start = new_indices[partno];
-                auto stop = new_indices[partno + 1];
-                /*
-                 * Get the queries associated with this partition.
-                 */
-                auto range =
-                    centroid_query.equal_range(active_partitions[partno]);
-                for (auto i = range.first; i != range.second; ++i) {
-                  auto j = i->second;
-                  auto q_vec = query[j];
-
-                  // @todo shift start / stop back by the offset
-                  for (size_t k = start; k < stop; ++k) {
-                    auto kp = k - col_offset(partitioned_vectors);
-                    auto score = L2(q_vec, partitioned_vectors[kp]);
-
-                    // @todo any performance with apparent extra indirection?
-                    min_scores[n][j].insert(
-                        score, partitioned_vectors.ids()[kp]);
-                  }
-                }
-              }
-            }));
-      }
-    }
-
-    for (size_t n = 0; n < size(futs); ++n) {
-      futs[n].get();
-    }
-    _i.stop();
-  }
-
-  consolidate_scores(min_scores);
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-
-  return top_k;
-}
 
 // ----------------------------------------------------------------------------
 // Functions for searching with finite RAM, new qv (nuv) ordering
@@ -622,6 +404,13 @@ auto qv_query_heap_finite_ram(
 /*
  * Queries a set of query vectors against an indexed vector database, using
  * the "nuv" ordering.
+ *
+ *  Queries a set of query vectors against an indexed vector database. The
+ * arrays part_uri, centroids, indices, and id_uri comprise the index.  The
+ * partitioned database is stored in part_uri, the centroids are stored in
+ * centroids, the indices demarcating partitions is stored in indices, and the
+ * labels for the vectors in the original database are stored in id_uri.
+ * The query is stored in q.
  *
  * "Finite RAM" means the only the partitions necessary for the search will
  * be loaded into memory.  Moreover, the `upper_bound` parameter controls
@@ -917,6 +706,90 @@ auto nuv_query_heap_finite_ram_reg_blocked(
 
   return top_k;
 }
+
+
+/**
+ * @todo Modify for new ivf_index api
+ *
+ * @brief Formerly OG Implementation of finite RAM qv query, but now
+ * dispatches to nuv_query_heap_finite_ram.
+ *
+ * "Finite RAM" means the only the partitions necessary for the search will
+ * be loaded into memory.  Moreover, the `upper_bound` parameter controls
+ * how many vectors will be loaded into memory at any one time.  If all of
+ * the partitions can be loaded into memory at once, then batches of them
+ * will be loaded, and the search will be performed on the batches.  (That is
+ * the search will be performed "out of core".)
+ *
+ * The function loads partitions in the order they are stored in the array.
+ *
+ * Note that an upper_bound of 0 means that all relevant partitions will be
+ * loaded. This differs from infinite RAM, which loads the entire partitioned
+ * database.  An upper_bound of 0 will load only the partitions necessary
+ * to answer the query, but it will load all of those.
+ *
+ * @param part_uri The URI of the partitioned database
+ * @param centroids Centroids of the vectors in the original database (and
+ * the partitioned database).  The ith centroid is the centroid of the ith
+ * partition.
+ * @param q The query to be searched
+ * @param indices The demarcations of partitions
+ * @param id_uri URI for the labels for the vectors in the original database
+ * @param nprobe How many partitions to search
+ * @param k_nn How many nearest neighbors to return
+ * @param upper_bound Limit of how many vectors to load into memory at one time
+ * @param nth Unused
+ * @param nthreads How many threads to use for parallel execution
+ * @return The indices of the top_k neighbors for each query vector
+ */
+template <class feature_type, class id_type>
+auto qv_query_heap_finite_ram(
+    tiledb::Context& ctx,
+    const std::string& part_uri,
+    auto&& centroids,
+    auto&& query,
+    auto&& indices,
+    const std::string& id_uri,
+    size_t nprobe,
+    size_t k_nn,
+    size_t upper_bound,
+    size_t nthreads,
+    uint64_t timestamp = 0) {
+  scoped_timer _{tdb_func__};
+  auto temporal_policy =
+      (timestamp == 0) ? tiledb::TemporalPolicy() :
+                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+
+  using score_type = float;
+  using indices_type =
+      typename std::remove_reference_t<decltype(indices)>::value_type;
+  using parts_type = indices_type;
+
+  size_t num_queries = num_vectors(query);
+
+  auto&& [active_partitions, active_queries] =
+      detail::ivf::partition_ivf_flat_index<parts_type>(
+          centroids, query, nprobe, nthreads);
+
+  auto partitioned_vectors =
+      tdbColMajorPartitionedMatrix<feature_type, id_type, indices_type>(
+          ctx,
+          part_uri,
+          indices,
+          id_uri,
+          active_partitions,
+          upper_bound,
+          temporal_policy);
+
+  return nuv_query_heap_finite_ram(
+      partitioned_vectors, query, active_queries, k_nn, upper_bound, nthreads);
+}
+
+/*******************************************************************************
+ *
+ * GM functions for finite and infinite queries
+ *
+ ******************************************************************************/
 
 /**
  * Queries a set of query vectors against an indexed vector database, using
