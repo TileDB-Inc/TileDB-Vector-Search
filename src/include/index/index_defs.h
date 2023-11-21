@@ -54,7 +54,7 @@ enum class IndexKind {
   Last
 };
 
-static std::vector<const std::string> index_kind_strings{
+[[maybe_unused]] static std::vector<const std::string> index_kind_strings{
     "FlatL2",
     "IVFFlat",
     "FlatPQ",
@@ -64,7 +64,7 @@ static std::vector<const std::string> index_kind_strings{
     "NNDescent",
     "Last"};
 
-constexpr static inline auto str(IndexKind kind) {
+[[maybe_unused]] constexpr static inline auto str(IndexKind kind) {
   return index_kind_strings[static_cast<int>(kind)];
 }
 
@@ -73,10 +73,10 @@ constexpr static inline auto str(IndexKind kind) {
  ******************************************************************************/
 
 // @todo C++20 should have constexpr std::string
-static std::string current_storage_version{"0.3"};
+[[maybe_unused]] static std::string current_storage_version{"0.3"};
 
 using StorageFormat = std::map<std::string, std::map<std::string, std::string>>;
-StorageFormat storage_formats = {
+[[maybe_unused]] static StorageFormat storage_formats = {
     {"0.1",
      {
          {"centroids_array_name", "centroids.tdb"},
@@ -118,7 +118,7 @@ StorageFormat storage_formats = {
      }},
 };
 
-static const std::map<std::string, std::vector<std::string>>
+[[maybe_unused]] static const std::map<std::string, std::vector<std::string>>
     ivf_flat_index_metadata_fields{
         {"0.3",
          {

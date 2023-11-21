@@ -157,7 +157,6 @@ auto qv_query_heap_infinite_ram(
  * @param active_partitions The partitions to which queries will be applied
  * @param query The query to be applied
  * @param active_queries The queries associated with each (active) partition
- * @param nprobe How many partitions to search
  * @param k_nn How many nearest neighbors to return
  * @param nthreads How many threads to parallelize with
  * @return tuple of the top_k scores and the top_k indices
@@ -169,7 +168,6 @@ auto nuv_query_heap_infinite_ram(
     auto&& active_partitions,
     const Q& query,
     auto&& active_queries,
-    size_t nprobe,
     size_t k_nn,
     size_t nthreads) {
   if (num_loads(partitioned_vectors) == 0) {
@@ -264,7 +262,6 @@ auto nuv_query_heap_infinite_ram(
  * @param active_partitions The partitions to which queries will be applied
  * @param query The query to be applied
  * @param active_queries The queries associated with each (active) partition
- * @param nprobe How many partitions to search
  * @param k_nn How many nearest neighbors to return
  * @param nthreads How many threads to parallelize with
  * @return tuple of the top_k scores and the top_k indices
@@ -276,7 +273,6 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
     auto&& active_partitions,
     const Q& query,
     auto&& active_queries,
-    size_t nprobe,
     size_t k_nn,
     size_t nthreads) {
   if (num_loads(partitioned_vectors) == 0) {
@@ -644,7 +640,6 @@ auto qv_query_heap_finite_ram(
  * @param active_partitions The partitions to which queries will be applied
  * @param query The query to be applied
  * @param active_queries The queries associated with each (active) partition
- * @param nprobe How many partitions to search
  * @param k_nn How many nearest neighbors to return
  * @param nthreads How many threads to parallelize with
  * @return tuple of the top_k scores and the top_k indices
@@ -655,7 +650,6 @@ auto nuv_query_heap_finite_ram(
     F& partitioned_vectors,
     const Q& query,
     auto&& active_queries,
-    size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads) {
@@ -770,8 +764,7 @@ auto nuv_query_heap_finite_ram(
  * @param active_partitions The partitions to which queries will be applied
  * @param query The query to be applied
  * @param active_queries The queries associated with each (active) partition
- * @param nprobe How many partitions to search
- * @param k_nn How many nearest neighbors to return
+  * @param k_nn How many nearest neighbors to return
  * @param nthreads How many threads to parallelize with
  * @return tuple of the top_k scores and the top_k indices
  *
@@ -781,8 +774,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
     F& partitioned_vectors,
     const Q& query,
     auto&& active_queries,
-    size_t nprobe,
-    size_t k_nn,
+     size_t k_nn,
     size_t upper_bound,
     size_t nthreads) {
   scoped_timer _{tdb_func__};
@@ -950,7 +942,6 @@ auto nuv_query_heap_finite_ram_reg_blocked(
  * @param active_partitions The partitions to which queries will be applied
  * @param query The query to be applied
  * @param active_queries The queries associated with each (active) partition
- * @param nprobe How many partitions to search
  * @param k_nn How many nearest neighbors to return
  * @param nthreads How many threads to parallelize with
  * @return tuple of the top_k scores and the top_k indices
@@ -1089,7 +1080,6 @@ auto apply_query(
  * @param q The query to be searched
  * @param indices The demarcations of partitions
  * @param id_uri URI for the labels for the vectors in the original database
- * @param nprobe How many partitions to search
  * @param k_nn How many nearest neighbors to return
  * @param upper_bound Limit of how many vectors to load into memory at one time
  * @param nth Unused
@@ -1102,7 +1092,6 @@ auto query_finite_ram(
     F& partitioned_vectors,
     const Q& query,
     auto&& active_queries,
-    size_t nprobe,
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads) {
@@ -1195,8 +1184,7 @@ auto query_finite_ram(
  * @param active_partitions The partitions to which queries will be applied
  * @param query The query to be applied
  * @param active_queries The queries associated with each (active) partition
- * @param nprobe How many partitions to search
- * @param k_nn How many nearest neighbors to return
+  * @param k_nn How many nearest neighbors to return
  * @param nthreads How many threads to parallelize with
  * @return tuple of the top_k scores and the top_k indices
  *
@@ -1207,7 +1195,6 @@ auto query_infinite_ram(
     auto&& active_partitions,
     const Q& query,
     auto&& active_queries,
-    size_t nprobe,
     size_t k_nn,
     size_t nthreads) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};

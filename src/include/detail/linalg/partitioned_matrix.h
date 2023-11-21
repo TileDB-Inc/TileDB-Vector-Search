@@ -124,7 +124,7 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   // @note Use Vector instead of std::vector
   PartitionedMatrix(
-      tdbMatrix<T, LayoutPolicy, I>& parts,
+      Matrix<T, LayoutPolicy, I>& parts,
       std::vector<IdType>& ids,
       std::vector<PartIndexType>& part_index)
       : Base(std::move(parts))

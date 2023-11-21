@@ -201,7 +201,7 @@ class ivf_flat_index {
    * No timestamping or temporal policy here since arrays are all opened.
    */
   ivf_flat_index(
-      tdbColMajorMatrix<T>& parts,
+      const ColMajorMatrix<T>& parts,
       centroids_storage_type& centroids,
       std::vector<partitioned_ids_type>& ids,
       std::vector<partitioning_index_type>& indices)
@@ -712,7 +712,6 @@ class ivf_flat_index {
         active_partitions,
         query_vectors,
         active_queries,
-        nprobe,
         k_nn,
         num_threads_);
   }
@@ -761,7 +760,6 @@ class ivf_flat_index {
         active_partitions,
         query_vectors,
         active_queries,
-        nprobe,
         k_nn,
         num_threads_);
   }
@@ -786,7 +784,6 @@ class ivf_flat_index {
         active_partitions,
         query_vectors,
         active_queries,
-        nprobe,
         k_nn,
         num_threads_);
   }
@@ -865,7 +862,6 @@ class ivf_flat_index {
         *partitioned_vectors_,
         query_vectors,
         active_queries,
-        nprobe,
         k_nn,
         upper_bound,
         num_threads_);
@@ -895,7 +891,6 @@ class ivf_flat_index {
         *partitioned_vectors_,
         query_vectors,
         active_queries,
-        nprobe,
         k_nn,
         upper_bound,
         num_threads_);
@@ -925,7 +920,6 @@ class ivf_flat_index {
         *partitioned_vectors_,
         query_vectors,
         active_queries,
-        nprobe,
         k_nn,
         upper_bound,
         num_threads_);
