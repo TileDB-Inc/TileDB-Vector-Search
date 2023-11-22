@@ -10,6 +10,8 @@ from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
                                                   storage_formats)
 
+import logging
+
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
 TILE_SIZE_BYTES = 64000000  # 64MB
 INDEX_TYPE = "IVF_FLAT"
@@ -174,6 +176,7 @@ class IVFFlatIndex(index.Index):
         if mode is None:
             queries_m = array_to_matrix(np.transpose(queries))
             if self.memory_budget == -1:
+                logging.info(f"query internal len(self._index): {len(self._index)}")
                 d, i = ivf_query_ram(
                     self.dtype,
                     self._db,

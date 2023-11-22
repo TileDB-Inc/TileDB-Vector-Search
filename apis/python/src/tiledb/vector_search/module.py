@@ -5,6 +5,8 @@ import numpy as np
 import tiledb
 from tiledb.vector_search._tiledbvspy import *
 
+import logging
+
 def load_as_matrix(
     path: str,
     ctx: "Ctx" = None,
@@ -280,6 +282,8 @@ def ivf_query_ram(
             nthreads,
         ]
     )
+
+    logging.info(f"ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}")
 
     if dtype == np.float32:
         if use_nuv_implementation:

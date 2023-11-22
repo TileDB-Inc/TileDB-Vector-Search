@@ -8,6 +8,8 @@ from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.utils import load_fvecs
 
+import logging
+
 MINIMUM_ACCURACY = 0.85
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 

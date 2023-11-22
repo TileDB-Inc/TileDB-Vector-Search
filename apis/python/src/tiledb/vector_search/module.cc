@@ -236,6 +236,7 @@ static void declare_nuv_query_heap_finite_ram(
           -> std::tuple<
               ColMajorMatrix<float>,
               ColMajorMatrix<uint64_t>> {  // TODO change return type
+
         auto&& [active_partitions, active_queries] =
             detail::ivf::partition_ivf_flat_index<Id_Type>(
                 centroids, query_vectors, nprobe, nthreads);
