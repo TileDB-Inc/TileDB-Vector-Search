@@ -31,7 +31,7 @@
 
 #include <catch2/catch_all.hpp>
 #include <cmath>
-#include "detail/ivf/dist_qv.h"
+#include "detail/ivf/dist_qv.h" // dist_qv_finite_ram
 #include "detail/ivf/qv.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
@@ -235,8 +235,9 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
 
     auto infinite_parts = std::vector<indices_type>(::num_vectors(centroids));
     std::iota(begin(infinite_parts), end(infinite_parts), 0);
-    auto inf_mat = tdbColMajorPartitionedMatrix<db_type, ids_type, indices_type>(
-        ctx, parts_uri, index_uri, ids_uri, infinite_parts, 0);
+    auto inf_mat =
+        tdbColMajorPartitionedMatrix<db_type, ids_type, indices_type>(
+            ctx, parts_uri, index_uri, ids_uri, infinite_parts, 0);
     inf_mat.load();
 
     auto&& [D00, I00] = detail::ivf::query_infinite_ram(
@@ -256,8 +257,6 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
         D00.data(),
         D00.data() + D00.size(),
         std::vector<db_type>(D00.size(), 0.0).data()));
-
-
 
     SECTION("detail::ivf::qv_query_heap_finite_ram") {
       auto fin_mat =
@@ -341,32 +340,78 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
       CHECK(std::labs(intersections00 - intersections04) < 12);
       CHECK(std::equal(D00.data(), D00.data() + D00.size(), D04.data()));
     }
-
-
-#if 0
-    SECTION("dist_qv_finite_ram") {
-      auto num_nodes = GENERATE(5 /*, 1 */);
-      // std::cout << "num nodes " << num_nodes << std::endl;
-
-      auto&& [D05, I05] = detail::ivf::dist_qv_finite_ram<db_type, ids_type>(
-          ctx,
-          parts_uri,
-          centroids,
-          query,
-          index,
-          ids_uri,
-          nprobe,
-          k_nn,
-          upper_bound,
-          nthreads,
-          num_nodes);
-
-      check_size(D05, I05);
-      auto intersections05 = (long)count_intersections(I05, groundtruth, k_nn);
-      CHECK(std::labs(intersections00 - intersections05) < 12);
-      // debug_slices_diff(D00, D05, "D00 vs D05");
-      CHECK(std::equal(D00.data(), D00.data() + D00.size(), D05.data()));
-    }
-#endif
   }
+}
+
+TEST_CASE("ivf_qv: dist_qv", "[ivf qv]") {
+
+  tiledb::Context ctx;
+
+  auto num_queries = GENERATE(1, 101, 0);
+  auto num_nodes = GENERATE(1, 5);
+  auto nprobe = GENERATE(1, 5);
+  auto k_nn = GENERATE(1, 5);
+  auto nthreads = GENERATE(/*1,*/ std::thread::hardware_concurrency());
+  auto upper_bound = GENERATE(1953, 1954, 0);
+
+  auto centroids = tdbColMajorMatrix<db_type>(ctx, centroids_uri);
+  centroids.load();
+  auto query = tdbColMajorMatrix<db_type>(ctx, query_uri, num_queries);
+  query.load();
+  auto index = read_vector<indices_type>(ctx, index_uri);
+  auto groundtruth = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
+  groundtruth.load();
+
+  auto&& [active_partitions, active_queries] =
+      detail::ivf::partition_ivf_flat_index<ids_type>(
+          centroids, query, nprobe, nthreads);
+
+  auto infinite_parts = std::vector<indices_type>(::num_vectors(centroids));
+  std::iota(begin(infinite_parts), end(infinite_parts), 0);
+  auto inf_mat =
+      tdbColMajorPartitionedMatrix<db_type, ids_type, indices_type>(
+          ctx, parts_uri, index_uri, ids_uri, infinite_parts, 0);
+  inf_mat.load();
+
+  auto&& [D00, I00] = detail::ivf::query_infinite_ram(
+      inf_mat, active_partitions, query, active_queries, k_nn, nthreads);
+
+  auto check_size = [&D00 = D00, &I00 = I00](auto& D, auto& I) {
+    CHECK(D00.num_rows() == D.num_rows());
+    CHECK(D00.num_cols() == D.num_cols());
+    CHECK(I00.num_rows() == I.num_rows());
+    CHECK(I00.num_cols() == I.num_cols());
+  };
+  auto intersections00 = (long)count_intersections(I00, groundtruth, k_nn);
+  if (nprobe != 1 && k_nn != 1 && num_queries != 1) {
+    CHECK(intersections00 != 0);
+  }
+  CHECK(!std::equal(
+      D00.data(),
+      D00.data() + D00.size(),
+      std::vector<db_type>(D00.size(), 0.0).data()));
+
+
+  // std::cout << "num nodes " << num_nodes << std::endl;
+
+  auto&& [D05, I05] = detail::ivf::dist_qv_finite_ram<db_type, ids_type>(
+      ctx,
+      parts_uri,
+      centroids,
+      query,
+      index,
+      ids_uri,
+      nprobe,
+      k_nn,
+      upper_bound,
+      nthreads,
+      num_nodes);
+
+  // debug_slices_diff(D00, D05, "D00 vs D05");
+
+  check_size(D05, I05);
+  auto intersections05 = (long)count_intersections(I05, groundtruth, k_nn);
+  CHECK(std::labs(intersections00 - intersections05) < 12);
+  // debug_slices_diff(D00, D05, "D00 vs D05");
+  CHECK(std::equal(D00.data(), D00.data() + D00.size(), D05.data()));
 }

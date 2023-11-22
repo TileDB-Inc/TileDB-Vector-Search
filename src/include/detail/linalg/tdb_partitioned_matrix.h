@@ -469,10 +469,12 @@ class tdbPartitionedMatrix
       query.set_subarray(subarray)
           .set_layout(layout_order)
           .set_data_buffer(attr_name, ptr, col_count * dimension);
-      tiledb_helpers::submit_query(tdb_func__, partitioned_vectors_uri_, query);
+      // tiledb_helpers::submit_query(tdb_func__, partitioned_vectors_uri_, query);
+      query.submit();
       _memory_data.insert_entry(tdb_func__, col_count * dimension * sizeof(T));
 
-      // assert(tiledb::Query::Status::COMPLETE == query.query_status());
+      // assert(tiledb::Query::Status::COMPLETE == query.query_dstatus());
+      auto qs = query.query_status();
       if (tiledb::Query::Status::COMPLETE != query.query_status()) {
         throw std::runtime_error("Query status is not complete -- fix me");
       }

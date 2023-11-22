@@ -449,7 +449,7 @@ auto nuv_query_heap_finite_ram(
 
   auto num_queries = num_vectors(query);
 
-  std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>> min_scores(
+  auto min_scores = std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>> (
       nthreads,
       std::vector<fixed_min_pair_heap<score_type, id_type>>(
           num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn)));
@@ -834,15 +834,17 @@ auto apply_query(
   using id_type = typename P::id_type;
   using score_type = float;
 
-  auto partitioned_ids = partitioned_vectors.ids();
-  auto indices = partitioned_vectors.indices();
+  auto partitioned_ids = partitioned_vectors.ids();  // These are global
+  auto indices = partitioned_vectors.indices();      // These are local to p_v
 
   auto num_queries = num_vectors(query);
 
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
       num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
 
-  // Iterate through the active partitions
+  // Iterate through the active partitions -- for a finite query, this is
+  // all of the partitions.  For an infinite query, this is a subset, given
+  // by `active_partitions`.
   for (size_t p = first_active_part; p < last_active_part; ++p) {
     // Note that in the infinite case, the active_partitions are a subset
     // of all the partitions.  In the finite case, all partitions are active.
@@ -990,49 +992,48 @@ auto query_finite_ram(
     auto current_part_size = ::num_partitions(partitioned_vectors);
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
-    {
-      std::vector<std::future<decltype(min_scores)>> futs;
-      futs.reserve(nthreads);
+    std::vector<std::future<decltype(min_scores)>> futs;
+    futs.reserve(nthreads);
 
-      for (size_t n = 0; n < nthreads; ++n) {
-        auto first_part =
-            std::min<size_t>(n * parts_per_thread, current_part_size);
-        auto last_part =
-            std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
+    for (size_t n = 0; n < nthreads; ++n) {
+      auto first_part =
+          std::min<size_t>(n * parts_per_thread, current_part_size);
+      auto last_part =
+          std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
 
-        if (first_part != last_part) {
-          futs.emplace_back(std::async(
-              std::launch::async,
-              [&query,
-               &partitioned_vectors,
-               &active_queries = active_queries,
-               k_nn,
-               first_part,
-               last_part,
-               part_offset]() {
-                return apply_query(
-                    partitioned_vectors,
-                    std::optional<std::vector<int>>{},
-                    query,
-                    active_queries,
-                    k_nn,
-                    first_part,
-                    last_part,
-                    part_offset);
-              }));
-        }
+      if (first_part != last_part) {
+        futs.emplace_back(std::async(
+            std::launch::async,
+            [&query,
+             &partitioned_vectors,
+             &active_queries = active_queries,
+             k_nn,
+             first_part,
+             last_part,
+             part_offset]() {
+              return apply_query(
+                  partitioned_vectors,
+                  std::optional<std::vector<int>>{},
+                  query,
+                  active_queries,
+                  k_nn,
+                  first_part,
+                  last_part,
+                  part_offset);
+            }));
       }
+    }
 
-      for (size_t n = 0; n < size(futs); ++n) {
-        auto min_n = futs[n].get();
+    for (size_t n = 0; n < size(futs); ++n) {
+      auto min_n = futs[n].get();
 
-        for (size_t j = 0; j < num_queries; ++j) {
-          for (auto&& [e, f] : min_n[j]) {
-            min_scores[j].insert(e, f);
-          }
+      for (size_t j = 0; j < num_queries; ++j) {
+        for (auto&& [e, f] : min_n[j]) {
+          min_scores[j].insert(e, f);
         }
       }
     }
+
     part_offset += current_part_size;
     _i.stop();
   }
