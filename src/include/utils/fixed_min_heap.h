@@ -436,8 +436,79 @@ class fixed_min_set_heap_2 : public std::vector<T> {
   }
 };
 
-// Kept here for historical comparison reasons.  They are
-// really slow.
+/**
+ * Heap to store a pair of values, ordered by the first element.
+ * @tparam T Type of first element
+ * @tparam U Type of second element
+ */
+template <class T, class U, class Compare = std::less<T>>
+class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
+  using Base = std::vector<std::tuple<T, U>>;
+
+  // using Base::Base;
+  unsigned max_size{0};
+  Compare compare_;
+
+ public:
+  explicit fixed_min_pair_heap(unsigned k, Compare compare = Compare())
+      : Base(0)
+      , max_size{k}
+      , compare_{std::move(compare)} {
+    Base::reserve(k);
+  }
+
+  explicit fixed_min_pair_heap(
+      unsigned k,
+      std::initializer_list<std::tuple<T, U>> l,
+      Compare compare = Compare())
+      : Base(0)
+      , max_size{k}
+      , compare_{std::move(compare)} {
+    Base::reserve(k);
+    for (auto& p : l) {
+      insert(std::get<0>(p), std::get<1>(p));
+    }
+  }
+
+  void insert(const T& x, const U& y) {
+    if (Base::size() < max_size) {
+      this->emplace_back(x, y);
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+    } else if (compare_(x, std::get<0>(this->front()))) {
+      std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+      this->pop_back();
+      this->emplace_back(x, y);
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+    }
+  }
+};
+
+template <class Heap>
+struct heap_traits {
+  using value_type = typename Heap::value_type;
+  using score_type =
+      typename std::tuple_element<0, typename Heap::value_type>::type;
+  using index_type =
+      typename std::tuple_element<1, typename Heap::value_type>::type;
+};
+
+template <class Heap>
+using heap_score_t = typename heap_traits<Heap>::score_type;
+
+template <class Heap>
+using heap_index_t = typename heap_traits<Heap>::index_type;
+
+// template <class T>
+// using fixed_min_heap = fixed_min_set_heap_1<T>;
+
+#ifdef ALLHEAPS  // Kept here for historical comparison reasons.  They are
+                 // really slow.
 template <class T, class Compare = std::less<T>>
 class fixed_min_set_heap_3 : public std::vector<T> {
   using Base = std::vector<T>;
