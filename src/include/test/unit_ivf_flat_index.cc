@@ -580,6 +580,8 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   CHECK(recall1 > 0.965);
 }
 
+// Decided to not support this for now -- see instead unit_compat.cc
+#if 0
 TEST_CASE("ivf_index: matrix+vector constructor, infinite", "[ivf_index]") {
   size_t nprobe = 16;
   size_t k_nn = 10;
@@ -727,3 +729,4 @@ TEST_CASE("ivf_index: matrix+vector constructor, finite", "[ivf_index]") {
     }
   }
 }
+#endif

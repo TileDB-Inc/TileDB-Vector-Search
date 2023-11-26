@@ -1,5 +1,5 @@
 /**
- * @file   index.h
+ * @file   matrix.h
  *
  * @section LICENSE
  *
@@ -91,7 +91,15 @@ class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     return this->extent(0);
   }
 
+  size_type num_rows() {
+    return this->extent(0);
+  }
+
   size_type num_cols() const {
+    return this->extent(1);
+  }
+
+  size_type num_cols() {
     return this->extent(1);
   }
 
