@@ -51,7 +51,6 @@
  * @tparam T
  * @tparam IdType
  * @tparam PartIndexType
- * @tparam PartsType
  * @tparam LayoutPolicy
  * @tparam I
  *
@@ -64,7 +63,6 @@ template <
     class T,
     class IdType,
     class PartIndexType,
-    class PartsType,
     class LayoutPolicy = stdx::layout_right,
     class I = size_t>
 class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
@@ -82,25 +80,24 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   using typename Base::reference;
   using typename Base::size_type;
   using id_type = IdType;
-  using parts_type = PartsType;
 
  private:
   using part_index_type = PartIndexType;
 
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
+ protected:
+  // ids for the partitioned vectors
+  std::vector<id_type> ids_;  // @todo pointer and span?
+
+  // Index for partitioned vectors
+  std::vector<part_index_type> part_index_;  // @todo pointer and span?
+
   // Stores the number of valid vectors being stored
   size_t num_vectors_{0};
 
   // Stores the number of valid partitions being stored
   size_t num_parts_{0};
-
- protected:
-  // Index for partitioned vectors
-  std::vector<part_index_type> part_index_;  // @todo pointer and span?
-
-  // ids for the partitioned vectors
-  std::vector<id_type> ids_;  // @todo pointer and span?
 
  public:
   PartitionedMatrix() = default;
@@ -115,8 +112,26 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
    */
   PartitionedMatrix(size_t dim, size_t max_num_vecs, size_t max_num_parts)
       : Base(dim, max_num_vecs)
-      , part_index_(max_num_parts + 1)
-      , ids_(max_num_vecs) {
+      , ids_(max_num_vecs)
+      , part_index_(max_num_parts + 1) {
+  }
+
+  PartitionedMatrix(const PartitionedMatrix&) = delete;
+  PartitionedMatrix& operator=(const PartitionedMatrix&) = delete;
+  PartitionedMatrix(PartitionedMatrix&&) = default;
+  PartitionedMatrix& operator=(PartitionedMatrix&&) = default;
+  virtual ~PartitionedMatrix() = default;
+
+  // @note Use Vector instead of std::vector
+  PartitionedMatrix(
+      Matrix<T, LayoutPolicy, I>& parts,
+      std::vector<IdType>& ids,
+      std::vector<PartIndexType>& part_index)
+      : Base(std::move(parts))
+      , ids_(std::move(ids))
+      , part_index_(std::move(part_index))
+      , num_vectors_(::num_vectors(parts))
+      , num_parts_(size(part_index_) - 1) {
   }
 
 
@@ -131,19 +146,15 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param part_labels A vector of size num_vectors(training_set) that maps
    * each vector of the training set to a partition.
    * @param num_parts The number of partitions
-   * @param num_threads_ The number of threads to use for parallel operations
    */
   template <feature_vector_array F, std::ranges::contiguous_range V>
   PartitionedMatrix(
-      const F& training_set,
-      const V& part_labels,
-      size_t num_parts,
-      size_t num_threads_)
+      const F& training_set, const V& part_labels, size_t num_parts)
       : Base(::dimension(training_set), ::num_vectors(training_set))
+      , ids_(::num_vectors(training_set))
+      , part_index_(num_parts + 1)
       , num_vectors_{::num_vectors(training_set)}
-      , num_parts_{num_parts}
-      , part_index_(num_parts_ + 1)
-      , ids_(num_vectors_) {
+      , num_parts_{num_parts} {
     auto degrees = std::vector<size_t>(num_parts);
 
     for (size_t i = 0; i < ::num_vectors(training_set); ++i) {
@@ -169,14 +180,6 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
     std::shift_right(begin(part_index_), end(part_index_), 1);
     part_index_[0] = 0;
   }
-
-  PartitionedMatrix(const PartitionedMatrix&) = delete;
-  PartitionedMatrix& operator=(const PartitionedMatrix&) = delete;
-  PartitionedMatrix(PartitionedMatrix&&) = delete;
-
-  PartitionedMatrix& operator=(PartitionedMatrix&&) = default;
-
-  virtual ~PartitionedMatrix() = default;
 
   constexpr auto& num_vectors() {
     return num_vectors_;
@@ -217,13 +220,11 @@ template <
     class T,
     class partitioned_ids_type,
     class part_index_type,
-    class parts_type,
     class I = size_t>
 using RowMajorPartitionedMatrix = PartitionedMatrix<
     T,
     partitioned_ids_type,
     part_index_type,
-    parts_type,
     stdx::layout_right,
     I>;
 
@@ -234,13 +235,11 @@ template <
     class T,
     class partitioned_ids_type,
     class part_index_type,
-    class parts_type,
     class I = size_t>
 using ColMajorPartitionedMatrix = PartitionedMatrix<
     T,
     partitioned_ids_type,
     part_index_type,
-    parts_type,
     stdx::layout_left,
     I>;
 

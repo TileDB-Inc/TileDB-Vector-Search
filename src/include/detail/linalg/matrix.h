@@ -1,5 +1,5 @@
 /**
- * @file   index.h
+ * @file   matrix.h
  *
  * @section LICENSE
  *
@@ -91,7 +91,15 @@ class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     return this->extent(0);
   }
 
+  size_type num_rows() {
+    return this->extent(0);
+  }
+
   size_type num_cols() const {
+    return this->extent(1);
+  }
+
+  size_type num_cols() {
     return this->extent(1);
   }
 
@@ -109,7 +117,6 @@ using RowMajorMatrixView = MatrixView<T, stdx::layout_right, I>;
  */
 template <class T, class I = size_t>
 using ColMajorMatrixView = MatrixView<T, stdx::layout_left, I>;
-
 
 /**
  * @brief A 2-D matrix class that owns its storage.  The interface is
@@ -129,7 +136,7 @@ class Matrix :
   using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
   // using Base::Base;
 #else
-public MatrixView<T, LayoutPolicy, I> {
+    public MatrixView<T, LayoutPolicy, I> {
   using Base = MatrixView<T, LayoutPolicy, I>;
   // So that the CPO for data() doesn't get confused
   // auto data_handle() = delete;
@@ -421,8 +428,8 @@ std::string matrix_info(const Matrix& A, const std::string& msg = "") {
   if (!msg.empty()) {
     str += ": ";
   }
-  str += "Shape: ( " + std::to_string(A.num_rows()) + ", " +
-         std::to_string(A.num_cols()) + " )";
+  str += "Shape: ( " + std::to_string(::dimension(A)) + ", " +
+         std::to_string(::num_vectors(A)) + " )";
   str += std::string(" Layout: ") +
          (is_row_oriented(A) ? "row major" : "column major");
   return str;

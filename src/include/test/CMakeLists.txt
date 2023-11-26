@@ -105,6 +105,8 @@ kmeans_add_test(unit_api_ivf_pq_index)
 
 kmeans_add_test(unit_api_vamana_index)
 
+kmeans_add_test(unit_compat)
+
 kmeans_add_test(unit_concepts)
 
 kmeans_add_test(unit_concepts_vs)

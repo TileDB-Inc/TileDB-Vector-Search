@@ -253,7 +253,7 @@ auto dump_logs = [](std::string filename,
 };
 
 #ifdef JSON_LOGGING
-auto config_log(const std::string& program_name) {
+static auto config_log(const std::string& program_name) {
   std::string uuid_;
   char host_[16];
   std::string date_;

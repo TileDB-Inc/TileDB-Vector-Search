@@ -50,8 +50,7 @@ TEST_CASE("slice", "[linalg][ci-skip]") {
   std::vector<int> data2_(288);
   std::vector<float> value_(288);
 
-  auto array_ =
-      tiledb_helpers::open_array(tdb_func__, ctx_, uri, TILEDB_READ);
+  auto array_ = tiledb_helpers::open_array(tdb_func__, ctx_, uri, TILEDB_READ);
   tiledb::ArraySchema schema_{array_->schema()};
   tiledb::Query query(ctx_, *array_);
 

@@ -128,10 +128,8 @@ concept partitionable = requires(const T& t) {
 template <typename R>
 concept feature_vector =
     std::ranges::random_access_range<R> && /* std::ranges::sized_range<R> && */
-    std::ranges::contiguous_range<R> &&
-        dimensionable<R> &&
+    std::ranges::contiguous_range<R> && dimensionable<R> &&
     (subscriptable_range<R> || callable_range<R>);
-
 
 template <class R>
 concept query_vector = feature_vector<R>;

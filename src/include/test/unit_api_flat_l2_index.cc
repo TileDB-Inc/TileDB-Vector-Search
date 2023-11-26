@@ -28,10 +28,10 @@
  * @section DESCRIPTION
  *
  */
+#include "api/feature_vector_array.h"
 #include "api/flat_l2_index.h"
 #include "catch2/catch_all.hpp"
 #include "query_common.h"
-#include "api/feature_vector_array.h"
 
 TEST_CASE("api_flat_l2_index: test test", "[api_flat_l2_index]") {
   REQUIRE(true);
@@ -48,7 +48,8 @@ TEST_CASE("api: flat_l2_index", "[api][flat_l2_index]") {
   // auto c = Index(ctx, fmnist_train_uri, IndexKind::IVFFlat);
 }
 
-TEST_CASE("api: uri flat_l2_index constructors, context", "[api][flat_l2_index]") {
+TEST_CASE(
+    "api: uri flat_l2_index constructors, context", "[api][flat_l2_index]") {
   tiledb::Context ctx;
 
   auto a = IndexFlatL2(ctx, db_uri);
@@ -72,23 +73,25 @@ TEST_CASE("api: uri flat_l2_index constructors, context", "[api][flat_l2_index]"
   CHECK(num_vectors(d) == 1'000'000);
 }
 
-TEST_CASE("api: uri flat_l2_index constructors, no context", "[api][flat_l2_index]") {
-  auto a = IndexFlatL2(db_uri);
+TEST_CASE(
+    "api: uri flat_l2_index constructors, no context", "[api][flat_l2_index]") {
+  tiledb::Context ctx;
+  auto a = IndexFlatL2(ctx, db_uri);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(a) == 128);
   CHECK(num_vectors(a) == 1'000'000);
 
-  auto b = IndexFlatL2(bigann1M_base_uri);
+  auto b = IndexFlatL2(ctx, bigann1M_base_uri);
   CHECK(b.feature_type() == TILEDB_UINT8);
   CHECK(dimension(b) == 128);
   CHECK(num_vectors(b) == 1'000'000);
 
-  auto c = IndexFlatL2(fmnist_train_uri);
+  auto c = IndexFlatL2(ctx, fmnist_train_uri);
   CHECK(c.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(c) == 784);
   CHECK(num_vectors(c) == 60'000);
 
-  auto d = IndexFlatL2(sift_base_uri);
+  auto d = IndexFlatL2(ctx, sift_base_uri);
   CHECK(d.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(d) == 128);
   CHECK(num_vectors(d) == 1'000'000);

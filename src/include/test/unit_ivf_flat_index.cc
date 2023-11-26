@@ -65,7 +65,7 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
   std::copy(begin(data), end(data), training_data.data());
 
   auto index = ivf_flat_index<float, uint32_t, uint32_t>(
-      /*4,*/ 3, 10, 1e-4, 1, Catch::rngSeed());
+      /*4,*/ 3, 10, 1e-4);
 
   index.set_centroids(ColMajorMatrix<float>(4, 3));
 
@@ -116,7 +116,7 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
   std::copy(begin(data), end(data), training_data.data());
 
   auto index = ivf_flat_index<float, size_t, size_t>(
-      /*4,*/ 3, 10, 1e-4, 1, Catch::rngSeed());
+      /*4,*/ 3, 10, 1e-4);
 
   SECTION("random") {
     std::cout << "random" << std::endl;
@@ -154,9 +154,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         /*sklearn_centroids.num_rows(),*/
         sklearn_centroids.num_cols(),
         1,
-        1e-4,
-        1,
-        Catch::rngSeed());
+        1e-4);
     index.set_centroids(sklearn_centroids);
     index.train(training_data, kmeans_init::none);
     // debug_centroids(index);
@@ -168,9 +166,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         /*sklearn_centroids.num_rows(),*/
         sklearn_centroids.num_cols(),
         2,
-        1e-4,
-        1,
-        Catch::rngSeed());
+        1e-4);
     index.set_centroids(sklearn_centroids);
     index.train(training_data, kmeans_init::none);
     // debug_centroids(index);
@@ -182,9 +178,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         /* sklearn_centroids.num_rows(), */
         sklearn_centroids.num_cols(),
         5,
-        1e-4,
-        1,
-        Catch::rngSeed());
+        1e-4);
     index.set_centroids(sklearn_centroids);
     index.train(training_data, kmeans_init::none);
     // debug_centroids(index);
@@ -203,9 +197,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         /* sklearn_centroids.num_rows(), */
         sklearn_centroids.num_cols(),
         5,
-        1e-4,
-        1,
-        Catch::rngSeed());
+        1e-4);
     index.set_centroids(sklearn_centroids);
     index.train(training_data, kmeans_init::none);
     // debug_centroids(index);
@@ -217,9 +209,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
         /* sklearn_centroids.num_rows(), */
         sklearn_centroids.num_cols(),
         5,
-        1e-4,
-        1,
-        Catch::rngSeed());
+        1e-4);
     index.train(training_data, kmeans_init::random);
     // debug_centroids(index);
   }
@@ -243,7 +233,7 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   idx.train(training_set, kmeans_init::kmeanspp);
   idx.add(training_set);
 
-  idx.write_index(ivf_index_uri, true);
+  idx.write_index(ctx, ivf_index_uri, true);
   auto idx2 = ivf_flat_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
   idx2.read_index_infinite();
 
@@ -287,12 +277,12 @@ TEMPLATE_TEST_CASE(
     size_t nlist = 1;
 
     auto ivf_idx2 = ivf_flat_index<TestType, uint32_t, uint32_t>(
-        /*128,*/ nlist, 4, 1.e-4, 1);  // dim nlist maxiter eps nthreads
+        /*128,*/ nlist, 4, 1.e-4);  // dim nlist maxiter eps nthreads
     ivf_idx2.train(hypercube2);
     ivf_idx2.add(hypercube2);
 
     auto ivf_idx4 = ivf_flat_index<TestType, uint32_t, uint32_t>(
-        /*128,*/ nlist, 4, 1.e-4, 1);
+        /*128,*/ nlist, 4, 1.e-4);
     ivf_idx4.train(hypercube4);
     ivf_idx4.add(hypercube4);
 
@@ -351,8 +341,6 @@ TEMPLATE_TEST_CASE(
   }
 }
 
-
-
 // Note:  In-place only makes sense for infinite ram case
 // @todo Use a fixed seed for initializing kmeans
 TEST_CASE(
@@ -393,7 +381,7 @@ TEST_CASE(
   SECTION("nuv_infinite_reg_blocked") {
     INFO("nuv_infinite_reg_blocked");
     std::tie(top_k_ivf_scores, top_k_ivf) =
-        idx.qv_query_heap_infinite_ram(query_set, k_nn, nprobe);
+        idx.nuv_query_heap_infinite_ram_reg_blocked(query_set, k_nn, nprobe);
   }
   init.verify(top_k_ivf);
 }
@@ -541,9 +529,11 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<id_type>();
 
-  auto init = siftsmall_test_init<ivf_flat_index<feature_type, id_type, px_type>>(ctx, nlist);
+  auto init =
+      siftsmall_test_init<ivf_flat_index<feature_type, id_type, px_type>>(
+          ctx, nlist);
   std::string tmp_ivf_index_uri = "/tmp/tmp_ivf_index";
-  init.idx.write_index(tmp_ivf_index_uri, true);
+  init.idx.write_index(ctx, tmp_ivf_index_uri, true);
 
 // Just some sanity checking and for interactive debugging
 #if 0
@@ -567,7 +557,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   SECTION("read cli generated") {
     INFO("infinite cli");
     auto idx = ivf_flat_index<feature_type, id_type, px_type>(
-        ctx, siftsmall_flatIVF_index_uri);
+        ctx, siftsmall_flatIVF_index_uri_32_64);
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
@@ -589,3 +579,154 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   }
   CHECK(recall1 > 0.965);
 }
+
+// Decided to not support this for now -- see instead unit_compat.cc
+#if 0
+TEST_CASE("ivf_index: matrix+vector constructor, infinite", "[ivf_index]") {
+  size_t nprobe = 16;
+  size_t k_nn = 10;
+  size_t nthreads = 8;
+  size_t num_queries = 100;
+  tiledb::Context ctx;
+
+  auto parts = tdbColMajorMatrix<db_type>(ctx, ivf_index_vectors_uri);
+  parts.load();
+  auto ids = read_vector<uint64_t>(ctx, ivf_index_ids_uri);
+  auto indices = read_vector<indices_type>(ctx, ivf_index_indices_uri);
+
+  auto centroids = tdbColMajorMatrix<db_type>(ctx, ivf_index_centroids_uri);
+  centroids.load();
+  auto query = tdbColMajorMatrix<db_type>(ctx, query_uri, num_queries);
+  query.load();
+  auto groundtruth = tdbColMajorMatrix<int32_t>(ctx, groundtruth_uri);
+  groundtruth.load();
+
+  // auto&& [s, t] = detail::ivf::qv_query_heap_infinite_ram(parts, centroids,
+  // query, index, ids, nprobe, k_nn, nthreads);
+
+  auto idx_0 = ivf_flat_index<float>(ctx, ivf_index_uri);
+  auto&& [s_0, t_0] = idx_0.qv_query_heap_infinite_ram(query, k_nn, nprobe);
+
+  auto check = [&, &t_0 = t_0](auto&& s_1, auto&& t_1) {
+    auto intersections0 = (long)count_intersections(t_0, groundtruth, k_nn);
+    auto intersections1 = (long)count_intersections(t_1, groundtruth, k_nn);
+    CHECK(intersections0 != 0);
+    CHECK(intersections1 != 0);
+    CHECK(std::abs(intersections0 - intersections1) < 4);
+    double recall0 = intersections0 / ((double)t_0.num_cols() * k_nn);
+    double recall1 = intersections1 / ((double)t_1.num_cols() * k_nn);
+  };
+
+  SECTION("infinite") {
+    SECTION("query_infinite_ram") {
+      INFO("query_infinite_ram");
+      auto idx_1 = ivf_flat_index<float>(parts, centroids, ids, indices);
+      auto&& [s_1, t_1] = idx_1.query_infinite_ram(query, k_nn, nprobe);
+      check(s_1, t_1);
+    }
+    SECTION("qv_query_heap_infinite_ram") {
+      INFO("qv_query_heap_infinite_ram");
+      auto idx_1 = ivf_flat_index<float>(parts, centroids, ids, indices);
+      auto&& [s_1, t_1] = idx_1.qv_query_heap_infinite_ram(query, k_nn, nprobe);
+      check(s_1, t_1);
+    }
+    SECTION("nuv_query_heap_infinite_ram") {
+      INFO("nuv_query_heap_infinite_ram");
+      auto idx_1 = ivf_flat_index<float>(parts, centroids, ids, indices);
+      auto&& [s_1, t_1] =
+          idx_1.nuv_query_heap_infinite_ram(query, k_nn, nprobe);
+      check(s_1, t_1);
+    }
+    SECTION("nuv_query_heap_infinite_ram_reg_blocked") {
+      INFO("nuv_query_heap_infinite_ram_reg_blocked");
+      auto idx_1 = ivf_flat_index<float>(parts, centroids, ids, indices);
+      auto&& [s_1, t_1] =
+          idx_1.nuv_query_heap_infinite_ram_reg_blocked(query, k_nn, nprobe);
+      check(s_1, t_1);
+    }
+  }
+}
+
+TEST_CASE("ivf_index: matrix+vector constructor, finite", "[ivf_index]") {
+  size_t nprobe = 16;
+  size_t k_nn = 10;
+  size_t nthreads = 8;
+  size_t num_queries = 100;
+  tiledb::Context ctx;
+
+  auto indices = read_vector<indices_type>(ctx, ivf_index_indices_uri);
+
+  auto centroids = tdbColMajorMatrix<db_type>(ctx, ivf_index_centroids_uri);
+  centroids.load();
+  auto query = tdbColMajorMatrix<db_type>(ctx, query_uri, num_queries);
+  query.load();
+  auto groundtruth = tdbColMajorMatrix<int32_t>(ctx, groundtruth_uri);
+  groundtruth.load();
+
+  // auto&& [s, t] = detail::ivf::qv_query_heap_infinite_ram(parts, centroids,
+  // query, index, ids, nprobe, k_nn, nthreads);
+
+  auto idx_0 = ivf_flat_index<float>(ctx, ivf_index_uri);
+  auto&& [s_0, t_0] = idx_0.qv_query_heap_infinite_ram(query, k_nn, nprobe);
+
+  auto check = [&, &t_0 = t_0](auto&& s_1, auto&& t_1) {
+    auto intersections0 = (long)count_intersections(t_0, groundtruth, k_nn);
+    auto intersections1 = (long)count_intersections(t_1, groundtruth, k_nn);
+    CHECK(intersections0 != 0);
+    CHECK(intersections1 != 0);
+    CHECK(std::abs(intersections0 - intersections1) < 10);
+    double recall0 = intersections0 / ((double)t_0.num_cols() * k_nn);
+    double recall1 = intersections1 / ((double)t_1.num_cols() * k_nn);
+  };
+
+#if 0
+  auto&& [active_partitions, active_queries] =
+      detail::ivf::partition_ivf_flat_index<indices_type>(
+          centroids_, query_vectors, nprobe, num_threads_);
+
+  partitioned_vectors_ = std::make_unique<tdb_storage_type>(
+      *cached_ctx_,
+      group_uri_ + "/partitioned_vectors",
+      group_uri_ + "/indices",
+      group_uri_ + "/partitioned_ids",
+      active_partitions,
+      upper_bound);
+  // NB: We don't load the partitioned_vectors here.  We will load them
+  // when we do the query.
+
+  return std::make_tuple(
+      std::move(active_partitions), std::move(active_queries));
+#endif
+
+  auto idx_1 = ivf_flat_index<float>(
+      ctx, ivf_index_vectors_uri, centroids, ivf_index_ids_uri, indices);
+  SECTION("finite") {
+    size_t upper_bound = GENERATE(0, 10033);
+    SECTION("query_finite_ram") {
+      INFO("query_finite_ram");
+
+      auto&& [s_1, t_1] =
+          idx_1.query_finite_ram(query, k_nn, nprobe, upper_bound);
+      check(s_1, t_1);
+    }
+    SECTION("qv_query_heap_finite_ram") {
+      INFO("qv_query_heap_finite_ram");
+      // auto idx_1 = ivf_flat_index<float>(parts, centroids, ids, indices);
+      // auto&& [s_1, t_1] = idx_1.qv_query_heap_infinite_ram(query, k_nn,
+      // nprobe); check (s_1, t_1);
+    }
+    SECTION("nuv_query_heap_finite_ram") {
+      INFO("nuv_query_heap_finite_ram");
+      auto&& [s_1, t_1] =
+          idx_1.nuv_query_heap_finite_ram(query, k_nn, nprobe, upper_bound);
+      check(s_1, t_1);
+    }
+    SECTION("nuv_query_heap_finite_ram_reg_blocked") {
+      INFO("nuv_query_heap_finite_ram_reg_blocked");
+      auto&& [s_1, t_1] = idx_1.nuv_query_heap_finite_ram_reg_blocked(
+          query, k_nn, nprobe, upper_bound);
+      check(s_1, t_1);
+    }
+  }
+}
+#endif

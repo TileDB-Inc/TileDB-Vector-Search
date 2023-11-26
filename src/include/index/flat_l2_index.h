@@ -69,7 +69,7 @@ class flat_l2_index {
   }
   flat_l2_index& operator=(flat_l2_index&& index) = default;
 
-  ~flat_l2_index() = default;
+  virtual ~flat_l2_index() = default;
 
   /**
    * @brief Construct a new flat index object from the array at the given URI.

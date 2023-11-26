@@ -81,26 +81,22 @@ using namespace Kokkos;
 }  // namespace stdx
 
 /**
- * @note The template parameters indices_type and parts_type can be deduced
- * usingCTAD.  However, with the uri-based constructor, the type of the indices
- * and the partitioned_vectors array cannot be deduced.  Therefore, the user
- * must specify the type of the indices and the partitioned_ids array.  And
- * since CTAD is all or nothing, we have to pass in all of the types.
+ * @brief Class for maintaining a partitioned matrix (ala a CSR matrix), with
+ * TileDB arrays as the source of the data.
+ * @tparam T
+ * @tparam IdType
+ * @tparam IndicesType
+ * @tparam LayoutPolicy
+ * @tparam I
  */
 template <
     class T,
     class IdType,
     class IndicesType,
-    class PartsType,
     class LayoutPolicy = stdx::layout_right,
     class I = size_t>
-class tdbPartitionedMatrix : public PartitionedMatrix<
-                                 T,
-                                 IdType,
-                                 IndicesType,
-                                 PartsType,
-                                 LayoutPolicy,
-                                 I> {
+class tdbPartitionedMatrix
+    : public PartitionedMatrix<T, IdType, IndicesType, LayoutPolicy, I> {
   /****************************************************************************
    *
    * Duplication from tdbMatrix
@@ -108,8 +104,7 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
    * @todo Unify duplicated code
    *
    ****************************************************************************/
-  using Base =
-      PartitionedMatrix<T, IdType, IndicesType, PartsType, LayoutPolicy, I>;
+  using Base = PartitionedMatrix<T, IdType, IndicesType, LayoutPolicy, I>;
   // using Base::Base;
 
  public:
@@ -120,7 +115,6 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
 
   using id_type = IdType;
   using indices_type = IndicesType;
-  using parts_type = PartsType;
 
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
@@ -134,8 +128,8 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
   size_t num_array_rows_{0};
   size_t num_array_cols_{0};
 
-  // std::reference_wrapper<const tiledb::Context> ctx_;
-  tiledb::Context ctx_;
+  std::reference_wrapper<const tiledb::Context> ctx_;
+  // tiledb::Context ctx_;
 
   std::string partitioned_vectors_uri_;
   std::unique_ptr<tiledb::Array> partitioned_vectors_array_;
@@ -154,8 +148,10 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
   // to read from the partitioned TileDB array.
   std::vector<indices_type> master_indices_;  // @todo pointer and span?
 
-  // Vector of all the partitions that we want to load
-  std::vector<parts_type> relevant_parts_;  // @todo pointer and span?
+  // Vector of the partition numbers of all the partitions that we want to load
+  // This could be much smaller than the master indices, but is the same size
+  // as the squashed indices.  We use indices_type as its type.
+  std::vector<indices_type> relevant_parts_;  // @todo pointer and span?
 
   // Vector of indices for all of the partitions that will be loaded from the
   // TileDB array into contiguous memory.
@@ -199,7 +195,10 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
   size_t num_loads_{0};
 
  public:
+  tdbPartitionedMatrix(const tdbPartitionedMatrix&) = delete;
+  tdbPartitionedMatrix(tdbPartitionedMatrix&&) = default;
   tdbPartitionedMatrix& operator=(tdbPartitionedMatrix&&) = default;
+  tdbPartitionedMatrix& operator=(const tdbPartitionedMatrix&) = delete;
 
   /**
    * @brief Primary constructor.  Reads in vectors from a partitioned array,
@@ -227,6 +226,28 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
       const P& relevant_parts,
       size_t upper_bound,
       const tiledb::TemporalPolicy temporal_policy = {})
+      : tdbPartitionedMatrix(
+            ctx,
+            partitioned_vectors_uri,
+            read_vector<indices_type>(ctx, indices_uri),
+            ids_uri,
+            relevant_parts,
+            upper_bound,
+            temporal_policy) {
+  }
+
+  tdbPartitionedMatrix(std::vector<indices_type>&) {
+  }
+
+  template <std::ranges::contiguous_range P>
+  tdbPartitionedMatrix(
+      const tiledb::Context& ctx,
+      const std::string& partitioned_vectors_uri,
+      const std::vector<indices_type>& indices,
+      const std::string& ids_uri,
+      const P& relevant_parts,
+      size_t upper_bound,
+      const tiledb::TemporalPolicy temporal_policy = {})
       : ctx_{ctx}
       , partitioned_vectors_uri_{partitioned_vectors_uri}
       , partitioned_vectors_array_(tiledb_helpers::open_array(
@@ -240,8 +261,10 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
       , partitioned_ids_array_(tiledb_helpers::open_array(
             tdb_func__, ctx_, partitioned_ids_uri_, TILEDB_READ))
       , ids_schema_{partitioned_ids_array_->schema()}
-      , master_indices_{read_vector<indices_type>(ctx_, indices_uri)}
-      , relevant_parts_(std::move(relevant_parts))
+//      , master_indices_{std::move(indices)}
+//      , relevant_parts_(std::move(relevant_parts))
+      , master_indices_{indices}
+      , relevant_parts_(relevant_parts)
       , squashed_indices_(size(relevant_parts_) + 1)
       , resident_part_view_{0, 0} {
     total_num_parts_ = size(relevant_parts_);
@@ -343,8 +366,10 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
      */
     Base::operator=(
         std::move(Base{dimension, column_capacity, max_resident_parts}));
-    this->num_vectors() = 0;
-    this->num_partitions() = 0;
+    // this->num_vectors() = 0;
+    // this->num_partitions() = 0;
+    this->num_vectors_ = 0;
+    this->num_parts_ = 0;
   }
 
   /**
@@ -444,10 +469,12 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
       query.set_subarray(subarray)
           .set_layout(layout_order)
           .set_data_buffer(attr_name, ptr, col_count * dimension);
-      tiledb_helpers::submit_query(tdb_func__, partitioned_vectors_uri_, query);
+      // tiledb_helpers::submit_query(tdb_func__, partitioned_vectors_uri_, query);
+      query.submit();
       _memory_data.insert_entry(tdb_func__, col_count * dimension * sizeof(T));
 
-      // assert(tiledb::Query::Status::COMPLETE == query.query_status());
+      // assert(tiledb::Query::Status::COMPLETE == query.query_dstatus());
+      auto qs = query.query_status();
       if (tiledb::Query::Status::COMPLETE != query.query_status()) {
         throw std::runtime_error("Query status is not complete -- fix me");
       }
@@ -509,8 +536,12 @@ class tdbPartitionedMatrix : public PartitionedMatrix<
       this->part_index_[i] = squashed_indices_[i + resident_part_offset_] - sub;
     }
 
-    this->num_vectors() = num_resident_cols_;
-    this->num_partitions() = num_resident_parts_;
+    // this->num_vectors() =
+    // this->num_partitions() =
+    this->num_vectors_ = num_resident_cols_;
+    ;
+    this->num_parts_ = num_resident_parts_;
+    ;
 
     num_loads_++;
     return true;
@@ -557,13 +588,11 @@ template <
     class T,
     class partitioned_ids_type,
     class indices_type,
-    class parts_type,
     class I = size_t>
 using tdbRowMajorPartitionedMatrix = tdbPartitionedMatrix<
     T,
     partitioned_ids_type,
     indices_type,
-    parts_type,
     stdx::layout_right,
     I>;
 
@@ -574,13 +603,11 @@ template <
     class T,
     class partitioned_ids_type,
     class indices_type,
-    class parts_type,
     class I = size_t>
 using tdbColMajorPartitionedMatrix = tdbPartitionedMatrix<
     T,
     partitioned_ids_type,
     indices_type,
-    parts_type,
     stdx::layout_left,
     I>;
 

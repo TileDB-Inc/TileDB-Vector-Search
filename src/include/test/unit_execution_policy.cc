@@ -38,7 +38,6 @@
 #include <span>
 #include "../execution_policy.h"
 
-
 TEST_CASE("execution_policy: construct", "[execution_policy]") {
   std::execution::sequenced_policy p;
   auto q = stdx::execution::seq;

@@ -34,8 +34,8 @@
 #define TILEDB_QUERY_COMMON_H
 
 #include <string>
-#include "linalg.h"
 #include "detail/flat/qv.h"
+#include "linalg.h"
 
 // clang-format off
 
@@ -171,6 +171,14 @@ static std::string ids_uri{m1_root + "sift/ids"};
 static std::string query_uri{m1_root + "sift/sift_query"};
 static std::string groundtruth_uri{m1_root + "sift/sift_groundtruth"};
 
+static std::string ivf_index_uri{
+    m1_root + "sift/flatIVF_index_sift_base_64_64"};
+static std::string ivf_index_centroids_uri{ivf_index_uri + "/centroids"};
+static std::string ivf_index_indices_uri{ivf_index_uri + "/indices"};
+static std::string ivf_index_ids_uri{ivf_index_uri + "/partitioned_ids"};
+static std::string ivf_index_vectors_uri{
+    ivf_index_uri + "/partitioned_vectors"};
+
 static std::string bigann1M_base_uri{m1_root + "1M/bigann1M_base"};
 static std::string bigann1M_query_uri{m1_root + "1M/query_public_10k"};
 static std::string bigann1M_groundtruth_uri{m1_root + "1M/bigann_1M_GT_nnids"};
@@ -204,6 +212,8 @@ static std::string siftsmall_flatIVF_index_uri{
     m1_root + "siftsmall/flatIVF_index_siftsmall_base"};
 static std::string siftsmall_flatIVF_index_uri_32_64{
     m1_root + "siftsmall/flatIVF_index_siftsmall_base_32_64"};
+static std::string siftsmall_flatIVF_index_uri_64_64{
+    m1_root + "siftsmall/flatIVF_index_siftsmall_base_64_64"};
 /*
  * siftsmall_base
  ArraySchema(
@@ -250,8 +260,8 @@ static std::string diskann_truth_index_data =
 #endif
 
 /**
- * A data structure for holding configuration information to provide the same configuration across
- * multiple different tests.
+ * A data structure for holding configuration information to provide the same
+ * configuration across multiple different tests.
  */
 // base is 10k, learn is 25k
 struct siftsmall_test_init_defaults {
@@ -285,7 +295,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
       , query_set(tdbColMajorMatrix<feature_type>(ctx_, siftsmall_query_uri))
       , groundtruth_set(
             tdbColMajorMatrix<int32_t>(ctx_, siftsmall_groundtruth_uri))
-      , idx(/*128,*/ nlist, max_iter, tolerance, nthreads, 0xdeadbeef) {
+      , idx(/*128,*/ nlist, max_iter, tolerance) {
     training_set.load();
     query_set.load();
     groundtruth_set.load();
@@ -298,9 +308,10 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
 
   auto get_write_read_idx() {
     std::string tmp_ivf_index_uri = "/tmp/tmp_ivf_index";
-    idx.write_index(tmp_ivf_index_uri, true);
+    idx.write_index(ctx_, tmp_ivf_index_uri, true);
     auto idx0 =
-        // ivf_flat_l2_index<feature_type, id_type, px_type>(ctx_, tmp_ivf_index_uri);
+        // ivf_flat_l2_index<feature_type, id_type, px_type>(ctx_,
+        // tmp_ivf_index_uri);
         IndexType(ctx_, tmp_ivf_index_uri);
     return idx0;
   }
@@ -348,6 +359,5 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     // std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
   }
 };
-
 
 #endif  // TILEDB_QUERY_COMMON_H

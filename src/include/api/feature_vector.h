@@ -58,7 +58,6 @@ class FeatureVector {
         typename std::remove_cvref_t<T>::value_type>::tiledb_type;
   }
 
-
   /**
    * @brief Construct from a dtype string and size.
    * @param size
@@ -121,7 +120,8 @@ class FeatureVector {
   /*
    * Dispatch to the appropriate concrete class based on the datatype.
    */
-  void tdb_vector_from_datatype(const tiledb::Context& ctx, const std::string& uri) {
+  void tdb_vector_from_datatype(
+      const tiledb::Context& ctx, const std::string& uri) {
     switch (feature_type_) {
       case TILEDB_FLOAT32:
         vector_ = std::make_unique<vector_impl<tdbVector<float>>>(ctx, uri);
@@ -191,17 +191,18 @@ class FeatureVector {
     explicit vector_impl(T&& t)
         : vector_(std::forward<T>(t)) {
     }
-    explicit vector_impl(size_t size) : vector_(size) {
+    explicit vector_impl(size_t size)
+        : vector_(size) {
     }
     vector_impl(const tiledb::Context& ctx, const std::string& uri)
         : vector_(ctx, uri) {
     }
     //[[nodiscard]] void* data() override {
     //  return _cpo::data(vector_);
-      // return vector_.data();
+    // return vector_.data();
     //}
     [[nodiscard]] void* data() const override {
-      return _cpo::data(vector_);
+      return (void*)::data(vector_);
       // return vector_.data();
     }
     [[nodiscard]] size_t dimension() const override {

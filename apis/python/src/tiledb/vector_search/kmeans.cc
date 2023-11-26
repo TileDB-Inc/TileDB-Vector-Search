@@ -35,7 +35,7 @@ static void declare_kmeans(py::module& m, const std::string& suffix) {
              } else {
                 throw std::invalid_argument("Invalid init method");
              }
-             ivf_flat_index<T> idx(/*sample_vectors.num_rows(),*/ n_clusters, max_iter, tol.value_or(0.0001), nthreads, seed);
+             ivf_flat_index<T> idx(/*sample_vectors.num_rows(),*/ n_clusters, max_iter, tol.value_or(0.0001));
              idx.train(sample_vectors, init_val);
              return std::move(idx.get_centroids());
   });

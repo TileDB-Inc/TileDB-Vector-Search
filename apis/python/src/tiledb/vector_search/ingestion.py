@@ -32,6 +32,7 @@ def ingest(
     storage_version: str = STORAGE_VERSION,
     verbose: bool = False,
     trace_id: Optional[str] = None,
+    use_sklearn: bool = False,
     mode: Mode = Mode.LOCAL,
     **kwargs,
 ):
@@ -88,6 +89,9 @@ def ingest(
         verbose logging, defaults to False
     trace_id: Optional[str]
         trace ID for logging, defaults to None
+    use_sklearn: bool
+        Whether to use scikit-learn's implementation of k-means clustering instead of
+        tiledb.vector_search's. Defaults to false.
     mode: Mode
         execution mode, defaults to LOCAL use BATCH for distributed execution
     """
@@ -720,9 +724,14 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
+        use_sklearn: bool = False
     ):
         from sklearn.cluster import KMeans
 
+        from tiledb.vector_search.module import (
+            array_to_matrix,
+            kmeans_fit,
+        )
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
             group = tiledb.Group(index_group_uri)
@@ -730,14 +739,7 @@ def ingest(
             verb = 0
             if verbose:
                 verb = 3
-            logger.debug("Start kmeans training")
-            km = KMeans(
-                n_clusters=partitions,
-                init=init,
-                max_iter=max_iter,
-                verbose=verb,
-                n_init=n_init,
-            )
+
             if sample_end_pos - sample_start_pos >= partitions:
                 sample_vectors = read_input_vectors(
                     source_uri=source_uri,
@@ -750,10 +752,25 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 ).astype(np.float32)
-                km.fit_predict(sample_vectors)
-                centroids = np.transpose(np.array(km.cluster_centers_))
+
+                if use_sklearn:
+                    km = KMeans(
+                        n_clusters=partitions,
+                        init=init,
+                        max_iter=max_iter,
+                        verbose=verb,
+                        n_init=n_init,
+                    )
+                    km.fit_predict(sample_vectors)
+                    centroids = np.transpose(np.array(km.cluster_centers_))
+                else:
+                    centroids = kmeans_fit(partitions, init, max_iter, verbose, n_init, array_to_matrix(np.transpose(sample_vectors)))
+                    centroids = np.array(centroids) # TODO: why is this here?
             else:
                 centroids = np.random.rand(dimensions, partitions)
+
+            logger.debug("Start kmeans training")
+
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
                 A[0:dimensions, 0:partitions] = centroids
@@ -801,6 +818,7 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
+        use_sklearn: bool = False,
     ):
         import tiledb.cloud
         from sklearn.cluster import KMeans
@@ -899,10 +917,13 @@ def ingest(
             )
             logger.debug("Input centroids: %s", centroids[0:5])
             logger.debug("Assigning vectors to centroids")
-            km = KMeans()
-            km._n_threads = threads
-            km.cluster_centers_ = centroids
-            assignments = km.predict(vectors)
+            if use_sklearn:
+                km = KMeans()
+                km.n_threads_ = threads
+                km.cluster_centers_ = centroids
+                assignments = km.predict(vectors)
+            else:
+                assignments = kmeans_predict(centroids, vectors)
             logger.debug("Assignments: %s", assignments[0:100])
             partial_new_centroids = update_centroids()
             logger.debug("New centroids: %s", partial_new_centroids[0:5])
@@ -1442,6 +1463,7 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
+        use_sklearn: bool = False,
         mode: Mode = Mode.LOCAL,
     ) -> dag.DAG:
         if mode == Mode.BATCH:
@@ -1520,6 +1542,7 @@ def ingest(
                         config=config,
                         verbose=verbose,
                         trace_id=trace_id,
+                        use_sklearn=use_sklearn,
                         name="kmeans",
                         resources={"cpu": "8", "memory": "32Gi"},
                         image_name=DEFAULT_IMG_NAME,
@@ -1565,6 +1588,7 @@ def ingest(
                                     config=config,
                                     verbose=verbose,
                                     trace_id=trace_id,
+                                    use_sklearn=use_sklearn,
                                     name="k-means-part-" + str(task_id),
                                     resources={"cpu": str(threads), "memory": "12Gi"},
                                     image_name=DEFAULT_IMG_NAME,
@@ -1902,6 +1926,7 @@ def ingest(
             config=config,
             verbose=verbose,
             trace_id=trace_id,
+            use_sklearn=use_sklearn,
             mode=mode,
         )
         logger.debug("Submitting ingestion graph")

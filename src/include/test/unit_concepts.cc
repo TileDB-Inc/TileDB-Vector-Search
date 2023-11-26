@@ -322,16 +322,15 @@ TEST_CASE("concepts: partitionable", "[concepts]") {
   CHECK(!partitionable<Vector<int>>);
 }
 
-
-
 template <class T>
 class dummy_feature_vector : public std::vector<T> {
  public:
-  using base = typename std::vector<T>::vector;
+  using base = typename std::vector<T>;  //::vector??
 
- // If both size and dimension are available, dimension() cpo is ambiguous
+  // If both size and dimension are available, dimension() cpo is ambiguous
  private:
   using base::size;
+
  public:
   auto dimension() const {
     return this->size();
@@ -339,12 +338,12 @@ class dummy_feature_vector : public std::vector<T> {
 };
 
 template <feature_vector R>
-void foo(const R& r){}
+void foo(const R& r) {
+}
 
 void bar() {
   foo(dummy_feature_vector<int>{});
 }
-
 
 TEST_CASE("concepts: feature_vector", "[concepts]") {
   CHECK(!feature_vector<int>);
