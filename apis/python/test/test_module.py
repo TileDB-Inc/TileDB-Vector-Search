@@ -6,7 +6,8 @@ from tiledb.vector_search import _tiledbvspy as vspy
 
 
 def test_tdbMatrix(tmpdir):
-    p = str(tmpdir.mkdir("test").join("test.tdb"))
+    d = tmpdir.mkdir("test");
+    p = str(d.join("test.tdb"))
     data = np.random.rand(12).astype(np.float32).reshape(3, 4)
 
     create_array(p, data)

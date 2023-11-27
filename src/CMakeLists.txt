@@ -160,6 +160,7 @@ endif()
 include(Docopt)
 include(mdspan)
 include(nlohmann_json)
+# include(HighFive)
 
 add_subdirectory(src)
 

@@ -1,6 +1,7 @@
 import json
 import multiprocessing
 from typing import Any, Mapping
+import logging
 
 import numpy as np
 from tiledb.cloud.dag import Mode
@@ -9,6 +10,8 @@ from tiledb.vector_search import index
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
                                                   storage_formats)
+
+import logging, pdb
 
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
 TILE_SIZE_BYTES = 64000000  # 64MB
@@ -170,10 +173,12 @@ class IVFFlatIndex(index.Index):
         if nthreads == -1:
             nthreads = multiprocessing.cpu_count()
 
+        logging.info(f"mode is {mode}, self.memory_budget is {self.memory_budget}, use_nuv_implementation is {use_nuv_implementation}")
         nprobe = min(nprobe, self.partitions)
         if mode is None:
             queries_m = array_to_matrix(np.transpose(queries))
             if self.memory_budget == -1:
+#                logging.info(f"query internal len(self._index): {len(self._index)}")
                 d, i = ivf_query_ram(
                     self.dtype,
                     self._db,
@@ -275,6 +280,7 @@ class IVFFlatIndex(index.Index):
             config: Optional[Mapping[str, Any]] = None,
             timestamp: int = 0,
         ):
+
             queries_m = array_to_matrix(np.transpose(query_vectors))
             if timestamp == 0:
                 r = dist_qv(
@@ -345,6 +351,7 @@ class IVFFlatIndex(index.Index):
 
         parts_per_node = int(math.ceil(num_parts / num_partitions))
         nodes = []
+
         for part in range(0, num_parts, parts_per_node):
             part_end = part + parts_per_node
             if part_end > num_parts:
@@ -354,7 +361,12 @@ class IVFFlatIndex(index.Index):
                 aqt = []
                 for ttt in range(len(active_queries[tt])):
                     aqt.append(active_queries[tt][ttt])
+                #aq.append(np.array(aqt))
+                #aq.append(StdVector_u64(aqt))
                 aq.append(aqt)
+            #logging.info(f"type of aq: {type(aq)}, type of aqt: {type(aqt)}, dtype of aqt: {aq.dtype}")
+            #logging.info(f"type of np.array(aq): {type(np.array(aq, dtype=object))}")
+
             nodes.append(
                 submit(
                     dist_qv_udf,
