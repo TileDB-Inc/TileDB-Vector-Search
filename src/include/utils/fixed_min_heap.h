@@ -507,7 +507,7 @@ using heap_index_t = typename heap_traits<Heap>::index_type;
 // template <class T>
 // using fixed_min_heap = fixed_min_set_heap_1<T>;
 
-#ifdef ALLHEAPS  // Kept here for historical comparison reasons.  They are
+  // Kept here for historical comparison reasons.  They are
                  // really slow.
 template <class T, class Compare = std::less<T>>
 class fixed_min_set_heap_3 : public std::vector<T> {

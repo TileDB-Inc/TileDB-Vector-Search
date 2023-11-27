@@ -84,13 +84,12 @@ auto dist_qv_finite_ram_part(
                          tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   using score_type = float;
-  using parts_type = typename std::remove_reference_t<
-      decltype(dist_active_partitions)>::value_type;
+  // using parts_type = typename
+  // std::remove_reference_t<decltype(dist_active_partitions)> ::value_type;
   using indices_type =
       typename std::remove_reference_t<decltype(global_indices)>::value_type;
 
   size_t num_queries = num_vectors(query);
-
 
   /*
    * We are given a subset of the partitions of the array, as given by
@@ -139,7 +138,6 @@ auto dist_qv_finite_ram_part(
           [&query,
            &partitioned_vectors,
            &active_queries = dist_active_queries,
-           &active_partitions = dist_active_partitions,
            k_nn,
            first_part,
            last_part]() {

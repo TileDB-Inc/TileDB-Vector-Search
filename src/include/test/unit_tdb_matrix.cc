@@ -1,5 +1,5 @@
 /**
- * @file   unit_linalg.cc
+ * @file   unit_tdb_matrix.cc
  *
  * @section LICENSE
  *
@@ -200,10 +200,4 @@ TEMPLATE_TEST_CASE("tdb_matrix: preload", "[tdb_matrix]", float, uint8_t) {
       CHECK(X(i, j) == Z(i, j));
     }
   }
-}
-
-TEST_CASE("foo" "[bar]") {
-  tiledb::Context ctx;
-
-  auto x = tdbColMajorMatrix<float>(ctx, "/private/var/folders/yj/w905q2n90vg1_51z5rj18bm80000gn/T/pytest-of-lums/pytest-2/test_tdbMatrix0/test/test.tdb/", 0, 0, 0, 0, 0);
 }

@@ -1167,7 +1167,7 @@ class ivf_flat_index {
 
   /***************************************************************************
    * Getters (copilot weirded me out again -- it suggested "Getters" based
-   * only on the comment string "/*" that I started, and with the two functions
+   * only on the comment string "/ *" that I started, and with the two functions
    * below.)
    * Note that we don't have a `num_vectors` because it isn't clear what
    * that means for a partitioned (possibly out-of-core) index.

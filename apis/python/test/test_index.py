@@ -96,7 +96,7 @@ def test_ivf_flat_index(tmp_path):
 
     index = index.consolidate_updates()
 
-    pdb.set_trace()
+    # pdb.set_trace()
 
     result_d, result_i = index.query(
         np.array([[2, 2, 2]], dtype=np.float32), k=3, nprobe=partitions

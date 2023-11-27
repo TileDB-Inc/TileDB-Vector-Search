@@ -760,7 +760,7 @@ auto qv_query_heap_finite_ram(
       (timestamp == 0) ? tiledb::TemporalPolicy() :
                          tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
-  using score_type = float;
+  // using score_type = float;
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
   using parts_type = indices_type;
