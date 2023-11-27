@@ -252,7 +252,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       ids_.resize(max_cols_);
     }
 
-#ifndef __APPLE__
+#ifdef __cpp_lib_smart_ptr_for_overwrite
     auto data_ = std::make_unique_for_overwrite<T[]>(dimension * max_cols_);
 #else
     auto data_ = std::unique_ptr<T[]>(new T[dimension * max_cols_]);
