@@ -71,7 +71,10 @@ class CloudTests(unittest.TestCase):
             partitions=partitions,
             input_vectors_per_work_item=5000,
             config=tiledb.cloud.Config().dict(),
-            mode=Mode.BATCH,
+            # TODO Re-enable.
+            #  This is temporarily disabled due to an incompatibility of new ingestion code and previous
+            #  UDF library releases.
+            # mode=Mode.BATCH,
         )
         _, result_i = index.query(query_vectors, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
