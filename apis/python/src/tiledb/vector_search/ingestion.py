@@ -1775,7 +1775,7 @@ def ingest(
         # TODO remove temp data for tiledb URIs
         if not index_group_uri.startswith("tiledb://"):
             group = tiledb.Group(index_group_uri, "r")
-            if group.__contains__(PARTIAL_WRITE_ARRAY_DIR):
+            if PARTIAL_WRITE_ARRAY_DIR in group:
                 group.close()
                 group = tiledb.Group(index_group_uri, "w")
                 group.remove(PARTIAL_WRITE_ARRAY_DIR)
