@@ -262,6 +262,51 @@ def test_ivf_flat_ingestion_numpy(tmp_path):
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
+def test_ivf_flat_ingestion_multiple_workers(tmp_path):
+    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
+    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
+    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    index_uri = os.path.join(tmp_path, "array")
+    k = 100
+    partitions = 100
+    nqueries = 100
+    nprobe = 20
+
+    query_vectors = load_fvecs(queries_uri)
+    gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
+
+    index = ingest(
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
+        source_uri=source_uri,
+        partitions=partitions,
+        input_vectors_per_work_item=421,
+        max_tasks_per_stage=4,
+    )
+    _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    # Test single query vector handling
+    _, result1 = index.query(query_vectors[10], k=k, nprobe=nprobe)
+    assert accuracy(result1, np.array([gt_i[10]])) > MINIMUM_ACCURACY
+
+    index_ram = IVFFlatIndex(uri=index_uri)
+    _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    _, result = index_ram.query(
+        query_vectors,
+        k=k,
+        nprobe=nprobe,
+        use_nuv_implementation=True,
+    )
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    # NB: local mode currently does not return distances
+    _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+
 def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
     source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
     queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
