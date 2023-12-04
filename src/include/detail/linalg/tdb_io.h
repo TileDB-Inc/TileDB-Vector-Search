@@ -47,39 +47,76 @@
 #include "utils/print_types.h"
 #include "utils/timer.h"
 
-template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-void create_matrix(
-    const tiledb::Context& ctx,
-    const Matrix<T, LayoutPolicy, I>& A,
-    const std::string& uri) {
-  // @todo: make this a parameter
-  size_t num_parts = 10;
-  size_t row_extent = std::max<size_t>(
-      (A.num_rows() + num_parts - 1) / num_parts, A.num_rows() >= 2 ? 2 : 1);
-  size_t col_extent = std::max<size_t>(
-      (A.num_cols() + num_parts - 1) / num_parts, A.num_cols() >= 2 ? 2 : 1);
+/******************************************************************************
+ * Matrix creation and writing.  Because we support out-of-core operations with
+ * matrices, reading a matrix is more subtle and is contained in the tdb_matrix
+ * and tdb_partitioned_matrix classes.
+ ******************************************************************************/
 
+/**
+ * Create an empty TileDB array to eventually contain a matrix (a
+ * feature_vector_array).
+ */
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+void create_empty_for_matrix(
+    const tiledb::Context& ctx,
+    const std::string& uri,
+    const std::string& attr_name,
+    size_t rows,
+    size_t cols,
+    size_t row_extent,
+    size_t col_extent,
+    std::optional<tiledb_filter_type_t> filter = std::nullopt) {
   tiledb::Domain domain(ctx);
   domain
       .add_dimension(tiledb::Dimension::create<int>(
-          ctx, "rows", {{0, (int)A.num_rows() - 1}}, row_extent))
+          ctx, "rows", {{0, (int)rows - 1}}, row_extent))
       .add_dimension(tiledb::Dimension::create<int>(
-          ctx, "cols", {{0, (int)A.num_cols() - 1}}, col_extent));
+          ctx, "cols", {{0, (int)cols - 1}}, col_extent));
 
-  // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
 
   auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
                    TILEDB_ROW_MAJOR :
                    TILEDB_COL_MAJOR;
   schema.set_domain(domain).set_order({{order, order}});
+  schema.add_attribute(tiledb::Attribute::create<T>(ctx, attr_name));
 
-  schema.add_attribute(tiledb::Attribute::create<T>(ctx, "values"));
+  if (filter) {
+    tiledb::FilterList fl(ctx);
+    fl.add_filter(tiledb::Filter(ctx, *filter));
+    schema.set_coords_filter_list(fl);
+  }
 
   tiledb::Array::create(uri, schema);
 }
+
 /**
- * Write the contents of a Matrix to a TileDB array.
+ * @brief Create an empty TileDB array based on a Matrix.
+ */
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+void create_matrix(
+    const tiledb::Context& ctx,
+    const Matrix<T, LayoutPolicy, I>& A,
+    const std::string& uri,
+    std::optional<tiledb_filter_type_t> filter = std::nullopt) {
+  // @todo: make this a parameter
+  size_t num_parts = 10;
+
+  size_t row_extent = std::max<size_t>(
+      (A.num_rows() + num_parts - 1) / num_parts, A.num_rows() >= 2 ? 2 : 1);
+  size_t col_extent = std::max<size_t>(
+      (A.num_cols() + num_parts - 1) / num_parts, A.num_cols() >= 2 ? 2 : 1);
+
+  create_empty_for_matrix<T, LayoutPolicy, I>(
+      ctx, uri, "values", A.num_rows(), A.num_cols(), row_extent, col_extent, filter);
+}
+
+/**
+ * @brief Write the contents of a Matrix to a TileDB array.
+ *
+ * @note If we create the matrix here, it will not have any compression
+ * @todo Add compressor argument
  */
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 void write_matrix(
@@ -122,6 +159,46 @@ void write_matrix(
   array->close();
 }
 
+/******************************************************************************
+ * Vector I/O
+ ******************************************************************************/
+
+/**
+ * Create an empty TileDB array to eventually contain a vector
+ * @tparam feature_type
+ * @param ctx
+ * @param uri
+ * @param attr_name
+ * @param rows
+ * @param row_extent
+ */
+template <class feature_type>
+void create_empty_for_vector(
+    const tiledb::Context& ctx,
+    const std::string& uri,
+    const std::string& attr_name,
+    size_t rows,
+    size_t row_extent) {
+  tiledb::Domain domain(ctx);
+  domain.add_dimension(tiledb::Dimension::create<int>(
+      ctx, "rows", {{0, (int)rows - 1}}, row_extent));
+
+  // The array will be dense.
+  tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
+  schema.set_domain(domain).set_order({{TILEDB_ROW_MAJOR, TILEDB_ROW_MAJOR}});
+
+  schema.add_attribute(tiledb::Attribute::create<feature_type>(ctx, attr_name));
+
+  tiledb::Array::create(uri, schema);
+}
+
+/**
+ * Create an empty TileDB array to eventually contain a vector
+ * @tparam feature_type
+ * @param ctx
+ * @param uri
+ * @todo change order of arguments
+ */
 template <std::ranges::contiguous_range V>
 void create_vector(
     const tiledb::Context& ctx, const V& v, const std::string& uri) {
@@ -129,22 +206,15 @@ void create_vector(
 
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
-  tiledb::Domain domain(ctx);
-  domain.add_dimension(tiledb::Dimension::create<int>(
-      ctx, "rows", {{0, (int)size(v) - 1}}, tile_extent));
 
-  // The array will be dense.
-  tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
-  schema.set_domain(domain).set_order({{TILEDB_ROW_MAJOR, TILEDB_ROW_MAJOR}});
-
-  schema.add_attribute(tiledb::Attribute::create<value_type>(ctx, "values"));
-
-  tiledb::Array::create(uri, schema);
+  create_empty_for_vector<value_type>(
+      ctx, uri, "values", size(v), tile_extent);
 }
 
 /**
  * Write the contents of a std::vector to a TileDB array.
  * @todo change the naming of this function to something more appropriate
+ * @todo change the order of arguments
  */
 template <std::ranges::contiguous_range V>
 void write_vector(

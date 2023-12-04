@@ -56,6 +56,7 @@
 #include "concepts.h"
 #include "cpos.h"
 #include "index/index_defs.h"
+#include "index/ivf_flat_group.h"
 #include "linalg.h"
 
 #include "detail/flat/qv.h"
@@ -93,16 +94,26 @@ class ivf_flat_index {
 
   using centroids_storage_type = ColMajorMatrix<centroid_feature_type>;
 
-  /****************************************************************************
-   * Index data
-   ****************************************************************************/
   std::mt19937 gen_;
 
+  constexpr static const IndexKind index_kind_ = IndexKind::IVFFlat;
+
+  /****************************************************************************
+   * Index group information
+   ****************************************************************************/
   std::optional<std::reference_wrapper<const tiledb::Context>> cached_ctx_;
 
-  std::string group_uri_;
+  uint64_t timestamp_{0};
   tiledb::TemporalPolicy temporal_policy_;
+  ivf_flat_index_group<ivf_flat_index> group_;
 
+  /****************************************************************************
+   * Index representation
+   ****************************************************************************/
+
+  uint64_t dimension_{0};
+  uint64_t num_partitions_{0};
+  
   // The PartitionedMatrix has indices and ids internally
   std::unique_ptr<storage_type> partitioned_vectors_;
   centroids_storage_type centroids_;
@@ -111,43 +122,13 @@ class ivf_flat_index {
   std::vector<indices_type> tmp_indices_;
   std::string tmp_ids_uri_;
 
-  /****************************************************************************
-   * Metadata
-   ****************************************************************************/
-
-  constexpr static const IndexKind index_kind_ = IndexKind::IVFFlat;
-
-  uint64_t dimension_{0};
-  uint64_t nlist_;
-  uint64_t max_iter_;
-  float tol_;
+  uint64_t max_iter_{1};
+  float tol_{1.e-4};
   float reassign_ratio_{0.075};
+
   uint64_t num_threads_{std::thread::hardware_concurrency()};
   uint64_t seed_{std::random_device{}()};
-  uint64_t timestamp_{0};
 
-  // @todo store seed as metadata
-  // size_t seed_ = std::random_device{}();
-
-  tiledb_datatype_t feature_datatype_{TILEDB_ANY};
-  tiledb_datatype_t id_datatype_{TILEDB_ANY};
-  tiledb_datatype_t px_datatype_{TILEDB_ANY};
-
-  //  Index metadata. index_kind_ is handled separately as a class variable
-  using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
-  std::vector<metadata_element> metadata{
-      {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
-      {"id_datatype", &id_datatype_, TILEDB_UINT32},
-      {"px_datatype", &px_datatype_, TILEDB_UINT32},
-      {"dimension", &dimension_, TILEDB_UINT64},
-      {"num_partitions", &nlist_, TILEDB_UINT64},
-      {"max_iter", &max_iter_, TILEDB_UINT64},
-      {"tol", &tol_, TILEDB_FLOAT32},
-      {"reassign_ratio", &reassign_ratio_, TILEDB_FLOAT32},
-      {"num_threads", &num_threads_, TILEDB_UINT64},
-      // {"seed", &seed_, TILEDB_UINT64},
-      // {"timestamp", &timestamp_, TILEDB_UINT64},
-  };
 
  public:
   using value_type = feature_type;
@@ -170,24 +151,29 @@ class ivf_flat_index {
       size_t max_iter = 2,
       float tol = 0.000025)
       :  // , dimension_(dim)
-      nlist_(nlist)
+      num_partitions_(nlist)
       , max_iter_(max_iter)
       , tol_(tol)
-      , feature_datatype_(type_to_tiledb_t<feature_type>)
-      , id_datatype_(type_to_tiledb_t<id_type>)
-      , px_datatype_(type_to_tiledb_t<indices_type>)
-  // , centroids_(dim, nlist)
   {
   }
 
+  /**
+   * @brief Open a previously created index.
+   * @param ctx
+   * @param uri
+   * @param timestamp
+   */
   ivf_flat_index(
       const tiledb::Context& ctx,
       const std::string& uri,
       uint64_t timestamp = 0)
       : cached_ctx_{ctx}
-      , group_uri_{uri}
-      , temporal_policy_{(timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)}
-      , timestamp_{timestamp} {
+      , group_{uri}
+      , timestamp_{timestamp}
+      , temporal_policy_{
+            (timestamp_ == 0) ?
+                tiledb::TemporalPolicy() :
+                tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp_)} {
     open_index();
   }
 
@@ -210,10 +196,7 @@ class ivf_flat_index {
             parts, ids, indices)}
       , centroids_{std::move(centroids)}
       , dimension_{::dimension(*partitioned_vectors_)}
-      , nlist_{::num_vectors(centroids_)}
-      , feature_datatype_{type_to_tiledb_t<feature_type>}
-      , id_datatype_{type_to_tiledb_t<id_type>}
-      , px_datatype_{type_to_tiledb_t<indices_type>} {
+      , num_partitions_{::num_vectors(centroids_)} {
   }
 
   /**
@@ -247,11 +230,8 @@ class ivf_flat_index {
       , tmp_indices_(std::move(indices))
       , tmp_ids_uri_(ids_uri)
       , dimension_{::dimension(centroids_)}  // @todo is dimension needed?
-      , nlist_{::num_vectors(centroids_)}
-      , timestamp_{timestamp}
-      , feature_datatype_{type_to_tiledb_t<feature_type>}
-      , id_datatype_{type_to_tiledb_t<id_type>}
-      , px_datatype_{type_to_tiledb_t<indices_type>} {
+      , num_partitions_{::num_vectors(centroids_)}
+      , timestamp_{timestamp} {
   }
 #endif
 
@@ -302,12 +282,12 @@ class ivf_flat_index {
         training_set.num_cols(), std::numeric_limits<score_type>::max() / 8192);
 
 #ifdef _TRIANGLE_INEQUALITY
-    std::vector<centroid_feature_type> centroid_centroid(nlist_, 0.0);
+    std::vector<centroid_feature_type> centroid_centroid(num_partitions_, 0.0);
     std::vector<index_type> nearest_centroid(training_set.num_cols(), 0);
 #endif
 
     // Calculate the remaining centroids using K-means++ algorithm
-    for (size_t i = 1; i < nlist_; ++i) {
+    for (size_t i = 1; i < num_partitions_; ++i) {
       stdx::execution::indexed_parallel_policy par{num_threads_};
       stdx::range_for_each(
           std::move(par),
@@ -369,10 +349,10 @@ class ivf_flat_index {
   void kmeans_random_init(const V& training_set) {
     scoped_timer _{__FUNCTION__};
 
-    std::vector<indices_type> indices(nlist_);
+    std::vector<indices_type> indices(num_partitions_);
     std::vector<bool> visited(training_set.num_cols(), false);
     std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
-    for (size_t i = 0; i < nlist_; ++i) {
+    for (size_t i = 0; i < num_partitions_; ++i) {
       size_t index;
       do {
         index = dis(gen_);
@@ -383,7 +363,7 @@ class ivf_flat_index {
     // std::iota(begin(indices), end(indices), 0);
     // std::shuffle(begin(indices), end(indices), gen_);
 
-    for (size_t i = 0; i < nlist_; ++i) {
+    for (size_t i = 0; i < num_partitions_; ++i) {
       std::copy(
           begin(training_set[indices[i]]),
           end(training_set[indices[i]]),
@@ -405,9 +385,9 @@ class ivf_flat_index {
   void train_no_init(const V& training_set) {
     scoped_timer _{__FUNCTION__};
 
-    std::vector<size_t> degrees(nlist_, 0);
+    std::vector<size_t> degrees(num_partitions_, 0);
     auto new_centroids =
-        ColMajorMatrix<centroid_feature_type>(dimension_, nlist_);
+        ColMajorMatrix<centroid_feature_type>(dimension_, num_partitions_);
 
     for (size_t iter = 0; iter < max_iter_; ++iter) {
       auto [scores, parts] = detail::flat::qv_partition_with_scores(
@@ -421,7 +401,7 @@ class ivf_flat_index {
       std::fill(begin(degrees), end(degrees), 0);
 
       // How many centroids should we try to fix up
-      size_t heap_size = std::ceil(reassign_ratio_ * nlist_) + 5;
+      size_t heap_size = std::ceil(reassign_ratio_ * num_partitions_) + 5;
       auto high_scores = fixed_min_pair_heap<
           feature_type,
           index_type,
@@ -441,7 +421,7 @@ class ivf_flat_index {
       }
 
       size_t max_degree = 0;
-      for (size_t i = 0; i < nlist_; ++i) {
+      for (size_t i = 0; i < num_partitions_; ++i) {
         auto degree = degrees[i];
         max_degree = std::max<size_t>(max_degree, degree);
         low_degrees.insert(degree, i);
@@ -499,7 +479,7 @@ class ivf_flat_index {
       // @todo parallelize?
       float max_diff = 0.0;
       float total_weight = 0.0;
-      for (size_t j = 0; j < nlist_; ++j) {
+      for (size_t j = 0; j < num_partitions_; ++j) {
         if (degrees[j] != 0) {
           auto centroid = new_centroids[j];
           for (size_t k = 0; k < dimension_; ++k) {
@@ -584,11 +564,11 @@ class ivf_flat_index {
       const V& training_set,
       kmeans_init init = kmeans_init::random) {
     dimension_ = ::dimension(training_set);
-    if (nlist_ == 0) {
-      nlist_ = std::sqrt(num_vectors(training_set));
+    if (num_partitions_ == 0) {
+      num_partitions_ = std::sqrt(num_vectors(training_set));
     }
 
-    centroids_ = ColMajorMatrix<centroid_feature_type>(dimension_, nlist_);
+    centroids_ = ColMajorMatrix<centroid_feature_type>(dimension_, num_partitions_);
     switch (init) {
       case (kmeans_init::none):
         break;
@@ -949,6 +929,7 @@ class ivf_flat_index {
       const std::string& group_uri,
       bool overwrite) const {
     tiledb::VFS vfs(ctx);
+
     if (vfs.is_dir(group_uri)) {
       if (overwrite == false) {
         return false;
@@ -1029,6 +1010,7 @@ class ivf_flat_index {
    */
   auto open_index() {
     tiledb::Config cfg;
+
     tiledb::Group read_group(cached_ctx_->get(), group_uri_, TILEDB_READ, cfg);
 
     tiledb_datatype_t index_kind_type;
@@ -1193,8 +1175,8 @@ class ivf_flat_index {
                 << " != " << rhs.dimension_ << ")" << std::endl;
       return false;
     }
-    if (nlist_ != rhs.nlist_) {
-      std::cout << "nlist_ != rhs.nlist_ (" << nlist_ << " != " << rhs.nlist_
+    if (num_partitions_ != rhs.num_partitions_) {
+      std::cout << "num_partitions_ != rhs.num_partitions_ (" << num_partitions_ << " != " << rhs.num_partitions_
                 << ")" << std::endl;
       return false;
     }

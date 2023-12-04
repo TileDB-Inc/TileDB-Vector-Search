@@ -90,6 +90,9 @@ constexpr bool always_false = false;
   throw std::runtime_error("Unsupported datatype");
 }
 
+// cf type_to_str(tiledb_datatype_t type) in tiledb/type.h
+// type_to_tiledb<T>::tiledb_type
+// tiledb_to_type<tiledb_datatype_t>::type
 [[maybe_unused]] static std::string datatype_to_string(
     tiledb_datatype_t datatype) {
   switch (datatype) {
@@ -116,7 +119,8 @@ constexpr bool always_false = false;
   }
 }
 
-[[maybe_unused]] static size_t datatype_to_size(tiledb_datatype_t datatype) {
+[[maybe_unused]] constexpr static size_t datatype_to_size(
+    tiledb_datatype_t datatype) {
   switch (datatype) {
     case TILEDB_FLOAT32:
       return sizeof(float);
@@ -136,6 +140,51 @@ constexpr bool always_false = false;
       return sizeof(uint64_t);
     default:
       throw std::runtime_error("Unsupported datatype");
+  }
+}
+
+[[maybe_unused]] constexpr static auto string_to_filter(
+    const std::string& str) {
+  if (str == "gzip") {
+    return TILEDB_FILTER_GZIP;
+  }
+  if (str == "zstd") {
+    return TILEDB_FILTER_ZSTD;
+  }
+  if (str == "lz4") {
+    return TILEDB_FILTER_LZ4;
+  }
+  if (str == "rle") {
+    return TILEDB_FILTER_RLE;
+  }
+  if (str == "bzip2") {
+    return TILEDB_FILTER_BZIP2;
+  }
+  if (str == "double-delta") {
+    return TILEDB_FILTER_DOUBLE_DELTA;
+  }
+  throw std::runtime_error("Unsupported filter name " + str);
+}
+
+[[maybe_unused]] constexpr static auto filter_to_string(
+    tiledb_filter_type_t filter) {
+  switch (filter) {
+    case TILEDB_FILTER_NONE:
+      return "none";
+    case TILEDB_FILTER_GZIP:
+      return "gzip";
+    case TILEDB_FILTER_ZSTD:
+      return "zstd";
+    case TILEDB_FILTER_LZ4:
+      return "lz4";
+    case TILEDB_FILTER_RLE:
+      return "rle";
+    case TILEDB_FILTER_BZIP2:
+      return "bzip2";
+    case TILEDB_FILTER_DOUBLE_DELTA:
+      return "double-delta";
+    default:
+      throw std::runtime_error("Unsupported filter");
   }
 }
 

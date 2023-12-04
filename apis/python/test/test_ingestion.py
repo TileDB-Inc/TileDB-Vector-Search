@@ -18,6 +18,11 @@ MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 def test_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
+
+    logging.info("here")
+
+    logging.info(tmp_path)
+
     create_random_dataset_u8(nb=10000, d=100, nq=100, k=10, path=dataset_dir)
     dtype = np.uint8
     k = 10
@@ -88,6 +93,9 @@ def test_flat_ingestion_external_id_u8(tmp_path):
 def test_ivf_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
+
+    logging.info(tmp_path)
+
     k = 10
     size = 100000
     partitions = 100
@@ -137,6 +145,9 @@ def test_ivf_flat_ingestion_u8(tmp_path):
 def test_ivf_flat_ingestion_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
+
+    logging.info(tmp_path)
+
     k = 10
     size = 100000
     dimensions = 128
