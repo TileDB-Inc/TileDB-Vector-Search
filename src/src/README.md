@@ -106,14 +106,13 @@ The full set of usage options for `ivf_flat` are the following:
 ivf_flat: demo CLI program for performing feature vector search with kmeans index.
 Usage:
     ivf_flat (-h | --help)
-    ivf_flat --db_uri URI --centroids_uri URI (--index_uri URI | --sizes_uri URI)
-             --parts_uri URI --ids_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
-            [--k NN][--nprobe NN] [--nqueries NN] [--alg ALGO] [--finite] [--blocksize NN] [--nth]
-            [--nthreads NN] [--region REGION] [--log FILE] [-d] [-v]
+    ivf_flat --centroids_uri URI --parts_uri URI (--index_uri URI | --sizes_uri URI)
+             --ids_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
+            [--k NN][--nprobe NN] [--nqueries NN] [--alg ALGO] [--infinite] [--finite] [--blocksize NN]
+            [--nthreads NN] [--ppt NN] [--vpt NN] [--nodes NN] [--region REGION] [--stats] [--log FILE] [-d] [-v]
 
 Options:
     -h, --help            show this screen
-    --db_uri URI          database URI with feature vectors
     --centroids_uri URI   URI with centroid vectors
     --index_uri URI       URI with the paritioning index
     --sizes_uri URI       URI with the parition sizes
@@ -129,10 +128,13 @@ Options:
     --infinite            Load the entire array into RAM for the search [default: false]
     --finite              For backward compatibility, load only required partitions into memory [default: true]
     --blocksize NN        number of vectors to process in an out of core block (0 = all) [default: 0]
-    --nth                 use nth_element for top k [default: false]
-    --nthreads NN         number of threads to use (0 = all) [default: 0]
+    --nthreads NN         number of threads to use (0 = hardware concurrency) [default: 0]
+    --ppt NN              minimum number of partitions to assign to a thread (0 = no min) [default: 0]
+    --vpt NN              minimum number of vectors to assign to a thread (0 = no min) [default: 0]
+    --nodes NN            number of nodes to use for (emulated) distributed query [default: 1]
     --region REGION       AWS S3 region [default: us-east-1]
     --log FILE            log info to FILE (- for stdout)
+    --stats               log TileDB stats [default: false]
     -d, --debug           run in debug mode [default: false]
     -v, --verbose         run in verbose mode [default: false]
 ```
@@ -152,20 +154,18 @@ The inverted file index consists of data stored in multiple TileDB arrays, which
 
 The user can also optionally specify
 * An array containing ground truth vectors (`--groundtruth_uri`), i.e., the nearest-neighbors that would be returned from an exact (`flat L2)` search and/or
-* An array for saving the results of the query. 
+* An array for saving the results of the query. (`--output_uri`).
 
 Example
 ```txt
   ivf_flat                                                                                    \ 
-    --db_uri s3://tiledb-nikos/vector-search/datasets/arrays/sift-1b-col-major                \
     --centroids_uri s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/centroids.tdb  \
     --parts_uri s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/parts.tdb          \
     --index_uri s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/index.tdb          \
-    --sizes_uri s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/index_size.tdb     \
     --ids_uri s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/ids.tdb              \
     --query_uri s3://tiledb-andrew/kmeans/benchmark/query_public_10k                          \
     --groundtruth_uri s3://tiledb-andrew/kmeans/benchmark/bigann_1B_GT_nnids                  \
-    --output_array file://vector_search/results/output.tdb
+    --output_uri file://vector_search/results/output.tdb
 ```
 
 #### Search Options
@@ -178,8 +178,6 @@ The default is to use all the queries in the query array, which can also be spec
 * Which search algorithm in the C++ library to use for performing the search (`--algo`).  It is recommended to use the default (other algorithms are currently WIP).  
 * Whether to load the entire partitioned array into memory when performing the search or (if the `--infinite` option is given) whether to load only the necesary partitions, given the specified query.  It is recommended to generally use the default value except in the case of large values of `nqueries` and `nprobe` and the availability of sufficient RAM to hold the entire partitioned array.  (For backward compatibility, there is also a `--finite` flag which had the complementary behavior to `--infinite`).  If `--blocksize` is specified with the finite-memory option, `ivf_flat` also operate in out-of-core fashion, loading subsets of partitions into memory, in the order they appear in the partitioned vector array.  
 * An upper bound to the number of vectors to be loaded during each batch when using the finite-memory case.  `ivf_flat` will load complete partitions on each out-of-core iteration, so the number of vectors loaded will generally be fewer than the specified upper bound.  Similarly, the specified upper bound must be larger than the largest partition in the partitioned array.  Out of core operation is necessary if available RAM cannot hold all the index data (in general due to the size of the vector data to be searched).  Even if available memory can accommodate the entire partitioned array, out of core operation can be useful for making more efficient use of hierarchical memory.
-* Whether to use the `nth_element` C++ standard library algorithm for ranking top-k vectors (`--nth`).  The default value is `false` and the default should always be used  This option was used for performance experiments and should be considered deprecated.
-* How many threads to use when executing the parallelized sections of the search (`--nthreads`).  The default is `std::thread::hardware_concurrency`, i.e., the number of available cores.  In general the default value should be used.
 * The AWS region to use when accessing TileDB arrays stored in S3 (`--region`).  The example array URIs provided with TileDB-Vector-Search are located in the `us-east-1` region, which is the default value. 
 * The name of a file to write logging information to (`--log`).  The default is nil, meaning no logs will be written.  If the value `-` is specified, the output will be written to `std::cout`.
 * Whether to run in debug mode (`-d` or `--debug`).  This will print copious information that is useful only to the library developers.  End users should always use the default.
@@ -195,8 +193,8 @@ Example:
     --ids_uri s3://tiledb-nikos/vector-search/andrew/sift-base-1b-10000p/ids.tdb              \
     --query_uri s3://tiledb-andrew/kmeans/benchmark/query_public_10k                          \
     --groundtruth_uri s3://tiledb-andrew/kmeans/benchmark/bigann_1B_GT_nnids                  \
-    --output_array file://vector_search/results/output.tdb                                    \
-    --blocksize 1000000 --nqueries 1000 --nprobe 128 --log - -v                                          
+    --output_uri file://vector_search/results/output.tdb                                    \
+    --blocksize 1000000 --nqueries 1000 --nprobe 128 --log -v
 ```
 Since there are a large number of options, particular the long set of of array URIs, it is recommended that
 you use the setup scripts in the `src/benchmarks` subdirectory.  The setup script defines bash functions that
@@ -222,7 +220,7 @@ If the `--kmeans` flag is specified, `index` will generate a centroids array usi
 
 The options used by `index` are
 * The name of the database to be indexed (`--db_uri`)
-* The name of the centroids array to be written, if `--kmeans` is specified (`--out_centroids_uri`)
+* The name of the centroids array to be written, if `--kmeans` is specified (`--centroids_uri`)
 * The name of the centroids array to be used for indexing if `--kmeans` is not specified (`--centroids`)
 * The name of the array of vectors specified by `--db_uri`, partitioned according to the generated (or provided) centroids 
 * The name of the index array to be written (`--index_uri`)
@@ -235,10 +233,10 @@ Example:
 ```
   ivf_index  --kmeans                                                       \
              --db_uri s3://tiledb-lums/sift/sift_base                       \                   
-             --id_uri s3://tiledb-lums/kmeans/ivf_flat/ids                  \
+             --ids_uri s3://tiledb-lums/kmeans/ivf_flat/ids                  \
              --index_uri s3://tiledb-lums/kmeans/ivf_flat/index             \
              --part_uri s3://tiledb-lums/kmeans/ivf_flat/parts              \ 
-             --out_centroids_uri s3://tiledb-lums/kmeans/ivf_flat/centroids
+             --centroids_uri s3://tiledb-lums/kmeans/ivf_flat/centroids
 
 ```
 
@@ -268,8 +266,8 @@ program will check its results against the given set of ground truth vectors.
   Usage:
       flat_l2 (-h | --help)
       flat_l2 --db_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
-          [--k NN] [--nqueries NN] [--alg ALGO] [--finite] [--blocksize NN] [--nth]
-          [--nthreads N] [--region REGION] [--log FILE] [-d] [-v]
+          [--k NN] [--nqueries NN] [--alg ALGO] [--finite] [--blocksize NN]
+          [--nthreads N] [--region REGION] [--log FILE] [--stats] [-d] [-v]
 
   Options:
       -h, --help              show this screen
@@ -282,10 +280,10 @@ program will check its results against the given set of ground truth vectors.
       --alg ALGO              which algorithm to use for comparisons [default: vq_heap]
       --finite                use finite RAM (out of core) algorithm [default: false]
       --blocksize NN          number of vectors to process in an out of core block (0 = all) [default: 0]
-      --nth                   use nth_element for top k [default: false]
       --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
       --region REGION         AWS region [default: us-east-1]
       --log FILE              log info to FILE (- for stdout)
+      --stats                 log TileDB stats [default: false]
       -d, --debug             run in debug mode [default: false]
       -v, --verbose           run in verbose mode [default: false]
 ```
@@ -309,7 +307,7 @@ Example:
     --db_uri s3://tiledb-nikos/vector-search/datasets/arrays/sift-1b-col-major                \
     --query_uri s3://tiledb-andrew/kmeans/benchmark/query_public_10k                          \
     --groundtruth_uri s3://tiledb-andrew/kmeans/benchmark/bigann_1B_GT_nnids                  \
-    --output_array file://vector_search/results/output.tdb                                    \
+    --output_uri file://vector_search/results/output.tdb                                    \
     --blocksize 1000000 --nqueries 1000 --nprobe 128 --log - -v                                          
 ```
 As with `ivf_flat`, it is recommended that you run `flat_l2` using the setup scripts in `src/benchmarks` (or that you use your own scripts).

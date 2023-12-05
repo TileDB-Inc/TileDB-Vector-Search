@@ -11,8 +11,7 @@ Please see the following blog posts for background:
 * [Why TileDB as a Vector Database](https://tiledb.com/blog/why-tiledb-as-a-vector-database)
 * [TileDB Vector Search 101](https://tiledb.com/blog/tiledb-101-vector-search/)
 
-We are actively working on LangChain integration, with others to come soon:
-* https://github.com/TileDB-Inc/langchain/pull/1 (WIP)
+We have released a [LangChain integration](https://python.langchain.com/docs/integrations/vectorstores/tiledb), with others to come soon.
 
 # Quick Links
 
@@ -22,7 +21,7 @@ We are actively working on LangChain integration, with others to come soon:
 
 # Quick Installation
 
-Pre-built packages are available from PyPI using pip:
+Pre-built packages are available from [PyPI](https://pypi.org/project/tiledb-vector-search) using pip:
 
 ```
 pip install tiledb-vector-search
@@ -37,11 +36,11 @@ conda install -c tiledb -c conda-forge tiledb-vector-search
 
 # Contributing
 
-We welcome contributions. Please see [`Building`](Building.md) for
+We welcome contributions. Please see [`Building`](./documentation/Building.md) for
 development-build instructions. For large new
 features, please open an issue to discuss goals and approach in order
 to ensure a smooth PR integration and review process. All contributions
-must be licensed under the repository's [MIT License](../LICENSE).
+must be licensed under the repository's [MIT License](./LICENSE).
 
 # Testing
 
