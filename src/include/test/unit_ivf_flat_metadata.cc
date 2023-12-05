@@ -55,5 +55,13 @@ TEST_CASE("ivf_flat_metadata: open group", "[ivf_flat_metadata]") {
 
   auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
   auto x = ivf_flat_index_metadata();
-  x.load_metadata(read_group);
+
+  SECTION("load metadata") {
+    x.load_metadata(read_group);
+  }
+
+  SECTION("load and dump metadata") {
+    x.load_metadata(read_group);
+    x.dump();
+  }
 }

@@ -87,53 +87,55 @@ class ivf_flat_index_metadata {
      return vec;
    }
 
+
+   using metadata_check_type = std::tuple<std::string, std::string&>;
+   std::vector<metadata_check_type> metadata_checks{
+       {"dataset_type", dataset_type_},
+       {"index_type", index_type_},
+       {"storage_version", storage_version_},
+       {"dtype", dtype_},
+       {"base_sizes", base_sizes_str_},
+       {"ingestion_timestamps", ingestion_timestamps_str_},
+       {"partition_history", partition_history_str_},
+   };
+
+
+   auto check_metadata(tiledb::Group& read_group, const metadata_check_type& check) {
+     tiledb_datatype_t v_type;
+     uint32_t v_num;
+     const void* v;
+     if (!read_group.has_metadata(std::get<0>(check), &v_type)) {
+       throw std::runtime_error("Missing metadata: " + std::get<0>(check));
+     }
+     read_group.get_metadata(std::get<0>(check), &v_type, &v_num, &v);
+     if (v_type != TILEDB_STRING_ASCII && v_type != TILEDB_STRING_UTF8) {
+       throw std::runtime_error(
+           std::get<0>(check) + " must be a string not " +
+           tiledb::impl::type_to_str(v_type));
+     }
+     std::string tmp = std::string(static_cast<const char*>(v), v_num);
+     if (std::get<1>(check) != "" && tmp != std::get<1>(check)) {
+       throw std::runtime_error(
+           std::get<0>(check) + " must be '" + std::get<1>(check) +
+           "' not " + tmp);
+     }
+     std::get<1>(check) = tmp;
+   };
+
+
   /**
-   *
    * @param read_group
-   * @return
+   * @return void
    *
-   * @todo Use initializer list
+   * @todo Dispatch on storage version
    */
   auto load_metadata (tiledb::Group& read_group) {
     tiledb_datatype_t v_type;
     uint32_t v_num;
     const void* v;
 
-    using metadata_check_type = std::tuple<std::string, std::string&>;
-    std::vector<metadata_check_type> metadata_checks{
-        {"dataset_type", dataset_type_},
-        {"index_type", index_type_},
-        {"storage_version", storage_version_},
-        {"dtype", dtype_},
-        {"base_sizes", base_sizes_str_},
-        {"ingestion_timestamps", ingestion_timestamps_str_},
-        {"partition_history", partition_history_str_},
-    };
-
-    auto check_metadata = [&read_group](const auto& check) {
-      tiledb_datatype_t v_type;
-      uint32_t v_num;
-      const void* v;
-      if (!read_group.has_metadata(std::get<0>(check), &v_type)) {
-        throw std::runtime_error("Missing metadata: " + std::get<0>(check));
-      }
-      read_group.get_metadata(std::get<0>(check), &v_type, &v_num, &v);
-      if (v_type != TILEDB_STRING_ASCII && v_type != TILEDB_STRING_UTF8) {
-        throw std::runtime_error(
-            std::get<0>(check) + " must be a string not " +
-            tiledb::impl::type_to_str(v_type));
-      }
-      std::string tmp = std::string(static_cast<const char*>(v), v_num);
-      if (std::get<1>(check) != "" && tmp != std::get<1>(check)) {
-        throw std::runtime_error(
-            std::get<0>(check) + " must be '" + std::get<1>(check) +
-            "' not " + tmp);
-      }
-      std::get<1>(check) = tmp;
-    };
-
     for (auto& check : metadata_checks) {
-      check_metadata(check);
+      check_metadata(read_group, check);
     }
 
     if (!read_group.has_metadata("temp_size", &v_type)) {
@@ -152,62 +154,13 @@ class ivf_flat_index_metadata {
     ingestion_timestamps_ = json_to_vector<ingestion_timestamps_type>(ingestion_timestamps_str_);
     partition_history_ = json_to_vector<partition_history_type>(partition_history_str_);
 
-#if 0
-    if (!read_group.has_metadata("dataset_type", &v_type)) {
-       throw std::runtime_error("Missing metadata: dataset_type");
-    }
-    read_group.get_metadata("dataset_type", &v_type, &v_num, &v);
-    if (v_type != TILEDB_STRING_ASCII && v_type != TILEDB_STRING_UTF8) {
-      throw std::runtime_error("dataset_type must be a string not " + tiledb::impl::type_to_str(v_type));
-    }
-    dataset_type_ = std::string(static_cast<const char*>(v), v_num);
-    if (dataset_type_ != "vector_search") {
-      throw std::runtime_error("dataset_type must be 'vector_search' not " + dataset_type_);
-    }
+  }
 
-    read_group.get_metadata("index_type", &v_type, &v_num, &v);
-    if (v_type != TILEDB_STRING_ASCII && v_type != TILEDB_STRING_UTF8) {
-      throw std::runtime_error("index_type must be a string not " + tiledb::impl::type_to_str(v_type));
+  auto dump() {
+    for (auto& check : metadata_checks) {
+      std::cout << std::get<0>(check) << ": " << std::get<1>(check) << std::endl;
     }
-    index_type_ = std::string(static_cast<const char*>(v), v_num);
-    if (index_type_ != "IVF_FLAT") {
-      throw std::runtime_error("index_type must be 'IVF_FLAT' not " + index_type_);
-    }
-
-    read_group.get_metadata("storage_version", &v_type, &v_num, &v);
-    if (v_type != TILEDB_STRING_ASCII && v_type != TILEDB_STRING_UTF8) {
-      throw std::runtime_error("storage_version must be a string not " + tiledb::impl::type_to_str(v_type));
-    }
-    storage_version_ = std::string(static_cast<const char*>(v), v_num);
-    if (storage_version_ != "0.3") {
-      throw std::runtime_error("storage_version must be '0.3' not " + storage_version_);
-    }
-
-    read_group.get_metadata("dtype", &v_type, &v_num, &v);
-    dtype_ = std::string(static_cast<const char*>(v), v_num);
-
-    read_group.get_metadata("base_sizes", &v_type, &v_num, &v);
-    base_sizes_str_ = std::string(static_cast<const char*>(v), v_num);
-
-    read_group.get_metadata("ingestion_timestamps", &v_type, &v_num, &v);
-    ingestion_timestamps_str_ = std::string(static_cast<const char*>(v), v_num);
-
-    read_group.get_metadata("partition_history", &v_type, &v_num, &v);
-    partition_history_str_ = std::string(static_cast<const char*>(v), v_num);
-
-    read_group.get_metadata("temp_size", &v_type, &v_num, &v);
-    if (v_type == TILEDB_UINT64) {
-      temp_size_ = *static_cast<const uint64_t*>(v);
-    } else if (v_type == TILEDB_FLOAT64) {
-      temp_size_ = static_cast<uint64_t>(*static_cast<const double*>(v));
-    } else {
-      throw std::runtime_error("temp_size must be a uint64_t or float64 not " + tiledb::impl::type_to_str(v_type));
-    }
-
-    base_sizes_ = json_to_vector<base_sizes_type>(base_sizes_str_);
-    ingestion_timestamps_ = json_to_vector<ingestion_timestamps_type>(ingestion_timestamps_str_);
-    partition_history_ = json_to_vector<partition_history_type>(partition_history_str_);
-#endif
+    std::cout << "temp_size: " << temp_size_ << std::endl;
   }
 };
 
