@@ -31,7 +31,7 @@ arrays in an `ivf_flat_index` at a given timestamp.
 The `ivf_flat_index_metadata` class encapsulates metadata in a class separate from
 `ivf_flat_index_group` for the sake of convenience.
 
-## Functionality
+## Functionality 
 
 The `ivf_flat_index` class provides three classes of functionality: 
 1. Creating an inverted file index and writing it to a group; and
@@ -173,14 +173,35 @@ class IVFFlatIndex {
                 const FeatureVector& active_partitions, 
                 const FeatureVectorArray& activer_queries, size_t upper_bound);
   
-  
   /**
    * Computes the active partitions and active queries for the given query.
+   * Internally applies a query of the centroids against the queries.  This
+   * can safely be done on the centralized instance since the number of
+   * queries and the number of centroids is assumed to be modest and will fit
+   * completely into memory.
    */
   std::tuple<FeatureVector, FeatureVectorArray> 
   partition_for_active(const FeatureVector& query, size_t nprobe);
 };
 ```
+
+## Implementation
+
+We seek to provide as uniform an interface as possible across different index
+classes and to reuse as much code as possible.
+
+* `vector_search_index` base class that provides common API
+
+* `flat_l2_index` derived class supporting flat search with L2 norm distance.  Note that the distance computation is parameterized so that `flat_l2_index` can also support dot, cosine, jaccard, etc.
+* `flat_pq_index` derived class supporting flat search with L2 norm (et al) distance.  Vectors are compressed with PQ encoding.
+* `ivf_flat_index` derived class supporting inverted index search without compression, and with parameterized distance over uncompressed vectors.
+* `ivf_pq_index` derived class supporting inverted index search with parameterized distance over PQ compressed vectors.
+* `vamana_index` derived class supporting graph-based vamana indexing and querying with parameterized distance over uncompressed vectors.
+* `vamana_pq_index` derived class supporting graph-based vamana indexing and querying with parameterized distance over PQ compressed vectors.
+
+The `flat` and `ivf` indexes can all support additions and deletions in the same way -- by using an auxiliary array to hold the updates.  Queries are performed by first querying the "main" index and then filtering those results using the contents of the query applied to the updates array.  When the updates array has grown sufficiently large, the indexes are re-indexed.
+
+In the non-cloud case, insertions into the `vamana` (graph-based) indexes is extrememly efficient and can be done immediately (without the use of a separate updates array). 
 
 
 ### `ivf_flat_index`

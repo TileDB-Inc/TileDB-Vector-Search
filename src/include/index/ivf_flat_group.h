@@ -46,6 +46,8 @@ template <class Index>
 class ivf_flat_index_group {
   Index* index_ {nullptr};
 
+  std::reference_wrapper<const tiledb::Context> cached_ctx_;
+
   std::filesystem::path centroids_array_name_;
   std::filesystem::path part_array_name_;
   std::filesystem::path ids_array_name_;
@@ -77,9 +79,11 @@ class ivf_flat_index_group {
 
   // @todo Loop through `storage_formats` as an initializer list
   ivf_flat_index_group(
+      const tiledb::Context ctx,
       const std::string& uri,
       const std::string& version = current_storage_version)
-      : group_uri_(uri)
+      : cached_ctx_(ctx)
+      , group_uri_(uri)
       , centroids_array_name_{storage_formats[version]["centroids_array_name"]}
       , part_array_name_{storage_formats[version]["part_array_name"]}
       , ids_array_name_{storage_formats[version]["ids_array_name"]}
@@ -109,6 +113,77 @@ class ivf_flat_index_group {
     return tiledb::Object::remove(ctx, group_uri_);
   }
 
+  /**
+   * Read metadata, etc
+   */
+  auto open(const tiledb::Config& cfg = tiledb::Config{}) {
+
+    /*
+     * First verify that this is the right kind of index
+     */
+    tiledb::Group read_group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
+
+    tiledb_datatype_t index_kind_type;
+    if (!read_group.has_metadata("index_kind", &index_kind_type)) {
+      throw std::runtime_error("Missing index_kind metadata");
+    }
+    if (index_kind_type != TILEDB_UINT32) {
+      throw std::runtime_error("Wrong type for index_kind");
+    }
+    uint32_t index_kind_value;
+    void* index_kind_addr;
+    read_group.get_metadata(
+        "index_kind",
+        &index_kind_type,
+        &index_kind_value,
+        (const void**)&index_kind_addr);
+    *reinterpret_cast<IndexKind*>(&index_kind_value) =
+        *reinterpret_cast<IndexKind*>(index_kind_addr);
+    if (index_kind_value != (uint32_t) Index::index_kind_) {
+      throw std::runtime_error("Wrong value for index_kind");
+    }
+  }
+
+#if 0
+
+    for (auto& [name, value, datatype] : metadata) {
+      if (!read_group.has_metadata(name, &datatype)) {
+        throw std::runtime_error("Missing metadata: " + name);
+      }
+      uint32_t count;
+      void* addr;
+      read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
+      if (datatype == TILEDB_UINT32) {
+        *reinterpret_cast<uint32_t*>(value) =
+            *reinterpret_cast<uint32_t*>(addr);
+      } else if (datatype == TILEDB_UINT64) {
+        *reinterpret_cast<uint64_t*>(value) =
+            *reinterpret_cast<uint64_t*>(addr);
+      } else if (datatype == TILEDB_FLOAT32) {
+        *reinterpret_cast<float*>(value) = *reinterpret_cast<float*>(addr);
+      } else {
+        throw std::runtime_error("Unsupported datatype");
+      }
+    }
+
+    centroids_ =
+        std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
+            *cached_ctx_, group_uri_ + "/centroids", 0, temporal_policy_));
+  }
+
+#endif
+
+
+  /**
+   * Create an empty group.
+   *
+   * @param ctx
+   * @param dimension
+   * @param cfg
+   * @return
+   *
+   * @todo Take some of the tile sizes (et al) as parameters
+   */
   auto create_empty(
       const tiledb::Context& ctx,
       size_t dimension,

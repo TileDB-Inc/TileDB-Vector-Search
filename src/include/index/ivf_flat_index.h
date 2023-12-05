@@ -71,15 +71,26 @@
 
 enum class kmeans_init { none, kmeanspp, random };
 
+/**
+ * Class representing an inverted file (IVF) index for flat (non-compressed)
+ * feature vectors.  The class simply holds the index data itself, it is
+ * unaware of where the data comes from -- reading and writing data is done
+ * via an ivf_flat_index_group.  Thus, this class does not hold information
+ * about the group (neither the group members, nor the group metadata).
+ *
+ * @tparam partitioned_vectors_feature_type
+ * @tparam partitioned_ids_type
+ * @tparam partitioning_index_type
+ */
 template <
-    class T,
+    class partitioned_vectors_feature_type,
     class partitioned_ids_type = uint64_t,
     class partitioning_index_type = uint64_t>
 class ivf_flat_index {
-  using feature_type = T;
+  using feature_type = partitioned_vectors_feature_type;
   using id_type = partitioned_ids_type;
   using indices_type = partitioning_index_type;
-  using score_type = float;
+  using score_type = float;  // @todo -- this should be a parameter?
   using centroid_feature_type = score_type;
 
   using storage_type = ColMajorPartitionedMatrix<
@@ -101,7 +112,6 @@ class ivf_flat_index {
   /****************************************************************************
    * Index group information
    ****************************************************************************/
-  std::optional<std::reference_wrapper<const tiledb::Context>> cached_ctx_;
 
   uint64_t timestamp_{0};
   tiledb::TemporalPolicy temporal_policy_;
@@ -111,17 +121,22 @@ class ivf_flat_index {
    * Index representation
    ****************************************************************************/
 
+  // Cached information about the partitioned vectors in the index
   uint64_t dimension_{0};
   uint64_t num_partitions_{0};
-  
-  // The PartitionedMatrix has indices and ids internally
+
+  // The PartitionedMatrix has indices and ids internally and is also
+  // responsible for dealing with loading itself, etc
   std::unique_ptr<storage_type> partitioned_vectors_;
   centroids_storage_type centroids_;
 
+  // Some uris we cache for transitional constructors used in the current
+  // Python API
   std::string tmp_parts_uri_;
   std::vector<indices_type> tmp_indices_;
   std::string tmp_ids_uri_;
 
+  // Some parameters for performing kmeans clustering
   uint64_t max_iter_{1};
   float tol_{1.e-4};
   float reassign_ratio_{0.075};
@@ -129,10 +144,13 @@ class ivf_flat_index {
   uint64_t num_threads_{std::thread::hardware_concurrency()};
   uint64_t seed_{std::random_device{}()};
 
-
  public:
   using value_type = feature_type;
   using index_type = partitioning_index_type;  // @todo This isn't right
+
+  /****************************************************************************
+   * Constructors (et al)
+   ****************************************************************************/
 
   /**
    * @brief Construct a new `ivf_flat_index` object, setting a number of
@@ -144,6 +162,8 @@ class ivf_flat_index {
    * @param nlist Number of centroids / partitions to compute.
    * @param max_iter Maximum number of iterations for kmans algorithm.
    * @param tol Convergence tolerance for kmeans algorithm.
+   *
+   * @todo Use chained parameter technique
    */
   ivf_flat_index(
       // size_t dim,
@@ -153,15 +173,21 @@ class ivf_flat_index {
       :  // , dimension_(dim)
       num_partitions_(nlist)
       , max_iter_(max_iter)
-      , tol_(tol)
-  {
+      , tol_(tol) {
   }
 
   /**
-   * @brief Open a previously created index.
+   * @brief Open a previously created index, stored as a TileDB group.  This
+   * class does not deal with the group itself, but rather calls the group
+   * constructor.  The group constructor will initialize itself with information
+   * about the different constituent arrays needed for operation of this class,
+   * but will not initialize any member data of this class.
+   *
    * @param ctx
    * @param uri
    * @param timestamp
+   *
+   * @todo Is this spooky action at a distance?
    */
   ivf_flat_index(
       const tiledb::Context& ctx,
@@ -174,7 +200,11 @@ class ivf_flat_index {
             (timestamp_ == 0) ?
                 tiledb::TemporalPolicy() :
                 tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp_)} {
-    open_index();
+
+    /**
+     * Prep the group for subsequent reading of arrays.
+     */
+    group_.open();
   }
 
 #if 0
@@ -241,6 +271,10 @@ class ivf_flat_index {
   ivf_flat_index(ivf_flat_index&& index) = default;
   ivf_flat_index& operator=(ivf_flat_index&& index) = default;
 
+  /****************************************************************************
+   * kmeans algorithm for clustering
+   * @todo Move out of this class and implement as free functions
+   ****************************************************************************/
   /**
    * @brief Use the kmeans++ algorithm to choose initial centroids.
    * The current implementation follows the algorithm described in
@@ -548,6 +582,14 @@ class ivf_flat_index {
 #endif
   }
 
+  /****************************************************************************
+   * Methods for building, writing, and reading the complete index
+   * @todo Create single function that trains and adds (ingests)
+   * @todo Provide interface that takes URI rather than vectors
+   * @todo Provide "kernel" interface for use in distributed computation
+   * @todo Do we need an out-of-core version of this?
+   ****************************************************************************/
+
   /**
    * Compute centroids of the training set data, using the kmeans algorithm.
    * The initialization algorithm used to generate the starting centroids
@@ -568,7 +610,8 @@ class ivf_flat_index {
       num_partitions_ = std::sqrt(num_vectors(training_set));
     }
 
-    centroids_ = ColMajorMatrix<centroid_feature_type>(dimension_, num_partitions_);
+    centroids_ =
+        ColMajorMatrix<centroid_feature_type>(dimension_, num_partitions_);
     switch (init) {
       case (kmeans_init::none):
         break;
@@ -607,9 +650,6 @@ class ivf_flat_index {
 #endif
   }
 
-  /****************************************************************************
-   * Methods for building, writing, and reading the complete index
-   ****************************************************************************/
   /**
    * @brief Build the index from a training set, given the centroids.  This
    * will partition the training set into a contiguous array, with one
@@ -635,6 +675,189 @@ class ivf_flat_index {
     // @todo Should we have a move here?
     partitioned_vectors_ = std::make_unique<storage_type>(
         training_set, partition_labels, num_unique_labels);
+  }
+
+  /*****************************************************************************
+   * Methods for reading and reading the index from a group.
+   *****************************************************************************/
+
+  /**
+   * @brief Read the the complete index arrays into ("infinite") memory.
+   * This will read the centroids, indices, partitioned_ids, and
+   * and the complete set of partitioned_vectors, along with metadata
+   * from a group_uri.
+   *
+   * @param group_uri
+   * @return bool indicating success or failure of read
+   */
+  auto read_index_infinite() {
+    if (partitioned_vectors_ &&
+        (::num_vectors(*partitioned_vectors_) != 0 ||
+         ::num_vectors(partitioned_vectors_->ids()) != 0)) {
+      throw std::runtime_error("Index already loaded");
+    }
+
+    // Load all partitions for infinite query
+    // Note that the constructor will move the infinite_parts vector
+    auto infinite_parts = std::vector<indices_type>(::num_vectors(centroids_));
+    std::iota(begin(infinite_parts), end(infinite_parts), 0);
+    partitioned_vectors_ = std::make_unique<tdb_storage_type>(
+        cached_ctx_->get(),
+        group_uri_ + "/partitioned_vectors",
+        group_uri_ + "/indices",
+        group_uri_ + "/partitioned_ids",
+        infinite_parts,
+        0,
+        temporal_policy_);
+
+    partitioned_vectors_->load();
+
+    assert(
+        ::num_vectors(*partitioned_vectors_) ==
+        size(partitioned_vectors_->ids()));
+    assert(
+        size(partitioned_vectors_->indices()) == ::num_vectors(centroids_) + 1);
+  }
+
+  /**
+   * @brief Open the index from the arrays contained in the group_uri.
+   * The "finite" queries only load as much data (ids and vectors) as are
+   * necessary for a given query -- so we can't load any data until we
+   * know what the query is.  So, here we would have read the centroids and
+   * indices into memory, when creating the index but would not have read
+   * the partitioned_ids or partitioned_vectors.
+   *
+   * @param group_uri
+   * @return bool indicating success or failure of read
+   */
+  template <feature_vector_array Q>
+  auto read_index_finite(
+      const Q& query_vectors, size_t nprobe, size_t upper_bound) {
+    if (partitioned_vectors_ &&
+        (::num_vectors(*partitioned_vectors_) != 0 ||
+         ::num_vectors(partitioned_vectors_->ids()) != 0)) {
+      throw std::runtime_error("Index already loaded");
+    }
+
+    auto&& [active_partitions, active_queries] =
+        detail::ivf::partition_ivf_flat_index<indices_type>(
+            centroids_, query_vectors, nprobe, num_threads_);
+
+    if (size(tmp_indices_) != 0) {
+      partitioned_vectors_ = std::make_unique<tdb_storage_type>(
+          *cached_ctx_,
+          tmp_parts_uri_,
+          std::move(tmp_indices_),
+          tmp_ids_uri_,
+          active_partitions,
+          upper_bound,
+          temporal_policy_);
+    } else {
+      partitioned_vectors_ = std::make_unique<tdb_storage_type>(
+          *cached_ctx_,
+          group_uri_ + "/partitioned_vectors",
+          group_uri_ + "/indices",
+          group_uri_ + "/partitioned_ids",
+          active_partitions,
+          upper_bound,
+          temporal_policy_);
+    }
+
+    // NB: We don't load the partitioned_vectors here.  We will load them
+    // when we do the query.
+
+    return std::make_tuple(
+        std::move(active_partitions), std::move(active_queries));
+  }
+
+  /**
+   * @brief Write the index to disk.  This would typically done after a set of
+   * input vectors has been read and a new group is created.
+   *
+   * We assume we have all of the data in memory, and that we are writing
+   * all of it to a TileDB group.  Since we have all of it in memory,
+   * we write from the PartitionedMatrix base class.
+   *
+   * @param group_uri
+   * @param overwrite
+   * @return bool indicating success or failure
+   */
+  auto write_index(
+      const tiledb::Context& ctx,
+      const std::string& group_uri,
+      bool overwrite) const {
+    tiledb::VFS vfs(ctx);
+
+    if (vfs.is_dir(group_uri)) {
+      if (overwrite == false) {
+        return false;
+      }
+      vfs.remove_dir(group_uri);
+    }
+
+    // Timestamp the index to be written at the current time
+    // @todo Do we need to do anything about the group itself?
+    size_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+                           std::chrono::system_clock::now().time_since_epoch())
+                           .count();
+
+    auto write_temporal_policy =
+        tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+
+    tiledb::Config cfg;
+    tiledb::Group::create(ctx, group_uri);
+    auto write_group = tiledb::Group(ctx, group_uri, TILEDB_WRITE, cfg);
+
+    // Write metadata for the ivf_flat_index
+    IndexKind index_kind = index_kind_;
+    write_group.put_metadata("index_kind", TILEDB_UINT32, 1, &index_kind);
+
+    // Write metadata for the ivf_flat_index.  The member data for the
+    // PartitionedMatrix is created when the PartitionedMatrix is
+    // constructed.
+    for (auto&& [name, value, type] : metadata) {
+      write_group.put_metadata(name, type, 1, value);
+    }
+
+    // Temporary names!
+    // @todo Name per schema in ingestion.py
+    auto centroids_uri = group_uri + "/centroids";
+    write_matrix(
+        ctx, centroids_, centroids_uri, 0, overwrite, write_temporal_policy);
+    write_group.add_member("centroids", true, "centroids");
+
+    auto indices_uri = group_uri + "/indices";
+    write_vector(
+        ctx,
+        partitioned_vectors_->indices(),
+        indices_uri,
+        0,
+        overwrite,
+        write_temporal_policy);
+    write_group.add_member("indices", true, "indices");
+
+    auto partitioned_ids_uri = group_uri + "/partitioned_ids";
+    write_vector(
+        ctx,
+        partitioned_vectors_->ids(),
+        partitioned_ids_uri,
+        0,
+        overwrite,
+        write_temporal_policy);
+    write_group.add_member("partitioned_ids", true, "partitioned_ids");
+
+    auto partitioned_vectors_uri = group_uri + "/partitioned_vectors";
+    write_matrix(
+        ctx,
+        *partitioned_vectors_,
+        partitioned_vectors_uri,
+        0,
+        overwrite,
+        write_temporal_policy);
+    write_group.add_member("partitioned_vectors", true, "partitioned_vectors");
+
+    write_group.close();
+    return true;
   }
 
   /*****************************************************************************
@@ -907,246 +1130,6 @@ class ivf_flat_index {
         num_threads_);
   }
 
-  /*****************************************************************************
-   * Methods for writing and reading the index
-   *****************************************************************************/
-
-  /**
-   * @brief Write the index to disk.  This will write the centroids, indices,
-   * partitioned_ids, and partitioned_vectors to disk, along with metadata to
-   * a group_uri.
-   *
-   * We assume we have all of the data in memory, and that we are writing
-   * all of it to a TileDB group.  Since we have all of it in memory,
-   * we write from the PartitionedMatrix base class.
-   *
-   * @param group_uri
-   * @param overwrite
-   * @return bool indicating success or failure
-   */
-  auto write_index(
-      const tiledb::Context& ctx,
-      const std::string& group_uri,
-      bool overwrite) const {
-    tiledb::VFS vfs(ctx);
-
-    if (vfs.is_dir(group_uri)) {
-      if (overwrite == false) {
-        return false;
-      }
-      vfs.remove_dir(group_uri);
-    }
-
-    // Timestamp the index to be written at the current time
-    // @todo Do we need to do anything about the group itself?
-    size_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-                           std::chrono::system_clock::now().time_since_epoch())
-                           .count();
-
-    auto write_temporal_policy =
-        tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
-
-    tiledb::Config cfg;
-    tiledb::Group::create(ctx, group_uri);
-    auto write_group = tiledb::Group(ctx, group_uri, TILEDB_WRITE, cfg);
-
-    // Write metadata for the ivf_flat_index
-    IndexKind index_kind = index_kind_;
-    write_group.put_metadata("index_kind", TILEDB_UINT32, 1, &index_kind);
-
-    // Write metadata for the ivf_flat_index.  The member data for the
-    // PartitionedMatrix is created when the PartitionedMatrix is
-    // constructed.
-    for (auto&& [name, value, type] : metadata) {
-      write_group.put_metadata(name, type, 1, value);
-    }
-
-    // Temporary names!
-    // @todo Name per schema in ingestion.py
-    auto centroids_uri = group_uri + "/centroids";
-    write_matrix(
-        ctx, centroids_, centroids_uri, 0, overwrite, write_temporal_policy);
-    write_group.add_member("centroids", true, "centroids");
-
-    auto indices_uri = group_uri + "/indices";
-    write_vector(
-        ctx,
-        partitioned_vectors_->indices(),
-        indices_uri,
-        0,
-        overwrite,
-        write_temporal_policy);
-    write_group.add_member("indices", true, "indices");
-
-    auto partitioned_ids_uri = group_uri + "/partitioned_ids";
-    write_vector(
-        ctx,
-        partitioned_vectors_->ids(),
-        partitioned_ids_uri,
-        0,
-        overwrite,
-        write_temporal_policy);
-    write_group.add_member("partitioned_ids", true, "partitioned_ids");
-
-    auto partitioned_vectors_uri = group_uri + "/partitioned_vectors";
-    write_matrix(
-        ctx,
-        *partitioned_vectors_,
-        partitioned_vectors_uri,
-        0,
-        overwrite,
-        write_temporal_policy);
-    write_group.add_member("partitioned_vectors", true, "partitioned_vectors");
-
-    write_group.close();
-    return true;
-  }
-
-  /**
-   * @brief Open the index and pre-load the arrays common to both infinite
-   * and finite queries (i.e., metadata, centroids, and indices).  We load
-   * the centroids here, but defer loading the info for the PartitionedMatrix
-   * until we know what kind of open we will need for that (finite or infinite).
-   */
-  auto open_index() {
-    tiledb::Config cfg;
-
-    tiledb::Group read_group(cached_ctx_->get(), group_uri_, TILEDB_READ, cfg);
-
-    tiledb_datatype_t index_kind_type;
-    if (!read_group.has_metadata("index_kind", &index_kind_type)) {
-      throw std::runtime_error("Missing index_kind metadata");
-    }
-    if (index_kind_type != TILEDB_UINT32) {
-      throw std::runtime_error("Wrong type for index_kind");
-    }
-    uint32_t index_kind_value;
-    void* index_kind_addr;
-    read_group.get_metadata(
-        "index_kind",
-        &index_kind_type,
-        &index_kind_value,
-        (const void**)&index_kind_addr);
-    *reinterpret_cast<IndexKind*>(&index_kind_value) =
-        *reinterpret_cast<IndexKind*>(index_kind_addr);
-    if (index_kind_value != (uint32_t)index_kind_) {
-      throw std::runtime_error("Wrong value for index_kind");
-    }
-
-    for (auto& [name, value, datatype] : metadata) {
-      if (!read_group.has_metadata(name, &datatype)) {
-        throw std::runtime_error("Missing metadata: " + name);
-      }
-      uint32_t count;
-      void* addr;
-      read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
-      if (datatype == TILEDB_UINT32) {
-        *reinterpret_cast<uint32_t*>(value) =
-            *reinterpret_cast<uint32_t*>(addr);
-      } else if (datatype == TILEDB_UINT64) {
-        *reinterpret_cast<uint64_t*>(value) =
-            *reinterpret_cast<uint64_t*>(addr);
-      } else if (datatype == TILEDB_FLOAT32) {
-        *reinterpret_cast<float*>(value) = *reinterpret_cast<float*>(addr);
-      } else {
-        throw std::runtime_error("Unsupported datatype");
-      }
-    }
-
-    centroids_ =
-        std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
-            *cached_ctx_, group_uri_ + "/centroids", 0, temporal_policy_));
-  }
-
-  /**
-   * @brief Read the the complete index arrays into ("infinite") memory.
-   * This will read the centroids, indices, partitioned_ids, and
-   * and the complete set of partitioned_vectors, along with metadata
-   * from a group_uri.
-   *
-   * @param group_uri
-   * @return bool indicating success or failure of read
-   */
-  auto read_index_infinite() {
-    if (partitioned_vectors_ &&
-        (::num_vectors(*partitioned_vectors_) != 0 ||
-         ::num_vectors(partitioned_vectors_->ids()) != 0)) {
-      throw std::runtime_error("Index already loaded");
-    }
-
-    // Load all partitions for infinite query
-    // Note that the constructor will move the infinite_parts vector
-    auto infinite_parts = std::vector<indices_type>(::num_vectors(centroids_));
-    std::iota(begin(infinite_parts), end(infinite_parts), 0);
-    partitioned_vectors_ = std::make_unique<tdb_storage_type>(
-        cached_ctx_->get(),
-        group_uri_ + "/partitioned_vectors",
-        group_uri_ + "/indices",
-        group_uri_ + "/partitioned_ids",
-        infinite_parts,
-        0,
-        temporal_policy_);
-
-    partitioned_vectors_->load();
-
-    assert(
-        ::num_vectors(*partitioned_vectors_) ==
-        size(partitioned_vectors_->ids()));
-    assert(
-        size(partitioned_vectors_->indices()) == ::num_vectors(centroids_) + 1);
-  }
-
-  /**
-   * @brief Open the index from the arrays contained in the group_uri.
-   * The "finite" queries only load as much data (ids and vectors) as are
-   * necessary for a given query -- so we can't load any data until we
-   * know what the query is.  So, here we would have read the centroids and
-   * indices into memory, when creating the index but would not have read
-   * the partitioned_ids or partitioned_vectors.
-   *
-   * @param group_uri
-   * @return bool indicating success or failure of read
-   */
-  template <feature_vector_array Q>
-  auto read_index_finite(
-      const Q& query_vectors, size_t nprobe, size_t upper_bound) {
-    if (partitioned_vectors_ &&
-        (::num_vectors(*partitioned_vectors_) != 0 ||
-         ::num_vectors(partitioned_vectors_->ids()) != 0)) {
-      throw std::runtime_error("Index already loaded");
-    }
-
-    auto&& [active_partitions, active_queries] =
-        detail::ivf::partition_ivf_flat_index<indices_type>(
-            centroids_, query_vectors, nprobe, num_threads_);
-
-    if (size(tmp_indices_) != 0) {
-      partitioned_vectors_ = std::make_unique<tdb_storage_type>(
-          *cached_ctx_,
-          tmp_parts_uri_,
-          std::move(tmp_indices_),
-          tmp_ids_uri_,
-          active_partitions,
-          upper_bound,
-          temporal_policy_);
-    } else {
-      partitioned_vectors_ = std::make_unique<tdb_storage_type>(
-          *cached_ctx_,
-          group_uri_ + "/partitioned_vectors",
-          group_uri_ + "/indices",
-          group_uri_ + "/partitioned_ids",
-          active_partitions,
-          upper_bound,
-          temporal_policy_);
-    }
-
-    // NB: We don't load the partitioned_vectors here.  We will load them
-    // when we do the query.
-
-    return std::make_tuple(
-        std::move(active_partitions), std::move(active_queries));
-  }
-
   /***************************************************************************
    * Getters (copilot weirded me out again -- it suggested "Getters" based
    * only on the comment string "/ *" that I started, and with the two functions
@@ -1176,8 +1159,8 @@ class ivf_flat_index {
       return false;
     }
     if (num_partitions_ != rhs.num_partitions_) {
-      std::cout << "num_partitions_ != rhs.num_partitions_ (" << num_partitions_ << " != " << rhs.num_partitions_
-                << ")" << std::endl;
+      std::cout << "num_partitions_ != rhs.num_partitions_ (" << num_partitions_
+                << " != " << rhs.num_partitions_ << ")" << std::endl;
       return false;
     }
     if (max_iter_ != rhs.max_iter_) {
