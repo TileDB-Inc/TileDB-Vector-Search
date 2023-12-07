@@ -136,6 +136,8 @@ kmeans_add_test(unit_gen_graphs)
 # kmeans_add_test(unit_high_five)
 # target_link_libraries(unit_high_five PRIVATE HighFive)
 
+kmeans_add_test(unit_ivf_flat_group)
+
 kmeans_add_test(unit_ivf_flat_index)
 
 kmeans_add_test(unit_ivf_flat_metadata)

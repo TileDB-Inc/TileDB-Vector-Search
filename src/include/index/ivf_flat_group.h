@@ -32,37 +32,38 @@
 #define TILEDB_IVF_FLAT_GROUP_H
 
 #include <filesystem>
+#include <map>
 #include <string>
+#include <vector>
 
 #include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 
 #include "index/index_defs.h"
-#include "index/ivf_flat_index.h"
 #include "index/ivf_flat_metadata.h"
 #include "tdb_defs.h"
 
-template <class Index>
+// template <class Index>
 class ivf_flat_index_group {
-  Index* index_ {nullptr};
+  // Index* index_ {nullptr};
 
   std::reference_wrapper<const tiledb::Context> cached_ctx_;
 
-  std::filesystem::path centroids_array_name_;
-  std::filesystem::path part_array_name_;
-  std::filesystem::path ids_array_name_;
-  std::filesystem::path indices_array_name_;
-
-  std::filesystem::path partial_write_array_name_;
-
-  std::filesystem::path input_vectors_array_name_;
-  std::filesystem::path external_ids_array_name_;
-  std::filesystem::path updates_array_name_;
-
   std::filesystem::path group_uri_;
 
+  std::string centroids_array_name_;
+  std::string parts_array_name_;
+  std::string ids_array_name_;
+  std::string indices_array_name_;
+
+  std::string partial_write_array_name_;
+
+  std::string input_vectors_array_name_;
+  std::string external_ids_array_name_;
+  std::string updates_array_name_;
+
   std::filesystem::path centroids_uri_;
-  std::filesystem::path part_uri_;
+  std::filesystem::path parts_uri_;
   std::filesystem::path ids_uri_;
   std::filesystem::path indices_uri_;
 
@@ -75,33 +76,26 @@ class ivf_flat_index_group {
   ivf_flat_index_metadata metadata_;
 
  public:
-  ivf_flat_index_group() = default;
+  ivf_flat_index_group() = delete;
 
   // @todo Loop through `storage_formats` as an initializer list
   ivf_flat_index_group(
-      const tiledb::Context ctx,
+      const tiledb::Context& ctx,
       const std::string& uri,
       const std::string& version = current_storage_version)
       : cached_ctx_(ctx)
       , group_uri_(uri)
       , centroids_array_name_{storage_formats[version]["centroids_array_name"]}
-      , part_array_name_{storage_formats[version]["part_array_name"]}
+      , parts_array_name_{storage_formats[version]["parts_array_name"]}
       , ids_array_name_{storage_formats[version]["ids_array_name"]}
       , indices_array_name_{storage_formats[version]["index_array_name"]}
       , partial_write_array_name_{storage_formats[version]
                                                  ["partial_write_array_name"]}
-      , input_vectors_array_name_{storage_formats[version]["input_vectors_array_name"]}
-      , external_ids_array_name_{storage_formats[version]["external_ids_array_name"]}
-      , updates_array_name_{storage_formats[version]["updates_array_name"]}
-
-      , centroids_uri_{group_uri_ / centroids_array_name_}
-      , part_uri_{group_uri_ / part_array_name_}
-      , ids_uri_{group_uri_ / ids_array_name_}
-      , indices_uri_{group_uri_ / indices_array_name_}
-      , partial_write_array_dir_{group_uri_ / partial_write_array_name_}
-      , input_vectors_uri_{group_uri_ / input_vectors_array_name_}
-      , external_ids_uri_{group_uri_ / external_ids_array_name_}
-      , updates_array_uri_{group_uri_ / updates_array_name_} {
+      , input_vectors_array_name_{storage_formats[version]
+                                                 ["input_vectors_array_name"]}
+      , external_ids_array_name_{storage_formats[version]
+                                                ["external_ids_array_name"]}
+      , updates_array_name_{storage_formats[version]["updates_array_name"]} {
   }
 
   bool exists(const tiledb::Context& ctx) const {
@@ -113,67 +107,121 @@ class ivf_flat_index_group {
     return tiledb::Object::remove(ctx, group_uri_);
   }
 
+  using uri_init_type = std::tuple<std::string, std::filesystem::path*>;
+  // std::vector<uri_init_type> uri_inits {
+  std::map<std::string, std::filesystem::path*> uri_inits{
+      {centroids_array_name_, &centroids_uri_},
+      {parts_array_name_, &parts_uri_},
+      {ids_array_name_, &ids_uri_},
+      {indices_array_name_, &indices_uri_},
+      {partial_write_array_name_, &partial_write_array_dir_},
+      {input_vectors_array_name_, &input_vectors_uri_},
+      {external_ids_array_name_, &external_ids_uri_},
+      {updates_array_name_, &updates_array_uri_},
+  };
+
   /**
-   * Read metadata, etc
+   * Read metadata, set up uris, etc.
    */
   auto open(const tiledb::Config& cfg = tiledb::Config{}) {
+    auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
 
-    /*
-     * First verify that this is the right kind of index
-     */
-    tiledb::Group read_group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
+    metadata_.load_metadata(read_group);
 
-    tiledb_datatype_t index_kind_type;
-    if (!read_group.has_metadata("index_kind", &index_kind_type)) {
-      throw std::runtime_error("Missing index_kind metadata");
+    for (size_t i = 0; i < read_group.member_count(); ++i) {
+      auto member = read_group.member(i);
+      auto name = member.name();
+      if (!name || name.value().empty()) {
+        throw std::runtime_error("Name is empty.");
+      }
+      if (uri_inits.find(*name) != uri_inits.end()) {
+        *uri_inits[*name] = std::filesystem::path(member.uri());
+      }
     }
-    if (index_kind_type != TILEDB_UINT32) {
-      throw std::runtime_error("Wrong type for index_kind");
-    }
-    uint32_t index_kind_value;
-    void* index_kind_addr;
-    read_group.get_metadata(
-        "index_kind",
-        &index_kind_type,
-        &index_kind_value,
-        (const void**)&index_kind_addr);
-    *reinterpret_cast<IndexKind*>(&index_kind_value) =
-        *reinterpret_cast<IndexKind*>(index_kind_addr);
-    if (index_kind_value != (uint32_t) Index::index_kind_) {
-      throw std::runtime_error("Wrong value for index_kind");
+
+    for (auto& [name, uri] : uri_inits) {
+      if (uri->empty()) {
+        *(uri) = group_uri_ / name;
+      }
     }
   }
 
+  /**************************************************************************
+   * Getters
+   **************************************************************************/
+
+  [[nodiscard]] auto centroids_uri() const {
+    return centroids_uri_;
+  }
+  [[nodiscard]] auto parts_uri() const {
+    return parts_uri_;
+  }
+  [[nodiscard]] auto ids_uri() const {
+    return ids_uri_;
+  }
+  [[nodiscard]] auto indices_uri() const {
+    return indices_uri_;
+  }
+  [[nodiscard]] auto partial_write_array_dir() const {
+    return partial_write_array_dir_;
+  }
+  [[nodiscard]] auto input_vectors_uri() const {
+    return input_vectors_uri_;
+  }
+  [[nodiscard]] auto external_ids_uri() const {
+    return external_ids_uri_;
+  }
+  [[nodiscard]] auto updates_array_uri() const {
+    return updates_array_uri_;
+  }
+  [[nodiscard]] auto centroids_name() const {
+    return centroids_array_name_;
+  }
+  [[nodiscard]] auto parts_name() const {
+    return parts_array_name_;
+  }
+  [[nodiscard]] auto ids_name() const {
+    return ids_array_name_;
+  }
+  [[nodiscard]] auto indices_name() const {
+    return indices_array_name_;
+  }
+  [[nodiscard]] auto partial_write_array_name() const {
+    return partial_write_array_name_;
+  }
+  [[nodiscard]] auto input_vectors_name() const {
+    return input_vectors_array_name_;
+  }
+  [[nodiscard]] auto external_ids_name() const {
+    return external_ids_array_name_;
+  }
+  [[nodiscard]] auto updates_array_name() const {
+    return updates_array_name_;
+  }
+
+  [[nodiscard]] const std::reference_wrapper<const tiledb::Context> cached_ctx()
+      const {
+    return cached_ctx_;
+  }
+  [[nodiscard]] std::reference_wrapper<const tiledb::Context> cached_ctx() {
+    return cached_ctx_;
+  }
+
 #if 0
-
-    for (auto& [name, value, datatype] : metadata) {
-      if (!read_group.has_metadata(name, &datatype)) {
-        throw std::runtime_error("Missing metadata: " + name);
-      }
-      uint32_t count;
-      void* addr;
-      read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
-      if (datatype == TILEDB_UINT32) {
-        *reinterpret_cast<uint32_t*>(value) =
-            *reinterpret_cast<uint32_t*>(addr);
-      } else if (datatype == TILEDB_UINT64) {
-        *reinterpret_cast<uint64_t*>(value) =
-            *reinterpret_cast<uint64_t*>(addr);
-      } else if (datatype == TILEDB_FLOAT32) {
-        *reinterpret_cast<float*>(value) = *reinterpret_cast<float*>(addr);
-      } else {
-        throw std::runtime_error("Unsupported datatype");
-      }
-    }
-
     centroids_ =
         std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
             *cached_ctx_, group_uri_ + "/centroids", 0, temporal_policy_));
   }
-
 #endif
 
+  auto dump() {
+    for (auto& [name, uri] : uri_inits) {
+      std::cout << name << " " << uri->string() << std::endl;
+    }
+  }
 
+  // Defer implementation for now
+#if 0
   /**
    * Create an empty group.
    *
@@ -297,9 +345,7 @@ class ivf_flat_index_group {
 
 
   }
-
-
-
+#endif
 };
 
 #endif  // TILEDB_IVF_FLAT_GROUP_H

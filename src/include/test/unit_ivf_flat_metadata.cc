@@ -35,6 +35,7 @@
 #include <string>
 
 #include "index/ivf_flat_metadata.h"
+#include "query_common.h"
 
 TEST_CASE("ivf_flat_metadata: test test", "[ivf_flat_metadata]") {
   REQUIRE(true);
@@ -48,10 +49,6 @@ TEST_CASE("ivf_flat_metadata: default constructor", "[ivf_flat_metadata]") {
 TEST_CASE("ivf_flat_metadata: open group", "[ivf_flat_metadata]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
-
-  auto group_uri_root = std::filesystem::path{"/Users/lums/TileDB/TileDB-Vector-Search/external/data/pytest-170/"};
-  auto group_uri_path = std::filesystem::path{"test_ivf_flat_ingestion_f320/array"};
-  auto group_uri = group_uri_root / group_uri_path;
 
   auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
   auto x = ivf_flat_index_metadata();

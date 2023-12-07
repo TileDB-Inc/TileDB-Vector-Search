@@ -257,6 +257,10 @@ static std::string diskann_truth_index_data =
 // static std::string diskann_truth_mem_layout = m1_diskann_rust_test_data_root
 // + "truth_disk_index_siftsmall_learn_256pts_R4_L50_A1.2_mem.index";
 
+
+auto group_uri_root = std::filesystem::path{"/Users/lums/TileDB/TileDB-Vector-Search/external/data/pytest-170/"};
+auto group_uri_path = std::filesystem::path{"test_ivf_flat_ingestion_f320/array"};
+auto group_uri = group_uri_root / group_uri_path;
 #endif
 
 /**
