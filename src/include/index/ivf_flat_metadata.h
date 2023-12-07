@@ -26,6 +26,26 @@
  * THE SOFTWARE.
  *
  * @section DESCRIPTION
+ *
+ *
+ * Group metadata identifiers:
+ *
+ *  "base_sizes",            // (json) list
+ *  "dataset_type",          // "vector_search"
+ *  "dtype",                 // "float32", etc (Python dtype names)
+ *  "index_type",            // "FLAT", "IVF_FLAT"
+ *  "ingestion_timestamps",  // (json) list
+ *  "partition_history",     // (json) list
+ *  "storage_version",       // "0.3"
+ *  "temp_size",
+ *
+ *  "feature_datatype",      // TILEDB_UINT32
+ *  "id_datatype",           // TILEDB_UINT32
+ *  "px_datatype",           // TILEDB_UINT32
+ *
+ *  "feature_type",        // std::string
+ *  "id_type",             // std::string
+ *  "indices_type",        // std::string
  */
 
 #ifndef TILEDB_IVF_FLAT_METADATA_H
@@ -35,74 +55,53 @@
 #include <tiledb/tiledb>
 
 #include "index/index_defs.h"
+#include "tdb_defs.h"
 
 #include "nlohmann/json.hpp"
 
 class ivf_flat_index_metadata {
  private:
+
+  friend class ivf_flat_index_group;
+
   using base_sizes_type = uint32_t;
   using ingestion_timestamps_type = uint32_t;
   using partition_history_type = uint32_t;
 
+  /**************************************************************************
+   * Members set / updated by users of the group
+   ******************************************************************************/
   // @todo Is this where we actually want to store these?
   std::vector<base_sizes_type> base_sizes_;
   std::vector<ingestion_timestamps_type> ingestion_timestamps_;
   std::vector<partition_history_type> partition_history_;
   uint64_t temp_size_{0};  // @todo ???
 
+  IndexKind index_kind_{IndexKind::IVFFlat};
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
   tiledb_datatype_t px_datatype_{TILEDB_ANY};
 
-  std::string base_sizes_str_{"[0]"};
+  // A non-empty value indicates an expected value / default value
+  std::string base_sizes_str_{""};
   std::string dataset_type_{"vector_search"};
   std::string dtype_{""};
   std::string index_type_{"IVF_FLAT"};
-  std::string ingestion_timestamps_str_{"[0]"};
-  std::string partition_history_str_{"[0]"};
+  std::string ingestion_timestamps_str_{""};
+  std::string partition_history_str_{""};
   std::string storage_version_{current_storage_version};
 
   std::string feature_type_str_{""};
   std::string id_type_str_{""};
   std::string indices_type_str_{""};
 
-  /*
-   * Group Metadata:
-   *
-   "base_sizes",            // (json) list
-   "dataset_type",          // "vector_search"
-   "dtype",                 // "float32", etc (Python dtype names)
-   "index_type",            // "FLAT", "IVF_FLAT"
-   "ingestion_timestamps",  // (json) list
-   "partition_history",     // (json) list
-   "storage_version",       // "0.3"
-   "temp_size",
-   *
-   "feature_datatype",      // TILEDB_UINT32
-   "id_datatype",           // TILEDB_UINT32
-   "px_datatype",           // TILEDB_UINT32
-   *
-   * "feature_type",        // std::string
-   * "id_type",             // std::string
-   * indices_type",         // std::string
-   */
-
- public:
-  ivf_flat_index_metadata() = default;
-
-  template <class T>
-  auto json_to_vector(const std::string& json_str) {
-    auto json = nlohmann::json::parse(json_str);
-    std::vector<T> vec;
-    for (auto& item : json) {
-      vec.push_back(item.get<uint32_t>());
-    }
-    return vec;
-  }
-
+  /**************************************************************************
+   * Initializer structs for metadata
+   **************************************************************************/
   using metadata_string_check_type =
       std::tuple<std::string, std::string&, bool>;
   std::vector<metadata_string_check_type> metadata_string_checks{
+      // name, member_variable, default, expected, required
       {"dataset_type", dataset_type_, true},
       {"index_type", index_type_, true},
       {"storage_version", storage_version_, true},
@@ -119,39 +118,73 @@ class ivf_flat_index_metadata {
       std::tuple<std::string, void*, tiledb_datatype_t, bool>;
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks{
       {"temp_size", &temp_size_, TILEDB_UINT64, true},
+      {"index_kind", &index_kind_, TILEDB_UINT32, false},
       {"feature_datatype", &feature_datatype_, TILEDB_UINT32, false},
       {"id_datatype", &id_datatype_, TILEDB_UINT32, false},
       {"px_datatype", &px_datatype_, TILEDB_UINT32, false},
   };
 
+ public:
+  ivf_flat_index_metadata() = default;
+
+  template <class T>
+  auto json_to_vector(const std::string& json_str) {
+    auto json = nlohmann::json::parse(json_str);
+    std::vector<T> vec;
+    for (auto& item : json) {
+      vec.push_back(item.get<uint32_t>());
+    }
+    return vec;
+  }
+
+  /**
+   * @brief Given a name, value, and required flag, read in the metadata
+   * associated with the name and store into value.  An exception is thrown if
+   * required is set and the metadata is not found, or if the metadata is found
+   * but is not of the correct type. This function deals with metadata stored as
+   * strings.
+   * @param read_group
+   * @param check
+   * @return
+   */
   auto check_string_metadata(
       tiledb::Group& read_group, const metadata_string_check_type& check) {
     tiledb_datatype_t v_type;
     uint32_t v_num;
     const void* v;
+
     auto&& [name, value, required] = check;  // copilot filled in "required"
-    if (!read_group.has_metadata(std::get<0>(check), &v_type)) {
+    if (!read_group.has_metadata(name, &v_type)) {
       if (required) {
-        throw std::runtime_error("Missing metadata: " + std::get<0>(check));
+        throw std::runtime_error("Missing metadata: " + name);
       } else {
         return;
       }
     }
-    read_group.get_metadata(std::get<0>(check), &v_type, &v_num, &v);
+    read_group.get_metadata(name, &v_type, &v_num, &v);
     if (v_type != TILEDB_STRING_ASCII && v_type != TILEDB_STRING_UTF8) {
       throw std::runtime_error(
-          std::get<0>(check) + " must be a string not " +
-          tiledb::impl::type_to_str(v_type));
+          name + " must be a string not " + tiledb::impl::type_to_str(v_type));
     }
     std::string tmp = std::string(static_cast<const char*>(v), v_num);
-    if (std::get<1>(check) != "" && tmp != std::get<1>(check)) {
-      throw std::runtime_error(
-          std::get<0>(check) + " must be '" + std::get<1>(check) + "' not " +
-          tmp);
+
+    // Check for expected value
+    if (!empty(value) && tmp != value) {
+      throw std::runtime_error(name + " must be '" + value + "' not " + tmp);
     }
-    std::get<1>(check) = tmp;
+    value = tmp;
   };
 
+  /**
+   * @brief Given a name, value, and required flag, read in the metadata
+   * associated with the name and store into value.  An exception is thrown if
+   * required is set and the metadata is not found, or if the metadata is found
+   * but is not of the correct type. This function deals with metadata stored as
+   * arithmetic types.
+   * @param read_group
+   * @param check
+   * @return
+   */
   auto check_arithmetic_metadata(
       tiledb::Group& read_group, const metadata_arithmetic_check_type& check) {
     tiledb_datatype_t v_type;
@@ -159,9 +192,9 @@ class ivf_flat_index_metadata {
     const void* v;
     auto&& [name, value, type, required] =
         check;  // copilot filled in "required"
-    if (!read_group.has_metadata(std::get<0>(check), &v_type)) {
+    if (!read_group.has_metadata(name, &v_type)) {
       if (required) {
-        throw std::runtime_error("Missing metadata: " + std::get<0>(check));
+        throw std::runtime_error("Missing metadata: " + name);
       } else {
         return;
       }
@@ -207,6 +240,8 @@ class ivf_flat_index_metadata {
   }
 
   /**
+   * Read all of the metadata fields from the given group.
+   *
    * @param read_group
    * @return void
    *
@@ -245,6 +280,86 @@ class ivf_flat_index_metadata {
         json_to_vector<partition_history_type>(partition_history_str_);
   }
 
+  /**
+   * @brief Write all the metadata fields to the given group.
+   *
+   * @param write_group
+   * @return
+   */
+  auto store_metadata(tiledb::Group& write_group) {
+    base_sizes_str_ = to_string(nlohmann::json(base_sizes_));
+    ingestion_timestamps_str_ =
+        to_string(nlohmann::json(ingestion_timestamps_));
+    partition_history_str_ = to_string(nlohmann::json(partition_history_));
+
+    for (auto&& [name, value, required] : metadata_string_checks) {
+      write_group.put_metadata(
+          name, TILEDB_STRING_UTF8, value.size(), value.c_str());
+    }
+    for (auto&& [name, value, type, required] : metadata_arithmetic_checks) {
+      write_group.put_metadata(name, type, 1, static_cast<const void*>(value));
+    }
+  }
+
+#if 0
+  /**************************************************************************
+   * Getters and setters
+   **************************************************************************/
+  std::string base_sizes_str() const {
+    return base_sizes_str_;
+  }
+  auto& base_sizes() {
+    return base_sizes_;
+  }
+  auto& base_sizes() const {
+    return base_sizes_;
+  }
+  void set_base_sizes(const std::vector<base_sizes_type>& base_sizes) {
+    base_sizes_ = base_sizes;
+  }
+  auto storage_version() const {
+    return storage_version_;
+  }
+  auto& storage_version()  {
+    return storage_version_;
+  }
+  auto dtype() const {
+    return dtype_;
+  }
+  auto& dtype()  {
+    return dtype_;
+  }
+  auto feature_datatype() const {
+    return feature_datatype_;
+  }
+  auto& feature_datatype()  {
+    return feature_datatype_;
+  }
+  auto id_datatype() const {
+    return id_datatype_;
+  }
+  auto& id_datatype()  {
+    return id_datatype_;
+  }
+  auto px_datatype() const {
+    return px_datatype_;
+  }
+  auto& px_datatype()  {
+    return px_datatype_;
+  }
+#endif
+
+  /**************************************************************************
+   * Helpful functions for debugging, testing, etc
+   **************************************************************************/
+
+  /**
+   * @brief Dump metadata to stdout.  Useful for debugging.
+   * @param write_group
+   * @return void
+   *
+   * @todo Dispatch on storage version
+   */
   auto dump() {
     for (auto&& [name, value, required] : metadata_string_checks) {
       std::cout << name << ": " << value << std::endl;
@@ -267,7 +382,8 @@ class ivf_flat_index_metadata {
               name == "px_datatype") {
             std::cout << name << ": "
                       << tiledb::impl::type_to_str(
-                             (tiledb_datatype_t)*static_cast<uint32_t*>(value))
+                             (tiledb_datatype_t) *
+                             static_cast<uint32_t*>(value))
                       << std::endl;
           } else {
             std::cout << name << ": " << *static_cast<uint32_t*>(value)
@@ -277,6 +393,34 @@ class ivf_flat_index_metadata {
         default:
           throw std::runtime_error(
               "Unhandled type: " + tiledb::impl::type_to_str(type));
+      }
+    }
+
+    if (!empty(feature_type_str_)) {
+      if (feature_datatype_ == TILEDB_ANY) {
+        feature_datatype_ = string_to_datatype(feature_type_str_);
+      } else if (feature_datatype_ != string_to_datatype(feature_type_str_)) {
+        throw std::runtime_error(
+            "feature_datatype metadata disagree, must be " + feature_type_str_ +
+            " not " + tiledb::impl::type_to_str(feature_datatype_));
+      }
+    }
+    if (!empty(id_type_str_)) {
+      if (id_datatype_ == TILEDB_ANY) {
+        id_datatype_ = string_to_datatype(id_type_str_);
+      } else if (id_datatype_ != string_to_datatype(id_type_str_)) {
+        throw std::runtime_error(
+            "id_datatype metadata disagree, must be " + id_type_str_ + " not " +
+            tiledb::impl::type_to_str(id_datatype_));
+      }
+    }
+    if (!empty(indices_type_str_)) {
+      if (px_datatype_ == TILEDB_ANY) {
+        px_datatype_ = string_to_datatype(indices_type_str_);
+      } else if (px_datatype_ != string_to_datatype(indices_type_str_)) {
+        throw std::runtime_error(
+            "px_datatype metadata disagree, must be " + indices_type_str_ +
+            " not " + tiledb::impl::type_to_str(px_datatype_));
       }
     }
   }

@@ -131,12 +131,6 @@ class ivf_flat_index {
   std::unique_ptr<storage_type> partitioned_vectors_;
   centroids_storage_type centroids_;
 
-  // Some uris we cache for transitional constructors used in the current
-  // Python API
-  std::string tmp_parts_uri_;
-  std::vector<indices_type> tmp_indices_;
-  std::string tmp_ids_uri_;
-
   // Some parameters for performing kmeans clustering
   uint64_t max_iter_{1};
   float tol_{1.e-4};
@@ -202,65 +196,16 @@ class ivf_flat_index {
      * Prep the group for subsequent reading of arrays.
      */
     group_.open();
+
+    /**
+     * Read the centroids.  How the partitioned_vectors_ are read in will be
+     * determined by the type of query we are doing.
+     */
+     centroids_ =
+        std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
+            group_.cached_ctx(), group_.centroids_uri(), 0, temporal_policy_));
   }
 
-#if 0
-  /**
-   * Transitional constructor to support backwards compatibility with
-   * pre-ivf_index free-function queries.  This is for constructing "infinite
-   * ram" indices from arrays that are already all loaded into memory.
-   * @param parts The vectors to be partitioned.  Must be loaded for infinite
-   * queries.
-   *
-   * No timestamping or temporal policy here since arrays are all opened.
-   */
-  ivf_flat_index(
-      const ColMajorMatrix<T>& parts,
-      centroids_storage_type& centroids,
-      std::vector<partitioned_ids_type>& ids,
-      std::vector<partitioning_index_type>& indices)
-      : partitioned_vectors_{std::make_unique<storage_type>(
-            parts, ids, indices)}
-      , centroids_{std::move(centroids)}
-      , dimension_{::dimension(*partitioned_vectors_)}
-      , num_partitions_{::num_vectors(centroids_)} {
-  }
-
-  /**
-   * Another transitional constructor to support backwards compatibility with
-   * pre-ivf_index free-function queries.  This is for constructing "finite
-   * ram" indices.  The indices can be loaded into memory, but the vectors
-   * and the ids are read on-demand.  Note that the template parameters
-   * cannot be deduced from the arguments, so they need to be explicitly
-   * specified.
-   *
-   * Note that some args are passed in as URIs to be opened later, and some
-   * are already opened.  We are taking a timestamp, but the user must
-   * ensure that the indices array is compatible with the timestamp being
-   * passed in.
-   *
-   * @param parts The vectors to be partitioned.  Must be loaded.
-   * @param ids
-   * @param indices
-   */
-  ivf_flat_index(
-      const tiledb::Context& ctx,
-      const std::string& parts_uri,
-      centroids_storage_type& centroids,
-      const std::string& ids_uri,
-      std::vector<partitioning_index_type>& indices,
-      uint64_t timestamp = 0)
-      : cached_ctx_{ctx}
-      , temporal_policy_{(timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)}
-      , centroids_{std::move(centroids)}
-      , tmp_parts_uri_(parts_uri)
-      , tmp_indices_(std::move(indices))
-      , tmp_ids_uri_(ids_uri)
-      , dimension_{::dimension(centroids_)}  // @todo is dimension needed?
-      , num_partitions_{::num_vectors(centroids_)}
-      , timestamp_{timestamp} {
-  }
-#endif
 
   ivf_flat_index() = delete;
   ivf_flat_index(const ivf_flat_index& index) = delete;
@@ -740,16 +685,6 @@ class ivf_flat_index {
         detail::ivf::partition_ivf_flat_index<indices_type>(
             centroids_, query_vectors, nprobe, num_threads_);
 
-    if (size(tmp_indices_) != 0) {
-      partitioned_vectors_ = std::make_unique<tdb_storage_type>(
-          group_.cached_ctx(),
-          tmp_parts_uri_,
-          std::move(tmp_indices_),
-          tmp_ids_uri_,
-          active_partitions,
-          upper_bound,
-          temporal_policy_);
-    } else {
       partitioned_vectors_ = std::make_unique<tdb_storage_type>(
           group_.cached_ctx(),
           group_.parts_uri(),
@@ -758,18 +693,16 @@ class ivf_flat_index {
           active_partitions,
           upper_bound,
           temporal_policy_);
-    }
 
     // NB: We don't load the partitioned_vectors here.  We will load them
     // when we do the query.
-
     return std::make_tuple(
         std::move(active_partitions), std::move(active_queries));
   }
 
   /**
-   * @brief Write the index to disk.  This would typically be done after a set
-   * of input vectors has been read and a new group is created.  Or after
+   * @brief Write the index to storage.  This would typically be done after a
+   * set of input vectors has been read and a new group is created.  Or after
    * consolidation.
    *
    * We assume we have all of the data in memory, and that we are writing
@@ -794,6 +727,8 @@ class ivf_flat_index {
       vfs.remove_dir(group_uri);
     }
 
+    // Timestamps are next PR
+#if 0
     // Timestamp the index to be written at the current time
     // @todo Do we need to do anything about the group itself?
     size_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -802,6 +737,11 @@ class ivf_flat_index {
 
     auto write_temporal_policy =
         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+#endif
+
+    // Write the group
+    auto write_group = ivf_flat_index_group(ctx, group_uri);
+    write_group.open();
 
     tiledb::Config cfg;
     tiledb::Group::create(ctx, group_uri);

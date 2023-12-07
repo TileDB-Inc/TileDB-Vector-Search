@@ -52,16 +52,14 @@ TEST_CASE("ivf_flat_group: constructor", "[ivf_flat_group]") {
   auto x = ivf_flat_index_group(ctx, group_uri);
 }
 
-TEST_CASE("ivf_flat_group: open", "[ivf_flat_group]") {
+TEST_CASE("ivf_flat_group: default constructor", "[ivf_flat_group]") {
   tiledb::Context ctx;
-
   auto x = ivf_flat_index_group(ctx, group_uri);
+  x.dump("Default constructor");
+}
 
-  SECTION("open") {
-    x.open();
-  }
-  SECTION("open and close") {
-    x.open();
-    x.dump();
-  }
+TEST_CASE("ivf_flat_group: read constructor", "[ivf_flat_group]") {
+  tiledb::Context ctx;
+  auto x = ivf_flat_index_group(ctx, group_uri, TILEDB_READ);
+  x.dump("Read constructor");
 }

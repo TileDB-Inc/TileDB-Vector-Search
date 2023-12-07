@@ -39,6 +39,9 @@
 template <class... T>
 constexpr bool always_false = false;
 
+template <class T>
+constexpr auto type_to_tiledb_v = tiledb::impl::type_to_tiledb<T>::tiledb_type;
+
 [[maybe_unused]] static auto get_array_datatype(const tiledb::Array& array) {
   auto schema = array.schema();
   auto num_attributes = schema.attribute_num();
@@ -93,7 +96,7 @@ constexpr bool always_false = false;
 // cf type_to_str(tiledb_datatype_t type) in tiledb/type.h
 // type_to_tiledb<T>::tiledb_type
 // tiledb_to_type<tiledb_datatype_t>::type
-[[maybe_unused]] static std::string datatype_to_string(
+[[maybe_unused]] constexpr inline static std::string datatype_to_string(
     tiledb_datatype_t datatype) {
   switch (datatype) {
     case TILEDB_FLOAT32:
@@ -119,7 +122,7 @@ constexpr bool always_false = false;
   }
 }
 
-[[maybe_unused]] constexpr static size_t datatype_to_size(
+[[maybe_unused]] constexpr inline static size_t datatype_to_size(
     tiledb_datatype_t datatype) {
   switch (datatype) {
     case TILEDB_FLOAT32:
@@ -187,5 +190,54 @@ constexpr bool always_false = false;
       throw std::runtime_error("Unsupported filter");
   }
 }
+
+template <class T>
+struct type_to_string {
+  static constexpr auto value = "unknown";
+};
+
+template <>
+struct type_to_string<float> {
+  static constexpr auto value = "float32";
+};
+
+template <>
+struct type_to_string<double> {
+  static constexpr auto value = "float64";
+};
+
+template <>
+struct type_to_string<int8_t> {
+  static constexpr auto value = "int8";
+};
+
+template <>
+struct type_to_string<uint8_t> {
+  static constexpr auto value = "uint8";
+};
+
+template <>
+struct type_to_string<int32_t> {
+  static constexpr auto value = "int32";
+};
+
+template <>
+struct type_to_string<uint32_t> {
+  static constexpr auto value = "uint32";
+};
+
+template <>
+struct type_to_string<int64_t> {
+  static constexpr auto value = "int64";
+};
+
+template <>
+struct type_to_string<uint64_t> {
+  static constexpr auto value = "uint64";
+};
+
+template <class T>
+inline constexpr auto type_to_string_v = type_to_string<T>::value;
+
 
 #endif  // TILEDB_TDB_DEFS_H
