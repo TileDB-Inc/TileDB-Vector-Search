@@ -55,14 +55,16 @@
 #include <tiledb/tiledb>
 
 #include "index/index_defs.h"
+#include "index/ivf_flat_group.h"
 #include "tdb_defs.h"
 
 #include "nlohmann/json.hpp"
 
+template <class Group>
 class ivf_flat_index_metadata {
  private:
 
-  friend class ivf_flat_index_group;
+  friend Group;
 
   using base_sizes_type = uint32_t;
   using ingestion_timestamps_type = uint32_t;

@@ -502,7 +502,7 @@ class flatpq_index {
     using B = decltype(pq_vectors_[0]);
     struct pq_distance {
       flatpq_index* outer_;
-      float operator()(const A& a, const B& b) {
+      inline float operator()(const A& a, const B& b) {
         return outer_->sub_distance_symmetric(a, b);
       }
     };
@@ -534,9 +534,10 @@ class flatpq_index {
     using A = std::span<feature_type>;  // @todo: Don't hardcode span
     using B = decltype(pq_vectors_[0]);
 
+    // @todo Do we need to worry about function overhead here?
     struct pq_distance {
       flatpq_index* outer_;
-      float operator()(const A& a, const B& b) {
+      inline float operator()(const A& a, const B& b) {
         return outer_->sub_distance_asymmetric(a, b);
       }
     };

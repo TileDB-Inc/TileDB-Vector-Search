@@ -37,29 +37,58 @@
 #include "index/ivf_flat_group.h"
 #include "query_common.h"
 
+#include "utils/print_types.h"
+
 
 TEST_CASE("ivf_flat_group: test test", "[ivf_flat_group]") {
   REQUIRE(true);
 }
 
 struct dummy_index {
-  constexpr static const IndexKind index_kind_ = IndexKind::IVFFlat;
+  using feature_type = float;
+  using id_type = int;
+  using indices_type = int;
 };
 
 TEST_CASE("ivf_flat_group: constructor", "[ivf_flat_group]") {
   tiledb::Context ctx;
 
-  auto x = ivf_flat_index_group(ctx, group_uri);
+  auto x = ivf_flat_index_group<dummy_index>(ctx, group_uri);
 }
 
 TEST_CASE("ivf_flat_group: default constructor", "[ivf_flat_group]") {
   tiledb::Context ctx;
-  auto x = ivf_flat_index_group(ctx, group_uri);
+  auto x = ivf_flat_index_group<dummy_index>(ctx, group_uri);
   x.dump("Default constructor");
 }
 
 TEST_CASE("ivf_flat_group: read constructor", "[ivf_flat_group]") {
   tiledb::Context ctx;
-  auto x = ivf_flat_index_group(ctx, group_uri, TILEDB_READ);
+  auto x = ivf_flat_index_group<dummy_index>(ctx, group_uri, TILEDB_READ);
   x.dump("Read constructor");
+}
+
+TEST_CASE("ivf_flat_group: read constructor with version", "[ivf_flat_group]") {
+  tiledb::Context ctx;
+  auto x = ivf_flat_index_group<dummy_index>(ctx, group_uri, TILEDB_READ, "0.3");
+  x.dump("Read constructor with version");
+}
+
+TEST_CASE("ivf_flat_group: read constructor for non-existent group", "[ivf_flat_group]") {
+  tiledb::Context ctx;
+
+  CHECK_THROWS_WITH(ivf_flat_index_group<dummy_index>(ctx, "I dont exist"), "Group uri I dont exist does not exist.");
+}
+
+TEST_CASE("ivf_flat_group: write constructor, no arrays created", "[ivf_flat_group]") {
+  std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
+
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri)) {
+    vfs.remove_dir(tmp_uri);
+  }
+
+  ivf_flat_index_group x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE);
+  x.dump("Write constructor, no arrays created");
 }

@@ -44,9 +44,8 @@
 #include "index/ivf_flat_metadata.h"
 #include "tdb_defs.h"
 
-class ivf_flat_index_metadata;
 
-// template <class Index>
+template <class Index>
 class ivf_flat_index_group {
   // Index* index_ {nullptr};
 
@@ -79,7 +78,7 @@ class ivf_flat_index_group {
   std::filesystem::path updates_array_uri_;
 
   // std::unique_ptr<ivf_flat_index_metadata> metadata_;
-  ivf_flat_index_metadata metadata_;
+  ivf_flat_index_metadata<ivf_flat_index_group> metadata_;
 
  public:
   ivf_flat_index_group() = delete;
@@ -101,7 +100,6 @@ class ivf_flat_index_group {
    * @param uri
    * @param version
    */
-  template <class Index = void>
   ivf_flat_index_group(
       const tiledb::Context& ctx,
       const std::string& uri,
@@ -109,13 +107,14 @@ class ivf_flat_index_group {
       const std::string& version = std::string{""},
       const tiledb::Config& cfg = tiledb::Config{})
       : cached_ctx_(ctx)
-      , group_uri_(uri), version_(version) {
+      , group_uri_(uri)
+      , version_(version) {
     switch (rw) {
       case TILEDB_READ:
         open_for_read(cfg);
         break;
       case TILEDB_WRITE:
-        open_for_write<Index>(cfg);
+        open_for_write(cfg);
         break;
       default:
         throw std::runtime_error("Invalid query type.");
@@ -125,10 +124,22 @@ class ivf_flat_index_group {
   using uri_init_type = std::tuple<std::string, std::filesystem::path*>;
   std::map<std::string, std::filesystem::path*> uri_inits;
 
+  /**
+   * Open group for reading.  If version_ is not set, the group will be opened
+   * with whichever version is found in the metadata.  If version_ is set,
+   * and does not match the version in the metadata, an exception will be
+   * thrown.
+   *
+   * @param ctx
+   */
   void open_for_read(const tiledb::Config& cfg) {
-
-
+    tiledb::VFS vfs(cached_ctx_);
+    if (!vfs.is_dir(group_uri_)) {
+      throw std::runtime_error(
+          "Group uri " + std::string(group_uri_) + " does not exist.");
+    }
     auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
+
     metadata_.load_metadata(read_group);
     if (!empty(version_) && metadata_.storage_version_ != version_) {
       throw std::runtime_error(
@@ -153,59 +164,76 @@ class ivf_flat_index_group {
 
   /**
    * Open group for writing.  For now we assume the group does not exist and
-   * needs to be created.
+   * needs to be created.  If version_ has not been set, the group is opened
+   * with the current default storage version.  Otherwise it is opened with the
+   * specified version.
+   *
+   * @todo This is really a create.  We also need an open for update.
    *
    * @param ctx
    * @param uri
    * @param version
    */
-  template <class Index>
   void open_for_write(const tiledb::Config& cfg) {
-    if constexpr (std::is_same_v<Index, void>) {
+    tiledb::VFS vfs(cached_ctx_);
+    if (vfs.is_dir(group_uri_)) {
       throw std::runtime_error(
-          "Index type must be specified for open_for_write.");
-    } else {
-      if (empty(version_)) {
-        version_ = current_storage_version;
-      }
-      init_array_names(version_);
-      // Do not init_uris -- uris are set when an array is added
-      // init_uris();
-      write_group_ = std::make_optional<tiledb::Group>(
-          cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
-
-      ivf_flat_index_metadata metadata;
-      metadata.storage_version_ = version_;
-      metadata.dtype_ = type_to_string_v<typename Index::feature_type>;
-
-      metadata.feature_datatype_ =
-          type_to_tiledb_v<typename Index::feature_type>;
-      metadata.id_datatype_ = type_to_tiledb_v<typename Index::id_type>;
-      metadata.px_datatype_ = type_to_tiledb_v<typename Index::indices_type>;
-
-      metadata.feature_type_str_ =
-          type_to_string_v<typename Index::feature_type>;
-      metadata.id_type_str_ = type_to_string_v<typename Index::id_type>;
-      metadata.indices_type_str_ =
-          type_to_string_v<typename Index::indices_type>;
-
-      metadata_.store_metadata(*write_group_);
+          "Group uri " + std::string(group_uri_) + " exists.");
     }
+
+
+    if (empty(version_)) {
+      version_ = current_storage_version;
+    }
+    init_array_names(version_);
+    // Do not init_uris -- uris are set when an array is added
+    // init_uris();
+    write_group_ = std::make_optional<tiledb::Group>(
+        cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
+
+    ivf_flat_index_metadata<ivf_flat_index_group> metadata;
+    metadata.storage_version_ = version_;
+
+    metadata.dtype_ = type_to_string_v<typename Index::feature_type>;
+
+    metadata.feature_datatype_ = type_to_tiledb_v<typename Index::feature_type>;
+    metadata.id_datatype_ = type_to_tiledb_v<typename Index::id_type>;
+    metadata.px_datatype_ = type_to_tiledb_v<typename Index::indices_type>;
+
+    metadata.feature_type_str_ = type_to_string_v<typename Index::feature_type>;
+    metadata.id_type_str_ = type_to_string_v<typename Index::id_type>;
+    metadata.indices_type_str_ = type_to_string_v<typename Index::indices_type>;
+
+    metadata_.store_metadata(*write_group_);
   }
 
+  /**
+   * @brief Convert the base name (array name) to a URI.
+   *
+   * @param basename
+   */
   std::string basename_to_uri(const std::string& basename) {
     return group_uri_ / basename;
   }
 
-  void add_array(const std::string& basename) {
+  /**
+   * @brief Add an array to the group.
+   *
+   * @param basename
+   */
+  void add_array(const std::string& basename, tiledb_datatype_t datatype = TILEDB_ANY) {
     if (!write_group_ || write_group_->is_open()) {
-      throw std::runtime_error("Group " + std::string(group_uri_) + " is not open for writing.");
+      throw std::runtime_error(
+          "Group " + std::string(group_uri_) + " is not open for writing.");
     }
     if (uri_inits.find(basename) == uri_inits.end()) {
       throw std::runtime_error("Invalid array name " + basename);
     }
     std::filesystem::path uri = basename_to_uri(basename);
     *uri_inits[basename] = uri;
+
+    // Make this relative so it can be moved? Or just make it absolute?
+    // Our absolute formula seems to give the same URI as relative
     write_group_->add_member(uri, false, basename);
   }
 
@@ -223,6 +251,12 @@ class ivf_flat_index_group {
     updates_array_name_ = storage_formats[version]["updates_array_name"];
   }
 
+  /**
+   * Set up dictionary of array basenames to URIs. Have to this in a
+   * function rather than a static intitializer because the names need
+   * to be set first, which only happens after the group is opened
+   * because we need the group version to get the correct names.
+   */
   void init_uris() {
     uri_inits = {
         {centroids_array_name_, &centroids_uri_},
@@ -236,48 +270,24 @@ class ivf_flat_index_group {
     };
   }
 
-
-
+  /**
+   * @brief Test whether the group exists or not.
+   * @param ctx
+   */
   bool exists(const tiledb::Context& ctx) const {
     return tiledb::Object::object(ctx, group_uri_).type() ==
            tiledb::Object::Type::Group;
   }
 
+  /**
+   * @brief Delete the group.  Use with caution.
+   *
+   * @param ctx
+   * @return void
+   */
   auto remove(const tiledb::Context& ctx) {
     return tiledb::Object::remove(ctx, group_uri_);
   }
-
-
-#if 0
-  /**
-   * Read metadata, set up uris, etc.
-   */
-  auto open(const tiledb::Config& cfg = tiledb::Config{}) {
-    auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
-
-    metadata_.load_metadata(read_group);
-
-    for (size_t i = 0; i < read_group.member_count(); ++i) {
-      auto member = read_group.member(i);
-      auto name = member.name();
-      if (!name || name.value().empty()) {
-        throw std::runtime_error("Name is empty.");
-      }
-      if (uri_inits.find(*name) != uri_inits.end()) {
-        *uri_inits[*name] = std::filesystem::path(member.uri());
-      }
-    }
-    // Should do this in the appropriate place (which is tbd)
-#if 0
-    // Should not have group members for which arrays do not exist
-    for (auto& [name, uri] : uri_inits) {
-      if (uri->empty()) {
-        *(uri) = group_uri_ / name;
-      }
-    }
-#endif
-  }
-#endif
 
   /**************************************************************************
    * Getters
@@ -340,7 +350,13 @@ class ivf_flat_index_group {
     return cached_ctx_;
   }
 
-  auto dump(const std::string& msg= "") {
+  /**
+   * Dump the contents of the group to stdout.  Useful for "printf" debugging.
+   * @todo Add test to compare the real group with the group structure.
+   *
+   * @param msg Optional message to print before the dump.
+   */
+  auto dump(const std::string& msg = "") {
     if (!empty(msg)) {
       std::cout << "-------------------------------------------------------\n";
       std::cout << "# " + msg << std::endl;
@@ -364,133 +380,6 @@ class ivf_flat_index_group {
     }
     std::cout << "-------------------------------------------------------\n";
   }
-
-  // Defer implementation for now
-#if 0
-  /**
-   * Create an empty group.
-   *
-   * @param ctx
-   * @param dimension
-   * @param cfg
-   * @return
-   *
-   * @todo Take some of the tile sizes (et al) as parameters
-   */
-  auto create_empty(
-      const tiledb::Context& ctx,
-      size_t dimension,
-      const tiledb::Config& cfg = tiledb::Config{}) {
-    if (group_uri_.empty()) {
-      throw std::runtime_error("Group URI has not been set.");
-    }
-    if (exists(ctx)) {
-      throw std::runtime_error("Group already exists.");
-    }
-
-    using centroids_type = typename Index::feature_type;
-    using feature_type = typename Index::centroids_type;
-    using id_type = typename Index::id_type;
-    using indices_type = typename Index::indices_type;
-
-    static const std::string version{current_storage_version};
-    static const int32_t default_domain{std::numeric_limits<int32_t>::max()};
-    static const int32_t default_tile_extent{100'000};
-    static const int32_t tile_size_bytes{64 * 1024 * 1024};
-    static const int32_t tile_size{
-        tile_size_bytes / sizeof(feature_type) / dimension};
-    static const tiledb_filter_type_t default_compression{
-        string_to_filter(storage_formats[version]["default_attr_filters"])};
-
-    tiledb::Group::create(ctx, group_uri_);
-    auto create_group = tiledb::Group(ctx, group_uri_, TILEDB_WRITE, cfg);
-
-    // rows
-    // cols
-    // row_extents
-    // col_extents
-    create_array_for_matrix<centroids_type, stdx::layout_left>(
-        ctx,
-        centroids_uri_,
-        "centroids",
-        dimension,
-        default_domain,
-        dimension,
-        default_tile_extent,
-        default_compression);
-    // create_group.add_member(centroids_array_name_, true, centroids_array_name_);
-    create_group.add_member(centroids_uri_, false, centroids_array_name_);
-
-    create_array_for_matrix<feature_type, stdx::layout_left>(
-        ctx,
-        part_uri_,
-        "values",
-        dimension,
-        default_domain,
-        dimension,
-        default_tile_extent,
-        default_compression);
-    create_group.add_member(part_uri_, false, part_array_name_);
-
-    create_array_for_vector<id_type>(
-        ctx,
-        ids_uri_,
-        "values",
-        default_domain,
-        tile_size,
-        default_compression);
-    create_group.add_member(ids_uri_, false, ids_array_name_);
-
-    create_array_for_vector<indices_type>(
-        ctx,
-        indices_uri_,
-        "values",
-        default_domain,
-        default_tile_extent,
-        default_compression);
-    create_group.add_member(indices_uri_, false, indices_array_name_);
-
-    // -- then ivf_flat_index.py create() constructs and returns Index
-    //
-    // -- constructs base
-    //    uri
-    //    group
-    //    storage_version
-    //    checks support_timetravel for index version
-    //    updates_array_name
-    //    updates_array_uri
-    //    index_version
-    //    ingestion_timestamps
-    //    history_index
-    //    base_sizes
-    //    latest_ingestion_timestamp
-    //    base_array_timestamp
-    //    query_base_array
-    //    update_array_timestamp
-    //    does a bunch of stuff based on timestamp
-    //
-    // -- sets
-    //    index_type = INDEX_TYPE (hardwired)
-    //    db_uri (parts_array_name) -- from storage_formats.py
-    //    centroids_uri (centroids_array_name)
-    //    index_uri (index_array_name)
-    //    ids_uri (ids_array_name)
-    //    self.dtype ("dtype") -- from metadata or from db_uri
-    //    base_size
-    //    partition_history
-    // -- loads
-    //    centroids
-    //    index
-    //      parts and ids loaded upon query
-
-    // -- currently ivf_flat.h open_index()
-    //    reads metadata
-    //    reads centroids
-    //    does not read index -> part of tdb_partitioned_matrix
-
-
-  }
-#endif
 };
 
 #endif  // TILEDB_IVF_FLAT_GROUP_H
