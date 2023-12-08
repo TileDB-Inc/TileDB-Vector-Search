@@ -44,6 +44,20 @@ TEST_CASE("ivf_flat_group: test test", "[ivf_flat_group]") {
   REQUIRE(true);
 }
 
+TEST_CASE("ivf_flat_group: create tiledb::Group", "[ivf_flat_group]") {
+  tiledb::Context ctx;
+  tiledb::Config cfg;
+  std::string tmp_uri = "/tmp/ivf_flat_group_test_groups";
+
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri))
+    vfs.remove_dir(tmp_uri);
+  tiledb::Group::create(ctx, tmp_uri);
+  std::unique_ptr<tiledb::Group> write_group_;
+  write_group_ = std::make_unique<tiledb::Group>(
+      ctx, tmp_uri, TILEDB_WRITE, cfg);
+}
+
 struct dummy_index {
   using feature_type = float;
   using id_type = int;

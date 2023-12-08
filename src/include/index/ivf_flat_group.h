@@ -53,7 +53,7 @@ class ivf_flat_index_group {
 
   std::filesystem::path group_uri_;
   std::string version_;
-  std::optional<tiledb::Group> write_group_;
+  std::unique_ptr<tiledb::Group> write_group_;
 
   std::string centroids_array_name_;
   std::string parts_array_name_;
@@ -176,11 +176,11 @@ class ivf_flat_index_group {
    */
   void open_for_write(const tiledb::Config& cfg) {
     tiledb::VFS vfs(cached_ctx_);
+
     if (vfs.is_dir(group_uri_)) {
       throw std::runtime_error(
           "Group uri " + std::string(group_uri_) + " exists.");
     }
-
 
     if (empty(version_)) {
       version_ = current_storage_version;
@@ -188,7 +188,10 @@ class ivf_flat_index_group {
     init_array_names(version_);
     // Do not init_uris -- uris are set when an array is added
     // init_uris();
-    write_group_ = std::make_optional<tiledb::Group>(
+
+    tiledb::Group::create(cached_ctx_, group_uri_);
+    auto foo = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
+    write_group_ = std::make_unique<tiledb::Group>(
         cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
 
     ivf_flat_index_metadata<ivf_flat_index_group> metadata;
