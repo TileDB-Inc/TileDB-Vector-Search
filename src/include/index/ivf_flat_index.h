@@ -196,9 +196,10 @@ class ivf_flat_index {
      * Read the centroids.  How the partitioned_vectors_ are read in will be
      * determined by the type of query we are doing.
      */
+    size_t num_centroids = group_->num_partitione();
     centroids_ =
         std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
-            group_->cached_ctx(), group_->centroids_uri(), 0, temporal_policy_));
+            group_->cached_ctx(), group_->centroids_uri(), 0, num_centroids, 0, temporal_policy_));
   }
 
   ivf_flat_index() = delete;
@@ -736,6 +737,12 @@ class ivf_flat_index {
     // Write the group
     auto write_group =
         ivf_flat_index_group(ctx, group_uri, *this, TILEDB_WRITE);
+
+    write_group.set_dimension(dimension_);
+
+    write_group.append_ingestion_timestamp(timestamp_);
+    write_group.append_base_size(::num_vectors(*partitioned_vectors_));
+    write_group.append_num_partitions(num_partitions_);
 
     write_matrix(ctx, centroids_, write_group.centroids_uri(), 0, false);
 

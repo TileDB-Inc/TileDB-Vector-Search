@@ -83,10 +83,13 @@ class ivf_flat_index_metadata {
   /** Record number of partitions at each write at a given timestamp */
   std::vector<partition_history_type> partition_history_;
 
-  /** Record size of temp */
+  /** Record size of temp data */
   uint64_t temp_size_{0};
 
   IndexKind index_kind_{IndexKind::IVFFlat};
+
+  uint32_t dimension_{0};
+
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
   tiledb_datatype_t px_datatype_{TILEDB_ANY};
@@ -130,6 +133,7 @@ class ivf_flat_index_metadata {
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks{
       {"temp_size", &temp_size_, TILEDB_UINT64, true},
       {"index_kind", &index_kind_, TILEDB_UINT32, false},
+      {"dimension", &dimension_, TILEDB_UINT32, true},
       {"feature_datatype", &feature_datatype_, TILEDB_UINT32, false},
       {"id_datatype", &id_datatype_, TILEDB_UINT32, false},
       {"px_datatype", &px_datatype_, TILEDB_UINT32, false},

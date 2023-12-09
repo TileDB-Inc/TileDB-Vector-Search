@@ -276,6 +276,7 @@ class ivf_flat_index_group {
     metadata_.base_sizes_ = {0};
     metadata_.partition_history_ = {0};
     metadata_.temp_size_ = 0;
+    metadata_.dimension_ = 0;
 
     create_empty_for_matrix<typename Index::centroid_feature_type, stdx::layout_left>(
         cached_ctx_,
@@ -406,9 +407,17 @@ class ivf_flat_index_group {
   auto get_temp_size() const {
     return metadata_.temp_size_;
   }
-  auto set_temp_size(size_t size) const {
+  auto set_temp_size(size_t size)  {
     metadata_.temp_size_ = size;
   }
+
+  auto get_dimension() const {
+    return metadata_.dimension_;
+  }
+  auto set_dimension(size_t dim) {
+    metadata_.dimension_ = dim;
+  }
+
 
 
   /**************************************************************************

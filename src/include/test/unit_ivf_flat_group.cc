@@ -173,7 +173,8 @@ TEST_CASE("ivf_flat_group: group metadata - bases, ingestions, partitions", "[iv
   size_t expected_ingestion = 867;
   size_t expected_base = 5309;  // OMG, copilot filled in 5309 after I typed 867
   size_t expected_partitions = 42;
-  size_t exptected_temp_size = 314159;
+  size_t expected_temp_size = 314159;
+  size_t expected_dimension = 128;
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -211,6 +212,8 @@ TEST_CASE("ivf_flat_group: group metadata - bases, ingestions, partitions", "[iv
     x.set_ingestion_timestamp(expected_ingestion);
     x.set_base_size(expected_base);
     x.set_num_partitions(expected_partitions);
+    x.set_temp_size(expected_temp_size);
+    x.set_dimension(expected_dimension);
   }
 
   SECTION("Just append") {
@@ -238,6 +241,8 @@ TEST_CASE("ivf_flat_group: group metadata - bases, ingestions, partitions", "[iv
     x.append_ingestion_timestamp(expected_ingestion);
     x.append_base_size(expected_base);
     x.append_num_partitions(expected_partitions);
+    x.set_temp_size(expected_temp_size);
+    x.set_dimension(expected_dimension);
   }
 
   SECTION("Set then append") {
@@ -265,12 +270,16 @@ TEST_CASE("ivf_flat_group: group metadata - bases, ingestions, partitions", "[iv
     x.set_ingestion_timestamp(expected_ingestion);
     x.set_base_size(expected_base);
     x.set_num_partitions(expected_partitions);
+    x.set_temp_size(expected_temp_size);
+    x.set_dimension(expected_dimension);
 
     offset = 13;
 
     x.append_ingestion_timestamp(expected_ingestion + offset);
     x.append_base_size(expected_base + offset);
     x.append_num_partitions(expected_partitions + offset);
+    x.set_temp_size(expected_temp_size + offset);
+    x.set_dimension(expected_dimension + offset);
 
     CHECK(size(x.get_all_ingestion_timestamps()) == 2); // OMG copilot set this to 2 here, to 1 below
     CHECK(size(x.get_all_base_sizes()) == 2);
@@ -302,12 +311,16 @@ TEST_CASE("ivf_flat_group: group metadata - bases, ingestions, partitions", "[iv
     x.set_ingestion_timestamp(expected_ingestion);
     x.set_base_size(expected_base);
     x.set_num_partitions(expected_partitions);
+    x.set_temp_size(expected_temp_size);
+    x.set_dimension(expected_dimension);
 
     offset = 13;
 
     x.set_ingestion_timestamp(expected_ingestion + offset);
     x.set_base_size(expected_base + offset);
     x.set_num_partitions(expected_partitions + offset);
+    x.set_temp_size(expected_temp_size + offset);
+    x.set_dimension(expected_dimension + offset);
 
     CHECK(size(x.get_all_ingestion_timestamps()) == 1);
     CHECK(size(x.get_all_base_sizes()) == 1);
@@ -317,4 +330,6 @@ TEST_CASE("ivf_flat_group: group metadata - bases, ingestions, partitions", "[iv
   CHECK(x.get_ingestion_timestamp() == expected_ingestion + offset);
   CHECK(x.get_base_size() == expected_base + offset);
   CHECK(x.get_num_partitions() == expected_partitions + offset);
+  CHECK(x.get_temp_size() == expected_temp_size + offset);
+  CHECK(x.get_dimension() == expected_dimension + offset);
 }
