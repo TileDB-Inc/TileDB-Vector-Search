@@ -458,7 +458,7 @@ def create(
             centroids_array_rows_dim, centroids_array_cols_dim
         )
         centroids_attr = tiledb.Attr(
-            name="centroids",
+            name="values",
             dtype=np.dtype(np.float32),
             filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
         )

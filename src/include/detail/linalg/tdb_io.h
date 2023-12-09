@@ -61,7 +61,6 @@ template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 void create_empty_for_matrix(
     const tiledb::Context& ctx,
     const std::string& uri,
-    const std::string& attr_name,
     size_t rows,
     size_t cols,
     size_t row_extent,
@@ -80,7 +79,7 @@ void create_empty_for_matrix(
                    TILEDB_ROW_MAJOR :
                    TILEDB_COL_MAJOR;
   schema.set_domain(domain).set_order({{order, order}});
-  schema.add_attribute(tiledb::Attribute::create<T>(ctx, attr_name));
+  schema.add_attribute(tiledb::Attribute::create<T>(ctx, "values"));
 
   if (filter) {
     tiledb::FilterList fl(ctx);
@@ -109,7 +108,7 @@ void create_matrix(
       (A.num_cols() + num_parts - 1) / num_parts, A.num_cols() >= 2 ? 2 : 1);
 
   create_empty_for_matrix<T, LayoutPolicy, I>(
-      ctx, uri, "values", A.num_rows(), A.num_cols(), row_extent, col_extent, filter);
+      ctx, uri, A.num_rows(), A.num_cols(), row_extent, col_extent, filter);
 }
 
 /**
@@ -168,17 +167,16 @@ void write_matrix(
  * @tparam feature_type
  * @param ctx
  * @param uri
- * @param attr_name
- * @param rows
+  * @param rows
  * @param row_extent
  */
 template <class feature_type>
 void create_empty_for_vector(
     const tiledb::Context& ctx,
     const std::string& uri,
-    const std::string& attr_name,
     size_t rows,
-    size_t row_extent) {
+    size_t row_extent,
+    std::optional<tiledb_filter_type_t> filter = std::nullopt) {
   tiledb::Domain domain(ctx);
   domain.add_dimension(tiledb::Dimension::create<int>(
       ctx, "rows", {{0, (int)rows - 1}}, row_extent));
@@ -187,7 +185,7 @@ void create_empty_for_vector(
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
   schema.set_domain(domain).set_order({{TILEDB_ROW_MAJOR, TILEDB_ROW_MAJOR}});
 
-  schema.add_attribute(tiledb::Attribute::create<feature_type>(ctx, attr_name));
+  schema.add_attribute(tiledb::Attribute::create<feature_type>(ctx, "values"));
 
   tiledb::Array::create(uri, schema);
 }
@@ -201,14 +199,15 @@ void create_empty_for_vector(
  */
 template <std::ranges::contiguous_range V>
 void create_vector(
-    const tiledb::Context& ctx, const V& v, const std::string& uri) {
+    const tiledb::Context& ctx, const V& v, const std::string& uri,
+    std::optional<tiledb_filter_type_t> filter = std::nullopt) {
   using value_type = std::ranges::range_value_t<V>;
 
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
 
   create_empty_for_vector<value_type>(
-      ctx, uri, "values", size(v), tile_extent);
+      ctx, uri, size(v), tile_extent, filter);
 }
 
 /**

@@ -87,12 +87,14 @@ template <
     class partitioned_ids_type = uint64_t,
     class partitioning_index_type = uint64_t>
 class ivf_flat_index {
+ public:
   using feature_type = partitioned_vectors_feature_type;
   using id_type = partitioned_ids_type;
   using indices_type = partitioning_index_type;
   using score_type = float;  // @todo -- this should be a parameter?
   using centroid_feature_type = score_type;
 
+ private:
   using storage_type = ColMajorPartitionedMatrix<
       feature_type,
       partitioned_ids_type,
@@ -115,8 +117,8 @@ class ivf_flat_index {
 
   uint64_t timestamp_{0};
   tiledb::TemporalPolicy temporal_policy_;
-  // ivf_flat_index_group<ivf_flat_index> group_;
-  ivf_flat_index_group group_;
+
+  std::unique_ptr<ivf_flat_index_group<ivf_flat_index>> group_;
 
   /****************************************************************************
    * Index representation
@@ -186,26 +188,18 @@ class ivf_flat_index {
       const tiledb::Context& ctx,
       const std::string& uri,
       uint64_t timestamp = 0)
-      : group_{ctx, uri}
-      , timestamp_{timestamp}
-      , temporal_policy_{
-            (timestamp_ == 0) ?
-                tiledb::TemporalPolicy() :
-                tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp_)} {
-    /**
-     * Prep the group for subsequent reading of arrays.
-     */
-    group_.open();
-
+      : timestamp_{timestamp}
+      , temporal_policy_{(timestamp_ == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp_)}
+      , group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
+            ctx, uri, *this, TILEDB_READ)} {
     /**
      * Read the centroids.  How the partitioned_vectors_ are read in will be
      * determined by the type of query we are doing.
      */
-     centroids_ =
+    centroids_ =
         std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
-            group_.cached_ctx(), group_.centroids_uri(), 0, temporal_policy_));
+            group_->cached_ctx(), group_->centroids_uri(), 0, temporal_policy_));
   }
-
 
   ivf_flat_index() = delete;
   ivf_flat_index(const ivf_flat_index& index) = delete;
@@ -644,10 +638,10 @@ class ivf_flat_index {
     auto infinite_parts = std::vector<indices_type>(::num_vectors(centroids_));
     std::iota(begin(infinite_parts), end(infinite_parts), 0);
     partitioned_vectors_ = std::make_unique<tdb_storage_type>(
-        group_.cached_ctx(),
-        group_.parts_uri(),
-        group_.indices_uri(),
-        group_.ids_uri(),
+        group_->cached_ctx(),
+        group_->parts_uri(),
+        group_->indices_uri(),
+        group_->ids_uri(),
         infinite_parts,
         0,
         temporal_policy_);
@@ -685,14 +679,14 @@ class ivf_flat_index {
         detail::ivf::partition_ivf_flat_index<indices_type>(
             centroids_, query_vectors, nprobe, num_threads_);
 
-      partitioned_vectors_ = std::make_unique<tdb_storage_type>(
-          group_.cached_ctx(),
-          group_.parts_uri(),
-          group_.indices_uri(),
-          group_.ids_uri(),
-          active_partitions,
-          upper_bound,
-          temporal_policy_);
+    partitioned_vectors_ = std::make_unique<tdb_storage_type>(
+        group_->cached_ctx(),
+        group_->parts_uri(),
+        group_->indices_uri(),
+        group_->ids_uri(),
+        active_partitions,
+        upper_bound,
+        temporal_policy_);
 
     // NB: We don't load the partitioned_vectors here.  We will load them
     // when we do the query.
@@ -740,63 +734,17 @@ class ivf_flat_index {
 #endif
 
     // Write the group
-    auto write_group = ivf_flat_index_group(ctx, group_uri);
-    write_group.open();
+    auto write_group =
+        ivf_flat_index_group(ctx, group_uri, *this, TILEDB_WRITE);
 
-    tiledb::Config cfg;
-    tiledb::Group::create(ctx, group_uri);
-    auto write_group = tiledb::Group(ctx, group_uri, TILEDB_WRITE, cfg);
+    write_matrix(ctx, centroids_, write_group.centroids_uri(), 0, false);
 
-    // Write metadata for the ivf_flat_index
-    IndexKind index_kind = index_kind_;
-    write_group.put_metadata("index_kind", TILEDB_UINT32, 1, &index_kind);
+    write_matrix(ctx, *partitioned_vectors_, write_group.parts_uri(), 0, false);
 
-    // Write metadata for the ivf_flat_index.  The member data for the
-    // PartitionedMatrix is created when the PartitionedMatrix is
-    // constructed.
-    for (auto&& [name, value, type] : metadata) {
-      write_group.put_metadata(name, type, 1, value);
-    }
-
-    write_group.add_member(
-        group_.centroids_uri(), false, group_.centroids_name());
-    write_group.add_member(group_.parts_uri(), false, group_.parts_name());
-    write_group.add_member(group_.ids_uri(), false, group_.ids_name());
-    write_group.add_member(group_.indices_uri(), false, group_.indices_name());
-    write_group.close();
-
-    write_matrix(
-        ctx,
-        centroids_,
-        group_.centroids_uri(),
-        0,
-        overwrite,
-        write_temporal_policy);
-
-    write_matrix(
-        ctx,
-        *partitioned_vectors_,
-        group_.parts_uri(),
-        0,
-        overwrite,
-        write_temporal_policy);
+    write_vector(ctx, partitioned_vectors_->ids(), write_group.ids_uri(), 0, false);
 
     write_vector(
-        ctx,
-        partitioned_vectors_->ids(),
-        group_.ids_uri(),
-        0,
-        overwrite,
-        write_temporal_policy);
-
-    write_vector(
-        ctx,
-        partitioned_vectors_->indices(),
-        group_.indices_uri(),
-        0,
-        overwrite,
-        write_temporal_policy);
-
+        ctx, partitioned_vectors_->indices(), write_group.indices_uri(), 0, false);
 
     return true;
   }
@@ -1207,8 +1155,8 @@ class ivf_flat_index {
   }
 
   auto set_centroids(const ColMajorMatrix<feature_type>& centroids) {
-    centroids_ =
-        ColMajorMatrix<T>(::dimension(centroids), ::num_vectors(centroids));
+    centroids_ = ColMajorMatrix<centroid_feature_type>(
+        ::dimension(centroids), ::num_vectors(centroids));
     std::copy(
         centroids.data(),
         centroids.data() + centroids.num_rows() * centroids.num_cols(),

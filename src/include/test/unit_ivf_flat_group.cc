@@ -62,39 +62,48 @@ struct dummy_index {
   using feature_type = float;
   using id_type = int;
   using indices_type = int;
+  using centroids_type = float;
+
+  auto dimension() const { return 10; }
 };
 
 TEST_CASE("ivf_flat_group: constructor", "[ivf_flat_group]") {
   tiledb::Context ctx;
 
-  auto x = ivf_flat_index_group<dummy_index>(ctx, group_uri);
+  auto foo = dummy_index{};
+  auto n = foo.dimension();
+  std::reference_wrapper<const dummy_index> bar = foo;
+  auto m = bar.get().dimension();
+
+  auto x = ivf_flat_index_group(ctx, group_uri, foo);
+  auto y = ivf_flat_index_group(ctx, group_uri, dummy_index{});
 }
 
 TEST_CASE("ivf_flat_group: default constructor", "[ivf_flat_group]") {
   tiledb::Context ctx;
-  auto x = ivf_flat_index_group<dummy_index>(ctx, group_uri);
+  auto x = ivf_flat_index_group(ctx, group_uri, dummy_index{});
   x.dump("Default constructor");
 }
 
 TEST_CASE("ivf_flat_group: read constructor", "[ivf_flat_group]") {
   tiledb::Context ctx;
-  auto x = ivf_flat_index_group<dummy_index>(ctx, group_uri, TILEDB_READ);
+  auto x = ivf_flat_index_group(ctx, group_uri, dummy_index{}, TILEDB_READ);
   x.dump("Read constructor");
 }
 
 TEST_CASE("ivf_flat_group: read constructor with version", "[ivf_flat_group]") {
   tiledb::Context ctx;
-  auto x = ivf_flat_index_group<dummy_index>(ctx, group_uri, TILEDB_READ, "0.3");
+  auto x = ivf_flat_index_group(ctx, group_uri, dummy_index{}, TILEDB_READ, "0.3");
   x.dump("Read constructor with version");
 }
 
 TEST_CASE("ivf_flat_group: read constructor for non-existent group", "[ivf_flat_group]") {
   tiledb::Context ctx;
 
-  CHECK_THROWS_WITH(ivf_flat_index_group<dummy_index>(ctx, "I dont exist"), "Group uri I dont exist does not exist.");
+  CHECK_THROWS_WITH(ivf_flat_index_group(ctx, "I dont exist", dummy_index{}), "Group uri I dont exist does not exist.");
 }
 
-TEST_CASE("ivf_flat_group: write constructor, no arrays created", "[ivf_flat_group]") {
+TEST_CASE("ivf_flat_group: write constructor", "[ivf_flat_group]") {
   std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
 
   tiledb::Context ctx;
@@ -103,6 +112,6 @@ TEST_CASE("ivf_flat_group: write constructor, no arrays created", "[ivf_flat_gro
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_index_group x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor, no arrays created");
+  ivf_flat_index_group x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+  x.dump("Write constructor");
 }

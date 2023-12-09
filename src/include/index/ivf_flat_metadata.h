@@ -62,8 +62,8 @@
 
 template <class Group>
 class ivf_flat_index_metadata {
- private:
 
+ private:
   friend Group;
 
   using base_sizes_type = uint32_t;
@@ -73,11 +73,18 @@ class ivf_flat_index_metadata {
   /**************************************************************************
    * Members set / updated by users of the group
    ******************************************************************************/
-  // @todo Is this where we actually want to store these?
-  std::vector<base_sizes_type> base_sizes_;
+
+  /** Record timestamps of writes to the group */
   std::vector<ingestion_timestamps_type> ingestion_timestamps_;
+
+  /** Record size of vector array at each write at a given timestamp */
+  std::vector<base_sizes_type> base_sizes_;
+
+  /** Record number of partitions at each write at a given timestamp */
   std::vector<partition_history_type> partition_history_;
-  uint64_t temp_size_{0};  // @todo ???
+
+  /** Record size of temp */
+  uint64_t temp_size_{0};
 
   IndexKind index_kind_{IndexKind::IVFFlat};
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
@@ -108,12 +115,14 @@ class ivf_flat_index_metadata {
       {"index_type", index_type_, true},
       {"storage_version", storage_version_, true},
       {"dtype", dtype_, false},
-      {"base_sizes", base_sizes_str_, true},
-      {"ingestion_timestamps", ingestion_timestamps_str_, true},
-      {"partition_history", partition_history_str_, true},
+
       {"feature_type", feature_type_str_, false},
       {"id_type", id_type_str_, false},
       {"indices_type", indices_type_str_, false},
+
+      {"base_sizes", base_sizes_str_, true},
+      {"ingestion_timestamps", ingestion_timestamps_str_, true},
+      {"partition_history", partition_history_str_, true},
   };
 
   using metadata_arithmetic_check_type =
