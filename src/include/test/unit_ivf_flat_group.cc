@@ -62,7 +62,7 @@ struct dummy_index {
   using feature_type = float;
   using id_type = int;
   using indices_type = int;
-  using centroids_type = float;
+  using centroid_feature_type = float;
 
   auto dimension() const { return 10; }
 };
@@ -103,7 +103,7 @@ TEST_CASE("ivf_flat_group: read constructor for non-existent group", "[ivf_flat_
   CHECK_THROWS_WITH(ivf_flat_index_group(ctx, "I dont exist", dummy_index{}), "Group uri I dont exist does not exist.");
 }
 
-TEST_CASE("ivf_flat_group: write constructor", "[ivf_flat_group]") {
+TEST_CASE("ivf_flat_group: write constructor - create", "[ivf_flat_group]") {
   std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
 
   tiledb::Context ctx;
@@ -113,5 +113,208 @@ TEST_CASE("ivf_flat_group: write constructor", "[ivf_flat_group]") {
   }
 
   ivf_flat_index_group x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
-  x.dump("Write constructor");
+  x.dump("Write constructor - create");
+}
+
+TEST_CASE("ivf_flat_group: write constructor - create and open", "[ivf_flat_group]") {
+  std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
+
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri)) {
+    vfs.remove_dir(tmp_uri);
+  }
+
+  ivf_flat_index_group x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+  x.dump("Write constructor - create before open");
+
+  ivf_flat_index_group y = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+  x.dump("Write constructor - open");
+}
+
+TEST_CASE("ivf_flat_group: write constructor - create and read", "[ivf_flat_group]") {
+  std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
+
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri)) {
+    vfs.remove_dir(tmp_uri);
+  }
+
+  ivf_flat_index_group x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+  x.dump("Write constructor - create before open");
+
+  ivf_flat_index_group y = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+  x.dump("Write constructor - open for read");
+}
+
+TEST_CASE("ivf_flat_group: write constructor - create, write, and read", "[ivf_flat_group]") {
+  std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
+
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri)) {
+    vfs.remove_dir(tmp_uri);
+  }
+
+  ivf_flat_index_group x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+  x.dump("Write constructor - create before open");
+
+  ivf_flat_index_group y = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+  x.dump("Write constructor - open for write");
+
+  ivf_flat_index_group z = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+  x.dump("Write constructor - open for read");
+}
+
+TEST_CASE("ivf_flat_group: group metadata - bases, ingestions, partitions", "[ivf_flat_group]") {
+  std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
+
+  size_t expected_ingestion = 867;
+  size_t expected_base = 5309;  // OMG, copilot filled in 5309 after I typed 867
+  size_t expected_partitions = 42;
+  size_t exptected_temp_size = 314159;
+
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri)) {
+    vfs.remove_dir(tmp_uri);
+  }
+
+  size_t offset = 0;
+
+  ivf_flat_index_group x =
+      ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+
+  SECTION("Just set") {
+    SECTION("After create") {
+    }
+
+    SECTION("After create and read") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+    }
+
+    SECTION("After create and write") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+    }
+
+    SECTION("After create and write and read") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+    }
+
+    SECTION("After create and read and write") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+    }
+
+    x.set_ingestion_timestamp(expected_ingestion);
+    x.set_base_size(expected_base);
+    x.set_num_partitions(expected_partitions);
+  }
+
+  SECTION("Just append") {
+    SECTION("After create") {
+    }
+
+    SECTION("After create and read") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+    }
+
+    SECTION("After create and write") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+    }
+
+    SECTION("After create and write and read") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+    }
+
+    SECTION("After create and read and write") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+    }
+
+    x.append_ingestion_timestamp(expected_ingestion);
+    x.append_base_size(expected_base);
+    x.append_num_partitions(expected_partitions);
+  }
+
+  SECTION("Set then append") {
+    SECTION("After create") {
+    }
+
+    SECTION("After create and read") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+    }
+
+    SECTION("After create and write") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+    }
+
+    SECTION("After create and write and read") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+    }
+
+    SECTION("After create and read and write") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+    }
+
+    x.set_ingestion_timestamp(expected_ingestion);
+    x.set_base_size(expected_base);
+    x.set_num_partitions(expected_partitions);
+
+    offset = 13;
+
+    x.append_ingestion_timestamp(expected_ingestion + offset);
+    x.append_base_size(expected_base + offset);
+    x.append_num_partitions(expected_partitions + offset);
+
+    CHECK(size(x.get_all_ingestion_timestamps()) == 2); // OMG copilot set this to 2 here, to 1 below
+    CHECK(size(x.get_all_base_sizes()) == 2);
+    CHECK(size(x.get_all_num_partitions()) == 2);
+  }
+
+  SECTION("Set then set") {
+    SECTION("After create") {
+    }
+
+    SECTION("After create and read") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+    }
+
+    SECTION("After create and write") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+    }
+
+    SECTION("After create and write and read") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+    }
+
+    SECTION("After create and read and write") {
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+      x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+    }
+
+    x.set_ingestion_timestamp(expected_ingestion);
+    x.set_base_size(expected_base);
+    x.set_num_partitions(expected_partitions);
+
+    offset = 13;
+
+    x.set_ingestion_timestamp(expected_ingestion + offset);
+    x.set_base_size(expected_base + offset);
+    x.set_num_partitions(expected_partitions + offset);
+
+    CHECK(size(x.get_all_ingestion_timestamps()) == 1);
+    CHECK(size(x.get_all_base_sizes()) == 1);
+    CHECK(size(x.get_all_num_partitions()) == 1);
+  }
+
+  CHECK(x.get_ingestion_timestamp() == expected_ingestion + offset);
+  CHECK(x.get_base_size() == expected_base + offset);
+  CHECK(x.get_num_partitions() == expected_partitions + offset);
 }

@@ -125,8 +125,12 @@ class tdbPartitionedMatrix
   using row_domain_type = int32_t;
   using col_domain_type = int32_t;
 
+  // For now, we assume this is always valid so we don't need to add constructor
+  // arguments to limit it
   size_t num_array_rows_{0};
-  size_t num_array_cols_{0};
+
+  // We don't actually use this
+  // size_t num_array_cols_{0};
 
   std::reference_wrapper<const tiledb::Context> ctx_;
   // tiledb::Context ctx_;
@@ -286,9 +290,15 @@ class tdbPartitionedMatrix
     num_array_rows_ =
         (array_rows_.template domain<row_domain_type>().second -
          array_rows_.template domain<row_domain_type>().first + 1);
+
+// We don't use this.  The active partitions naturally limits the number of
+// columns that we will read in.
+// Comment out for now
+#if 0
     num_array_cols_ =
         (array_cols_.template domain<col_domain_type>().second -
          array_cols_.template domain<col_domain_type>().first + 1);
+#endif
 
     if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
         (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {

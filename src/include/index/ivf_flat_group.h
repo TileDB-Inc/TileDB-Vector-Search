@@ -239,6 +239,8 @@ class ivf_flat_index_group {
       open_for_read(cfg);
 
     } else {
+
+      /** Create a new group */
       create_default(cfg);
     }
   }
@@ -356,8 +358,61 @@ class ivf_flat_index_group {
     return tiledb::Object::remove(ctx, group_uri_);
   }
 
+
   /**************************************************************************
-   * Getters
+   * Getters for read and write timestamps and sizes
+   **************************************************************************/
+
+  /** Temporary until time traveling is implemented */
+  auto get_ingestion_timestamp() const {
+    return metadata_.ingestion_timestamps_.back();
+  }
+  auto set_ingestion_timestamp(size_t timestamp)  {
+    metadata_.ingestion_timestamps_.back() = timestamp;
+  }
+  auto append_ingestion_timestamp(size_t timestamp)  {
+    metadata_.ingestion_timestamps_.push_back(timestamp);
+  }
+  auto get_all_ingestion_timestamps() {
+    return metadata_.ingestion_timestamps_;
+  }
+
+  auto get_base_size() const {
+    return metadata_.base_sizes_.back();
+  }
+  auto set_base_size(size_t size)  {
+    metadata_.base_sizes_.back() = size;
+  }
+  auto append_base_size(size_t size)  {
+    metadata_.base_sizes_.push_back(size);
+  }
+  auto get_all_base_sizes() {
+    return metadata_.base_sizes_;
+  }
+
+  auto get_num_partitions() const {
+    return metadata_.partition_history_.back();
+  }
+  auto set_num_partitions(size_t size)  {
+    metadata_.partition_history_.back() = size;
+  }
+  auto append_num_partitions(size_t size)  {
+    metadata_.partition_history_.push_back(size);
+  }
+  auto get_all_num_partitions() {
+    return metadata_.partition_history_;
+  }
+
+  auto get_temp_size() const {
+    return metadata_.temp_size_;
+  }
+  auto set_temp_size(size_t size) const {
+    metadata_.temp_size_ = size;
+  }
+
+
+  /**************************************************************************
+   * Getters for names and uris
    **************************************************************************/
 
   [[nodiscard]] auto centroids_uri() const {
