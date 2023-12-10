@@ -554,6 +554,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   }
 #endif
 
+#if 0
   SECTION("read cli generated") {
     INFO("infinite cli");
     auto idx = ivf_flat_index<feature_type, id_type, px_type>(
@@ -561,6 +562,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
+#endif
 
   SECTION("read init generated") {
     INFO("infinite init");

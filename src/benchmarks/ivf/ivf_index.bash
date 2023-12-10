@@ -11,7 +11,7 @@ fi
 
 cmd="${IVFPATH}/ivf_index --db_uri ${SIFT_LEARN}  --ftype ${F_TYPE} --index_uri ${SIFT_INDEX} --idtype ${ID_TYPE} --pxtype ${PX_TYPE} -v -d --log - --force"
 echo ${cmd}
-time ${cmd}
+# time ${cmd}
 
 # cmd="${IVFPATH}/ivf_query  --index_uri ${SIFT_INDEX} --query_uri ${SIFT_QUERY}  --groundtruth_uri ${SIFT_GROUNDTRUTH}  -k 10 -v -d --log -"
 # echo ${cmd}
