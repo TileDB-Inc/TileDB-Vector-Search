@@ -121,6 +121,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       : tdbBlockedMatrix(ctx, uri, 0, tiledb::TemporalPolicy()) {
   }
 
+#if 0
   tdbBlockedMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
@@ -134,6 +135,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
                 tiledb::TemporalPolicy() :
                 tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)) {
   }
+#endif
 
   /**
    * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`

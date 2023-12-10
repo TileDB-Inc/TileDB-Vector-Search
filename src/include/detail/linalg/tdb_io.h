@@ -167,7 +167,7 @@ void write_matrix(
  * @tparam feature_type
  * @param ctx
  * @param uri
-  * @param rows
+ * @param rows
  * @param row_extent
  */
 template <class feature_type>
@@ -199,15 +199,16 @@ void create_empty_for_vector(
  */
 template <std::ranges::contiguous_range V>
 void create_vector(
-    const tiledb::Context& ctx, const V& v, const std::string& uri,
+    const tiledb::Context& ctx,
+    const V& v,
+    const std::string& uri,
     std::optional<tiledb_filter_type_t> filter = std::nullopt) {
   using value_type = std::ranges::range_value_t<V>;
 
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
 
-  create_empty_for_vector<value_type>(
-      ctx, uri, size(v), tile_extent, filter);
+  create_empty_for_vector<value_type>(ctx, uri, size(v), tile_extent, filter);
 }
 
 /**
@@ -315,10 +316,6 @@ std::vector<T> read_vector(
   return data_;
 }
 
-template <class T>
-std::vector<T> read_vector(const tiledb::Context& ctx, const std::string& uri) {
-  return read_vector<T>(ctx, uri, 0, 0, tiledb::TemporalPolicy());
-}
 
 template <class T>
 std::vector<T> read_vector(
@@ -334,6 +331,13 @@ std::vector<T> read_vector(
       end_pos,
       (timestamp == 0) ? tiledb::TemporalPolicy() :
                          tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp));
+}
+
+
+template <class T>
+std::vector<T> read_vector(
+    const tiledb::Context& ctx, const std::string& uri, size_t timestamp = 0) {
+  return read_vector<T>(ctx, uri, 0, 0, timestamp);
 }
 
 template <class T>

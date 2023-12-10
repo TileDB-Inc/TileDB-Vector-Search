@@ -59,6 +59,7 @@ class ivf_flat_index_group {
   std::filesystem::path group_uri_;
   std::reference_wrapper<const Index> index_;
   std::string version_;
+  tiledb_query_type_t opened_for_ {TILEDB_READ};
 
   static const int32_t default_domain{std::numeric_limits<int32_t>::max()-1};
   static const int32_t default_tile_extent{100'000};
@@ -150,8 +151,9 @@ class ivf_flat_index_group {
       : cached_ctx_(ctx)
       , group_uri_(uri)
       , index_(index)
-      , version_(version) {
-    switch (rw) {
+      , version_(version)
+      , opened_for_(rw) {
+    switch (opened_for_) {
       case TILEDB_READ:
         open_for_read(cfg);
         break;
@@ -166,6 +168,14 @@ class ivf_flat_index_group {
         break;
       default:
         throw std::runtime_error("Invalid query type.");
+    }
+  }
+
+  ~ivf_flat_index_group() {
+    if (opened_for_ == TILEDB_WRITE) {
+      auto cfg = tiledb::Config();
+      auto write_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
+      metadata_.store_metadata(write_group);
     }
   }
 
@@ -276,7 +286,7 @@ class ivf_flat_index_group {
     metadata_.base_sizes_ = {0};
     metadata_.partition_history_ = {0};
     metadata_.temp_size_ = 0;
-    metadata_.dimension_ = 0;
+    metadata_.dimension_ = index_.get().dimension();
 
     create_empty_for_matrix<typename Index::centroid_feature_type, stdx::layout_left>(
         cached_ctx_,

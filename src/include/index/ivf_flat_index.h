@@ -116,7 +116,6 @@ class ivf_flat_index {
    ****************************************************************************/
 
   uint64_t timestamp_{0};
-  tiledb::TemporalPolicy temporal_policy_;
 
   std::unique_ptr<ivf_flat_index_group<ivf_flat_index>> group_;
 
@@ -189,17 +188,16 @@ class ivf_flat_index {
       const std::string& uri,
       uint64_t timestamp = 0)
       : timestamp_{timestamp}
-      , temporal_policy_{(timestamp_ == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp_)}
       , group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
             ctx, uri, *this, TILEDB_READ)} {
     /**
      * Read the centroids.  How the partitioned_vectors_ are read in will be
      * determined by the type of query we are doing.
      */
-    size_t num_centroids = group_->num_partitione();
+    size_t num_centroids = group_->get_num_partitions();
     centroids_ =
         std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
-            group_->cached_ctx(), group_->centroids_uri(), 0, num_centroids, 0, temporal_policy_));
+            group_->cached_ctx(), group_->centroids_uri(), 0, num_centroids, 0, timestamp_));
   }
 
   ivf_flat_index() = delete;
@@ -642,10 +640,11 @@ class ivf_flat_index {
         group_->cached_ctx(),
         group_->parts_uri(),
         group_->indices_uri(),
+        group_->get_num_partitions() + 1,
         group_->ids_uri(),
         infinite_parts,
         0,
-        temporal_policy_);
+        timestamp_);
 
     partitioned_vectors_->load();
 
@@ -684,10 +683,11 @@ class ivf_flat_index {
         group_->cached_ctx(),
         group_->parts_uri(),
         group_->indices_uri(),
+        group_->get_num_partitions() + 1,
         group_->ids_uri(),
         active_partitions,
         upper_bound,
-        temporal_policy_);
+        timestamp_);
 
     // NB: We don't load the partitioned_vectors here.  We will load them
     // when we do the query.
@@ -730,8 +730,6 @@ class ivf_flat_index {
                            std::chrono::system_clock::now().time_since_epoch())
                            .count();
 
-    auto write_temporal_policy =
-        tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 #endif
 
     // Write the group

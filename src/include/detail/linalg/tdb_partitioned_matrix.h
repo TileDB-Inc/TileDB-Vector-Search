@@ -229,19 +229,37 @@ class tdbPartitionedMatrix
       const std::string& ids_uri,
       const P& relevant_parts,
       size_t upper_bound,
-      const tiledb::TemporalPolicy temporal_policy = {})
+      size_t timestamp = 0)
       : tdbPartitionedMatrix(
             ctx,
             partitioned_vectors_uri,
-            read_vector<indices_type>(ctx, indices_uri),
+            read_vector<indices_type>(ctx, indices_uri, timestamp),
             ids_uri,
             relevant_parts,
             upper_bound,
-            temporal_policy) {
+            timestamp) {
   }
 
-  tdbPartitionedMatrix(std::vector<indices_type>&) {
+  template <std::ranges::contiguous_range P>
+  tdbPartitionedMatrix(
+      const tiledb::Context& ctx,
+      const std::string& partitioned_vectors_uri,
+      const std::string& indices_uri,
+      size_t num_indices,
+      const std::string& ids_uri,
+      const P& relevant_parts,
+      size_t upper_bound,
+      size_t timestamp = 0)
+      : tdbPartitionedMatrix(
+            ctx,
+            partitioned_vectors_uri,
+            read_vector<indices_type>(ctx, indices_uri, 0, num_indices, timestamp),
+            ids_uri,
+            relevant_parts,
+            upper_bound,
+            timestamp) {
   }
+
 
   template <std::ranges::contiguous_range P>
   tdbPartitionedMatrix(
@@ -251,7 +269,27 @@ class tdbPartitionedMatrix
       const std::string& ids_uri,
       const P& relevant_parts,
       size_t upper_bound,
-      const tiledb::TemporalPolicy temporal_policy = {})
+      size_t timestamp = 0) :
+        tdbPartitionedMatrix(
+            ctx,
+            partitioned_vectors_uri,
+            indices,
+            ids_uri,
+            relevant_parts,
+            upper_bound,
+            (timestamp == 0) ? tiledb::TemporalPolicy() :
+            tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)) {
+  }
+
+      template <std::ranges::contiguous_range P>
+      tdbPartitionedMatrix(
+          const tiledb::Context& ctx,
+          const std::string& partitioned_vectors_uri,
+          const std::vector<indices_type>& indices,
+          const std::string& ids_uri,
+          const P& relevant_parts,
+          size_t upper_bound,
+          const tiledb::TemporalPolicy temporal_policy = {})
       : ctx_{ctx}
       , partitioned_vectors_uri_{partitioned_vectors_uri}
       , partitioned_vectors_array_(tiledb_helpers::open_array(

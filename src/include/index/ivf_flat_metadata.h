@@ -133,7 +133,7 @@ class ivf_flat_index_metadata {
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks{
       {"temp_size", &temp_size_, TILEDB_UINT64, true},
       {"index_kind", &index_kind_, TILEDB_UINT32, false},
-      {"dimension", &dimension_, TILEDB_UINT32, true},
+      {"dimension", &dimension_, TILEDB_UINT32, false},
       {"feature_datatype", &feature_datatype_, TILEDB_UINT32, false},
       {"id_datatype", &id_datatype_, TILEDB_UINT32, false},
       {"px_datatype", &px_datatype_, TILEDB_UINT32, false},
