@@ -341,7 +341,7 @@ struct _gn {
   }
 
   template <class T>
-    requires(!_member_num_resident_parts<T>) auto constexpr operator()(
+  requires(!_member_num_resident_parts<T>) auto constexpr operator()(
       T&& t) const noexcept {
     return 0;
   }
@@ -395,7 +395,6 @@ inline constexpr auto num_partitions = _num_partitions::_fn{};
 // ----------------------------------------------------------------------------
 namespace _col_offset {
 
-
 template <class T>
 concept _member_col_offset = requires(T t) {
   { t.col_offset() } -> semi_integral;
@@ -428,7 +427,7 @@ struct _fn {
   }
 
   template <class T>
-    requires(!_member_col_offset<T>) auto constexpr operator()(
+  requires(!_member_col_offset<T>) auto constexpr operator()(
       T&& t) const noexcept {
     return 0;
   }
@@ -446,8 +445,9 @@ struct _gn {
   }
 
   template <class T>
-  requires((!_member_num_col_parts<T>) && (!_member_num_resident_parts<T>) ) auto constexpr operator()(
-      T&& t) const noexcept {
+  requires((!_member_num_col_parts<T>)&&(
+      !_member_num_resident_parts<T>)) auto constexpr
+  operator()(T&& t) const noexcept {
     return 0;
   }
 };
@@ -464,12 +464,12 @@ struct _hn {
   }
 
   template <class T>
-    requires((!_member_col_part_offset<T>) && (!_member_resident_part_offset<T>)) auto constexpr operator()(
-      T&& t) const noexcept {
+  requires((!_member_col_part_offset<T>)&&(
+      !_member_resident_part_offset<T>)) auto constexpr
+  operator()(T&& t) const noexcept {
     return 0;
   }
 };
-
 
 }  // namespace _col_offset
 inline namespace _cpo {
@@ -477,8 +477,5 @@ inline constexpr auto col_offset = _col_offset::_fn{};
 inline constexpr auto num_col_parts = _col_offset::_gn{};
 inline constexpr auto col_part_offset = _col_offset::_hn{};
 }  // namespace _cpo
-
-
-
 
 #endif  // TILEDB_CPOS_H

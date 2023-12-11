@@ -423,7 +423,8 @@ TEST_CASE("threshold_heap: new threshold", "[threshold_heap]") {
 }
 
 TEST_CASE(
-    "fixed_min_heap: fixed_max_heap with a large vector and compare function", "[fixed_min_heap]") {
+    "fixed_min_heap: fixed_max_heap with a large vector and compare function",
+    "[fixed_min_heap]") {
   using element = std::tuple<float, int>;
 
   fixed_min_pair_heap<float, int, std::greater<float>> a(

@@ -223,7 +223,7 @@ TEST_CASE(
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
   size_t nprobe = GENERATE(8, 32);
-  size_t max_iter = GENERATE( 4, 8 );
+  size_t max_iter = GENERATE(4, 8);
 
   std::string api_ivf_flat_index_uri = "/tmp/api_ivf_flat_index";
 

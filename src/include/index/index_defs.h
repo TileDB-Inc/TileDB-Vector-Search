@@ -79,7 +79,8 @@ enum class IndexKind {
 [[maybe_unused]] static std::string current_storage_version{"0.3"};
 
 // @todo Use enum for key rather than string?
-using StorageFormat = std::map<std::string, std::map<std::string, std::filesystem::path>>;
+using StorageFormat =
+    std::map<std::string, std::map<std::string, std::filesystem::path>>;
 [[maybe_unused]] static StorageFormat storage_formats = {
     {"0.1",
      {
@@ -158,14 +159,14 @@ using StorageFormat = std::map<std::string, std::map<std::string, std::filesyste
              "temp_size",             // uint64_t
 
              // From C++ ivf_flat_index -- these are constant for a given index
-             "feature_datatype",      // tiledb_datatype_t (enum -> uint64_t)
-             "id_datatype",           // tiledb_datatype_t (enum -> uint64_t)
-             "px_datatype",           // tiledb_datatype_t (enum -> uint64_t)
-             "dimension",             // uint64_t
+             "feature_datatype",  // tiledb_datatype_t (enum -> uint64_t)
+             "id_datatype",       // tiledb_datatype_t (enum -> uint64_t)
+             "px_datatype",       // tiledb_datatype_t (enum -> uint64_t)
+             "dimension",         // uint64_t
 
              // From C++ ivf_flat_index -- this needs to be timestamped
              // @todo Deprecate and change to partition_history
-             "num_partitions",        // uint64_t
+             "num_partitions",  // uint64_t
 
              // These all have to do with individual instantiations of the
              // index and might not really belong in the metadata -- should
@@ -173,15 +174,15 @@ using StorageFormat = std::map<std::string, std::map<std::string, std::filesyste
 
              // For execution of kmeans -- could be useful for debugging and
              // reproducibility -- need to store as json list
-             "max_iter",              // uint64_t -> json list
-             "tol",                   // float -> json list
-             "reassign_ratio",        // float -> json list
+             "max_iter",        // uint64_t -> json list
+             "tol",             // float -> json list
+             "reassign_ratio",  // float -> json list
 
              // For execution of ingestion and queries
              // @todo gather from context
-             "num_threads",           // float
-             // "seed", &seed_, TILEDB_UINT64},
-             // "timestamp", &timestamp_, TILEDB_UINT64},
+             "num_threads",  // float
+                             // "seed", &seed_, TILEDB_UINT64},
+                             // "timestamp", &timestamp_, TILEDB_UINT64},
          }}};
 
 // convert tiledb dataypes into python name strings with datatype_to_string

@@ -239,5 +239,4 @@ struct type_to_string<uint64_t> {
 template <class T>
 inline constexpr auto type_to_string_v = type_to_string<T>::value;
 
-
 #endif  // TILEDB_TDB_DEFS_H

@@ -395,8 +395,6 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
  *
  ******************************************************************************/
 
-
-
 // ----------------------------------------------------------------------------
 // Functions for searching with finite RAM, new qv (nuv) ordering
 // ----------------------------------------------------------------------------
@@ -449,10 +447,11 @@ auto nuv_query_heap_finite_ram(
 
   auto num_queries = num_vectors(query);
 
-  auto min_scores = std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>> (
-      nthreads,
-      std::vector<fixed_min_pair_heap<score_type, id_type>>(
-          num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn)));
+  auto min_scores =
+      std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>>(
+          nthreads,
+          std::vector<fixed_min_pair_heap<score_type, id_type>>(
+              num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn)));
 
   log_timer _i{tdb_func__ + " in RAM"};
 
@@ -553,17 +552,17 @@ auto nuv_query_heap_finite_ram(
  * @param active_partitions The partitions to which queries will be applied
  * @param query The query to be applied
  * @param active_queries The queries associated with each (active) partition
-  * @param k_nn How many nearest neighbors to return
+ * @param k_nn How many nearest neighbors to return
  * @param nthreads How many threads to parallelize with
  * @return tuple of the top_k scores and the top_k indices
  *
  */
 template <feature_vector_array F, feature_vector_array Q>
 auto nuv_query_heap_finite_ram_reg_blocked(
-    F& partitioned_vectors, // not const because of load()
+    F& partitioned_vectors,  // not const because of load()
     const Q& query,
     auto&& active_queries,
-     size_t k_nn,
+    size_t k_nn,
     size_t upper_bound,
     size_t nthreads) {
   scoped_timer _{tdb_func__};
@@ -706,7 +705,6 @@ auto nuv_query_heap_finite_ram_reg_blocked(
 
   return top_k;
 }
-
 
 /**
  * @todo Modify for new ivf_index api
@@ -964,7 +962,7 @@ auto apply_query(
  */
 template <feature_vector_array F, feature_vector_array Q>
 auto query_finite_ram(
-    F& partitioned_vectors,   // not const because of load()
+    F& partitioned_vectors,  // not const because of load()
     const Q& query,
     auto&& active_queries,
     size_t k_nn,
@@ -1058,7 +1056,7 @@ auto query_finite_ram(
  * @param active_partitions The partitions to which queries will be applied
  * @param query The query to be applied
  * @param active_queries The queries associated with each (active) partition
-  * @param k_nn How many nearest neighbors to return
+ * @param k_nn How many nearest neighbors to return
  * @param nthreads How many threads to parallelize with
  * @return tuple of the top_k scores and the top_k indices
  *

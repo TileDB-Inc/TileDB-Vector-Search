@@ -134,7 +134,6 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       , num_parts_(size(part_index_) - 1) {
   }
 
-
   /**
    * @brief Construct a partitioned matrix in place from a training set of data
    * and an array of labels that maps each vector of the training set to a

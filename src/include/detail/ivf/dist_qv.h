@@ -302,7 +302,7 @@ auto dist_qv_finite_ram(
        */
 
 #if 1
-auto dist_min_scores =
+      auto dist_min_scores =
           dist_qv_finite_ram_part<feature_type, shuffled_ids_type>(
               ctx,
               part_uri,

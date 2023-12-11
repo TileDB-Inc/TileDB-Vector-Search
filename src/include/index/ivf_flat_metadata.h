@@ -73,7 +73,6 @@
  */
 template <class Group>
 class ivf_flat_index_metadata {
-
  private:
   friend Group;
 
@@ -269,7 +268,8 @@ class ivf_flat_index_metadata {
   ivf_flat_index_metadata& operator=(const ivf_flat_index_metadata&) = default;
   ivf_flat_index_metadata& operator=(ivf_flat_index_metadata&&) = default;
 
-  ivf_flat_index_metadata(const Group& read_group) { }
+  ivf_flat_index_metadata(const Group& read_group) {
+  }
 
   /**
    * Read all of the metadata fields from the given group.

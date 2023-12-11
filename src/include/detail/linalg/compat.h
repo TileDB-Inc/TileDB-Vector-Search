@@ -36,9 +36,9 @@
 #ifndef TILEDB_COMPAT_H
 #define TILEDB_COMPAT_H
 
-// ColMajorPartitionedMatrix: qv_query_heap_infinite_ram, nuv_query_heap_infinite_ram
-// tdbColMajorPartitionedMatrix: nuv_query_heap_finite_ram -- should be okay -- called with uris
-
+// ColMajorPartitionedMatrix: qv_query_heap_infinite_ram,
+// nuv_query_heap_infinite_ram tdbColMajorPartitionedMatrix:
+// nuv_query_heap_finite_ram -- should be okay -- called with uris
 
 #include <cstddef>
 #include "detail/linalg/matrix.h"
@@ -63,7 +63,6 @@ template <
     class LayoutPolicy = stdx::layout_right,
     class I = size_t>
 class PartitionedMatrixWrapper {
-
  public:
   using value_type = T;  // should be same as T
   using index_type = PartIndexType;
@@ -76,15 +75,16 @@ class PartitionedMatrixWrapper {
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
  protected:
-
   // The partitioned vectors
-  std::reference_wrapper<Matrix<T, LayoutPolicy, I>> parts_;  // @todo pointer and span?
+  std::reference_wrapper<Matrix<T, LayoutPolicy, I>>
+      parts_;  // @todo pointer and span?
 
   // ids for the partitioned vectors
   std::reference_wrapper<std::vector<id_type>> ids_;  // @todo pointer and span?
 
   // Index for partitioned vectors
-  std::reference_wrapper<std::vector<part_index_type>> part_index_;  // @todo pointer and span?
+  std::reference_wrapper<std::vector<part_index_type>>
+      part_index_;  // @todo pointer and span?
 
   // Stores the number of valid vectors being stored
   size_t num_vectors_{0};
@@ -112,7 +112,6 @@ class PartitionedMatrixWrapper {
       , num_vectors_(::num_vectors(parts))
       , num_parts_(part_index.size() - 1) {
   }
-
 
   auto operator[](index_type i) const {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
@@ -220,6 +219,5 @@ using ColMajorPartitionedMatrixWrapper = PartitionedMatrixWrapper<
     part_index_type,
     stdx::layout_left,
     I>;
-
 
 #endif  // TILEDB_COMPAT_H

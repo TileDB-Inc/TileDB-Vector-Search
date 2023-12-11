@@ -198,7 +198,12 @@ class ivf_flat_index {
     num_partitions_ = group_->get_num_partitions();
     centroids_ =
         std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
-            group_->cached_ctx(), group_->centroids_uri(), 0, num_partitions_, 0, timestamp_));
+            group_->cached_ctx(),
+            group_->centroids_uri(),
+            0,
+            num_partitions_,
+            0,
+            timestamp_));
   }
 
   ivf_flat_index() = delete;
@@ -747,10 +752,15 @@ class ivf_flat_index {
 
     write_matrix(ctx, *partitioned_vectors_, write_group.parts_uri(), 0, false);
 
-    write_vector(ctx, partitioned_vectors_->ids(), write_group.ids_uri(), 0, false);
+    write_vector(
+        ctx, partitioned_vectors_->ids(), write_group.ids_uri(), 0, false);
 
     write_vector(
-        ctx, partitioned_vectors_->indices(), write_group.indices_uri(), 0, false);
+        ctx,
+        partitioned_vectors_->indices(),
+        write_group.indices_uri(),
+        0,
+        false);
 
     return true;
   }
@@ -1229,7 +1239,6 @@ class ivf_flat_index {
     }
     return indices;
   }
-
 };
 
 #endif  // TILEDB_ivf_flat_index_H

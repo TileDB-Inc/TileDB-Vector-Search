@@ -47,12 +47,12 @@ struct dummy_index {
   using indices_type = int;
   using centroid_feature_type = float;
 
-  auto dimension() const { return 10; }
+  auto dimension() const {
+    return 10;
+  }
 };
 
-struct null_group {
-
-};
+struct null_group {};
 
 TEST_CASE("ivf_flat_metadata: default constructor", "[ivf_flat_metadata]") {
   auto x = ivf_flat_index_metadata<null_group>();

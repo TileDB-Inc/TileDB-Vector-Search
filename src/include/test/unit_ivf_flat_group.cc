@@ -1,32 +1,32 @@
 /**
-* @file   unit_ivf_flat_group.cc
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
-*/
+ * @file   unit_ivf_flat_group.cc
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ */
 
 #include <catch2/catch_all.hpp>
 #include <tiledb/tiledb>
@@ -38,7 +38,6 @@
 #include "query_common.h"
 
 #include "utils/print_types.h"
-
 
 TEST_CASE("ivf_flat_group: test test", "[ivf_flat_group]") {
   REQUIRE(true);
@@ -54,8 +53,8 @@ TEST_CASE("ivf_flat_group: create tiledb::Group", "[ivf_flat_group]") {
     vfs.remove_dir(tmp_uri);
   tiledb::Group::create(ctx, tmp_uri);
   std::unique_ptr<tiledb::Group> write_group_;
-  write_group_ = std::make_unique<tiledb::Group>(
-      ctx, tmp_uri, TILEDB_WRITE, cfg);
+  write_group_ =
+      std::make_unique<tiledb::Group>(ctx, tmp_uri, TILEDB_WRITE, cfg);
 }
 
 struct dummy_index {
@@ -64,7 +63,9 @@ struct dummy_index {
   using indices_type = int;
   using centroid_feature_type = float;
 
-  auto dimension() const { return 10; }
+  auto dimension() const {
+    return 10;
+  }
 };
 
 TEST_CASE("ivf_flat_group: constructor", "[ivf_flat_group]") {
@@ -93,14 +94,19 @@ TEST_CASE("ivf_flat_group: read constructor", "[ivf_flat_group]") {
 
 TEST_CASE("ivf_flat_group: read constructor with version", "[ivf_flat_group]") {
   tiledb::Context ctx;
-  auto x = ivf_flat_index_group(ctx, group_uri, dummy_index{}, TILEDB_READ, "0.3");
+  auto x =
+      ivf_flat_index_group(ctx, group_uri, dummy_index{}, TILEDB_READ, "0.3");
   x.dump("Read constructor with version");
 }
 
-TEST_CASE("ivf_flat_group: read constructor for non-existent group", "[ivf_flat_group]") {
+TEST_CASE(
+    "ivf_flat_group: read constructor for non-existent group",
+    "[ivf_flat_group]") {
   tiledb::Context ctx;
 
-  CHECK_THROWS_WITH(ivf_flat_index_group(ctx, "I dont exist", dummy_index{}), "Group uri I dont exist does not exist.");
+  CHECK_THROWS_WITH(
+      ivf_flat_index_group(ctx, "I dont exist", dummy_index{}),
+      "Group uri I dont exist does not exist.");
 }
 
 TEST_CASE("ivf_flat_group: write constructor - create", "[ivf_flat_group]") {
@@ -112,11 +118,13 @@ TEST_CASE("ivf_flat_group: write constructor - create", "[ivf_flat_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_index_group x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+  ivf_flat_index_group x =
+      ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
   x.dump("Write constructor - create");
 }
 
-TEST_CASE("ivf_flat_group: write constructor - create and open", "[ivf_flat_group]") {
+TEST_CASE(
+    "ivf_flat_group: write constructor - create and open", "[ivf_flat_group]") {
   std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
 
   tiledb::Context ctx;
@@ -125,14 +133,17 @@ TEST_CASE("ivf_flat_group: write constructor - create and open", "[ivf_flat_grou
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_index_group x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+  ivf_flat_index_group x =
+      ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
   x.dump("Write constructor - create before open");
 
-  ivf_flat_index_group y = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+  ivf_flat_index_group y =
+      ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
   x.dump("Write constructor - open");
 }
 
-TEST_CASE("ivf_flat_group: write constructor - create and read", "[ivf_flat_group]") {
+TEST_CASE(
+    "ivf_flat_group: write constructor - create and read", "[ivf_flat_group]") {
   std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
 
   tiledb::Context ctx;
@@ -141,14 +152,18 @@ TEST_CASE("ivf_flat_group: write constructor - create and read", "[ivf_flat_grou
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_index_group x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+  ivf_flat_index_group x =
+      ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
   x.dump("Write constructor - create before open");
 
-  ivf_flat_index_group y = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+  ivf_flat_index_group y =
+      ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
   x.dump("Write constructor - open for read");
 }
 
-TEST_CASE("ivf_flat_group: write constructor - create, write, and read", "[ivf_flat_group]") {
+TEST_CASE(
+    "ivf_flat_group: write constructor - create, write, and read",
+    "[ivf_flat_group]") {
   std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
 
   tiledb::Context ctx;
@@ -157,17 +172,22 @@ TEST_CASE("ivf_flat_group: write constructor - create, write, and read", "[ivf_f
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_index_group x = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+  ivf_flat_index_group x =
+      ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
   x.dump("Write constructor - create before open");
 
-  ivf_flat_index_group y = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
+  ivf_flat_index_group y =
+      ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_WRITE);
   x.dump("Write constructor - open for write");
 
-  ivf_flat_index_group z = ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
+  ivf_flat_index_group z =
+      ivf_flat_index_group(ctx, tmp_uri, dummy_index{}, TILEDB_READ);
   x.dump("Write constructor - open for read");
 }
 
-TEST_CASE("ivf_flat_group: group metadata - bases, ingestions, partitions", "[ivf_flat_group]") {
+TEST_CASE(
+    "ivf_flat_group: group metadata - bases, ingestions, partitions",
+    "[ivf_flat_group]") {
   std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
 
   size_t expected_ingestion = 867;
@@ -281,7 +301,9 @@ TEST_CASE("ivf_flat_group: group metadata - bases, ingestions, partitions", "[iv
     x.set_temp_size(expected_temp_size + offset);
     x.set_dimension(expected_dimension + offset);
 
-    CHECK(size(x.get_all_ingestion_timestamps()) == 2); // OMG copilot set this to 2 here, to 1 below
+    CHECK(
+        size(x.get_all_ingestion_timestamps()) ==
+        2);  // OMG copilot set this to 2 here, to 1 below
     CHECK(size(x.get_all_base_sizes()) == 2);
     CHECK(size(x.get_all_num_partitions()) == 2);
   }

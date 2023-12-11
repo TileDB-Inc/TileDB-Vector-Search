@@ -316,7 +316,6 @@ std::vector<T> read_vector(
   return data_;
 }
 
-
 template <class T>
 std::vector<T> read_vector(
     const tiledb::Context& ctx,
@@ -332,7 +331,6 @@ std::vector<T> read_vector(
       (timestamp == 0) ? tiledb::TemporalPolicy() :
                          tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp));
 }
-
 
 template <class T>
 std::vector<T> read_vector(

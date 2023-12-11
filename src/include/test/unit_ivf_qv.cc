@@ -31,7 +31,7 @@
 
 #include <catch2/catch_all.hpp>
 #include <cmath>
-#include "detail/ivf/dist_qv.h" // dist_qv_finite_ram
+#include "detail/ivf/dist_qv.h"  // dist_qv_finite_ram
 #include "detail/ivf/qv.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
@@ -40,7 +40,6 @@
 TEST_CASE("qv: test test", "[qv]") {
   REQUIRE(true);
 }
-
 
 TEST_CASE("ivf qv: infinite all or none", "[ivf qv][ci-skip]") {
   // vq_query_infinite_ram
@@ -54,7 +53,7 @@ TEST_CASE("ivf qv: infinite all or none", "[ivf qv][ci-skip]") {
   // auto ids = read_vector<uint64_t>(ctx, ids_uri);
   // auto index = sizes_to_indices(sizes);
 
-  auto centroids =  tdbColMajorMatrix<db_type>(ctx, centroids_uri);
+  auto centroids = tdbColMajorMatrix<db_type>(ctx, centroids_uri);
   centroids.load();
   auto query = tdbColMajorMatrix<db_type>(ctx, query_uri, num_queries);
   query.load();
@@ -128,7 +127,6 @@ TEST_CASE("ivf qv: infinite all or none", "[ivf qv][ci-skip]") {
     }
   }
 }
-
 
 TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
   // vq_query_infinite_ram
@@ -281,7 +279,6 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
 }
 
 TEST_CASE("ivf_qv: dist_qv", "[ivf qv]") {
-
   tiledb::Context ctx;
 
   auto num_queries = GENERATE(1, 101, 0);
@@ -305,9 +302,8 @@ TEST_CASE("ivf_qv: dist_qv", "[ivf qv]") {
 
   auto infinite_parts = std::vector<indices_type>(::num_vectors(centroids));
   std::iota(begin(infinite_parts), end(infinite_parts), 0);
-  auto inf_mat =
-      tdbColMajorPartitionedMatrix<db_type, ids_type, indices_type>(
-          ctx, parts_uri, index_uri, ids_uri, infinite_parts, 0);
+  auto inf_mat = tdbColMajorPartitionedMatrix<db_type, ids_type, indices_type>(
+      ctx, parts_uri, index_uri, ids_uri, infinite_parts, 0);
   inf_mat.load();
 
   auto&& [D00, I00] = detail::ivf::query_infinite_ram(
@@ -327,7 +323,6 @@ TEST_CASE("ivf_qv: dist_qv", "[ivf qv]") {
       D00.data(),
       D00.data() + D00.size(),
       std::vector<db_type>(D00.size(), 0.0).data()));
-
 
   // std::cout << "num nodes " << num_nodes << std::endl;
 
