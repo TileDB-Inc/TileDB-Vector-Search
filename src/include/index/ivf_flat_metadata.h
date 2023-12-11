@@ -386,6 +386,82 @@ class ivf_flat_index_metadata {
    **************************************************************************/
 
   /**
+   * @brief Compare two metadata objects for equality.
+   * @param rhs The metadata object to compare *this against.
+   * @return bool Whether the metadata objects are equal.
+   */
+  bool compare_metadata(const ivf_flat_index_metadata& rhs){
+
+    // If the dataset type is different, don't bother comparing rest
+    if (dataset_type_ != rhs.dataset_type_) {
+      return false;
+    }
+
+    // If storage version is different, don't bother comparing rest
+    if (storage_version_ != rhs.storage_version_) {
+      return false;
+    }
+
+    if(base_sizes_str_ != rhs.base_sizes_str_){
+      return false;
+    }
+    if (ingestion_timestamps_str_ != rhs.ingestion_timestamps_str_) {
+      return false;
+    }
+    if (partition_history_str_ != rhs.partition_history_str_) {
+      return false;
+    }
+    for (size_t i = 0; i < size(metadata_string_checks); i++) {
+      auto&& [name, value, required] = metadata_string_checks[i];
+      auto&& [rhs_name, rhs_value, rhs_required] =
+          rhs.metadata_string_checks[i];
+      if (name != rhs_name) {
+        return false;
+      }
+      if (value != rhs_value) {
+        return false;
+      }
+    }
+    for (size_t i = 0; i < size(metadata_arithmetic_checks); i++) {
+      auto&& [name, value, type, required] = metadata_arithmetic_checks[i];
+      auto&& [rhs_name, rhs_value, rhs_type, rhs_required] =
+          rhs.metadata_arithmetic_checks[i];
+
+      if (name != rhs_name) {
+        return false;
+      }
+      if (type != rhs_type) {
+        return false;
+      }
+      switch (type) {
+        case TILEDB_FLOAT64:
+          if(*static_cast<double*>(value) != *static_cast<double*>(rhs_value)){
+            return false;
+          }
+        case TILEDB_FLOAT32:
+          if (*static_cast<float*>(value) != *static_cast<float*>(rhs_value)) {
+            return false;
+          }
+        case TILEDB_UINT64:
+          if (*static_cast<uint64_t*>(value) !=
+              *static_cast<uint64_t*>(rhs_value)) {
+            return false;
+          }
+        case TILEDB_UINT32:
+          if (*static_cast<uint32_t*>(value) !=
+              *static_cast<uint32_t*>(rhs_value)) {
+            return false;
+          }
+          break;
+        default:
+          throw std::runtime_error("Unhandled type in compare_metadata");
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * @brief Dump metadata to stdout.  Useful for debugging.
    * @param write_group
    * @return void

@@ -194,10 +194,11 @@ class ivf_flat_index {
      * Read the centroids.  How the partitioned_vectors_ are read in will be
      * determined by the type of query we are doing.
      */
-    size_t num_centroids = group_->get_num_partitions();
+    dimension_ = group_->get_dimension();
+    num_partitions_ = group_->get_num_partitions();
     centroids_ =
         std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
-            group_->cached_ctx(), group_->centroids_uri(), 0, num_centroids, 0, timestamp_));
+            group_->cached_ctx(), group_->centroids_uri(), 0, num_partitions_, 0, timestamp_));
   }
 
   ivf_flat_index() = delete;
@@ -1057,6 +1058,9 @@ class ivf_flat_index {
                 << " != " << rhs.num_partitions_ << ")" << std::endl;
       return false;
     }
+
+// These are only useful for training
+#if 0
     if (max_iter_ != rhs.max_iter_) {
       std::cout << "max_iter_ != rhs.max_iter_ (" << max_iter_
                 << " != " << rhs.max_iter_ << ")" << std::endl;
@@ -1077,6 +1081,7 @@ class ivf_flat_index {
                 << " != " << rhs.num_threads_ << ")" << std::endl;
       return false;
     }
+#endif
     return true;
   }
 

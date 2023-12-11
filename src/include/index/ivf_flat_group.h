@@ -112,6 +112,181 @@ class ivf_flat_index_group {
     }
   }
 
+
+    /**
+     * @brief Add an array to the group.
+     *
+     * @param basename
+     *
+     * @todo Could have type of array set here instead of by Index.  Might be
+     * better to have it set in conjunction with array being set?
+     */
+    auto init_array_for_create(const std::string& array_name) {
+      if (!is_valid_array_name(array_name)) {
+        throw std::runtime_error("Invalid array name in add_array: " + array_name);
+      }
+      active_array_names_.insert(array_name);
+
+      std::filesystem::path uri = array_name_to_uri(array_name);
+
+      return uri;
+    }
+
+
+    /**
+     * Open group for reading.  If version_ is not set, the group will be opened
+     * with whichever version is found in the metadata.  If version_ is set,
+     * and does not match the version in the metadata, an exception will be
+     * thrown.
+     *
+     * @param ctx
+     */
+    void open_for_read(const tiledb::Config& cfg) {
+      tiledb::VFS vfs(cached_ctx_);
+      if (!vfs.is_dir(group_uri_)) {
+        throw std::runtime_error(
+            "Group uri " + std::string(group_uri_) + " does not exist.");
+      }
+      auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
+
+      // Load the metadata and check the version.  We need to do this before
+      // we can check the array names.
+      metadata_.load_metadata(read_group);
+      if (!empty(version_) && metadata_.storage_version_ != version_) {
+        throw std::runtime_error(
+            "Version mismatch.  Requested " + version_ + " but found " +
+            metadata_.storage_version_);
+      } else if (empty(version_)) {
+        version_ = metadata_.storage_version_;
+      }
+
+      init_valid_array_names();
+
+      // Get the active array names
+      auto count = read_group.member_count();
+      for (size_t i = 0; i < read_group.member_count(); ++i) {
+        auto member = read_group.member(i);
+        auto name = member.name();
+        if (!name || name->empty()) {
+          throw std::runtime_error("Name is empty.");
+        }
+        if (is_valid_array_name(*name)) {
+          active_array_names_.insert(*name);
+        } else {
+          throw std::runtime_error(
+              "Invalid array name in group: " + std::string(*name));
+        }
+      }
+    }
+
+    /**
+     * Open group for writing.  If the group does not exist, create a new one.
+     *
+     * If creating a new group, the version_ must be set.  If it is not set,
+     * use the current default storage version.
+     *
+     * If opening a group for write, we open for read first to get the metadata
+     * and record the timestamp at which we opened the group.  When we close the
+     * group, we update the timestamp array, the sizes array, and the partitions
+     * array.  We also update the metadata.
+     *
+     * @param ctx
+     * @param uri
+     * @param version
+     */
+    void open_for_write(const tiledb::Config& cfg) {
+      tiledb::VFS vfs(cached_ctx_);
+
+      if (vfs.is_dir(group_uri_)) {
+
+        /** Load the current group metadata */
+        open_for_read(cfg);
+
+      } else {
+
+        /** Create a new group */
+        create_default(cfg);
+      }
+    }
+
+    /**
+     * Create a new group with the default arrays and metadata.
+     *
+     * @param cfg
+     */
+    void create_default(const tiledb::Config& cfg) {
+
+      if (empty(version_)) {
+        version_ = current_storage_version;
+      }
+      init_valid_array_names();
+
+      static const int32_t tile_size {
+          (int32_t)(tile_size_bytes / sizeof(typename Index::feature_type) / index_.get().dimension())};
+      static const tiledb_filter_type_t default_compression{
+          string_to_filter(storage_formats[version_]["default_attr_filters"])};
+
+      tiledb::Group::create(cached_ctx_, group_uri_);
+      auto write_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
+
+      metadata_.storage_version_ = version_;
+
+      metadata_.dtype_ = type_to_string_v<typename Index::feature_type>;
+
+      metadata_.feature_datatype_ = type_to_tiledb_v<typename Index::feature_type>;
+      metadata_.id_datatype_ = type_to_tiledb_v<typename Index::id_type>;
+      metadata_.px_datatype_ = type_to_tiledb_v<typename Index::indices_type>;
+
+      metadata_.feature_type_str_ = type_to_string_v<typename Index::feature_type>;
+      metadata_.id_type_str_ = type_to_string_v<typename Index::id_type>;
+      metadata_.indices_type_str_ = type_to_string_v<typename Index::indices_type>;
+
+      metadata_.ingestion_timestamps_ = {0};
+      metadata_.base_sizes_ = {0};
+      metadata_.partition_history_ = {0};
+      metadata_.temp_size_ = 0;
+      metadata_.dimension_ = index_.get().dimension();
+
+      create_empty_for_matrix<typename Index::centroid_feature_type, stdx::layout_left>(
+          cached_ctx_,
+          centroids_uri(),
+          index_.get().dimension(),
+          default_domain,
+          index_.get().dimension(),
+          default_tile_extent,
+          default_compression);
+      write_group.add_member(centroids_uri(), false, centroids_array_name());
+
+      create_empty_for_matrix<typename Index::feature_type, stdx::layout_left>(
+          cached_ctx_,
+          parts_uri(),
+          index_.get().dimension(),
+          default_domain,
+          index_.get().dimension(),
+          default_tile_extent,
+          default_compression);
+      write_group.add_member(parts_uri(), false, parts_array_name());
+
+      create_empty_for_vector<typename Index::id_type>(
+          cached_ctx_,
+          ids_uri(),
+          default_domain,
+          tile_size,
+          default_compression);
+      write_group.add_member(ids_uri(), false, ids_array_name());
+
+      create_empty_for_vector<typename Index::indices_type>(
+          cached_ctx_,
+          indices_uri(),
+          default_domain,
+          default_tile_extent,
+          default_compression);
+      write_group.add_member(indices_uri(), false, indices_array_name());
+
+      // Store the metadata if all of the arrays were created successfully
+      metadata_.store_metadata(write_group);
+    }
+
   /** Convert an array name to a uri. */
   constexpr std::string array_name_to_uri(const std::string& array_name) const noexcept {
     return group_uri_ / array_name;
@@ -174,6 +349,11 @@ class ivf_flat_index_group {
     }
   }
 
+  /**
+   * @brief Destructor.  If opened for write, update the metadata.
+   *
+   * @todo Don't use default Config
+   */
   ~ivf_flat_index_group() {
     if (opened_for_ == TILEDB_WRITE) {
       auto cfg = tiledb::Config();
@@ -181,177 +361,6 @@ class ivf_flat_index_group {
       metadata_.store_metadata(write_group);
     }
   }
-
-  /**
-   * Open group for reading.  If version_ is not set, the group will be opened
-   * with whichever version is found in the metadata.  If version_ is set,
-   * and does not match the version in the metadata, an exception will be
-   * thrown.
-   *
-   * @param ctx
-   */
-  void open_for_read(const tiledb::Config& cfg) {
-    tiledb::VFS vfs(cached_ctx_);
-    if (!vfs.is_dir(group_uri_)) {
-      throw std::runtime_error(
-          "Group uri " + std::string(group_uri_) + " does not exist.");
-    }
-    auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
-
-    // Load the metadata and check the version.  We need to do this before
-    // we can check the array names.
-    metadata_.load_metadata(read_group);
-    if (!empty(version_) && metadata_.storage_version_ != version_) {
-      throw std::runtime_error(
-          "Version mismatch.  Requested " + version_ + " but found " +
-          metadata_.storage_version_);
-    } else if (empty(version_)) {
-      version_ = metadata_.storage_version_;
-    }
-
-    init_valid_array_names();
-
-    // Get the active array names
-    auto count = read_group.member_count();
-    for (size_t i = 0; i < read_group.member_count(); ++i) {
-      auto member = read_group.member(i);
-      auto name = member.name();
-      if (!name || name->empty()) {
-        throw std::runtime_error("Name is empty.");
-      }
-      if (is_valid_array_name(*name)) {
-        active_array_names_.insert(*name);
-      } else {
-        throw std::runtime_error(
-            "Invalid array name in group: " + std::string(*name));
-      }
-    }
-  }
-
-  /**
-   * Open group for writing.  If the group does not exist, create a new one.
-   *
-   * If creating a new group, the version_ must be set.  If it is not set,
-   * use the current default storage version.
-   *
-   * If opening a group for write, we open for read first to get the metadata
-   * and record the timestamp at which we opened the group.  When we close the
-   * group, we update the timestamp array, the sizes array, and the partitions
-   * array.  We also update the metadata.
-   *
-   * @param ctx
-   * @param uri
-   * @param version
-   */
-  void open_for_write(const tiledb::Config& cfg) {
-    tiledb::VFS vfs(cached_ctx_);
-
-    if (vfs.is_dir(group_uri_)) {
-
-      /** Load the current group metadata */
-      open_for_read(cfg);
-
-    } else {
-
-      /** Create a new group */
-      create_default(cfg);
-    }
-  }
-
-  void create_default(const tiledb::Config& cfg) {
-
-    if (empty(version_)) {
-      version_ = current_storage_version;
-    }
-    init_valid_array_names();
-
-    static const int32_t tile_size {
-        (int32_t)(tile_size_bytes / sizeof(typename Index::feature_type) / index_.get().dimension())};
-    static const tiledb_filter_type_t default_compression{
-        string_to_filter(storage_formats[version_]["default_attr_filters"])};
-
-    tiledb::Group::create(cached_ctx_, group_uri_);
-    auto write_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
-
-    metadata_.storage_version_ = version_;
-
-    metadata_.dtype_ = type_to_string_v<typename Index::feature_type>;
-
-    metadata_.feature_datatype_ = type_to_tiledb_v<typename Index::feature_type>;
-    metadata_.id_datatype_ = type_to_tiledb_v<typename Index::id_type>;
-    metadata_.px_datatype_ = type_to_tiledb_v<typename Index::indices_type>;
-
-    metadata_.feature_type_str_ = type_to_string_v<typename Index::feature_type>;
-    metadata_.id_type_str_ = type_to_string_v<typename Index::id_type>;
-    metadata_.indices_type_str_ = type_to_string_v<typename Index::indices_type>;
-
-    metadata_.ingestion_timestamps_ = {0};
-    metadata_.base_sizes_ = {0};
-    metadata_.partition_history_ = {0};
-    metadata_.temp_size_ = 0;
-    metadata_.dimension_ = index_.get().dimension();
-
-    create_empty_for_matrix<typename Index::centroid_feature_type, stdx::layout_left>(
-        cached_ctx_,
-        centroids_uri(),
-        index_.get().dimension(),
-        default_domain,
-        index_.get().dimension(),
-        default_tile_extent,
-        default_compression);
-    write_group.add_member(centroids_uri(), false, centroids_array_name());
-
-    create_empty_for_matrix<typename Index::feature_type, stdx::layout_left>(
-        cached_ctx_,
-        parts_uri(),
-        index_.get().dimension(),
-        default_domain,
-        index_.get().dimension(),
-        default_tile_extent,
-        default_compression);
-    write_group.add_member(parts_uri(), false, parts_array_name());
-
-    create_empty_for_vector<typename Index::id_type>(
-        cached_ctx_,
-        ids_uri(),
-        default_domain,
-        tile_size,
-        default_compression);
-    write_group.add_member(ids_uri(), false, ids_array_name());
-
-    create_empty_for_vector<typename Index::indices_type>(
-        cached_ctx_,
-        indices_uri(),
-        default_domain,
-        default_tile_extent,
-        default_compression);
-    write_group.add_member(indices_uri(), false, indices_array_name());
-
-    // Store the metadata if all of the arrays were created successfully
-    metadata_.store_metadata(write_group);
-  }
-
-
-
-  /**
-   * @brief Add an array to the group.
-   *
-   * @param basename
-   *
-   * @todo Could have type of array set here instead of by Index.  Might be
-   * better to have it set in conjunction with array being set?
-   */
-  auto init_array_for_create(const std::string& array_name) {
-    if (!is_valid_array_name(array_name)) {
-      throw std::runtime_error("Invalid array name in add_array: " + array_name);
-    }
-    active_array_names_.insert(array_name);
-
-    std::filesystem::path uri = array_name_to_uri(array_name);
-
-    return uri;
-  }
-
 
   /**
    * @brief Test whether the group exists or not.
@@ -431,8 +440,6 @@ class ivf_flat_index_group {
     metadata_.dimension_ = dim;
   }
 
-
-
   /**************************************************************************
    * Getters for names and uris
    **************************************************************************/
@@ -492,6 +499,38 @@ class ivf_flat_index_group {
   [[nodiscard]] std::reference_wrapper<const tiledb::Context> cached_ctx() {
     return cached_ctx_;
   }
+
+  /**************************************************************************
+   * Helpful functions for debugging, testing, etc
+   **************************************************************************/
+
+  bool compare_group(const ivf_flat_index_group& rhs) const {
+    if (group_uri_ != rhs.group_uri_) {
+      return false;
+    }
+    if (group_uri_ != rhs.group_uri_) {
+      return false;
+
+    }
+    if (size(valid_array_names_ != size(rhs.valid_array_names_))) {
+      return false;
+    }
+    if (valid_array_names_ != rhs.valid_array_names_) {
+      return false;
+    }
+    if (size(valid_key_names_ != size(rhs.valid_key_names_))) {
+      return false;
+    }
+    if (valid_key_names_ != rhs.valid_key_names_) {
+      return false;
+    }
+    if (!metadata_.compare_metadata(rhs.metadata_)) {
+      return false;
+    }
+
+    return true;
+  }
+
 
   /**
    * Dump the contents of the group to stdout.  Useful for "printf" debugging.

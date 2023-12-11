@@ -70,8 +70,15 @@ TEST_CASE("ivf_flat_metadata: open group", "[ivf_flat_metadata]") {
     x.load_metadata(read_group);
   }
 
-  SECTION("load and dump metadata") {
+  SECTION("load and dump metadata -- for manual inspection") {
     x.load_metadata(read_group);
     x.dump();
+  }
+
+  SECTION("Compare two constructed objects") {
+    x.load_metadata(read_group);
+    ivf_flat_index_metadata<null_group> y;
+    y.load_metadata(read_group);
+    CHECK(x.compare_metadata(y));
   }
 }
