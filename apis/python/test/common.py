@@ -6,6 +6,7 @@ import numpy as np
 
 import tiledb
 
+
 def xbin_mmap(fname, dtype):
     n, d = map(int, np.fromfile(fname, dtype="uint32", count=2))
     assert os.stat(fname).st_size == 8 + n * d * np.dtype(dtype).itemsize
