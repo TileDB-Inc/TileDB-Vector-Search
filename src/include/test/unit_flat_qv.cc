@@ -33,6 +33,8 @@
 #include "detail/flat/qv.h"
 #include "query_common.h"
 
+bool global_debug = false;
+
 TEST_CASE("qv test test", "[qv]") {
   REQUIRE(true);
 }

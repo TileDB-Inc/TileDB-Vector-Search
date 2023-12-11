@@ -32,11 +32,18 @@
 #ifndef TILEDB_TDB_IO_H
 #define TILEDB_TDB_IO_H
 
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <filesystem>
 #include <numeric>
 #include <vector>
 
 #include "detail/linalg/matrix.h"
+#include "detail/linalg/tdb_helpers.h"
 #include "utils/logging.h"
+#include "utils/print_types.h"
 #include "utils/timer.h"
 #include <tiledb/tiledb>
 
@@ -85,21 +92,22 @@ void write_matrix(
   if (create) {
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri);
   }
-  std::vector<int32_t> subarray_vals{
-      0,
-      (int)A.num_rows() - 1,
-      (int)start_pos,
-      (int)start_pos + (int)A.num_cols() - 1};
+  std::vector<int32_t> subarray_vals{0,
+                                     (int)A.num_rows() - 1,
+                                     (int)start_pos,
+                                     (int)start_pos + (int)A.num_cols() - 1};
 
   // Open array for writing
-  tiledb::Array array =
-      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_WRITE, temporal_policy);
+  auto array = tiledb_helpers::open_array(
+      tdb_func__, ctx, uri, TILEDB_WRITE, temporal_policy);
 
-  tiledb::Subarray subarray(ctx, array);
+  tiledb::Subarray subarray(ctx, *array);
   subarray.set_subarray(subarray_vals);
 
-  tiledb::Query query(ctx, array);
-  auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ? TILEDB_ROW_MAJOR : TILEDB_COL_MAJOR;
+  tiledb::Query query(ctx, *array);
+  auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
+                   TILEDB_ROW_MAJOR :
+                   TILEDB_COL_MAJOR;
   query.set_layout(order)
       .set_data_buffer(
           "values", &A(0, 0), (uint64_t)A.num_rows() * (uint64_t)A.num_cols())
@@ -108,12 +116,14 @@ void write_matrix(
 
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
-  array.close();
+  array->close();
 }
 
-template <class T>
+template <std::ranges::contiguous_range V>
 void create_vector(
-    const tiledb::Context& ctx, std::vector<T>& v, const std::string& uri) {
+    const tiledb::Context& ctx, const V& v, const std::string& uri) {
+  using value_type = std::ranges::range_value_t<V>;
+
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
   tiledb::Domain domain(ctx);
@@ -124,7 +134,7 @@ void create_vector(
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
   schema.set_domain(domain).set_order({{TILEDB_ROW_MAJOR, TILEDB_ROW_MAJOR}});
 
-  schema.add_attribute(tiledb::Attribute::create<T>(ctx, "values"));
+  schema.add_attribute(tiledb::Attribute::create<value_type>(ctx, "values"));
 
   tiledb::Array::create(uri, schema);
 }
@@ -133,40 +143,42 @@ void create_vector(
  * Write the contents of a std::vector to a TileDB array.
  * @todo change the naming of this function to something more appropriate
  */
-template <class T>
+template <std::ranges::contiguous_range V>
 void write_vector(
     const tiledb::Context& ctx,
-    std::vector<T>& v,
+    V& v,
     const std::string& uri,
     size_t start_pos = 0,
     bool create = true,
     const tiledb::TemporalPolicy temporal_policy = {}) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
+  // using value_type = std::ranges::range_value_t<V>;
+
   if (create) {
-    create_vector<T>(ctx, v, uri);
+    create_vector(ctx, v, uri);
   }
   // Set the subarray to write into
-  std::vector<int32_t> subarray_vals{
-      (int)start_pos, (int)start_pos + (int)size(v) - 1};
+  std::vector<int32_t> subarray_vals{(int)start_pos,
+                                     (int)start_pos + (int)size(v) - 1};
 
   // Open array for writing
-  tiledb::Array array =
-      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_WRITE, temporal_policy);
+  auto array = tiledb_helpers::open_array(
+      tdb_func__, ctx, uri, TILEDB_WRITE, temporal_policy);
 
-  tiledb::Subarray subarray(ctx, array);
+  tiledb::Subarray subarray(ctx, *array);
   subarray.set_subarray(subarray_vals);
 
-  tiledb::Query query(ctx, array);
+  tiledb::Query query(ctx, *array);
   query.set_layout(TILEDB_ROW_MAJOR)
-      .set_data_buffer("values", v)
+      .set_data_buffer("values", v.data(), size(v))
       .set_subarray(subarray);
 
   query.submit();
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
   tiledb_helpers::submit_query(tdb_func__, uri, query);
 
-  array.close();
+  array->close();
 }
 
 /**
@@ -181,9 +193,9 @@ std::vector<T> read_vector(
     const tiledb::TemporalPolicy temporal_policy = {}) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
-  tiledb::Array array_ =
-      tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
-  auto schema_ = array_.schema();
+  auto array_ = tiledb_helpers::open_array(
+      tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
+  auto schema_ = array_->schema();
 
   using domain_type = int32_t;
   const size_t idx = 0;
@@ -209,21 +221,21 @@ std::vector<T> read_vector(
   tiledb_datatype_t attr_type = attr.type();
 
   // Create a subarray that reads the array up to the specified subset.
-  std::vector<int32_t> subarray_vals = {
-      (int32_t)start_pos, (int32_t)end_pos - 1};
-  tiledb::Subarray subarray(ctx, array_);
+  std::vector<int32_t> subarray_vals = {(int32_t)start_pos,
+                                        (int32_t)end_pos - 1};
+  tiledb::Subarray subarray(ctx, *array_);
   subarray.set_subarray(subarray_vals);
 
   // @todo: use something non-initializing
   std::vector<T> data_(vec_rows_);
 
-  tiledb::Query query(ctx, array_);
+  tiledb::Query query(ctx, *array_);
   query.set_subarray(subarray).set_data_buffer(
       attr_name, data_.data(), vec_rows_);
   tiledb_helpers::submit_query(tdb_func__, uri, query);
   _memory_data.insert_entry(tdb_func__, vec_rows_ * sizeof(T));
 
-  array_.close();
+  array_->close();
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
   return data_;
@@ -257,6 +269,67 @@ auto sizes_to_indices(const std::vector<T>& sizes) {
   std::inclusive_scan(begin(sizes), end(sizes), begin(indices) + 1);
 
   return indices;
+}
+
+template <class T>
+auto read_bin(const std::string& bin_file, size_t subset = 0) {
+  if (!std::filesystem::exists(bin_file)) {
+    throw std::runtime_error("file " + bin_file + " does not exist");
+  }
+  auto file_size = std::filesystem::file_size(bin_file);
+
+  auto fd = open(bin_file.c_str(), O_RDONLY);
+  if (fd == -1) {
+    throw std::runtime_error("could not open " + bin_file);
+  }
+
+  uint32_t dimension{0};
+  auto num_read = read(fd, &dimension, 4);
+  lseek(fd, 0, SEEK_SET);
+
+  auto max_vectors = file_size / (4 + dimension * sizeof(T));
+  if (subset > max_vectors) {
+    throw std::runtime_error(
+        "specified subset is too large " + std::to_string(subset) + " > " +
+        std::to_string(max_vectors));
+  }
+  auto num_vectors = subset == 0 ? max_vectors : subset;
+
+  struct stat s;
+  fstat(fd, &s);
+  size_t mapped_size = s.st_size;
+  assert(s.st_size == file_size);
+
+  T* mapped_ptr = reinterpret_cast<T*>(
+      mmap(0, mapped_size, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0));
+
+  if ((long)mapped_ptr == -1) {
+    throw std::runtime_error("mmap failed");
+  }
+
+  ColMajorMatrix<T> X(dimension, num_vectors);
+
+  auto data_ptr = X.data();
+  auto sift_ptr = mapped_ptr;
+
+  // Perform strided read
+  for (size_t k = 0; k < num_vectors; ++k) {
+    // Check for consistency of dimensions
+    decltype(dimension) dim = *reinterpret_cast<int*>(sift_ptr++);
+    if (dim != dimension) {
+      throw std::runtime_error(
+          "dimension mismatch: " + std::to_string(dim) +
+          " != " + std::to_string(dimension));
+    }
+    std::copy(sift_ptr, sift_ptr + dimension, data_ptr);
+    data_ptr += dimension;
+    sift_ptr += dimension;
+  }
+
+  munmap(mapped_ptr, mapped_size);
+  close(fd);
+
+  return X;
 }
 
 #endif  // TILEDB_TDB_IO_H
