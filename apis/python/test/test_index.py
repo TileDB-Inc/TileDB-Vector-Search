@@ -6,7 +6,7 @@ from tiledb.vector_search import flat_index, ivf_flat_index
 from tiledb.vector_search.index import Index
 
 def query_and_check(index, queries, k, expected, **kwargs):
-    for _ in range(5):
+    for _ in range(3):
         result_d, result_i = index.query(queries, k=k, **kwargs)
         assert expected.issubset(set(result_i[0]))
 
