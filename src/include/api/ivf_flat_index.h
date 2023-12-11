@@ -38,11 +38,11 @@
 
 #include <tiledb/tiledb>
 
-#include <tiledb/group_experimental.h>
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
 #include "api_defs.h"
 #include "index/ivf_flat_index.h"
+#include "tiledb/group_experimental.h"
 
 /*******************************************************************************
  * IndexIVFFlat

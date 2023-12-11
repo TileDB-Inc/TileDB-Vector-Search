@@ -41,9 +41,22 @@ TEST_CASE("ivf_flat_metadata: test test", "[ivf_flat_metadata]") {
   REQUIRE(true);
 }
 
+struct dummy_index {
+  using feature_type = float;
+  using id_type = int;
+  using indices_type = int;
+  using centroid_feature_type = float;
+
+  auto dimension() const { return 10; }
+};
+
+struct null_group {
+
+};
+
 TEST_CASE("ivf_flat_metadata: default constructor", "[ivf_flat_metadata]") {
-  auto x = ivf_flat_index_metadata();
-  ivf_flat_index_metadata y;
+  auto x = ivf_flat_index_metadata<null_group>();
+  ivf_flat_index_metadata<null_group> y;
 }
 
 TEST_CASE("ivf_flat_metadata: open group", "[ivf_flat_metadata]") {
@@ -51,7 +64,7 @@ TEST_CASE("ivf_flat_metadata: open group", "[ivf_flat_metadata]") {
   tiledb::Config cfg;
 
   auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
-  auto x = ivf_flat_index_metadata();
+  auto x = ivf_flat_index_metadata<null_group>();
 
   SECTION("load metadata") {
     x.load_metadata(read_group);

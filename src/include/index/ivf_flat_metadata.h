@@ -60,6 +60,17 @@
 
 #include "nlohmann/json.hpp"
 
+/**
+ * @brief Metadata for an IVF_FLAT index.
+ * @tparam Group
+ *
+ * @note Group is a template parameter out of laziness so that the Group class
+ * can directly access the metadata without a plethora of getters and setters.
+ * Putting ivf_flat_group directly here caused a circular dependency, perhaps
+ * fixable by CRTP?
+ *
+ * @todo Clean up so that we don't need the template parameter.
+ */
 template <class Group>
 class ivf_flat_index_metadata {
 
@@ -138,9 +149,6 @@ class ivf_flat_index_metadata {
       {"id_datatype", &id_datatype_, TILEDB_UINT32, false},
       {"px_datatype", &px_datatype_, TILEDB_UINT32, false},
   };
-
- public:
-  ivf_flat_index_metadata() = default;
 
   template <class T>
   auto json_to_vector(const std::string& json_str) {
@@ -253,6 +261,15 @@ class ivf_flat_index_metadata {
         throw std::runtime_error("Unhandled type");
     }
   }
+
+ public:
+  ivf_flat_index_metadata() = default;
+  ivf_flat_index_metadata(const ivf_flat_index_metadata&) = default;
+  ivf_flat_index_metadata(ivf_flat_index_metadata&&) = default;
+  ivf_flat_index_metadata& operator=(const ivf_flat_index_metadata&) = default;
+  ivf_flat_index_metadata& operator=(ivf_flat_index_metadata&&) = default;
+
+  ivf_flat_index_metadata(const Group& read_group) { }
 
   /**
    * Read all of the metadata fields from the given group.

@@ -34,6 +34,7 @@
 #ifndef TILEDB_HELPERS_H
 #define TILEDB_HELPERS_H
 
+#include <tiledb/array.h>
 #include <tiledb/tiledb>
 #include "stats.h"
 
