@@ -13,9 +13,7 @@ def query_and_check(index, queries, k, expected, **kwargs):
 def test_flat_index(tmp_path):
     uri = os.path.join(tmp_path, "array")
     index = flat_index.create(uri=uri, dimensions=3, vector_type=np.dtype(np.uint8))
-    for _ in range(2):
-        result_d, result_i = index.query(np.array([[2, 2, 2]], dtype=np.float32), k=3)
-        assert {ind.MAX_UINT64} == set(result_i[0])
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {ind.MAX_UINT64})
 
     update_vectors = np.empty([5], dtype=object)
     update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.uint8))
