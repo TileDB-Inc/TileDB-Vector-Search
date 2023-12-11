@@ -1027,8 +1027,8 @@ class ivf_flat_index {
 
   /***************************************************************************
    * Getters (copilot weirded me out again -- it suggested "Getters" based
-   * only on the comment string "/ *" that I started, and with the two functions
-   * below.)
+   * only on the two character "/ *" that I typed to begin a comment,
+   * and with the two functions below.)
    * Note that we don't have a `num_vectors` because it isn't clear what
    * that means for a partitioned (possibly out-of-core) index.
    ***************************************************************************/
@@ -1047,46 +1047,55 @@ class ivf_flat_index {
    *
    **************************************************************************/
 
+  /**
+   * @brief Compare groups associated with two ivf_flat_index objects for
+   * equality.  Note that both indexes will have had to perform a read or
+   * a write.  An index created from partitioning will not yet have a group
+   * associated with it.
+   *
+   * Comparing groups will also compare metadata associated with each group.
+   *
+   * @param rhs the index against which to compare
+   * @return bool indicating equality of the groups
+   */
+  bool compare_group(const ivf_flat_index& rhs) const {
+    return group_->compare_group(*(rhs.group_));
+  }
+
+  /**
+   * @brief Compare metadata associated with two ivf_flat_index objects for
+   * equality.  Thi is not the same as the metadata associated with the index
+   * group.  Rather, it is the metadata associated with the index itself and is
+   * only a small number of cached quantities.
+   *
+   * Note that `max_iter` et al are only relevant for partitioning an index
+   * and are not stored (and would not be meaningful to compare at any rate).
+   *
+   * @param rhs the index against which to compare
+   * @return bool indicating equality of the index metadata
+   */
   bool compare_metadata(const ivf_flat_index& rhs) {
     if (dimension_ != rhs.dimension_) {
-      std::cout << "dimension_ != rhs.dimension_ (" << dimension_
-                << " != " << rhs.dimension_ << ")" << std::endl;
       return false;
     }
     if (num_partitions_ != rhs.num_partitions_) {
-      std::cout << "num_partitions_ != rhs.num_partitions_ (" << num_partitions_
-                << " != " << rhs.num_partitions_ << ")" << std::endl;
       return false;
     }
 
-// These are only useful for training
-#if 0
-    if (max_iter_ != rhs.max_iter_) {
-      std::cout << "max_iter_ != rhs.max_iter_ (" << max_iter_
-                << " != " << rhs.max_iter_ << ")" << std::endl;
-      return false;
-    }
-    if (tol_ != rhs.tol_) {
-      std::cout << "tol_ != rhs.tol_ (" << tol_ << " != " << rhs.tol_ << ")"
-                << std::endl;
-      return false;
-    }
-    if (reassign_ratio_ != rhs.reassign_ratio_) {
-      std::cout << "reassign_ratio_ != rhs.reassign_ratio_ (" << reassign_ratio_
-                << " != " << rhs.reassign_ratio_ << ")" << std::endl;
-      return false;
-    }
-    if (num_threads_ != rhs.num_threads_) {
-      std::cout << "num_threads_ != rhs.num_threads_ (" << num_threads_
-                << " != " << rhs.num_threads_ << ")" << std::endl;
-      return false;
-    }
-#endif
     return true;
   }
 
+  /**
+   * @brief Compare two `feature_vector_arrays` for equality
+   *
+   * @tparam L Type of the lhs `feature_vector_array`
+   * @tparam R Type of the rhs `feature_vector_array`
+   * @param rhs the index against which to compare
+   * @param lhs The lhs `feature_vector_array`
+   * @return bool indicating equality of the `feature_vector_arrays`
+   */
   template <feature_vector_array L, feature_vector_array R>
-  auto compare_feature_vector_arrays(const L& lhs, const R& rhs) {
+  auto compare_feature_vector_arrays(const L& lhs, const R& rhs) const {
     if (::num_vectors(lhs) != ::num_vectors(rhs) ||
         ::dimension(lhs) != ::dimension(rhs)) {
       std::cout << "num_vectors(lhs) != num_vectors(rhs) || dimension(lhs) != "
@@ -1116,8 +1125,16 @@ class ivf_flat_index {
     return true;
   }
 
+  /**
+   * @brief Compare two `feature_vectors` for equality
+   * @tparam L Type of the lhs `feature_vector`
+   * @tparam R Type of the rhs `feature_vector`
+   * @param lhs The lhs `feature_vector`
+   * @param rhs The rhs `feature_vector`
+   * @return
+   */
   template <feature_vector L, feature_vector R>
-  auto compare_vectors(const L& lhs, const R& rhs) {
+  auto compare_vectors(const L& lhs, const R& rhs) const {
     if (::dimension(lhs) != ::dimension(rhs)) {
       std::cout << "dimension(lhs) != dimension(rhs) (" << ::dimension(lhs)
                 << " != " << ::dimension(rhs) << ")" << std::endl;
@@ -1126,10 +1143,20 @@ class ivf_flat_index {
     return std::equal(begin(lhs), end(lhs), begin(rhs));
   }
 
+  /**
+   * @brief Compare `centroids_` against another index
+   * @param rhs The index against which to compare
+   * @return bool indicating equality of the centroids
+   */
   auto compare_centroids(const ivf_flat_index& rhs) {
     return compare_feature_vector_arrays(centroids_, rhs.centroids_);
   }
 
+  /**
+   * @brief Compare all of the `feature_vector_arrays` against another index
+   * @param rhs The other index
+   * @return bool indicating equality of the `feature_vector_arrays`
+   */
   auto compare_feature_vectors(const ivf_flat_index& rhs) {
     if (partitioned_vectors_->num_vectors() !=
         rhs.partitioned_vectors_->num_vectors()) {
@@ -1154,11 +1181,13 @@ class ivf_flat_index {
         *partitioned_vectors_, *(rhs.partitioned_vectors_));
   }
 
+  /** Compare the stored `indices_` vector */
   auto compare_indices(const ivf_flat_index& rhs) {
     return compare_vectors(
         partitioned_vectors_->indices(), rhs.partitioned_vectors_->indices());
   }
 
+  /** Compare the stored `partitioned_ids_` vector */
   auto compare_partitioned_ids(const ivf_flat_index& rhs) {
     return compare_vectors(
         partitioned_vectors_->ids(), rhs.partitioned_vectors_->ids());
@@ -1173,6 +1202,16 @@ class ivf_flat_index {
         centroids_.data());
   }
 
+  auto& get_centroids() {
+    return centroids_;
+  }
+
+  /**
+   * @brief Used for evaluating quality of partitioning
+   * @param centroids
+   * @param vectors
+   * @return
+   */
   static std::vector<indices_type> predict(
       const ColMajorMatrix<feature_type>& centroids,
       const ColMajorMatrix<feature_type>& vectors) {
@@ -1191,9 +1230,6 @@ class ivf_flat_index {
     return indices;
   }
 
-  auto& get_centroids() {
-    return centroids_;
-  }
 };
 
 #endif  // TILEDB_ivf_flat_index_H

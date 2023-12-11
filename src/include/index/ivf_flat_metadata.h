@@ -390,8 +390,7 @@ class ivf_flat_index_metadata {
    * @param rhs The metadata object to compare *this against.
    * @return bool Whether the metadata objects are equal.
    */
-  bool compare_metadata(const ivf_flat_index_metadata& rhs){
-
+  bool compare_metadata(const ivf_flat_index_metadata& rhs) const {
     // If the dataset type is different, don't bother comparing rest
     if (dataset_type_ != rhs.dataset_type_) {
       return false;
@@ -402,7 +401,7 @@ class ivf_flat_index_metadata {
       return false;
     }
 
-    if(base_sizes_str_ != rhs.base_sizes_str_){
+    if (base_sizes_str_ != rhs.base_sizes_str_) {
       return false;
     }
     if (ingestion_timestamps_str_ != rhs.ingestion_timestamps_str_) {
@@ -435,7 +434,8 @@ class ivf_flat_index_metadata {
       }
       switch (type) {
         case TILEDB_FLOAT64:
-          if(*static_cast<double*>(value) != *static_cast<double*>(rhs_value)){
+          if (*static_cast<double*>(value) !=
+              *static_cast<double*>(rhs_value)) {
             return false;
           }
         case TILEDB_FLOAT32:

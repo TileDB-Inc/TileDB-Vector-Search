@@ -223,13 +223,16 @@ TEST_CASE(
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
   size_t nprobe = GENERATE(8, 32);
+  size_t max_iter = GENERATE( 4, 8 );
 
   std::string api_ivf_flat_index_uri = "/tmp/api_ivf_flat_index";
 
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
       {{"feature_type", "float32"},
        {"id_type", "uint32"},
-       {"px_type", "uint32"}}));
+       {"px_type", "uint32"},
+       {"max_iter", std::to_string(max_iter)}}));
+
   auto training_set = FeatureVectorArray(ctx, siftsmall_base_uri);
   a.train(training_set, kmeans_init::random);
   a.add(training_set);
@@ -307,11 +310,4 @@ TEST_CASE(
       CHECK(recall > 0.925);
     }
   }
-}
-
-TEST_CASE("foo", "[bar]") {
-  tiledb::Context ctx;
-  auto b = IndexIVFFlat(ctx, ivf_index_uri);
-
-  CHECK(b.feature_type() == TILEDB_FLOAT32);
 }

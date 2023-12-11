@@ -454,6 +454,12 @@ class tdbPartitionedMatrix
       for (size_t i = std::get<0>(resident_part_view_); i < total_num_parts_;
            ++i) {
         auto next_part_size = squashed_indices_[i + 1] - squashed_indices_[i];
+
+        // Continue if this partition is empty
+        if (next_part_size == 0) {
+          continue;
+        }
+
         if ((std::get<1>(resident_col_view_) + next_part_size) >
             std::get<0>(resident_col_view_) + column_capacity) {
           break;

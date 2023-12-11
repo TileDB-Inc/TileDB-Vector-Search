@@ -510,15 +510,14 @@ class ivf_flat_index_group {
     }
     if (group_uri_ != rhs.group_uri_) {
       return false;
-
     }
-    if (size(valid_array_names_ != size(rhs.valid_array_names_))) {
+    if (size(valid_array_names_) != size(rhs.valid_array_names_)) {
       return false;
     }
     if (valid_array_names_ != rhs.valid_array_names_) {
       return false;
     }
-    if (size(valid_key_names_ != size(rhs.valid_key_names_))) {
+    if (size(valid_key_names_) != size(rhs.valid_key_names_)) {
       return false;
     }
     if (valid_key_names_ != rhs.valid_key_names_) {
@@ -530,7 +529,6 @@ class ivf_flat_index_group {
 
     return true;
   }
-
 
   /**
    * Dump the contents of the group to stdout.  Useful for "printf" debugging.
