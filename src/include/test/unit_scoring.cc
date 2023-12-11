@@ -296,7 +296,7 @@ TEMPLATE_LIST_TEST_CASE(
   using index_type = std::tuple_element_t<1, TestType>;
   using groundtruth_type = std::tuple_element_t<2, TestType>;
 
-  groundtruth_type k_nn = GENERATE(1, 3, 5);
+  unsigned long k_nn = GENERATE(1, 3, 5);
   groundtruth_type asize = GENERATE(1, 3, 5);
 
   fixed_min_pair_heap<score_type, index_type> a(
@@ -341,8 +341,8 @@ TEMPLATE_LIST_TEST_CASE(
     auto l_nn = std::min<size_t>(k_nn + pad, a.size());
     CHECK(std::equal(
         begin(gt_neighbors), begin(gt_neighbors) + l_nn, top_k.begin()));
-    CHECK(end(top_k) == begin(top_k) + k_nn + pad);
-    CHECK(end(top_k) - begin(top_k) == k_nn + pad);
+    CHECK(end(top_k) == begin(top_k) + (long)(k_nn + pad));
+    CHECK(end(top_k) - begin(top_k) == (long)(k_nn + pad));
     CHECK(std::equal(
         begin(top_k) + l_nn,
         begin(top_k) + k_nn + pad,
@@ -359,8 +359,8 @@ TEMPLATE_LIST_TEST_CASE(
     auto l_nn = std::min<size_t>(k_nn + pad, a.size());
     CHECK(std::equal(
         begin(gt_neighbors), begin(gt_neighbors) + l_nn, top_k.begin()));
-    CHECK(end(top_k) == begin(top_k) + k_nn + pad);
-    CHECK(end(top_k) - begin(top_k) == k_nn + pad);
+    CHECK(end(top_k) == begin(top_k) + (long)(k_nn + pad));
+    CHECK(end(top_k) - begin(top_k) == (long)(k_nn + pad));
     CHECK(std::equal(
         begin(top_k) + l_nn,
         begin(top_k) + k_nn + pad,
@@ -376,8 +376,8 @@ TEMPLATE_LIST_TEST_CASE("scoring: get_top_k", "[scoring]", scoring_typelist) {
   using groundtruth_type = std::tuple_element_t<2, TestType>;
 
   groundtruth_type k_nn = GENERATE(1, 3, 5);
-  groundtruth_type asize = GENERATE(1, 3, 5);
-  groundtruth_type bsize = GENERATE(0, 1);
+  size_t asize = GENERATE(1, 3, 5);
+  size_t bsize = GENERATE(0, 1);
   size_t num_vectors{2};
 
   std::vector<fixed_min_pair_heap<score_type, index_type>> scores00{

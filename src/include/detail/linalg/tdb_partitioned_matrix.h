@@ -49,11 +49,12 @@
 #include <thread>
 #include <type_traits>
 #include <vector>
+#include <version>
 
 #include <tiledb/tiledb>
 #include "mdspan/mdspan.hpp"
 
-#include "detail/linalg/tdb_defs.h"
+#include "tdb_defs.h"
 
 #include "utils/timer.h"
 
@@ -104,7 +105,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   std::string uri_;
   std::reference_wrapper<const tiledb::Context> ctx_;
-  tiledb::Array array_;
+  std::unique_ptr<tiledb::Array> array_;
   tiledb::ArraySchema schema_;
   size_t num_array_rows_{0};
   size_t num_array_cols_{0};
@@ -127,7 +128,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @todo This needs to go into its own class
    *
    ****************************************************************************/
-  tiledb::Array ids_array_;
+  std::unique_ptr<tiledb::Array> ids_array_;
   tiledb::ArraySchema ids_schema_;
   std::vector<indices_type> indices_;   // @todo pointer and span?
   std::vector<parts_type> parts_;       // @todo pointer and span?
@@ -186,11 +187,12 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       : constructor_timer{tdb_func__ + std::string{" constructor"}}
       , uri_{uri}
       , ctx_{ctx}
-      , array_{tiledb_helpers::open_array(tdb_func__, ctx_, uri, TILEDB_READ, temporal_policy)}
-      , schema_{array_.schema()}
+      , array_{tiledb_helpers::open_array(
+            tdb_func__, ctx_, uri, TILEDB_READ, temporal_policy)}
+      , schema_{array_->schema()}
       , ids_array_{tiledb_helpers::open_array(
             tdb_func__, ctx_, ids_uri, TILEDB_READ)}
-      , ids_schema_{ids_array_.schema()}
+      , ids_schema_{ids_array_->schema()}
       , indices_{in_indices}
       , parts_{in_parts}
       , col_part_view_{0, 0} {
@@ -320,7 +322,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       /*
        * Set up the subarray to read the partitions
        */
-      tiledb::Subarray subarray(ctx_, this->array_);
+      tiledb::Subarray subarray(ctx_, *array_);
 
       // Dimension 0 goes from 0 to 127
       subarray.add_range(0, 0, (int)dimension - 1);
@@ -348,7 +350,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       auto cell_order = schema_.cell_order();
       auto layout_order = cell_order;
 
-      tiledb::Query query(ctx_, this->array_);
+      tiledb::Query query(ctx_, *array_);
 
       // auto ptr = data_.get();
 
@@ -375,7 +377,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       auto ids_attr = ids_schema_.attribute(ids_attr_idx);
       std::string ids_attr_name = ids_attr.name();
 
-      tiledb::Subarray ids_subarray(ctx_, ids_array_);
+      tiledb::Subarray ids_subarray(ctx_, *ids_array_);
 
       size_t ids_col_count = 0;
       for (size_t j = std::get<0>(col_part_view_);
@@ -394,7 +396,7 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
         throw std::runtime_error("Column count mismatch");
       }
 
-      tiledb::Query ids_query(ctx_, ids_array_);
+      tiledb::Query ids_query(ctx_, *ids_array_);
 
       auto ids_ptr = ids_.data();
       ids_query.set_subarray(ids_subarray)
@@ -436,11 +438,11 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
    * Destructor.  Closes arrays if they are open.
    */
   ~tdbPartitionedMatrix() {
-    if (array_.is_open()) {
-      array_.close();
+    if (array_->is_open()) {
+      array_->close();
     }
-    if (ids_array_.is_open()) {
-      ids_array_.close();
+    if (ids_array_->is_open()) {
+      ids_array_->close();
     }
   }
 };

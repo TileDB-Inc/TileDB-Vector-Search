@@ -43,9 +43,8 @@ namespace detail::flat {
 
 template <class DB, class Q>
 auto gemm_query(const DB& db, const Q& q, int k, bool nth, size_t nthreads) {
-  if constexpr (is_loadable_v<decltype(db)>) {
-    db.load();
-  }
+  load(db);
+
   scoped_timer _{"Total time " + tdb_func__};
   auto scores = gemm_scores(db, q, nthreads);
   auto top_k = get_top_k(scores, k, nth, nthreads);

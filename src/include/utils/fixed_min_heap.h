@@ -1,5 +1,5 @@
 /**
- * @file   fixed_min_queues.h
+ * @file   fixed_min_heap.h
  *
  * @section LICENSE
  *
@@ -35,12 +35,347 @@
  * scores during similarity search.
  */
 
-#ifndef TILEDB_FIXED_MIN_QUEUES_H
-#define TILEDB_FIXED_MIN_QUEUES_H
+#ifndef TILEDB_FIXED_MIN_HEAP_H
+#define TILEDB_FIXED_MIN_HEAP_H
 
+#include <concepts>
 #include <functional>
 #include <initializer_list>
+#include <iostream>
 #include <set>
+
+#include "functional.h"
+
+namespace {
+class not_unique {};
+class unique_id {};
+class unique_score {};
+class unique_both {};
+}  // namespace
+
+template <class Heap>
+struct heap_traits {
+  using value_type = typename Heap::value_type;
+  using score_type =
+      typename std::tuple_element<0, typename Heap::value_type>::type;
+  using index_type =
+      typename std::tuple_element<1, typename Heap::value_type>::type;
+};
+
+template <class Heap>
+using heap_score_t = typename heap_traits<Heap>::score_type;
+
+template <class Heap>
+using heap_index_t = typename heap_traits<Heap>::index_type;
+
+/**
+ * Heap to store a pair of values, ordered by the first element.
+ * @tparam T Type of first element
+ * @tparam U Type of second element
+ */
+template <class T, class U, class Compare = std::less<T>>
+class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
+  using Base = std::vector<std::tuple<T, U>>;
+  // using Base::Base;
+  unsigned max_size{0};
+  constexpr const static Compare compare_{};
+
+ public:
+  explicit fixed_min_pair_heap(
+      std::integral auto k, Compare compare = Compare{})
+      : Base(0)
+      , max_size{(unsigned)k}  //    , compare_{std::move(compare)}
+  {
+    Base::reserve(k);
+  }
+
+  explicit fixed_min_pair_heap(
+      unsigned k,
+      std::initializer_list<std::tuple<T, U>> l,
+      Compare compare = Compare{})
+      : Base(0)
+      , max_size{k} {
+    Base::reserve(k);
+    for (auto& p : l) {
+      insert(std::get<0>(p), std::get<1>(p));
+    }
+  }
+
+  template <class Unique = not_unique>
+  bool insert(const T& x, const U& y) {
+    if (Base::size() < max_size) {
+      if constexpr (std::is_same_v<Unique, unique_id>) {
+        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
+              return std::get<1>(e) == y;
+            }) != end(*this)) {
+          return false;
+        }
+      }
+
+      Base::emplace_back(x, y);
+
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+      //      if (Base::size() == max_size) {
+      //        std::make_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      //          return std::get<0>(a) < std::get<0>(b);
+      //        });
+      //      }
+      return true;
+    } else if (compare_(x, std::get<0>(this->front()))) {
+      std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+
+      if constexpr (std::is_same_v<Unique, unique_id>) {
+        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
+              return std::get<1>(e) == y;
+            }) != end(*this)) {
+          std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+            return compare_(std::get<0>(a), std::get<0>(b));
+          });
+          return false;
+        }
+      }
+
+      //      this->pop_back();
+      //      this->emplace_back(x, y);
+      (*this)[max_size - 1] = std::make_tuple(x, y);
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+      return true;
+    }
+    return false;
+  }
+
+  auto pop() {
+    std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      return compare_(std::get<0>(a), std::get<0>(b));
+    });
+    this->pop_back();
+  }
+
+  void self_sort() {
+    std::sort_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      return compare(std::get<0>(a), std::get<0>(b));
+    });
+  }
+};
+
+template <class T, class U>
+using k_min_heap = fixed_min_pair_heap<T, U>;
+
+template <class T, class U>
+class threshold_min_pair_heap : public std::vector<std::tuple<T, U>> {
+ private:
+  using element = std::tuple<T, U>;
+  using Base = std::vector<element>;
+
+  T threshold_{std::numeric_limits<T>::max()};
+
+  void rebuild_heap() {
+    std::vector<element> new_heap;
+    new_heap.reserve(this->size());
+
+    for (auto&& value : *this) {
+      if (std::get<0>(value) < threshold_) {
+        new_heap.emplace_back(value);
+      }
+    }
+    std::swap(new_heap, *this);
+    std::make_heap(this->begin(), this->end(), first_less<element>{});
+  }
+
+ public:
+  threshold_min_pair_heap() = default;
+  threshold_min_pair_heap(T threshold)
+      : threshold_(threshold) {
+  }
+
+  void set_threshold(T new_threshold) {
+    if (new_threshold < threshold_) {
+      threshold_ = new_threshold;
+      rebuild_heap();
+    }
+  }
+
+  void insert(const T& t, const U& u) {
+    if (t < threshold_) {
+      this->emplace_back(t, u);
+      std::push_heap(begin(*this), end(*this), first_less<element>{});
+    }
+  }
+
+  void insert(element value) {
+    if (std::get<0>(value) < threshold_) {
+      this->push_back(value);
+      std::push_heap(begin(*this), end(*this), first_less<element>{});
+    }
+  }
+
+  auto get_min() {
+    if (empty(*this)) {
+      throw std::out_of_range("Heap is empty.");
+    }
+    return this->front();
+  }
+
+  void pop() {
+    if (empty(*this)) {
+      throw std::out_of_range("Heap is empty.");
+    }
+    std::pop_heap(begin(*this), end(*this), first_less<element>{});
+    this->pop_back();
+  }
+
+  void unfiltered_heapify() {
+    std::push_heap(begin(*this), end(*this), first_less<element>{});
+  }
+
+  void filtered_heapify() {
+    rebuild_heap();
+  }
+};
+
+template <class T, class U>
+using threshold_heap = threshold_min_pair_heap<T, U>;
+
+template <class Heap>
+void debug_min_heap(
+    const Heap& heap, const std::string& msg = "", int which = 2) {
+  std::cout << msg;
+
+  if (which == 0) {
+    for (auto&& [score, id] : heap) {
+      std::cout << score << " ";
+    }
+    std::cout << std::endl;
+  } else if (which == 1) {
+    for (auto&& [score, id] : heap) {
+      std::cout << id << " ";
+    }
+    std::cout << std::endl;
+  } else {
+    for (auto&& [score, id] : heap) {
+      std::cout << "( " << score << ", " << id << " ) ";
+    }
+    std::cout << std::endl;
+  }
+}
+
+template <class T, class Compare = std::greater<>>
+void max_heapify(
+    std::vector<T>& heap, int i, int heap_size, Compare comp = Compare()) {
+  int largest = i;
+  int left = 2 * i + 1;
+  int right = 2 * i + 2;
+
+  if (left < heap_size && comp(heap[left], heap[largest])) {
+    largest = left;
+  }
+
+  if (right < heap_size && comp(heap[right], heap[largest])) {
+    largest = right;
+  }
+
+  if (largest != i) {
+    std::swap(heap[i], heap[largest]);
+    max_heapify(heap, largest, heap_size);
+  }
+}
+
+template <class T, class Compare = std::greater<>>
+void convert_to_max_heap(std::vector<T>& heap, Compare comp = Compare()) {
+  for (int i = heap.size() / 2 - 1; i >= 0; --i) {
+    max_heapify(heap, i, heap.size(), comp);
+  }
+}
+
+template <class T, class Compare = std::less<>>
+void min_heapify(
+    std::vector<T>& heap, int i, int heap_size, Compare comp = Compare()) {
+  int smallest = i;
+  int left = 2 * i + 1;
+  int right = 2 * i + 2;
+
+  if (left < heap_size && comp(heap[left], heap[smallest])) {
+    smallest = left;
+  }
+
+  if (right < heap_size && comp(heap[right], heap[smallest])) {
+    smallest = right;
+  }
+
+  if (smallest != i) {
+    std::swap(heap[i], heap[smallest]);
+    min_heapify(heap, smallest, heap_size);
+  }
+}
+
+template <class T>
+void convert_to_min_heap(std::vector<T>& heap) {
+  for (int i = heap.size() / 2 - 1; i >= 0; --i) {
+    min_heapify(heap, i, heap.size());
+  }
+}
+
+#ifdef ALLHEAPS
+
+// Original simple heap
+#if 0
+/**
+ * Heap to store a pair of values, ordered by the first element.
+ * @tparam T Type of first element
+ * @tparam U Type of second element
+ */
+template <class T, class U>
+class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
+  using Base = std::vector<std::tuple<T, U>>;
+
+  // using Base::Base;
+  unsigned max_size{0};
+
+ public:
+  explicit fixed_min_pair_heap(unsigned k)
+      : Base(0)
+      , max_size{k} {
+    Base::reserve(k);
+  }
+
+  explicit fixed_min_pair_heap(
+      unsigned k, std::initializer_list<std::tuple<T, U>> l)
+      : Base(0)
+      , max_size{k} {
+    Base::reserve(k);
+    for (auto& p : l) {
+      insert(std::get<0>(p), std::get<1>(p));
+    }
+  }
+
+  void insert(const T& x, const U& y) {
+    if (Base::size() < max_size) {
+      this->emplace_back(x, y);
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return std::get<0>(a) < std::get<0>(b);
+      });
+    } else if (x < std::get<0>(this->front())) {
+      std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return std::get<0>(a) < std::get<0>(b);
+      });
+      this->pop_back();
+      this->emplace_back(x, y);
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return std::get<0>(a) < std::get<0>(b);
+      });
+    }
+  }
+};
+#endif
+
+// Kept here for historical comparison reasons.
+// These are okay
 
 template <class T>
 class fixed_min_set_heap_1 : public std::vector<T> {
@@ -172,8 +507,8 @@ using heap_index_t = typename heap_traits<Heap>::index_type;
 // template <class T>
 // using fixed_min_heap = fixed_min_set_heap_1<T>;
 
-#ifdef ALLHEAPS  // Kept here for historical comparison reasons.  They are
-                 // really slow.
+// Kept here for historical comparison reasons.  They are
+// really slow.
 template <class T, class Compare = std::less<T>>
 class fixed_min_set_heap_3 : public std::vector<T> {
   using Base = std::vector<T>;
@@ -240,5 +575,6 @@ struct fixed_min_set_set : public std::set<T, Compare, Allocator> {
     }
   }
 };
-#endif
-#endif  // TILEDB_FIXED_MIN_QUEUES_H
+
+#endif  // ALLHEAPS
+#endif  // TILEDB_FIXED_MIN_HEAP_H
