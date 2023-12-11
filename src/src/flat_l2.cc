@@ -87,6 +87,7 @@
 
 #include "flat_query.h"
 #include "stats.h"
+#include "utils/print_types.h"
 #include "utils/timer.h"
 
 bool verbose = false;
@@ -190,6 +191,7 @@ int main(int argc, char* argv[]) {
       if (verbose) {
         std::cout << "# Using vq_heap_2" << std::endl;
       }
+      auto foo = detail::flat::vq_query_heap_2(db, query, k, nthreads);
       return detail::flat::vq_query_heap_2(db, query, k, nthreads);
     } else if (alg_name == "qv_tiled") {
       if (verbose) {
@@ -202,6 +204,7 @@ int main(int argc, char* argv[]) {
       }
       return detail::flat::qv_query_heap(db, query, k, nthreads);
     }
+
 #ifdef TILEDB_VS_ENABLE_BLAS
 #if 0
     else if (alg_name == "gemm") {

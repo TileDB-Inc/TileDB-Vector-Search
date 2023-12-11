@@ -57,7 +57,7 @@ auto partition_ivf_index(
   scoped_timer _{tdb_func__};
 
   size_t dimension = centroids.num_rows();
-  size_t num_queries = size(query);
+  size_t num_queries = num_vectors(query);
 
   // get closest centroid for each query vector
   // There may be duplicates

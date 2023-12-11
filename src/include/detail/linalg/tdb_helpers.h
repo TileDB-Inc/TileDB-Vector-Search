@@ -52,16 +52,15 @@ namespace tiledb_helpers {
  * @param uri The URI of the array to open.
  * @param query_type The mode to open the array.
  */
-inline tiledb::Array open_array(
+inline std::unique_ptr<tiledb::Array> open_array(
     const std::string& function_name,
     const tiledb::Context& ctx,
     const std::string& uri,
     tiledb_query_type_t query_type,
     const tiledb::TemporalPolicy temporal_policy = {}) {
   StatsCollectionScope stats_scope(uri, function_name, "open_array");
-  return tiledb::Array(ctx, uri, query_type, temporal_policy);
+  return std::make_unique<tiledb::Array>(ctx, uri, query_type, temporal_policy);
 }
-
 /**
  * @brief Submits a TileDB query and displays stats to stderr.
  *

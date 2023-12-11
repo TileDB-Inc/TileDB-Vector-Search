@@ -1,6 +1,5 @@
-
 /**
- * @file   matrix.h
+ * @file   index.h
  *
  * @section LICENSE
  *
@@ -39,15 +38,65 @@
 #include <cstddef>
 #include <initializer_list>
 #include <iostream>
+#include "concepts.h"
 #include "mdspan/mdspan.hpp"
+#include "tdb_defs.h"
 
 #include "utils/timer.h"
 
+#include <version>
 #include "detail/linalg/linalg_defs.h"
 
 template <class I = size_t>
 using matrix_extents = stdx::dextents<I, 2>;
 
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+class MatrixView : public stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy> {
+  using Base = stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy>;
+  using Base::Base;
+
+ public:
+  using layout_policy = LayoutPolicy;
+  using index_type = typename Base::index_type;
+  using size_type = typename Base::size_type;
+  using reference = typename Base::reference;
+
+ public:
+  MatrixView(const Base& rhs)
+      : Base(rhs) {
+  }
+
+  MatrixView(T* p, I r, I c)
+      : Base{p, r, c} {
+  }
+
+  // @todo is this right???
+  auto operator[](index_type i) {
+    if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
+      return std::span(&Base::operator()(i, 0), this->extents().extent(1));
+    } else {
+      return std::span(&Base::operator()(0, i), this->extents().extent(0));
+    }
+  }
+
+  auto operator[](index_type i) const {
+    if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
+      return std::span(&Base::operator()(i, 0), this->extents().extent(1));
+    } else {
+      return std::span(&Base::operator()(0, i), this->extents().extent(0));
+    }
+  }
+
+  size_type num_rows() const {
+    return this->extent(0);
+  }
+
+  size_type num_cols() const {
+    return this->extent(1);
+  }
+
+  ~MatrixView() = default;
+};
 /**
  * @brief A 2-D matrix class that owns its storage.  The interface is
  * that of mdspan.
@@ -56,12 +105,16 @@ using matrix_extents = stdx::dextents<I, 2>;
  * @tparam LayoutPolicy
  * @tparam I
  *
- * @todo Make an alias for extents.
+ * @todo Make Matrix into a range (?)
  */
+
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
   // using Base::Base;
+
+  // So that the CPO for data() doesn't get confused
+  // auto data_handle() = delete;
 
  public:
   using layout_policy = LayoutPolicy;
@@ -79,7 +132,16 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   std::unique_ptr<T[]> storage_;
 
  public:
+  // Needed because of deferred construction in derived classes
   Matrix() noexcept = default;
+
+ public:
+  Matrix(const Matrix&) = delete;
+  Matrix& operator=(const Matrix&) = delete;
+
+  Matrix(Matrix&&) = default;
+  Matrix& operator=(Matrix&& rhs) = default;
+  ~Matrix() = default;
 
   Matrix(
       size_type nrows,
@@ -87,7 +149,12 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       LayoutPolicy policy = LayoutPolicy()) noexcept
       : num_rows_(nrows)
       , num_cols_(ncols)
-      , storage_{new T[num_rows_ * num_cols_]} {
+#ifdef __cpp_lib_smart_ptr_for_overwrite
+      , storage_{std::make_unique_for_overwrite<T[]>(num_rows_ * num_cols_)}
+#else
+      , storage_{new T[num_rows_ * num_cols_]}
+#endif
+  {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
   }
 
@@ -102,12 +169,15 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
   }
 
+#if 0
   Matrix(Matrix&& rhs) noexcept
       : num_rows_{rhs.num_rows_}
       , num_cols_{rhs.num_cols_}
       , storage_{std::move(rhs.storage_)} {
+    *static_cast<Base*>(&rhs) = Base { rhs.storage_.get(), 0, 0 };
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
-  }
+      }
+#endif
 
   /**
    * Initializer list constructor.  Useful for testing and for examples.
@@ -117,7 +187,12 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : num_rows_{list.size()}
       , num_cols_{list.begin()->size()}
-      , storage_{new T[num_rows_ * num_cols_]} {
+#ifdef __cpp_lib_smart_ptr_for_overwrite
+      , storage_{std::make_unique_for_overwrite<T[]>(num_rows_ * num_cols_)}
+#else
+      , storage_{new T[num_rows_ * num_cols_]}
+#endif
+  {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
     auto it = list.begin();
     for (size_type i = 0; i < num_rows_; ++i, ++it) {
@@ -133,7 +208,12 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : num_rows_{list.begin()->size()}
       , num_cols_{list.size()}
-      , storage_{new T[num_rows_ * num_cols_]} {
+#ifdef __cpp_lib_smart_ptr_for_overwrite
+      , storage_{std::make_unique_for_overwrite<T[]>(num_rows_ * num_cols_)}
+#else
+      , storage_{new T[num_rows_ * num_cols_]}
+#endif
+  {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
     auto it = list.begin();
     for (size_type i = 0; i < num_cols_; ++i, ++it) {
@@ -141,19 +221,13 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     }
   }
 
-  auto& operator=(Matrix&& rhs) noexcept {
-    num_rows_ = rhs.num_rows_;
-    num_cols_ = rhs.num_cols_;
-    storage_ = std::move(rhs.storage_);
-    Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
-    return *this;
-  }
-
   auto data() {
+    // return this->data_handle();
     return storage_.get();
   }
 
   auto data() const {
+    // return this->data_handle();
     return storage_.get();
   }
 
@@ -186,12 +260,19 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     // return 2;  //
   }
 
+#if 0
   auto span() const noexcept {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
       return num_cols();
     } else {
       return num_rows();
     }
+  }
+#endif
+
+  auto extents() const noexcept {
+    return std::vector<size_t>{
+        Base::extents().extent(0), Base::extents().extent(1)};
   }
 
   auto num_rows() const noexcept {
@@ -230,6 +311,7 @@ auto raveled(Matrix<T, LayoutPolicy, I>& m) {
   return m.raveled();
 }
 
+#if 0
 // @todo these are k
 template <class T, class I>
 size_t size(const Matrix<T, stdx::layout_right, I>& m) {
@@ -240,6 +322,7 @@ template <class T, class I>
 size_t size(const Matrix<T, stdx::layout_left, I>& m) {
   return m.num_cols();
 }
+#endif
 
 /**
  * Is the matrix row-oriented?
@@ -248,6 +331,48 @@ template <class Matrix>
 constexpr bool is_row_oriented(const Matrix& A) {
   return std::is_same_v<typename Matrix::layout_policy, stdx::layout_right>;
 }
+
+#if 0
+// @todo This will need some more infrastructure to work.  If we tag_invoke
+// for defining CPOs it can work.  Otherwise need to be more
+// careful with namespaces so that ADL can work (?)
+//
+/**********************************************************************
+ *
+ * Matrix CPO overloads
+ *
+ * *********************************************************************/
+
+template <class T, class LayoutPolicy, class I>
+auto dimension(const Matrix<T, LayoutPolicy, I>& m) {
+  // row major -- dimension is number of columns
+  if constexpr(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
+    return m.num_cols();
+  } else if constexpr(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
+    return m.num_rows();
+  } else {
+    static_assert(always_false<LayoutPolicy>, "Unknown layout policy");
+  }
+}
+
+template <class T, class LayoutPolicy, class I>
+auto num_vectors(const Matrix<T, LayoutPolicy, I>& m) {
+  // row major -- num_vectors is number of rows
+  if constexpr(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
+    return m.num_rows();
+  } else if constexpr(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
+    return m.num_cols();
+  } else {
+    static_assert(always_false<LayoutPolicy>, "Unknown layout policy");
+  }
+}
+#endif  // 0
+
+/**********************************************************************
+ *
+ * Some debugging utilities.
+ *
+ * *********************************************************************/
 
 /**
  * Print information about a Matrix.
@@ -265,12 +390,6 @@ std::string matrix_info(const Matrix& A, const std::string& msg = "") {
          (is_row_oriented(A) ? "row major" : "column major");
   return str;
 }
-
-/**********************************************************************
- *
- * Some debugging utilities.
- *
- * *********************************************************************/
 
 /**
  * Print information about a std::vector -- overload.
@@ -309,9 +428,9 @@ void debug_matrix(const Matrix& A, const std::string& msg = "") {
   }
 }
 
-template <class Matrix>
+template <feature_vector_array M>
 void debug_slice(
-    const Matrix& A,
+    const M& A,
     const std::string& msg = "",
     size_t rows = 5,
     size_t cols = 15) {
