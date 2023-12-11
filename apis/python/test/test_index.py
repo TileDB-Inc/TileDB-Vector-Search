@@ -122,6 +122,7 @@ def test_ivf_flat_index(tmp_path):
     )
     assert {0, 2, 4}.issubset(set(result_i[0]))
 
+# NOTE(paris): This test is failing on my machine. See: https://tiledb.slack.com/archives/C0537B4V7Q8/p1702312614334709
 def test_ivf_flat_failing_query(tmp_path):
     # TODO(paris): Pull this and make_blobs() into a helper in common.py. Left to keep failing unit 
     # test easier to debug.
