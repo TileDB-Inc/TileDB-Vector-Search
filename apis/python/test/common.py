@@ -70,8 +70,47 @@ def groundtruth_read(dataset_dir, nqueries=None):
     else:
         return I, D
 
+def create_random_dataset_f32_only_data(nb, d, centers, path):
+    """
+    Creates a random float32 dataset containing just a dataset and then writes it to disk.
+
+    Parameters
+    ----------
+    nb: int
+        Number of points in the dataset
+    d: int
+        Dimension of the dataset
+    nq: int
+        Number of centers
+    path: str
+        Path to write the dataset to
+    """
+    from sklearn.datasets import make_blobs
+
+    os.mkdir(path)
+    X, _ = make_blobs(n_samples=nb, n_features=d, centers=centers, random_state=1)
+
+    with open(os.path.join(path, "data.f32bin"), "wb") as f:
+        np.array([nb, d], dtype="uint32").tofile(f)
+        X.astype("float32").tofile(f)
 
 def create_random_dataset_f32(nb, d, nq, k, path):
+    """
+    Creates a random float32 dataset containing both a dataset and queries against it, and then writes those to disk.
+
+    Parameters
+    ----------
+    nb: int
+        Number of points in the dataset
+    d: int
+        Dimension of the dataset
+    nq: int
+        Number of queries
+    k: int
+        Number of nearest neighbors to return
+    path: str
+        Path to write the dataset to
+    """
     import sklearn.model_selection
     from sklearn.datasets import make_blobs
     from sklearn.neighbors import NearestNeighbors
@@ -104,6 +143,22 @@ def create_random_dataset_f32(nb, d, nq, k, path):
 
 
 def create_random_dataset_u8(nb, d, nq, k, path):
+    """
+    Creates a random uint8 dataset containing both a dataset and queries against it, and then writes those to disk.
+
+    Parameters
+    ----------
+    nb: int
+        Number of points in the dataset
+    d: int
+        Dimension of the dataset
+    nq: int
+        Number of queries
+    k: int
+        Number of nearest neighbors to return
+    path: str
+        Path to write the dataset to
+    """
     import sklearn.model_selection
     from sklearn.datasets import make_blobs
     from sklearn.neighbors import NearestNeighbors

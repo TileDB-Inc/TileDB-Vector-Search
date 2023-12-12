@@ -1,9 +1,12 @@
 import numpy as np
 from common import *
+import pytest
 
 import tiledb.vector_search.index as ind
 from tiledb.vector_search import flat_index, ivf_flat_index
 from tiledb.vector_search.index import Index
+from tiledb.vector_search.ingestion import ingest
+from tiledb.vector_search.utils import load_fvecs
 
 def query_and_check(index, queries, k, expected, **kwargs):
     for _ in range(3):
@@ -89,3 +92,87 @@ def test_ivf_flat_index(tmp_path):
 
     index = index.consolidate_updates()
     query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4}, nprobe=partitions)
+
+def test_index_with_incorrect_dimensions(tmp_path):
+    indexes = [flat_index, ivf_flat_index]
+    for index_type in indexes:
+        uri = os.path.join(tmp_path, f"array_{index_type.__name__}")
+        index = index_type.create(uri=uri, dimensions=1, vector_type=np.dtype(np.uint8))
+
+        # Wrong number of dimensions will raise a TypeError.
+        with pytest.raises(TypeError):
+            index.query(np.array(1, dtype=np.float32), k=3)
+        with pytest.raises(TypeError):
+            index.query(np.array([[[1]]], dtype=np.float32), k=3)
+        with pytest.raises(TypeError):
+            index.query(np.array([[[[1]]]], dtype=np.float32), k=3)
+        
+        # But the correct number of dimensions will not.
+        index.query(np.array([1], dtype=np.float32), k=3)
+        index.query(np.array([[1]], dtype=np.float32), k=3)
+
+def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
+    siftsmall_uri = "test/data/siftsmall/siftsmall_base.fvecs"
+    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
+    indexes = ["FLAT", "IVF_FLAT"]
+    for index_type in indexes:
+        index_uri = os.path.join(tmp_path, f"sift10k_flat_{index_type}")
+        index = ingest(
+            index_type=index_type,
+            index_uri=index_uri,
+            source_uri=siftsmall_uri,
+            source_type = "FVEC",
+        )
+
+        # Throw with an incorrect number of columns.
+        query_shape = (1, 1)
+        with pytest.raises(TypeError):
+            index.query(np.random.rand(*query_shape).astype(np.float32), k=10)
+
+        # Okay ottherwise.
+        query_vectors = load_fvecs(queries_uri)
+        index.query(query_vectors, k=10)
+
+def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
+    # Tests that we raise a TypeError if the number of columns in the query is not the same as the 
+    # number of columns in the indexed data.
+    size=1000
+    indexes = ["FLAT", "IVF_FLAT"]
+    num_columns_in_vector = [1, 2, 3, 4, 5, 10]
+    for index_type in indexes:
+        for num_columns in num_columns_in_vector:
+            index_uri = os.path.join(tmp_path, f"array_{index_type}_{num_columns}")
+            dataset_dir = os.path.join(tmp_path, f"dataset_{index_type}_{num_columns}")
+            create_random_dataset_f32_only_data(nb=size, d=num_columns, centers=1, path=dataset_dir)
+            index = ingest(index_type=index_type, index_uri=index_uri, source_uri=os.path.join(dataset_dir, "data.f32bin"))
+
+            # We have created a dataset with num_columns in each vector. Let's try creating queries 
+            # with different numbers of columns and confirming incorrect ones will throw.
+            for num_columns_for_query in range(1, num_columns + 2):
+                query_shape = (1, num_columns_for_query)
+                query = np.random.rand(*query_shape).astype(np.float32)
+                if query.shape[1] == num_columns:
+                    index.query(query, k=1)
+                else:
+                    with pytest.raises(TypeError):
+                        index.query(query, k=1)
+
+def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_path):
+    # Tests that we raise a TypeError if the number of columns in the query is not the same as the 
+    # number of columns in the indexed data, specifically for a single vector query.
+    # i.e. queries = [1, 2, 3]  instead of queries = [[1, 2, 3], [4, 5, 6]].
+    indexes = [flat_index, ivf_flat_index]
+    for index_type in indexes:
+        uri = os.path.join(tmp_path, f"array_{index_type.__name__}")
+        index = index_type.create(uri=uri, dimensions=3, vector_type=np.dtype(np.uint8))
+
+        # Wrong number of columns will raise a TypeError.
+        with pytest.raises(TypeError):
+            index.query(np.array([1], dtype=np.float32), k=3)
+        with pytest.raises(TypeError):
+            index.query(np.array([1, 1], dtype=np.float32), k=3)
+        with pytest.raises(TypeError):
+            index.query(np.array([1, 1, 1, 1], dtype=np.float32), k=3)
+        
+        # But the correct number of columns will not.
+        index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
