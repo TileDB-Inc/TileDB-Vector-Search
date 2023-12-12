@@ -106,8 +106,8 @@ def test_index_with_incorrect_dimensions(tmp_path):
             index.query(np.array([[[1]]], dtype=np.float32), k=3)
         with pytest.raises(TypeError):
             index.query(np.array([[[[1]]]], dtype=np.float32), k=3)
-        
-        # But the correct number of dimensions will not.
+
+        # Okay otherwise.
         index.query(np.array([1], dtype=np.float32), k=3)
         index.query(np.array([[1]], dtype=np.float32), k=3)
 
@@ -124,12 +124,12 @@ def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
             source_type = "FVEC",
         )
 
-        # Throw with an incorrect number of columns.
+        # Wrong number of columns will raise a TypeError.
         query_shape = (1, 1)
         with pytest.raises(TypeError):
             index.query(np.random.rand(*query_shape).astype(np.float32), k=10)
 
-        # Okay ottherwise.
+        # Okay otherwise.
         query_vectors = load_fvecs(queries_uri)
         index.query(query_vectors, k=10)
 
@@ -157,6 +157,20 @@ def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
                     with pytest.raises(TypeError):
                         index.query(query, k=1)
 
+                # TODO(paris): This will throw with the following error. Fix and re-enable, then remove 
+                # test_index_with_incorrect_num_of_query_columns_in_single_vector_query:
+                #   def array_to_matrix(array: np.ndarray):
+                #           if array.dtype == np.float32:
+                #   >           return pyarray_copyto_matrix_f32(array)
+                #   E           RuntimeError: Number of dimensions must be two
+                # Here we test with a query which is just a vector, i.e. [1, 2, 3].
+                # query = query[0]
+                # if num_columns_for_query == num_columns:
+                #     index.query(query, k=1)
+                # else:
+                #     with pytest.raises(TypeError):
+                #         index.query(query, k=1)
+
 def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_path):
     # Tests that we raise a TypeError if the number of columns in the query is not the same as the 
     # number of columns in the indexed data, specifically for a single vector query.
@@ -173,6 +187,6 @@ def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_pa
             index.query(np.array([1, 1], dtype=np.float32), k=3)
         with pytest.raises(TypeError):
             index.query(np.array([1, 1, 1, 1], dtype=np.float32), k=3)
-        
-        # But the correct number of columns will not.
+
+        # Okay otherwise.
         index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
