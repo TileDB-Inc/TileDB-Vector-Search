@@ -30,6 +30,7 @@
 
 #include <catch2/catch_all.hpp>
 #include <tiledb/tiledb>
+#include <tiledb/group_experimental.h>
 
 #include <filesystem>
 #include <string>
@@ -42,6 +43,28 @@
 TEST_CASE("ivf_flat_group: test test", "[ivf_flat_group]") {
   REQUIRE(true);
 }
+
+// This test is a quickie to check whether a particular group can be opened,
+// as it fails in TileDB-Py
+#if 0
+TEST_CASE("ivf_flat_group: read a tiledb::Group", "[ivf_flat_group]") {
+  tiledb::Context ctx;
+  tiledb::Config cfg;
+  // std::string tmp_uri = "/tmp/ivf_flat_group_test_groups";
+  std::string tmp_uri="/Users/lums/TileDB/TileDB-Vector-Search/external/data/pytest/test_ivf_flat_ingestion_with_u0/array";
+
+  auto read_group = tiledb::Group(ctx, tmp_uri, TILEDB_READ, cfg);
+
+  for (size_t i = 0; i < read_group.member_count(); ++i) {
+    auto member = read_group.member(i);
+    auto name = member.name();
+    if (!name || empty(*name)) {
+      throw std::runtime_error("Name is empty.");
+    }
+    std::cout << i <<  ": " << *name << " " << member.uri() << std::endl;
+  }
+}
+#endif
 
 TEST_CASE("ivf_flat_group: create tiledb::Group", "[ivf_flat_group]") {
   tiledb::Context ctx;
