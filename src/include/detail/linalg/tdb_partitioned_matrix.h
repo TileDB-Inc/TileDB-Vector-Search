@@ -293,6 +293,12 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       std::get<1>(col_part_view_) = std::get<0>(col_part_view_);
       for (size_t i = std::get<0>(col_part_view_); i < total_num_parts_; ++i) {
         auto next_part_size = indices_[parts_[i] + 1] - indices_[parts_[i]];
+
+        // Continue if this partition is empty
+        if (next_part_size == 0) {
+          continue;
+        }
+
         if ((std::get<1>(col_view_) + next_part_size) >
             std::get<0>(col_view_) + max_cols_) {
           break;
