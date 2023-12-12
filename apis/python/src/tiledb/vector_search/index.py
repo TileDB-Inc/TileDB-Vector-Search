@@ -129,9 +129,9 @@ class Index:
         if queries.ndim != 1 and queries.ndim != 2:
             raise TypeError(f"Expected queries to have either 1 or 2 dimensions (i.e. [...] or [[...], [...]]), but it had {queries.ndim} dimensions")
         
-        query_columns = queries.shape[0] if queries.ndim == 1 else queries.shape[1]
-        if query_columns != self.get_expected_query_columns():
-            raise TypeError(f"A query in queries has {query_columns} columns, but the indexed data had {self.expected_query_columns} columns")
+        query_dimensions = queries.shape[0] if queries.ndim == 1 else queries.shape[1]
+        if query_dimensions != self.get_expected_query_dimensions():
+            raise TypeError(f"A query in queries has {query_dimensions} dimensions, but the indexed data had {self.expected_query_dimensions} dimensions")
 
         with tiledb.scope_ctx(ctx_or_config=self.config):
             if not tiledb.array_exists(self.updates_array_uri):
@@ -260,7 +260,7 @@ class Index:
             else:
                 return None, None, updated_ids
 
-    def get_expected_query_columns(self):
+    def get_expected_query_dimensions(self):
         raise NotImplementedError
 
     def query_internal(self, queries: np.ndarray, k, **kwargs):

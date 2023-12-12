@@ -97,19 +97,19 @@ def test_index_with_incorrect_dimensions(tmp_path):
     indexes = [flat_index, ivf_flat_index]
     for index_type in indexes:
         uri = os.path.join(tmp_path, f"array_{index_type.__name__}")
-        index = index_type.create(uri=uri, dimensions=1, vector_type=np.dtype(np.uint8))
+        index = index_type.create(uri=uri, dimensions=3, vector_type=np.dtype(np.uint8))
 
         # Wrong number of dimensions will raise a TypeError.
         with pytest.raises(TypeError):
             index.query(np.array(1, dtype=np.float32), k=3)
         with pytest.raises(TypeError):
-            index.query(np.array([[[1]]], dtype=np.float32), k=3)
+            index.query(np.array([[[1, 1, 1]]], dtype=np.float32), k=3)
         with pytest.raises(TypeError):
-            index.query(np.array([[[[1]]]], dtype=np.float32), k=3)
+            index.query(np.array([[[[1, 1, 1]]]], dtype=np.float32), k=3)
 
         # Okay otherwise.
-        index.query(np.array([1], dtype=np.float32), k=3)
-        index.query(np.array([[1]], dtype=np.float32), k=3)
+        index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
+        index.query(np.array([[1, 1, 1]], dtype=np.float32), k=3)
 
 def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
     siftsmall_uri = "test/data/siftsmall/siftsmall_base.fvecs"

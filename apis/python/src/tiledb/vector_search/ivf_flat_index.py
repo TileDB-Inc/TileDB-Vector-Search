@@ -64,7 +64,7 @@ class IVFFlatIndex(index.Index):
         self.memory_budget = memory_budget
 
         schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
-        self.expected_query_columns = schema.shape[0]
+        self.expected_query_dimensions = schema.shape[0]
 
         self.dtype = self.group.meta.get("dtype", None)
         if self.dtype is None:
@@ -122,8 +122,8 @@ class IVFFlatIndex(index.Index):
                 self.ctx, self.ids_uri, 0, self.size, self.base_array_timestamp
             )
 
-    def get_expected_query_columns(self):
-        return self.expected_query_columns
+    def get_expected_query_dimensions(self):
+        return self.expected_query_dimensions
 
     def query_internal(
         self,
