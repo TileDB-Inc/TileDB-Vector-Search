@@ -40,7 +40,7 @@ class FlatIndex(index.Index):
             + self.index_version
         ].uri
         schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
-        self.expected_query_dimensions = schema.shape[0]
+        self.dimensions = schema.shape[0]
         if self.base_size == -1:
             self.size = schema.domain.dim(1).domain[1] + 1
         else:
@@ -76,8 +76,8 @@ class FlatIndex(index.Index):
                     self.ctx, self.ids_uri, 0, self.size, self.base_array_timestamp
                 )
     
-    def get_expected_query_dimensions(self):
-        return self.expected_query_dimensions
+    def get_dimensions(self):
+        return self.dimensions
 
     def query_internal(
         self,
