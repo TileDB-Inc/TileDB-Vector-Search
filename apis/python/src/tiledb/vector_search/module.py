@@ -5,6 +5,7 @@ import numpy as np
 import tiledb
 from tiledb.vector_search._tiledbvspy import *
 
+import logging, pdb
 
 def load_as_matrix(
     path: str,
@@ -269,6 +270,7 @@ def ivf_query_ram(
     if ctx is None:
         ctx = Ctx({})
 
+
     args = tuple(
         [
             parts_db,
@@ -281,6 +283,9 @@ def ivf_query_ram(
             nthreads,
         ]
     )
+
+    # logging.info(f">>>> ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}")
+    # pdb.set_trace()
 
     if dtype == np.float32:
         if use_nuv_implementation:
@@ -360,6 +365,8 @@ def ivf_query(
         ]
     )
 
+    # logging.info(f">>>> ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}")
+
     if dtype == np.float32:
         if use_nuv_implementation:
             return nuv_query_heap_finite_ram_reg_blocked_f32(*args)
@@ -399,17 +406,21 @@ def dist_qv(
         ctx = Ctx({})
     args = tuple(
         [
-            ctx,
-            parts_uri,
-            active_partitions,
-            query_vectors,
-            active_queries,
+            ctx,                               # 0
+            parts_uri,                         # 1
+            StdVector_u64(active_partitions),  # 2
+            query_vectors,                     # 3
+            active_queries,                    # 4
             StdVector_u64(indices),
             ids_uri,
             k_nn,
             timestamp,
         ]
     )
+
+    # logging.info(f">>>> ivf_query_ram len(indices): {len(indices)}, dtype: {dtype},")
+    # pdb.set_trace()
+
     if dtype == np.float32:
         return dist_qv_f32(*args)
     elif dtype == np.uint8:

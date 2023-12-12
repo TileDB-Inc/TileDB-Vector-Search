@@ -1,3 +1,7 @@
+
+
+
+
 # Re-import mode from cloud.dag
 from tiledb.cloud.dag.mode import Mode
 
@@ -8,9 +12,20 @@ from .ingestion import ingest
 from .ivf_flat_index import IVFFlatIndex
 from .module import (array_to_matrix, ivf_index, ivf_index_tdb, ivf_query,
                      ivf_query_ram, load_as_array, load_as_matrix,
-                     partition_ivf_index, query_vq_heap, query_vq_nth,
+                     partition_ivf_index,
+                     query_vq_heap, query_vq_nth,
                      validate_top_k)
 from .storage_formats import STORAGE_VERSION, storage_formats
+
+
+
+from  ._tiledbvspy import FeatureVector
+from  ._tiledbvspy import FeatureVectorArray
+from  ._tiledbvspy import IndexFlatL2
+from  ._tiledbvspy import IndexIVFFlat
+from  ._tiledbvspy import Ctx
+
+
 
 try:
     from tiledb.vector_search.version import version as __version__
@@ -35,3 +50,4 @@ __all__ = [
     "partition_ivf_index",
     "utils",
 ]
+

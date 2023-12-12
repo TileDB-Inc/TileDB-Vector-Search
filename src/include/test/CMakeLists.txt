@@ -34,7 +34,7 @@ endif()
 
 macro (kmeans_add_exe EXENAME)
     add_executable(${EXENAME} ${EXENAME}.cc)
-    target_link_libraries(${EXENAME} kmeans_lib)
+    target_link_libraries(${EXENAME} PRIVATE kmeans_lib)
 endmacro (kmeans_add_exe)
 
 macro (kmeans_add_test TESTNAME)
@@ -62,24 +62,95 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 # kmeans_add_test(gen_queries)
 # kmeans_add_test(time_queries)
 
+# find_package(Matplot++ REQUIRED)
+
+# kmeans_add_exe(demo_high_five)
+# target_link_libraries(demo_high_five PRIVATE HighFive)
+
+# kmeans_add_exe(demo_matplot)
+# target_link_libraries(demo_matplot PUBLIC Matplot++::matplot)
+
+# kmeans_add_exe(demo_nn-descent)
+# target_link_libraries(demo_nn-descent PUBLIC Matplot++::matplot)
+
+# kmeans_add_exe(demo_nn-graph)
+# target_link_libraries(demo_nn-graph PUBLIC Matplot++::matplot)
+
+# kmeans_add_exe(demo_vamana)
+# target_link_libraries(demo_vamana PUBLIC Matplot++::matplot)
+
+kmeans_add_exe(time_insert)
+
+kmeans_add_exe(time_abstraction_penalty)
+
+kmeans_add_test(unit_vamana)
+
+kmeans_add_test(unit_adj_list)
 
 kmeans_add_test(unit_algorithm)
 
+kmeans_add_test(unit_api)
+
+kmeans_add_test(unit_api_feature_vector)
+
+kmeans_add_test(unit_api_feature_vector_array)
+
+kmeans_add_test(unit_api_flat_l2_index)
+
+kmeans_add_test(unit_api_flat_pq_index)
+
+kmeans_add_test(unit_api_ivf_flat_index)
+
+kmeans_add_test(unit_api_ivf_pq_index)
+
+kmeans_add_test(unit_api_vamana_index)
+
+kmeans_add_test(unit_compat)
+
 kmeans_add_test(unit_concepts)
 
+kmeans_add_test(unit_concepts_vs)
+
+kmeans_add_test(unit_cpos)
+
+# kmeans_add_test(unit_old_concepts)
+
+# kmeans_add_test(unit_coo)
+
+# kmeans_add_test(unit_csr)
+
+kmeans_add_test(unit_execution_policy)
+
 kmeans_add_test(unit_fixed_min_heap)
+
+kmeans_add_test(unit_flat_l2_index)
+
+kmeans_add_test(unit_flatpq_index)
 
 kmeans_add_test(unit_flat_qv)
 
 kmeans_add_test(unit_flat_vq)
 
-kmeans_add_test(unit_ivf_index)
+kmeans_add_test(unit_gen_graphs)
 
-kmeans_add_test(unit_ivf_query)
+# kmeans_add_test(unit_high_five)
+# target_link_libraries(unit_high_five PRIVATE HighFive)
+
+kmeans_add_test(unit_ivf_flat_group)
+
+kmeans_add_test(unit_ivf_flat_index)
+
+kmeans_add_test(unit_ivf_flat_metadata)
+
+kmeans_add_test(unit_index_defs)
+
+# kmeans_add_test(unit_ivf_query)
 
 kmeans_add_test(unit_ivf_qv)
 
-kmeans_add_test(unit_ivf_vq)
+# kmeans_add_test(unit_ivf_vq)
+
+# kmeans_add_test(unit_json)
 
 add_executable(unit_linalg unit_linalg.cc)
 target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)
@@ -92,6 +163,12 @@ kmeans_add_test(unit_matrix)
 
 kmeans_add_test(unit_mdspan)
 
+kmeans_add_test(unit_memory)
+
+# kmeans_add_test(unit_nn-descent)
+
+kmeans_add_test(unit_nn-graph)
+
 kmeans_add_test(unit_partition)
 
 kmeans_add_test(unit_scoring)
@@ -100,15 +177,20 @@ kmeans_add_test(unit_slicing)
 
 kmeans_add_test(unit_stats)
 
+kmeans_add_test(unit_stl)
+
+kmeans_add_test(unit_tdb_io)
+
+kmeans_add_test(unit_tdb_matrix)
 
 kmeans_add_test(unit_utils)
 
+kmeans_add_test(unit_vector)
 
-if (TILEDB_VS_ENABLE_BLAS)
-  kmeans_add_test(unit_queries)
-  kmeans_add_test(unit_gemm)
-  target_link_libraries(unit_gemm PRIVATE flat_blas)
-endif()
+kmeans_add_test(unit_queries)
+
+# kmeans_add_test(unit_gemm)
+# target_link_libraries(unit_gemm PRIVATE flat_blas)
 
 # Create the subdirectory for the extracted files
 file(MAKE_DIRECTORY ${SIFT_TEST_DIR}/siftsmall)

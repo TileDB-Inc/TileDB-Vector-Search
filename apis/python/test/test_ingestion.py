@@ -9,6 +9,8 @@ from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.module import array_to_matrix, kmeans_fit, kmeans_predict
 from tiledb.vector_search.utils import load_fvecs
 
+import logging, pdb
+
 MINIMUM_ACCURACY = 0.85
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 
@@ -16,6 +18,11 @@ MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 def test_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
+
+    logging.info("here")
+
+    logging.info(tmp_path)
+
     create_random_dataset_u8(nb=10000, d=100, nq=100, k=10, path=dataset_dir)
     dtype = np.uint8
     k = 10
@@ -86,6 +93,9 @@ def test_flat_ingestion_external_id_u8(tmp_path):
 def test_ivf_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
+
+    logging.info(tmp_path)
+
     k = 10
     size = 100000
     partitions = 100
@@ -105,10 +115,12 @@ def test_ivf_flat_ingestion_u8(tmp_path):
         input_vectors_per_work_item=int(size / 10),
     )
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
+    # logging.info(f"accuracy: {accuracy(result, gt_i)}, MINIMUM_ACCURACY: {MINIMUM_ACCURACY}")
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_ram = IVFFlatIndex(uri=index_uri, memory_budget=int(size / 10))
     _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
+    # logging.info(f"accuracy: {accuracy(result, gt_i)}, MINIMUM_ACCURACY: {MINIMUM_ACCURACY}")
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     _, result = index_ram.query(
@@ -117,6 +129,7 @@ def test_ivf_flat_ingestion_u8(tmp_path):
         nprobe=nprobe,
         use_nuv_implementation=True,
     )
+    # logging.info(f"accuracy: {accuracy(result, gt_i)}, MINIMUM_ACCURACY: {MINIMUM_ACCURACY}")
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     _, result = index_ram.query(
@@ -125,12 +138,16 @@ def test_ivf_flat_ingestion_u8(tmp_path):
         nprobe=nprobe,
         mode=Mode.LOCAL,
     )
+    # logging.info(f"accuracy: {accuracy(result, gt_i)}, MINIMUM_ACCURACY: {MINIMUM_ACCURACY}")
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
 def test_ivf_flat_ingestion_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
+
+    logging.info(tmp_path)
+
     k = 10
     size = 100000
     dimensions = 128
@@ -180,6 +197,7 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
     gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
     index_uri = os.path.join(tmp_path, "array")
+
     k = 100
     partitions = 100
     nqueries = 100
@@ -194,6 +212,7 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
         source_uri=source_uri,
         partitions=partitions,
     )
+
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -202,15 +221,29 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     assert accuracy(result1, np.array([gt_i[10]])) > MINIMUM_ACCURACY
 
     index_ram = IVFFlatIndex(uri=index_uri)
+
     _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    logging.info(f"!!!! index_ram._index @ {lineno()}: {len(index_ram._index)}")
+
+    # pdb.set_trace()
+
+    pre_len = len(index_ram._index)
     _, result = index_ram.query(
         query_vectors,
         k=k,
         nprobe=nprobe,
         use_nuv_implementation=True,
     )
+    post_len = len(index_ram._index)
+
+    logging.info(f"!!!! index_ram._index @ {lineno()}: {len(index_ram._index)}")
+
+    if pre_len != post_len:
+        logging.info(f"!!!! pre_len: {pre_len}, post_len: {post_len}")
+        pdb.set_trace()
+
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     # NB: local mode currently does not return distances
