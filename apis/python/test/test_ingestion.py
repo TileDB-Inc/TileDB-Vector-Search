@@ -11,6 +11,8 @@ from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.module import array_to_matrix, kmeans_fit, kmeans_predict
 from tiledb.vector_search.utils import load_fvecs
 
+import logging, pdb
+
 MINIMUM_ACCURACY = 0.85
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 
@@ -21,6 +23,11 @@ def query_and_check_equals(index, queries, expected_result_d, expected_result_i)
 def test_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
+
+    logging.info("here")
+
+    logging.info(tmp_path)
+
     create_random_dataset_u8(nb=10000, d=100, nq=100, k=10, path=dataset_dir)
     dtype = np.uint8
     k = 10
@@ -91,6 +98,9 @@ def test_flat_ingestion_external_id_u8(tmp_path):
 def test_ivf_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
+
+    logging.info(tmp_path)
+
     k = 10
     size = 100000
     partitions = 100
@@ -122,6 +132,7 @@ def test_ivf_flat_ingestion_u8(tmp_path):
         nprobe=nprobe,
         use_nuv_implementation=True,
     )
+    # logging.info(f"accuracy: {accuracy(result, gt_i)}, MINIMUM_ACCURACY: {MINIMUM_ACCURACY}")
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     _, result = index_ram.query(
@@ -130,12 +141,16 @@ def test_ivf_flat_ingestion_u8(tmp_path):
         nprobe=nprobe,
         mode=Mode.LOCAL,
     )
+    # logging.info(f"accuracy: {accuracy(result, gt_i)}, MINIMUM_ACCURACY: {MINIMUM_ACCURACY}")
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
 def test_ivf_flat_ingestion_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
+
+    logging.info(tmp_path)
+
     k = 10
     size = 100000
     dimensions = 128
@@ -185,6 +200,7 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
     gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
     index_uri = os.path.join(tmp_path, "array")
+
     k = 100
     partitions = 100
     nqueries = 100
@@ -206,12 +222,25 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     _, result = index_ram.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    logging.info(f"!!!! index_ram._index @ {lineno()}: {len(index_ram._index)}")
+
+    # pdb.set_trace()
+
+    pre_len = len(index_ram._index)
     _, result = index_ram.query(
         queries,
         k=k,
         nprobe=nprobe,
         use_nuv_implementation=True,
     )
+    post_len = len(index_ram._index)
+
+    logging.info(f"!!!! index_ram._index @ {lineno()}: {len(index_ram._index)}")
+
+    if pre_len != post_len:
+        logging.info(f"!!!! pre_len: {pre_len}, post_len: {post_len}")
+        pdb.set_trace()
+
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     # NB: local mode currently does not return distances
@@ -689,7 +718,7 @@ def test_storage_versions(tmp_path):
     dtype = np.uint8
     queries = get_queries(dataset_dir, dtype=dtype)
     gt_i, _ = get_groundtruth(dataset_dir, k)
-    
+
     indexes = ["FLAT", "IVF_FLAT"]
     index_classes = [FlatIndex, IVFFlatIndex]
     index_files = [tiledb.vector_search.flat_index, tiledb.vector_search.ivf_flat_index]
@@ -773,8 +802,8 @@ def test_copy_centroids_uri(tmp_path):
     # Create the index.
     index_uri = os.path.join(tmp_path, "array")
     index = ingest(
-        index_type="IVF_FLAT", 
-        index_uri=index_uri, 
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
         input_vectors=data,
         copy_centroids_uri=centroids_uri,
         partitions=centroids_in_size
@@ -863,8 +892,8 @@ def test_ingest_with_training_source_uri_f32(tmp_path):
     create_manual_dataset_f32_only_data(data=training_data, path=dataset_dir, dataset_name="training_data.f32bin")
     index_uri = os.path.join(tmp_path, "array")
     index = ingest(
-        index_type="IVF_FLAT", 
-        index_uri=index_uri, 
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.f32bin"),
         training_source_uri=os.path.join(dataset_dir, "training_data.f32bin")
     )
@@ -878,7 +907,7 @@ def test_ingest_with_training_source_uri_f32(tmp_path):
     # Also test that we can ingest with training_source_type.
     ingest(
         index_type="IVF_FLAT",
-        index_uri=os.path.join(tmp_path, "array_2"), 
+        index_uri=os.path.join(tmp_path, "array_2"),
         source_uri=os.path.join(dataset_dir, "data.f32bin"),
         training_source_uri=os.path.join(dataset_dir, "training_data.f32bin"),
         training_source_type="F32BIN"
@@ -892,27 +921,27 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     os.mkdir(dataset_dir)
     # data.shape should give you (cols, rows). So we transpose this before using it.
     data = np.array([
-        [1.0, 1.1, 1.2, 1.3], 
-        [2.0, 2.1, 2.2, 2.3], 
-        [3.0, 3.1, 3.2, 3.3], 
-        [4.0, 4.1, 4.2, 4.3], 
+        [1.0, 1.1, 1.2, 1.3],
+        [2.0, 2.1, 2.2, 2.3],
+        [3.0, 3.1, 3.2, 3.3],
+        [4.0, 4.1, 4.2, 4.3],
         [5.0, 5.1, 5.2, 5.3]], dtype=np.float32).transpose()
     create_array(path=os.path.join(dataset_dir, "data.tdb"), data=data)
 
     training_data = np.array([
-        [1.0, 1.1, 1.2, 1.3], 
+        [1.0, 1.1, 1.2, 1.3],
         [5.0, 5.1, 5.2, 5.3]], dtype=np.float32).transpose()
     create_array(path=os.path.join(dataset_dir, "training_data.tdb"), data=training_data)
 
     # Run a quick test that if we set up training_data incorrectly, we will raise an exception.
     with pytest.raises(ValueError) as error:
         training_data_invalid = np.array([
-            [1.0, 1.1, 1.2], 
+            [1.0, 1.1, 1.2],
             [5.0, 5.1, 5.2]], dtype=np.float32).transpose()
         create_array(path=os.path.join(dataset_dir, "training_data_invalid.tdb"), data=training_data_invalid)
         index = ingest(
-            index_type="IVF_FLAT", 
-            index_uri=os.path.join(tmp_path, f"array_invalid"), 
+            index_type="IVF_FLAT",
+            index_uri=os.path.join(tmp_path, f"array_invalid"),
             source_uri=os.path.join(dataset_dir, "data.tdb"),
             training_source_uri=os.path.join(dataset_dir, "training_data_invalid.tdb")
         )
@@ -923,8 +952,8 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     ################################################################################################
     index_uri = os.path.join(tmp_path, "array")
     index = ingest(
-        index_type="IVF_FLAT", 
-        index_uri=index_uri, 
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.tdb"),
         training_source_uri=os.path.join(dataset_dir, "training_data.tdb")
     )
@@ -937,7 +966,7 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     update_vectors[1] = np.array([7.0, 7.1, 7.2, 7.3], dtype=np.dtype(np.float32))
     update_vectors[2] = np.array([8.0, 8.1, 8.2, 8.3], dtype=np.dtype(np.float32))
     index.update_batch(vectors=update_vectors, external_ids=np.array([1000, 1001, 1002]))
-    
+
     index = index.consolidate_updates()
 
     queries = np.array([update_vectors[2]], dtype=np.float32)
@@ -950,14 +979,14 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     index = IVFFlatIndex(uri=index_uri)
 
     query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1002]])
-    
+
     # Update the index and query.
     update_vectors = np.empty([2], dtype=object)
     update_vectors[0] = np.array([9.0, 9.1, 9.2, 9.3], dtype=np.dtype(np.float32))
     update_vectors[1] = np.array([10.0, 10.1, 10.2, 10.3], dtype=np.dtype(np.float32))
     index.update_batch(vectors=update_vectors, external_ids=np.array([1003, 1004]))
     index = index.consolidate_updates()
-    
+
     queries = np.array([update_vectors[0]], dtype=np.float32)
     query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1003]])
 
@@ -980,7 +1009,7 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     ###############################################################################################
     ingest(
         index_type="IVF_FLAT",
-        index_uri=os.path.join(tmp_path, "array_2"), 
+        index_uri=os.path.join(tmp_path, "array_2"),
         source_uri=os.path.join(dataset_dir, "data.tdb"),
         training_source_uri=os.path.join(dataset_dir, "training_data.tdb"),
         training_source_type="TILEDB_ARRAY"
@@ -991,21 +1020,21 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     # First set up the data.
     ################################################################################################
     data = np.array([
-        [1.0, 1.1, 1.2, 1.3], 
-        [2.0, 2.1, 2.2, 2.3], 
-        [3.0, 3.1, 3.2, 3.3], 
-        [4.0, 4.1, 4.2, 4.3], 
+        [1.0, 1.1, 1.2, 1.3],
+        [2.0, 2.1, 2.2, 2.3],
+        [3.0, 3.1, 3.2, 3.3],
+        [4.0, 4.1, 4.2, 4.3],
         [5.0, 5.1, 5.2, 5.3]], dtype=np.float32)
     training_data = data[1:3]
 
     # Run a quick test that if we set up training_data incorrectly, we will raise an exception.
     with pytest.raises(ValueError) as error:
         training_data_invalid = np.array([
-            [4.0, 4.1, 4.2], 
+            [4.0, 4.1, 4.2],
             [5.0, 5.1, 5.2]], dtype=np.float32)
         index = ingest(
-            index_type="IVF_FLAT", 
-            index_uri=os.path.join(tmp_path, "array_invalid"), 
+            index_type="IVF_FLAT",
+            index_uri=os.path.join(tmp_path, "array_invalid"),
             input_vectors=data,
             training_input_vectors=training_data_invalid,
         )
@@ -1016,8 +1045,8 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     ################################################################################################
     index_uri = os.path.join(tmp_path, "array")
     index = ingest(
-        index_type="IVF_FLAT", 
-        index_uri=index_uri, 
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
         input_vectors=data,
         training_input_vectors=training_data,
     )
@@ -1030,7 +1059,7 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     update_vectors[1] = np.array([7.0, 7.1, 7.2, 7.3], dtype=np.dtype(np.float32))
     update_vectors[2] = np.array([8.0, 8.1, 8.2, 8.3], dtype=np.dtype(np.float32))
     index.update_batch(vectors=update_vectors, external_ids=np.array([1000, 1001, 1002]))
-    
+
     index = index.consolidate_updates()
 
     queries = np.array([update_vectors[2]], dtype=np.float32)
