@@ -55,7 +55,6 @@ class CloudTests(unittest.TestCase):
         _, result_i = index.query(query_vectors, k=k)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
-
     def test_cloud_ivf_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
         queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
