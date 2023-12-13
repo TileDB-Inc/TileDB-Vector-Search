@@ -29,39 +29,38 @@ class CloudTests(unittest.TestCase):
         cls.flat_index_uri = f"{test_path}/test_flat_array"
         cls.ivf_flat_index_uri = f"{test_path}/test_ivf_flat_array"
 
-    # @classmethod
-    # def tearDownClass(cls):
-        # vs.Index.delete_index(uri=cls.flat_index_uri, config=tiledb.cloud.Config())
-        # vs.Index.delete_index(uri=cls.ivf_flat_index_uri, config=tiledb.cloud.Config())
+    @classmethod
+    def tearDownClass(cls):
+        vs.Index.delete_index(uri=cls.flat_index_uri, config=tiledb.cloud.Config())
+        vs.Index.delete_index(uri=cls.ivf_flat_index_uri, config=tiledb.cloud.Config())
 
-    # def test_cloud_flat(self):
-    #     source_uri = "tiledb://TileDB-Inc/sift_10k"
-    #     queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    #     gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
-    #     index_uri = CloudTests.flat_index_uri
-    #     k = 100
-    #     nqueries = 100
+    def test_cloud_flat(self):
+        source_uri = "tiledb://TileDB-Inc/sift_10k"
+        queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
+        gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+        index_uri = CloudTests.flat_index_uri
+        k = 100
+        nqueries = 100
 
-    #     query_vectors = load_fvecs(queries_uri)
-    #     gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
+        query_vectors = load_fvecs(queries_uri)
+        gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
-    #     index = vs.ingest(
-    #         index_type="FLAT",
-    #         index_uri=index_uri,
-    #         source_uri=source_uri,
-    #         config=tiledb.cloud.Config().dict(),
-    #         mode=Mode.BATCH,
-    #     )
-    #     _, result_i = index.query(query_vectors, k=k)
-    #     assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+        index = vs.ingest(
+            index_type="FLAT",
+            index_uri=index_uri,
+            source_uri=source_uri,
+            config=tiledb.cloud.Config().dict(),
+            mode=Mode.BATCH,
+        )
+        _, result_i = index.query(query_vectors, k=k)
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
 
     def test_cloud_ivf_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
         queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
         gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
-        # index_uri = CloudTests.ivf_flat_index_uri
-        index_uri = "tiledb://paris-morgan/s3://tiledb-paris/tiledb/groups/zzz_unittest_vector_search_xAIIqbZoaY/test_ivf_flat_array"
+        index_uri = CloudTests.ivf_flat_index_uri
         k = 100
         partitions = 100
         nqueries = 100
@@ -70,19 +69,18 @@ class CloudTests(unittest.TestCase):
         query_vectors = load_fvecs(queries_uri)
         gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
-        # index = vs.ingest(
-        #     index_type="IVF_FLAT",
-        #     index_uri=index_uri,
-        #     source_uri=source_uri,
-        #     partitions=partitions,
-        #     input_vectors_per_work_item=5000,
-        #     config=tiledb.cloud.Config().dict(),
-        #     # TODO Re-enable.
-        #     #  This is temporarily disabled due to an incompatibility of new ingestion code and previous
-        #     #  UDF library releases.
-        #     # mode=Mode.BATCH,
-        # )
-        index = IVFFlatIndex(uri=index_uri)
+        index = vs.ingest(
+            index_type="IVF_FLAT",
+            index_uri=index_uri,
+            source_uri=source_uri,
+            partitions=partitions,
+            input_vectors_per_work_item=5000,
+            config=tiledb.cloud.Config().dict(),
+            # TODO Re-enable.
+            #  This is temporarily disabled due to an incompatibility of new ingestion code and previous
+            #  UDF library releases.
+            # mode=Mode.BATCH,
+        )
 
         _, result_i = index.query(query_vectors, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
@@ -97,7 +95,7 @@ class CloudTests(unittest.TestCase):
         )
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
-        # We now will test setting the resources to use in query().
+        # We now will test for invalid scenarios when setting the query() resources.
         resources = {"cpu": "9", "memory": "12Gi", "gpu": 0}
 
         # Cannot pass resource_class or resources to LOCAL mode or to no mode.
@@ -113,11 +111,6 @@ class CloudTests(unittest.TestCase):
         # Cannot pass resources to REALTIME.
         with pytest.raises(tiledb_cloud_error.TileDBCloudError):
             index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, resources=resources)
-
-        # You can pass resource_class or resources to BATCH, or resource_class to REALTIME.
-        index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, resource_class="standard")
-        index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.BATCH, resource_class="standard")
-        index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.BATCH, resources=resources)
 
         # Cannot pass both resource_class and resources.
         with pytest.raises(TypeError):
