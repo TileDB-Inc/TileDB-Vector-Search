@@ -1,6 +1,5 @@
 import os
 import unittest
-import pytest
 
 from common import *
 from tiledb.cloud import groups, tiledb_cloud_error
@@ -8,7 +7,6 @@ from tiledb.cloud.dag import Mode
 
 import tiledb.vector_search as vs
 from tiledb.vector_search.utils import load_fvecs
-from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 
 MINIMUM_ACCURACY = 0.85
 
@@ -98,21 +96,21 @@ class CloudTests(unittest.TestCase):
         resources = {"cpu": "9", "memory": "12Gi", "gpu": 0}
 
         # Cannot pass resource_class or resources to LOCAL mode or to no mode.
-        with pytest.raises(TypeError):
+        with self.assertRaises(TypeError):
             index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL, resource_class="large")
-        with pytest.raises(TypeError):
+        with self.assertRaises(TypeError):
             index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL, resources=resources)
-        with pytest.raises(TypeError):
+        with self.assertRaises(TypeError):
             index.query(query_vectors, k=k, nprobe=nprobe, resource_class="large")
-        with pytest.raises(TypeError):
+        with self.assertRaises(TypeError):
             index.query(query_vectors, k=k, nprobe=nprobe, resources=resources)
 
         # Cannot pass resources to REALTIME.
-        with pytest.raises(tiledb_cloud_error.TileDBCloudError):
+        with self.assertRaises(tiledb_cloud_error.TileDBCloudError):
             index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, resources=resources)
 
         # Cannot pass both resource_class and resources.
-        with pytest.raises(TypeError):
+        with self.assertRaises(TypeError):
             index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, resource_class="large", resources=resources)
-        with pytest.raises(TypeError):
+        with self.assertRaises(TypeError):
             index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.BATCH, resource_class="large", resources=resources)
