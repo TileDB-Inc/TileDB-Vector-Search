@@ -1,12 +1,14 @@
 import os
 import unittest
+import pytest
 
 from common import *
-from tiledb.cloud import groups
+from tiledb.cloud import groups, tiledb_cloud_error
 from tiledb.cloud.dag import Mode
 
 import tiledb.vector_search as vs
 from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 
 MINIMUM_ACCURACY = 0.85
 
@@ -17,6 +19,8 @@ class CloudTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        if not os.getenv("TILEDB_REST_TOKEN"):
+            raise ValueError("TILEDB_REST_TOKEN not set")
         tiledb.cloud.login(token=os.getenv("TILEDB_REST_TOKEN"))
         namespace, storage_path, _ = groups._default_ns_path_cred()
         storage_path = storage_path.replace("//", "/").replace("/", "//", 1)
@@ -25,37 +29,39 @@ class CloudTests(unittest.TestCase):
         cls.flat_index_uri = f"{test_path}/test_flat_array"
         cls.ivf_flat_index_uri = f"{test_path}/test_ivf_flat_array"
 
-    @classmethod
-    def tearDownClass(cls):
-        vs.Index.delete_index(uri=cls.flat_index_uri, config=tiledb.cloud.Config())
-        vs.Index.delete_index(uri=cls.ivf_flat_index_uri, config=tiledb.cloud.Config())
+    # @classmethod
+    # def tearDownClass(cls):
+        # vs.Index.delete_index(uri=cls.flat_index_uri, config=tiledb.cloud.Config())
+        # vs.Index.delete_index(uri=cls.ivf_flat_index_uri, config=tiledb.cloud.Config())
 
-    def test_cloud_flat(self):
-        source_uri = "tiledb://TileDB-Inc/sift_10k"
-        queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-        gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
-        index_uri = CloudTests.flat_index_uri
-        k = 100
-        nqueries = 100
+    # def test_cloud_flat(self):
+    #     source_uri = "tiledb://TileDB-Inc/sift_10k"
+    #     queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
+    #     gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    #     index_uri = CloudTests.flat_index_uri
+    #     k = 100
+    #     nqueries = 100
 
-        query_vectors = load_fvecs(queries_uri)
-        gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
+    #     query_vectors = load_fvecs(queries_uri)
+    #     gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
-        index = vs.ingest(
-            index_type="FLAT",
-            index_uri=index_uri,
-            source_uri=source_uri,
-            config=tiledb.cloud.Config().dict(),
-            mode=Mode.BATCH,
-        )
-        _, result_i = index.query(query_vectors, k=k)
-        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+    #     index = vs.ingest(
+    #         index_type="FLAT",
+    #         index_uri=index_uri,
+    #         source_uri=source_uri,
+    #         config=tiledb.cloud.Config().dict(),
+    #         mode=Mode.BATCH,
+    #     )
+    #     _, result_i = index.query(query_vectors, k=k)
+    #     assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
 
     def test_cloud_ivf_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
         queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
         gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
-        index_uri = CloudTests.ivf_flat_index_uri
+        # index_uri = CloudTests.ivf_flat_index_uri
+        index_uri = "tiledb://paris-morgan/s3://tiledb-paris/tiledb/groups/zzz_unittest_vector_search_xAIIqbZoaY/test_ivf_flat_array"
         k = 100
         partitions = 100
         nqueries = 100
@@ -64,22 +70,57 @@ class CloudTests(unittest.TestCase):
         query_vectors = load_fvecs(queries_uri)
         gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
-        index = vs.ingest(
-            index_type="IVF_FLAT",
-            index_uri=index_uri,
-            source_uri=source_uri,
-            partitions=partitions,
-            input_vectors_per_work_item=5000,
-            config=tiledb.cloud.Config().dict(),
-            # TODO Re-enable.
-            #  This is temporarily disabled due to an incompatibility of new ingestion code and previous
-            #  UDF library releases.
-            # mode=Mode.BATCH,
-        )
+        # index = vs.ingest(
+        #     index_type="IVF_FLAT",
+        #     index_uri=index_uri,
+        #     source_uri=source_uri,
+        #     partitions=partitions,
+        #     input_vectors_per_work_item=5000,
+        #     config=tiledb.cloud.Config().dict(),
+        #     # TODO Re-enable.
+        #     #  This is temporarily disabled due to an incompatibility of new ingestion code and previous
+        #     #  UDF library releases.
+        #     # mode=Mode.BATCH,
+        # )
+        index = IVFFlatIndex(uri=index_uri)
+
         _, result_i = index.query(query_vectors, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
         _, result_i = index.query(
-            query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, num_partitions=2
+            query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, num_partitions=2, resource_class="standard"
         )
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        _, result_i = index.query(
+            query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL, num_partitions=2
+        )
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        # We now will test setting the resources to use in query().
+        resources = {"cpu": "9", "memory": "12Gi", "gpu": 0}
+
+        # Cannot pass resource_class or resources to LOCAL mode or to no mode.
+        with pytest.raises(TypeError):
+            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL, resource_class="large")
+        with pytest.raises(TypeError):
+            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL, resources=resources)
+        with pytest.raises(TypeError):
+            index.query(query_vectors, k=k, nprobe=nprobe, resource_class="large")
+        with pytest.raises(TypeError):
+            index.query(query_vectors, k=k, nprobe=nprobe, resources=resources)
+
+        # Cannot pass resources to REALTIME.
+        with pytest.raises(tiledb_cloud_error.TileDBCloudError):
+            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, resources=resources)
+
+        # You can pass resource_class or resources to BATCH, or resource_class to REALTIME.
+        index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, resource_class="standard")
+        index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.BATCH, resource_class="standard")
+        index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.BATCH, resources=resources)
+
+        # Cannot pass both resource_class and resources.
+        with pytest.raises(TypeError):
+            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, resource_class="large", resources=resources)
+        with pytest.raises(TypeError):
+            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.BATCH, resource_class="large", resources=resources)

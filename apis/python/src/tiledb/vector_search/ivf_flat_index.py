@@ -18,8 +18,8 @@ INDEX_TYPE = "IVF_FLAT"
 def submit_local(d, func, *args, **kwargs):
     # Drop kwarg
     kwargs.pop("image_name", None)
-    kwargs.pop("resources", None)
     kwargs.pop("resource_class", None)
+    kwargs.pop("resources", None)
     return d.submit_local(func, *args, **kwargs)
 
 
@@ -184,6 +184,9 @@ class IVFFlatIndex(index.Index):
                 (queries.shape[0], k), index.MAX_UINT64
             )
 
+        if not (mode == Mode.REALTIME or mode == Mode.BATCH) and (resource_class or resources):
+            raise TypeError("Can only pass resource_class or resources in REALTIME or BATCH mode")
+
         assert queries.dtype == np.float32
 
         if queries.ndim == 1:
@@ -302,8 +305,6 @@ class IVFFlatIndex(index.Index):
 
         if resource_class and resources:
             raise TypeError("Cannot provide both resource_class and resources")
-        if mode == Mode.LOCAL and (resource_class or resources):
-            raise TypeError("Cannot provide resource_class or resources in LOCAL mode")
 
         def dist_qv_udf(
             dtype: np.dtype,
