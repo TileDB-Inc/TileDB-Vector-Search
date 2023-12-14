@@ -6,7 +6,7 @@ import numpy as np
 from tiledb.cloud.dag import Mode
 
 from tiledb.vector_search._tiledbvspy import *
-from tiledb.vector_search.storage_formats import STORAGE_VERSION
+from tiledb.vector_search.storage_formats import STORAGE_VERSION, validate_storage_version
 
 
 def ingest(
@@ -88,7 +88,7 @@ def ingest(
         Max number of tasks per execution stage of ingestion,
         if not provided, is auto-configured
     storage_version: str
-        Vector index storage format version.
+        Vector index storage format version. If not provided, defaults to the latest version.
     verbose: bool
         verbose logging, defaults to False
     trace_id: Optional[str]
@@ -118,6 +118,8 @@ def ingest(
     from tiledb.vector_search import flat_index, ivf_flat_index
     from tiledb.vector_search.index import Index
     from tiledb.vector_search.storage_formats import storage_formats
+
+    validate_storage_version(storage_version)
 
     # use index_group_uri for internal clarity
     index_group_uri = index_uri
@@ -355,6 +357,7 @@ def ingest(
         input_vectors_work_items: int,
         vector_type: np.dtype,
         logger: logging.Logger,
+        storage_version: str,
     ) -> None:
         if index_type == "FLAT":
             if not arrays_created:
@@ -364,6 +367,7 @@ def ingest(
                     vector_type=vector_type,
                     group_exists=True,
                     config=config,
+                    storage_version=storage_version
                 )
         elif index_type == "IVF_FLAT":
             if not arrays_created:
@@ -373,6 +377,7 @@ def ingest(
                     vector_type=vector_type,
                     group_exists=True,
                     config=config,
+                    storage_version=storage_version
                 )
             tile_size = int(
                 ivf_flat_index.TILE_SIZE_BYTES
@@ -1935,6 +1940,7 @@ def ingest(
             input_vectors_work_items=input_vectors_work_items,
             vector_type=vector_type,
             logger=logger,
+            storage_version=storage_version
         )
         group.meta["temp_size"] = size
         group.close()

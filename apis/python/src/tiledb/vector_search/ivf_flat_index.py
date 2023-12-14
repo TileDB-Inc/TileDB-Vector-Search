@@ -8,7 +8,8 @@ from tiledb.cloud.dag import Mode
 from tiledb.vector_search import index
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
-                                                  storage_formats)
+                                                  storage_formats,
+                                                  validate_storage_version)
 
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
 TILE_SIZE_BYTES = 64000000  # 64MB
@@ -450,13 +451,17 @@ def create(
     vector_type: np.dtype,
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
+    storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> IVFFlatIndex:
+    validate_storage_version(storage_version)
+
     index.create_metadata(
         uri=uri,
         dimensions=dimensions,
         vector_type=vector_type,
         index_type=INDEX_TYPE,
+        storage_version=storage_version,
         group_exists=group_exists,
         config=config,
     )
@@ -464,10 +469,10 @@ def create(
         group = tiledb.Group(uri, "w")
         tile_size = int(TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions)
         group.meta["partition_history"] = json.dumps([0])
-        centroids_array_name = storage_formats[STORAGE_VERSION]["CENTROIDS_ARRAY_NAME"]
-        index_array_name = storage_formats[STORAGE_VERSION]["INDEX_ARRAY_NAME"]
-        ids_array_name = storage_formats[STORAGE_VERSION]["IDS_ARRAY_NAME"]
-        parts_array_name = storage_formats[STORAGE_VERSION]["PARTS_ARRAY_NAME"]
+        centroids_array_name = storage_formats[storage_version]["CENTROIDS_ARRAY_NAME"]
+        index_array_name = storage_formats[storage_version]["INDEX_ARRAY_NAME"]
+        ids_array_name = storage_formats[storage_version]["IDS_ARRAY_NAME"]
+        parts_array_name = storage_formats[storage_version]["PARTS_ARRAY_NAME"]
         centroids_uri = f"{uri}/{centroids_array_name}"
         index_array_uri = f"{uri}/{index_array_name}"
         ids_uri = f"{uri}/{ids_array_name}"
@@ -491,7 +496,7 @@ def create(
         centroids_attr = tiledb.Attr(
             name="centroids",
             dtype=np.dtype(np.float32),
-            filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
+            filters=storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"],
         )
         centroids_schema = tiledb.ArraySchema(
             domain=centroids_array_dom,
@@ -513,7 +518,7 @@ def create(
         index_attr = tiledb.Attr(
             name="values",
             dtype=np.dtype(np.uint64),
-            filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
+            filters=storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"],
         )
         index_schema = tiledb.ArraySchema(
             domain=index_array_dom,
@@ -535,7 +540,7 @@ def create(
         ids_attr = tiledb.Attr(
             name="values",
             dtype=np.dtype(np.uint64),
-            filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
+            filters=storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"],
         )
         ids_schema = tiledb.ArraySchema(
             domain=ids_array_dom,
@@ -563,7 +568,7 @@ def create(
         parts_attr = tiledb.Attr(
             name="values",
             dtype=vector_type,
-            filters=storage_formats[STORAGE_VERSION]["DEFAULT_ATTR_FILTERS"],
+            filters=storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"],
         )
         parts_schema = tiledb.ArraySchema(
             domain=parts_array_dom,
