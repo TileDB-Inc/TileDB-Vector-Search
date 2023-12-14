@@ -669,6 +669,34 @@ def test_ivf_flat_ingestion_with_additions_and_timetravel(tmp_path):
     _, result = index.query(query_vectors, k=k, nprobe=index.partitions)
     assert 0.45 < accuracy(result, gt_i) < 0.55
 
+def test_ingest_different_storage_versions(tmp_path):
+    k = 10
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    create_random_dataset_f32(nb=10000, d=100, nq=100, k=10, path=dataset_dir)
+    query_vectors = get_queries(dataset_dir, dtype=np.float32)
+    gt_i, _ = get_groundtruth(dataset_dir, k)
+
+    indexes = ["FLAT", "IVF_FLAT"]
+    for index_type in indexes:
+        for storage_version, _ in tiledb.vector_search.storage_formats.items():
+            if storage_version == "0.1":
+                # Version 0.1 currently crashes, so we will consider it as not suppported.
+                continue
+            index_uri = os.path.join(tmp_path, f"array_{index_type}_{storage_version}")
+            print(index_uri)
+            index = ingest(
+                index_type="FLAT",
+                index_uri=index_uri,
+                source_uri=os.path.join(dataset_dir, "data.f32bin"),
+                storage_version=storage_version
+            )
+            _, result = index.query(query_vectors, k=k)
+            assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+            index_ram = FlatIndex(uri=index_uri)
+            _, result = index_ram.query(query_vectors, k=k)
+            assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
 def test_kmeans():
     k = 128
     d = 16
