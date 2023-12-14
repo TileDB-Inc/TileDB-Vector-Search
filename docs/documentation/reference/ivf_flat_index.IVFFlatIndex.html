@@ -248,16 +248,16 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="tiledb.vector_search.ivf_flat_index.IVFFlatIndex.query_internal" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.ivf_flat_index.IVFFlatIndex.query_internal">query_internal</h3>
-<p><code>vector_search.ivf_flat_index.IVFFlatIndex.query_internal(queries, k=10, nprobe=1, nthreads=-1, use_nuv_implementation=False, mode=None, num_partitions=-1, num_workers=-1)</code></p>
+<p><code>vector_search.ivf_flat_index.IVFFlatIndex.query_internal(queries, k=10, nprobe=1, nthreads=-1, use_nuv_implementation=False, mode=None, resource_class=None, resources=None, num_partitions=-1, num_workers=-1)</code></p>
 <p>Query an IVF_FLAT index</p>
 <section id="parameters-1" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
 <table class="table">
 <colgroup>
-<col style="width: 14%">
 <col style="width: 6%">
-<col style="width: 72%">
-<col style="width: 6%">
+<col style="width: 8%">
+<col style="width: 82%">
+<col style="width: 2%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -301,7 +301,19 @@ ul.task-list li input[type="checkbox"] {
 <tr class="even">
 <td><code>mode</code></td>
 <td>Mode</td>
-<td>If provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode</td>
+<td>If provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode. For local execution you can use LOCAL mode.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>resource_class</code></td>
+<td>Optional[str]</td>
+<td>The name of the resource class to use (“standard” or “large”). Resource classes define maximum limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode. Cannot be used alongside resources. In REALTIME or BATCH mode if neither resource_class nor resources are provided, we default to the “large” resource class.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>resources</code></td>
+<td>Optional[Mapping[str, Any]]</td>
+<td>A specification for the amount of resources to use when executing using TileDB cloud taskgraphs, of the form: {“cpu”: “6”, “memory”: “12Gi”, “gpu”: 1}. Can only be used in BATCH mode. Cannot be used alongside resource_class.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
@@ -322,16 +334,16 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="tiledb.vector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query">taskgraph_query</h3>
-<p><code>vector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query(queries, k=10, nprobe=10, nthreads=-1, mode=None, num_partitions=-1, num_workers=-1, config=None)</code></p>
+<p><code>vector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query(queries, k=10, nprobe=10, nthreads=-1, mode=None, resource_class=None, resources=None, num_partitions=-1, num_workers=-1, config=None)</code></p>
 <p>Query an IVF_FLAT index using TileDB cloud taskgraphs</p>
 <section id="parameters-2" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
 <table class="table">
 <colgroup>
-<col style="width: 9%">
-<col style="width: 16%">
-<col style="width: 67%">
-<col style="width: 6%">
+<col style="width: 4%">
+<col style="width: 8%">
+<col style="width: 84%">
+<col style="width: 3%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -369,7 +381,19 @@ ul.task-list li input[type="checkbox"] {
 <tr class="odd">
 <td><code>mode</code></td>
 <td>Mode</td>
-<td>If provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode</td>
+<td>If provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode. For local execution you can use LOCAL mode.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>resource_class</code></td>
+<td>Optional[str]</td>
+<td>The name of the resource class to use (“standard” or “large”). Resource classes define maximum limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode. Cannot be used alongside resources. In REALTIME or BATCH mode if neither resource_class nor resources are provided, we default to the “large” resource class.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>resources</code></td>
+<td>Optional[Mapping[str, Any]]</td>
+<td>A specification for the amount of resources to use when executing using TileDB cloud taskgraphs, of the form: {“cpu”: “6”, “memory”: “12Gi”, “gpu”: 1}. Can only be used in BATCH mode. Cannot be used alongside resource_class.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
