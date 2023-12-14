@@ -6,7 +6,7 @@ import numpy as np
 from tiledb.cloud.dag import Mode
 
 from tiledb.vector_search._tiledbvspy import *
-from tiledb.vector_search.storage_formats import STORAGE_VERSION
+from tiledb.vector_search.storage_formats import STORAGE_VERSION, validate_storage_version
 
 
 def ingest(
@@ -119,9 +119,7 @@ def ingest(
     from tiledb.vector_search.index import Index
     from tiledb.vector_search.storage_formats import storage_formats
 
-    if storage_version not in storage_formats:
-        valid_versions = ', '.join(storage_formats.keys())
-        raise ValueError(f"Invalid storage version: {storage_version}. Valid versions are: [{valid_versions}]")
+    validate_storage_version(storage_version)
 
     # use index_group_uri for internal clarity
     index_group_uri = index_uri

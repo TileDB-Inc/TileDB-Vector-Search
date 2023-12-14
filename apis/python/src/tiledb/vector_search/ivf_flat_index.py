@@ -8,7 +8,8 @@ from tiledb.cloud.dag import Mode
 from tiledb.vector_search import index
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
-                                                  storage_formats)
+                                                  storage_formats,
+                                                  validate_storage_version)
 
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
 TILE_SIZE_BYTES = 64000000  # 64MB
@@ -415,6 +416,8 @@ def create(
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> IVFFlatIndex:
+    validate_storage_version(storage_version)
+
     index.create_metadata(
         uri=uri,
         dimensions=dimensions,

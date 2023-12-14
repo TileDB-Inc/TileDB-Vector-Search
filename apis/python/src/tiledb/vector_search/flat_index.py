@@ -6,7 +6,8 @@ import numpy as np
 from tiledb.vector_search import index
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
-                                                  storage_formats)
+                                                  storage_formats,
+                                                  validate_storage_version)
 
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
 TILE_SIZE_BYTES = 128000000  # 128MB
@@ -122,9 +123,7 @@ def create(
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> FlatIndex:
-    if storage_version not in storage_formats:
-        valid_versions = ', '.join(storage_formats.keys())
-        raise ValueError(f"Invalid storage version: {storage_version}. Valid versions are: [{valid_versions}]")
+    validate_storage_version(storage_version)
 
     index.create_metadata(
         uri=uri,
