@@ -126,8 +126,8 @@ class Index:
         self.thread_executor = futures.ThreadPoolExecutor()
 
     def query(self, queries: np.ndarray, k, **kwargs):
-        if queries.ndim != 1 and queries.ndim != 2:
-            raise TypeError(f"Expected queries to have either 1 or 2 dimensions (i.e. [...] or [[...], [...]]), but it had {queries.ndim} dimensions")
+        if queries.ndim != 2:
+            raise TypeError(f"Expected queries to have 2 dimensions (i.e. [[...], etc.]), but it had {queries.ndim} dimensions")
         
         query_dimensions = queries.shape[0] if queries.ndim == 1 else queries.shape[1]
         if query_dimensions != self.get_dimensions():
