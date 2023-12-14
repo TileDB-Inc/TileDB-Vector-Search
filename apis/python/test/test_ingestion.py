@@ -689,7 +689,7 @@ def test_storage_versions(tmp_path):
     indexes = ["FLAT", "IVF_FLAT"]
     index_classes = [FlatIndex, IVFFlatIndex]
     for index_type, index_class in zip(indexes, index_classes):
-        # First we test with some invalid storage versions.
+        # First we test with an invalid storage version.
         with pytest.raises(ValueError):
             ingest(
                 index_type=index_type,
@@ -701,9 +701,6 @@ def test_storage_versions(tmp_path):
 
         # Then we test with valid storage versions.
         for storage_version, _ in tiledb.vector_search.storage_formats.items():
-            if storage_version == "0.1":
-                # Version 0.1 currently crashes, so we will consider it as not suppported.
-                continue
             index_uri = os.path.join(tmp_path, f"array_{index_type}_{storage_version}")
             index = ingest(
                 index_type=index_type,

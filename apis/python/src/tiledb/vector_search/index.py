@@ -489,6 +489,7 @@ def create_metadata(
     dimensions: int,
     vector_type: np.dtype,
     index_type: str,
+    storage_version: str,
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
 ):
@@ -501,7 +502,7 @@ def create_metadata(
         group = tiledb.Group(uri, "w")
         group.meta["dataset_type"] = DATASET_TYPE
         group.meta["dtype"] = np.dtype(vector_type).name
-        group.meta["storage_version"] = STORAGE_VERSION
+        group.meta["storage_version"] = storage_version
         group.meta["index_type"] = index_type
         group.meta["base_sizes"] = json.dumps([0])
         group.meta["ingestion_timestamps"] = json.dumps([0])

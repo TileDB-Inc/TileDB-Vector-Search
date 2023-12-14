@@ -88,7 +88,7 @@ def ingest(
         Max number of tasks per execution stage of ingestion,
         if not provided, is auto-configured
     storage_version: str
-        Vector index storage format version.
+        Vector index storage format version. If not provided, defaults to the latest version.
     verbose: bool
         verbose logging, defaults to False
     trace_id: Optional[str]
@@ -359,6 +359,7 @@ def ingest(
         input_vectors_work_items: int,
         vector_type: np.dtype,
         logger: logging.Logger,
+        storage_version: str,
     ) -> None:
         if index_type == "FLAT":
             if not arrays_created:
@@ -368,6 +369,7 @@ def ingest(
                     vector_type=vector_type,
                     group_exists=True,
                     config=config,
+                    storage_version=storage_version
                 )
         elif index_type == "IVF_FLAT":
             if not arrays_created:
@@ -377,6 +379,7 @@ def ingest(
                     vector_type=vector_type,
                     group_exists=True,
                     config=config,
+                    storage_version=storage_version
                 )
             tile_size = int(
                 ivf_flat_index.TILE_SIZE_BYTES
@@ -1939,6 +1942,7 @@ def ingest(
             input_vectors_work_items=input_vectors_work_items,
             vector_type=vector_type,
             logger=logger,
+            storage_version=storage_version
         )
         group.meta["temp_size"] = size
         group.close()
