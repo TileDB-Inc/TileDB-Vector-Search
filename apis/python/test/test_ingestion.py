@@ -1,7 +1,8 @@
 import numpy as np
 from common import *
-from tiledb.cloud.dag import Mode
+import pytest
 
+from tiledb.cloud.dag import Mode
 from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.index import Index
 from tiledb.vector_search.ingestion import ingest
@@ -671,24 +672,34 @@ def test_ivf_flat_ingestion_with_additions_and_timetravel(tmp_path):
     assert 0.45 < accuracy(result, gt_i) < 0.55
 
 
-def test_different_storage_versions(tmp_path):
+def test_storage_versions(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     k = 10
     size = 1000
     partitions = 10
     dimensions = 128
     nqueries = 100
-    data = create_random_dataset_u8(
-        nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir
-    )
-    dtype = np.uint8
+    data = create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
+    source_uri = os.path.join(dataset_dir, "data.u8bin")
 
+    dtype = np.uint8
     query_vectors = get_queries(dataset_dir, dtype=dtype)
     gt_i, _ = get_groundtruth(dataset_dir, k)
     
     indexes = ["FLAT", "IVF_FLAT"]
     index_classes = [FlatIndex, IVFFlatIndex]
     for index_type, index_class in zip(indexes, index_classes):
+        # First we test with some invalid storage versions.
+        with pytest.raises(ValueError):
+            ingest(
+                index_type=index_type,
+                index_uri=os.path.join(tmp_path, f"array_{index_type}_invalid"),
+                source_uri=source_uri,
+                partitions=partitions,
+                storage_version="Foo"
+            )
+
+        # Then we test with valid storage versions.
         for storage_version, _ in tiledb.vector_search.storage_formats.items():
             if storage_version == "0.1":
                 # Version 0.1 currently crashes, so we will consider it as not suppported.
@@ -697,7 +708,7 @@ def test_different_storage_versions(tmp_path):
             index = ingest(
                 index_type=index_type,
                 index_uri=index_uri,
-                source_uri=os.path.join(dataset_dir, "data.u8bin"),
+                source_uri=source_uri,
                 partitions=partitions,
                 storage_version=storage_version
             )

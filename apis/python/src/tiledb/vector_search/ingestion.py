@@ -119,6 +119,10 @@ def ingest(
     from tiledb.vector_search.index import Index
     from tiledb.vector_search.storage_formats import storage_formats
 
+    if storage_version not in storage_formats:
+        valid_versions = ', '.join(storage_formats.keys())
+        raise ValueError(f"Invalid storage version: {storage_version}. Valid versions are: [{valid_versions}]")
+
     # use index_group_uri for internal clarity
     index_group_uri = index_uri
 
