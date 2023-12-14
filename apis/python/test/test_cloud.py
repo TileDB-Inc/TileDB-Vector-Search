@@ -2,7 +2,7 @@ import os
 import unittest
 
 from common import *
-from tiledb.cloud import groups
+from tiledb.cloud import groups, tiledb_cloud_error
 from tiledb.cloud.dag import Mode
 
 import tiledb.vector_search as vs
@@ -17,6 +17,8 @@ class CloudTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        if not os.getenv("TILEDB_REST_TOKEN"):
+            raise ValueError("TILEDB_REST_TOKEN not set")
         tiledb.cloud.login(token=os.getenv("TILEDB_REST_TOKEN"))
         namespace, storage_path, _ = groups._default_ns_path_cred()
         storage_path = storage_path.replace("//", "/").replace("/", "//", 1)
@@ -76,10 +78,39 @@ class CloudTests(unittest.TestCase):
             #  UDF library releases.
             # mode=Mode.BATCH,
         )
+
         _, result_i = index.query(query_vectors, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
         _, result_i = index.query(
-            query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, num_partitions=2
+            query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, num_partitions=2, resource_class="standard"
         )
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        _, result_i = index.query(
+            query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL, num_partitions=2
+        )
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        # We now will test for invalid scenarios when setting the query() resources.
+        resources = {"cpu": "9", "memory": "12Gi", "gpu": 0}
+
+        # Cannot pass resource_class or resources to LOCAL mode or to no mode.
+        with self.assertRaises(TypeError):
+            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL, resource_class="large")
+        with self.assertRaises(TypeError):
+            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL, resources=resources)
+        with self.assertRaises(TypeError):
+            index.query(query_vectors, k=k, nprobe=nprobe, resource_class="large")
+        with self.assertRaises(TypeError):
+            index.query(query_vectors, k=k, nprobe=nprobe, resources=resources)
+
+        # Cannot pass resources to REALTIME.
+        with self.assertRaises(TypeError):
+            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, resources=resources)
+
+        # Cannot pass both resource_class and resources.
+        with self.assertRaises(TypeError):
+            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, resource_class="large", resources=resources)
+        with self.assertRaises(TypeError):
+            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.BATCH, resource_class="large", resources=resources)
