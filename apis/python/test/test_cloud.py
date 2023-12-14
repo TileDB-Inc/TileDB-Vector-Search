@@ -106,7 +106,7 @@ class CloudTests(unittest.TestCase):
             index.query(query_vectors, k=k, nprobe=nprobe, resources=resources)
 
         # Cannot pass resources to REALTIME.
-        with self.assertRaises(tiledb_cloud_error.TileDBCloudError):
+        with self.assertRaises(TypeError):
             index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, resources=resources)
 
         # Cannot pass both resource_class and resources.

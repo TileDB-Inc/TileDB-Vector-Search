@@ -167,10 +167,7 @@ class IVFFlatIndex(index.Index):
         resources:
             A specification for the amount of resources to use when executing using TileDB cloud 
             taskgraphs, of the form: {"cpu": "6", "memory": "12Gi", "gpu": 1}. Can only be used 
-            in REALTIME or BATCH mode. Cannot be used alongside resource_class.
-        num_partitions: int
-            Only relevant for taskgraph based execution.
-            If provided, we split the query execution in that many partitions.
+            in BATCH mode. Cannot be used alongside resource_class.
         num_partitions: int
             Only relevant for taskgraph based execution.
             If provided, we split the query execution in that many partitions.
@@ -184,8 +181,10 @@ class IVFFlatIndex(index.Index):
                 (queries.shape[0], k), index.MAX_UINT64
             )
 
-        if not (mode == Mode.REALTIME or mode == Mode.BATCH) and (resource_class or resources):
-            raise TypeError("Can only pass resource_class or resources in REALTIME or BATCH mode")
+        if mode != Mode.BATCH and resources:
+            raise TypeError("Can only pass resources in BATCH mode")
+        if (mode != Mode.REALTIME and mode != Mode.BATCH) and resource_class:
+            raise TypeError("Can only pass resource_class in REALTIME or BATCH mode")
 
         assert queries.dtype == np.float32
 
@@ -283,7 +282,7 @@ class IVFFlatIndex(index.Index):
         resources:
             A specification for the amount of resources to use when executing using TileDB cloud 
             taskgraphs, of the form: {"cpu": "6", "memory": "12Gi", "gpu": 1}. Can only be used 
-            in REALTIME or BATCH mode. Cannot be used alongside resource_class.
+            in BATCH mode. Cannot be used alongside resource_class.
         num_partitions: int
             Only relevant for taskgraph based execution.
             If provided, we split the query execution in that many partitions.
