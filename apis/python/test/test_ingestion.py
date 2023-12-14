@@ -699,6 +699,7 @@ def test_different_storage_versions(tmp_path):
                 index_uri=index_uri,
                 source_uri=os.path.join(dataset_dir, "data.u8bin"),
                 partitions=partitions,
+                storage_version=storage_version
             )
             _, result = index.query(query_vectors, k=k)
             assert accuracy(result, gt_i) >= MINIMUM_ACCURACY
