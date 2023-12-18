@@ -863,7 +863,7 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     result_d, result_i = index.query(query_vectors, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
-    index_ram = FlatIndex(uri=index_uri)
+    index_ram = IVFFlatIndex(uri=index_uri)
     result_d, result_i = index_ram.query(query_vectors, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
@@ -893,6 +893,6 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     result_d, result_i = index.query(query_vectors, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
-    index_ram = FlatIndex(uri=index_uri)
+    index_ram = IVFFlatIndex(uri=index_uri)
     result_d, result_i = index_ram.query(query_vectors, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
