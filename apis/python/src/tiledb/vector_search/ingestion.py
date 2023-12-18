@@ -803,8 +803,6 @@ def ingest(
             kmeans_fit,
         )
 
-        print("[ingestion@centralised_kmeans] training_sample_size: ", training_sample_size, "training_source_uri: ", training_source_uri, "training_source_type: ", training_source_type)
-        # paris debug
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
             group = tiledb.Group(index_group_uri)
@@ -815,7 +813,6 @@ def ingest(
                         training_source_type = autodetect_source_type(source_uri=training_source_uri)
                     training_in_size, training_dimensions, training_vector_type = read_source_metadata(source_uri=training_source_uri, source_type=training_source_type)
                     dimensions = training_dimensions
-                    print("[ingestion@centralised_kmeans] training_in_size: ", training_in_size, "training_dimensions: ", training_dimensions, "training_vector_type: ", training_vector_type)
                     sample_vectors = read_input_vectors(
                         source_uri=training_source_uri,
                         source_type=training_source_type,
@@ -827,7 +824,6 @@ def ingest(
                         verbose=verbose,
                         trace_id=trace_id,
                     ).astype(np.float32)
-                    print("[ingestion@centralised_kmeans] sample_vectors", sample_vectors.shape, sample_vectors)
                 else:
                     sample_vectors = read_input_vectors(
                         source_uri=source_uri,
@@ -1905,8 +1901,6 @@ def ingest(
                 array_name=TRAINING_INPUT_VECTORS_ARRAY_NAME
             )
             training_source_type = "TILEDB_ARRAY"
-            with tiledb.open(training_source_uri, mode="r") as src_array:
-                print('[ingestion@ingest()] training_source_uri created from training_input_vectors', src_array.schema)
 
         if input_vectors is not None:
             in_size = input_vectors.shape[0]
