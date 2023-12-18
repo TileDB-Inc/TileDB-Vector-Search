@@ -7,7 +7,6 @@ from tiledb.cloud.dag import Mode
 
 from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION, validate_storage_version
-from tiledb.vector_search.module import kmeans_predict
 
 np.random.seed(0)
 
@@ -29,6 +28,7 @@ def ingest(
     partitions: int = -1,
     copy_centroids_uri: str = None,
     training_sample_size: int = -1,
+    training_input_vectors: np.ndarray = None,
     training_source_uri: str = None,
     training_source_type: str = None,
     workers: int = -1,
@@ -83,6 +83,8 @@ def ingest(
         vector sample size to train centroids with,
         if not provided, is auto-configured based on the dataset sizes
         should not be provided if training_source_uri is provided
+    training_input_vectors: numpy Array
+        Training input vectors, if this is provided it takes precedence over training_source_uri and training_source_type
     training_source_uri: str = None
         The source URI to use for training centroids when building a IVF_FLAT vector index, 
         if not provided, the first training_sample_size vectors from source_uri are used
@@ -133,10 +135,22 @@ def ingest(
 
     validate_storage_version(storage_version)
 
-    if training_source_type and not training_source_uri:
-        raise ValueError("training_source_type should not be provided without training_source_uri")
     if source_type and not source_uri:
         raise ValueError("source_type should not be provided without source_uri")
+    if source_uri and input_vectors:
+        raise ValueError("source_uri should not be provided alongside input_vectors")
+    if source_type and input_vectors:
+        raise ValueError("source_type should not be provided alongside input_vectors")
+
+    if training_source_type and not training_source_uri:
+        raise ValueError("training_source_type should not be provided without training_source_uri")
+    if training_source_uri and training_input_vectors:
+        raise ValueError("training_source_uri should not be provided alongside training_input_vectors")
+    if training_source_type and training_input_vectors:
+        raise ValueError("training_source_type should not be provided alongside training_input_vectors")
+
+    if training_sample_size != -1 and training_source_uri:
+        raise ValueError("training_source_uri and training_sample_size should not both be provided")
 
     # use index_group_uri for internal clarity
     index_group_uri = index_uri
@@ -147,6 +161,9 @@ def ingest(
     PARTS_ARRAY_NAME = storage_formats[storage_version]["PARTS_ARRAY_NAME"]
     INPUT_VECTORS_ARRAY_NAME = storage_formats[storage_version][
         "INPUT_VECTORS_ARRAY_NAME"
+    ]
+    TRAINING_INPUT_VECTORS_ARRAY_NAME = storage_formats[storage_version][
+        "TRAINING_INPUT_VECTORS_ARRAY_NAME"
     ]
     EXTERNAL_IDS_ARRAY_NAME = storage_formats[storage_version][
         "EXTERNAL_IDS_ARRAY_NAME"
@@ -273,8 +290,9 @@ def ingest(
         size: int,
         dimensions: int,
         vector_type: np.dtype,
+        array_name: str
     ) -> str:
-        input_vectors_array_uri = f"{group.uri}/{INPUT_VECTORS_ARRAY_NAME}"
+        input_vectors_array_uri = f"{group.uri}/{array_name}"
         if tiledb.array_exists(input_vectors_array_uri):
             raise ValueError(f"Array exists {input_vectors_array_uri}")
         tile_size = min(
@@ -312,7 +330,7 @@ def ingest(
         )
         logger.debug(input_vectors_array_schema)
         tiledb.Array.create(input_vectors_array_uri, input_vectors_array_schema)
-        group.add(input_vectors_array_uri, name=INPUT_VECTORS_ARRAY_NAME)
+        group.add(input_vectors_array_uri, name=array_name)
 
         input_vectors_array = tiledb.open(
             input_vectors_array_uri, "w", timestamp=index_timestamp
@@ -658,8 +676,6 @@ def ingest(
             "Reading input vectors start_pos: %i, end_pos: %i", start_pos, end_pos
         )
 
-        print('[ingestion@read_input_vectors] start_pos', start_pos, 'end_pos', end_pos, 'dimensions', dimensions)
-
         if source_type == "TILEDB_ARRAY":
             with tiledb.open(
                 source_uri, mode="r", timestamp=index_timestamp
@@ -786,25 +802,20 @@ def ingest(
             array_to_matrix,
             kmeans_fit,
         )
+
+        print("[ingestion@centralised_kmeans] training_sample_size: ", training_sample_size, "training_source_uri: ", training_source_uri, "training_source_type: ", training_source_type)
         # paris debug
-        print('[ingestion@centralised_kmeans] dimensions', dimensions)
-        print('[ingestion@centralised_kmeans] partitions', partitions)
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
-            print('[ingestion@centralised_kmeans] index_group_uri', index_group_uri)
             group = tiledb.Group(index_group_uri)
             centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
-            print('[ingestion@centralised_kmeans] training_source_uri', training_source_uri, 'training_source_type', training_source_type)
-
             if training_sample_size >= partitions:
-                print('[ingestion@centralised_kmeans] We have a large sample range than the number of partitions, so we can use the sample range to train the centroids.')
                 if training_source_uri:
                     if training_source_type is None:
                         training_source_type = autodetect_source_type(source_uri=training_source_uri)
-                    print('[ingestion@centralised_kmeans] training_source_type', training_source_type)
                     training_in_size, training_dimensions, training_vector_type = read_source_metadata(source_uri=training_source_uri, source_type=training_source_type)
-                    print('[ingestion@centralised_kmeans] for training', 'in_size', training_in_size, 'dimensions', training_dimensions, 'vector_type', training_vector_type)
                     dimensions = training_dimensions
+                    print("[ingestion@centralised_kmeans] training_in_size: ", training_in_size, "training_dimensions: ", training_dimensions, "training_vector_type: ", training_vector_type)
                     sample_vectors = read_input_vectors(
                         source_uri=training_source_uri,
                         source_type=training_source_type,
@@ -816,6 +827,7 @@ def ingest(
                         verbose=verbose,
                         trace_id=trace_id,
                     ).astype(np.float32)
+                    print("[ingestion@centralised_kmeans] sample_vectors", sample_vectors.shape, sample_vectors)
                 else:
                     sample_vectors = read_input_vectors(
                         source_uri=source_uri,
@@ -828,7 +840,6 @@ def ingest(
                         verbose=verbose,
                         trace_id=trace_id,
                     ).astype(np.float32)
-                print('[ingestion@centralised_kmeans] sample_vectors', sample_vectors.shape, sample_vectors)
 
                 logger.debug("Start kmeans training")
                 if use_sklearn:
@@ -846,12 +857,9 @@ def ingest(
                     centroids = kmeans_fit(partitions, init, max_iter, verbose, n_init, array_to_matrix(np.transpose(sample_vectors)))
                     centroids = np.array(centroids) # TODO: why is this here?
             else:
-                print('[ingestion@centralised_kmeans] We have a smaller sample range than the number of partitions')
                 # NOTE(paris): Should we instead take the first training_sample_size vectors and then fill in random for the rest?
                 # np.random() is [0, 1) so it seems like it won't fit the data unless it's also in that range?
                 centroids = np.random.rand(dimensions, partitions)
-            
-            print('[ingestion@centralised_kmeans] centroids', centroids.shape, centroids)
 
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
@@ -1549,11 +1557,6 @@ def ingest(
         use_sklearn: bool = False,
         mode: Mode = Mode.LOCAL,
     ) -> dag.DAG:
-        print('[ingestion@create_ingestion_dag] training_sample_size', training_sample_size)
-        print('[ingestion@create_ingestion_dag] input_vectors_per_work_item', input_vectors_per_work_item)
-        print('[ingestion@create_ingestion_dag] input_vectors_work_items_per_worker', input_vectors_work_items_per_worker)
-        print('[ingestion@create_ingestion_dag] table_partitions_per_work_item', table_partitions_per_work_item)
-        print('[ingestion@create_ingestion_dag] table_partitions_work_items_per_worker', table_partitions_work_items_per_worker)
         if mode == Mode.BATCH:
             d = dag.DAG(
                 name="vector-ingestion",
@@ -1660,7 +1663,6 @@ def ingest(
                         ):
                             start = i
                             end = i + input_vectors_batch_size
-                            print('[ingestion@create_ingestion_dag@] training_sample_size > CENTRALISED_KMEANS_MAX_SAMPLE_SIZE so: start -> end', start, end)
                             if end > size:
                                 end = size
                             kmeans_workers.append(
@@ -1893,6 +1895,19 @@ def ingest(
         group.close()
         group = tiledb.Group(index_group_uri, "w")
 
+        if training_input_vectors is not None:
+            training_source_uri = write_input_vectors(
+                group=group,
+                input_vectors=training_input_vectors,
+                size=training_input_vectors.shape[0],
+                dimensions=training_input_vectors.shape[1],
+                vector_type=training_input_vectors.dtype,
+                array_name=TRAINING_INPUT_VECTORS_ARRAY_NAME
+            )
+            training_source_type = "TILEDB_ARRAY"
+            with tiledb.open(training_source_uri, mode="r") as src_array:
+                print('[ingestion@ingest()] training_source_uri created from training_input_vectors', src_array.schema)
+
         if input_vectors is not None:
             in_size = input_vectors.shape[0]
             dimensions = input_vectors.shape[1]
@@ -1903,6 +1918,7 @@ def ingest(
                 size=in_size,
                 dimensions=dimensions,
                 vector_type=vector_type,
+                array_name=INPUT_VECTORS_ARRAY_NAME
             )
             source_type = "TILEDB_ARRAY"
         else:
@@ -1911,7 +1927,6 @@ def ingest(
             in_size, dimensions, vector_type = read_source_metadata(
                 source_uri=source_uri, source_type=source_type
             )
-            print('[ingestion@ingest] autodetect_source_type', source_type, 'in_size', in_size, 'dimensions', dimensions, 'vector_type', vector_type)
         if size == -1:
             size = int(in_size)
         if size > in_size:
@@ -1921,8 +1936,6 @@ def ingest(
         logger.debug("Vector dimension type %s", vector_type)
         if partitions == -1:
             partitions = max(1, int(math.sqrt(size)))
-        if training_sample_size != -1 and training_source_uri:
-            raise ValueError("training_source_uri and training_sample_size should not both be provided")
         if training_sample_size == -1:
             training_sample_size = min(size, 100 * partitions)
         if mode == Mode.BATCH:
@@ -1932,7 +1945,7 @@ def ingest(
             workers = 1
         logger.debug("Partitions %d", partitions)
         logger.debug("Training sample size %d", training_sample_size)
-        logger.debug("Training sample uri %s", training_source_uri)
+        logger.debug("Training sample uri %s and type %s", training_source_uri, training_source_type)
         logger.debug("Number of workers %d", workers)
 
         if external_ids is not None:

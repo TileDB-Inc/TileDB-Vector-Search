@@ -13,6 +13,7 @@ from tiledb.vector_search.utils import load_fvecs
 MINIMUM_ACCURACY = 0.85
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 
+
 def test_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
@@ -840,14 +841,20 @@ def test_ingest_with_training_source_uri_f32(tmp_path):
     )
 
 def test_ingest_with_training_source_uri_tdb(tmp_path):
+    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] ====================================')
     dataset_dir = os.path.join(tmp_path, "dataset")
     os.mkdir(dataset_dir)
     # data.shape should give you (cols, rows). So we transpose this before using it.
     data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3], [4.0, 4.1, 4.2, 4.3], [5.0, 5.1, 5.2, 5.3]], dtype=np.float32).transpose()
     create_array(path=os.path.join(dataset_dir, "data.tdb"), data=data)
+    print('[test_ingestion] data', data.shape, data.dtype, '\n', data)
 
-    training_data = data[1:2]
+    training_data = data[1:3]
     create_array(path=os.path.join(dataset_dir, "training_data.tdb"), data=training_data)
+
+    print('[test_ingestion] training_data', training_data.shape, training_data.dtype, '\n', training_data)
+    with tiledb.open(os.path.join(dataset_dir, "training_data.tdb"), mode="r") as src_array:
+        print('training_data.tdb', src_array.schema)
 
     index_uri = os.path.join(tmp_path, "array")
     index = ingest(
@@ -862,10 +869,12 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     result_d, result_i = index.query(query_vectors, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
+    print('[test_ingestion] FlatIndex(uri=index_uri) ===============================')
     index_ram = FlatIndex(uri=index_uri)
     result_d, result_i = index_ram.query(query_vectors, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
+    print('[test_ingestion] ingest() 2 ===============================')
     # Add a short test that we can also ingest with a specified training_source_type.
     ingest(
         index_type="IVF_FLAT",
@@ -874,3 +883,33 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
         training_source_uri=os.path.join(dataset_dir, "training_data.tdb"),
         training_source_type="TILEDB_ARRAY"
     )
+
+def test_ingest_with_training_source_uri_numpy(tmp_path):
+    print('[test_ingestion@test_ingest_with_training_source_uri_numpy] ====================================')
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    os.mkdir(dataset_dir)
+    data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3], [4.0, 4.1, 4.2, 4.3], [5.0, 5.1, 5.2, 5.3]], dtype=np.float32)
+    create_array(path=os.path.join(dataset_dir, "data.tdb"), data=data)
+    print('[test_ingestion] data', data.shape, data.dtype, '\n', data)
+    
+    training_data = data[1:3]
+    print('[test_ingestion] training_data', training_data.shape, training_data.dtype, '\n', training_data)
+
+    index_uri = os.path.join(tmp_path, "array")
+    index = ingest(
+        index_type="IVF_FLAT", 
+        index_uri=index_uri, 
+        input_vectors=data,
+        # source_uri=os.path.join(dataset_dir, "data.tdb"),
+        training_input_vectors=training_data,
+    )
+
+    query_vector_index = 1
+    query_vectors = np.array([data[query_vector_index]], dtype=np.float32)
+    print('[test_ingestion] query_vectors', query_vectors.shape, query_vectors.dtype, '\n', query_vectors)
+    result_d, result_i = index.query(query_vectors, k=1)
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
+
+    index_ram = FlatIndex(uri=index_uri)
+    result_d, result_i = index_ram.query(query_vectors, k=1)
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
