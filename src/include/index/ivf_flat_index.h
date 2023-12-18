@@ -115,6 +115,7 @@ class ivf_flat_index {
    * Index group information
    ****************************************************************************/
 
+  /** The timestamp at which the index was created */
   uint64_t timestamp_{0};
 
   std::unique_ptr<ivf_flat_index_group<ivf_flat_index>> group_;
@@ -148,6 +149,12 @@ class ivf_flat_index {
    * Constructors (et al)
    ****************************************************************************/
 
+  // ivf_flat_index() = delete;
+  ivf_flat_index(const ivf_flat_index& index) = delete;
+  ivf_flat_index& operator=(const ivf_flat_index& index) = delete;
+  ivf_flat_index(ivf_flat_index&& index) = default;
+  ivf_flat_index& operator=(ivf_flat_index&& index) = default;
+
   /**
    * @brief Construct a new `ivf_flat_index` object, setting a number of
    * parameters to be used subsequently in training.  To fully create an index
@@ -158,18 +165,34 @@ class ivf_flat_index {
    * @param nlist Number of centroids / partitions to compute.
    * @param max_iter Maximum number of iterations for kmans algorithm.
    * @param tol Convergence tolerance for kmeans algorithm.
+   * @param timestamp Timestamp for the index.
+   * @param seed Random seed for kmeans algorithm.
    *
-   * @todo Use chained parameter technique
+   * @todo Use chained parameter technique for arguments
+   * @todo -- Need something equivalent to "None" since user could pass 0
+   * @todo -- Or something equivalent to "Use current time" and something
+   * to indicate "no time traveling"
+   * @todo -- May also want start/stop?  Use a variant?  TemporalPolicy?
    */
   ivf_flat_index(
       // size_t dim,
       size_t nlist = 0,
       size_t max_iter = 2,
-      float tol = 0.000025)
+      float tol = 0.000025,
+      size_t timestamp = 0,
+      uint64_t seed = std::random_device{}())
       :  // , dimension_(dim)
-      num_partitions_(nlist)
+      timestamp_{
+          (timestamp == 0) ?
+              std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::system_clock::now().time_since_epoch())
+                  .count() :
+              timestamp}
+      , num_partitions_(nlist)
       , max_iter_(max_iter)
-      , tol_(tol) {
+      , tol_(tol)
+      , seed_{seed} {
+    gen_.seed(seed_);
   }
 
   /**
@@ -177,22 +200,34 @@ class ivf_flat_index {
    * class does not deal with the group itself, but rather calls the group
    * constructor.  The group constructor will initialize itself with information
    * about the different constituent arrays needed for operation of this class,
-   * but will not initialize any member data of this class.
+   * but will not initialize any member data of the class.
+   *
+   * The group is opened with a timestamp, so the correct values of base_size
+   * and num_partitions will be set.
+   *
+   * We go ahead and load the centroids here.
+   * @todo Is this the right place to load the centroids?
    *
    * @param ctx
    * @param uri
    * @param timestamp
+   *
    */
   ivf_flat_index(
       const tiledb::Context& ctx,
       const std::string& uri,
       uint64_t timestamp = 0)
-      : timestamp_{timestamp}
-      , group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
-            ctx, uri, *this, TILEDB_READ)} {
+      : group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
+            ctx, uri, *this, TILEDB_READ, timestamp_)} {
+
+    if (timestamp_ == 0) {
+      timestamp_ = group_->get_previous_ingestion_timestamp();
+    }
+
     /**
      * Read the centroids.  How the partitioned_vectors_ are read in will be
-     * determined by the type of query we are doing.
+     * determined by the type of query we are doing.  But they will be read
+     * in at this same timestamp.
      */
     dimension_ = group_->get_dimension();
     num_partitions_ = group_->get_num_partitions();
@@ -206,15 +241,9 @@ class ivf_flat_index {
             timestamp_));
   }
 
-  ivf_flat_index() = delete;
-  ivf_flat_index(const ivf_flat_index& index) = delete;
-  ivf_flat_index& operator=(const ivf_flat_index& index) = delete;
-  ivf_flat_index(ivf_flat_index&& index) = default;
-  ivf_flat_index& operator=(ivf_flat_index&& index) = default;
-
   /****************************************************************************
    * kmeans algorithm for clustering
-   * @todo Move out of this class and implement as free functions
+   * @todo Move out of this class (and implement as free functions)
    ****************************************************************************/
   /**
    * @brief Use the kmeans++ algorithm to choose initial centroids.
@@ -728,16 +757,6 @@ class ivf_flat_index {
       vfs.remove_dir(group_uri);
     }
 
-    // Timestamps are next PR
-#if 0
-    // Timestamp the index to be written at the current time
-    // @todo Do we need to do anything about the group itself?
-    size_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-                           std::chrono::system_clock::now().time_since_epoch())
-                           .count();
-
-#endif
-
     // Write the group
     auto write_group =
         ivf_flat_index_group(ctx, group_uri, *this, TILEDB_WRITE);
@@ -748,19 +767,19 @@ class ivf_flat_index {
     write_group.append_base_size(::num_vectors(*partitioned_vectors_));
     write_group.append_num_partitions(num_partitions_);
 
-    write_matrix(ctx, centroids_, write_group.centroids_uri(), 0, false);
+    write_matrix(ctx, centroids_, write_group.centroids_uri(), 0, false, timestamp_);
 
-    write_matrix(ctx, *partitioned_vectors_, write_group.parts_uri(), 0, false);
+    write_matrix(ctx, *partitioned_vectors_, write_group.parts_uri(), 0, false, timestamp_);
 
     write_vector(
-        ctx, partitioned_vectors_->ids(), write_group.ids_uri(), 0, false);
+        ctx, partitioned_vectors_->ids(), write_group.ids_uri(), 0, false, timestamp_);
 
     write_vector(
         ctx,
         partitioned_vectors_->indices(),
         write_group.indices_uri(),
         0,
-        false);
+        false, timestamp_);
 
     return true;
   }
@@ -1238,6 +1257,14 @@ class ivf_flat_index {
           std::min_element(begin(distances), end(distances)) - begin(distances);
     }
     return indices;
+  }
+
+  void dump_group(const std::string& msg) {
+    group_->dump(msg);
+  }
+
+  void dump_metadata(const std::string& msg) {
+    group_->metadata.dump(msg);
   }
 };
 
