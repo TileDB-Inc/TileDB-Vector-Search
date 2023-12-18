@@ -787,9 +787,6 @@ def test_kmeans():
 
     sklearn_score = get_score(centroids_sk, results_sk)
     tdb_score = get_score(centroids_tdb_np, results_tdb_np)
-    print("Random initialization:")
-    print(f"sklearn score: {sklearn_score}")
-    print(f"tiledb score: {tdb_score}")
 
     km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init="k-means++", random_state=1)
     km.fit(data)
@@ -807,8 +804,95 @@ def test_kmeans():
 
     sklearn_score = get_score(centroids_sk, results_sk)
     tdb_score = get_score(centroids_tdb_np, results_tdb_np)
-    print("K-means++:")
-    print(f"sklearn score: {sklearn_score}")
-    print(f"tiledb score: {tdb_score}")
 
     assert tdb_score < 1.5 * sklearn_score
+
+def test_ingest_with_training_source_uri_f32(tmp_path):
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3], [4.0, 4.1, 4.2, 4.3], [5.0, 5.1, 5.2, 5.3]], dtype=np.float32)
+    create_manual_dataset_f32_only_data(data=data, path=dataset_dir)
+
+    training_data = np.array([data[0], data[1], data[2]], dtype=np.float32)
+    create_manual_dataset_f32_only_data(data=training_data, path=dataset_dir, dataset_name="training_data.f32bin")
+    index_uri = os.path.join(tmp_path, "array")
+    index = ingest(
+        index_type="IVF_FLAT", 
+        index_uri=index_uri, 
+        source_uri=os.path.join(dataset_dir, "data.f32bin"),
+        training_source_uri=os.path.join(dataset_dir, "training_data.f32bin")
+    )
+
+    query_vector_index = 1
+    query_vectors = np.array([data[query_vector_index]], dtype=np.float32)
+    result_d, result_i = index.query(query_vectors, k=1)
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
+
+    index_ram = FlatIndex(uri=index_uri)
+    result_d, result_i = index_ram.query(query_vectors, k=1)
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
+
+    # Also test that we can ingest with training_source_type.
+    ingest(
+        index_type="IVF_FLAT",
+        index_uri=os.path.join(tmp_path, "array_2"), 
+        source_uri=os.path.join(dataset_dir, "data.f32bin"),
+        training_source_uri=os.path.join(dataset_dir, "training_data.f32bin"),
+        training_source_type="FVEC"
+    )
+
+def test_ingest_with_training_source_uri_tdb(tmp_path):
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    os.mkdir(dataset_dir)
+    # data.shape should give you (cols, rows). So we transpose this before using it.
+    data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3], [4.0, 4.1, 4.2, 4.3], [5.0, 5.1, 5.2, 5.3]], dtype=np.float32).transpose()
+    create_array(path=os.path.join(dataset_dir, "data.tdb"), data=data)
+
+    training_data = data[1:3]
+    create_array(path=os.path.join(dataset_dir, "training_data.tdb"), data=training_data)
+
+    index_uri = os.path.join(tmp_path, "array")
+    index = ingest(
+        index_type="IVF_FLAT", 
+        index_uri=index_uri, 
+        source_uri=os.path.join(dataset_dir, "data.tdb"),
+        training_source_uri=os.path.join(dataset_dir, "training_data.tdb")
+    )
+
+    query_vector_index = 1
+    query_vectors = np.array([data.transpose()[query_vector_index]], dtype=np.float32)
+    result_d, result_i = index.query(query_vectors, k=1)
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
+
+    index_ram = IVFFlatIndex(uri=index_uri)
+    result_d, result_i = index_ram.query(query_vectors, k=1)
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
+
+    # Also test that we can ingest with training_source_type.
+    ingest(
+        index_type="IVF_FLAT",
+        index_uri=os.path.join(tmp_path, "array_2"), 
+        source_uri=os.path.join(dataset_dir, "data.tdb"),
+        training_source_uri=os.path.join(dataset_dir, "training_data.tdb"),
+        training_source_type="TILEDB_ARRAY"
+    )
+
+def test_ingest_with_training_source_uri_numpy(tmp_path):
+    data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3], [4.0, 4.1, 4.2, 4.3], [5.0, 5.1, 5.2, 5.3]], dtype=np.float32)
+    training_data = data[1:3]
+
+    index_uri = os.path.join(tmp_path, "array")
+    index = ingest(
+        index_type="IVF_FLAT", 
+        index_uri=index_uri, 
+        input_vectors=data,
+        training_input_vectors=training_data,
+    )
+
+    query_vector_index = 1
+    query_vectors = np.array([data[query_vector_index]], dtype=np.float32)
+    result_d, result_i = index.query(query_vectors, k=1)
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
+
+    index_ram = IVFFlatIndex(uri=index_uri)
+    result_d, result_i = index_ram.query(query_vectors, k=1)
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
