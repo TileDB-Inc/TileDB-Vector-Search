@@ -85,13 +85,15 @@ def ingest(
         should not be provided if training_source_uri is provided
     training_input_vectors: numpy Array
         Training input vectors, if this is provided it takes precedence over training_source_uri and training_source_type
+        should not be provided if training_sample_size or training_source_uri is provided
     training_source_uri: str = None
         The source URI to use for training centroids when building a IVF_FLAT vector index, 
         if not provided, the first training_sample_size vectors from source_uri are used
-        should not be provided if training_sample_size is provided
+        should not be provided if training_sample_size or training_input_vectors is provided
     training_source_type: str = None
         Type of the training source data in training_source_uri
         if left empty, is auto-detected from the suffix of training_source_type
+        should only be provided when training_source_uri is provided
     workers: int = -1
         number of workers for vector ingestion,
         if not provided, is auto-configured based on the dataset size
@@ -142,15 +144,21 @@ def ingest(
     if source_type and input_vectors:
         raise ValueError("source_type should not be provided alongside input_vectors")
 
+    if training_source_uri and training_sample_size != -1:
+        raise ValueError("training_source_uri and training_sample_size should not both be provided")
+    if training_source_uri and training_input_vectors:
+        raise ValueError("training_source_uri and training_input_vectors should not both be provided")
+
+    if training_input_vectors and training_source_type:
+        raise ValueError("training_input_vectors and training_source_type should not both be provided")
+    if training_input_vectors and training_sample_size != -1:
+        raise ValueError("training_input_vectors and training_sample_size should not both be provided")
+
+    if training_sample_size < -1:
+        raise ValueError("training_sample_size should either be positive or -1 to auto-configure")
+
     if training_source_type and not training_source_uri:
         raise ValueError("training_source_type should not be provided without training_source_uri")
-    if training_source_uri and training_input_vectors:
-        raise ValueError("training_source_uri should not be provided alongside training_input_vectors")
-    if training_source_type and training_input_vectors:
-        raise ValueError("training_source_type should not be provided alongside training_input_vectors")
-
-    if training_sample_size != -1 and training_source_uri:
-        raise ValueError("training_source_uri and training_sample_size should not both be provided")
 
     # use index_group_uri for internal clarity
     index_group_uri = index_uri
@@ -675,7 +683,6 @@ def ingest(
         logger.debug(
             "Reading input vectors start_pos: %i, end_pos: %i", start_pos, end_pos
         )
-
         if source_type == "TILEDB_ARRAY":
             with tiledb.open(
                 source_uri, mode="r", timestamp=index_timestamp
@@ -1939,7 +1946,7 @@ def ingest(
             workers = 1
         logger.debug("Partitions %d", partitions)
         logger.debug("Training sample size %d", training_sample_size)
-        logger.debug("Training sample uri %s and type %s", training_source_uri, training_source_type)
+        logger.debug("Training source uri %s and type %s", training_source_uri, training_source_type)
         logger.debug("Number of workers %d", workers)
 
         if external_ids is not None:

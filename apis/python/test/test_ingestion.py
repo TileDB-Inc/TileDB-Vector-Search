@@ -831,7 +831,7 @@ def test_ingest_with_training_source_uri_f32(tmp_path):
     result_d, result_i = index_ram.query(query_vectors, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
-    # Add a short test that we can also ingest with a specified training_source_type.
+    # Also test that we can ingest with training_source_type.
     ingest(
         index_type="IVF_FLAT",
         index_uri=os.path.join(tmp_path, "array_2"), 
@@ -867,7 +867,7 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     result_d, result_i = index_ram.query(query_vectors, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
-    # Add a short test that we can also ingest with a specified training_source_type.
+    # Also test that we can ingest with training_source_type.
     ingest(
         index_type="IVF_FLAT",
         index_uri=os.path.join(tmp_path, "array_2"), 
@@ -877,11 +877,7 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     )
 
 def test_ingest_with_training_source_uri_numpy(tmp_path):
-    dataset_dir = os.path.join(tmp_path, "dataset")
-    os.mkdir(dataset_dir)
     data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3], [4.0, 4.1, 4.2, 4.3], [5.0, 5.1, 5.2, 5.3]], dtype=np.float32)
-    create_array(path=os.path.join(dataset_dir, "data.tdb"), data=data)
-
     training_data = data[1:3]
 
     index_uri = os.path.join(tmp_path, "array")
