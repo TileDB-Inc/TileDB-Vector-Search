@@ -233,8 +233,11 @@ def create_schema(dimension0DomainMax, dimension1DomainMax):
     return schema
 
 
-def create_array(path: str, data, dimension0DomainMax = 2, dimension1DomainMax = 3):
-    schema = create_schema(dimension0DomainMax, dimension1DomainMax)
+def create_array(path: str, data):
+    schema = create_schema(
+        data.shape[0] - 1, # number of rows
+        data.shape[1] - 1, # number of cols
+    )
     tiledb.Array.create(path, schema)
     with tiledb.open(path, "w") as A:
         A[:] = data

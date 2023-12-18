@@ -8,7 +8,6 @@ from tiledb.cloud.dag import Mode
 from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION, validate_storage_version
 from tiledb.vector_search.module import kmeans_predict
-from tiledb.vector_search.training_sampling_policy import TrainingSamplingPolicy
 
 np.random.seed(0)
 
@@ -29,7 +28,6 @@ def ingest(
     size: int = -1,
     partitions: int = -1,
     copy_centroids_uri: str = None,
-    training_sampling_policy: TrainingSamplingPolicy = TrainingSamplingPolicy.FIRST_N,
     training_sample_size: int = -1,
     training_source_uri: str = None,
     training_source_type: str = None,
@@ -81,19 +79,17 @@ def ingest(
     copy_centroids_uri: str
         TileDB array URI to copy centroids from,
         if not provided, centroids are build running kmeans
-    training_sampling_policy: TrainingSamplingPolicy = TrainingSamplingPolicy.FIRST_N
-        Only used for IVF_FLAT, the policy to use for training centroids. 
-        If FIRST_N, then the first training_sample_size vectors of source_uri are used.
-        If RANDOM, then training_sample_size random vectors from source_uri are used.
-        If SOURCE_URI, then all of the vectors from training_source_uri are used.
     training_sample_size: int = -1
         vector sample size to train centroids with,
         if not provided, is auto-configured based on the dataset sizes
+        should not be provided if training_source_uri is provided
     training_source_uri: str = None
-        Only used for IVF_FLAT, the source URI to use for training centroids if 
-        training_sampling_policy is SOURCE_URI. Should be of the same type as source_uri.
+        The source URI to use for training centroids when building a IVF_FLAT vector index, 
+        if not provided, the first training_sample_size vectors from source_uri are used
+        should not be provided if training_sample_size is provided
     training_source_type: str = None
-        Type of the training source data. If left empty it is auto-detected from the suffix of training_source_type.
+        Type of the training source data in training_source_uri
+        if left empty, is auto-detected from the suffix of training_source_type
     workers: int = -1
         number of workers for vector ingestion,
         if not provided, is auto-configured based on the dataset size
@@ -136,6 +132,11 @@ def ingest(
     from tiledb.vector_search.storage_formats import storage_formats
 
     validate_storage_version(storage_version)
+
+    if training_source_type and not training_source_uri:
+        raise ValueError("training_source_type should not be provided without training_source_uri")
+    if source_type and not source_uri:
+        raise ValueError("source_type should not be provided without source_uri")
 
     # use index_group_uri for internal clarity
     index_group_uri = index_uri
@@ -768,10 +769,7 @@ def ingest(
         vector_type: np.dtype,
         partitions: int,
         dimensions: int,
-        # sample_start_pos: int,
-        # sample_end_pos: int,
         training_sample_size: int,
-        training_sampling_policy: TrainingSamplingPolicy,
         training_source_uri: Optional[str],
         training_source_type: Optional[str],
         init: str = "random",
@@ -800,32 +798,7 @@ def ingest(
 
             if training_sample_size >= partitions:
                 print('[ingestion@centralised_kmeans] We have a large sample range than the number of partitions, so we can use the sample range to train the centroids.')
-                if training_sampling_policy == TrainingSamplingPolicy.FIRST_N:
-                    sample_vectors = read_input_vectors(
-                        source_uri=source_uri,
-                        source_type=source_type,
-                        vector_type=vector_type,
-                        dimensions=dimensions,
-                        start_pos=0,
-                        end_pos=training_sample_size,
-                        config=config,
-                        verbose=verbose,
-                        trace_id=trace_id,
-                    ).astype(np.float32)
-                elif training_sampling_policy == TrainingSamplingPolicy.RANDOM:
-                    # TODO(paris): Add a read_input_vectors_random() function to use instead.
-                    sample_vectors = read_input_vectors(
-                        source_uri=source_uri,
-                        source_type=source_type,
-                        vector_type=vector_type,
-                        dimensions=dimensions,
-                        start_pos=0,
-                        end_pos=training_sample_size,
-                        config=config,
-                        verbose=verbose,
-                        trace_id=trace_id,
-                    ).astype(np.float32)
-                elif training_sampling_policy == TrainingSamplingPolicy.SOURCE_URI:
+                if training_source_uri:
                     if training_source_type is None:
                         training_source_type = autodetect_source_type(source_uri=training_source_uri)
                     print('[ingestion@centralised_kmeans] training_source_type', training_source_type)
@@ -844,7 +817,17 @@ def ingest(
                         trace_id=trace_id,
                     ).astype(np.float32)
                 else:
-                    raise ValueError(f"Unsupported training_sampling_policy {training_sampling_policy}")
+                    sample_vectors = read_input_vectors(
+                        source_uri=source_uri,
+                        source_type=source_type,
+                        vector_type=vector_type,
+                        dimensions=dimensions,
+                        start_pos=0,
+                        end_pos=training_sample_size,
+                        config=config,
+                        verbose=verbose,
+                        trace_id=trace_id,
+                    ).astype(np.float32)
                 print('[ingestion@centralised_kmeans] sample_vectors', sample_vectors.shape, sample_vectors)
 
                 logger.debug("Start kmeans training")
@@ -1552,25 +1535,9 @@ def ingest(
         partitions: int,
         dimensions: int,
         copy_centroids_uri: str,
-        
-        # Either you provide training_sample_size and sampling_policy.
         training_sample_size: int,
-        # enum: first training_sample_size, random of training_sample_size. default to first training_sample_size.
-        training_sampling_policy: TrainingSamplingPolicy,
-        
-        # Or you provide the samples directly.
-        training_source_uri: Optional[str], # a list of vectors
-
-        training_source_type: Optional[str], # a list of vectors
-
-        # When to use training_source_uri?
-        # - For large datasets, first X is efficient. Random sample is not efficient.
-
-        # for each partition in source_uri you need to do sampling and do merging on them
-        # change task graph
-
-        # first PR just make it work for centralised_kmeans
-
+        training_source_uri: Optional[str],
+        training_source_type: Optional[str],
         input_vectors_per_work_item: int,
         input_vectors_work_items_per_worker: int,
         table_partitions_per_work_item: int,
@@ -1658,10 +1625,7 @@ def ingest(
                         vector_type=vector_type,
                         partitions=partitions,
                         dimensions=dimensions,
-                        # sample_start_pos=0,
-                        # sample_end_pos=training_sample_size,
                         training_sample_size=training_sample_size,
-                        training_sampling_policy=training_sampling_policy,
                         training_source_uri=training_source_uri,
                         training_source_type=training_source_type,
                         config=config,
@@ -1957,12 +1921,8 @@ def ingest(
         logger.debug("Vector dimension type %s", vector_type)
         if partitions == -1:
             partitions = max(1, int(math.sqrt(size)))
-        if training_sampling_policy != TrainingSamplingPolicy.SOURCE_URI and training_source_uri:
-            raise ValueError("If training_sampling_policy is not SOURCE_URI, training_source_uri should not be provided")
-        if training_sampling_policy == TrainingSamplingPolicy.SOURCE_URI and not training_source_uri:
-            raise ValueError("If training_sampling_policy is SOURCE_URI, training_source_uri must be provided")
-        if training_sampling_policy == TrainingSamplingPolicy.SOURCE_URI and training_sample_size != -1:
-            raise ValueError("If training_sampling_policy is SOURCE_URI, training_sample_size should not be provided")
+        if training_sample_size != -1 and training_source_uri:
+            raise ValueError("training_source_uri and training_sample_size should not both be provided")
         if training_sample_size == -1:
             training_sample_size = min(size, 100 * partitions)
         if mode == Mode.BATCH:
@@ -1971,7 +1931,6 @@ def ingest(
         else:
             workers = 1
         logger.debug("Partitions %d", partitions)
-        logger.debug("Training sample policy %s", training_sampling_policy)
         logger.debug("Training sample size %d", training_sample_size)
         logger.debug("Training sample uri %s", training_source_uri)
         logger.debug("Number of workers %d", workers)
@@ -2062,7 +2021,6 @@ def ingest(
             dimensions=dimensions,
             copy_centroids_uri=copy_centroids_uri,
             training_sample_size=training_sample_size,
-            training_sampling_policy=training_sampling_policy,
             training_source_uri=training_source_uri,
             training_source_type=training_source_type,
             input_vectors_per_work_item=input_vectors_per_work_item,
