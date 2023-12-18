@@ -52,7 +52,11 @@ class Index:
             raise ValueError(
                 f"Time traveling is not supported for index storage_version={self.storage_version}"
             )
-        self.updates_array_uri = self.group[storage_formats[self.storage_version]["UPDATES_ARRAY_NAME"]].uri
+        updates_array_name = storage_formats[self.storage_version]["UPDATES_ARRAY_NAME"]
+        if updates_array_name in self.group:
+            self.updates_array_uri = self.group[storage_formats[self.storage_version]["UPDATES_ARRAY_NAME"]].uri
+        else:
+            self.updates_array_uri = f"{self.group.uri}/{updates_array_name}"
         self.index_version = self.group.meta.get("index_version", "")
         self.ingestion_timestamps = [
             int(x)
