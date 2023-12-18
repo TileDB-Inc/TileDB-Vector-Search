@@ -454,6 +454,7 @@ def create(
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> IVFFlatIndex:
+    print('[ivf_flat_index@create]')
     validate_storage_version(storage_version)
 
     index.create_metadata(
