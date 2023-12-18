@@ -44,6 +44,8 @@ class Index:
         self.config = config
         self.ctx = Ctx(config)
         self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
+        self.training_source_uri = self.group.meta.get("training_source_uri", None)
+        self.training_source_type = self.group.meta.get("training_source_type", None)
         self.storage_version = self.group.meta.get("storage_version", "0.1")
         if (
             not storage_formats[self.storage_version]["SUPPORT_TIMETRAVEL"]
@@ -357,6 +359,9 @@ class Index:
     def consolidate_updates(self, **kwargs):
         from tiledb.vector_search.ingestion import ingest
 
+        if not tiledb.array_exists(self.updates_array_uri):
+            raise ValueError("No updates to consolidate")
+
         fragments_info = tiledb.array_fragments(
             self.updates_array_uri, ctx=tiledb.Ctx(self.config)
         )
@@ -382,6 +387,8 @@ class Index:
             index_timestamp=max_timestamp,
             storage_version=self.storage_version,
             config=self.config,
+            training_source_uri=self.training_source_uri,
+            training_source_type=self.training_source_type,
             **kwargs,
         )
         return new_index

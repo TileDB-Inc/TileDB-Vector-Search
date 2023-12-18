@@ -451,9 +451,12 @@ def create(
     vector_type: np.dtype,
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
+    training_source_uri: str = None,
+    training_source_type: str = None,
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> IVFFlatIndex:
+    print('[ivf_flat_index@create] uri', uri, 'group_exists', group_exists, 'config', config, 'storage_version', storage_version, 'kwargs', kwargs)
     validate_storage_version(storage_version)
 
     index.create_metadata(
@@ -468,8 +471,12 @@ def create(
     # TODO(paris): Save training_source_uri as metadata so that we use it for re-ingestion's.
     with tiledb.scope_ctx(ctx_or_config=config):
         group = tiledb.Group(uri, "w")
-        tile_size = int(TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions)
         group.meta["partition_history"] = json.dumps([0])
+        if training_source_uri is not None:
+            group.meta["training_source_uri"] = training_source_uri
+        if training_source_type is not None:
+            group.meta["training_source_type"] = training_source_type
+        tile_size = int(TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions)
         centroids_array_name = storage_formats[storage_version]["CENTROIDS_ARRAY_NAME"]
         index_array_name = storage_formats[storage_version]["INDEX_ARRAY_NAME"]
         ids_array_name = storage_formats[storage_version]["IDS_ARRAY_NAME"]

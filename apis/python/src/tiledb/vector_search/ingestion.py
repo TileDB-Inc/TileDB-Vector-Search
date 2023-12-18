@@ -401,6 +401,8 @@ def ingest(
         logger: logging.Logger,
         storage_version: str,
     ) -> None:
+        print('[ingestion@create_arrays] index_type', index_type)
+        print('[ingestion@create_arrays] training_source_uri', training_source_uri, 'training_source_type', training_source_type)
         if index_type == "FLAT":
             if not arrays_created:
                 flat_index.create(
@@ -419,7 +421,9 @@ def ingest(
                     vector_type=vector_type,
                     group_exists=True,
                     config=config,
-                    storage_version=storage_version
+                    storage_version=storage_version,
+                    training_source_uri=training_source_uri,
+                    training_source_type=training_source_type,
                 )
             tile_size = int(
                 ivf_flat_index.TILE_SIZE_BYTES
@@ -809,6 +813,8 @@ def ingest(
             kmeans_fit,
         )
 
+        print('[ingestion@centralised_kmeans] training_sample_size', training_sample_size, 'training_source_uri', training_source_uri, 'training_source_type', training_source_type)
+
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
             group = tiledb.Group(index_group_uri)
@@ -863,6 +869,7 @@ def ingest(
                 # raise ValueError(f"We have a training_sample_size of {training_sample_size} but {partitions} partitions - training_sample_size must be >= partitions")
                 centroids = np.random.rand(dimensions, partitions)
 
+            print('[ingestion@centralised_kmeans] sample_vectors', sample_vectors.shape, '\n', sample_vectors)
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
                 A[0:dimensions, 0:partitions] = centroids
