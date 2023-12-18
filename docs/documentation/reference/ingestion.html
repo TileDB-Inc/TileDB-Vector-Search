@@ -202,16 +202,16 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="tiledb.vector_search.ingestion.ingest" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.ingestion.ingest">ingest</h3>
-<p><code>vector_search.ingestion.ingest(index_type, index_uri, *, input_vectors=None, source_uri=None, source_type=None, external_ids=None, external_ids_uri='', external_ids_type=None, updates_uri=None, index_timestamp=None, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, workers=-1, input_vectors_per_work_item=-1, max_tasks_per_stage=-1, storage_version=STORAGE_VERSION, verbose=False, trace_id=None, use_sklearn=False, mode=Mode.LOCAL, **kwargs)</code></p>
+<p><code>vector_search.ingestion.ingest(index_type, index_uri, *, input_vectors=None, source_uri=None, source_type=None, external_ids=None, external_ids_uri='', external_ids_type=None, updates_uri=None, index_timestamp=None, config=None, namespace=None, size=-1, partitions=-1, copy_centroids_uri=None, training_sample_size=-1, training_input_vectors=None, training_source_uri=None, training_source_type=None, workers=-1, input_vectors_per_work_item=-1, max_tasks_per_stage=-1, storage_version=STORAGE_VERSION, verbose=False, trace_id=None, use_sklearn=False, mode=Mode.LOCAL, **kwargs)</code></p>
 <p>Ingest vectors into TileDB.</p>
 <section id="parameters" class="level4">
 <h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
 <table class="table">
 <colgroup>
-<col style="width: 15%">
-<col style="width: 16%">
-<col style="width: 59%">
 <col style="width: 9%">
+<col style="width: 9%">
+<col style="width: 75%">
+<col style="width: 5%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -315,52 +315,70 @@ ul.task-list li input[type="checkbox"] {
 <tr class="even">
 <td><code>training_sample_size</code></td>
 <td>int</td>
-<td>vector sample size to train centroids with, if not provided, is auto-configured based on the dataset sizes</td>
+<td>vector sample size to train centroids with, if not provided, is auto-configured based on the dataset sizes should not be provided if training_source_uri is provided</td>
 <td><code>-1</code></td>
 </tr>
 <tr class="odd">
+<td><code>training_input_vectors</code></td>
+<td>np.ndarray</td>
+<td>Training input vectors, if this is provided it takes precedence over training_source_uri and training_source_type should not be provided if training_sample_size or training_source_uri is provided</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>training_source_uri</code></td>
+<td>str</td>
+<td>The source URI to use for training centroids when building a IVF_FLAT vector index, if not provided, the first training_sample_size vectors from source_uri are used should not be provided if training_sample_size or training_input_vectors is provided</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>training_source_type</code></td>
+<td>str</td>
+<td>Type of the training source data in training_source_uri if left empty, is auto-detected from the suffix of training_source_type should only be provided when training_source_uri is provided</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
 <td><code>workers</code></td>
 <td>int</td>
 <td>number of workers for vector ingestion, if not provided, is auto-configured based on the dataset size</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>input_vectors_per_work_item</code></td>
 <td>int</td>
 <td>number of vectors per ingestion work item, if not provided, is auto-configured</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>max_tasks_per_stage</code></td>
 <td>int</td>
 <td>Max number of tasks per execution stage of ingestion, if not provided, is auto-configured</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>storage_version</code></td>
 <td>str</td>
 <td>Vector index storage format version. If not provided, defaults to the latest version.</td>
 <td><code>STORAGE_VERSION</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>verbose</code></td>
 <td>bool</td>
 <td>verbose logging, defaults to False</td>
 <td><code>False</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>trace_id</code></td>
 <td>Optional[str]</td>
 <td>trace ID for logging, defaults to None</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>use_sklearn</code></td>
 <td>bool</td>
 <td>Whether to use scikit-learn’s implementation of k-means clustering instead of tiledb.vector_search’s. Defaults to false.</td>
 <td><code>False</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>mode</code></td>
 <td>Mode</td>
 <td>execution mode, defaults to LOCAL use BATCH for distributed execution</td>
