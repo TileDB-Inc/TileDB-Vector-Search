@@ -8,6 +8,7 @@ from tiledb.cloud.dag import Mode
 from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION, validate_storage_version
 
+
 def ingest(
     index_type: str,
     index_uri: str,
@@ -144,12 +145,12 @@ def ingest(
 
     if training_source_uri and training_sample_size != -1:
         raise ValueError("training_source_uri and training_sample_size should not both be provided")
-    if training_source_uri and training_input_vectors:
+    if training_source_uri and training_input_vectors is not None:
         raise ValueError("training_source_uri and training_input_vectors should not both be provided")
 
-    if training_input_vectors != None and training_sample_size != -1:
+    if training_input_vectors is not None and training_sample_size != -1:
         raise ValueError("training_input_vectors and training_sample_size should not both be provided")
-    if training_input_vectors != None and training_source_type:
+    if training_input_vectors is not None and training_source_type:
         raise ValueError("training_input_vectors and training_source_type should not both be provided")
 
     if training_source_type and not training_source_uri:
