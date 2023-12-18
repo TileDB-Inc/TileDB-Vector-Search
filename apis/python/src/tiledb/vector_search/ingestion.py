@@ -859,9 +859,7 @@ def ingest(
                     centroids = kmeans_fit(partitions, init, max_iter, verbose, n_init, array_to_matrix(np.transpose(sample_vectors)))
                     centroids = np.array(centroids) # TODO: why is this here?
             else:
-                # NOTE(paris): Should we instead take the first training_sample_size vectors and then fill in random for the rest?
-                # np.random() is [0, 1) so it seems like it won't fit the data unless it's also in that range?
-                centroids = np.random.rand(dimensions, partitions)
+                raise ValueError(f"We have a training_sample_size of {training_sample_size} but {partitions} partitions - training_sample_size must be >= partitions")
 
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:

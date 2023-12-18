@@ -214,12 +214,12 @@ def create_random_dataset_u8(nb, d, nq, k, path):
     return data
 
 
-def create_schema(dimension0DomainMax, dimension1DomainMax):
+def create_schema(dimension_0_domain_max, dimension_1_domain_max):
     schema = tiledb.ArraySchema(
         domain=tiledb.Domain(
             *[
-                tiledb.Dim(name="__dim_0", domain=(0, dimension0DomainMax), tile=max(1, min(3, dimension0DomainMax)), dtype="int32"),
-                tiledb.Dim(name="__dim_1", domain=(0, dimension1DomainMax), tile=max(1, min(3, dimension1DomainMax)), dtype="int32"),
+                tiledb.Dim(name="__dim_0", domain=(0, dimension_0_domain_max), tile=max(1, min(3, dimension_0_domain_max)), dtype="int32"),
+                tiledb.Dim(name="__dim_1", domain=(0, dimension_1_domain_max), tile=max(1, min(3, dimension_1_domain_max)), dtype="int32"),
             ]
         ),
         attrs=[
