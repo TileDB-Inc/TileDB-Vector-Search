@@ -400,6 +400,8 @@ def ingest(
         vector_type: np.dtype,
         logger: logging.Logger,
         storage_version: str,
+        training_source_uri: Optional[str],
+        training_source_type: Optional[str],
     ) -> None:
         if index_type == "FLAT":
             if not arrays_created:
@@ -2017,7 +2019,9 @@ def ingest(
             input_vectors_work_items=input_vectors_work_items,
             vector_type=vector_type,
             logger=logger,
-            storage_version=storage_version
+            storage_version=storage_version,
+            training_source_uri=training_source_uri,
+            training_source_type=training_source_type,
         )
         group.meta["temp_size"] = size
         group.close()
