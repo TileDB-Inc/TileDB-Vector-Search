@@ -9,6 +9,7 @@ from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.module import array_to_matrix, kmeans_fit, kmeans_predict
 from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.training_sampling_policy import TrainingSamplingPolicy
 
 MINIMUM_ACCURACY = 0.85
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
@@ -812,3 +813,131 @@ def test_kmeans():
     print(f"tiledb score: {tdb_score}")
 
     assert tdb_score < 1.5 * sklearn_score
+
+
+def test_ingest_with_missing_training_source_uri(tmp_path):
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    data = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3], [4, 4, 4], [5, 5, 5]], dtype=np.float32)
+    create_manual_dataset_f32_only_data(data=data, path=dataset_dir)
+    index_uri = os.path.join(tmp_path, "array")
+    with pytest.raises(ValueError) as error:
+        ingest(
+            index_type="IVF_FLAT", 
+            index_uri=index_uri, 
+            source_uri=os.path.join(dataset_dir, "data.f32bin"),
+            training_sampling_policy=TrainingSamplingPolicy.SOURCE_URI
+        )
+    assert "training_source_uri must be provided" in str(error.value)
+
+def test_ingest_with_training_source_uri_f32(tmp_path):
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    data = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3], [4, 4, 4], [5, 5, 5]], dtype=np.float32)
+    create_manual_dataset_f32_only_data(data=data, path=dataset_dir)
+
+    training_data = np.array([data[0], data[1], data[2]], dtype=np.float32)
+    create_manual_dataset_f32_only_data(data=training_data, path=dataset_dir, dataset_name="training_data.f32bin")
+    index_uri = os.path.join(tmp_path, "array")
+    index = ingest(
+        index_type="IVF_FLAT", 
+        index_uri=index_uri, 
+        source_uri=os.path.join(dataset_dir, "data.f32bin"),
+        training_sampling_policy=TrainingSamplingPolicy.SOURCE_URI,
+        training_source_uri=os.path.join(dataset_dir, "training_data.f32bin")
+    )
+
+    query_vector_index = 1
+    query_vectors = np.array([data[query_vector_index]], dtype=np.float32)
+    result_d, result_i = index.query(query_vectors, k=1)
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
+    print("result_d", result_d, "result_i", result_i)
+
+    index_ram = FlatIndex(uri=index_uri)
+    result_d, result_i = index_ram.query(query_vectors, k=1)
+    print("result_d", result_d, "result_i", result_i)
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
+
+    # Add a short test that we can also ingest with a specified training_source_type.
+    ingest(
+        index_type="IVF_FLAT",
+        index_uri=os.path.join(tmp_path, "array_2"), 
+        source_uri=os.path.join(dataset_dir, "data.f32bin"),
+        training_sampling_policy=TrainingSamplingPolicy.SOURCE_URI,
+        training_source_uri=os.path.join(dataset_dir, "training_data.f32bin"),
+        training_source_type="FVEC"
+    )
+
+def test_ingest_with_training_source_uri_tdb(tmp_path):
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    os.mkdir(dataset_dir)
+    # data.shape should give you (cols, rows). So we transpose this before using it.
+    data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3], [4.0, 4.1, 4.2, 4.3], [5.0, 5.1, 5.2, 5.3]], dtype=np.float32).transpose()
+    print('data', data.shape, '\n', data)
+    # create_manual_dataset_f32_only_data(data=data, path=dataset_dir)
+    create_array(
+        path=os.path.join(dataset_dir, "data.tdb"), 
+        data=data,
+        dimension0DomainMax=data.shape[0] - 1, # number of rows
+        dimension1DomainMax=data.shape[1] - 1, # number of cols
+    )
+    with tiledb.open(os.path.join(dataset_dir, "data.tdb"), mode="r") as src_array:
+        print('data.tdb', src_array.schema)
+
+    training_data = data[1:2] # np.array([data[0], data[1], data[2]], dtype=np.float32)
+    print('training_data', training_data.shape, '\n', training_data)
+    create_array(
+        path=os.path.join(dataset_dir, "training_data.tdb"), 
+        data=training_data,
+        dimension0DomainMax=training_data.shape[0] - 1, # number of rows
+        dimension1DomainMax=training_data.shape[1] - 1, # number of cols
+    )
+    with tiledb.open(os.path.join(dataset_dir, "training_data.tdb"), mode="r") as src_array:
+        print('training_data.tdb', src_array.schema)
+
+    # dimensions should be rows
+    # size should be cols
+
+    # [ingestion@ingest] autodetect_source_type TILEDB_ARRAY in_size 4 dimensions 5 vector_type float32
+    # [ingestion@centralised_kmeans] for training in_size 4 dimensions 3 vector_type float32
+
+    # dimensions = 5
+    # start_pos = 0
+    # end_pos = 4
+    # with tiledb.open(os.path.join(dataset_dir, "training_data.tdb"), mode="r") as src_array:
+    #     print('src_array', src_array.schema)
+    #     res = np.transpose(
+    #         # src_array[:][attr_name]
+    #         # src_array[0:dimensions, :]["values"]
+    #         src_array[0:dimensions, start_pos:end_pos]["values"]
+    #     ).copy(order="C")
+    #     print(res)
+    # return
+
+    index_uri = os.path.join(tmp_path, "array")
+    index = ingest(
+        index_type="IVF_FLAT", 
+        index_uri=index_uri, 
+        source_uri=os.path.join(dataset_dir, "data.tdb"),
+        training_sampling_policy=TrainingSamplingPolicy.SOURCE_URI,
+        training_source_uri=os.path.join(dataset_dir, "training_data.tdb")
+    )
+
+    query_vector_index = 1
+    query_vectors = np.array([data.transpose()[query_vector_index]], dtype=np.float32)
+    result_d, result_i = index.query(query_vectors, k=1)
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
+    print("result_d", result_d, "result_i", result_i)
+
+    index_ram = FlatIndex(uri=index_uri)
+    result_d, result_i = index_ram.query(query_vectors, k=1)
+    print("result_d", result_d, "result_i", result_i)
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
+
+    # Add a short test that we can also ingest with a specified training_source_type.
+    ingest(
+        index_type="IVF_FLAT",
+        index_uri=os.path.join(tmp_path, "array_2"), 
+        source_uri=os.path.join(dataset_dir, "data.tdb"),
+        training_sampling_policy=TrainingSamplingPolicy.SOURCE_URI,
+        training_source_uri=os.path.join(dataset_dir, "training_data.tdb"),
+        training_source_type="TILEDB_ARRAY"
+    )

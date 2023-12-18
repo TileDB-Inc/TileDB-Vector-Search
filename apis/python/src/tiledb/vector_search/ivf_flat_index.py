@@ -473,6 +473,7 @@ def create(
         index_array_name = storage_formats[storage_version]["INDEX_ARRAY_NAME"]
         ids_array_name = storage_formats[storage_version]["IDS_ARRAY_NAME"]
         parts_array_name = storage_formats[storage_version]["PARTS_ARRAY_NAME"]
+        # this is hwere you could create the training_source_uri
         centroids_uri = f"{uri}/{centroids_array_name}"
         index_array_uri = f"{uri}/{index_array_name}"
         ids_uri = f"{uri}/{ids_array_name}"

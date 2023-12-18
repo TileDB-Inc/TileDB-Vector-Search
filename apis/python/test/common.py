@@ -87,12 +87,31 @@ def create_random_dataset_f32_only_data(nb, d, centers, path):
     """
     from sklearn.datasets import make_blobs
 
-    os.mkdir(path)
+    if not os.path.exists(path):
+        os.mkdir(path)
     X, _ = make_blobs(n_samples=nb, n_features=d, centers=centers, random_state=1)
 
     with open(os.path.join(path, "data.f32bin"), "wb") as f:
         np.array([nb, d], dtype="uint32").tofile(f)
         X.astype("float32").tofile(f)
+
+def create_manual_dataset_f32_only_data(data, path, dataset_name="data.f32bin"):
+    """
+    Creates a dataset from manually defined data and writes it to disk.
+
+    Parameters
+    ----------
+    data: numpy.ndarray
+        Manually defined data
+    path: str
+        Path to write the dataset to
+    """
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+    with open(os.path.join(path, dataset_name), "wb") as f:
+        np.array([data.shape[0], data.shape[1]], dtype="uint32").tofile(f)
+        data.astype("float32").tofile(f)
 
 def create_random_dataset_f32(nb, d, nq, k, path):
     """
@@ -116,7 +135,8 @@ def create_random_dataset_f32(nb, d, nq, k, path):
     from sklearn.neighbors import NearestNeighbors
 
     # print(f"Preparing datasets with {nb} random points and {nq} queries.")
-    os.mkdir(path)
+    if not os.path.exists(path):
+        os.mkdir(path)
     X, _ = make_blobs(n_samples=nb + nq, n_features=d, centers=nq, random_state=1)
 
     data, queries = sklearn.model_selection.train_test_split(
@@ -164,7 +184,8 @@ def create_random_dataset_u8(nb, d, nq, k, path):
     from sklearn.neighbors import NearestNeighbors
 
     # print(f"Preparing datasets with {nb} random points and {nq} queries.")
-    os.mkdir(path)
+    if not os.path.exists(path):
+        os.mkdir(path)
     X, _ = make_blobs(n_samples=nb + nq, n_features=d, centers=nq, random_state=1)
 
     data, queries = sklearn.model_selection.train_test_split(
@@ -193,16 +214,16 @@ def create_random_dataset_u8(nb, d, nq, k, path):
     return data
 
 
-def create_schema():
+def create_schema(dimension0DomainMax, dimension1DomainMax):
     schema = tiledb.ArraySchema(
         domain=tiledb.Domain(
             *[
-                tiledb.Dim(name="__dim_0", domain=(0, 2), tile=3, dtype="int32"),
-                tiledb.Dim(name="__dim_1", domain=(0, 3), tile=3, dtype="int32"),
+                tiledb.Dim(name="__dim_0", domain=(0, dimension0DomainMax), tile=max(1, min(3, dimension0DomainMax)), dtype="int32"),
+                tiledb.Dim(name="__dim_1", domain=(0, dimension1DomainMax), tile=max(1, min(3, dimension1DomainMax)), dtype="int32"),
             ]
         ),
         attrs=[
-            tiledb.Attr(name="", dtype="float32", var=False, nullable=False),
+            tiledb.Attr(name="values", dtype="float32", var=False, nullable=False),
         ],
         cell_order="col-major",
         tile_order="col-major",
@@ -212,8 +233,8 @@ def create_schema():
     return schema
 
 
-def create_array(path: str, data):
-    schema = create_schema()
+def create_array(path: str, data, dimension0DomainMax = 2, dimension1DomainMax = 3):
+    schema = create_schema(dimension0DomainMax, dimension1DomainMax)
     tiledb.Array.create(path, schema)
     with tiledb.open(path, "w") as A:
         A[:] = data
@@ -256,6 +277,23 @@ def accuracy(
         found += len(np.intersect1d(temp_result, gt[i]))
     return found / total
 
+def check_equals(result_d, result_i, expected_result_d, expected_result_i):
+    """
+    Check that the results are equal to the expected results.
+
+    Parameters
+    ----------
+    result_d: int
+        The distances returned by the query
+    result_i: int
+        The indices returned by the query
+    result_d_expected: int
+        The expected distances
+    result_i_expected: int
+        The expected indices
+    """
+    assert result_i == expected_result_i
+    assert result_d == expected_result_d
 
 # Generate random names for test array uris
 def random_name(name: str) -> str:

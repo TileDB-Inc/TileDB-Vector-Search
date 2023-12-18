@@ -7,7 +7,10 @@ from tiledb.cloud.dag import Mode
 
 from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION, validate_storage_version
+from tiledb.vector_search.module import kmeans_predict
+from tiledb.vector_search.training_sampling_policy import TrainingSamplingPolicy
 
+np.random.seed(0)
 
 def ingest(
     index_type: str,
@@ -26,7 +29,10 @@ def ingest(
     size: int = -1,
     partitions: int = -1,
     copy_centroids_uri: str = None,
+    training_sampling_policy: TrainingSamplingPolicy = TrainingSamplingPolicy.FIRST_N,
     training_sample_size: int = -1,
+    training_source_uri: str = None,
+    training_source_type: str = None,
     workers: int = -1,
     input_vectors_per_work_item: int = -1,
     max_tasks_per_stage: int= -1,
@@ -75,9 +81,19 @@ def ingest(
     copy_centroids_uri: str
         TileDB array URI to copy centroids from,
         if not provided, centroids are build running kmeans
+    training_sampling_policy: TrainingSamplingPolicy = TrainingSamplingPolicy.FIRST_N
+        Only used for IVF_FLAT, the policy to use for training centroids. 
+        If FIRST_N, then the first training_sample_size vectors of source_uri are used.
+        If RANDOM, then training_sample_size random vectors from source_uri are used.
+        If SOURCE_URI, then all of the vectors from training_source_uri are used.
     training_sample_size: int = -1
         vector sample size to train centroids with,
         if not provided, is auto-configured based on the dataset sizes
+    training_source_uri: str = None
+        Only used for IVF_FLAT, the source URI to use for training centroids if 
+        training_sampling_policy is SOURCE_URI. Should be of the same type as source_uri.
+    training_source_type: str = None
+        Type of the training source data. If left empty it is auto-detected from the suffix of training_source_type.
     workers: int = -1
         number of workers for vector ingestion,
         if not provided, is auto-configured based on the dataset size
@@ -248,7 +264,7 @@ def ingest(
                 size = int(file_size / vector_size)
                 return size, dimensions, np.uint8
         else:
-            raise ValueError(f"Not supported source_type {source_type}")
+            raise ValueError(f"Not supported source_type {source_type} - valid types are [TILEDB_ARRAY, U8BIN, F32BIN, FVEC, IVEC, BVEC]")
 
     def write_input_vectors(
         group: tiledb.Group,
@@ -640,6 +656,9 @@ def ingest(
         logger.debug(
             "Reading input vectors start_pos: %i, end_pos: %i", start_pos, end_pos
         )
+
+        print('[ingestion@read_input_vectors] start_pos', start_pos, 'end_pos', end_pos, 'dimensions', dimensions)
+
         if source_type == "TILEDB_ARRAY":
             with tiledb.open(
                 source_uri, mode="r", timestamp=index_timestamp
@@ -749,8 +768,12 @@ def ingest(
         vector_type: np.dtype,
         partitions: int,
         dimensions: int,
-        sample_start_pos: int,
-        sample_end_pos: int,
+        # sample_start_pos: int,
+        # sample_end_pos: int,
+        training_sample_size: int,
+        training_sampling_policy: TrainingSamplingPolicy,
+        training_source_uri: Optional[str],
+        training_source_type: Optional[str],
         init: str = "random",
         max_iter: int = 10,
         n_init: int = 1,
@@ -765,34 +788,74 @@ def ingest(
             array_to_matrix,
             kmeans_fit,
         )
+        # paris debug
+        print('[ingestion@centralised_kmeans] dimensions', dimensions)
+        print('[ingestion@centralised_kmeans] partitions', partitions)
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
+            print('[ingestion@centralised_kmeans] index_group_uri', index_group_uri)
             group = tiledb.Group(index_group_uri)
             centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
-            verb = 0
-            if verbose:
-                verb = 3
+            print('[ingestion@centralised_kmeans] training_source_uri', training_source_uri, 'training_source_type', training_source_type)
 
-            if sample_end_pos - sample_start_pos >= partitions:
-                sample_vectors = read_input_vectors(
-                    source_uri=source_uri,
-                    source_type=source_type,
-                    vector_type=vector_type,
-                    dimensions=dimensions,
-                    start_pos=sample_start_pos,
-                    end_pos=sample_end_pos,
-                    config=config,
-                    verbose=verbose,
-                    trace_id=trace_id,
-                ).astype(np.float32)
+            if training_sample_size >= partitions:
+                print('[ingestion@centralised_kmeans] We have a large sample range than the number of partitions, so we can use the sample range to train the centroids.')
+                if training_sampling_policy == TrainingSamplingPolicy.FIRST_N:
+                    sample_vectors = read_input_vectors(
+                        source_uri=source_uri,
+                        source_type=source_type,
+                        vector_type=vector_type,
+                        dimensions=dimensions,
+                        start_pos=0,
+                        end_pos=training_sample_size,
+                        config=config,
+                        verbose=verbose,
+                        trace_id=trace_id,
+                    ).astype(np.float32)
+                elif training_sampling_policy == TrainingSamplingPolicy.RANDOM:
+                    # TODO(paris): Add a read_input_vectors_random() function to use instead.
+                    sample_vectors = read_input_vectors(
+                        source_uri=source_uri,
+                        source_type=source_type,
+                        vector_type=vector_type,
+                        dimensions=dimensions,
+                        start_pos=0,
+                        end_pos=training_sample_size,
+                        config=config,
+                        verbose=verbose,
+                        trace_id=trace_id,
+                    ).astype(np.float32)
+                elif training_sampling_policy == TrainingSamplingPolicy.SOURCE_URI:
+                    if training_source_type is None:
+                        training_source_type = autodetect_source_type(source_uri=training_source_uri)
+                    print('[ingestion@centralised_kmeans] training_source_type', training_source_type)
+                    training_in_size, training_dimensions, training_vector_type = read_source_metadata(source_uri=training_source_uri, source_type=training_source_type)
+                    print('[ingestion@centralised_kmeans] for training', 'in_size', training_in_size, 'dimensions', training_dimensions, 'vector_type', training_vector_type)
+                    dimensions = training_dimensions
+                    sample_vectors = read_input_vectors(
+                        source_uri=training_source_uri,
+                        source_type=training_source_type,
+                        vector_type=training_vector_type,
+                        dimensions=training_dimensions,
+                        start_pos=0,
+                        end_pos=training_in_size,
+                        config=config,
+                        verbose=verbose,
+                        trace_id=trace_id,
+                    ).astype(np.float32)
+                else:
+                    raise ValueError(f"Unsupported training_sampling_policy {training_sampling_policy}")
+                print('[ingestion@centralised_kmeans] sample_vectors', sample_vectors.shape, sample_vectors)
 
+                logger.debug("Start kmeans training")
                 if use_sklearn:
                     km = KMeans(
                         n_clusters=partitions,
                         init=init,
                         max_iter=max_iter,
-                        verbose=verb,
+                        verbose=3 if verbose else 0,
                         n_init=n_init,
+                        random_state=0,
                     )
                     km.fit_predict(sample_vectors)
                     centroids = np.transpose(np.array(km.cluster_centers_))
@@ -800,9 +863,12 @@ def ingest(
                     centroids = kmeans_fit(partitions, init, max_iter, verbose, n_init, array_to_matrix(np.transpose(sample_vectors)))
                     centroids = np.array(centroids) # TODO: why is this here?
             else:
+                print('[ingestion@centralised_kmeans] We have a smaller sample range than the number of partitions')
+                # NOTE(paris): Should we instead take the first training_sample_size vectors and then fill in random for the rest?
+                # np.random() is [0, 1) so it seems like it won't fit the data unless it's also in that range?
                 centroids = np.random.rand(dimensions, partitions)
-
-            logger.debug("Start kmeans training")
+            
+            print('[ingestion@centralised_kmeans] centroids', centroids.shape, centroids)
 
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
@@ -1486,7 +1552,25 @@ def ingest(
         partitions: int,
         dimensions: int,
         copy_centroids_uri: str,
+        
+        # Either you provide training_sample_size and sampling_policy.
         training_sample_size: int,
+        # enum: first training_sample_size, random of training_sample_size. default to first training_sample_size.
+        training_sampling_policy: TrainingSamplingPolicy,
+        
+        # Or you provide the samples directly.
+        training_source_uri: Optional[str], # a list of vectors
+
+        training_source_type: Optional[str], # a list of vectors
+
+        # When to use training_source_uri?
+        # - For large datasets, first X is efficient. Random sample is not efficient.
+
+        # for each partition in source_uri you need to do sampling and do merging on them
+        # change task graph
+
+        # first PR just make it work for centralised_kmeans
+
         input_vectors_per_work_item: int,
         input_vectors_work_items_per_worker: int,
         table_partitions_per_work_item: int,
@@ -1498,6 +1582,11 @@ def ingest(
         use_sklearn: bool = False,
         mode: Mode = Mode.LOCAL,
     ) -> dag.DAG:
+        print('[ingestion@create_ingestion_dag] training_sample_size', training_sample_size)
+        print('[ingestion@create_ingestion_dag] input_vectors_per_work_item', input_vectors_per_work_item)
+        print('[ingestion@create_ingestion_dag] input_vectors_work_items_per_worker', input_vectors_work_items_per_worker)
+        print('[ingestion@create_ingestion_dag] table_partitions_per_work_item', table_partitions_per_work_item)
+        print('[ingestion@create_ingestion_dag] table_partitions_work_items_per_worker', table_partitions_work_items_per_worker)
         if mode == Mode.BATCH:
             d = dag.DAG(
                 name="vector-ingestion",
@@ -1569,8 +1658,12 @@ def ingest(
                         vector_type=vector_type,
                         partitions=partitions,
                         dimensions=dimensions,
-                        sample_start_pos=0,
-                        sample_end_pos=training_sample_size,
+                        # sample_start_pos=0,
+                        # sample_end_pos=training_sample_size,
+                        training_sample_size=training_sample_size,
+                        training_sampling_policy=training_sampling_policy,
+                        training_source_uri=training_source_uri,
+                        training_source_type=training_source_type,
                         config=config,
                         verbose=verbose,
                         trace_id=trace_id,
@@ -1603,6 +1696,7 @@ def ingest(
                         ):
                             start = i
                             end = i + input_vectors_batch_size
+                            print('[ingestion@create_ingestion_dag@] training_sample_size > CENTRALISED_KMEANS_MAX_SAMPLE_SIZE so: start -> end', start, end)
                             if end > size:
                                 end = size
                             kmeans_workers.append(
@@ -1853,6 +1947,7 @@ def ingest(
             in_size, dimensions, vector_type = read_source_metadata(
                 source_uri=source_uri, source_type=source_type
             )
+            print('[ingestion@ingest] autodetect_source_type', source_type, 'in_size', in_size, 'dimensions', dimensions, 'vector_type', vector_type)
         if size == -1:
             size = int(in_size)
         if size > in_size:
@@ -1862,6 +1957,12 @@ def ingest(
         logger.debug("Vector dimension type %s", vector_type)
         if partitions == -1:
             partitions = max(1, int(math.sqrt(size)))
+        if training_sampling_policy != TrainingSamplingPolicy.SOURCE_URI and training_source_uri:
+            raise ValueError("If training_sampling_policy is not SOURCE_URI, training_source_uri should not be provided")
+        if training_sampling_policy == TrainingSamplingPolicy.SOURCE_URI and not training_source_uri:
+            raise ValueError("If training_sampling_policy is SOURCE_URI, training_source_uri must be provided")
+        if training_sampling_policy == TrainingSamplingPolicy.SOURCE_URI and training_sample_size != -1:
+            raise ValueError("If training_sampling_policy is SOURCE_URI, training_sample_size should not be provided")
         if training_sample_size == -1:
             training_sample_size = min(size, 100 * partitions)
         if mode == Mode.BATCH:
@@ -1870,7 +1971,9 @@ def ingest(
         else:
             workers = 1
         logger.debug("Partitions %d", partitions)
+        logger.debug("Training sample policy %s", training_sampling_policy)
         logger.debug("Training sample size %d", training_sample_size)
+        logger.debug("Training sample uri %s", training_source_uri)
         logger.debug("Number of workers %d", workers)
 
         if external_ids is not None:
@@ -1959,6 +2062,9 @@ def ingest(
             dimensions=dimensions,
             copy_centroids_uri=copy_centroids_uri,
             training_sample_size=training_sample_size,
+            training_sampling_policy=training_sampling_policy,
+            training_source_uri=training_source_uri,
+            training_source_type=training_source_type,
             input_vectors_per_work_item=input_vectors_per_work_item,
             input_vectors_work_items_per_worker=input_vectors_work_items_per_worker,
             table_partitions_per_work_item=table_partitions_per_work_item,
