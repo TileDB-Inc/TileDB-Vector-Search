@@ -76,9 +76,9 @@ class ivf_flat_index_metadata {
  private:
   friend Group;
 
-  using base_sizes_type = uint32_t;
-  using ingestion_timestamps_type = uint32_t;
-  using partition_history_type = uint32_t;
+  using base_sizes_type = uint64_t;
+  using ingestion_timestamps_type = uint64_t;
+  using partition_history_type = uint64_t;
 
   /**************************************************************************
    * Members set / updated by users of the group
@@ -154,7 +154,7 @@ class ivf_flat_index_metadata {
     auto json = nlohmann::json::parse(json_str);
     std::vector<T> vec;
     for (auto& item : json) {
-      vec.push_back(item.get<uint32_t>());
+      vec.push_back(item.get<T>());
     }
     return vec;
   }

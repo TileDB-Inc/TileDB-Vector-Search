@@ -61,6 +61,10 @@ class ivf_flat_index_group {
 
   std::reference_wrapper<const tiledb::Context> cached_ctx_;
   std::filesystem::path group_uri_;
+  size_t index_timestamp_{0};
+  size_t group_timestamp_{0};
+  size_t timetravel_index_{0};
+
   std::reference_wrapper<const Index> index_;
   std::string version_;
   tiledb_query_type_t opened_for_{TILEDB_READ};
@@ -118,7 +122,7 @@ class ivf_flat_index_group {
   /**
    * @brief Add an array to the group.
    *
-   * @param basename
+   * @param array_name
    *
    * @todo Could have type of array set here instead of by Index.  Might be
    * better to have it set in conjunction with array being set?
@@ -143,7 +147,7 @@ class ivf_flat_index_group {
    *
    * @param ctx
    */
-  void open_for_read(const tiledb::Config& cfg) {
+  void init_for_open(const tiledb::Config& cfg) {
     tiledb::VFS vfs(cached_ctx_);
     if (!vfs.is_dir(group_uri_)) {
       throw std::runtime_error(
@@ -181,6 +185,32 @@ class ivf_flat_index_group {
     }
   }
 
+  void open_for_read(const tiledb::Config& cfg) {
+    init_for_open(cfg);
+
+    if (size(metadata_.ingestion_timestamps_) == 0) {
+      throw std::runtime_error("No ingestion timestamps found.");
+    }
+    if (index_timestamp_ == 0) {
+      index_timestamp_ = metadata_.ingestion_timestamps_.back();
+    }
+
+    auto timestamp_bound = std::lower_bound(
+        begin(metadata_.ingestion_timestamps_),
+        end(metadata_.ingestion_timestamps_),
+        index_timestamp_);
+    if (timestamp_bound == end(metadata_.ingestion_timestamps_)) {
+      throw std::runtime_error(
+          "Requested read timestamp " + std::to_string(index_timestamp_) +
+          " is beyond " + std::to_string(metadata_.ingestion_timestamps_.back()));
+    }
+    timetravel_index_ = std::distance(
+        begin(metadata_.ingestion_timestamps_), timestamp_bound);
+
+    // @todo Or index_timestamp_?
+    group_timestamp_ = metadata_.ingestion_timestamps_[timetravel_index_];
+  }
+
   /**
    * Open group for writing.  If the group does not exist, create a new one.
    *
@@ -201,8 +231,14 @@ class ivf_flat_index_group {
 
     if (vfs.is_dir(group_uri_)) {
       /** Load the current group metadata */
-      open_for_read(cfg);
-
+      init_for_open(cfg);
+      if (index_timestamp_ < metadata_.ingestion_timestamps_.back()) {
+        throw std::runtime_error(
+            "Requested write timestamp " + std::to_string(index_timestamp_) +
+            " is not greater than " +
+            std::to_string(metadata_.ingestion_timestamps_.back()));
+        group_timestamp_ = index_timestamp_;
+      }
     } else {
       /** Create a new group */
       create_default(cfg);
@@ -318,16 +354,23 @@ class ivf_flat_index_group {
    * @param ctx
    * @param uri
    * @param version
+   * @param index
+   * @param rw
+   * @param timestamp
+   *
+   * @todo Chained parameters here too?
    */
   ivf_flat_index_group(
       const tiledb::Context& ctx,
       const std::string& uri,
       const Index& index,
       tiledb_query_type_t rw = TILEDB_READ,
+      size_t timestamp = 0,
       const std::string& version = std::string{""},
       const tiledb::Config& cfg = tiledb::Config{})
       : cached_ctx_(ctx)
       , group_uri_(uri)
+      , index_timestamp_(timestamp)
       , index_(index)
       , version_(version)
       , opened_for_(rw) {
@@ -387,11 +430,11 @@ class ivf_flat_index_group {
    **************************************************************************/
 
   /** Temporary until time traveling is implemented */
-  auto get_ingestion_timestamp() const {
+  auto get_previous_ingestion_timestamp() const {
     return metadata_.ingestion_timestamps_.back();
   }
-  auto set_ingestion_timestamp(size_t timestamp) {
-    metadata_.ingestion_timestamps_.back() = timestamp;
+  auto get_ingestion_timestamp() const {
+    return metadata_.ingestion_timestamps_[timetravel_index_];
   }
   auto append_ingestion_timestamp(size_t timestamp) {
     metadata_.ingestion_timestamps_.push_back(timestamp);
@@ -400,11 +443,11 @@ class ivf_flat_index_group {
     return metadata_.ingestion_timestamps_;
   }
 
-  auto get_base_size() const {
+  auto get_previous_base_size() const {
     return metadata_.base_sizes_.back();
   }
-  auto set_base_size(size_t size) {
-    metadata_.base_sizes_.back() = size;
+  auto get_base_size() const {
+    return metadata_.base_sizes_[timetravel_index_];
   }
   auto append_base_size(size_t size) {
     metadata_.base_sizes_.push_back(size);
@@ -413,17 +456,29 @@ class ivf_flat_index_group {
     return metadata_.base_sizes_;
   }
 
-  auto get_num_partitions() const {
+  auto get_previous_num_partitions() const {
     return metadata_.partition_history_.back();
   }
-  auto set_num_partitions(size_t size) {
-    metadata_.partition_history_.back() = size;
+  auto get_num_partitions() const {
+    return metadata_.partition_history_[timetravel_index_];
   }
   auto append_num_partitions(size_t size) {
     metadata_.partition_history_.push_back(size);
   }
   auto get_all_num_partitions() {
     return metadata_.partition_history_;
+  }
+
+  auto get_all_active_array_names() {
+    return active_array_names_;
+  }
+
+  auto get_all_active_uris() {
+    std::vector<std::string> uris;
+    for (auto&& array_name : active_array_names_) {
+      uris.push_back(array_name_to_uri(array_name));
+    }
+    return uris;
   }
 
   auto get_temp_size() const {
@@ -499,10 +554,33 @@ class ivf_flat_index_group {
   [[nodiscard]] std::reference_wrapper<const tiledb::Context> cached_ctx() {
     return cached_ctx_;
   }
+  [[nodiscard]] auto group_timestamp() const {
+    return group_timestamp_;
+  }
+
 
   /**************************************************************************
    * Helpful functions for debugging, testing, etc
    **************************************************************************/
+
+  auto set_ingestion_timestamp(size_t timestamp)  {
+    metadata_.ingestion_timestamps_[timetravel_index_] = timestamp;
+  }
+  auto set_base_size(size_t size)  {
+    metadata_.base_sizes_[timetravel_index_] = size;
+  }
+  auto set_num_partitions(size_t size)  {
+    metadata_.partition_history_[timetravel_index_] = size;
+  }
+  auto set_last_ingestion_timestamp(size_t timestamp)  {
+    metadata_.ingestion_timestamps_.back() = timestamp;
+  }
+  auto set_last_base_size(size_t size)  {
+    metadata_.base_sizes_.back() = size;
+  }
+  auto set_last_num_partitions(size_t size)  {
+    metadata_.partition_history_.back() = size;
+  }
 
   bool compare_group(const ivf_flat_index_group& rhs) const {
     if (group_uri_ != rhs.group_uri_) {

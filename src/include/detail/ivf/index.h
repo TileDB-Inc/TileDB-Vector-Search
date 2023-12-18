@@ -71,22 +71,19 @@ int ivf_index(
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
-  auto read_temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+
   auto centroid_read_temporal_policy =
       (timestamp == 0) ? tiledb::TemporalPolicy() :
                          tiledb::TemporalPolicy(
                              tiledb::TimestampStartEnd, timestamp, timestamp);
-  auto write_temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
   tiledb::Array array(
       ctx, centroids_uri, TILEDB_READ, centroid_read_temporal_policy);
   auto non_empty = array.non_empty_domain<int32_t>();
   auto partitions = non_empty[1].second.second + 1;
+
   auto centroids = tdbColMajorMatrix<centroids_type>(
-      ctx, centroids_uri, 0, 0, 0, partitions, centroid_read_temporal_policy);
+      ctx, centroids_uri, 0, 0, 0, partitions, timestamp);
+
   auto parts = detail::flat::qv_partition(centroids, db, nthreads);
   debug_matrix(parts, "parts");
   {
@@ -182,14 +179,13 @@ int ivf_index(
     // Write out the arrays
     if (parts_uri != "") {
       write_matrix<T, stdx::layout_left, size_t>(
-          ctx, shuffled_db, parts_uri, start_pos, false, write_temporal_policy);
+          ctx, shuffled_db, parts_uri, start_pos, false, timestamp);
     }
     if (index_uri != "") {
-      write_vector(ctx, indices, index_uri, 0, false, write_temporal_policy);
+      write_vector(ctx, indices, index_uri, 0, false, timestamp);
     }
     if (id_uri != "") {
-      write_vector(
-          ctx, shuffled_ids, id_uri, start_pos, false, write_temporal_policy);
+      write_vector(ctx, shuffled_ids, id_uri, start_pos, false, timestamp);
     }
   }
   return 0;
@@ -222,12 +218,8 @@ int ivf_index(
     external_ids = std::vector<ids_type>(db.num_cols());
     std::iota(begin(external_ids), end(external_ids), start_pos);
   } else {
-    auto temporal_policy =
-        (timestamp == 0) ?
-            tiledb::TemporalPolicy() :
-            tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
     external_ids = read_vector<ids_type>(
-        ctx, external_ids_uri, start_pos, end_pos, temporal_policy);
+        ctx, external_ids_uri, start_pos, end_pos, timestamp);
   }
   return ivf_index<T, ids_type, centroids_type>(
       ctx,
@@ -261,11 +253,8 @@ int ivf_index(
     size_t end_pos = 0,
     size_t nthreads = 0,
     uint64_t timestamp = 0) {
-  auto temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
-  auto db = tdbColMajorMatrix<T>(
-      ctx, db_uri, 0, 0, start_pos, end_pos, temporal_policy);
+  auto db =
+      tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos, timestamp);
   db.load();
   return ivf_index<T, ids_type, centroids_type>(
       ctx,
@@ -305,12 +294,8 @@ int ivf_index(
     external_ids = std::vector<ids_type>(db.num_cols());
     std::iota(begin(external_ids), end(external_ids), start_pos);
   } else {
-    auto temporal_policy =
-        (timestamp == 0) ?
-            tiledb::TemporalPolicy() :
-            tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
     external_ids = read_vector<ids_type>(
-        ctx, external_ids_uri, start_pos, end_pos, temporal_policy);
+        ctx, external_ids_uri, start_pos, end_pos, timestamp);
   }
   return ivf_index<T, ids_type, centroids_type>(
       ctx,

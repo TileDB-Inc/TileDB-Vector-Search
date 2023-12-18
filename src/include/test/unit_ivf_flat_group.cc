@@ -118,7 +118,7 @@ TEST_CASE("ivf_flat_group: read constructor", "[ivf_flat_group]") {
 TEST_CASE("ivf_flat_group: read constructor with version", "[ivf_flat_group]") {
   tiledb::Context ctx;
   auto x =
-      ivf_flat_index_group(ctx, group_uri, dummy_index{}, TILEDB_READ, "0.3");
+      ivf_flat_index_group(ctx, group_uri, dummy_index{}, TILEDB_READ, 0, "0.3");
   x.dump("Read constructor with version");
 }
 
@@ -372,9 +372,9 @@ TEST_CASE(
     CHECK(size(x.get_all_num_partitions()) == 1);
   }
 
-  CHECK(x.get_ingestion_timestamp() == expected_ingestion + offset);
-  CHECK(x.get_base_size() == expected_base + offset);
-  CHECK(x.get_num_partitions() == expected_partitions + offset);
+  CHECK(x.get_previous_ingestion_timestamp() == expected_ingestion + offset);
+  CHECK(x.get_previous_base_size() == expected_base + offset);
+  CHECK(x.get_previous_num_partitions() == expected_partitions + offset);
   CHECK(x.get_temp_size() == expected_temp_size + offset);
   CHECK(x.get_dimension() == expected_dimension + offset);
 }

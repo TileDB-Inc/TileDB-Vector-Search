@@ -91,7 +91,7 @@ void create_empty_for_matrix(
 }
 
 /**
- * @brief Create an empty TileDB array based on a Matrix.
+ * @brief Create an empty TileDB array into which to write a Matrix.
  */
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 void create_matrix(
@@ -114,6 +114,16 @@ void create_matrix(
 /**
  * @brief Write the contents of a Matrix to a TileDB array.
  *
+ * @tparam T Type of the matrix elements
+ * @tparam LayoutPolicy Layout policy of the matrix (left or right)
+ * @tparam I Index type of the matrix
+ * @param ctx Context for the write
+ * @param A The matrix to write
+ * @param uri The URI of the TileDB array to write to
+ * @param start_pos Offset row/colum to start writing at
+ * @param create Flag to create the array if it does not exist
+ * @param temporal_policy Temporal policy for the write
+ *
  * @note If we create the matrix here, it will not have any compression
  * @todo Add compressor argument
  */
@@ -124,12 +134,17 @@ void write_matrix(
     const std::string& uri,
     size_t start_pos = 0,
     bool create = true,
-    const tiledb::TemporalPolicy temporal_policy = {}) {
+    size_t timestamp = 0) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
+
+  tiledb::TemporalPolicy temporal_policy =
+      (timestamp == 0) ? tiledb::TemporalPolicy() :
+                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   if (create) {
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri);
   }
+
   std::vector<int32_t> subarray_vals{
       0,
       (int)A.num_rows() - 1,
@@ -191,7 +206,7 @@ void create_empty_for_vector(
 }
 
 /**
- * Create an empty TileDB array to eventually contain a vector
+ * Create an empty TileDB array to into which to write a vector
  * @tparam feature_type
  * @param ctx
  * @param uri
@@ -213,6 +228,13 @@ void create_vector(
 
 /**
  * Write the contents of a std::vector to a TileDB array.
+ * @tparam V The type of the vector
+ * @param ctx The TileDB context for writing the vector
+ * @param v The vector to write
+ * @param uri The URI at which to write it
+ * @param start_pos Offset to start writing from
+ * @param create Flag to create the array if it does not exist
+ *
  * @todo change the naming of this function to something more appropriate
  * @todo change the order of arguments
  */
@@ -223,8 +245,12 @@ void write_vector(
     const std::string& uri,
     size_t start_pos = 0,
     bool create = true,
-    const tiledb::TemporalPolicy temporal_policy = {}) {
+    size_t timestamp = 0) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
+
+  tiledb::TemporalPolicy temporal_policy =
+      (timestamp == 0) ? tiledb::TemporalPolicy() :
+                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   using value_type = std::remove_const_t<std::ranges::range_value_t<V>>;
 
@@ -258,6 +284,8 @@ void write_vector(
 
 /**
  * Read the contents of a TileDB array into a std::vector.
+ *
+ * @todo Return a Vector instead of a std::vector
  */
 template <class T>
 std::vector<T> read_vector(
@@ -265,8 +293,12 @@ std::vector<T> read_vector(
     const std::string& uri,
     size_t start_pos,
     size_t end_pos,
-    const tiledb::TemporalPolicy temporal_policy = {}) {
+    size_t timestamp = 0) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
+
+  tiledb::TemporalPolicy temporal_policy =
+      (timestamp == 0) ? tiledb::TemporalPolicy() :
+                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   auto array_ = tiledb_helpers::open_array(
       tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
@@ -316,22 +348,10 @@ std::vector<T> read_vector(
   return data_;
 }
 
-template <class T>
-std::vector<T> read_vector(
-    const tiledb::Context& ctx,
-    const std::string& uri,
-    size_t start_pos,
-    size_t end_pos,
-    uint64_t timestamp = 0) {
-  return read_vector<T>(
-      ctx,
-      uri,
-      start_pos,
-      end_pos,
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp));
-}
 
+/**
+ * @brief Overload with 0 for start_pos and end_pos (read entire vector)
+ */
 template <class T>
 std::vector<T> read_vector(
     const tiledb::Context& ctx, const std::string& uri, size_t timestamp = 0) {
@@ -346,8 +366,17 @@ auto sizes_to_indices(const std::vector<T>& sizes) {
   return indices;
 }
 
+/**
+ * Read binary file format of "sift" datafiles (cf.
+ * http://corpus-texmex.irisa.fr) This reads the entire file into memory, from a
+ * locally stored file.
+ * @tparam T Type of data element stored
+ * @param bin_file Path to data file
+ * @param subset Number of vectors to read (0 = all)
+ * @return a Matrix of the data
+ */
 template <class T>
-auto read_bin(const std::string& bin_file, size_t subset = 0) {
+auto read_bin_local(const std::string& bin_file, size_t subset = 0) {
   if (!std::filesystem::exists(bin_file)) {
     throw std::runtime_error("file " + bin_file + " does not exist");
   }
