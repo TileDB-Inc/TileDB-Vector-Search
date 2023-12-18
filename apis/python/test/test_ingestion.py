@@ -856,7 +856,6 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     ################################################################################################
     # Test we can ingest, query, update, and consolidate with a training_source_uri.
     ################################################################################################
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] ingest() ======================')
     index_uri = os.path.join(tmp_path, "array")
     index = ingest(
         index_type="IVF_FLAT", 
@@ -865,35 +864,29 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
         training_source_uri=os.path.join(dataset_dir, "training_data.tdb")
     )
 
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] query() ======================')
     query_vector_index = 1
     query_vectors = np.array([data.transpose()[query_vector_index]], dtype=np.float32)
     result_d, result_i = index.query(query_vectors, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] update_batch() ======================')
     update_vectors = np.empty([3], dtype=object)
     update_vectors[0] = np.array([6.0, 6.1, 6.2, 6.3], dtype=np.dtype(np.float32))
     update_vectors[1] = np.array([7.0, 7.1, 7.2, 7.3], dtype=np.dtype(np.float32))
     update_vectors[2] = np.array([8.0, 8.1, 8.2, 8.3], dtype=np.dtype(np.float32))
     index.update_batch(vectors=update_vectors, external_ids=np.array([1000, 1001, 1002]))
     
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] index.consolidate_updates() ======================')
     index = index.consolidate_updates()
 
     query_vectors = np.array([update_vectors[2]], dtype=np.float32)
     result_d, result_i = index.query(query_vectors, k=1)
-    print('result_d', result_d, 'result_i', result_i)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1002]])
 
     ################################################################################################
     # Test we can load the index again and query, update, and consolidate.
     ################################################################################################
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] index_ram = IVFFlatIndex(uri=index_uri) ======================')
     index_ram = IVFFlatIndex(uri=index_uri)
 
     result_d, result_i = index.query(query_vectors, k=1)
-    print('result_d', result_d, 'result_i', result_i)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1002]])
     
     update_vectors = np.empty([2], dtype=object)
@@ -940,25 +933,21 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     result_d, result_i = index.query(query_vectors, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] update_batch() ======================')
     update_vectors = np.empty([3], dtype=object)
     update_vectors[0] = np.array([6.0, 6.1, 6.2, 6.3], dtype=np.dtype(np.float32))
     update_vectors[1] = np.array([7.0, 7.1, 7.2, 7.3], dtype=np.dtype(np.float32))
     update_vectors[2] = np.array([8.0, 8.1, 8.2, 8.3], dtype=np.dtype(np.float32))
     index.update_batch(vectors=update_vectors, external_ids=np.array([1000, 1001, 1002]))
     
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] index.consolidate_updates() ======================')
     index = index.consolidate_updates()
 
     query_vectors = np.array([update_vectors[2]], dtype=np.float32)
     result_d, result_i = index.query(query_vectors, k=1)
-    print('result_d', result_d, 'result_i', result_i)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1002]])
 
     ################################################################################################
     # Test we can load the index again and query, update, and consolidate.
     ################################################################################################
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] index_ram = IVFFlatIndex(uri=index_uri) ======================')
     index_ram = IVFFlatIndex(uri=index_uri)
 
     query_vectors = np.array([data[query_vector_index]], dtype=np.float32)
