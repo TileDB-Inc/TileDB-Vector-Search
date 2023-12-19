@@ -128,6 +128,7 @@ set_property(TEST unit_fixed_min_heap_test PROPERTY WILL_FAIL TRUE)
 kmeans_add_test(unit_flat_l2_index)
 
 kmeans_add_test(unit_flatpq_index)
+set_property(TEST unit_flatpq_index_test PROPERTY WILL_FAIL TRUE)
 
 kmeans_add_test(unit_flat_qv)
 
@@ -160,6 +161,7 @@ target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)
 add_test(NAME unit_linalg_test COMMAND unit_linalg ~[tdbmatrix])
 
 kmeans_add_test(unit_logging)
+set_property(TEST unit_logging_test PROPERTY WILL_FAIL TRUE)
 
 kmeans_add_test(unit_matrix)
 

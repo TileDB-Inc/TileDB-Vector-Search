@@ -30,6 +30,7 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <cmath>
 
 #include "detail/flat/qv.h"
 #include "gen_graphs.h"
@@ -559,6 +560,27 @@ TEMPLATE_TEST_CASE(
       if (a_vx_pqx4 > 1) {
         scale *= a_vx_pqx4;
       }
+
+      REQUIRE(scale > 0);
+      REQUIRE(!std::isnan(scale));
+
+      CHECK(!std::isnan(a_vx_pqx4));
+      CHECK(!std::isnan(a_dpqx_evx4));
+      CHECK(!std::isnan(s_evx_pqx4));
+      CHECK(!std::isnan(ss_vx_dpqx4));
+      CHECK(!std::isnan(s_evx_edpqx4));
+      CHECK(!std::isnan(a_evx_edpqx4));
+      CHECK(!std::isnan(ss_devx_dpqx4));
+      CHECK(!std::isnan(ss_devx_vx4));
+
+      CHECK(!std::isnan(a_vx_pqx4/scale));
+      CHECK(!std::isnan(a_dpqx_evx4/scale));
+      CHECK(!std::isnan(s_evx_pqx4/scale));
+      CHECK(!std::isnan(ss_vx_dpqx4/scale));
+      CHECK(!std::isnan(s_evx_edpqx4/scale));
+      CHECK(!std::isnan(a_evx_edpqx4/scale));
+      CHECK(!std::isnan(ss_devx_dpqx4/scale));
+      CHECK(!std::isnan(ss_devx_vx4/scale));
 
       CHECK(a_vx_pqx4 / scale < 0.0005);
       CHECK(a_dpqx_evx4 / scale < 0.0005);
