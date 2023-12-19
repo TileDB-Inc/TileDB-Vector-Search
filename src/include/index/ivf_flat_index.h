@@ -219,7 +219,6 @@ class ivf_flat_index {
       uint64_t timestamp = 0)
       : group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
             ctx, uri, *this, TILEDB_READ, timestamp_)} {
-
     if (timestamp_ == 0) {
       timestamp_ = group_->get_previous_ingestion_timestamp();
     }
@@ -767,19 +766,32 @@ class ivf_flat_index {
     write_group.append_base_size(::num_vectors(*partitioned_vectors_));
     write_group.append_num_partitions(num_partitions_);
 
-    write_matrix(ctx, centroids_, write_group.centroids_uri(), 0, false, timestamp_);
+    write_matrix(
+        ctx, centroids_, write_group.centroids_uri(), 0, false, timestamp_);
 
-    write_matrix(ctx, *partitioned_vectors_, write_group.parts_uri(), 0, false, timestamp_);
+    write_matrix(
+        ctx,
+        *partitioned_vectors_,
+        write_group.parts_uri(),
+        0,
+        false,
+        timestamp_);
 
     write_vector(
-        ctx, partitioned_vectors_->ids(), write_group.ids_uri(), 0, false, timestamp_);
+        ctx,
+        partitioned_vectors_->ids(),
+        write_group.ids_uri(),
+        0,
+        false,
+        timestamp_);
 
     write_vector(
         ctx,
         partitioned_vectors_->indices(),
         write_group.indices_uri(),
         0,
-        false, timestamp_);
+        false,
+        timestamp_);
 
     return true;
   }

@@ -573,14 +573,14 @@ TEMPLATE_TEST_CASE(
       CHECK(!std::isnan(ss_devx_dpqx4));
       CHECK(!std::isnan(ss_devx_vx4));
 
-      CHECK(!std::isnan(a_vx_pqx4/scale));
-      CHECK(!std::isnan(a_dpqx_evx4/scale));
-      CHECK(!std::isnan(s_evx_pqx4/scale));
-      CHECK(!std::isnan(ss_vx_dpqx4/scale));
-      CHECK(!std::isnan(s_evx_edpqx4/scale));
-      CHECK(!std::isnan(a_evx_edpqx4/scale));
-      CHECK(!std::isnan(ss_devx_dpqx4/scale));
-      CHECK(!std::isnan(ss_devx_vx4/scale));
+      CHECK(!std::isnan(a_vx_pqx4 / scale));
+      CHECK(!std::isnan(a_dpqx_evx4 / scale));
+      CHECK(!std::isnan(s_evx_pqx4 / scale));
+      CHECK(!std::isnan(ss_vx_dpqx4 / scale));
+      CHECK(!std::isnan(s_evx_edpqx4 / scale));
+      CHECK(!std::isnan(a_evx_edpqx4 / scale));
+      CHECK(!std::isnan(ss_devx_dpqx4 / scale));
+      CHECK(!std::isnan(ss_devx_vx4 / scale));
 
       CHECK(a_vx_pqx4 / scale < 0.0005);
       CHECK(a_dpqx_evx4 / scale < 0.0005);

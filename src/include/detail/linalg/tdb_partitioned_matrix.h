@@ -467,14 +467,12 @@ class tdbPartitionedMatrix
       /*
        * Fit as many partitions as we can into column_capacity
        */
-      
-      first_resident_col_ = last_resident_col_;  // # columns
-      first_resident_part_ =
-          last_resident_part_;  // # partitions
+
+      first_resident_col_ = last_resident_col_;    // # columns
+      first_resident_part_ = last_resident_part_;  // # partitions
 
       last_resident_part_ = first_resident_part_;
-      for (size_t i = first_resident_part_; i < total_num_parts_;
-           ++i) {
+      for (size_t i = first_resident_part_; i < total_num_parts_; ++i) {
         auto next_part_size = squashed_indices_[i + 1] - squashed_indices_[i];
 
         // Continue if this partition is empty
@@ -496,20 +494,19 @@ class tdbPartitionedMatrix
       if (num_resident_cols_ > column_capacity) {
         throw std::runtime_error(
             "Invalid partitioning, num_resident_cols_ " +
-            std::to_string(num_resident_cols_) +
-            " > " + std::to_string(column_capacity));
+            std::to_string(num_resident_cols_) + " > " +
+            std::to_string(column_capacity));
       }
 
-      num_resident_parts_ =
-          last_resident_part_ - first_resident_part_;
+      num_resident_parts_ = last_resident_part_ - first_resident_part_;
       resident_part_offset_ = first_resident_part_;
 
       assert(num_resident_parts_ <= max_resident_parts_);
       if (num_resident_parts_ > max_resident_parts_) {
         throw std::runtime_error(
             "Invalid partitioning, num_resident_parts_ " +
-            std::to_string(num_resident_parts_) +
-            " > " + std::to_string(max_resident_parts_));
+            std::to_string(num_resident_parts_) + " > " +
+            std::to_string(max_resident_parts_));
       }
 
       if ((num_resident_cols_ == 0 && num_resident_parts_ != 0) ||
@@ -529,8 +526,8 @@ class tdbPartitionedMatrix
       if (num_resident_parts_ > max_resident_parts_) {
         throw std::runtime_error(
             "Invalid partitioning, num_resident_parts_ " +
-            std::to_string(num_resident_parts_) +
-            " > " + std::to_string(max_resident_parts_));
+            std::to_string(num_resident_parts_) + " > " +
+            std::to_string(max_resident_parts_));
       }
 
       /*
@@ -545,9 +542,7 @@ class tdbPartitionedMatrix
        * Read in the next batch of partitions
        */
       size_t col_count = 0;
-      for (size_t j = first_resident_part_;
-           j < last_resident_part_;
-           ++j) {
+      for (size_t j = first_resident_part_; j < last_resident_part_; ++j) {
         size_t start = master_indices_[relevant_parts_[j]];
         size_t stop = master_indices_[relevant_parts_[j] + 1];
         size_t len = stop - start;
@@ -597,9 +592,7 @@ class tdbPartitionedMatrix
       tiledb::Subarray ids_subarray(ctx_, *partitioned_ids_array_);
 
       size_t ids_col_count = 0;
-      for (size_t j = first_resident_part_;
-           j < last_resident_part_;
-           ++j) {
+      for (size_t j = first_resident_part_; j < last_resident_part_; ++j) {
         size_t start = master_indices_[relevant_parts_[j]];
         size_t stop = master_indices_[relevant_parts_[j] + 1];
         size_t len = stop - start;

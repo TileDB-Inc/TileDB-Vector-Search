@@ -124,7 +124,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param uri URI of the TileDB array to read.
    */
   tdbBlockedMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrix(ctx, uri, 0, 0, 0, 0, 0, 0) {
   }
 
@@ -159,8 +159,8 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       const tiledb::Context& ctx,
       const std::string& uri,
       size_t upper_bound,
-      size_t timestamp = 0)
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      size_t timestamp =
+          0) requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrix(ctx, uri, 0, 0, 0, 0, upper_bound, timestamp) {
   }
 #if 0
@@ -336,7 +336,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t last_col,
       size_t upper_bound,
       size_t timestamp = 0)  // noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : ctx_{ctx}
       , uri_{uri}
       , array_(std::make_unique<tiledb::Array>(
@@ -432,7 +432,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
     size_t dimension = last_row_ - first_row_;
     auto elements_to_load =
-        std::min(load_blocksize_, last_col_  - last_resident_col_);
+        std::min(load_blocksize_, last_col_ - last_resident_col_);
 
     // Return if we're at the end
     if (elements_to_load == 0) {
@@ -459,7 +459,8 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
         .set_layout(layout_order)
         .set_data_buffer(attr_name, this->data(), elements_to_load * dimension);
     tiledb_helpers::submit_query(tdb_func__, uri_, query);
-    _memory_data.insert_entry(tdb_func__, elements_to_load * dimension * sizeof(T));
+    _memory_data.insert_entry(
+        tdb_func__, elements_to_load * dimension * sizeof(T));
 
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
       throw std::runtime_error("Query status is not complete -- fix me");
@@ -662,7 +663,15 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
       size_t num_array_cols,
       size_t upper_bound = 0,
       uint64_t timestamp = 0)
-      : Base(ctx, uri, 0, num_array_rows, 0, num_array_cols, upper_bound, timestamp) {
+      : Base(
+            ctx,
+            uri,
+            0,
+            num_array_rows,
+            0,
+            num_array_cols,
+            upper_bound,
+            timestamp) {
     Base::load();
   }
 
