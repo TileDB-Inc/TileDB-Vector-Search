@@ -622,6 +622,9 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                 auto partno =
                     p +
                     part_offset;  // resident_part_offset(partitioned_vectors);
+
+                assert (p+1 < size(indices));
+
                 auto start = indices[p];
                 auto stop = indices[p + 1];
 
