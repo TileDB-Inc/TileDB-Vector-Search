@@ -860,6 +860,15 @@ class ivf_flat_index {
 
     auto top_centroids = detail::ivf::ivf_top_centroids(
         centroids_, query_vectors, nprobe, num_threads_);
+
+    for (size_t i = 0; i < ::num_vectors(top_centroids); ++i) {
+      for (size_t j = 0; j < ::dimension(top_centroids); ++j) {
+        auto xx =top_centroids(j, i);
+        assert(top_centroids(j, i) < 1000);
+      }
+    }
+
+
     return detail::ivf::qv_query_heap_infinite_ram(
         top_centroids,
         *partitioned_vectors_,

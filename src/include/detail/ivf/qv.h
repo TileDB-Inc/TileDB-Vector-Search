@@ -129,6 +129,10 @@ auto qv_query_heap_infinite_ram(
         query,
         [&, nprobe](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
           for (size_t p = 0; p < nprobe; ++p) {
+
+            auto aa = top_centroids(p, j);
+            assert(top_centroids(p, j) < size(indices) - 1);
+
             size_t start = indices[top_centroids(p, j)];
             size_t stop = indices[top_centroids(p, j) + 1];
 
