@@ -776,7 +776,7 @@ def test_copy_centroids_uri(tmp_path):
         copy_centroids_uri=centroids_uri
     )
 
-    # Query the index/
+    # Query the index.
     query_vector_index = 4
     query_vectors = np.array([data[query_vector_index]], dtype=np.float32)
     result_d, result_i = index.query(query_vectors, k=1)
