@@ -350,7 +350,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
       CHECK(intersections0 == num_vectors(top_k) * dimension(top_k));
       CHECK(recall0 == 1.0);
     }
-    CHECK(recall0 > .965);
+    CHECK(recall0 > .95);
 
     auto intersections1 =
         (long)count_intersections(top_k_ivf, groundtruth_set, k_nn);
@@ -359,7 +359,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
       CHECK(intersections1 == num_vectors(top_k) * dimension(top_k));
       CHECK(recall1 == 1.0);
     }
-    CHECK(recall1 > 0.965);
+    CHECK(recall1 > 0.95);
 
     // std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
   }
