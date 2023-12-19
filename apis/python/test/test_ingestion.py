@@ -739,18 +739,16 @@ def test_storage_versions(tmp_path):
             assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 def test_copy_centroids_uri(tmp_path):
-    print('[test_ingestion@test_copy_centroids_uri] ==========================================')
     dataset_dir = os.path.join(tmp_path, "dataset")
     os.mkdir(dataset_dir)
 
+    # Create the index data.
     data = np.array([[1, 1, 1, 1], [1, 1, 1, 1], [2, 2, 2, 2], [2, 2, 2, 2], [3, 3, 3, 3]], dtype=np.float32)
 
+    # Create the centroids - this is based on ivf_flat_index.py.
     centroids = np.array([[1, 1, 1, 1], [2, 2, 2, 2]], dtype=np.float32)
-    in_size = centroids.shape[0]
+    centroids_in_size = centroids.shape[0]
     dimensions = centroids.shape[1]
-    vector_type = centroids.dtype
-    print('[test_ingestion@test_copy_centroids_uri] in_size', in_size, 'dimensions', dimensions, 'vector_type', vector_type)
-
     schema = tiledb.ArraySchema(
         domain=tiledb.Domain(
             *[
@@ -767,15 +765,9 @@ def test_copy_centroids_uri(tmp_path):
     tiledb.Array.create(centroids_uri, schema)
     index_timestamp = int(time.time() * 1000)
     with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
-        A[0:dimensions, 0:in_size] = centroids.transpose()
+        A[0:dimensions, 0:centroids_in_size] = centroids.transpose()
 
-    with tiledb.open(centroids_uri, mode="r") as array:
-        print('[test_ingestion@test_copy_centroids_uri] centroids_uri', array.schema)
-        print('[test_ingestion@test_copy_centroids_uri] centroids_uri', array[0:dimensions, 0:in_size])
-        # print('[test_ingestion@test_copy_centroids_uri] centroids_uri', array[0:dimensions, 0:10]) # this is okay
-        # print('[test_ingestion@test_copy_centroids_uri] centroids_uri', array[:]) # this will crash
-
-    print('[test_ingestion@test_copy_centroids_uri@ingest] ==========================================')
+    # Create the index.
     index_uri = os.path.join(tmp_path, "array")
     index = ingest(
         index_type="IVF_FLAT", 
@@ -784,6 +776,7 @@ def test_copy_centroids_uri(tmp_path):
         copy_centroids_uri=centroids_uri
     )
 
+    # Query the index/
     query_vector_index = 4
     query_vectors = np.array([data[query_vector_index]], dtype=np.float32)
     result_d, result_i = index.query(query_vectors, k=1)
