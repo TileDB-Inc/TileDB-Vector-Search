@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from common import *
 import pytest
@@ -737,6 +738,57 @@ def test_storage_versions(tmp_path):
             _, result = index_ram.query(query_vectors, k=k)
             assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+def test_copy_centroids_uri(tmp_path):
+    print('[test_ingestion@test_copy_centroids_uri] ==========================================')
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    os.mkdir(dataset_dir)
+
+    data = np.array([[1, 1, 1, 1], [1, 1, 1, 1], [2, 2, 2, 2], [2, 2, 2, 2], [3, 3, 3, 3]], dtype=np.float32)
+
+    centroids = np.array([[1, 1, 1, 1], [2, 2, 2, 2]], dtype=np.float32)
+    in_size = centroids.shape[0]
+    dimensions = centroids.shape[1]
+    vector_type = centroids.dtype
+    print('[test_ingestion@test_copy_centroids_uri] in_size', in_size, 'dimensions', dimensions, 'vector_type', vector_type)
+
+    schema = tiledb.ArraySchema(
+        domain=tiledb.Domain(
+            *[
+                tiledb.Dim(name="rows", domain=(0, dimensions - 1), tile=dimensions, dtype=np.dtype(np.int32)),
+                tiledb.Dim(name="cols", domain=(0, np.iinfo(np.dtype("int32")).max), tile=100000, dtype=np.dtype(np.int32)),
+            ]
+        ),
+        sparse=False,
+        attrs=[tiledb.Attr(name="centroids", dtype="float32", filters=tiledb.FilterList([tiledb.ZstdFilter()]))],
+        cell_order="col-major",
+        tile_order="col-major",
+    )
+    centroids_uri = os.path.join(dataset_dir, "centroids.tdb")
+    tiledb.Array.create(centroids_uri, schema)
+    index_timestamp = int(time.time() * 1000)
+    with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
+        A[0:dimensions, 0:in_size] = centroids.transpose()
+
+    with tiledb.open(centroids_uri, mode="r") as array:
+        print('[test_ingestion@test_copy_centroids_uri] centroids_uri', array.schema)
+        print('[test_ingestion@test_copy_centroids_uri] centroids_uri', array[0:dimensions, 0:in_size])
+        # print('[test_ingestion@test_copy_centroids_uri] centroids_uri', array[0:dimensions, 0:10]) # this is okay
+        # print('[test_ingestion@test_copy_centroids_uri] centroids_uri', array[:]) # this will crash
+
+    print('[test_ingestion@test_copy_centroids_uri@ingest] ==========================================')
+    index_uri = os.path.join(tmp_path, "array")
+    index = ingest(
+        index_type="IVF_FLAT", 
+        index_uri=index_uri, 
+        input_vectors=data,
+        copy_centroids_uri=centroids_uri
+    )
+
+    query_vector_index = 4
+    query_vectors = np.array([data[query_vector_index]], dtype=np.float32)
+    result_d, result_i = index.query(query_vectors, k=1)
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
+
 
 def test_kmeans():
     k = 128
@@ -827,7 +879,7 @@ def test_ingest_with_training_source_uri_f32(tmp_path):
     result_d, result_i = index.query(query_vectors, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
-    index_ram = FlatIndex(uri=index_uri)
+    index_ram = IVFFlatIndex(uri=index_uri)
     result_d, result_i = index_ram.query(query_vectors, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
@@ -837,7 +889,7 @@ def test_ingest_with_training_source_uri_f32(tmp_path):
         index_uri=os.path.join(tmp_path, "array_2"), 
         source_uri=os.path.join(dataset_dir, "data.f32bin"),
         training_source_uri=os.path.join(dataset_dir, "training_data.f32bin"),
-        training_source_type="FVEC"
+        training_source_type="F32BIN"
     )
 
 def test_ingest_with_training_source_uri_tdb(tmp_path):

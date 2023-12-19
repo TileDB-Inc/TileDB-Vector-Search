@@ -765,6 +765,8 @@ def ingest(
     def copy_centroids(
         index_group_uri: str,
         copy_centroids_uri: str,
+        partitions: int,
+        dimensions: int,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
@@ -777,8 +779,8 @@ def ingest(
         )
         src = tiledb.open(copy_centroids_uri, mode="r")
         dest = tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp)
-        src_centroids = src[:, :]
-        dest[:, :] = src_centroids
+        src_centroids = src[0:dimensions, 0:partitions]
+        dest[0:dimensions, 0:partitions] = src_centroids
         logger.debug(src_centroids)
 
     # --------------------------------------------------------------------
@@ -1613,6 +1615,8 @@ def ingest(
                     copy_centroids,
                     index_group_uri=index_group_uri,
                     copy_centroids_uri=copy_centroids_uri,
+                    partitions=partitions,
+                    dimensions=dimensions,
                     config=config,
                     verbose=verbose,
                     trace_id=trace_id,
