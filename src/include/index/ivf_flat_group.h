@@ -202,10 +202,11 @@ class ivf_flat_index_group {
     if (timestamp_bound == end(metadata_.ingestion_timestamps_)) {
       throw std::runtime_error(
           "Requested read timestamp " + std::to_string(index_timestamp_) +
-          " is beyond " + std::to_string(metadata_.ingestion_timestamps_.back()));
+          " is beyond " +
+          std::to_string(metadata_.ingestion_timestamps_.back()));
     }
-    timetravel_index_ = std::distance(
-        begin(metadata_.ingestion_timestamps_), timestamp_bound);
+    timetravel_index_ =
+        std::distance(begin(metadata_.ingestion_timestamps_), timestamp_bound);
 
     // @todo Or index_timestamp_?
     group_timestamp_ = metadata_.ingestion_timestamps_[timetravel_index_];
@@ -558,27 +559,26 @@ class ivf_flat_index_group {
     return group_timestamp_;
   }
 
-
   /**************************************************************************
    * Helpful functions for debugging, testing, etc
    **************************************************************************/
 
-  auto set_ingestion_timestamp(size_t timestamp)  {
+  auto set_ingestion_timestamp(size_t timestamp) {
     metadata_.ingestion_timestamps_[timetravel_index_] = timestamp;
   }
-  auto set_base_size(size_t size)  {
+  auto set_base_size(size_t size) {
     metadata_.base_sizes_[timetravel_index_] = size;
   }
-  auto set_num_partitions(size_t size)  {
+  auto set_num_partitions(size_t size) {
     metadata_.partition_history_[timetravel_index_] = size;
   }
-  auto set_last_ingestion_timestamp(size_t timestamp)  {
+  auto set_last_ingestion_timestamp(size_t timestamp) {
     metadata_.ingestion_timestamps_.back() = timestamp;
   }
-  auto set_last_base_size(size_t size)  {
+  auto set_last_base_size(size_t size) {
     metadata_.base_sizes_.back() = size;
   }
-  auto set_last_num_partitions(size_t size)  {
+  auto set_last_num_partitions(size_t size) {
     metadata_.partition_history_.back() = size;
   }
 

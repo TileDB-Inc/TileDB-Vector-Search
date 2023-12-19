@@ -96,7 +96,8 @@ TEST_CASE("timetravel: open", "[timetravel]") {
     fc.load();
     auto nc = fc.fragment_num();
     auto tc = fc.timestamp_range(0);
-    // std::cout << "centroid tc: " << tc.first << ", " << tc.second << std::endl;
+    // std::cout << "centroid tc: " << tc.first << ", " << tc.second <<
+    // std::endl;
     CHECK(tc.first == tc.second);
     CHECK((long)tc.first == z[1]);
 

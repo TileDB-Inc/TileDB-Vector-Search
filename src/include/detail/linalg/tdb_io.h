@@ -348,7 +348,6 @@ std::vector<T> read_vector(
   return data_;
 }
 
-
 /**
  * @brief Overload with 0 for start_pos and end_pos (read entire vector)
  */

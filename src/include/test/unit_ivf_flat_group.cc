@@ -28,9 +28,9 @@
  * @section DESCRIPTION
  */
 
+#include <tiledb/group_experimental.h>
 #include <catch2/catch_all.hpp>
 #include <tiledb/tiledb>
-#include <tiledb/group_experimental.h>
 
 #include <filesystem>
 #include <string>
@@ -117,8 +117,8 @@ TEST_CASE("ivf_flat_group: read constructor", "[ivf_flat_group]") {
 
 TEST_CASE("ivf_flat_group: read constructor with version", "[ivf_flat_group]") {
   tiledb::Context ctx;
-  auto x =
-      ivf_flat_index_group(ctx, group_uri, dummy_index{}, TILEDB_READ, 0, "0.3");
+  auto x = ivf_flat_index_group(
+      ctx, group_uri, dummy_index{}, TILEDB_READ, 0, "0.3");
   x.dump("Read constructor with version");
 }
 
