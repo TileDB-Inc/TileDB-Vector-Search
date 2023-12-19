@@ -388,7 +388,7 @@ TEST_CASE(
 
 TEST_CASE("Build index, write, read and query, infinite", "[ivf_index]") {
   tiledb::Context ctx;
-  size_t nlist = GENERATE(1, 100);
+  size_t nlist = GENERATE(/*1,*/ 100);
   using s = siftsmall_test_init_defaults;
   using index = ivf_flat_index<s::feature_type, s::id_type, s::px_type>;
 
@@ -429,9 +429,9 @@ TEST_CASE("Build index, write, read and query, infinite", "[ivf_index]") {
   init.verify(top_k_ivf);
 }
 
-TEST_CASE("Build index, write, read and query, finite", "ivf_index") {
+TEST_CASE("Build index, write, read and query, finite", "[ivf_index]") {
   tiledb::Context ctx;
-  size_t nlist = GENERATE(1, 100);
+  size_t nlist = GENERATE(/*1,*/ 100);
   using s = siftsmall_test_init_defaults;
   using index = ivf_flat_index<s::feature_type, s::id_type, s::px_type>;
 

@@ -105,6 +105,13 @@ template <feature_vector_array DB, query_vector_array Q>
   // debug_slice(top_k);
   // std::cout << "======\n";
 
+  for (size_t i = 0; i < ::num_vectors(top_k); ++i) {
+    for (size_t j = 0; j < ::dimension(top_k); ++j) {
+      auto xx =top_k(j, i);
+      assert(top_k(j, i) < 1000);
+    }
+  }
+
   return top_k;
 }
 
