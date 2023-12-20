@@ -390,7 +390,6 @@ class Index:
             should only be provided when training_source_uri is provided
         """
         from tiledb.vector_search.ingestion import ingest
-        print(f'[index@consolidate_updates] self.partitions {self.partitions} self.size {self.size}')
         fragments_info = tiledb.array_fragments(
             self.updates_array_uri, ctx=tiledb.Ctx(self.config)
         )
