@@ -455,6 +455,7 @@ def create(
     **kwargs,
 ) -> IVFFlatIndex:
     validate_storage_version(storage_version)
+
     index.create_metadata(
         uri=uri,
         dimensions=dimensions,
