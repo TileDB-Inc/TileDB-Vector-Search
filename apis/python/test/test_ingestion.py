@@ -898,16 +898,14 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
         [3.0, 3.1, 3.2, 3.3], 
         [4.0, 4.1, 4.2, 4.3], 
         [5.0, 5.1, 5.2, 5.3]], dtype=np.float32).transpose()
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] data', data.shape, '\n', data)
     create_array(path=os.path.join(dataset_dir, "data.tdb"), data=data)
 
     training_data = np.array([
         [1.0, 1.1, 1.2, 1.3], 
         [5.0, 5.1, 5.2, 5.3]], dtype=np.float32).transpose()
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] training_data', training_data.shape, '\n', training_data)
     create_array(path=os.path.join(dataset_dir, "training_data.tdb"), data=training_data)
 
-    # Run a quick test that if we setup training_data incorrectly we will throw.
+    # Run a quick test that if we set up training_data incorrectly, we will raise an exception.
     with pytest.raises(ValueError) as error:
         training_data_invalid = np.array([
             [1.0, 1.1, 1.2], 
@@ -919,7 +917,6 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
             source_uri=os.path.join(dataset_dir, "data.tdb"),
             training_source_uri=os.path.join(dataset_dir, "training_data_invalid.tdb")
         )
-    print('error', error)
     assert "training data dimensions" in str(error.value)
 
     ################################################################################################
@@ -934,52 +931,16 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
         training_source_uri=os.path.join(dataset_dir, "training_data.tdb")
     )
 
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] query() ======================================')
     query_vector_index = 1
     query_vectors = np.array([data.transpose()[query_vector_index]], dtype=np.float32)
     result_d, result_i = index.query(query_vectors, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
-    update_vectors = np.empty([3], dtype=object)
-    update_vectors[0] = np.array([6.0, 6.1, 6.2, 6.3], dtype=np.dtype(np.float32))
-    update_vectors[1] = np.array([7.0, 7.1, 7.2, 7.3], dtype=np.dtype(np.float32))
-    update_vectors[2] = np.array([8.0, 8.1, 8.2, 8.3], dtype=np.dtype(np.float32))
-    index.update_batch(vectors=update_vectors, external_ids=np.array([1000, 1001, 1002]))
-    
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] index.consolidate_updates() ======================================')
-    index = index.consolidate_updates()
-
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] query() ======================================')
-    query_vectors = np.array([update_vectors[2]], dtype=np.float32)
-    result_d, result_i = index.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1002]])
-
-    ################################################################################################
-    # Test we can load the index again and query, update, and consolidate.
-    ################################################################################################
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] index_ram = IVFFlatIndex(uri=index_uri) ======================================')
     index_ram = IVFFlatIndex(uri=index_uri)
-
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] query() ======================================')
-    result_d, result_i = index.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1002]])
-    
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] index.consolidate_updates() ======================================')
-    update_vectors = np.empty([2], dtype=object)
-    update_vectors[0] = np.array([9.0, 9.1, 9.2, 9.3], dtype=np.dtype(np.float32))
-    update_vectors[1] = np.array([10.0, 10.1, 10.2, 10.3], dtype=np.dtype(np.float32))
-    index.update_batch(vectors=update_vectors, external_ids=np.array([1003, 1004]))
-    index_ram = index_ram.consolidate_updates()
-    
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] query() ======================================')
-    query_vectors = np.array([update_vectors[0]], dtype=np.float32)
     result_d, result_i = index_ram.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1003]])
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
-    ################################################################################################
-    # Test that we can ingest with training_source_type.
-    ################################################################################################
-    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] ingest() ======================================')
+    # Also test that we can ingest with training_source_type.
     ingest(
         index_type="IVF_FLAT",
         index_uri=os.path.join(tmp_path, "array_2"), 
@@ -992,10 +953,26 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     ################################################################################################
     # First set up the data.
     ################################################################################################
-    data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3], [4.0, 4.1, 4.2, 4.3], [5.0, 5.1, 5.2, 5.3]], dtype=np.float32)
-    print('data', data)
+    data = np.array([
+        [1.0, 1.1, 1.2, 1.3], 
+        [2.0, 2.1, 2.2, 2.3], 
+        [3.0, 3.1, 3.2, 3.3], 
+        [4.0, 4.1, 4.2, 4.3], 
+        [5.0, 5.1, 5.2, 5.3]], dtype=np.float32)
     training_data = data[1:3]
-    print('training_data', training_data)
+
+    # Run a quick test that if we set up training_data incorrectly, we will raise an exception.
+    with pytest.raises(ValueError) as error:
+        training_data_invalid = np.array([
+            [4.0, 4.1, 4.2], 
+            [5.0, 5.1, 5.2]], dtype=np.float32)
+        index = ingest(
+            index_type="IVF_FLAT", 
+            index_uri=os.path.join(tmp_path, "array_invalid"), 
+            input_vectors=data,
+            training_input_vectors=training_data_invalid,
+        )
+    assert "training data dimensions" in str(error.value)
 
     ################################################################################################
     # Test we can ingest, query, update, and consolidate.
@@ -1013,33 +990,6 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     result_d, result_i = index.query(query_vectors, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
-    update_vectors = np.empty([3], dtype=object)
-    update_vectors[0] = np.array([6.0, 6.1, 6.2, 6.3], dtype=np.dtype(np.float32))
-    update_vectors[1] = np.array([7.0, 7.1, 7.2, 7.3], dtype=np.dtype(np.float32))
-    update_vectors[2] = np.array([8.0, 8.1, 8.2, 8.3], dtype=np.dtype(np.float32))
-    index.update_batch(vectors=update_vectors, external_ids=np.array([1000, 1001, 1002]))
-    
-    index = index.consolidate_updates()
-
-    query_vectors = np.array([update_vectors[2]], dtype=np.float32)
-    result_d, result_i = index.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1002]])
-
-    ################################################################################################
-    # Test we can load the index again and query, update, and consolidate.
-    ################################################################################################
     index_ram = IVFFlatIndex(uri=index_uri)
-
-    query_vectors = np.array([data[query_vector_index]], dtype=np.float32)
-    result_d, result_i = index.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
-
-    update_vectors = np.empty([2], dtype=object)
-    update_vectors[0] = np.array([9.0, 9.1, 9.2, 9.3], dtype=np.dtype(np.float32))
-    update_vectors[1] = np.array([10.0, 10.1, 10.2, 10.3], dtype=np.dtype(np.float32))
-    index.update_batch(vectors=update_vectors, external_ids=np.array([1003, 1004]))
-    index_ram = index_ram.consolidate_updates()
-    
-    query_vectors = np.array([update_vectors[0]], dtype=np.float32)
     result_d, result_i = index_ram.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1003]])
+    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])

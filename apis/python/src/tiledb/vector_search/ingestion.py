@@ -134,8 +134,6 @@ def ingest(
     from tiledb.vector_search.index import Index
     from tiledb.vector_search.storage_formats import storage_formats
 
-    print('[ingestion@ingest]', 'copy_centroids_uri', copy_centroids_uri, 'training_sample_size', training_sample_size, 'training_input_vectors', training_input_vectors, 'training_source_uri', training_source_uri, 'training_source_type', training_source_type)
-
     validate_storage_version(storage_version)
 
     if source_type and not source_uri:
@@ -254,7 +252,6 @@ def ingest(
     ) -> Tuple[int, int, np.dtype]:
         if source_type == "TILEDB_ARRAY":
             schema = tiledb.ArraySchema.load(source_uri)
-            print('[ingest@read_source_metadata] schema', schema)
             size = schema.domain.dim(1).domain[1] + 1
             dimensions = schema.domain.dim(0).domain[1] + 1
             return size, dimensions, schema.attr("values").dtype
@@ -813,7 +810,6 @@ def ingest(
         trace_id: Optional[str] = None,
         use_sklearn: bool = False
     ):
-        print('[ingest@centralised_kmeans] training_sample_size', training_sample_size, 'training_source_uri', training_source_uri, 'training_source_type', training_source_type)
         from sklearn.cluster import KMeans
 
         from tiledb.vector_search.module import (
@@ -830,7 +826,6 @@ def ingest(
                     if training_source_type is None:
                         training_source_type = autodetect_source_type(source_uri=training_source_uri)
                     training_in_size, training_dimensions, training_vector_type = read_source_metadata(source_uri=training_source_uri, source_type=training_source_type)
-                    print('[ingest@centralised_kmeans] reading from training_source_uri: training_source_uri', training_source_uri, 'training_source_type', training_source_type, 'training_in_size', training_in_size, 'training_dimensions', training_dimensions, 'training_vector_type', training_vector_type)
                     if dimensions != training_dimensions:
                         raise ValueError(f"When training centroids, the index data dimensions ({dimensions}) != the training data dimensions ({training_dimensions})")
                     sample_vectors = read_input_vectors(
@@ -845,7 +840,6 @@ def ingest(
                         trace_id=trace_id,
                     ).astype(np.float32)
                 else:
-                    print('[ingest@centralised_kmeans] reading from source_uri: source_uri', source_uri, 'source_type', source_type, 'vector_type', vector_type, 'dimensions', dimensions, 'training_sample_size', training_sample_size)
                     sample_vectors = read_input_vectors(
                         source_uri=source_uri,
                         source_type=source_type,
@@ -878,13 +872,9 @@ def ingest(
                 # raise ValueError(f"We have a training_sample_size of {training_sample_size} but {partitions} partitions - training_sample_size must be >= partitions")
                 centroids = np.random.rand(dimensions, partitions)
 
-            print('[ingestion@centralized_kmeans] sample_vectors', sample_vectors.shape, '\n', sample_vectors, '\ncentroids', centroids.shape, '\n', centroids)
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
                 A[0:dimensions, 0:partitions] = centroids
-
-            # with tiledb.open(centroids_uri, mode="r") as A:
-            #     print('[ingest@centralized_kmeans] centroids_uri', centroids_uri, A.shape, '\n', A[:])
 
     # --------------------------------------------------------------------
     # distributed kmeans UDFs
