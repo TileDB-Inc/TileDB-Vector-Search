@@ -158,6 +158,7 @@ def ingest(
     
     if training_sample_size < -1:
         raise ValueError("training_sample_size should either be positive or -1 (to auto-configure based on the dataset sizes)")
+
     if copy_centroids_uri is not None and training_sample_size != -1:
         raise ValueError("training_sample_size should either be positive or -1 (to auto-configure based on the dataset sizes)")
     if copy_centroids_uri is not None and partitions == -1:

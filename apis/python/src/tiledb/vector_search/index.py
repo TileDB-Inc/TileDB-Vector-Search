@@ -404,7 +404,7 @@ class Index:
         tiledb.consolidate(self.updates_array_uri, config=conf)
         tiledb.vacuum(self.updates_array_uri, config=conf)
 
-        pass_copy_centroids_uri = self.index_type == "IVF_FLAT" and reuse_centroids
+        should_pass_copy_centroids_uri = self.index_type == "IVF_FLAT" and reuse_centroids
         new_index = ingest(
             index_type=self.index_type,
             index_uri=self.uri,
@@ -415,8 +415,8 @@ class Index:
             updates_uri=self.updates_array_uri,
             index_timestamp=max_timestamp,
             storage_version=self.storage_version,
-            copy_centroids_uri=self.centroids_uri if pass_copy_centroids_uri else None,
-            partitions=self.partitions if pass_copy_centroids_uri else -1,
+            copy_centroids_uri=self.centroids_uri if should_pass_copy_centroids_uri else None,
+            partitions=self.partitions if should_pass_copy_centroids_uri else -1,
             training_sample_size=training_sample_size,
             training_input_vectors=training_input_vectors,
             training_source_uri=training_source_uri,
