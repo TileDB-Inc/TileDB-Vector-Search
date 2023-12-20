@@ -28,9 +28,10 @@
  * @section DESCRIPTION
  */
 
-#include <tiledb/group_experimental.h>
 #include <catch2/catch_all.hpp>
+
 #include <tiledb/tiledb>
+#include <tiledb/group_experimental.h>
 
 #include <filesystem>
 #include <string>
