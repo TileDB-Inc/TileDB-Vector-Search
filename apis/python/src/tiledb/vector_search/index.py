@@ -354,9 +354,43 @@ class Index:
                 timestamp = int(time.time() * 1000)
             return tiledb.open(self.updates_array_uri, mode="w", timestamp=timestamp)
 
-    def consolidate_updates(self, **kwargs):
+    def consolidate_updates(
+        self, 
+        reuse_centroids: bool = True, 
+        training_sample_size: int = -1,
+        training_input_vectors: np.ndarray = None,
+        training_source_uri: str = None,
+        training_source_type: str = None,
+        **kwargs
+    ):
+        """
+        Parameters
+        ----------
+        reuse_centroids: bool
+            If true, reuse the centroids from the previous index. Else, recompute the centroids.
+            Only valid for IVF_FLAT indexes.
+        training_sample_size: int = -1
+            if reuse_centroids is True, this is the
+            vector sample size to train centroids with,
+            if not provided, is auto-configured based on the dataset sizes
+            should not be provided if training_source_uri is provided
+        training_input_vectors: numpy Array
+            if reuse_centroids is True, these are the
+            training input vectors, if this is provided it takes precedence over training_source_uri and training_source_type
+            should not be provided if training_sample_size or training_source_uri is provided
+        training_source_uri: str = None
+            if reuse_centroids is True, this is the
+            source URI to use for training centroids when building a IVF_FLAT vector index, 
+            if not provided, the first training_sample_size vectors from source_uri are used
+            should not be provided if training_sample_size or training_input_vectors is provided
+        training_source_type: str = None
+            if reuse_centroids is True, this is the
+            type of the training source data in training_source_uri
+            if left empty, is auto-detected from the suffix of training_source_type
+            should only be provided when training_source_uri is provided
+        """
         from tiledb.vector_search.ingestion import ingest
-
+        print(f'[index@consolidate_updates] self.partitions {self.partitions} self.size {self.size}')
         fragments_info = tiledb.array_fragments(
             self.updates_array_uri, ctx=tiledb.Ctx(self.config)
         )
@@ -371,6 +405,7 @@ class Index:
         tiledb.consolidate(self.updates_array_uri, config=conf)
         tiledb.vacuum(self.updates_array_uri, config=conf)
 
+        pass_copy_centroids_uri = self.index_type == "IVF_FLAT" and reuse_centroids
         new_index = ingest(
             index_type=self.index_type,
             index_uri=self.uri,
@@ -381,6 +416,12 @@ class Index:
             updates_uri=self.updates_array_uri,
             index_timestamp=max_timestamp,
             storage_version=self.storage_version,
+            copy_centroids_uri=self.centroids_uri if pass_copy_centroids_uri else None,
+            partitions=self.partitions if pass_copy_centroids_uri else -1,
+            training_sample_size=training_sample_size,
+            training_input_vectors=training_input_vectors,
+            training_source_uri=training_source_uri,
+            training_source_type=training_source_type,
             config=self.config,
             **kwargs,
         )

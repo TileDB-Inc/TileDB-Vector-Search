@@ -98,6 +98,8 @@ class IVFFlatIndex(index.Index):
             config=config,
             timestamp=self.base_array_timestamp,
         )
+        # src = tiledb.open(self.centroids_uri, mode="r")
+        # print('[ivf_flat_index.py] self._centroids\n', tiledb.ArraySchema.load(self.centroids_uri, ctx=tiledb.Ctx(config))) #, '\n', src[0]
         self._index = read_vector_u64(
             self.ctx,
             self.index_array_uri,
@@ -455,7 +457,7 @@ def create(
     **kwargs,
 ) -> IVFFlatIndex:
     validate_storage_version(storage_version)
-
+    print('[ivf_flat_index.py@create] dimensions', dimensions, 'vector_type', vector_type)
     index.create_metadata(
         uri=uri,
         dimensions=dimensions,

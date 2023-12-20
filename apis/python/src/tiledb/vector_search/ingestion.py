@@ -134,6 +134,8 @@ def ingest(
     from tiledb.vector_search.index import Index
     from tiledb.vector_search.storage_formats import storage_formats
 
+    print('[ingestion@ingest]', 'copy_centroids_uri', copy_centroids_uri, 'training_sample_size', training_sample_size, 'training_input_vectors', training_input_vectors, 'training_source_uri', training_source_uri, 'training_source_type', training_source_type)
+
     validate_storage_version(storage_version)
 
     if source_type and not source_uri:
@@ -158,6 +160,10 @@ def ingest(
     
     if training_sample_size < -1:
         raise ValueError("training_sample_size should either be positive or -1 (to auto-configure based on the dataset sizes)")
+    if copy_centroids_uri is not None and training_sample_size != -1:
+        raise ValueError("training_sample_size should either be positive or -1 (to auto-configure based on the dataset sizes)")
+    if copy_centroids_uri is not None and partitions == -1:
+        raise ValueError("partitions must be explicitly set if copy_centroids_uri is provided (set it to the number of centroids in copy_centroids_uri)")
 
     if index_type != "IVF_FLAT" and training_sample_size != -1:
         raise ValueError("training_sample_size should only be provided with index_type IVF_FLAT")
@@ -783,9 +789,14 @@ def ingest(
         logger.debug(
             "Copying centroids from: %s, to: %s", copy_centroids_uri, centroids_uri
         )
+
+        dst_centroids = tiledb.open(centroids_uri, mode="r")
+        print('[ingest@copy_centroids] dst_centroids before write\n', dst_centroids[0:dimensions, 0:partitions]['centroids'])
+
         src = tiledb.open(copy_centroids_uri, mode="r")
         dest = tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp)
         src_centroids = src[0:dimensions, 0:partitions]
+        print('[ingest@copy_centroids] src_centroids\n', src_centroids['centroids'])
         dest[0:dimensions, 0:partitions] = src_centroids
         logger.debug(src_centroids)
 
@@ -810,6 +821,7 @@ def ingest(
         trace_id: Optional[str] = None,
         use_sklearn: bool = False
     ):
+        print('[ingest@centralised_kmeans] training_sample_size', training_sample_size, 'training_source_uri', training_source_uri, 'training_source_type', training_source_type)
         from sklearn.cluster import KMeans
 
         from tiledb.vector_search.module import (
@@ -828,6 +840,7 @@ def ingest(
                     training_in_size, training_dimensions, training_vector_type = read_source_metadata(source_uri=training_source_uri, source_type=training_source_type)
                     if dimensions != training_dimensions:
                         raise ValueError(f"When training centroids, the index data dimensions ({dimensions}) != the training data dimensions ({training_dimensions})")
+                    print('[ingest@centralised_kmeans] reading from training_source_uri: training_source_uri', training_source_uri, 'training_source_type', training_source_type, 'training_in_size', training_in_size, 'training_dimensions', training_dimensions, 'training_vector_type', training_vector_type)
                     sample_vectors = read_input_vectors(
                         source_uri=training_source_uri,
                         source_type=training_source_type,
@@ -840,6 +853,7 @@ def ingest(
                         trace_id=trace_id,
                     ).astype(np.float32)
                 else:
+                    print('[ingest@centralised_kmeans] reading from source_uri: source_uri', source_uri, 'source_type', source_type, 'vector_type', vector_type, 'dimensions', dimensions, 'training_sample_size', training_sample_size)
                     sample_vectors = read_input_vectors(
                         source_uri=source_uri,
                         source_type=source_type,
@@ -872,6 +886,7 @@ def ingest(
                 # raise ValueError(f"We have a training_sample_size of {training_sample_size} but {partitions} partitions - training_sample_size must be >= partitions")
                 centroids = np.random.rand(dimensions, partitions)
 
+            print('[ingestion@centralized_kmeans] sample_vectors', sample_vectors.shape, '\n', sample_vectors, '\ncentroids', centroids.shape, '\n', centroids)
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
                 A[0:dimensions, 0:partitions] = centroids
@@ -1617,6 +1632,7 @@ def ingest(
             )
             return d
         elif index_type == "IVF_FLAT":
+            print('[ingestion@create_ingestion_dag] partitions', partitions, 'dimensions', dimensions)
             if copy_centroids_uri is not None:
                 centroids_node = submit(
                     copy_centroids,
@@ -1890,6 +1906,7 @@ def ingest(
         partition_history = list(json.loads(group.meta.get("partition_history", "[]")))
         if partitions == -1:
             partitions = int(group.meta.get("partitions", "-1"))
+            print('[ingestion@ingest_vectors] partitions from meta', partitions)
 
         previous_ingestion_timestamp = 0
         if len(ingestion_timestamps) > 0:
@@ -1947,6 +1964,7 @@ def ingest(
         logger.debug("Vector dimension type %s", vector_type)
         if partitions == -1:
             partitions = max(1, int(math.sqrt(size)))
+            print(f"[ingestion@ingest_vectors] partitions calculated from size ({size}), partitions: ", partitions)
         if training_sample_size == -1:
             training_sample_size = min(size, 100 * partitions)
         if mode == Mode.BATCH:
