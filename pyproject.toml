@@ -41,16 +41,28 @@ metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
 cmake.verbose = true # TODO: Remove
 logging.level = "INFO" # TODO: Remove
 cmake.source-dir = "src"
+cmake.targets = ["libtiledbvectorsearch", "install-libtiledbvectorsearch"]
 # TODO: This should be removed, but currently can't bacause: 'src/src/CMakeLists.txt'
 sdist.include = [
     ".git"
 ]
+wheel.packages = ["apis/python/src/tiledb"]
+build-dir = "build/{wheel_tag}"
+#wheel.install-dir = "apis/python/src/tiledb/vector_search"
 
 [tool.scikit-build.cmake.define]
-GIT_REPO_NAME = "placeholder"
+#GIT_REPO_NAME = "placeholder"
+TILEDB_VS_PYTHON = "ON"
+CMAKE_INSTALL_PREFIX = "apis/python/src/tiledb/vector_search"
 
 [tool.setuptools_scm]
 version_file = "apis/python/src/tiledb/vector_search/version.py"
+
+#[tool.setuptools.packages.find]
+#where = ["apis/python/src/tiledb"]
+#
+#[tool.setuptools.package-data]
+#vector_search = ["*.so"]
 
 [tool.ruff]
 extend-select = ["I"]

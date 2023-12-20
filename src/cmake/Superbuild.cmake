@@ -131,7 +131,7 @@ ExternalProject_Add(libtiledbvectorsearch
 # make install-libtiledbvectorsearch
 add_custom_target(install-libtiledbvectorsearch
   COMMAND
-    ${CMAKE_COMMAND} --build . --target install --config ${CMAKE_BUILD_TYPE}
+    ${CMAKE_COMMAND} --build . --target install
   COMMAND
     ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch/install_manifest.txt ${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch
