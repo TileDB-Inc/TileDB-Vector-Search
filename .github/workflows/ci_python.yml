@@ -28,7 +28,6 @@ jobs:
           python --version
       - name: Build and test python
         run: |
-          cd apis/python
           pip install .[test]
           pytest
           # TODO: fix editable on linux
