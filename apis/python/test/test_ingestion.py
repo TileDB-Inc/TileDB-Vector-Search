@@ -886,15 +886,43 @@ def test_ingest_with_training_source_uri_f32(tmp_path):
     )
 
 def test_ingest_with_training_source_uri_tdb(tmp_path):
+    ################################################################################################
+    # First set up the data.
+    ################################################################################################
     dataset_dir = os.path.join(tmp_path, "dataset")
     os.mkdir(dataset_dir)
     # data.shape should give you (cols, rows). So we transpose this before using it.
-    data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3], [4.0, 4.1, 4.2, 4.3], [5.0, 5.1, 5.2, 5.3]], dtype=np.float32).transpose()
+    data = np.array([
+        [1.0, 1.1, 1.2, 1.3], 
+        [2.0, 2.1, 2.2, 2.3], 
+        [3.0, 3.1, 3.2, 3.3], 
+        [4.0, 4.1, 4.2, 4.3], 
+        [5.0, 5.1, 5.2, 5.3]], dtype=np.float32).transpose()
     create_array(path=os.path.join(dataset_dir, "data.tdb"), data=data)
 
-    training_data = data[1:3]
+    training_data = np.array([
+        [1.0, 1.1, 1.2, 1.3], 
+        [5.0, 5.1, 5.2, 5.3]], dtype=np.float32).transpose()
     create_array(path=os.path.join(dataset_dir, "training_data.tdb"), data=training_data)
 
+    # Run a quick test that if we set up training_data incorrectly, we will raise an exception.
+    with pytest.raises(ValueError) as error:
+        training_data_invalid = np.array([
+            [1.0, 1.1, 1.2], 
+            [5.0, 5.1, 5.2]], dtype=np.float32).transpose()
+        create_array(path=os.path.join(dataset_dir, "training_data_invalid.tdb"), data=training_data_invalid)
+        index = ingest(
+            index_type="IVF_FLAT", 
+            index_uri=os.path.join(tmp_path, f"array_invalid"), 
+            source_uri=os.path.join(dataset_dir, "data.tdb"),
+            training_source_uri=os.path.join(dataset_dir, "training_data_invalid.tdb")
+        )
+    assert "training data dimensions" in str(error.value)
+
+    ################################################################################################
+    # Test we can ingest, query, update, and consolidate with a training_source_uri.
+    ################################################################################################
+    print('[test_ingestion@test_ingest_with_training_source_uri_tdb] ingest() ======================================')
     index_uri = os.path.join(tmp_path, "array")
     index = ingest(
         index_type="IVF_FLAT", 
@@ -922,9 +950,33 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     )
 
 def test_ingest_with_training_source_uri_numpy(tmp_path):
-    data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3], [4.0, 4.1, 4.2, 4.3], [5.0, 5.1, 5.2, 5.3]], dtype=np.float32)
+    ################################################################################################
+    # First set up the data.
+    ################################################################################################
+    data = np.array([
+        [1.0, 1.1, 1.2, 1.3], 
+        [2.0, 2.1, 2.2, 2.3], 
+        [3.0, 3.1, 3.2, 3.3], 
+        [4.0, 4.1, 4.2, 4.3], 
+        [5.0, 5.1, 5.2, 5.3]], dtype=np.float32)
     training_data = data[1:3]
 
+    # Run a quick test that if we set up training_data incorrectly, we will raise an exception.
+    with pytest.raises(ValueError) as error:
+        training_data_invalid = np.array([
+            [4.0, 4.1, 4.2], 
+            [5.0, 5.1, 5.2]], dtype=np.float32)
+        index = ingest(
+            index_type="IVF_FLAT", 
+            index_uri=os.path.join(tmp_path, "array_invalid"), 
+            input_vectors=data,
+            training_input_vectors=training_data_invalid,
+        )
+    assert "training data dimensions" in str(error.value)
+
+    ################################################################################################
+    # Test we can ingest, query, update, and consolidate.
+    ################################################################################################
     index_uri = os.path.join(tmp_path, "array")
     index = ingest(
         index_type="IVF_FLAT", 
