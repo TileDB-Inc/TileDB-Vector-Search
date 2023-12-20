@@ -41,8 +41,6 @@
 
 #include <docopt.h>
 
-#include "flat_query.h"
-#include "ivf_query.h"
 #include "linalg.h"
 #include "utils/utils.h"
 

@@ -27,7 +27,7 @@
  *
  * @section DESCRIPTION
  *
- * Nascent concepts for code organization and to help with testing.
+ * Nascent C++ API (including concepts).
  *
  */
 
@@ -36,84 +36,187 @@
 
 #include <concepts>
 #include <ranges>
-#include <span>
-#include <type_traits>
 
-template <typename T>
-concept has_load_member = requires(T&& t) {
-  t.load();
+#include "cpos.h"
+
+// ----------------------------------------------------------------------------
+// Convenience concepts
+// ----------------------------------------------------------------------------
+
+template <typename R>
+concept range_of_ranges =
+    std::ranges::range<R> && std::ranges::range<std::ranges::range_value_t<R>>;
+
+template <typename R>
+requires range_of_ranges<R>
+using inner_range_t = std::ranges::range_value_t<R>;
+
+template <typename R>
+requires range_of_ranges<R>
+using inner_iterator_t = std::ranges::iterator_t<inner_range_t<R>>;
+
+template <typename R>
+using inner_const_iterator_t = std::ranges::iterator_t<const inner_range_t<R>>;
+
+template <typename R>
+using inner_value_t = std::ranges::range_value_t<inner_range_t<R>>;
+
+template <typename R>
+using inner_reference_t = std::ranges::range_reference_t<inner_range_t<R>>;
+
+// ----------------------------------------------------------------------------
+// Utility concepts
+// ----------------------------------------------------------------------------
+
+/**
+ * @brief A concept for types that have `operator[]` defined.
+ *
+ * @tparam T The type to check.
+ */
+template <class T>
+concept subscriptable_range = std::ranges::random_access_range<T> && requires(
+    T& x,
+    const T& y,
+    const std::iter_difference_t<std::ranges::iterator_t<T>> n) {
+  { x[n] } -> std::same_as<std::iter_reference_t<std::ranges::iterator_t<T>>>;
+  {
+    y[n]
+    } -> std::same_as<std::iter_reference_t<std::ranges::iterator_t<const T>>>;
+};
+
+/**
+ * @brief A concept for types that have `operator()` defined.
+ *
+ * @tparam R The return type.
+ * @tparam T The type to check.
+ * @tparam Args The argument types.
+ */
+template <class R, class T, class... Args>
+concept callable = std::is_invocable_r_v<R, T, Args...>;
+
+template <class R>
+concept callable_range = std::ranges::range<R> && callable<
+    std::iter_reference_t<std::ranges::iterator_t<R>>,
+    R,
+    std::iter_difference_t<std::ranges::iterator_t<R>>>;
+
+// ----------------------------------------------------------------------------
+// Expected member functions for feature_vectors -- will be used by CPOs
+// ----------------------------------------------------------------------------
+
+template <class T>
+concept dimensionable = requires(const T& t) {
+  { dimension(t) } -> semi_integral;
 };
 
 template <class T>
-constexpr bool is_loadable_v = has_load_member<T>;
+concept vectorable = requires(const T& t) {
+  { num_vectors(t) } -> semi_integral;
+};
 
 template <class T>
-bool load(T&& t) {
-  return false;
-}
+concept partitionable = requires(const T& t) {
+  //  { num_partitions(t) } -> semi_integral;
+  {t.indices()};
+  {t.ids()};
+};
 
-template <has_load_member T>
-bool load(T&& t) {
-  return t.load();
-}
+// ----------------------------------------------------------------------------
+// feature_vector concept
+// ----------------------------------------------------------------------------
+
+template <typename R>
+concept feature_vector =
+    std::ranges::random_access_range<R> && /* std::ranges::sized_range<R> && */
+    std::ranges::contiguous_range<R> && dimensionable<R> &&
+    (subscriptable_range<R> || callable_range<R>);
+
+template <class R>
+concept query_vector = feature_vector<R>;
+
+// ----------------------------------------------------------------------------
+// feature_vector_array concept
+//
+// A vector range is a range of feature vectors.
+// We will want at least these kinds:
+//   contiguous -- all the vectors are stored in a single contiguous array
+//   partitioned -- the range is a range of partitions, each of which is a
+//                  contiguous range of vectors
+//   distributed?-- the range is a range of partitions, each of which is a
+//
+// @todo operator()(size_t, size_t) ?
+// ----------------------------------------------------------------------------
+template <class D>
+concept feature_vector_array =
+    // feature_vector<inner_range_t<D>> &&
+    // std::ranges::random_access_range<D> && /* std::ranges::sized_range<D> &&
+    // */ subscriptable_range<D> && requires(D d, const
+    // std::iter_difference_t<std::ranges::iterator_t<D>> n) {
+    requires(D d, size_t n) {
+  //      typename D::feature_type;
+  { num_vectors(d) } -> semi_integral;
+  { dimension(d) } -> semi_integral;
+  //{
+  //        d[n]
+  //      } -> std::same_as<std::iter_reference_t<std::ranges::iterator_t<D>>>;
+  { d[n] } -> feature_vector;  // Maybe redundant
+};
+
+/**
+ * @brief A concept for contiguous vector ranges.  The member function data()
+ * returns a pointer to the underlying contiguous one-dimensional storage.
+ * @tparam D
+ *
+ */
+// @todo -- add ranges::contiguous_range as a requirement
+template <class D>
+concept contiguous_feature_vector_array = feature_vector_array<D> &&
+    requires(D d) {
+  { data(d) } -> std::same_as<std::add_pointer_t<typename D::reference>>;
+};
 
 template <class T>
-size_t num_loads(T&& t) {
-  return 1;
-}
+concept query_vector_array = feature_vector_array<T>;
 
-template <has_load_member T>
-size_t num_loads(T&& t) {
-  return t.num_loads();
-}
+template <class T>
+concept contiguous_query_vector_array = contiguous_feature_vector_array<T>;
 
-template <typename T>
-concept has_col_offset = requires(T&& t) {
-  t.col_offset();
+// ----------------------------------------------------------------------------
+// partitioned_feature_vector_range concept (WIP)
+// ----------------------------------------------------------------------------
+
+template <class D>
+concept partitioned_feature_vector_array =
+    feature_vector_array<D> && partitionable<D>;
+//    && requires(D d) {
+//      typename D::id_type;
+//      typename D::indices_type;
+//    };
+
+template <class D>
+concept contiguous_partitioned_feature_vector_array =
+    partitioned_feature_vector_array<D> && std::ranges::contiguous_range<D> &&
+    requires(D d) {
+  {d.vectors()};
+  {d.indices()};
+  {d.ids()};
 };
 
-template <typename T>
-concept has_num_col_parts = requires(T&& t) {
-  t.num_col_parts();
+// ----------------------------------------------------------------------------
+// partition_index concept (WIP)
+// ----------------------------------------------------------------------------
+template <class P>
+concept partition_index = std::ranges::random_access_range<P> &&
+    std::ranges::contiguous_range<P> && subscriptable_range<P>;
+
+// ----------------------------------------------------------------------------
+// vector_search_index concept (WIP)
+// ----------------------------------------------------------------------------
+template <typename I>
+concept vector_search_index = requires(I i) {
+  {i.train()};
+  {i.add()};
+  {i.search()};
 };
 
-template <typename T>
-concept feature_vector = requires(T t) {
-  typename T::value_type;
-  //  typename T::index_type;
-  //  typename T::size_type;
-  //  typename T::reference;
-  { t.size() } -> std::convertible_to<std::size_t>;
-  requires(
-      requires(T t) {
-        { t[0] } -> std::convertible_to<typename T::value_type>;
-      } ||
-      requires(T t) {
-        { t(0) } -> std::convertible_to<typename T::value_type>;
-      });
-  { t.data() } -> std::convertible_to<typename T::value_type*>;
-  { num_features(t) } -> std::convertible_to<std::size_t>;
-};
-
-template <typename T>
-concept query_vector = feature_vector<T>;
-
-template <typename T>
-concept vector_database = requires(T t) {
-  typename T::value_type;
-  //  typename T::index_type;
-  //  typename T::size_type;
-  //  typename T::reference;
-  { t.size() } -> std::convertible_to<std::size_t>;
-  { t.rank() } -> std::convertible_to<std::size_t>;
-  { t[0] } -> std::convertible_to<std::span<typename T::value_type>>;
-  { t(0, 0) } -> std::convertible_to<typename T::value_type>;
-  { t.data() } -> std::convertible_to<typename T::value_type*>;
-  {t.rank() == 2};
-  { raveled(t) } -> std::convertible_to<std::span<typename T::value_type>>;
-};
-
-template <typename T>
-concept query_set = vector_database<T>;
-
-#endif
+#endif  // TDB_CONCEPTS_H
