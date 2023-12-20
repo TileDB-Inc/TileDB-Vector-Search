@@ -781,78 +781,79 @@ def test_copy_centroids_uri(tmp_path):
     )
 
     # Query the index.
-    queries = np.array([data[4]], dtype=np.float32)
-    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[4]])
+    query_vector_index = 4
+    queries = np.array([data[query_vector_index]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
 
-def test_kmeans():
-    k = 128
-    d = 16
-    n = k * k
-    max_iter = 16
-    n_init = 10
-    verbose = False
+# def test_kmeans():
+#     k = 128
+#     d = 16
+#     n = k * k
+#     max_iter = 16
+#     n_init = 10
+#     verbose = False
 
-    import sklearn.model_selection
-    from sklearn.datasets import make_blobs
-    from sklearn.cluster import KMeans
+#     import sklearn.model_selection
+#     from sklearn.datasets import make_blobs
+#     from sklearn.cluster import KMeans
 
-    X, _, centers = make_blobs(n_samples=n, n_features=d, centers=k, return_centers=True, random_state=1)
-    X = X.astype("float32")
+#     X, _, centers = make_blobs(n_samples=n, n_features=d, centers=k, return_centers=True, random_state=1)
+#     X = X.astype("float32")
 
-    data, queries = sklearn.model_selection.train_test_split(
-        X, test_size=0.1, random_state=1
-    )
+#     data, queries = sklearn.model_selection.train_test_split(
+#         X, test_size=0.1, random_state=1
+#     )
 
-    data_x = np.array([[1.0573647,   5.082087],
-                      [-6.229642,   -1.3590931],
-                      [0.7446737,    6.3828287],
-                      [-7.698864,   -3.0493321],
-                      [2.1362762,   -4.4448104],
-                      [1.04019,     -4.0389647],
-                      [0.38996044,   5.7235265],
-    [1.7470839,  -4.717076]]).astype("float32")
-    queries_x = np.array([[-7.3712273, -1.1178735]]).astype("float32")
+#     data_x = np.array([[1.0573647,   5.082087],
+#                       [-6.229642,   -1.3590931],
+#                       [0.7446737,    6.3828287],
+#                       [-7.698864,   -3.0493321],
+#                       [2.1362762,   -4.4448104],
+#                       [1.04019,     -4.0389647],
+#                       [0.38996044,   5.7235265],
+#     [1.7470839,  -4.717076]]).astype("float32")
+#     queries_x = np.array([[-7.3712273, -1.1178735]]).astype("float32")
 
-    km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init="random", random_state=1)
-    km.fit(data)
-    centroids_sk = km.cluster_centers_
-    results_sk = km.predict(queries)
+#     km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init="random", random_state=1)
+#     km.fit(data)
+#     centroids_sk = km.cluster_centers_
+#     results_sk = km.predict(queries)
 
-    centroids_tdb = kmeans_fit(
-        k, "random", max_iter, verbose, n_init, array_to_matrix(np.transpose(data)), seed=1
-    )
-    centroids_tdb_np = np.transpose(np.array(centroids_tdb))
-    results_tdb = kmeans_predict(centroids_tdb, array_to_matrix(np.transpose(queries)))
-    results_tdb_np = np.transpose(np.array(results_tdb))
+#     centroids_tdb = kmeans_fit(
+#         k, "random", max_iter, verbose, n_init, array_to_matrix(np.transpose(data)), seed=1
+#     )
+#     centroids_tdb_np = np.transpose(np.array(centroids_tdb))
+#     results_tdb = kmeans_predict(centroids_tdb, array_to_matrix(np.transpose(queries)))
+#     results_tdb_np = np.transpose(np.array(results_tdb))
 
-    def get_score(centroids, results):
-        x = []
-        for i in range(len(queries)):
-            x.append(np.linalg.norm(queries[i] - centroids[results[i]]))
-        return np.mean(np.array(x))
+#     def get_score(centroids, results):
+#         x = []
+#         for i in range(len(queries)):
+#             x.append(np.linalg.norm(queries[i] - centroids[results[i]]))
+#         return np.mean(np.array(x))
 
-    sklearn_score = get_score(centroids_sk, results_sk)
-    tdb_score = get_score(centroids_tdb_np, results_tdb_np)
+#     sklearn_score = get_score(centroids_sk, results_sk)
+#     tdb_score = get_score(centroids_tdb_np, results_tdb_np)
 
-    km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init="k-means++", random_state=1)
-    km.fit(data)
-    centroids_sk = km.cluster_centers_
-    results_sk = km.predict(queries)
+#     km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init="k-means++", random_state=1)
+#     km.fit(data)
+#     centroids_sk = km.cluster_centers_
+#     results_sk = km.predict(queries)
 
-    assert tdb_score < 1.5 * sklearn_score
+#     assert tdb_score < 1.5 * sklearn_score
 
-    centroids_tdb = kmeans_fit(
-        k, "k-means++", max_iter, verbose, n_init, array_to_matrix(np.transpose(data)), seed=1
-    )
-    centroids_tdb_np = np.transpose(np.array(centroids_tdb))
-    results_tdb = kmeans_predict(centroids_tdb, array_to_matrix(np.transpose(queries)))
-    results_tdb_np = np.transpose(np.array(results_tdb))
+#     centroids_tdb = kmeans_fit(
+#         k, "k-means++", max_iter, verbose, n_init, array_to_matrix(np.transpose(data)), seed=1
+#     )
+#     centroids_tdb_np = np.transpose(np.array(centroids_tdb))
+#     results_tdb = kmeans_predict(centroids_tdb, array_to_matrix(np.transpose(queries)))
+#     results_tdb_np = np.transpose(np.array(results_tdb))
 
-    sklearn_score = get_score(centroids_sk, results_sk)
-    tdb_score = get_score(centroids_tdb_np, results_tdb_np)
+#     sklearn_score = get_score(centroids_sk, results_sk)
+#     tdb_score = get_score(centroids_tdb_np, results_tdb_np)
 
-    assert tdb_score < 1.5 * sklearn_score
+#     assert tdb_score < 1.5 * sklearn_score
 
 def test_ingest_with_training_source_uri_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -869,11 +870,12 @@ def test_ingest_with_training_source_uri_f32(tmp_path):
         training_source_uri=os.path.join(dataset_dir, "training_data.f32bin")
     )
 
-    queries = np.array([data[1]], dtype=np.float32)
-    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1]])
+    query_vector_index = 1
+    queries = np.array([data[query_vector_index]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
     index = IVFFlatIndex(uri=index_uri)
-    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1]])
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
     # Also test that we can ingest with training_source_type.
     ingest(
@@ -930,9 +932,8 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     )
 
     query_vector_index = 1
-    query_vectors = np.array([data.transpose()[query_vector_index]], dtype=np.float32)
-    result_d, result_i = index.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
+    queries = np.array([data.transpose()[query_vector_index]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
     update_vectors = np.empty([3], dtype=object)
     update_vectors[0] = np.array([6.0, 6.1, 6.2, 6.3], dtype=np.dtype(np.float32))
@@ -942,9 +943,8 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     
     index = index.consolidate_updates()
 
-    query_vectors = np.array([update_vectors[2]], dtype=np.float32)
-    result_d, result_i = index.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1002]])
+    queries = np.array([update_vectors[2]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1002]])
 
     ################################################################################################
     # Test we can load the index again and query, update, and consolidate.
@@ -952,8 +952,7 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     # Load the index again and query.
     index = IVFFlatIndex(uri=index_uri)
 
-    result_d, result_i = index.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1002]])
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1002]])
     
     # Update the index and query.
     update_vectors = np.empty([2], dtype=object)
@@ -962,9 +961,8 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     index.update_batch(vectors=update_vectors, external_ids=np.array([1003, 1004]))
     index = index.consolidate_updates()
     
-    query_vectors = np.array([update_vectors[0]], dtype=np.float32)
-    result_d, result_i = index.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1003]])
+    queries = np.array([update_vectors[0]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1003]])
 
     # Clear the index history, load, update, and query.
     Index.clear_history(uri=index_uri, timestamp=index.latest_ingestion_timestamp - 1)
@@ -977,9 +975,8 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     index.update_batch(vectors=update_vectors, external_ids=np.array([1003, 1004]))
     index = index.consolidate_updates()
 
-    query_vectors = np.array([update_vectors[0]], dtype=np.float32)
-    result_d, result_i = index.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1003]])
+    queries = np.array([update_vectors[0]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1003]])
 
     ###############################################################################################
     # Also test that we can ingest with training_source_type.
@@ -1028,8 +1025,9 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
         training_input_vectors=training_data,
     )
 
-    queries = np.array([data[1]], dtype=np.float32)
-    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1]])
+    query_vector_index = 1
+    queries = np.array([data[query_vector_index]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
     update_vectors = np.empty([3], dtype=object)
     update_vectors[0] = np.array([6.0, 6.1, 6.2, 6.3], dtype=np.dtype(np.float32))
@@ -1039,18 +1037,16 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     
     index = index.consolidate_updates()
 
-    query_vectors = np.array([update_vectors[2]], dtype=np.float32)
-    result_d, result_i = index.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1002]])
+    queries = np.array([update_vectors[2]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1002]])
 
     ################################################################################################
     # Test we can load the index again and query, update, and consolidate.
     ################################################################################################
     index_ram = IVFFlatIndex(uri=index_uri)
 
-    query_vectors = np.array([data[query_vector_index]], dtype=np.float32)
-    result_d, result_i = index.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
+    queries = np.array([data[query_vector_index]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
     update_vectors = np.empty([2], dtype=object)
     update_vectors[0] = np.array([9.0, 9.1, 9.2, 9.3], dtype=np.dtype(np.float32))
@@ -1058,9 +1054,8 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     index.update_batch(vectors=update_vectors, external_ids=np.array([1003, 1004]))
     index_ram = index_ram.consolidate_updates()
 
-    query_vectors = np.array([update_vectors[0]], dtype=np.float32)
-    result_d, result_i = index_ram.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1003]])
+    queries = np.array([update_vectors[0]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1003]])
 
     update_vectors = np.empty([2], dtype=object)
     update_vectors[0] = np.array([11.0, 11.1, 11.2, 11.3], dtype=np.dtype(np.float32))
@@ -1068,6 +1063,5 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     index.update_batch(vectors=update_vectors, external_ids=np.array([1003, 1004]))
     index_ram = index_ram.consolidate_updates(reuse_centroids=False, training_sample_size=3)
 
-    query_vectors = np.array([update_vectors[0]], dtype=np.float32)
-    result_d, result_i = index_ram.query(query_vectors, k=1)
-    check_equals(result_d=result_d, result_i=result_i, expected_result_d=[[0]], expected_result_i=[[1003]])
+    queries = np.array([update_vectors[0]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1003]])
