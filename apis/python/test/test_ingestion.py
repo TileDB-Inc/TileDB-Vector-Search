@@ -776,8 +776,7 @@ def test_copy_centroids_uri(tmp_path):
         index_type="IVF_FLAT", 
         index_uri=index_uri, 
         input_vectors=data,
-        copy_centroids_uri=centroids_uri,
-        partitions=centroids_in_size
+        copy_centroids_uri=centroids_uri
     )
 
     # Query the index.
