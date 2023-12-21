@@ -1701,12 +1701,16 @@ def ingest(
                         kmeans_workers = []
                         task_id = 0
 
+                        # We will read N batches of input vectors.
                         num_batches = math.ceil(in_size / input_vectors_batch_size)
+                        # For each batch, we will sample a random group of num_per_batch vectors.
                         num_per_batch = math.ceil(training_sample_size / num_batches)
+                        # Except the last batch which might be different if things are not perfectly divisible.
                         num_per_last_batch = training_sample_size - ((num_batches - 1) * num_per_batch)
                         
-                        # In RANDOM mode, we select a random group of training_sample_size vectors out of all the vectors.
-                        # In FIRST_N mode, we select the first training_sample_size vectors.
+                        # In RANDOM mode, we will iterate through all the vectors in order to use a 
+                        # random group of training_sample_size vectors for computing centroids.
+                        # In FIRST_N mode, we just select the first training_sample_size vectors.
                         input_vectors_end_pos = training_sample_size if training_sampling_policy != TrainingSamplingPolicy.RANDOM else in_size
                         for i in range(0, input_vectors_end_pos, input_vectors_batch_size):
                             start = i
