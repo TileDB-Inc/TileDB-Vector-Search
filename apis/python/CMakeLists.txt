@@ -29,6 +29,7 @@ cmake_minimum_required(VERSION 3.21)
 
 find_package(TileDB REQUIRED)
 
+set(Python_FIND_VIRTUALENV FIRST)
 set(PYBIND11_NEWPYTHON ON)
 find_package(pybind11 CONFIG REQUIRED)
 
