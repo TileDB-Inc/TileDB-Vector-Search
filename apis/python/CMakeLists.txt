@@ -29,20 +29,10 @@ cmake_minimum_required(VERSION 3.21)
 
 find_package(TileDB REQUIRED)
 
-if(SKBUILD)
-    set(Python_EXECUTABLE "${PYTHON_EXECUTABLE}")
-    set(Python_INCLUDE_DIR "${PYTHON_INCLUDE_DIR}")
-    set(Python_LIBRARY "${PYTHON_LIBRARY}")
-endif()
-
-message(status "NORMAL CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
-
-set(Python_FIND_VIRTUALENV FIRST)
 set(PYBIND11_NEWPYTHON ON)
 find_package(pybind11 CONFIG REQUIRED)
 
 set(VSPY_TARGET_NAME _tiledbvspy)
-
 
 pybind11_add_module(
         ${VSPY_TARGET_NAME}
