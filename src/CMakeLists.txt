@@ -143,7 +143,7 @@ if (TILEDB_VS_ENABLE_BLAS)
 endif()
 
 if (DEFINED TileDB_DIR)
-    set(CMAKE_PREFIX_PATH "${TileDB_DIR};{CMAKE_PREFIX_PATH}")
+    set(CMAKE_PREFIX_PATH "${TileDB_DIR};${CMAKE_PREFIX_PATH}")
     message(STATUS "TileDB_DIR is set to ${TileDB_DIR} -- find_package will search there first.")
 else()
     message(STATUS "TileDB_DIR is not set -- find_package will use default search path.")
