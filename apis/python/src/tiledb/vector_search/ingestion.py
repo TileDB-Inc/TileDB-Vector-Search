@@ -1050,7 +1050,7 @@ def ingest(
                 km.cluster_centers_ = centroids
                 assignments = km.predict(vectors)
             else:
-                assignments = kmeans_predict(array_to_matrix(np.transpose(centroids)), array_to_matrix(np.transpose(vectors)))
+                assignments = kmeans_predict(centroids, vectors)	
             logger.debug("Assignments: %s", assignments[0:100])
             partial_new_centroids = update_centroids()
             logger.debug("New centroids: %s", partial_new_centroids[0:5])
@@ -1698,7 +1698,7 @@ def ingest(
                         kmeans_workers = []
                         task_id = 0
 
-                        # We will read N batches of input vectors.
+                        # We will read num_batches of input vectors.
                         num_batches = math.ceil(in_size / input_vectors_batch_size)
                         # For each batch, we will sample a random group of num_per_batch vectors.
                         num_per_batch = math.ceil(training_sample_size / num_batches)
