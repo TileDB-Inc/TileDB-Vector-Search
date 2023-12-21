@@ -786,74 +786,74 @@ def test_copy_centroids_uri(tmp_path):
     query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[query_vector_index]])
 
 
-# def test_kmeans():
-#     k = 128
-#     d = 16
-#     n = k * k
-#     max_iter = 16
-#     n_init = 10
-#     verbose = False
+def test_kmeans():
+    k = 128
+    d = 16
+    n = k * k
+    max_iter = 16
+    n_init = 10
+    verbose = False
 
-#     import sklearn.model_selection
-#     from sklearn.datasets import make_blobs
-#     from sklearn.cluster import KMeans
+    import sklearn.model_selection
+    from sklearn.datasets import make_blobs
+    from sklearn.cluster import KMeans
 
-#     X, _, centers = make_blobs(n_samples=n, n_features=d, centers=k, return_centers=True, random_state=1)
-#     X = X.astype("float32")
+    X, _, centers = make_blobs(n_samples=n, n_features=d, centers=k, return_centers=True, random_state=1)
+    X = X.astype("float32")
 
-#     data, queries = sklearn.model_selection.train_test_split(
-#         X, test_size=0.1, random_state=1
-#     )
+    data, queries = sklearn.model_selection.train_test_split(
+        X, test_size=0.1, random_state=1
+    )
 
-#     data_x = np.array([[1.0573647,   5.082087],
-#                       [-6.229642,   -1.3590931],
-#                       [0.7446737,    6.3828287],
-#                       [-7.698864,   -3.0493321],
-#                       [2.1362762,   -4.4448104],
-#                       [1.04019,     -4.0389647],
-#                       [0.38996044,   5.7235265],
-#     [1.7470839,  -4.717076]]).astype("float32")
-#     queries_x = np.array([[-7.3712273, -1.1178735]]).astype("float32")
+    data_x = np.array([[1.0573647,   5.082087],
+                      [-6.229642,   -1.3590931],
+                      [0.7446737,    6.3828287],
+                      [-7.698864,   -3.0493321],
+                      [2.1362762,   -4.4448104],
+                      [1.04019,     -4.0389647],
+                      [0.38996044,   5.7235265],
+    [1.7470839,  -4.717076]]).astype("float32")
+    queries_x = np.array([[-7.3712273, -1.1178735]]).astype("float32")
 
-#     km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init="random", random_state=1)
-#     km.fit(data)
-#     centroids_sk = km.cluster_centers_
-#     results_sk = km.predict(queries)
+    km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init="random", random_state=1)
+    km.fit(data)
+    centroids_sk = km.cluster_centers_
+    results_sk = km.predict(queries)
 
-#     centroids_tdb = kmeans_fit(
-#         k, "random", max_iter, verbose, n_init, array_to_matrix(np.transpose(data)), seed=1
-#     )
-#     centroids_tdb_np = np.transpose(np.array(centroids_tdb))
-#     results_tdb = kmeans_predict(centroids_tdb, array_to_matrix(np.transpose(queries)))
-#     results_tdb_np = np.transpose(np.array(results_tdb))
+    centroids_tdb = kmeans_fit(
+        k, "random", max_iter, verbose, n_init, array_to_matrix(np.transpose(data)), seed=1
+    )
+    centroids_tdb_np = np.transpose(np.array(centroids_tdb))
+    results_tdb = kmeans_predict(centroids_tdb, array_to_matrix(np.transpose(queries)))
+    results_tdb_np = np.transpose(np.array(results_tdb))
 
-#     def get_score(centroids, results):
-#         x = []
-#         for i in range(len(queries)):
-#             x.append(np.linalg.norm(queries[i] - centroids[results[i]]))
-#         return np.mean(np.array(x))
+    def get_score(centroids, results):
+        x = []
+        for i in range(len(queries)):
+            x.append(np.linalg.norm(queries[i] - centroids[results[i]]))
+        return np.mean(np.array(x))
 
-#     sklearn_score = get_score(centroids_sk, results_sk)
-#     tdb_score = get_score(centroids_tdb_np, results_tdb_np)
+    sklearn_score = get_score(centroids_sk, results_sk)
+    tdb_score = get_score(centroids_tdb_np, results_tdb_np)
 
-#     km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init="k-means++", random_state=1)
-#     km.fit(data)
-#     centroids_sk = km.cluster_centers_
-#     results_sk = km.predict(queries)
+    km = KMeans(n_clusters=k, n_init=n_init, max_iter=max_iter, verbose=verbose, init="k-means++", random_state=1)
+    km.fit(data)
+    centroids_sk = km.cluster_centers_
+    results_sk = km.predict(queries)
 
-#     assert tdb_score < 1.5 * sklearn_score
+    assert tdb_score < 1.5 * sklearn_score
 
-#     centroids_tdb = kmeans_fit(
-#         k, "k-means++", max_iter, verbose, n_init, array_to_matrix(np.transpose(data)), seed=1
-#     )
-#     centroids_tdb_np = np.transpose(np.array(centroids_tdb))
-#     results_tdb = kmeans_predict(centroids_tdb, array_to_matrix(np.transpose(queries)))
-#     results_tdb_np = np.transpose(np.array(results_tdb))
+    centroids_tdb = kmeans_fit(
+        k, "k-means++", max_iter, verbose, n_init, array_to_matrix(np.transpose(data)), seed=1
+    )
+    centroids_tdb_np = np.transpose(np.array(centroids_tdb))
+    results_tdb = kmeans_predict(centroids_tdb, array_to_matrix(np.transpose(queries)))
+    results_tdb_np = np.transpose(np.array(results_tdb))
 
-#     sklearn_score = get_score(centroids_sk, results_sk)
-#     tdb_score = get_score(centroids_tdb_np, results_tdb_np)
+    sklearn_score = get_score(centroids_sk, results_sk)
+    tdb_score = get_score(centroids_tdb_np, results_tdb_np)
 
-#     assert tdb_score < 1.5 * sklearn_score
+    assert tdb_score < 1.5 * sklearn_score
 
 def test_ingest_with_training_source_uri_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")

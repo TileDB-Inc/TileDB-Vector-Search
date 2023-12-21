@@ -356,38 +356,17 @@ class Index:
 
     def consolidate_updates(
         self, 
-        reuse_centroids: bool = True, 
-        training_sample_size: int = -1,
-        training_input_vectors: np.ndarray = None,
-        training_source_uri: str = None,
-        training_source_type: str = None,
+        reuse_centroids: bool = True,
         **kwargs
     ):
         """
         Parameters
         ----------
         reuse_centroids: bool
-            If true, reuse the centroids from the previous index. Else, recompute the centroids.
-            Only valid for IVF_FLAT indexes.
-        training_sample_size: int = -1
-            if reuse_centroids is True, this is the
-            vector sample size to train centroids with,
-            if not provided, is auto-configured based on the dataset sizes
-            should not be provided if training_source_uri is provided
-        training_input_vectors: numpy Array
-            if reuse_centroids is True, these are the
-            training input vectors, if this is provided it takes precedence over training_source_uri and training_source_type
-            should not be provided if training_sample_size or training_source_uri is provided
-        training_source_uri: str = None
-            if reuse_centroids is True, this is the
-            source URI to use for training centroids when building a IVF_FLAT vector index, 
-            if not provided, the first training_sample_size vectors from source_uri are used
-            should not be provided if training_sample_size or training_input_vectors is provided
-        training_source_type: str = None
-            if reuse_centroids is True, this is the
-            type of the training source data in training_source_uri
-            if left empty, is auto-detected from the suffix of training_source_type
-            should only be provided when training_source_uri is provided
+            If true, reuse the centroids from the previous index. 
+            Else, recompute the centroids - when doing so you can pass any ingest() arguments used 
+            to configure computing centroids and we will use them when recomputing the centroids.
+            Only valid for IVF_FLAT indexes. 
         """
         from tiledb.vector_search.ingestion import ingest
         fragments_info = tiledb.array_fragments(
@@ -404,7 +383,21 @@ class Index:
         tiledb.consolidate(self.updates_array_uri, config=conf)
         tiledb.vacuum(self.updates_array_uri, config=conf)
 
-        should_pass_copy_centroids_uri = self.index_type == "IVF_FLAT" and reuse_centroids
+        # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
+        should_pass_copy_centroids_uri = self.index_type == "IVF_FLAT" and reuse_centroids and self.partitions > 0
+        print('should_pass_copy_centroids_uri', should_pass_copy_centroids_uri)
+        print('kwargs[partitions]', kwargs.get('partitions'))
+        print('partitions in kwargs', 'partitions' in kwargs)
+        print('self.centroids_uri', self.centroids_uri)
+        print('self.partitions', self.partitions)
+        if should_pass_copy_centroids_uri:
+            if 'partitions' in kwargs and self.partitions != kwargs['partitions']:
+                raise ValueError(f"The passed partitions={kwargs['partitions']} are different than the number of partitions ({self.partitions}) from when the index was created - this is an issue because with reuse_centroids=True, the partitions from the previous index will be used; to fix, set reuse_centroids=False, don't pass partitions, or pass the correct number of partitions.")
+            partitions = self.partitions
+        else:
+            partitions = kwargs.get('partitions', -1)
+        print('partitions', partitions)
+
         new_index = ingest(
             index_type=self.index_type,
             index_uri=self.uri,
@@ -416,11 +409,7 @@ class Index:
             index_timestamp=max_timestamp,
             storage_version=self.storage_version,
             copy_centroids_uri=self.centroids_uri if should_pass_copy_centroids_uri else None,
-            partitions=self.partitions if should_pass_copy_centroids_uri else -1,
-            training_sample_size=training_sample_size,
-            training_input_vectors=training_input_vectors,
-            training_source_uri=training_source_uri,
-            training_source_type=training_source_type,
+            partitions=partitions,
             config=self.config,
             **kwargs,
         )
