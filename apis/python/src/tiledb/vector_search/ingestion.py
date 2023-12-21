@@ -928,6 +928,10 @@ def ingest(
     ):
         import tiledb.cloud
         from sklearn.cluster import KMeans
+        from tiledb.vector_search.module import (
+            array_to_matrix,
+            kmeans_predict,
+        )
 
         def generate_new_centroid_per_thread(
             thread_id, start, end, new_centroid_sums_queue, new_centroid_counts_queue
@@ -1029,7 +1033,7 @@ def ingest(
                 km.cluster_centers_ = centroids
                 assignments = km.predict(vectors)
             else:
-                assignments = kmeans_predict(centroids, vectors)
+                assignments = kmeans_predict(array_to_matrix(np.transpose(centroids)), array_to_matrix(np.transpose(vectors)))
             logger.debug("Assignments: %s", assignments[0:100])
             partial_new_centroids = update_centroids()
             logger.debug("New centroids: %s", partial_new_centroids[0:5])
@@ -1637,7 +1641,7 @@ def ingest(
                     image_name=DEFAULT_IMG_NAME,
                 )
             else:
-                if training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE:
+                if training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE and False:
                     centroids_node = submit(
                         centralised_kmeans,
                         index_group_uri=index_group_uri,
