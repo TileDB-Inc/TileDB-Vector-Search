@@ -159,6 +159,11 @@ def ingest(
     if training_sample_size < -1:
         raise ValueError("training_sample_size should either be positive or -1 (to auto-configure based on the dataset sizes)")
 
+    if copy_centroids_uri is not None and training_sample_size != -1:
+        raise ValueError("training_sample_size should not be provided alongside copy_centroids_uri")
+    if copy_centroids_uri is not None and partitions == -1:
+        raise ValueError("partitions should be provided if copy_centroids_uri is provided (set partitions to the number of centroids in copy_centroids_uri)")
+
     if index_type != "IVF_FLAT" and training_sample_size != -1:
         raise ValueError("training_sample_size should only be provided with index_type IVF_FLAT")
     for variable in ["copy_centroids_uri", "training_input_vectors", "training_source_uri", "training_source_type"]:

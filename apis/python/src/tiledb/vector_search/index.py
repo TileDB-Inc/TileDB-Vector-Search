@@ -354,9 +354,21 @@ class Index:
                 timestamp = int(time.time() * 1000)
             return tiledb.open(self.updates_array_uri, mode="w", timestamp=timestamp)
 
-    def consolidate_updates(self, **kwargs):
+    def consolidate_updates(
+        self, 
+        reuse_centroids: bool = True,
+        **kwargs
+    ):
+        """
+        Parameters
+        ----------
+        reuse_centroids: bool
+            If true, reuse the centroids from the previous index. 
+            Else, recompute the centroids - when doing so you can pass any ingest() arguments used 
+            to configure computing centroids and we will use them when recomputing the centroids.
+            Only valid for IVF_FLAT indexes. 
+        """
         from tiledb.vector_search.ingestion import ingest
-
         fragments_info = tiledb.array_fragments(
             self.updates_array_uri, ctx=tiledb.Ctx(self.config)
         )
@@ -371,6 +383,15 @@ class Index:
         tiledb.consolidate(self.updates_array_uri, config=conf)
         tiledb.vacuum(self.updates_array_uri, config=conf)
 
+        # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
+        should_pass_copy_centroids_uri = self.index_type == "IVF_FLAT" and reuse_centroids and self.partitions > 0
+        if should_pass_copy_centroids_uri:
+            # Make sure the user didn't pass an incorrect number of partitions.
+            if 'partitions' in kwargs and self.partitions != kwargs['partitions']:
+                raise ValueError(f"The passed partitions={kwargs['partitions']} is different than the number of partitions ({self.partitions}) from when the index was created - this is an issue because with reuse_centroids=True, the partitions from the previous index will be used; to fix, set reuse_centroids=False, don't pass partitions, or pass the correct number of partitions.")
+            # We pass partitions through kwargs so that we don't pass it twice.
+            kwargs['partitions'] = self.partitions
+
         new_index = ingest(
             index_type=self.index_type,
             index_uri=self.uri,
@@ -381,6 +402,7 @@ class Index:
             updates_uri=self.updates_array_uri,
             index_timestamp=max_timestamp,
             storage_version=self.storage_version,
+            copy_centroids_uri=self.centroids_uri if should_pass_copy_centroids_uri else None,
             config=self.config,
             **kwargs,
         )
