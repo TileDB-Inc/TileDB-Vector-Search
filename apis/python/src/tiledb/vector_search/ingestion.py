@@ -7,6 +7,7 @@ from tiledb.cloud.dag import Mode
 
 from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION, validate_storage_version
+from tiledb.vector_search.training_sampling_policy import TrainingSamplingPolicy
 
 
 def ingest(
@@ -26,6 +27,7 @@ def ingest(
     size: int = -1,
     partitions: int = -1,
     copy_centroids_uri: str = None,
+    training_sampling_policy: TrainingSamplingPolicy = TrainingSamplingPolicy.FIRST_N,
     training_sample_size: int = -1,
     training_input_vectors: np.ndarray = None,
     training_source_uri: str = None,
@@ -78,6 +80,8 @@ def ingest(
     copy_centroids_uri: str
         TileDB array URI to copy centroids from,
         if not provided, centroids are build running kmeans
+    training_sampling_policy: TrainingSamplingPolicy
+        The training sampling policy to use.
     training_sample_size: int = -1
         vector sample size to train centroids with,
         if not provided, is auto-configured based on the dataset sizes
@@ -133,6 +137,8 @@ def ingest(
     from tiledb.vector_search import flat_index, ivf_flat_index
     from tiledb.vector_search.index import Index
     from tiledb.vector_search.storage_formats import storage_formats
+
+    print('[ingestion@ingest] training_sampling_policy', training_sampling_policy)
 
     validate_storage_version(storage_version)
 
@@ -816,7 +822,7 @@ def ingest(
         use_sklearn: bool = False
     ):
         from sklearn.cluster import KMeans
-
+        print('[ingestion@centralised_kmeans] training_sampling_policy', training_sampling_policy, 'training_sample_size', training_sample_size, 'partitions', partitions)
         from tiledb.vector_search.module import (
             array_to_matrix,
             kmeans_fit,
@@ -877,6 +883,8 @@ def ingest(
                 # raise ValueError(f"We have a training_sample_size of {training_sample_size} but {partitions} partitions - training_sample_size must be >= partitions")
                 centroids = np.random.rand(dimensions, partitions)
 
+            print('[ingestion@centralised_kmeans] sample_vectors', sample_vectors.shape, sample_vectors)
+            print('[ingestion@centralised_kmeans] centroids', centroids.shape, centroids)
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
                 A[0:dimensions, 0:partitions] = centroids
@@ -928,6 +936,10 @@ def ingest(
     ):
         import tiledb.cloud
         from sklearn.cluster import KMeans
+        from tiledb.vector_search.module import (
+            array_to_matrix,
+            kmeans_predict,
+        )
 
         def generate_new_centroid_per_thread(
             thread_id, start, end, new_centroid_sums_queue, new_centroid_counts_queue
@@ -1029,7 +1041,7 @@ def ingest(
                 km.cluster_centers_ = centroids
                 assignments = km.predict(vectors)
             else:
-                assignments = kmeans_predict(centroids, vectors)
+                assignments = kmeans_predict(array_to_matrix(np.transpose(centroids)), array_to_matrix(np.transpose(vectors)))
             logger.debug("Assignments: %s", assignments[0:100])
             partial_new_centroids = update_centroids()
             logger.debug("New centroids: %s", partial_new_centroids[0:5])
@@ -1637,7 +1649,7 @@ def ingest(
                     image_name=DEFAULT_IMG_NAME,
                 )
             else:
-                if training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE:
+                if training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE and training_sampling_policy != TrainingSamplingPolicy.RANDOM:
                     centroids_node = submit(
                         centralised_kmeans,
                         index_group_uri=index_group_uri,
@@ -1676,9 +1688,8 @@ def ingest(
                     for it in range(5):
                         kmeans_workers = []
                         task_id = 0
-                        for i in range(
-                            0, training_sample_size, input_vectors_batch_size
-                        ):
+                        input_vectors_end_pos = training_sample_size if training_sampling_policy != TrainingSamplingPolicy else in_size
+                        for i in range(0, training_sample_size, input_vectors_batch_size):
                             start = i
                             end = i + input_vectors_batch_size
                             if end > size:
