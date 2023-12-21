@@ -137,6 +137,16 @@ add_custom_target(install-libtiledbvectorsearch
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch
 )
 
+add_custom_target(
+        skbuild-export
+        COMMAND
+            ${CMAKE_COMMAND} --install . --prefix ${SKBUILD_PLATLIB_DIR}/tiledb/vector_search
+        WORKING_DIRECTORY
+            ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch
+        DEPENDS
+            libtiledbvectorsearch
+)
+
 # make check
 add_custom_target(check
   COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch --output-on-failure
