@@ -1,5 +1,6 @@
 import json
 from functools import partial
+import random
 from typing import Any, Mapping, Optional, Tuple
 
 import numpy as np
@@ -7,8 +8,15 @@ from tiledb.cloud.dag import Mode
 
 from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION, validate_storage_version
-from tiledb.vector_search.training_sampling_policy import TrainingSamplingPolicy
+import enum
 
+class TrainingSamplingPolicy(enum.Enum):
+    FIRST_N = 1
+    RANDOM = 2
+    SOURCE_URI = 3
+
+    def __str__(self):
+        return self.name.replace("_", " ").title()
 
 def ingest(
     index_type: str,
@@ -928,18 +936,20 @@ def ingest(
         dimensions: int,
         vector_start_pos: int,
         vector_end_pos: int,
+        random_sample_size_from_vectors: int,
         threads: int,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
         use_sklearn: bool = False,
     ):
+        """
+        random_sample_size_from_vectors: int
+            The number of vectors to sample from the source data to use for assigning points to 
+            centroids. If -1 we will not sample and will use all vectors.
+        """
         import tiledb.cloud
         from sklearn.cluster import KMeans
-        from tiledb.vector_search.module import (
-            array_to_matrix,
-            kmeans_predict,
-        )
 
         def generate_new_centroid_per_thread(
             thread_id, start, end, new_centroid_sums_queue, new_centroid_counts_queue
@@ -1033,6 +1043,8 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             )
+            if random_sample_size_from_vectors != -1:
+                vectors = random.sample(vectors, random_sample_size_from_vectors)
             logger.debug("Input centroids: %s", centroids[0:5])
             logger.debug("Assigning vectors to centroids")
             if use_sklearn:
@@ -1688,12 +1700,26 @@ def ingest(
                     for it in range(5):
                         kmeans_workers = []
                         task_id = 0
-                        input_vectors_end_pos = training_sample_size if training_sampling_policy != TrainingSamplingPolicy else in_size
-                        for i in range(0, training_sample_size, input_vectors_batch_size):
+
+                        num_batches = math.ceil(in_size / input_vectors_batch_size)
+                        num_per_batch = math.ceil(training_sample_size / num_batches)
+                        num_per_last_batch = training_sample_size - ((num_batches - 1) * num_per_batch)
+                        
+                        # In RANDOM mode, we select a random group of training_sample_size vectors out of all the vectors.
+                        # In FIRST_N mode, we select the first training_sample_size vectors.
+                        input_vectors_end_pos = training_sample_size if training_sampling_policy != TrainingSamplingPolicy.RANDOM else in_size
+                        for i in range(0, input_vectors_end_pos, input_vectors_batch_size):
                             start = i
                             end = i + input_vectors_batch_size
                             if end > size:
                                 end = size
+                            
+                            random_sample_size_from_vectors = -1
+                            if training_sampling_policy == TrainingSamplingPolicy.RANDOM:
+                                if i == input_vectors_end_pos - input_vectors_batch_size:
+                                    random_sample_size_from_vectors = num_per_last_batch
+                                else:
+                                    random_sample_size_from_vectors = num_per_batch
                             kmeans_workers.append(
                                 submit(
                                     assign_points_and_partial_new_centroids,
@@ -1705,6 +1731,7 @@ def ingest(
                                     dimensions=dimensions,
                                     vector_start_pos=start,
                                     vector_end_pos=end,
+                                    random_sample_size_from_vectors=random_sample_size_from_vectors,
                                     threads=threads,
                                     config=config,
                                     verbose=verbose,

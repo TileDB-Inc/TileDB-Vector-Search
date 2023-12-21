@@ -5,11 +5,10 @@ import pytest
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.index import Index
-from tiledb.vector_search.ingestion import ingest
+from tiledb.vector_search.ingestion import ingest, TrainingSamplingPolicy
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.module import array_to_matrix, kmeans_fit, kmeans_predict
 from tiledb.vector_search.utils import load_fvecs
-from tiledb.vector_search.training_sampling_policy import TrainingSamplingPolicy
 
 MINIMUM_ACCURACY = 0.85
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
