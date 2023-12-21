@@ -385,18 +385,12 @@ class Index:
 
         # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
         should_pass_copy_centroids_uri = self.index_type == "IVF_FLAT" and reuse_centroids and self.partitions > 0
-        print('should_pass_copy_centroids_uri', should_pass_copy_centroids_uri)
-        print('kwargs[partitions]', kwargs.get('partitions'))
-        print('partitions in kwargs', 'partitions' in kwargs)
-        print('self.centroids_uri', self.centroids_uri)
-        print('self.partitions', self.partitions)
         if should_pass_copy_centroids_uri:
             if 'partitions' in kwargs and self.partitions != kwargs['partitions']:
-                raise ValueError(f"The passed partitions={kwargs['partitions']} are different than the number of partitions ({self.partitions}) from when the index was created - this is an issue because with reuse_centroids=True, the partitions from the previous index will be used; to fix, set reuse_centroids=False, don't pass partitions, or pass the correct number of partitions.")
+                raise ValueError(f"The passed partitions={kwargs['partitions']} is different than the number of partitions ({self.partitions}) from when the index was created - this is an issue because with reuse_centroids=True, the partitions from the previous index will be used; to fix, set reuse_centroids=False, don't pass partitions, or pass the correct number of partitions.")
             partitions = self.partitions
         else:
             partitions = kwargs.get('partitions', -1)
-        print('partitions', partitions)
 
         new_index = ingest(
             index_type=self.index_type,
