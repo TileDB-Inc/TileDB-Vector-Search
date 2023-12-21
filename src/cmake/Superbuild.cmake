@@ -48,6 +48,8 @@ set(EXTERNAL_PROJECTS)
 # character other than a semicolon.
 list(JOIN CMAKE_PREFIX_PATH "|" CMAKE_PREFIX_PATH_STR)
 
+message(status "SUPER CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
+
 # Forward any additional CMake args to the non-superbuild.
 set(INHERITED_CMAKE_ARGS
   -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
