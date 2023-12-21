@@ -46,7 +46,7 @@
     "href": "documentation/reference/index.Index.html",
     "title": "index.Index",
     "section": "",
-    "text": "vector_search.index.Index(self, uri, config=None, timestamp=None)\nOpen a Vector index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nuri\nstr\nURI of the index\nrequired\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone\n\n\ntimestamp\n\n(default None) If int, open the index at a given timestamp. If tuple, open at the given start and end timestamps.\nNone"
+    "text": "vector_search.index.Index(self, uri, config=None, timestamp=None)\nOpen a Vector index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nuri\nstr\nURI of the index\nrequired\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone\n\n\ntimestamp\n\n(default None) If int, open the index at a given timestamp. If tuple, open at the given start and end timestamps.\nNone\n\n\n\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nconsolidate_updates\n\n\n\n\n\n\nvector_search.index.Index.consolidate_updates(retrain_index=False, **kwargs)\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nretrain_index\nbool\nIf true, retrain the index. If false, reuse data from the previous index. For IVF_FLAT retraining means we will recompute the centroids - when doing so you can pass any ingest() arguments used to configure computing centroids and we will use them when recomputing the centroids. Otherwise, if false, we will reuse the centroids from the previous index.\nFalse"
   },
   {
     "objectID": "documentation/reference/index.Index.html#parameters",
@@ -54,6 +54,13 @@
     "title": "index.Index",
     "section": "",
     "text": "Name\nType\nDescription\nDefault\n\n\n\n\nuri\nstr\nURI of the index\nrequired\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone\n\n\ntimestamp\n\n(default None) If int, open the index at a given timestamp. If tuple, open at the given start and end timestamps.\nNone"
+  },
+  {
+    "objectID": "documentation/reference/index.Index.html#methods",
+    "href": "documentation/reference/index.Index.html#methods",
+    "title": "index.Index",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nconsolidate_updates\n\n\n\n\n\n\nvector_search.index.Index.consolidate_updates(retrain_index=False, **kwargs)\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nretrain_index\nbool\nIf true, retrain the index. If false, reuse data from the previous index. For IVF_FLAT retraining means we will recompute the centroids - when doing so you can pass any ingest() arguments used to configure computing centroids and we will use them when recomputing the centroids. Otherwise, if false, we will reuse the centroids from the previous index.\nFalse"
   },
   {
     "objectID": "documentation/reference/ingestion.html",
