@@ -365,7 +365,7 @@ def test_ivf_flat_ingestion_with_updates(tmp_path):
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
-    index = index.consolidate_updates(partitions=20)
+    index = index.consolidate_updates(reuse_centroids=False, partitions=20)
     _, result = index.query(queries, k=k, nprobe=20)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
@@ -733,7 +733,7 @@ def test_storage_versions(tmp_path):
             _, result = index.query(queries, k=k)
             assert accuracy(result, gt_i, updated_ids=updated_ids) >= MINIMUM_ACCURACY
 
-            index = index.consolidate_updates(partitions=20)
+            index = index.consolidate_updates(reuse_centroids=False, partitions=20)
             _, result = index.query(queries, k=k)
             assert accuracy(result, gt_i, updated_ids=updated_ids) >= MINIMUM_ACCURACY
 
