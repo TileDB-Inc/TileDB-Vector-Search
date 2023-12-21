@@ -13,7 +13,8 @@ import enum
 class TrainingSamplingPolicy(enum.Enum):
     FIRST_N = 1
     RANDOM = 2
-    SOURCE_URI = 3
+    INPUT_VECTORS = 3
+    SOURCE_URI = 4
 
     def __str__(self):
         return self.name.replace("_", " ").title()
@@ -145,8 +146,6 @@ def ingest(
     from tiledb.vector_search import flat_index, ivf_flat_index
     from tiledb.vector_search.index import Index
     from tiledb.vector_search.storage_formats import storage_formats
-
-    print('[ingestion@ingest] training_sampling_policy', training_sampling_policy)
 
     validate_storage_version(storage_version)
 
@@ -830,7 +829,7 @@ def ingest(
         use_sklearn: bool = False
     ):
         from sklearn.cluster import KMeans
-        print('[ingestion@centralised_kmeans] training_sampling_policy', training_sampling_policy, 'training_sample_size', training_sample_size, 'partitions', partitions)
+
         from tiledb.vector_search.module import (
             array_to_matrix,
             kmeans_fit,
@@ -891,8 +890,6 @@ def ingest(
                 # raise ValueError(f"We have a training_sample_size of {training_sample_size} but {partitions} partitions - training_sample_size must be >= partitions")
                 centroids = np.random.rand(dimensions, partitions)
 
-            print('[ingestion@centralised_kmeans] sample_vectors', sample_vectors.shape, sample_vectors)
-            print('[ingestion@centralised_kmeans] centroids', centroids.shape, centroids)
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
                 A[0:dimensions, 0:partitions] = centroids
