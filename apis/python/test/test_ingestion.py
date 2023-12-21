@@ -365,7 +365,7 @@ def test_ivf_flat_ingestion_with_updates(tmp_path):
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
-    index = index.consolidate_updates(reuse_centroids=False, partitions=20)
+    index = index.consolidate_updates(retrain_index=True, partitions=20)
     _, result = index.query(queries, k=k, nprobe=20)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
@@ -733,7 +733,7 @@ def test_storage_versions(tmp_path):
             _, result = index.query(queries, k=k)
             assert accuracy(result, gt_i, updated_ids=updated_ids) >= MINIMUM_ACCURACY
 
-            index = index.consolidate_updates(reuse_centroids=False, partitions=20)
+            index = index.consolidate_updates(retrain_index=True, partitions=20)
             _, result = index.query(queries, k=k)
             assert accuracy(result, gt_i, updated_ids=updated_ids) >= MINIMUM_ACCURACY
 
@@ -1057,7 +1057,7 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     update_vectors[0] = np.array([11.0, 11.1, 11.2, 11.3], dtype=np.dtype(np.float32))
     update_vectors[1] = np.array([12.0, 12.1, 12.2, 12.3], dtype=np.dtype(np.float32))
     index.update_batch(vectors=update_vectors, external_ids=np.array([1003, 1004]))
-    index_ram = index_ram.consolidate_updates(reuse_centroids=False, training_sample_size=3)
+    index_ram = index_ram.consolidate_updates(retrain_index=True, training_sample_size=3)
 
     queries = np.array([update_vectors[0]], dtype=np.float32)
     query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1003]])
