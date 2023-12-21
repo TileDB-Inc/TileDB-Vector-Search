@@ -365,7 +365,7 @@ def test_ivf_flat_ingestion_with_updates(tmp_path):
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
-    index = index.consolidate_updates(partitions=20)
+    index = index.consolidate_updates(retrain_index=True, partitions=20)
     _, result = index.query(queries, k=k, nprobe=20)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
@@ -733,7 +733,7 @@ def test_storage_versions(tmp_path):
             _, result = index.query(queries, k=k)
             assert accuracy(result, gt_i, updated_ids=updated_ids) >= MINIMUM_ACCURACY
 
-            index = index.consolidate_updates(partitions=20)
+            index = index.consolidate_updates(retrain_index=True, partitions=20)
             _, result = index.query(queries, k=k)
             assert accuracy(result, gt_i, updated_ids=updated_ids) >= MINIMUM_ACCURACY
 
@@ -776,7 +776,8 @@ def test_copy_centroids_uri(tmp_path):
         index_type="IVF_FLAT", 
         index_uri=index_uri, 
         input_vectors=data,
-        copy_centroids_uri=centroids_uri
+        copy_centroids_uri=centroids_uri,
+        partitions=centroids_in_size
     )
 
     # Query the index.
@@ -931,8 +932,48 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     queries = np.array([data.transpose()[1]], dtype=np.float32)
     query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1]])
 
+    update_vectors = np.empty([3], dtype=object)
+    update_vectors[0] = np.array([6.0, 6.1, 6.2, 6.3], dtype=np.dtype(np.float32))
+    update_vectors[1] = np.array([7.0, 7.1, 7.2, 7.3], dtype=np.dtype(np.float32))
+    update_vectors[2] = np.array([8.0, 8.1, 8.2, 8.3], dtype=np.dtype(np.float32))
+    index.update_batch(vectors=update_vectors, external_ids=np.array([1000, 1001, 1002]))
+    
+    index = index.consolidate_updates()
+
+    queries = np.array([update_vectors[2]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1002]])
+
+    ################################################################################################
+    # Test we can load the index again and query, update, and consolidate.
+    ################################################################################################
+    # Load the index again and query.
     index = IVFFlatIndex(uri=index_uri)
-    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1]])
+
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1002]])
+    
+    # Update the index and query.
+    update_vectors = np.empty([2], dtype=object)
+    update_vectors[0] = np.array([9.0, 9.1, 9.2, 9.3], dtype=np.dtype(np.float32))
+    update_vectors[1] = np.array([10.0, 10.1, 10.2, 10.3], dtype=np.dtype(np.float32))
+    index.update_batch(vectors=update_vectors, external_ids=np.array([1003, 1004]))
+    index = index.consolidate_updates()
+    
+    queries = np.array([update_vectors[0]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1003]])
+
+    # Clear the index history, load, update, and query.
+    Index.clear_history(uri=index_uri, timestamp=index.latest_ingestion_timestamp - 1)
+
+    index = IVFFlatIndex(uri=index_uri)
+
+    update_vectors = np.empty([2], dtype=object)
+    update_vectors[0] = np.array([11.0, 11.1, 11.2, 11.3], dtype=np.dtype(np.float32))
+    update_vectors[1] = np.array([12.0, 12.1, 12.2, 12.3], dtype=np.dtype(np.float32))
+    index.update_batch(vectors=update_vectors, external_ids=np.array([1003, 1004]))
+    index = index.consolidate_updates()
+
+    queries = np.array([update_vectors[0]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1003]])
 
     ###############################################################################################
     # Also test that we can ingest with training_source_type.
@@ -984,5 +1025,39 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     queries = np.array([data[1]], dtype=np.float32)
     query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1]])
 
-    index = IVFFlatIndex(uri=index_uri)
+    update_vectors = np.empty([3], dtype=object)
+    update_vectors[0] = np.array([6.0, 6.1, 6.2, 6.3], dtype=np.dtype(np.float32))
+    update_vectors[1] = np.array([7.0, 7.1, 7.2, 7.3], dtype=np.dtype(np.float32))
+    update_vectors[2] = np.array([8.0, 8.1, 8.2, 8.3], dtype=np.dtype(np.float32))
+    index.update_batch(vectors=update_vectors, external_ids=np.array([1000, 1001, 1002]))
+    
+    index = index.consolidate_updates()
+
+    queries = np.array([update_vectors[2]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1002]])
+
+    ################################################################################################
+    # Test we can load the index again and query, update, and consolidate.
+    ################################################################################################
+    index_ram = IVFFlatIndex(uri=index_uri)
+
+    queries = np.array([data[1]], dtype=np.float32)
     query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1]])
+
+    update_vectors = np.empty([2], dtype=object)
+    update_vectors[0] = np.array([9.0, 9.1, 9.2, 9.3], dtype=np.dtype(np.float32))
+    update_vectors[1] = np.array([10.0, 10.1, 10.2, 10.3], dtype=np.dtype(np.float32))
+    index.update_batch(vectors=update_vectors, external_ids=np.array([1003, 1004]))
+    index_ram = index_ram.consolidate_updates()
+
+    queries = np.array([update_vectors[0]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1003]])
+
+    update_vectors = np.empty([2], dtype=object)
+    update_vectors[0] = np.array([11.0, 11.1, 11.2, 11.3], dtype=np.dtype(np.float32))
+    update_vectors[1] = np.array([12.0, 12.1, 12.2, 12.3], dtype=np.dtype(np.float32))
+    index.update_batch(vectors=update_vectors, external_ids=np.array([1003, 1004]))
+    index_ram = index_ram.consolidate_updates(retrain_index=True, training_sample_size=3)
+
+    queries = np.array([update_vectors[0]], dtype=np.float32)
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1003]])
