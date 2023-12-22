@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  CC: gcc-13
+  CXX: g++-13
+
 jobs:
   run-tests:
     strategy:
