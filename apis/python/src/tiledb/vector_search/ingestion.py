@@ -1,13 +1,23 @@
 import json
 from functools import partial
 from typing import Any, Mapping, Optional, Tuple
-
+import enum
+import random
 import numpy as np
-from tiledb.cloud.dag import Mode
 
+from tiledb.cloud.dag import Mode
 from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION, validate_storage_version
 
+
+class TrainingSamplingPolicy(enum.Enum):
+    FIRST_N = 1
+    RANDOM = 2
+    INPUT_VECTORS = 3
+    SOURCE_URI = 4
+
+    def __str__(self):
+        return self.name.replace("_", " ").title()
 
 def ingest(
     index_type: str,
@@ -25,6 +35,7 @@ def ingest(
     namespace: Optional[str] = None,
     size: int = -1,
     partitions: int = -1,
+    training_sampling_policy: TrainingSamplingPolicy = TrainingSamplingPolicy.FIRST_N,
     copy_centroids_uri: str = None,
     training_sample_size: int = -1,
     training_input_vectors: np.ndarray = None,
@@ -133,6 +144,8 @@ def ingest(
     from tiledb.vector_search import flat_index, ivf_flat_index
     from tiledb.vector_search.index import Index
     from tiledb.vector_search.storage_formats import storage_formats
+
+    np.random.seed(1)
 
     validate_storage_version(storage_version)
 
@@ -797,6 +810,49 @@ def ingest(
     # --------------------------------------------------------------------
     # centralised kmeans UDFs
     # --------------------------------------------------------------------
+    def combine_vectors(vectors: Optional[np.ndarray]):
+        result = vectors[0]
+        for vector in vectors[1:]:
+            result = np.vstack((result, vector))
+        print('[combine_vectors] vectors', vectors, ' -> result', result.shape, result)
+        return result
+
+    def read_random_sample(
+        source_uri: str,
+        source_type: str,
+        vector_type: np.dtype,
+        partitions: int,
+        dimensions: int,
+        vector_start_pos: int,
+        vector_end_pos: int,
+        random_sample_size: int,
+        config: Optional[Mapping[str, Any]] = None,
+        verbose: bool = False,
+    ):
+        logger = setup(config, verbose)
+        with tiledb.scope_ctx(ctx_or_config=config):
+            logger.debug("Reading input vectors.")
+            vectors = read_input_vectors(
+                source_uri=source_uri,
+                source_type=source_type,
+                vector_type=vector_type,
+                dimensions=dimensions,
+                start_pos=vector_start_pos,
+                end_pos=vector_end_pos,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+            )
+            # sample_vectors = random.sample(vectors, random_sample_size)
+            # sample_vectors = np.random.choice(vectors, size=random_sample_size, replace=False)
+            # sample_vectors = vectors[np.random.choice(vectors.shape[0], random_sample_size, replace=False), :]
+
+            row_indices = np.random.choice(vectors.shape[0], size=random_sample_size, replace=False)
+            sample_vectors = vectors[row_indices]
+
+            print('----\n[ingestion@read_random_sample]\nvectors', vectors.shape, '\n', vectors, '\nsample_vectors', sample_vectors.shape, '\n', sample_vectors, '\n----')
+            return sample_vectors
+    
     def centralised_kmeans(
         index_group_uri: str,
         source_uri: str,
@@ -804,6 +860,7 @@ def ingest(
         vector_type: np.dtype,
         partitions: int,
         dimensions: int,
+        existing_sample_vectors: Optional[np.ndarray],
         training_sample_size: int,
         training_source_uri: Optional[str],
         training_source_type: Optional[str],
@@ -827,7 +884,10 @@ def ingest(
             group = tiledb.Group(index_group_uri)
             centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
             if training_sample_size >= partitions:
-                if training_source_uri:
+                if existing_sample_vectors is not None:
+                    sample_vectors = existing_sample_vectors
+                    print('[centralized_kmeans] existing_sample_vectors', existing_sample_vectors.shape, '\n', existing_sample_vectors)
+                elif training_source_uri:
                     if training_source_type is None:
                         training_source_type = autodetect_source_type(source_uri=training_source_uri)
                     training_in_size, training_dimensions, training_vector_type = read_source_metadata(source_uri=training_source_uri, source_type=training_source_type)
@@ -856,6 +916,7 @@ def ingest(
                         verbose=verbose,
                         trace_id=trace_id,
                     ).astype(np.float32)
+                    print('[centralized_kmeans] old approach sample_vectors', existing_sample_vectors.shape, '\n', existing_sample_vectors)
 
                 logger.debug("Start kmeans training")
                 if use_sklearn:
@@ -877,6 +938,8 @@ def ingest(
                 # raise ValueError(f"We have a training_sample_size of {training_sample_size} but {partitions} partitions - training_sample_size must be >= partitions")
                 centroids = np.random.rand(dimensions, partitions)
 
+            print('[centralized_kmeans] sample_vectors', sample_vectors.shape, '\n', sample_vectors)
+            print('[centralized_kmeans] centroids', centroids.shape, '\n', centroids)
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
                 A[0:dimensions, 0:partitions] = centroids
@@ -1637,6 +1700,66 @@ def ingest(
                     image_name=DEFAULT_IMG_NAME,
                 )
             else:
+                existing_sample_vectors = None
+                if training_sampling_policy == TrainingSamplingPolicy.RANDOM:
+                    existing_sample_vectors = []
+
+                    print('[ingestion@create_ingestion_dag] training_sample_size', training_sample_size)
+                    print('[ingestion@create_ingestion_dag] in_size', in_size)
+                    print('[ingestion@create_ingestion_dag] input_vectors_batch_size', input_vectors_batch_size)
+
+                    num_so_far = 0
+                    task_id = 0
+                    existing_sample_vectors = []
+                    for i in range(0, in_size, input_vectors_batch_size):
+                        # What vectors to read from the source_uri.
+                        start = i
+                        end = i + input_vectors_batch_size
+                        if end > size:
+                            end = size
+
+                        # How many of those vectors to sample.
+                        percent_of_data = (end - start) / in_size
+                        num_for_batch = math.ceil(training_sample_size * percent_of_data)
+                        num_so_far += num_for_batch
+                        if num_so_far > training_sample_size:
+                            num_for_batch -= num_so_far - training_sample_size
+                        print(f" [{task_id}] start {start} -> end {end}, num_for_batch {num_for_batch}")
+                        if num_for_batch <= 0:
+                            print("  [skipping]")
+                            continue
+
+                        existing_sample_vectors.append(submit(
+                            read_random_sample,
+                            source_uri=source_uri,
+                            source_type=source_type,
+                            vector_type=vector_type,
+                            partitions=partitions,
+                            dimensions=dimensions,
+                            vector_start_pos=start,
+                            vector_end_pos=end,
+                            random_sample_size=num_for_batch,
+                            config=config,
+                            verbose=verbose,
+                            name="read-random-sample-" + str(task_id),
+                            resources={"cpu": str(threads), "memory": "12Gi"},
+                            image_name=DEFAULT_IMG_NAME,
+                        ))
+                        task_id += 1
+                    
+                    print('[ingestion@create_ingestion_dag] existing_sample_vectors', type(existing_sample_vectors), existing_sample_vectors)
+                    
+                    combine_vectors_node = submit(
+                        combine_vectors,
+                        existing_sample_vectors,
+                        name="combine-vectors",
+                        resources={"cpu": "1", "memory": "8Gi"},
+                        image_name=DEFAULT_IMG_NAME,
+                    )
+                    # for existing_sample_vector in existing_sample_vectors:
+                    #     combine_vectors_node.depends_on(existing_sample_vector)
+                    print('[ingestion@create_ingestion_dag] sample_vectors', type(combine_vectors_node), combine_vectors_node)
+
                 if training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE:
                     centroids_node = submit(
                         centralised_kmeans,
@@ -1646,6 +1769,7 @@ def ingest(
                         vector_type=vector_type,
                         partitions=partitions,
                         dimensions=dimensions,
+                        existing_sample_vectors=combine_vectors_node,
                         training_sample_size=training_sample_size,
                         training_source_uri=training_source_uri,
                         training_source_type=training_source_type,
@@ -1657,6 +1781,8 @@ def ingest(
                         resources={"cpu": "8", "memory": "32Gi"},
                         image_name=DEFAULT_IMG_NAME,
                     )
+                    # if combine_vectors_node:
+                    #     centroids_node.depends_on(combine_vectors_node)
                 else:
                     internal_centroids_node = submit(
                         init_centroids,
@@ -1950,6 +2076,9 @@ def ingest(
         logger.debug("Input dataset size %d", size)
         logger.debug("Input dataset dimensions %d", dimensions)
         logger.debug("Vector dimension type %s", vector_type)
+        if training_sample_size > in_size:
+            raise ValueError(f"training_sample_size {training_sample_size} is larger than the input dataset size {in_size}")
+
         if partitions == -1:
             partitions = max(1, int(math.sqrt(size)))
         if training_sample_size == -1:
