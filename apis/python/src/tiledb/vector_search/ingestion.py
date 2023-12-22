@@ -143,8 +143,6 @@ def ingest(
     from tiledb.vector_search.index import Index
     from tiledb.vector_search.storage_formats import storage_formats
 
-    np.random.seed(1)
-
     validate_storage_version(storage_version)
 
     if source_type and not source_uri:
@@ -819,7 +817,6 @@ def ingest(
         source_uri: str,
         source_type: str,
         vector_type: np.dtype,
-        partitions: int,
         dimensions: int,
         vector_start_pos: int,
         vector_end_pos: int,
@@ -827,9 +824,8 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
     ):
-        logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
-            logger.debug("Reading input vectors.")
+            # Read from the source data.
             vectors = read_input_vectors(
                 source_uri=source_uri,
                 source_type=source_type,
@@ -841,11 +837,9 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             )
-
+            # Randomly sample from the read data.
             row_indices = np.random.choice(vectors.shape[0], size=random_sample_size, replace=False)
-            sample_vectors = vectors[row_indices]
-
-            return sample_vectors
+            return vectors[row_indices]
     
     def centralised_kmeans(
         index_group_uri: str,
@@ -1719,7 +1713,6 @@ def ingest(
                             source_uri=source_uri,
                             source_type=source_type,
                             vector_type=vector_type,
-                            partitions=partitions,
                             dimensions=dimensions,
                             vector_start_pos=start,
                             vector_end_pos=end,
@@ -1761,8 +1754,6 @@ def ingest(
                         resources={"cpu": "8", "memory": "32Gi"},
                         image_name=DEFAULT_IMG_NAME,
                     )
-                    # if combine_vectors_node:
-                    #     centroids_node.depends_on(combine_vectors_node)
                 else:
                     internal_centroids_node = submit(
                         init_centroids,
