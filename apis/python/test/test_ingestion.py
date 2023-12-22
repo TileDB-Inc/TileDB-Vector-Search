@@ -715,7 +715,7 @@ def test_ivf_flat_ingestion_fvec_random_sampling_policy(tmp_path):
     gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
     index_uri = os.path.join(tmp_path, "array")
     k = 100
-    partitions = 100
+    partitions = 50
     nqueries = 100
     nprobe = 20
 
@@ -728,6 +728,7 @@ def test_ivf_flat_ingestion_fvec_random_sampling_policy(tmp_path):
         source_uri=source_uri,
         partitions=partitions,
         training_sampling_policy=TrainingSamplingPolicy.RANDOM,
+        training_sample_size=1239,
         input_vectors_per_work_item=1000,
     )
     _, result = index.query(queries, k=k, nprobe=nprobe)

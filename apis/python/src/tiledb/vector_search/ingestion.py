@@ -866,7 +866,6 @@ def ingest(
             array_to_matrix,
             kmeans_fit,
         )
-
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
             group = tiledb.Group(index_group_uri)
@@ -874,6 +873,7 @@ def ingest(
             if training_sample_size >= partitions:
                 if sampled_vectors is not None:
                     sample_vectors = sampled_vectors
+                    print('[centralised_kmeans] Using sampled vectors', sample_vectors.shape, sample_vectors)
                 elif training_source_uri:
                     if training_source_type is None:
                         training_source_type = autodetect_source_type(source_uri=training_source_uri)
@@ -1687,8 +1687,39 @@ def ingest(
                 combine_vectors_node = None
                 if training_sampling_policy == TrainingSamplingPolicy.RANDOM:
                     sampled_vectors = []
-                    num_so_far = 0
-                    task_id = 0
+                    num_sampled = 0
+                    idx = 0
+                    print(f"[ingestion@create_ingestion_dag] training_sample_size {training_sample_size}")
+                    print(f"[ingestion@create_ingestion_dag] in_size {in_size}")
+                    print(f"[ingestion@create_ingestion_dag] input_vectors_batch_size {input_vectors_batch_size}")
+
+                    # Calculate the number of complete chunks
+                    num_chunks = math.ceil(in_size / input_vectors_batch_size)
+                    # Calculate the number of data points to sample from each chunk
+                    samples_per_complete_chunk = 0 if num_chunks == 0 else math.floor(training_sample_size / num_chunks)
+
+                    # Calculate the remaining data points after the complete chunks are sampled
+                    remaining_data_points = training_sample_size - (num_chunks * samples_per_complete_chunk)
+                    # Calculate how many of the remaining data points to sample from each chunk.
+                    extra_samples_per_complete_chunk = remaining_data_points if num_chunks == 0 else math.ceil(remaining_data_points / num_chunks)
+                    # Calculate at which index to stop adding extra samples.
+                    idx_to_stop_adding_extra_samples = 0 if extra_samples_per_complete_chunk == 0 else remaining_data_points / extra_samples_per_complete_chunk
+                    
+                    # # Create a list to store the number of samples per chunk
+                    # chunk_sizes = [samples_per_complete_chunk] * num_chunks
+                    # # Fill out the remaining_data_points
+                    # chunk_sizes.append(samples_in_last_chunk)
+                    
+                    print(f"num_chunks {num_chunks}")
+                    print(f"samples_per_complete_chunk {samples_per_complete_chunk}")
+                    print(f"remaining_data_points {remaining_data_points}")
+                    print(f"extra_samples_per_complete_chunk {extra_samples_per_complete_chunk}")
+                    print(f"samples_to_stop_adding_extra {idx_to_stop_adding_extra_samples}")
+                    # print(f"samples_in_last_chunk {samples_in_last_chunk}")
+                    # print(f"chunk_sizes {chunk_sizes}")
+
+                    num_sampled = 0
+
                     for i in range(0, in_size, input_vectors_batch_size):
                         # What vectors to read from the source_uri.
                         start = i
@@ -1699,14 +1730,23 @@ def ingest(
                         # How many of those vectors to sample. We divide our random sample between
                         # the batches, taking a percentage of the total sample size based on the
                         # batch size.
-                        percent_of_data = (end - start) / in_size
-                        num_for_batch = math.ceil(training_sample_size * percent_of_data)
-                        num_so_far += num_for_batch
-                        if num_so_far > training_sample_size:
-                            num_for_batch -= num_so_far - training_sample_size
-                        # When training_sampling_policy is small we may skip the last batch(es).
-                        if num_for_batch <= 0:
-                            continue
+                        
+                        num_for_batch = samples_per_complete_chunk
+                        if idx < idx_to_stop_adding_extra_samples:
+                            num_for_batch += extra_samples_per_complete_chunk
+                        num_sampled += num_for_batch
+                        print(f" [{idx}] start {start} -> end {end}, num_for_batch {num_for_batch}")
+                        # percent_of_data = (end - start) / in_size
+                        # num_for_batch = math.ceil(training_sample_size * percent_of_data)
+                        # num_sampled += num_for_batch
+                        # if num_sampled > training_sample_size:
+                        #     print(f"we'd go over by num_sampled ({num_sampled}) - training_sample_size ({training_sample_size}) {num_sampled - training_sample_size}")
+                        #     num_for_batch -= num_sampled - training_sample_size
+                        # print(f" [{task_id}] start {start} -> end {end}, percent_of_data {percent_of_data}, training_sample_size {training_sample_size}, num_for_batch {num_for_batch}")
+                        # # When training_sampling_policy is small we may skip the last batch(es).
+                        # if num_for_batch <= 0:
+                        #     print("   skip")
+                        #     continue
 
                         sampled_vectors.append(submit(
                             random_sample_from_input_vectors,
@@ -1719,12 +1759,14 @@ def ingest(
                             random_sample_size=num_for_batch,
                             config=config,
                             verbose=verbose,
-                            name="read-random-sample-" + str(task_id),
+                            name="read-random-sample-" + str(idx),
                             resources={"cpu": str(threads), "memory": "12Gi"},
                             image_name=DEFAULT_IMG_NAME,
                         ))
-                        task_id += 1
-                    
+                        idx += 1
+                    print(f"Done with random sampling, we sampled {num_sampled} points")
+                    if num_sampled != training_sample_size:
+                        raise ValueError(f"The random sampling ran into an issue: num_sampled ({num_sampled}) != training_sample_size ({training_sample_size})")
                     combine_vectors_node = submit(
                         combine_vectors,
                         sampled_vectors,
