@@ -13,8 +13,6 @@ from tiledb.vector_search.storage_formats import STORAGE_VERSION, validate_stora
 class TrainingSamplingPolicy(enum.Enum):
     FIRST_N = 1
     RANDOM = 2
-    INPUT_VECTORS = 3
-    SOURCE_URI = 4
 
     def __str__(self):
         return self.name.replace("_", " ").title()
@@ -182,6 +180,10 @@ def ingest(
     for variable in ["copy_centroids_uri", "training_input_vectors", "training_source_uri", "training_source_type"]:
         if index_type != "IVF_FLAT" and locals().get(variable) is not None:
             raise ValueError(f"{variable} should only be provided with index_type IVF_FLAT")
+        
+    for variable in ["copy_centroids_uri", "training_input_vectors", "training_source_uri", "training_source_type"]:
+        if training_sampling_policy != TrainingSamplingPolicy.FIRST_N and locals().get(variable) is not None:
+            raise ValueError(f"{variable} should not provided alonside training_sampling_policy")
 
     # use index_group_uri for internal clarity
     index_group_uri = index_uri
@@ -916,7 +918,7 @@ def ingest(
                         verbose=verbose,
                         trace_id=trace_id,
                     ).astype(np.float32)
-                    print('[centralized_kmeans] old approach sample_vectors', existing_sample_vectors.shape, '\n', existing_sample_vectors)
+                    print('[centralized_kmeans] old approach sample_vectors', sample_vectors.shape, '\n', sample_vectors)
 
                 logger.debug("Start kmeans training")
                 if use_sklearn:
@@ -933,13 +935,14 @@ def ingest(
                 else:
                     centroids = kmeans_fit(partitions, init, max_iter, verbose, n_init, array_to_matrix(np.transpose(sample_vectors)))
                     centroids = np.array(centroids) # TODO: why is this here?
+                print('[centralized_kmeans] sample_vectors', sample_vectors.shape, '\n', sample_vectors)
+                print('[centralized_kmeans] centroids', centroids.shape, '\n', centroids)
             else:
                 # TODO(paris): Should we instead take the first training_sample_size vectors and then fill in random for the rest? Or raise an error like this:
                 # raise ValueError(f"We have a training_sample_size of {training_sample_size} but {partitions} partitions - training_sample_size must be >= partitions")
                 centroids = np.random.rand(dimensions, partitions)
+                print('INVALID@!')
 
-            print('[centralized_kmeans] sample_vectors', sample_vectors.shape, '\n', sample_vectors)
-            print('[centralized_kmeans] centroids', centroids.shape, '\n', centroids)
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
                 A[0:dimensions, 0:partitions] = centroids
@@ -1700,7 +1703,7 @@ def ingest(
                     image_name=DEFAULT_IMG_NAME,
                 )
             else:
-                existing_sample_vectors = None
+                combine_vectors_node = None
                 if training_sampling_policy == TrainingSamplingPolicy.RANDOM:
                     existing_sample_vectors = []
 
@@ -2069,6 +2072,7 @@ def ingest(
             in_size, dimensions, vector_type = read_source_metadata(
                 source_uri=source_uri, source_type=source_type
             )
+        print('[ingestion] in_size', in_size)
         if size == -1:
             size = int(in_size)
         if size > in_size:
