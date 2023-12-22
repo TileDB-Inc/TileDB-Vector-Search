@@ -728,7 +728,7 @@ def test_ivf_flat_ingestion_fvec_random_sampling_policy(tmp_path):
         source_uri=source_uri,
         partitions=partitions,
         training_sampling_policy=TrainingSamplingPolicy.RANDOM,
-        input_vectors_per_work_item=5000,
+        input_vectors_per_work_item=1000,
     )
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
