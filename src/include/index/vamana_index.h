@@ -220,8 +220,8 @@ auto greedy_search(
 
         // unique id or not does not seem to make a difference
         // Actually, it does make a difference
-        if (result.template insert <unique_id> (score, p)) {
-          q2.template insert<unique_id>(score, p);
+        if (result.template insert<unique_id>(score, p)) {
+          q2.template insert /* <unique_id> */ (score, p);
         }
       }
     }
@@ -379,7 +379,7 @@ auto robust_prune(
  * @return The index of the vector in P that is closest to the centroid of P
  */
 template <class Distance = sum_of_squares_distance>
-auto medioid(auto&& P, Distance distance = Distance{}) {
+auto medoid(auto&& P, Distance distance = Distance{}) {
   auto n = num_vectors(P);
   auto centroid = Vector<float>(P[0].size());
   for (size_t j = 0; j < n; ++j) {
@@ -538,7 +538,7 @@ class vamana_index {
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
     // dump_edgelist("edges_" + std::to_string(0) + ".txt", graph_);
 
-    medioid_ = medioid(feature_vectors_);
+    medioid_ = medoid(feature_vectors_);
 
     debug_index();
     size_t counter{0};
@@ -745,7 +745,7 @@ class vamana_index {
       {"B", &B_backtrack_, TILEDB_UINT64},
       {"alpha_min", &alpha_min_, TILEDB_FLOAT32},
       {"alpha_max", &alpha_max_, TILEDB_FLOAT32},
-      {"medioid", &medioid_, TILEDB_UINT64},
+      {"medoid", &medioid_, TILEDB_UINT64},
   };
 
   /**
@@ -765,7 +765,7 @@ class vamana_index {
    */
   auto write_index(const std::string& group_uri, bool overwrite = false) {
     // copilot ftw!
-    // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medioid
+    // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
 
     tiledb::Context ctx;

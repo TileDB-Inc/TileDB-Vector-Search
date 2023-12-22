@@ -67,8 +67,6 @@
 #include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 
-#include "index/index_defs.h"
-
 enum class kmeans_init { none, kmeanspp, random };
 
 /**

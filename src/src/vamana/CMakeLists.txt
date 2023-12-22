@@ -25,12 +25,12 @@
 # THE SOFTWARE.
 #
 
-add_executable(vamana_query query.cc)
+add_executable(vamana_query vamana_query.cc)
 target_link_libraries(vamana_query PUBLIC kmeans_lib)
 target_compile_definitions(vamana_query PUBLIC TILEDB_VS_ENABLE_STATS)
 set_target_properties(vamana_query PROPERTIES OUTPUT_NAME query)
 
-add_executable(vamana_index index.cc)
+add_executable(vamana_index vamana_index.cc)
 target_link_libraries(vamana_index PUBLIC kmeans_lib)
 target_compile_definitions(vamana_index PUBLIC TILEDB_VS_ENABLE_STATS)
 set_target_properties(vamana_index PROPERTIES OUTPUT_NAME index)
