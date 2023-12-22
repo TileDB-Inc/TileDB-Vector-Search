@@ -38,6 +38,7 @@
 
 #include <filesystem>
 #include <map>
+#include <unordered_map>
 #include <memory>
 #include <string>
 #include <unordered_set>
@@ -55,11 +56,24 @@
 template <class Index>
 class base_index_metadata;
 
+
+template <class DerivedClass>
+struct metadata_type_selector {
+  using type = typename DerivedClass::index_metadata_type;
+};
+
+
 template <class IndexGroup>
 class base_index_group {
   // using index_type = typename IndexGroup::index_type;
   using group_type = IndexGroup;
-  using index_group_metadata_type = group_type::index_group_metadata_type;
+
+  // Can't do this ....
+  // using index_group_metadata_type = typename IndexGroup::index_group_metadata_type;
+  // Can do this
+  using index_group_metadata_type = typename metadata_type_selector<IndexGroup>::type;
+
+  friend IndexGroup;
 
  protected:
   std::reference_wrapper<const tiledb::Context> cached_ctx_;
@@ -81,6 +95,8 @@ class base_index_group {
   // Set of names of arrays that are part of the group.  They either have
   // been read from the group or written to the group.
   std::unordered_set<std::string> active_array_names_;
+
+  std::unordered_map<std::string, std::string> array_name_map_;
 
   /** Check validity of key name */
   constexpr bool is_valid_key_name(const std::string& key_name) const noexcept {
@@ -104,7 +120,8 @@ class base_index_group {
     if (!is_valid_key_name(array_key)) {
       throw std::runtime_error("Invalid array key: " + array_key);
     }
-    return storage_formats[version_][array_key];
+    auto tmp = *array_name_map_.find(array_key);
+    return tmp.second;
   };
 
   /** Create the set of valid key names and array names */
@@ -115,6 +132,7 @@ class base_index_group {
     for (auto&& [array_key, array_name] : storage_formats[version_]) {
       valid_key_names_.insert(array_key);
       valid_array_names_.insert(array_name);
+      array_name_map_[array_key] = array_name;
     }
     static_cast<group_type*>(this)->append_valid_array_names_impl();
   }

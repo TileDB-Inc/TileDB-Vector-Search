@@ -81,6 +81,8 @@ class base_index_metadata {
    * Members set / updated by users of the group
    ******************************************************************************/
 
+ // Make public for now in interest of expedience
+ public:
   /** Record timestamps of writes to the group */
   std::vector<ingestion_timestamps_type> ingestion_timestamps_;
 
@@ -490,20 +492,6 @@ class base_index_metadata {
                 .metadata_string_checks_impl) == false) {
       return false;
     }
-#if 0
-    for (size_t i = 0; i < size(metadata_string_checks); i++) {
-      auto&& [name, value, required] = metadata_string_checks[i];
-      auto&& [rhs_name, rhs_value, rhs_required] =
-          rhs.metadata_string_checks[i];
-      if (name != rhs_name) {
-        return false;
-      }
-      if (value != rhs_value) {
-        return false;
-      }
-    }
-#endif
-
     return true;
   }
 
