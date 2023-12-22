@@ -45,12 +45,15 @@ class ivf_flat_index_metadata
 
   using partition_history_type = uint64_t;
 
+ // public for now in interest of time
+public:
+
+
   /** Record number of partitions at each write at a given timestamp */
   std::vector<partition_history_type> partition_history_;
 
 
   tiledb_datatype_t px_datatype_{TILEDB_ANY};
-
   std::string index_type_{"IVF_FLAT"};
   std::string partition_history_str_{""};
   std::string indices_type_str_{""};

@@ -38,6 +38,7 @@
 
 #include "index/index_defs.h"
 #include "index/index_group.h"
+#include "index/ivf_flat_metadata.h"
 
 [[maybe_unused]] static StorageFormat ivf_flat_storage_formats = {
     {"0.3",
@@ -47,6 +48,15 @@
          {"ids_array_name", "shuffled_vector_ids"},
          {"parts_array_name", "shuffled_vectors"},
      }}};
+
+
+template <class Index>
+class ivf_flat_index_group;
+
+template <class Index>
+struct metadata_type_selector<ivf_flat_index_group<Index>> {
+  using type = ivf_flat_index_metadata;
+};
 
 template <class Index>
 class ivf_flat_index_group
@@ -59,6 +69,7 @@ class ivf_flat_index_group
   using Base::metadata_;
   using Base::valid_array_names_;
   using Base::valid_key_names_;
+  using Base::array_name_map_;
   using Base::version_;
 
   using index_type = Index;
@@ -70,6 +81,8 @@ class ivf_flat_index_group
   static const int32_t tile_size_bytes{64 * 1024 * 1024};
 
  public:
+  using index_group_metadata_type = ivf_flat_index_metadata;
+
   ivf_flat_index_group(
       const index_type index,
       const tiledb::Context& ctx,
@@ -78,8 +91,7 @@ class ivf_flat_index_group
       size_t timestamp = 0,
       const std::string& version = std::string{""},
       const tiledb::Config& cfg = tiledb::Config{})
-      : index_{index}
-      , Base(ctx, uri, rw, timestamp, version, cfg) {
+      :  Base(ctx, uri, rw, timestamp, version, cfg), index_{index} {
   }
 
  public:
@@ -87,6 +99,7 @@ class ivf_flat_index_group
     for (auto&& [array_key, array_name] : ivf_flat_storage_formats[version_]) {
       valid_key_names_.insert(array_key);
       valid_array_names_.insert(array_name);
+      array_name_map_[array_key] = array_name;
     }
   }
 
