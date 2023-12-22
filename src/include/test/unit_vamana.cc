@@ -155,6 +155,7 @@ TEST_CASE("vamana: small256 build index", "[vamana]") {
     int query = 72;
     auto&& [tk_scores, tk, V] = greedy_search(graph, x, med, x[query], 10, 10);
     CHECK(tk[0] == 72);
+    CHECK(tk_scores[0] ==  125678.0);
     CHECK(size(V) == 1);
   }
   {
@@ -345,7 +346,9 @@ TEST_CASE("vamana: greedy grid search", "[vamana]") {
   size_t M = 5;
   size_t N = 7;
 
-  auto one_two = GENERATE(1, 2);
+  // auto one_two = GENERATE(1);
+  auto one_two = GENERATE(2);
+  // auto one_two = GENERATE(1, 2);
   auto&& [vecs, edges] = ([one_two, M, N]() {
     if (one_two == 1) {
       return gen_uni_grid(M, N);

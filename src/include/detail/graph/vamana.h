@@ -135,27 +135,27 @@ auto greedy_search(
     return visited_vertices.contains(v);
   };
 
-  auto result = k_min_heap<score_type, id_type>{L};  // Ell: |Ell| <= L
+  auto result = k_min_heap<score_type, id_type>{L};  // 𝓛: |𝓛| <= L
   // auto result = std::set<id_type>{};
-  auto q1 = k_min_heap<score_type, id_type>{L};  // Ell \ V
-  auto q2 = k_min_heap<score_type, id_type>{L};  // Ell \ V
+  auto q1 = k_min_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
+  auto q2 = k_min_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
 
-  // L <- {s} and V <- empty`
+  // 𝓛 <- {s} and 𝓥 <- ∅
   result.insert(distance(db[source], query), source);
 
-  // q1 = L \ V = {s}
+  // q1 = 𝓛 \ 𝓥 = {s}
   q1.insert(distance(db[source], query), source);
 
   size_t counter{0};
 
-  // while L\V is not empty
+  // while 𝓛 \ 𝓥 ≠ ∅
   while (!q1.empty()) {
     if (noisy) {
       std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
       debug_min_heap(q1, "q1: ", 1);
     }
 
-    // p* <- argmin_{p \in L\V} distance(p, q)
+    // p* <- argmin_{p ∈ 𝓛 \ 𝓥} distance(p, q)
 
     // Although we use the name `k_min_heap` -- it actually stores a finite
     // number of elements in a max heap (we remove the max element
@@ -219,7 +219,8 @@ auto greedy_search(
         auto score = distance(db[p], query);
 
         // unique id or not does not seem to make a difference
-        if (result.template insert /*<unique_id>*/ (score, p)) {
+        // Actually, it does make a difference
+        if (result.template insert <unique_id> (score, p)) {
           q2.template insert<unique_id>(score, p);
         }
       }
