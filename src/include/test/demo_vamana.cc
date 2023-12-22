@@ -37,8 +37,8 @@
 #include <random>
 #include "detail/graph/adj_list.h"
 #include "detail/graph/nn-graph.h"
-#include "detail/graph/vamana.h"
 #include "detail/linalg/matrix.h"
+#include "index/vamana_index.h"
 #include "scoring.h"
 
 #include "gen_graphs.h"
@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) {
   dump_edgelist("edges_" + std::to_string(0) + ".txt", g);
 
   size_t img_count = 0;
-  auto start = medioid(X);
+  auto start = medoid(X);
 
   for (float alpha : {alpha_0, alpha_1}) {
     for (size_t p = 0; p < X.num_cols(); ++p) {

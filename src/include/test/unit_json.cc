@@ -28,7 +28,7 @@
  * @section DESCRIPTION
  */
 
-#include <catch2/catch_all.hpp>
+#include "catch2/catch_all.hpp"
 
 TEST_CASE("json: test test", "[json]") {
   REQUIRE(true);

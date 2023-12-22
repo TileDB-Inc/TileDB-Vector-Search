@@ -128,7 +128,6 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       : tdbBlockedMatrix(ctx, uri, 0, 0, 0, 0, 0, 0) {
   }
 
-
   /**
    * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
    * vectors. In this case, the `Matrix` is column-major, so the number of
@@ -148,8 +147,6 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
           0) requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrix(ctx, uri, 0, 0, 0, 0, upper_bound, timestamp) {
   }
-
-
 
   /** General constructor */
   tdbBlockedMatrix(
@@ -302,7 +299,6 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   index_type num_loads() const {
     return num_loads_;
   }
-
 
 };  // tdbBlockedMatrix
 

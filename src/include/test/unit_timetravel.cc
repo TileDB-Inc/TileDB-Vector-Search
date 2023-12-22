@@ -39,9 +39,9 @@
 
 #include "detail/linalg/tdb_matrix.h"
 
-#include "index/ivf_flat_group.h"
+#include "index/index_group.h"
+#include "index/index_metadata.h"
 #include "index/ivf_flat_index.h"
-#include "index/ivf_flat_metadata.h"
 
 #include "query_common.h"
 
