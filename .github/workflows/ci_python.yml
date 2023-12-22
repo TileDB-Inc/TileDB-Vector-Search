@@ -29,6 +29,7 @@ jobs:
       - name: Build and test python
         run: |
           pip install .[test]
+          cd apis/python
           pytest
           # TODO: fix editable on linux
           #pip uninstall -y tiledb.vector_search
