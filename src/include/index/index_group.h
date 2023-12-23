@@ -314,6 +314,7 @@ class base_index_group {
   base_index_group(
       const tiledb::Context& ctx,
       const std::string& uri,
+      uint64_t dimension,
       tiledb_query_type_t rw = TILEDB_READ,
       size_t timestamp = 0,
       const std::string& version = std::string{""},
@@ -323,11 +324,13 @@ class base_index_group {
       , index_timestamp_(timestamp)
       , version_(version)
       , opened_for_(rw) {
+
     switch (opened_for_) {
       case TILEDB_READ:
         open_for_read(cfg);
         break;
       case TILEDB_WRITE:
+        set_dimension(dimension);
         open_for_write(cfg);
         break;
       case TILEDB_MODIFY_EXCLUSIVE:
@@ -443,6 +446,7 @@ class base_index_group {
   auto set_dimension(size_t dim) {
     metadata_.dimension_ = dim;
   }
+
 
   /**************************************************************************
    * Getters for names and uris
