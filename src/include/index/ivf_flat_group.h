@@ -49,7 +49,6 @@
          {"parts_array_name", "shuffled_vectors"},
      }}};
 
-
 template <class Index>
 class ivf_flat_index_group;
 
@@ -64,16 +63,16 @@ class ivf_flat_index_group
   using Base = base_index_group<ivf_flat_index_group>;
   // using Base::Base;
 
+  using Base::array_name_map_;
   using Base::cached_ctx_;
   using Base::group_uri_;
   using Base::metadata_;
   using Base::valid_array_names_;
   using Base::valid_key_names_;
-  using Base::array_name_map_;
   using Base::version_;
 
   using index_type = Index;
-  std::reference_wrapper<const index_type> index_;
+  // std::reference_wrapper<const index_type> index_;
   // index_type index_;
 
   static const int32_t default_domain{std::numeric_limits<int32_t>::max() - 1};
@@ -84,14 +83,14 @@ class ivf_flat_index_group
   using index_group_metadata_type = ivf_flat_index_metadata;
 
   ivf_flat_index_group(
-      const index_type index,
+      const index_type& index,
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
       size_t timestamp = 0,
       const std::string& version = std::string{""},
       const tiledb::Config& cfg = tiledb::Config{})
-      :  Base(ctx, uri, rw, timestamp, version, cfg), index_{index} {
+      : Base(ctx, uri, index.dimension(), rw, timestamp, version, cfg) {
   }
 
  public:
@@ -134,7 +133,9 @@ class ivf_flat_index_group
     }
     this->init_valid_array_names();
 
-    static const int32_t tile_size { (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) / index_.get().dimension()) };
+    static const int32_t tile_size{
+        (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
+                  this->get_dimension())};
     static const tiledb_filter_type_t default_compression{
         string_to_filter(storage_formats[version_]["default_attr_filters"])};
 
@@ -163,16 +164,16 @@ class ivf_flat_index_group
     metadata_.base_sizes_ = {0};
     metadata_.partition_history_ = {0};
     metadata_.temp_size_ = 0;
-    metadata_.dimension_ = index_.get().dimension();
+    metadata_.dimension_ = this->get_dimension();
 
     create_empty_for_matrix<
         typename index_type::centroid_feature_type,
         stdx::layout_left>(
         cached_ctx_,
         centroids_uri(),
-        index_.get().dimension(),
+        this->get_dimension(),
         default_domain,
-        index_.get().dimension(),
+        this->get_dimension(),
         default_tile_extent,
         default_compression);
     write_group.add_member(centroids_uri(), false, centroids_array_name());
@@ -182,9 +183,9 @@ class ivf_flat_index_group
         stdx::layout_left>(
         cached_ctx_,
         parts_uri(),
-        index_.get().dimension(),
+        this->get_dimension(),
         default_domain,
-        index_.get().dimension(),
+        this->get_dimension(),
         default_tile_extent,
         default_compression);
     write_group.add_member(parts_uri(), false, parts_array_name());
