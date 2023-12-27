@@ -107,13 +107,12 @@ def test_index_with_incorrect_dimensions(tmp_path):
         with pytest.raises(TypeError):
             index.query(np.array(1, dtype=np.float32), k=3)
         with pytest.raises(TypeError):
-            index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
-        with pytest.raises(TypeError):
             index.query(np.array([[[1, 1, 1]]], dtype=np.float32), k=3)
         with pytest.raises(TypeError):
             index.query(np.array([[[[1, 1, 1]]]], dtype=np.float32), k=3)
 
         # Okay otherwise.
+        index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
         index.query(np.array([[1, 1, 1]], dtype=np.float32), k=3)
 
 def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
