@@ -134,8 +134,8 @@ def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
             index.query(np.random.rand(*query_shape).astype(np.float32), k=10)
 
         # Okay otherwise.
-        query_vectors = load_fvecs(queries_uri)
-        index.query(query_vectors, k=10)
+        queries = load_fvecs(queries_uri)
+        index.query(queries, k=10)
 
 def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
     # Tests that we raise a TypeError if the number of columns in the query is not the same as the

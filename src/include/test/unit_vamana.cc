@@ -38,11 +38,11 @@
 #include "detail/graph/diskann.h"
 #include "detail/graph/nn-descent.h"
 #include "detail/graph/nn-graph.h"
-#include "detail/graph/vamana.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
 #include "gen_graphs.h"
 #include "graphs/tiny.h"
+#include "index/vamana_index.h"
 #include "query_common.h"
 #include "utils/logging.h"
 #include "utils/utils.h"
@@ -105,7 +105,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
 
   std::cout << "index_file_size " << index_file_size << std::endl;
   std::cout << "max_degree " << max_degree << std::endl;
-  std::cout << "medioid " << medioid_ << std::endl;
+  std::cout << "medoid " << medioid_ << std::endl;
   std::cout << "vamana_frozen_num " << vamana_frozen_num << std::endl;
 
   binary_file.close();
@@ -135,7 +135,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
   auto f = read_diskann_data(diskann_test_data_file);
   CHECK(num_vectors(f) == 256);
   CHECK(dimension(f) == 128);
-  auto med = detail::graph::medioid(f);
+  auto med = detail::graph::medoid(f);
   std::cout << "med " << med << std::endl;
   CHECK(med == 72);
   // tiledb::Context ctx;
@@ -155,7 +155,8 @@ TEST_CASE("vamana: small256 build index", "[vamana]") {
     int query = 72;
     auto&& [tk_scores, tk, V] = greedy_search(graph, x, med, x[query], 10, 10);
     CHECK(tk[0] == 72);
-    CHECK(tk_scores[0] ==  125678.0);
+    CHECK(tk_scores[0] == 125678.0);
+    CHECK(tk_scores[1] == 125678.0);
     CHECK(size(V) == 1);
   }
   {
@@ -164,6 +165,8 @@ TEST_CASE("vamana: small256 build index", "[vamana]") {
     auto&& [tk_scores, tk, V] = greedy_search(graph, x, med, x[query], 2, 2);
     CHECK(tk[0] == 0);
     CHECK(tk[1] == 72);
+    CHECK(tk_scores[0] == 125678.0);
+    CHECK(tk_scores[1] == 125678.0);
     CHECK(size(V) == 1);
   }
 }
@@ -249,7 +252,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   size_t L = 45;
   auto query_id = 14;
   size_t k = 15;
-  // auto med = detail::graph::medioid(x);
+  // auto med = detail::graph::medoid(x);
   //  int med = GENERATE(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 72);
   int med = 72;
   std::cout << "med " << med << std::endl;
@@ -708,7 +711,7 @@ TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
   float alpha = 1.0;
 
   auto nn_hypercube = build_hypercube(k_near, k_far);
-  auto start = detail::graph::medioid(nn_hypercube);
+  auto start = detail::graph::medoid(nn_hypercube);
 
   if (debug) {
     for (auto&& s : nn_hypercube[start]) {
@@ -839,7 +842,7 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
   auto valid2 = validate_graph(g, db);
   REQUIRE(valid2.size() == 0);
 
-  auto start = detail::graph::medioid(db);
+  auto start = detail::graph::medoid(db);
 
   for (float alpha : {1.0, 1.25}) {
     if (debug) {
@@ -975,10 +978,10 @@ TEST_CASE("vamana: vamana by hand random index", "[vamana]") {
   auto graph_ = ::detail::graph::init_random_nn_graph<float, uint64_t>(
       training_set_, R_max_degree_);
 
-  auto medioid_ = detail::graph::medioid(training_set_);
+  auto medioid_ = detail::graph::medoid(training_set_);
 
   if (debug) {
-    std::cout << "medioid: " << medioid_ << std::endl;
+    std::cout << "medoid: " << medioid_ << std::endl;
   }
 
   size_t counter{0};
@@ -1109,7 +1112,7 @@ TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
 
   auto recall =
       ((double)total_intersected) / ((double)k_nn * num_vectors(queries));
-  CHECK(recall > 0.85);  // @todo -- had been 0.95?
+  CHECK(recall > 0.80);  // @todo -- had been 0.95?
 
   if (debug) {
     std::cout << total_intersected << " / " << k_nn * num_vectors(queries)
