@@ -81,7 +81,7 @@ class base_index_metadata {
    * Members set / updated by users of the group
    ******************************************************************************/
 
- // Make public for now in interest of expedience
+  // Make public for now in interest of expedience
  public:
   /** Record timestamps of writes to the group */
   std::vector<ingestion_timestamps_type> ingestion_timestamps_;

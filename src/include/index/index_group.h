@@ -38,9 +38,9 @@
 
 #include <filesystem>
 #include <map>
-#include <unordered_map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -56,12 +56,10 @@
 template <class Index>
 class base_index_metadata;
 
-
 template <class DerivedClass>
 struct metadata_type_selector {
   using type = typename DerivedClass::index_metadata_type;
 };
-
 
 template <class IndexGroup>
 class base_index_group {
@@ -69,9 +67,10 @@ class base_index_group {
   using group_type = IndexGroup;
 
   // Can't do this ....
-  // using index_group_metadata_type = typename IndexGroup::index_group_metadata_type;
-  // Can do this
-  using index_group_metadata_type = typename metadata_type_selector<IndexGroup>::type;
+  // using index_group_metadata_type = typename
+  // IndexGroup::index_group_metadata_type; Can do this
+  using index_group_metadata_type =
+      typename metadata_type_selector<IndexGroup>::type;
 
   friend IndexGroup;
 
@@ -324,7 +323,6 @@ class base_index_group {
       , index_timestamp_(timestamp)
       , version_(version)
       , opened_for_(rw) {
-
     switch (opened_for_) {
       case TILEDB_READ:
         open_for_read(cfg);
@@ -446,7 +444,6 @@ class base_index_group {
   auto set_dimension(size_t dim) {
     metadata_.dimension_ = dim;
   }
-
 
   /**************************************************************************
    * Getters for names and uris

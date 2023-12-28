@@ -133,9 +133,8 @@ class ivf_flat_index_group
     }
     this->init_valid_array_names();
 
-    static const int32_t tile_size{
-        (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
-                  this->get_dimension())};
+    static const int32_t tile_size{(
+        int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) / this->get_dimension())};
     static const tiledb_filter_type_t default_compression{
         string_to_filter(storage_formats[version_]["default_attr_filters"])};
 
