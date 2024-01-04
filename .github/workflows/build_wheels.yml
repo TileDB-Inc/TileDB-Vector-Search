@@ -10,6 +10,7 @@ on:
   pull_request:
     branches:
       - '*wheel*'  # must quote since "*" is a YAML reserved character; we want a string
+  workflow_dispatch:
 
 jobs:
   build_wheels:
