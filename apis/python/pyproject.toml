@@ -47,6 +47,7 @@ zip-safe = false
 [tool.setuptools_scm]
 root = "../.."
 write_to = "apis/python/src/tiledb/vector_search/version.py"
+local_scheme = "no-local-version"
 
 [tool.ruff]
 extend-select = ["I"]
