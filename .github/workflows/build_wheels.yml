@@ -46,7 +46,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
-          path: ./wheelhouse/*.whl
+          path: './wheelhouse/*.whl'
 
 # TODO: Needs support for pulling in the root directory
 #  build_sdist:
@@ -77,7 +77,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           # unpacks all CIBW artifacts into dist/
-          pattern: cibw-*
+          pattern: 'cibw-*'
           path: dist
           merge-multiple: true
 
@@ -85,4 +85,4 @@ jobs:
         with:
           user: ${{ secrets.TEST_PYPI_USERNAME }}
           password: ${{ secrets.TEST_PYPI_PASSWORD }}
-          repository_url: https://test.pypi.org/legacy/
+          repository-url: https://test.pypi.org/legacy/
