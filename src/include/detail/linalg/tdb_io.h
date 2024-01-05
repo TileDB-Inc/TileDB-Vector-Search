@@ -155,6 +155,8 @@ void write_vector(
 
   // using value_type = std::ranges::range_value_t<V>;
 
+  // print_types(v);
+
   if (create) {
     create_vector(ctx, v, uri);
   }

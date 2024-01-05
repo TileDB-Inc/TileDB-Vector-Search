@@ -48,6 +48,8 @@
 #include "ivf_query.h"
 #include "utils/utils.h"
 
+#include "utils/print_types.h"
+
 using namespace detail::flat;
 
 namespace detail::ivf {
@@ -174,10 +176,11 @@ int ivf_index(
           ctx, shuffled_db, parts_uri, start_pos, false, write_temporal_policy);
     }
     if (index_uri != "") {
-      write_vector<ids_type>(ctx, indices, index_uri, 0, false, write_temporal_policy);
+      //print_types(ctx, indices, index_uri, 0, false, write_temporal_policy);
+      write_vector(ctx, indices, index_uri, 0, false, write_temporal_policy);
     }
     if (id_uri != "") {
-      write_vector<ids_type>(ctx, shuffled_ids, id_uri, start_pos, false, write_temporal_policy);
+      write_vector(ctx, shuffled_ids, id_uri, start_pos, false, write_temporal_policy);
     }
   }
   return 0;

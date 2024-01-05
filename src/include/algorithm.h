@@ -154,7 +154,7 @@ void for_each(
            start,
            stop,
            f = std::forward<UnaryFunction>(f)]() mutable {
-            scoped_timer __{tdb_func__ + std::string{" (lambda)"}, true};
+            // scoped_timer __{tdb_func__ + std::string{" (lambda "} + std::to_string(n) + ")", true};
 
             for (size_t i = start; i < stop; ++i) {
               std::forward<UnaryFunction>(f)(begin[i], n, i);
