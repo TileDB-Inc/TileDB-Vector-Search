@@ -108,6 +108,21 @@ static std::filesystem::path siftsmall_query_uri{siftsmall_root / "queries"};
 static std::filesystem::path siftsmall_groundtruth_uri{
     siftsmall_root / "groundtruth"};
 
+static std::filesystem::path siftsmall_uint8_root{test_array_root / "siftsmall_uint8"};
+static std::filesystem::path siftsmall_uint8_inputs_uri{
+    siftsmall_uint8_root / "input_vectors"};
+static std::filesystem::path siftsmall_uint8_centroids_uri{
+    siftsmall_uint8_root / "partition_centroids"};
+static std::filesystem::path siftsmall_uint8_index_uri{
+    siftsmall_uint8_root / "partition_indexes"};
+static std::filesystem::path siftsmall_uint8_ids_uri{
+    siftsmall_uint8_root / "shuffled_vector_ids"};
+static std::filesystem::path siftsmall_uint8_parts_uri{
+    siftsmall_uint8_root / "shuffled_vectors"};
+static std::filesystem::path siftsmall_uint8_query_uri{siftsmall_uint8_root / "queries"};
+static std::filesystem::path siftsmall_uint8_groundtruth_uri{
+    siftsmall_uint8_root / "groundtruth"};
+
 static std::filesystem::path bigann1M_root{test_array_root / "bigann1M"};
 static std::filesystem::path bigann1M_inputs_uri{
     bigann1M_root / "input_vectors"};

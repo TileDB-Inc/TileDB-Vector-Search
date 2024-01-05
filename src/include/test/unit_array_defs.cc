@@ -82,6 +82,20 @@ std::vector<std::filesystem::path> siftsmall_array_uris{
     siftsmall_groundtruth_uri,
 };
 
+// Note that we don't have a canonical IVF index for siftsmall_uint8 yet, so
+// some of these URIs are placeholders
+std::vector<std::filesystem::path> siftsmall_uint8_array_uris{
+    siftsmall_uint8_inputs_uri,
+    siftsmall_uint8_centroids_uri,
+    siftsmall_uint8_index_uri,
+    siftsmall_uint8_ids_uri,
+    siftsmall_uint8_parts_uri,
+    siftsmall_uint8_query_uri,
+    siftsmall_uint8_groundtruth_uri,
+};
+
+// Note that we don't have a canonical IVF index for bigann10k yet, so some
+// of these URIs are placeholders
 std::vector<std::filesystem::path> bigann10k_array_uris{
     bigann10k_inputs_uri,
     bigann10k_centroids_uri,
@@ -102,9 +116,9 @@ std::vector<std::filesystem::path> bigann1M_array_uris{
     bigann1M_groundtruth_uri,
 };
 
+// Note that we don't have a canonical IVF index for fmnist yet, so some
+// of these URIs are placeholders
 std::vector<std::filesystem::path> fmnist_array_uris{
-    // Note that we don't have a canonical IVF index for fmnist yet, so some
-    // of these URIs are placeholders
     fmnist_inputs_uri,
     fmnist_centroids_uri,
     fmnist_index_uri,
@@ -123,23 +137,22 @@ std::vector<std::filesystem::path> siftsmall_files{
 TEST_CASE("array_defs: test array uris", "[array_defs]") {
   bool debug = true;
 
-  for (auto& uri : siftsmall_array_uris) {
-    if (debug) {
-      std::cout << uri << " "
-                << (std::filesystem::exists(uri) ? "exists" : "does not exist")
-                << std::endl;
+  for (auto& test :
+       {siftsmall_array_uris,
+        siftsmall_uint8_array_uris,
+        bigann10k_array_uris}) {
+    for (auto& uri : test) {
+      if (debug) {
+        std::cout << uri << " "
+                  << (std::filesystem::exists(uri) ? "exists" :
+                                                     "does not exist")
+                  << std::endl;
+      }
+      // CHECK(std::filesystem::exists(uri));
+      CHECK(std::filesystem::is_directory(uri));
     }
-    // CHECK(std::filesystem::exists(uri));
-    CHECK(std::filesystem::is_directory(uri));
   }
-  for (auto& uri : bigann10k_array_uris) {
-    if (debug) {
-      std::cout << uri << " "
-                << (std::filesystem::exists(uri) ? "exists" : "does not exist")
-                << std::endl;
-    }
-    CHECK(std::filesystem::is_directory(uri));
-  }
+
   for (auto& file : siftsmall_files) {
     if (debug) {
       std::cout << file << " "
