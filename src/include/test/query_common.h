@@ -125,37 +125,4 @@
 // clang-format on
 
 
-#if 0
-  static std::string sift_inputs_uri{m1_root + "sift/sift_base"};
-  static std::string sift_centroids_uri{m1_root + "sift/centroids"};
-  static std::string sift_parts_uri{m1_root + "sift/parts"};
-  static std::string sift_index_uri{m1_root + "sift/index"};
-  //  static std::string sizes_uri{m1_root + "/1M/index_size.tdb"};
-  static std::string sift_ids_uri{m1_root + "sift/ids"};
-  static std::string sift_query_uri{m1_root + "sift/sift_query"};
-  static std::string sift_groundtruth_uri{m1_root + "sift/sift_groundtruth"};
-
-  static std::string ivf_index_uri{
-      m1_root + "sift/flatIVF_index_sift_base_64_64"};
-  static std::string ivf_index_centroids_uri{ivf_index_uri + "/centroids"};
-  static std::string ivf_index_indices_uri{ivf_index_uri + "/indices"};
-  static std::string ivf_index_ids_uri{ivf_index_uri + "/partitioned_ids"};
-  static std::string ivf_index_vectors_uri{
-      ivf_index_uri + "/partitioned_vectors"};
-
-  static std::string bigann1M_inputs _uri{m1_root + "1M/bigann1M_base"};
-  static std::string bigann1M_query_uri{m1_root + "1M/query_public_10k"};
-  static std::string bigann1M_groundtruth_uri{m1_root + "1M/bigann_1M_GT_nnids"};
-  static std::string bigann1M_centroids_uri{m1_root + "1M/centroids.tdb"};
-  static std::string bigann1M_ids_uri{m1_root + "1M/ids.tdb"};
-  static std::string bigann1M_index_uri{m1_root + "1M/index.tdb"};
-  static std::string bigann1M_index_size_uri{m1_root + "1M/index_size.tdb"};
-  static std::string bigann1M_parts_uri{m1_root + "1M/parts.tdb"};
-
-  static std::string fmnist_inputs_uri{m1_root + "fmnist/fmnist_train.tdb"};
-  static std::string fmnist_test_uri{m1_root + "fmnist/fmnist_test.tdb"};
-  static std::string fmnist_groundtruth_uri{
-      m1_root + "fmnist/fmnist_neighbors.tdb"};
-  static std::string sift_base_uri{m1_root + "sift/sift_base"};
-#endif
 #endif  // TILEDB_QUERY_COMMON_H

@@ -27,7 +27,7 @@
  *
  * @section DESCRIPTION
  *
- * Driver for making a query against a vamana index, as given by the sift_index_uri.
+ * Driver for making a query against a vamana index, as given by the index_uri.
  *
  * The driver searches using a previously-stored index.
  */
@@ -54,17 +54,17 @@ static constexpr const char USAGE[] =
     R"(vamana: C++ cli for vamana query
   Usage:
       vamana (-h | --help)
-      vamana --sift_index_uri URI --sift_query_uri URI [--ftype TYPE] [--idtype TYPE] [--sift_groundtruth_uri URI]
+      vamana --index_uri URI --query_uri URI [--ftype TYPE] [--idtype TYPE] [--groundtruth_uri URI]
              [--Lbuild NN] [--nqueries NN] [--k NN]
              [--nthreads NN] [--validate] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
   Options:
       -h, --help              show this screen
-      --sift_index_uri URI         group URI ov vamana index
-      --sift_query_uri URI         query URI with feature vectors to search for
+      --index_uri URI         group URI ov vamana index
+      --query_uri URI         query URI with feature vectors to search for
       --ftype TYPE            data type of feature vectors [default: float]
       --idtype TYPE           data type of ids [default: uint64]
-      --sift_groundtruth_uri URI   ground truth URI
+      --groundtruth_uri URI   ground truth URI
       -L, --Lbuild NN         size of search list
       -k, --k NN              number of nearest neighbors [default: 1]
       --nqueries NN           size of queries subset to compare (0 = all) [default: 0]
@@ -88,8 +88,8 @@ int main(int argc, char* argv[]) {
   verbose = args["--verbose"].asBool();
   enable_stats = args["--stats"].asBool();
 
-  std::string index_uri = args["--sift_index_uri"].asString();
-  std::string query_uri = args["--sift_query_uri"].asString();
+  std::string index_uri = args["--index_uri"].asString();
+  std::string query_uri = args["--query_uri"].asString();
 
   size_t k_nn = args["--k"].asLong();
   size_t nqueries = args["--nqueries"].asLong();
@@ -111,8 +111,8 @@ int main(int argc, char* argv[]) {
 
     query_time.stop();
 
-    if (args["--sift_groundtruth_uri"]) {
-      auto groundtruth_uri = args["--sift_groundtruth_uri"].asString();
+    if (args["--groundtruth_uri"]) {
+      auto groundtruth_uri = args["--groundtruth_uri"].asString();
 
       auto groundtruth =
           tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
