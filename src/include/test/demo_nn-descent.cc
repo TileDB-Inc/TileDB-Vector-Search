@@ -35,6 +35,7 @@
 #include <cmath>
 
 #include <vector>
+#include "array_defs.h"
 #include "detail/graph/nn-descent.h"
 #include "detail/graph/nn-graph.h"
 #include "query_common.h"
@@ -61,7 +62,7 @@ int main() {
   auto k_nn = 5;
 
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<db_type>(ctx, db_uri, N);
+  auto db = tdbColMajorMatrix<db_type>(ctx, sift_inputs_uri, N);
   db.load();
   auto g = ::detail::graph::init_random_nn_graph<float>(db /*sift_base*/, k_nn);
   show_graph(g);

@@ -33,6 +33,7 @@
 
 #include <tiledb/group_experimental.h>
 #include <catch2/catch_all.hpp>
+#include "array_defs.h"
 #include "concepts.h"
 #include "cpos.h"
 #include "detail/linalg/tdb_io.h"
@@ -84,7 +85,7 @@ TEMPLATE_TEST_CASE("tdb_io: read / write vector", "[tdb_io]", float, uint8_t) {
 TEST_CASE("tdb_io: read matrix", "[tdb_io]") {
   tiledb::Context ctx;
 
-  auto X = tdbColMajorMatrix<uint8_t>(ctx, bigann1M_base_uri);
+  auto X = tdbColMajorMatrix<uint8_t>(ctx, bigann1M_inputs_uri);
   REQUIRE(num_vectors(X) == 1'000'000);
   REQUIRE(dimension(X) == 128);
 }

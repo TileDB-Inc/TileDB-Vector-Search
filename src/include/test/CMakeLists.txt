@@ -92,6 +92,10 @@ kmeans_add_test(unit_algorithm)
 
 kmeans_add_test(unit_api)
 
+kmeans_add_test(unit_array_defs)
+
+kmeans_add_test(unit_api)
+
 kmeans_add_test(unit_api_feature_vector)
 
 kmeans_add_test(unit_api_feature_vector_array)
@@ -133,6 +137,13 @@ set_property(TEST unit_flatpq_index_test PROPERTY WILL_FAIL TRUE)
 kmeans_add_test(unit_flat_qv)
 
 kmeans_add_test(unit_flat_vq)
+
+kmeans_add_test(unit_gen_graphs)
+
+kmeans_add_test(unit_flat_index)
+
+# kmeans_add_test(unit_high_five)
+# target_link_libraries(unit_high_five PRIVATE HighFive)
 
 kmeans_add_test(unit_gen_graphs)
 
