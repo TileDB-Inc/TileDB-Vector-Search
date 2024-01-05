@@ -56,14 +56,14 @@ static constexpr const char USAGE[] =
     R"(vamana/index: C++ cli for creating vamana index
   Usage:
       vamana (-h | --help)
-      vamana --sift_inputs_uri URI --sift_index_uri URI [--ftype TYPE] [--idtype TYPE] [--force]
+      vamana inputs_uri URI index_uri URI [--ftype TYPE] [--idtype TYPE] [--force]
              [--max_degree NN] [--Lbuild NN] [--backtrack NN] [--alpha FF]
              [--nthreads NN] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
   Options:
       -h, --help              show this screen
-      --sift_inputs_uri URI            database URI with feature vectors
-      --sift_index_uri URI         group URI for storing vamana index
+      inputs_uri URI            database URI with feature vectors
+      index_uri URI         group URI for storing vamana index
       --ftype TYPE            data type of feature vectors [default: float]
       --idtype TYPE           data type of ids [default: uint64]
       -f, --force             overwrite index if it exists [default:false]
@@ -101,8 +101,8 @@ int main(int argc, char* argv[]) {
   verbose = args["--verbose"].asBool();
   enable_stats = args["--stats"].asBool();
 
-  std::string db_uri = args["--sift_inputs_uri"].asString();
-  std::string index_uri = args["--sift_index_uri"].asString();
+  std::string db_uri = args["inputs_uri"].asString();
+  std::string index_uri = args["index_uri"].asString();
   size_t nthreads = args["--nthreads"].asLong();
 
   size_t dump = args["--dump"].asLong();

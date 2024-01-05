@@ -71,18 +71,18 @@ static constexpr const char USAGE[] =
 Usage:
     index (-h | --help)
     index [--kmeans] [--index]
-           --sift_inputs_uri URI --sift_centroids_uri URI [--sift_index_uri URI] [--sift_parts_uri URI] [--sift_ids_uri URI]
+           inputs_uri URI centroids_uri URI [index_uri URI] [parts_uri URI] [ids_uri URI]
           [--blocksize NN] [--nthreads N] [--nth] [--log FILE] [--force] [--dryrun] [-d] [-v]
 
 Options:
     -h, --help            show this screen
-    --sift_inputs_uri URI          database URI with feature vectors
+    inputs_uri URI          database URI with feature vectors
     --kmeans              run kmeans clustering, computing centroids (default: false)
     --index               create indexing data structures, given centroids (default: false)
-    --sift_centroids_uri URI   URI for centroid vectors.  May be input or output.
-    --sift_index_uri URI       URI with the paritioning index.  Output.
-    --sift_parts_uri URI       URI with the partitioned data.  Output.
-    --sift_ids_uri URI         URI with original IDs of vectors.  Output.
+    centroids_uri URI   URI for centroid vectors.  May be input or output.
+    index_uri URI       URI with the paritioning index.  Output.
+    parts_uri URI       URI with the partitioned data.  Output.
+    ids_uri URI         URI with original IDs of vectors.  Output.
     --blocksize NN        number of vectors to process in a block (0 = all) [default: 0]
     --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
     --nth                 use nth_element for top k [default: false]
@@ -98,8 +98,8 @@ int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
   auto args = docopt::docopt(USAGE, strings, true);
 
-  auto centroids_uri = args["--sift_centroids_uri"].asString();
-  auto db_uri = args["--sift_inputs_uri"].asString();
+  auto centroids_uri = args["centroids_uri"].asString();
+  auto db_uri = args["inputs_uri"].asString();
 
   auto nthreads = args["--nthreads"].asLong();
   if (nthreads == 0) {
@@ -110,9 +110,9 @@ int main(int argc, char* argv[]) {
   enable_stats = args["--stats"].asBool();
   bool dryrun = args["--dryrun"].asBool();
 
-  auto parts_uri = args["--sift_parts_uri"] ? args["--sift_parts_uri"].asString() : "";
-  auto index_uri = args["--sift_index_uri"] ? args["--sift_index_uri"].asString() : "";
-  auto id_uri = args["--sift_ids_uri"] ? args["--sift_ids_uri"].asString() : "";
+  auto parts_uri = args["parts_uri"] ? args["parts_uri"].asString() : "";
+  auto index_uri = args["index_uri"] ? args["index_uri"].asString() : "";
+  auto id_uri = args["ids_uri"] ? args["ids_uri"].asString() : "";
   bool nth = args["--nth"].asBool();
 
   tiledb::Context ctx;
@@ -199,7 +199,7 @@ int main(int argc, char* argv[]) {
       if (is_local_array(parts_uri) && std::filesystem::exists(parts_uri)) {
         // Apple clang does not support std::format yet
         // std::cerr << std::format("Error: URI {} already exists: " ,
-        // sift_parts_uri) << std::endl;
+        // parts_uri) << std::endl;
         std::cerr << "Error: URI " << parts_uri
                   << " already exists: " << std::endl;
         std::cerr << "This is a dangerous operation, so we will not "
@@ -209,13 +209,13 @@ int main(int argc, char* argv[]) {
                   << std::endl;
         return 1;
         // Too dangerous to have this ability
-        // std::filesystem::remove_all(sift_parts_uri);
+        // std::filesystem::remove_all(parts_uri);
       }
       write_matrix(ctx, shuffled_db, parts_uri);
     }
     if (index_uri != "") {
       if (is_local_array(index_uri) && std::filesystem::exists(index_uri)) {
-        // std::filesystem::remove(sift_index_uri);
+        // std::filesystem::remove(index_uri);
         std::cerr << "Error: URI " << index_uri
                   << " already exists: " << std::endl;
         std::cerr << "This is a dangerous operation, so we will not "
