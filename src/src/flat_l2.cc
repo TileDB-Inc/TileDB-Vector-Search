@@ -108,16 +108,16 @@ static constexpr const char USAGE[] =
     R"(flat_l2: feature vector search with flat index.
   Usage:
       flat_l2 (-h | --help)
-      flat_l2 --db_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
+      flat_l2 --sift_inputs_uri URI --sift_query_uri URI [--sift_groundtruth_uri URI] [--output_uri URI]
           [--k NN] [--nqueries NN]
           [--alg ALGO] [--finite] [--blocksize NN]
           [--nthreads N] [--region REGION] [--validate] [--log FILE] [--stats] [-d] [-v]
 
   Options:
       -h, --help              show this screen
-      --db_uri URI            database URI with feature vectors
-      --query_uri URI         query URI with feature vectors to search for
-      --groundtruth_uri URI   ground truth URI
+      --sift_inputs_uri URI            database URI with feature vectors
+      --sift_query_uri URI         query URI with feature vectors to search for
+      --sift_groundtruth_uri URI   ground truth URI
       --output_uri URI        output URI for results
       --k NN                  number of nearest neighbors to find [default: 10]
       --nqueries NN           size of queries subset to compare (0 = all) [default: 0]
@@ -148,10 +148,10 @@ int main(int argc, char* argv[]) {
   verbose = args["--verbose"].asBool();
   enable_stats = args["--stats"].asBool();
 
-  std::string db_uri = args["--db_uri"].asString();
-  std::string query_uri = args["--query_uri"].asString();
+  std::string db_uri = args["--sift_inputs_uri"].asString();
+  std::string query_uri = args["--sift_query_uri"].asString();
   std::string groundtruth_uri =
-      args["--groundtruth_uri"] ? args["--groundtruth_uri"].asString() : "";
+      args["--sift_groundtruth_uri"] ? args["--sift_groundtruth_uri"].asString() : "";
 
   auto alg_name = args["--alg"].asString();
   std::cout << "# Using " << alg_name << std::endl;

@@ -97,20 +97,20 @@ static constexpr const char USAGE[] =
     R"(ivf_flat: demo CLI program for performing feature vector search with kmeans index.
 Usage:
     ivf_flat (-h | --help)
-    ivf_flat --centroids_uri URI --parts_uri URI (--index_uri URI | --sizes_uri URI)
-             --ids_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
+    ivf_flat --sift_centroids_uri URI --sift_parts_uri URI (--sift_index_uri URI | --sizes_uri URI)
+             --sift_ids_uri URI --sift_query_uri URI [--sift_groundtruth_uri URI] [--output_uri URI]
             [--k NN][--nprobe NN] [--nqueries NN] [--alg ALGO] [--infinite] [--finite] [--blocksize NN]
             [--nthreads NN] [--ppt NN] [--vpt NN] [--nodes NN] [--region REGION] [--stats] [--log FILE] [-d] [-v]
 
 Options:
     -h, --help            show this screen
-    --centroids_uri URI   URI with centroid vectors
-    --index_uri URI       URI with the paritioning index
+    --sift_centroids_uri URI   URI with centroid vectors
+    --sift_index_uri URI       URI with the paritioning index
     --sizes_uri URI       URI with the parition sizes
-    --parts_uri URI       URI with the partitioned data
-    --ids_uri URI         URI with original IDs of vectors
-    --query_uri URI       URI storing query vectors
-    --groundtruth_uri URI URI storing ground truth vectors
+    --sift_parts_uri URI       URI with the partitioned data
+    --sift_ids_uri URI         URI with original IDs of vectors
+    --sift_query_uri URI       URI storing query vectors
+    --sift_groundtruth_uri URI URI storing ground truth vectors
     --output_uri URI      URI to store search results
     --k NN                number of nearest neighbors to search for [default: 10]
     --nprobe NN           number of centroid partitions to use [default: 100]
@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
   auto args = docopt::docopt(USAGE, strings, true);
 
-  auto centroids_uri = args["--centroids_uri"].asString();
+  auto centroids_uri = args["--sift_centroids_uri"].asString();
   auto nthreads = args["--nthreads"].asLong();
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
@@ -145,30 +145,30 @@ int main(int argc, char* argv[]) {
   // global_verbose = args["--verbose"].asBool();
   enable_stats = args["--stats"].asBool();
 
-  auto part_uri = args["--parts_uri"].asString();
+  auto part_uri = args["--sift_parts_uri"].asString();
 
   std::string index_uri;
   bool size_index{false};
-  if (args["--index_uri"]) {
+  if (args["--sift_index_uri"]) {
     if (args["--sizes_uri"]) {
-      std::cerr << "Cannot specify both --index_uri and --sizes_uri\n";
+      std::cerr << "Cannot specify both --sift_index_uri and --sizes_uri\n";
       return 1;
     }
-    index_uri = args["--index_uri"].asString();
+    index_uri = args["--sift_index_uri"].asString();
   }
   if (args["--sizes_uri"]) {
     index_uri = args["--sizes_uri"].asString();
     size_index = true;
   }
   if (index_uri.empty()) {
-    std::cerr << "Must specify either --index_uri or --sizes_uri\n";
+    std::cerr << "Must specify either --sift_index_uri or --sizes_uri\n";
     return 1;
   }
 
-  auto id_uri = args["--ids_uri"].asString();
+  auto id_uri = args["--sift_ids_uri"].asString();
   size_t nprobe = args["--nprobe"].asLong();
   size_t k_nn = args["--k"].asLong();
-  auto query_uri = args["--query_uri"] ? args["--query_uri"].asString() : "";
+  auto query_uri = args["--sift_query_uri"] ? args["--sift_query_uri"].asString() : "";
   auto nqueries = (size_t)args["--nqueries"].asLong();
   auto blocksize = (size_t)args["--blocksize"].asLong();
   auto num_nodes = (size_t)args["--nodes"].asLong();
@@ -184,7 +184,7 @@ int main(int argc, char* argv[]) {
   if (is_local_array(centroids_uri) &&
       !std::filesystem::exists(centroids_uri)) {
     std::cerr << "Error: centroids URI does not exist: "
-              << args["--centroids_uri"] << std::endl;
+              << args["--sift_centroids_uri"] << std::endl;
     return 1;
   }
 
@@ -409,8 +409,8 @@ int main(int argc, char* argv[]) {
   debug_matrix(top_k, "top_k");
 
   // @todo encapsulate as a function
-  if (args["--groundtruth_uri"]) {
-    auto groundtruth_uri = args["--groundtruth_uri"].asString();
+  if (args["--sift_groundtruth_uri"]) {
+    auto groundtruth_uri = args["--sift_groundtruth_uri"].asString();
 
     auto groundtruth =
         tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);

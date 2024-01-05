@@ -938,7 +938,7 @@ auto nuv_query_heap_finite_ram(
         centroids.load();
         return centroids;
       });
-  // auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri);
+  // auto centroids = tdbColMajorMatrix<centroids_type>(ctx, sift_centroids_uri);
   // centroids.load();
 
   std::future<query_type> query_future = std::async(std::launch::async, [&]() {
@@ -948,7 +948,7 @@ auto nuv_query_heap_finite_ram(
     return query;
   });
   // auto query =
-  //      tdbColMajorMatrix<db_type, id_type>(ctx, query_uri,
+  //      tdbColMajorMatrix<db_type, id_type>(ctx, sift_query_uri,
   //      nqueries);
   // query.load();
 

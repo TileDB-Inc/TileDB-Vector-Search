@@ -170,7 +170,7 @@ TEST_CASE("array_defs: quick hack to create groundtruths", "[array_defs]") {
 #endif
 
 TEST_CASE("array_defs: test array uris", "[array_defs]") {
-  bool debug = true;
+  bool debug = false;
 
   for (auto& test :
        {siftsmall_array_uris,

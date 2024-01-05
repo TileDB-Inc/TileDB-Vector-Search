@@ -211,6 +211,6 @@ static std::filesystem::path diskann_truth_index_data =
 
 static std::filesystem::path pytest_170_group_root{test_array_root / "pytest-170"};
 static std::filesystem::path pytest_170_group_uri{
-    pytest_170_group_uri / "test_ivf_flat_ingestion_f320/array"};
+    pytest_170_group_root / "test_ivf_flat_ingestion_f320/array"};
 
 #endif  // TILEDB_ARRAY_DEFS_H

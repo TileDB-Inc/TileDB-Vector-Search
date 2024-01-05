@@ -328,7 +328,7 @@ static void declarePartitionedMatrix(py::module& mod,
 
   PyTMatrix cls(mod, (name + "_" + suffix).c_str(), py::buffer_protocol());
   cls.def(py::init<const tiledb::Context&,
-                   const std::string&,      // db_uri
+                   const std::string&,      // sift_inputs_uri
                    std::vector<uint64_t>&,  // partition array indices
                    std::vector<uint64_t>&,  // partition list to load
                    const std::string&>(),   // id_uri
