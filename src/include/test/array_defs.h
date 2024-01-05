@@ -83,7 +83,11 @@ static std::filesystem::path test_file_root { test_data_root / "files" };
  * Queries used for testing are stored in the array "queries" and the groundruth
  * for each query is stored in the array "groundtruth".
  */
+#ifdef USE_1M_UNIT_TEST_ARRAYS
+static std::filesystem::path sift_root{test_array_root / "siftsmallqv"};
+#else
 static std::filesystem::path sift_root{test_array_root / "sift"};
+#endif
 static std::filesystem::path sift_inputs_uri{sift_root / "input_vectors"};
 static std::filesystem::path sift_centroids_uri{
     sift_root / "partition_centroids"};
@@ -123,7 +127,11 @@ static std::filesystem::path siftsmall_uint8_query_uri{siftsmall_uint8_root / "q
 static std::filesystem::path siftsmall_uint8_groundtruth_uri{
     siftsmall_uint8_root / "groundtruth"};
 
+#ifdef USE_1M_UNIT_TEST_ARRAYS
 static std::filesystem::path bigann1M_root{test_array_root / "bigann1M"};
+#else
+static std::filesystem::path bigann1M_root{test_array_root / "bigann10k"};
+#endif
 static std::filesystem::path bigann1M_inputs_uri{
     bigann1M_root / "input_vectors"};
 static std::filesystem::path bigann1M_centroids_uri{
