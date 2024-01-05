@@ -180,9 +180,9 @@ static std::filesystem::path siftsmall_files_root{test_file_root / "siftsmall"};
 static std::filesystem::path siftsmall_inputs_file{
     siftsmall_files_root / "input_vectors.fvecs"};
 static std::filesystem::path siftsmall_query_file{
-    siftsmall_files_root / "queries.fvec"};
+    siftsmall_files_root / "queries.fvecs"};
 static std::filesystem::path siftsmall_groundtruth_file{
-    siftsmall_files_root / "groundtruth.ivec"};
+    siftsmall_files_root / "groundtruth.ivecs"};
 
 
 /**

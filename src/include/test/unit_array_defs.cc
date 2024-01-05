@@ -36,6 +36,9 @@
 #include <vector>
 #include "array_defs.h"
 
+#include "detail/flat/qv.h"
+#include "detail/linalg/tdb_matrix.h"
+
 TEST_CASE("array_defs: test test", "[array_defs]") {
   REQUIRE(true);
 }
@@ -133,6 +136,38 @@ std::vector<std::filesystem::path> siftsmall_files{
     siftsmall_query_file,
     siftsmall_groundtruth_file,
 };
+
+#if 0
+TEST_CASE("array_defs: quick hack to create groundtruths", "[array_defs]") {
+  tiledb::Context ctx;
+  size_t k_nn = 100;
+
+  {
+    auto training_set =
+        tdbColMajorMatrix<uint8_t>(ctx, siftsmall_uint8_inputs_uri);
+    training_set.load();
+    auto queries = tdbColMajorMatrix<uint8_t>(ctx, siftsmall_uint8_query_uri);
+    queries.load();
+
+    auto&& [qv_scores, qv_top_k] =
+        detail::flat::qv_query_heap(training_set, queries, k_nn, 4);
+
+    write_matrix(ctx, qv_top_k, siftsmall_uint8_groundtruth_uri);
+  }
+  {
+    auto training_set =
+        tdbColMajorMatrix<uint8_t>(ctx, bigann10k_inputs_uri);
+    training_set.load();
+    auto queries = tdbColMajorMatrix<uint8_t>(ctx, bigann10k_query_uri);
+    queries.load();
+
+    auto&& [qv_scores, qv_top_k] =
+        detail::flat::qv_query_heap(training_set, queries, k_nn, 4);
+
+    write_matrix(ctx, qv_top_k, bigann10k_groundtruth_uri);
+  }
+}
+#endif
 
 TEST_CASE("array_defs: test array uris", "[array_defs]") {
   bool debug = true;
