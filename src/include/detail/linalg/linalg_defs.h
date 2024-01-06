@@ -34,6 +34,7 @@
 
 #include <tiledb/tiledb>
 #include "mdspan/mdspan.hpp"
+#include <string>
 
 namespace stdx {
 using namespace Kokkos;

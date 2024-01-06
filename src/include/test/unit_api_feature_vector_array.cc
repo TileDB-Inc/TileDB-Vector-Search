@@ -33,6 +33,7 @@
 #include "catch2/catch_all.hpp"
 #include "detail/ivf/qv.h"
 #include "query_common.h"
+#include "array_defs.h"
 
 TEST_CASE("api_feature_vector_array: test test", "[api_feature_vector_array]") {
   REQUIRE(true);
@@ -45,25 +46,25 @@ TEST_CASE("api_feature_vector_array: test test", "[api_feature_vector_array]") {
 TEST_CASE("api: feature vector array open", "[api]") {
   tiledb::Context ctx;
 
-  auto a = FeatureVectorArray(ctx, db_uri);
+  auto a = FeatureVectorArray(ctx, sift_inputs_uri);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(a) == 128);
-  CHECK(num_vectors(a) == 1'000'000);
+  CHECK(num_vectors(a) == num_sift_vectors);
 
-  auto b = FeatureVectorArray(ctx, bigann1M_base_uri);
+  auto b = FeatureVectorArray(ctx, bigann1M_inputs_uri);
   CHECK(b.feature_type() == TILEDB_UINT8);
   CHECK(dimension(b) == 128);
-  CHECK(num_vectors(b) == 1'000'000);
+  CHECK(num_vectors(b) == num_bigann1M_vectors);
 
-  auto c = FeatureVectorArray(ctx, fmnist_train_uri);
+  auto c = FeatureVectorArray(ctx, fmnist_inputs_uri);
   CHECK(c.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(c) == 784);
-  CHECK(num_vectors(c) == 60'000);
+  CHECK(num_vectors(c) == num_fmnist_vectors);
 
-  auto d = FeatureVectorArray(ctx, sift_base_uri);
+  auto d = FeatureVectorArray(ctx, sift_inputs_uri);
   CHECK(d.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(d) == 128);
-  CHECK(num_vectors(d) == 1'000'000);
+  CHECK(num_vectors(d) == num_sift_vectors);
 }
 
 template <query_vector_array M>
@@ -198,24 +199,24 @@ TEST_CASE("api: query checks", "[api][index]") {
   size_t num_queries = 50;
 
   SECTION("simple check") {
-    auto z = FeatureVectorArray(ctx, db_uri);
+    auto z = FeatureVectorArray(ctx, sift_inputs_uri);
     auto nn = dimension(z);
     auto nnn = num_vectors(z);
     CHECK(dimension(z) == 128);
-    CHECK(num_vectors(z) == 1'000'000);
+    CHECK(num_vectors(z) == num_sift_vectors);
   }
 
   SECTION("tdbMatrix") {
-    auto ck = tdbColMajorMatrix<float>(ctx, db_uri);
+    auto ck = tdbColMajorMatrix<float>(ctx, sift_inputs_uri);
     ck.load();
 
-    auto qk = tdbColMajorMatrix<float>(ctx, query_uri, num_queries);
+    auto qk = tdbColMajorMatrix<float>(ctx, sift_query_uri, num_queries);
     load(qk);
 
     auto [ck_scores, ck_top_k] =
         detail::flat::qv_query_heap(ck, qk, k_nn, nthreads);
 
-    auto gk = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
+    auto gk = tdbColMajorMatrix<test_groundtruth_type>(ctx, sift_groundtruth_uri);
     load(gk);
 
     auto ok = validate_top_k(ck_top_k, gk);

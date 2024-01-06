@@ -32,6 +32,7 @@
 
 #include <catch2/catch_all.hpp>
 
+#include "array_defs.h"
 #include "cpos.h"
 #include "detail/flat/qv.h"
 #include "detail/graph/adj_list.h"
@@ -176,7 +177,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   // "tests/data/siftsmall_learn_256pts.fbin";
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
-    throw std::runtime_error("Could not open file " + diskann_test_256bin);
+    throw std::runtime_error("Could not open file " + diskann_test_256bin.string());
   }
 
   binary_file.read((char*)&npoints, 4);
@@ -544,7 +545,7 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
 
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
-    throw std::runtime_error("Could not open file " + diskann_test_256bin);
+    throw std::runtime_error("Could not open file " + diskann_test_256bin.string());
   }
 
   binary_file.read((char*)&npoints, 4);
@@ -586,7 +587,7 @@ TEST_CASE("vamana: fmnist", "[vamana]") {
   size_t N = 5000;
 
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<db_type>(ctx, fmnist_test, N);
+  auto db = tdbColMajorMatrix<test_feature_type>(ctx, fmnist_inputs_uri, N);
   db.load();
   auto g = detail::graph::init_random_nn_graph<score_type, id_type>(db, L);
 
@@ -807,7 +808,7 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
   float alpha = 1.0;
 
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<db_type>(ctx, fmnist_test, N);
+  auto db = tdbColMajorMatrix<test_feature_type>(ctx, fmnist_inputs_uri, N);
   db.load();
   auto g = detail::graph::init_random_nn_graph<float, uint64_t>(db, L);
 
@@ -919,7 +920,7 @@ TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
 
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
-    throw std::runtime_error("Could not open file " + diskann_test_256bin);
+    throw std::runtime_error("Could not open file " + diskann_test_256bin.string());
   }
 
   binary_file.read((char*)&npoints, 4);
@@ -1089,7 +1090,7 @@ TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
 
   tiledb::Context ctx;
   auto training_set =
-      tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, num_nodes);
+      tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, num_nodes);
   training_set.load();
   auto queries =
       tdbColMajorMatrix<float>(ctx, siftsmall_query_uri, num_queries);
@@ -1125,7 +1126,7 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
 
   tiledb::Context ctx;
   std::string vamana_index_uri = "/tmp/tmp_vamana_index";
-  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
+  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
 
   auto idx = detail::graph::vamana_index<float, uint64_t>(

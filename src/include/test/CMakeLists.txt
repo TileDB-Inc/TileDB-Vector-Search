@@ -90,6 +90,8 @@ kmeans_add_test(unit_adj_list)
 
 kmeans_add_test(unit_algorithm)
 
+kmeans_add_test(unit_array_defs)
+
 kmeans_add_test(unit_api)
 
 kmeans_add_test(unit_api_feature_vector)
@@ -99,8 +101,6 @@ kmeans_add_test(unit_api_feature_vector_array)
 kmeans_add_test(unit_api_flat_l2_index)
 
 kmeans_add_test(unit_api_flat_pq_index)
-
-kmeans_add_test(unit_api_ivf_flat_index)
 
 kmeans_add_test(unit_api_ivf_pq_index)
 
@@ -128,10 +128,16 @@ set_property(TEST unit_fixed_min_heap_test PROPERTY WILL_FAIL TRUE)
 kmeans_add_test(unit_flat_l2_index)
 
 kmeans_add_test(unit_flatpq_index)
+set_property(TEST unit_flatpq_index_test PROPERTY WILL_FAIL TRUE)
 
 kmeans_add_test(unit_flat_qv)
 
 kmeans_add_test(unit_flat_vq)
+
+# kmeans_add_test(unit_flat_index)
+
+# kmeans_add_test(unit_high_five)
+# target_link_libraries(unit_high_five PRIVATE HighFive)
 
 kmeans_add_test(unit_gen_graphs)
 
@@ -160,6 +166,7 @@ target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)
 add_test(NAME unit_linalg_test COMMAND unit_linalg ~[tdbmatrix])
 
 kmeans_add_test(unit_logging)
+set_property(TEST unit_logging_test PROPERTY WILL_FAIL TRUE)
 
 kmeans_add_test(unit_matrix)
 

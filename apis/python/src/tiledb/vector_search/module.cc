@@ -19,6 +19,8 @@
 #include "detail/linalg/tdb_partitioned_matrix.h"
 // #include "detail/ivf/vq.h"
 
+#include "utils/print_types.h"
+
 namespace py = pybind11;
 using Ctx = tiledb::Context;
 
@@ -363,7 +365,7 @@ static void declareFixedMinPairHeap(py::module& mod) {
   // cls.def("insert", &fixed_min_pair_heap<T, U>::insert);
   cls.def(
       "insert",
-      [](fixed_min_pair_heap<T, U> heap, const T& x, const U& y) {
+      [](fixed_min_pair_heap<T, U>& heap, const T& x, const U& y) {
         return heap.insert(x, y);
       }),
       cls.def("__len__", [](const fixed_min_pair_heap<T, U>& v) {
@@ -412,7 +414,7 @@ static void declarePartitionedMatrix(
   cls.def(
       py::init<
           const tiledb::Context&,
-          const std::string&,  // db_uri
+          const std::string&,  // sift_inputs_uri
           // std::vector<Indices_Type>&&,      // partition array indices
           const std::string&,
           const std::string&,                // id_uri

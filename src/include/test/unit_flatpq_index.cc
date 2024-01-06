@@ -30,6 +30,7 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <cmath>
 
 #include "detail/flat/qv.h"
 #include "gen_graphs.h"
@@ -427,7 +428,7 @@ TEST_CASE(
     "flatpq_index: verify pq_encoding and pq_distances with siftsmall",
     "[flatpq_index]") {
   tiledb::Context ctx;
-  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 2500);
+  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 2500);
   training_set.load();
 
   auto pq_idx = flatpq_index<float, uint32_t, uint32_t>(128, 16, 8, 50);
@@ -560,6 +561,27 @@ TEMPLATE_TEST_CASE(
         scale *= a_vx_pqx4;
       }
 
+      REQUIRE(scale > 0);
+      REQUIRE(!std::isnan(scale));
+
+      CHECK(!std::isnan(a_vx_pqx4));
+      CHECK(!std::isnan(a_dpqx_evx4));
+      CHECK(!std::isnan(s_evx_pqx4));
+      CHECK(!std::isnan(ss_vx_dpqx4));
+      CHECK(!std::isnan(s_evx_edpqx4));
+      CHECK(!std::isnan(a_evx_edpqx4));
+      CHECK(!std::isnan(ss_devx_dpqx4));
+      CHECK(!std::isnan(ss_devx_vx4));
+
+      CHECK(!std::isnan(a_vx_pqx4 / scale));
+      CHECK(!std::isnan(a_dpqx_evx4 / scale));
+      CHECK(!std::isnan(s_evx_pqx4 / scale));
+      CHECK(!std::isnan(ss_vx_dpqx4 / scale));
+      CHECK(!std::isnan(s_evx_edpqx4 / scale));
+      CHECK(!std::isnan(a_evx_edpqx4 / scale));
+      CHECK(!std::isnan(ss_devx_dpqx4 / scale));
+      CHECK(!std::isnan(ss_devx_vx4 / scale));
+
       CHECK(a_vx_pqx4 / scale < 0.0005);
       CHECK(a_dpqx_evx4 / scale < 0.0005);
       CHECK(s_evx_pqx4 / scale < 0.0005);
@@ -653,7 +675,7 @@ TEST_CASE("flatpq_index: query siftsmall", "[flatpq_index]") {
   auto k_nn = 10;
 
   tiledb::Context ctx;
-  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
+  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   training_set.load();
 
   auto query_set = tdbColMajorMatrix<float>(ctx, siftsmall_query_uri, 0);
@@ -708,7 +730,7 @@ TEST_CASE("flatpq_index: query 1M", "[flatpq_index]") {
 
   tiledb::Context ctx;
   auto training_set =
-      tdbColMajorMatrix<uint8_t>(ctx, bigann1M_base_uri, num_vectors);
+      tdbColMajorMatrix<uint8_t>(ctx, bigann1M_inputs_uri, num_vectors);
   training_set.load();
 
   auto query_set =
@@ -769,7 +791,7 @@ TEST_CASE("flatpq_index: flatpq_index write and read", "[flatpq_index]") {
 
   tiledb::Context ctx;
   std::string flatpq_index_uri = "/tmp/tmp_flatpq_index";
-  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
+  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
 
   auto idx = flatpq_index<float, uint32_t, uint32_t>(

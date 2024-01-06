@@ -202,10 +202,11 @@ class ivf_flat_index_group {
     if (timestamp_bound == end(metadata_.ingestion_timestamps_)) {
       throw std::runtime_error(
           "Requested read timestamp " + std::to_string(index_timestamp_) +
-          " is beyond " + std::to_string(metadata_.ingestion_timestamps_.back()));
+          " is beyond " +
+          std::to_string(metadata_.ingestion_timestamps_.back()));
     }
-    timetravel_index_ = std::distance(
-        begin(metadata_.ingestion_timestamps_), timestamp_bound);
+    timetravel_index_ =
+        std::distance(begin(metadata_.ingestion_timestamps_), timestamp_bound);
 
     // @todo Or index_timestamp_?
     group_timestamp_ = metadata_.ingestion_timestamps_[timetravel_index_];
@@ -296,7 +297,8 @@ class ivf_flat_index_group {
         index_.get().dimension(),
         default_tile_extent,
         default_compression);
-    write_group.add_member(centroids_uri(), false, centroids_array_name());
+    //write_group.add_member(centroids_uri(), true, centroids_array_name());
+    write_group.add_member(centroids_array_name(), true, centroids_array_name());
 
     create_empty_for_matrix<typename Index::feature_type, stdx::layout_left>(
         cached_ctx_,
@@ -306,11 +308,13 @@ class ivf_flat_index_group {
         index_.get().dimension(),
         default_tile_extent,
         default_compression);
-    write_group.add_member(parts_uri(), false, parts_array_name());
+    // write_group.add_member(parts_uri(), true, parts_array_name());
+    write_group.add_member(parts_array_name(), true, parts_array_name());
 
     create_empty_for_vector<typename Index::id_type>(
         cached_ctx_, ids_uri(), default_domain, tile_size, default_compression);
-    write_group.add_member(ids_uri(), false, ids_array_name());
+    // write_group.add_member(ids_uri(), true, ids_array_name());
+    write_group.add_member(ids_array_name(), true, ids_array_name());
 
     create_empty_for_vector<typename Index::indices_type>(
         cached_ctx_,
@@ -318,7 +322,8 @@ class ivf_flat_index_group {
         default_domain,
         default_tile_extent,
         default_compression);
-    write_group.add_member(indices_uri(), false, indices_array_name());
+    // write_group.add_member(indices_uri(), true, indices_array_name());
+    write_group.add_member(indices_array_name(), true, indices_array_name());
 
     // Store the metadata if all of the arrays were created successfully
     metadata_.store_metadata(write_group);
@@ -558,27 +563,26 @@ class ivf_flat_index_group {
     return group_timestamp_;
   }
 
-
   /**************************************************************************
    * Helpful functions for debugging, testing, etc
    **************************************************************************/
 
-  auto set_ingestion_timestamp(size_t timestamp)  {
+  auto set_ingestion_timestamp(size_t timestamp) {
     metadata_.ingestion_timestamps_[timetravel_index_] = timestamp;
   }
-  auto set_base_size(size_t size)  {
+  auto set_base_size(size_t size) {
     metadata_.base_sizes_[timetravel_index_] = size;
   }
-  auto set_num_partitions(size_t size)  {
+  auto set_num_partitions(size_t size) {
     metadata_.partition_history_[timetravel_index_] = size;
   }
-  auto set_last_ingestion_timestamp(size_t timestamp)  {
+  auto set_last_ingestion_timestamp(size_t timestamp) {
     metadata_.ingestion_timestamps_.back() = timestamp;
   }
-  auto set_last_base_size(size_t size)  {
+  auto set_last_base_size(size_t size) {
     metadata_.base_sizes_.back() = size;
   }
-  auto set_last_num_partitions(size_t size)  {
+  auto set_last_num_partitions(size_t size) {
     metadata_.partition_history_.back() = size;
   }
 

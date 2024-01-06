@@ -62,7 +62,6 @@ inline std::unique_ptr<tiledb::Array> open_array(
   StatsCollectionScope stats_scope(uri, function_name, "open_array");
   return std::make_unique<tiledb::Array>(ctx, uri, query_type, temporal_policy);
 }
-
 /**
  * @brief Submits a TileDB query and displays stats to stderr.
  *

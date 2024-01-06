@@ -55,7 +55,7 @@ TEST_CASE("timetravel: open", "[timetravel]") {
   tiledb::Context ctx;
 
   auto index = ivf_flat_index<float, uint32_t, uint32_t>(100);
-  auto training_set = tdbColMajorPreLoadMatrix<float>(ctx, siftsmall_base_uri);
+  auto training_set = tdbColMajorPreLoadMatrix<float>(ctx, siftsmall_inputs_uri);
   index.train(training_set);
   index.add(training_set);
 
@@ -96,7 +96,8 @@ TEST_CASE("timetravel: open", "[timetravel]") {
     fc.load();
     auto nc = fc.fragment_num();
     auto tc = fc.timestamp_range(0);
-    // std::cout << "centroid tc: " << tc.first << ", " << tc.second << std::endl;
+    // std::cout << "centroid tc: " << tc.first << ", " << tc.second <<
+    // std::endl;
     CHECK(tc.first == tc.second);
     CHECK((long)tc.first == z[1]);
 

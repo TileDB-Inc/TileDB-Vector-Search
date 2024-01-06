@@ -49,6 +49,7 @@ namespace detail::flat {
  * where each thread keeps its own set of heaps for each query vector.  After
  * The database vector loop, the heaps are merged and then copied to `top_k`.
  *
+ * @todo Support out of core operation
  * @todo Unify out of core and not out of core versions.
  */
 
@@ -268,7 +269,10 @@ auto vq_query_heap_2(
 
 /**
  * @brief Find the single nearest neighbor for each query vector.  This is
- * essentially vq_query_heap, specialized for k = 1.
+ * essentially vq_query_heap, specialized for k = 1.  Note that if we query
+ * the centroids using the set of feature vectors, we will get back the id of
+ * closest centroid to each feature vector.  I.e., we will get a partition
+ * label for each feature vector.
  * @tparam DB
  * @tparam Q
  * @param db
