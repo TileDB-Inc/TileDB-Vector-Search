@@ -146,8 +146,7 @@ constexpr auto type_to_tiledb_v = tiledb::impl::type_to_tiledb<T>::tiledb_type;
   }
 }
 
-[[maybe_unused]] inline static auto string_to_filter(
-    const std::string& str) {
+[[maybe_unused]] inline static auto string_to_filter(const std::string& str) {
   if (str == "gzip") {
     return TILEDB_FILTER_GZIP;
   }

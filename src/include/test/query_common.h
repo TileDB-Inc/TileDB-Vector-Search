@@ -34,9 +34,9 @@
 #define TILEDB_QUERY_COMMON_H
 
 #include <string>
+#include "array_defs.h"
 #include "detail/flat/qv.h"
 #include "linalg.h"
-#include "array_defs.h"
 
 // clang-format off
 
@@ -158,10 +158,11 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
       : ctx_{ctx}
       , nlist(nl)
       , nprobe(std::min<size_t>(10, nlist))
-      , training_set(tdbColMajorMatrix<feature_type>(ctx_, siftsmall_inputs_uri))
+      , training_set(
+            tdbColMajorMatrix<feature_type>(ctx_, siftsmall_inputs_uri))
       , query_set(tdbColMajorMatrix<feature_type>(ctx_, siftsmall_query_uri))
-      , groundtruth_set(
-            tdbColMajorMatrix<siftsmall_groundtruth_type>(ctx_, siftsmall_groundtruth_uri))
+      , groundtruth_set(tdbColMajorMatrix<siftsmall_groundtruth_type>(
+            ctx_, siftsmall_groundtruth_uri))
       , idx(/*128,*/ nlist, max_iter, tolerance) {
     training_set.load();
     query_set.load();

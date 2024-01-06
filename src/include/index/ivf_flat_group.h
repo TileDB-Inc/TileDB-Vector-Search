@@ -297,8 +297,9 @@ class ivf_flat_index_group {
         index_.get().dimension(),
         default_tile_extent,
         default_compression);
-    //write_group.add_member(centroids_uri(), true, centroids_array_name());
-    write_group.add_member(centroids_array_name(), true, centroids_array_name());
+    // write_group.add_member(centroids_uri(), true, centroids_array_name());
+    write_group.add_member(
+        centroids_array_name(), true, centroids_array_name());
 
     create_empty_for_matrix<typename Index::feature_type, stdx::layout_left>(
         cached_ctx_,

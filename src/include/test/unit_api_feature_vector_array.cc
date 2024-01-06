@@ -30,10 +30,10 @@
  */
 
 #include "api/feature_vector_array.h"
+#include "array_defs.h"
 #include "catch2/catch_all.hpp"
 #include "detail/ivf/qv.h"
 #include "query_common.h"
-#include "array_defs.h"
 
 TEST_CASE("api_feature_vector_array: test test", "[api_feature_vector_array]") {
   REQUIRE(true);
@@ -216,7 +216,8 @@ TEST_CASE("api: query checks", "[api][index]") {
     auto [ck_scores, ck_top_k] =
         detail::flat::qv_query_heap(ck, qk, k_nn, nthreads);
 
-    auto gk = tdbColMajorMatrix<test_groundtruth_type>(ctx, sift_groundtruth_uri);
+    auto gk =
+        tdbColMajorMatrix<test_groundtruth_type>(ctx, sift_groundtruth_uri);
     load(gk);
 
     auto ok = validate_top_k(ck_top_k, gk);

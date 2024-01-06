@@ -60,7 +60,8 @@ TEST_CASE("ivf vq: infinite all or none", "[ivf vq][ci-skip]") {
   // auto ids = read_vector<uint64_t>(ctx, sift_ids_uri);
   // auto index = sizes_to_indices(sizes);
 
-  auto centroids = tdbColMajorMatrix<test_feature_type>(ctx, sift_centroids_uri);
+  auto centroids =
+      tdbColMajorMatrix<test_feature_type>(ctx, sift_centroids_uri);
   centroids.load();
   auto query = tdbColMajorMatrix<test_feature_type>(ctx, sift_query_uri);
   query.load();
@@ -72,37 +73,40 @@ TEST_CASE("ivf vq: infinite all or none", "[ivf vq][ci-skip]") {
     auto nthreads = GENERATE(1, 5);
     std::cout << nprobe << " " << k_nn << " " << nthreads << std::endl;
 
-    auto&& [D02, I02] = detail::ivf::query_infinite_ram<test_feature_type, test_ids_type>(
-        ctx,
-        sift_parts_uri,
-        centroids,
-        query,
-        index,
-        sift_ids_uri,
-        nprobe,
-        k_nn,
-        nthreads);
+    auto&& [D02, I02] =
+        detail::ivf::query_infinite_ram<test_feature_type, test_ids_type>(
+            ctx,
+            sift_parts_uri,
+            centroids,
+            query,
+            index,
+            sift_ids_uri,
+            nprobe,
+            k_nn,
+            nthreads);
 
-    auto&& [D00, I00] = detail::ivf::vq_query_infinite_ram<test_feature_type, test_ids_type>(
-        ctx,
-        sift_parts_uri,
-        centroids,
-        query,
-        index,
-        sift_ids_uri,
-        nprobe,
-        k_nn,
-        nthreads);
-    auto&& [D01, I01] = detail::ivf::vq_query_infinite_ram_2<test_feature_type, test_ids_type>(
-        ctx,
-        sift_parts_uri,
-        centroids,
-        query,
-        index,
-        sift_ids_uri,
-        nprobe,
-        k_nn,
-        nthreads);
+    auto&& [D00, I00] =
+        detail::ivf::vq_query_infinite_ram<test_feature_type, test_ids_type>(
+            ctx,
+            sift_parts_uri,
+            centroids,
+            query,
+            index,
+            sift_ids_uri,
+            nprobe,
+            k_nn,
+            nthreads);
+    auto&& [D01, I01] =
+        detail::ivf::vq_query_infinite_ram_2<test_feature_type, test_ids_type>(
+            ctx,
+            sift_parts_uri,
+            centroids,
+            query,
+            index,
+            sift_ids_uri,
+            nprobe,
+            k_nn,
+            nthreads);
 
     CHECK(!std::equal(
         D00.data(),
@@ -132,12 +136,15 @@ TEST_CASE("ivf vq: finite all or none", "[ivf vq][ci-skip]") {
   // auto ids = read_vector<uint64_t>(ctx, sift_ids_uri);
   // auto index = sizes_to_indices(sizes);
 
-  auto centroids = tdbColMajorMatrix<test_feature_type>(ctx, sift_centroids_uri);
+  auto centroids =
+      tdbColMajorMatrix<test_feature_type>(ctx, sift_centroids_uri);
   centroids.load();
-  auto query = tdbColMajorMatrix<test_feature_type>(ctx, sift_query_uri, num_queries);
+  auto query =
+      tdbColMajorMatrix<test_feature_type>(ctx, sift_query_uri, num_queries);
   query.load();
   auto index = read_vector<test_indices_type>(ctx, sift_index_uri);
-  auto groundtruth = tdbColMajorMatrix<test_groundtruth_type>(ctx, sift_groundtruth_uri);
+  auto groundtruth =
+      tdbColMajorMatrix<test_groundtruth_type>(ctx, sift_groundtruth_uri);
   groundtruth.load();
 
   SECTION("all") {
@@ -147,52 +154,56 @@ TEST_CASE("ivf vq: finite all or none", "[ivf vq][ci-skip]") {
     std::cout << upper_bound << " " << nprobe << " " << num_queries << " "
               << k_nn << " " << nthreads << std::endl;
 
-    auto&& [D00, I00] = detail::ivf::query_infinite_ram<test_feature_type, test_ids_type>(
-        ctx,
-        sift_parts_uri,
-        centroids,
-        query,
-        index,
-        sift_ids_uri,
-        nprobe,
-        k_nn,
-        nthreads);
+    auto&& [D00, I00] =
+        detail::ivf::query_infinite_ram<test_feature_type, test_ids_type>(
+            ctx,
+            sift_parts_uri,
+            centroids,
+            query,
+            index,
+            sift_ids_uri,
+            nprobe,
+            k_nn,
+            nthreads);
 
-    auto&& [D01, I01] = detail::ivf::vq_query_finite_ram<test_feature_type, test_ids_type>(
-        ctx,
-        sift_parts_uri,
-        centroids,
-        query,
-        index,
-        sift_ids_uri,
-        nprobe,
-        k_nn,
-        upper_bound,
-        nthreads);
+    auto&& [D01, I01] =
+        detail::ivf::vq_query_finite_ram<test_feature_type, test_ids_type>(
+            ctx,
+            sift_parts_uri,
+            centroids,
+            query,
+            index,
+            sift_ids_uri,
+            nprobe,
+            k_nn,
+            upper_bound,
+            nthreads);
 
-    auto&& [D02, I02] = detail::ivf::vq_query_finite_ram_2<test_feature_type, test_ids_type>(
-        ctx,
-        sift_parts_uri,
-        centroids,
-        query,
-        index,
-        sift_ids_uri,
-        nprobe,
-        k_nn,
-        upper_bound,
-        nthreads);
+    auto&& [D02, I02] =
+        detail::ivf::vq_query_finite_ram_2<test_feature_type, test_ids_type>(
+            ctx,
+            sift_parts_uri,
+            centroids,
+            query,
+            index,
+            sift_ids_uri,
+            nprobe,
+            k_nn,
+            upper_bound,
+            nthreads);
 
-    auto&& [D03, I03] = detail::ivf::query_finite_ram<test_feature_type, test_ids_type>(
-        ctx,
-        sift_parts_uri,
-        centroids,
-        query,
-        index,
-        sift_ids_uri,
-        nprobe,
-        k_nn,
-        upper_bound,
-        nthreads);
+    auto&& [D03, I03] =
+        detail::ivf::query_finite_ram<test_feature_type, test_ids_type>(
+            ctx,
+            sift_parts_uri,
+            centroids,
+            query,
+            index,
+            sift_ids_uri,
+            nprobe,
+            k_nn,
+            upper_bound,
+            nthreads);
 
     CHECK(D00.num_rows() == D01.num_rows());
     CHECK(D00.num_cols() == D01.num_cols());

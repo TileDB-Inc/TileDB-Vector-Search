@@ -55,10 +55,11 @@ using test_indices_type = uint64_t;  // Should be same as groundtruth_type
  * We also don't want to make copies of the data under every build directory,
  * so we put it in CMAKE_SOURCE_DIR/external/test_arrays.
  */
-static std::filesystem::path cmake_source_dir { CMAKE_SOURCE_DIR };
-static std::filesystem::path test_data_root { cmake_source_dir.parent_path() / "external" / "test_data" };
-static std::filesystem::path test_array_root { test_data_root / "arrays" };
-static std::filesystem::path test_file_root { test_data_root / "files" };
+static std::filesystem::path cmake_source_dir{CMAKE_SOURCE_DIR};
+static std::filesystem::path test_data_root{
+    cmake_source_dir.parent_path() / "external" / "test_data"};
+static std::filesystem::path test_array_root{test_data_root / "arrays"};
+static std::filesystem::path test_file_root{test_data_root / "files"};
 
 /**
  * @brief  Array URIs for arrays used for unit testing of IVF indexes.
@@ -97,7 +98,7 @@ static std::filesystem::path sift_root{test_array_root / "sift"};
 static std::filesystem::path sift_root{test_array_root / "siftsmall"};
 constexpr size_t num_sift_vectors = 10'000;
 #endif
-constexpr size_t sift_dimension = 128; // OMG!
+constexpr size_t sift_dimension = 128;  // OMG!
 static std::filesystem::path sift_group_uri{sift_root / "group"};
 static std::filesystem::path sift_inputs_uri{sift_root / "input_vectors"};
 static std::filesystem::path sift_centroids_uri{
@@ -108,9 +109,8 @@ static std::filesystem::path sift_parts_uri{sift_root / "shuffled_vectors"};
 static std::filesystem::path sift_query_uri{sift_root / "queries"};
 static std::filesystem::path sift_groundtruth_uri{sift_root / "groundtruth"};
 
-
 using siftsmall_feature_type = float;
-using siftsmall_groundtruth_type = uint64_t; // int32?
+using siftsmall_groundtruth_type = uint64_t;  // int32?
 using siftsmall_centroids_type = float;
 using siftsmall_ids_type = uint64_t;
 using siftsmall_indices_type = uint64_t;
@@ -133,17 +133,18 @@ static std::filesystem::path siftsmall_groundtruth_uri{
     siftsmall_root / "groundtruth"};
 
 using siftsmall_uint8_feature_type = uint8_t;
-using siftsmall_uint8_groundtruth_type = uint64_t; // int32?
+using siftsmall_uint8_groundtruth_type = uint64_t;  // int32?
 using siftsmall_uint8_centroids_type = float;
 using siftsmall_uint8_ids_type = uint64_t;
 using siftsmall_uint8_indices_type = uint64_t;
 constexpr size_t num_siftsmall_uint8_vectors = 10'000;
 constexpr size_t siftsmall_uint8_dimension = 128;
-static std::filesystem::path siftsmall_uint8_root{test_array_root / "siftsmall_uint8"};
-static std::filesystem::path siftsmall_uint8_group_uri{siftsmall_uint8_root /
-                                                       "group"};
-static std::filesystem::path siftsmall_uint8_inputs_uri{siftsmall_uint8_root /
-                                                        "input_vectors"};
+static std::filesystem::path siftsmall_uint8_root{
+    test_array_root / "siftsmall_uint8"};
+static std::filesystem::path siftsmall_uint8_group_uri{
+    siftsmall_uint8_root / "group"};
+static std::filesystem::path siftsmall_uint8_inputs_uri{
+    siftsmall_uint8_root / "input_vectors"};
 static std::filesystem::path siftsmall_uint8_centroids_uri{
     siftsmall_uint8_root / "partition_centroids"};
 static std::filesystem::path siftsmall_uint8_index_uri{
@@ -152,7 +153,8 @@ static std::filesystem::path siftsmall_uint8_ids_uri{
     siftsmall_uint8_root / "shuffled_vector_ids"};
 static std::filesystem::path siftsmall_uint8_parts_uri{
     siftsmall_uint8_root / "shuffled_vectors"};
-static std::filesystem::path siftsmall_uint8_query_uri{siftsmall_uint8_root / "queries"};
+static std::filesystem::path siftsmall_uint8_query_uri{
+    siftsmall_uint8_root / "queries"};
 static std::filesystem::path siftsmall_uint8_groundtruth_uri{
     siftsmall_uint8_root / "groundtruth"};
 
@@ -170,10 +172,10 @@ constexpr size_t num_bigann1M_vectors = 10'000;
 #endif
 constexpr size_t bigann1M_dimension = 128;
 static std::filesystem::path bigann1M_group_uri{bigann1M_root / "group"};
-static std::filesystem::path bigann1M_inputs_uri{bigann1M_root /
-                                                 "input_vectors"};
-static std::filesystem::path bigann1M_centroids_uri{bigann1M_root /
-                                                    "partition_centroids"};
+static std::filesystem::path bigann1M_inputs_uri{
+    bigann1M_root / "input_vectors"};
+static std::filesystem::path bigann1M_centroids_uri{
+    bigann1M_root / "partition_centroids"};
 static std::filesystem::path bigann1M_index_uri{
     bigann1M_root / "partition_indexes"};
 static std::filesystem::path bigann1M_ids_uri{
@@ -193,10 +195,10 @@ constexpr size_t num_bigann10k_vectors = 10'000;
 constexpr size_t bigann10k_dimension = 128;
 static std::filesystem::path bigann10k_root{test_array_root / "bigann10k"};
 static std::filesystem::path bigann10k_group_uri{bigann10k_root / "group"};
-static std::filesystem::path bigann10k_inputs_uri{bigann10k_root /
-                                                  "input_vectors"};
-static std::filesystem::path bigann10k_centroids_uri{bigann10k_root /
-                                                     "partition_centroids"};
+static std::filesystem::path bigann10k_inputs_uri{
+    bigann10k_root / "input_vectors"};
+static std::filesystem::path bigann10k_centroids_uri{
+    bigann10k_root / "partition_centroids"};
 static std::filesystem::path bigann10k_index_uri{
     bigann10k_root / "partition_indexes"};
 static std::filesystem::path bigann10k_ids_uri{
@@ -214,12 +216,12 @@ using fmnist_ids_type = uint64_t;
 using fmnist_indices_type = uint64_t;
 // How does copilot get the number right?
 constexpr size_t num_fmnist_vectors = 60'000;
-constexpr size_t fmnist_dimension = 784; // OMG OMG OMG
+constexpr size_t fmnist_dimension = 784;  // OMG OMG OMG
 static std::filesystem::path fmnist_root{test_array_root / "fmnist"};
 static std::filesystem::path fmnist_group_uri{fmnist_root / "group"};
 static std::filesystem::path fmnist_inputs_uri{fmnist_root / "input_vectors"};
-static std::filesystem::path fmnist_centroids_uri{fmnist_root /
-                                                  "partition_centroids"};
+static std::filesystem::path fmnist_centroids_uri{
+    fmnist_root / "partition_centroids"};
 static std::filesystem::path fmnist_index_uri{
     fmnist_root / "partition_indexes"};
 static std::filesystem::path fmnist_ids_uri{
@@ -247,7 +249,6 @@ static std::filesystem::path siftsmall_query_file{
 static std::filesystem::path siftsmall_groundtruth_file{
     siftsmall_files_root / "groundtruth.ivecs"};
 
-
 /**
  * @brief Data files used in unit tests in the DiskANN git repo.
  * (Note:  These are files not arrays!)
@@ -272,7 +273,8 @@ static std::filesystem::path diskann_mem_index{
 static std::filesystem::path diskann_truth_index_data =
     diskann_root / "truth_index_siftsmall_learn_256pts_R4_L50_A1.2.data";
 
-static std::filesystem::path pytest_170_group_root{test_array_root / "pytest-170"};
+static std::filesystem::path pytest_170_group_root{
+    test_array_root / "pytest-170"};
 static std::filesystem::path pytest_170_group_uri{
     pytest_170_group_root / "test_ivf_flat_ingestion_f320/array"};
 

@@ -320,9 +320,8 @@ TEMPLATE_TEST_CASE(
           {0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127}};
     }
 
-
     std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
-									  hypercube2, query2, k_nn, 1, sum_of_squares_distance{});
+        hypercube2, query2, k_nn, 1, sum_of_squares_distance{});
     std::tie(top_k_ivf_scores, top_k_ivf) =
         ivf_idx2.qv_query_heap_infinite_ram(query2, k_nn, 1);  // k, nprobe
     auto intersections0 = (long)count_intersections(top_k_ivf, top_k, k_nn);
@@ -523,8 +522,8 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   tiledb::Context ctx;
   auto query_set = tdbColMajorMatrix<float>(ctx, siftsmall_query_uri);
   query_set.load();
-  auto groundtruth_set =
-      tdbColMajorMatrix<siftsmall_groundtruth_type>(ctx, siftsmall_groundtruth_uri);
+  auto groundtruth_set = tdbColMajorMatrix<siftsmall_groundtruth_type>(
+      ctx, siftsmall_groundtruth_uri);
   groundtruth_set.load();
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();

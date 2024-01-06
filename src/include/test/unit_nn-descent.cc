@@ -194,10 +194,12 @@ TEST_CASE("nn-descent: nn_descent_1 vs ivf", "[nn-descent]") {
   db.load();
   auto centroids = tdbColMajorMatrix<feature_type>(ctx, sift_centroids_uri);
   centroids.load();
-  auto query = tdbColMajorMatrix<feature_type>(ctx, sift_query_uri, num_queries);
+  auto query =
+      tdbColMajorMatrix<feature_type>(ctx, sift_query_uri, num_queries);
   query.load();
   auto index = read_vector<test_indices_type>(ctx, sift_index_uri);
-  auto groundtruth = tdbColMajorMatrix<test_groundtruth_type>(ctx, sift_groundtruth_uri);
+  auto groundtruth =
+      tdbColMajorMatrix<test_groundtruth_type>(ctx, sift_groundtruth_uri);
   groundtruth.load();
 
   auto parts = tdbColMajorMatrix<feature_type>(ctx, sift_parts_uri);

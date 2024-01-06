@@ -31,8 +31,8 @@
 
 #include <catch2/catch_all.hpp>
 #include <cmath>
-#include "detail/ivf/dist_qv.h"  // dist_qv_finite_ram
 #include "array_defs.h"
+#include "detail/ivf/dist_qv.h"  // dist_qv_finite_ram
 #include "detail/ivf/qv.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
@@ -65,9 +65,9 @@ TEST_CASE("ivf qv: infinite all or none", "[ivf qv][ci-skip]") {
       tdbColMajorMatrix<test_groundtruth_type>(ctx, sift_groundtruth_uri);
   groundtruth.load();
 
-  //debug_slice(query, "query");
-  //debug_slice(centroids, "centroids");
-  //debug_slice(groundtruth, "groundtruth");
+  // debug_slice(query, "query");
+  // debug_slice(centroids, "centroids");
+  // debug_slice(groundtruth, "groundtruth");
 
   SECTION("all") {
     auto nprobe = GENERATE(1, 5);
@@ -95,7 +95,7 @@ TEST_CASE("ivf qv: infinite all or none", "[ivf qv][ci-skip]") {
     auto&& [D00, I00] = detail::ivf::query_infinite_ram(
         inf_mat, active_partitions, query, active_queries, k_nn, nthreads);
 
-    auto check_size = [& D00 = D00, &I00 = I00](auto& D, auto& I) {
+    auto check_size = [&D00 = D00, &I00 = I00](auto& D, auto& I) {
       CHECK(D00.num_rows() == D.num_rows());
       CHECK(D00.num_cols() == D.num_cols());
       CHECK(I00.num_rows() == I.num_rows());
@@ -197,7 +197,7 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
     auto&& [D00, I00] = detail::ivf::query_infinite_ram(
         inf_mat, active_partitions, query, active_queries, k_nn, nthreads);
 
-    auto check_size = [& D00 = D00, &I00 = I00](auto& D, auto& I) {
+    auto check_size = [&D00 = D00, &I00 = I00](auto& D, auto& I) {
       CHECK(D00.num_rows() == D.num_rows());
       CHECK(D00.num_cols() == D.num_cols());
       CHECK(I00.num_rows() == I.num_rows());
@@ -343,7 +343,7 @@ TEST_CASE("ivf_qv: dist_qv", "[ivf qv]") {
   auto&& [D00, I00] = detail::ivf::query_infinite_ram(
       inf_mat, active_partitions, query, active_queries, k_nn, nthreads);
 
-  auto check_size = [& D00 = D00, &I00 = I00](auto& D, auto& I) {
+  auto check_size = [&D00 = D00, &I00 = I00](auto& D, auto& I) {
     CHECK(D00.num_rows() == D.num_rows());
     CHECK(D00.num_cols() == D.num_cols());
     CHECK(I00.num_rows() == I.num_rows());
