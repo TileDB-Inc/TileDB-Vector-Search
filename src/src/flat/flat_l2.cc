@@ -102,14 +102,14 @@ static constexpr const char USAGE[] =
     R"(flat_l2: feature vector search with flat index.
   Usage:
       flat_l2 (-h | --help)
-      flat_l2 --db_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
-          [--ftype TYPE] [--idtype TYPE] [--k NN] [--nqueries NN]
+      flat_l2 --inputs_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
+          [--k NN] [--nqueries NN]
           [--alg ALGO] [--finite] [--blocksize NN]
           [--nthreads N] [--region REGION] [--validate] [--log FILE] [--stats] [-d] [-v]
 
   Options:
       -h, --help              show this screen
-      --db_uri URI            database URI with feature vectors
+      --inputs_uri URI            database URI with feature vectors
       --query_uri URI         query URI with feature vectors to search for
       --groundtruth_uri URI   ground truth URI
       --output_uri URI        output URI for results
@@ -144,7 +144,7 @@ int main(int argc, char* argv[]) {
   verbose = args["--verbose"].asBool();
   enable_stats = args["--stats"].asBool();
 
-  std::string db_uri = args["--db_uri"].asString();
+  std::string db_uri = args["--inputs_uri"].asString();
   std::string query_uri = args["--query_uri"].asString();
   std::string groundtruth_uri =
       args["--groundtruth_uri"] ? args["--groundtruth_uri"].asString() : "";
@@ -202,7 +202,6 @@ int main(int argc, char* argv[]) {
         }
         return detail::flat::qv_query_heap(db, query, k, nthreads);
       }
-
 #ifdef TILEDB_VS_ENABLE_BLAS
 #if 0
     else if (alg_name == "gemm") {

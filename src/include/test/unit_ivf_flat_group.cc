@@ -107,26 +107,26 @@ TEST_CASE("ivf_flat_group: constructor", "[ivf_flat_group]") {
   std::reference_wrapper<const dummy_index> bar = foo;
   auto m = bar.get().dimension();
 
-  auto x = ivf_flat_index_group(dummy_index{}, ctx, group_uri);
-  auto y = ivf_flat_index_group(dummy_index{}, ctx, group_uri);
+  auto x = ivf_flat_index_group(dummy_index{}, ctx, sift_group_uri);
+  auto y = ivf_flat_index_group(dummy_index{}, ctx, sift_group_uri);
 }
 
 TEST_CASE("ivf_flat_group: default constructor", "[ivf_flat_group]") {
   tiledb::Context ctx;
-  auto x = ivf_flat_index_group(dummy_index{}, ctx, group_uri);
+  auto x = ivf_flat_index_group(dummy_index{}, ctx, sift_group_uri);
   x.dump("Default constructor");
 }
 
 TEST_CASE("ivf_flat_group: read constructor", "[ivf_flat_group]") {
   tiledb::Context ctx;
-  auto x = ivf_flat_index_group(dummy_index{}, ctx, group_uri, TILEDB_READ);
+  auto x = ivf_flat_index_group(dummy_index{}, ctx, sift_group_uri, TILEDB_READ);
   x.dump("Read constructor");
 }
 
 TEST_CASE("ivf_flat_group: read constructor with version", "[ivf_flat_group]") {
   tiledb::Context ctx;
   auto x =
-      ivf_flat_index_group(dummy_index{}, ctx, group_uri, TILEDB_READ, 0, "0.3");
+      ivf_flat_index_group(dummy_index{}, ctx, sift_group_uri, TILEDB_READ, 0, "0.3");
   x.dump("Read constructor with version");
 }
 

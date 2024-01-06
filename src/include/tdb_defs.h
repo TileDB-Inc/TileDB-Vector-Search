@@ -96,7 +96,7 @@ constexpr auto type_to_tiledb_v = tiledb::impl::type_to_tiledb<T>::tiledb_type;
 // cf type_to_str(tiledb_datatype_t type) in tiledb/type.h
 // type_to_tiledb<T>::tiledb_type
 // tiledb_to_type<tiledb_datatype_t>::type
-[[maybe_unused]] constexpr inline static std::string datatype_to_string(
+[[maybe_unused]] inline static std::string datatype_to_string(
     tiledb_datatype_t datatype) {
   switch (datatype) {
     case TILEDB_FLOAT32:
@@ -146,8 +146,7 @@ constexpr auto type_to_tiledb_v = tiledb::impl::type_to_tiledb<T>::tiledb_type;
   }
 }
 
-[[maybe_unused]] constexpr static auto string_to_filter(
-    const std::string& str) {
+[[maybe_unused]] inline static auto string_to_filter(const std::string& str) {
   if (str == "gzip") {
     return TILEDB_FILTER_GZIP;
   }
@@ -169,7 +168,7 @@ constexpr auto type_to_tiledb_v = tiledb::impl::type_to_tiledb<T>::tiledb_type;
   throw std::runtime_error("Unsupported filter name " + str);
 }
 
-[[maybe_unused]] constexpr static auto filter_to_string(
+[[maybe_unused]] static inline std::string filter_to_string(
     tiledb_filter_type_t filter) {
   switch (filter) {
     case TILEDB_FILTER_NONE:

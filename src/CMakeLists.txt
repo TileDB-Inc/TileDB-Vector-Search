@@ -161,6 +161,7 @@ include(Docopt)
 include(mdspan)
 include(nlohmann_json)
 # include(HighFive)
+include(config)
 
 add_subdirectory(src)
 

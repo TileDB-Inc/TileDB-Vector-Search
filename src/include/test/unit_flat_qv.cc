@@ -30,6 +30,7 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include "array_defs.h"
 #include "detail/flat/qv.h"
 #include "query_common.h"
 

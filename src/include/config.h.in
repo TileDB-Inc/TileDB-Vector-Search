@@ -37,9 +37,12 @@
 #ifndef TILEDB_CONFIG_H
 #define TILEDB_CONFIG_H
 
-constexpr const char SIFT_TEST_DIR[] = "@SIFT_TEST_DIR@";
-constexpr const char CURRENT_DATETIME[] = "@CURRENT_DATETIME@";
 constexpr const char CMAKE_SOURCE_DIR[] = "@CMAKE_SOURCE_DIR@";
+constexpr const char CMAKE_BINARY_DIR[] = "@CMAKE_BINARY_DIR@";
+
+constexpr const char SIFT_TEST_DIR[] = "@SIFT_TEST_DIR@";
+
+constexpr const char CURRENT_DATETIME[] = "@CURRENT_DATETIME@";
 constexpr const char BUILD_TYPE[] = "@CMAKE_BUILD_TYPE@";
 constexpr const char CXX_VERSION[] = "@CMAKE_CXX_COMPILER_VERSION@";
 constexpr const char CXX_COMPILER_ID[] = "@CMAKE_CXX_COMPILER_ID@";

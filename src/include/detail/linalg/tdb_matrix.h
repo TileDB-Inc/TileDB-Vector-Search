@@ -229,7 +229,8 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     last_resident_col_ = first_col_;
 
 #ifdef __cpp_lib_smart_ptr_for_overwrite
-    auto data_ = std::make_unique_for_overwrite<T[]>(dimension * blocksize_);
+    auto data_ =
+        std::make_unique_for_overwrite<T[]>(dimension * load_blocksize_);
 #else
     auto data_ = std::unique_ptr<T[]>(new T[dimension * load_blocksize_]);
 #endif
@@ -248,8 +249,8 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     tiledb_datatype_t attr_type = attr.type();
     if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
       throw std::runtime_error(
-          "Attribute type mismatch: " + std::to_string(attr_type) + " != " +
-          std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
+          "Attribute type mismatch: " + datatype_to_string(attr_type) + " != " +
+          datatype_to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
     }
 
     size_t dimension = last_row_ - first_row_;
