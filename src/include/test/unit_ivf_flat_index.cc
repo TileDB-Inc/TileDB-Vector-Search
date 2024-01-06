@@ -289,7 +289,7 @@ TEMPLATE_TEST_CASE(
     auto top_k_ivf_scores = ColMajorMatrix<float>();
     auto top_k_ivf = ColMajorMatrix<unsigned>();
     auto top_k_scores = ColMajorMatrix<float>();
-    auto top_k = ColMajorMatrix<unsigned long long>();
+    auto top_k = ColMajorMatrix<uint64_t>();
     auto query2 = ColMajorMatrix<TestType>();
     auto query4 = ColMajorMatrix<TestType>();
 
@@ -320,8 +320,9 @@ TEMPLATE_TEST_CASE(
           {0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127}};
     }
 
+
     std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
-        hypercube2, query2, k_nn, 1, sum_of_squares_distance{});
+									  hypercube2, query2, k_nn, 1, sum_of_squares_distance{});
     std::tie(top_k_ivf_scores, top_k_ivf) =
         ivf_idx2.qv_query_heap_infinite_ram(query2, k_nn, 1);  // k, nprobe
     auto intersections0 = (long)count_intersections(top_k_ivf, top_k, k_nn);

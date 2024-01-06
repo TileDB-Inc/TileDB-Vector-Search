@@ -105,7 +105,7 @@ class StatsCollectionScope final {
 #endif
 };
 
-auto dump_logs = [](std::string filename,
+static auto dump_logs = [](std::string filename,
                     const std::string algorithm,
                     std::optional<size_t> nqueries,
                     std::optional<size_t> nprobe,

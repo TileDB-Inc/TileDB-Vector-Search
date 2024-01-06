@@ -232,7 +232,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     last_resident_col_ = first_col_;
 
 #ifdef __cpp_lib_smart_ptr_for_overwrite
-    auto data_ = std::make_unique_for_overwrite<T[]>(dimension * blocksize_);
+    auto data_ = std::make_unique_for_overwrite<T[]>(dimension * load_blocksize_);
 #else
     auto data_ = std::unique_ptr<T[]>(new T[dimension * load_blocksize_]);
 #endif
