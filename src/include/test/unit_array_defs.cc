@@ -140,7 +140,7 @@ std::vector<std::filesystem::path> siftsmall_files{
 };
 
 
-#if 1
+#if 0
 TEST_CASE("array_defs: quick hack to create index vectors", "[array_defs]") {
   tiledb::Context ctx;
 
