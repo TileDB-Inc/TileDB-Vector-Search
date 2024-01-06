@@ -94,7 +94,7 @@ struct dummy_index {
 TEST_CASE("ivf_flat_group: member type", "[ivf_flat_group") {
   tiledb::Context ctx;
 
-  auto x = ivf_flat_index_group(dummy_index{}, ctx, group_uri);
+  auto x = ivf_flat_index_group(dummy_index{}, ctx, sift_group_uri);
 
   using a = typename ivf_flat_index_group<dummy_index>::index_group_metadata_type;
 }
