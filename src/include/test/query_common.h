@@ -325,7 +325,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
   tdbColMajorMatrix<float> query_set;
   tdbColMajorMatrix<int32_t> groundtruth_set;
   ColMajorMatrix<float> top_k_scores;
-  ColMajorMatrix<unsigned long long> top_k;
+  ColMajorMatrix<uint64_t> top_k;
   // ivf_flat_l2_index<feature_type, id_type, px_type> idx;
   IndexType idx;
 
