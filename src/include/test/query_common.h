@@ -36,6 +36,7 @@
 #include <string>
 #include "detail/flat/qv.h"
 #include "linalg.h"
+#include "array_defs.h"
 
 // clang-format off
 
@@ -131,9 +132,9 @@
  */
 // base is 10k, learn is 25k
 struct siftsmall_test_init_defaults {
-  using feature_type = float;
-  using id_type = uint32_t;
-  using px_type = uint64_t;
+  using feature_type = siftsmall_feature_type;
+  using id_type = siftsmall_ids_type;
+  using px_type = siftsmall_indices_type;
 
   size_t k_nn = 10;
   size_t nthreads = 0;
@@ -157,10 +158,10 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
       : ctx_{ctx}
       , nlist(nl)
       , nprobe(std::min<size_t>(10, nlist))
-      , training_set(tdbColMajorMatrix<feature_type>(ctx_, siftsmall_base_uri))
+      , training_set(tdbColMajorMatrix<feature_type>(ctx_, siftsmall_inputs_uri))
       , query_set(tdbColMajorMatrix<feature_type>(ctx_, siftsmall_query_uri))
       , groundtruth_set(
-            tdbColMajorMatrix<int32_t>(ctx_, siftsmall_groundtruth_uri))
+            tdbColMajorMatrix<siftsmall_groundtruth_type>(ctx_, siftsmall_groundtruth_uri))
       , idx(/*128,*/ nlist, max_iter, tolerance) {
     training_set.load();
     query_set.load();
@@ -182,11 +183,11 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     return idx0;
   }
 
-  tdbColMajorMatrix<float> training_set;
-  tdbColMajorMatrix<float> query_set;
-  tdbColMajorMatrix<int32_t> groundtruth_set;
+  tdbColMajorMatrix<siftsmall_feature_type> training_set;
+  tdbColMajorMatrix<siftsmall_feature_type> query_set;
+  tdbColMajorMatrix<siftsmall_groundtruth_type> groundtruth_set;
   ColMajorMatrix<float> top_k_scores;
-  ColMajorMatrix<unsigned long long> top_k;
+  ColMajorMatrix<siftsmall_ids_type> top_k;
   // ivf_flat_l2_index<feature_type, id_type, px_type> idx;
   IndexType idx;
 

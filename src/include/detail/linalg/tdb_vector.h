@@ -32,7 +32,6 @@
 #ifndef TILEDB_TDB_VECTOR_H
 #define TILEDB_TDB_VECTOR_H
 
-<<<<<<<< HEAD:src/include/detail/linalg/tdb_vector.h
 #include <tiledb/tiledb>
 #include "detail/linalg/tdb_io.h"
 #include "detail/linalg/vector.h"
@@ -54,9 +53,3 @@ class tdbVector : public Vector<T> {
 };
 
 #endif  // TILEDB_TDB_VECTOR_H
-========
-template <class... T>
-constexpr bool always_false = false;
-
-#endif  // TILEDB_TDB_DEFS_H
->>>>>>>> lums/sc-32552/nn-descent-too:src/include/tdb_defs.h

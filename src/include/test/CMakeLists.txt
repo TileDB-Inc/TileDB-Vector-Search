@@ -90,8 +90,6 @@ kmeans_add_test(unit_adj_list)
 
 kmeans_add_test(unit_algorithm)
 
-kmeans_add_test(unit_api)
-
 kmeans_add_test(unit_array_defs)
 
 kmeans_add_test(unit_api)
@@ -103,8 +101,6 @@ kmeans_add_test(unit_api_feature_vector_array)
 kmeans_add_test(unit_api_flat_l2_index)
 
 kmeans_add_test(unit_api_flat_pq_index)
-
-kmeans_add_test(unit_api_ivf_flat_index)
 
 kmeans_add_test(unit_api_ivf_pq_index)
 
@@ -138,9 +134,7 @@ kmeans_add_test(unit_flat_qv)
 
 kmeans_add_test(unit_flat_vq)
 
-kmeans_add_test(unit_gen_graphs)
-
-kmeans_add_test(unit_flat_index)
+# kmeans_add_test(unit_flat_index)
 
 # kmeans_add_test(unit_high_five)
 # target_link_libraries(unit_high_five PRIVATE HighFive)

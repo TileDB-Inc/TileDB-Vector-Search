@@ -39,6 +39,8 @@
 #include "detail/flat/qv.h"
 #include "detail/linalg/tdb_matrix.h"
 
+#include "index/ivf_flat_index.h"
+
 TEST_CASE("array_defs: test test", "[array_defs]") {
   REQUIRE(true);
 }
@@ -137,11 +139,101 @@ std::vector<std::filesystem::path> siftsmall_files{
     siftsmall_groundtruth_file,
 };
 
+
+#if 1
+TEST_CASE("array_defs: quick hack to create index vectors", "[array_defs]") {
+  tiledb::Context ctx;
+
+  {
+    auto training_set =
+        tdbColMajorMatrix<siftsmall_feature_type>(ctx, siftsmall_inputs_uri);
+    training_set.load();
+
+    using index = ivf_flat_index<
+        siftsmall_feature_type,
+        siftsmall_ids_type,
+        siftsmall_indices_type>;
+    size_t nlist = (size_t)std::sqrt(num_siftsmall_vectors);
+    auto idx = index(nlist, 10, 1.e-4);
+    idx.train(training_set);
+    idx.add(training_set);
+    idx.write_index_arrays(
+        ctx,
+        siftsmall_centroids_uri,
+        siftsmall_parts_uri,
+        siftsmall_ids_uri,
+        siftsmall_index_uri,
+        true);
+  }
+  {
+    auto training_set =
+        tdbColMajorMatrix<siftsmall_uint8_feature_type>(ctx, siftsmall_uint8_inputs_uri);
+
+    using index = ivf_flat_index<
+        siftsmall_uint8_feature_type,
+        siftsmall_uint8_ids_type,
+        siftsmall_uint8_indices_type>;
+    auto idx = index((size_t)std::sqrt(num_siftsmall_uint8_vectors), 10, 1.e-4);
+    idx.train(training_set, kmeans_init::kmeanspp);
+    idx.add(training_set);
+    idx.write_index_arrays(
+        ctx,
+        siftsmall_uint8_centroids_uri,
+        siftsmall_uint8_parts_uri,
+        siftsmall_uint8_ids_uri,
+        siftsmall_uint8_index_uri,
+        true);
+  }
+  {
+    auto training_set =
+        tdbColMajorMatrix<bigann10k_feature_type>(ctx, bigann10k_inputs_uri);
+
+    using index = ivf_flat_index<
+        bigann10k_feature_type,
+        bigann10k_ids_type,
+        bigann10k_indices_type>;
+    auto idx = index((size_t)std::sqrt(num_bigann10k_vectors), 10, 1.e-4);
+    idx.train(training_set, kmeans_init::kmeanspp);
+    idx.add(training_set);
+    idx.write_index_arrays(
+        ctx,
+        bigann10k_centroids_uri,
+        bigann10k_parts_uri,
+        bigann10k_ids_uri,
+        bigann10k_index_uri,
+        true);
+  }
+}
+#endif
+
 #if 0
 TEST_CASE("array_defs: quick hack to create groundtruths", "[array_defs]") {
   tiledb::Context ctx;
   size_t k_nn = 100;
+  {
+    auto training_set =
+        tdbColMajorMatrix<fmnist_feature_type>(ctx, fmnist_inputs_uri);
+    training_set.load();
+    auto queries = tdbColMajorMatrix<fmnist_feature_type>(ctx, fmnist_query_uri);
+    queries.load();
 
+    auto&& [qv_scores, qv_top_k] =
+        detail::flat::qv_query_heap(training_set, queries, k_nn, 4);
+
+    write_matrix(ctx, qv_top_k, fmnist_groundtruth_uri);
+  }
+  {
+    auto training_set =
+        tdbColMajorMatrix<siftsmall_feature_type>(ctx, siftsmall_inputs_uri);
+    training_set.load();
+    auto queries = tdbColMajorMatrix<siftsmall_feature_type>(ctx, siftsmall_query_uri);
+    queries.load();
+
+    auto&& [qv_scores, qv_top_k] =
+        detail::flat::qv_query_heap(training_set, queries, k_nn, 4);
+
+    write_matrix(ctx, qv_top_k, siftsmall_groundtruth_uri);
+  }
   {
     auto training_set =
         tdbColMajorMatrix<uint8_t>(ctx, siftsmall_uint8_inputs_uri);

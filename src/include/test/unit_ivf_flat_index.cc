@@ -224,7 +224,7 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
 
   tiledb::Context ctx;
   std::string ivf_index_uri = "/tmp/tmp_ivf_index";
-  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_base_uri, 0);
+  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
 
   auto idx =
@@ -358,7 +358,7 @@ TEST_CASE(
       init.idx, init.training_set, init.query_set, init.groundtruth_set);
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
-  auto top_k_ivf = ColMajorMatrix<unsigned>();
+  auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
 
   SECTION("infinite") {
     INFO("infinite");
@@ -444,7 +444,7 @@ TEST_CASE("Build index, write, read and query, finite", "[ivf_index]") {
   auto idx = init.get_write_read_idx();
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
-  auto top_k_ivf = ColMajorMatrix<unsigned>();
+  auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
 
   SECTION("finite") {
     INFO("finite");
@@ -483,7 +483,7 @@ TEST_CASE(
   auto idx = init.get_write_read_idx();
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
-  auto top_k_ivf = ColMajorMatrix<unsigned>();
+  auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
 
   SECTION("nuv_finite") {
     INFO("nuv_finite");
@@ -523,11 +523,11 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   auto query_set = tdbColMajorMatrix<float>(ctx, siftsmall_query_uri);
   query_set.load();
   auto groundtruth_set =
-      tdbColMajorMatrix<int32_t>(ctx, siftsmall_groundtruth_uri);
+      tdbColMajorMatrix<siftsmall_groundtruth_type>(ctx, siftsmall_groundtruth_uri);
   groundtruth_set.load();
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
-  auto top_k_ivf = ColMajorMatrix<id_type>();
+  auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
 
   auto init =
       siftsmall_test_init<ivf_flat_index<feature_type, id_type, px_type>>(
