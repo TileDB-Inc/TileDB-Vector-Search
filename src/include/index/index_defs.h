@@ -67,7 +67,7 @@ enum class IndexKind {
     "NNDescent",
     "Last"};
 
-[[maybe_unused]] constexpr static inline auto str(IndexKind kind) {
+[[maybe_unused]] static inline auto str(IndexKind kind) {
   return index_kind_strings[static_cast<int>(kind)];
 }
 
