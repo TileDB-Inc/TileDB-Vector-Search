@@ -58,14 +58,14 @@ enum class IndexKind {
 };
 
 [[maybe_unused]] static std::vector<const std::string> index_kind_strings{
-    "FlatL2",
-    "IVFFlat",
-    "FlatPQ",
-    "IVFPQ",
-    "Vamana",
-    "VamanaPQ",
-    "NNDescent",
-    "Last"};
+    std::string("FlatL2"),
+    std::string("IVFFlat"),
+    std::string("FlatPQ"),
+    std::string("IVFPQ"),
+    std::string("Vamana"),
+    std::string("VamanaPQ"),
+    std::string("NNDescent"),
+    std::string("Last")};
 
 [[maybe_unused]] constexpr static inline auto str(IndexKind kind) {
   return index_kind_strings[static_cast<int>(kind)];
