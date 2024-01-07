@@ -794,6 +794,23 @@ class ivf_flat_index {
     return true;
   }
 
+  auto write_index_arrays(
+      const tiledb::Context& ctx,
+      const std::string& centroids_uri,
+      const std::string& parts_uri,
+      const std::string& ids_uri,
+      const std::string& indices_uri,
+      bool overwrite) const {
+    tiledb::VFS vfs(ctx);
+
+    write_matrix(ctx, centroids_, centroids_uri, 0, true);
+    write_matrix(ctx, *partitioned_vectors_, parts_uri, 0, true);
+    write_vector(ctx, partitioned_vectors_->ids(), ids_uri, 0, true);
+    write_vector(ctx, partitioned_vectors_->indices(), indices_uri, 0, true);
+
+    return true;
+  }
+
   /*****************************************************************************
    *
    * Queries, infinite and finite.

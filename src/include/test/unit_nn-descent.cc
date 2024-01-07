@@ -31,6 +31,7 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include "array_defs.h"
 #include "detail/flat/qv.h"
 #include "detail/graph/nn-descent.h"
 #include "detail/ivf/qv.h"
@@ -59,7 +60,7 @@ TEMPLATE_TEST_CASE(
   using feature_type = float;
 
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnist_test, N);
+  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnist_inputs_uri, N);
   db.load();
   //  auto db = std::move(sift_base);
   //  N = db.num_cols();
@@ -109,7 +110,7 @@ TEMPLATE_TEST_CASE(
   using id_type = TestType;
 
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnist_test, N);
+  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnist_inputs_uri, N);
   db.load();
   auto g = detail::graph::nn_descent_1<feature_type, id_type>(db, k_nn);
 
@@ -125,7 +126,7 @@ TEST_CASE("nn-descent: nn_descent_1", "[nn-descent]") {
   size_t num_queries = 10;
 
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnist_test, N);
+  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnist_inputs_uri, N);
   db.load();
   auto g = detail::graph::nn_descent_1<feature_type, id_type>(db, k_nn);
   auto query = ColMajorMatrix<float>(db.num_rows(), num_queries);
@@ -189,19 +190,21 @@ TEST_CASE("nn-descent: nn_descent_1 vs ivf", "[nn-descent]") {
 
   tiledb::Context ctx;
 
-  auto db = tdbColMajorMatrix<feature_type>(ctx, db_uri);
+  auto db = tdbColMajorMatrix<feature_type>(ctx, sift_inputs_uri);
   db.load();
-  auto centroids = tdbColMajorMatrix<feature_type>(ctx, centroids_uri);
+  auto centroids = tdbColMajorMatrix<feature_type>(ctx, sift_centroids_uri);
   centroids.load();
-  auto query = tdbColMajorMatrix<feature_type>(ctx, query_uri, num_queries);
+  auto query =
+      tdbColMajorMatrix<feature_type>(ctx, sift_query_uri, num_queries);
   query.load();
-  auto index = read_vector<indices_type>(ctx, index_uri);
-  auto groundtruth = tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
+  auto index = read_vector<test_indices_type>(ctx, sift_index_uri);
+  auto groundtruth =
+      tdbColMajorMatrix<test_groundtruth_type>(ctx, sift_groundtruth_uri);
   groundtruth.load();
 
-  auto parts = tdbColMajorMatrix<feature_type>(ctx, parts_uri);
+  auto parts = tdbColMajorMatrix<feature_type>(ctx, sift_parts_uri);
   parts.load();
-  auto ids = read_vector<uint64_t>(ctx, ids_uri);
+  auto ids = read_vector<uint64_t>(ctx, sift_ids_uri);
 
   size_t nprobe = 20;
 

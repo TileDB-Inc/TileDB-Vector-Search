@@ -56,13 +56,13 @@ static constexpr const char USAGE[] =
     R"(vamana/index: C++ cli for creating vamana index
   Usage:
       vamana (-h | --help)
-      vamana --db_uri URI --index_uri URI [--ftype TYPE] [--idtype TYPE] [--force]
+      vamana --inputs_uri URI --index_uri URI [--ftype TYPE] [--idtype TYPE] [--force]
              [--max_degree NN] [--Lbuild NN] [--backtrack NN] [--alpha FF]
              [--nthreads NN] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
   Options:
       -h, --help              show this screen
-      --db_uri URI            database URI with feature vectors
+      --inputs_uri URI            database URI with feature vectors
       --index_uri URI         group URI for storing vamana index
       --ftype TYPE            data type of feature vectors [default: float]
       --idtype TYPE           data type of ids [default: uint64]
@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
   verbose = args["--verbose"].asBool();
   enable_stats = args["--stats"].asBool();
 
-  std::string db_uri = args["--db_uri"].asString();
+  std::string db_uri = args["--inputs_uri"].asString();
   std::string index_uri = args["--index_uri"].asString();
   size_t nthreads = args["--nthreads"].asLong();
 

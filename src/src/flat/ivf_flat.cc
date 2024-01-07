@@ -66,6 +66,7 @@
 #include "docopt.h"
 
 #include "config.h"
+#include "ivf_query.h"
 #include "linalg.h"
 #include "stats.h"
 #include "utils/logging.h"
@@ -81,7 +82,6 @@ std::vector<json> core_stats;
  * Specify some types for the demo.  For now the types associated with the
  * vector db to be queried are hard-coded.
  */
-
 using score_type = float;
 using groundtruth_type = int32_t;
 using centroids_type = float;
@@ -93,7 +93,6 @@ Usage:
     ivf_flat (-h | --help)
     ivf_flat --centroids_uri URI --parts_uri URI (--index_uri URI | --sizes_uri URI)
              --ids_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
-            [--ftype TYPE] [--idtype TYPE]
             [--k NN][--nprobe NN] [--nqueries NN] [--alg ALGO] [--infinite] [--finite] [--blocksize NN]
             [--nthreads NN] [--ppt NN] [--vpt NN] [--nodes NN] [--region REGION] [--stats] [--log FILE] [-d] [-v]
 

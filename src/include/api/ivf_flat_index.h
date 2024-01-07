@@ -406,7 +406,7 @@ class IndexIVFFlat {
     return feature_datatype_;
   }
 
-  constexpr auto feature_type_string() const {
+   inline auto feature_type_string() const {
     return datatype_to_string(feature_datatype_);
   }
 
@@ -414,7 +414,7 @@ class IndexIVFFlat {
     return id_datatype_;
   }
 
-  constexpr auto id_type_string() const {
+  inline auto id_type_string() const {
     return datatype_to_string(id_datatype_);
   }
 
@@ -422,7 +422,7 @@ class IndexIVFFlat {
     return px_datatype_;
   }
 
-  constexpr auto px_type_string() const {
+  inline auto px_type_string() const {
     return datatype_to_string(px_datatype_);
   }
 

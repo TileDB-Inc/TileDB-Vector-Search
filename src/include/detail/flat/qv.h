@@ -233,7 +233,9 @@ auto qv_query_heap(
 
 /**
  * This algorithm is similar to `qv_query_heap`, but it tiles the query loop
- * and the database loop (2X2). This is done to improve cache locality.
+ * and the database loop (2X2). This is done to improve cache locality.  We
+ * assume the feature vector array has been loaded into memory prior to the
+ * call.
  * @tparam DB The type of the database.
  * @tparam Q The type of the query.
  * @param db The database.
@@ -409,7 +411,12 @@ auto qv_query_heap_tiled(
 
 /**
  * @brief Find the single nearest neighbor of each query vector in the database.
- * This is essentially qv_query_heap, specialized for k = 1.
+ * This is essentially qv_query_heap, specialized for the case of k = 1.  Note
+ * that if we call this to query a set of centroids using the feature vector
+ * array as the query vectors, it will return the id of closest centroid to
+ * each feature vector.  I.e., it will label each feature vector with a
+ * partition number.  This will be used later to reorder the feature vectors
+ * so that all vectors in the same partition are contiguous.
  * @tparam DB
  * @tparam Q
  * @param db
@@ -476,7 +483,7 @@ auto qv_partition_with_scores(
     Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
 
-  auto size_db = num_vectors(db);
+  auto size_db = ::num_vectors(db);
 
   // Just need a single vector
   std::vector<size_t> top_k(q.num_cols());

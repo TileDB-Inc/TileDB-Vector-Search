@@ -69,18 +69,18 @@ static constexpr const char USAGE[] =
 Usage:
     index (-h | --help)
     index [--kmeans] [--index]
-           --db_uri URI --centroids_uri URI [--index_uri URI] [--parts_uri URI] [--ids_uri URI]
+           inputs_uri URI centroids_uri URI [index_uri URI] [parts_uri URI] [ids_uri URI]
           [--blocksize NN] [--nthreads N] [--nth] [--log FILE] [--force] [--dryrun] [-d] [-v]
 
 Options:
     -h, --help            show this screen
-    --db_uri URI          database URI with feature vectors
+    inputs_uri URI          database URI with feature vectors
     --kmeans              run kmeans clustering, computing centroids (default: false)
     --index               create indexing data structures, given centroids (default: false)
-    --centroids_uri URI   URI for centroid vectors.  May be input or output.
-    --index_uri URI       URI with the paritioning index.  Output.
-    --parts_uri URI       URI with the partitioned data.  Output.
-    --ids_uri URI         URI with original IDs of vectors.  Output.
+    centroids_uri URI   URI for centroid vectors.  May be input or output.
+    index_uri URI       URI with the paritioning index.  Output.
+    parts_uri URI       URI with the partitioned data.  Output.
+    ids_uri URI         URI with original IDs of vectors.  Output.
     --blocksize NN        number of vectors to process in a block (0 = all) [default: 0]
     --nthreads N          number of threads to use in parallel loops (0 = all) [default: 0]
     --nth                 use nth_element for top k [default: false]
@@ -96,8 +96,8 @@ int main(int argc, char* argv[]) {
   std::vector<std::string> strings(argv + 1, argv + argc);
   auto args = docopt::docopt(USAGE, strings, true);
 
-  auto centroids_uri = args["--centroids_uri"].asString();
-  auto db_uri = args["--db_uri"].asString();
+  auto centroids_uri = args["centroids_uri"].asString();
+  auto db_uri = args["inputs_uri"].asString();
 
   auto nthreads = args["--nthreads"].asLong();
   if (nthreads == 0) {
@@ -108,9 +108,9 @@ int main(int argc, char* argv[]) {
   enable_stats = args["--stats"].asBool();
   bool dryrun = args["--dryrun"].asBool();
 
-  auto parts_uri = args["--parts_uri"] ? args["--parts_uri"].asString() : "";
-  auto index_uri = args["--index_uri"] ? args["--index_uri"].asString() : "";
-  auto id_uri = args["--ids_uri"] ? args["--ids_uri"].asString() : "";
+  auto parts_uri = args["parts_uri"] ? args["parts_uri"].asString() : "";
+  auto index_uri = args["index_uri"] ? args["index_uri"].asString() : "";
+  auto id_uri = args["ids_uri"] ? args["ids_uri"].asString() : "";
   bool nth = args["--nth"].asBool();
 
   tiledb::Context ctx;

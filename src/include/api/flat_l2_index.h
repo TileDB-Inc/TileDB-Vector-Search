@@ -129,7 +129,7 @@ class IndexFlatL2 {
     return feature_datatype_;
   }
 
-  constexpr auto feature_type_string() const {
+  auto feature_type_string() const {
     return datatype_to_string(feature_datatype_);
   }
 

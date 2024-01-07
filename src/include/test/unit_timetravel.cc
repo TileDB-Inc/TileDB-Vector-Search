@@ -55,7 +55,8 @@ TEST_CASE("timetravel: open", "[timetravel]") {
   tiledb::Context ctx;
 
   auto index = ivf_flat_index<float, uint32_t, uint32_t>(100);
-  auto training_set = tdbColMajorPreLoadMatrix<float>(ctx, siftsmall_base_uri);
+  auto training_set =
+      tdbColMajorPreLoadMatrix<float>(ctx, siftsmall_inputs_uri);
   index.train(training_set);
   index.add(training_set);
 
@@ -66,7 +67,7 @@ TEST_CASE("timetravel: open", "[timetravel]") {
   index.write_index(ctx, "/tmp/timetravel_test_open", true);
 
   // @todo: index is fake -- just used to set types of group and metadata
-  auto grp = ivf_flat_index_group(ctx, "/tmp/timetravel_test_open", index);
+  auto grp = ivf_flat_index_group(index, ctx, "/tmp/timetravel_test_open");
   // grp.dump("unit_timetravel test open");
 
   auto x = grp.get_all_base_sizes();

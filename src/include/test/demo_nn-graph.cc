@@ -35,6 +35,7 @@
 #include <cmath>
 
 #include <vector>
+#include "array_defs.h"
 #include "detail/graph/nn-graph.h"
 #include "query_common.h"
 

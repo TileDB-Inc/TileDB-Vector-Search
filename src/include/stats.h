@@ -105,13 +105,13 @@ class StatsCollectionScope final {
 #endif
 };
 
-auto dump_logs = [](std::string filename,
-                    const std::string algorithm,
-                    std::optional<size_t> nqueries,
-                    std::optional<size_t> nprobe,
-                    std::optional<size_t> k_nn,
-                    std::optional<size_t> nthreads,
-                    std::optional<double> recall) {
+static auto dump_logs = [](std::string filename,
+                           const std::string algorithm,
+                           std::optional<size_t> nqueries,
+                           std::optional<size_t> nprobe,
+                           std::optional<size_t> k_nn,
+                           std::optional<size_t> nthreads,
+                           std::optional<double> recall) {
   // Quick and dirty way to get log info into a summarizable and useful form --
   // fixed-width columns
   // @todo encapsulate this as a function that can be customized
