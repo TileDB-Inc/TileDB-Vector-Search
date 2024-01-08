@@ -84,7 +84,7 @@ static std::filesystem::path test_file_root { test_data_root / "files" };
  * for each query is stored in the array "groundtruth".
  */
 #ifdef USE_1M_UNIT_TEST_ARRAYS
-static std::filesystem::path sift_root{test_array_root / "siftsmallqv"};
+static std::filesystem::path sift_root{test_array_root / "siftsmall"};
 #else
 static std::filesystem::path sift_root{test_array_root / "sift"};
 #endif
