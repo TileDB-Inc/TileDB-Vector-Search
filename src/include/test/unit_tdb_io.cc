@@ -50,7 +50,7 @@ TEST_CASE("tdb_io: read vector", "[tdb_io]") {
   // Nice hallucination
   // auto uri = "s3://tiledb-inc-demo-data/ivf-hnsw/ivfhnsw_1000_128_uint8/ids";
   auto ids = read_vector<uint64_t>(ctx, bigann1M_ids_uri);
-  REQUIRE(ids.size() == 1'000'000);
+  REQUIRE(ids.size() == num_bigann1M_vectors);
 }
 
 TEMPLATE_TEST_CASE("tdb_io: read / write vector", "[tdb_io]", float, uint8_t) {
@@ -86,7 +86,7 @@ TEST_CASE("tdb_io: read matrix", "[tdb_io]") {
   tiledb::Context ctx;
 
   auto X = tdbColMajorMatrix<uint8_t>(ctx, bigann1M_inputs_uri);
-  REQUIRE(num_vectors(X) == 1'000'000);
+  REQUIRE(num_vectors(X) == num_bigann1M_vectors);
   REQUIRE(dimension(X) == 128);
 }
 

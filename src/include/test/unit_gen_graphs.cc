@@ -40,7 +40,7 @@ TEST_CASE("gen_graphs: test test", "[gen_graphs]") {
   REQUIRE(true);
 }
 
-TEST_CASE("gen_graphs: grid", "[gen_graphs]") {
+TEST_CASE("gen_graphs: uni_grid", "[gen_graphs]") {
   auto&& [vecs, edges] = gen_uni_grid(5, 7);
 
   // print_types (vecs, edges);
@@ -49,7 +49,7 @@ TEST_CASE("gen_graphs: grid", "[gen_graphs]") {
   dump_edgelist("edges.txt", edges);
 }
 
-TEST_CASE("gen_graphs: grid", "[gen_graphs]") {
+TEST_CASE("gen_graphs: bi_grid", "[gen_graphs]") {
   auto&& [vecs, edges] = gen_bi_grid(5, 7);
 
   // print_types (vecs, edges);

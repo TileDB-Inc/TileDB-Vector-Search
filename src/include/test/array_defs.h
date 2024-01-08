@@ -84,9 +84,11 @@ static std::filesystem::path test_file_root { test_data_root / "files" };
  * for each query is stored in the array "groundtruth".
  */
 #ifdef USE_1M_UNIT_TEST_ARRAYS
-static std::filesystem::path sift_root{test_array_root / "siftsmall"};
-#else
 static std::filesystem::path sift_root{test_array_root / "sift"};
+static size_t num_sift_vectors = 1'000'000;
+#else
+static std::filesystem::path sift_root{test_array_root / "siftsmall"};
+static size_t num_sift_vectors = 10'000;
 #endif
 static std::filesystem::path sift_inputs_uri{sift_root / "input_vectors"};
 static std::filesystem::path sift_centroids_uri{
@@ -96,6 +98,7 @@ static std::filesystem::path sift_ids_uri{sift_root / "shuffled_vector_ids"};
 static std::filesystem::path sift_parts_uri{sift_root / "shuffled_vectors"};
 static std::filesystem::path sift_query_uri{sift_root / "queries"};
 static std::filesystem::path sift_groundtruth_uri{sift_root / "groundtruth"};
+
 
 static std::filesystem::path siftsmall_root{test_array_root / "siftsmall"};
 static std::filesystem::path siftsmall_inputs_uri{
@@ -129,8 +132,10 @@ static std::filesystem::path siftsmall_uint8_groundtruth_uri{
 
 #ifdef USE_1M_UNIT_TEST_ARRAYS
 static std::filesystem::path bigann1M_root{test_array_root / "bigann1M"};
+static size_t num_bigann1M_vectors = 1'000'000;
 #else
 static std::filesystem::path bigann1M_root{test_array_root / "bigann10k"};
+static size_t num_bigann1M_vectors = 10'000;
 #endif
 static std::filesystem::path bigann1M_inputs_uri{
     bigann1M_root / "input_vectors"};

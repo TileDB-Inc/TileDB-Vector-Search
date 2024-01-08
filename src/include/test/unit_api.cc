@@ -165,12 +165,12 @@ TEST_CASE("api: feature vector array open", "[api]") {
   auto a = FeatureVectorArray(ctx, sift_inputs_uri);
   CHECK(a.datatype() == TILEDB_FLOAT32);
   CHECK(dimension(a) == 128);
-  CHECK(num_vectors(a) == 1'000'000);
+  CHECK(num_vectors(a) == num_sift_vectors);
 
   auto b = FeatureVectorArray(ctx, bigann1M_inputs_uri);
   CHECK(b.datatype() == TILEDB_UINT8);
   CHECK(dimension(b) == 128);
-  CHECK(num_vectors(b) == 1'000'000);
+  CHECK(num_vectors(b) == num_bigann1M_vectors);
 
   auto c = FeatureVectorArray(ctx, fmnist_inputs_uri);
   CHECK(c.datatype() == TILEDB_FLOAT32);
@@ -180,7 +180,7 @@ TEST_CASE("api: feature vector array open", "[api]") {
   auto d = FeatureVectorArray(ctx, sift_inputs_uri);
   CHECK(d.datatype() == TILEDB_FLOAT32);
   CHECK(dimension(d) == 128);
-  CHECK(num_vectors(d) == 1'000'000);
+  CHECK(num_vectors(d) == num_sift_vectors);
 }
 
 // ----------------------------------------------------------------------------
@@ -192,12 +192,12 @@ TEST_CASE("api: uri index constructors, context", "[api][index]") {
   auto a = Index(ctx, sift_inputs_uri);
   CHECK(a.datatype() == TILEDB_FLOAT32);
   CHECK(dimension(a) == 128);
-  CHECK(num_vectors(a) == 1'000'000);
+  CHECK(num_vectors(a) == num_sift_vectors);
 
   auto b = Index(ctx, bigann1M_inputs_uri);
   CHECK(b.datatype() == TILEDB_UINT8);
   CHECK(dimension(b) == 128);
-  CHECK(num_vectors(b) == 1'000'000);
+  CHECK(num_vectors(b) == num_bigann1M_vectors);
 
   auto c = Index(ctx, fmnist_inputs_uri);
   CHECK(c.datatype() == TILEDB_FLOAT32);
@@ -207,19 +207,19 @@ TEST_CASE("api: uri index constructors, context", "[api][index]") {
   auto d = Index(ctx, sift_inputs_uri);
   CHECK(d.datatype() == TILEDB_FLOAT32);
   CHECK(dimension(d) == 128);
-  CHECK(num_vectors(d) == 1'000'000);
+  CHECK(num_vectors(d) == num_sift_vectors);
 }
 
 TEST_CASE("api: uri index constructors, no context", "[api][index]") {
   auto a = Index(sift_inputs_uri);
   CHECK(a.datatype() == TILEDB_FLOAT32);
   CHECK(dimension(a) == 128);
-  CHECK(num_vectors(a) == 1'000'000);
+  CHECK(num_vectors(a) == num_sift_vectors);
 
   auto b = Index(bigann1M_inputs_uri);
   CHECK(b.datatype() == TILEDB_UINT8);
   CHECK(dimension(b) == 128);
-  CHECK(num_vectors(b) == 1'000'000);
+  CHECK(num_vectors(b) == num_bigann1M_vectors);
 
   auto c = Index(fmnist_inputs_uri);
   CHECK(c.datatype() == TILEDB_FLOAT32);
@@ -229,7 +229,7 @@ TEST_CASE("api: uri index constructors, no context", "[api][index]") {
   auto d = Index(sift_inputs_uri);
   CHECK(d.datatype() == TILEDB_FLOAT32);
   CHECK(dimension(d) == 128);
-  CHECK(num_vectors(d) == 1'000'000);
+  CHECK(num_vectors(d) == num_sift_vectors);
 }
 
 template <query_vector_array M>
@@ -403,7 +403,7 @@ TEST_CASE("api: query checks", "[api][index]") {
     auto nn = dimension(z);
     auto nnn = num_vectors(z);
     CHECK(dimension(z) == 128);
-    CHECK(num_vectors(z) == 1'000'000);
+    CHECK(num_vectors(z) == num_sift_vectors);
   }
 
   SECTION("tdbMatrix") {
@@ -431,7 +431,7 @@ TEST_CASE("api: queries", "[api][index]") {
   auto sift_test_tuple = std::make_tuple(
       sift_inputs_uri,
       sift_groundtruth_uri,
-      sift_query_uri, TILEDB_FLOAT32, 128, 1'000'000);
+      sift_query_uri, TILEDB_FLOAT32, 128, num_sift_vectors);
 
   auto bigann1M_tuple = std::make_tuple(
       bigann1M_inputs_uri,
@@ -439,7 +439,7 @@ TEST_CASE("api: queries", "[api][index]") {
       bigann1M_query_uri,
       TILEDB_UINT8,
       128,
-      1'000'000);
+      num_bigann1M_vectors);
 
   auto fmnist_tuple = std::make_tuple(
       fmnist_inputs_uri,
