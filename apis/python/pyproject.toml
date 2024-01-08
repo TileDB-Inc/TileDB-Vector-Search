@@ -1,6 +1,7 @@
 [project]
 name = "tiledb-vector-search"
-dynamic = ["version"]
+version = "0.1.dev80"
+#dynamic = ["version"]
 description = "TileDB Vector Search Python client"
 license = { text = "MIT" }
 readme = "README.md"
@@ -44,10 +45,10 @@ build-backend = "setuptools.build_meta"
 zip-safe = false
 #packages = ["tiledb.vector_search"]
 
-[tool.setuptools_scm]
-root = "../.."
-write_to = "apis/python/src/tiledb/vector_search/version.py"
-local_scheme = "no-local-version"
+#[tool.setuptools_scm]
+#root = "../.."
+#write_to = "apis/python/src/tiledb/vector_search/version.py"
+#local_scheme = "no-local-version"
 
 [tool.ruff]
 extend-select = ["I"]
