@@ -43,6 +43,7 @@
  * corresponding member functions of the base class object stored in the
  * unique_ptr (which in turn invoke members of the concrete class stored by the
  * implementation class).
+ * 
  *
  */
 
