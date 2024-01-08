@@ -95,8 +95,8 @@ using sift_indices_type = uint64_t;
 constexpr size_t num_sift_vectors = 1'000'000;
 static std::filesystem::path sift_root{test_array_root / "sift"};
 #else
-static std::filesystem::path sift_root{test_array_root / "siftsmall"};
 constexpr size_t num_sift_vectors = 10'000;
+static std::filesystem::path sift_root{test_array_root / "siftsmall"};
 #endif
 constexpr size_t sift_dimension = 128;  // OMG!
 static std::filesystem::path sift_group_uri{sift_root / "group"};

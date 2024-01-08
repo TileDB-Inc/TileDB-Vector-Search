@@ -139,7 +139,7 @@ std::vector<std::filesystem::path> siftsmall_files{
     siftsmall_groundtruth_file,
 };
 
-#if 0
+#if 1
 TEST_CASE("array_defs: quick hack to create index vectors", "[array_defs]") {
   tiledb::Context ctx;
 
@@ -156,13 +156,15 @@ TEST_CASE("array_defs: quick hack to create index vectors", "[array_defs]") {
     auto idx = index(nlist, 10, 1.e-4);
     idx.train(training_set);
     idx.add(training_set);
-    idx.write_index_arrays(
-        ctx,
-        siftsmall_centroids_uri,
-        siftsmall_parts_uri,
-        siftsmall_ids_uri,
-        siftsmall_index_uri,
-        true);
+    idx.write_index(ctx, siftsmall_group_uri, true);
+
+//    idx.write_index_arrays(
+//        ctx,
+//        siftsmall_centroids_uri,
+//        siftsmall_parts_uri,
+//        siftsmall_ids_uri,
+//        siftsmall_index_uri,
+//        true);
   }
   {
     auto training_set =
@@ -175,13 +177,7 @@ TEST_CASE("array_defs: quick hack to create index vectors", "[array_defs]") {
     auto idx = index((size_t)std::sqrt(num_siftsmall_uint8_vectors), 10, 1.e-4);
     idx.train(training_set, kmeans_init::kmeanspp);
     idx.add(training_set);
-    idx.write_index_arrays(
-        ctx,
-        siftsmall_uint8_centroids_uri,
-        siftsmall_uint8_parts_uri,
-        siftsmall_uint8_ids_uri,
-        siftsmall_uint8_index_uri,
-        true);
+    idx.write_index(ctx, siftsmall_uint8_group_uri, true);
   }
   {
     auto training_set =
@@ -194,13 +190,7 @@ TEST_CASE("array_defs: quick hack to create index vectors", "[array_defs]") {
     auto idx = index((size_t)std::sqrt(num_bigann10k_vectors), 10, 1.e-4);
     idx.train(training_set, kmeans_init::kmeanspp);
     idx.add(training_set);
-    idx.write_index_arrays(
-        ctx,
-        bigann10k_centroids_uri,
-        bigann10k_parts_uri,
-        bigann10k_ids_uri,
-        bigann10k_index_uri,
-        true);
+    idx.write_index(ctx, bigann10k_group_uri, true);
   }
 }
 #endif
