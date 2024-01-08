@@ -877,6 +877,7 @@ def ingest(
             array_to_matrix,
             kmeans_fit,
         )
+
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
             group = tiledb.Group(index_group_uri)
