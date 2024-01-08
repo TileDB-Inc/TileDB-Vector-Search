@@ -10,6 +10,7 @@ from tiledb.vector_search.ingestion import ingest, TrainingSamplingPolicy
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.module import array_to_matrix, kmeans_fit, kmeans_predict
 from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSION
 
 MINIMUM_ACCURACY = 0.85
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
@@ -17,6 +18,14 @@ MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 def query_and_check_equals(index, queries, expected_result_d, expected_result_i):
     result_d, result_i = index.query(queries, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=expected_result_d, expected_result_i=expected_result_i)
+
+def check_training_input_vectors(index_uri: str, expected_training_sample_size: int, expected_dimensions: int):
+    training_input_vectors_uri = f"{index_uri}/{storage_formats[STORAGE_VERSION]['TRAINING_INPUT_VECTORS_ARRAY_NAME']}"
+    with tiledb.open(training_input_vectors_uri, mode="r") as src_array:
+        training_input_vectors = np.transpose(src_array[:, :]["values"])
+        assert training_input_vectors.shape[0] == expected_training_sample_size
+        assert training_input_vectors.shape[1] == expected_dimensions
+        assert not np.isnan(training_input_vectors).any()
 
 def test_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -705,6 +714,11 @@ def test_ivf_flat_ingestion_tdb_random_sampling_policy(tmp_path):
                 use_sklearn=True
             )
 
+            check_training_input_vectors(
+                index_uri=index_uri, 
+                expected_training_sample_size=training_sample_size, 
+                expected_dimensions=data.shape[0])
+
             queries = np.array([data.transpose()[3]], dtype=np.float32)
             query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[3]])
 
@@ -722,15 +736,22 @@ def test_ivf_flat_ingestion_fvec_random_sampling_policy(tmp_path):
     queries = load_fvecs(queries_uri)
     gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
+    training_sample_size = 1239
     index = ingest(
         index_type="IVF_FLAT",
         index_uri=index_uri,
         source_uri=source_uri,
         partitions=partitions,
         training_sampling_policy=TrainingSamplingPolicy.RANDOM,
-        training_sample_size=1239,
+        training_sample_size=training_sample_size,
         input_vectors_per_work_item=1000,
     )
+
+    check_training_input_vectors(
+        index_uri=index_uri, 
+        expected_training_sample_size=training_sample_size, 
+        expected_dimensions=queries.shape[1])
+
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
