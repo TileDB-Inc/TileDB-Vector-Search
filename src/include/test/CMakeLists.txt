@@ -84,7 +84,6 @@ kmeans_add_exe(time_insert)
 kmeans_add_exe(time_abstraction_penalty)
 
 kmeans_add_test(unit_vamana)
-set_property(TEST unit_vamana_test PROPERTY WILL_FAIL TRUE)
 
 kmeans_add_test(unit_adj_list)
 
@@ -123,12 +122,10 @@ kmeans_add_test(unit_cpos)
 kmeans_add_test(unit_execution_policy)
 
 kmeans_add_test(unit_fixed_min_heap)
-set_property(TEST unit_fixed_min_heap_test PROPERTY WILL_FAIL TRUE)
 
 kmeans_add_test(unit_flat_l2_index)
 
 kmeans_add_test(unit_flatpq_index)
-set_property(TEST unit_flatpq_index_test PROPERTY WILL_FAIL TRUE)
 
 kmeans_add_test(unit_flat_qv)
 
@@ -183,7 +180,6 @@ kmeans_add_test(unit_partition)
 kmeans_add_test(unit_scoring)
 
 kmeans_add_test(unit_slicing)
-set_property(TEST unit_slicing_test PROPERTY WILL_FAIL TRUE)
 
 kmeans_add_test(unit_stats)
 
