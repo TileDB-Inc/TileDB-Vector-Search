@@ -317,12 +317,17 @@ def ingest(
 
     def write_input_vectors(
         group: tiledb.Group,
-        input_vectors: np.ndarray,
+        input_vectors: Optional[np.ndarray],
         size: int,
         dimensions: int,
         vector_type: np.dtype,
         array_name: str
     ) -> str:
+        '''
+        input_vectors: Optional[np.ndarray]
+            The input vectors to write. If None, we will skip writing. You can use this to create an
+            empty array and later append to it.
+        '''
         input_vectors_array_uri = f"{group.uri}/{array_name}"
         if tiledb.array_exists(input_vectors_array_uri):
             raise ValueError(f"Array exists {input_vectors_array_uri}")
@@ -366,7 +371,8 @@ def ingest(
         input_vectors_array = tiledb.open(
             input_vectors_array_uri, "w", timestamp=index_timestamp
         )
-        input_vectors_array[:, :] = np.transpose(input_vectors)
+        if input_vectors is not None:
+            input_vectors_array[:, :] = np.transpose(input_vectors)
         input_vectors_array.close()
 
         return input_vectors_array_uri
@@ -810,9 +816,6 @@ def ingest(
     # --------------------------------------------------------------------
     # centralised kmeans UDFs
     # --------------------------------------------------------------------
-    def combine_vectors(vectors: np.ndarray):
-        return np.concatenate(vectors, axis=0)
-
     def random_sample_from_input_vectors(
         source_uri: str,
         source_type: str,
@@ -821,9 +824,14 @@ def ingest(
         vector_start_pos: int,
         vector_end_pos: int,
         random_sample_size: int,
+        output_source_uri: str,
+        output_start_pos: int,
+        output_end_pos: int,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
     ):
+        if random_sample_size == 0:
+            return
         with tiledb.scope_ctx(ctx_or_config=config):
             # Read from the source data.
             vectors = read_input_vectors(
@@ -837,10 +845,14 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             )
-            # Randomly sample from the read data.
+            # Randomly sample from the data we read.
             row_indices = np.random.choice(vectors.shape[0], size=random_sample_size, replace=False)
-            return vectors[row_indices]
-    
+            sampled_vectors = vectors[row_indices]
+
+            # Append to output array.
+            with tiledb.open(output_source_uri, mode="w", timestamp=index_timestamp) as A:
+                A[:, output_start_pos:output_end_pos] = np.transpose(sampled_vectors)
+
     def centralised_kmeans(
         index_group_uri: str,
         source_uri: str,
@@ -848,7 +860,6 @@ def ingest(
         vector_type: np.dtype,
         partitions: int,
         dimensions: int,
-        sampled_vectors: Optional[np.ndarray],
         training_sample_size: int,
         training_source_uri: Optional[str],
         training_source_type: Optional[str],
@@ -871,9 +882,7 @@ def ingest(
             group = tiledb.Group(index_group_uri)
             centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
             if training_sample_size >= partitions:
-                if sampled_vectors is not None:
-                    sample_vectors = sampled_vectors
-                elif training_source_uri:
+                if training_source_uri:
                     if training_source_type is None:
                         training_source_type = autodetect_source_type(source_uri=training_source_uri)
                     training_in_size, training_dimensions, training_vector_type = read_source_metadata(source_uri=training_source_uri, source_type=training_source_type)
@@ -1683,8 +1692,21 @@ def ingest(
                     image_name=DEFAULT_IMG_NAME,
                 )
             else:
-                combine_vectors_node = None
                 if training_sampling_policy == TrainingSamplingPolicy.RANDOM:
+                    # Create an empty array to write the sampled vectors to.
+                    group = tiledb.Group(index_group_uri, "w")
+                    training_source_uri = write_input_vectors(
+                        group=group,
+                        input_vectors=None,
+                        size=training_sample_size,
+                        dimensions=dimensions,
+                        vector_type=vector_type,
+                        array_name=TRAINING_INPUT_VECTORS_ARRAY_NAME
+                    )
+                    training_source_type = "TILEDB_ARRAY"
+                    group.close()
+
+                    # Then sample training_sample_size vectors from input_vectors.
                     # The number of complete batches.
                     num_batches = math.ceil(in_size / input_vectors_batch_size)
                     # The number of data points to sample from each batch.
@@ -1696,7 +1718,6 @@ def ingest(
                     # Calculate at which index to stop sampling an extra_samples_per_batch from.
                     idx_to_stop_adding_extra_samples = 0 if extra_samples_per_batch == 0 else remaining_samples / extra_samples_per_batch
 
-                    sampled_vectors = []
                     idx = 0
                     num_sampled = 0
                     for i in range(0, in_size, input_vectors_batch_size):
@@ -1710,9 +1731,8 @@ def ingest(
                         num_for_batch = samples_per_batch
                         if idx < idx_to_stop_adding_extra_samples:
                             num_for_batch += extra_samples_per_batch
-                        num_sampled += num_for_batch
 
-                        sampled_vectors.append(submit(
+                        submit(
                             random_sample_from_input_vectors,
                             source_uri=source_uri,
                             source_type=source_type,
@@ -1721,22 +1741,19 @@ def ingest(
                             vector_start_pos=start,
                             vector_end_pos=end,
                             random_sample_size=num_for_batch,
+                            output_source_uri=training_source_uri,
+                            output_start_pos=num_sampled,
+                            output_end_pos=num_sampled + num_for_batch,
                             config=config,
                             verbose=verbose,
                             name="read-random-sample-" + str(idx),
                             resources={"cpu": str(threads), "memory": "12Gi"},
                             image_name=DEFAULT_IMG_NAME,
-                        ))
+                        )
+                        num_sampled += num_for_batch
                         idx += 1
                     if num_sampled != training_sample_size:
                         raise ValueError(f"The random sampling ran into an issue: num_sampled ({num_sampled}) != training_sample_size ({training_sample_size})")
-                    combine_vectors_node = submit(
-                        combine_vectors,
-                        sampled_vectors,
-                        name="combine-vectors",
-                        resources={"cpu": "1", "memory": "8Gi"},
-                        image_name=DEFAULT_IMG_NAME,
-                    )
 
                 if training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE:
                     centroids_node = submit(
@@ -1747,7 +1764,6 @@ def ingest(
                         vector_type=vector_type,
                         partitions=partitions,
                         dimensions=dimensions,
-                        sampled_vectors=combine_vectors_node,
                         training_sample_size=training_sample_size,
                         training_source_uri=training_source_uri,
                         training_source_type=training_source_type,
