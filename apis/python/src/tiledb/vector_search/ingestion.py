@@ -315,19 +315,13 @@ def ingest(
         else:
             raise ValueError(f"Not supported source_type {source_type} - valid types are [TILEDB_ARRAY, U8BIN, F32BIN, FVEC, IVEC, BVEC]")
 
-    def write_input_vectors(
+    def create_array(
         group: tiledb.Group,
-        input_vectors: Optional[np.ndarray],
         size: int,
         dimensions: int,
         vector_type: np.dtype,
         array_name: str
     ) -> str:
-        '''
-        input_vectors: Optional[np.ndarray]
-            The input vectors to write. If None, we will skip writing. You can use this to create an
-            empty array and later append to it.
-        '''
         input_vectors_array_uri = f"{group.uri}/{array_name}"
         if tiledb.array_exists(input_vectors_array_uri):
             raise ValueError(f"Array exists {input_vectors_array_uri}")
@@ -368,11 +362,22 @@ def ingest(
         tiledb.Array.create(input_vectors_array_uri, input_vectors_array_schema)
         group.add(input_vectors_array_uri, name=array_name)
 
+        return input_vectors_array_uri
+
+    def write_input_vectors(
+        group: tiledb.Group,
+        input_vectors: np.ndarray,
+        size: int,
+        dimensions: int,
+        vector_type: np.dtype,
+        array_name: str
+    ) -> str:
+        input_vectors_array_uri = create_array(group=group, size=size, dimensions=dimensions, vector_type=vector_type, array_name=array_name)
+
         input_vectors_array = tiledb.open(
             input_vectors_array_uri, "w", timestamp=index_timestamp
         )
-        if input_vectors is not None:
-            input_vectors_array[:, :] = np.transpose(input_vectors)
+        input_vectors_array[:, :] = np.transpose(input_vectors)
         input_vectors_array.close()
 
         return input_vectors_array_uri
@@ -823,35 +828,82 @@ def ingest(
         dimensions: int,
         vector_start_pos: int,
         vector_end_pos: int,
+        batch: int,
         random_sample_size: int,
         output_source_uri: str,
         output_start_pos: int,
-        output_end_pos: int,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
     ):
+        '''
+        Reads a random sample of vectors from the input vectors and appends them to the output array.
+
+        Parameters
+        ----------
+        source_uri: str
+            Data source URI.
+        source_type: str
+            Type of the source data.
+        vector_type: np.dtype
+            Type of the vectors.
+        dimensions: int
+            Number of dimensions in a vector.
+        vector_start_pos: int
+            Start position of source_uri to read from.
+        vector_end_pos: int
+            End position of source_uri to read to.
+        batch: int
+            Read the input vectors in batches of this size.
+        random_sample_size: int
+            Number of vectors to randomly sample from the input vectors.
+        output_source_uri: str
+            URI of the output array.
+        output_start_pos: int
+            Start position of the output array to write to.
+        '''
         if random_sample_size == 0:
             return
-        with tiledb.scope_ctx(ctx_or_config=config):
-            # Read from the source data.
-            vectors = read_input_vectors(
-                source_uri=source_uri,
-                source_type=source_type,
-                vector_type=vector_type,
-                dimensions=dimensions,
-                start_pos=vector_start_pos,
-                end_pos=vector_end_pos,
-                config=config,
-                verbose=verbose,
-                trace_id=trace_id,
-            )
-            # Randomly sample from the data we read.
-            row_indices = np.random.choice(vectors.shape[0], size=random_sample_size, replace=False)
-            sampled_vectors = vectors[row_indices]
 
-            # Append to output array.
-            with tiledb.open(output_source_uri, mode="w", timestamp=index_timestamp) as A:
-                A[:, output_start_pos:output_end_pos] = np.transpose(sampled_vectors)
+        with tiledb.scope_ctx(ctx_or_config=config):
+            num_batches = math.ceil((vector_end_pos - vector_start_pos) / batch)
+            num_per_batch = math.ceil(random_sample_size / num_batches)
+            num_sampled = 0
+            for start in range(vector_start_pos, vector_end_pos, batch):
+                # How many to sample from this batch - continue if we've already sampled enough.
+                batch_sample_size = num_per_batch
+                if num_sampled + num_per_batch > random_sample_size:
+                    batch_sample_size = random_sample_size - num_sampled
+                if batch_sample_size == 0:
+                    continue
+                num_sampled += batch_sample_size
+                
+                # Indices to read from source_uri.
+                end = start + batch
+                if end > vector_end_pos:
+                    end = vector_end_pos
+
+                # Read from the source data.
+                vectors = read_input_vectors(
+                    source_uri=source_uri,
+                    source_type=source_type,
+                    vector_type=vector_type,
+                    dimensions=dimensions,
+                    start_pos=start,
+                    end_pos=end,
+                    config=config,
+                    verbose=verbose,
+                    trace_id=trace_id,
+                )
+                # Randomly sample from the data we read.
+                row_indices = np.random.choice(vectors.shape[0], size=batch_sample_size, replace=False)
+                sampled_vectors = vectors[row_indices]
+
+                # Append to output array.
+                with tiledb.open(output_source_uri, mode="w", timestamp=index_timestamp) as A:
+                    A[0:dimensions, output_start_pos:output_start_pos + batch_sample_size] = np.transpose(sampled_vectors)
+        
+        if num_sampled != random_sample_size:
+            raise ValueError(f"The random sampling within a batch ran into an issue: num_sampled ({num_sampled}) != random_sample_size ({random_sample_size})")
 
     def centralised_kmeans(
         index_group_uri: str,
@@ -1696,9 +1748,8 @@ def ingest(
                 if training_sampling_policy == TrainingSamplingPolicy.RANDOM:
                     # Create an empty array to write the sampled vectors to.
                     group = tiledb.Group(index_group_uri, "w")
-                    training_source_uri = write_input_vectors(
+                    training_source_uri = create_array(
                         group=group,
-                        input_vectors=None,
                         size=training_sample_size,
                         dimensions=dimensions,
                         vector_type=vector_type,
@@ -1741,10 +1792,10 @@ def ingest(
                             dimensions=dimensions,
                             vector_start_pos=start,
                             vector_end_pos=end,
+                            batch=input_vectors_per_work_item,
                             random_sample_size=num_for_batch,
                             output_source_uri=training_source_uri,
                             output_start_pos=num_sampled,
-                            output_end_pos=num_sampled + num_for_batch,
                             config=config,
                             verbose=verbose,
                             name="read-random-sample-" + str(idx),
