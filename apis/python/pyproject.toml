@@ -1,6 +1,6 @@
 [project]
 name = "tiledb-vector-search"
-version = "0.1.dev82"
+version = "0.1.dev83"
 #dynamic = ["version"]
 description = "TileDB Vector Search Python client"
 license = { text = "MIT" }
