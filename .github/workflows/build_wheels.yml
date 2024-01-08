@@ -98,9 +98,12 @@ jobs:
     needs: [upload_test_pypi]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+
       - env:
           PACKAGE_VERSION: ${{ needs.upload_test_pypi.outputs.package_version }}
         run: |
+          pip install -r apis/python/requirements-py.txt
           pip install -i https://test.pypi.org/simple/ tiledb-vector-search==$PACKAGE_VERSION
 
       - run: |
