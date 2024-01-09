@@ -103,8 +103,7 @@ jobs:
       - env:
           PACKAGE_VERSION: ${{ needs.upload_test_pypi.outputs.package_version }}
         run: |
-          cd apis/python
-          pip install .
+          pip install -r apis/python/requirements-py.txt
           pip install --only-binary ":all:" -i https://test.pypi.org/simple/ tiledb-vector-search==$PACKAGE_VERSION
 
       - run: |
