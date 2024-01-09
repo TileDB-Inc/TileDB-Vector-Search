@@ -105,7 +105,7 @@ jobs:
         run: |
           cd apis/python
           pip install .
-          pip install -i https://test.pypi.org/simple/ tiledb-vector-search==$PACKAGE_VERSION
+          pip install --only-binary ":all:" -i https://test.pypi.org/simple/ tiledb-vector-search==$PACKAGE_VERSION
 
       - run: |
           python -c "import tiledb.vector_search"
