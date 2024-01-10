@@ -9,7 +9,7 @@ on:
 jobs:
   generate_backwards_compatability_data:
     name: Generate Backwards Compatibility Data
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -26,8 +26,23 @@ jobs:
           release_tag=$(git describe --tags --abbrev=0)
           echo "::set-output name=release_tag::$release_tag"
 
+      - name: Print Python version
+        run: |
+          which python
+          which pip
+          python --version
+
+      - name: Build python
+        run: |
+          cd apis/python
+          pip install .
+
       - name: Build Indexes
-        run: backwards-compatibility-data/generate_data.py ${{ steps.get_release_tag.outputs.release_tag }}
+        run: |
+          echo "pwd" && pwd
+          echo "ls" && ls
+          echo ${{ steps.get_release_tag.outputs.release_tag }}
+          python backwards-compatability-data/generate_data.py ${{ steps.get_release_tag.outputs.release_tag }}
 
       - name: Commit and Push to Main Branch
         run: |
