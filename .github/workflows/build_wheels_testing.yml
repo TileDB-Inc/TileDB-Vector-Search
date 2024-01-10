@@ -32,11 +32,15 @@ jobs:
       - name: Build python
         run: |
           cd apis/python
-          pip install .[test]
+          pip install .
 
       - name: List Installed Python Packages
         run: |
           pip freeze
+      
+      - name: List Installed Python Packages 2
+        run: |
+          cd apis/python && pip freeze
 
       - name: Build Indexes
         run: |
