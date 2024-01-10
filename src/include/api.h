@@ -44,6 +44,7 @@
  * unique_ptr (which in turn invoke members of the concrete class stored by the
  * implementation class).
  *
+ *
  */
 
 #ifndef TDB_API_H

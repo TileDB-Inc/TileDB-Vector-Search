@@ -166,6 +166,7 @@ using bigann1M_indices_type = uint64_t;
 #ifdef USE_1M_UNIT_TEST_ARRAYS
 constexpr size_t num_bigann1M_vectors = 1'000'000;
 static std::filesystem::path bigann1M_root{test_array_root / "bigann1M"};
+static size_t num_bigann1M_vectors = 1'000'000;
 #else
 static std::filesystem::path bigann1M_root{test_array_root / "bigann10k"};
 constexpr size_t num_bigann1M_vectors = 10'000;
