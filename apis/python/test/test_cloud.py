@@ -114,3 +114,42 @@ class CloudTests(unittest.TestCase):
             index.query(queries, k=k, nprobe=nprobe, mode=Mode.REALTIME, resource_class="large", resources=resources)
         with self.assertRaises(TypeError):
             index.query(queries, k=k, nprobe=nprobe, mode=Mode.BATCH, resource_class="large", resources=resources)
+
+    def test_cloud_ivf_flat_random_sampling(self):
+        # NOTE(paris): This was also tested with the following (and also with mode=Mode.BATCH):
+        # source_uri = "tiledb://TileDB-Inc/ann_sift1b_raw_vectors_col_major"
+        # training_sample_size = 1000000
+        source_uri = "tiledb://TileDB-Inc/ann_sift1b_raw_vectors_col_major"
+        queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
+        gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+        index_uri = CloudTests.ivf_flat_index_uri
+        k = 100
+        nqueries = 100
+        nprobe = 20
+        max_sampling_tasks = 13
+        training_sample_size = 500123
+
+        queries = load_fvecs(queries_uri)
+        gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
+        
+        index = vs.ingest(
+            index_type="IVF_FLAT",
+            index_uri=index_uri,
+            source_uri=source_uri,
+            training_sampling_policy=vs.ingestion.TrainingSamplingPolicy.RANDOM,
+            training_sample_size=training_sample_size,
+            max_sampling_tasks=max_sampling_tasks,
+            config=tiledb.cloud.Config().dict(),
+            # TODO Re-enable.
+            #  This is temporarily disabled due to an incompatibility of new ingestion code and previous
+            #  UDF library releases.
+            # mode=Mode.BATCH,
+        )
+
+        check_training_input_vectors(
+            index_uri=index_uri, 
+            expected_training_sample_size=training_sample_size, 
+            expected_dimensions=queries.shape[1])
+
+        _, result_i = index.query(queries, k=k, nprobe=nprobe)
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY

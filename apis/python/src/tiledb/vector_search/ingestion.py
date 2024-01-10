@@ -42,6 +42,8 @@ def ingest(
     workers: int = -1,
     input_vectors_per_work_item: int = -1,
     max_tasks_per_stage: int= -1,
+    input_vectors_per_work_item_during_sampling: int = -1,
+    max_sampling_tasks: int= -1,
     storage_version: str = STORAGE_VERSION,
     verbose: bool = False,
     trace_id: Optional[str] = None,
@@ -111,6 +113,14 @@ def ingest(
     max_tasks_per_stage: int = -1
         Max number of tasks per execution stage of ingestion,
         if not provided, is auto-configured
+    input_vectors_per_work_item_during_sampling: int = -1
+        number of vectors per sample ingestion work item,
+        if not provided, is auto-configured
+        only valid with training_sampling_policy=TrainingSamplingPolicy.RANDOM
+    max_sampling_tasks: int = -1
+        Max number of tasks per execution stage of sampling,
+        if not provided, is auto-configured
+        only valid with training_sampling_policy=TrainingSamplingPolicy.RANDOM
     storage_version: str
         Vector index storage format version. If not provided, defaults to the latest version.
     verbose: bool
@@ -204,6 +214,7 @@ def ingest(
     ]
     DEFAULT_ATTR_FILTERS = storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"]
     VECTORS_PER_WORK_ITEM = 20000000
+    VECTORS_PER_SAMPLE_WORK_ITEM=1000000
     MAX_TASKS_PER_STAGE = 100
     CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 1000000
     DEFAULT_IMG_NAME = "3.9-vectorsearch"
@@ -826,8 +837,8 @@ def ingest(
         source_type: str,
         vector_type: np.dtype,
         dimensions: int,
-        vector_start_pos: int,
-        vector_end_pos: int,
+        source_start_pos: int,
+        source_end_pos: int,
         batch: int,
         random_sample_size: int,
         output_source_uri: str,
@@ -836,7 +847,7 @@ def ingest(
         verbose: bool = False,
     ):
         '''
-        Reads a random sample of vectors from the input vectors and appends them to the output array.
+        Reads a random sample of vectors from the source data and appends them to the output array.
 
         Parameters
         ----------
@@ -853,9 +864,9 @@ def ingest(
         vector_end_pos: int
             End position of source_uri to read to.
         batch: int
-            Read the input vectors in batches of this size.
+            Read the source data in batches of this size.
         random_sample_size: int
-            Number of vectors to randomly sample from the input vectors.
+            Number of vectors to randomly sample from the source data.
         output_source_uri: str
             URI of the output array.
         output_start_pos: int
@@ -865,22 +876,22 @@ def ingest(
             return
 
         with tiledb.scope_ctx(ctx_or_config=config):
-            num_batches = math.ceil((vector_end_pos - vector_start_pos) / batch)
-            num_per_batch = math.ceil(random_sample_size / num_batches)
+            source_size = source_end_pos - source_start_pos
             num_sampled = 0
-            for start in range(vector_start_pos, vector_end_pos, batch):
-                # How many to sample from this batch - continue if we've already sampled enough.
-                batch_sample_size = num_per_batch
-                if num_sampled + num_per_batch > random_sample_size:
-                    batch_sample_size = random_sample_size - num_sampled
-                if batch_sample_size == 0:
-                    continue
-                num_sampled += batch_sample_size
-                
-                # Indices to read from source_uri.
+            for start in range(source_start_pos, source_end_pos, batch):
+                # What vectors to read from the source_uri.
                 end = start + batch
-                if end > vector_end_pos:
-                    end = vector_end_pos
+                if end > source_end_pos:
+                    end = source_end_pos
+
+                # How many vectors sample from the vectors read.
+                percent_of_data_to_read = (end - start) / source_size
+                num_to_sample = math.ceil(random_sample_size * percent_of_data_to_read)
+                if num_sampled + num_to_sample > random_sample_size:
+                    num_to_sample = random_sample_size - num_sampled
+                if num_to_sample == 0:
+                    continue
+                num_sampled += num_to_sample
 
                 # Read from the source data.
                 vectors = read_input_vectors(
@@ -894,13 +905,14 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
+
                 # Randomly sample from the data we read.
-                row_indices = np.random.choice(vectors.shape[0], size=batch_sample_size, replace=False)
+                row_indices = np.random.choice(vectors.shape[0], size=num_to_sample, replace=False)
                 sampled_vectors = vectors[row_indices]
 
                 # Append to output array.
                 with tiledb.open(output_source_uri, mode="w", timestamp=index_timestamp) as A:
-                    A[0:dimensions, output_start_pos:output_start_pos + batch_sample_size] = np.transpose(sampled_vectors)
+                    A[0:dimensions, output_start_pos:output_start_pos + num_to_sample] = np.transpose(sampled_vectors)
         
         if num_sampled != random_sample_size:
             raise ValueError(f"The random sampling within a batch ran into an issue: num_sampled ({num_sampled}) != random_sample_size ({random_sample_size})")
@@ -1672,6 +1684,8 @@ def ingest(
         training_source_type: Optional[str],
         input_vectors_per_work_item: int,
         input_vectors_work_items_per_worker: int,
+        input_vectors_per_work_item_during_sampling: int,
+        input_vectors_work_items_per_worker_during_sampling: int,
         table_partitions_per_work_item: int,
         table_partitions_work_items_per_worker: int,
         workers: int,
@@ -1708,6 +1722,15 @@ def ingest(
         input_vectors_batch_size = (
             input_vectors_per_work_item * input_vectors_work_items_per_worker
         )
+
+        # The number of vectors each task will read.
+        input_vectors_batch_size_during_sampling = (
+            # The number of vectors to read into memory in one batch within a task.
+            input_vectors_per_work_item_during_sampling * 
+            # The number of batches that a single task will need to run.
+            input_vectors_work_items_per_worker_during_sampling
+        )
+
         if index_type == "FLAT":
             ingest_node = submit(
                 ingest_flat,
@@ -1745,6 +1768,7 @@ def ingest(
                     image_name=DEFAULT_IMG_NAME,
                 )
             else:
+                random_sample_nodes = []
                 if training_sampling_policy == TrainingSamplingPolicy.RANDOM:
                     # Create an empty array to write the sampled vectors to.
                     group = tiledb.Group(index_group_uri, "w")
@@ -1758,51 +1782,41 @@ def ingest(
                     training_source_type = "TILEDB_ARRAY"
                     group.close()
 
-                    # Then sample training_sample_size vectors from input_vectors.
-                    # The number of complete batches.
-                    num_batches = math.ceil(in_size / input_vectors_batch_size)
-                    # The number of data points to sample from each batch.
-                    samples_per_batch = 0 if num_batches == 0 else math.floor(training_sample_size / num_batches)
-                    # Calculate the remaining data points that need to be sampled (i.e. b/c the numbers were not perfectly divisible).
-                    remaining_samples = training_sample_size - (num_batches * samples_per_batch)
-                    # Calculate how many of the remaining data points to sample from each batch.
-                    extra_samples_per_batch = remaining_samples if num_batches == 0 else math.ceil(remaining_samples / num_batches)
-                    # Calculate at which index to stop sampling an extra_samples_per_batch from.
-                    idx_to_stop_adding_extra_samples = 0 if extra_samples_per_batch == 0 else remaining_samples / extra_samples_per_batch
-
                     idx = 0
                     num_sampled = 0
-                    for i in range(0, in_size, input_vectors_batch_size):
+                    for start in range(0, in_size, input_vectors_batch_size_during_sampling):
                         # What vectors to read from the source_uri.
-                        start = i
-                        end = i + input_vectors_batch_size
+                        end = start + input_vectors_batch_size_during_sampling
                         if end > size:
                             end = size
 
-                        # How many of those vectors to sample in this batch.
-                        num_for_batch = samples_per_batch
-                        if idx < idx_to_stop_adding_extra_samples:
-                            num_for_batch += extra_samples_per_batch
+                        # How many vectors to sample from the vectors read.
+                        percent_of_data_to_read = (end - start) / in_size
+                        num_to_sample = math.ceil(training_sample_size * percent_of_data_to_read)
+                        if num_sampled + num_to_sample > training_sample_size:
+                            num_to_sample = training_sample_size - num_sampled
+                        if num_to_sample == 0:
+                            continue
 
-                        submit(
+                        random_sample_nodes.append(submit(
                             random_sample_from_input_vectors,
                             source_uri=source_uri,
                             source_type=source_type,
                             vector_type=vector_type,
                             dimensions=dimensions,
-                            vector_start_pos=start,
-                            vector_end_pos=end,
-                            batch=input_vectors_per_work_item,
-                            random_sample_size=num_for_batch,
+                            source_start_pos=start,
+                            source_end_pos=end,
+                            batch=input_vectors_per_work_item_during_sampling,
+                            random_sample_size=num_to_sample,
                             output_source_uri=training_source_uri,
                             output_start_pos=num_sampled,
                             config=config,
                             verbose=verbose,
                             name="read-random-sample-" + str(idx),
-                            resources={"cpu": str(threads), "memory": "12Gi"},
+                            resources={"cpu": str(threads), "memory": "1Gi"},
                             image_name=DEFAULT_IMG_NAME,
-                        )
-                        num_sampled += num_for_batch
+                        ))
+                        num_sampled += num_to_sample
                         idx += 1
                     if num_sampled != training_sample_size:
                         raise ValueError(f"The random sampling ran into an issue: num_sampled ({num_sampled}) != training_sample_size ({training_sample_size})")
@@ -1827,6 +1841,9 @@ def ingest(
                         resources={"cpu": "8", "memory": "32Gi"},
                         image_name=DEFAULT_IMG_NAME,
                     )
+
+                    for random_sample_node in random_sample_nodes:
+                        centroids_node.depends_on(random_sample_node)
                 else:
                     internal_centroids_node = submit(
                         init_centroids,
@@ -2149,6 +2166,7 @@ def ingest(
             if external_ids_type is None:
                 external_ids_type = "U64BIN"
 
+        # Compute task parameters for main ingestion.
         if input_vectors_per_work_item == -1:
             input_vectors_per_work_item = VECTORS_PER_WORK_ITEM
         input_vectors_work_items = int(math.ceil(size / input_vectors_per_work_item))
@@ -2168,6 +2186,27 @@ def ingest(
             "input_vectors_work_items_per_worker %d",
             input_vectors_work_items_per_worker,
         )
+
+        # Compute task parameters for random sampling.
+        # How many input vectors to read into memory in one batch within a task.
+        if input_vectors_per_work_item_during_sampling == -1:
+            input_vectors_per_work_item_during_sampling = VECTORS_PER_SAMPLE_WORK_ITEM
+        # How many total batches we need to read all the data..
+        input_vectors_work_items_during_sampling = int(math.ceil(size / input_vectors_per_work_item_during_sampling))
+        # The number of tasks to create, at max.
+        if max_sampling_tasks == -1:
+            max_sampling_tasks = MAX_TASKS_PER_STAGE
+        # The number of batches a single task will run. If there are more batches required than 
+        # allowed tasks, each task will process mutiple batches.
+        input_vectors_work_items_per_worker_during_sampling = 1
+        if input_vectors_work_items_during_sampling > max_sampling_tasks:
+            input_vectors_work_items_per_worker_during_sampling = int(
+                math.ceil(input_vectors_work_items_during_sampling / max_sampling_tasks)
+            )
+            input_vectors_work_items_during_sampling = max_sampling_tasks
+        logger.debug("input_vectors_per_work_item_during_sampling %d", input_vectors_per_work_item_during_sampling)
+        logger.debug("input_vectors_work_items_during_sampling %d", input_vectors_work_items_during_sampling)
+        logger.debug("input_vectors_work_items_per_worker_during_sampling %d", input_vectors_work_items_per_worker_during_sampling)
 
         vectors_per_table_partitions = max(1, size / partitions)
         table_partitions_per_work_item = max(
@@ -2227,6 +2266,8 @@ def ingest(
             training_source_type=training_source_type,
             input_vectors_per_work_item=input_vectors_per_work_item,
             input_vectors_work_items_per_worker=input_vectors_work_items_per_worker,
+            input_vectors_per_work_item_during_sampling=input_vectors_per_work_item_during_sampling,
+            input_vectors_work_items_per_worker_during_sampling=input_vectors_work_items_per_worker_during_sampling,
             table_partitions_per_work_item=table_partitions_per_work_item,
             table_partitions_work_items_per_worker=table_partitions_work_items_per_worker,
             workers=workers,

@@ -10,7 +10,6 @@ from tiledb.vector_search.ingestion import ingest, TrainingSamplingPolicy
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.module import array_to_matrix, kmeans_fit, kmeans_predict
 from tiledb.vector_search.utils import load_fvecs
-from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSION
 
 MINIMUM_ACCURACY = 0.85
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
@@ -19,13 +18,6 @@ def query_and_check_equals(index, queries, expected_result_d, expected_result_i)
     result_d, result_i = index.query(queries, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=expected_result_d, expected_result_i=expected_result_i)
 
-def check_training_input_vectors(index_uri: str, expected_training_sample_size: int, expected_dimensions: int):
-    training_input_vectors_uri = f"{index_uri}/{storage_formats[STORAGE_VERSION]['TRAINING_INPUT_VECTORS_ARRAY_NAME']}"
-    with tiledb.open(training_input_vectors_uri, mode="r") as src_array:
-        training_input_vectors = np.transpose(src_array[:, :]["values"])
-        assert training_input_vectors.shape[0] == expected_training_sample_size
-        assert training_input_vectors.shape[1] == expected_dimensions
-        assert not np.isnan(training_input_vectors).any()
 
 def test_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -702,15 +694,15 @@ def test_ivf_flat_ingestion_tdb_random_sampling_policy(tmp_path):
     create_array(path=os.path.join(dataset_dir, "data.tdb"), data=data)
 
     for training_sample_size in [3, 5, 9]:
-        for input_vectors_per_work_item in [1, 50, 20]:
-            index_uri = os.path.join(tmp_path, f"array_{training_sample_size}_{input_vectors_per_work_item}")
+        for input_vectors_per_work_item_during_sampling in [1, 2, 3, 4, 5, 6, 9, 20, 50]:
+            index_uri = os.path.join(tmp_path, f"array_{training_sample_size}_{input_vectors_per_work_item_during_sampling}")
             index = ingest(
                 index_type="IVF_FLAT", 
                 index_uri=index_uri, 
                 source_uri=os.path.join(dataset_dir, "data.tdb"),
                 training_sampling_policy=TrainingSamplingPolicy.RANDOM,
                 training_sample_size=training_sample_size,
-                input_vectors_per_work_item=input_vectors_per_work_item,
+                input_vectors_per_work_item_during_sampling=input_vectors_per_work_item_during_sampling,
                 use_sklearn=True
             )
 
