@@ -1,0 +1,44 @@
+name: Test Build wheels
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  generate_backwards_compatability_data:
+    name: Generate Backwards Compatibility Data
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Determine Release Tag
+        id: get_release_tag
+        run: |
+          release_tag=$(git describe --tags --abbrev=0)
+          echo "::set-output name=release_tag::$release_tag"
+
+      - name: Build Indexes
+        run: backwards-compatibility-data/generate_data.py ${{ steps.get_release_tag.outputs.release_tag }}
+
+      - name: Commit and Push to Main Branch
+        run: |
+          git status
+          git branch
+          # git checkout main
+          # git add backwards-compatibility-data/
+          # git commit -m "Add backward compatibility data for release ${{ steps.get_release_tag.outputs.release_tag }}"
+          # git push
+
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    needs: generate_backwards_compatability_data
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04]
+
+    steps:
+      - name: Running!
+        run: |
+          Running build_wheels

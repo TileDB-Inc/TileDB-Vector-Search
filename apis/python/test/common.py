@@ -6,6 +6,7 @@ import numpy as np
 
 import tiledb
 
+MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 
 def xbin_mmap(fname, dtype):
     n, d = map(int, np.fromfile(fname, dtype="uint32", count=2))
