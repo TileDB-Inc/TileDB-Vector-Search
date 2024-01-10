@@ -295,8 +295,8 @@ def check_equals(result_d, result_i, expected_result_d, expected_result_i):
     result_i_expected: int
         The expected indices
     """
-    assert result_i == expected_result_i
-    assert result_d == expected_result_d
+    assert result_i == expected_result_i, f"result_i: {result_i} != expected_result_i: {expected_result_i}"
+    assert result_d == expected_result_d, f"result_d: {result_d} != expected_result_d: {expected_result_d}"
 
 # Generate random names for test array uris
 def random_name(name: str) -> str:

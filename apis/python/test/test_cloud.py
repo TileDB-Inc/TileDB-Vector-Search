@@ -40,7 +40,7 @@ class CloudTests(unittest.TestCase):
         k = 100
         nqueries = 100
 
-        query_vectors = load_fvecs(queries_uri)
+        queries = load_fvecs(queries_uri)
         gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
         index = vs.ingest(
@@ -50,7 +50,7 @@ class CloudTests(unittest.TestCase):
             config=tiledb.cloud.Config().dict(),
             mode=Mode.BATCH,
         )
-        _, result_i = index.query(query_vectors, k=k)
+        _, result_i = index.query(queries, k=k)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
     def test_cloud_ivf_flat(self):
@@ -63,7 +63,7 @@ class CloudTests(unittest.TestCase):
         nqueries = 100
         nprobe = 20
 
-        query_vectors = load_fvecs(queries_uri)
+        queries = load_fvecs(queries_uri)
         gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
         index = vs.ingest(
@@ -79,16 +79,16 @@ class CloudTests(unittest.TestCase):
             # mode=Mode.BATCH,
         )
 
-        _, result_i = index.query(query_vectors, k=k, nprobe=nprobe)
+        _, result_i = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
         _, result_i = index.query(
-            query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, num_partitions=2, resource_class="standard"
+            queries, k=k, nprobe=nprobe, mode=Mode.REALTIME, num_partitions=2, resource_class="standard"
         )
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
         _, result_i = index.query(
-            query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL, num_partitions=2
+            queries, k=k, nprobe=nprobe, mode=Mode.LOCAL, num_partitions=2
         )
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
@@ -97,20 +97,20 @@ class CloudTests(unittest.TestCase):
 
         # Cannot pass resource_class or resources to LOCAL mode or to no mode.
         with self.assertRaises(TypeError):
-            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL, resource_class="large")
+            index.query(queries, k=k, nprobe=nprobe, mode=Mode.LOCAL, resource_class="large")
         with self.assertRaises(TypeError):
-            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.LOCAL, resources=resources)
+            index.query(queries, k=k, nprobe=nprobe, mode=Mode.LOCAL, resources=resources)
         with self.assertRaises(TypeError):
-            index.query(query_vectors, k=k, nprobe=nprobe, resource_class="large")
+            index.query(queries, k=k, nprobe=nprobe, resource_class="large")
         with self.assertRaises(TypeError):
-            index.query(query_vectors, k=k, nprobe=nprobe, resources=resources)
+            index.query(queries, k=k, nprobe=nprobe, resources=resources)
 
         # Cannot pass resources to REALTIME.
         with self.assertRaises(TypeError):
-            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, resources=resources)
+            index.query(queries, k=k, nprobe=nprobe, mode=Mode.REALTIME, resources=resources)
 
         # Cannot pass both resource_class and resources.
         with self.assertRaises(TypeError):
-            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.REALTIME, resource_class="large", resources=resources)
+            index.query(queries, k=k, nprobe=nprobe, mode=Mode.REALTIME, resource_class="large", resources=resources)
         with self.assertRaises(TypeError):
-            index.query(query_vectors, k=k, nprobe=nprobe, mode=Mode.BATCH, resource_class="large", resources=resources)
+            index.query(queries, k=k, nprobe=nprobe, mode=Mode.BATCH, resource_class="large", resources=resources)

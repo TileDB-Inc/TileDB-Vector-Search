@@ -157,7 +157,18 @@ def ingest(
         raise ValueError("training_source_type should not be provided without training_source_uri")
     
     if training_sample_size < -1:
-        raise ValueError("training_sample_size should either be positive or -1 to auto-configure based on the dataset sizes")
+        raise ValueError("training_sample_size should either be positive or -1 (to auto-configure based on the dataset sizes)")
+
+    if copy_centroids_uri is not None and training_sample_size != -1:
+        raise ValueError("training_sample_size should not be provided alongside copy_centroids_uri")
+    if copy_centroids_uri is not None and partitions == -1:
+        raise ValueError("partitions should be provided if copy_centroids_uri is provided (set partitions to the number of centroids in copy_centroids_uri)")
+
+    if index_type != "IVF_FLAT" and training_sample_size != -1:
+        raise ValueError("training_sample_size should only be provided with index_type IVF_FLAT")
+    for variable in ["copy_centroids_uri", "training_input_vectors", "training_source_uri", "training_source_type"]:
+        if index_type != "IVF_FLAT" and locals().get(variable) is not None:
+            raise ValueError(f"{variable} should only be provided with index_type IVF_FLAT")
 
     # use index_group_uri for internal clarity
     index_group_uri = index_uri
@@ -820,12 +831,13 @@ def ingest(
                     if training_source_type is None:
                         training_source_type = autodetect_source_type(source_uri=training_source_uri)
                     training_in_size, training_dimensions, training_vector_type = read_source_metadata(source_uri=training_source_uri, source_type=training_source_type)
-                    dimensions = training_dimensions
+                    if dimensions != training_dimensions:
+                        raise ValueError(f"When training centroids, the index data dimensions ({dimensions}) != the training data dimensions ({training_dimensions})")
                     sample_vectors = read_input_vectors(
                         source_uri=training_source_uri,
                         source_type=training_source_type,
                         vector_type=training_vector_type,
-                        dimensions=training_dimensions,
+                        dimensions=dimensions,
                         start_pos=0,
                         end_pos=training_in_size,
                         config=config,
