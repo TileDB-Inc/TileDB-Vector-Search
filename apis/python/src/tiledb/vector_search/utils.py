@@ -17,7 +17,7 @@ def _load_vecs_t(uri, dtype, ctx_or_config=None):
             elem_nbytes = int(4 + ndim * dtype.itemsize)
             if raw.size % elem_nbytes != 0:
                 raise ValueError(
-                    f"Mismatched dims to bytes in file {uri}: {raw.size}, elem_nbytes"
+                    f"Mismatched dims to bytes in file {uri}: raw.size: {raw.size}, elem_nbytes: {elem_nbytes}"
                 )
             # take a view on the whole array as
             # (ndim, sizeof(t)*ndim), and return the actual elements
@@ -40,3 +40,27 @@ def load_fvecs(uri, ctx_or_config=None):
 
 def load_bvecs(uri, ctx_or_config=None):
     return _load_vecs_t(uri, np.uint8, ctx_or_config)
+
+
+def _write_vecs_t(uri, data, dtype, ctx_or_config=None):
+    with tiledb.scope_ctx(ctx_or_config) as ctx:
+        dtype = np.dtype(dtype)
+        vfs = tiledb.VFS(ctx.config())
+        ndim = data.shape[1]  # Get the number of dimensions from the input data
+
+        buffer = io.BytesIO()
+
+        for vector in data:
+            buffer.write(np.array([ndim], dtype=np.int32).tobytes())
+            buffer.write(vector.tobytes())
+
+        with vfs.open(uri, "wb") as f:
+            f.write(buffer.getvalue())
+
+
+def write_ivecs(uri, data, ctx_or_config=None):
+    _write_vecs_t(uri, data, np.int32, ctx_or_config)
+
+
+def write_fvecs(uri, data, ctx_or_config=None):
+    _write_vecs_t(uri, data, np.float32, ctx_or_config)
