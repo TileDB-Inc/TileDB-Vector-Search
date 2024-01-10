@@ -3,6 +3,8 @@ name: Test Build wheels
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   generate_backwards_compatability_data:
