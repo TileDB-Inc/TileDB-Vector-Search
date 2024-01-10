@@ -10,6 +10,7 @@ jobs:
   generate_backwards_compatability_data:
     name: Generate Backwards Compatibility Data
     runs-on: ubuntu-latest
+    python-version: 3.9
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -17,13 +18,10 @@ jobs:
       - name: Determine Release Tag
         id: get_release_tag
         run: |
-          echo "git status" && git status
-          echo "git branch" && git branch
-          echo "git fetch origin" && git fetch origin
-          echo "git checkout main" && git checkout main
-          echo "git status" && git status
-          echo "git branch" && git branch
-          release_tag=$(git describe --tags --abbrev=0)
+          # TODO: test this on a branch with a real tag
+          # release_tag=$(git describe --tags --abbrev=0)
+          release_tag="0.0.0"
+          echo "release_tag" && echo $release_tag
           echo "::set-output name=release_tag::$release_tag"
 
       - name: Print Python version
@@ -46,8 +44,12 @@ jobs:
 
       - name: Commit and Push to Main Branch
         run: |
-          git status
-          git branch
+          echo "git status" && git status
+          echo "git branch" && git branch
+          echo "git fetch origin main" && git fetch origin main
+          echo "git checkout main" && git checkout main
+          echo "git status" && git status
+          echo "git branch" && git branch
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
