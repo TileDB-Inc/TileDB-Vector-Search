@@ -1,6 +1,5 @@
 import os
 import shutil
-import numpy as np
 
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.utils import load_fvecs, write_fvecs
