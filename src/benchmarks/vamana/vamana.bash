@@ -17,7 +17,7 @@ echo "VECTOR_SEARCH is ${VECTOR_SEARCH}"
 
 export DISKANNROOT=${VECTOR_SEARCH}/src/
 
-export SIFT=sift
+export SIFT=siftsmall
 export SIFTPATH=${VECTOR_SEARCH}/external/data/gp3/${SIFT}
 export DATAPATH=${SIFTPATH}
 

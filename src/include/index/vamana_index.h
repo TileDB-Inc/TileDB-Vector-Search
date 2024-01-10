@@ -83,6 +83,11 @@ struct counting_sum_of_squares_distance {
 };
 }  // namespace
 
+static bool noisy = false;
+static void set_noisy(bool b) {
+  noisy = b;
+}
+
 /**
  * @brief Truncated best-first search
  * @tparam Distance The distance function used to compare vectors
@@ -110,6 +115,7 @@ struct counting_sum_of_squares_distance {
  * @todo -- add a `SearchPath `template parameter to determine whether to
  * return the top k results of the search or just the path taken.
  * @todo -- remove printf debugging code
+ * @todo -- would it be more efficient somehow to process multiple queries?
  */
 template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
 auto greedy_search(
@@ -120,7 +126,7 @@ auto greedy_search(
     size_t k_nn,
     size_t L,
     Distance&& distance = Distance{}) {
-  constexpr bool noisy = false;
+
 
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
@@ -179,7 +185,7 @@ auto greedy_search(
     q1.pop_back();
 
     if (noisy) {
-      std::cout << "p*: " << p_star << std::endl;
+      std::cout << "p*: " << p_star << " --  distance = " << distance(db[p_star], query) << std::endl;
     }
 
     // Change back to max heap

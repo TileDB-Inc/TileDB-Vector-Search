@@ -144,17 +144,35 @@ TEST_CASE("vamana: diskann", "[vamana]") {
 }
 
 TEST_CASE("vamana: small256 build index", "[vamana]") {
-  auto vindex = detail::graph::vamana_index<float, uint32_t>(256, 50, 0);
+
+  // DiskANN rust code has this test:
+  // TEST_DATA_FILE = tests/data/siftsmall_learn_256pts.fbin
+  // assert_eq!(visited_nodes.len(), 1);
+  // assert_eq!(scratch.best_candidates.size(), 1);
+  // assert_eq!(scratch.best_candidates[0].id, 72);
+  // assert_eq!(scratch.best_candidates[0].distance, 125678.0_f32);
+  // assert!(scratch.best_candidates[0].visited);
+  // Load 256 points
+  // search_list_size == 50, max degree == 4, alpha == 1.2
+  // medoid == 72, query == 0 ??
+
+  // num_nodes, Lbuild, Rmax_degree
+
+  detail::graph::set_noisy(false);
+
+  auto vindex = detail::graph::vamana_index<float, uint32_t>(256, 50, 4);
   auto x = read_diskann_data(diskann_test_data_file);
   auto graph = read_diskann_mem_index_with_scores(
       diskann_mem_index, diskann_test_data_file);
 
   vindex.train(x);
 
+  detail::graph::set_noisy(true);
   {
     int med = 72;
     int query = 72;
-    auto&& [tk_scores, tk, V] = greedy_search(graph, x, med, x[query], 10, 10);
+    auto dd = l2_distance{}(x[med], x[query]);
+    auto&& [tk_scores, tk, V] = greedy_search(graph, x, med, x[query], 2, 2);
     CHECK(tk[0] == 72);
     CHECK(tk_scores[0] == 125678.0);
     CHECK(tk_scores[1] == 125678.0);

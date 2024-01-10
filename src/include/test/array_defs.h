@@ -253,7 +253,7 @@ static std::filesystem::path siftsmall_groundtruth_file{
  * @brief Data files used in unit tests in the DiskANN git repo.
  * (Note:  These are files not arrays!)
  */
-static std::filesystem::path diskann_root{test_array_root / "diskann"};
+static std::filesystem::path diskann_root{test_file_root / "diskann"};
 static std::filesystem::path diskann_test_256bin{
     diskann_root / "siftsmall_learn_256pts.fbin"};
 static std::filesystem::path diskann_test_data_file{
