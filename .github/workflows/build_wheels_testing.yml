@@ -17,6 +17,8 @@ jobs:
       - name: Determine Release Tag
         id: get_release_tag
         run: |
+          git status
+          git branch
           release_tag=$(git describe --tags --abbrev=0)
           echo "::set-output name=release_tag::$release_tag"
 
