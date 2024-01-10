@@ -14,6 +14,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.9"
+
+      - name: Print Python version
+        run: |
+          which python
+          which pip
+          python --version
+
       - name: Determine Release Tag
         id: get_release_tag
         run: |
@@ -23,29 +34,14 @@ jobs:
           echo "release_tag" && echo $release_tag
           echo "::set-output name=release_tag::$release_tag"
 
-      - name: Print Python version
-        run: |
-          which python
-          which pip
-          python --version
-
-      - name: Build python
-        run: |
-          cd apis/python
-          pip install .
-
-      - name: List Installed Python Packages
-        run: |
-          pip freeze
-      
-      - name: List Installed Python Packages 2
-        run: |
-          cd apis/python && pip freeze
-
       - name: Build Indexes
         run: |
           echo "pwd" && pwd
           echo "ls" && ls
+          cd apis/python && pip install .
+          echo "pwd" && pwd
+          echo "ls" && ls
+          echo "pip freeze" && pip freeze
           echo ${{ steps.get_release_tag.outputs.release_tag }}
           python backwards-compatability-data/generate_data.py ${{ steps.get_release_tag.outputs.release_tag }}
 
