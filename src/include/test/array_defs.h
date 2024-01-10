@@ -44,7 +44,7 @@
 
 using test_feature_type = float;
 
-using test_groundtruth_type = int32_t;
+using test_groundtruth_type = uint64_t;
 using test_centroids_type = float;
 using test_ids_type = uint64_t;
 using test_indices_type = uint64_t;
