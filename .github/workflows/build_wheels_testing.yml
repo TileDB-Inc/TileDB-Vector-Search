@@ -32,7 +32,7 @@ jobs:
       - name: Build python
         run: |
           cd apis/python
-          pip install .
+          pip install .[test]
 
       - name: List Installed Python Packages
         run: |
