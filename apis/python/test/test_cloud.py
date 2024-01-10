@@ -26,11 +26,13 @@ class CloudTests(unittest.TestCase):
         test_path = f"tiledb://{namespace}/{storage_path}/{rand_name}"
         cls.flat_index_uri = f"{test_path}/test_flat_array"
         cls.ivf_flat_index_uri = f"{test_path}/test_ivf_flat_array"
+        cls.ivf_flat_random_sampling_index_uri = f"{test_path}/test_ivf_flat_random_sampling_array"
 
     @classmethod
     def tearDownClass(cls):
         vs.Index.delete_index(uri=cls.flat_index_uri, config=tiledb.cloud.Config())
         vs.Index.delete_index(uri=cls.ivf_flat_index_uri, config=tiledb.cloud.Config())
+        vs.Index.delete_index(uri=cls.ivf_flat_random_sampling_index_uri, config=tiledb.cloud.Config())
 
     def test_cloud_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
@@ -119,15 +121,15 @@ class CloudTests(unittest.TestCase):
         # NOTE(paris): This was also tested with the following (and also with mode=Mode.BATCH):
         # source_uri = "tiledb://TileDB-Inc/ann_sift1b_raw_vectors_col_major"
         # training_sample_size = 1000000
-        source_uri = "tiledb://TileDB-Inc/ann_sift1b_raw_vectors_col_major"
+        source_uri = "tiledb://TileDB-Inc/sift_10k"
         queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
         gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
-        index_uri = CloudTests.ivf_flat_index_uri
+        index_uri = CloudTests.ivf_flat_random_sampling_index_uri
         k = 100
         nqueries = 100
         nprobe = 20
         max_sampling_tasks = 13
-        training_sample_size = 500123
+        training_sample_size = 1234
 
         queries = load_fvecs(queries_uri)
         gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
