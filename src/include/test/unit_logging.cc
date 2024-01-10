@@ -123,6 +123,8 @@ TEST_CASE("logging: interval test", "[logging]") {
   CHECK((f <= 1010 && f >= 990));
 }
 
+// Can't go across scopes like this
+#if 0
 TEST_CASE("logging: scoped_timer start test", "[logging]") {
   scoped_timer a("life_test");
   std::this_thread::sleep_for(300ms);
@@ -133,6 +135,7 @@ TEST_CASE("logging: scoped_timer stop test", "[logging]") {
   auto f = _timing_data.get_entries_summed("life_test");
   CHECK((f <= 310 && f >= 290));
 }
+#endif
 
 TEST_CASE("logging: ordering", "[logging]") {
   auto g = log_timer{"g"};
@@ -168,7 +171,7 @@ TEST_CASE("logging: ordering", "[logging]") {
   auto g_t = _timing_data.get_entries_summed("g");
   auto f_t = _timing_data.get_entries_summed("f");
 
-  std::cout << f_t << " " << g_t << " " << h_t << " " << i_t << std::endl;
+  // std::cout << f_t << " " << g_t << " " << h_t << " " << i_t << std::endl;
 
   CHECK((i_t > 770 && i_t < 880));
   CHECK((h_t > 470 && h_t < 530));
