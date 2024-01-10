@@ -17,11 +17,12 @@ jobs:
       - name: Determine Release Tag
         id: get_release_tag
         run: |
-          git status
-          git branch
-          git checkout main
-          git status
-          git branch
+          echo "git status" && git status
+          echo "git branch" && git branch
+          echo "git fetch origin" && git fetch origin
+          echo "git checkout main" && git checkout main
+          echo "git status" && git status
+          echo "git branch" && git branch
           release_tag=$(git describe --tags --abbrev=0)
           echo "::set-output name=release_tag::$release_tag"
 
