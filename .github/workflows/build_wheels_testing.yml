@@ -10,7 +10,6 @@ jobs:
   generate_backwards_compatability_data:
     name: Generate Backwards Compatibility Data
     runs-on: ubuntu-latest
-    python-version: 3.9
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
