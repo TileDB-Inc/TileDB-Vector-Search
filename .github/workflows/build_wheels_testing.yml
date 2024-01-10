@@ -19,6 +19,9 @@ jobs:
         run: |
           git status
           git branch
+          git checkout main
+          git status
+          git branch
           release_tag=$(git describe --tags --abbrev=0)
           echo "::set-output name=release_tag::$release_tag"
 
@@ -29,10 +32,6 @@ jobs:
         run: |
           git status
           git branch
-          # git checkout main
-          # git add backwards-compatibility-data/
-          # git commit -m "Add backward compatibility data for release ${{ steps.get_release_tag.outputs.release_tag }}"
-          # git push
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
