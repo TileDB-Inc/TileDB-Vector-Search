@@ -136,7 +136,7 @@ class Index:
             raise TypeError(f"A query in queries has {query_dimensions} dimensions, but the indexed data had {self.dimensions} dimensions")
 
         with tiledb.scope_ctx(ctx_or_config=self.config):
-            if not self.has_updates():
+            if not tiledb.array_exists(self.updates_array_uri) or not self.has_updates():
                 if self.query_base_array:
                     return self.query_internal(queries, k, **kwargs)
                 else:
@@ -269,7 +269,10 @@ class Index:
         raise NotImplementedError
 
     def has_updates(self):
-        return self.group.meta["has_updates"]
+        if "has_updates" in self.group.meta:
+            return self.group.meta["has_updates"]
+        else:
+            return True
 
     def set_has_updates(self, has_updates: bool = True):
         if not self.group.meta["has_updates"]:
