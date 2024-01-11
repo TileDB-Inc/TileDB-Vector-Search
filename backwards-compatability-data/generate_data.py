@@ -10,20 +10,26 @@ def create_sift_micro():
     don't need to run this again. We only write the base data used to create an index. To query you
     should just select vectors from this to query against the index with.
     '''
+    script_dir = os.path.dirname(os.path.abspath(__file__))
     base_uri = "../apis/python/test/data/siftsmall/siftsmall_base.fvecs"
-    write_fvecs("./siftmicro_base.fvecs", load_fvecs(base_uri)[:100])
+    write_fvecs(os.path.join(script_dir, "siftmicro_base.fvecs"), load_fvecs(base_uri)[:100])
 
 def generate_release_data(version):
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
     # Create the new release directory.
-    release_dir = f"./data/{version}"
+    release_dir = os.path.join(script_dir, "data", version) 
+    print(f"release_dir {release_dir}")
     shutil.rmtree(release_dir, ignore_errors=True)
     os.makedirs(release_dir, exist_ok=True)
 
     # Get the data we'll use to generate the index.
-    base_uri = "./siftmicro_base.fvecs"
+    base_uri = os.path.join(script_dir, "siftmicro_base.fvecs")
+    print(f"base_uri {base_uri}")
     base = load_fvecs(base_uri)
     indices = [0, 3, 4, 8, 10, 19, 28, 31, 39, 40, 41, 47, 49, 50, 56, 64, 68, 70, 71, 79, 82, 89, 90, 94]
     queries = base[indices]
+    print(f"queries {queries}")
 
     # Generate each index and query to make sure it works before we write it.
     index_types = ["FLAT", "IVF_FLAT"]
