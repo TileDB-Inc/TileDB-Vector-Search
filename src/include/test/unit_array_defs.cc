@@ -150,8 +150,8 @@ TEST_CASE("array_defs: quick hack to create fmnistsmall", "[array_defs]") {
   write_matrix(ctx, fmnistsmall_queries, fmnistsmall_query_uri);
 }
 #endif
-#if 1
-TEST_CASE("array_defs: quick hack to create groups", "[array_defs]") {
+#if 0
+TEST_CASE("array_defs: quick hack to create *small groups", "[array_defs]") {
   tiledb::Context ctx;
   {
     auto fmnistsmall_inputs =
