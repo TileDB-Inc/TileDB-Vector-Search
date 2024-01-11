@@ -30,9 +30,11 @@ def generate_release_data(version):
     data_types = ["float32", "uint8"]
     for index_type in index_types:
         for data_type in data_types:
+            index_uri = f"{release_dir}/{index_type.lower()}_{data_type}"
+            print(f"Creating index at {index_uri}")
             index = ingest(
                 index_type=index_type, 
-                index_uri=f"{release_dir}/{index_type.lower()}_{data_type}",
+                index_uri=index_uri,
                 input_vectors=base.astype(data_type),
             )
 

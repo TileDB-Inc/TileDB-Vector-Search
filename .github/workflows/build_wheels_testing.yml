@@ -25,25 +25,26 @@ jobs:
           which pip
           python --version
 
-      - name: Determine Release Tag
-        id: get_release_tag
+      - name: Build Indexes
         run: |
           # TODO: test this on a branch with a real tag
           # release_tag=$(git describe --tags --abbrev=0)
           release_tag="0.0.0"
           echo "release_tag" && echo $release_tag
-          echo "::set-output name=release_tag::$release_tag"
-
-      - name: Build Indexes
-        run: |
           echo "pwd" && pwd
           echo "ls" && ls
-          cd apis/python && pip install .
+          cd apis/python && pip install . & cd ../..
           echo "pwd" && pwd
           echo "ls" && ls
           echo "pip freeze" && pip freeze
-          echo ${{ steps.get_release_tag.outputs.release_tag }}
-          python backwards-compatability-data/generate_data.py ${{ steps.get_release_tag.outputs.release_tag }}
+          echo "pwd" && pwd
+          echo "ls" && ls
+          python backwards-compatability-data/generate_data.py $release_tag
+          echo "pwd" && pwd
+          echo "ls" && ls
+          echo "ls backwards-compatability-data" && ls backwards-compatability-data
+          echo "ls backwards-compatability-data/data" && ls backwards-compatability-data/data
+          echo "ls backwards-compatability-data/data/0.0.0" && ls backwards-compatability-data/data/0.0.0
 
       - name: Commit and Push to Main Branch
         run: |
