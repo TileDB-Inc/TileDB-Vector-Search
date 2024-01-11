@@ -33,27 +33,33 @@ jobs:
           echo "release_tag" && echo $release_tag
           echo "pwd" && pwd
           echo "ls" && ls
+          echo ""
           cd apis/python && pip install . && cd ../..
+          echo ""
           echo "pwd" && pwd
           echo "ls" && ls
           echo "pip freeze" && pip freeze
           echo "pwd" && pwd
           echo "ls" && ls
-          python backwards-compatability-data/generate_data.py $release_tag
+          echo ""
+          echo "python backwards-compatability-data/generate_data.py $release_tag" && python backwards-compatability-data/generate_data.py $release_tag
+          echo ""
           echo "pwd" && pwd
           echo "ls" && ls
           echo "ls backwards-compatability-data" && ls backwards-compatability-data
           echo "ls backwards-compatability-data/data" && ls backwards-compatability-data/data
           echo "ls backwards-compatability-data/data/0.0.0" && ls backwards-compatability-data/data/0.0.0
-
-      - name: Commit and Push to Main Branch
-        run: |
+          echo ""
           echo "git status" && git status
           echo "git branch" && git branch
-          echo "git fetch origin main" && git fetch origin main
-          echo "git checkout main" && git checkout main
+          echo "git fetch origin jparismorgan/temp-testing" && git fetch origin jparismorgan/temp-testing
+          echo "git checkout jparismorgan/temp-testing" && git checkout jparismorgan/temp-testing
           echo "git status" && git status
           echo "git branch" && git branch
+          echo "git add backwards-compatability-data/data/" && git add backwards-compatability-data/data/
+          echo "git commit -m '[automated] Update backwards-compatability-data for release $release_tag'" && git commit -m "[automated] Update backwards-compatability-data for release $release_tag"
+          echo "git push origin jparismorgan/temp-testing" && git push origin jparismorgan/temp-testing
+          echo "git status" && git status
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -66,4 +72,4 @@ jobs:
     steps:
       - name: Running!
         run: |
-          Running build_wheels
+          "Running!"
