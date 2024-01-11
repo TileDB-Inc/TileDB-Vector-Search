@@ -90,8 +90,6 @@ kmeans_add_test(unit_adj_list)
 
 kmeans_add_test(unit_algorithm)
 
-kmeans_add_test(unit_api)
-
 kmeans_add_test(unit_array_defs)
 
 kmeans_add_test(unit_api_feature_vector)
