@@ -46,7 +46,7 @@ def _write_vecs_t(uri, data, dtype, ctx_or_config=None):
     with tiledb.scope_ctx(ctx_or_config) as ctx:
         dtype = np.dtype(dtype)
         vfs = tiledb.VFS(ctx.config())
-        ndim = data.shape[1]  # Get the number of dimensions from the input data
+        ndim = data.shape[1]
 
         buffer = io.BytesIO()
 
