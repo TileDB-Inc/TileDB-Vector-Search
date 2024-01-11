@@ -140,6 +140,36 @@ std::vector<std::filesystem::path> siftsmall_files{
 };
 
 #if 0
+TEST_CASE("array_defs: quick hack to create fmnistsmall", "[array_defs]") {
+  tiledb::Context ctx;
+  auto fmnistsmall_inputs = tdbColMajorPreLoadMatrix<fmnistsmall_feature_type>(
+      ctx, fmnist_inputs_uri, num_fmnistsmall_vectors);
+  write_matrix(ctx, fmnistsmall_inputs, fmnistsmall_inputs_uri);
+  auto fmnistsmall_queries = tdbColMajorPreLoadMatrix<fmnistsmall_feature_type>(
+      ctx, fmnist_query_uri, 500);
+  write_matrix(ctx, fmnistsmall_queries, fmnistsmall_query_uri);
+}
+#endif
+#if 0
+TEST_CASE("array_defs: quick hack to create fmnistsmall group", "[array_defs]") {
+  tiledb::Context ctx;
+
+  auto fmnistsmall_inputs = tdbColMajorPreLoadMatrix<fmnistsmall_feature_type>(
+      ctx, fmnistsmall_inputs_uri, num_fmnistsmall_vectors);
+
+  using index = ivf_flat_index<
+      fmnistsmall_feature_type,
+      fmnistsmall_ids_type,
+      fmnistsmall_indices_type>;
+  size_t nlist = (size_t)std::sqrt(num_fmnistsmall_vectors);
+  auto idx = index(nlist, 10, 1.e-4);
+  idx.train(fmnistsmall_inputs);
+  idx.add(fmnistsmall_inputs);
+  idx.write_index(ctx, fmnistsmall_group_uri, true);
+}
+#endif
+
+#if 0
 TEST_CASE("array_defs: quick hack to create index vectors", "[array_defs]") {
   tiledb::Context ctx;
 
