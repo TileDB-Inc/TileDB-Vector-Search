@@ -136,7 +136,7 @@ class Index:
             raise TypeError(f"A query in queries has {query_dimensions} dimensions, but the indexed data had {self.dimensions} dimensions")
 
         with tiledb.scope_ctx(ctx_or_config=self.config):
-            if not tiledb.array_exists(self.updates_array_uri):
+            if not self.group.meta["has_updates"]:
                 if self.query_base_array:
                     return self.query_internal(queries, k, **kwargs)
                 else:
@@ -269,6 +269,12 @@ class Index:
         raise NotImplementedError
 
     def update(self, vector: np.array, external_id: np.uint64, timestamp: int = None):
+        if not self.group.meta["has_updates"]:
+            self.group.close()
+            self.group = tiledb.Group(self.uri, "w", ctx=tiledb.Ctx(self.config))
+            self.group.meta["has_updates"] = True
+            self.group.close()
+            self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(self.config))
         updates_array = self.open_updates_array(timestamp=timestamp)
         vectors = np.empty((1), dtype="O")
         vectors[0] = vector
@@ -279,12 +285,24 @@ class Index:
     def update_batch(
         self, vectors: np.ndarray, external_ids: np.array, timestamp: int = None
     ):
+        if not self.group.meta["has_updates"]:
+            self.group.close()
+            self.group = tiledb.Group(self.uri, "w", ctx=tiledb.Ctx(self.config))
+            self.group.meta["has_updates"] = True
+            self.group.close()
+            self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(self.config))
         updates_array = self.open_updates_array(timestamp=timestamp)
         updates_array[external_ids] = {"vector": vectors}
         updates_array.close()
         self.consolidate_update_fragments()
 
     def delete(self, external_id: np.uint64, timestamp: int = None):
+        if not self.group.meta["has_updates"]:
+            self.group.close()
+            self.group = tiledb.Group(self.uri, "w", ctx=tiledb.Ctx(self.config))
+            self.group.meta["has_updates"] = True
+            self.group.close()
+            self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(self.config))
         updates_array = self.open_updates_array(timestamp=timestamp)
         deletes = np.empty((1), dtype="O")
         deletes[0] = np.array([], dtype=self.dtype)
@@ -293,6 +311,12 @@ class Index:
         self.consolidate_update_fragments()
 
     def delete_batch(self, external_ids: np.array, timestamp: int = None):
+        if not self.group.meta["has_updates"]:
+            self.group.close()
+            self.group = tiledb.Group(self.uri, "w", ctx=tiledb.Ctx(self.config))
+            self.group.meta["has_updates"] = True
+            self.group.close()
+            self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(self.config))
         updates_array = self.open_updates_array(timestamp=timestamp)
         deletes = np.empty((len(external_ids)), dtype="O")
         for i in range(len(external_ids)):
@@ -356,9 +380,22 @@ class Index:
                 timestamp = int(time.time() * 1000)
             return tiledb.open(self.updates_array_uri, mode="w", timestamp=timestamp)
 
-    def consolidate_updates(self, **kwargs):
+    def consolidate_updates(
+        self, 
+        retrain_index: bool = False,
+        **kwargs
+    ):
+        """
+        Parameters
+        ----------
+        retrain_index: bool
+            If true, retrain the index. If false, reuse data from the previous index. 
+            For IVF_FLAT retraining means we will recompute the centroids - when doing so you can 
+            pass any ingest() arguments used to configure computing centroids and we will use them 
+            when recomputing the centroids. Otherwise, if false, we will reuse the centroids from 
+            the previous index.
+        """
         from tiledb.vector_search.ingestion import ingest
-
         fragments_info = tiledb.array_fragments(
             self.updates_array_uri, ctx=tiledb.Ctx(self.config)
         )
@@ -373,6 +410,15 @@ class Index:
         tiledb.consolidate(self.updates_array_uri, config=conf)
         tiledb.vacuum(self.updates_array_uri, config=conf)
 
+        # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
+        should_pass_copy_centroids_uri = self.index_type == "IVF_FLAT" and not retrain_index and self.partitions > 0
+        if should_pass_copy_centroids_uri:
+            # Make sure the user didn't pass an incorrect number of partitions.
+            if 'partitions' in kwargs and self.partitions != kwargs['partitions']:
+                raise ValueError(f"The passed partitions={kwargs['partitions']} is different than the number of partitions ({self.partitions}) from when the index was created - this is an issue because with retrain_index=True, the partitions from the previous index will be used; to fix, set retrain_index=False, don't pass partitions, or pass the correct number of partitions.")
+            # We pass partitions through kwargs so that we don't pass it twice.
+            kwargs['partitions'] = self.partitions
+
         new_index = ingest(
             index_type=self.index_type,
             index_uri=self.uri,
@@ -383,6 +429,7 @@ class Index:
             updates_uri=self.updates_array_uri,
             index_timestamp=max_timestamp,
             storage_version=self.storage_version,
+            copy_centroids_uri=self.centroids_uri if should_pass_copy_centroids_uri else None,
             config=self.config,
             **kwargs,
         )
@@ -508,4 +555,5 @@ def create_metadata(
         group.meta["index_type"] = index_type
         group.meta["base_sizes"] = json.dumps([0])
         group.meta["ingestion_timestamps"] = json.dumps([0])
+        group.meta["has_updates"] = False
         group.close()
