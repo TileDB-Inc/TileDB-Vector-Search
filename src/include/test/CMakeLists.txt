@@ -91,7 +91,6 @@ kmeans_add_test(unit_adj_list)
 kmeans_add_test(unit_algorithm)
 
 kmeans_add_test(unit_api)
-set_tests_properties(unit_api_test PROPERTIES WILL_FAIL TRUE)
 
 kmeans_add_test(unit_array_defs)
 
@@ -110,10 +109,8 @@ kmeans_add_test(unit_api_vamana_index)
 kmeans_add_test(unit_compat)
 
 kmeans_add_test(unit_concepts)
-set_tests_properties(unit_concepts_test PROPERTIES WILL_FAIL TRUE)
 
 kmeans_add_test(unit_concepts_vs)
-set_tests_properties(unit_concepts_vs_test PROPERTIES WILL_FAIL TRUE)
 
 kmeans_add_test(unit_cpos)
 
@@ -124,10 +121,8 @@ kmeans_add_test(unit_cpos)
 # kmeans_add_test(unit_csr)
 
 kmeans_add_test(unit_execution_policy)
-set_tests_properties(unit_execution_policy_test PROPERTIES WILL_FAIL TRUE)
 
 kmeans_add_test(unit_fixed_min_heap)
-set_tests_properties(unit_fixed_min_heap_test PROPERTIES WILL_FAIL TRUE)
 
 kmeans_add_test(unit_flat_l2_index)
 
@@ -158,10 +153,11 @@ kmeans_add_test(unit_index_defs)
 # kmeans_add_test(unit_ivf_query)
 
 kmeans_add_test(unit_ivf_qv)
-set_tests_properties(unit_ivf_qv_test PROPERTIES WILL_FAIL TRUE)
 
-kmeans_add_test(unit_ivf_vq)
-set_tests_properties(unit_ivf_vq_test PROPERTIES WILL_FAIL TRUE)
+
+# We haven't updated vq to new partitioned matrix API yet
+# kmeans_add_test(unit_ivf_vq)
+# set_tests_properties(unit_ivf_vq_test PROPERTIES WILL_FAIL TRUE)
 
 add_executable(unit_linalg unit_linalg.cc)
 target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)
@@ -169,7 +165,6 @@ target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)
 add_test(NAME unit_linalg_test COMMAND unit_linalg ~[tdbmatrix])
 
 kmeans_add_test(unit_logging)
-set_property(TEST unit_logging_test PROPERTY WILL_FAIL TRUE)
 
 kmeans_add_test(unit_matrix)
 
@@ -186,14 +181,13 @@ kmeans_add_test(unit_partition)
 kmeans_add_test(unit_scoring)
 
 kmeans_add_test(unit_slicing)
-set_tests_properties(unit_slicing_test PROPERTIES WILL_FAIL TRUE)
+# set_tests_properties(unit_slicing_test PROPERTIES WILL_FAIL TRUE)
 
 kmeans_add_test(unit_stats)
 
 kmeans_add_test(unit_stl)
 
 kmeans_add_test(unit_tdb_io)
-set_tests_properties(unit_tdb_io_test PROPERTIES WILL_FAIL TRUE)
 
 kmeans_add_test(unit_tdb_matrix)
 

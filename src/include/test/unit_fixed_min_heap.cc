@@ -279,7 +279,7 @@ TEST_CASE("fixed_min_heap: fixed_min_pair_heap", "[fixed_min_heap]") {
 }
 
 TEST_CASE(
-    "fixed_min_heap: fixed_min_heap with a large vector", "[fixed_min_heap]") {
+    "fixed_min_heap: fixed_min_heap with a 5500 vector", "[fixed_min_heap]") {
   using element = std::tuple<float, int>;
 
   fixed_min_pair_heap<float, int> a(7);
@@ -499,6 +499,8 @@ TEST_CASE(
   CHECK(a2 == v3);
 }
 
+// This seems to duplicate above
+#if 0
 TEST_CASE(
     "fixed_min_heap: fixed_max_heap with a large vector", "[fixed_min_heap]") {
   using element = std::tuple<float, int>;
@@ -536,3 +538,4 @@ TEST_CASE(
   });
   CHECK(a2 == v3);
 }
+#endif

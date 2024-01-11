@@ -34,7 +34,6 @@
 
 #include <tiledb/group_experimental.h>
 
-
 #include <filesystem>
 #include <string>
 
