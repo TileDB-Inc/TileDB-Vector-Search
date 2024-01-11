@@ -50,8 +50,16 @@ class CloudTests(unittest.TestCase):
             config=tiledb.cloud.Config().dict(),
             mode=Mode.BATCH,
         )
+        tiledb_index_uri = groups.info(index_uri).tiledb_uri
+        index = vs.flat_index.FlatIndex(uri=tiledb_index_uri)
+
         _, result_i = index.query(queries, k=k)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        index.delete(external_id=42)
+        _, result_i = index.query(queries, k=k)
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
 
     def test_cloud_ivf_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
@@ -78,6 +86,9 @@ class CloudTests(unittest.TestCase):
             #  UDF library releases.
             # mode=Mode.BATCH,
         )
+
+        tiledb_index_uri = groups.info(index_uri).tiledb_uri
+        index = vs.ivf_flat_index.IVFFlatIndex(uri=tiledb_index_uri)
 
         _, result_i = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
@@ -114,3 +125,7 @@ class CloudTests(unittest.TestCase):
             index.query(queries, k=k, nprobe=nprobe, mode=Mode.REALTIME, resource_class="large", resources=resources)
         with self.assertRaises(TypeError):
             index.query(queries, k=k, nprobe=nprobe, mode=Mode.BATCH, resource_class="large", resources=resources)
+
+        index.delete(external_id=42)
+        _, result_i = index.query(queries, k=k, nprobe=nprobe)
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
