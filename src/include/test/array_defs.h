@@ -237,7 +237,7 @@ using fmnist_centroids_type = float;
 using fmnist_ids_type = uint64_t;
 using fmnist_indices_type = uint64_t;
 
-#if 1 //  USE_1M_UNIT_TEST_ARRAYS
+#ifdef USE_1M_UNIT_TEST_ARRAYS
 constexpr size_t num_fmnist_vectors = 60'000;
 static std::filesystem::path fmnist_root{test_array_root / "fmnist"};
 #else
