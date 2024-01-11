@@ -11,7 +11,7 @@ def create_sift_micro():
     should just select vectors from this to query against the index with.
     '''
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    base_uri = "../apis/python/test/data/siftsmall/siftsmall_base.fvecs"
+    base_uri = os.path.join(script_dir, "..", "apis", "python", "test", "data", "siftsmall", "siftsmall_base.fvecs")
     write_fvecs(os.path.join(script_dir, "siftmicro_base.fvecs"), load_fvecs(base_uri)[:100])
 
 def generate_release_data(version):
