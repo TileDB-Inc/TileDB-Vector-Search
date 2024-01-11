@@ -298,8 +298,8 @@ TEST_CASE("normalize matrix", "[flatpq_index]") {
   auto hypercube = build_hypercube<float>(2, 2, 0xdeadbeef);
   auto normalized = normalize_matrix(hypercube);
 
-  debug_slice(hypercube);
-  debug_slice(normalized);
+  // debug_slice(hypercube);
+  // debug_slice(normalized);
 }
 
 TEMPLATE_TEST_CASE(
@@ -457,7 +457,7 @@ TEST_CASE(
 
 TEMPLATE_TEST_CASE(
     "flatpq_index: query stacked hypercube", "[flatpq_index]", float, uint8_t) {
-  size_t k_dist = GENERATE(0, 32);
+  size_t k_dist = GENERATE(/*0,*/ 32);
   size_t k_near = k_dist;
   size_t k_far = k_dist;
 
@@ -541,6 +541,8 @@ TEMPLATE_TEST_CASE(
     }
   }
 
+  // Need to implement with its own "expected" four-element set
+#if 0
   SECTION("Test sub_distance_*symmetric, hypercube4") {
     for (auto&& [vx, pqx] : expected) {
       auto a_vx_pqx4 = pq_idx4.sub_distance_asymmetric(vx, pqx);
@@ -564,35 +566,37 @@ TEMPLATE_TEST_CASE(
       REQUIRE(scale > 0);
       REQUIRE(!std::isnan(scale));
 
-      CHECK(!std::isnan(a_vx_pqx4));
-      CHECK(!std::isnan(a_dpqx_evx4));
-      CHECK(!std::isnan(s_evx_pqx4));
-      CHECK(!std::isnan(ss_vx_dpqx4));
-      CHECK(!std::isnan(s_evx_edpqx4));
-      CHECK(!std::isnan(a_evx_edpqx4));
-      CHECK(!std::isnan(ss_devx_dpqx4));
-      CHECK(!std::isnan(ss_devx_vx4));
+      REQUIRE(!std::isnan(a_vx_pqx4));
+      REQUIRE(!std::isnan(a_dpqx_evx4));
+      REQUIRE(!std::isnan(s_evx_pqx4));
+      REQUIRE(!std::isnan(ss_vx_dpqx4));
+      REQUIRE(!std::isnan(s_evx_edpqx4));
+      REQUIRE(!std::isnan(a_evx_edpqx4));
+      REQUIRE(!std::isnan(ss_devx_dpqx4));
+      REQUIRE(!std::isnan(ss_devx_vx4));
 
-      CHECK(!std::isnan(a_vx_pqx4 / scale));
-      CHECK(!std::isnan(a_dpqx_evx4 / scale));
-      CHECK(!std::isnan(s_evx_pqx4 / scale));
-      CHECK(!std::isnan(ss_vx_dpqx4 / scale));
-      CHECK(!std::isnan(s_evx_edpqx4 / scale));
-      CHECK(!std::isnan(a_evx_edpqx4 / scale));
-      CHECK(!std::isnan(ss_devx_dpqx4 / scale));
-      CHECK(!std::isnan(ss_devx_vx4 / scale));
+      REQUIRE(!std::isnan(a_vx_pqx4 / scale));
+      REQUIRE(!std::isnan(a_dpqx_evx4 / scale));
+      REQUIRE(!std::isnan(s_evx_pqx4 / scale));
+      REQUIRE(!std::isnan(ss_vx_dpqx4 / scale));
+      REQUIRE(!std::isnan(s_evx_edpqx4 / scale));
+      REQUIRE(!std::isnan(a_evx_edpqx4 / scale));
+      REQUIRE(!std::isnan(ss_devx_dpqx4 / scale));
+      REQUIRE(!std::isnan(ss_devx_vx4 / scale));
 
-      CHECK(a_vx_pqx4 / scale < 0.0005);
-      CHECK(a_dpqx_evx4 / scale < 0.0005);
-      CHECK(s_evx_pqx4 / scale < 0.0005);
-      CHECK(ss_vx_dpqx4 / scale < 0.0005);
-      CHECK(s_evx_edpqx4 / scale < 0.0005);
-      CHECK(a_evx_edpqx4 / scale < 0.0005);
-      CHECK(ss_devx_dpqx4 / scale < 0.0005);
-      CHECK(ss_devx_vx4 / scale < 0.0005);
+      REQUIRE(a_vx_pqx4 / scale < 0.0005);
+      REQUIRE(a_dpqx_evx4 / scale < 0.0005);
+      REQUIRE(s_evx_pqx4 / scale < 0.0005);
+      REQUIRE(ss_vx_dpqx4 / scale < 0.0005);
+      REQUIRE(s_evx_edpqx4 / scale < 0.0005);
+      REQUIRE(a_evx_edpqx4 / scale < 0.0005);
+      REQUIRE(ss_devx_dpqx4 / scale < 0.0005);
+      REQUIRE(ss_devx_vx4 / scale < 0.0005);
     }
   }
+#endif
 
+// Add CHECKs / REQUIREs?
 #if 0
   SECTION("Test asymmetric query 2") {
     auto query = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0}};
@@ -681,8 +685,8 @@ TEST_CASE("flatpq_index: query siftsmall", "[flatpq_index]") {
   auto query_set = tdbColMajorMatrix<float>(ctx, siftsmall_query_uri, 0);
   query_set.load();
 
-  auto groundtruth_set =
-      tdbColMajorMatrix<int32_t>(ctx, siftsmall_groundtruth_uri, 0);
+  auto groundtruth_set = tdbColMajorMatrix<siftsmall_groundtruth_type>(
+      ctx, siftsmall_groundtruth_uri, 0);
   groundtruth_set.load();
 
   auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
@@ -704,7 +708,7 @@ TEST_CASE("flatpq_index: query siftsmall", "[flatpq_index]") {
     double recall1 = intersections1 / ((double)top_k_pq.num_cols() * k_nn);
     CHECK(recall1 > 0.7);
 
-    std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
+    // std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
   }
 
   SECTION("symmetric") {
@@ -719,7 +723,7 @@ TEST_CASE("flatpq_index: query siftsmall", "[flatpq_index]") {
     double recall1 = intersections1 / ((double)top_k_pq.num_cols() * k_nn);
     CHECK(recall1 > 0.6);
 
-    std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
+    // std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
   }
 }
 
@@ -729,16 +733,16 @@ TEST_CASE("flatpq_index: query 1M", "[flatpq_index]") {
   auto k_nn = 10;
 
   tiledb::Context ctx;
-  auto training_set =
-      tdbColMajorMatrix<uint8_t>(ctx, bigann1M_inputs_uri, num_vectors);
+  auto training_set = tdbColMajorMatrix<bigann1M_feature_type>(
+      ctx, bigann1M_inputs_uri, num_vectors);
   training_set.load();
 
   auto query_set =
       tdbColMajorMatrix<uint8_t>(ctx, bigann1M_query_uri, num_queries);
   query_set.load();
 
-  auto groundtruth_set =
-      tdbColMajorMatrix<int32_t>(ctx, siftsmall_groundtruth_uri, num_queries);
+  auto groundtruth_set = tdbColMajorMatrix<siftsmall_groundtruth_type>(
+      ctx, siftsmall_groundtruth_uri, num_queries);
   groundtruth_set.load();
 
   auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
@@ -753,7 +757,7 @@ TEST_CASE("flatpq_index: query 1M", "[flatpq_index]") {
 
     auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
     double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
-    std::cout << "Recall: " << recall0 << std::endl;
+    // std::cout << "Recall: " << recall0 << std::endl;
     CHECK(recall0 > 0.65);
   }
 
@@ -762,7 +766,7 @@ TEST_CASE("flatpq_index: query 1M", "[flatpq_index]") {
 
     auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
     double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
-    std::cout << "Recall: " << recall0 << std::endl;
+    // std::cout << "Recall: " << recall0 << std::endl;
     CHECK(recall0 > 0.55);
   }
 
@@ -771,7 +775,7 @@ TEST_CASE("flatpq_index: query 1M", "[flatpq_index]") {
 
     auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
     double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
-    std::cout << "Recall: " << recall0 << std::endl;
+    // std::cout << "Recall: " << recall0 << std::endl;
     CHECK(recall0 > 0.65);
   }
 

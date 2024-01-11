@@ -406,7 +406,7 @@ class IndexIVFFlat {
     return feature_datatype_;
   }
 
-   inline auto feature_type_string() const {
+  inline auto feature_type_string() const {
     return datatype_to_string(feature_datatype_);
   }
 

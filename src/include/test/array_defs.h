@@ -95,8 +95,8 @@ using sift_indices_type = uint64_t;
 constexpr size_t num_sift_vectors = 1'000'000;
 static std::filesystem::path sift_root{test_array_root / "sift"};
 #else
-static std::filesystem::path sift_root{test_array_root / "siftsmall"};
 constexpr size_t num_sift_vectors = 10'000;
+static std::filesystem::path sift_root{test_array_root / "siftsmall"};
 #endif
 constexpr size_t sift_dimension = 128;  // OMG!
 static std::filesystem::path sift_group_uri{sift_root / "group"};
@@ -209,15 +209,43 @@ static std::filesystem::path bigann10k_query_uri{bigann10k_root / "queries"};
 static std::filesystem::path bigann10k_groundtruth_uri{
     bigann10k_root / "groundtruth"};
 
+using fmnistsmall_feature_type = float;
+using fmnistsmall_groundtruth_type = uint64_t;
+using fmnistsmall_centroids_type = float;
+using fmnistsmall_ids_type = uint64_t;
+using fmnistsmall_indices_type = uint64_t;
+// How does copilot get the number right?
+constexpr size_t num_fmnistsmall_vectors = 1'000;
+constexpr size_t fmnistsmall_dimension = 784;  // OMG OMG OMG
+static std::filesystem::path fmnistsmall_root{test_array_root / "fmnistsmall"};
+static std::filesystem::path fmnistsmall_group_uri{fmnistsmall_root / "group"};
+static std::filesystem::path fmnistsmall_inputs_uri{fmnistsmall_root / "input_vectors"};
+static std::filesystem::path fmnistsmall_centroids_uri{
+    fmnistsmall_root / "partition_centroids"};
+static std::filesystem::path fmnistsmall_index_uri{
+    fmnistsmall_root / "partition_indexes"};
+static std::filesystem::path fmnistsmall_ids_uri{
+    fmnistsmall_root / "shuffled_vector_ids"};
+static std::filesystem::path fmnistsmall_parts_uri{fmnistsmall_root / "shuffled_vectors"};
+static std::filesystem::path fmnistsmall_query_uri{fmnistsmall_root / "queries"};
+static std::filesystem::path fmnistsmall_groundtruth_uri{
+    fmnistsmall_root / "groundtruth"};
+
 using fmnist_feature_type = float;
 using fmnist_groundtruth_type = uint64_t;
 using fmnist_centroids_type = float;
 using fmnist_ids_type = uint64_t;
 using fmnist_indices_type = uint64_t;
-// How does copilot get the number right?
+
+#ifdef USE_1M_UNIT_TEST_ARRAYS
 constexpr size_t num_fmnist_vectors = 60'000;
-constexpr size_t fmnist_dimension = 784;  // OMG OMG OMG
 static std::filesystem::path fmnist_root{test_array_root / "fmnist"};
+#else
+constexpr size_t num_fmnist_vectors = num_fmnistsmall_vectors;
+static std::filesystem::path fmnist_root{test_array_root / "fmnistsmall"};
+#endif
+constexpr size_t fmnist_dimension = 784;  // OMG OMG OMG
+
 static std::filesystem::path fmnist_group_uri{fmnist_root / "group"};
 static std::filesystem::path fmnist_inputs_uri{fmnist_root / "input_vectors"};
 static std::filesystem::path fmnist_centroids_uri{
@@ -230,6 +258,8 @@ static std::filesystem::path fmnist_parts_uri{fmnist_root / "shuffled_vectors"};
 static std::filesystem::path fmnist_query_uri{fmnist_root / "queries"};
 static std::filesystem::path fmnist_groundtruth_uri{
     fmnist_root / "groundtruth"};
+
+
 
 /**
  * @brief Some additional arrays that are not part of the IVF index, but

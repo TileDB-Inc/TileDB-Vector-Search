@@ -78,6 +78,8 @@ class ivf_flat_index_group
   static const int32_t default_domain{std::numeric_limits<int32_t>::max() - 1};
   static const int32_t default_tile_extent{100'000};
   static const int32_t tile_size_bytes{64 * 1024 * 1024};
+  // static const int32_t default_tile_extent{1'000};
+  // static const int32_t tile_size_bytes{1024 * 1024};
 
  public:
   using index_group_metadata_type = ivf_flat_index_metadata;

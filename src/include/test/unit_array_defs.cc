@@ -140,8 +140,34 @@ std::vector<std::filesystem::path> siftsmall_files{
 };
 
 #if 0
-TEST_CASE("array_defs: quick hack to create index vectors", "[array_defs]") {
+TEST_CASE("array_defs: quick hack to create fmnistsmall", "[array_defs]") {
   tiledb::Context ctx;
+  auto fmnistsmall_inputs = tdbColMajorPreLoadMatrix<fmnistsmall_feature_type>(
+      ctx, fmnist_inputs_uri, num_fmnistsmall_vectors);
+  write_matrix(ctx, fmnistsmall_inputs, fmnistsmall_inputs_uri);
+  auto fmnistsmall_queries = tdbColMajorPreLoadMatrix<fmnistsmall_feature_type>(
+      ctx, fmnist_query_uri, 500);
+  write_matrix(ctx, fmnistsmall_queries, fmnistsmall_query_uri);
+}
+#endif
+#if 0
+TEST_CASE("array_defs: quick hack to create *small groups", "[array_defs]") {
+  tiledb::Context ctx;
+  {
+    auto fmnistsmall_inputs =
+        tdbColMajorPreLoadMatrix<fmnistsmall_feature_type>(
+            ctx, fmnistsmall_inputs_uri, num_fmnistsmall_vectors);
+
+    using index = ivf_flat_index<
+        fmnistsmall_feature_type,
+        fmnistsmall_ids_type,
+        fmnistsmall_indices_type>;
+    size_t nlist = (size_t)std::sqrt(num_fmnistsmall_vectors);
+    auto idx = index(nlist, 10, 1.e-4);
+    idx.train(fmnistsmall_inputs);
+    idx.add(fmnistsmall_inputs);
+    idx.write_index(ctx, fmnistsmall_group_uri, true);
+  }
 
   {
     auto training_set =
@@ -156,17 +182,19 @@ TEST_CASE("array_defs: quick hack to create index vectors", "[array_defs]") {
     auto idx = index(nlist, 10, 1.e-4);
     idx.train(training_set);
     idx.add(training_set);
-    idx.write_index_arrays(
-        ctx,
-        siftsmall_centroids_uri,
-        siftsmall_parts_uri,
-        siftsmall_ids_uri,
-        siftsmall_index_uri,
-        true);
+    idx.write_index(ctx, siftsmall_group_uri, true);
+
+    //    idx.write_index_arrays(
+    //        ctx,
+    //        siftsmall_centroids_uri,
+    //        siftsmall_parts_uri,
+    //        siftsmall_ids_uri,
+    //        siftsmall_index_uri,
+    //        true);
   }
   {
-    auto training_set =
-        tdbColMajorMatrix<siftsmall_uint8_feature_type>(ctx, siftsmall_uint8_inputs_uri);
+    auto training_set = tdbColMajorMatrix<siftsmall_uint8_feature_type>(
+        ctx, siftsmall_uint8_inputs_uri);
 
     using index = ivf_flat_index<
         siftsmall_uint8_feature_type,
@@ -175,13 +203,7 @@ TEST_CASE("array_defs: quick hack to create index vectors", "[array_defs]") {
     auto idx = index((size_t)std::sqrt(num_siftsmall_uint8_vectors), 10, 1.e-4);
     idx.train(training_set, kmeans_init::kmeanspp);
     idx.add(training_set);
-    idx.write_index_arrays(
-        ctx,
-        siftsmall_uint8_centroids_uri,
-        siftsmall_uint8_parts_uri,
-        siftsmall_uint8_ids_uri,
-        siftsmall_uint8_index_uri,
-        true);
+    idx.write_index(ctx, siftsmall_uint8_group_uri, true);
   }
   {
     auto training_set =
@@ -194,13 +216,7 @@ TEST_CASE("array_defs: quick hack to create index vectors", "[array_defs]") {
     auto idx = index((size_t)std::sqrt(num_bigann10k_vectors), 10, 1.e-4);
     idx.train(training_set, kmeans_init::kmeanspp);
     idx.add(training_set);
-    idx.write_index_arrays(
-        ctx,
-        bigann10k_centroids_uri,
-        bigann10k_parts_uri,
-        bigann10k_ids_uri,
-        bigann10k_index_uri,
-        true);
+    idx.write_index(ctx, bigann10k_group_uri, true);
   }
 }
 #endif

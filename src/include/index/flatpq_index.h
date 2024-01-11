@@ -680,8 +680,8 @@ class flatpq_index {
     double total_distance = 0.0;
     double total_normalizer = 0.0;
 
-    debug_slice(centroids_, "verify pq encoding centroids");
-    debug_slice(feature_vectors, "verify pq encoding feature vectors");
+    // debug_slice(centroids_, "verify pq encoding centroids");
+    // debug_slice(feature_vectors, "verify pq encoding feature vectors");
 
     auto debug_vectors =
         ColMajorMatrix<float>(dimension_, num_vectors(feature_vectors));
@@ -701,6 +701,7 @@ class flatpq_index {
           re[j] = centroid[j];
         }
       }
+      // std::copy(begin(re), end(re), begin(debug_vectors[i]));
 
       // Measure the distance between the original vector and the reconstructed
       // vector and accumulate into the total distance as well as the total
@@ -709,7 +710,7 @@ class flatpq_index {
       total_distance += distance;
       total_normalizer += sum_of_squares(feature_vectors[i]);
     }
-    debug_slice(debug_vectors, "verify pq encoding re");
+    // debug_slice(debug_vectors, "verify pq encoding re");
 
     // Return the total accumulated distance between the encoded and original
     // vectors, divided by the total weight of the original feature vectors

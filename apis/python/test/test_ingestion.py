@@ -120,10 +120,13 @@ def test_ivf_flat_ingestion_u8(tmp_path):
         input_vectors_per_work_item=int(size / 10),
     )
     _, result = index.query(queries, k=k, nprobe=nprobe)
+    # logging.info(f"accuracy: {accuracy(result, gt_i)}, MINIMUM_ACCURACY: {MINIMUM_ACCURACY}")
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_ram = IVFFlatIndex(uri=index_uri, memory_budget=int(size / 10))
     _, result = index_ram.query(queries, k=k, nprobe=nprobe)
+    # logging.info(f"accuracy: {accuracy(result, gt_i)}, MINIMUM_ACCURACY: {MINIMUM_ACCURACY}")
+
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     _, result = index_ram.query(
