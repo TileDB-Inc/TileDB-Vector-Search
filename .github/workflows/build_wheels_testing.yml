@@ -33,7 +33,7 @@ jobs:
           echo "release_tag" && echo $release_tag
           echo "pwd" && pwd
           echo "ls" && ls
-          cd apis/python && pip install . & cd ../..
+          cd apis/python && pip install . && cd ../..
           echo "pwd" && pwd
           echo "ls" && ls
           echo "pip freeze" && pip freeze
