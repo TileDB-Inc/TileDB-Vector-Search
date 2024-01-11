@@ -18,7 +18,12 @@ TEST_CASE("memory: move unique_ptr scalar", "[memory]") {
 }
 
 TEST_CASE("memory: move unique_ptr array", "[memory]") {
+
+  // This will default initialize the array
   std::unique_ptr<double[]> storage_{new double[42]};
+
+  // default-initialization does not zero-initialize
+  std::fill(storage_.get(), storage_.get() + 42, 0.0);
   CHECK(std::equal(
       storage_.get(),
       storage_.get() + 42,
