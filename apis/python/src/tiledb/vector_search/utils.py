@@ -4,6 +4,14 @@ import numpy as np
 
 import tiledb
 
+def add_to_group(group, uri, name):
+    '''
+    Adds an array to a group. Automatically infers whether to use a relative path or absolute path.
+    '''
+    if 'tiledb://' in uri or 's3://' in uri:
+        group.add(uri, name=name)
+    else:
+        group.add(name, name=name, relative=True)
 
 def _load_vecs_t(uri, dtype, ctx_or_config=None):
     with tiledb.scope_ctx(ctx_or_config) as ctx:
