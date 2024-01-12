@@ -6,7 +6,7 @@ import tiledb
 
 def add_to_group(group, uri, name):
     '''
-    Adds an array to a group. Automatically infers whether to use a relative path or absolute path.
+    Adds an object to a group. Automatically infers whether to use a relative path or absolute path.
     '''
     if 'tiledb://' in uri or 's3://' in uri:
         group.add(uri, name=name)
