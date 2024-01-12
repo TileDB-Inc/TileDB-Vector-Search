@@ -61,7 +61,7 @@ enum class SearchPath { path_and_search, path_only };
 
 /**
  * An augmented distance functor that counts the number of distance
- * invocations.
+ * invocations.  Used for test/debugging/profiling.
  */
 struct counting_sum_of_squares_distance {
   size_t num_comps_{0};
@@ -1005,6 +1005,10 @@ class vamana_index {
         feature_vectors_.data() +
             ::dimension(feature_vectors_) * ::num_vectors(feature_vectors_),
         rhs.feature_vectors_.data());
+  }
+ public:
+  void dump_edgelist__(const std::string& str) {
+    ::dump_edgelist(str, graph_);
   }
 };
 

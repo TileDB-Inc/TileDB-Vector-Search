@@ -32,7 +32,7 @@
  *
  */
 
-#include <matplot/matplot.h>
+// #include <matplot/matplot.h>
 #include <cmath>
 #include <random>
 #include "detail/graph/adj_list.h"
@@ -82,6 +82,7 @@ int main(int argc, char* argv[]) {
   auto idx =
       detail::graph::vamana_index<float, size_t, size_t>(num_nodes, L, R, 0);
   idx.train(X);
+  idx.dump_edgelist__("edges.txt");
 
 #else
 #if 1

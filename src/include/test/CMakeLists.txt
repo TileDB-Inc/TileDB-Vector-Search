@@ -76,7 +76,7 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 # kmeans_add_exe(demo_nn-graph)
 # target_link_libraries(demo_nn-graph PUBLIC Matplot++::matplot)
 
-# kmeans_add_exe(demo_vamana)
+kmeans_add_exe(demo_vamana)
 # target_link_libraries(demo_vamana PUBLIC Matplot++::matplot)
 
 kmeans_add_exe(time_insert)
