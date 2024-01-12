@@ -1,24 +1,22 @@
-from typing import Any, Mapping, Optional, Callable
+from typing import Any, Mapping, Optional, List
 from functools import partial
 
 import numpy as np
 from tiledb.cloud.dag import Mode
+from tiledb.vector_search.object_api import ObjectIndex
+from tiledb.vector_search.object_readers import ObjectReader, ObjectPartition
+from tiledb.vector_search.embeddings import ObjectEmbedding
 
 
-def generate_embeddings(
-    object_array_uri: str,
+def ingest_embeddings(
+    object_index: ObjectIndex,
     embeddings_uri: str,
     external_ids_uri: str,
-    dimensions: int,
-    vector_type: np.dtype,
-    object_id_dim: int,
-    load_embedding_model_udf: str,
-    embedding_udf: str,
-    object_array_timestamp=None,
     index_timestamp: int = None,
     workers: int = -1,
-    objects_per_work_item: int = -1,
-    max_tasks_per_stage: int= -1,
+    objects_per_partition = -1,
+    object_partitions_per_task: int = -1,
+    max_tasks_per_stage: int = -1,
     verbose: bool = False,
     trace_id: Optional[str] = None,
     mode: Mode = Mode.LOCAL,
@@ -36,7 +34,6 @@ def generate_embeddings(
     from tiledb.cloud.rest_api import models
     from tiledb.cloud.utilities import get_logger, set_aws_context
 
-    OBJECTS_PER_WORK_ITEM = 100
     MAX_TASKS_PER_STAGE = 100
     DEFAULT_IMG_NAME = "3.9-vectorsearch"
 
@@ -76,56 +73,45 @@ def generate_embeddings(
     # UDFs
     # --------------------------------------------------------------------
     def compute_embeddings_udf(
-        object_array_uri: str,
+        object_reader: ObjectReader,
+        object_embedding: ObjectEmbedding,
+        partitions: List[ObjectPartition],
         embeddings_uri: str,
         external_ids_uri: str,
-        dimensions: int,
-        vector_type: np.dtype,
-        object_id_dim: str,
-        load_embedding_model_udf: str,
-        embedding_udf: str,
-        start: int,
-        end: int,
-        batch: int,
-        object_array_timestamp=None,
         index_timestamp: int = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
         config: Optional[Mapping[str, Any]] = None,
     ):
-        import base64
-        import cloudpickle
         import numpy as np
         import tiledb.cloud
 
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
-            load_embedding_model = cloudpickle.loads(base64.b64decode(load_embedding_model_udf))
-            embedding = cloudpickle.loads(base64.b64decode(embedding_udf))
-
             logger.debug("Loading model...")
-            model = load_embedding_model()
+            object_embedding.load()
             logger.debug("Model loaded")
+            dimensions = object_embedding.dimensions()
+            vector_type = object_embedding.vector_type()
 
             logger.debug("embeddings_uri %s external_ids_uri %s", embeddings_uri, external_ids_uri)
             embeddings_array = tiledb.open(embeddings_uri, "w", timestamp=index_timestamp)
             external_ids_array = tiledb.open(external_ids_uri, "w", timestamp=index_timestamp)
-            object_array = tiledb.open(object_array_uri, "r", timestamp=object_array_timestamp)
-            for part in range(start, end, batch):
-                part_end = part + batch
-                if part_end > end:
-                    part_end = end
+            for partition in partitions:
+                logger.debug(f"Computing partition: {partition.index_slice()}")
+                logger.debug("Reading objects...")
+                objects, metadata = object_reader.read_objects(partition)
 
-                logger.debug("Loading objects start_pos: %d, end_pos: %d", part, part_end)
-                data = object_array[part:part_end]
+                logger.debug("Embedding objects...")
+                embeddings = object_embedding.embed(objects, metadata)
 
-                logger.debug("Embedding objects start_pos: %d, end_pos: %d", part, part_end)
-                embeddings = embedding(model, data)
+                partition_index_slice = partition.index_slice()
+                index_start = partition_index_slice[0]
+                index_end = partition_index_slice[1]
+                logger.debug("Write embeddings index_start: %d, index_end: %d", index_start, index_end)
+                embeddings_array[0:dimensions, index_start:index_end] = np.transpose(embeddings).astype(vector_type)
+                external_ids_array[index_start:index_end] = objects["ids"]
 
-                logger.debug("Write embeddings start_pos: %d, end_pos: %d", part, part_end)
-                embeddings_array[0:dimensions, part:part_end] = np.transpose(embeddings).astype(vector_type)
-                external_ids_array[part:part_end] = data[object_id_dim]
-            object_array.close()
             embeddings_array.close()
             external_ids_array.close()
 
@@ -140,18 +126,12 @@ def generate_embeddings(
         return d.submit_local(func, *args, **kwargs)
 
     def create_dag(
-        object_array_uri: str,
+        object_index: ObjectIndex,
         embeddings_uri: str,
         external_ids_uri: str,
-        dimensions: int,
-        vector_type: np.dtype,
-        object_id_dim: int,
-        load_embedding_model_udf: str,
-        embedding_udf: str,
-        objects_per_work_item: int,
-        object_work_items_per_worker: int,
-        size: int,
-        object_array_timestamp=None,
+        partitions: List[ObjectPartition],
+        object_partitions_per_worker: int,
+        object_work_tasks: int,
         index_timestamp: int = None,
         workers: int = -1,
         verbose: bool = False,
@@ -184,30 +164,20 @@ def generate_embeddings(
         if mode == Mode.BATCH or mode == Mode.REALTIME:
             submit = d.submit
 
-        object_batch_size = (
-            objects_per_work_item * object_work_items_per_worker
-        )
-
         task_id = 0
-        for i in range(0, size, object_batch_size):
+        num_partitions = len(partitions)
+        for i in range(0, num_partitions, object_partitions_per_worker):
             start = i
-            end = i + object_batch_size
-            if end > size:
-                end = size
+            end = i + object_partitions_per_worker
+            if end > num_partitions:
+                end = num_partitions
             submit(
                 compute_embeddings_udf,
-                object_array_uri=object_array_uri,
+                object_reader=object_index.object_reader,
+                object_embedding=object_index.embedding,
+                partitions=partitions[start:end],
                 embeddings_uri=embeddings_uri,
                 external_ids_uri=external_ids_uri,
-                dimensions=dimensions,
-                vector_type=vector_type,
-                object_id_dim=object_id_dim,
-                load_embedding_model_udf=load_embedding_model_udf,
-                embedding_udf=embedding_udf,
-                start=start,
-                end=end,
-                batch=objects_per_work_item,
-                object_array_timestamp=object_array_timestamp,
                 index_timestamp=index_timestamp,
                 verbose=verbose,
                 trace_id=trace_id,
@@ -225,53 +195,40 @@ def generate_embeddings(
 
     with tiledb.scope_ctx(ctx_or_config=config):
         logger = setup(config, verbose)
-        logger.debug("Generating embeddings for %r", object_array_uri)
+        logger.debug("Generating embeddings")
         if index_timestamp is None:
             index_timestamp = int(time.time() * 1000)
 
-        with tiledb.open(object_array_uri, mode='r', timestamp=object_array_timestamp) as object_array:
-            nonempty_object_array_domain = object_array.nonempty_domain()[0]
-            size = nonempty_object_array_domain[1] + 1 - nonempty_object_array_domain[0]
-
-        if objects_per_work_item == -1:
-            objects_per_work_item = OBJECTS_PER_WORK_ITEM
-        object_work_items = int(math.ceil(size / objects_per_work_item))
-        object_work_tasks = object_work_items
-        object_work_items_per_worker = 1
+        print(f"objects_per_partition: {objects_per_partition}")
+        partitions = object_index.object_reader.get_partitions(partition_size=objects_per_partition)
+        object_partitions = len(partitions)
+        object_partitions_per_worker = 1
         if max_tasks_per_stage == -1:
             max_tasks_per_stage = MAX_TASKS_PER_STAGE
-        if object_work_tasks > max_tasks_per_stage:
-            object_work_items_per_worker = int(
-                math.ceil(object_work_items / max_tasks_per_stage)
+        object_work_tasks = object_partitions
+        if object_partitions > max_tasks_per_stage:
+            object_partitions_per_worker = int(
+                math.ceil(object_partitions / max_tasks_per_stage)
             )
             object_work_tasks = max_tasks_per_stage
-        logger.debug("objects_per_work_item %d", objects_per_work_item)
-        logger.debug("object_work_items %d", object_work_items)
+        logger.debug("object_partitions %d", object_partitions)
         logger.debug("object_work_tasks %d", object_work_tasks)
-        logger.debug(
-            "object_work_items_per_worker %d",
-            object_work_items_per_worker,
-        )
+        logger.debug("object_partitions_per_worker %d", object_partitions_per_worker)
         if mode == Mode.BATCH:
             if workers == -1:
                 workers = 10
         else:
-            workers = 1
+            if workers == -1:
+                workers = 1
 
         logger.debug("Creating ingestion graph")
         d = create_dag(
-            object_array_uri=object_array_uri,
+            object_index=object_index,
             embeddings_uri=embeddings_uri,
             external_ids_uri=external_ids_uri,
-            dimensions=dimensions,
-            vector_type=vector_type,
-            object_id_dim=object_id_dim,
-            load_embedding_model_udf=load_embedding_model_udf,
-            embedding_udf=embedding_udf,
-            objects_per_work_item=objects_per_work_item,
-            object_work_items_per_worker=object_work_items_per_worker,
-            size=size,
-            object_array_timestamp=object_array_timestamp,
+            partitions=partitions,
+            object_partitions_per_worker=object_partitions_per_worker,
+            object_work_tasks=object_work_tasks,
             index_timestamp=index_timestamp,
             workers=workers,
             verbose=verbose,
