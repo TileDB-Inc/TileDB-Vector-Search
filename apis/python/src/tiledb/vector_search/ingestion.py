@@ -7,7 +7,7 @@ from tiledb.cloud.dag import Mode
 
 from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION, validate_storage_version
-
+from tiledb.vector_search.utils import add_to_group
 
 def ingest(
     index_type: str,
@@ -171,6 +171,7 @@ def ingest(
             raise ValueError(f"{variable} should only be provided with index_type IVF_FLAT")
 
     # use index_group_uri for internal clarity
+    print(f"[ingestion@ingest] index_uri {index_uri}")
     index_group_uri = index_uri
 
     CENTROIDS_ARRAY_NAME = storage_formats[storage_version]["CENTROIDS_ARRAY_NAME"]
@@ -348,7 +349,8 @@ def ingest(
         )
         logger.debug(input_vectors_array_schema)
         tiledb.Array.create(input_vectors_array_uri, input_vectors_array_schema)
-        group.add(input_vectors_array_uri, name=array_name)
+        # group.add(input_vectors_array_uri, name=array_name)
+        add_to_group(group, input_vectors_array_uri, array_name)
 
         input_vectors_array = tiledb.open(
             input_vectors_array_uri, "w", timestamp=index_timestamp
@@ -391,7 +393,12 @@ def ingest(
         )
         logger.debug(ids_schema)
         tiledb.Array.create(external_ids_array_uri, ids_schema)
-        group.add(external_ids_array_uri, name=IDS_ARRAY_NAME)
+        print('[ingestion@write_external_ids] writing IDS_ARRAY_NAME. group before', group)
+        print('external_ids_array_uri', external_ids_array_uri)
+        print('IDS_ARRAY_NAME', IDS_ARRAY_NAME)
+        # group.add(external_ids_array_uri, name=IDS_ARRAY_NAME)
+        add_to_group(group, external_ids_array_uri, EXTERNAL_IDS_ARRAY_NAME)
+        print('[ingestion@write_external_ids] writing IDS_ARRAY_NAME. group after', group)
 
         external_ids_array = tiledb.open(
             external_ids_array_uri, "w", timestamp=index_timestamp
@@ -412,6 +419,7 @@ def ingest(
         logger: logging.Logger,
         storage_version: str,
     ) -> None:
+        print(f"[ingestion@create_arrays] group.uri {group.uri}")
         if index_type == "FLAT":
             if not arrays_created:
                 flat_index.create(
@@ -447,6 +455,7 @@ def ingest(
             partial_write_array_parts_uri = (
                 f"{partial_write_array_dir_uri}/{PARTS_ARRAY_NAME}"
             )
+            print('[ingestion@create_arrays] partial_write_array_dir_uri', partial_write_array_dir_uri, 'partial_write_array_parts_uri', partial_write_array_parts_uri)
 
             try:
                 tiledb.group_create(partial_write_array_dir_uri)
@@ -458,26 +467,29 @@ def ingest(
                     )
                 raise err
             partial_write_array_group = tiledb.Group(partial_write_array_dir_uri, "w")
-            group.add(partial_write_array_dir_uri, name=PARTIAL_WRITE_ARRAY_DIR)
+            print('[ingestion@create_arrays] partial_write_array_group', partial_write_array_group)
+            # group.add(partial_write_array_dir_uri, name=PARTIAL_WRITE_ARRAY_DIR)
+            add_to_group(group, partial_write_array_dir_uri, PARTIAL_WRITE_ARRAY_DIR)
 
             try:
                 tiledb.group_create(partial_write_array_index_uri)
             except tiledb.TileDBError as err:
                 message = str(err)
                 if "already exists" in message:
-                    logger.debug(
+                    print(
                         f"Group '{partial_write_array_index_uri}' already exists"
                     )
                 raise err
-            partial_write_array_group.add(
-                partial_write_array_index_uri, name=INDEX_ARRAY_NAME
-            )
+            # partial_write_array_group.add(
+            #     partial_write_array_index_uri, name=INDEX_ARRAY_NAME
+            # )
+            add_to_group(partial_write_array_group, partial_write_array_index_uri, INDEX_ARRAY_NAME)
             partial_write_array_index_group = tiledb.Group(
                 partial_write_array_index_uri, "w"
             )
 
             if not tiledb.array_exists(partial_write_array_ids_uri):
-                logger.debug("Creating temp ids array")
+                print("Creating temp ids array")
                 ids_array_rows_dim = tiledb.Dim(
                     name="rows",
                     domain=(0, MAX_INT32),
@@ -500,9 +512,10 @@ def ingest(
                 )
                 logger.debug(ids_schema)
                 tiledb.Array.create(partial_write_array_ids_uri, ids_schema)
-                partial_write_array_group.add(
-                    partial_write_array_ids_uri, name=IDS_ARRAY_NAME
-                )
+                # partial_write_array_group.add(
+                #     partial_write_array_ids_uri, name=IDS_ARRAY_NAME
+                # )
+                add_to_group(partial_write_array_group, partial_write_array_ids_uri, IDS_ARRAY_NAME)
 
             if not tiledb.array_exists(partial_write_array_parts_uri):
                 logger.debug("Creating temp parts array")
@@ -534,9 +547,11 @@ def ingest(
                 logger.debug(parts_schema)
                 logger.debug(partial_write_array_parts_uri)
                 tiledb.Array.create(partial_write_array_parts_uri, parts_schema)
-                partial_write_array_group.add(
-                    partial_write_array_parts_uri, name=PARTS_ARRAY_NAME
-                )
+                # partial_write_array_group.add(
+                #     partial_write_array_parts_uri, name=PARTS_ARRAY_NAME
+                # )
+                add_to_group(partial_write_array_group, partial_write_array_parts_uri, PARTS_ARRAY_NAME)
+
             for part in range(input_vectors_work_items):
                 part_index_uri = partial_write_array_index_uri + "/" + str(part)
                 if not tiledb.array_exists(part_index_uri):
@@ -563,7 +578,8 @@ def ingest(
                     )
                     logger.debug(index_schema)
                     tiledb.Array.create(part_index_uri, index_schema)
-                    partial_write_array_index_group.add(part_index_uri, name=str(part))
+                    # partial_write_array_index_group.add(part_index_uri, name=str(part))
+                    add_to_group(partial_write_array_index_group, part_index_uri, str(part))
             if updates_uri is not None:
                 part_index_uri = partial_write_array_index_uri + "/additions"
                 if not tiledb.array_exists(part_index_uri):
@@ -590,7 +606,8 @@ def ingest(
                     )
                     logger.debug(index_schema)
                     tiledb.Array.create(part_index_uri, index_schema)
-                    partial_write_array_index_group.add(part_index_uri, name="additions")
+                    # partial_write_array_index_group.add(part_index_uri, name="additions")
+                    add_to_group(partial_write_array_index_group, part_index_uri, "additions")
             partial_write_array_group.close()
             partial_write_array_index_group.close()
 
@@ -2070,6 +2087,17 @@ def ingest(
 
         group = tiledb.Group(index_group_uri, "r")
         temp_size = int(group.meta.get("temp_size", "0"))
+        print('group', group)
+        # print("group[CENTROIDS_ARRAY_NAME].uri", group[CENTROIDS_ARRAY_NAME].uri)
+        # print("group[INDEX_ARRAY_NAME].uri", group[INDEX_ARRAY_NAME].uri)
+        print("group[IDS_ARRAY_NAME].uri", group[IDS_ARRAY_NAME])
+        print("group[PARTS_ARRAY_NAME].uri", group[PARTS_ARRAY_NAME])
+        print("group[IDS_ARRAY_NAME].uri", group[IDS_ARRAY_NAME].uri)
+        print("group[PARTS_ARRAY_NAME].uri", group[PARTS_ARRAY_NAME].uri)
+        # print("group[INPUT_VECTORS_ARRAY_NAME].uri", group[INPUT_VECTORS_ARRAY_NAME].uri)
+        # print("group[TRAINING_INPUT_VECTORS_ARRAY_NAME].uri", group[TRAINING_INPUT_VECTORS_ARRAY_NAME].uri)
+        # print("group[EXTERNAL_IDS_ARRAY_NAME].uri", group[EXTERNAL_IDS_ARRAY_NAME].uri)
+        # print("group[PARTIAL_WRITE_ARRAY_DIR].uri", group[PARTIAL_WRITE_ARRAY_DIR].uri)
         group.close()
         group = tiledb.Group(index_group_uri, "w")
         if index_timestamp is None:
@@ -2083,6 +2111,8 @@ def ingest(
         group.close()
         consolidate_and_vacuum(index_group_uri=index_group_uri, config=config)
 
+
+        print('[ingestion] Returning index which we created')
         if index_type == "FLAT":
             return flat_index.FlatIndex(uri=index_group_uri, config=config)
         elif index_type == "IVF_FLAT":

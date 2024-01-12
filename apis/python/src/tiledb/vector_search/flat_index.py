@@ -9,6 +9,8 @@ from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
                                                   storage_formats,
                                                   validate_storage_version)
 
+from tiledb.vector_search.utils import add_to_group
+
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 TILE_SIZE_BYTES = 128000000  # 128MB
@@ -34,13 +36,16 @@ class FlatIndex(index.Index):
         timestamp=None,
         **kwargs,
     ):
+        print('[flat_index@__init__()] ==================================================')
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
         self._index = None
+        print('[flat_index@__init__()] self.group', self.group)
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
             + self.index_version
         ].uri
+        print('[flat_index@__init__()] PARTS_ARRAY_NAME', self.db_uri)
         schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
         self.dimensions = schema.shape[0]
         if self.base_size == -1:
@@ -57,6 +62,7 @@ class FlatIndex(index.Index):
                 storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
                 + self.index_version
             ].uri
+            print('[flat_index@__init__()] IDS_ARRAY_NAME', self.ids_uri)
         else:
             self.ids_uri = ""
         if self.size > 0:
@@ -114,7 +120,6 @@ class FlatIndex(index.Index):
 
         return np.transpose(np.array(d)), np.transpose(np.array(i))
 
-
 def create(
     uri: str,
     dimensions: int,
@@ -136,6 +141,7 @@ def create(
         config=config,
     )
     with tiledb.scope_ctx(ctx_or_config=config):
+        print('[flat_index@create()] uri', uri)
         group = tiledb.Group(uri, "w")
         tile_size = TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions
         ids_array_name = storage_formats[storage_version]["IDS_ARRAY_NAME"]
@@ -165,7 +171,10 @@ def create(
             tile_order="col-major",
         )
         tiledb.Array.create(ids_uri, ids_schema)
-        group.add(ids_uri, name=ids_array_name)
+        print('[flat_index@create()] group before', group.uri, group)
+        print('[flat_index@create()] ids_uri', ids_uri, 'ids_array_name', ids_array_name)
+        # group.add(ids_array_name, name=ids_array_name, relative=True)
+        add_to_group(group, ids_uri, ids_array_name)
 
         parts_array_rows_dim = tiledb.Dim(
             name="rows",
@@ -193,7 +202,9 @@ def create(
             tile_order="col-major",
         )
         tiledb.Array.create(parts_uri, parts_schema)
-        group.add(parts_uri, name=parts_array_name)
+        # group.add(parts_uri, name=parts_array_name)
+        # group.add(parts_array_name, name=parts_array_name, relative=True)
+        add_to_group(group, parts_uri, parts_array_name)
 
         external_id_dim = tiledb.Dim(
             name="external_id",
@@ -209,7 +220,9 @@ def create(
             allows_duplicates=False,
         )
         tiledb.Array.create(updates_array_uri, updates_schema)
-        group.add(updates_array_uri, name=updates_array_name)
+        # group.add(updates_array_uri, name=updates_array_name)
+        # group.add(updates_array_name, name=updates_array_name, relative=True)
+        add_to_group(group, updates_array_uri, updates_array_name)
 
         group.close()
         return FlatIndex(uri=uri, config=config)

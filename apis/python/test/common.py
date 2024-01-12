@@ -1,7 +1,7 @@
 import os
 import random
 import string
-
+import shutil
 import numpy as np
 
 import tiledb
@@ -298,7 +298,19 @@ def check_equals(result_d, result_i, expected_result_d, expected_result_i):
     assert result_i == expected_result_i, f"result_i: {result_i} != expected_result_i: {expected_result_i}"
     assert result_d == expected_result_d, f"result_d: {result_d} != expected_result_d: {expected_result_d}"
 
-# Generate random names for test array uris
 def random_name(name: str) -> str:
+    """
+    Generate random names for test array uris
+    """
     suffix = "".join(random.choices(string.ascii_letters, k=10))
     return f"zzz_unittest_{name}_{suffix}"
+
+def move_local_index_to_new_location(index_uri):
+    """
+    Moves to the index to a new location on the computer. This helps test that there are no absolute 
+    paths in the index.
+    """
+    copied_index_uri = index_uri + "_copied"
+    shutil.copytree(index_uri, copied_index_uri)
+    shutil.rmtree(index_uri)
+    return copied_index_uri
