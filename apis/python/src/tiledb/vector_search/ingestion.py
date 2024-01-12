@@ -47,7 +47,7 @@ def ingest(
     storage_version: str = STORAGE_VERSION,
     verbose: bool = False,
     trace_id: Optional[str] = None,
-    use_sklearn: bool = False,
+    use_sklearn: bool = True,
     mode: Mode = Mode.LOCAL,
     **kwargs,
 ):
@@ -129,7 +129,7 @@ def ingest(
         trace ID for logging, defaults to None
     use_sklearn: bool
         Whether to use scikit-learn's implementation of k-means clustering instead of
-        tiledb.vector_search's. Defaults to false.
+        tiledb.vector_search's. Defaults to true.
     mode: Mode
         execution mode, defaults to LOCAL use BATCH for distributed execution
     """
@@ -933,7 +933,7 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
-        use_sklearn: bool = False
+        use_sklearn: bool = True
     ):
         from sklearn.cluster import KMeans
 
@@ -1044,7 +1044,7 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
-        use_sklearn: bool = False,
+        use_sklearn: bool = True,
     ):
         import tiledb.cloud
         from sklearn.cluster import KMeans
@@ -1692,7 +1692,7 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
-        use_sklearn: bool = False,
+        use_sklearn: bool = True,
         mode: Mode = Mode.LOCAL,
     ) -> dag.DAG:
         if mode == Mode.BATCH:
