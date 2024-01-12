@@ -891,7 +891,7 @@ def test_kmeans():
 
     assert tdb_score < 1.5 * sklearn_score
 
-def test_ingest_with_training_source_uri_f32(tmp_path):
+def test_ivf_flat_ingestion_with_training_source_uri_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3], [4.0, 4.1, 4.2, 4.3], [5.0, 5.1, 5.2, 5.3]], dtype=np.float32)
     create_manual_dataset_f32_only_data(data=data, path=dataset_dir)
@@ -922,7 +922,7 @@ def test_ingest_with_training_source_uri_f32(tmp_path):
         training_source_type="F32BIN"
     )
 
-def test_ingest_with_training_source_uri_tdb(tmp_path):
+def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
     ################################################################################################
     # First set up the data.
     ################################################################################################
@@ -1027,7 +1027,7 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
         training_source_type="TILEDB_ARRAY"
     )
 
-def test_ingest_with_training_source_uri_numpy(tmp_path):
+def test_ivf_flat_ingestion_with_training_source_uri_numpy(tmp_path):
     ################################################################################################
     # First set up the data.
     ################################################################################################

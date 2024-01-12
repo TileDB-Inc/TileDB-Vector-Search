@@ -169,7 +169,6 @@ def ingest(
             raise ValueError(f"{variable} should only be provided with index_type IVF_FLAT")
 
     # use index_group_uri for internal clarity
-    print(f"[ingestion@ingest] index_uri {index_uri}")
     index_group_uri = index_uri
 
     CENTROIDS_ARRAY_NAME = storage_formats[storage_version]["CENTROIDS_ARRAY_NAME"]
@@ -411,7 +410,6 @@ def ingest(
         logger: logging.Logger,
         storage_version: str,
     ) -> None:
-        print(f"[ingestion@create_arrays] group.uri {group.uri}")
         if index_type == "FLAT":
             if not arrays_created:
                 flat_index.create(
@@ -447,7 +445,6 @@ def ingest(
             partial_write_array_parts_uri = (
                 f"{partial_write_array_dir_uri}/{PARTS_ARRAY_NAME}"
             )
-            print('[ingestion@create_arrays] partial_write_array_dir_uri', partial_write_array_dir_uri, 'partial_write_array_parts_uri', partial_write_array_parts_uri)
 
             try:
                 tiledb.group_create(partial_write_array_dir_uri)
@@ -476,7 +473,6 @@ def ingest(
             )
 
             if not tiledb.array_exists(partial_write_array_ids_uri):
-                print("Creating temp ids array")
                 ids_array_rows_dim = tiledb.Dim(
                     name="rows",
                     domain=(0, MAX_INT32),

@@ -35,16 +35,13 @@ class FlatIndex(index.Index):
         timestamp=None,
         **kwargs,
     ):
-        print('[flat_index@__init__()] ==================================================')
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
         self._index = None
-        print('[flat_index@__init__()] self.group', self.group)
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
             + self.index_version
         ].uri
-        print('[flat_index@__init__()] PARTS_ARRAY_NAME', self.db_uri)
         schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
         self.dimensions = schema.shape[0]
         if self.base_size == -1:
@@ -61,7 +58,6 @@ class FlatIndex(index.Index):
                 storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
                 + self.index_version
             ].uri
-            print('[flat_index@__init__()] IDS_ARRAY_NAME', self.ids_uri)
         else:
             self.ids_uri = ""
         if self.size > 0:
@@ -118,6 +114,7 @@ class FlatIndex(index.Index):
         d, i = query_vq_heap(self._db, queries_m, self._ids, k, nthreads)
 
         return np.transpose(np.array(d)), np.transpose(np.array(i))
+
 
 def create(
     uri: str,
