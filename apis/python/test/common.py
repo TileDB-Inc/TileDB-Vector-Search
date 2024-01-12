@@ -5,7 +5,7 @@ import shutil
 import numpy as np
 
 import tiledb
-
+from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSION
 
 def xbin_mmap(fname, dtype):
     n, d = map(int, np.fromfile(fname, dtype="uint32", count=2))
@@ -304,6 +304,14 @@ def random_name(name: str) -> str:
     """
     suffix = "".join(random.choices(string.ascii_letters, k=10))
     return f"zzz_unittest_{name}_{suffix}"
+
+def check_training_input_vectors(index_uri: str, expected_training_sample_size: int, expected_dimensions: int):
+    training_input_vectors_uri = f"{index_uri}/{storage_formats[STORAGE_VERSION]['TRAINING_INPUT_VECTORS_ARRAY_NAME']}"
+    with tiledb.open(training_input_vectors_uri, mode="r") as src_array:
+        training_input_vectors = np.transpose(src_array[:, :]["values"])
+        assert training_input_vectors.shape[0] == expected_training_sample_size
+        assert training_input_vectors.shape[1] == expected_dimensions
+        assert not np.isnan(training_input_vectors).any()
 
 def move_local_index_to_new_location(index_uri):
     """
