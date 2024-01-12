@@ -84,7 +84,7 @@ class SomaReader(ObjectReader):
             metadata = obs_array[partition.coord_start: partition.coord_end-1]
         return {
                    "data": query.to_anndata(X_name="data").X.toarray(),
-                   "ids": np.arange(partition.coord_start, partition.coord_end)
+                   "soma_joinid": np.arange(partition.coord_start, partition.coord_end)
                }, metadata
 
     def read_objects_by_ids(self, ids):

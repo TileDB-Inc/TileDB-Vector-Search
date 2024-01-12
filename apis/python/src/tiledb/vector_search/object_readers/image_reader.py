@@ -75,7 +75,6 @@ class ImageReader(ObjectReader):
 
         with tiledb.open(self.uri, "r", timestamp=self.timestamp) as object_array:
             data = object_array[partition.start:partition.end]
-            data["ids"] = data["image_id"]
             return data, None
 
     def read_objects_by_ids(self, ids):

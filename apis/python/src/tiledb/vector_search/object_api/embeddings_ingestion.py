@@ -110,7 +110,7 @@ def ingest_embeddings(
                 index_end = partition_index_slice[1]
                 logger.debug("Write embeddings index_start: %d, index_end: %d", index_start, index_end)
                 embeddings_array[0:dimensions, index_start:index_end] = np.transpose(embeddings).astype(vector_type)
-                external_ids_array[index_start:index_end] = objects["ids"]
+                external_ids_array[index_start:index_end] = objects[object_reader.metadata_array_object_id_dim()]
 
             embeddings_array.close()
             external_ids_array.close()
