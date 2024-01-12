@@ -984,7 +984,6 @@ def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
     ################################################################################################
     # Test we can load the index again and query, update, and consolidate.
     ################################################################################################
-    # Move the index to verify there are no absolute paths.
     index_uri = move_local_index_to_new_location(index_uri)
 
     # Load the index again and query.

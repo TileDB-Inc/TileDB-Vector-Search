@@ -463,7 +463,7 @@ def ingest(
             except tiledb.TileDBError as err:
                 message = str(err)
                 if "already exists" in message:
-                    print(
+                    logger.debug(
                         f"Group '{partial_write_array_index_uri}' already exists"
                     )
                 raise err
@@ -473,6 +473,7 @@ def ingest(
             )
 
             if not tiledb.array_exists(partial_write_array_ids_uri):
+                logger.debug("Creating temp ids array")
                 ids_array_rows_dim = tiledb.Dim(
                     name="rows",
                     domain=(0, MAX_INT32),

@@ -137,7 +137,6 @@ def create(
         config=config,
     )
     with tiledb.scope_ctx(ctx_or_config=config):
-        print('[flat_index@create()] uri', uri)
         group = tiledb.Group(uri, "w")
         tile_size = TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions
         ids_array_name = storage_formats[storage_version]["IDS_ARRAY_NAME"]
