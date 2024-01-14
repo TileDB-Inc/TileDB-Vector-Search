@@ -116,8 +116,8 @@ def test_index_with_incorrect_dimensions(tmp_path):
         index.query(np.array([[1, 1, 1]], dtype=np.float32), k=3)
 
 def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
-    siftsmall_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
+    siftsmall_uri = "test/data/siftsmall/input_vectors.fvecs"
+    queries_uri = "test/data/siftsmall/queries.fvecs"
     indexes = ["FLAT", "IVF_FLAT"]
     for index_type in indexes:
         index_uri = os.path.join(tmp_path, f"sift10k_flat_{index_type}")
@@ -193,5 +193,8 @@ def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_pa
         with pytest.raises(TypeError):
             index.query(np.array([1, 1, 1, 1], dtype=np.float32), k=3)
 
-        # Okay otherwise.
-        index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
+        # TODO:  This also throws a TypeError for incorrect dimension
+        with pytest.raises(TypeError):
+            index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
+
+

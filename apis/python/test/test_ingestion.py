@@ -199,9 +199,9 @@ def test_ivf_flat_ingestion_f32(tmp_path):
 
 
 def test_ivf_flat_ingestion_fvec(tmp_path):
-    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    source_uri = "test/data/siftsmall/input_vectors.fvecs"
+    queries_uri = "test/data/siftsmall/queries.fvecs"
+    gt_uri = "test/data/siftsmall/groundtruth.ivecs"
     index_uri = os.path.join(tmp_path, "array")
 
     k = 100
