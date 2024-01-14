@@ -5,7 +5,56 @@ from tiledb.vector_search import _tiledbvspy as vspy
 import numpy as np
 import logging
 
-m1_root = "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/"
+# TODO Use python Pathlib
+# m1_root = "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/"
+# TODO Get absolute path from cmake / setup / pytest
+vector_search_root = "../../"
+vector_search_root = "/Users/lums/TileDB/TileDB-Vector-Search/"
+test_data_root = vector_search_root + "external/test_data/"
+test_array_root = test_data_root + "arrays/"
+
+siftsmall_root = test_array_root + "siftsmall/"
+siftsmall_group_uri = siftsmall_root + "group"
+siftsmall_inputs_uri = siftsmall_root + "input_vectors"
+siftsmall_centroids_uri = siftsmall_root + "partition_centroids"
+siftsmall_index_uri = siftsmall_root + "partition_indexes"
+siftsmall_ids_uri = siftsmall_root + "shuffled_vector_ids"
+siftsmall_parts_uri = siftsmall_root + "shuffled_vectors"
+siftsmall_query_uri = siftsmall_root + "queries"
+siftsmall_groundtruth_uri = siftsmall_root + "groundtruth"
+
+siftsmall_uint8_root = test_array_root + "siftsmall_uint8/"
+siftsmall_uint8_group_uri = siftsmall_uint8_root + "group"
+siftsmall_uint8_inputs_uri = siftsmall_uint8_root + "input_vectors"
+siftsmall_uint8_centroids_uri = siftsmall_uint8_root + "partition_centroids"
+siftsmall_uint8_index_uri = siftsmall_uint8_root + "partition_indexes"
+siftsmall_uint8_ids_uri = siftsmall_uint8_root + "shuffled_vector_ids"
+siftsmall_uint8_parts_uri = siftsmall_uint8_root + "shuffled_vectors"
+siftsmall_uint8_query_uri = siftsmall_uint8_root + "queries"
+siftsmall_uint8_groundtruth_uri = siftsmall_uint8_root + "groundtruth"
+
+bigann10k_root = test_array_root + "bigann10k/"
+bigann10k_group_uri = bigann10k_root + "group"
+bigann10k_inputs_uri = bigann10k_root + "input_vectors"
+bigann10k_centroids_uri = bigann10k_root + "partition_centroids"
+bigann10k_index_uri = bigann10k_root + "partition_indexes"
+bigann10k_ids_uri = bigann10k_root + "shuffled_vector_ids"
+bigann10k_parts_uri = bigann10k_root + "shuffled_vectors"
+bigann10k_query_uri = bigann10k_root + "queries"
+bigann10k_groundtruth_uri = bigann10k_root + "groundtruth"
+
+fmnistsmall_root = test_array_root + "fmnistsmall/"
+fmnistsmall_group_uri = fmnistsmall_root + "group"
+fmnistsmall_inputs_uri = fmnistsmall_root + "input_vectors"
+fmnistsmall_centroids_uri = fmnistsmall_root + "partition_centroids"
+fmnistsmall_index_uri = fmnistsmall_root + "partition_indexes"
+fmnistsmall_ids_uri = fmnistsmall_root + "shuffled_vector_ids"
+fmnistsmall_parts_uri = fmnistsmall_root + "shuffled_vectors"
+fmnistsmall_query_uri = fmnistsmall_root + "queries"
+fmnistsmall_groundtruth_uri = fmnistsmall_root + "groundtruth"
+
+'''
+m1_root = "/Users/lums/TileDB/TileDB-Vector-Search/external/test_data/arrays/"
 db_uri = m1_root + "sift/sift_base"
 centroids_uri = m1_root + "sift/centroids"
 parts_uri = m1_root + "sift/parts"
@@ -42,25 +91,30 @@ siftsmall_groundtruth_uri = m1_root + "siftsmall/siftsmall_groundtruth"
 siftsmall_query_uri = m1_root + "siftsmall/siftsmall_query"
 siftsmall_flatIVF_index_uri = m1_root + "siftsmall/flatIVF_index_siftsmall_base"
 siftsmall_flatIVF_index_uri_32_64 = m1_root + "siftsmall/flatIVF_index_siftsmall_base_32_64"
+'''
 
 # ctx = tiledb.Ctx()
 ctx = vspy.Ctx({})
 
-
 def test_construct_FeatureVector():
-    a = vspy.FeatureVector(ctx, ids_uri);
+
+    logging.info(f"siftsmall_ids_uri = {siftsmall_ids_uri}")
+    print(f"siftsmall_ids_uri = {siftsmall_ids_uri}")
+
+    a = vspy.FeatureVector(ctx, siftsmall_ids_uri);
     assert a.feature_type_string() == "uint64"
-    assert a.dimension() == 1000000
+    assert a.dimension() == 10000
 
 
 def test_feature_vector_to_numpy():
-    a = vspy.FeatureVector(ctx, ids_uri)
+    a = vspy.FeatureVector(ctx, siftsmall_ids_uri)
     assert a.feature_type_string() == "uint64"
-    assert a.dimension() == 1000000
+    assert a.dimension() == 10000
     b = np.array(a)
     assert b.ndim == 1
-    assert b.shape == (1000000,)
+    assert b.shape == (10000,)
     assert b.dtype == np.uint64
+
 
 def test_numpy_to_feature_vector_array():
     a = np.array(np.random.rand(10000), dtype=np.float32)
@@ -76,30 +130,40 @@ def test_numpy_to_feature_vector_array():
     assert c.shape == (10000,)
     assert (a == c).all()
 
+
 def test_construct_FeatureVectorArray():
-    a = vspy.FeatureVectorArray(ctx, siftsmall_base_uri)
+    a = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
     assert a.feature_type_string() == "float32"
     assert a.num_vectors() == 10000
     assert a.dimension() == 128
 
-    a = vspy.FeatureVectorArray(ctx, bigann1M_base_uri)
+    a = vspy.FeatureVectorArray(ctx, siftsmall_uint8_inputs_uri)
     assert a.feature_type_string() == "uint8"
-    assert a.num_vectors() == 1000000
+    assert a.num_vectors() == 10000
     assert a.dimension() == 128
 
+    a = vspy.FeatureVectorArray(ctx, bigann10k_inputs_uri)
+    assert a.feature_type_string() == "uint8"
+    assert a.num_vectors() == 10000
+    assert a.dimension() == 128
+
+    a = vspy.FeatureVectorArray(ctx, fmnistsmall_inputs_uri)
+    assert a.feature_type_string() == "float32"
+    assert a.num_vectors() == 1000
+    assert a.dimension() == 784
 
 def test_feature_vector_array_to_numpy():
-    a = vspy.FeatureVectorArray(ctx, siftsmall_base_uri)
+    a = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
     assert a.num_vectors() == 10000
     assert a.dimension() == 128
     b = np.array(a)
     assert b.shape == (10000, 128)
 
-    a = vspy.FeatureVectorArray(ctx, bigann1M_base_uri)
-    assert a.num_vectors() == 1000000
+    a = vspy.FeatureVectorArray(ctx, bigann10k_inputs_uri)
+    assert a.num_vectors() == 10000
     assert a.dimension() == 128
     b = np.array(a)
-    assert b.shape == (1000000, 128)
+    assert b.shape == (10000, 128)
 
 
 def test_numpy_to_feature_vector_array():
@@ -151,7 +215,7 @@ def test_numpy_to_feature_vector_array():
 #    logging.info(c[1:5, 1:5])
 
 def test_construct_IndexFlatL2():
-    a = vspy.IndexFlatL2(ctx, siftsmall_base_uri)
+    a = vspy.IndexFlatL2(ctx, siftsmall_inputs_uri)
     assert a.feature_type_string() == "float32"
     assert a.dimension() == 128
 
@@ -159,7 +223,7 @@ def test_query_IndexFlatL2():
     k_nn = 10
     num_queries = 100
 
-    a = vspy.IndexFlatL2(ctx, siftsmall_base_uri)
+    a = vspy.IndexFlatL2(ctx, siftsmall_inputs_uri)
     q = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
     gt = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
     assert a.feature_type_string() == "float32"
@@ -167,7 +231,7 @@ def test_query_IndexFlatL2():
     assert q.feature_type_string() == "float32"
     assert q.dimension() == 128
     assert q.num_vectors() == num_queries
-    assert gt.feature_type_string() == "int32"
+    assert gt.feature_type_string() == "uint64"
     assert gt.dimension() == 100
     assert gt.num_vectors() == num_queries
 
@@ -209,16 +273,17 @@ def test_construct_IndexIVFFlat():
     assert a.id_type_string() == "int64"
     assert a.px_type_string() == "uint64"
 
-    a = vspy.IndexIVFFlat(ctx, siftsmall_flatIVF_index_uri_32_64)
+    # TODO: Create some indexes with other than uint64 id_type and test them
+    a = vspy.IndexIVFFlat(ctx, siftsmall_group_uri)
     assert a.feature_type_string() == "float32"
-    assert a.id_type_string() == "uint32"
+    assert a.id_type_string() == "uint64"
     assert a.px_type_string() == "uint64"
     assert a.dimension() == 128
 
-    a = vspy.IndexIVFFlat(ctx, bigann1M_flatIVF_index_uri_64_32)
+    a = vspy.IndexIVFFlat(ctx, bigann10k_group_uri)
     assert a.feature_type_string() == "uint8"
     assert a.id_type_string() == "uint64"
-    assert a.px_type_string() == "uint32"
+    assert a.px_type_string() == "uint64"
     assert a.dimension() == 128
 
 def test_inplace_build_infinite_query_IndexIVFFlat():
@@ -229,14 +294,14 @@ def test_inplace_build_infinite_query_IndexIVFFlat():
     for nprobe in [ 8, 32]:
         a = vspy.IndexIVFFlat(id_type="uint32", px_type="uint32")
 
-        training_set = vspy.FeatureVectorArray(ctx, siftsmall_base_uri)
+        training_set = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
         assert training_set.feature_type_string() == "float32"
 
         query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
         assert query_set.feature_type_string() == "float32"
 
         groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
-        assert groundtruth_set.feature_type_string() == "int32"
+        assert groundtruth_set.feature_type_string() == "uint64"
 
         a.train(training_set, "random");
         a.add(training_set);
@@ -260,9 +325,9 @@ def test_read_index_and_infinite_query():
     num_queries = 100
 
     for nprobe in [ 8, 32]:
-        a = vspy.IndexIVFFlat(ctx, siftsmall_flatIVF_index_uri_32_64)
+        a = vspy.IndexIVFFlat(ctx, siftsmall_group_uri)
         assert a.feature_type_string() == "float32"
-        assert a.id_type_string() == "uint32"
+        assert a.id_type_string() == "uint64"
         assert a.px_type_string() == "uint64"
         assert a.dimension() == 128
 
@@ -270,7 +335,7 @@ def test_read_index_and_infinite_query():
         assert query_set.feature_type_string() == "float32"
 
         groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
-        assert groundtruth_set.feature_type_string() == "int32"
+        assert groundtruth_set.feature_type_string() == "uint64"
 
         s, t = a.query_infinite_ram(query_set, k_nn, nprobe)
 
@@ -292,7 +357,7 @@ def test_read_index_and_finite_query_default_upper_bound():
     num_queries = 100
 
     for nprobe in [ 8, 32]:
-        a = vspy.IndexIVFFlat(ctx, siftsmall_flatIVF_index_uri_32_64)
+        a = vspy.IndexIVFFlat(ctx, siftsmall_group_uri)
         query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
         groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
 
@@ -317,7 +382,7 @@ def test_read_index_and_finite_query_0_upper_bound():
     num_queries = 100
 
     for nprobe in [ 8, 32]:
-        a = vspy.IndexIVFFlat(ctx, siftsmall_flatIVF_index_uri_32_64)
+        a = vspy.IndexIVFFlat(ctx, siftsmall_group_uri)
         query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
         groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
 
@@ -342,7 +407,7 @@ def test_read_index_and_finite_query_1000_upper_bound():
     num_queries = 100
 
     for nprobe in [ 8, 32]:
-        a = vspy.IndexIVFFlat(ctx, siftsmall_flatIVF_index_uri_32_64)
+        a = vspy.IndexIVFFlat(ctx, siftsmall_group_uri)
         query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
         groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
 

@@ -198,12 +198,12 @@ class IVFFlatIndex(index.Index):
         if nthreads == -1:
             nthreads = multiprocessing.cpu_count()
 
-        logging.info(f"mode is {mode}, self.memory_budget is {self.memory_budget}, use_nuv_implementation is {use_nuv_implementation}")
+        logging.info(f"ivf_flat_index: mode is {mode}, self.memory_budget is {self.memory_budget}, use_nuv_implementation is {use_nuv_implementation}")
         nprobe = min(nprobe, self.partitions)
         if mode is None:
             queries_m = array_to_matrix(np.transpose(queries))
             if self.memory_budget == -1:
-#                logging.info(f"query internal len(self._index): {len(self._index)}")
+                logging.info(f"ivf_flat_index.py query internal #1 len(self._index): {len(self._index)}")
                 d, i = ivf_query_ram(
                     self.dtype,
                     self._db,
@@ -218,6 +218,7 @@ class IVFFlatIndex(index.Index):
                     use_nuv_implementation=use_nuv_implementation,
                 )
             else:
+                logging.info(f"ivf_flat_index.py #2 query internal len(self._index): {len(self._index)}")
                 d, i = ivf_query(
                     self.dtype,
                     self.db_uri,

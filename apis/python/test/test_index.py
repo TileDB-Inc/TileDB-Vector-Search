@@ -1,7 +1,6 @@
 import numpy as np
 from common import *
-import logging
-import pdb
+import pytest
 
 import tiledb.vector_search.index as ind
 from tiledb.vector_search import flat_index, ivf_flat_index
