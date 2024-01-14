@@ -32,16 +32,96 @@
 #include <catch2/catch_all.hpp>
 #include "array_defs.h"
 #include "detail/flat/qv.h"
+#include "detail/linalg/tdb_matrix.h"
 #include "query_common.h"
 
 bool global_debug = false;
 
-TEST_CASE("qv test test", "[qv]") {
+TEST_CASE("qv test test", "[flat qv]") {
   REQUIRE(true);
 }
 
+TEST_CASE("flat qv compare arrays and files", "[flat qv]") {
+  tiledb::Context ctx;
+
+  auto array_inputs = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(
+      ctx, siftsmall_inputs_uri);
+  auto array_queries = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(
+      ctx, siftsmall_query_uri);
+  auto array_groundtruth = tdbColMajorPreLoadMatrix<siftsmall_groundtruth_type>(
+      ctx, siftsmall_groundtruth_uri);
+
+  auto file_inputs =
+      read_bin_local<siftsmall_feature_type>(siftsmall_inputs_file);
+  auto file_queries =
+      read_bin_local<siftsmall_feature_type>(siftsmall_query_file);
+  auto file_groundtruth = read_bin_local<uint32_t>(siftsmall_groundtruth_file);
+
+  auto file_groundtruth_64 = ColMajorMatrix<siftsmall_groundtruth_type>(
+      file_groundtruth.num_rows(), file_groundtruth.num_cols());
+
+  std::copy(
+      file_groundtruth.raveled().begin(),
+      file_groundtruth.raveled().end(),
+      file_groundtruth_64.raveled().begin());
+
+  CHECK(file_groundtruth_64 == file_groundtruth);
+
+  CHECK(array_inputs == file_inputs);
+  CHECK(array_queries == file_queries);
+
+  auto intersections00 =
+      (long)count_intersections(file_groundtruth_64, array_groundtruth, 100);
+  CHECK(intersections00 != 0);
+  auto expected00 = array_groundtruth.num_cols() * 100;
+  CHECK(intersections00 == expected00);
+}
+
+TEST_CASE(
+    "flat qv all or nothing, tdbMatrix with siftsmall arrays", "[flat qv]") {
+  tiledb::Context ctx;
+  size_t k_nn = 10;
+
+  auto array_inputs = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(
+      ctx, siftsmall_inputs_uri);
+  auto array_queries = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(
+      ctx, siftsmall_query_uri);
+  auto array_groundtruth = tdbColMajorPreLoadMatrix<siftsmall_groundtruth_type>(
+      ctx, siftsmall_groundtruth_uri);
+
+  auto&& [D00, I00] =
+      detail::flat::qv_query_heap(array_inputs, array_queries, k_nn, 1);
+
+  auto intersections00 =
+      (long)count_intersections(I00, array_groundtruth, k_nn);
+  CHECK(intersections00 != 0);
+  auto expected00 = array_groundtruth.num_cols() * k_nn;
+  CHECK(intersections00 == expected00);
+}
+
+TEST_CASE(
+    "flat qv all or nothing, tdbMatrix with siftsmall files", "[flat qv]") {
+  tiledb::Context ctx;
+  size_t k_nn = 10;
+
+  auto array_inputs =
+      read_bin_local<siftsmall_feature_type>(siftsmall_inputs_file);
+  auto array_queries =
+      read_bin_local<siftsmall_feature_type>(siftsmall_query_file);
+  auto array_groundtruth = read_bin_local<uint32_t>(siftsmall_groundtruth_file);
+
+  auto&& [D00, I00] =
+      detail::flat::qv_query_heap(array_inputs, array_queries, k_nn, 1);
+
+  auto intersections00 =
+      (long)count_intersections(I00, array_groundtruth, k_nn);
+  CHECK(intersections00 != 0);
+  auto expected00 = array_groundtruth.num_cols() * k_nn;
+  CHECK(intersections00 == expected00);
+}
+
 // @todo: test with tdbMatrix
-TEST_CASE("flat qv all or nothing", "[flat vq]") {
+TEST_CASE("flat qv all or nothing", "[flat qv]") {
   auto ids = std::vector<size_t>(sift_base.num_cols());
   std::iota(ids.rbegin(), ids.rend(), 9);
 

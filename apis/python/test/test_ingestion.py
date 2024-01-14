@@ -99,7 +99,7 @@ def test_ivf_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
 
-    logging.info(tmp_path)
+    logging.info(f">>>> test_ivf_flat_ingestion_u8: {tmp_path}")
 
     k = 10
     size = 100000
@@ -122,6 +122,8 @@ def test_ivf_flat_ingestion_u8(tmp_path):
 
     _, result = index.query(queries, k=k, nprobe=nprobe)
     logging.info(f"accuracy: {accuracy(result, gt_i)}, MINIMUM_ACCURACY: {MINIMUM_ACCURACY}")
+    acc = accuracy(result, gt_i)
+    logging.info(f"accuracy: {acc}, MINIMUM_ACCURACY: {MINIMUM_ACCURACY}")
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_ram = IVFFlatIndex(uri=index_uri, memory_budget=int(size / 10))
@@ -176,6 +178,8 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     )
 
     _, result = index.query(queries, k=k, nprobe=nprobe)
+    acc = accuracy(result, gt_i)
+    logging.info(f"accuracy: {acc}, MINIMUM_ACCURACY: {MINIMUM_ACCURACY}")
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_ram = IVFFlatIndex(uri=index_uri)
@@ -256,9 +260,9 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
 
 
 def test_ivf_flat_ingestion_numpy(tmp_path):
-    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    source_uri = "test/data/siftsmall/input_vectors.fvecs"
+    queries_uri = "test/data/siftsmall/queries.fvecs"
+    gt_uri = "test/data/siftsmall/groundtruth.ivecs"
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 100
@@ -296,9 +300,9 @@ def test_ivf_flat_ingestion_numpy(tmp_path):
 
 
 def test_ivf_flat_ingestion_multiple_workers(tmp_path):
-    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    source_uri = "test/data/siftsmall/input_vectors.fvecs"
+    queries_uri = "test/data/siftsmall/queries.fvecs"
+    gt_uri = "test/data/siftsmall/groundtruth.ivecs"
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 100
@@ -337,9 +341,9 @@ def test_ivf_flat_ingestion_multiple_workers(tmp_path):
 
 
 def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
-    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    source_uri = "test/data/siftsmall/input_vectors.fvecs"
+    queries_uri = "test/data/siftsmall/queries.fvecs"
+    gt_uri = "test/data/siftsmall/groundtruth.ivecs"
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 100

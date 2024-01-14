@@ -327,12 +327,23 @@ class Matrix :
     std::swap(static_cast<Base&>(*this), static_cast<Base&>(rhs));
   }
 
+// Attempt at generic comparison
+#if 1
+  template <class T_, class LayoutPolicy_ = stdx::layout_right, class I_ = size_t>
+  bool operator==(const Matrix<T_, LayoutPolicy_, I_>& rhs) const noexcept {
+    return (void*)this->data() == (void*)rhs.data() ||
+           (num_rows_ == rhs.num_rows() && num_cols_ == rhs.num_cols() &&
+            std::equal(
+                raveled().begin(), raveled().end(), rhs.raveled().begin()));
+  }
+#else
   bool operator==(const Matrix& rhs) const noexcept {
-    return this->data() == rhs.data() ||
+    return (void*)this->data() == (void*)rhs.data() ||
            (num_rows_ == rhs.num_rows_ && num_cols_ == rhs.num_cols_ &&
             std::equal(
                 raveled().begin(), raveled().end(), rhs.raveled().begin()));
   }
+#endif
 };
 
 /**
