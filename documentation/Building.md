@@ -9,7 +9,6 @@ pip install git+https://github.com/TileDB-Inc/TileDB-Vector-Search.git#subdirect
 
 ## Installation from a local checkout:
 ```
-cd apis/python
 pip install .
 ```
 # Dependencies
@@ -23,7 +22,6 @@ apt-get openblas-dev build-essentials cmake3
 
 To build the python API after you have the dependencies, use pip:
 ```
-cd apis/python
 pip install .
 ```
 
