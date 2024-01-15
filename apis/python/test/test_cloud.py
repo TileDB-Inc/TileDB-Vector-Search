@@ -83,10 +83,7 @@ class CloudTests(unittest.TestCase):
             partitions=partitions,
             input_vectors_per_work_item=5000,
             config=tiledb.cloud.Config().dict(),
-            # TODO Re-enable.
-            #  This is temporarily disabled due to an incompatibility of new ingestion code and previous
-            #  UDF library releases.
-            # mode=Mode.BATCH,
+            mode=Mode.BATCH,
         )
 
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
