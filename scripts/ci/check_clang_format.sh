@@ -11,4 +11,4 @@ sudo ./scripts/install_clang_format.sh
 # Run clang-format.
 src=$GITHUB_WORKSPACE
 cd $src
-$src/scripts/run_clang_format.sh $src clang-format-16 0
+$src/scripts/run_clang_format.sh $src clang-format-17 0
