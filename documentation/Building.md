@@ -67,3 +67,18 @@ You run the example docker image which provides the python package with:
 ```
 docker run --rm tiledb/tiledb-vector-search
 ```
+
+# Formatting
+
+Other code (i.e. Python, YAML, and Markdown files) is formatted with `pre-commit`. Install it with:
+```bash
+cd apis/python
+pip install ".[formatting]"
+```
+Run it (it will autofix any issues it can) with:
+```bash
+# To run on all files:
+pre-commit run --all-files
+# To run on a single file:
+pre-commit run --files path/to/file.py
+```

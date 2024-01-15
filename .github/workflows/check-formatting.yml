@@ -38,13 +38,3 @@ jobs:
             key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
       - name: Run pre-commit checks
         run: pre-commit run --all-files --verbose
-      - name: Check for modified files
-        run: |
-          changes=$(git status -s)
-          if [[ -n "$changes" ]]; then
-            echo "Changes were made by pre-commit. The following files were modified:"
-            echo "$changes"
-            echo "Run 'pre-commit run --all-files' locally to lint your code."
-            exit 1
-          fi
-      
