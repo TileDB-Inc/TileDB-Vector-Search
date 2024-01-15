@@ -937,10 +937,7 @@ def ingest(
     ):
         from sklearn.cluster import KMeans
 
-        from tiledb.vector_search.module import (
-            array_to_matrix,
-            kmeans_fit,
-        )
+        from tiledb.vector_search.module import array_to_matrix
 
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
@@ -990,6 +987,7 @@ def ingest(
                     km.fit_predict(sample_vectors)
                     centroids = np.transpose(np.array(km.cluster_centers_))
                 else:
+                    from tiledb.vector_search.module import kmeans_fit
                     centroids = kmeans_fit(partitions, init, max_iter, verbose, n_init, array_to_matrix(np.transpose(sample_vectors)))
                     centroids = np.array(centroids) # TODO: why is this here?
             else:
