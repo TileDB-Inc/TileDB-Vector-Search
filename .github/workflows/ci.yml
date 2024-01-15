@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  Run-Tests:
+  run-tests:
     strategy:
       matrix:
         os: [ubuntu-latest]

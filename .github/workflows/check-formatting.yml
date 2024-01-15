@@ -1,0 +1,37 @@
+name: check-formatting
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '_quarto.yml'
+      - 'quarto-materials/*'
+      - '**/.md'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '_quarto.yml'
+      - 'quarto-materials/*'
+      - '**/.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: 'Print env'
+        run: |
+          echo "'uname -s' is:"
+          echo "uname: " $(uname)
+          echo "uname -m: " $(uname -m)
+          echo "uname -r:" $(uname -r)
+          echo "uname -s: " $(uname -s)
+          echo "uname -v: " $(uname -v)
+          printenv
+        shell: bash
+      - name: 'Check clang-format'
+        run: |
+          source $GITHUB_WORKSPACE/scripts/ci/check_clang_format.sh
+        shell: bash
