@@ -6,6 +6,11 @@
 #   $2 - Path to the clang format binary
 #   $3 - Apply fixes (will raise an error if false and there are changes)
 #   $ARGN - Files to run clang format on
+# Example commands:
+# - To run on a local repo and not make changes:
+#   - ~/repo/TileDB-Vector-Search-4 scripts/run_clang_format.sh . clang-format 0
+# - To run on a local repo and make changes:
+#   - ~/repo/TileDB-Vector-Search-4 scripts/run_clang_format.sh . clang-format 1
 
 SOURCE_DIR=$1
 shift
@@ -21,7 +26,7 @@ echo "Running clang-format version:" `$CLANG_FORMAT --version`
 pushd $SOURCE_DIR
 
 src=$SOURCE_DIR
-SOURCE_PATHS=($src/tiledb $src/test $src/examples $src/tools $src/experimental)
+SOURCE_PATHS=($src/src)
 FIND_FILES=(-name "*.cc" -or -name "*.c" -or -name "*.h")
 
 if [ "$APPLY_FIXES" == "1" ]; then
@@ -31,7 +36,7 @@ else
   NUM_CORRECTIONS=`find "${SOURCE_PATHS[@]}" \( "${FIND_FILES[@]}" \) -print0 | xargs -0 -P8 $CLANG_FORMAT -output-replacements-xml | grep offset | wc -l`
 
   if [ "$NUM_CORRECTIONS" -gt "0" ]; then
-    echo "clang-format suggested changes, please run 'make format'!!!!"
+    echo "clang-format suggested $NUM_CORRECTIONS changes, please run 'make format'!!!!"
 
     # If running on CI, print out the change-set
     if [ "$CI" = true ]; then

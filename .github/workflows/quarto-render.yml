@@ -3,9 +3,7 @@
 name: Render and deploy Quarto files
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
 
 jobs:
   quarto-render-and-deploy:

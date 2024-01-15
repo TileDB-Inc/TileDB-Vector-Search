@@ -1,4 +1,4 @@
-name: check-formatting
+name: Check formatting
 
 on:
   push:
@@ -17,7 +17,7 @@ on:
       - '**/.md'
 
 jobs:
-  build:
+  check-formatting:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
