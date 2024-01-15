@@ -18,19 +18,9 @@ on:
 
 jobs:
   check-formatting:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: 'Print env'
-        run: |
-          echo "'uname -s' is:"
-          echo "uname: " $(uname)
-          echo "uname -m: " $(uname -m)
-          echo "uname -r:" $(uname -r)
-          echo "uname -s: " $(uname -s)
-          echo "uname -v: " $(uname -v)
-          printenv
-        shell: bash
       - name: 'Check clang-format'
         run: |
           source $GITHUB_WORKSPACE/scripts/ci/check_clang_format.sh

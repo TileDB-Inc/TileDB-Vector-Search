@@ -34,10 +34,9 @@ if [ "$APPLY_FIXES" == "1" ]; then
 
 else
   NUM_CORRECTIONS=`find "${SOURCE_PATHS[@]}" \( "${FIND_FILES[@]}" \) -print0 | xargs -0 -P8 $CLANG_FORMAT -output-replacements-xml | grep offset | wc -l`
+  echo "clang-format suggested $NUM_CORRECTIONS changes"
 
   if [ "$NUM_CORRECTIONS" -gt "0" ]; then
-    echo "clang-format suggested $NUM_CORRECTIONS changes"
-
     # If running on CI, print out the change-set
     if [ "$CI" = true ]; then
       echo "-------- see list of files to update below --------"
