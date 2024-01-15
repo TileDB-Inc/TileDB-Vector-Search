@@ -41,16 +41,3 @@ development-build instructions. For large new
 features, please open an issue to discuss goals and approach in order
 to ensure a smooth PR integration and review process. All contributions
 must be licensed under the repository's [MIT License](./LICENSE).
-
-# Testing
-
-* Unit tests: `pytest`
-* Demo notebooks:
-  * ```
-    cd apis/python
-    pip install -r test/ipynb/requirements.txt
-    pytest --nbmake test/ipynb
-    ```
-* Credentials:
-  * Some tests run on TileDB Cloud using your current environment variable `TILEDB_REST_TOKEN` -- you will need a valid API token for the tests to pass 
-  * For continuous integration, the token is configured for the `unittest` user and all tests should pass
