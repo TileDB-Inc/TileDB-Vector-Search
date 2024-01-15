@@ -33,8 +33,8 @@ jobs:
           pip install ".[formatting]"
       - name: Restore pre-commit cache
         uses: actions/cache@v3
-       with:
-          path: ~/.cache/pre-commit
-          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+        with:
+            path: ~/.cache/pre-commit
+            key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
       - name: Pre-commit checks
         run: pre-commit run --all-files --verbose
