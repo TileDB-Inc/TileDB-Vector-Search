@@ -49,9 +49,7 @@ std::vector<T> read_vector(
     uint64_t timestamp);
 
 template <class M>
-concept is_view = requires(M) {
-  typename M::view_type;
-};
+concept is_view = requires(M) { typename M::view_type; };
 
 template <class T>
 using VectorView = std::span<T>;
@@ -67,28 +65,31 @@ class Vector : public std::span<T> {
   using Base = std::span<T>;
   using Base::Base;
 
-  public:
+ public:
   using index_type = typename Base::difference_type;
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
-  private:
+ private:
   size_type nrows_;
   std::unique_ptr<T[]> storage_;
 
-  public:
+ public:
   explicit Vector(index_type nrows) noexcept
-      : nrows_(nrows), storage_{new T[nrows_]} {
+      : nrows_(nrows)
+      , storage_{new T[nrows_]} {
     Base::operator=(Base{storage_.get(), nrows_});
   }
 
   Vector(index_type nrows, std::unique_ptr<T[]> storage)
-      : nrows_(nrows), storage_{std::move(storage)} {
+      : nrows_(nrows)
+      , storage_{std::move(storage)} {
     Base::operator=(Base{storage_.get(), nrows_});
   }
 
   Vector(Vector&& rhs) noexcept
-      : nrows_{rhs.nrows_}, storage_{std::move(rhs.storage_)} {
+      : nrows_{rhs.nrows_}
+      , storage_{std::move(rhs.storage_)} {
     Base::operator=(Base{storage_.get(), nrows_});
   }
 

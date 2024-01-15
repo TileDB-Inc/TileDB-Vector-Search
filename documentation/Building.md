@@ -67,3 +67,18 @@ You run the example docker image which provides the python package with:
 ```
 docker run --rm tiledb/tiledb-vector-search
 ```
+
+# Formatting
+
+The C++ code is formatted with `clang-format`. Install it yourself or by running:
+```bash
+./scripts/install_clang_format.sh
+```
+Check if any files require formatting changes with:
+```bash
+./scripts/run_clang_format.sh . clang-format 0
+```
+Make all required formatting changes with:
+```bash
+./scripts/run_clang_format.sh . clang-format 1
+```
