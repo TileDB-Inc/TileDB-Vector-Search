@@ -17,7 +17,6 @@ pip install .
 
 You can run unit tests with `pytest`. You'll also need to install the test dependencies:
 ```bash
-cd apis/python
 pip install ".[test]"
 ```
 Then you can run the tests:
