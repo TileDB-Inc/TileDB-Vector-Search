@@ -1143,7 +1143,7 @@ def ingest(
             logger.debug("Assigning vectors to centroids")
             if use_sklearn:
                 km = KMeans()
-                km.n_threads_ = threads
+                km._n_threads = threads
                 km.cluster_centers_ = centroids
                 assignments = km.predict(vectors)
             else:
