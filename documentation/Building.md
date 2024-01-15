@@ -70,7 +70,7 @@ docker run --rm tiledb/tiledb-vector-search
 
 # Formatting
 
-The C++ code is formatted with `clang-format`. Install it yourself or by running:
+The C++ code is formatted with `clang-format` version 17. Install it yourself or by running:
 ```bash
 ./scripts/install_clang_format.sh
 ```
