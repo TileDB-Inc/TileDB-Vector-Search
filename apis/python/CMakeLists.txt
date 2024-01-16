@@ -30,6 +30,7 @@ cmake_minimum_required(VERSION 3.21)
 find_package(TileDB REQUIRED)
 
 set(PYBIND11_NEWPYTHON ON)
+# NOTE: If you remove the line below the Windows build will fail
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
