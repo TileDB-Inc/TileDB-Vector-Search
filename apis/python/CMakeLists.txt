@@ -30,6 +30,7 @@ cmake_minimum_required(VERSION 3.21)
 find_package(TileDB REQUIRED)
 
 set(PYBIND11_NEWPYTHON ON)
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
 set(VSPY_TARGET_NAME _tiledbvspy)
