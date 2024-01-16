@@ -39,9 +39,7 @@ jobs:
           CIBW_BUILD_VERBOSITY: 3
           MACOSX_DEPLOYMENT_TARGET: "12.0"
         with:
-          package-dir: "apis/python"
           output-dir: wheelhouse
-          config-file: "{package}/pyproject.toml"
 
       - uses: actions/upload-artifact@v3
         with:
