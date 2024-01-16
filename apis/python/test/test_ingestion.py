@@ -18,6 +18,9 @@ def query_and_check_equals(index, queries, expected_result_d, expected_result_i)
     result_d, result_i = index.query(queries, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=expected_result_d, expected_result_i=expected_result_i)
 
+@pytest.fixture(scope="module")
+def test_data_path():
+    return get_test_data_path()
 
 def test_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -181,10 +184,10 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
-def test_ivf_flat_ingestion_fvec(tmp_path):
-    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+def test_ivf_flat_ingestion_fvec(tmp_path, test_data_path):
+    source_uri = f"{test_data_path}/siftsmall/siftsmall_base.fvecs"
+    queries_uri = f"{test_data_path}/siftsmall/siftsmall_query.fvecs"
+    gt_uri = f"{test_data_path}/siftsmall/siftsmall_groundtruth.ivecs"
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 100
@@ -220,10 +223,10 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
-def test_ivf_flat_ingestion_numpy(tmp_path):
-    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+def test_ivf_flat_ingestion_numpy(tmp_path, test_data_path):
+    source_uri = f"{test_data_path}/siftsmall/siftsmall_base.fvecs"
+    queries_uri = f"{test_data_path}/siftsmall/siftsmall_query.fvecs"
+    gt_uri = f"{test_data_path}/siftsmall/siftsmall_groundtruth.ivecs"
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 100
@@ -260,10 +263,10 @@ def test_ivf_flat_ingestion_numpy(tmp_path):
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
-def test_ivf_flat_ingestion_multiple_workers(tmp_path):
-    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+def test_ivf_flat_ingestion_multiple_workers(tmp_path, test_data_path):
+    source_uri = f"{test_data_path}/siftsmall/siftsmall_base.fvecs"
+    queries_uri = f"{test_data_path}/siftsmall/siftsmall_query.fvecs"
+    gt_uri = f"{test_data_path}/siftsmall/siftsmall_groundtruth.ivecs"
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 100
@@ -301,10 +304,10 @@ def test_ivf_flat_ingestion_multiple_workers(tmp_path):
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
-def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
-    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+def test_ivf_flat_ingestion_external_ids_numpy(tmp_path, test_data_path):
+    source_uri = f"{test_data_path}/siftsmall/siftsmall_base.fvecs"
+    queries_uri = f"{test_data_path}/siftsmall/siftsmall_query.fvecs"
+    gt_uri = f"{test_data_path}/siftsmall/siftsmall_groundtruth.ivecs"
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 100
@@ -715,10 +718,10 @@ def test_ivf_flat_ingestion_tdb_random_sampling_policy(tmp_path):
             query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[3]])
 
 
-def test_ivf_flat_ingestion_fvec_random_sampling_policy(tmp_path):
-    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+def test_ivf_flat_ingestion_fvec_random_sampling_policy(tmp_path, test_data_path):
+    source_uri = f"{test_data_path}/siftsmall/siftsmall_base.fvecs"
+    queries_uri = f"{test_data_path}/siftsmall/siftsmall_query.fvecs"
+    gt_uri = f"{test_data_path}/siftsmall/siftsmall_groundtruth.ivecs"
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 50

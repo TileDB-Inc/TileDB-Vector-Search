@@ -10,7 +10,6 @@ from tiledb.vector_search.utils import load_fvecs
 
 MINIMUM_ACCURACY = 0.85
 
-
 class CloudTests(unittest.TestCase):
     flat_index_uri = ""
     ivf_flat_index_uri = ""
@@ -28,6 +27,8 @@ class CloudTests(unittest.TestCase):
         cls.ivf_flat_index_uri = f"{test_path}/test_ivf_flat_array"
         cls.ivf_flat_random_sampling_index_uri = f"{test_path}/test_ivf_flat_random_sampling_array"
 
+        cls.test_data_path = get_test_data_path()
+
     @classmethod
     def tearDownClass(cls):
         vs.Index.delete_index(uri=cls.flat_index_uri, config=tiledb.cloud.Config())
@@ -36,8 +37,8 @@ class CloudTests(unittest.TestCase):
 
     def test_cloud_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
-        queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-        gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+        queries_uri = f"{CloudTests.test_data_path}/siftsmall/siftsmall_query.fvecs"
+        gt_uri = f"{CloudTests.test_data_path}/siftsmall/siftsmall_groundtruth.ivecs"
         index_uri = CloudTests.flat_index_uri
         k = 100
         nqueries = 100
@@ -65,8 +66,8 @@ class CloudTests(unittest.TestCase):
 
     def test_cloud_ivf_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
-        queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-        gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+        queries_uri = f"{CloudTests.test_data_path}/siftsmall/siftsmall_query.fvecs"
+        gt_uri = f"{CloudTests.test_data_path}/siftsmall/siftsmall_groundtruth.ivecs"
         index_uri = CloudTests.ivf_flat_index_uri
         k = 100
         partitions = 100
@@ -134,8 +135,8 @@ class CloudTests(unittest.TestCase):
         # source_uri = "tiledb://TileDB-Inc/ann_sift1b_raw_vectors_col_major"
         # training_sample_size = 1000000
         source_uri = "tiledb://TileDB-Inc/sift_10k"
-        queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-        gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+        queries_uri = f"{CloudTests.test_data_path}/siftsmall/siftsmall_query.fvecs"
+        gt_uri = f"{CloudTests.test_data_path}/siftsmall/siftsmall_groundtruth.ivecs"
         index_uri = CloudTests.ivf_flat_random_sampling_index_uri
         k = 100
         nqueries = 100

@@ -13,6 +13,10 @@ def query_and_check(index, queries, k, expected, **kwargs):
         result_d, result_i = index.query(queries, k=k, **kwargs)
         assert expected.issubset(set(result_i[0]))
 
+@pytest.fixture(scope="module")
+def test_data_path():
+    return get_test_data_path()
+
 def test_flat_index(tmp_path):
     uri = os.path.join(tmp_path, "array")
     index = flat_index.create(uri=uri, dimensions=3, vector_type=np.dtype(np.uint8))
@@ -112,9 +116,9 @@ def test_index_with_incorrect_dimensions(tmp_path):
         # Okay otherwise.
         index.query(np.array([[1, 1, 1]], dtype=np.float32), k=3)
 
-def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
-    siftsmall_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
+def test_index_with_incorrect_num_of_query_columns_simple(tmp_path, test_data_path):
+    siftsmall_uri = f"{test_data_path}/siftsmall/siftsmall_base.fvecs"
+    queries_uri = f"{test_data_path}/siftsmall/siftsmall_query.fvecs"
     indexes = ["FLAT", "IVF_FLAT"]
     for index_type in indexes:
         index_uri = os.path.join(tmp_path, f"sift10k_flat_{index_type}")

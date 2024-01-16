@@ -35,7 +35,9 @@ build
 .vs
 .vscode
 
+# CMake
 CMakeUserPresets.json
+*/cmake-build-debug
 
 # Byte-compiled / optimized / DLL files
 python/__pycache__/
@@ -100,3 +102,6 @@ docs/.quarto
 
 documentation/reference/*
 documentation/reference
+
+# Mac
+*.DS_Store

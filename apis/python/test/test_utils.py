@@ -1,10 +1,16 @@
 import os
 import numpy as np
+import pytest
+from common import *
 from tiledb.vector_search.utils import load_fvecs, load_ivecs, write_fvecs, write_ivecs
 
-def test_load_and_write_vecs(tmp_path):
-    fvecs_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    ivecs_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+@pytest.fixture(scope="module")
+def test_data_path():
+    return get_test_data_path()
+
+def test_load_and_write_vecs(tmp_path, test_data_path):
+    fvecs_uri = f"{test_data_path}/siftsmall/siftsmall_base.fvecs"
+    ivecs_uri = f"{test_data_path}/siftsmall/siftsmall_groundtruth.ivecs"
 
     fvecs = load_fvecs(fvecs_uri)
     assert fvecs.shape == (10000, 128)
