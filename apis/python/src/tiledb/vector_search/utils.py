@@ -8,7 +8,7 @@ def add_to_group(group, uri, name):
     '''
     Adds an object to a group. Automatically infers whether to use a relative path or absolute path.
     '''
-    if 'tiledb://' in uri or 's3://' in uri:
+    if 'tiledb://' in uri:
         group.add(uri, name=name)
     else:
         group.add(name, name=name, relative=True)
