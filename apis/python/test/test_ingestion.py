@@ -1,6 +1,7 @@
 import time
 import numpy as np
 from common import *
+from array_paths import *
 import pytest
 
 from tiledb.cloud.dag import Mode
@@ -196,9 +197,9 @@ def test_ivf_flat_ingestion_f32(tmp_path):
 
 
 def test_ivf_flat_ingestion_fvec(tmp_path):
-    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    source_uri = siftsmall_inputs_file
+    queries_uri = siftsmall_query_file
+    gt_uri = siftsmall_groundtruth_file
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 100
@@ -236,9 +237,9 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
 
 
 def test_ivf_flat_ingestion_numpy(tmp_path):
-    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    source_uri = siftsmall_inputs_file
+    queries_uri = siftsmall_query_file
+    gt_uri = siftsmall_groundtruth_file
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 100
@@ -277,9 +278,9 @@ def test_ivf_flat_ingestion_numpy(tmp_path):
 
 
 def test_ivf_flat_ingestion_multiple_workers(tmp_path):
-    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    source_uri = siftsmall_inputs_file
+    queries_uri = siftsmall_query_file
+    gt_uri = siftsmall_groundtruth_file
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 100
@@ -319,9 +320,9 @@ def test_ivf_flat_ingestion_multiple_workers(tmp_path):
 
 
 def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
-    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    source_uri = siftsmall_inputs_file
+    queries_uri = siftsmall_query_file
+    gt_uri = siftsmall_groundtruth_file
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 100
@@ -752,9 +753,9 @@ def test_ivf_flat_ingestion_tdb_random_sampling_policy(tmp_path):
 
 
 def test_ivf_flat_ingestion_fvec_random_sampling_policy(tmp_path):
-    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    source_uri = siftsmall_inputs_file
+    queries_uri = siftsmall_query_file
+    gt_uri = siftsmall_groundtruth_file
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 50
@@ -868,7 +869,7 @@ def test_ivf_flat_copy_centroids_uri(tmp_path):
             ]
         ),
         sparse=False,
-        attrs=[tiledb.Attr(name="centroids", dtype="float32", filters=tiledb.FilterList([tiledb.ZstdFilter()]))],
+        attrs=[tiledb.Attr(name="values", dtype="float32", filters=tiledb.FilterList([tiledb.ZstdFilter()]))],
         cell_order="col-major",
         tile_order="col-major",
     )
