@@ -9,7 +9,7 @@ from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSIO
 
 def get_test_data_path():
     current_dir = os.path.dirname(__file__)
-    test_data_path = os.path.join(current_dir, "../../../test-data")
+    test_data_path = os.path.join(current_dir, "../../../external/test_data/files")
     if not os.path.exists(test_data_path):
         raise ValueError(f"Test data path not found at {test_data_path}")
     return test_data_path
