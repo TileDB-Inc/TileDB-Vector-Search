@@ -30,3 +30,4 @@ repos:
     rev: "v17.0.6"
     hooks:
       - id: clang-format
+        exclude: '\.ipynb$'

@@ -2,8 +2,8 @@
 from tiledb.cloud.dag.mode import Mode
 
 from . import utils
-from .index import Index
 from .flat_index import FlatIndex
+from .index import Index
 from .ingestion import ingest
 from .ivf_flat_index import IVFFlatIndex
 from .module import array_to_matrix
