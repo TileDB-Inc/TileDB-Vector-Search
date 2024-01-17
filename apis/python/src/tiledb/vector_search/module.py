@@ -81,6 +81,17 @@ def load_as_array(
         return r
 
 
+def debug_slice(m: "colMajorMatrix", name: str):
+    dtype = m.dtype
+    if (dtype == np.float32):
+        return debug_slice_f32(m, name)
+    elif (dtype == np.uint8):
+        return debug_slice_u8(m, name)
+    elif (dtype == np.uint64):
+        return debug_slice_u64(m, name)
+    else:
+        raise TypeError(f"Unsupported type: {dtype}!")
+
 def query_vq_nth(db: "colMajorMatrix", *args):
     """
     Run vector query
@@ -365,7 +376,7 @@ def ivf_query(
         ]
     )
 
-    # logging.info(f">>>> ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}")
+    logging.info(f">>>> module.py: ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}")
 
     if dtype == np.float32:
         if use_nuv_implementation:

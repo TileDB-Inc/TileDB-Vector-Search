@@ -110,8 +110,19 @@ static void declareColMajorMatrix(py::module& mod, std::string const& suffix) {
 }
 
 template <class T>
-static void declare_pyarray_to_matrix(
+static void declare_debug_slice(
     py::module& m, const std::string& suffix) {
+  m.def(
+      ("debug_slice" + suffix).c_str(),
+      [](ColMajorMatrix<T>& mat, const std::string& msg = "module.cc: ") {
+        debug_slice(mat, msg);
+      });
+// py::keep_alive<1, 2>());
+}
+
+template <class T>
+static void declare_pyarray_to_matrix(
+        py::module& m, const std::string& suffix) {
   m.def(
       ("pyarray_copyto_matrix" + suffix).c_str(),
       [](py::array_t<T, py::array::f_style> arr) -> ColMajorMatrix<T> {
@@ -796,6 +807,10 @@ PYBIND11_MODULE(_tiledbvspy, m) {
     global_debug = debug;
   });
 #endif
+
+  declare_debug_slice<uint8_t>(m, "_u8");
+  declare_debug_slice<float>(m, "_f32");
+  declare_debug_slice<uint64_t>(m, "_u64");
 
   declare_vq_query_heap<uint8_t>(m, "u8");
   declare_vq_query_heap<float>(m, "f32");

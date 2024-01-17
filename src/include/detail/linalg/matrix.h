@@ -221,7 +221,7 @@ class Matrix :
    * The intializer list is assumed to be in row-major order.
    */
   Matrix(std::initializer_list<std::initializer_list<T>> list) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : num_rows_{list.size()}
       , num_cols_{list.begin()->size()}
 #ifdef __cpp_lib_smart_ptr_for_overwrite
@@ -242,7 +242,7 @@ class Matrix :
    * The initializer list is assumed to be in column-major order.
    */
   Matrix(std::initializer_list<std::initializer_list<T>> list) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : num_rows_{list.begin()->size()}
       , num_cols_{list.size()}
 #ifdef __cpp_lib_smart_ptr_for_overwrite
@@ -327,12 +327,23 @@ class Matrix :
     std::swap(static_cast<Base&>(*this), static_cast<Base&>(rhs));
   }
 
+// Attempt at generic comparison
+#if 1
+  template <class T_, class LayoutPolicy_ = stdx::layout_right, class I_ = size_t>
+  bool operator==(const Matrix<T_, LayoutPolicy_, I_>& rhs) const noexcept {
+    return (void*)this->data() == (void*)rhs.data() ||
+           (num_rows_ == rhs.num_rows() && num_cols_ == rhs.num_cols() &&
+            std::equal(
+                raveled().begin(), raveled().end(), rhs.raveled().begin()));
+  }
+#else
   bool operator==(const Matrix& rhs) const noexcept {
-    return this->data() == rhs.data() ||
+    return (void*)this->data() == (void*)rhs.data() ||
            (num_rows_ == rhs.num_rows_ && num_cols_ == rhs.num_cols_ &&
             std::equal(
                 raveled().begin(), raveled().end(), rhs.raveled().begin()));
   }
+#endif
 };
 
 /**
@@ -567,7 +578,8 @@ void debug_slice(
     const std::string& msg = "",
     size_t rows = 6,
     size_t cols = 18) {
-  if (matrix_printf) {
+
+  if (matrix_printf || true) {
     rows = std::min(rows, dimension(A));
     cols = std::min(cols, num_vectors(A));
 

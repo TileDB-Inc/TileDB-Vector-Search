@@ -100,3 +100,6 @@ docs/.quarto
 
 documentation/reference/*
 documentation/reference
+
+# Mac
+*DS_Store

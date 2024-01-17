@@ -31,9 +31,9 @@
 #include <catch2/catch_all.hpp>
 
 #include <tiledb/tiledb>
-
 #include <tiledb/group_experimental.h>
 
+#include <filesystem>
 #include <string>
 
 #include "index/ivf_flat_group.h"
@@ -113,22 +113,31 @@ TEST_CASE("ivf_flat_group: constructor", "[ivf_flat_group]") {
 }
 
 TEST_CASE("ivf_flat_group: default constructor", "[ivf_flat_group]") {
+  bool debug = false;
   tiledb::Context ctx;
   auto x = ivf_flat_index_group(dummy_index{}, ctx, sift_group_uri);
-  x.dump("Default constructor");
+  if (debug) {
+    x.dump("Default constructor");
+  }
 }
 
 TEST_CASE("ivf_flat_group: read constructor", "[ivf_flat_group]") {
+  bool debug = false;
   tiledb::Context ctx;
   auto x = ivf_flat_index_group(dummy_index{}, ctx, sift_group_uri, TILEDB_READ);
-  x.dump("Read constructor");
+  if (debug) {
+    x.dump("Read constructor");
+  }
 }
 
 TEST_CASE("ivf_flat_group: read constructor with version", "[ivf_flat_group]") {
+  bool debug = false;
   tiledb::Context ctx;
   auto x =
       ivf_flat_index_group(dummy_index{}, ctx, sift_group_uri, TILEDB_READ, 0, "0.3");
-  x.dump("Read constructor with version");
+  if (debug) {
+    x.dump("Read constructor with version");
+  }
 }
 
 TEST_CASE(
@@ -142,6 +151,7 @@ TEST_CASE(
 }
 
 TEST_CASE("ivf_flat_group: write constructor - create", "[ivf_flat_group]") {
+  bool debug = false;
   std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
 
   tiledb::Context ctx;
@@ -152,11 +162,14 @@ TEST_CASE("ivf_flat_group: write constructor - create", "[ivf_flat_group]") {
 
   ivf_flat_index_group x =
       ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor - create");
+  if(debug) {
+    x.dump("Write constructor - create");
+  }
 }
 
 TEST_CASE(
     "ivf_flat_group: write constructor - create and open", "[ivf_flat_group]") {
+  bool debug = false;
   std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
 
   tiledb::Context ctx;
@@ -167,15 +180,20 @@ TEST_CASE(
 
   ivf_flat_index_group x =
       ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor - create before open");
+  if (debug) {
+    x.dump("Write constructor - create before open");
+  }
 
   ivf_flat_index_group y =
       ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor - open");
+  if (debug) {
+    x.dump("Write constructor - open");
+  }
 }
 
 TEST_CASE(
     "ivf_flat_group: write constructor - create and read", "[ivf_flat_group]") {
+  bool debug = false;
   std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
 
   tiledb::Context ctx;
@@ -186,16 +204,22 @@ TEST_CASE(
 
   ivf_flat_index_group x =
       ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor - create before open");
+  if (debug) {
+    x.dump("Write constructor - create before open");
+  }
 
   ivf_flat_index_group y =
       ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-  x.dump("Write constructor - open for read");
+
+  if (debug) {
+    x.dump("Write constructor - open for read");
+  }
 }
 
 TEST_CASE(
     "ivf_flat_group: write constructor - create, write, and read",
     "[ivf_flat_group]") {
+  bool debug = false;
   std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
 
   tiledb::Context ctx;
@@ -206,15 +230,24 @@ TEST_CASE(
 
   ivf_flat_index_group x =
       ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor - create before open");
+
+  if (debug) {
+    x.dump("Write constructor - create before open");
+  }
 
   ivf_flat_index_group y =
       ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor - open for write");
+
+  if (debug) {
+    x.dump("Write constructor - open for write");
+  }
 
   ivf_flat_index_group z =
       ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-  x.dump("Write constructor - open for read");
+
+  if (debug) {
+    x.dump("Write constructor - open for read");
+  }
 }
 
 TEST_CASE(

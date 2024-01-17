@@ -32,16 +32,60 @@
 #include <catch2/catch_all.hpp>
 #include "array_defs.h"
 #include "detail/flat/qv.h"
+#include "detail/linalg/tdb_matrix.h"
 #include "query_common.h"
 
 bool global_debug = false;
 
-TEST_CASE("qv test test", "[qv]") {
+TEST_CASE("qv test test", "[flat qv]") {
   REQUIRE(true);
 }
 
+TEST_CASE(
+    "flat qv all or nothing, tdbMatrix with siftsmall arrays", "[flat qv]") {
+  tiledb::Context ctx;
+  size_t k_nn = 10;
+
+  auto array_inputs = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(
+      ctx, siftsmall_inputs_uri);
+  auto array_queries = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(
+      ctx, siftsmall_query_uri);
+  auto array_groundtruth = tdbColMajorPreLoadMatrix<siftsmall_groundtruth_type>(
+      ctx, siftsmall_groundtruth_uri);
+
+  auto&& [D00, I00] =
+      detail::flat::qv_query_heap(array_inputs, array_queries, k_nn, 1);
+
+  auto intersections00 =
+      (long)count_intersections(I00, array_groundtruth, k_nn);
+  CHECK(intersections00 != 0);
+  auto expected00 = array_groundtruth.num_cols() * k_nn;
+  CHECK(intersections00 == expected00);
+}
+
+TEST_CASE(
+    "flat qv all or nothing, tdbMatrix with siftsmall files", "[flat qv]") {
+  tiledb::Context ctx;
+  size_t k_nn = 10;
+
+  auto array_inputs =
+      read_bin_local<siftsmall_feature_type>(siftsmall_inputs_file);
+  auto array_queries =
+      read_bin_local<siftsmall_feature_type>(siftsmall_query_file);
+  auto array_groundtruth = read_bin_local<uint32_t>(siftsmall_groundtruth_file);
+
+  auto&& [D00, I00] =
+      detail::flat::qv_query_heap(array_inputs, array_queries, k_nn, 1);
+
+  auto intersections00 =
+      (long)count_intersections(I00, array_groundtruth, k_nn);
+  CHECK(intersections00 != 0);
+  auto expected00 = array_groundtruth.num_cols() * k_nn;
+  CHECK(intersections00 == expected00);
+}
+
 // @todo: test with tdbMatrix
-TEST_CASE("flat qv all or nothing", "[flat vq]") {
+TEST_CASE("flat qv all or nothing", "[flat qv]") {
   auto ids = std::vector<size_t>(sift_base.num_cols());
   std::iota(ids.rbegin(), ids.rend(), 9);
 

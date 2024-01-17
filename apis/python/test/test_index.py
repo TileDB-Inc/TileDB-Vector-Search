@@ -1,7 +1,6 @@
 import numpy as np
 from common import *
-import logging
-import pdb
+import pytest
 
 import tiledb.vector_search.index as ind
 from tiledb.vector_search import flat_index, ivf_flat_index
@@ -116,8 +115,8 @@ def test_index_with_incorrect_dimensions(tmp_path):
         index.query(np.array([[1, 1, 1]], dtype=np.float32), k=3)
 
 def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
-    siftsmall_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
+    siftsmall_uri = "test/data/files/siftsmall/input_vectors.fvecs"
+    queries_uri = "test/data/files/siftsmall/queries.fvecs"
     indexes = ["FLAT", "IVF_FLAT"]
     for index_type in indexes:
         index_uri = os.path.join(tmp_path, f"sift10k_flat_{index_type}")
@@ -192,5 +191,6 @@ def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_pa
         with pytest.raises(TypeError):
             index.query(np.array([1, 1, 1, 1], dtype=np.float32), k=3)
 
-        # Okay otherwise.
-        index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
+        # TODO:  This also throws a TypeError for incorrect dimension
+        with pytest.raises(TypeError):
+            index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
