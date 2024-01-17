@@ -2,6 +2,7 @@
 from tiledb.cloud.dag.mode import Mode
 
 from . import utils
+from .index import Index
 from .flat_index import FlatIndex
 from .ingestion import ingest
 from .ivf_flat_index import IVFFlatIndex
@@ -16,6 +17,8 @@ from .module import partition_ivf_index
 from .module import query_vq_heap
 from .module import query_vq_nth
 from .module import validate_top_k
+from .storage_formats import STORAGE_VERSION
+from .storage_formats import storage_formats
 
 try:
     from tiledb.vector_search.version import version as __version__
@@ -23,6 +26,7 @@ except ImportError:
     __version__ = "0.0.0.local"
 
 __all__ = [
+    "Index",
     "FlatIndex",
     "IVFFlatIndex",
     "Mode",
@@ -39,4 +43,6 @@ __all__ = [
     "array_to_matrix",
     "partition_ivf_index",
     "utils",
+    "STORAGE_VERSION",
+    "storage_formats",
 ]
