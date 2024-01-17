@@ -123,14 +123,7 @@
     "href": "documentation/Building.html",
     "title": "Building From Source",
     "section": "",
-    "text": "TileDB Vector Search can be built from source. For information on dependencies, see below.\n\n\npip install git+https://github.com/TileDB-Inc/TileDB-Vector-Search.git#subdirectory=apis/python\n\n\n\ncd apis/python\npip install ."
-  },
-  {
-    "objectID": "documentation/Building.html#installation-from-github-with-pip",
-    "href": "documentation/Building.html#installation-from-github-with-pip",
-    "title": "Building From Source",
-    "section": "",
-    "text": "pip install git+https://github.com/TileDB-Inc/TileDB-Vector-Search.git#subdirectory=apis/python"
+    "text": "TileDB Vector Search can be built from source. For information on dependencies, see below.\n\n\ncd apis/python\npip install ."
   },
   {
     "objectID": "documentation/Building.html#installation-from-a-local-checkout",
