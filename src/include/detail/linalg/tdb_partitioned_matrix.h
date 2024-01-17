@@ -186,7 +186,8 @@ class tdbPartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       : constructor_timer{tdb_func__ + std::string{" constructor"}}
       , uri_{uri}
       , ctx_{ctx}
-      , array_{tiledb_helpers::open_array(tdb_func__, ctx_, uri, TILEDB_READ, temporal_policy)}
+      , array_{tiledb_helpers::open_array(
+            tdb_func__, ctx_, uri, TILEDB_READ, temporal_policy)}
       , schema_{array_.schema()}
       , ids_array_{tiledb_helpers::open_array(
             tdb_func__, ctx_, ids_uri, TILEDB_READ)}
