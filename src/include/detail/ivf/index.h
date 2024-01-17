@@ -83,9 +83,13 @@ int ivf_index(
 
   auto centroids = tdbColMajorMatrix<centroids_type>(
       ctx, centroids_uri, 0, 0, 0, partitions, timestamp);
+  centroids.load();
 
   auto parts = detail::flat::qv_partition(centroids, db, nthreads);
-  debug_matrix(parts, "parts");
+
+  debug_slice(centroids);
+  debug_slice(parts, "parts");
+
   {
     scoped_timer _{"shuffling data"};
     std::unordered_set<ids_type> deleted_ids_set(
@@ -112,8 +116,8 @@ int ivf_index(
     std::vector<size_t> check(indices.size());
     std::copy(begin(indices), end(indices), begin(check));
 
-    debug_matrix(degrees, "degrees");
-    debug_matrix(indices, "indices");
+    debug_slice(degrees, "degrees ");
+    debug_slice(indices, "indices ");
 
     // Some variables for debugging
     // @todo remove these once we are confident in the code

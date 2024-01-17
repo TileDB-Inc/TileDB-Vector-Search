@@ -38,6 +38,29 @@ TEST_CASE("partition: test test", "[partition]") {
   REQUIRE(true);
 }
 
+TEST_CASE("partition: top_centroids", "[partition]") {
+  auto parts = ColMajorMatrix<float>{
+      {1, 1, 1, 1,},
+      {1, 1, 1, 1,},
+      {2, 2, 2, 2 },
+      {2, 2, 2, 2 },
+      {3, 3, 3, 3,},
+  };
+  auto centroids = ColMajorMatrix<float>{
+      {1, 1, 1, 1,},
+      {2, 2, 2, 2 },
+  };
+  auto top_centroids = detail::ivf::ivf_top_centroids(centroids, parts, 1, 1);
+
+  CHECK(top_centroids.num_cols() == 5);
+  CHECK(top_centroids.num_rows() == 1);
+  CHECK(top_centroids(0, 0) == 0);
+  CHECK(top_centroids(0, 1) == 0);
+  CHECK(top_centroids(0, 2) == 1);
+  CHECK(top_centroids(0, 3) == 1);
+  CHECK(top_centroids(0, 4) == 1);
+}
+
 TEST_CASE("partition: partition_ivf_index", "[partition]") {
   // auto partition_ivf_index(
   //      auto&& centroids, auto&& query, size_t nprobe, size_t nthreads)

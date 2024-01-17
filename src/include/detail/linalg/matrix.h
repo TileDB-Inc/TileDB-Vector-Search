@@ -578,7 +578,8 @@ void debug_slice(
     const std::string& msg = "",
     size_t rows = 6,
     size_t cols = 18) {
-  if (matrix_printf) {
+
+  if (matrix_printf || true) {
     rows = std::min(rows, dimension(A));
     cols = std::min(cols, num_vectors(A));
 

@@ -14,9 +14,9 @@ from .module import (array_to_matrix, ivf_index, ivf_index_tdb, ivf_query,
                      ivf_query_ram, load_as_array, load_as_matrix,
                      partition_ivf_index,
                      query_vq_heap, query_vq_nth,
-                     validate_top_k)
+                     validate_top_k,
+                     debug_slice)
 from .storage_formats import STORAGE_VERSION, storage_formats
-
 
 
 from  ._tiledbvspy import FeatureVector
@@ -44,6 +44,7 @@ __all__ = [
     "ivf_query",
     "ivf_query_ram",
     "validate_top_k",
+    "debug_slice",
     "ivf_index",
     "ivf_index_tdb",
     "array_to_matrix",

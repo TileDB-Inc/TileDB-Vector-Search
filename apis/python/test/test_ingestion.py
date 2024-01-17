@@ -1,6 +1,7 @@
 import time
 import numpy as np
 from common import *
+from array_paths import *
 import pytest
 
 from tiledb.cloud.dag import Mode
@@ -19,6 +20,66 @@ MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 def query_and_check_equals(index, queries, expected_result_d, expected_result_i):
     result_d, result_i = index.query(queries, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=expected_result_d, expected_result_i=expected_result_i)
+
+
+def test_copy_centroids_uri(tmp_path):
+
+    print("==== test_copy_centroids_uri ==== ")
+
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    os.mkdir(dataset_dir)
+
+    # Create the index data.
+    data = np.array([[1, 1, 1, 1], [1, 1, 1, 1], [2, 2, 2, 2], [2, 2, 2, 2], [3, 3, 3, 3]], dtype=np.float32)
+
+    # Create the centroids - this is based on ivf_flat_index.py.
+    centroids = np.array([[1, 1, 1, 1], [2, 2, 2, 2]], dtype=np.float32)
+    centroids_in_size = centroids.shape[0]
+    dimensions = centroids.shape[1]
+    schema = tiledb.ArraySchema(
+        domain=tiledb.Domain(
+            *[
+                tiledb.Dim(name="rows", domain=(0, dimensions - 1), tile=dimensions, dtype=np.dtype(np.int32)),
+                tiledb.Dim(name="cols", domain=(0, np.iinfo(np.dtype("int32")).max), tile=100000, dtype=np.dtype(np.int32)),
+            ]
+        ),
+        sparse=False,
+        # Changing this will let the tests pass, but will likely break things in production
+        # Suggest using "values" for all arrays in vector search
+        # attrs=[tiledb.Attr(name="centroids", dtype="float32", filters=tiledb.FilterList([tiledb.ZstdFilter()]))],
+        attrs=[tiledb.Attr(name="values", dtype="float32", filters=tiledb.FilterList([tiledb.ZstdFilter()]))],
+        cell_order="col-major",
+        tile_order="col-major",
+    )
+    centroids_uri = os.path.join(dataset_dir, "centroids.tdb")
+    tiledb.Array.create(centroids_uri, schema)
+    index_timestamp = int(time.time() * 1000)
+    with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
+        A[0:dimensions, 0:centroids_in_size] = centroids.transpose()
+
+    # Create the index.
+    index_uri = os.path.join(tmp_path, "array")
+    index = ingest(
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
+        input_vectors=data,
+        copy_centroids_uri=centroids_uri,
+        partitions=centroids_in_size
+    )
+
+    # Query the index.
+    queries = np.array([data[4]], dtype=np.float32)
+
+    print(f"centroids_uri: {centroids_uri}")
+    print(f"index_uri: {index_uri}")
+    print(f"centroids_in_size: {centroids_in_size}")
+
+    print(data, "==== data")
+    print(centroids, "==== centroids")
+
+    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[4]])
+
+
 
 def test_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -203,9 +264,9 @@ def test_ivf_flat_ingestion_f32(tmp_path):
 
 
 def test_ivf_flat_ingestion_fvec(tmp_path):
-    source_uri = "test/data/siftsmall/input_vectors.fvecs"
-    queries_uri = "test/data/siftsmall/queries.fvecs"
-    gt_uri = "test/data/siftsmall/groundtruth.ivecs"
+    source_uri = siftsmall_inputs_file
+    queries_uri = siftsmall_query_file
+    gt_uri = siftsmall_groundtruth_file
     index_uri = os.path.join(tmp_path, "array")
 
     k = 100
@@ -260,9 +321,9 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
 
 
 def test_ivf_flat_ingestion_numpy(tmp_path):
-    source_uri = "test/data/siftsmall/input_vectors.fvecs"
-    queries_uri = "test/data/siftsmall/queries.fvecs"
-    gt_uri = "test/data/siftsmall/groundtruth.ivecs"
+    source_uri = siftsmall_inputs_file
+    queries_uri = siftsmall_query_file
+    gt_uri = siftsmall_groundtruth_file
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 100
@@ -300,9 +361,9 @@ def test_ivf_flat_ingestion_numpy(tmp_path):
 
 
 def test_ivf_flat_ingestion_multiple_workers(tmp_path):
-    source_uri = "test/data/siftsmall/input_vectors.fvecs"
-    queries_uri = "test/data/siftsmall/queries.fvecs"
-    gt_uri = "test/data/siftsmall/groundtruth.ivecs"
+    source_uri = siftsmall_inputs_file
+    queries_uri = siftsmall_query_file
+    gt_uri = siftsmall_groundtruth_file
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 100
@@ -341,9 +402,9 @@ def test_ivf_flat_ingestion_multiple_workers(tmp_path):
 
 
 def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
-    source_uri = "test/data/siftsmall/input_vectors.fvecs"
-    queries_uri = "test/data/siftsmall/queries.fvecs"
-    gt_uri = "test/data/siftsmall/groundtruth.ivecs"
+    source_uri = siftsmall_inputs_file
+    queries_uri = siftsmall_query_file
+    gt_uri = siftsmall_groundtruth_file
     index_uri = os.path.join(tmp_path, "array")
     k = 100
     partitions = 100
@@ -780,52 +841,6 @@ def test_storage_versions(tmp_path):
             index_ram = index_class(uri=index_uri)
             _, result = index_ram.query(queries, k=k)
             assert accuracy(result, gt_i) > MINIMUM_ACCURACY
-
-def test_copy_centroids_uri(tmp_path):
-    dataset_dir = os.path.join(tmp_path, "dataset")
-    os.mkdir(dataset_dir)
-
-    # Create the index data.
-    data = np.array([[1, 1, 1, 1], [1, 1, 1, 1], [2, 2, 2, 2], [2, 2, 2, 2], [3, 3, 3, 3]], dtype=np.float32)
-
-    # Create the centroids - this is based on ivf_flat_index.py.
-    centroids = np.array([[1, 1, 1, 1], [2, 2, 2, 2]], dtype=np.float32)
-    centroids_in_size = centroids.shape[0]
-    dimensions = centroids.shape[1]
-    schema = tiledb.ArraySchema(
-        domain=tiledb.Domain(
-            *[
-                tiledb.Dim(name="rows", domain=(0, dimensions - 1), tile=dimensions, dtype=np.dtype(np.int32)),
-                tiledb.Dim(name="cols", domain=(0, np.iinfo(np.dtype("int32")).max), tile=100000, dtype=np.dtype(np.int32)),
-            ]
-        ),
-        sparse=False,
-        # Changing this will let the tests pass, but will likely break things in production
-        # Suggest using "values" for all arrays in vector search
-        # attrs=[tiledb.Attr(name="centroids", dtype="float32", filters=tiledb.FilterList([tiledb.ZstdFilter()]))],
-        attrs=[tiledb.Attr(name="values", dtype="float32", filters=tiledb.FilterList([tiledb.ZstdFilter()]))],
-        cell_order="col-major",
-        tile_order="col-major",
-    )
-    centroids_uri = os.path.join(dataset_dir, "centroids.tdb")
-    tiledb.Array.create(centroids_uri, schema)
-    index_timestamp = int(time.time() * 1000)
-    with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
-        A[0:dimensions, 0:centroids_in_size] = centroids.transpose()
-
-    # Create the index.
-    index_uri = os.path.join(tmp_path, "array")
-    index = ingest(
-        index_type="IVF_FLAT", 
-        index_uri=index_uri, 
-        input_vectors=data,
-        copy_centroids_uri=centroids_uri,
-        partitions=centroids_in_size
-    )
-
-    # Query the index.
-    queries = np.array([data[4]], dtype=np.float32)
-    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[4]])
 
 
 def test_kmeans():
