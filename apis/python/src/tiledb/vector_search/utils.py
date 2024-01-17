@@ -2,6 +2,16 @@ import tiledb
 import numpy as np
 import io
 
+def add_to_group(group, uri, name):
+    '''
+    Adds an object to a group. Automatically infers whether to use a relative path or absolute path.
+    NOTE(paris): We use absolute paths for tileDB URIs because of a bug tracked in SC39197, once 
+    that is fixed everything can use relative paths.
+    '''
+    if 'tiledb://' in uri:
+        group.add(uri, name=name)
+    else:
+        group.add(name, name=name, relative=True)
 
 def _load_vecs_t(uri, dtype, ctx_or_config=None):
     with tiledb.scope_ctx(ctx_or_config) as ctx:

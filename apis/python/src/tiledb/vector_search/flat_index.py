@@ -4,7 +4,7 @@ from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.index import Index
 from typing import Any, Mapping
-
+rom tiledb.vector_search.utils import add_to_group
 
 class FlatIndex(Index):
     """

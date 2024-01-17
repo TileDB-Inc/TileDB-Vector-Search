@@ -4,7 +4,7 @@ from functools import partial
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search._tiledbvspy import *
 import numpy as np
-
+from tiledb.vector_search.utils import add_to_group
 
 def ingest(
     index_type: str,
@@ -270,7 +270,7 @@ def ingest(
         )
         logger.debug(input_vectors_array_schema)
         tiledb.Array.create(input_vectors_array_uri, input_vectors_array_schema)
-        group.add(input_vectors_array_uri, name=INPUT_VECTORS_ARRAY_NAME)
+        add_to_group(group, input_vectors_array_uri, INPUT_VECTORS_ARRAY_NAME)
 
         input_vectors_array = tiledb.open(input_vectors_array_uri, "w")
         input_vectors_array[:, :] = np.transpose(input_vectors)
@@ -311,7 +311,7 @@ def ingest(
         )
         logger.debug(ids_schema)
         tiledb.Array.create(external_ids_array_uri, ids_schema)
-        group.add(external_ids_array_uri, name=IDS_ARRAY_NAME)
+        add_to_group(group, external_ids_array_uri, EXTERNAL_IDS_ARRAY_NAME)
 
         external_ids_array = tiledb.open(external_ids_array_uri, "w")
         external_ids_array[:] = external_ids
@@ -356,7 +356,7 @@ def ingest(
                 )
                 logger.debug(ids_schema)
                 tiledb.Array.create(ids_uri, ids_schema)
-                group.add(ids_uri, name=IDS_ARRAY_NAME)
+                add_to_group(group, ids_uri, IDS_ARRAY_NAME)
 
             if not tiledb.array_exists(parts_uri):
                 logger.debug("Creating parts array")
@@ -388,7 +388,7 @@ def ingest(
                 )
                 logger.debug(parts_schema)
                 tiledb.Array.create(parts_uri, parts_schema)
-                group.add(parts_uri, name=PARTS_ARRAY_NAME)
+                add_to_group(group, parts_uri, PARTS_ARRAY_NAME)
 
         elif index_type == "IVF_FLAT":
             centroids_uri = f"{group.uri}/{CENTROIDS_ARRAY_NAME}"
@@ -438,7 +438,7 @@ def ingest(
                 )
                 logger.debug(centroids_schema)
                 tiledb.Array.create(centroids_uri, centroids_schema)
-                group.add(centroids_uri, name=CENTROIDS_ARRAY_NAME)
+                add_to_group(group, centroids_uri, CENTROIDS_ARRAY_NAME)
 
             if not tiledb.array_exists(index_array_uri):
                 logger.debug("Creating index array")
@@ -464,7 +464,7 @@ def ingest(
                 )
                 logger.debug(index_schema)
                 tiledb.Array.create(index_array_uri, index_schema)
-                group.add(index_array_uri, name=INDEX_ARRAY_NAME)
+                add_to_group(group, index_array_uri, INDEX_ARRAY_NAME)
 
             if not tiledb.array_exists(ids_uri):
                 logger.debug("Creating ids array")
@@ -490,7 +490,7 @@ def ingest(
                 )
                 logger.debug(ids_schema)
                 tiledb.Array.create(ids_uri, ids_schema)
-                group.add(ids_uri, name=IDS_ARRAY_NAME)
+                add_to_group(group, ids_uri, IDS_ARRAY_NAME)
 
             if not tiledb.array_exists(parts_uri):
                 logger.debug("Creating parts array")
@@ -522,7 +522,7 @@ def ingest(
                 )
                 logger.debug(parts_schema)
                 tiledb.Array.create(parts_uri, parts_schema)
-                group.add(parts_uri, name=PARTS_ARRAY_NAME)
+                add_to_group(group, parts_uri, PARTS_ARRAY_NAME)
 
             try:
                 tiledb.group_create(partial_write_array_dir_uri)
@@ -534,7 +534,7 @@ def ingest(
                     )
                 raise err
             partial_write_array_group = tiledb.Group(partial_write_array_dir_uri, "w")
-            group.add(partial_write_array_dir_uri, name=PARTIAL_WRITE_ARRAY_DIR)
+            add_to_group(group, partial_write_array_dir_uri, PARTIAL_WRITE_ARRAY_DIR)
 
             try:
                 tiledb.group_create(partial_write_array_index_uri)
@@ -545,9 +545,7 @@ def ingest(
                         f"Group '{partial_write_array_index_uri}' already exists"
                     )
                 raise err
-            partial_write_array_group.add(
-                partial_write_array_index_uri, name=INDEX_ARRAY_NAME
-            )
+            add_to_group(partial_write_array_group, partial_write_array_index_uri, INDEX_ARRAY_NAME)
             partial_write_array_index_group = tiledb.Group(
                 partial_write_array_index_uri, "w"
             )
@@ -576,9 +574,7 @@ def ingest(
                 )
                 logger.debug(ids_schema)
                 tiledb.Array.create(partial_write_array_ids_uri, ids_schema)
-                partial_write_array_group.add(
-                    partial_write_array_ids_uri, name=IDS_ARRAY_NAME
-                )
+                add_to_group(partial_write_array_group, partial_write_array_ids_uri, IDS_ARRAY_NAME)
 
             if not tiledb.array_exists(partial_write_array_parts_uri):
                 logger.debug("Creating temp parts array")
@@ -611,9 +607,7 @@ def ingest(
                 logger.debug(parts_schema)
                 logger.debug(partial_write_array_parts_uri)
                 tiledb.Array.create(partial_write_array_parts_uri, parts_schema)
-                partial_write_array_group.add(
-                    partial_write_array_parts_uri, name=PARTS_ARRAY_NAME
-                )
+                add_to_group(partial_write_array_group, partial_write_array_parts_uri, PARTS_ARRAY_NAME)
             partial_write_arrays = input_vectors_work_tasks
             if updates_uri is not None:
                 partial_write_arrays += 1
@@ -643,7 +637,7 @@ def ingest(
                     )
                     logger.debug(index_schema)
                     tiledb.Array.create(part_index_uri, index_schema)
-                    partial_write_array_index_group.add(part_index_uri, name=str(part))
+                    add_to_group(partial_write_array_index_group, part_index_uri, str(part))
             partial_write_array_group.close()
             partial_write_array_index_group.close()
 

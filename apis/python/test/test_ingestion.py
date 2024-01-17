@@ -30,6 +30,10 @@ def test_flat_ingestion_u8(tmp_path):
     _, result = index.query(query_vectors, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    index_uri = move_local_index_to_new_location(index_uri)
+    index_ram = FlatIndex(uri=index_uri)
+    _, result = index_ram.query(queries, k=k)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 def test_flat_ingestion_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -49,6 +53,7 @@ def test_flat_ingestion_f32(tmp_path):
     _, result = index.query(query_vectors, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    index_uri = move_local_index_to_new_location(index_uri)
     index_ram = FlatIndex(uri=index_uri)
     _, result = index_ram.query(query_vectors, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
@@ -76,6 +81,13 @@ def test_flat_ingestion_external_id_u8(tmp_path):
     _, result = index.query(query_vectors, k=k)
     assert accuracy(result, gt_i, external_ids_offset=external_ids_offset) > MINIMUM_ACCURACY
 
+    index_uri = move_local_index_to_new_location(index_uri)
+    index_ram = FlatIndex(uri=index_uri)
+    _, result = index_ram.query(queries, k=k)
+    assert (
+        accuracy(result, gt_i, external_ids_offset=external_ids_offset)
+        > MINIMUM_ACCURACY
+    )
 
 def test_ivf_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -101,6 +113,7 @@ def test_ivf_flat_ingestion_u8(tmp_path):
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    index_uri = move_local_index_to_new_location(index_uri)
     index_ram = IVFFlatIndex(uri=index_uri, memory_budget=int(size / 10))
     _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
@@ -149,6 +162,7 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    index_uri = move_local_index_to_new_location(index_uri)
     index_ram = IVFFlatIndex(uri=index_uri)
     _, result = index_ram.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
@@ -283,6 +297,10 @@ def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, external_ids_offset) > MINIMUM_ACCURACY
 
+    index_uri = move_local_index_to_new_location(index_uri)
+    index_ram = IVFFlatIndex(uri=index_uri)
+    _, result = index_ram.query(queries, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i, external_ids_offset) > MINIMUM_ACCURACY
 
 def test_ivf_flat_ingestion_with_updates(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -366,6 +384,9 @@ def test_ivf_flat_ingestion_with_batch_updates(tmp_path):
     index.update_batch(vectors=updates, external_ids=external_ids)
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, updated_ids=updated_ids) > MINIMUM_ACCURACY
+
+    index_uri = move_local_index_to_new_location(index_uri)
+    index = IVFFlatIndex(uri=index_uri)
 
     index = index.consolidate_updates()
     _, result = index.query(query_vectors, k=k, nprobe=nprobe)

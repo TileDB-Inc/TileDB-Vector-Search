@@ -6,7 +6,7 @@ from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.index import Index
 from tiledb.cloud.dag import Mode
 from typing import Any, Mapping
-
+from tiledb.vector_search.utils import add_to_group
 
 def submit_local(d, func, *args, **kwargs):
     # Drop kwarg
