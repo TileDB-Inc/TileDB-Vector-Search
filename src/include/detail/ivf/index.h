@@ -87,8 +87,8 @@ int ivf_index(
 
   auto parts = detail::flat::qv_partition(centroids, db, nthreads);
 
-  debug_slice(centroids);
-  debug_slice(parts, "parts");
+  // debug_slice(centroids);
+  // debug_slice(parts, "parts");
 
   {
     scoped_timer _{"shuffling data"};
@@ -116,8 +116,8 @@ int ivf_index(
     std::vector<size_t> check(indices.size());
     std::copy(begin(indices), end(indices), begin(check));
 
-    debug_slice(degrees, "degrees ");
-    debug_slice(indices, "indices ");
+    // debug_slice(degrees, "degrees ");
+    // debug_slice(indices, "indices ");
 
     // Some variables for debugging
     // @todo remove these once we are confident in the code
@@ -130,8 +130,8 @@ int ivf_index(
     auto shuffled_db = ColMajorMatrix<T>{db.num_rows(), db.num_cols()};
     std::vector shuffled_ids = std::vector<ids_type>(db.num_cols());
 
-    debug_matrix(shuffled_db, "shuffled_db");
-    debug_matrix(shuffled_ids, "shuffled_ids");
+    // debug_matrix(shuffled_db, "shuffled_db");
+    // debug_matrix(shuffled_ids, "shuffled_ids");
 
     // @todo parallelize
     // Unfortunately this variant of the algorithm is not parallelizable.

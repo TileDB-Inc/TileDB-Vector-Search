@@ -200,10 +200,6 @@ static void declare_qv_query_heap_finite_ram(
           -> py::tuple {  // std::tuple<ColMajorMatrix<float>,
                           // ColMajorMatrix<size_t>> { //
                           // TODO change return type
-        debug_slice(centroids, "centroids, qv_query_heap_finite");
-        debug_slice(query_vectors, "query_vectors, qv_query_heap_finite");
-        debug_slice(indices, "indices, qv_query_heap_finite");
-
         auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
             ctx,
             parts_uri,

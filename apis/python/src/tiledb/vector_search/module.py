@@ -377,12 +377,6 @@ def ivf_query(
     )
 
     logging.info(f">>>> module.py: ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}")
-    print(f":::: parts_uri: {parts_uri} ")
-    debug_slice(centroids, ":::: centroids ")
-    debug_slice(query_vectors, ":::: query_vectors ")
-    for i in range(len(indices)):
-        print(f":::: indices[{i}]: {indices[i]} ")
-    print(f":::: ids_uri: {ids_uri}")
 
     if dtype == np.float32:
         if use_nuv_implementation:

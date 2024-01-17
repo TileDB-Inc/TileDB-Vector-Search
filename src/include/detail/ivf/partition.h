@@ -90,11 +90,6 @@ auto partition_ivf_flat_index(
    * We also need to know the "active" centroids, i.e., the ones having at
    * least one query.
    */
-  debug_slice(centroids, "centroids");
-  debug_slice(query, "query");
-  debug_slice(top_centroids, "top_centroids");
-
-
   auto centroid_query = std::multimap<parts_type, size_t>{};
   auto active_centroids = std::set<parts_type>{};
   for (size_t j = 0; j < num_queries; ++j) {
