@@ -2,11 +2,6 @@
 
 TileDB Vector Search can be built from source. For information on dependencies, see below.
 
-## Installation from github with pip:
-```
-pip install git+https://github.com/TileDB-Inc/TileDB-Vector-Search.git#subdirectory=apis/python
-```
-
 ## Installation from a local checkout:
 ```bash
 cd apis/python
