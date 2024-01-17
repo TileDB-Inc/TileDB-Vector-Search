@@ -47,7 +47,7 @@ def ingest(
     storage_version: str = STORAGE_VERSION,
     verbose: bool = False,
     trace_id: Optional[str] = None,
-    use_sklearn: bool = False,
+    use_sklearn: bool = True,
     mode: Mode = Mode.LOCAL,
     **kwargs,
 ):
@@ -129,7 +129,7 @@ def ingest(
         trace ID for logging, defaults to None
     use_sklearn: bool
         Whether to use scikit-learn's implementation of k-means clustering instead of
-        tiledb.vector_search's. Defaults to false.
+        tiledb.vector_search's. Defaults to true.
     mode: Mode
         execution mode, defaults to LOCAL use BATCH for distributed execution
     """
@@ -933,14 +933,11 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
-        use_sklearn: bool = False
+        use_sklearn: bool = True
     ):
         from sklearn.cluster import KMeans
 
-        from tiledb.vector_search.module import (
-            array_to_matrix,
-            kmeans_fit,
-        )
+        from tiledb.vector_search.module import array_to_matrix
 
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
@@ -990,6 +987,7 @@ def ingest(
                     km.fit_predict(sample_vectors)
                     centroids = np.transpose(np.array(km.cluster_centers_))
                 else:
+                    from tiledb.vector_search.module import kmeans_fit
                     centroids = kmeans_fit(partitions, init, max_iter, verbose, n_init, array_to_matrix(np.transpose(sample_vectors)))
                     centroids = np.array(centroids) # TODO: why is this here?
             else:
@@ -1044,7 +1042,7 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
-        use_sklearn: bool = False,
+        use_sklearn: bool = True,
     ):
         import tiledb.cloud
         from sklearn.cluster import KMeans
@@ -1145,7 +1143,7 @@ def ingest(
             logger.debug("Assigning vectors to centroids")
             if use_sklearn:
                 km = KMeans()
-                km.n_threads_ = threads
+                km._n_threads = threads
                 km.cluster_centers_ = centroids
                 assignments = km.predict(vectors)
             else:
@@ -1692,7 +1690,7 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
-        use_sklearn: bool = False,
+        use_sklearn: bool = True,
         mode: Mode = Mode.LOCAL,
     ) -> dag.DAG:
         if mode == Mode.BATCH:
