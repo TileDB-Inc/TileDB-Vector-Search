@@ -10,6 +10,7 @@ from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
                                                   storage_formats,
                                                   validate_storage_version)
+from tiledb.vector_search.utils import add_to_group
 
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
@@ -506,7 +507,7 @@ def create(
             tile_order="col-major",
         )
         tiledb.Array.create(centroids_uri, centroids_schema)
-        group.add(centroids_uri, name=centroids_array_name)
+        add_to_group(group, centroids_uri, name=centroids_array_name)
 
         index_array_rows_dim = tiledb.Dim(
             name="rows",
@@ -528,7 +529,7 @@ def create(
             tile_order="col-major",
         )
         tiledb.Array.create(index_array_uri, index_schema)
-        group.add(index_array_uri, name=index_array_name)
+        add_to_group(group, index_array_uri, name=index_array_name)
 
         ids_array_rows_dim = tiledb.Dim(
             name="rows",
@@ -550,7 +551,7 @@ def create(
             tile_order="col-major",
         )
         tiledb.Array.create(ids_uri, ids_schema)
-        group.add(ids_uri, name=ids_array_name)
+        add_to_group(group, ids_uri, name=ids_array_name)
 
         parts_array_rows_dim = tiledb.Dim(
             name="rows",
@@ -578,7 +579,7 @@ def create(
             tile_order="col-major",
         )
         tiledb.Array.create(parts_uri, parts_schema)
-        group.add(parts_uri, name=parts_array_name)
+        add_to_group(group, parts_uri, name=parts_array_name)
 
         external_id_dim = tiledb.Dim(
             name="external_id",
@@ -594,7 +595,7 @@ def create(
             allows_duplicates=False,
         )
         tiledb.Array.create(updates_array_uri, updates_schema)
-        group.add(updates_array_uri, name=updates_array_name)
+        add_to_group(group, updates_array_uri, name=updates_array_name)
 
         group.close()
         return IVFFlatIndex(uri=uri, config=config, memory_budget=1000000)

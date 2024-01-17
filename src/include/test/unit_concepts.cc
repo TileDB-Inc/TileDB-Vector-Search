@@ -97,7 +97,7 @@ auto num_features(const FV& fv) {
 }
 
 template <class FV>
-requires feature_vector<FV>
+  requires feature_vector<FV>
 auto a(const FV& fv) {
   return true;
 }
@@ -146,7 +146,7 @@ auto raveled(const DB& db) {
 }
 
 template <class DB>
-requires vector_database<DB>
+  requires vector_database<DB>
 auto b(const DB& db) {
   return true;
 }
