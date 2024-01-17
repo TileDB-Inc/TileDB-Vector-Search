@@ -1,8 +1,6 @@
 import numpy as np
-import pytest
 from common import *
 
-import tiledb
 import tiledb.vector_search as vs
 from tiledb.vector_search import _tiledbvspy as vspy
 
@@ -31,7 +29,7 @@ def test_vector(tmpdir):
 
 
 def test_partition_ivf_index(tmpdir):
-    path = tmpdir.mkdir("test").join("test.tdb")
+    tmpdir.mkdir("test").join("test.tdb")
 
     # Test: 3x3 identity; swap columns 0 and 1; check assignment matches swap.
     data = np.identity(3).astype(np.float32)
@@ -46,7 +44,7 @@ def test_partition_ivf_index(tmpdir):
 
 
 def test_partition_ivf_index2(tmpdir):
-    path = tmpdir.mkdir("test").join("test.tdb")
+    tmpdir.mkdir("test").join("test.tdb")
 
     # Test: 3x3 identity; swap columns 0 and 1; check assignment matches swap.
     data = np.identity(3).astype(np.float32)

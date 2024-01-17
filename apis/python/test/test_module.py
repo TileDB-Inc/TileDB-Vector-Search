@@ -29,7 +29,7 @@ def test_tdbMatrix(tmpdir):
 
 
 def test_array_to_matrix(tmpdir):
-    p = str(tmpdir.mkdir("test").join("test.tdb"))
+    str(tmpdir.mkdir("test").join("test.tdb"))
 
     data = np.random.rand(12).astype(np.float32).reshape(3, 4)
 

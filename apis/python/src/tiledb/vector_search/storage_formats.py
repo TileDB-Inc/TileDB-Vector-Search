@@ -44,7 +44,10 @@ storage_formats = {
 
 STORAGE_VERSION = "0.3"
 
+
 def validate_storage_version(storage_version):
     if storage_version not in storage_formats:
-        valid_versions = ', '.join(storage_formats.keys())
-        raise ValueError(f"Invalid storage version: {storage_version} - valid versions are [{valid_versions}]")
+        valid_versions = ", ".join(storage_formats.keys())
+        raise ValueError(
+            f"Invalid storage version: {storage_version} - valid versions are [{valid_versions}]"
+        )
