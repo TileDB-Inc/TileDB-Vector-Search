@@ -11,7 +11,7 @@ install_apt_pkg() {
 }
 
 install_brew_pkg() {
-  brew upgrade && brew install clang-format@17
+  brew install clang-format@17
 }
 
 install_clang_format() {
