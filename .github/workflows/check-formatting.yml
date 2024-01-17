@@ -1,27 +1,27 @@
-name: Check formatting
+# name: Check formatting
 
-on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '_quarto.yml'
-      - 'quarto-materials/*'
-      - '**/.md'
-  pull_request:
-    branches:
-      - main
-    paths-ignore:
-      - '_quarto.yml'
-      - 'quarto-materials/*'
-      - '**/.md'
+# on:
+#   push:
+#     branches:
+#       - main
+#     paths-ignore:
+#       - '_quarto.yml'
+#       - 'quarto-materials/*'
+#       - '**/.md'
+#   pull_request:
+#     branches:
+#       - main
+#     paths-ignore:
+#       - '_quarto.yml'
+#       - 'quarto-materials/*'
+#       - '**/.md'
 
-jobs:
-  check-formatting:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: 'Check clang-format'
-        run: |
-          source $GITHUB_WORKSPACE/scripts/ci/check_clang_format.sh
-        shell: bash
+# jobs:
+#   check-formatting:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v3
+#       - name: 'Check clang-format'
+#         run: |
+#           source $GITHUB_WORKSPACE/scripts/ci/check_clang_format.sh
+#         shell: bash

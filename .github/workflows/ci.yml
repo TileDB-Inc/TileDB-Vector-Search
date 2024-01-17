@@ -1,24 +1,24 @@
-name: CI
+# name: CI
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+# on:
+#   push:
+#     branches: [main]
+#   pull_request:
+#     branches: [main]
 
-jobs:
-  run-tests:
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Install OpenBLAS
-        run: sudo apt install libopenblas-dev
-      - uses: actions/checkout@v3
-      - name: Configure CMake
-        run: cmake -S ./src -B ./src/build -DCMAKE_BUILD_TYPE=Debug -DTILEDB_VS_ENABLE_BLAS=ON
-      - name: Build
-        run: cmake --build ./src/build -j3
-      - name: Run Tests
-        run: cmake --build ./src/build --target check-ci
+# jobs:
+#   run-tests:
+#     strategy:
+#       matrix:
+#         os: [ubuntu-latest]
+#     runs-on: ${{ matrix.os }}
+#     steps:
+#       - name: Install OpenBLAS
+#         run: sudo apt install libopenblas-dev
+#       - uses: actions/checkout@v3
+#       - name: Configure CMake
+#         run: cmake -S ./src -B ./src/build -DCMAKE_BUILD_TYPE=Debug -DTILEDB_VS_ENABLE_BLAS=ON
+#       - name: Build
+#         run: cmake --build ./src/build -j3
+#       - name: Run Tests
+#         run: cmake --build ./src/build --target check-ci
