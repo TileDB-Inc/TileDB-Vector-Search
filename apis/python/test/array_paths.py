@@ -1,10 +1,14 @@
 # Description: Contains paths to test arrays
 
+import os
 # TODO Use python Pathlib
 # m1_root = "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/"
 # TODO Get absolute path from cmake / setup / pytest
+
+test_data_path = os.path.join(os.path.dirname(__file__), "../../../")
+
 vector_search_root = "../../"
-vector_search_root = "/Users/lums/TileDB/TileDB-Vector-Search/"
+# vector_search_root = "/Users/lums/TileDB/TileDB-Vector-Search/"
 test_data_root = vector_search_root + "external/test_data/"
 test_array_root = test_data_root + "arrays/"
 test_file_root = test_data_root + "files/"
