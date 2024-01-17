@@ -112,8 +112,10 @@ auto qv_query_heap_infinite_ram(
   }
   scoped_timer _{"Total time " + tdb_func__};
 
-  // using feature_type = typename std::remove_reference_t<decltype(partitioned_db)>::value_type;
-  using id_type = typename std::remove_reference_t<decltype(partitioned_ids)>::value_type;
+  // using feature_type = typename
+  // std::remove_reference_t<decltype(partitioned_db)>::value_type;
+  using id_type =
+      typename std::remove_reference_t<decltype(partitioned_ids)>::value_type;
   using score_type = float;
 
   assert(partitioned_db.num_cols() == partitioned_ids.size());
@@ -317,8 +319,10 @@ auto nuv_query_heap_infinite_ram(
   }
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
-  // using feature_type = typename std::remove_reference_t<decltype(partitioned_db)>::value_type;
-  using id_type = typename std::remove_reference_t<decltype(partitioned_ids)>::value_type;
+  // using feature_type = typename
+  // std::remove_reference_t<decltype(partitioned_db)>::value_type;
+  using id_type =
+      typename std::remove_reference_t<decltype(partitioned_ids)>::value_type;
   using score_type = float;
 
   assert(partitioned_db.num_cols() == partitioned_ids.size());
@@ -423,12 +427,16 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
     size_t nthreads,
     uint64_t timestamp = 0) {
   scoped_timer _{tdb_func__};
-  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+  auto temporal_policy =
+      (timestamp == 0) ? tiledb::TemporalPolicy() :
+                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   // Read the shuffled database and ids
   // @todo To this more systematically
-  auto partitioned_db = tdbColMajorMatrix<feature_type>(ctx, part_uri, 0, temporal_policy);
-  auto partitioned_ids = read_vector<id_type>(ctx, id_uri, 0, 0, temporal_policy);
+  auto partitioned_db =
+      tdbColMajorMatrix<feature_type>(ctx, part_uri, 0, temporal_policy);
+  auto partitioned_ids =
+      read_vector<id_type>(ctx, id_uri, 0, 0, temporal_policy);
 
   return nuv_query_heap_infinite_ram_reg_blocked(
       partitioned_db,
@@ -485,8 +493,10 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
   }
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
-  // using feature_type = typename std::remove_reference_t<decltype(partitioned_db)>::value_type;
-  using id_type = typename std::remove_reference_t<decltype(partitioned_ids)>::value_type;
+  // using feature_type = typename
+  // std::remove_reference_t<decltype(partitioned_db)>::value_type;
+  using id_type =
+      typename std::remove_reference_t<decltype(partitioned_ids)>::value_type;
   using score_type = float;
 
   assert(partitioned_db.num_cols() == partitioned_ids.size());
@@ -504,10 +514,11 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
   // auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
   //     size(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
 
-  auto min_scores = std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>>(
-      nthreads,
-      std::vector<fixed_min_pair_heap<score_type, id_type>>(
-          num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn)));
+  auto min_scores =
+      std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>>(
+          nthreads,
+          std::vector<fixed_min_pair_heap<score_type, id_type>>(
+              num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn)));
 
   size_t parts_per_thread = (size(active_partitions) + nthreads - 1) / nthreads;
 
@@ -648,15 +659,19 @@ auto qv_query_heap_finite_ram(
     size_t nthreads,
     uint64_t timestamp = 0) {
   tiledb::Context ctx;
-  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+  auto temporal_policy =
+      (timestamp == 0) ? tiledb::TemporalPolicy() :
+                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
-  auto centroids = tdbColMajorMatrix<centroids_type>(ctx, centroids_uri, 0, temporal_policy);
+  auto centroids =
+      tdbColMajorMatrix<centroids_type>(ctx, centroids_uri, 0, temporal_policy);
   centroids.load();
 
   auto query = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
   query.load();
 
-  auto indices = read_vector<indices_type>(ctx, indices_uri, 0, 0, temporal_policy);
+  auto indices =
+      read_vector<indices_type>(ctx, indices_uri, 0, 0, temporal_policy);
 
   return qv_query_heap_finite_ram(
       ctx,
@@ -722,7 +737,9 @@ auto qv_query_heap_finite_ram(
     size_t nthreads,
     uint64_t timestamp) {
   scoped_timer _{tdb_func__};
-  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+  auto temporal_policy =
+      (timestamp == 0) ? tiledb::TemporalPolicy() :
+                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   using score_type = float;
   using indices_type =
@@ -766,7 +783,13 @@ auto qv_query_heap_finite_ram(
       id_type,
       indices_type,
       parts_type>(
-      ctx, part_uri, indices, active_partitions, id_uri, upper_bound, temporal_policy);
+      ctx,
+      part_uri,
+      indices,
+      active_partitions,
+      id_uri,
+      upper_bound,
+      temporal_policy);
 
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
   new_indices[0] = 0;
@@ -797,10 +820,11 @@ auto qv_query_heap_finite_ram(
   // auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
   //       size(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
 
-  auto min_scores = std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>>(
-      nthreads,
-      std::vector<fixed_min_pair_heap<score_type, id_type>>(
-          num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn)));
+  auto min_scores =
+      std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>>(
+          nthreads,
+          std::vector<fixed_min_pair_heap<score_type, id_type>>(
+              num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn)));
 
   log_timer _i{tdb_func__ + " in RAM"};
 
@@ -1194,7 +1218,9 @@ auto nuv_query_heap_finite_ram_reg_blocked(
     size_t nthreads,
     uint64_t timestamp = 0) {
   scoped_timer _{tdb_func__ + " " + part_uri};
-  auto temporal_policy = (timestamp == 0) ? tiledb::TemporalPolicy() : tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+  auto temporal_policy =
+      (timestamp == 0) ? tiledb::TemporalPolicy() :
+                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   // Check that the size of the indices vector is correct
   assert(size(indices) == centroids.num_cols() + 1);
@@ -1215,7 +1241,13 @@ auto nuv_query_heap_finite_ram_reg_blocked(
       id_type,
       indices_type,
       parts_type>(
-      ctx, part_uri, indices, active_partitions, id_uri, upper_bound, temporal_policy);
+      ctx,
+      part_uri,
+      indices,
+      active_partitions,
+      id_uri,
+      upper_bound,
+      temporal_policy);
 
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
   new_indices[0] = 0;

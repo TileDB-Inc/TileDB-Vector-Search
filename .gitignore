@@ -101,5 +101,5 @@ docs/.quarto
 documentation/reference/*
 documentation/reference
 
-# MacOS
-*.DS_Store
+# Mac
+*DS_Store

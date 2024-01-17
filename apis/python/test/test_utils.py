@@ -2,7 +2,7 @@ import os
 import numpy as np
 from tiledb.vector_search.utils import load_fvecs, load_ivecs, write_fvecs, write_ivecs
 
-def test_cloud_flat(tmp_path):
+def test_load_and_write_vecs(tmp_path):
     fvecs_uri = "test/data/siftsmall/siftsmall_base.fvecs"
     ivecs_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
 
