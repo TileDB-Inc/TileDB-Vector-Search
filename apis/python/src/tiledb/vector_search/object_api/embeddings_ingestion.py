@@ -1,4 +1,4 @@
-from typing import Any, Mapping, Optional, List
+from typing import Any, Mapping, Optional, List, Dict
 from functools import partial
 
 import numpy as np
@@ -12,8 +12,10 @@ def ingest_embeddings(
     object_index: ObjectIndex,
     embeddings_uri: str,
     external_ids_uri: str,
+    metadata_array_uri: str = None,
     index_timestamp: int = None,
     workers: int = -1,
+    worker_resources: Dict = None,
     objects_per_partition = -1,
     object_partitions_per_task: int = -1,
     max_tasks_per_stage: int = -1,
@@ -36,6 +38,7 @@ def ingest_embeddings(
 
     MAX_TASKS_PER_STAGE = 100
     DEFAULT_IMG_NAME = "3.9-vectorsearch"
+    DEFAULT_WORKER_RESOURCES = { "cpu": "1", "memory": "4Gi"}
 
     def setup(
         config: Optional[Mapping[str, Any]] = None,
@@ -73,20 +76,51 @@ def ingest_embeddings(
     # UDFs
     # --------------------------------------------------------------------
     def compute_embeddings_udf(
-        object_reader: ObjectReader,
-        object_embedding: ObjectEmbedding,
-        partitions: List[ObjectPartition],
+        object_reader_source_code: str,
+        object_reader_class_name: str,
+        object_reader_kwargs: Dict,
+        object_embedding_source_code: str,
+        object_embedding_class_name: str,
+        object_embedding_kwargs: Dict,
+        partition_dicts: List[Dict],
         embeddings_uri: str,
         external_ids_uri: str,
+        metadata_array_uri: str = None,
         index_timestamp: int = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
         config: Optional[Mapping[str, Any]] = None,
     ):
         import numpy as np
-        import tiledb.cloud
+        import tiledb
+
+        def instantiate_object(code, class_name, **kwargs):
+            import random
+            import string
+            import os
+            import sys
+            temp_file_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
+            abs_path = os.path.abspath(f"{temp_file_name}.py")
+            f = open(abs_path, "w")
+            f.write(code)
+            f.close()
+            sys.path.append(os.path.curdir)
+            reader_module = __import__(temp_file_name)
+            class_ = getattr(reader_module, class_name)
+            os.remove(abs_path)
+            return class_(**kwargs)
 
         logger = setup(config, verbose)
+        object_reader = instantiate_object(
+            code=object_reader_source_code,
+            class_name=object_reader_class_name,
+            **object_reader_kwargs
+        )
+        object_embedding = instantiate_object(
+            code=object_embedding_source_code,
+            class_name=object_embedding_class_name,
+            **object_embedding_kwargs
+        )
         with tiledb.scope_ctx(ctx_or_config=config):
             logger.debug("Loading model...")
             object_embedding.load()
@@ -97,7 +131,14 @@ def ingest_embeddings(
             logger.debug("embeddings_uri %s external_ids_uri %s", embeddings_uri, external_ids_uri)
             embeddings_array = tiledb.open(embeddings_uri, "w", timestamp=index_timestamp)
             external_ids_array = tiledb.open(external_ids_uri, "w", timestamp=index_timestamp)
-            for partition in partitions:
+            if metadata_array_uri is not None:
+                metadata_array = tiledb.open(metadata_array_uri, "w", timestamp=index_timestamp)
+            for partition_dict in partition_dicts:
+                partition = instantiate_object(
+                    code=object_reader_source_code,
+                    class_name="ImagePartition",
+                    **partition_dict
+                )
                 logger.debug(f"Computing partition: {partition.index_slice()}")
                 logger.debug("Reading objects...")
                 objects, metadata = object_reader.read_objects(partition)
@@ -111,9 +152,14 @@ def ingest_embeddings(
                 logger.debug("Write embeddings index_start: %d, index_end: %d", index_start, index_end)
                 embeddings_array[0:dimensions, index_start:index_end] = np.transpose(embeddings).astype(vector_type)
                 external_ids_array[index_start:index_end] = objects[object_reader.metadata_array_object_id_dim()]
+                if metadata_array_uri is not None:
+                    external_ids = metadata.pop(object_reader.metadata_array_object_id_dim(), None)
+                    metadata_array[external_ids] = metadata
 
             embeddings_array.close()
             external_ids_array.close()
+            if metadata_array_uri is not None:
+                metadata_array.close()
 
     # --------------------------------------------------------------------
     # DAG
@@ -132,8 +178,10 @@ def ingest_embeddings(
         partitions: List[ObjectPartition],
         object_partitions_per_worker: int,
         object_work_tasks: int,
+        metadata_array_uri: str = None,
         index_timestamp: int = None,
         workers: int = -1,
+        worker_resources: Dict = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
         mode: Mode = Mode.LOCAL,
@@ -142,7 +190,7 @@ def ingest_embeddings(
     ) -> dag.DAG:
         if mode == Mode.BATCH:
             d = dag.DAG(
-                name="vector-ingestion",
+                name="embedding-generation",
                 mode=Mode.BATCH,
                 max_workers=workers,
                 retry_strategy=models.RetryStrategy(
@@ -150,15 +198,13 @@ def ingest_embeddings(
                     retry_policy="Always",
                 ),
             )
-            threads = 16
         else:
             d = dag.DAG(
-                name="vector-ingestion",
+                name="embedding-generation",
                 mode=Mode.REALTIME,
                 max_workers=workers,
                 namespace="default",
             )
-            threads = multiprocessing.cpu_count()
 
         submit = partial(submit_local, d)
         if mode == Mode.BATCH or mode == Mode.REALTIME:
@@ -171,19 +217,27 @@ def ingest_embeddings(
             end = i + object_partitions_per_worker
             if end > num_partitions:
                 end = num_partitions
+            partition_dicts = []
+            for partition in partitions[start:end]:
+                partition_dicts.append(partition.__dict__)
             submit(
                 compute_embeddings_udf,
-                object_reader=object_index.object_reader,
-                object_embedding=object_index.embedding,
-                partitions=partitions[start:end],
+                object_reader_source_code=object_index.object_reader_source_code,
+                object_reader_class_name=object_index.object_reader_class_name,
+                object_reader_kwargs=object_index.object_reader_kwargs,
+                object_embedding_source_code=object_index.embedding_source_code,
+                object_embedding_class_name=object_index.embedding_class_name,
+                object_embedding_kwargs=object_index.embedding_kwargs,
+                partition_dicts=partition_dicts,
                 embeddings_uri=embeddings_uri,
                 external_ids_uri=external_ids_uri,
+                metadata_array_uri=metadata_array_uri,
                 index_timestamp=index_timestamp,
                 verbose=verbose,
                 trace_id=trace_id,
                 config=config,
                 name="generate_embeddings-" + str(task_id),
-                resources={"cpu": str(threads), "memory": "16Gi"},
+                resources=worker_resources,
                 image_name=DEFAULT_IMG_NAME,
             )
             task_id += 1
@@ -199,7 +253,6 @@ def ingest_embeddings(
         if index_timestamp is None:
             index_timestamp = int(time.time() * 1000)
 
-        print(f"objects_per_partition: {objects_per_partition}")
         partitions = object_index.object_reader.get_partitions(partition_size=objects_per_partition)
         object_partitions = len(partitions)
         object_partitions_per_worker = 1
@@ -211,12 +264,15 @@ def ingest_embeddings(
                 math.ceil(object_partitions / max_tasks_per_stage)
             )
             object_work_tasks = max_tasks_per_stage
+        logger.debug("objects_per_partition %d", objects_per_partition)
         logger.debug("object_partitions %d", object_partitions)
         logger.debug("object_work_tasks %d", object_work_tasks)
         logger.debug("object_partitions_per_worker %d", object_partitions_per_worker)
         if mode == Mode.BATCH:
             if workers == -1:
                 workers = 10
+            if worker_resources is None:
+                worker_resources=DEFAULT_WORKER_RESOURCES
         else:
             if workers == -1:
                 workers = 1
@@ -229,8 +285,10 @@ def ingest_embeddings(
             partitions=partitions,
             object_partitions_per_worker=object_partitions_per_worker,
             object_work_tasks=object_work_tasks,
+            metadata_array_uri=metadata_array_uri,
             index_timestamp=index_timestamp,
             workers=workers,
+            worker_resources=worker_resources,
             verbose=verbose,
             trace_id=trace_id,
             mode=mode,

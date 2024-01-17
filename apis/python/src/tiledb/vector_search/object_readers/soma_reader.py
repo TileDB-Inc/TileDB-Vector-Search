@@ -17,7 +17,7 @@ class SomaPartition(ObjectPartition):
     def size(self):
         return self.size
 
-    def partition_id(self):
+    def id(self):
         return self.partition_id
 
     def index_slice(self):
@@ -31,10 +31,12 @@ class SomaReader(ObjectReader):
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
     ):
+        import tiledb
         import tiledbsoma
 
         super().__init__(uri=uri, config=config, timestamp=timestamp)
-        exp = tiledbsoma.Experiment.open(self.uri, "r")
+        context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
+        exp = tiledbsoma.Experiment.open(self.uri, "r", context=context)
         self.num_obs = exp.obs.count
         self.obs_array_uri = exp.obs.uri
 
@@ -42,9 +44,10 @@ class SomaReader(ObjectReader):
         return self.num_obs
 
     def metadata_schema(self):
-        import tiledb
         import tiledbsoma
-        exp = tiledbsoma.Experiment.open(self.uri, "r")
+
+        context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
+        exp = tiledbsoma.Experiment.open(self.uri, "r", context=context)
         with tiledb.open(exp.obs.uri, "r") as obs_array:
             return obs_array.schema
 
@@ -73,23 +76,28 @@ class SomaReader(ObjectReader):
         import tiledb
         import tiledbsoma
         import numpy as np
-        exp = tiledbsoma.Experiment.open(self.uri, "r")
+
+        context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
+        exp = tiledbsoma.Experiment.open(self.uri, "r", context=context)
         query = exp.axis_query(
                 measurement_name="RNA",
                 obs_query=tiledbsoma.AxisQuery(
                     coords=(slice(partition.coord_start, partition.coord_end-1),)
                 ),
             )
-        with tiledb.open(exp.obs.uri, "r", timestamp=self.timestamp) as obs_array:
+        
+        with tiledb.open(exp.obs.uri, "r", timestamp=self.timestamp, config=self.config) as obs_array:
             metadata = obs_array[partition.coord_start: partition.coord_end-1]
         return {
-                   "data": query.to_anndata(X_name="data").X.toarray(),
-                   "soma_joinid": np.arange(partition.coord_start, partition.coord_end)
-               }, metadata
+                "data": query.to_anndata(X_name="data").X.toarray(),
+                "soma_joinid": np.arange(partition.coord_start, partition.coord_end)
+            }, metadata
 
     def read_objects_by_ids(self, ids):
+        import tiledb
         import tiledbsoma
-        exp = tiledbsoma.Experiment.open(self.uri, "r")
+        context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
+        exp = tiledbsoma.Experiment.open(self.uri, "r", context=context)
         query = exp.axis_query(
                 measurement_name="RNA",
                 obs_query=tiledbsoma.AxisQuery(

@@ -32,7 +32,7 @@ class SomaGenePTwEmbedding(ObjectEmbedding):
 
         print("Loading gene embeddings...")
         gene_pt_embeddings = {}
-        with tiledb.open(self.gene_embeddings_uri, "r") as gene_pt_array:
+        with tiledb.open(self.gene_embeddings_uri, "r", config=self.config) as gene_pt_array:
             gene_pt = gene_pt_array[:]
             i = 0
             for gene in np.array(gene_pt["genes"], dtype=str):
@@ -40,7 +40,8 @@ class SomaGenePTwEmbedding(ObjectEmbedding):
                 i += 1
 
         print("Loading var genes...")
-        experiment = tiledbsoma.Experiment.open(self.soma_uri, "r")
+        context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
+        experiment = tiledbsoma.Experiment.open(self.soma_uri, "r", context=context)
         self.gene_names = experiment.ms["RNA"].var.read().concat().to_pandas()["feature_name"].to_numpy()
 
         print("Computing model...")

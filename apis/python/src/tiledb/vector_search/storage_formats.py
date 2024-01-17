@@ -12,6 +12,7 @@ storage_formats = {
         "PARTIAL_WRITE_ARRAY_DIR": "write_temp",
         "DEFAULT_ATTR_FILTERS": None,
         "UPDATES_ARRAY_NAME": "updates",
+        "OBJECT_METADATA_ARRAY_NAME": "object_metadata",
         "SUPPORT_TIMETRAVEL": False,
     },
     "0.2": {
@@ -25,6 +26,7 @@ storage_formats = {
         "PARTIAL_WRITE_ARRAY_DIR": "temp_data",
         "DEFAULT_ATTR_FILTERS": tiledb.FilterList([tiledb.ZstdFilter()]),
         "UPDATES_ARRAY_NAME": "updates",
+        "OBJECT_METADATA_ARRAY_NAME": "object_metadata",
         "SUPPORT_TIMETRAVEL": False,
     },
     "0.3": {
@@ -38,6 +40,7 @@ storage_formats = {
         "PARTIAL_WRITE_ARRAY_DIR": "temp_data",
         "DEFAULT_ATTR_FILTERS": tiledb.FilterList([tiledb.ZstdFilter()]),
         "UPDATES_ARRAY_NAME": "updates",
+        "OBJECT_METADATA_ARRAY_NAME": "object_metadata",
         "SUPPORT_TIMETRAVEL": True,
     },
 }

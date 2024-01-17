@@ -4,7 +4,7 @@ import numpy as np
 import tiledb
 
 from collections import OrderedDict
-from typing import Any, Mapping, Optional, Callable
+from typing import Any, Mapping, Optional, Dict
 from tiledb.vector_search import flat_index, ivf_flat_index, Index, IVFFlatIndex, FlatIndex, ingest
 from tiledb.vector_search.storage_formats import STORAGE_VERSION, storage_formats
 from tiledb.cloud.dag import Mode
@@ -21,24 +21,40 @@ class ObjectIndex:
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
+        **kwargs
     ):
-        self.uri = uri
-        self.config = config
-        self.timestamp = timestamp
-        group = tiledb.Group(uri, "r")
-        self.index_type = group.meta["index_type"]
-        group.close()
-        if self.index_type == "FLAT":
-            self.index = FlatIndex(uri=uri, config=config, timestamp=timestamp)
-        elif self.index_type == "IVF_FLAT":
-            self.index = IVFFlatIndex(uri=uri, config=config, timestamp=timestamp)
+        with tiledb.scope_ctx(ctx_or_config=config):
+            self.uri = uri
+            self.config = config
+            self.timestamp = timestamp
+            group = tiledb.Group(uri, "r")
+            self.index_type = group.meta["index_type"]
+            group.close()
+            if self.index_type == "FLAT":
+                self.index = FlatIndex(uri=uri, config=config, timestamp=timestamp, **kwargs)
+            elif self.index_type == "IVF_FLAT":
+                self.index = IVFFlatIndex(uri=uri, config=config, timestamp=timestamp, **kwargs)
 
-        self.object_reader_str = self.index.group.meta["object_reader"]
-        self.embedding_str = self.index.group.meta["embedding"]
-        self.object_reader = cloudpickle.loads(base64.b64decode(self.object_reader_str))
-        self.embedding = cloudpickle.loads(base64.b64decode(self.embedding_str))
-        self.embedding.load()
-        self.object_metadata_array_uri = self.index.group.meta["object_metadata_array_uri"]
+            self.object_reader_source_code = self.index.group.meta["object_reader_source_code"]
+            self.object_reader_class_name = self.index.group.meta["object_reader_class_name"]
+            self.object_reader_kwargs = cloudpickle.loads(base64.b64decode(self.index.group.meta["object_reader_kwargs"]))
+            self.object_reader = instantiate_object(
+                code = self.object_reader_source_code,
+                class_name = self.object_reader_class_name,
+                **self.object_reader_kwargs
+            )
+            self.embedding_source_code = self.index.group.meta["embedding_source_code"]
+            self.embedding_class_name = self.index.group.meta["embedding_class_name"]
+            self.embedding_kwargs = cloudpickle.loads(base64.b64decode(self.index.group.meta["embedding_kwargs"]))
+            self.embedding = instantiate_object(
+                code = self.embedding_source_code,
+                class_name = self.embedding_class_name,
+                **self.embedding_kwargs
+            )
+
+            self.embedding.load()
+            self.object_metadata_array_uri = self.index.group.meta["object_metadata_array_uri"]
+            self.materialize_object_metadata = self.index.group.meta["materialize_object_metadata"]
 
     def query(
         self,
@@ -52,14 +68,14 @@ class ObjectIndex:
         query_embeddings = self.embedding.embed(objects=query_objects)
         fetch_k = k
         if metadata_array_cond is not None:
-            fetch_k = 50*k
+            fetch_k = min(50*k, self.index.size) 
 
         distances, object_ids = self.index.query(queries=query_embeddings, k=fetch_k, **kwargs)
         unique_ids, idx = np.unique(object_ids, return_inverse=True)
         idx = np.reshape(idx, object_ids.shape)
 
         if metadata_array_cond is not None:
-            with tiledb.open(self.object_metadata_array_uri, mode='r', timestamp=self.timestamp) as metadata_array:
+            with tiledb.open(self.object_metadata_array_uri, mode='r', timestamp=self.timestamp, config=self.config) as metadata_array:
                 q = metadata_array.query(cond=metadata_array_cond, coords=True)
                 filtered_unique_ids = q.multi_index[unique_ids][self.object_reader.metadata_array_object_id_dim()]
                 filtered_distances = np.zeros((query_embeddings.shape[0], k)).astype(object_ids.dtype)
@@ -81,7 +97,7 @@ class ObjectIndex:
 
         object_metadata = None
         if return_metadata:
-            with tiledb.open(self.object_metadata_array_uri, mode='r', timestamp=self.timestamp) as metadata_array:
+            with tiledb.open(self.object_metadata_array_uri, mode='r', timestamp=self.timestamp, config=self.config) as metadata_array:
                 unique_metadata = metadata_array.multi_index[unique_ids]
                 object_metadata = {}
                 for attr in unique_metadata.keys():
@@ -107,6 +123,7 @@ class ObjectIndex:
         object_array_timestamp=None,
         index_timestamp: int = None,
         workers: int = -1,
+        worker_resources: Dict = None,
         objects_per_partition: int = -1,
         object_partitions_per_task: int = -1,
         max_tasks_per_stage: int= -1,
@@ -121,15 +138,22 @@ class ObjectIndex:
         embeddings_uri = f"{self.uri}/{embeddings_array_name}"
         external_ids_array_name = storage_formats[self.index.storage_version]["EXTERNAL_IDS_ARRAY_NAME"]
         external_ids_uri = f"{self.uri}/{external_ids_array_name}"
+        metadata_array_uri = None
+        if self.materialize_object_metadata:
+            metadata_array_uri = self.object_metadata_array_uri
+        if config is None:
+            config = self.config
         object_api.ingest_embeddings(
             object_index=self,
             embeddings_uri=embeddings_uri,
             external_ids_uri=external_ids_uri,
+            metadata_array_uri=metadata_array_uri,
             index_timestamp=index_timestamp,
             objects_per_partition=objects_per_partition,
             object_partitions_per_task=object_partitions_per_task,
             max_tasks_per_stage=max_tasks_per_stage,
             workers=workers,
+            worker_resources=worker_resources,
             verbose=verbose,
             trace_id=trace_id,
             mode=mode,
@@ -137,7 +161,7 @@ class ObjectIndex:
             namespace=namespace,
         )
 
-        with tiledb.open(embeddings_uri, mode='r', timestamp=index_timestamp) as embeddings_array:
+        with tiledb.open(embeddings_uri, mode='r', timestamp=index_timestamp, config=config) as embeddings_array:
             nonempty_object_array_domain = embeddings_array.nonempty_domain()[1]
             size = nonempty_object_array_domain[1] + 1 - nonempty_object_array_domain[0]
         self.index = ingest(
@@ -148,7 +172,8 @@ class ObjectIndex:
             index_timestamp=index_timestamp,
             size=size,
             storage_version=self.index.storage_version,
-            config=self.config,
+            config=config,
+            mode=mode,
             **kwargs,
         )
 
@@ -156,6 +181,27 @@ class ObjectIndex:
 def encode_class(a):
     pickled_object = cloudpickle.dumps(a, protocol=TILEDB_CLOUD_PROTOCOL)
     return base64.b64encode(pickled_object).decode("ascii")
+
+def get_source_code(a):
+    import inspect
+    f = open(inspect.getsourcefile(a.__class__), "r")
+    return f.read()
+
+def instantiate_object(code, class_name, **kwargs):
+    import random
+    import string
+    import os
+    import sys
+    temp_file_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
+    abs_path = os.path.abspath(f"{temp_file_name}.py")
+    f = open(abs_path, "w")
+    f.write(code)
+    f.close()
+    sys.path.append(os.path.curdir)
+    reader_module = __import__(temp_file_name)
+    class_ = getattr(reader_module, class_name)
+    os.remove(abs_path)
+    return class_(**kwargs)
 
 
 def create(
@@ -167,46 +213,55 @@ def create(
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> ObjectIndex:
-    dimensions = embedding.dimensions()
-    vector_type = embedding.vector_type()
-    if index_type == "FLAT":
-        index = flat_index.create(
-            uri=uri,
-            dimensions=dimensions,
-            vector_type=vector_type,
-            group_exists=False,
-            config=config,
-            storage_version=storage_version
-        )
-    elif index_type == "IVF_FLAT":
-        index = ivf_flat_index.create(
-            uri=uri,
-            dimensions=dimensions,
-            vector_type=vector_type,
-            group_exists=False,
-            config=config,
-            storage_version=storage_version
-        )
+    with tiledb.scope_ctx(ctx_or_config=config):
+        dimensions = embedding.dimensions()
+        vector_type = embedding.vector_type()
+        if index_type == "FLAT":
+            index = flat_index.create(
+                uri=uri,
+                dimensions=dimensions,
+                vector_type=vector_type,
+                group_exists=False,
+                config=config,
+                storage_version=storage_version
+            )
+        elif index_type == "IVF_FLAT":
+            index = ivf_flat_index.create(
+                uri=uri,
+                dimensions=dimensions,
+                vector_type=vector_type,
+                group_exists=False,
+                config=config,
+                storage_version=storage_version
+            )
 
-    group = tiledb.Group(uri, "w")
-    group.meta["object_reader"] = encode_class(object_reader)
-    group.meta["embedding"] = encode_class(embedding)
+        group = tiledb.Group(uri, "w")
+        
+        group.meta["object_reader_source_code"] = get_source_code(object_reader)
+        group.meta["object_reader_class_name"] = object_reader.__class__.__name__
+        group.meta["object_reader_kwargs"] = encode_class(object_reader.get_kwargs())
+        group.meta["embedding_source_code"] = get_source_code(embedding)
+        group.meta["embedding_class_name"] = embedding.__class__.__name__
+        group.meta["embedding_kwargs"] = encode_class(embedding.get_kwargs())
 
-    embeddings_array_name = storage_formats[index.storage_version]["INPUT_VECTORS_ARRAY_NAME"]
-    external_ids_array_name = storage_formats[index.storage_version]["EXTERNAL_IDS_ARRAY_NAME"]
-    filters = storage_formats[index.storage_version]["DEFAULT_ATTR_FILTERS"]
+        embeddings_array_name = storage_formats[index.storage_version]["INPUT_VECTORS_ARRAY_NAME"]
+        external_ids_array_name = storage_formats[index.storage_version]["EXTERNAL_IDS_ARRAY_NAME"]
+        filters = storage_formats[index.storage_version]["DEFAULT_ATTR_FILTERS"]
 
-    create_embeddings_array(uri, group, dimensions, vector_type, embeddings_array_name, filters)
-    create_external_ids_array(uri, group, external_ids_array_name, filters)
-    object_metadata_array_uri = object_reader.metadata_array_uri()
-    if object_metadata_array_uri is None:
-        metadata_array_name = storage_formats[index.storage_version]["OBJECT_METADATA_ARRAY_NAME"]
-        metadata_array_uri = f"{uri}/{metadata_array_name}"
-        tiledb.Array.create(metadata_array_uri, object_reader.metadata_schema())
-        group.add(object_metadata_array_uri, name=metadata_array_name)
-    group.meta["object_metadata_array_uri"] = object_metadata_array_uri
-    group.close()
-    return ObjectIndex(uri, config, **kwargs)
+        create_embeddings_array(uri, group, dimensions, vector_type, embeddings_array_name, filters)
+        create_external_ids_array(uri, group, external_ids_array_name, filters)
+        object_metadata_array_uri = object_reader.metadata_array_uri()
+        materialize_object_metadata = False
+        if object_metadata_array_uri is None:
+            metadata_array_name = storage_formats[index.storage_version]["OBJECT_METADATA_ARRAY_NAME"]
+            object_metadata_array_uri = f"{uri}/{metadata_array_name}"
+            tiledb.Array.create(object_metadata_array_uri, object_reader.metadata_schema())
+            group.add(object_metadata_array_uri, name=metadata_array_name)
+            materialize_object_metadata = True
+        group.meta["materialize_object_metadata"] = materialize_object_metadata
+        group.meta["object_metadata_array_uri"] = object_metadata_array_uri
+        group.close()
+        return ObjectIndex(uri, config, **kwargs)
 
 
 def create_embeddings_array(
