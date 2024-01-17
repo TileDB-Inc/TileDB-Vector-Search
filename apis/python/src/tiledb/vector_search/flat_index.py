@@ -8,8 +8,10 @@ from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
                                                   storage_formats,
                                                   validate_storage_version)
+from tiledb.vector_search.utils import add_to_group
 
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
+MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 TILE_SIZE_BYTES = 128000000  # 128MB
 INDEX_TYPE = "FLAT"
 
@@ -139,8 +141,10 @@ def create(
         tile_size = TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions
         ids_array_name = storage_formats[storage_version]["IDS_ARRAY_NAME"]
         parts_array_name = storage_formats[storage_version]["PARTS_ARRAY_NAME"]
+        updates_array_name = storage_formats[storage_version]["UPDATES_ARRAY_NAME"]
         ids_uri = f"{uri}/{ids_array_name}"
         parts_uri = f"{uri}/{parts_array_name}"
+        updates_array_uri = f"{uri}/{updates_array_name}"
 
         ids_array_rows_dim = tiledb.Dim(
             name="rows",
@@ -162,7 +166,7 @@ def create(
             tile_order="col-major",
         )
         tiledb.Array.create(ids_uri, ids_schema)
-        group.add(ids_uri, name=ids_array_name)
+        add_to_group(group, ids_uri, ids_array_name)
 
         parts_array_rows_dim = tiledb.Dim(
             name="rows",
@@ -190,7 +194,23 @@ def create(
             tile_order="col-major",
         )
         tiledb.Array.create(parts_uri, parts_schema)
-        group.add(parts_uri, name=parts_array_name)
+        add_to_group(group, parts_uri, parts_array_name)
+
+        external_id_dim = tiledb.Dim(
+            name="external_id",
+            domain=(0, MAX_UINT64 - 1),
+            dtype=np.dtype(np.uint64),
+        )
+        dom = tiledb.Domain(external_id_dim)
+        vector_attr = tiledb.Attr(name="vector", dtype=vector_type, var=True)
+        updates_schema = tiledb.ArraySchema(
+            domain=dom,
+            sparse=True,
+            attrs=[vector_attr],
+            allows_duplicates=False,
+        )
+        tiledb.Array.create(updates_array_uri, updates_schema)
+        add_to_group(group, updates_array_uri, updates_array_name)
 
         group.close()
         return FlatIndex(uri=uri, config=config)

@@ -11,7 +11,7 @@ env:
   CXX: g++-13
 
 jobs:
-  Run-Tests:
+  run-tests:
     strategy:
       matrix:
         os: [ubuntu-latest]

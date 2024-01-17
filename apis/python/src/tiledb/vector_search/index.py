@@ -53,9 +53,11 @@ class Index:
             raise ValueError(
                 f"Time traveling is not supported for index storage_version={self.storage_version}"
             )
-
         updates_array_name = storage_formats[self.storage_version]["UPDATES_ARRAY_NAME"]
-        self.updates_array_uri = f"{self.group.uri}/{updates_array_name}"
+        if updates_array_name in self.group:
+            self.updates_array_uri = self.group[storage_formats[self.storage_version]["UPDATES_ARRAY_NAME"]].uri
+        else:
+            self.updates_array_uri = f"{self.group.uri}/{updates_array_name}"
         self.index_version = self.group.meta.get("index_version", "")
         self.ingestion_timestamps = [
             int(x)
@@ -135,7 +137,7 @@ class Index:
             raise TypeError(f"A query in queries has {query_dimensions} dimensions, but the indexed data had {self.dimensions} dimensions")
 
         with tiledb.scope_ctx(ctx_or_config=self.config):
-            if not tiledb.array_exists(self.updates_array_uri):
+            if not tiledb.array_exists(self.updates_array_uri) or not self.has_updates():
                 if self.query_base_array:
                     return self.query_internal(queries, k, **kwargs)
                 else:
@@ -267,7 +269,22 @@ class Index:
     def query_internal(self, queries: np.ndarray, k, **kwargs):
         raise NotImplementedError
 
+    def has_updates(self):
+        if "has_updates" in self.group.meta:
+            return self.group.meta["has_updates"]
+        else:
+            return True
+
+    def set_has_updates(self, has_updates: bool = True):
+        if not self.group.meta["has_updates"]:
+            self.group.close()
+            self.group = tiledb.Group(self.uri, "w", ctx=tiledb.Ctx(self.config))
+            self.group.meta["has_updates"] = has_updates
+            self.group.close()
+            self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(self.config))
+
     def update(self, vector: np.array, external_id: np.uint64, timestamp: int = None):
+        self.set_has_updates()
         updates_array = self.open_updates_array(timestamp=timestamp)
         vectors = np.empty((1), dtype="O")
         vectors[0] = vector
@@ -278,12 +295,14 @@ class Index:
     def update_batch(
         self, vectors: np.ndarray, external_ids: np.array, timestamp: int = None
     ):
+        self.set_has_updates()
         updates_array = self.open_updates_array(timestamp=timestamp)
         updates_array[external_ids] = {"vector": vectors}
         updates_array.close()
         self.consolidate_update_fragments()
 
     def delete(self, external_id: np.uint64, timestamp: int = None):
+        self.set_has_updates()
         updates_array = self.open_updates_array(timestamp=timestamp)
         deletes = np.empty((1), dtype="O")
         deletes[0] = np.array([], dtype=self.dtype)
@@ -292,6 +311,7 @@ class Index:
         self.consolidate_update_fragments()
 
     def delete_batch(self, external_ids: np.array, timestamp: int = None):
+        self.set_has_updates()
         updates_array = self.open_updates_array(timestamp=timestamp)
         deletes = np.empty((len(external_ids)), dtype="O")
         for i in range(len(external_ids)):
@@ -530,4 +550,5 @@ def create_metadata(
         group.meta["index_type"] = index_type
         group.meta["base_sizes"] = json.dumps([0])
         group.meta["ingestion_timestamps"] = json.dumps([0])
+        group.meta["has_updates"] = False
         group.close()

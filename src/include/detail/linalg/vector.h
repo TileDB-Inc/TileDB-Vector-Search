@@ -51,9 +51,7 @@ std::vector<T> read_vector(
 #endif
 
 template <class M>
-concept is_view = requires(M) {
-  typename M::view_type;
-};
+concept is_view = requires(M) { typename M::view_type; };
 
 template <class T>
 using VectorView = std::span<T>;
