@@ -62,7 +62,6 @@ jobs:
           echo "ls" && ls
           echo "ls backwards-compatability-data" && ls backwards-compatability-data
           echo "ls backwards-compatability-data/data" && ls backwards-compatability-data/data
-          echo "ls backwards-compatability-data/data/0.0.0" && ls backwards-compatability-data/data/0.0.0
           echo ""
           echo "git status" && git status
           echo "git branch" && git branch
