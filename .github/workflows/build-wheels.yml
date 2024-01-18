@@ -39,7 +39,7 @@ jobs:
           CIBW_BUILD_VERBOSITY: 3
           MACOSX_DEPLOYMENT_TARGET: "12.0"
           CIBW_TEST_REQUIRES: pytest
-          CIBW_TEST_COMMAND: "pytest apis/python"
+          CIBW_TEST_COMMAND: "pytest"
           CIBW_BEFORE_BUILD: "python -m pip install pip --upgrade"
           CIBW_BEFORE_TEST: "python -m pip install pip --upgrade"
         with:
