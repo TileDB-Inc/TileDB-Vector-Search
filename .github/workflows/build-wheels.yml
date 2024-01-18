@@ -41,8 +41,7 @@ jobs:
           CIBW_TEST_REQUIRES: pytest
           CIBW_TEST_COMMAND: "pytest {project}/apis/python"
           TILEDB_REST_TOKEN: ${{ secrets.TILEDB_CLOUD_HELPER_VAR }}
-          CIBW_BEFORE_BUILD: "python -m pip install pip --upgrade"
-          CIBW_BEFORE_TEST: "python -m pip install pip --upgrade"
+          CIBW_BEFORE_TEST: "export TILEDB_REST_TOKEN=${{ secrets.TILEDB_CLOUD_HELPER_VAR }}"
           SYSTEM_VERSION_COMPAT: ${{ startsWith(matrix.os, 'macos-') }}
         with:
           package-dir: "apis/python"
