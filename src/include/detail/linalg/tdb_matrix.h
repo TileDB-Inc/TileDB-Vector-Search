@@ -157,17 +157,36 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t first_col,
       size_t last_col,
       size_t upper_bound,
-      size_t timestamp = 0)  // noexcept
+      size_t timestamp)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : tdbBlockedMatrix(
+            ctx,
+            uri,
+            first_row,
+            last_row,
+            first_col,
+            last_col,
+            upper_bound,
+            (timestamp == 0 ?
+                 tiledb::TemporalPolicy() :
+                 tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp))) {
+  }
+
+  /** General constructor */
+  tdbBlockedMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t first_row,
+      size_t last_row,
+      size_t first_col,
+      size_t last_col,
+      size_t upper_bound,
+      tiledb::TemporalPolicy temporal_policy)  // noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : ctx_{ctx}
       , uri_{uri}
       , array_(std::make_unique<tiledb::Array>(
-            ctx,
-            uri,
-            TILEDB_READ,
-            (timestamp == 0 ?
-                 tiledb::TemporalPolicy() :
-                 tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp))))
+            ctx, uri, TILEDB_READ, temporal_policy))
       , schema_{array_->schema()}
       , first_row_{first_row}
       , last_row_{last_row}

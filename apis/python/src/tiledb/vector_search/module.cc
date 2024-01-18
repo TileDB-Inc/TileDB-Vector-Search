@@ -406,6 +406,7 @@ static void declareColMajorMatrixSubclass(
           size_t,
           size_t,
           size_t,
+          size_t,
           uint64_t>(),
       py::keep_alive<1, 2>());
 
