@@ -42,6 +42,7 @@ jobs:
           CIBW_TEST_COMMAND: "pytest {project}/apis/python"
           CIBW_BEFORE_BUILD: "python -m pip install pip --upgrade"
           CIBW_BEFORE_TEST: "python -m pip install pip --upgrade"
+          SYSTEM_VERSION_COMPAT: 0
         with:
           package-dir: "apis/python"
           output-dir: wheelhouse
