@@ -20,13 +20,14 @@ classifiers = [
 
 dependencies = [
     "tiledb-cloud>=0.11",
-    "tiledb>=0.23.1",
+    "tiledb>=0.25.0",
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
     "scikit-learn",
 ]
 
 [project.optional-dependencies]
 test = ["nbmake", "pytest"]
+formatting = ["pre-commit"]
 
 
 [project.urls]
@@ -52,6 +53,7 @@ zip-safe = false
 
 [tool.ruff]
 extend-select = ["I"]
+ignore = ["F403", "F405", "E501", "E741"]
 
 [tool.ruff.isort]
 known-first-party = ["tiledb"]

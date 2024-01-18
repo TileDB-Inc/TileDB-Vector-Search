@@ -6,7 +6,7 @@ import pytest
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.index import Index
-from tiledb.vector_search.ingestion import ingest
+from tiledb.vector_search.ingestion import ingest, TrainingSamplingPolicy
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.module import array_to_matrix, kmeans_fit, kmeans_predict
 from tiledb.vector_search.utils import load_fvecs
@@ -17,6 +17,7 @@ MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 def query_and_check_equals(index, queries, expected_result_d, expected_result_i):
     result_d, result_i = index.query(queries, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=expected_result_d, expected_result_i=expected_result_i)
+
 
 def test_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -36,6 +37,10 @@ def test_flat_ingestion_u8(tmp_path):
     _, result = index.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    index_uri = move_local_index_to_new_location(index_uri)
+    index_ram = FlatIndex(uri=index_uri)
+    _, result = index_ram.query(queries, k=k)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 def test_flat_ingestion_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -55,6 +60,7 @@ def test_flat_ingestion_f32(tmp_path):
     _, result = index.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    index_uri = move_local_index_to_new_location(index_uri)
     index_ram = FlatIndex(uri=index_uri)
     _, result = index_ram.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
@@ -87,6 +93,13 @@ def test_flat_ingestion_external_id_u8(tmp_path):
         > MINIMUM_ACCURACY
     )
 
+    index_uri = move_local_index_to_new_location(index_uri)
+    index_ram = FlatIndex(uri=index_uri)
+    _, result = index_ram.query(queries, k=k)
+    assert (
+        accuracy(result, gt_i, external_ids_offset=external_ids_offset)
+        > MINIMUM_ACCURACY
+    )
 
 def test_ivf_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -112,6 +125,7 @@ def test_ivf_flat_ingestion_u8(tmp_path):
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    index_uri = move_local_index_to_new_location(index_uri)
     index_ram = IVFFlatIndex(uri=index_uri, memory_budget=int(size / 10))
     _, result = index_ram.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
@@ -160,6 +174,7 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    index_uri = move_local_index_to_new_location(index_uri)
     index_ram = IVFFlatIndex(uri=index_uri)
     _, result = index_ram.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
@@ -202,6 +217,7 @@ def test_ivf_flat_ingestion_fvec(tmp_path):
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    index_uri = move_local_index_to_new_location(index_uri)
     index_ram = IVFFlatIndex(uri=index_uri)
     _, result = index_ram.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
@@ -243,6 +259,7 @@ def test_ivf_flat_ingestion_numpy(tmp_path):
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    index_uri = move_local_index_to_new_location(index_uri)
     index_ram = IVFFlatIndex(uri=index_uri)
     _, result = index_ram.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
@@ -283,6 +300,7 @@ def test_ivf_flat_ingestion_multiple_workers(tmp_path):
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+    index_uri = move_local_index_to_new_location(index_uri)
     index_ram = IVFFlatIndex(uri=index_uri)
     _, result = index_ram.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
@@ -329,6 +347,10 @@ def test_ivf_flat_ingestion_external_ids_numpy(tmp_path):
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, external_ids_offset) > MINIMUM_ACCURACY
 
+    index_uri = move_local_index_to_new_location(index_uri)
+    index_ram = IVFFlatIndex(uri=index_uri)
+    _, result = index_ram.query(queries, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i, external_ids_offset) > MINIMUM_ACCURACY
 
 def test_ivf_flat_ingestion_with_updates(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -366,6 +388,11 @@ def test_ivf_flat_ingestion_with_updates(tmp_path):
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
     index = index.consolidate_updates(retrain_index=True, partitions=20)
+    _, result = index.query(queries, k=k, nprobe=20)
+    assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+
+    index_uri = move_local_index_to_new_location(index_uri)
+    index = IVFFlatIndex(uri=index_uri)
     _, result = index.query(queries, k=k, nprobe=20)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
@@ -417,6 +444,9 @@ def test_ivf_flat_ingestion_with_batch_updates(tmp_path):
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, updated_ids=updated_ids) > 0.99
 
+    index_uri = move_local_index_to_new_location(index_uri)
+    index = IVFFlatIndex(uri=index_uri)
+
     index = index.consolidate_updates()
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i, updated_ids=updated_ids) > 0.99
@@ -466,6 +496,7 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=101)
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+    index_uri = move_local_index_to_new_location(index_uri)
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 101))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
@@ -494,6 +525,7 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=51)
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
+    index_uri = move_local_index_to_new_location(index_uri)
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 51))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
@@ -518,6 +550,7 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=101)
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+    index_uri = move_local_index_to_new_location(index_uri)
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 101))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
@@ -546,6 +579,7 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=51)
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
+    index_uri = move_local_index_to_new_location(index_uri)
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 51))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
@@ -582,6 +616,7 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 51))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+    index_uri = move_local_index_to_new_location(index_uri)
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 101))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
@@ -618,6 +653,7 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, 101))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
+    index_uri = move_local_index_to_new_location(index_uri)
     index = IVFFlatIndex(uri=index_uri, timestamp=(0, None))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
@@ -667,6 +703,7 @@ def test_ivf_flat_ingestion_with_additions_and_timetravel(tmp_path):
         )
         updated_ids[i] = i + update_ids_offset
 
+    index_uri = move_local_index_to_new_location(index_uri)
     index = IVFFlatIndex(uri=index_uri)
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert 0.45 < accuracy(result, gt_i) < 0.55
@@ -675,6 +712,76 @@ def test_ivf_flat_ingestion_with_additions_and_timetravel(tmp_path):
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert 0.45 < accuracy(result, gt_i) < 0.55
 
+
+def test_ivf_flat_ingestion_tdb_random_sampling_policy(tmp_path):
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    os.mkdir(dataset_dir)
+    # data.shape should give you (cols, rows). So we transpose this before using it.
+    data = np.array([
+        [1.0, 1.1, 1.2, 1.3], 
+        [2.0, 2.1, 2.2, 2.3], 
+        [3.0, 3.1, 3.2, 3.3], 
+        [4.0, 4.1, 4.2, 4.3], 
+        [5.0, 5.1, 5.2, 5.3],
+        [6.0, 6.1, 6.2, 6.3],
+        [7.0, 7.1, 7.2, 7.3],
+        [8.0, 8.1, 8.2, 8.3],
+        [9.0, 9.1, 9.2, 9.3]], dtype=np.float32).transpose()
+    create_array(path=os.path.join(dataset_dir, "data.tdb"), data=data)
+
+    for training_sample_size in [3, 5, 9]:
+        for input_vectors_per_work_item_during_sampling in [1, 2, 3, 4, 5, 6, 9, 20, 50]:
+            index_uri = os.path.join(tmp_path, f"array_{training_sample_size}_{input_vectors_per_work_item_during_sampling}")
+            index = ingest(
+                index_type="IVF_FLAT", 
+                index_uri=index_uri, 
+                source_uri=os.path.join(dataset_dir, "data.tdb"),
+                training_sampling_policy=TrainingSamplingPolicy.RANDOM,
+                training_sample_size=training_sample_size,
+                input_vectors_per_work_item_during_sampling=input_vectors_per_work_item_during_sampling,
+                use_sklearn=True
+            )
+
+            check_training_input_vectors(
+                index_uri=index_uri, 
+                expected_training_sample_size=training_sample_size, 
+                expected_dimensions=data.shape[0])
+
+            queries = np.array([data.transpose()[3]], dtype=np.float32)
+            query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[3]])
+
+
+def test_ivf_flat_ingestion_fvec_random_sampling_policy(tmp_path):
+    source_uri = "test/data/siftsmall/siftsmall_base.fvecs"
+    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
+    gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+    index_uri = os.path.join(tmp_path, "array")
+    k = 100
+    partitions = 50
+    nqueries = 100
+    nprobe = 20
+
+    queries = load_fvecs(queries_uri)
+    gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
+
+    training_sample_size = 1239
+    index = ingest(
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
+        source_uri=source_uri,
+        partitions=partitions,
+        training_sampling_policy=TrainingSamplingPolicy.RANDOM,
+        training_sample_size=training_sample_size,
+        input_vectors_per_work_item=1000,
+    )
+
+    check_training_input_vectors(
+        index_uri=index_uri, 
+        expected_training_sample_size=training_sample_size, 
+        expected_dimensions=queries.shape[1])
+
+    _, result = index.query(queries, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 def test_storage_versions(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -737,11 +844,12 @@ def test_storage_versions(tmp_path):
             _, result = index.query(queries, k=k)
             assert accuracy(result, gt_i, updated_ids=updated_ids) >= MINIMUM_ACCURACY
 
+            index_uri = move_local_index_to_new_location(index_uri)
             index_ram = index_class(uri=index_uri)
             _, result = index_ram.query(queries, k=k)
             assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-def test_copy_centroids_uri(tmp_path):
+def test_ivf_flat_copy_centroids_uri(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     os.mkdir(dataset_dir)
 
@@ -854,7 +962,7 @@ def test_kmeans():
 
     assert tdb_score < 1.5 * sklearn_score
 
-def test_ingest_with_training_source_uri_f32(tmp_path):
+def test_ivf_flat_ingestion_with_training_source_uri_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3], [4.0, 4.1, 4.2, 4.3], [5.0, 5.1, 5.2, 5.3]], dtype=np.float32)
     create_manual_dataset_f32_only_data(data=data, path=dataset_dir)
@@ -872,6 +980,7 @@ def test_ingest_with_training_source_uri_f32(tmp_path):
     queries = np.array([data[1]], dtype=np.float32)
     query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1]])
 
+    index_uri = move_local_index_to_new_location(index_uri)
     index = IVFFlatIndex(uri=index_uri)
     query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1]])
 
@@ -884,7 +993,7 @@ def test_ingest_with_training_source_uri_f32(tmp_path):
         training_source_type="F32BIN"
     )
 
-def test_ingest_with_training_source_uri_tdb(tmp_path):
+def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
     ################################################################################################
     # First set up the data.
     ################################################################################################
@@ -946,6 +1055,8 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
     ################################################################################################
     # Test we can load the index again and query, update, and consolidate.
     ################################################################################################
+    index_uri = move_local_index_to_new_location(index_uri)
+
     # Load the index again and query.
     index = IVFFlatIndex(uri=index_uri)
 
@@ -986,7 +1097,7 @@ def test_ingest_with_training_source_uri_tdb(tmp_path):
         training_source_type="TILEDB_ARRAY"
     )
 
-def test_ingest_with_training_source_uri_numpy(tmp_path):
+def test_ivf_flat_ingestion_with_training_source_uri_numpy(tmp_path):
     ################################################################################################
     # First set up the data.
     ################################################################################################
@@ -1039,7 +1150,8 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     ################################################################################################
     # Test we can load the index again and query, update, and consolidate.
     ################################################################################################
-    index_ram = IVFFlatIndex(uri=index_uri)
+    index_uri = move_local_index_to_new_location(index_uri)
+    index = IVFFlatIndex(uri=index_uri)
 
     queries = np.array([data[1]], dtype=np.float32)
     query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1]])
@@ -1048,7 +1160,7 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     update_vectors[0] = np.array([9.0, 9.1, 9.2, 9.3], dtype=np.dtype(np.float32))
     update_vectors[1] = np.array([10.0, 10.1, 10.2, 10.3], dtype=np.dtype(np.float32))
     index.update_batch(vectors=update_vectors, external_ids=np.array([1003, 1004]))
-    index_ram = index_ram.consolidate_updates()
+    index = index.consolidate_updates()
 
     queries = np.array([update_vectors[0]], dtype=np.float32)
     query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1003]])
@@ -1057,7 +1169,7 @@ def test_ingest_with_training_source_uri_numpy(tmp_path):
     update_vectors[0] = np.array([11.0, 11.1, 11.2, 11.3], dtype=np.dtype(np.float32))
     update_vectors[1] = np.array([12.0, 12.1, 12.2, 12.3], dtype=np.dtype(np.float32))
     index.update_batch(vectors=update_vectors, external_ids=np.array([1003, 1004]))
-    index_ram = index_ram.consolidate_updates(retrain_index=True, training_sample_size=3)
+    index = index.consolidate_updates(retrain_index=True, training_sample_size=3)
 
     queries = np.array([update_vectors[0]], dtype=np.float32)
     query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1003]])
