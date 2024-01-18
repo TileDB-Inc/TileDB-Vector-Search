@@ -329,7 +329,10 @@ class Matrix :
 
 // Attempt at generic comparison
 #if 1
-  template <class T_, class LayoutPolicy_ = stdx::layout_right, class I_ = size_t>
+  template <
+      class T_,
+      class LayoutPolicy_ = stdx::layout_right,
+      class I_ = size_t>
   bool operator==(const Matrix<T_, LayoutPolicy_, I_>& rhs) const noexcept {
     return (void*)this->data() == (void*)rhs.data() ||
            (num_rows_ == rhs.num_rows() && num_cols_ == rhs.num_cols() &&
@@ -578,7 +581,6 @@ void debug_slice(
     const std::string& msg = "",
     size_t rows = 6,
     size_t cols = 18) {
-
   if (matrix_printf || true) {
     rows = std::min(rows, dimension(A));
     cols = std::min(cols, num_vectors(A));

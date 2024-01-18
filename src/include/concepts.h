@@ -48,11 +48,11 @@ concept range_of_ranges =
     std::ranges::range<R> && std::ranges::range<std::ranges::range_value_t<R>>;
 
 template <typename R>
-requires range_of_ranges<R>
+  requires range_of_ranges<R>
 using inner_range_t = std::ranges::range_value_t<R>;
 
 template <typename R>
-requires range_of_ranges<R>
+  requires range_of_ranges<R>
 using inner_iterator_t = std::ranges::iterator_t<inner_range_t<R>>;
 
 template <typename R>
@@ -74,15 +74,20 @@ using inner_reference_t = std::ranges::range_reference_t<inner_range_t<R>>;
  * @tparam T The type to check.
  */
 template <class T>
-concept subscriptable_range = std::ranges::random_access_range<T> && requires(
-    T& x,
-    const T& y,
-    const std::iter_difference_t<std::ranges::iterator_t<T>> n) {
-  { x[n] } -> std::same_as<std::iter_reference_t<std::ranges::iterator_t<T>>>;
-  {
-    y[n]
-    } -> std::same_as<std::iter_reference_t<std::ranges::iterator_t<const T>>>;
-};
+concept subscriptable_range =
+    std::ranges::random_access_range<T> &&
+    requires(
+        T& x,
+        const T& y,
+        const std::iter_difference_t<std::ranges::iterator_t<T>> n) {
+      {
+        x[n]
+      } -> std::same_as<std::iter_reference_t<std::ranges::iterator_t<T>>>;
+      {
+        y[n]
+      }
+      -> std::same_as<std::iter_reference_t<std::ranges::iterator_t<const T>>>;
+    };
 
 /**
  * @brief A concept for types that have `operator()` defined.
@@ -95,10 +100,12 @@ template <class R, class T, class... Args>
 concept callable = std::is_invocable_r_v<R, T, Args...>;
 
 template <class R>
-concept callable_range = std::ranges::range<R> && callable<
-    std::iter_reference_t<std::ranges::iterator_t<R>>,
-    R,
-    std::iter_difference_t<std::ranges::iterator_t<R>>>;
+concept callable_range =
+    std::ranges::range<R> &&
+    callable<
+        std::iter_reference_t<std::ranges::iterator_t<R>>,
+        R,
+        std::iter_difference_t<std::ranges::iterator_t<R>>>;
 
 // ----------------------------------------------------------------------------
 // Expected member functions for feature_vectors -- will be used by CPOs
@@ -117,8 +124,8 @@ concept vectorable = requires(const T& t) {
 template <class T>
 concept partitionable = requires(const T& t) {
   //  { num_partitions(t) } -> semi_integral;
-  {t.indices()};
-  {t.ids()};
+  { t.indices() };
+  { t.ids() };
 };
 
 // ----------------------------------------------------------------------------
@@ -153,14 +160,15 @@ concept feature_vector_array =
     // */ subscriptable_range<D> && requires(D d, const
     // std::iter_difference_t<std::ranges::iterator_t<D>> n) {
     requires(D d, size_t n) {
-  //      typename D::feature_type;
-  { num_vectors(d) } -> semi_integral;
-  { dimension(d) } -> semi_integral;
-  //{
-  //        d[n]
-  //      } -> std::same_as<std::iter_reference_t<std::ranges::iterator_t<D>>>;
-  { d[n] } -> feature_vector;  // Maybe redundant
-};
+      //      typename D::feature_type;
+      { num_vectors(d) } -> semi_integral;
+      { dimension(d) } -> semi_integral;
+      //{
+      //        d[n]
+      //      } ->
+      //      std::same_as<std::iter_reference_t<std::ranges::iterator_t<D>>>;
+      { d[n] } -> feature_vector;  // Maybe redundant
+    };
 
 /**
  * @brief A concept for contiguous vector ranges.  The member function data()
@@ -170,10 +178,10 @@ concept feature_vector_array =
  */
 // @todo -- add ranges::contiguous_range as a requirement
 template <class D>
-concept contiguous_feature_vector_array = feature_vector_array<D> &&
-    requires(D d) {
-  { data(d) } -> std::same_as<std::add_pointer_t<typename D::reference>>;
-};
+concept contiguous_feature_vector_array =
+    feature_vector_array<D> && requires(D d) {
+      { data(d) } -> std::same_as<std::add_pointer_t<typename D::reference>>;
+    };
 
 template <class T>
 concept query_vector_array = feature_vector_array<T>;
@@ -197,26 +205,27 @@ template <class D>
 concept contiguous_partitioned_feature_vector_array =
     partitioned_feature_vector_array<D> && std::ranges::contiguous_range<D> &&
     requires(D d) {
-  {d.vectors()};
-  {d.indices()};
-  {d.ids()};
-};
+      { d.vectors() };
+      { d.indices() };
+      { d.ids() };
+    };
 
 // ----------------------------------------------------------------------------
 // partition_index concept (WIP)
 // ----------------------------------------------------------------------------
 template <class P>
-concept partition_index = std::ranges::random_access_range<P> &&
-    std::ranges::contiguous_range<P> && subscriptable_range<P>;
+concept partition_index =
+    std::ranges::random_access_range<P> && std::ranges::contiguous_range<P> &&
+    subscriptable_range<P>;
 
 // ----------------------------------------------------------------------------
 // vector_search_index concept (WIP)
 // ----------------------------------------------------------------------------
 template <typename I>
 concept vector_search_index = requires(I i) {
-  {i.train()};
-  {i.add()};
-  {i.search()};
+  { i.train() };
+  { i.add() };
+  { i.search() };
 };
 
 #endif  // TDB_CONCEPTS_H

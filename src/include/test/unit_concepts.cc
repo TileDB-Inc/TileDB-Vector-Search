@@ -196,7 +196,7 @@ TEST_CASE("concepts: inner_reference_t", "[concepts]") {
 }
 
 template <class T>
-requires callable<int, T, int>
+  requires callable<int, T, int>
 void foo(const T&) {
 }
 

@@ -124,7 +124,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param uri URI of the TileDB array to read.
    */
   tdbBlockedMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrix(ctx, uri, 0, 0, 0, 0, 0, 0) {
   }
 
@@ -143,8 +143,8 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       const tiledb::Context& ctx,
       const std::string& uri,
       size_t upper_bound,
-      size_t timestamp =
-          0) requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      size_t timestamp = 0)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrix(ctx, uri, 0, 0, 0, 0, upper_bound, timestamp) {
   }
 
@@ -158,7 +158,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t last_col,
       size_t upper_bound,
       size_t timestamp = 0)  // noexcept
-      requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : ctx_{ctx}
       , uri_{uri}
       , array_(std::make_unique<tiledb::Array>(

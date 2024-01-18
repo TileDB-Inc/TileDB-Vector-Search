@@ -40,15 +40,35 @@ TEST_CASE("partition: test test", "[partition]") {
 
 TEST_CASE("partition: top_centroids", "[partition]") {
   auto parts = ColMajorMatrix<float>{
-      {1, 1, 1, 1,},
-      {1, 1, 1, 1,},
-      {2, 2, 2, 2 },
-      {2, 2, 2, 2 },
-      {3, 3, 3, 3,},
+      {
+          1,
+          1,
+          1,
+          1,
+      },
+      {
+          1,
+          1,
+          1,
+          1,
+      },
+      {2, 2, 2, 2},
+      {2, 2, 2, 2},
+      {
+          3,
+          3,
+          3,
+          3,
+      },
   };
   auto centroids = ColMajorMatrix<float>{
-      {1, 1, 1, 1,},
-      {2, 2, 2, 2 },
+      {
+          1,
+          1,
+          1,
+          1,
+      },
+      {2, 2, 2, 2},
   };
   auto top_centroids = detail::ivf::ivf_top_centroids(centroids, parts, 1, 1);
 

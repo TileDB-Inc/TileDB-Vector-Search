@@ -91,28 +91,28 @@ struct _fn {
   }
 
   template <class V>
-  requires _member_size<V> &&(!_member_num_rows<V>)&&std::is_arithmetic_v<
-      std::ranges::range_value_t<V>> auto constexpr
-  operator()(V&& v) const noexcept {
+    requires _member_size<V> && (!_member_num_rows<V>) &&
+             std::is_arithmetic_v<std::ranges::range_value_t<V>>
+  auto constexpr operator()(V&& v) const noexcept {
     return v.size();
   }
 
   template <class V>
-  requires _member_num_rows<V> &&
-      std::is_arithmetic_v<std::ranges::range_value_t<V>>
+    requires _member_num_rows<V> &&
+             std::is_arithmetic_v<std::ranges::range_value_t<V>>
   constexpr auto operator()(V&& v) const noexcept {
     return v.num_rows();
   }
 
   // @todo This is a total temporary hack
   template <class M>
-  requires _member_num_rows<M> && _member_num_cols<M> && row_major<M>
+    requires _member_num_rows<M> && _member_num_cols<M> && row_major<M>
   auto constexpr operator()(M&& m) const noexcept {
     return m.num_cols();
   }
 
   template <class M>
-  requires _member_num_rows<M> && _member_num_cols<M> && col_major<M>
+    requires _member_num_rows<M> && _member_num_cols<M> && col_major<M>
   auto constexpr operator()(M&& m) const noexcept {
     return m.num_rows();
   }
@@ -145,7 +145,7 @@ void num_vectors(const auto&) = delete;
 
 template <class T>
 concept _member_num_vectors = requires(T&& t) {
-  {t.num_vectors()};
+  { t.num_vectors() };
 };
 
 struct _fn {
@@ -156,13 +156,13 @@ struct _fn {
 
   // @todo This is a total temporary hack -- abstraction violation
   template <class M>
-  requires _member_num_rows<M> && _member_num_cols<M> && row_major<M>
+    requires _member_num_rows<M> && _member_num_cols<M> && row_major<M>
   auto constexpr operator()(const M& m) const noexcept {
     return m.num_rows();
   }
 
   template <class M>
-  requires _member_num_rows<M> && _member_num_cols<M> && col_major<M>
+    requires _member_num_rows<M> && _member_num_cols<M> && col_major<M>
   auto constexpr operator()(const M& m) const noexcept {
     return m.num_cols();
   }
@@ -181,9 +181,9 @@ struct _fn {
   }
 
   template <class V>
-  requires(!_member_num_cols<V>) &&
-      std::is_arithmetic_v<std::ranges::range_value_t<V>> auto constexpr
-      operator()(V&& v) const noexcept {
+    requires(!_member_num_cols<V>) &&
+            std::is_arithmetic_v<std::ranges::range_value_t<V>>
+  auto constexpr operator()(V&& v) const noexcept {
     return 1;
   }
 };
@@ -203,28 +203,30 @@ void data(const auto&) = delete;
 
 template <class T>
 concept _member_data = requires(T t) {
-  {t.data()};
+  { t.data() };
 };
 
 template <class T>
 concept _member_data_handle = requires(T t) {
-  {t.data_handle()};
+  { t.data_handle() };
 };
 
 struct _fn {
   template <_member_data T>
-  requires(!_member_data_handle<T>) constexpr auto operator()(
-      T&& t) const noexcept {
+    requires(!_member_data_handle<T>)
+  constexpr auto operator()(T&& t) const noexcept {
     return t.data();
   }
 
   template <_member_data_handle T>
-  requires(!_member_data<T>) constexpr auto operator()(T&& t) const noexcept {
+    requires(!_member_data<T>)
+  constexpr auto operator()(T&& t) const noexcept {
     return t.data_handle();
   }
 
   template <_member_data_handle T>
-  requires(_member_data<T>) constexpr auto operator()(T&& t) const noexcept {
+    requires(_member_data<T>)
+  constexpr auto operator()(T&& t) const noexcept {
     return t.data_handle();
   }
 };
@@ -242,19 +244,21 @@ void extents(const auto&) = delete;
 
 template <class T>
 concept _member_extents = requires(T t) {
-  {t.extents()};
+  { t.extents() };
 };
 
 template <typename T>
-concept _is_mdspan = std::same_as < typename std::remove_cvref_t<T>,
-        stdx::mdspan < typename std::remove_cvref_t<T>::value_type,
-typename std::remove_cvref_t<T>::extents_type,
-    typename std::remove_cvref_t<T>::layout_type >>
-    ;
+concept _is_mdspan = std::same_as<
+    typename std::remove_cvref_t<T>,
+    stdx::mdspan<
+        typename std::remove_cvref_t<T>::value_type,
+        typename std::remove_cvref_t<T>::extents_type,
+        typename std::remove_cvref_t<T>::layout_type>>;
 
 struct _fn {
   template <_member_extents T>
-  requires(!_is_mdspan<T>) auto constexpr operator()(T&& t) const noexcept {
+    requires(!_is_mdspan<T>)
+  auto constexpr operator()(T&& t) const noexcept {
     return t.extents();
   }
 
@@ -294,7 +298,8 @@ struct _fn {
   }
 
   template <class T>
-  requires(!_member_load<T>) auto constexpr operator()(T&& t) const noexcept {
+    requires(!_member_load<T>)
+  auto constexpr operator()(T&& t) const noexcept {
     // return t.load();
     return false;
   }
@@ -308,8 +313,8 @@ struct _gn {
 
   // Assume that if the thing does not have num_loads, that it is loaded
   template <class T>
-  requires(!_member_num_loads<T>) auto constexpr operator()(
-      T&& t) const noexcept {
+    requires(!_member_num_loads<T>)
+  auto constexpr operator()(T&& t) const noexcept {
     return 1;
   }
 };
@@ -341,8 +346,8 @@ struct _gn {
   }
 
   template <class T>
-  requires(!_member_num_resident_parts<T>) auto constexpr operator()(
-      T&& t) const noexcept {
+    requires(!_member_num_resident_parts<T>)
+  auto constexpr operator()(T&& t) const noexcept {
     return 0;
   }
 };
@@ -354,8 +359,8 @@ struct _hn {
   }
 
   template <class T>
-  requires(!_member_resident_part_offset<T>) auto constexpr operator()(
-      T&& t) const noexcept {
+    requires(!_member_resident_part_offset<T>)
+  auto constexpr operator()(T&& t) const noexcept {
     return 0;
   }
 };
@@ -375,7 +380,7 @@ void num_partitions(const auto&) = delete;
 
 template <class T>
 concept _member_num_partitions = requires(T t) {
-  {t.num_partitions()};
+  { t.num_partitions() };
 };
 
 struct _fn {
@@ -427,8 +432,8 @@ struct _fn {
   }
 
   template <class T>
-  requires(!_member_col_offset<T>) auto constexpr operator()(
-      T&& t) const noexcept {
+    requires(!_member_col_offset<T>)
+  auto constexpr operator()(T&& t) const noexcept {
     return 0;
   }
 };
@@ -445,9 +450,8 @@ struct _gn {
   }
 
   template <class T>
-  requires((!_member_num_col_parts<T>)&&(
-      !_member_num_resident_parts<T>)) auto constexpr
-  operator()(T&& t) const noexcept {
+    requires((!_member_num_col_parts<T>) && (!_member_num_resident_parts<T>))
+  auto constexpr operator()(T&& t) const noexcept {
     return 0;
   }
 };
@@ -464,9 +468,9 @@ struct _hn {
   }
 
   template <class T>
-  requires((!_member_col_part_offset<T>)&&(
-      !_member_resident_part_offset<T>)) auto constexpr
-  operator()(T&& t) const noexcept {
+    requires(
+        (!_member_col_part_offset<T>) && (!_member_resident_part_offset<T>))
+  auto constexpr operator()(T&& t) const noexcept {
     return 0;
   }
 };

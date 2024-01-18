@@ -134,7 +134,8 @@ class adj_list : public std::vector<std::list<std::tuple<SC, ID>>> {
 #endif
 
   template <class AdjList>
-  requires(!std::integral<std::remove_cvref_t<AdjList>>) adj_list(AdjList&& l)
+    requires(!std::integral<std::remove_cvref_t<AdjList>>)
+  adj_list(AdjList&& l)
       : Base(l.size()) {
     for (size_t i = 0; i < l.size(); ++i) {
       for (auto&& [dst, val] : l[i]) {

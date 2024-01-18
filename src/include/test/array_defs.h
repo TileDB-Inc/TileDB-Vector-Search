@@ -219,15 +219,18 @@ constexpr size_t num_fmnistsmall_vectors = 1'000;
 constexpr size_t fmnistsmall_dimension = 784;  // OMG OMG OMG
 static std::filesystem::path fmnistsmall_root{test_array_root / "fmnistsmall"};
 static std::filesystem::path fmnistsmall_group_uri{fmnistsmall_root / "group"};
-static std::filesystem::path fmnistsmall_inputs_uri{fmnistsmall_root / "input_vectors"};
+static std::filesystem::path fmnistsmall_inputs_uri{
+    fmnistsmall_root / "input_vectors"};
 static std::filesystem::path fmnistsmall_centroids_uri{
     fmnistsmall_root / "partition_centroids"};
 static std::filesystem::path fmnistsmall_index_uri{
     fmnistsmall_root / "partition_indexes"};
 static std::filesystem::path fmnistsmall_ids_uri{
     fmnistsmall_root / "shuffled_vector_ids"};
-static std::filesystem::path fmnistsmall_parts_uri{fmnistsmall_root / "shuffled_vectors"};
-static std::filesystem::path fmnistsmall_query_uri{fmnistsmall_root / "queries"};
+static std::filesystem::path fmnistsmall_parts_uri{
+    fmnistsmall_root / "shuffled_vectors"};
+static std::filesystem::path fmnistsmall_query_uri{
+    fmnistsmall_root / "queries"};
 static std::filesystem::path fmnistsmall_groundtruth_uri{
     fmnistsmall_root / "groundtruth"};
 
@@ -258,8 +261,6 @@ static std::filesystem::path fmnist_parts_uri{fmnist_root / "shuffled_vectors"};
 static std::filesystem::path fmnist_query_uri{fmnist_root / "queries"};
 static std::filesystem::path fmnist_groundtruth_uri{
     fmnist_root / "groundtruth"};
-
-
 
 /**
  * @brief Some additional arrays that are not part of the IVF index, but
