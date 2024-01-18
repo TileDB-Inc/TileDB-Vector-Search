@@ -68,9 +68,10 @@ jobs:
     # needs: [build_wheels, build_sdist]
     needs: [build_wheels]
     runs-on: ubuntu-latest
-    # environment: pypi
+    environment: pypi
     permissions:
       id-token: write
+    # TODO: Decide when to run this
     # if: github.event_name == 'release' && github.event.action == 'published'
     # or, alternatively, upload to PyPI on every tag starting with 'v' (remove on: release above to use this)
     # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
@@ -91,8 +92,6 @@ jobs:
 
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          user: ${{ secrets.TEST_PYPI_USERNAME }}
-          password: ${{ secrets.TEST_PYPI_PASSWORD }}
           repository-url: https://test.pypi.org/legacy/
 
   test_pypi_package:
@@ -109,17 +108,3 @@ jobs:
 
       - run: |
           python -c "import tiledb.vector_search"
-
-#  upload_pypi:
-#    - uses: actions/download-artifact@v4
-#      with:
-#        # unpacks all CIBW artifacts into dist/
-#        pattern: 'cibw-*'
-#        path: dist
-#        merge-multiple: true
-#
-#    - uses: pypa/gh-action-pypi-publish@release/v1
-#      with:
-#        user: ${{ secrets.TEST_PYPI_USERNAME }}
-#        password: ${{ secrets.TEST_PYPI_PASSWORD }}
-#        repository-url: https://test.pypi.org/legacy/
