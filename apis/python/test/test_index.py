@@ -1,5 +1,6 @@
 import numpy as np
 from common import *
+from array_paths import *
 import pytest
 
 import tiledb.vector_search.index as ind
@@ -116,8 +117,8 @@ def test_index_with_incorrect_dimensions(tmp_path):
         index.query(np.array([[1, 1, 1]], dtype=np.float32), k=3)
 
 def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
-    siftsmall_uri = "test/data/files/siftsmall/input_vectors.fvecs"
-    queries_uri = "test/data/files/siftsmall/queries.fvecs"
+    siftsmall_uri = siftsmall_inputs_file
+    queries_uri = siftsmall_query_file
     indexes = ["FLAT", "IVF_FLAT"]
     for index_type in indexes:
         index_uri = os.path.join(tmp_path, f"sift10k_flat_{index_type}")
