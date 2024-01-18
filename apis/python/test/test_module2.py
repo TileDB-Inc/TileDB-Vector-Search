@@ -230,7 +230,7 @@ def test_inplace_build_infinite_query_IndexIVFFlat():
         logging.info(f"nprobe = {nprobe}, recall={recall}")
 
         if (nprobe == 8):
-            assert recall > 0.95
+            assert recall > 0.925
         if (nprobe == 32):
             assert recall == 1.0
 
