@@ -67,6 +67,10 @@ kmeans_add_test(unit_algorithm)
 
 kmeans_add_test(unit_concepts)
 
+kmeans_add_test(unit_concepts_vs)
+
+kmeans_add_test(unit_cpos)
+
 kmeans_add_test(unit_fixed_min_heap)
 
 kmeans_add_test(unit_flat_qv)
