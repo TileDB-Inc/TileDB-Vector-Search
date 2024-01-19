@@ -91,14 +91,13 @@ using sift_centroids_type = float;
 using sift_ids_type = uint64_t;
 using sift_indices_type = uint64_t;
 #ifdef USE_1M_UNIT_TEST_ARRAYS
-// copilot filled this in with no context at all about what I wanted
 constexpr size_t num_sift_vectors = 1'000'000;
 static std::filesystem::path sift_root{test_array_root / "sift"};
 #else
 constexpr size_t num_sift_vectors = 10'000;
 static std::filesystem::path sift_root{test_array_root / "siftsmall"};
 #endif
-constexpr size_t sift_dimension = 128;  // OMG!
+constexpr size_t sift_dimension = 128;
 static std::filesystem::path sift_group_uri{sift_root / "group"};
 static std::filesystem::path sift_inputs_uri{sift_root / "input_vectors"};
 static std::filesystem::path sift_centroids_uri{
@@ -214,9 +213,8 @@ using fmnistsmall_groundtruth_type = uint64_t;
 using fmnistsmall_centroids_type = float;
 using fmnistsmall_ids_type = uint64_t;
 using fmnistsmall_indices_type = uint64_t;
-// How does copilot get the number right?
 constexpr size_t num_fmnistsmall_vectors = 1'000;
-constexpr size_t fmnistsmall_dimension = 784;  // OMG OMG OMG
+constexpr size_t fmnistsmall_dimension = 784;
 static std::filesystem::path fmnistsmall_root{test_array_root / "fmnistsmall"};
 static std::filesystem::path fmnistsmall_group_uri{fmnistsmall_root / "group"};
 static std::filesystem::path fmnistsmall_inputs_uri{
@@ -247,7 +245,7 @@ static std::filesystem::path fmnist_root{test_array_root / "fmnist"};
 constexpr size_t num_fmnist_vectors = num_fmnistsmall_vectors;
 static std::filesystem::path fmnist_root{test_array_root / "fmnistsmall"};
 #endif
-constexpr size_t fmnist_dimension = 784;  // OMG OMG OMG
+constexpr size_t fmnist_dimension = 784;
 
 static std::filesystem::path fmnist_group_uri{fmnist_root / "group"};
 static std::filesystem::path fmnist_inputs_uri{fmnist_root / "input_vectors"};

@@ -119,7 +119,6 @@ auto greedy_search(
     Distance&& distance = Distance{}) {
   constexpr bool noisy = false;
 
-  // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
   using score_type = typename std::decay_t<decltype(graph)>::score_type;
 
@@ -133,11 +132,8 @@ auto greedy_search(
   };
 
   auto result = k_min_heap<score_type, id_type>{L};  // Ell: |Ell| <= L
-  // auto result = std::set<id_type>{};
-  auto q1 = k_min_heap<score_type, id_type>{L};  // Ell \ V
-  auto q2 = k_min_heap<score_type, id_type>{L};  // Ell \ V
-
-  // print_types(db, db[source], query, source);
+  auto q1 = k_min_heap<score_type, id_type>{L};      // Ell \ V
+  auto q2 = k_min_heap<score_type, id_type>{L};      // Ell \ V
 
   // L <- {s} and V <- empty`
   result.insert(distance(db[source], query), source);
@@ -235,8 +231,6 @@ auto greedy_search(
     q2.clear();
   }
 
-  // auto top_k = Vector<id_type>(k_nn);
-  // auto top_k_scores = Vector<score_type>(k_nn);
   auto top_k = std::vector<id_type>(k_nn);
   auto top_k_scores = std::vector<score_type>(k_nn);
 
@@ -281,7 +275,6 @@ auto robust_prune(
     Distance&& distance = Distance{}) {
   constexpr bool noisy = false;
 
-  // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
   using score_type = typename std::decay_t<decltype(graph)>::score_type;
 
@@ -413,9 +406,6 @@ auto medioid(auto&& P, Distance distance = Distance{}) {
  */
 template <class feature_type, class id_type, class index_type = uint32_t>
 class vamana_index {
-  // Array feature_vectors_;
-  // using feature_type = typename Array::score_type;
-  // using id_type = typename Array::id_type;
   using score_type = float;
 
   // A copy of the original feature vectors
@@ -427,9 +417,9 @@ class vamana_index {
   uint64_t num_vectors_{0};
   uint64_t L_build_{0};       // diskANN paper says default = 100
   uint64_t R_max_degree_{0};  // diskANN paper says default = 64
-  uint64_t B_backtrack_{0};   //
-  float alpha_min_{1.0};      // per diskANN paper
-  float alpha_max_{1.2};      // per diskANN paper
+  uint64_t B_backtrack_{0};
+  float alpha_min_{1.0};  // per diskANN paper
+  float alpha_max_{1.2};  // per diskANN paper
   ::detail::graph::adj_list<score_type, id_type> graph_;
   id_type medioid_{0};
 
@@ -531,17 +521,12 @@ class vamana_index {
 
     dimension_ = feature_vectors_.num_rows();
     num_vectors_ = feature_vectors_.num_cols();
-    // graph_ = ::detail::graph::init_random_adj_list<feature_type, id_type>(
-    //     feature_vectors_, R_max_degree_);
 
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
-    // dump_edgelist("edges_" + std::to_string(0) + ".txt", graph_);
 
     medioid_ = medioid(feature_vectors_);
 
-    debug_index();
     size_t counter{0};
-    //    for (float alpha : {alpha_min_, alpha_max_}) {
     // Just use one value of alpha
     for (float alpha : {alpha_max_}) {
       scoped_timer _("train " + std::to_string(counter), true);
@@ -572,8 +557,8 @@ class vamana_index {
           scoped_timer _{"post search prune"};
           for (auto&& [i, j] : graph_.out_edges(p)) {
             // @todo Do this without copying -- prune should take vector of
-            //  tuples and p (it copies anyway) maybe scan for p and then only
-            //  build tmp after if?
+            // tuples and p (it copies anyway) maybe scan for p and then only
+            // build tmp after if?
             auto tmp = std::vector<size_t>(graph_.out_degree(j) + 1);
             tmp.push_back(p);
             for (auto&& [_, k] : graph_.out_edges(j)) {
@@ -598,11 +583,7 @@ class vamana_index {
             }
           }
         }
-        if ((counter) % 10 == 0) {
-          // dump_edgelist("edges_" + std::to_string(counter) + ".txt", graph_);
-        }
       }
-      debug_index();
     }
   }
 
@@ -649,9 +630,6 @@ class vamana_index {
     scoped_timer __{tdb_func__ + std::string{" (outer)"}, true};
 
     size_t L = opt_L ? *opt_L : L_build_;
-    // L = std::min<size_t>(L, L_build_);
-
-    // print_types(query_set);
 
     auto top_k = ColMajorMatrix<size_t>(k, query_set.num_cols());
     auto top_k_scores = ColMajorMatrix<float>(k, query_set.num_cols());
@@ -767,7 +745,6 @@ class vamana_index {
    * the group?
    */
   auto write_index(const std::string& group_uri, bool overwrite = false) {
-    // copilot ftw!
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medioid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
 
