@@ -6,9 +6,9 @@ from tiledb.vector_search.utils import load_fvecs, write_fvecs
 
 def create_sift_micro():
     '''
-    Here we create a smaller version of the SIFT 10K dataset (http://corpus-texmex.irisa.fr). You 
-    don't need to run this again. We only write the base data used to create an index. To query you
-    should just select vectors from this to query against the index with.
+    Create a smaller version of the base SIFT 10K dataset (http://corpus-texmex.irisa.fr). You 
+    don't need to run this again, but it's saved here just in case. To query an index built with 
+    this data just select vectors from this file as the query vectors.
     '''
     script_dir = os.path.dirname(os.path.abspath(__file__))
     base_uri = os.path.join(script_dir, "..", "apis", "python", "test", "data", "siftsmall", "siftsmall_base.fvecs")
@@ -19,17 +19,14 @@ def generate_release_data(version):
 
     # Create the new release directory.
     release_dir = os.path.join(script_dir, "data", version) 
-    print(f"release_dir {release_dir}")
     shutil.rmtree(release_dir, ignore_errors=True)
     os.makedirs(release_dir, exist_ok=True)
 
     # Get the data we'll use to generate the index.
     base_uri = os.path.join(script_dir, "siftmicro_base.fvecs")
-    print(f"base_uri {base_uri}")
     base = load_fvecs(base_uri)
     indices = [0, 3, 4, 8, 10, 19, 28, 31, 39, 40, 41, 47, 49, 50, 56, 64, 68, 70, 71, 79, 82, 89, 90, 94]
     queries = base[indices]
-    print(f"queries {queries}")
 
     # Generate each index and query to make sure it works before we write it.
     index_types = ["FLAT", "IVF_FLAT"]
@@ -53,5 +50,5 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("version", help="The name of the of the TileDB-Vector-Search version which we are creating indices for.")
     args = p.parse_args()
-    print("[generate_data.py] Building indexes for version:", args.version)
+    print(f"Building indexes for version {args.version}")
     generate_release_data(args.version)
