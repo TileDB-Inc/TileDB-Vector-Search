@@ -82,8 +82,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   explicit fixed_min_pair_heap(
       std::integral auto k, Compare compare = Compare{})
       : Base(0)
-      , max_size{(unsigned)k}
-  {
+      , max_size{(unsigned)k} {
     Base::reserve(k);
   }
 
@@ -258,6 +257,7 @@ void debug_min_heap(
 template <class T, class Compare = std::less<T>>
 class fixed_min_set_heap_3 : public std::vector<T> {
   using Base = std::vector<T>;
+  // using Base::Base;
   unsigned max_size{0};
   Compare comp;
 
@@ -276,6 +276,7 @@ class fixed_min_set_heap_3 : public std::vector<T> {
   void insert(T const& x) {
     if (Base::size() < max_size) {
       Base::push_back(x);
+      // std::push_heap(begin(*this), end(*this), std::less<T>());
       if (Base::size() == max_size) {
         std::make_heap(begin(*this), end(*this), comp);
       }
