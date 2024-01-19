@@ -55,13 +55,11 @@ inline auto sum_of_squares(V const& a, U const& b) {
       std::unsigned_integral<std::remove_reference_t<decltype(a[0])>> ||
       std::unsigned_integral<std::remove_reference_t<decltype(b[0])>>) {
     for (size_t i = 0; i < size_a; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
       float diff = (float)a[i] - (float)b[i];
       sum += diff * diff;
     }
   } else {
     for (size_t i = 0; i < size_a; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
       float diff = a[i] - b[i];
       sum += diff * diff;
     }
@@ -176,8 +174,6 @@ TEST_CASE("concepts: inner_iterator_t", "[concepts]") {
 }
 
 TEST_CASE("concepts: inner_const_iterator_t", "[concepts]") {
-  // print_types(inner_const_iterator_t<std::vector<std::vector<int>>>{},
-  // std::vector<int>::const_iterator{ });
   CHECK(std::is_same_v<
         inner_const_iterator_t<std::vector<std::vector<int>>>,
         std::vector<int>::const_iterator>);
@@ -224,9 +220,6 @@ TEST_CASE("concepts: subscriptable_range", "[concepts]") {
   using sv = std::vector<int>;
   using svi = std::ranges::iterator_t<sv>;
   using svri = std::iter_reference_t<svi>;
-
-  // print_types(sv{}, sv{}.begin(), sv{}.cbegin(), svi{}, svi{}[0],
-  // std::iter_value_t<svi>{});
 
   CHECK(!subscriptable_range<int>);
   CHECK(subscriptable_range<std::vector<int>>);
@@ -379,14 +372,4 @@ TEST_CASE("concepts: feature_vector_array", "[concepts]") {
   CHECK(!feature_vector_array<std::vector<int>>);
   CHECK(!feature_vector_array<std::vector<double>>);
   CHECK(!feature_vector_array<std::vector<std::vector<int>>>);
-}
-
-TEST_CASE("concepts: contiguous_feature_vector_range", "[concepts]") {
-}
-
-TEST_CASE("concepts: partitioned_feature_vector_range", "[concepts]") {
-}
-
-TEST_CASE(
-    "concepts: contiguous_partitioned_feature_vector_range", "[concepts]") {
 }

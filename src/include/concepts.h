@@ -123,7 +123,6 @@ concept vectorable = requires(const T& t) {
 
 template <class T>
 concept partitionable = requires(const T& t) {
-  //  { num_partitions(t) } -> semi_integral;
   { t.indices() };
   { t.ids() };
 };
@@ -134,7 +133,7 @@ concept partitionable = requires(const T& t) {
 
 template <typename R>
 concept feature_vector =
-    std::ranges::random_access_range<R> && /* std::ranges::sized_range<R> && */
+    std::ranges::random_access_range<R> &&
     std::ranges::contiguous_range<R> && dimensionable<R> &&
     (subscriptable_range<R> || callable_range<R>);
 
@@ -155,18 +154,9 @@ concept query_vector = feature_vector<R>;
 // ----------------------------------------------------------------------------
 template <class D>
 concept feature_vector_array =
-    // feature_vector<inner_range_t<D>> &&
-    // std::ranges::random_access_range<D> && /* std::ranges::sized_range<D> &&
-    // */ subscriptable_range<D> && requires(D d, const
-    // std::iter_difference_t<std::ranges::iterator_t<D>> n) {
     requires(D d, size_t n) {
-      //      typename D::feature_type;
       { num_vectors(d) } -> semi_integral;
       { dimension(d) } -> semi_integral;
-      //{
-      //        d[n]
-      //      } ->
-      //      std::same_as<std::iter_reference_t<std::ranges::iterator_t<D>>>;
       { d[n] } -> feature_vector;  // Maybe redundant
     };
 
@@ -196,10 +186,6 @@ concept contiguous_query_vector_array = contiguous_feature_vector_array<T>;
 template <class D>
 concept partitioned_feature_vector_array =
     feature_vector_array<D> && partitionable<D>;
-//    && requires(D d) {
-//      typename D::id_type;
-//      typename D::indices_type;
-//    };
 
 template <class D>
 concept contiguous_partitioned_feature_vector_array =
