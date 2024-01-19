@@ -49,15 +49,6 @@ class index_adj_list : public std::vector<std::list<I>> {
       : Base(num_vertices) {
   }
 
-#if 0
-  template <class EdgeList>
-  index_adj_list(EdgeList&& edge_list) {
-    for (auto& [src, dst] : edge_list) {
-      Base::operator[](src).push_back(dst);
-    }
-  }
-#endif
-
   template <class AdjList>
   index_adj_list(AdjList&& l)
       : Base(size(l)) {
@@ -123,15 +114,6 @@ class adj_list : public std::vector<std::list<std::tuple<SC, ID>>> {
   explicit adj_list(size_t num_vertices = 0)
       : Base(num_vertices) {
   }
-
-#if 0
-  template <class EdgeList>
-  index_adj_list(EdgeList&& edge_list) {
-    for (auto& [src, dst] : edge_list) {
-      Base::operator[](src).push_back(dst);
-    }
-  }
-#endif
 
   template <class AdjList>
     requires(!std::integral<std::remove_cvref_t<AdjList>>)

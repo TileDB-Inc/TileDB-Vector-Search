@@ -168,30 +168,25 @@ auto gen_star_grid(size_t M, size_t N) {
         auto src = i * N + j;
         auto dst = i * N + j + 1;
         edges.emplace_back(src, dst);
-        // edges.emplace_back(dst, src);
         if (i < M - 1) {
           auto src = i * N + j;
           auto dst = (i + 1) * N + j + 1;
           edges.emplace_back(src, dst);
-          // edges.emplace_back(dst, src);
         }
       }
       if (i < M - 1) {
         auto src = i * N + j;
         auto dst = (i + 1) * N + j;
         edges.emplace_back(src, dst);
-        // edges.emplace_back(dst, src);
         if (j < N - 1) {
           auto src = i * N + j;
           auto dst = (i + 1) * N + j + 1;
           edges.emplace_back(src, dst);
-          // edges.emplace_back(dst, src);
         }
         if (j > 0) {
           auto src = i * N + j;
           auto dst = (i + 1) * N + j - 1;
           edges.emplace_back(src, dst);
-          // edges.emplace_back(dst, src);
         }
       }
     }

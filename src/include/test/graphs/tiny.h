@@ -52,11 +52,4 @@ std::vector<std::tuple<size_t, float>> tiny_best{
     {11, 449266.0},
 };
 
-// const TEST_DATA_FILE: &str = "tests/data/siftsmall_learn_256pts.fbin";
-// const NUM_POINTS_TO_LOAD: usize = 256;
-
-// let visited_nodes = index.search_for_point(&query, &mut scratch).unwrap();
-// assert_eq!(visited_nodes.len(), 15);
-// assert_eq!(scratch.best_candidates.size(), 15);
-
 #endif  // DISKANN_GRAPH_HPP

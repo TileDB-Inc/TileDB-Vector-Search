@@ -138,8 +138,4 @@ void debug_vector(const V& v, const std::string& msg = "") {
   std::cout << "\n";
 }
 
-// template <class V>
-// void debug_slice(const V& v, const std::string& msg = "") {
-//   debug_vector(v, msg);
-// }
 #endif

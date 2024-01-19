@@ -75,7 +75,6 @@ using heap_index_t = typename heap_traits<Heap>::index_type;
 template <class T, class U, class Compare = std::less<T>>
 class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   using Base = std::vector<std::tuple<T, U>>;
-  // using Base::Base;
   unsigned max_size{0};
   constexpr const static Compare compare_{};
 
@@ -83,7 +82,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   explicit fixed_min_pair_heap(
       std::integral auto k, Compare compare = Compare{})
       : Base(0)
-      , max_size{(unsigned)k}  //    , compare_{std::move(compare)}
+      , max_size{(unsigned)k}
   {
     Base::reserve(k);
   }
@@ -116,11 +115,6 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
       std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
-      //      if (Base::size() == max_size) {
-      //        std::make_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
-      //          return std::get<0>(a) < std::get<0>(b);
-      //        });
-      //      }
       return true;
     } else if (compare_(x, std::get<0>(this->front()))) {
       std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
@@ -138,8 +132,6 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
         }
       }
 
-      //      this->pop_back();
-      //      this->emplace_back(x, y);
       (*this)[max_size - 1] = std::make_tuple(x, y);
       std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
@@ -261,15 +253,11 @@ void debug_min_heap(
   }
 }
 
-// template <class T>
-// using fixed_min_heap = fixed_min_set_heap_1<T>;
-
 #ifdef ALLHEAPS  // Kept here for historical comparison reasons.  They are
                  // really slow.
 template <class T, class Compare = std::less<T>>
 class fixed_min_set_heap_3 : public std::vector<T> {
   using Base = std::vector<T>;
-  // using Base::Base;
   unsigned max_size{0};
   Compare comp;
 
@@ -288,7 +276,6 @@ class fixed_min_set_heap_3 : public std::vector<T> {
   void insert(T const& x) {
     if (Base::size() < max_size) {
       Base::push_back(x);
-      // std::push_heap(begin(*this), end(*this), std::less<T>());
       if (Base::size() == max_size) {
         std::make_heap(begin(*this), end(*this), comp);
       }
