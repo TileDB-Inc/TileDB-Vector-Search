@@ -12,6 +12,8 @@ from tiledb.vector_search.module import array_to_matrix, kmeans_fit, kmeans_pred
 from tiledb.vector_search.utils import load_fvecs
 
 MINIMUM_ACCURACY = 0.85
+MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
+
 def query_and_check_equals(index, queries, expected_result_d, expected_result_i):
     result_d, result_i = index.query(queries, k=1)
     check_equals(result_d=result_d, result_i=result_i, expected_result_d=expected_result_d, expected_result_i=expected_result_i)

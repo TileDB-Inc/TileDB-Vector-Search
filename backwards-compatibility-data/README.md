@@ -3,8 +3,17 @@ This folder contains test indices built using different versions of TileDB-Vecto
 
 ### Usage
 To generate new data, run:
-- `python generate_data.py x.x.x`
-This will create a new folder in the `data` directory with the version. This folder will contain the arrays built by the current version of TileDB-Vector-Search.
+```bash
+cd apis/python
+pip install .
+cd ../..
+python generate_data.py my_version
+```
+This will build new indexes and save them to `backwards-compatibility-data/data/my_version`.
 
-To run a backwards compability test, run:
-- `cd ~/repo/TileDB-Vector-Search && pytest apis/python/test/test_backwards_compatibility.py -s`
+To run the backwards compability test:
+```bash
+cd apis/python
+pip install ".[test]"
+pytest test/test_backwards_compatibility.py -s
+```

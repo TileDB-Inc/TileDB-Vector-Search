@@ -40,6 +40,3 @@ jobs:
         env:
           TILEDB_REST_TOKEN: ${{ secrets.TILEDB_CLOUD_HELPER_VAR }}
         shell: bash -el {0}
-      - name: List Installed Python Packages
-        run: |
-          pip freeze

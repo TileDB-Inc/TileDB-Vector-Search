@@ -78,33 +78,33 @@ def test_create_and_query_indices_with_old_storage_versions(tmp_path):
             _, result = index_ram.query(queries, k=k)
             assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
-# def test_query_old_indices():
-#     '''
-#     Tests that current code can query indices which were written to disk by old code.
-#     '''
-#     backwards_compatibility_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'backwards-compatibility-data')
-#     datasets_path = os.path.join(backwards_compatibility_path, 'data')
-#     base = load_fvecs(os.path.join(backwards_compatibility_path, 'siftmicro_base.fvecs'))
-#     query_indices = [0, 3, 4, 8, 10, 19, 28, 31, 39, 40, 41, 47, 49, 50, 56, 64, 68, 70, 71, 79, 82, 89, 90, 94]
-#     queries = base[query_indices]
+def test_query_old_indices():
+    '''
+    Tests that current code can query indices which were written to disk by old code.
+    '''
+    backwards_compatibility_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'backwards-compatibility-data')
+    datasets_path = os.path.join(backwards_compatibility_path, 'data')
+    base = load_fvecs(os.path.join(backwards_compatibility_path, 'siftmicro_base.fvecs'))
+    query_indices = [0, 3, 4, 8, 10, 19, 28, 31, 39, 40, 41, 47, 49, 50, 56, 64, 68, 70, 71, 79, 82, 89, 90, 94]
+    queries = base[query_indices]
 
-#     for directory_name in os.listdir(datasets_path):
-#         version_path = os.path.join(datasets_path, directory_name)
-#         if not os.path.isdir(version_path):
-#             continue
+    for directory_name in os.listdir(datasets_path):
+        version_path = os.path.join(datasets_path, directory_name)
+        if not os.path.isdir(version_path):
+            continue
 
-#         for index_name in os.listdir(version_path):
-#             index_uri = os.path.join(version_path, index_name)
-#             if not os.path.isdir(index_uri):
-#               continue
+        for index_name in os.listdir(version_path):
+            index_uri = os.path.join(version_path, index_name)
+            if not os.path.isdir(index_uri):
+              continue
 
-#             if "ivf_flat" in index_name:
-#                 index = IVFFlatIndex(uri=index_uri)
-#             elif "flat" in index_name:
-#                 index = FlatIndex(uri=index_uri)
-#             else:
-#                 assert False, f"Unknown index name: {index_name}"
+            if "ivf_flat" in index_name:
+                index = IVFFlatIndex(uri=index_uri)
+            elif "flat" in index_name:
+                index = FlatIndex(uri=index_uri)
+            else:
+                assert False, f"Unknown index name: {index_name}"
 
-#             result_d, result_i = index.query(queries, k=1)
-#             assert query_indices == result_i.flatten().tolist()
-#             assert result_d.flatten().tolist() == [0 for _ in range(len(query_indices))]
+            result_d, result_i = index.query(queries, k=1)
+            assert query_indices == result_i.flatten().tolist()
+            assert result_d.flatten().tolist() == [0 for _ in range(len(query_indices))]
