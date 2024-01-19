@@ -526,8 +526,7 @@ class vamana_index {
         training_set.num_rows(), training_set.num_cols()));
     std::copy(
         training_set.data(),
-        training_set.data() +
-            training_set.num_rows() * training_set.num_cols(),
+        training_set.data() + training_set.num_rows() * training_set.num_cols(),
         feature_vectors_.data());
 
     dimension_ = feature_vectors_.num_rows();
@@ -643,7 +642,7 @@ class vamana_index {
    */
   template <class M>
     requires requires(M m) { m.num_rows(); }
-    auto query(
+  auto query(
       const M& query_set,
       size_t k,
       std::optional<size_t> opt_L = std::nullopt) {
@@ -710,7 +709,7 @@ class vamana_index {
    * @return Top k scores and top k ids
    */
   template <class Vec>
-  requires requires (Vec v) { v.begin(); }
+    requires requires(Vec v) { v.begin(); }
   auto query(
       const Vec& query_vec,
       size_t k,

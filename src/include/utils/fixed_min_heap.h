@@ -39,8 +39,8 @@
 #define TILEDB_FIXED_MIN_QUEUES_H
 
 #include <functional>
-#include <iostream>
 #include <initializer_list>
+#include <iostream>
 #include <set>
 
 #include "functional.h"
@@ -66,7 +66,6 @@ using heap_score_t = typename heap_traits<Heap>::score_type;
 
 template <class Heap>
 using heap_index_t = typename heap_traits<Heap>::index_type;
-
 
 /**
  * Heap to store a pair of values, ordered by the first element.

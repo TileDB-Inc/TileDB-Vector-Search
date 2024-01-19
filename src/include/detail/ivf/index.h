@@ -183,8 +183,7 @@ int ivf_index(
           ctx, shuffled_db, parts_uri, start_pos, false, write_temporal_policy);
     }
     if (index_uri != "") {
-      write_vector(
-          ctx, indices, index_uri, 0, false, write_temporal_policy);
+      write_vector(ctx, indices, index_uri, 0, false, write_temporal_policy);
     }
     if (id_uri != "") {
       write_vector(
