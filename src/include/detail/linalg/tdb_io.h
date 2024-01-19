@@ -115,20 +115,22 @@ void write_matrix(
   array.close();
 }
 
-template <class T>
+template <class V>
 void create_vector(
-    const tiledb::Context& ctx, std::vector<T>& v, const std::string& uri) {
+    const tiledb::Context& ctx, const V& v, const std::string& uri) {
   size_t num_parts = 10;
   size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
   tiledb::Domain domain(ctx);
   domain.add_dimension(tiledb::Dimension::create<int>(
       ctx, "rows", {{0, (int)size(v) - 1}}, tile_extent));
 
+  using value_type = std::remove_const_t<std::ranges::range_value_t<V>>;
+
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
   schema.set_domain(domain).set_order({{TILEDB_ROW_MAJOR, TILEDB_ROW_MAJOR}});
 
-  schema.add_attribute(tiledb::Attribute::create<T>(ctx, "values"));
+  schema.add_attribute(tiledb::Attribute::create<value_type>(ctx, "values"));
 
   tiledb::Array::create(uri, schema);
 }
@@ -137,18 +139,19 @@ void create_vector(
  * Write the contents of a std::vector to a TileDB array.
  * @todo change the naming of this function to something more appropriate
  */
-template <class T>
+template <class V>
 void write_vector(
     const tiledb::Context& ctx,
-    std::vector<T>& v,
+    const V& v,
     const std::string& uri,
     size_t start_pos = 0,
     bool create = true,
     const tiledb::TemporalPolicy temporal_policy = {}) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
+  using value_type = std::remove_const_t<std::ranges::range_value_t<V>>;
   if (create) {
-    create_vector<T>(ctx, v, uri);
+    create_vector<V>(ctx, v, uri);
   }
   // Set the subarray to write into
   std::vector<int32_t> subarray_vals{
@@ -163,7 +166,7 @@ void write_vector(
 
   tiledb::Query query(ctx, array);
   query.set_layout(TILEDB_ROW_MAJOR)
-      .set_data_buffer("values", v)
+      .set_data_buffer("values", const_cast<value_type*>(v.data()), size(v))
       .set_subarray(subarray);
 
   query.submit();

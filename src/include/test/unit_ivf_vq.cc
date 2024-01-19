@@ -36,6 +36,7 @@
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
 #include "query_common.h"
+#include "array_defs.h"
 #include "utils/utils.h"
 
 TEST_CASE("vq: test test", "[ivf vq]") {
