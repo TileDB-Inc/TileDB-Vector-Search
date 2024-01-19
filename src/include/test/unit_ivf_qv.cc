@@ -42,7 +42,7 @@ TEST_CASE("qv: test test", "[qv]") {
   REQUIRE(true);
 }
 
-TEST_CASE("ivf qv: infinite all or none", "[ivf qv][ci-skip]") {
+TEST_CASE("ivf qv: infinite all or none", "[ivf qv]") {
   // vq_query_infinite_ram
   // vq_query_infinite_ram_2
 
@@ -147,7 +147,7 @@ TEST_CASE("ivf qv: infinite all or none", "[ivf qv][ci-skip]") {
   }
 }
 
-TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
+TEST_CASE("ivf qv: finite all or none", "[ivf qv]") {
   // vq_query_infinite_ram
   // vq_query_infinite_ram_2
 

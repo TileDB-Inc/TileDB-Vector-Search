@@ -44,13 +44,13 @@ TEST_CASE("vq: test test", "[ivf vq]") {
 }
 
 // vq_apply_query
-TEST_CASE("ivf vq: vq apply query", "[ivf vq][ci-skip]") {
+TEST_CASE("ivf vq: vq apply query", "[ivf vq]") {
   //  vq_apply_query(query, shuffled_db, new_indices, active_queries, ids,
   //  active_partitions, k_nn, first_part, last_part);
   REQUIRE(true);
 }
 
-TEST_CASE("ivf vq: infinite all or none", "[ivf vq][ci-skip]") {
+TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
   // vq_query_infinite_ram
   // vq_query_infinite_ram_2
 
@@ -119,7 +119,7 @@ TEST_CASE("ivf vq: infinite all or none", "[ivf vq][ci-skip]") {
   }
 }
 
-TEST_CASE("ivf vq: finite all or none", "[ivf vq][ci-skip]") {
+TEST_CASE("ivf vq: finite all or none", "[ivf vq]") {
   // vq_query_infinite_ram
   // vq_query_infinite_ram_2
 
