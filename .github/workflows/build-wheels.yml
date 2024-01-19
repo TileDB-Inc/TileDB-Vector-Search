@@ -39,7 +39,7 @@ jobs:
           CIBW_BUILD_VERBOSITY: 3
           MACOSX_DEPLOYMENT_TARGET: "12.0"
           CIBW_TEST_REQUIRES: pytest
-          CIBW_BEFORE_TEST: "cp ${project}/apis/python/test ."
+          CIBW_BEFORE_TEST: "cp {project}/apis/python/test ."
           CIBW_TEST_COMMAND: "pytest {project}/apis/python"
           CIBW_ENVIRONMENT: TILEDB_REST_TOKEN=${{ secrets.TILEDB_CLOUD_HELPER_VAR }}
           SYSTEM_VERSION_COMPAT: ${{ startsWith(matrix.os, 'macos-') }}
