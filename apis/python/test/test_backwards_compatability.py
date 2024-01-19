@@ -82,9 +82,9 @@ def test_create_and_query_indices_with_old_storage_versions(tmp_path):
 #     '''
 #     Tests that current code can query indices which were written to disk by old code.
 #     '''
-#     backwards_compatability_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'backwards-compatability-data')
-#     datasets_path = os.path.join(backwards_compatability_path, 'data')
-#     base = load_fvecs(os.path.join(backwards_compatability_path, 'siftmicro_base.fvecs'))
+#     backwards_compatibility_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'backwards-compatibility-data')
+#     datasets_path = os.path.join(backwards_compatibility_path, 'data')
+#     base = load_fvecs(os.path.join(backwards_compatibility_path, 'siftmicro_base.fvecs'))
 #     query_indices = [0, 3, 4, 8, 10, 19, 28, 31, 39, 40, 41, 47, 49, 50, 56, 64, 68, 70, 71, 79, 82, 89, 90, 94]
 #     queries = base[query_indices]
 

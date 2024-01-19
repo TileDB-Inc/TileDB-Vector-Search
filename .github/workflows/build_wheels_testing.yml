@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  generate_backwards_compatability_data:
+  generate_backwards_compatibility_data:
     name: Generate Backwards Compatibility Data
     runs-on: ubuntu-latest
     steps:
@@ -55,13 +55,13 @@ jobs:
           echo "ls" && ls
           echo ""
           
-          echo "python backwards-compatability-data/generate_data.py $release_tag" && python backwards-compatability-data/generate_data.py $release_tag
+          echo "python backwards-compatibility-data/generate_data.py $release_tag" && python backwards-compatibility-data/generate_data.py $release_tag
           
           echo ""
           echo "pwd" && pwd
           echo "ls" && ls
-          echo "ls backwards-compatability-data" && ls backwards-compatability-data
-          echo "ls backwards-compatability-data/data" && ls backwards-compatability-data/data
+          echo "ls backwards-compatibility-data" && ls backwards-compatibility-data
+          echo "ls backwards-compatibility-data/data" && ls backwards-compatibility-data/data
           echo ""
           echo "git status" && git status
           echo "git branch" && git branch
@@ -73,15 +73,15 @@ jobs:
           echo "git status" && git status
           echo "git branch" && git branch
           
-          echo "git add backwards-compatability-data/data/" && git add backwards-compatability-data/data/
-          echo "git commit -m '[automated] Update backwards-compatability-data for release $release_tag'" && git commit -m "[automated] Update backwards-compatability-data for release $release_tag"
+          echo "git add backwards-compatibility-data/data/" && git add backwards-compatibility-data/data/
+          echo "git commit -m '[automated] Update backwards-compatibility-data for release $release_tag'" && git commit -m "[automated] Update backwards-compatibility-data for release $release_tag"
           echo "git push origin jparismorgan/temp-testing-2" && git push origin jparismorgan/temp-testing-2
           
           echo "git status" && git status
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
-    needs: generate_backwards_compatability_data
+    needs: generate_backwards_compatibility_data
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
