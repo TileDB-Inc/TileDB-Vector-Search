@@ -78,7 +78,6 @@ TEST_CASE("vamana: diskann", "[vamana]") {
         diskann_mem_index,
         diskann_truth_disk_layout,
         diskann_truth_index_data}) {
-    // std::cout << s << std::endl;
     CHECK(local_file_exists(s));
   }
 
@@ -138,8 +137,6 @@ TEST_CASE("vamana: diskann", "[vamana]") {
   auto med = detail::graph::medioid(f);
   std::cout << "med " << med << std::endl;
   CHECK(med == 72);
-  // tiledb::Context ctx;
-  // write_matrix(ctx, f, "/tmp/diskann_test_data_file.tdb");
 }
 
 TEST_CASE("vamana: small256 build index", "[vamana]") {
@@ -173,7 +170,6 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   uint32_t npoints{0};
   uint32_t ndim{0};
 
-  // "tests/data/siftsmall_learn_256pts.fbin";
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
     throw std::runtime_error(
@@ -235,7 +231,6 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
     for (auto&& dst : init_nbrs[i]) {
       auto score = sum_of_squares(x[j], x[dst]);
       graph.add_edge(j, dst, score);
-      // std::cout << j << " " << dst << " " << score << std::endl;
     }
   }
   for (size_t i = 0; i < size(init_nodes); ++i) {
@@ -245,12 +240,9 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
 
   auto yack = sum_of_squares_distance{}(x[72], x[14]);
   std::cout << yack << std::endl;
-  // L = 50, R = 4
   size_t L = 45;
   auto query_id = 14;
   size_t k = 15;
-  // auto med = detail::graph::medioid(x);
-  //  int med = GENERATE(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 72);
   int med = 72;
   std::cout << "med " << med << std::endl;
 
@@ -265,17 +257,6 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
     std::cout << "( " << top_k[i] << ", " << top_k_scores[i] << " ), ";
   }
   std::cout << std::endl;
-
-#if 0
-  for (size_t i = 0; i < size(visited); ++i) {
-    std::cout << visited[i] << ", ";
-  }
-  std::cout << std::endl;
-  for (size_t i = 0; i < size(expected); ++i) {
-    std::cout << expected[i] << ", ";
-  }
-  std::cout << std::endl;
-#endif
 
 #if 0
   set_neighbors(&index, 0, vec![12, 72, 5, 9]);
@@ -339,7 +320,6 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
 TEST_CASE("vamana: greedy grid search", "[vamana]") {
   const bool debug = true;
 
-  // using feature_type = uint8_t;
   using id_type = uint32_t;
   using score_type = float;
 
@@ -539,7 +519,6 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
   size_t L = 5;
 
   // should be dim = 128, num = 256
-  // npoints, ndims
   uint32_t npoints{0};
   uint32_t ndim{0};
 
@@ -568,7 +547,6 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
         greedy_search(g, x, start, x[start], k_nn, L);
     std::sort(begin(top_k), end(top_k));
 
-    // CHECK(top_k[0] == start);
     CHECK(std::find(begin(top_k), end(top_k), start) != end(top_k));
     CHECK(std::find(begin(V), end(V), start) != end(V));
   }
@@ -867,10 +845,6 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
 
   if (debug) {
     std::cout << "V.size: " << size(V) << std::endl;
-
-    // for (auto&& v : V) {
-    //   std::cout << v << ", ";
-    // }
   }
 
   auto top_n = ColMajorMatrix<size_t>(k_nn, 1);
@@ -915,7 +889,6 @@ TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
   bool debug = false;
 
   // should be dim = 128, num = 256
-  // npoints, ndims
   uint32_t npoints{0};
   uint32_t ndim{0};
 

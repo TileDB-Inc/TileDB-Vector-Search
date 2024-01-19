@@ -71,7 +71,7 @@ template <
 auto nn_descent_0_step(
     auto&& g, auto&& db, I i, J j, Distance distance = Distance()) {
   size_t num_updates{0};
-  for (auto&& [_, k] : out_edges(g, j)) {  // _ is dist(j, k)
+  for (auto&& [_, k] : out_edges(g, j)) {
     if (k == i) {
       continue;
     }
@@ -80,7 +80,7 @@ auto nn_descent_0_step(
       ++num_updates;
     }
   }
-  for (auto&& k : in_edges(g, j)) {  // _ is dist(j, k)
+  for (auto&& k : in_edges(g, j)) {
     if (k == i) {
       continue;
     }
@@ -98,7 +98,6 @@ auto nn_descent_0_step_all(
     auto&& g, auto&& db, Distance distance = Distance()) {
   size_t num_updates{0};
   size_t nvertices{num_vertices(g)};
-  // g.copy_to_update_edges();
 
   g.build_in_edges();
 
@@ -111,7 +110,6 @@ auto nn_descent_0_step_all(
       num_updates += nn_descent_0_step(g, db, i, j);
     }
   }
-  // g.swap_all_update_edges();
 
   return num_updates;
 }
@@ -125,7 +123,7 @@ auto nn_descent_1_step(
     auto&& g, auto&& db, I i, J j, Distance distance = Distance()) {
   size_t num_updates{0};
 
-  for (auto&& [_, k] : out_edges(g, i)) {  // _ is dist(j, k)
+  for (auto&& [_, k] : out_edges(g, i)) {
     if (k <= j) {
       continue;
     }
@@ -138,7 +136,7 @@ auto nn_descent_1_step(
     }
   }
 
-  for (auto&& k : in_edges(g, i)) {  // _ is dist(j, k)
+  for (auto&& k : in_edges(g, i)) {
     if (k <= j) {
       continue;
     }
@@ -159,13 +157,11 @@ auto nn_descent_1_step_all(
     auto&& g, auto&& db, Distance distance = Distance()) {
   size_t num_updates{0};
   size_t nvertices{num_vertices(g)};
-  // g.copy_to_update_edges();
 
   g.build_in_edges();
 
   for (size_t i = 0; i < nvertices; ++i) {
     for (auto&& [_, j] : out_edges(g, i)) {
-      // print_types(i, j);
       num_updates += nn_descent_1_step(g, db, i, j);
     }
 
@@ -173,45 +169,9 @@ auto nn_descent_1_step_all(
       num_updates += nn_descent_1_step(g, db, i, j);
     }
   }
-  // g.swap_all_update_edges();
 
   return num_updates;
 }
-
-#if 0
-template <adjacency_list_graph Graph>
-auto bfs(const Graph& graph, vertex_id_t<Graph> root) {
-  using vertex_id_type = vertex_id_t<Graph>;
-
-  std::deque<vertex_id_type>  q1, q2;
-  std::vector<vertex_id_type> level(num_vertices(graph), std::numeric_limits<vertex_id_type>::max());
-  std::vector<vertex_id_type> parents(num_vertices(graph), std::numeric_limits<vertex_id_type>::max());
-  size_t                      lvl = 0;
-
-  q1.push_back(root);
-  level[root]   = lvl++;
-  parents[root] = root;
-
-  while (!q1.empty()) {
-
-    std::for_each(q1.begin(), q1.end(), [&](vertex_id_type u) {
-      std::for_each(graph[u].begin(), graph[u].end(), [&](auto&& x) {
-        vertex_id_type v = target(graph, x);
-        if (level[v] == std::numeric_limits<vertex_id_type>::max()) {
-          q2.push_back(v);
-          level[v]   = lvl;
-          parents[v] = u;
-        }
-      });
-    });
-    std::swap(q1, q2);
-    q2.clear();
-    ++lvl;
-  }
-  return parents;
-}
-
-#endif
 
 template <class Graph>
 struct vertex_id {
@@ -260,7 +220,6 @@ auto bfs(nn_graph<T, I>& graph, I root) {
 
   for (auto&& l : level) {
     if (l == std::numeric_limits<vertex_id_type>::max()) {
-      std::cout << "Graph is not connected!" << std::endl;
       break;
     }
   }
@@ -313,7 +272,6 @@ auto nn_descent_1_query(
 
       std::for_each(start, stop, [&](auto&& x) {
         auto&& [_, u] = x;
-        //       auto&& [_, u] = q1.front(); // this is going to be max element
 
         auto nbd{graph.entire_neighborhood(u)};
         auto in_start = begin(nbd);
@@ -343,7 +301,6 @@ auto nn_descent_1(auto&& db, size_t k_nn, Distance distance = Distance()) {
   size_t num_updates{0};
   do {
     num_updates = nn_descent_1_step_all(g, db);
-    std::cout << num_updates << std::endl;
   } while (num_updates > (k_nn * num_vertices(g)) / 100);
 
   return g;
@@ -353,14 +310,14 @@ template <std::integral I, std::integral J, std::integral ID>
 auto nn_descent_step(auto&& g, I i, J j, std::unordered_set<ID>& s) {
   auto num_visited = 0;
 
-  for (auto&& [_, k] : out_edges(g, j)) {  // _ is dist(j, k)
+  for (auto&& [_, k] : out_edges(g, j)) {
     if (i == k) {
       continue;
     }
     s.insert(k);
     ++num_visited;
   }
-  for (auto&& k : in_edges(g, j)) {  // _ is dist(j, k)
+  for (auto&& k : in_edges(g, j)) {
     if (i == k) {
       continue;
     }
@@ -377,7 +334,6 @@ auto nn_descent_step_all(auto&& g, auto&& db, Distance distance = Distance()) {
   size_t num_updates{0};
   size_t num_visited{0};
   size_t nvertices{num_vertices(g)};
-  // g.copy_to_update_edges();
 
   g.build_in_edges();
 
@@ -404,9 +360,6 @@ auto nn_descent_step_all(auto&& g, auto&& db, Distance distance = Distance()) {
   }
 
   t.stop();
-
-  std::cout << num_visited << ", " << num_updates << ", " << num_candidates
-            << std::endl;
 
   return num_updates;
 }
@@ -419,7 +372,6 @@ auto nn_descent_step_full_all(
   size_t num_updates{0};
   size_t num_visited{0};
   size_t nvertices{num_vertices(g)};
-  // g.copy_to_update_edges();
 
   g.build_in_edges();
 
@@ -446,9 +398,6 @@ auto nn_descent_step_full_all(
   }
 
   t.stop();
-
-  std::cout << num_visited << ", " << num_updates << ", " << num_candidates
-            << std::endl;
 
   return num_updates;
 }
