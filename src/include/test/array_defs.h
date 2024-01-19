@@ -309,28 +309,22 @@ static std::filesystem::path pytest_170_group_root{
 static std::filesystem::path pytest_170_group_uri{
     pytest_170_group_root / "test_ivf_flat_ingestion_f320/array"};
 
-
 #define TEMP_LEGACY_URIS
-#ifdef  TEMP_LEGACY_URIS
+#ifdef TEMP_LEGACY_URIS
 using db_type = siftsmall_feature_type;
 using groundtruth_type = siftsmall_groundtruth_type;  // int32?
 using centroids_type = siftsmall_centroids_type;
 using ids_type = siftsmall_ids_type;
 using indices_type = siftsmall_indices_type;
 
-static std::filesystem::path db_uri{
-    siftsmall_root / "input_vectors"};
+static std::filesystem::path db_uri{siftsmall_root / "input_vectors"};
 static std::filesystem::path centroids_uri{
     siftsmall_root / "partition_centroids"};
-static std::filesystem::path index_uri{
-    siftsmall_root / "partition_indexes"};
-static std::filesystem::path ids_uri{
-    siftsmall_root / "shuffled_vector_ids"};
-static std::filesystem::path parts_uri{
-    siftsmall_root / "shuffled_vectors"};
+static std::filesystem::path index_uri{siftsmall_root / "partition_indexes"};
+static std::filesystem::path ids_uri{siftsmall_root / "shuffled_vector_ids"};
+static std::filesystem::path parts_uri{siftsmall_root / "shuffled_vectors"};
 static std::filesystem::path query_uri{siftsmall_root / "queries"};
-static std::filesystem::path groundtruth_uri{
-    siftsmall_root / "groundtruth"};
+static std::filesystem::path groundtruth_uri{siftsmall_root / "groundtruth"};
 #endif
 
 #endif  // TILEDB_ARRAY_DEFS_H

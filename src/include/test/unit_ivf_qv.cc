@@ -31,12 +31,12 @@
 
 #include <catch2/catch_all.hpp>
 #include <cmath>
+#include "array_defs.h"
 #include "detail/ivf/dist_qv.h"
 #include "detail/ivf/qv.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
 #include "query_common.h"
-#include "array_defs.h"
 
 TEST_CASE("qv: test test", "[qv]") {
   REQUIRE(true);
