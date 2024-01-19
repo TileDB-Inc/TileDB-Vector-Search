@@ -162,6 +162,45 @@ include(Docopt)
 include(mdspan)
 include(nlohmann_json)
 
+
+# -----------------------------------------------------------------------------
+# Config header
+# -----------------------------------------------------------------------------
+# Get git info, etc
+include (logging)
+
+# Write config file
+configure_file(${CMAKE_SOURCE_DIR}/include/config.h.in config.h)
+
+# -----------------------------------------------------------------------------
+# Interface libraries
+# -----------------------------------------------------------------------------
+add_library(kmeans_lib INTERFACE)
+add_library(kmeans_linalg INTERFACE)
+if (TILEDB_VS_ENABLE_BLAS)
+    target_link_Libraries(kmeans_linalg INTERFACE
+            flat_blas)
+endif()
+add_library(kmeans_queries INTERFACE)
+target_include_directories(kmeans_lib INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_BINARY_DIR}
+)
+target_link_libraries(kmeans_lib INTERFACE
+        kmeans_linalg
+        kmeans_queries
+)
+target_link_libraries(kmeans_lib INTERFACE
+        nlohmann_json::nlohmann_json
+        docopt
+        flat_mt
+        TileDB::tiledb_shared
+        mdspan
+)
+
+
 # -----------------------------------------------------------------------------
 # Command-line interface programs
 # -----------------------------------------------------------------------------

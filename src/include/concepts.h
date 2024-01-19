@@ -37,6 +37,8 @@
 #include <concepts>
 #include <ranges>
 
+#include "legacy_concepts.h"
+
 #include "cpos.h"
 
 // ----------------------------------------------------------------------------
