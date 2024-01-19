@@ -132,8 +132,8 @@ auto greedy_search(
   };
 
   auto result = k_min_heap<score_type, id_type>{L};  // Ell: |Ell| <= L
-  auto q1 = k_min_heap<score_type, id_type>{L};  // Ell \ V
-  auto q2 = k_min_heap<score_type, id_type>{L};  // Ell \ V
+  auto q1 = k_min_heap<score_type, id_type>{L};      // Ell \ V
+  auto q2 = k_min_heap<score_type, id_type>{L};      // Ell \ V
 
   // L <- {s} and V <- empty`
   result.insert(distance(db[source], query), source);
@@ -418,8 +418,8 @@ class vamana_index {
   uint64_t L_build_{0};       // diskANN paper says default = 100
   uint64_t R_max_degree_{0};  // diskANN paper says default = 64
   uint64_t B_backtrack_{0};
-  float alpha_min_{1.0};      // per diskANN paper
-  float alpha_max_{1.2};      // per diskANN paper
+  float alpha_min_{1.0};  // per diskANN paper
+  float alpha_max_{1.2};  // per diskANN paper
   ::detail::graph::adj_list<score_type, id_type> graph_;
   id_type medioid_{0};
 
