@@ -36,6 +36,7 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
+#include <initializer_list>
 #include <span>
 #include <tiledb/tiledb>
 #include <vector>
@@ -87,6 +88,18 @@ class Vector : public std::span<T> {
     Base::operator=(Base{storage_.get(), nrows_});
   }
 
+  Vector(std::initializer_list<T> lst)
+      : nrows_(lst.size())
+#ifdef __cpp_lib_smart_ptr_for_overwrite
+      , storage_{std::make_unique_for_overwrite<T[]>(nrows_)}
+#else
+      , storage_{new T[nrows_]}
+#endif
+  {
+    Base::operator=(Base{storage_.get(), nrows_});
+    std::copy(lst.begin(), lst.end(), storage_.get());
+  }
+
   Vector(Vector&& rhs) noexcept
       : nrows_{rhs.nrows_}
       , storage_{std::move(rhs.storage_)} {
@@ -106,4 +119,27 @@ class Vector : public std::span<T> {
     return nrows_;
   }
 };
+
+template <class V>
+void debug_vector(const V& v, const std::string& msg = "") {
+  std::cout << msg;
+  for (size_t i = 0; i < dimension(v); ++i) {
+    std::cout << v[i] << " ";
+  }
+  std::cout << "\n";
+}
+
+template <std::ranges::forward_range V>
+void debug_vector(const V& v, const std::string& msg = "") {
+  std::cout << msg;
+  for (auto&& i : v) {
+    std::cout << i << " ";
+  }
+  std::cout << "\n";
+}
+
+// template <class V>
+// void debug_slice(const V& v, const std::string& msg = "") {
+//   debug_vector(v, msg);
+// }
 #endif

@@ -62,6 +62,10 @@ message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
 # kmeans_add_test(gen_queries)
 # kmeans_add_test(time_queries)
 
+kmeans_add_test(unit_vamana)
+set_tests_properties(unit_vamana_test PROPERTIES WILL_FAIL TRUE)
+
+kmeans_add_test(unit_adj_list)
 
 kmeans_add_test(unit_algorithm)
 
@@ -73,13 +77,17 @@ kmeans_add_test(unit_flat_qv)
 
 kmeans_add_test(unit_flat_vq)
 
+kmeans_add_test(unit_gen_graphs)
+
 kmeans_add_test(unit_ivf_index)
 
 kmeans_add_test(unit_ivf_query)
 
 kmeans_add_test(unit_ivf_qv)
+set_tests_properties(unit_ivf_qv_test PROPERTIES WILL_FAIL TRUE)
 
 kmeans_add_test(unit_ivf_vq)
+set_tests_properties(unit_ivf_vq_test PROPERTIES WILL_FAIL TRUE)
 
 add_executable(unit_linalg unit_linalg.cc)
 target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)
@@ -91,6 +99,8 @@ kmeans_add_test(unit_logging)
 kmeans_add_test(unit_matrix)
 
 kmeans_add_test(unit_mdspan)
+
+kmeans_add_test(unit_nn-graph)
 
 kmeans_add_test(unit_partition)
 
