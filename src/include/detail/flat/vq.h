@@ -37,6 +37,7 @@
 #include <vector>
 
 #include "algorithm.h"
+#include "concepts.h"
 #include "linalg.h"
 #include "scoring.h"
 #include "utils/timer.h"
