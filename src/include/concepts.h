@@ -135,9 +135,8 @@ concept partitionable = requires(const T& t) {
 
 template <typename R>
 concept feature_vector =
-    std::ranges::random_access_range<R> &&
-    std::ranges::contiguous_range<R> && dimensionable<R> &&
-    (subscriptable_range<R> || callable_range<R>);
+    std::ranges::random_access_range<R> && std::ranges::contiguous_range<R> &&
+    dimensionable<R> && (subscriptable_range<R> || callable_range<R>);
 
 template <class R>
 concept query_vector = feature_vector<R>;
@@ -155,12 +154,11 @@ concept query_vector = feature_vector<R>;
 // @todo operator()(size_t, size_t) ?
 // ----------------------------------------------------------------------------
 template <class D>
-concept feature_vector_array =
-    requires(D d, size_t n) {
-      { num_vectors(d) } -> semi_integral;
-      { dimension(d) } -> semi_integral;
-      { d[n] } -> feature_vector;  // Maybe redundant
-    };
+concept feature_vector_array = requires(D d, size_t n) {
+  { num_vectors(d) } -> semi_integral;
+  { dimension(d) } -> semi_integral;
+  { d[n] } -> feature_vector;  // Maybe redundant
+};
 
 /**
  * @brief A concept for contiguous vector ranges.  The member function data()
