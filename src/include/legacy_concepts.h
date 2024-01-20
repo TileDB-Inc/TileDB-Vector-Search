@@ -29,7 +29,7 @@ template <has_load_member T>
 size_t num_loads(T&& t) {
   return t.num_loads();
 }
-}
+}  // namespace legacy_concepts
 
 template <typename T>
 concept has_col_offset = requires(T&& t) { t.col_offset(); };
