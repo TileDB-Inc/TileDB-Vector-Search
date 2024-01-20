@@ -74,6 +74,8 @@ class nn_graph {
    * @param score
    */
   auto add_edge(id_type src, id_type dst, score_type score) {
+    // return out_edges_[src]. template insert<typename
+    // std::remove_cvref_t<decltype(out_edges_[src])>::unique_id>(score, dst);
     return out_edges_[src].template insert<unique_id>(score, dst);
   }
 
