@@ -49,6 +49,15 @@ class index_adj_list : public std::vector<std::list<I>> {
       : Base(num_vertices) {
   }
 
+#if 0
+  template <class EdgeList>
+  index_adj_list(EdgeList&& edge_list) {
+    for (auto& [src, dst] : edge_list) {
+      Base::operator[](src).push_back(dst);
+    }
+  }
+#endif
+
   template <class AdjList>
   index_adj_list(AdjList&& l)
       : Base(size(l)) {
@@ -115,6 +124,15 @@ class adj_list : public std::vector<std::list<std::tuple<SC, ID>>> {
       : Base(num_vertices) {
   }
 
+#if 0
+  template <class EdgeList>
+  index_adj_list(EdgeList&& edge_list) {
+    for (auto& [src, dst] : edge_list) {
+      Base::operator[](src).push_back(dst);
+    }
+  }
+#endif
+
   template <class AdjList>
     requires(!std::integral<std::remove_cvref_t<AdjList>>)
   adj_list(AdjList&& l)
@@ -173,7 +191,7 @@ auto& out_degree(adj_list<T, ID>& g, ID i) {
 
 template <class T, std::integral ID, class Distance = sum_of_squares_distance>
 auto init_random_adj_list(auto&& db, size_t R, Distance distance = Distance()) {
-  auto num_vertices = db.num_cols();
+  auto num_vertices = num_vectors(db);
   adj_list<T, ID> g(num_vertices);
   std::random_device rd;
   std::mt19937 gen(rd());
