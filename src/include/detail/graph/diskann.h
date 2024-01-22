@@ -60,6 +60,14 @@ auto read_diskann_data(const std::string& path) {
   return x;
 }
 
+/**
+ * @brief Read a diskann index from disk
+ *
+ * @note: Currently this will read the test index that has a constant
+ * number of neighbors for each vertex.
+ * @todo: Implement loop to compare total bytes read to file size,
+ * cf DiskANN/src/in_mem_graph_store.cpp:135
+ */
 auto read_diskann_mem_index(const std::string& index) {
   std::ifstream binary_file(index, std::ios::binary);
   if (!binary_file.is_open()) {
@@ -87,7 +95,6 @@ auto read_diskann_mem_index(const std::string& index) {
       binary_file.read((char*)&id, 4);
       g.add_edge(node, id);
     }
-    // @todo ??? Is this right ???
     binary_file.seekg(max_degree - num_neighbors, std::ios_base::cur);
   }
   binary_file.close();

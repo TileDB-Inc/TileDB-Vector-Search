@@ -58,19 +58,6 @@ TEST_CASE("vamana: test test", "[vamana]") {
   REQUIRE(true);
 }
 
-#if 0
-TEST_CASE("vamana: tiny greedy search", "[vamana]") {
-  auto A = index_adj_list{tiny_index_adj_list};
-  size_t source = 0;
-  std::vector<size_t> query {0, 1};
-  size_t k = 3;
-  size_t L = 3;
-  std::vector<size_t> top_k(k);
-
-  auto V = greedy_search(A, tiny_vectors, source, query, k, L);
-}
-#endif
-
 TEST_CASE("vamana: diskann", "[vamana]") {
   for (auto&& s :
        {diskann_test_data_file,
