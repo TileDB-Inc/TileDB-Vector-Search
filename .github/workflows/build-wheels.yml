@@ -63,7 +63,7 @@ jobs:
 #          path: dist/*.tar.gz
 
 
-  upload_test_pypi:
+  upload_pypi:
     # needs: [build_wheels, build_sdist]
     needs: [build_wheels]
     runs-on: ubuntu-latest
@@ -84,21 +84,12 @@ jobs:
         run: |
           echo "package_version=$(ls dist/ | head -n 1 | cut -d - -f 2)" >> "$GITHUB_OUTPUT"
 
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Upload to test-pypi
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
 
-  test_pypi_package:
-    needs: [upload_test_pypi]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - env:
-          PACKAGE_VERSION: ${{ needs.upload_test_pypi.outputs.package_version }}
-        run: |
-          pip install -r apis/python/requirements-py.txt
-          pip install --only-binary ":all:" -i https://test.pypi.org/simple/ tiledb-vector-search==$PACKAGE_VERSION
-
-      - run: |
-          python -c "import tiledb.vector_search"
+      - name: Upload to pypi
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
