@@ -2157,7 +2157,6 @@ def ingest(
         else:
             if external_ids_type is None:
                 external_ids_type = "U64BIN"
-
         # Compute task parameters for main ingestion.
         if input_vectors_per_work_item == -1:
             input_vectors_per_work_item = VECTORS_PER_WORK_ITEM
