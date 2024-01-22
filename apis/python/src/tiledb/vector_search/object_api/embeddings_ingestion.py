@@ -100,14 +100,17 @@ def ingest_embeddings(
             import string
             import os
             import sys
+            import importlib.util
+
             temp_file_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
             abs_path = os.path.abspath(f"{temp_file_name}.py")
             f = open(abs_path, "w")
             f.write(code)
             f.close()
-            print(os.path.dirname(abs_path))
-            sys.path.append(os.path.dirname(abs_path))
-            reader_module = __import__(temp_file_name)
+            spec = importlib.util.spec_from_file_location(temp_file_name, abs_path)
+            reader_module = importlib.util.module_from_spec(spec)
+            sys.modules[temp_file_name] = reader_module
+            spec.loader.exec_module(reader_module)
             class_ = getattr(reader_module, class_name)
             os.remove(abs_path)
             return class_(**kwargs)
