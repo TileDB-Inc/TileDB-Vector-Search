@@ -70,10 +70,6 @@ jobs:
     environment: pypi
     permissions:
       id-token: write
-    # TODO: Decide when to run this
-    # if: github.event_name == 'release' && github.event.action == 'published'
-    # or, alternatively, upload to PyPI on every tag starting with 'v' (remove on: release above to use this)
-    # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     outputs:
       package_version: ${{ steps.get_package_version.outputs.package_version }}
     steps:
@@ -86,7 +82,6 @@ jobs:
 
       - id: get_package_version
         run: |
-          echo "package_version=$(ls dist/ | head -n 1 | cut -d - -f 2)"
           echo "package_version=$(ls dist/ | head -n 1 | cut -d - -f 2)" >> "$GITHUB_OUTPUT"
 
       - uses: pypa/gh-action-pypi-publish@release/v1
