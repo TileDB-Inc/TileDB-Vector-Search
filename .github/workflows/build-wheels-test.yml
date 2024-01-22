@@ -35,7 +35,7 @@ jobs:
         run: |
           # Get the release tag.
           # release_tag=$(git describe --tags --abbrev=0)
-          release_tag="0.0.2"
+          release_tag="0.0.3"
           echo $release_tag
 
           # Install dependencies.
@@ -53,3 +53,5 @@ jobs:
           git commit -m "[automated] Update backwards-compatibility-data for release $release_tag"
           git push origin "$branch_name"
           gh pr create --base main --head "$branch_name" --title "[automated] Update backwards-compatibility-data for release $release_tag" --body "This PR was created in a Github Actions job during the release process."
+        env:
+          GH_TOKEN: ${{ github.token }}
