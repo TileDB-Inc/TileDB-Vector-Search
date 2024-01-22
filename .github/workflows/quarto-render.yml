@@ -7,7 +7,6 @@ on:
 
 jobs:
   quarto-render-and-deploy:
-    if: ${{ false }}
     strategy:
       matrix:
         os: [ubuntu-latest]

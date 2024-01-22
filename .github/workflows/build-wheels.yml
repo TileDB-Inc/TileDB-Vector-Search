@@ -49,12 +49,17 @@ jobs:
           # Generate data.
           python backwards-compatibility-data/generate_data.py $release_tag
 
-          # Push this data to main.
-          git fetch origin main
-          git checkout main
+          # Push this data to a new branch and create a PR from it.
+          git fetch
+          branch_name="update-backwards-compatibility-data-${release_tag}"
+          echo $branch_name
+          git checkout -b "$branch_name"
           git add backwards-compatibility-data/data/
           git commit -m "[automated] Update backwards-compatibility-data for release $release_tag"
-          git push origin main
+          git push origin "$branch_name"
+          gh pr create --base main --head "$branch_name" --title "[automated] Update backwards-compatibility-data for release $release_tag"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
