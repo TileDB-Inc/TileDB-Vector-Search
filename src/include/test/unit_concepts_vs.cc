@@ -74,13 +74,17 @@ TEST_CASE("concepts_vs: Vector", "[concepts_vs]") {
 
   CHECK(feature_vector<Vector<int>>);
   CHECK(feature_vector<Vector<double>>);
-  CHECK(feature_vector<Vector<bool>>);  // @todo ? Vector of bool is not
-                                        // contiguous?
+
+  // @note: There is an open question about whether we should consider Vector of
+  // bool bo be a contiguous range or not. It is not contiguous in the sense
+  // that it is not a contiguous array of bools, but it is contiguous in the
+  // sense that it is a contiguous array of bits.  For now, if it passes the
+  // concept check, we'll let it be.
+  CHECK(feature_vector<Vector<bool>>);
 
   CHECK(query_vector<Vector<int>>);
   CHECK(query_vector<Vector<double>>);
-  CHECK(
-      query_vector<Vector<bool>>);  // @todo ? Vector of bool is not contiguous?
+  CHECK(query_vector<Vector<bool>>);
 
   CHECK(!feature_vector_array<Vector<int>>);
   CHECK(!feature_vector_array<Vector<double>>);
@@ -143,13 +147,11 @@ TEST_CASE("concepts_vs: Matrix", "[concepts_vs]") {
 
   CHECK(!feature_vector<Matrix<int>>);
   CHECK(!feature_vector<Matrix<double>>);
-  CHECK(!feature_vector<Matrix<bool>>);  // @todo ? Matrix of bool is not
-                                         // contiguous?
+  CHECK(!feature_vector<Matrix<bool>>);
 
   CHECK(!query_vector<Matrix<int>>);
   CHECK(!query_vector<Matrix<double>>);
-  CHECK(!query_vector<Matrix<bool>>);  // @todo ? Matrix of bool is not
-                                       // contiguous?
+  CHECK(!query_vector<Matrix<bool>>);
 
   CHECK(feature_vector_array<Matrix<int>>);
   CHECK(feature_vector_array<Matrix<double>>);

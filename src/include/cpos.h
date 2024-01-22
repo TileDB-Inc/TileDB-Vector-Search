@@ -297,10 +297,11 @@ struct _fn {
     return t.load();
   }
 
+  // Assume that if the thing does not have load, that it is loaded --
+  // subsequent load will therefore not be satisfiable.
   template <class T>
     requires(!_member_load<T>)
   auto constexpr operator()(T&& t) const noexcept {
-    // return t.load();
     return false;
   }
 };
