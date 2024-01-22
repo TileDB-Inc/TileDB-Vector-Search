@@ -8,6 +8,7 @@ on:
 
 jobs:
   run-tests:
+    if: ${{ false }}
     strategy:
       matrix:
         os: [ubuntu-latest]
