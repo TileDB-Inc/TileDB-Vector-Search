@@ -50,7 +50,7 @@ option(USE_MKL_CBLAS "Try to use mkl_cblas.h (requires additional CMake configur
 option(TILEDB_VS_PYTHON "Build Python wrapping of C++ API" OFF)
 option(TILEDB_VS_ENABLE_BLAS "Build components and demos which require BLAS" OFF)
 option(BUILD_TESTS "Build the tests" ON)
-option(BUILD_CLI "Build the index and query command-line interface programs" OFF)
+option(BUILD_CLI "Build the index and query command-line interface programs" ON)
 
 set(CMAKE_CXX_STANDARD 20)
 
