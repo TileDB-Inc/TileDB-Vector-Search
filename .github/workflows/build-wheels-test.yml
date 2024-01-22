@@ -34,7 +34,8 @@ jobs:
       - name: Build Indexes
         run: |
           # Get the release tag.
-          release_tag=$(git describe --tags --abbrev=0)
+          # release_tag=$(git describe --tags --abbrev=0)
+          release_tag="0.0.2"
           echo $release_tag
 
           # Install dependencies.
