@@ -1,63 +1,84 @@
-from typing import Any, Mapping, Optional, List
-from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
+from typing import Any, Mapping, Optional, List, Dict, OrderedDict, Tuple
+# from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
+from tiledb import Attr
 
-
-class SomaPartition(ObjectPartition):
+# class SomaPartition(ObjectPartition):
+class SomaPartition():
     def __init__(
         self,
         partition_id: str,
         coord_start: int,
         coord_end: int,
+        **kwargs,
     ):
         self.partition_id = partition_id
         self.coord_start = coord_start
         self.coord_end = coord_end
         self.size = coord_end - coord_start
 
-    def size(self):
+    def init_kwargs(self) -> Dict:
+        return {
+            "partition_id": self.partition_id,
+            "coord_start": self.coord_start,
+            "coord_end": self.coord_end,
+        }
+
+    def num_vectors(self) -> int:
         return self.size
 
-    def id(self):
-        return self.partition_id
-
-    def index_slice(self):
-        return [self.coord_start, self.coord_end]
+    def index_slice(self) -> Tuple[int,int]:
+        return (self.coord_start, self.coord_end)
 
 
-class SomaReader(ObjectReader):
+# class SomaReader(ObjectReader):
+class SomaReader():
     def __init__(
         self,
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
+        **kwargs,
     ):
         import tiledb
         import tiledbsoma
 
-        super().__init__(uri=uri, config=config, timestamp=timestamp)
+        self.uri = uri
+        self.config = config
+        self.timestamp = timestamp
         context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
         exp = tiledbsoma.Experiment.open(self.uri, "r", context=context)
         self.num_obs = exp.obs.count
         self.obs_array_uri = exp.obs.uri
 
-    def size(self):
+    def init_kwargs(self) -> Dict:
+        return {
+            "uri": self.uri,
+            "config": self.config,
+            "timestamp": self.timestamp,
+        }
+
+    def num_vectors(self) -> int:
         return self.num_obs
 
-    def metadata_schema(self):
+    def partition_class_name(self) -> str:
+        return "SomaPartition"
+
+    def metadata_array_uri(self) -> str:
+        return self.obs_array_uri
+
+    def metadata_attributes(self) -> List[Attr]:
+        import tiledb
         import tiledbsoma
 
         context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
         exp = tiledbsoma.Experiment.open(self.uri, "r", context=context)
         with tiledb.open(exp.obs.uri, "r") as obs_array:
-            return obs_array.schema
+            attributes = []
+            for i in range(obs_array.schema.nattr):
+                attributes.append(obs_array.schema.attr(i))
+            return attributes
 
-    def metadata_array_uri(self):
-        return self.obs_array_uri
-    
-    def metadata_array_object_id_dim(self):
-        return "soma_joinid"
-
-    def get_partitions(self, partition_size: int = -1) -> List[ObjectPartition]:
+    def get_partitions(self, partition_size: int = -1) -> List[SomaPartition]:
         if partition_size == -1:
             partition_size = 100000
 
@@ -72,7 +93,7 @@ class SomaReader(ObjectReader):
 
         return partitions
 
-    def read_objects(self, partition: SomaPartition):
+    def read_objects(self, partition: SomaPartition) -> Tuple[OrderedDict, OrderedDict]:
         import tiledb
         import tiledbsoma
         import numpy as np
@@ -90,10 +111,10 @@ class SomaReader(ObjectReader):
             metadata = obs_array[partition.coord_start: partition.coord_end-1]
         return {
                 "data": query.to_anndata(X_name="data").X.toarray(),
-                "soma_joinid": np.arange(partition.coord_start, partition.coord_end)
+                "external_id": np.arange(partition.coord_start, partition.coord_end)
             }, metadata
 
-    def read_objects_by_ids(self, ids):
+    def read_objects_by_external_ids(self, ids: List[int]) -> OrderedDict:
         import tiledb
         import tiledbsoma
         context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
@@ -104,4 +125,4 @@ class SomaReader(ObjectReader):
                     coords=(ids,)
                 ),
             )
-        return {"data": query.to_anndata(X_name="data").X.toarray()}
+        return {"data": query.to_anndata(X_name="data").X.toarray(), "external_id": ids}

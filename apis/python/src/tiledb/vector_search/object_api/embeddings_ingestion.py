@@ -16,6 +16,7 @@ def ingest_embeddings(
     index_timestamp: int = None,
     workers: int = -1,
     worker_resources: Dict = None,
+    worker_image: str = None,
     objects_per_partition = -1,
     object_partitions_per_task: int = -1,
     max_tasks_per_stage: int = -1,
@@ -136,7 +137,7 @@ def ingest_embeddings(
             for partition_dict in partition_dicts:
                 partition = instantiate_object(
                     code=object_reader_source_code,
-                    class_name="ImagePartition",
+                    class_name=object_reader.partition_class_name(),
                     **partition_dict
                 )
                 logger.debug(f"Computing partition: {partition.index_slice()}")
@@ -151,9 +152,9 @@ def ingest_embeddings(
                 index_end = partition_index_slice[1]
                 logger.debug("Write embeddings index_start: %d, index_end: %d", index_start, index_end)
                 embeddings_array[0:dimensions, index_start:index_end] = np.transpose(embeddings).astype(vector_type)
-                external_ids_array[index_start:index_end] = objects[object_reader.metadata_array_object_id_dim()]
+                external_ids_array[index_start:index_end] = objects["external_id"]
                 if metadata_array_uri is not None:
-                    external_ids = metadata.pop(object_reader.metadata_array_object_id_dim(), None)
+                    external_ids = metadata.pop("external_id", None)
                     metadata_array[external_ids] = metadata
 
             embeddings_array.close()
@@ -182,6 +183,7 @@ def ingest_embeddings(
         index_timestamp: int = None,
         workers: int = -1,
         worker_resources: Dict = None,
+        worker_image: str = DEFAULT_IMG_NAME,
         verbose: bool = False,
         trace_id: Optional[str] = None,
         mode: Mode = Mode.LOCAL,
@@ -219,7 +221,7 @@ def ingest_embeddings(
                 end = num_partitions
             partition_dicts = []
             for partition in partitions[start:end]:
-                partition_dicts.append(partition.__dict__)
+                partition_dicts.append(partition.init_kwargs())
             submit(
                 compute_embeddings_udf,
                 object_reader_source_code=object_index.object_reader_source_code,
@@ -238,7 +240,7 @@ def ingest_embeddings(
                 config=config,
                 name="generate_embeddings-" + str(task_id),
                 resources=worker_resources,
-                image_name=DEFAULT_IMG_NAME,
+                image_name=worker_image,
             )
             task_id += 1
         return d
@@ -276,6 +278,8 @@ def ingest_embeddings(
         else:
             if workers == -1:
                 workers = 1
+        if worker_image is None:
+            worker_image=DEFAULT_IMG_NAME
 
         logger.debug("Creating ingestion graph")
         d = create_dag(
@@ -289,6 +293,7 @@ def ingest_embeddings(
             index_timestamp=index_timestamp,
             workers=workers,
             worker_resources=worker_resources,
+            worker_image=worker_image,
             verbose=verbose,
             trace_id=trace_id,
             mode=mode,

@@ -1,8 +1,10 @@
-from typing import Any, Mapping, Optional, List, Tuple
-from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
+from typing import Any, Mapping, Optional, List, Tuple, Dict, OrderedDict
+# from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
+from tiledb import Attr
 
 
-class BioImagePartition(ObjectPartition):
+# class BioImagePartition(ObjectPartition):
+class BioImagePartition():
     def __init__(
         self,
         partition_id: str,
@@ -11,23 +13,31 @@ class BioImagePartition(ObjectPartition):
         id_start: int,
         id_end: int,
     ):
-        self.crop_config = crop_config
         self.partition_id = partition_id
+        self.crop_config = crop_config
+        self.level =level
         self.id_start = id_start
         self.id_end = id_end
         self.size = id_end - id_start
 
-    def size(self):
+    def init_kwargs(self) -> Dict:
+        return {
+            "partition_id": self.partition_id,
+            "crop_config": self.crop_config,
+            "level": self.level,
+            "id_start": self.id_start,
+            "id_end": self.id_end,
+        }
+
+    def num_vectors(self) -> int:
         return self.size
 
-    def id(self):
-        return self.partition_id
-
-    def index_slice(self):
-        return [self.id_start, self.id_end]
+    def index_slice(self) -> Tuple[int,int]:
+        return (self.id_start, self.id_end)
 
 
-class BioImageReader(ObjectReader):
+# class BioImageReader(ObjectReader):
+class BioImageReader():
     def __init__(
         self,
         uri: str,
@@ -36,17 +46,20 @@ class BioImageReader(ObjectReader):
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
     ):
+        self.uri = uri
+        self.level = level
+        self.object_crop_shape = object_crop_shape
+        self.config = config
+        self.timestamp = timestamp
+        self.crop_config = None
+
+    def create_crop_config(self):
         import tiledb
         import math
         from tiledb.bioimg.openslide import TileDBOpenSlide
 
-        super().__init__(uri=uri, config=config, timestamp=timestamp)
-
         vfs = tiledb.VFS(config=self.config)
         self.images = vfs.ls(self.uri)[1:]
-        self.level = level
-        self.object_crop_shape = object_crop_shape
-        
         self.crop_config = []
         with tiledb.scope_ctx(ctx_or_config=self.config):
             for image in self.images:
@@ -60,65 +73,65 @@ class BioImageReader(ObjectReader):
                             self.crop_config.append((image, ((dim_0, dim_1), self.object_crop_shape)))
         self.num_objects = len(self.crop_config)
 
-    def size(self):
+    def init_kwargs(self) -> Dict:
+        return {
+            "uri": self.uri,
+            "level": self.level,
+            "object_crop_shape": self.object_crop_shape,
+            "config": self.config,
+            "timestamp": self.timestamp,
+        }
+
+    def num_vectors(self) -> int:
+        if self.crop_config is None:
+            self.create_crop_config()
         return self.num_objects
 
-    def metadata_schema(self):
-        import tiledb
-        import numpy as np
+    def partition_class_name(self) -> str:
+        return "BioImagePartition"
 
-        ids_dim = tiledb.Dim(
-            name="external_ids",
-            domain=(0, np.iinfo(np.dtype("int32")).max),
-            tile=100000,
-            dtype=np.dtype(np.int32),
-        )
-        ids_dom = tiledb.Domain(ids_dim)
-        image_uri_attr = tiledb.Attr(
+    def metadata_array_uri(self) -> str:
+        return None
+
+    def metadata_attributes(self) -> List[Attr]:
+        import numpy as np
+        image_uri_attr = Attr(
             name="image_uri",
             dtype=str,
         )
-        location_attr = tiledb.Attr(
+        location_attr = Attr(
             name="location",
             dtype=np.uint32,
             var=True,
         )
-        schema = tiledb.ArraySchema(
-            domain=ids_dom,
-            sparse=True,
-            attrs=[image_uri_attr, location_attr],
-            capacity=100000
-        )
-        return schema
+        return [image_uri_attr, location_attr]
 
-    def metadata_array_uri(self):
-        return None
-    
-    def metadata_array_object_id_dim(self):
-        return "external_ids"
-
-    def get_partitions(self, partition_size: int = -1) -> List[ObjectPartition]:
+    def get_partitions(self, partition_size: int = -1) -> List[BioImagePartition]:
         if partition_size == -1:
             partition_size = 1
 
+        if self.crop_config is None:
+            self.create_crop_config()
 
         partitions = []
         partition_id = 0
-        for start in range(0, self.size(), partition_size):
+        for start in range(0, self.num_vectors(), partition_size):
             end = start + partition_size
-            if end > self.size():
-                end = self.size()
+            if end > self.num_vectors():
+                end = self.num_vectors()
             partitions.append(BioImagePartition(str(partition_id), crop_config=self.crop_config[start:end], level=self.level, id_start=start, id_end=end))
             partition_id += 1
 
         return partitions
 
-    def read_objects(self, partition: BioImagePartition):
+    def read_objects(self, partition: BioImagePartition) -> Tuple[OrderedDict, OrderedDict]:
         import tiledb
         import numpy as np
         from tiledb.bioimg.openslide import TileDBOpenSlide
 
 
+        if self.crop_config is None:
+            self.create_crop_config()
         ids_per_image = {}
         i = 0
         for id in range(partition.id_start, partition.id_end):
@@ -155,14 +168,15 @@ class BioImageReader(ObjectReader):
                     locations[i] = np.array([dim_0_start, dim_0_end, dim_1_start, dim_1_end], dtype=np.uint32)
                     i += 1
         
-        return {"image": images, "shape": shapes, "external_ids": external_ids}, {"image_uri": image_uris, "location": locations, "external_ids": external_ids}
+        return {"image": images, "shape": shapes, "external_id": external_ids}, {"image_uri": image_uris, "location": locations, "external_id": external_ids}
 
-
-    def read_objects_by_ids(self, ids):
+    def read_objects_by_external_ids(self, ids: List[int]) -> OrderedDict:
         import tiledb
         import numpy as np
         from tiledb.bioimg.openslide import TileDBOpenSlide
 
+        if self.crop_config is None:
+            self.create_crop_config()
         ids_per_image = {}
         for id in ids:
             image_uri = self.crop_config[id][0]
@@ -192,5 +206,5 @@ class BioImageReader(ObjectReader):
                     shapes[i] = np.array(cropped_image.shape, dtype=np.uint32)
                     external_ids[i] = id
                     i += 1
-        return {"image": images, "shape": shapes, "external_ids": external_ids}
+        return {"image": images, "shape": shapes, "external_id": external_ids}
 

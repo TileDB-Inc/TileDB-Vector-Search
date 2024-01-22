@@ -1,4 +1,4 @@
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Dict, OrderedDict
 
 import numpy as np
 from tiledb.vector_search.embeddings import ObjectEmbedding
@@ -19,13 +19,20 @@ class SomaGenePTwEmbedding(ObjectEmbedding):
         self.gene_embedding = None
         self.gene_names = None
 
+    def init_kwargs(self) -> Dict:
+        return {
+            "gene_embeddings_uri": self.gene_embeddings_uri,
+            "soma_uri": self.soma_uri,
+            "config": self.config,
+        }
+
     def dimensions(self) -> int:
         return EMBED_DIM
 
     def vector_type(self) -> np.dtype:
         return np.float32
 
-    def load(self):
+    def load(self) -> None:
         import tiledb
         import tiledbsoma
         import numpy as np
@@ -53,6 +60,6 @@ class SomaGenePTwEmbedding(ObjectEmbedding):
             else:
                 count_missing += 1
 
-    def embed(self, objects, metadata=None) -> np.ndarray:
+    def embed(self, objects: OrderedDict, metadata: OrderedDict) -> np.ndarray:
         import numpy as np
         return np.array(np.dot(objects["data"], self.gene_embedding)/len(self.gene_names), dtype=np.float32)

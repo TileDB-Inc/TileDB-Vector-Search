@@ -1,19 +1,17 @@
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Dict, OrderedDict
 
 import numpy as np
-# from tiledb.vector_search.embeddings import ObjectEmbedding
 
 EMBED_DIM = 2048
 
 
-# class RandomEmbedding(ObjectEmbedding):
 class RandomEmbedding():
     def __init__(
         self,
     ):
         self.model = None
 
-    def get_kwargs(self):
+    def init_kwargs(self) -> Dict:
         return {}
     
     def dimensions(self) -> int:
@@ -22,9 +20,9 @@ class RandomEmbedding():
     def vector_type(self) -> np.dtype:
         return np.float32
 
-    def load(self):
+    def load(self) -> None:
         pass
 
-    def embed(self, objects, metadata=None) -> np.ndarray:
+    def embed(self, objects: OrderedDict, metadata: OrderedDict) -> np.ndarray:
         size = len(objects["image"])
         return np.random.rand(size,EMBED_DIM).astype(self.vector_type())

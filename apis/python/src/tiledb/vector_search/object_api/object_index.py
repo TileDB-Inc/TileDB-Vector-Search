@@ -21,6 +21,7 @@ class ObjectIndex:
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
+        load_embedding: bool = True,
         **kwargs
     ):
         with tiledb.scope_ctx(ctx_or_config=config):
@@ -51,21 +52,32 @@ class ObjectIndex:
                 class_name = self.embedding_class_name,
                 **self.embedding_kwargs
             )
+            self.embedding_loaded = False
+            if load_embedding:
+                self.embedding.load()
+                self.embedding_loaded = True
 
-            self.embedding.load()
             self.object_metadata_array_uri = self.index.group.meta["object_metadata_array_uri"]
             self.materialize_object_metadata = self.index.group.meta["materialize_object_metadata"]
+            self.object_metadata_external_id_dim = self.index.group.meta["object_metadata_external_id_dim"]
 
     def query(
         self,
         query_objects: np.ndarray,
         k: int,
+        query_metadata: OrderedDict = None,
         metadata_array_cond: str = None,
         return_objects: bool = True,
         return_metadata: bool = True,
         **kwargs,
     ):
-        query_embeddings = self.embedding.embed(objects=query_objects)
+        if metadata_array_cond is not None and self.object_metadata_array_uri is None:
+            raise AttributeError("metadata_array_cond can't be applied when there is no metadata array") 
+
+        if not self.embedding_loaded:
+            self.embedding.load()
+            self.embedding_loaded = True
+        query_embeddings = self.embedding.embed(objects=query_objects, metadata=query_metadata)
         fetch_k = k
         if metadata_array_cond is not None:
             fetch_k = min(50*k, self.index.size) 
@@ -77,7 +89,7 @@ class ObjectIndex:
         if metadata_array_cond is not None:
             with tiledb.open(self.object_metadata_array_uri, mode='r', timestamp=self.timestamp, config=self.config) as metadata_array:
                 q = metadata_array.query(cond=metadata_array_cond, coords=True)
-                filtered_unique_ids = q.multi_index[unique_ids][self.object_reader.metadata_array_object_id_dim()]
+                filtered_unique_ids = q.multi_index[unique_ids][self.object_metadata_external_id_dim]
                 filtered_distances = np.zeros((query_embeddings.shape[0], k)).astype(object_ids.dtype)
                 filtered_object_ids = np.zeros((query_embeddings.shape[0], k)).astype(object_ids.dtype)
                 for query_id in range(query_embeddings.shape[0]):
@@ -104,7 +116,7 @@ class ObjectIndex:
                     object_metadata[attr] = unique_metadata[attr][idx]
 
         if return_objects:
-            unique_objects = self.object_reader.read_objects_by_ids(unique_ids)
+            unique_objects = self.object_reader.read_objects_by_external_ids(unique_ids)
             objects = OrderedDict()
             for attr in unique_objects.keys():
                 objects[attr] = unique_objects[attr][idx]
@@ -236,13 +248,12 @@ def create(
             )
 
         group = tiledb.Group(uri, "w")
-        
         group.meta["object_reader_source_code"] = get_source_code(object_reader)
         group.meta["object_reader_class_name"] = object_reader.__class__.__name__
-        group.meta["object_reader_kwargs"] = encode_class(object_reader.get_kwargs())
+        group.meta["object_reader_kwargs"] = encode_class(object_reader.init_kwargs())
         group.meta["embedding_source_code"] = get_source_code(embedding)
         group.meta["embedding_class_name"] = embedding.__class__.__name__
-        group.meta["embedding_kwargs"] = encode_class(embedding.get_kwargs())
+        group.meta["embedding_kwargs"] = encode_class(embedding.init_kwargs())
 
         embeddings_array_name = storage_formats[index.storage_version]["INPUT_VECTORS_ARRAY_NAME"]
         external_ids_array_name = storage_formats[index.storage_version]["EXTERNAL_IDS_ARRAY_NAME"]
@@ -252,16 +263,34 @@ def create(
         create_external_ids_array(uri, group, external_ids_array_name, filters)
         object_metadata_array_uri = object_reader.metadata_array_uri()
         materialize_object_metadata = False
-        if object_metadata_array_uri is None:
+        if object_metadata_array_uri is None and object_reader.metadata_attributes() is not None:
             metadata_array_name = storage_formats[index.storage_version]["OBJECT_METADATA_ARRAY_NAME"]
             object_metadata_array_uri = f"{uri}/{metadata_array_name}"
-            tiledb.Array.create(object_metadata_array_uri, object_reader.metadata_schema())
+            external_ids_dim = tiledb.Dim(
+                name="external_id",
+                domain=(0, np.iinfo(np.dtype("int32")).max),
+                dtype=np.dtype(np.int32),
+            )
+            external_ids_dom = tiledb.Domain(external_ids_dim)
+            schema = tiledb.ArraySchema(
+                domain=external_ids_dom,
+                sparse=True,
+                attrs=object_reader.metadata_attributes(),
+                # capacity=10000
+            )
+            tiledb.Array.create(object_metadata_array_uri, schema)
             group.add(object_metadata_array_uri, name=metadata_array_name)
             materialize_object_metadata = True
+        object_metadata_external_id_dim = ""
+        if object_metadata_array_uri is not None:
+            with tiledb.open(object_metadata_array_uri, "r") as object_metadata_array:
+                object_metadata_external_id_dim = object_metadata_array.schema.domain.dim(0).name
+
         group.meta["materialize_object_metadata"] = materialize_object_metadata
         group.meta["object_metadata_array_uri"] = object_metadata_array_uri
+        group.meta["object_metadata_external_id_dim"] = object_metadata_external_id_dim
         group.close()
-        return ObjectIndex(uri, config, **kwargs)
+        return ObjectIndex(uri, config, load_embedding=False, **kwargs)
 
 
 def create_embeddings_array(

@@ -1,4 +1,4 @@
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Dict, OrderedDict
 
 import numpy as np
 from tiledb.vector_search.embeddings import ObjectEmbedding
@@ -12,18 +12,21 @@ class ImageResNetV2Embedding(ObjectEmbedding):
     ):
         self.model = None
 
+    def init_kwargs(self) -> Dict:
+        return {}
+
     def dimensions(self) -> int:
         return EMBED_DIM
 
     def vector_type(self) -> np.dtype:
         return np.float32
 
-    def load(self):
+    def load(self) -> None:
         import tensorflow as tf
 
         self.model = tf.keras.applications.ResNet50V2(include_top=False)
 
-    def embed(self, objects, metadata=None) -> np.ndarray:
+    def embed(self, objects: OrderedDict, metadata: OrderedDict) -> np.ndarray:
         from tensorflow.keras.applications.resnet_v2 import preprocess_input
         from efficientnet.preprocessing import center_crop_and_resize
 
