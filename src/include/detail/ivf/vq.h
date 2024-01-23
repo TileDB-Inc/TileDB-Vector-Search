@@ -556,8 +556,6 @@ auto vq_query_finite_ram(
   }
 
   assert(partitioned_db.num_cols() == size(partitioned_db.ids()));
-  debug_matrix(partitioned_db, "partitioned_db");
-  debug_matrix(partitioned_db.ids(), "partitioned_db.ids()");
 
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
       num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));

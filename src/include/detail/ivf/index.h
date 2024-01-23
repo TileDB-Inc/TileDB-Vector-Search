@@ -180,14 +180,14 @@ int ivf_index(
     // Write out the arrays
     if (parts_uri != "") {
       write_matrix<T, stdx::layout_left, size_t>(
-          ctx, shuffled_db, parts_uri, start_pos, false, write_temporal_policy);
+          ctx, shuffled_db, parts_uri, start_pos, false, timestamp);
     }
     if (index_uri != "") {
-      write_vector(ctx, indices, index_uri, 0, false, write_temporal_policy);
+      write_vector(ctx, indices, index_uri, 0, false, timestamp);
     }
     if (id_uri != "") {
       write_vector(
-          ctx, shuffled_ids, id_uri, start_pos, false, write_temporal_policy);
+          ctx, shuffled_ids, id_uri, start_pos, false, timestamp);
     }
   }
   return 0;
@@ -220,7 +220,7 @@ int ivf_index(
             tiledb::TemporalPolicy() :
             tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
     external_ids = read_vector<ids_type>(
-        ctx, external_ids_uri, start_pos, end_pos, temporal_policy);
+        ctx, external_ids_uri, start_pos, end_pos, timestamp);
   }
   return ivf_index<T, ids_type, centroids_type>(
       ctx,
