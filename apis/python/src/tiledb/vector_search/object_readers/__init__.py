@@ -1,13 +1,13 @@
 from .object_reader import ObjectPartition, ObjectReader
-from .soma_reader import SomaReader, SomaPartition
+from .soma_reader import SomaRNAXRowReader, SomaRNAXRowPartition
 from .image_reader import ImageReader, ImagePartition
 from .bioimage_reader import BioImageReader, BioImagePartition
 
 __all__ = [
     "ObjectPartition",
     "ObjectReader",
-    "SomaPartition",
-    "SomaReader",
+    "SomaRNAXRowPartition",
+    "SomaRNAXRowReader",
     "ImagePartition",
     "ImageReader",
     "BioImagePartition",
