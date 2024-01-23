@@ -123,10 +123,6 @@ auto qv_query_heap_infinite_ram(
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
 
-  debug_matrix(partitioned_db, "partitioned_db");
-  debug_slice(partitioned_db, "partitioned_db");
-  debug_matrix(partitioned_ids, "partitioned_ids");
-
   // get closest centroid for each query vector
   // auto top_k = qv_query(centroids, q, nprobe, nthreads);
   //  auto top_centroids = vq_query_heap(centroids, q, nprobe, nthreads);
@@ -326,10 +322,6 @@ auto nuv_query_heap_infinite_ram(
   using score_type = float;
 
   assert(partitioned_db.num_cols() == partitioned_ids.size());
-
-  debug_matrix(partitioned_db, "partitioned_db");
-  debug_slice(partitioned_db, "partitioned_db");
-  debug_matrix(partitioned_ids, "partitioned_ids");
 
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
@@ -813,9 +805,6 @@ auto qv_query_heap_finite_ram(
 
   assert(partitioned_db.num_cols() == size(partitioned_db.ids()));
 
-  debug_matrix(partitioned_db, "partitioned_db");
-  debug_matrix(partitioned_db.ids(), "partitioned_db.ids()");
-
   // auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
   //       size(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
 
@@ -1085,8 +1074,6 @@ auto nuv_query_heap_finite_ram(
   }
 
   assert(partitioned_db.num_cols() == size(partitioned_db.ids()));
-  debug_matrix(partitioned_db, "partitioned_db");
-  debug_matrix(partitioned_db.ids(), "partitioned_db.ids()");
 
   // auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
   //       size(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
@@ -1271,8 +1258,6 @@ auto nuv_query_heap_finite_ram_reg_blocked(
   }
 
   assert(partitioned_db.num_cols() == size(partitioned_db.ids()));
-  debug_matrix(partitioned_db, "partitioned_db");
-  debug_matrix(partitioned_db.ids(), "partitioned_db.ids()");
 
   // auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
   //       size(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
@@ -1631,8 +1616,6 @@ auto query_finite_ram(
   }
 
   assert(partitioned_db.num_cols() == size(partitioned_db.ids()));
-  debug_matrix(partitioned_db, "partitioned_db");
-  debug_matrix(partitioned_db.ids(), "partitioned_db.ids()");
 
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
       num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
