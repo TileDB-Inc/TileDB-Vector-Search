@@ -184,4 +184,3 @@ void debug_slice(const V& v, const std::string& msg = "") {
 }
 
 #endif  // TILEDB_VECTOR_H
-
