@@ -186,8 +186,7 @@ int ivf_index(
       write_vector(ctx, indices, index_uri, 0, false, timestamp);
     }
     if (id_uri != "") {
-      write_vector(
-          ctx, shuffled_ids, id_uri, start_pos, false, timestamp);
+      write_vector(ctx, shuffled_ids, id_uri, start_pos, false, timestamp);
     }
   }
   return 0;
