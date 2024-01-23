@@ -293,7 +293,11 @@ static void declareFixedMinPairHeap(py::module& mod) {
   PyFixedMinPairHeap cls(mod, "FixedMinPairHeap", py::buffer_protocol());
 
   cls.def(py::init<unsigned>());
-  cls.def("insert", &fixed_min_pair_heap<T, U>::insert);
+  cls.def(
+	  "insert",
+      [](fixed_min_pair_heap<T, U>& heap, const T& x, const U& y) {
+        return heap.insert(x, y);
+      });
   cls.def("__len__", [](const fixed_min_pair_heap<T, U> &v) { return v.size(); });
   cls.def("__getitem__", [](fixed_min_pair_heap<T, U>& v, size_t i) { return v[i]; });
 }
