@@ -100,7 +100,7 @@ auto vq_apply_query(
     size_t k_nn,
     size_t first_part,
     size_t last_part) {
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   // using feature_type = typename
   // std::remove_reference_t<decltype(partitioned_db)>::value_type;
@@ -237,7 +237,7 @@ auto vq_query_infinite_ram(
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   // @todo Maybe we don't want to do new_indices in partition_ivf_index after
   //  all since they aren't used in this function
@@ -516,7 +516,7 @@ auto vq_query_finite_ram(
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);
@@ -642,7 +642,7 @@ auto vq_query_finite_ram_2(
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);

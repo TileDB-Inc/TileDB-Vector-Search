@@ -66,8 +66,6 @@
 namespace {
 class with_ids {};
 class without_ids {};
-template <class... T>
-constexpr bool always_false = false;
 }  // namespace
 
 // ----------------------------------------------------------------------------
