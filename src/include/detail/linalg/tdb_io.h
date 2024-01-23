@@ -196,6 +196,8 @@ void create_empty_for_vector(
   domain.add_dimension(tiledb::Dimension::create<int>(
       ctx, "rows", {{0, (int)rows - 1}}, row_extent));
 
+  using value_type = std::remove_const_t<std::ranges::range_value_t<V>>;
+
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
   schema.set_domain(domain).set_order({{TILEDB_ROW_MAJOR, TILEDB_ROW_MAJOR}});
