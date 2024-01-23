@@ -12,8 +12,58 @@ on:
       - '*wheel*'  # must quote since "*" is a YAML reserved character; we want a string
 
 jobs:
+  generate_backwards_compatibility_data:
+    name: Generate Backwards Compatibility Data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # Based on https://github.com/TileDB-Inc/conda-forge-nightly-controller/blob/51519a0f8340b32cf737fcb59b76c6a91c42dc47/.github/workflows/activity.yml#L19C10-L19C10
+      - name: Setup git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "runneradmin@users.noreply.github.com"
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.9"
+
+      - name: Print Python version
+        run: |
+          which python
+          which pip
+          python --version
+
+      - name: Build Indexes
+        run: |
+          # Get the release tag.
+          release_tag=$(git describe --tags --abbrev=0)
+          echo $release_tag
+
+          # Install dependencies.
+          cd apis/python && pip install . && cd ../..
+
+          # Generate data.
+          python backwards-compatibility-data/generate_data.py $release_tag
+
+          # Push this data to a new branch and create a PR from it.
+          git fetch
+          branch_name="update-backwards-compatibility-data-${release_tag}"
+          echo $branch_name
+          git checkout -b "$branch_name"
+          git add backwards-compatibility-data/data/
+          git commit -m "[automated] Update backwards-compatibility-data for release $release_tag"
+          git push origin "$branch_name"
+          gh pr create --base main --head "$branch_name" --title "[automated] Update backwards-compatibility-data for release $release_tag"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
+    # TODO(paris): Add this back once generate_backwards_compatibility_data is confirmed to work.
+    # needs: generate_backwards_compatibility_data
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
