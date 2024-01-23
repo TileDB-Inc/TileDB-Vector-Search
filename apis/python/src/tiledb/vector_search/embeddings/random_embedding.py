@@ -24,5 +24,5 @@ class RandomEmbedding():
         pass
 
     def embed(self, objects: OrderedDict, metadata: OrderedDict) -> np.ndarray:
-        size = len(objects["image"])
+        size = len(objects[list(objects.keys())[0]])
         return np.random.rand(size,EMBED_DIM).astype(self.vector_type())

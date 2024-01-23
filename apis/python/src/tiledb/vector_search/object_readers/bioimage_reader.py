@@ -151,7 +151,6 @@ class BioImageReader():
         locations = np.empty(size, dtype="O")
         with tiledb.scope_ctx(ctx_or_config=self.config):
             for image_uri, ids in ids_per_image.items():
-                print(f"Loading image: {image_uri}")
                 slide = TileDBOpenSlide(image_uri)
                 level_dimensions = slide.level_dimensions[self.level]
                 image = slide.read_region((0, 0), self.level, level_dimensions)
@@ -192,7 +191,6 @@ class BioImageReader():
         i = 0
         with tiledb.scope_ctx(ctx_or_config=self.config):
             for image_uri, ids in ids_per_image.items():
-                print(f"Loading image: {image_uri}")
                 slide = TileDBOpenSlide(image_uri)
                 level_dimensions = slide.level_dimensions[self.level]
                 image = slide.read_region((0, 0), self.level, level_dimensions)

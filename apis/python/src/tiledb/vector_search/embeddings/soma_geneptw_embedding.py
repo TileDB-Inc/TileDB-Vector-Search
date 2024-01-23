@@ -37,7 +37,6 @@ class SomaGenePTwEmbedding(ObjectEmbedding):
         import tiledbsoma
         import numpy as np
 
-        print("Loading gene embeddings...")
         gene_pt_embeddings = {}
         with tiledb.open(self.gene_embeddings_uri, "r", config=self.config) as gene_pt_array:
             gene_pt = gene_pt_array[:]
@@ -46,19 +45,14 @@ class SomaGenePTwEmbedding(ObjectEmbedding):
                 gene_pt_embeddings[str(gene)] = gene_pt["embeddings"][i]
                 i += 1
 
-        print("Loading var genes...")
         context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
         experiment = tiledbsoma.Experiment.open(self.soma_uri, "r", context=context)
         self.gene_names = experiment.ms["RNA"].var.read().concat().to_pandas()["feature_name"].to_numpy()
 
-        print("Computing model...")
-        count_missing = 0
         self.gene_embedding = np.zeros(shape=(len(self.gene_names), EMBED_DIM))
         for i, gene in enumerate(self.gene_names):
             if gene in gene_pt_embeddings:
                 self.gene_embedding[i, :] = gene_pt_embeddings[gene]
-            else:
-                count_missing += 1
 
     def embed(self, objects: OrderedDict, metadata: OrderedDict) -> np.ndarray:
         import numpy as np

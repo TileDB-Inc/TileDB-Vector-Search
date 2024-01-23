@@ -2,8 +2,8 @@ from typing import Any, Mapping, Optional, List, Dict, OrderedDict, Tuple
 # from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
 from tiledb import Attr
 
-# class SomaPartition(ObjectPartition):
-class SomaPartition():
+# class SomaRNAXRowPartition(ObjectPartition):
+class SomaRNAXRowPartition():
     def __init__(
         self,
         partition_id: str,
@@ -30,8 +30,8 @@ class SomaPartition():
         return (self.coord_start, self.coord_end)
 
 
-# class SomaReader(ObjectReader):
-class SomaReader():
+# class SomaRNAXRowReader(ObjectReader):
+class SomaRNAXRowReader():
     def __init__(
         self,
         uri: str,
@@ -61,7 +61,7 @@ class SomaReader():
         return self.num_obs
 
     def partition_class_name(self) -> str:
-        return "SomaPartition"
+        return "SomaRNAXRowPartition"
 
     def metadata_array_uri(self) -> str:
         return self.obs_array_uri
@@ -78,7 +78,7 @@ class SomaReader():
                 attributes.append(obs_array.schema.attr(i))
             return attributes
 
-    def get_partitions(self, partition_size: int = -1) -> List[SomaPartition]:
+    def get_partitions(self, partition_size: int = -1) -> List[SomaRNAXRowPartition]:
         if partition_size == -1:
             partition_size = 100000
 
@@ -88,12 +88,12 @@ class SomaReader():
             coord_end = coord_start + partition_size
             if coord_end > self.num_obs:
                 coord_end = self.num_obs
-            partitions.append(SomaPartition(str(partition_id), coord_start, coord_end))
+            partitions.append(SomaRNAXRowPartition(str(partition_id), coord_start, coord_end))
             partition_id += 1
 
         return partitions
 
-    def read_objects(self, partition: SomaPartition) -> Tuple[OrderedDict, OrderedDict]:
+    def read_objects(self, partition: SomaRNAXRowPartition) -> Tuple[OrderedDict, OrderedDict]:
         import tiledb
         import tiledbsoma
         import numpy as np

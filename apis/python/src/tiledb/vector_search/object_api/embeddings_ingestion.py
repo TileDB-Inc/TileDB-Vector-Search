@@ -242,7 +242,7 @@ def ingest_embeddings(
                 verbose=verbose,
                 trace_id=trace_id,
                 config=config,
-                name="generate_embeddings-" + str(task_id),
+                name="generate-embeddings-" + str(task_id),
                 resources=worker_resources,
                 image_name=worker_image,
             )

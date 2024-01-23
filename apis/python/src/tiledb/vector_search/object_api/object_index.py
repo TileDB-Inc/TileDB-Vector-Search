@@ -282,7 +282,6 @@ def create(
                 domain=external_ids_dom,
                 sparse=True,
                 attrs=object_reader.metadata_attributes(),
-                # capacity=10000
             )
             tiledb.Array.create(object_metadata_array_uri, schema)
             group.add(object_metadata_array_uri, name=metadata_array_name)
