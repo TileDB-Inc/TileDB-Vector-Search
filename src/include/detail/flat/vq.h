@@ -83,9 +83,9 @@ auto vq_query_heap(
   std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>> scores(
       nthreads,
       std::vector<fixed_min_pair_heap<score_type, id_type>>(
-          size(q), fixed_min_pair_heap<score_type, id_type>(k_nn)));
+          num_vectors(q), fixed_min_pair_heap<score_type, id_type>(k_nn)));
 
-  unsigned size_q = size(q);
+  unsigned size_q = num_vectors(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
   log_timer _i{tdb_func__ + " in RAM"};
@@ -183,9 +183,9 @@ auto vq_query_heap_tiled(
   std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>> scores(
       nthreads,
       std::vector<fixed_min_pair_heap<score_type, id_type>>(
-          size(q), fixed_min_pair_heap<score_type, id_type>(k_nn)));
+          num_vectors(q), fixed_min_pair_heap<score_type, id_type>(k_nn)));
 
-  unsigned size_q = size(q);
+  unsigned size_q = num_vectors(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
   log_timer _i{tdb_func__ + " in RAM"};
@@ -256,9 +256,9 @@ auto vq_query_heap_2(
   std::vector<std::vector<fixed_min_pair_heap<score_type, id_type>>> scores(
       nthreads,
       std::vector<fixed_min_pair_heap<score_type, id_type>>(
-          size(q), fixed_min_pair_heap<score_type, id_type>(k_nn)));
+          num_vectors(q), fixed_min_pair_heap<score_type, id_type>(k_nn)));
 
-  unsigned size_q = size(q);
+  unsigned size_q = num_vectors(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
   log_timer _i{tdb_func__ + " in RAM"};
