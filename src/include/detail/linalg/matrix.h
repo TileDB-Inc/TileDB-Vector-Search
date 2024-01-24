@@ -130,8 +130,7 @@ using ColMajorMatrixView = MatrixView<T, stdx::layout_left, I>;
  */
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-class Matrix :
-    public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
+class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
 
  public:
@@ -325,7 +324,6 @@ auto raveled(Matrix<T, LayoutPolicy, I>& m) {
   return m.raveled();
 }
 
-
 /**
  * Is the matrix row-oriented?
  */
@@ -341,9 +339,6 @@ template <class Matrix>
 constexpr bool is_col_oriented(const Matrix& A) {
   return std::is_same_v<typename Matrix::layout_policy, stdx::layout_left>;
 }
-
-
-
 
 /**********************************************************************
  *
