@@ -1,9 +1,8 @@
 from typing import Any, Mapping, Optional, List, Dict, OrderedDict, Tuple
-# from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
+from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
 from tiledb import Attr
 
-# class ImagePartition(ObjectPartition):
-class ImagePartition():
+class TileDBArrayPartition(ObjectPartition):
     def __init__(
         self,
         partition_id: str,
@@ -30,13 +29,18 @@ class ImagePartition():
         return (self.start, self.end)
 
 
-# class ImageReader(ObjectReader):
-class ImageReader():
+class TileDBArrayReader(ObjectReader):
+    """
+    Reader that reads objects and their metadata stored in TileDB arrays.
+
+    The first dimension of the object array should represent the `external_ids` of the objects to be read.
+    """
+
     def __init__(
         self,
         *args,
         uri: str,
-        image_metadata_uri: str,
+        metadata_uri: str = None,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
         **kwargs,
@@ -47,14 +51,15 @@ class ImageReader():
         self.config = config
         self.timestamp = timestamp
         with tiledb.open(uri, mode='r', timestamp=timestamp, config=config) as object_array:
+            self.external_id_dimension_name = object_array.schema.domain.dim(0).name
             nonempty_object_array_domain = object_array.nonempty_domain()[0]
             self.num_objects = nonempty_object_array_domain[1] + 1 - nonempty_object_array_domain[0]
-        self.image_metadata_uri = image_metadata_uri
+        self.metadata_uri = metadata_uri
 
     def init_kwargs(self) -> Dict:
         return {
             "uri": self.uri,
-            "image_metadata_uri": self.image_metadata_uri,
+            "metadata_uri": self.metadata_uri,
             "config": self.config,
             "timestamp": self.timestamp,
         }
@@ -63,23 +68,24 @@ class ImageReader():
         return self.num_objects
 
     def partition_class_name(self) -> str:
-        return "ImagePartition"
+        return "TileDBArrayPartition"
 
     def metadata_array_uri(self) -> str:
-        return self.image_metadata_uri
+        return self.metadata_uri
 
     def metadata_attributes(self) -> List[Attr]:
         import tiledb
-
-        with tiledb.open(self.image_metadata_uri, "r", config=self.config) as image_metadata_array:
+        if self.metadata_uri is None:
+            return None
+        with tiledb.open(self.metadata_uri, "r", config=self.config) as metadata_array:
             attributes = []
-            for i in range(image_metadata_array.schema.nattr):
-                attributes.append(image_metadata_array.schema.attr(i))
+            for i in range(metadata_array.schema.nattr):
+                attributes.append(metadata_array.schema.attr(i))
             return attributes
 
-    def get_partitions(self, partition_size: int = -1) -> List[ImagePartition]:
+    def get_partitions(self, partition_size: int = -1) -> List[TileDBArrayPartition]:
         if partition_size == -1:
-            partition_size = 500
+            partition_size = 10000
 
         partitions = []
         partition_id = 0
@@ -87,19 +93,24 @@ class ImageReader():
             end = start + partition_size
             if end > self.num_objects:
                 end = self.num_objects
-            partitions.append(ImagePartition(str(partition_id), start, end))
+            partitions.append(TileDBArrayPartition(str(partition_id), start, end))
             partition_id += 1
 
         return partitions
 
-    def read_objects(self, partition: ImagePartition) -> Tuple[OrderedDict, OrderedDict]:
+    def read_objects(self, partition: TileDBArrayPartition) -> Tuple[OrderedDict, OrderedDict]:
         import tiledb
 
         with tiledb.open(self.uri, "r", timestamp=self.timestamp, config=self.config) as object_array:
             data = object_array[partition.start:partition.end]
-            external_ids = data.pop("image_id", None)
-            data["external_id"] = external_ids
-            return (data, None)
+            if self.external_id_dimension_name != "external_id":
+                external_ids = data.pop(self.external_id_dimension_name, None)
+                data["external_id"] = external_ids
+        metadata = None
+        if self.metadata_uri is not None:
+            with tiledb.open(self.metadata_uri, "r", timestamp=self.timestamp, config=self.config) as metadata_array:
+                metadata = metadata_array[partition.start:partition.end]
+        return (data, metadata)
 
     def read_objects_by_external_ids(self, ids: List[int]) -> OrderedDict:
         import tiledb

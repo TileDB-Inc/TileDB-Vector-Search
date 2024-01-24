@@ -57,9 +57,13 @@ class ObjectIndex:
                 self.embedding.load()
                 self.embedding_loaded = True
 
-            self.object_metadata_array_uri = self.index.group.meta["object_metadata_array_uri"]
             self.materialize_object_metadata = self.index.group.meta["materialize_object_metadata"]
-            self.object_metadata_external_id_dim = self.index.group.meta["object_metadata_external_id_dim"]
+            if "object_metadata_array_uri" in self.index.group.meta:
+                self.object_metadata_array_uri = self.index.group.meta["object_metadata_array_uri"]
+                self.object_metadata_external_id_dim = self.index.group.meta["object_metadata_external_id_dim"]
+            else:
+                self.object_metadata_array_uri = None
+                self.object_metadata_external_id_dim = None
 
     def query(
         self,
@@ -109,11 +113,12 @@ class ObjectIndex:
 
         object_metadata = None
         if return_metadata:
-            with tiledb.open(self.object_metadata_array_uri, mode='r', timestamp=self.timestamp, config=self.config) as metadata_array:
-                unique_metadata = metadata_array.multi_index[unique_ids]
-                object_metadata = {}
-                for attr in unique_metadata.keys():
-                    object_metadata[attr] = unique_metadata[attr][idx]
+            if self.object_metadata_array_uri is not None:
+                with tiledb.open(self.object_metadata_array_uri, mode='r', timestamp=self.timestamp, config=self.config) as metadata_array:
+                    unique_metadata = metadata_array.multi_index[unique_ids]
+                    object_metadata = {}
+                    for attr in unique_metadata.keys():
+                        object_metadata[attr] = unique_metadata[attr][idx]
 
         if return_objects:
             unique_objects = self.object_reader.read_objects_by_external_ids(unique_ids)
@@ -290,10 +295,10 @@ def create(
         if object_metadata_array_uri is not None:
             with tiledb.open(object_metadata_array_uri, "r") as object_metadata_array:
                 object_metadata_external_id_dim = object_metadata_array.schema.domain.dim(0).name
+            group.meta["object_metadata_array_uri"] = object_metadata_array_uri
+            group.meta["object_metadata_external_id_dim"] = object_metadata_external_id_dim
 
         group.meta["materialize_object_metadata"] = materialize_object_metadata
-        group.meta["object_metadata_array_uri"] = object_metadata_array_uri
-        group.meta["object_metadata_external_id_dim"] = object_metadata_external_id_dim
         group.close()
         return ObjectIndex(uri, config, load_embedding=False, **kwargs)
 

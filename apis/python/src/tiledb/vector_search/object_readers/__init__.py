@@ -1,6 +1,6 @@
 from .object_reader import ObjectPartition, ObjectReader
 from .soma_reader import SomaRNAXRowReader, SomaRNAXRowPartition
-from .image_reader import ImageReader, ImagePartition
+from .tiledb_array_reader import TileDBArrayReader, TileDBArrayPartition
 from .bioimage_reader import BioImageReader, BioImagePartition
 
 __all__ = [
@@ -8,8 +8,8 @@ __all__ = [
     "ObjectReader",
     "SomaRNAXRowPartition",
     "SomaRNAXRowReader",
-    "ImagePartition",
-    "ImageReader",
+    "TileDBArrayPartition",
+    "TileDBArrayReader",
     "BioImagePartition",
     "BioImageReader",
 ]

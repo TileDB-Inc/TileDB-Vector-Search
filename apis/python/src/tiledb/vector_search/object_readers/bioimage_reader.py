@@ -1,10 +1,9 @@
 from typing import Any, Mapping, Optional, List, Tuple, Dict, OrderedDict
-# from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
+from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
 from tiledb import Attr
 
 
-# class BioImagePartition(ObjectPartition):
-class BioImagePartition():
+class BioImagePartition(ObjectPartition):
     def __init__(
         self,
         partition_id: str,
@@ -36,8 +35,7 @@ class BioImagePartition():
         return (self.id_start, self.id_end)
 
 
-# class BioImageReader(ObjectReader):
-class BioImageReader():
+class BioImageReader(ObjectReader):
     def __init__(
         self,
         uri: str,

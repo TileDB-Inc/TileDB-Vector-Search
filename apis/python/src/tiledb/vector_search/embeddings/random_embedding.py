@@ -1,11 +1,12 @@
 from typing import Any, Mapping, Optional, Dict, OrderedDict
 
 import numpy as np
+from tiledb.vector_search.embeddings import ObjectEmbedding
 
 EMBED_DIM = 2048
 
 
-class RandomEmbedding():
+class RandomEmbedding(ObjectEmbedding):
     def __init__(
         self,
     ):

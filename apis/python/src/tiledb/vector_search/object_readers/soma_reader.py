@@ -1,9 +1,8 @@
 from typing import Any, Mapping, Optional, List, Dict, OrderedDict, Tuple
-# from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
+from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
 from tiledb import Attr
 
-# class SomaRNAXRowPartition(ObjectPartition):
-class SomaRNAXRowPartition():
+class SomaRNAXRowPartition(ObjectPartition):
     def __init__(
         self,
         partition_id: str,
@@ -30,8 +29,7 @@ class SomaRNAXRowPartition():
         return (self.coord_start, self.coord_end)
 
 
-# class SomaRNAXRowReader(ObjectReader):
-class SomaRNAXRowReader():
+class SomaRNAXRowReader(ObjectReader):
     def __init__(
         self,
         uri: str,
