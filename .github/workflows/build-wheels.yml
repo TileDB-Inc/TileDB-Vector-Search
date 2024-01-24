@@ -83,7 +83,7 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.16.2
         env:
-          CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
+          CIBW_MANYLINUX_X86_64_IMAGE: "dockcross/manylinux-x64"
           CIBW_SKIP: "*-win32 cp27-* cp35-* cp36-* cp37-* pp* *_i686 *musllinux*"
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_BUILD_VERBOSITY: 3
