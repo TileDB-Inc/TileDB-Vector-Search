@@ -1,5 +1,5 @@
 /**
-* @file   tiledb/vector_search/module2.cc
+* @file   tiledb/vector_search/type_erased_module.cc
 *
 * @section LICENSE
 *
@@ -109,7 +109,7 @@ auto datatype_to_format(tiledb_datatype_t datatype) {
 // Define Pybind11 bindings
 
 // PYBIND11_MODULE(_tiledbvspy2, m) {
-void init_module2(py::module_& m) {
+void init_type_erased_module(py::module_& m) {
   m.def(
       "count_intersections",
       [](const FeatureVectorArray& a,

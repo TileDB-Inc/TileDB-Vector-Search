@@ -14,7 +14,6 @@ ctx = vspy.Ctx({})
 def test_construct_FeatureVector():
 
     logging.info(f"siftsmall_ids_uri = {siftsmall_ids_uri}")
-    print(f"siftsmall_ids_uri = {siftsmall_ids_uri}")
 
     a = vspy.FeatureVector(ctx, siftsmall_ids_uri);
     assert a.feature_type_string() == "uint64"

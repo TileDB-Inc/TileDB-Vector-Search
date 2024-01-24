@@ -52,7 +52,7 @@ set(VSPY_TARGET_NAME _tiledbvspy)
 python_add_library(${VSPY_TARGET_NAME} MODULE
     "src/tiledb/vector_search/module.cc"
     "src/tiledb/vector_search/kmeans.cc"
-    "src/tiledb/vector_search/module2.cc"
+    "src/tiledb/vector_search/type_erased_module.cc"
     WITH_SOABI)
 
 target_link_libraries(${VSPY_TARGET_NAME}
