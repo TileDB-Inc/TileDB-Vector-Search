@@ -18,6 +18,7 @@ except ImportError:
     __version__ = "0.0.0.local"
 
 __all__ = [
+    "Index",
     "FlatIndex",
     "IVFFlatIndex",
     "Mode",
