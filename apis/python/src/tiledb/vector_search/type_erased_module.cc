@@ -49,9 +49,6 @@
 
 namespace py = pybind11;
 
-// See https://chat.openai.com/share/0ec55abe-f5be-4988-a99b-017f27a1e129
-
-
 namespace {
 template <typename ...TArgs>
 py::tuple make_python_pair(std::tuple<TArgs...>&& arg) {
