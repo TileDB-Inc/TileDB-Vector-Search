@@ -382,5 +382,5 @@ TEST_CASE("concepts: partitioned_feature_vector_range", "[concepts]") {
 }
 
 TEST_CASE(
-	  "concepts: contiguous_partitioned_feature_vector_range", "[concepts]") {
+    "concepts: contiguous_partitioned_feature_vector_range", "[concepts]") {
 }

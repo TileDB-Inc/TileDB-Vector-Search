@@ -282,16 +282,20 @@ TEST_CASE("array_defs: test array uris", "[array_defs]") {
 
   for (auto& test :
        {siftsmall_array_uris,
-        siftsmall_uint8_array_uris,
+        // Not checked in to github
+        // siftsmall_uint8_array_uris,
         bigann10k_array_uris}) {
     for (auto& uri : test) {
       if (debug) {
         std::cout << uri << " "
                   << (std::filesystem::exists(uri) ? "exists" :
-                                                     "does not exist")
-                  << std::endl;
+                                                     "does not exist");
+        std::cout << " and is directory is "
+                  << std::filesystem::is_directory(uri) << " ";
+        std::cout << std::endl;
       }
       // CHECK(std::filesystem::exists(uri));
+
       CHECK(std::filesystem::is_directory(uri));
     }
   }
