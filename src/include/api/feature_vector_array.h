@@ -311,15 +311,14 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
   }
 }
 
-template <feature_vector_array T>
-void foo(const T& t) {
-}
-
-void bar() {
-  static_assert(feature_vector_array<MatrixView<int, stdx::layout_left>>);
-  foo(MatrixView<int32_t, stdx::layout_left>{});
-}
-
+/**
+ * @brief Count the number of intersections between two sets of feature vectors.
+ * This dispatches to the appropriate type-specific implementation.
+ * @param a FeatureVectorArray to be compared
+ * @param b FeatureVectorArray to be compared
+ * @param k_nn Number of nearest neighbors to consider
+ * @return Number of intersections found
+ */
 auto count_intersections(
     const FeatureVectorArray& a, const FeatureVectorArray& b, size_t k_nn) {
   auto proc_b = [&b, k_nn](auto& aview) {

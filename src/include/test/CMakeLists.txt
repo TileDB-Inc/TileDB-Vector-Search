@@ -58,6 +58,10 @@ set_tests_properties(unit_vamana_test PROPERTIES WILL_FAIL TRUE)
 
 kmeans_add_test(unit_adj_list)
 
+kmeans_add_test(unit_api_feature_vector)
+
+kmeans_add_test(unit_api_feature_vector_array)
+
 kmeans_add_test(unit_algorithm)
 
 kmeans_add_test(unit_array_defs)
@@ -88,8 +92,7 @@ kmeans_add_test(unit_ivf_query)
 
 kmeans_add_test(unit_ivf_qv)
 
-# Needs to be updated to latest API
-# kmeans_add_test(unit_ivf_vq)
+kmeans_add_test(unit_ivf_vq)
 
 add_executable(unit_linalg unit_linalg.cc)
 target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)

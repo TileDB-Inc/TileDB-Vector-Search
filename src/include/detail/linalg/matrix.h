@@ -131,16 +131,8 @@ using ColMajorMatrixView = MatrixView<T, stdx::layout_left, I>;
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class Matrix :
-#if 1
     public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
-  // using Base::Base;
-#else
-    public MatrixView<T, LayoutPolicy, I> {
-  using Base = MatrixView<T, LayoutPolicy, I>;
-  // So that the CPO for data() doesn't get confused
-  // auto data_handle() = delete;
-#endif
 
  public:
   using layout_policy = LayoutPolicy;
@@ -165,15 +157,7 @@ class Matrix :
   Matrix(const Matrix&) = delete;
   Matrix& operator=(const Matrix&) = delete;
 
-// Some diagnostic debugging to track move constructors
-#if 1
   Matrix(Matrix&&) = default;
-#else
-  Matrix(Matrix&& rhs) {
-    std::cout << "Move constructor\n";
-    *this = std::move(rhs);
-  }
-#endif
 
   Matrix& operator=(Matrix&& rhs) = default;
   virtual ~Matrix() = default;
@@ -202,16 +186,6 @@ class Matrix :
       : num_rows_(nrows)
       , num_cols_(ncols)
       , storage_{std::move(storage)} {
-    // std::cout << "Constructor from storage\n";
-    Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
-  }
-
-#if 0
-  Matrix(Matrix&& rhs) noexcept
-      : num_rows_{rhs.num_rows_}
-      , num_cols_{rhs.num_cols_}
-      , storage_{std::move(rhs.storage_)} {
-    *static_cast<Base*>(&rhs) = Base { rhs.storage_.get(), 0, 0 };
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
       }
 #endif
@@ -297,21 +271,14 @@ class Matrix :
     // return 2;  //
   }
 
-#if 0
-  auto span() const noexcept {
-    if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
-      return num_cols();
-    } else {
-      return num_rows();
-    }
-  }
-#endif
-
   auto extents() const noexcept {
     return std::vector<size_t>{
         Base::extents().extent(0), Base::extents().extent(1)};
   }
 
+
+  // @note We do not have a `size()` method, due to ambiguity with
+  // what it means for a matrix (and for feature vector array)
   auto num_rows() const noexcept {
     return num_rows_;
   }
@@ -327,8 +294,6 @@ class Matrix :
     std::swap(static_cast<Base&>(*this), static_cast<Base&>(rhs));
   }
 
-// Attempt at generic comparison
-#if 1
   template <
       class T_,
       class LayoutPolicy_ = stdx::layout_right,
@@ -339,14 +304,6 @@ class Matrix :
             std::equal(
                 raveled().begin(), raveled().end(), rhs.raveled().begin()));
   }
-#else
-  bool operator==(const Matrix& rhs) const noexcept {
-    return (void*)this->data() == (void*)rhs.data() ||
-           (num_rows_ == rhs.num_rows_ && num_cols_ == rhs.num_cols_ &&
-            std::equal(
-                raveled().begin(), raveled().end(), rhs.raveled().begin()));
-  }
-#endif
 };
 
 /**
@@ -369,19 +326,6 @@ auto raveled(Matrix<T, LayoutPolicy, I>& m) {
   return m.raveled();
 }
 
-#if 0
-// @todo these are k
-template <class T, class I>
-size_t size(const Matrix<T, stdx::layout_right, I>& m) {
-  return m.num_rows();
-}
-
-template <class T, class I>
-size_t size(const Matrix<T, stdx::layout_left, I>& m) {
-  return m.num_cols();
-}
-#endif
-
 /**
  * Is the matrix row-oriented?
  */
@@ -390,41 +334,13 @@ constexpr bool is_row_oriented(const Matrix& A) {
   return std::is_same_v<typename Matrix::layout_policy, stdx::layout_right>;
 }
 
-#if 0
-// @todo This will need some more infrastructure to work.  If we tag_invoke
-// for defining CPOs it can work.  Otherwise need to be more
-// careful with namespaces so that ADL can work (?)
-//
-/**********************************************************************
- *
- * Matrix CPO overloads
- *
- * *********************************************************************/
-
-template <class T, class LayoutPolicy, class I>
-auto dimension(const Matrix<T, LayoutPolicy, I>& m) {
-  // row major -- dimension is number of columns
-  if constexpr(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
-    return m.num_cols();
-  } else if constexpr(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
-    return m.num_rows();
-  } else {
-    static_assert(always_false<LayoutPolicy>, "Unknown layout policy");
-  }
+/**
+ * Is the matrix col-oriented?
+ */
+template <class Matrix>
+constexpr bool is_col_oriented(const Matrix& A) {
+  return std::is_same_v<typename Matrix::layout_policy, stdx::layout_left>;
 }
-
-template <class T, class LayoutPolicy, class I>
-auto num_vectors(const Matrix<T, LayoutPolicy, I>& m) {
-  // row major -- num_vectors is number of rows
-  if constexpr(std::is_same_v<LayoutPolicy, stdx::layout_right>) {
-    return m.num_rows();
-  } else if constexpr(std::is_same_v<LayoutPolicy, stdx::layout_left>) {
-    return m.num_cols();
-  } else {
-    static_assert(always_false<LayoutPolicy>, "Unknown layout policy");
-  }
-}
-#endif  // 0
 
 /**********************************************************************
  *
