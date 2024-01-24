@@ -373,3 +373,14 @@ TEST_CASE("concepts: feature_vector_array", "[concepts]") {
   CHECK(!feature_vector_array<std::vector<double>>);
   CHECK(!feature_vector_array<std::vector<std::vector<int>>>);
 }
+
+// Placeholders
+TEST_CASE("concepts: contiguous_feature_vector_range", "[concepts]") {
+}
+
+TEST_CASE("concepts: partitioned_feature_vector_range", "[concepts]") {
+}
+
+TEST_CASE(
+	  "concepts: contiguous_partitioned_feature_vector_range", "[concepts]") {
+}
