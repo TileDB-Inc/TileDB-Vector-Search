@@ -2155,8 +2155,6 @@ def ingest(
         logger.debug("Training sample size %d", training_sample_size)
         logger.debug("Training source uri %s and type %s", training_source_uri, training_source_type)
         logger.debug("Number of workers %d", workers)
-        if training_sample_size < partitions:
-            raise ValueError(f"training_sample_size ({training_sample_size}) must be greater than or equal to the number of partitions ({partitions})")
 
         if external_ids is not None:
             external_ids_uri = write_external_ids(
