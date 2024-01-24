@@ -36,11 +36,12 @@ find_package(pybind11 CONFIG REQUIRED)
 
 set(VSPY_TARGET_NAME _tiledbvspy)
 
-python_add_library(${VSPY_TARGET_NAME} MODULE
-    "src/tiledb/vector_search/module.cc"
-    "src/tiledb/vector_search/kmeans.cc"
-    "src/tiledb/vector_search/type_erased_module.cc"
-    WITH_SOABI)
+pybind11_add_module(
+        ${VSPY_TARGET_NAME}
+        src/tiledb/vector_search/module.cc
+        src/tiledb/vector_search/kmeans.cc
+        src/tiledb/vector_search/type_erased_module.cc
+)
 
 target_compile_features(
         ${VSPY_TARGET_NAME}
