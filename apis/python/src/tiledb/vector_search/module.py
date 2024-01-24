@@ -5,6 +5,7 @@ import numpy as np
 import tiledb
 from tiledb.vector_search._tiledbvspy import *
 
+import logging, pdb
 
 def load_as_matrix(
     path: str,
@@ -35,15 +36,15 @@ def load_as_matrix(
     a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
     if dtype == np.float32:
-        m = tdbColMajorMatrix_f32(ctx, path, 0, 0, 0, size, timestamp)
+        m = tdbColMajorMatrix_f32(ctx, path, 0, 0, 0, size, 0, timestamp)
     elif dtype == np.float64:
-        m = tdbColMajorMatrix_f64(ctx, path, 0, 0, 0, size, timestamp)
+        m = tdbColMajorMatrix_f64(ctx, path, 0, 0, 0, size, 0, timestamp)
     elif dtype == np.int32:
-        m = tdbColMajorMatrix_i32(ctx, path, 0, 0, 0, size, timestamp)
+        m = tdbColMajorMatrix_i32(ctx, path, 0, 0, 0, size, 0, timestamp)
     elif dtype == np.int32:
-        m = tdbColMajorMatrix_i64(ctx, path, 0, 0, 0, size, timestamp)
+        m = tdbColMajorMatrix_i64(ctx, path, 0, 0, 0, size, 0, timestamp)
     elif dtype == np.uint8:
-        m = tdbColMajorMatrix_u8(ctx, path, 0, 0, 0, size, timestamp)
+        m = tdbColMajorMatrix_u8(ctx, path, 0, 0, 0, size, 0, timestamp)
     # elif dtype == np.uint64:
     #     return tdbColMajorMatrix_u64(ctx, path, size, timestamp)
     else:
@@ -79,6 +80,17 @@ def load_as_array(
     else:
         return r
 
+
+def debug_slice(m: "colMajorMatrix", name: str):
+    dtype = m.dtype
+    if (dtype == np.float32):
+        return debug_slice_f32(m, name)
+    elif (dtype == np.uint8):
+        return debug_slice_u8(m, name)
+    elif (dtype == np.uint64):
+        return debug_slice_u64(m, name)
+    else:
+        raise TypeError(f"Unsupported type: {dtype}!")
 
 def query_vq_nth(db: "colMajorMatrix", *args):
     """
@@ -269,6 +281,7 @@ def ivf_query_ram(
     if ctx is None:
         ctx = Ctx({})
 
+
     args = tuple(
         [
             parts_db,
@@ -281,6 +294,9 @@ def ivf_query_ram(
             nthreads,
         ]
     )
+
+    # logging.info(f">>>> ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}")
+    # pdb.set_trace()
 
     if dtype == np.float32:
         if use_nuv_implementation:
@@ -360,6 +376,8 @@ def ivf_query(
         ]
     )
 
+    logging.info(f">>>> module.py: ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}")
+
     if dtype == np.float32:
         if use_nuv_implementation:
             return nuv_query_heap_finite_ram_reg_blocked_f32(*args)
@@ -399,17 +417,21 @@ def dist_qv(
         ctx = Ctx({})
     args = tuple(
         [
-            ctx,
-            parts_uri,
-            active_partitions,
-            query_vectors,
-            active_queries,
+            ctx,                               # 0
+            parts_uri,                         # 1
+            StdVector_u64(active_partitions),  # 2
+            query_vectors,                     # 3
+            active_queries,                    # 4
             StdVector_u64(indices),
             ids_uri,
             k_nn,
             timestamp,
         ]
     )
+
+    # logging.info(f">>>> ivf_query_ram len(indices): {len(indices)}, dtype: {dtype},")
+    # pdb.set_trace()
+
     if dtype == np.float32:
         return dist_qv_f32(*args)
     elif dtype == np.uint8:

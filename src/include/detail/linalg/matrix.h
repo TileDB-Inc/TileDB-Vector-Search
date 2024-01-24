@@ -174,7 +174,6 @@ class Matrix :
       , storage_{new T[num_rows_ * num_cols_]}
 #endif
   {
-    // std::cout << "Empty constructor\n";
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
   }
 
@@ -188,7 +187,7 @@ class Matrix :
       , storage_{std::move(storage)} {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
       }
-#endif
+
 
   /**
    * Initializer list constructor.  Useful for testing and for examples.
