@@ -1,5 +1,5 @@
 /**
- * @file   flat.cc
+ * @file   flat_l2.cc
  *
  * @section LICENSE
  *
@@ -83,10 +83,10 @@
 #include <thread>
 #include <vector>
 
-#include <docopt.h>
+#include "docopt.h"
 
-#include "flat_query.h"
 #include "stats.h"
+#include "utils/print_types.h"
 #include "utils/timer.h"
 
 bool verbose = false;
@@ -95,29 +95,26 @@ bool debug = false;
 bool enable_stats = false;
 std::vector<json> core_stats;
 
-#if 1
-using db_type = uint8_t;
-#else
-using db_type = float;
-#endif
-
+using score_type = float;
 using groundtruth_type = int32_t;
 
 static constexpr const char USAGE[] =
     R"(flat_l2: feature vector search with flat index.
   Usage:
       flat_l2 (-h | --help)
-      flat_l2 --db_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
+      flat_l2 --inputs_uri URI --query_uri URI [--groundtruth_uri URI] [--output_uri URI]
           [--k NN] [--nqueries NN]
           [--alg ALGO] [--finite] [--blocksize NN]
           [--nthreads N] [--region REGION] [--validate] [--log FILE] [--stats] [-d] [-v]
 
   Options:
       -h, --help              show this screen
-      --db_uri URI            database URI with feature vectors
+      --inputs_uri URI            database URI with feature vectors
       --query_uri URI         query URI with feature vectors to search for
       --groundtruth_uri URI   ground truth URI
       --output_uri URI        output URI for results
+      --ftype TYPE            data type of feature vectors [default: float]
+      --idtype TYPE           data type of ids [default: uint64]
       --k NN                  number of nearest neighbors to find [default: 10]
       --nqueries NN           size of queries subset to compare (0 = all) [default: 0]
       --alg ALGO              which algorithm to use for comparisons [default: vq_heap]
@@ -147,7 +144,7 @@ int main(int argc, char* argv[]) {
   verbose = args["--verbose"].asBool();
   enable_stats = args["--stats"].asBool();
 
-  std::string db_uri = args["--db_uri"].asString();
+  std::string db_uri = args["--inputs_uri"].asString();
   std::string query_uri = args["--query_uri"].asString();
   std::string groundtruth_uri =
       args["--groundtruth_uri"] ? args["--groundtruth_uri"].asString() : "";
@@ -165,43 +162,46 @@ int main(int argc, char* argv[]) {
     nthreads = std::thread::hardware_concurrency();
   }
 
-  ms_timer load_time{"Load database, query, and ground truth arrays"};
+  auto run_flat_l2 = [&]<class feature_type, class id_type> {
+    ms_timer load_time{"Load database, query, and ground truth arrays"};
 
-  tiledb::Context ctx;
+    tiledb::Context ctx;
 
-  auto db = tdbColMajorMatrix<db_type>(ctx, db_uri, blocksize);  // blocked
-  db.load();
+    auto db =
+        tdbColMajorMatrix<feature_type>(ctx, db_uri, blocksize);  // blocked
+    db.load();
 
-  auto query =
-      tdbColMajorMatrix<uint8_t>(ctx, query_uri, nqueries);  // just a slice
-  query.load();
+    auto query = tdbColMajorMatrix<feature_type>(
+        ctx, query_uri, nqueries);  // just a slice
+    query.load();
 
-  load_time.stop();
-  std::cout << load_time << std::endl;
+    load_time.stop();
+    std::cout << load_time << std::endl;
 
-  // @todo decide on what the type of top_k::value should be
-  auto [top_k_scores, top_k] = [&]() {
-    if (alg_name == "vq_heap" || alg_name == "vq") {
-      if (verbose) {
-        std::cout << "# Using vq_heap" << std::endl;
+    // @todo decide on what the type of top_k::value should be
+    auto [top_k_scores, top_k] = [&]() {
+      if (alg_name == "vq_heap" || alg_name == "vq") {
+        if (verbose) {
+          std::cout << "# Using vq_heap" << std::endl;
+        }
+        return detail::flat::vq_query_heap(db, query, k, nthreads);
+      } else if (alg_name == "vq_heap_2" || alg_name == "vq2") {
+        if (verbose) {
+          std::cout << "# Using vq_heap_2" << std::endl;
+        }
+        auto foo = detail::flat::vq_query_heap_2(db, query, k, nthreads);
+        return detail::flat::vq_query_heap_2(db, query, k, nthreads);
+      } else if (alg_name == "qv_tiled") {
+        if (verbose) {
+          std::cout << "# Using qv_tiled" << std::endl;
+        }
+        return detail::flat::qv_query_heap_tiled(db, query, k, nthreads);
+      } else if (alg_name == "qv_heap" || alg_name == "qv") {
+        if (verbose) {
+          std::cout << "# Using qv_query (qv_heap)" << std::endl;
+        }
+        return detail::flat::qv_query_heap(db, query, k, nthreads);
       }
-      return detail::flat::vq_query_heap(db, query, k, nthreads);
-    } else if (alg_name == "vq_heap_2" || alg_name == "vq2") {
-      if (verbose) {
-        std::cout << "# Using vq_heap_2" << std::endl;
-      }
-      return detail::flat::vq_query_heap_2(db, query, k, nthreads);
-    } else if (alg_name == "qv_tiled") {
-      if (verbose) {
-        std::cout << "# Using qv_tiled" << std::endl;
-      }
-      return detail::flat::qv_query_heap_tiled(db, query, k, nthreads);
-    } else if (alg_name == "qv_heap" || alg_name == "qv") {
-      if (verbose) {
-        std::cout << "# Using qv_query (qv_heap)" << std::endl;
-      }
-      return detail::flat::qv_query_heap(db, query, k, nthreads);
-    }
 #ifdef TILEDB_VS_ENABLE_BLAS
 #if 0
     else if (alg_name == "gemm") {
@@ -215,31 +215,58 @@ int main(int argc, char* argv[]) {
     }
 #endif
 #endif
-    throw std::runtime_error("incorrect or unset algorithm type: " + alg_name);
-  }();
+      throw std::runtime_error(
+          "incorrect or unset algorithm type: " + alg_name);
+    }();
 
-  if (!groundtruth_uri.empty()) {
-    auto groundtruth =
-        tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
-    groundtruth.load();
+    if (!groundtruth_uri.empty()) {
+      auto groundtruth =
+          tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri);
+      groundtruth.load();
 
-    if (!validate_top_k(top_k, groundtruth)) {
-      std::cout << "Validation failed" << std::endl;
-    } else {
-      if (verbose) {
-        std::cout << "Validation succeeded" << std::endl;
+      if (!validate_top_k(top_k, groundtruth)) {
+        std::cout << "Validation failed" << std::endl;
+      } else {
+        if (verbose) {
+          std::cout << "Validation succeeded" << std::endl;
+        }
       }
     }
-  }
 
-  if (args["--output_uri"]) {
-    write_matrix(ctx, top_k, args["--output_uri"].asString());
-  }
+    if (args["--output_uri"]) {
+      write_matrix(ctx, top_k, args["--output_uri"].asString());
+    }
 
-  if (args["--log"]) {
-    dump_logs(args["--log"].asString(), alg_name, nqueries, 0, k, nthreads, 0);
+    if (args["--log"]) {
+      dump_logs(
+          args["--log"].asString(), alg_name, nqueries, 0, k, nthreads, 0);
+    }
+    if (enable_stats) {
+      std::cout << json{core_stats}.dump() << std::endl;
+    }
+  };
+  auto feature_type = args["--ftype"].asString();
+  auto id_type = args["--idtype"].asString();
+
+  if (feature_type != "float" && feature_type != "uint8") {
+    std::cout << "Unsupported feature type " << feature_type << std::endl;
+    return 1;
   }
-  if (enable_stats) {
-    std::cout << json{core_stats}.dump() << std::endl;
+  if (id_type != "uint64" && id_type != "uint32") {
+    std::cout << "Unsupported id type " << id_type << std::endl;
+    return 1;
+  }
+  if (feature_type == "float" && id_type == "uint64") {
+    run_flat_l2.operator()<float, uint64_t>();
+  } else if (feature_type == "float" && id_type == "uint32") {
+    run_flat_l2.operator()<float, uint32_t>();
+  } else if (feature_type == "uint8" && id_type == "uint64") {
+    run_flat_l2.operator()<uint8_t, uint64_t>();
+  } else if (feature_type == "uint8" && id_type == "uint32") {
+    run_flat_l2.operator()<uint8_t, uint32_t>();
+  } else {
+    std::cout << "Unsupported feature type " << feature_type;
+    std::cout << " and/or unsupported id_type " << id_type << std::endl;
+    return 1;
   }
 }

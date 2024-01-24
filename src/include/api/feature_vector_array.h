@@ -73,8 +73,8 @@ class FeatureVectorArray {
       const std::string& uri,
       size_t num_vectors = 0) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
-    feature_type_ = get_array_datatype(array);  // @note Will become unique_ptr
-    array.close();  // @todo create Matrix constructor that takes opened array
+    feature_type_ = get_array_datatype(*array);
+    array->close();  // @todo create Matrix constructor that takes opened array
     feature_size_ = datatype_to_size(feature_type_);
 
     /**

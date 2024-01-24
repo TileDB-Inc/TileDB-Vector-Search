@@ -47,37 +47,32 @@ macro (kmeans_add_test TESTNAME)
     # catch_discover_tests(${TESTNAME})
 endmacro (kmeans_add_test)
 
-set (SIFT_TEST_DIR ${CMAKE_BINARY_DIR}/src/test)
-message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
-
-# Deprecated / removed
-# kmeans_add_test(unit_sift_array)
-# kmeans_add_test(unit_sift_db)
-# kmeans_add_test(gen_partitioned)
+# To be updated
+# kmeans_add_test(time_abstraction_penalty)
 # kmeans_add_test(time_insert)
 # kmeans_add_test(time_l2)
 # kmeans_add_test(time_open)
-# target_link_libraries(time_queries PRIVATE flat_blas)
-
-# kmeans_add_test(gen_queries)
-# kmeans_add_test(time_queries)
 
 kmeans_add_test(unit_vamana)
 set_tests_properties(unit_vamana_test PROPERTIES WILL_FAIL TRUE)
 
 kmeans_add_test(unit_adj_list)
 
+kmeans_add_test(unit_algorithm)
+
+kmeans_add_test(unit_array_defs)
+
 kmeans_add_test(unit_api_feature_vector)
 
 kmeans_add_test(unit_api_feature_vector_array)
-
-kmeans_add_test(unit_algorithm)
 
 kmeans_add_test(unit_concepts)
 
 kmeans_add_test(unit_concepts_vs)
 
 kmeans_add_test(unit_cpos)
+
+kmeans_add_test(unit_execution_policy)
 
 kmeans_add_test(unit_fixed_min_heap)
 
@@ -106,6 +101,8 @@ kmeans_add_test(unit_matrix)
 
 kmeans_add_test(unit_mdspan)
 
+kmeans_add_test(unit_memory)
+
 kmeans_add_test(unit_nn-graph)
 
 kmeans_add_test(unit_partition)
@@ -116,9 +113,15 @@ kmeans_add_test(unit_slicing)
 
 kmeans_add_test(unit_stats)
 
+kmeans_add_test(unit_stl)
+
+kmeans_add_test(unit_tdb_io)
+
+kmeans_add_test(unit_tdb_matrix)
 
 kmeans_add_test(unit_utils)
 
+kmeans_add_test(unit_vector)
 
 if (TILEDB_VS_ENABLE_BLAS)
   kmeans_add_test(unit_queries)
@@ -126,51 +129,6 @@ if (TILEDB_VS_ENABLE_BLAS)
   target_link_libraries(unit_gemm PRIVATE flat_blas)
 endif()
 
-# Create the subdirectory for the extracted files
-file(MAKE_DIRECTORY ${SIFT_TEST_DIR}/siftsmall)
-
-# Download and extract the tar file
-add_custom_command(
-  OUTPUT ${SIFT_TEST_DIR}/siftsmall.tar.gz
-  COMMAND wget -O ${SIFT_TEST_DIR}/siftsmall.tar.gz ftp://ftp.irisa.fr/local/texmex/corpus/siftsmall.tar.gz
-)
-
-add_custom_command(
-  OUTPUT ${SIFT_TEST_DIR}/siftsmall/
-  COMMAND ${CMAKE_COMMAND} -E tar xzf ${SIFT_TEST_DIR}/siftsmall.tar.gz # -C ${SIFT_TEST_DIR}
-  DEPENDS ${SIFT_TEST_DIR}/siftsmall.tar.gz
-)
-
-add_custom_target(download_siftsmall DEPENDS ${SIFT_TEST_DIR}/siftsmall/)
-
-# Add the targets that depend on siftsmall
-# kmeans_add_test(target1 ...)
-# kmeans_add_test(target2 ...)
-
-# # Exclude the targets from the default build and set dependencies
-# set_target_properties(target1 PROPERTIES
-#   EXCLUDE_FROM_ALL TRUE
-#   EXCLUDE_FROM_DEFAULT_BUILD TRUE
-# )
-
-# set_target_properties(target2 PROPERTIES
-#   EXCLUDE_FROM_ALL TRUE
-#   EXCLUDE_FROM_DEFAULT_BUILD TRUE
-# )
-
-# add_dependencies(unit_sift_array download_siftsmall)
-# add_dependencies(unit_sift_db download_siftsmall)
-
-# file(MAKE_DIRECTORY siftsmall)
-
-# add_custom_command(
-#     OUTPUT my_subdirectory/myfile
-#     COMMAND wget https://example.com/myfile.tar.gz && tar -xzf myfile.tar.gz -C my_subdirectory/
-# )
-
-# add_custom_target(
-#     extract_myfile
-#     DEPENDS my_subdirectory/myfile
 # )
 
 # add_dependencies(target1 extract_myfile)

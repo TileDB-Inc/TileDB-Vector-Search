@@ -39,8 +39,6 @@
 #include "detail/flat/qv.h"
 #include "detail/linalg/tdb_matrix.h"
 
-#include "index/ivf_flat_index.h"
-
 TEST_CASE("array_defs: test test", "[array_defs]") {
   REQUIRE(true);
 }
@@ -151,6 +149,9 @@ TEST_CASE("array_defs: quick hack to create fmnistsmall", "[array_defs]") {
 }
 #endif
 #if 0
+
+#include "index/ivf_flat_index.h"
+
 TEST_CASE("array_defs: quick hack to create *small groups", "[array_defs]") {
   tiledb::Context ctx;
   {
