@@ -23,6 +23,8 @@ PYBIND11_MAKE_OPAQUE(std::vector<double>);
   PYBIND11_MAKE_OPAQUE(std::vector<size_t>);
 #endif
 
+void init_type_erased_module(py::module&);
+
 namespace {
 
 
@@ -436,6 +438,7 @@ static void declare_vq_query_heap_pyarray(py::module& m, const std::string& suff
 } // anonymous namespace
 
 void init_kmeans(py::module&);
+void init_type_erased_module(py::module&);
 
 PYBIND11_MODULE(_tiledbvspy, m) {
 
@@ -603,4 +606,5 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declareFixedMinPairHeap(m);
 
   init_kmeans(m);
+  init_type_erased_module(m);
 }

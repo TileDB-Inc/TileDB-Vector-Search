@@ -1,5 +1,5 @@
 /**
- * @file   tdb_defs.h
+ * * @file   test/test_utils.h
  *
  * @section LICENSE
  *
@@ -27,28 +27,35 @@
  *
  * @section DESCRIPTION
  *
- *
  */
 
-#ifndef TILEDB_TDB_DEFS_H
-#define TILEDB_TDB_DEFS_H
+#ifndef TILEDB_TEST_UTILS_H
+#define TILEDB_TEST_UTILS_H
 
-template <class LayoutPolicy>
-struct order_traits {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
-};
+#include <random>
+#include <ranges>
 
-template <>
-struct order_traits<stdx::layout_right> {
-  constexpr static auto order{TILEDB_ROW_MAJOR};
-};
+template <std::ranges::range R>
+void randomize(R& r, std::tuple<int, int> range = {0, 128}) {
+  std::random_device rd;
+  // std::mt19937 gen(rd());
+  std::mt19937 gen(2514908090);
 
-template <>
-struct order_traits<stdx::layout_left> {
-  constexpr static auto order{TILEDB_COL_MAJOR};
-};
+  if constexpr (std::is_floating_point_v<std::ranges::range_value_t<R>>) {
+    std::uniform_real_distribution<std::ranges::range_value_t<R>> dist(
+        std::get<0>(range), std::get<1>(range));
+    for (auto& x : r) {
+      x = dist(gen);
+    }
+    return;
+  } else {
+    std::uniform_int_distribution<std::ranges::range_value_t<R>> dist(
+        std::get<0>(range), std::get<1>(range));
+    for (auto& x : r) {
+      x = dist(gen);
+    }
+    return;
+  }
+}
 
-template <class LayoutPolicy>
-constexpr auto order_v = order_traits<LayoutPolicy>::order;
-
-#endif  // TILEDB_TDB_DEFS_H
+#endif  // TILEDB_TEST_UTILS_H

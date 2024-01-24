@@ -123,10 +123,6 @@ auto qv_query_heap_infinite_ram(
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
 
-  debug_matrix(partitioned_db, "partitioned_db");
-  debug_slice(partitioned_db, "partitioned_db");
-  debug_matrix(partitioned_ids, "partitioned_ids");
-
   // get closest centroid for each query vector
   // auto top_k = qv_query(centroids, q, nprobe, nthreads);
   //  auto top_centroids = vq_query_heap(centroids, q, nprobe, nthreads);
@@ -137,7 +133,7 @@ auto qv_query_heap_infinite_ram(
       detail::flat::qv_query_heap_0(centroids, q, nprobe, nthreads);
 
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
-      size(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
+      num_vectors(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
 
   // Parallelizing over q is not going to be very efficient
   {
@@ -327,14 +323,10 @@ auto nuv_query_heap_infinite_ram(
 
   assert(partitioned_db.num_cols() == partitioned_ids.size());
 
-  debug_matrix(partitioned_db, "partitioned_db");
-  debug_slice(partitioned_db, "partitioned_db");
-  debug_matrix(partitioned_ids, "partitioned_ids");
-
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);
@@ -435,8 +427,7 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
   // @todo To this more systematically
   auto partitioned_db =
       tdbColMajorMatrix<feature_type>(ctx, part_uri, 0, temporal_policy);
-  auto partitioned_ids =
-      read_vector<id_type>(ctx, id_uri, 0, 0, temporal_policy);
+  auto partitioned_ids = read_vector<id_type>(ctx, id_uri, 0, 0, timestamp);
 
   return nuv_query_heap_infinite_ram_reg_blocked(
       partitioned_db,
@@ -504,7 +495,7 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   // @todo Maybe we don't want to do new_indices in partition_ivf_index after
   //  all since they aren't used in this function
@@ -748,7 +739,7 @@ auto qv_query_heap_finite_ram(
   // Check that the size of the indices vector is correct
   assert(size(indices) == centroids.num_cols() + 1);
 
-  size_t num_queries = size(query);
+  size_t num_queries = num_vectors(query);
 
   // get closest centroid for each query vector
   auto top_centroids =
@@ -813,9 +804,6 @@ auto qv_query_heap_finite_ram(
   }
 
   assert(partitioned_db.num_cols() == size(partitioned_db.ids()));
-
-  debug_matrix(partitioned_db, "partitioned_db");
-  debug_matrix(partitioned_db.ids(), "partitioned_db.ids()");
 
   // auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
   //       size(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
@@ -1049,7 +1037,7 @@ auto nuv_query_heap_finite_ram(
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);
@@ -1086,8 +1074,6 @@ auto nuv_query_heap_finite_ram(
   }
 
   assert(partitioned_db.num_cols() == size(partitioned_db.ids()));
-  debug_matrix(partitioned_db, "partitioned_db");
-  debug_matrix(partitioned_db.ids(), "partitioned_db.ids()");
 
   // auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
   //       size(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
@@ -1229,7 +1215,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);
@@ -1272,8 +1258,6 @@ auto nuv_query_heap_finite_ram_reg_blocked(
   }
 
   assert(partitioned_db.num_cols() == size(partitioned_db.ids()));
-  debug_matrix(partitioned_db, "partitioned_db");
-  debug_matrix(partitioned_db.ids(), "partitioned_db.ids()");
 
   // auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
   //       size(q), fixed_min_pair_heap<score_type, id_type>(k_nn));
@@ -1450,7 +1434,7 @@ auto apply_query(
   using id_type = typename std::remove_reference_t<decltype(ids)>::value_type;
   using score_type = float;
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
       num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
 
@@ -1593,7 +1577,7 @@ auto query_finite_ram(
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   auto&& [active_partitions, active_queries] =
       partition_ivf_index(centroids, query, nprobe, nthreads);
@@ -1632,8 +1616,6 @@ auto query_finite_ram(
   }
 
   assert(partitioned_db.num_cols() == size(partitioned_db.ids()));
-  debug_matrix(partitioned_db, "partitioned_db");
-  debug_matrix(partitioned_db.ids(), "partitioned_db.ids()");
 
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
       num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
@@ -1750,7 +1732,7 @@ auto query_infinite_ram(
   // Check that the indices vector is the right size
   assert(size(indices) == centroids.num_cols() + 1);
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   // @todo Maybe we don't want to do new_indices in partition_ivf_index after
   //  all since they aren't used in this function

@@ -40,6 +40,7 @@ pybind11_add_module(
         ${VSPY_TARGET_NAME}
         src/tiledb/vector_search/module.cc
         src/tiledb/vector_search/kmeans.cc
+        src/tiledb/vector_search/type_erased_module.cc
 )
 
 target_compile_features(
