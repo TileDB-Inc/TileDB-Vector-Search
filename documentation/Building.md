@@ -3,8 +3,8 @@
 TileDB Vector Search can be built from source. For information on dependencies, see below.
 
 ## Installation from a local checkout:
+
 ```bash
-cd apis/python
 pip install .
 ```
 
@@ -12,7 +12,6 @@ pip install .
 
 You can run unit tests with `pytest`. You'll also need to install the test dependencies:
 ```bash
-cd apis/python
 pip install ".[test]"
 ```
 Then you can run the tests:
@@ -46,7 +45,6 @@ apt-get openblas-dev build-essentials cmake3
 
 To build the python API after you have the dependencies, use pip:
 ```bash
-cd apis/python
 pip install .
 ```
 
