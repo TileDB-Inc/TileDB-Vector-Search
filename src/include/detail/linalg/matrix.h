@@ -130,8 +130,7 @@ using ColMajorMatrixView = MatrixView<T, stdx::layout_left, I>;
  */
 
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-class Matrix :
-    public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
+class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
 
  public:
@@ -186,8 +185,7 @@ class Matrix :
       , num_cols_(ncols)
       , storage_{std::move(storage)} {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
-      }
-
+  }
 
   /**
    * Initializer list constructor.  Useful for testing and for examples.
@@ -274,7 +272,6 @@ class Matrix :
     return std::vector<size_t>{
         Base::extents().extent(0), Base::extents().extent(1)};
   }
-
 
   // @note We do not have a `size()` method, due to ambiguity with
   // what it means for a matrix (and for feature vector array)
