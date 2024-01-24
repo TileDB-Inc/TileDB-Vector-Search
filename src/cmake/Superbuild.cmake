@@ -52,6 +52,7 @@ list(JOIN CMAKE_PREFIX_PATH "|" CMAKE_PREFIX_PATH_STR)
 set(INHERITED_CMAKE_ARGS
   -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
   -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH_STR}
+  -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}
   -DCMAKE_BUILD_TYPE=$<CONFIG>
   -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}
   -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}
@@ -131,10 +132,20 @@ ExternalProject_Add(libtiledbvectorsearch
 # make install-libtiledbvectorsearch
 add_custom_target(install-libtiledbvectorsearch
   COMMAND
-    ${CMAKE_COMMAND} --build . --target install --config ${CMAKE_BUILD_TYPE}
+    ${CMAKE_COMMAND} --build . --target install --config $<CONFIG>
   COMMAND
     ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch/install_manifest.txt ${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch
+)
+
+add_custom_target(
+        skbuild-export
+        COMMAND
+            ${CMAKE_COMMAND} --install . --prefix ${SKBUILD_PLATLIB_DIR}/tiledb/vector_search --config $<CONFIG>
+        WORKING_DIRECTORY
+            ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch
+        DEPENDS
+            libtiledbvectorsearch
 )
 
 # make check

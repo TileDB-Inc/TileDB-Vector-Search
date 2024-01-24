@@ -50,6 +50,7 @@ option(USE_MKL_CBLAS "Try to use mkl_cblas.h (requires additional CMake configur
 option(TILEDB_VS_PYTHON "Build Python wrapping of C++ API" OFF)
 option(TILEDB_VS_ENABLE_BLAS "Build components and demos which require BLAS" OFF)
 option(BUILD_TESTS "Build the tests" ON)
+option(BUILD_CLI "Build the index and query command-line interface programs" ON)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -143,7 +144,7 @@ if (TILEDB_VS_ENABLE_BLAS)
 endif()
 
 if (DEFINED TileDB_DIR)
-    set(CMAKE_PREFIX_PATH "${TileDB_DIR};{CMAKE_PREFIX_PATH}")
+    set(CMAKE_PREFIX_PATH "${TileDB_DIR};${CMAKE_PREFIX_PATH}")
     message(STATUS "TileDB_DIR is set to ${TileDB_DIR} -- find_package will search there first.")
 else()
     message(STATUS "TileDB_DIR is not set -- find_package will use default search path.")
@@ -161,7 +162,51 @@ include(Docopt)
 include(mdspan)
 include(nlohmann_json)
 
-add_subdirectory(src)
+
+# -----------------------------------------------------------------------------
+# Config header
+# -----------------------------------------------------------------------------
+# Get git info, etc
+include (logging)
+
+# Write config file
+configure_file(${CMAKE_SOURCE_DIR}/include/config.h.in config.h)
+
+# -----------------------------------------------------------------------------
+# Interface libraries
+# -----------------------------------------------------------------------------
+add_library(kmeans_lib INTERFACE)
+add_library(kmeans_linalg INTERFACE)
+if (TILEDB_VS_ENABLE_BLAS)
+    target_link_Libraries(kmeans_linalg INTERFACE
+            flat_blas)
+endif()
+add_library(kmeans_queries INTERFACE)
+target_include_directories(kmeans_lib INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_BINARY_DIR}
+)
+target_link_libraries(kmeans_lib INTERFACE
+        kmeans_linalg
+        kmeans_queries
+)
+target_link_libraries(kmeans_lib INTERFACE
+        nlohmann_json::nlohmann_json
+        docopt
+        flat_mt
+        TileDB::tiledb_shared
+        mdspan
+)
+
+
+# -----------------------------------------------------------------------------
+# Command-line interface programs
+# -----------------------------------------------------------------------------
+if (BUILD_CLI)
+    add_subdirectory(src)
+endif()
 
 if(BUILD_TESTS)
     # include(Catch2)
