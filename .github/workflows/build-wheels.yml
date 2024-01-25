@@ -68,7 +68,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, macos-13]
+        os: [ubuntu-22.04, macos-13, windows-2022]
         # `windows-2022, ` blocked by https://github.com/pybind/pybind11/issues/3445#issuecomment-1525500927
 
     steps:
@@ -86,7 +86,7 @@ jobs:
         env:
           CIBW_MANYLINUX_X86_64_IMAGE: "quay.io/pypa/manylinux_2_28_x86_64"
           CIBW_MUSLLINUX_X86_64_IMAGE: "quay.io/pypa/musllinux_1_1_x86_64"
-          CIBW_SKIP: "*-win* cp27-* cp35-* cp36-* cp37-* pp* *_i686"
+          CIBW_SKIP: "*-win32 cp27-* cp35-* cp36-* cp37-* pp* *_i686"
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_BUILD_VERBOSITY: 3
           CIBW_ENVIRONMENT_MACOS: >
