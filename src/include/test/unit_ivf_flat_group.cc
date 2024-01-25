@@ -40,12 +40,12 @@
 #include "array_defs.h"
 #include "index/ivf_flat_group.h"
 
-
 TEST_CASE("ivf_flat_group: test test", "[ivf_flat_group]") {
   REQUIRE(true);
 }
 
-// This test is for debugging and checks whether a particular group can be opened
+// This test is for debugging and checks whether a particular group can be
+// opened
 #if 0
 TEST_CASE("ivf_flat_group: read a tiledb::Group", "[ivf_flat_group]") {
   tiledb::Context ctx;
