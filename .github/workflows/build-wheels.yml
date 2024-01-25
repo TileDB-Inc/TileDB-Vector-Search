@@ -85,9 +85,13 @@ jobs:
         uses: pypa/cibuildwheel@v2.16.2
         env:
           CIBW_MANYLINUX_X86_64_IMAGE: "quay.io/pypa/manylinux_2_28_x86_64"
-          CIBW_SKIP: "*-win32 cp27-* cp35-* cp36-* cp37-* pp* *_i686 *musllinux*"
+          CIBW_MUSLLINUX_X86_64_IMAGE: "quay.io/pypa/musllinux_1_1_x86_64"
+          CIBW_SKIP: "*-win32 cp27-* cp35-* cp36-* cp37-* pp* *_i686"
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_BUILD_VERBOSITY: 3
+          CIBW_ENVIRONMENT_MACOS: >
+            CC=clang
+            CXX=clang++
           MACOSX_DEPLOYMENT_TARGET: "12.0"
         with:
           output-dir: wheelhouse
