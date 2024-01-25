@@ -40,20 +40,17 @@
 #include "array_defs.h"
 #include "index/ivf_flat_group.h"
 
-#include "utils/print_types.h"
 
 TEST_CASE("ivf_flat_group: test test", "[ivf_flat_group]") {
   REQUIRE(true);
 }
 
-// This test is a quickie to check whether a particular group can be opened,
-// as it fails in TileDB-Py
+// This test is for debugging and checks whether a particular group can be opened
 #if 0
 TEST_CASE("ivf_flat_group: read a tiledb::Group", "[ivf_flat_group]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
-  // std::string tmp_uri = "/tmp/ivf_flat_group_test_groups";
-  std::string tmp_uri="/Users/lums/TileDB/TileDB-Vector-Search/external/data/pytest/test_ivf_flat_ingestion_with_u0/array";
+  std::string tmp_uri = siftsmall_group_uri;
 
   auto read_group = tiledb::Group(ctx, tmp_uri, TILEDB_READ, cfg);
 

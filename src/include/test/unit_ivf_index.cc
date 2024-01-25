@@ -225,12 +225,9 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
 
 TEST_CASE("ivf_index: not a unit test per se", "[ivf_index]") {
   tiledb::Context ctx;
-  //  auto A = tdbColMajorMatrix<float>(ctx,
-  //  "s3://tiledb-andrew/sift/siftsmall_base");
   auto A = tdbColMajorMatrix<float>(
       ctx,
-      "/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/sift/"
-      "sift_base");
+      sift_inputs_uri);
 
   CHECK(A.num_rows() == 128);
   CHECK(A.num_cols() == 10'000);
@@ -249,8 +246,8 @@ TEST_CASE("ivf_index: not a unit test per se", "[ivf_index]") {
 
 TEST_CASE("ivf_index: also not a unit test per se", "[ivf_index]") {
   tiledb::Context ctx;
-  //  auto A = tdbColMajorMatrix<float>(ctx, "s3://tiledb-andrew/sift/siftsmall_base");
-  auto A = tdbColMajorMatrix<float>(ctx, "/Users/lums/TileDB/feature-vector-prototype/external/data/arrays/sift/sift_base");
+
+  auto A = tdbColMajorMatrix<float>(ctx, sift_inputs_uri);
 
   CHECK(A.num_rows() == 128);
   CHECK(A.num_cols() == 10'000);
