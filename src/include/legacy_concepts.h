@@ -1,7 +1,7 @@
 
 // Purely temporary file
 
-#warning Deprecated legacy concepts
+#pragma message ( "Deprecated legacy concepts" )
 
 template <typename T>
 concept has_load_member = requires(T&& t) { t.load(); };
