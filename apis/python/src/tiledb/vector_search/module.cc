@@ -17,9 +17,6 @@
 #include "detail/linalg/partitioned_matrix.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
-// #include "detail/ivf/vq.h"
-
-#include "utils/print_types.h"
 
 namespace py = pybind11;
 using Ctx = tiledb::Context;
@@ -299,7 +296,7 @@ static void declare_nuv_query_heap_finite_ram(
       py::keep_alive<1, 2>());
 }
 
-/** Calls the principal ivf_index in index.h */
+/** Calls the principal ivf_index in index.h -- does not create a C++ `ivf_index` object */
 template <class T>
 static void declare_ivf_index(py::module& m, const std::string& suffix) {
   m.def(
@@ -333,7 +330,7 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
       py::keep_alive<1, 2>());
 }
 
-/** Calls the second ivf_index function in index.h */
+/** Calls the second ivf_index function in index.h -- does not create a C++ `ivf_index` object */
 template <class T>
 static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
   m.def(
@@ -373,8 +370,7 @@ static void declareFixedMinPairHeap(py::module& mod) {
   PyFixedMinPairHeap cls(mod, "FixedMinPairHeap", py::buffer_protocol());
 
   cls.def(py::init<unsigned>());
-  // cls.def("insert", &fixed_min_pair_heap<T, U>::insert);
-  cls.def(
+    cls.def(
       "insert",
       [](fixed_min_pair_heap<T, U>& heap, const T& x, const U& y) {
         return heap.insert(x, y);
@@ -426,8 +422,7 @@ static void declarePartitionedMatrix(
   cls.def(
       py::init<
           const tiledb::Context&,
-          const std::string&,  // sift_inputs_uri
-          // std::vector<Indices_Type>&&,      // partition array indices
+          const std::string&,                 // sift_inputs_uri
           const std::string&,
           const std::string&,                // id_uri
           const std::vector<Indices_Type>&,  // partition list to load
@@ -485,19 +480,45 @@ template <
     class shuffled_ids_type = uint64_t,
     class indices_type = uint64_t>
 static void declare_dist_qv(py::module& m, const std::string& suffix) {
+  m.def(
+      ("dist_qv_" + suffix).c_str(),
+      [](tiledb::Context& ctx,                                    // 0
+         const std::string& part_uri,                             // 1
+         std::vector<indices_type>& active_partitions,            // 2
+         ColMajorMatrix<float>& query,                            // 3
+         std::vector<std::vector<int>>& active_queries,           // 4
+         std::vector<indices_type>& indices,                      // 5
+         const std::string& id_uri,
+         size_t k_nn,
+         uint64_t timestamp
+         /* size_t nthreads TODO: optional arg w/ fallback to C++ default arg */
+      ) { /* TODO return type */
+          size_t upper_bound{0};
+          auto nthreads = std::thread::hardware_concurrency();
+
+          return detail::ivf::dist_qv_finite_ram_part<T, shuffled_ids_type>(
+              ctx,
+              part_uri,
+              active_partitions,
+              query,
+              active_queries,
+              indices,
+              id_uri,
+              k_nn,
+              timestamp);
+      }, py::keep_alive<1,2>());
   m.def(("dist_qv_" + suffix).c_str(),
         [](tiledb::Context& ctx,
            const std::string& part_uri,
            std::vector<indices_type>& active_partitions,
            ColMajorMatrix<T>& query,
-           // std::vector<std::vector<shuffled_ids_type>>& active_queries,
-           py::array& active_queries_arr,
+           py::array& active_queries_arr,  // Alternative to std::vector argument in above API
            std::vector<shuffled_ids_type>& indices,
            const std::string& id_uri,
            size_t k_nn,
            uint64_t timestamp
-           /* size_t nthreads TODO: optional arg w/ fallback to C++ default arg */
-        ) { /* TODO return type */
+           /* size_t nthreads @todo: optional arg w/ fallback to C++ default arg */
+        ) { /* @todo: return type */
 
             size_t upper_bound{0};
             auto nthreads = std::thread::hardware_concurrency();
@@ -536,98 +557,6 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
       k_nn,
       timestamp);
 }, py::keep_alive<1,2>());
-#if 0
-m.def(
-    ("dist_qv_" + suffix).c_str(),
-    [](tiledb::Context& ctx,                          // 0
-       const std::string& part_uri,                   // 1
-       std::vector<indices_type>& active_partitions,  // 2
-       ColMajorMatrix<float>& query,                  // 3
-       py::array& active_queries_arr,  // 4
-       std::vector<indices_type>& indices,            // 5
-       const std::string& id_uri,
-       size_t k_nn,
-       uint64_t timestamp)
-    /* size_t nthreads TODO: optional arg w/ fallback to C++ default arg */
-      { /* TODO return type */
-  //        assert(size(indices) > 0);
-
-        static size_t counter = 0;
-        {
-          std::string filename = "/tmp/" + std::to_string(counter) + ".txt";
-          std::remove(filename.c_str());
-          std::ofstream outfile(filename);
-          ++counter;
-        }
-
-        size_t upper_bound{0};
-        auto nthreads = std::thread::hardware_concurrency();
-        auto temporal_policy{
-            (timestamp == 0) ?
-                tiledb::TemporalPolicy() :
-                tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)};
-
-        py::buffer_info buf_info = active_queries_arr.request();
-        auto shape = active_queries_arr.shape();
-        auto num_rows = shape[0];
-
-        auto active_queries = std::vector<std::vector<indices_type>>();
-        active_queries.reserve(num_rows);
-
-        auto ptr = static_cast<py::object*>(buf_info.ptr);
-
-        for (size_t i = 0; i < num_rows; ++i) {
-          py::list sublist = py::cast<py::list>(ptr[i]);
-          size_t sublist_length = py::len(sublist);
-          active_queries.emplace_back();
-          active_queries.back().reserve(sublist_length);
-          for (size_t j = 0; j < sublist_length; ++j) {
-            active_queries.back().emplace_back(py::cast<indices_type>(sublist[j]));
-          }
-        }
-        auto mat = tdbColMajorPartitionedMatrix<
-            T,
-            shuffled_ids_type,
-            shuffled_ids_type>(
-            ctx,
-            part_uri,
-            indices,
-            id_uri,
-            active_partitions,
-            upper_bound,
-            temporal_policy);
-        return detail::ivf::query_finite_ram_part(
-            mat, query, active_queries, k_nn, upper_bound, nthreads);
-      },
-      py::keep_alive<1, 2>());
-#endif
-  m.def(
-      ("dist_qv_" + suffix).c_str(),
-      [](tiledb::Context& ctx,                                    // 0
-         const std::string& part_uri,                             // 1
-         std::vector<indices_type>& active_partitions,            // 2
-         ColMajorMatrix<float>& query,                            // 3
-         std::vector<std::vector<int>>& active_queries,  // 4
-         std::vector<indices_type>& indices,                      // 5
-         const std::string& id_uri,
-         size_t k_nn,
-         uint64_t timestamp
-         /* size_t nthreads TODO: optional arg w/ fallback to C++ default arg */
-      ) { /* TODO return type */
-          size_t upper_bound{0};
-          auto nthreads = std::thread::hardware_concurrency();
-
-          return detail::ivf::dist_qv_finite_ram_part<T, shuffled_ids_type>(
-              ctx,
-              part_uri,
-              active_partitions,
-              query,
-              active_queries,
-              indices,
-              id_uri,
-              k_nn,
-              timestamp);
-      }, py::keep_alive<1,2>());
 
 }
 
@@ -668,6 +597,13 @@ static void declare_vq_query_heap_pyarray(
 
 void init_kmeans(py::module&);
 void init_type_erased_module(py::module&);
+
+
+  /**************************************************************************
+   *
+   * Template instantiations to create typed interface functions
+   *
+   **************************************************************************/
 
 PYBIND11_MODULE(_tiledbvspy, m) {
   py::class_<tiledb::Context>(m, "Ctx", py::module_local())
@@ -715,9 +651,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
         auto r = read_vector<uint64_t>(ctx, uri, start_pos, end_pos, timestamp);
         return r;
       });
-  //  m.def("read_vector_u32", &read_vector<uint32_t>, "Read a vector from
-  //  TileDB"); m.def("read_vector_u64", &read_vector<uint64_t>, "Read a vector
-  //  from TileDB");
 
   m.def("_create_vector_u64", []() {
     auto v = std::vector<uint64_t>(10);
@@ -728,7 +661,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   /* === Matrix === */
 
-  // template specializations
   declareColMajorMatrix<uint8_t>(m, "_u8");
   declareColMajorMatrix<float>(m, "_f32");
   declareColMajorMatrix<double>(m, "_f64");
@@ -758,7 +690,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declare_pyarray_to_matrix<float>(m, "_f32");
   declare_pyarray_to_matrix<double>(m, "_f64");
 
-  /* Query API */
+  /* === Queries === */
 
   m.def(
       "query_vq_f32",
@@ -788,30 +720,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
          const ColMajorMatrix<int32_t>& ground_truth) -> bool {
         return validate_top_k(top_k, ground_truth);
       });
-
-  m.def("stats_enable", []() {
-    enable_stats = true;
-    tiledb::Stats::enable();
-  });
-
-  m.def("stats_disable", []() {
-    enable_stats = false;
-    tiledb::Stats::disable();
-  });
-
-  m.def("stats_reset", []() { core_stats.clear(); });
-
-  m.def("stats_dump", []() { return json{core_stats}.dump(); });
-
-#if 0
-  m.def("set_debug", [](bool debug) {
-    global_debug = debug;
-  });
-#endif
-
-  declare_debug_slice<uint8_t>(m, "_u8");
-  declare_debug_slice<float>(m, "_f32");
-  declare_debug_slice<uint64_t>(m, "_u64");
 
   declare_vq_query_heap<uint8_t>(m, "u8");
   declare_vq_query_heap<float>(m, "f32");
@@ -843,6 +751,27 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declare_dist_qv<uint8_t>(m, "u8");
   declare_dist_qv<float>(m, "f32");
   declareFixedMinPairHeap(m);
+
+  /* === Stats and Debugging === */
+
+  m.def("stats_enable", []() {
+    enable_stats = true;
+    tiledb::Stats::enable();
+  });
+
+  m.def("stats_disable", []() {
+    enable_stats = false;
+    tiledb::Stats::disable();
+  });
+
+  m.def("stats_reset", []() { core_stats.clear(); });
+  m.def("stats_dump", []() { return json{core_stats}.dump(); });
+
+  declare_debug_slice<uint8_t>(m, "_u8");
+  declare_debug_slice<float>(m, "_f32");
+  declare_debug_slice<uint64_t>(m, "_u64");
+
+  /* === Module inits === */
 
   init_kmeans(m);
   init_type_erased_module(m);
