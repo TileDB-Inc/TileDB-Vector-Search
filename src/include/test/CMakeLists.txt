@@ -139,19 +139,3 @@ if (TILEDB_VS_ENABLE_BLAS)
   kmeans_add_test(unit_gemm)
   target_link_libraries(unit_gemm PRIVATE flat_blas)
 endif()
-
-# )
-
-# add_dependencies(target1 extract_myfile)
-# add_dependencies(target2 extract_myfile)
-
-
-# set (SIFT_DIR ${CMAKE_SOURCE_DIR}/external/data/siftsmall)
-
-# add_custom_command(
-#     TARGET unit_sift_db POST_BUILD
-#     COMMAND ${CMAKE_COMMAND} -E copy_directory
-#         ${SIFT_DIR}
-#         "$<TARGET_PROPERTY:unit_sift_db,BINARY_DIR>/siftsmall"
-#     )
-# add_custom_target(copy_data_files DEPENDS ${EXECUTABLE})
