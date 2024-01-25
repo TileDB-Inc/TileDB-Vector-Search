@@ -36,6 +36,7 @@
 #include <vector>
 
 #include "../linalg.h"
+#include "array_defs.h"
 #include "gen_graphs.h"
 #include "index/ivf_flat_index.h"
 #include "query_common.h"

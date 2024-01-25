@@ -37,8 +37,8 @@
 #include <filesystem>
 #include <string>
 
+#include "array_defs.h"
 #include "index/ivf_flat_group.h"
-#include "query_common.h"
 
 #include "utils/print_types.h"
 
