@@ -436,7 +436,7 @@ class Index:
                 group = tiledb.Group(uri, "m")
             except tiledb.TileDBError as err:
                 message = str(err)
-                if "group does not exist" in message:
+                if "does not exist" in message:
                     return
                 else:
                     raise err
