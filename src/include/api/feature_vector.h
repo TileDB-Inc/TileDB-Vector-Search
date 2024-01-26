@@ -89,9 +89,8 @@ class FeatureVector {
   FeatureVector(const tiledb::Context& ctx, const std::string& uri) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
 
-    // @note In future PR, array will become unique_ptr
-    feature_type_ = get_array_datatype(array);
-    array.close();  // @todo create Matrix constructor that takes opened array
+    feature_type_ = get_array_datatype(*array);
+    array->close();
 
     tdb_vector_from_datatype(ctx, uri);
   }

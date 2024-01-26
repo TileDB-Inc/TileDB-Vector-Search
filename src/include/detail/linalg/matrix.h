@@ -173,7 +173,6 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       , storage_{new T[num_rows_ * num_cols_]}
 #endif
   {
-    // std::cout << "Empty constructor\n";
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
   }
 
@@ -185,7 +184,6 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       : num_rows_(nrows)
       , num_cols_(ncols)
       , storage_{std::move(storage)} {
-    // std::cout << "Constructor from storage\n";
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
   }
 
