@@ -38,6 +38,8 @@
 std::string global_region = "us-east-1";
 
 TEST_CASE("slice", "[linalg][ci-skip]") {
+  const bool debug = false;
+
   tiledb::Context ctx_;
 
   std::vector<int> data_(288);
@@ -63,8 +65,10 @@ TEST_CASE("slice", "[linalg][ci-skip]") {
 
   tiledb_helpers::submit_query(tdb_func__, sift_inputs_uri, query);
 
-  for (int i = 0; i < 135; i++) {
-    std::cout << data_[i] << ", " << data2_[i] << ": " << value_[i]
-              << std::endl;
+  if (debug) {
+    for (int i = 0; i < 135; i++) {
+      std::cout << data_[i] << ", " << data2_[i] << ": " << value_[i]
+		<< std::endl;
+    }
   }
 }
