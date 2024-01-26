@@ -31,8 +31,8 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include "array_defs.h"
 #include "index/flat_l2_index.h"
+#include "query_common.h"
 
 TEST_CASE("index: test test", "[index]") {
   REQUIRE(true);

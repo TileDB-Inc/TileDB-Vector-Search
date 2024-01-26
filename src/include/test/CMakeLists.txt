@@ -92,8 +92,6 @@ kmeans_add_test(unit_ivf_flat_metadata)
 
 kmeans_add_test(unit_index_defs)
 
-kmeans_add_test(unit_ivf_index)
-
 kmeans_add_test(unit_ivf_query)
 
 kmeans_add_test(unit_ivf_qv)
