@@ -90,7 +90,7 @@ auto dist_qv_finite_ram_part(
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
-  size_t num_queries = size(query);
+  size_t num_queries = num_vectors(query);
 
   auto shuffled_db = tdbColMajorPartitionedMatrix<
       feature_type,
@@ -266,7 +266,7 @@ auto dist_qv_finite_ram(
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   /*
    * Select the relevant partitions from the array, along with the queries
