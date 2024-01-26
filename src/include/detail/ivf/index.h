@@ -153,7 +153,6 @@ int ivf_index(
     // debug_matrix(shuffled_db, "shuffled_db");
     // debug_matrix(shuffled_ids, "shuffled_ids");
 
-
     // @todo parallelize
     // Unfortunately this variant of the algorithm is not parallelizable.
     // The other approach involves doing parallel sort on the indices,
