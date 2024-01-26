@@ -68,7 +68,7 @@ TEST_CASE("slice", "[linalg][ci-skip]") {
   if (debug) {
     for (int i = 0; i < 135; i++) {
       std::cout << data_[i] << ", " << data2_[i] << ": " << value_[i]
-		<< std::endl;
+                << std::endl;
     }
   }
 }
