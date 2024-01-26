@@ -66,8 +66,6 @@
 namespace {
 class with_ids {};
 class without_ids {};
-template <class... T>
-constexpr bool always_false = false;
 }  // namespace
 
 // ----------------------------------------------------------------------------
@@ -169,6 +167,22 @@ inline auto dot(U const& a, V const& b) {
   }
   return sum;
 }
+
+// ----------------------------------------------------------------------------
+// Function objects for computing distances
+// ----------------------------------------------------------------------------
+
+struct sum_of_squares_distance {
+  template <class V, class U>
+  constexpr auto operator()(const V& a, const U& b) const {
+    return sum_of_squares(a, b);
+  }
+
+  template <class V>
+  constexpr auto operator()(const V& a) const {
+    return sum_of_squares(a);
+  }
+};
 
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn

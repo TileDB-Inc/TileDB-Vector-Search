@@ -23,6 +23,8 @@ PYBIND11_MAKE_OPAQUE(std::vector<double>);
   PYBIND11_MAKE_OPAQUE(std::vector<size_t>);
 #endif
 
+void init_type_erased_module(py::module&);
+
 namespace {
 
 
@@ -293,7 +295,11 @@ static void declareFixedMinPairHeap(py::module& mod) {
   PyFixedMinPairHeap cls(mod, "FixedMinPairHeap", py::buffer_protocol());
 
   cls.def(py::init<unsigned>());
-  cls.def("insert", &fixed_min_pair_heap<T, U>::insert);
+  cls.def(
+	  "insert",
+      [](fixed_min_pair_heap<T, U>& heap, const T& x, const U& y) {
+        return heap.insert(x, y);
+      });
   cls.def("__len__", [](const fixed_min_pair_heap<T, U> &v) { return v.size(); });
   cls.def("__getitem__", [](fixed_min_pair_heap<T, U>& v, size_t i) { return v[i]; });
 }
@@ -432,6 +438,7 @@ static void declare_vq_query_heap_pyarray(py::module& m, const std::string& suff
 } // anonymous namespace
 
 void init_kmeans(py::module&);
+void init_type_erased_module(py::module&);
 
 PYBIND11_MODULE(_tiledbvspy, m) {
 
@@ -599,4 +606,5 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declareFixedMinPairHeap(m);
 
   init_kmeans(m);
+  init_type_erased_module(m);
 }

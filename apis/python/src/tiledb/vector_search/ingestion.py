@@ -1145,12 +1145,17 @@ def ingest(
                 new_centroid_thread_sums.append(new_centroid_sums_queue)
                 new_centroid_counts_queue = mp.Queue()
                 new_centroid_thread_counts.append(new_centroid_counts_queue)
+
+                start = i
+                end = i + batch_size
+                if end > len(vectors):
+                    end = len(vectors)
                 worker = mp.Process(
                     target=generate_new_centroid_per_thread,
                     args=(
                         thread_id,
-                        i,
-                        i + batch_size,
+                        start,
+                        end,
                         new_centroid_sums_queue,
                         new_centroid_counts_queue,
                     ),
@@ -1900,10 +1905,12 @@ def ingest(
                     for random_sample_node in random_sample_nodes:
                         centroids_node.depends_on(random_sample_node)
                 else:
+                    uri = training_source_uri if training_source_uri is not None else source_uri
+                    uri_type = training_source_type if training_source_uri is not None else source_type
                     internal_centroids_node = submit(
                         init_centroids,
-                        source_uri=source_uri,
-                        source_type=source_type,
+                        source_uri=uri,
+                        source_type=uri_type,
                         vector_type=vector_type,
                         partitions=partitions,
                         dimensions=dimensions,
@@ -1914,6 +1921,9 @@ def ingest(
                         resources={"cpu": "1", "memory": "1Gi"},
                         image_name=DEFAULT_IMG_NAME,
                     )
+
+                    for random_sample_node in random_sample_nodes:
+                        internal_centroids_node.depends_on(random_sample_node)
 
                     for it in range(5):
                         kmeans_workers = []
@@ -1929,8 +1939,8 @@ def ingest(
                                 submit(
                                     assign_points_and_partial_new_centroids,
                                     centroids=internal_centroids_node,
-                                    source_uri=source_uri,
-                                    source_type=source_type,
+                                    source_uri=uri,
+                                    source_type=uri_type,
                                     vector_type=vector_type,
                                     partitions=partitions,
                                     dimensions=dimensions,
