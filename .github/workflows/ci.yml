@@ -10,10 +10,11 @@ jobs:
   run-tests:
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-2022]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install OpenBLAS
+        if: ${{ matrix.os == "ubuntu-latest" }}
         run: sudo apt install libopenblas-dev
       - uses: actions/checkout@v3
       - name: Configure CMake
