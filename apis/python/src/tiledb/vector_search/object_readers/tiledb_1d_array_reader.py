@@ -1,9 +1,11 @@
-from typing import Any, Mapping, Optional, List, Dict, OrderedDict, Tuple
+from typing import Any, Dict, List, Mapping, Optional, OrderedDict, Tuple
+
 # from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
 import tiledb
 
+
 # class TileDB1DArrayPartition(ObjectPartition):
-class TileDB1DArrayPartition():
+class TileDB1DArrayPartition:
     def __init__(
         self,
         partition_id: int,
@@ -27,7 +29,7 @@ class TileDB1DArrayPartition():
 
 
 # class TileDB1DArrayReader(ObjectReader):
-class TileDB1DArrayReader():
+class TileDB1DArrayReader:
     """
     Reader that reads objects and their metadata stored in TileDB arrays.
 
@@ -48,10 +50,14 @@ class TileDB1DArrayReader():
         self.partition_tile_size = partition_tile_size
         self.config = config
         self.timestamp = timestamp
-        with tiledb.open(uri, mode='r', timestamp=timestamp, config=config) as object_array:
+        with tiledb.open(
+            uri, mode="r", timestamp=timestamp, config=config
+        ) as object_array:
             self.external_id_dimension_name = object_array.schema.domain.dim(0).name
             nonempty_object_array_domain = object_array.nonempty_domain()[0]
-            self.domain_length = nonempty_object_array_domain[1] + 1 - nonempty_object_array_domain[0]
+            self.domain_length = (
+                nonempty_object_array_domain[1] + 1 - nonempty_object_array_domain[0]
+            )
             if self.partition_tile_size == -1:
                 self.partition_tile_size = object_array.schema.domain.dim(0).tile
         self.metadata_uri = metadata_uri
@@ -73,6 +79,7 @@ class TileDB1DArrayReader():
 
     def metadata_attributes(self) -> List[tiledb.Attr]:
         import tiledb
+
         if self.metadata_uri is None:
             return None
         with tiledb.open(self.metadata_uri, "r", config=self.config) as metadata_array:
@@ -81,7 +88,9 @@ class TileDB1DArrayReader():
                 attributes.append(metadata_array.schema.attr(i))
             return attributes
 
-    def get_partitions(self, partition_tile_size: int = -1) -> List[TileDB1DArrayPartition]:
+    def get_partitions(
+        self, partition_tile_size: int = -1
+    ) -> List[TileDB1DArrayPartition]:
         if partition_tile_size == -1:
             partition_tile_size = self.partition_tile_size
 
@@ -96,22 +105,30 @@ class TileDB1DArrayReader():
 
         return partitions
 
-    def read_objects(self, partition: TileDB1DArrayPartition) -> Tuple[OrderedDict, OrderedDict]:
+    def read_objects(
+        self, partition: TileDB1DArrayPartition
+    ) -> Tuple[OrderedDict, OrderedDict]:
         import tiledb
 
-        with tiledb.open(self.uri, "r", timestamp=self.timestamp, config=self.config) as object_array:
-            data = object_array[partition.start:partition.end]
+        with tiledb.open(
+            self.uri, "r", timestamp=self.timestamp, config=self.config
+        ) as object_array:
+            data = object_array[partition.start : partition.end]
             if self.external_id_dimension_name != "external_id":
                 external_ids = data.pop(self.external_id_dimension_name, None)
                 data["external_id"] = external_ids
         metadata = None
         if self.metadata_uri is not None:
-            with tiledb.open(self.metadata_uri, "r", timestamp=self.timestamp, config=self.config) as metadata_array:
-                metadata = metadata_array[partition.start:partition.end]
+            with tiledb.open(
+                self.metadata_uri, "r", timestamp=self.timestamp, config=self.config
+            ) as metadata_array:
+                metadata = metadata_array[partition.start : partition.end]
         return (data, metadata)
 
     def read_objects_by_external_ids(self, ids: List[int]) -> OrderedDict:
         import tiledb
 
-        with tiledb.open(self.uri, "r", timestamp=self.timestamp, config=self.config) as object_array:
+        with tiledb.open(
+            self.uri, "r", timestamp=self.timestamp, config=self.config
+        ) as object_array:
             return object_array.multi_index[ids]

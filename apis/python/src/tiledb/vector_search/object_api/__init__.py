@@ -1,5 +1,5 @@
-from .object_index import ObjectIndex
 from .embeddings_ingestion import ingest_embeddings
+from .object_index import ObjectIndex
 
 __all__ = [
     "ObjectIndex",

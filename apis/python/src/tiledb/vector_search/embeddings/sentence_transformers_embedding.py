@@ -1,11 +1,12 @@
-from typing import Any, Mapping, Optional, Dict, OrderedDict, Iterable, Union
+from typing import Dict, Optional, OrderedDict
 
 import numpy as np
+
 # from tiledb.vector_search.embeddings import ObjectEmbedding
 
 
 # class SentenceTransformersEmbedding(ObjectEmbedding):
-class SentenceTransformersEmbedding():
+class SentenceTransformersEmbedding:
     """
     Hugging SentenceTransformer model that can be used to map sentences / text to embeddings.
 
@@ -24,7 +25,7 @@ class SentenceTransformersEmbedding():
         model_name_or_path: Optional[str] = None,
         device: Optional[str] = None,
         cache_folder: Optional[str] = None,
-        dimensions: Optional[int] = -1
+        dimensions: Optional[int] = -1,
     ):
         self.model_name_or_path = model_name_or_path
         self.device = device
@@ -60,4 +61,3 @@ class SentenceTransformersEmbedding():
 
     def embed(self, objects: OrderedDict, metadata: OrderedDict) -> np.ndarray:
         return self.model.encode(objects["text"], normalize_embeddings=True)
-

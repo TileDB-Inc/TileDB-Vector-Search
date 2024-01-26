@@ -1,7 +1,11 @@
-from .object_reader import ObjectPartition, ObjectReader
-from .soma_reader import SomaRNAXRowReader, SomaRNAXRowPartition
-from .tiledb_1d_array_reader import TileDB1DArrayReader, TileDB1DArrayPartition
-from .bioimage_reader import BioImageReader, BioImagePartition
+from .bioimage_reader import BioImagePartition
+from .bioimage_reader import BioImageReader
+from .object_reader import ObjectPartition
+from .object_reader import ObjectReader
+from .soma_reader import SomaRNAXRowPartition
+from .soma_reader import SomaRNAXRowReader
+from .tiledb_1d_array_reader import TileDB1DArrayPartition
+from .tiledb_1d_array_reader import TileDB1DArrayReader
 
 __all__ = [
     "ObjectPartition",

@@ -1,11 +1,9 @@
-from typing import Any, Mapping, Optional, List, Dict
 from functools import partial
+from typing import Any, Dict, List, Mapping, Optional
 
-import numpy as np
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search.object_api import ObjectIndex
-from tiledb.vector_search.object_readers import ObjectReader, ObjectPartition
-from tiledb.vector_search.embeddings import ObjectEmbedding
+from tiledb.vector_search.object_readers import ObjectPartition
 
 
 def ingest_embeddings(
@@ -25,18 +23,18 @@ def ingest_embeddings(
     **kwargs,
 ):
     import logging
-    import time
-    import multiprocessing
     import math
-    import numpy as np
+    import time
+
     import tiledb
     from tiledb.cloud import dag
     from tiledb.cloud.rest_api import models
-    from tiledb.cloud.utilities import get_logger, set_aws_context
+    from tiledb.cloud.utilities import get_logger
+    from tiledb.cloud.utilities import set_aws_context
 
     MAX_TASKS_PER_STAGE = 100
     DEFAULT_IMG_NAME = "3.9-vectorsearch"
-    DEFAULT_WORKER_RESOURCES = { "cpu": "1", "memory": "4Gi"}
+    DEFAULT_WORKER_RESOURCES = {"cpu": "1", "memory": "4Gi"}
 
     def setup(
         config: Optional[Mapping[str, Any]] = None,
@@ -70,6 +68,7 @@ def ingest_embeddings(
         )
 
         return logger
+
     # --------------------------------------------------------------------
     # UDFs
     # --------------------------------------------------------------------
@@ -89,16 +88,19 @@ def ingest_embeddings(
         config: Optional[Mapping[str, Any]] = None,
     ):
         import numpy as np
+
         import tiledb
 
         def instantiate_object(code, class_name, **kwargs):
+            import importlib.util
+            import os
             import random
             import string
-            import os
             import sys
-            import importlib.util
 
-            temp_file_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
+            temp_file_name = "".join(
+                random.choices(string.ascii_uppercase + string.digits, k=16)
+            )
             abs_path = os.path.abspath(f"{temp_file_name}.py")
             f = open(abs_path, "w")
             f.write(code)
@@ -115,29 +117,33 @@ def ingest_embeddings(
         object_reader = instantiate_object(
             code=object_reader_source_code,
             class_name=object_reader_class_name,
-            **object_reader_kwargs
+            **object_reader_kwargs,
         )
         object_embedding = instantiate_object(
             code=object_embedding_source_code,
             class_name=object_embedding_class_name,
-            **object_embedding_kwargs
+            **object_embedding_kwargs,
         )
         with tiledb.scope_ctx(ctx_or_config=config):
             logger.debug("Loading model...")
             object_embedding.load()
             logger.debug("Model loaded")
-            dimensions = object_embedding.dimensions()
+            object_embedding.dimensions()
             vector_type = object_embedding.vector_type()
 
             logger.debug("embeddings_uri %s", embeddings_uri)
-            embeddings_array = tiledb.open(embeddings_uri, "w", timestamp=index_timestamp)
+            embeddings_array = tiledb.open(
+                embeddings_uri, "w", timestamp=index_timestamp
+            )
             if metadata_array_uri is not None:
-                metadata_array = tiledb.open(metadata_array_uri, "w", timestamp=index_timestamp)
+                metadata_array = tiledb.open(
+                    metadata_array_uri, "w", timestamp=index_timestamp
+                )
             for partition_dict in partition_dicts:
                 partition = instantiate_object(
                     code=object_reader_source_code,
                     class_name=object_reader.partition_class_name(),
-                    **partition_dict
+                    **partition_dict,
                 )
                 partition_id = partition.id()
                 logger.debug(f"Computing partition: {partition_id}")
@@ -146,7 +152,7 @@ def ingest_embeddings(
 
                 logger.debug("Embedding objects...")
                 embeddings = object_embedding.embed(objects, metadata)
-                
+
                 logger.debug("Write embeddings partition_id: %d", partition_id)
                 embeddings_flattened = np.empty(1, dtype="O")
                 embeddings_flattened[0] = embeddings.astype(vector_type).flatten()
@@ -276,12 +282,12 @@ def ingest_embeddings(
             if workers == -1:
                 workers = 10
             if worker_resources is None:
-                worker_resources=DEFAULT_WORKER_RESOURCES
+                worker_resources = DEFAULT_WORKER_RESOURCES
         else:
             if workers == -1:
                 workers = 1
         if worker_image is None:
-            worker_image=DEFAULT_IMG_NAME
+            worker_image = DEFAULT_IMG_NAME
 
         logger.debug("Creating ingestion graph")
         d = create_dag(

@@ -1,5 +1,7 @@
-from abc import ABC, abstractmethod 
-from typing import Any, Mapping, Optional, List, Dict, Tuple, OrderedDict
+from abc import ABC
+from abc import abstractmethod
+from typing import Dict, List, OrderedDict, Tuple
+
 from tiledb import Attr
 
 
@@ -13,16 +15,16 @@ class ObjectPartition(ABC):
         """
         Returns a dictionary containing kwargs that can be used to re-initialize the ObjectPartition.
 
-        This is used to serialize the ObjectPartition and pass it as argument to UDF tasks. 
+        This is used to serialize the ObjectPartition and pass it as argument to UDF tasks.
         """
         raise NotImplementedError
-    
+
     @abstractmethod
     def id(self) -> int:
         """
         Returns the id of the ObjectPartition.
         """
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class ObjectReader(ABC):
@@ -35,7 +37,7 @@ class ObjectReader(ABC):
         """
         Returns a dictionary containing kwargs that can be used to re-initialize the ObjectReader.
 
-        This is used to serialize the ObjectReader and pass it as argument to UDF tasks. 
+        This is used to serialize the ObjectReader and pass it as argument to UDF tasks.
         """
         raise NotImplementedError
 
@@ -76,7 +78,9 @@ class ObjectReader(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def read_objects(self, partition: ObjectPartition) -> Tuple[OrderedDict, OrderedDict]:
+    def read_objects(
+        self, partition: ObjectPartition
+    ) -> Tuple[OrderedDict, OrderedDict]:
         """
         Reads the objects corresponding to an ObjectPartition.
 

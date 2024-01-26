@@ -1,16 +1,22 @@
 import base64
+from collections import OrderedDict
+from typing import Any, Dict, Mapping, Optional
+
 import cloudpickle
 import numpy as np
-import tiledb
 
-from collections import OrderedDict
-from typing import Any, Mapping, Optional, Dict
-from tiledb.vector_search import flat_index, ivf_flat_index, Index, IVFFlatIndex, FlatIndex, ingest
-from tiledb.vector_search.storage_formats import STORAGE_VERSION, storage_formats
-from tiledb.cloud.dag import Mode
-from tiledb.vector_search.object_readers import ObjectReader
-from tiledb.vector_search.embeddings import ObjectEmbedding
+import tiledb
 import tiledb.vector_search.object_api as object_api
+from tiledb.cloud.dag import Mode
+from tiledb.vector_search import FlatIndex
+from tiledb.vector_search import IVFFlatIndex
+from tiledb.vector_search import flat_index
+from tiledb.vector_search import ingest
+from tiledb.vector_search import ivf_flat_index
+from tiledb.vector_search.embeddings import ObjectEmbedding
+from tiledb.vector_search.object_readers import ObjectReader
+from tiledb.vector_search.storage_formats import STORAGE_VERSION
+from tiledb.vector_search.storage_formats import storage_formats
 
 TILEDB_CLOUD_PROTOCOL = 4
 
@@ -22,7 +28,7 @@ class ObjectIndex:
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
         load_embedding: bool = True,
-        **kwargs
+        **kwargs,
     ):
         with tiledb.scope_ctx(ctx_or_config=config):
             self.uri = uri
@@ -32,35 +38,53 @@ class ObjectIndex:
             self.index_type = group.meta["index_type"]
             group.close()
             if self.index_type == "FLAT":
-                self.index = FlatIndex(uri=uri, config=config, timestamp=timestamp, **kwargs)
+                self.index = FlatIndex(
+                    uri=uri, config=config, timestamp=timestamp, **kwargs
+                )
             elif self.index_type == "IVF_FLAT":
-                self.index = IVFFlatIndex(uri=uri, config=config, timestamp=timestamp, **kwargs)
+                self.index = IVFFlatIndex(
+                    uri=uri, config=config, timestamp=timestamp, **kwargs
+                )
 
-            self.object_reader_source_code = self.index.group.meta["object_reader_source_code"]
-            self.object_reader_class_name = self.index.group.meta["object_reader_class_name"]
-            self.object_reader_kwargs = cloudpickle.loads(base64.b64decode(self.index.group.meta["object_reader_kwargs"]))
+            self.object_reader_source_code = self.index.group.meta[
+                "object_reader_source_code"
+            ]
+            self.object_reader_class_name = self.index.group.meta[
+                "object_reader_class_name"
+            ]
+            self.object_reader_kwargs = cloudpickle.loads(
+                base64.b64decode(self.index.group.meta["object_reader_kwargs"])
+            )
             self.object_reader = instantiate_object(
-                code = self.object_reader_source_code,
-                class_name = self.object_reader_class_name,
-                **self.object_reader_kwargs
+                code=self.object_reader_source_code,
+                class_name=self.object_reader_class_name,
+                **self.object_reader_kwargs,
             )
             self.embedding_source_code = self.index.group.meta["embedding_source_code"]
             self.embedding_class_name = self.index.group.meta["embedding_class_name"]
-            self.embedding_kwargs = cloudpickle.loads(base64.b64decode(self.index.group.meta["embedding_kwargs"]))
+            self.embedding_kwargs = cloudpickle.loads(
+                base64.b64decode(self.index.group.meta["embedding_kwargs"])
+            )
             self.embedding = instantiate_object(
-                code = self.embedding_source_code,
-                class_name = self.embedding_class_name,
-                **self.embedding_kwargs
+                code=self.embedding_source_code,
+                class_name=self.embedding_class_name,
+                **self.embedding_kwargs,
             )
             self.embedding_loaded = False
             if load_embedding:
                 self.embedding.load()
                 self.embedding_loaded = True
 
-            self.materialize_object_metadata = self.index.group.meta["materialize_object_metadata"]
+            self.materialize_object_metadata = self.index.group.meta[
+                "materialize_object_metadata"
+            ]
             if "object_metadata_array_uri" in self.index.group.meta:
-                self.object_metadata_array_uri = self.index.group.meta["object_metadata_array_uri"]
-                self.object_metadata_external_id_dim = self.index.group.meta["object_metadata_external_id_dim"]
+                self.object_metadata_array_uri = self.index.group.meta[
+                    "object_metadata_array_uri"
+                ]
+                self.object_metadata_external_id_dim = self.index.group.meta[
+                    "object_metadata_external_id_dim"
+                ]
             else:
                 self.object_metadata_array_uri = None
                 self.object_metadata_external_id_dim = None
@@ -76,31 +100,52 @@ class ObjectIndex:
         **kwargs,
     ):
         if metadata_array_cond is not None and self.object_metadata_array_uri is None:
-            raise AttributeError("metadata_array_cond can't be applied when there is no metadata array") 
+            raise AttributeError(
+                "metadata_array_cond can't be applied when there is no metadata array"
+            )
         if not self.embedding_loaded:
             self.embedding.load()
             self.embedding_loaded = True
-        query_embeddings = self.embedding.embed(objects=query_objects, metadata=query_metadata)
+        query_embeddings = self.embedding.embed(
+            objects=query_objects, metadata=query_metadata
+        )
         fetch_k = k
         if metadata_array_cond is not None:
-            fetch_k = min(50*k, self.index.size) 
+            fetch_k = min(50 * k, self.index.size)
 
-        distances, object_ids = self.index.query(queries=query_embeddings, k=fetch_k, **kwargs)
+        distances, object_ids = self.index.query(
+            queries=query_embeddings, k=fetch_k, **kwargs
+        )
         unique_ids, idx = np.unique(object_ids, return_inverse=True)
         idx = np.reshape(idx, object_ids.shape)
 
         if metadata_array_cond is not None:
-            with tiledb.open(self.object_metadata_array_uri, mode='r', timestamp=self.timestamp, config=self.config) as metadata_array:
+            with tiledb.open(
+                self.object_metadata_array_uri,
+                mode="r",
+                timestamp=self.timestamp,
+                config=self.config,
+            ) as metadata_array:
                 q = metadata_array.query(cond=metadata_array_cond, coords=True)
-                filtered_unique_ids = q.multi_index[unique_ids][self.object_metadata_external_id_dim]
-                filtered_distances = np.zeros((query_embeddings.shape[0], k)).astype(object_ids.dtype)
-                filtered_object_ids = np.zeros((query_embeddings.shape[0], k)).astype(object_ids.dtype)
+                filtered_unique_ids = q.multi_index[unique_ids][
+                    self.object_metadata_external_id_dim
+                ]
+                filtered_distances = np.zeros((query_embeddings.shape[0], k)).astype(
+                    object_ids.dtype
+                )
+                filtered_object_ids = np.zeros((query_embeddings.shape[0], k)).astype(
+                    object_ids.dtype
+                )
                 for query_id in range(query_embeddings.shape[0]):
                     write_id = 0
                     for result_id in range(fetch_k):
                         if object_ids[query_id, result_id] in filtered_unique_ids:
-                            filtered_distances[query_id, write_id] = distances[query_id, result_id]
-                            filtered_object_ids[query_id, write_id] = object_ids[query_id, result_id]
+                            filtered_distances[query_id, write_id] = distances[
+                                query_id, result_id
+                            ]
+                            filtered_object_ids[query_id, write_id] = object_ids[
+                                query_id, result_id
+                            ]
                             write_id += 1
                             if write_id >= k:
                                 break
@@ -113,7 +158,12 @@ class ObjectIndex:
         object_metadata = None
         if return_metadata:
             if self.object_metadata_array_uri is not None:
-                with tiledb.open(self.object_metadata_array_uri, mode='r', timestamp=self.timestamp, config=self.config) as metadata_array:
+                with tiledb.open(
+                    self.object_metadata_array_uri,
+                    mode="r",
+                    timestamp=self.timestamp,
+                    config=self.config,
+                ) as metadata_array:
                     unique_metadata = metadata_array.multi_index[unique_ids]
                     object_metadata = {}
                     for attr in unique_metadata.keys():
@@ -140,7 +190,7 @@ class ObjectIndex:
         index_timestamp: int = None,
         workers: int = -1,
         worker_resources: Dict = None,
-        max_tasks_per_stage: int= -1,
+        max_tasks_per_stage: int = -1,
         verbose: bool = False,
         trace_id: Optional[str] = None,
         mode: Mode = Mode.LOCAL,
@@ -148,10 +198,11 @@ class ObjectIndex:
         namespace: Optional[str] = None,
         **kwargs,
     ):
-        embeddings_array_name = storage_formats[self.index.storage_version]["INPUT_VECTORS_ARRAY_NAME"]
+        embeddings_array_name = storage_formats[self.index.storage_version][
+            "INPUT_VECTORS_ARRAY_NAME"
+        ]
         embeddings_uri = f"{self.uri}/{embeddings_array_name}"
-        external_ids_array_name = storage_formats[self.index.storage_version]["EXTERNAL_IDS_ARRAY_NAME"]
-        external_ids_uri = f"{self.uri}/{external_ids_array_name}"
+        storage_formats[self.index.storage_version]["EXTERNAL_IDS_ARRAY_NAME"]
         metadata_array_uri = None
         if self.materialize_object_metadata:
             metadata_array_uri = self.object_metadata_array_uri
@@ -192,19 +243,24 @@ def encode_class(a):
     pickled_object = cloudpickle.dumps(a, protocol=TILEDB_CLOUD_PROTOCOL)
     return base64.b64encode(pickled_object).decode("ascii")
 
+
 def get_source_code(a):
     import inspect
+
     f = open(inspect.getsourcefile(a.__class__), "r")
     return f.read()
 
+
 def instantiate_object(code, class_name, **kwargs):
+    import importlib.util
+    import os
     import random
     import string
-    import os
     import sys
-    import importlib.util
 
-    temp_file_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
+    temp_file_name = "".join(
+        random.choices(string.ascii_uppercase + string.digits, k=16)
+    )
     abs_path = os.path.abspath(f"{temp_file_name}.py")
     f = open(abs_path, "w")
     f.write(code)
@@ -237,7 +293,7 @@ def create(
                 vector_type=vector_type,
                 group_exists=False,
                 config=config,
-                storage_version=storage_version
+                storage_version=storage_version,
             )
         elif index_type == "IVF_FLAT":
             index = ivf_flat_index.create(
@@ -246,7 +302,7 @@ def create(
                 vector_type=vector_type,
                 group_exists=False,
                 config=config,
-                storage_version=storage_version
+                storage_version=storage_version,
             )
 
         group = tiledb.Group(uri, "w")
@@ -257,14 +313,23 @@ def create(
         group.meta["embedding_class_name"] = embedding.__class__.__name__
         group.meta["embedding_kwargs"] = encode_class(embedding.init_kwargs())
 
-        embeddings_array_name = storage_formats[index.storage_version]["INPUT_VECTORS_ARRAY_NAME"]
+        embeddings_array_name = storage_formats[index.storage_version][
+            "INPUT_VECTORS_ARRAY_NAME"
+        ]
         filters = storage_formats[index.storage_version]["DEFAULT_ATTR_FILTERS"]
 
-        create_embeddings_partitioned_array(uri, embeddings_array_name, group, vector_type, filters)
+        create_embeddings_partitioned_array(
+            uri, embeddings_array_name, group, vector_type, filters
+        )
         object_metadata_array_uri = object_reader.metadata_array_uri()
         materialize_object_metadata = False
-        if object_metadata_array_uri is None and object_reader.metadata_attributes() is not None:
-            metadata_array_name = storage_formats[index.storage_version]["OBJECT_METADATA_ARRAY_NAME"]
+        if (
+            object_metadata_array_uri is None
+            and object_reader.metadata_attributes() is not None
+        ):
+            metadata_array_name = storage_formats[index.storage_version][
+                "OBJECT_METADATA_ARRAY_NAME"
+            ]
             object_metadata_array_uri = f"{uri}/{metadata_array_name}"
             external_ids_dim = tiledb.Dim(
                 name="external_id",
@@ -283,21 +348,22 @@ def create(
         object_metadata_external_id_dim = ""
         if object_metadata_array_uri is not None:
             with tiledb.open(object_metadata_array_uri, "r") as object_metadata_array:
-                object_metadata_external_id_dim = object_metadata_array.schema.domain.dim(0).name
+                object_metadata_external_id_dim = (
+                    object_metadata_array.schema.domain.dim(0).name
+                )
             group.meta["object_metadata_array_uri"] = object_metadata_array_uri
-            group.meta["object_metadata_external_id_dim"] = object_metadata_external_id_dim
+            group.meta[
+                "object_metadata_external_id_dim"
+            ] = object_metadata_external_id_dim
 
         group.meta["materialize_object_metadata"] = materialize_object_metadata
         group.close()
         return ObjectIndex(uri, config, load_embedding=False, **kwargs)
 
+
 def create_embeddings_partitioned_array(
-    group_uri: str,
-    array_name: str,
-    group: tiledb.Group,
-    vector_type: np.dtype,
-    filters
-):    
+    group_uri: str, array_name: str, group: tiledb.Group, vector_type: np.dtype, filters
+):
     embeddings_array_uri = f"{group_uri}/{array_name}"
     if tiledb.array_exists(embeddings_array_uri):
         raise ValueError(f"Array exists {embeddings_array_uri}")
@@ -306,14 +372,14 @@ def create_embeddings_partitioned_array(
         domain=(0, flat_index.MAX_INT32),
         tile=1,
         dtype=np.dtype(np.uint32),
-    ) 
-    domain = tiledb.Domain(
-        partition_id_dim
     )
-    attrs=[
+    domain = tiledb.Domain(partition_id_dim)
+    attrs = [
         tiledb.Attr(name="vectors", dtype=vector_type, var=True, filters=filters),
         tiledb.Attr(name="vectors_shape", dtype=np.uint32, var=True, filters=filters),
-        tiledb.Attr(name="external_ids", dtype=np.dtype(np.uint64), var=True, filters=filters),
+        tiledb.Attr(
+            name="external_ids", dtype=np.dtype(np.uint64), var=True, filters=filters
+        ),
     ]
     embeddings_array_schema = tiledb.ArraySchema(
         domain=domain,

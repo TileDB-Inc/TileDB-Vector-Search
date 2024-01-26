@@ -1,13 +1,14 @@
-from typing import Any, Mapping, Optional, Dict, OrderedDict
+from typing import Any, Dict, Mapping, Optional, OrderedDict
 
 import numpy as np
+
 # from tiledb.vector_search.embeddings import ObjectEmbedding
 
 EMBED_DIM = 1536  # embedding dim from GPT-3.5
 
 
 # class SomaGenePTwEmbedding(ObjectEmbedding):
-class SomaGenePTwEmbedding():
+class SomaGenePTwEmbedding:
     def __init__(
         self,
         gene_embeddings_uri: str,
@@ -34,12 +35,15 @@ class SomaGenePTwEmbedding():
         return np.float32
 
     def load(self) -> None:
-        import tiledb
-        import tiledbsoma
         import numpy as np
+        import tiledbsoma
+
+        import tiledb
 
         gene_pt_embeddings = {}
-        with tiledb.open(self.gene_embeddings_uri, "r", config=self.config) as gene_pt_array:
+        with tiledb.open(
+            self.gene_embeddings_uri, "r", config=self.config
+        ) as gene_pt_array:
             gene_pt = gene_pt_array[:]
             i = 0
             for gene in np.array(gene_pt["genes"], dtype=str):
@@ -48,7 +52,13 @@ class SomaGenePTwEmbedding():
 
         context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
         experiment = tiledbsoma.Experiment.open(self.soma_uri, "r", context=context)
-        self.gene_names = experiment.ms["RNA"].var.read().concat().to_pandas()["feature_name"].to_numpy()
+        self.gene_names = (
+            experiment.ms["RNA"]
+            .var.read()
+            .concat()
+            .to_pandas()["feature_name"]
+            .to_numpy()
+        )
 
         self.gene_embedding = np.zeros(shape=(len(self.gene_names), EMBED_DIM))
         for i, gene in enumerate(self.gene_names):
@@ -57,4 +67,8 @@ class SomaGenePTwEmbedding():
 
     def embed(self, objects: OrderedDict, metadata: OrderedDict) -> np.ndarray:
         import numpy as np
-        return np.array(np.dot(objects["data"], self.gene_embedding)/len(self.gene_names), dtype=np.float32)
+
+        return np.array(
+            np.dot(objects["data"], self.gene_embedding) / len(self.gene_names),
+            dtype=np.float32,
+        )

@@ -1,9 +1,11 @@
-from typing import Any, Mapping, Optional, List, Dict, OrderedDict, Tuple
+from typing import Any, Dict, List, Mapping, Optional, OrderedDict, Tuple
+
 # from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
 from tiledb import Attr
 
+
 # class SomaRNAXRowPartition(ObjectPartition):
-class SomaRNAXRowPartition():
+class SomaRNAXRowPartition:
     def __init__(
         self,
         partition_id: int,
@@ -28,7 +30,7 @@ class SomaRNAXRowPartition():
 
 
 # class SomaRNAXRowReader(ObjectReader):
-class SomaRNAXRowReader():
+class SomaRNAXRowReader:
     def __init__(
         self,
         uri: str,
@@ -37,8 +39,9 @@ class SomaRNAXRowReader():
         timestamp=None,
         **kwargs,
     ):
-        import tiledb
         import tiledbsoma
+
+        import tiledb
 
         self.uri = uri
         self.cells_per_partition = cells_per_partition
@@ -64,8 +67,9 @@ class SomaRNAXRowReader():
         return self.obs_array_uri
 
     def metadata_attributes(self) -> List[Attr]:
-        import tiledb
         import tiledbsoma
+
+        import tiledb
 
         context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
         exp = tiledbsoma.Experiment.open(self.uri, "r", context=context)
@@ -75,7 +79,9 @@ class SomaRNAXRowReader():
                 attributes.append(obs_array.schema.attr(i))
             return attributes
 
-    def get_partitions(self, cells_per_partition: int = -1) -> List[SomaRNAXRowPartition]:
+    def get_partitions(
+        self, cells_per_partition: int = -1
+    ) -> List[SomaRNAXRowPartition]:
         if cells_per_partition == -1:
             cells_per_partition = self.cells_per_partition
 
@@ -85,41 +91,48 @@ class SomaRNAXRowReader():
             coord_end = coord_start + cells_per_partition
             if coord_end > self.num_obs:
                 coord_end = self.num_obs
-            partitions.append(SomaRNAXRowPartition(partition_id, coord_start, coord_end))
+            partitions.append(
+                SomaRNAXRowPartition(partition_id, coord_start, coord_end)
+            )
             partition_id += 1
 
         return partitions
 
-    def read_objects(self, partition: SomaRNAXRowPartition) -> Tuple[OrderedDict, OrderedDict]:
-        import tiledb
-        import tiledbsoma
+    def read_objects(
+        self, partition: SomaRNAXRowPartition
+    ) -> Tuple[OrderedDict, OrderedDict]:
         import numpy as np
+        import tiledbsoma
+
+        import tiledb
 
         context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
         exp = tiledbsoma.Experiment.open(self.uri, "r", context=context)
         query = exp.axis_query(
-                measurement_name="RNA",
-                obs_query=tiledbsoma.AxisQuery(
-                    coords=(slice(partition.coord_start, partition.coord_end-1),)
-                ),
-            )
-        
-        with tiledb.open(exp.obs.uri, "r", timestamp=self.timestamp, config=self.config) as obs_array:
-            metadata = obs_array[partition.coord_start: partition.coord_end-1]
+            measurement_name="RNA",
+            obs_query=tiledbsoma.AxisQuery(
+                coords=(slice(partition.coord_start, partition.coord_end - 1),)
+            ),
+        )
+
+        with tiledb.open(
+            exp.obs.uri, "r", timestamp=self.timestamp, config=self.config
+        ) as obs_array:
+            metadata = obs_array[partition.coord_start : partition.coord_end - 1]
         return {
-                "data": query.to_anndata(X_name="data").X.toarray(),
-                "external_id": np.arange(partition.coord_start, partition.coord_end)
-            }, metadata
+            "data": query.to_anndata(X_name="data").X.toarray(),
+            "external_id": np.arange(partition.coord_start, partition.coord_end),
+        }, metadata
 
     def read_objects_by_external_ids(self, ids: List[int]) -> OrderedDict:
-        import tiledb
         import tiledbsoma
+
+        import tiledb
+
         context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
         exp = tiledbsoma.Experiment.open(self.uri, "r", context=context)
         query = exp.axis_query(
-                measurement_name="RNA",
-                obs_query=tiledbsoma.AxisQuery(
-                    coords=(ids,)
-                ),
-            )
+            measurement_name="RNA",
+            obs_query=tiledbsoma.AxisQuery(coords=(ids,)),
+        )
         return {"data": query.to_anndata(X_name="data").X.toarray(), "external_id": ids}

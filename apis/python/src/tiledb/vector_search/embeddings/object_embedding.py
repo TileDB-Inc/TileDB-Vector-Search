@@ -1,6 +1,8 @@
+from abc import ABC
+from abc import abstractmethod
+from typing import Dict, OrderedDict
+
 import numpy as np
-from abc import ABC, abstractmethod 
-from typing import OrderedDict, Dict
 
 
 class ObjectEmbedding(ABC):
@@ -13,7 +15,7 @@ class ObjectEmbedding(ABC):
         """
         Returns a dictionary containing kwargs that can be used to re-initialize the ObjectEmbedding.
 
-        This is used to serialize the ObjectEmbedding and pass it as argument to UDF tasks. 
+        This is used to serialize the ObjectEmbedding and pass it as argument to UDF tasks.
         """
         raise NotImplementedError
 
