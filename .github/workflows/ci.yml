@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install OpenBLAS
-        if: ${{ matrix.os == "ubuntu-latest" }}
+        if: ${{ startsWith(matrix.os, 'ubuntu-') == true }}
         run: sudo apt install libopenblas-dev
       - uses: actions/checkout@v3
       - name: Configure CMake
