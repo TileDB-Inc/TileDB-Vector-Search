@@ -1,12 +1,13 @@
 from typing import Any, Mapping, Optional, Dict, OrderedDict
 
 import numpy as np
-from tiledb.vector_search.embeddings import ObjectEmbedding
+# from tiledb.vector_search.embeddings import ObjectEmbedding
 
 EMBED_DIM = 1536  # embedding dim from GPT-3.5
 
 
-class SomaGenePTwEmbedding(ObjectEmbedding):
+# class SomaGenePTwEmbedding(ObjectEmbedding):
+class SomaGenePTwEmbedding():
     def __init__(
         self,
         gene_embeddings_uri: str,

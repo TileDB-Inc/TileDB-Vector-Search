@@ -77,7 +77,6 @@ class ObjectIndex:
     ):
         if metadata_array_cond is not None and self.object_metadata_array_uri is None:
             raise AttributeError("metadata_array_cond can't be applied when there is no metadata array") 
-
         if not self.embedding_loaded:
             self.embedding.load()
             self.embedding_loaded = True
@@ -141,8 +140,6 @@ class ObjectIndex:
         index_timestamp: int = None,
         workers: int = -1,
         worker_resources: Dict = None,
-        objects_per_partition: int = -1,
-        object_partitions_per_task: int = -1,
         max_tasks_per_stage: int= -1,
         verbose: bool = False,
         trace_id: Optional[str] = None,
@@ -163,11 +160,8 @@ class ObjectIndex:
         object_api.ingest_embeddings(
             object_index=self,
             embeddings_uri=embeddings_uri,
-            external_ids_uri=external_ids_uri,
             metadata_array_uri=metadata_array_uri,
             index_timestamp=index_timestamp,
-            objects_per_partition=objects_per_partition,
-            object_partitions_per_task=object_partitions_per_task,
             max_tasks_per_stage=max_tasks_per_stage,
             workers=workers,
             worker_resources=worker_resources,
@@ -176,20 +170,17 @@ class ObjectIndex:
             mode=mode,
             config=config,
             namespace=namespace,
+            **kwargs,
         )
-
-        with tiledb.open(embeddings_uri, mode='r', timestamp=index_timestamp, config=config) as embeddings_array:
-            nonempty_object_array_domain = embeddings_array.nonempty_domain()[1]
-            size = nonempty_object_array_domain[1] + 1 - nonempty_object_array_domain[0]
         self.index = ingest(
             index_type=self.index_type,
             index_uri=self.uri,
             source_uri=embeddings_uri,
-            source_type="TILEDB_ARRAY",
-            external_ids_uri=external_ids_uri,
-            external_ids_type="TILEDB_ARRAY",
+            source_type="TILEDB_PARTITIONED_ARRAY",
+            external_ids_uri=embeddings_uri,
+            external_ids_type="TILEDB_PARTITIONED_ARRAY",
             index_timestamp=index_timestamp,
-            size=size,
+            # size=size,
             storage_version=self.index.storage_version,
             config=config,
             mode=mode,
@@ -267,11 +258,9 @@ def create(
         group.meta["embedding_kwargs"] = encode_class(embedding.init_kwargs())
 
         embeddings_array_name = storage_formats[index.storage_version]["INPUT_VECTORS_ARRAY_NAME"]
-        external_ids_array_name = storage_formats[index.storage_version]["EXTERNAL_IDS_ARRAY_NAME"]
         filters = storage_formats[index.storage_version]["DEFAULT_ATTR_FILTERS"]
 
-        create_embeddings_array(uri, group, dimensions, vector_type, embeddings_array_name, filters)
-        create_external_ids_array(uri, group, external_ids_array_name, filters)
+        create_embeddings_partitioned_array(uri, embeddings_array_name, group, vector_type, filters)
         object_metadata_array_uri = object_reader.metadata_array_uri()
         materialize_object_metadata = False
         if object_metadata_array_uri is None and object_reader.metadata_attributes() is not None:
@@ -302,77 +291,34 @@ def create(
         group.close()
         return ObjectIndex(uri, config, load_embedding=False, **kwargs)
 
-
-def create_embeddings_array(
-    uri: str,
-    group: tiledb.Group,
-    dimensions: int,
-    vector_type: np.dtype,
+def create_embeddings_partitioned_array(
+    group_uri: str,
     array_name: str,
+    group: tiledb.Group,
+    vector_type: np.dtype,
     filters
-):
-    embeddings_array_uri = f"{uri}/{array_name}"
+):    
+    embeddings_array_uri = f"{group_uri}/{array_name}"
     if tiledb.array_exists(embeddings_array_uri):
         raise ValueError(f"Array exists {embeddings_array_uri}")
-    tile_size = int(flat_index.TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions)
-    embeddings_array_rows_dim = tiledb.Dim(
-        name="rows",
-        domain=(0, dimensions - 1),
-        tile=dimensions,
-        dtype=np.dtype(np.int32),
-    )
-    embeddings_array_cols_dim = tiledb.Dim(
-        name="cols",
+    partition_id_dim = tiledb.Dim(
+        name="partition_id",
         domain=(0, flat_index.MAX_INT32),
-        tile=tile_size,
-        dtype=np.dtype(np.int32),
+        tile=1,
+        dtype=np.dtype(np.uint32),
+    ) 
+    domain = tiledb.Domain(
+        partition_id_dim
     )
-    embeddings_array_dom = tiledb.Domain(
-        embeddings_array_rows_dim, embeddings_array_cols_dim
-    )
-    embeddings_array_attr = tiledb.Attr(
-        name="values", dtype=vector_type, filters=filters
-    )
+    attrs=[
+        tiledb.Attr(name="vectors", dtype=vector_type, var=True, filters=filters),
+        tiledb.Attr(name="vectors_shape", dtype=np.uint32, var=True, filters=filters),
+        tiledb.Attr(name="external_ids", dtype=np.dtype(np.uint64), var=True, filters=filters),
+    ]
     embeddings_array_schema = tiledb.ArraySchema(
-        domain=embeddings_array_dom,
+        domain=domain,
         sparse=False,
-        attrs=[embeddings_array_attr],
-        cell_order="col-major",
-        tile_order="col-major",
+        attrs=attrs,
     )
     tiledb.Array.create(embeddings_array_uri, embeddings_array_schema)
     group.add(embeddings_array_uri, name=array_name)
-
-
-def create_external_ids_array(
-    uri: str,
-    group: tiledb.Group,
-    array_name: str,
-    filters
-):
-    external_ids_array_uri = f"{uri}/{array_name}"
-    if tiledb.array_exists(external_ids_array_uri):
-        raise ValueError(f"Array exists {external_ids_array_uri}")
-
-    ids_array_rows_dim = tiledb.Dim(
-        name="rows",
-        domain=(0, flat_index.MAX_INT32),
-        tile=100000,
-        dtype=np.dtype(np.int32),
-    )
-    ids_array_dom = tiledb.Domain(ids_array_rows_dim)
-    ids_attr = tiledb.Attr(
-        name="values",
-        dtype=np.dtype(np.uint64),
-        filters=filters,
-    )
-    ids_schema = tiledb.ArraySchema(
-        domain=ids_array_dom,
-        sparse=False,
-        attrs=[ids_attr],
-        capacity=100000,
-        cell_order="col-major",
-        tile_order="col-major",
-    )
-    tiledb.Array.create(external_ids_array_uri, ids_schema)
-    group.add(external_ids_array_uri, name=array_name)

@@ -41,41 +41,37 @@ class TestEmbedding(ObjectEmbedding):
 class TestPartition(ObjectPartition):
     def __init__(
         self,
+        partition_id: int,
         start: int,
         end: int,
         **kwargs,
     ):
+        self.partition_id = partition_id
         self.start = start
         self.end = end
-        self.size = end - start
 
     def init_kwargs(self) -> Dict:
         return {
+            "partition_id": self.partition_id,
             "start": self.start,
             "end": self.end,
         }
-
-    def num_vectors(self) -> int:
-        return self.size
-
-    def index_slice(self) -> Tuple[int,int]:
-        return (self.start, self.end)
+    
+    def id(self) -> int:
+        return self.partition_id
 
 class TestReader(ObjectReader):
     def __init__(
         self,
-        conf_val: str,
+        num_objects: int,
         **kwargs,
     ):
-        self.conf_val = conf_val
+        self.num_objects = num_objects
 
     def init_kwargs(self) -> Dict:
         return {
-            "conf_val": self.conf_val,
+            "num_objects": self.num_objects,
         }
-    
-    def num_vectors(self) -> int:
-        return 42
 
     def partition_class_name(self) -> str:
         return "TestPartition"
@@ -90,13 +86,25 @@ class TestReader(ObjectReader):
         )
         return [test_attr]
 
-    def get_partitions(self, partition_size: int = -1) -> List[TestPartition]:
-        return [TestPartition(0,21), TestPartition(21,42)]
+    def get_partitions(self, objects_per_partition: int = -1) -> List[TestPartition]:
+        if objects_per_partition == -1:
+            objects_per_partition = 42
+        partitions = []
+        partition_id = 0
+        for start in range(0, self.num_objects, objects_per_partition):
+            end = start + objects_per_partition
+            if end > self.num_objects:
+                end = self.num_objects
+            partitions.append(TestPartition(partition_id, start, end))
+            partition_id += 1
+
+        return partitions
 
     def read_objects(self, partition: TestPartition) -> Tuple[OrderedDict, OrderedDict]:
         external_ids = np.arange(partition.start, partition.end)
-        objects = np.empty(partition.num_vectors(), dtype="O")
-        metadata = np.empty(partition.num_vectors(), dtype="O")
+        num_vectors = partition.end - partition.start
+        objects = np.empty(num_vectors, dtype="O")
+        metadata = np.empty(num_vectors, dtype="O")
         i = 0 
         for id in range(partition.start, partition.end):
             objects[i]=np.array([id, id, id, id])
@@ -120,7 +128,7 @@ class TestReader(ObjectReader):
 
 
 def test_object_index_ivf_flat(tmp_path):
-    reader = TestReader(conf_val="42")
+    reader = TestReader(num_objects=1000)
     embedding = TestEmbedding()
 
     index_uri = f"{tmp_path}/index"
@@ -151,7 +159,7 @@ def test_object_index_ivf_flat(tmp_path):
 
 
 def test_object_index_flat(tmp_path):
-    reader = TestReader(conf_val="42")
+    reader = TestReader(num_objects=1000)
     embedding = TestEmbedding()
 
     index_uri = f"{tmp_path}/index"

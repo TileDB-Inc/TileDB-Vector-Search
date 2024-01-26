@@ -1,11 +1,12 @@
 from typing import Any, Mapping, Optional, List, Dict, OrderedDict, Tuple
-from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
+# from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
 from tiledb import Attr
 
-class SomaRNAXRowPartition(ObjectPartition):
+# class SomaRNAXRowPartition(ObjectPartition):
+class SomaRNAXRowPartition():
     def __init__(
         self,
-        partition_id: str,
+        partition_id: int,
         coord_start: int,
         coord_end: int,
         **kwargs,
@@ -22,17 +23,16 @@ class SomaRNAXRowPartition(ObjectPartition):
             "coord_end": self.coord_end,
         }
 
-    def num_vectors(self) -> int:
-        return self.size
-
-    def index_slice(self) -> Tuple[int,int]:
-        return (self.coord_start, self.coord_end)
+    def id(self) -> int:
+        return self.partition_id
 
 
-class SomaRNAXRowReader(ObjectReader):
+# class SomaRNAXRowReader(ObjectReader):
+class SomaRNAXRowReader():
     def __init__(
         self,
         uri: str,
+        cells_per_partition: int = 10000,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
         **kwargs,
@@ -41,6 +41,7 @@ class SomaRNAXRowReader(ObjectReader):
         import tiledbsoma
 
         self.uri = uri
+        self.cells_per_partition = cells_per_partition
         self.config = config
         self.timestamp = timestamp
         context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
@@ -51,12 +52,10 @@ class SomaRNAXRowReader(ObjectReader):
     def init_kwargs(self) -> Dict:
         return {
             "uri": self.uri,
+            "cells_per_partition": self.cells_per_partition,
             "config": self.config,
             "timestamp": self.timestamp,
         }
-
-    def num_vectors(self) -> int:
-        return self.num_obs
 
     def partition_class_name(self) -> str:
         return "SomaRNAXRowPartition"
@@ -76,17 +75,17 @@ class SomaRNAXRowReader(ObjectReader):
                 attributes.append(obs_array.schema.attr(i))
             return attributes
 
-    def get_partitions(self, partition_size: int = -1) -> List[SomaRNAXRowPartition]:
-        if partition_size == -1:
-            partition_size = 100000
+    def get_partitions(self, cells_per_partition: int = -1) -> List[SomaRNAXRowPartition]:
+        if cells_per_partition == -1:
+            cells_per_partition = self.cells_per_partition
 
         partitions = []
         partition_id = 0
-        for coord_start in range(0, self.num_obs, partition_size):
-            coord_end = coord_start + partition_size
+        for coord_start in range(0, self.num_obs, cells_per_partition):
+            coord_end = coord_start + cells_per_partition
             if coord_end > self.num_obs:
                 coord_end = self.num_obs
-            partitions.append(SomaRNAXRowPartition(str(partition_id), coord_start, coord_end))
+            partitions.append(SomaRNAXRowPartition(partition_id, coord_start, coord_end))
             partition_id += 1
 
         return partitions

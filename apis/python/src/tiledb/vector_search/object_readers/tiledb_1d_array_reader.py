@@ -1,11 +1,12 @@
 from typing import Any, Mapping, Optional, List, Dict, OrderedDict, Tuple
-from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
-from tiledb import Attr
+# from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
+import tiledb
 
-class TileDBArrayPartition(ObjectPartition):
+# class TileDB1DArrayPartition(ObjectPartition):
+class TileDB1DArrayPartition():
     def __init__(
         self,
-        partition_id: str,
+        partition_id: int,
         start: int,
         end: int,
         **kwargs,
@@ -13,7 +14,6 @@ class TileDBArrayPartition(ObjectPartition):
         self.partition_id = partition_id
         self.start = start
         self.end = end
-        self.size = end - start
 
     def init_kwargs(self) -> Dict:
         return {
@@ -22,14 +22,12 @@ class TileDBArrayPartition(ObjectPartition):
             "end": self.end,
         }
 
-    def num_vectors(self) -> int:
-        return self.size
-
-    def index_slice(self) -> Tuple[int,int]:
-        return (self.start, self.end)
+    def id(self) -> int:
+        return self.partition_id
 
 
-class TileDBArrayReader(ObjectReader):
+# class TileDB1DArrayReader(ObjectReader):
+class TileDB1DArrayReader():
     """
     Reader that reads objects and their metadata stored in TileDB arrays.
 
@@ -40,40 +38,40 @@ class TileDBArrayReader(ObjectReader):
         self,
         *args,
         uri: str,
+        partition_tile_size: int = -1,
         metadata_uri: str = None,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
         **kwargs,
     ):
-        import tiledb
-
         self.uri = uri
+        self.partition_tile_size = partition_tile_size
         self.config = config
         self.timestamp = timestamp
         with tiledb.open(uri, mode='r', timestamp=timestamp, config=config) as object_array:
             self.external_id_dimension_name = object_array.schema.domain.dim(0).name
             nonempty_object_array_domain = object_array.nonempty_domain()[0]
-            self.num_objects = nonempty_object_array_domain[1] + 1 - nonempty_object_array_domain[0]
+            self.domain_length = nonempty_object_array_domain[1] + 1 - nonempty_object_array_domain[0]
+            if self.partition_tile_size == -1:
+                self.partition_tile_size = object_array.schema.domain.dim(0).tile
         self.metadata_uri = metadata_uri
 
     def init_kwargs(self) -> Dict:
         return {
             "uri": self.uri,
+            "partition_tile_size": self.partition_tile_size,
             "metadata_uri": self.metadata_uri,
             "config": self.config,
             "timestamp": self.timestamp,
         }
-    
-    def num_vectors(self) -> int:
-        return self.num_objects
 
     def partition_class_name(self) -> str:
-        return "TileDBArrayPartition"
+        return "TileDB1DArrayPartition"
 
     def metadata_array_uri(self) -> str:
         return self.metadata_uri
 
-    def metadata_attributes(self) -> List[Attr]:
+    def metadata_attributes(self) -> List[tiledb.Attr]:
         import tiledb
         if self.metadata_uri is None:
             return None
@@ -83,22 +81,22 @@ class TileDBArrayReader(ObjectReader):
                 attributes.append(metadata_array.schema.attr(i))
             return attributes
 
-    def get_partitions(self, partition_size: int = -1) -> List[TileDBArrayPartition]:
-        if partition_size == -1:
-            partition_size = 10000
+    def get_partitions(self, partition_tile_size: int = -1) -> List[TileDB1DArrayPartition]:
+        if partition_tile_size == -1:
+            partition_tile_size = self.partition_tile_size
 
         partitions = []
         partition_id = 0
-        for start in range(0, self.num_objects, partition_size):
-            end = start + partition_size
-            if end > self.num_objects:
-                end = self.num_objects
-            partitions.append(TileDBArrayPartition(str(partition_id), start, end))
+        for start in range(0, self.domain_length, partition_tile_size):
+            end = int(start + partition_tile_size)
+            if end > self.domain_length:
+                end = self.domain_length
+            partitions.append(TileDB1DArrayPartition(partition_id, start, end))
             partition_id += 1
 
         return partitions
 
-    def read_objects(self, partition: TileDBArrayPartition) -> Tuple[OrderedDict, OrderedDict]:
+    def read_objects(self, partition: TileDB1DArrayPartition) -> Tuple[OrderedDict, OrderedDict]:
         import tiledb
 
         with tiledb.open(self.uri, "r", timestamp=self.timestamp, config=self.config) as object_array:

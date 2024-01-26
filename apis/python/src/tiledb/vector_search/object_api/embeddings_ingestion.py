@@ -11,14 +11,11 @@ from tiledb.vector_search.embeddings import ObjectEmbedding
 def ingest_embeddings(
     object_index: ObjectIndex,
     embeddings_uri: str,
-    external_ids_uri: str,
     metadata_array_uri: str = None,
     index_timestamp: int = None,
     workers: int = -1,
     worker_resources: Dict = None,
     worker_image: str = None,
-    objects_per_partition = -1,
-    object_partitions_per_task: int = -1,
     max_tasks_per_stage: int = -1,
     verbose: bool = False,
     trace_id: Optional[str] = None,
@@ -85,7 +82,6 @@ def ingest_embeddings(
         object_embedding_kwargs: Dict,
         partition_dicts: List[Dict],
         embeddings_uri: str,
-        external_ids_uri: str,
         metadata_array_uri: str = None,
         index_timestamp: int = None,
         verbose: bool = False,
@@ -133,9 +129,8 @@ def ingest_embeddings(
             dimensions = object_embedding.dimensions()
             vector_type = object_embedding.vector_type()
 
-            logger.debug("embeddings_uri %s external_ids_uri %s", embeddings_uri, external_ids_uri)
+            logger.debug("embeddings_uri %s", embeddings_uri)
             embeddings_array = tiledb.open(embeddings_uri, "w", timestamp=index_timestamp)
-            external_ids_array = tiledb.open(external_ids_uri, "w", timestamp=index_timestamp)
             if metadata_array_uri is not None:
                 metadata_array = tiledb.open(metadata_array_uri, "w", timestamp=index_timestamp)
             for partition_dict in partition_dicts:
@@ -144,25 +139,31 @@ def ingest_embeddings(
                     class_name=object_reader.partition_class_name(),
                     **partition_dict
                 )
-                logger.debug(f"Computing partition: {partition.index_slice()}")
+                partition_id = partition.id()
+                logger.debug(f"Computing partition: {partition_id}")
                 logger.debug("Reading objects...")
                 objects, metadata = object_reader.read_objects(partition)
 
                 logger.debug("Embedding objects...")
                 embeddings = object_embedding.embed(objects, metadata)
-
-                partition_index_slice = partition.index_slice()
-                index_start = partition_index_slice[0]
-                index_end = partition_index_slice[1]
-                logger.debug("Write embeddings index_start: %d, index_end: %d", index_start, index_end)
-                embeddings_array[0:dimensions, index_start:index_end] = np.transpose(embeddings).astype(vector_type)
-                external_ids_array[index_start:index_end] = objects["external_id"]
+                
+                logger.debug("Write embeddings partition_id: %d", partition_id)
+                embeddings_flattened = np.empty(1, dtype="O")
+                embeddings_flattened[0] = embeddings.astype(vector_type).flatten()
+                embeddings_shape = np.empty(1, dtype="O")
+                embeddings_shape[0] = np.array(embeddings.shape, dtype=np.uint32)
+                external_ids = np.empty(1, dtype="O")
+                external_ids[0] = objects["external_id"].astype(np.uint64)
+                embeddings_array[partition_id] = {
+                    "vectors": embeddings_flattened,
+                    "vectors_shape": embeddings_shape,
+                    "external_ids": external_ids,
+                }
                 if metadata_array_uri is not None:
                     external_ids = metadata.pop("external_id", None)
                     metadata_array[external_ids] = metadata
 
             embeddings_array.close()
-            external_ids_array.close()
             if metadata_array_uri is not None:
                 metadata_array.close()
 
@@ -179,7 +180,6 @@ def ingest_embeddings(
     def create_dag(
         object_index: ObjectIndex,
         embeddings_uri: str,
-        external_ids_uri: str,
         partitions: List[ObjectPartition],
         object_partitions_per_worker: int,
         object_work_tasks: int,
@@ -236,7 +236,6 @@ def ingest_embeddings(
                 object_embedding_kwargs=object_index.embedding_kwargs,
                 partition_dicts=partition_dicts,
                 embeddings_uri=embeddings_uri,
-                external_ids_uri=external_ids_uri,
                 metadata_array_uri=metadata_array_uri,
                 index_timestamp=index_timestamp,
                 verbose=verbose,
@@ -259,7 +258,7 @@ def ingest_embeddings(
         if index_timestamp is None:
             index_timestamp = int(time.time() * 1000)
 
-        partitions = object_index.object_reader.get_partitions(partition_size=objects_per_partition)
+        partitions = object_index.object_reader.get_partitions(**kwargs)
         object_partitions = len(partitions)
         object_partitions_per_worker = 1
         if max_tasks_per_stage == -1:
@@ -270,7 +269,6 @@ def ingest_embeddings(
                 math.ceil(object_partitions / max_tasks_per_stage)
             )
             object_work_tasks = max_tasks_per_stage
-        logger.debug("objects_per_partition %d", objects_per_partition)
         logger.debug("object_partitions %d", object_partitions)
         logger.debug("object_work_tasks %d", object_work_tasks)
         logger.debug("object_partitions_per_worker %d", object_partitions_per_worker)
@@ -289,7 +287,6 @@ def ingest_embeddings(
         d = create_dag(
             object_index=object_index,
             embeddings_uri=embeddings_uri,
-            external_ids_uri=external_ids_uri,
             partitions=partitions,
             object_partitions_per_worker=object_partitions_per_worker,
             object_work_tasks=object_work_tasks,

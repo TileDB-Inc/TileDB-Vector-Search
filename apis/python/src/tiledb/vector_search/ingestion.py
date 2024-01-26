@@ -283,6 +283,17 @@ def ingest(
             size = schema.domain.dim(1).domain[1] + 1
             dimensions = schema.domain.dim(0).domain[1] + 1
             return size, dimensions, schema.attr("values").dtype
+        if source_type == "TILEDB_PARTITIONED_ARRAY":
+            with tiledb.open(source_uri, "r") as source_array:
+                q = source_array.query(attrs=('vectors_shape',), coords=True)
+                nonempty_object_array_domain = source_array.nonempty_domain()
+                partition_shapes = q[nonempty_object_array_domain[0][0]:nonempty_object_array_domain[0][1]+1]['vectors_shape']
+                size = 0
+                for partition_shape in partition_shapes:
+                    size += partition_shape[0]
+                    dimensions = partition_shape[1]
+            schema = tiledb.ArraySchema.load(source_uri)
+            return size, dimensions, schema.attr("vectors").dtype
         elif source_type == "U8BIN":
             vfs = tiledb.VFS()
             with vfs.open(source_uri, "rb") as f:
@@ -646,6 +657,32 @@ def ingest(
                 external_ids_uri, mode="r", timestamp=index_timestamp
             ) as external_ids_array:
                 return external_ids_array[start_pos:end_pos]["values"]
+        elif source_type == "TILEDB_PARTITIONED_ARRAY":
+            with tiledb.open(source_uri, "r") as source_array:
+                q = source_array.query(attrs=('vectors_shape',), coords=True)
+                qv = source_array.query(attrs=('external_ids',), coords=True)
+                nonempty_object_array_domain = source_array.nonempty_domain()
+                partitions = q[nonempty_object_array_domain[0][0]:nonempty_object_array_domain[0][1]+1]
+                partition_idx_start = 0
+                partition_idx_end = 0
+                i = 0
+                external_ids = None
+                for partition_shape in partitions["vectors_shape"]:
+                    partition_id = partitions["partition_id"][i]
+                    partition_idx_end += partition_shape[0]
+                    intersection_start = max(start_pos, partition_idx_start)
+                    intersection_end = min(end_pos, partition_idx_end)
+                    if intersection_start < intersection_end:
+                        crop_start = intersection_start-partition_idx_start
+                        crop_end = intersection_end-partition_idx_start
+                        partition_external_ids = qv[partition_id:partition_id+1]["external_ids"][0][crop_start:crop_end]
+                        if external_ids is None:
+                            external_ids = partition_external_ids
+                        else:
+                            external_ids = np.concatenate((external_ids, partition_external_ids))
+                    partition_idx_start = partition_idx_end
+                    i += 1
+            return external_ids
         elif external_ids_type == "U64BIN":
             vfs = tiledb.VFS()
             read_size = end_pos - start_pos
@@ -729,6 +766,32 @@ def ingest(
                 return np.transpose(
                     src_array[0:dimensions, start_pos:end_pos]["values"]
                 ).copy(order="C")
+        elif source_type == "TILEDB_PARTITIONED_ARRAY":
+            with tiledb.open(source_uri, "r") as source_array:
+                q = source_array.query(attrs=('vectors_shape',), coords=True)
+                qv = source_array.query(attrs=('vectors',), coords=True)
+                nonempty_object_array_domain = source_array.nonempty_domain()
+                partitions = q[nonempty_object_array_domain[0][0]:nonempty_object_array_domain[0][1]+1]
+                partition_idx_start = 0
+                partition_idx_end = 0
+                i = 0
+                vectors = None
+                for partition_shape in partitions["vectors_shape"]:
+                    partition_id = partitions["partition_id"][i]
+                    partition_idx_end += partition_shape[0]
+                    intersection_start = max(start_pos, partition_idx_start)
+                    intersection_end = min(end_pos, partition_idx_end)
+                    if intersection_start < intersection_end:
+                        crop_start = intersection_start-partition_idx_start
+                        crop_end = intersection_end-partition_idx_start
+                        partition_vectors = np.reshape(qv[partition_id:partition_id+1]["vectors"][0], partition_shape)[crop_start:crop_end]
+                        if vectors is None:
+                            vectors = partition_vectors
+                        else:
+                            vectors = np.concatenate((vectors, partition_vectors))
+                    partition_idx_start = partition_idx_end
+                    i += 1
+            return vectors
         elif source_type == "U8BIN":
             vfs = tiledb.VFS()
             read_size = end_pos - start_pos

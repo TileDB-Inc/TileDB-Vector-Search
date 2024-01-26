@@ -1,12 +1,13 @@
 from typing import Any, Mapping, Optional, Dict, OrderedDict
 
 import numpy as np
-from tiledb.vector_search.embeddings import ObjectEmbedding
+# from tiledb.vector_search.embeddings import ObjectEmbedding
 
 EMBED_DIM = 2048
 
 
-class ImageResNetV2Embedding(ObjectEmbedding):
+# class ImageResNetV2Embedding(ObjectEmbedding):
+class ImageResNetV2Embedding():
     def __init__(
         self,
     ):
