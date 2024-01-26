@@ -36,7 +36,6 @@
 
 class ivf_flat_index_metadata
     : public base_index_metadata<ivf_flat_index_metadata> {
-
   using Base = base_index_metadata<ivf_flat_index_metadata>;
   friend Base;
 
@@ -45,13 +44,10 @@ class ivf_flat_index_metadata
 
   using partition_history_type = uint64_t;
 
- // public for now in interest of time
-public:
-
-
+  // public for now in interest of time
+ public:
   /** Record number of partitions at each write at a given timestamp */
   std::vector<partition_history_type> partition_history_;
-
 
   tiledb_datatype_t px_datatype_{TILEDB_ANY};
   std::string index_type_{"IVF_FLAT"};
@@ -81,7 +77,7 @@ public:
     partition_history_str_ = to_string(nlohmann::json(partition_history_));
   }
 
-  auto dump_json_impl()  {
+  auto dump_json_impl() {
     if (!empty(indices_type_str_)) {
       if (px_datatype_ == TILEDB_ANY) {
         px_datatype_ = string_to_datatype(indices_type_str_);
