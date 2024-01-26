@@ -59,6 +59,8 @@ void debug_centroids(auto& index) {
 }
 
 TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
+  const bool debug = false;
+
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
                              9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
 
@@ -71,12 +73,16 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
   index.set_centroids(ColMajorMatrix<float>(4, 3));
 
   SECTION("random") {
-    std::cout << "random" << std::endl;
+    if (debug) {
+      std::cout << "random" << std::endl;
+    }
     index.kmeans_random_init(training_data);
   }
 
   SECTION("kmeans++") {
-    std::cout << "kmeans++" << std::endl;
+    if (debug) {
+      std::cout << "kmeans++" << std::endl;
+    }
     index.kmeans_pp(training_data);
   }
 
@@ -110,6 +116,8 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
 }
 
 TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
+  const bool debug = false;
+
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
                              9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
 
@@ -120,12 +128,16 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
       /*4,*/ 3, 10, 1e-4);
 
   SECTION("random") {
-    std::cout << "random" << std::endl;
+    if (debug) {
+      std::cout << "random" << std::endl;
+    }
     index.train(training_data, kmeans_init::random);
   }
 
   SECTION("kmeans++") {
-    std::cout << "kmeans++" << std::endl;
+    if (debug) {
+      std::cout << "kmeans++" << std::endl;
+    }
     index.train(training_data, kmeans_init::kmeanspp);
   }
 }
@@ -136,6 +148,8 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
  * sklearn) are done in python
  */
 TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
+  const bool debug = false;
+
   ColMajorMatrix<float> training_data{
       {1.0573647, 5.082087},
       {-6.229642, -1.3590931},
@@ -150,7 +164,9 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
       {-6.964253, -2.2042127}, {1.6411834, -4.400284}, {0.7306664, 5.7294807}};
 
   SECTION("one iteration") {
-    std::cout << "one iteration" << std::endl;
+    if (debug) {
+      std::cout << "one iteration" << std::endl;
+    }
     auto index = ivf_flat_index<float, size_t, size_t>(
         /*sklearn_centroids.num_rows(),*/
         sklearn_centroids.num_cols(),
@@ -162,7 +178,9 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
   }
 
   SECTION("two iterations") {
-    std::cout << "two iterations" << std::endl;
+    if (debug) {
+      std::cout << "two iterations" << std::endl;
+    }
     auto index = ivf_flat_index<float, size_t, size_t>(
         /*sklearn_centroids.num_rows(),*/
         sklearn_centroids.num_cols(),
@@ -174,7 +192,9 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
   }
 
   SECTION("five iterations") {
-    std::cout << "five iterations" << std::endl;
+    if (debug) {
+      std::cout << "five iterations" << std::endl;
+    }
     auto index = ivf_flat_index<float, size_t, size_t>(
         /* sklearn_centroids.num_rows(), */
         sklearn_centroids.num_cols(),
@@ -186,7 +206,9 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
   }
 
   SECTION("five iterations, perturbed") {
-    std::cout << "five iterations, perturbed" << std::endl;
+    if (debug) {
+      std::cout << "five iterations, perturbed" << std::endl;
+    }
     for (size_t i = 0; i < sklearn_centroids.num_cols(); ++i) {
       for (size_t j = 0; j < sklearn_centroids.num_rows(); ++j) {
         sklearn_centroids(j, i) *= 0.8;
@@ -205,7 +227,9 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
   }
 
   SECTION("five iterations") {
-    std::cout << "five iterations" << std::endl;
+    if (debug) {
+      std::cout << "five iterations" << std::endl;
+    }
     auto index = ivf_flat_index<float, size_t, size_t>(
         /* sklearn_centroids.num_rows(), */
         sklearn_centroids.num_cols(),
