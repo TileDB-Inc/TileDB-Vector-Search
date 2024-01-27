@@ -4,10 +4,11 @@ from array_paths import *
 import pytest
 
 import tiledb.vector_search.index as ind
-from tiledb.vector_search import flat_index, ivf_flat_index
-from tiledb.vector_search.index import Index
+from tiledb.vector_search import flat_index, ivf_flat_index, Index
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.flat_index import FlatIndex
+from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 
 def query_and_check(index, queries, k, expected, **kwargs):
     for _ in range(3):
@@ -96,6 +97,22 @@ def test_ivf_flat_index(tmp_path):
 
     index = index.consolidate_updates()
     query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4}, nprobe=partitions)
+
+def test_delete_invalid_index(tmp_path):
+    # We don't throw with an invalid uri.
+    Index.delete_index(uri="invalid_uri", config=tiledb.cloud.Config())
+
+def test_delete_index(tmp_path):
+    indexes = ["FLAT", "IVF_FLAT"]
+    index_classes = [FlatIndex, IVFFlatIndex]
+    data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3]], dtype=np.float32)
+    for index_type, index_class in zip(indexes, index_classes):
+        index_uri = os.path.join(tmp_path, f"array_{index_type}")
+        ingest(index_type=index_type, index_uri=index_uri, input_vectors=data)
+        Index.delete_index(uri=index_uri, config=tiledb.cloud.Config())
+        with pytest.raises(tiledb.TileDBError) as error:
+            index_class(uri=index_uri)
+        assert "does not exist" in str(error.value)
 
 def test_index_with_incorrect_dimensions(tmp_path):
     indexes = [flat_index, ivf_flat_index]
