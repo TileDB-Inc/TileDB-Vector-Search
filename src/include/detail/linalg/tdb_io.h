@@ -401,7 +401,7 @@ auto read_bin_local(const std::string& bin_file, size_t subset = 0) {
   struct stat s;
   fstat(fd, &s);
   size_t mapped_size = s.st_size;
-  assert(s.st_size == file_size);
+  assert((size_t)s.st_size == (size_t)file_size);
 
   T* mapped_ptr = reinterpret_cast<T*>(
       mmap(0, mapped_size, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0));

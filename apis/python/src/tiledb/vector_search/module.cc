@@ -529,7 +529,7 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
 
             py::buffer_info buf_info = active_queries_arr.request();
             auto shape = active_queries_arr.shape();
-            auto num_rows = shape[0];
+            size_t num_rows = shape[0];
 
             auto active_queries = std::vector<std::vector<indices_type>>();
             active_queries.reserve(num_rows);

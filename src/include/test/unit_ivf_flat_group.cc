@@ -96,8 +96,6 @@ TEST_CASE("ivf_flat_group: member type", "[ivf_flat_group") {
 
   auto x = ivf_flat_index_group(dummy_index{}, ctx, sift_group_uri);
 
-  using a =
-      typename ivf_flat_index_group<dummy_index>::index_group_metadata_type;
 }
 
 TEST_CASE("ivf_flat_group: constructor", "[ivf_flat_group]") {
