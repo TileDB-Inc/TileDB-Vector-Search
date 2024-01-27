@@ -343,7 +343,8 @@ TEST_CASE("ivf_qv: dist_qv", "[ivf qv]") {
   auto&& [D00, I00] = detail::ivf::query_infinite_ram(
       inf_mat, active_partitions, query, active_queries, k_nn, nthreads);
 
-  [[maybe_unused]] auto check_size = [&D00 = D00, &I00 = I00](auto& D, auto& I) {
+  [[maybe_unused]] auto check_size = [&D00 = D00, &I00 = I00](
+                                         auto& D, auto& I) {
     CHECK(D00.num_rows() == D.num_rows());
     CHECK(D00.num_cols() == D.num_cols());
     CHECK(I00.num_rows() == I.num_rows());

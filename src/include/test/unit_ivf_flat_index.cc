@@ -597,8 +597,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
 
-  size_t intersections1 =
-      count_intersections(top_k_ivf, groundtruth_set, k_nn);
+  size_t intersections1 = count_intersections(top_k_ivf, groundtruth_set, k_nn);
   double recall1 = intersections1 / ((double)top_k_ivf.num_cols() * k_nn);
   if (nlist == 1) {
     CHECK(intersections1 == num_vectors(top_k_ivf) * dimension(top_k_ivf));

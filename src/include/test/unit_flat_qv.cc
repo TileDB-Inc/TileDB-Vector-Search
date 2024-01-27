@@ -223,8 +223,7 @@ TEST_CASE(
   auto&& [D00, I00] =
       detail::flat::qv_query_heap(array_inputs, array_queries, k_nn, 1);
 
-  size_t intersections00 =
-      count_intersections(I00, array_groundtruth, k_nn);
+  size_t intersections00 = count_intersections(I00, array_groundtruth, k_nn);
   CHECK(intersections00 != 0);
   size_t expected00 = array_groundtruth.num_cols() * k_nn;
   CHECK(intersections00 == expected00);
