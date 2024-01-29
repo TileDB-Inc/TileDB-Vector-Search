@@ -61,45 +61,56 @@
   {
     "objectID": "documentation/Building.html",
     "href": "documentation/Building.html",
-    "title": "Building From Source",
+    "title": "Building and Running Tests",
     "section": "",
-    "text": "TileDB Vector Search can be built from source. For information on dependencies, see below.\n\n\npip install .",
+    "text": "TileDB Vector Search can be built from source for either C++ or Python.\n\n\nTo build for C++, run:\ncmake -S ./src -B ./src/build -DCMAKE_BUILD_TYPE=Debug\ncmake --build ./src/build -j3\nThen you can run the tests:\ncmake --build ./src/build --target check\nAlternatively, you can setup CLion to build and run tests. Just right-click on src/CMakeLists.txt and select Load CMake Project. You can then choose a target, e.g. check, to build and run.\n\n\n\nTo build for Python, run:\npip install .\nYou can run unit tests with pytest. You’ll also need to install the test dependencies:\npip install \".[test]\"\nThen you can run the tests:\ncd apis/python\n# To run all tests.\npytest\n# To run a single test and display standard output and standard error.\npytest test/test_ingestion.py -s\nTo test Demo notebooks:\ncd apis/python\npip install -r test/ipynb/requirements.txt\npytest --nbmake test/ipynb\nCredentials: * Some tests run on TileDB Cloud using your current environment variable TILEDB_REST_TOKEN - you will need a valid API token for the tests to pass. See Create API Tokens for for instructions on getting one. * For continuous integration, the token is configured for the unittest user and all tests should pass.",
     "crumbs": [
       "Home page",
-      "Building From Source"
+      "Building and Running Tests"
     ]
   },
   {
-    "objectID": "documentation/Building.html#installation-from-a-local-checkout",
-    "href": "documentation/Building.html#installation-from-a-local-checkout",
-    "title": "Building From Source",
+    "objectID": "documentation/Building.html#c",
+    "href": "documentation/Building.html#c",
+    "title": "Building and Running Tests",
     "section": "",
-    "text": "pip install .",
+    "text": "To build for C++, run:\ncmake -S ./src -B ./src/build -DCMAKE_BUILD_TYPE=Debug\ncmake --build ./src/build -j3\nThen you can run the tests:\ncmake --build ./src/build --target check\nAlternatively, you can setup CLion to build and run tests. Just right-click on src/CMakeLists.txt and select Load CMake Project. You can then choose a target, e.g. check, to build and run.",
     "crumbs": [
       "Home page",
-      "Building From Source"
+      "Building and Running Tests"
+    ]
+  },
+  {
+    "objectID": "documentation/Building.html#python",
+    "href": "documentation/Building.html#python",
+    "title": "Building and Running Tests",
+    "section": "",
+    "text": "To build for Python, run:\npip install .\nYou can run unit tests with pytest. You’ll also need to install the test dependencies:\npip install \".[test]\"\nThen you can run the tests:\ncd apis/python\n# To run all tests.\npytest\n# To run a single test and display standard output and standard error.\npytest test/test_ingestion.py -s\nTo test Demo notebooks:\ncd apis/python\npip install -r test/ipynb/requirements.txt\npytest --nbmake test/ipynb\nCredentials: * Some tests run on TileDB Cloud using your current environment variable TILEDB_REST_TOKEN - you will need a valid API token for the tests to pass. See Create API Tokens for for instructions on getting one. * For continuous integration, the token is configured for the unittest user and all tests should pass.",
+    "crumbs": [
+      "Home page",
+      "Building and Running Tests"
     ]
   },
   {
     "objectID": "documentation/Building.html#linux",
     "href": "documentation/Building.html#linux",
-    "title": "Building From Source",
+    "title": "Building and Running Tests",
     "section": "Linux",
     "text": "Linux\nThere are several dependencies needed, for Ubuntu you can install via:\napt-get openblas-dev build-essentials cmake3\nTo build the python API after you have the dependencies, use pip:\npip install .",
     "crumbs": [
       "Home page",
-      "Building From Source"
+      "Building and Running Tests"
     ]
   },
   {
     "objectID": "documentation/Building.html#docker",
     "href": "documentation/Building.html#docker",
-    "title": "Building From Source",
+    "title": "Building and Running Tests",
     "section": "Docker",
     "text": "Docker\nA docker image is also provided for simplicity:\ndocker build -t tiledb/tiledb-vector-search .\nYou run the example docker image which provides the python package with:\ndocker run --rm tiledb/tiledb-vector-search",
     "crumbs": [
       "Home page",
-      "Building From Source"
+      "Building and Running Tests"
     ]
   },
   {
