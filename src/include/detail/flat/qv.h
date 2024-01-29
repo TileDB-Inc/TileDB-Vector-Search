@@ -211,13 +211,7 @@ auto qv_query_heap(
     unsigned nthreads,
     Distance distance = Distance{}) {
   return qv_query_heap(
-      without_ids{},
-      db,
-      q,
-      std::vector<uint64_t>{},
-      k_nn,
-      nthreads,
-      distance);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads, distance);
 }
 
 template <

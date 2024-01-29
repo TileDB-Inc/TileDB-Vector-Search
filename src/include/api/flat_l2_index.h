@@ -208,9 +208,7 @@ class IndexFlatL2 {
       switch (dtype) {
         case TILEDB_FLOAT32: {
           auto qspan = MatrixView<float, stdx::layout_left>{
-              (float*)vectors.data(),
-              extents(vectors)[0],
-              extents(vectors)[1]};
+              (float*)vectors.data(), extents(vectors)[0], extents(vectors)[1]};
           auto [s, t] = impl_index_.query(qspan, k_nn);
 
           auto& ss = s;
