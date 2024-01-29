@@ -76,11 +76,21 @@ kmeans_add_test(unit_execution_policy)
 
 kmeans_add_test(unit_fixed_min_heap)
 
+kmeans_add_test(unit_flat_l2_index)
+
 kmeans_add_test(unit_flat_qv)
 
 kmeans_add_test(unit_flat_vq)
 
 kmeans_add_test(unit_gen_graphs)
+
+kmeans_add_test(unit_ivf_flat_group)
+
+kmeans_add_test(unit_ivf_flat_index)
+
+kmeans_add_test(unit_ivf_flat_metadata)
+
+kmeans_add_test(unit_index_defs)
 
 kmeans_add_test(unit_ivf_index)
 

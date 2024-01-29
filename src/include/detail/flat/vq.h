@@ -137,9 +137,6 @@ auto vq_query_heap(
   consolidate_scores(scores);
   auto top_k = get_top_k_with_scores(scores, k_nn);
 
-  debug_slice(std::get<0>(top_k));
-  debug_slice(std::get<1>(top_k));
-
   return top_k;
 }
 
