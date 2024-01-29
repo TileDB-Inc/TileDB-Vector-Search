@@ -219,6 +219,8 @@ class IndexIVFFlat {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<float, uint64_t, uint64_t>>>(
           ctx, group_uri, config);
+    } else {
+      throw std::runtime_error("Unsupported datatype combination");
     }
     if (dimension_ != 0 && dimension_ != index_->dimension()) {
       throw std::runtime_error(
@@ -390,18 +392,6 @@ class IndexIVFFlat {
     return nlist_;  // ::num_partitions(*index_);
   }
 
-// Don't think we need thi
-#if 0
-  constexpr size_t ntotal() const {
-    // @todo
-    return 0;
-  }
-
-  constexpr auto num_vectors() const {
-    return _cpo::num_vectors(*index_);
-  }
-#endif
-
   constexpr auto feature_type() const {
     return feature_datatype_;
   }
@@ -469,13 +459,6 @@ class IndexIVFFlat {
     [[nodiscard]] virtual size_t dimension() const = 0;
 
     [[nodiscard]] virtual size_t num_partitions() const = 0;
-
-// Don't think we need these
-#if 0
-    virtual size_t ntotal() const = 0;
-
-    virtual size_t num_vectors() const = 0;
-#endif
   };
 
   /**
@@ -674,17 +657,6 @@ class IndexIVFFlat {
     size_t num_partitions() const override {
       return ::num_partitions(impl_index_);
     }
-
-    // Don't think we need these
-#if 0
-    size_t ntotal() const override {
-      return ::num_vectors(impl_index_);
-    }
-
-    size_t num_vectors() const override {
-      return ::num_vectors(impl_index_);
-    }
-#endif
 
    private:
     /**

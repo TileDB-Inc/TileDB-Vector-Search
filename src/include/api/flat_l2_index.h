@@ -73,22 +73,22 @@ class IndexFlatL2 {
   };
 
   void add() const {
-    // @todo
+    // @todo Is implementation more than no-op needed?
   }
 
   void add_with_ids() const {
-    // @todo
+    // @todo Is implementation more than no-op needed?
   }
 
   void train() const {
-    // @todo
+    // @todo Is implementation more than no-op needed?
   }
 
   void save() const {
-    // @todo
+    // @todo Implement
   }
 
-  // todo query() or search() -- or both?
+  // @todo query() or search() -- or both?
   [[nodiscard]] auto query(
       const QueryVectorArray& vectors, size_t top_k) const {
     return index_->query(vectors, top_k);
@@ -114,15 +114,6 @@ class IndexFlatL2 {
 
   auto dimension() {
     return _cpo::dimension(*index_);
-  }
-
-  size_t ntotal() const {
-    // @todo
-    return 0;
-  }
-
-  auto num_vectors() {
-    return _cpo::num_vectors(*index_);
   }
 
   constexpr auto feature_type() const {
@@ -155,10 +146,6 @@ class IndexFlatL2 {
     virtual void remove(const IdVector& ids) const = 0;
 
     virtual size_t dimension() const = 0;
-
-    virtual size_t ntotal() const = 0;
-
-    virtual size_t num_vectors() const = 0;
   };
 
   /**
@@ -213,7 +200,7 @@ class IndexFlatL2 {
      */
     [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
         const QueryVectorArray& vectors, size_t k_nn) const override {
-      // @todo using index_type = size_t;
+      // @todo using index_type = size_t; ?
 
       auto dtype = vectors.feature_type();
 
@@ -223,9 +210,9 @@ class IndexFlatL2 {
           auto qspan = MatrixView<float, stdx::layout_left>{
               (float*)vectors.data(),
               extents(vectors)[0],
-              extents(vectors)[1]};  // @todo ??
+              extents(vectors)[1]};
           auto [s, t] = impl_index_.query(qspan, k_nn);
-          debug_slice(t);
+
           auto& ss = s;
           auto& tt = t;
           auto x = FeatureVectorArray{std::move(s)};
@@ -236,7 +223,7 @@ class IndexFlatL2 {
           auto qspan = MatrixView<uint8_t, stdx::layout_left>{
               (uint8_t*)vectors.data(),
               extents(vectors)[0],
-              extents(vectors)[1]};  // @todo ??
+              extents(vectors)[1]};
           auto [s, t] = impl_index_.query(qspan, k_nn);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
@@ -270,14 +257,6 @@ class IndexFlatL2 {
 
     size_t dimension() const override {
       return _cpo::dimension(impl_index_);
-    }
-
-    size_t ntotal() const override {
-      return _cpo::num_vectors(impl_index_);
-    }
-
-    size_t num_vectors() const override {
-      return _cpo::num_vectors(impl_index_);
     }
 
    private:

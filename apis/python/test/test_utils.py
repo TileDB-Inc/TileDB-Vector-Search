@@ -1,6 +1,5 @@
 import os
 import numpy as np
-from array_paths import *
 from tiledb.vector_search.utils import load_fvecs, load_ivecs, write_fvecs, write_ivecs
 from array_paths import *
 
