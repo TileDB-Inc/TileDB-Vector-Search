@@ -1,40 +1,39 @@
 /**
-* @file   tiledb/vector_search/type_erased_module.cc
-*
-* @section LICENSE
-*
-* The MIT License
-*
-* @copyright Copyright (c) 2023 TileDB, Inc.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-* @section DESCRIPTION
-*/
+ * @file   tiledb/vector_search/type_erased_module.cc
+ *
+ * @section LICENSE
+ *
+ * The MIT License
+ *
+ * @copyright Copyright (c) 2023 TileDB, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * @section DESCRIPTION
+ */
 
 #include <tiledb/tiledb>
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
-
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
@@ -50,14 +49,13 @@
 namespace py = pybind11;
 
 namespace {
-template <typename ...TArgs>
+template <typename... TArgs>
 py::tuple make_python_pair(std::tuple<TArgs...>&& arg) {
   static_assert(sizeof...(TArgs) == 2, "Must have exactly two arguments");
 
   return py::make_tuple<py::return_value_policy::automatic>(
       py::cast(std::get<0>(arg), py::return_value_policy::move),
-      py::cast(std::get<1>(arg), py::return_value_policy::move)
-  );
+      py::cast(std::get<1>(arg), py::return_value_policy::move));
 }
 
 std::map<std::string, std::string> kwargs_to_map(py::kwargs kwargs) {
@@ -74,33 +72,33 @@ std::map<std::string, std::string> kwargs_to_map(py::kwargs kwargs) {
   return result;
 }
 
-} // namespace
+}  // namespace
 
 auto datatype_to_format(tiledb_datatype_t datatype) {
-    switch(datatype) {
-        case TILEDB_FLOAT32:
-            return py::format_descriptor<float>::format();
-        case TILEDB_FLOAT64:
-            return py::format_descriptor<double>::format();
-        case TILEDB_INT8:
-            return py::format_descriptor<int8_t>::format();
-        case TILEDB_UINT8:
-            return py::format_descriptor<uint8_t>::format();
-        case TILEDB_INT16:
-            return py::format_descriptor<int16_t>::format();
-        case TILEDB_UINT16:
-            return py::format_descriptor<uint16_t>::format();
-        case TILEDB_INT32:
-            return py::format_descriptor<int32_t>::format();
-        case TILEDB_UINT32:
-            return py::format_descriptor<uint32_t>::format();
-        case TILEDB_INT64:
-            return py::format_descriptor<int64_t>::format();
-        case TILEDB_UINT64:
-            return py::format_descriptor<uint64_t>::format();
-        default:
-            throw std::runtime_error("Unsupported datatype");
-    }
+  switch (datatype) {
+    case TILEDB_FLOAT32:
+      return py::format_descriptor<float>::format();
+    case TILEDB_FLOAT64:
+      return py::format_descriptor<double>::format();
+    case TILEDB_INT8:
+      return py::format_descriptor<int8_t>::format();
+    case TILEDB_UINT8:
+      return py::format_descriptor<uint8_t>::format();
+    case TILEDB_INT16:
+      return py::format_descriptor<int16_t>::format();
+    case TILEDB_UINT16:
+      return py::format_descriptor<uint16_t>::format();
+    case TILEDB_INT32:
+      return py::format_descriptor<int32_t>::format();
+    case TILEDB_UINT32:
+      return py::format_descriptor<uint32_t>::format();
+    case TILEDB_INT64:
+      return py::format_descriptor<int64_t>::format();
+    case TILEDB_UINT64:
+      return py::format_descriptor<uint64_t>::format();
+    default:
+      throw std::runtime_error("Unsupported datatype");
+  }
 }
 
 // Define Pybind11 bindings
@@ -312,4 +310,3 @@ void init_type_erased_module(py::module_& m) {
       .def("dimension", &IndexIVFFlat::dimension);
 #endif
 }
-
