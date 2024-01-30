@@ -40,10 +40,12 @@
 
 TEST_CASE("execution_policy: construct", "[execution_policy]") {
   std::execution::sequenced_policy p;
-  auto q = stdx::execution::seq;
 
   std::vector<int> v(10);
   stdx::fill(std::execution::seq, v.begin(), v.end(), 0);
+
+  auto q = stdx::execution::seq;
+  stdx::fill(q, v.begin(), v.end(), 0);
 }
 #else
 

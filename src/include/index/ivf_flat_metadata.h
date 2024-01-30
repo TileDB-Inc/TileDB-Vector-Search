@@ -175,7 +175,7 @@ class ivf_flat_index_metadata {
     uint32_t v_num;
     const void* v;
 
-    auto&& [name, value, required] = check;  // copilot filled in "required"
+    auto&& [name, value, required] = check;
     if (!read_group.has_metadata(name, &v_type)) {
       if (required) {
         throw std::runtime_error("Missing metadata: " + name);
@@ -212,8 +212,7 @@ class ivf_flat_index_metadata {
     tiledb_datatype_t v_type;
     uint32_t v_num;
     const void* v;
-    auto&& [name, value, type, required] =
-        check;  // copilot filled in "required"
+    auto&& [name, value, type, required] = check;
     if (!read_group.has_metadata(name, &v_type)) {
       if (required) {
         throw std::runtime_error("Missing metadata: " + name);

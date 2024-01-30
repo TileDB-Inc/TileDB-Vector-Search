@@ -120,11 +120,6 @@ def test_numpy_to_feature_vector_array():
     assert (a == c).all()
 
 
-#    logging.info(a[1:5, 1:5])
-#    logging.info(c[1:5, 1:5])
-
-# These will be added to a future PR
-'''
 def test_construct_IndexFlatL2():
     a = vspy.IndexFlatL2(ctx, siftsmall_inputs_uri)
     assert a.feature_type_string() == "float32"
@@ -335,4 +330,3 @@ def test_read_index_and_finite_query_1000_upper_bound():
             assert recall > 0.925
         if (nprobe == 32):
             assert recall == 1.0
-'''

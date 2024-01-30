@@ -38,11 +38,8 @@
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
 
-// Do not delete!  This will be part of a future PR
-#if 0
 #include "api/flat_l2_index.h"
 #include "api/ivf_flat_index.h"
-#endif
 
 #include "api/api_defs.h"
 
@@ -220,8 +217,6 @@ void init_type_erased_module(py::module_& m) {
         return v;
       }));
 
-  // Do not delete!  This will be part of a future PR
-#if 0
   py::class_<IndexFlatL2>(m, "IndexFlatL2")
       .def(py::init<const tiledb::Context&, const std::string&>())
       .def("add", &IndexFlatL2::add)
@@ -308,5 +303,4 @@ void init_type_erased_module(py::module_& m) {
       .def("id_type_string", &IndexIVFFlat::id_type_string)
       .def("px_type_string", &IndexIVFFlat::px_type_string)
       .def("dimension", &IndexIVFFlat::dimension);
-#endif
 }
