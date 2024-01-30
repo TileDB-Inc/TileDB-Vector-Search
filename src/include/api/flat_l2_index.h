@@ -116,6 +116,10 @@ class IndexFlatL2 {
     return _cpo::dimension(*index_);
   }
 
+  auto num_vectors() {
+    return _cpo::num_vectors(*index_);
+  }
+
   constexpr auto feature_type() const {
     return feature_datatype_;
   }
@@ -146,6 +150,8 @@ class IndexFlatL2 {
     virtual void remove(const IdVector& ids) const = 0;
 
     virtual size_t dimension() const = 0;
+
+    virtual size_t num_vectors() const = 0;
   };
 
   /**
@@ -255,6 +261,10 @@ class IndexFlatL2 {
 
     size_t dimension() const override {
       return _cpo::dimension(impl_index_);
+    }
+
+    size_t num_vectors() const override {
+      return _cpo::num_vectors(impl_index_);
     }
 
    private:
