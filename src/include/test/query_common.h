@@ -197,29 +197,29 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     // debug_slice(top_k_ivf, "top_k_ivf");
     // debug_slice(top_k_ivf_scores, "top_k_ivf_scores");
 
-    auto intersectionsm1 =
-        (long)count_intersections(top_k, groundtruth_set, k_nn);
+    size_t intersectionsm1 =
+      count_intersections(top_k, groundtruth_set, k_nn);
     double recallm1 = intersectionsm1 / ((double)top_k.num_cols() * k_nn);
     if (nlist == 1) {
-      CHECK(intersectionsm1 == num_vectors(top_k) * dimension(top_k));
+      CHECK(intersectionsm1 == (size_t)( num_vectors(top_k) * dimension(top_k)));
       CHECK(recallm1 == 1.0);
     }
     CHECK(recallm1 > .99);
 
     // @todo There is randomness in initialization of kmeans, use a fixed seed
-    auto intersections0 = (long)count_intersections(top_k_ivf, top_k, k_nn);
+    size_t intersections0 = count_intersections(top_k_ivf, top_k, k_nn);
     double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
     if (nlist == 1) {
-      CHECK(intersections0 == num_vectors(top_k) * dimension(top_k));
+      CHECK(intersections0 == (size_t)(num_vectors(top_k) * dimension(top_k)));
       CHECK(recall0 == 1.0);
     }
     CHECK(recall0 > .95);
 
-    auto intersections1 =
+    size_t intersections1 =
         (long)count_intersections(top_k_ivf, groundtruth_set, k_nn);
     double recall1 = intersections1 / ((double)top_k_ivf.num_cols() * k_nn);
     if (nlist == 1) {
-      CHECK(intersections1 == num_vectors(top_k) * dimension(top_k));
+      CHECK(intersections1 == (size_t)(num_vectors(top_k) * dimension(top_k)));
       CHECK(recall1 == 1.0);
     }
     CHECK(recall1 > 0.95);

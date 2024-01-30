@@ -339,9 +339,9 @@ TEST_CASE("array_defs: compare siftsmall arrays and files", "[array_defs]") {
   CHECK(array_inputs == file_inputs);
   CHECK(array_queries == file_queries);
 
-  auto intersections00 =
-      (long)count_intersections(file_groundtruth_64, array_groundtruth, 100);
+  size_t intersections00 =
+    count_intersections(file_groundtruth_64, array_groundtruth, 100);
   CHECK(intersections00 != 0);
-  auto expected00 = array_groundtruth.num_cols() * 100;
+  size_t expected00 = array_groundtruth.num_cols() * 100;
   CHECK(intersections00 == expected00);
 }
