@@ -156,6 +156,7 @@ auto qv_query_heap(
     unsigned nthreads,
     Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
+  // load(db);
 
   // @todo Definitive spec on whether or not feature_vector_arrays are loaded
   // when the function is called.  IVF assumes calls to "infinite" algorithms
