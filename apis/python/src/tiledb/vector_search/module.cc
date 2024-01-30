@@ -529,9 +529,9 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
                   tiledb::TemporalPolicy() :
                   tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)};
 
-            py::buffer_info buf_info = active_queries_arr.request();
-            auto shape = active_queries_arr.shape();
-            size_t num_rows = shape[0];
+          py::buffer_info buf_info = active_queries_arr.request();
+          auto shape = active_queries_arr.shape();
+          size_t num_rows = shape[0];
 
           auto active_queries = std::vector<std::vector<indices_type>>();
           active_queries.reserve(num_rows);
