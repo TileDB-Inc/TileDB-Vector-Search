@@ -89,7 +89,7 @@ class flat_l2_index {
   }
 
   constexpr auto load() {
-    feature_vectors_->load();
+    return feature_vectors_->load();
   }
 
   auto store() {
