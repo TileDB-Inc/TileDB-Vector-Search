@@ -90,7 +90,6 @@ struct dummy_index {
   }
 };
 
-
 TEST_CASE("ivf_flat_group: constructor", "[ivf_flat_group]") {
   tiledb::Context ctx;
 

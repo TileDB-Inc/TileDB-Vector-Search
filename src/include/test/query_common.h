@@ -197,11 +197,10 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     // debug_slice(top_k_ivf, "top_k_ivf");
     // debug_slice(top_k_ivf_scores, "top_k_ivf_scores");
 
-    size_t intersectionsm1 =
-      count_intersections(top_k, groundtruth_set, k_nn);
+    size_t intersectionsm1 = count_intersections(top_k, groundtruth_set, k_nn);
     double recallm1 = intersectionsm1 / ((double)top_k.num_cols() * k_nn);
     if (nlist == 1) {
-      CHECK(intersectionsm1 == (size_t)( num_vectors(top_k) * dimension(top_k)));
+      CHECK(intersectionsm1 == (size_t)(num_vectors(top_k) * dimension(top_k)));
       CHECK(recallm1 == 1.0);
     }
     CHECK(recallm1 > .99);
