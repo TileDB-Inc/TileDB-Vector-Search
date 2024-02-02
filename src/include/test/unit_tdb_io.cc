@@ -94,6 +94,18 @@ TEST_CASE("tdb_io: read matrix", "[tdb_io]") {
   CHECK(dimension(X) == bigann1M_dimension);
 }
 
+TEST_CASE("tdb_io: load_file", "[tdb_io]") {
+  tiledb::Context ctx;
+
+  auto A = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri);
+  auto B = read_bin_local<float>(siftsmall_inputs_file);
+
+  CHECK(A[0][0] == B[0][0]);
+  CHECK(A[0][1] == B[0][1]);
+  CHECK(A[1][0] == B[1][0]);
+  REQUIRE(A == B);
+}
+
 TEMPLATE_TEST_CASE("tdb_io: write matrix", "[tdb_io]", float, uint8_t) {
   tiledb::Context ctx;
   std::string tmp_matrix_uri = "/tmp/tmp_matrix";
