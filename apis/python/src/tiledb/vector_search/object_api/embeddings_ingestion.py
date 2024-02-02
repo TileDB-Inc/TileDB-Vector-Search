@@ -14,6 +14,7 @@ def ingest_embeddings(
     workers: int = -1,
     worker_resources: Dict = None,
     worker_image: str = None,
+    extra_worker_modules: Optional[List[str]] = None,
     max_tasks_per_stage: int = -1,
     verbose: bool = False,
     trace_id: Optional[str] = None,
@@ -86,7 +87,24 @@ def ingest_embeddings(
         verbose: bool = False,
         trace_id: Optional[str] = None,
         config: Optional[Mapping[str, Any]] = None,
+        extra_worker_modules: Optional[List[str]] = None,
     ):
+        def install_extra_modules():
+            if extra_worker_modules is not None:
+                import os
+                import subprocess
+                import sys
+
+                sys.path.insert(0, "/home/udf/.local/bin")
+                sys.path.insert(0, "/home/udf/.local/lib/python3.9/site-packages")
+                os.environ["PATH"] = f"/home/udf/.local/bin:{os.environ['PATH']}"
+                for module in extra_worker_modules:
+                    subprocess.check_call(
+                        [sys.executable, "-m", "pip", "install", module]
+                    )
+
+        install_extra_modules()
+
         import numpy as np
 
         import tiledb
@@ -194,6 +212,7 @@ def ingest_embeddings(
         workers: int = -1,
         worker_resources: Dict = None,
         worker_image: str = DEFAULT_IMG_NAME,
+        extra_worker_modules: Optional[List[str]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
         mode: Mode = Mode.LOCAL,
@@ -219,8 +238,10 @@ def ingest_embeddings(
             )
 
         submit = partial(submit_local, d)
+        extra_udf_worker_modules = None
         if mode == Mode.BATCH or mode == Mode.REALTIME:
             submit = d.submit
+            extra_udf_worker_modules = extra_worker_modules
 
         task_id = 0
         num_partitions = len(partitions)
@@ -247,6 +268,7 @@ def ingest_embeddings(
                 verbose=verbose,
                 trace_id=trace_id,
                 config=config,
+                extra_worker_modules=extra_udf_worker_modules,
                 name="generate-embeddings-" + str(task_id),
                 resources=worker_resources,
                 image_name=worker_image,
@@ -301,6 +323,7 @@ def ingest_embeddings(
             workers=workers,
             worker_resources=worker_resources,
             worker_image=worker_image,
+            extra_worker_modules=extra_worker_modules,
             verbose=verbose,
             trace_id=trace_id,
             mode=mode,
