@@ -34,8 +34,8 @@
 #include <filesystem>
 #include <string>
 
-#include "array_defs.h"
 #include "index/ivf_flat_metadata.h"
+#include "query_common.h"
 
 TEST_CASE("ivf_flat_metadata: test test", "[ivf_flat_metadata]") {
   REQUIRE(true);
@@ -55,8 +55,8 @@ struct dummy_index {
 struct null_group {};
 
 TEST_CASE("ivf_flat_metadata: default constructor", "[ivf_flat_metadata]") {
-  auto x = ivf_flat_index_metadata<null_group>();
-  ivf_flat_index_metadata<null_group> y;
+  auto x = ivf_flat_index_metadata();
+  ivf_flat_index_metadata y;
 }
 
 TEST_CASE("ivf_flat_metadata: open group", "[ivf_flat_metadata]") {
@@ -64,7 +64,7 @@ TEST_CASE("ivf_flat_metadata: open group", "[ivf_flat_metadata]") {
   tiledb::Config cfg;
 
   auto read_group = tiledb::Group(ctx, sift_group_uri, TILEDB_READ, cfg);
-  auto x = ivf_flat_index_metadata<null_group>();
+  auto x = ivf_flat_index_metadata();
 
   SECTION("load metadata") {
     x.load_metadata(read_group);
@@ -77,7 +77,7 @@ TEST_CASE("ivf_flat_metadata: open group", "[ivf_flat_metadata]") {
 
   SECTION("Compare two constructed objects") {
     x.load_metadata(read_group);
-    ivf_flat_index_metadata<null_group> y;
+    ivf_flat_index_metadata y;
     y.load_metadata(read_group);
     CHECK(x.compare_metadata(y));
   }

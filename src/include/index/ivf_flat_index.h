@@ -67,8 +67,6 @@
 #include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 
-#include "index/index_defs.h"
-
 enum class kmeans_init { none, kmeanspp, random };
 
 /**
@@ -218,7 +216,7 @@ class ivf_flat_index {
       const std::string& uri,
       uint64_t timestamp = 0)
       : group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
-            ctx, uri, *this, TILEDB_READ, timestamp_)} {
+            *this, ctx, uri, TILEDB_READ, timestamp_)} {
     if (timestamp_ == 0) {
       timestamp_ = group_->get_previous_ingestion_timestamp();
     }
@@ -758,7 +756,7 @@ class ivf_flat_index {
 
     // Write the group
     auto write_group =
-        ivf_flat_index_group(ctx, group_uri, *this, TILEDB_WRITE);
+        ivf_flat_index_group(*this, ctx, group_uri, TILEDB_WRITE);
 
     write_group.set_dimension(dimension_);
 
