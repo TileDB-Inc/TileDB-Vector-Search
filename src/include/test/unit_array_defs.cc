@@ -137,6 +137,24 @@ std::vector<std::filesystem::path> siftsmall_files{
     siftsmall_groundtruth_file,
 };
 
+#if 1
+TEST_CASE("array_defs: quick hack to create siftsmall input", "[array_defs]") {
+  tiledb::Context ctx;
+  auto siftsmall_inputs = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(
+      ctx, siftsmall_inputs_uri, num_siftsmall_vectors);
+  write_matrix(ctx, siftsmall_inputs, "/tmp/abc");
+  auto siftsmall_queries = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(
+      ctx, siftsmall_query_uri, 100);
+  write_matrix(ctx, siftsmall_queries, "/tmp/def");
+  auto siftsmall_uint8_inputs = tdbColMajorPreLoadMatrix<siftsmall_uint8_feature_type>(
+      ctx, siftsmall_uint8_inputs_uri, num_siftsmall_uint8_vectors);
+  write_matrix(ctx, siftsmall_uint8_inputs, "/tmp/ghi");
+  auto siftsmall_uint8_queries = tdbColMajorPreLoadMatrix<siftsmall_uint8_feature_type>(
+      ctx, siftsmall_uint8_query_uri, 100);
+  write_matrix(ctx, siftsmall_uint8_queries, "/tmp/jkl");
+
+}
+#endif
 #if 0
 TEST_CASE("array_defs: quick hack to create fmnistsmall", "[array_defs]") {
   tiledb::Context ctx;
