@@ -30,6 +30,8 @@
  * Header-only library of class that implements a flat index that used product
  * quantization.
  *
+ * @todo Measure any overheads of applying pq distance function objects.
+ * @todo More thorough documentation
  */
 
 #ifndef TILEDB_FLATPQ_INDEX_H
@@ -78,8 +80,6 @@ void sub_kmeans_random_init(
     indices[i] = index;
     visited.insert(index);
   }
-  // std::iota(begin(indices), end(indices), 0);
-  // std::shuffle(begin(indices), end(indices), gen);
 
   for (size_t i = 0; i < num_clusters; ++i) {
     for (size_t j = sub_begin; j < sub_end; ++j) {
@@ -118,9 +118,6 @@ auto sub_kmeans(
     size_t max_iter,
     size_t num_threads,
     float reassign_ratio = 0.05) {
-  // using feature_type = T;
-  // using centroids_feature_type = U;
-  // using index_type = size_t;
 
   size_t sub_dimension_ = sub_end - sub_begin;
 
@@ -195,21 +192,6 @@ auto sub_kmeans(
     size_t lower_degree_bound = std::ceil(max_degree * reassign_ratio);
 
     if (iter != max_iter - 1) {
-#if 0
-        // Pick a random vector to be a new centroid
-        std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
-        for (auto&& [degree, zero_part] : low_degrees) {
-          if (degree < lower_degree_bound) {
-            auto index = dis(gen);
-            auto rand_vector = training_set[index];
-            auto low_centroid = new_centroids[zero_part];
-            std::copy(begin(rand_vector), end(rand_vector), begin(low_centroid));
-            for (size_t i = 0; i < dimension_; ++i) {
-              new_centroids[parts[index]][i] -= rand_vector[i];
-            }
-          }
-        }
-#endif
       // Move vectors with high scores to replace zero-degree partitions
       std::sort_heap(begin(low_degrees), end(low_degrees));
       std::sort_heap(begin(high_scores), end(high_scores), [](auto a, auto b) {
@@ -279,15 +261,14 @@ template <
     class shuffled_ids_type = size_t,
     class indices_type = size_t>
 class flatpq_index {
-  // using feature_type = typename
-  // std::remove_reference_t<decltype(partitioned_db)>::value_type;
+
   using feature_type = T;
   using id_type = shuffled_ids_type;
   using score_type = float;
   using centroid_feature_type = float;
   using code_type = uint8_t;
 
-  // @todo Temporary only!!
+  // @todo Temporarily public to facilitate early testing
  public:
   // metadata
   size_t dimension_{0};
@@ -347,31 +328,12 @@ class flatpq_index {
     }
     sub_dimension_ = dimension_ / num_subspaces_;
 
-#if 0
-    switch (bits_per_subspace) {
-      case 8: {
-        num_clusters_ = 256;
-        break;
-      }
-      case 16: {
-        // @todo -- allow setting to smaller value
-        // num_clusters_ = 65536;
-        num_clusters_ = 2048;
-        break;
-      }
-        throw std::invalid_argument(
-            "bits_per_subspace must be equal to 8 or 16");
-    }
-#endif
   }
 
   /**
    * Load constructor
    */
   flatpq_index(tiledb::Context ctx, const std::string& group_uri) {
-    // ColMajorMatrix<centroid_feature_type> centroids_;
-    // std::vector<ColMajorMatrix<score_type>> distance_tables_;
-    // ColMajorMatrix<code_type> pq_vectors_;
 
     tiledb::Config cfg;
     auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
@@ -466,16 +428,22 @@ class flatpq_index {
       auto sub_begin = sub_dimension_ * subspace;
       auto sub_end = sub_dimension_ * (subspace + 1);
 
+      // For each vector, find the closest centroid
+      // We use sub_sum_of_squares_distance, which will find the closest
+      // centroid for the current subspace
       auto x = detail::flat::qv_partition(
           centroids_,
           feature_vectors,
           num_threads_,
           sub_sum_of_squares_distance{sub_begin, sub_end});
 
+      // Save the index (code) of the closest centroid
+      // @todo Avoid this copy.  Do "in-place" or return 8-bit result from
+      // qv_partition and move to pq_vectors_
       for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
         pq_vectors_(subspace, i) = x[i];
 
-        // Debugging
+        // Debugging -- copy to std::vector so the debugger can inspect
         std::vector<float> a(
             begin(feature_vectors[i]), end(feature_vectors[i]));
         std::vector<float> b{begin(pq_vectors_[i]), end(pq_vectors_[i])};
@@ -530,7 +498,7 @@ class flatpq_index {
   }
 
   auto make_pq_distance_asymmetric() {
-    // using A = decltype(centroids_[0]);
+
     using A = std::span<feature_type>;  // @todo: Don't hardcode span
     using B = decltype(pq_vectors_[0]);
 
@@ -584,14 +552,16 @@ class flatpq_index {
     }
   }
 
+  // @todo Make an in-place variant
   template <feature_vector V>
   auto encode(const V& v) {
-    // auto pq = Vector<score_type>(num_subspaces_);
+    // @todo Use Vector instead of std::vector
     auto pq = std::vector<code_type>(num_subspaces_);
     encode(v, pq);
     return pq;
   }
 
+  // @todo Make an in-place variant
   template <feature_vector_array V>
   auto encode(const V& v) {
     auto pq = ColMajorMatrix<code_type>(num_subspaces_, num_vectors(v));
@@ -605,7 +575,7 @@ class flatpq_index {
   template <class F = feature_type, feature_vector PQ>
   auto decode(const PQ& pq) {
     using local_feature_type = F;
-    // auto un_pq = Vector<local_feature_type>(dimension_);
+    // @todo Use Vector instead of std::vector
     auto un_pq = std::vector<local_feature_type>(dimension_);
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
@@ -639,10 +609,6 @@ class flatpq_index {
     for (auto&& [name, value, type] : metadata) {
       write_group.put_metadata(name, type, 1, value);
     }
-
-    // ColMajorMatrix<centroid_feature_type> centroids_;
-    // std::vector<ColMajorMatrix<score_type>> distance_tables_;
-    // ColMajorMatrix<code_type> pq_vectors_;
 
     auto centroids_uri = group_uri + "/centroids";
     write_matrix(ctx, centroids_, centroids_uri);
@@ -679,9 +645,6 @@ class flatpq_index {
   auto verify_pq_encoding(const ColMajorMatrix<feature_type>& feature_vectors) {
     double total_distance = 0.0;
     double total_normalizer = 0.0;
-
-    // debug_slice(centroids_, "verify pq encoding centroids");
-    // debug_slice(feature_vectors, "verify pq encoding feature vectors");
 
     auto debug_vectors =
         ColMajorMatrix<float>(dimension_, num_vectors(feature_vectors));
