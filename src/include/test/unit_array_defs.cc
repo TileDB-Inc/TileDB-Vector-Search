@@ -137,7 +137,6 @@ std::vector<std::filesystem::path> siftsmall_files{
     siftsmall_groundtruth_file,
 };
 
-
 TEST_CASE("array_defs: test array uris", "[array_defs]") {
   bool debug = false;
 
