@@ -118,7 +118,6 @@ auto sub_kmeans(
     size_t max_iter,
     size_t num_threads,
     float reassign_ratio = 0.05) {
-
   size_t sub_dimension_ = sub_end - sub_begin;
 
   std::vector<size_t> degrees(num_clusters, 0);
@@ -261,7 +260,6 @@ template <
     class shuffled_ids_type = size_t,
     class indices_type = size_t>
 class flatpq_index {
-
   using feature_type = T;
   using id_type = shuffled_ids_type;
   using score_type = float;
@@ -327,14 +325,12 @@ class flatpq_index {
           "Number of subspaces must evenly divide dimension of vector");
     }
     sub_dimension_ = dimension_ / num_subspaces_;
-
   }
 
   /**
    * Load constructor
    */
   flatpq_index(tiledb::Context ctx, const std::string& group_uri) {
-
     tiledb::Config cfg;
     auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
 
@@ -498,7 +494,6 @@ class flatpq_index {
   }
 
   auto make_pq_distance_asymmetric() {
-
     using A = std::span<feature_type>;  // @todo: Don't hardcode span
     using B = decltype(pq_vectors_[0]);
 
