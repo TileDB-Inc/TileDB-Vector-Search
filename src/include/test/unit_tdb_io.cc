@@ -99,14 +99,14 @@ TEST_CASE("tdb_io: load_file", "[tdb_io]") {
 
   SECTION("inputs") {
     const auto A = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(ctx, siftsmall_inputs_uri);
-    const auto B = read_bin_local<siftsmall_feature_type>(siftsmall_inputs_file);
+    const auto B = read_bin_local<siftsmall_feature_type>(ctx, siftsmall_inputs_file);
 
     REQUIRE(A == B);
   }
 
   SECTION("query") {
     const auto A = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(ctx, siftsmall_query_uri);
-    const auto B = read_bin_local<siftsmall_feature_type>(siftsmall_query_file);
+    const auto B = read_bin_local<siftsmall_feature_type>(ctx, siftsmall_query_file);
 
     REQUIRE(A == B);
   }

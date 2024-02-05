@@ -32,26 +32,12 @@
 #ifndef TILEDB_TDB_IO_H
 #define TILEDB_TDB_IO_H
 
-#if defined __has_include
-#if __has_include(<sys/mman.h>)
-#define USE_MMAP
-#endif
-#endif
-
-#ifdef USE_MMAP
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#else
-#include <fstream>
-#endif
-
 #include <filesystem>
 #include <numeric>
 #include <vector>
 
 #include <tiledb/tiledb>
+// #include <tiledb/vfs.h>
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_helpers.h"
 #include "utils/logging.h"
@@ -386,71 +372,20 @@ auto sizes_to_indices(const std::vector<T>& sizes) {
  * @return a Matrix of the data
  */
 template <class T>
-auto read_bin_local(const std::string& bin_file, size_t subset = 0) {
-#ifdef USE_MMAP
-  if (!std::filesystem::exists(bin_file)) {
-    throw std::runtime_error("file " + bin_file + " does not exist");
-  }
-  auto file_size = std::filesystem::file_size(bin_file);
+auto read_bin_local(
+  const tiledb::Context& ctx,
+  const std::string& bin_file,
+  size_t subset = 0) {
+  auto vfs = tiledb::VFS{ctx};
 
-  auto fd = open(bin_file.c_str(), O_RDONLY);
-  if (fd == -1) {
-    throw std::runtime_error("could not open " + bin_file);
-  }
-
-  uint32_t dimension{0};
-  auto num_read = read(fd, &dimension, 4);
-  lseek(fd, 0, SEEK_SET);
-
-  auto max_vectors = file_size / (4 + dimension * sizeof(T));
-  if (subset > max_vectors) {
-    throw std::runtime_error(
-        "specified subset is too large " + std::to_string(subset) + " > " +
-        std::to_string(max_vectors));
-  }
-  auto num_vectors = subset == 0 ? max_vectors : subset;
-
-  struct stat s;
-  fstat(fd, &s);
-  size_t mapped_size = s.st_size;
-  assert((size_t)s.st_size == (size_t)file_size);
-
-  T* mapped_ptr = reinterpret_cast<T*>(
-      mmap(0, mapped_size, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0));
-
-  if ((long)mapped_ptr == -1) {
-    throw std::runtime_error("mmap failed");
-  }
-
-  ColMajorMatrix<T> X(dimension, num_vectors);
-
-  auto data_ptr = X.data();
-  auto sift_ptr = mapped_ptr;
-
-  // Perform strided read
-  for (size_t k = 0; k < num_vectors; ++k) {
-    // Check for consistency of dimensions
-    decltype(dimension) dim = *reinterpret_cast<int*>(sift_ptr++);
-    if (dim != dimension) {
-      throw std::runtime_error(
-          "dimension mismatch: " + std::to_string(dim) +
-          " != " + std::to_string(dimension));
-    }
-    std::copy(sift_ptr, sift_ptr + dimension, data_ptr);
-    data_ptr += dimension;
-    sift_ptr += dimension;
-  }
-
-  munmap(mapped_ptr, mapped_size);
-  close(fd);
-
-  return X;
-#else
   std::uint32_t dimension = 0u;
 
-  const auto file_size = std::filesystem::file_size(bin_file);
+  const auto file_size = vfs.file_size(bin_file);
+  auto filebuf = tiledb::VFS::filebuf{vfs};
+  filebuf.open(bin_file, std::ios::in | std::ios::binary);
+
   auto file = std::ifstream{bin_file, std::ios::binary};
-  if (!file.is_open()) {
+  if (!file.good()) {
     throw std::runtime_error("failed to open file: " + bin_file);
   }
 
@@ -491,7 +426,6 @@ auto read_bin_local(const std::string& bin_file, size_t subset = 0) {
   }
 
   return result;
-#endif
 }
 
 #endif  // TILEDB_TDB_IO_H
