@@ -34,22 +34,17 @@
 
 #if defined __has_include
 #if __has_include(<sys/mman.h>)
-
 #define USE_MMAP
+#endif
+#endif
+
+#ifdef USE_MMAP
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
 #else
-
 #include <fstream>
-
-#endif
-#else
-
-#include <fstream>
-
 #endif
 
 #include <filesystem>
