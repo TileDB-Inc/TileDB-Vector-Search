@@ -32,10 +32,26 @@
 #ifndef TILEDB_TDB_IO_H
 #define TILEDB_TDB_IO_H
 
+#if defined __has_include
+#if __has_include (<sys/mman.h>)
+
+#define USE_MMAP
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#else
+
+#include <fstream>
+
+#endif
+#else
+
+#include <fstream>
+
+#endif
+
 #include <filesystem>
 #include <numeric>
 #include <vector>
@@ -376,6 +392,7 @@ auto sizes_to_indices(const std::vector<T>& sizes) {
  */
 template <class T>
 auto read_bin_local(const std::string& bin_file, size_t subset = 0) {
+#ifdef USE_MMAP
   if (!std::filesystem::exists(bin_file)) {
     throw std::runtime_error("file " + bin_file + " does not exist");
   }
@@ -433,6 +450,52 @@ auto read_bin_local(const std::string& bin_file, size_t subset = 0) {
   close(fd);
 
   return X;
+#else
+  std::uint32_t dimension = 0u;
+
+  const auto file_size = std::filesystem::file_size(bin_file);
+  auto file = std::ifstream{bin_file, std::ios::binary};
+  if (!file.is_open()) {
+    throw std::runtime_error("failed to open file: " + bin_file);
+  }
+
+  if (!file.read(reinterpret_cast<char*>(&dimension), sizeof(dimension))) {
+    throw std::runtime_error("failed to read dimension for the first vector");
+  }
+  file.seekg(0);
+
+  const auto max_vectors = file_size / (4u + dimension * sizeof(T));
+  if (subset > max_vectors) {
+    throw std::runtime_error(
+        "specified subset is too large " + std::to_string(subset) + " > " +
+        std::to_string(max_vectors));
+  }
+
+  const auto num_vectors = subset == 0 ? max_vectors : subset;
+
+  auto result = ColMajorMatrix<T>{dimension, num_vectors};
+  auto* result_ptr = result.data();
+
+  for (std::size_t i = 0; i < num_vectors; ++i) {
+    std::uint32_t d = 0u;
+
+    if (!file.read(reinterpret_cast<char*>(&d), sizeof(d))) {
+      throw std::runtime_error("failed to read dimension for vector at pos: " + std::to_string(i));
+    }
+
+    if (d != dimension) {
+      throw std::runtime_error(
+          "dimension mismatch: " + std::to_string(d) +
+          " != " + std::to_string(dimension));
+    }
+    if (!file.read(reinterpret_cast<char*>(result_ptr), d * sizeof(T))) {
+      throw std::runtime_error("file read error");
+    }
+    result_ptr += dimension;
+  }
+
+  return result;
+#endif
 }
 
 #endif  // TILEDB_TDB_IO_H
