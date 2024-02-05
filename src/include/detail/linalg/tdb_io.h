@@ -373,9 +373,9 @@ auto sizes_to_indices(const std::vector<T>& sizes) {
  */
 template <class T>
 auto read_bin_local(
-  const tiledb::Context& ctx,
-  const std::string& bin_file,
-  size_t subset = 0) {
+    const tiledb::Context& ctx,
+    const std::string& bin_file,
+    size_t subset = 0) {
   auto vfs = tiledb::VFS{ctx};
 
   std::uint32_t dimension = 0u;
