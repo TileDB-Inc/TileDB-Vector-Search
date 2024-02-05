@@ -33,7 +33,7 @@
 #define TILEDB_TDB_IO_H
 
 #if defined __has_include
-#if __has_include (<sys/mman.h>)
+#if __has_include(<sys/mman.h>)
 
 #define USE_MMAP
 #include <fcntl.h>
@@ -480,7 +480,8 @@ auto read_bin_local(const std::string& bin_file, size_t subset = 0) {
     std::uint32_t d = 0u;
 
     if (!file.read(reinterpret_cast<char*>(&d), sizeof(d))) {
-      throw std::runtime_error("failed to read dimension for vector at pos: " + std::to_string(i));
+      throw std::runtime_error(
+        "failed to read dimension for vector at pos: " + std::to_string(i));
     }
 
     if (d != dimension) {
