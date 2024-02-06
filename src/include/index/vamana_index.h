@@ -1,5 +1,5 @@
 /**
- * @file   vamana.h
+ * @file   vamana_index.h
  *
  * @section LICENSE
  *
@@ -30,8 +30,8 @@
  *
  */
 
-#ifndef TDB_VAMANA_H
-#define TDB_VAMANA_H
+#ifndef TDB_VAMANA_INDEX_H
+#define TDB_VAMANA_INDEX_H
 
 #include <cstddef>
 
@@ -46,11 +46,13 @@
 
 #include "detail/graph/adj_list.h"
 #include "detail/graph/graph_utils.h"
+#include "index/vamana_group.h"
 
-#include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 
-namespace detail::graph {
+#include <tiledb/group_experimental.h>
+
+
 namespace {
 
 /**
@@ -61,7 +63,7 @@ enum class SearchPath { path_and_search, path_only };
 
 /**
  * An augmented distance functor that counts the number of distance
- * invocations.
+ * invocations.  Used for test/debugging/profiling.
  */
 struct counting_sum_of_squares_distance {
   size_t num_comps_{0};
@@ -78,10 +80,15 @@ struct counting_sum_of_squares_distance {
     return sum_of_squares(a, b);
   }
   ~counting_sum_of_squares_distance() {
-    //    _count_data.insert_entry(msg_ + " num_ss_comps", num_comps_);
+    _count_data.insert_entry(msg_ + " num_ss_comps", num_comps_);
   }
 };
 }  // namespace
+
+static bool noisy = false;
+static void set_noisy(bool b) {
+  noisy = b;
+}
 
 /**
  * @brief Truncated best-first search
@@ -110,6 +117,7 @@ struct counting_sum_of_squares_distance {
  * @todo -- add a `SearchPath `template parameter to determine whether to
  * return the top k results of the search or just the path taken.
  * @todo -- remove printf debugging code
+ * @todo -- would it be more efficient somehow to process multiple queries?
  */
 template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
 auto greedy_search(
@@ -120,8 +128,6 @@ auto greedy_search(
     size_t k_nn,
     size_t L,
     Distance&& distance = Distance{}) {
-  constexpr bool noisy = false;
-
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
   using score_type = typename std::decay_t<decltype(graph)>::score_type;
@@ -135,27 +141,27 @@ auto greedy_search(
     return visited_vertices.contains(v);
   };
 
-  auto result = k_min_heap<score_type, id_type>{L};  // Ell: |Ell| <= L
+  auto result = k_min_heap<score_type, id_type>{L};  // 𝓛: |𝓛| <= L
   // auto result = std::set<id_type>{};
-  auto q1 = k_min_heap<score_type, id_type>{L};  // Ell \ V
-  auto q2 = k_min_heap<score_type, id_type>{L};  // Ell \ V
+  auto q1 = k_min_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
+  auto q2 = k_min_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
 
-  // L <- {s} and V <- empty`
+  // 𝓛 <- {s} and 𝓥 <- ∅
   result.insert(distance(db[source], query), source);
 
-  // q1 = L \ V = {s}
+  // q1 = 𝓛 \ 𝓥 = {s}
   q1.insert(distance(db[source], query), source);
 
   size_t counter{0};
 
-  // while L\V is not empty
+  // while 𝓛 \ 𝓥 ≠ ∅
   while (!q1.empty()) {
     if (noisy) {
       std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
       debug_min_heap(q1, "q1: ", 1);
     }
 
-    // p* <- argmin_{p \in L\V} distance(p, q)
+    // p* <- argmin_{p ∈ 𝓛 \ 𝓥} distance(p, q)
 
     // Although we use the name `k_min_heap` -- it actually stores a finite
     // number of elements in a max heap (we remove the max element
@@ -179,7 +185,9 @@ auto greedy_search(
     q1.pop_back();
 
     if (noisy) {
-      std::cout << "p*: " << p_star << std::endl;
+      std::cout << "p*: " << p_star
+                << " --  distance = " << distance(db[p_star], query)
+                << std::endl;
     }
 
     // Change back to max heap
@@ -380,7 +388,7 @@ auto robust_prune(
  * @return The index of the vector in P that is closest to the centroid of P
  */
 template <class Distance = sum_of_squares_distance>
-auto medioid(auto&& P, Distance distance = Distance{}) {
+auto medoid(auto&& P, Distance distance = Distance{}) {
   auto n = num_vectors(P);
   auto centroid = Vector<float>(P[0].size());
   for (size_t j = 0; j < n; ++j) {
@@ -419,31 +427,69 @@ class vamana_index {
   // using id_type = typename Array::id_type;
   using score_type = float;
 
-  // A copy of the original feature vectors
-  // @todo -- this is a waste of memory -- we could also do queries against
-  // the original feature vectors (supplied by user)
+  /****************************************************************************
+   * Index group information
+   ****************************************************************************/
+
+  /** The timestamp at which the index was created */
+  uint64_t timestamp_{0};
+
+  std::unique_ptr<vamana_index_group<vamana_index>> group_;
+
+  /*
+   * The feature vectors.  These contain the original input vectors, modified
+   * with updates and deletions over time.
+   */
   ColMajorMatrix<feature_type> feature_vectors_;
 
+  /****************************************************************************
+   * Index representation
+   ****************************************************************************/
+
+  // Cached information about the index
   uint64_t dimension_{0};
   uint64_t num_vectors_{0};
+  uint64_t num_edges_{0};
+
+  /** The graph representing the index over `feature_vectors_` */
+  ::detail::graph::adj_list<score_type, id_type> graph_;
+
+  /*
+   * The medoid of the feature vectors -- the vector in the set that is closest
+   * to the centroid of the entire set. This is used as the starting point for
+   * queries.
+   * @todo -- In the partitioned case, we will want to use a vector of medoids,
+   * one for each partition.
+   */
+  id_type medoid_{0};
+
+  /*
+   * Training parameters
+   */
   uint64_t L_build_{0};       // diskANN paper says default = 100
   uint64_t R_max_degree_{0};  // diskANN paper says default = 64
   uint64_t B_backtrack_{0};   //
   float alpha_min_{1.0};      // per diskANN paper
   float alpha_max_{1.2};      // per diskANN paper
-  ::detail::graph::adj_list<score_type, id_type> graph_;
-  id_type medioid_{0};
+
 
  public:
+
+  /****************************************************************************
+   * Constructors (et al)
+   ****************************************************************************/
+
   vamana_index() = delete;
   vamana_index(const vamana_index& index) = delete;
   vamana_index& operator=(const vamana_index& index) = delete;
-  vamana_index(vamana_index&& index) {
-  }
+  vamana_index(vamana_index&& index)  = default;
   vamana_index& operator=(vamana_index&& index) = default;
 
   ~vamana_index() = default;
 
+  /**
+   * Construct empty index in preparation for construction and training
+   */
   vamana_index(size_t num_nodes, size_t L, size_t R, size_t B = 0)
       : num_vectors_{num_nodes}
       , L_build_{L}
@@ -457,41 +503,47 @@ class vamana_index {
    * @param ctx TileDB context
    * @param group_uri URI of the group containing the index
    */
-  vamana_index(tiledb::Context ctx, const std::string& group_uri)
-      : feature_vectors_{
-            std::move(tdbPreLoadMatrix<feature_type, stdx::layout_left>(
-                ctx, group_uri + "/feature_vectors"))} {
-    tiledb::Config cfg;
-    auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
+  vamana_index(tiledb::Context ctx, const std::string& uri)
+      : group_{std::make_unique<vamana_index_group<vamana_index>>(
+            *this, ctx, uri, TILEDB_READ, timestamp_)} {
+  }
 
-    for (auto& [name, value, datatype] : metadata) {
-      if (!read_group.has_metadata(name, &datatype)) {
-        throw std::runtime_error("Missing metadata: " + name);
-      }
-      uint32_t count;
-      void* addr;
-      read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
-      if (datatype == TILEDB_UINT64) {
-        *reinterpret_cast<uint64_t*>(value) =
-            *reinterpret_cast<uint64_t*>(addr);
-      } else if (datatype == TILEDB_FLOAT32) {
-        *reinterpret_cast<float*>(value) = *reinterpret_cast<float*>(addr);
-      } else {
-        throw std::runtime_error("Unsupported datatype");
-      }
-    }
+  auto read_index_infinite() {
+    /*
+     * Read the feature vectors
+     * Read the graph
+     *   Read the adjacency scores
+     *   Read the adjacency ids
+     *   Read the adjacency row index
+     * @todo Encapsulate reading the graph?
+     */
+
 
     ::load(feature_vectors_);
     auto v = std::vector<feature_type>(
         begin(feature_vectors_[0]), end(feature_vectors_[0]));
     assert(num_vectors_ == ::num_vectors(feature_vectors_));
 
+
+  /****************************************************************************
+   * Read the graph
+   * Here, we assume a dynamic graph, which is one that we can later add more
+   * edges and vertices to (to index new vectors).
+   * @todo Add case for static graph -- i.e., CSR -- that we can read the
+   * vectors into directly
+   ****************************************************************************/
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
 
-    auto adj_scores = read_vector<score_type>(ctx, group_uri + "/adj_scores");
-    auto adj_ids = read_vector<id_type>(ctx, group_uri + "/adj_ids");
-    auto adj_index = read_vector<index_type>(ctx, group_uri + "/adj_index");
+    auto nnz = 0;
+    auto num_vectors = 0;
 
+    auto adj_scores = read_vector<score_type>(group_->cached_ctx(), group_->adjacency_scores_uri());
+    auto adj_ids = read_vector<id_type>(group_->cached_ctx(), group_->adjacency_ids_uri());
+    auto adj_index = read_vector<index_type>(group_->cached_ctx(), group_->adjacency_row_index_uri());
+
+    // Here we build a graph using the graph data we read in.  We do it this
+    // way for a dynamic graph, which is one that we can later add more edges
+    // and vertices to (to index new vectors).
     for (size_t i = 0; i < num_vectors_; ++i) {
       auto start = adj_index[i];
       auto end = adj_index[i + 1];
@@ -539,7 +591,7 @@ class vamana_index {
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
     // dump_edgelist("edges_" + std::to_string(0) + ".txt", graph_);
 
-    medioid_ = medioid(feature_vectors_);
+    medoid_ = medoid(feature_vectors_);
 
     debug_index();
     size_t counter{0};
@@ -555,7 +607,7 @@ class vamana_index {
         auto&& [top_k_scores, top_k, visited] = greedy_search(
             graph_,
             feature_vectors_,
-            medioid_,
+            medoid_,
             feature_vectors_[p],
             1,
             L_build_,
@@ -663,7 +715,7 @@ class vamana_index {
 
     stdx::range_for_each(std::move(par), query_set, [&](auto&& query_vec, auto n, auto i) {
       auto&& [tk_scores, tk, V] = greedy_search(
-          graph_, feature_vectors_, medioid_, query_vec, k, L);
+          graph_, feature_vectors_, medoid_, query_vec, k, L);
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
     });
@@ -672,7 +724,7 @@ class vamana_index {
       auto&& [tk_scores, tk, V] = greedy_search(
           graph_,
           feature_vectors_,
-          medioid_,
+          medoid_,
           query_set[i],
           k,
           L,
@@ -686,7 +738,7 @@ class vamana_index {
 #if 0
     for (size_t i = 0; i < ::num_vectors(query_set); ++i) {
       auto&& [_top_k_scores, _top_k, V] = greedy_search(
-          graph_, feature_vectors_, medioid_, query_set[i], k, L_build_);
+          graph_, feature_vectors_, medoid_, query_set[i], k, L_build_);
       std::copy(
           _top_k_scores.data(),
           _top_k_scores.data() + k,
@@ -715,7 +767,7 @@ class vamana_index {
     size_t L = opt_L ? *opt_L : L_build_;
 
     auto&& [top_k_scores, top_k, V] =
-        greedy_search(graph_, feature_vectors_, medioid_, query_vec, k, L);
+        greedy_search(graph_, feature_vectors_, medoid_, query_vec, k, L);
 
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
@@ -746,7 +798,7 @@ class vamana_index {
       {"B", &B_backtrack_, TILEDB_UINT64},
       {"alpha_min", &alpha_min_, TILEDB_FLOAT32},
       {"alpha_max", &alpha_max_, TILEDB_FLOAT32},
-      {"medioid", &medioid_, TILEDB_UINT64},
+      {"medoid", &medoid_, TILEDB_UINT64},
   };
 
   /**
@@ -766,7 +818,7 @@ class vamana_index {
    */
   auto write_index(const std::string& group_uri, bool overwrite = false) {
     // copilot ftw!
-    // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medioid
+    // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
 
     tiledb::Context ctx;
@@ -827,8 +879,6 @@ class vamana_index {
    * @brief Log statistics about the index
    */
   void log_index() {
-    // #warning disabling _count_data
-#if 1
     _count_data.insert_entry("dimension", dimension_);
     _count_data.insert_entry("num_vectors", num_vectors_);
     _count_data.insert_entry("L_build", L_build_);
@@ -846,7 +896,6 @@ class vamana_index {
     _count_data.insert_entry(
         "avg_degree",
         (double)graph_.num_edges() / (double)num_vertices(graph_));
-#endif
   }
 
   /**
@@ -913,9 +962,9 @@ class vamana_index {
                 << " ! = " << rhs.alpha_max_ << std::endl;
       return false;
     }
-    if (medioid_ != rhs.medioid_) {
-      std::cout << "medioid_ != rhs.medioid_" << medioid_
-                << " ! = " << rhs.medioid_ << std::endl;
+    if (medoid_ != rhs.medoid_) {
+      std::cout << "medoid_ != rhs.medoid_" << medoid_
+                << " ! = " << rhs.medoid_ << std::endl;
       return false;
     }
 
@@ -1003,6 +1052,11 @@ class vamana_index {
             ::dimension(feature_vectors_) * ::num_vectors(feature_vectors_),
         rhs.feature_vectors_.data());
   }
+
+ public:
+  void dump_edgelist__(const std::string& str) {
+    ::dump_edgelist(str, graph_);
+  }
 };
 
 /**
@@ -1014,5 +1068,4 @@ class vamana_index {
 template <class feature_type, class id_type, class index_type>
 size_t vamana_index<feature_type, id_type, index_type>::num_comps_ = 0;
 
-}  // namespace detail::graph
-#endif  // TDB_VAMANA_H
+#endif  // TDB_VAMANA_INDEX_H

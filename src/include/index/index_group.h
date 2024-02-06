@@ -269,6 +269,8 @@ class base_index_group {
    * Create a new group with the default arrays and metadata.
    *
    * @param cfg
+   *
+   * @todo Process the "base group" metadata here.
    */
   void create_default(const tiledb::Config& cfg) {
     static_cast<group_type*>(this)->create_default_impl(cfg);
@@ -393,6 +395,9 @@ class base_index_group {
     return metadata_.ingestion_timestamps_;
   }
 
+  /*
+   * Base size information
+   */
   auto get_previous_base_size() const {
     return metadata_.base_sizes_.back();
   }
@@ -406,6 +411,10 @@ class base_index_group {
     return metadata_.base_sizes_;
   }
 
+  /*
+   * Partition information
+   * @todo This probably belongs in ivf_flat_group
+   */
   auto get_previous_num_partitions() const {
     return metadata_.partition_history_.back();
   }

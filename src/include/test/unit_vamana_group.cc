@@ -1,11 +1,11 @@
 /**
- * @file unit_ivf_flat_metadata.cc
+ * @file   unit_vamana_group.cc
  *
  * @section LICENSE
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2023 TileDB
+ * @copyright Copyright (c) 2024 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,54 +26,13 @@
  * THE SOFTWARE.
  *
  * @section DESCRIPTION
+ *
  */
 
 #include <catch2/catch_all.hpp>
-#include <tiledb/tiledb>
+#include "index/vamana_group.h"
 
-#include <filesystem>
-#include <string>
-
-#include "index/ivf_flat_metadata.h"
-#include "query_common.h"
-
-TEST_CASE("ivf_flat_metadata: test test", "[ivf_flat_metadata]") {
+TEST_CASE("vamana_group: test test", "[vamana_group]") {
   REQUIRE(true);
 }
 
-TEST_CASE("ivf_flat_metadata: default constructor", "[ivf_flat_metadata]") {
-  auto x = ivf_flat_index_metadata();
-  ivf_flat_index_metadata y;
-}
-
-TEST_CASE("ivf_flat_metadata: default constructor dump", "[ivf_flat_metadata]") {
-  auto x = ivf_flat_index_metadata();
-  x.dump();
-
-  ivf_flat_index_metadata y;
-  y.dump();
-}
-
-TEST_CASE("ivf_flat_metadata: open group", "[ivf_flat_metadata]") {
-  tiledb::Context ctx;
-  tiledb::Config cfg;
-
-  auto read_group = tiledb::Group(ctx, sift_group_uri, TILEDB_READ, cfg);
-  auto x = ivf_flat_index_metadata();
-
-  SECTION("load metadata") {
-    x.load_metadata(read_group);
-  }
-
-  SECTION("load and dump metadata -- for manual inspection") {
-    x.load_metadata(read_group);
-    x.dump();
-  }
-
-  SECTION("Compare two constructed objects") {
-    x.load_metadata(read_group);
-    ivf_flat_index_metadata y;
-    y.load_metadata(read_group);
-    CHECK(x.compare_metadata(y));
-  }
-}
