@@ -71,26 +71,6 @@ int ivf_index(
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
-#if 0
-  auto read_temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
-  auto centroid_read_temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(
-                             tiledb::TimestampStartEnd, timestamp, timestamp);
-  auto write_temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
-  tiledb::Array array(
-      ctx, centroids_uri, TILEDB_READ, centroid_read_temporal_policy);
-  auto non_empty = array.non_empty_domain<int32_t>();
-  auto partitions = non_empty[1].second.second + 1;
-
-  auto centroids = tdbColMajorMatrix<centroids_type>(
-      ctx, centroids_uri, 0, 0, 0, partitions, 0, centroid_read_temporal_policy);
-
-#else
   auto centroid_read_temporal_policy =
       (timestamp == 0) ? tiledb::TemporalPolicy() :
                          tiledb::TemporalPolicy(

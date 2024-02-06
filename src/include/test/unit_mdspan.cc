@@ -138,13 +138,13 @@ TEST_CASE("mdspan: rectangular", "[mdspan]") {
   SECTION("submdspan, slices") {
     auto k = 5;
 
-    auto sbm =
+    [[maybe_unused]] auto sbm =
         stdx::submdspan(m, std::pair{1, m.extent(0) - 1}, std::pair{0, k});
-    auto sbn =
+    [[maybe_unused]] auto sbn =
         stdx::submdspan(n, std::pair{0, k}, std::pair{1, n.extent(1) - 1});
 
-    auto sbe = stdx::submdspan(m, stdx::full_extent, 0);
-    auto sbf = stdx::submdspan(n, 0, stdx::full_extent);
+    [[maybe_unused]] auto sbe = stdx::submdspan(m, stdx::full_extent, 0);
+    [[maybe_unused]] auto sbf = stdx::submdspan(n, 0, stdx::full_extent);
 
     auto sbv = stdx::submdspan(m, 0, stdx::full_extent);  // right
     auto sbw = stdx::submdspan(m, 0, std::tuple{0, k});   // right
