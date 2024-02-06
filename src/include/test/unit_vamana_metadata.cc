@@ -144,6 +144,9 @@ TEST_CASE("vamana_metadata: read metadata from reference group", "[vamana_metada
         CHECK(value == *static_cast<const uint32_t*>(v));
         break;
       case TILEDB_STRING_UTF8:
+        CHECK(name == "mystery string utf8");
+        break;
+      default:
         CHECK(name == "mystery name");
         break;
     }
