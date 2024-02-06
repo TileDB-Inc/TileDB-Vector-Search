@@ -75,9 +75,9 @@ jobs:
           - [ windows-2022, win_amd64 ]
         python: [ "cp39", "cp310", "cp311", "cp312", "pp39" ]
         exclude:
-          - buildplat: [macos-13, macosx_arm64]
+          - buildplat: [macos-latest, macosx_arm64]
             python: "pp39"
-          - buildplat: [macos-13, macosx_arm64]
+          - buildplat: [macos-latest, macosx_arm64]
             python: "cp312"
 
     steps:
@@ -99,7 +99,6 @@ jobs:
             CXX=clang++
           MACOSX_DEPLOYMENT_TARGET: "12.0"
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
-          CIBW_ARCHS: all
         with:
           output-dir: wheelhouse
 
