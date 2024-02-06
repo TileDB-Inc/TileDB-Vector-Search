@@ -827,8 +827,8 @@ class vamana_index {
    * @brief Log statistics about the index
    */
   void log_index() {
-#warning disabling _count_data
-#if 0
+    // #warning disabling _count_data
+#if 1
     _count_data.insert_entry("dimension", dimension_);
     _count_data.insert_entry("num_vectors", num_vectors_);
     _count_data.insert_entry("L_build", L_build_);

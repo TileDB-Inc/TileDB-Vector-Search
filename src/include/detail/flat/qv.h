@@ -158,6 +158,11 @@ auto qv_query_heap(
   scoped_timer _{tdb_func__};
   // load(db);
 
+  // @todo Definitive spec on whether or not feature_vector_arrays are loaded
+  // when the function is called.  IVF assumes calls to "infinite" algorithms
+  // are loaded and calls to "finite" algorithms are not loaded.
+  // load(db);
+
   // using feature_type = typename
   // std::remove_reference_t<decltype(db)>::value_type;
   using id_type = typename std::remove_reference_t<decltype(ids)>::value_type;
@@ -396,7 +401,7 @@ auto qv_query_heap_tiled(
 template <feature_vector_array DB, feature_vector_array Q>
 auto qv_query_heap_tiled(DB& db, const Q& q, int k_nn, unsigned nthreads) {
   return qv_query_heap_tiled(
-      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);  // ????
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
 }
 
 template <feature_vector_array DB, feature_vector_array Q, class Index>

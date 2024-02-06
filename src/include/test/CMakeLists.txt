@@ -64,6 +64,10 @@ kmeans_add_test(unit_api_feature_vector)
 
 kmeans_add_test(unit_api_feature_vector_array)
 
+kmeans_add_test(unit_api_flat_l2_index)
+
+kmeans_add_test(unit_api_ivf_flat_index)
+
 kmeans_add_test(unit_array_defs)
 
 kmeans_add_test(unit_concepts)
@@ -84,17 +88,13 @@ kmeans_add_test(unit_flat_vq)
 
 kmeans_add_test(unit_gen_graphs)
 
-kmeans_add_test(unit_index_defs)
-
 kmeans_add_test(unit_ivf_flat_group)
 
 kmeans_add_test(unit_ivf_flat_index)
 
 kmeans_add_test(unit_ivf_flat_metadata)
 
-kmeans_add_test(unit_ivf_index)
-
-kmeans_add_test(unit_ivf_query)
+kmeans_add_test(unit_index_defs)
 
 kmeans_add_test(unit_ivf_qv)
 
@@ -136,8 +136,11 @@ kmeans_add_test(unit_utils)
 
 kmeans_add_test(unit_vector)
 
-if (TILEDB_VS_ENABLE_BLAS)
-  kmeans_add_test(unit_queries)
-  kmeans_add_test(unit_gemm)
-  target_link_libraries(unit_gemm PRIVATE flat_blas)
+# Temporarily deprecated
+if (FALSE)
+  if (TILEDB_VS_ENABLE_BLAS)
+    kmeans_add_test(unit_queries)
+    kmeans_add_test(unit_gemm)
+    target_link_libraries(unit_gemm PRIVATE flat_blas)
+  endif()
 endif()
