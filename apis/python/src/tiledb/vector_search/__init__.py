@@ -14,9 +14,8 @@ from .storage_formats import STORAGE_VERSION, storage_formats
 
 from  ._tiledbvspy import FeatureVector
 from  ._tiledbvspy import FeatureVectorArray
-# Indexes to be added in later PR
-# from  ._tiledbvspy import IndexFlatL2
-# from  ._tiledbvspy import IndexIVFFlat
+from  ._tiledbvspy import IndexFlatL2
+from  ._tiledbvspy import IndexIVFFlat
 from  ._tiledbvspy import Ctx
 
 try:

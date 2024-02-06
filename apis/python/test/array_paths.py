@@ -2,11 +2,14 @@
 
 import os
 # TODO Use python Pathlib?
-# TODO Get absolute path from cmake / setup / pytest
+# TODO Get absolute path to project root from cmake / setup / pytest
 
-test_data_path = os.path.join(os.path.dirname(__file__), "../../../")
+# Use path relative to test file rather than to where pytest is invoked
+this_file_path = os.path.join(os.path.dirname(__file__))
+vector_search_root = this_file_path + "/../../../"
 
-vector_search_root = "../../"
+# vector_search_root = "../../"
+
 test_data_root = vector_search_root + "external/test_data/"
 test_array_root = test_data_root + "arrays/"
 test_file_root = test_data_root + "files/"

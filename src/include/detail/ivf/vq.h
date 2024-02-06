@@ -107,12 +107,8 @@ auto vq_apply_query(
   using id_type = typename std::remove_reference_t<decltype(ids)>::value_type;
   using score_type = float;
 
-  size_t part_offset = 0;
-  size_t col_offset = 0;
-  if constexpr (has_num_col_parts<decltype(partitioned_db)>) {
-    part_offset = partitioned_db.col_part_offset();
-    col_offset = partitioned_db.col_offset();
-  }
+  size_t col_offset = _cpo::col_offset(partitioned_db);
+  size_t part_offset = col_part_offset(partitioned_db);
 
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
       num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
@@ -125,9 +121,9 @@ auto vq_apply_query(
 
     // @todo this is a bit of a hack
     auto quartno = partno;
-    if constexpr (!has_num_col_parts<decltype(partitioned_db)>) {
-      quartno = active_partitions[partno];
-    }
+    //    if constexpr (!has_num_col_parts<decltype(partitioned_db)>) {
+    quartno = active_partitions[partno];
+    //    }
 
     auto start = new_indices[quartno] - col_offset;
     auto stop = new_indices[quartno + 1] - col_offset;
@@ -366,7 +362,7 @@ auto vq_query_infinite_ram_2(
       typename std::remove_reference<decltype(partitioned_ids)>::value_type;
   using score_type = float;
 
-  auto num_queries = size(query);
+  auto num_queries = num_vectors(query);
 
   // @todo Maybe we don't want to do new_indices in partition_ivf_index after
   //  all since they aren't used in this function
