@@ -177,6 +177,11 @@ configure_file(${CMAKE_SOURCE_DIR}/include/config.h.in config.h)
 # -----------------------------------------------------------------------------
 add_library(kmeans_lib INTERFACE)
 add_library(kmeans_linalg INTERFACE)
+
+add_compile_definitions(
+        GHC_WIN_DISABLE_WSTRING_STORAGE_TYPE
+)
+
 if (TILEDB_VS_ENABLE_BLAS)
     target_link_Libraries(kmeans_linalg INTERFACE
             flat_blas)
