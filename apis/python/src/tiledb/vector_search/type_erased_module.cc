@@ -63,7 +63,6 @@ std::map<std::string, std::string> kwargs_to_map(py::kwargs kwargs) {
     // Convert the Python objects to strings
     std::string key = py::str(item.first);
     std::string value = py::str(item.second);
-    std::cout << "key: " << key << " value: " << value << std::endl;
 
     result[key] = value;
   }

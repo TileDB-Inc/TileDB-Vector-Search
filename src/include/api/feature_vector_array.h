@@ -65,11 +65,7 @@ class FeatureVectorArray {
             std::make_unique<vector_array_impl<T>>(std::forward<T>(obj))) {
     feature_type_ = tiledb::impl::type_to_tiledb<
         typename std::remove_cvref_t<T>::value_type>::tiledb_type;
-    std::cout << "[feature_vector_array] feature_type_: " << feature_type_
-              << std::endl;
     feature_size_ = datatype_to_size(feature_type_);
-    std::cout << "[feature_vector_array] feature_size_: " << feature_size_
-              << std::endl;
   }
 
   FeatureVectorArray(

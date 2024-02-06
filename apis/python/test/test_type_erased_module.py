@@ -196,17 +196,12 @@ def test_inplace_build_query_IndexVamana():
     assert groundtruth_set.feature_type_string() == "uint64"
 
     a.train(training_set)
-    print('will query')
     s, t = a.query(query_set, k_nn, opt_l)
-    print('finished query', s, t)
 
     intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
-    print('intersections', intersections)
 
     nt = np.double(t.num_vectors()) * np.double(k_nn)
     recall = intersections / nt
-    print('nt', nt)
-    print('recall', recall)
 
     assert recall == 1.0
 

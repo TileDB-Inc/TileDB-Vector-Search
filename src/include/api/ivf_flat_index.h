@@ -92,7 +92,6 @@ class IndexIVFFlat {
    */
   explicit IndexIVFFlat(
       const std::optional<IndexOptions>& config = std::nullopt) {
-    std::cout << "[IndexIVFFlat@1]" << std::endl;
     feature_datatype_ = TILEDB_ANY;
     id_datatype_ = TILEDB_UINT32;
     px_datatype_ = TILEDB_UINT32;
@@ -140,7 +139,6 @@ class IndexIVFFlat {
       const URI& group_uri,
       const std::optional<IndexOptions>& config = std::nullopt) {
     using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
-    std::cout << "[IndexIVFFlat@2] Opening index: " << group_uri << std::endl;
     std::vector<metadata_element> metadata{
         {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
         {"id_datatype", &id_datatype_, TILEDB_UINT32},

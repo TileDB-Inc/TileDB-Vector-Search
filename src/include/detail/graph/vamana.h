@@ -470,7 +470,6 @@ class vamana_index {
       if (!read_group.has_metadata(name, &datatype)) {
         throw std::runtime_error("Missing metadata: " + name);
       }
-      std::cout << name << " " << value << " " << datatype << std::endl;
       uint32_t count;
       void* addr;
       read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
@@ -544,12 +543,11 @@ class vamana_index {
 
     medioid_ = medioid(feature_vectors_);
 
-    debug_index();
     size_t counter{0};
     //    for (float alpha : {alpha_min_, alpha_max_}) {
     // Just use one value of alpha
     for (float alpha : {alpha_max_}) {
-      scoped_timer _("train " + std::to_string(counter), true);
+      scoped_timer _("train " + std::to_string(counter));
       size_t total_visited{0};
       for (size_t p = 0; p < num_vectors_; ++p) {
         ++counter;
@@ -607,7 +605,6 @@ class vamana_index {
           // dump_edgelist("edges_" + std::to_string(counter) + ".txt", graph_);
         }
       }
-      debug_index();
     }
   }
 
@@ -650,14 +647,11 @@ class vamana_index {
       const Q& query_set,
       size_t k,
       std::optional<size_t> opt_L = std::nullopt) {
-    scoped_timer __{tdb_func__ + std::string{" (outer)"}, true};
-    std::cout << "[vamana@query1]" << k << std::endl;
+    scoped_timer __{tdb_func__ + std::string{" (outer)"}};
 
     size_t L = opt_L ? *opt_L : L_build_;
     // L = std::min<size_t>(L, L_build_);
 
-    // auto top_k = ColMajorMatrix<size_t>(k, ::num_vectors(query_set));
-    // auto top_k_scores = ColMajorMatrix<float>(k, ::num_vectors(query_set));
     auto top_k = ColMajorMatrix<id_type>(k, ::num_vectors(query_set));
     auto top_k_scores = ColMajorMatrix<score_type>(k, ::num_vectors(query_set));
 
@@ -674,7 +668,6 @@ class vamana_index {
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
     });
 #else
-    std::cout << "[vamana@query1] A" << k << std::endl;
     for (size_t i = 0; i < num_vectors(query_set); ++i) {
       auto&& [tk_scores, tk, V] = greedy_search(
           graph_,
@@ -688,7 +681,6 @@ class vamana_index {
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
       num_visited_vertices_ += V.size();
     }
-    std::cout << "[vamana@query1] B" << k << std::endl;
 #endif
 
 #if 0
@@ -702,7 +694,6 @@ class vamana_index {
       std::copy(_top_k.data(), _top_k.data() + k, top_k[i].data());
     }
 #endif
-    std::cout << "[vamana@query1] C" << k << std::endl;
 
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
@@ -721,7 +712,6 @@ class vamana_index {
       const Q& query_vec,
       size_t k,
       std::optional<size_t> opt_L = std::nullopt) {
-    std::cout << "[vamana@query2]" << k << std::endl;
     size_t L = opt_L ? *opt_L : L_build_;
 
     auto&& [top_k_scores, top_k, V] =

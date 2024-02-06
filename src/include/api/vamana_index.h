@@ -87,7 +87,6 @@ class IndexVamana {
    */
   explicit IndexVamana(
       const std::optional<IndexOptions>& config = std::nullopt) {
-    std::cout << "[IndexVamana@1] Opening index" << std::endl;
     feature_datatype_ = TILEDB_ANY;
     id_datatype_ = TILEDB_UINT32;
     px_datatype_ = TILEDB_UINT32;
@@ -96,7 +95,6 @@ class IndexVamana {
       for (auto&& c : *config) {
         auto key = c.first;
         auto value = c.second;
-        std::cout << "[IndexVamana@1]" << key << " " << value << std::endl;
         if (key == "dimension") {
           dimension_ = std::stol(value);
         } else if (key == "L_build") {
@@ -132,16 +130,13 @@ class IndexVamana {
       const URI& group_uri,
       const std::optional<IndexOptions>& config = std::nullopt) {
     using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
-    std::cout << "[IndexVamana@2] Opening index: " << group_uri << std::endl;
     std::vector<metadata_element> metadata{
         {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
         {"id_datatype", &id_datatype_, TILEDB_UINT32},
         {"px_datatype", &px_datatype_, TILEDB_UINT32}};
 
-    std::cout << "here1" << std::endl;
     tiledb::Config cfg;
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
-    std::cout << "here2" << std::endl;
 
     for (auto& [name, value, datatype] : metadata) {
       if (!read_group.has_metadata(name, &datatype)) {
@@ -157,7 +152,6 @@ class IndexVamana {
         throw std::runtime_error("Unsupported datatype for metadata: " + name);
       }
     }
-    std::cout << "here3" << std::endl;
 
     /**
      * We support all combinations of the following types for feature,
@@ -171,56 +165,48 @@ class IndexVamana {
      */
     if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
-      std::cout << "idx1" << std::endl;
       index_ = std::make_unique<
           index_impl<detail::graph::vamana_index<uint8_t, uint32_t, uint32_t>>>(
           ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
-      std::cout << "idx2" << std::endl;
       index_ = std::make_unique<
           index_impl<detail::graph::vamana_index<float, uint32_t, uint32_t>>>(
           ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
-      std::cout << "idx3" << std::endl;
       index_ = std::make_unique<
           index_impl<detail::graph::vamana_index<uint8_t, uint32_t, uint64_t>>>(
           ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
-      std::cout << "idx4" << std::endl;
       index_ = std::make_unique<
           index_impl<detail::graph::vamana_index<float, uint32_t, uint64_t>>>(
           ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
-      std::cout << "idx5" << std::endl;
       index_ = std::make_unique<
           index_impl<detail::graph::vamana_index<uint8_t, uint64_t, uint32_t>>>(
           ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
-      std::cout << "idx6" << std::endl;
       index_ = std::make_unique<
           index_impl<detail::graph::vamana_index<float, uint64_t, uint32_t>>>(
           ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
-      std::cout << "idx7" << std::endl;
       index_ = std::make_unique<
           index_impl<detail::graph::vamana_index<uint8_t, uint64_t, uint64_t>>>(
           ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
-      std::cout << "idx8" << std::endl;
       index_ = std::make_unique<
           index_impl<detail::graph::vamana_index<float, uint64_t, uint64_t>>>(
           ctx, group_uri);
@@ -233,7 +219,6 @@ class IndexVamana {
           " != " + std::to_string(index_->dimension()));
     }
     dimension_ = index_->dimension();
-    std::cout << "here5" << std::endl;
   }
 
   /**
@@ -337,7 +322,6 @@ class IndexVamana {
       const QueryVectorArray& vectors,
       size_t top_k,
       std::optional<size_t> opt_L) {
-    std::cout << "[vamana_index@queryA]" << top_k << std::endl;
     return index_->query(vectors, top_k, opt_L);
   }
 
@@ -459,7 +443,6 @@ class IndexVamana {
         const URI& uri,
         size_t top_k,
         std::optional<size_t> opt_L) {
-      std::cout << "[vamana_index@queryZ]" << top_k << std::endl;
       return impl_index_.query(ctx, uri, top_k, opt_L);
     }
 
@@ -478,7 +461,6 @@ class IndexVamana {
         size_t top_k,
         std::optional<size_t> opt_L) override {
       // @todo using index_type = size_t;
-      std::cout << "[vamana_index@queryT]" << top_k << std::endl;
       auto dtype = vectors.feature_type();
 
       // @note We need to maintain same layout -> or swap extents
@@ -488,19 +470,9 @@ class IndexVamana {
               (float*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          std::cout << "[vamana_index@queryT] 1" << std::endl;
           auto [s, t] = impl_index_.query(qspan, top_k, opt_L);
-
-          // s = scores
-          std::cout << "[vamana_index@queryT] 2" << std::endl;
-          // [feature_vector_array] feature_type_: 2 - float32
-          // [feature_vector_array] feature_size_: 4
           auto x = FeatureVectorArray{std::move(s)};
-
-          // t = indices
-          std::cout << "[vamana_index@queryT] 3" << std::endl;
           auto y = FeatureVectorArray{std::move(t)};
-          std::cout << "[vamana_index@queryT] 4" << std::endl;
           return {std::move(x), std::move(y)};
         }
         case TILEDB_UINT8: {
@@ -508,7 +480,6 @@ class IndexVamana {
               (uint8_t*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          std::cout << "[vamana_index@queryT] 2" << std::endl;
           auto [s, t] = impl_index_.query(qspan, top_k, opt_L);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
