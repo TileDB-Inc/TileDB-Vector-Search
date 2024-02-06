@@ -235,10 +235,11 @@ TEST_CASE(
   size_t k_nn = 10;
 
   auto array_inputs =
-      read_bin_local<siftsmall_feature_type>(siftsmall_inputs_file);
+      read_bin_local<siftsmall_feature_type>(ctx, siftsmall_inputs_file);
   auto array_queries =
-      read_bin_local<siftsmall_feature_type>(siftsmall_query_file);
-  auto array_groundtruth = read_bin_local<uint32_t>(siftsmall_groundtruth_file);
+      read_bin_local<siftsmall_feature_type>(ctx, siftsmall_query_file);
+  auto array_groundtruth =
+      read_bin_local<uint32_t>(ctx, siftsmall_groundtruth_file);
 
   auto&& [D00, I00] =
       detail::flat::qv_query_heap(array_inputs, array_queries, k_nn, 1);
