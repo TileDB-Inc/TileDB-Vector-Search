@@ -61,10 +61,6 @@
  */
 class IndexVamana {
  public:
-  /**
-   * Create empty index
-   */
-  // IndexVamana() = delete;
   IndexVamana(const IndexVamana&) = delete;
   IndexVamana(IndexVamana&&) = default;
   IndexVamana& operator=(const IndexVamana&) = delete;
@@ -123,7 +119,6 @@ class IndexVamana {
    * @param ctx
    * @param group_uri TileDB group containing all the arrays comprising the
    * index.
-
    */
   IndexVamana(
       const tiledb::Context& ctx,
@@ -244,6 +239,7 @@ class IndexVamana {
      *   id_type: uint32 or uint64
      *   px_type: uint32 or uint64
      */
+    // TODO(paris): Add support for B_backtrack_.
     if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
@@ -333,7 +329,7 @@ class IndexVamana {
   }
 
   constexpr auto dimension() const {
-    return dimension_;  //::dimension(*index_);
+    return dimension_;
   }
 
   constexpr auto feature_type() const {
@@ -401,24 +397,6 @@ class IndexVamana {
     index_impl(const tiledb::Context& ctx, const URI& index_uri)
         : impl_index_(ctx, index_uri) {
     }
-
-    // template <feature_vector_array V>
-    // index_impl(
-    //     const URI& index_uri,
-    //     const V& vectors,
-    //     const IndexOptions& options,
-    //     const std::optional<StringMap>& config = std::nullopt)
-    //     : impl_index_(index_uri, vectors, options, config) {
-    // }
-
-    // // Create from input URI
-    // index_impl(
-    //     const URI& index_uri,
-    //     const URI& vectors_uri,
-    //     const IndexOptions& options,
-    //     std::optional<StringMap> config = std::nullopt)
-    //     : impl_index_(index_uri, vectors_uri, options, config) {
-    // }
 
     void train(const FeatureVectorArray& training_set) override {
       using feature_type = typename T::value_type;
@@ -514,7 +492,7 @@ class IndexVamana {
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
   tiledb_datatype_t px_datatype_{TILEDB_ANY};
-  std::unique_ptr</* const */ index_base> index_;
+  std::unique_ptr<index_base> index_;
 };
 
 #endif  // TILEDB_API_VAMANA_INDEX_H
