@@ -1041,7 +1041,7 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
       training_set.num_cols(), L_build, R_max_degree, Backtrack);
   idx.train(training_set);
 
-  idx.write_index(vamana_index_uri, true);
+  idx.write_index(ctx, vamana_index_uri, true);
   auto idx2 =
       detail::graph::vamana_index<float, uint64_t>(ctx, vamana_index_uri);
 

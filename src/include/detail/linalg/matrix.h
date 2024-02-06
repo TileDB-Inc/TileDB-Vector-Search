@@ -70,6 +70,14 @@ class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       : Base{p, r, c} {
   }
 
+  auto data() {
+    return this->data_handle();
+  }
+
+  auto data() const {
+    return this->data_handle();
+  }
+
   // @todo is this right???
   auto operator[](index_type i) {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {

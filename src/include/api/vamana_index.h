@@ -1,5 +1,5 @@
 /**
- * * @file   api/ivf_flat_index.h
+ * * @file   api/vamana_index.h
  *
  * @section LICENSE
  *
@@ -26,32 +26,30 @@
  * THE SOFTWARE.
  *
  * @section DESCRIPTION
- * This file defines the `IndexIVFFlat` class, which is a type-erased
- * wrapper of `index_ivf_flat` that allows for runtime polymorphism of the
- * `index_ivf_flat` class template.
+ * This file defines the `IndexVamana` class, which is a type-erased
+ * wrapper of `index_vamana` that allows for runtime polymorphism of the
+ * `index_vamana` class template.
  *
  * See README.md for details on type erasure.
  */
 
-#ifndef TILEDB_API_IVF_FLAT_INDEX_H
-#define TILEDB_API_IVF_FLAT_INDEX_H
+#ifndef TILEDB_API_VAMANA_INDEX_H
+#define TILEDB_API_VAMANA_INDEX_H
 
 #include <tiledb/tiledb>
 
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
 #include "api_defs.h"
-#include "index/ivf_flat_index.h"
+#include "detail/graph/vamana.h"
 #include "tiledb/group_experimental.h"
 
 /*******************************************************************************
- * IndexIVFFlat
+ * IndexVamana
  ******************************************************************************/
-// OK -- copilot filled this in completely, which really weirded me out
-
 /**
- * A type-erased IVF flat index class. This is a type-erased wrapper around
- * the `ivf_flat_index` class in index/ivf_flat_index.h.
+ * A type-erased Vamana index class. This is a type-erased wrapper around
+ * the `vamana_index` class in detail/graph/vamana.h.
  *
  * An index class is provides
  *   - URI-based constructor
@@ -59,40 +57,37 @@
  *   - A train method
  *   - An add method
  *   - A query method
- *   - An update method
- *   - A remove method
  *
  */
-class IndexIVFFlat {
+class IndexVamana {
  public:
   /**
    * Create empty index
    */
-  // IndexIVFFlat() = delete;
-  IndexIVFFlat(const IndexIVFFlat&) = delete;
-  IndexIVFFlat(IndexIVFFlat&&) = default;
-  IndexIVFFlat& operator=(const IndexIVFFlat&) = delete;
-  IndexIVFFlat& operator=(IndexIVFFlat&&) = default;
+  // IndexVamana() = delete;
+  IndexVamana(const IndexVamana&) = delete;
+  IndexVamana(IndexVamana&&) = default;
+  IndexVamana& operator=(const IndexVamana&) = delete;
+  IndexVamana& operator=(IndexVamana&&) = default;
 
   /**
    * @brief Create an index with the given configuration.  The index in this
    * state is ready to be trained.  The sequence for creating an index in this
    * fashion is:
-   *  - Create an IndexIVFFlat object with the desired configuration (using this
+   *  - Create an IndexVamana object with the desired configuration (using this
    *  constructor
    *  - Call train() with the training data
    *  - Call add() to add a set of vectors to the index (often the same as the
    *  training data)
    *  Either (or both)
-   *    - Perform an "infinite ram" query (since the index is all in RAM at this
-   *      point, only "infinite ram" queries make sense)
+   *    - Perform a query
    *    - Call write_index() to write the index to disk
    * @param config A map of configuration parameters, as pairs of strings
    * containing config parameters and values.
    */
-  explicit IndexIVFFlat(
+  explicit IndexVamana(
       const std::optional<IndexOptions>& config = std::nullopt) {
-    std::cout << "[IndexIVFFlat@1]" << std::endl;
+    std::cout << "[IndexVamana@1] Opening index" << std::endl;
     feature_datatype_ = TILEDB_ANY;
     id_datatype_ = TILEDB_UINT32;
     px_datatype_ = TILEDB_UINT32;
@@ -101,16 +96,13 @@ class IndexIVFFlat {
       for (auto&& c : *config) {
         auto key = c.first;
         auto value = c.second;
-        if (key == "nlist") {
-          nlist_ = std::stol(value);
-        } else if (key == "dimension") {
+        std::cout << "[IndexVamana@1]" << key << " " << value << std::endl;
+        if (key == "dimension") {
           dimension_ = std::stol(value);
-        } else if (key == "max_iter") {
-          max_iter_ = std::stol(value);
-        } else if (key == "tolerance") {
-          tolerance_ = std::stof(value);
-        } else if (key == "num_threads") {
-          num_threads_ = std::make_optional<size_t>(std::stol(value));
+        } else if (key == "L_build") {
+          L_build_ = std::stol(value);
+        } else if (key == "R_max_degree") {
+          R_max_degree_ = std::stof(value);
         } else if (key == "feature_type") {
           feature_datatype_ = string_to_datatype(value);
         } else if (key == "id_type") {
@@ -128,26 +120,28 @@ class IndexIVFFlat {
    * @brief Open an existing index.
    *
    * @note This will be able to infer all of its types using the group metadata
-   * to create the internal ivf_flat_index object.
+   * to create the internal vamana_index object.
    *
    * @param ctx
    * @param group_uri TileDB group containing all the arrays comprising the
    * index.
 
    */
-  IndexIVFFlat(
+  IndexVamana(
       const tiledb::Context& ctx,
       const URI& group_uri,
       const std::optional<IndexOptions>& config = std::nullopt) {
     using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
-    std::cout << "[IndexIVFFlat@2] Opening index: " << group_uri << std::endl;
+    std::cout << "[IndexVamana@2] Opening index: " << group_uri << std::endl;
     std::vector<metadata_element> metadata{
         {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
         {"id_datatype", &id_datatype_, TILEDB_UINT32},
         {"px_datatype", &px_datatype_, TILEDB_UINT32}};
 
+    std::cout << "here1" << std::endl;
     tiledb::Config cfg;
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
+    std::cout << "here2" << std::endl;
 
     for (auto& [name, value, datatype] : metadata) {
       if (!read_group.has_metadata(name, &datatype)) {
@@ -163,6 +157,7 @@ class IndexIVFFlat {
         throw std::runtime_error("Unsupported datatype for metadata: " + name);
       }
     }
+    std::cout << "here3" << std::endl;
 
     /**
      * We support all combinations of the following types for feature,
@@ -176,51 +171,59 @@ class IndexIVFFlat {
      */
     if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
+      std::cout << "idx1" << std::endl;
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<uint8_t, uint32_t, uint32_t>>>(
-          ctx, group_uri, config);
+          index_impl<detail::graph::vamana_index<uint8_t, uint32_t, uint32_t>>>(
+          ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
+      std::cout << "idx2" << std::endl;
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<float, uint32_t, uint32_t>>>(
-          ctx, group_uri, config);
+          index_impl<detail::graph::vamana_index<float, uint32_t, uint32_t>>>(
+          ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
+      std::cout << "idx3" << std::endl;
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<uint8_t, uint32_t, uint64_t>>>(
-          ctx, group_uri, config);
+          index_impl<detail::graph::vamana_index<uint8_t, uint32_t, uint64_t>>>(
+          ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
+      std::cout << "idx4" << std::endl;
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<float, uint32_t, uint64_t>>>(
-          ctx, group_uri, config);
+          index_impl<detail::graph::vamana_index<float, uint32_t, uint64_t>>>(
+          ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
+      std::cout << "idx5" << std::endl;
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<uint8_t, uint64_t, uint32_t>>>(
-          ctx, group_uri, config);
+          index_impl<detail::graph::vamana_index<uint8_t, uint64_t, uint32_t>>>(
+          ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
+      std::cout << "idx6" << std::endl;
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<float, uint64_t, uint32_t>>>(
-          ctx, group_uri, config);
+          index_impl<detail::graph::vamana_index<float, uint64_t, uint32_t>>>(
+          ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
+      std::cout << "idx7" << std::endl;
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<uint8_t, uint64_t, uint64_t>>>(
-          ctx, group_uri, config);
+          index_impl<detail::graph::vamana_index<uint8_t, uint64_t, uint64_t>>>(
+          ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
+      std::cout << "idx8" << std::endl;
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<float, uint64_t, uint64_t>>>(
-          ctx, group_uri, config);
+          index_impl<detail::graph::vamana_index<float, uint64_t, uint64_t>>>(
+          ctx, group_uri);
     } else {
       throw std::runtime_error("Unsupported datatype combination");
     }
@@ -230,12 +233,7 @@ class IndexIVFFlat {
           " != " + std::to_string(index_->dimension()));
     }
     dimension_ = index_->dimension();
-    if (nlist_ != 0 && nlist_ != index_->num_partitions()) {
-      throw std::runtime_error(
-          "nlist mismatch: " + std::to_string(nlist_) +
-          " != " + std::to_string(index_->num_partitions()));
-    }
-    nlist_ = index_->num_partitions();
+    std::cout << "here5" << std::endl;
   }
 
   /**
@@ -244,9 +242,7 @@ class IndexIVFFlat {
    * @param init
    */
   // @todo -- infer feature type from input
-  void train(
-      const FeatureVectorArray& training_set,
-      kmeans_init init = kmeans_init::random) {
+  void train(const FeatureVectorArray& training_set) {
     if (feature_datatype_ == TILEDB_ANY) {
       feature_datatype_ = training_set.feature_type();
     } else if (feature_datatype_ != training_set.feature_type()) {
@@ -266,53 +262,53 @@ class IndexIVFFlat {
     if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<uint8_t, uint32_t, uint32_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          index_impl<detail::graph::vamana_index<uint8_t, uint32_t, uint32_t>>>(
+          training_set.num_vectors(), L_build_, R_max_degree_);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<float, uint32_t, uint32_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          index_impl<detail::graph::vamana_index<float, uint32_t, uint32_t>>>(
+          training_set.num_vectors(), L_build_, R_max_degree_);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<uint8_t, uint32_t, uint64_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          index_impl<detail::graph::vamana_index<uint8_t, uint32_t, uint64_t>>>(
+          training_set.num_vectors(), L_build_, R_max_degree_);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<float, uint32_t, uint64_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          index_impl<detail::graph::vamana_index<float, uint32_t, uint64_t>>>(
+          training_set.num_vectors(), L_build_, R_max_degree_);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<uint8_t, uint64_t, uint32_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          index_impl<detail::graph::vamana_index<uint8_t, uint64_t, uint32_t>>>(
+          training_set.num_vectors(), L_build_, R_max_degree_);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<float, uint64_t, uint32_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          index_impl<detail::graph::vamana_index<float, uint64_t, uint32_t>>>(
+          training_set.num_vectors(), L_build_, R_max_degree_);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<uint8_t, uint64_t, uint64_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          index_impl<detail::graph::vamana_index<uint8_t, uint64_t, uint64_t>>>(
+          training_set.num_vectors(), L_build_, R_max_degree_);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
-          index_impl<ivf_flat_index<float, uint64_t, uint64_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          index_impl<detail::graph::vamana_index<float, uint64_t, uint64_t>>>(
+          training_set.num_vectors(), L_build_, R_max_degree_);
     }
 
-    index_->train(training_set, init);
+    index_->train(training_set);
 
     if (dimension_ != 0 && dimension_ != index_->dimension()) {
       throw std::runtime_error(
@@ -320,13 +316,6 @@ class IndexIVFFlat {
           " != " + std::to_string(index_->dimension()));
     }
     dimension_ = index_->dimension();
-
-    if (nlist_ != 0 && nlist_ != index_->num_partitions()) {
-      throw std::runtime_error(
-          "nlist mismatch: " + std::to_string(nlist_) +
-          " != " + std::to_string(index_->num_partitions()));
-    }
-    nlist_ = index_->num_partitions();
   }
 
   /**
@@ -343,40 +332,13 @@ class IndexIVFFlat {
     index_->add(data_set);
   }
 
-  void add_with_ids() const {
-    // @todo
-  }
-
   // todo query() or search() -- or both?
-  [[nodiscard]] auto query_infinite_ram(
-      const QueryVectorArray& vectors, size_t top_k, size_t nprobe) const {
-    return index_->query_infinite_ram(vectors, top_k, nprobe);
-  }
-
-  [[nodiscard]] auto query_finite_ram(
+  [[nodiscard]] auto query(
       const QueryVectorArray& vectors,
       size_t top_k,
-      size_t nprobe,
-      size_t upper_bound = 0) const {
-    return index_->query_finite_ram(vectors, top_k, nprobe, upper_bound);
-  }
-
-  void update(
-      const FeatureVectorArray& vectors,
-      const std::optional<IdVector>& ids = std::nullopt,
-      const std::optional<UpdateOptions>& options = std::nullopt) const {
-    index_->update(vectors, ids, options);
-  }
-
-  void update(
-      const URI& vectors_uri,
-      const std::optional<IdVector>& ids = std::nullopt,
-      const std::optional<UpdateOptions>& options = std::nullopt) const {
-    index_->update(vectors_uri, ids, options);
-  }
-
-  void remove(const IdVector& ids) const {
-    index_->remove(ids);
+      std::optional<size_t> opt_L) {
+    std::cout << "[vamana_index@queryA]" << top_k << std::endl;
+    return index_->query(vectors, top_k, opt_L);
   }
 
   void write_index(
@@ -388,10 +350,6 @@ class IndexIVFFlat {
 
   constexpr auto dimension() const {
     return dimension_;  //::dimension(*index_);
-  }
-
-  constexpr auto num_partitions() const {
-    return nlist_;  // ::num_partitions(*index_);
   }
 
   constexpr auto feature_type() const {
@@ -424,34 +382,15 @@ class IndexIVFFlat {
   struct index_base {
     virtual ~index_base() = default;
 
-    virtual void train(
-        const FeatureVectorArray& training_set,
-        kmeans_init init = kmeans_init::random) = 0;
+    virtual void train(const FeatureVectorArray& training_set) = 0;
 
     virtual void add(const FeatureVectorArray& data_set) = 0;
 
     [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
-    query_infinite_ram(
-        const QueryVectorArray& vectors, size_t top_k, size_t nprobe) = 0;
-
-    [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
-    query_finite_ram(
+    query(
         const QueryVectorArray& vectors,
         size_t top_k,
-        size_t nprobe,
-        size_t upper_bound) = 0;
-
-    virtual void update(
-        const FeatureVectorArray&,
-        const std::optional<IdVector>& ids,
-        const std::optional<UpdateOptions>& options) const = 0;
-
-    virtual void update(
-        const URI& vectors_uri,
-        const std::optional<IdVector>& ids,
-        const std::optional<UpdateOptions>& options) const = 0;
-
-    virtual void remove(const IdVector& ids) const = 0;
+        std::optional<size_t> opt_L) = 0;
 
     virtual void write_index(
         const tiledb::Context& ctx,
@@ -459,8 +398,6 @@ class IndexIVFFlat {
         bool overwrite) const = 0;
 
     [[nodiscard]] virtual size_t dimension() const = 0;
-
-    [[nodiscard]] virtual size_t num_partitions() const = 0;
   };
 
   /**
@@ -473,48 +410,39 @@ class IndexIVFFlat {
         : impl_index_(std::forward<T>(t)) {
     }
 
-    index_impl(
-        size_t nlist,
-        size_t max_iter,
-        float tolerance,
-        std::optional<size_t> num_threads)
-        : impl_index_(nlist, max_iter, tolerance) {
+    index_impl(size_t num_vectors, size_t L_build, size_t R_max_degree)
+        : impl_index_(num_vectors, L_build, R_max_degree) {
     }
 
-    index_impl(
-        const tiledb::Context& ctx,
-        const URI& index_uri,
-        const std::optional<StringMap>& config = std::nullopt)
+    index_impl(const tiledb::Context& ctx, const URI& index_uri)
         : impl_index_(ctx, index_uri) {
     }
 
-    template <feature_vector_array V>
-    index_impl(
-        const URI& index_uri,
-        const V& vectors,
-        const IndexOptions& options,
-        const std::optional<StringMap>& config = std::nullopt)
-        : impl_index_(index_uri, vectors, options, config) {
-    }
+    // template <feature_vector_array V>
+    // index_impl(
+    //     const URI& index_uri,
+    //     const V& vectors,
+    //     const IndexOptions& options,
+    //     const std::optional<StringMap>& config = std::nullopt)
+    //     : impl_index_(index_uri, vectors, options, config) {
+    // }
 
-    // Create from input URI
-    index_impl(
-        const URI& index_uri,
-        const URI& vectors_uri,
-        const IndexOptions& options,
-        std::optional<StringMap> config = std::nullopt)
-        : impl_index_(index_uri, vectors_uri, options, config) {
-    }
+    // // Create from input URI
+    // index_impl(
+    //     const URI& index_uri,
+    //     const URI& vectors_uri,
+    //     const IndexOptions& options,
+    //     std::optional<StringMap> config = std::nullopt)
+    //     : impl_index_(index_uri, vectors_uri, options, config) {
+    // }
 
-    void train(
-        const FeatureVectorArray& training_set,
-        kmeans_init init = kmeans_init::random) override {
+    void train(const FeatureVectorArray& training_set) override {
       using feature_type = typename T::value_type;
       auto fspan = MatrixView<feature_type, stdx::layout_left>{
           (feature_type*)training_set.data(),
           extents(training_set)[0],
           extents(training_set)[1]};
-      impl_index_.train(fspan, init);
+      impl_index_.train(fspan);
     }
 
     void add(const FeatureVectorArray& data_set) override {
@@ -526,73 +454,31 @@ class IndexIVFFlat {
       impl_index_.add(fspan);
     }
 
-    [[nodiscard]] auto query_infinite_ram(
+    [[nodiscard]] auto query(
         const tiledb::Context& ctx,
         const URI& uri,
         size_t top_k,
-        size_t nprobe) {
-      return impl_index_.query_infinite_ram(ctx, uri, top_k, nprobe);
+        std::optional<size_t> opt_L) {
+      std::cout << "[vamana_index@queryZ]" << top_k << std::endl;
+      return impl_index_.query(ctx, uri, top_k, opt_L);
     }
 
-    [[nodiscard]] auto query_finite_ram(
-        const tiledb::Context& ctx,
-        const URI& uri,
-        size_t top_k,
-        size_t nprobe) {
-      return impl_index_.query_finite_ram(ctx, uri, top_k, nprobe);
-    }
     /**
      * @brief Query the index with the given vectors.  The concrete query
      * function returns a tuple of arrays, which are type erased and returned as
      * a tuple of FeatureVectorArrays.
      * @param vectors
-     * @param k_nn
+     * @param top_k
      * @return
      *
      * @todo Make sure the extents of the returned arrays are used correctly.
      */
-    [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray>
-    query_infinite_ram(
-        const QueryVectorArray& vectors, size_t k_nn, size_t nprobe) override {
-      // @todo using index_type = size_t;
-
-      auto dtype = vectors.feature_type();
-
-      // @note We need to maintain same layout -> or swap extents
-      switch (dtype) {
-        case TILEDB_FLOAT32: {
-          auto qspan = MatrixView<float, stdx::layout_left>{
-              (float*)vectors.data(),
-              extents(vectors)[0],
-              extents(vectors)[1]};  // @todo ??
-          auto [s, t] = impl_index_.query_infinite_ram(qspan, k_nn, nprobe);
-          auto x = FeatureVectorArray{std::move(s)};
-          auto y = FeatureVectorArray{std::move(t)};
-          return {std::move(x), std::move(y)};
-        }
-        case TILEDB_UINT8: {
-          auto qspan = MatrixView<uint8_t, stdx::layout_left>{
-              (uint8_t*)vectors.data(),
-              extents(vectors)[0],
-              extents(vectors)[1]};  // @todo ??
-          auto [s, t] = impl_index_.query_infinite_ram(qspan, k_nn, nprobe);
-          auto x = FeatureVectorArray{std::move(s)};
-          auto y = FeatureVectorArray{std::move(t)};
-          return {std::move(x), std::move(y)};
-        }
-        default:
-          throw std::runtime_error("Unsupported attribute type");
-      }
-    }
-
-    [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray>
-    query_finite_ram(
+    [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
         const QueryVectorArray& vectors,
-        size_t k_nn,
-        size_t nprobe,
-        size_t upper_bound = 0) override {
+        size_t top_k,
+        std::optional<size_t> opt_L) override {
       // @todo using index_type = size_t;
-
+      std::cout << "[vamana_index@queryT]" << top_k << std::endl;
       auto dtype = vectors.feature_type();
 
       // @note We need to maintain same layout -> or swap extents
@@ -602,10 +488,19 @@ class IndexIVFFlat {
               (float*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] =
-              impl_index_.query_finite_ram(qspan, k_nn, nprobe, upper_bound);
+          std::cout << "[vamana_index@queryT] 1" << std::endl;
+          auto [s, t] = impl_index_.query(qspan, top_k, opt_L);
+
+          // s = scores
+          std::cout << "[vamana_index@queryT] 2" << std::endl;
+          // [feature_vector_array] feature_type_: 2 - float32
+          // [feature_vector_array] feature_size_: 4
           auto x = FeatureVectorArray{std::move(s)};
+
+          // t = indices
+          std::cout << "[vamana_index@queryT] 3" << std::endl;
           auto y = FeatureVectorArray{std::move(t)};
+          std::cout << "[vamana_index@queryT] 4" << std::endl;
           return {std::move(x), std::move(y)};
         }
         case TILEDB_UINT8: {
@@ -613,8 +508,8 @@ class IndexIVFFlat {
               (uint8_t*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] =
-              impl_index_.query_finite_ram(qspan, k_nn, nprobe, upper_bound);
+          std::cout << "[vamana_index@queryT] 2" << std::endl;
+          auto [s, t] = impl_index_.query(qspan, top_k, opt_L);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -622,22 +517,6 @@ class IndexIVFFlat {
         default:
           throw std::runtime_error("Unsupported attribute type");
       }
-    }
-
-    // WIP
-    void update(
-        const FeatureVectorArray& vectors,
-        const std::optional<IdVector>& ids,
-        const std::optional<UpdateOptions>& options) const override {
-      //      index_.update(vectors, ids, options);
-    }
-
-    // WIP
-    void update(
-        const URI& vectors_uri,
-        const std::optional<IdVector>& ids,
-        const std::optional<UpdateOptions>& options) const override {
-      //      index_.update(vectors_uri, ids, options);
     }
 
     void write_index(
@@ -647,17 +526,8 @@ class IndexIVFFlat {
       impl_index_.write_index(ctx, group_uri, overwrite);
     }
 
-    // WIP
-    void remove(const IdVector& ids) const override {
-      //      index_.remove(ids);
-    }
-
     size_t dimension() const override {
       return ::dimension(impl_index_);
-    }
-
-    size_t num_partitions() const override {
-      return ::num_partitions(impl_index_);
     }
 
    private:
@@ -668,14 +538,12 @@ class IndexIVFFlat {
   };
 
   size_t dimension_ = 0;
-  size_t nlist_ = 0;
-  size_t max_iter_ = 2;
-  float tolerance_ = 1e-4;
-  std::optional<size_t> num_threads_ = std::nullopt;
+  size_t L_build_ = 100;
+  size_t R_max_degree_ = 64;
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
   tiledb_datatype_t px_datatype_{TILEDB_ANY};
   std::unique_ptr</* const */ index_base> index_;
 };
 
-#endif  // TILEDB_API_IVF_FLAT_INDEX_H
+#endif  // TILEDB_API_VAMANA_INDEX_H

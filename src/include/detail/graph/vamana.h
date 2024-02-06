@@ -435,6 +435,8 @@ class vamana_index {
   id_type medioid_{0};
 
  public:
+  using value_type = feature_type;
+
   vamana_index() = delete;
   vamana_index(const vamana_index& index) = delete;
   vamana_index& operator=(const vamana_index& index) = delete;
@@ -468,6 +470,7 @@ class vamana_index {
       if (!read_group.has_metadata(name, &datatype)) {
         throw std::runtime_error("Missing metadata: " + name);
       }
+      std::cout << name << " " << value << " " << datatype << std::endl;
       uint32_t count;
       void* addr;
       read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
@@ -648,12 +651,15 @@ class vamana_index {
       size_t k,
       std::optional<size_t> opt_L = std::nullopt) {
     scoped_timer __{tdb_func__ + std::string{" (outer)"}, true};
+    std::cout << "[vamana@query1]" << k << std::endl;
 
     size_t L = opt_L ? *opt_L : L_build_;
     // L = std::min<size_t>(L, L_build_);
 
-    auto top_k = ColMajorMatrix<size_t>(k, ::num_vectors(query_set));
-    auto top_k_scores = ColMajorMatrix<float>(k, ::num_vectors(query_set));
+    // auto top_k = ColMajorMatrix<size_t>(k, ::num_vectors(query_set));
+    // auto top_k_scores = ColMajorMatrix<float>(k, ::num_vectors(query_set));
+    auto top_k = ColMajorMatrix<id_type>(k, ::num_vectors(query_set));
+    auto top_k_scores = ColMajorMatrix<score_type>(k, ::num_vectors(query_set));
 
 #if 0
     // Parallelized implementation -- we stay single-threaded for now
@@ -668,6 +674,7 @@ class vamana_index {
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
     });
 #else
+    std::cout << "[vamana@query1] A" << k << std::endl;
     for (size_t i = 0; i < num_vectors(query_set); ++i) {
       auto&& [tk_scores, tk, V] = greedy_search(
           graph_,
@@ -681,6 +688,7 @@ class vamana_index {
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
       num_visited_vertices_ += V.size();
     }
+    std::cout << "[vamana@query1] B" << k << std::endl;
 #endif
 
 #if 0
@@ -694,6 +702,7 @@ class vamana_index {
       std::copy(_top_k.data(), _top_k.data() + k, top_k[i].data());
     }
 #endif
+    std::cout << "[vamana@query1] C" << k << std::endl;
 
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
@@ -712,6 +721,7 @@ class vamana_index {
       const Q& query_vec,
       size_t k,
       std::optional<size_t> opt_L = std::nullopt) {
+    std::cout << "[vamana@query2]" << k << std::endl;
     size_t L = opt_L ? *opt_L : L_build_;
 
     auto&& [top_k_scores, top_k, V] =
@@ -764,12 +774,13 @@ class vamana_index {
    * those will presumably be in a known array that can be made part of
    * the group?
    */
-  auto write_index(const std::string& group_uri, bool overwrite = false) {
-    // copilot ftw!
+  auto write_index(
+      const tiledb::Context& ctx,
+      const std::string& group_uri,
+      bool overwrite = false) const {
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medioid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
 
-    tiledb::Context ctx;
     tiledb::VFS vfs(ctx);
     if (vfs.is_dir(group_uri)) {
       if (overwrite == false) {
