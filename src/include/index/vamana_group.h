@@ -52,6 +52,9 @@
          {"adjacency_scores_array_name", "adjacency_scores"},
          {"adjacency_ids_array_name", "adjacency_ids"},
          {"adjacency_row_index_array_name", "adjacency_row_index"},
+
+         // @todo for ivf_vamana we would also want medoids
+         // {"medoids_array_name", "medoids"},
      }}};
 
 template <class Index>

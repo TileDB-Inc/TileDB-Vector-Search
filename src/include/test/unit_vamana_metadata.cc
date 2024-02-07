@@ -83,7 +83,15 @@ TEST_CASE("vamana_metadata: default constructor dump", "[vamana_metadata]") {
 }
 
 TEST_CASE("vamana_metadata: read metadata from reference group", "[vamana_metadata]") {
-  auto group_uri = test_data_root / "nano" / "vamana" / "vamana_test_index_meta_data";
+
+  size_t test_case = GENERATE(0, 1);
+
+  std::vector<std::string> test_uris {
+      test_data_root / "nano" / "vamana" / "vamana_test_index_metadata",
+      test_data_root / "nano" / "vamana" / "vamana_test_index",
+  };
+
+  auto group_uri = test_uris[test_case];
 
   tiledb::Context ctx;
   tiledb::Config cfg;
@@ -154,12 +162,12 @@ TEST_CASE("vamana_metadata: read metadata from reference group", "[vamana_metada
 }
 
 #if 0
-TEST_CASE("ivf_flat_metadata: open group", "[ivf_flat_metadata]") {
+TEST_CASE("vamana_metadata: open group", "[vamana_metadata]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
 
   auto read_group = tiledb::Group(ctx, sift_group_uri, TILEDB_READ, cfg);
-  auto x = ivf_flat_index_metadata();
+  auto x = vamana_index_metadata();
 
   SECTION("load metadata") {
     x.load_metadata(read_group);
