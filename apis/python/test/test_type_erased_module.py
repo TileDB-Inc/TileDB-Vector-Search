@@ -157,6 +157,53 @@ def test_query_IndexFlatL2():
     logging.info(f"u.dtype={u.dtype}, v.dtype={v.dtype}")
     assert (u == v[:,0:k_nn]).all()
 
+def test_construct_IndexVamana():
+    a = vspy.IndexVamana()
+    assert a.feature_type_string() == "any"
+    assert a.id_type_string() == "uint32"
+    assert a.px_type_string() == "uint32"
+    assert a.dimension() == 0
+
+    a = vspy.IndexVamana(feature_type="float32")
+    assert a.feature_type_string() == "float32"
+    assert a.id_type_string() == "uint32"
+    assert a.px_type_string() == "uint32"
+    assert a.dimension() == 0
+
+    a = vspy.IndexVamana(feature_type="uint8", id_type="uint64", px_type="int64")
+    assert a.feature_type_string() == "uint8"
+    assert a.id_type_string() == "uint64"
+    assert a.px_type_string() == "int64"
+    assert a.dimension() == 0
+
+    a = vspy.IndexVamana(feature_type="float32", id_type="int64", px_type="uint64")
+    assert a.feature_type_string() == "float32"
+    assert a.id_type_string() == "int64"
+    assert a.px_type_string() == "uint64"
+    assert a.dimension() == 0
+
+def test_inplace_build_query_IndexVamana():
+    opt_l = 100
+    k_nn = 10
+
+    a = vspy.IndexVamana(id_type="uint32", px_type="uint32", feature_type="float32")
+
+    training_set = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
+    assert training_set.feature_type_string() == "float32"
+    query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
+    assert query_set.feature_type_string() == "float32"
+    groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
+    assert groundtruth_set.feature_type_string() == "uint64"
+
+    a.train(training_set)
+    s, t = a.query(query_set, k_nn, opt_l)
+
+    intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
+
+    nt = np.double(t.num_vectors()) * np.double(k_nn)
+    recall = intersections / nt
+
+    assert recall == 1.0
 
 def test_construct_IndexIVFFlat():
     a = vspy.IndexIVFFlat()

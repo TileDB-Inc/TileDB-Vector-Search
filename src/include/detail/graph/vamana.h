@@ -435,6 +435,8 @@ class vamana_index {
   id_type medioid_{0};
 
  public:
+  using value_type = feature_type;
+
   vamana_index() = delete;
   vamana_index(const vamana_index& index) = delete;
   vamana_index& operator=(const vamana_index& index) = delete;
@@ -541,12 +543,11 @@ class vamana_index {
 
     medioid_ = medioid(feature_vectors_);
 
-    debug_index();
     size_t counter{0};
     //    for (float alpha : {alpha_min_, alpha_max_}) {
     // Just use one value of alpha
     for (float alpha : {alpha_max_}) {
-      scoped_timer _("train " + std::to_string(counter), true);
+      scoped_timer _("train " + std::to_string(counter));
       size_t total_visited{0};
       for (size_t p = 0; p < num_vectors_; ++p) {
         ++counter;
@@ -604,7 +605,6 @@ class vamana_index {
           // dump_edgelist("edges_" + std::to_string(counter) + ".txt", graph_);
         }
       }
-      debug_index();
     }
   }
 
@@ -647,13 +647,13 @@ class vamana_index {
       const Q& query_set,
       size_t k,
       std::optional<size_t> opt_L = std::nullopt) {
-    scoped_timer __{tdb_func__ + std::string{" (outer)"}, true};
+    scoped_timer __{tdb_func__ + std::string{" (outer)"}};
 
     size_t L = opt_L ? *opt_L : L_build_;
     // L = std::min<size_t>(L, L_build_);
 
-    auto top_k = ColMajorMatrix<size_t>(k, ::num_vectors(query_set));
-    auto top_k_scores = ColMajorMatrix<float>(k, ::num_vectors(query_set));
+    auto top_k = ColMajorMatrix<id_type>(k, ::num_vectors(query_set));
+    auto top_k_scores = ColMajorMatrix<score_type>(k, ::num_vectors(query_set));
 
 #if 0
     // Parallelized implementation -- we stay single-threaded for now
@@ -764,12 +764,13 @@ class vamana_index {
    * those will presumably be in a known array that can be made part of
    * the group?
    */
-  auto write_index(const std::string& group_uri, bool overwrite = false) {
-    // copilot ftw!
+  auto write_index(
+      const tiledb::Context& ctx,
+      const std::string& group_uri,
+      bool overwrite = false) const {
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medioid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
 
-    tiledb::Context ctx;
     tiledb::VFS vfs(ctx);
     if (vfs.is_dir(group_uri)) {
       if (overwrite == false) {
