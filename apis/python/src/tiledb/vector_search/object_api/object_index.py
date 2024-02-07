@@ -2,7 +2,7 @@ import base64
 from collections import OrderedDict
 from typing import Any, Dict, List, Mapping, Optional
 
-import cloudpickle
+import json
 import numpy as np
 
 import tiledb
@@ -52,8 +52,8 @@ class ObjectIndex:
             self.object_reader_class_name = self.index.group.meta[
                 "object_reader_class_name"
             ]
-            self.object_reader_kwargs = cloudpickle.loads(
-                base64.b64decode(self.index.group.meta["object_reader_kwargs"])
+            self.object_reader_kwargs = json_decode_kwargs(
+                self.index.group.meta["object_reader_kwargs"]
             )
             self.object_reader = instantiate_object(
                 code=self.object_reader_source_code,
@@ -62,8 +62,8 @@ class ObjectIndex:
             )
             self.embedding_source_code = self.index.group.meta["embedding_source_code"]
             self.embedding_class_name = self.index.group.meta["embedding_class_name"]
-            self.embedding_kwargs = cloudpickle.loads(
-                base64.b64decode(self.index.group.meta["embedding_kwargs"])
+            self.object_reader_kwargs = json_decode_kwargs(
+                self.index.group.meta["embedding_kwargs"]
             )
             self.embedding = instantiate_object(
                 code=self.embedding_source_code,
@@ -252,9 +252,12 @@ class ObjectIndex:
         )
 
 
-def encode_class(a):
-    pickled_object = cloudpickle.dumps(a, protocol=TILEDB_CLOUD_PROTOCOL)
-    return base64.b64encode(pickled_object).decode("ascii")
+def json_encode_kwargs(a):
+    return base64.b64encode(json.dumps(a)).decode("ascii")
+
+
+def json_decode_kwargs(s):
+    return json.loads(base64.b64decode(s))
 
 
 def get_source_code(a):
@@ -321,10 +324,12 @@ def create(
         group = tiledb.Group(uri, "w")
         group.meta["object_reader_source_code"] = get_source_code(object_reader)
         group.meta["object_reader_class_name"] = object_reader.__class__.__name__
-        group.meta["object_reader_kwargs"] = encode_class(object_reader.init_kwargs())
+        group.meta["object_reader_kwargs"] = json_encode_kwargs(
+            object_reader.init_kwargs()
+        )
         group.meta["embedding_source_code"] = get_source_code(embedding)
         group.meta["embedding_class_name"] = embedding.__class__.__name__
-        group.meta["embedding_kwargs"] = encode_class(embedding.init_kwargs())
+        group.meta["embedding_kwargs"] = json_encode_kwargs(embedding.init_kwargs())
 
         embeddings_array_name = storage_formats[index.storage_version][
             "INPUT_VECTORS_ARRAY_NAME"
