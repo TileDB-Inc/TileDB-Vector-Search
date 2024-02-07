@@ -1,5 +1,62 @@
 [
   {
+    "objectID": "documentation/Benchmarks.html",
+    "href": "documentation/Benchmarks.html",
+    "title": "Benchmarks",
+    "section": "",
+    "text": "We have implemented a big-ann-benchmarks interface for TileDB-Vector-Search, which is available in the tiledb branch of our fork: - https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb. This interface implements two new algorithms: tiledb-flat and tiledb-ivf-flat, which are usable within the framework’s runner.\n\n\n\nBuild the Dockerfile at the root of this repository:\n\ncd tiledb-vector-search\ndocker build -f Dockerfile . -t tiledb_vs\n\nBuild the TileDB docker image in the big-ann fork (requires image from step 1):\n\ngit clone https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb\ncd big-ann-benchmarks\ndocker build -f install/Dockerfile.tiledb . -t billion-scale-benchmark-tiledb\n\n\n\n\nCreate a local dataset.\nnote: the create_dataset.py command will download remote files the first time it runs, some of which can total &gt;100GB). Use --skip-data to avoid downloading the large base set.\nThis command will download 7.7MB of data:\n\npython create_dataset.py --dataset bigann-10M --skip-data\n\nRun the benchmarks, choosing either tiledb-flat or tiledb-ivf-flat:\n\npython run.py --dataset bigann-10M --algorithm tiledb-flat",
+    "crumbs": [
+      "Home page",
+      "Benchmarks"
+    ]
+  },
+  {
+    "objectID": "documentation/Benchmarks.html#building",
+    "href": "documentation/Benchmarks.html#building",
+    "title": "Benchmarks",
+    "section": "",
+    "text": "Build the Dockerfile at the root of this repository:\n\ncd tiledb-vector-search\ndocker build -f Dockerfile . -t tiledb_vs\n\nBuild the TileDB docker image in the big-ann fork (requires image from step 1):\n\ngit clone https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb\ncd big-ann-benchmarks\ndocker build -f install/Dockerfile.tiledb . -t billion-scale-benchmark-tiledb",
+    "crumbs": [
+      "Home page",
+      "Benchmarks"
+    ]
+  },
+  {
+    "objectID": "documentation/Benchmarks.html#running-benchmarks",
+    "href": "documentation/Benchmarks.html#running-benchmarks",
+    "title": "Benchmarks",
+    "section": "",
+    "text": "Create a local dataset.\nnote: the create_dataset.py command will download remote files the first time it runs, some of which can total &gt;100GB). Use --skip-data to avoid downloading the large base set.\nThis command will download 7.7MB of data:\n\npython create_dataset.py --dataset bigann-10M --skip-data\n\nRun the benchmarks, choosing either tiledb-flat or tiledb-ivf-flat:\n\npython run.py --dataset bigann-10M --algorithm tiledb-flat",
+    "crumbs": [
+      "Home page",
+      "Benchmarks"
+    ]
+  },
+  {
+    "objectID": "documentation/reference/index.html",
+    "href": "documentation/reference/index.html",
+    "title": "Python",
+    "section": "",
+    "text": "index.Index\nOpen a Vector index\n\n\nflat_index.FlatIndex\nOpen a flat index\n\n\nivf_flat_index.IVFFlatIndex\nOpen a IVF Flat index\n\n\ningestion",
+    "crumbs": [
+      "Home page",
+      "API Reference",
+      "Python"
+    ]
+  },
+  {
+    "objectID": "documentation/reference/index.html#tiledb.vector_search",
+    "href": "documentation/reference/index.html#tiledb.vector_search",
+    "title": "Python",
+    "section": "",
+    "text": "index.Index\nOpen a Vector index\n\n\nflat_index.FlatIndex\nOpen a flat index\n\n\nivf_flat_index.IVFFlatIndex\nOpen a IVF Flat index\n\n\ningestion",
+    "crumbs": [
+      "Home page",
+      "API Reference",
+      "Python"
+    ]
+  },
+  {
     "objectID": "documentation/reference/index.Index.html",
     "href": "documentation/reference/index.Index.html",
     "title": "index.Index",
@@ -19,48 +76,6 @@
     "title": "index.Index",
     "section": "",
     "text": "Name\nDescription\n\n\n\n\nconsolidate_updates\n\n\n\n\n\n\nvector_search.index.Index.consolidate_updates(retrain_index=False, **kwargs)\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nretrain_index\nbool\nIf true, retrain the index. If false, reuse data from the previous index. For IVF_FLAT retraining means we will recompute the centroids - when doing so you can pass any ingest() arguments used to configure computing centroids and we will use them when recomputing the centroids. Otherwise, if false, we will reuse the centroids from the previous index.\nFalse"
-  },
-  {
-    "objectID": "documentation/reference/flat_index.FlatIndex.html",
-    "href": "documentation/reference/flat_index.FlatIndex.html",
-    "title": "flat_index.FlatIndex",
-    "section": "",
-    "text": "vector_search.flat_index.FlatIndex(self, uri, config=None, timestamp=None, **kwargs)\nOpen a flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nuri\nstr\nURI of the index\nrequired\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone\n\n\n\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nquery_internal\nQuery a flat index\n\n\n\n\n\nvector_search.flat_index.FlatIndex.query_internal(queries, k=10, nthreads=8)\nQuery a flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnthreads\nint\nNumber of threads to use for query\n8"
-  },
-  {
-    "objectID": "documentation/reference/flat_index.FlatIndex.html#parameters",
-    "href": "documentation/reference/flat_index.FlatIndex.html#parameters",
-    "title": "flat_index.FlatIndex",
-    "section": "",
-    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nuri\nstr\nURI of the index\nrequired\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone"
-  },
-  {
-    "objectID": "documentation/reference/flat_index.FlatIndex.html#methods",
-    "href": "documentation/reference/flat_index.FlatIndex.html#methods",
-    "title": "flat_index.FlatIndex",
-    "section": "",
-    "text": "Name\nDescription\n\n\n\n\nquery_internal\nQuery a flat index\n\n\n\n\n\nvector_search.flat_index.FlatIndex.query_internal(queries, k=10, nthreads=8)\nQuery a flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnthreads\nint\nNumber of threads to use for query\n8"
-  },
-  {
-    "objectID": "documentation/reference/ivf_flat_index.IVFFlatIndex.html",
-    "href": "documentation/reference/ivf_flat_index.IVFFlatIndex.html",
-    "title": "ivf_flat_index.IVFFlatIndex",
-    "section": "",
-    "text": "vector_search.ivf_flat_index.IVFFlatIndex(self, uri, config=None, timestamp=None, memory_budget=-1, **kwargs)\nOpen a IVF Flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nuri\nstr\nURI of the index\nrequired\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone\n\n\nmemory_budget\nint\nMain memory budget. If not provided, no memory budget is applied.\n-1\n\n\n\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nquery_internal\nQuery an IVF_FLAT index\n\n\ntaskgraph_query\nQuery an IVF_FLAT index using TileDB cloud taskgraphs\n\n\n\n\n\nvector_search.ivf_flat_index.IVFFlatIndex.query_internal(queries, k=10, nprobe=1, nthreads=-1, use_nuv_implementation=False, mode=None, resource_class=None, resources=None, num_partitions=-1, num_workers=-1)\nQuery an IVF_FLAT index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnprobe\nint\nnumber of probes\n1\n\n\nnthreads\nint\nNumber of threads to use for query\n-1\n\n\nuse_nuv_implementation\nbool\nwether to use the nuv query implementation. Default: False\nFalse\n\n\nmode\nMode\nIf provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode. For local execution you can use LOCAL mode.\nNone\n\n\nresource_class\nOptional[str]\nThe name of the resource class to use (“standard” or “large”). Resource classes define maximum limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode. Cannot be used alongside resources. In REALTIME or BATCH mode if neither resource_class nor resources are provided, we default to the “large” resource class.\nNone\n\n\nresources\nOptional[Mapping[str, Any]]\nA specification for the amount of resources to use when executing using TileDB cloud taskgraphs, of the form: {“cpu”: “6”, “memory”: “12Gi”, “gpu”: 1}. Can only be used in BATCH mode. Cannot be used alongside resource_class.\nNone\n\n\nnum_partitions\nint\nOnly relevant for taskgraph based execution. If provided, we split the query execution in that many partitions.\n-1\n\n\nnum_workers\nint\nOnly relevant for taskgraph based execution. If provided, this is the number of workers to use for the query execution.\n-1\n\n\n\n\n\n\n\nvector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query(queries, k=10, nprobe=10, nthreads=-1, mode=None, resource_class=None, resources=None, num_partitions=-1, num_workers=-1, config=None)\nQuery an IVF_FLAT index using TileDB cloud taskgraphs\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnprobe\nint\nnumber of probes\n10\n\n\nnthreads\nint\nNumber of threads to use for query\n-1\n\n\nmode\nMode\nIf provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode. For local execution you can use LOCAL mode.\nNone\n\n\nresource_class\nOptional[str]\nThe name of the resource class to use (“standard” or “large”). Resource classes define maximum limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode. Cannot be used alongside resources. In REALTIME or BATCH mode if neither resource_class nor resources are provided, we default to the “large” resource class.\nNone\n\n\nresources\nOptional[Mapping[str, Any]]\nA specification for the amount of resources to use when executing using TileDB cloud taskgraphs, of the form: {“cpu”: “6”, “memory”: “12Gi”, “gpu”: 1}. Can only be used in BATCH mode. Cannot be used alongside resource_class.\nNone\n\n\nnum_partitions\nint\nOnly relevant for taskgraph based execution. If provided, we split the query execution in that many partitions.\n-1\n\n\nnum_workers\nint\nOnly relevant for taskgraph based execution. If provided, this is the number of workers to use for the query execution.\n-1\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone"
-  },
-  {
-    "objectID": "documentation/reference/ivf_flat_index.IVFFlatIndex.html#parameters",
-    "href": "documentation/reference/ivf_flat_index.IVFFlatIndex.html#parameters",
-    "title": "ivf_flat_index.IVFFlatIndex",
-    "section": "",
-    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nuri\nstr\nURI of the index\nrequired\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone\n\n\nmemory_budget\nint\nMain memory budget. If not provided, no memory budget is applied.\n-1"
-  },
-  {
-    "objectID": "documentation/reference/ivf_flat_index.IVFFlatIndex.html#methods",
-    "href": "documentation/reference/ivf_flat_index.IVFFlatIndex.html#methods",
-    "title": "ivf_flat_index.IVFFlatIndex",
-    "section": "",
-    "text": "Name\nDescription\n\n\n\n\nquery_internal\nQuery an IVF_FLAT index\n\n\ntaskgraph_query\nQuery an IVF_FLAT index using TileDB cloud taskgraphs\n\n\n\n\n\nvector_search.ivf_flat_index.IVFFlatIndex.query_internal(queries, k=10, nprobe=1, nthreads=-1, use_nuv_implementation=False, mode=None, resource_class=None, resources=None, num_partitions=-1, num_workers=-1)\nQuery an IVF_FLAT index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnprobe\nint\nnumber of probes\n1\n\n\nnthreads\nint\nNumber of threads to use for query\n-1\n\n\nuse_nuv_implementation\nbool\nwether to use the nuv query implementation. Default: False\nFalse\n\n\nmode\nMode\nIf provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode. For local execution you can use LOCAL mode.\nNone\n\n\nresource_class\nOptional[str]\nThe name of the resource class to use (“standard” or “large”). Resource classes define maximum limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode. Cannot be used alongside resources. In REALTIME or BATCH mode if neither resource_class nor resources are provided, we default to the “large” resource class.\nNone\n\n\nresources\nOptional[Mapping[str, Any]]\nA specification for the amount of resources to use when executing using TileDB cloud taskgraphs, of the form: {“cpu”: “6”, “memory”: “12Gi”, “gpu”: 1}. Can only be used in BATCH mode. Cannot be used alongside resource_class.\nNone\n\n\nnum_partitions\nint\nOnly relevant for taskgraph based execution. If provided, we split the query execution in that many partitions.\n-1\n\n\nnum_workers\nint\nOnly relevant for taskgraph based execution. If provided, this is the number of workers to use for the query execution.\n-1\n\n\n\n\n\n\n\nvector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query(queries, k=10, nprobe=10, nthreads=-1, mode=None, resource_class=None, resources=None, num_partitions=-1, num_workers=-1, config=None)\nQuery an IVF_FLAT index using TileDB cloud taskgraphs\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnprobe\nint\nnumber of probes\n10\n\n\nnthreads\nint\nNumber of threads to use for query\n-1\n\n\nmode\nMode\nIf provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode. For local execution you can use LOCAL mode.\nNone\n\n\nresource_class\nOptional[str]\nThe name of the resource class to use (“standard” or “large”). Resource classes define maximum limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode. Cannot be used alongside resources. In REALTIME or BATCH mode if neither resource_class nor resources are provided, we default to the “large” resource class.\nNone\n\n\nresources\nOptional[Mapping[str, Any]]\nA specification for the amount of resources to use when executing using TileDB cloud taskgraphs, of the form: {“cpu”: “6”, “memory”: “12Gi”, “gpu”: 1}. Can only be used in BATCH mode. Cannot be used alongside resource_class.\nNone\n\n\nnum_partitions\nint\nOnly relevant for taskgraph based execution. If provided, we split the query execution in that many partitions.\n-1\n\n\nnum_workers\nint\nOnly relevant for taskgraph based execution. If provided, this is the number of workers to use for the query execution.\n-1\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone"
   },
   {
     "objectID": "documentation/Building.html",
@@ -129,61 +144,25 @@
     ]
   },
   {
-    "objectID": "documentation/Benchmarks.html",
-    "href": "documentation/Benchmarks.html",
-    "title": "Benchmarks",
+    "objectID": "documentation/reference/flat_index.FlatIndex.html",
+    "href": "documentation/reference/flat_index.FlatIndex.html",
+    "title": "flat_index.FlatIndex",
     "section": "",
-    "text": "We have implemented a big-ann-benchmarks interface for TileDB-Vector-Search, which is available in the tiledb branch of our fork: - https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb. This interface implements two new algorithms: tiledb-flat and tiledb-ivf-flat, which are usable within the framework’s runner.\n\n\n\nBuild the Dockerfile at the root of this repository:\n\ncd tiledb-vector-search\ndocker build -f Dockerfile . -t tiledb_vs\n\nBuild the TileDB docker image in the big-ann fork (requires image from step 1):\n\ngit clone https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb\ncd big-ann-benchmarks\ndocker build -f install/Dockerfile.tiledb . -t billion-scale-benchmark-tiledb\n\n\n\n\nCreate a local dataset.\nnote: the create_dataset.py command will download remote files the first time it runs, some of which can total &gt;100GB). Use --skip-data to avoid downloading the large base set.\nThis command will download 7.7MB of data:\n\npython create_dataset.py --dataset bigann-10M --skip-data\n\nRun the benchmarks, choosing either tiledb-flat or tiledb-ivf-flat:\n\npython run.py --dataset bigann-10M --algorithm tiledb-flat",
-    "crumbs": [
-      "Home page",
-      "Benchmarks"
-    ]
+    "text": "vector_search.flat_index.FlatIndex(self, uri, config=None, timestamp=None, **kwargs)\nOpen a flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nuri\nstr\nURI of the index\nrequired\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone\n\n\n\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nquery_internal\nQuery a flat index\n\n\n\n\n\nvector_search.flat_index.FlatIndex.query_internal(queries, k=10, nthreads=8)\nQuery a flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnthreads\nint\nNumber of threads to use for query\n8"
   },
   {
-    "objectID": "documentation/Benchmarks.html#building",
-    "href": "documentation/Benchmarks.html#building",
-    "title": "Benchmarks",
+    "objectID": "documentation/reference/flat_index.FlatIndex.html#parameters",
+    "href": "documentation/reference/flat_index.FlatIndex.html#parameters",
+    "title": "flat_index.FlatIndex",
     "section": "",
-    "text": "Build the Dockerfile at the root of this repository:\n\ncd tiledb-vector-search\ndocker build -f Dockerfile . -t tiledb_vs\n\nBuild the TileDB docker image in the big-ann fork (requires image from step 1):\n\ngit clone https://github.com/TileDB-Inc/big-ann-benchmarks/tree/tiledb\ncd big-ann-benchmarks\ndocker build -f install/Dockerfile.tiledb . -t billion-scale-benchmark-tiledb",
-    "crumbs": [
-      "Home page",
-      "Benchmarks"
-    ]
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nuri\nstr\nURI of the index\nrequired\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone"
   },
   {
-    "objectID": "documentation/Benchmarks.html#running-benchmarks",
-    "href": "documentation/Benchmarks.html#running-benchmarks",
-    "title": "Benchmarks",
+    "objectID": "documentation/reference/flat_index.FlatIndex.html#methods",
+    "href": "documentation/reference/flat_index.FlatIndex.html#methods",
+    "title": "flat_index.FlatIndex",
     "section": "",
-    "text": "Create a local dataset.\nnote: the create_dataset.py command will download remote files the first time it runs, some of which can total &gt;100GB). Use --skip-data to avoid downloading the large base set.\nThis command will download 7.7MB of data:\n\npython create_dataset.py --dataset bigann-10M --skip-data\n\nRun the benchmarks, choosing either tiledb-flat or tiledb-ivf-flat:\n\npython run.py --dataset bigann-10M --algorithm tiledb-flat",
-    "crumbs": [
-      "Home page",
-      "Benchmarks"
-    ]
-  },
-  {
-    "objectID": "documentation/reference/index.html",
-    "href": "documentation/reference/index.html",
-    "title": "Python",
-    "section": "",
-    "text": "index.Index\nOpen a Vector index\n\n\nflat_index.FlatIndex\nOpen a flat index\n\n\nivf_flat_index.IVFFlatIndex\nOpen a IVF Flat index\n\n\ningestion",
-    "crumbs": [
-      "Home page",
-      "API Reference",
-      "Python"
-    ]
-  },
-  {
-    "objectID": "documentation/reference/index.html#tiledb.vector_search",
-    "href": "documentation/reference/index.html#tiledb.vector_search",
-    "title": "Python",
-    "section": "",
-    "text": "index.Index\nOpen a Vector index\n\n\nflat_index.FlatIndex\nOpen a flat index\n\n\nivf_flat_index.IVFFlatIndex\nOpen a IVF Flat index\n\n\ningestion",
-    "crumbs": [
-      "Home page",
-      "API Reference",
-      "Python"
-    ]
+    "text": "Name\nDescription\n\n\n\n\nquery_internal\nQuery a flat index\n\n\n\n\n\nvector_search.flat_index.FlatIndex.query_internal(queries, k=10, nthreads=8)\nQuery a flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnthreads\nint\nNumber of threads to use for query\n8"
   },
   {
     "objectID": "documentation/reference/ingestion.html",
@@ -198,5 +177,26 @@
     "title": "ingestion",
     "section": "",
     "text": "Name\nDescription\n\n\n\n\ningest\nIngest vectors into TileDB.\n\n\n\n\n\nvector_search.ingestion.ingest(index_type, index_uri, *, input_vectors=None, source_uri=None, source_type=None, external_ids=None, external_ids_uri='', external_ids_type=None, updates_uri=None, index_timestamp=None, config=None, namespace=None, size=-1, partitions=-1, training_sampling_policy=TrainingSamplingPolicy.FIRST_N, copy_centroids_uri=None, training_sample_size=-1, training_input_vectors=None, training_source_uri=None, training_source_type=None, workers=-1, input_vectors_per_work_item=-1, max_tasks_per_stage=-1, input_vectors_per_work_item_during_sampling=-1, max_sampling_tasks=-1, storage_version=STORAGE_VERSION, verbose=False, trace_id=None, use_sklearn=True, mode=Mode.LOCAL, **kwargs)\nIngest vectors into TileDB.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nindex_type\nstr\nType of vector index (FLAT, IVF_FLAT)\nrequired\n\n\nindex_uri\nstr\nVector index URI (stored as TileDB group)\nrequired\n\n\ninput_vectors\nnp.ndarray\nInput vectors, if this is provided it takes precedence over source_uri and source_type.\nNone\n\n\nsource_uri\nstr\nData source URI\nNone\n\n\nsource_type\nstr\nType of the source data. If left empty it is auto-detected from the suffix of source_uri\nNone\n\n\nexternal_ids\nnp.array\nInput vector external_ids, if this is provided it takes precedence over external_ids_uri and external_ids_type\nNone\n\n\nexternal_ids_uri\nstr\nSource URI for external_ids\n''\n\n\nexternal_ids_type\nstr\nFile type of external_ids_uri. If left empty it is auto-detected from the suffix of external_ids_uri\nNone\n\n\nupdates_uri\nstr\nUpdates\nNone\n\n\nindex_timestamp\nint\nTimestamp to use for writing and reading data. By default it sues the current unix ms timestamp.\nNone\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone\n\n\nnamespace\nOptional[str]\nTileDB-Cloud namespace, defaults to None\nNone\n\n\nsize\nint\nNumber of input vectors, if not provided use the full size of the input dataset\n-1\n\n\npartitions\nint\nNumber of partitions to load the data with, if not provided, is auto-configured based on the dataset size\n-1\n\n\ncopy_centroids_uri\nstr\nTileDB array URI to copy centroids from, if not provided, centroids are build running kmeans\nNone\n\n\ntraining_sample_size\nint\nvector sample size to train centroids with, if not provided, is auto-configured based on the dataset sizes should not be provided if training_source_uri is provided\n-1\n\n\ntraining_input_vectors\nnp.ndarray\nTraining input vectors, if this is provided it takes precedence over training_source_uri and training_source_type should not be provided if training_sample_size or training_source_uri is provided\nNone\n\n\ntraining_source_uri\nstr\nThe source URI to use for training centroids when building a IVF_FLAT vector index, if not provided, the first training_sample_size vectors from source_uri are used should not be provided if training_sample_size or training_input_vectors is provided\nNone\n\n\ntraining_source_type\nstr\nType of the training source data in training_source_uri if left empty, is auto-detected from the suffix of training_source_type should only be provided when training_source_uri is provided\nNone\n\n\nworkers\nint\nnumber of workers for vector ingestion, if not provided, is auto-configured based on the dataset size\n-1\n\n\ninput_vectors_per_work_item\nint\nnumber of vectors per ingestion work item, if not provided, is auto-configured\n-1\n\n\nmax_tasks_per_stage\nint\nMax number of tasks per execution stage of ingestion, if not provided, is auto-configured\n-1\n\n\ninput_vectors_per_work_item_during_sampling\nint\nnumber of vectors per sample ingestion work item, if not provided, is auto-configured only valid with training_sampling_policy=TrainingSamplingPolicy.RANDOM\n-1\n\n\nmax_sampling_tasks\nint\nMax number of tasks per execution stage of sampling, if not provided, is auto-configured only valid with training_sampling_policy=TrainingSamplingPolicy.RANDOM\n-1\n\n\nstorage_version\nstr\nVector index storage format version. If not provided, defaults to the latest version.\nSTORAGE_VERSION\n\n\nverbose\nbool\nverbose logging, defaults to False\nFalse\n\n\ntrace_id\nOptional[str]\ntrace ID for logging, defaults to None\nNone\n\n\nuse_sklearn\nbool\nWhether to use scikit-learn’s implementation of k-means clustering instead of tiledb.vector_search’s. Defaults to true.\nTrue\n\n\nmode\nMode\nexecution mode, defaults to LOCAL use BATCH for distributed execution\nMode.LOCAL"
+  },
+  {
+    "objectID": "documentation/reference/ivf_flat_index.IVFFlatIndex.html",
+    "href": "documentation/reference/ivf_flat_index.IVFFlatIndex.html",
+    "title": "ivf_flat_index.IVFFlatIndex",
+    "section": "",
+    "text": "vector_search.ivf_flat_index.IVFFlatIndex(self, uri, config=None, timestamp=None, memory_budget=-1, **kwargs)\nOpen a IVF Flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nuri\nstr\nURI of the index\nrequired\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone\n\n\nmemory_budget\nint\nMain memory budget. If not provided, no memory budget is applied.\n-1\n\n\n\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nquery_internal\nQuery an IVF_FLAT index\n\n\ntaskgraph_query\nQuery an IVF_FLAT index using TileDB cloud taskgraphs\n\n\n\n\n\nvector_search.ivf_flat_index.IVFFlatIndex.query_internal(queries, k=10, nprobe=1, nthreads=-1, use_nuv_implementation=False, mode=None, resource_class=None, resources=None, num_partitions=-1, num_workers=-1)\nQuery an IVF_FLAT index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnprobe\nint\nnumber of probes\n1\n\n\nnthreads\nint\nNumber of threads to use for query\n-1\n\n\nuse_nuv_implementation\nbool\nwether to use the nuv query implementation. Default: False\nFalse\n\n\nmode\nMode\nIf provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode. For local execution you can use LOCAL mode.\nNone\n\n\nresource_class\nOptional[str]\nThe name of the resource class to use (“standard” or “large”). Resource classes define maximum limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode. Cannot be used alongside resources. In REALTIME or BATCH mode if neither resource_class nor resources are provided, we default to the “large” resource class.\nNone\n\n\nresources\nOptional[Mapping[str, Any]]\nA specification for the amount of resources to use when executing using TileDB cloud taskgraphs, of the form: {“cpu”: “6”, “memory”: “12Gi”, “gpu”: 1}. Can only be used in BATCH mode. Cannot be used alongside resource_class.\nNone\n\n\nnum_partitions\nint\nOnly relevant for taskgraph based execution. If provided, we split the query execution in that many partitions.\n-1\n\n\nnum_workers\nint\nOnly relevant for taskgraph based execution. If provided, this is the number of workers to use for the query execution.\n-1\n\n\n\n\n\n\n\nvector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query(queries, k=10, nprobe=10, nthreads=-1, mode=None, resource_class=None, resources=None, num_partitions=-1, num_workers=-1, config=None)\nQuery an IVF_FLAT index using TileDB cloud taskgraphs\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnprobe\nint\nnumber of probes\n10\n\n\nnthreads\nint\nNumber of threads to use for query\n-1\n\n\nmode\nMode\nIf provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode. For local execution you can use LOCAL mode.\nNone\n\n\nresource_class\nOptional[str]\nThe name of the resource class to use (“standard” or “large”). Resource classes define maximum limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode. Cannot be used alongside resources. In REALTIME or BATCH mode if neither resource_class nor resources are provided, we default to the “large” resource class.\nNone\n\n\nresources\nOptional[Mapping[str, Any]]\nA specification for the amount of resources to use when executing using TileDB cloud taskgraphs, of the form: {“cpu”: “6”, “memory”: “12Gi”, “gpu”: 1}. Can only be used in BATCH mode. Cannot be used alongside resource_class.\nNone\n\n\nnum_partitions\nint\nOnly relevant for taskgraph based execution. If provided, we split the query execution in that many partitions.\n-1\n\n\nnum_workers\nint\nOnly relevant for taskgraph based execution. If provided, this is the number of workers to use for the query execution.\n-1\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone"
+  },
+  {
+    "objectID": "documentation/reference/ivf_flat_index.IVFFlatIndex.html#parameters",
+    "href": "documentation/reference/ivf_flat_index.IVFFlatIndex.html#parameters",
+    "title": "ivf_flat_index.IVFFlatIndex",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nuri\nstr\nURI of the index\nrequired\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone\n\n\nmemory_budget\nint\nMain memory budget. If not provided, no memory budget is applied.\n-1"
+  },
+  {
+    "objectID": "documentation/reference/ivf_flat_index.IVFFlatIndex.html#methods",
+    "href": "documentation/reference/ivf_flat_index.IVFFlatIndex.html#methods",
+    "title": "ivf_flat_index.IVFFlatIndex",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nquery_internal\nQuery an IVF_FLAT index\n\n\ntaskgraph_query\nQuery an IVF_FLAT index using TileDB cloud taskgraphs\n\n\n\n\n\nvector_search.ivf_flat_index.IVFFlatIndex.query_internal(queries, k=10, nprobe=1, nthreads=-1, use_nuv_implementation=False, mode=None, resource_class=None, resources=None, num_partitions=-1, num_workers=-1)\nQuery an IVF_FLAT index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnprobe\nint\nnumber of probes\n1\n\n\nnthreads\nint\nNumber of threads to use for query\n-1\n\n\nuse_nuv_implementation\nbool\nwether to use the nuv query implementation. Default: False\nFalse\n\n\nmode\nMode\nIf provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode. For local execution you can use LOCAL mode.\nNone\n\n\nresource_class\nOptional[str]\nThe name of the resource class to use (“standard” or “large”). Resource classes define maximum limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode. Cannot be used alongside resources. In REALTIME or BATCH mode if neither resource_class nor resources are provided, we default to the “large” resource class.\nNone\n\n\nresources\nOptional[Mapping[str, Any]]\nA specification for the amount of resources to use when executing using TileDB cloud taskgraphs, of the form: {“cpu”: “6”, “memory”: “12Gi”, “gpu”: 1}. Can only be used in BATCH mode. Cannot be used alongside resource_class.\nNone\n\n\nnum_partitions\nint\nOnly relevant for taskgraph based execution. If provided, we split the query execution in that many partitions.\n-1\n\n\nnum_workers\nint\nOnly relevant for taskgraph based execution. If provided, this is the number of workers to use for the query execution.\n-1\n\n\n\n\n\n\n\nvector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query(queries, k=10, nprobe=10, nthreads=-1, mode=None, resource_class=None, resources=None, num_partitions=-1, num_workers=-1, config=None)\nQuery an IVF_FLAT index using TileDB cloud taskgraphs\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnprobe\nint\nnumber of probes\n10\n\n\nnthreads\nint\nNumber of threads to use for query\n-1\n\n\nmode\nMode\nIf provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode. For local execution you can use LOCAL mode.\nNone\n\n\nresource_class\nOptional[str]\nThe name of the resource class to use (“standard” or “large”). Resource classes define maximum limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode. Cannot be used alongside resources. In REALTIME or BATCH mode if neither resource_class nor resources are provided, we default to the “large” resource class.\nNone\n\n\nresources\nOptional[Mapping[str, Any]]\nA specification for the amount of resources to use when executing using TileDB cloud taskgraphs, of the form: {“cpu”: “6”, “memory”: “12Gi”, “gpu”: 1}. Can only be used in BATCH mode. Cannot be used alongside resource_class.\nNone\n\n\nnum_partitions\nint\nOnly relevant for taskgraph based execution. If provided, we split the query execution in that many partitions.\n-1\n\n\nnum_workers\nint\nOnly relevant for taskgraph based execution. If provided, this is the number of workers to use for the query execution.\n-1\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone"
   }
 ]
