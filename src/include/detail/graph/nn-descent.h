@@ -372,7 +372,7 @@ auto nn_descent_step(auto&& g, I i, J j, std::unordered_set<ID>& s) {
 
 template <class Distance = sum_of_squares_distance>
 auto nn_descent_step_all(auto&& g, auto&& db, Distance distance = Distance()) {
-  scoped_timer t("nn_descent_step_all", true);
+  scoped_timer t("nn_descent_step_all");
   size_t num_candidates{0};
   size_t num_updates{0};
   size_t num_visited{0};
@@ -414,7 +414,7 @@ auto nn_descent_step_all(auto&& g, auto&& db, Distance distance = Distance()) {
 template <class Distance = sum_of_squares_distance>
 auto nn_descent_step_full_all(
     auto&& g, auto&& db, Distance distance = Distance()) {
-  scoped_timer t("nn_descent_step_full_all", true);
+  scoped_timer t("nn_descent_step_full_all");
   size_t num_candidates{0};
   size_t num_updates{0};
   size_t num_visited{0};
