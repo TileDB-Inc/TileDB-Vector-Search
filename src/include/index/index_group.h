@@ -411,23 +411,6 @@ class base_index_group {
     return metadata_.base_sizes_;
   }
 
-  /*
-   * Partition information
-   * @todo This probably belongs in ivf_flat_group
-   */
-  auto get_previous_num_partitions() const {
-    return metadata_.partition_history_.back();
-  }
-  auto get_num_partitions() const {
-    return metadata_.partition_history_[timetravel_index_];
-  }
-  auto append_num_partitions(size_t size) {
-    metadata_.partition_history_.push_back(size);
-  }
-  auto get_all_num_partitions() {
-    return metadata_.partition_history_;
-  }
-
   auto get_all_active_array_names() {
     return active_array_names_;
   }

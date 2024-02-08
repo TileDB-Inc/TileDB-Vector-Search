@@ -88,6 +88,8 @@ class ivf_flat_index_metadata
       }
     }
   }
+
+
 };
 
 #endif  // TILEDB_IVF_FLAT_INDEX_METADATA_H

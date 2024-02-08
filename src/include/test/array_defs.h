@@ -60,6 +60,7 @@ static std::filesystem::path test_data_root{
     cmake_source_dir.parent_path() / "external" / "test_data"};
 static std::filesystem::path test_array_root{test_data_root / "arrays"};
 static std::filesystem::path test_file_root{test_data_root / "files"};
+static std::filesystem::path nano_root{test_data_root / "nano"};
 
 /**
  * @brief  Array URIs for arrays used for unit testing of IVF indexes.
@@ -302,10 +303,29 @@ static std::filesystem::path diskann_mem_index{
 static std::filesystem::path diskann_truth_index_data =
     diskann_root / "truth_index_siftsmall_learn_256pts_R4_L50_A1.2.data";
 
-static std::filesystem::path pytest_170_group_root{
-    test_array_root / "pytest-170"};
-static std::filesystem::path pytest_170_group_uri{
-    pytest_170_group_root / "test_ivf_flat_ingestion_f320/array"};
+using vamana_nano_feature_type = float;
+using vamana_nano_groundtruth_type = uint64_t;  // int32?
+using vamana_nano_ids_type = uint64_t;
+using vamana_nano_indices_type = uint64_t;
+constexpr size_t num_vamana_nano_vectors = 231;
+constexpr size_t vamana_nano_dimension = 128;
+static std::filesystem::path vamana_nano_root{nano_root / "vamana"};
+static std::filesystem::path vamana_nano_group_uri{vamana_nano_root / "vamana_test_index"};
+
+static std::filesystem::path vamana_nano_inputs_uri{
+    vamana_nano_root / "feature_vectors"};
+static std::filesystem::path vamana_nano_feature_vectors_uri{
+    vamana_nano_root / "feature_vectors"};
+static std::filesystem::path vamana_nano_adjacency_scores_uri{
+          vamana_nano_root / "adjacency_scores"};
+static std::filesystem::path vamana_nano_adjacency_ids_uri{
+          vamana_nano_root / "adjacency_ids"};
+static std::filesystem::path vamana_nano_adjacency_row_index_uri{
+    vamana_nano_root / "adjacency_row_index"};
+
+static std::filesystem::path vamana_nano_query_uri{vamana_nano_root / "queries"};
+static std::filesystem::path vamana_nano_groundtruth_uri{
+    vamana_nano_root / "groundtruth"};
 
 #define TEMP_LEGACY_URIS
 #ifdef TEMP_LEGACY_URIS

@@ -151,7 +151,6 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     auto write_group =
         tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
 
-
     /**************************************************************************
      * Base group metadata setup
      * @todo Do this in base group
@@ -174,62 +173,65 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
      *************************************************************************/
     metadata_.adjacency_scores_datatype_ =
         type_to_tiledb_v<typename index_type::score_type>;
-    metadata_.adjacency_row_index_datatype =
-        type_to_tiledb_v<typename index_type::score_type>;
+    metadata_.adjacency_row_index_datatype_ =
+        type_to_tiledb_v<typename index_type::adjacency_row_index_type>;
+
     metadata_.adjacency_scores_type_str_ =
         type_to_string_v<typename index_type::score_type>;
     metadata_.adjacency_row_index_type_str_ =
-        type_to_string_v<typename index_type::score_type>;
-
-    metadata_.adjacency_scores_type_str_ =
-        type_to_string_v<typename index_type::indices_type>;
+        type_to_string_v<typename index_type::adjacency_row_index_type>;
 
     metadata_.ingestion_timestamps_ = {0};
     metadata_.base_sizes_ = {0};
-    metadata_.partition_history_ = {0};
+    metadata_.num_edges_history_ = {0};
     metadata_.temp_size_ = 0;
     metadata_.dimension_ = this->get_dimension();
 
-    create_empty_for_matrix<
-        typename index_type::centroid_feature_type,
-        stdx::layout_left>(
-        cached_ctx_,
-        centroids_uri(),
-        this->get_dimension(),
-        default_domain,
-        this->get_dimension(),
-        default_tile_extent,
-        default_compression);
-    // write_group.add_member(centroids_uri(), true, centroids_array_name());
-    write_group.add_member(
-        centroids_array_name(), true, centroids_array_name());
-
+    /**
+     * Create the arrays: feature_vectors (matrix), adjacency_scores (vector),
+     * adjacency_ids (vector), adjacency_row_index (vector).
+     */
     create_empty_for_matrix<
         typename index_type::feature_type,
         stdx::layout_left>(
         cached_ctx_,
-        parts_uri(),
+        feature_vectors_uri(),
         this->get_dimension(),
         default_domain,
         this->get_dimension(),
         default_tile_extent,
         default_compression);
-    // write_group.add_member(parts_uri(), true, parts_array_name());
-    write_group.add_member(parts_array_name(), true, parts_array_name());
+    write_group.add_member(
+        feature_vectors_array_name(), true, feature_vectors_array_name());
+
+    create_empty_for_vector<typename index_type::score_type>(
+        cached_ctx_,
+        adjacency_scores_uri(),
+        default_domain,
+        tile_size,
+        default_compression);
+    write_group.add_member(
+        adjacency_scores_array_name(), true, adjacency_scores_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
-        cached_ctx_, ids_uri(), default_domain, tile_size, default_compression);
-    // write_group.add_member(ids_uri(), true, ids_array_name());
-    write_group.add_member(ids_array_name(), true, ids_array_name());
-
-    create_empty_for_vector<typename index_type::indices_type>(
         cached_ctx_,
-        indices_uri(),
+        adjacency_ids_uri(),
         default_domain,
-        default_tile_extent,
+        tile_size,
         default_compression);
-    // write_group.add_member(indices_uri(), true, indices_array_name());
-    write_group.add_member(indices_array_name(), true, indices_array_name());
+    write_group.add_member(
+        adjacency_ids_array_name(), true, adjacency_ids_array_name());
+
+    create_empty_for_vector<typename index_type::id_type>(
+        cached_ctx_,
+        adjacency_row_index_uri(),
+        default_domain,
+        tile_size,
+        default_compression);
+    write_group.add_member(
+        adjacency_row_index_array_name(),
+        true,
+        adjacency_row_index_array_name());
 
     // Store the metadata if all of the arrays were created successfully
     metadata_.store_metadata(write_group);

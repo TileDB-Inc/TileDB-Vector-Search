@@ -35,8 +35,7 @@
  *  "dtype",                 // "float32", etc (Python dtype names)
  *  "index_type",            // "FLAT", "IVF_FLAT", "Vamana"
  *  "ingestion_timestamps",  // (json) list
- *  "partition_history",     // (json) list
- *  "storage_version",       // "0.3"
+  *  "storage_version",       // "0.3"
  *  "temp_size",
  *
  *  "feature_datatype",      // TILEDB_UINT32
