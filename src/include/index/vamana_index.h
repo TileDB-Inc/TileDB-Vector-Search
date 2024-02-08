@@ -52,7 +52,6 @@
 
 #include <tiledb/group_experimental.h>
 
-
 namespace {
 
 /**
@@ -420,7 +419,7 @@ auto medoid(auto&& P, Distance distance = Distance{}) {
  * @tparam feature_type Type of the elements in the feature vectors
  * @tparam id_type Type of the ids of the feature vectors
  */
-template <class FeatureType, class IdType, class IndexType = uint32_t>
+template <class FeatureType, class IdType, class IndexType = uint64_t>
 class vamana_index {
  public:
   using feature_type = FeatureType;
@@ -474,9 +473,7 @@ class vamana_index {
   float alpha_min_{1.0};      // per diskANN paper
   float alpha_max_{1.2};      // per diskANN paper
 
-
  public:
-
   /****************************************************************************
    * Constructors (et al)
    ****************************************************************************/
@@ -484,7 +481,7 @@ class vamana_index {
   vamana_index() = delete;
   vamana_index(const vamana_index& index) = delete;
   vamana_index& operator=(const vamana_index& index) = delete;
-  vamana_index(vamana_index&& index)  = default;
+  vamana_index(vamana_index&& index) = default;
   vamana_index& operator=(vamana_index&& index) = default;
 
   ~vamana_index() = default;
@@ -497,8 +494,7 @@ class vamana_index {
       , graph_{num_vectors_}
       , L_build_{L}
       , R_max_degree_{R}
-      , B_backtrack_{B == 0 ? L_build_ : B}
-       {
+      , B_backtrack_{B == 0 ? L_build_ : B} {
   }
 
   /**
@@ -509,9 +505,21 @@ class vamana_index {
   vamana_index(tiledb::Context ctx, const std::string& uri)
       : group_{std::make_unique<vamana_index_group<vamana_index>>(
             *this, ctx, uri, TILEDB_READ, timestamp_)} {
-  }
+    if (timestamp_ == 0) {
+      timestamp_ = group_->get_previous_ingestion_timestamp();
+    }
 
-  auto read_index_infinite() {
+    dimension_ = group_->get_dimension();
+    num_vectors_ = group_->get_base_size();
+    feature_vectors_ =
+        std::move(tdbColMajorPreLoadMatrix<feature_type>(
+            group_->cached_ctx(),
+            group_->feature_vectors_uri(),
+            dimension_,
+            num_vectors_,
+            0,
+            timestamp_));
+
     /*
      * Read the feature vectors
      * Read the graph
@@ -521,28 +529,26 @@ class vamana_index {
      * @todo Encapsulate reading the graph?
      */
 
-
-    ::load(feature_vectors_);
-    auto v = std::vector<feature_type>(
-        begin(feature_vectors_[0]), end(feature_vectors_[0]));
-    assert(num_vectors_ == ::num_vectors(feature_vectors_));
-
-
-  /****************************************************************************
-   * Read the graph
-   * Here, we assume a dynamic graph, which is one that we can later add more
-   * edges and vertices to (to index new vectors).
-   * @todo Add case for static graph -- i.e., CSR -- that we can read the
-   * vectors into directly
-   ****************************************************************************/
+    /****************************************************************************
+     * Read the graph
+     * Here, we assume a dynamic graph, which is one that we can later add more
+     * edges and vertices to (to index new vectors).
+     * @todo Add case for static graph -- i.e., CSR -- that we can read the
+     * vectors into directly
+     * @todo Encapsulate reading the graph?
+     * @todo Instead of saving scores, recompute them on ingestion
+     ****************************************************************************/
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
 
-    auto nnz = 0;
-    auto num_vectors = 0;
-
-    auto adj_scores = read_vector<score_type>(group_->cached_ctx(), group_->adjacency_scores_uri());
-    auto adj_ids = read_vector<id_type>(group_->cached_ctx(), group_->adjacency_ids_uri());
-    auto adj_index = read_vector<adjacency_row_index_type>(group_->cached_ctx(), group_->adjacency_row_index_uri());
+    auto adj_scores = read_vector<score_type>(
+        group_->cached_ctx(), group_->adjacency_scores_uri(), 0, num_edges_, timestamp_);
+    auto adj_ids = read_vector<id_type>(
+        group_->cached_ctx(), group_->adjacency_ids_uri(), 0, num_edges_, timestamp_);
+    auto adj_index = read_vector<adjacency_row_index_type>(
+        group_->cached_ctx(),
+        group_->adjacency_row_index_uri(),
+        0,
+        num_vectors_ + 1, timestamp_);
 
     // Here we build a graph using the graph data we read in.  We do it this
     // way for a dynamic graph, which is one that we can later add more edges
@@ -833,26 +839,23 @@ class vamana_index {
       vfs.remove_dir(group_uri);
     }
 
-    tiledb::Config cfg;
-    tiledb::Group::create(ctx, group_uri);
-    auto write_group = tiledb::Group(ctx, group_uri, TILEDB_WRITE, cfg);
+    auto write_group = vamana_index_group(*this, ctx, group_uri, TILEDB_WRITE);
+    write_group.set_dimension(dimension_);
 
-    for (auto&& [name, value, type] : metadata) {
-      write_group.put_metadata(name, type, 1, value);
-    }
+    write_group.append_ingestion_timestamp(timestamp_);
+    write_group.append_base_size(::num_vectors(feature_vectors_));
+    write_matrix(
+        ctx,
+        feature_vectors_,
+        write_group.feature_vectors_uri(),
+        0,
+        false,
+        timestamp_);
 
-    // feature_vectors
-    auto feature_vectors_uri = group_uri + "/feature_vectors";
-    write_matrix(ctx, feature_vectors_, feature_vectors_uri);
-    write_group.add_member("feature_vectors", true, "feature_vectors");
-
-    // adj_list
-    auto adj_scores_uri = group_uri + "/adj_scores";
-    auto adj_ids_uri = group_uri + "/adj_ids";
-    auto adj_index_uri = group_uri + "/adj_index";
     auto adj_scores = Vector<score_type>(graph_.num_edges());
     auto adj_ids = Vector<id_type>(graph_.num_edges());
-    auto adj_index = Vector<adjacency_row_index_type>(graph_.num_vertices() + 1);
+    auto adj_index =
+        Vector<adjacency_row_index_type>(graph_.num_vertices() + 1);
 
     size_t edge_offset{0};
     for (size_t i = 0; i < num_vertices(graph_); ++i) {
@@ -865,16 +868,23 @@ class vamana_index {
     }
     adj_index.back() = edge_offset;
 
-    write_vector(ctx, adj_scores, adj_scores_uri);
-    write_group.add_member("adj_scores", true, "adj_scores");
+    write_vector(
+        ctx,
+        adj_scores,
+        write_group.adjacency_scores_uri(),
+        0,
+        false,
+        timestamp_);
+    write_vector(
+        ctx, adj_ids, write_group.adjacency_ids_uri(), 0, false, timestamp_);
+    write_vector(
+        ctx,
+        adj_index,
+        write_group.adjacency_row_index_uri(),
+        0,
+        false,
+        timestamp_);
 
-    write_vector(ctx, adj_ids, adj_ids_uri);
-    write_group.add_member("adj_ids", true, "adj_ids");
-
-    write_vector(ctx, adj_index, adj_index_uri);
-    write_group.add_member("adj_index", true, "adj_index");
-
-    write_group.close();
     return true;
   }
 
@@ -966,8 +976,8 @@ class vamana_index {
       return false;
     }
     if (medoid_ != rhs.medoid_) {
-      std::cout << "medoid_ != rhs.medoid_" << medoid_
-                << " ! = " << rhs.medoid_ << std::endl;
+      std::cout << "medoid_ != rhs.medoid_" << medoid_ << " ! = " << rhs.medoid_
+                << std::endl;
       return false;
     }
 
