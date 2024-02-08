@@ -486,17 +486,12 @@ class base_index_group {
   auto set_base_size(size_t size) {
     metadata_.base_sizes_[timetravel_index_] = size;
   }
-  auto set_num_partitions(size_t size) {
-    metadata_.partition_history_[timetravel_index_] = size;
-  }
+
   auto set_last_ingestion_timestamp(size_t timestamp) {
     metadata_.ingestion_timestamps_.back() = timestamp;
   }
   auto set_last_base_size(size_t size) {
     metadata_.base_sizes_.back() = size;
-  }
-  auto set_last_num_partitions(size_t size) {
-    metadata_.partition_history_.back() = size;
   }
 
   bool compare_group(const base_index_group& rhs) const {

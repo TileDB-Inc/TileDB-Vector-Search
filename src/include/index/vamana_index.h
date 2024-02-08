@@ -420,13 +420,15 @@ auto medoid(auto&& P, Distance distance = Distance{}) {
  * @tparam feature_type Type of the elements in the feature vectors
  * @tparam id_type Type of the ids of the feature vectors
  */
-template <class feature_type, class id_type, class index_type = uint32_t>
+template <class FeatureType, class IdType, class IndexType = uint32_t>
 class vamana_index {
-  // Array feature_vectors_;
-  // using feature_type = typename Array::score_type;
-  // using id_type = typename Array::id_type;
+ public:
+  using feature_type = FeatureType;
+  using id_type = IdType;
+  using adjacency_row_index_type = IndexType;
   using score_type = float;
 
+ private:
   /****************************************************************************
    * Index group information
    ****************************************************************************/
@@ -492,10 +494,11 @@ class vamana_index {
    */
   vamana_index(size_t num_nodes, size_t L, size_t R, size_t B = 0)
       : num_vectors_{num_nodes}
+      , graph_{num_vectors_}
       , L_build_{L}
       , R_max_degree_{R}
       , B_backtrack_{B == 0 ? L_build_ : B}
-      , graph_{num_vectors_} {
+       {
   }
 
   /**
@@ -539,7 +542,7 @@ class vamana_index {
 
     auto adj_scores = read_vector<score_type>(group_->cached_ctx(), group_->adjacency_scores_uri());
     auto adj_ids = read_vector<id_type>(group_->cached_ctx(), group_->adjacency_ids_uri());
-    auto adj_index = read_vector<index_type>(group_->cached_ctx(), group_->adjacency_row_index_uri());
+    auto adj_index = read_vector<adjacency_row_index_type>(group_->cached_ctx(), group_->adjacency_row_index_uri());
 
     // Here we build a graph using the graph data we read in.  We do it this
     // way for a dynamic graph, which is one that we can later add more edges
@@ -849,7 +852,7 @@ class vamana_index {
     auto adj_index_uri = group_uri + "/adj_index";
     auto adj_scores = Vector<score_type>(graph_.num_edges());
     auto adj_ids = Vector<id_type>(graph_.num_edges());
-    auto adj_index = Vector<index_type>(graph_.num_vertices() + 1);
+    auto adj_index = Vector<adjacency_row_index_type>(graph_.num_vertices() + 1);
 
     size_t edge_offset{0};
     for (size_t i = 0; i < num_vertices(graph_); ++i) {

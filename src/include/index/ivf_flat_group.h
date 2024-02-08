@@ -118,6 +118,12 @@ class ivf_flat_index_group
     return metadata_.partition_history_;
   }
 
+  auto set_num_partitions(size_t size) {
+    metadata_.partition_history_[this->timetravel_index_] = size;
+  }
+  auto set_last_num_partitions(size_t size) {
+    metadata_.partition_history_.back() = size;
+  }
 
   [[nodiscard]] auto centroids_uri() const {
     return this->array_key_to_uri("centroids_array_name");

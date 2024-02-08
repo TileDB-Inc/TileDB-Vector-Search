@@ -136,7 +136,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
   auto f = read_diskann_data(diskann_test_data_file);
   CHECK(num_vectors(f) == 256);
   CHECK(dimension(f) == 128);
-  auto med = detail::graph::medoid(f);
+  auto med = ::medoid(f);
   std::cout << "med " << med << std::endl;
   CHECK(med == 72);
   // tiledb::Context ctx;
@@ -157,16 +157,16 @@ TEST_CASE("vamana: small256 build index", "[vamana]") {
 
   // num_nodes, Lbuild, Rmax_degree
 
-  detail::graph::set_noisy(false);
+  set_noisy(false);
 
-  auto vindex = detail::graph::vamana_index<float, uint32_t>(256, 50, 4);
+  auto vindex = vamana_index<float, uint32_t>(256, 50, 4);
   auto x = read_diskann_data(diskann_test_data_file);
   auto graph = read_diskann_mem_index_with_scores(
       diskann_mem_index, diskann_test_data_file);
 
   vindex.train(x);
 
-  detail::graph::set_noisy(true);
+  set_noisy(true);
   {
     int med = 72;
     int query = 72;
@@ -271,13 +271,13 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   size_t L = 45;
   auto query_id = 14;
   size_t k = 15;
-  // auto med = detail::graph::medoid(x);
+  // auto med = medoid(x);
   //  int med = GENERATE(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 72);
   int med = 72;
   std::cout << "med " << med << std::endl;
 
   auto&& [top_k_scores, top_k, visited] =
-      detail::graph::greedy_search(graph, x, med, x[query_id], k, L);
+      greedy_search(graph, x, med, x[query_id], k, L);
 
   CHECK(size(top_k) == 15);
   CHECK(size(top_k_scores) == 15);
@@ -731,7 +731,7 @@ TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
   float alpha = 1.0;
 
   auto nn_hypercube = build_hypercube(k_near, k_far);
-  auto start = detail::graph::medoid(nn_hypercube);
+  auto start = medoid(nn_hypercube);
 
   if (debug) {
     for (auto&& s : nn_hypercube[start]) {
@@ -862,7 +862,7 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
   auto valid2 = validate_graph(g, db);
   REQUIRE(valid2.size() == 0);
 
-  auto start = detail::graph::medoid(db);
+  auto start = medoid(db);
 
   for (float alpha : {1.0, 1.25}) {
     if (debug) {
@@ -963,7 +963,7 @@ TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
   size_t R = 100;
   size_t B = 2;
   auto index =
-      detail::graph::vamana_index<float, uint64_t>(num_vectors(x), L, R, B);
+      vamana_index<float, uint64_t>(num_vectors(x), L, R, B);
 
   auto x0 = std::vector<float>(ndim);
   std::copy(x.data(), x.data() + ndim, begin(x0));
@@ -999,7 +999,7 @@ TEST_CASE("vamana: vamana by hand random index", "[vamana]") {
   auto graph_ = ::detail::graph::init_random_nn_graph<float, uint64_t>(
       training_set_, R_max_degree_);
 
-  auto medioid_ = detail::graph::medoid(training_set_);
+  auto medioid_ = medoid(training_set_);
 
   if (debug) {
     std::cout << "medoid: " << medioid_ << std::endl;
@@ -1069,7 +1069,7 @@ TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
 
   auto training_set = random_geometric_2D(num_nodes);
 
-  auto idx = detail::graph::vamana_index<float, uint64_t>(
+  auto idx = vamana_index<float, uint64_t>(
       num_vectors(training_set), L_build, R_max_degree, 0);
   idx.train(training_set);
 
@@ -1122,7 +1122,7 @@ TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
       tdbColMajorMatrix<float>(ctx, siftsmall_query_uri, num_queries);
   queries.load();
 
-  auto idx = detail::graph::vamana_index<float, uint64_t>(
+  auto idx = vamana_index<float, uint64_t>(
       num_vectors(training_set), L_build, R_max_degree, 0);
   idx.train(training_set);
 
@@ -1155,13 +1155,13 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
 
-  auto idx = detail::graph::vamana_index<float, uint64_t>(
+  auto idx = vamana_index<float, uint64_t>(
       num_vectors(training_set), L_build, R_max_degree, Backtrack);
   idx.train(training_set);
 
   idx.write_index(vamana_index_uri, true);
   auto idx2 =
-      detail::graph::vamana_index<float, uint64_t>(ctx, vamana_index_uri);
+      vamana_index<float, uint64_t>(ctx, vamana_index_uri);
 
   CHECK(idx.compare_metadata(idx2));
   CHECK(idx.compare_feature_vectors(idx2));

@@ -110,6 +110,28 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     }
   }
 
+  /*
+   * Graph size information
+   */
+  auto get_previous_num_edges() const {
+    return metadata_.num_edges_history_.back();
+  }
+  auto get_num_edges() const {
+    return metadata_.num_edges_history_[this->timetravel_index_];
+  }
+  auto append_num_edges(size_t size) {
+    metadata_.num_edges_history_.push_back(size);
+  }
+  auto get_all_num_edges() {
+    return metadata_.num_edges_history_;
+  }
+  auto set_num_edges(size_t size) {
+    metadata_.num_edges_history_[this->timetravel_index_] = size;
+  }
+  auto set_last_num_edges(size_t size) {
+    metadata_.num_edges_history_.back() = size;
+  }
+
   [[nodiscard]] auto feature_vectors_uri() const {
     return this->array_key_to_uri("feature_vectors_array_name");
   }
@@ -169,7 +191,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     metadata_.id_type_str_ = type_to_string_v<typename index_type::id_type>;
 
     /**************************************************************************
-     * IVF group metadata setup
+     * Vamana group metadata setup
      *************************************************************************/
     metadata_.adjacency_scores_datatype_ =
         type_to_tiledb_v<typename index_type::score_type>;
