@@ -40,6 +40,7 @@
 
 #include "api/flat_l2_index.h"
 #include "api/ivf_flat_index.h"
+#include "api/vamana_index.h"
 
 #include "api/api_defs.h"
 
@@ -242,6 +243,44 @@ void init_type_erased_module(py::module_& m) {
           throw std::runtime_error("Invalid kmeans_init value");
         }
       }));
+
+  py::class_<IndexVamana>(m, "IndexVamana")
+      .def(py::init<const tiledb::Context&, const std::string&>())
+      .def(
+          "__init__",
+          [](IndexVamana& instance, py::kwargs kwargs) {
+            auto args = kwargs_to_map(kwargs);
+            new (&instance) IndexVamana(args);
+          })
+      .def(
+          "train",
+          [](IndexVamana& index, const FeatureVectorArray& vectors) {
+            index.train(vectors);
+          },
+          py::arg("vectors"))
+      .def(
+          "add",
+          [](IndexVamana& index, const FeatureVectorArray& vectors) {
+            index.add(vectors);
+          },
+          py::arg("vectors"))
+      .def(
+          "query",
+          // TODO(paris): Update opt_l to be optional.
+          [](IndexVamana& index,
+             FeatureVectorArray& vectors,
+             size_t top_k,
+             size_t opt_l) {
+            auto r = index.query(vectors, top_k, opt_l);
+            return make_python_pair(std::move(r));
+          },
+          py::arg("vectors"),
+          py::arg("top_k"),
+          py::arg("opt_l"))
+      .def("feature_type_string", &IndexVamana::feature_type_string)
+      .def("id_type_string", &IndexVamana::id_type_string)
+      .def("px_type_string", &IndexVamana::px_type_string)
+      .def("dimension", &IndexVamana::dimension);
 
   py::class_<IndexIVFFlat>(m, "IndexIVFFlat")
       .def(py::init<const tiledb::Context&, const std::string&>())

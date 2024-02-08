@@ -210,7 +210,6 @@ class base_index_metadata {
     }
     read_group.get_metadata(name, &v_type, &v_num, &v);
 
-
     // Handle temp_size as a special case for now
     if (name == "temp_size") {
       if (v_type == TILEDB_UINT64) {
