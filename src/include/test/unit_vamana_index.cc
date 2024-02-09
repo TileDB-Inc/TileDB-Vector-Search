@@ -962,8 +962,7 @@ TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
   size_t L = 100;
   size_t R = 100;
   size_t B = 2;
-  auto index =
-      vamana_index<float, uint64_t>(num_vectors(x), L, R, B);
+  auto index = vamana_index<float, uint64_t>(num_vectors(x), L, R, B);
 
   auto x0 = std::vector<float>(ndim);
   std::copy(x.data(), x.data() + ndim, begin(x0));
@@ -1160,8 +1159,7 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   idx.train(training_set);
 
   idx.write_index(ctx, vamana_index_uri, true);
-  auto idx2 =
-      vamana_index<float, uint64_t>(ctx, vamana_index_uri);
+  auto idx2 = vamana_index<float, uint64_t>(ctx, vamana_index_uri);
 
   // Can't compare groups because a write_index does not create a group
   // @todo Should it?

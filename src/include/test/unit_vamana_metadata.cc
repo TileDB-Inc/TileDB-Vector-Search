@@ -32,8 +32,8 @@
 #include <catch2/catch_all.hpp>
 #include <tiledb/tiledb>
 #include <vector>
-#include "index/vamana_metadata.h"
 #include "array_defs.h"
+#include "index/vamana_metadata.h"
 
 std::vector<std::tuple<std::string, std::string>> expected_str{
     {"dataset_type", "vector_search"},
@@ -82,11 +82,12 @@ TEST_CASE("vamana_metadata: default constructor dump", "[vamana_metadata]") {
   y.dump();
 }
 
-TEST_CASE("vamana_metadata: read metadata from reference group", "[vamana_metadata]") {
-
+TEST_CASE(
+    "vamana_metadata: read metadata from reference group",
+    "[vamana_metadata]") {
   size_t test_case = GENERATE(0, 1);
 
-  std::vector<std::string> test_uris {
+  std::vector<std::string> test_uris{
       test_data_root / "nano" / "vamana" / "vamana_test_index_metadata",
       test_data_root / "nano" / "vamana" / "vamana_test_index",
   };
@@ -129,14 +130,16 @@ TEST_CASE("vamana_metadata: read metadata from reference group", "[vamana_metada
     read_group.get_metadata(name, &v_type, &v_num, &v);
 
     if (name == "temp_size") {
-      CHECK ((v_type == TILEDB_UINT64 || v_type == TILEDB_UINT32));
+      CHECK((v_type == TILEDB_UINT64 || v_type == TILEDB_UINT32));
       if (v_type == TILEDB_UINT64) {
         CHECK(value == *static_cast<const uint64_t*>(v));
       } else if (v_type == TILEDB_FLOAT64) {
-        CHECK(value == (uint64_t)*static_cast<const double*>(v));
+        CHECK(value == (uint64_t) * static_cast<const double*>(v));
       }
     }
-    CHECK((v_type == TILEDB_UINT32 || v_type == TILEDB_UINT64 || v_type == TILEDB_FLOAT64 || v_type == TILEDB_FLOAT32));
+    CHECK(
+        (v_type == TILEDB_UINT32 || v_type == TILEDB_UINT64 ||
+         v_type == TILEDB_FLOAT64 || v_type == TILEDB_FLOAT32));
 
     switch (v_type) {
       case TILEDB_FLOAT64:

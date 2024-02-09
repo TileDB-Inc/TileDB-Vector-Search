@@ -310,20 +310,22 @@ using vamana_nano_indices_type = uint64_t;
 constexpr size_t num_vamana_nano_vectors = 231;
 constexpr size_t vamana_nano_dimension = 128;
 static std::filesystem::path vamana_nano_root{nano_root / "vamana"};
-static std::filesystem::path vamana_nano_group_uri{vamana_nano_root / "vamana_test_index"};
+static std::filesystem::path vamana_nano_group_uri{
+    vamana_nano_root / "vamana_test_index"};
 
 static std::filesystem::path vamana_nano_inputs_uri{
     vamana_nano_root / "feature_vectors"};
 static std::filesystem::path vamana_nano_feature_vectors_uri{
     vamana_nano_root / "feature_vectors"};
 static std::filesystem::path vamana_nano_adjacency_scores_uri{
-          vamana_nano_root / "adjacency_scores"};
+    vamana_nano_root / "adjacency_scores"};
 static std::filesystem::path vamana_nano_adjacency_ids_uri{
-          vamana_nano_root / "adjacency_ids"};
+    vamana_nano_root / "adjacency_ids"};
 static std::filesystem::path vamana_nano_adjacency_row_index_uri{
     vamana_nano_root / "adjacency_row_index"};
 
-static std::filesystem::path vamana_nano_query_uri{vamana_nano_root / "queries"};
+static std::filesystem::path vamana_nano_query_uri{
+    vamana_nano_root / "queries"};
 static std::filesystem::path vamana_nano_groundtruth_uri{
     vamana_nano_root / "groundtruth"};
 

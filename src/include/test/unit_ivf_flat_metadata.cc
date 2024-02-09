@@ -46,7 +46,8 @@ TEST_CASE("ivf_flat_metadata: default constructor", "[ivf_flat_metadata]") {
   ivf_flat_index_metadata y;
 }
 
-TEST_CASE("ivf_flat_metadata: default constructor dump", "[ivf_flat_metadata]") {
+TEST_CASE(
+    "ivf_flat_metadata: default constructor dump", "[ivf_flat_metadata]") {
   auto x = ivf_flat_index_metadata();
   x.dump();
 

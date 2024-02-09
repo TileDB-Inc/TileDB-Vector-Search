@@ -957,7 +957,6 @@ class vamana_index {
               << std::endl;
   }
 
-
   bool compare_cached_metadata(const vamana_index& rhs) const {
     return dimension_ == rhs.dimension_ && num_vectors_ == rhs.num_vectors_ &&
            L_build_ == rhs.L_build_ && R_max_degree_ == rhs.R_max_degree_ &&

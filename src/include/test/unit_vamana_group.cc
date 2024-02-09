@@ -30,8 +30,8 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include "index/vamana_group.h"
 #include "array_defs.h"
+#include "index/vamana_group.h"
 
 TEST_CASE("vamana_group: test test", "[vamana_group]") {
   REQUIRE(true);
@@ -45,10 +45,10 @@ struct dummy_index {
 
   constexpr static tiledb_datatype_t feature_datatype = TILEDB_FLOAT32;
   constexpr static tiledb_datatype_t id_datatype = TILEDB_UINT64;
-  constexpr static tiledb_datatype_t adjacency_row_index_datatype = TILEDB_UINT64;
+  constexpr static tiledb_datatype_t adjacency_row_index_datatype =
+      TILEDB_UINT64;
   constexpr static tiledb_datatype_t adjacency_scores_datatype = TILEDB_FLOAT32;
   constexpr static tiledb_datatype_t adjacency_ids_datatype = TILEDB_UINT64;
-
 
   auto dimension() const {
     return 10;
@@ -63,7 +63,7 @@ TEST_CASE("vamana_group: verify member types exist", "[vamana_group") {
 
 TEST_CASE("vamana_group: constructor", "[vamana_group]") {
   tiledb::Context ctx;
-  
+
   auto foo = dummy_index{};
   auto n = foo.dimension();
   std::reference_wrapper<const dummy_index> bar = foo;
@@ -81,8 +81,8 @@ TEST_CASE("vamana_group: default constructor", "[vamana_group]") {
 
 TEST_CASE("vamana_group: read constructor", "[vamana_group]") {
   tiledb::Context ctx;
-  auto x =
-      vamana_index_group(dummy_index{}, ctx, vamana_nano_group_uri, TILEDB_READ);
+  auto x = vamana_index_group(
+      dummy_index{}, ctx, vamana_nano_group_uri, TILEDB_READ);
   x.dump("Read constructor");
 }
 
@@ -109,7 +109,7 @@ TEST_CASE(
 
 TEST_CASE("vamana_group: write constructor - create", "[vamana_group]") {
   std::string tmp_uri = "/tmp/vamana_group_test_write_constructor";
-  
+
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
   if (vfs.is_dir(tmp_uri)) {
