@@ -131,6 +131,42 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   auto set_last_num_edges(size_t size) {
     metadata_.num_edges_history_.back() = size;
   }
+  auto get_L_build() const {
+    return metadata_.L_build_;
+  }
+  auto set_L_build(size_t size) {
+    metadata_.L_build_ = size;
+  }
+  auto get_R_max_degree() const {
+    return metadata_.R_max_degree_;
+  }
+  auto set_R_max_degree(size_t size) {
+    metadata_.R_max_degree_ = size;
+  }
+  auto get_B_backtrack() const {
+    return metadata_.B_backtrack_;
+  }
+  auto set_B_backtrack(size_t size) {
+    metadata_.B_backtrack_ = size;
+  }
+  auto get_alpha_min() const {
+    return metadata_.alpha_min_;
+  }
+  auto set_alpha_min(float size) {
+    metadata_.alpha_min_ = size;
+  }
+  auto get_alpha_max() const {
+    return metadata_.alpha_max_;
+  }
+  auto set_alpha_max(float size) {
+    metadata_.alpha_max_ = size;
+  }
+  auto get_medoid() const {
+    return metadata_.medoid_;
+  }
+  auto set_medoid(size_t size) {
+    metadata_.medoid_ = size;
+  }
 
   [[nodiscard]] auto feature_vectors_uri() const {
     return this->array_key_to_uri("feature_vectors_array_name");
@@ -176,6 +212,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     /**************************************************************************
      * Base group metadata setup
      * @todo Do this in base group
+     * @todo Make this table-driven
      *************************************************************************/
     this->metadata_.storage_version_ = version_;
 
@@ -192,6 +229,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
 
     /**************************************************************************
      * Vamana group metadata setup
+     * @todo Make this table-driven
      *************************************************************************/
     metadata_.adjacency_scores_datatype_ =
         type_to_tiledb_v<typename index_type::score_type>;

@@ -166,7 +166,7 @@ TEST_CASE("vamana: small256 build index", "[vamana]") {
 
   vindex.train(x);
 
-  set_noisy(true);
+  set_noisy(false);
   {
     int med = 72;
     int query = 72;
@@ -1163,7 +1163,11 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   auto idx2 =
       vamana_index<float, uint64_t>(ctx, vamana_index_uri);
 
-  CHECK(idx.compare_metadata(idx2));
+  // Can't compare groups because a write_index does not create a group
+  // @todo Should it?
+  // CHECK(idx.compare_group(idx2));
+
+  CHECK(idx.compare_cached_metadata(idx2));
   CHECK(idx.compare_feature_vectors(idx2));
   CHECK(idx.compare_adj_scores(idx2));
   CHECK(idx.compare_adj_ids(idx2));

@@ -84,6 +84,13 @@ class vamana_index_metadata
   std::string adjacency_scores_type_str_{""};
   std::string adjacency_row_index_type_str_{""};
 
+  uint64_t L_build_{0};
+  uint64_t R_max_degree_{0};
+  uint64_t B_backtrack_{0};
+  float alpha_min_{1.0};
+  float alpha_max_{1.2};
+  uint64_t medoid_{0};
+
  protected:
   IndexKind index_kind_{IndexKind::Vamana};
 
@@ -104,6 +111,12 @@ class vamana_index_metadata
        &adjacency_row_index_datatype_,
        TILEDB_UINT32,
        false},
+      {"L", &L_build_, TILEDB_UINT64, false},
+      {"R", &R_max_degree_, TILEDB_UINT64, false},
+      {"B", &B_backtrack_, TILEDB_UINT64, false},
+      {"alpha_min", &alpha_min_, TILEDB_FLOAT32, false},
+      {"alpha_max", &alpha_max_, TILEDB_FLOAT32, false},
+      {"medoid", &medoid_, TILEDB_UINT64, false},
   };
 
   auto json_to_vector_impl() {
@@ -118,9 +131,11 @@ class vamana_index_metadata
   auto dump_json_impl() {
     if (!empty(adjacency_scores_type_str_)) {
       if (adjacency_scores_datatype_ == TILEDB_ANY) {
-        adjacency_scores_datatype_ = string_to_datatype(adjacency_scores_type_str_);
-      } else if (adjacency_scores_datatype_ !=
-                 string_to_datatype(adjacency_scores_type_str_)) {
+        adjacency_scores_datatype_ =
+            string_to_datatype(adjacency_scores_type_str_);
+      } else if (
+          adjacency_scores_datatype_ !=
+          string_to_datatype(adjacency_scores_type_str_)) {
         throw std::runtime_error(
             "adjacency_scores_datatype metadata disagree, must be " +
             adjacency_scores_type_str_ + " not " +
@@ -131,8 +146,9 @@ class vamana_index_metadata
       if (adjacency_row_index_datatype_ == TILEDB_ANY) {
         adjacency_row_index_datatype_ =
             string_to_datatype(adjacency_row_index_type_str_);
-      } else if (adjacency_row_index_datatype_ !=
-                 string_to_datatype(adjacency_row_index_type_str_)) {
+      } else if (
+          adjacency_row_index_datatype_ !=
+          string_to_datatype(adjacency_row_index_type_str_)) {
         throw std::runtime_error(
             "adjacency_row_index_datatype metadata disagree, must be " +
             adjacency_row_index_type_str_ + " not " +

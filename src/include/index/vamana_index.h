@@ -85,7 +85,7 @@ struct counting_sum_of_squares_distance {
 }  // namespace
 
 static bool noisy = false;
-static void set_noisy(bool b) {
+[[maybe_unused]] static void set_noisy(bool b) {
   noisy = b;
 }
 
@@ -489,8 +489,19 @@ class vamana_index {
   /**
    * Construct empty index in preparation for construction and training
    */
-  vamana_index(size_t num_nodes, size_t L, size_t R, size_t B = 0)
-      : num_vectors_{num_nodes}
+  vamana_index(
+      size_t num_nodes,
+      size_t L,
+      size_t R,
+      size_t B = 0,
+      size_t timestamp = 0):
+      timestamp_{
+          (timestamp == 0) ?
+              std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::system_clock::now().time_since_epoch())
+                  .count() :
+              timestamp}
+      , num_vectors_{num_nodes}
       , graph_{num_vectors_}
       , L_build_{L}
       , R_max_degree_{R}
@@ -509,16 +520,24 @@ class vamana_index {
       timestamp_ = group_->get_previous_ingestion_timestamp();
     }
 
+    // @todo Make this table-driven
     dimension_ = group_->get_dimension();
     num_vectors_ = group_->get_base_size();
-    feature_vectors_ =
-        std::move(tdbColMajorPreLoadMatrix<feature_type>(
-            group_->cached_ctx(),
-            group_->feature_vectors_uri(),
-            dimension_,
-            num_vectors_,
-            0,
-            timestamp_));
+    num_edges_ = group_->get_num_edges();
+    L_build_ = group_->get_L_build();
+    R_max_degree_ = group_->get_R_max_degree();
+    B_backtrack_ = group_->get_B_backtrack();
+    alpha_min_ = group_->get_alpha_min();
+    alpha_max_ = group_->get_alpha_max();
+    medoid_ = group_->get_medoid();
+
+    feature_vectors_ = std::move(tdbColMajorPreLoadMatrix<feature_type>(
+        group_->cached_ctx(),
+        group_->feature_vectors_uri(),
+        dimension_,
+        num_vectors_,
+        0,
+        timestamp_));
 
     /*
      * Read the feature vectors
@@ -541,14 +560,23 @@ class vamana_index {
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
 
     auto adj_scores = read_vector<score_type>(
-        group_->cached_ctx(), group_->adjacency_scores_uri(), 0, num_edges_, timestamp_);
+        group_->cached_ctx(),
+        group_->adjacency_scores_uri(),
+        0,
+        num_edges_,
+        timestamp_);
     auto adj_ids = read_vector<id_type>(
-        group_->cached_ctx(), group_->adjacency_ids_uri(), 0, num_edges_, timestamp_);
+        group_->cached_ctx(),
+        group_->adjacency_ids_uri(),
+        0,
+        num_edges_,
+        timestamp_);
     auto adj_index = read_vector<adjacency_row_index_type>(
         group_->cached_ctx(),
         group_->adjacency_row_index_uri(),
         0,
-        num_vectors_ + 1, timestamp_);
+        num_vectors_ + 1,
+        timestamp_);
 
     // Here we build a graph using the graph data we read in.  We do it this
     // way for a dynamic graph, which is one that we can later add more edges
@@ -796,21 +824,6 @@ class vamana_index {
   }
 
   /**
-   * Table of metadata to be saved with the index.
-   */
-  using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
-  std::vector<metadata_element> metadata{
-      {"dimension", &dimension_, TILEDB_UINT64},
-      {"ntotal", &num_vectors_, TILEDB_UINT64},
-      {"L", &L_build_, TILEDB_UINT64},
-      {"R", &R_max_degree_, TILEDB_UINT64},
-      {"B", &B_backtrack_, TILEDB_UINT64},
-      {"alpha_min", &alpha_min_, TILEDB_FLOAT32},
-      {"alpha_max", &alpha_max_, TILEDB_FLOAT32},
-      {"medoid", &medoid_, TILEDB_UINT64},
-  };
-
-  /**
    * @brief Write the index to a TileDB group
    * @param group_uri The URI of the TileDB group where the index will be saved
    * @param overwrite Whether to overwrite an existing group
@@ -825,12 +838,13 @@ class vamana_index {
    * those will presumably be in a known array that can be made part of
    * the group?
    */
-  auto write_index(const std::string& group_uri, bool overwrite = false) {
-    // copilot ftw!
+  auto write_index(
+      tiledb::Context ctx,
+      const std::string& group_uri,
+      bool overwrite = false) const {
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
 
-    tiledb::Context ctx;
     tiledb::VFS vfs(ctx);
     if (vfs.is_dir(group_uri)) {
       if (overwrite == false) {
@@ -840,10 +854,20 @@ class vamana_index {
     }
 
     auto write_group = vamana_index_group(*this, ctx, group_uri, TILEDB_WRITE);
+
+    // @todo Make this table-driven
     write_group.set_dimension(dimension_);
+    write_group.set_L_build(L_build_);
+    write_group.set_R_max_degree(R_max_degree_);
+    write_group.set_B_backtrack(B_backtrack_);
+    write_group.set_alpha_min(alpha_min_);
+    write_group.set_alpha_max(alpha_max_);
+    write_group.set_medoid(medoid_);
 
     write_group.append_ingestion_timestamp(timestamp_);
     write_group.append_base_size(::num_vectors(feature_vectors_));
+    write_group.append_num_edges(graph_.num_edges());
+
     write_matrix(
         ctx,
         feature_vectors_,
@@ -933,60 +957,17 @@ class vamana_index {
               << std::endl;
   }
 
-  /**
-   * @brief Compare the metadata of two vamana_index objects -- useful for
-   * testing
-   * @param rhs The other vamana_index to compare with
-   * @return True if the metadata is the same, false otherwise
-   */
-  bool compare_metadata(const vamana_index& rhs) {
-    if (dimension_ != rhs.dimension_) {
-      std::cout << "dimension_ != rhs.dimension_" << dimension_
-                << " ! = " << rhs.dimension_ << std::endl;
-      return false;
-    }
-    if (num_vectors_ != rhs.num_vectors_) {
-      std::cout << "num_vectors_ != rhs.num_vectors_" << num_vectors_
-                << " ! = " << rhs.num_vectors_ << std::endl;
-      return false;
-    }
-    if (L_build_ != rhs.L_build_) {
-      std::cout << "L_build_ != rhs.L_build_" << L_build_
-                << " ! = " << rhs.L_build_ << std::endl;
-      return false;
-    }
-    if (R_max_degree_ != rhs.R_max_degree_) {
-      std::cout << "R_max_degree_ != rhs.R_max_degree_" << R_max_degree_
-                << " ! = " << rhs.R_max_degree_ << std::endl;
-      return false;
-    }
-    if (B_backtrack_ != rhs.B_backtrack_) {
-      std::cout << "B_backtrack_ != rhs.B_backtrack_" << B_backtrack_
-                << " ! = " << rhs.B_backtrack_ << std::endl;
-      return false;
-    }
-    if (alpha_min_ != rhs.alpha_min_) {
-      std::cout << "alpha_min_ != rhs.alpha_min_" << alpha_min_
-                << " ! = " << rhs.alpha_min_ << std::endl;
-      return false;
-    }
-    if (alpha_max_ != rhs.alpha_max_) {
-      std::cout << "alpha_max_ != rhs.alpha_max_" << alpha_max_
-                << " ! = " << rhs.alpha_max_ << std::endl;
-      return false;
-    }
-    if (medoid_ != rhs.medoid_) {
-      std::cout << "medoid_ != rhs.medoid_" << medoid_ << " ! = " << rhs.medoid_
-                << std::endl;
-      return false;
-    }
 
-    return true;
+  bool compare_cached_metadata(const vamana_index& rhs) const {
+    return dimension_ == rhs.dimension_ && num_vectors_ == rhs.num_vectors_ &&
+           L_build_ == rhs.L_build_ && R_max_degree_ == rhs.R_max_degree_ &&
+           B_backtrack_ == rhs.B_backtrack_ && alpha_min_ == rhs.alpha_min_ &&
+           alpha_max_ == rhs.alpha_max_ && medoid_ == rhs.medoid_;
   }
 
   /**
    * @brief Compare the scores of adjacency lists of two vamana_index
-   * objects -- useful for testing
+   * objects -- useful for tes`ting
    * @param rhs The other vamana_index to compare with
    * @return True if the adjacency lists are the same, false otherwise
    */
@@ -1064,6 +1045,10 @@ class vamana_index {
         feature_vectors_.data() +
             ::dimension(feature_vectors_) * ::num_vectors(feature_vectors_),
         rhs.feature_vectors_.data());
+  }
+
+  bool compare_group(const vamana_index& rhs) const {
+    return group_->compare_group(*(rhs.group_));
   }
 
  public:
