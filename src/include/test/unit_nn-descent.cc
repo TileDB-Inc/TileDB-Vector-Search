@@ -35,14 +35,13 @@
 #include "detail/flat/qv.h"
 #include "detail/graph/nn-descent.h"
 #include "detail/ivf/qv.h"
+#include "detail/linalg/compat.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "query_common.h"
 
 #include <tiledb/tiledb>
 
 bool global_debug = false;
-
-size_t N = 10000;
 
 TEST_CASE("nn-descent: test test", "[nn-descent]") {
   REQUIRE(true);
@@ -60,11 +59,9 @@ TEMPLATE_TEST_CASE(
   using feature_type = float;
 
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnist_inputs_uri, N);
+  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnistsmall_inputs_uri);
   db.load();
-  //  auto db = std::move(sift_base);
-  //  N = db.num_cols();
-  //  k_nn = 2;
+  auto N = num_vectors(db);
 
   auto&& [top_k_scores, top_k] =
       detail::flat::qv_query_heap(db, db, k_nn + 1, 3);
@@ -110,8 +107,10 @@ TEMPLATE_TEST_CASE(
   using id_type = TestType;
 
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnist_inputs_uri, N);
+  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnistsmall_inputs_uri);
   db.load();
+  auto N = num_vectors(db);
+
   auto g = detail::graph::nn_descent_1<feature_type, id_type>(db, k_nn);
 
   bfs(g, TestType{0});
@@ -126,8 +125,10 @@ TEST_CASE("nn-descent: nn_descent_1", "[nn-descent]") {
   size_t num_queries = 10;
 
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnist_inputs_uri, N);
+  auto db = tdbColMajorMatrix<feature_type>(ctx, fmnistsmall_inputs_uri);
   db.load();
+  auto N = num_vectors(db);
+
   auto g = detail::graph::nn_descent_1<feature_type, id_type>(db, k_nn);
   auto query = ColMajorMatrix<float>(db.num_rows(), num_queries);
   for (size_t i = 0; i < db.num_rows(); ++i) {
@@ -182,7 +183,7 @@ TEST_CASE("nn-descent: nn_descent_1", "[nn-descent]") {
 
 TEST_CASE("nn-descent: nn_descent_1 vs ivf", "[nn-descent]") {
   using feature_type = float;
-  using id_type = uint32_t;
+  using id_type = uint64_t;
 
   size_t nthreads = 1;
   size_t k_nn = 10;
@@ -192,6 +193,8 @@ TEST_CASE("nn-descent: nn_descent_1 vs ivf", "[nn-descent]") {
 
   auto db = tdbColMajorMatrix<feature_type>(ctx, sift_inputs_uri);
   db.load();
+  auto N = num_vectors(db);
+
   auto centroids = tdbColMajorMatrix<feature_type>(ctx, sift_centroids_uri);
   centroids.load();
   auto query =
@@ -212,9 +215,20 @@ TEST_CASE("nn-descent: nn_descent_1 vs ivf", "[nn-descent]") {
   // auto&& [top_s, top_k] = detail::flat::qv_query_heap(db, query, k_nn + 1,
   // nthreads); flat_timer.stop();
 
+  // @todo Use updated partitioned_matrix interface rather than compat
+
   log_timer ivf_timer{"ivf_query", true};
+  auto mat = ColMajorPartitionedMatrixWrapper<feature_type, id_type, id_type>(
+      parts, ids, index);
+
+  auto&& [active_partitions, active_queries] =
+      detail::ivf::partition_ivf_flat_index<id_type>(
+          centroids, query, nprobe, nthreads);
+
+  //  auto&& [D00, I00] = detail::ivf::query_infinite_ram(
+  //      parts, centroids, query, index, ids, nprobe, k_nn + 1, nthreads);
   auto&& [D00, I00] = detail::ivf::query_infinite_ram(
-      parts, centroids, query, index, ids, nprobe, k_nn + 1, nthreads);
+      mat, active_partitions, query, active_queries, k_nn + 1, nthreads);
   ivf_timer.stop();
 
   log_timer graph_timer{"nn_descent_1", true};

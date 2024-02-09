@@ -120,6 +120,8 @@ kmeans_add_test(unit_mdspan)
 
 kmeans_add_test(unit_memory)
 
+kmeans_add_test(unit_nn-descent)
+
 kmeans_add_test(unit_nn-graph)
 
 kmeans_add_test(unit_partition)

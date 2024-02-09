@@ -34,8 +34,8 @@
 #include <filesystem>
 #include <string>
 
+#include "array_defs.h"
 #include "index/ivf_flat_metadata.h"
-#include "query_common.h"
 
 TEST_CASE("ivf_flat_metadata: test test", "[ivf_flat_metadata]") {
   REQUIRE(true);
