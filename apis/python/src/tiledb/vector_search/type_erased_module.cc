@@ -254,10 +254,18 @@ void init_type_erased_module(py::module_& m) {
             auto args = kwargs_to_map(kwargs);
             new (&instance) IndexVamana(args);
           })
-      // TODO(paris): Update train()/add() to take `const std::optional<FeatureVectorArray>& external_ids`. Failing with this currently:
-      // TypeError: train(): incompatible function arguments. The following argument types are supported:
-      //     1. (self: tiledb.vector_search._tiledbvspy.IndexVamana, vectors: tiledb.vector_search._tiledbvspy.FeatureVectorArray, external_ids: std::__1::optional<FeatureVectorArray> = None) -> None
-      // Invoked with: <tiledb.vector_search._tiledbvspy.IndexVamana object at 0x10efbc330>, <tiledb.vector_search._tiledbvspy.FeatureVectorArray object at 0x10efbc370>, <tiledb.vector_search._tiledbvspy.FeatureVectorArray object at 0x10efbc370>
+      // TODO(paris): Update train()/add() to take `const
+      // std::optional<FeatureVectorArray>& external_ids`. Failing with this
+      // currently: TypeError: train(): incompatible function arguments. The
+      // following argument types are supported:
+      //     1. (self: tiledb.vector_search._tiledbvspy.IndexVamana, vectors:
+      //     tiledb.vector_search._tiledbvspy.FeatureVectorArray, external_ids:
+      //     std::__1::optional<FeatureVectorArray> = None) -> None
+      // Invoked with: <tiledb.vector_search._tiledbvspy.IndexVamana object at
+      // 0x10efbc330>, <tiledb.vector_search._tiledbvspy.FeatureVectorArray
+      // object at 0x10efbc370>,
+      // <tiledb.vector_search._tiledbvspy.FeatureVectorArray object at
+      // 0x10efbc370>
       .def(
           "train",
           [](IndexVamana& index, const FeatureVectorArray& vectors) {
@@ -266,7 +274,9 @@ void init_type_erased_module(py::module_& m) {
           py::arg("vectors"))
       .def(
           "train_with_ids",
-          [](IndexVamana& index, const FeatureVectorArray& vectors, const FeatureVector& external_ids) {
+          [](IndexVamana& index,
+             const FeatureVectorArray& vectors,
+             const FeatureVector& external_ids) {
             index.train_with_ids(vectors, external_ids);
           },
           py::arg("vectors"),
@@ -279,7 +289,9 @@ void init_type_erased_module(py::module_& m) {
           py::arg("vectors"))
       .def(
           "add_with_ids",
-          [](IndexVamana& index, const FeatureVectorArray& vectors, const FeatureVector& external_ids) {
+          [](IndexVamana& index,
+             const FeatureVectorArray& vectors,
+             const FeatureVector& external_ids) {
             index.add_with_ids(vectors, external_ids);
           },
           py::arg("vectors"),
