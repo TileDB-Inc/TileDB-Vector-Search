@@ -34,8 +34,6 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/complex.h>
-#include <pybind11/chrono.h>
 
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
@@ -222,7 +220,6 @@ void init_type_erased_module(py::module_& m) {
         return v;
       }));
 
-  // TODO(paris): Add support for external_ids.
   py::class_<IndexFlatL2>(m, "IndexFlatL2")
       .def(py::init<const tiledb::Context&, const std::string&>())
       .def("add", &IndexFlatL2::add)
