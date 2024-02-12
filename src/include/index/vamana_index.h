@@ -385,6 +385,8 @@ auto robust_prune(
  * @param P The set of vectors to be computed over
  * @param distance The distance functor used to compare vectors
  * @return The index of the vector in P that is closest to the centroid of P
+ *
+ * @todo Instead of <float>, centroid type should be return type of distance
  */
 template <class Distance = sum_of_squares_distance>
 auto medoid(auto&& P, Distance distance = Distance{}) {
@@ -630,12 +632,14 @@ class vamana_index {
 
     medoid_ = medoid(feature_vectors_);
 
-    debug_index();
+
+    // debug_index();
+
     size_t counter{0};
     //    for (float alpha : {alpha_min_, alpha_max_}) {
     // Just use one value of alpha
     for (float alpha : {alpha_max_}) {
-      scoped_timer _("train " + std::to_string(counter), true);
+      scoped_timer _("train " + std::to_string(counter));
       size_t total_visited{0};
       for (size_t p = 0; p < num_vectors_; ++p) {
         ++counter;
@@ -665,7 +669,7 @@ class vamana_index {
             // @todo Do this without copying -- prune should take vector of
             //  tuples and p (it copies anyway) maybe scan for p and then only
             //  build tmp after if?
-            auto tmp = std::vector<size_t>(graph_.out_degree(j) + 1);
+            auto tmp = std::vector<id_type>(graph_.out_degree(j) + 1);
             tmp.push_back(p);
             for (auto&& [_, k] : graph_.out_edges(j)) {
               tmp.push_back(k);
@@ -693,7 +697,7 @@ class vamana_index {
           // dump_edgelist("edges_" + std::to_string(counter) + ".txt", graph_);
         }
       }
-      debug_index();
+      // debug_index();
     }
   }
 
@@ -736,13 +740,13 @@ class vamana_index {
       const Q& query_set,
       size_t k,
       std::optional<size_t> opt_L = std::nullopt) {
-    scoped_timer __{tdb_func__ + std::string{" (outer)"}, true};
+    scoped_timer __{tdb_func__ + std::string{" (outer)"}};
 
     size_t L = opt_L ? *opt_L : L_build_;
     // L = std::min<size_t>(L, L_build_);
 
-    auto top_k = ColMajorMatrix<size_t>(k, ::num_vectors(query_set));
-    auto top_k_scores = ColMajorMatrix<float>(k, ::num_vectors(query_set));
+    auto top_k = ColMajorMatrix<id_type>(k, ::num_vectors(query_set));
+    auto top_k_scores = ColMajorMatrix<score_type>(k, ::num_vectors(query_set));
 
 #if 0
     // Parallelized implementation -- we stay single-threaded for now
@@ -839,7 +843,7 @@ class vamana_index {
    * the group?
    */
   auto write_index(
-      tiledb::Context ctx,
+      const tiledb::Context& ctx,
       const std::string& group_uri,
       bool overwrite = false) const {
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
@@ -958,10 +962,48 @@ class vamana_index {
   }
 
   bool compare_cached_metadata(const vamana_index& rhs) const {
-    return dimension_ == rhs.dimension_ && num_vectors_ == rhs.num_vectors_ &&
-           L_build_ == rhs.L_build_ && R_max_degree_ == rhs.R_max_degree_ &&
-           B_backtrack_ == rhs.B_backtrack_ && alpha_min_ == rhs.alpha_min_ &&
-           alpha_max_ == rhs.alpha_max_ && medoid_ == rhs.medoid_;
+     if (dimension_ != rhs.dimension_) {
+       std::cout << "dimension_ != rhs.dimension_" << dimension_
+                 << " ! = " << rhs.dimension_ << std::endl;
+       return false;
+     }
+     if (num_vectors_ != rhs.num_vectors_) {
+       std::cout << "num_vectors_ != rhs.num_vectors_" << num_vectors_
+                 << " ! = " << rhs.num_vectors_ << std::endl;
+       return false;
+     }
+     if (L_build_ != rhs.L_build_) {
+       std::cout << "L_build_ != rhs.L_build_" << L_build_
+                 << " ! = " << rhs.L_build_ << std::endl;
+       return false;
+     }
+     if (R_max_degree_ != rhs.R_max_degree_) {
+       std::cout << "R_max_degree_ != rhs.R_max_degree_" << R_max_degree_
+                 << " ! = " << rhs.R_max_degree_ << std::endl;
+       return false;
+     }
+     if (B_backtrack_ != rhs.B_backtrack_) {
+       std::cout << "B_backtrack_ != rhs.B_backtrack_" << B_backtrack_
+                 << " ! = " << rhs.B_backtrack_ << std::endl;
+       return false;
+     }
+     if (alpha_min_ != rhs.alpha_min_) {
+       std::cout << "alpha_min_ != rhs.alpha_min_" << alpha_min_
+                 << " ! = " << rhs.alpha_min_ << std::endl;
+       return false;
+     }
+     if (alpha_max_ != rhs.alpha_max_) {
+       std::cout << "alpha_max_ != rhs.alpha_max_" << alpha_max_
+                 << " ! = " << rhs.alpha_max_ << std::endl;
+       return false;
+     }
+     if (medoid_ != rhs.medoid_) {
+       std::cout << "medoid_ != rhs.medoid_" << medoid_
+                 << " ! = " << rhs.medoid_ << std::endl;
+       return false;
+     }
+
+     return true;
   }
 
   /**

@@ -75,12 +75,51 @@ TEST_CASE("vamana_metadata: default constructor compare", "[vamana_metadata]") {
 }
 
 TEST_CASE("vamana_metadata: default constructor dump", "[vamana_metadata]") {
+  bool debug = false;
+
   auto x = vamana_index_metadata();
-  x.dump();
+  if (debug) {
+    x.dump();
+  }
 
   vamana_index_metadata y;
-  y.dump();
+  if (debug) {
+    y.dump();
+  }
+
 }
+
+// @todo More vamana groups (from "real" data) to test with
+TEST_CASE("vamana_metadata: open group", "[vamana_metadata]") {
+  bool debug = false;
+
+  tiledb::Context ctx;
+  tiledb::Config cfg;
+
+  std::string group_uri = test_data_root / "nano" / "vamana" / "vamana_test_index_metadata";
+
+  auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
+  auto x = vamana_index_metadata();
+
+  SECTION("load metadata") {
+    x.load_metadata(read_group);
+  }
+
+  SECTION("load and dump metadata -- for manual inspection") {
+    x.load_metadata(read_group);
+    if (debug) {
+      x.dump();
+    }
+  }
+
+  SECTION("Compare two constructed objects") {
+    x.load_metadata(read_group);
+    vamana_index_metadata y;
+    y.load_metadata(read_group);
+    CHECK(x.compare_metadata(y));
+  }
+}
+
 
 TEST_CASE(
     "vamana_metadata: read metadata from reference group",
@@ -164,28 +203,3 @@ TEST_CASE(
   }
 }
 
-#if 0
-TEST_CASE("vamana_metadata: open group", "[vamana_metadata]") {
-  tiledb::Context ctx;
-  tiledb::Config cfg;
-
-  auto read_group = tiledb::Group(ctx, sift_group_uri, TILEDB_READ, cfg);
-  auto x = vamana_index_metadata();
-
-  SECTION("load metadata") {
-    x.load_metadata(read_group);
-  }
-
-  SECTION("load and dump metadata -- for manual inspection") {
-    x.load_metadata(read_group);
-    x.dump();
-  }
-
-  SECTION("Compare two constructed objects") {
-    x.load_metadata(read_group);
-    ivf_flat_index_metadata y;
-    y.load_metadata(read_group);
-    CHECK(x.compare_metadata(y));
-  }
-}
-#endif

@@ -59,27 +59,18 @@ TEST_CASE("vamana: test test", "[vamana]") {
   REQUIRE(true);
 }
 
-#if 0
-TEST_CASE("vamana: tiny greedy search", "[vamana]") {
-  auto A = index_adj_list{tiny_index_adj_list};
-  size_t source = 0;
-  std::vector<size_t> query {0, 1};
-  size_t k = 3;
-  size_t L = 3;
-  std::vector<size_t> top_k(k);
-
-  auto V = greedy_search(A, tiny_vectors, source, query, k, L);
-}
-#endif
-
 TEST_CASE("vamana: diskann", "[vamana]") {
+  bool debug = false;
   for (auto&& s :
        {diskann_test_data_file,
         diskann_disk_index,
         diskann_mem_index,
         diskann_truth_disk_layout,
         diskann_truth_index_data}) {
-    // std::cout << s << std::endl;
+
+    if (debug) {
+      std::cout << s << std::endl;
+    }
     CHECK(local_file_exists(s));
   }
 
@@ -104,10 +95,12 @@ TEST_CASE("vamana: diskann", "[vamana]") {
   CHECK(medioid_ == 72);
   CHECK(vamana_frozen_num == 0);
 
-  std::cout << "index_file_size " << index_file_size << std::endl;
-  std::cout << "max_degree " << max_degree << std::endl;
-  std::cout << "medoid " << medioid_ << std::endl;
-  std::cout << "vamana_frozen_num " << vamana_frozen_num << std::endl;
+  if (debug) {
+    std::cout << "index_file_size " << index_file_size << std::endl;
+    std::cout << "max_degree " << max_degree << std::endl;
+    std::cout << "medoid " << medioid_ << std::endl;
+    std::cout << "vamana_frozen_num " << vamana_frozen_num << std::endl;
+  }
 
   binary_file.close();
 
@@ -137,13 +130,22 @@ TEST_CASE("vamana: diskann", "[vamana]") {
   CHECK(num_vectors(f) == 256);
   CHECK(dimension(f) == 128);
   auto med = ::medoid(f);
-  std::cout << "med " << med << std::endl;
+
+  if (debug) {
+    std::cout << "med " << med << std::endl;
+  }
+
   CHECK(med == 72);
-  // tiledb::Context ctx;
-  // write_matrix(ctx, f, "/tmp/diskann_test_data_file.tdb");
+
+  if (debug) {
+    tiledb::Context ctx;
+    write_matrix(ctx, f, "/tmp/diskann_test_data_file.tdb");
+  }
 }
 
 TEST_CASE("vamana: small256 build index", "[vamana]") {
+  const bool debug = false;
+
   // DiskANN rust code has this test:
   // TEST_DATA_FILE = tests/data/siftsmall_learn_256pts.fbin
   // assert_eq!(visited_nodes.len(), 1);
@@ -189,13 +191,17 @@ TEST_CASE("vamana: small256 build index", "[vamana]") {
   }
 }
 
+/*
+ * The data in this test were cribbed from DiskANN's tests.
+ * See DiskANN/rust//diskann/src/algorithm/search/search.rs
+ */
 TEST_CASE("vamana: small greedy search", "[vamana]") {
   const bool debug = true;
 
   uint32_t npoints{0};
   uint32_t ndim{0};
 
-  // "tests/data/siftsmall_learn_256pts.fbin";
+  // The name of the file is "tests/data/siftsmall_learn_256pts.fbin";
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
     throw std::runtime_error(
@@ -257,7 +263,10 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
     for (auto&& dst : init_nbrs[i]) {
       auto score = sum_of_squares(x[j], x[dst]);
       graph.add_edge(j, dst, score);
-      // std::cout << j << " " << dst << " " << score << std::endl;
+      if (debug) {
+        std::cout << "Adding edge " << j << " " << dst << " " << score
+                  << std::endl;
+      }
     }
   }
   for (size_t i = 0; i < size(init_nodes); ++i) {
@@ -266,15 +275,21 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   }
 
   auto yack = sum_of_squares_distance{}(x[72], x[14]);
-  std::cout << yack << std::endl;
+  if (debug) {
+    std::cout << "distance(x[72], x[14] = " << yack << std::endl;
+  }
   // L = 50, R = 4
   size_t L = 45;
   auto query_id = 14;
   size_t k = 15;
+
+  // A few different options that could be used for testing this
   // auto med = medoid(x);
-  //  int med = GENERATE(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 72);
+  // int med = GENERATE(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 72);
   int med = 72;
-  std::cout << "med " << med << std::endl;
+  if (debug) {
+    std::cout << "medoid is " << med << std::endl;
+  }
 
   auto&& [top_k_scores, top_k, visited] =
       greedy_search(graph, x, med, x[query_id], k, L);
@@ -283,23 +298,26 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   CHECK(size(top_k_scores) == 15);
   CHECK(size(visited) == 15);
 
-  for (size_t i = 0; i < size(top_k); ++i) {
-    std::cout << "( " << top_k[i] << ", " << top_k_scores[i] << " ), ";
-  }
-  std::cout << std::endl;
+  if (debug) {
+    std::cout << "top_k_scores: " << std::endl;
+    for (size_t i = 0; i < size(top_k); ++i) {
+      std::cout << "( " << top_k[i] << ", " << top_k_scores[i] << " ), ";
+    }
+    std::cout << std::endl;
 
-#if 0
-  for (size_t i = 0; i < size(visited); ++i) {
-    std::cout << visited[i] << ", ";
+    std::cout << "visited: " << std::endl;
+    for (auto&& v : visited) {
+      std::cout << v << ", ";
+    }
+    std::cout << std::endl;
+    for (size_t i = 0; i < size(expected); ++i) {
+      std::cout << expected[i] << ", ";
+    }
+    std::cout << std::endl;
   }
-  std::cout << std::endl;
-  for (size_t i = 0; i < size(expected); ++i) {
-    std::cout << expected[i] << ", ";
-  }
-  std::cout << std::endl;
-#endif
 
-#if 0
+/*
+ * The original Rust code has this test:
   set_neighbors(&index, 0, vec![12, 72, 5, 9]);
   set_neighbors(&index, 1, vec![2, 12, 10, 4]);
   set_neighbors(&index, 2, vec![1, 72, 9]);
@@ -355,7 +373,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   assert_eq!(scratch.best_candidates[13].distance, 416386.0_f32);
   assert_eq!(scratch.best_candidates[14].id, 11);
   assert_eq!(scratch.best_candidates[14].distance, 449266.0_f32);
-#endif
+*/
 }
 
 TEST_CASE("vamana: greedy grid search", "[vamana]") {
@@ -592,6 +610,9 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
         greedy_search(g, x, start, x[start], k_nn, L);
     std::sort(begin(top_k), end(top_k));
 
+    // There seems to be some ambiguity in the DiskANN code about whether
+    // the start point should be included in the top_k list.  It probably
+    // should not be, so comment out for now.
     // CHECK(top_k[0] == start);
     CHECK(std::find(begin(top_k), end(top_k), start) != end(top_k));
     CHECK(std::find(begin(V), end(V), start) != end(V));
