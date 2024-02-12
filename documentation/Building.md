@@ -1,26 +1,31 @@
-# Building From Source
+# Building and Running Tests
 
-TileDB Vector Search can be built from source. For information on dependencies, see below.
+TileDB Vector Search can be built from source for either C++ or Python.
 
-## Installation from github with pip:
-
-```
-pip install git+https://github.com/TileDB-Inc/TileDB-Vector-Search.git#subdirectory=apis/python
-```
-
-## Installation from a local checkout:
-
+## C++
+To build for C++, run:
 ```bash
-cd apis/python
+cmake -S ./src -B ./src/build -DCMAKE_BUILD_TYPE=Debug
+cmake --build ./src/build -j3
+```
+
+Then you can run the tests:
+```
+cmake --build ./src/build --target check
+```
+
+Alternatively, you can setup CLion to build and run tests. Just right-click on `src/CMakeLists.txt` and select `Load CMake Project`. You can then choose a target, e.g. `check`, to build and run.
+
+## Python
+
+To build for Python, run:
+```bash
 pip install .
 ```
-
-# Testing
 
 You can run unit tests with `pytest`. You'll also need to install the test dependencies:
 
 ```bash
-cd apis/python
 pip install ".[test]"
 ```
 
@@ -60,7 +65,6 @@ apt-get openblas-dev build-essentials cmake3
 To build the python API after you have the dependencies, use pip:
 
 ```bash
-cd apis/python
 pip install .
 ```
 
@@ -82,6 +86,7 @@ docker run --rm tiledb/tiledb-vector-search
 
 There are two ways you can format your code.
 
+### 1. Using `clang-format`
 If you just want to format C++ code and don't want to `pip install` anything, you can install [clang-format](https://clang.llvm.org/docs/ClangFormat.html) version 17 and use that directly. Install it yourself, or by running this installation script:
 
 ```bash
@@ -97,6 +102,7 @@ Then run it:
 ./scripts/run_clang_format.sh . clang-format 1
 ```
 
+### 2. Using `pre-commit`
 Alternatively, you can format all code in the repo (i.e. C++, Python, YAML, and Markdown files) with [pre-commit](https://pre-commit.com/), though it requires installing with `pip`. Install it with:
 
 ```bash

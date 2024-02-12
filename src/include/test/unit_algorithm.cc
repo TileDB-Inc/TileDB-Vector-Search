@@ -30,7 +30,7 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include "../algorithm.h"
+#include "algorithm.h"
 
 TEST_CASE("algorithm: test test", "[algorithm]") {
   REQUIRE(true);

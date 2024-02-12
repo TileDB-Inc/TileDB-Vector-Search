@@ -1,0 +1,65 @@
+[project]
+name = "tiledb-vector-search"
+dynamic = ["version"]
+description = "TileDB Vector Search Python client"
+license = { text = "MIT" }
+readme = "README.md"
+authors = []
+requires-python = "~=3.7"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "tiledb-cloud>=0.11",
+    "tiledb>=0.25.0",
+    "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
+    "scikit-learn",
+]
+
+[project.optional-dependencies]
+test = ["nbmake", "pytest"]
+formatting = ["pre-commit"]
+
+[project.urls]
+homepage = "https://tiledb.com"
+repository = "https://github.com/TileDB-Inc/tiledb-vector-search"
+
+[build-system]
+requires = ["scikit-build-core", "pybind11"]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+wheel.expand-macos-universal-tags = true
+metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
+cmake.source-dir = "src"
+cmake.targets = ["skbuild-export"]
+# TODO: This should be removed, but currently can't bacause: 'src/src/CMakeLists.txt'
+sdist.include = [
+    ".git"
+]
+wheel.packages = ["apis/python/src/tiledb"]
+
+[tool.scikit-build.cmake.define]
+#GIT_REPO_NAME = "placeholder"
+TILEDB_VS_PYTHON = "ON"
+
+[tool.setuptools_scm]
+version_file = "apis/python/src/tiledb/vector_search/version.py"
+
+[tool.ruff]
+extend-select = ["I"]
+ignore = ["F403", "F405", "E501", "E741"]
+exclude = [".ipynb"]
+
+[tool.ruff.isort]
+known-first-party = ["tiledb"]
+force-single-line = true
+single-line-exclusions = ["typing", "typing_extensions"]

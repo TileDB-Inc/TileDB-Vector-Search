@@ -1,12 +1,15 @@
 import numpy as np
+from common import *
+from array_paths import *
 import pytest
 from common import *
 
 import tiledb.vector_search.index as ind
-from tiledb.vector_search import flat_index
-from tiledb.vector_search import ivf_flat_index
+from tiledb.vector_search import flat_index, ivf_flat_index, Index
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.flat_index import FlatIndex
+from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 
 
 def query_and_check(index, queries, k, expected, **kwargs):
@@ -57,6 +60,7 @@ def test_flat_index(tmp_path):
 def test_ivf_flat_index(tmp_path):
     partitions = 10
     uri = os.path.join(tmp_path, "array")
+
     index = ivf_flat_index.create(
         uri=uri, dimensions=3, vector_type=np.dtype(np.uint8), partitions=partitions
     )
@@ -75,14 +79,12 @@ def test_ivf_flat_index(tmp_path):
     update_vectors[3] = np.array([3, 3, 3], dtype=np.dtype(np.uint8))
     update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.uint8))
     index.update_batch(vectors=update_vectors, external_ids=np.array([0, 1, 2, 3, 4]))
-    query_and_check(
-        index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
-    )
+
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions)
 
     index = index.consolidate_updates()
-    query_and_check(
-        index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
-    )
+
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions)
 
     index.delete_batch(external_ids=np.array([1, 3]))
     query_and_check(
@@ -118,6 +120,22 @@ def test_ivf_flat_index(tmp_path):
     )
 
 
+def test_delete_invalid_index(tmp_path):
+    # We don't throw with an invalid uri.
+    Index.delete_index(uri="invalid_uri", config=tiledb.cloud.Config())
+
+def test_delete_index(tmp_path):
+    indexes = ["FLAT", "IVF_FLAT"]
+    index_classes = [FlatIndex, IVFFlatIndex]
+    data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3]], dtype=np.float32)
+    for index_type, index_class in zip(indexes, index_classes):
+        index_uri = os.path.join(tmp_path, f"array_{index_type}")
+        ingest(index_type=index_type, index_uri=index_uri, input_vectors=data)
+        Index.delete_index(uri=index_uri, config=tiledb.cloud.Config())
+        with pytest.raises(tiledb.TileDBError) as error:
+            index_class(uri=index_uri)
+        assert "does not exist" in str(error.value)
+
 def test_index_with_incorrect_dimensions(tmp_path):
     indexes = [flat_index, ivf_flat_index]
     for index_type in indexes:
@@ -139,8 +157,8 @@ def test_index_with_incorrect_dimensions(tmp_path):
 
 
 def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
-    siftsmall_uri = "test/data/siftsmall/siftsmall_base.fvecs"
-    queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
+    siftsmall_uri = siftsmall_inputs_file
+    queries_uri = siftsmall_query_file
     indexes = ["FLAT", "IVF_FLAT"]
     for index_type in indexes:
         index_uri = os.path.join(tmp_path, f"sift10k_flat_{index_type}")
@@ -190,3 +208,41 @@ def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
                 else:
                     with pytest.raises(TypeError):
                         index.query(query, k=1)
+
+
+                # TODO(paris): This will throw with the following error. Fix and re-enable, then remove
+                # test_index_with_incorrect_num_of_query_columns_in_single_vector_query:
+                #   def array_to_matrix(array: np.ndarray):
+                #           if array.dtype == np.float32:
+                #   >           return pyarray_copyto_matrix_f32(array)
+                #   E           RuntimeError: Number of dimensions must be two
+                # Here we test with a query which is just a vector, i.e. [1, 2, 3].
+                # query = query[0]
+                # if num_columns_for_query == num_columns:
+                #     index.query(query, k=1)
+                # else:
+                #     with pytest.raises(TypeError):
+                #         index.query(query, k=1)
+
+def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_path):
+    # Tests that we raise a TypeError if the number of columns in the query is not the same as the
+    # number of columns in the indexed data, specifically for a single vector query.
+    # i.e. queries = [1, 2, 3]  instead of queries = [[1, 2, 3], [4, 5, 6]].
+    indexes = [flat_index, ivf_flat_index]
+    for index_type in indexes:
+        uri = os.path.join(tmp_path, f"array_{index_type.__name__}")
+        index = index_type.create(uri=uri, dimensions=3, vector_type=np.dtype(np.uint8))
+
+        # Wrong number of columns will raise a TypeError.
+        with pytest.raises(TypeError):
+            index.query(np.array([1], dtype=np.float32), k=3)
+        with pytest.raises(TypeError):
+            index.query(np.array([1, 1], dtype=np.float32), k=3)
+        with pytest.raises(TypeError):
+            index.query(np.array([1, 1, 1, 1], dtype=np.float32), k=3)
+
+        # TODO:  This also throws a TypeError for incorrect dimension
+        with pytest.raises(TypeError):
+            index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
+
+

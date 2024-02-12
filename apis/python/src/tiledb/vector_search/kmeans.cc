@@ -7,6 +7,7 @@
 #include "flat_query.h"
 #include "ivf_index.h"
 #include "ivf_query.h"
+#include "index/ivf_flat_index.h"
 #include "linalg.h"
 
 namespace py = pybind11;
@@ -38,13 +39,10 @@ static void declare_kmeans(py::module& m, const std::string& suffix) {
         } else {
           throw std::invalid_argument("Invalid init method");
         }
-        kmeans_index<T> idx(
-            sample_vectors.num_rows(),
-            n_clusters,
+        ivf_flat_index<T> idx(
+            /*sample_vectors.num_rows(),*/ n_clusters,
             max_iter,
-            tol.value_or(0.0001),
-            nthreads,
-            seed);
+            tol.value_or(0.0001));
         idx.train(sample_vectors, init_val);
         return std::move(idx.get_centroids());
       });
@@ -59,6 +57,3 @@ static void declare_kmeans(py::module& m, const std::string& suffix) {
 
 }  // anonymous namespace
 
-void init_kmeans(py::module_& m) {
-  declare_kmeans<float>(m, "f32");
-}

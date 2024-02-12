@@ -12,4 +12,4 @@ RUN mamba install -y -c tiledb 'tiledb>=2.17,<2.18' tiledb-py cmake pybind11 pyt
 
 COPY . TileDB-Vector-Search/
 
-RUN . ~/.bashrc && cd TileDB-Vector-Search/apis/python && pip install .
+RUN . ~/.bashrc && cd TileDB-Vector-Search && pip install .
