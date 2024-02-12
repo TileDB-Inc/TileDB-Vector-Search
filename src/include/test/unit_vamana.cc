@@ -65,7 +65,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
         diskann_mem_index,
         diskann_truth_disk_layout,
         diskann_truth_index_data}) {
-    CHECK(local_file_exists(s));
+    CHECK(local_file_exists(s.string()));
   }
 
   std::ifstream binary_file(diskann_mem_index, std::ios::binary);
@@ -96,7 +96,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
 
   binary_file.close();
 
-  auto g = read_diskann_mem_index(diskann_mem_index);
+  auto g = read_diskann_mem_index(diskann_mem_index.string());
   CHECK(g.size() == 256);
 
   for (size_t i = 0; i < g.size(); ++i) {
@@ -104,7 +104,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
   }
 
   auto h = read_diskann_mem_index_with_scores(
-      diskann_mem_index, diskann_test_data_file);
+      diskann_mem_index.string(), diskann_test_data_file.string());
   CHECK(h.size() == 256);
 
   for (size_t i = 0; i < h.size(); ++i) {
@@ -118,7 +118,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
         [](auto&& a, auto&& b) { return a == std::get<1>(b); }));
   }
 
-  auto f = read_diskann_data(diskann_test_data_file);
+  auto f = read_diskann_data(diskann_test_data_file.string());
   CHECK(f.num_cols() == 256);
   CHECK(f.num_rows() == 128);
   auto med = detail::graph::medioid(f);
@@ -128,9 +128,9 @@ TEST_CASE("vamana: diskann", "[vamana]") {
 
 TEST_CASE("vamana: small256 build index", "[vamana]") {
   auto vindex = detail::graph::vamana_index<float, uint32_t>(256, 50, 0);
-  auto x = read_diskann_data(diskann_test_data_file);
+  auto x = read_diskann_data(diskann_test_data_file.string());
   auto graph = read_diskann_mem_index_with_scores(
-      diskann_mem_index, diskann_test_data_file);
+      diskann_mem_index.string(), diskann_test_data_file.string());
 
   vindex.train(x);
 
@@ -499,7 +499,8 @@ TEST_CASE("vamana: fmnist", "[vamana]") {
   size_t N = 5000;
 
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<test_feature_type>(ctx, fmnist_inputs_uri, N);
+  auto db =
+      tdbColMajorMatrix<test_feature_type>(ctx, fmnist_inputs_uri.string(), N);
   db.load();
   auto g = detail::graph::init_random_nn_graph<score_type, id_type>(db, L);
 
@@ -720,7 +721,8 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
   float alpha = 1.0;
 
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<test_feature_type>(ctx, fmnist_inputs_uri, N);
+  auto db =
+      tdbColMajorMatrix<test_feature_type>(ctx, fmnist_inputs_uri.string(), N);
   db.load();
   auto g = detail::graph::init_random_nn_graph<float, uint64_t>(db, L);
 
@@ -998,10 +1000,10 @@ TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
 
   tiledb::Context ctx;
   auto training_set =
-      tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, num_nodes);
+      tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri.string(), num_nodes);
   training_set.load();
   auto queries =
-      tdbColMajorMatrix<float>(ctx, siftsmall_query_uri, num_queries);
+      tdbColMajorMatrix<float>(ctx, siftsmall_query_uri.string(), num_queries);
   queries.load();
 
   auto idx = detail::graph::vamana_index<float, uint64_t>(
@@ -1034,7 +1036,8 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
 
   tiledb::Context ctx;
   std::string vamana_index_uri = "/tmp/tmp_vamana_index";
-  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
+  auto training_set =
+      tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri.string(), 0);
   load(training_set);
 
   auto idx = detail::graph::vamana_index<float, uint64_t>(

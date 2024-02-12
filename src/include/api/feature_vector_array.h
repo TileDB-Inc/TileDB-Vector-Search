@@ -68,6 +68,12 @@ class FeatureVectorArray {
     feature_size_ = datatype_to_size(feature_type_);
   }
 
+    FeatureVectorArray(
+      const tiledb::Context& ctx,
+      const std::filesystem::path& uri,
+      size_t num_vectors = 0) : FeatureVectorArray(ctx, uri.string(), num_vectors) {
+    }
+
   FeatureVectorArray(
       const tiledb::Context& ctx,
       const std::string& uri,

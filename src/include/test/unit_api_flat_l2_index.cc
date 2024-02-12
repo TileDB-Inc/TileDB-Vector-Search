@@ -43,7 +43,7 @@ TEST_CASE("api_flat_l2_index: test test", "[api_flat_l2_index]") {
 
 TEST_CASE("api: flat_l2_index", "[api][flat_l2_index]") {
   tiledb::Context ctx;
-  auto a = IndexFlatL2(ctx, fmnist_inputs_uri);
+  auto a = IndexFlatL2(ctx, fmnist_inputs_uri.string());
   // auto b = Index(ctx, fmnist_inputs_uri, IndexKind::FlatL2);
   // auto c = Index(ctx, fmnist_inputs_uri, IndexKind::IVFFlat);
 }
@@ -52,27 +52,27 @@ TEST_CASE(
     "api: uri flat_l2_index constructors, context", "[api][flat_l2_index]") {
   tiledb::Context ctx;
 
-  auto a = IndexFlatL2(ctx, sift_inputs_uri);
+  auto a = IndexFlatL2(ctx, sift_inputs_uri.string());
   CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(a) == sift_dimension);
   CHECK(num_vectors(a) == num_sift_vectors);
 
-  auto b = IndexFlatL2(ctx, bigann1M_inputs_uri);
+  auto b = IndexFlatL2(ctx, bigann1M_inputs_uri.string());
   CHECK(b.feature_type() == TILEDB_UINT8);
   CHECK(dimension(b) == bigann1M_dimension);
   CHECK(num_vectors(b) == num_bigann1M_vectors);
 
-  auto c = IndexFlatL2(ctx, fmnist_inputs_uri);
+  auto c = IndexFlatL2(ctx, fmnist_inputs_uri.string());
   CHECK(c.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(c) == fmnist_dimension);
   CHECK(num_vectors(c) == num_fmnist_vectors);
 
-  auto d = IndexFlatL2(ctx, sift_inputs_uri);
+  auto d = IndexFlatL2(ctx, sift_inputs_uri.string());
   CHECK(d.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(d) == sift_dimension);
   CHECK(num_vectors(d) == num_sift_vectors);
 
-  auto e = IndexFlatL2(ctx, siftsmall_inputs_uri);
+  auto e = IndexFlatL2(ctx, siftsmall_inputs_uri.string());
   CHECK(d.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(d) == siftsmall_dimension);
   CHECK(num_vectors(d) == num_siftsmall_vectors);
@@ -81,27 +81,27 @@ TEST_CASE(
 TEST_CASE(
     "api: uri flat_l2_index constructors, no context", "[api][flat_l2_index]") {
   tiledb::Context ctx;
-  auto a = IndexFlatL2(ctx, sift_inputs_uri);
+  auto a = IndexFlatL2(ctx, sift_inputs_uri.string());
   CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(a) == sift_dimension);
   CHECK(num_vectors(a) == num_sift_vectors);
 
-  auto b = IndexFlatL2(ctx, bigann1M_inputs_uri);
+  auto b = IndexFlatL2(ctx, bigann1M_inputs_uri.string());
   CHECK(b.feature_type() == TILEDB_UINT8);
   CHECK(dimension(b) == bigann1M_dimension);
   CHECK(num_vectors(b) == num_bigann1M_vectors);
 
-  auto c = IndexFlatL2(ctx, fmnist_inputs_uri);
+  auto c = IndexFlatL2(ctx, fmnist_inputs_uri.string());
   CHECK(c.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(c) == fmnist_dimension);
   CHECK(num_vectors(c) == num_fmnist_vectors);
 
-  auto d = IndexFlatL2(ctx, sift_inputs_uri);
+  auto d = IndexFlatL2(ctx, sift_inputs_uri.string());
   CHECK(d.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(d) == sift_dimension);
   CHECK(num_vectors(d) == num_sift_vectors);
 
-  auto e = IndexFlatL2(ctx, siftsmall_inputs_uri);
+  auto e = IndexFlatL2(ctx, siftsmall_inputs_uri.string());
   CHECK(e.feature_type() == TILEDB_FLOAT32);
   CHECK(dimension(e) == siftsmall_dimension);
   CHECK(num_vectors(e) == num_siftsmall_vectors);
@@ -113,25 +113,25 @@ TEST_CASE("api: queries", "[api][flat_l2_index]") {
   size_t nthreads = 8;
   size_t num_queries = 50;
   auto sift_test_tuple = std::make_tuple(
-      sift_inputs_uri,
-      sift_groundtruth_uri,
-      sift_query_uri,
+      sift_inputs_uri.string(),
+      sift_groundtruth_uri.string(),
+      sift_query_uri.string(),
       TILEDB_FLOAT32,
       sift_dimension,
       num_sift_vectors);
 
   auto bigann1M_tuple = std::make_tuple(
-      bigann1M_inputs_uri,
-      bigann1M_groundtruth_uri,
-      bigann1M_query_uri,
+      bigann1M_inputs_uri.string(),
+      bigann1M_groundtruth_uri.string(),
+      bigann1M_query_uri.string(),
       TILEDB_UINT8,
       bigann1M_dimension,
       num_bigann1M_vectors);
 
   auto fmnist_tuple = std::make_tuple(
-      fmnist_inputs_uri,
-      fmnist_groundtruth_uri,
-      fmnist_query_uri,
+      fmnist_inputs_uri.string(),
+      fmnist_groundtruth_uri.string(),
+      fmnist_query_uri.string(),
       TILEDB_FLOAT32,
       fmnist_dimension,
       num_fmnist_vectors);

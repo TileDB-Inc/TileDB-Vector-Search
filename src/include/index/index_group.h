@@ -130,8 +130,8 @@ class base_index_group {
     }
     for (auto&& [array_key, array_name] : storage_formats[version_]) {
       valid_key_names_.insert(array_key);
-      valid_array_names_.insert(array_name);
-      array_name_map_[array_key] = array_name;
+      valid_array_names_.insert(array_name.string());
+      array_name_map_[array_key] = array_name.string();
     }
     static_cast<group_type*>(this)->append_valid_array_names_impl();
   }
@@ -166,11 +166,12 @@ class base_index_group {
    */
   void init_for_open(const tiledb::Config& cfg) {
     tiledb::VFS vfs(cached_ctx_);
-    if (!vfs.is_dir(group_uri_)) {
+    if (!vfs.is_dir(group_uri_.string())) {
       throw std::runtime_error(
-          "Group uri " + std::string(group_uri_) + " does not exist.");
+          "Group uri " + group_uri_.string() + " does not exist.");
     }
-    auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
+    auto read_group =
+        tiledb::Group(cached_ctx_, group_uri_.string(), TILEDB_READ, cfg);
 
     // Load the metadata and check the version.  We need to do this before
     // we can check the array names.
@@ -249,7 +250,7 @@ class base_index_group {
   void open_for_write(const tiledb::Config& cfg) {
     tiledb::VFS vfs(cached_ctx_);
 
-    if (vfs.is_dir(group_uri_)) {
+    if (vfs.is_dir(group_uri_.string())) {
       /** Load the current group metadata */
       init_for_open(cfg);
       if (index_timestamp_ < metadata_.ingestion_timestamps_.back()) {
@@ -282,7 +283,7 @@ class base_index_group {
 
   /** Convert an array key to a uri. */
   constexpr std::string array_key_to_uri(const std::string& array_key) const {
-    return group_uri_ / array_key_to_array_name(array_key);
+    return (group_uri_ / array_key_to_array_name(array_key)).string();
   }
 
  public:
@@ -351,7 +352,7 @@ class base_index_group {
     if (opened_for_ == TILEDB_WRITE) {
       auto cfg = tiledb::Config();
       auto write_group =
-          tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
+          tiledb::Group(cached_ctx_, group_uri_.string(), TILEDB_WRITE, cfg);
       metadata_.store_metadata(write_group);
     }
   }

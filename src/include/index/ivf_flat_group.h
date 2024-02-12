@@ -97,8 +97,8 @@ class ivf_flat_index_group
   void append_valid_array_names_impl() {
     for (auto&& [array_key, array_name] : ivf_flat_storage_formats[version_]) {
       valid_key_names_.insert(array_key);
-      valid_array_names_.insert(array_name);
-      array_name_map_[array_key] = array_name;
+      valid_array_names_.insert(array_name.string());
+      array_name_map_[array_key] = array_name.string();
     }
   }
 
@@ -137,11 +137,11 @@ class ivf_flat_index_group
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
                   this->get_dimension())};
     static const tiledb_filter_type_t default_compression{
-        string_to_filter(storage_formats[version_]["default_attr_filters"])};
+        string_to_filter(storage_formats[version_]["default_attr_filters"].string())};
 
-    tiledb::Group::create(cached_ctx_, group_uri_);
+    tiledb::Group::create(cached_ctx_, group_uri_.string());
     auto write_group =
-        tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
+        tiledb::Group(cached_ctx_, group_uri_.string(), TILEDB_WRITE, cfg);
 
     this->metadata_.storage_version_ = version_;
 

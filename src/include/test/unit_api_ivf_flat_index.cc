@@ -135,7 +135,7 @@ TEST_CASE(
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
       {{"id_type", "uint32"}, {"px_type", "uint32"}}));
   auto ctx = tiledb::Context{};
-  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
+  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri.string());
   a.train(training_set, kmeans_init::random);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(a.id_type() == TILEDB_UINT32);
@@ -147,7 +147,7 @@ TEST_CASE(
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
       {{"id_type", "uint32"}, {"px_type", "uint32"}}));
   auto ctx = tiledb::Context{};
-  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
+  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri.string());
   CHECK(dimension(a) == 0);
   a.train(training_set, kmeans_init::random);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
@@ -166,7 +166,7 @@ TEST_CASE(
       {{"feature_type", "float32"},
        {"id_type", "uint32"},
        {"px_type", "uint32"}}));
-  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
+  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri.string());
   a.train(training_set, kmeans_init::random);
   a.add(training_set);
   a.write_index(ctx, api_ivf_flat_index_uri, true);
@@ -188,9 +188,9 @@ TEST_CASE(
 
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
       {{"id_type", "uint32"}, {"px_type", "uint32"}}));
-  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-  auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
-  auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
+  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri.string());
+  auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri.string());
+  auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri.string());
   a.train(training_set, kmeans_init::random);
   a.add(training_set);
 

@@ -66,6 +66,7 @@
 #include <type_traits>
 #include <vector>
 #include <version>
+#include <algorithm>
 
 #include <tiledb/tiledb>
 #include "mdspan/mdspan.hpp"
