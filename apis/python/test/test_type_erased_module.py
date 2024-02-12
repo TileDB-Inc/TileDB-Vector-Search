@@ -32,7 +32,7 @@ def test_numpy_to_feature_vector_array_simple():
     b = vspy.FeatureVector(a)
     assert a.ndim == 1
     logging.info(a.shape)
-    assert a.shape == (10000)
+    assert a.shape[0] == (10000)
     assert b.dimension() == 10000
     assert b.feature_type_string() == "float32"
 
