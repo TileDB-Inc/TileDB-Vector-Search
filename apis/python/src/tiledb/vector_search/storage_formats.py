@@ -19,4 +19,4 @@ storage_formats = {
     },
 }
 
-STORAGE_VERSION = "0.2"
+STORAGE_VERSION = "0.1"
