@@ -1,18 +1,19 @@
 import os
 import shutil
+import numpy as np
 
 from tiledb.vector_search.ingestion import ingest
-from tiledb.vector_search.utils import load_fvecs, write_fvecs
+from tiledb.vector_search.utils import load_fvecs
 
-def create_sift_micro():
-    '''
-    Create a smaller version of the base SIFT 10K dataset (http://corpus-texmex.irisa.fr). You 
-    don't need to run this again, but it's saved here just in case. To query an index built with 
-    this data just select vectors from this file as the query vectors.
-    '''
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    base_uri = os.path.join(script_dir, "..", "apis", "python", "test", "data", "siftsmall", "siftsmall_base.fvecs")
-    write_fvecs(os.path.join(script_dir, "siftmicro_base.fvecs"), load_fvecs(base_uri)[:100])
+# def create_sift_micro():
+#     '''
+#     Create a smaller version of the base SIFT 10K dataset (http://corpus-texmex.irisa.fr). You 
+#     don't need to run this again, but it's saved here just in case. To query an index built with 
+#     this data just select vectors from this file as the query vectors.
+#     '''
+#     script_dir = os.path.dirname(os.path.abspath(__file__))
+#     base_uri = os.path.join(script_dir, "..", "apis", "python", "test", "data", "siftsmall", "siftsmall_base.fvecs")
+#     write_fvecs(os.path.join(script_dir, "siftmicro_base.fvecs"), load_fvecs(base_uri)[:100])
 
 def generate_release_data(version):
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -31,19 +32,27 @@ def generate_release_data(version):
     # Generate each index and query to make sure it works before we write it.
     index_types = ["FLAT", "IVF_FLAT"]
     data_types = ["float32", "uint8"]
+    source_types = ["F32BIN", "U8BIN"]
     for index_type in index_types:
-        for data_type in data_types:
+        for data_type, source_type in zip(data_types, source_types):
+            numpy_source_data = base.astype(data_type)
+            numpy_source_data_uri = os.path.join(script_dir, "numpy_source_data.bin")
+            with open(numpy_source_data_uri, "wb") as f:
+                np.array(numpy_source_data.shape, dtype="uint32").tofile(f)
+                numpy_source_data.tofile(f)
+
             index_uri = f"{release_dir}/{index_type.lower()}_{data_type}"
             print(f"Creating index at {index_uri}")
             index = ingest(
                 index_type=index_type, 
-                index_uri=index_uri,
-                input_vectors=base.astype(data_type),
+                array_uri=index_uri,
+                source_type=source_type,
+                source_uri=numpy_source_data_uri,
             )
+            result = index.query(queries, k=1)
+            assert indices == result.flatten().tolist()
 
-            result_d, result_i = index.query(queries, k=1)
-            assert indices == result_i.flatten().tolist()
-            assert result_d.flatten().tolist() == [0 for _ in range(len(indices))]
+            os.remove(numpy_source_data_uri)
 
 if __name__ == "__main__":
     import argparse
