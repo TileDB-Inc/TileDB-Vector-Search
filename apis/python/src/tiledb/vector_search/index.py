@@ -6,6 +6,7 @@ import sys
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
 from typing import Any, Mapping, Optional
+from tiledb.vector_search.utils import add_to_group
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 MAX_FLOAT_32 = np.finfo(np.dtype("float32")).max
@@ -213,7 +214,7 @@ class Index:
             tiledb.Array.create(updates_array_uri, updates_schema)
             self.group.close()
             self.group = tiledb.Group(self.uri, "w", ctx=tiledb.Ctx(self.config))
-            self.group.add(updates_array_uri, name=updates_array_name)
+            add_to_group(self.group, updates_array_uri, updates_array_name)
             self.group.close()
             self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(self.config))
             self.update_arrays_uri = updates_array_uri

@@ -242,6 +242,15 @@ def ingest(
         if tiledb.array_exists(input_vectors_array_uri):
             raise ValueError(f"Array exists {input_vectors_array_uri}")
 
+        # NOTE(paris): This is pulled it from a future commit: https://github.com/TileDB-Inc/TileDB-Vector-Search/commit/bcfdaa1cda0fc369223fa6cf263c3c834b389d77#diff-1f069806fd80be4565aeb1f2af024bd4363d02a250d8f377dd455e7a43218620R257
+        TILE_SIZE_BYTES = 128000000
+        tile_size = min(
+            size,
+            int(
+                TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions
+            ),
+        )
+
         logger.debug("Creating input vectors array")
         input_vectors_array_rows_dim = tiledb.Dim(
             name="rows",
@@ -252,7 +261,7 @@ def ingest(
         input_vectors_array_cols_dim = tiledb.Dim(
             name="cols",
             domain=(0, size - 1),
-            tile=int(size / partitions),
+            tile=tile_size,
             dtype=np.dtype(np.int32),
         )
         input_vectors_array_dom = tiledb.Domain(
