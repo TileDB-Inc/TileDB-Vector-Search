@@ -67,7 +67,6 @@ TEST_CASE("vamana: diskann", "[vamana]") {
         diskann_mem_index,
         diskann_truth_disk_layout,
         diskann_truth_index_data}) {
-
     if (debug) {
       std::cout << s << std::endl;
     }
@@ -316,64 +315,64 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
     std::cout << std::endl;
   }
 
-/*
- * The original Rust code has this test:
-  set_neighbors(&index, 0, vec![12, 72, 5, 9]);
-  set_neighbors(&index, 1, vec![2, 12, 10, 4]);
-  set_neighbors(&index, 2, vec![1, 72, 9]);
-  set_neighbors(&index, 3, vec![13, 6, 5, 11]);
-  set_neighbors(&index, 4, vec![1, 3, 7, 9]);
-  set_neighbors(&index, 5, vec![3, 0, 8, 11, 13]);
-  set_neighbors(&index, 6, vec![3, 72, 7, 10, 13]);
-  set_neighbors(&index, 7, vec![72, 4, 6]);
-  set_neighbors(&index, 8, vec![72, 5, 9, 12]);
-  set_neighbors(&index, 9, vec![8, 4, 0, 2]);
-  set_neighbors(&index, 10, vec![72, 1, 9, 6]);
-  set_neighbors(&index, 11, vec![3, 0, 5]);
-  set_neighbors(&index, 12, vec![1, 0, 8, 9]);
-  set_neighbors(&index, 13, vec![3, 72, 5, 6]);
-  set_neighbors(&index, 72, vec![7, 2, 10, 8, 13]);
+  /*
+   * The original Rust code has this test:
+    set_neighbors(&index, 0, vec![12, 72, 5, 9]);
+    set_neighbors(&index, 1, vec![2, 12, 10, 4]);
+    set_neighbors(&index, 2, vec![1, 72, 9]);
+    set_neighbors(&index, 3, vec![13, 6, 5, 11]);
+    set_neighbors(&index, 4, vec![1, 3, 7, 9]);
+    set_neighbors(&index, 5, vec![3, 0, 8, 11, 13]);
+    set_neighbors(&index, 6, vec![3, 72, 7, 10, 13]);
+    set_neighbors(&index, 7, vec![72, 4, 6]);
+    set_neighbors(&index, 8, vec![72, 5, 9, 12]);
+    set_neighbors(&index, 9, vec![8, 4, 0, 2]);
+    set_neighbors(&index, 10, vec![72, 1, 9, 6]);
+    set_neighbors(&index, 11, vec![3, 0, 5]);
+    set_neighbors(&index, 12, vec![1, 0, 8, 9]);
+    set_neighbors(&index, 13, vec![3, 72, 5, 6]);
+    set_neighbors(&index, 72, vec![7, 2, 10, 8, 13]);
 
-  let mut scratch = InMemQueryScratch::new(
-                        index.configuration.index_write_parameter.search_list_size,
-                        &index.configuration.index_write_parameter,
-                        false,
-                        )
-                        .unwrap();
-  let visited_nodes = index.search_for_point(&query, &mut scratch).unwrap();
-  assert_eq!(visited_nodes.len(), 15);
-  assert_eq!(scratch.best_candidates.size(), 15);
-  assert_eq!(scratch.best_candidates[0].id, 2);
-  assert_eq!(scratch.best_candidates[0].distance, 120899.0_f32);
-  assert_eq!(scratch.best_candidates[1].id, 8);
-  assert_eq!(scratch.best_candidates[1].distance, 145538.0_f32);
-  assert_eq!(scratch.best_candidates[2].id, 72);
-  assert_eq!(scratch.best_candidates[2].distance, 146046.0_f32);
-  assert_eq!(scratch.best_candidates[3].id, 4);
-  assert_eq!(scratch.best_candidates[3].distance, 148462.0_f32);
-  assert_eq!(scratch.best_candidates[4].id, 7);
-  assert_eq!(scratch.best_candidates[4].distance, 148912.0_f32);
-  assert_eq!(scratch.best_candidates[5].id, 10);
-  assert_eq!(scratch.best_candidates[5].distance, 154570.0_f32);
-  assert_eq!(scratch.best_candidates[6].id, 1);
-  assert_eq!(scratch.best_candidates[6].distance, 159448.0_f32);
-  assert_eq!(scratch.best_candidates[7].id, 12);
-  assert_eq!(scratch.best_candidates[7].distance, 170698.0_f32);
-  assert_eq!(scratch.best_candidates[8].id, 9);
-  assert_eq!(scratch.best_candidates[8].distance, 171405.0_f32);
-  assert_eq!(scratch.best_candidates[9].id, 0);
-  assert_eq!(scratch.best_candidates[9].distance, 259996.0_f32);
-  assert_eq!(scratch.best_candidates[10].id, 6);
-  assert_eq!(scratch.best_candidates[10].distance, 371819.0_f32);
-  assert_eq!(scratch.best_candidates[11].id, 5);
-  assert_eq!(scratch.best_candidates[11].distance, 385240.0_f32);
-  assert_eq!(scratch.best_candidates[12].id, 3);
-  assert_eq!(scratch.best_candidates[12].distance, 413899.0_f32);
-  assert_eq!(scratch.best_candidates[13].id, 13);
-  assert_eq!(scratch.best_candidates[13].distance, 416386.0_f32);
-  assert_eq!(scratch.best_candidates[14].id, 11);
-  assert_eq!(scratch.best_candidates[14].distance, 449266.0_f32);
-*/
+    let mut scratch = InMemQueryScratch::new(
+                          index.configuration.index_write_parameter.search_list_size,
+                          &index.configuration.index_write_parameter,
+                          false,
+                          )
+                          .unwrap();
+    let visited_nodes = index.search_for_point(&query, &mut scratch).unwrap();
+    assert_eq!(visited_nodes.len(), 15);
+    assert_eq!(scratch.best_candidates.size(), 15);
+    assert_eq!(scratch.best_candidates[0].id, 2);
+    assert_eq!(scratch.best_candidates[0].distance, 120899.0_f32);
+    assert_eq!(scratch.best_candidates[1].id, 8);
+    assert_eq!(scratch.best_candidates[1].distance, 145538.0_f32);
+    assert_eq!(scratch.best_candidates[2].id, 72);
+    assert_eq!(scratch.best_candidates[2].distance, 146046.0_f32);
+    assert_eq!(scratch.best_candidates[3].id, 4);
+    assert_eq!(scratch.best_candidates[3].distance, 148462.0_f32);
+    assert_eq!(scratch.best_candidates[4].id, 7);
+    assert_eq!(scratch.best_candidates[4].distance, 148912.0_f32);
+    assert_eq!(scratch.best_candidates[5].id, 10);
+    assert_eq!(scratch.best_candidates[5].distance, 154570.0_f32);
+    assert_eq!(scratch.best_candidates[6].id, 1);
+    assert_eq!(scratch.best_candidates[6].distance, 159448.0_f32);
+    assert_eq!(scratch.best_candidates[7].id, 12);
+    assert_eq!(scratch.best_candidates[7].distance, 170698.0_f32);
+    assert_eq!(scratch.best_candidates[8].id, 9);
+    assert_eq!(scratch.best_candidates[8].distance, 171405.0_f32);
+    assert_eq!(scratch.best_candidates[9].id, 0);
+    assert_eq!(scratch.best_candidates[9].distance, 259996.0_f32);
+    assert_eq!(scratch.best_candidates[10].id, 6);
+    assert_eq!(scratch.best_candidates[10].distance, 371819.0_f32);
+    assert_eq!(scratch.best_candidates[11].id, 5);
+    assert_eq!(scratch.best_candidates[11].distance, 385240.0_f32);
+    assert_eq!(scratch.best_candidates[12].id, 3);
+    assert_eq!(scratch.best_candidates[12].distance, 413899.0_f32);
+    assert_eq!(scratch.best_candidates[13].id, 13);
+    assert_eq!(scratch.best_candidates[13].distance, 416386.0_f32);
+    assert_eq!(scratch.best_candidates[14].id, 11);
+    assert_eq!(scratch.best_candidates[14].distance, 449266.0_f32);
+  */
 }
 
 TEST_CASE("vamana: greedy grid search", "[vamana]") {

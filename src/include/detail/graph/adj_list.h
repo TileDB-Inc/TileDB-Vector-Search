@@ -51,7 +51,7 @@ class index_adj_list : public std::vector<std::list<I>> {
   }
 
 #if 1
-  index_adj_list(const std::vector<std::tuple<I,I>> & edge_list) {
+  index_adj_list(const std::vector<std::tuple<I, I>>& edge_list) {
     for (auto& [src, dst] : edge_list) {
       Base::operator[](src).push_back(dst);
     }
@@ -90,8 +90,9 @@ class index_adj_list : public std::vector<std::list<I>> {
 };
 
 // Deduction guide
-template<class Inner>
-index_adj_list(const std::vector<Inner>& l) -> index_adj_list<typename Inner::value_type>;
+template <class Inner>
+index_adj_list(const std::vector<Inner>& l)
+    -> index_adj_list<typename Inner::value_type>;
 
 template <class I = size_t>
 auto num_vertices(index_adj_list<I>& g) {

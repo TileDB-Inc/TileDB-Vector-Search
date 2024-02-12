@@ -86,7 +86,6 @@ TEST_CASE("vamana_metadata: default constructor dump", "[vamana_metadata]") {
   if (debug) {
     y.dump();
   }
-
 }
 
 // @todo More vamana groups (from "real" data) to test with
@@ -96,7 +95,8 @@ TEST_CASE("vamana_metadata: open group", "[vamana_metadata]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
 
-  std::string group_uri = test_data_root / "nano" / "vamana" / "vamana_test_index_metadata";
+  std::string group_uri =
+      test_data_root / "nano" / "vamana" / "vamana_test_index_metadata";
 
   auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
   auto x = vamana_index_metadata();
@@ -119,7 +119,6 @@ TEST_CASE("vamana_metadata: open group", "[vamana_metadata]") {
     CHECK(x.compare_metadata(y));
   }
 }
-
 
 TEST_CASE(
     "vamana_metadata: read metadata from reference group",
@@ -202,4 +201,3 @@ TEST_CASE(
     }
   }
 }
-

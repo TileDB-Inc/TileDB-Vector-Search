@@ -632,7 +632,6 @@ class vamana_index {
 
     medoid_ = medoid(feature_vectors_);
 
-
     // debug_index();
 
     size_t counter{0};
@@ -962,48 +961,48 @@ class vamana_index {
   }
 
   bool compare_cached_metadata(const vamana_index& rhs) const {
-     if (dimension_ != rhs.dimension_) {
-       std::cout << "dimension_ != rhs.dimension_" << dimension_
-                 << " ! = " << rhs.dimension_ << std::endl;
-       return false;
-     }
-     if (num_vectors_ != rhs.num_vectors_) {
-       std::cout << "num_vectors_ != rhs.num_vectors_" << num_vectors_
-                 << " ! = " << rhs.num_vectors_ << std::endl;
-       return false;
-     }
-     if (L_build_ != rhs.L_build_) {
-       std::cout << "L_build_ != rhs.L_build_" << L_build_
-                 << " ! = " << rhs.L_build_ << std::endl;
-       return false;
-     }
-     if (R_max_degree_ != rhs.R_max_degree_) {
-       std::cout << "R_max_degree_ != rhs.R_max_degree_" << R_max_degree_
-                 << " ! = " << rhs.R_max_degree_ << std::endl;
-       return false;
-     }
-     if (B_backtrack_ != rhs.B_backtrack_) {
-       std::cout << "B_backtrack_ != rhs.B_backtrack_" << B_backtrack_
-                 << " ! = " << rhs.B_backtrack_ << std::endl;
-       return false;
-     }
-     if (alpha_min_ != rhs.alpha_min_) {
-       std::cout << "alpha_min_ != rhs.alpha_min_" << alpha_min_
-                 << " ! = " << rhs.alpha_min_ << std::endl;
-       return false;
-     }
-     if (alpha_max_ != rhs.alpha_max_) {
-       std::cout << "alpha_max_ != rhs.alpha_max_" << alpha_max_
-                 << " ! = " << rhs.alpha_max_ << std::endl;
-       return false;
-     }
-     if (medoid_ != rhs.medoid_) {
-       std::cout << "medoid_ != rhs.medoid_" << medoid_
-                 << " ! = " << rhs.medoid_ << std::endl;
-       return false;
-     }
+    if (dimension_ != rhs.dimension_) {
+      std::cout << "dimension_ != rhs.dimension_" << dimension_
+                << " ! = " << rhs.dimension_ << std::endl;
+      return false;
+    }
+    if (num_vectors_ != rhs.num_vectors_) {
+      std::cout << "num_vectors_ != rhs.num_vectors_" << num_vectors_
+                << " ! = " << rhs.num_vectors_ << std::endl;
+      return false;
+    }
+    if (L_build_ != rhs.L_build_) {
+      std::cout << "L_build_ != rhs.L_build_" << L_build_
+                << " ! = " << rhs.L_build_ << std::endl;
+      return false;
+    }
+    if (R_max_degree_ != rhs.R_max_degree_) {
+      std::cout << "R_max_degree_ != rhs.R_max_degree_" << R_max_degree_
+                << " ! = " << rhs.R_max_degree_ << std::endl;
+      return false;
+    }
+    if (B_backtrack_ != rhs.B_backtrack_) {
+      std::cout << "B_backtrack_ != rhs.B_backtrack_" << B_backtrack_
+                << " ! = " << rhs.B_backtrack_ << std::endl;
+      return false;
+    }
+    if (alpha_min_ != rhs.alpha_min_) {
+      std::cout << "alpha_min_ != rhs.alpha_min_" << alpha_min_
+                << " ! = " << rhs.alpha_min_ << std::endl;
+      return false;
+    }
+    if (alpha_max_ != rhs.alpha_max_) {
+      std::cout << "alpha_max_ != rhs.alpha_max_" << alpha_max_
+                << " ! = " << rhs.alpha_max_ << std::endl;
+      return false;
+    }
+    if (medoid_ != rhs.medoid_) {
+      std::cout << "medoid_ != rhs.medoid_" << medoid_ << " ! = " << rhs.medoid_
+                << std::endl;
+      return false;
+    }
 
-     return true;
+    return true;
   }
 
   /**

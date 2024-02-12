@@ -86,15 +86,14 @@ static std::filesystem::path nano_root{test_data_root / "nano"};
  * for each query is stored in the array "groundtruth".
  */
 
-
 /*
- * Definitions for IVF index for "sift" (10k subset on http://corpus-texmex.irisa.fr)
- * Here, because of some hard-coded typing in the Python implementation, groundtruth
- * is typed as uint64_t -- however, in the reference data from the website, the
- * grountruth type is uint32_t.
+ * Definitions for IVF index for "sift" (10k subset on
+ * http://corpus-texmex.irisa.fr) Here, because of some hard-coded typing in the
+ * Python implementation, groundtruth is typed as uint64_t -- however, in the
+ * reference data from the website, the grountruth type is uint32_t.
  *
- * @todo Create groundtruth with uint32_t as well as ids_type and indices_type as
- * uint32_t.  Verify they can be mixed and matched.
+ * @todo Create groundtruth with uint32_t as well as ids_type and indices_type
+ * as uint32_t.  Verify they can be mixed and matched.
  */
 using sift_feature_type = float;
 using sift_groundtruth_type = uint64_t;
@@ -313,12 +312,11 @@ static std::filesystem::path diskann_mem_index{
 static std::filesystem::path diskann_truth_index_data =
     diskann_root / "truth_index_siftsmall_learn_256pts_R4_L50_A1.2.data";
 
-
 /*
  * Definitions for the "nano" reference group for vamana index
  */
 using vamana_nano_feature_type = float;
-using vamana_nano_groundtruth_type = uint64_t;  
+using vamana_nano_groundtruth_type = uint64_t;
 using vamana_nano_ids_type = uint64_t;
 using vamana_nano_indices_type = uint64_t;
 constexpr size_t num_vamana_nano_vectors = 231;
