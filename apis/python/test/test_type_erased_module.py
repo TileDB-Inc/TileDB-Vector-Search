@@ -183,7 +183,6 @@ def test_construct_IndexVamana():
     assert a.dimension() == 0
 
 def test_inplace_build_query_IndexVamana():
-    opt_l = 100
     k_nn = 10
 
     a = vspy.IndexVamana(id_type="uint32", px_type="uint32", feature_type="float32")
@@ -196,14 +195,43 @@ def test_inplace_build_query_IndexVamana():
     assert groundtruth_set.feature_type_string() == "uint64"
 
     a.train(training_set)
-    s, t = a.query(query_set, k_nn, opt_l)
+    a.add(training_set)
 
+    s, t = a.query(query_set, k_nn)
     intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
-
     nt = np.double(t.num_vectors()) * np.double(k_nn)
-    recall = intersections / nt
+    assert intersections / nt == 1.0
+    
+    opt_l = 100
+    s, t = a.query(query_set, k_nn, opt_l)
+    intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
+    nt = np.double(t.num_vectors()) * np.double(k_nn)
+    assert intersections / nt == 1.0
 
-    assert recall == 1.0
+def test_inplace_build_with_external_ids_query_IndexVamana():
+    k_nn = 10
+    id_type = np.uint32
+
+    a = vspy.IndexVamana(id_type="uint32", px_type="uint32", feature_type="float32")
+
+    training_set = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
+    assert training_set.feature_type_string() == "float32"
+    query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
+    assert query_set.feature_type_string() == "float32"
+    groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
+    assert groundtruth_set.feature_type_string() == "uint64"
+
+    random_numbers = np.random.rand(training_set.num_vectors()) * np.iinfo(id_type).max
+    external_ids_numpy = np.array(random_numbers, dtype=id_type)
+    external_ids = vspy.FeatureVector(external_ids_numpy)
+
+    a.train_with_ids(training_set, external_ids)
+    a.add_with_ids(training_set, external_ids)
+
+    s, t = a.query(query_set, k_nn)
+    intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
+    nt = np.double(t.num_vectors()) * np.double(k_nn)
+    assert intersections / nt == 1.0
 
 def test_construct_IndexIVFFlat():
     a = vspy.IndexIVFFlat()

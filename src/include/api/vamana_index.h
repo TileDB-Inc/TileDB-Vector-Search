@@ -216,13 +216,17 @@ class IndexVamana {
     dimension_ = index_->dimension();
   }
 
+  void train(const FeatureVectorArray& training_set) {
+    train_with_ids(training_set, FeatureVector(0, id_datatype_));
+  }
+
   /**
    * @brief Train the index based on the given training set.
    * @param training_set
    * @param init
    */
   // @todo -- infer feature type from input
-  void train(const FeatureVectorArray& training_set) {
+  void train_with_ids(const FeatureVectorArray& training_set, const FeatureVector& external_ids) {
     if (feature_datatype_ == TILEDB_ANY) {
       feature_datatype_ = training_set.feature_type();
     } else if (feature_datatype_ != training_set.feature_type()) {
@@ -299,11 +303,15 @@ class IndexVamana {
     dimension_ = index_->dimension();
   }
 
+  void add(const FeatureVectorArray& data_set) {
+    add_with_ids(data_set, FeatureVector(0, id_datatype_));
+  }
+
   /**
    * @brief Add a set of vectors to a trained index.
    * @param data_set
    */
-  void add(const FeatureVectorArray& data_set) {
+  void add_with_ids(const FeatureVectorArray& data_set, const FeatureVector& external_ids) {
     if (feature_datatype_ != data_set.feature_type()) {
       throw std::runtime_error(
           "Feature datatype mismatch: " +

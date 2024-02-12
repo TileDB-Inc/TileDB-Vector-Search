@@ -64,6 +64,16 @@ class FeatureVector {
    * @param size
    * @param dtype
    */
+  FeatureVector(size_t N, tiledb_datatype_t dtype) {
+    feature_type_ = dtype;
+    vector_from_datatype(N);
+  }
+
+  /**
+   * @brief Construct from a dtype string and size.
+   * @param size
+   * @param dtype
+   */
   FeatureVector(size_t N, const std::string& dtype) {
     feature_type_ = string_to_datatype(dtype);
     vector_from_datatype(N);

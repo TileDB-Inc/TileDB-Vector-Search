@@ -34,6 +34,8 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/complex.h>
+#include <pybind11/chrono.h>
 
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
@@ -45,6 +47,8 @@
 #include "api/api_defs.h"
 
 namespace py = pybind11;
+
+// TODO(paris): Should we add PYBIND11_MAKE_OPAQUE here like we do in module.cc?
 
 namespace {
 template <typename... TArgs>
@@ -218,6 +222,7 @@ void init_type_erased_module(py::module_& m) {
         return v;
       }));
 
+  // TODO(paris): Add support for external_ids.
   py::class_<IndexFlatL2>(m, "IndexFlatL2")
       .def(py::init<const tiledb::Context&, const std::string&>())
       .def("add", &IndexFlatL2::add)
@@ -252,6 +257,10 @@ void init_type_erased_module(py::module_& m) {
             auto args = kwargs_to_map(kwargs);
             new (&instance) IndexVamana(args);
           })
+      // TODO(paris): Update train()/add() to take `const std::optional<FeatureVectorArray>& external_ids`. Failing with this currently:
+      // TypeError: train(): incompatible function arguments. The following argument types are supported:
+      //     1. (self: tiledb.vector_search._tiledbvspy.IndexVamana, vectors: tiledb.vector_search._tiledbvspy.FeatureVectorArray, external_ids: std::__1::optional<FeatureVectorArray> = None) -> None
+      // Invoked with: <tiledb.vector_search._tiledbvspy.IndexVamana object at 0x10efbc330>, <tiledb.vector_search._tiledbvspy.FeatureVectorArray object at 0x10efbc370>, <tiledb.vector_search._tiledbvspy.FeatureVectorArray object at 0x10efbc370>
       .def(
           "train",
           [](IndexVamana& index, const FeatureVectorArray& vectors) {
@@ -259,24 +268,37 @@ void init_type_erased_module(py::module_& m) {
           },
           py::arg("vectors"))
       .def(
+          "train_with_ids",
+          [](IndexVamana& index, const FeatureVectorArray& vectors, const FeatureVector& external_ids) {
+            index.train_with_ids(vectors, external_ids);
+          },
+          py::arg("vectors"),
+          py::arg("external_ids"))
+      .def(
           "add",
           [](IndexVamana& index, const FeatureVectorArray& vectors) {
             index.add(vectors);
           },
           py::arg("vectors"))
       .def(
+          "add_with_ids",
+          [](IndexVamana& index, const FeatureVectorArray& vectors, const FeatureVector& external_ids) {
+            index.add_with_ids(vectors, external_ids);
+          },
+          py::arg("vectors"),
+          py::arg("external_ids"))
+      .def(
           "query",
-          // TODO(paris): Update opt_l to be optional.
           [](IndexVamana& index,
              FeatureVectorArray& vectors,
              size_t top_k,
-             size_t opt_l) {
+             std::optional<size_t> opt_l) {
             auto r = index.query(vectors, top_k, opt_l);
             return make_python_pair(std::move(r));
           },
           py::arg("vectors"),
           py::arg("top_k"),
-          py::arg("opt_l"))
+          py::arg_v("opt_l", std::nullopt, "None"))
       .def("feature_type_string", &IndexVamana::feature_type_string)
       .def("id_type_string", &IndexVamana::id_type_string)
       .def("px_type_string", &IndexVamana::px_type_string)
