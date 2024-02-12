@@ -4,9 +4,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "flat_query.h"
-#include "ivf_index.h"
-#include "ivf_query.h"
 #include "index/ivf_flat_index.h"
 #include "linalg.h"
 
@@ -51,9 +48,12 @@ static void declare_kmeans(py::module& m, const std::string& suffix) {
       ("kmeans_predict_" + suffix).c_str(),
       [](const ColMajorMatrix<T>& centroids,
          const ColMajorMatrix<T>& sample_vectors) {
-        return kmeans_index<T>::predict(centroids, sample_vectors);
+        return ivf_flat_index<T>::predict(centroids, sample_vectors);
       });
 }
 
 }  // anonymous namespace
 
+void init_kmeans(py::module_& m) {
+  declare_kmeans<float>(m, "f32");
+}

@@ -1,9 +1,8 @@
 import time
 
 import numpy as np
-from common import *
-from array_paths import *
 import pytest
+from array_paths import *
 from common import *
 
 from tiledb.cloud.dag import Mode
@@ -29,7 +28,6 @@ def query_and_check_equals(index, queries, expected_result_d, expected_result_i)
         expected_result_d=expected_result_d,
         expected_result_i=expected_result_i,
     )
-
 
 
 def test_flat_ingestion_u8(tmp_path):
@@ -468,7 +466,6 @@ def test_ivf_flat_ingestion_with_batch_updates(tmp_path):
     assert accuracy(result, gt_i, updated_ids=updated_ids) > 0.99
 
 
-
 def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
@@ -522,16 +519,16 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 101))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert (
-            0.05
-            <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
-            <= 0.15
+        0.05
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.15
     )
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, None))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert (
-            0.05
-            <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
-            <= 0.15
+        0.05
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.15
     )
 
     # Timetravel with partial read from updates table
@@ -548,9 +545,9 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 51))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert (
-            0.02
-            <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
-            <= 0.07
+        0.02
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.07
     )
 
     # Timetravel at previous ingestion timestamp
@@ -576,16 +573,16 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 101))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert (
-            0.05
-            <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
-            <= 0.15
+        0.05
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.15
     )
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, None))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert (
-            0.05
-            <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
-            <= 0.15
+        0.05
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.15
     )
 
     # Timetravel with partial read from updates table
@@ -602,9 +599,9 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 51))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert (
-            0.02
-            <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
-            <= 0.07
+        0.02
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.07
     )
 
     # Timetravel at previous ingestion timestamp
@@ -1347,4 +1344,9 @@ def test_ivf_flat_ingestion_with_training_source_uri_numpy(tmp_path):
     index = index.consolidate_updates(retrain_index=True, training_sample_size=3)
 
     queries = np.array([update_vectors[0]], dtype=np.float32)
-    query_and_check_equals(index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1003]])
+    query_and_check_equals(
+        index=index,
+        queries=queries,
+        expected_result_d=[[0]],
+        expected_result_i=[[1003]],
+    )

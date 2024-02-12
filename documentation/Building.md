@@ -3,13 +3,16 @@
 TileDB Vector Search can be built from source for either C++ or Python.
 
 ## C++
+
 To build for C++, run:
+
 ```bash
 cmake -S ./src -B ./src/build -DCMAKE_BUILD_TYPE=Debug
 cmake --build ./src/build -j3
 ```
 
 Then you can run the tests:
+
 ```
 cmake --build ./src/build --target check
 ```
@@ -19,6 +22,7 @@ Alternatively, you can setup CLion to build and run tests. Just right-click on `
 ## Python
 
 To build for Python, run:
+
 ```bash
 pip install .
 ```
@@ -87,6 +91,7 @@ docker run --rm tiledb/tiledb-vector-search
 There are two ways you can format your code.
 
 ### 1. Using `clang-format`
+
 If you just want to format C++ code and don't want to `pip install` anything, you can install [clang-format](https://clang.llvm.org/docs/ClangFormat.html) version 17 and use that directly. Install it yourself, or by running this installation script:
 
 ```bash
@@ -103,10 +108,10 @@ Then run it:
 ```
 
 ### 2. Using `pre-commit`
+
 Alternatively, you can format all code in the repo (i.e. C++, Python, YAML, and Markdown files) with [pre-commit](https://pre-commit.com/), though it requires installing with `pip`. Install it with:
 
 ```bash
-cd apis/python
 pip install ".[formatting]"
 ```
 

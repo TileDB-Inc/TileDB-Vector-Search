@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
+
       # Based on https://github.com/TileDB-Inc/conda-forge-nightly-controller/blob/51519a0f8340b32cf737fcb59b76c6a91c42dc47/.github/workflows/activity.yml#L19C10-L19C10
       - name: Setup git
         run: |

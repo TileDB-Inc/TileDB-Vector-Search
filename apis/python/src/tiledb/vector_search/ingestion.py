@@ -2025,8 +2025,16 @@ def ingest(
                     for random_sample_node in random_sample_nodes:
                         centroids_node.depends_on(random_sample_node)
                 else:
-                    uri = training_source_uri if training_source_uri is not None else source_uri
-                    uri_type = training_source_type if training_source_uri is not None else source_type
+                    uri = (
+                        training_source_uri
+                        if training_source_uri is not None
+                        else source_uri
+                    )
+                    uri_type = (
+                        training_source_type
+                        if training_source_uri is not None
+                        else source_type
+                    )
                     internal_centroids_node = submit(
                         init_centroids,
                         source_uri=uri,

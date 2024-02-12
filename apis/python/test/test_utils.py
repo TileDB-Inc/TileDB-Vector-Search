@@ -2,8 +2,12 @@ import os
 
 import numpy as np
 from array_paths import *
-from tiledb.vector_search.utils import load_fvecs, load_ivecs, write_fvecs, write_ivecs
-from array_paths import *
+
+from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.utils import load_ivecs
+from tiledb.vector_search.utils import write_fvecs
+from tiledb.vector_search.utils import write_ivecs
+
 
 def test_load_and_write_vecs(tmp_path):
     fvecs_uri = siftsmall_inputs_file
