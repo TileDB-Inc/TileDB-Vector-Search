@@ -82,7 +82,7 @@ class DirectoryReader:
                 if self.suffixes and child_path.suffix not in self.suffixes:
                     continue
                 self.paths.append(child)
-            if vfs.is_dir(child):
+            else:
                 self.list_paths(vfs, child)
     
     def get_partitions(
@@ -155,46 +155,77 @@ class DirectoryTextReader(DirectoryReader):
     def read_objects(
         self, partition: DirectoryPartition
     ) -> Tuple[OrderedDict, OrderedDict]:
-        from langchain.document_loaders.s3_file import S3FileLoader
-        from langchain_community.document_loaders import UnstructuredFileLoader
+        from urllib.parse import urlparse
+        import os
+        import tempfile
+        import traceback
 
-        
         max_size = DirectoryTextReader.MAX_OBJECTS_PER_FILE * len(partition.paths)
         texts = np.empty(max_size, dtype="O")
         file_paths = np.empty(max_size, dtype="O")
         pages = np.zeros(max_size, dtype=np.int32)
         external_ids = np.zeros(max_size, dtype=np.uint64)
         write_id = 0
-        
-        for path in partition.paths:
-            from urllib.parse import urlparse
-            parsed_path = urlparse(path, allow_fragments=False)
-            if parsed_path.scheme == "s3":
-                loader = S3FileLoader(
-                    bucket=parsed_path.netloc,
-                    key=parsed_path.path.lstrip('/'),
-                    aws_access_key_id=self.config["vfs.s3.aws_access_key_id"],
-                    aws_secret_access_key=self.config["vfs.s3.aws_secret_access_key"],
-                )
-            elif parsed_path.scheme == "file":
-                loader = UnstructuredFileLoader(
-                            file_path=parsed_path.path,
+        vfs = tiledb.VFS(config=self.config)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for path in partition.paths:
+                try:
+                    local_temp_path = ""
+                    parsed_path = urlparse(path, allow_fragments=False)
+                    if parsed_path.scheme != "file":
+                        # Copy remote file to a local temp file
+                        key = parsed_path.path.lstrip('/')
+                        local_temp_path = f"{temp_dir}/{key}"
+                        os.makedirs(os.path.dirname(local_temp_path), exist_ok=True)
+                        with vfs.open(path, 'rb') as src, open(local_temp_path, 'wb') as dst:
+                            dst.write(src.read())
+                        parsed_path = urlparse(local_temp_path, allow_fragments=False)
+                    if parsed_path.path.endswith(".jpg") or parsed_path.path.endswith(".png"):
+                        from langchain_community.document_loaders import UnstructuredFileLoader
+                        loader = UnstructuredFileLoader(
+                            file_path=parsed_path.path
                         )
-            
-            documents = loader.load()
-            import importlib
-            text_splitters_module = importlib.import_module("langchain.text_splitter")
-            splitter_class_ = getattr(text_splitters_module, self.text_splitter)
-            splitter = splitter_class_(**self.text_splitter_kwargs)
-            documents = splitter.split_documents(documents)
-            size = len(documents)
-            for d in documents:
-                texts[write_id] = d.page_content
-                file_paths[write_id] = str(path)
-                if "page" in d.metadata:
-                    pages[write_id] = int(d.metadata["page"])
-                external_ids[write_id] = partition.object_id_start * DirectoryTextReader.MAX_OBJECTS_PER_FILE + write_id
-                write_id += 1
+                    else:
+                        from langchain_community.document_loaders.generic import GenericLoader
+                        from langchain_community.document_loaders.parsers.generic import MimeTypeBasedParser
+                        from langchain_community.document_loaders.parsers.msword import MsWordParser
+                        from langchain_community.document_loaders.parsers.pdf import PyMuPDFParser
+                        from langchain_community.document_loaders.parsers.txt import TextParser
+                        from langchain_community.document_loaders.parsers.html import BS4HTMLParser
+
+                        loader = GenericLoader.from_filesystem(
+                            path=parsed_path.path,
+                            parser=MimeTypeBasedParser(
+                                handlers={
+                                    "application/pdf": PyMuPDFParser(),
+                                    "text/plain": TextParser(),
+                                    "text/html": BS4HTMLParser(),
+                                    "application/msword": MsWordParser(),
+                                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (
+                                        MsWordParser()
+                                    ),
+                                },
+                                fallback_parser=None,
+                            )
+                        )
+                    documents = loader.load()
+                    import importlib
+                    text_splitters_module = importlib.import_module("langchain.text_splitter")
+                    splitter_class_ = getattr(text_splitters_module, self.text_splitter)
+                    splitter = splitter_class_(**self.text_splitter_kwargs)
+                    documents = splitter.split_documents(documents)
+                    size = len(documents)
+                    for d in documents:
+                        file_paths[write_id] = str(path)
+                        if "page" in d.metadata:
+                            pages[write_id] = int(d.metadata["page"])
+                        texts[write_id] = f"file_name: {os.path.basename(parsed_path.path)}, page: {pages[write_id]}\n text: {d.page_content}"
+                        external_ids[write_id] = partition.object_id_start * DirectoryTextReader.MAX_OBJECTS_PER_FILE + write_id
+                        write_id += 1
+                    if local_temp_path != "":
+                        os.remove(local_temp_path)
+                except Exception as e:
+                    traceback.print_exc()
         return (
                 {
                     "text": texts[0:write_id], 
