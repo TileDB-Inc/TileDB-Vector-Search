@@ -44,7 +44,7 @@ jobs:
           echo $release_tag
 
           # Install dependencies.
-          cd apis/python && pip install . && cd ../..
+          pip install .
 
           # Generate data.
           python backwards-compatibility-data/generate_data.py $release_tag
