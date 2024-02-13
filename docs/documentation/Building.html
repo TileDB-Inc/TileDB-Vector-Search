@@ -261,7 +261,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="sourceCode" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> apis/python</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="at">-r</span> test/ipynb/requirements.txt</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pytest</span> <span class="at">--nbmake</span> test/ipynb</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Credentials: * Some tests run on TileDB Cloud using your current environment variable <code>TILEDB_REST_TOKEN</code> - you will need a valid API token for the tests to pass. See <a href="https://docs.tiledb.com/cloud/how-to/account/create-api-tokens">Create API Tokens</a> for for instructions on getting one. * For continuous integration, the token is configured for the <code>unittest</code> user and all tests should pass.</p>
+<p>Credentials:</p>
+<ul>
+<li>Some tests run on TileDB Cloud using your current environment variable <code>TILEDB_REST_TOKEN</code> - you will need a valid API token for the tests to pass. See <a href="https://docs.tiledb.com/cloud/how-to/account/create-api-tokens">Create API Tokens</a> for for instructions on getting one.</li>
+<li>For continuous integration, the token is configured for the <code>unittest</code> user and all tests should pass.</li>
+</ul>
 </section>
 </section>
 <section id="dependencies" class="level1">
@@ -297,8 +301,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="using-pre-commit" class="level3">
 <h3 class="anchored" data-anchor-id="using-pre-commit">2. Using <code>pre-commit</code></h3>
 <p>Alternatively, you can format all code in the repo (i.e.&nbsp;C++, Python, YAML, and Markdown files) with <a href="https://pre-commit.com/">pre-commit</a>, though it requires installing with <code>pip</code>. Install it with:</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> apis/python</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="st">".[formatting]"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="st">".[formatting]"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Then run it:</p>
 <div class="sourceCode" id="cb14"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Run on all files and make formatting changes:</span></span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pre-commit</span> run <span class="at">--all-files</span></span>
