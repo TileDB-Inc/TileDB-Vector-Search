@@ -54,7 +54,6 @@ endmacro (kmeans_add_test)
 # kmeans_add_test(time_open)
 
 kmeans_add_test(unit_vamana_index)
-set_tests_properties(unit_vamana_index_test PROPERTIES WILL_FAIL TRUE)
 
 kmeans_add_test(unit_vamana_group)
 

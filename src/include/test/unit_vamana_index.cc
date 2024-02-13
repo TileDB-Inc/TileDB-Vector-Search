@@ -144,8 +144,15 @@ TEST_CASE("vamana: diskann", "[vamana]") {
 
 TEST_CASE("vamana: small256 build index", "[vamana]") {
   const bool debug = false;
+  const bool noisy = false;
+
+  std::vector<size_t> vectors_of_interest{
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 72};
 
   // DiskANN rust code has this test:
+  // DiskANN/rust/diskann/src/algorithm/search/search.rs,
+  //   search_for_point_initial_call():
+  //   query = 0, medoid = 72?
   // TEST_DATA_FILE = tests/data/siftsmall_learn_256pts.fbin
   // assert_eq!(visited_nodes.len(), 1);
   // assert_eq!(scratch.best_candidates.size(), 1);
@@ -154,52 +161,37 @@ TEST_CASE("vamana: small256 build index", "[vamana]") {
   // assert!(scratch.best_candidates[0].visited);
   // Load 256 points
   // search_list_size == 50, max degree == 4, alpha == 1.2
-  // medoid == 72, query == 0 ??
-
   // num_nodes, Lbuild, Rmax_degree
 
-  set_noisy(false);
+  // The function search_for_point_initial_call() just seems to compute
+  // the distance from the medoid to the query point.  We don't really
+  // have that functionality for anything.  So here we just test that
+  // the distance between 0 and 72 is 125678.0
 
-  auto vindex = vamana_index<float, uint32_t>(256, 50, 4);
-  auto x = read_diskann_data(diskann_test_data_file);
-  auto graph = read_diskann_mem_index_with_scores(
-      diskann_mem_index, diskann_test_data_file);
+  auto x =
+      read_diskann_data(diskann_test_data_file);  // siftsmall_learn_256pts.fbin
+  int med = 72;
+  int query = 0;
+  CHECK(l2_distance{}(x[med], x[query]) == 125678);
 
-  vindex.train(x);
-
-  set_noisy(false);
-  {
-    int med = 72;
-    int query = 72;
-    auto dd = l2_distance{}(x[med], x[query]);
-    auto&& [tk_scores, tk, V] = greedy_search(graph, x, med, x[query], 2, 2);
-    CHECK(tk[0] == 72);
-    CHECK(tk_scores[0] == 125678.0);
-    CHECK(tk_scores[1] == 125678.0);
-    CHECK(size(V) == 1);
-  }
-  {
-    int med = 72;
-    int query = 0;
-    auto&& [tk_scores, tk, V] = greedy_search(graph, x, med, x[query], 2, 2);
-    CHECK(tk[0] == 0);
-    CHECK(tk[1] == 72);
-    CHECK(tk_scores[0] == 125678.0);
-    CHECK(tk_scores[1] == 125678.0);
-    CHECK(size(V) == 1);
-  }
+  // We might want to also do a search and verify that the path to 0 from 72
+  // is less than 125678
 }
 
 /*
  * The data in this test were cribbed from DiskANN's tests.
  * See DiskANN/rust//diskann/src/algorithm/search/search.rs
+ * function search_for_point_works_with_edges()
  */
 TEST_CASE("vamana: small greedy search", "[vamana]") {
-  const bool debug = true;
+  const bool debug = false;
 
   uint32_t npoints{0};
   uint32_t ndim{0};
+  std::vector<size_t> vectors_of_interest{
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 72};
 
+  // See copy_aligned_data_from_file() in DiskANN/rust/diskann/src/utils.rs
   // The name of the file is "tests/data/siftsmall_learn_256pts.fbin";
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
@@ -271,6 +263,16 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   for (size_t i = 0; i < size(init_nodes); ++i) {
     auto j = init_nodes[i];
     CHECK(size(graph.out_edges(j)) == size(init_nbrs[i]));
+  }
+
+  if (debug) {
+    for (size_t i : vectors_of_interest) {
+      std::cout << i << ": ";
+      for (auto&& j : graph.out_edges(i)) {
+        std::cout << std::get<1>(j) << " ";
+      }
+      std::cout << std::endl;
+    }
   }
 
   auto yack = sum_of_squares_distance{}(x[72], x[14]);
@@ -376,7 +378,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
 }
 
 TEST_CASE("vamana: greedy grid search", "[vamana]") {
-  const bool debug = true;
+  const bool debug = false;
 
   // using feature_type = uint8_t;
   using id_type = uint32_t;
@@ -873,7 +875,7 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
   auto valid6 = validate_graph(g, db);
   REQUIRE(valid6.size() == 0);
 
-  auto qv_timer = log_timer{"qv", true};
+  auto qv_timer = log_timer{"qv", debug};
   auto&& [top_scores, qv_top_k] =
       detail::flat::qv_query_heap(db, query_mat, k_nn, 1);
   std::sort(begin(qv_top_k[0]), end(qv_top_k[0]));
@@ -905,7 +907,7 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
     }
   }
 
-  auto greedy_timer = log_timer{"greedy", true};
+  auto greedy_timer = log_timer{"greedy", debug};
   auto&& [top_k_scores, top_k, V] = greedy_search(g, db, start, query, k_nn, L);
   greedy_timer.stop();
 

@@ -102,6 +102,8 @@ auto read_diskann_mem_index(const std::string& index) {
   return g;
 }
 
+// @todo Also a read_diskann_disk_index?
+// Note that that is much more complicated
 auto read_diskann_mem_index_with_scores(
     const std::string& index, const std::string& data) {
   auto x = read_diskann_data(data);

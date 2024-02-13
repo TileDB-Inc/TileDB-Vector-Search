@@ -238,3 +238,28 @@ Product quantization is an approach to compressing the vectors in a vector datab
 The basic idea is to divide the vectors into `m` subvectors and to quantize each subvector
 into `k` centroids.  The centroids are stored in a codebook.  The original vectors are
 then replaced by the indices of the centroids in the codebook.  The codebook is stored
+
+
+## Vamana
+
+Data: Database $P$ with $n$ points where $i$-th point has coords $x_i$,
+parameters $\alpha, L, R$.
+Result: Directed graph $G$ over $P$ with out-degree $\leq R$.
+
+begin
+  Initialize $G$ to an empty graph
+  Let $s$ denote the medoid of $P$
+
+  foreach $i \in[n]$ do
+    Let $S_{F_{x_{\sigma(i)}}}=\left\{\operatorname{st}(f): f \in F_{x_{\sigma(i)}}\right\}$
+    Let $\left[\emptyset ; \mathcal{V}_{F_{x_{\sigma(i)}}}\right] \leftarrow$ FilteredGreedySearch $\left(S_{F_{x_
+      {\sigma(i)}}}\right.$,
+      $\left.x_{\sigma(i)}, 0, L, F_{x_{\sigma(i)}}\right)$
+    n$\mathcal{V} \leftarrow \mathcal{V} \cup \mathcal{V}_{F_{x_{\sigma(i)}}}$
+    Run FilteredRobustPrune $\left(\sigma(i), \mathcal{V}_{F_{x_{\sigma(i)}}}, \alpha, R\right)$
+      to update out-neighbors of $\sigma(i)$.
+    foreach $j \in N_{\text {out }}(\sigma(i))$ do
+      Update $N_{\text {out }}(j) \leftarrow N_{\text {out }}(j) \cup\{\sigma(i)\}$
+      if $\left|N_{\text {out }}(j)\right|>R$ then
+        Run FilteredRobustPrune $\left(j, N_{\text {out }}(j), \alpha, R\right)$
+          to update out-neighbors of $j$.
