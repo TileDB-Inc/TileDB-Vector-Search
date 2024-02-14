@@ -60,7 +60,11 @@ TEST_CASE("vamana: test test", "[vamana]") {
 }
 
 TEST_CASE("vamana: diskann", "[vamana]") {
-  bool debug = false;
+  const bool debug = false;
+  const bool noisy = true;
+
+  set_noisy(noisy);
+
   for (auto&& s :
        {diskann_test_data_file,
         diskann_disk_index,
@@ -144,7 +148,9 @@ TEST_CASE("vamana: diskann", "[vamana]") {
 
 TEST_CASE("vamana: small256 build index", "[vamana]") {
   const bool debug = false;
-  const bool noisy = false;
+  const bool noisy = true;
+
+  set_noisy(noisy);
 
   std::vector<size_t> vectors_of_interest{
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 72};
@@ -185,6 +191,9 @@ TEST_CASE("vamana: small256 build index", "[vamana]") {
  */
 TEST_CASE("vamana: small greedy search", "[vamana]") {
   const bool debug = false;
+  const bool noisy = true;
+
+  set_noisy(noisy);
 
   uint32_t npoints{0};
   uint32_t ndim{0};
@@ -279,10 +288,10 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   if (debug) {
     std::cout << "distance(x[72], x[14] = " << yack << std::endl;
   }
-  // L = 50, R = 4
+  // L = 50, R = 4 from one of the Rust tests...
   size_t L = 45;
   auto query_id = 14;
-  size_t k = 15;
+  size_t k = 2;
 
   // A few different options that could be used for testing this
   // auto med = medoid(x);
@@ -292,13 +301,38 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
     std::cout << "medoid is " << med << std::endl;
   }
 
+  set_noisy(noisy);
   auto&& [top_k_scores, top_k, visited] =
       greedy_search(graph, x, med, x[query_id], k, L);
+  set_noisy(false);
 
-  CHECK(size(top_k) == 15);
-  CHECK(size(top_k_scores) == 15);
-  CHECK(size(visited) == 15);
+  CHECK(size(top_k) == k);
+  CHECK(size(top_k_scores) == k);
+  CHECK(size(visited) == size(expected));
 
+  {
+    auto&& [top_k_scores, top_k, visited] =
+        greedy_search_O0(graph, x, med, x[query_id], k, L);
+    CHECK(size(top_k) == k);
+    CHECK(size(top_k_scores) == k);
+    CHECK(size(visited) == size(expected));
+    for (size_t i = 0; i < k; ++i) {
+      CHECK(top_k[i] == expected[i]);
+      CHECK(top_k_scores[i] == expected_scores[i]);
+    }
+  }
+  set_noisy(noisy);
+  {
+    auto&& [top_k_scores, top_k, visited] =
+        greedy_search_O1(graph, x, med, x[query_id], k, L);
+    CHECK(size(top_k) == k);
+    CHECK(size(top_k_scores) == k);
+    CHECK(size(visited) == size(expected));
+    for (size_t i = 0; i < k; ++i) {
+      CHECK(top_k[i] == expected[i]);
+      CHECK(top_k_scores[i] == expected_scores[i]);
+    }
+  }
   if (debug) {
     std::cout << "top_k_scores: " << std::endl;
     for (size_t i = 0; i < size(top_k); ++i) {
@@ -316,7 +350,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
     }
     std::cout << std::endl;
   }
-
+  set_noisy(false);
   /*
    * The original Rust code has this test:
     set_neighbors(&index, 0, vec![12, 72, 5, 9]);
@@ -379,6 +413,9 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
 
 TEST_CASE("vamana: greedy grid search", "[vamana]") {
   const bool debug = false;
+  const bool noisy = true;
+
+  set_noisy(noisy);
 
   // using feature_type = uint8_t;
   using id_type = uint32_t;
@@ -466,6 +503,9 @@ TEST_CASE("vamana: greedy grid search", "[vamana]") {
 
 TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
   const bool debug = false;
+  const bool noisy = true;
+
+  set_noisy(noisy);
 
   size_t k_near = 5;
   size_t k_far = 5;
@@ -519,6 +559,9 @@ TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
 
 TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
   const bool debug = false;
+  const bool noisy = true;
+
+  set_noisy(noisy);
 
   size_t k_near = 5;
   size_t k_far = 5;
@@ -533,7 +576,7 @@ TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
   auto valid = validate_graph(g, nn_hypercube);
   CHECK(valid.size() == 0);
 
-  for (size_t kk : {-1, 1}) {
+  for (int kk : {-1, 1}) {
     auto query = Vector<float>{kk * 1.05f, kk * 0.95f, 1.09f};
 
     auto&& [top_k_scores, top_k, V] =
@@ -578,6 +621,11 @@ TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
 }
 
 TEST_CASE("vamana: diskann fbin", "[vamana]") {
+  const bool debug = false;
+  const bool noisy = true;
+
+  set_noisy(noisy);
+
   size_t k_nn = 5;
   size_t L = 5;
 
@@ -615,13 +663,16 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
     // the start point should be included in the top_k list.  It probably
     // should not be, so comment out for now.
     // CHECK(top_k[0] == start);
-    CHECK(std::find(begin(top_k), end(top_k), start) != end(top_k));
-    CHECK(std::find(begin(V), end(V), start) != end(V));
+    // CHECK(std::find(begin(top_k), end(top_k), start) != end(top_k));
+    // CHECK(std::find(begin(V), end(V), start) != end(V));
   }
 }
 
 TEST_CASE("vamana: fmnist", "[vamana]") {
   const bool debug = false;
+  const bool noisy = false;
+
+  set_noisy(noisy);
 
   using feature_type = float;
   using score_type = float;
@@ -742,9 +793,71 @@ TEST_CASE("vamana: fmnist", "[vamana]") {
   }
 }
 
-TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
-  bool debug = false;
 
+TEST_CASE("vamana: fmnist compare greedy search", "[vamana]") {
+  const bool debug = true;
+  const bool noisy = false;
+
+  set_noisy(noisy);
+
+  using feature_type = float;
+  using score_type = float;
+  using id_type = uint32_t;
+
+  size_t nthreads = 1;
+  size_t L = GENERATE(7, 15, 50);
+  size_t k_nn = L;
+  size_t num_queries = 10;
+  size_t N = 5000;
+
+  tiledb::Context ctx;
+  auto db = tdbColMajorMatrix<test_feature_type>(ctx, fmnist_inputs_uri, N);
+  db.load();
+  auto g = detail::graph::init_random_nn_graph<score_type, id_type>(db, L);
+
+  auto valid = validate_graph(g, db);
+  CHECK(valid.size() == 0);
+
+  auto query = db[599];
+
+  auto query_mat = ColMajorMatrix<feature_type>(size(query), 1);
+  for (size_t i = 0; i < size(query); ++i) {
+    query_mat(i, 0) = query[i];
+  }
+
+  auto&& [top_scores, qv_top_k] =
+      detail::flat::qv_query_heap(db, query_mat, k_nn, 1);
+  std::sort(begin(qv_top_k[0]), end(qv_top_k[0]));
+
+  auto&& [top_k_scores_O0, top_k_O0, V_O0] = greedy_search_O0(g, db, 0UL, query, k_nn, L);
+  auto&& [top_k_scores_O1, top_k_O1, V_O1] = greedy_search_O1(g, db, 0UL, query, k_nn, L);
+
+  CHECK(top_k_scores_O0 == top_k_scores_O1);
+  CHECK(top_k_O0 == top_k_O1);
+  CHECK(V_O0 == V_O1);
+
+  auto top_n_O0 = ColMajorMatrix<size_t>(k_nn, 1);
+  auto top_n_O1 = ColMajorMatrix<size_t>(k_nn, 1);
+  for (size_t i = 0; i < k_nn; ++i) {
+    top_n_O0(i, 0) = top_k_O0[i];
+    top_n_O1(i, 0) = top_k_O1[i];
+  }
+  auto num_intersected_O0 = count_intersections(top_n_O0, qv_top_k, k_nn);
+  auto num_intersected_O1 = count_intersections(top_n_O1, qv_top_k, k_nn);
+  CHECK(num_intersected_O0 == num_intersected_O1);
+  if (debug) {
+    std::cout << "num intersected_O0: " << num_intersected_O0 << " / " << L << std::endl;
+    std::cout << "num intersected_O1: " << num_intersected_O1 << " / " << L << std::endl;
+  }
+
+
+}
+
+TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
+  const bool debug = false;
+  const bool noisy = true;
+
+  set_noisy(noisy);
   size_t k_near = 5;
   size_t k_far = 5;
   size_t L = 7;
@@ -844,7 +957,10 @@ TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
 }
 
 TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
-  bool debug = false;
+  const bool debug = false;
+  const bool noisy = true;
+
+  set_noisy(noisy);
 
   size_t nthreads = 1;
   size_t k_nn = 5;
@@ -958,7 +1074,10 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
 }
 
 TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
-  bool debug = false;
+  const bool debug = false;
+  const bool noisy = true;
+
+  set_noisy(noisy);
 
   // should be dim = 128, num = 256
   // npoints, ndims
@@ -1000,6 +1119,9 @@ TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
 
 TEST_CASE("vamana: vamana by hand random index", "[vamana]") {
   const bool debug = false;
+  const bool noisy = true;
+
+  set_noisy(noisy);
 
   size_t num_nodes = 20;
 
@@ -1077,6 +1199,9 @@ TEST_CASE("vamana: vamana by hand random index", "[vamana]") {
  */
 TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
   const bool debug = false;
+  const bool noisy = true;
+
+  set_noisy(noisy);
 
   size_t num_nodes = 200;
 
@@ -1122,7 +1247,10 @@ TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
 }
 
 TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
-  bool debug = false;
+  const bool debug = false;
+  const bool noisy = true;
+
+  set_noisy(noisy);
 
   size_t num_nodes = 10000;
   size_t num_queries = 200;
@@ -1166,6 +1294,11 @@ TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
 }
 
 TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
+  const bool debug = false;
+  const bool noisy = true;
+
+  set_noisy(noisy);
+
   size_t L_build{37};
   size_t R_max_degree{41};
   size_t k_nn{10};

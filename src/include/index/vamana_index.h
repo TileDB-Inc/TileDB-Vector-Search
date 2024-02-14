@@ -89,7 +89,96 @@ static bool noisy = false;
   noisy = b;
 }
 
-/**
+template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
+auto greedy_search_O0(
+    auto&& graph,
+    auto&& db,
+    typename std::decay_t<decltype(graph)>::id_type source,
+    auto&& query,
+    size_t k_nn,
+    size_t Lmax,
+    Distance&& distance = Distance{}) {
+
+  std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> L;
+  std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> V;
+  std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> L_minus_V;
+
+  L.insert(source);
+  L_minus_V.insert(source);
+
+  size_t counter{0};
+
+  while (!empty(L_minus_V)) {
+
+    if (noisy) {
+      std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
+    }
+
+    auto p_star = std::min_element(begin(L_minus_V), end(L_minus_V), [&](auto&& a, auto&& b) {
+      return distance(db[a], query) < distance(db[b], query);
+    });
+    for (auto&& p : graph.out_edges(*p_star)) {
+      L.insert(std::get<1>(p));
+      L_minus_V.insert(std::get<1>(p));
+    }
+    V.insert(*p_star);
+
+    if (size(L) > Lmax) {
+      // trim L to Lmax closest points to query
+      std::vector<std::pair<typename std::decay_t<decltype(graph)>::id_type, float>> L_with_scores;
+      for (auto&& p : L) {
+        L_with_scores.emplace_back(p, distance(db[p], query));
+      }
+      std::sort(begin(L_with_scores), end(L_with_scores), [](auto&& a, auto&& b) {
+        return a.second < b.second;
+      });
+      L.clear();
+      for (size_t i = 0; i < Lmax && i < size(L_with_scores); ++i) {
+        L.insert(L_with_scores[i].first);
+      }
+    }
+    L_minus_V.clear();
+    for (auto&& p : L) {
+      L_minus_V.insert(p);
+    }
+    for (auto&& p : V) {
+      L_minus_V.erase(p);
+    }
+
+    if (noisy) {
+      std::cout << "L: ";
+      for (auto&& p : L) {
+        std::cout << "(" << p << " " << distance(db[p], query) << ") ";
+      }
+      std::cout << std::endl;
+      std::cout << "V: ";
+      for (auto&& p : V) {
+        std::cout << "(" << p << " " << distance(db[p], query) << ") ";
+      }
+      std::cout << std::endl;
+      std::cout << "L\\V: ";
+      for (auto&& p : L_minus_V) {
+        std::cout << "(" << p << " " << distance(db[p], query) << ") ";
+      }
+      std::cout << std::endl;
+    }
+  }
+  auto min_scores = fixed_min_pair_heap<float, typename std::decay_t<decltype(graph)>::id_type>(k_nn);
+  for (auto&& p : L) {
+    min_scores.insert(distance(db[p], query), p);
+  }
+  auto top_k = std::vector<typename std::decay_t<decltype(graph)>::id_type>(k_nn);
+  auto top_k_scores = std::vector<float>(k_nn);
+
+  get_top_k_with_scores_from_heap(min_scores, top_k, top_k_scores);
+  return std::make_tuple(
+      std::move(top_k_scores), std::move(top_k), std::move(V));
+
+  return std::make_tuple(std::move(top_k_scores), std::move(top_k), std::move(V));
+}
+
+
+    /**
  * @brief Truncated best-first search
  * @tparam Distance The distance function used to compare vectors
  * @param graph Graph to be searched
@@ -119,7 +208,7 @@ static bool noisy = false;
  * @todo -- would it be more efficient somehow to process multiple queries?
  */
 template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
-auto greedy_search(
+auto greedy_search_O1(
     auto&& graph,
     auto&& db,
     typename std::decay_t<decltype(graph)>::id_type source,
@@ -252,6 +341,26 @@ auto greedy_search(
   return std::make_tuple(
       std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
 }
+
+template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
+auto greedy_search(
+    auto&& graph,
+    auto&& db,
+    typename std::decay_t<decltype(graph)>::id_type source,
+    auto&& query,
+    size_t k_nn,
+    size_t L,
+    Distance&& distance = Distance{}) {
+  return greedy_search_O1(
+      std::forward<decltype(graph)>(graph),
+      std::forward<decltype(db)>(db),
+      source,
+      std::forward<decltype(query)>(query),
+      k_nn,
+      L,
+      std::forward<Distance>(distance));
+}
+
 
 /**
  * @brief RobustPrune(p, vee, alpha, R)
