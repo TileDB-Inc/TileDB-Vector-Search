@@ -60,6 +60,7 @@ static std::filesystem::path test_data_root{
     cmake_source_dir.parent_path() / "external" / "test_data"};
 static std::filesystem::path test_array_root{test_data_root / "arrays"};
 static std::filesystem::path test_file_root{test_data_root / "files"};
+static std::filesystem::path nano_root{test_data_root / "nano"};
 
 /**
  * @brief  Array URIs for arrays used for unit testing of IVF indexes.
@@ -85,6 +86,15 @@ static std::filesystem::path test_file_root{test_data_root / "files"};
  * for each query is stored in the array "groundtruth".
  */
 
+/*
+ * Definitions for IVF index for "sift" (10k subset on
+ * http://corpus-texmex.irisa.fr) Here, because of some hard-coded typing in the
+ * Python implementation, groundtruth is typed as uint64_t -- however, in the
+ * reference data from the website, the grountruth type is uint32_t.
+ *
+ * @todo Create groundtruth with uint32_t as well as ids_type and indices_type
+ * as uint32_t.  Verify they can be mixed and matched.
+ */
 using sift_feature_type = float;
 using sift_groundtruth_type = uint64_t;
 using sift_centroids_type = float;
@@ -109,7 +119,7 @@ static std::filesystem::path sift_query_uri{sift_root / "queries"};
 static std::filesystem::path sift_groundtruth_uri{sift_root / "groundtruth"};
 
 using siftsmall_feature_type = float;
-using siftsmall_groundtruth_type = uint64_t;  // int32?
+using siftsmall_groundtruth_type = uint64_t;
 using siftsmall_centroids_type = float;
 using siftsmall_ids_type = uint64_t;
 using siftsmall_indices_type = uint64_t;
@@ -132,7 +142,7 @@ static std::filesystem::path siftsmall_groundtruth_uri{
     siftsmall_root / "groundtruth"};
 
 using siftsmall_uint8_feature_type = uint8_t;
-using siftsmall_uint8_groundtruth_type = uint64_t;  // int32?
+using siftsmall_uint8_groundtruth_type = uint64_t;
 using siftsmall_uint8_centroids_type = float;
 using siftsmall_uint8_ids_type = uint64_t;
 using siftsmall_uint8_indices_type = uint64_t;
@@ -302,15 +312,39 @@ static std::filesystem::path diskann_mem_index{
 static std::filesystem::path diskann_truth_index_data =
     diskann_root / "truth_index_siftsmall_learn_256pts_R4_L50_A1.2.data";
 
-static std::filesystem::path pytest_170_group_root{
-    test_array_root / "pytest-170"};
-static std::filesystem::path pytest_170_group_uri{
-    pytest_170_group_root / "test_ivf_flat_ingestion_f320/array"};
+/*
+ * Definitions for the "nano" reference group for vamana index
+ */
+using vamana_nano_feature_type = float;
+using vamana_nano_groundtruth_type = uint64_t;
+using vamana_nano_ids_type = uint64_t;
+using vamana_nano_indices_type = uint64_t;
+constexpr size_t num_vamana_nano_vectors = 231;
+constexpr size_t vamana_nano_dimension = 128;
+static std::filesystem::path vamana_nano_root{nano_root / "vamana"};
+static std::filesystem::path vamana_nano_group_uri{
+    vamana_nano_root / "vamana_test_index"};
+
+static std::filesystem::path vamana_nano_inputs_uri{
+    vamana_nano_root / "feature_vectors"};
+static std::filesystem::path vamana_nano_feature_vectors_uri{
+    vamana_nano_root / "feature_vectors"};
+static std::filesystem::path vamana_nano_adjacency_scores_uri{
+    vamana_nano_root / "adjacency_scores"};
+static std::filesystem::path vamana_nano_adjacency_ids_uri{
+    vamana_nano_root / "adjacency_ids"};
+static std::filesystem::path vamana_nano_adjacency_row_index_uri{
+    vamana_nano_root / "adjacency_row_index"};
+
+static std::filesystem::path vamana_nano_query_uri{
+    vamana_nano_root / "queries"};
+static std::filesystem::path vamana_nano_groundtruth_uri{
+    vamana_nano_root / "groundtruth"};
 
 #define TEMP_LEGACY_URIS
 #ifdef TEMP_LEGACY_URIS
 using db_type = siftsmall_feature_type;
-using groundtruth_type = siftsmall_groundtruth_type;  // int32?
+using groundtruth_type = siftsmall_groundtruth_type;
 using centroids_type = siftsmall_centroids_type;
 using ids_type = siftsmall_ids_type;
 using indices_type = siftsmall_indices_type;

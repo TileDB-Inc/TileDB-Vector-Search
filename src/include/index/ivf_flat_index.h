@@ -1130,7 +1130,7 @@ class ivf_flat_index {
    * @param rhs the index against which to compare
    * @return bool indicating equality of the index metadata
    */
-  bool compare_metadata(const ivf_flat_index& rhs) {
+  bool compare_cached_metadata(const ivf_flat_index& rhs) {
     if (dimension_ != rhs.dimension_) {
       return false;
     }

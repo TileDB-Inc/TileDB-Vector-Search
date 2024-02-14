@@ -269,6 +269,8 @@ class base_index_group {
    * Create a new group with the default arrays and metadata.
    *
    * @param cfg
+   *
+   * @todo Process the "base group" metadata here.
    */
   void create_default(const tiledb::Config& cfg) {
     static_cast<group_type*>(this)->create_default_impl(cfg);
@@ -393,6 +395,9 @@ class base_index_group {
     return metadata_.ingestion_timestamps_;
   }
 
+  /*
+   * Base size information
+   */
   auto get_previous_base_size() const {
     return metadata_.base_sizes_.back();
   }
@@ -404,19 +409,6 @@ class base_index_group {
   }
   auto get_all_base_sizes() {
     return metadata_.base_sizes_;
-  }
-
-  auto get_previous_num_partitions() const {
-    return metadata_.partition_history_.back();
-  }
-  auto get_num_partitions() const {
-    return metadata_.partition_history_[timetravel_index_];
-  }
-  auto append_num_partitions(size_t size) {
-    metadata_.partition_history_.push_back(size);
-  }
-  auto get_all_num_partitions() {
-    return metadata_.partition_history_;
   }
 
   auto get_all_active_array_names() {
@@ -494,17 +486,12 @@ class base_index_group {
   auto set_base_size(size_t size) {
     metadata_.base_sizes_[timetravel_index_] = size;
   }
-  auto set_num_partitions(size_t size) {
-    metadata_.partition_history_[timetravel_index_] = size;
-  }
+
   auto set_last_ingestion_timestamp(size_t timestamp) {
     metadata_.ingestion_timestamps_.back() = timestamp;
   }
   auto set_last_base_size(size_t size) {
     metadata_.base_sizes_.back() = size;
-  }
-  auto set_last_num_partitions(size_t size) {
-    metadata_.partition_history_.back() = size;
   }
 
   bool compare_group(const base_index_group& rhs) const {
