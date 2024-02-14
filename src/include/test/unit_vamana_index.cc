@@ -132,6 +132,9 @@ TEST_CASE("vamana: diskann", "[vamana]") {
   CHECK(!std::equal(
       f.data(), f.data() + 256 * 128, std::vector<float>(128 * 256, 0).data()));
 
+  CHECK(f.num_rows() == 128);
+  CHECK(f.num_cols() == 256);
+
   CHECK(sum_of_squares(f[0], f[72]) == 125678);
   {
     auto n = num_vectors(f);
@@ -141,6 +144,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
     CHECK(dimension(f) == 128);
 
     auto centroid = Vector<float>(f[0].size());
+    std::fill(begin(centroid), end(centroid), 0.0);
     for (size_t j = 0; j < n; ++j) {
       auto p = f[j];
       for (size_t i = 0; i < p.size(); ++i) {
@@ -176,10 +180,10 @@ TEST_CASE("vamana: diskann", "[vamana]") {
 
   CHECK(med == 72);
 
-//  if (debug) {
-//    tiledb::Context ctx;
-//    write_matrix(ctx, f, "/tmp/diskann_test_data_file.tdb");
-//  }
+  //  if (debug) {
+  //    tiledb::Context ctx;
+  //    write_matrix(ctx, f, "/tmp/diskann_test_data_file.tdb");
+  //  }
 }
 
 TEST_CASE("vamana: small256 build index", "[vamana]") {
