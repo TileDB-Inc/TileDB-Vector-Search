@@ -61,7 +61,7 @@ TEST_CASE("vamana: test test", "[vamana]") {
 
 TEST_CASE("vamana: diskann", "[vamana]") {
   const bool debug = false;
-  const bool noisy = true;
+  const bool noisy = false;
 
   set_noisy(noisy);
 
@@ -148,7 +148,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
 
 TEST_CASE("vamana: small256 build index", "[vamana]") {
   const bool debug = false;
-  const bool noisy = true;
+  const bool noisy = false;
 
   set_noisy(noisy);
 
@@ -191,7 +191,7 @@ TEST_CASE("vamana: small256 build index", "[vamana]") {
  */
 TEST_CASE("vamana: small greedy search", "[vamana]") {
   const bool debug = false;
-  const bool noisy = true;
+  const bool noisy = false;
 
   set_noisy(noisy);
 
@@ -413,7 +413,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
 
 TEST_CASE("vamana: greedy grid search", "[vamana]") {
   const bool debug = false;
-  const bool noisy = true;
+  const bool noisy = false;
 
   set_noisy(noisy);
 
@@ -503,7 +503,7 @@ TEST_CASE("vamana: greedy grid search", "[vamana]") {
 
 TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
   const bool debug = false;
-  const bool noisy = true;
+  const bool noisy = false;
 
   set_noisy(noisy);
 
@@ -559,7 +559,7 @@ TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
 
 TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
   const bool debug = false;
-  const bool noisy = true;
+  const bool noisy = false;
 
   set_noisy(noisy);
 
@@ -622,7 +622,7 @@ TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
 
 TEST_CASE("vamana: diskann fbin", "[vamana]") {
   const bool debug = false;
-  const bool noisy = true;
+  const bool noisy = false;
 
   set_noisy(noisy);
 
@@ -795,7 +795,7 @@ TEST_CASE("vamana: fmnist", "[vamana]") {
 
 
 TEST_CASE("vamana: fmnist compare greedy search", "[vamana]") {
-  const bool debug = true;
+  const bool debug = false;
   const bool noisy = false;
 
   set_noisy(noisy);
@@ -1100,10 +1100,9 @@ TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
   binary_file.read((char*)x.data(), npoints * ndim);
   binary_file.close();
 
-  size_t L = 100;
-  size_t R = 100;
-  size_t B = 2;
-  auto index = vamana_index<float, uint64_t>(num_vectors(x), L, R, B);
+  size_t L = 50;
+  size_t R = 4;
+  auto index = vamana_index<float, uint64_t>(num_vectors(x), L, R);
 
   auto x0 = std::vector<float>(ndim);
   std::copy(x.data(), x.data() + ndim, begin(x0));
