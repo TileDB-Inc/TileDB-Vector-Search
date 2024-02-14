@@ -130,13 +130,16 @@ TEMPLATE_TEST_CASE(
   CHECK(A.data() == nullptr);
 }
 
-TEMPLATE_TEST_CASE("matrix_with_ids: vector of matrix", "[matrix_with_ids]",
+TEMPLATE_TEST_CASE(
+    "matrix_with_ids: vector of matrix",
+    "[matrix_with_ids]",
     stdx::layout_right,
     stdx::layout_left) {
   std::vector<MatrixWithIds<float, TestType>> v;
 
   auto numIds = 3;
-  auto A = MatrixWithIds<float, TestType>{{{8, 6, 7}, {5, 3, 0}, {9, 5, 0}}, {0, 1, 2}};
+  auto A = MatrixWithIds<float, TestType>{
+      {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}}, {0, 1, 2}};
   auto aptr = A.data();
   auto aptrIds = A.ids();
 
