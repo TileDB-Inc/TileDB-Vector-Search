@@ -132,18 +132,21 @@ TEST_CASE("vamana: diskann", "[vamana]") {
   CHECK(!std::equal(
       f.data(), f.data() + 256 * 128, std::vector<float>(128 * 256, 0).data()));
 
+  CHECK(sum_of_squares(f[0], f[72]) == 125678);
+
   auto med = ::medoid(f);
 
   if (debug) {
     std::cout << "med " << med << std::endl;
+    std::cout << "f[0] - f[72] = " << sum_of_squares(f[0], f[72]) << std::endl;
   }
 
   CHECK(med == 72);
 
-  if (debug) {
-    tiledb::Context ctx;
-    write_matrix(ctx, f, "/tmp/diskann_test_data_file.tdb");
-  }
+//  if (debug) {
+//    tiledb::Context ctx;
+//    write_matrix(ctx, f, "/tmp/diskann_test_data_file.tdb");
+//  }
 }
 
 TEST_CASE("vamana: small256 build index", "[vamana]") {
