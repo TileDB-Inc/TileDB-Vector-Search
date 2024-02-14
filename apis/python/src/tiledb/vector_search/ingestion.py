@@ -322,7 +322,7 @@ def ingest(
             dimensions = schema.domain.dim(0).domain[1] + 1
             return size, dimensions, schema.attr("values").dtype
         if source_type == "TILEDB_PARTITIONED_ARRAY":
-            with tiledb.open(source_uri, "r") as source_array:
+            with tiledb.open(source_uri, "r", config=config) as source_array:
                 q = source_array.query(attrs=("vectors_shape",), coords=True)
                 nonempty_object_array_domain = source_array.nonempty_domain()
                 partition_shapes = q[
@@ -335,8 +335,7 @@ def ingest(
                 for partition_shape in partition_shapes:
                     size += partition_shape[0]
                     dimensions = partition_shape[1]
-            schema = tiledb.ArraySchema.load(source_uri)
-            return size, dimensions, schema.attr("vectors").dtype
+                return size, dimensions, source_array.schema.attr("vectors").dtype
         elif source_type == "U8BIN":
             vfs = tiledb.VFS()
             with vfs.open(source_uri, "rb") as f:
@@ -727,7 +726,6 @@ def ingest(
         elif source_type == "TILEDB_PARTITIONED_ARRAY":
             with tiledb.open(source_uri, "r") as source_array:
                 q = source_array.query(attrs=("vectors_shape",), coords=True)
-                qv = source_array.query(attrs=("external_ids",), coords=True)
                 nonempty_object_array_domain = source_array.nonempty_domain()
                 partitions = q[
                     nonempty_object_array_domain[0][0] : nonempty_object_array_domain[
@@ -747,6 +745,7 @@ def ingest(
                     if intersection_start < intersection_end:
                         crop_start = intersection_start - partition_idx_start
                         crop_end = intersection_end - partition_idx_start
+                        qv = source_array.query(attrs=("external_ids",), coords=True)
                         partition_external_ids = qv[partition_id : partition_id + 1][
                             "external_ids"
                         ][0][crop_start:crop_end]
@@ -843,9 +842,10 @@ def ingest(
                     src_array[0:dimensions, start_pos:end_pos]["values"]
                 ).copy(order="C")
         elif source_type == "TILEDB_PARTITIONED_ARRAY":
-            with tiledb.open(source_uri, "r") as source_array:
+            with tiledb.open(
+                source_uri, "r", timestamp=index_timestamp, config=config
+            ) as source_array:
                 q = source_array.query(attrs=("vectors_shape",), coords=True)
-                qv = source_array.query(attrs=("vectors",), coords=True)
                 nonempty_object_array_domain = source_array.nonempty_domain()
                 partitions = q[
                     nonempty_object_array_domain[0][0] : nonempty_object_array_domain[
@@ -865,6 +865,7 @@ def ingest(
                     if intersection_start < intersection_end:
                         crop_start = intersection_start - partition_idx_start
                         crop_end = intersection_end - partition_idx_start
+                        qv = source_array.query(attrs=("vectors",), coords=True)
                         partition_vectors = np.reshape(
                             qv[partition_id : partition_id + 1]["vectors"][0],
                             partition_shape,

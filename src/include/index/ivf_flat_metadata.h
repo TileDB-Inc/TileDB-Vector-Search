@@ -58,7 +58,7 @@ class ivf_flat_index_metadata
   IndexKind index_kind_{IndexKind::IVFFlat};
 
   std::vector<metadata_string_check_type> metadata_string_checks_impl{
-      // name, member_variable, default, expected, required
+      // name, member_variable, required
       {"index_type", index_type_, true},
       {"indices_type", indices_type_str_, false},
       {"partition_history", partition_history_str_, true},

@@ -235,4 +235,4 @@ A more detailed overview of product quantization for vector search is given in h
 Product quantization is an approach to compressing the vectors in a vector database.
 The basic idea is to divide the vectors into `m` subvectors and to quantize each subvector
 into `k` centroids. The centroids are stored in a codebook. The original vectors are
-then replaced by the indices of the centroids in the codebook. The codebook is stored
+then replaced by the indices of the centroids in the codebook.

@@ -262,7 +262,7 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   auto idx2 = ivf_flat_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
   idx2.read_index_infinite();
 
-  CHECK(idx.compare_metadata(idx2));
+  CHECK(idx.compare_cached_metadata(idx2));
   CHECK(idx.compare_centroids(idx2));
   CHECK(idx.compare_feature_vectors(idx2));
   CHECK(idx.compare_indices(idx2));
@@ -571,7 +571,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
     idx2.open_index(ctx, tmp_ivf_index_uri);
     idx2.read_index_infinite();
 
-    CHECK(idx1.compare_metadata(idx2));
+    CHECK(idx1.compare_cached_metadata(idx2));
     CHECK(idx1.compare_centroids(idx2));
     CHECK(idx1.compare_feature_vectors(idx2));
     CHECK(idx1.compare_indices(idx2));
