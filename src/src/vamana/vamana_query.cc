@@ -97,8 +97,7 @@ int main(int argc, char* argv[]) {
 
   auto run_query = [&]<class feature_type, class id_type>() {
     tiledb::Context ctx;
-    auto idx =
-        detail::graph::vamana_index<feature_type, id_type>(ctx, index_uri);
+    auto idx = vamana_index<feature_type, id_type>(ctx, index_uri);
     auto queries = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
     queries.load();
 

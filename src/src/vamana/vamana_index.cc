@@ -112,10 +112,10 @@ int main(int argc, char* argv[]) {
     auto X = tdbColMajorMatrix<feature_type>(ctx, db_uri);
     X.load();
 
-    auto idx = detail::graph::vamana_index<feature_type, id_type>(
+    auto idx = vamana_index<feature_type, id_type>(
         num_vectors(X), Lbuild, max_degree, backtrack);
     idx.train(X);
-    idx.write_index(index_uri, overwrite);
+    idx.write_index(ctx, index_uri, overwrite);
 
     if (args["--log"]) {
       idx.log_index();

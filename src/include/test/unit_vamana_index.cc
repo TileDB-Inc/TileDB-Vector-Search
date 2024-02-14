@@ -855,7 +855,7 @@ TEST_CASE("vamana: fmnist compare greedy search", "[vamana]") {
 
 TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
   const bool debug = false;
-  const bool noisy = true;
+  const bool noisy = false;
 
   set_noisy(noisy);
   size_t k_near = 5;
@@ -958,7 +958,7 @@ TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
 
 TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
   const bool debug = false;
-  const bool noisy = true;
+  const bool noisy = false;
 
   set_noisy(noisy);
 
@@ -1075,7 +1075,7 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
 
 TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
   const bool debug = false;
-  const bool noisy = true;
+  const bool noisy = false;
 
   set_noisy(noisy);
 
@@ -1118,7 +1118,7 @@ TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
 
 TEST_CASE("vamana: vamana by hand random index", "[vamana]") {
   const bool debug = false;
-  const bool noisy = true;
+  const bool noisy = false;
 
   set_noisy(noisy);
 
@@ -1198,7 +1198,7 @@ TEST_CASE("vamana: vamana by hand random index", "[vamana]") {
  */
 TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
   const bool debug = false;
-  const bool noisy = true;
+  const bool noisy = false;
 
   set_noisy(noisy);
 
@@ -1247,7 +1247,7 @@ TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
 
 TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
   const bool debug = false;
-  const bool noisy = true;
+  const bool noisy = false;
 
   set_noisy(noisy);
 
@@ -1294,7 +1294,7 @@ TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
 
 TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   const bool debug = false;
-  const bool noisy = true;
+  const bool noisy = false;
 
   set_noisy(noisy);
 
