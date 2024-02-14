@@ -56,7 +56,7 @@ auto read_diskann_data(const std::string& path) {
   auto x = ColMajorMatrix<float>(ndim, npoints);
 
   binary_file.read((char*)x.data(), npoints * ndim * sizeof(float));
-  if((size_t)binary_file.gcount() != (size_t)npoints * ndim * sizeof(float)) {
+  if ((size_t)binary_file.gcount() != (size_t)npoints * ndim * sizeof(float)) {
     throw std::runtime_error("Could not read all data from " + path);
   }
 

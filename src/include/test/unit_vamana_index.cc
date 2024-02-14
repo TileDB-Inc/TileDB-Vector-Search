@@ -129,7 +129,8 @@ TEST_CASE("vamana: diskann", "[vamana]") {
   CHECK(num_vectors(f) == 256);
   CHECK(dimension(f) == 128);
   CHECK(f.data() != nullptr);
-  CHECK(!std::equal(f.data(), f.data() + 256 * 128, std::vector<float>(128*256, 0).data()));
+  CHECK(!std::equal(
+      f.data(), f.data() + 256 * 128, std::vector<float>(128 * 256, 0).data()));
 
   auto med = ::medoid(f);
 
