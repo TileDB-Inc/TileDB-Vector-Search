@@ -133,6 +133,39 @@ TEST_CASE("vamana: diskann", "[vamana]") {
       f.data(), f.data() + 256 * 128, std::vector<float>(128 * 256, 0).data()));
 
   CHECK(sum_of_squares(f[0], f[72]) == 125678);
+  {
+    auto n = num_vectors(f);
+    CHECK(n != 0);
+    CHECK(n == 256);
+    CHECK(f[0].size() == 128);
+    CHECK(dimension(f) == 128);
+
+    auto centroid = Vector<float>(f[0].size());
+    for (size_t j = 0; j < n; ++j) {
+      auto p = f[j];
+      for (size_t i = 0; i < p.size(); ++i) {
+        centroid[i] += p[i];
+      }
+    }
+    float sum = 0.0;
+    for (size_t i = 0; i < centroid.size(); ++i) {
+      sum += abs(centroid[i]);
+      centroid[i] /= (float)num_vectors(f);
+    }
+    CHECK(sum > 0);
+
+    std::vector<float> tmp{begin(centroid), end(centroid)};
+    auto min_score = std::numeric_limits<float>::max();
+    auto med = std::numeric_limits<size_t>::max();
+    for (size_t i = 0; i < n; ++i) {
+      auto score = sum_of_squares(f[i], centroid);
+      if (score < min_score) {
+        min_score = score;
+        med = i;
+      }
+    }
+    CHECK(med != std::numeric_limits<size_t>::max());
+  }
 
   auto med = ::medoid(f);
 
