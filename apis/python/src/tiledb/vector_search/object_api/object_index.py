@@ -17,6 +17,7 @@ from tiledb.vector_search.embeddings import ObjectEmbedding
 from tiledb.vector_search.object_readers import ObjectReader
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import storage_formats
+from tiledb.vector_search.utils import add_to_group
 
 TILEDB_CLOUD_PROTOCOL = 4
 
@@ -352,7 +353,7 @@ def create(
                 attrs=object_reader.metadata_attributes(),
             )
             tiledb.Array.create(object_metadata_array_uri, schema)
-            group.add(object_metadata_array_uri, name=metadata_array_name)
+            add_to_group(group, object_metadata_array_uri, name=metadata_array_name)
             materialize_object_metadata = True
         object_metadata_external_id_dim = ""
         if object_metadata_array_uri is not None:
@@ -407,4 +408,4 @@ def create_embeddings_partitioned_array(
             attrs=attrs,
         )
         tiledb.Array.create(embeddings_array_uri, embeddings_array_schema)
-        group.add(embeddings_array_uri, name=array_name)
+        add_to_group(group, embeddings_array_uri, name=array_name)
