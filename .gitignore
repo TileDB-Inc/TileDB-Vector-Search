@@ -106,3 +106,4 @@ documentation/reference
 
 # CMake
 */cmake-build-*
+**/Testing/Temporary/**/*

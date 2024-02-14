@@ -405,6 +405,12 @@ class IndexVamana {
           extents(training_set)[0],
           extents(training_set)[1]};
       impl_index_.train(fspan);
+      // TODO(paris): Add support for training with IDs. the index should keep
+      // hold onto the ids. if (training_set.has_ids()) {
+      //   impl_index_.train(fspan, training_set.ids_data());
+      // } else {
+      //   impl_index_.train(fspan);
+      // }
     }
 
     void add(const FeatureVectorArray& data_set) override {

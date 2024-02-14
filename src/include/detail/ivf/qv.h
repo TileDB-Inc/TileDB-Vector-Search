@@ -885,6 +885,7 @@ auto apply_query(
         auto score_10 = L2(q_vec_1, partitioned_vectors[kp + 0]);
         auto score_11 = L2(q_vec_1, partitioned_vectors[kp + 1]);
 
+        // if paritioned_ids are external_ids then it should should work
         min_scores[j0].insert(score_00, partitioned_ids[kp + 0]);
         min_scores[j0].insert(score_01, partitioned_ids[kp + 1]);
         min_scores[j1].insert(score_10, partitioned_ids[kp + 0]);
@@ -968,6 +969,7 @@ auto apply_query(
  */
 template <feature_vector_array F, feature_vector_array Q>
 auto query_finite_ram(
+    // This is a tdbPartitionedMatrix.
     F& partitioned_vectors,  // not const because of load()
     const Q& query,
     auto&& active_queries,

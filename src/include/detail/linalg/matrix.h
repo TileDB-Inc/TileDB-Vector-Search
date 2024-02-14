@@ -271,6 +271,18 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     }
   }
 
+  // auto hasIds() const {
+  //   return hasIds_;
+  // }
+
+  // auto id(index_type i) const {
+  //   if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
+  //     return std::span(&Base::id()(i, 0), num_cols_);
+  //   } else {
+  //     return std::span(&Base::id()(0, i), num_rows_);
+  //   }
+  // }
+
   auto rank() const noexcept {
     return Base::extents().rank();
     // return 2;  //
@@ -468,7 +480,7 @@ std::string matrix_info(const std::vector<T>& A, const std::string& msg = "") {
   if (!msg.empty()) {
     str += ": ";
   }
-  str += "Shape: (" + std::to_string(A.size()) + " )";
+  str += "Shape: (" + std::to_string(A.size()) + ")";
   return str;
 }
 
@@ -479,10 +491,18 @@ std::string matrix_info(const std::vector<T>& A, const std::string& msg = "") {
 template <class T>
 std::string matrix_info(const std::span<T>& A, const std::string& msg = "") {
   std::string str = "# " + msg;
-  if (!msg.empty()) {
-    str += ": ";
+  str += "Shape: (" + std::to_string(A.size()) + "), Data: [";
+  auto end = std::min(A.size(), static_cast<size_t>(10));
+  for (int i = 0; i < end; ++i) {
+    str += std::to_string(A[i]);
+    if (i != end - 1) {
+      str += " ";
+    }
   }
-  str += "Shape: (" + std::to_string(A.size()) + " )";
+  if (A.size() > 10) {
+    str += "...";
+  }
+  str += "]";
   return str;
 }
 
@@ -509,7 +529,7 @@ void debug_slice(
     for (size_t i = 0; i < rows; ++i) {
       std::cout << "# ";
       for (size_t j = 0; j < cols; ++j) {
-        std::cout << (float)A(i, j) << "\t";
+        std::cout << (float)A(i, j) << " ";
       }
       std::cout << std::endl;
     }

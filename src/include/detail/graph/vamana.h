@@ -423,6 +423,7 @@ class vamana_index {
   // @todo -- this is a waste of memory -- we could also do queries against
   // the original feature vectors (supplied by user)
   ColMajorMatrix<feature_type> feature_vectors_;
+  std::vector<id_type> ids_;
 
   uint64_t dimension_{0};
   uint64_t num_vectors_{0};
@@ -523,6 +524,48 @@ class vamana_index {
    * (j)←N_"out " (j)∪{σ(i)} if |N_"out "  (j)|>R then Run FilteredRobustPrune
    * (j,N_"out " (j),α,R) to update out-neighbors of j.
    */
+  template <feature_vector_array Array>
+  void train(
+      const MatrixView<feature_type, stdx::layout_left>& training_set,
+      const std::vector<id_type>& ids) {
+    ids_ = ids;
+    train(training_set);
+  }
+
+  // how to save the index?
+  // write_vector(
+  //       ctx,
+  //       ids_,
+  //       write_group.adjacency_scores_uri(),
+  //       0,
+  //       false,
+  //       timestamp_);
+
+  // Note:
+  // - We don't care about IO performance because everything is dominated by
+  // latency.
+  // - Always this tension in graphs about making it efficient to update vs
+  // efficient to traverse.
+  //  - for traverse nice to make al lthe ids of neighbors contigous in one long
+  //  list, but then you can't insert anything, but then you need to make all of
+  //  them into different lits
+
+  // DiskANN
+  // - Vamana is the indexing scheme and search scheme
+  // - First few papers
+  //  - had you create this random graph with limited degrees on each vertex
+  //  - Every vertex of the graph has N (4) neighbors
+  //  - Then you run greedy search following these edges that are already there,
+  //  following the path you update neighbors and then do the prune
+  // - Newest one
+  //  - start with a one vertex graph, throw in a new one and graph the shortest
+  //  path for that, then another one, etc.
+  //    - medoid is the vector in the dataset that median of all vectors, i.e.
+  //    the closest to all vectors
+  //    - versus centroid which is mean
+  //  - just use the insertion function to build the graph up
+  //  - that was a lot faster than the other approach
+
   template <feature_vector_array Array>
   void train(const Array& training_set) {
     feature_vectors_ = std::move(ColMajorMatrix<feature_type>(
@@ -644,7 +687,7 @@ class vamana_index {
    */
   template <query_vector_array Q>
   auto query(
-      const Q& query_set,
+      const Q& query_set,  // FeatureVectorArray without IDs
       size_t k,
       std::optional<size_t> opt_L = std::nullopt) {
     scoped_timer __{tdb_func__ + std::string{" (outer)"}};
@@ -677,6 +720,12 @@ class vamana_index {
           k,
           L,
           sum_of_squares_distance{});
+      // TODO(paris): If we have ids_, return these ids instead of the indices.
+      if (!ids_.empty()) {
+        for (auto idx : tk) {
+          auto id = ids_[idx];
+        }
+      }
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
       num_visited_vertices_ += V.size();

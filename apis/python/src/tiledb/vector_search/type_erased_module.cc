@@ -140,6 +140,8 @@ void init_type_erased_module(py::module_& m) {
             /* Strides (in bytes) for each index */
         );
       })
+      // .def(py::init([](py::array vectors, py::array ids) {
+      // }))
       .def(py::init([](py::array b) {
         /* Request a buffer descriptor from Python */
         py::buffer_info info = b.request();
@@ -185,9 +187,10 @@ void init_type_erased_module(py::module_& m) {
                  v.dimension(), /* Strides (in bytes) for each index */
              datatype_to_size(v.feature_type())});
       })
-      .def(py::init([](py::array b) {
+      .def(py::init([](py::array b, py::array ids) {
         /* Request a buffer descriptor from Python */
         py::buffer_info info = b.request();
+        py::buffer_info info_ids = ids.request();
         if (info.ndim != 2)
           throw std::runtime_error(
               "Incompatible buffer dimension! Should be 2.");
@@ -200,6 +203,7 @@ void init_type_erased_module(py::module_& m) {
               datatype_to_string(datatype));
 
         size_t sz = datatype_to_size(datatype);
+        size_t sz = datatype_to_size(ids_datatype);
 
         auto v = [&]() {
           auto order = b.flags() & py::array::f_style ? TILEDB_COL_MAJOR :
@@ -214,6 +218,9 @@ void init_type_erased_module(py::module_& m) {
         auto data = (uint8_t*)v.data();
         std::memcpy(
             data, (uint8_t*)info.ptr, info.shape[0] * info.shape[1] * sz);
+
+        auto ids_data = (uint8_t*)v.ids_data();
+        std::memcpy(ids_data, (uint8_t*)info_ids.ptr, info_ids.shape[0] * sz);
 
         return v;
       }));
@@ -254,9 +261,9 @@ void init_type_erased_module(py::module_& m) {
           })
       .def(
           "train",
-          [](IndexVamana& index, const FeatureVectorArray& vectors) {
-            index.train(vectors);
-          },
+          [](IndexVamana& index,
+             const FeatureVectorArray& vectors,
+             const std::string& ids_uri) { index.train(vectors); },
           py::arg("vectors"))
       .def(
           "add",

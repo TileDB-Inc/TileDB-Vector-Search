@@ -59,6 +59,17 @@ class FeatureVectorArray {
   FeatureVectorArray(FeatureVectorArray&& other) = default;
   FeatureVectorArray& operator=(FeatureVectorArray&& other) = default;
 
+  // TODO(paris): Add new constructor that supports this.
+  // template <feature_vector_array T, feature_vector U>
+  // explicit FeatureVectorArray(T&& obj, U &&ids_obj)
+  //     : vector_array(
+  //           std::make_unique<vector_array_impl<T>>(std::forward<T>(obj),
+  //           std::forward<U>(ids_obj))) {
+  //   feature_type_ = tiledb::impl::type_to_tiledb<
+  //       typename std::remove_cvref_t<T>::value_type>::tiledb_type;
+  //   feature_size_ = datatype_to_size(feature_type_);
+  // }
+
   template <feature_vector_array T>
   explicit FeatureVectorArray(T&& obj)
       : vector_array(
@@ -68,9 +79,12 @@ class FeatureVectorArray {
     feature_size_ = datatype_to_size(feature_type_);
   }
 
+  // This is a tdbColMajorMatrix b/c we load from a URI.
   FeatureVectorArray(
       const tiledb::Context& ctx,
       const std::string& uri,
+      // TODO(paris): Add new constructor that supports this.
+      const std::string& ids_uri = "",
       size_t num_vectors = 0) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
     feature_type_ = get_array_datatype(*array);
@@ -86,34 +100,40 @@ class FeatureVectorArray {
      */
     switch (feature_type_) {
       case TILEDB_FLOAT32:
-        vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<float>>>(
-                ctx, uri, num_vectors);
+        vector_array = std::make_unique<
+            vector_array_impl<tdbColMajorMatrixWithIds<float>>>(
+            ctx, uri, ids_uri, num_vectors);
+        // ctx, uri, ids_uri, num_vectors);
         break;
       case TILEDB_UINT8:
         vector_array =
             std::make_unique<vector_array_impl<tdbColMajorMatrix<uint8_t>>>(
                 ctx, uri, num_vectors);
+        // ctx, uri, ids_uri, num_vectors);
         break;
       case TILEDB_INT32:
         vector_array =
             std::make_unique<vector_array_impl<tdbColMajorMatrix<int32_t>>>(
                 ctx, uri, num_vectors);
+        // ctx, uri, ids_uri, num_vectors);
         break;
       case TILEDB_UINT32:
         vector_array =
             std::make_unique<vector_array_impl<tdbColMajorMatrix<uint32_t>>>(
                 ctx, uri, num_vectors);
+        // ctx, uri, ids_uri, num_vectors);
         break;
       case TILEDB_INT64:
         vector_array =
             std::make_unique<vector_array_impl<tdbColMajorMatrix<int64_t>>>(
                 ctx, uri, num_vectors);
+        // ctx, uri, ids_uri, num_vectors);
         break;
       case TILEDB_UINT64:
         vector_array =
             std::make_unique<vector_array_impl<tdbColMajorMatrix<uint64_t>>>(
                 ctx, uri, num_vectors);
+        // ctx, uri, ids_uri, num_vectors);
         break;
       default:
         throw std::runtime_error("Unsupported attribute type");
@@ -121,13 +141,14 @@ class FeatureVectorArray {
     (void)vector_array->load();
   }
 
+  // This is a ColMajorMatrix b/c the data is already in memory.
   FeatureVectorArray(size_t rows, size_t cols, const std::string type_string) {
     feature_type_ = string_to_datatype(type_string);
     feature_size_ = datatype_to_size(feature_type_);
     switch (feature_type_) {
       case TILEDB_FLOAT32:
         vector_array =
-            std::make_unique<vector_array_impl<ColMajorMatrix<float>>>(
+            std::make_unique<vector_array_impl<ColMajorMatrixWithIds<float>>>(
                 rows, cols);
         break;
       case TILEDB_UINT8:
@@ -173,6 +194,11 @@ class FeatureVectorArray {
     // return _cpo::data(*vector_array);
     return vector_array->data();
   }
+
+  // [[nodiscard]] auto ids_data() const {
+  //   // return _cpo::data(*vector_array);
+  //   return vector_array->ids_data();
+  // }
 
   [[nodiscard]] auto extents() const {
     return _cpo::extents(*vector_array);

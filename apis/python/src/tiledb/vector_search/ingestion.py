@@ -1242,7 +1242,7 @@ def ingest(
 
         return np.mean(argv, axis=0).astype(np.float32)
 
-    def ingest_flat(
+    def ingest_vamana(
         index_group_uri: str,
         source_uri: str,
         source_type: str,
@@ -1337,6 +1337,23 @@ def ingest(
             group = tiledb.Group(index_group_uri, "w")
             group.meta["temp_size"] = end
             group.close()
+            
+            # SOMEWHERE ELSE:
+            #   1. create empty array and write to URI
+            #   index = IndexVamana(ctx, ids_type=foo, etc.)
+            #   index.write_index(index_uri)
+
+            # 2. open the array and write to it at different points in time
+            # parts_array the vector
+            # ids_array the id for
+            index = IndexVamana(ctx, index_uri)
+            vector = FeatureVectorArray(part_array, ids_array)
+            index.train(vector)
+            index.write_index(index_uri)
+            
+            # Then we get:
+            # ids, distances = index.query([[1, 2, 3]])
+            
             parts_array.close()
             ids_array.close()
 

@@ -127,6 +127,11 @@ concept partitionable = requires(const T& t) {
   { t.ids() };
 };
 
+template <class T>
+concept has_ids = requires(const T& t) {
+  { t.ids_data() };
+};
+
 // ----------------------------------------------------------------------------
 // feature_vector concept
 // ----------------------------------------------------------------------------

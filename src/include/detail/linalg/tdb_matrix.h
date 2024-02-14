@@ -78,6 +78,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
   std::reference_wrapper<const tiledb::Context> ctx_;
   std::string uri_;
   std::unique_ptr<tiledb::Array> array_;
+  std::unique_ptr<tiledb::Array> arrayIds_;
   tiledb::ArraySchema schema_;
 
   /** The domain for each dimension (rows and columns) */
@@ -307,6 +308,22 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
       throw std::runtime_error("Query status is not complete -- fix me");
     }
+
+    // // Create an ids query
+    // if (hasIds_) {
+    //   tiledb::Query query(ctx_, *array_);
+    //   // query.set_subarray(subarray)
+    //   //     .set_layout(layout_order)
+    //   //     .set_data_buffer(attr_name, this->data(), elements_to_load *
+    //   dimension);
+    //   // tiledb_helpers::submit_query(tdb_func__, uri_, query);
+    //   // _memory_data.insert_entry(
+    //   //     tdb_func__, elements_to_load * dimension * sizeof(T));
+
+    //   if (tiledb::Query::Status::COMPLETE != query.query_status()) {
+    //     throw std::runtime_error("Query status is not complete -- fix me");
+    //   }
+    // }
 
     num_loads_++;
     return true;

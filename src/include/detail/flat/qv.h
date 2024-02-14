@@ -187,6 +187,7 @@ auto qv_query_heap(
         for (size_t i = 0; i < size_db; ++i) {
           auto score = distance(q_vec, db[i]);
           if constexpr (std::is_same_v<T, with_ids>) {
+            // if we pass the right id in ids then it should just work.
             min_scores.insert(score, ids[i]);
           } else if constexpr (std::is_same_v<T, without_ids>) {
             min_scores.insert(score, i);
