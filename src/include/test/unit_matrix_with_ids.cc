@@ -1,11 +1,11 @@
 /**
- * @file   unit_linalg.cc
+ * @file   unit_matrix_with_ids.cc
  *
  * @section LICENSE
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2023 TileDB, Inc.
+ * @copyright Copyright (c) 2024 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,64 +33,114 @@
 #include <catch2/catch_all.hpp>
 #include <vector>
 #include "cpos.h"
-#include "detail/linalg/matrix.h"
+#include "detail/linalg/matrix_with_ids.h"
 #include "mdspan/mdspan.hpp"
 
 using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 
-TEST_CASE("matrix: test test", "[matrix]") {
+TEST_CASE("matrix_with_ids: test test", "[matrix_with_ids]") {
   REQUIRE(true);
 }
 
-/*
- * Many tests remain in linalg.cc from before the refactor.
- */
-TEST_CASE("matrix: initializer list", "[matrix]") {
-  auto A = Matrix<float>{{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
-  auto a = std::vector<float>{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8};
-  CHECK(
-      std::equal(A.data(), A.data() + A.num_rows() * A.num_cols(), a.begin()));
+TEMPLATE_TEST_CASE(
+    "matrix_with_ids: initializer list",
+    "[matrix_with_ids]",
+    stdx::layout_right,
+    stdx::layout_left) {
+  auto matrix = MatrixWithIds<float, TestType>{
+      {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}, {1, 2, 3, 4}};
+
+  auto matrixData = std::vector<float>{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8};
+  auto idsData = std::vector<float>{1, 2, 3, 4};
+  auto matrixRaveled = matrix.raveled();
+  auto matrixRaveledIds = matrix.raveledIds();
+
+  CHECK(matrix.num_rows() * matrix.num_cols() == matrixData.size());
+  CHECK(std::equal(
+      matrix.data(),
+      matrix.data() + matrix.num_rows() * matrix.num_cols(),
+      matrixData.begin()));
+  CHECK(std::equal(
+      matrixRaveled.begin(), matrixRaveled.end(), matrixData.begin()));
+
+  CHECK(matrix.num_ids() == idsData.size());
+  CHECK(std::equal(
+      matrix.ids(), matrix.ids() + matrix.num_rows(), idsData.begin()));
+  CHECK(std::equal(
+      matrixRaveledIds.begin(), matrixRaveledIds.end(), idsData.begin()));
+  CHECK(matrix.id(0) == 1);
+  CHECK(matrix.id(1) == 2);
+  CHECK(matrix.id(2) == 3);
+  CHECK(matrix.id(3) == 4);
 }
 
-TEST_CASE("matrix: copy", "[matrix]") {
-  auto A = Matrix<float>{{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
-  auto a = std::vector<float>{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8};
-  auto aptr = A.data();
-  //  auto B = A;  // Error: copy constructor is deleted
+TEST_CASE("matrix_with_ids: copy", "[matrix_with_ids]") {
+  auto matrixA = MatrixWithIds<float>{
+      {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}, {1, 2, 3, 4}};
 
-  auto C{std::move(A)};  // move constructor
-  auto cptr = C.data();
+  auto matrixAPtr = matrixA.data();
+  auto matrixAPtrIds = matrixA.ids();
+  auto matrixData = std::vector<float>{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8};
+  auto idsData = std::vector<float>{1, 2, 3, 4};
 
-  CHECK(
-      std::equal(C.data(), C.data() + C.num_rows() * C.num_cols(), a.begin()));
-  CHECK(aptr == cptr);
-  CHECK(A.data() == nullptr);
+  auto matrixB{std::move(matrixA)};
+  auto matrixBRaveled = matrixB.raveled();
+  auto matrixBRaveledIds = matrixB.raveledIds();
+
+  CHECK(matrixAPtr == matrixB.data());
+  CHECK(matrixA.data() == nullptr);
+  CHECK(matrixAPtrIds == matrixB.ids());
+  CHECK(matrixA.ids() == nullptr);
+
+  CHECK(std::equal(
+      matrixB.data(),
+      matrixB.data() + matrixB.num_rows() * matrixB.num_cols(),
+      matrixData.begin()));
+  CHECK(std::equal(
+      matrixBRaveled.begin(), matrixBRaveled.end(), matrixData.begin()));
+
+  CHECK(matrixB.num_ids() == idsData.size());
+  CHECK(std::equal(
+      matrixB.ids(), matrixB.ids() + matrixB.num_rows(), idsData.begin()));
+  CHECK(std::equal(
+      matrixBRaveledIds.begin(), matrixBRaveledIds.end(), idsData.begin()));
+  CHECK(matrixB.id(0) == 1);
+  CHECK(matrixB.id(3) == 4);
 }
 
-TEST_CASE("matrix: assign", "[matrix]") {
-  auto A = Matrix<float>{{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}};
+TEST_CASE("matrix_with_ids: assign", "[matrix_with_ids]") {
+  auto A = MatrixWithIds<float>{
+      {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {0, 1, 2, 3}};
   auto a = std::vector<float>{8, 6, 7, 5, 3, 0, 9, 5, 0, 2, 7, 3};
+  auto ids = std::vector<float>{0, 1, 2, 3};
 
-  auto B = Matrix<float>{{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
+  auto B = MatrixWithIds<float>{
+      {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}, {100, 101, 102, 103}};
 
   auto aptr = A.data();
+  auto aptrIds = A.ids();
 
-  // B = A;  // Error: copy assignment is deleted
+  B = std::move(A);
 
-  B = std::move(A);  // move assignment
   CHECK(
       std::equal(B.data(), B.data() + B.num_rows() * B.num_cols(), a.begin()));
+  CHECK(B.num_ids() == ids.size());
+  CHECK(std::equal(B.ids(), B.ids() + B.num_rows(), ids.begin()));
+  auto raveledIds = B.raveledIds();
+  CHECK(std::equal(raveledIds.begin(), raveledIds.end(), ids.begin()));
 
-  auto bptr = B.data();
-  CHECK(aptr == bptr);
+  CHECK(aptr == B.data());
+  CHECK(aptrIds == B.ids());
   CHECK(A.data() == nullptr);
 }
 
-TEST_CASE("matrix: vector of matrix", "[matrix]") {
-  std::vector<Matrix<float>> v;
+TEST_CASE("matrix_with_ids: vector of matrix", "[matrix_with_ids]") {
+  std::vector<MatrixWithIds<float>> v;
 
-  auto A = Matrix<float>{{8, 6, 7}, {5, 3, 0}, {9, 5, 0}};
+  auto numIds = 3;
+  auto A = MatrixWithIds<float>{{{8, 6, 7}, {5, 3, 0}, {9, 5, 0}}, {0, 1, 2}};
   auto aptr = A.data();
+  auto aptrIds = A.ids();
 
   SECTION("push_back and emplace_back") {
     SECTION("push_back") {
@@ -106,7 +156,6 @@ TEST_CASE("matrix: vector of matrix", "[matrix]") {
     SECTION("reserve and push_back") {
       v.reserve(10);
       // v.push_back(A);  // Error: no matching construct_at
-
       v.push_back(std::move(A));
     }
 
@@ -118,28 +167,43 @@ TEST_CASE("matrix: vector of matrix", "[matrix]") {
     CHECK(v.size() == 1);
     CHECK(v[0].data() == aptr);
     CHECK(A.data() == nullptr);
+    CHECK(v[0].num_ids() == numIds);
+    CHECK(v[0].ids() == aptrIds);
+    CHECK(A.ids() == nullptr);
   }
 
   SECTION("operator[]") {
-    std::vector<Matrix<float>> x;
+    std::vector<MatrixWithIds<float>> x;
 
     SECTION("operator[]") {
-      std::vector<Matrix<float>> w(1);
+      std::vector<MatrixWithIds<float>> w;
       w.reserve(10);
+      w.emplace_back();
       // w[0] = A; // Error: no matching construct_at
       w[0] = std::move(A);
       CHECK(w[0].data() == aptr);
+      CHECK(w[0].num_ids() == numIds);
+      CHECK(w[0].ids() == aptrIds);
     }
     SECTION("resize and operator[]") {
       x.resize(10);
       x[0] = std::move(A);
       CHECK(x[0].data() == aptr);
+      CHECK(x[0].num_ids() == numIds);
+      CHECK(x[0].ids() == aptrIds);
     }
     CHECK(A.data() == nullptr);
+    CHECK(A.ids() == nullptr);
   }
 }
 
-TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
+TEMPLATE_TEST_CASE(
+    "matrix_with_ids: view",
+    "[matrix_with_ids]",
+    char,
+    float,
+    int32_t,
+    int64_t) {
   size_t major = 7;
   size_t minor = 13;
   auto v = std::vector<TestType>(major * minor);
@@ -170,39 +234,32 @@ TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(b(1, 0) == 1);  // M(1,0)
   CHECK(b(0, 1) == 7);  // M(1,0)
 
-#if 0
-  // Extents are major and minor -- 7, 13 -- each row is 13 elements long
-  for (ptrdiff_t i = 0; i < s.extent(0); ++i) {
-    for (ptrdiff_t j = 0; j < s.extent(1); ++j) {
-      sum += s(i, j);
-    }
-  }
-  for (ptrdiff_t i = 0; i < x; ++i) {
-    for (ptrdiff_t j = 0; j < y; ++j){
-      sum += s_ptr[j + i*y];
-    }
-  }
-#endif
-
-  // row idx = j + i * extents(1)
-  // col idx = i + j * extents(0)
-
-  auto c = RowMajorMatrix<TestType>(major, minor);
+  auto ids = std::vector<TestType>(major);
+  std::iota(ids.begin(), ids.end(), 0);
+  auto c = RowMajorMatrixWithIds<TestType, size_t, TestType>(major, minor);
   std::copy(v.begin(), v.end(), c.data());
+  std::copy(ids.begin(), ids.end(), c.ids());
   CHECK(c(0, 0) == 0);
   CHECK(
       c(1, 0) == 13);  // 0 + 1 * 13 => j + i * extents(1) => minor = extents(1)
   CHECK(c(0, 1) == 1);  // 1 + 0 * 13
+  CHECK(c.id(0) == 0);
+  CHECK(c.id(1) == 1);
+  CHECK(c.id(5) == 5);
+  CHECK(c.num_ids() == ids.size());
   CHECK(c.num_rows() == major);
   CHECK(c.num_cols() == minor);
   CHECK(num_vectors(c) == major);
   CHECK(dimension(c) == minor);
 
+  auto raveledIds = c.raveledIds();
+  CHECK(std::equal(raveledIds.begin(), raveledIds.end(), ids.begin()));
+
   auto mc =
       Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_right>(
           t, major, minor);
-  CHECK(mc.extent(0) == major);
-  CHECK(mc.extent(1) == minor);
+  CHECK(c.extent(0) == major);
+  CHECK(c.extent(1) == minor);
   CHECK(mc(0, 0) == 0);
   CHECK(
       mc(0, 1) ==
@@ -235,15 +292,24 @@ TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(num_vectors(cv) == major);
   CHECK(dimension(cv) == minor);
 
-  auto d = ColMajorMatrix<TestType>(major, minor);
+  ids = std::vector<TestType>(minor);
+  std::iota(ids.begin(), ids.end(), 0);
+  auto d = ColMajorMatrixWithIds<TestType, size_t, TestType>(major, minor);
   std::copy(v.begin(), v.end(), d.data());
+  std::copy(ids.begin(), ids.end(), d.ids());
+  CHECK(d.num_ids() == ids.size());
   CHECK(d(0, 0) == 0);
   CHECK(d(0, 1) == 7);  // 0 + 1 * 7
   CHECK(d(1, 0) == 1);  // 1 + 0 * 7 => i + j * extents(0) => major = extents(0)
+  CHECK(d.id(0) == 0);
+  CHECK(d.id(10) == 10);
   CHECK(d.num_rows() == major);
   CHECK(d.num_cols() == minor);
   CHECK(num_vectors(cv) == major);
   CHECK(dimension(cv) == minor);
+
+  raveledIds = d.raveledIds();
+  CHECK(std::equal(raveledIds.begin(), raveledIds.end(), ids.begin()));
 
   // Column major
   auto md =
@@ -258,6 +324,7 @@ TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(md(1, 0) == 1);
   CHECK(d.num_rows() == major);
   CHECK(d.num_cols() == minor);
+  CHECK(d.num_ids() == minor);
   CHECK(num_vectors(cv) == major);
   CHECK(dimension(cv) == minor);
 
