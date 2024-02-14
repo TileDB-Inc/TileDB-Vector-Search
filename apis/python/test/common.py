@@ -1,11 +1,14 @@
 import os
 import random
-import string
 import shutil
+import string
+
 import numpy as np
 
 import tiledb
-from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSION
+from tiledb.vector_search.storage_formats import STORAGE_VERSION
+from tiledb.vector_search.storage_formats import storage_formats
+
 
 def xbin_mmap(fname, dtype):
     n, d = map(int, np.fromfile(fname, dtype="uint32", count=2))
@@ -70,6 +73,7 @@ def groundtruth_read(dataset_dir, nqueries=None):
     else:
         return I, D
 
+
 def create_random_dataset_f32_only_data(nb, d, centers, path):
     """
     Creates a random float32 dataset containing just a dataset and then writes it to disk.
@@ -95,6 +99,7 @@ def create_random_dataset_f32_only_data(nb, d, centers, path):
         np.array([nb, d], dtype="uint32").tofile(f)
         X.astype("float32").tofile(f)
 
+
 def create_manual_dataset_f32_only_data(data, path, dataset_name="data.f32bin"):
     """
     Creates a dataset from manually defined data and writes it to disk.
@@ -112,6 +117,7 @@ def create_manual_dataset_f32_only_data(data, path, dataset_name="data.f32bin"):
     with open(os.path.join(path, dataset_name), "wb") as f:
         np.array([data.shape[0], data.shape[1]], dtype="uint32").tofile(f)
         data.astype("float32").tofile(f)
+
 
 def create_random_dataset_f32(nb, d, nq, k, path):
     """
@@ -218,8 +224,18 @@ def create_schema(dimension_0_domain_max, dimension_1_domain_max):
     schema = tiledb.ArraySchema(
         domain=tiledb.Domain(
             *[
-                tiledb.Dim(name="__dim_0", domain=(0, dimension_0_domain_max), tile=max(1, min(3, dimension_0_domain_max)), dtype="int32"),
-                tiledb.Dim(name="__dim_1", domain=(0, dimension_1_domain_max), tile=max(1, min(3, dimension_1_domain_max)), dtype="int32"),
+                tiledb.Dim(
+                    name="__dim_0",
+                    domain=(0, dimension_0_domain_max),
+                    tile=max(1, min(3, dimension_0_domain_max)),
+                    dtype="int32",
+                ),
+                tiledb.Dim(
+                    name="__dim_1",
+                    domain=(0, dimension_1_domain_max),
+                    tile=max(1, min(3, dimension_1_domain_max)),
+                    dtype="int32",
+                ),
             ]
         ),
         attrs=[
@@ -235,8 +251,8 @@ def create_schema(dimension_0_domain_max, dimension_1_domain_max):
 
 def create_array(path: str, data):
     schema = create_schema(
-        data.shape[0] - 1, # number of rows
-        data.shape[1] - 1, # number of cols
+        data.shape[0] - 1,  # number of rows
+        data.shape[1] - 1,  # number of cols
     )
     tiledb.Array.create(path, schema)
     with tiledb.open(path, "w") as A:
@@ -280,6 +296,7 @@ def accuracy(
         found += len(np.intersect1d(temp_result, gt[i]))
     return found / total
 
+
 def check_equals(result_d, result_i, expected_result_d, expected_result_i):
     """
     Check that the results are equal to the expected results.
@@ -295,8 +312,13 @@ def check_equals(result_d, result_i, expected_result_d, expected_result_i):
     result_i_expected: int
         The expected indices
     """
-    assert result_i == expected_result_i, f"result_i: {result_i} != expected_result_i: {expected_result_i}"
-    assert result_d == expected_result_d, f"result_d: {result_d} != expected_result_d: {expected_result_d}"
+    assert (
+        result_i == expected_result_i
+    ), f"result_i: {result_i} != expected_result_i: {expected_result_i}"
+    assert (
+        result_d == expected_result_d
+    ), f"result_d: {result_d} != expected_result_d: {expected_result_d}"
+
 
 def random_name(name: str) -> str:
     """
@@ -305,7 +327,10 @@ def random_name(name: str) -> str:
     suffix = "".join(random.choices(string.ascii_letters, k=10))
     return f"zzz_unittest_{name}_{suffix}"
 
-def check_training_input_vectors(index_uri: str, expected_training_sample_size: int, expected_dimensions: int):
+
+def check_training_input_vectors(
+    index_uri: str, expected_training_sample_size: int, expected_dimensions: int
+):
     training_input_vectors_uri = f"{index_uri}/{storage_formats[STORAGE_VERSION]['TRAINING_INPUT_VECTORS_ARRAY_NAME']}"
     with tiledb.open(training_input_vectors_uri, mode="r") as src_array:
         training_input_vectors = np.transpose(src_array[:, :]["values"])
@@ -313,9 +338,10 @@ def check_training_input_vectors(index_uri: str, expected_training_sample_size: 
         assert training_input_vectors.shape[1] == expected_dimensions
         assert not np.isnan(training_input_vectors).any()
 
+
 def move_local_index_to_new_location(index_uri):
     """
-    Moves to the index to a new location on the computer. This helps test that there are no absolute 
+    Moves to the index to a new location on the computer. This helps test that there are no absolute
     paths in the index.
     """
     copied_index_uri = index_uri + "_copied"
