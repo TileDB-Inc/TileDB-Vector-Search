@@ -36,8 +36,6 @@
 #include "detail/linalg/matrix_with_ids.h"
 #include "mdspan/mdspan.hpp"
 
-using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
-
 TEST_CASE("matrix_with_ids: test test", "[matrix_with_ids]") {
   REQUIRE(true);
 }
@@ -69,8 +67,12 @@ TEMPLATE_TEST_CASE(
   CHECK(A.id(3) == 4);
 }
 
-TEST_CASE("matrix_with_ids: copy", "[matrix_with_ids]") {
-  auto A = MatrixWithIds<float>{
+TEMPLATE_TEST_CASE(
+    "matrix_with_ids: copy",
+    "[matrix_with_ids]",
+    stdx::layout_right,
+    stdx::layout_left) {
+  auto A = MatrixWithIds<float, TestType>{
       {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}, {1, 2, 3, 4}};
 
   auto aptr = A.data();
@@ -92,19 +94,23 @@ TEST_CASE("matrix_with_ids: copy", "[matrix_with_ids]") {
   CHECK(std::equal(raveled.begin(), raveled.end(), matrixData.begin()));
 
   CHECK(B.num_ids() == idsData.size());
-  CHECK(std::equal(B.ids(), B.ids() + B.num_rows(), idsData.begin()));
+  CHECK(std::equal(B.ids(), B.ids() + B.num_ids(), idsData.begin()));
   CHECK(std::equal(raveledIds.begin(), raveledIds.end(), idsData.begin()));
   CHECK(B.id(0) == 1);
   CHECK(B.id(3) == 4);
 }
 
-TEST_CASE("matrix_with_ids: assign", "[matrix_with_ids]") {
-  auto A = MatrixWithIds<float>{
+TEMPLATE_TEST_CASE(
+    "matrix_with_ids: assign",
+    "[matrix_with_ids]",
+    stdx::layout_right,
+    stdx::layout_left) {
+  auto A = MatrixWithIds<float, TestType>{
       {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {0, 1, 2, 3}};
   auto a = std::vector<float>{8, 6, 7, 5, 3, 0, 9, 5, 0, 2, 7, 3};
   auto ids = std::vector<float>{0, 1, 2, 3};
 
-  auto B = MatrixWithIds<float>{
+  auto B = MatrixWithIds<float, TestType>{
       {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}, {100, 101, 102, 103}};
 
   auto aptr = A.data();
@@ -115,7 +121,7 @@ TEST_CASE("matrix_with_ids: assign", "[matrix_with_ids]") {
   CHECK(
       std::equal(B.data(), B.data() + B.num_rows() * B.num_cols(), a.begin()));
   CHECK(B.num_ids() == ids.size());
-  CHECK(std::equal(B.ids(), B.ids() + B.num_rows(), ids.begin()));
+  CHECK(std::equal(B.ids(), B.ids() + B.num_ids(), ids.begin()));
   auto raveledIds = B.raveledIds();
   CHECK(std::equal(raveledIds.begin(), raveledIds.end(), ids.begin()));
 
@@ -124,11 +130,13 @@ TEST_CASE("matrix_with_ids: assign", "[matrix_with_ids]") {
   CHECK(A.data() == nullptr);
 }
 
-TEST_CASE("matrix_with_ids: vector of matrix", "[matrix_with_ids]") {
-  std::vector<MatrixWithIds<float>> v;
+TEMPLATE_TEST_CASE("matrix_with_ids: vector of matrix", "[matrix_with_ids]",
+    stdx::layout_right,
+    stdx::layout_left) {
+  std::vector<MatrixWithIds<float, TestType>> v;
 
   auto numIds = 3;
-  auto A = MatrixWithIds<float>{{{8, 6, 7}, {5, 3, 0}, {9, 5, 0}}, {0, 1, 2}};
+  auto A = MatrixWithIds<float, TestType>{{{8, 6, 7}, {5, 3, 0}, {9, 5, 0}}, {0, 1, 2}};
   auto aptr = A.data();
   auto aptrIds = A.ids();
 
@@ -163,10 +171,10 @@ TEST_CASE("matrix_with_ids: vector of matrix", "[matrix_with_ids]") {
   }
 
   SECTION("operator[]") {
-    std::vector<MatrixWithIds<float>> x;
+    std::vector<MatrixWithIds<float, TestType>> x;
 
     SECTION("operator[]") {
-      std::vector<MatrixWithIds<float>> w;
+      std::vector<MatrixWithIds<float, TestType>> w;
       w.reserve(10);
       w.emplace_back();
       // w[0] = A; // Error: no matching construct_at
