@@ -47,65 +47,55 @@ TEMPLATE_TEST_CASE(
     "[matrix_with_ids]",
     stdx::layout_right,
     stdx::layout_left) {
-  auto matrix = MatrixWithIds<float, TestType>{
+  auto A = MatrixWithIds<float, TestType>{
       {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}, {1, 2, 3, 4}};
 
-  auto matrixData = std::vector<float>{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8};
+  auto a = std::vector<float>{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8};
   auto idsData = std::vector<float>{1, 2, 3, 4};
-  auto matrixRaveled = matrix.raveled();
-  auto matrixRaveledIds = matrix.raveledIds();
+  auto raveled = A.raveled();
+  auto raveledIds = A.raveledIds();
 
-  CHECK(matrix.num_rows() * matrix.num_cols() == matrixData.size());
-  CHECK(std::equal(
-      matrix.data(),
-      matrix.data() + matrix.num_rows() * matrix.num_cols(),
-      matrixData.begin()));
-  CHECK(std::equal(
-      matrixRaveled.begin(), matrixRaveled.end(), matrixData.begin()));
+  CHECK(A.num_rows() * A.num_cols() == a.size());
+  CHECK(
+      std::equal(A.data(), A.data() + A.num_rows() * A.num_cols(), a.begin()));
+  CHECK(std::equal(raveled.begin(), raveled.end(), a.begin()));
 
-  CHECK(matrix.num_ids() == idsData.size());
-  CHECK(std::equal(
-      matrix.ids(), matrix.ids() + matrix.num_rows(), idsData.begin()));
-  CHECK(std::equal(
-      matrixRaveledIds.begin(), matrixRaveledIds.end(), idsData.begin()));
-  CHECK(matrix.id(0) == 1);
-  CHECK(matrix.id(1) == 2);
-  CHECK(matrix.id(2) == 3);
-  CHECK(matrix.id(3) == 4);
+  CHECK(A.num_ids() == idsData.size());
+  CHECK(std::equal(A.ids(), A.ids() + A.num_rows(), idsData.begin()));
+  CHECK(std::equal(raveledIds.begin(), raveledIds.end(), idsData.begin()));
+  CHECK(A.id(0) == 1);
+  CHECK(A.id(1) == 2);
+  CHECK(A.id(2) == 3);
+  CHECK(A.id(3) == 4);
 }
 
 TEST_CASE("matrix_with_ids: copy", "[matrix_with_ids]") {
-  auto matrixA = MatrixWithIds<float>{
+  auto A = MatrixWithIds<float>{
       {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}, {1, 2, 3, 4}};
 
-  auto matrixAPtr = matrixA.data();
-  auto matrixAPtrIds = matrixA.ids();
+  auto aptr = A.data();
+  auto ptrIds = A.ids();
   auto matrixData = std::vector<float>{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8};
   auto idsData = std::vector<float>{1, 2, 3, 4};
 
-  auto matrixB{std::move(matrixA)};
-  auto matrixBRaveled = matrixB.raveled();
-  auto matrixBRaveledIds = matrixB.raveledIds();
+  auto B{std::move(A)};
+  auto raveled = B.raveled();
+  auto raveledIds = B.raveledIds();
 
-  CHECK(matrixAPtr == matrixB.data());
-  CHECK(matrixA.data() == nullptr);
-  CHECK(matrixAPtrIds == matrixB.ids());
-  CHECK(matrixA.ids() == nullptr);
+  CHECK(aptr == B.data());
+  CHECK(A.data() == nullptr);
+  CHECK(ptrIds == B.ids());
+  CHECK(A.ids() == nullptr);
 
   CHECK(std::equal(
-      matrixB.data(),
-      matrixB.data() + matrixB.num_rows() * matrixB.num_cols(),
-      matrixData.begin()));
-  CHECK(std::equal(
-      matrixBRaveled.begin(), matrixBRaveled.end(), matrixData.begin()));
+      B.data(), B.data() + B.num_rows() * B.num_cols(), matrixData.begin()));
+  CHECK(std::equal(raveled.begin(), raveled.end(), matrixData.begin()));
 
-  CHECK(matrixB.num_ids() == idsData.size());
-  CHECK(std::equal(
-      matrixB.ids(), matrixB.ids() + matrixB.num_rows(), idsData.begin()));
-  CHECK(std::equal(
-      matrixBRaveledIds.begin(), matrixBRaveledIds.end(), idsData.begin()));
-  CHECK(matrixB.id(0) == 1);
-  CHECK(matrixB.id(3) == 4);
+  CHECK(B.num_ids() == idsData.size());
+  CHECK(std::equal(B.ids(), B.ids() + B.num_rows(), idsData.begin()));
+  CHECK(std::equal(raveledIds.begin(), raveledIds.end(), idsData.begin()));
+  CHECK(B.id(0) == 1);
+  CHECK(B.id(3) == 4);
 }
 
 TEST_CASE("matrix_with_ids: assign", "[matrix_with_ids]") {
@@ -230,9 +220,9 @@ TEMPLATE_TEST_CASE(
           t, major, minor);
   CHECK(b.extent(0) == major);
   CHECK(b.extent(1) == minor);
-  CHECK(b(0, 0) == 0);  // M(0, 0)
-  CHECK(b(1, 0) == 1);  // M(1,0)
-  CHECK(b(0, 1) == 7);  // M(1,0)
+  CHECK(b(0, 0) == 0);
+  CHECK(b(1, 0) == 1);
+  CHECK(b(0, 1) == 7);
 
   auto ids = std::vector<TestType>(major);
   std::iota(ids.begin(), ids.end(), 0);

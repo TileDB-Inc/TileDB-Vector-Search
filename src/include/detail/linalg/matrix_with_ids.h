@@ -31,19 +31,9 @@
  *
  */
 
-#ifndef TILEDB_MATRIX_WITH_ID_H
-#define TILEDB_MATRIX_WITH_ID_H
+#ifndef TILEDB_MATRIX_WITH_IDS_H
+#define TILEDB_MATRIX_WITH_IDS_H
 
-#include <cstddef>
-#include <initializer_list>
-#include <iostream>
-#include "concepts.h"
-#include "mdspan/mdspan.hpp"
-#include "tdb_defs.h"
-
-#include "utils/timer.h"
-
-#include <version>
 #include "detail/linalg/linalg_defs.h"
 #include "detail/linalg/matrix.h"
 
@@ -217,4 +207,4 @@ using RowMajorMatrixWithIds = MatrixWithIds<T, stdx::layout_right, I, IdsType>;
 template <class T, class I = size_t, class IdsType = size_t>
 using ColMajorMatrixWithIds = MatrixWithIds<T, stdx::layout_left, I, IdsType>;
 
-#endif  // TILEDB_MATRIX_WITH_ID_H
+#endif  // TILEDB_MATRIX_WITH_IDS_H
