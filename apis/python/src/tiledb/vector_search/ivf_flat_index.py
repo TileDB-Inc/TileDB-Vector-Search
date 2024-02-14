@@ -3,13 +3,13 @@ import multiprocessing
 from typing import Any, Mapping
 
 import numpy as np
-from tiledb.cloud.dag import Mode
 
+from tiledb.cloud.dag import Mode
 from tiledb.vector_search import index
 from tiledb.vector_search.module import *
-from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
-                                                  storage_formats,
-                                                  validate_storage_version)
+from tiledb.vector_search.storage_formats import STORAGE_VERSION
+from tiledb.vector_search.storage_formats import storage_formats
+from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import add_to_group
 
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
@@ -159,17 +159,17 @@ class IVFFlatIndex(index.Index):
             wether to use the nuv query implementation. Default: False
         mode: Mode
             If provided the query will be executed using TileDB cloud taskgraphs.
-            For distributed execution you can use REALTIME or BATCH mode. 
+            For distributed execution you can use REALTIME or BATCH mode.
             For local execution you can use LOCAL mode.
-        resource_class: 
+        resource_class:
             The name of the resource class to use ("standard" or "large"). Resource classes define maximum
             limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode.
             Cannot be used alongside resources.
             In REALTIME or BATCH mode if neither resource_class nor resources are provided,
             we default to the "large" resource class.
         resources:
-            A specification for the amount of resources to use when executing using TileDB cloud 
-            taskgraphs, of the form: {"cpu": "6", "memory": "12Gi", "gpu": 1}. Can only be used 
+            A specification for the amount of resources to use when executing using TileDB cloud
+            taskgraphs, of the form: {"cpu": "6", "memory": "12Gi", "gpu": 1}. Can only be used
             in BATCH mode. Cannot be used alongside resource_class.
         num_partitions: int
             Only relevant for taskgraph based execution.
@@ -274,17 +274,17 @@ class IVFFlatIndex(index.Index):
             Number of threads to use for query
         mode: Mode
             If provided the query will be executed using TileDB cloud taskgraphs.
-            For distributed execution you can use REALTIME or BATCH mode. 
+            For distributed execution you can use REALTIME or BATCH mode.
             For local execution you can use LOCAL mode.
-        resource_class: 
+        resource_class:
             The name of the resource class to use ("standard" or "large"). Resource classes define maximum
             limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode.
             Cannot be used alongside resources.
             In REALTIME or BATCH mode if neither resource_class nor resources are provided,
             we default to the "large" resource class.
         resources:
-            A specification for the amount of resources to use when executing using TileDB cloud 
-            taskgraphs, of the form: {"cpu": "6", "memory": "12Gi", "gpu": 1}. Can only be used 
+            A specification for the amount of resources to use when executing using TileDB cloud
+            taskgraphs, of the form: {"cpu": "6", "memory": "12Gi", "gpu": 1}. Can only be used
             in BATCH mode. Cannot be used alongside resource_class.
         num_partitions: int
             Only relevant for taskgraph based execution.
@@ -299,11 +299,12 @@ class IVFFlatIndex(index.Index):
         from functools import partial
 
         import numpy as np
+
         from tiledb.cloud import dag
         from tiledb.cloud.dag import Mode
-
-        from tiledb.vector_search.module import (array_to_matrix, dist_qv,
-                                                 partition_ivf_index)
+        from tiledb.vector_search.module import array_to_matrix
+        from tiledb.vector_search.module import dist_qv
+        from tiledb.vector_search.module import partition_ivf_index
 
         if resource_class and resources:
             raise TypeError("Cannot provide both resource_class and resources")
@@ -413,7 +414,9 @@ class IVFFlatIndex(index.Index):
                     k_nn=k,
                     config=config,
                     timestamp=self.base_array_timestamp,
-                    resource_class="large" if (not resources and not resource_class) else resource_class,
+                    resource_class="large"
+                    if (not resources and not resource_class)
+                    else resource_class,
                     resources=resources,
                     image_name="3.9-vectorsearch",
                 )
