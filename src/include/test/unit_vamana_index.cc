@@ -128,6 +128,9 @@ TEST_CASE("vamana: diskann", "[vamana]") {
   auto f = read_diskann_data(diskann_test_data_file);
   CHECK(num_vectors(f) == 256);
   CHECK(dimension(f) == 128);
+  CHECK(f.data() != nullptr);
+  CHECK(!std::equal(f.data(), f.data() + 256 * 128, std::vector<float>(128*256, 0).data()));
+
   auto med = ::medoid(f);
 
   if (debug) {
