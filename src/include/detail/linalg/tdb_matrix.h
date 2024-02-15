@@ -54,9 +54,13 @@
  * it is sufficient to simply have one Matrix class and have a factory that
  * creates them by reading from TileDB.
  */
-template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
-  using Base = Matrix<T, LayoutPolicy, I>;
+template <
+    class T,
+    class LayoutPolicy = stdx::layout_right,
+    class I = size_t,
+    class MatrixBase = Matrix<T, LayoutPolicy, I>>
+class tdbBlockedMatrix : public MatrixBase {
+  using Base = MatrixBase;
   using Base::Base;
 
  public:
@@ -69,7 +73,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
- private:
+ protected:
   using row_domain_type = int32_t;
   using col_domain_type = int32_t;
 
@@ -172,7 +176,12 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
                  tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp))) {
   }
 
-  /** General constructor */
+  /** General constructor
+   * @param move_to_base Whether this constructor should construct the base
+   * class with the storage data. If you do not set this to true then you should
+   * manually do this before using the object. This is set to false by
+   * tdbBlockedMatrixWithIds() because it will be
+   */
   tdbBlockedMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
@@ -182,6 +191,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t last_col,
       size_t upper_bound,
       tiledb::TemporalPolicy temporal_policy)  // noexcept
+      // bool move_to_base = true
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : ctx_{ctx}
       , uri_{uri}
@@ -253,8 +263,37 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 #else
     auto data_ = std::unique_ptr<T[]>(new T[dimension * load_blocksize_]);
 #endif
-
-    Base::operator=(Base{std::move(data_), dimension, load_blocksize_});
+    if constexpr (std::is_same<MatrixBase, Matrix<T, LayoutPolicy, I>>::value) {
+      std::cout << "hit noIds case" << std::endl;
+      Base::operator=(Base{std::move(data_), dimension, load_blocksize_});
+    } else {
+      std::cout << "hit WithIDS case" << std::endl;
+#ifdef __cpp_lib_smart_ptr_for_overwrite
+      auto ids_data_ =
+          std::make_unique_for_overwrite<typename MatrixBase::IdsType[]>(
+              load_blocksize_);
+#else
+      auto ids_data_ = std::unique_ptr<typename MatrixBase::ids_type[]>(
+          new typename MatrixBase::ids_type[load_blocksize_]);
+//    auto ids_data_ = std::unique_ptr<MatrixBase::ids_type[]>(new
+//    T[load_blocksize_]);
+#endif
+      Base::operator=(Base{
+          std::move(data_), std::move(ids_data_), dimension, load_blocksize_});
+    }
+    //     if (move_to_base) {
+    //       size_t dimension = last_row_ - first_row_;
+    // #ifdef __cpp_lib_smart_ptr_for_overwrite
+    //       auto data_ =
+    //           std::make_unique_for_overwrite<T[]>(dimension *
+    //           load_blocksize_);
+    // #else
+    //       auto data_ = std::unique_ptr<T[]>(new T[dimension *
+    //       load_blocksize_]);
+    // #endif
+    //       Base::operator=(Base{std::move(data_), dimension,
+    //       load_blocksize_});
+    //     }
   }
 
   // @todo Allow specification of how many columns to advance by
@@ -305,7 +344,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
         tdb_func__, elements_to_load * dimension * sizeof(T));
 
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
-      throw std::runtime_error("Query status is not complete -- fix me");
+      throw std::runtime_error("Query status is not complete");
     }
 
     num_loads_++;

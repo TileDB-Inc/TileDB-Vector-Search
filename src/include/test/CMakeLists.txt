@@ -115,6 +115,8 @@ kmeans_add_test(unit_logging)
 
 kmeans_add_test(unit_matrix)
 
+kmeans_add_test(unit_matrix_with_ids)
+
 kmeans_add_test(unit_mdspan)
 
 kmeans_add_test(unit_memory)
@@ -136,6 +138,8 @@ kmeans_add_test(unit_stl)
 kmeans_add_test(unit_tdb_io)
 
 kmeans_add_test(unit_tdb_matrix)
+
+kmeans_add_test(unit_tdb_matrix_with_ids)
 
 kmeans_add_test(unit_utils)
 
