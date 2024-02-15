@@ -76,9 +76,9 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       : Matrix<T, LayoutPolicy, I>(nrows, ncols, policy)
       , num_ids_(this->num_rows_)
 #ifdef __cpp_lib_smart_ptr_for_overwrite
-      , idsStorage_{std::make_unique_for_overwrite<T[]>(this->num_rows_)}
+      , idsStorage_{std::make_unique_for_overwrite<IdsType[]>(this->num_rows_)}
 #else
-      , idsStorage_{new T[this->num_rows_]}
+      , idsStorage_{new IdsType[this->num_rows_]}
 #endif
   {
   }
@@ -91,16 +91,16 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       : Matrix<T, LayoutPolicy, I>(nrows, ncols, policy)
       , num_ids_(this->num_cols_)
 #ifdef __cpp_lib_smart_ptr_for_overwrite
-      , idsStorage_{std::make_unique_for_overwrite<T[]>(this->num_cols_)}
+      , idsStorage_{std::make_unique_for_overwrite<IdsType[]>(this->num_cols_)}
 #else
-      , idsStorage_{new T[this->num_cols_]}
+      , idsStorage_{new IdsType[this->num_cols_]}
 #endif
   {
   }
 
   MatrixWithIds(
       std::unique_ptr<T[]>&& storage,
-      std::unique_ptr<T[]>&& ids_storage,
+      std::unique_ptr<IdsType[]>&& ids_storage,
       Matrix<T, LayoutPolicy, I>::size_type nrows,
       Matrix<T, LayoutPolicy, I>::size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
