@@ -274,7 +274,7 @@ class tdbBlockedMatrix : public MatrixBase {
     }
   }
 
-    // @todo Allow specification of how many columns to advance by
+  // @todo Allow specification of how many columns to advance by
   virtual bool load() {
     scoped_timer _{tdb_func__ + " " + uri_};
 
