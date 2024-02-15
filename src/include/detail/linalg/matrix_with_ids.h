@@ -110,7 +110,6 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
             std::is_same<LayoutPolicy, stdx::layout_right>::value ?
                 this->num_rows_ :
                 this->num_cols_} {
-    std::cout << "ctor 1" << std::endl;
   }
 
   /**
