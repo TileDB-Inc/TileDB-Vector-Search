@@ -41,6 +41,30 @@ TEST_CASE("matrix_with_ids: test test", "[matrix_with_ids]") {
 }
 
 TEMPLATE_TEST_CASE(
+    "matrix_with_ids: move constructor",
+    "[matrix_with_ids]",
+    stdx::layout_right,
+    stdx::layout_left) {
+  size_t rows = 5;
+  size_t cols = 10;
+  auto vectors = std::unique_ptr<float[]>(new float[rows * cols]);
+  auto ids = std::unique_ptr<size_t[]>(new size_t[rows * cols]);
+  auto matrix = MatrixWithIds<float, TestType>{
+      std::move(vectors), std::move(ids), rows, cols};
+}
+
+TEMPLATE_TEST_CASE(
+    "matrix_with_ids: size constructor",
+    "[matrix_with_ids]",
+    char,
+    float,
+    int32_t,
+    int64_t) {
+  auto matrix =
+      MatrixWithIds<TestType, stdx::layout_right, size_t, TestType>{2, 5};
+}
+
+TEMPLATE_TEST_CASE(
     "matrix_with_ids: initializer list",
     "[matrix_with_ids]",
     stdx::layout_right,

@@ -53,6 +53,8 @@ template <
     class I = size_t,
     class IdsType = size_t>
 class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
+  using Base = Matrix<T, LayoutPolicy, I>;
+
  protected:
   size_t num_ids_ = 0;
   std::unique_ptr<IdsType[]> idsStorage_;
@@ -69,11 +71,11 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
   virtual ~MatrixWithIds() = default;
 
   MatrixWithIds(
-      Matrix<T, LayoutPolicy, I>::size_type nrows,
-      Matrix<T, LayoutPolicy, I>::size_type ncols,
+      Base::size_type nrows,
+      Base::size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-      : Matrix<T, LayoutPolicy, I>(nrows, ncols, policy)
+      : Base(nrows, ncols, policy)
       , num_ids_(this->num_rows_)
 #ifdef __cpp_lib_smart_ptr_for_overwrite
       , idsStorage_{std::make_unique_for_overwrite<IdsType[]>(this->num_rows_)}
@@ -84,11 +86,11 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
   }
 
   MatrixWithIds(
-      Matrix<T, LayoutPolicy, I>::size_type nrows,
-      Matrix<T, LayoutPolicy, I>::size_type ncols,
+      Base::size_type nrows,
+      Base::size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : Matrix<T, LayoutPolicy, I>(nrows, ncols, policy)
+      : Base(nrows, ncols, policy)
       , num_ids_(this->num_cols_)
 #ifdef __cpp_lib_smart_ptr_for_overwrite
       , idsStorage_{std::make_unique_for_overwrite<IdsType[]>(this->num_cols_)}
@@ -101,15 +103,12 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
   MatrixWithIds(
       std::unique_ptr<T[]>&& storage,
       std::unique_ptr<IdsType[]>&& ids_storage,
-      Matrix<T, LayoutPolicy, I>::size_type nrows,
-      Matrix<T, LayoutPolicy, I>::size_type ncols,
+      Base::size_type nrows,
+      Base::size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
-      : Matrix<T, LayoutPolicy, I>(storage, nrows, ncols, policy)
-      , idsStorage_{std::move(ids_storage)}
-      , num_ids_{
-            std::is_same<LayoutPolicy, stdx::layout_right>::value ?
-                this->num_rows_ :
-                this->num_cols_} {
+      : Base(std::move(storage), nrows, ncols, policy)
+      , num_ids_{std::is_same<LayoutPolicy, stdx::layout_right>::value ? this->num_rows_ : this->num_cols_}
+      , idsStorage_{std::move(ids_storage)} {
   }
 
   /**
@@ -120,7 +119,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       std::initializer_list<std::initializer_list<T>> matrix,
       std::initializer_list<T> ids) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-      : Matrix<T, LayoutPolicy, I>(matrix)
+      : Base(matrix)
       , num_ids_(this->num_rows_)
 #ifdef __cpp_lib_smart_ptr_for_overwrite
       , idsStorage_{std::make_unique_for_overwrite<IdsType[]>(this->num_rows_)}
@@ -139,7 +138,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       std::initializer_list<std::initializer_list<T>> matrix,
       std::initializer_list<T> ids) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : Matrix<T, LayoutPolicy, I>(matrix)
+      : Base(matrix)
       , num_ids_(this->num_cols_)
 #ifdef __cpp_lib_smart_ptr_for_overwrite
       , idsStorage_{std::make_unique_for_overwrite<IdsType[]>(this->num_cols_)}
@@ -170,21 +169,22 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
     return std::span(idsStorage_.get(), num_ids_);
   }
 
-  auto id(Matrix<T, LayoutPolicy, I>::index_type i) const {
+  auto id(Base::index_type i) const {
     return idsStorage_[i];
   }
 
   auto swap(MatrixWithIds& rhs) noexcept {
-    Matrix<T, LayoutPolicy, I>::swap(rhs);
+    Base::swap(rhs);
     std::swap(idsStorage_, rhs.idsStorage_);
   }
 
   template <
       class T_,
       class LayoutPolicy_ = stdx::layout_right,
-      class I_ = size_t>
-  bool operator==(
-      const MatrixWithIds<T_, LayoutPolicy_, I_>& rhs) const noexcept {
+      class I_ = size_t,
+      class IdsType_ = size_t>
+  bool operator==(const MatrixWithIds<T_, LayoutPolicy_, I_, IdsType_>& rhs)
+      const noexcept {
     return Matrix<T_, LayoutPolicy_, I_>::operator==(rhs) &&
            ((void*)this->ids() == (void*)rhs.ids() ||
             std::equal(
