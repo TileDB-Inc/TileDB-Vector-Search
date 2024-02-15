@@ -264,7 +264,6 @@ class tdbBlockedMatrix : public MatrixBase {
     auto data_ = std::unique_ptr<T[]>(new T[dimension * load_blocksize_]);
 #endif
     if constexpr (std::is_same<MatrixBase, Matrix<T, LayoutPolicy, I>>::value) {
-      std::cout << "hit noIds case" << std::endl;
       Base::operator=(Base{std::move(data_), dimension, load_blocksize_});
     } else {
       std::cout << "hit WithIDS case" << std::endl;
@@ -275,29 +274,15 @@ class tdbBlockedMatrix : public MatrixBase {
 #else
       auto ids_data_ = std::unique_ptr<typename MatrixBase::ids_type[]>(
           new typename MatrixBase::ids_type[load_blocksize_]);
-//    auto ids_data_ = std::unique_ptr<MatrixBase::ids_type[]>(new
-//    T[load_blocksize_]);
 #endif
       Base::operator=(Base{
           std::move(data_), std::move(ids_data_), dimension, load_blocksize_});
     }
-    //     if (move_to_base) {
-    //       size_t dimension = last_row_ - first_row_;
-    // #ifdef __cpp_lib_smart_ptr_for_overwrite
-    //       auto data_ =
-    //           std::make_unique_for_overwrite<T[]>(dimension *
-    //           load_blocksize_);
-    // #else
-    //       auto data_ = std::unique_ptr<T[]>(new T[dimension *
-    //       load_blocksize_]);
-    // #endif
-    //       Base::operator=(Base{std::move(data_), dimension,
-    //       load_blocksize_});
-    //     }
   }
 
-  // @todo Allow specification of how many columns to advance by
-  bool load() {
+  virtual  // @todo Allow specification of how many columns to advance by
+      bool
+      load() {
     scoped_timer _{tdb_func__ + " " + uri_};
 
     const size_t attr_idx{0};

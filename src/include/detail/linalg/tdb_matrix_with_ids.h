@@ -27,7 +27,8 @@
  *
  * @section DESCRIPTION
  *
- * Class that provides a matrix interface to a TileDB array.
+ * Class that provides a matrix interface to two TileDB arrays, one containing
+ * vectors and one IDs.
  *
  * @todo Include the right headers for BLAS support.
  * @todo Refactor ala tdb_partitioned_matrix.h
@@ -37,22 +38,10 @@
 #ifndef TDB_MATRIX_WITH_IDS_H
 #define TDB_MATRIX_WITH_IDS_H
 
-// #include <future>
-//
-// #include <tiledb/tiledb>
-//
-// #include "detail/linalg/linalg_defs.h"
 #include "detail/linalg/matrix_with_ids.h"
 #include "detail/linalg/tdb_helpers.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "tdb_defs.h"
-
-// template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-// class tdbBlockedMatrixBase : public Matrix<T, LayoutPolicy, I> {};
-
-// template <class T, class LayoutPolicy, class I>
-// class tdbBlockedMatrixBase<T, LayoutPolicy, I, true> : public
-// MatrixWithIds<T, LayoutPolicy, I> {};
 
 /**
  * Derived from `tdbBlockedMatrix`, which we have derive from `MatrixWithIds`.
@@ -77,48 +66,14 @@ class tdbBlockedMatrixWithIds
   using Base::Base;
 
  public:
-  // using value_type = typename Base::value_type;
   using index_type = typename Base::index_type;
-  // using size_type = typename Base::size_type;
-  // using reference = typename Base::reference;
-
-  // using view_type = Base;
-
-  // constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
  private:
-  // using row_domain_type = int32_t;
-  // using col_domain_type = int32_t;
-
   log_timer constructor_timer{"tdbBlockedMatrixWithIds constructor"};
-
-  // std::reference_wrapper<const tiledb::Context> ctx_;
-  // std::string uri_;
-  // std::unique_ptr<tiledb::Array> array_;
-  // tiledb::ArraySchema schema_;
 
   std::string ids_uri_;
   std::unique_ptr<tiledb::Array> ids_array_;
   tiledb::ArraySchema ids_schema_;
-
-  //  index_type first_ids_index_;
-  //  index_type last_ids_index_;
-  // index_type first_row_;
-  // index_type last_row_;
-  // index_type first_col_;
-  // index_type last_col_;
-  // index_type first_resident_col_;
-  // index_type last_resident_col_;
-
-  // The number of columns loaded into memory.  Except for the last (remainder)
-  // block, this will be equal to `blocksize_`.
-  // index_type num_resident_cols_{0};
-
-  // How many columns to load at a time
-  // index_type load_blocksize_{0};
-
-  // How many blocks we have loaded
-  // size_t num_loads_{0};
 
  public:
   tdbBlockedMatrixWithIds(tdbBlockedMatrixWithIds&& rhs) = default;
@@ -218,22 +173,6 @@ class tdbBlockedMatrixWithIds
             ctx, ids_uri, TILEDB_READ, temporal_policy))
       , ids_schema_{ids_array_->schema()} {
     constructor_timer.stop();
-    //     scoped_timer _{tdb_func__ + " " + uri};
-
-    //     size_t dimension = last_row_ - first_row_;
-    // #ifdef __cpp_lib_smart_ptr_for_overwrite
-    //       auto data_ =
-    //           std::make_unique_for_overwrite<T[]>(dimension *
-    //           load_blocksize_);
-    //       auto ids_data_ =
-    //           std::make_unique_for_overwrite<T[]>(load_blocksize_);
-    // #else
-    //       auto data_ = std::unique_ptr<T[]>(new T[dimension *
-    //       load_blocksize_]); auto ids_data_ = std::unique_ptr<T[]>(new
-    //       T[load_blocksize_]);
-    // #endif
-    //       Base::operator=(Base{std::move(data_), std::move(ids_data_),
-    //       dimension, load_blocksize_});
   }
 
   // @todo Allow specification of how many columns to advance by
@@ -242,7 +181,6 @@ class tdbBlockedMatrixWithIds
     if (!Base::load()) {
       return false;
     }
-    std::cout << "[tdb_matrix_with_ids] finished with base load()" << std::endl;
 
     const size_t attr_idx{0};
     auto attr = ids_schema_.attribute(attr_idx);
@@ -256,15 +194,7 @@ class tdbBlockedMatrixWithIds
           datatype_to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
     }
 
-    // std::string ids_uri_;
-    // std::unique_ptr<tiledb::Array> ids_array_;
-    // tiledb::ArraySchema ids_schema_;
-
-    // size_t dimension = 1;
-    // auto elements_to_load =
-    //     std::min(load_blocksize_, last_col_ - last_resident_col_);
-
-    size_t dimension = 1;
+    static const size_t dimension = 1;
     // In the Base::load() we will have already computed the number of elements
     // to load, and because returned true from there we should have a positive
     // number of elements to load.
@@ -274,17 +204,6 @@ class tdbBlockedMatrixWithIds
       throw std::runtime_error(
           "Error computing IDs to load: " + std::to_string(elements_to_load));
     }
-
-    // // Return if we're at the end
-    // if (elements_to_load == 0) {
-    //   return false;
-    // }
-
-    // // These calls change the current view
-    // first_resident_col_ = last_resident_col_;
-    // last_resident_col_ += elements_to_load;
-
-    // assert(last_resident_col_ != first_resident_col_);
 
     // Create a subarray for the next block of columns
     tiledb::Subarray subarray(this->ctx_, *ids_array_);
@@ -307,19 +226,9 @@ class tdbBlockedMatrixWithIds
       throw std::runtime_error("Query status for IDs is not complete");
     }
 
-    // num_loads_++;
     return true;
   }
-
-  // index_type col_offset() const {
-  //   return first_resident_col_;
-  // }
-
-  // index_type num_loads() const {
-  //   return num_loads_;
-  // }
-
-};  // tdbBlockedMatrix
+};  // tdbBlockedMatrixWithIds
 
 /**
  * Convenience class for row-major blocked matrices.
@@ -329,7 +238,7 @@ using tdbRowMajorBlockedMatrixWithIds =
     tdbBlockedMatrixWithIds<T, stdx::layout_right, I, IdsType>;
 
 /**
- * Convenience class for column-major blockef matrices.
+ * Convenience class for column-major blocked matrices.
  */
 template <class T, class I = size_t, class IdsType = size_t>
 using tdbColMajorBlockedMatrixWithIds =
