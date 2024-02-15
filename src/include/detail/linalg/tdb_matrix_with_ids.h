@@ -45,7 +45,7 @@
 
 /**
  * Derived from `tdbBlockedMatrix`, which we have derive from `MatrixWithIds`.
- * Initialized in construction by filling from a given TileDB array.
+ * Initialized in construction by filling from the TileDB vectors array and the the TileDB IDs array .
  */
 template <
     class T,

@@ -176,12 +176,7 @@ class tdbBlockedMatrix : public MatrixBase {
                  tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp))) {
   }
 
-  /** General constructor
-   * @param move_to_base Whether this constructor should construct the base
-   * class with the storage data. If you do not set this to true then you should
-   * manually do this before using the object. This is set to false by
-   * tdbBlockedMatrixWithIds() because it will be
-   */
+  /** General constructor */
   tdbBlockedMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
@@ -191,7 +186,6 @@ class tdbBlockedMatrix : public MatrixBase {
       size_t last_col,
       size_t upper_bound,
       tiledb::TemporalPolicy temporal_policy)  // noexcept
-      // bool move_to_base = true
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : ctx_{ctx}
       , uri_{uri}
@@ -280,9 +274,8 @@ class tdbBlockedMatrix : public MatrixBase {
     }
   }
 
-  virtual  // @todo Allow specification of how many columns to advance by
-      bool
-      load() {
+    // @todo Allow specification of how many columns to advance by
+  virtual bool load() {
     scoped_timer _{tdb_func__ + " " + uri_};
 
     const size_t attr_idx{0};
