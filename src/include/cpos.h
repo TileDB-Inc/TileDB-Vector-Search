@@ -236,6 +236,30 @@ inline constexpr auto data = _data::_fn{};
 }  // namespace _cpo
 
 // ----------------------------------------------------------------------------
+// ids CPO
+// @todo Figure out what is wrong with const
+// ----------------------------------------------------------------------------
+namespace _ids {
+void ids(auto&) = delete;
+void ids(const auto&) = delete;
+
+template <class T>
+concept _member_data = requires(T t) {
+  { t.ids() };
+};
+
+struct _fn {
+  template <_member_data T>
+  constexpr auto operator()(T&& t) const noexcept {
+    return t.ids();
+  }
+};
+}  // namespace _ids
+inline namespace _cpo {
+inline constexpr auto ids = _ids::_fn{};
+}  // namespace _cpo
+
+// ----------------------------------------------------------------------------
 // extents CPO
 // ----------------------------------------------------------------------------
 namespace _extents {

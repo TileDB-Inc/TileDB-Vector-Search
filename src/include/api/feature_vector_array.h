@@ -38,6 +38,7 @@
 #ifndef TILEDB_API_FEATURE_VECTOR_ARRAY_H
 #define TILEDB_API_FEATURE_VECTOR_ARRAY_H
 
+#include <unordered_set>
 #include "api_defs.h"
 #include "concepts.h"
 #include "cpos.h"
@@ -47,7 +48,150 @@
 #include "scoring.h"
 #include "tdb_defs.h"
 
+#include <type_traits>
 #include "utils/print_types.h"
+
+// TODO(paris): Move this somewhere specific if we decide to use this.
+
+// template <tiledb_datatype_t Enum>
+// struct BaseTypeFromEnum {
+//     using type = void; // Placeholder, will be specialized
+// };
+//
+//// Specialized TypeFromEnum structs inherit from BaseTypeFromEnum
+// template <tiledb_datatype_t Enum>
+// struct TypeFromEnum : BaseTypeFromEnum<Enum> {};
+//
+//// // Define a function to map from enum values to types
+//// template <tiledb_datatype_t Enum>
+//// struct TypeFromEnum;
+//
+// template <>
+// struct TypeFromEnum<TILEDB_FLOAT32> {
+//  using type = float;
+//};
+//
+// template <>
+// struct TypeFromEnum<TILEDB_UINT8> {
+//  using type = uint8_t;
+//};
+//
+// template <>
+// struct TypeFromEnum<TILEDB_INT32> {
+//  using type = int32_t;
+//};
+//
+// template <>
+// struct TypeFromEnum<TILEDB_UINT32> {
+//  using type = uint32_t;
+//};
+//
+// template <>
+// struct TypeFromEnum<TILEDB_INT64> {
+//  using type = int64_t;
+//};
+//
+// template <>
+// struct TypeFromEnum<TILEDB_UINT64> {
+//  using type = uint64_t;
+//};
+//
+// auto typeFromEnum(tiledb_datatype_t enumValue) {
+//  switch (enumValue) {
+//    case TILEDB_FLOAT32:
+//      return static_cast<void *>(&TypeFromEnum<TILEDB_FLOAT32>{});
+//    case TILEDB_UINT8:
+//      return static_cast<void *>(&TypeFromEnum<TILEDB_UINT8>{});
+//    case TILEDB_INT32:
+//      return static_cast<void *>(&TypeFromEnum<TILEDB_INT32>{});
+//    case TILEDB_UINT32:
+//      return static_cast<void *>(&TypeFromEnum<TILEDB_UINT32>{});
+//    case TILEDB_INT64:
+//      return static_cast<void *>(&TypeFromEnum<TILEDB_INT64>{});
+//    case TILEDB_UINT64:
+//      return static_cast<void *>(&TypeFromEnum<TILEDB_UINT64>{});
+//    default:
+//      throw std::runtime_error("Unsupported attribute type");
+//  }
+//}
+
+// template <tiledb_datatype_t A>
+// auto typeFromEnum(tiledb_datatype_t enumValue) {
+//  switch (enumValue) {
+//    case TILEDB_FLOAT32:
+//      return TypeFromEnum<TILEDB_FLOAT32>{};
+//    case TILEDB_UINT8:
+//      return TypeFromEnum<TILEDB_UINT8>{};
+//    case TILEDB_INT32:
+//      return TypeFromEnum<TILEDB_INT32>{};
+//    case TILEDB_UINT32:
+//      return TypeFromEnum<TILEDB_UINT32>{};
+//    case TILEDB_INT64:
+//      return TypeFromEnum<TILEDB_INT64>{};
+//    case TILEDB_UINT64:
+//      return TypeFromEnum<TILEDB_UINT64>{};
+//    default:
+//      throw std::runtime_error("Unsupported attribute type");
+//  }
+// }
+
+// template<tiledb_datatype_t A>
+// typename TypeFromEnum<A>::type typeFromEnum() { return
+// TypeFromEnum<A>::value; }
+
+// struct Converter {
+//   template <tiledb_datatype_t EnumValue>
+//   struct ToType {};
+
+//   template <>
+//   struct ToType<TILEDB_UINT64> {
+//     using type = uint64_t;
+//   };
+
+//   template <>
+//   struct ToType<TILEDB_INT64> {
+//     using type = int64_t;
+//   };
+
+//   // Add more specializations for other enum values as needed
+// };
+
+static const std::unordered_set<tiledb_datatype_t> supported_types_ = {
+    TILEDB_FLOAT32,
+    TILEDB_UINT8,
+    TILEDB_INT32,
+    TILEDB_UINT32,
+    TILEDB_INT64,
+    TILEDB_UINT64};
+
+using VariantType =
+    std::variant<float, uint8_t, int32_t, uint32_t, int64_t, uint64_t>;
+VariantType typeFromEnum(tiledb_datatype_t enumValue) {
+  VariantType v;
+  switch (enumValue) {
+    case TILEDB_FLOAT32:
+      v = static_cast<float>(0);
+      break;
+    case TILEDB_UINT8:
+      v = static_cast<uint8_t>(0);
+      break;
+    case TILEDB_INT32:
+      v = static_cast<int32_t>(0);
+      break;
+    case TILEDB_UINT32:
+      v = static_cast<uint32_t>(0);
+      break;
+    case TILEDB_INT64:
+      v = static_cast<int64_t>(0);
+      break;
+    case TILEDB_UINT64:
+      v = static_cast<uint64_t>(0);
+      break;
+    default:
+      throw std::runtime_error("Unsupported attribute type");
+  }
+  return v;
+}
 
 class FeatureVectorArray {
  public:
@@ -66,11 +210,20 @@ class FeatureVectorArray {
     feature_type_ = tiledb::impl::type_to_tiledb<
         typename std::remove_cvref_t<T>::value_type>::tiledb_type;
     feature_size_ = datatype_to_size(feature_type_);
+
+    //    TODO(paris): Get this working.
+    //    has_ids_ = obj.has_ids();
+    //    if (has_ids_) {
+    //      ids_type_ = tiledb::impl::type_to_tiledb<typename
+    //      std::remove_cvref_t<T>::value_type>::tiledb_type; feature_size_ =
+    //      datatype_to_size(feature_type_);
+    //    }
   }
 
   FeatureVectorArray(
       const tiledb::Context& ctx,
       const std::string& uri,
+      const std::string& ids_uri = "",
       size_t num_vectors = 0) {
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
     feature_type_ = get_array_datatype(*array);
@@ -84,79 +237,58 @@ class FeatureVectorArray {
      * happen with either orientation, and so will work at the other end with
      * either orientation since we are just passing a pointer to the data.
      */
-    switch (feature_type_) {
-      case TILEDB_FLOAT32:
-        vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<float>>>(
-                ctx, uri, num_vectors);
-        break;
-      case TILEDB_UINT8:
-        vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint8_t>>>(
-                ctx, uri, num_vectors);
-        break;
-      case TILEDB_INT32:
-        vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<int32_t>>>(
-                ctx, uri, num_vectors);
-        break;
-      case TILEDB_UINT32:
-        vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint32_t>>>(
-                ctx, uri, num_vectors);
-        break;
-      case TILEDB_INT64:
-        vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<int64_t>>>(
-                ctx, uri, num_vectors);
-        break;
-      case TILEDB_UINT64:
-        vector_array =
-            std::make_unique<vector_array_impl<tdbColMajorMatrix<uint64_t>>>(
-                ctx, uri, num_vectors);
-        break;
-      default:
-        throw std::runtime_error("Unsupported attribute type");
+    auto feature_type_variant = typeFromEnum(feature_type_);
+    if (ids_uri.empty()) {
+      vector_array = std::make_unique<vector_array_impl<
+          tdbColMajorMatrix<decltype(feature_type_variant.index())>>>(
+          ctx, uri, num_vectors, ids_uri);
+      (void)vector_array->load();
+    } else {
+      has_ids_ = true;
+      auto array =
+          tiledb_helpers::open_array(tdb_func__, ctx, ids_uri, TILEDB_READ);
+      ids_type_ = get_array_datatype(*array);
+      array->close();
+      ids_size_ = datatype_to_size(ids_type_);
+
+      auto ids_type_variant = typeFromEnum(ids_type_);
+      vector_array =
+          std::make_unique<vector_array_impl<tdbColMajorMatrixWithIds<
+              decltype(feature_type_variant.index()),
+              size_t,
+              decltype(ids_type_variant.index())>>>(ctx, uri, num_vectors, ids_uri);
+      (void)vector_array->load();
     }
-    (void)vector_array->load();
   }
 
-  FeatureVectorArray(size_t rows, size_t cols, const std::string type_string) {
+  FeatureVectorArray(
+      size_t rows,
+      size_t cols,
+      const std::string& type_string,
+      const std::string& ids_type_string = "") {
     feature_type_ = string_to_datatype(type_string);
     feature_size_ = datatype_to_size(feature_type_);
-    switch (feature_type_) {
-      case TILEDB_FLOAT32:
-        vector_array =
-            std::make_unique<vector_array_impl<ColMajorMatrix<float>>>(
-                rows, cols);
-        break;
-      case TILEDB_UINT8:
-        vector_array =
-            std::make_unique<vector_array_impl<ColMajorMatrix<uint8_t>>>(
-                rows, cols);
-        break;
-      case TILEDB_INT32:
-        vector_array =
-            std::make_unique<vector_array_impl<ColMajorMatrix<int32_t>>>(
-                rows, cols);
-        break;
-      case TILEDB_UINT32:
-        vector_array =
-            std::make_unique<vector_array_impl<ColMajorMatrix<uint32_t>>>(
-                rows, cols);
-        break;
-      case TILEDB_INT64:
-        vector_array =
-            std::make_unique<vector_array_impl<ColMajorMatrix<int64_t>>>(
-                rows, cols);
-        break;
-      case TILEDB_UINT64:
-        vector_array =
-            std::make_unique<vector_array_impl<ColMajorMatrix<uint64_t>>>(
-                rows, cols);
-        break;
-      default:
-        throw std::runtime_error("Unsupported attribute type");
+    if (supported_types_.find(feature_type_) == supported_types_.end()) {
+      throw std::runtime_error("Unsupported attribute type");
+    }
+
+    auto feature_type_variant = typeFromEnum(feature_type_);
+    if (ids_type_string.empty()) {
+      vector_array = std::make_unique<vector_array_impl<
+          ColMajorMatrix<decltype(feature_type_variant.index())>>>(rows, cols);
+    } else {
+      has_ids_ = true;
+      ids_type_ = string_to_datatype(ids_type_string);
+      ids_size_ = datatype_to_size(ids_type_);
+      if (supported_types_.find(ids_type_) == supported_types_.end()) {
+        throw std::runtime_error("Unsupported attribute type for ids");
+      }
+      auto ids_type_variant = typeFromEnum(ids_type_);
+      vector_array =
+          std::make_unique<vector_array_impl<ColMajorMatrixWithIds<
+              decltype(feature_type_variant.index()),
+              size_t,
+              decltype(ids_type_variant.index())>>>(rows, cols);
     }
   }
 
@@ -174,6 +306,11 @@ class FeatureVectorArray {
     return vector_array->data();
   }
 
+  [[nodiscard]] auto ids() const {
+    // return _cpo::data(*vector_array);
+    return vector_array->ids();
+  }
+
   [[nodiscard]] auto extents() const {
     return _cpo::extents(*vector_array);
   }
@@ -184,6 +321,10 @@ class FeatureVectorArray {
 
   [[nodiscard]] auto num_vectors() const {
     return _cpo::num_vectors(*vector_array);
+  }
+
+  [[nodiscard]] auto has_ids() const {
+    return has_ids_;
   }
 
   [[nodiscard]] tiledb_datatype_t feature_type() const {
@@ -198,6 +339,18 @@ class FeatureVectorArray {
     return feature_size_;
   }
 
+  [[nodiscard]] tiledb_datatype_t ids_type() const {
+    return ids_type_;
+  }
+
+  [[nodiscard]] std::string ids_type_string() const {
+    return datatype_to_string(ids_type_);
+  }
+
+  [[nodiscard]] size_t ids_size() const {
+    return ids_size_;
+  }
+
   /**
    * Non-type parameterized base class (for type erasure).
    */
@@ -206,6 +359,7 @@ class FeatureVectorArray {
     [[nodiscard]] virtual size_t dimension() const = 0;
     [[nodiscard]] virtual size_t num_vectors() const = 0;
     [[nodiscard]] virtual void* data() const = 0;
+    [[nodiscard]] virtual void* ids() const = 0;
     [[nodiscard]] virtual std::vector<size_t> extents() const = 0;
     [[nodiscard]] virtual bool load() = 0;
   };
@@ -219,14 +373,17 @@ class FeatureVectorArray {
       //     : impl_vector_array(t) {
     }
     vector_array_impl(
-        const tiledb::Context& ctx, const std::string& uri, size_t num_vectors)
-        : impl_vector_array(ctx, uri, num_vectors) {
+        const tiledb::Context& ctx, const std::string& uri, size_t num_vectors, const std::string& ids_uri)
+        : impl_vector_array(ctx, uri, num_vectors, 0, ids_uri) {
     }
     vector_array_impl(size_t rows, size_t cols)
         : impl_vector_array(rows, cols) {
     }
     [[nodiscard]] void* data() const override {
       return _cpo::data(impl_vector_array);
+    }
+    [[nodiscard]] void* ids() const override {
+      return _cpo::ids(impl_vector_array);
     }
     [[nodiscard]] size_t dimension() const override {
       return _cpo::dimension(impl_vector_array);
@@ -248,6 +405,10 @@ class FeatureVectorArray {
  private:
   tiledb_datatype_t feature_type_{TILEDB_ANY};
   size_t feature_size_{0};
+
+  bool has_ids_{false};
+  tiledb_datatype_t ids_type_{TILEDB_ANY};
+  size_t ids_size_{0};
 
   // @todo const????
   std::unique_ptr</*const*/ vector_array_base> vector_array;
