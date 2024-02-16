@@ -96,6 +96,7 @@ jobs:
             CXX=clang++
           MACOSX_DEPLOYMENT_TARGET: "12.0"
           CIBW_ARCHS: all
+          CIBW_PRERELEASE_PYTHONS: True
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
         with:
           output-dir: wheelhouse
