@@ -35,9 +35,25 @@
 #include "cpos.h"
 #include "detail/linalg/matrix_with_ids.h"
 #include "mdspan/mdspan.hpp"
+#include <type_traits>
+#include <typeinfo>
 
 TEST_CASE("matrix_with_ids: test test", "[matrix_with_ids]") {
   REQUIRE(true);
+}
+
+TEMPLATE_TEST_CASE(
+        "matrix_with_ids: template arguments",
+        "[matrix_with_ids]",
+        char,
+        float,
+        int32_t,
+        int64_t) {
+  auto vectors = std::unique_ptr<float[]>(new float[100]);
+  auto ids = std::vector<TestType>(100);
+  auto matrix = MatrixWithIds<float, TestType>{std::move(vectors), std::move(ids), 100, 1};
+    CHECK(std::is_same<decltype(matrix.id(0)), TestType>::value);
+    CHECK(typeid(decltype(matrix.id(0))) == typeid(decltype(matrix.ids()[0])));
 }
 
 TEMPLATE_TEST_CASE(
@@ -48,9 +64,15 @@ TEMPLATE_TEST_CASE(
   size_t rows = 5;
   size_t cols = 10;
   auto vectors = std::unique_ptr<float[]>(new float[rows * cols]);
-  auto ids = std::unique_ptr<size_t[]>(new size_t[rows * cols]);
-  auto matrix = MatrixWithIds<float, TestType>{
-      std::move(vectors), std::move(ids), rows, cols};
+  auto expectedNumVectors = std::is_same<TestType, stdx::layout_right>::value ? rows : cols;
+  auto expectedDimension = std::is_same<TestType, stdx::layout_right>::value ? cols : rows;
+  auto ids = std::vector<size_t>(expectedNumVectors);
+  auto matrix = MatrixWithIds<float, size_t, TestType>{std::move(vectors), std::move(ids), rows, cols};
+  CHECK(matrix.num_rows() == rows);
+  CHECK(matrix.num_cols() == cols);
+  CHECK(dimension(matrix) == expectedDimension);
+  CHECK(num_vectors(matrix) == expectedNumVectors);
+  CHECK(size(matrix.ids()) == expectedNumVectors);
 }
 
 TEMPLATE_TEST_CASE(
@@ -60,8 +82,20 @@ TEMPLATE_TEST_CASE(
     float,
     int32_t,
     int64_t) {
-  auto matrix =
-      MatrixWithIds<TestType, stdx::layout_right, size_t, TestType>{2, 5};
+  auto row_matrix =
+       MatrixWithIds<TestType, TestType, stdx::layout_right, size_t>{2, 5};
+  CHECK(row_matrix.num_rows() == 2);
+  CHECK(row_matrix.num_cols() == 5);
+  CHECK(dimension(row_matrix) == 5);
+  CHECK(num_vectors(row_matrix) == 2);
+  CHECK(size(row_matrix.ids()) == 2);
+
+  auto col_matrix = MatrixWithIds<TestType, TestType, stdx::layout_left, size_t>{2, 5};
+  CHECK(col_matrix.num_rows() == 2);
+  CHECK(col_matrix.num_cols() == 5);
+  CHECK(dimension(col_matrix) == 2);
+  CHECK(num_vectors(col_matrix) == 5);
+  CHECK(size(col_matrix.ids()) == 5);
 }
 
 TEMPLATE_TEST_CASE(
@@ -69,13 +103,13 @@ TEMPLATE_TEST_CASE(
     "[matrix_with_ids]",
     stdx::layout_right,
     stdx::layout_left) {
-  auto A = MatrixWithIds<float, TestType>{
+  auto A = MatrixWithIds<float, size_t, TestType>{
       {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}, {1, 2, 3, 4}};
 
   auto a = std::vector<float>{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8};
-  auto idsData = std::vector<float>{1, 2, 3, 4};
+  auto idsData = std::vector<size_t>{1, 2, 3, 4};
   auto raveled = A.raveled();
-  auto raveledIds = A.raveledIds();
+  auto ids = A.ids();
 
   CHECK(A.num_rows() * A.num_cols() == a.size());
   CHECK(
@@ -83,8 +117,9 @@ TEMPLATE_TEST_CASE(
   CHECK(std::equal(raveled.begin(), raveled.end(), a.begin()));
 
   CHECK(A.num_ids() == idsData.size());
-  CHECK(std::equal(A.ids(), A.ids() + A.num_rows(), idsData.begin()));
-  CHECK(std::equal(raveledIds.begin(), raveledIds.end(), idsData.begin()));
+  CHECK(std::equal(A.ids().begin(), A.ids().end(), idsData.begin()));
+  CHECK(std::equal(ids.begin(), ids.end(), idsData.begin()));
+  CHECK(std::is_same<decltype(A.id(0)), size_t>::value);
   CHECK(A.id(0) == 1);
   CHECK(A.id(1) == 2);
   CHECK(A.id(2) == 3);
@@ -96,7 +131,7 @@ TEMPLATE_TEST_CASE(
     "[matrix_with_ids]",
     stdx::layout_right,
     stdx::layout_left) {
-  auto A = MatrixWithIds<float, TestType>{
+  auto A = MatrixWithIds<float, float, TestType>{
       {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}, {1, 2, 3, 4}};
 
   auto aptr = A.data();
@@ -106,20 +141,20 @@ TEMPLATE_TEST_CASE(
 
   auto B{std::move(A)};
   auto raveled = B.raveled();
-  auto raveledIds = B.raveledIds();
+  auto ids = B.ids();
 
   CHECK(aptr == B.data());
   CHECK(A.data() == nullptr);
   CHECK(ptrIds == B.ids());
-  CHECK(A.ids() == nullptr);
+  CHECK(A.ids().size() == 0);
 
   CHECK(std::equal(
       B.data(), B.data() + B.num_rows() * B.num_cols(), matrixData.begin()));
   CHECK(std::equal(raveled.begin(), raveled.end(), matrixData.begin()));
 
   CHECK(B.num_ids() == idsData.size());
-  CHECK(std::equal(B.ids(), B.ids() + B.num_ids(), idsData.begin()));
-  CHECK(std::equal(raveledIds.begin(), raveledIds.end(), idsData.begin()));
+  CHECK(std::equal(B.ids().begin(), B.ids().end(), idsData.begin()));
+  CHECK(std::equal(ids.begin(), ids.end(), idsData.begin()));
   CHECK(B.id(0) == 1);
   CHECK(B.id(3) == 4);
 }
@@ -129,12 +164,12 @@ TEMPLATE_TEST_CASE(
     "[matrix_with_ids]",
     stdx::layout_right,
     stdx::layout_left) {
-  auto A = MatrixWithIds<float, TestType>{
+  auto A = MatrixWithIds<float, float, TestType>{
       {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {0, 1, 2, 3}};
   auto a = std::vector<float>{8, 6, 7, 5, 3, 0, 9, 5, 0, 2, 7, 3};
   auto ids = std::vector<float>{0, 1, 2, 3};
 
-  auto B = MatrixWithIds<float, TestType>{
+  auto B = MatrixWithIds<float, float, TestType>{
       {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}, {100, 101, 102, 103}};
 
   auto aptr = A.data();
@@ -145,9 +180,7 @@ TEMPLATE_TEST_CASE(
   CHECK(
       std::equal(B.data(), B.data() + B.num_rows() * B.num_cols(), a.begin()));
   CHECK(B.num_ids() == ids.size());
-  CHECK(std::equal(B.ids(), B.ids() + B.num_ids(), ids.begin()));
-  auto raveledIds = B.raveledIds();
-  CHECK(std::equal(raveledIds.begin(), raveledIds.end(), ids.begin()));
+  CHECK(std::equal(B.ids().begin(), B.ids().end(), ids.begin()));
 
   CHECK(aptr == B.data());
   CHECK(aptrIds == B.ids());
@@ -159,10 +192,10 @@ TEMPLATE_TEST_CASE(
     "[matrix_with_ids]",
     stdx::layout_right,
     stdx::layout_left) {
-  std::vector<MatrixWithIds<float, TestType>> v;
+  std::vector<MatrixWithIds<float, float, TestType>> v;
 
   auto numIds = 3;
-  auto A = MatrixWithIds<float, TestType>{
+  auto A = MatrixWithIds<float, float, TestType>{
       {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}}, {0, 1, 2}};
   auto aptr = A.data();
   auto aptrIds = A.ids();
@@ -194,14 +227,14 @@ TEMPLATE_TEST_CASE(
     CHECK(A.data() == nullptr);
     CHECK(v[0].num_ids() == numIds);
     CHECK(v[0].ids() == aptrIds);
-    CHECK(A.ids() == nullptr);
+    CHECK(A.ids().size() == 0);
   }
 
   SECTION("operator[]") {
-    std::vector<MatrixWithIds<float, TestType>> x;
+    std::vector<MatrixWithIds<float, float, TestType>> x;
 
     SECTION("operator[]") {
-      std::vector<MatrixWithIds<float, TestType>> w;
+      std::vector<MatrixWithIds<float, float, TestType>> w;
       w.reserve(10);
       w.emplace_back();
       // w[0] = A; // Error: no matching construct_at
@@ -218,7 +251,7 @@ TEMPLATE_TEST_CASE(
       CHECK(x[0].ids() == aptrIds);
     }
     CHECK(A.data() == nullptr);
-    CHECK(A.ids() == nullptr);
+    CHECK(A.ids().size() == 0);
   }
 }
 
@@ -261,9 +294,9 @@ TEMPLATE_TEST_CASE(
 
   auto ids = std::vector<TestType>(major);
   std::iota(ids.begin(), ids.end(), 0);
-  auto c = RowMajorMatrixWithIds<TestType, size_t, TestType>(major, minor);
+  auto c = RowMajorMatrixWithIds<TestType, TestType>(major, minor);
   std::copy(v.begin(), v.end(), c.data());
-  std::copy(ids.begin(), ids.end(), c.ids());
+  std::copy(ids.begin(), ids.end(), c.ids().begin());
   CHECK(c(0, 0) == 0);
   CHECK(
       c(1, 0) == 13);  // 0 + 1 * 13 => j + i * extents(1) => minor = extents(1)
@@ -276,9 +309,9 @@ TEMPLATE_TEST_CASE(
   CHECK(c.num_cols() == minor);
   CHECK(num_vectors(c) == major);
   CHECK(dimension(c) == minor);
+  CHECK(std::is_same<decltype(c.id(2)), TestType>::value);
 
-  auto raveledIds = c.raveledIds();
-  CHECK(std::equal(raveledIds.begin(), raveledIds.end(), ids.begin()));
+  CHECK(std::equal(c.ids().begin(), c.ids().end(), ids.begin()));
 
   auto mc =
       Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_right>(
@@ -319,9 +352,9 @@ TEMPLATE_TEST_CASE(
 
   ids = std::vector<TestType>(minor);
   std::iota(ids.begin(), ids.end(), 0);
-  auto d = ColMajorMatrixWithIds<TestType, size_t, TestType>(major, minor);
+  auto d = ColMajorMatrixWithIds<TestType, TestType>(major, minor);
   std::copy(v.begin(), v.end(), d.data());
-  std::copy(ids.begin(), ids.end(), d.ids());
+  std::copy(ids.begin(), ids.end(), d.ids().begin());
   CHECK(d.num_ids() == ids.size());
   CHECK(d(0, 0) == 0);
   CHECK(d(0, 1) == 7);  // 0 + 1 * 7
@@ -332,9 +365,9 @@ TEMPLATE_TEST_CASE(
   CHECK(d.num_cols() == minor);
   CHECK(num_vectors(cv) == major);
   CHECK(dimension(cv) == minor);
+  CHECK(std::is_same<decltype(d.id(5)), TestType>::value);
 
-  raveledIds = d.raveledIds();
-  CHECK(std::equal(raveledIds.begin(), raveledIds.end(), ids.begin()));
+  CHECK(std::equal(d.ids().begin(), d.ids().end(), ids.begin()));
 
   // Column major
   auto md =
