@@ -31,29 +31,30 @@
 
 #include <algorithm>
 #include <catch2/catch_all.hpp>
+#include <type_traits>
+#include <typeinfo>
 #include <vector>
 #include "cpos.h"
 #include "detail/linalg/matrix_with_ids.h"
 #include "mdspan/mdspan.hpp"
-#include <type_traits>
-#include <typeinfo>
 
 TEST_CASE("matrix_with_ids: test test", "[matrix_with_ids]") {
   REQUIRE(true);
 }
 
 TEMPLATE_TEST_CASE(
-        "matrix_with_ids: template arguments",
-        "[matrix_with_ids]",
-        char,
-        float,
-        int32_t,
-        int64_t) {
+    "matrix_with_ids: template arguments",
+    "[matrix_with_ids]",
+    char,
+    float,
+    int32_t,
+    int64_t) {
   auto vectors = std::unique_ptr<float[]>(new float[100]);
   auto ids = std::vector<TestType>(100);
-  auto matrix = MatrixWithIds<float, TestType>{std::move(vectors), std::move(ids), 100, 1};
-    CHECK(std::is_same<decltype(matrix.id(0)), TestType>::value);
-    CHECK(typeid(decltype(matrix.id(0))) == typeid(decltype(matrix.ids()[0])));
+  auto matrix = MatrixWithIds<float, TestType>{
+      std::move(vectors), std::move(ids), 100, 1};
+  CHECK(std::is_same<decltype(matrix.id(0)), TestType>::value);
+  CHECK(typeid(decltype(matrix.id(0))) == typeid(decltype(matrix.ids()[0])));
 }
 
 TEMPLATE_TEST_CASE(
@@ -64,10 +65,13 @@ TEMPLATE_TEST_CASE(
   size_t rows = 5;
   size_t cols = 10;
   auto vectors = std::unique_ptr<float[]>(new float[rows * cols]);
-  auto expectedNumVectors = std::is_same<TestType, stdx::layout_right>::value ? rows : cols;
-  auto expectedDimension = std::is_same<TestType, stdx::layout_right>::value ? cols : rows;
+  auto expectedNumVectors =
+      std::is_same<TestType, stdx::layout_right>::value ? rows : cols;
+  auto expectedDimension =
+      std::is_same<TestType, stdx::layout_right>::value ? cols : rows;
   auto ids = std::vector<size_t>(expectedNumVectors);
-  auto matrix = MatrixWithIds<float, size_t, TestType>{std::move(vectors), std::move(ids), rows, cols};
+  auto matrix = MatrixWithIds<float, size_t, TestType>{
+      std::move(vectors), std::move(ids), rows, cols};
   CHECK(matrix.num_rows() == rows);
   CHECK(matrix.num_cols() == cols);
   CHECK(dimension(matrix) == expectedDimension);
@@ -83,14 +87,15 @@ TEMPLATE_TEST_CASE(
     int32_t,
     int64_t) {
   auto row_matrix =
-       MatrixWithIds<TestType, TestType, stdx::layout_right, size_t>{2, 5};
+      MatrixWithIds<TestType, TestType, stdx::layout_right, size_t>{2, 5};
   CHECK(row_matrix.num_rows() == 2);
   CHECK(row_matrix.num_cols() == 5);
   CHECK(dimension(row_matrix) == 5);
   CHECK(num_vectors(row_matrix) == 2);
   CHECK(size(row_matrix.ids()) == 2);
 
-  auto col_matrix = MatrixWithIds<TestType, TestType, stdx::layout_left, size_t>{2, 5};
+  auto col_matrix =
+      MatrixWithIds<TestType, TestType, stdx::layout_left, size_t>{2, 5};
   CHECK(col_matrix.num_rows() == 2);
   CHECK(col_matrix.num_cols() == 5);
   CHECK(dimension(col_matrix) == 2);

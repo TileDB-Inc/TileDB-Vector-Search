@@ -51,106 +51,110 @@ template <
     class T,
     class IdsType = uint64_t,
     class LayoutPolicy = stdx::layout_right,
-    class I = size_t
-    >
+    class I = size_t>
 class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
-    using Base = Matrix<T, LayoutPolicy, I>;
+  using Base = Matrix<T, LayoutPolicy, I>;
 
-protected:
-    std::vector<IdsType> ids_;
+ protected:
+  std::vector<IdsType> ids_;
 
-public:
-    MatrixWithIds() noexcept = default;
+ public:
+  MatrixWithIds() noexcept = default;
 
-    MatrixWithIds(const MatrixWithIds &) = delete;
+  MatrixWithIds(const MatrixWithIds&) = delete;
 
-    MatrixWithIds &operator=(const MatrixWithIds &) = delete;
+  MatrixWithIds& operator=(const MatrixWithIds&) = delete;
 
-    MatrixWithIds(MatrixWithIds &&) = default;
+  MatrixWithIds(MatrixWithIds&&) = default;
 
-    MatrixWithIds &operator=(MatrixWithIds &&rhs) = default;
+  MatrixWithIds& operator=(MatrixWithIds&& rhs) = default;
 
-    virtual ~MatrixWithIds() = default;
+  virtual ~MatrixWithIds() = default;
 
-    MatrixWithIds(
-            Base::size_type nrows,
-            Base::size_type ncols,
-            LayoutPolicy policy = LayoutPolicy()) noexcept requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-            : Base(nrows, ncols, policy), ids_(this->num_rows_) {
-    }
+  MatrixWithIds(
+      Base::size_type nrows,
+      Base::size_type ncols,
+      LayoutPolicy policy = LayoutPolicy()) noexcept
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+      : Base(nrows, ncols, policy)
+      , ids_(this->num_rows_) {
+  }
 
-    MatrixWithIds(
-            Base::size_type nrows,
-            Base::size_type ncols,
-            LayoutPolicy policy = LayoutPolicy()) noexcept requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-            : Base(nrows, ncols, policy), ids_(this->num_cols_) {
-    }
+  MatrixWithIds(
+      Base::size_type nrows,
+      Base::size_type ncols,
+      LayoutPolicy policy = LayoutPolicy()) noexcept
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : Base(nrows, ncols, policy)
+      , ids_(this->num_cols_) {
+  }
 
-    MatrixWithIds(
-            std::unique_ptr<T[]> &&storage,
-            std::vector<IdsType> &&ids,
-            Base::size_type nrows,
-            Base::size_type ncols,
-            LayoutPolicy policy = LayoutPolicy()) noexcept
-            : Base(std::move(storage), nrows, ncols, policy), ids_{std::move(ids)} {
-    }
+  MatrixWithIds(
+      std::unique_ptr<T[]>&& storage,
+      std::vector<IdsType>&& ids,
+      Base::size_type nrows,
+      Base::size_type ncols,
+      LayoutPolicy policy = LayoutPolicy()) noexcept
+      : Base(std::move(storage), nrows, ncols, policy)
+      , ids_{std::move(ids)} {
+  }
 
-    /**
-     * Initializer list constructor. Useful for testing and for examples.
-     * The initializer list is assumed to be in row-major order.
-     */
-    MatrixWithIds(
-            std::initializer_list<std::initializer_list<T>> matrix,
-            const std::vector<IdsType> &ids) noexcept requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-            : Base(matrix), ids_{ids} {
-        }
+  /**
+   * Initializer list constructor. Useful for testing and for examples.
+   * The initializer list is assumed to be in row-major order.
+   */
+  MatrixWithIds(
+      std::initializer_list<std::initializer_list<T>> matrix,
+      const std::vector<IdsType>& ids) noexcept
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
+      : Base(matrix)
+      , ids_{ids} {
+  }
 
-        /**
-         * Initializer list constructor. Useful for testing and for examples.
-         * The initializer list is assumed to be in column-major order.
-         */
-        MatrixWithIds(std::initializer_list<std::initializer_list<T>> matrix, const std::vector<IdsType> &ids) noexcept requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-        : Base (matrix)
-        , ids_{ids}
-        {
-        }
+  /**
+   * Initializer list constructor. Useful for testing and for examples.
+   * The initializer list is assumed to be in column-major order.
+   */
+  MatrixWithIds(
+      std::initializer_list<std::initializer_list<T>> matrix,
+      const std::vector<IdsType>& ids) noexcept
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : Base(matrix)
+      , ids_{ids} {
+  }
 
-        [[nodiscard]] size_t num_ids() const {
-            return ids_.size();
-        }
+  [[nodiscard]] size_t num_ids() const {
+    return ids_.size();
+  }
 
-        std::vector<IdsType> &ids() {
-            return ids_;
-        }
+  std::vector<IdsType>& ids() {
+    return ids_;
+  }
 
-        const std::vector<IdsType> &ids() const {
-            return ids_;
-        }
+  const std::vector<IdsType>& ids() const {
+    return ids_;
+  }
 
-        auto id(Base::index_type i) const {
-            return ids_[i];
-        }
+  auto id(Base::index_type i) const {
+    return ids_[i];
+  }
 
-        auto swap(MatrixWithIds &rhs) noexcept {
-            Base::swap(rhs);
-            std::swap(ids_, rhs.ids_);
-        }
+  auto swap(MatrixWithIds& rhs) noexcept {
+    Base::swap(rhs);
+    std::swap(ids_, rhs.ids_);
+  }
 
-        template<
-                class T_,
-                class IdsType_ = uint64_t,
-                class LayoutPolicy_ = stdx::layout_right,
-                class I_ = size_t
-        >
-        bool operator==(const MatrixWithIds<T_, IdsType_, LayoutPolicy_, I_> &rhs)
-        const noexcept {
-            return Matrix<T_, LayoutPolicy_, I_>::operator==(rhs) &&
-                   ((void *) this->ids() == (void *) rhs.ids() ||
-                    std::equal(
-                            ids().begin(),
-                            ids().end(),
-                            rhs.ids().begin()));
-        }
+  template <
+      class T_,
+      class IdsType_ = uint64_t,
+      class LayoutPolicy_ = stdx::layout_right,
+      class I_ = size_t>
+  bool operator==(const MatrixWithIds<T_, IdsType_, LayoutPolicy_, I_>& rhs)
+      const noexcept {
+    return Matrix<T_, LayoutPolicy_, I_>::operator==(rhs) &&
+           ((void*)this->ids() == (void*)rhs.ids() ||
+            std::equal(ids().begin(), ids().end(), rhs.ids().begin()));
+  }
 };
 
 /**
