@@ -43,6 +43,7 @@
 
 #include "detail/linalg/linalg_defs.h"
 #include "detail/linalg/matrix.h"
+#include "detail/linalg/matrix_with_ids.h"
 #include "detail/linalg/tdb_helpers.h"
 #include "tdb_defs.h"
 
@@ -257,10 +258,14 @@ class tdbBlockedMatrix : public MatrixBase {
 #else
     auto data_ = std::unique_ptr<T[]>(new T[dimension * load_blocksize_]);
 #endif
+    // @todo Use concepts instead of concrete type.
     if constexpr (std::is_same<MatrixBase, Matrix<T, LayoutPolicy, I>>::value) {
       Base::operator=(Base{std::move(data_), dimension, load_blocksize_});
-    } else {
-      std::cout << "hit WithIDS case" << std::endl;
+    } else if constexpr (
+        std::is_same<
+            MatrixBase,
+            MatrixWithIds<T, LayoutPolicy, I, typename Base::ids_type>>::
+            value) {
 #ifdef __cpp_lib_smart_ptr_for_overwrite
       auto ids_data_ =
           std::make_unique_for_overwrite<typename MatrixBase::IdsType[]>(
@@ -271,6 +276,10 @@ class tdbBlockedMatrix : public MatrixBase {
 #endif
       Base::operator=(Base{
           std::move(data_), std::move(ids_data_), dimension, load_blocksize_});
+    } else {
+      static_assert(
+          always_false<MatrixBase>,
+          "MatrixBase must be Matrix or MatrixWithIds");
     }
   }
 
