@@ -392,6 +392,8 @@ template <class Distance = sum_of_squares_distance>
 auto medoid(auto&& P, Distance distance = Distance{}) {
   auto n = num_vectors(P);
   auto centroid = Vector<float>(P[0].size());
+  std::fill(begin(centroid), end(centroid), 0.0);
+
   for (size_t j = 0; j < n; ++j) {
     auto p = P[j];
     for (size_t i = 0; i < p.size(); ++i) {
