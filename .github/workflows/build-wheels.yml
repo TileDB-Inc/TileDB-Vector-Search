@@ -75,7 +75,7 @@ jobs:
           # Windows build is currently disabled since the C++ build fails on multiple errors e.g. file manipulation
           # and std::filesystem::path implicit to string conversion.
           # Follow up task https://app.shortcut.com/tiledb-inc/story/41119/enable-windows-build-for-vector-search-repository
-        python: [ "cp39", "cp310", "cp311", "cp312", "pp39" ]
+        python: [ "cp39", "cp310", "cp311", "pp39" ]
         exclude:
           - buildplat: [ macos-13, macosx_arm64 ]
             python: "pp39"
