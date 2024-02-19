@@ -137,8 +137,6 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - run: ls dist
-
       - id: get_package_version
         run: |
           echo "package_version=$(ls dist/ | head -n 1 | cut -d - -f 2)" >> "$GITHUB_OUTPUT"
