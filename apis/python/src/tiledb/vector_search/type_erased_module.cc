@@ -254,8 +254,12 @@ void init_type_erased_module(py::module_& m) {
           })
       .def(
           "write_index",
-          [](IndexVamana& index, const tiledb::Context& ctx, const std::string& group_uri, bool overwrite) {
-            std::cout << "[type_erased_module] write_index" << group_uri << " " << overwrite << std::endl;
+          [](IndexVamana& index,
+             const tiledb::Context& ctx,
+             const std::string& group_uri,
+             bool overwrite) {
+            std::cout << "[type_erased_module] write_index" << group_uri << " "
+                      << overwrite << std::endl;
             index.write_index(ctx, group_uri, overwrite);
           },
           py::arg("ctx"),

@@ -53,8 +53,11 @@ endmacro (kmeans_add_test)
 # kmeans_add_test(time_l2)
 # kmeans_add_test(time_open)
 
-kmeans_add_test(unit_vamana)
-set_tests_properties(unit_vamana_test PROPERTIES WILL_FAIL TRUE)
+kmeans_add_test(unit_vamana_index)
+
+kmeans_add_test(unit_vamana_group)
+
+kmeans_add_test(unit_vamana_metadata)
 
 kmeans_add_test(unit_adj_list)
 
@@ -79,6 +82,8 @@ kmeans_add_test(unit_cpos)
 kmeans_add_test(unit_execution_policy)
 
 kmeans_add_test(unit_fixed_min_heap)
+
+kmeans_add_test(unit_flatpq_index)
 
 kmeans_add_test(unit_flat_l2_index)
 
@@ -113,6 +118,8 @@ kmeans_add_test(unit_matrix)
 kmeans_add_test(unit_mdspan)
 
 kmeans_add_test(unit_memory)
+
+kmeans_add_test(unit_nn-descent)
 
 kmeans_add_test(unit_nn-graph)
 

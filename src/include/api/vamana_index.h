@@ -41,7 +41,7 @@
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
 #include "api_defs.h"
-#include "detail/graph/vamana.h"
+#include "index/vamana_index.h"
 #include "tiledb/group_experimental.h"
 
 /*******************************************************************************
@@ -91,7 +91,6 @@ class IndexVamana {
       for (auto&& c : *config) {
         auto key = c.first;
         auto value = c.second;
-        std::cout << key << " " << value << std::endl;
         if (key == "dimension") {
           dimension_ = std::stol(value);
         } else if (key == "L_build") {
@@ -162,50 +161,50 @@ class IndexVamana {
     if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<uint8_t, uint32_t, uint32_t>>>(
+          index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(
           ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
-      index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<float, uint32_t, uint32_t>>>(
-          ctx, group_uri);
+      index_ =
+          std::make_unique<index_impl<vamana_index<float, uint32_t, uint32_t>>>(
+              ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<uint8_t, uint32_t, uint64_t>>>(
+          index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(
           ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
-      index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<float, uint32_t, uint64_t>>>(
-          ctx, group_uri);
+      index_ =
+          std::make_unique<index_impl<vamana_index<float, uint32_t, uint64_t>>>(
+              ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<uint8_t, uint64_t, uint32_t>>>(
+          index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(
           ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
-      index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<float, uint64_t, uint32_t>>>(
-          ctx, group_uri);
+      index_ =
+          std::make_unique<index_impl<vamana_index<float, uint64_t, uint32_t>>>(
+              ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<uint8_t, uint64_t, uint64_t>>>(
+          index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(
           ctx, group_uri);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
-      index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<float, uint64_t, uint64_t>>>(
-          ctx, group_uri);
+      index_ =
+          std::make_unique<index_impl<vamana_index<float, uint64_t, uint64_t>>>(
+              ctx, group_uri);
     } else {
       throw std::runtime_error("Unsupported datatype combination");
     }
@@ -244,50 +243,50 @@ class IndexVamana {
     if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<uint8_t, uint32_t, uint32_t>>>(
+          index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(
           training_set.num_vectors(), L_build_, R_max_degree_);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
-      index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<float, uint32_t, uint32_t>>>(
-          training_set.num_vectors(), L_build_, R_max_degree_);
+      index_ =
+          std::make_unique<index_impl<vamana_index<float, uint32_t, uint32_t>>>(
+              training_set.num_vectors(), L_build_, R_max_degree_);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<uint8_t, uint32_t, uint64_t>>>(
+          index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(
           training_set.num_vectors(), L_build_, R_max_degree_);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
-      index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<float, uint32_t, uint64_t>>>(
-          training_set.num_vectors(), L_build_, R_max_degree_);
+      index_ =
+          std::make_unique<index_impl<vamana_index<float, uint32_t, uint64_t>>>(
+              training_set.num_vectors(), L_build_, R_max_degree_);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<uint8_t, uint64_t, uint32_t>>>(
+          index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(
           training_set.num_vectors(), L_build_, R_max_degree_);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
-      index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<float, uint64_t, uint32_t>>>(
-          training_set.num_vectors(), L_build_, R_max_degree_);
+      index_ =
+          std::make_unique<index_impl<vamana_index<float, uint64_t, uint32_t>>>(
+              training_set.num_vectors(), L_build_, R_max_degree_);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<uint8_t, uint64_t, uint64_t>>>(
+          index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(
           training_set.num_vectors(), L_build_, R_max_degree_);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
-      index_ = std::make_unique<
-          index_impl<detail::graph::vamana_index<float, uint64_t, uint64_t>>>(
-          training_set.num_vectors(), L_build_, R_max_degree_);
+      index_ =
+          std::make_unique<index_impl<vamana_index<float, uint64_t, uint64_t>>>(
+              training_set.num_vectors(), L_build_, R_max_degree_);
     }
 
     index_->train(training_set);
@@ -311,9 +310,6 @@ class IndexVamana {
           datatype_to_string(feature_datatype_) +
           " != " + datatype_to_string(data_set.feature_type()));
     }
-    if (!_index) {
-      throw std::runtime_error("Index has not been created");
-    }
     index_->add(data_set);
   }
 
@@ -322,9 +318,6 @@ class IndexVamana {
       const QueryVectorArray& vectors,
       size_t top_k,
       std::optional<size_t> opt_L) {
-    if (!_index) {
-      throw std::runtime_error("Index has not been created");
-    }
     return index_->query(vectors, top_k, opt_L);
   }
 
@@ -332,10 +325,6 @@ class IndexVamana {
       const tiledb::Context& ctx,
       const std::string& group_uri,
       bool overwrite = false) const {
-    std::cout << "[vamana_index.h@write_index]" << group_uri << " " << overwrite << std::endl;
-    if (!_index) {
-      throw std::runtime_error("Index has not been created");
-    }
     index_->write_index(ctx, group_uri, overwrite);
   }
 
@@ -410,7 +399,7 @@ class IndexVamana {
     }
 
     void train(const FeatureVectorArray& training_set) override {
-      using feature_type = typename T::value_type;
+      using feature_type = typename T::feature_type;
       auto fspan = MatrixView<feature_type, stdx::layout_left>{
           (feature_type*)training_set.data(),
           extents(training_set)[0],
@@ -419,7 +408,7 @@ class IndexVamana {
     }
 
     void add(const FeatureVectorArray& data_set) override {
-      using feature_type = typename T::value_type;
+      using feature_type = typename T::feature_type;
       auto fspan = MatrixView<feature_type, stdx::layout_left>{
           (feature_type*)data_set.data(),
           extents(data_set)[0],
@@ -483,7 +472,6 @@ class IndexVamana {
         const tiledb::Context& ctx,
         const std::string& group_uri,
         bool overwrite) const override {
-      std::cout << "[vamana_index.h@impl@write_index]" << group_uri << " " << overwrite << std::endl;
       impl_index_.write_index(ctx, group_uri, overwrite);
     }
 
