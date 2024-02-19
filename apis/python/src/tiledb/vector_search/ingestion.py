@@ -56,7 +56,7 @@ def ingest(
     Parameters
     ----------
     index_type: str
-        Type of vector index (FLAT, IVF_FLAT)
+        Type of vector index (FLAT, IVF_FLAT, VAMANA)
     index_uri: str
         Vector index URI (stored as TileDB group)
     input_vectors: numpy Array
@@ -139,7 +139,6 @@ def ingest(
     import multiprocessing
     import os
     import time
-    from datetime import datetime
     from typing import Any, Mapping
 
     import numpy as np
@@ -148,8 +147,7 @@ def ingest(
     from tiledb.cloud.utilities import get_logger, set_aws_context
 
     import tiledb
-    from tiledb.vector_search import flat_index, ivf_flat_index
-    from tiledb.vector_search.index import Index
+    from tiledb.vector_search import flat_index, ivf_flat_index, vamana_index
     from tiledb.vector_search.storage_formats import storage_formats
 
     validate_storage_version(storage_version)
@@ -472,6 +470,16 @@ def ingest(
                     config=config,
                     storage_version=storage_version
                 )
+        elif index_type == "VAMANA":
+            if not arrays_created:
+                vamana_index.create(
+                    uri=group.uri,
+                    dimensions=dimensions,
+                    vector_type=vector_type,
+                    group_exists=True,
+                    config=config,
+                    storage_version=storage_version
+                )
         elif index_type == "IVF_FLAT":
             if not arrays_created:
                 ivf_flat_index.create(
@@ -638,7 +646,6 @@ def ingest(
                     add_to_group(partial_write_array_index_group, part_index_uri, "additions")
             partial_write_array_group.close()
             partial_write_array_index_group.close()
-
         else:
             raise ValueError(f"Not supported index_type {index_type}")
 
@@ -1340,6 +1347,118 @@ def ingest(
             parts_array.close()
             ids_array.close()
 
+    def ingest_vamana(
+        index_group_uri: str,
+        source_uri: str,
+        source_type: str,
+        updates_uri: str,
+        vector_type: np.dtype,
+        external_ids_uri: str,
+        external_ids_type: str,
+        dimensions: int,
+        size: int,
+        batch: int,
+        config: Optional[Mapping[str, Any]] = None,
+        verbose: bool = False,
+        trace_id: Optional[str] = None,
+    ):
+        import numpy as np
+        import tiledb.cloud
+        from tiledb.vector_search import _tiledbvspy as vspy
+
+        logger = setup(config, verbose)
+        with tiledb.scope_ctx(ctx_or_config=config):
+            updated_ids = read_updated_ids(
+                updates_uri=updates_uri,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+            )
+            group = tiledb.Group(index_group_uri)
+            parts_array_uri = group[PARTS_ARRAY_NAME].uri
+            ids_array_uri = group[IDS_ARRAY_NAME].uri
+            parts_array = tiledb.open(
+                parts_array_uri, mode="w", timestamp=index_timestamp
+            )
+            ids_array = tiledb.open(ids_array_uri, mode="w", timestamp=index_timestamp)
+            # Ingest base data
+            write_offset = 0
+            for part in range(0, size, batch):
+                part_end = part + batch
+                if part_end > size:
+                    part_end = size
+                # First we get each vector and it's external id from the input data.
+                in_vectors = read_input_vectors(
+                    source_uri=source_uri,
+                    source_type=source_type,
+                    vector_type=vector_type,
+                    dimensions=dimensions,
+                    start_pos=part,
+                    end_pos=part_end,
+                    config=config,
+                    verbose=verbose,
+                    trace_id=trace_id,
+                )
+                external_ids = read_external_ids(
+                    external_ids_uri=external_ids_uri,
+                    external_ids_type=external_ids_type,
+                    start_pos=part,
+                    end_pos=part_end,
+                    config=config,
+                    verbose=verbose,
+                    trace_id=trace_id,
+                )
+                # Now we check if the external id is in the updated ids.
+                # False where an element of `ar1` is in `ar2` and True otherwise
+                # updates_filter[i] = False if external_ids[i] is in updated_ids
+                updates_filter = np.in1d(
+                    external_ids, updated_ids, assume_unique=True, invert=True
+                )
+                # We only keep the vectors and external ids that are not in the updated ids.
+                in_vectors = in_vectors[updates_filter]
+                external_ids = external_ids[updates_filter]
+                vector_len = len(in_vectors)
+                if vector_len > 0:
+                    end_offset = write_offset + vector_len
+                    logger.debug("Vector read: %d", vector_len)
+                    logger.debug("Writing input data to array %s", parts_array_uri)
+                    # We write the not-updated vectors to the parts array.
+                    parts_array[0:dimensions, write_offset:end_offset] = np.transpose(
+                        in_vectors
+                    )
+                    logger.debug("Writing input data to array %s", ids_array_uri)
+                    # And also write the not-updated external ids to the ids array.
+                    ids_array[write_offset:end_offset] = external_ids
+                    write_offset = end_offset
+
+            # Ingest additions
+            additions_vectors, additions_external_ids = read_additions(
+                updates_uri=updates_uri,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+            )
+            end = write_offset
+            if additions_vectors is not None:
+                end += len(additions_external_ids)
+                logger.debug("Writing additions data to array %s", parts_array_uri)
+                parts_array[0:dimensions, write_offset:end] = np.transpose(
+                    additions_vectors
+                )
+                logger.debug("Writing additions  data to array %s", ids_array_uri)
+                ids_array[write_offset:end] = additions_external_ids
+            
+            # group = tiledb.Group(index_group_uri, "w")
+            # group.meta["temp_size"] = end
+            # group.close()
+            parts_array.close()
+            ids_array.close()
+
+            index = vspy.IndexVamana(tiledb.Ctx(config), index_group_uri)
+            data = vspy.FeatureVectorArray(tiledb.Ctx(config), parts_array_uri)
+            index.train(data)
+            index.add(data)
+
     def write_centroids(
         centroids: np.ndarray,
         index_group_uri: str,
@@ -1816,6 +1935,27 @@ def ingest(
         if index_type == "FLAT":
             ingest_node = submit(
                 ingest_flat,
+                index_group_uri=index_group_uri,
+                source_uri=source_uri,
+                source_type=source_type,
+                updates_uri=updates_uri,
+                vector_type=vector_type,
+                external_ids_uri=external_ids_uri,
+                external_ids_type=external_ids_type,
+                dimensions=dimensions,
+                size=size,
+                batch=input_vectors_batch_size,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+                name="ingest",
+                resources={"cpu": str(threads), "memory": "16Gi"},
+                image_name=DEFAULT_IMG_NAME,
+            )
+            return d
+        elif index_type == "VAMANA":
+            ingest_node = submit(
+                ingest_vamana,
                 index_group_uri=index_group_uri,
                 source_uri=source_uri,
                 source_type=source_type,
@@ -2385,7 +2525,12 @@ def ingest(
 
         if index_type == "FLAT":
             return flat_index.FlatIndex(uri=index_group_uri, config=config)
+        elif index_type == "VAMANA":
+            return vamana_index.VamanaIndex(uri=index_group_uri, config=config)
         elif index_type == "IVF_FLAT":
             return ivf_flat_index.IVFFlatIndex(
                 uri=index_group_uri, memory_budget=1000000, config=config
             )
+        else:
+            raise ValueError(f"Not supported index_type {index_type}")
+    # create feature vector from input source data and pass to c++

@@ -91,6 +91,7 @@ class IndexVamana {
       for (auto&& c : *config) {
         auto key = c.first;
         auto value = c.second;
+        std::cout << key << " " << value << std::endl;
         if (key == "dimension") {
           dimension_ = std::stol(value);
         } else if (key == "L_build") {
@@ -310,6 +311,9 @@ class IndexVamana {
           datatype_to_string(feature_datatype_) +
           " != " + datatype_to_string(data_set.feature_type()));
     }
+    if (!_index) {
+      throw std::runtime_error("Index has not been created");
+    }
     index_->add(data_set);
   }
 
@@ -318,6 +322,9 @@ class IndexVamana {
       const QueryVectorArray& vectors,
       size_t top_k,
       std::optional<size_t> opt_L) {
+    if (!_index) {
+      throw std::runtime_error("Index has not been created");
+    }
     return index_->query(vectors, top_k, opt_L);
   }
 
@@ -325,6 +332,10 @@ class IndexVamana {
       const tiledb::Context& ctx,
       const std::string& group_uri,
       bool overwrite = false) const {
+    std::cout << "[vamana_index.h@write_index]" << group_uri << " " << overwrite << std::endl;
+    if (!_index) {
+      throw std::runtime_error("Index has not been created");
+    }
     index_->write_index(ctx, group_uri, overwrite);
   }
 
@@ -472,6 +483,7 @@ class IndexVamana {
         const tiledb::Context& ctx,
         const std::string& group_uri,
         bool overwrite) const override {
+      std::cout << "[vamana_index.h@impl@write_index]" << group_uri << " " << overwrite << std::endl;
       impl_index_.write_index(ctx, group_uri, overwrite);
     }
 

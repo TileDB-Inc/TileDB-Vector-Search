@@ -6,6 +6,7 @@ from .flat_index import FlatIndex
 from .index import Index
 from .ingestion import ingest
 from .ivf_flat_index import IVFFlatIndex
+from .vamana_index import VamanaIndex
 from .module import (array_to_matrix, ivf_index, ivf_index_tdb, ivf_query,
                      ivf_query_ram, load_as_array, load_as_matrix,
                      partition_ivf_index, query_vq_heap, query_vq_nth,
@@ -27,6 +28,7 @@ __all__ = [
     "Index",
     "FlatIndex",
     "IVFFlatIndex",
+    "VamanaIndex",
     "Mode",
     "load_as_array",
     "load_as_matrix",
