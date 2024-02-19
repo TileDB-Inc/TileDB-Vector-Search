@@ -52,6 +52,9 @@ option(TILEDB_VS_ENABLE_BLAS "Build components and demos which require BLAS" OFF
 option(BUILD_TESTS "Build the tests" ON)
 option(BUILD_CLI "Build the index and query command-line interface programs" OFF)
 
+message(STATUS "+++ BUILD_TESTS: ${BUILD_TESTS}")
+message(STATUS "+++ BUILD_CLI: ${BUILD_CLI}")
+
 set(CMAKE_CXX_STANDARD 20)
 
 # -----------------------------------------------------------------------------
@@ -158,6 +161,8 @@ if (TileDB_EP_FOUND)
     message(STATUS "TileDB include directories are ${_TDB_INCLUDES}")
 endif()
 
+message(STATUS "=====================================================")
+
 include(Docopt)
 include(mdspan)
 include(nlohmann_json)
@@ -204,7 +209,10 @@ target_link_libraries(kmeans_lib INTERFACE
 # -----------------------------------------------------------------------------
 # Command-line interface programs
 # -----------------------------------------------------------------------------
+message(STATUS ">>>>>>>> Build CLI programs: ${BUILD_CLI}")
+
 if (BUILD_CLI)
+    message(STATUS "Building CLI programs")
     add_subdirectory(src)
 endif()
 
