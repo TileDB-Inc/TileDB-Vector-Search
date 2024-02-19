@@ -126,7 +126,7 @@ jobs:
   upload_pypi:
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
-    environment: pypi
+    environment: Release
     permissions:
       id-token: write
     outputs:
@@ -134,10 +134,10 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          # unpacks all CIBW artifacts into dist/
-          pattern: 'cibw-*'
           path: dist
           merge-multiple: true
+
+      - run: ls dist
 
       - id: get_package_version
         run: |
