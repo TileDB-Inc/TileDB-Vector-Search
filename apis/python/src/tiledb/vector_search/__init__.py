@@ -33,6 +33,7 @@ except ImportError:
     __version__ = "0.0.0.local"
 
 __all__ = [
+    "Index",
     "FlatIndex",
     "IVFFlatIndex",
     "Mode",
@@ -50,5 +51,7 @@ __all__ = [
     "array_to_matrix",
     "partition_ivf_index",
     "utils",
+    "STORAGE_VERSION",
+    "storage_formats",
 ]
 

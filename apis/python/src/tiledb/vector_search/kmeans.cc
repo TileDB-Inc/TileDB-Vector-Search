@@ -1,7 +1,7 @@
 #include <tiledb/tiledb>
 
-#include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
 #include "index/ivf_flat_index.h"
@@ -47,8 +47,7 @@ static void declare_kmeans(py::module& m, const std::string& suffix) {
   });
 }
 
-} // anonymous namespace
-
+}  // anonymous namespace
 
 void init_kmeans(py::module_& m) {
   declare_kmeans<float>(m, "f32");

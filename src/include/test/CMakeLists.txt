@@ -47,20 +47,13 @@ macro (kmeans_add_test TESTNAME)
     # catch_discover_tests(${TESTNAME})
 endmacro (kmeans_add_test)
 
-set (SIFT_TEST_DIR ${CMAKE_BINARY_DIR}/src/test)
-message(STATUS "Data files for testing will be extracted to ${SIFT_TEST_DIR}")
-
-# Deprecated / removed
-# kmeans_add_test(unit_sift_array)
-# kmeans_add_test(unit_sift_db)
-# kmeans_add_test(gen_partitioned)
+# To be updated
+# kmeans_add_test(time_abstraction_penalty)
 # kmeans_add_test(time_insert)
 # kmeans_add_test(time_l2)
 # kmeans_add_test(time_open)
-# target_link_libraries(time_queries PRIVATE flat_blas)
 
-# kmeans_add_test(gen_queries)
-# kmeans_add_test(time_queries)
+kmeans_add_test(unit_vamana_index)
 
 # find_package(Matplot++ REQUIRED)
 
@@ -165,6 +158,8 @@ add_test(NAME unit_linalg_test COMMAND unit_linalg ~[tdbmatrix])
 kmeans_add_test(unit_logging)
 
 kmeans_add_test(unit_matrix)
+
+kmeans_add_test(unit_matrix_with_ids)
 
 kmeans_add_test(unit_mdspan)
 

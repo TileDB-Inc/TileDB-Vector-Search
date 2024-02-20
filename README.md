@@ -1,23 +1,21 @@
 <a href="https://tiledb.com"><img src="https://github.com/TileDB-Inc/TileDB/raw/dev/doc/source/_static/tiledb-logo_color_no_margin_@4x.png" alt="TileDB logo" width="400"></a>
 
-
-
 # TileDB Vector Search
 
-*TileDB-Vector-Search* is a C++ library and Python API for vector search built on top of the [TileDB Storage Engine](https://github.com/TileDB-Inc/TileDB).
+_TileDB-Vector-Search_ is a C++ library and Python API for vector search built on top of the [TileDB Storage Engine](https://github.com/TileDB-Inc/TileDB).
 
 Please see the following blog posts for background:
 
-* [Why TileDB as a Vector Database](https://tiledb.com/blog/why-tiledb-as-a-vector-database)
-* [TileDB Vector Search 101](https://tiledb.com/blog/tiledb-101-vector-search/)
+- [Why TileDB as a Vector Database](https://tiledb.com/blog/why-tiledb-as-a-vector-database)
+- [TileDB Vector Search 101](https://tiledb.com/blog/tiledb-101-vector-search/)
 
 We have released a [LangChain integration](https://python.langchain.com/docs/integrations/vectorstores/tiledb), with others to come soon.
 
 # Quick Links
 
-* [Build Instructions](https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/Building.html)
-* [Documentation](https://tiledb-inc.github.io/TileDB-Vector-Search/)
-* [Python API reference](https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/)
+- [Build Instructions](https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/Building.html)
+- [Documentation](https://tiledb-inc.github.io/TileDB-Vector-Search/)
+- [Python API reference](https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/)
 
 # Quick Installation
 

@@ -35,3 +35,20 @@
 TEST_CASE("api_ivf_pq_index: test test", "[api_ivf_pq_index]") {
   REQUIRE(true);
 }
+
+#ifndef TILEDB_API_API_DEFS_H
+#define TILEDB_API_API_DEFS_H
+
+#include <tiledb/type.h>
+#include <map>
+#include <string>
+#include <tiledb/tiledb>
+
+// Some fake types and type aliases for now
+using URI = std::string;
+using StringMap = std::map<std::string, std::string>;
+
+using IndexOptions = std::map<std::string, std::string>;
+using UpdateOptions = std::map<std::string, std::string>;
+
+#endif  // TILEDB_API_API_DEFS_H

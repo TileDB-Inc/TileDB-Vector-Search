@@ -166,7 +166,6 @@ static void declare_qv_query_heap_infinite_ram(
          size_t nprobe,
          size_t k_nn,
          size_t nthreads) -> py::tuple {
-
         auto mat = ColMajorPartitionedMatrixWrapper<T, Id_Type, Id_Type>(
             parts, ids, indices);
 
@@ -728,7 +727,6 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   /* === Matrix === */
 
-  // template specializations
   declareColMajorMatrix<uint8_t>(m, "_u8");
   declareColMajorMatrix<float>(m, "_f32");
   declareColMajorMatrix<double>(m, "_f64");
@@ -758,7 +756,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declare_pyarray_to_matrix<float>(m, "_f32");
   declare_pyarray_to_matrix<double>(m, "_f64");
 
-  /* Query API */
+  /* === Queries === */
 
   m.def(
       "query_vq_f32",
@@ -843,6 +841,27 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declare_dist_qv<uint8_t>(m, "u8");
   declare_dist_qv<float>(m, "f32");
   declareFixedMinPairHeap(m);
+
+  /* === Stats and Debugging === */
+
+  m.def("stats_enable", []() {
+    enable_stats = true;
+    tiledb::Stats::enable();
+  });
+
+  m.def("stats_disable", []() {
+    enable_stats = false;
+    tiledb::Stats::disable();
+  });
+
+  m.def("stats_reset", []() { core_stats.clear(); });
+  m.def("stats_dump", []() { return json{core_stats}.dump(); });
+
+  declare_debug_slice<uint8_t>(m, "_u8");
+  declare_debug_slice<float>(m, "_f32");
+  declare_debug_slice<uint64_t>(m, "_u64");
+
+  /* === Module inits === */
 
   init_kmeans(m);
   init_module2(m);

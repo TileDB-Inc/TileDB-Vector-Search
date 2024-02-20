@@ -312,6 +312,8 @@ class Matrix :
         Base::extents().extent(0), Base::extents().extent(1)};
   }
 
+  // @note We do not have a `size()` method, due to ambiguity with
+  // what it means for a matrix (and for feature vector array)
   auto num_rows() const noexcept {
     return num_rows_;
   }
@@ -390,6 +392,19 @@ constexpr bool is_row_oriented(const Matrix& A) {
   return std::is_same_v<typename Matrix::layout_policy, stdx::layout_right>;
 }
 
+/**
+ * Is the matrix col-oriented?
+ */
+template <class Matrix>
+constexpr bool is_col_oriented(const Matrix& A) {
+  return std::is_same_v<typename Matrix::layout_policy, stdx::layout_left>;
+}
+
+/**********************************************************************
+ *
+ * Some debugging utilities.
+ *
+ * *********************************************************************/
 #if 0
 // @todo This will need some more infrastructure to work.  If we tag_invoke
 // for defining CPOs it can work.  Otherwise need to be more
@@ -431,6 +446,7 @@ auto num_vectors(const Matrix<T, LayoutPolicy, I>& m) {
  * Some debugging utilities.
  *
  * *********************************************************************/
+
 
 /**
  * Print information about a Matrix.

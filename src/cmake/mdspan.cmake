@@ -12,4 +12,3 @@ FetchContent_Declare(
         GIT_TAG stable)
 
 FetchContent_MakeAvailable(mdspan)
-

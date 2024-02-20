@@ -1,5 +1,9 @@
 /**
+<<<<<<<< HEAD:src/include/api/flat_pq_index.h
  * * @file   api/flat_pq_index.h
+========
+ * @file   functional.h
+>>>>>>>> aac84b531e68712e5e21b07657adcebdf409807e:src/include/functional.h
  *
  * @section LICENSE
  *
@@ -27,6 +31,7 @@
  *
  * @section DESCRIPTION
  *
+<<<<<<<< HEAD:src/include/api/flat_pq_index.h
  * This file defines the `IndexFlatPQ` class, which is a type-erased
  * wrapper of `index_flat_pq` that allows for runtime polymorphism of the
  * `index_flat_pq` class template.
@@ -40,3 +45,32 @@
 #include "api_defs.h"
 
 #endif  // TILEDB_API_FLAT_PQ_INDEX_H
+========
+ * Implementations of various utilities similar to those in <functional>
+ *
+ */
+
+#ifndef TDB_FUNCTIONAL_H
+#define TDB_FUNCTIONAL_H
+
+#include <functional>
+
+namespace stdx {}  // namespace stdx
+
+template <class T = void>
+struct first_less {
+  constexpr bool operator()(const T& lhs, const T& rhs) const {
+    return std::get<0>(lhs) < std::get<0>(rhs);
+  }
+};
+
+template <>
+struct first_less<void> {
+  template <class T1, class T2>
+  constexpr bool operator()(const T1& lhs, const T2& rhs) const {
+    return std::get<0>(lhs) < std::get<0>(rhs);
+  }
+};
+
+#endif
+>>>>>>>> aac84b531e68712e5e21b07657adcebdf409807e:src/include/functional.h

@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, Mapping, Optional
 
 import numpy as np
@@ -461,7 +462,18 @@ def array_to_matrix(array: np.ndarray):
     else:
         raise TypeError("Unsupported type!")
 
-def kmeans_fit(partitions: int, init: str, max_iter: int, verbose: bool, n_init: int, sample_vectors: "colMajorMatrix", tol: Optional[float] = None, nthreads: Optional[int] = None, seed: Optional[int] = None):
+
+def kmeans_fit(
+    partitions: int,
+    init: str,
+    max_iter: int,
+    verbose: bool,
+    n_init: int,
+    sample_vectors: "colMajorMatrix",
+    tol: Optional[float] = None,
+    nthreads: Optional[int] = None,
+    seed: Optional[int] = None,
+):
     args = tuple(
         [
             partitions,
@@ -479,6 +491,7 @@ def kmeans_fit(partitions: int, init: str, max_iter: int, verbose: bool, n_init:
         return kmeans_fit_f32(*args)
     else:
         raise TypeError("Unsupported type!")
+
 
 def kmeans_predict(centroids: "colMajorMatrix", sample_vectors: "colMajorMatrix"):
     args = tuple(

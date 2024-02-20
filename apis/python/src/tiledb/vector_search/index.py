@@ -5,8 +5,7 @@ import time
 from typing import Any, Mapping, Optional
 
 from tiledb.vector_search.module import *
-from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
-                                                  storage_formats)
+from tiledb.vector_search.storage_formats import storage_formats
 
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
@@ -55,7 +54,9 @@ class Index:
             )
         updates_array_name = storage_formats[self.storage_version]["UPDATES_ARRAY_NAME"]
         if updates_array_name in self.group:
-            self.updates_array_uri = self.group[storage_formats[self.storage_version]["UPDATES_ARRAY_NAME"]].uri
+            self.updates_array_uri = self.group[
+                storage_formats[self.storage_version]["UPDATES_ARRAY_NAME"]
+            ].uri
         else:
             self.updates_array_uri = f"{self.group.uri}/{updates_array_name}"
         self.index_version = self.group.meta.get("index_version", "")
@@ -130,14 +131,21 @@ class Index:
 
     def query(self, queries: np.ndarray, k, **kwargs):
         if queries.ndim != 2:
-            raise TypeError(f"Expected queries to have 2 dimensions (i.e. [[...], etc.]), but it had {queries.ndim} dimensions")
-        
+            raise TypeError(
+                f"Expected queries to have 2 dimensions (i.e. [[...], etc.]), but it had {queries.ndim} dimensions"
+            )
+
         query_dimensions = queries.shape[0] if queries.ndim == 1 else queries.shape[1]
         if query_dimensions != self.get_dimensions():
-            raise TypeError(f"A query in queries has {query_dimensions} dimensions, but the indexed data had {self.dimensions} dimensions")
+            raise TypeError(
+                f"A query in queries has {query_dimensions} dimensions, but the indexed data had {self.dimensions} dimensions"
+            )
 
         with tiledb.scope_ctx(ctx_or_config=self.config):
-            if not tiledb.array_exists(self.updates_array_uri) or not self.has_updates():
+            if (
+                not tiledb.array_exists(self.updates_array_uri)
+                or not self.has_updates()
+            ):
                 if self.query_base_array:
                     return self.query_internal(queries, k, **kwargs)
                 else:
@@ -375,22 +383,19 @@ class Index:
                 timestamp = int(time.time() * 1000)
             return tiledb.open(self.updates_array_uri, mode="w", timestamp=timestamp)
 
-    def consolidate_updates(
-        self, 
-        retrain_index: bool = False,
-        **kwargs
-    ):
+    def consolidate_updates(self, retrain_index: bool = False, **kwargs):
         """
         Parameters
         ----------
         retrain_index: bool
-            If true, retrain the index. If false, reuse data from the previous index. 
-            For IVF_FLAT retraining means we will recompute the centroids - when doing so you can 
-            pass any ingest() arguments used to configure computing centroids and we will use them 
-            when recomputing the centroids. Otherwise, if false, we will reuse the centroids from 
+            If true, retrain the index. If false, reuse data from the previous index.
+            For IVF_FLAT retraining means we will recompute the centroids - when doing so you can
+            pass any ingest() arguments used to configure computing centroids and we will use them
+            when recomputing the centroids. Otherwise, if false, we will reuse the centroids from
             the previous index.
         """
         from tiledb.vector_search.ingestion import ingest
+
         fragments_info = tiledb.array_fragments(
             self.updates_array_uri, ctx=tiledb.Ctx(self.config)
         )
@@ -406,13 +411,17 @@ class Index:
         tiledb.vacuum(self.updates_array_uri, config=conf)
 
         # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
-        should_pass_copy_centroids_uri = self.index_type == "IVF_FLAT" and not retrain_index and self.partitions > 0
+        should_pass_copy_centroids_uri = (
+            self.index_type == "IVF_FLAT" and not retrain_index and self.partitions > 0
+        )
         if should_pass_copy_centroids_uri:
             # Make sure the user didn't pass an incorrect number of partitions.
-            if 'partitions' in kwargs and self.partitions != kwargs['partitions']:
-                raise ValueError(f"The passed partitions={kwargs['partitions']} is different than the number of partitions ({self.partitions}) from when the index was created - this is an issue because with retrain_index=True, the partitions from the previous index will be used; to fix, set retrain_index=False, don't pass partitions, or pass the correct number of partitions.")
+            if "partitions" in kwargs and self.partitions != kwargs["partitions"]:
+                raise ValueError(
+                    f"The passed partitions={kwargs['partitions']} is different than the number of partitions ({self.partitions}) from when the index was created - this is an issue because with retrain_index=True, the partitions from the previous index will be used; to fix, set retrain_index=False, don't pass partitions, or pass the correct number of partitions."
+                )
             # We pass partitions through kwargs so that we don't pass it twice.
-            kwargs['partitions'] = self.partitions
+            kwargs["partitions"] = self.partitions
 
         new_index = ingest(
             index_type=self.index_type,
@@ -424,7 +433,9 @@ class Index:
             updates_uri=self.updates_array_uri,
             index_timestamp=max_timestamp,
             storage_version=self.storage_version,
-            copy_centroids_uri=self.centroids_uri if should_pass_copy_centroids_uri else None,
+            copy_centroids_uri=self.centroids_uri
+            if should_pass_copy_centroids_uri
+            else None,
             config=self.config,
             **kwargs,
         )
@@ -437,7 +448,7 @@ class Index:
                 group = tiledb.Group(uri, "m")
             except tiledb.TileDBError as err:
                 message = str(err)
-                if "group does not exist" in message:
+                if "does not exist" in message:
                     return
                 else:
                     raise err

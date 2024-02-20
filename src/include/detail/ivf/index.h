@@ -79,9 +79,6 @@ int ivf_index(
       (timestamp == 0) ? tiledb::TemporalPolicy() :
                          tiledb::TemporalPolicy(
                              tiledb::TimestampStartEnd, timestamp, timestamp);
-  auto write_temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
   tiledb::Array array(
       ctx, centroids_uri, TILEDB_READ, centroid_read_temporal_policy);
   auto non_empty = array.non_empty_domain<int32_t>();
