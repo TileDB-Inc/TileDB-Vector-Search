@@ -218,8 +218,6 @@ class tdbBlockedMatrixWithIds
     tiledb::Query query(this->ctx_, *ids_array_);
     query.set_subarray(subarray)
         .set_layout(layout_order)
-        //        .set_data_buffer(attr_name, this->ids(), elements_to_load *
-        //        dimension);
         .set_data_buffer(attr_name, this->ids());
     tiledb_helpers::submit_query(tdb_func__, ids_uri_, query);
     _memory_data.insert_entry(
