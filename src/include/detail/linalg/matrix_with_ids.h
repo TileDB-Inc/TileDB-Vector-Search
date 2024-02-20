@@ -135,10 +135,6 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
     return ids_;
   }
 
-  auto id(Base::index_type i) const {
-    return ids_[i];
-  }
-
   auto swap(MatrixWithIds& rhs) noexcept {
     Base::swap(rhs);
     std::swap(ids_, rhs.ids_);

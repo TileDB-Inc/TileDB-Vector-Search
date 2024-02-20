@@ -53,8 +53,7 @@ TEMPLATE_TEST_CASE(
   auto ids = std::vector<TestType>(100);
   auto matrix = MatrixWithIds<float, TestType>{
       std::move(vectors), std::move(ids), 100, 1};
-  CHECK(std::is_same<decltype(matrix.id(0)), TestType>::value);
-  CHECK(typeid(decltype(matrix.id(0))) == typeid(decltype(matrix.ids()[0])));
+  CHECK(typeid(decltype(matrix.ids()[0])) == typeid(TestType));
 }
 
 TEMPLATE_TEST_CASE(
@@ -124,11 +123,11 @@ TEMPLATE_TEST_CASE(
   CHECK(A.num_ids() == idsData.size());
   CHECK(std::equal(A.ids().begin(), A.ids().end(), idsData.begin()));
   CHECK(std::equal(ids.begin(), ids.end(), idsData.begin()));
-  CHECK(std::is_same<decltype(A.id(0)), size_t>::value);
-  CHECK(A.id(0) == 1);
-  CHECK(A.id(1) == 2);
-  CHECK(A.id(2) == 3);
-  CHECK(A.id(3) == 4);
+  CHECK(typeid(decltype(A.ids()[0])) == typeid(size_t));
+  CHECK(A.ids()[0] == 1);
+  CHECK(A.ids()[1] == 2);
+  CHECK(A.ids()[2] == 3);
+  CHECK(A.ids()[3] == 4);
 }
 
 TEMPLATE_TEST_CASE(
@@ -160,8 +159,8 @@ TEMPLATE_TEST_CASE(
   CHECK(B.num_ids() == idsData.size());
   CHECK(std::equal(B.ids().begin(), B.ids().end(), idsData.begin()));
   CHECK(std::equal(ids.begin(), ids.end(), idsData.begin()));
-  CHECK(B.id(0) == 1);
-  CHECK(B.id(3) == 4);
+  CHECK(B.ids()[0] == 1);
+  CHECK(B.ids()[3] == 4);
 }
 
 TEMPLATE_TEST_CASE(
@@ -306,15 +305,15 @@ TEMPLATE_TEST_CASE(
   CHECK(
       c(1, 0) == 13);  // 0 + 1 * 13 => j + i * extents(1) => minor = extents(1)
   CHECK(c(0, 1) == 1);  // 1 + 0 * 13
-  CHECK(c.id(0) == 0);
-  CHECK(c.id(1) == 1);
-  CHECK(c.id(5) == 5);
+  CHECK(c.ids()[0] == 0);
+  CHECK(c.ids()[1] == 1);
+  CHECK(c.ids()[5] == 5);
   CHECK(c.num_ids() == ids.size());
   CHECK(c.num_rows() == major);
   CHECK(c.num_cols() == minor);
   CHECK(num_vectors(c) == major);
   CHECK(dimension(c) == minor);
-  CHECK(std::is_same<decltype(c.id(2)), TestType>::value);
+  CHECK(typeid(decltype(c.ids()[2])) == typeid(TestType));
 
   CHECK(std::equal(c.ids().begin(), c.ids().end(), ids.begin()));
 
@@ -364,13 +363,13 @@ TEMPLATE_TEST_CASE(
   CHECK(d(0, 0) == 0);
   CHECK(d(0, 1) == 7);  // 0 + 1 * 7
   CHECK(d(1, 0) == 1);  // 1 + 0 * 7 => i + j * extents(0) => major = extents(0)
-  CHECK(d.id(0) == 0);
-  CHECK(d.id(10) == 10);
+  CHECK(d.ids()[0] == 0);
+  CHECK(d.ids()[10] == 10);
   CHECK(d.num_rows() == major);
   CHECK(d.num_cols() == minor);
   CHECK(num_vectors(cv) == major);
   CHECK(dimension(cv) == minor);
-  CHECK(std::is_same<decltype(d.id(5)), TestType>::value);
+  CHECK(typeid(decltype(d.ids()[5])) == typeid(TestType));
 
   CHECK(std::equal(d.ids().begin(), d.ids().end(), ids.begin()));
 
