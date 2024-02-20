@@ -52,9 +52,6 @@ option(TILEDB_VS_ENABLE_BLAS "Build components and demos which require BLAS" OFF
 option(BUILD_TESTS "Build the tests" ON)
 option(BUILD_CLI "Build the index and query command-line interface programs" OFF)
 
-message(STATUS "+++ BUILD_TESTS: ${BUILD_TESTS}")
-message(STATUS "+++ BUILD_CLI: ${BUILD_CLI}")
-
 set(CMAKE_CXX_STANDARD 20)
 
 # -----------------------------------------------------------------------------
@@ -209,7 +206,6 @@ target_link_libraries(kmeans_lib INTERFACE
 # -----------------------------------------------------------------------------
 # Command-line interface programs
 # -----------------------------------------------------------------------------
-message(STATUS ">>>>>>>> Build CLI programs: ${BUILD_CLI}")
 
 if (BUILD_CLI)
     message(STATUS "Building CLI programs")

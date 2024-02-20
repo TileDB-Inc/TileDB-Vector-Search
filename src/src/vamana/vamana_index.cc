@@ -53,16 +53,16 @@ std::vector<json> core_stats;
 using score_type = float;
 
 static constexpr const char USAGE[] =
-    R"(vamana/index: C++ cli for creating vamana index
+    R"(vamana_index: C++ cli for creating vamana index
   Usage:
-      vamana (-h | --help)
-      vamana --inputs_uri URI --index_uri URI [--ftype TYPE] [--idtype TYPE] [--force]
-             [--max_degree NN] [--Lbuild NN] [--backtrack NN] [--alpha FF]
-             [--nthreads NN] [--log FILE] [--stats] [-d] [-v] [--dump NN]
+      vamana_index (-h | --help)
+      vamana_index --inputs_uri URI --index_uri URI [--ftype TYPE] [--idtype TYPE] [--force]
+                  [--max_degree NN] [--Lbuild NN] [--backtrack NN] [--alpha FF]
+                  [--nthreads NN] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
   Options:
       -h, --help              show this screen
-      --inputs_uri URI            database URI with feature vectors
+      --inputs_uri URI        database URI with feature vectors
       --index_uri URI         group URI for storing vamana index
       --ftype TYPE            data type of feature vectors [default: float]
       --idtype TYPE           data type of ids [default: uint64]
