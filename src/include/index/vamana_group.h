@@ -222,6 +222,8 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     metadata_.feature_datatype_ =
         type_to_tiledb_v<typename index_type::feature_type>;
     metadata_.id_datatype_ = type_to_tiledb_v<typename index_type::id_type>;
+    metadata_.px_datatype_ =
+        type_to_tiledb_v<typename index_type::adjacency_row_index_type>;
 
     metadata_.feature_type_str_ =
         type_to_string_v<typename index_type::feature_type>;
