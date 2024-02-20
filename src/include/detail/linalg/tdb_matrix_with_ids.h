@@ -50,20 +50,20 @@
  */
 template <
     class T,
+    class IdsType = size_t,
     class LayoutPolicy = stdx::layout_right,
-    class I = size_t,
-    class IdsType = size_t>
+    class I = size_t>
 class tdbBlockedMatrixWithIds
     : public tdbBlockedMatrix<
           T,
           LayoutPolicy,
           I,
-          MatrixWithIds<T, LayoutPolicy, I, IdsType>> {
+          MatrixWithIds<T, IdsType, LayoutPolicy, I>> {
   using Base = tdbBlockedMatrix<
       T,
       LayoutPolicy,
       I,
-      MatrixWithIds<T, LayoutPolicy, I, IdsType>>;
+      MatrixWithIds<T, IdsType, LayoutPolicy, I>>;
   using Base::Base;
 
  public:
@@ -213,12 +213,14 @@ class tdbBlockedMatrixWithIds
         1, (int)this->first_resident_col_, (int)this->last_resident_col_ - 1);
 
     auto layout_order = ids_schema_.cell_order();
-
+    this->ids().resize(elements_to_load * dimension);
     // Create a query
     tiledb::Query query(this->ctx_, *ids_array_);
     query.set_subarray(subarray)
         .set_layout(layout_order)
-        .set_data_buffer(attr_name, this->ids(), elements_to_load * dimension);
+        //        .set_data_buffer(attr_name, this->ids(), elements_to_load *
+        //        dimension);
+        .set_data_buffer(attr_name, this->ids());
     tiledb_helpers::submit_query(tdb_func__, ids_uri_, query);
     _memory_data.insert_entry(
         tdb_func__, elements_to_load * dimension * sizeof(T));
@@ -234,39 +236,39 @@ class tdbBlockedMatrixWithIds
 /**
  * Convenience class for row-major blocked matrices.
  */
-template <class T, class I = size_t, class IdsType = size_t>
+template <class T, class IdsType = size_t, class I = size_t>
 using tdbRowMajorBlockedMatrixWithIds =
-    tdbBlockedMatrixWithIds<T, stdx::layout_right, I, IdsType>;
+    tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major blocked matrices.
  */
-template <class T, class I = size_t, class IdsType = size_t>
+template <class T, class IdsType = size_t, class I = size_t>
 using tdbColMajorBlockedMatrixWithIds =
-    tdbBlockedMatrixWithIds<T, stdx::layout_left, I, IdsType>;
+    tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_left, I>;
 
 /**
  * Convenience class for row-major matrices.
  */
-template <class T, class I = size_t, class IdsType = size_t>
+template <class T, class IdsType = size_t, class I = size_t>
 using tdbRowMajorMatrixWithIds =
-    tdbBlockedMatrixWithIds<T, stdx::layout_right, I, IdsType>;
+    tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.
  */
-template <class T, class I = size_t, class IdsType = size_t>
+template <class T, class IdsType = size_t, class I = size_t>
 using tdbColMajorMatrixWithIds =
-    tdbBlockedMatrixWithIds<T, stdx::layout_left, I, IdsType>;
+    tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_left, I>;
 
 /**
  * Convenience class for row-major matrices.
  */
 template <
     class T,
+    class IdsType = size_t,
     class LayoutPolicy = stdx::layout_right,
-    class I = size_t,
-    class IdsType = size_t>
-using tdbMatrixWithIds = tdbBlockedMatrixWithIds<T, LayoutPolicy, I, IdsType>;
+    class I = size_t>
+using tdbMatrixWithIds = tdbBlockedMatrixWithIds<T, IdsType, LayoutPolicy, I>;
 
 #endif  // TDB_MATRIX_WITH_IDS_H

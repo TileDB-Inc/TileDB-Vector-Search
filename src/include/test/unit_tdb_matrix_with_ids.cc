@@ -55,14 +55,14 @@ TEMPLATE_TEST_CASE(
   int offset = 13;
   size_t Mrows = 200;
   size_t Ncols = 500;
-  auto X = ColMajorMatrixWithIds<TestType, size_t, TestType>(Mrows, Ncols);
+  auto X = ColMajorMatrixWithIds<TestType, TestType, size_t>(Mrows, Ncols);
   fill_and_write_matrix(
       ctx, X, tmp_matrix_uri, tmp_ids_uri, Mrows, Ncols, offset);
-  CHECK(X.id(0) == offset + 0);
-  CHECK(X.id(1) == offset + 1);
-  CHECK(X.id(10) == offset + 10);
+  CHECK(X.ids()[0] == offset + 0);
+  CHECK(X.ids()[1] == offset + 1);
+  CHECK(X.ids()[10] == offset + 10);
 
-  auto Y = tdbColMajorMatrixWithIds<TestType, size_t, TestType>(
+  auto Y = tdbColMajorMatrixWithIds<TestType, TestType>(
       ctx, tmp_matrix_uri, tmp_ids_uri);
   Y.load();
   CHECK(num_vectors(Y) == num_vectors(X));
@@ -75,12 +75,12 @@ TEMPLATE_TEST_CASE(
     }
   }
   CHECK(X.num_ids() == Y.num_ids());
-  CHECK(std::equal(X.ids(), X.ids() + X.num_ids(), Y.ids()));
+  CHECK(std::equal(X.ids().begin(), X.ids().end(), Y.ids().begin()));
   for (size_t i = 0; i < X.num_ids(); ++i) {
-    CHECK(X.id(i) == Y.id(i));
+    CHECK(X.ids()[i] == Y.ids()[i]);
   }
 
-  auto Z = tdbColMajorMatrixWithIds<TestType, size_t, TestType>(std::move(Y));
+  auto Z = tdbColMajorMatrixWithIds<TestType, TestType>(std::move(Y));
   CHECK(num_vectors(Z) == num_vectors(X));
   CHECK(dimension(Z) == dimension(X));
   CHECK(
@@ -92,9 +92,9 @@ TEMPLATE_TEST_CASE(
   }
 
   CHECK(X.num_ids() == Z.num_ids());
-  CHECK(std::equal(X.ids(), X.ids() + X.num_ids(), Z.ids()));
+  CHECK(std::equal(X.ids().begin(), X.ids().end(), Z.ids().begin()));
   for (size_t i = 0; i < X.num_ids(); ++i) {
-    CHECK(X.id(i) == Z.id(i));
+    CHECK(X.ids()[i] == Z.ids()[i]);
   }
 }
 
@@ -107,28 +107,28 @@ TEMPLATE_TEST_CASE(
   size_t Mrows = 200;
   size_t Ncols = 500;
 
-  auto X = ColMajorMatrixWithIds<TestType, size_t, TestType>(Mrows, Ncols);
+  auto X = ColMajorMatrixWithIds<TestType, TestType, size_t>(Mrows, Ncols);
   fill_and_write_matrix(
       ctx, X, tmp_matrix_uri, tmp_ids_uri, Mrows, Ncols, offset);
-  CHECK(X.id(0) == offset + 0);
-  CHECK(X.id(1) == offset + 1);
-  CHECK(X.id(10) == offset + 10);
+  CHECK(X.ids()[0] == offset + 0);
+  CHECK(X.ids()[1] == offset + 1);
+  CHECK(X.ids()[10] == offset + 10);
 
-  auto B = ColMajorMatrixWithIds<TestType, size_t, TestType>(0, 0);
+  auto B = ColMajorMatrixWithIds<TestType, TestType, size_t>(0, 0);
   {
-    auto Y = tdbColMajorMatrixWithIds<TestType, size_t, TestType>(
+    auto Y = tdbColMajorMatrixWithIds<TestType, TestType>(
         ctx, tmp_matrix_uri, tmp_ids_uri);
     Y.load();
     B = std::move(Y);
   }
 
   {
-    auto Y = tdbColMajorMatrixWithIds<TestType, size_t, TestType>(
-        tdbColMajorMatrixWithIds<TestType, size_t, TestType>(
+    auto Y = tdbColMajorMatrixWithIds<TestType, TestType>(
+        tdbColMajorMatrixWithIds<TestType, TestType>(
             ctx, tmp_matrix_uri, tmp_ids_uri));
   }
 
-  auto Y = tdbColMajorMatrixWithIds<TestType, size_t, TestType>(
+  auto Y = tdbColMajorMatrixWithIds<TestType, TestType>(
       ctx, tmp_matrix_uri, tmp_ids_uri);
   Y.load();
 
@@ -143,7 +143,7 @@ TEMPLATE_TEST_CASE(
   }
 
   // Check that we can assign to a matrix
-  auto Z = ColMajorMatrixWithIds<TestType, size_t, TestType>(0, 0);
+  auto Z = ColMajorMatrixWithIds<TestType, TestType, size_t>(0, 0);
   Z = std::move(Y);
 
   CHECK(num_vectors(Z) == num_vectors(X));
@@ -156,7 +156,7 @@ TEMPLATE_TEST_CASE(
     }
   }
 
-  auto A = ColMajorMatrixWithIds<TestType, size_t, TestType>(0, 0);
+  auto A = ColMajorMatrixWithIds<TestType, TestType, size_t>(0, 0);
   A = std::move(Z);
   CHECK(num_vectors(A) == num_vectors(X));
   CHECK(dimension(A) == dimension(X));

@@ -105,7 +105,7 @@ void fill_and_write_matrix(
     vfs.remove_dir(ids_uri);
   }
   std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
-  std::iota(X.ids(), X.ids() + num_vectors(X), offset);
+  std::iota(X.ids().begin(), X.ids().end(), offset);
   // Write the vectors to the URI.
   write_matrix(ctx, X, uri);
 

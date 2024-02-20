@@ -264,18 +264,21 @@ class tdbBlockedMatrix : public MatrixBase {
     } else if constexpr (
         std::is_same<
             MatrixBase,
-            MatrixWithIds<T, LayoutPolicy, I, typename Base::ids_type>>::
+            MatrixWithIds<T, typename Base::ids_type, LayoutPolicy, I>>::
             value) {
-#ifdef __cpp_lib_smart_ptr_for_overwrite
-      auto ids_data_ =
-          std::make_unique_for_overwrite<typename MatrixBase::IdsType[]>(
-              load_blocksize_);
-#else
-      auto ids_data_ = std::unique_ptr<typename MatrixBase::ids_type[]>(
-          new typename MatrixBase::ids_type[load_blocksize_]);
-#endif
-      Base::operator=(Base{
-          std::move(data_), std::move(ids_data_), dimension, load_blocksize_});
+      // #ifdef __cpp_lib_smart_ptr_for_overwrite
+      //       auto ids_data_ =
+      //           std::make_unique_for_overwrite<typename
+      //           MatrixBase::IdsType[]>(
+      //               load_blocksize_);
+      // #else
+      //       auto ids_data_ = std::unique_ptr<typename
+      //       MatrixBase::ids_type[]>(
+      //           new typename MatrixBase::ids_type[load_blocksize_]);
+      // #endif
+      auto ids = std::vector<typename MatrixBase::ids_type>(load_blocksize_);
+      Base::operator=(
+          Base{std::move(data_), std::move(ids), dimension, load_blocksize_});
     } else {
       static_assert(
           always_false<MatrixBase>,

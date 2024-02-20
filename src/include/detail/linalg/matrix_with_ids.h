@@ -1,5 +1,5 @@
 /**
- * @file   matrix.h
+ * @file   matrix_with_ids.h
  *
  * @section LICENSE
  *
@@ -49,28 +49,28 @@
  */
 template <
     class T,
+    class IdsType = uint64_t,
     class LayoutPolicy = stdx::layout_right,
-    class I = size_t,
-    class IdsType = size_t>
+    class I = size_t>
 class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
   using Base = Matrix<T, LayoutPolicy, I>;
 
  protected:
-  size_t num_ids_ = 0;
-  std::unique_ptr<IdsType[]> idsStorage_;
+  std::vector<IdsType> ids_;
 
  public:
   using ids_type = IdsType;
 
- public:
   MatrixWithIds() noexcept = default;
 
   MatrixWithIds(const MatrixWithIds&) = delete;
+
   MatrixWithIds& operator=(const MatrixWithIds&) = delete;
 
   MatrixWithIds(MatrixWithIds&&) = default;
 
   MatrixWithIds& operator=(MatrixWithIds&& rhs) = default;
+
   virtual ~MatrixWithIds() = default;
 
   MatrixWithIds(
@@ -79,13 +79,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       LayoutPolicy policy = LayoutPolicy()) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : Base(nrows, ncols, policy)
-      , num_ids_(this->num_rows_)
-#ifdef __cpp_lib_smart_ptr_for_overwrite
-      , idsStorage_{std::make_unique_for_overwrite<IdsType[]>(this->num_rows_)}
-#else
-      , idsStorage_{new IdsType[this->num_rows_]}
-#endif
-  {
+      , ids_(this->num_rows_) {
   }
 
   MatrixWithIds(
@@ -94,24 +88,17 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       LayoutPolicy policy = LayoutPolicy()) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(nrows, ncols, policy)
-      , num_ids_(this->num_cols_)
-#ifdef __cpp_lib_smart_ptr_for_overwrite
-      , idsStorage_{std::make_unique_for_overwrite<IdsType[]>(this->num_cols_)}
-#else
-      , idsStorage_{new IdsType[this->num_cols_]}
-#endif
-  {
+      , ids_(this->num_cols_) {
   }
 
   MatrixWithIds(
       std::unique_ptr<T[]>&& storage,
-      std::unique_ptr<IdsType[]>&& ids_storage,
+      std::vector<IdsType>&& ids,
       Base::size_type nrows,
       Base::size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
       : Base(std::move(storage), nrows, ncols, policy)
-      , num_ids_{std::is_same<LayoutPolicy, stdx::layout_right>::value ? this->num_rows_ : this->num_cols_}
-      , idsStorage_{std::move(ids_storage)} {
+      , ids_{std::move(ids)} {
   }
 
   /**
@@ -120,17 +107,10 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
    */
   MatrixWithIds(
       std::initializer_list<std::initializer_list<T>> matrix,
-      std::initializer_list<T> ids) noexcept
+      const std::vector<IdsType>& ids) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : Base(matrix)
-      , num_ids_(this->num_rows_)
-#ifdef __cpp_lib_smart_ptr_for_overwrite
-      , idsStorage_{std::make_unique_for_overwrite<IdsType[]>(this->num_rows_)}
-#else
-      , idsStorage_{new IdsType[this->num_rows_]}
-#endif
-  {
-    std::copy(ids.begin(), ids.end(), idsStorage_.get());
+      , ids_{ids} {
   }
 
   /**
@@ -139,128 +119,52 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
    */
   MatrixWithIds(
       std::initializer_list<std::initializer_list<T>> matrix,
-      std::initializer_list<T> ids) noexcept
+      const std::vector<IdsType>& ids) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(matrix)
-      , num_ids_(this->num_cols_)
-#ifdef __cpp_lib_smart_ptr_for_overwrite
-      , idsStorage_{std::make_unique_for_overwrite<IdsType[]>(this->num_cols_)}
-#else
-      , idsStorage_{new IdsType[this->num_cols_]}
-#endif
-  {
-    std::copy(ids.begin(), ids.end(), idsStorage_.get());
+      , ids_{ids} {
   }
 
-  size_t num_ids() const {
-    return num_ids_;
+  [[nodiscard]] size_t num_ids() const {
+    return ids_.size();
   }
 
-  auto ids() {
-    return idsStorage_.get();
+  std::vector<IdsType>& ids() {
+    return ids_;
   }
 
-  auto ids() const {
-    return idsStorage_.get();
-  }
-
-  auto raveledIds() {
-    return std::span(idsStorage_.get(), num_ids_);
-  }
-
-  auto raveledIds() const {
-    return std::span(idsStorage_.get(), num_ids_);
-  }
-
-  auto id(Base::index_type i) const {
-    return idsStorage_[i];
+  const std::vector<IdsType>& ids() const {
+    return ids_;
   }
 
   auto swap(MatrixWithIds& rhs) noexcept {
     Base::swap(rhs);
-    std::swap(idsStorage_, rhs.idsStorage_);
+    std::swap(ids_, rhs.ids_);
   }
 
   template <
       class T_,
+      class IdsType_ = uint64_t,
       class LayoutPolicy_ = stdx::layout_right,
-      class I_ = size_t,
-      class IdsType_ = size_t>
-  bool operator==(const MatrixWithIds<T_, LayoutPolicy_, I_, IdsType_>& rhs)
+      class I_ = size_t>
+  bool operator==(const MatrixWithIds<T_, IdsType_, LayoutPolicy_, I_>& rhs)
       const noexcept {
     return Matrix<T_, LayoutPolicy_, I_>::operator==(rhs) &&
            ((void*)this->ids() == (void*)rhs.ids() ||
-            std::equal(
-                raveledIds().begin(),
-                raveledIds().end(),
-                rhs.raveledIds().begin()));
+            std::equal(ids().begin(), ids().end(), rhs.ids().begin()));
   }
 };
 
 /**
  * Convenience class for row-major matrices.
  */
-template <class T, class I = size_t, class IdsType = size_t>
-using RowMajorMatrixWithIds = MatrixWithIds<T, stdx::layout_right, I, IdsType>;
+template <class T, class IdsType = uint64_t, class I = size_t>
+using RowMajorMatrixWithIds = MatrixWithIds<T, IdsType, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.
  */
-template <class T, class I = size_t, class IdsType = size_t>
-using ColMajorMatrixWithIds = MatrixWithIds<T, stdx::layout_left, I, IdsType>;
-
-/**********************************************************************
- *
- * Debugging utilities.
- *
- **********************************************************************/
-
-template <class MatrixWithIds>
-void debug_slice_with_ids(
-    const MatrixWithIds& A,
-    const std::string& msg = "",
-    size_t rows = 6,
-    size_t cols = 18) {
-  //  TODO(paris): It used to be different, but is that a bug?
-  // It should be A.num_rows() not dimension(A), right?
-  //  rows = std::min(rows, dimension(A));
-  //  cols = std::min(cols, num_vectors(A));
-  auto max_size = 260;
-
-  std::cout << "# " << msg << std::endl;
-  auto rowsEnd = std::min(A.num_rows(), static_cast<size_t>(max_size));
-  auto colsEnd = std::min(A.num_cols(), static_cast<size_t>(max_size));
-  for (size_t i = 0; i < rowsEnd; ++i) {
-    std::cout << "# ";
-    for (size_t j = 0; j < colsEnd; ++j) {
-      std::cout << (float)A(i, j) << " ";
-    }
-    if (A.num_cols() > max_size) {
-      std::cout << "...";
-    }
-    std::cout << std::endl;
-  }
-  if (A.num_rows() > max_size) {
-    std::cout << "# ..." << std::endl;
-  }
-
-  std::cout << "# ids: [";
-  auto end = std::min(A.num_ids(), static_cast<size_t>(max_size));
-  for (size_t i = 0; i < end; ++i) {
-    std::cout << (float)A.id(i);
-    if (i != A.num_ids() - 1) {
-      std::cout << ", ";
-    }
-  }
-  if (A.num_ids() > max_size) {
-    std::cout << "...";
-  }
-  std::cout << "]" << std::endl;
-}
-
-template <class MatrixWithIds>
-void debug_with_ids(const MatrixWithIds& A, const std::string& msg = "") {
-  debug_slice_with_ids(A, msg, A.num_rows(), A.num_cols());
-}
+template <class T, class IdsType = uint64_t, class I = size_t>
+using ColMajorMatrixWithIds = MatrixWithIds<T, IdsType, stdx::layout_left, I>;
 
 #endif  // TILEDB_MATRIX_WITH_IDS_H

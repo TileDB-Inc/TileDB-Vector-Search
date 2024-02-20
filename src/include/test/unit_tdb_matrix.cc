@@ -250,7 +250,7 @@ TEST_CASE("tdb_matrix: MatrixBase template parameter", "[tdb_matrix]") {
         T,
         LayoutPolicy,
         I,
-        MatrixWithIds<T, LayoutPolicy, I, IdsType>>(ctx, tmp_matrix_uri);
+        MatrixWithIds<T, IdsType, LayoutPolicy, I>>(ctx, tmp_matrix_uri);
     Y.load();
     CHECK(num_vectors(Y) == num_vectors(X));
     CHECK(dimension(Y) == dimension(X));
