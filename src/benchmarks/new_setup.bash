@@ -117,6 +117,3 @@ function print_all_schemas() {
 # Specify benchmarking commands
 #
 ################################################################
-
-
-

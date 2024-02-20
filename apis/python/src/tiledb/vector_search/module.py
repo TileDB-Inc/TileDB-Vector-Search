@@ -6,7 +6,6 @@ import numpy as np
 import tiledb
 from tiledb.vector_search._tiledbvspy import *
 
-import logging, pdb
 
 def load_as_matrix(
     path: str,
@@ -84,14 +83,15 @@ def load_as_array(
 
 def debug_slice(m: "colMajorMatrix", name: str):
     dtype = m.dtype
-    if (dtype == np.float32):
+    if dtype == np.float32:
         return debug_slice_f32(m, name)
-    elif (dtype == np.uint8):
+    elif dtype == np.uint8:
         return debug_slice_u8(m, name)
-    elif (dtype == np.uint64):
+    elif dtype == np.uint64:
         return debug_slice_u64(m, name)
     else:
         raise TypeError(f"Unsupported type: {dtype}!")
+
 
 def query_vq_nth(db: "colMajorMatrix", *args):
     """
@@ -282,7 +282,6 @@ def ivf_query_ram(
     if ctx is None:
         ctx = Ctx({})
 
-
     args = tuple(
         [
             parts_db,
@@ -377,7 +376,9 @@ def ivf_query(
         ]
     )
 
-    logging.info(f">>>> module.py: ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}")
+    logging.info(
+        f">>>> module.py: ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}"
+    )
 
     if dtype == np.float32:
         if use_nuv_implementation:
@@ -418,11 +419,11 @@ def dist_qv(
         ctx = Ctx({})
     args = tuple(
         [
-            ctx,                               # 0
-            parts_uri,                         # 1
+            ctx,  # 0
+            parts_uri,  # 1
             StdVector_u64(active_partitions),  # 2
-            query_vectors,                     # 3
-            active_queries,                    # 4
+            query_vectors,  # 3
+            active_queries,  # 4
             StdVector_u64(indices),
             ids_uri,
             k_nn,

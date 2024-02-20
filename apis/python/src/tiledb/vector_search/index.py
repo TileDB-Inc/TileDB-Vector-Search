@@ -7,7 +7,6 @@ from typing import Any, Mapping, Optional
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
 
-
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
 MAX_FLOAT_32 = np.finfo(np.dtype("float32")).max

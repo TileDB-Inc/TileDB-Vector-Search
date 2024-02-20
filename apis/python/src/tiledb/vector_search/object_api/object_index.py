@@ -1,8 +1,7 @@
-import base64
+import json
 from collections import OrderedDict
 from typing import Any, Dict, List, Mapping, Optional
 
-import json
 import numpy as np
 
 import tiledb

@@ -45,17 +45,15 @@
 #include "api_defs.h"
 
 #endif  // TILEDB_API_FLAT_PQ_INDEX_H
-========
- * Implementations of various utilities similar to those in <functional>
- *
- */
-
+== == == ==
+    *Implementations of various utilities similar to those in<functional>** /
 #ifndef TDB_FUNCTIONAL_H
 #define TDB_FUNCTIONAL_H
 
 #include <functional>
 
-namespace stdx {}  // namespace stdx
+        namespace stdx {
+}  // namespace stdx
 
 template <class T = void>
 struct first_less {
@@ -73,4 +71,4 @@ struct first_less<void> {
 };
 
 #endif
->>>>>>>> aac84b531e68712e5e21b07657adcebdf409807e:src/include/functional.h
+>>>>>>>> aac84b531e68712e5e21b07657adcebdf409807e : src / include / functional.h

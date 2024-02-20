@@ -1,8 +1,6 @@
 import time
 
 import numpy as np
-from common import *
-from array_paths import *
 import pytest
 from array_paths import *
 from common import *
@@ -32,7 +30,6 @@ def query_and_check_equals(index, queries, expected_result_d, expected_result_i)
     )
 
 
-
 def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
@@ -41,7 +38,6 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     partitions = 10
     dimensions = 128
     nqueries = 100
-    nprobe = 10
     data = create_random_dataset_u8(
         nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir
     )
@@ -87,16 +83,16 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 101))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert (
-            0.05
-            <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
-            <= 0.15
+        0.05
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.15
     )
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, None))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert (
-            0.05
-            <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
-            <= 0.15
+        0.05
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.15
     )
 
     # Timetravel with partial read from updates table
@@ -113,9 +109,9 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 51))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert (
-            0.02
-            <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
-            <= 0.07
+        0.02
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.07
     )
 
     # Timetravel at previous ingestion timestamp
@@ -141,16 +137,16 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 101))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert (
-            0.05
-            <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
-            <= 0.15
+        0.05
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.15
     )
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, None))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert (
-            0.05
-            <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
-            <= 0.15
+        0.05
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.15
     )
 
     # Timetravel with partial read from updates table
@@ -167,9 +163,9 @@ def test_ivf_flat_ingestion_with_updates_and_timetravel(tmp_path):
     index = IVFFlatIndex(uri=index_uri, timestamp=(2, 51))
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert (
-            0.02
-            <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
-            <= 0.07
+        0.02
+        <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
+        <= 0.07
     )
 
     # Timetravel at previous ingestion timestamp
@@ -292,9 +288,6 @@ def test_ivf_flat_ingestion_with_additions_and_timetravel(tmp_path):
     index = index.consolidate_updates()
     _, result = index.query(queries, k=k, nprobe=index.partitions)
     assert 0.45 < accuracy(result, gt_i) < 0.55
-
-
-
 
 
 def test_flat_ingestion_u8(tmp_path):
@@ -936,7 +929,13 @@ def test_ivf_flat_copy_centroids_uri(tmp_path):
             ]
         ),
         sparse=False,
-        attrs=[tiledb.Attr(name="values", dtype="float32", filters=tiledb.FilterList([tiledb.ZstdFilter()]))],
+        attrs=[
+            tiledb.Attr(
+                name="values",
+                dtype="float32",
+                filters=tiledb.FilterList([tiledb.ZstdFilter()]),
+            )
+        ],
         cell_order="col-major",
         tile_order="col-major",
     )

@@ -7,8 +7,9 @@ TileDB arrays (`arrays`)
 
 ### Basic Test Data
 
-The TileDB-Vector-Search repo contains small data sets for testing.  
+The TileDB-Vector-Search repo contains small data sets for testing.
 When you first checkout TileDB-Vector-Search from github you will see the following:
+
 ```text
 ├── arrays
 │   └── siftsmall
@@ -19,7 +20,6 @@ When you first checkout TileDB-Vector-Search from github you will see the follow
 ```
 
 Within each subdirectory are an input dataset for vector search, a query dataset, and a groundtruth dataset for the queries in the query dataset.
-
 
 ```text
 ├── arrays
@@ -41,6 +41,7 @@ Within each subdirectory are an input dataset for vector search, a query dataset
 ### IVF Indexes
 
 The array test data subdirectory additionally includes arrays comprising the IVF index for the vector data.
+
 ```text
 └── arrays
     ├── bigann10k
@@ -61,16 +62,15 @@ The array test data subdirectory additionally includes arrays comprising the IVF
         └── shuffled_vector_ids
 ```
 
-
-
-
 ### Additional Test Data
 
 Additional test arrays (e.g., for benchmarking or additional testing) can be downloaded:
-* `bigann1M`
-* `sift`
+
+- `bigann1M`
+- `sift`
 
 To download these files:
+
 ```bash
 # TBD
 ```

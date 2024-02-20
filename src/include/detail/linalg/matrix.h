@@ -447,7 +447,6 @@ auto num_vectors(const Matrix<T, LayoutPolicy, I>& m) {
  *
  * *********************************************************************/
 
-
 /**
  * Print information about a Matrix.
  * @param A

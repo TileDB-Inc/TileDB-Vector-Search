@@ -3,7 +3,8 @@
  * @file   unit_json.cc
 ========
  * @file   unit_index.cc
->>>>>>>> aac84b531e68712e5e21b07657adcebdf409807e:src/include/test/unit_flat_l2_index.cc
+>>>>>>>>
+aac84b531e68712e5e21b07657adcebdf409807e:src/include/test/unit_flat_l2_index.cc
  *
  * @section LICENSE
  *
@@ -40,21 +41,19 @@ TEST_CASE("json: test test", "[json]") {
 }
 
 TEST_CASE("json: load vector", "[json]") {
-========
- *
- *
- */
-
+  == == == ==
+      *** /
 #include <catch2/catch_all.hpp>
 #include "array_defs.h"
 #include "index/flat_l2_index.h"
 
-TEST_CASE("index: test test", "[index]") {
->>>>>>>> aac84b531e68712e5e21b07657adcebdf409807e:src/include/test/unit_flat_l2_index.cc
-  REQUIRE(true);
-}
+          TEST_CASE("index: test test", "[index]") {
+    >>>>>>>> aac84b531e68712e5e21b07657adcebdf409807e
+        : src /
+          include / test / unit_flat_l2_index.cc REQUIRE(true);
+  }
 
-TEST_CASE("index: uri constructor", "[index]") {
-  tiledb::Context ctx;
-  auto index = flat_l2_index<float>(ctx, sift_inputs_uri);
-}
+  TEST_CASE("index: uri constructor", "[index]") {
+    tiledb::Context ctx;
+    auto index = flat_l2_index<float>(ctx, sift_inputs_uri);
+  }

@@ -1,6 +1,4 @@
 import numpy as np
-from common import *
-from array_paths import *
 import pytest
 from array_paths import *
 from common import *
@@ -83,11 +81,15 @@ def test_ivf_flat_index(tmp_path):
     update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.uint8))
     index.update_batch(vectors=update_vectors, external_ids=np.array([0, 1, 2, 3, 4]))
 
-    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions)
+    query_and_check(
+        index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
+    )
 
     index = index.consolidate_updates()
 
-    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions)
+    query_and_check(
+        index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
+    )
 
     index.delete_batch(external_ids=np.array([1, 3]))
     query_and_check(
@@ -228,6 +230,7 @@ def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
                 #     with pytest.raises(TypeError):
                 #         index.query(query, k=1)
 
+
 def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_path):
     # Tests that we raise a TypeError if the number of columns in the query is not the same as the
     # number of columns in the indexed data, specifically for a single vector query.
@@ -248,5 +251,3 @@ def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_pa
         # TODO:  This also throws a TypeError for incorrect dimension
         with pytest.raises(TypeError):
             index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
-
-

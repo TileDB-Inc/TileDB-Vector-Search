@@ -1,3 +1,4 @@
+import inspect
 import os
 import random
 import shutil
@@ -6,14 +7,14 @@ import string
 import numpy as np
 
 import tiledb
-from tiledb.vector_search.storage_formats import storage_formats, STORAGE_VERSION
-import logging, pdb
+from tiledb.vector_search.storage_formats import STORAGE_VERSION
+from tiledb.vector_search.storage_formats import storage_formats
 
-import inspect
 
 def lineno():
     """Returns the current line number in our program."""
     return inspect.currentframe().f_back.f_lineno
+
 
 def xbin_mmap(fname, dtype):
     n, d = map(int, np.fromfile(fname, dtype="uint32", count=2))

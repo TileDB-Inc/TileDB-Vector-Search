@@ -1,6 +1,7 @@
 # Description: Contains paths to test arrays
 
 import os
+
 # TODO Use python Pathlib
 # m1_root = "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/"
 # TODO Get absolute path from cmake / setup / pytest
@@ -58,7 +59,7 @@ fmnistsmall_parts_uri = fmnistsmall_root + "shuffled_vectors"
 fmnistsmall_query_uri = fmnistsmall_root + "queries"
 fmnistsmall_groundtruth_uri = fmnistsmall_root + "groundtruth"
 
-'''
+"""
 m1_root = "/Users/lums/TileDB/TileDB-Vector-Search/external/test_data/arrays/"
 db_uri = m1_root + "sift/sift_base"
 centroids_uri = m1_root + "sift/centroids"
@@ -96,4 +97,4 @@ siftsmall_groundtruth_uri = m1_root + "siftsmall/siftsmall_groundtruth"
 siftsmall_query_uri = m1_root + "siftsmall/siftsmall_query"
 siftsmall_flatIVF_index_uri = m1_root + "siftsmall/flatIVF_index_siftsmall_base"
 siftsmall_flatIVF_index_uri_32_64 = m1_root + "siftsmall/flatIVF_index_siftsmall_base_32_64"
-'''
+"""
