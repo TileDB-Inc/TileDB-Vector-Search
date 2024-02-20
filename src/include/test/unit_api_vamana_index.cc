@@ -152,7 +152,7 @@ TEST_CASE("api_vamana_index: infer dimension", "[api_vamana_index]") {
   CHECK(dimension(a) == 128);
 }
 
- TEST_CASE(
+TEST_CASE(
     "api_vamana_index: api_vamana_index write and read",
     "[api_vamana_index][ci-skip]") {
   auto ctx = tiledb::Context{};
@@ -175,61 +175,61 @@ TEST_CASE("api_vamana_index: infer dimension", "[api_vamana_index]") {
   CHECK(a.px_type() == b.px_type());
 }
 
- TEST_CASE(
+TEST_CASE(
     "api_vamana_index: build index and query in place infinite",
     "[api_vamana_index][ci-skip]") {
-    auto ctx = tiledb::Context{};
-    size_t k_nn = 10;
-    size_t nprobe = GENERATE(8, 32);
+  auto ctx = tiledb::Context{};
+  size_t k_nn = 10;
+  size_t nprobe = GENERATE(8, 32);
 
-    auto a = IndexVamana(std::make_optional<IndexOptions>(
+  auto a = IndexVamana(std::make_optional<IndexOptions>(
       {{"id_type", "uint32"}, {"px_type", "uint32"}}));
-    auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-    auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
-    auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
-    a.train(training_set);
-    a.add(training_set);
+  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
+  auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
+  auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
+  a.train(training_set);
+  a.add(training_set);
 
-    auto&& [s, t] = a.query(query_set, k_nn);
+  auto&& [s, t] = a.query(query_set, k_nn);
 
-    auto intersections = count_intersections(t, groundtruth_set, k_nn);
-    auto nt = num_vectors(t);
-    auto recall = ((double)intersections) / ((double)nt * k_nn);
-    CHECK(recall == 1.0);
- }
+  auto intersections = count_intersections(t, groundtruth_set, k_nn);
+  auto nt = num_vectors(t);
+  auto recall = ((double)intersections) / ((double)nt * k_nn);
+  CHECK(recall == 1.0);
+}
 
- TEST_CASE(
-     "api_vamana_index: read index and query infinite and finite",
-     "[api_vamana_index][ci-skip]") {
-    auto ctx = tiledb::Context{};
-    size_t k_nn = 10;
-    size_t nprobe = GENERATE(8, 32);
+TEST_CASE(
+    "api_vamana_index: read index and query infinite and finite",
+    "[api_vamana_index][ci-skip]") {
+  auto ctx = tiledb::Context{};
+  size_t k_nn = 10;
+  size_t nprobe = GENERATE(8, 32);
 
-    std::string api_vamana_index_uri = "/tmp/api_vamana_index";
+  std::string api_vamana_index_uri = "/tmp/api_vamana_index";
 
-    auto a = IndexVamana(std::make_optional<IndexOptions>(
-       {{"feature_type", "float32"},
-        {"id_type", "uint32"},
-        {"px_type", "uint32"}}));
+  auto a = IndexVamana(std::make_optional<IndexOptions>(
+      {{"feature_type", "float32"},
+       {"id_type", "uint32"},
+       {"px_type", "uint32"}}));
 
-    auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-    a.train(training_set);
-    a.add(training_set);
-    a.write_index(ctx, api_vamana_index_uri, true);
-    auto b = IndexVamana(ctx, api_vamana_index_uri);
+  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
+  a.train(training_set);
+  a.add(training_set);
+  a.write_index(ctx, api_vamana_index_uri, true);
+  auto b = IndexVamana(ctx, api_vamana_index_uri);
 
-    auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
-    auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
+  auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
+  auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
 
-    auto&& [s, t] = a.query(query_set, k_nn);
-    auto&& [u, v] = b.query(query_set, k_nn);
+  auto&& [s, t] = a.query(query_set, k_nn);
+  auto&& [u, v] = b.query(query_set, k_nn);
 
-    auto intersections_a = count_intersections(t, groundtruth_set, k_nn);
-    auto intersections_b = count_intersections(v, groundtruth_set, k_nn);
-    CHECK(intersections_a == intersections_b);
-    auto nt = num_vectors(t);
-    auto nv = num_vectors(v);
-    CHECK(nt == nv);
-    auto recall = ((double)intersections_a) / ((double)nt * k_nn);
-    CHECK(recall == 1.0);
- }
+  auto intersections_a = count_intersections(t, groundtruth_set, k_nn);
+  auto intersections_b = count_intersections(v, groundtruth_set, k_nn);
+  CHECK(intersections_a == intersections_b);
+  auto nt = num_vectors(t);
+  auto nv = num_vectors(v);
+  CHECK(nt == nv);
+  auto recall = ((double)intersections_a) / ((double)nt * k_nn);
+  CHECK(recall == 1.0);
+}
