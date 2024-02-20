@@ -242,7 +242,7 @@ TEST_CASE("tdb_matrix: MatrixBase template parameter", "[tdb_matrix]") {
 
   // 2. Use MatrixWithIds as the MatrixBase template parameter.
   {
-    auto X = ColMajorMatrixWithIds<T, I, IdsType>(Mrows, Ncols);
+    auto X = ColMajorMatrixWithIds<T, IdsType, I>(Mrows, Ncols);
     fill_and_write_matrix(
         ctx, X, tmp_matrix_uri, tmp_ids_uri, Mrows, Ncols, offset);
 
