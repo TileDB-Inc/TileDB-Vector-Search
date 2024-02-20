@@ -205,7 +205,6 @@ class FeatureVectorArray {
       tdb_col_major_matrix_dispatch_table;
 
   tiledb_datatype_t feature_type_{TILEDB_ANY};
-
   size_t feature_size_{0};
 
   // @todo const????
