@@ -57,7 +57,7 @@ version_file = "apis/python/src/tiledb/vector_search/version.py"
 [tool.ruff]
 extend-select = ["I"]
 ignore = ["F403", "F405", "E501", "E741"]
-exclude = [".ipynb"]
+exclude = [".ipynb", "apis/python/src/tiledb/vector_search/object_api/__init__.py"]
 
 [tool.ruff.isort]
 known-first-party = ["tiledb"]
