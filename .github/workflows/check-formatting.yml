@@ -40,9 +40,7 @@ jobs:
           cache: pip
           cache-dependency-path: ".github/workflows/check-formatting.yml"
       - name: Install pre-commit
-        run: |
-          cd apis/python
-          pip install ".[formatting]"
+        run: pip install ".[formatting]"
       - name: Restore pre-commit cache
         uses: actions/cache@v3
         with:
