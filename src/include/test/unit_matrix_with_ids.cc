@@ -192,6 +192,28 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
+    "matrix_with_ids: assign to matrix",
+    "[matrix_with_ids]",
+    stdx::layout_right,
+    stdx::layout_left) {
+  auto A = MatrixWithIds<float, float, TestType, size_t>{
+      {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {0, 1, 2, 3}};
+  auto a = std::vector<float>{8, 6, 7, 5, 3, 0, 9, 5, 0, 2, 7, 3};
+  auto ids = std::vector<float>{0, 1, 2, 3};
+  auto aptr = A.data();
+  auto aptrIds = A.ids();
+
+  auto B = Matrix<float, TestType, size_t>{
+      {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}};
+  B = std::move(A);
+  auto bptr = A.data();
+  CHECK(
+      std::equal(B.data(), B.data() + B.num_rows() * B.num_cols(), a.begin()));
+  CHECK(aptr == B.data());
+  CHECK(A.data() == nullptr);
+}
+
+TEMPLATE_TEST_CASE(
     "matrix_with_ids: vector of matrix",
     "[matrix_with_ids]",
     stdx::layout_right,

@@ -139,6 +139,8 @@ kmeans_add_test(unit_tdb_io)
 
 kmeans_add_test(unit_tdb_matrix)
 
+kmeans_add_test(unit_tdb_matrix_with_ids)
+
 kmeans_add_test(unit_utils)
 
 kmeans_add_test(unit_vector)
