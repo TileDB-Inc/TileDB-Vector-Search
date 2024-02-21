@@ -5,16 +5,16 @@ on:
     branches:
       - main
     paths-ignore:
-      - '_quarto.yml'
-      - 'quarto-materials/*'
-      - '**/.md'
+      - "_quarto.yml"
+      - "quarto-materials/*"
+      - "**/.md"
   pull_request:
     branches:
       - main
     paths-ignore:
-      - '_quarto.yml'
-      - 'quarto-materials/*'
-      - '**/.md'
+      - "_quarto.yml"
+      - "quarto-materials/*"
+      - "**/.md"
 
 jobs:
   # TODO(paris): pre-commit also runs clang-format. Leaving for now to gain confidence that it 
@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: 'Check clang-format'
+      - name: "Check clang-format"
         run: |
           source $GITHUB_WORKSPACE/scripts/ci/check_clang_format.sh
         shell: bash

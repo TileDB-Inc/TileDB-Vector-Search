@@ -318,7 +318,7 @@ TEMPLATE_LIST_TEST_CASE(
   SECTION("std::vector") {
     std::vector<index_type> top_k(k_nn);
     get_top_k_from_heap(a, top_k);
-    REQUIRE(top_k.size() == k_nn);
+    REQUIRE((size_t)top_k.size() == (size_t)k_nn);
     auto l_nn = std::min<size_t>(k_nn, a.size());
     CHECK(std::equal(
         begin(gt_neighbors), begin(gt_neighbors) + l_nn, top_k.begin()));
@@ -327,7 +327,7 @@ TEMPLATE_LIST_TEST_CASE(
   SECTION("std::span") {
     std::vector<index_type> top_k(k_nn);
     get_top_k_from_heap(a, std::span(top_k.data(), k_nn));
-    REQUIRE(top_k.size() == k_nn);
+    REQUIRE((size_t)top_k.size() == (size_t)k_nn);
     auto l_nn = std::min<size_t>(k_nn, a.size());
     CHECK(std::equal(
         begin(gt_neighbors), begin(gt_neighbors) + l_nn, top_k.begin()));
@@ -337,12 +337,12 @@ TEMPLATE_LIST_TEST_CASE(
     groundtruth_type pad = 2;
     std::vector<index_type> top_k(k_nn + pad);
     get_top_k_from_heap(a, top_k);
-    REQUIRE(top_k.size() == k_nn + pad);
+    REQUIRE((size_t)top_k.size() == (size_t)(k_nn + pad));
     auto l_nn = std::min<size_t>(k_nn + pad, a.size());
     CHECK(std::equal(
         begin(gt_neighbors), begin(gt_neighbors) + l_nn, top_k.begin()));
     CHECK(end(top_k) == begin(top_k) + k_nn + pad);
-    CHECK(end(top_k) - begin(top_k) == k_nn + pad);
+    CHECK((size_t)(end(top_k) - begin(top_k)) == (size_t)(k_nn + pad));
     CHECK(std::equal(
         begin(top_k) + l_nn,
         begin(top_k) + k_nn + pad,
@@ -355,12 +355,12 @@ TEMPLATE_LIST_TEST_CASE(
     groundtruth_type pad = 2;
     std::vector<index_type> top_k(k_nn + pad);
     get_top_k_from_heap(a, std::span(top_k.data(), k_nn + pad));
-    REQUIRE(top_k.size() == k_nn + pad);
+    REQUIRE((size_t)top_k.size() == (size_t)(k_nn + pad));
     auto l_nn = std::min<size_t>(k_nn + pad, a.size());
     CHECK(std::equal(
         begin(gt_neighbors), begin(gt_neighbors) + l_nn, top_k.begin()));
     CHECK(end(top_k) == begin(top_k) + k_nn + pad);
-    CHECK(end(top_k) - begin(top_k) == k_nn + pad);
+    CHECK((size_t)(end(top_k) - begin(top_k)) == (size_t)(k_nn + pad));
     CHECK(std::equal(
         begin(top_k) + l_nn,
         begin(top_k) + k_nn + pad,
@@ -421,8 +421,8 @@ TEMPLATE_LIST_TEST_CASE("scoring: get_top_k", "[scoring]", scoring_typelist) {
   };
 
   SECTION("std::vector get_top_k") {
-    CHECK(size(scores00[0]) == asize);
-    CHECK(size(scores00[1]) == asize + bsize);
+    CHECK((size_t)size(scores00[0]) == (size_t)(asize));
+    CHECK((size_t)size(scores00[1]) == size_t(asize + bsize));
 
     auto top_k = get_top_k(scores00, k_nn);
 
@@ -441,8 +441,8 @@ TEMPLATE_LIST_TEST_CASE("scoring: get_top_k", "[scoring]", scoring_typelist) {
     }
   }
   SECTION("std::vector get_top_k_with_scores") {
-    CHECK(size(scores00[0]) == asize);
-    CHECK(size(scores00[1]) == asize + bsize);
+    CHECK((size_t)size(scores00[0]) == (size_t)asize);
+    CHECK((size_t)size(scores00[1]) == (size_t)(asize + bsize));
 
     auto&& [top_k_scores, top_k] = get_top_k_with_scores(scores00, k_nn);
 

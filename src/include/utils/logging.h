@@ -109,6 +109,7 @@ _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 
 /**
  *  Macro holding the name of the function in which it is called.
@@ -469,6 +470,126 @@ inline memory_data& get_memory_data_instance() {
 }
 
 static memory_data& _memory_data{get_memory_data_instance()};
+
+/**
+ * Singleton class for recording miscellaneous counts.  Internally maintains a
+ * multimap of names and count values.  The `insert_entry()` method
+ * is used to record the count.  The `get_entries_*()` methods are used
+ * to query the recorded counts.
+ *
+ * Data are stored as integral values.  The `get_entries_*()` methods return
+ * integral values.
+ */
+class count_data {
+ public:
+  using count_type = size_t;
+  using name_count = std::multimap<std::string, count_type>;
+
+ private:
+  name_count count_usages_;
+  bool verbose_{false};
+  bool debug_{false};
+
+  /**
+   * Constructor.  Private to enforce singleton pattern.
+   */
+  count_data() = default;
+  ~count_data() = default;
+
+ public:
+  /**
+   * Copy constructor.  Deleted to enforce singleton pattern.
+   */
+  count_data(const count_data&) = delete;
+  count_data& operator=(const count_data&) = delete;
+
+  /**
+   * Get a reference to the singleton instance of the class.
+   * @return Reference to the singleton instance of the class.
+   */
+  static count_data& get_instance() {
+    static count_data instance;
+    return instance;
+  }
+
+  /**
+   * Insert a count entry into the multimap.
+   * @param name The name to be associated with the count.
+   * @param use The count to be recorded (in bytes).
+   */
+  void insert_entry(const std::string& name, const count_type& use) {
+    count_usages_.insert(std::make_pair(name, use));
+  }
+
+  /**
+   * Get the count entries associated with a name.
+   * @param string Name to be queried.
+   * @return Vector of count values associated with the name.
+   */
+  auto get_entries_separately(const std::string& string) {
+    std::vector<double> usages;
+
+    auto range = count_usages_.equal_range(string);
+    for (auto i = range.first; i != range.second; ++i) {
+      usages.push_back(i->second);
+    }
+    return usages;
+  }
+
+  /**
+   * Get the sum of the count entries associated with a name.
+   * @param string Name to be queried.
+   * @return Vector of count values associated with the name.
+   */
+  auto get_entries_summed(const std::string& string) {
+    double sum = 0.0;
+    auto range = count_usages_.equal_range(string);
+    for (auto i = range.first; i != range.second; ++i) {
+      sum += i->second;
+    }
+    return sum;
+  }
+
+  /**
+   * Get the names associated with the count entries.
+   * @return Vector of names associated with the count entries.
+   */
+  auto get_usage_names() {
+    std::set<std::string> multinames;
+
+    std::vector<std::string> names;
+
+    for (auto& i : count_usages_) {
+      multinames.insert(i.first);
+    }
+    for (auto& i : multinames) {
+      names.push_back(i);
+    }
+    return names;
+  }
+
+  void set_verbose(bool verbose) {
+    verbose_ = verbose;
+  }
+
+  bool get_verbose() {
+    return verbose_;
+  }
+
+  void set_debug(bool debug) {
+    debug_ = debug;
+  }
+
+  bool get_debug() {
+    return debug_;
+  }
+};
+
+inline count_data& get_count_data_instance() {
+  return count_data::get_instance();
+}
+
+static count_data& _count_data{get_count_data_instance()};
 
 #if 0
 class stats_data {

@@ -26,42 +26,43 @@
 #
 
 cmake_minimum_required(VERSION 3.21)
-set(CMAKE_CXX_STANDARD 20)
-
-# Define CMAKE_INSTALL_xxx: LIBDIR, INCLUDEDIR
-include(GNUInstallDirs)
-include(FetchContent)
 
 find_package(TileDB REQUIRED)
 
-# Currently, Scikit-build does not support FindPython, so we convert the
-# provided hints ourselves.
-# Otherwise, the extension will use system Python instead of cibuildwheel's venv
-if(SKBUILD)
-  set(Python_EXECUTABLE "${PYTHON_EXECUTABLE}")
-  set(Python_INCLUDE_DIR "${PYTHON_INCLUDE_DIR}")
-  set(Python_LIBRARY "${PYTHON_LIBRARY}")
-endif()
-
-set(Python_FIND_VIRTUALENV FIRST)
-find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
+set(PYBIND11_NEWPYTHON ON)
+# NOTE: If you remove the line below the Windows build will fail
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
 set(VSPY_TARGET_NAME _tiledbvspy)
 
-python_add_library(${VSPY_TARGET_NAME} MODULE
-    "src/tiledb/vector_search/module.cc"
-    "src/tiledb/vector_search/kmeans.cc"
-    WITH_SOABI)
+pybind11_add_module(
+        ${VSPY_TARGET_NAME}
+        src/tiledb/vector_search/module.cc
+        src/tiledb/vector_search/kmeans.cc
+        src/tiledb/vector_search/type_erased_module.cc
+)
 
-target_link_libraries(${VSPY_TARGET_NAME}
-  PRIVATE
-    pybind11::headers
-    mdspan
-    kmeans_lib
-    TileDB::tiledb_shared)
+target_compile_features(
+        ${VSPY_TARGET_NAME}
+        PRIVATE
+        cxx_std_20
+)
 
-target_compile_definitions(${VSPY_TARGET_NAME} PRIVATE TILEDBVS_ENABLE_STATS VERSION_INFO=${PROJECT_VERSION})
+target_link_libraries(
+        ${VSPY_TARGET_NAME}
+        PRIVATE
+        mdspan
+        kmeans_lib
+        TileDB::tiledb_shared
+)
+
+target_compile_definitions(
+        ${VSPY_TARGET_NAME}
+        PRIVATE
+        TILEDBVS_ENABLE_STATS
+        VERSION_INFO=${PROJECT_VERSION}
+)
 
 if (APPLE)
   set_target_properties(${VSPY_TARGET_NAME} PROPERTIES INSTALL_RPATH "@loader_path/lib")
@@ -70,10 +71,7 @@ elseif(UNIX)
 endif()
 
 # Install the extension module
-install(TARGETS ${VSPY_TARGET_NAME} DESTINATION .)
+install(TARGETS ${VSPY_TARGET_NAME} LIBRARY DESTINATION .)
 
 # Install libtiledb so that we can repackage it with the extension
 install(IMPORTED_RUNTIME_ARTIFACTS TileDB::tiledb_shared DESTINATION lib)
-
-# Quiet a warning, since this project is only valid with SKBUILD
-set(ignoreMe "${SKBUILD}")

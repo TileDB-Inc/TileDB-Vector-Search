@@ -36,10 +36,10 @@ quartodoc:
     - title: "tiledb.vector_search"
       desc: ""
       contents:
-          - index.Index
-          - flat_index.FlatIndex
-          - ivf_flat_index.IVFFlatIndex
-          - ingestion
+        - index.Index
+        - flat_index.FlatIndex
+        - ivf_flat_index.IVFFlatIndex
+        - ingestion
 
 website:
   favicon: "documentation/assets/tiledb.ico"

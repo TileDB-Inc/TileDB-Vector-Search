@@ -6,13 +6,14 @@ from tiledb.vector_search import _tiledbvspy as vspy
 
 
 def test_tdbMatrix(tmpdir):
-    p = str(tmpdir.mkdir("test").join("test.tdb"))
+    d = tmpdir.mkdir("test")
+    p = str(d.join("test.tdb"))
     data = np.random.rand(12).astype(np.float32).reshape(3, 4)
 
     create_array(p, data)
 
     ctx = vspy.Ctx({})
-    m = vspy.tdbColMajorMatrix_f32(ctx, p, 0, 0, 0, 0, 0)
+    m = vspy.tdbColMajorMatrix_f32(ctx, p, 0, 0, 0, 0, 0, 0)
     m.load()
     m_array = np.array(m)
     assert m_array.shape == data.shape
@@ -29,7 +30,7 @@ def test_tdbMatrix(tmpdir):
 
 
 def test_array_to_matrix(tmpdir):
-    p = str(tmpdir.mkdir("test").join("test.tdb"))
+    str(tmpdir.mkdir("test").join("test.tdb"))
 
     data = np.random.rand(12).astype(np.float32).reshape(3, 4)
 

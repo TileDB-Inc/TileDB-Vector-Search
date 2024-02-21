@@ -34,6 +34,8 @@
 #define TILEDB_QUERY_COMMON_H
 
 #include <string>
+#include "array_defs.h"
+#include "detail/flat/qv.h"
 #include "linalg.h"
 
 // clang-format off
@@ -124,47 +126,105 @@
 
 // clang-format on
 
-#if 0
-using db_type = uint8_t;
+/**
+ * A data structure for holding configuration information to provide the same
+ * configuration across multiple different tests.
+ */
+// base is 10k, learn is 25k
+struct siftsmall_test_init_defaults {
+  using feature_type = siftsmall_feature_type;
+  using id_type = siftsmall_ids_type;
+  using px_type = siftsmall_indices_type;
 
-using groundtruth_type = int32_t;
-using centroids_type = float;
-using ids_type = uint64_t;
-using indices_type = uint64_t;
+  size_t k_nn = 10;
+  size_t nthreads = 0;
+  size_t max_iter = 10;
+  float tolerance = 1e-4;
+};
 
-static std::string ec2_root{
-    "/home/lums/TileDB-Vector-Search/external/data/gp3"};
-static std::string m1_root{
-    "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3"};
-static std::string db_uri{m1_root + "/1M/bigann1M_base"};
-static std::string centroids_uri{m1_root + "/1M/centroids.tdb"};
-static std::string parts_uri{m1_root + "/1M/parts.tdb"};
-static std::string index_uri{m1_root + "/1M/index.tdb"};
-static std::string sizes_uri{m1_root + "/1M/index_size.tdb"};
-static std::string ids_uri{m1_root + "/1M/ids.tdb"};
-static std::string query_uri{m1_root + "/1M/query_public_10k"};
-static std::string groundtruth_uri{m1_root + "/1M/bigann_1M_GT_nnids"};
-#else
-using db_type = float;
+template <class IndexType>
+struct siftsmall_test_init : public siftsmall_test_init_defaults {
+  using Base = siftsmall_test_init_defaults;
 
-using groundtruth_type = int32_t;
-using centroids_type = float;
-using ids_type = uint64_t;
-using indices_type = uint64_t;
+  using feature_type = Base::feature_type;
+  using id_type = Base::id_type;
+  using px_type = Base::px_type;
 
-static std::string ec2_root{
-    "/home/lums/TileDB-Vector-Search/external/data/gp3/sift/"};
-static std::string m1_root{
-    "/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3/sift/"};
-static std::string db_uri{m1_root + "sift_base"};
-static std::string centroids_uri{m1_root + "centroids"};
-static std::string parts_uri{m1_root + "parts"};
-static std::string index_uri{m1_root + "index"};
-//  static std::string sizes_uri{m1_root + "/1M/index_size.tdb"};
-static std::string ids_uri{m1_root + "ids"};
-static std::string query_uri{m1_root + "sift_query"};
-static std::string groundtruth_uri{m1_root + "sift_groundtruth"};
+  tiledb::Context ctx_;
+  size_t nlist;
+  size_t nprobe;
 
-#endif
+  siftsmall_test_init(tiledb::Context ctx, size_t nl)
+      : ctx_{ctx}
+      , nlist(nl)
+      , nprobe(std::min<size_t>(10, nlist))
+      , training_set(
+            tdbColMajorMatrix<feature_type>(ctx_, siftsmall_inputs_uri))
+      , query_set(tdbColMajorMatrix<feature_type>(ctx_, siftsmall_query_uri))
+      , groundtruth_set(tdbColMajorMatrix<siftsmall_groundtruth_type>(
+            ctx_, siftsmall_groundtruth_uri))
+      , idx(/*128,*/ nlist, max_iter, tolerance) {
+    training_set.load();
+    query_set.load();
+    groundtruth_set.load();
+    std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
+        training_set, query_set, k_nn, 1, sum_of_squares_distance{});
+
+    idx.train(training_set);
+    idx.add(training_set);
+  }
+
+  auto get_write_read_idx() {
+    std::string tmp_ivf_index_uri = "/tmp/tmp_ivf_index";
+    idx.write_index(ctx_, tmp_ivf_index_uri, true);
+    auto idx0 =
+        // ivf_flat_l2_index<feature_type, id_type, px_type>(ctx_,
+        // tmp_ivf_index_uri);
+        IndexType(ctx_, tmp_ivf_index_uri);
+    return idx0;
+  }
+
+  tdbColMajorMatrix<siftsmall_feature_type> training_set;
+  tdbColMajorMatrix<siftsmall_feature_type> query_set;
+  tdbColMajorMatrix<siftsmall_groundtruth_type> groundtruth_set;
+  ColMajorMatrix<float> top_k_scores;
+  ColMajorMatrix<siftsmall_ids_type> top_k;
+  // ivf_flat_l2_index<feature_type, id_type, px_type> idx;
+  IndexType idx;
+
+  auto verify(auto&& top_k_ivf) {
+    // These are helpful for debugging
+    // debug_slice(top_k_ivf, "top_k_ivf");
+    // debug_slice(top_k_ivf_scores, "top_k_ivf_scores");
+
+    size_t intersectionsm1 = count_intersections(top_k, groundtruth_set, k_nn);
+    double recallm1 = intersectionsm1 / ((double)top_k.num_cols() * k_nn);
+    if (nlist == 1) {
+      CHECK(intersectionsm1 == (size_t)(num_vectors(top_k) * dimension(top_k)));
+      CHECK(recallm1 == 1.0);
+    }
+    CHECK(recallm1 > .99);
+
+    // @todo There is randomness in initialization of kmeans, use a fixed seed
+    size_t intersections0 = count_intersections(top_k_ivf, top_k, k_nn);
+    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    if (nlist == 1) {
+      CHECK(intersections0 == (size_t)(num_vectors(top_k) * dimension(top_k)));
+      CHECK(recall0 == 1.0);
+    }
+    CHECK(recall0 > .95);
+
+    size_t intersections1 =
+        (long)count_intersections(top_k_ivf, groundtruth_set, k_nn);
+    double recall1 = intersections1 / ((double)top_k_ivf.num_cols() * k_nn);
+    if (nlist == 1) {
+      CHECK(intersections1 == (size_t)(num_vectors(top_k) * dimension(top_k)));
+      CHECK(recall1 == 1.0);
+    }
+    CHECK(recall1 > 0.95);
+
+    // std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
+  }
+};
 
 #endif  // TILEDB_QUERY_COMMON_H

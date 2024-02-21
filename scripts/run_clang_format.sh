@@ -26,7 +26,7 @@ echo "Running clang-format version:" `$CLANG_FORMAT --version`
 pushd $SOURCE_DIR
 
 src=$SOURCE_DIR
-SOURCE_PATHS=($src/src)
+SOURCE_PATHS=($src/src/src $src/src/include $src/apis/python/src)
 FIND_FILES=(-name "*.cc" -or -name "*.c" -or -name "*.h")
 
 if [ "$APPLY_FIXES" == "1" ]; then
