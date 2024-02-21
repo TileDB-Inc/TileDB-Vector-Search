@@ -68,7 +68,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, macos-12, windows-2022]
+        os: [windows-2022]
         # `windows-2022, ` blocked by https://github.com/pybind/pybind11/issues/3445#issuecomment-1525500927
 
     steps:
@@ -81,7 +81,7 @@ jobs:
           brew install automake pkg-config ninja
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.2
+        uses: pypa/cibuildwheel@v2.16.5
         env:
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
           CIBW_SKIP: "*-win32 cp27-* cp35-* cp36-* cp37-* pp* *_i686 *musllinux*"
