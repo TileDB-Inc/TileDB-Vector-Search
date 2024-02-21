@@ -66,6 +66,7 @@
 #include <type_traits>
 #include <vector>
 #include <version>
+#include <algorithm>
 
 #include <tiledb/tiledb>
 #include "mdspan/mdspan.hpp"
@@ -373,8 +374,8 @@ class tdbPartitionedMatrix
     }
 
     // auto max_resident_parts = 0UL;
-    auto running_resident_parts = 0UL;
-    auto running_resident_size = 0UL;
+    size_t running_resident_parts = 0UL;
+    size_t running_resident_size = 0UL;
     for (size_t i = 0; i < total_num_parts_; ++i) {
       auto part_size = master_indices_[relevant_parts_[i] + 1] -
                        master_indices_[relevant_parts_[i]];
