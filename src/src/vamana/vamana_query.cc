@@ -57,9 +57,11 @@ static constexpr const char USAGE[] =
       vamana --index_uri URI --query_uri URI [--ftype TYPE] [--idtype TYPE] [--groundtruth_uri URI]
              [--Lbuild NN] [--nqueries NN] [--k NN]
              [--nthreads NN] [--validate] [--log FILE] [--stats] [-d] [-v] [--dump NN]
+             [--bfs]
 
   Options:
       -h, --help              show this screen
+      -b, --bfs               run bfs on the index
       --index_uri URI         group URI ov vamana index
       --query_uri URI         query URI with feature vectors to search for
       --ftype TYPE            data type of feature vectors [default: float]
@@ -95,17 +97,32 @@ int main(int argc, char* argv[]) {
   size_t nqueries = args["--nqueries"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
 
+
+
   auto run_query = [&]<class feature_type, class id_type>() {
     tiledb::Context ctx;
     auto idx = vamana_index<feature_type, id_type>(ctx, index_uri);
     auto queries = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
     queries.load();
 
-    auto query_time = log_timer("query time", true);
-
     auto Lbuild = args["--Lbuild"] ?
                       std::optional<size_t>(args["--Lbuild"].asLong()) :
                       std::nullopt;
+
+    auto query_time = log_timer("query time", true);
+
+    if (args["--bfs"].asBool()) {
+
+      auto query_time = log_timer("bfs time", true);
+      tiledb::Context ctx;
+      auto idx = vamana_index<feature_type, id_type>(ctx, index_uri);
+      /*auto parents = */idx.bfs_O1(queries, k_nn, *Lbuild);
+      query_time.stop();
+
+      return 0;
+    }
+
+
     auto&& [top_k_scores, top_k] = idx.query(queries, k_nn, Lbuild);
 
     query_time.stop();

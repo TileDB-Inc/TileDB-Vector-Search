@@ -89,8 +89,107 @@ static bool noisy = false;
   noisy = b;
 }
 
+template <
+    class Graph,
+    feature_vector_array A,
+    feature_vector V,
+    class Distance = sum_of_squares_distance>
+auto bfs_O1(
+    const Graph& graph,
+    const A& db,
+    typename std::decay_t<Graph>::id_type source,
+    const V& query,
+    size_t Lmax,
+    Distance&& distance = Distance{}) {
+  using vertex_id_type = typename std::decay_t<Graph>::id_type;
+  using score_type = float;
+
+  // std::deque<vertex_id_type> q1, q2;
+  auto q1 = k_min_heap<score_type, vertex_id_type>{Lmax};
+  auto q2 = k_min_heap<score_type, vertex_id_type>{Lmax};
+
+  std::vector<vertex_id_type> level(
+      graph.num_vertices(), std::numeric_limits<vertex_id_type>::max());
+  std::vector<vertex_id_type> parents(
+      graph.num_vertices(), std::numeric_limits<vertex_id_type>::max());
+  size_t lvl = 0;
+
+  q1.insert(distance(db[source], query), source);
+  level[source] = lvl++;
+  parents[source] = source;
+
+  // We want the frontier to be the Lbuild closest points to the query, minus
+  // any points that have already been visited
+  while (!q1.empty()) {
+    std::for_each(q1.begin(), q1.end(), [&](auto&& e) {
+      auto&& [s, u] = e;
+      std::for_each(graph[u].begin(), graph[u].end(), [&, u = u](auto&& x) {
+        vertex_id_type v = std::get<1>(x);
+        if (level[v] == std::numeric_limits<vertex_id_type>::max()) {
+          q2.insert(distance(db[v], query), v);
+          level[v] = lvl;
+          parents[v] = u;
+        }
+      });
+    });
+    std::swap(q1, q2);
+    q2.clear();
+    ++lvl;
+  }
+  size_t counter = 0;
+  for (auto&& p : parents) {
+    if (p != std::numeric_limits<vertex_id_type>::max()) {
+      ++counter;
+    }
+  }
+  std::cout << "visited: " << counter << " of " << size(parents) << std::endl;
+
+  return parents;
+}
+
+template <class Graph>
+auto bfs_O0(const Graph& graph, typename std::decay_t<Graph>::id_type source) {
+  using vertex_id_type = typename std::decay_t<Graph>::id_type;
+
+  std::deque<vertex_id_type> q1, q2;
+  std::vector<vertex_id_type> level(
+      graph.num_vertices(), std::numeric_limits<vertex_id_type>::max());
+  std::vector<vertex_id_type> parents(
+      graph.num_vertices(), std::numeric_limits<vertex_id_type>::max());
+  size_t lvl = 0;
+
+  q1.push_back(source);
+  level[source] = lvl++;
+  parents[source] = source;
+
+  while (!q1.empty()) {
+    std::for_each(q1.begin(), q1.end(), [&](vertex_id_type u) {
+      std::for_each(graph[u].begin(), graph[u].end(), [&](auto&& x) {
+        vertex_id_type v = std::get<1>(x);
+        if (level[v] == std::numeric_limits<vertex_id_type>::max()) {
+          q2.push_back(v);
+          level[v] = lvl;
+          parents[v] = u;
+        }
+      });
+    });
+    std::swap(q1, q2);
+    q2.clear();
+    ++lvl;
+  }
+  size_t counter = 0;
+  for (auto&& p : parents) {
+    if (p != std::numeric_limits<vertex_id_type>::max()) {
+      ++counter;
+    }
+  }
+  std::cout << "visited: " << counter << " of " << size(parents) << std::endl;
+
+  return parents;
+}
+
 template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
-auto greedy_search_O0(
+auto greedy_search_O2(
     auto&& graph,
     auto&& db,
     typename std::decay_t<decltype(graph)>::id_type source,
@@ -98,7 +197,6 @@ auto greedy_search_O0(
     size_t k_nn,
     size_t Lmax,
     Distance&& distance = Distance{}) {
-
   std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> L;
   std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> V;
   std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> L_minus_V;
@@ -109,14 +207,14 @@ auto greedy_search_O0(
   size_t counter{0};
 
   while (!empty(L_minus_V)) {
-
     if (noisy) {
       std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
     }
 
-    auto p_star = std::min_element(begin(L_minus_V), end(L_minus_V), [&](auto&& a, auto&& b) {
-      return distance(db[a], query) < distance(db[b], query);
-    });
+    auto p_star = std::min_element(
+        begin(L_minus_V), end(L_minus_V), [&](auto&& a, auto&& b) {
+          return distance(db[a], query) < distance(db[b], query);
+        });
     for (auto&& p : graph.out_edges(*p_star)) {
       L.insert(std::get<1>(p));
       L_minus_V.insert(std::get<1>(p));
@@ -125,13 +223,16 @@ auto greedy_search_O0(
 
     if (size(L) > Lmax) {
       // trim L to Lmax closest points to query
-      std::vector<std::pair<typename std::decay_t<decltype(graph)>::id_type, float>> L_with_scores;
+      std::vector<
+          std::pair<typename std::decay_t<decltype(graph)>::id_type, float>>
+          L_with_scores;
       for (auto&& p : L) {
         L_with_scores.emplace_back(p, distance(db[p], query));
       }
-      std::sort(begin(L_with_scores), end(L_with_scores), [](auto&& a, auto&& b) {
-        return a.second < b.second;
-      });
+      std::sort(
+          begin(L_with_scores), end(L_with_scores), [](auto&& a, auto&& b) {
+            return a.second < b.second;
+          });
       L.clear();
       for (size_t i = 0; i < Lmax && i < size(L_with_scores); ++i) {
         L.insert(L_with_scores[i].first);
@@ -163,22 +264,119 @@ auto greedy_search_O0(
       std::cout << std::endl;
     }
   }
-  auto min_scores = fixed_min_pair_heap<float, typename std::decay_t<decltype(graph)>::id_type>(k_nn);
+  auto min_scores = fixed_min_pair_heap<
+      float,
+      typename std::decay_t<decltype(graph)>::id_type>(k_nn);
   for (auto&& p : L) {
     min_scores.insert(distance(db[p], query), p);
   }
-  auto top_k = std::vector<typename std::decay_t<decltype(graph)>::id_type>(k_nn);
+  auto top_k =
+      std::vector<typename std::decay_t<decltype(graph)>::id_type>(k_nn);
   auto top_k_scores = std::vector<float>(k_nn);
 
   get_top_k_with_scores_from_heap(min_scores, top_k, top_k_scores);
   return std::make_tuple(
       std::move(top_k_scores), std::move(top_k), std::move(V));
 
-  return std::make_tuple(std::move(top_k_scores), std::move(top_k), std::move(V));
+  return std::make_tuple(
+      std::move(top_k_scores), std::move(top_k), std::move(V));
 }
 
+template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
+auto greedy_search_O0(
+    auto&& graph,
+    auto&& db,
+    typename std::decay_t<decltype(graph)>::id_type source,
+    auto&& query,
+    size_t k_nn,
+    size_t Lmax,
+    Distance&& distance = Distance{}) {
+  std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> L;
+  std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> V;
+  std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> L_minus_V;
 
-    /**
+  L.insert(source);
+  L_minus_V.insert(source);
+
+  size_t counter{0};
+
+  while (!empty(L_minus_V)) {
+    if (noisy) {
+      std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
+    }
+
+    auto p_star = std::min_element(
+        begin(L_minus_V), end(L_minus_V), [&](auto&& a, auto&& b) {
+          return distance(db[a], query) < distance(db[b], query);
+        });
+    for (auto&& p : graph.out_edges(*p_star)) {
+      L.insert(std::get<1>(p));
+      L_minus_V.insert(std::get<1>(p));
+    }
+    V.insert(*p_star);
+
+    if (size(L) > Lmax) {
+      // trim L to Lmax closest points to query
+      std::vector<
+          std::pair<typename std::decay_t<decltype(graph)>::id_type, float>>
+          L_with_scores;
+      for (auto&& p : L) {
+        L_with_scores.emplace_back(p, distance(db[p], query));
+      }
+      std::sort(
+          begin(L_with_scores), end(L_with_scores), [](auto&& a, auto&& b) {
+            return a.second < b.second;
+          });
+      L.clear();
+      for (size_t i = 0; i < Lmax && i < size(L_with_scores); ++i) {
+        L.insert(L_with_scores[i].first);
+      }
+    }
+    L_minus_V.clear();
+    for (auto&& p : L) {
+      L_minus_V.insert(p);
+    }
+    for (auto&& p : V) {
+      L_minus_V.erase(p);
+    }
+
+    if (noisy) {
+      std::cout << "L: ";
+      for (auto&& p : L) {
+        std::cout << "(" << p << " " << distance(db[p], query) << ") ";
+      }
+      std::cout << std::endl;
+      std::cout << "V: ";
+      for (auto&& p : V) {
+        std::cout << "(" << p << " " << distance(db[p], query) << ") ";
+      }
+      std::cout << std::endl;
+      std::cout << "L\\V: ";
+      for (auto&& p : L_minus_V) {
+        std::cout << "(" << p << " " << distance(db[p], query) << ") ";
+      }
+      std::cout << std::endl;
+    }
+  }
+  auto min_scores = fixed_min_pair_heap<
+      float,
+      typename std::decay_t<decltype(graph)>::id_type>(k_nn);
+  for (auto&& p : L) {
+    min_scores.insert(distance(db[p], query), p);
+  }
+  auto top_k =
+      std::vector<typename std::decay_t<decltype(graph)>::id_type>(k_nn);
+  auto top_k_scores = std::vector<float>(k_nn);
+
+  get_top_k_with_scores_from_heap(min_scores, top_k, top_k_scores);
+  return std::make_tuple(
+      std::move(top_k_scores), std::move(top_k), std::move(V));
+
+  return std::make_tuple(
+      std::move(top_k_scores), std::move(top_k), std::move(V));
+}
+
+/**
  * @brief Truncated best-first search
  * @tparam Distance The distance function used to compare vectors
  * @param graph Graph to be searched
@@ -360,7 +558,6 @@ auto greedy_search(
       L,
       std::forward<Distance>(distance));
 }
-
 
 /**
  * @brief RobustPrune(p, vee, alpha, R)
@@ -835,6 +1032,22 @@ class vamana_index {
 
   size_t num_comps() const {
     return num_comps_;
+  }
+
+  auto& get_graph() {
+    return graph_;
+  }
+
+  auto bfs() {
+    return bfs_O0(graph_, medoid_);
+  }
+
+  template <query_vector_array Q>
+  auto bfs_O1(const Q& queries, size_t k_nn, size_t Lbuild) {
+
+    for (size_t i = 0; i < num_vectors(queries); ++i) {
+      ::bfs_O1(graph_, feature_vectors_, medoid_, queries[i], Lbuild);
+    }
   }
 
   /**

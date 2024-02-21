@@ -56,6 +56,7 @@ static constexpr const char USAGE[] =
     R"(vamana_index: C++ cli for creating vamana index
   Usage:
       vamana_index (-h | --help)
+      vamana_index (-b | --bfs)
       vamana_index --inputs_uri URI --index_uri URI [--ftype TYPE] [--idtype TYPE] [--force]
                   [--max_degree NN] [--Lbuild NN] [--backtrack NN] [--alpha FF]
                   [--nthreads NN] [--log FILE] [--stats] [-d] [-v] [--dump NN]
