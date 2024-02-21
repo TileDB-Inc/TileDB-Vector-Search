@@ -87,31 +87,39 @@ docker run --rm tiledb/tiledb-vector-search
 ```
 
 # Formatting
+
 There are two ways you can format your code.
 
+### 1. Using `clang-format`
+
 If you just want to format C++ code and don't want to `pip install` anything, you can install [clang-format](https://clang.llvm.org/docs/ClangFormat.html) version 17 and use that directly. Install it yourself, or by running this installation script:
+
 ```bash
 ./scripts/install_clang_format.sh
 ```
-Then check if any files require formatting changes with:
+
+Then run it:
+
 ```bash
 # Check if any files require formatting changes:
 ./scripts/run_clang_format.sh . clang-format 0
-```
-Then make these formatting changes with:
-```bash
+# Run on all files and make formatting changes:
 ./scripts/run_clang_format.sh . clang-format 1
 ```
 
+### 2. Using `pre-commit`
+
 Alternatively, you can format all code in the repo (i.e. C++, Python, YAML, and Markdown files) with [pre-commit](https://pre-commit.com/), though it requires installing with `pip`. Install it with:
+
 ```bash
-cd apis/python
 pip install ".[formatting]"
 ```
-Then run it (it will autofix any issues it can) with:
+
+Then run it:
+
 ```bash
-# To run on all files:
+# Run on all files and make formatting changes:
 pre-commit run --all-files
-# To run on a single file:
+# Run on single file and make formatting changes:
 pre-commit run --files path/to/file.py
 ```
