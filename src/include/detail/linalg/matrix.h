@@ -405,18 +405,6 @@ template <class T, class I = size_t>
 using ColMajorMatrix = Matrix<T, stdx::layout_left, I>;
 
 /**
- * Convenience class for row-major matrices.
- */
-template <class T, class I = size_t, class IdsType = uint64_t>
-using RowMajorMatrixWithIds = Matrix<T, stdx::layout_right, I, IdsType>;
-
-/**
- * Convenience class for column-major matrices.
- */
-template <class T, class I = size_t, class IdsType = uint64_t>
-using ColMajorMatrixWithIds = Matrix<T, stdx::layout_left, I, IdsType>;
-
-/**
  * Convenience class for turning 2D matrices into 1D vectors.
  */
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>

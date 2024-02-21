@@ -95,12 +95,26 @@ class FeatureVectorArray {
      * happen with either orientation, and so will work at the other end with
      * either orientation since we are just passing a pointer to the data.
      */
-    if (tdb_col_major_matrix_dispatch_table.find(feature_type_) ==
-        tdb_col_major_matrix_dispatch_table.end()) {
-      throw std::runtime_error("Unsupported attribute type");
+    if (ids_uri.empty()) {
+      if (tdb_col_major_matrix_dispatch_table.find(feature_type_) ==
+          tdb_col_major_matrix_dispatch_table.end()) {
+        throw std::runtime_error("Unsupported features attribute type");
+      }
+      vector_array = tdb_col_major_matrix_dispatch_table.at(feature_type_)(
+          ctx, uri, num_vectors);
+    } else {
+      has_ids_ = true;
+      auto array = tiledb_helpers::open_array(tdb_func__, ctx, ids_uri, TILEDB_READ);
+      ids_type_ = get_array_datatype(*array);
+      array->close();
+      ids_size_ = datatype_to_size(ids_type_);
+
+      auto type = std::tuple{feature_type_, ids_type_};
+      if (tdb_col_major_matrix_with_ids_dispatch_table.find(type) == tdb_col_major_matrix_with_ids_dispatch_table.end()) {
+        throw std::runtime_error("Unsupported ids attribute type");
+      }
+      vector_array = tdb_col_major_matrix_with_ids_dispatch_table.at(type)(ctx, uri, ids_uri, num_vectors);
     }
-    vector_array = tdb_col_major_matrix_dispatch_table.at(feature_type_)(
-        ctx, uri, num_vectors);
     (void)vector_array->load();
   }
 
@@ -113,7 +127,7 @@ class FeatureVectorArray {
     feature_size_ = datatype_to_size(feature_type_);
     if (col_major_matrix_dispatch_table.find(feature_type_) ==
         col_major_matrix_dispatch_table.end()) {
-      throw std::runtime_error("Unsupported attribute type");
+      throw std::runtime_error("Unsupported features attribute type");
     }
     vector_array =
         col_major_matrix_dispatch_table.at(feature_type_)(rows, cols);
@@ -247,6 +261,20 @@ class FeatureVectorArray {
   static const tdb_col_major_matrix_table_type
       tdb_col_major_matrix_dispatch_table;
 
+  using col_major_matrix_with_ids_constructor_function =
+      std::function<std::unique_ptr<vector_array_base>(size_t, size_t)>;
+  using col_major_matrix_with_ids_table_type =
+      std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t>, col_major_matrix_with_ids_constructor_function>;
+  static const col_major_matrix_with_ids_table_type col_major_matrix_with_ids_dispatch_table;
+
+  using tdb_col_major_matrix_with_ids_constructor_function =
+      std::function<std::unique_ptr<vector_array_base>(
+          const tiledb::Context&, const std::string&, const std::string&, size_t)>;
+  using tdb_col_major_matrix_with_ids_table_type =
+      std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t>, tdb_col_major_matrix_with_ids_constructor_function>;
+  static const tdb_col_major_matrix_with_ids_table_type
+      tdb_col_major_matrix_with_ids_dispatch_table;
+
   tiledb_datatype_t feature_type_{TILEDB_ANY};
   size_t feature_size_{0};
 
@@ -343,6 +371,38 @@ const FeatureVectorArray::tdb_col_major_matrix_table_type
            return std::make_unique<FeatureVectorArray::vector_array_impl<
                tdbColMajorMatrix<uint64_t>>>(ctx, uri, num_vectors);
          }},
+};
+
+const FeatureVectorArray::col_major_matrix_with_ids_table_type FeatureVectorArray::col_major_matrix_with_ids_dispatch_table = {
+    {{TILEDB_FLOAT32, TILEDB_UINT32},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<float, uint32_t>>>(rows, cols); }},
+    {{TILEDB_UINT8, TILEDB_UINT32},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<uint8_t, uint32_t>>>(rows, cols); }},
+    {{TILEDB_INT32, TILEDB_UINT32},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<int32_t, uint32_t>>>(rows, cols); }},
+    {{TILEDB_UINT32, TILEDB_UINT32},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<uint32_t, uint32_t>>>(rows, cols); }},
+    {{TILEDB_INT64, TILEDB_UINT32},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<int64_t, uint32_t>>>(rows, cols); }},
+    {{TILEDB_UINT64, TILEDB_UINT32},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<uint64_t, uint32_t>>>(rows, cols); }},
+
+    {{TILEDB_FLOAT32, TILEDB_UINT64},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<float, uint64_t>>>(rows, cols); }},
+    {{TILEDB_UINT8, TILEDB_UINT64},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<uint8_t, uint64_t>>>(rows, cols); }},
+    {{TILEDB_INT32, TILEDB_UINT64},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<int32_t, uint64_t>>>(rows, cols); }},
+    {{TILEDB_UINT32, TILEDB_UINT64},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<uint32_t, uint64_t>>>(rows, cols); }},
+    {{TILEDB_INT64, TILEDB_UINT64},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<int64_t, uint64_t>>>(rows, cols); }},
+    {{TILEDB_UINT64, TILEDB_UINT64},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<uint64_t, uint64_t>>>(rows, cols); }},
+};
+
+const FeatureVectorArray::tdb_col_major_matrix_with_ids_table_type FeatureVectorArray::tdb_col_major_matrix_with_ids_dispatch_table = {
+    {{TILEDB_FLOAT32, TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<float, uint32_t>>>(ctx, uri, ids_uri, num_vectors);}},
+    {{TILEDB_UINT8, TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<uint8_t, uint32_t>>>(ctx, uri, ids_uri, num_vectors);}},
+    {{TILEDB_INT32, TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors) {return  std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<int32_t, uint32_t>>>(ctx, uri, ids_uri, num_vectors);}},
+    {{TILEDB_UINT32, TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors) {return  std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<uint32_t, uint32_t>>>(ctx, uri,ids_uri,  num_vectors);}},
+    {{TILEDB_INT64, TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors) {return  std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<int64_t, uint32_t>>>(ctx, uri, ids_uri, num_vectors);}},
+    {{TILEDB_UINT64, TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors) {return  std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<uint64_t, uint32_t>>>(ctx, uri,ids_uri,  num_vectors);}},
+
+    {{TILEDB_FLOAT32, TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<float, uint64_t>>>(ctx, uri, ids_uri, num_vectors);}},
+    {{TILEDB_UINT8, TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<uint8_t, uint64_t>>>(ctx, uri, ids_uri, num_vectors);}},
+    {{TILEDB_INT32, TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors) {return  std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<int32_t, uint64_t>>>(ctx, uri, ids_uri, num_vectors);}},
+    {{TILEDB_UINT32, TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors) {return  std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<uint32_t, uint64_t>>>(ctx, uri, ids_uri, num_vectors);}},
+    {{TILEDB_INT64, TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors) {return  std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<int64_t, uint64_t>>>(ctx, uri, ids_uri, num_vectors);}},
+    {{TILEDB_UINT64, TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors) {return  std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<uint64_t, uint64_t>>>(ctx, uri, ids_uri, num_vectors);}},
 };
 
 using QueryVectorArray = FeatureVectorArray;
