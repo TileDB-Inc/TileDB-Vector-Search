@@ -62,7 +62,7 @@
  * datatypes:
  *   - feature_type: uint8 or float
  *   - id_type: uint32 or uint64
- *   - px_type: uint32 or uint64
+ *   - adjacency_row_index_type: uint32 or uint64
  */
 class IndexVamana {
  public:
@@ -90,7 +90,7 @@ class IndexVamana {
       const std::optional<IndexOptions>& config = std::nullopt) {
     feature_datatype_ = TILEDB_ANY;
     id_datatype_ = TILEDB_UINT32;
-    px_datatype_ = TILEDB_UINT32;
+    adjacency_row_index_datatype_ = TILEDB_UINT32;
 
     if (config) {
       for (auto&& c : *config) {
@@ -106,8 +106,8 @@ class IndexVamana {
           feature_datatype_ = string_to_datatype(value);
         } else if (key == "id_type") {
           id_datatype_ = string_to_datatype(value);
-        } else if (key == "px_type") {
-          px_datatype_ = string_to_datatype(value);
+        } else if (key == "adjacency_row_index_type") {
+          adjacency_row_index_datatype_ = string_to_datatype(value);
         } else {
           throw std::runtime_error("Invalid index config key: " + key);
         }
@@ -133,7 +133,9 @@ class IndexVamana {
     std::vector<metadata_element> metadata{
         {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
         {"id_datatype", &id_datatype_, TILEDB_UINT32},
-        {"px_datatype", &px_datatype_, TILEDB_UINT32}};
+        {"adjacency_row_index_datatype",
+         &adjacency_row_index_datatype_,
+         TILEDB_UINT32}};
 
     tiledb::Config cfg;
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
@@ -153,7 +155,8 @@ class IndexVamana {
       }
     }
 
-    auto type = std::tuple{feature_datatype_, id_datatype_, px_datatype_};
+    auto type = std::tuple{
+        feature_datatype_, id_datatype_, adjacency_row_index_datatype_};
     if (uri_dispatch_table.find(type) == uri_dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
@@ -183,7 +186,8 @@ class IndexVamana {
           " != " + datatype_to_string(training_set.feature_type()));
     }
 
-    auto type = std::tuple{feature_datatype_, id_datatype_, px_datatype_};
+    auto type = std::tuple{
+        feature_datatype_, id_datatype_, adjacency_row_index_datatype_};
     if (dispatch_table.find(type) == dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
@@ -249,12 +253,12 @@ class IndexVamana {
     return datatype_to_string(id_datatype_);
   }
 
-  constexpr auto px_type() const {
-    return px_datatype_;
+  constexpr auto adjacency_row_index_type() const {
+    return adjacency_row_index_datatype_;
   }
 
-  inline auto px_type_string() const {
-    return datatype_to_string(px_datatype_);
+  inline auto adjacency_row_index_type_string() const {
+    return datatype_to_string(adjacency_row_index_datatype_);
   }
 
  private:
@@ -407,7 +411,7 @@ class IndexVamana {
   size_t R_max_degree_ = 64;
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
-  tiledb_datatype_t px_datatype_{TILEDB_ANY};
+  tiledb_datatype_t adjacency_row_index_datatype_{TILEDB_ANY};
   std::unique_ptr<index_base> index_;
 };
 

@@ -69,7 +69,6 @@ class vamana_index_metadata
 
   // public for now in interest of time
  public:
-  tiledb_datatype_t px_datatype_{TILEDB_ANY};
   std::string index_type_{"Vamana"};
 
   /** Record number of partitions at each write at a given timestamp */
@@ -118,7 +117,10 @@ class vamana_index_metadata
       {"alpha_min", &alpha_min_, TILEDB_FLOAT32, false},
       {"alpha_max", &alpha_max_, TILEDB_FLOAT32, false},
       {"medoid", &medoid_, TILEDB_UINT64, false},
-      {"px_datatype", &px_datatype_, TILEDB_UINT32, false},
+      {"adjacency_row_index_datatype",
+       &adjacency_row_index_datatype_,
+       TILEDB_UINT32,
+       false},
   };
 
   auto json_to_vector_impl() {
