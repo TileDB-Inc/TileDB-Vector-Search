@@ -48,7 +48,7 @@ TEST_CASE("utils: test", "[utils]") {
   CHECK(!is_s3_container("file://www.tiledb.com"));
   CHECK(!is_s3_container("www.tiledb.com"));
 
-  static std::filesystem::path cmake_source_dir{CMAKE_SOURCE_DIR};
+  static std::string cmake_source_dir{CMAKE_SOURCE_DIR};
   CHECK(is_local_directory(cmake_source_dir));
   CHECK(is_local_file(cmake_source_dir / "README.md"));
   CHECK(is_local_file(cmake_source_dir / "src" / "README.md"));

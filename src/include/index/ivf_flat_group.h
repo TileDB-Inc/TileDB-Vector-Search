@@ -60,7 +60,7 @@ class ivf_flat_index_group {
   // Index* index_ {nullptr};
 
   std::reference_wrapper<const tiledb::Context> cached_ctx_;
-  std::filesystem::path group_uri_;
+  std::string group_uri_;
   size_t index_timestamp_{0};
   size_t group_timestamp_{0};
   size_t timetravel_index_{0};
@@ -136,7 +136,7 @@ class ivf_flat_index_group {
     }
     active_array_names_.insert(array_name);
 
-    std::filesystem::path uri = array_name_to_uri(array_name);
+    std::string uri = array_name_to_uri(array_name);
 
     return uri;
   }

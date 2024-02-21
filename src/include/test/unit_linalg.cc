@@ -423,7 +423,7 @@ TEST_CASE(
 #endif
 
 TEST_CASE("linalg: print cwd", "[linalg][cwd]") {
-  std::filesystem::path currentPath = std::filesystem::current_path();
+  std::string currentPath = std::filesystem::current_path();
   std::cout << "Current Working Directory: " << currentPath << std::endl;
 }
 
