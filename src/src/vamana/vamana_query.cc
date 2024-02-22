@@ -155,16 +155,16 @@ int main(int argc, char* argv[]) {
       } else if (args["--O1"].asBool()) {
         /*auto parents = */ idx.best_first_O1(queries, k_nn, *Lbuild);
       } else if (args["--O2"].asBool()) {
-        /*auto parents = */ idx.best_first_O2(queries, k_nn, *Lbuild);
+        /*auto parents = */ idx.best_first_O2(queries, k_nn, Lbuild);
       } else if (args["--O3"].asBool()) {
-        std::cout << "O3 not implemented" << std::endl;
+        /*auto parents = */ idx.best_first_O3(queries, k_nn, Lbuild);
       }
       query_time.stop();
       return 0;
     }
     // greedy is default
 
-    auto&& [top_k_scores, top_k] = idx.query(queries, k_nn, Lbuild);
+    auto&& [top_k_scores, top_k] = idx.best_first_O3(queries, k_nn, Lbuild);
 
     query_time.stop();
 

@@ -323,7 +323,7 @@ class vamana_index {
         ++counter;
 
         // Do not need top_k or top_k scores here -- use path_only enum
-        auto&& [top_k_scores, top_k, visited] = greedy_search(
+        auto&& [top_k_scores, top_k, visited] = ::best_first_O2/*greedy_search*/(
             graph_,
             feature_vectors_,
             medoid_,
@@ -432,17 +432,60 @@ class vamana_index {
   }
 
   template <query_vector_array Q>
-  auto best_first_O1(const Q& queries, size_t knn, size_t Lbuild) {
+  auto best_first_O1(const Q& queries, size_t k_nn, size_t Lbuild) {
     for (size_t i = 0; i < num_vectors(queries); ++i) {
       ::best_first_O1(graph_, feature_vectors_, medoid_, queries[i], Lbuild);
     }
   }
 
   template <query_vector_array Q>
-  auto best_first_O2(const Q& queries, size_t knn, size_t Lbuild) {
+  auto best_first_O2(const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
+
+    size_t Lbuild = opt_L ? *opt_L : L_build_;
+
+    auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
+    auto top_k_scores = ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
+
     for (size_t i = 0; i < num_vectors(queries); ++i) {
-      ::best_first_O2(graph_, feature_vectors_, medoid_, queries[i], Lbuild);
+      auto&& [tk_scores, tk, V] = ::best_first_O2(
+          graph_,
+          feature_vectors_,
+          medoid_,
+          queries[i],
+          k_nn,
+          Lbuild,
+          sum_of_squares_distance{});
+      std::copy(tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
+      std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
+      num_visited_vertices_ += V.size();
     }
+
+    return std::make_tuple(std::move(top_k_scores), std::move(top_k));
+  }
+
+  template <query_vector_array Q>
+  auto best_first_O3(const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
+
+    size_t Lbuild = opt_L ? *opt_L : L_build_;
+
+    auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
+    auto top_k_scores = ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
+
+    for (size_t i = 0; i < num_vectors(queries); ++i) {
+      auto&& [tk_scores, tk, V] = ::best_first_O3(
+          graph_,
+          feature_vectors_,
+          medoid_,
+          queries[i],
+          k_nn,
+          Lbuild,
+          sum_of_squares_distance{});
+      std::copy(tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
+      std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
+      num_visited_vertices_ += V.size();
+    }
+
+    return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
 
   /**
