@@ -58,6 +58,11 @@
  *   - An add method
  *   - A query method
  *
+ * We support all combinations of the following types for feature, id, and px
+ * datatypes:
+ *   - feature_type: uint8 or float
+ *   - id_type: uint32 or uint64
+ *   - adjacency_row_index_type: uint32 or uint64
  */
 class IndexVamana {
  public:
@@ -67,8 +72,8 @@ class IndexVamana {
   IndexVamana& operator=(IndexVamana&&) = default;
 
   /**
-   * @brief Create an index with the given configuration.  The index in this
-   * state is ready to be trained.  The sequence for creating an index in this
+   * @brief Create an index with the given configuration. The index in this
+   * state must next be trained. The sequence for creating an index in this
    * fashion is:
    *  - Create an IndexVamana object with the desired configuration (using this
    *  constructor
@@ -85,7 +90,7 @@ class IndexVamana {
       const std::optional<IndexOptions>& config = std::nullopt) {
     feature_datatype_ = TILEDB_ANY;
     id_datatype_ = TILEDB_UINT32;
-    px_datatype_ = TILEDB_UINT32;
+    adjacency_row_index_datatype_ = TILEDB_UINT32;
 
     if (config) {
       for (auto&& c : *config) {
@@ -101,8 +106,8 @@ class IndexVamana {
           feature_datatype_ = string_to_datatype(value);
         } else if (key == "id_type") {
           id_datatype_ = string_to_datatype(value);
-        } else if (key == "px_type") {
-          px_datatype_ = string_to_datatype(value);
+        } else if (key == "adjacency_row_index_type") {
+          adjacency_row_index_datatype_ = string_to_datatype(value);
         } else {
           throw std::runtime_error("Invalid index config key: " + key);
         }
@@ -128,7 +133,9 @@ class IndexVamana {
     std::vector<metadata_element> metadata{
         {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
         {"id_datatype", &id_datatype_, TILEDB_UINT32},
-        {"px_datatype", &px_datatype_, TILEDB_UINT32}};
+        {"adjacency_row_index_datatype",
+         &adjacency_row_index_datatype_,
+         TILEDB_UINT32}};
 
     tiledb::Config cfg;
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
@@ -148,66 +155,13 @@ class IndexVamana {
       }
     }
 
-    /**
-     * We support all combinations of the following types for feature,
-     * id, and px datatypes:
-     *   feature_type: uint8 or float
-     *   id_type: uint32 or uint64
-     *   px_type: uint32 or uint64
-     *
-     *   @todo Unify the type-based switch-case statements in a manner
-     *   similar to what was done in query_condition
-     */
-    if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
-        px_datatype_ == TILEDB_UINT32) {
-      index_ = std::make_unique<
-          index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(
-          ctx, group_uri);
-    } else if (
-        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
-        px_datatype_ == TILEDB_UINT32) {
-      index_ =
-          std::make_unique<index_impl<vamana_index<float, uint32_t, uint32_t>>>(
-              ctx, group_uri);
-    } else if (
-        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
-        px_datatype_ == TILEDB_UINT64) {
-      index_ = std::make_unique<
-          index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(
-          ctx, group_uri);
-    } else if (
-        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
-        px_datatype_ == TILEDB_UINT64) {
-      index_ =
-          std::make_unique<index_impl<vamana_index<float, uint32_t, uint64_t>>>(
-              ctx, group_uri);
-    } else if (
-        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
-        px_datatype_ == TILEDB_UINT32) {
-      index_ = std::make_unique<
-          index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(
-          ctx, group_uri);
-    } else if (
-        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
-        px_datatype_ == TILEDB_UINT32) {
-      index_ =
-          std::make_unique<index_impl<vamana_index<float, uint64_t, uint32_t>>>(
-              ctx, group_uri);
-    } else if (
-        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
-        px_datatype_ == TILEDB_UINT64) {
-      index_ = std::make_unique<
-          index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(
-          ctx, group_uri);
-    } else if (
-        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
-        px_datatype_ == TILEDB_UINT64) {
-      index_ =
-          std::make_unique<index_impl<vamana_index<float, uint64_t, uint64_t>>>(
-              ctx, group_uri);
-    } else {
+    auto type = std::tuple{
+        feature_datatype_, id_datatype_, adjacency_row_index_datatype_};
+    if (uri_dispatch_table.find(type) == uri_dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
+    index_ = uri_dispatch_table.at(type)(ctx, group_uri);
+
     if (dimension_ != 0 && dimension_ != index_->dimension()) {
       throw std::runtime_error(
           "Dimension mismatch: " + std::to_string(dimension_) +
@@ -232,62 +186,13 @@ class IndexVamana {
           " != " + datatype_to_string(training_set.feature_type()));
     }
 
-    /**
-     * We support all combinations of the following types for feature,
-     * id, and px datatypes:
-     *   feature_type: uint8 or float
-     *   id_type: uint32 or uint64
-     *   px_type: uint32 or uint64
-     */
-    // TODO(paris): Add support for B_backtrack_.
-    if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
-        px_datatype_ == TILEDB_UINT32) {
-      index_ = std::make_unique<
-          index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(
-          training_set.num_vectors(), L_build_, R_max_degree_);
-    } else if (
-        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
-        px_datatype_ == TILEDB_UINT32) {
-      index_ =
-          std::make_unique<index_impl<vamana_index<float, uint32_t, uint32_t>>>(
-              training_set.num_vectors(), L_build_, R_max_degree_);
-    } else if (
-        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
-        px_datatype_ == TILEDB_UINT64) {
-      index_ = std::make_unique<
-          index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(
-          training_set.num_vectors(), L_build_, R_max_degree_);
-    } else if (
-        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
-        px_datatype_ == TILEDB_UINT64) {
-      index_ =
-          std::make_unique<index_impl<vamana_index<float, uint32_t, uint64_t>>>(
-              training_set.num_vectors(), L_build_, R_max_degree_);
-    } else if (
-        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
-        px_datatype_ == TILEDB_UINT32) {
-      index_ = std::make_unique<
-          index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(
-          training_set.num_vectors(), L_build_, R_max_degree_);
-    } else if (
-        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
-        px_datatype_ == TILEDB_UINT32) {
-      index_ =
-          std::make_unique<index_impl<vamana_index<float, uint64_t, uint32_t>>>(
-              training_set.num_vectors(), L_build_, R_max_degree_);
-    } else if (
-        feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
-        px_datatype_ == TILEDB_UINT64) {
-      index_ = std::make_unique<
-          index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(
-          training_set.num_vectors(), L_build_, R_max_degree_);
-    } else if (
-        feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
-        px_datatype_ == TILEDB_UINT64) {
-      index_ =
-          std::make_unique<index_impl<vamana_index<float, uint64_t, uint64_t>>>(
-              training_set.num_vectors(), L_build_, R_max_degree_);
+    auto type = std::tuple{
+        feature_datatype_, id_datatype_, adjacency_row_index_datatype_};
+    if (dispatch_table.find(type) == dispatch_table.end()) {
+      throw std::runtime_error("Unsupported datatype combination");
     }
+    index_ = dispatch_table.at(type)(
+        training_set.num_vectors(), L_build_, R_max_degree_);
 
     index_->train(training_set);
 
@@ -317,7 +222,7 @@ class IndexVamana {
   [[nodiscard]] auto query(
       const QueryVectorArray& vectors,
       size_t top_k,
-      std::optional<size_t> opt_L) {
+      std::optional<size_t> opt_L = std::nullopt) {
     return index_->query(vectors, top_k, opt_L);
   }
 
@@ -348,14 +253,15 @@ class IndexVamana {
     return datatype_to_string(id_datatype_);
   }
 
-  constexpr auto px_type() const {
-    return px_datatype_;
+  constexpr auto adjacency_row_index_type() const {
+    return adjacency_row_index_datatype_;
   }
 
-  inline auto px_type_string() const {
-    return datatype_to_string(px_datatype_);
+  inline auto adjacency_row_index_type_string() const {
+    return datatype_to_string(adjacency_row_index_datatype_);
   }
 
+ private:
   /**
    * Non-type parameterized base class (for type erasure).
    */
@@ -486,13 +392,119 @@ class IndexVamana {
     T impl_index_;
   };
 
+  using constructor_function =
+      std::function<std::unique_ptr<index_base>(size_t, size_t, size_t)>;
+  using table_type = std::map<
+      std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>,
+      constructor_function>;
+  static const table_type dispatch_table;
+
+  using uri_constructor_function = std::function<std::unique_ptr<index_base>(
+      const tiledb::Context&, const std::string&)>;
+  using uri_table_type = std::map<
+      std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>,
+      uri_constructor_function>;
+  static const uri_table_type uri_dispatch_table;
+
   size_t dimension_ = 0;
   size_t L_build_ = 100;
   size_t R_max_degree_ = 64;
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
-  tiledb_datatype_t px_datatype_{TILEDB_ANY};
+  tiledb_datatype_t adjacency_row_index_datatype_{TILEDB_ANY};
   std::unique_ptr<index_base> index_;
 };
+
+const IndexVamana::table_type IndexVamana::dispatch_table = {
+    {{TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT32},
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+       return std::make_unique<
+           index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(
+           num_vectors, L_build, R_max_degree);
+     }},
+    {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32},
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+       return std::make_unique<
+           index_impl<vamana_index<float, uint32_t, uint32_t>>>(
+           num_vectors, L_build, R_max_degree);
+     }},
+    {{TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT64},
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+       return std::make_unique<
+           index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(
+           num_vectors, L_build, R_max_degree);
+     }},
+    {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64},
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+       return std::make_unique<
+           index_impl<vamana_index<float, uint32_t, uint64_t>>>(
+           num_vectors, L_build, R_max_degree);
+     }},
+    {{TILEDB_UINT8, TILEDB_UINT64, TILEDB_UINT32},
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+       return std::make_unique<
+           index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(
+           num_vectors, L_build, R_max_degree);
+     }},
+    {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32},
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+       return std::make_unique<
+           index_impl<vamana_index<float, uint64_t, uint32_t>>>(
+           num_vectors, L_build, R_max_degree);
+     }},
+    {{TILEDB_UINT8, TILEDB_UINT64, TILEDB_UINT64},
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+       return std::make_unique<
+           index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(
+           num_vectors, L_build, R_max_degree);
+     }},
+    {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64},
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+       return std::make_unique<
+           index_impl<vamana_index<float, uint64_t, uint64_t>>>(
+           num_vectors, L_build, R_max_degree);
+     }}};
+
+const IndexVamana::uri_table_type IndexVamana::uri_dispatch_table = {
+    {{TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT32},
+     [](const tiledb::Context& ctx, const std::string& uri) {
+       return std::make_unique<
+           index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(ctx, uri);
+     }},
+    {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32},
+     [](const tiledb::Context& ctx, const std::string& uri) {
+       return std::make_unique<
+           index_impl<vamana_index<float, uint32_t, uint32_t>>>(ctx, uri);
+     }},
+    {{TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT64},
+     [](const tiledb::Context& ctx, const std::string& uri) {
+       return std::make_unique<
+           index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(ctx, uri);
+     }},
+    {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64},
+     [](const tiledb::Context& ctx, const std::string& uri) {
+       return std::make_unique<
+           index_impl<vamana_index<float, uint32_t, uint64_t>>>(ctx, uri);
+     }},
+    {{TILEDB_UINT8, TILEDB_UINT64, TILEDB_UINT32},
+     [](const tiledb::Context& ctx, const std::string& uri) {
+       return std::make_unique<
+           index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(ctx, uri);
+     }},
+    {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32},
+     [](const tiledb::Context& ctx, const std::string& uri) {
+       return std::make_unique<
+           index_impl<vamana_index<float, uint64_t, uint32_t>>>(ctx, uri);
+     }},
+    {{TILEDB_UINT8, TILEDB_UINT64, TILEDB_UINT64},
+     [](const tiledb::Context& ctx, const std::string& uri) {
+       return std::make_unique<
+           index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(ctx, uri);
+     }},
+    {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64},
+     [](const tiledb::Context& ctx, const std::string& uri) {
+       return std::make_unique<
+           index_impl<vamana_index<float, uint64_t, uint64_t>>>(ctx, uri);
+     }}};
 
 #endif  // TILEDB_API_VAMANA_INDEX_H
