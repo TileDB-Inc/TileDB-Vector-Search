@@ -7,14 +7,12 @@ on:
     paths-ignore:
       - "_quarto.yml"
       - "quarto-materials/*"
-      - "**/.md"
   pull_request:
     branches:
       - main
     paths-ignore:
       - "_quarto.yml"
       - "quarto-materials/*"
-      - "**/.md"
 
 jobs:
   # TODO(paris): pre-commit also runs clang-format. Leaving for now to gain confidence that it
