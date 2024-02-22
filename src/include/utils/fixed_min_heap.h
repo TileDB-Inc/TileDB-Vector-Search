@@ -150,6 +150,49 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
     return false;
   }
 
+  template <class Unique = not_unique>
+  std::tuple<bool, bool, T, U> evict_insert(const T& x, const U& y) {
+    if (Base::size() < max_size) {
+      if constexpr (std::is_same_v<Unique, unique_id>) {
+        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
+              return std::get<1>(e) == y;
+            }) != end(*this)) {
+          return {false, false, x, y};
+        }
+      }
+
+      Base::emplace_back(x, y);
+
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+
+      return {true, false, x, y};
+    } else if (compare_(x, std::get<0>(this->front()))) {
+      std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+      auto tmp = this->back();
+      if constexpr (std::is_same_v<Unique, unique_id>) {
+        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
+              return std::get<1>(e) == y;
+            }) != end(*this)) {
+          std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+            return compare_(std::get<0>(a), std::get<0>(b));
+          });
+          return { false, false, x, y };
+        }
+      }
+
+      (*this)[max_size - 1] = std::make_tuple(x, y);
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+      return {true, true, std::get<0>(tmp), std::get<1>(tmp)};
+    }
+    return {false, false, x, y};
+  }
+
   auto pop() {
     std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
       return compare_(std::get<0>(a), std::get<0>(b));

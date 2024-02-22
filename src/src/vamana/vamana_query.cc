@@ -57,11 +57,14 @@ static constexpr const char USAGE[] =
       vamana --index_uri URI --query_uri URI [--ftype TYPE] [--idtype TYPE] [--groundtruth_uri URI]
              [--Lbuild NN] [--nqueries NN] [--k NN]
              [--nthreads NN] [--validate] [--log FILE] [--stats] [-d] [-v] [--dump NN]
-             [--bfs]
+             [--bfs | --dfs | --best_first | --greedy] [--O0 | --O1 | --O2 | --O3]
 
   Options:
       -h, --help              show this screen
-      -b, --bfs               run bfs on the index
+      --bfs                   run bfs on the index
+      --dfs                   run dfs on the index
+      --best_first            run best_first on the index
+      --greedy                run greedy on the index [default: true]
       --index_uri URI         group URI ov vamana index
       --query_uri URI         query URI with feature vectors to search for
       --ftype TYPE            data type of feature vectors [default: float]
@@ -75,6 +78,10 @@ static constexpr const char USAGE[] =
       --stats                 log TileDB stats [default: false]
       -d, --debug             run in debug mode [default: false]
       -v, --verbose           run in verbose mode [default: false]
+      --O0                    run naive version of algorithm (default)
+      --O1                    run the "O1" version of the algorithm
+      --O2                    run the "O2" version of the algorithm
+      --O3                    run the "O3" version of the algorithm
 )";
 
 int main(int argc, char* argv[]) {
@@ -97,8 +104,6 @@ int main(int argc, char* argv[]) {
   size_t nqueries = args["--nqueries"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
 
-
-
   auto run_query = [&]<class feature_type, class id_type>() {
     tiledb::Context ctx;
     auto idx = vamana_index<feature_type, id_type>(ctx, index_uri);
@@ -112,16 +117,52 @@ int main(int argc, char* argv[]) {
     auto query_time = log_timer("query time", true);
 
     if (args["--bfs"].asBool()) {
-
       auto query_time = log_timer("bfs time", true);
       tiledb::Context ctx;
       auto idx = vamana_index<feature_type, id_type>(ctx, index_uri);
-      /*auto parents = */idx.bfs_O1(queries, k_nn, *Lbuild);
+
+      if (args["--O0"].asBool()) {
+        /*auto parents = */ idx.bfs_O0();
+      } else if (args["--O1"].asBool()) {
+        /*auto parents = */ idx.bfs_O1(queries, k_nn, *Lbuild);
+      } else if (args["--O2"].asBool()) {
+        std::cout << "O2 not implemented" << std::endl;
+      } else if (args["--O3"].asBool()) {
+        std::cout << "O3 not implemented" << std::endl;
+      }
       query_time.stop();
 
       return 0;
-    }
+    } else if (args["--dfs"].asBool()) {
+      /*
+      auto query_time = log_timer("dfs time", true);
+      tiledb::Context ctx;
+      auto idx = vamana_index<feature_type, id_type>(ctx, index_uri);
 
+      auto parents = idx.dfs_O1(queries, k_nn, *Lbuild);
+
+      query_time.stop();
+      */
+      std::cout << "DFS not implemented" << std::endl;
+      return 1;
+    } else if (args["--best_first"].asBool()) {
+      auto query_time = log_timer("best_first time", true);
+      tiledb::Context ctx;
+      auto idx = vamana_index<feature_type, id_type>(ctx, index_uri);
+
+      if (args["--O0"].asBool()) {
+        /*auto parents = */ idx.best_first_O0(queries);
+      } else if (args["--O1"].asBool()) {
+        /*auto parents = */ idx.best_first_O1(queries, k_nn, *Lbuild);
+      } else if (args["--O2"].asBool()) {
+        /*auto parents = */ idx.best_first_O2(queries, k_nn, *Lbuild);
+      } else if (args["--O3"].asBool()) {
+        std::cout << "O3 not implemented" << std::endl;
+      }
+      query_time.stop();
+      return 0;
+    }
+    // greedy is default
 
     auto&& [top_k_scores, top_k] = idx.query(queries, k_nn, Lbuild);
 
