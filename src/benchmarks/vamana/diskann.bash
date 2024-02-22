@@ -3,9 +3,11 @@
 benchmark_path=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 VECTOR_SEARCH="$(dirname "$(dirname "$(dirname "$benchmark_path")")")"
 
+
 if [ ! -d ${VECTOR_SEARCH} ]; then
     echo "${VECTOR_SEARCH} not found"
-    export VECTOR_SEARCH=${HOME}/TileDB/TileDB-Vector-Search-complete-index-vamana
+    # export VECTOR_SEARCH=${HOME}/TileDB/TileDB-Vector-Search-complete-index-vamana
+    export VECTOR_SEARCH=${HOME}/TileDB/TileDB-Vector-Search
     echo "Trying ${VECTOR_SEARCH}"
 fi
 if [ ! -d ${VECTOR_SEARCH} ]; then
@@ -18,7 +20,7 @@ export DISKANNROOT=${VECTOR_SEARCH}/external/DiskANN
 
 # export SIFT=siftsmall
 export SIFT=siftsmall
-export SIFTPATH=${VECTOR_SEARCH}/external/data/bins/${SIFT}
+export SIFTPATH=${VECTOR_SEARCH}/external/test_data/files/${SIFT}
 export DATAPATH=${SIFTPATH}
 
 export DISKANNPATH=${DISKANNROOT}/build/apps

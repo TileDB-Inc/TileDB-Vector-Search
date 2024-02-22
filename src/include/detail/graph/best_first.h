@@ -523,6 +523,7 @@ auto best_first_O3(
       } else {
         break;
       }
+      vertex_state_map.erase(p_star);
     }
   }
   auto top_k = std::vector<id_type>(k_nn);

@@ -323,7 +323,7 @@ class vamana_index {
         ++counter;
 
         // Do not need top_k or top_k scores here -- use path_only enum
-        auto&& [top_k_scores, top_k, visited] = ::best_first_O2/*greedy_search*/(
+        auto&& [top_k_scores, top_k, visited] = ::best_first_O3/*greedy_search*/(
             graph_,
             feature_vectors_,
             medoid_,
