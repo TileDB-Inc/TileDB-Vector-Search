@@ -321,10 +321,11 @@ TEST_CASE("array_defs: compare siftsmall arrays and files", "[array_defs]") {
       ctx, siftsmall_groundtruth_uri);
 
   auto file_inputs =
-      read_bin_local<siftsmall_feature_type>(siftsmall_inputs_file);
+      read_bin_local<siftsmall_feature_type>(ctx, siftsmall_inputs_file);
   auto file_queries =
-      read_bin_local<siftsmall_feature_type>(siftsmall_query_file);
-  auto file_groundtruth = read_bin_local<uint32_t>(siftsmall_groundtruth_file);
+      read_bin_local<siftsmall_feature_type>(ctx, siftsmall_query_file);
+  auto file_groundtruth =
+      read_bin_local<uint32_t>(ctx, siftsmall_groundtruth_file);
 
   auto file_groundtruth_64 = ColMajorMatrix<siftsmall_groundtruth_type>(
       file_groundtruth.num_rows(), file_groundtruth.num_cols());
