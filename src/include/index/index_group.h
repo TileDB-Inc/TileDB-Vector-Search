@@ -279,12 +279,12 @@ class base_index_group {
   /** Convert an array name to a uri. */
   constexpr std::string array_name_to_uri(
       const std::string& array_name) const noexcept {
-    return group_uri_ / array_name;
+    return (std::filesystem::path{group_uri_} / std::filesystem::path{array_name}).string();
   }
 
   /** Convert an array key to a uri. */
   constexpr std::string array_key_to_uri(const std::string& array_key) const {
-    return group_uri_ / array_key_to_array_name(array_key);
+    return (std::filesystem::path{group_uri_} / std::filesystem::path{array_key_to_array_name(array_key)}).string();
   }
 
  public:

@@ -41,7 +41,7 @@
 namespace {
 
     std::string operator/(const std::string& lhs, const std::string& rhs) {
-        return (std::filesystem::path{lhs} / rhs).string();
+        return (std::filesystem::path{lhs} / std::filesystem::path{rhs}).string();
     }
 
 }

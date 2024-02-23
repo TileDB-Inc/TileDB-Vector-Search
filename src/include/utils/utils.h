@@ -79,7 +79,7 @@ bool subdirectory_exists(
     const std::string& path, const std::string& subdirectoryName) {
   std::string directoryPath(path);
   std::string subdirectoryPath =
-      (std::filesystem::path{directoryPath} / subdirectoryName).string();
+      (std::filesystem::path{directoryPath} / std::filesystem::path{subdirectoryName}).string();
   auto b = std::filesystem::is_directory(subdirectoryPath);
   return std::filesystem::is_directory(subdirectoryPath);
 }
