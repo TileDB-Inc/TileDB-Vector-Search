@@ -57,6 +57,7 @@
 #ifndef TILEDB_PARTITIONED_MATRIX_H
 #define TILEDB_PARTITIONED_MATRIX_H
 
+#include <algorithm>
 #include <cstddef>
 #include <future>
 #include <memory>
@@ -66,7 +67,6 @@
 #include <type_traits>
 #include <vector>
 #include <version>
-#include <algorithm>
 
 #include <tiledb/tiledb>
 #include "mdspan/mdspan.hpp"

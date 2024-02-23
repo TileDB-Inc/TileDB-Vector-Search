@@ -40,11 +40,11 @@
 
 namespace {
 
-    std::string operator/(const std::string& lhs, const std::string& rhs) {
-        return (std::filesystem::path{lhs} / std::filesystem::path{rhs}).string();
-    }
-
+std::string operator/(const std::string& lhs, const std::string& rhs) {
+  return (std::filesystem::path{lhs} / std::filesystem::path{rhs}).string();
 }
+
+}  // namespace
 
 /**
  * @brief  Some default types used in unit tests.
@@ -118,8 +118,7 @@ static std::string sift_root{test_array_root / "siftsmall"};
 constexpr size_t sift_dimension = 128;
 static std::string sift_group_uri{sift_root / "group"};
 static std::string sift_inputs_uri{sift_root / "input_vectors"};
-static std::string sift_centroids_uri{
-    sift_root / "partition_centroids"};
+static std::string sift_centroids_uri{sift_root / "partition_centroids"};
 static std::string sift_index_uri{sift_root / "partition_indexes"};
 static std::string sift_ids_uri{sift_root / "shuffled_vector_ids"};
 static std::string sift_parts_uri{sift_root / "shuffled_vectors"};
@@ -135,19 +134,14 @@ constexpr size_t num_siftsmall_vectors = 10'000;
 constexpr size_t siftsmall_dimension = 128;
 static std::string siftsmall_root{test_array_root / "siftsmall"};
 static std::string siftsmall_group_uri{siftsmall_root / "group"};
-static std::string siftsmall_inputs_uri{
-    siftsmall_root / "input_vectors"};
+static std::string siftsmall_inputs_uri{siftsmall_root / "input_vectors"};
 static std::string siftsmall_centroids_uri{
     siftsmall_root / "partition_centroids"};
-static std::string siftsmall_index_uri{
-    siftsmall_root / "partition_indexes"};
-static std::string siftsmall_ids_uri{
-    siftsmall_root / "shuffled_vector_ids"};
-static std::string siftsmall_parts_uri{
-    siftsmall_root / "shuffled_vectors"};
+static std::string siftsmall_index_uri{siftsmall_root / "partition_indexes"};
+static std::string siftsmall_ids_uri{siftsmall_root / "shuffled_vector_ids"};
+static std::string siftsmall_parts_uri{siftsmall_root / "shuffled_vectors"};
 static std::string siftsmall_query_uri{siftsmall_root / "queries"};
-static std::string siftsmall_groundtruth_uri{
-    siftsmall_root / "groundtruth"};
+static std::string siftsmall_groundtruth_uri{siftsmall_root / "groundtruth"};
 
 using siftsmall_uint8_feature_type = uint8_t;
 using siftsmall_uint8_groundtruth_type = uint64_t;
@@ -156,10 +150,8 @@ using siftsmall_uint8_ids_type = uint64_t;
 using siftsmall_uint8_indices_type = uint64_t;
 constexpr size_t num_siftsmall_uint8_vectors = 10'000;
 constexpr size_t siftsmall_uint8_dimension = 128;
-static std::string siftsmall_uint8_root{
-    test_array_root / "siftsmall_uint8"};
-static std::string siftsmall_uint8_group_uri{
-    siftsmall_uint8_root / "group"};
+static std::string siftsmall_uint8_root{test_array_root / "siftsmall_uint8"};
+static std::string siftsmall_uint8_group_uri{siftsmall_uint8_root / "group"};
 static std::string siftsmall_uint8_inputs_uri{
     siftsmall_uint8_root / "input_vectors"};
 static std::string siftsmall_uint8_centroids_uri{
@@ -170,8 +162,7 @@ static std::string siftsmall_uint8_ids_uri{
     siftsmall_uint8_root / "shuffled_vector_ids"};
 static std::string siftsmall_uint8_parts_uri{
     siftsmall_uint8_root / "shuffled_vectors"};
-static std::string siftsmall_uint8_query_uri{
-    siftsmall_uint8_root / "queries"};
+static std::string siftsmall_uint8_query_uri{siftsmall_uint8_root / "queries"};
 static std::string siftsmall_uint8_groundtruth_uri{
     siftsmall_uint8_root / "groundtruth"};
 
@@ -189,19 +180,14 @@ constexpr size_t num_bigann1M_vectors = 10'000;
 #endif
 constexpr size_t bigann1M_dimension = 128;
 static std::string bigann1M_group_uri{bigann1M_root / "group"};
-static std::string bigann1M_inputs_uri{
-    bigann1M_root / "input_vectors"};
+static std::string bigann1M_inputs_uri{bigann1M_root / "input_vectors"};
 static std::string bigann1M_centroids_uri{
     bigann1M_root / "partition_centroids"};
-static std::string bigann1M_index_uri{
-    bigann1M_root / "partition_indexes"};
-static std::string bigann1M_ids_uri{
-    bigann1M_root / "shuffled_vector_ids"};
-static std::string bigann1M_parts_uri{
-    bigann1M_root / "shuffled_vectors"};
+static std::string bigann1M_index_uri{bigann1M_root / "partition_indexes"};
+static std::string bigann1M_ids_uri{bigann1M_root / "shuffled_vector_ids"};
+static std::string bigann1M_parts_uri{bigann1M_root / "shuffled_vectors"};
 static std::string bigann1M_query_uri{bigann1M_root / "queries"};
-static std::string bigann1M_groundtruth_uri{
-    bigann1M_root / "groundtruth"};
+static std::string bigann1M_groundtruth_uri{bigann1M_root / "groundtruth"};
 
 using bigann10k_feature_type = uint8_t;
 using bigann10k_groundtruth_type = uint64_t;
@@ -212,19 +198,14 @@ constexpr size_t num_bigann10k_vectors = 10'000;
 constexpr size_t bigann10k_dimension = 128;
 static std::string bigann10k_root{test_array_root / "bigann10k"};
 static std::string bigann10k_group_uri{bigann10k_root / "group"};
-static std::string bigann10k_inputs_uri{
-    bigann10k_root / "input_vectors"};
+static std::string bigann10k_inputs_uri{bigann10k_root / "input_vectors"};
 static std::string bigann10k_centroids_uri{
     bigann10k_root / "partition_centroids"};
-static std::string bigann10k_index_uri{
-    bigann10k_root / "partition_indexes"};
-static std::string bigann10k_ids_uri{
-    bigann10k_root / "shuffled_vector_ids"};
-static std::string bigann10k_parts_uri{
-    bigann10k_root / "shuffled_vectors"};
+static std::string bigann10k_index_uri{bigann10k_root / "partition_indexes"};
+static std::string bigann10k_ids_uri{bigann10k_root / "shuffled_vector_ids"};
+static std::string bigann10k_parts_uri{bigann10k_root / "shuffled_vectors"};
 static std::string bigann10k_query_uri{bigann10k_root / "queries"};
-static std::string bigann10k_groundtruth_uri{
-    bigann10k_root / "groundtruth"};
+static std::string bigann10k_groundtruth_uri{bigann10k_root / "groundtruth"};
 
 using fmnistsmall_feature_type = float;
 using fmnistsmall_groundtruth_type = uint64_t;
@@ -235,18 +216,15 @@ constexpr size_t num_fmnistsmall_vectors = 1'000;
 constexpr size_t fmnistsmall_dimension = 784;
 static std::string fmnistsmall_root{test_array_root / "fmnistsmall"};
 static std::string fmnistsmall_group_uri{fmnistsmall_root / "group"};
-static std::string fmnistsmall_inputs_uri{
-    fmnistsmall_root / "input_vectors"};
+static std::string fmnistsmall_inputs_uri{fmnistsmall_root / "input_vectors"};
 static std::string fmnistsmall_centroids_uri{
     fmnistsmall_root / "partition_centroids"};
 static std::string fmnistsmall_index_uri{
     fmnistsmall_root / "partition_indexes"};
 static std::string fmnistsmall_ids_uri{
     fmnistsmall_root / "shuffled_vector_ids"};
-static std::string fmnistsmall_parts_uri{
-    fmnistsmall_root / "shuffled_vectors"};
-static std::string fmnistsmall_query_uri{
-    fmnistsmall_root / "queries"};
+static std::string fmnistsmall_parts_uri{fmnistsmall_root / "shuffled_vectors"};
+static std::string fmnistsmall_query_uri{fmnistsmall_root / "queries"};
 static std::string fmnistsmall_groundtruth_uri{
     fmnistsmall_root / "groundtruth"};
 
@@ -267,16 +245,12 @@ constexpr size_t fmnist_dimension = 784;
 
 static std::string fmnist_group_uri{fmnist_root / "group"};
 static std::string fmnist_inputs_uri{fmnist_root / "input_vectors"};
-static std::string fmnist_centroids_uri{
-    fmnist_root / "partition_centroids"};
-static std::string fmnist_index_uri{
-    fmnist_root / "partition_indexes"};
-static std::string fmnist_ids_uri{
-    fmnist_root / "shuffled_vector_ids"};
+static std::string fmnist_centroids_uri{fmnist_root / "partition_centroids"};
+static std::string fmnist_index_uri{fmnist_root / "partition_indexes"};
+static std::string fmnist_ids_uri{fmnist_root / "shuffled_vector_ids"};
 static std::string fmnist_parts_uri{fmnist_root / "shuffled_vectors"};
 static std::string fmnist_query_uri{fmnist_root / "queries"};
-static std::string fmnist_groundtruth_uri{
-    fmnist_root / "groundtruth"};
+static std::string fmnist_groundtruth_uri{fmnist_root / "groundtruth"};
 
 /**
  * @brief Some additional arrays that are not part of the IVF index, but
@@ -291,8 +265,7 @@ static std::string fmnist_distances_uri{fmnist_root / "distances"};
 static std::string siftsmall_files_root{test_file_root / "siftsmall"};
 static std::string siftsmall_inputs_file{
     siftsmall_files_root / "input_vectors.fvecs"};
-static std::string siftsmall_query_file{
-    siftsmall_files_root / "queries.fvecs"};
+static std::string siftsmall_query_file{siftsmall_files_root / "queries.fvecs"};
 static std::string siftsmall_groundtruth_file{
     siftsmall_files_root / "groundtruth.ivecs"};
 
@@ -333,8 +306,7 @@ static std::string vamana_nano_root{nano_root / "vamana"};
 static std::string vamana_nano_group_uri{
     vamana_nano_root / "vamana_test_index"};
 
-static std::string vamana_nano_inputs_uri{
-    vamana_nano_root / "feature_vectors"};
+static std::string vamana_nano_inputs_uri{vamana_nano_root / "feature_vectors"};
 static std::string vamana_nano_feature_vectors_uri{
     vamana_nano_root / "feature_vectors"};
 static std::string vamana_nano_adjacency_scores_uri{
@@ -344,8 +316,7 @@ static std::string vamana_nano_adjacency_ids_uri{
 static std::string vamana_nano_adjacency_row_index_uri{
     vamana_nano_root / "adjacency_row_index"};
 
-static std::string vamana_nano_query_uri{
-    vamana_nano_root / "queries"};
+static std::string vamana_nano_query_uri{vamana_nano_root / "queries"};
 static std::string vamana_nano_groundtruth_uri{
     vamana_nano_root / "groundtruth"};
 
@@ -358,8 +329,7 @@ using ids_type = siftsmall_ids_type;
 using indices_type = siftsmall_indices_type;
 
 static std::string db_uri{siftsmall_root / "input_vectors"};
-static std::string centroids_uri{
-    siftsmall_root / "partition_centroids"};
+static std::string centroids_uri{siftsmall_root / "partition_centroids"};
 static std::string index_uri{siftsmall_root / "partition_indexes"};
 static std::string ids_uri{siftsmall_root / "shuffled_vector_ids"};
 static std::string parts_uri{siftsmall_root / "shuffled_vectors"};

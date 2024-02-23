@@ -239,8 +239,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   // The name of the file is "tests/data/siftsmall_learn_256pts.fbin";
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
-    throw std::runtime_error(
-        "Could not open file " + diskann_test_256bin);
+    throw std::runtime_error("Could not open file " + diskann_test_256bin);
   }
 
   binary_file.read((char*)&npoints, 4);
@@ -632,8 +631,7 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
 
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
-    throw std::runtime_error(
-        "Could not open file " + diskann_test_256bin);
+    throw std::runtime_error("Could not open file " + diskann_test_256bin);
   }
 
   binary_file.read((char*)&npoints, 4);
@@ -1011,8 +1009,7 @@ TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
 
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
-    throw std::runtime_error(
-        "Could not open file " + diskann_test_256bin);
+    throw std::runtime_error("Could not open file " + diskann_test_256bin);
   }
 
   binary_file.read((char*)&npoints, 4);
