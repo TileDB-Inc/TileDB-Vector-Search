@@ -109,24 +109,27 @@ void fill_and_write_matrix(
   // Write the vectors to the URI.
   write_matrix(ctx, X, uri);
 
-  // Write the IDs to their URI. We could do this by modifying write_matrix() to
-  // separately write out to ids_uri from ids(), but that would require some
-  // changes. So instead we just create an additional temporary IDs matrix,
-  // write the ids into data(), and then write it separately.
-  size_t id_rows =
-      std::is_same<typename MatrixWithIds::layout_policy, stdx::layout_right>::
-              value ?
-          num_vectors(X) :
-          1;
-  size_t id_cols =
-      std::is_same<typename MatrixWithIds::layout_policy, stdx::layout_right>::
-              value ?
-          1 :
-          num_vectors(X);
-  MatrixWithIds tempIdsMatrix(id_rows, id_cols);
-  std::iota(
-      tempIdsMatrix.data(), tempIdsMatrix.data() + num_vectors(X), offset);
-  write_matrix(ctx, tempIdsMatrix, ids_uri);
+  // Write the IDs to their URI.
+  write_vector(ctx, X.ids(), ids_uri);
+
+//  // We could do this by modifying write_matrix() to
+//  // separately write out to ids_uri from ids(), but that would require some
+//  // changes. So instead we just create an additional temporary IDs matrix,
+//  // write the ids into data(), and then write it separately.
+//  size_t id_rows =
+//      std::is_same<typename MatrixWithIds::layout_policy, stdx::layout_right>::
+//              value ?
+//          num_vectors(X) :
+//          1;
+//  size_t id_cols =
+//      std::is_same<typename MatrixWithIds::layout_policy, stdx::layout_right>::
+//              value ?
+//          1 :
+//          num_vectors(X);
+//  Matrix<typename MatrixWithIds::ids_type, typename MatrixWithIds::layout_policy, typename MatrixWithIds::index_type> tempIdsMatrix(id_rows, id_cols);
+//  std::iota(
+//      tempIdsMatrix.data(), tempIdsMatrix.data() + num_vectors(X), offset);
+//  write_matrix(ctx, tempIdsMatrix, ids_uri);
 }
 
 #endif  // TILEDB_TEST_UTILS_H

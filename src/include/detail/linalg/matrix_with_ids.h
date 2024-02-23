@@ -57,6 +57,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
 
  protected:
   std::vector<IdsType> ids_;
+  // std::unique_ptr<IdsType[]> ids_;
 
  public:
   using ids_type = IdsType;
@@ -166,5 +167,53 @@ using RowMajorMatrixWithIds = MatrixWithIds<T, IdsType, stdx::layout_right, I>;
  */
 template <class T, class IdsType = uint64_t, class I = size_t>
 using ColMajorMatrixWithIds = MatrixWithIds<T, IdsType, stdx::layout_left, I>;
+
+template <class MatrixWithIds>
+void debug_slice_with_ids(
+    const MatrixWithIds& A,
+    const std::string& msg = "",
+    size_t rows = 6,
+    size_t cols = 18) {
+  //  TODO(paris): It used to be different, but is that a bug?
+  // It should be A.num_rows() not dimension(A), right?
+  //  rows = std::min(rows, dimension(A));
+  //  cols = std::min(cols, num_vectors(A));
+  auto max_size = 260;
+
+  std::cout << "# " << msg << std::endl;
+  auto rowsEnd = std::min(A.num_rows(), static_cast<size_t>(max_size));
+  auto colsEnd = std::min(A.num_cols(), static_cast<size_t>(max_size));
+  for (size_t i = 0; i < rowsEnd; ++i) {
+    std::cout << "# ";
+    for (size_t j = 0; j < colsEnd; ++j) {
+      std::cout << (float)A(i, j) << " ";
+    }
+    if (A.num_cols() > max_size) {
+      std::cout << "...";
+    }
+    std::cout << std::endl;
+  }
+  if (A.num_rows() > max_size) {
+    std::cout << "# ..." << std::endl;
+  }
+
+  std::cout << "# ids: [";
+  auto end = std::min(A.num_ids(), static_cast<size_t>(max_size));
+  for (size_t i = 0; i < end; ++i) {
+    std::cout << (float)A.ids()[i];
+    if (i != A.num_ids() - 1) {
+      std::cout << ", ";
+    }
+  }
+  if (A.num_ids() > max_size) {
+    std::cout << "...";
+  }
+  std::cout << "]" << std::endl;
+}
+
+template <class MatrixWithIds>
+void debug_with_ids(const MatrixWithIds& A, const std::string& msg = "") {
+  debug_slice_with_ids(A, msg, A.num_rows(), A.num_cols());
+}
 
 #endif  // TILEDB_MATRIX_WITH_IDS_H

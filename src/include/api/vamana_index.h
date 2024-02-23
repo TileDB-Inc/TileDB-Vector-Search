@@ -43,6 +43,7 @@
 #include "api_defs.h"
 #include "index/vamana_index.h"
 #include "tiledb/group_experimental.h"
+#include "utils/print_types.h"
 
 /*******************************************************************************
  * IndexVamana
@@ -404,7 +405,13 @@ class IndexVamana {
           (feature_type*)training_set.data(),
           extents(training_set)[0],
           extents(training_set)[1]};
-      impl_index_.train(fspan);
+
+      print_types(std::declval<T>());
+      using ids_type = typename T::ids_type;
+      auto ispan = std::span<ids_type>(
+          (ids_type*)training_set.ids_data(), training_set.num_vectors());
+
+      impl_index_.train(fspan, ispan);
     }
 
     void add(const FeatureVectorArray& data_set) override {

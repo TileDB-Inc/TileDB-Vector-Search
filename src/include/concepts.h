@@ -158,6 +158,11 @@ concept feature_vector_array = requires(D d, size_t n) {
   { d[n] } -> feature_vector;  // Maybe redundant
 };
 
+template <class D>
+concept feature_vector_array_with_ids = feature_vector_array<D> && requires(D d, size_t n) {
+  { ids(d) };  // Maybe redundant
+};
+
 /**
  * @brief A concept for contiguous vector ranges.  The member function data()
  * returns a pointer to the underlying contiguous one-dimensional storage.
@@ -193,6 +198,16 @@ concept contiguous_partitioned_feature_vector_array =
       { d.indices() };
       { d.ids() };
     };
+
+// ----------------------------------------------------------------------------
+// matrix_with_ids concept
+// ----------------------------------------------------------------------------
+template <class D>
+concept matrix_with_ids = requires(D d) {
+  { d.ids() };
+};
+//  { num_ids(d) };
+//  { ids(d) };
 
 // ----------------------------------------------------------------------------
 // partition_index concept (WIP)

@@ -67,6 +67,12 @@ template <class T>
 concept col_major = std::
     same_as<typename std::remove_cvref_t<T>::layout_policy, stdx::layout_left>;
 
+template <class T>
+concept _member_ids = requires(T t) {
+//  { t.ids() };
+{ t.num_ids() };
+};
+
 // ----------------------------------------------------------------------------
 // dimension CPO
 // ----------------------------------------------------------------------------
@@ -236,27 +242,65 @@ inline constexpr auto data = _data::_fn{};
 }  // namespace _cpo
 
 // ----------------------------------------------------------------------------
+// num_ids CPO
+// ----------------------------------------------------------------------------
+namespace _num_ids {
+void num_ids(auto&) = delete;
+void num_ids(const auto&) = delete;
+
+struct _fn {
+  template <class T>
+    requires(_member_ids<T>)
+  constexpr auto operator()(T&& t) const noexcept {
+//    return t.ids().size();
+return t.num_ids();
+  }
+
+
+  template <class T>
+    requires(!_member_ids<T>)
+  constexpr auto operator()(T&& t) const noexcept {
+    return 0;
+  }
+};
+}  // namespace _num_ids
+inline namespace _cpo {
+inline constexpr auto num_ids = _num_ids::_fn{};
+}  // namespace _cpo
+
+// ----------------------------------------------------------------------------
 // ids CPO
 // @todo Figure out what is wrong with const
 // ----------------------------------------------------------------------------
-namespace _ids {
-void ids(auto&) = delete;
-void ids(const auto&) = delete;
+namespace _ids_data {
+void ids_data(auto&) = delete;
+void ids_data(const auto&) = delete;
 
-template <class T>
-concept _member_data = requires(T t) {
-  { t.ids() };
-};
+// template <class T>
+// concept _member_ids = requires(T t) {
+//   { t.ids() };
+// };
 
 struct _fn {
-  template <_member_data T>
-  constexpr auto operator()(T&& t) const noexcept {
-    return t.ids();
+  template <class T>
+    requires(_member_ids<T>)
+  constexpr const void* operator()(T&& t) const noexcept {
+    return static_cast<const void*>(t.ids().data());
+  }
+
+  template <class T>
+    requires(!_member_ids<T>)
+  constexpr void* operator()(T&& t) const noexcept {
+     return nullptr;
+    // This is a hack - when we don't have IDs we want to return an empty list, but we need to 
+    // choose a type for that list. Here we choose the same type as the value type of the Matrix.
+    // Note that we could also return an iota vector here if needed by something in the future.
+//    return std::vector<typename std::remove_cvref_t<T>::value_type>{};
   }
 };
-}  // namespace _ids
+}  // namespace _ids_data
 inline namespace _cpo {
-inline constexpr auto ids = _ids::_fn{};
+inline constexpr auto ids_data = _ids_data::_fn{};
 }  // namespace _cpo
 
 // ----------------------------------------------------------------------------

@@ -69,7 +69,6 @@ class tdbBlockedMatrix : public MatrixBase {
   using index_type = typename Base::index_type;
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
-  using ids_type = typename Base::ids_type;
 
   using view_type = Base;
 
@@ -85,9 +84,6 @@ class tdbBlockedMatrix : public MatrixBase {
   std::string uri_;
   std::unique_ptr<tiledb::Array> array_;
   tiledb::ArraySchema schema_;
-
-  std::string ids_uri_;
-  std::unique_ptr<tiledb::Array> ids_array_;
 
   /** The domain for each dimension (rows and columns) */
   // size_t row_capacity_{0};
@@ -132,10 +128,7 @@ class tdbBlockedMatrix : public MatrixBase {
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
    */
-  tdbBlockedMatrix(
-      const tiledb::Context& ctx,
-      const std::string& uri,
-      const std::string& ids_uri = "") noexcept
+  tdbBlockedMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrix(ctx, uri, 0, 0, 0, 0, 0, 0) {
   }
@@ -155,11 +148,9 @@ class tdbBlockedMatrix : public MatrixBase {
       const tiledb::Context& ctx,
       const std::string& uri,
       size_t upper_bound,
-      size_t timestamp = 0,
-      const std::string& ids_uri = "")
+      size_t timestamp = 0)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : tdbBlockedMatrix(
-            ctx, uri, 0, 0, 0, 0, upper_bound, timestamp, ids_uri) {
+      : tdbBlockedMatrix(ctx, uri, 0, 0, 0, 0, upper_bound, timestamp) {
   }
 
   /** General constructor */
@@ -171,8 +162,7 @@ class tdbBlockedMatrix : public MatrixBase {
       size_t first_col,
       size_t last_col,
       size_t upper_bound,
-      size_t timestamp,
-      const std::string& ids_uri = "")
+      size_t timestamp)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrix(
             ctx,
@@ -184,8 +174,7 @@ class tdbBlockedMatrix : public MatrixBase {
             upper_bound,
             (timestamp == 0 ?
                  tiledb::TemporalPolicy() :
-                 tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)),
-            ids_uri) {
+                 tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp))) {
   }
 
   /** General constructor */
@@ -197,19 +186,13 @@ class tdbBlockedMatrix : public MatrixBase {
       size_t first_col,
       size_t last_col,
       size_t upper_bound,
-      tiledb::TemporalPolicy temporal_policy,
-      const std::string& ids_uri = "")  // noexcept
+      tiledb::TemporalPolicy temporal_policy)  // noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : ctx_{ctx}
       , uri_{uri}
       , array_(std::make_unique<tiledb::Array>(
             ctx, uri, TILEDB_READ, temporal_policy))
       , schema_{array_->schema()}
-      , ids_uri_{ids_uri}
-      , ids_array_(
-            ids_uri.empty() ? nullptr :
-                              std::make_unique<tiledb::Array>(
-                                  ctx, ids_uri, TILEDB_READ, temporal_policy))
       , first_row_{first_row}
       , last_row_{last_row}
       , first_col_{first_col}
@@ -232,13 +215,6 @@ class tdbBlockedMatrix : public MatrixBase {
       throw std::runtime_error("Cell order and matrix order must match");
     }
 
-    if (!ids_uri_.empty() &&
-        (ids_array_->schema().cell_order() != cell_order ||
-         ids_array_->schema().cell_order() != cell_order)) {
-      throw std::runtime_error(
-          "Cell order and matrix order of IDs URI should match the data URI");
-    }
-
     // @todo Maybe throw an exception here instead of just an assert?
     // Have to properly handle an exception since this is a constructor.
     assert(cell_order == tile_order);
@@ -249,25 +225,6 @@ class tdbBlockedMatrix : public MatrixBase {
 
     auto row_domain{domain_.dimension(0)};
     auto col_domain{domain_.dimension(1)};
-
-    //    TODO(paris): Do we need to do this?
-    //    if (!ids_uri_.empty()) {
-    //      // If we are row major than the row domain should match, else the
-    //      col
-    //      // domain.
-    //      auto ids_row_domain{ids_array_->schema().domain().dimension(0)};
-    //      auto ids_col_domain{ids_array_->schema().domain().dimension(1)};
-    //      if (std::is_same<LayoutPolicy, stdx::layout_right>::value &&
-    //      ids_row_domain != row_domain) {
-    //        throw std::runtime_error(
-    //            "The number of rows in the matrix did not match the number of
-    //            IDs");
-    //      } else if (ids_col_domain != col_domain) {
-    //        throw std::runtime_error(
-    //            "The number of cols in the matrix did not match the number of
-    //            IDs");
-    //      }
-    //    }
 
     /* The size of the array may not be the size of domain.  Use non-zero value
      * if set in constructor */
@@ -372,32 +329,6 @@ class tdbBlockedMatrix : public MatrixBase {
     }
 
     num_loads_++;
-
-    if (ids_uri_.empty()) {
-      return true;
-    }
-
-    // Now load IDs.
-    // Create a subarray for the next block of columns
-    dimension = 1;
-    tiledb::Subarray ids_subarray(ctx_, *ids_array_);
-    ids_subarray.add_range(0, 0, (int)dimension - 1);
-    ids_subarray.add_range(
-        1, (int)first_resident_col_, (int)last_resident_col_ - 1);
-
-    // Create a query
-    tiledb::Query ids_query(ctx_, *ids_array_);
-    ids_query.set_subarray(subarray)
-        .set_layout(layout_order)
-        .set_data_buffer(attr_name, this->ids(), elements_to_load * dimension);
-    tiledb_helpers::submit_query(tdb_func__, ids_uri_, ids_query);
-    _memory_data.insert_entry(
-        tdb_func__, elements_to_load * dimension * sizeof(T));
-
-    if (tiledb::Query::Status::COMPLETE != ids_query.query_status()) {
-      throw std::runtime_error("Query status for IDs is not complete");
-    }
-
     return true;
   }
 
@@ -503,20 +434,6 @@ using tdbRowMajorMatrix = tdbBlockedMatrix<T, stdx::layout_right, I>;
  */
 template <class T, class I = size_t>
 using tdbColMajorMatrix = tdbBlockedMatrix<T, stdx::layout_left, I>;
-
-/**
- * Convenience class for row-major matrices.
- */
-template <class T, class I = size_t, class IdsType = uint64_t>
-using tdbRowMajorMatrixWithIds =
-    tdbBlockedMatrix<T, stdx::layout_right, I, IdsType>;
-
-/**
- * Convenience class for column-major matrices.
- */
-template <class T, class I = size_t, class IdsType = uint64_t>
-using tdbColMajorMatrixWithIds =
-    tdbBlockedMatrix<T, stdx::layout_left, I, IdsType>;
 
 /**
  * Convenience class for row-major matrices.

@@ -71,6 +71,9 @@ TEMPLATE_TEST_CASE(
   auto ids = std::vector<size_t>(expectedNumVectors);
   auto matrix = MatrixWithIds<float, size_t, TestType>{
       std::move(vectors), std::move(ids), rows, cols};
+  std::iota(matrix.ids().begin(), matrix.ids().end(), 0);
+  std::iota(matrix.data(), matrix.data() + rows * cols, 0);
+  debug_with_ids(matrix);
   CHECK(matrix.num_rows() == rows);
   CHECK(matrix.num_cols() == cols);
   CHECK(dimension(matrix) == expectedDimension);

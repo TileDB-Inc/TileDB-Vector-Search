@@ -137,11 +137,7 @@ using ColMajorMatrixView = MatrixView<T, stdx::layout_left, I>;
  * @todo Make Matrix into a range (?)
  */
 
-template <
-    class T,
-    class LayoutPolicy = stdx::layout_right,
-    class I = size_t,
-    class IdsType = uint64_t>
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
 
@@ -150,18 +146,15 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using index_type = typename Base::index_type;
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
-  using ids_type = IdsType;
 
   using view_type = Matrix;
 
  protected:
   size_type num_rows_{0};
   size_type num_cols_{0};
-  size_type num_ids_{0};
 
   // private:
   std::unique_ptr<T[]> storage_;
-  std::unique_ptr<ids_type[]> ids_storage_;
 
  public:
   // Needed because of deferred construction in derived classes
@@ -179,19 +172,13 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   Matrix(
       size_type nrows,
       size_type ncols,
-      bool with_ids = false) noexcept
+      LayoutPolicy policy = LayoutPolicy()) noexcept
       : num_rows_(nrows)
       , num_cols_(ncols)
-      , num_ids_{!with_ids ? 0 : std::is_same<LayoutPolicy, stdx::layout_right>::value ? nrows : ncols}
 #ifdef __cpp_lib_smart_ptr_for_overwrite
       , storage_{std::make_unique_for_overwrite<T[]>(num_rows_ * num_cols_)}
 #else
       , storage_{new T[num_rows_ * num_cols_]}
-#endif
-#ifdef __cpp_lib_smart_ptr_for_overwrite
-      , ids_storage_{!with_ids ? nullptr : std::make_unique_for_overwrite<ids_type[]>(num_ids_)}
-#else
-      , ids_storage_{!with_ids ? nullptr : new ids_type[num_ids_]}
 #endif
   {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
@@ -208,40 +195,18 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
   }
 
-  Matrix(
-      std::unique_ptr<T[]>&& storage,
-      std::unique_ptr<ids_type[]>&& ids,
-      size_type nrows,
-      size_type ncols,
-      LayoutPolicy policy = LayoutPolicy()) noexcept
-      : num_rows_(nrows)
-      , num_cols_(ncols)
-      , num_ids_{std::is_same<LayoutPolicy, stdx::layout_right>::value ? nrows : ncols}
-      , storage_{std::move(storage)}
-      , ids_storage_{std::move(ids)} {
-    Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
-  }
-
   /**
    * Initializer list constructor.  Useful for testing and for examples.
    * The intializer list is assumed to be in row-major order.
    */
-  Matrix(
-      std::initializer_list<std::initializer_list<T>> list,
-      std::initializer_list<ids_type> ids = {}) noexcept
+  Matrix(std::initializer_list<std::initializer_list<T>> list) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : num_rows_{list.size()}
       , num_cols_{list.begin()->size()}
-      , num_ids_{ids.size()}
 #ifdef __cpp_lib_smart_ptr_for_overwrite
       , storage_{std::make_unique_for_overwrite<T[]>(num_rows_ * num_cols_)}
 #else
       , storage_{new T[num_rows_ * num_cols_]}
-#endif
-#ifdef __cpp_lib_smart_ptr_for_overwrite
-      , ids_storage_{num_ids_ == 0 ? nullptr : std::make_unique_for_overwrite<ids_type[]>(num_ids_)}
-#else
-      , ids_storage_{new ids_type[num_ids_]}
 #endif
   {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
@@ -249,40 +214,26 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     for (size_type i = 0; i < num_rows_; ++i, ++it) {
       std::copy(it->begin(), it->end(), (*this)[i].begin());
     }
-    if (num_ids_ > 0) {
-      std::copy(ids.begin(), ids.end(), ids_storage_.get());
-    }
   }
 
   /**
    * Initializer list constructor.  Useful for testing and for examples.
    * The initializer list is assumed to be in column-major order.
    */
-  Matrix(
-      std::initializer_list<std::initializer_list<T>> list,
-      std::initializer_list<ids_type> ids = {}) noexcept
+  Matrix(std::initializer_list<std::initializer_list<T>> list) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : num_rows_{list.begin()->size()}
       , num_cols_{list.size()}
-      , num_ids_{ids.size()}
 #ifdef __cpp_lib_smart_ptr_for_overwrite
       , storage_{std::make_unique_for_overwrite<T[]>(num_rows_ * num_cols_)}
 #else
       , storage_{new T[num_rows_ * num_cols_]}
-#endif
-#ifdef __cpp_lib_smart_ptr_for_overwrite
-      , ids_storage_{num_ids_ == 0 ? nullptr : std::make_unique_for_overwrite<ids_type[]>(num_ids_)}
-#else
-      , ids_storage_{new ids_type[num_ids_]}
 #endif
   {
     Base::operator=(Base{storage_.get(), num_rows_, num_cols_});
     auto it = list.begin();
     for (size_type i = 0; i < num_cols_; ++i, ++it) {
       std::copy(it->begin(), it->end(), (*this)[i].begin());
-    }
-    if (num_ids_ > 0) {
-      std::copy(ids.begin(), ids.end(), ids_storage_.get());
     }
   }
 
@@ -296,28 +247,12 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     return storage_.get();
   }
 
-  auto ids() {
-    return ids_storage_.get();
-  }
-
-  auto ids() const {
-    return ids_storage_.get();
-  }
-
   auto raveled() {
     return std::span(storage_.get(), num_rows_ * num_cols_);
   }
 
   auto raveled() const {
     return std::span(storage_.get(), num_rows_ * num_cols_);
-  }
-
-  auto raveledIds() {
-    return std::span(ids_storage_.get(), num_ids_);
-  }
-
-  auto raveledIds() const {
-    return std::span(ids_storage_.get(), num_ids_);
   }
 
   auto operator[](index_type i) {
@@ -334,10 +269,6 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     } else {
       return std::span(&Base::operator()(0, i), num_rows_);
     }
-  }
-
-  auto id(index_type i) const {
-    return ids_storage_[i];
   }
 
   auto rank() const noexcept {
@@ -360,16 +291,10 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     return num_cols_;
   }
 
-  auto num_ids() const noexcept {
-    return num_ids_;
-  }
-
   auto swap(Matrix& rhs) noexcept {
     std::swap(num_rows_, rhs.num_rows_);
     std::swap(num_cols_, rhs.num_cols_);
-    std::swap(num_ids_, rhs.num_ids_);
     std::swap(storage_, rhs.storage_);
-    std::swap(ids_storage_, rhs.ids_storage_);
     std::swap(static_cast<Base&>(*this), static_cast<Base&>(rhs));
   }
 
@@ -378,17 +303,10 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       class LayoutPolicy_ = stdx::layout_right,
       class I_ = size_t>
   bool operator==(const Matrix<T_, LayoutPolicy_, I_>& rhs) const noexcept {
-    auto matrixEqual =
-        (void*)this->data() == (void*)rhs.data() ||
-        (num_rows_ == rhs.num_rows() && num_cols_ == rhs.num_cols() &&
-         std::equal(raveled().begin(), raveled().end(), rhs.raveled().begin()));
-    auto idsEqual =
-        (void*)this->ids() == (void*)rhs.ids() ||
-        (num_ids_ == rhs.num_ids() && std::equal(
-                                          raveledIds().begin(),
-                                          raveledIds().end(),
-                                          rhs.raveledIds().begin()));
-    return matrixEqual && idsEqual;
+    return (void*)this->data() == (void*)rhs.data() ||
+           (num_rows_ == rhs.num_rows() && num_cols_ == rhs.num_cols() &&
+            std::equal(
+                raveled().begin(), raveled().end(), rhs.raveled().begin()));
   }
 };
 

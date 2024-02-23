@@ -102,6 +102,44 @@ TEMPLATE_TEST_CASE(
   }
 }
 
+TEST_CASE("tdb_matrix_with_ids: different types", "[tdb_matrix_with_ids]") {
+  tiledb::Context ctx;
+  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+  std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
+  int offset = 13;
+  size_t Mrows = 200;
+  size_t Ncols = 500;
+  using DataType = float;
+  using IdsType = uint64_t;
+
+  auto X = ColMajorMatrixWithIds<DataType, IdsType, size_t>(Mrows, Ncols);
+  fill_and_write_matrix(
+      ctx, X, tmp_matrix_uri, tmp_ids_uri, Mrows, Ncols, offset);
+  CHECK(X.ids()[0] == offset + 0);
+  CHECK(X.ids()[1] == offset + 1);
+  CHECK(X.ids()[10] == offset + 10);
+
+  auto Y = tdbColMajorMatrixWithIds<DataType, IdsType>(
+      ctx, tmp_matrix_uri, tmp_ids_uri);
+  Y.load();
+  CHECK(num_vectors(Y) == num_vectors(X));
+  CHECK(dimension(Y) == dimension(X));
+  CHECK(
+      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+  for (size_t i = 0; i < X.num_rows(); ++i) {
+    for (size_t j = 0; j < X.num_cols(); ++j) {
+      CHECK(X(i, j) == Y(i, j));
+    }
+  }
+  CHECK(size(Y.ids()) == Y.num_ids());
+  CHECK(size(X.ids()) == size(Y.ids()));
+  CHECK(X.num_ids() == Y.num_ids());
+  CHECK(std::equal(X.ids().begin(), X.ids().end(), Y.ids().begin()));
+  for (size_t i = 0; i < X.num_ids(); ++i) {
+    CHECK(X.ids()[i] == Y.ids()[i]);
+  }
+}
+
 TEMPLATE_TEST_CASE(
     "tdb_matrix: assign to matrix", "[tdb_matrix_with_ids]", float, uint8_t) {
   tiledb::Context ctx;

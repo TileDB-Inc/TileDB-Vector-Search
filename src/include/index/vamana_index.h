@@ -614,6 +614,17 @@ class vamana_index {
    * (j)←N_"out " (j)∪{σ(i)} if |N_"out "  (j)|>R then Run FilteredRobustPrune
    * (j,N_"out " (j),α,R) to update out-neighbors of j.
    */
+//  vector<> ids_;
+  template <feature_vector_array Array, feature_vector Vector>
+  void train(const Array& training_set, const Vector& ids) {
+    // std::copy(ids.ids_data(), ids.ids_data() + ::num_vectors(ids), ids_.begin());
+    // std::copy(
+    //     training_set.ids(),
+    //     training_set.ids() + ::num_vectors(training_set),
+    //     ids_.data());
+    train(training_set);
+  }
+
   template <feature_vector_array Array>
   void train(const Array& training_set) {
     feature_vectors_ = std::move(ColMajorMatrix<feature_type>(
