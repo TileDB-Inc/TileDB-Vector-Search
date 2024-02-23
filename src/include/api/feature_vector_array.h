@@ -253,7 +253,8 @@ class FeatureVectorArray {
     }
     //    requires(feature_vector_array_with_ids<T>)
     [[nodiscard]] const void* ids_data() const override {
-      return _cpo::ids_data(impl_vector_array);
+//       return _cpo::ids_data(impl_vector_array);
+      return _cpo::ids_data(impl_vector_array).data();
     }
     // NOTE(paris): This is from when I tried to have it be _cpo::ids() an then
     // we do `return _cpo::ids().data();`: In file included from

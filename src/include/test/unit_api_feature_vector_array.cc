@@ -278,6 +278,7 @@ TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
     CHECK(data(0, 0) == 0);
     CHECK(data(5, 0) == 5);
 
+    CHECK(b.num_ids() == cols);
     CHECK(b.ids_data() != nullptr);
     auto ids = std::span<IdsType>((IdsType*)b.ids_data(), b.num_vectors());
     CHECK(ids.size() == cols);

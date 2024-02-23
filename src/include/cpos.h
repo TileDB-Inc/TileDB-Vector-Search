@@ -283,19 +283,22 @@ void ids_data(const auto&) = delete;
 struct _fn {
   template <class T>
     requires(_member_ids<T>)
-  constexpr const void* operator()(T&& t) const noexcept {
-    return static_cast<const void*>(t.ids().data());
+  constexpr const auto& operator()(T&& t) const noexcept {
+    return t.ids();
   }
+//  constexpr const void* operator()(T&& t) const noexcept {
+//    return static_cast<const void*>(t.ids().data());
+//  }
 
+//  template <class T>
+//    requires(!_member_ids<T>)
+//  constexpr void* operator()(T&& t) const noexcept {
+//    return nullptr;
+//  }
   template <class T>
     requires(!_member_ids<T>)
-  constexpr void* operator()(T&& t) const noexcept {
-    return nullptr;
-    // This is a hack - when we don't have IDs we want to return an empty list,
-    // but we need to choose a type for that list. Here we choose the same type
-    // as the value type of the Matrix. Note that we could also return an iota
-    // vector here if needed by something in the future.
-    //    return std::vector<typename std::remove_cvref_t<T>::value_type>{};
+  constexpr const auto &operator()(T&& t) const noexcept {
+    return std::vector<typename std::remove_cvref_t<T>::value_type>{};
   }
 };
 }  // namespace _ids_data
