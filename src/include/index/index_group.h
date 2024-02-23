@@ -76,7 +76,7 @@ class base_index_group {
 
  protected:
   std::reference_wrapper<const tiledb::Context> cached_ctx_;
-  std::filesystem::path group_uri_;
+  std::string group_uri_;
   size_t index_timestamp_{0};
   size_t group_timestamp_{0};
   size_t timetravel_index_{0};
@@ -536,7 +536,7 @@ class base_index_group {
       std::cout << "# " + msg << std::endl;
     }
     std::cout << "-------------------------------------------------------\n";
-    std::cout << "Stored in " + group_uri_.string() + ":" << std::endl;
+    std::cout << "Stored in " + group_uri_ + ":" << std::endl;
     auto cfg = tiledb::Config();
     auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
     for (size_t i = 0; i < read_group.member_count(); ++i) {
