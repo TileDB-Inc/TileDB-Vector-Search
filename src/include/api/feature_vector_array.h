@@ -183,7 +183,7 @@ class FeatureVectorArray {
   }
 
   [[nodiscard]] auto ids_data() const {
-    // return _cpo::data(*vector_array);
+    // return _cpo::ids_data(*vector_array);
     return vector_array->ids_data();
   }
 
@@ -200,8 +200,8 @@ class FeatureVectorArray {
   }
 
   [[nodiscard]] auto num_ids() const {
-//    return _cpo::num_ids(*vector_array);
-    return vector_array->num_ids();
+   return _cpo::num_ids(*vector_array);
+    // return vector_array->num_ids();
   }
 
   [[nodiscard]] tiledb_datatype_t feature_type() const {

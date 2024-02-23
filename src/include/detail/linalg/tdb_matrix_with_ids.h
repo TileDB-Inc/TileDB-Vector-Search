@@ -178,28 +178,15 @@ class tdbBlockedMatrixWithIds
 
   // @todo Allow specification of how many columns to advance by
   bool load() {
-    std::cout << "tdbBlockedMatrixWithIds::load()" << std::endl;
     scoped_timer _{tdb_func__ + " " + this->ids_uri_};
     if (!Base::load()) {
       return false;
     }
 
-//    std::cout << "vectors:" << std::endl;
-//    this->schema_.dump();
-//    std::cout << "vectors done" << std::endl;
-
-//    std::cout << "ids:" << std::endl;
-//    ids_schema_.dump();
-//    std::cout << "ids done" << std::endl;
-
     const size_t attr_idx{0};
     auto attr = ids_schema_.attribute(attr_idx);
     std::string attr_name = attr.name();
     tiledb_datatype_t attr_type = attr.type();
-    std::cout << "IdsType: " <<tiledb::impl::type_to_tiledb<IdsType>::tiledb_type << std::endl;
-    std::cout << "attr_type: " << attr_type << std::endl;
-    std::cout << datatype_to_string(attr_type) << std::endl;
-    std::cout << "here" << std::endl;
     if (attr_type != tiledb::impl::type_to_tiledb<IdsType>::tiledb_type) {
       throw std::runtime_error(
           "Attribute type mismatch with IDs: " + datatype_to_string(attr_type) +
@@ -217,16 +204,9 @@ class tdbBlockedMatrixWithIds
       throw std::runtime_error(
           "Error computing IDs to load: " + std::to_string(elements_to_load));
     }
-//    std::cout << "tdbBlockedMatrixWithIds::load() a" << std::endl;
-//    std::cout << "tdbBlockedMatrixWithIds::load() elements_to_load: " << elements_to_load << std::endl;
-//    std::cout << "tdbBlockedMatrixWithIds::load() dimension: " << dimension << std::endl;
 
     // Create a subarray for the next block of columns
     tiledb::Subarray subarray(this->ctx_, *ids_array_);
-//    subarray.add_range(0, 0, (int)dimension - 1);
-//    std::cout << "tdbBlockedMatrixWithIds::load() c" << std::endl;
-//    std::cout << "tdbBlockedMatrixWithIds::load() this->first_resident_col_: " << this->first_resident_col_ << std::endl;
-//    std::cout << "tdbBlockedMatrixWithIds::load() this->last_resident_col_: " << this->last_resident_col_ << std::endl;
     subarray.add_range(
         0, (int)this->first_resident_col_, (int)this->last_resident_col_ - 1);
 

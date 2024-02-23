@@ -57,7 +57,6 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
 
  protected:
   std::vector<IdsType> ids_;
-  // std::unique_ptr<IdsType[]> ids_;
 
  public:
   using ids_type = IdsType;

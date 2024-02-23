@@ -35,6 +35,11 @@
 #include "concepts.h"
 #include "cpos.h"
 #include "detail/linalg/matrix.h"
+#include "detail/linalg/tdb_matrix.h"
+#include "detail/linalg/partitioned_matrix.h"
+#include "detail/linalg/tdb_partitioned_matrix.h"
+#include "detail/linalg/matrix_with_ids.h"
+#include "detail/linalg/tdb_matrix_with_ids.h"
 #include "detail/linalg/vector.h"
 #include "utils/print_types.h"
 
@@ -372,6 +377,19 @@ TEST_CASE("concepts: feature_vector_array", "[concepts]") {
   CHECK(!feature_vector_array<std::vector<int>>);
   CHECK(!feature_vector_array<std::vector<double>>);
   CHECK(!feature_vector_array<std::vector<std::vector<int>>>);
+}
+
+TEST_CASE("concepts: matrix_with_ids", "[concepts]") {
+  CHECK(!matrix_with_ids<int>);
+  CHECK(!matrix_with_ids<std::vector<int>>);
+  CHECK(!matrix_with_ids<std::vector<double>>);
+  CHECK(!matrix_with_ids<std::vector<std::vector<int>>>);
+  CHECK(!matrix_with_ids<Matrix<int>>);
+  CHECK(!matrix_with_ids<tdbMatrix<int>>);
+  CHECK(matrix_with_ids<PartitionedMatrix<int, uint64_t, size_t>>);
+  CHECK(matrix_with_ids<tdbPartitionedMatrix<int, uint64_t, size_t>>);
+  CHECK(matrix_with_ids<MatrixWithIds<int>>);
+  CHECK(matrix_with_ids<tdbMatrixWithIds<int>>);
 }
 
 // Placeholders

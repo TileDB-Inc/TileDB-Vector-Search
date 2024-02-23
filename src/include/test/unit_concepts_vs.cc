@@ -37,14 +37,14 @@
 #include "cpos.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_matrix.h"
+#include "detail/linalg/matrix_with_ids.h"
+#include "detail/linalg/tdb_matrix_with_ids.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "detail/linalg/vector.h"
 
 TEST_CASE("concepts_vs: test test", "[concepts_vs]") {
   REQUIRE(true);
 }
-
-// TODOD(paris): Add unit tests here.
 
 // Concepts:
 // 1. subscriptable_range
@@ -56,6 +56,9 @@ TEST_CASE("concepts_vs: test test", "[concepts_vs]") {
 // 7. feature_vector
 // 8. feature_vector_array
 // 9. contiguous_feature_vector_range
+// 10. partitioned_feature_vector_array
+// 11. contiguous_partitioned_feature_vector_array
+// 12. matrix_with_ids
 
 TEST_CASE("concepts_vs: Vector", "[concepts_vs]") {
   CHECK(subscriptable_range<Vector<int>>);
@@ -103,6 +106,10 @@ TEST_CASE("concepts_vs: Vector", "[concepts_vs]") {
   CHECK(!contiguous_partitioned_feature_vector_array<Vector<int>>);
   CHECK(!contiguous_partitioned_feature_vector_array<Vector<double>>);
   CHECK(!contiguous_partitioned_feature_vector_array<Vector<bool>>);
+
+  CHECK(!matrix_with_ids<Vector<int>>);
+  CHECK(!matrix_with_ids<Vector<double>>);
+  CHECK(!matrix_with_ids<Vector<bool>>);
 }
 
 template <dimensionable D>
@@ -170,6 +177,102 @@ TEST_CASE("concepts_vs: Matrix", "[concepts_vs]") {
   CHECK(!contiguous_partitioned_feature_vector_array<Matrix<int>>);
   CHECK(!contiguous_partitioned_feature_vector_array<Matrix<double>>);
   CHECK(!contiguous_partitioned_feature_vector_array<Matrix<bool>>);
+
+  CHECK(!matrix_with_ids<Matrix<int>>);
+  CHECK(!matrix_with_ids<Matrix<double>>);
+  CHECK(!matrix_with_ids<Matrix<bool>>);
+}
+
+TEST_CASE("concepts_vs: MatrixWithIds", "[concepts_vs]") {
+  CHECK(!subscriptable_range<MatrixWithIds<int>>);
+  CHECK(!subscriptable_range<MatrixWithIds<double>>);
+  CHECK(!subscriptable_range<MatrixWithIds<bool>>);
+
+  CHECK(!callable_range<MatrixWithIds<int>>);
+  CHECK(!callable_range<MatrixWithIds<double>>);
+  CHECK(!callable_range<MatrixWithIds<bool>>);
+
+  CHECK(dimensionable<MatrixWithIds<int>>);
+  CHECK(dimensionable<MatrixWithIds<double>>);
+  CHECK(dimensionable<MatrixWithIds<bool>>);
+
+  CHECK(vectorable<MatrixWithIds<int>>);
+  CHECK(vectorable<MatrixWithIds<double>>);
+  CHECK(vectorable<MatrixWithIds<bool>>);
+
+  CHECK(!feature_vector<MatrixWithIds<int>>);
+  CHECK(!feature_vector<MatrixWithIds<double>>);
+  CHECK(!feature_vector<MatrixWithIds<bool>>);
+
+  CHECK(!query_vector<MatrixWithIds<int>>);
+  CHECK(!query_vector<MatrixWithIds<double>>);
+  CHECK(!query_vector<MatrixWithIds<bool>>);
+
+  CHECK(feature_vector_array<MatrixWithIds<int>>);
+  CHECK(feature_vector_array<MatrixWithIds<double>>);
+  CHECK(feature_vector_array<MatrixWithIds<bool>>);
+
+  CHECK(contiguous_feature_vector_array<MatrixWithIds<int>>);
+  CHECK(contiguous_feature_vector_array<MatrixWithIds<double>>);
+  CHECK(contiguous_feature_vector_array<MatrixWithIds<bool>>);
+
+  CHECK(!partitioned_feature_vector_array<MatrixWithIds<int>>);
+  CHECK(!partitioned_feature_vector_array<MatrixWithIds<double>>);
+  CHECK(!partitioned_feature_vector_array<MatrixWithIds<bool>>);
+
+  CHECK(!contiguous_partitioned_feature_vector_array<MatrixWithIds<int>>);
+  CHECK(!contiguous_partitioned_feature_vector_array<MatrixWithIds<double>>);
+  CHECK(!contiguous_partitioned_feature_vector_array<MatrixWithIds<bool>>);
+
+  CHECK(matrix_with_ids<MatrixWithIds<int>>);
+  CHECK(matrix_with_ids<MatrixWithIds<double>>);
+  CHECK(matrix_with_ids<MatrixWithIds<bool>>);
+}
+
+TEST_CASE("concepts_vs: tdbMatrixWithIds", "[concepts_vs]") {
+  CHECK(!subscriptable_range<tdbMatrixWithIds<int>>);
+  CHECK(!subscriptable_range<tdbMatrixWithIds<double>>);
+  CHECK(!subscriptable_range<tdbMatrixWithIds<bool>>);
+
+  CHECK(!callable_range<tdbMatrixWithIds<int>>);
+  CHECK(!callable_range<tdbMatrixWithIds<double>>);
+  CHECK(!callable_range<tdbMatrixWithIds<bool>>);
+
+  CHECK(dimensionable<tdbMatrixWithIds<int>>);
+  CHECK(dimensionable<tdbMatrixWithIds<double>>);
+  CHECK(dimensionable<tdbMatrixWithIds<bool>>);
+
+  CHECK(vectorable<tdbMatrixWithIds<int>>);
+  CHECK(vectorable<tdbMatrixWithIds<double>>);
+  CHECK(vectorable<tdbMatrixWithIds<bool>>);
+
+  CHECK(!feature_vector<tdbMatrixWithIds<int>>);
+  CHECK(!feature_vector<tdbMatrixWithIds<double>>);
+  CHECK(!feature_vector<tdbMatrixWithIds<bool>>);
+
+  CHECK(!query_vector<tdbMatrixWithIds<int>>);
+  CHECK(!query_vector<tdbMatrixWithIds<double>>);
+  CHECK(!query_vector<tdbMatrixWithIds<bool>>);
+
+  CHECK(feature_vector_array<tdbMatrixWithIds<int>>);
+  CHECK(feature_vector_array<tdbMatrixWithIds<double>>);
+  CHECK(feature_vector_array<tdbMatrixWithIds<bool>>);
+
+  CHECK(contiguous_feature_vector_array<tdbMatrixWithIds<int>>);
+  CHECK(contiguous_feature_vector_array<tdbMatrixWithIds<double>>);
+  CHECK(contiguous_feature_vector_array<tdbMatrixWithIds<bool>>);
+
+  CHECK(!partitioned_feature_vector_array<tdbMatrixWithIds<int>>);
+  CHECK(!partitioned_feature_vector_array<tdbMatrixWithIds<double>>);
+  CHECK(!partitioned_feature_vector_array<tdbMatrixWithIds<bool>>);
+
+  CHECK(!contiguous_partitioned_feature_vector_array<tdbMatrixWithIds<int>>);
+  CHECK(!contiguous_partitioned_feature_vector_array<tdbMatrixWithIds<double>>);
+  CHECK(!contiguous_partitioned_feature_vector_array<tdbMatrixWithIds<bool>>);
+
+  CHECK(matrix_with_ids<tdbMatrixWithIds<int>>);
+  CHECK(matrix_with_ids<tdbMatrixWithIds<double>>);
+  CHECK(matrix_with_ids<tdbMatrixWithIds<bool>>);
 }
 
 TEST_CASE("concepts_vs: tdbMatrix", "[concepts_vs]") {

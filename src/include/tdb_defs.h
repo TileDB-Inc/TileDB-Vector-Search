@@ -98,7 +98,6 @@ constexpr auto type_to_tiledb_v = tiledb::impl::type_to_tiledb<T>::tiledb_type;
 // tiledb_to_type<tiledb_datatype_t>::type
 [[maybe_unused]] inline static std::string datatype_to_string(
     tiledb_datatype_t datatype) {
-//  std::cout << datatype << std::endl;
   switch (datatype) {
     case TILEDB_FLOAT32:
       return "float32";
