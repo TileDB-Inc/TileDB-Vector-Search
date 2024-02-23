@@ -466,7 +466,8 @@ auto best_first_O3(
 
       score_type heuristic = distance(db[neighbor_id], query);
 
-      pq.template insert<unique_id>(heuristic, neighbor_id);
+      //pq.template insert<unique_id>(heuristic, neighbor_id);
+      pq.insert(heuristic, neighbor_id);
     }
     frontier.clear();
     for (size_t i = 0; i < size(pq); ++i) {

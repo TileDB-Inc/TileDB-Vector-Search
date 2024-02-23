@@ -78,9 +78,9 @@ static constexpr const char USAGE[] =
       --stats                 log TileDB stats [default: false]
       -d, --debug             run in debug mode [default: false]
       -v, --verbose           run in verbose mode [default: false]
-      --O0                    run naive version of algorithm (default)
+      --O0                    run naive version of algorithm
       --O1                    run the "O1" version of the algorithm
-      --O2                    run the "O2" version of the algorithm
+      --O2                    run the "O2" version of the algorithm (default)
       --O3                    run the "O3" version of the algorithm
 )";
 
@@ -114,57 +114,44 @@ int main(int argc, char* argv[]) {
                       std::optional<size_t>(args["--Lbuild"].asLong()) :
                       std::nullopt;
 
+    const std::string alg = [&]() {
+      if (args["--bfs"].asBool()) {
+        return "bfs";
+      } else if (args["--dfs"].asBool()) {
+        return "dfs";
+      } else if (args["--best_first"].asBool()) {
+        return "best_first";
+      }
+      return "greedy";
+    }();
+    const std::string opt = [&]() {
+      if (args["--O0"].asBool()) {
+        return "O0";
+      } else if (args["--O1"].asBool()) {
+        return "O1";
+      } else if (args["--O2"].asBool()) {
+        return "O2";
+      } else if (args["--O3"].asBool()) {
+        return "O3";
+      }
+      return "O2";
+    }();
+
     auto query_time = log_timer("query time", true);
 
-    if (args["--bfs"].asBool()) {
-      auto query_time = log_timer("bfs time", true);
-      tiledb::Context ctx;
-      auto idx = vamana_index<feature_type, id_type>(ctx, index_uri);
-
-      if (args["--O0"].asBool()) {
-        /*auto parents = */ idx.bfs_O0();
-      } else if (args["--O1"].asBool()) {
-        /*auto parents = */ idx.bfs_O1(queries, k_nn, *Lbuild);
-      } else if (args["--O2"].asBool()) {
-        std::cout << "O2 not implemented" << std::endl;
-      } else if (args["--O3"].asBool()) {
-        std::cout << "O3 not implemented" << std::endl;
+    auto&& [top_k_scores, top_k] = [&](const std::string& alg, const std::string& opt) {
+      if (alg == "best_first") {
+        if (opt == "O2") {
+          return idx.best_first_O2(queries, k_nn, Lbuild);
+        } else if (opt == "O3") {
+          return idx.best_first_O3(queries, k_nn, Lbuild);
+         }
+      } else if (alg == "greedy") {
+        return idx.query(queries, k_nn, Lbuild);
+      } else {
+        throw std::runtime_error("Unsupported algorithm " + alg + " with option " + opt);
       }
-      query_time.stop();
-
-      return 0;
-    } else if (args["--dfs"].asBool()) {
-      /*
-      auto query_time = log_timer("dfs time", true);
-      tiledb::Context ctx;
-      auto idx = vamana_index<feature_type, id_type>(ctx, index_uri);
-
-      auto parents = idx.dfs_O1(queries, k_nn, *Lbuild);
-
-      query_time.stop();
-      */
-      std::cout << "DFS not implemented" << std::endl;
-      return 1;
-    } else if (args["--best_first"].asBool()) {
-      auto query_time = log_timer("best_first time", true);
-      tiledb::Context ctx;
-      auto idx = vamana_index<feature_type, id_type>(ctx, index_uri);
-
-      if (args["--O0"].asBool()) {
-        /*auto parents = */ idx.best_first_O0(queries);
-      } else if (args["--O1"].asBool()) {
-        /*auto parents = */ idx.best_first_O1(queries, k_nn, *Lbuild);
-      } else if (args["--O2"].asBool()) {
-        /*auto parents = */ idx.best_first_O2(queries, k_nn, Lbuild);
-      } else if (args["--O3"].asBool()) {
-        /*auto parents = */ idx.best_first_O3(queries, k_nn, Lbuild);
-      }
-      query_time.stop();
-      return 0;
-    }
-    // greedy is default
-
-    auto&& [top_k_scores, top_k] = idx.best_first_O3(queries, k_nn, Lbuild);
+    } (alg, opt);
 
     query_time.stop();
 
