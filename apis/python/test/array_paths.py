@@ -1,6 +1,7 @@
 # Description: Contains paths to test arrays
 
 import os
+
 # TODO Use python Pathlib?
 # TODO Get absolute path to project root from cmake / setup / pytest
 
@@ -58,4 +59,3 @@ fmnistsmall_ids_uri = fmnistsmall_root + "shuffled_vector_ids"
 fmnistsmall_parts_uri = fmnistsmall_root + "shuffled_vectors"
 fmnistsmall_query_uri = fmnistsmall_root + "queries"
 fmnistsmall_groundtruth_uri = fmnistsmall_root + "groundtruth"
-

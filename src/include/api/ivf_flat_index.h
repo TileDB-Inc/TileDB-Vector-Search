@@ -165,9 +165,9 @@ class IndexIVFFlat {
     /**
      * We support all combinations of the following types for feature,
      * id, and px datatypes:
-     *   feature_type: uint8 or float
-     *   id_type: uint32 or uint64
-     *   px_type: uint32 or uint64
+     *   feature_type (partitioned_vectors_feature_type): uint8 or float
+     *   id_type (partitioned_ids_type): uint32 or uint64
+     *   px_type (partitioning_index_type): uint32 or uint64
      *
      *   @todo Unify the type-based switch-case statements in a manner
      *   similar to what was done in query_condition
@@ -257,9 +257,9 @@ class IndexIVFFlat {
     /**
      * We support all combinations of the following types for feature,
      * id, and px datatypes:
-     *   feature_type: uint8 or float
-     *   id_type: uint32 or uint64
-     *   px_type: uint32 or uint64
+     *   feature_type (partitioned_vectors_feature_type): uint8 or float
+     *   id_type (partitioned_ids_type): uint32 or uint64
+     *   px_type (partitioning_index_type): uint32 or uint64
      */
     if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {

@@ -1,22 +1,20 @@
 <a href="https://tiledb.com"><img src="https://github.com/TileDB-Inc/TileDB/raw/dev/doc/source/_static/tiledb-logo_color_no_margin_@4x.png" alt="TileDB logo" width="400"></a>
 
-
-
 # TileDB Vector Search
 
-*TileDB-Vector-Search* is a C++ library and Python API for vector search built on top of the [TileDB Storage Engine](https://github.com/TileDB-Inc/TileDB).
+_TileDB-Vector-Search_ is a C++ library and Python API for vector search built on top of the [TileDB Storage Engine](https://github.com/TileDB-Inc/TileDB).
 
 # Quick Links
 
-* [Build Instructions](https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/Building.html)
-* [Documentation](https://tiledb-inc.github.io/TileDB-Vector-Search/)
-* [Python API reference](https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/)
+- [Build Instructions](https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/Building.html)
+- [Documentation](https://tiledb-inc.github.io/TileDB-Vector-Search/)
+- [Python API reference](https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/)
 
 # Quick Installation
 
 TileDB-Vector-Search is available from [PyPI](https://pypi.org/project/tiledb-vector-search/) or the [tiledb conda channel](https://anaconda.org/tiledb/tiledb-vector-search).
 
-To install from [PyPI](https://pypi.org/project/tiledb-vector-search/) with ``pip``, use:
+To install from [PyPI](https://pypi.org/project/tiledb-vector-search/) with `pip`, use:
 
 ```
 pip install tiledb-vector-search
@@ -27,11 +25,10 @@ To install from [conda](https://anaconda.org/tiledb/tiledb-vector-search), use c
 ```
 conda install -c tiledb -c conda-forge tiledb-vector-search
 ```
+
 ```
 mamba install -c tiledb -c conda-forge tiledb-vector-search
 ```
-
-
 
 # Contributing
 

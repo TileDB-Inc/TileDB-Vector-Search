@@ -58,4 +58,75 @@ void randomize(R& r, std::tuple<int, int> range = {0, 128}) {
   }
 }
 
+// Fill a matrix with sequentially increasing values. Will delete data from the
+// URI if it exists.
+template <class Matrix>
+void fill_and_write_matrix(
+    const tiledb::Context& ctx,
+    Matrix& X,
+    const std::string& uri,
+    size_t rows,
+    size_t cols,
+    size_t offset) {
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(uri)) {
+    vfs.remove_dir(uri);
+  }
+  std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
+  write_matrix(ctx, X, uri);
+}
+
+/*
+ * Fill a matrix with sequentially increasing values and write those values to
+ * URIs. Will delete data from the URI if it exists.
+ * @param ctx TileDB context.
+ * @param X MatrixWithIds to fill with vectors and IDs.
+ * @param uri The URI to write the vectors to in addition to filled X with them.
+ * @param ids_uri The URI to write the IDs to in addition to filled X with them.
+ * @param rows The number of rows in the matrix.
+ * @param cols The number of columns in the matrix.
+ * @param offset The value to start filling the matrix with, i.e. if it's 10 we
+ * will fill with 10, 11, 12, etc.
+ */
+template <class MatrixWithIds>
+void fill_and_write_matrix(
+    const tiledb::Context& ctx,
+    MatrixWithIds& X,
+    const std::string& uri,
+    const std::string& ids_uri,
+    size_t rows,
+    size_t cols,
+    size_t offset) {
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(uri)) {
+    vfs.remove_dir(uri);
+  }
+  if (vfs.is_dir(ids_uri)) {
+    vfs.remove_dir(ids_uri);
+  }
+  std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
+  std::iota(X.ids().begin(), X.ids().end(), offset);
+  // Write the vectors to the URI.
+  write_matrix(ctx, X, uri);
+
+  // Write the IDs to their URI. We could do this by modifying write_matrix() to
+  // separately write out to ids_uri from ids(), but that would require some
+  // changes. So instead we just create an additional temporary IDs matrix,
+  // write the ids into data(), and then write it separately.
+  size_t id_rows =
+      std::is_same<typename MatrixWithIds::layout_policy, stdx::layout_right>::
+              value ?
+          num_vectors(X) :
+          1;
+  size_t id_cols =
+      std::is_same<typename MatrixWithIds::layout_policy, stdx::layout_right>::
+              value ?
+          1 :
+          num_vectors(X);
+  MatrixWithIds tempIdsMatrix(id_rows, id_cols);
+  std::iota(
+      tempIdsMatrix.data(), tempIdsMatrix.data() + num_vectors(X), offset);
+  write_matrix(ctx, tempIdsMatrix, ids_uri);
+}
+
 #endif  // TILEDB_TEST_UTILS_H

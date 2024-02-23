@@ -37,7 +37,6 @@
 #include <vector>
 
 #include <tiledb/tiledb>
-// #include <tiledb/vfs.h>
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_helpers.h"
 #include "utils/logging.h"
@@ -378,7 +377,7 @@ auto read_bin_local(
     size_t subset = 0) {
   auto vfs = tiledb::VFS{ctx};
 
-  std::uint32_t dimension = 0u;
+  uint32_t dimension = 0u;
 
   const auto file_size = vfs.file_size(bin_file);
   auto filebuf = tiledb::VFS::filebuf{vfs};
@@ -406,8 +405,8 @@ auto read_bin_local(
   auto result = ColMajorMatrix<T>{dimension, num_vectors};
   auto* result_ptr = result.data();
 
-  for (std::size_t i = 0; i < num_vectors; ++i) {
-    std::uint32_t d = 0u;
+  for (size_t i = 0; i < num_vectors; ++i) {
+    uint32_t d = 0u;
 
     if (!file.read(reinterpret_cast<char*>(&d), sizeof(d))) {
       throw std::runtime_error(

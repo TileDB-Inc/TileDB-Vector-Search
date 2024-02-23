@@ -37,7 +37,7 @@ tdb_vector_search_root_2="${HOME}/TileDB/TileDB-Vector-Search"
 
 # AWS information
 # Defines the variables instance_id, volume_id, region, and instance_ip
-# 
+#
 if [ -f ~/.bash_awsrc ]; then
     . ~/.bash_awsrc
 elif [ -f ./awsrc.bash ]; then
