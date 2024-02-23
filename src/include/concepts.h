@@ -207,8 +207,6 @@ template <class D>
 concept matrix_with_ids = requires(D d) {
   { d.ids() };
 };
-//  { num_ids(d) };
-//  { ids(d) };
 
 // ----------------------------------------------------------------------------
 // partition_index concept (WIP)
