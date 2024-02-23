@@ -300,14 +300,15 @@ auto best_first_O2(
 // the map enum class vertex_state { unvisited, enfrontiered, enpqd, visited,
 // finished };
 
-constexpr static const uint8_t unvisited = 0;
-constexpr static const uint8_t enfrontiered = 1;
-constexpr static const uint8_t enpqd = 2;
-constexpr static const uint8_t visited = 4;
-constexpr static const uint8_t finished = 8;
+// constexpr static const uint8_t unvisited = 0;
+constexpr static const uint8_t enfrontiered = 0;
+constexpr static const uint8_t enpqd = 1;
+constexpr static const uint8_t visited = 2;
+constexpr static const uint8_t evicted = 4;
+// constexpr static const uint8_t finished = 8;
 
 auto set_unvisited(uint8_t& state) {
-  state |= unvisited;
+  state = 0;
 }
 auto set_enfrontiered(uint8_t& state) {
   state |= enfrontiered;
@@ -318,12 +319,10 @@ auto set_enpqd(uint8_t& state) {
 auto set_visited(uint8_t& state) {
   state |= visited;
 }
-auto set_finished(uint8_t& state) {
-  state |= finished;
+auto set_evicted(uint8_t& state) {
+  state |= evicted;
 }
-auto clear_unvisited(uint8_t& state) {
-  state &= ~unvisited;
-}
+
 auto clear_enfrontiered(uint8_t& state) {
   state &= ~enfrontiered;
 }
@@ -333,11 +332,12 @@ auto clear_enpqd(uint8_t& state) {
 auto clear_visited(uint8_t& state) {
   state &= ~visited;
 }
-auto clear_finished(uint8_t& state) {
-  state &= ~finished;
+auto clear_evicted(uint8_t& state) {
+  state &= ~evicted;
 }
+
 bool is_unvisited(uint8_t state) {
-  return (state & unvisited) != 0;
+  return state == 0;
 }
 bool is_enfrontiered(uint8_t state) {
   return (state & enfrontiered) != 0;
@@ -348,8 +348,8 @@ bool is_enpqd(uint8_t state) {
 bool is_visited(uint8_t state) {
   return (state & visited) != 0;
 }
-bool is_finished(uint8_t state) {
-  return (state & finished) != 0;
+bool is_evicted(uint8_t state) {
+  return (state & evicted) != 0;
 }
 
 template <
@@ -384,7 +384,8 @@ auto best_first_O3(
   frontier.reserve(Lmax);
   score_type heuristic = distance(db[source], query);
   pq.insert(heuristic, source);
-  auto&& [source_iter, success] = vertex_state_map.emplace(std::make_pair(source, unvisited));
+  auto&& [source_iter, success] =
+      vertex_state_map.emplace(std::make_pair(source, 0));
   assert(success);
 
   set_enpqd(source_iter->second);
@@ -454,7 +455,7 @@ auto best_first_O3(
 
       if (neighbor_state_iter == vertex_state_map.end()) {
         auto [local_neighbor_state_iter, success] =
-            vertex_state_map.emplace(std::make_pair(neighbor_id, 0));
+            vertex_state_map.emplace(neighbor_id, 0);
         assert(success);
         neighbor_state_iter = local_neighbor_state_iter;
       } else {
@@ -466,27 +467,142 @@ auto best_first_O3(
 
       score_type heuristic = distance(db[neighbor_id], query);
 
-      //pq.template insert<unique_id>(heuristic, neighbor_id);
-      pq.insert(heuristic, neighbor_id);
+      // pq.template insert<unique_id>(heuristic, neighbor_id);
+      auto [inserted, evicted, evicted_score, evicted_id] =
+          pq.template evict_insert<unique_id>(heuristic, neighbor_id);
+      if (inserted) {
+        set_enpqd(neighbor_state_iter->second);
+        if (evicted) {
+          auto evicted_state_iter = vertex_state_map.find(evicted_id);
+          assert(evicted_state_iter != vertex_state_map.end());
+          set_evicted(evicted_state_iter->second);
+        }
+      } else {
+        set_evicted(neighbor_state_iter->second);
+      }
     }
+
+    // copy pq to frontier, minus any vertices that have been visited or evicted
     frontier.clear();
     for (size_t i = 0; i < size(pq); ++i) {
       auto id = std::get<1>(pq[i]);
       auto iter = vertex_state_map.find(id);
-      if (!is_visited(iter->second)) {
+      if (!is_visited(iter->second) && !is_evicted(iter->second)) {
         frontier.push_back(pq[i]);
+        set_enfrontiered(iter->second);
       }
     }
-    make_minmax_heap(
-        frontier.begin(), frontier.end(), [](auto&& a, auto&& b) {
-          return std::get<0>(a) < std::get<0>(b);
-        });
+    make_minmax_heap(frontier.begin(), frontier.end(), [](auto&& a, auto&& b) {
+      return std::get<0>(a) < std::get<0>(b);
+    });
 
     assert(size(frontier) <= size(pq));
     // vertex_state_map.erase(p_star);
 
-    set_finished(p_star_iter->second);
   }
+  auto top_k = std::vector<id_type>(k_nn);
+  auto top_k_scores = std::vector<score_type>(k_nn);
+
+  get_top_k_with_scores_from_heap(pq, top_k, top_k_scores);
+  return std::make_tuple(
+      std::move(top_k_scores), std::move(top_k), std::move(visited));
+}
+
+template <
+    class Graph,
+    feature_vector_array A,
+    feature_vector V,
+    class Distance = sum_of_squares_distance>
+auto best_first_O4(
+    const Graph& graph,
+    const A& db,
+    typename std::decay_t<Graph>::id_type source,
+    const V& query,
+    size_t k_nn,
+    size_t Lmax,
+    Distance&& distance = Distance{}) {
+  scoped_timer __{tdb_func__};
+
+  using id_type = typename std::decay_t<Graph>::id_type;
+  using score_type = float;
+  using node_type = std::tuple<score_type, id_type>;
+
+  auto pq = k_min_heap<score_type, id_type>{Lmax};
+
+  // The frontier to hold the next vertices to explore.  We will use it as a
+  // min-max heap.  It will never be larger than Lmax.
+  //  auto frontier = std::vector<node_type>();
+
+  // Don't actually need a frontier
+  // auto frontier = std::vector<node_type>{Lmax};
+
+  // Map to keep track of state of vertices
+  // Key is vertex id, value is state
+  // We don't use a map in O4, but instead tag the node ids
+  std::vector<uint8_t> vertex_state_property_map(
+      graph.num_vertices(), 0);
+
+  // Set to keep track of which vertices have been visited
+  // Will be returned from this function
+  std::unordered_set<id_type> visited;
+
+  score_type heuristic = distance(db[source], query);
+  pq.insert(heuristic, source);
+  set_enpqd(vertex_state_property_map[source]);
+
+  id_type p_star = source;
+  set_enfrontiered(vertex_state_property_map[p_star]);
+
+  do {
+    visited.insert(p_star);
+    set_visited(vertex_state_property_map[p_star]);
+
+    for (auto&& [_, neighbor_id] : graph[p_star]) {
+      auto debug_neighbor_id = neighbor_id;
+      auto neighbor_state = vertex_state_property_map[neighbor_id];
+      if (!is_unvisited(neighbor_state)) {
+        continue;
+      }
+      set_enpqd(vertex_state_property_map[neighbor_id]);
+
+      score_type heuristic = distance(db[neighbor_id], query);
+
+      auto [inserted, evicted, evicted_score, evicted_id] =
+          // pq.template evict_insert<unique_id>(heuristic, neighbor_id);
+          pq.evict_insert(heuristic, neighbor_id);
+      if (inserted) {
+        set_enpqd(vertex_state_property_map[neighbor_id]);
+        if (evicted) {
+          set_evicted(vertex_state_property_map[evicted_id]);
+          clear_enpqd(vertex_state_property_map[evicted_id]);
+        }
+      } else {
+        set_evicted(vertex_state_property_map[neighbor_id]);
+        clear_enpqd(vertex_state_property_map[neighbor_id]);
+      }
+    }
+    clear_enfrontiered(vertex_state_property_map[p_star]);
+    assert(is_visited(vertex_state_property_map[p_star]) &&
+           !is_evicted(vertex_state_property_map[p_star]) &&
+           !is_enfrontiered(vertex_state_property_map[p_star]));
+
+    p_star = std::numeric_limits<id_type>::max();
+    auto p_min_score = std::numeric_limits<score_type>::max();
+
+    for (auto&& [pq_score, pq_id] : pq) {
+      auto pq_state = vertex_state_property_map[pq_id];
+      assert(!is_evicted(pq_state));
+      assert(is_enpqd(pq_state));
+      if (!is_visited(pq_state)) {
+        if (pq_score < p_min_score) {
+          p_star = pq_id;
+          p_min_score = pq_score;
+        }
+      }
+    }
+    // set_finished(vertex_state_property_map[p_star]);
+  } while (p_star != std::numeric_limits<id_type>::max());
+
   auto top_k = std::vector<id_type>(k_nn);
   auto top_k_scores = std::vector<score_type>(k_nn);
 
