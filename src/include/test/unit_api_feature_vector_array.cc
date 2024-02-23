@@ -29,11 +29,17 @@
  *
  */
 
+#include <tiledb/tiledb>
+#include <type_traits>
+#include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
 #include "array_defs.h"
 #include "catch2/catch_all.hpp"
 #include "detail/ivf/qv.h"
 #include "query_common.h"
+#include "tdb_defs.h"
+#include "test/test_utils.h"
+#include "utils/utils.h"
 
 TEST_CASE("api_feature_vector_array: test test", "[api_feature_vector_array]") {
   REQUIRE(true);
@@ -206,6 +212,285 @@ TEST_CASE("api: query checks", "[api][index]") {
 
     auto qk = tdbColMajorMatrix<float>(ctx, sift_query_uri, num_queries);
     load(qk);
+
+    auto [ck_scores, ck_top_k] =
+        detail::flat::qv_query_heap(ck, qk, k_nn, nthreads);
+
+    auto gk =
+        tdbColMajorMatrix<test_groundtruth_type>(ctx, sift_groundtruth_uri);
+    load(gk);
+
+    auto ok = validate_top_k(ck_top_k, gk);
+    CHECK(ok);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// FeatureVectorArray with IDs tests
+// ----------------------------------------------------------------------------
+
+TEST_CASE("api: feature vector array with IDs open", "[api]") {
+  tiledb::Context ctx;
+
+  auto a = FeatureVectorArray(ctx, sift_inputs_uri, sift_ids_uri);
+  CHECK(a.feature_type() == TILEDB_FLOAT32);
+  CHECK(dimension(a) == 128);
+  CHECK(num_vectors(a) == num_sift_vectors);
+
+  auto b = FeatureVectorArray(ctx, bigann1M_inputs_uri, bigann1M_ids_uri);
+  CHECK(b.feature_type() == TILEDB_UINT8);
+  CHECK(dimension(b) == 128);
+  CHECK(num_vectors(b) == num_bigann1M_vectors);
+}
+
+TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
+  auto rows = 3;
+  auto cols = 7;
+
+  SECTION("copy constructor") {
+    using DataType = int;
+    using IdsType = float;
+
+    auto a = ColMajorMatrixWithIds<DataType, IdsType>(rows, cols);
+    std::iota(a.data(), a.data() + rows * cols, 0);
+    std::iota(a.ids().begin(), a.ids().end(), 0);
+    auto b = FeatureVectorArray(a);
+
+    CHECK(b.dimension() == rows);
+    CHECK(dimension(b) == rows);
+    CHECK(b.num_vectors() == cols);
+    CHECK(num_vectors(b) == cols);
+    CHECK(b.num_ids() == cols);
+    CHECK(num_ids(b) == cols);
+
+    auto feature_type = tiledb::impl::type_to_tiledb<DataType>::tiledb_type;
+    CHECK(b.feature_type() == feature_type);
+    CHECK(b.feature_type_string() == datatype_to_string(feature_type));
+    CHECK(b.feature_size() == datatype_to_size(feature_type));
+
+    auto ids_type = tiledb::impl::type_to_tiledb<IdsType>::tiledb_type;
+    CHECK(b.ids_type() == ids_type);
+    CHECK(b.ids_type_string() == datatype_to_string(ids_type));
+    CHECK(b.ids_size() == datatype_to_size(ids_type));
+
+    auto data = MatrixView<DataType, stdx::layout_left>{
+        (DataType*)b.data(), extents(b)[0], extents(b)[1]};
+    CHECK(data(0, 0) == 0);
+    CHECK(data(5, 0) == 5);
+
+    CHECK(b.ids_data() != nullptr);
+    auto ids = std::span<IdsType>((IdsType*)b.ids_data(), b.num_vectors());
+    CHECK(ids.size() == cols);
+    CHECK(ids[0] == 0);
+    CHECK(ids[5] == 5);
+  }
+  SECTION("move constructor") {
+    using DataType = float;
+    using IdsType = uint8_t;
+
+    auto a = ColMajorMatrixWithIds<DataType, IdsType>(rows, cols);
+    std::iota(a.data(), a.data() + rows * cols, 0);
+    std::iota(a.ids().begin(), a.ids().end(), 0);
+    auto b = FeatureVectorArray(std::move(a));
+
+    CHECK(b.dimension() == rows);
+    CHECK(dimension(b) == rows);
+    CHECK(b.num_vectors() == cols);
+    CHECK(num_vectors(b) == cols);
+    CHECK(b.num_ids() == cols);
+
+    auto feature_type = tiledb::impl::type_to_tiledb<DataType>::tiledb_type;
+    CHECK(b.feature_type() == feature_type);
+    CHECK(b.feature_type_string() == datatype_to_string(feature_type));
+    CHECK(b.feature_size() == datatype_to_size(feature_type));
+
+    auto ids_type = tiledb::impl::type_to_tiledb<IdsType>::tiledb_type;
+    CHECK(b.ids_type() == ids_type);
+    CHECK(b.ids_type_string() == datatype_to_string(ids_type));
+    CHECK(b.ids_size() == datatype_to_size(ids_type));
+
+    auto data = MatrixView<DataType, stdx::layout_left>{
+        (DataType*)b.data(), extents(b)[0], extents(b)[1]};
+    CHECK(data(0, 0) == 0);
+    CHECK(data(5, 0) == 5);
+
+    CHECK(b.ids_data() != nullptr);
+    auto ids = std::span<IdsType>((IdsType*)b.ids_data(), b.num_vectors());
+    CHECK(ids.size() == cols);
+    CHECK(ids[0] == 0);
+    CHECK(ids[5] == 5);
+  }
+}
+
+TEMPLATE_TEST_CASE(
+    "api: FeatureVectorArray with IDs feature_type",
+    "[api]",
+    int,
+    uint8_t,
+    uint32_t,
+    float,
+    uint64_t) {
+  using DataType = float;
+  using IdsType = TestType;
+  auto t = tiledb::impl::type_to_tiledb<DataType>::tiledb_type;
+  auto t_ids = tiledb::impl::type_to_tiledb<IdsType>::tiledb_type;
+
+  auto a = ColMajorMatrixWithIds<DataType, TestType>{3, 17};
+  auto b = FeatureVectorArray(a);
+  CHECK(b.feature_type() == t);
+  CHECK(b.feature_size() == sizeof(DataType));
+  CHECK(b.ids_type() == t_ids);
+  CHECK(b.ids_size() == sizeof(TestType));
+
+  auto c = FeatureVectorArray{ColMajorMatrixWithIds<DataType, TestType>{17, 3}};
+  CHECK(c.feature_type() == t);
+  CHECK(c.feature_size() == sizeof(DataType));
+  CHECK(c.ids_type() == t_ids);
+  CHECK(c.ids_size() == sizeof(TestType));
+
+  auto f = ColMajorMatrixWithIds<DataType, TestType>{3, 17};
+  auto d = FeatureVectorArray{std::move(f)};
+  CHECK(d.feature_type() == t);
+  CHECK(d.feature_size() == sizeof(DataType));
+  CHECK(d.ids_type() == t_ids);
+  CHECK(d.ids_size() == sizeof(TestType));
+
+  auto e = FeatureVectorArray{
+      std::move(ColMajorMatrixWithIds<DataType, TestType>{3, 9})};
+  CHECK(e.feature_type() == t);
+  CHECK(e.feature_size() == sizeof(DataType));
+  CHECK(e.ids_type() == t_ids);
+  CHECK(e.ids_size() == sizeof(TestType));
+
+  auto g = std::move(e);
+  CHECK(g.feature_type() == t);
+  CHECK(g.feature_size() == sizeof(DataType));
+  CHECK(g.ids_type() == t_ids);
+  CHECK(g.ids_size() == sizeof(TestType));
+}
+
+TEST_CASE("api: tdbMatrixWithIds constructors and destructors", "[api]") {
+  tiledb::Context ctx;
+
+  int offset = 13;
+  size_t rows = 3;
+  size_t cols = 7;
+  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+  std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
+
+  auto c = ColMajorMatrixWithIds<int, float>(rows, cols);
+  fill_and_write_matrix(
+      ctx, c, tmp_matrix_uri, tmp_ids_uri, rows, cols, offset);
+
+  auto a =
+      tdbColMajorMatrixWithIds<int, float>(ctx, tmp_matrix_uri, tmp_ids_uri);
+  a.load();
+  auto b = FeatureVectorArray(a);
+
+  auto d =
+      tdbColMajorMatrixWithIds<int, float>(ctx, tmp_matrix_uri, tmp_ids_uri);
+  d.load();
+  auto e = FeatureVectorArray(std::move(d));
+}
+
+TEMPLATE_TEST_CASE(
+    "api: tdb FeatureVectorArray with IDs feature_type",
+    "[api]",
+    uint32_t,
+    uint64_t) {
+  using DataType = float;
+  using IdsType = TestType;
+  auto t = tiledb::impl::type_to_tiledb<DataType>::tiledb_type;
+  auto t_ids = tiledb::impl::type_to_tiledb<IdsType>::tiledb_type;
+
+  tiledb::Context ctx;
+
+  int offset = 13;
+  size_t rows = 3;
+  size_t cols = 7;
+  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+  std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
+
+  auto cc = ColMajorMatrixWithIds<DataType, IdsType>(rows, cols);
+  fill_and_write_matrix(
+      ctx, cc, tmp_matrix_uri, tmp_ids_uri, rows, cols, offset);
+
+  {
+    auto a = tdbColMajorMatrixWithIds<DataType, TestType>{
+        ctx, tmp_matrix_uri, tmp_ids_uri};
+    auto b = FeatureVectorArray(a);
+    CHECK(b.feature_type() == t);
+    CHECK(b.feature_size() == sizeof(DataType));
+    CHECK(b.ids_type() == t_ids);
+    CHECK(b.ids_size() == sizeof(TestType));
+  }
+
+  {
+    auto c = FeatureVectorArray(tdbColMajorMatrixWithIds<DataType, IdsType>{
+        ctx, tmp_matrix_uri, tmp_ids_uri});
+    CHECK(c.feature_type() == t);
+    CHECK(c.feature_size() == sizeof(DataType));
+    CHECK(c.ids_type() == t_ids);
+    CHECK(c.ids_size() == sizeof(TestType));
+  }
+
+  {
+    auto f = tdbColMajorMatrixWithIds<DataType, IdsType>{
+        ctx, tmp_matrix_uri, tmp_ids_uri};
+    auto d = FeatureVectorArray{std::move(f)};
+    CHECK(d.feature_type() == t);
+    CHECK(d.feature_size() == sizeof(DataType));
+    CHECK(d.ids_type() == t_ids);
+    CHECK(d.ids_size() == sizeof(TestType));
+  }
+
+  {
+    auto e = FeatureVectorArray{
+        std::move(tdbColMajorMatrixWithIds<DataType, IdsType>{
+            ctx, tmp_matrix_uri, tmp_ids_uri})};
+    CHECK(e.feature_type() == t);
+    CHECK(e.feature_size() == sizeof(DataType));
+    CHECK(e.ids_type() == t_ids);
+    CHECK(e.ids_size() == sizeof(TestType));
+
+    auto g = std::move(e);
+    CHECK(g.feature_type() == t);
+    CHECK(g.feature_size() == sizeof(DataType));
+    CHECK(g.ids_type() == t_ids);
+    CHECK(g.ids_size() == sizeof(TestType));
+  }
+}
+
+TEST_CASE("api: query checks with IDs", "[api][index]") {
+  tiledb::Context ctx;
+  size_t k_nn = 10;
+  size_t nthreads = 8;
+  size_t num_queries = 50;
+
+  SECTION("simple check") {
+    auto z = FeatureVectorArray(ctx, sift_inputs_uri, sift_ids_uri);
+    auto nn = dimension(z);
+    auto nnn = num_vectors(z);
+    CHECK(dimension(z) == 128);
+    CHECK(z.dimension() == 128);
+    CHECK(num_vectors(z) == num_sift_vectors);
+    CHECK(z.num_vectors() == num_sift_vectors);
+    CHECK(num_ids(z) == num_sift_vectors);
+    CHECK(z.num_ids() == num_sift_vectors);
+  }
+
+  SECTION("tdbMatrixWithIds") {
+    auto ck =
+        tdbColMajorMatrixWithIds<float>(ctx, sift_inputs_uri, sift_ids_uri);
+    ck.load();
+    CHECK(num_ids(ck) == num_sift_vectors);
+    CHECK(ck.num_ids() == num_sift_vectors);
+
+    auto qk = tdbColMajorMatrixWithIds<float>(
+        ctx, sift_query_uri, sift_ids_uri, num_queries);
+    load(qk);
+    CHECK(num_ids(qk) == num_queries);
+    CHECK(qk.num_ids() == num_queries);
 
     auto [ck_scores, ck_top_k] =
         detail::flat::qv_query_heap(ck, qk, k_nn, nthreads);
