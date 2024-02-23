@@ -286,6 +286,7 @@ auto best_first_O2(
         break;
       }
     }
+    enfrontiered.erase(p_star);
   }
   auto top_k = std::vector<id_type>(k_nn);
   auto top_k_scores = std::vector<score_type>(k_nn);
@@ -335,20 +336,20 @@ auto clear_visited(uint8_t& state) {
 auto clear_finished(uint8_t& state) {
   state &= ~finished;
 }
-auto is_unvisited(uint8_t state) {
-  return state & unvisited;
+bool is_unvisited(uint8_t state) {
+  return (state & unvisited) != 0;
 }
-auto is_enfrontiered(uint8_t state) {
-  return state & enfrontiered;
+bool is_enfrontiered(uint8_t state) {
+  return (state & enfrontiered) != 0;
 }
-auto is_enpqd(uint8_t state) {
-  return state & enpqd;
+bool is_enpqd(uint8_t state) {
+  return (state & enpqd) != 0;
 }
-auto is_visited(uint8_t state) {
-  return state & visited;
+bool is_visited(uint8_t state) {
+  return (state & visited) != 0;
 }
-auto is_finished(uint8_t state) {
-  return state & finished;
+bool is_finished(uint8_t state) {
+  return (state & finished) != 0;
 }
 
 template <
@@ -374,24 +375,26 @@ auto best_first_O3(
   auto frontier = std::vector<node_type>();
 
   // Map to keep track of state of vertices
+  // Key is vertex id, value is state
   std::unordered_map<id_type, uint8_t> vertex_state_map;
+
+  // Set to keep track of which vertices have been visited
   std::unordered_set<id_type> visited;
 
   frontier.reserve(Lmax);
   score_type heuristic = distance(db[source], query);
   pq.insert(heuristic, source);
-  auto&& [source_iter, success] = vertex_state_map.emplace(std::make_pair(source, 0));
+  auto&& [source_iter, success] = vertex_state_map.emplace(std::make_pair(source, unvisited));
+  assert(success);
 
-  // enpqd.insert(source);
   set_enpqd(source_iter->second);
 
   frontier.emplace_back(heuristic, source);
   push_minmax_heap(frontier.begin(), frontier.end(), [](auto&& a, auto&& b) {
     return std::get<0>(a) < std::get<0>(b);
   });
-
-  // enfrontiered.insert(source);
   set_enfrontiered(source_iter->second);
+  set_enpqd(source_iter->second);
 
   while (!frontier.empty()) {
     assert(is_minmax_heap(
@@ -436,8 +439,6 @@ auto best_first_O3(
     frontier.pop_back();
     // auto p_star_iter = vertex_state_map.find(p_star);
 
-
-
     // enfrontiered.erase(p_star);
     visited.insert(p_star);
     clear_enfrontiered(p_star_iter->second);
@@ -452,7 +453,8 @@ auto best_first_O3(
       auto neighbor_state_iter = vertex_state_map.find(neighbor_id);
 
       if (neighbor_state_iter == vertex_state_map.end()) {
-        auto [local_neighbor_state_iter, success] = vertex_state_map.emplace(std::make_pair(neighbor_id, 0));
+        auto [local_neighbor_state_iter, success] =
+            vertex_state_map.emplace(std::make_pair(neighbor_id, 0));
         assert(success);
         neighbor_state_iter = local_neighbor_state_iter;
       } else {
@@ -462,69 +464,27 @@ auto best_first_O3(
       }
       auto debug_neighbor_state = neighbor_state_iter->second;
 
-
       score_type heuristic = distance(db[neighbor_id], query);
 
-      // Making the unique_id is a bit expensive -- may want to see if there
-      // is another way to do this
-      auto&& [inserted, evicted, evicted_score, evicted_id] =
-          pq.template evict_insert<unique_id>(heuristic, neighbor_id);
-
-      if (inserted) {
-        // enpqd.insert(neighbor_id);
-        set_enpqd(neighbor_state_iter->second);
-
-        frontier.push_back({heuristic, neighbor_id});
-        push_minmax_heap(
-            frontier.begin(), frontier.end(), [](auto&& a, auto&& b) {
-              return std::get<0>(a) < std::get<0>(b);
-            });
-        set_enfrontiered(neighbor_state_iter->second);
-
-        if (evicted) {
-          clear_enpqd(vertex_state_map[evicted_id]);
-          evicted_pq.push_back({evicted_score, evicted_id});
-          min_evicted_score = std::min(min_evicted_score, evicted_score);
-        }
-      } else {
-        evicted_pq.push_back({evicted_score, evicted_id});
-        min_evicted_score = std::min(min_evicted_score, evicted_score);
+      pq.template insert<unique_id>(heuristic, neighbor_id);
+    }
+    frontier.clear();
+    for (size_t i = 0; i < size(pq); ++i) {
+      auto id = std::get<1>(pq[i]);
+      auto iter = vertex_state_map.find(id);
+      if (!is_visited(iter->second)) {
+        frontier.push_back(pq[i]);
       }
     }
+    make_minmax_heap(
+        frontier.begin(), frontier.end(), [](auto&& a, auto&& b) {
+          return std::get<0>(a) < std::get<0>(b);
+        });
 
-    while (size(frontier) > 0) {
-      score_type score_3;
-      id_type id_3;
-      if (size(frontier) == 1) {
-        score_3 = std::get<0>(frontier.front());
-        id_3 = std::get<1>(frontier.front());
-      } else if (size(frontier) == 2) {
-        score_3 = std::get<0>(frontier[1]);
-        id_3 = std::get<1>(frontier[1]);
-      } else {
-        score_type score_1 = std::get<0>(frontier[1]);
-        score_type score_2 = std::get<0>(frontier[2]);
-        if (score_1 > score_2) {
-          score_3 = std::get<0>(frontier[1]);
-          id_3 = std::get<1>(frontier[1]);
-        } else {
-          score_3 = std::get<0>(frontier[2]);
-          id_3 = std::get<1>(frontier[2]);
-        }
-      }
-      if (score_3 < min_evicted_score) {
-        break;
-      }
+    assert(size(frontier) <= size(pq));
+    // vertex_state_map.erase(p_star);
 
-      if (is_enfrontiered(vertex_state_map[id_3])) {
-        pop_minmax_heap_max(frontier.begin(), frontier.end());
-        frontier.pop_back();
-        clear_enfrontiered(vertex_state_map[id_3]);
-      } else {
-        break;
-      }
-      vertex_state_map.erase(p_star);
-    }
+    set_finished(p_star_iter->second);
   }
   auto top_k = std::vector<id_type>(k_nn);
   auto top_k_scores = std::vector<score_type>(k_nn);
