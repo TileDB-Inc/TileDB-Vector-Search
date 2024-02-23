@@ -50,7 +50,7 @@
  */
 template <
     class T,
-    class IdsType = size_t,
+    class IdsType = uint64_t,
     class LayoutPolicy = stdx::layout_right,
     class I = size_t>
 class tdbBlockedMatrixWithIds
@@ -188,11 +188,12 @@ class tdbBlockedMatrixWithIds
 
     std::string attr_name = attr.name();
     tiledb_datatype_t attr_type = attr.type();
-    if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
+    if (attr_type != tiledb::impl::type_to_tiledb<IdsType>::tiledb_type) {
       throw std::runtime_error(
           "Attribute type mismatch with IDs: " + datatype_to_string(attr_type) +
           " != " +
-          datatype_to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
+          datatype_to_string(
+              tiledb::impl::type_to_tiledb<IdsType>::tiledb_type));
     }
 
     static const size_t dimension = 1;
@@ -208,9 +209,8 @@ class tdbBlockedMatrixWithIds
 
     // Create a subarray for the next block of columns
     tiledb::Subarray subarray(this->ctx_, *ids_array_);
-    subarray.add_range(0, 0, (int)dimension - 1);
     subarray.add_range(
-        1, (int)this->first_resident_col_, (int)this->last_resident_col_ - 1);
+        0, (int)this->first_resident_col_, (int)this->last_resident_col_ - 1);
 
     auto layout_order = ids_schema_.cell_order();
     this->ids().resize(elements_to_load * dimension);
@@ -234,28 +234,28 @@ class tdbBlockedMatrixWithIds
 /**
  * Convenience class for row-major blocked matrices.
  */
-template <class T, class IdsType = size_t, class I = size_t>
+template <class T, class IdsType = uint64_t, class I = size_t>
 using tdbRowMajorBlockedMatrixWithIds =
     tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major blocked matrices.
  */
-template <class T, class IdsType = size_t, class I = size_t>
+template <class T, class IdsType = uint64_t, class I = size_t>
 using tdbColMajorBlockedMatrixWithIds =
     tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_left, I>;
 
 /**
  * Convenience class for row-major matrices.
  */
-template <class T, class IdsType = size_t, class I = size_t>
+template <class T, class IdsType = uint64_t, class I = size_t>
 using tdbRowMajorMatrixWithIds =
     tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.
  */
-template <class T, class IdsType = size_t, class I = size_t>
+template <class T, class IdsType = uint64_t, class I = size_t>
 using tdbColMajorMatrixWithIds =
     tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_left, I>;
 
@@ -264,7 +264,7 @@ using tdbColMajorMatrixWithIds =
  */
 template <
     class T,
-    class IdsType = size_t,
+    class IdsType = uint64_t,
     class LayoutPolicy = stdx::layout_right,
     class I = size_t>
 using tdbMatrixWithIds = tdbBlockedMatrixWithIds<T, IdsType, LayoutPolicy, I>;
