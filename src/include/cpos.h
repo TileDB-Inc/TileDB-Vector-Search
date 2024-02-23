@@ -69,7 +69,6 @@ concept col_major = std::
 
 template <class T>
 concept _member_ids = requires(T t) {
-  //  { t.ids() };
   { t.num_ids() };
 };
 
@@ -252,7 +251,6 @@ struct _fn {
   template <class T>
     requires(_member_ids<T>)
   constexpr auto operator()(T&& t) const noexcept {
-    //    return t.ids().size();
     return t.num_ids();
   }
 
@@ -271,14 +269,9 @@ inline constexpr auto num_ids = _num_ids::_fn{};
 // ids CPO
 // @todo Figure out what is wrong with const
 // ----------------------------------------------------------------------------
-namespace _ids_data {
-void ids_data(auto&) = delete;
-void ids_data(const auto&) = delete;
-
-// template <class T>
-// concept _member_ids = requires(T t) {
-//   { t.ids() };
-// };
+namespace _ids {
+void ids(auto&) = delete;
+void ids(const auto&) = delete;
 
 struct _fn {
   template <class T>
@@ -286,24 +279,16 @@ struct _fn {
   constexpr const auto& operator()(T&& t) const noexcept {
     return t.ids();
   }
-//  constexpr const void* operator()(T&& t) const noexcept {
-//    return static_cast<const void*>(t.ids().data());
-//  }
 
-//  template <class T>
-//    requires(!_member_ids<T>)
-//  constexpr void* operator()(T&& t) const noexcept {
-//    return nullptr;
-//  }
   template <class T>
     requires(!_member_ids<T>)
-  constexpr const auto &operator()(T&& t) const noexcept {
+  constexpr const auto& operator()(T&& t) const noexcept {
     return std::vector<typename std::remove_cvref_t<T>::value_type>{};
   }
 };
-}  // namespace _ids_data
+}  // namespace _ids
 inline namespace _cpo {
-inline constexpr auto ids_data = _ids_data::_fn{};
+inline constexpr auto ids = _ids::_fn{};
 }  // namespace _cpo
 
 // ----------------------------------------------------------------------------

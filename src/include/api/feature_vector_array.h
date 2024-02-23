@@ -251,37 +251,9 @@ class FeatureVectorArray {
     [[nodiscard]] size_t num_ids() const override {
       return _cpo::num_ids(impl_vector_array);
     }
-    //    requires(feature_vector_array_with_ids<T>)
     [[nodiscard]] const void* ids_data() const override {
-//       return _cpo::ids_data(impl_vector_array);
-      return _cpo::ids_data(impl_vector_array).data();
+      return _cpo::ids(impl_vector_array).data();
     }
-    // NOTE(paris): This is from when I tried to have it be _cpo::ids() an then
-    // we do `return _cpo::ids().data();`: In file included from
-    // /Users/parismorgan/repo/TileDB-Vector-Search-3/src/include/test/unit_api_feature_vector_array.cc:32:
-    /// Users/parismorgan/repo/TileDB-Vector-Search-3/src/include/api/feature_vector_array.h:277:14:
-    /// error: cannot initialize return object of type 'void *' with an rvalue
-    /// of type 'const value_type *' (aka 'const unsigned int *')
-    //      return _cpo::ids_data(impl_vector_array);
-    //             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    //      return _cpo::ids_data(impl_vector_array);
-
-    //      return static_cast<void*>(_cpo::ids_data(impl_vector_array));
-    //      /Users/parismorgan/repo/TileDB-Vector-Search-3/src/include/api/feature_vector_array.h:272:14:
-    //      error: static_cast from 'const value_type *' (aka 'const unsigned
-    //      int *') to 'void *' is not allowed
-    //                                                                                                                                      return static_cast<void*>(_cpo::ids_data(impl_vector_array));
-    //      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    // In file included from
-    // /Users/parismorgan/repo/TileDB-Vector-Search-3/src/include/test/unit_api_feature_vector_array.cc:32:
-    /// Users/parismorgan/repo/TileDB-Vector-Search-3/src/include/api/feature_vector_array.h:283:16:
-    /// error: reinterpret_cast from 'std::nullptr_t' to 'void *' is not allowed
-    //        return reinterpret_cast<void*>(_cpo::ids_data(impl_vector_array));
-    //               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    //        return reinterpret_cast<void*>(_cpo::ids_data(impl_vector_array));
-    //      return impl_vector_array.ids().data();
-
     [[nodiscard]] size_t dimension() const override {
       return _cpo::dimension(impl_vector_array);
     }
