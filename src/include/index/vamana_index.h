@@ -48,6 +48,7 @@
 #include "detail/graph/best_first.h"
 #include "detail/graph/bfs.h"
 #include "detail/graph/dfs.h"
+#include "detail/graph/diskann.h"
 #include "detail/graph/graph_utils.h"
 #include "detail/graph/greedy_search.h"
 #include "index/vamana_group.h"
@@ -271,6 +272,14 @@ class vamana_index {
     }
   }
 
+  vamana_index(
+      const std::string& diskann_index,
+      const std::string& diskann_data) {
+    feature_vectors_ = read_diskann_data(diskann_data);
+    size_t num_nodes = num_vectors(feature_vectors_);
+    graph_ = read_diskann_mem_index_with_scores(diskann_index, diskann_data, num_nodes);
+  }
+
   /**
    * @brief Build a vamana graph index.  This is algorithm is from the Filtered
    * Fresh DiskAnn paper -- which is a different training process than the
@@ -323,14 +332,15 @@ class vamana_index {
         ++counter;
 
         // Do not need top_k or top_k scores here -- use path_only enum
-        auto&& [top_k_scores, top_k, visited] = ::best_first_O4/*greedy_search*/(
-            graph_,
-            feature_vectors_,
-            medoid_,
-            feature_vectors_[p],
-            1,
-            L_build_,
-            sum_of_squares_distance{});
+        auto&& [top_k_scores, top_k, visited] =
+            ::best_first_O4 /*greedy_search*/ (
+                graph_,
+                feature_vectors_,
+                medoid_,
+                feature_vectors_[p],
+                1,
+                L_build_,
+                sum_of_squares_distance{});
         total_visited += visited.size();
 
         robust_prune(
@@ -439,12 +449,13 @@ class vamana_index {
   }
 
   template <query_vector_array Q>
-  auto best_first_O2(const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
-
+  auto best_first_O2(
+      const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
     size_t Lbuild = opt_L ? *opt_L : L_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
-    auto top_k_scores = ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
+    auto top_k_scores =
+        ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
 
     for (size_t i = 0; i < num_vectors(queries); ++i) {
       auto&& [tk_scores, tk, V] = ::best_first_O2(
@@ -455,7 +466,8 @@ class vamana_index {
           k_nn,
           Lbuild,
           sum_of_squares_distance{});
-      std::copy(tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
+      std::copy(
+          tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
       num_visited_vertices_ += V.size();
     }
@@ -464,12 +476,13 @@ class vamana_index {
   }
 
   template <query_vector_array Q>
-  auto best_first_O3(const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
-
+  auto best_first_O3(
+      const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
     size_t Lbuild = opt_L ? *opt_L : L_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
-    auto top_k_scores = ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
+    auto top_k_scores =
+        ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
 
     for (size_t i = 0; i < num_vectors(queries); ++i) {
       auto&& [tk_scores, tk, V] = ::best_first_O3(
@@ -480,7 +493,8 @@ class vamana_index {
           k_nn,
           Lbuild,
           sum_of_squares_distance{});
-      std::copy(tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
+      std::copy(
+          tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
       num_visited_vertices_ += V.size();
     }
@@ -489,12 +503,13 @@ class vamana_index {
   }
 
   template <query_vector_array Q>
-  auto best_first_O4(const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
-
+  auto best_first_O4(
+      const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
     size_t Lbuild = opt_L ? *opt_L : L_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
-    auto top_k_scores = ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
+    auto top_k_scores =
+        ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
 
     for (size_t i = 0; i < num_vectors(queries); ++i) {
       auto&& [tk_scores, tk, V] = ::best_first_O4(
@@ -505,7 +520,8 @@ class vamana_index {
           k_nn,
           Lbuild,
           sum_of_squares_distance{});
-      std::copy(tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
+      std::copy(
+          tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
       num_visited_vertices_ += V.size();
     }

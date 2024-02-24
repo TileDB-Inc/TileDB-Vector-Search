@@ -837,7 +837,6 @@ TEST_CASE("vamana: fmnist", "[vamana]") {
   }
 }
 
-
 TEST_CASE("vamana: fmnist compare greedy search", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
@@ -873,8 +872,10 @@ TEST_CASE("vamana: fmnist compare greedy search", "[vamana]") {
       detail::flat::qv_query_heap(db, query_mat, k_nn, 1);
   std::sort(begin(qv_top_k[0]), end(qv_top_k[0]));
 
-  auto&& [top_k_scores_O0, top_k_O0, V_O0] = greedy_search_O0(g, db, 0UL, query, k_nn, L);
-  auto&& [top_k_scores_O1, top_k_O1, V_O1] = greedy_search_O1(g, db, 0UL, query, k_nn, L);
+  auto&& [top_k_scores_O0, top_k_O0, V_O0] =
+      greedy_search_O0(g, db, 0UL, query, k_nn, L);
+  auto&& [top_k_scores_O1, top_k_O1, V_O1] =
+      greedy_search_O1(g, db, 0UL, query, k_nn, L);
 
   CHECK(top_k_scores_O0 == top_k_scores_O1);
   CHECK(top_k_O0 == top_k_O1);
@@ -890,11 +891,11 @@ TEST_CASE("vamana: fmnist compare greedy search", "[vamana]") {
   auto num_intersected_O1 = count_intersections(top_n_O1, qv_top_k, k_nn);
   CHECK(num_intersected_O0 == num_intersected_O1);
   if (debug) {
-    std::cout << "num intersected_O0: " << num_intersected_O0 << " / " << L << std::endl;
-    std::cout << "num intersected_O1: " << num_intersected_O1 << " / " << L << std::endl;
+    std::cout << "num intersected_O0: " << num_intersected_O0 << " / " << L
+              << std::endl;
+    std::cout << "num intersected_O1: " << num_intersected_O1 << " / " << L
+              << std::endl;
   }
-
-
 }
 
 TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
@@ -1367,4 +1368,43 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   CHECK(idx.compare_feature_vectors(idx2));
   CHECK(idx.compare_adj_scores(idx2));
   CHECK(idx.compare_adj_ids(idx2));
+}
+
+TEST_CASE("vamana: vamana_index read from diskann memory index", "[vamana]") {
+  // Hard code paths temporarily until we canonicalize them
+
+  const std::string data_path =
+      "/Users/lums/TileDB/TileDB-Vector-Search/external/test_data/bins/"
+      "siftsmall/siftsmall_base.fbin";
+  const std::string index_path =
+      "/Users/lums/TileDB/TileDB-Vector-Search/external/test_data/bins/"
+      "siftsmall/index_siftsmall_learn_R64_L100_A1.2";
+
+  SECTION("open") {
+    auto idx = vamana_index<float, uint64_t>(index_path, data_path);
+    int i = 0;
+  }
+  SECTION("open and query") {
+    tiledb::Context ctx;
+    size_t num_queries = 10;
+    size_t k_nn = 10;
+    auto idx = vamana_index<float, uint64_t>(index_path, data_path);
+    auto queries =
+        tdbColMajorMatrix<float>(ctx, siftsmall_query_uri, num_queries);
+    queries.load();
+    auto&& [mat_scores, mat_top_k] = idx.query(queries, k_nn, std::make_optional(k_nn));
+
+    auto training_set =
+        tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, idx.ntotal());
+    training_set.load();
+
+    auto&& [qv_scores, qv_top_k] =
+        detail::flat::qv_query_heap(training_set, queries, k_nn, 4);
+
+    size_t total_intersected = count_intersections(mat_top_k, qv_top_k, k_nn);
+
+    auto recall =
+        ((double)total_intersected) / ((double)k_nn * num_vectors(queries));
+    CHECK(recall > 0.80);  // @todo -- had been 0.95?
+  }
 }
