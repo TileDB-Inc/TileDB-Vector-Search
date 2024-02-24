@@ -273,8 +273,8 @@ class vamana_index {
   }
 
   vamana_index(
-      const std::string& diskann_index,
-      const std::string& diskann_data) {
+      const std::string& diskann_index) {
+    const std::string diskann_data = diskann_index + ".data";
     feature_vectors_ = read_diskann_data(diskann_data);
     size_t num_nodes = num_vectors(feature_vectors_);
     graph_ = read_diskann_mem_index_with_scores(diskann_index, diskann_data, num_nodes);

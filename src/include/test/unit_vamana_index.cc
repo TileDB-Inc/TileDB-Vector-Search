@@ -1373,22 +1373,19 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
 TEST_CASE("vamana: vamana_index read from diskann memory index", "[vamana]") {
   // Hard code paths temporarily until we canonicalize them
 
-  const std::string data_path =
-      "/Users/lums/TileDB/TileDB-Vector-Search/external/test_data/bins/"
-      "siftsmall/siftsmall_base.fbin";
   const std::string index_path =
       "/Users/lums/TileDB/TileDB-Vector-Search/external/test_data/bins/"
       "siftsmall/index_siftsmall_learn_R64_L100_A1.2";
 
   SECTION("open") {
-    auto idx = vamana_index<float, uint64_t>(index_path, data_path);
+    auto idx = vamana_index<float, uint64_t>(index_path);
     int i = 0;
   }
   SECTION("open and query") {
     tiledb::Context ctx;
     size_t num_queries = 10;
     size_t k_nn = 10;
-    auto idx = vamana_index<float, uint64_t>(index_path, data_path);
+    auto idx = vamana_index<float, uint64_t>(index_path);
     auto queries =
         tdbColMajorMatrix<float>(ctx, siftsmall_query_uri, num_queries);
     queries.load();

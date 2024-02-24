@@ -58,6 +58,7 @@ static constexpr const char USAGE[] =
              [--Lbuild NN] [--nqueries NN] [--k NN]
              [--nthreads NN] [--validate] [--log FILE] [--stats] [-d] [-v] [--dump NN]
              [--bfs | --dfs | --best_first | --greedy] [--O0 | --O1 | --O2 | --O3 | --O4]
+             [--diskann]
 
   Options:
       -h, --help              show this screen
@@ -83,6 +84,7 @@ static constexpr const char USAGE[] =
       --O2                    run the "O2" version of the algorithm (default)
       --O3                    run the "O3" version of the algorithm
       --O4                    run the "O4" version of the algorithm
+      --diskann               read diskann index
 )";
 
 int main(int argc, char* argv[]) {
@@ -105,15 +107,75 @@ int main(int argc, char* argv[]) {
   size_t nqueries = args["--nqueries"].asLong();
   size_t nthreads = args["--nthreads"].asLong();
 
+  auto Lbuild = args["--Lbuild"] ?
+                    std::optional<size_t>(args["--Lbuild"].asLong()) :
+                    std::nullopt;
+
+  tiledb::Context ctx;
+
+  auto compute_recall = [&](auto&& top_k, auto&& args) {
+    auto groundtruth_uri = args["--groundtruth_uri"].asString();
+
+    auto groundtruth =
+        tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
+    groundtruth.load();
+
+    if (debug) {
+      std::cout << std::endl;
+
+      debug_matrix(groundtruth, "groundtruth");
+      debug_slice(groundtruth, "groundtruth");
+
+      std::cout << std::endl;
+      debug_matrix(top_k, "top_k");
+      debug_slice(top_k, "top_k");
+
+      std::cout << std::endl;
+    }
+
+    size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
+
+    size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
+
+    float recall = ((float)total_intersected) / ((float)total_groundtruth);
+    // std::cout << "# total intersected = " << total_intersected << " of "
+    //           << total_groundtruth << " = "
+    //           << "R@" << k_nn << " of " << recall << std::endl;
+    return recall;
+  };
+
+  if (args["--diskann"].asBool()) {
+    auto idx = vamana_index<float, uint64_t>(index_uri);
+    auto queries = tdbColMajorMatrix<float>(ctx, query_uri, nqueries);
+    queries.load();
+    // auto&& [top_k_scores, top_k] = idx.query(queries, k_nn, Lbuild);
+    auto&& [top_k_scores, top_k] = idx.best_first_O4(queries, k_nn, Lbuild);
+
+// print_types(top_k);
+    double recall = 0.0;
+    if (args["--groundtruth_uri"]) {
+      recall = compute_recall(top_k, args);
+    }
+    if (args["--log"]) {
+      idx.log_index();
+      dump_logs(
+          args["--log"].asString(),
+          "vamana",
+          nqueries,
+          {},
+          k_nn,
+          nthreads,
+          recall);
+    }
+  }
+
   auto run_query = [&]<class feature_type, class id_type>() {
-    tiledb::Context ctx;
     auto idx = vamana_index<feature_type, id_type>(ctx, index_uri);
+
     auto queries = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
     queries.load();
 
-    auto Lbuild = args["--Lbuild"] ?
-                      std::optional<size_t>(args["--Lbuild"].asLong()) :
-                      std::nullopt;
+
 
     const std::string alg = [&]() {
       if (args["--bfs"].asBool()) {
@@ -142,7 +204,8 @@ int main(int argc, char* argv[]) {
 
     auto query_time = log_timer("query time", true);
 
-    auto&& [top_k_scores, top_k] = [&](const std::string& alg, const std::string& opt) {
+    auto&& [top_k_scores, top_k] = [&](const std::string& alg,
+                                       const std::string& opt) {
       if (alg == "best_first") {
         if (opt == "O2") {
           return idx.best_first_O2(queries, k_nn, Lbuild);
@@ -154,53 +217,35 @@ int main(int argc, char* argv[]) {
       } else if (alg == "greedy") {
         return idx.query(queries, k_nn, Lbuild);
       } else {
-        throw std::runtime_error("Unsupported algorithm " + alg + " with option " + opt);
+        throw std::runtime_error(
+            "Unsupported algorithm " + alg + " with option " + opt);
       }
-    } (alg, opt);
+    }(alg, opt);
 
     query_time.stop();
 
+// print_types(top_k);
+
+    double recall = 0.0;
     if (args["--groundtruth_uri"]) {
-      auto groundtruth_uri = args["--groundtruth_uri"].asString();
-
-      auto groundtruth =
-          tdbColMajorMatrix<groundtruth_type>(ctx, groundtruth_uri, nqueries);
-      groundtruth.load();
-
-      if (debug) {
-        std::cout << std::endl;
-
-        debug_matrix(groundtruth, "groundtruth");
-        debug_slice(groundtruth, "groundtruth");
-
-        std::cout << std::endl;
-        debug_matrix(top_k, "top_k");
-        debug_slice(top_k, "top_k");
-
-        std::cout << std::endl;
-      }
-
-      size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
-      size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
-
-      float recall = ((float)total_intersected) / ((float)total_groundtruth);
-      // std::cout << "# total intersected = " << total_intersected << " of "
-      //           << total_groundtruth << " = "
-      //           << "R@" << k_nn << " of " << recall << std::endl;
-
-      if (args["--log"]) {
-        idx.log_index();
-        dump_logs(
-            args["--log"].asString(),
-            "vamana",
-            nqueries,
-            {},
-            k_nn,
-            nthreads,
-            recall);
-      }
+      recall = compute_recall(top_k, args);
     }
+    if (args["--log"]) {
+      idx.log_index();
+      dump_logs(
+          args["--log"].asString(),
+          "vamana",
+          nqueries,
+          {},
+          k_nn,
+          nthreads,
+          recall);
+    }
+
   };
+
+
+
   auto feature_type = args["--ftype"].asString();
   auto id_type = args["--idtype"].asString();
 
@@ -226,4 +271,6 @@ int main(int argc, char* argv[]) {
     std::cout << " and/or unsupported id_type " << id_type << std::endl;
     return 1;
   }
+
+
 }
