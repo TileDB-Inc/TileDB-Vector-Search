@@ -106,7 +106,8 @@ void fill_and_write_matrix(
   }
   std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
   std::iota(X.ids().begin(), X.ids().end(), offset);
-  // Write the vectors to the URI.
+
+  // Write the vectors to their URI.
   write_matrix(ctx, X, uri);
 
   // Write the IDs to their URI.
