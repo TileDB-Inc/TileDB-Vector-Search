@@ -611,4 +611,125 @@ auto best_first_O4(
       std::move(top_k_scores), std::move(top_k), std::move(visited));
 }
 
+
+template <
+    class Graph,
+    feature_vector_array A,
+    feature_vector V,
+    class Distance = sum_of_squares_distance>
+auto best_first_O5(
+    const Graph& graph,
+    const A& db,
+    typename std::decay_t<Graph>::id_type source,
+    const V& query,
+    size_t k_nn,
+    size_t Lmax,
+    Distance&& distance = Distance{}) {
+  scoped_timer __{tdb_func__};
+
+  using id_type = typename std::decay_t<Graph>::id_type;
+  using score_type = float;
+  using node_type = std::tuple<score_type, id_type>;
+
+  auto pq = k_min_heap<score_type, id_type>{Lmax};
+
+  // Map to keep track of state of vertices
+  // Key is vertex id, value is state
+  std::unordered_map<id_type, uint8_t> vertex_state_map;
+
+  // Set to keep track of which vertices have been visited
+  std::unordered_set<id_type> visited;
+
+  score_type heuristic = distance(db[source], query);
+  pq.insert(heuristic, source);
+  auto&& [source_iter, success] =
+      vertex_state_map.emplace(std::make_pair(source, 0));
+  assert(success);
+
+  set_enpqd(source_iter->second);
+
+  auto p_star = source;
+  set_enfrontiered(vertex_state_map[p_star]);
+  do {
+    visited.insert(p_star);
+
+    auto p_star_iter = vertex_state_map.find(p_star);
+    assert(p_star_iter != vertex_state_map.end());
+    clear_enfrontiered(p_star_iter->second);
+    set_visited(p_star_iter->second);
+
+    for (auto&& [_, neighbor_id] : graph[p_star]) {
+      auto neighbor_state_iter = vertex_state_map.find(neighbor_id);
+
+      if (neighbor_state_iter == vertex_state_map.end()) {
+        auto [local_neighbor_state_iter, success] =
+            vertex_state_map.emplace(neighbor_id, 0);
+        assert(success);
+        neighbor_state_iter = local_neighbor_state_iter;
+      } else {
+        if (!is_unvisited(neighbor_state_iter->second)) {
+          continue;
+        }
+      }
+      auto debug_neighbor_state = neighbor_state_iter->second;
+
+      score_type heuristic = distance(db[neighbor_id], query);
+
+      // pq.template insert<unique_id>(heuristic, neighbor_id);
+      auto [inserted, evicted, evicted_score, evicted_id] =
+          pq.template evict_insert<unique_id>(heuristic, neighbor_id);
+      if (inserted) {
+        set_enpqd(neighbor_state_iter->second);
+        if (evicted) {
+          auto evicted_state_iter = vertex_state_map.find(evicted_id);
+          assert(evicted_state_iter != vertex_state_map.end());
+          set_evicted(evicted_state_iter->second);
+        }
+      } else {
+        set_evicted(neighbor_state_iter->second);
+      }
+    }
+
+    p_star = std::numeric_limits<id_type>::max();
+    auto p_min_score = std::numeric_limits<score_type>::max();
+
+    for (auto&& [pq_score, pq_id] : pq) {
+      auto pq_state_iter = vertex_state_map.find(pq_id);
+      assert(!is_evicted(pq_state_iter->second));
+      assert(is_enpqd(pq_state_iter->second));
+      if (!is_visited(pq_state_iter->second)) {
+        if (pq_score < p_min_score) {
+          p_star = pq_id;
+          p_min_score = pq_score;
+        }
+      }
+    }
+
+  } while(p_star != std::numeric_limits<id_type>::max());
+
+  auto top_k = std::vector<id_type>(k_nn);
+  auto top_k_scores = std::vector<score_type>(k_nn);
+
+  get_top_k_with_scores_from_heap(pq, top_k, top_k_scores);
+  return std::make_tuple(
+      std::move(top_k_scores), std::move(top_k), std::move(visited));
+}
+
+/*
+ * The main bottlenecks (per vtune) are:
+ *   - Keeping vertex state
+ *   - Maintaining list of nearest neighbors (pq, aka Ell)
+ *
+ * Other things to try:
+ *   - Profile with vtune to find actual bottlenecks
+ *   - Use AVX2 instructions to compute distances (use compiler to generate
+ f *     rather than trying to use intrinsics)
+ *   - Use a k_min_max_heap for pq so that min is easily found and max can be
+ *     easily evicted when inserting
+ *   - Use a vector for pq, emplace_back nodes as we go along and then use
+ *     std::nth_element to limit size to Lmax, marking the vertexes past Lmax
+ *     as evicted
+ */
+
+
 #endif  // TILEDB_BEST_FIRST_H

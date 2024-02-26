@@ -57,7 +57,7 @@ static constexpr const char USAGE[] =
       vamana --index_uri URI --query_uri URI [--ftype TYPE] [--idtype TYPE] [--groundtruth_uri URI]
              [--Lbuild NN] [--nqueries NN] [--k NN]
              [--nthreads NN] [--validate] [--log FILE] [--stats] [-d] [-v] [--dump NN]
-             [--bfs | --dfs | --best_first | --greedy] [--O0 | --O1 | --O2 | --O3 | --O4]
+             [--bfs | --dfs | --best_first | --greedy] [--O0 | --O1 | --O2 | --O3 | --O4 | --O5 | --O6]
              [--diskann]
 
   Options:
@@ -81,9 +81,11 @@ static constexpr const char USAGE[] =
       -v, --verbose           run in verbose mode [default: false]
       --O0                    run naive version of algorithm
       --O1                    run the "O1" version of the algorithm
-      --O2                    run the "O2" version of the algorithm (default)
+      --O2                    run the "O2" version of the algorithm
       --O3                    run the "O3" version of the algorithm
-      --O4                    run the "O4" version of the algorithm
+      --O4                    run the "O4" version of the algorithm (default)
+      --O5                    run the "O5" version of the algorithm
+      --O6                    run the "O6" version of the algorithm
       --diskann               read diskann index
 )";
 
@@ -198,8 +200,10 @@ int main(int argc, char* argv[]) {
         return "O3";
       } else if (args["--O4"].asBool()) {
         return "O4";
+      } else if (args["--O5"].asBool()) {
+        return "O5";
       }
-      return "O3";
+      return "O4";
     }();
 
     auto query_time = log_timer("query time", true);
@@ -213,6 +217,8 @@ int main(int argc, char* argv[]) {
           return idx.best_first_O3(queries, k_nn, Lbuild);
         } else if (opt == "O4") {
           return idx.best_first_O4(queries, k_nn, Lbuild);
+        } else if (opt == "O5") {
+          return idx.best_first_O5(queries, k_nn, Lbuild);
         }
       } else if (alg == "greedy") {
         return idx.query(queries, k_nn, Lbuild);
