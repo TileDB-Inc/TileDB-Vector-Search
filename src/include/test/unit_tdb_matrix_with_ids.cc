@@ -33,6 +33,7 @@
 #include "detail/linalg/matrix_with_ids.h"
 #include "detail/linalg/tdb_io.h"
 #include "detail/linalg/tdb_matrix_with_ids.h"
+#include "test/array_defs.h"
 #include "test/test_utils.h"
 
 TEST_CASE("tdb_matrix_with_ids: test test", "[tdb_matrix_with_ids]") {
@@ -103,7 +104,10 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "tdb_matrix: assign to matrix", "[tdb_matrix_with_ids]", float, uint8_t) {
+    "tdb_matrix_with_ids: assign to matrix",
+    "[tdb_matrix_with_ids]",
+    float,
+    uint8_t) {
   tiledb::Context ctx;
   std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
   std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
@@ -117,7 +121,6 @@ TEMPLATE_TEST_CASE(
   CHECK(X.ids()[0] == offset + 0);
   CHECK(X.ids()[1] == offset + 1);
   CHECK(X.ids()[10] == offset + 10);
-  CHECK(size(X.ids()) == Ncols);
   CHECK(size(X.ids()) == Ncols);
 
   auto B = ColMajorMatrixWithIds<TestType, TestType, size_t>(0, 0);
@@ -179,4 +182,18 @@ TEMPLATE_TEST_CASE(
       CHECK(X(i, j) == B(i, j));
     }
   }
+}
+
+TEST_CASE("tdb_matrix_with_ids: load from uri", "[tdb_matrix_with_ids]") {
+  tiledb::Context ctx;
+
+  auto ck = tdbColMajorMatrixWithIds<float>(ctx, sift_inputs_uri, sift_ids_uri);
+  ck.load();
+  CHECK(ck.num_ids() == num_sift_vectors);
+
+  auto num_queries = 10;
+  auto qk = tdbColMajorMatrixWithIds<float>(
+      ctx, sift_query_uri, sift_ids_uri, num_queries);
+  load(qk);
+  CHECK(qk.num_ids() == num_queries);
 }
