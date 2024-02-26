@@ -68,7 +68,7 @@ TEST_CASE("ivf_flat_group: read a tiledb::Group", "[ivf_flat_group]") {
 TEST_CASE("ivf_flat_group: create tiledb::Group", "[ivf_flat_group]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
-  std::string tmp_uri = "/tmp/ivf_flat_group_test_groups";
+  std::string tmp_uri = (std::filesystem::temp_directory_path() / "ivf_flat_group_test_groups").string();
 
   tiledb::VFS vfs(ctx);
   if (vfs.is_dir(tmp_uri))
@@ -143,7 +143,10 @@ TEST_CASE(
 #endif
 
 TEST_CASE("ivf_flat_group: write constructor - create", "[ivf_flat_group]") {
-  std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
+  std::string tmp_uri =
+      (std::filesystem::temp_directory_path() / "ivf_flat_group_test_write_constructor")
+          .string();
+
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -159,7 +162,9 @@ TEST_CASE("ivf_flat_group: write constructor - create", "[ivf_flat_group]") {
 TEST_CASE(
     "ivf_flat_group: write constructor - create and open", "[ivf_flat_group]") {
   bool debug = false;
-  std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
+  std::string tmp_uri = (std::filesystem::temp_directory_path() /
+                         "ivf_flat_group_test_write_constructor")
+                            .string();
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -179,7 +184,9 @@ TEST_CASE(
 TEST_CASE(
     "ivf_flat_group: write constructor - create and read", "[ivf_flat_group]") {
   bool debug = false;
-  std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
+  std::string tmp_uri = (std::filesystem::temp_directory_path() /
+                         "ivf_flat_group_test_write_constructor")
+                            .string();
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -200,7 +207,9 @@ TEST_CASE(
     "ivf_flat_group: write constructor - create, write, and read",
     "[ivf_flat_group]") {
   bool debug = false;
-  std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
+  std::string tmp_uri = (std::filesystem::temp_directory_path() /
+                         "ivf_flat_group_test_write_constructor")
+                            .string();
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -224,7 +233,9 @@ TEST_CASE(
 TEST_CASE(
     "ivf_flat_group: group metadata - bases, ingestions, partitions",
     "[ivf_flat_group]") {
-  std::string tmp_uri = "/tmp/ivf_flat_group_test_write_constructor";
+  std::string tmp_uri = (std::filesystem::temp_directory_path() /
+                         "ivf_flat_group_test_write_constructor")
+                            .string();
 
   size_t expected_ingestion = 867;
   size_t expected_base = 5309;  // OMG, copilot filled in 5309 after I typed 867

@@ -121,14 +121,16 @@ TEST_CASE("api: tdbMatrix constructors and destructors", "[api]") {
   tiledb::Context ctx;
   auto c = ColMajorMatrix<int>(3, 7);
 
-  std::filesystem::remove_all("/tmp/a");
-  write_matrix(ctx, c, "/tmp/a");
+  const auto tmp = (std::filesystem::temp_directory_path() / "a").string();
 
-  auto a = tdbColMajorMatrix<int>(ctx, "/tmp/a");
+  std::filesystem::remove_all(tmp);
+  write_matrix(ctx, c, tmp);
+
+  auto a = tdbColMajorMatrix<int>(ctx, tmp);
   a.load();
   auto b = FeatureVectorArray(a);
 
-  auto d = tdbColMajorMatrix<int>(ctx, "/tmp/a");
+  auto d = tdbColMajorMatrix<int>(ctx, tmp);
   d.load();
   auto e = FeatureVectorArray(std::move(d));
 }
@@ -152,7 +154,8 @@ TEMPLATE_TEST_CASE(
   auto t = tiledb::impl::type_to_tiledb<TestType>::tiledb_type;
 
   tiledb::Context ctx;
-  auto uri = std::string{"/tmp/a"};
+  const auto uri = (std::filesystem::temp_directory_path() / "a").string();
+
 
   auto cc = ColMajorMatrix<TestType>(3, 7);
 

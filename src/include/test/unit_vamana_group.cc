@@ -108,7 +108,9 @@ TEST_CASE(
 #endif
 
 TEST_CASE("vamana_group: write constructor - create", "[vamana_group]") {
-  std::string tmp_uri = "/tmp/vamana_group_test_write_constructor";
+  std::string tmp_uri =
+      (std::filesystem::temp_directory_path() / "vamana_group_test_write_constructor").string();
+
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -123,7 +125,9 @@ TEST_CASE("vamana_group: write constructor - create", "[vamana_group]") {
 
 TEST_CASE(
     "vamana_group: write constructor - create and open", "[vamana_group]") {
-  std::string tmp_uri = "/tmp/vamana_group_test_write_constructor";
+  std::string tmp_uri = (std::filesystem::temp_directory_path() /
+                         "vamana_group_test_write_constructor")
+                            .string();
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -142,7 +146,9 @@ TEST_CASE(
 
 TEST_CASE(
     "vamana_group: write constructor - create and read", "[vamana_group]") {
-  std::string tmp_uri = "/tmp/vamana_group_test_write_constructor";
+  std::string tmp_uri = (std::filesystem::temp_directory_path() /
+                         "vamana_group_test_write_constructor")
+                            .string();
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -162,7 +168,9 @@ TEST_CASE(
 TEST_CASE(
     "vamana_group: write constructor - create, write, and read",
     "[vamana_group]") {
-  std::string tmp_uri = "/tmp/vamana_group_test_write_constructor";
+  std::string tmp_uri = (std::filesystem::temp_directory_path() /
+                         "vamana_group_test_write_constructor")
+                            .string();
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -186,7 +194,9 @@ TEST_CASE(
 TEST_CASE(
     "vamana_group: group metadata - bases, ingestions, partitions",
     "[vamana_group]") {
-  std::string tmp_uri = "/tmp/vamana_group_test_write_constructor";
+  std::string tmp_uri = (std::filesystem::temp_directory_path() /
+                         "vamana_group_test_write_constructor")
+                            .string();
 
   size_t expected_ingestion = 867;
   size_t expected_base = 5309;
