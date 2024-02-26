@@ -521,7 +521,6 @@ auto best_first_O4(
     size_t k_nn,
     size_t Lmax,
     Distance&& distance = Distance{}) {
-  scoped_timer __{tdb_func__};
 
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
@@ -545,6 +544,9 @@ auto best_first_O4(
   // Set to keep track of which vertices have been visited
   // Will be returned from this function
   std::unordered_set<id_type> visited;
+
+  scoped_timer __{tdb_func__};
+
 
   score_type heuristic = distance(db[source], query);
   pq.insert(heuristic, source);
@@ -582,9 +584,10 @@ auto best_first_O4(
       }
     }
     clear_enfrontiered(vertex_state_property_map[p_star]);
-    assert(is_visited(vertex_state_property_map[p_star]) &&
-           !is_evicted(vertex_state_property_map[p_star]) &&
-           !is_enfrontiered(vertex_state_property_map[p_star]));
+    //    std::cout << "p_star " << p_star << std::endl;
+    assert(is_visited(vertex_state_property_map[p_star]));
+    assert(!is_evicted(vertex_state_property_map[p_star]));
+    assert(!is_enfrontiered(vertex_state_property_map[p_star]));
 
     p_star = std::numeric_limits<id_type>::max();
     auto p_min_score = std::numeric_limits<score_type>::max();

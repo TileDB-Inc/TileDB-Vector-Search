@@ -292,6 +292,8 @@ auto greedy_search_O1(
   auto q1 = k_min_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
   auto q2 = k_min_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
 
+  scoped_timer __{tdb_func__};
+
   // 𝓛 <- {s} and 𝓥 <- ∅
   result.insert(distance(db[source], query), source);
 

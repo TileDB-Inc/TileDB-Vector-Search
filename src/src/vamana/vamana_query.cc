@@ -48,7 +48,7 @@ bool enable_stats = false;
 std::vector<json> core_stats;
 
 using score_type = float;
-using groundtruth_type = uint64_t;
+using groundtruth_type = int32_t;
 
 static constexpr const char USAGE[] =
     R"(vamana: C++ cli for vamana query
