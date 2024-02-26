@@ -104,7 +104,10 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "tdb_matrix_with_ids: assign to matrix", "[tdb_matrix_with_ids]", float) {
+    "tdb_matrix_with_ids: assign to matrix",
+    "[tdb_matrix_with_ids]",
+    float,
+    uint8_t) {
   tiledb::Context ctx;
   std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
   std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
