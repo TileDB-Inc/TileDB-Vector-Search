@@ -156,7 +156,6 @@ TEMPLATE_TEST_CASE(
   tiledb::Context ctx;
   const auto uri = (std::filesystem::temp_directory_path() / "a").string();
 
-
   auto cc = ColMajorMatrix<TestType>(3, 7);
 
   std::filesystem::remove_all(uri);

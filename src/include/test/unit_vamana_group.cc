@@ -108,9 +108,9 @@ TEST_CASE(
 #endif
 
 TEST_CASE("vamana_group: write constructor - create", "[vamana_group]") {
-  std::string tmp_uri =
-      (std::filesystem::temp_directory_path() / "vamana_group_test_write_constructor").string();
-
+  std::string tmp_uri = (std::filesystem::temp_directory_path() /
+                         "vamana_group_test_write_constructor")
+                            .string();
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);

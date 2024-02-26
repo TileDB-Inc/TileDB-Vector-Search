@@ -59,7 +59,8 @@ TEST_CASE("tdb_io: read vector", "[tdb_io]") {
 
 TEMPLATE_TEST_CASE("tdb_io: read / write vector", "[tdb_io]", float, uint8_t) {
   tiledb::Context ctx;
-  std::string tmp_std_vector_uri = (std::filesystem::temp_directory_path() / "tmp_std_vector").string();
+  std::string tmp_std_vector_uri =
+      (std::filesystem::temp_directory_path() / "tmp_std_vector").string();
   std::string tmp_vector_uri =
       (std::filesystem::temp_directory_path() / "tmp_vector").string();
 
@@ -196,7 +197,6 @@ TEST_CASE("tdb_io: create group", "[tdb_io]") {
   CHECK(
       std::filesystem::path(a.uri().substr(8)) ==
       std::filesystem::path(tmp_group_uri) / "ids");
-
 
   CHECK(read_group.has_metadata("w[0]", &w_type));
   CHECK(!read_group.has_metadata("w[1]", &w_type));

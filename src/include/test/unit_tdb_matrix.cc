@@ -47,7 +47,8 @@ TEST_CASE("tdb_matrix: test test", "[tdb_matrix]") {
 
 TEMPLATE_TEST_CASE("tdb_matrix: constructors", "[tdb_matrix]", float, uint8_t) {
   tiledb::Context ctx;
-  std::string tmp_matrix_uri = (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
   int offset = 13;
   size_t Mrows = 200;
   size_t Ncols = 500;

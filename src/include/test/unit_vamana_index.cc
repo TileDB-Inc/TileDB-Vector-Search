@@ -1213,9 +1213,8 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   size_t Backtrack{3};
 
   tiledb::Context ctx;
-  std::string vamana_index_uri = (std::filesystem::temp_directory_path() /
-                         "tmp_vamana_index")
-                            .string();
+  std::string vamana_index_uri =
+      (std::filesystem::temp_directory_path() / "tmp_vamana_index").string();
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
 

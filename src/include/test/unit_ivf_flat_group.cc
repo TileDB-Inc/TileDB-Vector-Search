@@ -68,7 +68,9 @@ TEST_CASE("ivf_flat_group: read a tiledb::Group", "[ivf_flat_group]") {
 TEST_CASE("ivf_flat_group: create tiledb::Group", "[ivf_flat_group]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
-  std::string tmp_uri = (std::filesystem::temp_directory_path() / "ivf_flat_group_test_groups").string();
+  std::string tmp_uri =
+      (std::filesystem::temp_directory_path() / "ivf_flat_group_test_groups")
+          .string();
 
   tiledb::VFS vfs(ctx);
   if (vfs.is_dir(tmp_uri))
@@ -143,10 +145,9 @@ TEST_CASE(
 #endif
 
 TEST_CASE("ivf_flat_group: write constructor - create", "[ivf_flat_group]") {
-  std::string tmp_uri =
-      (std::filesystem::temp_directory_path() / "ivf_flat_group_test_write_constructor")
-          .string();
-
+  std::string tmp_uri = (std::filesystem::temp_directory_path() /
+                         "ivf_flat_group_test_write_constructor")
+                            .string();
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);

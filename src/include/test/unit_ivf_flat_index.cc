@@ -248,9 +248,8 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   size_t nthreads = 1;
 
   tiledb::Context ctx;
-  std::string ivf_index_uri = (std::filesystem::temp_directory_path() /
-                         "tmp_ivf_index")
-                            .string();
+  std::string ivf_index_uri =
+      (std::filesystem::temp_directory_path() / "tmp_ivf_index").string();
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
 
