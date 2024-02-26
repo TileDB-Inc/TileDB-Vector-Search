@@ -59,6 +59,8 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
   std::vector<IdsType> ids_;
 
  public:
+  using ids_type = IdsType;
+
   MatrixWithIds() noexcept = default;
 
   MatrixWithIds(const MatrixWithIds&) = delete;

@@ -572,6 +572,7 @@ class tdbPartitionedMatrix
 
       // assert(tiledb::Query::Status::COMPLETE == query.query_dstatus());
       auto qs = query.query_status();
+      // @todo Handle incomplete queries.
       if (tiledb::Query::Status::COMPLETE != query.query_status()) {
         throw std::runtime_error("Query status is not complete -- fix me");
       }
