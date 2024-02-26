@@ -53,10 +53,10 @@ void randomize(R& r, std::tuple<int, int> range = {0, 128}) {
     if constexpr (sizeof(element_type) == 1u) {
       // For MSVC the std::uniform_int_distribution does not compile for char
       // types e.g. char, uint8_t, int8_t, signed char...
-      std::uniform_int_distribution<short> dist(
+      std::uniform_int_distribution<uint16_t> dist(
           std::get<0>(range), std::get<1>(range));
       for (auto& x : r) {
-        x = static_cast<element_type>(dist(gen) / 256u);
+        x = static_cast<element_type>(dist(gen));
       }
     } else {
       std::uniform_int_distribution<element_type> dist(
