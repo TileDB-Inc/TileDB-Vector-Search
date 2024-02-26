@@ -43,6 +43,7 @@
 
 #include "detail/linalg/linalg_defs.h"
 #include "detail/linalg/matrix.h"
+#include "detail/linalg/matrix_with_ids.h"
 #include "detail/linalg/tdb_helpers.h"
 #include "tdb_defs.h"
 
@@ -54,9 +55,13 @@
  * it is sufficient to simply have one Matrix class and have a factory that
  * creates them by reading from TileDB.
  */
-template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
-class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
-  using Base = Matrix<T, LayoutPolicy, I>;
+template <
+    class T,
+    class LayoutPolicy = stdx::layout_right,
+    class I = size_t,
+    class MatrixBase = Matrix<T, LayoutPolicy, I>>
+class tdbBlockedMatrix : public MatrixBase {
+  using Base = MatrixBase;
   using Base::Base;
 
  public:
@@ -69,7 +74,7 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
- private:
+ protected:
   using row_domain_type = int32_t;
   using col_domain_type = int32_t;
 
@@ -253,12 +258,26 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
 #else
     auto data_ = std::unique_ptr<T[]>(new T[dimension * load_blocksize_]);
 #endif
-
-    Base::operator=(Base{std::move(data_), dimension, load_blocksize_});
+    // @todo Use concepts instead of concrete type.
+    if constexpr (std::is_same<MatrixBase, Matrix<T, LayoutPolicy, I>>::value) {
+      Base::operator=(Base{std::move(data_), dimension, load_blocksize_});
+    } else if constexpr (
+        std::is_same<
+            MatrixBase,
+            MatrixWithIds<T, typename Base::ids_type, LayoutPolicy, I>>::
+            value) {
+      auto ids = std::vector<typename MatrixBase::ids_type>(load_blocksize_);
+      Base::operator=(
+          Base{std::move(data_), std::move(ids), dimension, load_blocksize_});
+    } else {
+      static_assert(
+          always_false<MatrixBase>,
+          "MatrixBase must be Matrix or MatrixWithIds");
+    }
   }
 
   // @todo Allow specification of how many columns to advance by
-  bool load() {
+  virtual bool load() {
     scoped_timer _{tdb_func__ + " " + uri_};
 
     const size_t attr_idx{0};
@@ -304,8 +323,9 @@ class tdbBlockedMatrix : public Matrix<T, LayoutPolicy, I> {
     _memory_data.insert_entry(
         tdb_func__, elements_to_load * dimension * sizeof(T));
 
+    // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
-      throw std::runtime_error("Query status is not complete -- fix me");
+      throw std::runtime_error("Query status is not complete");
     }
 
     num_loads_++;

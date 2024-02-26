@@ -292,7 +292,9 @@ void init_type_erased_module(py::module_& m) {
           py::arg("opt_l"))
       .def("feature_type_string", &IndexVamana::feature_type_string)
       .def("id_type_string", &IndexVamana::id_type_string)
-      .def("px_type_string", &IndexVamana::px_type_string)
+      .def(
+          "adjacency_row_index_type_string",
+          &IndexVamana::adjacency_row_index_type_string)
       .def("dimension", &IndexVamana::dimension);
 
   py::class_<IndexIVFFlat>(m, "IndexIVFFlat")
