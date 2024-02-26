@@ -30,7 +30,7 @@
  * wrapper of `index_vamana` that allows for runtime polymorphism of the
  * `index_vamana` class template.
  *
- * See README.md for details on type erasure.
+ * See IVF.md for details on type erasure.
  */
 
 #ifndef TILEDB_API_VAMANA_INDEX_H

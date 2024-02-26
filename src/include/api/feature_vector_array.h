@@ -31,7 +31,7 @@
  * wrapper of `tdbMatrix` that allows for runtime polymorphism of the
  * `tdbMatrix` class template.
  *
- * See README.md for details on type erasure.
+ * See IVF.md for details on type erasure.
  *
  */
 

@@ -590,16 +590,17 @@ auto best_first_O4(
     auto p_min_score = std::numeric_limits<score_type>::max();
 
     for (auto&& [pq_score, pq_id] : pq) {
-      auto pq_state = vertex_state_property_map[pq_id];
-      assert(!is_evicted(pq_state));
-      assert(is_enpqd(pq_state));
-      if (!is_visited(pq_state)) {
-        if (pq_score < p_min_score) {
+      if (pq_score < p_min_score) {
+        auto pq_state = vertex_state_property_map[pq_id];
+        assert(!is_evicted(pq_state));
+        assert(is_enpqd(pq_state));
+        if (!is_visited(pq_state)) {
           p_star = pq_id;
           p_min_score = pq_score;
         }
       }
     }
+
     // set_finished(vertex_state_property_map[p_star]);
   } while (p_star != std::numeric_limits<id_type>::max());
 
@@ -723,7 +724,9 @@ auto best_first_O5(
  * Other things to try:
  *   - Profile with vtune to find actual bottlenecks
  *   - Use AVX2 instructions to compute distances (use compiler to generate
- f *     rather than trying to use intrinsics)
+ *     rather than trying to use intrinsics)
+ *   - Use an unordered_set to keep node state and use upper bits of node id to
+ *     store the state
  *   - Use a k_min_max_heap for pq so that min is easily found and max can be
  *     easily evicted when inserting
  *   - Use a vector for pq, emplace_back nodes as we go along and then use
