@@ -34,9 +34,9 @@
 #ifndef TDB_SCORING_H
 #define TDB_SCORING_H
 
-#define INTRINSICS
+#define AVX2_INTRINSICS
 
-#if defined(INTRINSICS)
+#if defined(AVX2_INTRINSICS)
 #include <immintrin.h> // Include AVX2 intrinsics
 #endif
 
@@ -123,38 +123,29 @@ inline auto sum_of_squares(V const& a, U const& b) {
       sum += diff * diff;
     }
   } else {
-#if defined(INTRINSICS)
+#if defined(AVX2_INTRINSICS)
 
-
-// Function to compute Euclidean distance between two points
     const float* ap = a.data();
     const float* bp = b.data();
     __m256 sum_ = _mm256_setzero_ps(); // Initialize sum to zero
 
-    // Unroll the loop by 8
     for (int i = 0; i < size_a; i += 8) {
-        // Load points into AVX registers
         __m256 aVec = _mm256_loadu_ps(ap + i);
         __m256 bVec = _mm256_loadu_ps(bp + i);
 
-        // Subtract 'b' from 'a'
         __m256 diff = _mm256_sub_ps(aVec, bVec);
 
-        // Square the differences
         __m256 squaredDiff = _mm256_mul_ps(diff, diff);
 
-        // Accumulate squared differences
         sum_ = _mm256_add_ps(sum_, squaredDiff);
     }
 
-    // Horizontal addition of elements
     __m128 lo = _mm256_castps256_ps128(sum_);
     __m128 hi = _mm256_extractf128_ps(sum_, 1);
     __m128 combined = _mm_add_ps(lo, hi);
     combined = _mm_hadd_ps(combined, combined);
     combined = _mm_hadd_ps(combined, combined);
 
-    // Extract result and return
     sum = _mm_cvtss_f32(combined);
   }
   return sum;
