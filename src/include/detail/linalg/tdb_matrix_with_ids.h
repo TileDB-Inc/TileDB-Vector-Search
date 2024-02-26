@@ -186,6 +186,7 @@ class tdbBlockedMatrixWithIds
 
     const size_t attr_idx{0};
     auto attr = ids_schema_.attribute(attr_idx);
+
     std::string attr_name = attr.name();
     tiledb_datatype_t attr_type = attr.type();
     if (attr_type != tiledb::impl::type_to_tiledb<ids_type>::tiledb_type) {
@@ -195,7 +196,9 @@ class tdbBlockedMatrixWithIds
           datatype_to_string(
               tiledb::impl::type_to_tiledb<ids_type>::tiledb_type));
     }
+
     static const size_t dimension = 1;
+    // In the Base::load() we will have already computed the number of elements
     // to load, and because returned true from there we should have a positive
     // number of elements to load.
     auto elements_to_load =
