@@ -292,7 +292,16 @@ TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
     auto a = ColMajorMatrixWithIds<DataType, IdsType>(rows, cols);
     std::iota(a.data(), a.data() + rows * cols, 0);
     std::iota(a.ids().begin(), a.ids().end(), 0);
+
+    auto a_ptr = a.data();
+    auto a_ptr_ids = a.ids().data();
+
     auto b = FeatureVectorArray(std::move(a));
+
+    CHECK(a_ptr == b.data());
+    CHECK(a_ptr_ids == b.ids_data());
+    CHECK(a.data() == nullptr);
+    CHECK(a.ids().data() == nullptr);
 
     CHECK(b.dimension() == rows);
     CHECK(dimension(b) == rows);
@@ -323,51 +332,56 @@ TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
   }
 }
 
-TEMPLATE_TEST_CASE(
+TEMPLATE_PRODUCT_TEST_CASE(
     "api: FeatureVectorArray with IDs feature_type",
     "[api]",
-    int,
-    uint8_t,
-    uint32_t,
-    float,
-    uint64_t) {
-  using DataType = float;
-  using IdsType = TestType;
+    (ColMajorMatrixWithIds),
+    ((int, uint32_t),
+     (uint8_t, uint32_t),
+     (uint32_t, uint32_t),
+     (float, uint32_t),
+     (uint64_t, uint32_t),
+     (int, uint64_t),
+     (uint8_t, uint64_t),
+     (uint32_t, uint64_t),
+     (float, uint64_t),
+     (uint64_t, uint64_t))) {
+  using DataType = typename TestType::value_type;
+  using IdsType = typename TestType::ids_type;
   auto t = tiledb::impl::type_to_tiledb<DataType>::tiledb_type;
   auto t_ids = tiledb::impl::type_to_tiledb<IdsType>::tiledb_type;
 
-  auto a = ColMajorMatrixWithIds<DataType, TestType>{3, 17};
+  auto a = TestType{3, 17};
   auto b = FeatureVectorArray(a);
   CHECK(b.feature_type() == t);
   CHECK(b.feature_size() == sizeof(DataType));
   CHECK(b.ids_type() == t_ids);
-  CHECK(b.ids_size() == sizeof(TestType));
+  CHECK(b.ids_size() == sizeof(IdsType));
 
-  auto c = FeatureVectorArray{ColMajorMatrixWithIds<DataType, TestType>{17, 3}};
+  auto c = FeatureVectorArray{TestType{17, 3}};
   CHECK(c.feature_type() == t);
   CHECK(c.feature_size() == sizeof(DataType));
   CHECK(c.ids_type() == t_ids);
-  CHECK(c.ids_size() == sizeof(TestType));
+  CHECK(c.ids_size() == sizeof(IdsType));
 
-  auto f = ColMajorMatrixWithIds<DataType, TestType>{3, 17};
+  auto f = TestType{3, 17};
   auto d = FeatureVectorArray{std::move(f)};
   CHECK(d.feature_type() == t);
   CHECK(d.feature_size() == sizeof(DataType));
   CHECK(d.ids_type() == t_ids);
-  CHECK(d.ids_size() == sizeof(TestType));
+  CHECK(d.ids_size() == sizeof(IdsType));
 
-  auto e = FeatureVectorArray{
-      std::move(ColMajorMatrixWithIds<DataType, TestType>{3, 9})};
+  auto e = FeatureVectorArray{std::move(TestType{3, 9})};
   CHECK(e.feature_type() == t);
   CHECK(e.feature_size() == sizeof(DataType));
   CHECK(e.ids_type() == t_ids);
-  CHECK(e.ids_size() == sizeof(TestType));
+  CHECK(e.ids_size() == sizeof(IdsType));
 
   auto g = std::move(e);
   CHECK(g.feature_type() == t);
   CHECK(g.feature_size() == sizeof(DataType));
   CHECK(g.ids_type() == t_ids);
-  CHECK(g.ids_size() == sizeof(TestType));
+  CHECK(g.ids_size() == sizeof(IdsType));
 }
 
 TEST_CASE("api: tdbMatrixWithIds constructors and destructors", "[api]") {

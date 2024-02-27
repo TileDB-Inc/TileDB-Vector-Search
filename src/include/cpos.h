@@ -60,17 +60,22 @@ concept _member_num_cols = requires(T t) {
 };
 
 template <class T>
+concept _member_num_ids = requires(T t) {
+  { t.num_ids() };
+};
+
+template <class T>
+concept _member_ids = requires(T t) {
+  { t.ids() };
+};
+
+template <class T>
 concept row_major = std::
     same_as<typename std::remove_cvref_t<T>::layout_policy, stdx::layout_right>;
 
 template <class T>
 concept col_major = std::
     same_as<typename std::remove_cvref_t<T>::layout_policy, stdx::layout_left>;
-
-template <class T>
-concept _member_ids = requires(T t) {
-  { t.num_ids() };
-};
 
 // ----------------------------------------------------------------------------
 // dimension CPO
@@ -249,13 +254,13 @@ void num_ids(const auto&) = delete;
 
 struct _fn {
   template <class T>
-    requires(_member_ids<T>)
+    requires(_member_num_ids<T>)
   constexpr auto operator()(T&& t) const noexcept {
     return t.num_ids();
   }
 
   template <class T>
-    requires(!_member_ids<T>)
+    requires(!_member_num_ids<T>)
   constexpr auto operator()(T&& t) const noexcept {
     return 0;
   }

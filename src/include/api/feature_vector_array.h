@@ -71,7 +71,8 @@ class FeatureVectorArray {
         typename std::remove_cvref_t<T>::value_type>::tiledb_type;
     feature_size_ = datatype_to_size(feature_type_);
 
-    if constexpr (matrix_with_ids<std::remove_cvref_t<decltype(obj)>>) {
+    if constexpr (feature_vector_array_with_ids<
+                      std::remove_cvref_t<decltype(obj)>>) {
       ids_type_ = tiledb::impl::type_to_tiledb<
           typename std::remove_cvref_t<T>::ids_type>::tiledb_type;
       ids_size_ = datatype_to_size(ids_type_);

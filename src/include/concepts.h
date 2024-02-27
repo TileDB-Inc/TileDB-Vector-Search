@@ -160,8 +160,8 @@ concept feature_vector_array = requires(D d, size_t n) {
 
 template <class D>
 concept feature_vector_array_with_ids =
-    feature_vector_array<D> && requires(D d, size_t n) {
-      { ids(d) };
+    feature_vector_array<D> && requires(D d) {
+      { d.ids() };
     };
 
 /**
@@ -199,14 +199,6 @@ concept contiguous_partitioned_feature_vector_array =
       { d.indices() };
       { d.ids() };
     };
-
-// ----------------------------------------------------------------------------
-// matrix_with_ids concept
-// ----------------------------------------------------------------------------
-template <class D>
-concept matrix_with_ids = requires(D d) {
-  { d.ids() };
-};
 
 // ----------------------------------------------------------------------------
 // partition_index concept (WIP)
