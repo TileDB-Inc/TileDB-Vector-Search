@@ -190,12 +190,12 @@ TEST_CASE("tdb_io: create group", "[tdb_io]") {
   CHECK(num_members == 1);
   auto a = read_group.member(0);
   CHECK(
-      std::filesystem::path(a.uri().substr(8)) ==
+      std::filesystem::path(a.uri().substr(7)).relative_path() ==
       std::filesystem::path(tmp_group_uri) / "ids");
 
   auto b = read_group.member("ids");
   CHECK(
-      std::filesystem::path(a.uri().substr(8)) ==
+      std::filesystem::path(a.uri().substr(7)).relative_path() ==
       std::filesystem::path(tmp_group_uri) / "ids");
 
   CHECK(read_group.has_metadata("w[0]", &w_type));
