@@ -73,9 +73,9 @@ bool is_local_directory(const std::string& path) {
 
 bool subdirectory_exists(
     const std::string& path, const std::string& subdirectoryName) {
-  std::string subdirectoryPath = (std::filesystem::path{path} /
-                                  std::filesystem::path{subdirectoryName})
-                                     .string();
+  std::string subdirectoryPath =
+      (std::filesystem::path{path} / std::filesystem::path{subdirectoryName})
+          .string();
   return std::filesystem::is_directory(subdirectoryPath);
 }
 
