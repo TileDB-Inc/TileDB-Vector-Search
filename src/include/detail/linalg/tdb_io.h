@@ -65,9 +65,9 @@ void create_empty_for_matrix(
   tiledb::Domain domain(ctx);
   domain
       .add_dimension(tiledb::Dimension::create<int>(
-          ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent))
+          ctx, "rows", {{0, (int)rows - 1}}, row_extent))
       .add_dimension(tiledb::Dimension::create<int>(
-          ctx, "cols", {{0, std::max(0, (int)cols - 1)}}, col_extent));
+          ctx, "cols", {{0, (int)cols - 1}}, col_extent));
 
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
 
