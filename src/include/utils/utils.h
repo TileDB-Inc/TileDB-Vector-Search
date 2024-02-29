@@ -64,11 +64,7 @@ std::string get_filename(const std::string& filename) {
 }
 
 bool local_directory_exists(const std::string& path) {
-  std::string directoryPath(path);
-  auto a = std::filesystem::status(directoryPath);
-  auto b = std::filesystem::is_directory(directoryPath);
-
-  return std::filesystem::is_directory(directoryPath);
+  return std::filesystem::is_directory(path);
 }
 
 bool is_local_directory(const std::string& path) {
@@ -77,11 +73,9 @@ bool is_local_directory(const std::string& path) {
 
 bool subdirectory_exists(
     const std::string& path, const std::string& subdirectoryName) {
-  std::string directoryPath(path);
-  std::string subdirectoryPath = (std::filesystem::path{directoryPath} /
+  std::string subdirectoryPath = (std::filesystem::path{path} /
                                   std::filesystem::path{subdirectoryName})
                                      .string();
-  auto b = std::filesystem::is_directory(subdirectoryPath);
   return std::filesystem::is_directory(subdirectoryPath);
 }
 
