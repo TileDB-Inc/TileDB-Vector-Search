@@ -57,8 +57,8 @@ template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 void create_empty_for_matrix(
     const tiledb::Context& ctx,
     const std::string& uri,
-    size_t rows,  // number of dimensions
-    size_t cols,  // number of vectors
+    size_t rows,
+    size_t cols,
     size_t row_extent,
     size_t col_extent,
     std::optional<tiledb_filter_type_t> filter = std::nullopt) {
@@ -143,9 +143,9 @@ void write_matrix(
 
   std::vector<int32_t> subarray_vals{
       0,
-      std::max((int)A.num_rows() - 1, 0),
+      (int)A.num_rows() - 1,
       (int)start_pos,
-      std::max((int)start_pos + (int)A.num_cols() - 1, 0)};
+      (int)start_pos + (int)A.num_cols() - 1};
 
   // Open array for writing
   auto array = tiledb_helpers::open_array(
@@ -190,7 +190,7 @@ void create_empty_for_vector(
     std::optional<tiledb_filter_type_t> filter = std::nullopt) {
   tiledb::Domain domain(ctx);
   domain.add_dimension(tiledb::Dimension::create<int>(
-      ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent));
+      ctx, "rows", {{0, (int)rows - 1}}, row_extent));
 
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
