@@ -88,7 +88,8 @@ int ivf_index(
       0,
       partitions,
       0,
-      centroid_read_temporal_policy);
+      centroid_read_temporal_policy,
+      true);
   centroids.load();
   auto parts = detail::flat::qv_partition(centroids, db, nthreads);
   // debug_matrix(parts, "parts");
@@ -219,7 +220,7 @@ int ivf_index(
     size_t nthreads = 0,
     uint64_t timestamp = 0) {
   auto db =
-      tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos, 0, timestamp);
+      tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos, 0, timestamp, true);
   db.load();
   std::vector<ids_type> external_ids;
   if (external_ids_uri.empty()) {
@@ -262,7 +263,7 @@ int ivf_index(
     size_t nthreads = 0,
     uint64_t timestamp = 0) {
   auto db =
-      tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos, 0, timestamp);
+      tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos, 0, timestamp, true);
   db.load();
   return ivf_index<T, ids_type, centroids_type>(
       ctx,

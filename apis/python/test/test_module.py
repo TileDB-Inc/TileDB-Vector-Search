@@ -13,11 +13,16 @@ def test_tdbMatrix(tmpdir):
     create_array(p, data)
 
     ctx = vspy.Ctx({})
-    m = vspy.tdbColMajorMatrix_f32(ctx, p, 0, 0, 0, 0, 0, 0)
+    m = vspy.tdbColMajorMatrix_f32(ctx, p, 0, 0, 0, 0, 0, 0, True)
     m.load()
     m_array = np.array(m)
     assert m_array.shape == data.shape
     assert np.array_equal(m_array, data)
+
+    m_no_fill = vspy.tdbColMajorMatrix_f32(ctx, p, 0, 0, 0, 0, 0, 0, False)
+    m_no_fill.load()
+    m_array = np.array(m_no_fill)
+    assert m_array.shape == (0, 0)
 
     m_array2 = np.array(m, copy=False)  # mutable view
     v = np.random.rand(1).astype(np.float32)

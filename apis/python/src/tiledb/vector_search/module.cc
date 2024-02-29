@@ -402,7 +402,8 @@ static void declareColMajorMatrixSubclass(
           size_t,
           size_t,
           size_t,
-          uint64_t>(),
+          uint64_t,
+          bool>(),
       py::keep_alive<1, 2>());
 
   if constexpr (std::is_same<P, tdbColMajorMatrix<T>>::value) {
@@ -425,7 +426,8 @@ static void declarePartitionedMatrix(
           const std::string&,
           const std::string&,                // id_uri
           const std::vector<Indices_Type>&,  // partition list to load
-          size_t>(),                         // upper_bound
+          size_t,
+          bool>(),                         // upper_bound
 
       py::keep_alive<1, 2>());
   cls.def("load", &TMatrix::load);
