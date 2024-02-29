@@ -427,7 +427,7 @@ static void declarePartitionedMatrix(
           const std::string&,                // id_uri
           const std::vector<Indices_Type>&,  // partition list to load
           size_t,
-          bool>(),                         // upper_bound
+          bool>(),  // upper_bound
 
       py::keep_alive<1, 2>());
   cls.def("load", &TMatrix::load);

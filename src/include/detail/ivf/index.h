@@ -219,8 +219,8 @@ int ivf_index(
     size_t end_pos = 0,
     size_t nthreads = 0,
     uint64_t timestamp = 0) {
-  auto db =
-      tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos, 0, timestamp, true);
+  auto db = tdbColMajorMatrix<T>(
+      ctx, db_uri, 0, 0, start_pos, end_pos, 0, timestamp, true);
   db.load();
   std::vector<ids_type> external_ids;
   if (external_ids_uri.empty()) {
@@ -262,8 +262,8 @@ int ivf_index(
     size_t end_pos = 0,
     size_t nthreads = 0,
     uint64_t timestamp = 0) {
-  auto db =
-      tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos, 0, timestamp, true);
+  auto db = tdbColMajorMatrix<T>(
+      ctx, db_uri, 0, 0, start_pos, end_pos, 0, timestamp, true);
   db.load();
   return ivf_index<T, ids_type, centroids_type>(
       ctx,
