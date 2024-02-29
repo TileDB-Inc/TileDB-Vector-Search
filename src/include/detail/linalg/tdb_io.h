@@ -57,17 +57,17 @@ template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 void create_empty_for_matrix(
     const tiledb::Context& ctx,
     const std::string& uri,
-    size_t rows,
-    size_t cols,
+    size_t rows,  // number of dimensions
+    size_t cols,  // number of vectors
     size_t row_extent,
     size_t col_extent,
     std::optional<tiledb_filter_type_t> filter = std::nullopt) {
   tiledb::Domain domain(ctx);
   domain
       .add_dimension(tiledb::Dimension::create<int>(
-          ctx, "rows", {{0, (int)rows - 1}}, row_extent))
+          ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent))
       .add_dimension(tiledb::Dimension::create<int>(
-          ctx, "cols", {{0, (int)cols - 1}}, col_extent));
+          ctx, "cols", {{0, std::max(0, (int)cols - 1)}}, col_extent));
 
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
 
@@ -143,9 +143,9 @@ void write_matrix(
 
   std::vector<int32_t> subarray_vals{
       0,
-      (int)A.num_rows() - 1,
+      std::max((int)A.num_rows() - 1, 0),
       (int)start_pos,
-      (int)start_pos + (int)A.num_cols() - 1};
+      std::max((int)start_pos + (int)A.num_cols() - 1, 0)};
 
   // Open array for writing
   auto array = tiledb_helpers::open_array(
@@ -190,7 +190,7 @@ void create_empty_for_vector(
     std::optional<tiledb_filter_type_t> filter = std::nullopt) {
   tiledb::Domain domain(ctx);
   domain.add_dimension(tiledb::Dimension::create<int>(
-      ctx, "rows", {{0, (int)rows - 1}}, row_extent));
+      ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent));
 
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
@@ -289,7 +289,8 @@ std::vector<T> read_vector(
     const std::string& uri,
     size_t start_pos,
     size_t end_pos,
-    size_t timestamp = 0) {
+    size_t timestamp = 0,
+    bool read_full_vector = false) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
   tiledb::TemporalPolicy temporal_policy =
@@ -308,14 +309,20 @@ std::vector<T> read_vector(
   auto dim_num_{domain_.ndim()};
   auto array_rows_{domain_.dimension(0)};
 
-  if (start_pos == 0) {
-    start_pos = array_rows_.template domain<domain_type>().first;
-  }
-  if (end_pos == 0) {
-    end_pos = array_rows_.template domain<domain_type>().second + 1;
+  if (read_full_vector) {
+    if (start_pos == 0) {
+      start_pos = array_rows_.template domain<domain_type>().first;
+    }
+    if (end_pos == 0) {
+      end_pos = array_rows_.template domain<domain_type>().second + 1;
+    }
   }
 
   auto vec_rows_{end_pos - start_pos};
+
+  if (vec_rows_ == 0) {
+    return {};
+  }
 
   auto attr_num{schema_.attribute_num()};
   auto attr = schema_.attribute(idx);
@@ -350,7 +357,7 @@ std::vector<T> read_vector(
 template <class T>
 std::vector<T> read_vector(
     const tiledb::Context& ctx, const std::string& uri, size_t timestamp = 0) {
-  return read_vector<T>(ctx, uri, 0, 0, timestamp);
+  return read_vector<T>(ctx, uri, 0, 0, timestamp, true);
 }
 
 template <class T>

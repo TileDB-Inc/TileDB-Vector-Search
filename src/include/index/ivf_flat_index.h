@@ -235,7 +235,8 @@ class ivf_flat_index {
             0,
             num_partitions_,
             0,
-            timestamp_));
+            timestamp_,
+            true));
   }
 
   /****************************************************************************

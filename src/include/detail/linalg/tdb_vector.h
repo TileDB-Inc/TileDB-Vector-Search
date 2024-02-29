@@ -48,7 +48,7 @@ class tdbVector : public Vector<T> {
 
  public:
   tdbVector(const tiledb::Context& ctx, const std::string& uri)
-      : Base(read_vector<T>(ctx, uri, 0, 0, 0)) {
+      : Base(read_vector<T>(ctx, uri, 0, 0, 0, true)) {
   }
 };
 

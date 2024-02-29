@@ -97,7 +97,7 @@ class tdbBlockedMatrixWithIds
       const std::string& uri,
       const std::string& ids_uri) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : tdbBlockedMatrixWithIds(ctx, uri, ids_uri, 0, 0, 0, 0, 0, 0) {
+      : tdbBlockedMatrixWithIds(ctx, uri, ids_uri, 0, 0, 0, 0, 0, 0, true) {
   }
 
   /**
@@ -120,7 +120,7 @@ class tdbBlockedMatrixWithIds
       size_t timestamp = 0)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrixWithIds(
-            ctx, uri, ids_uri, 0, 0, 0, 0, upper_bound, timestamp) {
+            ctx, uri, ids_uri, 0, 0, 0, 0, upper_bound, timestamp, true) {
   }
 
   /** General constructor */
@@ -133,7 +133,8 @@ class tdbBlockedMatrixWithIds
       size_t first_col,
       size_t last_col,
       size_t upper_bound,
-      size_t timestamp)
+      size_t timestamp,
+      bool read_full_matrix)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrixWithIds(
             ctx,
@@ -146,7 +147,8 @@ class tdbBlockedMatrixWithIds
             upper_bound,
             (timestamp == 0 ?
                  tiledb::TemporalPolicy() :
-                 tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp))) {
+                 tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)),
+            read_full_matrix) {
   }
 
   /** General constructor */
@@ -159,7 +161,8 @@ class tdbBlockedMatrixWithIds
       size_t first_col,
       size_t last_col,
       size_t upper_bound,
-      tiledb::TemporalPolicy temporal_policy)  // noexcept
+      tiledb::TemporalPolicy temporal_policy,
+      bool read_full_matrix)  // noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(
             ctx,
@@ -169,7 +172,8 @@ class tdbBlockedMatrixWithIds
             first_col,
             last_col,
             upper_bound,
-            temporal_policy)
+            temporal_policy,
+            read_full_matrix)
       , ids_uri_(ids_uri)
       , ids_array_(std::make_unique<tiledb::Array>(
             ctx, ids_uri, TILEDB_READ, temporal_policy))
