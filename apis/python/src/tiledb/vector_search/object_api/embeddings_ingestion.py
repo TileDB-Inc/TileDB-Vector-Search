@@ -49,7 +49,7 @@ def ingest_embeddings_with_driver(
     ):
         import tiledb
 
-        def install_extra_modules():
+        def install_extra_worker_modules():
             if extra_driver_modules is not None:
                 import os
                 import subprocess
@@ -63,7 +63,7 @@ def ingest_embeddings_with_driver(
                         [sys.executable, "-m", "pip", "install", module]
                     )
 
-        install_extra_modules()
+        install_extra_worker_modules()
         import importlib
 
         importlib.reload(tiledb)
@@ -134,7 +134,7 @@ def ingest_embeddings_with_driver(
             config: Optional[Mapping[str, Any]] = None,
             extra_worker_modules: Optional[List[str]] = None,
         ):
-            def install_extra_modules():
+            def install_extra_driver_modules():
                 if extra_worker_modules is not None:
                     import os
                     import subprocess
@@ -148,7 +148,7 @@ def ingest_embeddings_with_driver(
                             [sys.executable, "-m", "pip", "install", module]
                         )
 
-            install_extra_modules()
+            install_extra_driver_modules()
 
             import numpy as np
 
