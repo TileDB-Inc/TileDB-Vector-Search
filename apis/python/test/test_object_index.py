@@ -145,6 +145,7 @@ def test_object_index_ivf_flat(tmp_path):
     )
 
     index.update_index()
+    index = object_index.ObjectIndex(uri=index_uri)
 
     distances, objects, metadata = index.query(
         {"object": np.array([[12, 12, 12, 12]])},
@@ -178,6 +179,7 @@ def test_object_index_flat(tmp_path):
     )
 
     index.update_index()
+    index = object_index.ObjectIndex(uri=index_uri)
 
     distances, objects, metadata = index.query(
         {"object": np.array([[12, 12, 12, 12]])}, k=5

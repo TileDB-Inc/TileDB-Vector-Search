@@ -1,8 +1,7 @@
-import base64
+import json
 from collections import OrderedDict
 from typing import Any, Dict, List, Mapping, Optional
 
-import json
 import numpy as np
 
 import tiledb
@@ -11,7 +10,6 @@ from tiledb.cloud.dag import Mode
 from tiledb.vector_search import FlatIndex
 from tiledb.vector_search import IVFFlatIndex
 from tiledb.vector_search import flat_index
-from tiledb.vector_search import ingest
 from tiledb.vector_search import ivf_flat_index
 from tiledb.vector_search.embeddings import ObjectEmbedding
 from tiledb.vector_search.object_readers import ObjectReader
@@ -203,10 +201,16 @@ class ObjectIndex:
         worker_resources: Dict = None,
         worker_image: str = None,
         extra_worker_modules: Optional[List[str]] = None,
+        driver_resources: Dict = None,
+        driver_image: str = None,
+        extra_driver_modules: Optional[List[str]] = None,
+        worker_access_credentials_name: str = None,
         max_tasks_per_stage: int = -1,
         verbose: bool = False,
         trace_id: Optional[str] = None,
-        mode: Mode = Mode.LOCAL,
+        embeddings_generation_mode: Mode = Mode.LOCAL,
+        embeddings_generation_driver_mode: Mode = Mode.LOCAL,
+        vector_indexing_mode: Mode = Mode.LOCAL,
         config: Optional[Mapping[str, Any]] = None,
         namespace: Optional[str] = None,
         **kwargs,
@@ -221,8 +225,9 @@ class ObjectIndex:
             metadata_array_uri = self.object_metadata_array_uri
         if config is None:
             config = self.config
-        object_api.ingest_embeddings(
-            object_index=self,
+
+        object_api.ingest_embeddings_with_driver(
+            object_index_uri=self.uri,
             embeddings_uri=embeddings_uri,
             metadata_array_uri=metadata_array_uri,
             index_timestamp=index_timestamp,
@@ -231,24 +236,16 @@ class ObjectIndex:
             worker_resources=worker_resources,
             worker_image=worker_image,
             extra_worker_modules=extra_worker_modules,
+            driver_resources=driver_resources,
+            driver_image=driver_image,
+            extra_driver_modules=extra_driver_modules,
+            worker_access_credentials_name=worker_access_credentials_name,
             verbose=verbose,
             trace_id=trace_id,
-            mode=mode,
+            embeddings_generation_driver_mode=embeddings_generation_driver_mode,
+            embeddings_generation_mode=embeddings_generation_mode,
+            vector_indexing_mode=vector_indexing_mode,
             config=config,
-            namespace=namespace,
-            **kwargs,
-        )
-        self.index = ingest(
-            index_type=self.index_type,
-            index_uri=self.uri,
-            source_uri=embeddings_uri,
-            source_type="TILEDB_PARTITIONED_ARRAY",
-            external_ids_uri=embeddings_uri,
-            external_ids_type="TILEDB_PARTITIONED_ARRAY",
-            index_timestamp=index_timestamp,
-            storage_version=self.index.storage_version,
-            config=config,
-            mode=mode,
             **kwargs,
         )
 
