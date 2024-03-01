@@ -285,10 +285,15 @@ TEST_CASE(
   fixed_min_pair_heap<float, int> a(7);
 
   std::vector<element> v(5500);
-  float vFloat = 10000.f;
-  int vInt = 10000;
+//  NOTE(paris): This was passing.
+//    float vFloat = 10000.f;
+//    int vInt = 10000;
+//    for (auto&& i : v) {
+//        i = {vFloat--, vInt--};
+//        CHECK(i != element{});
+//    }
   for (auto&& i : v) {
-    i = {vFloat--, vInt--};
+    i = {std::rand(), std::rand()};
     CHECK(i != element{});
   }
   for (auto&& [e, f] : v) {
