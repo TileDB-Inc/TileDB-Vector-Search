@@ -307,7 +307,7 @@ TEST_CASE(
     std::cout << "i: " << i << " tuple: " << std::get<0>(a2[i]) << " "
               << std::get<1>(a2[i]) << std::endl;
   }
-  std::sort(begin(a2), end(a2));
+  std::stable_sort(begin(a2), end(a2));
   CHECK(a2.size() == 7);
   std::cout << "a2:" << std::endl;
   for (int i = 0; i < a2.size(); i++) {
