@@ -303,7 +303,8 @@ TEST_CASE(
 
   std::vector<element> v3(v.begin(), v.begin() + 7);
   std::sort(begin(v3), end(v3));
-  CHECK(std::equal(begin(v3), end(v3), begin(a2),
+  CHECK(
+    std::equal(begin(v3), end(v3), begin(a2),
     [](auto&& f, auto&& s) {
       return std::get<0>(f) == std::get<0>(s);
     }));
