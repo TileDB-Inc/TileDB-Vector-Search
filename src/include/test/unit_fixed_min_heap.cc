@@ -285,8 +285,10 @@ TEST_CASE(
   fixed_min_pair_heap<float, int> a(7);
 
   std::vector<element> v(5500);
+  float vFloat = 10000.f;
+  int vInt = 10000;
   for (auto&& i : v) {
-    i = {std::rand(), std::rand()};
+    i = {vFloat--, vInt--};
     CHECK(i != element{});
   }
   for (auto&& [e, f] : v) {
@@ -295,23 +297,76 @@ TEST_CASE(
   CHECK(a.size() == 7);
 
   std::vector<element> a2(begin(a), end(a));
+  std::cout << "a2:" << std::endl;
+  for (int i = 0; i < a2.size(); i++) {
+    std::cout << "i: " << i << " tuple: " << std::get<0>(a2[i]) << " "
+              << std::get<1>(a2[i]) << std::endl;
+  }
   std::sort(begin(a2), end(a2));
   CHECK(a2.size() == 7);
+  std::cout << "a2:" << std::endl;
+  for (int i = 0; i < a2.size(); i++) {
+    std::cout << "i: " << i << " tuple: " << std::get<0>(a2[i]) << " "
+              << std::get<1>(a2[i]) << std::endl;
+  }
 
   std::vector<element> u(v.begin(), v.begin() + 7);
   CHECK(u.size() == 7);
+  std::cout << "u:" << std::endl;
+  for (int i = 0; i < u.size(); i++) {
+    std::cout << "i: " << i << " tuple: " << std::get<0>(u[i]) << " "
+              << std::get<1>(u[i]) << std::endl;
+  }
 
   std::nth_element(v.begin(), v.begin() + 7, v.end());
+  std::cout << "v:" << std::endl;
+  for (int i = 0; i < v.size(); i++) {
+    if (i > 20 && i < 5490) {
+        if (i == 21) {
+            std::cout << "..." << std::endl;
+        }
+      continue;
+    }
+    std::cout << "i: " << i << " tuple: " << std::get<0>(v[i]) << " "
+              << std::get<1>(v[i]) << std::endl;
+  }
+
   std::vector<element> w(v.begin(), v.begin() + 7);
+  std::cout << "w:" << std::endl;
+  for (int i = 0; i < w.size(); i++) {
+    std::cout << "i: " << i << " tuple: " << std::get<0>(w[i]) << " "
+              << std::get<1>(w[i]) << std::endl;
+  }
   CHECK(w.size() == 7);
 
   CHECK(u != w);
 
   std::vector<element> v3(v.begin(), v.begin() + 7);
+  std::cout << "v3:" << std::endl;
+  for (int i = 0; i < v3.size(); i++) {
+    std::cout << "i: " << i << " tuple: " << std::get<0>(v3[i]) << " "
+              << std::get<1>(v3[i]) << std::endl;
+  }
   std::sort(begin(v3), end(v3));
+  std::cout << "v3:" << std::endl;
+  for (int i = 0; i < v3.size(); i++) {
+    std::cout << "i: " << i << " tuple: " << std::get<0>(v3[i]) << " "
+              << std::get<1>(v3[i]) << std::endl;
+  }
   CHECK(a2 == v3);
 
   std::sort_heap(begin(a), end(a), first_less<element>{});
+  std::cout << "a:" << std::endl;
+  for (int i = 0; i < a.size(); i++) {
+    std::cout << "i: " << i << " tuple: " << std::get<0>(a[i]) << " "
+              << std::get<1>(a[i]) << std::endl;
+  }
+
+    std::cout << "a2:" << std::endl;
+    for (int i = 0; i < a2.size(); i++) {
+        std::cout << "i: " << i << " tuple: " << std::get<0>(a2[i]) << " "
+                  << std::get<1>(a2[i]) << std::endl;
+    }
   CHECK(a == a2);
 }
 
