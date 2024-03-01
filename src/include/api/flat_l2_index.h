@@ -91,6 +91,9 @@ class IndexFlatL2 {
   // @todo query() or search() -- or both?
   [[nodiscard]] auto query(
       const QueryVectorArray& vectors, size_t top_k) const {
+    if (!index_) {
+      throw std::runtime_error("Cannot query() because there is no index.");
+    }
     return index_->query(vectors, top_k);
   }
 
@@ -98,6 +101,9 @@ class IndexFlatL2 {
       const FeatureVectorArray& vectors,
       const std::optional<IdVector>& ids = std::nullopt,
       const std::optional<UpdateOptions>& options = std::nullopt) const {
+    if (!index_) {
+      throw std::runtime_error("Cannot update() because there is no index.");
+    }
     index_->update(vectors, ids, options);
   }
 
@@ -105,10 +111,16 @@ class IndexFlatL2 {
       const URI& vectors_uri,
       const std::optional<IdVector>& ids = std::nullopt,
       const std::optional<UpdateOptions>& options = std::nullopt) const {
+    if (!index_) {
+      throw std::runtime_error("Cannot update() because there is no index.");
+    }
     index_->update(vectors_uri, ids, options);
   }
 
   void remove(const IdVector& ids) const {
+    if (!index_) {
+      throw std::runtime_error("Cannot remove() because there is no index.");
+    }
     index_->remove(ids);
   }
 
