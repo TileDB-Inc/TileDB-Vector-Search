@@ -352,7 +352,7 @@ TEST_CASE(
     std::cout << "i: " << i << " tuple: " << std::get<0>(v3[i]) << " "
               << std::get<1>(v3[i]) << std::endl;
   }
-  std::sort(begin(v3), end(v3));
+  std::stable_sort(begin(v3), end(v3));
   std::cout << "v3:" << std::endl;
   for (int i = 0; i < v3.size(); i++) {
     std::cout << "i: " << i << " tuple: " << std::get<0>(v3[i]) << " "
