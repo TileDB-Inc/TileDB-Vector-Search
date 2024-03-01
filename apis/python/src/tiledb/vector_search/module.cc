@@ -642,8 +642,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
          size_t start_pos,
          size_t end_pos,
          uint64_t timestamp) -> std::vector<uint32_t> {
-        auto r = read_vector<uint32_t>(
-            ctx, uri, start_pos, end_pos, timestamp, true);
+        auto r = read_vector<uint32_t>(ctx, uri, start_pos, end_pos, timestamp);
         return r;
       });
   m.def(
@@ -653,8 +652,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
          size_t start_pos,
          size_t end_pos,
          uint64_t timestamp) -> std::vector<uint64_t> {
-        auto r = read_vector<uint64_t>(
-            ctx, uri, start_pos, end_pos, timestamp, true);
+        auto r = read_vector<uint64_t>(ctx, uri, start_pos, end_pos, timestamp);
         return r;
       });
 

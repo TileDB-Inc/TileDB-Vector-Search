@@ -228,7 +228,7 @@ int ivf_index(
     std::iota(begin(external_ids), end(external_ids), start_pos);
   } else {
     external_ids = read_vector<ids_type>(
-        ctx, external_ids_uri, start_pos, end_pos, timestamp, true);
+        ctx, external_ids_uri, start_pos, end_pos, timestamp);
   }
   return ivf_index<T, ids_type, centroids_type>(
       ctx,
@@ -304,7 +304,7 @@ int ivf_index(
     std::iota(begin(external_ids), end(external_ids), start_pos);
   } else {
     external_ids = read_vector<ids_type>(
-        ctx, external_ids_uri, start_pos, end_pos, timestamp, true);
+        ctx, external_ids_uri, start_pos, end_pos, timestamp);
   }
   return ivf_index<T, ids_type, centroids_type>(
       ctx,

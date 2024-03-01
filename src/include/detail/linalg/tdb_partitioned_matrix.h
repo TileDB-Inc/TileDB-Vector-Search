@@ -258,7 +258,7 @@ class tdbPartitionedMatrix
             ctx,
             partitioned_vectors_uri,
             read_vector<indices_type>(
-                ctx, indices_uri, 0, num_indices, timestamp, true),
+                ctx, indices_uri, 0, num_indices, timestamp),
             ids_uri,
             relevant_parts,
             upper_bound,
