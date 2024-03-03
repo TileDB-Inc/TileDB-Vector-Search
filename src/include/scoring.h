@@ -127,17 +127,17 @@ inline auto sum_of_squares(V const& a, U const& b) {
 
     const float* ap = a.data();
     const float* bp = b.data();
-    __m256 sum_ = _mm256_setzero_ps(); // Initialize sum to zero
+    __m256 sum_ = _mm256_setzero_ps();
 
     for (int i = 0; i < size_a; i += 8) {
-        __m256 aVec = _mm256_loadu_ps(ap + i);
-        __m256 bVec = _mm256_loadu_ps(bp + i);
+        __m256 a_vec = _mm256_loadu_ps(ap + i);
+        __m256 b_vec = _mm256_loadu_ps(bp + i);
 
-        __m256 diff = _mm256_sub_ps(aVec, bVec);
+        __m256 diff = _mm256_sub_ps(a_vec, b_vec);
 
-        __m256 squaredDiff = _mm256_mul_ps(diff, diff);
+        __m256 squared_diff = _mm256_mul_ps(diff, diff);
 
-        sum_ = _mm256_add_ps(sum_, squaredDiff);
+        sum_ = _mm256_add_ps(sum_, squared_diff);
     }
 
     __m128 lo = _mm256_castps256_ps128(sum_);
