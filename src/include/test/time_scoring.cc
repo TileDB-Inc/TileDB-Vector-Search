@@ -40,19 +40,25 @@
 
 double the_sum = 0.0;
 
-auto baseline_scoring(const ColMajorMatrix<float>& a, const ColMajorMatrix<float>& b, size_t trials = 128) {
-  life_timer _{tdb_func__};
+auto baseline_scoring(const ColMajorMatrix<float>& a, const ColMajorMatrix<float>& b, size_t trials = 4) {
+  life_timer _{tdb_func__, true};
 
-  auto size_a = num_vectors(a) * dimension(a);
-  const auto a_data = a.data();
-  const auto b_data = b.data();
+  auto size_a = num_vectors(a);
+  auto size_b = num_vectors(b);
+  auto size_d = dimension(a);
+  const float* a_data = a.data();
+  const float* b_data = b.data();
 
   the_sum = 0.0;
   for (unsigned iter = 0; iter < trials; ++iter) {
     float sum = 0.0;
     for (unsigned i = 0; i < size_a; ++i) {
-      auto diff = a_data[i] - b_data[i];
-      sum += diff * diff;
+      for (unsigned j = 0; j < size_b; ++j) {
+	for (unsigned k = 0; k < size_d; ++k) {
+	  float diff = a_data[i*size_d+k] - b_data[j*size_d+k];
+	  sum += diff * diff;
+	}
+      }
     }
     the_sum += sum;
   }
@@ -61,18 +67,22 @@ auto baseline_scoring(const ColMajorMatrix<float>& a, const ColMajorMatrix<float
 }
 
 template <class V, class W, class F>
-auto do_time_scoring(
+inline double do_time_scoring(
     const V& a,
     const W& b,
     F&& f,
-    size_t trials = 128) {
-  life_timer _{tdb_func__};
+    size_t trials = 4) {
+  life_timer _{tdb_func__,true};
+  size_t size_a = num_vectors(a);
+    size_t size_b = num_vectors(b);
 
   the_sum = 0.0;
   for (unsigned iter = 0; iter < trials; ++iter) {
     float sum = 0.0;
-    for (unsigned i = 0; i < num_vectors(a); ++i) {
-      sum += std::forward<F>(f)(a[i], b[i]);
+    for (unsigned i = 0; i < size_a; ++i) {
+      for (unsigned j = 0; j < size_b; ++j) {
+	sum += std::forward<F>(f)(a[i], b[j]);
+      }
     }
     the_sum += sum;
   }
@@ -83,9 +93,10 @@ auto do_time_scoring(
 template <class V, class W>
 requires std::same_as<typename V::value_type, float> &&
     std::same_as<typename W::value_type, float>
-inline auto sum_of_squares_naive(const V& a, const W& b) {
-  auto sum = 0.0;
-  for (size_t i = 0; i < dimension(a); ++i) {
+inline float sum_of_squares_naive(const V& a, const W& b) {
+  size_t size_a = size(a);
+  float sum = 0.0;
+  for (size_t i = 0; i < size_a; ++i) {
     float diff = a[i] - b[i];
     sum += diff * diff;
   }
@@ -93,11 +104,30 @@ inline auto sum_of_squares_naive(const V& a, const W& b) {
 }
 
 template <class V, class W>
+requires std::same_as<typename V::value_type, float> &&
+    std::same_as<typename W::value_type, float>
+inline float sum_of_squares_unroll4(const V& a, const W& b) {
+  size_t size_a = size(a);
+  float sum = 0.0;
+  for (size_t i = 0; i < size_a; i+=4) {
+    float diff0 = a[i+0] - b[i+0];
+    float diff1 = a[i+1] - b[i+1];
+    float diff2 = a[i+2] - b[i+2];
+    float diff3 = a[i+3] - b[i+3];
+    sum += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
+  }
+  return sum;
+}
+
+
+
+template <class V, class W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, uint8_t>
-inline auto sum_of_squares_naive(const V& a, const W& b) {
-  auto sum = 0.0;
-  for (size_t i = 0; i < dimension(a); ++i) {
+inline float sum_of_squares_naive(const V& a, const W& b) {
+  size_t size_a = size(a);
+  float sum = 0.0;
+  for (size_t i = 0; i < size_a; ++i) {
     float diff = a[i] - (float) b[i];
     sum += diff * diff;
   }
@@ -107,9 +137,10 @@ inline auto sum_of_squares_naive(const V& a, const W& b) {
 template <class V, class W>
   requires std::same_as<typename V::value_type, uint8_t> &&
            std::same_as<typename W::value_type, float>
-inline auto sum_of_squares_naive(const V& a, const W& b) {
-  auto sum = 0.0;
-  for (size_t i = 0; i < a.size(); ++i) {
+inline float sum_of_squares_naive(const V& a, const W& b) {
+  size_t size_a = size(a);
+  float sum = 0.0;
+  for (size_t i = 0; i < size_a; ++i) {
     float diff =(float) a[i] - b[i];
     sum += diff * diff;
   }
@@ -119,10 +150,11 @@ inline auto sum_of_squares_naive(const V& a, const W& b) {
 template <class V, class W>
   requires std::same_as<typename V::value_type, uint8_t> &&
            std::same_as<typename W::value_type, uint8_t>
-inline auto sum_of_squares_naive(const V& a, const W& b) {
-  auto sum = 0.0;
-  for (size_t i = 0; i < a.size(); ++i) {
-    float diff = (float) a[i] * (float) b[i];
+inline float sum_of_squares_naive(const V& a, const W& b) {
+  size_t size_a = size(a);
+  float sum = 0.0;
+  for (size_t i = 0; i < size_a; ++i) {
+    float diff = (float) a[i] - (float) b[i];
     sum += diff * diff;
   }
   return sum;
@@ -131,40 +163,84 @@ inline auto sum_of_squares_naive(const V& a, const W& b) {
 
 #ifdef __AVX2__
 
-// Function to compute Euclidean distance between two points
-float computeDistance(const float* a, const float* b, int size) {
-  __m256 sum = _mm256_setzero_ps(); // Initialize sum to zero
+template <class V, class W>
+  requires std::same_as<typename V::value_type, float> &&
+           std::same_as<typename W::value_type, float>
+inline float sum_of_squares_avx2(const V& a, const W& b) {
 
-  // Unroll the loop by 8
-  for (int i = 0; i < size; i += 8) {
-    // Load points into AVX registers
-    __m256 aVec = _mm256_loadu_ps(a + i);
-    __m256 bVec = _mm256_loadu_ps(b + i);
+  // @todo Align on 256 bit boundaries 
+  const size_t start = 0;
+  const size_t size_a = size(a);
+  const size_t stop = size_a - (size_a % 8);
 
-    // Subtract 'b' from 'a'
-    __m256 diff = _mm256_sub_ps(aVec, bVec);
+  const float* a_ptr = a.data();
+  const float* b_ptr = b.data();
 
-    // Square the differences
-    __m256 squaredDiff = _mm256_mul_ps(diff, diff);
+  __m256 sum_vec = _mm256_setzero_ps();
 
-    // Accumulate squared differences
-    sum = _mm256_add_ps(sum, squaredDiff);
+  for (int i = start; i < stop; i += 8) {
+
+  // @todo Align on 256 bit boundaries 
+      __m256 vec_a = _mm256_loadu_ps(a_ptr + i + 0);
+      __m256 vec_b = _mm256_loadu_ps(b_ptr + i + 0);
+
+      __m256 diff = _mm256_sub_ps(vec_a, vec_b);
+      // sum_vec = _mm256_fmadd_ps(diff, diff, sum_vec);
+
+        __m256 squared_diff = _mm256_mul_ps(diff, diff);
+
+        sum_vec = _mm256_add_ps(sum_vec, squared_diff);
   }
 
-  // Horizontal addition of elements
-  sum = _mm256_hadd_ps(sum, sum);
-  sum = _mm256_hadd_ps(sum, sum);
+    __m128 lo = _mm256_castps256_ps128(sum_vec);
+    __m128 hi = _mm256_extractf128_ps(sum_vec, 1);
+    __m128 combined = _mm_add_ps(lo, hi);
+    combined = _mm_hadd_ps(combined, combined);
+    combined = _mm_hadd_ps(combined, combined);
 
-  // Extract result and return
-  return _mm_cvtss_f32(_mm256_castps256_ps128(sum));
+
+    float sum = _mm_cvtss_f32(combined);
+
+  for (size_t i = stop; i < size_a; ++i) {
+    float diff = a[i] -	b[i];
+    sum	+= diff	* diff;
+  }
+
+  return sum;
 }
+
+template <class V, class W>
+inline double do_time_scoring_avx2(
+    const V& a,
+    const W& b,
+    size_t trials = 4) {
+  life_timer _{tdb_func__,true};
+  size_t size_a = num_vectors(a);
+  size_t size_b = num_vectors(b);
+
+  the_sum = 0.0;
+  for (unsigned iter = 0; iter < trials; ++iter) {
+    float sum = 0.0;
+    for (unsigned i = 0; i < size_a; ++i) {
+      for (unsigned j = 0; j < size_b; ++j) {
+	sum += sum_of_squares_avx2(a[i], b[j]);
+      }
+    }
+    the_sum += sum;
+  }
+  _.stop();
+  return _.elapsed();
+}
+
+
+
 #endif
 
 int main() {
-  auto a = ColMajorMatrix<float>(128, 1'000'000);
-  auto b = ColMajorMatrix<float>(128, 1'000'000);
-  auto c = ColMajorMatrix<uint8_t>(128, 1'000'000);
-  auto d = ColMajorMatrix<uint8_t>(128, 1'000'000);
+  auto a = ColMajorMatrix<float>(128, 10'000);
+  auto b = ColMajorMatrix<float>(128, 100);
+  auto c = ColMajorMatrix<uint8_t>(128, 100);
+  auto d = ColMajorMatrix<uint8_t>(128, 10'000);
   randomize(std::span<float>(a.data(), dimension(a) * num_vectors(a)));
   randomize(std::span<float>(b.data(), dimension(b) * num_vectors(b)));
   randomize(std::span<uint8_t>(c.data(), dimension(c) * num_vectors(c)));
@@ -185,4 +261,29 @@ int main() {
 
   auto t3 = do_time_scoring(c, d, sum_of_squares_naive<decltype(c[0]), decltype(d[0])>);
   std::cout << "naive uint8_t-uint8_t: " << t3 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
+
+#ifdef __AVX2__
+  auto t4 = do_time_scoring(a, b, sum_of_squares_avx2<decltype(a[0]), decltype(b[0])>);
+  std::cout << "avx2 float-float: " << t4 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
+#endif
+
+#if 0
+  auto t5 = do_time_scoring(a, c, sum_of_squares_avx2<decltype(a[0]), decltype(c[0])>);
+  std::cout << "avx2 float-uint8_t: " << t5 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
+
+  auto t6 = do_time_scoring(c, a, sum_of_squares_avx2<decltype(c[0]), decltype(a[0])>);
+  std::cout << "avx2 uint8_t-float: " << t6 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
+
+  auto t7 = do_time_scoring(c, d, sum_of_squares_avx2<decltype(c[0]), decltype(d[0])>);
+  std::cout << "avx2 uint8_t-uint8_t: " << t7 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
+#endif
+
+#ifdef __AVX2__
+  auto t8 = do_time_scoring_avx2(a, b);
+  std::cout << "avx2 float-float: " << t8 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
+#endif
+
+  auto t9 = do_time_scoring(a, b, sum_of_squares_unroll4<decltype(a[0]), decltype(b[0])>);
+  std::cout << "unroll4 float-float: " << t9 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
+
 }

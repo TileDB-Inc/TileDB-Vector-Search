@@ -50,8 +50,10 @@ endmacro (kmeans_add_test)
 # To be updated
 # kmeans_add_test(time_abstraction_penalty)
 # kmeans_add_test(time_insert)
-# kmeans_add_test(time_l2)
+
 # kmeans_add_test(time_open)
+
+kmeans_add_test(time_l2)
 
 kmeans_add_test(time_scoring)
 
