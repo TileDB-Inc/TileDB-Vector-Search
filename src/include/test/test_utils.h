@@ -58,11 +58,6 @@ void randomize(R& r, std::tuple<int, int> range = {0, 128}) {
   }
 }
 
-template <std::ranges::range R>
-void randomize(R&& r, std::tuple<int, int> range = {0, 128}) {
-  return randomize(r, range);
-}
-
 // Fill a matrix with sequentially increasing values. Will delete data from the
 // URI if it exists.
 template <class Matrix>
