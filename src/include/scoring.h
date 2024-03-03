@@ -27,8 +27,6 @@
  *
  * @section DESCRIPTION
  *
- * Gemm-based scoring.
- *
  */
 
 #ifndef TDB_SCORING_H
@@ -75,103 +73,12 @@ class without_ids {};
 // Distance functions
 // ----------------------------------------------------------------------------
 
-/**
- * @brief Compute sum of squares distance between two vectors.
- * @tparam V
- * @tparam U
- * @param a
- * @param b
- * @return
- */
-#if 0
-template <class V, class U>
-inline auto sum_of_squares(V const& a, U const& b) {
-  float sum{0.0};
-  size_t size_a = size(a);
 
-  if constexpr (std::is_same_v<decltype(a[0]),decltype(b[0])>) {
-    for (size_t i = 0; i < size_a; ++i) {
-      float diff = a[i]- b[i];
-      sum += diff * diff;
-    }
-  } else {
-    for (size_t i = 0; i < size_a; ++i) {
-      float diff = ((float)a[i]) - ((float)b[i]);
-      sum += diff * diff;
-    }
-  }
-  return sum;
-}
-#else
-template <class V, class U>
-inline auto sum_of_squares(V const& a, U const& b) {
-  float sum{0.0};
-  size_t size_a = size(a);
+// sum_of_squares(a, b)
+// sum_of_squares(a)
+// sub_sum_of_squares(a, b, start, stop)
 
-  if constexpr (
-      std::unsigned_integral<std::remove_reference_t<decltype(a[0])>> ||
-      std::unsigned_integral<std::remove_reference_t<decltype(b[0])>>) {
-    for (size_t i = 0; i < size_a; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = (float)a[i] - (float)b[i];
-      sum += diff * diff;
-    }
-  } else {
-    for (size_t i = 0; i < size_a; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = a[i] - b[i];
-      sum += diff * diff;
-    }
-  }
-  return sum;
-}
 
-template <class V>
-inline auto sum_of_squares(V const& a) {
-  float sum{0.0};
-  size_t size_a = size(a);
-
-  if constexpr (std::unsigned_integral<
-                    std::remove_reference_t<decltype(a[0])>>) {
-    for (size_t i = 0; i < size_a; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = (float)a[i];
-      sum += diff * diff;
-    }
-  } else {
-    for (size_t i = 0; i < size_a; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = a[i];
-      sum += diff * diff;
-    }
-  }
-  return sum;
-}
-
-template <class V, class U>
-inline auto sub_sum_of_squares(
-    V const& a, U const& b, size_t start, size_t end) {
-  float sum{0.0};
-
-  if constexpr (
-      std::unsigned_integral<std::remove_reference_t<decltype(a[0])>> ||
-      std::unsigned_integral<std::remove_reference_t<decltype(b[0])>>) {
-    for (size_t i = start; i < end; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = (float)a[i] - (float)b[i];
-      sum += diff * diff;
-    }
-  } else {
-    for (size_t i = start; i < end; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = a[i] - b[i];
-      sum += diff * diff;
-    }
-  }
-  return sum;
-}
-
-#endif
 
 /**
  * @brief Compute L2 distance between two vectors.
