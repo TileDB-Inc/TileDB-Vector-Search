@@ -153,7 +153,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
     }
     float sum = 0.0;
     for (size_t i = 0; i < centroid.size(); ++i) {
-      sum += abs(centroid[i]);
+      sum += std::abs(centroid[i]);
       centroid[i] /= (float)num_vectors(f);
     }
     CHECK(sum > 0);

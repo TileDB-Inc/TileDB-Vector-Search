@@ -60,6 +60,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
 
  public:
   using ids_type = IdsType;
+  using size_type = typename Base::size_type;
 
   MatrixWithIds() noexcept = default;
 
@@ -74,8 +75,8 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
   virtual ~MatrixWithIds() = default;
 
   MatrixWithIds(
-      Base::size_type nrows,
-      Base::size_type ncols,
+      size_type nrows,
+      size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : Base(nrows, ncols, policy)
@@ -83,8 +84,8 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
   }
 
   MatrixWithIds(
-      Base::size_type nrows,
-      Base::size_type ncols,
+      size_type nrows,
+      size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(nrows, ncols, policy)
@@ -94,8 +95,8 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
   MatrixWithIds(
       std::unique_ptr<T[]>&& storage,
       std::vector<IdsType>&& ids,
-      Base::size_type nrows,
-      Base::size_type ncols,
+      size_type nrows,
+      size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
       : Base(std::move(storage), nrows, ncols, policy)
       , ids_{std::move(ids)} {
