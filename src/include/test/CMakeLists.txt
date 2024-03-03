@@ -53,6 +53,8 @@ endmacro (kmeans_add_test)
 # kmeans_add_test(time_l2)
 # kmeans_add_test(time_open)
 
+kmeans_add_test(time_scoring)
+
 kmeans_add_test(unit_vamana_index)
 
 kmeans_add_test(unit_vamana_group)
