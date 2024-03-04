@@ -39,6 +39,8 @@
 #include <immintrin.h>
 #include "detail/scoring/l2_distance.h"
 #include "detail/scoring/l2_distance_avx.h"
+#include "detail/scoring/inner_product.h"
+#include "detail/scoring/inner_product_avx.h"
 #endif
 
 double the_sum = 0.0;
@@ -121,147 +123,6 @@ auto baseline_inner_product(const ColMajorMatrix<float>& a, const ColMajorMatrix
 }
 
 
-template <class V, class W>
-requires std::same_as<typename V::value_type, float> &&
-std::same_as<typename W::value_type, float>
-inline float inner_product_naive(const V& a, const W& b) {
-  size_t size_a = size(a);
-  float sum = 0.0;
-  for (size_t i = 0; i < size_a; ++i) {
-    sum += a[i] * b[i];
-  }
-  return sum;
-}
-
-template <class V, class W>
-requires std::same_as<typename V::value_type, uint8_t> &&
-std::same_as<typename W::value_type, uint8_t>
-inline float inner_product_naive(const V& a, const W& b) {
-  size_t size_a = size(a);
-  float sum = 0.0;
-  for (size_t i = 0; i < size_a; ++i) {
-    sum +=((float) a[i]) * ((float)b[i]);
-  }
-  return sum;
-}
-
-
-template <class V, class W>
-requires std::same_as<typename V::value_type, float> &&
-std::same_as<typename W::value_type, float>
-inline float inner_product_unroll4(const V& a, const W& b) {
-  size_t size_a = size(a);
-  float sum = 0.0;
-  for (size_t i = 0; i < size_a; i+=4) {
-    float prod0 = a[i+0] * b[i+0];
-    float prod1 = a[i+1] * b[i+1];
-    float prod2 = a[i+2] * b[i+2];
-    float prod3 = a[i+3] * b[i+3];
-    sum += prod0 + prod1 + prod2 + prod3;
-  }
-  return sum;
-}
-
-
-template <class V, class W>
-requires std::same_as<typename V::value_type, float> &&
-std::same_as<typename W::value_type, float>
-inline float inner_product_avx2(const V& a, const W& b) {
-
-  // @todo Align on 256 bit boundaries 
-  const size_t start = 0;
-  const size_t size_a = size(a);
-  const size_t stop = size_a - (size_a % 8);
-
-  const float* a_ptr = a.data();
-  const float* b_ptr = b.data();
-
-  __m256 vec_sum = _mm256_setzero_ps();  
-
-  for (size_t i = start; i < stop; i += 8) {
-
-        // Load 8 floats
-        __m256 vec_a = _mm256_loadu_ps(a_ptr + i);
-        __m256 vec_b = _mm256_loadu_ps(b_ptr + i);
-
-        // Multiply and accumulate
-        vec_sum = _mm256_fmadd_ps(vec_a, vec_b, vec_sum);
-    }
-
-  // 8 to 4
-  __m128 lo = _mm256_castps256_ps128(vec_sum);
-  __m128 hi = _mm256_extractf128_ps(vec_sum, 1);
-  __m128 combined = _mm_add_ps(lo, hi);
-
-  // 4 to 2
-  combined = _mm_hadd_ps(combined, combined);
-
-  // 2 to 1
-  combined = _mm_hadd_ps(combined, combined);
-
-  float sum = _mm_cvtss_f32(combined);
-
-  // Clean up
-  for (size_t i = stop; i < size_a; ++i) {
-    sum += a[i] * b[i];
-  }
-
-  return sum;
-}
-
-template <class V, class W>
-requires std::same_as<typename V::value_type, uint8_t> &&
-std::same_as<typename W::value_type, uint8_t>
-inline float inner_product_avx2(const V& a, const W& b) {
-
-  // @todo Align on 256 bit boundaries 
-  const size_t start = 0;
-  const size_t size_a = size(a);
-  const size_t stop = size_a - (size_a % 8);
-
-  const uint8_t* a_ptr = a.data();
-  const uint8_t* b_ptr = b.data();
-
-  __m256 vec_sum = _mm256_setzero_ps();  
-
-  for (size_t i = start; i < stop; i += 8) {
-
-    // Load 8 bytes == 64 bits -- zeros out top 8 bytes
-    __m128i vec_a = _mm_loadu_si64((__m64*)(a_ptr + i));
-    __m128i vec_b = _mm_loadu_si64((__m64*)(b_ptr + i));
-
-    // Zero extend 8bit to 32bit ints
-    __m256i a_ints = _mm256_cvtepu8_epi32(vec_a);
-    __m256i b_ints = _mm256_cvtepu8_epi32(vec_b);
-
-    // Convert signed integers to floats
-    __m256 a_floats = _mm256_cvtepi32_ps(a_ints);
-    __m256 b_floats = _mm256_cvtepi32_ps(b_ints);
-
-    // Multiply and accumulate
-    vec_sum = _mm256_fmadd_ps(a_floats, b_floats, vec_sum);
-    }
-
-  // 8 to 4
-  __m128 lo = _mm256_castps256_ps128(vec_sum);
-  __m128 hi = _mm256_extractf128_ps(vec_sum, 1);
-  __m128 combined = _mm_add_ps(lo, hi);
-
-  // 4 to 2
-  combined = _mm_hadd_ps(combined, combined);
-
-  // 2 to 1
-  combined = _mm_hadd_ps(combined, combined);
-
-  float sum = _mm_cvtss_f32(combined);
-
-  // Clean up
-  for (size_t i = stop; i < size_a; ++i) {
-    sum += a[i] * b[i];
-  }
-
-  return sum;
-}
 
 
 template <class V, class W>
@@ -298,32 +159,65 @@ int main() {
   randomize(std::span<uint8_t>(c.data(), dimension(c) * num_vectors(c)));
   randomize(std::span<uint8_t>(d.data(), dimension(d) * num_vectors(d)));
 
+  std::cout << "***** Inner Product" << std::endl;
+
   auto ta = baseline_inner_product(a, b);
   std::cout << "baseline inner product: " << ta << "s" << std::endl;
   auto inner_ = the_sum;
 
-  auto tb = do_time_scoring(a, b, inner_product_naive<decltype(a[0]), decltype(b[0])>);
-  std::cout << "naive float-float inner_product: " << tb << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
+  {
+    auto ta = do_time_scoring(a, b, naive_inner_product<decltype(a[0]), decltype(b[0])>);
+    std::cout << "naive float-float inner_product: " << ta << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
 
-  auto tc = do_time_scoring(c, d, inner_product_naive<decltype(c[0]), decltype(d[0])>);
-  std::cout << "naive uint8_t-uint8_t inner_product: " << tc << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
+    auto tb = do_time_scoring(a, c, naive_inner_product<decltype(a[0]), decltype(c[0])>);
+    std::cout << "naive float-uint8_t inner_product: " << tb << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
 
-  auto td = do_time_scoring(a, b, inner_product_unroll4<decltype(a[0]), decltype(b[0])>);
-  std::cout << "unrolled float-float inner_product: " << td << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
+    auto tc = do_time_scoring(c, a, naive_inner_product<decltype(c[0]), decltype(a[0])>);
+    std::cout <<"naive uint8_t-float inner_product: " << tc << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
 
-  auto te = do_time_scoring(a, b, inner_product_avx2<decltype(a[0]), decltype(b[0])>);
-  std::cout << "avx2 float-float inner_product: " << te << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
+    auto td = do_time_scoring(c, d, naive_inner_product<decltype(c[0]), decltype(d[0])>);
+    std::cout << "naive uint8_t-uint8_t inner_product: " << td << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
+  }
 
-  auto tf = do_time_scoring(c, d, inner_product_avx2<decltype(c[0]), decltype(d[0])>);
-  std::cout << "avx2 uint8_t-uint8_t inner_product: " << tf << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
+  {
+    auto ta = do_time_scoring(a, b, unroll4_inner_product<decltype(a[0]), decltype(b[0])>);
+    std::cout << "unrolled float-float inner_product: " << ta << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
+    
+    auto tb = do_time_scoring(a, c, unroll4_inner_product<decltype(a[0]), decltype(c[0])>);
+    std::cout << "unroll4 float-uint8_t inner_product: " << tb << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
+    
+    auto tc = do_time_scoring(c, a, unroll4_inner_product<decltype(c[0]), decltype(a[0])>);
+    std::cout <<"unroll4 uint8_t-float inner_product: " << tc << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
+    
+    auto td = do_time_scoring(c, d, unroll4_inner_product<decltype(c[0]), decltype(d[0])>);
+    std::cout << "unroll4 uint8_t-uint8_t inner_product: " << td << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
+  }
 
+  {
+
+  auto ta = do_time_scoring(a, b, avx2_inner_product<decltype(a[0]), decltype(b[0])>);
+  std::cout << "avx2 float-float inner_product: " << ta << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
+
+  auto tb = do_time_scoring(a, c, avx2_inner_product<decltype(a[0]), decltype(c[0])>);
+  std::cout << "avx2 float -uint8_t inner_product: " << tb << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
+
+  auto tc = do_time_scoring(c, a, avx2_inner_product<decltype(c[0]), decltype(a[0])>);
+  std::cout << "avx2 uint8_t-float inner_product: " << tc << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
+
+  auto td = do_time_scoring(c, d, avx2_inner_product<decltype(c[0]), decltype(d[0])>);
+  std::cout << "avx2 uint8_t-uint8_t inner_product: " << td << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
+  }
+
+
+  std::cout << "***** L2 distance" << std::endl;
 
   auto t = baseline_scoring(a, b);
   std::cout << "baseline: " << t << "s" << std::endl;
   auto the_sum_ = the_sum;
 
-  auto t0 = do_time_scoring(a, b, naive_sum_of_squares<decltype(a[0]), decltype(b[0])>);
-  std::cout << "naive float-float: " << t0 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
+  {
+  auto t0 = do_time_scoring(a, b, unroll4_sum_of_squares<decltype(a[0]), decltype(b[0])>);
+  std::cout << "unroll4 float-float: " << t0 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
 
 #ifdef __AVX2__
   auto t4 = do_time_scoring(a, b, avx2_sum_of_squares<decltype(a[0]), decltype(b[0])>);
@@ -353,9 +247,10 @@ int main() {
   auto t7 = do_time_scoring(c, d, avx2_sum_of_squares<decltype(c[0]), decltype(d[0])>);
   std::cout << "avx2 uint8_t-uint8_t: " << t7 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
 #endif
-
-  auto t01 = do_time_scoring(a, b, unroll4_sum_of_squares<decltype(a[0]), decltype(b[0])>);
-  std::cout << "unroll4 float-float: " << t01 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
+  }
+  {
+  auto t00 = do_time_scoring(a, b, unroll4_sum_of_squares<decltype(a[0]), decltype(b[0])>);
+  std::cout << "unroll4 float-float: " << t00 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
 
   auto t01 = do_time_scoring(a, c, unroll4_sum_of_squares<decltype(a[0]), decltype(c[0])>);
   std::cout << "unroll4 float-uint8_t: " << t01 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
@@ -365,4 +260,5 @@ int main() {
 
   auto t03 = do_time_scoring(c, d, unroll4_sum_of_squares<decltype(c[0]), decltype(d[0])>);
   std::cout << "unroll4 uint8_t-uint8_t: " << t03 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
+  }
 }
