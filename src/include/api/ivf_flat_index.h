@@ -165,9 +165,9 @@ class IndexIVFFlat {
     /**
      * We support all combinations of the following types for feature,
      * id, and px datatypes:
-     *   feature_type: uint8 or float
-     *   id_type: uint32 or uint64
-     *   px_type: uint32 or uint64
+     *   feature_type (partitioned_vectors_feature_type): uint8 or float
+     *   id_type (partitioned_ids_type): uint32 or uint64
+     *   px_type (partitioning_index_type): uint32 or uint64
      *
      *   @todo Unify the type-based switch-case statements in a manner
      *   similar to what was done in query_condition
@@ -257,9 +257,9 @@ class IndexIVFFlat {
     /**
      * We support all combinations of the following types for feature,
      * id, and px datatypes:
-     *   feature_type: uint8 or float
-     *   id_type: uint32 or uint64
-     *   px_type: uint32 or uint64
+     *   feature_type (partitioned_vectors_feature_type): uint8 or float
+     *   id_type (partitioned_ids_type): uint32 or uint64
+     *   px_type (partitioning_index_type): uint32 or uint64
      */
     if (feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
@@ -338,6 +338,9 @@ class IndexIVFFlat {
           datatype_to_string(feature_datatype_) +
           " != " + datatype_to_string(data_set.feature_type()));
     }
+    if (!index_) {
+      throw std::runtime_error("Cannot add() because there is no index.");
+    }
     index_->add(data_set);
   }
 
@@ -348,6 +351,10 @@ class IndexIVFFlat {
   // todo query() or search() -- or both?
   [[nodiscard]] auto query_infinite_ram(
       const QueryVectorArray& vectors, size_t top_k, size_t nprobe) const {
+    if (!index_) {
+      throw std::runtime_error(
+          "Cannot query_infinite_ram() because there is no index.");
+    }
     return index_->query_infinite_ram(vectors, top_k, nprobe);
   }
 
@@ -356,6 +363,10 @@ class IndexIVFFlat {
       size_t top_k,
       size_t nprobe,
       size_t upper_bound = 0) const {
+    if (!index_) {
+      throw std::runtime_error(
+          "Cannot query_finite_ram() because there is no index.");
+    }
     return index_->query_finite_ram(vectors, top_k, nprobe, upper_bound);
   }
 
@@ -363,6 +374,9 @@ class IndexIVFFlat {
       const FeatureVectorArray& vectors,
       const std::optional<IdVector>& ids = std::nullopt,
       const std::optional<UpdateOptions>& options = std::nullopt) const {
+    if (!index_) {
+      throw std::runtime_error("Cannot update() because there is no index.");
+    }
     index_->update(vectors, ids, options);
   }
 
@@ -370,10 +384,16 @@ class IndexIVFFlat {
       const URI& vectors_uri,
       const std::optional<IdVector>& ids = std::nullopt,
       const std::optional<UpdateOptions>& options = std::nullopt) const {
+    if (!index_) {
+      throw std::runtime_error("Cannot update() because there is no index.");
+    }
     index_->update(vectors_uri, ids, options);
   }
 
   void remove(const IdVector& ids) const {
+    if (!index_) {
+      throw std::runtime_error("Cannot remove() because there is no index.");
+    }
     index_->remove(ids);
   }
 
@@ -381,6 +401,10 @@ class IndexIVFFlat {
       const tiledb::Context& ctx,
       const std::string& group_uri,
       bool overwrite = false) const {
+    if (!index_) {
+      throw std::runtime_error(
+          "Cannot write_index() because there is no index.");
+    }
     index_->write_index(ctx, group_uri, overwrite);
   }
 

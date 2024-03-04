@@ -94,6 +94,28 @@ TEST_CASE("tdb_io: read matrix", "[tdb_io]") {
   CHECK(dimension(X) == bigann1M_dimension);
 }
 
+TEST_CASE("tdb_io: load_file", "[tdb_io]") {
+  tiledb::Context ctx;
+
+  SECTION("inputs") {
+    const auto A = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(
+        ctx, siftsmall_inputs_uri);
+    const auto B =
+        read_bin_local<siftsmall_feature_type>(ctx, siftsmall_inputs_file);
+
+    REQUIRE(A == B);
+  }
+
+  SECTION("query") {
+    const auto A = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(
+        ctx, siftsmall_query_uri);
+    const auto B =
+        read_bin_local<siftsmall_feature_type>(ctx, siftsmall_query_file);
+
+    REQUIRE(A == B);
+  }
+}
+
 TEMPLATE_TEST_CASE("tdb_io: write matrix", "[tdb_io]", float, uint8_t) {
   tiledb::Context ctx;
   std::string tmp_matrix_uri = "/tmp/tmp_matrix";

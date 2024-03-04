@@ -51,7 +51,7 @@ else()
 endif()
 
 find_program(CLANG_FORMAT_BIN
-  NAMES 
+  NAMES
   clang-format-15
   clang-format-5.0
   clang-format-4.0

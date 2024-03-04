@@ -45,6 +45,7 @@ auto read_diskann_data(const std::string& path) {
   uint32_t ndim{0};
 
   std::ifstream binary_file(path, std::ios::binary);
+  binary_file.exceptions(std::ifstream::failbit);
   if (!binary_file.is_open()) {
     throw std::runtime_error("Could not open file " + path);
   }
@@ -55,6 +56,10 @@ auto read_diskann_data(const std::string& path) {
   auto x = ColMajorMatrix<float>(ndim, npoints);
 
   binary_file.read((char*)x.data(), npoints * ndim * sizeof(float));
+  if ((size_t)binary_file.gcount() != (size_t)npoints * ndim * sizeof(float)) {
+    throw std::runtime_error("Could not read all data from " + path);
+  }
+
   binary_file.close();
 
   return x;
@@ -102,6 +107,8 @@ auto read_diskann_mem_index(const std::string& index) {
   return g;
 }
 
+// @todo Also a read_diskann_disk_index?
+// Note that that is much more complicated
 auto read_diskann_mem_index_with_scores(
     const std::string& index, const std::string& data) {
   auto x = read_diskann_data(data);

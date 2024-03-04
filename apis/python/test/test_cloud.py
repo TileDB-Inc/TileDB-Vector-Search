@@ -2,10 +2,10 @@ import os
 import unittest
 
 from common import *
-from tiledb.cloud import groups, tiledb_cloud_error
-from tiledb.cloud.dag import Mode
 
 import tiledb.vector_search as vs
+from tiledb.cloud import groups
+from tiledb.cloud.dag import Mode
 from tiledb.vector_search.utils import load_fvecs
 
 MINIMUM_ACCURACY = 0.85
@@ -26,13 +26,17 @@ class CloudTests(unittest.TestCase):
         test_path = f"tiledb://{namespace}/{storage_path}/{rand_name}"
         cls.flat_index_uri = f"{test_path}/test_flat_array"
         cls.ivf_flat_index_uri = f"{test_path}/test_ivf_flat_array"
-        cls.ivf_flat_random_sampling_index_uri = f"{test_path}/test_ivf_flat_random_sampling_array"
+        cls.ivf_flat_random_sampling_index_uri = (
+            f"{test_path}/test_ivf_flat_random_sampling_array"
+        )
 
     @classmethod
     def tearDownClass(cls):
         vs.Index.delete_index(uri=cls.flat_index_uri, config=tiledb.cloud.Config())
         vs.Index.delete_index(uri=cls.ivf_flat_index_uri, config=tiledb.cloud.Config())
-        vs.Index.delete_index(uri=cls.ivf_flat_random_sampling_index_uri, config=tiledb.cloud.Config())
+        vs.Index.delete_index(
+            uri=cls.ivf_flat_random_sampling_index_uri, config=tiledb.cloud.Config()
+        )
 
     def test_cloud_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
@@ -61,7 +65,6 @@ class CloudTests(unittest.TestCase):
         index.delete(external_id=42)
         _, result_i = index.query(queries, k=k)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
-
 
     def test_cloud_ivf_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
@@ -93,7 +96,12 @@ class CloudTests(unittest.TestCase):
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
         _, result_i = index.query(
-            queries, k=k, nprobe=nprobe, mode=Mode.REALTIME, num_partitions=2, resource_class="standard"
+            queries,
+            k=k,
+            nprobe=nprobe,
+            mode=Mode.REALTIME,
+            num_partitions=2,
+            resource_class="standard",
         )
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
@@ -107,9 +115,13 @@ class CloudTests(unittest.TestCase):
 
         # Cannot pass resource_class or resources to LOCAL mode or to no mode.
         with self.assertRaises(TypeError):
-            index.query(queries, k=k, nprobe=nprobe, mode=Mode.LOCAL, resource_class="large")
+            index.query(
+                queries, k=k, nprobe=nprobe, mode=Mode.LOCAL, resource_class="large"
+            )
         with self.assertRaises(TypeError):
-            index.query(queries, k=k, nprobe=nprobe, mode=Mode.LOCAL, resources=resources)
+            index.query(
+                queries, k=k, nprobe=nprobe, mode=Mode.LOCAL, resources=resources
+            )
         with self.assertRaises(TypeError):
             index.query(queries, k=k, nprobe=nprobe, resource_class="large")
         with self.assertRaises(TypeError):
@@ -117,14 +129,30 @@ class CloudTests(unittest.TestCase):
 
         # Cannot pass resources to REALTIME.
         with self.assertRaises(TypeError):
-            index.query(queries, k=k, nprobe=nprobe, mode=Mode.REALTIME, resources=resources)
+            index.query(
+                queries, k=k, nprobe=nprobe, mode=Mode.REALTIME, resources=resources
+            )
 
         # Cannot pass both resource_class and resources.
         with self.assertRaises(TypeError):
-            index.query(queries, k=k, nprobe=nprobe, mode=Mode.REALTIME, resource_class="large", resources=resources)
+            index.query(
+                queries,
+                k=k,
+                nprobe=nprobe,
+                mode=Mode.REALTIME,
+                resource_class="large",
+                resources=resources,
+            )
         with self.assertRaises(TypeError):
-            index.query(queries, k=k, nprobe=nprobe, mode=Mode.BATCH, resource_class="large", resources=resources)
-        
+            index.query(
+                queries,
+                k=k,
+                nprobe=nprobe,
+                mode=Mode.BATCH,
+                resource_class="large",
+                resources=resources,
+            )
+
         index.delete(external_id=42)
         _, result_i = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
@@ -145,7 +173,7 @@ class CloudTests(unittest.TestCase):
 
         queries = load_fvecs(queries_uri)
         gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
-        
+
         index = vs.ingest(
             index_type="IVF_FLAT",
             index_uri=index_uri,
@@ -161,9 +189,10 @@ class CloudTests(unittest.TestCase):
         )
 
         check_training_input_vectors(
-            index_uri=index_uri, 
-            expected_training_sample_size=training_sample_size, 
-            expected_dimensions=queries.shape[1])
+            index_uri=index_uri,
+            expected_training_sample_size=training_sample_size,
+            expected_dimensions=queries.shape[1],
+        )
 
         _, result_i = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
