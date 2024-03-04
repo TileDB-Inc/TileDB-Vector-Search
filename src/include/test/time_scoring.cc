@@ -119,8 +119,6 @@ inline float sum_of_squares_unroll4(const V& a, const W& b) {
   return sum;
 }
 
-
-
 template <class V, class W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, uint8_t>
@@ -176,9 +174,9 @@ inline float sum_of_squares_avx2(const V& a, const W& b) {
   const float* a_ptr = a.data();
   const float* b_ptr = b.data();
 
-  __m256 sum_vec = _mm256_setzero_ps();
+  __m256 sum_vec = _mm256_setzero_ps();  
 
-  for (int i = start; i < stop; i += 8) {
+  for (size_t i = start; i < stop; i += 8) {
 
   // @todo Align on 256 bit boundaries 
       __m256 vec_a = _mm256_loadu_ps(a_ptr + i + 0);
@@ -196,7 +194,6 @@ inline float sum_of_squares_avx2(const V& a, const W& b) {
     __m128 combined = _mm_add_ps(lo, hi);
     combined = _mm_hadd_ps(combined, combined);
     combined = _mm_hadd_ps(combined, combined);
-
 
     float sum = _mm_cvtss_f32(combined);
 
@@ -222,46 +219,40 @@ inline float sum_of_squares_avx2(const V& a, const W& b) {
   const uint8_t* a_ptr = a.data();
   const uint8_t* b_ptr = b.data();
 
-    size_t remaining = size_a;
     __m256 vec_sum = _mm256_setzero_ps();
 
-    // Process arrays in chunks of 32 bytes (256 bits)
-    while (remaining >=16) {
-        // Load arrays into AVX2 registers
-        __m128i vec_a = _mm_loadu_si128((__m128i*)a_ptr);
-        __m128i vec_b = _mm_loadu_si128((__m128i*)b_ptr);
+    
+    for (size_t i = start; i < stop; i += 8) {
+      // Load 8 bytes == 64 bits -- zeros out top 8 bytes
+      __m128i vec_a = _mm_loadu_si64((__m64*)(a_ptr + i));
+      __m128i vec_b = _mm_loadu_si64((__m64*)(b_ptr + i));
 
-        // Convert to 16-bit integers
-        __m256i a16 = _mm256_cvtepu8_epi16(vec_a);
-        __m256i b16 = _mm256_cvtepu8_epi16(vec_b);
+      // Zero extend 8bit to 32bit ints
+      __m256i a_ints = _mm256_cvtepu8_epi32(vec_a);
+      __m256i b_ints = _mm256_cvtepu8_epi32(vec_b);
 
-        // Subtract 'b' from 'a'
-        __m256i idiff = _mm256_sub_epi16(a16, b16);
+	__m256 a_floats = _mm256_cvtepi32_ps(a_ints);
+	__m256 b_floats = _mm256_cvtepi32_ps(b_ints);
 
-        // Convert to floating-point
-        __m256 diff = _mm256_cvtepf32_ps(idiff);
+        __m256i diff = _mm256_sub_ps(a_floats, b_floats);
+	vec_sum = _mm256_fmadd_ps(diff, diff, vec_sum);
 
-        // Square the differences
-        __m256 diff_2 = _mm256_mul_ps(diff, diff);
-
-        // Accumulate squared differences
-        vec_sum = _mm256_add_ps(vec_sum, diff_2);
-
-        // Move to next chunk
-        a += 16;
-        b += 16;
-        remaining -= 16;
+        // __m256 diff_2 = _mm256_mul_ps(diff, diff);
+        // vec_sum = _mm256_add_ps(vec_sum, diff_2);
     }
 
-    // Horizontal addition to reduce to a single 256-bit vector
     __m128 lo = _mm256_castps256_ps128(vec_sum);
     __m128 hi = _mm256_extractf128_ps(vec_sum, 1);
     __m128 combined = _mm_add_ps(lo, hi);
     combined = _mm_hadd_ps(combined, combined);
     combined = _mm_hadd_ps(combined, combined);
 
-    // Extract and return the result as a float
     float sum = _mm_cvtss_f32(combined);
+
+  for (size_t i = stop; i < size_a; ++i) {
+    float diff = a[i] -	b[i];
+    sum	+= diff	* diff;
+  }
 
     return sum;
 }
@@ -322,6 +313,9 @@ int main() {
   std::cout << "naive uint8_t-uint8_t: " << t3 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
 
 #ifdef __AVX2__
+  auto t8 = do_time_scoring(c, d, sum_of_squares_avx2<decltype(c[0]), decltype(d[0])>);
+  std::cout << "avx2 uint8_t-uint8_t: " << t8 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
+
   auto t4 = do_time_scoring(a, b, sum_of_squares_avx2<decltype(a[0]), decltype(b[0])>);
   std::cout << "avx2 float-float: " << t4 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
 #endif
@@ -337,10 +331,6 @@ int main() {
   std::cout << "avx2 uint8_t-uint8_t: " << t7 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
 #endif
 
-#ifdef __AVX2__
-  auto t8 = do_time_scoring_avx2(a, b);
-  std::cout << "avx2 float-float: " << t8 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
-#endif
 
   auto t9 = do_time_scoring(a, b, sum_of_squares_unroll4<decltype(a[0]), decltype(b[0])>);
   std::cout << "unroll4 float-float: " << t9 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
