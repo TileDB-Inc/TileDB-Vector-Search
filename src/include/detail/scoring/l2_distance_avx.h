@@ -35,19 +35,12 @@
 #ifndef TDB_SCORING_L2_DISTANCE_AVX_H
 #define TDB_SCORING_L2_DISTANCE_AVX_H
 
-
-
 #ifndef __AVX2__
 #warning "AVX2 not supported!! Using naive algorithms!!"
 #else
 
 #include "concepts.h"
-#include "utils/timer.h"
-#include "detail/linalg/vector.h"
-
 #include <immintrin.h>
-
-
 
 /**
  * float - float

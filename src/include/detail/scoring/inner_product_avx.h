@@ -35,7 +35,14 @@
 #ifndef TDB_SCORING_INNER_PRODUCT_AVX_H
 #define TDB_SCORING_INNER_PRODUCT_AVX_H
 
-template <class V, class W>
+#ifndef __AVX2__
+#warning "AVX2 not supported!! Using naive algorithms!!"
+#else
+
+#include "concepts.h"
+#include <immintrin.h>
+
+template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, float>
 inline float avx2_inner_product(const V& a, const W& b) {
@@ -81,7 +88,7 @@ inline float avx2_inner_product(const V& a, const W& b) {
   return sum;
 }
 
-template <class V, class W>
+template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, uint8_t>
 inline float avx2_inner_product(const V& a, const W& b) {
@@ -135,7 +142,7 @@ inline float avx2_inner_product(const V& a, const W& b) {
   return sum;
 }
 
-template <class V, class W>
+template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, uint8_t> &&
            std::same_as<typename W::value_type, float>
 inline float avx2_inner_product(const V& a, const W& b) {
@@ -189,7 +196,7 @@ inline float avx2_inner_product(const V& a, const W& b) {
   return sum;
 }
 
-template <class V, class W>
+template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, uint8_t> &&
            std::same_as<typename W::value_type, uint8_t>
 inline float avx2_inner_product(const V& a, const W& b) {
@@ -243,5 +250,5 @@ inline float avx2_inner_product(const V& a, const W& b) {
   return sum;
 }
 
-
+#endif // __AVX2__
 #endif // TDB_SCORING_INNER_PRODUCT_AVX_H

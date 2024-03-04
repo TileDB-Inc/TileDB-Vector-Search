@@ -35,8 +35,9 @@
 #ifndef TDB_SCORING_INNER_PRODUCT_H
 #define TDB_SCORING_INNER_PRODUCT_H
 
+#include "concepts.h"
 
-template <class V, class W>
+template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, float>
 inline float naive_inner_product(const V& a, const W& b) {
@@ -48,7 +49,7 @@ inline float naive_inner_product(const V& a, const W& b) {
   return sum;
 }
 
-template <class V, class W>
+template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, uint8_t>
 inline float naive_inner_product(const V& a, const W& b) {
@@ -60,7 +61,7 @@ inline float naive_inner_product(const V& a, const W& b) {
   return sum;
 }
 
-template <class V, class W>
+template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, uint8_t> &&
            std::same_as<typename W::value_type, float>
 inline float naive_inner_product(const V& a, const W& b) {
@@ -72,7 +73,7 @@ inline float naive_inner_product(const V& a, const W& b) {
   return sum;
 }
 
-template <class V, class W>
+template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, uint8_t> &&
            std::same_as<typename W::value_type, uint8_t>
 inline float naive_inner_product(const V& a, const W& b) {
@@ -85,7 +86,7 @@ inline float naive_inner_product(const V& a, const W& b) {
 }
 
 
-template <class V, class W>
+template <feature_vector V, feature_vector W>
 requires std::same_as<typename V::value_type, float> &&
          std::same_as<typename W::value_type, float>
 inline float unroll4_inner_product(const V& a, const W& b) {
@@ -101,7 +102,7 @@ inline float unroll4_inner_product(const V& a, const W& b) {
   return sum;
 }
 
-template <class V, class W>
+template <feature_vector V, feature_vector W>
 requires std::same_as<typename V::value_type, float> &&
          std::same_as<typename W::value_type, uint8_t>
 inline float unroll4_inner_product(const V& a, const W& b) {
@@ -117,7 +118,7 @@ inline float unroll4_inner_product(const V& a, const W& b) {
   return sum;
 }
 
-template <class V, class W>
+template <feature_vector V, feature_vector W>
 requires std::same_as<typename V::value_type, uint8_t> &&
          std::same_as<typename W::value_type, float>
 inline float unroll4_inner_product(const V& a, const W& b) {
@@ -133,7 +134,7 @@ inline float unroll4_inner_product(const V& a, const W& b) {
   return sum;
 }
 
-template <class V, class W>
+template <feature_vector V, feature_vector W>
 requires std::same_as<typename V::value_type, uint8_t> &&
          std::same_as<typename W::value_type, uint8_t>
 inline float unroll4_inner_product(const V& a, const W& b) {

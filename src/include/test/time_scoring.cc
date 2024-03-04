@@ -72,6 +72,7 @@ auto baseline_scoring(const ColMajorMatrix<float>& a, const ColMajorMatrix<float
 }
 
 template <class V, class W, class F>
+  requires std::invocable<F, std::span<typename V::value_type>, std::span<typename W::value_type>>
 inline double do_time_scoring(
 			      const V& a,
 			      const W& b,
@@ -216,8 +217,8 @@ int main() {
   auto the_sum_ = the_sum;
 
   {
-  auto t0 = do_time_scoring(a, b, unroll4_sum_of_squares<decltype(a[0]), decltype(b[0])>);
-  std::cout << "unroll4 float-float: " << t0 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
+  auto t0 = do_time_scoring(a, b, naive_sum_of_squares<decltype(a[0]), decltype(b[0])>);
+  std::cout << "naive float-float: " << t0 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
 
 #ifdef __AVX2__
   auto t4 = do_time_scoring(a, b, avx2_sum_of_squares<decltype(a[0]), decltype(b[0])>);
@@ -249,16 +250,16 @@ int main() {
 #endif
   }
   {
-  auto t00 = do_time_scoring(a, b, unroll4_sum_of_squares<decltype(a[0]), decltype(b[0])>);
+    auto t00 = do_time_scoring(a, b, [](auto&& a, auto&&b) {return unroll4_sum_of_squares(a, b);});
   std::cout << "unroll4 float-float: " << t00 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
 
-  auto t01 = do_time_scoring(a, c, unroll4_sum_of_squares<decltype(a[0]), decltype(c[0])>);
+  auto t01 = do_time_scoring(a, c, [](auto&& a, auto&&b) {return unroll4_sum_of_squares(a, b);});
   std::cout << "unroll4 float-uint8_t: " << t01 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
 
-  auto t02 = do_time_scoring(c, a, unroll4_sum_of_squares<decltype(c[0]), decltype(a[0])>);
+  auto t02 = do_time_scoring(c,a, [](auto&& a, auto&&b) {return unroll4_sum_of_squares(a, b);});
   std::cout << "unroll4 uint8_t-float: " << t02 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
 
-  auto t03 = do_time_scoring(c, d, unroll4_sum_of_squares<decltype(c[0]), decltype(d[0])>);
+  auto t03 = do_time_scoring(c,d, [](auto&& a, auto&&b) {return unroll4_sum_of_squares(a, b);});
   std::cout << "unroll4 uint8_t-uint8_t: " << t03 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
   }
 }

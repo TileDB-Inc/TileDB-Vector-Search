@@ -38,227 +38,51 @@
 #include "detail/scoring/l2_distance_avx.h"
 #include "detail/scoring/inner_product.h"
 #include "detail/scoring/inner_product_avx.h"
-#include "detail/scoring/cosine.h"
-#include "detail/scoring/cosine_avx.h"
+
+// @todo Implement
+// #include "detail/scoring/cosine.h"
+// #include "detail/scoring/cosine_avx.h"
 
 #ifdef TILEDB_VS_ENABLE_BLAS
 
+// @todo Implement
 #include "detail/scoring/l2_distance_blas.h"
 #include "detail/scoring/inner_product_blas.h"
 #include "detail/scoring/cosine_blas.h"
 
 #endif // TILEDB_VS_ENABLE_BLAS
 
-#endif // TDB_SCORING_H
 
-#if 0
-#include <algorithm>
-#include "algorithm.h"
-#include "concepts.h"
-#include "linalg.h"
-#include "utils/timer.h"
-#include "utils/utils.h"
-
-#include "detail/linalg/choose_blas.h"
-
-#include <algorithm>
-#include <cmath>
-#include <future>
-#include <iostream>
-#include <limits>
-#include <memory>
-#include <numeric>
-#include <queue>
-#include <ranges>
-#include <set>
-#include <span>
-// #include <execution>
-
-#include "detail/linalg/linalg_defs.h"
-#include "tdb_defs.h"
-#include "utils/fixed_min_heap.h"
-#include "utils/timer.h"
-
-#include "utils/print_types.h"
-
-// ----------------------------------------------------------------------------
-// Helper utilities
-//----------------------------------------------------------------------------
-namespace {
-class with_ids {};
-class without_ids {};
-}  // namespace
-
-// ----------------------------------------------------------------------------
-// Distance functions
-// ----------------------------------------------------------------------------
-
-/**
- * @brief Compute sum of squares distance between two vectors.
- * @tparam V
- * @tparam U
- * @param a
- * @param b
- * @return
- */
-#if 0
-template <class V, class U>
-inline auto sum_of_squares(V const& a, U const& b) {
-  float sum{0.0};
-  size_t size_a = size(a);
-
-  if constexpr (std::is_same_v<decltype(a[0]),decltype(b[0])>) {
-    for (size_t i = 0; i < size_a; ++i) {
-      float diff = a[i]- b[i];
-      sum += diff * diff;
-    }
-  } else {
-    for (size_t i = 0; i < size_a; ++i) {
-      float diff = ((float)a[i]) - ((float)b[i]);
-      sum += diff * diff;
-    }
-  }
-  return sum;
-}
-#else
-template <class V, class U>
-inline auto sum_of_squares(V const& a, U const& b) {
-  float sum{0.0};
-  size_t size_a = size(a);
-
-  if constexpr (
-      std::unsigned_integral<std::remove_reference_t<decltype(a[0])>> ||
-      std::unsigned_integral<std::remove_reference_t<decltype(b[0])>>) {
-    for (size_t i = 0; i < size_a; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = (float)a[i] - (float)b[i];
-      sum += diff * diff;
-    }
-  } else {
-    for (size_t i = 0; i < size_a; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = a[i] - b[i];
-      sum += diff * diff;
-    }
-  }
-  return sum;
-}
-
-template <class V>
-inline auto sum_of_squares(V const& a) {
-  float sum{0.0};
-  size_t size_a = size(a);
-
-  if constexpr (std::unsigned_integral<
-                    std::remove_reference_t<decltype(a[0])>>) {
-    for (size_t i = 0; i < size_a; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = (float)a[i];
-      sum += diff * diff;
-    }
-  } else {
-    for (size_t i = 0; i < size_a; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = a[i];
-      sum += diff * diff;
-    }
-  }
-  return sum;
-}
-
-template <class V, class U>
-inline auto sub_sum_of_squares(
-    V const& a, U const& b, size_t start, size_t end) {
-  float sum{0.0};
-
-  if constexpr (
-      std::unsigned_integral<std::remove_reference_t<decltype(a[0])>> ||
-      std::unsigned_integral<std::remove_reference_t<decltype(b[0])>>) {
-    for (size_t i = start; i < end; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = (float)a[i] - (float)b[i];
-      sum += diff * diff;
-    }
-  } else {
-    for (size_t i = start; i < end; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = a[i] - b[i];
-      sum += diff * diff;
-    }
-  }
-  return sum;
-}
-
-#endif
-
-/**
- * @brief Compute L2 distance between two vectors.
- * @tparam V
- * @param a
- * @param b
- * @return L2 norm of the difference between a and b.
- */
-template <class V, class U>
-inline auto L2(V const& a, U const& b) {
-  // return std::sqrt(sum_of_squares(a, b)); // sqrt is really slow
-  return sum_of_squares(a, b);
-}
-
-/**
- * @brief Compute cosine similarity between two vectors.
- * @tparam V
- * @param a
- * @param b
- * @return
- */
-template <class V>
-auto cosine(V const& a, V const& b) {
-  float sum = 0.0;
-  float a2 = 0.0;
-  float b2 = 0.0;
-
-  auto size_a = size(a);
-  for (auto i = 0; i < size_a; ++i) {
-    sum += a[i] * b[i];
-    a2 += a[i] * a[i];
-    b2 += b[i] * b[i];
-  }
-  // return sum / std::sqrt(a2 * b2);  // sqrt is really slow
-  return (sum * sum) / (a2 * b2);
-}
-
-/**
- * @brief Compute cosine similarity between two vectors.
- * @tparam V
- * @param a
- * @param b
- * @return
- */
-template <class U, class V>
-inline auto dot(U const& a, V const& b) {
-  float sum = 0.0;
-
-  auto size_a = size(a);
-  for (auto i = 0; i < size_a; ++i) {
-    sum += a[i] * b[i];
-  }
-  return sum;
-}
-
-// ----------------------------------------------------------------------------
-// Function objects for computing distances
-// ----------------------------------------------------------------------------
+/****************************************************************
+ *
+ * Function objects.  We put these here instead of in the detail
+ * header file so that we can specify which functio we want to 
+ * dispatch to in this header
+ *
+ ****************************************************************/
 
 struct sum_of_squares_distance {
-  template <class V, class U>
-  constexpr auto operator()(const V& a, const U& b) const {
-    return sum_of_squares(a, b);
+#ifdef __AVX2__
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return avx2_sum_of_squares(a, b);
   }
 
-  template <class V>
-  constexpr auto operator()(const V& a) const {
-    return sum_of_squares(a);
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return avx2_sum_of_squares(a);
   }
+#else
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return unroll4_sum_of_squares(a, b);
+  }
+
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return unroll4_sum_of_squares(a);
+  }
+#endif
 };
 
 using l2_distance = sum_of_squares_distance;
@@ -270,18 +94,23 @@ struct sub_sum_of_squares_distance {
   size_t stop_{0};
 
  public:
+
   sub_sum_of_squares_distance(size_t start, size_t stop)
       : start_(start)
       , stop_(stop) {
   }
-  template <class V, class U>
+
+  // @todo AVX implementation
+  template <feature_vector V, feature_vector U>
   constexpr auto operator()(const V& a, const U& b) const {
-    return sub_sum_of_squares(a, b, start_, stop_);
+    return unroll4_sum_of_squares(a, b, start_, stop_);
   }
 };
 
 using sub_l2_distance = sub_sum_of_squares_distance;
 using sub_L2_distance = sub_sum_of_squares_distance;
+
+
 
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn
@@ -799,4 +628,5 @@ auto gemm_scores(const Matrix1& A, const Matrix2& B, unsigned nthreads) {
   return C;
 }
 #endif  // TILEDB_VS_ENABLE_BLAS
-#endif  // 0
+#endif // TDB_SCORING_H
+
