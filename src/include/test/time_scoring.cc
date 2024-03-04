@@ -40,7 +40,7 @@
 
 double the_sum = 0.0;
 
-auto baseline_scoring(const ColMajorMatrix<float>& a, const ColMajorMatrix<float>& b, size_t trials = 4) {
+auto baseline_scoring(const ColMajorMatrix<float>& a, const ColMajorMatrix<float>& b, size_t trials = 32) {
   life_timer _{tdb_func__, true};
 
   auto size_a = num_vectors(a);
@@ -50,11 +50,11 @@ auto baseline_scoring(const ColMajorMatrix<float>& a, const ColMajorMatrix<float
   const float* b_data = b.data();
 
   the_sum = 0.0;
-  for (unsigned iter = 0; iter < trials; ++iter) {
+  for (size_t iter = 0; iter < trials; ++iter) {
     float sum = 0.0;
-    for (unsigned i = 0; i < size_a; ++i) {
-      for (unsigned j = 0; j < size_b; ++j) {
-	for (unsigned k = 0; k < size_d; ++k) {
+    for (size_t i = 0; i < size_a; ++i) {
+      for (size_t j = 0; j < size_b; ++j) {
+	for (size_t k = 0; k < size_d; ++k) {
 	  float diff = a_data[i*size_d+k] - b_data[j*size_d+k];
 	  sum += diff * diff;
 	}
@@ -71,7 +71,7 @@ inline double do_time_scoring(
     const V& a,
     const W& b,
     F&& f,
-    size_t trials = 4) {
+    size_t trials = 32) {
   life_timer _{tdb_func__,true};
   size_t size_a = num_vectors(a);
     size_t size_b = num_vectors(b);
@@ -185,11 +185,10 @@ inline float sum_of_squares_avx2(const V& a, const W& b) {
       __m256 vec_b = _mm256_loadu_ps(b_ptr + i + 0);
 
       __m256 diff = _mm256_sub_ps(vec_a, vec_b);
-      // sum_vec = _mm256_fmadd_ps(diff, diff, sum_vec);
+       sum_vec = _mm256_fmadd_ps(diff, diff, sum_vec);
 
-        __m256 squared_diff = _mm256_mul_ps(diff, diff);
-
-        sum_vec = _mm256_add_ps(sum_vec, squared_diff);
+       // __m256 squared_diff = _mm256_mul_ps(diff, diff);
+       // sum_vec = _mm256_add_ps(sum_vec, squared_diff);
   }
 
     __m128 lo = _mm256_castps256_ps128(sum_vec);
@@ -209,11 +208,71 @@ inline float sum_of_squares_avx2(const V& a, const W& b) {
   return sum;
 }
 
+
+template <class V, class W>
+  requires std::same_as<typename V::value_type, uint8_t> &&
+           std::same_as<typename W::value_type, uint8_t>
+inline float sum_of_squares_avx2(const V& a, const W& b) {
+
+  // @todo Align on 256 bit boundaries 
+  const size_t start = 0;
+  const size_t size_a = size(a);
+  const size_t stop = size_a - (size_a % 8);
+
+  const uint8_t* a_ptr = a.data();
+  const uint8_t* b_ptr = b.data();
+
+    size_t remaining = size_a;
+    __m256 vec_sum = _mm256_setzero_ps();
+
+    // Process arrays in chunks of 32 bytes (256 bits)
+    while (remaining >=16) {
+        // Load arrays into AVX2 registers
+        __m128i vec_a = _mm_loadu_si128((__m128i*)a_ptr);
+        __m128i vec_b = _mm_loadu_si128((__m128i*)b_ptr);
+
+        // Convert to 16-bit integers
+        __m256i a16 = _mm256_cvtepu8_epi16(vec_a);
+        __m256i b16 = _mm256_cvtepu8_epi16(vec_b);
+
+        // Subtract 'b' from 'a'
+        __m256i idiff = _mm256_sub_epi16(a16, b16);
+
+        // Convert to floating-point
+        __m256 diff = _mm256_cvtepf32_ps(idiff);
+
+        // Square the differences
+        __m256 diff_2 = _mm256_mul_ps(diff, diff);
+
+        // Accumulate squared differences
+        vec_sum = _mm256_add_ps(vec_sum, diff_2);
+
+        // Move to next chunk
+        a += 16;
+        b += 16;
+        remaining -= 16;
+    }
+
+    // Horizontal addition to reduce to a single 256-bit vector
+    __m128 lo = _mm256_castps256_ps128(vec_sum);
+    __m128 hi = _mm256_extractf128_ps(vec_sum, 1);
+    __m128 combined = _mm_add_ps(lo, hi);
+    combined = _mm_hadd_ps(combined, combined);
+    combined = _mm_hadd_ps(combined, combined);
+
+    // Extract and return the result as a float
+    float sum = _mm_cvtss_f32(combined);
+
+    return sum;
+}
+
+
+
 template <class V, class W>
 inline double do_time_scoring_avx2(
     const V& a,
     const W& b,
-    size_t trials = 4) {
+    size_t trials = 32) {
   life_timer _{tdb_func__,true};
   size_t size_a = num_vectors(a);
   size_t size_b = num_vectors(b);
