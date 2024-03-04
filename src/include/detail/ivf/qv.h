@@ -136,7 +136,7 @@ auto qv_query_heap_infinite_ram(
             size_t stop = indices[top_centroids(p, j) + 1];
 
             for (size_t i = start; i < stop; ++i) {
-              auto score = L2(q_vec /*q[j]*/, partitioned_vectors[i]);
+              auto score = l2_distance(q_vec /*q[j]*/, partitioned_vectors[i]);
               min_scores[j].insert(score, partitioned_ids[i]);
             }
           }
@@ -229,7 +229,7 @@ auto nuv_query_heap_infinite_ram(
                 // for (size_t k = start; k < stop; ++k) {
                 //   auto kp = k - partitioned_vectors.col_offset();
                 for (size_t kp = start; kp < stop; ++kp) {
-                  auto score = L2(q_vec, partitioned_vectors[kp]);
+                  auto score = l2_distance(q_vec, partitioned_vectors[kp]);
 
                   // @todo any performance with apparent extra indirection?
                   // (Compiler should do the right thing, but...)
@@ -337,10 +337,10 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
                 auto q_vec_1 = query[j1];
 
                 for (size_t kp = start; kp < kstop; kp += 2) {
-                  auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
-                  auto score_01 = L2(q_vec_0, partitioned_vectors[kp + 1]);
-                  auto score_10 = L2(q_vec_1, partitioned_vectors[kp + 0]);
-                  auto score_11 = L2(q_vec_1, partitioned_vectors[kp + 1]);
+                  auto score_00 = l2_distance(q_vec_0, partitioned_vectors[kp + 0]);
+                  auto score_01 = l2_distance(q_vec_0, partitioned_vectors[kp + 1]);
+                  auto score_10 = l2_distance(q_vec_1, partitioned_vectors[kp + 0]);
+                  auto score_11 = l2_distance(q_vec_1, partitioned_vectors[kp + 1]);
 
                   min_scores[n][j0].insert(score_00, partitioned_ids[kp + 0]);
                   min_scores[n][j0].insert(score_01, partitioned_ids[kp + 1]);
@@ -352,8 +352,8 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
                  * Cleanup the last iteration(s) of k
                  */
                 for (size_t kp = kstop; kp < stop; ++kp) {
-                  auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
-                  auto score_10 = L2(q_vec_1, partitioned_vectors[kp + 0]);
+                  auto score_00 = l2_distance(q_vec_0, partitioned_vectors[kp + 0]);
+                  auto score_10 = l2_distance(q_vec_1, partitioned_vectors[kp + 0]);
                   min_scores[n][j0].insert(score_00, partitioned_ids[kp + 0]);
                   min_scores[n][j1].insert(score_10, partitioned_ids[kp + 0]);
                 }
@@ -367,14 +367,14 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
                 auto q_vec_0 = query[j0];
 
                 for (size_t kp = start; kp < kstop; kp += 2) {
-                  auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
-                  auto score_01 = L2(q_vec_0, partitioned_vectors[kp + 1]);
+                  auto score_00 = l2_distance(q_vec_0, partitioned_vectors[kp + 0]);
+                  auto score_01 = l2_distance(q_vec_0, partitioned_vectors[kp + 1]);
 
                   min_scores[n][j0].insert(score_00, partitioned_ids[kp + 0]);
                   min_scores[n][j0].insert(score_01, partitioned_ids[kp + 1]);
                 }
                 for (size_t kp = kstop; kp < stop; ++kp) {
-                  auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
+                  auto score_00 = l2_distance(q_vec_0, partitioned_vectors[kp + 0]);
                   min_scores[n][j0].insert(score_00, partitioned_ids[kp + 0]);
                 }
               }
@@ -509,7 +509,7 @@ auto nuv_query_heap_finite_ram(
                    * Apply the query to the partition.
                    */
                   for (size_t kp = start; kp < stop; ++kp) {
-                    auto score = L2(q_vec, partitioned_vectors[kp]);
+                    auto score = l2_distance(q_vec, partitioned_vectors[kp]);
 
                     // @todo any performance with apparent extra indirection?
                     min_scores[n][j].insert(
@@ -644,10 +644,10 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                   auto q_vec_1 = query[j1];
 
                   for (size_t kp = start; kp < kstop; kp += 2) {
-                    auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
-                    auto score_01 = L2(q_vec_0, partitioned_vectors[kp + 1]);
-                    auto score_10 = L2(q_vec_1, partitioned_vectors[kp + 0]);
-                    auto score_11 = L2(q_vec_1, partitioned_vectors[kp + 1]);
+                    auto score_00 = l2_distance(q_vec_0, partitioned_vectors[kp + 0]);
+                    auto score_01 = l2_distance(q_vec_0, partitioned_vectors[kp + 1]);
+                    auto score_10 = l2_distance(q_vec_1, partitioned_vectors[kp + 0]);
+                    auto score_11 = l2_distance(q_vec_1, partitioned_vectors[kp + 1]);
 
                     min_scores[n][j0].insert(
                         score_00, partitioned_vectors.ids()[kp + 0]);
@@ -663,8 +663,8 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                    * Cleanup the last iteration(s) of k
                    */
                   for (size_t kp = kstop; kp < stop; ++kp) {
-                    auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
-                    auto score_10 = L2(q_vec_1, partitioned_vectors[kp + 0]);
+                    auto score_00 = l2_distance(q_vec_0, partitioned_vectors[kp + 0]);
+                    auto score_10 = l2_distance(q_vec_1, partitioned_vectors[kp + 0]);
                     min_scores[n][j0].insert(
                         score_00, partitioned_vectors.ids()[kp + 0]);
                     min_scores[n][j1].insert(
@@ -680,8 +680,8 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                   auto q_vec_0 = query[j0];
 
                   for (size_t kp = start; kp < kstop; kp += 2) {
-                    auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
-                    auto score_01 = L2(q_vec_0, partitioned_vectors[kp + 1]);
+                    auto score_00 = l2_distance(q_vec_0, partitioned_vectors[kp + 0]);
+                    auto score_01 = l2_distance(q_vec_0, partitioned_vectors[kp + 1]);
 
                     min_scores[n][j0].insert(
                         score_00, partitioned_vectors.ids()[kp + 0]);
@@ -689,7 +689,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                         score_01, partitioned_vectors.ids()[kp + 1]);
                   }
                   for (size_t kp = kstop; kp < stop; ++kp) {
-                    auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
+                    auto score_00 = l2_distance(q_vec_0, partitioned_vectors[kp + 0]);
                     min_scores[n][j0].insert(
                         score_00, partitioned_vectors.ids()[kp + 0]);
                   }
@@ -880,10 +880,10 @@ auto apply_query(
       auto q_vec_1 = query[j1];
 
       for (size_t kp = start; kp < kstop; kp += 2) {
-        auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
-        auto score_01 = L2(q_vec_0, partitioned_vectors[kp + 1]);
-        auto score_10 = L2(q_vec_1, partitioned_vectors[kp + 0]);
-        auto score_11 = L2(q_vec_1, partitioned_vectors[kp + 1]);
+        auto score_00 = l2_distance(q_vec_0, partitioned_vectors[kp + 0]);
+        auto score_01 = l2_distance(q_vec_0, partitioned_vectors[kp + 1]);
+        auto score_10 = l2_distance(q_vec_1, partitioned_vectors[kp + 0]);
+        auto score_11 = l2_distance(q_vec_1, partitioned_vectors[kp + 1]);
 
         min_scores[j0].insert(score_00, partitioned_ids[kp + 0]);
         min_scores[j0].insert(score_01, partitioned_ids[kp + 1]);
@@ -895,8 +895,8 @@ auto apply_query(
        * Cleanup the last iteration(s) of k
        */
       for (size_t kp = kstop; kp < stop; ++kp) {
-        auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
-        auto score_10 = L2(q_vec_1, partitioned_vectors[kp + 0]);
+        auto score_00 = l2_distance(q_vec_0, partitioned_vectors[kp + 0]);
+        auto score_10 = l2_distance(q_vec_1, partitioned_vectors[kp + 0]);
         min_scores[j0].insert(score_00, partitioned_ids[kp + 0]);
         min_scores[j1].insert(score_10, partitioned_ids[kp + 0]);
       }
@@ -910,14 +910,14 @@ auto apply_query(
       auto q_vec_0 = query[j0];
 
       for (size_t kp = start; kp < kstop; kp += 2) {
-        auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
-        auto score_01 = L2(q_vec_0, partitioned_vectors[kp + 1]);
+        auto score_00 = l2_distance(q_vec_0, partitioned_vectors[kp + 0]);
+        auto score_01 = l2_distance(q_vec_0, partitioned_vectors[kp + 1]);
 
         min_scores[j0].insert(score_00, partitioned_ids[kp + 0]);
         min_scores[j0].insert(score_01, partitioned_ids[kp + 1]);
       }
       for (size_t kp = kstop; kp < stop; ++kp) {
-        auto score_00 = L2(q_vec_0, partitioned_vectors[kp + 0]);
+        auto score_00 = l2_distance(q_vec_0, partitioned_vectors[kp + 0]);
         min_scores[j0].insert(score_00, partitioned_ids[kp + 0]);
       }
     }

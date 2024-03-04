@@ -310,6 +310,108 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
   return sum;
 }
 
+
+/**
+ * float
+ */
+template <feature_vector V>
+  requires std::same_as<typename V::value_type, float>
+inline float avx2_sum_of_squares(const V& a) {
+
+  // @todo Align on 256 bit boundaries 
+    const size_t start = 0;
+  const size_t size_a = size(a);
+  const size_t stop = size_a - (size_a % 8);
+
+  const float* a_ptr = a.data();
+
+  __m256 vec_sum = _mm256_setzero_ps();  
+
+  for (size_t i = start; i < stop; i += 8) {
+
+    // Load 8 floats
+    __m256 vec_a = _mm256_loadu_ps(a_ptr + i + 0);
+
+    // Square and accumulate
+    vec_sum = _mm256_fmadd_ps(vec_a, vec_a, vec_sum);
+  }
+
+  // 8 to 4
+  __m128 lo = _mm256_castps256_ps128(vec_sum);
+  __m128 hi = _mm256_extractf128_ps(vec_sum, 1);
+  __m128 combined = _mm_add_ps(lo, hi);
+
+  // 4 to 2
+  combined = _mm_hadd_ps(combined, combined);
+
+  // 2 to 1
+  combined = _mm_hadd_ps(combined, combined);
+
+  float sum = _mm_cvtss_f32(combined);
+
+  // Clean up
+  for (size_t i = stop; i < size_a; ++i) {
+    sum += a[i]*a[i];
+  }
+
+  return sum;
+}
+
+
+
+/**
+ * uint8_t
+ */
+template <class V>
+  requires std::same_as<typename V::value_type, uint8_t>
+inline float avx2_sum_of_squares(const V& a) {
+
+  // @todo Align on 256 bit boundaries 
+    const size_t start = 0;
+  const size_t size_a = size(a);
+  const size_t stop = size_a - (size_a % 8);
+
+  const uint8_t* a_ptr = a.data();
+
+  __m256 vec_sum = _mm256_setzero_ps();
+
+  for (size_t i = start; i < stop; i += 8) {
+    // Load 8 bytes == 64 bits -- zeros out top 8 bytes
+    __m128i vec_a = _mm_loadu_si64((__m64*)(a_ptr + i));
+
+    // Zero extend 8bit to 32bit ints
+    __m256i a_ints = _mm256_cvtepu8_epi32(vec_a);
+
+    // Convert integers to floats
+    __m256 a_floats = _mm256_cvtepi32_ps(a_ints);
+
+    // Square and add with fmadd
+    vec_sum = _mm256_fmadd_ps(a_floats, a_floats, vec_sum);
+
+  }
+
+  // 8 to 4
+  __m128 lo = _mm256_castps256_ps128(vec_sum);
+  __m128 hi = _mm256_extractf128_ps(vec_sum, 1);
+  __m128 combined = _mm_add_ps(lo, hi);
+
+  // 4 to 2
+  combined = _mm_hadd_ps(combined, combined);
+
+  // 2 to 1
+  combined = _mm_hadd_ps(combined, combined);
+
+  float sum = _mm_cvtss_f32(combined);
+
+  // Clean up
+  for (size_t i = stop; i < size_a; ++i) {
+    sum += a[i] * a[i];
+  }
+
+  return sum;
+}
+
+
 #endif
 
 #endif // TDB_SCORING_L2_DISTANCE_AVX_H

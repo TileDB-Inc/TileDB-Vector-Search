@@ -97,7 +97,6 @@ inline double do_time_scoring(
 }
 
 
-
 auto baseline_inner_product(const ColMajorMatrix<float>& a, const ColMajorMatrix<float>& b, size_t trials = 32) {
   life_timer _{tdb_func__, false};
 
@@ -237,7 +236,7 @@ int main() {
   std::cout << "naive uint8_t-float: " << t2 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
 
 #ifdef __AVX2__
-  auto t6 = do_time_scoring(c, a, avx2_sum_of_squares<decltype(c[0]), decltype(a[0])>);
+  auto t6 = do_time_scoring(c, a, [] (auto&& a, auto&& b) {return avx2_sum_of_squares(a, b);});
   std::cout << "avx2 uint8_t-float: " << t6 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
 #endif
 
@@ -245,7 +244,7 @@ int main() {
   std::cout << "naive uint8_t-uint8_t: " << t3 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
 
 #ifdef __AVX2__
-  auto t7 = do_time_scoring(c, d, avx2_sum_of_squares<decltype(c[0]), decltype(d[0])>);
+  auto t7 = do_time_scoring(c, d, [] (auto&& a, auto&& b) {return avx2_sum_of_squares(a, b);});
   std::cout << "avx2 uint8_t-uint8_t: " << t7 << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum << std::endl;
 #endif
   }

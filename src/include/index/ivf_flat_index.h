@@ -313,7 +313,7 @@ class ivf_flat_index {
               }
             }
 #else
-            auto distance = sum_of_squares(vec, centroids_[i - 1]);
+            auto distance = l2_distance(vec, centroids_[i - 1]);
             auto min_distance = std::min(distances[j], distance);
             distances[j] = min_distance;
 #endif
@@ -488,7 +488,7 @@ class ivf_flat_index {
             total_weight += centroid[k] * centroid[k];
           }
         }
-        auto diff = sum_of_squares(centroids_[j], new_centroids[j]);
+        auto diff = l2_distance(centroids_[j], new_centroids[j]);
         max_diff = std::max<float>(max_diff, diff);
       }
       centroids_.swap(new_centroids);

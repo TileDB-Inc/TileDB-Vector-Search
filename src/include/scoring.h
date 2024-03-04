@@ -52,6 +52,16 @@
 
 #endif // TILEDB_VS_ENABLE_BLAS
 
+#include "utils/utils.h"
+#include "utils/fixed_min_heap.h"
+#include "detail/linalg/matrix.h"
+
+// Helper utility
+namespace {
+class with_ids {};
+class without_ids {};
+}  // namespace
+
 
 /****************************************************************
  *
@@ -60,6 +70,8 @@
  * dispatch to in this header
  *
  ****************************************************************/
+
+namespace _l2_distance {
 
 struct sum_of_squares_distance {
 #ifdef __AVX2__
@@ -85,8 +97,13 @@ struct sum_of_squares_distance {
 #endif
 };
 
-using l2_distance = sum_of_squares_distance;
-using L2_distance = sum_of_squares_distance;
+}
+
+using sum_of_squares_distance = _l2_distance::sum_of_squares_distance;
+inline constexpr auto l2_distance = _l2_distance::sum_of_squares_distance{};
+
+
+namespace _l2_sub_distance {
 
 struct sub_sum_of_squares_distance {
  private:
@@ -107,9 +124,15 @@ struct sub_sum_of_squares_distance {
   }
 };
 
-using sub_l2_distance = sub_sum_of_squares_distance;
-using sub_L2_distance = sub_sum_of_squares_distance;
+}
 
+using sub_sum_of_squares_distance = _l2_sub_distance::sub_sum_of_squares_distance;
+
+template <feature_vector U, feature_vector V>
+auto sub_l2_distance(const U& u, const V& v, size_t i, size_t j) {
+  return unroll4_sum_of_squares(u, v, i, j);
+}
+// inline constexpr auto sub_l2_distance = _l2_sub_distance::sub_sum_of_squares_distance{};
 
 
 // ----------------------------------------------------------------------------
