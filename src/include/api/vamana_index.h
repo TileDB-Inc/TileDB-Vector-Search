@@ -215,6 +215,9 @@ class IndexVamana {
           datatype_to_string(feature_datatype_) +
           " != " + datatype_to_string(data_set.feature_type()));
     }
+    if (!index_) {
+      throw std::runtime_error("Cannot add() because there is no index.");
+    }
     index_->add(data_set);
   }
 
@@ -223,6 +226,9 @@ class IndexVamana {
       const QueryVectorArray& vectors,
       size_t top_k,
       std::optional<size_t> opt_L = std::nullopt) {
+    if (!index_) {
+      throw std::runtime_error("Cannot query() because there is no index.");
+    }
     return index_->query(vectors, top_k, opt_L);
   }
 
@@ -230,6 +236,10 @@ class IndexVamana {
       const tiledb::Context& ctx,
       const std::string& group_uri,
       bool overwrite = false) const {
+    if (!index_) {
+      throw std::runtime_error(
+          "Cannot write_index() because there is no index.");
+    }
     index_->write_index(ctx, group_uri, overwrite);
   }
 
