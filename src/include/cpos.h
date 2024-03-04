@@ -35,6 +35,7 @@
 #define TILEDB_CPOS_H
 
 #include <concepts>
+#include <vector>
 
 template <class T>
 concept semi_integral = std::integral<T> && !std::same_as<T, bool>;

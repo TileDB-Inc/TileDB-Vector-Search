@@ -27,13 +27,31 @@
  *
  * @section DESCRIPTION
  *
- * Gemm-based scoring.
+ * Top-level include file for all scoring functions (l2, inner_product, cosine)
  *
  */
 
 #ifndef TDB_SCORING_H
 #define TDB_SCORING_H
 
+#include "detail/scoring/l2_distance.h"
+#include "detail/scoring/l2_distance_avx.h"
+#include "detail/scoring/inner_product.h"
+#include "detail/scoring/inner_product_avx.h"
+#include "detail/scoring/cosine.h"
+#include "detail/scoring/cosine_avx.h"
+
+#ifdef TILEDB_VS_ENABLE_BLAS
+
+#include "detail/scoring/l2_distance_blas.h"
+#include "detail/scoring/inner_product_blas.h"
+#include "detail/scoring/cosine_blas.h"
+
+#endif // TILEDB_VS_ENABLE_BLAS
+
+#endif // TDB_SCORING_H
+
+#if 0
 #include <algorithm>
 #include "algorithm.h"
 #include "concepts.h"
@@ -781,4 +799,4 @@ auto gemm_scores(const Matrix1& A, const Matrix2& B, unsigned nthreads) {
   return C;
 }
 #endif  // TILEDB_VS_ENABLE_BLAS
-#endif  // TDB_SCORING_H
+#endif  // 0

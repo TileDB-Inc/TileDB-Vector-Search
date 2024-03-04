@@ -35,6 +35,8 @@
 #include <random>
 #include <ranges>
 
+#include <tiledb/tiledb>
+
 template <std::ranges::range R>
 void randomize(R& r, std::tuple<int, int> range = {0, 128}) {
   std::random_device rd;
