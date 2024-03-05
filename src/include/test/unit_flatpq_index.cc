@@ -827,7 +827,8 @@ TEST_CASE("flatpq_index: flatpq_index write and read", "[flatpq_index]") {
   size_t num_clusters_{256};
 
   tiledb::Context ctx;
-  std::string flatpq_index_uri = "/tmp/tmp_flatpq_index";
+  std::string flatpq_index_uri =
+      (std::filesystem::temp_directory_path() / "tmp_flatpq_index").string();
   auto training_set =
       tdbColMajorMatrix<siftsmall_feature_type>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);

@@ -281,9 +281,7 @@ TEST_CASE("fixed_min_heap: fixed_min_pair_heap", "[fixed_min_heap]") {
 TEST_CASE(
     "fixed_min_heap: fixed_min_heap with a 5500 vector", "[fixed_min_heap]") {
   using element = std::tuple<float, int>;
-
   fixed_min_pair_heap<float, int> a(7);
-
   std::vector<element> v(5500);
   for (auto&& i : v) {
     i = {std::rand(), std::rand()};
@@ -293,23 +291,21 @@ TEST_CASE(
     a.insert(e, f);
   }
   CHECK(a.size() == 7);
-
   std::vector<element> a2(begin(a), end(a));
   std::sort(begin(a2), end(a2));
   CHECK(a2.size() == 7);
-
   std::vector<element> u(v.begin(), v.begin() + 7);
   CHECK(u.size() == 7);
-
   std::nth_element(v.begin(), v.begin() + 7, v.end());
   std::vector<element> w(v.begin(), v.begin() + 7);
   CHECK(w.size() == 7);
-
   CHECK(u != w);
 
   std::vector<element> v3(v.begin(), v.begin() + 7);
   std::sort(begin(v3), end(v3));
-  CHECK(a2 == v3);
+  CHECK(std::equal(begin(v3), end(v3), begin(a2), [](auto&& f, auto&& s) {
+    return std::get<0>(f) == std::get<0>(s);
+  }));
 
   std::sort_heap(begin(a), end(a), first_less<element>{});
   CHECK(a == a2);

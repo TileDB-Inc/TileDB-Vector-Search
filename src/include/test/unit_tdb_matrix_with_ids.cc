@@ -51,8 +51,10 @@ TEMPLATE_TEST_CASE(
     uint32_t) {
   tiledb::Context ctx;
 
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
-  std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  std::string tmp_ids_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
   int offset = 13;
   size_t Mrows = 200;
   size_t Ncols = 500;
@@ -109,8 +111,10 @@ TEMPLATE_TEST_CASE(
     float,
     uint8_t) {
   tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
-  std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  std::string tmp_ids_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
   int offset = 123;
   size_t Mrows = 200;
   size_t Ncols = 500;
