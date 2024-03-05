@@ -35,6 +35,6 @@
 #ifndef TDB_SCORING_L2_DISTANCE_BLAS_H
 #define TDB_SCORING_L2_DISTANCE_BLAS_H
 
-#warning "BLAS l2 distance not implemented!!"
+// #warning "BLAS l2 distance not implemented!!"
 
 #endif  // TDB_SCORING_INNER_PRODUCT_BLAS_H

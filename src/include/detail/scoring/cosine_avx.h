@@ -1,5 +1,5 @@
 /**
- * @file   inner_product_blas.h
+ * @file   cosine_avx.h
  *
  * @section LICENSE
  *
@@ -27,14 +27,9 @@
  *
  * @section DESCRIPTION
  *
- * C++ functions for computing L2 distance between two feature vectors, using
- * BLAS
- *
  */
 
-#ifndef TDB_SCORING_INNER_PRODUCT_BLAS_H
-#define TDB_SCORING_INNER_PRODUCT_BLAS_H
+#ifndef TDB_SCORING_COSINE_AVX_H
+#define TDB_SCORING_COSINE_AVX_H
 
-// #warning "BLAS inner product not implemented!!"
-
-#endif  // TDB_SCORING_INNER_PRODUCT_BLAS_H
+#endif  // TDB_SCORING_COSINE_AVX_H

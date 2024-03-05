@@ -1,5 +1,5 @@
 /**
- * @file   l2_distance_avx.h
+ * @file   inner_product.h
  *
  * @section LICENSE
  *

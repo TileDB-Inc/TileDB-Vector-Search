@@ -1278,7 +1278,7 @@ class ivf_flat_index {
     std::vector<score_type> distances(nClusters);
     for (size_t i = 0; i < vectors.num_cols(); ++i) {
       for (size_t j = 0; j < nClusters; ++j) {
-        distances[j] = sum_of_squares(vectors[i], centroids[j]);
+        distances[j] = l2_distance(vectors[i], centroids[j]);
       }
       indices[i] =
           std::min_element(begin(distances), end(distances)) - begin(distances);

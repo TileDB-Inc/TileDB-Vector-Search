@@ -35,11 +35,12 @@
 #include "test_utils.h"
 #include "utils/timer.h"
 
+#include "detail/scoring/inner_product.h"
+#include "detail/scoring/l2_distance.h"
+
 #ifdef __AVX2__
 #include <immintrin.h>
-#include "detail/scoring/inner_product.h"
 #include "detail/scoring/inner_product_avx.h"
-#include "detail/scoring/l2_distance.h"
 #include "detail/scoring/l2_distance_avx.h"
 #endif
 
@@ -207,6 +208,7 @@ int main() {
               << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
   }
 
+#ifdef __AVX2__
   {
     auto ta = do_time_scoring(
         a, b, avx2_inner_product<decltype(a[0]), decltype(b[0])>);
@@ -228,6 +230,7 @@ int main() {
     std::cout << "avx2 uint8_t-uint8_t inner_product: " << td
               << "s -- inner_ - the_sum = " << inner_ - the_sum << std::endl;
   }
+#endif
 
   std::cout << "***** L2 distance" << std::endl;
 
@@ -237,7 +240,7 @@ int main() {
 
   {
     auto t0 = do_time_scoring(
-        a, b, naive_sum_of_squares<decltype(a[0]), decltype(b[0])>);
+        a, b, [](auto&& a, auto&& b) { return naive_sum_of_squares(a, b); });
     std::cout << "naive float-float: " << t0
               << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum
               << std::endl;
@@ -251,7 +254,7 @@ int main() {
 #endif
 
     auto t1 = do_time_scoring(
-        a, c, naive_sum_of_squares<decltype(a[0]), decltype(c[0])>);
+        a, c, [](auto&& a, auto&& b) { return naive_sum_of_squares(a, b); });
     std::cout << "naive float-uint8_t: " << t1
               << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum
               << std::endl;
@@ -265,7 +268,7 @@ int main() {
 #endif
 
     auto t2 = do_time_scoring(
-        c, a, naive_sum_of_squares<decltype(c[0]), decltype(a[0])>);
+        c, a, [](auto&& a, auto&& b) { return naive_sum_of_squares(a, b); });
     std::cout << "naive uint8_t-float: " << t2
               << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum
               << std::endl;
@@ -279,7 +282,7 @@ int main() {
 #endif
 
     auto t3 = do_time_scoring(
-        c, d, naive_sum_of_squares<decltype(c[0]), decltype(d[0])>);
+        c, d, [](auto&& a, auto&& b) { return naive_sum_of_squares(a, b); });
     std::cout << "naive uint8_t-uint8_t: " << t3
               << "s -- the_sum_ - the_sum = " << the_sum_ - the_sum
               << std::endl;

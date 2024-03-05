@@ -36,12 +36,11 @@
 #include "detail/linalg/matrix.h"
 #include "scoring.h"
 
-#define AVX2_INTRINSICS
-#if defined(AVX2_INTRINSICS)
+#ifdef __AVX2__
 #include <immintrin.h>
 #endif
 
-#ifdef TILEDB_VS_ENABLE_BLAS
+#if defined(TILEDB_VS_ENABLE_BLAS) && 0
 
 TEST_CASE("scoring: vector test", "[scoring]") {
   std::vector<std::vector<float>> a{
@@ -689,7 +688,7 @@ TEMPLATE_LIST_TEST_CASE(
 // gemm_scores
 #endif
 
-#if defined(AVX2_INTRINSICS)
+#ifdef __AVX2__
 
 template <class V, class W>
   requires std::same_as<typename V::value_type, float> &&

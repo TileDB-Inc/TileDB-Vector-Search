@@ -505,7 +505,7 @@ auto count_intersections(const U& I, const V& groundtruth, size_t k_nn) {
   return total_intersected;
 };
 
-#ifdef TILEDB_VS_ENABLE_BLAS
+#if defined(TILEDB_VS_ENABLE_BLAS) && 0
 
 /**
  * @brief Foreach input vector, apply a function to each element of the

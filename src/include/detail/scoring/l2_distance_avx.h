@@ -36,7 +36,7 @@
 #define TDB_SCORING_L2_DISTANCE_AVX_H
 
 #ifndef __AVX2__
-#warning "AVX2 not supported!! Using naive algorithms!!"
+// #warning "AVX2 not supported!! Using naive algorithms!!"
 #else
 
 #include <immintrin.h>
