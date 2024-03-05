@@ -120,7 +120,8 @@ struct sub_sum_of_squares_distance {
   // @todo AVX implementation
   template <feature_vector V, feature_vector U>
   constexpr auto operator()(const V& a, const U& b) const {
-    return unroll4_sum_of_squares(a, b, start_, stop_);
+    //    return unroll4_sum_of_squares(a, b, start_, stop_);
+    return naive_sum_of_squares(a, b, start_, stop_);
   }
 };
 

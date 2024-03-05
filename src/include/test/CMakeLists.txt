@@ -52,8 +52,7 @@ endmacro (kmeans_add_test)
 # kmeans_add_test(time_insert)
 
 # kmeans_add_test(time_open)
-
-kmeans_add_test(time_l2)
+# kmeans_add_exe(time_l2)
 
 kmeans_add_test(time_scoring)
 

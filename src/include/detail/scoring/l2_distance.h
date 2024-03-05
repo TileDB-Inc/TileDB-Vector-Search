@@ -223,6 +223,76 @@ inline float unroll4_sum_of_squares(const V& a, const W& b) {
 
 /****************************************************************
  *
+ * Naive algorithms with start and stop
+ *
+ ****************************************************************/
+
+/**
+ * Compute l2 distance between two vectors of float
+ */
+template <feature_vector V, feature_vector W>
+  requires std::same_as<typename V::value_type, float> &&
+           std::same_as<typename W::value_type, float>
+inline float naive_sum_of_squares(const V& a, const W& b, size_t start, size_t stop) {
+  float sum = 0.0;
+  for (size_t i = start; i < stop; ++i) {
+    float diff = a[i] - b[i];
+    sum += diff * diff;
+  }
+  return sum;
+}
+
+
+/**
+ * Compute l2 distance between vector of float and vector of uint8_t
+ */
+template <feature_vector V, feature_vector W>
+  requires std::same_as<typename V::value_type, float> &&
+           std::same_as<typename W::value_type, uint8_t>
+inline float naive_sum_of_squares(const V& a, const W& b, size_t start, size_t stop) {
+  float sum = 0.0;
+  for (size_t i = start; i < stop; ++i) {
+    float diff = a[i] - (float) b[i];
+    sum += diff * diff;
+  }
+  return sum;
+}
+
+
+/**
+ * Compute l2 distance between vector of uint8_t and vector of float
+ */
+template <feature_vector V, feature_vector W>
+  requires std::same_as<typename V::value_type, uint8_t> &&
+           std::same_as<typename W::value_type, float>
+inline float naive_sum_of_squares(const V& a, const W& b, size_t start, size_t stop) {
+  float sum = 0.0;
+  for (size_t i = start; i < stop; ++i) {
+    float diff =(float) a[i] - b[i];
+    sum += diff * diff;
+  }
+  return sum;
+}
+
+/**
+ * Compute l2 distance between vector of uint8_t and vector of uint8_t
+ */
+template <feature_vector V, feature_vector W>
+  requires std::same_as<typename V::value_type, uint8_t> &&
+           std::same_as<typename W::value_type, uint8_t>
+inline float naive_sum_of_squares(const V& a, const W& b, size_t start, size_t stop) {
+  float sum = 0.0;
+  for (size_t i = start; i < stop; ++i) {
+    float diff = (float) a[i] - (float) b[i];
+    sum += diff * diff;
+  }
+  return sum;
+}
+
+
+
+/****************************************************************
+ *
  * 4x unrolled algorithms with start and stop.  We have separate
  * functions despite the code duplication to make sure about
  * performance in the common case (no start / stop).
