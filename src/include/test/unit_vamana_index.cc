@@ -135,7 +135,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
   CHECK(f.num_rows() == 128);
   CHECK(f.num_cols() == 256);
 
-  CHECK(sum_of_squares(f[0], f[72]) == 125678);
+  CHECK(l2_distance(f[0], f[72]) == 125678);
   {
     auto n = num_vectors(f);
     CHECK(n != 0);
@@ -162,7 +162,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
     auto min_score = std::numeric_limits<float>::max();
     auto med = std::numeric_limits<size_t>::max();
     for (size_t i = 0; i < n; ++i) {
-      auto score = sum_of_squares(f[i], centroid);
+      auto score = l2_distance(f[i], centroid);
       if (score < min_score) {
         min_score = score;
         med = i;
@@ -175,7 +175,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
 
   if (debug) {
     std::cout << "med " << med << std::endl;
-    std::cout << "f[0] - f[72] = " << sum_of_squares(f[0], f[72]) << std::endl;
+    std::cout << "f[0] - f[72] = " << l2_distance(f[0], f[72]) << std::endl;
   }
 
   CHECK(med == 72);
@@ -216,7 +216,7 @@ TEST_CASE("vamana: small256 build index", "[vamana]") {
       read_diskann_data(diskann_test_data_file);  // siftsmall_learn_256pts.fbin
   int med = 72;
   int query = 0;
-  CHECK(l2_distance{}(x[med], x[query]) == 125678);
+  CHECK(l2_distance(x[med], x[query]) == 125678);
 
   // We might want to also do a search and verify that the path to 0 from 72
   // is less than 125678
@@ -296,7 +296,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
     auto j = init_nodes[i];
     graph.out_edges(j).clear();
     for (auto&& dst : init_nbrs[i]) {
-      auto score = sum_of_squares(x[j], x[dst]);
+      auto score = l2_distance(x[j], x[dst]);
       graph.add_edge(j, dst, score);
       if (debug) {
         std::cout << "Adding edge " << j << " " << dst << " " << score
@@ -450,7 +450,7 @@ TEST_CASE("vamana: greedy grid search", "[vamana]") {
   for (auto&& [src, dst] : edges) {
     CHECK(src < A.num_vertices());
     CHECK(dst < A.num_vertices());
-    A.add_edge(src, dst, sum_of_squares_distance{}(vecs[src], vecs[dst]));
+    A.add_edge(src, dst, l2_distance(vecs[src], vecs[dst]));
   }
 
   // (2, 3): 17 -> {10, 16, 17, 18, 24}
@@ -460,9 +460,9 @@ TEST_CASE("vamana: greedy grid search", "[vamana]") {
   // (4, 6): 33 -> {27, 33, 34}
 
   using expt_type = std::tuple<
-      std::vector<id_type>,
+      std::vector<score_type>,
       id_type,
-      std::vector<id_type>,
+      std::vector<score_type>,
       id_type,
       id_type,
       std::vector<id_type>>;
@@ -530,8 +530,7 @@ TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
       for (auto&& n : top_k) {
         std::cout << n << " (" << nn_hypercube(0, n) << ", "
                   << nn_hypercube(1, n) << ", " << nn_hypercube(2, n) << "), "
-                  << sum_of_squares_distance{}(nn_hypercube[n], query)
-                  << std::endl;
+                  << l2_distance(nn_hypercube[n], query) << std::endl;
       }
       std::cout << "-----\ntop_k\n";
     }

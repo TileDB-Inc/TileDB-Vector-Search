@@ -35,6 +35,8 @@
 #include <random>
 #include <ranges>
 
+#include <tiledb/tiledb>
+
 template <std::ranges::range R>
 void randomize(R& r, std::tuple<int, int> range = {0, 128}) {
   std::random_device rd;
@@ -56,6 +58,11 @@ void randomize(R& r, std::tuple<int, int> range = {0, 128}) {
     }
     return;
   }
+}
+
+template <std::ranges::range R>
+void randomize(R&& r, std::tuple<int, int> range = {0, 128}) {
+  randomize(r, range);
 }
 
 // Fill a matrix with sequentially increasing values. Will delete data from the
