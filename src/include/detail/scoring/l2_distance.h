@@ -29,8 +29,25 @@
  *
  * C++ functions for computing L2 distance between two feature vectors
  *
+ * This file contains a number of different implementations of the L2 distance
+ * computation, including naive, unrolled, and start/stop versions.  The
+ * implementations are templated on the type of the feature vector, and
+ * concepts are used to select between feature vectors of float and uint8_t.
+ *
+ * Implementations include:
+ * - naive_sum_of_squares: single loop, one statement in inner loop
+ * - unroll4_sum_of_squares: 4x unrolled
+ * - naive_sum_of_squares with start and stop
+ * - unroll4_sum_of_squares with start and stop
+ *
+ * The unrolled versions use simple 4x unrolling, and are faster than the
+ * naive versions.  The start/stop versions are useful for computing the
+ * "sub" distance, that is, the distance between just a portion of two vectors,
+ * which is used in pq distance computation.
+ *
+ *
+ * @todo Relax condition of uint8_t to integral types
  */
-
 #ifndef TDB_SCORING_L2_DISTANCE_H
 #define TDB_SCORING_L2_DISTANCE_H
 

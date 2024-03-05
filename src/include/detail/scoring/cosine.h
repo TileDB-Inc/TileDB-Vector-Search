@@ -27,6 +27,8 @@
  *
  * @section DESCRIPTION
  *
+ * Compute the cosine similarity between two feature vectors
+ *
  */
 
 #ifndef TDB_SCORING_COSINE_H

@@ -27,6 +27,9 @@
  *
  * @section DESCRIPTION
  *
+ * C++ functions for computing cosine similarity between two feature vectors,
+ * using calls to BLAS
+ *
  */
 
 #ifndef TDB_SCORING_COSINE_BLAS_H

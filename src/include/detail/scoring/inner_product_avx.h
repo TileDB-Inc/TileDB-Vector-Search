@@ -27,8 +27,8 @@
  *
  * @section DESCRIPTION
  *
- * C++ functions for computing L2 distance between two feature vectors, using
- * AVX intrinsics
+ * C++ functions for computing the inner product between two feature vectors,
+ * using AVX2 intrinsics
  *
  */
 

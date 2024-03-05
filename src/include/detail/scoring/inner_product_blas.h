@@ -27,8 +27,8 @@
  *
  * @section DESCRIPTION
  *
- * C++ functions for computing L2 distance between two feature vectors, using
- * BLAS
+ * C++ functions for computing the inner product between two feature vectors,
+ * using calls to BLAS
  *
  */
 

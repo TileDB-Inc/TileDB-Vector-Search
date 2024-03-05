@@ -30,6 +30,8 @@
  * C++ functions for computing L2 distance between two feature vectors, using
  * AVX intrinsics
  *
+ * @todo The loops can be unrolled to improve performance
+ * @todo Implement "view" versions
  */
 
 #ifndef TDB_SCORING_L2_DISTANCE_AVX_H

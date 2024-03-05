@@ -27,6 +27,9 @@
  *
  * @section DESCRIPTION
  *
+ * C++ functions for computing cosine similarity between two feature vectors,
+ * using AVX intrinsics
+ *
  */
 
 #ifndef TDB_SCORING_COSINE_AVX_H
