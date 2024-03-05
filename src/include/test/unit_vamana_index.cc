@@ -530,8 +530,7 @@ TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
       for (auto&& n : top_k) {
         std::cout << n << " (" << nn_hypercube(0, n) << ", "
                   << nn_hypercube(1, n) << ", " << nn_hypercube(2, n) << "), "
-                  << l2_distance(nn_hypercube[n], query)
-                  << std::endl;
+                  << l2_distance(nn_hypercube[n], query) << std::endl;
       }
       std::cout << "-----\ntop_k\n";
     }

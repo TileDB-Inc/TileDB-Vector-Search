@@ -34,10 +34,10 @@
 #ifndef TDB_SCORING_H
 #define TDB_SCORING_H
 
-#include "detail/scoring/l2_distance.h"
-#include "detail/scoring/l2_distance_avx.h"
 #include "detail/scoring/inner_product.h"
 #include "detail/scoring/inner_product_avx.h"
+#include "detail/scoring/l2_distance.h"
+#include "detail/scoring/l2_distance_avx.h"
 
 // @todo Implement
 // #include "detail/scoring/cosine.h"
@@ -46,15 +46,15 @@
 #ifdef TILEDB_VS_ENABLE_BLAS
 
 // @todo Implement
-#include "detail/scoring/l2_distance_blas.h"
-#include "detail/scoring/inner_product_blas.h"
 #include "detail/scoring/cosine_blas.h"
+#include "detail/scoring/inner_product_blas.h"
+#include "detail/scoring/l2_distance_blas.h"
 
-#endif // TILEDB_VS_ENABLE_BLAS
+#endif  // TILEDB_VS_ENABLE_BLAS
 
-#include "utils/utils.h"
-#include "utils/fixed_min_heap.h"
 #include "detail/linalg/matrix.h"
+#include "utils/fixed_min_heap.h"
+#include "utils/utils.h"
 
 // Helper utility
 namespace {
@@ -62,11 +62,10 @@ class with_ids {};
 class without_ids {};
 }  // namespace
 
-
 /****************************************************************
  *
  * Function objects.  We put these here instead of in the detail
- * header file so that we can specify which functio we want to 
+ * header file so that we can specify which functio we want to
  * dispatch to in this header
  *
  ****************************************************************/
@@ -97,11 +96,10 @@ struct sum_of_squares_distance {
 #endif
 };
 
-}
+}  // namespace _l2_distance
 
 using sum_of_squares_distance = _l2_distance::sum_of_squares_distance;
 inline constexpr auto l2_distance = _l2_distance::sum_of_squares_distance{};
-
 
 namespace _l2_sub_distance {
 
@@ -111,7 +109,6 @@ struct sub_sum_of_squares_distance {
   size_t stop_{0};
 
  public:
-
   sub_sum_of_squares_distance(size_t start, size_t stop)
       : start_(start)
       , stop_(stop) {
@@ -125,17 +122,18 @@ struct sub_sum_of_squares_distance {
   }
 };
 
-}
+}  // namespace _l2_sub_distance
 
-using sub_sum_of_squares_distance = _l2_sub_distance::sub_sum_of_squares_distance;
+using sub_sum_of_squares_distance =
+    _l2_sub_distance::sub_sum_of_squares_distance;
 
 template <feature_vector U, feature_vector V>
 auto sub_l2_distance(const U& u, const V& v, size_t i, size_t j) {
-  //return unroll4_sum_of_squares(u, v, i, j);
+  // return unroll4_sum_of_squares(u, v, i, j);
   return naive_sum_of_squares(u, v, i, j);
 }
-// inline constexpr auto sub_l2_distance = _l2_sub_distance::sub_sum_of_squares_distance{};
-
+// inline constexpr auto sub_l2_distance =
+// _l2_sub_distance::sub_sum_of_squares_distance{};
 
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn
@@ -653,5 +651,4 @@ auto gemm_scores(const Matrix1& A, const Matrix2& B, unsigned nthreads) {
   return C;
 }
 #endif  // TILEDB_VS_ENABLE_BLAS
-#endif // TDB_SCORING_H
-
+#endif  // TDB_SCORING_H

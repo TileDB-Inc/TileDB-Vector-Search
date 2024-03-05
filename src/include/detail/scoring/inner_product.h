@@ -56,7 +56,7 @@ inline float naive_inner_product(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
   for (size_t i = 0; i < size_a; ++i) {
-    sum +=  a[i] * ((float)b[i]);
+    sum += a[i] * ((float)b[i]);
   }
   return sum;
 }
@@ -68,7 +68,7 @@ inline float naive_inner_product(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
   for (size_t i = 0; i < size_a; ++i) {
-    sum +=((float) a[i]) * b[i];
+    sum += ((float)a[i]) * b[i];
   }
   return sum;
 }
@@ -80,74 +80,73 @@ inline float naive_inner_product(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
   for (size_t i = 0; i < size_a; ++i) {
-    sum +=((float) a[i]) * ((float)b[i]);
+    sum += ((float)a[i]) * ((float)b[i]);
   }
   return sum;
 }
 
-
 template <feature_vector V, feature_vector W>
-requires std::same_as<typename V::value_type, float> &&
-         std::same_as<typename W::value_type, float>
+  requires std::same_as<typename V::value_type, float> &&
+           std::same_as<typename W::value_type, float>
 inline float unroll4_inner_product(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
-  for (size_t i = 0; i < size_a; i+=4) {
-    float prod0 = a[i+0] * b[i+0];
-    float prod1 = a[i+1] * b[i+1];
-    float prod2 = a[i+2] * b[i+2];
-    float prod3 = a[i+3] * b[i+3];
+  for (size_t i = 0; i < size_a; i += 4) {
+    float prod0 = a[i + 0] * b[i + 0];
+    float prod1 = a[i + 1] * b[i + 1];
+    float prod2 = a[i + 2] * b[i + 2];
+    float prod3 = a[i + 3] * b[i + 3];
     sum += prod0 + prod1 + prod2 + prod3;
   }
   return sum;
 }
 
 template <feature_vector V, feature_vector W>
-requires std::same_as<typename V::value_type, float> &&
-         std::same_as<typename W::value_type, uint8_t>
+  requires std::same_as<typename V::value_type, float> &&
+           std::same_as<typename W::value_type, uint8_t>
 inline float unroll4_inner_product(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
-  for (size_t i = 0; i < size_a; i+=4) {
-    float prod0 = a[i+0] * ((float)b[i+0]);
-    float prod1 = a[i+1] * ((float)b[i+1]);
-    float prod2 = a[i+2] * ((float)b[i+2]);
-    float prod3 = a[i+3] * ((float)b[i+3]);
+  for (size_t i = 0; i < size_a; i += 4) {
+    float prod0 = a[i + 0] * ((float)b[i + 0]);
+    float prod1 = a[i + 1] * ((float)b[i + 1]);
+    float prod2 = a[i + 2] * ((float)b[i + 2]);
+    float prod3 = a[i + 3] * ((float)b[i + 3]);
     sum += prod0 + prod1 + prod2 + prod3;
   }
   return sum;
 }
 
 template <feature_vector V, feature_vector W>
-requires std::same_as<typename V::value_type, uint8_t> &&
-         std::same_as<typename W::value_type, float>
+  requires std::same_as<typename V::value_type, uint8_t> &&
+           std::same_as<typename W::value_type, float>
 inline float unroll4_inner_product(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
-  for (size_t i = 0; i < size_a; i+=4) {
-    float prod0 = ((float)a[i+0]) * b[i+0];
-    float prod1 = ((float)a[i+1]) * b[i+1];
-    float prod2 = ((float)a[i+2]) * b[i+2];
-    float prod3 = ((float)a[i+3]) * b[i+3];
+  for (size_t i = 0; i < size_a; i += 4) {
+    float prod0 = ((float)a[i + 0]) * b[i + 0];
+    float prod1 = ((float)a[i + 1]) * b[i + 1];
+    float prod2 = ((float)a[i + 2]) * b[i + 2];
+    float prod3 = ((float)a[i + 3]) * b[i + 3];
     sum += prod0 + prod1 + prod2 + prod3;
   }
   return sum;
 }
 
 template <feature_vector V, feature_vector W>
-requires std::same_as<typename V::value_type, uint8_t> &&
-         std::same_as<typename W::value_type, uint8_t>
+  requires std::same_as<typename V::value_type, uint8_t> &&
+           std::same_as<typename W::value_type, uint8_t>
 inline float unroll4_inner_product(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
-  for (size_t i = 0; i < size_a; i+=4) {
-    float prod0 = ((float)a[i+0]) * ((float)b[i+0]);
-    float prod1 = ((float)a[i+1]) * ((float)b[i+1]);
-    float prod2 = ((float)a[i+2]) * ((float)b[i+2]);
-    float prod3 = ((float)a[i+3]) * ((float)b[i+3]);
+  for (size_t i = 0; i < size_a; i += 4) {
+    float prod0 = ((float)a[i + 0]) * ((float)b[i + 0]);
+    float prod1 = ((float)a[i + 1]) * ((float)b[i + 1]);
+    float prod2 = ((float)a[i + 2]) * ((float)b[i + 2]);
+    float prod3 = ((float)a[i + 3]) * ((float)b[i + 3]);
     sum += prod0 + prod1 + prod2 + prod3;
   }
   return sum;
 }
 
-#endif // TDB_SCORING_INNER_PRODUCT_H
+#endif  // TDB_SCORING_INNER_PRODUCT_H

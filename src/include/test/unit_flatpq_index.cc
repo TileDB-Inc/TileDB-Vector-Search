@@ -534,8 +534,8 @@ TEMPLATE_TEST_CASE(
           pq_idx2.encode(vx), pq_idx2.encode(pq_idx2.decode(pqx)));
       auto a_evx_edpqx2 = pq_idx2.sub_distance_asymmetric(
           pq_idx2.decode(pq_idx2.encode(vx)), pqx);
-      auto ss_devx_dpqx2 = l2_distance(
-          pq_idx2.decode(pq_idx2.encode(vx)), pq_idx2.decode(pqx));
+      auto ss_devx_dpqx2 =
+          l2_distance(pq_idx2.decode(pq_idx2.encode(vx)), pq_idx2.decode(pqx));
       auto ss_devx_vx2 = l2_distance(pq_idx2.decode(pq_idx2.encode(vx)), vx);
 
       auto scale = l2_distance(vx);

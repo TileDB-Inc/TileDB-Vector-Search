@@ -39,15 +39,14 @@
 #warning "AVX2 not supported!! Using naive algorithms!!"
 #else
 
-#include "concepts.h"
 #include <immintrin.h>
+#include "concepts.h"
 
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, float>
 inline float avx2_inner_product(const V& a, const W& b) {
-
-  // @todo Align on 256 bit boundaries 
+  // @todo Align on 256 bit boundaries
   const size_t start = 0;
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
@@ -55,17 +54,16 @@ inline float avx2_inner_product(const V& a, const W& b) {
   const float* a_ptr = a.data();
   const float* b_ptr = b.data();
 
-  __m256 vec_sum = _mm256_setzero_ps();  
+  __m256 vec_sum = _mm256_setzero_ps();
 
   for (size_t i = start; i < stop; i += 8) {
+    // Load 8 floats
+    __m256 vec_a = _mm256_loadu_ps(a_ptr + i);
+    __m256 vec_b = _mm256_loadu_ps(b_ptr + i);
 
-        // Load 8 floats
-        __m256 vec_a = _mm256_loadu_ps(a_ptr + i);
-        __m256 vec_b = _mm256_loadu_ps(b_ptr + i);
-
-        // Multiply and accumulate
-        vec_sum = _mm256_fmadd_ps(vec_a, vec_b, vec_sum);
-    }
+    // Multiply and accumulate
+    vec_sum = _mm256_fmadd_ps(vec_a, vec_b, vec_sum);
+  }
 
   // 8 to 4
   __m128 lo = _mm256_castps256_ps128(vec_sum);
@@ -92,8 +90,7 @@ template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, uint8_t>
 inline float avx2_inner_product(const V& a, const W& b) {
-
-  // @todo Align on 256 bit boundaries 
+  // @todo Align on 256 bit boundaries
   const size_t start = 0;
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
@@ -101,12 +98,11 @@ inline float avx2_inner_product(const V& a, const W& b) {
   const float* a_ptr = a.data();
   const uint8_t* b_ptr = b.data();
 
-  __m256 vec_sum = _mm256_setzero_ps();  
+  __m256 vec_sum = _mm256_setzero_ps();
 
   for (size_t i = start; i < stop; i += 8) {
-
     // Load 8 floats
-    __m256  a_floats = _mm256_loadu_ps(a_ptr + i + 0);
+    __m256 a_floats = _mm256_loadu_ps(a_ptr + i + 0);
 
     // Load 8 bytes
     __m128i vec_b = _mm_loadu_si64((__m64*)(b_ptr + i));
@@ -119,7 +115,7 @@ inline float avx2_inner_product(const V& a, const W& b) {
 
     // Multiply and accumulate
     vec_sum = _mm256_fmadd_ps(a_floats, b_floats, vec_sum);
-    }
+  }
 
   // 8 to 4
   __m128 lo = _mm256_castps256_ps128(vec_sum);
@@ -146,8 +142,7 @@ template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, uint8_t> &&
            std::same_as<typename W::value_type, float>
 inline float avx2_inner_product(const V& a, const W& b) {
-
-  // @todo Align on 256 bit boundaries 
+  // @todo Align on 256 bit boundaries
   const size_t start = 0;
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
@@ -155,15 +150,14 @@ inline float avx2_inner_product(const V& a, const W& b) {
   const uint8_t* a_ptr = a.data();
   const float* b_ptr = b.data();
 
-  __m256 vec_sum = _mm256_setzero_ps();  
+  __m256 vec_sum = _mm256_setzero_ps();
 
   for (size_t i = start; i < stop; i += 8) {
-
     // Load 8 bytes == 64 bits -- zeros out top 8 bytes
     __m128i vec_a = _mm_loadu_si64((__m64*)(a_ptr + i));
 
     // Load 8 floats
-    __m256  b_floats = _mm256_loadu_ps(b_ptr + i + 0);
+    __m256 b_floats = _mm256_loadu_ps(b_ptr + i + 0);
 
     // Zero extend 8bit to 32bit ints
     __m256i a_ints = _mm256_cvtepu8_epi32(vec_a);
@@ -173,7 +167,7 @@ inline float avx2_inner_product(const V& a, const W& b) {
 
     // Multiply and accumulate
     vec_sum = _mm256_fmadd_ps(a_floats, b_floats, vec_sum);
-    }
+  }
 
   // 8 to 4
   __m128 lo = _mm256_castps256_ps128(vec_sum);
@@ -200,8 +194,7 @@ template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, uint8_t> &&
            std::same_as<typename W::value_type, uint8_t>
 inline float avx2_inner_product(const V& a, const W& b) {
-
-  // @todo Align on 256 bit boundaries 
+  // @todo Align on 256 bit boundaries
   const size_t start = 0;
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
@@ -209,10 +202,9 @@ inline float avx2_inner_product(const V& a, const W& b) {
   const uint8_t* a_ptr = a.data();
   const uint8_t* b_ptr = b.data();
 
-  __m256 vec_sum = _mm256_setzero_ps();  
+  __m256 vec_sum = _mm256_setzero_ps();
 
   for (size_t i = start; i < stop; i += 8) {
-
     // Load 8 bytes == 64 bits -- zeros out top 8 bytes
     __m128i vec_a = _mm_loadu_si64((__m64*)(a_ptr + i));
     __m128i vec_b = _mm_loadu_si64((__m64*)(b_ptr + i));
@@ -227,7 +219,7 @@ inline float avx2_inner_product(const V& a, const W& b) {
 
     // Multiply and accumulate
     vec_sum = _mm256_fmadd_ps(a_floats, b_floats, vec_sum);
-    }
+  }
 
   // 8 to 4
   __m128 lo = _mm256_castps256_ps128(vec_sum);
@@ -250,5 +242,5 @@ inline float avx2_inner_product(const V& a, const W& b) {
   return sum;
 }
 
-#endif // __AVX2__
-#endif // TDB_SCORING_INNER_PRODUCT_AVX_H
+#endif  // __AVX2__
+#endif  // TDB_SCORING_INNER_PRODUCT_AVX_H

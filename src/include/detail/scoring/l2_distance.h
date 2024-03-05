@@ -59,7 +59,6 @@ inline float naive_sum_of_squares(const V& a, const W& b) {
   return sum;
 }
 
-
 /**
  * Compute l2 distance between vector of float and vector of uint8_t
  */
@@ -70,12 +69,11 @@ inline float naive_sum_of_squares(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
   for (size_t i = 0; i < size_a; ++i) {
-    float diff = a[i] - (float) b[i];
+    float diff = a[i] - (float)b[i];
     sum += diff * diff;
   }
   return sum;
 }
-
 
 /**
  * Compute l2 distance between vector of uint8_t and vector of float
@@ -87,7 +85,7 @@ inline float naive_sum_of_squares(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
   for (size_t i = 0; i < size_a; ++i) {
-    float diff =(float) a[i] - b[i];
+    float diff = (float)a[i] - b[i];
     sum += diff * diff;
   }
   return sum;
@@ -103,12 +101,11 @@ inline float naive_sum_of_squares(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
   for (size_t i = 0; i < size_a; ++i) {
-    float diff = (float) a[i] - (float) b[i];
+    float diff = (float)a[i] - (float)b[i];
     sum += diff * diff;
   }
   return sum;
 }
-
 
 /****************************************************************
  *
@@ -126,17 +123,17 @@ inline float unroll4_sum_of_squares(const V& a) {
   size_t size_a = size(a);
   size_t stop = 4 * (size_a / 4);
   float sum = 0.0;
-  for (size_t i = 0; i < stop; i+=4) {
-    float diff0 = a[i+0];
-    float diff1 = a[i+1];
-    float diff2 = a[i+2];
-    float diff3 = a[i+3];
+  for (size_t i = 0; i < stop; i += 4) {
+    float diff0 = a[i + 0];
+    float diff1 = a[i + 1];
+    float diff2 = a[i + 2];
+    float diff3 = a[i + 3];
     sum += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
   }
 
   // Clean up
   for (size_t i = stop; i < size_a; ++i) {
-    float diff0 = a[i+0];
+    float diff0 = a[i + 0];
     sum += diff0 * diff0;
   }
   return sum;
@@ -152,17 +149,17 @@ inline float unroll4_sum_of_squares(const V& a, const W& b) {
   size_t size_a = size(a);
   size_t stop = 4 * (size_a / 4);
   float sum = 0.0;
-  for (size_t i = 0; i < stop; i+=4) {
-    float diff0 = a[i+0] - b[i+0];
-    float diff1 = a[i+1] - b[i+1];
-    float diff2 = a[i+2] - b[i+2];
-    float diff3 = a[i+3] - b[i+3];
+  for (size_t i = 0; i < stop; i += 4) {
+    float diff0 = a[i + 0] - b[i + 0];
+    float diff1 = a[i + 1] - b[i + 1];
+    float diff2 = a[i + 2] - b[i + 2];
+    float diff3 = a[i + 3] - b[i + 3];
     sum += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
   }
 
   // Clean up
   for (size_t i = stop; i < size_a; ++i) {
-    float diff0 = a[i+0] - b[i+0];
+    float diff0 = a[i + 0] - b[i + 0];
     sum += diff0 * diff0;
   }
   return sum;
@@ -178,17 +175,17 @@ inline float unroll4_sum_of_squares(const V& a, const W& b) {
   size_t size_a = size(a);
   size_t stop = 4 * (size_a / 4);
   float sum = 0.0;
-  for (size_t i = 0; i < stop; i+=4) {
-    float diff0 = a[i+0] - (float) b[i+0];
-    float diff1 = a[i+1] - (float) b[i+1];
-    float diff2 = a[i+2] - (float) b[i+2];
-    float diff3 = a[i+3] - (float) b[i+3];
+  for (size_t i = 0; i < stop; i += 4) {
+    float diff0 = a[i + 0] - (float)b[i + 0];
+    float diff1 = a[i + 1] - (float)b[i + 1];
+    float diff2 = a[i + 2] - (float)b[i + 2];
+    float diff3 = a[i + 3] - (float)b[i + 3];
     sum += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
   }
 
   // Clean up
   for (size_t i = stop; i < size_a; ++i) {
-    float diff0 = a[i+0] - (float) b[i+0];
+    float diff0 = a[i + 0] - (float)b[i + 0];
     sum += diff0 * diff0;
   }
   return sum;
@@ -204,17 +201,17 @@ inline float unroll4_sum_of_squares(const V& a, const W& b) {
   size_t size_a = size(a);
   size_t stop = 4 * (size_a / 4);
   float sum = 0.0;
-  for (size_t i = 0; i < stop; i+=4) {
-    float diff0 = (float) a[i+0] - b[i+0];
-    float diff1 = (float) a[i+1] - b[i+1];
-    float diff2 = (float) a[i+2] - b[i+2];
-    float diff3 = (float) a[i+3] - b[i+3];
+  for (size_t i = 0; i < stop; i += 4) {
+    float diff0 = (float)a[i + 0] - b[i + 0];
+    float diff1 = (float)a[i + 1] - b[i + 1];
+    float diff2 = (float)a[i + 2] - b[i + 2];
+    float diff3 = (float)a[i + 3] - b[i + 3];
     sum += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
   }
 
   // Clean up
   for (size_t i = stop; i < size_a; ++i) {
-    float diff0 = (float) a[i+0] - b[i+0];
+    float diff0 = (float)a[i + 0] - b[i + 0];
     sum += diff0 * diff0;
   }
   return sum;
@@ -230,22 +227,21 @@ inline float unroll4_sum_of_squares(const V& a, const W& b) {
   size_t size_a = size(a);
   size_t stop = 4 * (size_a / 4);
   float sum = 0.0;
-  for (size_t i = 0; i < stop; i+=4) {
-    float diff0 = (float) a[i+0] - (float) b[i+0];
-    float diff1 = (float) a[i+1] - (float) b[i+1];
-    float diff2 = (float) a[i+2] - (float) b[i+2];
-    float diff3 = (float) a[i+3] - (float) b[i+3];
+  for (size_t i = 0; i < stop; i += 4) {
+    float diff0 = (float)a[i + 0] - (float)b[i + 0];
+    float diff1 = (float)a[i + 1] - (float)b[i + 1];
+    float diff2 = (float)a[i + 2] - (float)b[i + 2];
+    float diff3 = (float)a[i + 3] - (float)b[i + 3];
     sum += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
   }
 
   // Clean up
   for (size_t i = stop; i < size_a; ++i) {
-    float diff0 = (float) a[i+0] - (float) b[i+0];
+    float diff0 = (float)a[i + 0] - (float)b[i + 0];
     sum += diff0 * diff0;
   }
   return sum;
 }
-
 
 /****************************************************************
  *
@@ -259,7 +255,8 @@ inline float unroll4_sum_of_squares(const V& a, const W& b) {
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, float>
-inline float naive_sum_of_squares(const V& a, const W& b, size_t start, size_t stop) {
+inline float naive_sum_of_squares(
+    const V& a, const W& b, size_t start, size_t stop) {
   float sum = 0.0;
   for (size_t i = start; i < stop; ++i) {
     float diff = a[i] - b[i];
@@ -268,22 +265,21 @@ inline float naive_sum_of_squares(const V& a, const W& b, size_t start, size_t s
   return sum;
 }
 
-
 /**
  * Compute l2 distance between vector of float and vector of uint8_t
  */
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, uint8_t>
-inline float naive_sum_of_squares(const V& a, const W& b, size_t start, size_t stop) {
+inline float naive_sum_of_squares(
+    const V& a, const W& b, size_t start, size_t stop) {
   float sum = 0.0;
   for (size_t i = start; i < stop; ++i) {
-    float diff = a[i] - (float) b[i];
+    float diff = a[i] - (float)b[i];
     sum += diff * diff;
   }
   return sum;
 }
-
 
 /**
  * Compute l2 distance between vector of uint8_t and vector of float
@@ -291,10 +287,11 @@ inline float naive_sum_of_squares(const V& a, const W& b, size_t start, size_t s
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, uint8_t> &&
            std::same_as<typename W::value_type, float>
-inline float naive_sum_of_squares(const V& a, const W& b, size_t start, size_t stop) {
+inline float naive_sum_of_squares(
+    const V& a, const W& b, size_t start, size_t stop) {
   float sum = 0.0;
   for (size_t i = start; i < stop; ++i) {
-    float diff =(float) a[i] - b[i];
+    float diff = (float)a[i] - b[i];
     sum += diff * diff;
   }
   return sum;
@@ -306,16 +303,15 @@ inline float naive_sum_of_squares(const V& a, const W& b, size_t start, size_t s
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, uint8_t> &&
            std::same_as<typename W::value_type, uint8_t>
-inline float naive_sum_of_squares(const V& a, const W& b, size_t start, size_t stop) {
+inline float naive_sum_of_squares(
+    const V& a, const W& b, size_t start, size_t stop) {
   float sum = 0.0;
   for (size_t i = start; i < stop; ++i) {
-    float diff = (float) a[i] - (float) b[i];
+    float diff = (float)a[i] - (float)b[i];
     sum += diff * diff;
   }
   return sum;
 }
-
-
 
 /****************************************************************
  *
@@ -331,21 +327,22 @@ inline float naive_sum_of_squares(const V& a, const W& b, size_t start, size_t s
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, float>
-inline float unroll4_sum_of_squares(const V& a, const W& b, size_t begin, size_t end) {
-  size_t loops = 4*((end - begin) / 4);
+inline float unroll4_sum_of_squares(
+    const V& a, const W& b, size_t begin, size_t end) {
+  size_t loops = 4 * ((end - begin) / 4);
   size_t stop = begin + loops;
   float sum = 0.0;
-  for (size_t i = begin; i < stop; i+=4) {
-    float diff0 = a[i+0] - b[i+0];
-    float diff1 = a[i+1] - b[i+1];
-    float diff2 = a[i+2] - b[i+2];
-    float diff3 = a[i+3] - b[i+3];
+  for (size_t i = begin; i < stop; i += 4) {
+    float diff0 = a[i + 0] - b[i + 0];
+    float diff1 = a[i + 1] - b[i + 1];
+    float diff2 = a[i + 2] - b[i + 2];
+    float diff3 = a[i + 3] - b[i + 3];
     sum += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
   }
 
   // Clean up
   for (size_t i = stop; i < end; ++i) {
-    float diff0 = a[i+0] - b[i+0];
+    float diff0 = a[i + 0] - b[i + 0];
     sum += diff0 * diff0;
   }
   return sum;
@@ -357,21 +354,22 @@ inline float unroll4_sum_of_squares(const V& a, const W& b, size_t begin, size_t
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, uint8_t>
-inline float unroll4_sum_of_squares(const V& a, const W& b, size_t begin, size_t end) {
-  size_t loops = 4*((end - begin) / 4);
+inline float unroll4_sum_of_squares(
+    const V& a, const W& b, size_t begin, size_t end) {
+  size_t loops = 4 * ((end - begin) / 4);
   size_t stop = begin + loops;
   float sum = 0.0;
-  for (size_t i = begin; i < stop; i+=4) {
-    float diff0 = a[i+0] - (float) b[i+0];
-    float diff1 = a[i+1] - (float) b[i+1];
-    float diff2 = a[i+2] - (float) b[i+2];
-    float diff3 = a[i+3] - (float) b[i+3];
+  for (size_t i = begin; i < stop; i += 4) {
+    float diff0 = a[i + 0] - (float)b[i + 0];
+    float diff1 = a[i + 1] - (float)b[i + 1];
+    float diff2 = a[i + 2] - (float)b[i + 2];
+    float diff3 = a[i + 3] - (float)b[i + 3];
     sum += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
   }
 
   // Clean up
   for (size_t i = stop; i < end; ++i) {
-    float diff0 = a[i+0] - (float) b[i+0];
+    float diff0 = a[i + 0] - (float)b[i + 0];
     sum += diff0 * diff0;
   }
   return sum;
@@ -383,21 +381,22 @@ inline float unroll4_sum_of_squares(const V& a, const W& b, size_t begin, size_t
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, uint8_t> &&
            std::same_as<typename W::value_type, float>
-inline float unroll4_sum_of_squares(const V& a, const W& b, size_t begin, size_t end) {
-  size_t loops = 4*((end - begin) / 4);
+inline float unroll4_sum_of_squares(
+    const V& a, const W& b, size_t begin, size_t end) {
+  size_t loops = 4 * ((end - begin) / 4);
   size_t stop = begin + loops;
   float sum = 0.0;
-  for (size_t i = begin; i < stop; i+=4) {
-    float diff0 = (float) a[i+0] - b[i+0];
-    float diff1 = (float) a[i+1] - b[i+1];
-    float diff2 = (float) a[i+2] - b[i+2];
-    float diff3 = (float) a[i+3] - b[i+3];
+  for (size_t i = begin; i < stop; i += 4) {
+    float diff0 = (float)a[i + 0] - b[i + 0];
+    float diff1 = (float)a[i + 1] - b[i + 1];
+    float diff2 = (float)a[i + 2] - b[i + 2];
+    float diff3 = (float)a[i + 3] - b[i + 3];
     sum += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
   }
 
   // Clean up
   for (size_t i = stop; i < end; ++i) {
-    float diff0 = (float) a[i+0] - b[i+0];
+    float diff0 = (float)a[i + 0] - b[i + 0];
     sum += diff0 * diff0;
   }
   return sum;
@@ -409,24 +408,25 @@ inline float unroll4_sum_of_squares(const V& a, const W& b, size_t begin, size_t
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, uint8_t> &&
            std::same_as<typename W::value_type, uint8_t>
-inline float unroll4_sum_of_squares(const V& a, const W& b, size_t begin, size_t end) {
-  size_t loops = 4*((end - begin) / 4);
+inline float unroll4_sum_of_squares(
+    const V& a, const W& b, size_t begin, size_t end) {
+  size_t loops = 4 * ((end - begin) / 4);
   size_t stop = begin + loops;
-    float sum = 0.0;
-  for (size_t i = begin; i < stop; i+=4) {
-    float diff0 = (float) a[i+0] - (float) b[i+0];
-    float diff1 = (float) a[i+1] - (float) b[i+1];
-    float diff2 = (float) a[i+2] - (float) b[i+2];
-    float diff3 = (float) a[i+3] - (float) b[i+3];
+  float sum = 0.0;
+  for (size_t i = begin; i < stop; i += 4) {
+    float diff0 = (float)a[i + 0] - (float)b[i + 0];
+    float diff1 = (float)a[i + 1] - (float)b[i + 1];
+    float diff2 = (float)a[i + 2] - (float)b[i + 2];
+    float diff3 = (float)a[i + 3] - (float)b[i + 3];
     sum += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
   }
 
   // Clean up
   for (size_t i = stop; i < end; ++i) {
-    float diff0 = (float) a[i+0] - (float) b[i+0];
+    float diff0 = (float)a[i + 0] - (float)b[i + 0];
     sum += diff0 * diff0;
   }
   return sum;
 }
 
-#endif // TDB_SCORING_L2_DISTANCE_H
+#endif  // TDB_SCORING_L2_DISTANCE_H

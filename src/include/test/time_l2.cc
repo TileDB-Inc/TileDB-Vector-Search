@@ -222,7 +222,11 @@ float l22_just_swap(const V& u, const U& v) {
 
 bool global_debug = false;
 
-using typelist = std::tuple<std::tuple<float, float>, std::tuple<uint8_t, float>, std::tuple<uint8_t, float>, std::tuple<uint8_t, uint8_t>>;
+using typelist = std::tuple<
+    std::tuple<float, float>,
+    std::tuple<uint8_t, float>,
+    std::tuple<uint8_t, float>,
+    std::tuple<uint8_t, uint8_t>>;
 
 TEMPLATE_LIST_TEST_CASE("time queries", "[queries]", typelist) {
   size_t dimension = 128;

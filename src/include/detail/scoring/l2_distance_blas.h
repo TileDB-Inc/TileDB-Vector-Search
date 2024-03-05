@@ -37,5 +37,4 @@
 
 #warning "BLAS l2 distance not implemented!!"
 
-#endif // TDB_SCORING_INNER_PRODUCT_BLAS_H
-
+#endif  // TDB_SCORING_INNER_PRODUCT_BLAS_H

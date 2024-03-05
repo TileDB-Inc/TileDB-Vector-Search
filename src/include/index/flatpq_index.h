@@ -235,8 +235,8 @@ auto sub_kmeans(
           total_weight += centroid[k] * centroid[k];
         }
       }
-      auto diff = sub_l2_distance(
-          centroids[j], new_centroids[j], sub_begin, sub_end);
+      auto diff =
+          sub_l2_distance(centroids[j], new_centroids[j], sub_begin, sub_end);
       max_diff = std::max<double>(max_diff, diff);
     }
     centroids.swap(new_centroids);
@@ -373,11 +373,11 @@ class flatpq_index {
    * @param training_set Training set
    */
   auto train(const ColMajorMatrix<feature_type>& training_set) {
-    centroids_ = 
+    centroids_ =
         ColMajorMatrix<centroid_feature_type>(dimension_, num_clusters_);
     distance_tables_ = std::vector<ColMajorMatrix<score_type>>(num_subspaces_);
     for (size_t i = 0; i < num_subspaces_; ++i) {
-      distance_tables_[i] = 
+      distance_tables_[i] =
           ColMajorMatrix<centroid_feature_type>(num_clusters_, num_clusters_);
     }
 
@@ -408,8 +408,8 @@ class flatpq_index {
         for (size_t j = 0; j < num_clusters_; ++j) {
           auto sub_begin = subspace * sub_dimension_;
           auto sub_end = (subspace + 1) * sub_dimension_;
-          auto sub_distance = sub_l2_distance(
-              centroids_[i], centroids_[j], sub_begin, sub_end);
+          auto sub_distance =
+              sub_l2_distance(centroids_[i], centroids_[j], sub_begin, sub_end);
           distance_tables_[subspace](i, j) = sub_distance;
         }
       }
@@ -417,8 +417,8 @@ class flatpq_index {
   }
 
   auto add(const ColMajorMatrix<feature_type>& feature_vectors) {
-    pq_vectors_ = ColMajorMatrix<code_type>(
-        num_subspaces_, num_vectors(feature_vectors));
+    pq_vectors_ =
+        ColMajorMatrix<code_type>(num_subspaces_, num_vectors(feature_vectors));
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimension_ * subspace;

@@ -38,7 +38,7 @@
 
 #define AVX2_INTRINSICS
 #if defined(AVX2_INTRINSICS)
-#include <immintrin.h> 
+#include <immintrin.h>
 #endif
 
 #ifdef TILEDB_VS_ENABLE_BLAS
@@ -691,13 +691,11 @@ TEMPLATE_LIST_TEST_CASE(
 
 #if defined(AVX2_INTRINSICS)
 
-
 template <class V, class W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, float>
 inline float sum_of_squares_avx2(const V& a, const W& b) {
-
-  // @todo Align on 256 bit boundaries 
+  // @todo Align on 256 bit boundaries
   const size_t start = 0;
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
@@ -708,72 +706,78 @@ inline float sum_of_squares_avx2(const V& a, const W& b) {
   __m256 sum_vec = _mm256_setzero_ps();
 
   for (int i = start; i < stop; i += 8) {
+    // @todo Align on 256 bit boundaries
+    __m256 vec_a = _mm256_loadu_ps(a_ptr + i + 0);
+    __m256 vec_b = _mm256_loadu_ps(b_ptr + i + 0);
 
-  // @todo Align on 256 bit boundaries 
-      __m256 vec_a = _mm256_loadu_ps(a_ptr + i + 0);
-      __m256 vec_b = _mm256_loadu_ps(b_ptr + i + 0);
-
-      __m256 diff = _mm256_sub_ps(vec_a, vec_b);
-      sum_vec = _mm256_fmadd_ps(diff, diff, sum_vec);
+    __m256 diff = _mm256_sub_ps(vec_a, vec_b);
+    sum_vec = _mm256_fmadd_ps(diff, diff, sum_vec);
   }
 
-    __m128 lo = _mm256_castps256_ps128(sum_vec);
-    __m128 hi = _mm256_extractf128_ps(sum_vec, 1);
-    __m128 combined = _mm_add_ps(lo, hi);
-    combined = _mm_hadd_ps(combined, combined);
-    combined = _mm_hadd_ps(combined, combined);
+  __m128 lo = _mm256_castps256_ps128(sum_vec);
+  __m128 hi = _mm256_extractf128_ps(sum_vec, 1);
+  __m128 combined = _mm_add_ps(lo, hi);
+  combined = _mm_hadd_ps(combined, combined);
+  combined = _mm_hadd_ps(combined, combined);
 
-
-    float sum = _mm_cvtss_f32(combined);
+  float sum = _mm_cvtss_f32(combined);
 
   for (size_t i = stop; i < size_a; ++i) {
-    float diff = a[i] -	b[i];
-    sum	+= diff	* diff;
+    float diff = a[i] - b[i];
+    sum += diff * diff;
   }
 
   return sum;
 }
 
-
-
-
 TEST_CASE("scoring: avx2", "[scoring]") {
+  ColMajorMatrix<float> rand_a{
+      {0, 1, 2, 3, 4, 5, 6, 7, 3, 1, 4},
+      {8, 9, 10, 11, 12, 13, 14, 15, 1, 5, 9},
+      {16, 17, 18, 19, 20, 21, 22, 23, 2, 6, 5},
+      {24, 25, 26, 27, 28, 29, 30, 31, 3, 5, 8},
+      {
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          9,
+          7,
+          9,
+      },
+      {40, 41, 42, 43, 44, 45, 46, 47, 3, 2, 3},
+      {48, 49, 50, 51, 52, 53, 54, 55, 8, 4, 6},
+      {56, 57, 58, 59, 60, 61, 62, 63, 2, 6, 4},
+      {46, 65, 66, 67, 68, 69, 70, 71, 3, 3, 8},
+  };
 
-ColMajorMatrix<float> rand_a {
-  {  0, 1,  2,  3,  4,  5,  6,  7, 3, 1, 4},
-  {  8,  9, 10, 11, 12, 13, 14, 15, 1, 5, 9},
-  { 16, 17, 18, 19, 20, 21, 22, 23, 2, 6, 5},
-  { 24, 25, 26, 27, 28, 29, 30, 31, 3, 5, 8},
-  { 32, 33, 34, 35, 36, 37, 38, 39, 9, 7, 9,},
-  { 40, 41, 42, 43, 44, 45, 46, 47, 3, 2, 3},
-  { 48, 49, 50, 51, 52, 53, 54, 55, 8, 4, 6},
-  { 56, 57, 58, 59, 60, 61, 62, 63, 2, 6, 4},
-  { 46, 65, 66, 67, 68, 69, 70, 71, 3, 3, 8},
-};
+  ColMajorMatrix<float> rand_b{
+      {136, 135, 134, 33, 132, 131, 130, 129, 3, 8, 3},
+      {128, 127, 126, 125, 124, 123, 122, 121, 3, 4, 6},
+      {120, 119, 118, 117, 116, 115, 114, 113, 2, 6, 4},
+      {112, 111, 110, 109, 108, 107, 106, 105, 8, 3, 2},
+      {104, 103, 102, 101, 100, 99, 98, 97, 3, 9, 7},
+      {96, 95, 94, 93, 92, 91, 90, 89, 9, 8, 5},
+      {88, 87, 86, 85, 84, 83, 82, 81, 3, 5, 6},
+      {80, 79, 78, 77, 76, 75, 74, 73, 2, 9, 5},
+      {72, 71, 70, 69, 68, 67, 66, 65, 1, 4, 1},
+  };
 
-ColMajorMatrix<float> rand_b {
-  { 136, 135, 134, 33, 132, 131, 130, 129,3, 8, 3},
-  { 128, 127, 126, 125, 124, 123, 122, 121, 3, 4, 6},
-  { 120, 119, 118, 117, 116, 115, 114, 113, 2, 6, 4},
-  { 112, 111, 110, 109, 108, 107, 106, 105, 8, 3, 2},
-  { 104, 103, 102, 101, 100, 99, 98, 97, 3, 9, 7},
-  { 96, 95, 94, 93, 92, 91, 90, 89, 9, 8, 5},
-  { 88, 87, 86, 85, 84, 83, 82, 81, 3, 5, 6},
-  { 80, 79, 78, 77, 76, 75, 74, 73, 2, 9, 5},
-  { 72, 71, 70, 69, 68, 67, 66, 65, 1, 4, 1},
-};
-
-ColMajorMatrix<float> rand_0 {
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-};
+  ColMajorMatrix<float> rand_0{
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  };
 
   float sum_0 = 0;
   for (size_t i = 0; i < num_vectors(rand_a); ++i) {
@@ -791,8 +795,5 @@ ColMajorMatrix<float> rand_0 {
   }
   CHECK(sum_avx2 == 413544);
 }
-
-
-
 
 #endif
