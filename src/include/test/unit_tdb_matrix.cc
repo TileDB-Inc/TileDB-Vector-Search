@@ -37,6 +37,7 @@
 #include "detail/linalg/tdb_io.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "mdspan/mdspan.hpp"
+#include "test/test_utils.h"
 
 using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 
@@ -198,6 +199,69 @@ TEMPLATE_TEST_CASE("tdb_matrix: preload", "[tdb_matrix]", float, uint8_t) {
   for (size_t i = 0; i < 5; ++i) {
     for (size_t j = 0; j < 5; ++j) {
       CHECK(X(i, j) == Z(i, j));
+    }
+  }
+}
+
+TEST_CASE("tdb_matrix: MatrixBase template parameter", "[tdb_matrix]") {
+  // Load data.
+  tiledb::Context ctx;
+  int offset = 13;
+
+  size_t Mrows = 200;
+  size_t Ncols = 500;
+
+  using T = float;
+  using I = size_t;
+  using LayoutPolicy = stdx::layout_left;
+  using IdsType = uint8_t;
+
+  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+  std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
+
+  // 1. Use Matrix as the MatrixBase template parameter.
+  {
+    auto X = ColMajorMatrix<T>(Mrows, Ncols);
+    fill_and_write_matrix(ctx, X, tmp_matrix_uri, Mrows, Ncols, offset);
+
+    auto Y = tdbBlockedMatrix<T, LayoutPolicy, I, Matrix<T, LayoutPolicy, I>>(
+        ctx, tmp_matrix_uri);
+    Y.load();
+    CHECK(num_vectors(Y) == num_vectors(X));
+    CHECK(dimension(Y) == dimension(X));
+    CHECK(num_vectors(Y) == num_vectors(X));
+    CHECK(dimension(Y) == dimension(X));
+    CHECK(std::equal(
+        X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+    for (size_t i = 0; i < 5; ++i) {
+      for (size_t j = 0; j < 5; ++j) {
+        CHECK(X(i, j) == Y(i, j));
+      }
+    }
+  }
+
+  // 2. Use MatrixWithIds as the MatrixBase template parameter.
+  {
+    auto X = ColMajorMatrixWithIds<T, IdsType, I>(Mrows, Ncols);
+    fill_and_write_matrix(
+        ctx, X, tmp_matrix_uri, tmp_ids_uri, Mrows, Ncols, offset);
+
+    auto Y = tdbBlockedMatrix<
+        T,
+        LayoutPolicy,
+        I,
+        MatrixWithIds<T, IdsType, LayoutPolicy, I>>(ctx, tmp_matrix_uri);
+    Y.load();
+    CHECK(num_vectors(Y) == num_vectors(X));
+    CHECK(dimension(Y) == dimension(X));
+    CHECK(num_vectors(Y) == num_vectors(X));
+    CHECK(dimension(Y) == dimension(X));
+    CHECK(std::equal(
+        X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+    for (size_t i = 0; i < 5; ++i) {
+      for (size_t j = 0; j < 5; ++j) {
+        CHECK(X(i, j) == Y(i, j));
+      }
     }
   }
 }

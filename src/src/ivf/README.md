@@ -1,9 +1,7 @@
-
-
 ## C++ CLI for index and query with ivf flat index
 
-
 ### Usage
+
 ```c++
     ivf_index (-h | --help)
     ivf_index --db_uri URI --index_uri URI [--ftype TYPE] [--idtype TYPE] [--pxtype TYPE]
@@ -28,7 +26,6 @@ Options:
     -d, --debug             run in debug mode [default: false]
     -v, --verbose           run in verbose mode [default: false]
 ```
-
 
 ### Example
 

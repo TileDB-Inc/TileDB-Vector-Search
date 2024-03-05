@@ -1,13 +1,12 @@
-import json
 from typing import Any, Mapping
 
 import numpy as np
 
 from tiledb.vector_search import index
 from tiledb.vector_search.module import *
-from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
-                                                  storage_formats,
-                                                  validate_storage_version)
+from tiledb.vector_search.storage_formats import STORAGE_VERSION
+from tiledb.vector_search.storage_formats import storage_formats
+from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import add_to_group
 
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
@@ -78,7 +77,7 @@ class FlatIndex(index.Index):
                 self._ids = read_vector_u64(
                     self.ctx, self.ids_uri, 0, self.size, self.base_array_timestamp
                 )
-    
+
     def get_dimensions(self):
         return self.dimensions
 

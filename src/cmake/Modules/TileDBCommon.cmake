@@ -97,4 +97,3 @@ function(install_target_libs LIB_TARGET)
     install(FILES ${ABS_PATH} DESTINATION lib)
   endif()
 endfunction()
-
