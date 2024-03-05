@@ -31,13 +31,16 @@
  *
  */
 
+
 #ifndef TDB_SCORING_H
 #define TDB_SCORING_H
 
+#ifdef __AVX2__
 #define AVX2_INTRINSICS
+#endif
 
 #if defined(AVX2_INTRINSICS)
-#include <immintrin.h> // Include AVX2 intrinsics
+  #include <immintrin.h>
 #endif
 
 #include <algorithm>
