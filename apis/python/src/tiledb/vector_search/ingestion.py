@@ -2356,9 +2356,9 @@ def ingest(
         logger.debug("Input dataset size %d", size)
         logger.debug("Input dataset dimensions %d", dimensions)
         logger.debug("Vector dimension type %s", vector_type)
-        if training_sample_size > in_size:
+        if training_sample_size > size:
             raise ValueError(
-                f"training_sample_size {training_sample_size} is larger than the input dataset size {in_size}"
+                f"training_sample_size {training_sample_size} is larger than the input dataset size {size}"
             )
 
         if partitions == -1:
@@ -2383,7 +2383,7 @@ def ingest(
             external_ids_uri = write_external_ids(
                 group=group,
                 external_ids=external_ids,
-                size=in_size,
+                size=size,
                 partitions=partitions,
             )
             external_ids_type = "TILEDB_ARRAY"
