@@ -131,7 +131,29 @@ combined = _mm_hadd_ps(combined, combined);
 float sum = _mm_cvtss_f32(combined);
 ```
 
+### Function objects
 
+To enable different distance functions to be passed as parameters to
+queries, the file `scoring.h` defines some function objects to wrap the
+raw functions:
+```
+namespace _l2_distance {
+struct sum_of_squares_distance {
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return avx2_sum_of_squares(a, b);
+  }
+};
+}  // namespace _l2_distance
+
+using sum_of_squares_distance = _l2_distance::sum_of_squares_distance;
+inline constexpr auto l2_distance = _l2_distance::sum_of_squares_distance{};
+```
+With these definitions, users can compute L2 distance by calling `l2_distance()`:
+```
+  auto dist = l2_distance(x, y);
+```
+Users can pass the type `sum_of_squared_distance` where it is required as a template argument, for instance.
 
 ### Implementation status:
 
