@@ -33,6 +33,7 @@
 #ifndef TILEDB_GRAPH_H
 #define TILEDB_GRAPH_H
 
+#include <random>
 #include <vector>
 #include "scoring.h"
 #include "utils/fixed_min_heap.h"

@@ -16,11 +16,12 @@ echo "VECTOR_SEARCH is ${VECTOR_SEARCH}"
 
 export VAMANAROOT=${VECTOR_SEARCH}/src/
 
-export SIFT=siftsmall
+#export SIFT=siftsmall
+export SIFT=sift
 export SIFTPATH=${VECTOR_SEARCH}/external/test_data/arrays/${SIFT}
 export DATAPATH=${SIFTPATH}
 
-export VAMANAPATH=${VAMANAROOT}/cmake-build-relwithdebinfo/libtiledbvectorsearch/src/vamana
+export VAMANAPATH=${VAMANAROOT}/cmake-build-release/libtiledbvectorsearch/src/vamana
 
 export SIFT_LEARN=${SIFTPATH}/input_vectors
 export SIFT_QUERY=${SIFTPATH}/queries
@@ -64,7 +65,7 @@ for T in ${Ts[@]}; do
 	    export SIFT_INDEX=${SIFTPATH}/index_${SIFT}_learn_R${R}_L${L}_A1.2
 	    cmd="${VAMANAPATH}/vamana_index --inputs_uri ${SIFT_LEARN}  --index_uri ${SIFT_INDEX} -R ${R} -L ${L} --alpha 1.2 --nthreads ${T} -v -d --log - --force"
 	    echo ${cmd}
-	    time ${cmd}
+#	    time ${cmd}
 	done
     done
     echo "================================================================"

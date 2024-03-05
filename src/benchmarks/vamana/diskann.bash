@@ -67,9 +67,9 @@ for T in ${Ts[@]}; do
 	echo "----------------------------------------------------------------"
 	for L in ${Ls[@]}; do
 	    export SIFT_INDEX=${SIFTPATH}/index_${SIFT}_learn_R${R}_L${L}_A1.2
-	    cmd="${DISKANNPATH}/build_memory_index  --data_type float --dist_fn l2 --data_path ${SIFT_LEARN}  --index_path_prefix ${SIFT_INDEX} -R ${R} -L ${L} --alpha 1.2 -T ${T}"
+	    cmd="${DISKANNPATH}/build_memory_index  --data_type float --dist_fn l2 --data_path ${SIFT_LEARN}  --index_path_prefix ${SIFT_INDEX} -R ${R} -L ${L} --alpha 1.2 -T 64" #${T}
 	    echo ${cmd}
-	    time ${cmd}
+#	    time ${cmd}
 	done
     done
     echo "================================================================"
