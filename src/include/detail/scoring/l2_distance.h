@@ -117,6 +117,32 @@ inline float naive_sum_of_squares(const V& a, const W& b) {
  ****************************************************************/
 
 /**
+ * Unrolled l2 of single vector
+ */
+template <feature_vector V>
+  requires std::same_as<typename V::value_type, float> ||
+           std::same_as<typename V::value_type, uint8_t>
+inline float unroll4_sum_of_squares(const V& a) {
+  size_t size_a = size(a);
+  size_t stop = 4 * (size_a / 4);
+  float sum = 0.0;
+  for (size_t i = 0; i < stop; i+=4) {
+    float diff0 = a[i+0];
+    float diff1 = a[i+1];
+    float diff2 = a[i+2];
+    float diff3 = a[i+3];
+    sum += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
+  }
+
+  // Clean up
+  for (size_t i = stop; i < size_a; ++i) {
+    float diff0 = a[i+0];
+    sum += diff0 * diff0;
+  }
+  return sum;
+}
+
+/**
  * Unrolled l2 distance between vector of float and vector of float
  */
 template <feature_vector V, feature_vector W>
@@ -306,7 +332,8 @@ template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, float>
 inline float unroll4_sum_of_squares(const V& a, const W& b, size_t begin, size_t end) {
-  size_t stop = 4 * (end / 4);
+  size_t loops = 4*((end - begin) / 4);
+  size_t stop = begin + loops;
   float sum = 0.0;
   for (size_t i = begin; i < stop; i+=4) {
     float diff0 = a[i+0] - b[i+0];
@@ -331,7 +358,8 @@ template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
            std::same_as<typename W::value_type, uint8_t>
 inline float unroll4_sum_of_squares(const V& a, const W& b, size_t begin, size_t end) {
-  size_t stop = 4 * (stop / 4);
+  size_t loops = 4*((end - begin) / 4);
+  size_t stop = begin + loops;
   float sum = 0.0;
   for (size_t i = begin; i < stop; i+=4) {
     float diff0 = a[i+0] - (float) b[i+0];
@@ -356,7 +384,8 @@ template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, uint8_t> &&
            std::same_as<typename W::value_type, float>
 inline float unroll4_sum_of_squares(const V& a, const W& b, size_t begin, size_t end) {
-  size_t stop = 4 * (end / 4);
+  size_t loops = 4*((end - begin) / 4);
+  size_t stop = begin + loops;
   float sum = 0.0;
   for (size_t i = begin; i < stop; i+=4) {
     float diff0 = (float) a[i+0] - b[i+0];
@@ -381,8 +410,9 @@ template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, uint8_t> &&
            std::same_as<typename W::value_type, uint8_t>
 inline float unroll4_sum_of_squares(const V& a, const W& b, size_t begin, size_t end) {
-  size_t stop = 4 * (end / 4);
-  float sum = 0.0;
+  size_t loops = 4*((end - begin) / 4);
+  size_t stop = begin + loops;
+    float sum = 0.0;
   for (size_t i = begin; i < stop; i+=4) {
     float diff0 = (float) a[i+0] - (float) b[i+0];
     float diff1 = (float) a[i+1] - (float) b[i+1];

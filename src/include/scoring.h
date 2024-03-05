@@ -131,7 +131,8 @@ using sub_sum_of_squares_distance = _l2_sub_distance::sub_sum_of_squares_distanc
 
 template <feature_vector U, feature_vector V>
 auto sub_l2_distance(const U& u, const V& v, size_t i, size_t j) {
-  return unroll4_sum_of_squares(u, v, i, j);
+  //return unroll4_sum_of_squares(u, v, i, j);
+  return naive_sum_of_squares(u, v, i, j);
 }
 // inline constexpr auto sub_l2_distance = _l2_sub_distance::sub_sum_of_squares_distance{};
 
