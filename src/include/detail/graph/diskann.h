@@ -110,7 +110,7 @@ auto read_diskann_mem_index(const std::string& index) {
 // @todo Also a read_diskann_disk_index?
 // Note that that is much more complicated
 auto read_diskann_mem_index_with_scores(
-    const std::string& index, const std::string& data) {
+    const std::string& index, const std::string& data, size_t num_nodes = 0) {
   auto x = read_diskann_data(data);
 
   // @todo get rid of copy pasta
@@ -129,10 +129,17 @@ auto read_diskann_mem_index_with_scores(
   binary_file.read((char*)&medioid, 4);
   binary_file.read((char*)&vamana_frozen_num, 8);
 
-  size_t num_nodes = (index_file_size - 24) / (max_degree * 4 + 4);
+  if (num_nodes == 0) {
+    num_nodes = (index_file_size - 24) / (max_degree * 4 + 4);
+  }
   auto g = detail::graph::adj_list<float, uint32_t>(num_nodes);
 
-  for (size_t node = 0; node < num_nodes; ++node) {
+  size_t node = 0;
+  while (!binary_file.eof()) {
+    size_t where = binary_file.tellg();
+    if (where == index_file_size) {
+      break;
+    }
     uint32_t num_neighbors;
     binary_file.read((char*)&num_neighbors, 4);
     for (size_t i = 0; i < num_neighbors; ++i) {
@@ -141,9 +148,11 @@ auto read_diskann_mem_index_with_scores(
       g.add_edge(node, id, l2_distance(x[node], x[id]));
     }
     // @todo ??? Is this right ???
-    binary_file.seekg(max_degree - num_neighbors, std::ios_base::cur);
+    // binary_file.seekg(max_degree - num_neighbors, std::ios_base::cur);
+    ++node;
   }
   binary_file.close();
+  assert(node == num_nodes);
 
   return g;
 }

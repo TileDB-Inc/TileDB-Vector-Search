@@ -1,10 +1,5 @@
 #
-# CMakeLists.txt
-#
-#
-# The MIT License
-#
-# Copyright (c) 2023 TileDB, Inc.
+# Copyright (c) 2023-2024 TileDB, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +20,10 @@
 # THE SOFTWARE.
 #
 
-# Command line drivers
-add_subdirectory(flat)
-add_subdirectory(ivf)
-add_subdirectory(vamana)
+add_executable(vamana_query vamana_query.cc)
+target_link_libraries(vamana_query PUBLIC kmeans_lib)
+target_compile_definitions(vamana_query PUBLIC TILEDB_VS_ENABLE_STATS)
+
+add_executable(vamana_index vamana_index.cc)
+target_link_libraries(vamana_index PUBLIC kmeans_lib)
+target_compile_definitions(vamana_index PUBLIC TILEDB_VS_ENABLE_STATS)

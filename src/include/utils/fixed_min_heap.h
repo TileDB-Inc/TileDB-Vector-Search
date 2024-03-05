@@ -150,11 +150,89 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
     return false;
   }
 
+  // returns { inserted, evicted, evicted_score, evicted_id }
+  // Cases:
+  // 1. Inserted, not evicted: { true, false, x, y }
+  // 2. Inserted, evicted: { true, true, old_score, old_id }
+  // 3. Not inserted, not evicted: { false, false, x, y }
+  // 4. Not inserted, evicted: exception
+  template <class Unique = not_unique>
+  std::tuple<bool, bool, T, U> evict_insert(const T& x, const U& y) {
+
+    // There is room in the heap for the new element
+    if (Base::size() < max_size) {
+
+      // If the element id already exists in the heap, return false
+      // We don't insert the element -- return inserted = false
+      if constexpr (std::is_same_v<Unique, unique_id>) {
+        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
+              return std::get<1>(e) == y;
+            }) != end(*this)) {
+
+          // Not inserted
+          return {false, false, x, y};
+        }
+      }
+
+      // Insert, since there is room
+      Base::emplace_back(x, y);
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+
+      // Inserted, not evicted
+      return {true, false, x, y};
+    } else if (compare_(x, std::get<0>(this->front()))) {
+
+      // If x < max_score in the heap, evict max_score and insert x
+      // return inserted = true, evicted = true, old_score, old_id
+
+      // Get the old element
+      auto tmp = this->front();
+      std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+
+      if constexpr (std::is_same_v<Unique, unique_id>) {
+
+        // If the new element id exists in the heap, return inserted = false
+        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
+              return std::get<1>(e) == y;
+            }) != end(*this)) {
+
+          // Since we had previously popped the heap, we need to unpop it
+          std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+            return compare_(std::get<0>(a), std::get<0>(b));
+          });
+          return { false, false, x, y };
+        }
+      }
+
+      // Replace the former max element with the new element and re-heapify
+      (*this)[max_size - 1] = std::make_tuple(x, y);
+      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+
+      // Inserted, evicted: return old element
+      return {true, true, std::get<0>(tmp), std::get<1>(tmp)};
+    }
+
+    // If the new element is larger than the max, return not inserted
+    return {false, false, x, y};
+  }
+
   auto pop() {
     std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
       return compare_(std::get<0>(a), std::get<0>(b));
     });
     this->pop_back();
+  }
+
+  void self_heapify() {
+    std::make_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      return compare(std::get<0>(a), std::get<0>(b));
+    });
   }
 
   void self_sort() {

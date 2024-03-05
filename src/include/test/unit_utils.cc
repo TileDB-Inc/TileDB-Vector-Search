@@ -50,31 +50,31 @@ TEST_CASE("utils: test", "[utils]") {
 
   static std::filesystem::path cmake_source_dir{CMAKE_SOURCE_DIR};
   CHECK(is_local_directory(cmake_source_dir));
-  CHECK(is_local_file(cmake_source_dir / "README.md"));
-  CHECK(is_local_file(cmake_source_dir / "src" / "README.md"));
+  CHECK(is_local_file(cmake_source_dir / "IVF.md"));
+  CHECK(is_local_file(cmake_source_dir / "src" / "IVF.md"));
 
-  CHECK(!is_local_directory(cmake_source_dir / "README.md"));
-  CHECK(!is_local_directory(cmake_source_dir / "src" / "README.md"));
-  CHECK(!is_local_array(cmake_source_dir / "README.md"));
-  CHECK(!is_local_array(cmake_source_dir / "src" / "README.md"));
+  CHECK(!is_local_directory(cmake_source_dir / "IVF.md"));
+  CHECK(!is_local_directory(cmake_source_dir / "src" / "IVF.md"));
+  CHECK(!is_local_array(cmake_source_dir / "IVF.md"));
+  CHECK(!is_local_array(cmake_source_dir / "src" / "IVF.md"));
 
   std::string cmake_source_str{CMAKE_SOURCE_DIR};
   CHECK(is_local_directory(cmake_source_str));
-  CHECK(is_local_file(cmake_source_str + "/README.md"));
-  CHECK(is_local_file(cmake_source_str + "/src/README.md"));
+  CHECK(is_local_file(cmake_source_str + "/IVF.md"));
+  CHECK(is_local_file(cmake_source_str + "/src/IVF.md"));
 
-  CHECK(!is_local_directory(cmake_source_str + "/README.md"));
-  CHECK(!is_local_directory(cmake_source_str + "/src/README.md"));
-  CHECK(!is_local_array(cmake_source_str + "/README.md"));
-  CHECK(!is_local_array(cmake_source_str + "/src/README.md"));
+  CHECK(!is_local_directory(cmake_source_str + "/IVF.md"));
+  CHECK(!is_local_directory(cmake_source_str + "/src/IVF.md"));
+  CHECK(!is_local_array(cmake_source_str + "/IVF.md"));
+  CHECK(!is_local_array(cmake_source_str + "/src/IVF.md"));
 
-  CHECK(is_local_file("file://" + cmake_source_str + "/README.md"));
-  CHECK(is_local_file("file://" + cmake_source_str + "/src/README.md"));
+  CHECK(is_local_file("file://" + cmake_source_str + "/IVF.md"));
+  CHECK(is_local_file("file://" + cmake_source_str + "/src/IVF.md"));
 
-  CHECK(!is_local_directory("file://" + cmake_source_str + "/README.md"));
-  CHECK(!is_local_directory("file://" + cmake_source_str + "/src/README.md"));
-  CHECK(!is_local_array("file://" + cmake_source_str + "/README.md"));
-  CHECK(!is_local_array("file://" + cmake_source_str + "/src/README.md"));
+  CHECK(!is_local_directory("file://" + cmake_source_str + "/IVF.md"));
+  CHECK(!is_local_directory("file://" + cmake_source_str + "/src/IVF.md"));
+  CHECK(!is_local_array("file://" + cmake_source_str + "/IVF.md"));
+  CHECK(!is_local_array("file://" + cmake_source_str + "/src/IVF.md"));
 
   CHECK(!is_local_file("unit_utils_bad_path"));
   CHECK(!is_local_file("file://unit_utils_bad_path"));

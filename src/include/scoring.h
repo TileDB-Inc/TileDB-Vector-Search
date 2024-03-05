@@ -73,6 +73,10 @@ class without_ids {};
 
 namespace _l2_distance {
 
+/**
+ * @brief A distance functor that computes the sum of squares distance between
+ * two vectors.
+ */
 struct sum_of_squares_distance {
 #ifdef __AVX2__
   template <feature_vector V, feature_vector U>
@@ -105,6 +109,10 @@ inline constexpr auto l2_distance = _l2_distance::sum_of_squares_distance{};
 
 namespace _l2_sub_distance {
 
+/**
+ * @brief A distance functor that computes the sum of squares distance between
+ * two vectors, but only for a sub-range of the vectors.
+ */
 struct sub_sum_of_squares_distance {
  private:
   size_t start_{0};
@@ -134,6 +142,32 @@ auto sub_l2_distance(const U& u, const V& v, size_t i, size_t j) {
 }
 // inline constexpr auto sub_l2_distance = _l2_sub_distance::sub_sum_of_squares_distance{};
 
+
+/**
+ * An augmented distance functor that counts the number of distance
+ * invocations.  Used for test/debugging/profiling.
+ */
+struct counting_sum_of_squares_distance {
+  size_t num_comps_{0};
+  std::string msg_{""};
+
+  counting_sum_of_squares_distance() = default;
+  counting_sum_of_squares_distance(const std::string& msg)
+      : msg_(msg) {
+  }
+
+  template <class V, class U>
+  constexpr auto operator()(const V& a, const U& b) {
+    ++num_comps_;
+    return sum_of_squares(a, b);
+  }
+  ~counting_sum_of_squares_distance() {
+    _count_data.insert_entry(msg_ + " num_ss_comps", num_comps_);
+  }
+};
+
+using counting_l2_distance = counting_sum_of_squares_distance;
+using counting_L2_distance = counting_sum_of_squares_distance;
 
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn
