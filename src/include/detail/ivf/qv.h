@@ -167,7 +167,10 @@ auto qv_query_heap_infinite_ram(
  * @return tuple of the top_k scores and the top_k indices
  *
  */
-template <partitioned_feature_vector_array F, query_vector_array Q, class Distance = sum_of_squares_distance>
+template <
+    partitioned_feature_vector_array F,
+    query_vector_array Q,
+    class Distance = sum_of_squares_distance>
 auto nuv_query_heap_infinite_ram(
     const F& partitioned_vectors,
     auto&& active_partitions,
@@ -273,7 +276,10 @@ auto nuv_query_heap_infinite_ram(
  * @return tuple of the top_k scores and the top_k indices
  *
  */
-template <feature_vector_array F, query_vector_array Q, class Distance = sum_of_squares_distance>
+template <
+    feature_vector_array F,
+    query_vector_array Q,
+    class Distance = sum_of_squares_distance>
 auto nuv_query_heap_infinite_ram_reg_blocked(
     const F& partitioned_vectors,
     auto&& active_partitions,
@@ -448,7 +454,10 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
  * @return tuple of the top_k scores and the top_k indices
  *
  */
-template <feature_vector_array F, feature_vector_array Q, class Distance = sum_of_squares_distance>
+template <
+    feature_vector_array F,
+    feature_vector_array Q,
+    class Distance = sum_of_squares_distance>
 auto nuv_query_heap_finite_ram(
     F& partitioned_vectors,
     const Q& query,
@@ -574,7 +583,10 @@ auto nuv_query_heap_finite_ram(
  * @return tuple of the top_k scores and the top_k indices
  *
  */
-template <feature_vector_array F, feature_vector_array Q, class Distance = sum_of_squares_distance>
+template <
+    feature_vector_array F,
+    feature_vector_array Q,
+    class Distance = sum_of_squares_distance>
 auto nuv_query_heap_finite_ram_reg_blocked(
     F& partitioned_vectors,  // not const because of load()
     const Q& query,
@@ -771,7 +783,10 @@ auto nuv_query_heap_finite_ram_reg_blocked(
  * @param nthreads How many threads to use for parallel execution
  * @return The indices of the top_k neighbors for each query vector
  */
-template <class feature_type, class id_type>
+template <
+    class feature_type,
+    class id_type,
+    class Distance = sum_of_squares_distance>
 auto qv_query_heap_finite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -783,7 +798,8 @@ auto qv_query_heap_finite_ram(
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads,
-    uint64_t timestamp = 0) {
+    uint64_t timestamp = 0,
+    Distance&& distance = Distance{}) {
   scoped_timer _{tdb_func__};
   auto temporal_policy =
       (timestamp == 0) ? tiledb::TemporalPolicy() :
@@ -811,7 +827,13 @@ auto qv_query_heap_finite_ram(
           temporal_policy);
 
   return nuv_query_heap_finite_ram(
-      partitioned_vectors, query, active_queries, k_nn, upper_bound, nthreads);
+      partitioned_vectors,
+      query,
+      active_queries,
+      k_nn,
+      upper_bound,
+      nthreads,
+      distance);
 }
 
 /*******************************************************************************
@@ -849,7 +871,11 @@ auto qv_query_heap_finite_ram(
  * @return tuple of the top_k scores and the top_k indices
  *
  */
-template <partitioned_feature_vector_array P, query_vector_array Q, class A, class Distance = sum_of_squares_distance>
+template <
+    partitioned_feature_vector_array P,
+    query_vector_array Q,
+    class A,
+    class Distance = sum_of_squares_distance>
 auto apply_query(
     const P& partitioned_vectors,
     const std::optional<A>&
@@ -992,7 +1018,10 @@ auto apply_query(
  * @param min_parts_per_thread Unused (WIP for threading heuristics)
  * @return The indices of the top_k neighbors for each query vector
  */
-template <feature_vector_array F, feature_vector_array Q, class Distance = sum_of_squares_distance>
+template <
+    feature_vector_array F,
+    feature_vector_array Q,
+    class Distance = sum_of_squares_distance>
 auto query_finite_ram(
     F& partitioned_vectors,  // not const because of load()
     const Q& query,
@@ -1051,7 +1080,8 @@ auto query_finite_ram(
                   k_nn,
                   first_part,
                   last_part,
-                  part_offset, distance);
+                  part_offset,
+                  distance);
             }));
       }
     }
@@ -1095,14 +1125,18 @@ auto query_finite_ram(
  * @return tuple of the top_k scores and the top_k indices
  *
  */
-template <feature_vector_array F, feature_vector_array Q>
+template <
+    feature_vector_array F,
+    feature_vector_array Q,
+    class Distance = sum_of_squares_distance>
 auto query_infinite_ram(
     const F& partitioned_vectors,
     auto&& active_partitions,
     const Q& query,
     auto&& active_queries,
     size_t k_nn,
-    size_t nthreads) {
+    size_t nthreads,
+    Distance&& distance = Distance{}) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
   using id_type = typename F::id_type;
@@ -1134,6 +1168,7 @@ auto query_infinite_ram(
            &partitioned_vectors,
            &active_queries = active_queries,
            &active_partitions = active_partitions,
+           &distance,
            k_nn,
            first_part,
            last_part]() {
@@ -1144,7 +1179,9 @@ auto query_infinite_ram(
                 active_queries,
                 k_nn,
                 first_part,
-                last_part);
+                last_part,
+                0,
+                distance);
           }));
     }
   }
