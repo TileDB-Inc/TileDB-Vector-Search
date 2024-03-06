@@ -13,7 +13,7 @@ def test_load_matrix(tmpdir):
     create_array(p, data)
 
     # load the data with the vector search API and compare
-    m, orig_matrix = vs.load_as_array(p, return_matrix=True)
+    m, orig_matrix = vs.load_as_array(p, size=data.shape[1], return_matrix=True)
     assert np.array_equal(m, data)
 
     # mutate and compare again - should match backing data in the C++ Matrix

@@ -9,9 +9,9 @@ from tiledb.vector_search._tiledbvspy import *
 
 def load_as_matrix(
     path: str,
+    size: int,
     ctx: "Ctx" = None,
     config: Optional[Mapping[str, Any]] = None,
-    size: int = 0,
     timestamp: int = 0,
 ):
     """
@@ -35,16 +35,17 @@ def load_as_matrix(
 
     a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
+    # Read all rows of `path` from column 0 -> `size`. Set no upper_bound.
     if dtype == np.float32:
-        m = tdbColMajorMatrix_f32(ctx, path, 0, 0, 0, size, 0, timestamp, True)
+        m = tdbColMajorMatrix_f32(ctx, path, 0, size, 0, timestamp)
     elif dtype == np.float64:
-        m = tdbColMajorMatrix_f64(ctx, path, 0, 0, 0, size, 0, timestamp, True)
+        m = tdbColMajorMatrix_f64(ctx, path, 0, size, 0, timestamp)
     elif dtype == np.int32:
-        m = tdbColMajorMatrix_i32(ctx, path, 0, 0, 0, size, 0, timestamp, True)
+        m = tdbColMajorMatrix_i32(ctx, path, 0, size, 0, timestamp)
     elif dtype == np.int32:
-        m = tdbColMajorMatrix_i64(ctx, path, 0, 0, 0, size, 0, timestamp, True)
+        m = tdbColMajorMatrix_i64(ctx, path, 0, size, 0, timestamp)
     elif dtype == np.uint8:
-        m = tdbColMajorMatrix_u8(ctx, path, 0, 0, 0, size, 0, timestamp, True)
+        m = tdbColMajorMatrix_u8(ctx, path, 0, size, 0, timestamp)
     # elif dtype == np.uint64:
     #     return tdbColMajorMatrix_u64(ctx, path, size, timestamp)
     else:
@@ -55,6 +56,7 @@ def load_as_matrix(
 
 def load_as_array(
     path,
+    size: int,
     return_matrix: bool = False,
     ctx: "Ctx" = None,
     config: Optional[Mapping[str, Any]] = None,
@@ -71,7 +73,7 @@ def load_as_array(
     config: Dict
         TileDB configuration parameters
     """
-    m = load_as_matrix(path, ctx=ctx, config=config)
+    m = load_as_matrix(path, size=size, ctx=ctx, config=config)
     r = np.array(m, copy=False)
 
     # hang on to a copy for testing purposes, for now

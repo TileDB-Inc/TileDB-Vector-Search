@@ -85,30 +85,14 @@ class tdbBlockedMatrixWithIds
 
   /**
    * @brief Construct a new tdbBlockedMatrixWithIds object, limited to
-   * `upper_bound` vectors. In this case, the `Matrix` is row-major, so the
-   * number of vectors is the number of rows.
-   *
-   * @param ctx The TileDB context to use.
-   * @param uri URI of the TileDB array to read.
-   * @param ids_uri URI of the TileDB array of IDs to read.
-   */
-  tdbBlockedMatrixWithIds(
-      const tiledb::Context& ctx,
-      const std::string& uri,
-      const std::string& ids_uri) noexcept
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : tdbBlockedMatrixWithIds(ctx, uri, ids_uri, 0, 0, 0, 0, 0, 0, true) {
-  }
-
-  /**
-   * @brief Construct a new tdbBlockedMatrixWithIds object, limited to
    * `upper_bound` vectors. In this case, the `Matrix` is column-major, so the
    * number of vectors is the number of columns.
    *
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
    * @param ids_uri URI of the TileDB array of IDs to read.
-   * @param upper_bound The maximum number of vectors to read.
+   * @param upper_bound The maximum number of vectors to read. Set to 0 for no
+   * upper bound.
    * @param temporal_policy The TemporalPolicy to use for reading the array
    * data.
    */
@@ -116,11 +100,19 @@ class tdbBlockedMatrixWithIds
       const tiledb::Context& ctx,
       const std::string& uri,
       const std::string& ids_uri,
-      size_t upper_bound,
+      size_t upper_bound = 0,
       size_t timestamp = 0)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrixWithIds(
-            ctx, uri, ids_uri, 0, 0, 0, 0, upper_bound, timestamp, true) {
+            ctx,
+            uri,
+            ids_uri,
+            0,
+            Base::get_last_row(ctx, uri),
+            0,
+            Base::get_last_col(ctx, uri),
+            upper_bound,
+            timestamp) {
   }
 
   /** General constructor */
@@ -133,8 +125,7 @@ class tdbBlockedMatrixWithIds
       size_t first_col,
       size_t last_col,
       size_t upper_bound,
-      size_t timestamp,
-      bool read_full_matrix)
+      size_t timestamp)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrixWithIds(
             ctx,
@@ -147,8 +138,7 @@ class tdbBlockedMatrixWithIds
             upper_bound,
             (timestamp == 0 ?
                  tiledb::TemporalPolicy() :
-                 tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)),
-            read_full_matrix) {
+                 tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp))) {
   }
 
   /** General constructor */
@@ -161,8 +151,7 @@ class tdbBlockedMatrixWithIds
       size_t first_col,
       size_t last_col,
       size_t upper_bound,
-      tiledb::TemporalPolicy temporal_policy,
-      bool read_full_matrix)  // noexcept
+      tiledb::TemporalPolicy temporal_policy)  // noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(
             ctx,
@@ -172,8 +161,7 @@ class tdbBlockedMatrixWithIds
             first_col,
             last_col,
             upper_bound,
-            temporal_policy,
-            read_full_matrix)
+            temporal_policy)
       , ids_uri_(ids_uri)
       , ids_array_(std::make_unique<tiledb::Array>(
             ctx, ids_uri, TILEDB_READ, temporal_policy))

@@ -396,14 +396,11 @@ static void declareColMajorMatrixSubclass(
   cls.def(
       py::init<
           const Ctx&,
-          std::string,
-          size_t,
-          size_t,
-          size_t,
-          size_t,
-          size_t,
-          uint64_t,
-          bool>(),
+          std::string,  // uri
+          size_t,       // first_col
+          size_t,       // last_col
+          size_t,       // upper_bound
+          uint64_t>(),  // timestamp
       py::keep_alive<1, 2>());
 
   if constexpr (std::is_same<P, tdbColMajorMatrix<T>>::value) {
@@ -426,8 +423,7 @@ static void declarePartitionedMatrix(
           const std::string&,
           const std::string&,                // id_uri
           const std::vector<Indices_Type>&,  // partition list to load
-          size_t,
-          bool>(),  // upper_bound
+          size_t>(),                         // upper_bound
 
       py::keep_alive<1, 2>());
   cls.def("load", &TMatrix::load);

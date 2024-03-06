@@ -167,7 +167,7 @@ TEST_CASE("tdb_io: write empty matrix", "[tdb_io]") {
   create_empty_for_matrix<float, stdx::layout_left>(
       ctx, tmp_matrix_uri, dimension, domain, dimension, extent, compression);
   auto empty_matrix = tdbColMajorBlockedMatrix<float>(
-      ctx, tmp_matrix_uri, 0, dimension, 0, 0, 0, timestamp, false);
+      ctx, tmp_matrix_uri, 0, dimension, 0, 0, 0, timestamp);
   empty_matrix.load();
   CHECK(num_vectors(empty_matrix) == 0);
   CHECK(empty_matrix.num_cols() == 0);

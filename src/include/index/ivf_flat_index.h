@@ -232,11 +232,9 @@ class ivf_flat_index {
         std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
             group_->cached_ctx(),
             group_->centroids_uri(),
-            0,
             num_partitions_,
             0,
-            timestamp_,
-            true));
+            timestamp_));
   }
 
   /****************************************************************************

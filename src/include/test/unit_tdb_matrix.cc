@@ -287,8 +287,8 @@ TEST_CASE("tdb_matrix: empty matrix", "[tdb_matrix]") {
       tile_extent);
 
   SECTION("empty") {
-    auto X = tdbColMajorMatrix<float>(
-        ctx, tmp_matrix_uri, 0, 0, 0, 0, 10000, 0, false);
+    auto X =
+        tdbColMajorMatrix<float>(ctx, tmp_matrix_uri, 0, 0, 0, 0, 10000, 0);
     X.load();
     CHECK(X.num_cols() == 0);
     CHECK(num_vectors(X) == 0);

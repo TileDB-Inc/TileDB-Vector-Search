@@ -114,6 +114,26 @@ class tdbBlockedMatrix : public MatrixBase {
   // size_t pending_row_offset{0};
   // size_t pending_col_offset{0};
 
+  static size_t get_last_row(
+      const tiledb::Context& ctx, const std::string& uri) {
+    tiledb::ArraySchema schema(ctx, uri);
+    auto domain{schema.domain()};
+    auto row_domain{domain.dimension(0)};
+    return (
+        row_domain.template domain<row_domain_type>().second -
+        row_domain.template domain<row_domain_type>().first + 1);
+  }
+
+  static size_t get_last_col(
+      const tiledb::Context& ctx, const std::string& uri) {
+    tiledb::ArraySchema schema(ctx, uri);
+    auto domain{schema.domain()};
+    auto col_domain{domain.dimension(1)};
+    return (
+        col_domain.template domain<row_domain_type>().second -
+        col_domain.template domain<row_domain_type>().first + 1);
+  }
+
  public:
   tdbBlockedMatrix(tdbBlockedMatrix&& rhs) = default;
 
@@ -122,21 +142,39 @@ class tdbBlockedMatrix : public MatrixBase {
 
   /**
    * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
-   * vectors. In this case, the `Matrix` is row-major, so the number of vectors
-   * is the number of rows.
+   * vectors. We read rows from 0 -> row domain length and cols from 0 -> col
+   * domain length. In this case, the `Matrix` is column-major, so the number of
+   * vectors is the number of columns.
    *
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
+   * @param upper_bound The maximum number of vectors to read. Set to 0 for no
+   * upper bound.
+   * @param temporal_policy The TemporalPolicy to use for reading the array
+   * data.
    */
-  tdbBlockedMatrix(const tiledb::Context& ctx, const std::string& uri) noexcept
+  tdbBlockedMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t upper_bound = 0,
+      size_t timestamp = 0)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : tdbBlockedMatrix(ctx, uri, 0, 0, 0, 0, 0, 0, true) {
+      : tdbBlockedMatrix(
+            ctx,
+            uri,
+            0,
+            get_last_row(ctx, uri),
+            0,
+            get_last_col(ctx, uri),
+            upper_bound,
+            timestamp) {
   }
 
   /**
    * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
-   * vectors. In this case, the `Matrix` is column-major, so the number of
-   * vectors is the number of columns.
+   * vectors. We read rows from 0 -> row domain length and just the specified
+   * cols. In this case, the `Matrix` is column-major, so the number of vectors
+   * is the number of columns.
    *
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
@@ -147,10 +185,39 @@ class tdbBlockedMatrix : public MatrixBase {
   tdbBlockedMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
+      size_t first_col,
+      size_t last_col,
       size_t upper_bound,
       size_t timestamp = 0)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : tdbBlockedMatrix(ctx, uri, 0, 0, 0, 0, upper_bound, timestamp, true) {
+      : tdbBlockedMatrix(
+            ctx,
+            uri,
+            0,
+            get_last_row(ctx, uri),
+            first_col,
+            last_col,
+            upper_bound,
+            timestamp) {
+  }
+
+  tdbBlockedMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t first_col,
+      size_t last_col,
+      size_t upper_bound,
+      tiledb::TemporalPolicy temporal_policy)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : tdbBlockedMatrix(
+            ctx,
+            uri,
+            0,
+            get_last_row(ctx, uri),
+            first_col,
+            last_col,
+            upper_bound,
+            temporal_policy) {
   }
 
   /** General constructor */
@@ -162,8 +229,7 @@ class tdbBlockedMatrix : public MatrixBase {
       size_t first_col,
       size_t last_col,
       size_t upper_bound,
-      size_t timestamp,
-      bool read_full_matrix)
+      size_t timestamp)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrix(
             ctx,
@@ -175,8 +241,7 @@ class tdbBlockedMatrix : public MatrixBase {
             upper_bound,
             (timestamp == 0 ?
                  tiledb::TemporalPolicy() :
-                 tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)),
-            read_full_matrix) {
+                 tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp))) {
   }
 
   /** General constructor */
@@ -188,8 +253,7 @@ class tdbBlockedMatrix : public MatrixBase {
       size_t first_col,
       size_t last_col,
       size_t upper_bound,
-      tiledb::TemporalPolicy temporal_policy,
-      bool read_full_matrix)  // noexcept
+      tiledb::TemporalPolicy temporal_policy)  // noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : ctx_{ctx}
       , uri_{uri}
@@ -228,21 +292,6 @@ class tdbBlockedMatrix : public MatrixBase {
 
     auto row_domain{domain_.dimension(0)};
     auto col_domain{domain_.dimension(1)};
-
-    /* The size of the array may not be the size of domain.  Use non-zero value
-     * if set in constructor */
-    if (read_full_matrix) {
-      if (last_row_ == 0) {
-        last_row_ =
-            (row_domain.template domain<row_domain_type>().second -
-             row_domain.template domain<row_domain_type>().first + 1);
-      }
-      if (last_col_ == 0) {
-        last_col_ =
-            (col_domain.template domain<col_domain_type>().second -
-             col_domain.template domain<col_domain_type>().first + 1);
-      }
-    }
 
     size_t dimension = last_row_ - first_row_;
     size_t num_vectors = last_col_ - first_col_;
@@ -356,7 +405,8 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
  public:
   /**
    * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
-   * vectors. In this case, the `Matrix` is column-major, so the number of
+   * vectors. We read rows from 0 -> row domain length and cols from 0 -> col
+   * domain length. In this case, the `Matrix` is column-major, so the number of
    * vectors is the number of columns.
    *
    * @param ctx The TileDB context to use.
@@ -368,7 +418,8 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
       const std::string& uri,
       size_t upper_bound = 0,
       uint64_t timestamp = 0)
-      : tdbPreLoadMatrix(ctx, uri, 0, 0, upper_bound, timestamp, true) {
+      : Base(ctx, uri, upper_bound, timestamp) {
+    Base::load();
   }
 
   tdbPreLoadMatrix(
@@ -377,8 +428,7 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
       size_t num_array_rows,
       size_t num_array_cols,
       size_t upper_bound = 0,
-      uint64_t timestamp = 0,
-      bool read_full_matrix = false)
+      uint64_t timestamp = 0)
       : Base(
             ctx,
             uri,
@@ -387,34 +437,17 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
             0,
             num_array_cols,
             upper_bound,
-            timestamp,
-            read_full_matrix) {
+            timestamp) {
     Base::load();
   }
 
   tdbPreLoadMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
-      size_t upper_bound,
-      const tiledb::TemporalPolicy& temporal_policy)
-      : tdbPreLoadMatrix(ctx, uri, 0, 0, upper_bound, temporal_policy, true) {
-  }
-
-  tdbPreLoadMatrix(
-      const tiledb::Context& ctx,
-      const std::string& uri,
-      size_t num_array_rows,
       size_t num_array_cols,
-      size_t upper_bound,
-      const tiledb::TemporalPolicy& temporal_policy)
-      : Base(
-            ctx,
-            uri,
-            num_array_rows,
-            num_array_cols,
-            upper_bound,
-            temporal_policy,
-            true) {
+      size_t upper_bound = 0,
+      uint64_t timestamp = 0)
+      : Base(ctx, uri, 0, num_array_cols, upper_bound, timestamp) {
     Base::load();
   }
 };

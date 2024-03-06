@@ -80,16 +80,10 @@ int ivf_index(
   auto non_empty = array.non_empty_domain<int32_t>();
   auto partitions = non_empty[1].second.second + 1;
 
+  // Read all rows of `centroids_uri` from column 0 -> `partitions`. Set no
+  // upper_bound.
   auto centroids = tdbColMajorMatrix<centroids_type>(
-      ctx,
-      centroids_uri,
-      0,
-      0,
-      0,
-      partitions,
-      0,
-      centroid_read_temporal_policy,
-      true);
+      ctx, centroids_uri, 0, partitions, 0, centroid_read_temporal_policy);
   centroids.load();
   auto parts = detail::flat::qv_partition(centroids, db, nthreads);
   // debug_matrix(parts, "parts");
@@ -219,8 +213,9 @@ int ivf_index(
     size_t end_pos = 0,
     size_t nthreads = 0,
     uint64_t timestamp = 0) {
-  auto db = tdbColMajorMatrix<T>(
-      ctx, db_uri, 0, 0, start_pos, end_pos, 0, timestamp, true);
+  // Read all rows of `db_uri` from column `start_pos` -> `end_pos`. Set no
+  // upper_bound.
+  auto db = tdbColMajorMatrix<T>(ctx, db_uri, start_pos, end_pos, 0, timestamp);
   db.load();
   std::vector<ids_type> external_ids;
   if (external_ids_uri.empty()) {
@@ -262,8 +257,9 @@ int ivf_index(
     size_t end_pos = 0,
     size_t nthreads = 0,
     uint64_t timestamp = 0) {
-  auto db = tdbColMajorMatrix<T>(
-      ctx, db_uri, 0, 0, start_pos, end_pos, 0, timestamp, true);
+  // Read all rows of `db_uri` from column `start_pos` -> `end_pos`. Set no
+  // upper_bound.
+  auto db = tdbColMajorMatrix<T>(ctx, db_uri, start_pos, end_pos, 0, timestamp);
   db.load();
   return ivf_index<T, ids_type, centroids_type>(
       ctx,
