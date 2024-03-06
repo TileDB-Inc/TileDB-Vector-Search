@@ -118,7 +118,7 @@ struct counting_sum_of_squares_distance {
   }
 };
 
-size_t counting_sum_of_squares_distance::num_comps_ = 0;
+inline size_t counting_sum_of_squares_distance::num_comps_ = 0;
 
 /**
  * @brief Function object for computing the sum of squared distance, augmented

@@ -86,7 +86,7 @@ auto partition_ivf_flat_index(
     const Q& query,
     size_t nprobe,
     size_t nthreads,
-    distance = Distance{}) {
+    Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
 
   assert(::num_vectors(centroids) >= nprobe);
