@@ -128,7 +128,7 @@ inline float unroll4_inner_product(const V& a, const W& b) {
 
   // Clean up
   for (size_t i = stop; i < size_a; ++i) {
-    sum += a[i + 0] * ((float) b[i + 0]);
+    sum += a[i + 0] * ((float)b[i + 0]);
   }
   return sum;
 }

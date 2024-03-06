@@ -143,7 +143,7 @@ TEST_CASE(
   CHECK(std::abs(a3 - 649615.1875) < 0.25);
   auto b3 = unroll4_inner_product(u, x);
   CHECK(std::abs(a3 - 649615.1875) < 0.25);
-  CHECK(std::abs(a3 -b3) < 0.25);
+  CHECK(std::abs(a3 - b3) < 0.25);
 
   auto a3x = naive_inner_product(x, u);
   CHECK(std::abs(a3x - 649615.1875) < 0.25);
