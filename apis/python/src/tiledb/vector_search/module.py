@@ -9,13 +9,13 @@ from tiledb.vector_search._tiledbvspy import *
 
 def load_as_matrix(
     path: str,
-    size: int,
     ctx: "Ctx" = None,
     config: Optional[Mapping[str, Any]] = None,
+    size: int = 0,
     timestamp: int = 0,
 ):
     """
-    Load array as Matrix class
+    Load array as Matrix class. We read in all rows (i.e. from 0 to the row domain length).
 
     Parameters
     ----------
@@ -24,7 +24,7 @@ def load_as_matrix(
     ctx: Ctx
         TileDB context
     size: int
-        Size of vectors to load
+        Size of vectors to load. If not set we will read from 0 to the column domain length.
     """
     # If the user passes a tiledb python Config object convert to a dictionary
     if isinstance(config, tiledb.Config):
@@ -35,31 +35,48 @@ def load_as_matrix(
 
     a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
-    # Read all rows from column 0 -> `size`. Set no upper_bound.
-    if dtype == np.float32:
-        m = tdbColMajorMatrix_f32(ctx, path, 0, size, 0, timestamp)
-    elif dtype == np.float64:
-        m = tdbColMajorMatrix_f64(ctx, path, 0, size, 0, timestamp)
-    elif dtype == np.int32:
-        m = tdbColMajorMatrix_i32(ctx, path, 0, size, 0, timestamp)
-    elif dtype == np.int32:
-        m = tdbColMajorMatrix_i64(ctx, path, 0, size, 0, timestamp)
-    elif dtype == np.uint8:
-        m = tdbColMajorMatrix_u8(ctx, path, 0, size, 0, timestamp)
-    # elif dtype == np.uint64:
-    #     return tdbColMajorMatrix_u64(ctx, path, size, timestamp)
+    if size == 0:
+        # Read all rows and all cols. Set no upper_bound.
+        if dtype == np.float32:
+            m = tdbColMajorMatrix_f32(ctx, path, 0, timestamp)
+        elif dtype == np.float64:
+            m = tdbColMajorMatrix_f64(ctx, path, 0, timestamp)
+        elif dtype == np.int32:
+            m = tdbColMajorMatrix_i32(ctx, path, 0, timestamp)
+        elif dtype == np.int32:
+            m = tdbColMajorMatrix_i64(ctx, path, 0, timestamp)
+        elif dtype == np.uint8:
+            m = tdbColMajorMatrix_u8(ctx, path, 0, timestamp)
+        # elif dtype == np.uint64:
+        #     return tdbColMajorMatrix_u64(ctx, path, size, timestamp)
+        else:
+            raise ValueError("Unsupported Matrix dtype: {}".format(a.attr(0).dtype))
     else:
-        raise ValueError("Unsupported Matrix dtype: {}".format(a.attr(0).dtype))
+        # Read all rows from column 0 -> `size`. Set no upper_bound.
+        if dtype == np.float32:
+            m = tdbColMajorMatrix_f32(ctx, path, 0, size, 0, timestamp)
+        elif dtype == np.float64:
+            m = tdbColMajorMatrix_f64(ctx, path, 0, size, 0, timestamp)
+        elif dtype == np.int32:
+            m = tdbColMajorMatrix_i32(ctx, path, 0, size, 0, timestamp)
+        elif dtype == np.int32:
+            m = tdbColMajorMatrix_i64(ctx, path, 0, size, 0, timestamp)
+        elif dtype == np.uint8:
+            m = tdbColMajorMatrix_u8(ctx, path, 0, size, 0, timestamp)
+        # elif dtype == np.uint64:
+        #     return tdbColMajorMatrix_u64(ctx, path, size, timestamp)
+        else:
+            raise ValueError("Unsupported Matrix dtype: {}".format(a.attr(0).dtype))
     m.load()
     return m
 
 
 def load_as_array(
     path,
-    size: int,
     return_matrix: bool = False,
     ctx: "Ctx" = None,
     config: Optional[Mapping[str, Any]] = None,
+    size: int = 0,
 ):
     """
     Load array as array class

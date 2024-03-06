@@ -403,6 +403,14 @@ static void declareColMajorMatrixSubclass(
           uint64_t>(),  // timestamp
       py::keep_alive<1, 2>());
 
+  cls.def(
+      py::init<
+          const Ctx&,
+          std::string,  // uri
+          size_t,       // upper_bound
+          uint64_t>(),  // timestamp
+      py::keep_alive<1, 2>());
+
   if constexpr (std::is_same<P, tdbColMajorMatrix<T>>::value) {
     cls.def("load", &TMatrix::load);
   }

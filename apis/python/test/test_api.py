@@ -13,7 +13,7 @@ def test_load_matrix(tmpdir):
     create_array(p, data)
 
     # load the data with the vector search API and compare
-    m, orig_matrix = vs.load_as_array(p, size=data.shape[1], return_matrix=True)
+    m, orig_matrix = vs.load_as_array(p, return_matrix=True)
     assert np.array_equal(m, data)
 
     # mutate and compare again - should match backing data in the C++ Matrix
@@ -21,6 +21,21 @@ def test_load_matrix(tmpdir):
     m[0, 0] = data[0, 0]
     assert np.array_equal(m, data)
     assert np.array_equal(orig_matrix[0, 0], data[0, 0])
+
+def test_load_matrix_specify_size(tmpdir):
+    p = str(tmpdir.mkdir("test").join("test.tdb"))
+    data = np.random.rand(12).astype(np.float32).reshape(3, 4)
+
+    # write some test data with tiledb-py
+    create_array(p, data)
+
+    # also test specifying a size
+    m = vs.load_as_array(p, size=data.shape[1])
+    assert np.array_equal(m, data)
+
+    # also test specifying a smaller size
+    m = vs.load_as_array(p, size=2)
+    assert np.array_equal(m, data[:, :2])
 
 
 def test_vector(tmpdir):

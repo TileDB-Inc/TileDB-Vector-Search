@@ -186,7 +186,8 @@ TEST_CASE("tdb_io: write empty matrix", "[tdb_io]") {
 
 TEST_CASE("tdb_io: write empty vector", "[tdb_io]") {
   tiledb::Context ctx;
-  std::string tmp_vector_uri = "/tmp/tmp_vector";
+  std::string tmp_vector_uri =
+      (std::filesystem::temp_directory_path() / "tmp_vector").string();
   int offset = 13;
 
   size_t dimension = 128;
