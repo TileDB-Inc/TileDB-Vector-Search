@@ -43,7 +43,7 @@ TEST_CASE("array_defs: test test", "[array_defs]") {
   REQUIRE(true);
 }
 
-std::vector<std::filesystem::path> test_array_roots{
+std::vector<std::string> test_array_roots{
     sift_root,
     siftsmall_root,
     bigann1M_root,
@@ -52,7 +52,7 @@ std::vector<std::filesystem::path> test_array_roots{
     diskann_root,
 };
 
-std::vector<std::filesystem::path> test_file_roots{
+std::vector<std::string> test_file_roots{
     siftsmall_files_root,
 };
 
@@ -65,7 +65,7 @@ TEST_CASE("array_defs: test array root uris", "[array_defs]") {
   }
 }
 
-std::vector<std::filesystem::path> sift_array_uris{
+std::vector<std::string> sift_array_uris{
     sift_inputs_uri,
     sift_centroids_uri,
     sift_index_uri,
@@ -75,7 +75,7 @@ std::vector<std::filesystem::path> sift_array_uris{
     sift_groundtruth_uri,
 };
 
-std::vector<std::filesystem::path> siftsmall_array_uris{
+std::vector<std::string> siftsmall_array_uris{
     siftsmall_inputs_uri,
     siftsmall_centroids_uri,
     siftsmall_index_uri,
@@ -87,7 +87,7 @@ std::vector<std::filesystem::path> siftsmall_array_uris{
 
 // Note that we don't have a canonical IVF index for siftsmall_uint8 yet, so
 // some of these URIs are placeholders
-std::vector<std::filesystem::path> siftsmall_uint8_array_uris{
+std::vector<std::string> siftsmall_uint8_array_uris{
     siftsmall_uint8_inputs_uri,
     siftsmall_uint8_centroids_uri,
     siftsmall_uint8_index_uri,
@@ -99,7 +99,7 @@ std::vector<std::filesystem::path> siftsmall_uint8_array_uris{
 
 // Note that we don't have a canonical IVF index for bigann10k yet, so some
 // of these URIs are placeholders
-std::vector<std::filesystem::path> bigann10k_array_uris{
+std::vector<std::string> bigann10k_array_uris{
     bigann10k_inputs_uri,
     bigann10k_centroids_uri,
     bigann10k_index_uri,
@@ -109,7 +109,7 @@ std::vector<std::filesystem::path> bigann10k_array_uris{
     bigann10k_groundtruth_uri,
 };
 
-std::vector<std::filesystem::path> bigann1M_array_uris{
+std::vector<std::string> bigann1M_array_uris{
     bigann1M_inputs_uri,
     bigann1M_centroids_uri,
     bigann1M_index_uri,
@@ -121,7 +121,7 @@ std::vector<std::filesystem::path> bigann1M_array_uris{
 
 // Note that we don't have a canonical IVF index for fmnist yet, so some
 // of these URIs are placeholders
-std::vector<std::filesystem::path> fmnist_array_uris{
+std::vector<std::string> fmnist_array_uris{
     fmnist_inputs_uri,
     fmnist_centroids_uri,
     fmnist_index_uri,
@@ -131,7 +131,7 @@ std::vector<std::filesystem::path> fmnist_array_uris{
     fmnist_groundtruth_uri,
 };
 
-std::vector<std::filesystem::path> siftsmall_files{
+std::vector<std::string> siftsmall_files{
     siftsmall_inputs_file,
     siftsmall_query_file,
     siftsmall_groundtruth_file,
@@ -321,10 +321,11 @@ TEST_CASE("array_defs: compare siftsmall arrays and files", "[array_defs]") {
       ctx, siftsmall_groundtruth_uri);
 
   auto file_inputs =
-      read_bin_local<siftsmall_feature_type>(siftsmall_inputs_file);
+      read_bin_local<siftsmall_feature_type>(ctx, siftsmall_inputs_file);
   auto file_queries =
-      read_bin_local<siftsmall_feature_type>(siftsmall_query_file);
-  auto file_groundtruth = read_bin_local<uint32_t>(siftsmall_groundtruth_file);
+      read_bin_local<siftsmall_feature_type>(ctx, siftsmall_query_file);
+  auto file_groundtruth =
+      read_bin_local<uint32_t>(ctx, siftsmall_groundtruth_file);
 
   auto file_groundtruth_64 = ColMajorMatrix<siftsmall_groundtruth_type>(
       file_groundtruth.num_rows(), file_groundtruth.num_cols());

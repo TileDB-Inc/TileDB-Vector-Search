@@ -57,7 +57,7 @@ jobs:
           git add backwards-compatibility-data/data/
           git commit -m "[automated] Update backwards-compatibility-data for release $release_tag"
           git push origin "$branch_name"
-          gh pr create --base main --head "$branch_name" --title "[automated] Update backwards-compatibility-data for release $release_tag"
+          gh pr create --base main --head "$branch_name" --title "[automated] Update backwards-compatibility-data for release $release_tag" --body "This PR contains backwards compatibility indexes generated for release $release_tag."
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -72,10 +72,8 @@ jobs:
           - [ ubuntu-22.04, manylinux_x86_64 ]
           - [ macos-13, macosx_x86_64 ]
           - [ macos-13, macosx_arm64 ]
-          # Windows build is currently disabled since the C++ build fails on multiple errors e.g. file manipulation
-          # and std::filesystem::path implicit to string conversion.
-          # Follow up task https://app.shortcut.com/tiledb-inc/story/41119/enable-windows-build-for-vector-search-repository
-        python: [ "cp39", "cp310", "cp311" ]
+          - [ windows-2022, win_amd64 ]
+        python: [ "cp39", "cp310", "cp311", "cp312", "pp39" ]
         exclude:
           - buildplat: [ macos-13, macosx_arm64 ]
             python: "pp39"
@@ -102,7 +100,6 @@ jobs:
           CIBW_PRERELEASE_PYTHONS: True
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
           CIBW_TEST_REQUIRES: pytest
-          CIBW_TEST_SKIP: "*-win*"
           # This command should be just `pytest`, however, our tests require test data and those are only in the
           # original {project} folder. The cibuildwheel logic unfortunately creates an empty folder for tests, changes
           # directory there and so our tests will search for data folder in a completely different working directory.
@@ -142,8 +139,6 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          # unpacks all CIBW artifacts into dist/
-          pattern: 'cibw-*'
           path: dist
           merge-multiple: true
 

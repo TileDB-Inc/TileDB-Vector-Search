@@ -1,8 +1,7 @@
-import base64
+import json
 from collections import OrderedDict
 from typing import Any, Dict, List, Mapping, Optional
 
-import json
 import numpy as np
 
 import tiledb
@@ -11,7 +10,6 @@ from tiledb.cloud.dag import Mode
 from tiledb.vector_search import FlatIndex
 from tiledb.vector_search import IVFFlatIndex
 from tiledb.vector_search import flat_index
-from tiledb.vector_search import ingest
 from tiledb.vector_search import ivf_flat_index
 from tiledb.vector_search.embeddings import ObjectEmbedding
 from tiledb.vector_search.object_readers import ObjectReader
@@ -29,12 +27,14 @@ class ObjectIndex:
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
         load_embedding: bool = True,
+        load_metadata_in_memory: bool = True,
         **kwargs,
     ):
         with tiledb.scope_ctx(ctx_or_config=config):
             self.uri = uri
             self.config = config
             self.timestamp = timestamp
+            self.load_metadata_in_memory = load_metadata_in_memory
             group = tiledb.Group(uri, "r")
             self.index_type = group.meta["index_type"]
             group.close()
@@ -90,6 +90,16 @@ class ObjectIndex:
                 self.object_metadata_array_uri = None
                 self.object_metadata_external_id_dim = None
 
+            if self.object_metadata_array_uri is not None:
+                self.metadata_array = tiledb.open(
+                    self.object_metadata_array_uri,
+                    mode="r",
+                    timestamp=self.timestamp,
+                    config=self.config,
+                )
+                if self.load_metadata_in_memory:
+                    self.metadata_df = self.metadata_array.df[:]
+
     def query(
         self,
         query_objects: np.ndarray,
@@ -122,44 +132,49 @@ class ObjectIndex:
         )
         unique_ids, idx = np.unique(object_ids, return_inverse=True)
         idx = np.reshape(idx, object_ids.shape)
-
         if metadata_array_cond is not None or metadata_df_filter_fn is not None:
-            with tiledb.open(
-                self.object_metadata_array_uri,
-                mode="r",
-                timestamp=self.timestamp,
-                config=self.config,
-            ) as metadata_array:
-                q = metadata_array.query(
+            if self.load_metadata_in_memory:
+                if metadata_array_cond is not None:
+                    raise AttributeError(
+                        "metadata_array_cond is not supported with load_metadata_in_memory. Please use metadata_df_filter_fn."
+                    )
+                unique_ids_metadata_df = self.metadata_df[
+                    self.metadata_df[self.object_metadata_external_id_dim].isin(
+                        unique_ids
+                    )
+                ]
+            else:
+                q = self.metadata_array.query(
                     cond=metadata_array_cond, coords=True, use_arrow=False
                 )
                 unique_ids_metadata_df = q.df[unique_ids]
-                if metadata_df_filter_fn is not None:
-                    unique_ids_metadata_df = unique_ids_metadata_df[
-                        unique_ids_metadata_df.apply(metadata_df_filter_fn, axis=1)
-                    ]
-                filtered_unique_ids = unique_ids_metadata_df[
-                    self.object_metadata_external_id_dim
-                ].to_numpy()
-                filtered_distances = np.zeros((query_embeddings.shape[0], k)).astype(
-                    object_ids.dtype
-                )
-                filtered_object_ids = np.zeros((query_embeddings.shape[0], k)).astype(
-                    object_ids.dtype
-                )
-                for query_id in range(query_embeddings.shape[0]):
-                    write_id = 0
-                    for result_id in range(fetch_k):
-                        if object_ids[query_id, result_id] in filtered_unique_ids:
-                            filtered_distances[query_id, write_id] = distances[
-                                query_id, result_id
-                            ]
-                            filtered_object_ids[query_id, write_id] = object_ids[
-                                query_id, result_id
-                            ]
-                            write_id += 1
-                            if write_id >= k:
-                                break
+
+            if metadata_df_filter_fn is not None:
+                unique_ids_metadata_df = unique_ids_metadata_df[
+                    unique_ids_metadata_df.apply(metadata_df_filter_fn, axis=1)
+                ]
+            filtered_unique_ids = unique_ids_metadata_df[
+                self.object_metadata_external_id_dim
+            ].to_numpy()
+            filtered_distances = np.zeros((query_embeddings.shape[0], k)).astype(
+                object_ids.dtype
+            )
+            filtered_object_ids = np.zeros((query_embeddings.shape[0], k)).astype(
+                object_ids.dtype
+            )
+            for query_id in range(query_embeddings.shape[0]):
+                write_id = 0
+                for result_id in range(fetch_k):
+                    if object_ids[query_id, result_id] in filtered_unique_ids:
+                        filtered_distances[query_id, write_id] = distances[
+                            query_id, result_id
+                        ]
+                        filtered_object_ids[query_id, write_id] = object_ids[
+                            query_id, result_id
+                        ]
+                        write_id += 1
+                        if write_id >= k:
+                            break
 
             distances = filtered_distances
             object_ids = filtered_object_ids
@@ -169,15 +184,20 @@ class ObjectIndex:
         object_metadata = None
         if return_metadata:
             if self.object_metadata_array_uri is not None:
-                with tiledb.open(
-                    self.object_metadata_array_uri,
-                    mode="r",
-                    timestamp=self.timestamp,
-                    config=self.config,
-                ) as metadata_array:
-                    unique_metadata = metadata_array.multi_index[unique_ids]
+                if self.load_metadata_in_memory:
+                    unique_metadata = self.metadata_df[
+                        self.metadata_df[self.object_metadata_external_id_dim].isin(
+                            unique_ids
+                        )
+                    ]
                     object_metadata = {}
                     for attr in unique_metadata.keys():
+                        object_metadata[attr] = unique_metadata[attr].to_numpy()[idx]
+                else:
+                    unique_metadata = self.metadata_array.multi_index[unique_ids]
+                    object_metadata = {}
+                    for attr in unique_metadata.keys():
+                        unique_metadata[attr][idx]
                         object_metadata[attr] = unique_metadata[attr][idx]
 
         if return_objects:
@@ -203,10 +223,16 @@ class ObjectIndex:
         worker_resources: Dict = None,
         worker_image: str = None,
         extra_worker_modules: Optional[List[str]] = None,
+        driver_resources: Dict = None,
+        driver_image: str = None,
+        extra_driver_modules: Optional[List[str]] = None,
+        worker_access_credentials_name: str = None,
         max_tasks_per_stage: int = -1,
         verbose: bool = False,
         trace_id: Optional[str] = None,
-        mode: Mode = Mode.LOCAL,
+        embeddings_generation_mode: Mode = Mode.LOCAL,
+        embeddings_generation_driver_mode: Mode = Mode.LOCAL,
+        vector_indexing_mode: Mode = Mode.LOCAL,
         config: Optional[Mapping[str, Any]] = None,
         namespace: Optional[str] = None,
         **kwargs,
@@ -221,8 +247,9 @@ class ObjectIndex:
             metadata_array_uri = self.object_metadata_array_uri
         if config is None:
             config = self.config
-        object_api.ingest_embeddings(
-            object_index=self,
+
+        object_api.ingest_embeddings_with_driver(
+            object_index_uri=self.uri,
             embeddings_uri=embeddings_uri,
             metadata_array_uri=metadata_array_uri,
             index_timestamp=index_timestamp,
@@ -231,24 +258,16 @@ class ObjectIndex:
             worker_resources=worker_resources,
             worker_image=worker_image,
             extra_worker_modules=extra_worker_modules,
+            driver_resources=driver_resources,
+            driver_image=driver_image,
+            extra_driver_modules=extra_driver_modules,
+            worker_access_credentials_name=worker_access_credentials_name,
             verbose=verbose,
             trace_id=trace_id,
-            mode=mode,
+            embeddings_generation_driver_mode=embeddings_generation_driver_mode,
+            embeddings_generation_mode=embeddings_generation_mode,
+            vector_indexing_mode=vector_indexing_mode,
             config=config,
-            namespace=namespace,
-            **kwargs,
-        )
-        self.index = ingest(
-            index_type=self.index_type,
-            index_uri=self.uri,
-            source_uri=embeddings_uri,
-            source_type="TILEDB_PARTITIONED_ARRAY",
-            external_ids_uri=embeddings_uri,
-            external_ids_type="TILEDB_PARTITIONED_ARRAY",
-            index_timestamp=index_timestamp,
-            storage_version=self.index.storage_version,
-            config=config,
-            mode=mode,
             **kwargs,
         )
 
