@@ -856,7 +856,11 @@ class ivf_flat_index {
    *
    */
   template <feature_vector_array Q, class Distance = sum_of_squares_distance>
-  auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe, Distance distance = Distance{}) {
+  auto query_infinite_ram(
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      Distance distance = Distance{}) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
@@ -881,7 +885,10 @@ class ivf_flat_index {
    */
   template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto qv_query_heap_infinite_ram(
-      const Q& query_vectors, size_t k_nn, size_t nprobe, Distance distance = Distance{}) {
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      Distance distance = Distance{}) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
@@ -906,7 +913,10 @@ class ivf_flat_index {
    */
   template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto nuv_query_heap_infinite_ram(
-      const Q& query_vectors, size_t k_nn, size_t nprobe, Distance distance = Distance{}) {
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      Distance distance = Distance{}) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
@@ -919,7 +929,8 @@ class ivf_flat_index {
         query_vectors,
         active_queries,
         k_nn,
-        num_threads_, distance);
+        num_threads_,
+        distance);
   }
 
   /**
@@ -930,7 +941,10 @@ class ivf_flat_index {
    */
   template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto nuv_query_heap_infinite_ram_reg_blocked(
-      const Q& query_vectors, size_t k_nn, size_t nprobe, Distance distance = Distance{}) {
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      Distance distance = Distance{}) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
@@ -943,7 +957,8 @@ class ivf_flat_index {
         query_vectors,
         active_queries,
         k_nn,
-        num_threads_, distance);
+        num_threads_,
+        distance);
   }
 
   // WIP
@@ -1023,7 +1038,8 @@ class ivf_flat_index {
         active_queries,
         k_nn,
         upper_bound,
-        num_threads_, distance);
+        num_threads_,
+        distance);
   }
 
   /**
@@ -1053,7 +1069,8 @@ class ivf_flat_index {
         active_queries,
         k_nn,
         upper_bound,
-        num_threads_, distance);
+        num_threads_,
+        distance);
   }
 
   /**
@@ -1083,7 +1100,8 @@ class ivf_flat_index {
         active_queries,
         k_nn,
         upper_bound,
-        num_threads_, distance);
+        num_threads_,
+        distance);
   }
 
   /***************************************************************************

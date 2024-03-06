@@ -62,7 +62,6 @@ class with_ids {};
 class without_ids {};
 }  // namespace
 
-
 /******************************************************************************
  *
  * Function objects.  We define these here since they are what is used by the
@@ -101,22 +100,76 @@ struct sum_of_squares_distance {
 #endif
 };
 
+/**
+ * @brief Function object for computing the sum of squared distance, augmented
+ * to count the number of comparisons.
+ */
+struct counting_sum_of_squares_distance {
+  static size_t num_comps_;
+
+  template <class V, class U>
+  constexpr auto operator()(const V& a, const U& b) {
+    ++num_comps_;
+    return unroll4_sum_of_squares(a, b);
+  }
+
+  void reset() {
+    num_comps_ = 0;
+  }
+};
+
+size_t counting_sum_of_squares_distance::num_comps_ = 0;
+
+/**
+ * @brief Function object for computing the sum of squared distance, augmented
+ * to count the number of comparisons and to log the number of comparisons
+ * at destruction.
+ */
+struct logging_sum_of_squares_distance {
+  size_t num_comps_{0};
+  std::string msg_{""};
+
+  logging_sum_of_squares_distance() = default;
+  logging_sum_of_squares_distance(const std::string& msg)
+      : msg_(msg) {
+  }
+
+  template <class V, class U>
+  constexpr auto operator()(const V& a, const U& b) {
+    ++num_comps_;
+    return unroll4_sum_of_squares(a, b);
+  }
+
+  void reset() {
+    num_comps_ = 0;
+  }
+
+  ~logging_sum_of_squares_distance() {
+    _count_data.insert_entry(msg_ + " num_ss_comps", num_comps_);
+  }
+};
+
 }  // namespace _l2_distance
 
 using sum_of_squares_distance = _l2_distance::sum_of_squares_distance;
 inline constexpr auto l2_distance = _l2_distance::sum_of_squares_distance{};
 
+using counting_sum_of_squares_distance =
+    _l2_distance::counting_sum_of_squares_distance;
+inline auto counting_l2_distance =
+    _l2_distance::counting_sum_of_squares_distance{};
 
 /******************************************************************************
  *
- * Functions for computing l2 distance over just a view of each vector.  There is
- * a caching version, which keeps the start and stop indices in the constructor,
- * and a non-caching version, which takes the start and stop indices as
- * arguments.
+ * Functions for computing l2 distance over just a view of each vector.  There
+ *is a caching version, which keeps the start and stop indices in the
+ *constructor, and a non-caching version, which takes the start and stop indices
+ *as arguments.
  *
  * The "sub" distance functions are used by pq.
  *
- * @todo Investigate how to parameterize the "sub" functions by the distance function
+ * @todo Investigate how to parameterize the "sub" functions by the distance
+ *function
  ******************************************************************************/
 namespace _l2_sub_distance {
 
@@ -196,8 +249,8 @@ struct inner_product_distance {
 }  // namespace _inner_product_distance
 
 using inner_product_distance = _inner_product_distance::inner_product_distance;
-inline constexpr auto inner_product = _inner_product_distance::inner_product_distance{};
-
+inline constexpr auto inner_product =
+    _inner_product_distance::inner_product_distance{};
 
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn

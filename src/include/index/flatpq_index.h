@@ -116,7 +116,9 @@ template <
     class U,
     class SubDistance = cached_sub_sum_of_squares_distance>
   requires cached_sub_distance_function<
-      SubDistance, typename ColMajorMatrix<T>::span_type, typename ColMajorMatrix<U>::span_type>
+      SubDistance,
+      typename ColMajorMatrix<T>::span_type,
+      typename ColMajorMatrix<U>::span_type>
 auto sub_kmeans(
     const ColMajorMatrix<T>& training_set,
     ColMajorMatrix<U>& centroids,
@@ -384,8 +386,9 @@ class flatpq_index {
    */
   template <class SubDistance = cached_sub_sum_of_squares_distance>
     requires cached_sub_distance_function<
-        SubDistance, typename ColMajorMatrix<feature_type>::span_type,
-                 typename ColMajorMatrix<centroid_feature_type>::span_type>
+        SubDistance,
+        typename ColMajorMatrix<feature_type>::span_type,
+        typename ColMajorMatrix<centroid_feature_type>::span_type>
   auto train(const ColMajorMatrix<feature_type>& training_set) {
     centroids_ =
         ColMajorMatrix<centroid_feature_type>(dimension_, num_clusters_);
@@ -540,9 +543,13 @@ class flatpq_index {
         make_pq_distance_asymmetric());
   }
 
-  template <feature_vector_array Q, class SubDistance = cached_sub_sum_of_squares_distance>
-  requires cached_sub_distance_function<
-      SubDistance, typename Q::span_type, decltype(centroids_[0])>
+  template <
+      feature_vector_array Q,
+      class SubDistance = cached_sub_sum_of_squares_distance>
+    requires cached_sub_distance_function<
+        SubDistance,
+        typename Q::span_type,
+        decltype(centroids_[0])>
   auto symmetric_query(const Q& query_vectors, size_t k_nn) {
     auto encoded_query = encode<Q, SubDistance>(query_vectors);
     return detail::flat::qv_query_heap(
@@ -600,7 +607,9 @@ class flatpq_index {
       feature_vector_array V,
       class SubDistance = cached_sub_sum_of_squares_distance>
     requires cached_sub_distance_function<
-        SubDistance, typename V::span_type, decltype(centroids_[0])>
+        SubDistance,
+        typename V::span_type,
+        decltype(centroids_[0])>
   auto encode(const V& v) {
     auto pq = ColMajorMatrix<code_type>(num_subspaces_, num_vectors(v));
     for (size_t i = 0; i < num_vectors(pq); ++i) {
@@ -780,7 +789,8 @@ class flatpq_index {
 
   template <class SubDistance = cached_sub_sum_of_squares_distance>
     requires cached_sub_distance_function<
-        SubDistance, typename ColMajorMatrix<feature_type>::span_type,
+        SubDistance,
+        typename ColMajorMatrix<feature_type>::span_type,
         typename ColMajorMatrix<feature_type>::span_type>
   auto verify_symmetric_pq_distances(
       const ColMajorMatrix<feature_type>& feature_vectors) {
@@ -804,7 +814,8 @@ class flatpq_index {
         total_diff += diff;
       }
       auto zeros = std::vector<feature_type>(dimension_);
-      vec_max = std::max(vec_max, local_sub_distance(feature_vectors[i], zeros));
+      vec_max =
+          std::max(vec_max, local_sub_distance(feature_vectors[i], zeros));
     }
 
     return std::make_tuple(diff_max / vec_max, total_diff / total_normalizer);
