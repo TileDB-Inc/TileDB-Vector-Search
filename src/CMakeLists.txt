@@ -103,6 +103,11 @@ endif()
 # Control compiler-specific flags.
 include(CompilerFlags)
 
+if (MSVC)
+    add_compile_options(/bigobj)
+    add_compile_definitions("_ITERATOR_DEBUG_LEVEL=0")
+endif()
+
 if (NOT $ENV{CIBUILDWHEEL} EQUAL 1 AND NOT $ENV{CONDA_BUILD} EQUAL 1)
   if(MSVC)
       set(CMAKE_CXX_FLAGS_DEBUG "/Od /Zi /EHsc /RTC1" CACHE STRING "" FORCE)

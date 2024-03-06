@@ -47,7 +47,8 @@ TEST_CASE("tdb_matrix: test test", "[tdb_matrix]") {
 
 TEMPLATE_TEST_CASE("tdb_matrix: constructors", "[tdb_matrix]", float, uint8_t) {
   tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
   int offset = 13;
   size_t Mrows = 200;
   size_t Ncols = 500;
@@ -84,7 +85,9 @@ TEMPLATE_TEST_CASE("tdb_matrix: constructors", "[tdb_matrix]", float, uint8_t) {
 TEMPLATE_TEST_CASE(
     "tdb_matrix: assign to matrix", "[tdb_matrix]", float, uint8_t) {
   tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+
   int offset = 13;
 
   size_t Mrows = 200;
@@ -163,7 +166,8 @@ TEMPLATE_TEST_CASE(
 
 TEMPLATE_TEST_CASE("tdb_matrix: preload", "[tdb_matrix]", float, uint8_t) {
   tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
   int offset = 13;
 
   size_t Mrows = 200;
@@ -216,8 +220,10 @@ TEST_CASE("tdb_matrix: MatrixBase template parameter", "[tdb_matrix]") {
   using LayoutPolicy = stdx::layout_left;
   using IdsType = uint8_t;
 
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
-  std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  std::string tmp_ids_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
 
   // 1. Use Matrix as the MatrixBase template parameter.
   {

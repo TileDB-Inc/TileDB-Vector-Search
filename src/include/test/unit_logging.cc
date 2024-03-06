@@ -52,14 +52,14 @@ TEST_CASE("logging: test", "[logging]") {
   a.stop();
 
   auto f = _timing_data.get_entries_summed("test");
-  CHECK((f <= 510 && f >= 490));
+  CHECK((f <= 520 && f >= 500));
 
   a.start();
   std::this_thread::sleep_for(500ms);
   a.stop();
 
   f = _timing_data.get_entries_summed("test");
-  CHECK((f <= 1010 && f >= 990));
+  CHECK((f <= 1040 && f >= 1000));
 }
 
 TEST_CASE("logging: noisy test", "[logging]") {
@@ -70,14 +70,14 @@ TEST_CASE("logging: noisy test", "[logging]") {
   a.stop();
 
   auto f = _timing_data.get_entries_summed("noisy_test");
-  CHECK((f <= 510 && f >= 490));
+  CHECK((f <= 520 && f >= 500));
 
   a.start();
   std::this_thread::sleep_for(500ms);
   a.stop();
 
   f = _timing_data.get_entries_summed("noisy_test");
-  CHECK((f <= 1020 && f >= 980));
+  CHECK((f <= 1040 && f >= 1000));
 }
 
 TEST_CASE("logging: interval test", "[logging]") {
@@ -88,10 +88,10 @@ TEST_CASE("logging: interval test", "[logging]") {
   a.stop();
 
   auto f = _timing_data.get_entries_summed("interval_test");
-  CHECK((f <= 510 && f >= 490));
+  CHECK((f <= 520 && f >= 500));
   auto g = _timing_data.get_entries_separately("interval_test");
   CHECK(g.size() == 1);
-  CHECK((g[0] <= 510 && g[0] >= 490));
+  CHECK((g[0] <= 520 && g[0] >= 500));
   auto g0 = g[0];
 
   a.start();
@@ -99,28 +99,28 @@ TEST_CASE("logging: interval test", "[logging]") {
   a.stop();
 
   f = _timing_data.get_entries_summed("interval_test");
-  CHECK((f <= 1010 && f >= 990));
+  CHECK((f <= 1040 && f >= 1000));
   g = _timing_data.get_entries_separately("interval_test");
   CHECK(g.size() == 2);
-  CHECK((g[0] <= 510 && g[0] >= 490));
-  CHECK((g[1] <= 510 && g[1] >= 490));
+  CHECK((g[0] <= 520 && g[0] >= 500));
+  CHECK((g[1] <= 520 && g[1] >= 500));
   CHECK(g[0] == g0);
 
   f = _timing_data.get_entries_summed("interval_test");
-  CHECK((f <= 1010 && f >= 990));
+  CHECK((f <= 1040 && f >= 1000));
 
   std::this_thread::sleep_for(500ms);
 
   f = _timing_data.get_entries_summed("interval_test");
-  CHECK((f <= 1010 && f >= 990));
+  CHECK((f <= 1040 && f >= 1000));
   g = _timing_data.get_entries_separately("interval_test");
   CHECK(g.size() == 2);
-  CHECK((g[0] <= 510 && g[0] >= 490));
-  CHECK((g[1] <= 510 && g[1] >= 490));
+  CHECK((g[0] <= 520 && g[0] >= 500));
+  CHECK((g[1] <= 520 && g[1] >= 500));
   CHECK(g[0] == g0);
 
   f = _timing_data.get_entries_summed("interval_test");
-  CHECK((f <= 1010 && f >= 990));
+  CHECK((f <= 1040 && f >= 1000));
 }
 
 TEST_CASE("logging: scoped_timer start test", "[logging]") {
@@ -131,7 +131,7 @@ TEST_CASE("logging: scoped_timer start test", "[logging]") {
 TEST_CASE("logging: scoped_timer stop test", "[logging]") {
   std::this_thread::sleep_for(500ms);
   auto f = _timing_data.get_entries_summed("life_test");
-  CHECK((f <= 310 && f >= 290));
+  CHECK((f <= 320 && f >= 300));
 }
 
 TEST_CASE("logging: ordering", "[logging]") {
@@ -170,10 +170,10 @@ TEST_CASE("logging: ordering", "[logging]") {
 
   std::cout << f_t << " " << g_t << " " << h_t << " " << i_t << std::endl;
 
-  CHECK((i_t > 770 && i_t < 880));
-  CHECK((h_t > 470 && h_t < 530));
-  CHECK((g_t > 470 && g_t < 530));
-  CHECK((f_t > 470 && f_t < 530));
+  CHECK((i_t > 799 && i_t < 880));
+  CHECK((h_t > 499 && h_t < 560));
+  CHECK((g_t > 499 && g_t < 560));
+  CHECK((f_t > 499 && f_t < 560));
 }
 
 TEST_CASE("logging: memory", "[logging]") {

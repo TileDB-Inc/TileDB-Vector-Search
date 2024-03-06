@@ -61,6 +61,16 @@ concept _member_num_cols = requires(T t) {
 };
 
 template <class T>
+concept _member_num_ids = requires(T t) {
+  { t.num_ids() };
+};
+
+template <class T>
+concept _member_ids = requires(T t) {
+  { t.ids() };
+};
+
+template <class T>
 concept row_major = std::
     same_as<typename std::remove_cvref_t<T>::layout_policy, stdx::layout_right>;
 
@@ -234,6 +244,57 @@ struct _fn {
 }  // namespace _data
 inline namespace _cpo {
 inline constexpr auto data = _data::_fn{};
+}  // namespace _cpo
+
+// ----------------------------------------------------------------------------
+// num_ids CPO
+// ----------------------------------------------------------------------------
+namespace _num_ids {
+void num_ids(auto&) = delete;
+void num_ids(const auto&) = delete;
+
+struct _fn {
+  template <class T>
+    requires(_member_num_ids<T>)
+  constexpr auto operator()(T&& t) const noexcept {
+    return t.num_ids();
+  }
+
+  template <class T>
+    requires(!_member_num_ids<T>)
+  constexpr auto operator()(T&& t) const noexcept {
+    return 0;
+  }
+};
+}  // namespace _num_ids
+inline namespace _cpo {
+inline constexpr auto num_ids = _num_ids::_fn{};
+}  // namespace _cpo
+
+// ----------------------------------------------------------------------------
+// ids CPO
+// @todo Figure out what is wrong with const
+// ----------------------------------------------------------------------------
+namespace _ids {
+void ids(auto&) = delete;
+void ids(const auto&) = delete;
+
+struct _fn {
+  template <class T>
+    requires(_member_ids<T>)
+  constexpr const auto& operator()(T&& t) const noexcept {
+    return t.ids();
+  }
+
+  template <class T>
+    requires(!_member_ids<T>)
+  constexpr const auto& operator()(T&& t) const noexcept {
+    return std::vector<typename std::remove_cvref_t<T>::value_type>{};
+  }
+};
+}  // namespace _ids
+inline namespace _cpo {
+inline constexpr auto ids = _ids::_fn{};
 }  // namespace _cpo
 
 // ----------------------------------------------------------------------------

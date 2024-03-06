@@ -239,8 +239,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   // The name of the file is "tests/data/siftsmall_learn_256pts.fbin";
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
-    throw std::runtime_error(
-        "Could not open file " + diskann_test_256bin.string());
+    throw std::runtime_error("Could not open file " + diskann_test_256bin);
   }
 
   binary_file.read((char*)&npoints, 4);
@@ -631,8 +630,7 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
 
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
-    throw std::runtime_error(
-        "Could not open file " + diskann_test_256bin.string());
+    throw std::runtime_error("Could not open file " + diskann_test_256bin);
   }
 
   binary_file.read((char*)&npoints, 4);
@@ -1010,8 +1008,7 @@ TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
 
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
-    throw std::runtime_error(
-        "Could not open file " + diskann_test_256bin.string());
+    throw std::runtime_error("Could not open file " + diskann_test_256bin);
   }
 
   binary_file.read((char*)&npoints, 4);
@@ -1215,7 +1212,8 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   size_t Backtrack{3};
 
   tiledb::Context ctx;
-  std::string vamana_index_uri = "/tmp/tmp_vamana_index";
+  std::string vamana_index_uri =
+      (std::filesystem::temp_directory_path() / "tmp_vamana_index").string();
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
 
