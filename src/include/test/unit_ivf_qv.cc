@@ -302,6 +302,141 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
       CHECK(std::labs(intersections00 - intersections04) < 12);
       CHECK(std::equal(D00.data(), D00.data() + D00.size(), D04.data()));
     }
+
+    SECTION(
+        "detail::ivf::qv_query_heap_finite_ram, counting_l2_distance "
+        "function") {
+      auto fin_mat = tdbColMajorPartitionedMatrix<
+          test_feature_type,
+          test_ids_type,
+          test_indices_type>(
+          ctx,
+          sift_parts_uri,
+          sift_index_uri,
+          sift_ids_uri,
+          active_partitions,
+          upper_bound);
+
+      counting_l2_distance.reset();
+      counting_l2_distance.num_comps_ = 99;
+      auto&& [D01, I01] = detail::ivf::
+          qv_query_heap_finite_ram<test_feature_type, test_ids_type>(
+              ctx,
+              sift_parts_uri,
+              centroids,
+              query,
+              index,
+              sift_ids_uri,
+              nprobe,
+              k_nn,
+              upper_bound,
+              nthreads,
+              0,
+              counting_l2_distance);
+      CHECK(counting_l2_distance.num_comps_ != 0);
+      CHECK(counting_l2_distance.num_comps_ != 99);
+      CHECK(counting_l2_distance.num_comps_ < 100 * 10'000 + 99);
+
+      check_size(D01, I01);
+      auto intersections01 = (long)count_intersections(I01, groundtruth, k_nn);
+      CHECK(std::labs(intersections00 - intersections01) < 12);
+      CHECK(std::equal(D00.data(), D00.data() + D00.size(), D01.data()));
+    }
+    SECTION("detail::ivf::nuv_query_heap_finite_ram") {
+      auto fin_mat = tdbColMajorPartitionedMatrix<
+          test_feature_type,
+          test_ids_type,
+          test_indices_type>(
+          ctx,
+          sift_parts_uri,
+          sift_index_uri,
+          sift_ids_uri,
+          active_partitions,
+          upper_bound);
+
+      counting_l2_distance.reset();
+      counting_l2_distance.num_comps_ = 99;
+      auto&& [D02, I02] = detail::ivf::nuv_query_heap_finite_ram(
+          fin_mat,
+          query,
+          active_queries,
+          k_nn,
+          upper_bound,
+          nthreads,
+          counting_l2_distance);
+      CHECK(counting_l2_distance.num_comps_ != 0);
+      CHECK(counting_l2_distance.num_comps_ != 99);
+      CHECK(counting_l2_distance.num_comps_ < 100 * 10'000 + 99);
+
+      check_size(D02, I02);
+      auto intersections02 = (long)count_intersections(I02, groundtruth, k_nn);
+      CHECK(std::labs(intersections00 - intersections02) < 12);
+      CHECK(std::equal(D00.data(), D00.data() + D00.size(), D02.data()));
+    }
+
+    SECTION("detail::ivf::nuv_query_heap_finite_ram_reg_blocked") {
+      auto fin_mat = tdbColMajorPartitionedMatrix<
+          test_feature_type,
+          test_ids_type,
+          test_indices_type>(
+          ctx,
+          sift_parts_uri,
+          sift_index_uri,
+          sift_ids_uri,
+          active_partitions,
+          upper_bound);
+
+      counting_l2_distance.reset();
+      counting_l2_distance.num_comps_ = 99;
+      auto&& [D03, I03] = detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
+          fin_mat,
+          query,
+          active_queries,
+          k_nn,
+          upper_bound,
+          nthreads,
+          counting_l2_distance);
+      CHECK(counting_l2_distance.num_comps_ != 0);
+      CHECK(counting_l2_distance.num_comps_ != 99);
+      CHECK(counting_l2_distance.num_comps_ < 100 * 10'000 + 99);
+
+      check_size(D03, I03);
+      auto intersections03 = (long)count_intersections(I03, groundtruth, k_nn);
+      CHECK(std::labs(intersections00 - intersections03) < 12);
+      CHECK(std::equal(D00.data(), D00.data() + D00.size(), D03.data()));
+    }
+
+    SECTION("detail::ivf::nuv_query_finite_ram") {
+      auto fin_mat = tdbColMajorPartitionedMatrix<
+          test_feature_type,
+          test_ids_type,
+          test_indices_type>(
+          ctx,
+          sift_parts_uri,
+          sift_index_uri,
+          sift_ids_uri,
+          active_partitions,
+          upper_bound);
+
+      counting_l2_distance.reset();
+      counting_l2_distance.num_comps_ = 99;
+      auto&& [D04, I04] = detail::ivf::query_finite_ram(
+          fin_mat,
+          query,
+          active_queries,
+          k_nn,
+          upper_bound,
+          nthreads,
+          counting_l2_distance);
+      CHECK(counting_l2_distance.num_comps_ != 0);
+      CHECK(counting_l2_distance.num_comps_ != 99);
+      CHECK(counting_l2_distance.num_comps_ < 100 * 10'000 + 99);
+
+      check_size(D04, I04);
+      auto intersections04 = (long)count_intersections(I04, groundtruth, k_nn);
+      CHECK(std::labs(intersections00 - intersections04) < 12);
+      CHECK(std::equal(D00.data(), D00.data() + D00.size(), D04.data()));
+    }
   }
 }
 
@@ -360,31 +495,60 @@ TEST_CASE("ivf_qv: dist_qv", "[ivf qv]") {
       D00.data() + D00.size(),
       std::vector<test_feature_type>(D00.size(), 0.0).data()));
 
-// Leave this in place!  It fails now, but it is fixed in a later PR.
-#if 0
-    SECTION("dist_qv_finite_ram") {
-      auto num_nodes = GENERATE(5 /*, 1 */);
-      // std::cout << "num nodes " << num_nodes << std::endl;
+  SECTION("dist_qv_finite_ram") {
+    auto num_nodes = GENERATE(5 /*, 1 */);
+    // std::cout << "num nodes " << num_nodes << std::endl;
 
-      auto&& [D05, I05] = detail::ivf::dist_qv_finite_ram<db_type, ids_type>(
-          ctx,
-          sift_parts_uri,
-          centroids,
-          query,
-          index,
-          sift_ids_uri,
-          nprobe,
-          k_nn,
-          upper_bound,
-          nthreads,
-          num_nodes);
+    auto&& [D05, I05] = detail::ivf::dist_qv_finite_ram<db_type, ids_type>(
+        ctx,
+        sift_parts_uri,
+        centroids,
+        query,
+        index,
+        sift_ids_uri,
+        nprobe,
+        k_nn,
+        upper_bound,
+        nthreads,
+        num_nodes);
 
-  // debug_slices_diff(D00, D05, "D00 vs D05");
+    // debug_slices_diff(D00, D05, "D00 vs D05");
 
-  check_size(D05, I05);
-  auto intersections05 = (long)count_intersections(I05, groundtruth, k_nn);
-  CHECK(std::labs(intersections00 - intersections05) < 12);
-  // debug_slices_diff(D00, D05, "D00 vs D05");
-  CHECK(std::equal(D00.data(), D00.data() + D00.size(), D05.data()));
-#endif
+    check_size(D05, I05);
+    auto intersections05 = (long)count_intersections(I05, groundtruth, k_nn);
+    CHECK(std::labs(intersections00 - intersections05) < 12);
+    // debug_slices_diff(D00, D05, "D00 vs D05");
+    CHECK(std::equal(D00.data(), D00.data() + D00.size(), D05.data()));
+  }
+
+  SECTION("dist_qv_finite_ram couting_l2_distance") {
+    auto num_nodes = GENERATE(5 /*, 1 */);
+    // std::cout << "num nodes " << num_nodes << std::endl;
+
+    counting_l2_distance.reset();
+    counting_l2_distance.num_comps_ = 99;
+    auto&& [D05, I05] = detail::ivf::dist_qv_finite_ram<db_type, ids_type>(
+        ctx,
+        sift_parts_uri,
+        centroids,
+        query,
+        index,
+        sift_ids_uri,
+        nprobe,
+        k_nn,
+        upper_bound,
+        nthreads,
+        num_nodes,
+        0,
+        counting_l2_distance);
+    CHECK(counting_l2_distance.num_comps_ != 0);
+    CHECK(counting_l2_distance.num_comps_ != 99);
+    CHECK(counting_l2_distance.num_comps_ < 100 * 10'000 + 99);
+
+    check_size(D05, I05);
+    auto intersections05 = (long)count_intersections(I05, groundtruth, k_nn);
+    CHECK(std::labs(intersections00 - intersections05) < 12);
+    // debug_slices_diff(D00, D05, "D00 vs D05");
+    CHECK(std::equal(D00.data(), D00.data() + D00.size(), D05.data()));
+  }
 }

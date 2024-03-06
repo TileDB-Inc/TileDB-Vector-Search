@@ -108,7 +108,7 @@ auto qv_query_heap_infinite_ram(
     size_t nprobe,
     size_t k_nn,
     size_t nthreads,
-    Distance&& distance = Distance{}) {
+    Distance distance = Distance{}) {
   if (num_loads(partitioned_vectors) == 0) {
     load(partitioned_vectors);
   }
@@ -178,7 +178,7 @@ auto nuv_query_heap_infinite_ram(
     auto&& active_queries,
     size_t k_nn,
     size_t nthreads,
-    Distance&& distance = Distance{}) {
+    Distance distance = Distance{}) {
   if (num_loads(partitioned_vectors) == 0) {
     load(partitioned_vectors);
   }
@@ -287,7 +287,7 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
     auto&& active_queries,
     size_t k_nn,
     size_t nthreads,
-    Distance&& distance = Distance{}) {
+    Distance distance = Distance{}) {
   if (num_loads(partitioned_vectors) == 0) {
     load(partitioned_vectors);
   }
@@ -465,7 +465,7 @@ auto nuv_query_heap_finite_ram(
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads,
-    Distance&& distance = Distance{}) {
+    Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
 
   using id_type = typename F::id_type;
@@ -594,7 +594,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads,
-    Distance&& distance = Distance{}) {
+    Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
 
   using id_type = typename F::id_type;
@@ -799,7 +799,7 @@ auto qv_query_heap_finite_ram(
     size_t upper_bound,
     size_t nthreads,
     uint64_t timestamp = 0,
-    Distance&& distance = Distance{}) {
+    Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
   auto temporal_policy =
       (timestamp == 0) ? tiledb::TemporalPolicy() :
@@ -886,7 +886,7 @@ auto apply_query(
     size_t first_active_part,
     size_t last_active_part,
     size_t part_offset = 0,
-    Distance&& distance = Distance{}) {
+    Distance distance = Distance{}) {
   using id_type = typename P::id_type;
   using score_type = float;
 
@@ -1029,7 +1029,7 @@ auto query_finite_ram(
     size_t k_nn,
     size_t upper_bound,
     size_t nthreads,
-    Distance&& distance = Distance{}) {
+    Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
 
   using id_type = typename F::id_type;
@@ -1136,7 +1136,7 @@ auto query_infinite_ram(
     auto&& active_queries,
     size_t k_nn,
     size_t nthreads,
-    Distance&& distance = Distance{}) {
+    Distance distance = Distance{}) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
   using id_type = typename F::id_type;

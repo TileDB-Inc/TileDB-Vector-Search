@@ -232,8 +232,8 @@ TEST_CASE(
   }
 
   SECTION("Invoke with l2_distance function") {
-    auto&& [D00, I00] =
-        detail::flat::qv_query_heap(array_inputs, array_queries, k_nn, 1, l2_distance);
+    auto&& [D00, I00] = detail::flat::qv_query_heap(
+        array_inputs, array_queries, k_nn, 1, l2_distance);
 
     CHECK(counting_l2_distance.num_comps_ == 0);
 
@@ -247,10 +247,10 @@ TEST_CASE(
   SECTION("Invoke with counting_l2_distance function") {
     counting_l2_distance.reset();
     counting_l2_distance.num_comps_ = 99;
-    auto&& [D00, I00] =
-        detail::flat::qv_query_heap(array_inputs, array_queries, k_nn, 1, counting_l2_distance);
+    auto&& [D00, I00] = detail::flat::qv_query_heap(
+        array_inputs, array_queries, k_nn, 1, counting_l2_distance);
 
-    CHECK(counting_l2_distance.num_comps_ == 100*10'000+99);
+    CHECK(counting_l2_distance.num_comps_ == 100 * 10'000 + 99);
 
     size_t intersections00 =
         (long)count_intersections(I00, array_groundtruth, k_nn);
@@ -262,10 +262,10 @@ TEST_CASE(
   SECTION("Invoke with qv_query_heal_0 counting_l2_distance function") {
     counting_l2_distance.reset();
     counting_l2_distance.num_comps_ = 99;
-    auto&& [D00, I00] =
-        detail::flat::qv_query_heap_tiled(array_inputs, array_queries, k_nn, 1, counting_l2_distance);
+    auto&& [D00, I00] = detail::flat::qv_query_heap_tiled(
+        array_inputs, array_queries, k_nn, 1, counting_l2_distance);
 
-    CHECK(counting_l2_distance.num_comps_ == 100*10'000+99);
+    CHECK(counting_l2_distance.num_comps_ == 100 * 10'000 + 99);
 
     size_t intersections00 =
         (long)count_intersections(I00, array_groundtruth, k_nn);
@@ -297,8 +297,6 @@ TEST_CASE(
     size_t expected00 = array_groundtruth.num_cols() * k_nn;
     CHECK(intersections00 == expected00);
   }
-
-
 }
 
 // @todo: test with tdbMatrix
