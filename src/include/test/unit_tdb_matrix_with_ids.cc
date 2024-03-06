@@ -107,8 +107,10 @@ TEMPLATE_TEST_CASE(
 
 TEST_CASE("tdb_matrix_with_ids: different types", "[tdb_matrix_with_ids]") {
   tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
-  std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  std::string tmp_ids_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
   int offset = 13;
   size_t Mrows = 200;
   size_t Ncols = 500;
@@ -242,8 +244,10 @@ TEST_CASE("tdb_matrix_with_ids: load from uri", "[tdb_matrix_with_ids]") {
 
 TEST_CASE("tdb_matrix_with_ids: empty matrix", "[tdb_matrix_with_ids]") {
   tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
-  std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  std::string tmp_ids_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
   size_t matrix_dimension{128};
   int32_t matrix_domain{1000};
   int32_t tile_extent{100};

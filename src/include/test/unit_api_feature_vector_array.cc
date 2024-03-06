@@ -392,8 +392,10 @@ TEST_CASE("api: tdbMatrixWithIds constructors and destructors", "[api]") {
   int offset = 13;
   size_t rows = 3;
   size_t cols = 7;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
-  std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  std::string tmp_ids_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
 
   auto c = ColMajorMatrixWithIds<int, float>(rows, cols);
   fill_and_write_matrix(
@@ -425,8 +427,10 @@ TEMPLATE_TEST_CASE(
   int offset = 13;
   size_t rows = 3;
   size_t cols = 7;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
-  std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  std::string tmp_ids_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
 
   auto cc = ColMajorMatrixWithIds<DataType, IdsType>(rows, cols);
   fill_and_write_matrix(

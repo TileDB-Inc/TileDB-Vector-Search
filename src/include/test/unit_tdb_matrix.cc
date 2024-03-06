@@ -274,7 +274,8 @@ TEST_CASE("tdb_matrix: MatrixBase template parameter", "[tdb_matrix]") {
 
 TEST_CASE("tdb_matrix: empty matrix", "[tdb_matrix]") {
   tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
   size_t matrix_dimension{128};
   int32_t matrix_domain{1000};
   int32_t tile_extent{100};
