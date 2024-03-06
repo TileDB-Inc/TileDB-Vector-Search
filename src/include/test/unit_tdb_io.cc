@@ -59,8 +59,11 @@ TEST_CASE("tdb_io: read vector", "[tdb_io]") {
 
 TEMPLATE_TEST_CASE("tdb_io: read / write vector", "[tdb_io]", float, uint8_t) {
   tiledb::Context ctx;
-  std::string tmp_std_vector_uri = "/tmp/tmp_std_vector";
-  std::string tmp_vector_uri = "/tmp/tmp_vector";
+  std::string tmp_std_vector_uri =
+      (std::filesystem::temp_directory_path() / "tmp_std_vector").string();
+  std::string tmp_vector_uri =
+      (std::filesystem::temp_directory_path() / "tmp_vector").string();
+
   int offset = 19;
 
   tiledb::VFS vfs(ctx);
@@ -118,7 +121,8 @@ TEST_CASE("tdb_io: load_file", "[tdb_io]") {
 
 TEMPLATE_TEST_CASE("tdb_io: write matrix", "[tdb_io]", float, uint8_t) {
   tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_matrix").string();
   int offset = 13;
 
   size_t Mrows = 200;
@@ -213,7 +217,8 @@ TEST_CASE("tdb_io: create group", "[tdb_io]") {
 
   tiledb::Context ctx;
   tiledb::Config cfg;
-  std::string tmp_group_uri = "/tmp/tmp_group";
+  std::string tmp_group_uri =
+      (std::filesystem::temp_directory_path() / "tmp_group").string();
 
   std::string ids_name = "ids";
 
@@ -245,10 +250,16 @@ TEST_CASE("tdb_io: create group", "[tdb_io]") {
   auto num_members = read_group.member_count();
   CHECK(num_members == 1);
   auto a = read_group.member(0);
-  CHECK(a.uri() == "file:///tmp/tmp_group/ids");
+  const auto canonical_original_path =
+      tmp_group_uri[0] == '/' ? tmp_group_uri.substr(1) : tmp_group_uri;
+  CHECK(
+      std::filesystem::path(a.uri().substr(8)) ==
+      std::filesystem::path(canonical_original_path) / "ids");
 
   auto b = read_group.member("ids");
-  CHECK(a.uri() == "file:///tmp/tmp_group/ids");
+  CHECK(
+      std::filesystem::path(a.uri().substr(8)) ==
+      std::filesystem::path(canonical_original_path) / "ids");
 
   CHECK(read_group.has_metadata("w[0]", &w_type));
   CHECK(!read_group.has_metadata("w[1]", &w_type));

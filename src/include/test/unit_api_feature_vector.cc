@@ -120,7 +120,9 @@ TEMPLATE_LIST_TEST_CASE("api: FeatureVector read", "[api]", TestTypes) {
   randomize(v, {0, 128});
   auto w{v};
   auto ctx = tiledb::Context{};
-  auto vname = "/tmp/test_vector_" + std::to_string(api_counter++);
+  auto vname = (std::filesystem::temp_directory_path() /
+                ("test_vector_" + std::to_string(api_counter++)))
+                   .string();
   if (local_array_exists(vname)) {
     std::filesystem::remove_all(vname);
   }
