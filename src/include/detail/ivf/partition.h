@@ -50,10 +50,18 @@ namespace detail::ivf {
  * @param nthreads
  * @return The top nprobe centroids for each query vector.
  */
-template <feature_vector_array C, query_vector_array Q>
+template <
+    feature_vector_array C,
+    query_vector_array Q,
+    class Distance = sum_of_squares_distance>
 auto ivf_top_centroids(
-    const C& centroids, const Q& query, size_t nprobe, size_t nthreads) {
-  return detail::flat::qv_query_heap_0(centroids, query, nprobe, nthreads);
+    const C& centroids,
+    const Q& query,
+    size_t nprobe,
+    size_t nthreads,
+    Distance distance = Distance{}) {
+  return detail::flat::qv_query_heap_0(
+      centroids, query, nprobe, nthreads, distance);
 }
 
 /**
@@ -68,9 +76,17 @@ auto ivf_top_centroids(
  * the results from each compute node and returns the final result.
  *
  */
-template <class parts_type, feature_vector_array C, feature_vector_array Q>
+template <
+    class parts_type,
+    feature_vector_array C,
+    feature_vector_array Q,
+    class Distance = sum_of_squares_distance>
 auto partition_ivf_flat_index(
-    const C& centroids, const Q& query, size_t nprobe, size_t nthreads) {
+    const C& centroids,
+    const Q& query,
+    size_t nprobe,
+    size_t nthreads,
+    distance = Distance{}) {
   scoped_timer _{tdb_func__};
 
   assert(::num_vectors(centroids) >= nprobe);
