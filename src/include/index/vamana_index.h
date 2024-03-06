@@ -126,7 +126,7 @@ auto greedy_search(
     auto&& query,
     size_t k_nn,
     size_t L,
-    Distance&& distance = Distance{}) {
+    Distance distance = Distance{}) {
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
   using score_type = typename std::decay_t<decltype(graph)>::score_type;
@@ -286,7 +286,7 @@ auto robust_prune(
     auto&& V_in,
     float alpha,
     size_t R,
-    Distance&& distance = Distance{}) {
+    Distance distance = Distance{}) {
   constexpr bool noisy = false;
 
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
@@ -614,8 +614,8 @@ class vamana_index {
    * (j)←N_"out " (j)∪{σ(i)} if |N_"out "  (j)|>R then Run FilteredRobustPrune
    * (j,N_"out " (j),α,R) to update out-neighbors of j.
    */
-  template <feature_vector_array Array>
-  void train(const Array& training_set) {
+  template <feature_vector_array Array, class Distance = sum_of_squares_distance>
+  void train(const Array& training_set, Distance distance = Distance{}) {
     feature_vectors_ = std::move(ColMajorMatrix<feature_type>(
         ::dimension(training_set), ::num_vectors(training_set)));
     std::copy(
@@ -653,7 +653,7 @@ class vamana_index {
             feature_vectors_[p],
             1,
             L_build_,
-            sum_of_squares_distance{});
+            distance);
         total_visited += visited.size();
 
         robust_prune(
@@ -663,7 +663,7 @@ class vamana_index {
             visited,
             alpha,
             R_max_degree_,
-            sum_of_squares_distance{});
+            distance);
         {
           scoped_timer _{"post search prune"};
           for (auto&& [i, j] : graph_.out_edges(p)) {
@@ -684,12 +684,12 @@ class vamana_index {
                   tmp,
                   alpha,
                   R_max_degree_,
-                  sum_of_squares_distance{});
+                  distance);
             } else {
               graph_.add_edge(
                   j,
                   p,
-                  sum_of_squares_distance()(
+                  distance(
                       feature_vectors_[p], feature_vectors_[j]));
             }
           }
@@ -736,11 +736,11 @@ class vamana_index {
    * @param opt_L How deep to search
    * @return Tuple of top k scores and top k ids
    */
-  template <query_vector_array Q>
+  template <query_vector_array Q, class Distance = sum_of_squares_distance>
   auto query(
       const Q& query_set,
       size_t k,
-      std::optional<size_t> opt_L = std::nullopt) {
+      std::optional<size_t> opt_L = std::nullopt, Distance distance = Distance{}) {
     scoped_timer __{tdb_func__ + std::string{" (outer)"}};
 
     size_t L = opt_L ? *opt_L : L_build_;
@@ -770,7 +770,7 @@ class vamana_index {
           query_set[i],
           k,
           L,
-          sum_of_squares_distance{});
+          distance);
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
       num_visited_vertices_ += V.size();
@@ -801,15 +801,15 @@ class vamana_index {
    * @param opt_L How deep to search
    * @return Top k scores and top k ids
    */
-  template <query_vector Q>
+  template <query_vector Q, class Distance = sum_of_squares_distance>
   auto query(
       const Q& query_vec,
       size_t k,
-      std::optional<size_t> opt_L = std::nullopt) {
+      std::optional<size_t> opt_L = std::nullopt, Distance distance = Distance{}) {
     size_t L = opt_L ? *opt_L : L_build_;
 
     auto&& [top_k_scores, top_k, V] =
-        greedy_search(graph_, feature_vectors_, medoid_, query_vec, k, L);
+        greedy_search(graph_, feature_vectors_, medoid_, query_vec, k, L, distance);
 
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
