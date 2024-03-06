@@ -35,7 +35,7 @@ def load_as_matrix(
 
     a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
-    # Read all rows of `path` from column 0 -> `size`. Set no upper_bound.
+    # Read all rows from column 0 -> `size`. Set no upper_bound.
     if dtype == np.float32:
         m = tdbColMajorMatrix_f32(ctx, path, 0, size, 0, timestamp)
     elif dtype == np.float64:

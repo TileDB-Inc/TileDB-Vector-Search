@@ -228,6 +228,7 @@ class ivf_flat_index {
      */
     dimension_ = group_->get_dimension();
     num_partitions_ = group_->get_num_partitions();
+    // Read all rows from column 0 -> `num_partitions_`. Set no upper_bound.
     centroids_ =
         std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
             group_->cached_ctx(),

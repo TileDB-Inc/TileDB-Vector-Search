@@ -411,7 +411,8 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
    *
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
-   * @param upper_bound The maximum number of vectors to read.
+   * @param upper_bound The maximum number of vectors to read. Set to 0 to read
+   * all vectors.
    */
   tdbPreLoadMatrix(
       const tiledb::Context& ctx,
@@ -422,13 +423,48 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
     Base::load();
   }
 
+  /**
+   * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
+   * vectors. We read rows from 0 -> row domain length and cols from 0 ->
+   * `num_array_cols`. In this case, the `Matrix` is column-major, so the number
+   * of vectors is the number of columns.
+   *
+   * @param ctx The TileDB context to use.
+   * @param uri URI of the TileDB array to read.
+   * @param num_array_cols The number of columns to read.
+   * @param upper_bound The maximum number of vectors to read. Set to 0 to read
+   * all vectors.
+   */
+  tdbPreLoadMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t num_array_cols,
+      size_t upper_bound,
+      uint64_t timestamp)
+      : Base(ctx, uri, 0, num_array_cols, upper_bound, timestamp) {
+    Base::load();
+  }
+
+  /**
+   * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
+   * vectors. We read rows from 0 -> `num_array_rows` and cols from 0 ->
+   * `num_array_cols`. In this case, the `Matrix` is column-major, so the number
+   * of vectors is the number of columns.
+   *
+   * @param ctx The TileDB context to use.
+   * @param uri URI of the TileDB array to read.
+   * @param num_array_rows The number of columns to read.
+   * @param num_array_cols The number of columns to read.
+   * @param upper_bound The maximum number of vectors to read. Set to 0 to read
+   * all vectors.
+   */
   tdbPreLoadMatrix(
       const tiledb::Context& ctx,
       const std::string& uri,
       size_t num_array_rows,
       size_t num_array_cols,
-      size_t upper_bound = 0,
-      uint64_t timestamp = 0)
+      size_t upper_bound,
+      uint64_t timestamp)
       : Base(
             ctx,
             uri,
@@ -438,16 +474,6 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
             num_array_cols,
             upper_bound,
             timestamp) {
-    Base::load();
-  }
-
-  tdbPreLoadMatrix(
-      const tiledb::Context& ctx,
-      const std::string& uri,
-      size_t num_array_cols,
-      size_t upper_bound = 0,
-      uint64_t timestamp = 0)
-      : Base(ctx, uri, 0, num_array_cols, upper_bound, timestamp) {
     Base::load();
   }
 };
