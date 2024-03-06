@@ -104,31 +104,78 @@ TEST_CASE(
   auto x = std::vector<float>(n);
   auto y = std::vector<float>(n);
 
+  auto z = std::vector<float>(n);
+
   std::iota(begin(u), end(u), 0);
-  std::iota(begin(v), end(v), -9);
-  std::iota(begin(x), end(x), 13);
-  std::iota(begin(y), end(y), 17);
+  std::iota(begin(v), end(v), 13);
+  std::iota(begin(x), end(x), -3.14159);
+  std::iota(begin(y), end(y), 17.8675309);
+
+  std::iota(begin(z), end(z), 13);
 
   auto a = naive_inner_product(x, y);
-  CHECK(a == 942848);
+  CHECK(std::abs(a - 785444.4375) < 0.01);
+  auto ax = naive_inner_product(y, x);
+  CHECK(ax == a);
+  CHECK(std::abs(ax - 785444.4375) < 0.01);
 
   auto b = unroll4_inner_product(x, y);
-  CHECK(b == 942848);
+  CHECK(std::abs(b - 785444.4375) < 0.01);
+  CHECK(a == b);
+  auto bx = unroll4_inner_product(y, x);
+  CHECK(bx == b);
+  CHECK(std::abs(bx - 785444.4375) < 0.01);
 
-#ifdef __AVX2__
-  auto cc = avx2_inner_product(x, y);
-  CHECK(cc == 942848);
-#endif
-
-  auto a2 = naive_inner_product(u, x);
+  auto a2 = naive_inner_product(u, v);
   CHECK(a2 == 778764);
-  auto b2 = naive_inner_product(y, v);
-  CHECK(b2 == 767712);
+  auto b2 = unroll4_inner_product(u, v);
+  CHECK(b2 == 778764);
+  CHECK(a2 == b2);
+
+  auto a2x = naive_inner_product(v, u);
+  CHECK(a2x == 778764);
+  CHECK(a2 == a2x);
+  auto b2x = unroll4_inner_product(v, u);
+  CHECK(b2x == 778764);
+  CHECK(a2x == b2x);
 
   auto a3 = naive_inner_product(u, x);
-  CHECK(a3 == 778764);
-  auto b3 = naive_inner_product(y, v);
-  CHECK(b3 == 767712);
+  CHECK(std::abs(a3 - 649615.1875) < 0.25);
+  auto b3 = unroll4_inner_product(u, x);
+  CHECK(std::abs(a3 - 649615.1875) < 0.25);
+  CHECK(std::abs(a3 -b3) < 0.25);
+
+  auto a3x = naive_inner_product(x, u);
+  CHECK(std::abs(a3x - 649615.1875) < 0.25);
+  CHECK(a3 == a3x);
+  auto b3x = unroll4_inner_product(x, u);
+  CHECK(std::abs(a3x - 649615.1875) < 0.25);
+  CHECK(std::abs(a3x - b3x) < 0.25);
+
+#ifdef __AVX2__
+  {
+    auto a = avxs_inner_product(x, y);
+    CHECK(std::abs(a - 785444.4375) < 0.01);
+
+    auto ax = avx2_inner_product(y, x);
+    CHECK(ax == a);
+    CHECK(std::abs(ax - 785444.4375) < 0.01);
+
+    auto a2 = avx2_inner_product(u, v);
+    CHECK(a2 == 778764);
+
+    auto a2x = avx2_inner_product(v, u);
+    CHECK(a2x == 778764);
+    CHECK(a2 == a2x);
+
+    auto a3 = avx2_inner_product(u, x);
+    CHECK(std::abs(a3 - 649615.1875) < 0.25);
+
+    auto a3x = avx2_inner_product(x, u);
+    CHECK(std::abs(a3x - 649615.1875) < 0.25);
+    CHECK(a3 == a3x);
+  }
+#endif
 
 // @todo: inner_product does not yet have a partitioned version implemented yet.
 // Leaving code here for future reference
