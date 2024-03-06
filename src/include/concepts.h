@@ -212,4 +212,56 @@ concept vector_search_index = requires(I i) {
   { i.search() };
 };
 
+// ----------------------------------------------------------------------------
+// distance function concepts (for function objects)
+// - A distance function takes two feature vectors and returns a distance.
+// - A sub_distance function takes two feature vectors, a start and a stop, and
+//   returns a distance.
+// - A cached_sub_distance function takes a start and a stop in its constructor
+//   and takes two feature vectors in operator() and returns a distance.
+// ----------------------------------------------------------------------------
+
+/**
+ * @brief A concept for distance functions.
+ *
+ * @tparam F The function type.  Must be invocable on U and V.
+ * @tparam U The first feature vector type.  Must be a feature_vector.
+ * @tparam V The second feature vector type.  Must be a feature_vector.
+ */
+template <class F, class U, class V>
+concept distance_function =
+    feature_vector<U> && feature_vector<V> && std::regular_invocable<F, U, V> &&
+    std::regular_invocable<F, V, U> && std::regular_invocable<F, U, U> &&
+    std::regular_invocable<F, V, V>;
+
+/**
+ * @brief A concept for distance functions operating on subranges of a feature
+ * vector.
+ *
+ * @tparam F The function type.  Must be invocable on U, V, size_t, size_t.
+ * @tparam U The first feature vector type.  Must be a feature_vector.
+ * @tparam V The second feature vector type.  Must be a feature_vector.
+ */
+template <class F, class U, class V>
+concept sub_distance_function =
+    feature_vector<U> && feature_vector<V> &&
+    std::regular_invocable<F, U, V, size_t, size_t> &&
+    std::regular_invocable<F, V, U, size_t, size_t> &&
+    std::regular_invocable<F, U, U, size_t, size_t> &&
+    std::regular_invocable<F, V, V, size_t, size_t>;
+
+/**
+ * @brief A concept for distance functions operating on subranges of a feature
+ * vector, where the subrange is specified at construction time.  Thereafter,
+ * the object acts like a distance function.
+ * @tparam F The function type.  Must be constructable with size_t, size_t and
+ * invocable on U, V.
+ * @tparam U The first feature vector type.  Must be a feature_vector.
+ * @tparam V The second feature vector type.  Must be a feature_vector.
+ */
+template <class F, class U, class V>
+concept cached_sub_distance_function =
+    distance_function<F, U, V> && feature_vector<U> && feature_vector<V> &&
+    requires(size_t i, size_t j) { F(i, j); };
+
 #endif  // TDB_CONCEPTS_H

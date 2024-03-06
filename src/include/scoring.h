@@ -103,13 +103,13 @@ inline constexpr auto l2_distance = _l2_distance::sum_of_squares_distance{};
 
 namespace _l2_sub_distance {
 
-struct sub_sum_of_squares_distance {
+struct cached_sub_sum_of_squares_distance {
  private:
   size_t start_{0};
   size_t stop_{0};
 
  public:
-  sub_sum_of_squares_distance(size_t start, size_t stop)
+  cached_sub_sum_of_squares_distance(size_t start, size_t stop)
       : start_(start)
       , stop_(stop) {
   }
@@ -121,10 +121,25 @@ struct sub_sum_of_squares_distance {
   }
 };
 
+struct uncached_sub_sum_of_squares_distance {
+  // @todo AVX implementation
+  template <feature_vector V, feature_vector U>
+  constexpr auto operator()(
+      const V& a, const U& b, size_t start, size_t stop) const {
+    return unroll4_sum_of_squares(a, b, start, stop);
+  }
+};
+
 }  // namespace _l2_sub_distance
 
+using cached_sub_sum_of_squares_distance =
+    _l2_sub_distance::cached_sub_sum_of_squares_distance;
+
+using uncached_sub_sum_of_squares_distance =
+    _l2_sub_distance::uncached_sub_sum_of_squares_distance;
+
 using sub_sum_of_squares_distance =
-    _l2_sub_distance::sub_sum_of_squares_distance;
+    _l2_sub_distance::cached_sub_sum_of_squares_distance;
 
 template <feature_vector U, feature_vector V>
 auto sub_l2_distance(const U& u, const V& v, size_t i, size_t j) {
