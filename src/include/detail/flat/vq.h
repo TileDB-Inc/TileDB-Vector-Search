@@ -88,7 +88,7 @@ auto vq_query_heap(
         [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
           size_t index = i + col_offset(db);
           for (size_t j = 0; j < size_q; ++j) {
-            auto score = L2(q[j], db_vec);
+            auto score = l2_distance(q[j], db_vec);
             if constexpr (std::is_same_v<T, with_ids>) {
               scores[n][j].insert(score, ids[index]);
             } else if constexpr (std::is_same_v<T, without_ids>) {
@@ -177,7 +177,7 @@ auto vq_query_heap_tiled(
           std::remove_cvref_t<decltype(i)> index = 0;
           index = i + col_offset(db);
           for (size_t j = 0; j < size_q; ++j) {
-            auto score = L2(q[j], db_vec);
+            auto score = l2_distance(q[j], db_vec);
             if constexpr (std::is_same_v<T, with_ids>) {
               scores[n][j].insert(score, ids[index]);
             } else if constexpr (std::is_same_v<T, without_ids>) {
@@ -247,7 +247,7 @@ auto vq_query_heap_2(
           index = i + col_offset(db);
 
           for (size_t j = 0; j < size_q; ++j) {
-            auto score = L2(q[j], db_vec);
+            auto score = l2_distance(q[j], db_vec);
             if constexpr (std::is_same_v<T, with_ids>) {
               scores[n][j].insert(score, ids[index]);
             } else if constexpr (std::is_same_v<T, without_ids>) {

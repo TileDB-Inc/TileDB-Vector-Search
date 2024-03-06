@@ -235,8 +235,8 @@ auto sub_kmeans(
           total_weight += centroid[k] * centroid[k];
         }
       }
-      auto diff = sub_sum_of_squares(
-          centroids[j], new_centroids[j], sub_begin, sub_end);
+      auto diff =
+          sub_l2_distance(centroids[j], new_centroids[j], sub_begin, sub_end);
       max_diff = std::max<double>(max_diff, diff);
     }
     centroids.swap(new_centroids);
@@ -361,8 +361,8 @@ class flatpq_index {
       oss << std::setw(2) << std::setfill('0') << subspace;
       std::string number = oss.str();
       distance_tables_.emplace_back(
-          std::move(tdbPreLoadMatrix<score_type, stdx::layout_left>(
-              ctx, group_uri + "/distance_table_" + number)));
+          tdbPreLoadMatrix<score_type, stdx::layout_left>(
+              ctx, group_uri + "/distance_table_" + number));
     }
   }
 
@@ -373,12 +373,12 @@ class flatpq_index {
    * @param training_set Training set
    */
   auto train(const ColMajorMatrix<feature_type>& training_set) {
-    centroids_ = std::move(
-        ColMajorMatrix<centroid_feature_type>(dimension_, num_clusters_));
+    centroids_ =
+        ColMajorMatrix<centroid_feature_type>(dimension_, num_clusters_);
     distance_tables_ = std::vector<ColMajorMatrix<score_type>>(num_subspaces_);
     for (size_t i = 0; i < num_subspaces_; ++i) {
-      distance_tables_[i] = std::move(
-          ColMajorMatrix<centroid_feature_type>(num_clusters_, num_clusters_));
+      distance_tables_[i] =
+          ColMajorMatrix<centroid_feature_type>(num_clusters_, num_clusters_);
     }
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
@@ -408,8 +408,8 @@ class flatpq_index {
         for (size_t j = 0; j < num_clusters_; ++j) {
           auto sub_begin = subspace * sub_dimension_;
           auto sub_end = (subspace + 1) * sub_dimension_;
-          auto sub_distance = sub_sum_of_squares(
-              centroids_[i], centroids_[j], sub_begin, sub_end);
+          auto sub_distance =
+              sub_l2_distance(centroids_[i], centroids_[j], sub_begin, sub_end);
           distance_tables_[subspace](i, j) = sub_distance;
         }
       }
@@ -417,8 +417,8 @@ class flatpq_index {
   }
 
   auto add(const ColMajorMatrix<feature_type>& feature_vectors) {
-    pq_vectors_ = std::move(ColMajorMatrix<code_type>(
-        num_subspaces_, num_vectors(feature_vectors)));
+    pq_vectors_ =
+        ColMajorMatrix<code_type>(num_subspaces_, num_vectors(feature_vectors));
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimension_ * subspace;
@@ -487,7 +487,7 @@ class flatpq_index {
       auto sub_end = (subspace + 1) * sub_dimension_;
       auto i = b[subspace];
 
-      pq_distance += sub_sum_of_squares(a, centroids_[i], sub_begin, sub_end);
+      pq_distance += sub_l2_distance(a, centroids_[i], sub_begin, sub_end);
     }
 
     return pq_distance;
@@ -537,7 +537,7 @@ class flatpq_index {
       auto min_score = std::numeric_limits<score_type>::max();
       code_type idx{0};
       for (size_t i = 0; i < num_vectors(centroids_); ++i) {
-        auto score = sub_sum_of_squares(v, centroids_[i], sub_begin, sub_end);
+        auto score = sub_l2_distance(v, centroids_[i], sub_begin, sub_end);
         if (score < min_score) {
           min_score = score;
           idx = i;
@@ -664,9 +664,9 @@ class flatpq_index {
       // Measure the distance between the original vector and the reconstructed
       // vector and accumulate into the total distance as well as the total
       // weight of the feature vector
-      auto distance = sum_of_squares(feature_vectors[i], re);
+      auto distance = l2_distance(feature_vectors[i], re);
       total_distance += distance;
-      total_normalizer += sum_of_squares(feature_vectors[i]);
+      total_normalizer += l2_distance(feature_vectors[i]);
     }
     // debug_slice(debug_vectors, "verify pq encoding re");
 
@@ -690,7 +690,7 @@ class flatpq_index {
     for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
       for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
         auto real_distance =
-            sum_of_squares(feature_vectors[i], feature_vectors[j]);
+            l2_distance(feature_vectors[i], feature_vectors[j]);
         total_normalizer += real_distance;
         auto pq_distance = 0.0;
 
@@ -718,7 +718,7 @@ class flatpq_index {
     for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
       for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
         auto real_distance =
-            sum_of_squares(feature_vectors[i], feature_vectors[j]);
+            l2_distance(feature_vectors[i], feature_vectors[j]);
         total_normalizer += real_distance;
 
         auto pq_distance =
@@ -728,7 +728,7 @@ class flatpq_index {
         diff_max = std::max(diff_max, diff);
         total_diff += diff;
       }
-      vec_max = std::max(vec_max, sum_of_squares(feature_vectors[i]));
+      vec_max = std::max(vec_max, l2_distance(feature_vectors[i]));
     }
 
     return std::make_tuple(diff_max / vec_max, total_diff / total_normalizer);
@@ -744,7 +744,7 @@ class flatpq_index {
     for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
       for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
         auto real_distance =
-            sum_of_squares(feature_vectors[i], feature_vectors[j]);
+            l2_distance(feature_vectors[i], feature_vectors[j]);
         total_normalizer += real_distance;
 
         auto pq_distance =
@@ -754,7 +754,7 @@ class flatpq_index {
         diff_max = std::max(diff_max, diff);
         total_diff += diff;
       }
-      vec_max = std::max(vec_max, sum_of_squares(feature_vectors[i]));
+      vec_max = std::max(vec_max, l2_distance(feature_vectors[i]));
     }
 
     return std::make_tuple(diff_max / vec_max, total_diff / total_normalizer);
