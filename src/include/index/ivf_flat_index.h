@@ -855,8 +855,8 @@ class ivf_flat_index {
    * of the corresponding distances.
    *
    */
-  template <feature_vector_array Q>
-  auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
+  auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe, Distance distance = Distance{}) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
@@ -869,7 +869,8 @@ class ivf_flat_index {
         query_vectors,
         active_queries,
         k_nn,
-        num_threads_);
+        num_threads_,
+        distance);
   }
 
   /**
@@ -878,9 +879,9 @@ class ivf_flat_index {
    * See the documentation for that function in detail/ivf/qv.h
    * for more details.
    */
-  template <feature_vector_array Q>
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto qv_query_heap_infinite_ram(
-      const Q& query_vectors, size_t k_nn, size_t nprobe) {
+      const Q& query_vectors, size_t k_nn, size_t nprobe, Distance distance = Distance{}) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
@@ -893,7 +894,8 @@ class ivf_flat_index {
         query_vectors,
         nprobe,
         k_nn,
-        num_threads_);
+        num_threads_,
+        distance);
   }
 
   /**
@@ -902,9 +904,9 @@ class ivf_flat_index {
    * See the documentation for that function in detail/ivf/qv.h
    * for more details.
    */
-  template <feature_vector_array Q>
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto nuv_query_heap_infinite_ram(
-      const Q& query_vectors, size_t k_nn, size_t nprobe) {
+      const Q& query_vectors, size_t k_nn, size_t nprobe, Distance distance = Distance{}) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
@@ -917,7 +919,7 @@ class ivf_flat_index {
         query_vectors,
         active_queries,
         k_nn,
-        num_threads_);
+        num_threads_, distance);
   }
 
   /**
@@ -926,9 +928,9 @@ class ivf_flat_index {
    * See the documentation for that function in detail/ivf/qv.h
    * for more details.
    */
-  template <feature_vector_array Q>
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto nuv_query_heap_infinite_ram_reg_blocked(
-      const Q& query_vectors, size_t k_nn, size_t nprobe) {
+      const Q& query_vectors, size_t k_nn, size_t nprobe, Distance distance = Distance{}) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
@@ -941,17 +943,17 @@ class ivf_flat_index {
         query_vectors,
         active_queries,
         k_nn,
-        num_threads_);
+        num_threads_, distance);
   }
 
   // WIP
 #if 0
-  template <feature_vector_array Q>
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto qv_query_heap_finite_ram(
       const Q& query_vectors,
       size_t k_nn,
       size_t nprobe,
-      size_t upper_bound = 0) {
+      size_t upper_bound = 0, Distance distance = Distance{}) {
     if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
       std::throw_with_nested(
           std::runtime_error("Vectors are already loaded. Cannot load twice. "
@@ -968,7 +970,7 @@ class ivf_flat_index {
         nprobe,
         k_nn,
         upper_bound,
-        num_threads_);
+        num_threads_, distance);
   }
 #endif  // 0
 
@@ -1000,12 +1002,13 @@ class ivf_flat_index {
    * @param nprobe
    * @return
    */
-  template <feature_vector_array Q>
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto query_finite_ram(
       const Q& query_vectors,
       size_t k_nn,
       size_t nprobe,
-      size_t upper_bound = 0) {
+      size_t upper_bound = 0,
+      Distance distance = Distance{}) {
     if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
       throw std::runtime_error(
           "Vectors are already loaded. Cannot load twice. "
@@ -1020,7 +1023,7 @@ class ivf_flat_index {
         active_queries,
         k_nn,
         upper_bound,
-        num_threads_);
+        num_threads_, distance);
   }
 
   /**
@@ -1029,12 +1032,13 @@ class ivf_flat_index {
    * See the documentation for that function in detail/ivf/qv.h
    * for more details.
    */
-  template <feature_vector_array Q>
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto nuv_query_heap_finite_ram(
       const Q& query_vectors,
       size_t k_nn,
       size_t nprobe,
-      size_t upper_bound = 0) {
+      size_t upper_bound = 0,
+      Distance distance = Distance{}) {
     if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
       std::throw_with_nested(
           std::runtime_error("Vectors are already loaded. Cannot load twice. "
@@ -1049,7 +1053,7 @@ class ivf_flat_index {
         active_queries,
         k_nn,
         upper_bound,
-        num_threads_);
+        num_threads_, distance);
   }
 
   /**
@@ -1058,12 +1062,13 @@ class ivf_flat_index {
    * See the documentation for that function in detail/ivf/qv.h
    * for more details.
    */
-  template <feature_vector_array Q>
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto nuv_query_heap_finite_ram_reg_blocked(
       const Q& query_vectors,
       size_t k_nn,
       size_t nprobe,
-      size_t upper_bound = 0) {
+      size_t upper_bound = 0,
+      Distance distance = Distance{}) {
     if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
       std::throw_with_nested(
           std::runtime_error("Vectors are already loaded. Cannot load twice. "
@@ -1078,7 +1083,7 @@ class ivf_flat_index {
         active_queries,
         k_nn,
         upper_bound,
-        num_threads_);
+        num_threads_, distance);
   }
 
   /***************************************************************************

@@ -71,9 +71,9 @@ namespace detail::flat {
  * @return A matrix of size k x #queries containing the top k results for each
  * query.
  */
-template <feature_vector_array DB, query_vector_array Q>
+template <feature_vector_array DB, query_vector_array Q, class Distance = sum_of_squares_distance>
 [[deprecated]] auto qv_query_heap_0(
-    const DB& db, const Q& q, int k_nn, unsigned int nthreads) {
+    const DB& db, const Q& q, int k_nn, unsigned int nthreads, Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
 
   using id_type = uint64_t;
@@ -95,7 +95,7 @@ template <feature_vector_array DB, query_vector_array Q>
         Vector<score_type> scores(size_db);
 
         for (size_t i = 0; i < size_db; ++i) {
-          scores[i] = l2_distance(q_vec, db[i]);
+          scores[i] = distance(q_vec, db[i]);
         }
         get_top_k_from_scores(scores, top_k[j], k_nn);
       });
@@ -124,20 +124,20 @@ template <feature_vector_array DB, query_vector_array Q>
  * @return A matrix of size k x #queries containing the top k results for each
  * query.
  */
-template <class T, class DB, class Q, class ID>
+template <class T, class DB, class Q, class ID, class Distance = sum_of_squares_distance>
 auto qv_query_heap(
-    T, const DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads);
+    T, const DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads, Distance distance = Distance{});
 
-template <class DB, class Q>
-auto qv_query_heap(const DB& db, const Q& q, int k_nn, unsigned nthreads) {
+template <class DB, class Q, class Distance = sum_of_squares_distance>
+auto qv_query_heap(const DB& db, const Q& q, int k_nn, unsigned nthreads, Distance distance = Distance{} ) {
   return qv_query_heap(
-      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads, distance);
 }
 
-template <class DB, class Q, class ID>
+template <class DB, class Q, class ID, class Distance = sum_of_squares_distance>
 auto qv_query_heap(
-    const DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads) {
-  return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads);
+    const DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads, Distance distance = Distance{} ) {
+  return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads, distance);
 }
 
 // @todo Add to out of core
@@ -250,14 +250,15 @@ auto qv_query_heap(
  * @return A matrix of size k x #queries containing the top k results for each
  * query.
  */
-template <class T, class DB, class Q, class ID>
+template <class T, class DB, class Q, class ID, class Distance = sum_of_squares_distance>
 auto qv_query_heap_tiled(
     T,
     DB& db,
     const Q& query,
     [[maybe_unused]] const ID& ids,
     int k_nn,
-    unsigned nthreads) {
+    unsigned nthreads,
+    Distance distance = Distance{}) {
   load(db);
 
   // debug_slice(db);
@@ -291,7 +292,7 @@ auto qv_query_heap_tiled(
 
     if (start != stop) {
       futs.emplace_back(std::async(
-          std::launch::async, [start, stop, &query, &db, &min_scores, &ids]() {
+          std::launch::async, [start, stop, &query, &db, &min_scores, &ids, &distance]() {
             (void)ids;  // Suppress warnings
             auto len = 2 * ((stop - start) / 2);
             auto end = start + len;
@@ -309,10 +310,10 @@ auto qv_query_heap_tiled(
                   std::min<size_t>(num_vectors(db), 2 * (num_vectors(db) / 2));
 
               for (size_t kp = 0; kp < kstop; kp += 2) {
-                auto score_00 = l2_distance(q_vec_0, db[kp + 0]);
-                auto score_01 = l2_distance(q_vec_0, db[kp + 1]);
-                auto score_10 = l2_distance(q_vec_1, db[kp + 0]);
-                auto score_11 = l2_distance(q_vec_1, db[kp + 1]);
+                auto score_00 = distance(q_vec_0, db[kp + 0]);
+                auto score_01 = distance(q_vec_0, db[kp + 1]);
+                auto score_10 = distance(q_vec_1, db[kp + 0]);
+                auto score_11 = distance(q_vec_1, db[kp + 1]);
 
                 if constexpr (std::is_same_v<T, with_ids>) {
                   min_scores[j0].insert(score_00, ids[kp + 0]);
@@ -333,8 +334,8 @@ auto qv_query_heap_tiled(
                * Cleanup the last iteration(s) of k
                */
               for (size_t kp = kstop; kp < num_vectors(db); ++kp) {
-                auto score_00 = l2_distance(q_vec_0, db[kp + 0]);
-                auto score_10 = l2_distance(q_vec_1, db[kp + 0]);
+                auto score_00 = distance(q_vec_0, db[kp + 0]);
+                auto score_10 = distance(q_vec_1, db[kp + 0]);
 
                 if constexpr (std::is_same_v<T, with_ids>) {
                   min_scores[j0].insert(score_00, ids[kp + 0]);
@@ -359,8 +360,8 @@ auto qv_query_heap_tiled(
               auto kstop =
                   std::min<size_t>(num_vectors(db), 2 * (num_vectors(db) / 2));
               for (size_t kp = 0; kp < kstop; kp += 2) {
-                auto score_00 = l2_distance(q_vec_0, db[kp + 0]);
-                auto score_01 = l2_distance(q_vec_0, db[kp + 1]);
+                auto score_00 = distance(q_vec_0, db[kp + 0]);
+                auto score_01 = distance(q_vec_0, db[kp + 1]);
 
                 if constexpr (std::is_same_v<T, with_ids>) {
                   min_scores[j0].insert(score_00, ids[kp + 0]);
@@ -374,7 +375,7 @@ auto qv_query_heap_tiled(
                 }
               }
               for (size_t kp = kstop; kp < num_vectors(db); ++kp) {
-                auto score_00 = l2_distance(q_vec_0, db[kp + 0]);
+                auto score_00 = distance(q_vec_0, db[kp + 0]);
                 if constexpr (std::is_same_v<T, with_ids>) {
                   min_scores[j0].insert(score_00, ids[kp + 0]);
                 } else if constexpr (std::is_same_v<T, without_ids>) {
@@ -398,20 +399,21 @@ auto qv_query_heap_tiled(
   return top_k;
 }
 
-template <feature_vector_array DB, feature_vector_array Q>
-auto qv_query_heap_tiled(DB& db, const Q& q, int k_nn, unsigned nthreads) {
+template <feature_vector_array DB, feature_vector_array Q, class Distance = sum_of_squares_distance>
+auto qv_query_heap_tiled(DB& db, const Q& q, int k_nn, unsigned nthreads, Distance distance = Distance{}) {
   return qv_query_heap_tiled(
-      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads, distance);
 }
 
-template <feature_vector_array DB, feature_vector_array Q, class Index>
+template <feature_vector_array DB, feature_vector_array Q, class Index, class Distance = sum_of_squares_distance>
 auto qv_query_heap_tiled(
     DB& db,
     const Q& q,
     const std::vector<Index>& ids,
     int k_nn,
-    unsigned nthreads) {
-  return qv_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads);
+    unsigned nthreads,
+    Distance distance = Distance{}) {
+  return qv_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads, distance);
 }
 
 /**
