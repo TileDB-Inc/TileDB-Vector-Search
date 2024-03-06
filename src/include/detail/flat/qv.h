@@ -95,7 +95,7 @@ template <feature_vector_array DB, query_vector_array Q>
         Vector<score_type> scores(size_db);
 
         for (size_t i = 0; i < size_db; ++i) {
-          scores[i] = L2(q_vec, db[i]);
+          scores[i] = l2_distance(q_vec, db[i]);
         }
         get_top_k_from_scores(scores, top_k[j], k_nn);
       });
@@ -309,10 +309,10 @@ auto qv_query_heap_tiled(
                   std::min<size_t>(num_vectors(db), 2 * (num_vectors(db) / 2));
 
               for (size_t kp = 0; kp < kstop; kp += 2) {
-                auto score_00 = L2(q_vec_0, db[kp + 0]);
-                auto score_01 = L2(q_vec_0, db[kp + 1]);
-                auto score_10 = L2(q_vec_1, db[kp + 0]);
-                auto score_11 = L2(q_vec_1, db[kp + 1]);
+                auto score_00 = l2_distance(q_vec_0, db[kp + 0]);
+                auto score_01 = l2_distance(q_vec_0, db[kp + 1]);
+                auto score_10 = l2_distance(q_vec_1, db[kp + 0]);
+                auto score_11 = l2_distance(q_vec_1, db[kp + 1]);
 
                 if constexpr (std::is_same_v<T, with_ids>) {
                   min_scores[j0].insert(score_00, ids[kp + 0]);
@@ -333,8 +333,8 @@ auto qv_query_heap_tiled(
                * Cleanup the last iteration(s) of k
                */
               for (size_t kp = kstop; kp < num_vectors(db); ++kp) {
-                auto score_00 = L2(q_vec_0, db[kp + 0]);
-                auto score_10 = L2(q_vec_1, db[kp + 0]);
+                auto score_00 = l2_distance(q_vec_0, db[kp + 0]);
+                auto score_10 = l2_distance(q_vec_1, db[kp + 0]);
 
                 if constexpr (std::is_same_v<T, with_ids>) {
                   min_scores[j0].insert(score_00, ids[kp + 0]);
@@ -359,8 +359,8 @@ auto qv_query_heap_tiled(
               auto kstop =
                   std::min<size_t>(num_vectors(db), 2 * (num_vectors(db) / 2));
               for (size_t kp = 0; kp < kstop; kp += 2) {
-                auto score_00 = L2(q_vec_0, db[kp + 0]);
-                auto score_01 = L2(q_vec_0, db[kp + 1]);
+                auto score_00 = l2_distance(q_vec_0, db[kp + 0]);
+                auto score_01 = l2_distance(q_vec_0, db[kp + 1]);
 
                 if constexpr (std::is_same_v<T, with_ids>) {
                   min_scores[j0].insert(score_00, ids[kp + 0]);
@@ -374,7 +374,7 @@ auto qv_query_heap_tiled(
                 }
               }
               for (size_t kp = kstop; kp < num_vectors(db); ++kp) {
-                auto score_00 = L2(q_vec_0, db[kp + 0]);
+                auto score_00 = l2_distance(q_vec_0, db[kp + 0]);
                 if constexpr (std::is_same_v<T, with_ids>) {
                   min_scores[j0].insert(score_00, ids[kp + 0]);
                 } else if constexpr (std::is_same_v<T, without_ids>) {

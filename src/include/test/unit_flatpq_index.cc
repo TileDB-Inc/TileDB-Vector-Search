@@ -529,16 +529,16 @@ TEMPLATE_TEST_CASE(
       auto a_dpqx_evx2 = pq_idx2.sub_distance_asymmetric(
           pq_idx2.decode(pqx), pq_idx2.encode(vx));
       auto s_evx_pqx2 = pq_idx2.sub_distance_symmetric(pq_idx2.encode(vx), pqx);
-      auto ss_vx_dpqx2 = sum_of_squares(vx, pq_idx2.decode(pqx));
+      auto ss_vx_dpqx2 = l2_distance(vx, pq_idx2.decode(pqx));
       auto s_evx_edpqx2 = pq_idx2.sub_distance_symmetric(
           pq_idx2.encode(vx), pq_idx2.encode(pq_idx2.decode(pqx)));
       auto a_evx_edpqx2 = pq_idx2.sub_distance_asymmetric(
           pq_idx2.decode(pq_idx2.encode(vx)), pqx);
-      auto ss_devx_dpqx2 = sum_of_squares(
-          pq_idx2.decode(pq_idx2.encode(vx)), pq_idx2.decode(pqx));
-      auto ss_devx_vx2 = sum_of_squares(pq_idx2.decode(pq_idx2.encode(vx)), vx);
+      auto ss_devx_dpqx2 =
+          l2_distance(pq_idx2.decode(pq_idx2.encode(vx)), pq_idx2.decode(pqx));
+      auto ss_devx_vx2 = l2_distance(pq_idx2.decode(pq_idx2.encode(vx)), vx);
 
-      auto scale = sum_of_squares(vx);
+      auto scale = l2_distance(vx);
       if (a_vx_pqx2 > 1) {
         scale *= a_vx_pqx2;
       }
@@ -562,16 +562,16 @@ TEMPLATE_TEST_CASE(
       auto a_dpqx_evx4 = pq_idx4.sub_distance_asymmetric(
           pq_idx4.decode(pqx), pq_idx4.encode(vx));
       auto s_evx_pqx4 = pq_idx4.sub_distance_symmetric(pq_idx4.encode(vx), pqx);
-      auto ss_vx_dpqx4 = sum_of_squares(vx, pq_idx4.decode(pqx));
+      auto ss_vx_dpqx4 = l2_distance(vx, pq_idx4.decode(pqx));
       auto s_evx_edpqx4 = pq_idx4.sub_distance_symmetric(
           pq_idx4.encode(vx), pq_idx4.encode(pq_idx4.decode(pqx)));
       auto a_evx_edpqx4 = pq_idx4.sub_distance_symmetric(
           pq_idx4.decode(pq_idx4.encode(vx)), pqx);
-      auto ss_devx_dpqx4 = sum_of_squares(
+      auto ss_devx_dpqx4 = l2_distance(
           pq_idx4.decode(pq_idx4.encode(vx)), pq_idx4.decode(pqx));
-      auto ss_devx_vx4 = sum_of_squares(pq_idx4.decode(pq_idx4.encode(vx)), vx);
+      auto ss_devx_vx4 = l2_distance(pq_idx4.decode(pq_idx4.encode(vx)), vx);
 
-      auto scale = sum_of_squares(vx);
+      auto scale = l2_distance(vx);
       if (a_vx_pqx4 > 1) {
         scale *= a_vx_pqx4;
       }
@@ -616,7 +616,7 @@ TEMPLATE_TEST_CASE(
     auto&& [top_k_pq_scores, top_k_pq] = pq_idx2.asymmetric_query(query, 4);
 
     auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
-        hypercube2, query, 4, 8, sum_of_squares_distance{});
+        hypercube2, query, 4, 8, l2_distance_distance{});
 
     for (size_t i = 0; i < num_vectors(top_k); ++i) {
       std::sort(begin(top_k[i]), end(top_k[i]));
@@ -654,7 +654,7 @@ TEMPLATE_TEST_CASE(
     auto&& [top_k_pq_scores, top_k_pq] = pq_idx4.query(query, 8);
 
     auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
-        hypercube4, query, 8, 8, sum_of_squares_distance{});
+        hypercube4, query, 8, 8, l2_distance_distance{});
 
     for (size_t i = 0; i < num_vectors(top_k); ++i) {
       std::sort(begin(top_k[i]), end(top_k[i]));
@@ -707,7 +707,7 @@ TEST_CASE("flatpq_index: query siftsmall", "[flatpq_index]") {
   groundtruth_set.load();
 
   auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
-      training_set, query_set, k_nn, 1, sum_of_squares_distance{});
+      training_set, query_set, k_nn, 1, l2_distance);
 
   auto pq_idx = flatpq_index<
       siftsmall_feature_type,
@@ -772,7 +772,7 @@ TEST_CASE("flatpq_index: query 1M", "[flatpq_index]") {
   groundtruth_set.load();
 
   auto&& [top_k_scores, top_k] = detail::flat::qv_query_heap(
-      training_set, query_set, k_nn, 8, sum_of_squares_distance{});
+      training_set, query_set, k_nn, 8, l2_distance);
 
   auto pq_idx = flatpq_index<
       bigann1M_feature_type,
