@@ -153,7 +153,8 @@ TEMPLATE_TEST_CASE("tdb_io: write matrix", "[tdb_io]", float, uint8_t) {
 
 TEST_CASE("tdb_io: write empty matrix", "[tdb_io]") {
   tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
   int offset = 13;
 
   size_t dimension = 128;
