@@ -501,7 +501,7 @@ void debug_slice(
     const std::string& msg = "",
     size_t rows = 6,
     size_t cols = 18) {
-  auto max_size = 200;
+  auto max_size = 10;
   auto rowsEnd = std::min(dimension(A), static_cast<size_t>(max_size));
   auto colsEnd = std::min(num_vectors(A), static_cast<size_t>(max_size));
 
