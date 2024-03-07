@@ -152,8 +152,9 @@ class IndexIVFFlat {
 
     tiledb::Config cfg;
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
-    
-    // Get the storage_version in case the metadata is not present on read_group and we need to read the individual arrays.
+
+    // Get the storage_version in case the metadata is not present on read_group
+    // and we need to read the individual arrays.
     std::string storage_version = current_storage_version;
     tiledb_datatype_t v_type;
     if (read_group.has_metadata("storage_version", &v_type)) {
@@ -180,7 +181,8 @@ class IndexIVFFlat {
               "Unsupported datatype for metadata: " + name);
         }
       } else {
-        // If it is not present then fallback to checking the type on the array directly.
+        // If it is not present then fallback to checking the type on the array
+        // directly.
         auto uri =
             group_uri_path / array_key_to_array_name_from_map(
                                  storage_formats[storage_version], array_key);

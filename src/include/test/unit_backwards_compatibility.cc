@@ -115,7 +115,8 @@ TEST_CASE(
         // TODO(paris): Fix flat_l2_index and re-enable. Right now it just tries
         // to load the URI as a tdbMatrix.
       } else if (index_uri.find("vamana") != std::string::npos) {
-        // TODO(paris): Add once we save a vamana index in backwards compatibility data.
+        // TODO(paris): Add once we save a vamana index in backwards
+        // compatibility data.
       } else {
         REQUIRE(false);
       }
