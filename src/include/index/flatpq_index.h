@@ -373,11 +373,11 @@ class flatpq_index {
    * @param training_set Training set
    */
   auto train(const ColMajorMatrix<feature_type>& training_set) {
-    centroids_ = 
+    centroids_ =
         ColMajorMatrix<centroid_feature_type>(dimension_, num_clusters_);
     distance_tables_ = std::vector<ColMajorMatrix<score_type>>(num_subspaces_);
     for (size_t i = 0; i < num_subspaces_; ++i) {
-      distance_tables_[i] = 
+      distance_tables_[i] =
           ColMajorMatrix<centroid_feature_type>(num_clusters_, num_clusters_);
     }
 
@@ -417,8 +417,8 @@ class flatpq_index {
   }
 
   auto add(const ColMajorMatrix<feature_type>& feature_vectors) {
-    pq_vectors_ = ColMajorMatrix<code_type>(
-        num_subspaces_, num_vectors(feature_vectors));
+    pq_vectors_ =
+        ColMajorMatrix<code_type>(num_subspaces_, num_vectors(feature_vectors));
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimension_ * subspace;
