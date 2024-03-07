@@ -392,7 +392,8 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
       const std::string& uri,
       size_t upper_bound = 0,
       uint64_t timestamp = 0)
-      : tdbPreLoadMatrix(ctx, uri, {}, {}, upper_bound, timestamp) {
+      : tdbPreLoadMatrix(
+            ctx, uri, std::nullopt, std::nullopt, upper_bound, timestamp) {
   }
 
   tdbPreLoadMatrix(
@@ -413,31 +414,6 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
             timestamp) {
     Base::load();
   }
-
-  // tdbPreLoadMatrix(
-  //     const tiledb::Context& ctx,
-  //     const std::string& uri,
-  //     size_t upper_bound,
-  //     const tiledb::TemporalPolicy& temporal_policy)
-  //     : tdbPreLoadMatrix(ctx, uri, 0, 0, upper_bound, temporal_policy) {
-  // }
-
-  // tdbPreLoadMatrix(
-  //     const tiledb::Context& ctx,
-  //     const std::string& uri,
-  //     size_t num_array_rows,
-  //     size_t num_array_cols,
-  //     size_t upper_bound,
-  //     const tiledb::TemporalPolicy& temporal_policy)
-  //     : Base(
-  //           ctx,
-  //           uri,
-  //           num_array_rows,
-  //           num_array_cols,
-  //           upper_bound,
-  //           temporal_policy) {
-  //   Base::load();
-  // }
 };
 
 /**

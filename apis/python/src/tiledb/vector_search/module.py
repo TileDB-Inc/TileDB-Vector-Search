@@ -35,38 +35,22 @@ def load_as_matrix(
 
     a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
-    if size == None:
-        # Read all rows and all cols. Set no upper_bound.
-        if dtype == np.float32:
-            m = tdbColMajorMatrix_f32(ctx, path, 0, None, 0, None, 0, timestamp)
-        elif dtype == np.float64:
-            m = tdbColMajorMatrix_f64(ctx, path, 0, None, 0, None, 0, timestamp)
-        elif dtype == np.int32:
-            m = tdbColMajorMatrix_i32(ctx, path, 0, None, 0, None, 0, timestamp)
-        elif dtype == np.int32:
-            m = tdbColMajorMatrix_i64(ctx, path, 0, None, 0, None, 0, timestamp)
-        elif dtype == np.uint8:
-            m = tdbColMajorMatrix_u8(ctx, path, 0, None, 0, None, 0, timestamp)
-        # elif dtype == np.uint64:
-        #     return tdbColMajorMatrix_u64(ctx, path, size, timestamp)
-        else:
-            raise ValueError("Unsupported Matrix dtype: {}".format(a.attr(0).dtype))
+    # Read all rows from column 0 -> `size`. Set no upper_bound. Note that if `size` is None then 
+    # we'll read to the column domain length.
+    if dtype == np.float32:
+        m = tdbColMajorMatrix_f32(ctx, path, 0, None, 0, size, 0, timestamp)
+    elif dtype == np.float64:
+        m = tdbColMajorMatrix_f64(ctx, path, 0, None, 0, size, 0, timestamp)
+    elif dtype == np.int32:
+        m = tdbColMajorMatrix_i32(ctx, path, 0, None, 0, size, 0, timestamp)
+    elif dtype == np.int32:
+        m = tdbColMajorMatrix_i64(ctx, path, 0, None, 0, size, 0, timestamp)
+    elif dtype == np.uint8:
+        m = tdbColMajorMatrix_u8(ctx, path, 0, None, 0, size, 0, timestamp)
+    # elif dtype == np.uint64:
+    #     return tdbColMajorMatrix_u64(ctx, path, size, timestamp)
     else:
-        # Read all rows from column 0 -> `size`. Set no upper_bound.
-        if dtype == np.float32:
-            m = tdbColMajorMatrix_f32(ctx, path, 0, None, 0, size, 0, timestamp)
-        elif dtype == np.float64:
-            m = tdbColMajorMatrix_f64(ctx, path, 0, None, 0, size, 0, timestamp)
-        elif dtype == np.int32:
-            m = tdbColMajorMatrix_i32(ctx, path, 0, None, 0, size, 0, timestamp)
-        elif dtype == np.int32:
-            m = tdbColMajorMatrix_i64(ctx, path, 0, None, 0, size, 0, timestamp)
-        elif dtype == np.uint8:
-            m = tdbColMajorMatrix_u8(ctx, path, 0, None, 0, size, 0, timestamp)
-        # elif dtype == np.uint64:
-        #     return tdbColMajorMatrix_u64(ctx, path, size, timestamp)
-        else:
-            raise ValueError("Unsupported Matrix dtype: {}".format(a.attr(0).dtype))
+        raise ValueError("Unsupported Matrix dtype: {}".format(a.attr(0).dtype))
     m.load()
     return m
 
