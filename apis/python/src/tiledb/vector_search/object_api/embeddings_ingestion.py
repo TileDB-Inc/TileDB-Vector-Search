@@ -443,7 +443,7 @@ def ingest_embeddings_with_driver(
     ):
         submit = d.submit
     driver_access_credentials_name_kwargs = {}
-    if embeddings_generation_mode == Mode.BATCH:
+    if embeddings_generation_driver_mode == Mode.BATCH:
         driver_access_credentials_name_kwargs[
             "access_credentials_name"
         ] = worker_access_credentials_name
