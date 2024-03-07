@@ -138,7 +138,7 @@ auto read_diskann_mem_index_with_scores(
     for (size_t i = 0; i < num_neighbors; ++i) {
       uint32_t id;
       binary_file.read((char*)&id, 4);
-      g.add_edge(node, id, sum_of_squares(x[node], x[id]));
+      g.add_edge(node, id, l2_distance(x[node], x[id]));
     }
     // @todo ??? Is this right ???
     binary_file.seekg(max_degree - num_neighbors, std::ios_base::cur);
