@@ -152,6 +152,8 @@ class IndexIVFFlat {
 
     tiledb::Config cfg;
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
+    
+    // Get the storage_version in case the metadata is not present on read_group and we need to read the individual arrays.
     std::string storage_version = current_storage_version;
     tiledb_datatype_t v_type;
     if (read_group.has_metadata("storage_version", &v_type)) {
@@ -165,6 +167,7 @@ class IndexIVFFlat {
 
     std::filesystem::path group_uri_path{group_uri};
     for (auto& [name, value, datatype, array_key] : metadata) {
+      // We first try to read metadata from the group.
       if (read_group.has_metadata(name, &datatype)) {
         uint32_t count;
         void* addr;
@@ -177,35 +180,13 @@ class IndexIVFFlat {
               "Unsupported datatype for metadata: " + name);
         }
       } else {
+        // If it is not present then fallback to checking the type on the array directly.
         auto uri =
             group_uri_path / array_key_to_array_name_from_map(
                                  storage_formats[storage_version], array_key);
-        std::cout << uri << std::endl;
         tiledb::ArraySchema schema(ctx, uri);
         *reinterpret_cast<uint32_t*>(value) = schema.attribute(0).type();
       }
-      // if (name == "feature_datatype") {
-      //   auto uri = group_uri + "/shuffled_vectors";
-      //   //ivf_flat_index_group<void>::ids_uri(group_uri); std::cout <<
-      //   "feature_datatype uri: " << uri << std::endl; tiledb::ArraySchema
-      //   schema(ctx, uri); feature_datatype_ = schema.attribute(0).type();
-      //   std::cout << "feature_datatype_" << feature_datatype_ << " " <<
-      //   datatype_to_string(feature_datatype_) << std::endl;
-      // }
-      // else if (name == "id_datatype") {
-      //   auto uri = group_uri + "/shuffled_vector_ids"; //
-      //   ivf_flat_index_group<void>::ids_uri(group_uri); std::cout <<
-      //   "id_datatype uri: " << uri << std::endl; tiledb::ArraySchema
-      //   schema(ctx, uri);
-      //     id_datatype_ = schema.attribute(0).type();
-      // }
-      // else if (name == "px_datatype") {
-      //     auto uri = group_uri + "/partition_indexes"; //
-      //     ivf_flat_index_group<void>::ids_uri(group_uri); std::cout <<
-      //     "id_datatype uri: " << uri << std::endl; tiledb::ArraySchema
-      //     schema(ctx, uri); px_datatype_ = schema.attribute(0).type();
-      // }
-      // throw std::runtime_error("Missing metadata: " + name);
     }
 
     /**

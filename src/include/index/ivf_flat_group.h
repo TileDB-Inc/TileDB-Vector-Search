@@ -131,9 +131,15 @@ class ivf_flat_index_group
   [[nodiscard]] auto parts_uri() const {
     return this->array_key_to_uri("parts_array_name");
   }
+  // [[nodiscard]] static auto parts_uri(const std::string &uri) {
+  //   return uri + "parts_array_name";
+  // }
   [[nodiscard]] auto ids_uri() const {
     return this->array_key_to_uri("ids_array_name");
   }
+  // [[nodiscard]] static auto ids_uri(const std::string &uri) {
+  //   return uri + "ids_array_name";
+  // }
   [[nodiscard]] auto indices_uri() const {
     return this->array_key_to_uri("index_array_name");
   }
