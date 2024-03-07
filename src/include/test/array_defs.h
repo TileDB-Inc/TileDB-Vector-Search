@@ -61,6 +61,8 @@ static std::filesystem::path test_data_root{
 static std::filesystem::path test_array_root{test_data_root / "arrays"};
 static std::filesystem::path test_file_root{test_data_root / "files"};
 static std::filesystem::path nano_root{test_data_root / "nano"};
+static std::filesystem::path backwards_compatibility_root{
+    cmake_source_dir.parent_path() / "backwards-compatibility-data"};
 
 /**
  * @brief  Array URIs for arrays used for unit testing of IVF indexes.
@@ -287,6 +289,9 @@ static std::filesystem::path siftsmall_query_file{
     siftsmall_files_root / "queries.fvecs"};
 static std::filesystem::path siftsmall_groundtruth_file{
     siftsmall_files_root / "groundtruth.ivecs"};
+// Used for backwards compatability:
+static std::filesystem::path siftmicro_inputs_file{
+    backwards_compatibility_root / "siftmicro_base.fvecs"};
 
 /**
  * @brief Data files used in unit tests in the DiskANN git repo.

@@ -53,6 +53,17 @@
 #include "mdspan/mdspan.hpp"
 #include "tdb_defs.h"
 
+/** Lookup an array name given an array key */
+auto array_key_to_array_name_from_map(
+    const std::unordered_map<std::string, std::string>& map,
+    const std::string& array_key) {
+  if (map.find(array_key) == map.end()) {
+    throw std::runtime_error("Invalid array key in map: " + array_key);
+  }
+  auto tmp = *map.find(array_key);
+  return tmp.second;
+};
+
 template <class Index>
 class base_index_metadata;
 
@@ -119,8 +130,7 @@ class base_index_group {
     if (!is_valid_key_name(array_key)) {
       throw std::runtime_error("Invalid array key: " + array_key);
     }
-    auto tmp = *array_name_map_.find(array_key);
-    return tmp.second;
+    return array_key_to_array_name_from_map(array_name_map_, array_key);
   };
 
   /** Create the set of valid key names and array names */

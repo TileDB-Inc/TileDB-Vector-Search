@@ -501,19 +501,29 @@ void debug_slice(
     const std::string& msg = "",
     size_t rows = 6,
     size_t cols = 18) {
-  if (matrix_printf || true) {
-    rows = std::min(rows, dimension(A));
-    cols = std::min(cols, num_vectors(A));
+  auto max_size = 200;
+  auto rowsEnd = std::min(dimension(A), static_cast<size_t>(max_size));
+  auto colsEnd = std::min(num_vectors(A), static_cast<size_t>(max_size));
 
-    std::cout << "# " << msg << std::endl;
-    for (size_t i = 0; i < rows; ++i) {
-      std::cout << "# ";
-      for (size_t j = 0; j < cols; ++j) {
-        std::cout << (float)A(i, j) << "\t";
-      }
-      std::cout << std::endl;
+  std::cout << "# " << msg << std::endl;
+  for (size_t i = 0; i < rowsEnd; ++i) {
+    std::cout << "# ";
+    for (size_t j = 0; j < colsEnd; ++j) {
+      std::cout << (float)A(i, j) << " ";
     }
+    if (A.num_cols() > max_size) {
+      std::cout << "...";
+    }
+    std::cout << std::endl;
   }
+  if (A.num_rows() > max_size) {
+    std::cout << "# ..." << std::endl;
+  }
+}
+
+template <feature_vector_array M>
+void debug(const M& A, const std::string& msg = "") {
+  debug_slice(A, msg, dimension(A), num_vectors(A));
 }
 
 template <class Matrix1, class Matrix2>
