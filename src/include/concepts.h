@@ -158,6 +158,12 @@ concept feature_vector_array = requires(D d, size_t n) {
   { d[n] } -> feature_vector;  // Maybe redundant
 };
 
+template <class D>
+concept feature_vector_array_with_ids =
+    feature_vector_array<D> && requires(D d) {
+      { d.ids() };
+    };
+
 /**
  * @brief A concept for contiguous vector ranges.  The member function data()
  * returns a pointer to the underlying contiguous one-dimensional storage.

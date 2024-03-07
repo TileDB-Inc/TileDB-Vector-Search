@@ -145,6 +145,7 @@ def test_object_index_ivf_flat(tmp_path):
     )
 
     index.update_index()
+    index = object_index.ObjectIndex(uri=index_uri)
 
     index = object_index.ObjectIndex(uri=index_uri, load_metadata_in_memory=False)
     distances, objects, metadata = index.query(
@@ -200,6 +201,7 @@ def test_object_index_flat(tmp_path):
     )
 
     index.update_index()
+    index = object_index.ObjectIndex(uri=index_uri)
 
     index = object_index.ObjectIndex(uri=index_uri)
     distances, objects, metadata = index.query(
