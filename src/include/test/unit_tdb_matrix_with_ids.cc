@@ -272,7 +272,7 @@ TEST_CASE("tdb_matrix_with_ids: empty matrix", "[tdb_matrix_with_ids]") {
 
   SECTION("empty") {
     auto X = tdbColMajorMatrixWithIds<float>(
-        ctx, tmp_matrix_uri, tmp_ids_uri, 0, 0, 0, 0, 0, 10000);
+        ctx, tmp_matrix_uri, tmp_ids_uri, 0, 0, 0, 0, 10000, 0);
     X.load();
     CHECK(X.num_cols() == 0);
     CHECK(num_vectors(X) == 0);

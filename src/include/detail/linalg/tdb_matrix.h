@@ -225,11 +225,9 @@ class tdbBlockedMatrix : public MatrixBase {
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + " " + uri};
 
-    // Check if first_row and last_row have values before comparison
     if (last_row && *last_row < first_row_) {
       throw std::runtime_error("last_row < first_row");
     }
-    // Check if first_col and last_col have values before comparison
     if (last_col && *last_col < first_col_) {
       throw std::runtime_error("last_col < first_col");
     }
