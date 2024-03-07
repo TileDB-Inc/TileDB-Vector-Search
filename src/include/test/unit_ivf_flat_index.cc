@@ -248,7 +248,8 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   size_t nthreads = 1;
 
   tiledb::Context ctx;
-  std::string ivf_index_uri = "/tmp/tmp_ivf_index";
+  std::string ivf_index_uri =
+      (std::filesystem::temp_directory_path() / "tmp_ivf_index").string();
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
 
@@ -557,7 +558,8 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   auto init =
       siftsmall_test_init<ivf_flat_index<feature_type, id_type, px_type>>(
           ctx, nlist);
-  std::string tmp_ivf_index_uri = "/tmp/tmp_ivf_index";
+  std::string tmp_ivf_index_uri =
+      (std::filesystem::temp_directory_path() / "tmp_ivf_index").string();
   init.idx.write_index(ctx, tmp_ivf_index_uri, true);
 
 // Just some sanity checking and for interactive debugging

@@ -161,7 +161,8 @@ TEST_CASE(
     "api_vamana_index: api_vamana_index write and read",
     "[api_vamana_index][ci-skip]") {
   auto ctx = tiledb::Context{};
-  std::string api_vamana_index_uri = "/tmp/api_vamana_index";
+  std::string api_vamana_index_uri =
+      (std::filesystem::temp_directory_path() / "api_vamana_index").string();
 
   auto a = IndexVamana(std::make_optional<IndexOptions>(
       {{"feature_type", "float32"},
@@ -210,7 +211,8 @@ TEST_CASE(
   size_t k_nn = 10;
   size_t nprobe = GENERATE(8, 32);
 
-  std::string api_vamana_index_uri = "/tmp/api_vamana_index";
+  std::string api_vamana_index_uri =
+      (std::filesystem::temp_directory_path() / "api_vamana_index").string();
 
   auto a = IndexVamana(std::make_optional<IndexOptions>(
       {{"feature_type", "float32"},

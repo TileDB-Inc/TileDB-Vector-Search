@@ -160,7 +160,8 @@ TEST_CASE(
     "api_ivf_flat_index: api_ivf_flat_index write and read",
     "[api_ivf_flat_index][ci-skip]") {
   auto ctx = tiledb::Context{};
-  std::string api_ivf_flat_index_uri = "/tmp/api_ivf_flat_index";
+  std::string api_ivf_flat_index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_flat_index").string();
 
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
       {{"feature_type", "float32"},
@@ -225,7 +226,8 @@ TEST_CASE(
   size_t nprobe = GENERATE(8, 32);
   size_t max_iter = GENERATE(4, 8);
 
-  std::string api_ivf_flat_index_uri = "/tmp/api_ivf_flat_index";
+  std::string api_ivf_flat_index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_flat_index").string();
 
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
       {{"feature_type", "float32"},

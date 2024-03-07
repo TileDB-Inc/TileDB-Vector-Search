@@ -33,6 +33,14 @@
 #include "config.h"
 #include "utils/utils.h"
 
+namespace {
+
+std::string operator/(const std::string& lhs, const std::string& rhs) {
+  return (std::filesystem::path{lhs} / std::filesystem::path{rhs}).string();
+}
+
+}  // namespace
+
 TEST_CASE("utils: test", "[utils]") {
   CHECK(is_http_address("http://www.tiledb.com"));
   CHECK(is_http_address("http://www.tiledb.com/index.html"));
@@ -48,7 +56,7 @@ TEST_CASE("utils: test", "[utils]") {
   CHECK(!is_s3_container("file://www.tiledb.com"));
   CHECK(!is_s3_container("www.tiledb.com"));
 
-  static std::filesystem::path cmake_source_dir{CMAKE_SOURCE_DIR};
+  static std::string cmake_source_dir{CMAKE_SOURCE_DIR};
   CHECK(is_local_directory(cmake_source_dir));
   CHECK(is_local_file(cmake_source_dir / "README.md"));
   CHECK(is_local_file(cmake_source_dir / "src" / "README.md"));
