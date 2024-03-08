@@ -57,6 +57,7 @@
 #include "cpos.h"
 #include "index/index_defs.h"
 #include "index/ivf_flat_group.h"
+#include "index/kmeans.h"
 #include "linalg.h"
 
 #include "detail/flat/qv.h"
@@ -66,8 +67,6 @@
 
 #include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
-
-enum class kmeans_init { none, kmeanspp, random };
 
 /**
  * Class representing an inverted file (IVF) index for flat (non-compressed)
@@ -104,8 +103,6 @@ class ivf_flat_index {
       indices_type>;
 
   using centroids_storage_type = ColMajorMatrix<centroid_feature_type>;
-
-  std::mt19937 gen_;
 
   constexpr static const IndexKind index_kind_ = IndexKind::IVFFlat;
 
@@ -239,323 +236,22 @@ class ivf_flat_index {
   }
 
   /****************************************************************************
-   * kmeans algorithm for clustering
-   * @todo Move out of this class (and implement as free functions)
-   ****************************************************************************/
-  /**
-   * @brief Use the kmeans++ algorithm to choose initial centroids.
-   * The current implementation follows the algorithm described in
-   * the literature (Arthur and Vassilvitskii, 2007):
-   *
-   *  1a. Choose an initial centroid uniformly at random from the training set
-   *  1b. Choose the next centroid from the training set
-   *      2b. For each data point x not chosen yet, compute D(x), the distance
-   *          between x and the nearest centroid that has already been chosen.
-   *      3b. Choose one new data point at random as a new centroid, using a
-   *          weighted probability distribution where a point x is chosen
-   *          with probability proportional to D(x)2.
-   *  3. Repeat Steps 2b and 3b until k centers have been chosen.
-   *
-   *  The initial centroids are stored in the member variable `centroids_`.
-   *  It is expected that the centroids will be further refined by the
-   *  kmeans algorithm.
-   *
-   * @param training_set Array of vectors to cluster.
-   *
-   * @todo Implement greedy kmeans++: choose several new centers during each
-   * iteration, and then greedily chose the one that most decreases φ
-   * @todo Finish implementation using triangle inequality.
-   */
-  template <feature_vector_array V>
-  void kmeans_pp(const V& training_set) {
-    scoped_timer _{__FUNCTION__};
-
-    std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
-    auto choice = dis(gen_);
-
-    std::copy(
-        begin(training_set[choice]),
-        end(training_set[choice]),
-        begin(centroids_[0]));
-
-    // Initialize distances, leaving some room to grow
-    std::vector<score_type> distances(
-        training_set.num_cols(), std::numeric_limits<score_type>::max() / 8192);
-
-#ifdef _TRIANGLE_INEQUALITY
-    std::vector<centroid_feature_type> centroid_centroid(num_partitions_, 0.0);
-    std::vector<index_type> nearest_centroid(training_set.num_cols(), 0);
-#endif
-
-    // Calculate the remaining centroids using K-means++ algorithm
-    for (size_t i = 1; i < num_partitions_; ++i) {
-      stdx::execution::indexed_parallel_policy par{num_threads_};
-      stdx::range_for_each(
-          std::move(par),
-          training_set,
-          [this, &distances, i](auto&& vec, size_t n, size_t j) {
-
-      // Note: centroid i-1 is the newest centroid
-
-#ifdef _TRIANGLE_INEQUALITY
-            // using triangle inequality, only need to calculate distance to the
-            // newest centroid if distance between vec and its current nearest
-            // centroid is greater than half the distance between the newest
-            // centroid and vectors nearest centroid (1/4 distance squared)
-
-            float min_distance = distances[j];
-            if (centroid_centroid[nearest_centroid[j]] < 4 * min_distance) {
-              float distance = sum_of_squares(vec, centroids_[i - 1]);
-              if (distance < min_distance) {
-                min_distance = distance;
-                nearest_centroid[j] = i - 1;
-                distances[j] = min_distance;
-              }
-            }
-#else
-            auto distance = l2_distance(vec, centroids_[i - 1]);
-            auto min_distance = std::min(distances[j], distance);
-            distances[j] = min_distance;
-#endif
-          });
-
-      // Select the next centroid based on the probability proportional to
-      // distance squared -- note we did not normalize the vectors ourselves
-      // since `discrete_distribution` implicitly does that for us
-      std::discrete_distribution<size_t> probabilityDistribution(
-          distances.begin(), distances.end());
-      size_t nextIndex = probabilityDistribution(gen_);
-      std::copy(
-          begin(training_set[nextIndex]),
-          end(training_set[nextIndex]),
-          begin(centroids_[i]));
-      distances[nextIndex] = 0.0;
-
-#ifdef _TRIANGLE_INEQUALITY
-      // Update centroid-centroid distances -- only need distances from each
-      // existing to the new one
-      centroid_centroid[i] = sum_of_squares(centroids_[i], centroids_[i - 1]);
-      for (size_t j = 0; j < i; ++j) {
-        centroid_centroid[j] = sum_of_squares(centroids_[i], centroids_[j]);
-      }
-#endif
-    }
-  }
-
-  /**
-   * @brief Initialize centroids by choosing them at random from training set.
-   * @param training_set Array of vectors to cluster.
-   */
-  template <feature_vector_array V>
-  void kmeans_random_init(const V& training_set) {
-    scoped_timer _{__FUNCTION__};
-
-    std::vector<indices_type> indices(num_partitions_);
-    std::vector<bool> visited(training_set.num_cols(), false);
-    std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
-    for (size_t i = 0; i < num_partitions_; ++i) {
-      size_t index;
-      do {
-        index = dis(gen_);
-      } while (visited[index]);
-      indices[i] = index;
-      visited[index] = true;
-    }
-    // std::iota(begin(indices), end(indices), 0);
-    // std::shuffle(begin(indices), end(indices), gen_);
-
-    for (size_t i = 0; i < num_partitions_; ++i) {
-      std::copy(
-          begin(training_set[indices[i]]),
-          end(training_set[indices[i]]),
-          begin(centroids_[i]));
-    }
-  }
-
-  /**
-   * @brief Use kmeans algorithm to cluster vectors into centroids.  Beginning
-   * with an initial set of centroids, the algorithm iteratively partitions
-   * the training_set into clusters, and then recomputes new centroids based
-   * on the clusters.  The algorithm terminates when the change in centroids
-   * is less than a threshold tolerance, or when a maximum number of
-   * iterations is reached.
-   *
-   * @param training_set Array of vectors to cluster.
-   */
-  template <feature_vector_array V>
-  void train_no_init(const V& training_set) {
-    scoped_timer _{__FUNCTION__};
-
-    std::vector<size_t> degrees(num_partitions_, 0);
-    auto new_centroids =
-        ColMajorMatrix<centroid_feature_type>(dimension_, num_partitions_);
-
-    for (size_t iter = 0; iter < max_iter_; ++iter) {
-      auto [scores, parts] = detail::flat::qv_partition_with_scores(
-          centroids_, training_set, num_threads_);
-
-      std::fill(
-          new_centroids.data(),
-          new_centroids.data() +
-              new_centroids.num_rows() * new_centroids.num_cols(),
-          0.0);
-      std::fill(begin(degrees), end(degrees), 0);
-
-      // How many centroids should we try to fix up
-      size_t heap_size = std::ceil(reassign_ratio_ * num_partitions_) + 5;
-      auto high_scores = fixed_min_pair_heap<
-          feature_type,
-          index_type,
-          std::greater<feature_type>>(heap_size, std::greater<feature_type>());
-      auto low_degrees = fixed_min_pair_heap<index_type, index_type>(heap_size);
-
-      // @todo parallelize -- by partition
-      for (size_t i = 0; i < ::num_vectors(training_set); ++i) {
-        auto part = parts[i];
-        auto centroid = new_centroids[part];
-        auto vector = training_set[i];
-        for (size_t j = 0; j < dimension_; ++j) {
-          centroid[j] += vector[j];
-        }
-        ++degrees[part];
-        high_scores.insert(scores[i], i);
-      }
-
-      size_t max_degree = 0;
-      for (size_t i = 0; i < num_partitions_; ++i) {
-        auto degree = degrees[i];
-        max_degree = std::max<size_t>(max_degree, degree);
-        low_degrees.insert(degree, i);
-      }
-      size_t lower_degree_bound = std::ceil(max_degree * reassign_ratio_);
-
-      // Don't reassign if we are on last iteration
-      if (iter != max_iter_ - 1) {
-// Experiment with random reassignment
-#if 0
-        // Pick a random vector to be a new centroid
-        std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
-        for (auto&& [degree, zero_part] : low_degrees) {
-          if (degree < lower_degree_bound) {
-            auto index = dis(gen_);
-            auto rand_vector = training_set[index];
-            auto low_centroid = new_centroids[zero_part];
-            std::copy(begin(rand_vector), end(rand_vector), begin(low_centroid));
-            for (size_t i = 0; i < dimension_; ++i) {
-              new_centroids[parts[index]][i] -= rand_vector[i];
-            }
-          }
-        }
-#endif
-        // Move vectors with high scores to replace zero-degree partitions
-        std::sort_heap(begin(low_degrees), end(low_degrees));
-        std::sort_heap(
-            begin(high_scores), end(high_scores), [](auto a, auto b) {
-              return std::get<0>(a) > std::get<0>(b);
-            });
-        for (size_t i = 0; i < size(low_degrees) &&
-                           std::get<0>(low_degrees[i]) <= lower_degree_bound;
-             ++i) {
-          // std::cout << "i: " << i << " low_degrees: ("
-          //           << std::get<1>(low_degrees[i]) << " "
-          //           << std::get<0>(low_degrees[i]) << ") high_scores: ("
-          //           << parts[std::get<1>(high_scores[i])] << " "
-          //          << std::get<1>(high_scores[i]) << " "
-          //          << std::get<0>(high_scores[i]) << ")" << std::endl;
-          auto [degree, zero_part] = low_degrees[i];
-          auto [score, high_vector_id] = high_scores[i];
-          auto low_centroid = new_centroids[zero_part];
-          auto high_vector = training_set[high_vector_id];
-          std::copy(begin(high_vector), end(high_vector), begin(low_centroid));
-          for (size_t i = 0; i < dimension_; ++i) {
-            new_centroids[parts[high_vector_id]][i] -= high_vector[i];
-          }
-          ++degrees[zero_part];
-          --degrees[parts[high_vector_id]];
-        }
-      }
-      /**
-       * Check for convergence
-       */
-      // @todo parallelize?
-      float max_diff = 0.0;
-      float total_weight = 0.0;
-      for (size_t j = 0; j < num_partitions_; ++j) {
-        if (degrees[j] != 0) {
-          auto centroid = new_centroids[j];
-          for (size_t k = 0; k < dimension_; ++k) {
-            centroid[k] /= degrees[j];
-            total_weight += centroid[k] * centroid[k];
-          }
-        }
-        auto diff = l2_distance(centroids_[j], new_centroids[j]);
-        max_diff = std::max<float>(max_diff, diff);
-      }
-      centroids_.swap(new_centroids);
-      if (max_diff < tol_ * total_weight) {
-        break;
-      }
-
-// Temporary printf debugging
-#if 0
-        auto mm = std::minmax_element(begin(degrees), end(degrees));
-        float sum = std::accumulate(begin(degrees), end(degrees), 0);
-        float average = sum / (float)size(degrees);
-
-        auto min = *mm.first;
-        auto max = *mm.second;
-        auto diff = max - min;
-        std::cout << "avg: " << average << " sum: " << sum << " min: " << min
-                  << " max: " << max << " diff: " << diff << std::endl;
-#endif
-    }
-
-// Temporary printf debugging
-#ifdef _SAVE_PARTITIONS
-    {
-      char tempFileName[L_tmpnam];
-      tmpnam(tempFileName);
-
-      std::ofstream file(tempFileName);
-      if (!file) {
-        std::cout << "Error opening the file." << std::endl;
-        return;
-      }
-
-      for (const auto& element : degrees) {
-        file << element << ',';
-      }
-      file << std::endl;
-
-      for (auto s = 0; s < training_set.num_cols(); ++s) {
-        for (auto t = 0; t < training_set.num_rows(); ++t) {
-          file << std::to_string(training_set(t, s)) << ',';
-        }
-        file << std::endl;
-      }
-      file << std::endl;
-
-      for (auto s = 0; s < centroids_.num_cols(); ++s) {
-        for (auto t = 0; t < centroids_.num_rows(); ++t) {
-          file << std::to_string(centroids_(t, s)) << ',';
-        }
-        file << std::endl;
-      }
-
-      file.close();
-
-      std::cout << "Data written to file: " << tempFileName << std::endl;
-    }
-#endif
-  }
-
-  /****************************************************************************
    * Methods for building, writing, and reading the complete index
    * @todo Create single function that trains and adds (ingests)
    * @todo Provide interface that takes URI rather than vectors
    * @todo Provide "kernel" interface for use in distributed computation
    * @todo Do we need an out-of-core version of this?
    ****************************************************************************/
+
+  template <feature_vector_array V>
+  void kmeans_random_init(const V& training_set) {
+    ::kmeans_random_init(training_set, centroids_, num_partitions_);
+  }
+
+  template <feature_vector_array V>
+  void kmeans_pp(const V& training_set) {
+    ::kmeans_pp(training_set, centroids_, num_partitions_, num_threads_);
+  }
 
   /**
    * Compute centroids of the training set data, using the kmeans algorithm.
@@ -579,6 +275,7 @@ class ivf_flat_index {
 
     centroids_ =
         ColMajorMatrix<centroid_feature_type>(dimension_, num_partitions_);
+
     switch (init) {
       case (kmeans_init::none):
         break;
@@ -602,7 +299,15 @@ class ivf_flat_index {
     std::cout << std::endl;
 #endif
 
-    train_no_init(training_set);
+    train_no_init(
+        training_set,
+        centroids_,
+        dimension_,
+        num_partitions_,
+        max_iter_,
+        tol_,
+        num_threads_,
+        reassign_ratio_);
 
 // Temporary printf debugging
 #if 0

@@ -108,6 +108,14 @@ struct sub_sum_of_squares_distance {
   size_t start_{0};
   size_t stop_{0};
 
+  sub_sum_of_squares_distance() = delete;
+  sub_sum_of_squares_distance(const sub_sum_of_squares_distance&) = delete;
+  sub_sum_of_squares_distance(sub_sum_of_squares_distance&&) = default;
+  sub_sum_of_squares_distance& operator=(const sub_sum_of_squares_distance&) =
+      delete;
+  sub_sum_of_squares_distance& operator=(sub_sum_of_squares_distance&&) =
+      default;
+
  public:
   sub_sum_of_squares_distance(size_t start, size_t stop)
       : start_(start)

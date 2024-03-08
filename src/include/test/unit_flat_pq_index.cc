@@ -36,6 +36,7 @@
 #include "detail/flat/qv.h"
 #include "gen_graphs.h"
 #include "index/flat_pq_index.h"
+#include "index/kmeans.h"
 #include "query_common.h"
 #include "scoring.h"
 
@@ -469,7 +470,10 @@ TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "flat_pq_index: query stacked hypercube", "[flat_pq_index]", float, uint8_t) {
+    "flat_pq_index: query stacked hypercube",
+    "[flat_pq_index]",
+    float,
+    uint8_t) {
   size_t k_dist = GENERATE(/*0,*/ 32);
   size_t k_near = k_dist;
   size_t k_far = k_dist;
@@ -492,7 +496,8 @@ TEMPLATE_TEST_CASE(
     }
   }
 
-  auto pq_idx2 = flat_pq_index<TestType, uint32_t, uint32_t>(6, 2, 8, k_dist == 0 ? 8 : 16);
+  auto pq_idx2 = flat_pq_index<TestType, uint32_t, uint32_t>(
+      6, 2, 8, k_dist == 0 ? 8 : 16);
   pq_idx2.train(hypercube2);
   pq_idx2.add(hypercube2);
 
