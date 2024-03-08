@@ -69,8 +69,8 @@ static std::string test_data_root =
 static std::string test_array_root{test_data_root / "arrays"};
 static std::string test_file_root{test_data_root / "files"};
 static std::string nano_root{test_data_root / "nano"};
-static std::string backwards_compatibility_root{
-    cmake_source_dir.parent_path() / "backwards-compatibility-data"};
+static std::string backwards_compatibility_root =
+    (cmake_source_dir.parent_path() / "backwards-compatibility-data").string();
 
 /**
  * @brief  Array URIs for arrays used for unit testing of IVF indexes.
