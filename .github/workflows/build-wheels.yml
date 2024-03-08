@@ -49,14 +49,29 @@ jobs:
           # Generate data.
           python backwards-compatibility-data/generate_data.py $release_tag
 
-          # Push this data to a new branch and create a PR from it.
+          # Fetch.
           git fetch
+
+          # Create a new branch for the changes.
           branch_name="update-backwards-compatibility-data-${release_tag}"
-          echo $branch_name
           git checkout -b "$branch_name"
+
+          # Stage all changes within backwards-compatibility-data/data/.
           git add backwards-compatibility-data/data/
+
+          # Commit the staged changes.
           git commit -m "[automated] Update backwards-compatibility-data for release $release_tag"
+
+          # Reset other changes to match main branch - we do this in case the release branch had commits that were not in main.
+          git reset --hard main
+
+          # Re-apply the commit with the backwards-compatibility-data changes.
+          git cherry-pick HEAD@{1}
+
+          # Push to the branch.
           git push origin "$branch_name"
+
+          # Create a PR from this new branch to main.
           gh pr create --base main --head "$branch_name" --title "[automated] Update backwards-compatibility-data for release $release_tag" --body "This PR contains backwards compatibility indexes generated for release $release_tag."
         env:
           GH_TOKEN: ${{ github.token }}
