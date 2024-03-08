@@ -166,7 +166,6 @@ class IndexIVFFlat {
       }
     }
 
-    std::filesystem::path group_uri_path{group_uri};
     for (auto& [name, value, datatype, array_key] : metadata) {
       // We first try to read metadata from the group.
       if (read_group.has_metadata(name, &datatype)) {
@@ -184,7 +183,7 @@ class IndexIVFFlat {
         // If it is not present then fallback to checking the type on the array
         // directly.
         auto uri = array_name_to_uri(
-            group_uri_path,
+            group_uri,
             array_key_to_array_name_from_map(
                 storage_formats[storage_version], array_key));
         tiledb::ArraySchema schema(ctx, uri);
