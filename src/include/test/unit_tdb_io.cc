@@ -151,6 +151,40 @@ TEMPLATE_TEST_CASE("tdb_io: write matrix", "[tdb_io]", float, uint8_t) {
   }
 }
 
+TEST_CASE("tdb_io: write empty matrix", "[tdb_io]") {
+  tiledb::Context ctx;
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  int offset = 13;
+
+  size_t dimension = 128;
+  int32_t domain = std::numeric_limits<int32_t>::max() - 1;
+  int32_t extent = 100'000;
+  int32_t tile_size_bytes = 64 * 1024 * 1024;
+  tiledb_filter_type_t compression{string_to_filter("zstd")};
+  size_t timestamp = 0;
+
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_matrix_uri)) {
+    vfs.remove_dir(tmp_matrix_uri);
+  }
+
+  create_empty_for_matrix<float, stdx::layout_left>(
+      ctx, tmp_matrix_uri, dimension, domain, dimension, extent, compression);
+  auto empty_matrix = tdbColMajorBlockedMatrix<float>(
+      ctx, tmp_matrix_uri, 0, dimension, 0, 0, 0, timestamp);
+  empty_matrix.load();
+  CHECK(num_vectors(empty_matrix) == 0);
+  CHECK(empty_matrix.num_cols() == 0);
+  CHECK(empty_matrix.num_rows() == dimension);
+
+  auto empty_preload_matrix = tdbColMajorPreLoadMatrix<float>(
+      ctx, tmp_matrix_uri, dimension, 0, 0, timestamp);
+  CHECK(num_vectors(empty_preload_matrix) == 0);
+  CHECK(empty_preload_matrix.num_cols() == 0);
+  CHECK(empty_preload_matrix.num_rows() == dimension);
+}
+
 TEST_CASE("tdb_io: write empty vector", "[tdb_io]") {
   tiledb::Context ctx;
   std::string tmp_vector_uri =
