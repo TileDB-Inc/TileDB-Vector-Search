@@ -442,7 +442,7 @@ void sub_kmeans_random_init(
 template <
     feature_vector_array V,
     feature_vector_array C,
-    class SubDistance = sub_sum_of_squares_distance>
+    class SubDistance = cached_sub_sum_of_squares_distance>
 auto sub_kmeans(
     const V& training_set,
     C& centroids,
@@ -453,9 +453,9 @@ auto sub_kmeans(
     size_t max_iter,
     size_t num_threads,
     float reassign_ratio = 0.05,
-    bool reassign_later = false,
-    SubDistance sub_distancex) {
+    bool reassign_later = false) {
   size_t sub_dimension_ = sub_end - sub_begin;
+  auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
   using feature_type = typename V::value_type;
   using centroid_feature_type = typename C::value_type;
@@ -483,16 +483,10 @@ auto sub_kmeans(
 
 #ifdef REASSIGN
     auto [scores, parts] = detail::flat::qv_partition_with_scores(
-        centroids,
-        training_set,
-        num_threads,
-        sub_distancex{sub_begin, sub_end});
+        centroids, training_set, num_threads, local_sub_distance);
 #else
     auto parts = detail::flat::qv_partition(
-        centroids,
-        training_set,
-        num_threads,
-        sub_distancex{sub_begin, sub_end});
+        centroids, training_set, num_threads, local_sub_distance);
 #endif
 
     for (size_t j = 0; j < num_vectors(new_centroids); ++j) {
@@ -581,8 +575,7 @@ auto sub_kmeans(
           total_weight += centroid[k] * centroid[k];
         }
       }
-      auto diff =
-          sub_distance(centroids[j], new_centroids[j], sub_begin, sub_end);
+      auto diff = local_sub_distance(centroids[j], new_centroids[j]);
       max_diff = std::max<double>(max_diff, diff);
     }
     centroids.swap(new_centroids);

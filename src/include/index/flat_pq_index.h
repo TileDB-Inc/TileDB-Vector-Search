@@ -56,6 +56,10 @@
  * @tparam T Data type of the input vectors
  * @tparam shuffled_ids_type Data type of the shuffled ids
  * @tparam indices_type Data type of the indices
+ *
+ * @todo IMPORTANT: I am thinking that Distance should be a template parameter
+ * for the class.  We can't really use different distance functions for
+ * queries once the index is built.
  */
 template <
     class T,
@@ -64,6 +68,8 @@ template <
 class flat_pq_index {
   using feature_type = T;
   using id_type = shuffled_ids_type;
+
+  // Some hardcoded types (for now) -- maybe make these template parameters?
   using score_type = float;
   using centroid_feature_type = float;
   using code_type = uint8_t;
@@ -174,6 +180,11 @@ class flat_pq_index {
    *
    * @param training_set Training set
    */
+  template <class SubDistance = cached_sub_sum_of_squares_distance>
+    requires cached_sub_distance_function<
+        SubDistance,
+        typename ColMajorMatrix<feature_type>::span_type,
+        typename ColMajorMatrix<centroid_feature_type>::span_type>
   auto train(const ColMajorMatrix<feature_type>& training_set) {
     centroids_ =
         ColMajorMatrix<centroid_feature_type>(dimension_, num_clusters_);
@@ -187,11 +198,16 @@ class flat_pq_index {
       auto sub_begin = subspace * dimension_ / num_subspaces_;
       auto sub_end = (subspace + 1) * dimension_ / num_subspaces_;
 
+      auto local_sub_distance = SubDistance{sub_begin, sub_end};
+
       sub_kmeans_random_init(
           training_set, centroids_, sub_begin, sub_end, 0xdeadbeef);
       size_t iters;
       double conv;
-      std::tie(iters, conv) = sub_kmeans(
+      std::tie(iters, conv) = sub_kmeans<
+          std::remove_cvref_t<decltype(training_set)>,
+          std::remove_cvref_t<decltype(centroids_)>,
+          SubDistance>(
           training_set,
           centroids_,
           sub_begin,
@@ -206,18 +222,20 @@ class flat_pq_index {
 
     // Create table
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      auto sub_begin = subspace * sub_dimension_;
+      auto sub_end = (subspace + 1) * sub_dimension_;
+      auto local_sub_distance = SubDistance{sub_begin, sub_end};
+
       for (size_t i = 0; i < num_clusters_; ++i) {
         for (size_t j = 0; j < num_clusters_; ++j) {
-          auto sub_begin = subspace * sub_dimension_;
-          auto sub_end = (subspace + 1) * sub_dimension_;
-          auto sub_distance =
-              sub_l2_distance(centroids_[i], centroids_[j], sub_begin, sub_end);
+          auto sub_distance = local_sub_distance(centroids_[i], centroids_[j]);
           distance_tables_[subspace](i, j) = sub_distance;
         }
       }
     }
   }
 
+  template <class SubDistance = cached_sub_sum_of_squares_distance>
   auto add(const ColMajorMatrix<feature_type>& feature_vectors) {
     pq_vectors_ =
         ColMajorMatrix<code_type>(num_subspaces_, num_vectors(feature_vectors));
@@ -225,6 +243,7 @@ class flat_pq_index {
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimension_ * subspace;
       auto sub_end = sub_dimension_ * (subspace + 1);
+      auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
       // For each vector, find the closest centroid
       // We use sub_sum_of_squares_distance, which will find the closest
@@ -233,7 +252,7 @@ class flat_pq_index {
           centroids_,
           feature_vectors,
           num_threads_,
-          sub_sum_of_squares_distance{sub_begin, sub_end});
+          local_sub_distance);  // @todo Measure abstraction penalty
 
       // Save the index (code) of the closest centroid
       // @todo Avoid this copy.  Do "in-place" or return 8-bit result from
@@ -251,7 +270,9 @@ class flat_pq_index {
     }
   }
 
-  float sub_distance_symmetric(auto&& a, auto&& b) {
+  // @todo IMPORTANT: We need to do some abstraction penalty tests to make sure
+  // that the distance functions are inlined.
+  float sub_distance_symmetric(auto&& a, auto&& b) const {
     float pq_distance = 0.0;
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto i = a[subspace];
@@ -263,11 +284,11 @@ class flat_pq_index {
     return pq_distance;
   }
 
-  auto make_pq_distance_symmetric() {
+  auto make_pq_distance_symmetric() const {
     using A = decltype(pq_vectors_[0]);
     using B = decltype(pq_vectors_[0]);
     struct pq_distance {
-      flat_pq_index* outer_;
+      const flat_pq_index* outer_;
       inline float operator()(const A& a, const B& b) {
         return outer_->sub_distance_symmetric(a, b);
       }
@@ -281,7 +302,8 @@ class flat_pq_index {
    * @param b The compressed vector
    * @return
    */
-  float sub_distance_asymmetric(auto&& a, auto&& b) {
+  template <feature_vector U, feature_vector V>
+  float sub_distance_asymmetric(const U& a, const V& b) const {
     float pq_distance = 0.0;
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
@@ -301,7 +323,7 @@ class flat_pq_index {
 
     // @todo Do we need to worry about function overhead here?
     struct pq_distance {
-      flat_pq_index* outer_;
+      const flat_pq_index* outer_;
       inline float operator()(const A& a, const B& b) {
         return outer_->sub_distance_asymmetric(a, b);
       }
@@ -319,9 +341,15 @@ class flat_pq_index {
         make_pq_distance_asymmetric());
   }
 
-  template <feature_vector_array Q>
+  template <
+      feature_vector_array Q,
+      class SubDistance = cached_sub_sum_of_squares_distance>
+    requires cached_sub_distance_function<
+        SubDistance,
+        typename Q::span_type,
+        decltype(centroids_[0])>
   auto symmetric_query(const Q& query_vectors, size_t k_nn) {
-    auto encoded_query = encode(query_vectors);
+    auto encoded_query = encode<Q, SubDistance>(query_vectors);
     return detail::flat::qv_query_heap(
         pq_vectors_,
         encoded_query,
@@ -330,16 +358,24 @@ class flat_pq_index {
         make_pq_distance_symmetric());
   }
 
-  template <feature_vector V, feature_vector W>
-  auto encode(const V& v, W&& pq) {
+  template <
+      feature_vector V,
+      feature_vector W,
+      class SubDistance = cached_sub_sum_of_squares_distance>
+    requires cached_sub_distance_function<
+        SubDistance,
+        V,
+        decltype(centroids_[0])>
+  auto encode(const V& v, W& pq) const {
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimension_ * subspace;
       auto sub_end = sub_begin + sub_dimension_;
+      auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
       auto min_score = std::numeric_limits<score_type>::max();
       code_type idx{0};
       for (size_t i = 0; i < num_vectors(centroids_); ++i) {
-        auto score = sub_l2_distance(v, centroids_[i], sub_begin, sub_end);
+        auto score = local_sub_distance(v, centroids_[i]);
         if (score < min_score) {
           min_score = score;
           idx = i;
@@ -349,21 +385,34 @@ class flat_pq_index {
     }
   }
 
-  // @todo Make an in-place variant
-  template <feature_vector V>
+  // @todo Make an in-place variant so we don't construct a vector
+  template <
+      feature_vector V,
+      class SubDistance = cached_sub_sum_of_squares_distance>
+    requires cached_sub_distance_function<
+        SubDistance,
+        V,
+        decltype(centroids_[0])>
   auto encode(const V& v) {
     // @todo Use Vector instead of std::vector
     auto pq = std::vector<code_type>(num_subspaces_);
-    encode(v, pq);
+    encode<V, decltype(pq), SubDistance>(v, pq);
     return pq;
   }
 
-  // @todo Make an in-place variant
-  template <feature_vector_array V>
+  // @todo Make an in-place variant so we don't construct a matrix
+  template <
+      feature_vector_array V,
+      class SubDistance = cached_sub_sum_of_squares_distance>
+    requires cached_sub_distance_function<
+        SubDistance,
+        typename V::span_type,
+        decltype(centroids_[0])>
   auto encode(const V& v) {
     auto pq = ColMajorMatrix<code_type>(num_subspaces_, num_vectors(v));
     for (size_t i = 0; i < num_vectors(pq); ++i) {
-      encode(v[i], std::move(pq[i]));
+      auto x = pq[i];
+      encode<typename V::span_type, decltype(pq[0]), SubDistance>(v[i], x);
     }
 
     return pq;
@@ -536,17 +585,23 @@ class flat_pq_index {
     return std::make_tuple(diff_max / vec_max, total_diff / total_normalizer);
   }
 
+  template <class SubDistance = cached_sub_sum_of_squares_distance>
+    requires cached_sub_distance_function<
+        SubDistance,
+        typename ColMajorMatrix<feature_type>::span_type,
+        typename ColMajorMatrix<feature_type>::span_type>
   auto verify_symmetric_pq_distances(
       const ColMajorMatrix<feature_type>& feature_vectors) {
     double total_diff = 0.0;
     double total_normalizer = 0.0;
+    auto local_sub_distance = SubDistance{0, dimension_};
 
     score_type diff_max = 0.0;
     score_type vec_max = 0.0;
     for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
       for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
         auto real_distance =
-            l2_distance(feature_vectors[i], feature_vectors[j]);
+            local_sub_distance(feature_vectors[i], feature_vectors[j]);
         total_normalizer += real_distance;
 
         auto pq_distance =
@@ -556,7 +611,9 @@ class flat_pq_index {
         diff_max = std::max(diff_max, diff);
         total_diff += diff;
       }
-      vec_max = std::max(vec_max, l2_distance(feature_vectors[i]));
+      auto zeros = std::vector<feature_type>(dimension_);
+      vec_max =
+          std::max(vec_max, local_sub_distance(feature_vectors[i], zeros));
     }
 
     return std::make_tuple(diff_max / vec_max, total_diff / total_normalizer);

@@ -106,6 +106,8 @@ kmeans_add_test(unit_flat_vq)
 
 kmeans_add_test(unit_gen_graphs)
 
+kmeans_add_test(unit_inner_product_distance)
+
 kmeans_add_test(unit_ivf_flat_group)
 
 kmeans_add_test(unit_ivf_flat_index)

@@ -155,16 +155,53 @@ With these definitions, users can compute L2 distance by calling `l2_distance()`
 ```
 Users can pass the type `sum_of_squared_distance` where it is required as a template argument, for instance.
 
+
+### Functions parameterized by distance function
+
+All of the functions in the TileDB-Vector-Search library that use a distance function have been 
+parameterized by the type of the distance function.  Except for the pq related functions, they 
+also take the distance function as an argument.
+
+For example
+```c++
+template <
+    feature_vector_array F,
+    feature_vector_array Q,
+    class Distance = sum_of_squares_distance>
+auto query_finite_ram(
+    F& partitioned_vectors,  // not const because of load()
+    const Q& query,
+    auto&& active_queries,
+    size_t k_nn,
+    size_t upper_bound,
+    size_t nthreads,
+    Distance distance = Distance{});
+```
+In the body of the code, distance is computed simply by invoking `distance`.
+
+Query functions are invoked simply by passing the distance function object as a parameter.
+```c++
+nuv_query_heap_finite_ram(inputs, query, active_queries, 
+                          k_nn, upper_bound, nthreads,
+                          counting_l2_distance);
+```
+
+*Comments:*  
+* We need to get rid of the `nthreads` parameter throughout the entire code.
+* We may need to add timestamping to the functions.
+* IMPORTANT: We need to absolutely and positively understand what is happening with the function
+objects vis-a-vis inlining and optimization.
+
 ### Implementation status:
 
-| Metric     | Naive | 4x unrolled | AVX | BLAS   |
-|------------|-------|-------------|-----|--------|
-| L2         | Y     | Y           | Y   | N      |
-| Dot        | Y     | Y           | Y   | N      |  
-| Cosine     | N     | N           | N   | N      |        
-| L2 w/view  | Y     | Y           | N   | N      |
-| Dot w/view | N     | N           | N   | N      |            
-| Cosine     | N     | N           | N   | N      |        
+| Metric        | Naive | 4x unrolled | AVX | BLAS   |
+|---------------|-------|-------------|-----|--------|
+| L2            | Y     | Y           | Y   | N      |
+| Dot           | Y     | Y           | Y   | N      |  
+| Cosine        | N     | N           | N   | N      |        
+| L2 w/view     | Y     | Y           | N   | N      |
+| Dot w/view    | N     | N           | N   | N      |            
+| Cosine w/view | N     | N           | N   | N      |        
 
 NOTE: Cosine is just dot using normalized vectors.
 One approach to computing cosine similarity is 
