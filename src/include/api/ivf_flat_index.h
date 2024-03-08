@@ -183,9 +183,10 @@ class IndexIVFFlat {
       } else {
         // If it is not present then fallback to checking the type on the array
         // directly.
-        auto uri =
-            group_uri_path / array_key_to_array_name_from_map(
-                                 storage_formats[storage_version], array_key);
+        auto uri = array_name_to_uri(
+            group_uri_path,
+            array_key_to_array_name_from_map(
+                storage_formats[storage_version], array_key));
         tiledb::ArraySchema schema(ctx, uri);
         *reinterpret_cast<uint32_t*>(value) = schema.attribute(0).type();
       }
