@@ -76,14 +76,14 @@ TEST_CASE(
 
   for (const auto& directory_name :
        std::filesystem::directory_iterator(datasets_path)) {
-    std::string version_path = directory_name.path();
+    std::string version_path = directory_name.path().string();
     if (!std::filesystem::is_directory(version_path)) {
       continue;
     }
 
     for (const auto& index_name :
          std::filesystem::directory_iterator(version_path)) {
-      std::string index_uri = index_name.path();
+      std::string index_uri = index_name.path().string();
       if (!std::filesystem::is_directory(index_uri)) {
         continue;
       }
