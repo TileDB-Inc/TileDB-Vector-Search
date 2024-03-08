@@ -1,5 +1,5 @@
 /**
- * @file   flatpq_index.h
+ * @file   flat_pq_index.h
  *
  * @section LICENSE
  *
@@ -259,7 +259,7 @@ template <
     class T,
     class shuffled_ids_type = size_t,
     class indices_type = size_t>
-class flatpq_index {
+class flat_pq_index {
   using feature_type = T;
   using id_type = shuffled_ids_type;
   using score_type = float;
@@ -305,7 +305,7 @@ class flatpq_index {
    *
    * @todo We don't really need dimension as an argument for any of our indexes
    */
-  flatpq_index(
+  flat_pq_index(
       size_t dimension,
       size_t num_subspaces,
       size_t bits_per_subspace = 8,
@@ -330,7 +330,7 @@ class flatpq_index {
   /**
    * Load constructor
    */
-  flatpq_index(tiledb::Context ctx, const std::string& group_uri) {
+  flat_pq_index(tiledb::Context ctx, const std::string& group_uri) {
     tiledb::Config cfg;
     auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
 
@@ -465,7 +465,7 @@ class flatpq_index {
     using A = decltype(pq_vectors_[0]);
     using B = decltype(pq_vectors_[0]);
     struct pq_distance {
-      flatpq_index* outer_;
+      flat_pq_index* outer_;
       inline float operator()(const A& a, const B& b) {
         return outer_->sub_distance_symmetric(a, b);
       }
@@ -499,7 +499,7 @@ class flatpq_index {
 
     // @todo Do we need to worry about function overhead here?
     struct pq_distance {
-      flatpq_index* outer_;
+      flat_pq_index* outer_;
       inline float operator()(const A& a, const B& b) {
         return outer_->sub_distance_asymmetric(a, b);
       }
@@ -761,11 +761,11 @@ class flatpq_index {
   }
 
   /**
-   * @brief Compare the metadata information between two flatpq_index
+   * @brief Compare the metadata information between two flat_pq_index
    * @param rhs
    * @return
    */
-  bool compare_metadata(const flatpq_index& rhs) {
+  bool compare_metadata(const flat_pq_index& rhs) {
     if (dimension_ != rhs.dimension_) {
       std::cout << "dimension_ " << dimension_ << " != " << rhs.dimension_
                 << std::endl;
@@ -809,11 +809,11 @@ class flatpq_index {
   }
 
   /**
-   * @brief Compare the pq vectors information between two flatpq_index
+   * @brief Compare the pq vectors information between two flat_pq_index
    * @param rhs
    * @return
    */
-  auto compare_pq_vectors(const flatpq_index& rhs) {
+  auto compare_pq_vectors(const flat_pq_index& rhs) {
     // @todo use std::equal
     if (pq_vectors_.size() != rhs.pq_vectors_.size() ||
         num_vectors(pq_vectors_) != num_vectors(rhs.pq_vectors_)) {
@@ -835,11 +835,11 @@ class flatpq_index {
   }
 
   /**
-   * @brief Compare the centroids information between two flatpq_index
+   * @brief Compare the centroids information between two flat_pq_index
    * @param rhs
    * @return
    */
-  auto compare_centroids(const flatpq_index& rhs) {
+  auto compare_centroids(const flat_pq_index& rhs) {
     // @todo use std::equal
     if (centroids_.size() != rhs.centroids_.size() ||
         num_vectors(centroids_) != num_vectors(rhs.centroids_)) {
@@ -861,11 +861,11 @@ class flatpq_index {
   }
 
   /**
-   * @brief Compare the distance table information between two flatpq_index
+   * @brief Compare the distance table information between two flat_pq_index
    * @param rhs
    * @return
    */
-  auto compare_distance_tables(const flatpq_index& rhs) {
+  auto compare_distance_tables(const flat_pq_index& rhs) {
     if (distance_tables_.size() != rhs.distance_tables_.size()) {
       std::cout << "distance_tables_.size() " << distance_tables_.size()
                 << " != " << rhs.distance_tables_.size() << std::endl;
