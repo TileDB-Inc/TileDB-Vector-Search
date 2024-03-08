@@ -323,7 +323,7 @@ class tdbBlockedMatrix : public MatrixBase {
         std::min(load_blocksize_, last_col_ - last_resident_col_);
 
     // Return if we're at the end
-    if (elements_to_load == 0) {
+    if (elements_to_load == 0 || dimension == 0) {
       return false;
     }
 

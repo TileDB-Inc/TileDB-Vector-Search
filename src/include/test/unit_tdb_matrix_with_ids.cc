@@ -299,5 +299,12 @@ TEST_CASE("tdb_matrix_with_ids: empty matrix", "[tdb_matrix_with_ids]") {
     CHECK(dimension(Y) == dimension(X));
     CHECK(Y.num_ids() == 1000);
     CHECK(Y.ids().size() == 1000);
+    Y.load();
+    CHECK(Y.num_cols() == X.num_cols());
+    CHECK(num_vectors(Y) == num_vectors(X));
+    CHECK(Y.num_rows() == X.num_rows());
+    CHECK(dimension(Y) == dimension(X));
+    CHECK(Y.num_ids() == 1000);
+    CHECK(Y.ids().size() == 1000);
   }
 }

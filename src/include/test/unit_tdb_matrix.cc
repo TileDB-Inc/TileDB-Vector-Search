@@ -293,7 +293,7 @@ TEST_CASE("tdb_matrix: empty matrix", "[tdb_matrix]") {
       matrix_dimension,
       tile_extent);
 
-  SECTION("empty") {
+  SECTION("empty: no rows and no cols") {
     auto X =
         tdbColMajorMatrix<float>(ctx, tmp_matrix_uri, 0, 0, 0, 0, 10000, 0);
     X.load();
@@ -302,6 +302,27 @@ TEST_CASE("tdb_matrix: empty matrix", "[tdb_matrix]") {
     CHECK(X.num_rows() == 0);
     CHECK(dimension(X) == 0);
   }
+
+  SECTION("empty: all rows and no cols") {
+    auto X = tdbColMajorMatrix<float>(
+        ctx, tmp_matrix_uri, 0, std::nullopt, 0, 0, 10000, 0);
+    X.load();
+    CHECK(X.num_cols() == 0);
+    CHECK(num_vectors(X) == 0);
+    CHECK(X.num_rows() == matrix_dimension);
+    CHECK(dimension(X) == matrix_dimension);
+  }
+
+  SECTION("empty: no rows and all cols") {
+    auto X = tdbColMajorMatrix<float>(
+        ctx, tmp_matrix_uri, 0, 0, 0, std::nullopt, 10000, 0);
+    X.load();
+    CHECK(X.num_cols() == matrix_domain);
+    CHECK(num_vectors(X) == matrix_domain);
+    CHECK(X.num_rows() == 0);
+    CHECK(dimension(X) == 0);
+  }
+
   SECTION("filled") {
     auto X = tdbColMajorMatrix<float>(ctx, tmp_matrix_uri);
     X.load();
@@ -311,6 +332,11 @@ TEST_CASE("tdb_matrix: empty matrix", "[tdb_matrix]") {
     CHECK(dimension(X) == matrix_dimension);
 
     auto Y = tdbColMajorMatrix<float>(std::move(X));
+    CHECK(Y.num_cols() == X.num_cols());
+    CHECK(num_vectors(Y) == num_vectors(X));
+    CHECK(Y.num_rows() == X.num_rows());
+    CHECK(dimension(Y) == dimension(X));
+    Y.load();
     CHECK(Y.num_cols() == X.num_cols());
     CHECK(num_vectors(Y) == num_vectors(X));
     CHECK(Y.num_rows() == X.num_rows());
