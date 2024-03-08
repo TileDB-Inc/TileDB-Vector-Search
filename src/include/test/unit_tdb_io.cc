@@ -151,6 +151,35 @@ TEMPLATE_TEST_CASE("tdb_io: write matrix", "[tdb_io]", float, uint8_t) {
   }
 }
 
+TEST_CASE("tdb_io: write empty vector", "[tdb_io]") {
+  tiledb::Context ctx;
+  std::string tmp_vector_uri =
+      (std::filesystem::temp_directory_path() / "tmp_vector").string();
+  int offset = 13;
+
+  size_t dimension = 128;
+  static const int32_t domain{10000};
+  static const int32_t tile_size_bytes{1024};
+  static const tiledb_filter_type_t compression{string_to_filter("zstd")};
+  static const int32_t tile_size{
+      (int32_t)(tile_size_bytes / sizeof(float) / dimension)};
+  size_t timestamp = 0;
+
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_vector_uri)) {
+    vfs.remove_dir(tmp_vector_uri);
+  }
+
+  create_empty_for_vector<float>(
+      ctx, tmp_vector_uri, domain, tile_size, compression);
+
+  auto empty_vector = read_vector<float>(ctx, tmp_vector_uri, 0, 0, timestamp);
+  CHECK(empty_vector.size() == 0);
+
+  auto filled_vector = read_vector<float>(ctx, tmp_vector_uri);
+  CHECK(filled_vector.size() == domain);
+}
+
 TEST_CASE("tdb_io: create group", "[tdb_io]") {
   size_t N = 10'000;
 
