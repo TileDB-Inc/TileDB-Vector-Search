@@ -97,7 +97,8 @@ class tdbBlockedMatrixWithIds
       const std::string& uri,
       const std::string& ids_uri) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : tdbBlockedMatrixWithIds(ctx, uri, ids_uri, 0, 0, 0, 0, 0, 0) {
+      : tdbBlockedMatrixWithIds(
+            ctx, uri, ids_uri, 0, std::nullopt, 0, std::nullopt, 0, 0) {
   }
 
   /**
@@ -120,7 +121,15 @@ class tdbBlockedMatrixWithIds
       size_t timestamp = 0)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrixWithIds(
-            ctx, uri, ids_uri, 0, 0, 0, 0, upper_bound, timestamp) {
+            ctx,
+            uri,
+            ids_uri,
+            0,
+            std::nullopt,
+            0,
+            std::nullopt,
+            upper_bound,
+            timestamp) {
   }
 
   /** General constructor */
@@ -129,9 +138,9 @@ class tdbBlockedMatrixWithIds
       const std::string& uri,
       const std::string& ids_uri,
       size_t first_row,
-      size_t last_row,
+      std::optional<size_t> last_row,
       size_t first_col,
-      size_t last_col,
+      std::optional<size_t> last_col,
       size_t upper_bound,
       size_t timestamp)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
@@ -155,9 +164,9 @@ class tdbBlockedMatrixWithIds
       const std::string& uri,
       const std::string& ids_uri,
       size_t first_row,
-      size_t last_row,
+      std::optional<size_t> last_row,
       size_t first_col,
-      size_t last_col,
+      std::optional<size_t> last_col,
       size_t upper_bound,
       tiledb::TemporalPolicy temporal_policy)  // noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
