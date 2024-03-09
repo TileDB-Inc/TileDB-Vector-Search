@@ -58,6 +58,8 @@ struct dummy_pq_index {
   using id_type = int;
   using indices_type = int;
   using centroid_feature_type = float;
+  using pq_type = uint8_t;
+  using score_type = float;
 
   auto dimension() const {
     return 128;

@@ -260,12 +260,14 @@ class flat_pq_index {
       for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
         pq_vectors_(subspace, i) = x[i];
 
-        // Debugging -- copy to std::vector so the debugger can inspect
+// Debugging -- copy to std::vector so the debugger can inspect
+#if 0
         std::vector<float> a(
             begin(feature_vectors[i]), end(feature_vectors[i]));
         std::vector<float> b{begin(pq_vectors_[i]), end(pq_vectors_[i])};
         // std::vector<float> c{begin(centroids_[i]), end(centroids_[i])};
         auto foo = 0;
+#endif
       }
     }
   }
@@ -297,12 +299,21 @@ class flat_pq_index {
   }
 
   /**
-   *
+   * @brief Uncompress the b and compute the distance between a and b
    * @param a The uncompressed vector
    * @param b The compressed vector
-   * @return
+   * @tparam U The type of a, a feature vector
+   * @tparam V The type of b, a compressed feature vector, i.e., a vector of
+   * code types
+   * @return The distance between a and b
+   * @todo There is likely a copy constructor of the Distance functor.  That
+   * should be checked and possibly fixed so that there is just a reference to
+   * an existing object.
    */
-  template <feature_vector U, feature_vector V>
+  template <
+      feature_vector U,
+      feature_vector V,
+      class Distance = sub_sum_of_squares_distance>
   float sub_distance_asymmetric(const U& a, const V& b) const {
     float pq_distance = 0.0;
 

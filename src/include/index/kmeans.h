@@ -423,13 +423,15 @@ void sub_kmeans_random_init(
 // #define REASSIGN
 
 /**
- * @brief Run kmeans on a subspace
- * @tparam T Data type of the input vectors
- * @param training_set Training set
+ * @brief Run kmeans on the indicated view of the training set.  The centroids
+ * are updated in place, but only in the range [sub_begin, sub_end).
+ * @tparam V Type of training set vectors
+ * @tparam C Type of centroids vectors
+ * @param training_set Training set vectors
  * @param centroids Initial locations of centroids.  Will be updated in
  * locations [sub_begin, sub_end).
- * @param sub_begin Beginning of the subspace
- * @param sub_end End of the subspace
+ * @param sub_begin Beginning of the subspace to be computed
+ * @param sub_end End of the subspace to be computed
  * @param num_clusters Number of clusters to find
  * @return
  *

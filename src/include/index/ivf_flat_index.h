@@ -249,9 +249,10 @@ class ivf_flat_index {
     ::kmeans_random_init(training_set, centroids_, num_partitions_);
   }
 
-  template <feature_vector_array V>
+  template <feature_vector_array V, class Distance = sum_of_squares_distance>
   void kmeans_pp(const V& training_set) {
-    ::kmeans_pp(training_set, centroids_, num_partitions_, num_threads_);
+    ::kmeans_pp<std::remove_cvref_t<V>, decltype(centroids_), Distance>(
+        training_set, centroids_, num_partitions_, num_threads_);
   }
 
   /**
