@@ -33,13 +33,13 @@
  *
  *
  * I. To compress, train, add, the steps would be:
- * - pq_encode to get pq_centroids_ and distance_tables_
+ * - train_pq to get cluster_centroids_ and distance_tables_
  *   - uses sub_kmeans on uncompressed vectors
- *   - pq_centroids_ is a feature_vector_array of feature_type, dimension_ x
- * num_clusters_
- * - encode training_set using pq_centroids_ to get unpartitioned_pq_vectors_,
- *   which are a feature_vector_array of pq_code_type, num_subspaces_ x
- * num_vectors_
+ *   - cluster_centroids_ is a feature_vector_array of feature_type, dimension_
+ * x num_clusters_
+ * - encode training_set using cluster_centroids_ to get
+ * unpartitioned_pq_vectors_, which are a feature_vector_array of pq_code_type,
+ * num_subspaces_ x num_vectors_
  * - train using unpartitioned_pq_vectors_ to get ivf_centroids_, which is a
  *   feature_vector_array of pq_code_type, num_subpaces x num_partitions_
  *   - uses kmeans -- which would have to be a new implementation that
@@ -57,7 +57,7 @@
  *   - partition training set using ivf_centroids_ to get partitioned_vectors_
  *     - uses ivf_flat::add
  *       - uses partitioned_matrix constructor, which just shuffles
- * - pq train with partitioned_vectors_ to get pq_centroids_ and
+ * - pq train with partitioned_vectors_ to get cluster_centroids_ and
  *   distance_tables_
  * - compress partitioned_vectors_ and ivf_centroids_
  * - query with symmetric distance
@@ -68,12 +68,13 @@
  *   - uses ivf_flat::train
  *     - uses kmeans (just as it is used today)
  * - add
- *   - pq_train with training set to get pq_centroids_ and distance_tables_
+ *   - pq_train with training set to get cluster_centroids_ and distance_tables_
  *     - uses sub_kmeans
  *   - compress training set and ivf_centroids_ to get pq_vectors_ and
  * pq_ivf_centroids_
  *     - uses flatpq::add
- *   - partition pq_vectors using pq_ivf_centroids_ to get partitioned_pq_vectors_
+ *   - partition pq_vectors using pq_ivf_centroids_ to get
+ * partitioned_pq_vectors_
  *     - uses qv_partition with symmetric distance
  * - query with symmetric distance
  *
@@ -132,18 +133,19 @@ class ivf_pq_index {
   using indices_type = partitioning_index_type;
   using score_type = float;  // @todo -- this should be a parameter?
 
+  // @todo IMPORTANT: Use a uint64_t to store 8 bytes together -- should make
+  // loads and other operations faster and SIMD friendly
   using pq_code_type = uint8_t;
 
-  // For this implementation: partition then add, we need uncompressed ivf
-  // centroids
   using pq_vector_feature_type = pq_code_type;
 
   // The pq_centroids store the (unencoded) centroids for each subspace
   using flat_vector_feature_type = score_type;
 
  private:
-  // feature_vector_array types for storing compressed vectors.  Will be
-  // num_subspaces_ x num_vectors_
+  using flat_storage_type = ColMajorMatrix<pq_code_type>;
+  using tdb_flat_storage_type = ColMajorMatrix<pq_code_type>;
+
   using pq_storage_type = ColMajorPartitionedMatrix<  // was: storage_type
       pq_code_type,                                   // was: feature_type
       partitioned_ids_type,
@@ -218,9 +220,11 @@ class ivf_pq_index {
   std::vector<ColMajorMatrix<score_type>> distance_tables_;
 
   pq_ivf_centroid_storage_type pq_ivf_centroids_;
-  std::unique_ptr<pq_storage_type> partitioned_pq_vectors_;
-  std::unique_ptr<pq_storage_type> unpartitioned_pq_vectors_;
-
+  pq_storage_type partitioned_pq_vectors_;
+  flat_storage_type unpartitioned_pq_vectors_;
+  // Or should these be unique_ptrs?
+  // std::unique_ptr<pq_storage_type> partitioned_pq_vectors_;
+  // std::unique_ptr<flat_storage_type> unpartitioned_pq_vectors_;
 
   // Some parameters for performing kmeans clustering for ivf index
   uint64_t max_iter_{1};
@@ -353,14 +357,14 @@ class ivf_pq_index {
   /****************************************************************************
    * Methods for building, writing, and reading the complete index.  Includes:
    *   - Method for encoding the training set using pq compression to create
-   *     the pq_centroids_ and distance_tables_.
+   *     the cluster_centroids_ and distance_tables_.
    *   - Method to initialize the centroids that we will use for building the
    *IVF index.
    *   - Method to partition the pq_vectors_ into a partitioned_matrix of pq
    *encoded vectors.
-   * @note With this approach, we are partitioning based on pq_centroids_ the
-   *stored centroids are also encoded using pq.  Thus we can do our search using
-   *the symmetric distance function.
+   * @note With this approach, we are partitioning based on cluster_centroids_
+   *the stored centroids are also encoded using pq.  Thus we can do our search
+   *using the symmetric distance function.
    *
    * @todo Create single function that trains and adds (ingests)
    * @todo Provide interface that takes URI rather than vectors
@@ -369,23 +373,24 @@ class ivf_pq_index {
    ****************************************************************************/
 
   /**
-   * @brief Encode the training set using pq compression.  This will create
-   * the pq_centroids (encoded from the training set) and create
-   * distance_tables_. We measure the maximum number of iterations and minimum
-   * convergence over all of the subspaces and return a tuple of those values.
-   * We compute all of the distance_tables_ regarless of the values of
+   * @brief Create the `cluster_centroids_` (encoded from the training set) and
+   * create `distance_tables_`. We measure the maximum number of iterations and
+   * minimum convergence over all of the subspaces and return a tuple of those
+   * values. We compute all of the distance_tables_ regarless of the values of
    * max_local_iters_taken or min_local_conv relative to max_iter_ and tol_.
+   *
    * @tparam V type of the training vectors
    * @tparam SubDistance type of the distance function to use for encoding.
    * Must be a cached_sub_distance_function.
    * @param training_set The set of vectors to compress
+   *
    * @return tuple of the maximum number of iterations taken and the minimum
    * convergence
    *
-   * @note This is essentiall they same as flat_pq_index::train
-   * @note Recall that centroids_ are used for IVF indexing.  pq_centroids_ are
-   * still centroids, but they are divided into subspaces, and each portion
-   * of pq_centroids_ is the centroid of the corresponding subspace of the
+   * @note This is essentially the same as flat_pq_index::train
+   * @note Recall that centroids_ are used for IVF indexing.  cluster_centroids_
+   * are still centroids, but they are divided into subspaces, and each portion
+   * of cluster_centroids_ is the centroid of the corresponding subspace of the
    * training set.
    */
   template <
@@ -394,10 +399,10 @@ class ivf_pq_index {
     requires cached_sub_distance_function<
         SubDistance,
         typename ColMajorMatrix<feature_type>::span_type,
-        typename ColMajorMatrix<pq_centroid_feature_type>::span_type>
-  auto pq_encode(const V& training_set) {
-    pq_centroids_ =
-        ColMajorMatrix<pq_centroid_feature_type>(dimension_, num_clusters_);
+        typename ColMajorMatrix<flat_vector_feature_type>::span_type>
+  auto train_pq(const V& training_set) {
+    cluster_centroids_ =
+        ColMajorMatrix<flat_vector_feature_type>(dimension_, num_clusters_);
 
     // Lookup table for the distance between centroids of each subspace
     distance_tables_ = std::vector<ColMajorMatrix<score_type>>(num_subspaces_);
@@ -411,15 +416,18 @@ class ivf_pq_index {
 
     // This basically the same thing we do in ivf_flat, but we perform it
     // num_subspaces_ times, once for each subspace.
+    // @todo IMPORTANT This is highly suboptimal and will make multiple passes
+    // through the training set.  We need to move iteration over subspaces to
+    // the inner loop -- and SIMDize it
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = subspace * dimension_ / num_subspaces_;
       auto sub_end = (subspace + 1) * dimension_ / num_subspaces_;
 
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
-      // @todo Make this configurable
+      // @todo Make choice of kmeans init configurable
       sub_kmeans_random_init(
-          training_set, pq_centroids_, sub_begin, sub_end, 0xdeadbeef);
+          training_set, cluster_centroids_, sub_begin, sub_end, 0xdeadbeef);
 
       // sub_kmeans will invoke the sub_distance function with centroids
       // against new_centroids, and will call flat::qv_partition with centroids
@@ -427,14 +435,13 @@ class ivf_pq_index {
       // centroids against training_set (though that can perhaps be reversed,
       // but will have to make sure asymmetric distance gets passed in).
       // operator()() is a function template, so it should do the "right thing"
-      // @note we are doing this for each subspace, hence call to sub_kmeans
-      // with pq_centroids_ rather than centroids_.
+      // @note we are doing this for one subspace at a time
       auto&& [iters, conv] = sub_kmeans<
           std::remove_cvref_t<decltype(training_set)>,
-          std::remove_cvref_t<decltype(pq_centroids_)>,
+          std::remove_cvref_t<decltype(cluster_centroids_)>,
           SubDistance>(
           training_set,
-          pq_centroids_,  // new for pq
+          cluster_centroids_,
           sub_begin,
           sub_end,
           num_clusters_,
@@ -452,6 +459,7 @@ class ivf_pq_index {
     // The distance between two encoded vectors is looked up using the
     // keys of the vectors in each subspace (summing up the results obtained
     // from each subspace).
+    // @todo SIMDize with subspace iteration in inner loop
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = subspace * sub_dimension_;
       auto sub_end = (subspace + 1) * sub_dimension_;
@@ -460,7 +468,7 @@ class ivf_pq_index {
       for (size_t i = 0; i < num_clusters_; ++i) {
         for (size_t j = 0; j < num_clusters_; ++j) {
           auto sub_distance =
-              local_sub_distance(pq_centroids_[i], pq_centroids_[j]);
+              local_sub_distance(cluster_centroids_[i], cluster_centroids_[j]);
           distance_tables_[subspace](i, j) = sub_distance;
         }
       }
@@ -469,8 +477,16 @@ class ivf_pq_index {
     return std::make_tuple(max_local_iters_taken, min_local_conv);
   }
 
+  /***************************************************************************
+   *
+   * Distance functions for pq encoded vectors
+   *
+   ***************************************************************************/
+
   // @todo IMPORTANT: We need to do some abstraction penalty tests to make sure
   // that the distance functions are inlined.
+  // @todo Make this SIMD friendly -- do multiple subspaces at a time
+  // For each (i, j), distances should be stored contiguously
   float sub_distance_symmetric(auto&& a, auto&& b) const {
     float pq_distance = 0.0;
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
@@ -483,12 +499,71 @@ class ivf_pq_index {
     return pq_distance;
   }
 
+  auto make_pq_distance_symmetric() const {
+    using A = decltype(pq_storage_type{}[0]);
+    using B = decltype(pq_storage_type{}[0]);
+    struct pq_distance {
+      const ivf_pq_index* outer_;
+      inline float operator()(const A& a, const B& b) {
+        return outer_->sub_distance_symmetric(a, b);
+      }
+    };
+    return pq_distance{this};
+  }
+
+  /**
+   * @brief Uncompress the b and compute the distance between a and b
+   * @param a The uncompressed vector
+   * @param b The compressed vector
+   * @tparam U The type of a, a feature vector
+   * @tparam V The type of b, a compressed feature vector, i.e., a vector of
+   * code types
+   * @return The distance between a and b
+   * @todo There is likely a copy constructor of the Distance functor.  That
+   * should be checked and possibly fixed so that there is just a reference to
+   * an existing object.
+   * @todo This also needs to be SIMDized.
+   */
+  template <
+      feature_vector U,
+      feature_vector V,
+      class Distance = sub_sum_of_squares_distance>
+  float sub_distance_asymmetric(const U& a, const V& b) const {
+    float pq_distance = 0.0;
+    auto local_distance = Distance{};
+
+    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      auto sub_begin = subspace * sub_dimension_;
+      auto sub_end = (subspace + 1) * sub_dimension_;
+      auto i = b[subspace];
+
+      pq_distance +=
+          local_distance(a, cluster_centroids_[i], sub_begin, sub_end);
+    }
+
+    return pq_distance;
+  }
+
+  auto make_pq_distance_asymmetric() {
+    using A = std::span<feature_type>;  // @todo: Don't hardcode span
+    using B = decltype(pq_storage_type{}[0]);
+
+    // @todo Do we need to worry about function call overhead here?
+    struct pq_distance {
+      const ivf_pq_index* outer_;
+      inline float operator()(const A& a, const B& b) {
+        return outer_->sub_distance_asymmetric(a, b);
+      }
+    };
+    return pq_distance{this};
+  }
+
   /**
    * @brief Initialize the centroids that we will use for building IVF index.
    */
   template <feature_vector_array V>
   void kmeans_random_init(const V& training_set) {
-    ::kmeans_random_init(training_set, pq_centroids_, num_partitions_);
+    ::kmeans_random_init(training_set, cluster_centroids_, num_partitions_);
   }
 
   /**
@@ -496,93 +571,55 @@ class ivf_pq_index {
    */
   template <feature_vector_array V, class Distance = sum_of_squares_distance>
   void kmeans_pp(const V& training_set) {
-    ::kmeans_pp<std::remove_cvref_t<V>, decltype(pq_centroids_), Distance>(
-        training_set, pq_centroids_, num_partitions_, num_threads_);
+    ::kmeans_pp<std::remove_cvref_t<V>, decltype(cluster_centroids_), Distance>(
+        training_set, cluster_centroids_, num_partitions_, num_threads_);
   }
 
   /**
-   * Compute centroids of the training set data, using the kmeans algorithm.
-   * The initialization algorithm used to generate the starting centroids
-   * for kmeans is specified by the `init` parameter.  Either random
-   * initialization or kmeans++ initialization can be used.
-   *
-   * Here we compress, then partition.  So the steps have to be:
-   * - pq_encode to get pq_centroids_ and distance_tables_
-   *   - uses sub_kmeans on uncompressed vectors
-   *   - pq_centroids_ is a feature_vector_array of feature_type, dimension_ x
-   * num_clusters_
-   * - encode training_set using pq_centroids_ to get unpartitioned_pq_vectors_,
-   *   which are a feature_vector_array of pq_code_type, num_subspaces_ x
-   * num_vectors_
-   * - train using unpartitioned_pq_vectors_ to get ivf_centroids_, which is a
-   *   feature_vector_array of pq_code_type, num_subpaces x num_partitions_
-   *   - uses kmeans
-   * - partition unpartitioned_pq_vectors_ using ivf_centroids_ to get
-   * partitioned_pq_vectors_
-   *
-   *
+   * Compute `num_partitions` centroids of the training set data, using the
+   * kmeans algorithm. The initialization algorithm used to generate the
+   * starting centroids for kmeans is specified by the `init` parameter.
+   * Either random initialization or kmeans++ initialization can be used.
    *
    * @param training_set Array of vectors to cluster.
    * @param init Specify which initialization algorithm to use,
    * random (`random`) or kmeans++ (`kmeanspp`).
    */
   template <feature_vector_array V, class Distance = sum_of_squares_distance>
-  void train(const V& training_set, kmeans_init init = kmeans_init::random) {
+  void train_ivf(
+      const V& training_set, kmeans_init init = kmeans_init::random) {
     dimension_ = ::dimension(training_set);
-
     if (num_partitions_ == 0) {
       num_partitions_ = std::sqrt(num_vectors(training_set));
     }
 
-    // To partition based on compressed vectors, we need to use the symmetric
-    // distance and pass in the encoded vectors and encoded centroids to kmeans
     flat_ivf_centroids_ =
-        ColMajorMatrix<flat_ivf_feature_type>(dimension_, num_partitions_);
+        flat_ivf_centroid_storage_type(dimension_, num_partitions_);
 
     switch (init) {
       case (kmeans_init::none):
         break;
       case (kmeans_init::kmeanspp):
-        kmeans_pp(training_set);
+        kmeans_pp<std::remove_cvref_t<decltype(training_set)>, Distance>(
+            training_set);
         break;
       case (kmeans_init::random):
         kmeans_random_init(training_set);
         break;
     };
 
-// Temporary printf debugging
-#if 0
-    std::cout << "\nCentroids Before:\n" << std::endl;
-    for (size_t j = 0; j < centroids_.num_cols(); ++j) {
-      for (size_t i = 0; i < dimension_; ++i) {
-        std::cout << centroids_[j][i] << " ";
-      }
-      std::cout << std::endl;
-    }
-    std::cout << std::endl;
-#endif
-
-    train_no_init(
+    train_no_init<
+        std::remove_cvref_t<decltype(training_set)>,
+        std::remove_cvref<decltype(flat_ivf_centroids_)>,
+        Distance>(
         training_set,
-        centroids_,
+        flat_ivf_centroids_,
         dimension_,
         num_partitions_,
         max_iter_,
         tol_,
         num_threads_,
         reassign_ratio_);
-
-// Temporary printf debugging
-#if 0
-    std::cout << "\nCentroids After:\n" << std::endl;
-    for (size_t j = 0; j < centroids_.num_cols(); ++j) {
-      for (size_t i = 0; i < dimension_; ++i) {
-        std::cout << centroids_[j][i] << " ";
-      }
-      std::cout << std::endl;
-    }
-    std::cout << std::endl;
-#endif
   }
 
   /**
@@ -599,17 +636,107 @@ class ivf_pq_index {
    */
   template <feature_vector_array V>
   void add(const V& training_set) {
-    auto partition_labels =
-        detail::flat::qv_partition(centroids_, training_set, num_threads_);
+    auto num_unique_labels = ::num_vectors(flat_ivf_centroids_);
 
-    // @note parts is a vector containing the partition label for each
-    // vector in training_set.  num_parts is how many unique labels there
-    // are
-    auto num_unique_labels = ::num_vectors(centroids_);
+#if ONE_WAY  // -- through training set three times
+    // Partition based on unencoded centroids and unencoded training set
+    auto partition_labels = detail::flat::qv_partition(
+        flat_ivf_centroids_, training_set, num_threads_, distance);
 
-    // @todo Should we have a move here?
-    partitioned_vectors_ = std::make_unique<storage_type>(
-        training_set, partition_labels, num_unique_labels);
+    // PQ Encode: -> cluster_centroids_, distance_tables_
+    // Encode: training_set -> unpartitioned_pq_vectors_
+    encode();
+#else  // ANOTHER WAY -- through training set twice -- maybe only once if we can
+       // combine pq_encode and encode
+    train_pq(training_set);   // cluster_centroids_, distance_tables_
+    train_ivf(training_set);  // flat_ivf_centroids_
+    encode();                 // unpartitioned_pq_vectors, pq_ivf_centroids
+    auto partition_labels = detail::flat::qv_partition(
+        pq_ivf_centroids_,
+        unpartitioned_pq_vectors_,
+        num_threads_,
+        make_pq_distance_symmetric());
+#endif
+    // This just reorders based on partition_labels
+    partitioned_pq_vectors_ = std::make_unique<pq_storage_type>(
+        unpartitioned_pq_vectors_, partition_labels, num_unique_labels);
+  }
+
+  /**
+   * @brief PQ encode the training set using the cluster_centroids_ to get
+   * unpartitioned_pq_vectors_.  PQ encode the flat_ivf_centroids_ to get
+   * pq_ivf_centroids_.
+   *
+   * @return
+   */
+  template <feature_vector_array V>
+  auto encode(const V& training_set) {
+    // unpartitioned_pq_vectors_ :
+  }
+
+  template <
+      feature_vector V,
+      feature_vector W,
+      class SubDistance = sub_sum_of_squares_distance>
+    requires uncached_sub_distance_function<
+        SubDistance,
+        V,
+        decltype(cluster_centroids_[0])>
+  inline auto encode(const V& v, W& pq) const {
+    auto local_sub_distance = SubDistance{};
+
+    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      auto sub_begin = sub_dimension_ * subspace;
+      auto sub_end = sub_begin + sub_dimension_;
+
+      auto min_score = std::numeric_limits<score_type>::max();
+      pq_code_type idx{0};
+      for (size_t i = 0; i < num_vectors(cluster_centroids_); ++i) {
+        auto score =
+            local_sub_distance(v, cluster_centroids_[i], sub_begin, sub_end);
+        if (score < min_score) {
+          min_score = score;
+          idx = i;
+        }
+      }
+      pq[subspace] = idx;
+    }
+  }
+
+  template <
+      feature_vector_array V,
+      class SubDistance = cached_sub_sum_of_squares_distance>
+    requires cached_sub_distance_function<
+        SubDistance,
+        typename V::span_type,
+        decltype(cluster_centroids_[0])>
+  auto encode(const V& v) {
+    /*
+     * Encode the training set using the cluster_centroids_ to get the
+     * unpartitioned_pq_vectors_.
+     */
+    unpartitioned_pq_vectors_ =
+        flat_storage_type(num_subspaces_, num_vectors(v));
+    for (size_t i = 0; i < num_vectors(v); ++i) {
+      auto x = unpartitioned_pq_vectors_[i];
+      encode<
+          typename V::span_type,
+          decltype(unpartitioned_pq_vectors_[0]),
+          SubDistance>(v[i], x);
+    }
+
+    /*
+     * Encode the flat_ivf_centroids_ to get the pq_ivf_centroids_.
+     */
+    pq_ivf_centroids_ =
+        pq_ivf_centroid_storage_type(num_subspaces_, num_partitions_);
+    for (size_t i = 0; i < num_partitions_; ++i) {
+      auto x = pq_ivf_centroids_[i];
+      encode<
+          decltype(cluster_centroids_[0]),
+          decltype(pq_ivf_centroids_[0]),
+          SubDistance>(cluster_centroids_[i], x);
+    }
   }
 
   /*****************************************************************************

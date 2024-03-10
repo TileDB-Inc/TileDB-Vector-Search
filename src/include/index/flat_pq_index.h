@@ -274,6 +274,8 @@ class flat_pq_index {
 
   // @todo IMPORTANT: We need to do some abstraction penalty tests to make sure
   // that the distance functions are inlined.
+  // @todo Make this SIMD friendly -- do multiple subspaces at a time
+  // For each (i, j), distances should be stored contiguously
   float sub_distance_symmetric(auto&& a, auto&& b) const {
     float pq_distance = 0.0;
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
@@ -309,6 +311,7 @@ class flat_pq_index {
    * @todo There is likely a copy constructor of the Distance functor.  That
    * should be checked and possibly fixed so that there is just a reference to
    * an existing object.
+   * @todo This also needs to be SIMDized.
    */
   template <
       feature_vector U,

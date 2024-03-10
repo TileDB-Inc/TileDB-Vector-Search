@@ -265,7 +265,7 @@ class ivf_flat_index {
    * @param init Specify which initialization algorithm to use,
    * random (`random`) or kmeans++ (`kmeanspp`).
    */
-  template <feature_vector_array V>
+  template <feature_vector_array V, class Distance = sum_of_squares_distance>
   void train(
       //       ColMajorMatrix<feature_type>& training_set,
       const V& training_set,
@@ -282,7 +282,8 @@ class ivf_flat_index {
       case (kmeans_init::none):
         break;
       case (kmeans_init::kmeanspp):
-        kmeans_pp(training_set);
+        kmeans_pp<std::remove_cvref_t<decltype(training_set)>, Distance>(
+            training_set);
         break;
       case (kmeans_init::random):
         kmeans_random_init(training_set);
@@ -301,7 +302,12 @@ class ivf_flat_index {
     std::cout << std::endl;
 #endif
 
-    train_no_init(
+    // @todo Or we can pass a `distance` parameter as an argument and use
+    // argument deduction
+    train_no_init<
+        std::remove_cvref_t<decltype(training_set)>,
+        std::remove_cvref<decltype(centroids_)>,
+        Distance>(
         training_set,
         centroids_,
         dimension_,
