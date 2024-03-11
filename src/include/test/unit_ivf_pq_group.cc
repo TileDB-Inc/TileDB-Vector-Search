@@ -72,6 +72,12 @@ struct dummy_pq_index {
   auto get_num_clusters() const {
     return 256;
   }
+  auto get_sub_dimension() const {
+    return 8;
+  }
+  auto get_bits_per_subspace() const {
+    return 8;
+  }
 };
 
 TEST_CASE(

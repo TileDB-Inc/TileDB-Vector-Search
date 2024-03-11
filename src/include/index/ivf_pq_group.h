@@ -68,6 +68,11 @@ struct metadata_type_selector<ivf_pq_group<Index>> {
 };
 
 template <class Index>
+struct index_type_selector<ivf_pq_group<Index>> {
+  using type = Index;
+};
+
+template <class Index>
 class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
   using Base = base_index_group<ivf_pq_group>;
 
@@ -79,8 +84,6 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
   using Base::valid_key_names_;
   using Base::version_;
 
-  using index_type = Index;
-
   // @todo These should be defined in some common place and passed as parameters
   static const int32_t default_domain{std::numeric_limits<int32_t>::max() - 1};
   static const int32_t default_tile_extent{100'000};
@@ -88,16 +91,18 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
 
  public:
   using index_group_metadata_type = ivf_pq_metadata;
+  // using index_type = Index;
+  using index_type = index_type_selector<ivf_pq_group<Index>>::type;
 
   ivf_pq_group(
-      const index_type& index,
+      const Index& index,
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
       size_t timestamp = 0,
       const std::string& version = std::string{""},
       const tiledb::Config& cfg = tiledb::Config{})
-      : Base(ctx, uri, index.dimension(), rw, timestamp, version, cfg) {
+      : Base(index, ctx, uri, rw, timestamp, version, cfg) {
   }
 
  public:
@@ -222,6 +227,11 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
       this->version_ = current_storage_version;
     }
     this->init_valid_array_names();
+    this->set_dimension(this->cached_index_.get().dimension());
+    this->set_num_subspaces(this->cached_index_.get().get_num_subspaces());          // m
+    this->set_sub_dimension (this->cached_index_.get().get_sub_dimension());         // D* == D/m
+    this->set_bits_per_subspace(this->cached_index_.get().get_bits_per_subspace());  // 8
+    this->set_num_clusters(this->cached_index_.get().get_num_clusters());            // 2**nbits
 
     static const int32_t tile_size{
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
@@ -257,14 +267,10 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
     metadata_.base_sizes_ = {0};
     metadata_.partition_history_ = {0};
     metadata_.temp_size_ = 0;
-    metadata_.dimension_ = this->get_dimension();
 
     // Set the PQ related metadata: num_subspaces, sub_dimension,
     // bits_per_subspace, num_clusters
-    metadata_.num_subspaces_ = this->get_num_subspaces();          // m
-    metadata_.sub_dimension_ = this->get_sub_dimension();          // D* == D/m
-    metadata_.bits_per_subspace_ = this->get_bits_per_subspace();  // 8
-    metadata_.num_clusters_ = this->get_num_clusters();            // 2**nbits
+
 
     // Create the arrays: cluster_centroids,
     // flat_ivf_centroids, pq_ivf_centroids, ivf_index,
