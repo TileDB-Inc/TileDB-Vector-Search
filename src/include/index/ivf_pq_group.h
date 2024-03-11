@@ -39,6 +39,9 @@
 #include "index/index_group.h"
 #include "index/ivf_pq_metadata.h"
 
+// flat_ivf_centroids, pq_ivf_centroids, partitioned_pq_vectors, partitioned_pq_index, 
+// cluster_centroids, distance_tables,
+
 [[maybe_unused]] static StorageFormat ivf_pq_storage_formats = {
     {"0.3",
      {
