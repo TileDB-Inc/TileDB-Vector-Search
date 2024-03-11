@@ -72,7 +72,7 @@ TEMPLATE_TEST_CASE(
             << std::endl;
 
   {
-    scoped_timer _{"nn_descent", true};
+    scoped_timer _{"nn_descent"};
     auto g =
         ::detail::graph::init_random_nn_graph<feature_type, uint32_t>(db, k_nn);
     for (size_t i = 0; i < 4; ++i) {

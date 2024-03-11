@@ -1,8 +1,6 @@
 import numpy as np
-import pytest
 from common import *
 
-import tiledb
 import tiledb.vector_search as vs
 from tiledb.vector_search import _tiledbvspy as vspy
 
@@ -24,6 +22,24 @@ def test_load_matrix(tmpdir):
     assert np.array_equal(m, data)
     assert np.array_equal(orig_matrix[0, 0], data[0, 0])
 
+def test_load_matrix_specify_size(tmpdir):
+    p = str(tmpdir.mkdir("test").join("test.tdb"))
+    data = np.random.rand(12).astype(np.float32).reshape(3, 4)
+
+    # write some test data with tiledb-py
+    create_array(p, data)
+
+    # test specifying a size
+    m = vs.load_as_array(p, size=data.shape[1])
+    assert np.array_equal(m, data)
+
+    # test specifying a smaller size
+    m = vs.load_as_array(p, size=2)
+    assert np.array_equal(m, data[:, :2])
+
+    # test specifying a size of 0
+    m = vs.load_as_array(p, size=0)
+    assert m.shape == (3, 0)
 
 def test_vector(tmpdir):
     v = vspy._create_vector_u64()
@@ -31,7 +47,7 @@ def test_vector(tmpdir):
 
 
 def test_partition_ivf_index(tmpdir):
-    path = tmpdir.mkdir("test").join("test.tdb")
+    tmpdir.mkdir("test").join("test.tdb")
 
     # Test: 3x3 identity; swap columns 0 and 1; check assignment matches swap.
     data = np.identity(3).astype(np.float32)
@@ -46,7 +62,7 @@ def test_partition_ivf_index(tmpdir):
 
 
 def test_partition_ivf_index2(tmpdir):
-    path = tmpdir.mkdir("test").join("test.tdb")
+    tmpdir.mkdir("test").join("test.tdb")
 
     # Test: 3x3 identity; swap columns 0 and 1; check assignment matches swap.
     data = np.identity(3).astype(np.float32)

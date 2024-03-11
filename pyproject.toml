@@ -19,13 +19,13 @@ classifiers = [
 
 dependencies = [
     "tiledb-cloud>=0.11",
-    "tiledb>=0.25.0",
+    "tiledb>=0.26.0",
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
     "scikit-learn",
 ]
 
 [project.optional-dependencies]
-test = ["nbmake", "pytest"]
+test = ["nbmake", "pytest<8.0.0"]
 formatting = ["pre-commit"]
 
 [project.urls]
@@ -57,6 +57,7 @@ version_file = "apis/python/src/tiledb/vector_search/version.py"
 [tool.ruff]
 extend-select = ["I"]
 ignore = ["F403", "F405", "E501", "E741"]
+exclude = [".ipynb"]
 
 [tool.ruff.isort]
 known-first-party = ["tiledb"]

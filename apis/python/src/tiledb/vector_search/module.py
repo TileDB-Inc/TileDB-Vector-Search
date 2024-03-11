@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, Mapping, Optional
 
 import numpy as np
@@ -5,17 +6,16 @@ import numpy as np
 import tiledb
 from tiledb.vector_search._tiledbvspy import *
 
-import logging, pdb
 
 def load_as_matrix(
     path: str,
     ctx: "Ctx" = None,
     config: Optional[Mapping[str, Any]] = None,
-    size: int = 0,
+    size: Optional[int] = None,
     timestamp: int = 0,
 ):
     """
-    Load array as Matrix class
+    Load array as Matrix class. We read in all rows (i.e. from 0 to the row domain length).
 
     Parameters
     ----------
@@ -24,7 +24,7 @@ def load_as_matrix(
     ctx: Ctx
         TileDB context
     size: int
-        Size of vectors to load
+        Size of vectors to load. If not set we will read from 0 to the column domain length.
     """
     # If the user passes a tiledb python Config object convert to a dictionary
     if isinstance(config, tiledb.Config):
@@ -35,16 +35,18 @@ def load_as_matrix(
 
     a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
+    # Read all rows from column 0 -> `size`. Set no upper_bound. Note that if `size` is None then 
+    # we'll read to the column domain length.
     if dtype == np.float32:
-        m = tdbColMajorMatrix_f32(ctx, path, 0, 0, 0, size, 0, timestamp)
+        m = tdbColMajorMatrix_f32(ctx, path, 0, None, 0, size, 0, timestamp)
     elif dtype == np.float64:
-        m = tdbColMajorMatrix_f64(ctx, path, 0, 0, 0, size, 0, timestamp)
+        m = tdbColMajorMatrix_f64(ctx, path, 0, None, 0, size, 0, timestamp)
     elif dtype == np.int32:
-        m = tdbColMajorMatrix_i32(ctx, path, 0, 0, 0, size, 0, timestamp)
+        m = tdbColMajorMatrix_i32(ctx, path, 0, None, 0, size, 0, timestamp)
     elif dtype == np.int32:
-        m = tdbColMajorMatrix_i64(ctx, path, 0, 0, 0, size, 0, timestamp)
+        m = tdbColMajorMatrix_i64(ctx, path, 0, None, 0, size, 0, timestamp)
     elif dtype == np.uint8:
-        m = tdbColMajorMatrix_u8(ctx, path, 0, 0, 0, size, 0, timestamp)
+        m = tdbColMajorMatrix_u8(ctx, path, 0, None, 0, size, 0, timestamp)
     # elif dtype == np.uint64:
     #     return tdbColMajorMatrix_u64(ctx, path, size, timestamp)
     else:
@@ -58,6 +60,7 @@ def load_as_array(
     return_matrix: bool = False,
     ctx: "Ctx" = None,
     config: Optional[Mapping[str, Any]] = None,
+    size: Optional[int] = None,
 ):
     """
     Load array as array class
@@ -71,7 +74,7 @@ def load_as_array(
     config: Dict
         TileDB configuration parameters
     """
-    m = load_as_matrix(path, ctx=ctx, config=config)
+    m = load_as_matrix(path, size=size, ctx=ctx, config=config)
     r = np.array(m, copy=False)
 
     # hang on to a copy for testing purposes, for now
@@ -83,14 +86,15 @@ def load_as_array(
 
 def debug_slice(m: "colMajorMatrix", name: str):
     dtype = m.dtype
-    if (dtype == np.float32):
+    if dtype == np.float32:
         return debug_slice_f32(m, name)
-    elif (dtype == np.uint8):
+    elif dtype == np.uint8:
         return debug_slice_u8(m, name)
-    elif (dtype == np.uint64):
+    elif dtype == np.uint64:
         return debug_slice_u64(m, name)
     else:
         raise TypeError(f"Unsupported type: {dtype}!")
+
 
 def query_vq_nth(db: "colMajorMatrix", *args):
     """
@@ -281,7 +285,6 @@ def ivf_query_ram(
     if ctx is None:
         ctx = Ctx({})
 
-
     args = tuple(
         [
             parts_db,
@@ -376,7 +379,9 @@ def ivf_query(
         ]
     )
 
-    logging.info(f">>>> module.py: ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}")
+    logging.info(
+        f">>>> module.py: ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}"
+    )
 
     if dtype == np.float32:
         if use_nuv_implementation:
@@ -417,11 +422,11 @@ def dist_qv(
         ctx = Ctx({})
     args = tuple(
         [
-            ctx,                               # 0
-            parts_uri,                         # 1
+            ctx,  # 0
+            parts_uri,  # 1
             StdVector_u64(active_partitions),  # 2
-            query_vectors,                     # 3
-            active_queries,                    # 4
+            query_vectors,  # 3
+            active_queries,  # 4
             StdVector_u64(indices),
             ids_uri,
             k_nn,
@@ -461,7 +466,18 @@ def array_to_matrix(array: np.ndarray):
     else:
         raise TypeError("Unsupported type!")
 
-def kmeans_fit(partitions: int, init: str, max_iter: int, verbose: bool, n_init: int, sample_vectors: "colMajorMatrix", tol: Optional[float] = None, nthreads: Optional[int] = None, seed: Optional[int] = None):
+
+def kmeans_fit(
+    partitions: int,
+    init: str,
+    max_iter: int,
+    verbose: bool,
+    n_init: int,
+    sample_vectors: "colMajorMatrix",
+    tol: Optional[float] = None,
+    nthreads: Optional[int] = None,
+    seed: Optional[int] = None,
+):
     args = tuple(
         [
             partitions,
@@ -479,6 +495,7 @@ def kmeans_fit(partitions: int, init: str, max_iter: int, verbose: bool, n_init:
         return kmeans_fit_f32(*args)
     else:
         raise TypeError("Unsupported type!")
+
 
 def kmeans_predict(centroids: "colMajorMatrix", sample_vectors: "colMajorMatrix"):
     args = tuple(

@@ -44,14 +44,14 @@ class index_adj_list : public std::vector<std::list<I>> {
 
  public:
   using id_type = I;
+  using score_type = float;
 
   index_adj_list(size_t num_vertices)
       : Base(num_vertices) {
   }
 
-#if 0
-  template <class EdgeList>
-  index_adj_list(EdgeList&& edge_list) {
+#if 1
+  index_adj_list(const std::vector<std::tuple<I, I>>& edge_list) {
     for (auto& [src, dst] : edge_list) {
       Base::operator[](src).push_back(dst);
     }
@@ -88,6 +88,11 @@ class index_adj_list : public std::vector<std::list<I>> {
     return Base::size();
   }
 };
+
+// Deduction guide
+template <class Inner>
+index_adj_list(const std::vector<Inner>& l)
+    -> index_adj_list<typename Inner::value_type>;
 
 template <class I = size_t>
 auto num_vertices(index_adj_list<I>& g) {

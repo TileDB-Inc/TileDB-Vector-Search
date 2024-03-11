@@ -85,7 +85,7 @@ auto gen_uni_grid(size_t M, size_t N) {
   std::vector<std::tuple<size_t, size_t>> edges;
   edges.reserve(nedges);
 
-  auto vec_array = ColMajorMatrix<size_t>(dim, nvectors);
+  auto vec_array = ColMajorMatrix<float>(dim, nvectors);
 
   for (size_t i = 0; i < M; ++i) {
     for (size_t j = 0; j < N; ++j) {
@@ -116,7 +116,7 @@ auto gen_bi_grid(size_t M, size_t N) {
   std::vector<std::tuple<size_t, size_t>> edges;
   edges.reserve(nedges);
 
-  auto vec_array = ColMajorMatrix<size_t>(dim, nvectors);
+  auto vec_array = ColMajorMatrix<float>(dim, nvectors);
 
   for (size_t i = 0; i < M; ++i) {
     for (size_t j = 0; j < N; ++j) {

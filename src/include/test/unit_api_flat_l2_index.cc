@@ -154,7 +154,7 @@ TEST_CASE("api: queries", "[api][flat_l2_index]") {
       CHECK(dimension(a) == dim);
       CHECK(num_vectors(a) == numv);
 
-      auto aq = QueryVectorArray(ctx, q_uri, num_queries);
+      auto aq = QueryVectorArray(ctx, q_uri, "", num_queries);
       load(aq);
 
       auto [aq_scores, aq_top_k] = a.query(aq, k_nn);
