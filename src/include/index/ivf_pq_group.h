@@ -108,6 +108,18 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
  public:
   void append_valid_array_names_impl() {
     for (auto&& [array_key, array_name] : ivf_pq_storage_formats[version_]) {
+      if (array_key == "distance_tables_array_name") {
+        for (size_t i = 0; i < this->get_num_subspaces(); ++i) {
+          valid_key_names_.insert(array_key + "_" + std::to_string(i));
+          valid_array_names_.insert(array_name + "_" + std::to_string(i));
+          array_name_map_[array_key + "_" + std::to_string(i)] =
+              array_name + "_" + std::to_string(i);
+        }
+      } else {
+        valid_key_names_.insert(array_key);
+        valid_array_names_.insert(array_name);
+        array_name_map_[array_key] = array_name;
+      }
       valid_key_names_.insert(array_key);
       valid_array_names_.insert(array_name);
       array_name_map_[array_key] = array_name;
@@ -227,11 +239,18 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
       this->version_ = current_storage_version;
     }
     this->init_valid_array_names();
+
+    // Set the PQ related metadata: num_subspaces, sub_dimension,
+    // bits_per_subspace, num_clusters
     this->set_dimension(this->cached_index_.get().dimension());
-    this->set_num_subspaces(this->cached_index_.get().get_num_subspaces());          // m
-    this->set_sub_dimension (this->cached_index_.get().get_sub_dimension());         // D* == D/m
-    this->set_bits_per_subspace(this->cached_index_.get().get_bits_per_subspace());  // 8
-    this->set_num_clusters(this->cached_index_.get().get_num_clusters());            // 2**nbits
+    this->set_num_subspaces(
+        this->cached_index_.get().get_num_subspaces());  // m
+    this->set_sub_dimension(
+        this->cached_index_.get().get_sub_dimension());  // D* == D/m
+    this->set_bits_per_subspace(
+        this->cached_index_.get().get_bits_per_subspace());  // 8
+    this->set_num_clusters(
+        this->cached_index_.get().get_num_clusters());  // 2**nbits
 
     static const int32_t tile_size{
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
@@ -262,15 +281,11 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
     metadata_.indices_type_str_ =
         type_to_string_v<typename index_type::indices_type>;
 
-    // Set the IVF related metadata
+    // Initialize IVF related metadata
     metadata_.ingestion_timestamps_ = {0};
     metadata_.base_sizes_ = {0};
     metadata_.partition_history_ = {0};
     metadata_.temp_size_ = 0;
-
-    // Set the PQ related metadata: num_subspaces, sub_dimension,
-    // bits_per_subspace, num_clusters
-
 
     // Create the arrays: cluster_centroids,
     // flat_ivf_centroids, pq_ivf_centroids, ivf_index,
