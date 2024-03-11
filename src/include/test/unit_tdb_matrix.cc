@@ -47,7 +47,8 @@ TEST_CASE("tdb_matrix: test test", "[tdb_matrix]") {
 
 TEMPLATE_TEST_CASE("tdb_matrix: constructors", "[tdb_matrix]", float, uint8_t) {
   tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
   int offset = 13;
   size_t Mrows = 200;
   size_t Ncols = 500;
@@ -84,7 +85,9 @@ TEMPLATE_TEST_CASE("tdb_matrix: constructors", "[tdb_matrix]", float, uint8_t) {
 TEMPLATE_TEST_CASE(
     "tdb_matrix: assign to matrix", "[tdb_matrix]", float, uint8_t) {
   tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+
   int offset = 13;
 
   size_t Mrows = 200;
@@ -163,7 +166,8 @@ TEMPLATE_TEST_CASE(
 
 TEMPLATE_TEST_CASE("tdb_matrix: preload", "[tdb_matrix]", float, uint8_t) {
   tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
   int offset = 13;
 
   size_t Mrows = 200;
@@ -216,8 +220,10 @@ TEST_CASE("tdb_matrix: MatrixBase template parameter", "[tdb_matrix]") {
   using LayoutPolicy = stdx::layout_left;
   using IdsType = uint8_t;
 
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
-  std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  std::string tmp_ids_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
 
   // 1. Use Matrix as the MatrixBase template parameter.
   {
@@ -263,5 +269,77 @@ TEST_CASE("tdb_matrix: MatrixBase template parameter", "[tdb_matrix]") {
         CHECK(X(i, j) == Y(i, j));
       }
     }
+  }
+}
+
+TEST_CASE("tdb_matrix: empty matrix", "[tdb_matrix]") {
+  tiledb::Context ctx;
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  size_t matrix_dimension{128};
+  int32_t matrix_domain{1000};
+  int32_t tile_extent{100};
+
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_matrix_uri)) {
+    vfs.remove_dir(tmp_matrix_uri);
+  }
+
+  create_empty_for_matrix<float, stdx::layout_left>(
+      ctx,
+      tmp_matrix_uri,
+      matrix_dimension,
+      matrix_domain,
+      matrix_dimension,
+      tile_extent);
+
+  SECTION("empty: no rows and no cols") {
+    auto X =
+        tdbColMajorMatrix<float>(ctx, tmp_matrix_uri, 0, 0, 0, 0, 10000, 0);
+    X.load();
+    CHECK(X.num_cols() == 0);
+    CHECK(num_vectors(X) == 0);
+    CHECK(X.num_rows() == 0);
+    CHECK(dimension(X) == 0);
+  }
+
+  SECTION("empty: all rows and no cols") {
+    auto X = tdbColMajorMatrix<float>(
+        ctx, tmp_matrix_uri, 0, std::nullopt, 0, 0, 10000, 0);
+    X.load();
+    CHECK(X.num_cols() == 0);
+    CHECK(num_vectors(X) == 0);
+    CHECK(X.num_rows() == matrix_dimension);
+    CHECK(dimension(X) == matrix_dimension);
+  }
+
+  SECTION("empty: no rows and all cols") {
+    auto X = tdbColMajorMatrix<float>(
+        ctx, tmp_matrix_uri, 0, 0, 0, std::nullopt, 10000, 0);
+    X.load();
+    CHECK(X.num_cols() == matrix_domain);
+    CHECK(num_vectors(X) == matrix_domain);
+    CHECK(X.num_rows() == 0);
+    CHECK(dimension(X) == 0);
+  }
+
+  SECTION("filled") {
+    auto X = tdbColMajorMatrix<float>(ctx, tmp_matrix_uri);
+    X.load();
+    CHECK(X.num_cols() == matrix_domain);
+    CHECK(num_vectors(X) == matrix_domain);
+    CHECK(X.num_rows() == matrix_dimension);
+    CHECK(dimension(X) == matrix_dimension);
+
+    auto Y = tdbColMajorMatrix<float>(std::move(X));
+    CHECK(Y.num_cols() == X.num_cols());
+    CHECK(num_vectors(Y) == num_vectors(X));
+    CHECK(Y.num_rows() == X.num_rows());
+    CHECK(dimension(Y) == dimension(X));
+    Y.load();
+    CHECK(Y.num_cols() == X.num_cols());
+    CHECK(num_vectors(Y) == num_vectors(X));
+    CHECK(Y.num_rows() == X.num_rows());
+    CHECK(dimension(Y) == dimension(X));
   }
 }

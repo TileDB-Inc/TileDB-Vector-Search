@@ -80,7 +80,7 @@ enum class IndexKind {
 
 // @todo Use enum for key rather than string?
 using StorageFormat =
-    std::map<std::string, std::map<std::string, std::filesystem::path>>;
+    std::map<std::string, std::unordered_map<std::string, std::string>>;
 [[maybe_unused]] static StorageFormat storage_formats = {
     {"0.1",
      {

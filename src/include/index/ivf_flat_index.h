@@ -228,11 +228,12 @@ class ivf_flat_index {
      */
     dimension_ = group_->get_dimension();
     num_partitions_ = group_->get_num_partitions();
+    // Read all rows from column 0 -> `num_partitions_`. Set no upper_bound.
     centroids_ =
         std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
             group_->cached_ctx(),
             group_->centroids_uri(),
-            0,
+            std::nullopt,
             num_partitions_,
             0,
             timestamp_));
@@ -313,7 +314,7 @@ class ivf_flat_index {
               }
             }
 #else
-            auto distance = sum_of_squares(vec, centroids_[i - 1]);
+            auto distance = l2_distance(vec, centroids_[i - 1]);
             auto min_distance = std::min(distances[j], distance);
             distances[j] = min_distance;
 #endif
@@ -488,7 +489,7 @@ class ivf_flat_index {
             total_weight += centroid[k] * centroid[k];
           }
         }
-        auto diff = sum_of_squares(centroids_[j], new_centroids[j]);
+        auto diff = l2_distance(centroids_[j], new_centroids[j]);
         max_diff = std::max<float>(max_diff, diff);
       }
       centroids_.swap(new_centroids);
@@ -1278,7 +1279,7 @@ class ivf_flat_index {
     std::vector<score_type> distances(nClusters);
     for (size_t i = 0; i < vectors.num_cols(); ++i) {
       for (size_t j = 0; j < nClusters; ++j) {
-        distances[j] = sum_of_squares(vectors[i], centroids[j]);
+        distances[j] = l2_distance(vectors[i], centroids[j]);
       }
       indices[i] =
           std::min_element(begin(distances), end(distances)) - begin(distances);

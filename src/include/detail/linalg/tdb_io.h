@@ -32,10 +32,6 @@
 #ifndef TILEDB_TDB_IO_H
 #define TILEDB_TDB_IO_H
 
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <filesystem>
 #include <numeric>
 #include <vector>
@@ -46,6 +42,77 @@
 #include "utils/logging.h"
 #include "utils/print_types.h"
 #include "utils/timer.h"
+
+namespace {
+
+template <class T>
+std::vector<T> read_vector_helper(
+    const tiledb::Context& ctx,
+    const std::string& uri,
+    size_t start_pos,
+    size_t end_pos,
+    size_t timestamp,
+    bool read_full_vector) {
+  scoped_timer _{tdb_func__ + " " + std::string{uri}};
+
+  tiledb::TemporalPolicy temporal_policy =
+      (timestamp == 0) ? tiledb::TemporalPolicy() :
+                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+
+  auto array_ = tiledb_helpers::open_array(
+      tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
+  auto schema_ = array_->schema();
+
+  using domain_type = int32_t;
+  const size_t idx = 0;
+
+  auto domain_{schema_.domain()};
+
+  auto dim_num_{domain_.ndim()};
+  auto array_rows_{domain_.dimension(0)};
+
+  if (read_full_vector) {
+    if (start_pos == 0) {
+      start_pos = array_rows_.template domain<domain_type>().first;
+    }
+    if (end_pos == 0) {
+      end_pos = array_rows_.template domain<domain_type>().second + 1;
+    }
+  }
+
+  auto vec_rows_{end_pos - start_pos};
+
+  if (vec_rows_ == 0) {
+    return {};
+  }
+
+  auto attr_num{schema_.attribute_num()};
+  auto attr = schema_.attribute(idx);
+
+  std::string attr_name = attr.name();
+  tiledb_datatype_t attr_type = attr.type();
+
+  // Create a subarray that reads the array up to the specified subset.
+  std::vector<int32_t> subarray_vals = {
+      (int32_t)start_pos, (int32_t)end_pos - 1};
+  tiledb::Subarray subarray(ctx, *array_);
+  subarray.set_subarray(subarray_vals);
+
+  // @todo: use something non-initializing
+  std::vector<T> data_(vec_rows_);
+
+  tiledb::Query query(ctx, *array_);
+  query.set_subarray(subarray).set_data_buffer(
+      attr_name, data_.data(), vec_rows_);
+  tiledb_helpers::submit_query(tdb_func__, uri, query);
+  _memory_data.insert_entry(tdb_func__, vec_rows_ * sizeof(T));
+
+  array_->close();
+  assert(tiledb::Query::Status::COMPLETE == query.query_status());
+
+  return data_;
+}
+}  // namespace
 
 /******************************************************************************
  * Matrix creation and writing.  Because we support out-of-core operations with
@@ -294,67 +361,16 @@ std::vector<T> read_vector(
     size_t start_pos,
     size_t end_pos,
     size_t timestamp = 0) {
-  scoped_timer _{tdb_func__ + " " + std::string{uri}};
-
-  tiledb::TemporalPolicy temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
-
-  auto array_ = tiledb_helpers::open_array(
-      tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
-  auto schema_ = array_->schema();
-
-  using domain_type = int32_t;
-  const size_t idx = 0;
-
-  auto domain_{schema_.domain()};
-
-  auto dim_num_{domain_.ndim()};
-  auto array_rows_{domain_.dimension(0)};
-
-  if (start_pos == 0) {
-    start_pos = array_rows_.template domain<domain_type>().first;
-  }
-  if (end_pos == 0) {
-    end_pos = array_rows_.template domain<domain_type>().second + 1;
-  }
-
-  auto vec_rows_{end_pos - start_pos};
-
-  auto attr_num{schema_.attribute_num()};
-  auto attr = schema_.attribute(idx);
-
-  std::string attr_name = attr.name();
-  tiledb_datatype_t attr_type = attr.type();
-
-  // Create a subarray that reads the array up to the specified subset.
-  std::vector<int32_t> subarray_vals = {
-      (int32_t)start_pos, (int32_t)end_pos - 1};
-  tiledb::Subarray subarray(ctx, *array_);
-  subarray.set_subarray(subarray_vals);
-
-  // @todo: use something non-initializing
-  std::vector<T> data_(vec_rows_);
-
-  tiledb::Query query(ctx, *array_);
-  query.set_subarray(subarray).set_data_buffer(
-      attr_name, data_.data(), vec_rows_);
-  tiledb_helpers::submit_query(tdb_func__, uri, query);
-  _memory_data.insert_entry(tdb_func__, vec_rows_ * sizeof(T));
-
-  array_->close();
-  assert(tiledb::Query::Status::COMPLETE == query.query_status());
-
-  return data_;
+  return read_vector_helper<T>(ctx, uri, start_pos, end_pos, timestamp, false);
 }
 
 /**
- * @brief Overload with 0 for start_pos and end_pos (read entire vector)
+ * @brief Overload to read the entire vector.
  */
 template <class T>
 std::vector<T> read_vector(
     const tiledb::Context& ctx, const std::string& uri, size_t timestamp = 0) {
-  return read_vector<T>(ctx, uri, 0, 0, timestamp);
+  return read_vector_helper<T>(ctx, uri, 0, 0, timestamp, true);
 }
 
 template <class T>
@@ -375,64 +391,60 @@ auto sizes_to_indices(const std::vector<T>& sizes) {
  * @return a Matrix of the data
  */
 template <class T>
-auto read_bin_local(const std::string& bin_file, size_t subset = 0) {
-  if (!std::filesystem::exists(bin_file)) {
-    throw std::runtime_error("file " + bin_file + " does not exist");
+auto read_bin_local(
+    const tiledb::Context& ctx,
+    const std::string& bin_file,
+    size_t subset = 0) {
+  auto vfs = tiledb::VFS{ctx};
+
+  uint32_t dimension = 0u;
+
+  const auto file_size = vfs.file_size(bin_file);
+  auto filebuf = tiledb::VFS::filebuf{vfs};
+  filebuf.open(bin_file, std::ios::in | std::ios::binary);
+
+  auto file = std::ifstream{bin_file, std::ios::binary};
+  if (!file.good()) {
+    throw std::runtime_error("failed to open file: " + bin_file);
   }
-  auto file_size = std::filesystem::file_size(bin_file);
 
-  auto fd = open(bin_file.c_str(), O_RDONLY);
-  if (fd == -1) {
-    throw std::runtime_error("could not open " + bin_file);
+  if (!file.read(reinterpret_cast<char*>(&dimension), sizeof(dimension))) {
+    throw std::runtime_error("failed to read dimension for the first vector");
   }
+  file.seekg(0);
 
-  uint32_t dimension{0};
-  auto num_read = read(fd, &dimension, 4);
-  lseek(fd, 0, SEEK_SET);
-
-  auto max_vectors = file_size / (4 + dimension * sizeof(T));
+  const auto max_vectors = file_size / (4u + dimension * sizeof(T));
   if (subset > max_vectors) {
     throw std::runtime_error(
         "specified subset is too large " + std::to_string(subset) + " > " +
         std::to_string(max_vectors));
   }
-  auto num_vectors = subset == 0 ? max_vectors : subset;
 
-  struct stat s;
-  fstat(fd, &s);
-  size_t mapped_size = s.st_size;
-  assert((size_t)s.st_size == (size_t)file_size);
+  const auto num_vectors = subset == 0 ? max_vectors : subset;
 
-  T* mapped_ptr = reinterpret_cast<T*>(
-      mmap(0, mapped_size, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0));
+  auto result = ColMajorMatrix<T>{dimension, num_vectors};
+  auto* result_ptr = result.data();
 
-  if ((long)mapped_ptr == -1) {
-    throw std::runtime_error("mmap failed");
-  }
+  for (size_t i = 0; i < num_vectors; ++i) {
+    uint32_t d = 0u;
 
-  ColMajorMatrix<T> X(dimension, num_vectors);
-
-  auto data_ptr = X.data();
-  auto sift_ptr = mapped_ptr;
-
-  // Perform strided read
-  for (size_t k = 0; k < num_vectors; ++k) {
-    // Check for consistency of dimensions
-    decltype(dimension) dim = *reinterpret_cast<int*>(sift_ptr++);
-    if (dim != dimension) {
+    if (!file.read(reinterpret_cast<char*>(&d), sizeof(d))) {
       throw std::runtime_error(
-          "dimension mismatch: " + std::to_string(dim) +
+          "failed to read dimension for vector at pos: " + std::to_string(i));
+    }
+
+    if (d != dimension) {
+      throw std::runtime_error(
+          "dimension mismatch: " + std::to_string(d) +
           " != " + std::to_string(dimension));
     }
-    std::copy(sift_ptr, sift_ptr + dimension, data_ptr);
-    data_ptr += dimension;
-    sift_ptr += dimension;
+    if (!file.read(reinterpret_cast<char*>(result_ptr), d * sizeof(T))) {
+      throw std::runtime_error("file read error");
+    }
+    result_ptr += dimension;
   }
 
-  munmap(mapped_ptr, mapped_size);
-  close(fd);
-
-  return X;
+  return result;
 }
 
 #endif  // TILEDB_TDB_IO_H
