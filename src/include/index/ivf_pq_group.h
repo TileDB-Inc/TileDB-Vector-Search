@@ -39,19 +39,23 @@
 #include "index/index_group.h"
 #include "index/ivf_pq_metadata.h"
 
-// flat_ivf_centroids, pq_ivf_centroids, partitioned_pq_vectors, partitioned_pq_index, 
+// flat_ivf_centroids, pq_ivf_centroids,
+// partitioned_pq_vectors, partitioned_pq_index, partitioned_pq_ids
 // cluster_centroids, distance_tables,
 
 [[maybe_unused]] static StorageFormat ivf_pq_storage_formats = {
     {"0.3",
      {
          // @todo Should these be kept consistent with ivf_flat?
-         {"centroids_array_name", "partition_centroids"},  // These have to do
-         {"index_array_name", "partition_indexes"},        // with the inverted
-         {"ids_array_name", "shuffled_vector_ids"},        // index
+         {"cluster_centroids_array_name", "cluster_centroids"},
+         {"flat_ivf_centroids_array_name", "flat_ivf_centroids"},
+         {"pq_ivf_centroids_array_name", "pq_ivf_centroids"},
 
-         {"pq_parts_array_name", "shuffled_pq_vectors"},
-         {"pq_codes_array_name", "pq_codes"},  // "centroids" in flat_pq
+         {"ivf_index_array_name", "ivf_index"},
+         {"ivf_ids_array_name", "ivf_vector_ids"},
+
+         {"pq_ivf_vectors_array_name", "pq_ivf_vectors"},
+
          {"distance_tables_array_name", "distance_tables"},
      }}};
 
@@ -130,42 +134,45 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
   /*****************************************************************************
    * Inverted index information: centroids, index, pq_parts, ids
    ****************************************************************************/
-  [[nodiscard]] auto centroids_uri() const {
-    return this->array_key_to_uri("centroids_array_name");
+  [[nodiscard]] auto cluster_centroids_uri() const {
+    return this->array_key_to_uri("cluster_centroids_array_name");
   }
-  [[nodiscard]] auto pq_parts_uri() const {
-    return this->array_key_to_uri("pq_parts_array_name");
+  [[nodiscard]] auto flat_ivf_centroids_uri() const {
+    return this->array_key_to_uri("flat_ivf_centroids_array_name");
   }
-  [[nodiscard]] auto ids_uri() const {
-    return this->array_key_to_uri("ids_array_name");
+  [[nodiscard]] auto pq_ivf_centroids_uri() const {
+    return this->array_key_to_uri("pq_ivf_centroids_array_name");
   }
-  [[nodiscard]] auto indices_uri() const {
-    return this->array_key_to_uri("index_array_name");
+  [[nodiscard]] auto ivf_index_uri() const {
+    return this->array_key_to_uri("ivf_index_array_name");
   }
-  [[nodiscard]] auto centroids_array_name() const {
-    return this->array_key_to_array_name("centroids_array_name");
+  [[nodiscard]] auto ivf_ids_uri() const {
+    return this->array_key_to_uri("ivf_ids_array_name");
   }
-  [[nodiscard]] auto pq_parts_array_name() const {
-    return this->array_key_to_array_name("pq_parts_array_name");
-  }
-  [[nodiscard]] auto ids_array_name() const {
-    return this->array_key_to_array_name("ids_array_name");
-  }
-  [[nodiscard]] auto indices_array_name() const {
-    return this->array_key_to_array_name("index_array_name");
-  }
-
-  /*****************************************************************************
-   * PQ encoded data information: pq_codes, distance_tables
-   ****************************************************************************/
-  [[nodiscard]] auto pq_codes_uri() const {
-    return this->array_key_to_uri("pq_codes_array_name");
+  [[nodiscard]] auto pq_ivf_vectors_uri() const {
+    return this->array_key_to_uri("pq_ivf_vectors_array_name");
   }
   [[nodiscard]] auto distance_tables_uri() const {
     return this->array_key_to_uri("distance_tables_array_name");
   }
-  [[nodiscard]] auto pq_codes_array_name() const {
-    return this->array_key_to_array_name("pq_codes_array_name");
+
+  [[nodiscard]] auto cluster_centroids_array_name() const {
+    return this->array_key_to_array_name("cluster_centroids_array_name");
+  }
+  [[nodiscard]] auto flat_ivf_centroids_array_name() const {
+    return this->array_key_to_array_name("flat_ivf_centroids_array_name");
+  }
+  [[nodiscard]] auto pq_ivf_centroids_array_name() const {
+    return this->array_key_to_array_name("pq_ivf_centroids_array_name");
+  }
+  [[nodiscard]] auto ivf_index_array_name() const {
+    return this->array_key_to_array_name("ivf_index_array_name");
+  }
+  [[nodiscard]] auto ivf_ids_array_name() const {
+    return this->array_key_to_array_name("ivf_ids_array_name");
+  }
+  [[nodiscard]] auto pq_ivf_vectors_array_name() const {
+    return this->array_key_to_array_name("pq_ivf_vectors_array_name");
   }
   [[nodiscard]] auto distance_tables_array_name() const {
     return this->array_key_to_array_name("distance_tables_array_name");
@@ -259,66 +266,95 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
     metadata_.bits_per_subspace_ = this->get_bits_per_subspace();  // 8
     metadata_.num_clusters_ = this->get_num_clusters();            // 2**nbits
 
-    // Create the arrays: centroids, index, ids, pq_parts, pq_codes,
-    // distance_tables
+    // Create the arrays: cluster_centroids,
+    // flat_ivf_centroids, pq_ivf_centroids, ivf_index,
+    // ivf_ids, pq_ivf_vectors, cluster_centroids, distance_tables
     create_empty_for_matrix<
-        typename index_type::centroid_feature_type,
+        typename index_type::flat_vector_feature_type,
         stdx::layout_left>(
         cached_ctx_,
-        centroids_uri(),
+        cluster_centroids_uri(),
+        this->get_dimension(),
+        this->get_num_clusters(),
+        this->get_dimension(),
+        this->get_num_clusters(),
+        default_compression);
+    write_group.add_member(
+        cluster_centroids_array_name(), true, cluster_centroids_array_name());
+
+    create_empty_for_matrix<
+        typename index_type::flat_vector_feature_type,
+        stdx::layout_left>(
+        cached_ctx_,
+        flat_ivf_centroids_uri(),
         this->get_dimension(),
         default_domain,
         this->get_dimension(),
         default_tile_extent,
         default_compression);
     write_group.add_member(
-        centroids_array_name(), true, centroids_array_name());
+        flat_ivf_centroids_array_name(), true, flat_ivf_centroids_array_name());
+
+    create_empty_for_matrix<
+        typename index_type::pq_vector_feature_type,
+        stdx::layout_left>(
+        cached_ctx_,
+        pq_ivf_centroids_uri(),
+        this->get_num_subspaces(),
+        default_domain,
+        this->get_num_subspaces(),
+        default_tile_extent,
+        default_compression);
+    write_group.add_member(
+        pq_ivf_centroids_array_name(), true, pq_ivf_centroids_array_name());
 
     create_empty_for_vector<typename index_type::indices_type>(
         cached_ctx_,
-        indices_uri(),
+        ivf_index_uri(),
         default_domain,
         default_tile_extent,
         default_compression);
     // write_group.add_member(indices_uri(), true, indices_array_name());
-    write_group.add_member(indices_array_name(), true, indices_array_name());
+    write_group.add_member(
+        ivf_index_array_name(), true, ivf_index_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
-        cached_ctx_, ids_uri(), default_domain, tile_size, default_compression);
-    write_group.add_member(ids_array_name(), true, ids_array_name());
+        cached_ctx_,
+        ivf_ids_uri(),
+        default_domain,
+        tile_size,
+        default_compression);
+    write_group.add_member(ivf_ids_array_name(), true, ivf_ids_array_name());
 
     create_empty_for_matrix<typename index_type::pq_type, stdx::layout_left>(
         cached_ctx_,
-        pq_parts_uri(),
+        pq_ivf_vectors_uri(),
         this->get_num_subspaces(),
         default_domain,
         this->get_num_subspaces(),
-        default_tile_extent,  // This should be much smaller for pq vectors
-        default_compression);
-    write_group.add_member(pq_parts_array_name(), true, pq_parts_array_name());
-
-    create_empty_for_matrix<
-        typename index_type::centroid_feature_type,
-        stdx::layout_left>(
-        cached_ctx_,
-        pq_codes_uri(),
-        this->get_num_subspaces(),
-        this->get_num_clusters(),
-        this->get_num_subspaces(),
-        this->get_num_clusters(),
-        default_compression);
-    write_group.add_member(pq_codes_array_name(), true, pq_codes_array_name());
-
-    create_empty_for_matrix<typename index_type::score_type, stdx::layout_left>(
-        cached_ctx_,
-        distance_tables_uri(),
-        this->get_num_clusters(),
-        this->get_num_clusters() * this->get_num_subspaces(),
-        this->get_num_clusters(),
-        this->get_num_clusters() * this->get_num_subspaces(),
+        default_tile_extent,
         default_compression);
     write_group.add_member(
-        distance_tables_array_name(), true, distance_tables_array_name());
+        pq_ivf_vectors_array_name(), true, pq_ivf_vectors_array_name());
+
+    for (size_t i = 0; i < this->get_num_subspaces(); ++i) {
+      std::string this_table_uri =
+          distance_tables_uri() + "_" + std::to_string(i);
+      std::string this_table_array_name =
+          distance_tables_array_name() + "_" + std::to_string(i);
+      create_empty_for_matrix<
+          typename index_type::score_type,
+          stdx::layout_left>(
+          cached_ctx_,
+          this_table_uri,
+          this->get_num_clusters(),
+          this->get_num_clusters(),
+          this->get_num_clusters(),
+          this->get_num_clusters(),
+          default_compression);
+      write_group.add_member(
+          this_table_array_name, true, this_table_array_name);
+    }
 
     // Store the metadata if all of the arrays were created successfully
     metadata_.store_metadata(write_group);

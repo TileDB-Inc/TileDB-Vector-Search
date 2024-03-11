@@ -55,10 +55,12 @@ TEST_CASE("ivf_pq_group: create tiledb::Group", "[ivf_pq_group]") {
 
 struct dummy_pq_index {
   using feature_type = float;
+  using flat_vector_feature_type = feature_type;
   using id_type = int;
   using indices_type = int;
   using centroid_feature_type = float;
   using pq_type = uint8_t;
+  using pq_vector_feature_type = pq_type;
   using score_type = float;
 
   auto dimension() const {
@@ -66,6 +68,9 @@ struct dummy_pq_index {
   }
   auto get_num_subspaces() const {
     return 16;
+  }
+  auto get_num_clusters() const {
+    return 256;
   }
 };
 

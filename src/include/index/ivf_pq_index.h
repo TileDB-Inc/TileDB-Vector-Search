@@ -54,7 +54,8 @@
  *   - uses ivf_flat::train
  *     - uses kmeans (just as it is used today)
  * - add
- *   - partition training set using ivf_centroids_ to get partitioned_pq_vectors_
+ *   - partition training set using ivf_centroids_ to get
+ * partitioned_pq_vectors_
  *     - uses ivf_flat::add
  *       - uses partitioned_matrix constructor, which just shuffles
  * - pq train with partitioned_pq_vectors_ to get cluster_centroids_ and
@@ -753,7 +754,7 @@ class ivf_pq_index {
    * @return bool indicating success or failure of read
    */
   auto read_index_infinite() {
-    if ( partitioned_pq_vectors_ &&
+    if (partitioned_pq_vectors_ &&
         (::num_vectors(*partitioned_pq_vectors_) != 0 ||
          ::num_vectors(partitioned_pq_vectors_->ids()) != 0)) {
       throw std::runtime_error("Index already loaded");
@@ -761,7 +762,8 @@ class ivf_pq_index {
 
     // Load all partitions for infinite query
     // Note that the constructor will move the infinite_parts vector
-    auto infinite_parts = std::vector<indices_type>(::num_vectors(pq_ivf_centroids_));
+    auto infinite_parts =
+        std::vector<indices_type>(::num_vectors(pq_ivf_centroids_));
     std::iota(begin(infinite_parts), end(infinite_parts), 0);
     partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
         group_->cached_ctx(),
@@ -779,7 +781,8 @@ class ivf_pq_index {
         ::num_vectors(*partitioned_pq_vectors_) ==
         size(partitioned_pq_vectors_->ids()));
     assert(
-        size(partitioned_pq_vectors_->indices()) == ::num_vectors(flat_ivf_centroids_) + 1);
+        size(partitioned_pq_vectors_->indices()) ==
+        ::num_vectors(flat_ivf_centroids_) + 1);
   }
 
   /**
@@ -849,7 +852,6 @@ class ivf_pq_index {
       vfs.remove_dir(group_uri);
     }
 
-
     auto write_group = ivf_pq_group(*this, ctx, group_uri, TILEDB_WRITE);
 
     write_group.set_dimension(dimension_);
@@ -866,20 +868,25 @@ class ivf_pq_index {
     // pq_ivf_centroids_, partitioned_pq_vectors_, unpartitioned_pq_vectors_
 
     write_matrix(
-        ctx, centroids_, write_group.centroids_uri(), 0, false, timestamp_);
-
-    write_matrix(
         ctx,
-        *partitioned_pq_vectors_,
-        write_group.parts_uri(),
+        cluster_centroids_,
+        write_group.cluster_centroids_uri(),
         0,
         false,
         timestamp_);
 
-    write_vector(
+    write_matrix(
         ctx,
-        partitioned_pq_vectors_->ids(),
-        write_group.ids_uri(),
+        flat_ivf_centroids_,
+        write_group.flat_ivf_centroids_uri(),
+        0,
+        false,
+        timestamp_);
+
+    write_matrix(
+        ctx,
+        pq_ivf_centroids_,
+        write_group.pq_ivf_centroids_uri(),
         0,
         false,
         timestamp_);
@@ -887,10 +894,38 @@ class ivf_pq_index {
     write_vector(
         ctx,
         partitioned_pq_vectors_->indices(),
-        write_group.indices_uri(),
+        write_group.ivf_index_uri(),
         0,
         false,
         timestamp_);
+
+    write_vector(
+        ctx,
+        partitioned_pq_vectors_->ids(),
+        write_group.ivf_ids_uri(),
+        0,
+        false,
+        timestamp_);
+
+    write_matrix(
+        ctx,
+        *partitioned_pq_vectors_,
+        write_group.pq_ivf_vectors_uri(),
+        0,
+        false,
+        timestamp_);
+
+    for (size_t i = 0; i < size(distance_tables_); ++i) {
+      std::string this_table_uri =
+          write_group.distance_tables_uri + "_" + std::to_string(i);
+      write_matrix(
+          ctx,
+          distance_tables_[i],
+          write_group.distance_tables_uri(i),
+          0,
+          false,
+          timestamp_);
+    }
 
     return true;
   }
@@ -904,7 +939,7 @@ class ivf_pq_index {
       bool overwrite) const {
     tiledb::VFS vfs(ctx);
 
-    write_matrix(ctx, centroids_, centroids_uri, 0, true);
+    write_matrix(ctx, flat_ivf_centroids_, centroids_uri, 0, true);
     write_matrix(ctx, *partitioned_pq_vectors_, parts_uri, 0, true);
     write_vector(ctx, partitioned_pq_vectors_->ids(), ids_uri, 0, true);
     write_vector(ctx, partitioned_pq_vectors_->indices(), indices_uri, 0, true);
@@ -962,7 +997,8 @@ class ivf_pq_index {
       size_t k_nn,
       size_t nprobe,
       Distance distance = Distance{}) {
-    if (!partitioned_pq_vectors_ || ::num_vectors(*partitioned_pq_vectors_) == 0) {
+    if (!partitioned_pq_vectors_ ||
+        ::num_vectors(*partitioned_pq_vectors_) == 0) {
       read_index_infinite();
     }
     auto&& [active_partitions, active_queries] =
@@ -1013,7 +1049,8 @@ class ivf_pq_index {
       size_t nprobe,
       size_t upper_bound = 0,
       Distance distance = Distance{}) {
-    if (partitioned_pq_vectors_ && ::num_vectors(*partitioned_pq_vectors_) != 0) {
+    if (partitioned_pq_vectors_ &&
+        ::num_vectors(*partitioned_pq_vectors_) != 0) {
       throw std::runtime_error(
           "Vectors are already loaded. Cannot load twice. "
           "Cannot do finite query on in-memory index.");
@@ -1043,7 +1080,7 @@ class ivf_pq_index {
   }
 
   auto num_partitions() const {
-    return ::num_vectors(centroids_);
+    return ::num_vectors(flat_ivf_centroids_);
   }
 
   /***************************************************************************
@@ -1140,7 +1177,7 @@ class ivf_pq_index {
    * @return
    */
   template <feature_vector L, feature_vector R>
-  auto compare_vectors(const L& lhs, const R& rhs) const {
+  auto compare_feature_vectors(const L& lhs, const R& rhs) const {
     if (::dimension(lhs) != ::dimension(rhs)) {
       std::cout << "dimension(lhs) != dimension(rhs) (" << ::dimension(lhs)
                 << " != " << ::dimension(rhs) << ")" << std::endl;
@@ -1149,67 +1186,37 @@ class ivf_pq_index {
     return std::equal(begin(lhs), end(lhs), begin(rhs));
   }
 
-  /**
-   * @brief Compare `centroids_` against another index
-   * @param rhs The index against which to compare
-   * @return bool indicating equality of the centroids
-   */
-  auto compare_centroids(const ivf_pq_index& rhs) {
-    return compare_feature_vector_arrays(centroids_, rhs.centroids_);
+  auto compare_cluster_centroids(const ivf_pq_index& rhs) {
+    return compare_feature_vector_arrays(cluster_centroids_, rhs.cluster_centroids_);
   }
 
-  /**
-   * @brief Compare all of the `feature_vector_arrays` against another index
-   * @param rhs The other index
-   * @return bool indicating equality of the `feature_vector_arrays`
-   */
-  auto compare_feature_vectors(const ivf_pq_index& rhs) {
-    if (partitioned_pq_vectors_->num_vectors() !=
-        rhs.partitioned_pq_vectors_->num_vectors()) {
-      std::cout << "partitioned_pq_vectors_->num_vectors() != "
-                   "rhs.partitioned_pq_vectors_->num_vectors() ("
-                << partitioned_pq_vectors_->num_vectors()
-                << " != " << rhs.partitioned_pq_vectors_->num_vectors() << ")"
-                << std::endl;
-      return false;
+  auto compare_flat_ivf_centroids(const ivf_pq_index& rhs) {
+    return compare_feature_vector_arrays(flat_ivf_centroids_, rhs.flat_ivf_centroids_);
+  }
+
+  auto compare_pq_ivf_centroids(const ivf_pq_index& rhs) {
+    return compare_feature_vector_arrays(pq_ivf_centroids_, rhs.pq_ivf_centroids_);
+  }
+
+  auto compare_ivf_index(const ivf_pq_index& rhs) {
+    return compare_feature_vector(partitioned_pq_vectors_->indices(), rhs.partitioned_pq_vectors_->indices());
+  }
+
+  auto compare_ivf_ids(const ivf_pq_index& rhs) {
+    return compare_feature_vector(partitioned_pq_vectors_->ids(), rhs.partitioned_pq_vectors_->ids());
+  }
+
+  auto compare_pq_ivf_vectors(const ivf_pq_index& rhs) {
+    return compare_feature_vector_arrays(*partitioned_pq_vectors_, *(rhs.partitioned_pq_vectors_));
+  }
+
+  auto compare_distance_tables(const ivf_pq_index& rhs) {
+    for (size_t i = 0; i < size(distance_tables_); ++i) {
+      if (!compare_feature_vector_arrays(distance_tables_[i], rhs.distance_tables_[i])) {
+        return false;
+      }
     }
-    if (partitioned_pq_vectors_->num_partitions() !=
-        rhs.partitioned_pq_vectors_->num_partitions()) {
-      std::cout << "partitioned_pq_vectors_->num_parts() != "
-                   "rhs.partitioned_pq_vectors_->num_parts() ("
-                << partitioned_pq_vectors_->num_partitions()
-                << " != " << rhs.partitioned_pq_vectors_->num_partitions() << ")"
-                << std::endl;
-      return false;
-    }
-
-    return compare_feature_vector_arrays(
-        *partitioned_pq_vectors_, *(rhs.partitioned_pq_vectors_));
-  }
-
-  /** Compare the stored `indices_` vector */
-  auto compare_indices(const ivf_pq_index& rhs) {
-    return compare_vectors(
-        partitioned_pq_vectors_->indices(), rhs.partitioned_pq_vectors_->indices());
-  }
-
-  /** Compare the stored `partitioned_ids_` vector */
-  auto compare_partitioned_ids(const ivf_pq_index& rhs) {
-    return compare_vectors(
-        partitioned_pq_vectors_->ids(), rhs.partitioned_pq_vectors_->ids());
-  }
-
-  auto set_centroids(const ColMajorMatrix<feature_type>& centroids) {
-    centroids_ = ColMajorMatrix<centroid_feature_type>(
-        ::dimension(centroids), ::num_vectors(centroids));
-    std::copy(
-        centroids.data(),
-        centroids.data() + centroids.num_rows() * centroids.num_cols(),
-        centroids_.data());
-  }
-
-  auto& get_centroids() {
-    return centroids_;
+    return true;
   }
 
   /**
