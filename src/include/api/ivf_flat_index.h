@@ -41,6 +41,7 @@
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
 #include "api_defs.h"
+#include "index/ivf_flat_group.h"
 #include "index/ivf_flat_index.h"
 #include "tiledb/group_experimental.h"
 
@@ -138,27 +139,55 @@ class IndexIVFFlat {
       const tiledb::Context& ctx,
       const URI& group_uri,
       const std::optional<IndexOptions>& config = std::nullopt) {
-    using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
+    // Holds {metadata_name, address, datatype, array_key}
+    using metadata_element =
+        std::tuple<std::string, void*, tiledb_datatype_t, std::string>;
     std::vector<metadata_element> metadata{
-        {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
-        {"id_datatype", &id_datatype_, TILEDB_UINT32},
-        {"px_datatype", &px_datatype_, TILEDB_UINT32}};
+        {"feature_datatype",
+         &feature_datatype_,
+         TILEDB_UINT32,
+         "parts_array_name"},
+        {"id_datatype", &id_datatype_, TILEDB_UINT32, "ids_array_name"},
+        {"px_datatype", &px_datatype_, TILEDB_UINT32, "index_array_name"}};
 
     tiledb::Config cfg;
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
 
-    for (auto& [name, value, datatype] : metadata) {
-      if (!read_group.has_metadata(name, &datatype)) {
-        throw std::runtime_error("Missing metadata: " + name);
+    // Get the storage_version in case the metadata is not present on read_group
+    // and we need to read the individual arrays.
+    std::string storage_version = current_storage_version;
+    tiledb_datatype_t v_type;
+    if (read_group.has_metadata("storage_version", &v_type)) {
+      uint32_t v_num;
+      const void* v;
+      read_group.get_metadata("storage_version", &v_type, &v_num, &v);
+      if (v_type == TILEDB_STRING_ASCII || v_type == TILEDB_STRING_UTF8) {
+        storage_version = std::string(static_cast<const char*>(v), v_num);
       }
-      uint32_t count;
-      void* addr;
-      read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
-      if (datatype == TILEDB_UINT32) {
-        *reinterpret_cast<uint32_t*>(value) =
-            *reinterpret_cast<uint32_t*>(addr);
+    }
+
+    for (auto& [name, value, datatype, array_key] : metadata) {
+      // We first try to read metadata from the group.
+      if (read_group.has_metadata(name, &datatype)) {
+        uint32_t count;
+        void* addr;
+        read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
+        if (datatype == TILEDB_UINT32) {
+          *reinterpret_cast<uint32_t*>(value) =
+              *reinterpret_cast<uint32_t*>(addr);
+        } else {
+          throw std::runtime_error(
+              "Unsupported datatype for metadata: " + name);
+        }
       } else {
-        throw std::runtime_error("Unsupported datatype for metadata: " + name);
+        // If it is not present then fallback to checking the type on the array
+        // directly.
+        auto uri = array_name_to_uri(
+            group_uri,
+            array_key_to_array_name_from_map(
+                storage_formats[storage_version], array_key));
+        tiledb::ArraySchema schema(ctx, uri);
+        *reinterpret_cast<uint32_t*>(value) = schema.attribute(0).type();
       }
     }
 
