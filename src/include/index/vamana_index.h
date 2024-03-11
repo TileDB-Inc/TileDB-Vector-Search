@@ -500,18 +500,22 @@ class vamana_index {
       size_t L,
       size_t R,
       size_t B = 0,
-      size_t timestamp = 0):
+      size_t timestamp = 0,
+      size_t dimension = 0):
       timestamp_{
           (timestamp == 0) ?
               std::chrono::duration_cast<std::chrono::milliseconds>(
                   std::chrono::system_clock::now().time_since_epoch())
                   .count() :
               timestamp}
+      , dimension_{dimension}
       , num_vectors_{num_nodes}
       , graph_{num_vectors_}
       , L_build_{L}
       , R_max_degree_{R}
-      , B_backtrack_{B == 0 ? L_build_ : B} {
+      , B_backtrack_{B == 0 ? L_build_ : B}
+       {
+    std::cout << "[IndexVamana@detail@ctor] dimension" << dimension << std::endl;
   }
 
   /**
@@ -528,15 +532,25 @@ class vamana_index {
 
     // @todo Make this table-driven
     dimension_ = group_->get_dimension();
+    std::cout << "[vamama_index@uri ctor] dimension_: " << dimension_ << std::endl;
     num_vectors_ = group_->get_base_size();
+    std::cout << "[vamama_index@uri ctor] num_vectors_: " << num_vectors_ << std::endl;
     num_edges_ = group_->get_num_edges();
+    std::cout << "[vamama_index@uri ctor] num_edges_: " << num_edges_ << std::endl;
     L_build_ = group_->get_L_build();
+    std::cout << "[vamama_index@uri ctor] L_build_: " << L_build_ << std::endl;
     R_max_degree_ = group_->get_R_max_degree();
+    std::cout << "[vamama_index@uri ctor] R_max_degree_: " << R_max_degree_ << std::endl;
     B_backtrack_ = group_->get_B_backtrack();
+    std::cout << "[vamama_index@uri ctor] B_backtrack_: " << B_backtrack_ << std::endl;
     alpha_min_ = group_->get_alpha_min();
+    std::cout << "[vamama_index@uri ctor] alpha_min_: " << alpha_min_ << std::endl;
     alpha_max_ = group_->get_alpha_max();
+    std::cout << "[vamama_index@uri ctor] alpha_max_: " << alpha_max_ << std::endl;
     medoid_ = group_->get_medoid();
-
+    std::cout << "[vamama_index@uri ctor] medoid_: " << medoid_ << std::endl;
+    
+    std::cout << "[vamana_index@uri ctor] group_->feature_vectors_uri(): " << group_->feature_vectors_uri() << std::endl;
     feature_vectors_ = std::move(tdbColMajorPreLoadMatrix<feature_type>(
         group_->cached_ctx(),
         group_->feature_vectors_uri(),
@@ -626,7 +640,9 @@ class vamana_index {
             ::dimension(training_set) * ::num_vectors(training_set),
         feature_vectors_.data());
 
+    std::cout << "[vamana_index@train] before setting feature_vectors dimension_: " << dimension_ << std::endl;
     dimension_ = ::dimension(feature_vectors_);
+    std::cout << "[vamana_index@train] after dimension_: " << dimension_ << std::endl;
     num_vectors_ = ::num_vectors(feature_vectors_);
     // graph_ = ::detail::graph::init_random_adj_list<feature_type, id_type>(
     //     feature_vectors_, R_max_degree_);
@@ -777,6 +793,7 @@ class vamana_index {
       num_visited_vertices_ += V.size();
     }
 #endif
+    // return std::make_tuple(std::move(top_k_scores), std::move(top_k));
 
 #if 0
     for (size_t i = 0; i < ::num_vectors(query_set); ++i) {
@@ -844,7 +861,7 @@ class vamana_index {
    * those will presumably be in a known array that can be made part of
    * the group?
    */
-  auto write_index(
+  bool write_index(
       const tiledb::Context& ctx,
       const std::string& group_uri,
       bool overwrite = false) const {
@@ -858,8 +875,10 @@ class vamana_index {
       }
       vfs.remove_dir(group_uri);
     }
-
+    std::cout << "[IndexVamana@detail@write_index] 1 ~~~~~~" << std::endl;
+    std::cout << "[IndexVamana@detail@write_index] dimension_: " << dimension_ << std::endl;
     auto write_group = vamana_index_group(*this, ctx, group_uri, TILEDB_WRITE);
+    std::cout << "[IndexVamana@detail@write_index] 1a ~~~~~~" << std::endl;
 
     // @todo Make this table-driven
     write_group.set_dimension(dimension_);
@@ -873,6 +892,7 @@ class vamana_index {
     write_group.append_ingestion_timestamp(timestamp_);
     write_group.append_base_size(::num_vectors(feature_vectors_));
     write_group.append_num_edges(graph_.num_edges());
+    std::cout << "[IndexVamana@detail@write_index] 2 ~~~~~~" << std::endl;
 
     write_matrix(
         ctx,
@@ -881,12 +901,12 @@ class vamana_index {
         0,
         false,
         timestamp_);
-
+    std::cout << "[IndexVamana@detail@write_index] 2a ~~~~~~" << std::endl;
     auto adj_scores = Vector<score_type>(graph_.num_edges());
     auto adj_ids = Vector<id_type>(graph_.num_edges());
     auto adj_index =
         Vector<adjacency_row_index_type>(graph_.num_vertices() + 1);
-
+    std::cout << "[IndexVamana@detail@write_index] 3 ~~~~~~" << std::endl;
     size_t edge_offset{0};
     for (size_t i = 0; i < num_vertices(graph_); ++i) {
       adj_index[i] = edge_offset;
@@ -897,7 +917,7 @@ class vamana_index {
       }
     }
     adj_index.back() = edge_offset;
-
+    std::cout << "[IndexVamana@detail@write_index] 4 ~~~~~~" << std::endl;
     write_vector(
         ctx,
         adj_scores,
@@ -914,7 +934,7 @@ class vamana_index {
         0,
         false,
         timestamp_);
-
+    std::cout << "[IndexVamana@detail@write_index] 5 ~~~~~~" << std::endl;
     return true;
   }
 

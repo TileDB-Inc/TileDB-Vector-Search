@@ -194,6 +194,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   }
 
   void create_default_impl(const tiledb::Config& cfg) {
+    std::cout << "create_default_impl" << std::endl;
     if (empty(this->version_)) {
       this->version_ = current_storage_version;
     }
@@ -208,7 +209,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     tiledb::Group::create(cached_ctx_, group_uri_);
     auto write_group =
         tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
-
+    std::cout << "create_default_impl 1" << std::endl;
     /**************************************************************************
      * Base group metadata setup
      * @todo Do this in base group
@@ -246,7 +247,8 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     metadata_.num_edges_history_ = {0};
     metadata_.temp_size_ = 0;
     metadata_.dimension_ = this->get_dimension();
-
+    std::cout << "create_default_impl 2" << std::endl;
+    std::cout << "this->get_dimension()" << this->get_dimension() << std::endl;
     /**
      * Create the arrays: feature_vectors (matrix), adjacency_scores (vector),
      * adjacency_ids (vector), adjacency_row_index (vector).
@@ -263,7 +265,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
         default_compression);
     write_group.add_member(
         feature_vectors_array_name(), true, feature_vectors_array_name());
-
+    std::cout << "create_default_impl 3" << std::endl;
     create_empty_for_vector<typename index_type::score_type>(
         cached_ctx_,
         adjacency_scores_uri(),
@@ -292,9 +294,10 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
         adjacency_row_index_array_name(),
         true,
         adjacency_row_index_array_name());
-
+    std::cout << "create_default_impl 4" << std::endl;
     // Store the metadata if all of the arrays were created successfully
     metadata_.store_metadata(write_group);
+    std::cout << "create_default_impl done" << std::endl;
   }
 };
 

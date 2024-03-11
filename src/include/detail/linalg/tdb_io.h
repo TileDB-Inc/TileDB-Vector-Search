@@ -57,17 +57,17 @@ template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 void create_empty_for_matrix(
     const tiledb::Context& ctx,
     const std::string& uri,
-    size_t rows,
-    size_t cols,
+    size_t rows, // number of dimensions 
+    size_t cols, // number of vectors
     size_t row_extent,
     size_t col_extent,
     std::optional<tiledb_filter_type_t> filter = std::nullopt) {
   tiledb::Domain domain(ctx);
   domain
       .add_dimension(tiledb::Dimension::create<int>(
-          ctx, "rows", {{0, (int)rows - 1}}, row_extent))
+          ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent))
       .add_dimension(tiledb::Dimension::create<int>(
-          ctx, "cols", {{0, (int)cols - 1}}, col_extent));
+          ctx, "cols", {{0, std::max(0, (int)cols - 1)}}, col_extent));
 
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
 
@@ -131,22 +131,32 @@ void write_matrix(
     size_t start_pos = 0,
     bool create = true,
     size_t timestamp = 0) {
+ if (A.num_rows() == 0 || A.num_cols() == 0) {
+   return;
+ }
+  std::cout << "[IndexVamana@detail@write_matrix] 1" << std::endl;
+  std::cout << "[IndexVamana@detail@write_matrix] start_pos " << start_pos << std::endl;
+  std::cout << "[IndexVamana@detail@write_matrix] create " << create << std::endl;
+  std::cout << "[IndexVamana@detail@write_matrix] timestamp " << timestamp << std::endl;
+  std::cout << "[IndexVamana@detail@write_matrix] A.num_rows()" << A.num_rows() << std::endl;
+  std::cout << "[IndexVamana@detail@write_matrix] A.num_cols()" << A.num_cols() << std::endl;
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
   tiledb::TemporalPolicy temporal_policy =
       (timestamp == 0) ? tiledb::TemporalPolicy() :
                          tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
-
+  std::cout << "[IndexVamana@detail@write_matrix] 2" << std::endl;
   if (create) {
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri);
   }
+  std::cout << "[IndexVamana@detail@write_matrix] 3" << std::endl;
 
   std::vector<int32_t> subarray_vals{
       0,
-      (int)A.num_rows() - 1,
+      std::max((int)A.num_rows() - 1, 0),
       (int)start_pos,
-      (int)start_pos + (int)A.num_cols() - 1};
-
+      std::max((int)start_pos + (int)A.num_cols() - 1, 0)};
+  std::cout << "[IndexVamana@detail@write_matrix] 4" << std::endl;
   // Open array for writing
   auto array = tiledb_helpers::open_array(
       tdb_func__, ctx, uri, TILEDB_WRITE, temporal_policy);
@@ -158,6 +168,7 @@ void write_matrix(
   auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
                    TILEDB_ROW_MAJOR :
                    TILEDB_COL_MAJOR;
+//  std::cout << "A(0, 0)" << A(0, 0) << std::endl;
   query.set_layout(order)
       .set_data_buffer(
           "values", &A(0, 0), (uint64_t)A.num_rows() * (uint64_t)A.num_cols())
@@ -190,7 +201,7 @@ void create_empty_for_vector(
     std::optional<tiledb_filter_type_t> filter = std::nullopt) {
   tiledb::Domain domain(ctx);
   domain.add_dimension(tiledb::Dimension::create<int>(
-      ctx, "rows", {{0, (int)rows - 1}}, row_extent));
+      ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent));
 
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
@@ -242,6 +253,9 @@ void write_vector(
     size_t start_pos = 0,
     bool create = true,
     size_t timestamp = 0) {
+  if (size(v) == 0) {
+    return;
+  }
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
   tiledb::TemporalPolicy temporal_policy =
@@ -289,7 +303,8 @@ std::vector<T> read_vector(
     const std::string& uri,
     size_t start_pos,
     size_t end_pos,
-    size_t timestamp = 0) {
+    size_t timestamp = 0,
+    bool read_full_vector = false) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
   tiledb::TemporalPolicy temporal_policy =
@@ -308,14 +323,28 @@ std::vector<T> read_vector(
   auto dim_num_{domain_.ndim()};
   auto array_rows_{domain_.dimension(0)};
 
-  if (start_pos == 0) {
+  // TODO(paris): This breaks reading from empty vectors.
+  std::cout << "[IndexVamana@detail@read_vector] start_pos " << start_pos << std::endl;
+  std::cout << "[IndexVamana@detail@read_vector] end_pos " << end_pos << std::endl;
+  if (read_full_vector) {
     start_pos = array_rows_.template domain<domain_type>().first;
-  }
-  if (end_pos == 0) {
     end_pos = array_rows_.template domain<domain_type>().second + 1;
   }
+  // if (start_pos == 0) {
+  //   start_pos = array_rows_.template domain<domain_type>().first;
+  // }
+  // if (end_pos == 0) {
+  //   end_pos = array_rows_.template domain<domain_type>().second + 1;
+  // }
+  std::cout << "[IndexVamana@detail@read_vector] after" << std::endl;
+  std::cout << "[IndexVamana@detail@read_vector] start_pos " << start_pos << std::endl;
+  std::cout << "[IndexVamana@detail@read_vector] end_pos " << end_pos << std::endl;
 
   auto vec_rows_{end_pos - start_pos};
+
+  if (vec_rows_ == 0) {
+      return {};
+    }
 
   auto attr_num{schema_.attribute_num()};
   auto attr = schema_.attribute(idx);
@@ -350,7 +379,7 @@ std::vector<T> read_vector(
 template <class T>
 std::vector<T> read_vector(
     const tiledb::Context& ctx, const std::string& uri, size_t timestamp = 0) {
-  return read_vector<T>(ctx, uri, 0, 0, timestamp);
+  return read_vector<T>(ctx, uri, 0, 0, timestamp, true);
 }
 
 template <class T>
@@ -415,7 +444,7 @@ auto read_bin_local(
 
     if (d != dimension) {
       throw std::runtime_error(
-          "dimension mismatch: " + std::to_string(d) +
+          "dimension mismatch 3: " + std::to_string(d) +
           " != " + std::to_string(dimension));
     }
     if (!file.read(reinterpret_cast<char*>(result_ptr), d * sizeof(T))) {

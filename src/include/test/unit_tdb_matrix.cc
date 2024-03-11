@@ -41,227 +41,262 @@
 
 using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 
-TEST_CASE("tdb_matrix: test test", "[tdb_matrix]") {
-  REQUIRE(true);
-}
+ TEST_CASE("tdb_matrix: test test", "[tdb_matrix]") {
+   REQUIRE(true);
+ }
 
-TEMPLATE_TEST_CASE("tdb_matrix: constructors", "[tdb_matrix]", float, uint8_t) {
-  tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
-  int offset = 13;
-  size_t Mrows = 200;
-  size_t Ncols = 500;
+ TEMPLATE_TEST_CASE("tdb_matrix: constructors", "[tdb_matrix]", float, uint8_t) {
+   tiledb::Context ctx;
+   std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+   int offset = 13;
+   size_t Mrows = 200;
+   size_t Ncols = 500;
 
-  tiledb::VFS vfs(ctx);
-  if (vfs.is_dir(tmp_matrix_uri)) {
-    vfs.remove_dir(tmp_matrix_uri);
-  }
+   tiledb::VFS vfs(ctx);
+   if (vfs.is_dir(tmp_matrix_uri)) {
+     vfs.remove_dir(tmp_matrix_uri);
+   }
 
-  auto X = ColMajorMatrix<TestType>(Mrows, Ncols);
-  std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
-  write_matrix(ctx, X, tmp_matrix_uri);
+   auto X = ColMajorMatrix<TestType>(Mrows, Ncols);
+   std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
+   write_matrix(ctx, X, tmp_matrix_uri);
 
-  auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);
-  Y.load();
+   auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);
+   Y.load();
 
-  auto Z = tdbColMajorMatrix<TestType>(std::move(Y));
+   auto Z = tdbColMajorMatrix<TestType>(std::move(Y));
 
-  CHECK(num_vectors(Y) == num_vectors(X));
-  CHECK(dimension(Y) == dimension(X));
+   CHECK(num_vectors(Y) == num_vectors(X));
+   CHECK(dimension(Y) == dimension(X));
 
-  CHECK(num_vectors(Z) == num_vectors(X));
-  CHECK(dimension(Z) == dimension(X));
+   CHECK(num_vectors(Z) == num_vectors(X));
+   CHECK(dimension(Z) == dimension(X));
 
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Z.data()));
-  for (size_t i = 0; i < 5; ++i) {
-    for (size_t j = 0; j < 5; ++j) {
-      CHECK(X(i, j) == Z(i, j));
-    }
-  }
-}
+   CHECK(
+       std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Z.data()));
+   for (size_t i = 0; i < 5; ++i) {
+     for (size_t j = 0; j < 5; ++j) {
+       CHECK(X(i, j) == Z(i, j));
+     }
+   }
+ }
 
-TEMPLATE_TEST_CASE(
-    "tdb_matrix: assign to matrix", "[tdb_matrix]", float, uint8_t) {
-  tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
-  int offset = 13;
+ TEMPLATE_TEST_CASE(
+     "tdb_matrix: assign to matrix", "[tdb_matrix]", float, uint8_t) {
+   tiledb::Context ctx;
+   std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+   int offset = 13;
 
-  size_t Mrows = 200;
-  size_t Ncols = 500;
+   size_t Mrows = 200;
+   size_t Ncols = 500;
 
-  tiledb::VFS vfs(ctx);
-  if (vfs.is_dir(tmp_matrix_uri)) {
-    vfs.remove_dir(tmp_matrix_uri);
-  }
+   tiledb::VFS vfs(ctx);
+   if (vfs.is_dir(tmp_matrix_uri)) {
+     vfs.remove_dir(tmp_matrix_uri);
+   }
 
-  auto X = ColMajorMatrix<TestType>(Mrows, Ncols);
-  std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
-  write_matrix(ctx, X, tmp_matrix_uri);
+   auto X = ColMajorMatrix<TestType>(Mrows, Ncols);
+   std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
+   write_matrix(ctx, X, tmp_matrix_uri);
 
-  auto B = ColMajorMatrix<TestType>(0, 0);
-  {
-    auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);
-    Y.load();
-    B = std::move(Y);
-  }
+   auto B = ColMajorMatrix<TestType>(0, 0);
+   {
+     auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);
+     Y.load();
+     B = std::move(Y);
+   }
 
-  {
-    auto Y = tdbColMajorMatrix<TestType>(
-        tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri));
-  }
+   {
+     auto Y = tdbColMajorMatrix<TestType>(
+         tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri));
+   }
 
-  auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);
-  Y.load();
+   auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);
+   Y.load();
 
-  CHECK(num_vectors(Y) == num_vectors(X));
-  CHECK(dimension(Y) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
-  for (size_t i = 0; i < 5; ++i) {
-    for (size_t j = 0; j < 5; ++j) {
-      CHECK(X(i, j) == Y(i, j));
-    }
-  }
+   CHECK(num_vectors(Y) == num_vectors(X));
+   CHECK(dimension(Y) == dimension(X));
+   CHECK(
+       std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+   for (size_t i = 0; i < 5; ++i) {
+     for (size_t j = 0; j < 5; ++j) {
+       CHECK(X(i, j) == Y(i, j));
+     }
+   }
 
-  // Check that we can assign to a matrix
-  auto Z = ColMajorMatrix<TestType>(0, 0);
-  Z = std::move(Y);
+   // Check that we can assign to a matrix
+   auto Z = ColMajorMatrix<TestType>(0, 0);
+   Z = std::move(Y);
 
-  CHECK(num_vectors(Z) == num_vectors(X));
-  CHECK(dimension(Z) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Z.data()));
-  for (size_t i = 0; i < 5; ++i) {
-    for (size_t j = 0; j < 5; ++j) {
-      CHECK(X(i, j) == Z(i, j));
-    }
-  }
+   CHECK(num_vectors(Z) == num_vectors(X));
+   CHECK(dimension(Z) == dimension(X));
+   CHECK(
+       std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Z.data()));
+   for (size_t i = 0; i < 5; ++i) {
+     for (size_t j = 0; j < 5; ++j) {
+       CHECK(X(i, j) == Z(i, j));
+     }
+   }
 
-  auto A = ColMajorMatrix<TestType>(0, 0);
-  A = std::move(Z);
-  CHECK(num_vectors(A) == num_vectors(X));
-  CHECK(dimension(A) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), A.data()));
-  for (size_t i = 0; i < 5; ++i) {
-    for (size_t j = 0; j < 5; ++j) {
-      CHECK(X(i, j) == A(i, j));
-    }
-  }
+   auto A = ColMajorMatrix<TestType>(0, 0);
+   A = std::move(Z);
+   CHECK(num_vectors(A) == num_vectors(X));
+   CHECK(dimension(A) == dimension(X));
+   CHECK(
+       std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), A.data()));
+   for (size_t i = 0; i < 5; ++i) {
+     for (size_t j = 0; j < 5; ++j) {
+       CHECK(X(i, j) == A(i, j));
+     }
+   }
 
-  CHECK(num_vectors(B) == num_vectors(X));
-  CHECK(dimension(B) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), B.data()));
-  for (size_t i = 0; i < 5; ++i) {
-    for (size_t j = 0; j < 5; ++j) {
-      CHECK(X(i, j) == B(i, j));
-    }
-  }
-}
+   CHECK(num_vectors(B) == num_vectors(X));
+   CHECK(dimension(B) == dimension(X));
+   CHECK(
+       std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), B.data()));
+   for (size_t i = 0; i < 5; ++i) {
+     for (size_t j = 0; j < 5; ++j) {
+       CHECK(X(i, j) == B(i, j));
+     }
+   }
+ }
 
-TEMPLATE_TEST_CASE("tdb_matrix: preload", "[tdb_matrix]", float, uint8_t) {
-  tiledb::Context ctx;
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
-  int offset = 13;
+ TEMPLATE_TEST_CASE("tdb_matrix: preload", "[tdb_matrix]", float, uint8_t) {
+   tiledb::Context ctx;
+   std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+   int offset = 13;
 
-  size_t Mrows = 200;
-  size_t Ncols = 500;
+   size_t Mrows = 200;
+   size_t Ncols = 500;
 
-  tiledb::VFS vfs(ctx);
-  if (vfs.is_dir(tmp_matrix_uri)) {
-    vfs.remove_dir(tmp_matrix_uri);
-  }
+   tiledb::VFS vfs(ctx);
+   if (vfs.is_dir(tmp_matrix_uri)) {
+     vfs.remove_dir(tmp_matrix_uri);
+   }
 
-  auto X = ColMajorMatrix<TestType>(Mrows, Ncols);
-  std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
-  write_matrix(ctx, X, tmp_matrix_uri);
+   auto X = ColMajorMatrix<TestType>(Mrows, Ncols);
+   std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
+   write_matrix(ctx, X, tmp_matrix_uri);
 
-  auto Y = tdbPreLoadMatrix<TestType, stdx::layout_left>(ctx, tmp_matrix_uri);
-  CHECK(num_vectors(Y) == num_vectors(X));
-  CHECK(dimension(Y) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
-  for (size_t i = 0; i < 5; ++i) {
-    for (size_t j = 0; j < 5; ++j) {
-      CHECK(X(i, j) == Y(i, j));
-    }
-  }
+   auto Y = tdbPreLoadMatrix<TestType, stdx::layout_left>(ctx, tmp_matrix_uri);
+   CHECK(num_vectors(Y) == num_vectors(X));
+   CHECK(dimension(Y) == dimension(X));
+   CHECK(
+       std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+   for (size_t i = 0; i < 5; ++i) {
+     for (size_t j = 0; j < 5; ++j) {
+       CHECK(X(i, j) == Y(i, j));
+     }
+   }
 
-  auto Z = ColMajorMatrix<TestType>(0, 0);
-  Z = std::move(Y);
+   auto Z = ColMajorMatrix<TestType>(0, 0);
+   Z = std::move(Y);
 
-  CHECK(num_vectors(Z) == num_vectors(X));
-  CHECK(dimension(Z) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Z.data()));
-  for (size_t i = 0; i < 5; ++i) {
-    for (size_t j = 0; j < 5; ++j) {
-      CHECK(X(i, j) == Z(i, j));
-    }
-  }
-}
+   CHECK(num_vectors(Z) == num_vectors(X));
+   CHECK(dimension(Z) == dimension(X));
+   CHECK(
+       std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Z.data()));
+   for (size_t i = 0; i < 5; ++i) {
+     for (size_t j = 0; j < 5; ++j) {
+       CHECK(X(i, j) == Z(i, j));
+     }
+   }
+ }
 
-TEST_CASE("tdb_matrix: MatrixBase template parameter", "[tdb_matrix]") {
-  // Load data.
-  tiledb::Context ctx;
-  int offset = 13;
+ TEST_CASE("tdb_matrix: MatrixBase template parameter", "[tdb_matrix]") {
+   // Load data.
+   tiledb::Context ctx;
+   int offset = 13;
 
-  size_t Mrows = 200;
-  size_t Ncols = 500;
+   size_t Mrows = 200;
+   size_t Ncols = 500;
 
-  using T = float;
-  using I = size_t;
-  using LayoutPolicy = stdx::layout_left;
-  using IdsType = uint8_t;
+   using T = float;
+   using I = size_t;
+   using LayoutPolicy = stdx::layout_left;
+   using IdsType = uint8_t;
 
-  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
-  std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
+   std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+   std::string tmp_ids_uri = "/tmp/tmp_tdb_ids_matrix";
 
-  // 1. Use Matrix as the MatrixBase template parameter.
-  {
-    auto X = ColMajorMatrix<T>(Mrows, Ncols);
-    fill_and_write_matrix(ctx, X, tmp_matrix_uri, Mrows, Ncols, offset);
+   // 1. Use Matrix as the MatrixBase template parameter.
+   {
+     auto X = ColMajorMatrix<T>(Mrows, Ncols);
+     fill_and_write_matrix(ctx, X, tmp_matrix_uri, Mrows, Ncols, offset);
 
-    auto Y = tdbBlockedMatrix<T, LayoutPolicy, I, Matrix<T, LayoutPolicy, I>>(
-        ctx, tmp_matrix_uri);
-    Y.load();
-    CHECK(num_vectors(Y) == num_vectors(X));
-    CHECK(dimension(Y) == dimension(X));
-    CHECK(num_vectors(Y) == num_vectors(X));
-    CHECK(dimension(Y) == dimension(X));
-    CHECK(std::equal(
-        X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
-    for (size_t i = 0; i < 5; ++i) {
-      for (size_t j = 0; j < 5; ++j) {
-        CHECK(X(i, j) == Y(i, j));
-      }
-    }
-  }
+     auto Y = tdbBlockedMatrix<T, LayoutPolicy, I, Matrix<T, LayoutPolicy, I>>(
+         ctx, tmp_matrix_uri);
+     Y.load();
+     CHECK(num_vectors(Y) == num_vectors(X));
+     CHECK(dimension(Y) == dimension(X));
+     CHECK(num_vectors(Y) == num_vectors(X));
+     CHECK(dimension(Y) == dimension(X));
+     CHECK(std::equal(
+         X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+     for (size_t i = 0; i < 5; ++i) {
+       for (size_t j = 0; j < 5; ++j) {
+         CHECK(X(i, j) == Y(i, j));
+       }
+     }
+   }
 
-  // 2. Use MatrixWithIds as the MatrixBase template parameter.
-  {
-    auto X = ColMajorMatrixWithIds<T, IdsType, I>(Mrows, Ncols);
-    fill_and_write_matrix(
-        ctx, X, tmp_matrix_uri, tmp_ids_uri, Mrows, Ncols, offset);
+   // 2. Use MatrixWithIds as the MatrixBase template parameter.
+   {
+     auto X = ColMajorMatrixWithIds<T, IdsType, I>(Mrows, Ncols);
+     fill_and_write_matrix(
+         ctx, X, tmp_matrix_uri, tmp_ids_uri, Mrows, Ncols, offset);
 
-    auto Y = tdbBlockedMatrix<
-        T,
-        LayoutPolicy,
-        I,
-        MatrixWithIds<T, IdsType, LayoutPolicy, I>>(ctx, tmp_matrix_uri);
-    Y.load();
-    CHECK(num_vectors(Y) == num_vectors(X));
-    CHECK(dimension(Y) == dimension(X));
-    CHECK(num_vectors(Y) == num_vectors(X));
-    CHECK(dimension(Y) == dimension(X));
-    CHECK(std::equal(
-        X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
-    for (size_t i = 0; i < 5; ++i) {
-      for (size_t j = 0; j < 5; ++j) {
-        CHECK(X(i, j) == Y(i, j));
-      }
-    }
-  }
-}
+     auto Y = tdbBlockedMatrix<
+         T,
+         LayoutPolicy,
+         I,
+         MatrixWithIds<T, IdsType, LayoutPolicy, I>>(ctx, tmp_matrix_uri);
+     Y.load();
+     CHECK(num_vectors(Y) == num_vectors(X));
+     CHECK(dimension(Y) == dimension(X));
+     CHECK(num_vectors(Y) == num_vectors(X));
+     CHECK(dimension(Y) == dimension(X));
+     CHECK(std::equal(
+         X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+     for (size_t i = 0; i < 5; ++i) {
+       for (size_t j = 0; j < 5; ++j) {
+         CHECK(X(i, j) == Y(i, j));
+       }
+     }
+   }
+ }
+
+//TEST_CASE("tdb_matrix: empty matris", "[tdb_matrix]") {
+//  tiledb::Context ctx;
+//  std::string tmp_matrix_uri = "/tmp/tmp_tdb_matrix";
+//  size_t Mrows = 0;
+//  size_t Ncols = 0;
+//
+//  tiledb::VFS vfs(ctx);
+//  if (vfs.is_dir(tmp_matrix_uri)) {
+//    vfs.remove_dir(tmp_matrix_uri);
+//  }
+//
+//  auto X = ColMajorMatrix<float>(Mrows, Ncols);
+//  std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), 0);
+//  write_matrix(ctx, X, tmp_matrix_uri);
+//
+//  auto Y = tdbColMajorMatrix<float>(ctx, tmp_matrix_uri);
+//  Y.load();
+//
+//  auto Z = tdbColMajorMatrix<float>(std::move(Y));
+//
+//  CHECK(num_vectors(Y) == num_vectors(X));
+//  CHECK(dimension(Y) == dimension(X));
+//
+//  CHECK(num_vectors(Z) == num_vectors(X));
+//  CHECK(dimension(Z) == dimension(X));
+//
+//  CHECK(
+//      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Z.data()));
+//  for (size_t i = 0; i < 5; ++i) {
+//    for (size_t j = 0; j < 5; ++j) {
+//      CHECK(X(i, j) == Z(i, j));
+//    }
+//  }
+//}

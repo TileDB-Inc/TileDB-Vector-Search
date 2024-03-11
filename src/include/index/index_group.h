@@ -248,8 +248,9 @@ class base_index_group {
    */
   void open_for_write(const tiledb::Config& cfg) {
     tiledb::VFS vfs(cached_ctx_);
-
+    std::cout << "open_for_write()\n";
     if (vfs.is_dir(group_uri_)) {
+      std::cout << "vfs.is_dir(group_uri_)\n";
       /** Load the current group metadata */
       init_for_open(cfg);
       if (index_timestamp_ < metadata_.ingestion_timestamps_.back()) {
@@ -260,6 +261,7 @@ class base_index_group {
         group_timestamp_ = index_timestamp_;
       }
     } else {
+      std::cout << "create_default\n";
       /** Create a new group */
       create_default(cfg);
     }
@@ -325,13 +327,18 @@ class base_index_group {
       , index_timestamp_(timestamp)
       , version_(version)
       , opened_for_(rw) {
+    std::cout << "[index_group@base_index_group] constructor\n";
     switch (opened_for_) {
       case TILEDB_READ:
         open_for_read(cfg);
         break;
       case TILEDB_WRITE:
+        std::cout << "[index_group@base_index_group] TILEDB_WRITE\n";
+        std::cout << "[index_group@base_index_group] dimension: " << dimension << "\n";
         set_dimension(dimension);
+        std::cout << "[index_group@base_index_group] will open_for_write()\n";
         open_for_write(cfg);
+        std::cout << "[index_group@base_index_group] done here\n";
         break;
       case TILEDB_MODIFY_EXCLUSIVE:
         break;

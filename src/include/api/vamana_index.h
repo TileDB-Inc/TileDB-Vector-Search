@@ -88,35 +88,17 @@ class IndexVamana {
    */
   explicit IndexVamana(
       const std::optional<IndexOptions>& config = std::nullopt) {
+    std::cout << "[IndexVamana 1] " << std::endl;
     feature_datatype_ = TILEDB_ANY;
     id_datatype_ = TILEDB_UINT32;
     adjacency_row_index_datatype_ = TILEDB_UINT32;
-
-    if (config) {
-      for (auto&& c : *config) {
-        auto key = c.first;
-        auto value = c.second;
-        if (key == "dimension") {
-          dimension_ = std::stol(value);
-        } else if (key == "L_build") {
-          L_build_ = std::stol(value);
-        } else if (key == "R_max_degree") {
-          R_max_degree_ = std::stof(value);
-        } else if (key == "feature_type") {
-          feature_datatype_ = string_to_datatype(value);
-        } else if (key == "id_type") {
-          id_datatype_ = string_to_datatype(value);
-        } else if (key == "adjacency_row_index_type") {
-          adjacency_row_index_datatype_ = string_to_datatype(value);
-        } else {
-          throw std::runtime_error("Invalid index config key: " + key);
-        }
-      }
-    }
+    std::cout << "[IndexVamana 1] 1" << std::endl;
+    parse_config(config);
+    std::cout << "[IndexVamana 1] 2" << std::endl;
   }
 
   /**
-   * @brief Open an existing index.
+   * @brief Open an existing index or create an index at this URI.
    *
    * @note This will be able to infer all of its types using the group metadata
    * to create the internal vamana_index object.
@@ -124,34 +106,55 @@ class IndexVamana {
    * @param ctx
    * @param group_uri TileDB group containing all the arrays comprising the
    * index.
+   * @param create_new_index If true, create a new index at the given URI. You must pass feature_type, id_type, adjacency_row_index_type, and dimension if this is true.
    */
   IndexVamana(
       const tiledb::Context& ctx,
       const URI& group_uri,
-      const std::optional<IndexOptions>& config = std::nullopt) {
-    using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
-    std::vector<metadata_element> metadata{
-        {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
-        {"id_datatype", &id_datatype_, TILEDB_UINT32},
-        {"adjacency_row_index_datatype",
-         &adjacency_row_index_datatype_,
-         TILEDB_UINT32}};
-
-    tiledb::Config cfg;
-    tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
-
-    for (auto& [name, value, datatype] : metadata) {
-      if (!read_group.has_metadata(name, &datatype)) {
-        throw std::runtime_error("Missing metadata: " + name);
+      const std::optional<IndexOptions>& config = std::nullopt,
+      bool create_new_index = false) {
+    if (create_new_index) {
+      // If we are creating an index we first create an empty one and then write to disk, and then
+      // continue down the normal path of this constructor.
+      parse_config(config);
+      auto type = std::tuple{
+        feature_datatype_, id_datatype_, adjacency_row_index_datatype_};
+      if (dispatch_table.find(type) == dispatch_table.end()) {
+        throw std::runtime_error("Unsupported datatype combination");
       }
-      uint32_t count;
-      void* addr;
-      read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
-      if (datatype == TILEDB_UINT32) {
-        *reinterpret_cast<uint32_t*>(value) =
-            *reinterpret_cast<uint32_t*>(addr);
-      } else {
-        throw std::runtime_error("Unsupported datatype for metadata: " + name);
+      std::cout << "IndexVamana() ctor - dimension_" << dimension_ << std::endl;
+      index_ = dispatch_table.at(type)(0, L_build_, R_max_degree_, dimension_);
+
+      bool success = index_->write_index(ctx, group_uri, true);
+      if (!success) {
+        throw std::runtime_error("Failed to create new index at " + group_uri);
+      }
+      return;
+    } else {
+      using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
+      std::vector<metadata_element> metadata{
+          {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
+          {"id_datatype", &id_datatype_, TILEDB_UINT32},
+          {"adjacency_row_index_datatype",
+          &adjacency_row_index_datatype_,
+          TILEDB_UINT32}};
+
+      tiledb::Config cfg;
+      tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
+
+      for (auto& [name, value, datatype] : metadata) {
+        if (!read_group.has_metadata(name, &datatype)) {
+          throw std::runtime_error("Missing metadata: " + name);
+        }
+        uint32_t count;
+        void* addr;
+        read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
+        if (datatype == TILEDB_UINT32) {
+          *reinterpret_cast<uint32_t*>(value) =
+              *reinterpret_cast<uint32_t*>(addr);
+        } else {
+          throw std::runtime_error("Unsupported datatype for metadata: " + name);
+        }
       }
     }
 
@@ -164,7 +167,7 @@ class IndexVamana {
 
     if (dimension_ != 0 && dimension_ != index_->dimension()) {
       throw std::runtime_error(
-          "Dimension mismatch: " + std::to_string(dimension_) +
+          "Dimension mismatch 1: " + std::to_string(dimension_) +
           " != " + std::to_string(index_->dimension()));
     }
     dimension_ = index_->dimension();
@@ -192,13 +195,13 @@ class IndexVamana {
       throw std::runtime_error("Unsupported datatype combination");
     }
     index_ = dispatch_table.at(type)(
-        training_set.num_vectors(), L_build_, R_max_degree_);
+        training_set.num_vectors(), L_build_, R_max_degree_, dimension_);
 
     index_->train(training_set);
 
     if (dimension_ != 0 && dimension_ != index_->dimension()) {
       throw std::runtime_error(
-          "Dimension mismatch: " + std::to_string(dimension_) +
+          "Dimension mismatch 2: " + std::to_string(dimension_) +
           " != " + std::to_string(index_->dimension()));
     }
     dimension_ = index_->dimension();
@@ -215,6 +218,9 @@ class IndexVamana {
           datatype_to_string(feature_datatype_) +
           " != " + datatype_to_string(data_set.feature_type()));
     }
+    if (!index_) {
+      throw std::runtime_error("Cannot add() because there is no index.");
+    }
     index_->add(data_set);
   }
 
@@ -223,14 +229,21 @@ class IndexVamana {
       const QueryVectorArray& vectors,
       size_t top_k,
       std::optional<size_t> opt_L = std::nullopt) {
+    if (!index_) {
+      throw std::runtime_error("Cannot query() because there is no index.");
+    }
     return index_->query(vectors, top_k, opt_L);
   }
 
-  void write_index(
+  bool write_index(
       const tiledb::Context& ctx,
       const std::string& group_uri,
       bool overwrite = false) const {
-    index_->write_index(ctx, group_uri, overwrite);
+    if (!index_) {
+      throw std::runtime_error("Cannot write_index() because there is no index.");
+    }
+    std::cout << "[IndexVamana api @write_index] " << std::endl;
+    return index_->write_index(ctx, group_uri, overwrite);
   }
 
   constexpr auto dimension() const {
@@ -262,6 +275,31 @@ class IndexVamana {
   }
 
  private:
+  void parse_config(const std::optional<IndexOptions>& config) {
+    if (config) {
+        for (auto&& c : *config) {
+          auto key = c.first;
+          auto value = c.second;
+          std::cout << "[IndexVamana api @parse_config] " << key << " " << value << std::endl;
+          if (key == "dimension") {
+            dimension_ = std::stol(value);
+          } else if (key == "L_build") {
+            L_build_ = std::stol(value);
+          } else if (key == "R_max_degree") {
+            R_max_degree_ = std::stof(value);
+          } else if (key == "feature_type") {
+            feature_datatype_ = string_to_datatype(value);
+          } else if (key == "id_type") {
+            id_datatype_ = string_to_datatype(value);
+          } else if (key == "adjacency_row_index_type") {
+            adjacency_row_index_datatype_ = string_to_datatype(value);
+          } else {
+            throw std::runtime_error("Invalid index config key: " + key);
+          }
+        }
+      }
+  }
+
   /**
    * Non-type parameterized base class (for type erasure).
    */
@@ -278,7 +316,7 @@ class IndexVamana {
         size_t top_k,
         std::optional<size_t> opt_L) = 0;
 
-    virtual void write_index(
+    virtual bool write_index(
         const tiledb::Context& ctx,
         const std::string& group_uri,
         bool overwrite) const = 0;
@@ -296,8 +334,9 @@ class IndexVamana {
         : impl_index_(std::forward<T>(t)) {
     }
 
-    index_impl(size_t num_vectors, size_t L_build, size_t R_max_degree)
-        : impl_index_(num_vectors, L_build, R_max_degree) {
+    index_impl(size_t num_vectors, size_t L_build, size_t R_max_degree, size_t dimension)
+        // @todo Add support for B and timestamp.
+        : impl_index_(num_vectors, L_build, R_max_degree, 0, 0, dimension) {
     }
 
     index_impl(const tiledb::Context& ctx, const URI& index_uri)
@@ -374,11 +413,11 @@ class IndexVamana {
       }
     }
 
-    void write_index(
+    bool write_index(
         const tiledb::Context& ctx,
         const std::string& group_uri,
         bool overwrite) const override {
-      impl_index_.write_index(ctx, group_uri, overwrite);
+      return impl_index_.write_index(ctx, group_uri, overwrite);
     }
 
     size_t dimension() const override {
@@ -393,7 +432,7 @@ class IndexVamana {
   };
 
   using constructor_function =
-      std::function<std::unique_ptr<index_base>(size_t, size_t, size_t)>;
+      std::function<std::unique_ptr<index_base>(size_t, size_t, size_t, size_t)>;
   using table_type = std::map<
       std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>,
       constructor_function>;
@@ -417,52 +456,52 @@ class IndexVamana {
 
 const IndexVamana::table_type IndexVamana::dispatch_table = {
     {{TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT32},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree, size_t dimension) {
        return std::make_unique<
            index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, L_build, R_max_degree, dimension);
      }},
     {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree, size_t dimension) {
        return std::make_unique<
            index_impl<vamana_index<float, uint32_t, uint32_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, L_build, R_max_degree, dimension);
      }},
     {{TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT64},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree, size_t dimension) {
        return std::make_unique<
            index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, L_build, R_max_degree, dimension);
      }},
     {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree, size_t dimension) {
        return std::make_unique<
            index_impl<vamana_index<float, uint32_t, uint64_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, L_build, R_max_degree, dimension);
      }},
     {{TILEDB_UINT8, TILEDB_UINT64, TILEDB_UINT32},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree, size_t dimension) {
        return std::make_unique<
            index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, L_build, R_max_degree, dimension);
      }},
     {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree, size_t dimension) {
        return std::make_unique<
            index_impl<vamana_index<float, uint64_t, uint32_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, L_build, R_max_degree, dimension);
      }},
     {{TILEDB_UINT8, TILEDB_UINT64, TILEDB_UINT64},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree, size_t dimension) {
        return std::make_unique<
            index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, L_build, R_max_degree, dimension);
      }},
     {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t L_build, size_t R_max_degree, size_t dimension) {
        return std::make_unique<
            index_impl<vamana_index<float, uint64_t, uint64_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, L_build, R_max_degree, dimension);
      }}};
 
 const IndexVamana::uri_table_type IndexVamana::uri_dispatch_table = {

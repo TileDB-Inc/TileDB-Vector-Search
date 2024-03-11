@@ -253,6 +253,12 @@ void init_type_erased_module(py::module_& m) {
             new (&instance) IndexVamana(args);
           })
       .def(
+          "__init__",
+          [](IndexVamana& instance, const tiledb::Context& ctx, const std::string& group_uri, py::kwargs kwargs) {
+            auto args = kwargs_to_map(kwargs);
+            new (&instance) IndexVamana(ctx, group_uri, args, true);
+          })
+      .def(
           "write_index",
           [](IndexVamana& index,
              const tiledb::Context& ctx,
