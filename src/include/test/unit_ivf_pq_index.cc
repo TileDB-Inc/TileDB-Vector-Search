@@ -32,3 +32,10 @@
 #include <catch2/catch_all.hpp>
 
 #include "index/ivf_pq_index.h"
+#include <catch2/catch_all.hpp>
+
+#include "index/ivf_pq_index.h"
+
+TEST_CASE("ivf_pq_index: test test", "[ivf_pq_index]") {
+  REQUIRE(true);
+}
