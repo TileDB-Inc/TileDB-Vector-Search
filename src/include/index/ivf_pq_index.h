@@ -348,7 +348,7 @@ class ivf_pq_index {
     pq_ivf_centroids_ =
         tdbPreLoadMatrix<pq_vector_feature_type, stdx::layout_left>(
             group_->cached_ctx(),
-            group_->centroids_uri(),
+            group_->pq_ivf_centroids_uri(),
             std::nullopt,
             num_partitions_,
             0,
@@ -401,7 +401,12 @@ class ivf_pq_index {
         SubDistance,
         typename ColMajorMatrix<feature_type>::span_type,
         typename ColMajorMatrix<flat_vector_feature_type>::span_type>
-  auto train_pq(const V& training_set) {
+  auto train_pq(const V& training_set, kmeans_init init = kmeans_init::random) {
+    dimension_ = ::dimension(training_set);
+    assert(num_subspaces_ > 0);
+    sub_dimension_ = dimension_ / num_subspaces_;
+    assert(dimension_ % num_subspaces_ == 0);
+
     cluster_centroids_ =
         ColMajorMatrix<flat_vector_feature_type>(dimension_, num_clusters_);
 
@@ -1080,7 +1085,26 @@ class ivf_pq_index {
   }
 
   auto num_partitions() const {
-    return ::num_vectors(flat_ivf_centroids_);
+    assert(num_partitions_ == ::num_vectors(flat_ivf_centroids_));
+    assert(num_partitions_ == ::num_vectors(pq_ivf_centroids_));
+    // return ::num_vectors(flat_ivf_centroids_);
+    return num_partitions_;
+  }
+
+  auto num_subspaces() const {
+    return num_subspaces_;
+  }
+
+  auto sub_dimension() const {
+    return sub_dimension_;
+  }
+
+  auto bits_per_subspace() const {
+    return bits_per_subspace_;
+  }
+
+  auto num_clusters() const {
+    return num_clusters_;
   }
 
   /***************************************************************************

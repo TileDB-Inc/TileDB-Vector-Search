@@ -31,11 +31,78 @@
 
 #include <catch2/catch_all.hpp>
 
-#include "index/ivf_pq_index.h"
 #include <catch2/catch_all.hpp>
+#include "index/ivf_pq_index.h"
 
 #include "index/ivf_pq_index.h"
 
 TEST_CASE("ivf_pq_index: test test", "[ivf_pq_index]") {
   REQUIRE(true);
+}
+
+struct dummy_pq_index {
+  using feature_type = float;
+  using flat_vector_feature_type = feature_type;
+  using id_type = int;
+  using indices_type = int;
+  using centroid_feature_type = float;
+  using pq_code_type = uint8_t;
+  using pq_vector_feature_type = pq_code_type;
+  using score_type = float;
+
+  auto dimension() const {
+    return 128;
+  }
+  auto num_subspaces() const {
+    return 16;
+  }
+  auto num_clusters() const {
+    return 256;
+  }
+  auto sub_dimension() const {
+    return 8;
+  }
+  auto bits_per_subspace() const {
+    return 8;
+  }
+};
+
+TEST_CASE("ivf_pq_index: default construct then read", "[ivf_pq_index]") {
+  bool debug = false;
+  std::string tmp_uri = (std::filesystem::temp_directory_path() /
+                         "ivf_pq_group_test_write_constructor")
+                            .string();
+
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri)) {
+    vfs.remove_dir(tmp_uri);
+  }
+
+  ivf_pq_group x = ivf_pq_group(dummy_pq_index{}, ctx, tmp_uri, TILEDB_WRITE);
+  x.dump("Group write default");
+
+  ivf_pq_index y =
+      ivf_pq_index<float, uint32_t, uint32_t>(ctx, tmp_uri, TILEDB_READ);
+  x.dump("Write constructor - open");
+}
+
+TEST_CASE("ivf_pq_index: uri constructor", "[ivf_pq_index]") {
+  bool debug = false;
+  std::string tmp_uri = (std::filesystem::temp_directory_path() /
+                         "ivf_pq_group_test_write_constructor")
+                            .string();
+
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri)) {
+    vfs.remove_dir(tmp_uri);
+  }
+
+  // Create default
+  ivf_pq_group x = ivf_pq_group(dummy_pq_index{}, ctx, tmp_uri, TILEDB_WRITE);
+  x.dump("Write constructor - create before open");
+
+  ivf_pq_group y = ivf_pq_group(dummy_pq_index{}, ctx, tmp_uri, TILEDB_WRITE);
+  x.dump("Write constructor - open");
 }

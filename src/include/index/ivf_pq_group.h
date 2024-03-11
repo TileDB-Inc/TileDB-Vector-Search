@@ -243,14 +243,18 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
     // Set the PQ related metadata: num_subspaces, sub_dimension,
     // bits_per_subspace, num_clusters
     this->set_dimension(this->cached_index_.get().dimension());
-    this->set_num_subspaces(
-        this->cached_index_.get().get_num_subspaces());  // m
+    this->set_num_subspaces(this->cached_index_.get().num_subspaces());  // m
     this->set_sub_dimension(
-        this->cached_index_.get().get_sub_dimension());  // D* == D/m
+        this->cached_index_.get().sub_dimension());  // D* == D/m
     this->set_bits_per_subspace(
-        this->cached_index_.get().get_bits_per_subspace());  // 8
+        this->cached_index_.get().bits_per_subspace());  // 8
     this->set_num_clusters(
-        this->cached_index_.get().get_num_clusters());  // 2**nbits
+        this->cached_index_.get().num_clusters());  // 2**nbits
+
+    assert(
+        this->get_num_subspaces() * this->get_sub_dimension() ==
+        this->get_dimension());
+    assert(this->get_num_clusters() == 1 << this->get_bits_per_subspace());
 
     static const int32_t tile_size{
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
@@ -347,7 +351,9 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
         default_compression);
     write_group.add_member(ivf_ids_array_name(), true, ivf_ids_array_name());
 
-    create_empty_for_matrix<typename index_type::pq_type, stdx::layout_left>(
+    create_empty_for_matrix<
+        typename index_type::pq_code_type,
+        stdx::layout_left>(
         cached_ctx_,
         pq_ivf_vectors_uri(),
         this->get_num_subspaces(),
