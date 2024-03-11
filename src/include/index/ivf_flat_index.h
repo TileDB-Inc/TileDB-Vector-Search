@@ -306,7 +306,8 @@ class ivf_flat_index {
     // argument deduction
     train_no_init<
         std::remove_cvref_t<decltype(training_set)>,
-        std::remove_cvref<decltype(centroids_)>,
+        // std::remove_cvref<decltype(centroids_)>,
+        decltype(centroids_),
         Distance>(
         training_set,
         centroids_,
