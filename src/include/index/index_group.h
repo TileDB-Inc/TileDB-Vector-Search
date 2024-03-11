@@ -62,19 +62,27 @@ struct metadata_type_selector {
 };
 
 template <class IndexGroup>
+struct index_type_selector {
+  using type = typename IndexGroup::index_type;
+};
+
+template <class IndexGroup>
 class base_index_group {
-  // using index_type = typename IndexGroup::index_type;
+  friend IndexGroup;
+
   using group_type = IndexGroup;
 
   // Can't do this ....
   // using index_group_metadata_type = typename
   // IndexGroup::index_group_metadata_type; Can do this
   using index_group_metadata_type =
-      typename metadata_type_selector<IndexGroup>::type;
+      typename metadata_type_selector<group_type>::type;
 
-  friend IndexGroup;
+ public:
+  using index_type = typename index_type_selector<group_type>::type;
 
  protected:
+  std::reference_wrapper<const index_type> cached_index_;
   std::reference_wrapper<const tiledb::Context> cached_ctx_;
   std::string group_uri_;
   size_t index_timestamp_{0};
@@ -317,14 +325,15 @@ class base_index_group {
    * @todo Chained parameters here too?
    */
   base_index_group(
+      const index_type& index,
       const tiledb::Context& ctx,
       const std::string& uri,
-      uint64_t dimension,
       tiledb_query_type_t rw = TILEDB_READ,
       size_t timestamp = 0,
       const std::string& version = std::string{""},
       const tiledb::Config& cfg = tiledb::Config{})
-      : cached_ctx_(ctx)
+      : cached_index_(index)
+      , cached_ctx_(ctx)
       , group_uri_(uri)
       , index_timestamp_(timestamp)
       , version_(version)
@@ -334,7 +343,7 @@ class base_index_group {
         open_for_read(cfg);
         break;
       case TILEDB_WRITE:
-        set_dimension(dimension);
+        // set_dimension(dimension);
         open_for_write(cfg);
         break;
       case TILEDB_MODIFY_EXCLUSIVE:

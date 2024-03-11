@@ -1187,32 +1187,40 @@ class ivf_pq_index {
   }
 
   auto compare_cluster_centroids(const ivf_pq_index& rhs) {
-    return compare_feature_vector_arrays(cluster_centroids_, rhs.cluster_centroids_);
+    return compare_feature_vector_arrays(
+        cluster_centroids_, rhs.cluster_centroids_);
   }
 
   auto compare_flat_ivf_centroids(const ivf_pq_index& rhs) {
-    return compare_feature_vector_arrays(flat_ivf_centroids_, rhs.flat_ivf_centroids_);
+    return compare_feature_vector_arrays(
+        flat_ivf_centroids_, rhs.flat_ivf_centroids_);
   }
 
   auto compare_pq_ivf_centroids(const ivf_pq_index& rhs) {
-    return compare_feature_vector_arrays(pq_ivf_centroids_, rhs.pq_ivf_centroids_);
+    return compare_feature_vector_arrays(
+        pq_ivf_centroids_, rhs.pq_ivf_centroids_);
   }
 
   auto compare_ivf_index(const ivf_pq_index& rhs) {
-    return compare_feature_vector(partitioned_pq_vectors_->indices(), rhs.partitioned_pq_vectors_->indices());
+    return compare_feature_vector(
+        partitioned_pq_vectors_->indices(),
+        rhs.partitioned_pq_vectors_->indices());
   }
 
   auto compare_ivf_ids(const ivf_pq_index& rhs) {
-    return compare_feature_vector(partitioned_pq_vectors_->ids(), rhs.partitioned_pq_vectors_->ids());
+    return compare_feature_vector(
+        partitioned_pq_vectors_->ids(), rhs.partitioned_pq_vectors_->ids());
   }
 
   auto compare_pq_ivf_vectors(const ivf_pq_index& rhs) {
-    return compare_feature_vector_arrays(*partitioned_pq_vectors_, *(rhs.partitioned_pq_vectors_));
+    return compare_feature_vector_arrays(
+        *partitioned_pq_vectors_, *(rhs.partitioned_pq_vectors_));
   }
 
   auto compare_distance_tables(const ivf_pq_index& rhs) {
     for (size_t i = 0; i < size(distance_tables_); ++i) {
-      if (!compare_feature_vector_arrays(distance_tables_[i], rhs.distance_tables_[i])) {
+      if (!compare_feature_vector_arrays(
+              distance_tables_[i], rhs.distance_tables_[i])) {
         return false;
       }
     }

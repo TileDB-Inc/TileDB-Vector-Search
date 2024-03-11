@@ -72,7 +72,7 @@
  * Class representing an inverted file (IVF) index for flat (non-compressed)
  * feature vectors.  The class simply holds the index data itself, it is
  * unaware of where the data comes from -- reading and writing data is done
- * via an ivf_flat_index_group.  Thus, this class does not hold information
+ * via an ivf_flat_group.  Thus, this class does not hold information
  * about the group (neither the group members, nor the group metadata).
  *
  * @tparam partitioned_vectors_feature_type
@@ -113,7 +113,7 @@ class ivf_flat_index {
   /** The timestamp at which the index was created */
   uint64_t timestamp_{0};
 
-  std::unique_ptr<ivf_flat_index_group<ivf_flat_index>> group_;
+  std::unique_ptr<ivf_flat_group<ivf_flat_index>> group_;
 
   /****************************************************************************
    * Index representation
@@ -212,7 +212,7 @@ class ivf_flat_index {
       const tiledb::Context& ctx,
       const std::string& uri,
       uint64_t timestamp = 0)
-      : group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
+      : group_{std::make_unique<ivf_flat_group<ivf_flat_index>>(
             *this, ctx, uri, TILEDB_READ, timestamp_)} {
     if (timestamp_ == 0) {
       timestamp_ = group_->get_previous_ingestion_timestamp();
@@ -468,8 +468,7 @@ class ivf_flat_index {
     }
 
     // Write the group
-    auto write_group =
-        ivf_flat_index_group(*this, ctx, group_uri, TILEDB_WRITE);
+    auto write_group = ivf_flat_group(*this, ctx, group_uri, TILEDB_WRITE);
 
     write_group.set_dimension(dimension_);
 

@@ -1,5 +1,5 @@
 /**
- * @file   ivf_flat_index_group.h
+ * @file   ivf_flat_group.h
  *
  * @section LICENSE
  *
@@ -50,17 +50,21 @@
      }}};
 
 template <class Index>
-class ivf_flat_index_group;
+class ivf_flat_group;
 
 template <class Index>
-struct metadata_type_selector<ivf_flat_index_group<Index>> {
+struct metadata_type_selector<ivf_flat_group<Index>> {
   using type = ivf_flat_index_metadata;
 };
 
 template <class Index>
-class ivf_flat_index_group
-    : public base_index_group<ivf_flat_index_group<Index>> {
-  using Base = base_index_group<ivf_flat_index_group>;
+struct index_type_selector<ivf_flat_group<Index>> {
+  using type = Index;
+};
+
+template <class Index>
+class ivf_flat_group : public base_index_group<ivf_flat_group<Index>> {
+  using Base = base_index_group<ivf_flat_group>;
   // using Base::Base;
 
   using Base::array_name_map_;
@@ -71,26 +75,23 @@ class ivf_flat_index_group
   using Base::valid_key_names_;
   using Base::version_;
 
-  using index_type = Index;
-  // std::reference_wrapper<const index_type> index_;
-  // index_type index_;
-
   static const int32_t default_domain{std::numeric_limits<int32_t>::max() - 1};
   static const int32_t default_tile_extent{100'000};
   static const int32_t tile_size_bytes{64 * 1024 * 1024};
 
  public:
+  using index_type = index_type_selector<ivf_flat_group<Index>>::type;
   using index_group_metadata_type = ivf_flat_index_metadata;
 
-  ivf_flat_index_group(
-      const index_type& index,
+  ivf_flat_group(
+      const Index& index,
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
       size_t timestamp = 0,
       const std::string& version = std::string{""},
       const tiledb::Config& cfg = tiledb::Config{})
-      : Base(ctx, uri, index.dimension(), rw, timestamp, version, cfg) {
+      : Base(index, ctx, uri, rw, timestamp, version, cfg) {
   }
 
  public:
@@ -155,6 +156,7 @@ class ivf_flat_index_group
       this->version_ = current_storage_version;
     }
     this->init_valid_array_names();
+    this->set_dimension(this->cached_index_.get().dimension());
 
     static const int32_t tile_size{
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
@@ -187,7 +189,6 @@ class ivf_flat_index_group
     metadata_.base_sizes_ = {0};
     metadata_.partition_history_ = {0};
     metadata_.temp_size_ = 0;
-    metadata_.dimension_ = this->get_dimension();
 
     create_empty_for_matrix<
         typename index_type::centroid_feature_type,
