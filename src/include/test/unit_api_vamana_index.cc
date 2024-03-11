@@ -158,8 +158,7 @@ TEST_CASE("api_vamana_index: infer dimension", "[api_vamana_index]") {
 }
 
 TEST_CASE(
-    "api_vamana_index: api_vamana_index write and read",
-    "[api_vamana_index][ci-skip]") {
+    "api_vamana_index: api_vamana_index write and read", "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
   std::string api_vamana_index_uri =
       (std::filesystem::temp_directory_path() / "api_vamana_index").string();
@@ -181,9 +180,7 @@ TEST_CASE(
   CHECK(a.adjacency_row_index_type() == b.adjacency_row_index_type());
 }
 
-TEST_CASE(
-    "api_vamana_index: build index and query in place infinite",
-    "[api_vamana_index][ci-skip]") {
+TEST_CASE("api_vamana_index: build index and query", "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
   size_t nprobe = GENERATE(8, 32);
@@ -204,9 +201,7 @@ TEST_CASE(
   CHECK(recall == 1.0);
 }
 
-TEST_CASE(
-    "api_vamana_index: read index and query infinite and finite",
-    "[api_vamana_index][ci-skip]") {
+TEST_CASE("api_vamana_index: read index and query", "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
   size_t nprobe = GENERATE(8, 32);
