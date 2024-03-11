@@ -53,6 +53,24 @@
 #include "mdspan/mdspan.hpp"
 #include "tdb_defs.h"
 
+/** Lookup an array name given an array key */
+inline std::string array_key_to_array_name_from_map(
+    const std::unordered_map<std::string, std::string>& map,
+    const std::string& array_key) {
+  if (map.find(array_key) == map.end()) {
+    throw std::runtime_error("Invalid array key in map: " + array_key);
+  }
+  auto tmp = *map.find(array_key);
+  return tmp.second;
+};
+
+/** Convert an array name to a uri. */
+inline std::string array_name_to_uri(
+    const std::string& group_uri, const std::string& array_name) {
+  return (std::filesystem::path{group_uri} / std::filesystem::path{array_name})
+      .string();
+}
+
 template <class Index>
 class base_index_metadata;
 
@@ -127,8 +145,7 @@ class base_index_group {
     if (!is_valid_key_name(array_key)) {
       throw std::runtime_error("Invalid array key: " + array_key);
     }
-    auto tmp = *array_name_map_.find(array_key);
-    return tmp.second;
+    return array_key_to_array_name_from_map(array_name_map_, array_key);
   };
 
   /** Create the set of valid key names and array names */
@@ -287,9 +304,7 @@ class base_index_group {
   /** Convert an array name to a uri. */
   constexpr std::string array_name_to_uri(
       const std::string& array_name) const noexcept {
-    return (std::filesystem::path{group_uri_} /
-            std::filesystem::path{array_name})
-        .string();
+    return array_name_to_uri(group_uri_, array_name);
   }
 
   /** Convert an array key to a uri. */

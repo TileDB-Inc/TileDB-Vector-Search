@@ -78,6 +78,8 @@ kmeans_add_test(unit_api_vamana_index)
 
 kmeans_add_test(unit_array_defs)
 
+kmeans_add_test(unit_backwards_compatibility)
+
 kmeans_add_test(unit_concepts)
 
 kmeans_add_test(unit_concepts_vs)
