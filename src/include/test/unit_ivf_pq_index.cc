@@ -306,10 +306,15 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   idx2.read_index_infinite();
 
   CHECK(idx.compare_cached_metadata(idx2));
+  CHECK(idx.compare_cluster_centroids(idx2));
   CHECK(idx.compare_flat_ivf_centroids(idx2));
   CHECK(idx.compare_pq_ivf_vectors(idx2));
   CHECK(idx.compare_ivf_index(idx2));
   CHECK(idx.compare_ivf_ids(idx2));
+  CHECK(idx.compare_pq_ivf_vectors(idx2));
+  CHECK(idx.compare_distance_tables(idx2));
+
+
 }
 
 TEMPLATE_TEST_CASE(

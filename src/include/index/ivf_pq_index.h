@@ -364,6 +364,28 @@ class ivf_pq_index {
             num_partitions_,
             0,
             timestamp_);
+
+    cluster_centroids_ =
+        tdbPreLoadMatrix<flat_vector_feature_type, stdx::layout_left>(
+            group_->cached_ctx(),
+            group_->cluster_centroids_uri(),
+            std::nullopt,
+            std::nullopt,
+            num_clusters_,
+            timestamp_);
+
+    distance_tables_ = std::vector<ColMajorMatrix<score_type>>(num_subspaces_);
+    for (size_t i = 0; i < num_subspaces_; ++i) {
+      std::string local_uri =
+          group_->distance_tables_uri() + "_" + std::to_string(i);
+      distance_tables_[i] = tdbPreLoadMatrix<score_type, stdx::layout_left>(
+          group_->cached_ctx(),
+          local_uri,
+          std::nullopt,
+          std::nullopt,
+          num_clusters_,
+          timestamp_);
+    }
   }
 
   /****************************************************************************
