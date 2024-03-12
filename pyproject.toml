@@ -43,12 +43,12 @@ cmake.source-dir = "src"
 cmake.targets = ["skbuild-export"]
 # TODO: This should be removed, but currently can't bacause: 'src/src/CMakeLists.txt'
 sdist.include = [
-    ".git"
+    ".git",
+    "apis/python/src/tiledb/vector_search/version.py"
 ]
 wheel.packages = ["apis/python/src/tiledb"]
 
 [tool.scikit-build.cmake.define]
-#GIT_REPO_NAME = "placeholder"
 TILEDB_VS_PYTHON = "ON"
 
 [tool.setuptools_scm]
