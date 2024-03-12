@@ -36,6 +36,7 @@
  *  "index_type",            // "FLAT", "IVF_FLAT", "Vamana"
  *  "ingestion_timestamps",  // (json) list
  *  "storage_version",       // "0.3"
+ *  "has_updates",           // (int64)
  *  "temp_size",
  *
  *  "feature_datatype",      // TILEDB_UINT32
@@ -69,6 +70,8 @@
  * fixable by CRTP?
  *
  * @todo Clean up so that we don't need the template parameter.
+ * @todo Add support for metadata versioning - right now there is no way to add
+ * new metadata without breaking old indexes.
  */
 template <class IndexMetadata>
 class base_index_metadata {
@@ -93,6 +96,8 @@ class base_index_metadata {
 
   uint32_t dimension_{0};
 
+  int64_t has_updates_{0};
+
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
 
@@ -112,7 +117,7 @@ class base_index_metadata {
   using metadata_string_check_type =
       std::tuple<std::string, std::string&, bool>;
   std::vector<metadata_string_check_type> metadata_string_checks{
-      // name, member_variable, default, expected, required
+      // name, member_variable, required
       {"dataset_type", dataset_type_, true},
       {"storage_version", storage_version_, true},
       {"dtype", dtype_, false},
@@ -127,6 +132,7 @@ class base_index_metadata {
   using metadata_arithmetic_check_type =
       std::tuple<std::string, void*, tiledb_datatype_t, bool>;
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks{
+      // name, value, type, required
       {"temp_size", &temp_size_, TILEDB_UINT64, true},
       //{"index_kind",
       // nstatic_cast<IndexMetadata*>(this)->index_kind_,
@@ -135,6 +141,7 @@ class base_index_metadata {
       {"dimension", &dimension_, TILEDB_UINT32, false},
       {"feature_datatype", &feature_datatype_, TILEDB_UINT32, false},
       {"id_datatype", &id_datatype_, TILEDB_UINT32, false},
+      {"has_updates", &has_updates_, TILEDB_INT64, true},
   };
 
   template <class T>
@@ -167,7 +174,7 @@ class base_index_metadata {
     auto&& [name, value, required] = check;
     if (!read_group.has_metadata(name, &v_type)) {
       if (required) {
-        throw std::runtime_error("Missing metadata: " + name);
+        throw std::runtime_error("Missing string metadata: " + name);
       } else {
         return;
       }
@@ -204,7 +211,7 @@ class base_index_metadata {
     auto&& [name, value, type, required] = check;
     if (!read_group.has_metadata(name, &v_type)) {
       if (required) {
-        throw std::runtime_error("Missing metadata: " + name);
+        throw std::runtime_error("Missing arithmetic metadata: " + name);
       } else {
         return;
       }
@@ -238,6 +245,9 @@ class base_index_metadata {
       case TILEDB_FLOAT32:
         *static_cast<float*>(value) = *static_cast<const float*>(v);
         break;
+      case TILEDB_INT64:
+        *static_cast<int64_t*>(value) = *static_cast<const int64_t*>(v);
+        break;
       case TILEDB_UINT64:
         *static_cast<uint64_t*>(value) = *static_cast<const uint64_t*>(v);
         break;
@@ -245,7 +255,9 @@ class base_index_metadata {
         *static_cast<uint32_t*>(value) = *static_cast<const uint32_t*>(v);
         break;
       default:
-        throw std::runtime_error("Unhandled type");
+        throw std::runtime_error(
+            "Unhandled type during arithmetic check: " +
+            tiledb::impl::type_to_str(type));
     }
   }
 
@@ -382,6 +394,12 @@ class base_index_metadata {
   auto& px_datatype()  {
     return px_datatype_;
   }
+  auto has_updates() const {
+    return has_updates_;
+  }
+  auto& has_updates() {
+    return has_updates_;
+  }
 #endif
 
   /**************************************************************************
@@ -418,6 +436,12 @@ class base_index_metadata {
           if (*static_cast<float*>(value) != *static_cast<float*>(rhs_value)) {
             return false;
           }
+        case TILEDB_INT64:
+          if (*static_cast<int64_t*>(value) !=
+              *static_cast<int64_t*>(rhs_value)) {
+            return false;
+          }
+          break;
         case TILEDB_UINT64:
           if (*static_cast<uint64_t*>(value) !=
               *static_cast<uint64_t*>(rhs_value)) {
@@ -430,7 +454,9 @@ class base_index_metadata {
           }
           break;
         default:
-          throw std::runtime_error("Unhandled type in compare_metadata");
+          throw std::runtime_error(
+              "Unhandled type in compare_metadata: " +
+              tiledb::impl::type_to_str(type));
       }
     }
     return true;
@@ -519,6 +545,10 @@ class base_index_metadata {
         case TILEDB_FLOAT32:
           std::cout << name << ": " << *static_cast<float*>(value) << std::endl;
           break;
+        case TILEDB_INT64:
+          std::cout << name << ": " << *static_cast<int64_t*>(value)
+                    << std::endl;
+          break;
         case TILEDB_UINT64:
           std::cout << name << ": " << *static_cast<uint64_t*>(value)
                     << std::endl;
@@ -538,7 +568,8 @@ class base_index_metadata {
           break;
         default:
           throw std::runtime_error(
-              "Unhandled type: " + tiledb::impl::type_to_str(type));
+              "Unhandled type during arithmetic dump: " +
+              tiledb::impl::type_to_str(type));
       }
     }
   }

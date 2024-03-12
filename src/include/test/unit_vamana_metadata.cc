@@ -33,6 +33,8 @@
 #include <tiledb/tiledb>
 #include <vector>
 #include "array_defs.h"
+#include "detail/linalg/tdb_matrix.h"
+#include "index/vamana_index.h"
 #include "index/vamana_metadata.h"
 
 std::vector<std::tuple<std::string, std::string>> expected_str{
@@ -74,50 +76,28 @@ TEST_CASE("vamana_metadata: default constructor compare", "[vamana_metadata]") {
   CHECK(y.compare_metadata(x));
 }
 
-TEST_CASE("vamana_metadata: default constructor dump", "[vamana_metadata]") {
-  bool debug = false;
-
-  auto x = vamana_index_metadata();
-  if (debug) {
-    x.dump();
-  }
-
-  vamana_index_metadata y;
-  if (debug) {
-    y.dump();
-  }
-}
-
-// @todo More vamana groups (from "real" data) to test with
-TEST_CASE("vamana_metadata: open group", "[vamana_metadata]") {
-  bool debug = false;
-
+TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
 
-  std::string group_uri =
-      test_data_root / "nano" / "vamana" / "vamana_test_index_metadata";
+  std::string uri =
+      (std::filesystem::temp_directory_path() / "tmp_vamana_index").string();
+  auto training_vectors =
+      tdbColMajorPreLoadMatrix<float>(ctx, siftsmall_inputs_uri);
+  auto idx =
+      vamana_index<float, uint64_t>(num_vectors(training_vectors), 20, 40, 30);
+  idx.train(training_vectors);
+  idx.add(training_vectors);
+  idx.write_index(ctx, uri, true);
 
-  auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
+  auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
   auto x = vamana_index_metadata();
+  x.load_metadata(read_group);
 
-  SECTION("load metadata") {
-    x.load_metadata(read_group);
-  }
-
-  SECTION("load and dump metadata -- for manual inspection") {
-    x.load_metadata(read_group);
-    if (debug) {
-      x.dump();
-    }
-  }
-
-  SECTION("Compare two constructed objects") {
-    x.load_metadata(read_group);
-    vamana_index_metadata y;
-    y.load_metadata(read_group);
-    CHECK(x.compare_metadata(y));
-  }
+  // Compare two constructed objects.
+  vamana_index_metadata y;
+  y.load_metadata(read_group);
+  CHECK(x.compare_metadata(y));
 }
 
 TEST_CASE(

@@ -46,6 +46,7 @@
 
 #include "detail/graph/adj_list.h"
 #include "detail/graph/graph_utils.h"
+#include "detail/linalg/vector.h"
 #include "index/vamana_group.h"
 
 #include <tiledb/tiledb>
