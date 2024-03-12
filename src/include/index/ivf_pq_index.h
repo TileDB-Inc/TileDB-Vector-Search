@@ -344,6 +344,17 @@ class ivf_pq_index {
      */
     dimension_ = group_->get_dimension();
     num_partitions_ = group_->get_num_partitions();
+    num_subspaces_ = group_->get_num_subspaces();
+    sub_dimension_ = dimension_ / num_subspaces_;
+
+    flat_ivf_centroids_ =
+        tdbPreLoadMatrix<flat_vector_feature_type, stdx::layout_left>(
+            group_->cached_ctx(),
+            group_->flat_ivf_centroids_uri(),
+            std::nullopt,
+            num_partitions_,
+            0,
+            timestamp_);
 
     pq_ivf_centroids_ =
         tdbPreLoadMatrix<pq_vector_feature_type, stdx::layout_left>(
@@ -418,7 +429,7 @@ class ivf_pq_index {
     }
 
     size_t max_local_iters_taken = 0;
-    size_t min_local_conv = std::numeric_limits<double>::max();
+    double min_local_conv = std::numeric_limits<double>::max();
 
     // This basically the same thing we do in ivf_flat, but we perform it
     // num_subspaces_ times, once for each subspace.
@@ -550,6 +561,7 @@ class ivf_pq_index {
     return pq_distance;
   }
 
+  // @todo Parameterize by Distance
   auto make_pq_distance_asymmetric() {
     using A = std::span<feature_type>;  // @todo: Don't hardcode span
     using B = decltype(pq_storage_type{}[0]);
@@ -569,7 +581,7 @@ class ivf_pq_index {
    */
   template <feature_vector_array V>
   void kmeans_random_init(const V& training_set) {
-    ::kmeans_random_init(training_set, cluster_centroids_, num_partitions_);
+    ::kmeans_random_init(training_set, flat_ivf_centroids_, num_partitions_);
   }
 
   /**
@@ -577,8 +589,11 @@ class ivf_pq_index {
    */
   template <feature_vector_array V, class Distance = sum_of_squares_distance>
   void kmeans_pp(const V& training_set) {
-    ::kmeans_pp<std::remove_cvref_t<V>, decltype(cluster_centroids_), Distance>(
-        training_set, cluster_centroids_, num_partitions_, num_threads_);
+    ::kmeans_pp<
+        std::remove_cvref_t<V>,
+        decltype(flat_ivf_centroids_),
+        Distance>(
+        training_set, flat_ivf_centroids_, num_partitions_, num_threads_);
   }
 
   /**
@@ -616,7 +631,7 @@ class ivf_pq_index {
 
     train_no_init<
         std::remove_cvref_t<decltype(training_set)>,
-        std::remove_cvref<decltype(flat_ivf_centroids_)>,
+        decltype(flat_ivf_centroids_),
         Distance>(
         training_set,
         flat_ivf_centroids_,
@@ -640,32 +655,66 @@ class ivf_pq_index {
    *
    * @todo Create and write index that is larger than RAM
    */
-  template <feature_vector_array V>
-  void add(const V& training_set) {
+  template <feature_vector_array V, class Distance = sum_of_squares_distance>
+  void add(const V& training_set, Distance distance = Distance{}) {
     auto num_unique_labels = ::num_vectors(flat_ivf_centroids_);
 
-#if ONE_WAY  // -- through training set three times
-    // Partition based on unencoded centroids and unencoded training set
-    auto partition_labels = detail::flat::qv_partition(
-        flat_ivf_centroids_, training_set, num_threads_, distance);
-
-    // PQ Encode: -> cluster_centroids_, distance_tables_
-    // Encode: training_set -> unpartitioned_pq_vectors_
-    encode();
-#else  // ANOTHER WAY -- through training set twice -- maybe only once if we can
-       // combine pq_encode and encode
     train_pq(training_set);   // cluster_centroids_, distance_tables_
     train_ivf(training_set);  // flat_ivf_centroids_
-    encode();                 // unpartitioned_pq_vectors, pq_ivf_centroids
+    unpartitioned_pq_vectors_ = pq_encode(training_set);
+    pq_ivf_centroids_ = std::move(*pq_encode(flat_ivf_centroids_));
+
+    /*
     auto partition_labels = detail::flat::qv_partition(
         pq_ivf_centroids_,
         unpartitioned_pq_vectors_,
         num_threads_,
+        // @todo -- make_pq_distance_* need to be parameterized by Distance
         make_pq_distance_symmetric());
-#endif
+    */
+
+    auto partition_labels = detail::flat::qv_partition(
+        flat_ivf_centroids_, training_set, num_threads_, distance);
+
     // This just reorders based on partition_labels
     partitioned_pq_vectors_ = std::make_unique<pq_storage_type>(
-        unpartitioned_pq_vectors_, partition_labels, num_unique_labels);
+        *unpartitioned_pq_vectors_, partition_labels, num_unique_labels);
+  }
+
+  template <
+      feature_vector V,
+      feature_vector W,
+      class SubDistance = uncached_sub_sum_of_squares_distance>
+  auto pq_encode_one(
+      const V& v, W&& pq, SubDistance sub_distance = SubDistance{}) const {
+    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      auto sub_begin = sub_dimension_ * subspace;
+      auto sub_end = sub_begin + sub_dimension_;
+
+      auto min_score = std::numeric_limits<score_type>::max();
+      pq_code_type idx{0};
+      for (size_t i = 0; i < num_clusters_; ++i) {
+        auto score = sub_distance(v, cluster_centroids_[i], sub_begin, sub_end);
+        if (score < min_score) {
+          min_score = score;
+          idx = i;
+        }
+      }
+      pq[subspace] = idx;
+    }
+  }
+
+  template <
+      feature_vector_array U,
+      class Distance = uncached_sub_sum_of_squares_distance>
+  auto pq_encode(const U& training_set, Distance distance = Distance{}) {
+    auto pq_vectors = std::make_unique<ColMajorMatrix<pq_vector_feature_type>>(
+        num_subspaces_, num_vectors(training_set));
+    auto& pqv = *pq_vectors;
+    for (size_t i = 0; i < num_vectors(training_set); ++i) {
+      pq_encode_one(training_set[i], pqv[i], distance);
+    }
+    return pq_vectors;
   }
 
   /**
@@ -772,10 +821,10 @@ class ivf_pq_index {
     std::iota(begin(infinite_parts), end(infinite_parts), 0);
     partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
         group_->cached_ctx(),
-        group_->parts_uri(),
-        group_->indices_uri(),
+        group_->pq_ivf_vectors_uri(),
+        group_->ivf_index_uri(),
         group_->get_num_partitions() + 1,
-        group_->ids_uri(),
+        group_->ivf_ids_uri(),
         infinite_parts,
         0,
         timestamp_);
@@ -857,6 +906,12 @@ class ivf_pq_index {
       vfs.remove_dir(group_uri);
     }
 
+    // if (this->group_ == nullptr) {
+    //   throw std::runtime_error(
+    //       "Group " + group_uri + " does not exist!  Has index been
+    //       trained?");
+    // }
+
     auto write_group = ivf_pq_group(*this, ctx, group_uri, TILEDB_WRITE);
 
     write_group.set_dimension(dimension_);
@@ -922,14 +977,9 @@ class ivf_pq_index {
 
     for (size_t i = 0; i < size(distance_tables_); ++i) {
       std::string this_table_uri =
-          write_group.distance_tables_uri + "_" + std::to_string(i);
+          write_group.distance_tables_uri() + "_" + std::to_string(i);
       write_matrix(
-          ctx,
-          distance_tables_[i],
-          write_group.distance_tables_uri(i),
-          0,
-          false,
-          timestamp_);
+          ctx, distance_tables_[i], this_table_uri, 0, false, timestamp_);
     }
 
     return true;
@@ -1141,11 +1191,23 @@ class ivf_pq_index {
    * @param rhs the index against which to compare
    * @return bool indicating equality of the index metadata
    */
-  bool compare_cached_metadata(const ivf_pq_index& rhs) {
+  bool compare_cached_metadata(const ivf_pq_index& rhs) const {
     if (dimension_ != rhs.dimension_) {
       return false;
     }
     if (num_partitions_ != rhs.num_partitions_) {
+      return false;
+    }
+    if (num_subspaces_ != rhs.num_subspaces_) {
+      return false;
+    }
+    if (sub_dimension_ != rhs.sub_dimension_) {
+      return false;
+    }
+    if (bits_per_subspace_ != rhs.bits_per_subspace_) {
+      return false;
+    }
+    if (num_clusters_ != rhs.num_clusters_) {
       return false;
     }
 
@@ -1210,38 +1272,38 @@ class ivf_pq_index {
     return std::equal(begin(lhs), end(lhs), begin(rhs));
   }
 
-  auto compare_cluster_centroids(const ivf_pq_index& rhs) {
+  auto compare_cluster_centroids(const ivf_pq_index& rhs) const {
     return compare_feature_vector_arrays(
         cluster_centroids_, rhs.cluster_centroids_);
   }
 
-  auto compare_flat_ivf_centroids(const ivf_pq_index& rhs) {
+  auto compare_flat_ivf_centroids(const ivf_pq_index& rhs) const {
     return compare_feature_vector_arrays(
         flat_ivf_centroids_, rhs.flat_ivf_centroids_);
   }
 
-  auto compare_pq_ivf_centroids(const ivf_pq_index& rhs) {
+  auto compare_pq_ivf_centroids(const ivf_pq_index& rhs) const {
     return compare_feature_vector_arrays(
         pq_ivf_centroids_, rhs.pq_ivf_centroids_);
   }
 
-  auto compare_ivf_index(const ivf_pq_index& rhs) {
-    return compare_feature_vector(
+  auto compare_ivf_index(const ivf_pq_index& rhs) const {
+    return compare_feature_vectors(
         partitioned_pq_vectors_->indices(),
         rhs.partitioned_pq_vectors_->indices());
   }
 
-  auto compare_ivf_ids(const ivf_pq_index& rhs) {
-    return compare_feature_vector(
+  auto compare_ivf_ids(const ivf_pq_index& rhs) const {
+    return compare_feature_vectors(
         partitioned_pq_vectors_->ids(), rhs.partitioned_pq_vectors_->ids());
   }
 
-  auto compare_pq_ivf_vectors(const ivf_pq_index& rhs) {
+  auto compare_pq_ivf_vectors(const ivf_pq_index& rhs) const {
     return compare_feature_vector_arrays(
         *partitioned_pq_vectors_, *(rhs.partitioned_pq_vectors_));
   }
 
-  auto compare_distance_tables(const ivf_pq_index& rhs) {
+  auto compare_distance_tables(const ivf_pq_index& rhs) const {
     for (size_t i = 0; i < size(distance_tables_); ++i) {
       if (!compare_feature_vector_arrays(
               distance_tables_[i], rhs.distance_tables_[i])) {
@@ -1249,6 +1311,77 @@ class ivf_pq_index {
       }
     }
     return true;
+  }
+
+  template <class Other>
+  bool operator==(const Other& rhs) const {
+    if (this == &rhs) {
+      return true;
+    }
+    if (!std::is_same_v<feature_type, typename Other::feature_type>) {
+      return false;
+    }
+    if (!std::is_same_v<indices_type, typename Other::indices_type>) {
+      return false;
+    }
+    if (!std::is_same_v<id_type, typename Other::id_type>) {
+      return false;
+    }
+
+    if (compare_group(rhs) == false) {
+      return false;
+    }
+    if (compare_cached_metadata(rhs) == false) {
+      return false;
+    }
+    if (compare_cluster_centroids(rhs) == false) {
+      return false;
+    }
+    if (compare_flat_ivf_centroids(rhs) == false) {
+      return false;
+    }
+    if (compare_pq_ivf_centroids(rhs) == false) {
+      return false;
+    }
+    if (compare_ivf_index(rhs) == false) {
+      return false;
+    }
+    if (compare_ivf_ids(rhs) == false) {
+      return false;
+    }
+    if (compare_pq_ivf_vectors(rhs) == false) {
+      return false;
+    }
+    if (compare_distance_tables(rhs) == false) {
+      return false;
+    }
+    return true;
+  }
+
+  auto set_flat_ivf_centroids(const ColMajorMatrix<feature_type>& centroids) {
+    flat_ivf_centroids_ = flat_ivf_centroid_storage_type(
+        ::dimension(centroids), ::num_vectors(centroids));
+    std::copy(
+        centroids.data(),
+        centroids.data() + centroids.num_rows() * centroids.num_cols(),
+        flat_ivf_centroids_.data());
+  }
+
+  auto& get_flat_ivf_centroids() {
+    return flat_ivf_centroids_;
+  }
+
+  auto set_pq_ivf_centroids(const ColMajorMatrix<feature_type>& centroids) {
+    flat_ivf_centroids_ = flat_ivf_centroid_storage_type(
+        ::dimension(centroids), ::num_vectors(centroids));
+    std::copy(
+        centroids.data(),
+        centroids.data() + centroids.num_rows() * centroids.num_cols(),
+        flat_ivf_centroids_.data());
+  }
+
+  auto& get_pq_ivf_centroids() {
+    return flat_ivf_centroids_;
   }
 
   /**

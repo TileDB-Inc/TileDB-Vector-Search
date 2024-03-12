@@ -459,10 +459,6 @@ auto sub_kmeans(
   size_t sub_dimension_ = sub_end - sub_begin;
   auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
-  using feature_type = typename V::value_type;
-  using centroid_feature_type = typename C::value_type;
-  using index_type = size_t;
-
   std::vector<size_t> degrees(num_clusters, 0);
 
   // Copy centroids to new centroids -- note only one subspace will be changing
