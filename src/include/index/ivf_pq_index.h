@@ -1069,10 +1069,7 @@ class ivf_pq_index {
    *
    */
   template <feature_vector_array Q>
-  auto query_infinite_ram(
-      const Q& query_vectors,
-      size_t k_nn,
-      size_t nprobe) {
+  auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
     if (!partitioned_pq_vectors_ ||
         ::num_vectors(*partitioned_pq_vectors_) == 0) {
       read_index_infinite();
