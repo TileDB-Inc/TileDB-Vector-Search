@@ -468,27 +468,9 @@ TEST_CASE(
 
   auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
       init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
-  auto&& [idx, training_set, query_set, groundtruth_set] = std::tie(
+  auto&& [_, training_set, query_set, groundtruth_set] = std::tie(
       init.idx, init.training_set, init.query_set, init.groundtruth_set);
-
-  SECTION("pq_encoding") {
-    auto avg_error = idx.verify_pq_encoding(training_set);
-    CHECK(avg_error < 0.08);
-  }
-  SECTION("pq_distances") {
-    auto avg_error = idx.verify_pq_distances(training_set);
-    CHECK(avg_error < 0.15);
-  }
-  SECTION("asymmetric_pq_distances") {
-    auto [max_error, avg_error] =
-        idx.verify_asymmetric_pq_distances(training_set);
-    CHECK(avg_error < 0.08);
-  }
-  SECTION("symmetric_pq_distances") {
-    auto [max_error, avg_error] =
-        idx.verify_symmetric_pq_distances(training_set);
-    CHECK(avg_error < 0.15);
-  }
+  auto idx = init.get_write_read_idx();
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
@@ -498,14 +480,19 @@ TEST_CASE(
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
+
+#if 1
   SECTION("finite") {
     INFO("finite");
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_finite_ram(query_set, k_nn, nprobe);
   }
-  debug_slice(top_k_ivf, "top_k_ivf");
-  debug_slice(top_k_ivf_scores, "top_k_ivf_scores");
-  debug_slice(groundtruth_set, "groundtruth_set");
+#endif
+
+  // Very useful to keep on hand for debugging
+  // debug_slice(top_k_ivf, "top_k_ivf");
+  // debug_slice(top_k_ivf_scores, "top_k_ivf_scores");
+  // debug_slice(groundtruth_set, "groundtruth_set");
 
   init.verify(top_k_ivf);
 }

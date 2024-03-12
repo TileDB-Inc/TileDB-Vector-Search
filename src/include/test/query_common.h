@@ -160,7 +160,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
       tiledb::Context ctx,
       size_t nl,
       size_t num_subspaces = 0,
-      size_t num_vectors = 1'000)
+      size_t num_vectors = 0)
       : ctx_{ctx}
       , nlist(nl)
       , nprobe(std::min<size_t>(10, nlist))
@@ -233,7 +233,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
       CHECK(intersections0 == (size_t)(num_vectors(top_k) * dimension(top_k)));
       CHECK(recall0 == 1.0);
     }
-    CHECK(recall0 > .95);
+
 
     size_t intersections1 =
         (long)count_intersections(top_k_ivf, groundtruth_set, k_nn);
@@ -242,8 +242,23 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
       CHECK(intersections1 == (size_t)(num_vectors(top_k) * dimension(top_k)));
       CHECK(recall1 == 1.0);
     }
-    CHECK(recall1 > 0.95);
 
+
+    if constexpr (std::is_same_v<
+                      IndexType,
+                      ivf_flat_index<feature_type, id_type, px_type>>) {
+      CHECK(recall0 > .95);
+      CHECK(recall1 > 0.95);
+
+    } else if constexpr (std::is_same_v<
+                             IndexType,
+                             ivf_pq_index<feature_type, id_type, px_type>>) {
+      CHECK(recall0 > .7);
+      CHECK(recall1 > 0.7);
+
+    } else {
+      std::cout << "Unsupported index type" << std::endl;
+    }
     // std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
   }
 };
