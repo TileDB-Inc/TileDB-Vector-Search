@@ -70,8 +70,6 @@
  * fixable by CRTP?
  *
  * @todo Clean up so that we don't need the template parameter.
- * @todo Add support for metadata versioning - right now there is no way to add
- * new metadata without breaking old indexes.
  */
 template <class IndexMetadata>
 class base_index_metadata {
@@ -141,7 +139,7 @@ class base_index_metadata {
       {"dimension", &dimension_, TILEDB_UINT32, false},
       {"feature_datatype", &feature_datatype_, TILEDB_UINT32, false},
       {"id_datatype", &id_datatype_, TILEDB_UINT32, false},
-      {"has_updates", &has_updates_, TILEDB_INT64, true},
+      {"has_updates", &has_updates_, TILEDB_INT64, false},
   };
 
   template <class T>
