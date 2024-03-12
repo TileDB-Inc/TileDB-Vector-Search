@@ -94,7 +94,7 @@ std::vector<T> read_vector_helper(
 
   // Create a subarray that reads the array up to the specified subset.
   std::vector<int32_t> subarray_vals = {
-      (int32_t)start_pos, (int32_t)end_pos - 1};
+      (int32_t)start_pos, std::max(0, (int32_t)end_pos - 1)};
   tiledb::Subarray subarray(ctx, *array_);
   subarray.set_subarray(subarray_vals);
 
@@ -136,9 +136,9 @@ void create_empty_for_matrix(
   tiledb::Domain domain(ctx);
   domain
       .add_dimension(tiledb::Dimension::create<int>(
-          ctx, "rows", {{0, (int)rows - 1}}, row_extent))
+          ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent))
       .add_dimension(tiledb::Dimension::create<int>(
-          ctx, "cols", {{0, (int)cols - 1}}, col_extent));
+          ctx, "cols", {{0, std::max(0, (int)cols - 1)}}, col_extent));
 
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
 
@@ -202,39 +202,48 @@ void write_matrix(
     size_t start_pos = 0,
     bool create = true,
     size_t timestamp = 0) {
+  if (A.num_rows() == 0 || A.num_cols() == 0) {
+    std::cout << "[write_matrix] return early b/c empty write; A.num_rows() "
+              << A.num_rows() << " A.num_cols() " << A.num_cols() << "\n";
+    return;
+  }
+  std::cout << "[write_matrix] uri: " << uri << " start_pos: " << start_pos
+            << " create: " << create << " timestamp: " << timestamp << "\n";
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
-
+  std::cout << "[write_matrix] 1\n";
   tiledb::TemporalPolicy temporal_policy =
       (timestamp == 0) ? tiledb::TemporalPolicy() :
                          tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
-
+  std::cout << "[write_matrix] 2\n";
   if (create) {
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri);
   }
-
+  std::cout << "[write_matrix] 3\n";
   std::vector<int32_t> subarray_vals{
       0,
-      (int)A.num_rows() - 1,
-      (int)start_pos,
-      (int)start_pos + (int)A.num_cols() - 1};
-
+      std::max(0, (int)A.num_rows() - 1),
+      std::max(0, (int)start_pos),
+      std::max(0, (int)start_pos + (int)A.num_cols() - 1)};
+  std::cout << "[write_matrix] 4\n";
   // Open array for writing
   auto array = tiledb_helpers::open_array(
       tdb_func__, ctx, uri, TILEDB_WRITE, temporal_policy);
-
+  std::cout << "[write_matrix] 5\n";
   tiledb::Subarray subarray(ctx, *array);
   subarray.set_subarray(subarray_vals);
-
+  std::cout << "[write_matrix] 6\n";
   tiledb::Query query(ctx, *array);
   auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
                    TILEDB_ROW_MAJOR :
                    TILEDB_COL_MAJOR;
+  std::cout << "[write_matrix] 7\n";
   query.set_layout(order)
       .set_data_buffer(
           "values", &A(0, 0), (uint64_t)A.num_rows() * (uint64_t)A.num_cols())
       .set_subarray(subarray);
+  std::cout << "[write_matrix] 8\n";
   tiledb_helpers::submit_query(tdb_func__, uri, query);
-
+  std::cout << "[write_matrix] 9\n";
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
   array->close();
@@ -261,7 +270,7 @@ void create_empty_for_vector(
     std::optional<tiledb_filter_type_t> filter = std::nullopt) {
   tiledb::Domain domain(ctx);
   domain.add_dimension(tiledb::Dimension::create<int>(
-      ctx, "rows", {{0, (int)rows - 1}}, row_extent));
+      ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent));
 
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
@@ -314,6 +323,11 @@ void write_vector(
     bool create = true,
     size_t timestamp = 0) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
+  if (size(v) == 0) {
+    std::cout << "[write_vector] return early b/c empty write; size(v)) "
+              << size(v) << "\n";
+    return;
+  }
 
   tiledb::TemporalPolicy temporal_policy =
       (timestamp == 0) ? tiledb::TemporalPolicy() :

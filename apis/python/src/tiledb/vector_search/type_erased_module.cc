@@ -168,6 +168,7 @@ void init_type_erased_module(py::module_& m) {
       .def(py::init<const tiledb::Context&, const std::string&>())
       //      .def(py::init<size_t, size_t, const std::string&>())
       //      .def(py::init<size_t, size_t void*, const std::string&>())
+      .def(py::init<size_t, size_t, const std::string&, const std::string&>())
       .def("dimension", &FeatureVectorArray::dimension)
       .def("num_vectors", &FeatureVectorArray::num_vectors)
       .def("feature_type", &FeatureVectorArray::feature_type)
@@ -252,6 +253,19 @@ void init_type_erased_module(py::module_& m) {
             auto args = kwargs_to_map(kwargs);
             new (&instance) IndexVamana(args);
           })
+      .def(
+          "write_index",
+          [](IndexVamana& index,
+             const tiledb::Context& ctx,
+             const std::string& group_uri,
+             bool overwrite) {
+            std::cout << "[type_erased_module] write_index" << group_uri << " "
+                      << overwrite << std::endl;
+            index.write_index(ctx, group_uri, overwrite);
+          },
+          py::arg("ctx"),
+          py::arg("group_uri"),
+          py::arg_v("overwrite", true))
       .def(
           "train",
           [](IndexVamana& index, const FeatureVectorArray& vectors) {

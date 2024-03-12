@@ -14,6 +14,10 @@ storage_formats = {
         "UPDATES_ARRAY_NAME": "updates",
         "OBJECT_METADATA_ARRAY_NAME": "object_metadata",
         "SUPPORT_TIMETRAVEL": False,
+        "FEATURE_VECTORS_ARRAY_NAME": "feature_vectors",
+        "ADJACENCY_SCORES_ARRAY_NAME": "adjacency_scores",
+        "ADJACENCY_IDS_ARRAY_NAME": "adjacency_ids",
+        "ADJACENCY_ROW_index_ARRAY_NAME": "adjacency_row_index",
     },
     "0.2": {
         "CENTROIDS_ARRAY_NAME": "partition_centroids",
@@ -28,6 +32,10 @@ storage_formats = {
         "UPDATES_ARRAY_NAME": "updates",
         "OBJECT_METADATA_ARRAY_NAME": "object_metadata",
         "SUPPORT_TIMETRAVEL": False,
+        "FEATURE_VECTORS_ARRAY_NAME": "feature_vectors",
+        "ADJACENCY_SCORES_ARRAY_NAME": "adjacency_scores",
+        "ADJACENCY_IDS_ARRAY_NAME": "adjacency_ids",
+        "ADJACENCY_ROW_index_ARRAY_NAME": "adjacency_row_index",
     },
     "0.3": {
         "CENTROIDS_ARRAY_NAME": "partition_centroids",
@@ -42,6 +50,10 @@ storage_formats = {
         "UPDATES_ARRAY_NAME": "updates",
         "OBJECT_METADATA_ARRAY_NAME": "object_metadata",
         "SUPPORT_TIMETRAVEL": True,
+        "FEATURE_VECTORS_ARRAY_NAME": "feature_vectors",
+        "ADJACENCY_SCORES_ARRAY_NAME": "adjacency_scores",
+        "ADJACENCY_IDS_ARRAY_NAME": "adjacency_ids",
+        "ADJACENCY_ROW_index_ARRAY_NAME": "adjacency_row_index",
     },
 }
 

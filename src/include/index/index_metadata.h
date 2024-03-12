@@ -36,6 +36,7 @@
  *  "index_type",            // "FLAT", "IVF_FLAT", "Vamana"
  *  "ingestion_timestamps",  // (json) list
  *  "storage_version",       // "0.3"
+ *  "has_updates",           // (boolean)
  *  "temp_size",
  *
  *  "feature_datatype",      // TILEDB_UINT32
@@ -93,6 +94,8 @@ class base_index_metadata {
 
   uint32_t dimension_{0};
 
+  bool has_updates_{false};
+
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
 
@@ -112,7 +115,7 @@ class base_index_metadata {
   using metadata_string_check_type =
       std::tuple<std::string, std::string&, bool>;
   std::vector<metadata_string_check_type> metadata_string_checks{
-      // name, member_variable, default, expected, required
+      // name, member_variable, required
       {"dataset_type", dataset_type_, true},
       {"storage_version", storage_version_, true},
       {"dtype", dtype_, false},
@@ -127,6 +130,7 @@ class base_index_metadata {
   using metadata_arithmetic_check_type =
       std::tuple<std::string, void*, tiledb_datatype_t, bool>;
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks{
+      // name, value, type, required
       {"temp_size", &temp_size_, TILEDB_UINT64, true},
       //{"index_kind",
       // nstatic_cast<IndexMetadata*>(this)->index_kind_,
@@ -135,6 +139,7 @@ class base_index_metadata {
       {"dimension", &dimension_, TILEDB_UINT32, false},
       {"feature_datatype", &feature_datatype_, TILEDB_UINT32, false},
       {"id_datatype", &id_datatype_, TILEDB_UINT32, false},
+      {"has_updates", &has_updates_, TILEDB_BOOL, true},
   };
 
   template <class T>
@@ -167,7 +172,7 @@ class base_index_metadata {
     auto&& [name, value, required] = check;
     if (!read_group.has_metadata(name, &v_type)) {
       if (required) {
-        throw std::runtime_error("Missing metadata: " + name);
+        throw std::runtime_error("Missing string metadata: " + name);
       } else {
         return;
       }
@@ -202,9 +207,11 @@ class base_index_metadata {
     uint32_t v_num;
     const void* v;
     auto&& [name, value, type, required] = check;
+    std::cout << "name: " << name << " type: " << type
+              << " required: " << required << std::endl;
     if (!read_group.has_metadata(name, &v_type)) {
       if (required) {
-        throw std::runtime_error("Missing metadata: " + name);
+        throw std::runtime_error("Missing arithmetic metadata: " + name);
       } else {
         return;
       }
@@ -276,9 +283,11 @@ class base_index_metadata {
          static_cast<IndexMetadata*>(this)->metadata_string_checks_impl) {
       check_string_metadata(read_group, check);
     }
+    std::cout << "first checks ++++" << std::endl;
     for (auto& check : metadata_arithmetic_checks) {
       check_arithmetic_metadata(read_group, check);
     }
+    std::cout << "second checks ++++" << std::endl;
     for (auto& check :
          static_cast<IndexMetadata*>(this)->metadata_arithmetic_checks_impl) {
       check_arithmetic_metadata(read_group, check);
@@ -382,6 +391,12 @@ class base_index_metadata {
   auto& px_datatype()  {
     return px_datatype_;
   }
+  auto has_updates() const {
+    return has_updates_;
+  }
+  auto& has_updates() {
+    return has_updates_;
+  }
 #endif
 
   /**************************************************************************
@@ -426,6 +441,11 @@ class base_index_metadata {
         case TILEDB_UINT32:
           if (*static_cast<uint32_t*>(value) !=
               *static_cast<uint32_t*>(rhs_value)) {
+            return false;
+          }
+          break;
+        case TILEDB_BOOL:
+          if (*static_cast<bool*>(value) != *static_cast<bool*>(rhs_value)) {
             return false;
           }
           break;
@@ -535,6 +555,9 @@ class base_index_metadata {
             std::cout << name << ": " << *static_cast<uint32_t*>(value)
                       << std::endl;
           }
+          break;
+        case TILEDB_BOOL:
+          std::cout << name << ": " << *static_cast<bool*>(value) << std::endl;
           break;
         default:
           throw std::runtime_error(

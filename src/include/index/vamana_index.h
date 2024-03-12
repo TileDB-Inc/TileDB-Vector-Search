@@ -847,6 +847,8 @@ class vamana_index {
       const tiledb::Context& ctx,
       const std::string& group_uri,
       bool overwrite = false) const {
+    std::cout << "[index@write_index] " << group_uri
+              << " overwrite: " << overwrite << std::endl;
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
 
@@ -857,9 +859,10 @@ class vamana_index {
       }
       vfs.remove_dir(group_uri);
     }
+    std::cout << "[index@write_index] 1" << std::endl;
 
     auto write_group = vamana_index_group(*this, ctx, group_uri, TILEDB_WRITE);
-
+    std::cout << "[index@write_index] 2" << std::endl;
     // @todo Make this table-driven
     write_group.set_dimension(dimension_);
     write_group.set_L_build(L_build_);
@@ -872,20 +875,20 @@ class vamana_index {
     write_group.append_ingestion_timestamp(timestamp_);
     write_group.append_base_size(::num_vectors(feature_vectors_));
     write_group.append_num_edges(graph_.num_edges());
-
+    std::cout << "[index@write_index] 3" << std::endl;
     write_matrix(
         ctx,
         feature_vectors_,
         write_group.feature_vectors_uri(),
-        0,
-        false,
+        0,      // start_pos
+        false,  // create
         timestamp_);
-
+    std::cout << "[index@write_index] 4" << std::endl;
     auto adj_scores = Vector<score_type>(graph_.num_edges());
     auto adj_ids = Vector<id_type>(graph_.num_edges());
     auto adj_index =
         Vector<adjacency_row_index_type>(graph_.num_vertices() + 1);
-
+    std::cout << "[index@write_index] 5" << std::endl;
     size_t edge_offset{0};
     for (size_t i = 0; i < num_vertices(graph_); ++i) {
       adj_index[i] = edge_offset;
@@ -896,7 +899,7 @@ class vamana_index {
       }
     }
     adj_index.back() = edge_offset;
-
+    std::cout << "[index@write_index] 6" << std::endl;
     write_vector(
         ctx,
         adj_scores,
@@ -904,8 +907,10 @@ class vamana_index {
         0,
         false,
         timestamp_);
+    std::cout << "[index@write_index] 6" << std::endl;
     write_vector(
         ctx, adj_ids, write_group.adjacency_ids_uri(), 0, false, timestamp_);
+    std::cout << "[index@write_index] 7" << std::endl;
     write_vector(
         ctx,
         adj_index,
@@ -913,7 +918,7 @@ class vamana_index {
         0,
         false,
         timestamp_);
-
+    std::cout << "[index@write_index] 8" << std::endl;
     return true;
   }
 

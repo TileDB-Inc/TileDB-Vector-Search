@@ -206,6 +206,91 @@ def test_inplace_build_query_IndexVamana():
 
     assert recall == 1.0
 
+def test_construct_IndexVamana():
+    a = vspy.IndexVamana()
+    assert a.feature_type_string() == "any"
+    assert a.id_type_string() == "uint32"
+    assert a.adjacency_row_index_type_string() == "uint32"
+    assert a.dimension() == 0
+
+    a = vspy.IndexVamana(feature_type="float32")
+    assert a.feature_type_string() == "float32"
+    assert a.id_type_string() == "uint32"
+    assert a.adjacency_row_index_type_string() == "uint32"
+    assert a.dimension() == 0
+
+    a = vspy.IndexVamana(feature_type="uint8", id_type="uint64", adjacency_row_index_type="int64")
+    assert a.feature_type_string() == "uint8"
+    assert a.id_type_string() == "uint64"
+    assert a.adjacency_row_index_type_string() == "int64"
+    assert a.dimension() == 0
+
+    a = vspy.IndexVamana(feature_type="float32", id_type="int64", adjacency_row_index_type="uint64")
+    assert a.feature_type_string() == "float32"
+    assert a.id_type_string() == "int64"
+    assert a.adjacency_row_index_type_string() == "uint64"
+    assert a.dimension() == 0
+
+def test_construct_IndexVamana_with_empty_vector(tmp_path):
+    opt_l = 100
+    k_nn = 10
+    index_uri = os.path.join(tmp_path, "array")
+
+    # First create an empty index.
+    a = vspy.IndexVamana(feature_type="float32", id_type="int64", adjacency_row_index_type="uint64")
+    empty_vector = vspy.FeatureVectorArray(0, 0, "float32")
+    print('empty_vector', empty_vector)
+    a.train(empty_vector)
+    a.write_index(ctx, index_uri, True)
+
+    # Then load it again, retrain, and query.
+    a = vspy.IndexVamana(ctx, index_uri)
+    training_set = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
+    assert training_set.feature_type_string() == "float32"
+    query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
+    assert query_set.feature_type_string() == "float32"
+    groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
+    assert groundtruth_set.feature_type_string() == "uint64"
+
+    a.train(training_set)
+    
+    s, t = a.query(query_set, k_nn, opt_l)
+    intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
+    nt = np.double(t.num_vectors()) * np.double(k_nn)
+    recall = intersections / nt
+    assert recall == 1.0
+
+def test_construct_IndexVamana_with_uri(tmp_path):
+    index_uri = os.path.join(tmp_path, "array")
+    print('index_uri', index_uri)
+    a = vspy.IndexVamana(ctx, index_uri, True, feature_type="uint8", id_type="uint64", adjacency_row_index_type="uint64")
+    assert a.feature_type_string() == "any"
+    assert a.id_type_string() == "uint32"
+    assert a.adjacency_row_index_type_string() == "uint32"
+    assert a.dimension() == 0
+
+def test_inplace_build_query_IndexVamana():
+    opt_l = 100
+    k_nn = 10
+
+    a = vspy.IndexVamana(id_type="uint32", adjacency_row_index_type="uint32", feature_type="float32")
+
+    training_set = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
+    assert training_set.feature_type_string() == "float32"
+    query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
+    assert query_set.feature_type_string() == "float32"
+    groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
+    assert groundtruth_set.feature_type_string() == "uint64"
+
+    a.train(training_set)
+    s, t = a.query(query_set, k_nn, opt_l)
+
+    intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
+
+    nt = np.double(t.num_vectors()) * np.double(k_nn)
+    recall = intersections / nt
+
+    assert recall == 1.0
 
 def test_construct_IndexIVFFlat():
     a = vspy.IndexIVFFlat()
