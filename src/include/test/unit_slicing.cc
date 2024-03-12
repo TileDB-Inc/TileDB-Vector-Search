@@ -37,7 +37,7 @@
 
 std::string global_region = "us-east-1";
 
-TEST_CASE("slice", "[linalg][ci-skip]") {
+TEST_CASE("slice", "[linalg]") {
   const bool debug = false;
 
   tiledb::Context ctx_;
