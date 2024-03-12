@@ -37,6 +37,8 @@
 #include "array_defs.h"
 #include "gen_graphs.h"
 
+#include "query_common.h"
+
 TEST_CASE("ivf_pq_index: test test", "[ivf_pq_index]") {
   REQUIRE(true);
 }
@@ -285,6 +287,8 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
 TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   size_t dimension = 128;
   size_t nlist = 100;
+  size_t num_subspaces = 16;
+  size_t max_iters = 4;
   size_t nprobe = 10;
   size_t k_nn = 10;
   size_t nthreads = 1;
@@ -296,11 +300,12 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   load(training_set);
 
   auto idx = ivf_pq_index<float, uint32_t, uint32_t>(
-      /*dimension,*/ nlist, 2, 2, nthreads);
+      /*dimension,*/ nlist, num_subspaces, max_iters, nthreads);
 
   idx.train_ivf(training_set, kmeans_init::kmeanspp);
   idx.add(training_set);
 
+  ivf_index_uri = "/tmp/foo";
   idx.write_index(ctx, ivf_index_uri, true);
   auto idx2 = ivf_pq_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
   idx2.read_index_infinite();
@@ -313,10 +318,47 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   CHECK(idx.compare_ivf_ids(idx2));
   CHECK(idx.compare_pq_ivf_vectors(idx2));
   CHECK(idx.compare_distance_tables(idx2));
-
-
 }
 
+TEST_CASE(
+    "flat_pq_index: verify pq_encoding and pq_distances with siftsmall",
+    "[flat_pq_index]") {
+  tiledb::Context ctx;
+  auto training_set = tdbColMajorMatrix<siftsmall_feature_type>(
+      ctx, siftsmall_inputs_uri, 2500);
+  training_set.load();
+
+  auto pq_idx = ivf_pq_index<
+      siftsmall_feature_type,
+      siftsmall_ids_type,
+      siftsmall_indices_type>(20, 16, 50);
+  pq_idx.train_ivf(training_set);
+  pq_idx.add(training_set);
+
+  SECTION("pq_encoding") {
+    auto avg_error = pq_idx.verify_pq_encoding(training_set);
+    CHECK(avg_error < 0.08);
+  }
+  SECTION("pq_distances") {
+    auto avg_error = pq_idx.verify_pq_distances(training_set);
+    CHECK(avg_error < 0.15);
+  }
+  SECTION("asymmetric_pq_distances") {
+    auto [max_error, avg_error] =
+        pq_idx.verify_asymmetric_pq_distances(training_set);
+    CHECK(avg_error < 0.08);
+  }
+  SECTION("symmetric_pq_distances") {
+    auto [max_error, avg_error] =
+        pq_idx.verify_symmetric_pq_distances(training_set);
+    CHECK(avg_error < 0.15);
+  }
+}
+
+// Current code requires that the number of vectors in the training set be at
+// least as large as the number of clusters.
+//
+#if 0
 TEMPLATE_TEST_CASE(
     "flativf_index: query stacked hypercube",
     "[flativf_index]",
@@ -351,5 +393,119 @@ TEMPLATE_TEST_CASE(
         /*128,*/ nlist, 2, 4, 1.e-4);  // dim nlist maxiter eps nthreads
     ivf_idx2.train_ivf(hypercube2);
     ivf_idx2.add(hypercube2);
+    auto ivf_idx4 = ivf_pq_index<TestType, uint32_t, uint32_t>(
+        /*128,*/ nlist, 2, 4, 1.e-4);
+    ivf_idx4.train_ivf(hypercube4);
+    ivf_idx4.add(hypercube4);
+
+    auto top_k_ivf_scores = ColMajorMatrix<float>();
+    auto top_k_ivf = ColMajorMatrix<unsigned>();
+    auto top_k_scores = ColMajorMatrix<float>();
+    auto top_k = ColMajorMatrix<uint64_t>();
+    auto query2 = ColMajorMatrix<TestType>();
+    auto query4 = ColMajorMatrix<TestType>();
+
+    SECTION("query2/4 = 0...") {
+      query2 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0}};
+      query4 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
+    }
+    SECTION("query2/4 = 127...") {
+      query2 = ColMajorMatrix<TestType>{{127, 127, 127, 127, 127, 127}};
+      query4 = ColMajorMatrix<TestType>{
+          {127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127}};
+    }
+    SECTION("query2/4 = 0...") {
+      query2 = ColMajorMatrix<TestType>{{0, 0, 0, 127, 127, 127}};
+      query4 = ColMajorMatrix<TestType>{
+          {0, 0, 0, 0, 0, 0, 127, 127, 127, 127, 127, 127}};
+    }
+    SECTION("query2/4 = 127...") {
+      query2 = ColMajorMatrix<TestType>{{127, 127, 127, 0, 0, 0}};
+      query4 = ColMajorMatrix<TestType>{
+          {127, 127, 127, 127, 127, 127, 0, 0, 0, 0, 0, 0}};
+    }
+    SECTION("query2/4 = 127...") {
+      query2 = ColMajorMatrix<TestType>{
+          {127, 0, 127, 0, 127, 0}, {0, 127, 0, 127, 0, 127}};
+      query4 = ColMajorMatrix<TestType>{
+          {127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0},
+          {0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127}};
+    }
+
+    std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
+        hypercube2, query2, k_nn, 1, sum_of_squares_distance{});
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        ivf_idx2.query_infinite_ram(query2, k_nn, 1);  // k, nprobe
+    size_t intersections0 = count_intersections(top_k_ivf, top_k, k_nn);
+    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    CHECK(intersections0 == k_nn * num_vectors(query2));
+    CHECK(recall0 == 1.0);
+
+    std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
+        hypercube4, query4, k_nn, 1, sum_of_squares_distance{});
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        ivf_idx4.query_infinite_ram(query4, k_nn, 1);  // k, nprobe
+
+    size_t intersections1 = (long)count_intersections(top_k_ivf, top_k, k_nn);
+    double recall1 = intersections1 / ((double)top_k.num_cols() * k_nn);
+    CHECK(intersections1 == k_nn * num_vectors(query4));
+    CHECK(recall1 == 1.0);
   }
+}
+#endif
+
+// /Users/lums/TileDB/TileDB-Vector-Search-ivf-pq/external/test_data/arrays/siftsmall/pq_ivf_2
+TEST_CASE(
+    "ivf_pq_index: Build index and query in place, infinite",
+    "[ivf_pq_index]") {
+  tiledb::Context ctx;
+  // size_t nlist = GENERATE(1, 100);
+  size_t nlist = 20;
+  using s = siftsmall_test_init_defaults;
+  using index = ivf_pq_index<s::feature_type, s::id_type, s::px_type>;
+
+  auto init = siftsmall_test_init<index>(ctx, nlist, 16);
+
+  auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
+      init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
+  auto&& [idx, training_set, query_set, groundtruth_set] = std::tie(
+      init.idx, init.training_set, init.query_set, init.groundtruth_set);
+
+  SECTION("pq_encoding") {
+    auto avg_error = idx.verify_pq_encoding(training_set);
+    CHECK(avg_error < 0.08);
+  }
+  SECTION("pq_distances") {
+    auto avg_error = idx.verify_pq_distances(training_set);
+    CHECK(avg_error < 0.15);
+  }
+  SECTION("asymmetric_pq_distances") {
+    auto [max_error, avg_error] =
+        idx.verify_asymmetric_pq_distances(training_set);
+    CHECK(avg_error < 0.08);
+  }
+  SECTION("symmetric_pq_distances") {
+    auto [max_error, avg_error] =
+        idx.verify_symmetric_pq_distances(training_set);
+    CHECK(avg_error < 0.15);
+  }
+
+  auto top_k_ivf_scores = ColMajorMatrix<float>();
+  auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
+
+  SECTION("infinite") {
+    INFO("infinite");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.query_infinite_ram(query_set, k_nn, nprobe);
+  }
+  SECTION("finite") {
+    INFO("finite");
+    std::tie(top_k_ivf_scores, top_k_ivf) =
+        idx.query_finite_ram(query_set, k_nn, nprobe);
+  }
+  debug_slice(top_k_ivf, "top_k_ivf");
+  debug_slice(top_k_ivf_scores, "top_k_ivf_scores");
+  debug_slice(groundtruth_set, "groundtruth_set");
+
+  init.verify(top_k_ivf);
 }

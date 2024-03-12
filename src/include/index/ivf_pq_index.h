@@ -566,7 +566,7 @@ class ivf_pq_index {
   template <
       feature_vector U,
       feature_vector V,
-      class Distance = sub_sum_of_squares_distance>
+      class Distance = uncached_sub_sum_of_squares_distance>
   float sub_distance_asymmetric(const U& a, const V& b) const {
     float pq_distance = 0.0;
     auto local_distance = Distance{};
@@ -887,10 +887,10 @@ class ivf_pq_index {
 
     partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
         group_->cached_ctx(),
-        group_->parts_uri(),
-        group_->indices_uri(),
+        group_->pq_ivf_vectors_uri(),
+        group_->ivf_index_uri(),
         group_->get_num_partitions() + 1,
-        group_->ids_uri(),
+        group_->ivf_ids_uri(),
         active_partitions,
         upper_bound,
         timestamp_);
@@ -1185,6 +1185,145 @@ class ivf_pq_index {
    * @todo -- As elsewhere in this class, there is huge code duplication here
    *
    **************************************************************************/
+
+  /**
+   * @brief Verify that the pq encoding is correct by comparing every feature
+   * vector against the corresponding pq encoded value
+   * @param feature_vectors
+   * @return
+   */
+  auto verify_pq_encoding(const ColMajorMatrix<feature_type>& feature_vectors) {
+    double total_distance = 0.0;
+    double total_normalizer = 0.0;
+
+    auto debug_vectors =
+        ColMajorMatrix<float>(dimension_, num_vectors(feature_vectors));
+
+    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
+      auto re = std::vector<float>(dimension_);
+      for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+        auto sub_begin = sub_dimension_ * subspace;
+        auto sub_end = sub_dimension_ * (subspace + 1);
+        auto centroid =
+            cluster_centroids_[(*unpartitioned_pq_vectors_)(subspace, i)];
+
+        std::vector<float> x(
+            begin(feature_vectors[i]), end(feature_vectors[i]));
+
+        // Reconstruct the encoded vector
+        for (size_t j = sub_begin; j < sub_end; ++j) {
+          re[j] = centroid[j];
+        }
+      }
+      // std::copy(begin(re), end(re), begin(debug_vectors[i]));
+
+      // Measure the distance between the original vector and the reconstructed
+      // vector and accumulate into the total distance as well as the total
+      // weight of the feature vector
+      auto distance = l2_distance(feature_vectors[i], re);
+      total_distance += distance;
+      total_normalizer += l2_distance(feature_vectors[i]);
+    }
+    // debug_slice(debug_vectors, "verify pq encoding re");
+
+    // Return the total accumulated distance between the encoded and original
+    // vectors, divided by the total weight of the original feature vectors
+    return total_distance / total_normalizer;
+  }
+
+  /**
+   * @brief Verify that recorded distances between centroids are correct by
+   * comparing the distance between every pair of pq vectors against the
+   * distance between every pair of the original feature vectors.
+   * @param feature_vectors
+   * @return
+   */
+  auto verify_pq_distances(
+      const ColMajorMatrix<feature_type>& feature_vectors) {
+    double total_diff = 0.0;
+    double total_normalizer = 0.0;
+
+    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
+      for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
+        auto real_distance =
+            l2_distance(feature_vectors[i], feature_vectors[j]);
+        total_normalizer += real_distance;
+        auto pq_distance = 0.0;
+
+        for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+          auto sub_distance = distance_tables_[subspace](
+              (*unpartitioned_pq_vectors_)(subspace, i),
+              (*unpartitioned_pq_vectors_)(subspace, j));
+          pq_distance += sub_distance;
+        }
+
+        auto diff = std::abs(real_distance - pq_distance);
+        total_diff += diff;
+      }
+    }
+
+    return total_diff / total_normalizer;
+  }
+
+  auto verify_asymmetric_pq_distances(
+      const ColMajorMatrix<feature_type>& feature_vectors) {
+    double total_diff = 0.0;
+    double total_normalizer = 0.0;
+
+    score_type diff_max = 0.0;
+    score_type vec_max = 0.0;
+    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
+      for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
+        auto real_distance =
+            l2_distance(feature_vectors[i], feature_vectors[j]);
+        total_normalizer += real_distance;
+
+        auto pq_distance = this->sub_distance_asymmetric(
+            feature_vectors[i], (*unpartitioned_pq_vectors_)[j]);
+
+        auto diff = std::abs(real_distance - pq_distance);
+        diff_max = std::max(diff_max, diff);
+        total_diff += diff;
+      }
+      vec_max = std::max(vec_max, l2_distance(feature_vectors[i]));
+    }
+
+    return std::make_tuple(diff_max / vec_max, total_diff / total_normalizer);
+  }
+
+  template <class SubDistance = cached_sub_sum_of_squares_distance>
+    requires cached_sub_distance_function<
+        SubDistance,
+        typename ColMajorMatrix<feature_type>::span_type,
+        typename ColMajorMatrix<feature_type>::span_type>
+  auto verify_symmetric_pq_distances(
+      const ColMajorMatrix<feature_type>& feature_vectors) {
+    double total_diff = 0.0;
+    double total_normalizer = 0.0;
+    auto local_sub_distance = SubDistance{0, dimension_};
+
+    score_type diff_max = 0.0;
+    score_type vec_max = 0.0;
+    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
+      for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
+        auto real_distance =
+            local_sub_distance(feature_vectors[i], feature_vectors[j]);
+        total_normalizer += real_distance;
+
+        auto pq_distance = this->sub_distance_symmetric(
+            (*unpartitioned_pq_vectors_)[i], (*unpartitioned_pq_vectors_)[j]);
+
+        auto diff = std::abs(real_distance - pq_distance);
+        diff_max = std::max(diff_max, diff);
+        total_diff += diff;
+      }
+      auto zeros = std::vector<feature_type>(dimension_);
+      vec_max =
+          std::max(vec_max, local_sub_distance(feature_vectors[i], zeros));
+    }
+
+    return std::make_tuple(diff_max / vec_max, total_diff / total_normalizer);
+  }
 
   /**
    * @brief Compare groups associated with two ivf_pq_index objects for
