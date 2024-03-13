@@ -2,10 +2,11 @@ from typing import Dict, Optional, OrderedDict
 
 import numpy as np
 
-from tiledb.vector_search.embeddings import ObjectEmbedding
+# from tiledb.vector_search.embeddings import ObjectEmbedding
 
 
-class LangChainEmbedding(ObjectEmbedding):
+# class LangChainEmbedding(ObjectEmbedding):
+class LangChainEmbedding():
     """
     Embedding functions from `langchain.embeddings` package.
     """
