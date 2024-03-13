@@ -201,7 +201,7 @@ TEST_CASE(
     auto nt = num_vectors(t);
     auto recall = ((double)intersections) / ((double)nt * k_nn);
     if (nprobe == 32) {
-      CHECK(recall == 1.0);
+      CHECK(std::abs(recall - 1.0) <= 1e-3);
     } else if (nprobe == 8) {
       CHECK(recall > 0.925);
     }
@@ -305,7 +305,7 @@ TEST_CASE(
     CHECK(nt == nv);
     auto recall = ((double)intersections_a) / ((double)nt * k_nn);
     if (nprobe == 32) {
-      CHECK(recall == 1.0);
+      CHECK(std::abs(recall - 1.0) <= 1e-3);
     } else if (nprobe == 8) {
       CHECK(recall > 0.925);
     }

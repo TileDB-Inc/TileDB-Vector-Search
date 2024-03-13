@@ -39,14 +39,14 @@
 #include <queue>
 #include <unordered_set>
 
+#include "detail/graph/adj_list.h"
+#include "detail/graph/graph_utils.h"
+#include "detail/linalg/vector.h"
+#include "index/vamana_group.h"
 #include "scoring.h"
 #include "stats.h"
 #include "utils/fixed_min_heap.h"
 #include "utils/print_types.h"
-
-#include "detail/graph/adj_list.h"
-#include "detail/graph/graph_utils.h"
-#include "index/vamana_group.h"
 
 #include <tiledb/tiledb>
 
