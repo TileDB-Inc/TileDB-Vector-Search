@@ -66,6 +66,10 @@ struct metadata_type_selector<vamana_index_group<Index>> {
 };
 
 template <class Index>
+struct index_type_selector<vamana_index_group<Index>> {
+  using type = Index;
+};
+template <class Index>
 class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   using Base = base_index_group<vamana_index_group>;
   // using Base::Base;
@@ -78,9 +82,9 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   using Base::valid_key_names_;
   using Base::version_;
 
-  using index_type = Index;
+
   // std::reference_wrapper<const index_type> index_;
-  // index_type index_;
+
 
   // @todo Make this controllable
   static const int32_t default_domain{std::numeric_limits<int32_t>::max() - 1};
@@ -88,17 +92,18 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   static const int32_t tile_size_bytes{64 * 1024 * 1024};
 
  public:
+  using index_type = index_type_selector<vamana_index_group<Index>>::type;
   using index_group_metadata_type = vamana_index_metadata;
 
   vamana_index_group(
-      const index_type& index,
+      const Index& index,
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
       size_t timestamp = 0,
       const std::string& version = std::string{""},
       const tiledb::Config& cfg = tiledb::Config{})
-      : Base(ctx, uri, index.dimension(), rw, timestamp, version, cfg) {
+      : Base(index, ctx, uri, rw, timestamp, version, cfg) {
   }
 
  public:
@@ -198,6 +203,8 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
       this->version_ = current_storage_version;
     }
     this->init_valid_array_names();
+    this->set_dimension(this->cached_index_.get().dimension());
+
 
     static const int32_t tile_size{
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
@@ -245,7 +252,6 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     metadata_.base_sizes_ = {0};
     metadata_.num_edges_history_ = {0};
     metadata_.temp_size_ = 0;
-    metadata_.dimension_ = this->get_dimension();
 
     /**
      * Create the arrays: feature_vectors (matrix), adjacency_scores (vector),

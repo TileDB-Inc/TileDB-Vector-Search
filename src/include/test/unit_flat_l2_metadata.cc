@@ -32,3 +32,8 @@
 #include <catch2/catch_all.hpp>
 
 #include "index/flat_l2_metadata.h"
+
+// WIP
+TEST_CASE("flat_l2_metadata: test test", "[flat_l2_metadata]") {
+  REQUIRE(true);
+}

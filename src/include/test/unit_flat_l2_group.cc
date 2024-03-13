@@ -32,3 +32,8 @@
 #include <catch2/catch_all.hpp>
 
 #include "index/flat_l2_group.h"
+
+// WIP
+TEST_CASE("flat_l2_group: test test", "[flat_l2_group]") {
+  REQUIRE(true);
+}

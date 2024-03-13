@@ -32,3 +32,8 @@
 #include <catch2/catch_all.hpp>
 
 #include "index/flat_pq_metadata.h"
+
+// WIP
+TEST_CASE("flat_pq_metadata: test test", "[flat_pq_metadata]") {
+  REQUIRE(true);
+}

@@ -59,23 +59,23 @@ struct dummy_pq_index {
   using id_type = int;
   using indices_type = int;
   using centroid_feature_type = float;
-  using pq_type = uint8_t;
-  using pq_vector_feature_type = pq_type;
+  using pq_code_type = uint8_t;
+  using pq_vector_feature_type = pq_code_type;
   using score_type = float;
 
   auto dimension() const {
     return 128;
   }
-  auto get_num_subspaces() const {
+  auto num_subspaces() const {
     return 16;
   }
-  auto get_num_clusters() const {
+  auto num_clusters() const {
     return 256;
   }
-  auto get_sub_dimension() const {
+  auto sub_dimension() const {
     return 8;
   }
-  auto get_bits_per_subspace() const {
+  auto bits_per_subspace() const {
     return 8;
   }
 };
