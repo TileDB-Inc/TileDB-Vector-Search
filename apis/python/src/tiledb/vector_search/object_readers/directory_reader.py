@@ -8,6 +8,223 @@ import tiledb
 # from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
 
 
+# Util functions for file matching and recursive listing
+def match_uri(
+    search_uri: str,
+    file_uri: str,
+    include: str = "*",
+    exclude: Sequence[str] = ["[.]*", "*/[.]*"],
+    suffixes: Optional[Sequence[str]] = None,
+) -> bool:
+    search_uri = search_uri.rstrip("/") + "/"
+    file_split = file_uri.split(search_uri)
+    file_name = "/" if len(file_split) < 2 else file_split[1]
+    file_path = Path(file_name)
+    if not file_path.match(include):
+        return False
+    if any(file_path.match(e) for e in exclude):
+        return False
+    if suffixes:
+        if file_path.suffix not in suffixes:
+            return False
+        else:
+            return True
+    return True
+
+
+def find_uris_vfs(
+    search_uri: str,
+    config: Optional[Mapping[str, Any]] = None,
+    include: str = "*",
+    exclude: Sequence[str] = ["[.]*", "*/[.]*"],
+    suffixes: Optional[Sequence[str]] = None,
+    max_files: Optional[int] = None,
+) -> Sequence[str]:
+    with tiledb.scope_ctx(config):
+        vfs = tiledb.VFS(config=config, ctx=tiledb.Ctx(config))
+
+        def find(
+            uri: str,
+            *,
+            include: str = "*",
+            exclude: Sequence[str] = (),
+            suffixes: Optional[Sequence[str]] = None,
+            max_files: Optional[int] = None,
+        ):
+            # Stop if we have found max_count files
+            if max_files is not None and len(results) >= max_files:
+                return
+            listing = vfs.ls(uri)
+            for file_uri in listing:
+                # Avoid infinite recursion
+                if file_uri == uri:
+                    continue
+
+                if vfs.is_dir(file_uri):
+                    find(
+                        file_uri,
+                        include=include,
+                        exclude=exclude,
+                        suffixes=suffixes,
+                        max_files=max_files,
+                    )
+
+                else:
+                    match = match_uri(
+                        search_uri=search_uri,
+                        file_uri=file_uri,
+                        include=include,
+                        exclude=exclude,
+                        suffixes=suffixes,
+                    )
+                    if match:
+                        results.append(file_uri)
+
+        # Add one trailing slash to search_uri
+        search_uri = search_uri.rstrip("/") + "/"
+        results = []
+        find(
+            search_uri,
+            include=include,
+            exclude=exclude,
+            suffixes=suffixes,
+            max_files=max_files,
+        )
+        if max_files is not None:
+            return results[:max_files]
+        else:
+            return results
+
+
+def find_uris_tiledb_group(
+    search_uri: str,
+    config: Optional[Mapping[str, Any]] = None,
+    include: str = "*",
+    exclude: Sequence[str] = ["[.]*", "*/[.]*"],
+    suffixes: Optional[Sequence[str]] = None,
+    max_files: Optional[int] = None,
+    verbose: bool = False,
+) -> Sequence[str]:
+    with tiledb.scope_ctx(config):
+
+        def find(
+            uri: str,
+            path: str,
+            include: str = "*",
+            exclude: Sequence[str] = (),
+            suffixes: Optional[Sequence[str]] = None,
+            max_files: Optional[int] = None,
+        ):
+            # Stop if we have found max_count files
+            if max_files is not None and len(results) >= max_files:
+                return
+            obj_type = tiledb.object_type(uri)
+            if obj_type == "array":
+                match = match_uri(
+                    search_uri="/",
+                    file_uri=path,
+                    include=include,
+                    exclude=exclude,
+                    suffixes=suffixes,
+                )
+                if match:
+                    results.append(uri)
+            elif obj_type == "group":
+                grp = tiledb.Group(uri)
+                for child in list(grp):
+                    find(
+                        uri=child.uri,
+                        path=f"{path}/{child.name}",
+                        include=include,
+                        exclude=exclude,
+                        suffixes=suffixes,
+                        max_files=max_files,
+                    )
+
+        results = []
+        find(
+            uri=search_uri,
+            path="",
+            include=include,
+            exclude=exclude,
+            suffixes=suffixes,
+            max_files=max_files,
+        )
+        if max_files is not None:
+            return results[:max_files]
+        else:
+            return results
+
+
+def find_uris_aws(
+    search_uri: str,
+    config: Optional[Mapping[str, Any]] = None,
+    include: str = "*",
+    exclude: Sequence[str] = ["[.]*", "*/[.]*"],
+    suffixes: Optional[Sequence[str]] = None,
+    max_files: Optional[int] = None,
+    verbose: bool = False,
+) -> Sequence[str]:
+    from urllib.parse import urlparse
+
+    try:
+        import boto3
+    except ImportError:
+        raise ImportError(
+            "Could not import boto3 python package. "
+            "Please install it with `pip install boto3`."
+        )
+
+    search_uri = search_uri.rstrip("/") + "/"
+    parsed_path = urlparse(search_uri, allow_fragments=False)
+    s3_kwargs = {}
+    if (
+        "vfs.s3.aws_access_key_id" in config
+        and config["vfs.s3.aws_access_key_id"] != ""
+    ):
+        s3_kwargs["aws_access_key_id"] = config["vfs.s3.aws_access_key_id"]
+    if (
+        "vfs.s3.aws_secret_access_key" in config
+        and config["vfs.s3.aws_secret_access_key"] != ""
+    ):
+        s3_kwargs["aws_secret_access_key"] = config["vfs.s3.aws_secret_access_key"]
+    if (
+        "vfs.s3.aws_session_token" in config
+        and config["vfs.s3.aws_session_token"] != ""
+    ):
+        s3_kwargs["aws_session_token"] = config["vfs.s3.aws_session_token"]
+    if "vfs.s3.aws_role_arn" in config and config["vfs.s3.aws_role_arn"] != "":
+        s3_kwargs["aws_role_arn"] = config["vfs.s3.aws_role_arn"]
+    if "vfs.s3.aws_external_id" in config and config["vfs.s3.aws_external_id"] != "":
+        s3_kwargs["aws_external_id"] = config["vfs.s3.aws_external_id"]
+    if "vfs.s3.aws_session_name" in config and config["vfs.s3.aws_session_name"] != "":
+        s3_kwargs["aws_session_name"] = config["vfs.s3.aws_session_name"]
+    if "vfs.s3.region" in config and config["vfs.s3.region"] != "":
+        s3_kwargs["region_name"] = config["vfs.s3.region"]
+    s3 = boto3.resource("s3", **s3_kwargs)
+    bucket = s3.Bucket(parsed_path.netloc)
+    prefix = parsed_path.path.lstrip("/")
+    results = []
+    for obj in bucket.objects.filter(Prefix=prefix):
+        # Skip directories
+        if obj.size == 0 and obj.key.endswith("/"):
+            continue
+        match = match_uri(
+            search_uri=prefix,
+            file_uri=obj.key,
+            include=include,
+            exclude=exclude,
+            suffixes=suffixes,
+        )
+        if match:
+            file_name = obj.key.split(prefix)[1]
+            file_uri = f"{search_uri}{file_name}"
+            results.append(file_uri)
+            if max_files is not None and len(results) >= max_files:
+                return results
+    return results
+
+
 # class DirectoryPartition(ObjectPartition):
 class DirectoryPartition:
     def __init__(
@@ -35,30 +252,33 @@ class DirectoryPartition:
 class DirectoryReader:
     def __init__(
         self,
-        uri: str,
-        glob: str = "**/[!.]*",
-        exclude: Sequence[str] = (),
-        suffixes: Optional[Sequence[str]] = None,
+        search_uri: str,
         config: Optional[Mapping[str, Any]] = None,
+        include: str = "*",
+        exclude: Sequence[str] = ["[.]*", "*/[.]*"],
+        suffixes: Optional[Sequence[str]] = None,
+        max_files: Optional[int] = None,
     ):
         """Initialize with a path to directory and how to glob over it.
 
         Args:
-            uri: Path to directory to load from or path to file to load.
-                  If a path to a file is provided, glob/exclude/suffixes are ignored.
-            glob: Glob pattern relative to the specified path
-                  by default set to pick up all non-hidden files
-            exclude: patterns to exclude from results, use glob syntax
+            search_uri: Path of directory to load files from.
+            config: TileDB config.
+            include: File pattern to iclude relative to `search_uri`. By default set
+                to include all files.
+            exclude: File patterns to exclude relative to `search_uri`. By default set
+                to ignore all hidden files.
             suffixes: Provide to keep only files with these suffixes
-                      Useful when wanting to keep files with different suffixes
-                      Suffixes must include the dot, e.g. ".txt"
-            config: TileDB config
+                Useful when wanting to keep files with different suffixes
+                Suffixes must include the dot, e.g. ".txt"
+            max_files: Maximum number of files to include.
         """
-        self.uri = uri
-        self.glob = glob
+        self.search_uri = search_uri
+        self.config = config
+        self.include = include
         self.exclude = exclude
         self.suffixes = suffixes
-        self.config = config
+        self.max_files = max_files
         self.paths = None
 
     def partition_class_name(self) -> str:
@@ -67,25 +287,34 @@ class DirectoryReader:
     def metadata_array_uri(self) -> str:
         return None
 
-    def list_paths(self, vfs: tiledb.VFS, uri):
-        children = vfs.ls(uri)
-        uri_path = Path(uri)
-        for child in children:
-            child_path = Path(child)
-            if child_path == uri_path:
-                continue
-            if self.exclude:
-                if any(child_path.match(exclude_glob) for exclude_glob in self.exclude):
-                    continue
-            if vfs.is_file(child):
-                if not child_path.match(self.glob):
-                    continue
-
-                if self.suffixes and child_path.suffix not in self.suffixes:
-                    continue
-                self.paths.append(child)
-            else:
-                self.list_paths(vfs, child)
+    def list_paths(self):
+        if self.search_uri.startswith("s3://"):
+            self.paths = find_uris_aws(
+                search_uri=self.search_uri,
+                config=self.config,
+                include=self.include,
+                exclude=self.exclude,
+                suffixes=self.suffixes,
+                max_files=self.max_files,
+            )
+        elif self.search_uri.startswith("tiledb://"):
+            self.paths = find_uris_tiledb_group(
+                search_uri=self.search_uri,
+                config=self.config,
+                include=self.include,
+                exclude=self.exclude,
+                suffixes=self.suffixes,
+                max_files=self.max_files,
+            )
+        else:
+            self.paths = find_uris_vfs(
+                search_uri=self.search_uri,
+                config=self.config,
+                include=self.include,
+                exclude=self.exclude,
+                suffixes=self.suffixes,
+                max_files=self.max_files,
+            )
 
     def get_partitions(
         self, files_per_partition: int = -1, **kwargs
@@ -95,8 +324,7 @@ class DirectoryReader:
 
         if self.paths is None:
             self.paths = []
-            vfs = tiledb.VFS(config=self.config)
-            self.list_paths(vfs=vfs, uri=self.uri)
+            self.list_paths()
         num_files = len(self.paths)
         partitions = []
         partition_id = 0
@@ -120,11 +348,12 @@ class DirectoryTextReader(DirectoryReader):
 
     def __init__(
         self,
-        uri: str,
-        glob: str = "**/[!.]*",
-        exclude: Sequence[str] = (),
-        suffixes: Optional[Sequence[str]] = None,
+        search_uri: str,
         config: Optional[Mapping[str, Any]] = None,
+        include: str = "*",
+        exclude: Sequence[str] = ["[.]*", "*/[.]*"],
+        suffixes: Optional[Sequence[str]] = None,
+        max_files: Optional[int] = None,
         text_splitter: str = "RecursiveCharacterTextSplitter",
         text_splitter_kwargs: Optional[Dict] = {
             "chunk_size": 1000,
@@ -132,22 +361,24 @@ class DirectoryTextReader(DirectoryReader):
         },
     ):
         super().__init__(
-            uri=uri,
-            glob=glob,
+            search_uri=search_uri,
+            config=config,
+            include=include,
             exclude=exclude,
             suffixes=suffixes,
-            config=config,
+            max_files=max_files,
         )
         self.text_splitter = text_splitter
         self.text_splitter_kwargs = text_splitter_kwargs
 
     def init_kwargs(self) -> Dict:
         return {
-            "uri": self.uri,
-            "glob": self.glob,
+            "search_uri": self.search_uri,
+            "config": self.config,
+            "include": self.include,
             "exclude": self.exclude,
             "suffixes": self.suffixes,
-            "config": self.config,
+            "max_files": self.max_files,
             "text_splitter": self.text_splitter,
             "text_splitter_kwargs": self.text_splitter_kwargs,
         }
@@ -178,7 +409,18 @@ class DirectoryTextReader(DirectoryReader):
                 try:
                     local_temp_path = ""
                     parsed_path = urlparse(path, allow_fragments=False)
-                    if parsed_path.scheme != "file":
+                    if parsed_path.scheme == "tiledb":
+                        key = parsed_path.path.lstrip("/")
+                        with tiledb.open(path, "r") as a:
+                            file_extension = a.meta["file_extension"].lstrip(".")
+                            file_size = a.meta["file_size"]
+                            local_temp_path = f"{temp_dir}/{key}.{file_extension}"
+                            os.makedirs(os.path.dirname(local_temp_path), exist_ok=True)
+                            data = a[:file_size]["contents"]
+                            with open(local_temp_path, "wb") as dst:
+                                dst.write(data)
+                        parsed_path = urlparse(local_temp_path, allow_fragments=False)
+                    if parsed_path.scheme == "s3":
                         # Copy remote file to a local temp file
                         key = parsed_path.path.lstrip("/")
                         local_temp_path = f"{temp_dir}/{key}"
@@ -274,27 +516,30 @@ class DirectoryTextReader(DirectoryReader):
 class DirectoryImageReader(DirectoryReader):
     def __init__(
         self,
-        uri: str,
-        glob: str = "**/[!.]*",
-        exclude: Sequence[str] = (),
-        suffixes: Optional[Sequence[str]] = None,
+        search_uri: str,
         config: Optional[Mapping[str, Any]] = None,
+        include: str = "*",
+        exclude: Sequence[str] = ["[.]*", "*/[.]*"],
+        suffixes: Optional[Sequence[str]] = None,
+        max_files: Optional[int] = None,
     ):
         super().__init__(
-            uri=uri,
-            glob=glob,
+            search_uri=search_uri,
+            config=config,
+            include=include,
             exclude=exclude,
             suffixes=suffixes,
-            config=config,
+            max_files=max_files,
         )
 
     def init_kwargs(self) -> Dict:
         return {
-            "uri": self.uri,
-            "glob": self.glob,
+            "search_uri": self.search_uri,
+            "config": self.config,
+            "include": self.include,
             "exclude": self.exclude,
             "suffixes": self.suffixes,
-            "config": self.config,
+            "max_files": self.max_files,
         }
 
     def metadata_attributes(self) -> List[tiledb.Attr]:
