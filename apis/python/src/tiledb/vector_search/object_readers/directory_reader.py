@@ -130,16 +130,16 @@ def find_uris_tiledb_group(
                 if match:
                     results.append(uri)
             elif obj_type == "group":
-                grp = tiledb.Group(uri)
-                for child in list(grp):
-                    find(
-                        uri=child.uri,
-                        path=f"{path}/{child.name}",
-                        include=include,
-                        exclude=exclude,
-                        suffixes=suffixes,
-                        max_files=max_files,
-                    )
+                with tiledb.Group(uri) as grp:
+                    for child in list(grp):
+                        find(
+                            uri=child.uri,
+                            path=f"{path}/{child.name}",
+                            include=include,
+                            exclude=exclude,
+                            suffixes=suffixes,
+                            max_files=max_files,
+                        )
 
         results = []
         find(
