@@ -288,16 +288,7 @@ class DirectoryReader:
         return None
 
     def list_paths(self):
-        if self.search_uri.startswith("s3://"):
-            self.paths = find_uris_aws(
-                search_uri=self.search_uri,
-                config=self.config,
-                include=self.include,
-                exclude=self.exclude,
-                suffixes=self.suffixes,
-                max_files=self.max_files,
-            )
-        elif self.search_uri.startswith("tiledb://"):
+        if self.search_uri.startswith("tiledb://"):
             self.paths = find_uris_tiledb_group(
                 search_uri=self.search_uri,
                 config=self.config,
