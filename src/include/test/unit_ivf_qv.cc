@@ -300,6 +300,39 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
     }
 
     SECTION(
+        "detail::ivf::qv_query_heap_finite_ram, inner_product_distance does "
+        "not crash"
+        "function") {
+      auto fin_mat = tdbColMajorPartitionedMatrix<
+          test_feature_type,
+          test_ids_type,
+          test_indices_type>(
+          ctx,
+          sift_parts_uri,
+          sift_index_uri,
+          sift_ids_uri,
+          active_partitions,
+          upper_bound);
+
+      auto&& [D01, I01] = detail::ivf::
+          qv_query_heap_finite_ram<test_feature_type, test_ids_type>(
+              ctx,
+              sift_parts_uri,
+              centroids,
+              query,
+              index,
+              sift_ids_uri,
+              nprobe,
+              k_nn,
+              upper_bound,
+              nthreads,
+              0,
+              inner_product);
+
+      check_size(D01, I01);
+    }
+
+    SECTION(
         "detail::ivf::qv_query_heap_finite_ram, counting_l2_distance "
         "function") {
       auto fin_mat = tdbColMajorPartitionedMatrix<
@@ -338,6 +371,7 @@ TEST_CASE("ivf qv: finite all or none", "[ivf qv][ci-skip]") {
       CHECK(std::labs(intersections00 - intersections01) < 12);
       CHECK(std::equal(D00.data(), D00.data() + D00.size(), D01.data()));
     }
+
     SECTION("detail::ivf::nuv_query_heap_finite_ram, counting l2 distance") {
       auto fin_mat = tdbColMajorPartitionedMatrix<
           test_feature_type,

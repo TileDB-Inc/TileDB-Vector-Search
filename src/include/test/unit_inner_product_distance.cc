@@ -27,7 +27,7 @@
  *
  * @section DESCRIPTION
  *
- * Test the l2 distance functions
+ * Test the inner product distance functions
  */
 
 #include <catch2/catch_all.hpp>
