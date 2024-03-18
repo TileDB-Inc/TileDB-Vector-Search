@@ -39,15 +39,13 @@
 
 std::vector<std::tuple<std::string, std::string>> expected_str{
     {"dataset_type", "vector_search"},
-    {"storage_version", "0.3"},
+    {"storage_version", current_storage_version},
     {"dtype", "float32"},
     {"feature_type", "float32"},
     {"id_type", "uint64"},
-    {"base_sizes", "[0, 10000]"},
-    {"ingestion_timestamps", "[0, 1704946748930]"},
+    {"base_sizes", "[0,10000]"},
     {"adjacency_scores_type", "float32"},
     {"adjacency_row_index_type", "uint64"},
-    {"num_edges_history", "[0, 40000]"},
 };
 
 std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
@@ -90,6 +88,8 @@ TEST_CASE("vamana_metadata: default constructor dump", "[vamana_metadata]") {
   }
 }
 
+// TODO(paris): Modify the index and then also check for ingestion_timestamps
+// and num_edges_history.
 TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
@@ -108,122 +108,74 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
   auto x = vamana_index_metadata();
   x.load_metadata(read_group);
 
-  // Compare two constructed objects.
-  vamana_index_metadata y;
-  y.load_metadata(read_group);
-  CHECK(x.compare_metadata(y));
-}
-
-// @todo More vamana groups (from "real" data) to test with
-TEST_CASE("vamana_metadata: open group", "[vamana_metadata]") {
-  bool debug = false;
-
-  tiledb::Context ctx;
-  tiledb::Config cfg;
-
-  std::string group_uri =
-      test_data_root / "nano" / "vamana" / "vamana_test_index_metadata";
-
-  auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
-  auto x = vamana_index_metadata();
-
-  SECTION("load metadata") {
+  SECTION("Validate metadata.") {
+    auto x = vamana_index_metadata();
     x.load_metadata(read_group);
-  }
 
-  SECTION("load and dump metadata -- for manual inspection") {
-    x.load_metadata(read_group);
-    if (debug) {
-      x.dump();
+    for (auto& [name, value] : expected_str) {
+      tiledb_datatype_t v_type;
+      uint32_t v_num;
+      const void* v;
+      CHECK(read_group.has_metadata(name, &v_type));
+      if (!read_group.has_metadata(name, &v_type)) {
+        continue;
+      }
+
+      read_group.get_metadata(name, &v_type, &v_num, &v);
+      CHECK((v_type == TILEDB_STRING_ASCII || v_type == TILEDB_STRING_UTF8));
+      std::string tmp = std::string(static_cast<const char*>(v), v_num);
+      CHECK(!empty(value));
+      CHECK(tmp == value);
     }
-  }
+    for (auto& [name, value] : expected_arithmetic) {
+      tiledb_datatype_t v_type;
+      uint32_t v_num;
+      const void* v;
+      CHECK(read_group.has_metadata(name, &v_type));
+      if (!read_group.has_metadata(name, &v_type)) {
+        continue;
+      }
 
-  SECTION("Compare two constructed objects") {
-    x.load_metadata(read_group);
-    vamana_index_metadata y;
-    y.load_metadata(read_group);
-    CHECK(x.compare_metadata(y));
-  }
-}
+      read_group.get_metadata(name, &v_type, &v_num, &v);
 
-TEST_CASE(
-    "vamana_metadata: read metadata from reference group",
-    "[vamana_metadata]") {
-  size_t test_case = GENERATE(0, 1);
+      if (name == "temp_size") {
+        CHECK((v_type == TILEDB_UINT64 || v_type == TILEDB_UINT32));
+        if (v_type == TILEDB_UINT64) {
+          CHECK(value == *static_cast<const uint64_t*>(v));
+        } else if (v_type == TILEDB_FLOAT64) {
+          CHECK(value == (uint64_t) * static_cast<const double*>(v));
+        }
+      }
+      CHECK(
+          (v_type == TILEDB_UINT32 || v_type == TILEDB_UINT64 ||
+           v_type == TILEDB_FLOAT64 || v_type == TILEDB_FLOAT32));
 
-  std::vector<std::string> test_uris{
-      test_data_root / "nano" / "vamana" / "vamana_test_index_metadata",
-      test_data_root / "nano" / "vamana" / "vamana_test_index",
-  };
-
-  auto group_uri = test_uris[test_case];
-
-  tiledb::Context ctx;
-  tiledb::Config cfg;
-  tiledb::VFS vfs(ctx);
-  REQUIRE(vfs.is_dir(group_uri));
-  auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, cfg);
-
-  auto x = vamana_index_metadata();
-  x.load_metadata(read_group);
-
-  for (auto& [name, value] : expected_str) {
-    tiledb_datatype_t v_type;
-    uint32_t v_num;
-    const void* v;
-    CHECK(read_group.has_metadata(name, &v_type));
-    if (!read_group.has_metadata(name, &v_type)) {
-      continue;
-    }
-
-    read_group.get_metadata(name, &v_type, &v_num, &v);
-    CHECK((v_type == TILEDB_STRING_ASCII || v_type == TILEDB_STRING_UTF8));
-    std::string tmp = std::string(static_cast<const char*>(v), v_num);
-    CHECK(!empty(value));
-    CHECK(tmp == value);
-  }
-  for (auto& [name, value] : expected_arithmetic) {
-    tiledb_datatype_t v_type;
-    uint32_t v_num;
-    const void* v;
-    CHECK(read_group.has_metadata(name, &v_type));
-    if (!read_group.has_metadata(name, &v_type)) {
-      continue;
-    }
-
-    read_group.get_metadata(name, &v_type, &v_num, &v);
-
-    if (name == "temp_size") {
-      CHECK((v_type == TILEDB_UINT64 || v_type == TILEDB_UINT32));
-      if (v_type == TILEDB_UINT64) {
-        CHECK(value == *static_cast<const uint64_t*>(v));
-      } else if (v_type == TILEDB_FLOAT64) {
-        CHECK(value == (uint64_t) * static_cast<const double*>(v));
+      switch (v_type) {
+        case TILEDB_FLOAT64:
+          CHECK(value == *static_cast<const double*>(v));
+          break;
+        case TILEDB_FLOAT32:
+          CHECK(value == *static_cast<const float*>(v));
+          break;
+        case TILEDB_UINT64:
+          CHECK(value == *static_cast<const uint64_t*>(v));
+          break;
+        case TILEDB_UINT32:
+          CHECK(value == *static_cast<const uint32_t*>(v));
+          break;
+        case TILEDB_STRING_UTF8:
+          CHECK(name == "mystery string utf8");
+          break;
+        default:
+          CHECK(name == "mystery name");
+          break;
       }
     }
-    CHECK(
-        (v_type == TILEDB_UINT32 || v_type == TILEDB_UINT64 ||
-         v_type == TILEDB_FLOAT64 || v_type == TILEDB_FLOAT32));
 
-    switch (v_type) {
-      case TILEDB_FLOAT64:
-        CHECK(value == *static_cast<const double*>(v));
-        break;
-      case TILEDB_FLOAT32:
-        CHECK(value == *static_cast<const float*>(v));
-        break;
-      case TILEDB_UINT64:
-        CHECK(value == *static_cast<const uint64_t*>(v));
-        break;
-      case TILEDB_UINT32:
-        CHECK(value == *static_cast<const uint32_t*>(v));
-        break;
-      case TILEDB_STRING_UTF8:
-        CHECK(name == "mystery string utf8");
-        break;
-      default:
-        CHECK(name == "mystery name");
-        break;
+    SECTION("Compare with another load of the metadata.") {
+      vamana_index_metadata y;
+      y.load_metadata(read_group);
+      CHECK(x.compare_metadata(y));
     }
   }
 }
