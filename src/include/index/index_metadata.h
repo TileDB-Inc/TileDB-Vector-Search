@@ -33,7 +33,7 @@
  *  "base_sizes",            // (json) list
  *  "dataset_type",          // "vector_search"
  *  "dtype",                 // "float32", etc (Python dtype names)
- *  "index_type",            // "FLAT", "IVF_FLAT", "Vamana"
+ *  "index_type",            // "FLAT", "IVF_FLAT", "VAMANA"
  *  "ingestion_timestamps",  // (json) list
  *  "storage_version",       // "0.3"
  *  "temp_size",
