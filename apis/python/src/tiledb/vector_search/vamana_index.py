@@ -46,26 +46,41 @@ class VamanaIndex(index.Index):
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
-        memory_budget: int = -1,
         **kwargs,
     ):
+        print('[vamana_index@__init__]')
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
         self.index = vspy.IndexVamana(vspy.Ctx(config), uri)
         self.db_uri = self.group[
-            storage_formats[self.storage_version]["FEATURE_VECTORS_ARRAY_NAME"]
+            storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
             + self.index_version
         ].uri
+        self.ids_uri = self.group[
+            storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version
+        ].uri
+        
         schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
-        print('schema', schema)
         self.dimensions = self.index.dimension()
-        print('schema.domain.dim(1).domain[1]', schema.domain.dim(1).domain[1])
+        
+        self.dtype = np.dtype(self.group.meta.get("dtype", None))
+        if self.dtype is None:
+            self.dtype = np.dtype(schema.attr("values").dtype)
+        else:
+            self.dtype = np.dtype(self.dtype)
+
         if self.base_size == -1:
             self.size = schema.domain.dim(1).domain[1] + 1
         else:
             self.size = self.base_size
+        
+        print('[vamana_index@__init__] self.size', self.size)
+        print('[vamana_index@__init__] self.dtype', self.dtype)
+        print('[vamana_index@__init__] self.dimensions', self.dimensions)
+        print('[vamana_index@__init__] self.db_uri', self.db_uri)
+        print('[vamana_index@__init__] self.ids_uri', self.ids_uri)
 
-        print('self.base_size', self.base_size)
+        print('[vamana_index@__init__] done')
 
     def get_dimensions(self):
         return self.dimensions
@@ -85,7 +100,7 @@ class VamanaIndex(index.Index):
         num_workers: int = -1,
     ):
         """
-        Query an IVF_FLAT index
+        Query an VAMANA index
 
         Parameters
         ----------
@@ -121,6 +136,7 @@ class VamanaIndex(index.Index):
             If provided, this is the number of workers to use for the query execution.
 
         """
+        print('[vamana_index@query_internal]')
         if self.size == 0:
             return np.full((queries.shape[0], k), index.MAX_FLOAT_32), np.full(
                 (queries.shape[0], k), index.MAX_UINT64
@@ -142,194 +158,16 @@ class VamanaIndex(index.Index):
         nprobe = min(nprobe, self.partitions)
         if mode is None:
             # queries_m = array_to_matrix(np.transpose(queries))
-            queries = vspy.FeatureVectorArray(Ctx(self.config), queries)
-            d, i = self.index.query(queries, k, opt_l)
+            queries = vspy.FeatureVectorArray(vspy.Ctx(self.config), queries)
+            scores, ids = self.index.query(queries, k, opt_l)
+            print('[vamana_index.py] scores', scores, 'ids', ids)
             # return np.transpose(np.array(d)), np.transpose(np.array(i))
-            return d, i
+            return scores, ids
         else:
+            # TODO(paris): Support taskgraph queries.
             return [], []
-            # return self.taskgraph_query(
-            #     queries=queries,
-            #     k=k,
-            #     opt_l=opt_l,
-            #     nthreads=nthreads,
-            #     nprobe=nprobe,
-            #     mode=mode,
-            #     resource_class=resource_class,
-            #     resources=resources,
-            #     num_partitions=num_partitions,
-            #     num_workers=num_workers,
-            #     config=self.config,
-            # )
 
-    def taskgraph_query(
-        self,
-        queries: np.ndarray,
-        opt_l: Optional[int],
-        k: int = 10,
-        nprobe: int = 10,
-        nthreads: int = -1,
-        mode: Mode = None,
-        resource_class: Optional[str] = None,
-        resources: Optional[Mapping[str, Any]] = None,
-        num_partitions: int = -1,
-        num_workers: int = -1,
-        config: Optional[Mapping[str, Any]] = None,
-    ):
-        """
-        Query an IVF_FLAT index using TileDB cloud taskgraphs
-
-        Parameters
-        ----------
-        queries: numpy.ndarray
-            ND Array of queries
-        k: int
-            Number of top results to return per query
-        nprobe: int
-            number of probes
-        nthreads: int
-            Number of threads to use for query
-        mode: Mode
-            If provided the query will be executed using TileDB cloud taskgraphs.
-            For distributed execution you can use REALTIME or BATCH mode. 
-            For local execution you can use LOCAL mode.
-        resource_class: 
-            The name of the resource class to use ("standard" or "large"). Resource classes define maximum
-            limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode.
-            Cannot be used alongside resources.
-            In REALTIME or BATCH mode if neither resource_class nor resources are provided,
-            we default to the "large" resource class.
-        resources:
-            A specification for the amount of resources to use when executing using TileDB cloud 
-            taskgraphs, of the form: {"cpu": "6", "memory": "12Gi", "gpu": 1}. Can only be used 
-            in BATCH mode. Cannot be used alongside resource_class.
-        num_partitions: int
-            Only relevant for taskgraph based execution.
-            If provided, we split the query execution in that many partitions.
-        num_workers: int
-            Only relevant for taskgraph based execution.
-            If provided, this is the number of workers to use for the query execution.
-        config: None
-            config dictionary, defaults to None
-        """
-        import math
-        from functools import partial
-
-        import numpy as np
-        from tiledb.cloud import dag
-        from tiledb.cloud.dag import Mode
-
-        from tiledb.vector_search.module import (array_to_matrix, dist_qv,
-                                                 partition_ivf_index)
-
-        if resource_class and resources:
-            raise TypeError("Cannot provide both resource_class and resources")
-
-        def dist_qv_udf(
-            dtype: np.dtype,
-            parts_uri: str,
-            ids_uri: str,
-            query_vectors: np.ndarray,
-            active_partitions: np.array,
-            active_queries: np.array,
-            indices: np.array,
-            k_nn: int,
-            config: Optional[Mapping[str, Any]] = None,
-            timestamp: int = 0,
-        ):
-            queries = vspy.FeatureVectorArray(Ctx(self.config), queries)
-            return self.index.query(queries, k, opt_l)
-
-
-        assert queries.dtype == np.float32
-        if num_partitions == -1:
-            num_partitions = 5
-        if num_workers == -1:
-            num_workers = num_partitions
-        if mode == Mode.BATCH:
-            d = dag.DAG(
-                name="vector-query",
-                mode=Mode.BATCH,
-                max_workers=num_workers,
-            )
-        elif mode == Mode.REALTIME:
-            d = dag.DAG(
-                name="vector-query",
-                mode=Mode.REALTIME,
-                max_workers=num_workers,
-            )
-        else:
-            d = dag.DAG(
-                name="vector-query",
-                mode=Mode.REALTIME,
-                max_workers=1,
-                namespace="default",
-            )
-        submit = partial(submit_local, d)
-        if mode == Mode.BATCH or mode == Mode.REALTIME:
-            submit = d.submit
-
-        queries_m = array_to_matrix(np.transpose(queries))
-        active_partitions, active_queries = partition_ivf_index(
-            centroids=self._centroids, query=queries_m, nprobe=nprobe, nthreads=nthreads
-        )
-        num_parts = len(active_partitions)
-
-        parts_per_node = int(math.ceil(num_parts / num_partitions))
-        nodes = []
-        for part in range(0, num_parts, parts_per_node):
-            part_end = part + parts_per_node
-            if part_end > num_parts:
-                part_end = num_parts
-            aq = []
-            for tt in range(part, part_end):
-                aqt = []
-                for ttt in range(len(active_queries[tt])):
-                    aqt.append(active_queries[tt][ttt])
-                aq.append(aqt)
-            nodes.append(
-                submit(
-                    dist_qv_udf,
-                    dtype=self.dtype,
-                    parts_uri=self.db_uri,
-                    ids_uri=self.ids_uri,
-                    query_vectors=queries,
-                    active_partitions=np.array(active_partitions)[part:part_end],
-                    active_queries=np.array(aq, dtype=object),
-                    indices=np.array(self._index),
-                    k_nn=k,
-                    config=config,
-                    timestamp=self.base_array_timestamp,
-                    resource_class="large" if (not resources and not resource_class) else resource_class,
-                    resources=resources,
-                    image_name="3.9-vectorsearch",
-                )
-            )
-
-        d.compute()
-        d.wait()
-        results = []
-        for node in nodes:
-            res = node.result()
-            results.append(res)
-
-        results_per_query_d = []
-        results_per_query_i = []
-        for q in range(queries.shape[0]):
-            tmp_results = []
-            for j in range(k):
-                for r in results:
-                    if len(r[q]) > j:
-                        if r[q][j][0] > 0:
-                            tmp_results.append(r[q][j])
-            tmp = sorted(tmp_results, key=lambda t: t[0])[0:k]
-            for j in range(len(tmp), k):
-                tmp.append((float(0.0), int(0)))
-            results_per_query_d.append(np.array(tmp, dtype=np.float32)[:, 0])
-            results_per_query_i.append(np.array(tmp, dtype=np.uint64)[:, 1])
-        return np.array(results_per_query_d), np.array(results_per_query_i)
-
-# TODO(paris): Look into passing more args to C++, i.e. storage_version.
+# TODO(paris): Pass more arugments to C++, i.e. storage_version.
 def create(
     uri: str,
     dimensions: int,
@@ -341,20 +179,22 @@ def create(
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> VamanaIndex:
-      ctx = vspy.Ctx(config)
-      index = vspy.IndexVamana(
-          feature_type=np.dtype(vector_type).name, 
-          id_type=np.dtype(id_type).name, 
-          adjacency_row_index_type=np.dtype(adjacency_row_index_type).name, 
-          dimension=dimensions,
-      )
-      empty_vector = vspy.FeatureVectorArray(
-          dimensions, 
-          0, 
-          np.dtype(vector_type).name, 
-          np.dtype(id_type).name
+      print('[vamana_index@create]')
+      if not group_exists:
+        ctx = vspy.Ctx(config)
+        index = vspy.IndexVamana(
+            feature_type=np.dtype(vector_type).name, 
+            id_type=np.dtype(id_type).name, 
+            adjacency_row_index_type=np.dtype(adjacency_row_index_type).name, 
+            dimension=dimensions,
         )
-      index.train(empty_vector)
-      index.add(empty_vector)
-      index.write_index(ctx, uri)
+        empty_vector = vspy.FeatureVectorArray(
+            dimensions, 
+            0, 
+            np.dtype(vector_type).name, 
+            np.dtype(id_type).name
+            )
+        index.train(empty_vector)
+        index.add(empty_vector)
+        index.write_index(ctx, uri)
       return VamanaIndex(uri=uri, config=config, memory_budget=1000000)

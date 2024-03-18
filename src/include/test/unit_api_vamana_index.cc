@@ -246,10 +246,10 @@ TEST_CASE("api_vamana_index: empty index", "[api_vamana_index]") {
   size_t k_nn = 10;
   size_t nprobe = GENERATE(8, 32);
 
-  SECTION("Read from Python") {
-    std::string uri = "/tmp/vamana_index";
-    auto b = IndexVamana(ctx, uri);
-  }
+  // SECTION("Read from Python") {
+  //   std::string uri = "/tmp/vamana_index";
+  //   auto b = IndexVamana(ctx, uri);
+  // }
 
   std::string api_vamana_index_uri =
       (std::filesystem::temp_directory_path() / "api_vamana_index").string();

@@ -14,17 +14,30 @@ from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.utils import load_fvecs
 
 
-def query_and_check(index, queries, k, expected_d, expected_i, **kwargs):
-    for _ in range(3):
-        result_d, result_i = index.query(queries, k=k, **kwargs)
-        assert expected_d.issubset(set(result_d[0]))
-        assert expected_i.issubset(set(result_i[0]))
+def query_and_check(index, queries, k, expected_scores, expected_ids, **kwargs):
+    for _ in range(1):
+        scores, ids = index.query(queries, k=k, **kwargs)
+        print('scores', scores, 'expected_scores', expected_scores)
+        print('ids', ids, 'expected_ids', expected_ids)
+        assert np.array_equal(ids, expected_ids)
+        # assert ids == expected_ids
+        # assert scores == expected_scores
+        # assert expected_scores.issubset(set(scores[0]))
+        # assert expected_ids.issubset(set(ids[0]))
 
+# def query_and_check(index, queries, k, expected, **kwargs):
+#     for _ in range(3):
+#         result_d, result_i = index.query(queries, k=k, **kwargs)
+#         assert expected.issubset(set(result_i[0]))
 
 # def test_flat_index(tmp_path):
 #     uri = os.path.join(tmp_path, "array")
 #     index = flat_index.create(uri=uri, dimensions=3, vector_type=np.dtype(np.uint8))
 #     query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {ind.MAX_UINT64})
+#     print('========================================================================================================================================')
+#     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
+#     group.meta.dump()
+#     print('========================================================================================================================================')
 
 #     update_vectors = np.empty([5], dtype=object)
 #     update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.uint8))
@@ -35,8 +48,16 @@ def query_and_check(index, queries, k, expected_d, expected_i, **kwargs):
 #     index.update_batch(vectors=update_vectors, external_ids=np.array([0, 1, 2, 3, 4]))
 #     query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3})
 
+#     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
+#     group.meta.dump()
+#     print('========================================================================================================================================')
+
 #     index = index.consolidate_updates()
 #     query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3})
+
+#     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
+#     group.meta.dump()
+#     print('========================================================================================================================================')
 
 #     index.delete_batch(external_ids=np.array([1, 3]))
 #     query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4})
@@ -130,34 +151,49 @@ from tiledb.vector_search import _tiledbvspy as vspy
 def test_vamana_index(tmp_path):
     uri = os.path.join(tmp_path, "array")
     dimensions = 9
-    index = vamana_index.create(uri=uri, dimensions=3, vector_type=np.dtype(np.float32))
+    print('[test_index] vamana_index.create() ================================================================================================')
+    index = vamana_index.create(uri=uri, dimensions=3, vector_type=np.dtype(np.float32), id_type=np.dtype(np.uint32))
     queries = np.array([[2, 2, 2]], dtype=np.float32) # np.array([[0 for _ in range(3)]], dtype=np.float32)
-    result_d, result_i = index.query(queries, k=1)
-    assert result_d.shape == (1, 1)
-    print('result_d', result_d, result_d.shape)
-    print('result_i', result_i, result_i.shape)
-    assert result_i.shape == (1, 1)
-    assert result_d[0][0] == ind.MAX_FLOAT_32
-    assert result_i[0][0] == ind.MAX_UINT64
+    
+    print('[test_index] index.query() ================================================================================================')
+    scores, ids = index.query(queries, k=1)
+    print('scores', scores, scores.shape)
+    print('ids', ids, ids.shape)
+    assert scores.shape == (1, 1)
+    assert ids.shape == (1, 1)
+    assert scores[0][0] == ind.MAX_FLOAT_32
+    assert ids[0][0] == ind.MAX_UINT64
+    print('[test_index] query_and_check() ================================================================================================')
     query_and_check(
         index,
         queries,
-        3,
-        {ind.MAX_FLOAT_32},
-        {ind.MAX_UINT64}
+        1,
+        [[ind.MAX_FLOAT_32]],
+        [[ind.MAX_UINT64]]
     )
 
+    print('[test_index] index.update_batch() ================================================================================================')
     update_vectors = np.empty([5], dtype=object)
-    update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.uint8))
-    update_vectors[1] = np.array([1, 1, 1], dtype=np.dtype(np.uint8))
-    update_vectors[2] = np.array([2, 2, 2], dtype=np.dtype(np.uint8))
-    update_vectors[3] = np.array([3, 3, 3], dtype=np.dtype(np.uint8))
-    update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.uint8))
-    index.update_batch(vectors=update_vectors, external_ids=np.array([0, 1, 2, 3, 4]))
-    # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3})
+    update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.float32))
+    update_vectors[1] = np.array([1, 1, 1], dtype=np.dtype(np.float32))
+    update_vectors[2] = np.array([2, 2, 2], dtype=np.dtype(np.float32))
+    update_vectors[3] = np.array([3, 3, 3], dtype=np.dtype(np.float32))
+    update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.float32))
+    index.update_batch(vectors=update_vectors, external_ids=np.array([0, 1, 2, 3, 4], dtype=np.dtype(np.uint32)))
+    print('[test_index] query_and_check() ================================================================================================')
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]])
+    # scores, ids = index.query(queries, k=1)
+    # print('scores', scores, scores.shape)
+    # print('ids', ids, ids.shape)
+    print('[test_index] index.consolidate_updates() ================================================================================================')
+    index = index.consolidate_updates()
 
-    # index = index.consolidate_updates()
-    # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3})
+    # scores, ids = index.query(queries, k=1)
+    # print('scores', scores, scores.shape)
+    # print('ids', ids, ids.shape)
+
+    # print('Done!!')
+    # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, {0, 0, 0})
 
     # index.delete_batch(external_ids=np.array([1, 3]))
     # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4})

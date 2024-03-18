@@ -36,7 +36,6 @@
  *  "index_type",            // "FLAT", "IVF_FLAT", "Vamana"
  *  "ingestion_timestamps",  // (json) list
  *  "storage_version",       // "0.3"
- *  "has_updates",           // (boolean)
  *  "temp_size",
  *
  *  "feature_datatype",      // TILEDB_UINT32
@@ -90,11 +89,9 @@ class base_index_metadata {
   std::vector<base_sizes_type> base_sizes_;
 
   /** Record size of temp data */
-  uint64_t temp_size_{0};
+  int64_t temp_size_{0};
 
   uint32_t dimension_{0};
-
-  bool has_updates_{false};
 
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
@@ -115,7 +112,7 @@ class base_index_metadata {
   using metadata_string_check_type =
       std::tuple<std::string, std::string&, bool>;
   std::vector<metadata_string_check_type> metadata_string_checks{
-      // name, member_variable, required
+      // name, member_variable, default, expected, required
       {"dataset_type", dataset_type_, true},
       {"storage_version", storage_version_, true},
       {"dtype", dtype_, false},
@@ -130,8 +127,7 @@ class base_index_metadata {
   using metadata_arithmetic_check_type =
       std::tuple<std::string, void*, tiledb_datatype_t, bool>;
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks{
-      // name, value, type, required
-      {"temp_size", &temp_size_, TILEDB_UINT64, true},
+      {"temp_size", &temp_size_, TILEDB_INT64, true},
       //{"index_kind",
       // nstatic_cast<IndexMetadata*>(this)->index_kind_,
       // TILEDB_UINT64,
@@ -139,7 +135,6 @@ class base_index_metadata {
       {"dimension", &dimension_, TILEDB_UINT32, false},
       {"feature_datatype", &feature_datatype_, TILEDB_UINT32, false},
       {"id_datatype", &id_datatype_, TILEDB_UINT32, false},
-      {"has_updates", &has_updates_, TILEDB_BOOL, true},
   };
 
   template <class T>
@@ -172,7 +167,7 @@ class base_index_metadata {
     auto&& [name, value, required] = check;
     if (!read_group.has_metadata(name, &v_type)) {
       if (required) {
-        throw std::runtime_error("Missing string metadata: " + name);
+        throw std::runtime_error("Missing metadata: " + name);
       } else {
         return;
       }
@@ -207,11 +202,9 @@ class base_index_metadata {
     uint32_t v_num;
     const void* v;
     auto&& [name, value, type, required] = check;
-    std::cout << "name: " << name << " type: " << type
-              << " required: " << required << std::endl;
     if (!read_group.has_metadata(name, &v_type)) {
       if (required) {
-        throw std::runtime_error("Missing arithmetic metadata: " + name);
+        throw std::runtime_error("Missing metadata: " + name);
       } else {
         return;
       }
@@ -219,19 +212,19 @@ class base_index_metadata {
     read_group.get_metadata(name, &v_type, &v_num, &v);
 
     // Handle temp_size as a special case for now
-    if (name == "temp_size") {
-      if (v_type == TILEDB_UINT64) {
-        *static_cast<uint64_t*>(value) = *static_cast<const uint64_t*>(v);
-      } else if (v_type == TILEDB_FLOAT64) {
-        *static_cast<uint64_t*>(value) =
-            static_cast<uint64_t>(*static_cast<const double*>(v));
-      } else {
-        throw std::runtime_error(
-            "temp_size must be a uint64_t or float64 not " +
-            tiledb::impl::type_to_str(v_type));
-      }
-      return;
-    }
+    // if (name == "temp_size") {
+    //   if (v_type == TILEDB_UINT64) {
+    //     *static_cast<uint64_t*>(value) = *static_cast<const uint64_t*>(v);
+    //   } else if (v_type == TILEDB_FLOAT64) {
+    //     *static_cast<uint64_t*>(value) =
+    //         static_cast<uint64_t>(*static_cast<const double*>(v));
+    //   } else {
+    //     throw std::runtime_error(
+    //         "temp_size must be a uint64_t or float64 not " +
+    //         tiledb::impl::type_to_str(v_type));
+    //   }
+    //   return;
+    // }
 
     if (v_type != type) {
       throw std::runtime_error(
@@ -244,6 +237,9 @@ class base_index_metadata {
         break;
       case TILEDB_FLOAT32:
         *static_cast<float*>(value) = *static_cast<const float*>(v);
+        break;
+      case TILEDB_INT64:
+        *static_cast<int64_t*>(value) = *static_cast<const int64_t*>(v);
         break;
       case TILEDB_UINT64:
         *static_cast<uint64_t*>(value) = *static_cast<const uint64_t*>(v);
@@ -283,29 +279,27 @@ class base_index_metadata {
          static_cast<IndexMetadata*>(this)->metadata_string_checks_impl) {
       check_string_metadata(read_group, check);
     }
-    std::cout << "first checks ++++" << std::endl;
     for (auto& check : metadata_arithmetic_checks) {
       check_arithmetic_metadata(read_group, check);
     }
-    std::cout << "second checks ++++" << std::endl;
     for (auto& check :
          static_cast<IndexMetadata*>(this)->metadata_arithmetic_checks_impl) {
       check_arithmetic_metadata(read_group, check);
     }
 
-    if (!read_group.has_metadata("temp_size", &v_type)) {
-      throw std::runtime_error("Missing metadata: temp_size");
-    }
-    read_group.get_metadata("temp_size", &v_type, &v_num, &v);
-    if (v_type == TILEDB_UINT64) {
-      temp_size_ = *static_cast<const uint64_t*>(v);
-    } else if (v_type == TILEDB_FLOAT64) {
-      temp_size_ = static_cast<uint64_t>(*static_cast<const double*>(v));
-    } else {
-      throw std::runtime_error(
-          "temp_size must be a uint64_t or float64 not " +
-          tiledb::impl::type_to_str(v_type));
-    }
+    // if (!read_group.has_metadata("temp_size", &v_type)) {
+    //   throw std::runtime_error("Missing metadata: temp_size");
+    // }
+    // read_group.get_metadata("temp_size", &v_type, &v_num, &v);
+    // if (v_type == TILEDB_UINT64) {
+    //   temp_size_ = *static_cast<const uint64_t*>(v);
+    // } else if (v_type == TILEDB_FLOAT64) {
+    //   temp_size_ = static_cast<uint64_t>(*static_cast<const double*>(v));
+    // } else {
+    //   throw std::runtime_error(
+    //       "temp_size must be a uint64_t or float64 not " +
+    //       tiledb::impl::type_to_str(v_type));
+    // }
 
     base_sizes_ = json_to_vector<base_sizes_type>(base_sizes_str_);
     ingestion_timestamps_ =
@@ -391,12 +385,6 @@ class base_index_metadata {
   auto& px_datatype()  {
     return px_datatype_;
   }
-  auto has_updates() const {
-    return has_updates_;
-  }
-  auto& has_updates() {
-    return has_updates_;
-  }
 #endif
 
   /**************************************************************************
@@ -433,6 +421,11 @@ class base_index_metadata {
           if (*static_cast<float*>(value) != *static_cast<float*>(rhs_value)) {
             return false;
           }
+        case TILEDB_INT64:
+          if (*static_cast<int64_t*>(value) !=
+              *static_cast<int64_t*>(rhs_value)) {
+            return false;
+          }
         case TILEDB_UINT64:
           if (*static_cast<uint64_t*>(value) !=
               *static_cast<uint64_t*>(rhs_value)) {
@@ -441,11 +434,6 @@ class base_index_metadata {
         case TILEDB_UINT32:
           if (*static_cast<uint32_t*>(value) !=
               *static_cast<uint32_t*>(rhs_value)) {
-            return false;
-          }
-          break;
-        case TILEDB_BOOL:
-          if (*static_cast<bool*>(value) != *static_cast<bool*>(rhs_value)) {
             return false;
           }
           break;
@@ -539,6 +527,10 @@ class base_index_metadata {
         case TILEDB_FLOAT32:
           std::cout << name << ": " << *static_cast<float*>(value) << std::endl;
           break;
+        case TILEDB_INT64:
+          std::cout << name << ": " << *static_cast<int64_t*>(value)
+                    << std::endl;
+          break;
         case TILEDB_UINT64:
           std::cout << name << ": " << *static_cast<uint64_t*>(value)
                     << std::endl;
@@ -555,9 +547,6 @@ class base_index_metadata {
             std::cout << name << ": " << *static_cast<uint32_t*>(value)
                       << std::endl;
           }
-          break;
-        case TILEDB_BOOL:
-          std::cout << name << ": " << *static_cast<bool*>(value) << std::endl;
           break;
         default:
           throw std::runtime_error(

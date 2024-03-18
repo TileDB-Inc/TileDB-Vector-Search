@@ -250,6 +250,9 @@ def ingest(
     PARTIAL_WRITE_ARRAY_DIR = storage_formats[storage_version][
         "PARTIAL_WRITE_ARRAY_DIR"
     ]
+    # FEATURE_VECTORS_ARRAY_NAME = storage_formats[storage_version][
+    #     "FEATURE_VECTORS_ARRAY_NAME"
+    # ]
     DEFAULT_ATTR_FILTERS = storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"]
     VECTORS_PER_WORK_ITEM = 20000000
     VECTORS_PER_SAMPLE_WORK_ITEM = 1000000
@@ -1487,6 +1490,7 @@ def ingest(
         import tiledb.cloud
         from tiledb.vector_search import _tiledbvspy as vspy
 
+        print('[ingestion@ingest_vamana] size', size, 'batch', batch, 'dimensions', dimensions)
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
             updated_ids = read_updated_ids(
@@ -1519,7 +1523,8 @@ def ingest(
                     config=config,
                     verbose=verbose,
                     trace_id=trace_id,
-                )
+                ) # [[1, 2, 3, 4], [5, 6, 7, 8]]
+                print('[ingestion@ingest_vamana] in_vectors', in_vectors)
                 external_ids = read_external_ids(
                     external_ids_uri=external_ids_uri,
                     external_ids_type=external_ids_type,
@@ -1528,7 +1533,8 @@ def ingest(
                     config=config,
                     verbose=verbose,
                     trace_id=trace_id,
-                )
+                ) # [99, 100]
+                print('[ingestion@ingest_vamana] external_ids', external_ids)
                 # Now we check if the external id is in the updated ids.
                 # False where an element of `ar1` is in `ar2` and True otherwise
                 # updates_filter[i] = False if external_ids[i] is in updated_ids
@@ -1559,6 +1565,8 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             )
+            print('[ingestion@ingest_vamana] additions_vectors', additions_vectors)
+            print('[ingestion@ingest_vamana] additions_external_ids', additions_external_ids)
             end = write_offset
             if additions_vectors is not None:
                 end += len(additions_external_ids)
@@ -1574,9 +1582,24 @@ def ingest(
             # group.close()
             parts_array.close()
             ids_array.close()
+            
+            parts_array = tiledb.open(parts_array_uri, mode="r", timestamp=index_timestamp)
+            ids_array = tiledb.open(ids_array_uri, mode="r", timestamp=index_timestamp)
+            print('[ingestion@ingest_vamana] parts_array_uri', parts_array_uri)
+            print('[ingestion@ingest_vamana] parts_array.domain', parts_array.domain)
+            print('[ingestion@ingest_vamana] parts_array', parts_array[0:dimensions, 0:end])
+            print()
+            print('[ingestion@ingest_vamana] ids_array_uri', ids_array_uri)
+            print('[ingestion@ingest_vamana] ids_array.domain', ids_array.domain)
+            print('[ingestion@ingest_vamana] ids_array', ids_array[0:end])
+            parts_array.close()
+            ids_array.close()
 
-            index = vspy.IndexVamana(tiledb.Ctx(config), index_group_uri)
-            data = vspy.FeatureVectorArray(tiledb.Ctx(config), parts_array_uri)
+            index = vspy.IndexVamana(vspy.Ctx(config), index_group_uri)
+            return
+            print('parts_array_uri', parts_array_uri)
+            print('ids_array_uri', ids_array_uri)
+            data = vspy.FeatureVectorArray(vspy.Ctx(config), parts_array_uri)
             index.train(data)
             index.add(data)
 

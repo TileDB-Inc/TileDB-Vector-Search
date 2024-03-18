@@ -278,7 +278,8 @@ class tdbBlockedMatrix : public MatrixBase {
 
     first_resident_col_ = first_col_;
     last_resident_col_ = first_col_;
-
+    std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] dimension: " << dimension << std::endl;
+    std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] load_blocksize_: " << load_blocksize_ << std::endl;
 #ifdef __cpp_lib_smart_ptr_for_overwrite
     auto data_ =
         std::make_unique_for_overwrite<T[]>(dimension * load_blocksize_);
@@ -317,11 +318,13 @@ class tdbBlockedMatrix : public MatrixBase {
           "Attribute type mismatch: " + datatype_to_string(attr_type) + " != " +
           datatype_to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
     }
+    std::cout << "[tdbBlockedMatrix::load] attr_name: " << attr_name << std::endl;
 
     size_t dimension = last_row_ - first_row_;
+    std::cout << "[tdbBlockedMatrix::load] dimension: " << dimension << std::endl;
     auto elements_to_load =
         std::min(load_blocksize_, last_col_ - last_resident_col_);
-
+    std::cout << "[tdbBlockedMatrix::load] elements_to_load: " << elements_to_load << std::endl;
     // Return if we're at the end
     if (elements_to_load == 0 || dimension == 0) {
       return false;
@@ -349,7 +352,9 @@ class tdbBlockedMatrix : public MatrixBase {
     tiledb_helpers::submit_query(tdb_func__, uri_, query);
     _memory_data.insert_entry(
         tdb_func__, elements_to_load * dimension * sizeof(T));
-
+    std::cout << "query.has_results(): " << query.has_results() << std::endl;
+    std::cout << "query.query_status(): " << query.query_status() << std::endl;
+    return false;
     // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
       throw std::runtime_error("Query status is not complete");

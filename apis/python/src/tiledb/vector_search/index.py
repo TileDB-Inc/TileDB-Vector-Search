@@ -130,6 +130,7 @@ class Index:
         self.has_updates = self.check_has_updates()
 
     def query(self, queries: np.ndarray, k, **kwargs):
+        print('[index@query]')
         if queries.ndim != 2:
             raise TypeError(
                 f"Expected queries to have 2 dimensions (i.e. [[...], etc.]), but it had {queries.ndim} dimensions"
@@ -151,6 +152,7 @@ class Index:
                     )
 
         # Query with updates
+        print('[index@query] Query with updates')
         # Perform the queries in parallel
         retrieval_k = 2 * k
         kwargs["nthreads"] = int(os.cpu_count() / 2)
@@ -227,10 +229,12 @@ class Index:
         timestamp=None,
         config=None,
     ):
+        print('[index@query_additions]')
         assert queries.dtype == np.float32
         additions_vectors, additions_external_ids, updated_ids = Index.read_additions(
             updates_array_uri, timestamp, config
         )
+        print('[index@query_additions] additions_vectors', additions_vectors, 'additions_external_ids', additions_external_ids, 'updated_ids', updated_ids)
         if additions_vectors is None:
             return None, None, updated_ids
 
@@ -248,17 +252,26 @@ class Index:
     def read_additions(
         updates_array_uri, timestamp=None, config=None
     ) -> (np.ndarray, np.array):
+        print('[index@read_additions]')
         with tiledb.scope_ctx(ctx_or_config=config):
             if updates_array_uri is None:
                 return None, None, np.array([], np.uint64)
+
+            schema = tiledb.ArraySchema.load(updates_array_uri)
+            print('schema', schema)
             updates_array = tiledb.open(
                 updates_array_uri, mode="r", timestamp=timestamp
             )
+            print('updates_array', updates_array)
             q = updates_array.query(attrs=("vector",), coords=True)
+            print('here')
+            print('q', q[:])
             data = q[:]
             updates_array.close()
             updated_ids = data["external_id"]
+            print('updated_ids', updated_ids)
             additions_filter = [len(item) > 0 for item in data["vector"]]
+            print('additions_filter', additions_filter)
             if len(data["external_id"][additions_filter]) > 0:
                 return (
                     np.vstack(data["vector"][additions_filter]),
@@ -284,8 +297,8 @@ class Index:
         return array_exists and has_updates
 
     def set_has_updates(self, has_updates: bool = True):
-        self.has_updates = True
-        if not self.group.meta["has_updates"]:
+        self.has_updates = has_updates
+        if "has_updates" not in self.group.meta or self.group.meta["has_updates"] != has_updates:
             self.group.close()
             self.group = tiledb.Group(self.uri, "w", ctx=tiledb.Ctx(self.config))
             self.group.meta["has_updates"] = has_updates
