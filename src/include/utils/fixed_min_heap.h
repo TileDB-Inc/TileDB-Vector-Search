@@ -33,6 +33,9 @@
  *
  * This type of heap is used to maintain the top k small scores as we compute
  * scores during similarity search.
+ *
+ * @todo Run abstraction penalty benchmarks to make sure Distance is getting
+ * completely inlined
  */
 
 #ifndef TILEDB_FIXED_MIN_HEAP_H
