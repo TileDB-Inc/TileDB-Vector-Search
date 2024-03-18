@@ -61,6 +61,8 @@ class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
+  using span_type = std::span<T>;
+
  public:
   MatrixView(const Base& rhs)
       : Base(rhs) {
@@ -78,7 +80,7 @@ class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     return this->data_handle();
   }
 
-  // @todo is this right???
+  // @todo Fully verify row and column major function correctly
   auto operator[](index_type i) {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
       return std::span(&Base::operator()(i, 0), this->extents().extent(1));
@@ -148,6 +150,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using reference = typename Base::reference;
 
   using view_type = Matrix;
+  using span_type = std::span<T>;
 
  protected:
   size_type num_rows_{0};
