@@ -8,6 +8,7 @@ import tiledb.vector_search.index as ind
 from tiledb.vector_search import Index
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
+from tiledb.vector_search import vamana_index
 from tiledb.vector_search.index import create_metadata
 from tiledb.vector_search.index import DATASET_TYPE
 from tiledb.vector_search.flat_index import FlatIndex
@@ -159,6 +160,9 @@ def test_ivf_flat_index(tmp_path):
         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4}, nprobe=partitions
     )
 
+def test_vamana_index(tmp_path):
+    uri = os.path.join(tmp_path, "array")
+    index = vamana_index.create(uri=uri, dimensions=3, vector_type=np.dtype(np.float32), id_type=np.dtype(np.uint32))
 
 def test_delete_invalid_index(tmp_path):
     # We don't throw with an invalid uri.

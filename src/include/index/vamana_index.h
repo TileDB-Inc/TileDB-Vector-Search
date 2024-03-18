@@ -41,6 +41,7 @@
 
 #include "detail/graph/adj_list.h"
 #include "detail/graph/graph_utils.h"
+#include "detail/linalg/tdb_matrix_with_ids.h"
 #include "detail/linalg/vector.h"
 #include "index/vamana_group.h"
 #include "scoring.h"
@@ -445,7 +446,7 @@ class vamana_index {
    * The feature vectors.  These contain the original input vectors, modified
    * with updates and deletions over time.
    */
-  ColMajorMatrix<feature_type> feature_vectors_;
+  ColMajorMatrixWithIds<feature_type, id_type> feature_vectors_;
 
   /****************************************************************************
    * Index representation
@@ -535,13 +536,15 @@ class vamana_index {
     alpha_max_ = group_->get_alpha_max();
     medoid_ = group_->get_medoid();
 
-    feature_vectors_ = std::move(tdbColMajorPreLoadMatrix<feature_type>(
-        group_->cached_ctx(),
-        group_->feature_vectors_uri(),
-        dimension_,
-        num_vectors_,
-        0,
-        timestamp_));
+    feature_vectors_ =
+        std::move(tdbColMajorPreLoadMatrixWithIds<feature_type, id_type>(
+            group_->cached_ctx(),
+            group_->feature_vectors_uri(),
+            group_->feature_vector_ids_uri(),
+            dimension_,
+            num_vectors_,
+            0,
+            timestamp_));
 
     /*
      * Read the feature vectors
@@ -616,13 +619,17 @@ class vamana_index {
    */
   template <feature_vector_array Array>
   void train(const Array& training_set) {
-    feature_vectors_ = std::move(ColMajorMatrix<feature_type>(
+    feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
         ::dimension(training_set), ::num_vectors(training_set)));
     std::copy(
         training_set.data(),
         training_set.data() +
             ::dimension(training_set) * ::num_vectors(training_set),
         feature_vectors_.data());
+    // TODO(paris): Read IDs from training_set if they exist.
+    auto ids = std::vector<id_type>(::num_vectors(training_set));
+    std::iota(ids.begin(), ids.end(), 0);
+    std::copy(ids.begin(), ids.end(), feature_vectors_.ids().begin());
 
     dimension_ = ::dimension(feature_vectors_);
     num_vectors_ = ::num_vectors(feature_vectors_);
@@ -877,6 +884,14 @@ class vamana_index {
         ctx,
         feature_vectors_,
         write_group.feature_vectors_uri(),
+        0,
+        false,
+        timestamp_);
+
+    write_vector(
+        ctx,
+        feature_vectors_.ids(),
+        write_group.feature_vector_ids_uri(),
         0,
         false,
         timestamp_);
