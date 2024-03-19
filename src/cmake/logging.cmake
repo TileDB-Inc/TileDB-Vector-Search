@@ -1,4 +1,5 @@
 
+if(NOT EXISTS ${CMAKE_SOURCE_DIR}/config.h)
 
 # Get the current date and time
 string(TIMESTAMP CURRENT_DATETIME "%Y-%m-%d %H:%M:%S")
@@ -58,3 +59,5 @@ execute_process(
 )
 
 get_filename_component(IVF_HACK_CXX_COMPILER ${CMAKE_CXX_COMPILER} NAME)
+
+endif()
