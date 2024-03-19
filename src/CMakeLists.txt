@@ -175,7 +175,7 @@ include(nlohmann_json)
 include (logging)
 
 # Write config file
-if(NOT EXISTS ${CMAKE_SOURCE_DIR}/config.h)
+if(LOGGING_INFO_QUERIED)
     configure_file(${CMAKE_SOURCE_DIR}/include/config.h.in ${CMAKE_SOURCE_DIR}/config.h)
 endif()
 

@@ -1,5 +1,4 @@
-
-if(NOT EXISTS ${CMAKE_SOURCE_DIR}/config.h)
+if(EXISTS ${CMAKE_SOURCE_DIR}/../.git)
 
 # Get the current date and time
 string(TIMESTAMP CURRENT_DATETIME "%Y-%m-%d %H:%M:%S")
@@ -60,4 +59,8 @@ execute_process(
 
 get_filename_component(IVF_HACK_CXX_COMPILER ${CMAKE_CXX_COMPILER} NAME)
 
+set(LOGGING_INFO_QUERIED)
+
+elseif(NOT EXISTS ${CMAKE_SOURCE_DIR}/config.h)
+    message(FATAL_ERROR ".git or pre generated config.h is required")
 endif()
