@@ -42,8 +42,7 @@ class Index:
 
         self.uri = uri
         self.config = config
-        self.ctx_vspy = vspy.Ctx(config)
-        self.ctx_tiledb = tiledb.Ctx(config)
+        self.ctx = vspy.Ctx(config)
         self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
         self.storage_version = self.group.meta.get("storage_version", "0.1")
         if (

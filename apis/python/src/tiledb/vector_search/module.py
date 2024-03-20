@@ -22,7 +22,7 @@ def load_as_matrix(
     path: str
         Array path
     ctx: vspy.Ctx
-        TileDB context
+        The vspy Context
     size: int
         Size of vectors to load. If not set we will read from 0 to the column domain length.
     """
@@ -280,7 +280,7 @@ def ivf_query_ram(
     nthreads: int
         Number of theads
     ctx: vspy.Ctx
-        Tiledb Context
+        The vspy Context
     """
     if ctx is None:
         ctx = vspy.Ctx({})
