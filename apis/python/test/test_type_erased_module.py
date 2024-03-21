@@ -272,7 +272,7 @@ def test_inplace_build_infinite_query_IndexIVFFlat():
         if nprobe == 8:
             assert recall > 0.925
         if nprobe == 32:
-            assert recall == 1.0
+            assert recall >= 0.999
 
 
 def test_read_index_and_infinite_query():

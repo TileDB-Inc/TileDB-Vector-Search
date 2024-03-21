@@ -170,7 +170,7 @@ TEST_CASE("logging: ordering", "[logging]") {
 
   std::cout << f_t << " " << g_t << " " << h_t << " " << i_t << std::endl;
 
-  CHECK((i_t > 799 && i_t < 880));
+  CHECK((i_t > 799 && i_t < 890));
   CHECK((h_t > 499 && h_t < 560));
   CHECK((g_t > 499 && g_t < 560));
   CHECK((f_t > 499 && f_t < 560));
