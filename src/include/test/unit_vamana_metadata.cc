@@ -167,11 +167,8 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
         case TILEDB_UINT32:
           CHECK(value == *static_cast<const uint32_t*>(v));
           break;
-        case TILEDB_STRING_UTF8:
-          CHECK(name == "mystery string utf8");
-          break;
         default:
-          CHECK(name == "mystery name");
+          CHECK(false);
           break;
       }
     }
