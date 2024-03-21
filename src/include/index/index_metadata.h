@@ -36,7 +36,7 @@
  *  "index_type",            // "FLAT", "IVF_FLAT", "Vamana"
  *  "ingestion_timestamps",  // (json) list
  *  "storage_version",       // "0.3"
- *  "temp_size",             // TILEDB_INT64
+ *  "temp_size",             // TILEDB_INT64 or TILEDB_FLOAT64
  *
  *  "feature_datatype",      // TILEDB_UINT32
  *  "id_datatype",           // TILEDB_UINT32
@@ -211,6 +211,21 @@ class base_index_metadata {
     }
     read_group.get_metadata(name, &v_type, &v_num, &v);
 
+    // Handle temp_size as a special case for now
+    if (name == "temp_size") {
+      if (v_type == TILEDB_INT64) {
+        *static_cast<int64_t*>(value) = *static_cast<const int64_t*>(v);
+      } else if (v_type == TILEDB_FLOAT64) {
+        *static_cast<int64_t*>(value) =
+            static_cast<int64_t>(*static_cast<const double*>(v));
+      } else {
+        throw std::runtime_error(
+            "temp_size must be a int64_t or float64 not " +
+            tiledb::impl::type_to_str(v_type));
+      }
+      return;
+    }
+
     if (v_type != type) {
       throw std::runtime_error(
           name + " must be a " + tiledb::impl::type_to_str(type) + " not " +
@@ -270,6 +285,20 @@ class base_index_metadata {
     for (auto& check :
          static_cast<IndexMetadata*>(this)->metadata_arithmetic_checks_impl) {
       check_arithmetic_metadata(read_group, check);
+    }
+
+    if (!read_group.has_metadata("temp_size", &v_type)) {
+      throw std::runtime_error("Missing metadata: temp_size");
+    }
+    read_group.get_metadata("temp_size", &v_type, &v_num, &v);
+    if (v_type == TILEDB_INT64) {
+      temp_size_ = *static_cast<const int64_t*>(v);
+    } else if (v_type == TILEDB_FLOAT64) {
+      temp_size_ = static_cast<int64_t>(*static_cast<const double*>(v));
+    } else {
+      throw std::runtime_error(
+          "temp_size must be a int64_t or float64 not " +
+          tiledb::impl::type_to_str(v_type));
     }
 
     base_sizes_ = json_to_vector<base_sizes_type>(base_sizes_str_);

@@ -138,6 +138,14 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
       read_group.get_metadata(name, &v_type, &v_num, &v);
 
+      if (name == "temp_size") {
+        CHECK((v_type == TILEDB_INT64 || v_type == TILEDB_FLOAT64));
+        if (v_type == TILEDB_INT64) {
+          CHECK(value == *static_cast<const int64_t*>(v));
+        } else if (v_type == TILEDB_FLOAT64) {
+          CHECK(value == (int64_t) * static_cast<const double*>(v));
+        }
+      }
       CHECK(
           (v_type == TILEDB_UINT32 || v_type == TILEDB_INT64 ||
            v_type == TILEDB_UINT64 || v_type == TILEDB_FLOAT64 ||
