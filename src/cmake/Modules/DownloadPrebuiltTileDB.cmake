@@ -37,7 +37,7 @@ function(fetch_tiledb_release_list VERSION EXPECTED_HASH)
         if(${EXPECTED_HASH})
                 file(DOWNLOAD
                         ${UPSTREAM_URL}/${VERSION}/releases.csv
-                        releases.csv
+                        ${CMAKE_CURRENT_BINARY_DIR}/releases.csv
                         SHOW_PROGRESS
                         EXPECTED_HASH ${EXPECTED_HASH}
                 )
@@ -45,7 +45,7 @@ function(fetch_tiledb_release_list VERSION EXPECTED_HASH)
                 message(WARNING "Downloading release list without SHA checksum!")
                 file(DOWNLOAD
                         ${UPSTREAM_URL}/${VERSION}/releases.csv
-                        releases.csv
+                        ${CMAKE_CURRENT_BINARY_DIR}/releases.csv
                         SHOW_PROGRESS
                 )
         endif()
