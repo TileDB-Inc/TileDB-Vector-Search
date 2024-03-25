@@ -358,7 +358,6 @@ class base_index_group {
         open_for_read(cfg);
         break;
       case TILEDB_WRITE:
-        // set_dimension(dimension);
         open_for_write(cfg);
         break;
       case TILEDB_MODIFY_EXCLUSIVE:

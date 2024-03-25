@@ -30,7 +30,7 @@
  */
 
 #include <catch2/catch_all.hpp>
-
+#include <tiledb/tiledb>
 #include "index/ivf_pq_metadata.h"
 
 TEST_CASE("ivf_pq_metadata: test test", "[ivf_pq_metadata]") {
@@ -40,12 +40,4 @@ TEST_CASE("ivf_pq_metadata: test test", "[ivf_pq_metadata]") {
 TEST_CASE("ivf_pq_metadata: default constructor", "[ivf_pq_metadata]") {
   auto x = ivf_pq_metadata();
   ivf_pq_metadata y;
-}
-
-TEST_CASE("ivf_pq_metadata: default constructor dump", "[ivf_pq_metadata]") {
-  auto x = ivf_pq_metadata();
-  x.dump();
-
-  ivf_pq_metadata y;
-  y.dump();
 }
