@@ -29,10 +29,8 @@
  *
  * Test the inner product distance functions
  */
+#include <catch2/catch_all.hpp>
 #include "detail/scoring/inner_product.h"
-
-TEST_CASE("inner_product_distance: null test", "[inner_product_distance]") {
-}
 
 TEST_CASE(
     "inner_product_distance: simple vectors", "[inner_product_distance]") {

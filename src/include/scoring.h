@@ -165,6 +165,11 @@ using counting_sum_of_squares_distance =
 inline auto counting_l2_distance =
     _l2_distance::counting_sum_of_squares_distance{};
 
+using logging_sum_of_squares_distance =
+    _l2_distance::logging_sum_of_squares_distance;
+inline auto logging_l2_distance =
+    _l2_distance::logging_sum_of_squares_distance{};
+
 /**
  * @brief Create a sub distance function object based on a full distance
  * function. There are overloads for cached and uncached sub distance, based
