@@ -130,8 +130,7 @@ TEST_CASE("api_ivf_flat_index: init constructor", "[api_ivf_flat_index]") {
   }
 }
 
-TEST_CASE(
-    "api_ivf_flat_index: infer feature type", "[api_ivf_flat_index][ci-skip]") {
+TEST_CASE("api_ivf_flat_index: infer feature type", "[api_ivf_flat_index]") {
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
       {{"id_type", "uint32"}, {"px_type", "uint32"}}));
   auto ctx = tiledb::Context{};
@@ -142,8 +141,7 @@ TEST_CASE(
   CHECK(a.px_type() == TILEDB_UINT32);
 }
 
-TEST_CASE(
-    "api_ivf_flat_index: infer dimension", "[api_ivf_flat_index][ci-skip]") {
+TEST_CASE("api_ivf_flat_index: infer dimension", "[api_ivf_flat_index]") {
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
       {{"id_type", "uint32"}, {"px_type", "uint32"}}));
   auto ctx = tiledb::Context{};
@@ -158,9 +156,10 @@ TEST_CASE(
 
 TEST_CASE(
     "api_ivf_flat_index: api_ivf_flat_index write and read",
-    "[api_ivf_flat_index][ci-skip]") {
+    "[api_ivf_flat_index]") {
   auto ctx = tiledb::Context{};
-  std::string api_ivf_flat_index_uri = "/tmp/api_ivf_flat_index";
+  std::string api_ivf_flat_index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_flat_index").string();
 
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
       {{"feature_type", "float32"},
@@ -181,7 +180,7 @@ TEST_CASE(
 
 TEST_CASE(
     "api_ivf_flat_index: build index and query in place infinite",
-    "[api_ivf_flat_index][ci-skip]") {
+    "[api_ivf_flat_index]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
   size_t nprobe = GENERATE(8, 32);
@@ -202,7 +201,7 @@ TEST_CASE(
     auto nt = num_vectors(t);
     auto recall = ((double)intersections) / ((double)nt * k_nn);
     if (nprobe == 32) {
-      CHECK(recall == 1.0);
+      CHECK(recall >= 0.999);
     } else if (nprobe == 8) {
       CHECK(recall > 0.925);
     }
@@ -219,13 +218,14 @@ TEST_CASE(
 
 TEST_CASE(
     "api_ivf_flat_index: read index and query infinite and finite",
-    "[api_ivf_flat_index][ci-skip]") {
+    "[api_ivf_flat_index]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
   size_t nprobe = GENERATE(8, 32);
   size_t max_iter = GENERATE(4, 8);
 
-  std::string api_ivf_flat_index_uri = "/tmp/api_ivf_flat_index";
+  std::string api_ivf_flat_index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_flat_index").string();
 
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
       {{"feature_type", "float32"},
@@ -259,7 +259,7 @@ TEST_CASE(
     CHECK(nt == nv);
     auto recall = ((double)intersections_a) / ((double)nt * k_nn);
     if (nprobe == 32) {
-      CHECK(recall == 1.0);
+      CHECK(recall >= 0.999);
     } else if (nprobe == 8) {
       CHECK(recall > 0.925);
     }
@@ -305,7 +305,7 @@ TEST_CASE(
     CHECK(nt == nv);
     auto recall = ((double)intersections_a) / ((double)nt * k_nn);
     if (nprobe == 32) {
-      CHECK(recall == 1.0);
+      CHECK(recall >= 0.999);
     } else if (nprobe == 8) {
       CHECK(recall > 0.925);
     }

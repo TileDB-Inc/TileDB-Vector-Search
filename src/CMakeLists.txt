@@ -103,6 +103,11 @@ endif()
 # Control compiler-specific flags.
 include(CompilerFlags)
 
+if (MSVC)
+    add_compile_options(/bigobj)
+    add_compile_definitions("_ITERATOR_DEBUG_LEVEL=0")
+endif()
+
 if (NOT $ENV{CIBUILDWHEEL} EQUAL 1 AND NOT $ENV{CONDA_BUILD} EQUAL 1)
   if(MSVC)
       set(CMAKE_CXX_FLAGS_DEBUG "/Od /Zi /EHsc /RTC1" CACHE STRING "" FORCE)
@@ -172,7 +177,9 @@ include(nlohmann_json)
 include (logging)
 
 # Write config file
-configure_file(${CMAKE_SOURCE_DIR}/include/config.h.in config.h)
+if(LOGGING_INFO_QUERIED)
+    configure_file(${CMAKE_SOURCE_DIR}/include/config.h.in ${CMAKE_SOURCE_DIR}/config.h)
+endif()
 
 # -----------------------------------------------------------------------------
 # Interface libraries

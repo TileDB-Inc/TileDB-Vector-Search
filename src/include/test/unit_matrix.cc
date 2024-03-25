@@ -90,9 +90,7 @@ TEST_CASE("matrix: vector of matrix", "[matrix]") {
   std::vector<Matrix<float>> v;
 
   auto A = Matrix<float>{{8, 6, 7}, {5, 3, 0}, {9, 5, 0}};
-  auto B = Matrix<float>{{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
   auto aptr = A.data();
-  auto bptr = B.data();
 
   SECTION("push_back and emplace_back") {
     SECTION("push_back") {

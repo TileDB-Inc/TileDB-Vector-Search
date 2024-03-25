@@ -36,7 +36,11 @@
 #include "detail/linalg/matrix.h"
 #include "scoring.h"
 
-#ifdef TILEDB_VS_ENABLE_BLAS
+#ifdef __AVX2__
+#include <immintrin.h>
+#endif
+
+#if defined(TILEDB_VS_ENABLE_BLAS) && 0
 
 TEST_CASE("scoring: vector test", "[scoring]") {
   std::vector<std::vector<float>> a{

@@ -220,14 +220,59 @@ TEST_CASE(
   auto array_groundtruth = tdbColMajorPreLoadMatrix<siftsmall_groundtruth_type>(
       ctx, siftsmall_groundtruth_uri);
 
-  auto&& [D00, I00] =
-      detail::flat::qv_query_heap(array_inputs, array_queries, k_nn, 1);
+  SECTION("Invoke with default distance function") {
+    auto&& [D00, I00] =
+        detail::flat::qv_query_heap(array_inputs, array_queries, k_nn, 1);
 
-  size_t intersections00 =
-      (long)count_intersections(I00, array_groundtruth, k_nn);
-  CHECK(intersections00 != 0);
-  size_t expected00 = array_groundtruth.num_cols() * k_nn;
-  CHECK(intersections00 == expected00);
+    size_t intersections00 =
+        (long)count_intersections(I00, array_groundtruth, k_nn);
+    CHECK(intersections00 != 0);
+    size_t expected00 = array_groundtruth.num_cols() * k_nn;
+    CHECK(intersections00 == expected00);
+  }
+
+  SECTION("Invoke with l2_distance function") {
+    auto&& [D00, I00] = detail::flat::qv_query_heap(
+        array_inputs, array_queries, k_nn, 1, l2_distance);
+
+    CHECK(counting_l2_distance.num_comps_ == 0);
+
+    size_t intersections00 =
+        (long)count_intersections(I00, array_groundtruth, k_nn);
+    CHECK(intersections00 != 0);
+    size_t expected00 = array_groundtruth.num_cols() * k_nn;
+    CHECK(intersections00 == expected00);
+  }
+
+  SECTION("Invoke with counting_l2_distance function") {
+    counting_l2_distance.reset();
+    counting_l2_distance.num_comps_ = 99;
+    auto&& [D00, I00] = detail::flat::qv_query_heap(
+        array_inputs, array_queries, k_nn, 1, counting_l2_distance);
+
+    CHECK(counting_l2_distance.num_comps_ == 100 * 10'000 + 99);
+
+    size_t intersections00 =
+        (long)count_intersections(I00, array_groundtruth, k_nn);
+    CHECK(intersections00 != 0);
+    size_t expected00 = array_groundtruth.num_cols() * k_nn;
+    CHECK(intersections00 == expected00);
+  }
+
+  SECTION("Invoke with qv_query_heal_0 counting_l2_distance function") {
+    counting_l2_distance.reset();
+    counting_l2_distance.num_comps_ = 99;
+    auto&& [D00, I00] = detail::flat::qv_query_heap_tiled(
+        array_inputs, array_queries, k_nn, 1, counting_l2_distance);
+
+    CHECK(counting_l2_distance.num_comps_ == 100 * 10'000 + 99);
+
+    size_t intersections00 =
+        (long)count_intersections(I00, array_groundtruth, k_nn);
+    CHECK(intersections00 != 0);
+    size_t expected00 = array_groundtruth.num_cols() * k_nn;
+    CHECK(intersections00 == expected00);
+  }
 }
 
 TEST_CASE(
@@ -236,19 +281,22 @@ TEST_CASE(
   size_t k_nn = 10;
 
   auto array_inputs =
-      read_bin_local<siftsmall_feature_type>(siftsmall_inputs_file);
+      read_bin_local<siftsmall_feature_type>(ctx, siftsmall_inputs_file);
   auto array_queries =
-      read_bin_local<siftsmall_feature_type>(siftsmall_query_file);
-  auto array_groundtruth = read_bin_local<uint32_t>(siftsmall_groundtruth_file);
+      read_bin_local<siftsmall_feature_type>(ctx, siftsmall_query_file);
+  auto array_groundtruth =
+      read_bin_local<uint32_t>(ctx, siftsmall_groundtruth_file);
 
-  auto&& [D00, I00] =
-      detail::flat::qv_query_heap(array_inputs, array_queries, k_nn, 1);
+  SECTION("Invoke with default distance function") {
+    auto&& [D00, I00] =
+        detail::flat::qv_query_heap(array_inputs, array_queries, k_nn, 1);
 
-  size_t intersections00 =
-      (long)count_intersections(I00, array_groundtruth, k_nn);
-  CHECK(intersections00 != 0);
-  size_t expected00 = array_groundtruth.num_cols() * k_nn;
-  CHECK(intersections00 == expected00);
+    size_t intersections00 =
+        (long)count_intersections(I00, array_groundtruth, k_nn);
+    CHECK(intersections00 != 0);
+    size_t expected00 = array_groundtruth.num_cols() * k_nn;
+    CHECK(intersections00 == expected00);
+  }
 }
 
 // @todo: test with tdbMatrix

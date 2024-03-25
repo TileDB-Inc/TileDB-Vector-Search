@@ -27,7 +27,7 @@
  *
  * @section DESCRIPTION
  *
- * Gemm-based scoring.
+ * Top-level include file for all scoring functions (l2, inner_product, cosine)
  *
  */
 
@@ -50,47 +50,23 @@
 #include "utils/timer.h"
 #include "utils/utils.h"
 
-#include "detail/linalg/choose_blas.h"
-
-#include <algorithm>
-#include <cmath>
-#include <future>
-#include <iostream>
-#include <limits>
-#include <memory>
-#include <numeric>
-#include <queue>
-#include <ranges>
-#include <set>
-#include <span>
-// #include <execution>
-
-#include "detail/linalg/linalg_defs.h"
-#include "tdb_defs.h"
-#include "utils/fixed_min_heap.h"
-#include "utils/timer.h"
-
-#include "utils/print_types.h"
-
-// ----------------------------------------------------------------------------
-// Helper utilities
-//----------------------------------------------------------------------------
+// Helper utility
 namespace {
 class with_ids {};
 class without_ids {};
 }  // namespace
 
-// ----------------------------------------------------------------------------
-// Distance functions
-// ----------------------------------------------------------------------------
+/******************************************************************************
+ *
+ * Function objects.  We define these here since they are what is used by the
+ * index implementations.
+ *
+ ******************************************************************************/
 
 /**
- * @brief Compute sum of squares distance between two vectors.
- * @tparam V
- * @tparam U
- * @param a
- * @param b
- * @return
+ * @brief Function object for computing the sum of squared distance
+ * between two vectors.
+ * @tparam T
  */
 #if 0
 template <class V, class U>
@@ -317,19 +293,48 @@ inline auto dot(U const& a, V const& b) {
  * two vectors.
  */
 struct sum_of_squares_distance {
-  template <class V, class U>
-  constexpr auto operator()(const V& a, const U& b) const {
-    return sum_of_squares(a, b);
+#ifdef __AVX2__
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return avx2_sum_of_squares(a, b);
   }
 
-  template <class V>
-  constexpr auto operator()(const V& a) const {
-    return sum_of_squares(a);
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return avx2_sum_of_squares(a);
+  }
+#else
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return unroll4_sum_of_squares(a, b);
+  }
+
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return unroll4_sum_of_squares(a);
+  }
+#endif
+};
+
+/**
+ * @brief Function object for computing the sum of squared distance, augmented
+ * to count the number of comparisons.
+ */
+struct counting_sum_of_squares_distance {
+  static size_t num_comps_;
+
+  template <class V, class U>
+  constexpr auto operator()(const V& a, const U& b) {
+    ++num_comps_;
+    return unroll4_sum_of_squares(a, b);
+  }
+
+  void reset() {
+    num_comps_ = 0;
   }
 };
 
-using l2_distance = sum_of_squares_distance;
-using L2_distance = sum_of_squares_distance;
+inline size_t counting_sum_of_squares_distance::num_comps_ = 0;
 
 /**
  * @brief A distance functor that computes the sum of squares distance between
@@ -341,18 +346,78 @@ struct sub_sum_of_squares_distance {
   size_t stop_{0};
 
  public:
-  sub_sum_of_squares_distance(size_t start, size_t stop)
+  cached_sub_sum_of_squares_distance(size_t start, size_t stop)
       : start_(start)
       , stop_(stop) {
   }
-  template <class V, class U>
+
+  // @todo AVX implementation
+  template <feature_vector V, feature_vector U>
   constexpr auto operator()(const V& a, const U& b) const {
-    return sub_sum_of_squares(a, b, start_, stop_);
+    return unroll4_sum_of_squares(a, b, start_, stop_);
   }
 };
 
-using sub_l2_distance = sub_sum_of_squares_distance;
-using sub_L2_distance = sub_sum_of_squares_distance;
+struct uncached_sub_sum_of_squares_distance {
+  // @todo AVX implementation
+  template <feature_vector V, feature_vector U>
+  constexpr auto operator()(
+      const V& a, const U& b, size_t start, size_t stop) const {
+    return unroll4_sum_of_squares(a, b, start, stop);
+  }
+};
+}  // namespace _l2_sub_distance
+
+using cached_sub_sum_of_squares_distance =
+    _l2_sub_distance::cached_sub_sum_of_squares_distance;
+
+using uncached_sub_sum_of_squares_distance =
+    _l2_sub_distance::uncached_sub_sum_of_squares_distance;
+
+using sub_sum_of_squares_distance =
+    _l2_sub_distance::cached_sub_sum_of_squares_distance;
+
+template <feature_vector U, feature_vector V>
+auto sub_l2_distance(const U& u, const V& v, size_t i, size_t j) {
+  return unroll4_sum_of_squares(u, v, i, j);
+}
+
+/**
+ * @brief Function object for computing the sum of squared distance
+ * between two vectors.
+ * @tparam T
+ */
+namespace _inner_product_distance {
+
+struct inner_product_distance {
+#ifdef __AVX2__
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return avx2_inner_product(a, b);
+  }
+
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return avx2_inner_product(a);
+  }
+#else
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return unroll4_inner_product(a, b);
+  }
+
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return unroll4_inner_product(a);
+  }
+#endif
+};
+
+}  // namespace _inner_product_distance
+
+using inner_product_distance = _inner_product_distance::inner_product_distance;
+inline constexpr auto inner_product =
+    _inner_product_distance::inner_product_distance{};
 
 /**
  * An augmented distance functor that counts the number of distance
@@ -750,7 +815,7 @@ auto count_intersections(const U& I, const V& groundtruth, size_t k_nn) {
   return total_intersected;
 };
 
-#ifdef TILEDB_VS_ENABLE_BLAS
+#if defined(TILEDB_VS_ENABLE_BLAS) && 0
 
 /**
  * @brief Foreach input vector, apply a function to each element of the

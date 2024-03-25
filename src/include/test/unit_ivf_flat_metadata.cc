@@ -35,6 +35,8 @@
 #include <string>
 
 #include "array_defs.h"
+#include "detail/linalg/tdb_matrix.h"
+#include "index/ivf_flat_index.h"
 #include "index/ivf_flat_metadata.h"
 
 TEST_CASE("ivf_flat_metadata: test test", "[ivf_flat_metadata]") {
@@ -53,6 +55,31 @@ TEST_CASE(
 
   ivf_flat_index_metadata y;
   y.dump();
+}
+
+TEST_CASE(
+    "ivf_flat_metadata: load metadata from index", "[ivf_flat_metadata]") {
+  tiledb::Context ctx;
+  tiledb::Config cfg;
+
+  std::string uri =
+      (std::filesystem::temp_directory_path() / "tmp_ivf_index").string();
+  auto training_vectors =
+      tdbColMajorPreLoadMatrix<float>(ctx, siftsmall_inputs_uri, 0);
+  auto idx = ivf_flat_index<float, uint32_t, uint32_t>(100, 1);
+  idx.train(training_vectors, kmeans_init::kmeanspp);
+  idx.add(training_vectors);
+  idx.write_index(ctx, uri, true);
+
+  auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
+
+  auto x = ivf_flat_index_metadata();
+  x.load_metadata(read_group);
+
+  // Compare two constructed objects.
+  ivf_flat_index_metadata y;
+  y.load_metadata(read_group);
+  CHECK(x.compare_metadata(y));
 }
 
 TEST_CASE("ivf_flat_metadata: open group", "[ivf_flat_metadata]") {

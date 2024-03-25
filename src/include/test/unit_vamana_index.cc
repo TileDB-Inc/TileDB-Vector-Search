@@ -222,7 +222,7 @@ TEST_CASE("vamana: small256 build index", "[vamana]") {
       read_diskann_data(diskann_test_data_file);  // siftsmall_learn_256pts.fbin
   int med = 72;
   int query = 0;
-  CHECK(l2_distance{}(x[med], x[query]) == 125678);
+  CHECK(l2_distance(x[med], x[query]) == 125678);
 
   // We might want to also do a search and verify that the path to 0 from 72
   // is less than 125678
@@ -248,8 +248,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   // The name of the file is "tests/data/siftsmall_learn_256pts.fbin";
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
-    throw std::runtime_error(
-        "Could not open file " + diskann_test_256bin.string());
+    throw std::runtime_error("Could not open file " + diskann_test_256bin);
   }
 
   binary_file.read((char*)&npoints, 4);
@@ -305,7 +304,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
     auto j = init_nodes[i];
     graph.out_edges(j).clear();
     for (auto&& dst : init_nbrs[i]) {
-      auto score = sum_of_squares(x[j], x[dst]);
+      auto score = l2_distance(x[j], x[dst]);
       graph.add_edge(j, dst, score);
       if (debug) {
         std::cout << "Adding edge " << j << " " << dst << " " << score
@@ -487,7 +486,7 @@ TEST_CASE("vamana: greedy grid search", "[vamana]") {
   for (auto&& [src, dst] : edges) {
     CHECK(src < A.num_vertices());
     CHECK(dst < A.num_vertices());
-    A.add_edge(src, dst, sum_of_squares_distance{}(vecs[src], vecs[dst]));
+    A.add_edge(src, dst, l2_distance(vecs[src], vecs[dst]));
   }
 
   // (2, 3): 17 -> {10, 16, 17, 18, 24}
@@ -497,9 +496,9 @@ TEST_CASE("vamana: greedy grid search", "[vamana]") {
   // (4, 6): 33 -> {27, 33, 34}
 
   using expt_type = std::tuple<
-      std::vector<id_type>,
+      std::vector<score_type>,
       id_type,
-      std::vector<id_type>,
+      std::vector<score_type>,
       id_type,
       id_type,
       std::vector<id_type>>;
@@ -570,8 +569,7 @@ TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
       for (auto&& n : top_k) {
         std::cout << n << " (" << nn_hypercube(0, n) << ", "
                   << nn_hypercube(1, n) << ", " << nn_hypercube(2, n) << "), "
-                  << sum_of_squares_distance{}(nn_hypercube[n], query)
-                  << std::endl;
+                  << l2_distance(nn_hypercube[n], query) << std::endl;
       }
       std::cout << "-----\ntop_k\n";
     }
@@ -680,8 +678,7 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
 
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
-    throw std::runtime_error(
-        "Could not open file " + diskann_test_256bin.string());
+    throw std::runtime_error("Could not open file " + diskann_test_256bin);
   }
 
   binary_file.read((char*)&npoints, 4);
@@ -1131,8 +1128,7 @@ TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
 
   std::ifstream binary_file(diskann_test_256bin, std::ios::binary);
   if (!binary_file.is_open()) {
-    throw std::runtime_error(
-        "Could not open file " + diskann_test_256bin.string());
+    throw std::runtime_error("Could not open file " + diskann_test_256bin);
   }
 
   binary_file.read((char*)&npoints, 4);
@@ -1349,7 +1345,8 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   size_t Backtrack{3};
 
   tiledb::Context ctx;
-  std::string vamana_index_uri = "/tmp/tmp_vamana_index";
+  std::string vamana_index_uri =
+      (std::filesystem::temp_directory_path() / "tmp_vamana_index").string();
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
 

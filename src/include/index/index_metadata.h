@@ -158,7 +158,8 @@ class base_index_metadata {
    * @return
    */
   auto check_string_metadata(
-      tiledb::Group& read_group, const metadata_string_check_type& check) {
+      tiledb::Group& read_group,
+      const metadata_string_check_type& check) const {
     tiledb_datatype_t v_type;
     uint32_t v_num;
     const void* v;
