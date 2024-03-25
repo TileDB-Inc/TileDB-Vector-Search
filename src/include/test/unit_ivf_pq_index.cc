@@ -305,7 +305,9 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   idx.train_ivf(training_set, kmeans_init::kmeanspp);
   idx.add(training_set);
 
-  ivf_index_uri = "/tmp/foo";
+  ivf_index_uri =
+      (std::filesystem::temp_directory_path() / "second_tmp_ivf_index")
+          .string();
   idx.write_index(ctx, ivf_index_uri, true);
   auto idx2 = ivf_pq_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
   idx2.read_index_infinite();
