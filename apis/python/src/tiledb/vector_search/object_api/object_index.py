@@ -28,8 +28,13 @@ class ObjectIndex:
         timestamp=None,
         load_embedding: bool = True,
         load_metadata_in_memory: bool = True,
+        environment_variables: Dict = {},
         **kwargs,
     ):
+        import os
+
+        for var, val in environment_variables.items():
+            os.environ[var] = val
         with tiledb.scope_ctx(ctx_or_config=config):
             self.uri = uri
             self.config = config
@@ -235,6 +240,7 @@ class ObjectIndex:
         vector_indexing_mode: Mode = Mode.LOCAL,
         config: Optional[Mapping[str, Any]] = None,
         namespace: Optional[str] = None,
+        environment_variables: Dict = {},
         **kwargs,
     ):
         embeddings_array_name = storage_formats[self.index.storage_version][
@@ -268,6 +274,7 @@ class ObjectIndex:
             embeddings_generation_mode=embeddings_generation_mode,
             vector_indexing_mode=vector_indexing_mode,
             config=config,
+            environment_variables=environment_variables,
             **kwargs,
         )
 

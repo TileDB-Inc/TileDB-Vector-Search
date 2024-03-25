@@ -175,7 +175,9 @@ include(nlohmann_json)
 include (logging)
 
 # Write config file
-configure_file(${CMAKE_SOURCE_DIR}/include/config.h.in config.h)
+if(LOGGING_INFO_QUERIED)
+    configure_file(${CMAKE_SOURCE_DIR}/include/config.h.in ${CMAKE_SOURCE_DIR}/config.h)
+endif()
 
 # -----------------------------------------------------------------------------
 # Interface libraries

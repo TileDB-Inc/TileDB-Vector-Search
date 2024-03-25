@@ -82,9 +82,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   using Base::valid_key_names_;
   using Base::version_;
 
-
   // std::reference_wrapper<const index_type> index_;
-
 
   // @todo Make this controllable
   static const int32_t default_domain{std::numeric_limits<int32_t>::max() - 1};
@@ -204,7 +202,6 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     }
     this->init_valid_array_names();
     this->set_dimension(this->cached_index_.get().dimension());
-
 
     static const int32_t tile_size{
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /

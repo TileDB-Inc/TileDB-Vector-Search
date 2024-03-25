@@ -241,6 +241,63 @@ class tdbBlockedMatrixWithIds
   }
 };  // tdbBlockedMatrixWithIds
 
+template <
+    class T,
+    class IdsType = uint64_t,
+    class LayoutPolicy = stdx::layout_right,
+    class I = size_t>
+class tdbPreLoadMatrixWithIds
+    : public tdbBlockedMatrixWithIds<T, IdsType, LayoutPolicy, I> {
+  using Base = tdbBlockedMatrixWithIds<T, IdsType, LayoutPolicy, I>;
+
+ public:
+  /**
+   * @brief Construct a new tdbBlockedMatrixWithIds object, limited to
+   * `upper_bound` vectors. In this case, the `Matrix` is column-major, so the
+   * number of vectors is the number of columns.
+   *
+   * @param ctx The TileDB context to use.
+   * @param uri URI of the TileDB array to read.
+   * @param upper_bound The maximum number of vectors to read.
+   */
+  tdbPreLoadMatrixWithIds(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      const std::string& ids_uri,
+      size_t upper_bound = 0,
+      uint64_t timestamp = 0)
+      : tdbPreLoadMatrixWithIds(
+            ctx,
+            uri,
+            ids_uri,
+            std::nullopt,
+            std::nullopt,
+            upper_bound,
+            timestamp) {
+  }
+
+  tdbPreLoadMatrixWithIds(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      const std::string& ids_uri,
+      std::optional<size_t> num_array_rows,
+      std::optional<size_t> num_array_cols,
+      size_t upper_bound = 0,
+      uint64_t timestamp = 0)
+      : Base(
+            ctx,
+            uri,
+            ids_uri,
+            0,
+            num_array_rows,
+            0,
+            num_array_cols,
+            upper_bound,
+            timestamp) {
+    Base::load();
+  }
+};
+
 /**
  * Convenience class for row-major blocked matrices.
  */
@@ -278,5 +335,19 @@ template <
     class LayoutPolicy = stdx::layout_right,
     class I = size_t>
 using tdbMatrixWithIds = tdbBlockedMatrixWithIds<T, IdsType, LayoutPolicy, I>;
+
+/**
+ * Convenience class for row-major matrices.
+ */
+template <class T, class IdsType = uint64_t, class I = size_t>
+using tdbRowMajorPreLoadMatrixWithIds =
+    tdbPreLoadMatrixWithIds<T, IdsType, stdx::layout_right, I>;
+
+/**
+ * Convenience class for column-major matrices.
+ */
+template <class T, class IdsType = uint64_t, class I = size_t>
+using tdbColMajorPreLoadMatrixWithIds =
+    tdbPreLoadMatrixWithIds<T, IdsType, stdx::layout_left, I>;
 
 #endif  // TDB_MATRIX_WITH_IDS_H
