@@ -80,11 +80,12 @@ int ivf_index(
   auto non_empty = array.non_empty_domain<int32_t>();
   auto partitions = non_empty[1].second.second + 1;
 
+  // Read all rows from column 0 -> `partitions`. Set no upper_bound.
   auto centroids = tdbColMajorMatrix<centroids_type>(
       ctx,
       centroids_uri,
       0,
-      0,
+      std::nullopt,
       0,
       partitions,
       0,
@@ -218,8 +219,9 @@ int ivf_index(
     size_t end_pos = 0,
     size_t nthreads = 0,
     uint64_t timestamp = 0) {
-  auto db =
-      tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos, 0, timestamp);
+  // Read all rows from column `start_pos` -> `end_pos`. Set no upper_bound.
+  auto db = tdbColMajorMatrix<T>(
+      ctx, db_uri, 0, std::nullopt, start_pos, end_pos, 0, timestamp);
   db.load();
   std::vector<ids_type> external_ids;
   if (external_ids_uri.empty()) {
@@ -261,8 +263,9 @@ int ivf_index(
     size_t end_pos = 0,
     size_t nthreads = 0,
     uint64_t timestamp = 0) {
-  auto db =
-      tdbColMajorMatrix<T>(ctx, db_uri, 0, 0, start_pos, end_pos, 0, timestamp);
+  // Read all rows from column `start_pos` -> `end_pos`. Set no upper_bound.
+  auto db = tdbColMajorMatrix<T>(
+      ctx, db_uri, 0, std::nullopt, start_pos, end_pos, 0, timestamp);
   db.load();
   return ivf_index<T, ids_type, centroids_type>(
       ctx,

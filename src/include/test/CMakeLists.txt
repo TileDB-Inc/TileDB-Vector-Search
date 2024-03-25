@@ -78,6 +78,8 @@ kmeans_add_test(unit_api_vamana_index)
 
 kmeans_add_test(unit_array_defs)
 
+kmeans_add_test(unit_backwards_compatibility)
+
 kmeans_add_test(unit_concepts)
 
 kmeans_add_test(unit_concepts_vs)
@@ -97,6 +99,8 @@ kmeans_add_test(unit_flat_qv)
 kmeans_add_test(unit_flat_vq)
 
 kmeans_add_test(unit_gen_graphs)
+
+kmeans_add_test(unit_inner_product_distance)
 
 kmeans_add_test(unit_ivf_flat_group)
 

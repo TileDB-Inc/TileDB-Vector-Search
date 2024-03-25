@@ -241,3 +241,134 @@ TEST_CASE("tdb_matrix_with_ids: load from uri", "[tdb_matrix_with_ids]") {
   load(qk);
   CHECK(qk.num_ids() == num_queries);
 }
+
+TEST_CASE("tdb_matrix_with_ids: empty matrix", "[tdb_matrix_with_ids]") {
+  tiledb::Context ctx;
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  std::string tmp_ids_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
+  size_t matrix_dimension{128};
+  int32_t matrix_domain{1000};
+  int32_t tile_extent{100};
+
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_matrix_uri)) {
+    vfs.remove_dir(tmp_matrix_uri);
+  }
+  if (vfs.is_dir(tmp_ids_uri)) {
+    vfs.remove_dir(tmp_ids_uri);
+  }
+
+  create_empty_for_matrix<float, stdx::layout_left>(
+      ctx,
+      tmp_matrix_uri,
+      matrix_dimension,
+      matrix_domain,
+      matrix_dimension,
+      tile_extent);
+  create_empty_for_vector<uint64_t>(
+      ctx, tmp_ids_uri, matrix_domain, tile_extent);
+
+  SECTION("empty") {
+    auto X = tdbColMajorMatrixWithIds<float>(
+        ctx, tmp_matrix_uri, tmp_ids_uri, 0, 0, 0, 0, 10000, 0);
+    X.load();
+    CHECK(X.num_cols() == 0);
+    CHECK(num_vectors(X) == 0);
+    CHECK(X.num_rows() == 0);
+    CHECK(dimension(X) == 0);
+
+    CHECK(X.num_ids() == 0);
+    CHECK(X.ids().size() == 0);
+  }
+  SECTION("filled") {
+    auto X = tdbColMajorMatrixWithIds<float>(ctx, tmp_matrix_uri, tmp_ids_uri);
+    X.load();
+    CHECK(X.num_cols() == matrix_domain);
+    CHECK(num_vectors(X) == matrix_domain);
+    CHECK(X.num_rows() == matrix_dimension);
+    CHECK(dimension(X) == matrix_dimension);
+    CHECK(X.num_ids() == matrix_domain);
+    CHECK(X.ids().size() == matrix_domain);
+
+    auto Y = tdbColMajorMatrixWithIds<float>(std::move(X));
+    CHECK(Y.num_cols() == X.num_cols());
+    CHECK(num_vectors(Y) == num_vectors(X));
+    CHECK(Y.num_rows() == X.num_rows());
+    CHECK(dimension(Y) == dimension(X));
+    CHECK(Y.num_ids() == 1000);
+    CHECK(Y.ids().size() == 1000);
+    Y.load();
+    CHECK(Y.num_cols() == X.num_cols());
+    CHECK(num_vectors(Y) == num_vectors(X));
+    CHECK(Y.num_rows() == X.num_rows());
+    CHECK(dimension(Y) == dimension(X));
+    CHECK(Y.num_ids() == 1000);
+    CHECK(Y.ids().size() == 1000);
+  }
+}
+
+TEMPLATE_TEST_CASE(
+    "tdb_matrix_with_ids: preload", "[tdb_matrix_with_ids]", float, uint8_t) {
+  tiledb::Context ctx;
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  std::string tmp_ids_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
+  int offset = 13;
+  size_t Mrows = 200;
+  size_t Ncols = 500;
+
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_matrix_uri)) {
+    vfs.remove_dir(tmp_matrix_uri);
+  }
+
+  auto X = ColMajorMatrixWithIds<TestType, TestType>(Mrows, Ncols);
+  fill_and_write_matrix(
+      ctx, X, tmp_matrix_uri, tmp_ids_uri, Mrows, Ncols, offset);
+  CHECK(X.ids()[0] == offset + 0);
+  CHECK(X.ids()[1] == offset + 1);
+  CHECK(X.ids()[10] == offset + 10);
+
+  auto Y = tdbPreLoadMatrixWithIds<TestType, TestType, stdx::layout_left>(
+      ctx, tmp_matrix_uri, tmp_ids_uri);
+  CHECK(num_vectors(Y) == num_vectors(X));
+  CHECK(dimension(Y) == dimension(X));
+  CHECK(
+      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+  for (size_t i = 0; i < 5; ++i) {
+    for (size_t j = 0; j < 5; ++j) {
+      CHECK(X(i, j) == Y(i, j));
+    }
+  }
+
+  CHECK(size(Y.ids()) == Y.num_ids());
+  CHECK(size(X.ids()) == X.num_ids());
+  CHECK(X.num_ids() == Y.num_ids());
+  CHECK(std::equal(X.ids().begin(), X.ids().end(), Y.ids().begin()));
+  for (size_t i = 0; i < X.num_ids(); ++i) {
+    CHECK(X.ids()[i] == Y.ids()[i]);
+  }
+
+  auto Z = ColMajorMatrixWithIds<TestType, TestType>(0, 0);
+  Z = std::move(Y);
+
+  CHECK(num_vectors(Z) == num_vectors(X));
+  CHECK(dimension(Z) == dimension(X));
+  CHECK(
+      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Z.data()));
+  for (size_t i = 0; i < 5; ++i) {
+    for (size_t j = 0; j < 5; ++j) {
+      CHECK(X(i, j) == Z(i, j));
+    }
+  }
+
+  CHECK(size(Z.ids()) == Z.num_ids());
+  CHECK(X.num_ids() == Z.num_ids());
+  CHECK(std::equal(X.ids().begin(), X.ids().end(), Z.ids().begin()));
+  for (size_t i = 0; i < X.num_ids(); ++i) {
+    CHECK(X.ids()[i] == Z.ids()[i]);
+  }
+}

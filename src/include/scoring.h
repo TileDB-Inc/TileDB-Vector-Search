@@ -62,14 +62,18 @@ class with_ids {};
 class without_ids {};
 }  // namespace
 
-/****************************************************************
+/******************************************************************************
  *
- * Function objects.  We put these here instead of in the detail
- * header file so that we can specify which functio we want to
- * dispatch to in this header
+ * Function objects.  We define these here since they are what is used by the
+ * index implementations.
  *
- ****************************************************************/
+ ******************************************************************************/
 
+/**
+ * @brief Function object for computing the sum of squared distance
+ * between two vectors.
+ * @tparam T
+ */
 namespace _l2_distance {
 
 struct sum_of_squares_distance {
@@ -96,20 +100,91 @@ struct sum_of_squares_distance {
 #endif
 };
 
+/**
+ * @brief Function object for computing the sum of squared distance, augmented
+ * to count the number of comparisons.
+ */
+struct counting_sum_of_squares_distance {
+  static size_t num_comps_;
+
+  template <class V, class U>
+  constexpr auto operator()(const V& a, const U& b) {
+    ++num_comps_;
+    return unroll4_sum_of_squares(a, b);
+  }
+
+  void reset() {
+    num_comps_ = 0;
+  }
+};
+
+inline size_t counting_sum_of_squares_distance::num_comps_ = 0;
+
+/**
+ * @brief Function object for computing the sum of squared distance, augmented
+ * to count the number of comparisons and to log the number of comparisons
+ * at destruction.
+ */
+struct logging_sum_of_squares_distance {
+  size_t num_comps_{0};
+  std::string msg_{""};
+
+  logging_sum_of_squares_distance() = default;
+  logging_sum_of_squares_distance(const std::string& msg)
+      : msg_(msg) {
+  }
+
+  template <class V, class U>
+  constexpr auto operator()(const V& a, const U& b) {
+    ++num_comps_;
+    return unroll4_sum_of_squares(a, b);
+  }
+
+  void reset() {
+    num_comps_ = 0;
+  }
+
+  ~logging_sum_of_squares_distance() {
+    _count_data.insert_entry(msg_ + " num_ss_comps", num_comps_);
+  }
+};
+
 }  // namespace _l2_distance
 
 using sum_of_squares_distance = _l2_distance::sum_of_squares_distance;
 inline constexpr auto l2_distance = _l2_distance::sum_of_squares_distance{};
 
+using counting_sum_of_squares_distance =
+    _l2_distance::counting_sum_of_squares_distance;
+inline auto counting_l2_distance =
+    _l2_distance::counting_sum_of_squares_distance{};
+
+using logging_sum_of_squares_distance =
+    _l2_distance::logging_sum_of_squares_distance;
+inline auto logging_l2_distance =
+    _l2_distance::logging_sum_of_squares_distance{};
+
+/******************************************************************************
+ *
+ * Functions for computing l2 distance over just a view of each vector.  There
+ *is a caching version, which keeps the start and stop indices in the
+ *constructor, and a non-caching version, which takes the start and stop indices
+ *as arguments.
+ *
+ * The "sub" distance functions are used by pq.
+ *
+ * @todo Investigate how to parameterize the "sub" functions by the distance
+ *function
+ ******************************************************************************/
 namespace _l2_sub_distance {
 
-struct sub_sum_of_squares_distance {
+struct cached_sub_sum_of_squares_distance {
  private:
   size_t start_{0};
   size_t stop_{0};
 
  public:
-  sub_sum_of_squares_distance(size_t start, size_t stop)
+  cached_sub_sum_of_squares_distance(size_t start, size_t stop)
       : start_(start)
       , stop_(stop) {
   }
@@ -121,17 +196,66 @@ struct sub_sum_of_squares_distance {
   }
 };
 
+struct uncached_sub_sum_of_squares_distance {
+  // @todo AVX implementation
+  template <feature_vector V, feature_vector U>
+  constexpr auto operator()(
+      const V& a, const U& b, size_t start, size_t stop) const {
+    return unroll4_sum_of_squares(a, b, start, stop);
+  }
+};
 }  // namespace _l2_sub_distance
 
+using cached_sub_sum_of_squares_distance =
+    _l2_sub_distance::cached_sub_sum_of_squares_distance;
+
+using uncached_sub_sum_of_squares_distance =
+    _l2_sub_distance::uncached_sub_sum_of_squares_distance;
+
 using sub_sum_of_squares_distance =
-    _l2_sub_distance::sub_sum_of_squares_distance;
+    _l2_sub_distance::cached_sub_sum_of_squares_distance;
 
 template <feature_vector U, feature_vector V>
 auto sub_l2_distance(const U& u, const V& v, size_t i, size_t j) {
   return unroll4_sum_of_squares(u, v, i, j);
 }
-// inline constexpr auto sub_l2_distance =
-// _l2_sub_distance::sub_sum_of_squares_distance{};
+
+/**
+ * @brief Function object for computing the sum of squared distance
+ * between two vectors.
+ * @tparam T
+ */
+namespace _inner_product_distance {
+
+struct inner_product_distance {
+#ifdef __AVX2__
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return avx2_inner_product(a, b);
+  }
+
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return avx2_inner_product(a);
+  }
+#else
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return unroll4_inner_product(a, b);
+  }
+
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return unroll4_inner_product(a);
+  }
+#endif
+};
+
+}  // namespace _inner_product_distance
+
+using inner_product_distance = _inner_product_distance::inner_product_distance;
+inline constexpr auto inner_product =
+    _inner_product_distance::inner_product_distance{};
 
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn

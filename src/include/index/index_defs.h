@@ -79,7 +79,8 @@ enum class IndexKind {
 [[maybe_unused]] static std::string current_storage_version{"0.3"};
 
 // @todo Use enum for key rather than string?
-using StorageFormat = std::map<std::string, std::map<std::string, std::string>>;
+using StorageFormat =
+    std::map<std::string, std::unordered_map<std::string, std::string>>;
 [[maybe_unused]] static StorageFormat storage_formats = {
     {"0.1",
      {
