@@ -33,13 +33,13 @@
 #ifndef TILEDB_BFS_H
 #define TILEDB_BFS_H
 
-#include <vector>
 #include <algorithm>
 #include <deque>
-#include <limits>
 #include <iostream>
+#include <limits>
 #include <tuple>
 #include <type_traits>
+#include <vector>
 
 #include "utils/fixed_min_heap.h"
 
@@ -96,7 +96,8 @@ auto bfs_O1(
       ++counter;
     }
   }
-  // std::cout << "visited: " << counter << " of " << size(parents) << std::endl;
+  // std::cout << "visited: " << counter << " of " << size(parents) <<
+  // std::endl;
 
   return parents;
 }
@@ -141,6 +142,5 @@ auto bfs_O0(const Graph& graph, typename std::decay_t<Graph>::id_type source) {
 
   return parents;
 }
-
 
 #endif  // TILEDB_BFS_H

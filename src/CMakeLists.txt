@@ -163,8 +163,6 @@ if (TileDB_EP_FOUND)
     message(STATUS "TileDB include directories are ${_TDB_INCLUDES}")
 endif()
 
-message(STATUS "=====================================================")
-
 include(Docopt)
 include(mdspan)
 include(nlohmann_json)
@@ -213,9 +211,7 @@ target_link_libraries(kmeans_lib INTERFACE
 # -----------------------------------------------------------------------------
 # Command-line interface programs
 # -----------------------------------------------------------------------------
-
 if (BUILD_CLI)
-    message(STATUS "Building CLI programs")
     add_subdirectory(src)
 endif()
 

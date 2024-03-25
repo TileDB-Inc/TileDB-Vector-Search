@@ -153,7 +153,7 @@ int main(int argc, char* argv[]) {
     // auto&& [top_k_scores, top_k] = idx.query(queries, k_nn, Lbuild);
     auto&& [top_k_scores, top_k] = idx.best_first_O4(queries, k_nn, Lbuild);
 
-// print_types(top_k);
+    // print_types(top_k);
     double recall = 0.0;
     if (args["--groundtruth_uri"]) {
       recall = compute_recall(top_k, args);
@@ -176,8 +176,6 @@ int main(int argc, char* argv[]) {
 
     auto queries = tdbColMajorMatrix<feature_type>(ctx, query_uri, nqueries);
     queries.load();
-
-
 
     const std::string alg = [&]() {
       if (args["--bfs"].asBool()) {
@@ -230,7 +228,7 @@ int main(int argc, char* argv[]) {
 
     query_time.stop();
 
-// print_types(top_k);
+    // print_types(top_k);
 
     double recall = 0.0;
     if (args["--groundtruth_uri"]) {
@@ -247,10 +245,7 @@ int main(int argc, char* argv[]) {
           nthreads,
           recall);
     }
-
   };
-
-
 
   auto feature_type = args["--ftype"].asString();
   auto id_type = args["--idtype"].asString();
@@ -277,6 +272,4 @@ int main(int argc, char* argv[]) {
     std::cout << " and/or unsupported id_type " << id_type << std::endl;
     return 1;
   }
-
-
 }

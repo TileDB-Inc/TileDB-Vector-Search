@@ -498,7 +498,6 @@ auto best_first_O3(
 
     assert(size(frontier) <= size(pq));
     // vertex_state_map.erase(p_star);
-
   }
   auto top_k = std::vector<id_type>(k_nn);
   auto top_k_scores = std::vector<score_type>(k_nn);
@@ -521,7 +520,6 @@ auto best_first_O4(
     size_t k_nn,
     size_t Lmax,
     Distance&& distance = Distance{}) {
-
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
   using node_type = std::tuple<score_type, id_type>;
@@ -538,15 +536,13 @@ auto best_first_O4(
   // Map to keep track of state of vertices
   // Key is vertex id, value is state
   // We don't use a map in O4, but instead tag the node ids
-  std::vector<uint8_t> vertex_state_property_map(
-      graph.num_vertices(), 0);
+  std::vector<uint8_t> vertex_state_property_map(graph.num_vertices(), 0);
 
   // Set to keep track of which vertices have been visited
   // Will be returned from this function
   std::unordered_set<id_type> visited;
 
   scoped_timer __{tdb_func__};
-
 
   score_type heuristic = distance(db[source], query);
   pq.insert(heuristic, source);
@@ -614,7 +610,6 @@ auto best_first_O4(
   return std::make_tuple(
       std::move(top_k_scores), std::move(top_k), std::move(visited));
 }
-
 
 template <
     class Graph,
@@ -709,7 +704,7 @@ auto best_first_O5(
       }
     }
 
-  } while(p_star != std::numeric_limits<id_type>::max());
+  } while (p_star != std::numeric_limits<id_type>::max());
 
   auto top_k = std::vector<id_type>(k_nn);
   auto top_k_scores = std::vector<score_type>(k_nn);
@@ -736,6 +731,5 @@ auto best_first_O5(
  *     std::nth_element to limit size to Lmax, marking the vertexes past Lmax
  *     as evicted
  */
-
 
 #endif  // TILEDB_BEST_FIRST_H

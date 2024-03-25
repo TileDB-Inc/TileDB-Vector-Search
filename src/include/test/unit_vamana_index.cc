@@ -1366,39 +1366,3 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   CHECK(idx.compare_adj_scores(idx2));
   CHECK(idx.compare_adj_ids(idx2));
 }
-
-TEST_CASE("vamana: vamana_index read from diskann memory index", "[vamana]") {
-  // Hard code paths temporarily until we canonicalize them
-
-  const std::string index_path =
-      "/Users/lums/TileDB/TileDB-Vector-Search/external/test_data/bins/"
-      "siftsmall/index_siftsmall_learn_R64_L100_A1.2";
-
-  SECTION("open") {
-    auto idx = vamana_index<float, uint64_t>(index_path);
-    int i = 0;
-  }
-  SECTION("open and query") {
-    tiledb::Context ctx;
-    size_t num_queries = 10;
-    size_t k_nn = 10;
-    auto idx = vamana_index<float, uint64_t>(index_path);
-    auto queries =
-        tdbColMajorMatrix<float>(ctx, siftsmall_query_uri, num_queries);
-    queries.load();
-    auto&& [mat_scores, mat_top_k] = idx.query(queries, k_nn, std::make_optional(k_nn));
-
-    auto training_set =
-        tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, idx.ntotal());
-    training_set.load();
-
-    auto&& [qv_scores, qv_top_k] =
-        detail::flat::qv_query_heap(training_set, queries, k_nn, 4);
-
-    size_t total_intersected = count_intersections(mat_top_k, qv_top_k, k_nn);
-
-    auto recall =
-        ((double)total_intersected) / ((double)k_nn * num_vectors(queries));
-    CHECK(recall > 0.80);  // @todo -- had been 0.95?
-  }
-}

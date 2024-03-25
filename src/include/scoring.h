@@ -31,7 +31,6 @@
  *
  */
 
-
 #ifndef TDB_SCORING_H
 #define TDB_SCORING_H
 
@@ -40,7 +39,7 @@
 #endif
 
 #if defined(AVX2_INTRINSICS)
-  #include <immintrin.h>
+#include <immintrin.h>
 #endif
 
 #include <algorithm>
@@ -109,14 +108,14 @@ inline auto sum_of_squares(V const& a, U const& b) {
     __m256 sum_ = _mm256_setzero_ps();
 
     for (int i = 0; i < size_a; i += 8) {
-        __m256 a_vec = _mm256_loadu_ps(ap + i);
-        __m256 b_vec = _mm256_loadu_ps(bp + i);
+      __m256 a_vec = _mm256_loadu_ps(ap + i);
+      __m256 b_vec = _mm256_loadu_ps(bp + i);
 
-        __m256 diff = _mm256_sub_ps(a_vec, b_vec);
+      __m256 diff = _mm256_sub_ps(a_vec, b_vec);
 
-        __m256 squared_diff = _mm256_mul_ps(diff, diff);
+      __m256 squared_diff = _mm256_mul_ps(diff, diff);
 
-        sum_ = _mm256_add_ps(sum_, squared_diff);
+      sum_ = _mm256_add_ps(sum_, squared_diff);
     }
 
     __m128 lo = _mm256_castps256_ps128(sum_);
@@ -132,12 +131,12 @@ inline auto sum_of_squares(V const& a, U const& b) {
 
 #else
 #define UNROLL_4
-#if defined(UNROLL_8) 
-    float diff_0, diff_1, diff_2, diff_3, diff_4, diff_5, diff_6, diff_7, diff_8;
+#if defined(UNROLL_8)
+    float diff_0, diff_1, diff_2, diff_3, diff_4, diff_5, diff_6, diff_7,
+        diff_8;
     const size_t size_0 = 8 * (size_a / 8);
 
-
-    for (size_t i = 0; i < size_0; i+=8) {
+    for (size_t i = 0; i < size_0; i += 8) {
       // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
       diff_0 = a[i + 0] - b[i + 0];
       diff_1 = a[i + 1] - b[i + 1];
@@ -147,41 +146,40 @@ inline auto sum_of_squares(V const& a, U const& b) {
       diff_5 = a[i + 5] - b[i + 5];
       diff_6 = a[i + 6] - b[i + 6];
       diff_7 = a[i + 7] - b[i + 7];
-      sum += diff_0 * diff_0 + diff_1 * diff_1 + diff_2 * diff_2 + diff_3 * diff_3 +
-	diff_4 * diff_4 + diff_5 * diff_5 + diff_6 * diff_6 + diff_7 * diff_7;
+      sum += diff_0 * diff_0 + diff_1 * diff_1 + diff_2 * diff_2 +
+             diff_3 * diff_3 + diff_4 * diff_4 + diff_5 * diff_5 +
+             diff_6 * diff_6 + diff_7 * diff_7;
     }
 #elif defined(UNROLL_4)
     float diff_0, diff_1, diff_2, diff_3;
     const size_t size_0 = 4 * (size_a / 4);
 
-
-    for (size_t i = 0; i < size_0; i+=4) {
+    for (size_t i = 0; i < size_0; i += 4) {
       // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
       diff_0 = a[i + 0] - b[i + 0];
       diff_1 = a[i + 1] - b[i + 1];
       diff_2 = a[i + 2] - b[i + 2];
       diff_3 = a[i + 3] - b[i + 3];
-      sum += diff_0 * diff_0 + diff_1 * diff_1 + diff_2 * diff_2 + diff_3 * diff_3;
-
+      sum +=
+          diff_0 * diff_0 + diff_1 * diff_1 + diff_2 * diff_2 + diff_3 * diff_3;
     }
 #endif
-#if defined (UNROLL_4) || defined (UNROLL_8)
+#if defined(UNROLL_4) || defined(UNROLL_8)
     for (size_t i = size_0; i < size_a; ++i) {
       diff_0 = a[i + 0] - b[i + 0];
       sum += diff_0 * diff_0;
     }
-    #else
+#else
     for (size_t i = 0; i < size_a; ++i) {
       diff_0 = a[i + 0] - b[i + 0];
       sum += diff_0 * diff_0;
     }
 
-    #endif
+#endif
   }
   return sum;
 }
 #endif
-
 
 template <class V>
 inline auto sum_of_squares(V const& a) {
