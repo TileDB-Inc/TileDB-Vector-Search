@@ -139,7 +139,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
   CHECK(f.num_rows() == 128);
   CHECK(f.num_cols() == 256);
 
-  CHECK(sum_of_squares(f[0], f[72]) == 125678);
+  CHECK(l2_distance(f[0], f[72]) == 125678);
   {
     auto n = num_vectors(f);
     CHECK(n != 0);
@@ -166,7 +166,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
     auto min_score = std::numeric_limits<float>::max();
     auto med = std::numeric_limits<size_t>::max();
     for (size_t i = 0; i < n; ++i) {
-      auto score = sum_of_squares(f[i], centroid);
+      auto score = l2_distance(f[i], centroid);
       if (score < min_score) {
         min_score = score;
         med = i;
@@ -179,7 +179,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
 
   if (debug) {
     std::cout << "med " << med << std::endl;
-    std::cout << "f[0] - f[72] = " << sum_of_squares(f[0], f[72]) << std::endl;
+    std::cout << "f[0] - f[72] = " << l2_distance(f[0], f[72]) << std::endl;
   }
 
   CHECK(med == 72);
@@ -331,7 +331,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   if (debug) {
     std::cout << "distance(x[72], x[14] = " << yack << std::endl;
   }
-  // L = 50, R = 4 from one of the Rust tests...
+  // L = 50, R = 4
   size_t L = 45;
   auto query_id = 14;
   size_t k = 2;
@@ -347,7 +347,6 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   set_noisy(noisy);
   auto&& [top_k_scores, top_k, visited] =
       greedy_search(graph, x, med, x[query_id], k, L);
-  set_noisy(false);
 
   CHECK(size(top_k) == k);
   CHECK(size(top_k_scores) == k);

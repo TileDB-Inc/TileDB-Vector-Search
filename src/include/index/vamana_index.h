@@ -418,14 +418,6 @@ class vamana_index {
     return num_comps_;
   }
 
-  auto& get_graph() {
-    return graph_;
-  }
-
-  auto bfs() {
-    return ::bfs_O0(graph_, medoid_);
-  }
-
   auto bfs_O0() {
     return ::bfs_O0(graph_, medoid_);
   }
