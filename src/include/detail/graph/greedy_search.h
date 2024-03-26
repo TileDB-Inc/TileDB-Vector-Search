@@ -378,7 +378,7 @@ auto greedy_search_O1(
         // @todo (actually it does, but shouldn't need it -- need to
         // investigate) if (result.template insert /*<unique_id>*/ (score, p)) {
         if (result.template insert<unique_id>(score, p)) {
-          q2.template insert /*<unique_id>*/ (score, p);
+          q2.template insert<unique_id>(score, p);
         }
       }
     }
