@@ -199,9 +199,9 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   [[nodiscard]] auto feature_vector_ids_uri() const {
     return this->array_key_to_uri("ids_array_name");
   }
-  [[nodiscard]] auto ids_uri() const {
-    return this->array_key_to_uri("ids_array_name");
-  }
+  // [[nodiscard]] auto ids_uri() const {
+  //   return this->array_key_to_uri("ids_array_name");
+  // }
   [[nodiscard]] auto adjacency_scores_uri() const {
     return this->array_key_to_uri("adjacency_scores_array_name");
   }

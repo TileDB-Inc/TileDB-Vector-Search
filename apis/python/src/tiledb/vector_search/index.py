@@ -259,20 +259,19 @@ class Index:
                 return None, None, np.array([], np.uint64)
 
             schema = tiledb.ArraySchema.load(updates_array_uri)
-            print('schema', schema)
+            print('[index@read_additions] schema', schema)
             updates_array = tiledb.open(
                 updates_array_uri, mode="r", timestamp=timestamp
             )
-            print('updates_array', updates_array)
+            print('[index@read_additions] updates_array', updates_array)
             q = updates_array.query(attrs=("vector",), coords=True)
-            print('here')
-            print('q', q[:])
+            print('[index@read_additions] q', q[:])
             data = q[:]
             updates_array.close()
             updated_ids = data["external_id"]
-            print('updated_ids', updated_ids)
+            print('[index@read_additions] updated_ids', updated_ids)
             additions_filter = [len(item) > 0 for item in data["vector"]]
-            print('additions_filter', additions_filter)
+            print('[index@read_additions] additions_filter', additions_filter)
             if len(data["external_id"][additions_filter]) > 0:
                 return (
                     np.vstack(data["vector"][additions_filter]),

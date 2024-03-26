@@ -258,19 +258,6 @@ void init_type_erased_module(py::module_& m) {
             new (&instance) IndexVamana(args);
           })
       .def(
-          "write_index",
-          [](IndexVamana& index,
-             const tiledb::Context& ctx,
-             const std::string& group_uri,
-             bool overwrite) {
-            std::cout << "[type_erased_module@IndexVamana] write_index"
-                      << group_uri << " " << overwrite << std::endl;
-            index.write_index(ctx, group_uri, overwrite);
-          },
-          py::arg("ctx"),
-          py::arg("group_uri"),
-          py::arg_v("overwrite", true))
-      .def(
           "train",
           [](IndexVamana& index, const FeatureVectorArray& vectors) {
             index.train(vectors);
@@ -295,6 +282,19 @@ void init_type_erased_module(py::module_& m) {
           py::arg("vectors"),
           py::arg("top_k"),
           py::arg("opt_l"))
+      .def(
+          "write_index",
+          [](IndexVamana& index,
+             const tiledb::Context& ctx,
+             const std::string& group_uri,
+             bool overwrite) {
+            std::cout << "[type_erased_module@IndexVamana] write_index"
+                      << group_uri << " " << overwrite << std::endl;
+            index.write_index(ctx, group_uri, overwrite);
+          },
+          py::arg("ctx"),
+          py::arg("group_uri"),
+          py::arg_v("overwrite", true))
       .def("feature_type_string", &IndexVamana::feature_type_string)
       .def("id_type_string", &IndexVamana::id_type_string)
       .def(

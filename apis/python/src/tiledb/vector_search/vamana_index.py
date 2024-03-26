@@ -90,14 +90,6 @@ class VamanaIndex(index.Index):
         queries: np.ndarray,
         k: int = 10,
         opt_l: Optional[int] = None,
-        nprobe: int = 1,
-        nthreads: int = -1,
-        use_nuv_implementation: bool = False,
-        mode: Mode = None,
-        resource_class: Optional[str] = None,
-        resources: Optional[Mapping[str, Any]] = None,
-        num_partitions: int = -1,
-        num_workers: int = -1,
     ):
         """
         Query an VAMANA index
@@ -108,33 +100,8 @@ class VamanaIndex(index.Index):
             ND Array of queries
         k: int
             Number of top results to return per query
-        nprobe: int
-            number of probes
-        nthreads: int
-            Number of threads to use for query
-        use_nuv_implementation: bool
-            wether to use the nuv query implementation. Default: False
-        mode: Mode
-            If provided the query will be executed using TileDB cloud taskgraphs.
-            For distributed execution you can use REALTIME or BATCH mode. 
-            For local execution you can use LOCAL mode.
-        resource_class: 
-            The name of the resource class to use ("standard" or "large"). Resource classes define maximum
-            limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode.
-            Cannot be used alongside resources.
-            In REALTIME or BATCH mode if neither resource_class nor resources are provided,
-            we default to the "large" resource class.
-        resources:
-            A specification for the amount of resources to use when executing using TileDB cloud 
-            taskgraphs, of the form: {"cpu": "6", "memory": "12Gi", "gpu": 1}. Can only be used 
-            in BATCH mode. Cannot be used alongside resource_class.
-        num_partitions: int
-            Only relevant for taskgraph based execution.
-            If provided, we split the query execution in that many partitions.
-        num_workers: int
-            Only relevant for taskgraph based execution.
-            If provided, this is the number of workers to use for the query execution.
-
+        opt_l: int
+            How deep to search
         """
         print('[vamana_index@query_internal]')
         if self.size == 0:
@@ -142,32 +109,19 @@ class VamanaIndex(index.Index):
                 (queries.shape[0], k), index.MAX_UINT64
             )
 
-        if mode != Mode.BATCH and resources:
-            raise TypeError("Can only pass resources in BATCH mode")
-        if (mode != Mode.REALTIME and mode != Mode.BATCH) and resource_class:
-            raise TypeError("Can only pass resource_class in REALTIME or BATCH mode")
-
         assert queries.dtype == np.float32
 
         if queries.ndim == 1:
             queries = np.array([queries])
 
-        if nthreads == -1:
-            nthreads = multiprocessing.cpu_count()
+        # queries_m = array_to_matrix(np.transpose(queries))
+        queries = vspy.FeatureVectorArray(vspy.Ctx(self.config), queries)
+        scores, ids = self.index.query(queries, k, opt_l)
+        print('[vamana_index.py] scores', scores, 'ids', ids)
+        # return np.transpose(np.array(d)), np.transpose(np.array(i))
+        return scores, ids
 
-        nprobe = min(nprobe, self.partitions)
-        if mode is None:
-            # queries_m = array_to_matrix(np.transpose(queries))
-            queries = vspy.FeatureVectorArray(vspy.Ctx(self.config), queries)
-            scores, ids = self.index.query(queries, k, opt_l)
-            print('[vamana_index.py] scores', scores, 'ids', ids)
-            # return np.transpose(np.array(d)), np.transpose(np.array(i))
-            return scores, ids
-        else:
-            # TODO(paris): Support taskgraph queries.
-            return [], []
-
-# TODO(paris): Pass more arugments to C++, i.e. storage_version.
+# TODO(paris): Pass more arguments to C++, i.e. storage_version.
 def create(
     uri: str,
     dimensions: int,
@@ -188,6 +142,7 @@ def create(
             adjacency_row_index_type=np.dtype(adjacency_row_index_type).name, 
             dimension=dimensions,
         )
+        # TODO(paris): Run all of this with a single C++ call.
         empty_vector = vspy.FeatureVectorArray(
             dimensions, 
             0, 

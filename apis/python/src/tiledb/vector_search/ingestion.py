@@ -250,9 +250,6 @@ def ingest(
     PARTIAL_WRITE_ARRAY_DIR = storage_formats[storage_version][
         "PARTIAL_WRITE_ARRAY_DIR"
     ]
-    # FEATURE_VECTORS_ARRAY_NAME = storage_formats[storage_version][
-    #     "FEATURE_VECTORS_ARRAY_NAME"
-    # ]
     DEFAULT_ATTR_FILTERS = storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"]
     VECTORS_PER_WORK_ITEM = 20000000
     VECTORS_PER_SAMPLE_WORK_ITEM = 1000000

@@ -359,7 +359,6 @@ class tdbBlockedMatrix : public MatrixBase {
         tdb_func__, elements_to_load * dimension * sizeof(T));
     std::cout << "query.has_results(): " << query.has_results() << std::endl;
     std::cout << "query.query_status(): " << query.query_status() << std::endl;
-    return false;
     // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
       throw std::runtime_error("Query status is not complete");
