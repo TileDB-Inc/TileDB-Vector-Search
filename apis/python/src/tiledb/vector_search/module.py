@@ -5,7 +5,7 @@ import numpy as np
 
 import tiledb
 from tiledb.vector_search._tiledbvspy import *
-
+from tiledb.vector_search import _tiledbvspy as vspy
 
 def load_as_matrix(
     path: str,
@@ -21,8 +21,8 @@ def load_as_matrix(
     ----------
     path: str
         Array path
-    ctx: Ctx
-        TileDB context
+    ctx: vspy.Ctx
+        The vspy Context
     size: int
         Size of vectors to load. If not set we will read from 0 to the column domain length.
     """
@@ -31,7 +31,7 @@ def load_as_matrix(
         config = dict(config)
 
     if ctx is None:
-        ctx = Ctx(config)
+        ctx = vspy.Ctx(config)
 
     a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
@@ -169,9 +169,9 @@ def ivf_index_tdb(
     config: Dict = None,
 ):
     if config is None:
-        ctx = Ctx({})
+        ctx = vspy.Ctx({})
     else:
-        ctx = Ctx(config)
+        ctx = vspy.Ctx(config)
 
     args = tuple(
         [
@@ -214,9 +214,9 @@ def ivf_index(
     config: Dict = None,
 ):
     if config is None:
-        ctx = Ctx({})
+        ctx = vspy.Ctx({})
     else:
-        ctx = Ctx(config)
+        ctx = vspy.Ctx(config)
 
     args = tuple(
         [
@@ -279,11 +279,11 @@ def ivf_query_ram(
         Number of nn
     nthreads: int
         Number of theads
-    ctx: Ctx
-        Tiledb Context
+    ctx: vspy.Ctx
+        The vspy Context
     """
     if ctx is None:
-        ctx = Ctx({})
+        ctx = vspy.Ctx({})
 
     args = tuple(
         [
@@ -355,13 +355,13 @@ def ivf_query(
         Main memory budget
     nthreads: int
         Number of theads
-    ctx: Ctx
-        Tiledb Context
+    ctx: vspy.Ctx
+        The vspy Context
     timestamp: int
         Read timestamp
     """
     if ctx is None:
-        ctx = Ctx({})
+        ctx = vspy.Ctx({})
 
     args = tuple(
         [
@@ -419,7 +419,7 @@ def dist_qv(
     timestamp: int = 0,
 ):
     if ctx is None:
-        ctx = Ctx({})
+        ctx = vspy.Ctx({})
     args = tuple(
         [
             ctx,  # 0

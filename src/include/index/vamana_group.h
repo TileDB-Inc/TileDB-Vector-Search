@@ -48,7 +48,6 @@
 [[maybe_unused]] static StorageFormat vamana_storage_formats = {
     {"0.3",
      {
-         {"feature_vectors_array_name", "feature_vectors"},
          {"adjacency_scores_array_name", "adjacency_scores"},
          {"adjacency_ids_array_name", "adjacency_ids"},
          {"adjacency_row_index_array_name", "adjacency_row_index"},
@@ -172,7 +171,10 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   }
 
   [[nodiscard]] auto feature_vectors_uri() const {
-    return this->array_key_to_uri("feature_vectors_array_name");
+    return this->array_key_to_uri("parts_array_name");
+  }
+  [[nodiscard]] auto feature_vector_ids_uri() const {
+    return this->array_key_to_uri("ids_array_name");
   }
   [[nodiscard]] auto adjacency_scores_uri() const {
     return this->array_key_to_uri("adjacency_scores_array_name");
@@ -184,7 +186,10 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     return this->array_key_to_uri("adjacency_row_index_array_name");
   }
   [[nodiscard]] auto feature_vectors_array_name() const {
-    return this->array_key_to_array_name("feature_vectors_array_name");
+    return this->array_key_to_array_name("parts_array_name");
+  }
+  [[nodiscard]] auto feature_vector_ids_name() const {
+    return this->array_key_to_array_name("ids_array_name");
   }
   [[nodiscard]] auto adjacency_scores_array_name() const {
     return this->array_key_to_array_name("adjacency_scores_array_name");
@@ -251,8 +256,9 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     metadata_.temp_size_ = 0;
 
     /**
-     * Create the arrays: feature_vectors (matrix), adjacency_scores (vector),
-     * adjacency_ids (vector), adjacency_row_index (vector).
+     * Create the arrays: feature_vectors (matrix), feature_vectors_ids
+     * (vector), adjacency_scores (vector), adjacency_ids (vector),
+     * adjacency_row_index (vector).
      */
     create_empty_for_matrix<
         typename index_type::feature_type,
@@ -266,6 +272,15 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
         default_compression);
     write_group.add_member(
         feature_vectors_array_name(), true, feature_vectors_array_name());
+
+    create_empty_for_vector<typename index_type::id_type>(
+        cached_ctx_,
+        feature_vector_ids_uri(),
+        default_domain,
+        tile_size,
+        default_compression);
+    write_group.add_member(
+        feature_vector_ids_name(), true, feature_vector_ids_name());
 
     create_empty_for_vector<typename index_type::score_type>(
         cached_ctx_,

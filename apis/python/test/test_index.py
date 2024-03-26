@@ -8,11 +8,13 @@ import tiledb.vector_search.index as ind
 from tiledb.vector_search import Index
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
+from tiledb.vector_search import vamana_index
 from tiledb.vector_search.index import create_metadata
 from tiledb.vector_search.index import DATASET_TYPE
 from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
+from tiledb.vector_search.vamana_index import VamanaIndex
 from tiledb.vector_search.utils import load_fvecs
 
 
@@ -159,6 +161,30 @@ def test_ivf_flat_index(tmp_path):
         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4}, nprobe=partitions
     )
 
+def test_vamana_index(tmp_path):
+    uri = os.path.join(tmp_path, "array")
+    dimensions = 3
+    vector_type = np.dtype(np.uint8)
+
+    # Create the index.
+    index = vamana_index.create(uri=uri, dimensions=dimensions, vector_type=vector_type, id_type=np.dtype(np.uint32))
+    assert index.get_dimensions() == dimensions
+    query_and_check(
+        index,
+        np.array([[2, 2, 2]], dtype=np.float32),
+        3,
+        {ind.MAX_UINT64}
+    )
+
+    # Open the index.
+    index = VamanaIndex(uri=uri)
+    assert index.get_dimensions() == dimensions
+    query_and_check(
+        index,
+        np.array([[2, 2, 2]], dtype=np.float32),
+        3,
+        {ind.MAX_UINT64}
+    )
 
 def test_delete_invalid_index(tmp_path):
     # We don't throw with an invalid uri.
@@ -179,7 +205,7 @@ def test_delete_index(tmp_path):
 
 
 def test_index_with_incorrect_dimensions(tmp_path):
-    indexes = [flat_index, ivf_flat_index]
+    indexes = [flat_index, ivf_flat_index, vamana_index]
     for index_type in indexes:
         uri = os.path.join(tmp_path, f"array_{index_type.__name__}")
         index = index_type.create(uri=uri, dimensions=3, vector_type=np.dtype(np.uint8))
