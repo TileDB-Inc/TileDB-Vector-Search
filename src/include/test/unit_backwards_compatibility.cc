@@ -53,6 +53,8 @@ TEST_CASE(
     "backwards_compatibility: test_query_old_indices",
     "[backwards_compatibility]") {
   tiledb::Context ctx;
+  tiledb::Config cfg;
+
   std::string datasets_path = backwards_compatibility_root / "data";
   auto base =
       read_bin_local<siftsmall_feature_type>(ctx, siftmicro_inputs_file);
@@ -93,8 +95,11 @@ TEST_CASE(
           index_uri.find("0.0.17") != std::string::npos) {
         continue;
       }
+
+      auto read_group = tiledb::Group(ctx, index_uri, TILEDB_READ, cfg);
       std::vector<float> expected_distances(query_indices.size(), 0.0);
       if (index_uri.find("ivf_flat") != std::string::npos) {
+        // First check that we can query the index.
         auto index = IndexIVFFlat(ctx, index_uri);
         auto&& [scores, ids] =
             index.query_infinite_ram(queries_feature_vector_array, 1, 10);
@@ -111,6 +116,10 @@ TEST_CASE(
           CHECK(ids_span[0][i] == query_indices[i]);
           CHECK(scores_span[0][i] == 0);
         }
+
+        // Next check that we can load the metadata.
+        auto metadata = ivf_flat_index_metadata();
+        metadata.load_metadata(read_group);
       } else if (index_uri.find("flat") != std::string::npos) {
         // TODO(paris): Fix flat_l2_index and re-enable. Right now it just tries
         // to load the URI as a tdbMatrix.

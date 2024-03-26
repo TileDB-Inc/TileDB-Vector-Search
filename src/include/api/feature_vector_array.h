@@ -85,13 +85,16 @@ class FeatureVectorArray {
       const std::string& ids_uri = "",
       size_t num_vectors = 0) {
     std::cout << "[feature_vector_array@FeatureVectorArray]" << std::endl;
-    std::cout << "[feature_vector_array@FeatureVectorArray] uri: " << uri << std::endl;
-    std::cout << "[feature_vector_array@FeatureVectorArray] ids_uri: " << ids_uri << std::endl;
+    std::cout << "[feature_vector_array@FeatureVectorArray] uri: " << uri
+              << std::endl;
+    std::cout << "[feature_vector_array@FeatureVectorArray] ids_uri: "
+              << ids_uri << std::endl;
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
     feature_type_ = get_array_datatype(*array);
     array->close();  // @todo create Matrix constructor that takes opened array
     feature_size_ = datatype_to_size(feature_type_);
-    std::cout << "[feature_vector_array@FeatureVectorArray] feature_type_: " << datatype_to_string(feature_type_) << std::endl;
+    std::cout << "[feature_vector_array@FeatureVectorArray] feature_type_: "
+              << datatype_to_string(feature_type_) << std::endl;
     /**
      * Row and column orientation are kind of irrelevant?  We could dispatch
      * on the layout in the schema, but that might not be necessary.  What is
@@ -112,7 +115,8 @@ class FeatureVectorArray {
       ids_type_ = get_array_datatype(*ids_array);
       array->close();
       ids_size_ = datatype_to_size(ids_type_);
-      std::cout << "[feature_vector_array@FeatureVectorArray] ids_type_: " << datatype_to_string(ids_type_) << std::endl;
+      std::cout << "[feature_vector_array@FeatureVectorArray] ids_type_: "
+                << datatype_to_string(ids_type_) << std::endl;
       auto type = std::tuple{feature_type_, ids_type_};
       if (tdb_col_major_matrix_with_ids_dispatch_table.find(type) ==
           tdb_col_major_matrix_with_ids_dispatch_table.end()) {

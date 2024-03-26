@@ -41,6 +41,7 @@
 #include "detail/linalg/tdb_matrix_with_ids.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "detail/linalg/vector.h"
+#include "scoring.h"
 #include "utils/print_types.h"
 
 #include <list>
@@ -335,6 +336,12 @@ class dummy_feature_vector : public std::vector<T> {
   }
 };
 
+template <class T>
+class dummy_feature_vector_with_size : public std::vector<T> {
+ public:
+  using base = typename std::vector<T>;
+};
+
 template <feature_vector R>
 void foo(const R& r) {
 }
@@ -388,4 +395,136 @@ TEST_CASE("concepts: partitioned_feature_vector_range", "[concepts]") {
 
 TEST_CASE(
     "concepts: contiguous_partitioned_feature_vector_range", "[concepts]") {
+}
+
+TEST_CASE("concepts: distance_function", "[concepts]") {
+  CHECK(!distance_function<
+        int,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  CHECK(!distance_function<
+        std::vector<int>,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+
+  CHECK(distance_function<
+        sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  CHECK(distance_function<
+        logging_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  CHECK(distance_function<
+        counting_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+
+  CHECK(distance_function<
+        inner_product_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+
+  CHECK(distance_function<
+        sub_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  // cached_sub_sum_of_squares_distance is a distance_function because it takes
+  // the sub start & top in the constructor, not the operator. The naming makes
+  // it seem like it should be a sub_distance_function, but it is not.
+  CHECK(distance_function<
+        cached_sub_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  // But uncached_sub_sum_of_squares_distance takes the sub start & top in the
+  // operator so is not a distance_function.
+  CHECK(!distance_function<
+        uncached_sub_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+}
+
+TEST_CASE("concepts: sub_distance_function", "[concepts]") {
+  CHECK(!sub_distance_function<
+        int,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  CHECK(!sub_distance_function<
+        std::vector<int>,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+
+  CHECK(!sub_distance_function<
+        sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  CHECK(!sub_distance_function<
+        logging_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  CHECK(!sub_distance_function<
+        counting_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+
+  CHECK(!sub_distance_function<
+        inner_product_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+
+  // See distance_function for a discussion on these two.
+  CHECK(!sub_distance_function<
+        sub_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  CHECK(!sub_distance_function<
+        cached_sub_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  CHECK(sub_distance_function<
+        uncached_sub_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+}
+
+TEST_CASE("concepts: cached_sub_distance_function", "[concepts]") {
+  CHECK(!cached_sub_distance_function<
+        int,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  CHECK(!cached_sub_distance_function<
+        std::vector<int>,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+
+  CHECK(!cached_sub_distance_function<
+        sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  CHECK(!cached_sub_distance_function<
+        logging_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  CHECK(!cached_sub_distance_function<
+        counting_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+
+  CHECK(!cached_sub_distance_function<
+        inner_product_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+
+  CHECK(cached_sub_distance_function<
+        sub_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  CHECK(cached_sub_distance_function<
+        cached_sub_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
+  CHECK(!cached_sub_distance_function<
+        uncached_sub_sum_of_squares_distance,
+        dummy_feature_vector_with_size<float>,
+        dummy_feature_vector_with_size<float>>);
 }

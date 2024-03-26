@@ -45,8 +45,8 @@
      {
          {"centroids_array_name", "partition_centroids"},
          {"index_array_name", "partition_indexes"},
-        //  {"ids_array_name", "shuffled_vector_ids"},
-        //  {"parts_array_name", "shuffled_vectors"},
+         //  {"ids_array_name", "shuffled_vector_ids"},
+         //  {"parts_array_name", "shuffled_vectors"},
      }}};
 
 template <class Index>
@@ -216,7 +216,7 @@ class ivf_flat_index_group
     // write_group.add_member(parts_uri(), true, parts_array_name());
     write_group.add_member(parts_array_name(), true, parts_array_name());
     std::cout << "IVF_FLAT parts_uri()'," << parts_uri() << std::endl;
-    
+
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_, ids_uri(), default_domain, tile_size, default_compression);
     std::cout << "IVF_FLAT ids_uri()'," << ids_uri() << std::endl;

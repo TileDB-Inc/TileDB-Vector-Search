@@ -41,15 +41,18 @@
 #include "test/test_utils.h"
 #include "utils/utils.h"
 //
-//TEST_CASE("api_feature_vector_array: test test", "[api_feature_vector_array]") {
+// TEST_CASE("api_feature_vector_array: test test",
+// "[api_feature_vector_array]") {
 //  REQUIRE(true);
 //}
 //
-//// ----------------------------------------------------------------------------
+////
+///----------------------------------------------------------------------------
 //// FeatureVectorArray tests
-//// ----------------------------------------------------------------------------
+////
+///----------------------------------------------------------------------------
 //
-//TEST_CASE("api: feature vector array open", "[api]") {
+// TEST_CASE("api: feature vector array open", "[api]") {
 //  tiledb::Context ctx;
 //
 //  auto a = FeatureVectorArray(ctx, sift_inputs_uri);
@@ -73,15 +76,15 @@
 //  CHECK(num_vectors(d) == num_sift_vectors);
 //}
 //
-//template <query_vector_array M>
-//auto _ack(const M& m) {
+// template <query_vector_array M>
+// auto _ack(const M& m) {
 //}
 //
-//auto ack() {
+// auto ack() {
 //  _ack(MatrixView<float>{});
 //}
 //
-//TEST_CASE("api: Matrix constructors and destructors", "[api]") {
+// TEST_CASE("api: Matrix constructors and destructors", "[api]") {
 //  auto a = ColMajorMatrix<int>(3, 7);
 //  auto b = FeatureVectorArray(a);
 //
@@ -89,7 +92,7 @@
 //  auto d = FeatureVectorArray(std::move(c));
 //}
 //
-//TEMPLATE_TEST_CASE(
+// TEMPLATE_TEST_CASE(
 //    "api: FeatureVectorArray feature_type",
 //    "[api]",
 //    int,
@@ -123,7 +126,7 @@
 //  CHECK(g.feature_size() == sizeof(TestType));
 //}
 //
-//TEST_CASE("api: tdbMatrix constructors and destructors", "[api]") {
+// TEST_CASE("api: tdbMatrix constructors and destructors", "[api]") {
 //  tiledb::Context ctx;
 //  auto c = ColMajorMatrix<int>(3, 7);
 //
@@ -141,15 +144,15 @@
 //  auto e = FeatureVectorArray(std::move(d));
 //}
 //
-//#if 0  // This fails with 2.16.0
-//TEST_CASE("api: Arrays going out of scope", "[api]") {
+// #if 0  // This fails with 2.16.0
+// TEST_CASE("api: Arrays going out of scope", "[api]") {
 //  auto ctx = tiledb::Context{};
 //  auto foo = tiledb::Array(ctx, "/tmp/a", TILEDB_READ);
 //  auto bar = std::move(foo);
 //}
-//#endif
+// #endif
 //
-//TEMPLATE_TEST_CASE(
+// TEMPLATE_TEST_CASE(
 //    "api: tdb FeatureVectorArray feature_type",
 //    "[api]",
 //    int,
@@ -194,7 +197,7 @@
 //  }
 //}
 //
-//TEST_CASE("api: query checks", "[api][index]") {
+// TEST_CASE("api: query checks", "[api][index]") {
 //  tiledb::Context ctx;
 //  size_t k_nn = 10;
 //  size_t nthreads = 8;
@@ -227,11 +230,13 @@
 //  }
 //}
 //
-//// ----------------------------------------------------------------------------
+////
+///----------------------------------------------------------------------------
 //// FeatureVectorArray with IDs tests
-//// ----------------------------------------------------------------------------
+////
+///----------------------------------------------------------------------------
 //
-//TEST_CASE("api: feature vector array with IDs open", "[api]") {
+// TEST_CASE("api: feature vector array with IDs open", "[api]") {
 //  tiledb::Context ctx;
 //
 //  auto a = FeatureVectorArray(ctx, sift_inputs_uri, sift_ids_uri);
@@ -245,7 +250,7 @@
 //  CHECK(num_vectors(b) == num_bigann1M_vectors);
 //}
 //
-//TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
+// TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
 //  auto rows = 3;
 //  auto cols = 7;
 //
@@ -334,7 +339,7 @@
 //  }
 //}
 //
-//TEMPLATE_PRODUCT_TEST_CASE(
+// TEMPLATE_PRODUCT_TEST_CASE(
 //    "api: FeatureVectorArray with IDs feature_type",
 //    "[api]",
 //    (ColMajorMatrixWithIds),
@@ -386,7 +391,7 @@
 //  CHECK(g.ids_size() == sizeof(IdsType));
 //}
 //
-//TEST_CASE("api: tdbMatrixWithIds constructors and destructors", "[api]") {
+// TEST_CASE("api: tdbMatrixWithIds constructors and destructors", "[api]") {
 //  tiledb::Context ctx;
 //
 //  int offset = 13;
@@ -395,7 +400,8 @@
 //  std::string tmp_matrix_uri =
 //      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
 //  std::string tmp_ids_uri =
-//      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
+//      (std::filesystem::temp_directory_path() /
+//      "tmp_tdb_ids_matrix").string();
 //
 //  auto c = ColMajorMatrixWithIds<int, float>(rows, cols);
 //  fill_and_write_matrix(
@@ -412,7 +418,7 @@
 //  auto e = FeatureVectorArray(std::move(d));
 //}
 //
-//TEMPLATE_TEST_CASE(
+// TEMPLATE_TEST_CASE(
 //    "api: tdb FeatureVectorArray with IDs feature_type",
 //    "[api]",
 //    uint32_t,
@@ -430,7 +436,8 @@
 //  std::string tmp_matrix_uri =
 //      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
 //  std::string tmp_ids_uri =
-//      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
+//      (std::filesystem::temp_directory_path() /
+//      "tmp_tdb_ids_matrix").string();
 //
 //  auto cc = ColMajorMatrixWithIds<DataType, IdsType>(rows, cols);
 //  fill_and_write_matrix(
@@ -488,58 +495,64 @@ TEST_CASE("api: query checks with IDs", "[api][index]") {
   size_t nthreads = 8;
   size_t num_queries = 50;
 
-//  auto parts_array_uri = "/private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-124/test_vamana_index0/array/shuffled_vectors";
-//  auto ids_array_uri = "/private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-124/test_vamana_index0/array/shuffled_vector_ids";
+  //  auto parts_array_uri =
+  //  "/private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-124/test_vamana_index0/array/shuffled_vectors";
+  //  auto ids_array_uri =
+  //  "/private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-124/test_vamana_index0/array/shuffled_vector_ids";
 
-  auto parts_array_uri = "/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/ivf_flat_group_test_write_constructor/shuffled_vectors";
-  auto ids_array_uri = "/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/ivf_flat_group_test_write_constructor/shuffled_vector_ids";
+  auto parts_array_uri =
+      "/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/"
+      "ivf_flat_group_test_write_constructor/shuffled_vectors";
+  auto ids_array_uri =
+      "/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/"
+      "ivf_flat_group_test_write_constructor/shuffled_vector_ids";
 
   auto z = FeatureVectorArray(ctx, parts_array_uri);
-//  auto nn = dimension(z);
-//  auto nnn = num_vectors(z);
-//  std::cout << "z.dimension() = " << z.dimension() << std::endl;
-//  std::cout << "z.num_vectors() = " << z.num_vectors() << std::endl;
-//  std::cout << "z.num_ids() = " << z.num_ids() << std::endl;
-//  CHECK(dimension(z) == 128);
-//  CHECK(z.dimension() == 128);
-//  CHECK(num_vectors(z) == num_sift_vectors);
-//  CHECK(z.num_vectors() == num_sift_vectors);
-//  CHECK(num_ids(z) == num_sift_vectors);
-//  CHECK(z.num_ids() == num_sift_vectors);
+  //  auto nn = dimension(z);
+  //  auto nnn = num_vectors(z);
+  //  std::cout << "z.dimension() = " << z.dimension() << std::endl;
+  //  std::cout << "z.num_vectors() = " << z.num_vectors() << std::endl;
+  //  std::cout << "z.num_ids() = " << z.num_ids() << std::endl;
+  //  CHECK(dimension(z) == 128);
+  //  CHECK(z.dimension() == 128);
+  //  CHECK(num_vectors(z) == num_sift_vectors);
+  //  CHECK(z.num_vectors() == num_sift_vectors);
+  //  CHECK(num_ids(z) == num_sift_vectors);
+  //  CHECK(z.num_ids() == num_sift_vectors);
 
-//  SECTION("simple check") {
-//    auto z = FeatureVectorArray(ctx, sift_inputs_uri, sift_ids_uri);
-//    auto nn = dimension(z);
-//    auto nnn = num_vectors(z);
-//    CHECK(dimension(z) == 128);
-//    CHECK(z.dimension() == 128);
-//    CHECK(num_vectors(z) == num_sift_vectors);
-//    CHECK(z.num_vectors() == num_sift_vectors);
-//    CHECK(num_ids(z) == num_sift_vectors);
-//    CHECK(z.num_ids() == num_sift_vectors);
-//  }
-//
-//  SECTION("tdbMatrixWithIds") {
-//    auto ck =
-//        tdbColMajorMatrixWithIds<float>(ctx, sift_inputs_uri, sift_ids_uri);
-//    ck.load();
-//    CHECK(num_ids(ck) == num_sift_vectors);
-//    CHECK(ck.num_ids() == num_sift_vectors);
-//
-//    auto qk = tdbColMajorMatrixWithIds<float>(
-//        ctx, sift_query_uri, sift_ids_uri, num_queries);
-//    load(qk);
-//    CHECK(num_ids(qk) == num_queries);
-//    CHECK(qk.num_ids() == num_queries);
-//
-//    auto [ck_scores, ck_top_k] =
-//        detail::flat::qv_query_heap(ck, qk, k_nn, nthreads);
-//
-//    auto gk =
-//        tdbColMajorMatrix<test_groundtruth_type>(ctx, sift_groundtruth_uri);
-//    load(gk);
-//
-//    auto ok = validate_top_k(ck_top_k, gk);
-//    CHECK(ok);
-//  }
+  //  SECTION("simple check") {
+  //    auto z = FeatureVectorArray(ctx, sift_inputs_uri, sift_ids_uri);
+  //    auto nn = dimension(z);
+  //    auto nnn = num_vectors(z);
+  //    CHECK(dimension(z) == 128);
+  //    CHECK(z.dimension() == 128);
+  //    CHECK(num_vectors(z) == num_sift_vectors);
+  //    CHECK(z.num_vectors() == num_sift_vectors);
+  //    CHECK(num_ids(z) == num_sift_vectors);
+  //    CHECK(z.num_ids() == num_sift_vectors);
+  //  }
+  //
+  //  SECTION("tdbMatrixWithIds") {
+  //    auto ck =
+  //        tdbColMajorMatrixWithIds<float>(ctx, sift_inputs_uri, sift_ids_uri);
+  //    ck.load();
+  //    CHECK(num_ids(ck) == num_sift_vectors);
+  //    CHECK(ck.num_ids() == num_sift_vectors);
+  //
+  //    auto qk = tdbColMajorMatrixWithIds<float>(
+  //        ctx, sift_query_uri, sift_ids_uri, num_queries);
+  //    load(qk);
+  //    CHECK(num_ids(qk) == num_queries);
+  //    CHECK(qk.num_ids() == num_queries);
+  //
+  //    auto [ck_scores, ck_top_k] =
+  //        detail::flat::qv_query_heap(ck, qk, k_nn, nthreads);
+  //
+  //    auto gk =
+  //        tdbColMajorMatrix<test_groundtruth_type>(ctx, sift_groundtruth_uri);
+  //    load(gk);
+  //
+  //    auto ok = validate_top_k(ck_top_k, gk);
+  //    CHECK(ok);
+  //  }
 }

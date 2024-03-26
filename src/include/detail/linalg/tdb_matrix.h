@@ -278,8 +278,10 @@ class tdbBlockedMatrix : public MatrixBase {
 
     first_resident_col_ = first_col_;
     last_resident_col_ = first_col_;
-    std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] dimension: " << dimension << std::endl;
-    std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] load_blocksize_: " << load_blocksize_ << std::endl;
+    std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] dimension: " << dimension
+              << std::endl;
+    std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] load_blocksize_: "
+              << load_blocksize_ << std::endl;
 #ifdef __cpp_lib_smart_ptr_for_overwrite
     auto data_ =
         std::make_unique_for_overwrite<T[]>(dimension * load_blocksize_);
@@ -318,13 +320,16 @@ class tdbBlockedMatrix : public MatrixBase {
           "Attribute type mismatch: " + datatype_to_string(attr_type) + " != " +
           datatype_to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
     }
-    std::cout << "[tdbBlockedMatrix::load] attr_name: " << attr_name << std::endl;
+    std::cout << "[tdbBlockedMatrix::load] attr_name: " << attr_name
+              << std::endl;
 
     size_t dimension = last_row_ - first_row_;
-    std::cout << "[tdbBlockedMatrix::load] dimension: " << dimension << std::endl;
+    std::cout << "[tdbBlockedMatrix::load] dimension: " << dimension
+              << std::endl;
     auto elements_to_load =
         std::min(load_blocksize_, last_col_ - last_resident_col_);
-    std::cout << "[tdbBlockedMatrix::load] elements_to_load: " << elements_to_load << std::endl;
+    std::cout << "[tdbBlockedMatrix::load] elements_to_load: "
+              << elements_to_load << std::endl;
     // Return if we're at the end
     if (elements_to_load == 0 || dimension == 0) {
       return false;

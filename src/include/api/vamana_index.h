@@ -138,7 +138,8 @@ class IndexVamana {
          TILEDB_UINT32}};
     tiledb::Config cfg;
     auto obj = tiledb::Object::object(ctx, group_uri);
-    std::cout << "[vamana_index@IndexVamana] obj_type: " << obj.to_str() << std::endl;
+    std::cout << "[vamana_index@IndexVamana] obj_type: " << obj.to_str()
+              << std::endl;
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
 
     for (auto& [name, value, datatype] : metadata) {
@@ -155,9 +156,10 @@ class IndexVamana {
         throw std::runtime_error("Unsupported datatype for metadata: " + name);
       }
     }
-    std::cout << "[vamana_index@IndexVamana] feature_type_string: " << this->feature_type_string()
-              << std::endl;
-    std::cout << "[vamana_index@IndexVamana] id_type_string: " << this->id_type_string() << std::endl;
+    std::cout << "[vamana_index@IndexVamana] feature_type_string: "
+              << this->feature_type_string() << std::endl;
+    std::cout << "[vamana_index@IndexVamana] id_type_string: "
+              << this->id_type_string() << std::endl;
     std::cout << "[vamana_index@IndexVamana] adjacency_row_index_type_string: "
               << this->adjacency_row_index_type_string() << std::endl;
 

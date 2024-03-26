@@ -64,7 +64,10 @@ namespace detail::ivf {
  * Should be able to use only the indices and the query vectors that are active
  * on this node, and return only the min heaps for the active query vectors
  */
-template <class feature_type, class shuffled_ids_type>
+template <
+    class feature_type,
+    class shuffled_ids_type,
+    class Distance = sum_of_squares_distance>
 auto dist_qv_finite_ram_part(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -75,7 +78,8 @@ auto dist_qv_finite_ram_part(
     const std::string& id_uri,
     size_t k_nn,
     uint64_t timestamp = 0,
-    size_t nthreads = std::thread::hardware_concurrency()) {
+    size_t nthreads = std::thread::hardware_concurrency(),
+    Distance&& distance = Distance{}) {
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
@@ -138,6 +142,7 @@ auto dist_qv_finite_ram_part(
           [&query,
            &partitioned_vectors,
            &active_queries = dist_active_queries,
+           &distance,
            k_nn,
            first_part,
            last_part]() {
@@ -149,7 +154,9 @@ auto dist_qv_finite_ram_part(
                 active_queries,
                 k_nn,
                 first_part,
-                last_part);
+                last_part,
+                0,
+                distance);
           }));
     }
   }
@@ -238,7 +245,11 @@ auto dist_qv_finite_ram_part(
   return min_min_scores;
 #endif
 
-template <class feature_type, class shuffled_ids_type>
+// @todo This is a bit of a mess -- clean up parameter list
+template <
+    class feature_type,
+    class shuffled_ids_type,
+    class Distance = sum_of_squares_distance>
 auto dist_qv_finite_ram(
     tiledb::Context& ctx,
     const std::string& part_uri,
@@ -251,7 +262,8 @@ auto dist_qv_finite_ram(
     size_t upper_bound,
     size_t nthreads,
     size_t num_nodes,
-    uint64_t timestamp = 0) {
+    uint64_t timestamp = 0,
+    Distance&& distance = Distance{}) {
   scoped_timer _{tdb_func__ + " " + part_uri};
 
   // Check that the size of the indices vector is correct
@@ -313,7 +325,8 @@ auto dist_qv_finite_ram(
               id_uri,
               k_nn,
               timestamp,
-              nthreads);
+              nthreads,
+              distance);
 #else
       auto temporal_policy =
           (timestamp == 0) ?

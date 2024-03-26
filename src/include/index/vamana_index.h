@@ -44,9 +44,9 @@
 #include "utils/fixed_min_heap.h"
 #include "utils/print_types.h"
 
-#include "detail/linalg/tdb_matrix_with_ids.h"
 #include "detail/graph/adj_list.h"
 #include "detail/graph/graph_utils.h"
+#include "detail/linalg/tdb_matrix_with_ids.h"
 #include "index/vamana_group.h"
 
 #include <tiledb/tiledb>
@@ -536,14 +536,15 @@ class vamana_index {
     alpha_max_ = group_->get_alpha_max();
     medoid_ = group_->get_medoid();
 
-    feature_vectors_ = std::move(tdbColMajorPreLoadMatrixWithIds<feature_type, id_type>(
-        group_->cached_ctx(),
-        group_->feature_vectors_uri(),
-        group_->feature_vector_ids_uri(),
-        dimension_,
-        num_vectors_,
-        0,
-        timestamp_));
+    feature_vectors_ =
+        std::move(tdbColMajorPreLoadMatrixWithIds<feature_type, id_type>(
+            group_->cached_ctx(),
+            group_->feature_vectors_uri(),
+            group_->feature_vector_ids_uri(),
+            dimension_,
+            num_vectors_,
+            0,
+            timestamp_));
 
     /*
      * Read the feature vectors
@@ -891,12 +892,12 @@ class vamana_index {
         timestamp_);
 
     write_vector(
-      ctx,
-      feature_vectors_.ids(),
-      write_group.feature_vector_ids_uri(),
-      0,
-      false,
-      timestamp_);
+        ctx,
+        feature_vectors_.ids(),
+        write_group.feature_vector_ids_uri(),
+        0,
+        false,
+        timestamp_);
 
     std::cout << "[index@write_index] 4" << std::endl;
     auto adj_scores = Vector<score_type>(graph_.num_edges());
