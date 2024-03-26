@@ -475,7 +475,11 @@ auto best_first_O3(
         if (evicted) {
           auto evicted_state_iter = vertex_state_map.find(evicted_id);
           assert(evicted_state_iter != vertex_state_map.end());
-          set_evicted(evicted_state_iter->second);
+
+          if (is_visited(evicted_state_iter->second)) {
+            // Only mark as evicted if not visited
+            set_evicted(evicted_state_iter->second);
+          }
         }
       } else {
         set_evicted(neighbor_state_iter->second);
@@ -571,7 +575,10 @@ auto best_first_O4(
       if (inserted) {
         set_enpqd(vertex_state_property_map[neighbor_id]);
         if (evicted) {
-          set_evicted(vertex_state_property_map[evicted_id]);
+          // Only mark as evicted if not visited
+          if (!is_visited(vertex_state_property_map[evicted_id])) {
+            set_evicted(vertex_state_property_map[evicted_id]);
+          }
           clear_enpqd(vertex_state_property_map[evicted_id]);
         }
       } else {
