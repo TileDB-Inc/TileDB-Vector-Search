@@ -212,6 +212,10 @@ void write_matrix(
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri);
   }
 
+  if (A.num_rows() == 0 || A.num_cols() == 0) {
+    return;
+  }
+
   std::vector<int32_t> subarray_vals{
       0,
       (int)A.num_rows() - 1,
@@ -324,6 +328,11 @@ void write_vector(
   if (create) {
     create_vector(ctx, v, uri);
   }
+
+  if (size(v) == 0) {
+    return;
+  }
+
   // Set the subarray to write into
   std::vector<int32_t> subarray_vals{
       (int)start_pos, (int)start_pos + (int)size(v) - 1};
