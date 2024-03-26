@@ -6,6 +6,7 @@ from typing import Any, Mapping, Optional
 
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
+from tiledb.vector_search import _tiledbvspy as vspy
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
@@ -41,7 +42,7 @@ class Index:
 
         self.uri = uri
         self.config = config
-        self.ctx = Ctx(config)
+        self.ctx = vspy.Ctx(config)
         self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
         self.storage_version = self.group.meta.get("storage_version", "0.1")
         if (

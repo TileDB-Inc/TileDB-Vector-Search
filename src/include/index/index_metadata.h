@@ -36,7 +36,7 @@
  *  "index_type",            // "FLAT", "IVF_FLAT", "Vamana"
  *  "ingestion_timestamps",  // (json) list
  *  "storage_version",       // "0.3"
- *  "temp_size",
+ *  "temp_size",             // TILEDB_INT64 or TILEDB_FLOAT64
  *
  *  "feature_datatype",      // TILEDB_UINT32
  *  "id_datatype",           // TILEDB_UINT32
@@ -89,7 +89,7 @@ class base_index_metadata {
   std::vector<base_sizes_type> base_sizes_;
 
   /** Record size of temp data */
-  uint64_t temp_size_{0};
+  int64_t temp_size_{0};
 
   uint32_t dimension_{0};
 
@@ -127,7 +127,7 @@ class base_index_metadata {
   using metadata_arithmetic_check_type =
       std::tuple<std::string, void*, tiledb_datatype_t, bool>;
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks{
-      {"temp_size", &temp_size_, TILEDB_UINT64, true},
+      {"temp_size", &temp_size_, TILEDB_INT64, true},
       //{"index_kind",
       // nstatic_cast<IndexMetadata*>(this)->index_kind_,
       // TILEDB_UINT64,
@@ -213,14 +213,14 @@ class base_index_metadata {
 
     // Handle temp_size as a special case for now
     if (name == "temp_size") {
-      if (v_type == TILEDB_UINT64) {
-        *static_cast<uint64_t*>(value) = *static_cast<const uint64_t*>(v);
+      if (v_type == TILEDB_INT64) {
+        *static_cast<int64_t*>(value) = *static_cast<const int64_t*>(v);
       } else if (v_type == TILEDB_FLOAT64) {
-        *static_cast<uint64_t*>(value) =
-            static_cast<uint64_t>(*static_cast<const double*>(v));
+        *static_cast<int64_t*>(value) =
+            static_cast<int64_t>(*static_cast<const double*>(v));
       } else {
         throw std::runtime_error(
-            "temp_size must be a uint64_t or float64 not " +
+            "temp_size must be a int64_t or float64 not " +
             tiledb::impl::type_to_str(v_type));
       }
       return;
@@ -237,6 +237,9 @@ class base_index_metadata {
         break;
       case TILEDB_FLOAT32:
         *static_cast<float*>(value) = *static_cast<const float*>(v);
+        break;
+      case TILEDB_INT64:
+        *static_cast<int64_t*>(value) = *static_cast<const int64_t*>(v);
         break;
       case TILEDB_UINT64:
         *static_cast<uint64_t*>(value) = *static_cast<const uint64_t*>(v);
@@ -288,13 +291,13 @@ class base_index_metadata {
       throw std::runtime_error("Missing metadata: temp_size");
     }
     read_group.get_metadata("temp_size", &v_type, &v_num, &v);
-    if (v_type == TILEDB_UINT64) {
-      temp_size_ = *static_cast<const uint64_t*>(v);
+    if (v_type == TILEDB_INT64) {
+      temp_size_ = *static_cast<const int64_t*>(v);
     } else if (v_type == TILEDB_FLOAT64) {
-      temp_size_ = static_cast<uint64_t>(*static_cast<const double*>(v));
+      temp_size_ = static_cast<int64_t>(*static_cast<const double*>(v));
     } else {
       throw std::runtime_error(
-          "temp_size must be a uint64_t or float64 not " +
+          "temp_size must be a int64_t or float64 not " +
           tiledb::impl::type_to_str(v_type));
     }
 
@@ -418,6 +421,11 @@ class base_index_metadata {
           if (*static_cast<float*>(value) != *static_cast<float*>(rhs_value)) {
             return false;
           }
+        case TILEDB_INT64:
+          if (*static_cast<int64_t*>(value) !=
+              *static_cast<int64_t*>(rhs_value)) {
+            return false;
+          }
         case TILEDB_UINT64:
           if (*static_cast<uint64_t*>(value) !=
               *static_cast<uint64_t*>(rhs_value)) {
@@ -518,6 +526,10 @@ class base_index_metadata {
           break;
         case TILEDB_FLOAT32:
           std::cout << name << ": " << *static_cast<float*>(value) << std::endl;
+          break;
+        case TILEDB_INT64:
+          std::cout << name << ": " << *static_cast<int64_t*>(value)
+                    << std::endl;
           break;
         case TILEDB_UINT64:
           std::cout << name << ": " << *static_cast<uint64_t*>(value)
