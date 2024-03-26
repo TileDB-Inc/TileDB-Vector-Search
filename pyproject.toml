@@ -41,14 +41,19 @@ wheel.expand-macos-universal-tags = true
 metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
 cmake.source-dir = "src"
 cmake.targets = ["skbuild-export"]
-# TODO: This should be removed, but currently can't bacause: 'src/src/CMakeLists.txt'
 sdist.include = [
-    ".git"
+    "apis/python/src/tiledb/vector_search/version.py",
+    "src/config.h"
+]
+sdist.exclude = [
+    ".github"
 ]
 wheel.packages = ["apis/python/src/tiledb"]
+# We need to run cmake during packaging step in order to generate src/config.h and
+# thus not including .git to generate it later
+sdist.cmake = true
 
 [tool.scikit-build.cmake.define]
-#GIT_REPO_NAME = "placeholder"
 TILEDB_VS_PYTHON = "ON"
 
 [tool.setuptools_scm]

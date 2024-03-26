@@ -139,16 +139,17 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
       read_group.get_metadata(name, &v_type, &v_num, &v);
 
       if (name == "temp_size") {
-        CHECK((v_type == TILEDB_UINT64 || v_type == TILEDB_UINT32));
-        if (v_type == TILEDB_UINT64) {
-          CHECK(value == *static_cast<const uint64_t*>(v));
+        CHECK((v_type == TILEDB_INT64 || v_type == TILEDB_FLOAT64));
+        if (v_type == TILEDB_INT64) {
+          CHECK(value == *static_cast<const int64_t*>(v));
         } else if (v_type == TILEDB_FLOAT64) {
-          CHECK(value == (uint64_t) * static_cast<const double*>(v));
+          CHECK(value == (int64_t) * static_cast<const double*>(v));
         }
       }
       CHECK(
-          (v_type == TILEDB_UINT32 || v_type == TILEDB_UINT64 ||
-           v_type == TILEDB_FLOAT64 || v_type == TILEDB_FLOAT32));
+          (v_type == TILEDB_UINT32 || v_type == TILEDB_INT64 ||
+           v_type == TILEDB_UINT64 || v_type == TILEDB_FLOAT64 ||
+           v_type == TILEDB_FLOAT32));
 
       switch (v_type) {
         case TILEDB_FLOAT64:
@@ -156,6 +157,9 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
           break;
         case TILEDB_FLOAT32:
           CHECK(value == *static_cast<const float*>(v));
+          break;
+        case TILEDB_INT64:
+          CHECK(value == *static_cast<const int64_t*>(v));
           break;
         case TILEDB_UINT64:
           CHECK(value == *static_cast<const uint64_t*>(v));
