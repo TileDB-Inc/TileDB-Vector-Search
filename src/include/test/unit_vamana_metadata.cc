@@ -171,7 +171,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
           CHECK(name == "mystery string utf8");
           break;
         default:
-          CHECK(name == "mystery name");
+          CHECK(false);
           break;
       }
     }
