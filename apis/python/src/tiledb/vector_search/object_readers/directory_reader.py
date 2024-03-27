@@ -290,7 +290,8 @@ class DirectoryReader:
         return None
 
     def list_paths(self):
-        if self.search_uri.startswith("tiledb://"):
+        obj_type = tiledb.object_type(self.search_uri)
+        if obj_type == "group":
             self.paths = find_uris_tiledb_group(
                 search_uri=self.search_uri,
                 include=self.include,
@@ -298,14 +299,8 @@ class DirectoryReader:
                 suffixes=self.suffixes,
                 max_files=self.max_files,
             )
-        elif self.search_uri.startswith("s3://"):
-            self.paths = find_uris_aws(
-                search_uri=self.search_uri,
-                include=self.include,
-                exclude=self.exclude,
-                suffixes=self.suffixes,
-                max_files=self.max_files,
-            )
+        elif obj_type == "array":
+            self.paths = [self.search_uri]
         else:
             self.paths = find_uris_vfs(
                 search_uri=self.search_uri,
