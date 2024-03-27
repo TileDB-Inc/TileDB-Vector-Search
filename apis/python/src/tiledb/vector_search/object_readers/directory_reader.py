@@ -12,10 +12,6 @@ from typing import (
 )
 
 import numpy as np
-from langchain.text_splitter import TextSplitter
-from langchain_community.document_loaders.base import BaseLoader
-from langchain_community.document_loaders.blob_loaders import Blob
-from langchain_core.documents import Document
 
 import tiledb
 
@@ -348,7 +344,10 @@ class DirectoryReader:
         return partitions
 
 
-class TileDBLoader(BaseLoader):
+class TileDBLoader:
+    from langchain.text_splitter import TextSplitter
+    from langchain_core.documents import Document
+
     def __init__(
         self,
         uri: str,
@@ -386,6 +385,8 @@ class TileDBLoader(BaseLoader):
     ) -> Iterator[Document]:
         """A lazy loader for Documents."""
         import mimetypes
+
+        from langchain_community.document_loaders.blob_loaders import Blob
 
         vfs = tiledb.VFS(config=self.config)
         if tiledb.array_exists(self.uri):
