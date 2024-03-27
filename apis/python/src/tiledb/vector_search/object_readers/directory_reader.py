@@ -44,131 +44,127 @@ def match_uri(
 
 def find_uris_vfs(
     search_uri: str,
-    config: Optional[Mapping[str, Any]] = None,
     include: str = "*",
     exclude: Sequence[str] = ["[.]*", "*/[.]*"],
     suffixes: Optional[Sequence[str]] = None,
     max_files: Optional[int] = None,
 ) -> Sequence[str]:
-    with tiledb.scope_ctx(config):
-        vfs = tiledb.VFS(config=config, ctx=tiledb.Ctx(config))
+    vfs = tiledb.VFS()
 
-        def find(
-            uri: str,
-            *,
-            include: str = "*",
-            exclude: Sequence[str] = (),
-            suffixes: Optional[Sequence[str]] = None,
-            max_files: Optional[int] = None,
-        ):
-            # Stop if we have found max_count files
+    def find(
+        uri: str,
+        *,
+        include: str = "*",
+        exclude: Sequence[str] = (),
+        suffixes: Optional[Sequence[str]] = None,
+        max_files: Optional[int] = None,
+    ):
+        # Stop if we have found max_count files
+        if max_files is not None and len(results) >= max_files:
+            return
+        listing = vfs.ls(uri)
+        for file_uri in listing:
+            # Avoid infinite recursion
+            if file_uri == uri:
+                continue
             if max_files is not None and len(results) >= max_files:
                 return
-            listing = vfs.ls(uri)
-            for file_uri in listing:
-                # Avoid infinite recursion
-                if file_uri == uri:
-                    continue
 
-                if vfs.is_dir(file_uri):
-                    find(
-                        file_uri,
-                        include=include,
-                        exclude=exclude,
-                        suffixes=suffixes,
-                        max_files=max_files,
-                    )
+            if vfs.is_dir(file_uri):
+                find(
+                    file_uri,
+                    include=include,
+                    exclude=exclude,
+                    suffixes=suffixes,
+                    max_files=max_files,
+                )
 
-                else:
-                    match = match_uri(
-                        search_uri=search_uri,
-                        file_uri=file_uri,
-                        include=include,
-                        exclude=exclude,
-                        suffixes=suffixes,
-                    )
-                    if match:
-                        results.append(file_uri)
+            else:
+                match = match_uri(
+                    search_uri=search_uri,
+                    file_uri=file_uri,
+                    include=include,
+                    exclude=exclude,
+                    suffixes=suffixes,
+                )
+                if match:
+                    results.append(file_uri)
 
-        # Add one trailing slash to search_uri
-        search_uri = search_uri.rstrip("/") + "/"
-        results = []
-        find(
-            search_uri,
-            include=include,
-            exclude=exclude,
-            suffixes=suffixes,
-            max_files=max_files,
-        )
-        if max_files is not None:
-            return results[:max_files]
-        else:
-            return results
+    # Add one trailing slash to search_uri
+    search_uri = search_uri.rstrip("/") + "/"
+    results = []
+    find(
+        search_uri,
+        include=include,
+        exclude=exclude,
+        suffixes=suffixes,
+        max_files=max_files,
+    )
+    if max_files is not None:
+        return results[:max_files]
+    else:
+        return results
 
 
 def find_uris_tiledb_group(
     search_uri: str,
-    config: Optional[Mapping[str, Any]] = None,
     include: str = "*",
     exclude: Sequence[str] = ["[.]*", "*/[.]*"],
     suffixes: Optional[Sequence[str]] = None,
     max_files: Optional[int] = None,
     verbose: bool = False,
 ) -> Sequence[str]:
-    with tiledb.scope_ctx(config):
+    def find(
+        uri: str,
+        path: str,
+        include: str = "*",
+        exclude: Sequence[str] = (),
+        suffixes: Optional[Sequence[str]] = None,
+        max_files: Optional[int] = None,
+    ):
+        # Stop if we have found max_count files
+        if max_files is not None and len(results) >= max_files:
+            return
+        obj_type = tiledb.object_type(uri)
+        if obj_type == "array":
+            match = match_uri(
+                search_uri="/",
+                file_uri=path,
+                include=include,
+                exclude=exclude,
+                suffixes=suffixes,
+            )
+            if match:
+                results.append(uri)
+        elif obj_type == "group":
+            with tiledb.Group(uri) as grp:
+                for child in list(grp):
+                    find(
+                        uri=child.uri,
+                        path=f"{path}/{child.name}",
+                        include=include,
+                        exclude=exclude,
+                        suffixes=suffixes,
+                        max_files=max_files,
+                    )
 
-        def find(
-            uri: str,
-            path: str,
-            include: str = "*",
-            exclude: Sequence[str] = (),
-            suffixes: Optional[Sequence[str]] = None,
-            max_files: Optional[int] = None,
-        ):
-            # Stop if we have found max_count files
-            if max_files is not None and len(results) >= max_files:
-                return
-            obj_type = tiledb.object_type(uri)
-            if obj_type == "array":
-                match = match_uri(
-                    search_uri="/",
-                    file_uri=path,
-                    include=include,
-                    exclude=exclude,
-                    suffixes=suffixes,
-                )
-                if match:
-                    results.append(uri)
-            elif obj_type == "group":
-                with tiledb.Group(uri) as grp:
-                    for child in list(grp):
-                        find(
-                            uri=child.uri,
-                            path=f"{path}/{child.name}",
-                            include=include,
-                            exclude=exclude,
-                            suffixes=suffixes,
-                            max_files=max_files,
-                        )
-
-        results = []
-        find(
-            uri=search_uri,
-            path="",
-            include=include,
-            exclude=exclude,
-            suffixes=suffixes,
-            max_files=max_files,
-        )
-        if max_files is not None:
-            return results[:max_files]
-        else:
-            return results
+    results = []
+    find(
+        uri=search_uri,
+        path="",
+        include=include,
+        exclude=exclude,
+        suffixes=suffixes,
+        max_files=max_files,
+    )
+    if max_files is not None:
+        return results[:max_files]
+    else:
+        return results
 
 
 def find_uris_aws(
     search_uri: str,
-    config: Optional[Mapping[str, Any]] = None,
     include: str = "*",
     exclude: Sequence[str] = ["[.]*", "*/[.]*"],
     suffixes: Optional[Sequence[str]] = None,
@@ -187,6 +183,7 @@ def find_uris_aws(
 
     search_uri = search_uri.rstrip("/") + "/"
     parsed_path = urlparse(search_uri, allow_fragments=False)
+    config = tiledb.default_ctx().config().dict()
     s3_kwargs = {}
     if (
         "vfs.s3.aws_access_key_id" in config
@@ -263,7 +260,6 @@ class DirectoryReader:
     def __init__(
         self,
         search_uri: str,
-        config: Optional[Mapping[str, Any]] = None,
         include: str = "*",
         exclude: Sequence[str] = ["[.]*", "*/[.]*"],
         suffixes: Optional[Sequence[str]] = None,
@@ -273,7 +269,6 @@ class DirectoryReader:
 
         Args:
             search_uri: Path of directory to load files from.
-            config: TileDB config.
             include: File pattern to iclude relative to `search_uri`. By default set
                 to include all files.
             exclude: File patterns to exclude relative to `search_uri`. By default set
@@ -284,7 +279,6 @@ class DirectoryReader:
             max_files: Maximum number of files to include.
         """
         self.search_uri = search_uri
-        self.config = config
         self.include = include
         self.exclude = exclude
         self.suffixes = suffixes
@@ -301,7 +295,14 @@ class DirectoryReader:
         if self.search_uri.startswith("tiledb://"):
             self.paths = find_uris_tiledb_group(
                 search_uri=self.search_uri,
-                config=self.config,
+                include=self.include,
+                exclude=self.exclude,
+                suffixes=self.suffixes,
+                max_files=self.max_files,
+            )
+        elif self.search_uri.startswith("s3://"):
+            self.paths = find_uris_aws(
+                search_uri=self.search_uri,
                 include=self.include,
                 exclude=self.exclude,
                 suffixes=self.suffixes,
@@ -310,7 +311,6 @@ class DirectoryReader:
         else:
             self.paths = find_uris_vfs(
                 search_uri=self.search_uri,
-                config=self.config,
                 include=self.include,
                 exclude=self.exclude,
                 suffixes=self.suffixes,
@@ -348,7 +348,6 @@ class TileDBLoader:
     def __init__(
         self,
         uri: str,
-        config: Optional[Mapping[str, Any]] = None,
     ) -> None:
         from langchain_community.document_loaders.parsers.generic import (
             MimeTypeBasedParser,
@@ -359,7 +358,6 @@ class TileDBLoader:
         from langchain_community.document_loaders.parsers.txt import TextParser
 
         self.uri = uri
-        self.config = config
         self.parser = MimeTypeBasedParser(
             handlers={
                 "application/pdf": PyMuPDFParser(),
@@ -385,7 +383,7 @@ class TileDBLoader:
 
         from langchain_community.document_loaders.blob_loaders import Blob
 
-        vfs = tiledb.VFS(config=self.config)
+        vfs = tiledb.VFS()
         if tiledb.array_exists(self.uri):
             with tiledb.open(self.uri, "r") as a:
                 mime_type = a.meta.get("mime_type", None)
@@ -415,7 +413,6 @@ class DirectoryTextReader(DirectoryReader):
     def __init__(
         self,
         search_uri: str,
-        config: Optional[Mapping[str, Any]] = None,
         include: str = "*",
         exclude: Sequence[str] = ["[.]*", "*/[.]*"],
         suffixes: Optional[Sequence[str]] = None,
@@ -428,7 +425,6 @@ class DirectoryTextReader(DirectoryReader):
     ):
         super().__init__(
             search_uri=search_uri,
-            config=config,
             include=include,
             exclude=exclude,
             suffixes=suffixes,
@@ -440,7 +436,6 @@ class DirectoryTextReader(DirectoryReader):
     def init_kwargs(self) -> Dict:
         return {
             "search_uri": self.search_uri,
-            "config": self.config,
             "include": self.include,
             "exclude": self.exclude,
             "suffixes": self.suffixes,
@@ -472,7 +467,7 @@ class DirectoryTextReader(DirectoryReader):
         text_splitter = text_splitter_class_(**self.text_splitter_kwargs)
         for uri in partition.paths:
             try:
-                loader = TileDBLoader(uri=uri, config=self.config)
+                loader = TileDBLoader(uri=uri)
                 documents = loader.load_and_split(text_splitter=text_splitter)
                 for d in documents:
                     file_paths[write_id] = str(uri)
@@ -506,7 +501,6 @@ class DirectoryImageReader(DirectoryReader):
     def __init__(
         self,
         search_uri: str,
-        config: Optional[Mapping[str, Any]] = None,
         include: str = "*",
         exclude: Sequence[str] = ["[.]*", "*/[.]*"],
         suffixes: Optional[Sequence[str]] = None,
@@ -514,7 +508,6 @@ class DirectoryImageReader(DirectoryReader):
     ):
         super().__init__(
             search_uri=search_uri,
-            config=config,
             include=include,
             exclude=exclude,
             suffixes=suffixes,
@@ -524,7 +517,6 @@ class DirectoryImageReader(DirectoryReader):
     def init_kwargs(self) -> Dict:
         return {
             "search_uri": self.search_uri,
-            "config": self.config,
             "include": self.include,
             "exclude": self.exclude,
             "suffixes": self.suffixes,
@@ -549,7 +541,7 @@ class DirectoryImageReader(DirectoryReader):
         file_paths = np.empty(size, dtype="O")
         external_ids = np.zeros(size, dtype=np.uint64)
         write_id = 0
-        vfs = tiledb.VFS(config=self.config)
+        vfs = tiledb.VFS()
         for path in partition.paths:
             with vfs.open(path) as fp:
                 image = np.array(Image.open(fp))[:, :, :3]
@@ -578,7 +570,7 @@ class DirectoryImageReader(DirectoryReader):
 
         if self.paths is None:
             self.paths = []
-            vfs = tiledb.VFS(config=self.config)
+            vfs = tiledb.VFS()
             self.list_paths(vfs=vfs, uri=self.uri)
         size = len(ids)
         images = np.empty(size, dtype="O")
@@ -586,7 +578,7 @@ class DirectoryImageReader(DirectoryReader):
         file_paths = np.empty(size, dtype="O")
         external_ids = np.zeros(size, dtype=np.uint64)
         write_id = 0
-        vfs = tiledb.VFS(config=self.config)
+        vfs = tiledb.VFS()
         for id in ids:
             path = self.paths[id]
             with vfs.open(path) as fp:
