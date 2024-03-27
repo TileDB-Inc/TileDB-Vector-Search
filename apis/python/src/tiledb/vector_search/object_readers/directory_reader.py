@@ -344,79 +344,73 @@ class DirectoryReader:
         return partitions
 
 
+class TileDBLoader:
+    def __init__(
+        self,
+        uri: str,
+        config: Optional[Mapping[str, Any]] = None,
+    ) -> None:
+        from langchain_community.document_loaders.parsers.generic import (
+            MimeTypeBasedParser,
+        )
+        from langchain_community.document_loaders.parsers.html import BS4HTMLParser
+        from langchain_community.document_loaders.parsers.msword import MsWordParser
+        from langchain_community.document_loaders.parsers.pdf import PyMuPDFParser
+        from langchain_community.document_loaders.parsers.txt import TextParser
+
+        self.uri = uri
+        self.config = config
+        self.parser = MimeTypeBasedParser(
+            handlers={
+                "application/pdf": PyMuPDFParser(),
+                "text/plain": TextParser(),
+                "text/html": BS4HTMLParser(),
+                "application/msword": MsWordParser(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (
+                    MsWordParser()
+                ),
+            },
+            fallback_parser=None,
+        )
+
+    def load(self) -> List:
+        """Load data into Document objects."""
+        return list(self.lazy_load())
+
+    def lazy_load(
+        self,
+    ) -> Iterator:
+        """A lazy loader for Documents."""
+        import mimetypes
+
+        from langchain_community.document_loaders.blob_loaders import Blob
+
+        vfs = tiledb.VFS(config=self.config)
+        if tiledb.array_exists(self.uri):
+            with tiledb.open(self.uri, "r") as a:
+                mime_type = a.meta.get("mime_type", None)
+            f = tiledb.filestore.Filestore(self.uri)
+        else:
+            mime_type = mimetypes.guess_type(self.uri)[0]
+            f = vfs.open(self.uri)
+
+        if mime_type.startswith("image/"):
+            from langchain_community.document_loaders import UnstructuredFileIOLoader
+
+            unstructured_loader = UnstructuredFileIOLoader(f)
+            yield from unstructured_loader.load()
+
+        else:
+            blob = Blob.from_data(data=f.read(), mime_type=mime_type)
+            yield from self.parser.parse(blob)
+
+    def load_and_split(self, text_splitter) -> List:
+        """Load all documents and split them into sentences."""
+        return text_splitter.split_documents(self.load())
+
+
 class DirectoryTextReader(DirectoryReader):
     MAX_OBJECTS_PER_FILE = 10000
-
-    class TileDBLoader:
-        from langchain.text_splitter import TextSplitter
-        from langchain_core.documents import Document
-
-        def __init__(
-            self,
-            uri: str,
-            config: Optional[Mapping[str, Any]] = None,
-        ) -> None:
-            from langchain_community.document_loaders.parsers.generic import (
-                MimeTypeBasedParser,
-            )
-            from langchain_community.document_loaders.parsers.html import BS4HTMLParser
-            from langchain_community.document_loaders.parsers.msword import MsWordParser
-            from langchain_community.document_loaders.parsers.pdf import PyMuPDFParser
-            from langchain_community.document_loaders.parsers.txt import TextParser
-
-            self.uri = uri
-            self.config = config
-            self.parser = MimeTypeBasedParser(
-                handlers={
-                    "application/pdf": PyMuPDFParser(),
-                    "text/plain": TextParser(),
-                    "text/html": BS4HTMLParser(),
-                    "application/msword": MsWordParser(),
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (
-                        MsWordParser()
-                    ),
-                },
-                fallback_parser=None,
-            )
-
-        def load(self) -> List[Document]:
-            """Load data into Document objects."""
-            return list(self.lazy_load())
-
-        def lazy_load(
-            self,
-        ) -> Iterator[Document]:
-            """A lazy loader for Documents."""
-            import mimetypes
-
-            from langchain_community.document_loaders.blob_loaders import Blob
-
-            vfs = tiledb.VFS(config=self.config)
-            if tiledb.array_exists(self.uri):
-                with tiledb.open(self.uri, "r") as a:
-                    mime_type = a.meta.get("mime_type", None)
-                f = tiledb.filestore.Filestore(self.uri)
-            else:
-                mime_type = mimetypes.guess_type(self.uri)[0]
-                f = vfs.open(self.uri)
-
-            if mime_type.startswith("image/"):
-                from langchain_community.document_loaders import (
-                    UnstructuredFileIOLoader,
-                )
-
-                unstructured_loader = UnstructuredFileIOLoader(f)
-                yield from unstructured_loader.load()
-
-            else:
-                blob = Blob.from_data(data=f.read(), mime_type=mime_type)
-                yield from self.parser.parse(blob)
-
-        def load_and_split(
-            self, text_splitter: Optional[TextSplitter] = None
-        ) -> List[Document]:
-            """Load all documents and split them into sentences."""
-            return text_splitter.split_documents(self.load())
 
     def __init__(
         self,
@@ -478,7 +472,7 @@ class DirectoryTextReader(DirectoryReader):
         text_splitter = text_splitter_class_(**self.text_splitter_kwargs)
         for uri in partition.paths:
             try:
-                loader = DirectoryTextReader.TileDBLoader(uri=uri, config=self.config)
+                loader = TileDBLoader(uri=uri, config=self.config)
                 documents = loader.load_and_split(text_splitter=text_splitter)
                 for d in documents:
                     file_paths[write_id] = str(uri)
