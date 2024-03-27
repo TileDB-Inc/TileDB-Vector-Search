@@ -1,7 +1,21 @@
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, OrderedDict, Sequence, Tuple
+from typing import (
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    OrderedDict,
+    Sequence,
+    Tuple,
+)
 
 import numpy as np
+from langchain.text_splitter import TextSplitter
+from langchain_community.document_loaders.base import BaseLoader
+from langchain_community.document_loaders.blob_loaders import Blob
+from langchain_core.documents import Document
 
 import tiledb
 
@@ -334,6 +348,71 @@ class DirectoryReader:
         return partitions
 
 
+class TileDBLoader(BaseLoader):
+    def __init__(
+        self,
+        uri: str,
+        config: Optional[Mapping[str, Any]] = None,
+    ) -> None:
+        from langchain_community.document_loaders.parsers.generic import (
+            MimeTypeBasedParser,
+        )
+        from langchain_community.document_loaders.parsers.html import BS4HTMLParser
+        from langchain_community.document_loaders.parsers.msword import MsWordParser
+        from langchain_community.document_loaders.parsers.pdf import PyMuPDFParser
+        from langchain_community.document_loaders.parsers.txt import TextParser
+
+        self.uri = uri
+        self.config = config
+        self.parser = MimeTypeBasedParser(
+            handlers={
+                "application/pdf": PyMuPDFParser(),
+                "text/plain": TextParser(),
+                "text/html": BS4HTMLParser(),
+                "application/msword": MsWordParser(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (
+                    MsWordParser()
+                ),
+            },
+            fallback_parser=None,
+        )
+
+    def load(self) -> List[Document]:
+        """Load data into Document objects."""
+        return list(self.lazy_load())
+
+    def lazy_load(
+        self,
+    ) -> Iterator[Document]:
+        """A lazy loader for Documents."""
+        import mimetypes
+
+        vfs = tiledb.VFS(config=self.config)
+        if tiledb.array_exists(self.uri):
+            with tiledb.open(self.uri, "r") as a:
+                mime_type = a.meta.get("mime_type", None)
+            f = tiledb.filestore.Filestore(self.uri)
+        else:
+            mime_type = mimetypes.guess_type(self.uri)[0]
+            f = vfs.open(self.uri)
+
+        if mime_type.startswith("image/"):
+            from langchain_community.document_loaders import UnstructuredFileIOLoader
+
+            unstructured_loader = UnstructuredFileIOLoader(f)
+            yield from unstructured_loader.load()
+
+        else:
+            blob = Blob.from_data(data=f.read(), mime_type=mime_type)
+            yield from self.parser.parse(blob)
+
+    def load_and_split(
+        self, text_splitter: Optional[TextSplitter] = None
+    ) -> List[Document]:
+        """Load all documents and split them into sentences."""
+        return text_splitter.split_documents(self.load())
+
+
 class DirectoryTextReader(DirectoryReader):
     MAX_OBJECTS_PER_FILE = 10000
 
@@ -383,10 +462,8 @@ class DirectoryTextReader(DirectoryReader):
     def read_objects(
         self, partition: DirectoryPartition
     ) -> Tuple[OrderedDict, OrderedDict]:
-        import os
-        import tempfile
+        import importlib
         import traceback
-        from urllib.parse import urlparse
 
         max_size = DirectoryTextReader.MAX_OBJECTS_PER_FILE * len(partition.paths)
         texts = np.empty(max_size, dtype="O")
@@ -394,101 +471,26 @@ class DirectoryTextReader(DirectoryReader):
         pages = np.zeros(max_size, dtype=np.int32)
         external_ids = np.zeros(max_size, dtype=np.uint64)
         write_id = 0
-        vfs = tiledb.VFS(config=self.config)
-        with tempfile.TemporaryDirectory() as temp_dir:
-            for path in partition.paths:
-                try:
-                    local_temp_path = ""
-                    parsed_path = urlparse(path, allow_fragments=False)
-                    if parsed_path.scheme == "tiledb":
-                        key = parsed_path.path.lstrip("/")
-                        with tiledb.open(path, "r") as a:
-                            file_extension = a.meta["file_extension"].lstrip(".")
-                            file_size = a.meta["file_size"]
-                            local_temp_path = f"{temp_dir}/{key}.{file_extension}"
-                            os.makedirs(os.path.dirname(local_temp_path), exist_ok=True)
-                            data = a[:file_size]["contents"]
-                            with open(local_temp_path, "wb") as dst:
-                                dst.write(data)
-                        parsed_path = urlparse(local_temp_path, allow_fragments=False)
-                    if parsed_path.scheme == "s3":
-                        # Copy remote file to a local temp file
-                        key = parsed_path.path.lstrip("/")
-                        local_temp_path = f"{temp_dir}/{key}"
-                        os.makedirs(os.path.dirname(local_temp_path), exist_ok=True)
-                        with vfs.open(path, "rb") as src, open(
-                            local_temp_path, "wb"
-                        ) as dst:
-                            dst.write(src.read())
-                        parsed_path = urlparse(local_temp_path, allow_fragments=False)
-                    if parsed_path.path.endswith(".jpg") or parsed_path.path.endswith(
-                        ".png"
-                    ):
-                        from langchain_community.document_loaders import (
-                            UnstructuredFileLoader,
-                        )
-
-                        loader = UnstructuredFileLoader(file_path=parsed_path.path)
-                    else:
-                        from langchain_community.document_loaders.generic import (
-                            GenericLoader,
-                        )
-                        from langchain_community.document_loaders.parsers.generic import (
-                            MimeTypeBasedParser,
-                        )
-                        from langchain_community.document_loaders.parsers.html import (
-                            BS4HTMLParser,
-                        )
-                        from langchain_community.document_loaders.parsers.msword import (
-                            MsWordParser,
-                        )
-                        from langchain_community.document_loaders.parsers.pdf import (
-                            PyMuPDFParser,
-                        )
-                        from langchain_community.document_loaders.parsers.txt import (
-                            TextParser,
-                        )
-
-                        loader = GenericLoader.from_filesystem(
-                            path=parsed_path.path,
-                            parser=MimeTypeBasedParser(
-                                handlers={
-                                    "application/pdf": PyMuPDFParser(),
-                                    "text/plain": TextParser(),
-                                    "text/html": BS4HTMLParser(),
-                                    "application/msword": MsWordParser(),
-                                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (
-                                        MsWordParser()
-                                    ),
-                                },
-                                fallback_parser=None,
-                            ),
-                        )
-                    documents = loader.load()
-                    import importlib
-
-                    text_splitters_module = importlib.import_module(
-                        "langchain.text_splitter"
+        text_splitters_module = importlib.import_module("langchain.text_splitter")
+        text_splitter_class_ = getattr(text_splitters_module, self.text_splitter)
+        text_splitter = text_splitter_class_(**self.text_splitter_kwargs)
+        for uri in partition.paths:
+            try:
+                loader = TileDBLoader(uri=uri, config=self.config)
+                documents = loader.load_and_split(text_splitter=text_splitter)
+                for d in documents:
+                    file_paths[write_id] = str(uri)
+                    if "page" in d.metadata:
+                        pages[write_id] = int(d.metadata["page"])
+                    texts[write_id] = d.page_content
+                    external_ids[write_id] = (
+                        partition.object_id_start
+                        * DirectoryTextReader.MAX_OBJECTS_PER_FILE
+                        + write_id
                     )
-                    splitter_class_ = getattr(text_splitters_module, self.text_splitter)
-                    splitter = splitter_class_(**self.text_splitter_kwargs)
-                    documents = splitter.split_documents(documents)
-                    len(documents)
-                    for d in documents:
-                        file_paths[write_id] = str(path)
-                        if "page" in d.metadata:
-                            pages[write_id] = int(d.metadata["page"])
-                        texts[write_id] = d.page_content
-                        external_ids[write_id] = (
-                            partition.object_id_start
-                            * DirectoryTextReader.MAX_OBJECTS_PER_FILE
-                            + write_id
-                        )
-                        write_id += 1
-                    if local_temp_path != "":
-                        os.remove(local_temp_path)
-                except Exception:
-                    traceback.print_exc()
+                    write_id += 1
+            except Exception:
+                traceback.print_exc()
         return (
             {"text": texts[0:write_id], "external_id": external_ids[0:write_id]},
             {
