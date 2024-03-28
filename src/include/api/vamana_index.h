@@ -136,8 +136,10 @@ class IndexVamana {
         {"adjacency_row_index_datatype",
          &adjacency_row_index_datatype_,
          TILEDB_UINT32}};
-
     tiledb::Config cfg;
+    auto obj = tiledb::Object::object(ctx, group_uri);
+    std::cout << "[vamana_index@IndexVamana] obj_type: " << obj.to_str()
+              << std::endl;
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
 
     for (auto& [name, value, datatype] : metadata) {
@@ -154,6 +156,12 @@ class IndexVamana {
         throw std::runtime_error("Unsupported datatype for metadata: " + name);
       }
     }
+    std::cout << "[vamana_index@IndexVamana] feature_type_string: "
+              << this->feature_type_string() << std::endl;
+    std::cout << "[vamana_index@IndexVamana] id_type_string: "
+              << this->id_type_string() << std::endl;
+    std::cout << "[vamana_index@IndexVamana] adjacency_row_index_type_string: "
+              << this->adjacency_row_index_type_string() << std::endl;
 
     auto type = std::tuple{
         feature_datatype_, id_datatype_, adjacency_row_index_datatype_};
@@ -251,7 +259,7 @@ class IndexVamana {
     return feature_datatype_;
   }
 
-  inline auto feature_type_string() const {
+  inline std::string feature_type_string() const {
     return datatype_to_string(feature_datatype_);
   }
 
@@ -259,7 +267,7 @@ class IndexVamana {
     return id_datatype_;
   }
 
-  inline auto id_type_string() const {
+  inline std::string id_type_string() const {
     return datatype_to_string(id_datatype_);
   }
 
@@ -267,7 +275,7 @@ class IndexVamana {
     return adjacency_row_index_datatype_;
   }
 
-  inline auto adjacency_row_index_type_string() const {
+  inline std::string adjacency_row_index_type_string() const {
     return datatype_to_string(adjacency_row_index_datatype_);
   }
 

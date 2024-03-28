@@ -189,13 +189,17 @@ class tdbBlockedMatrixWithIds
   // @todo Allow specification of how many columns to advance by
   bool load() {
     scoped_timer _{tdb_func__ + " " + this->ids_uri_};
+    std::cout << "[tdbBlockedMatrixWithIds::load] ids_uri_: " << ids_uri_
+              << std::endl;
     if (!Base::load()) {
+      std::cout << "[tdbBlockedMatrixWithIds::load] return false 1"
+                << std::endl;
       return false;
     }
-
+    std::cout << "[tdbBlockedMatrixWithIds::load] a" << std::endl;
     const size_t attr_idx{0};
     auto attr = ids_schema_.attribute(attr_idx);
-
+    std::cout << "[tdbBlockedMatrixWithIds::load] b" << std::endl;
     std::string attr_name = attr.name();
     tiledb_datatype_t attr_type = attr.type();
     if (attr_type != tiledb::impl::type_to_tiledb<ids_type>::tiledb_type) {
