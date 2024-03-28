@@ -60,6 +60,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
 
  public:
   using ids_type = IdsType;
+  using size_type = typename Base::size_type;
 
   MatrixWithIds() noexcept = default;
 
@@ -74,8 +75,8 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
   virtual ~MatrixWithIds() = default;
 
   MatrixWithIds(
-      Base::size_type nrows,
-      Base::size_type ncols,
+      size_type nrows,
+      size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : Base(nrows, ncols, policy)
@@ -83,8 +84,8 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
   }
 
   MatrixWithIds(
-      Base::size_type nrows,
-      Base::size_type ncols,
+      size_type nrows,
+      size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(nrows, ncols, policy)
@@ -94,8 +95,8 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
   MatrixWithIds(
       std::unique_ptr<T[]>&& storage,
       std::vector<IdsType>&& ids,
-      Base::size_type nrows,
-      Base::size_type ncols,
+      size_type nrows,
+      size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
       : Base(std::move(storage), nrows, ncols, policy)
       , ids_{std::move(ids)} {
@@ -166,5 +167,49 @@ using RowMajorMatrixWithIds = MatrixWithIds<T, IdsType, stdx::layout_right, I>;
  */
 template <class T, class IdsType = uint64_t, class I = size_t>
 using ColMajorMatrixWithIds = MatrixWithIds<T, IdsType, stdx::layout_left, I>;
+
+template <class MatrixWithIds>
+void debug_slice_with_ids(
+    const MatrixWithIds& A,
+    const std::string& msg = "",
+    size_t rows = 6,
+    size_t cols = 18) {
+  auto max_size = 10;
+  auto rowsEnd = std::min(dimension(A), static_cast<size_t>(max_size));
+  auto colsEnd = std::min(num_vectors(A), static_cast<size_t>(max_size));
+
+  std::cout << "# " << msg << std::endl;
+  for (size_t i = 0; i < rowsEnd; ++i) {
+    std::cout << "# ";
+    for (size_t j = 0; j < colsEnd; ++j) {
+      std::cout << (float)A(i, j) << " ";
+    }
+    if (A.num_cols() > max_size) {
+      std::cout << "...";
+    }
+    std::cout << std::endl;
+  }
+  if (A.num_rows() > max_size) {
+    std::cout << "# ..." << std::endl;
+  }
+
+  std::cout << "# ids: [";
+  auto end = std::min(A.num_ids(), static_cast<size_t>(max_size));
+  for (size_t i = 0; i < end; ++i) {
+    std::cout << (float)A.ids()[i];
+    if (i != A.num_ids() - 1) {
+      std::cout << ", ";
+    }
+  }
+  if (A.num_ids() > max_size) {
+    std::cout << "...";
+  }
+  std::cout << "]" << std::endl;
+}
+
+template <class MatrixWithIds>
+void debug_with_ids(const MatrixWithIds& A, const std::string& msg = "") {
+  debug_slice_with_ids(A, msg, A.num_rows(), A.num_cols());
+}
 
 #endif  // TILEDB_MATRIX_WITH_IDS_H

@@ -228,11 +228,12 @@ class ivf_flat_index {
      */
     dimension_ = group_->get_dimension();
     num_partitions_ = group_->get_num_partitions();
+    // Read all rows from column 0 -> `num_partitions_`. Set no upper_bound.
     centroids_ =
         std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
             group_->cached_ctx(),
             group_->centroids_uri(),
-            0,
+            std::nullopt,
             num_partitions_,
             0,
             timestamp_));
@@ -313,7 +314,7 @@ class ivf_flat_index {
               }
             }
 #else
-            auto distance = sum_of_squares(vec, centroids_[i - 1]);
+            auto distance = l2_distance(vec, centroids_[i - 1]);
             auto min_distance = std::min(distances[j], distance);
             distances[j] = min_distance;
 #endif
@@ -488,7 +489,7 @@ class ivf_flat_index {
             total_weight += centroid[k] * centroid[k];
           }
         }
-        auto diff = sum_of_squares(centroids_[j], new_centroids[j]);
+        auto diff = l2_distance(centroids_[j], new_centroids[j]);
         max_diff = std::max<float>(max_diff, diff);
       }
       centroids_.swap(new_centroids);
@@ -855,8 +856,12 @@ class ivf_flat_index {
    * of the corresponding distances.
    *
    */
-  template <feature_vector_array Q>
-  auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
+  auto query_infinite_ram(
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      Distance distance = Distance{}) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
@@ -869,7 +874,8 @@ class ivf_flat_index {
         query_vectors,
         active_queries,
         k_nn,
-        num_threads_);
+        num_threads_,
+        distance);
   }
 
   /**
@@ -878,9 +884,12 @@ class ivf_flat_index {
    * See the documentation for that function in detail/ivf/qv.h
    * for more details.
    */
-  template <feature_vector_array Q>
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto qv_query_heap_infinite_ram(
-      const Q& query_vectors, size_t k_nn, size_t nprobe) {
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      Distance distance = Distance{}) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
@@ -893,7 +902,8 @@ class ivf_flat_index {
         query_vectors,
         nprobe,
         k_nn,
-        num_threads_);
+        num_threads_,
+        distance);
   }
 
   /**
@@ -902,9 +912,12 @@ class ivf_flat_index {
    * See the documentation for that function in detail/ivf/qv.h
    * for more details.
    */
-  template <feature_vector_array Q>
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto nuv_query_heap_infinite_ram(
-      const Q& query_vectors, size_t k_nn, size_t nprobe) {
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      Distance distance = Distance{}) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
@@ -917,7 +930,8 @@ class ivf_flat_index {
         query_vectors,
         active_queries,
         k_nn,
-        num_threads_);
+        num_threads_,
+        distance);
   }
 
   /**
@@ -926,9 +940,12 @@ class ivf_flat_index {
    * See the documentation for that function in detail/ivf/qv.h
    * for more details.
    */
-  template <feature_vector_array Q>
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto nuv_query_heap_infinite_ram_reg_blocked(
-      const Q& query_vectors, size_t k_nn, size_t nprobe) {
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      Distance distance = Distance{}) {
     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
       read_index_infinite();
     }
@@ -941,17 +958,18 @@ class ivf_flat_index {
         query_vectors,
         active_queries,
         k_nn,
-        num_threads_);
+        num_threads_,
+        distance);
   }
 
   // WIP
 #if 0
-  template <feature_vector_array Q>
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto qv_query_heap_finite_ram(
       const Q& query_vectors,
       size_t k_nn,
       size_t nprobe,
-      size_t upper_bound = 0) {
+      size_t upper_bound = 0, Distance distance = Distance{}) {
     if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
       std::throw_with_nested(
           std::runtime_error("Vectors are already loaded. Cannot load twice. "
@@ -968,7 +986,7 @@ class ivf_flat_index {
         nprobe,
         k_nn,
         upper_bound,
-        num_threads_);
+        num_threads_, distance);
   }
 #endif  // 0
 
@@ -1000,12 +1018,13 @@ class ivf_flat_index {
    * @param nprobe
    * @return
    */
-  template <feature_vector_array Q>
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto query_finite_ram(
       const Q& query_vectors,
       size_t k_nn,
       size_t nprobe,
-      size_t upper_bound = 0) {
+      size_t upper_bound = 0,
+      Distance distance = Distance{}) {
     if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
       throw std::runtime_error(
           "Vectors are already loaded. Cannot load twice. "
@@ -1020,7 +1039,8 @@ class ivf_flat_index {
         active_queries,
         k_nn,
         upper_bound,
-        num_threads_);
+        num_threads_,
+        distance);
   }
 
   /**
@@ -1029,12 +1049,13 @@ class ivf_flat_index {
    * See the documentation for that function in detail/ivf/qv.h
    * for more details.
    */
-  template <feature_vector_array Q>
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto nuv_query_heap_finite_ram(
       const Q& query_vectors,
       size_t k_nn,
       size_t nprobe,
-      size_t upper_bound = 0) {
+      size_t upper_bound = 0,
+      Distance distance = Distance{}) {
     if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
       std::throw_with_nested(
           std::runtime_error("Vectors are already loaded. Cannot load twice. "
@@ -1049,7 +1070,8 @@ class ivf_flat_index {
         active_queries,
         k_nn,
         upper_bound,
-        num_threads_);
+        num_threads_,
+        distance);
   }
 
   /**
@@ -1058,12 +1080,13 @@ class ivf_flat_index {
    * See the documentation for that function in detail/ivf/qv.h
    * for more details.
    */
-  template <feature_vector_array Q>
+  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto nuv_query_heap_finite_ram_reg_blocked(
       const Q& query_vectors,
       size_t k_nn,
       size_t nprobe,
-      size_t upper_bound = 0) {
+      size_t upper_bound = 0,
+      Distance distance = Distance{}) {
     if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
       std::throw_with_nested(
           std::runtime_error("Vectors are already loaded. Cannot load twice. "
@@ -1078,7 +1101,8 @@ class ivf_flat_index {
         active_queries,
         k_nn,
         upper_bound,
-        num_threads_);
+        num_threads_,
+        distance);
   }
 
   /***************************************************************************
@@ -1278,7 +1302,7 @@ class ivf_flat_index {
     std::vector<score_type> distances(nClusters);
     for (size_t i = 0; i < vectors.num_cols(); ++i) {
       for (size_t j = 0; j < nClusters; ++j) {
-        distances[j] = sum_of_squares(vectors[i], centroids[j]);
+        distances[j] = l2_distance(vectors[i], centroids[j]);
       }
       indices[i] =
           std::min_element(begin(distances), end(distances)) - begin(distances);

@@ -50,8 +50,11 @@ endmacro (kmeans_add_test)
 # To be updated
 # kmeans_add_test(time_abstraction_penalty)
 # kmeans_add_test(time_insert)
-# kmeans_add_test(time_l2)
+
 # kmeans_add_test(time_open)
+# kmeans_add_exe(time_l2)
+
+kmeans_add_exe(time_scoring)
 
 kmeans_add_test(unit_vamana_index)
 
@@ -75,6 +78,8 @@ kmeans_add_test(unit_api_vamana_index)
 
 kmeans_add_test(unit_array_defs)
 
+kmeans_add_test(unit_backwards_compatibility)
+
 kmeans_add_test(unit_concepts)
 
 kmeans_add_test(unit_concepts_vs)
@@ -95,6 +100,8 @@ kmeans_add_test(unit_flat_vq)
 
 kmeans_add_test(unit_gen_graphs)
 
+kmeans_add_test(unit_inner_product_distance)
+
 kmeans_add_test(unit_ivf_flat_group)
 
 kmeans_add_test(unit_ivf_flat_index)
@@ -114,6 +121,8 @@ target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)
 add_test(NAME unit_linalg_test COMMAND unit_linalg ~[tdbmatrix])
 
 kmeans_add_test(unit_logging)
+
+kmeans_add_test(unit_l2_distance)
 
 kmeans_add_test(unit_matrix)
 

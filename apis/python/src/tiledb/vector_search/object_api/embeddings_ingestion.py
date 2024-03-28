@@ -25,6 +25,7 @@ def ingest_embeddings_with_driver(
     vector_indexing_mode: Mode = Mode.LOCAL,
     config: Optional[Mapping[str, Any]] = None,
     namespace: Optional[str] = None,
+    environment_variables: Dict = {},
     **kwargs,
 ):
     def ingest_embeddings(
@@ -45,6 +46,7 @@ def ingest_embeddings_with_driver(
         vector_indexing_mode: Mode = Mode.LOCAL,
         config: Optional[Mapping[str, Any]] = None,
         namespace: Optional[str] = None,
+        environment_variables: Dict = {},
         **kwargs,
     ):
         import tiledb
@@ -133,6 +135,7 @@ def ingest_embeddings_with_driver(
             trace_id: Optional[str] = None,
             config: Optional[Mapping[str, Any]] = None,
             extra_worker_modules: Optional[List[str]] = None,
+            environment_variables: Dict = {},
         ):
             def install_extra_driver_modules():
                 if extra_worker_modules is not None:
@@ -149,6 +152,8 @@ def ingest_embeddings_with_driver(
                         )
 
             install_extra_driver_modules()
+
+            import os
 
             import numpy as np
 
@@ -187,6 +192,8 @@ def ingest_embeddings_with_driver(
                 class_name=object_embedding_class_name,
                 **object_embedding_kwargs,
             )
+            for var, val in environment_variables.items():
+                os.environ[var] = val
             with tiledb.scope_ctx(ctx_or_config=config):
                 logger.debug("Loading model...")
                 object_embedding.load()
@@ -263,6 +270,7 @@ def ingest_embeddings_with_driver(
             trace_id: Optional[str] = None,
             embeddings_generation_mode: Mode = Mode.LOCAL,
             config: Optional[Mapping[str, Any]] = None,
+            environment_variables: Dict = {},
             namespace: Optional[str] = None,
         ) -> dag.DAG:
             if embeddings_generation_mode == Mode.BATCH:
@@ -327,6 +335,7 @@ def ingest_embeddings_with_driver(
                     verbose=verbose,
                     trace_id=trace_id,
                     config=config,
+                    environment_variables=environment_variables,
                     extra_worker_modules=extra_udf_worker_modules,
                     name="generate-embeddings-" + str(task_id),
                     resources=worker_resources,
@@ -340,6 +349,10 @@ def ingest_embeddings_with_driver(
         # End internal function definitions
         # --------------------------------------------------------------------
 
+        import os
+
+        for var, val in environment_variables.items():
+            os.environ[var] = val
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
             logger.debug("Generating embeddings")
@@ -348,7 +361,11 @@ def ingest_embeddings_with_driver(
 
             from tiledb.vector_search.object_api import object_index
 
-            ob_index = object_index.ObjectIndex(object_index_uri, config=config)
+            ob_index = object_index.ObjectIndex(
+                object_index_uri,
+                config=config,
+                environment_variables=environment_variables,
+            )
             partitions = ob_index.object_reader.get_partitions(**kwargs)
             object_partitions = len(partitions)
             object_partitions_per_worker = 1
@@ -394,6 +411,7 @@ def ingest_embeddings_with_driver(
                 trace_id=trace_id,
                 embeddings_generation_mode=embeddings_generation_mode,
                 config=config,
+                environment_variables=environment_variables,
                 namespace=namespace,
             )
             logger.debug("Submitting ingestion graph")
@@ -443,7 +461,7 @@ def ingest_embeddings_with_driver(
     ):
         submit = d.submit
     driver_access_credentials_name_kwargs = {}
-    if embeddings_generation_mode == Mode.BATCH:
+    if embeddings_generation_driver_mode == Mode.BATCH:
         driver_access_credentials_name_kwargs[
             "access_credentials_name"
         ] = worker_access_credentials_name
@@ -465,6 +483,7 @@ def ingest_embeddings_with_driver(
         embeddings_generation_mode=embeddings_generation_mode,
         vector_indexing_mode=vector_indexing_mode,
         config=config,
+        environment_variables=environment_variables,
         **kwargs,
         name="ingest-embeddings-driver",
         resources={"cpu": "1", "memory": "4Gi"}

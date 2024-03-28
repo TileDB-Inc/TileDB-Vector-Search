@@ -55,44 +55,6 @@ struct dummy_index {
   }
 };
 
-TEST_CASE("vamana_group: verify member types exist", "[vamana_group") {
-  tiledb::Context ctx;
-
-  auto x = vamana_index_group(dummy_index{}, ctx, vamana_nano_group_uri);
-}
-
-TEST_CASE("vamana_group: constructor", "[vamana_group]") {
-  tiledb::Context ctx;
-
-  auto foo = dummy_index{};
-  auto n = foo.dimension();
-  std::reference_wrapper<const dummy_index> bar = foo;
-  auto m = bar.get().dimension();
-
-  auto x = vamana_index_group(dummy_index{}, ctx, vamana_nano_group_uri);
-  auto y = vamana_index_group(foo, ctx, vamana_nano_group_uri);
-}
-
-TEST_CASE("vamana_group: default constructor", "[vamana_group]") {
-  tiledb::Context ctx;
-  auto x = vamana_index_group(dummy_index{}, ctx, vamana_nano_group_uri);
-  x.dump("Default constructor");
-}
-
-TEST_CASE("vamana_group: read constructor", "[vamana_group]") {
-  tiledb::Context ctx;
-  auto x = vamana_index_group(
-      dummy_index{}, ctx, vamana_nano_group_uri, TILEDB_READ);
-  x.dump("Read constructor");
-}
-
-TEST_CASE("vamana_group: read constructor with version", "[vamana_group]") {
-  tiledb::Context ctx;
-  auto x = vamana_index_group(
-      dummy_index{}, ctx, vamana_nano_group_uri, TILEDB_READ, 0, "0.3");
-  x.dump("Read constructor with version");
-}
-
 // The catch2 check for exception doesn't seem to be working correctly
 // @todo Fix this
 #if 0

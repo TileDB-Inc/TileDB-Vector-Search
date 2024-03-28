@@ -54,9 +54,20 @@ namespace detail::flat {
  */
 
 // @todo Support out of core
-template <class T, class DB, class Q, class ID>
+template <
+    class T,
+    class DB,
+    class Q,
+    class ID,
+    class Distance = sum_of_squares_distance>
 auto vq_query_heap(
-    T, DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads) {
+    T,
+    DB& db,
+    const Q& q,
+    const ID& ids,
+    int k_nn,
+    unsigned nthreads,
+    Distance distance = Distance{}) {
   // @todo Need to get the total number of queries, not just the first block
   // @todo Use Matrix here rather than vector of vectors
 
@@ -88,7 +99,7 @@ auto vq_query_heap(
         [&, size_q](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
           size_t index = i + col_offset(db);
           for (size_t j = 0; j < size_q; ++j) {
-            auto score = L2(q[j], db_vec);
+            auto score = distance(q[j], db_vec);
             if constexpr (std::is_same_v<T, with_ids>) {
               scores[n][j].insert(score, ids[index]);
             } else if constexpr (std::is_same_v<T, without_ids>) {
@@ -108,16 +119,26 @@ auto vq_query_heap(
   return top_k;
 }
 
-template <class DB, class Q>
-auto vq_query_heap(DB& db, Q& q, int k_nn, unsigned nthreads) {
+template <class DB, class Q, class Distance = sum_of_squares_distance>
+auto vq_query_heap(
+    DB& db, Q& q, int k_nn, unsigned nthreads, Distance distance = Distance{}) {
   return vq_query_heap(
-      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads, distance);
 }
 
-template <feature_vector_array DB, query_vector_array Q, class Index>
+template <
+    feature_vector_array DB,
+    query_vector_array Q,
+    class Index,
+    class Distance = sum_of_squares_distance>
 auto vq_query_heap(
-    DB& db, Q& q, const std::vector<Index>& ids, int k_nn, unsigned nthreads) {
-  return vq_query_heap(with_ids{}, db, q, ids, k_nn, nthreads);
+    DB& db,
+    Q& q,
+    const std::vector<Index>& ids,
+    int k_nn,
+    unsigned nthreads,
+    Distance distance = Distance{}) {
+  return vq_query_heap(with_ids{}, db, q, ids, k_nn, nthreads, distance);
 }
 
 /**
@@ -130,25 +151,47 @@ auto vq_query_heap(
  * @param nthreads
  * @return
  */
-template <class T, class DB, class Q, class ID>
+template <class T, class DB, class Q, class ID, class Distance>
 auto vq_query_heap_tiled(
-    T, DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads);
+    T,
+    DB& db,
+    const Q& q,
+    const ID& ids,
+    int k_nn,
+    unsigned nthreads,
+    Distance distance);
 
-template <class DB, class Q>
-auto vq_query_heap_tiled(DB& db, const Q& q, int k_nn, unsigned nthreads) {
+template <class DB, class Q, class Distance = sum_of_squares_distance>
+auto vq_query_heap_tiled(
+    DB& db,
+    const Q& q,
+    int k_nn,
+    unsigned nthreads,
+    Distance distance = Distance{}) {
   return vq_query_heap_tiled(
-      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads, distance);
 }
 
-template <class DB, class Q, class ID>
+template <class DB, class Q, class ID, class Distance = sum_of_squares_distance>
 auto vq_query_heap_tiled(
-    DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads) {
-  return vq_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads);
+    DB& db,
+    const Q& q,
+    const ID& ids,
+    int k_nn,
+    unsigned nthreads,
+    Distance distance = Distance{}) {
+  return vq_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads, distance);
 }
 
-template <class T, class DB, class Q, class ID>
+template <class T, class DB, class Q, class ID, class Distance>
 auto vq_query_heap_tiled(
-    T, DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads) {
+    T,
+    DB& db,
+    const Q& q,
+    const ID& ids,
+    int k_nn,
+    unsigned nthreads,
+    Distance distance) {
   // @todo Need to get the total number of queries, not just the first block
   // @todo Use Matrix here rather than vector of vectors
 
@@ -177,7 +220,7 @@ auto vq_query_heap_tiled(
           std::remove_cvref_t<decltype(i)> index = 0;
           index = i + col_offset(db);
           for (size_t j = 0; j < size_q; ++j) {
-            auto score = L2(q[j], db_vec);
+            auto score = distance(q[j], db_vec);
             if constexpr (std::is_same_v<T, with_ids>) {
               scores[n][j].insert(score, ids[index]);
             } else if constexpr (std::is_same_v<T, without_ids>) {
@@ -199,25 +242,56 @@ auto vq_query_heap_tiled(
 
 // ====================================================================================================
 
-template <class T, class DB, class Q, class ID>
+template <
+    class T,
+    class DB,
+    class Q,
+    class ID,
+    class Distance = sum_of_squares_distance>
 auto vq_query_heap_2(
-    T, DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads);
+    T,
+    DB& db,
+    const Q& q,
+    const ID& ids,
+    int k_nn,
+    unsigned nthreads,
+    Distance distance = Distance{});
 
-template <class DB, class Q>
-auto vq_query_heap_2(DB& db, const Q& q, int k_nn, unsigned nthreads) {
+template <class DB, class Q, class Distance = sum_of_squares_distance>
+auto vq_query_heap_2(
+    DB& db,
+    const Q& q,
+    int k_nn,
+    unsigned nthreads,
+    Distance distance = Distance{}) {
   return vq_query_heap_2(
-      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads);
+      without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads, distance);
 }
 
-template <feature_vector_array DB, feature_vector_array Q, class ID>
+template <
+    feature_vector_array DB,
+    feature_vector_array Q,
+    class ID,
+    class Distance = sum_of_squares_distance>
 auto vq_query_heap_2(
-    DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads) {
-  return vq_query_heap_2(with_ids{}, db, q, ids, k_nn, nthreads);
+    DB& db,
+    const Q& q,
+    const ID& ids,
+    int k_nn,
+    unsigned nthreads,
+    Distance distance = Distance{}) {
+  return vq_query_heap_2(with_ids{}, db, q, ids, k_nn, nthreads, distance);
 }
 
-template <class T, class DB, class Q, class ID>
+template <class T, class DB, class Q, class ID, class Distance>
 auto vq_query_heap_2(
-    T, DB& db, const Q& q, const ID& ids, int k_nn, unsigned nthreads) {
+    T,
+    DB& db,
+    const Q& q,
+    const ID& ids,
+    int k_nn,
+    unsigned nthreads,
+    Distance distance) {
   // @todo Need to get the total number of queries, not just the first block
   // @todo Use Matrix here rather than vector of vectors
 
@@ -247,7 +321,7 @@ auto vq_query_heap_2(
           index = i + col_offset(db);
 
           for (size_t j = 0; j < size_q; ++j) {
-            auto score = L2(q[j], db_vec);
+            auto score = distance(q[j], db_vec);
             if constexpr (std::is_same_v<T, with_ids>) {
               scores[n][j].insert(score, ids[index]);
             } else if constexpr (std::is_same_v<T, without_ids>) {
@@ -280,8 +354,12 @@ auto vq_query_heap_2(
  * @param nthreads
  * @return
  */
-template <class DB, class Q>
-auto vq_partition(const DB& db, const Q& q, unsigned nthreads) {
+template <class DB, class Q, class Distance = sum_of_squares_distance>
+auto vq_partition(
+    const DB& db,
+    const Q& q,
+    unsigned nthreads,
+    Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
 
   auto num_queries = num_vectors(q);
@@ -297,7 +375,7 @@ auto vq_partition(const DB& db, const Q& q, unsigned nthreads) {
   stdx::range_for_each(
       std::move(par), db, [&](auto&& db_vec, auto&& n = 0, auto&& i = 0) {
         for (size_t j = 0; j < num_queries; ++j) {
-          auto score = L2(q[j], db_vec);
+          auto score = distance(q[j], db_vec);
           if (score < min_scores[n][j]) {
             min_scores[n][j] = score;
             min_ids[n][j] = i;

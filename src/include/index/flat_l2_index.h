@@ -79,13 +79,14 @@ class flat_l2_index {
             std::make_unique<tdbColMajorMatrix<attribute_type>>(ctx, uri)} {
   }
 
-  template <query_vector_array M>
+  template <query_vector_array M, class Distance = sum_of_squares_distance>
   auto query(
       const M& query,
       size_t k_nn,
-      size_t nthreads = std::thread::hardware_concurrency()) const {
+      size_t nthreads = std::thread::hardware_concurrency(),
+      Distance&& distance = Distance{}) const {
     return detail::flat::qv_query_heap_tiled(
-        *feature_vectors_, query, k_nn, nthreads);
+        *feature_vectors_, query, k_nn, nthreads, distance);
   }
 
   constexpr auto load() {

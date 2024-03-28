@@ -43,6 +43,77 @@
 #include "utils/print_types.h"
 #include "utils/timer.h"
 
+namespace {
+
+template <class T>
+std::vector<T> read_vector_helper(
+    const tiledb::Context& ctx,
+    const std::string& uri,
+    size_t start_pos,
+    size_t end_pos,
+    size_t timestamp,
+    bool read_full_vector) {
+  scoped_timer _{tdb_func__ + " " + std::string{uri}};
+
+  tiledb::TemporalPolicy temporal_policy =
+      (timestamp == 0) ? tiledb::TemporalPolicy() :
+                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+
+  auto array_ = tiledb_helpers::open_array(
+      tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
+  auto schema_ = array_->schema();
+
+  using domain_type = int32_t;
+  const size_t idx = 0;
+
+  auto domain_{schema_.domain()};
+
+  auto dim_num_{domain_.ndim()};
+  auto array_rows_{domain_.dimension(0)};
+
+  if (read_full_vector) {
+    if (start_pos == 0) {
+      start_pos = array_rows_.template domain<domain_type>().first;
+    }
+    if (end_pos == 0) {
+      end_pos = array_rows_.template domain<domain_type>().second + 1;
+    }
+  }
+
+  auto vec_rows_{end_pos - start_pos};
+
+  if (vec_rows_ == 0) {
+    return {};
+  }
+
+  auto attr_num{schema_.attribute_num()};
+  auto attr = schema_.attribute(idx);
+
+  std::string attr_name = attr.name();
+  tiledb_datatype_t attr_type = attr.type();
+
+  // Create a subarray that reads the array up to the specified subset.
+  std::vector<int32_t> subarray_vals = {
+      (int32_t)start_pos, (int32_t)end_pos - 1};
+  tiledb::Subarray subarray(ctx, *array_);
+  subarray.set_subarray(subarray_vals);
+
+  // @todo: use something non-initializing
+  std::vector<T> data_(vec_rows_);
+
+  tiledb::Query query(ctx, *array_);
+  query.set_subarray(subarray).set_data_buffer(
+      attr_name, data_.data(), vec_rows_);
+  tiledb_helpers::submit_query(tdb_func__, uri, query);
+  _memory_data.insert_entry(tdb_func__, vec_rows_ * sizeof(T));
+
+  array_->close();
+  assert(tiledb::Query::Status::COMPLETE == query.query_status());
+
+  return data_;
+}
+}  // namespace
+
 /******************************************************************************
  * Matrix creation and writing.  Because we support out-of-core operations with
  * matrices, reading a matrix is more subtle and is contained in the tdb_matrix
@@ -139,6 +210,10 @@ void write_matrix(
 
   if (create) {
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri);
+  }
+
+  if (A.num_rows() == 0 || A.num_cols() == 0) {
+    return;
   }
 
   std::vector<int32_t> subarray_vals{
@@ -253,6 +328,11 @@ void write_vector(
   if (create) {
     create_vector(ctx, v, uri);
   }
+
+  if (size(v) == 0) {
+    return;
+  }
+
   // Set the subarray to write into
   std::vector<int32_t> subarray_vals{
       (int)start_pos, (int)start_pos + (int)size(v) - 1};
@@ -290,67 +370,16 @@ std::vector<T> read_vector(
     size_t start_pos,
     size_t end_pos,
     size_t timestamp = 0) {
-  scoped_timer _{tdb_func__ + " " + std::string{uri}};
-
-  tiledb::TemporalPolicy temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
-
-  auto array_ = tiledb_helpers::open_array(
-      tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
-  auto schema_ = array_->schema();
-
-  using domain_type = int32_t;
-  const size_t idx = 0;
-
-  auto domain_{schema_.domain()};
-
-  auto dim_num_{domain_.ndim()};
-  auto array_rows_{domain_.dimension(0)};
-
-  if (start_pos == 0) {
-    start_pos = array_rows_.template domain<domain_type>().first;
-  }
-  if (end_pos == 0) {
-    end_pos = array_rows_.template domain<domain_type>().second + 1;
-  }
-
-  auto vec_rows_{end_pos - start_pos};
-
-  auto attr_num{schema_.attribute_num()};
-  auto attr = schema_.attribute(idx);
-
-  std::string attr_name = attr.name();
-  tiledb_datatype_t attr_type = attr.type();
-
-  // Create a subarray that reads the array up to the specified subset.
-  std::vector<int32_t> subarray_vals = {
-      (int32_t)start_pos, (int32_t)end_pos - 1};
-  tiledb::Subarray subarray(ctx, *array_);
-  subarray.set_subarray(subarray_vals);
-
-  // @todo: use something non-initializing
-  std::vector<T> data_(vec_rows_);
-
-  tiledb::Query query(ctx, *array_);
-  query.set_subarray(subarray).set_data_buffer(
-      attr_name, data_.data(), vec_rows_);
-  tiledb_helpers::submit_query(tdb_func__, uri, query);
-  _memory_data.insert_entry(tdb_func__, vec_rows_ * sizeof(T));
-
-  array_->close();
-  assert(tiledb::Query::Status::COMPLETE == query.query_status());
-
-  return data_;
+  return read_vector_helper<T>(ctx, uri, start_pos, end_pos, timestamp, false);
 }
 
 /**
- * @brief Overload with 0 for start_pos and end_pos (read entire vector)
+ * @brief Overload to read the entire vector.
  */
 template <class T>
 std::vector<T> read_vector(
     const tiledb::Context& ctx, const std::string& uri, size_t timestamp = 0) {
-  return read_vector<T>(ctx, uri, 0, 0, timestamp);
+  return read_vector_helper<T>(ctx, uri, 0, 0, timestamp, true);
 }
 
 template <class T>

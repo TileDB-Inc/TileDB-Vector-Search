@@ -174,9 +174,6 @@ include(nlohmann_json)
 # Get git info, etc
 include (logging)
 
-# Write config file
-configure_file(${CMAKE_SOURCE_DIR}/include/config.h.in config.h)
-
 # -----------------------------------------------------------------------------
 # Interface libraries
 # -----------------------------------------------------------------------------

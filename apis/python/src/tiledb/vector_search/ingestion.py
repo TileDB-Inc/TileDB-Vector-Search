@@ -2016,7 +2016,7 @@ def ingest(
                                 config=config,
                                 verbose=verbose,
                                 name="read-random-sample-" + str(idx),
-                                resources={"cpu": str(threads), "memory": "1Gi"},
+                                resources={"cpu": "2", "memory": "6Gi"},
                                 image_name=DEFAULT_IMG_NAME,
                             )
                         )
