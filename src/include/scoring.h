@@ -34,6 +34,7 @@
 #ifndef TDB_SCORING_H
 #define TDB_SCORING_H
 
+#include "concepts.h"
 #include "detail/scoring/inner_product.h"
 #include "detail/scoring/inner_product_avx.h"
 #include "detail/scoring/l2_distance.h"
@@ -73,6 +74,11 @@ class without_ids {};
  * @brief Function object for computing the sum of squared distance
  * between two vectors.
  * @tparam T
+ *
+ * @note To keep things clear, this function object computes the distance
+ * between two full vectors.
+ * @todo Implement the uncached sub_sum_of_squares_distance operator()() for
+ * AVX2.
  */
 namespace _l2_distance {
 
@@ -163,6 +169,29 @@ using logging_sum_of_squares_distance =
     _l2_distance::logging_sum_of_squares_distance;
 inline auto logging_l2_distance =
     _l2_distance::logging_sum_of_squares_distance{};
+
+/**
+ * @brief Create a sub distance function object based on a full distance
+ * function. There are overloads for cached and uncached sub distance, based
+ * on the concept that Distance satisfies.
+ *
+ * @note Note that if Distance is a function object, a new one will be created
+ * at each invocation. However, for thec case where Distance is assumed to be
+ * stateless, this should not introduce any overhead.
+ */
+template <class Distance>
+struct subify {
+  template <feature_vector V, feature_vector U>
+    requires sub_distance_function<Distance, V, U>
+  auto operator()(const V& a, const U& b, size_t start, size_t stop) {
+    return Distance{}(a, b, start, stop);
+  }
+  template <feature_vector V, feature_vector U>
+    requires cached_sub_distance_function<Distance, V, U>
+  auto operator()(const V& a, const U& b) {
+    return Distance{}(a, b);
+  }
+};
 
 /******************************************************************************
  *

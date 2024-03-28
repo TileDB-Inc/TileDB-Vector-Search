@@ -46,14 +46,10 @@
  * Static info for index kinds
  ******************************************************************************/
 
-enum class IndexKind {
-  FlatL2,
-  IVFFlat,
-  Vamana,
-};
+enum class IndexKind { FlatL2, IVFFlat, Vamana, IVFPQ };
 
 [[maybe_unused]] static std::vector<std::string> index_kind_strings{
-    "FLAT", "IVF_FLAT", "VAMANA"};
+    "FLAT", "IVF_FLAT", "VAMANA", "IVF_PQ"};
 
 [[maybe_unused]] static inline auto str(IndexKind kind) {
   return index_kind_strings[static_cast<int>(kind)];
