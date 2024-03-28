@@ -143,7 +143,7 @@ class adj_list : public std::vector<std::list<std::tuple<SC, ID>>> {
   adj_list(AdjList&& l)
       : Base(l.size()) {
     for (size_t i = 0; i < l.size(); ++i) {
-      for (auto&& [dst, val] : l[i]) {
+      for (auto&& [val, dst] : l[i]) {
         add_edge(i, dst, val);
       }
     }

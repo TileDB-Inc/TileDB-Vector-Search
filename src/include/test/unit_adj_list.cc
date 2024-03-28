@@ -38,7 +38,7 @@ TEST_CASE("adj_list: test test", "[adj_list]") {
 }
 
 TEMPLATE_TEST_CASE(
-    "adj_list: initializer_list",
+    "adj_list: index_adj_list initializer_list",
     "[adj_list]",
     int,
     unsigned,
@@ -54,4 +54,51 @@ TEMPLATE_TEST_CASE(
   CHECK(A[3].size() == 2);
   CHECK(A[4].size() == 1);
   CHECK(A[5].size() == 1);
+}
+
+TEMPLATE_TEST_CASE(
+    "adj_list: pseudo copy constructor",
+    "[adj_list]",
+    (std::tuple<float, int>),
+    (std::tuple<float, size_t>),
+    (std::tuple<double, uint8_t>)) {
+  auto A = detail::graph::adj_list<
+      std::tuple_element_t<0, TestType>,
+      std::tuple_element_t<1, TestType>>{tiny_adj_list};
+
+  CHECK(A.size() == 6);
+  CHECK(A[0].size() == 1);
+  CHECK(A[1].size() == 2);
+  CHECK(A[2].size() == 2);
+  CHECK(A[3].size() == 2);
+  CHECK(A[4].size() == 1);
+  CHECK(A[5].size() == 1);
+
+  auto&& [sc00, id00] = A[0].front();
+  auto&& [sc01, id01] = A[1].front();
+  auto&& [sc11, id11] = A[1].back();
+  auto&& [sc02, id02] = A[2].front();
+  auto&& [sc12, id12] = A[2].back();
+  auto&& [sc03, id03] = A[3].front();
+  auto&& [sc13, id13] = A[3].back();
+  auto&& [sc04, id04] = A[4].front();
+  auto&& [sc05, id05] = A[5].front();
+  CHECK(sc00 == 8.0);
+  CHECK(id00 == 1);
+  CHECK(std::abs(sc01 - 6.7) < 1e-6);
+  CHECK(id01 == 2);
+  CHECK(std::abs(sc11 - 5.0) < 1e-6);
+  CHECK(id11 == 3);
+  CHECK(sc02 == 1.0);
+  CHECK(id02 == 3);
+  CHECK(sc12 == 31.0);
+  CHECK(id12 == 6);
+  CHECK(sc03 == 4.0);
+  CHECK(id03 == 5);
+  CHECK(sc13 == 15.0);
+  CHECK(id13 == 6);
+  CHECK(std::abs(sc04 - 9.9) < 1e-6);
+  CHECK(id04 == 3);
+  CHECK(sc05 == 99.0);
+  CHECK(id05 == 4);
 }

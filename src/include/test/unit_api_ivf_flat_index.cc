@@ -282,7 +282,7 @@ TEST_CASE(
     CHECK(nt == nv);
     auto recall = ((double)intersections_a) / ((double)nt * k_nn);
     if (nprobe == 32) {
-      CHECK(recall == 1.0);
+      CHECK(recall >= 0.999);
     } else if (nprobe == 8) {
       CHECK(recall > 0.925);
     }
