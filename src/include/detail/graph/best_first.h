@@ -526,7 +526,6 @@ auto best_first_O4(
     Distance&& distance = Distance{}) {
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
-  using node_type = std::tuple<score_type, id_type>;
 
   auto pq = k_min_heap<score_type, id_type>{Lmax};
 
@@ -635,7 +634,6 @@ auto best_first_O5(
 
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
-  using node_type = std::tuple<score_type, id_type>;
 
   auto pq = k_min_heap<score_type, id_type>{Lmax};
 

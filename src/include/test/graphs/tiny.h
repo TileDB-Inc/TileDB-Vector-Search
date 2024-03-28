@@ -34,6 +34,15 @@ std::vector<std::vector<size_t>> tiny_index_adj_list{
     {4},
 };
 
+std::vector<std::vector<std::tuple<float, size_t>>> tiny_adj_list{
+    {{8.0, 1}},
+    { {6.7, 2} , {5.0, 3}},
+    { {1, 3}, {31, 6}},
+    { { 4, 5} , {15, 6} },
+    { {9.9, 3}},
+    { { 99, 4}},
+};
+
 std::vector<std::tuple<size_t, float>> tiny_best{
     {2, 120899.0},
     {8, 145538.0},

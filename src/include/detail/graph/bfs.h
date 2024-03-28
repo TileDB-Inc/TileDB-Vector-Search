@@ -90,14 +90,14 @@ auto bfs_O1(
     q2.clear();
     ++lvl;
   }
-  size_t counter = 0;
+
+  // Check for number visited vertices, used for debugging
+  [[maybe_unused]] size_t counter = 0;
   for (auto&& p : parents) {
     if (p != std::numeric_limits<vertex_id_type>::max()) {
       ++counter;
     }
   }
-  // std::cout << "visited: " << counter << " of " << size(parents) <<
-  // std::endl;
 
   return parents;
 }
