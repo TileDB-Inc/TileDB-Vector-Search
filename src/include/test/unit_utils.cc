@@ -80,7 +80,8 @@ TEST_CASE("utils: test", "[utils]") {
   CHECK(is_local_file("file://" + cmake_source_str + "/src/CMakeLists.txt"));
 
   CHECK(!is_local_directory("file://" + cmake_source_str + "/CMakeLists.txt"));
-  CHECK(!is_local_directory("file://" + cmake_source_str + "/src/CMakeLists.txt"));
+  CHECK(!is_local_directory(
+      "file://" + cmake_source_str + "/src/CMakeLists.txt"));
   CHECK(!is_local_array("file://" + cmake_source_str + "/CMakeLists.txt"));
   CHECK(!is_local_array("file://" + cmake_source_str + "/src/CMakeLists.txt"));
 
