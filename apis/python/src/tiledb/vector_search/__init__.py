@@ -35,6 +35,7 @@ __all__ = [
     "Index",
     "FlatIndex",
     "IVFFlatIndex",
+    "VamanaIndex",
     "Mode",
     "load_as_array",
     "load_as_matrix",

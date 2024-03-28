@@ -32,7 +32,7 @@
 
 
 # Two possible locations of TileDB-Vector-Search root -- edit as necessary
-tdb_vector_search_root_1="${HOME}/TileDB-Vector-Search"
+tdb_vector_search_root_1="${HOME}/TileDB/TileDB-Vector-Search"
 tdb_vector_search_root_2="${HOME}/TileDB/TileDB-Vector-Search"
 
 # AWS information
@@ -44,10 +44,10 @@ elif [ -f ./awsrc.bash ]; then
         . ./awsrc.bash
 fi
 
-ivf_flat_tail="src/cmake-build-release/libtiledbvectorsearch/src/ivf_flat"
+ivf_flat_tail="src/cmake-build-release/libtiledbvectorsearch/src/ivf/ivf_query"
 ivf_flat_1=${tdb_vector_search_root_1}/${ivf_flat_tail}
 ivf_flat_2=${tdb_vector_search_root_2}/${ivf_flat_tail}
-flat_l2_tail="src/cmake-build-release/libtiledbvectorsearch/src/flat_l2"
+flat_l2_tail="src/cmake-build-release/libtiledbvectorsearch/src/flat/flat_l2"
 flat_l2_1=${tdb_vector_search_root_1}/${flat_l2_tail}
 flat_l2_2=${tdb_vector_search_root_2}/${flat_l2_tail}
 
@@ -58,7 +58,7 @@ elif [ -f "${ivf_flat_1}" ]; then
 elif [ -f "${ivf_flat_2}" ]; then
     ivf_query="${ivf_flat_2}"
 else
-    echo "Neither ivf_flat executable file exists"
+    echo "Neither ivf_flat executable file exists ${ivf_query} ${ivf_flat_1} ${ivf_flat_2}"
 fi
 
 if [ -f flat_query ]; then
@@ -73,8 +73,8 @@ fi
 
 nvme_root=/mnt/ssd
 
-ec2_root="/home/lums/TileDB-Vector-Search/external/data/gp3"
-m1_root="/Users/lums/TileDB/TileDB-Vector-Search/external/data/gp3"
+ec2_root="/home/lums/TileDB/TileDB-Vector-Search/external/test_data/arrays"
+m1_root="/Users/lums/TileDB/TileDB-Vector-Search/external/test_data/arrays"
 
 if [ -d "${gp3_root}" ]; then
     gp3_root=${gp3_root}
@@ -83,7 +83,7 @@ elif [ -d "${ec2_root}" ]; then
 elif [ -d "${m1_root}" ]; then
     gp3_root=${m1_root}
 else
-    echo "gp3 directory does not exist"
+    echo "gp3 directory ${gp3_root} does not exist -- ${ec2_root} -- ${m1_root}"
 fi
 
 db_uri="not_set"
@@ -108,6 +108,7 @@ function init_1M_s3 () {
 }
 
 function init_1M_gp3 () {
+    group_uri="${gp3_root}/bigann1M/group""
     db_uri="${gp3_root}/1M/bigann1M_base"
     centroids_uri="${gp3_root}/1M/centroids.tdb"
     parts_uri="${gp3_root}/1M/parts.tdb"
