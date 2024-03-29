@@ -580,7 +580,6 @@ class vamana_index {
     // way for a dynamic graph, which is one that we can later add more edges
     // and vertices to (to index new vectors).
     std::cout << "num_vectors_: " << num_vectors_ << std::endl;
-    return;
     for (size_t i = 0; i < num_vectors_; ++i) {
       auto start = adj_index[i];
       auto end = adj_index[i + 1];
