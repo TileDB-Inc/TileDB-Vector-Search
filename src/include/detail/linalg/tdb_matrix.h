@@ -224,6 +224,7 @@ class tdbBlockedMatrix : public MatrixBase {
       , first_col_{first_col} {
     constructor_timer.stop();
     scoped_timer _{tdb_func__ + " " + uri};
+
     if (last_row && *last_row < first_row_) {
       throw std::runtime_error("last_row < first_row");
     }
@@ -246,77 +247,43 @@ class tdbBlockedMatrix : public MatrixBase {
     const size_t attr_idx = 0;
 
     auto domain_{schema_.domain()};
-    // std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] schema_:" <<  std::endl;
-    // schema_.dump();
+    
     auto row_domain{domain_.dimension(0)};
     auto col_domain{domain_.dimension(1)};
 
     auto non_empty_domain = array_->non_empty_domain<int>();
-    // std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] non_empty_domain.size(): " <<  non_empty_domain.size() << std::endl;
-    // if (!non_empty_domain.empty()) {
-    //     std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] [" << non_empty_domain[0].second.first << ","
-    //               << non_empty_domain[0].second.second << "], ["
-    //               << non_empty_domain[1].second.first << ","
-    //               << non_empty_domain[1].second.second << "]\n";
-    // }
-//    try {
-//        std::cout << "Dimension named " << non_empty[0].first << " has cells in [" << non_empty[0].second.first << ", "<<  non_empty[0].second.second << "]" << std::endl;
-//    } catch (const std::exception& e) {
-//        std::cout << e.what() << std::endl;
-//        std::cout << "Dimension named " << non_empty[0].first << " has no cells" << std::endl;
-//    }
-//      std::cout << "Non-empty domain: ";
-//      std::cout << "[" << non_empty_domain[0].second.first << ","
-//                << non_empty_domain[0].second.second << "], ["
-//                << non_empty_domain[1].second.first << ","
-//                << non_empty_domain[1].second.second << "]\n";
-    /* The size of the array may not be the size of domain.  Use non-zero value
-     * if set in constructor */
     if (!last_row.has_value()) {
-      // std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] last_row no value so read all" << std::endl;
       if (non_empty_domain.empty()) {
           last_row_ = 0;
       } else {
           last_row_ = non_empty_domain[0].second.second + 1;
       }
-//      last_row_ = row_domain.template domain<row_domain_type>().second -
-//                  row_domain.template domain<row_domain_type>().first + 1;
     } else {
       last_row_ = *last_row;
-      // std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] last_row has value" << std::endl;
     }
     if (!last_col.has_value()) {
-      // std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] last_col no value so read all" << std::endl;
         if (non_empty_domain.empty()) {
             last_col_ = 0;
         } else {
             last_col_ = non_empty_domain[1].second.second + 1;
         }
-//      last_col_ = col_domain.template domain<col_domain_type>().second -
-//                  col_domain.template domain<col_domain_type>().first + 1;
     } else {
       last_col_ = *last_col;
-      // std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] last_col_ has value" << std::endl;
     }
-    // std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] last_row_: " << last_row_ << std::endl;
-    // std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] last_col_: " << last_col_ << std::endl;
+
     size_t dimension = last_row_ - first_row_;
-    // std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] dimension: " << dimension << std::endl;
     size_t num_vectors = last_col_ - first_col_;
-    // std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] num_vectors: " << num_vectors << std::endl;
 
     // The default is to load all of the vectors
-    // std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] upper_bound: " << upper_bound<<  std::endl;
     if (upper_bound == 0 || upper_bound > num_vectors) {
       load_blocksize_ = num_vectors;
     } else {
       load_blocksize_ = upper_bound;
     }
-    // std::cout << "[tdbBlockedMatrix::tdbBlockedMatrix] load_blocksize_: " << load_blocksize_ << std::endl;
 
     first_resident_col_ = first_col_;
     last_resident_col_ = first_col_;
-    std::cout << "[tdbBlockedMatrix::load] will allocate data_ to have " << dimension * load_blocksize_ << std::endl;
+
 #ifdef __cpp_lib_smart_ptr_for_overwrite
     auto data_ =
         std::make_unique_for_overwrite<T[]>(dimension * load_blocksize_);
@@ -355,17 +322,12 @@ class tdbBlockedMatrix : public MatrixBase {
           "Attribute type mismatch: " + datatype_to_string(attr_type) + " != " +
           datatype_to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
     }
-    std::cout << "[tdbBlockedMatrix::load] attr_name: " << attr_name << std::endl;
 
     size_t dimension = last_row_ - first_row_;
-    std::cout << "[tdbBlockedMatrix::load] dimension: " << dimension << std::endl;
     
-    std::cout << "[tdbBlockedMatrix::load] last_col_: " << last_col_ << std::endl;
-    std::cout << "[tdbBlockedMatrix::load] last_resident_col_: " << last_resident_col_ << std::endl;
-    std::cout << "[tdbBlockedMatrix::load] load_blocksize_: " << load_blocksize_ << std::endl;
     auto elements_to_load =
         std::min(load_blocksize_, last_col_ - last_resident_col_);
-    std::cout << "[tdbBlockedMatrix::load] elements_to_load: " << elements_to_load << std::endl;
+
     // Return if we're at the end
     if (elements_to_load == 0 || dimension == 0) {
       return false;
@@ -376,21 +338,16 @@ class tdbBlockedMatrix : public MatrixBase {
     last_resident_col_ += elements_to_load;
 
     assert(last_resident_col_ != first_resident_col_);
-    std::cout << "[tdbBlockedMatrix::load] first_resident_col_: " << first_resident_col_ << std::endl;
-    std::cout << "[tdbBlockedMatrix::load] last_resident_col_: " << last_resident_col_ << std::endl;
+    
     // Create a subarray for the next block of columns
     tiledb::Subarray subarray(ctx_, *array_);
-    std::cout << "[tdbBlockedMatrix::load] will read attr 0 from 0 -> " << (int)dimension - 1 << std::endl;
     subarray.add_range(0, 0, (int)dimension - 1);
-      std::cout << "[tdbBlockedMatrix::load] will read attr 1 from " << (int)first_resident_col_ << " -> " << (int)last_resident_col_ - 1 << std::endl;
     subarray.add_range(
         1, (int)first_resident_col_, (int)last_resident_col_ - 1);
 
     auto layout_order = schema_.cell_order();
 
     // Create a query
-    std::cout << "[tdbBlockedMatrix::load] attr_name: " << attr_name << std::endl;
-    std::cout << "[tdbBlockedMatrix::load] layout_order: " << layout_order << std::endl;
     tiledb::Query query(ctx_, *array_);
     query.set_subarray(subarray)
         .set_layout(layout_order)
@@ -398,8 +355,7 @@ class tdbBlockedMatrix : public MatrixBase {
     tiledb_helpers::submit_query(tdb_func__, uri_, query);
     _memory_data.insert_entry(
         tdb_func__, elements_to_load * dimension * sizeof(T));
-    std::cout << "[tdbBlockedMatrix::load] query.has_results(): " << query.has_results() << std::endl;
-    std::cout << "[tdbBlockedMatrix::load] query.query_status(): " << query.query_status() << std::endl;
+
     // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
       throw std::runtime_error("Query status is not complete");

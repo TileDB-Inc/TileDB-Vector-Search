@@ -494,7 +494,7 @@ class vamana_index {
       timestamp_ = group_->get_previous_ingestion_timestamp();
     }
 
-    debug_vector(group_->get_all_ingestion_timestamps(), "ingestion_timestamps");
+    // debug_vector(group_->get_all_ingestion_timestamps(), "ingestion_timestamps");
     // [0,1711645583400,1711645583518]
     // timestamp_ = 1711645583400;
     // std::cout << "[index@vamana_index] group_->dump():" << std::endl;
@@ -559,7 +559,7 @@ class vamana_index {
         timestamp_);
       std::cout << "[index@vamana_index] timestamp_: " << timestamp_ << std::endl;
     std::cout << "[index@vamana_index] group_->adjacency_scores_uri(): " << group_->adjacency_scores_uri() << std::endl;
-    debug_vector(adj_scores, "adj_scores");
+    // debug_vector(adj_scores, "adj_scores");
     auto adj_ids = read_vector<id_type>(
         group_->cached_ctx(),
         group_->adjacency_ids_uri(),
@@ -567,14 +567,14 @@ class vamana_index {
         num_edges_,
         timestamp_);
       std::cout << "[index@vamana_index] 4" << std::endl;
-    debug_vector(adj_ids, "adj_ids");
+    // debug_vector(adj_ids, "adj_ids");
     auto adj_index = read_vector<adjacency_row_index_type>(
         group_->cached_ctx(),
         group_->adjacency_row_index_uri(),
         0,
         num_vectors_ + 1,
         timestamp_);
-    debug_vector(adj_index, "adj_index");
+    // debug_vector(adj_index, "adj_index");
     std::cout << "[index@vamana_index] 5" << std::endl;
     // Here we build a graph using the graph data we read in.  We do it this
     // way for a dynamic graph, which is one that we can later add more edges
@@ -861,12 +861,8 @@ class vamana_index {
       if (overwrite == false) {
         return false;
       }
-      // vfs.remove_dir(group_uri);
     }
     std::cout << "[index@write_index] 1" << std::endl;
-    
-    // std::cout << "[index@write_index] group_->dump():" << std::endl;
-    // group_->dump();
 
     auto write_group = vamana_index_group(*this, ctx, group_uri, TILEDB_WRITE, timestamp_);
     std::cout << "[index@write_index] 2" << std::endl;
@@ -904,12 +900,12 @@ class vamana_index {
 
     std::cout << "[index@write_index] 4" << std::endl;
     auto adj_scores = Vector<score_type>(graph_.num_edges());
-    debug_vector(adj_scores, "adj_scores");
+    // debug_vector(adj_scores, "adj_scores");
     auto adj_ids = Vector<id_type>(graph_.num_edges());
-    debug_vector(adj_ids, "adj_ids");
+    // debug_vector(adj_ids, "adj_ids");
     auto adj_index =
         Vector<adjacency_row_index_type>(graph_.num_vertices() + 1);
-    debug_vector(adj_index, "adj_index");
+    // debug_vector(adj_index, "adj_index");
     std::cout << "[index@write_index] 5" << std::endl;
     size_t edge_offset{0};
     for (size_t i = 0; i < num_vertices(graph_); ++i) {
@@ -921,9 +917,9 @@ class vamana_index {
       }
     }
     adj_index.back() = edge_offset;
-    debug_vector(adj_scores, "adj_scores");
-    debug_vector(adj_ids, "adj_ids");
-    debug_vector(adj_index, "adj_index");
+    // debug_vector(adj_scores, "adj_scores");
+    // debug_vector(adj_ids, "adj_ids");
+    // debug_vector(adj_index, "adj_index");
     std::cout << "[index@write_index] 6" << std::endl;
     write_vector(
         ctx,

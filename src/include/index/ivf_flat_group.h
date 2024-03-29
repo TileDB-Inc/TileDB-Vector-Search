@@ -45,8 +45,6 @@
      {
          {"centroids_array_name", "partition_centroids"},
          {"index_array_name", "partition_indexes"},
-         //  {"ids_array_name", "shuffled_vector_ids"},
-         //  {"parts_array_name", "shuffled_vectors"},
      }}};
 
 template <class Index>

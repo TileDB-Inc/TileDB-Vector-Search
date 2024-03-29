@@ -108,7 +108,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
   auto x = vamana_index_metadata();
   x.load_metadata(read_group);
 
-  SECTION("Validate metadata.") {
+  {
     auto x = vamana_index_metadata();
     x.load_metadata(read_group);
 
@@ -175,11 +175,11 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
           break;
       }
     }
+ }
 
-    SECTION("Compare with another load of the metadata.") {
+ {
       vamana_index_metadata y;
       y.load_metadata(read_group);
       CHECK(x.compare_metadata(y));
-    }
   }
 }

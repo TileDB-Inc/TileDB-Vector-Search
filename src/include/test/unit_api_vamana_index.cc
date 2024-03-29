@@ -201,8 +201,8 @@ TEST_CASE(
     auto ids = std::span<id_type_type>((id_type_type*)ids_vector_array.data(), ids_vector_array.num_vectors());
     CHECK(std::equal(scores.begin(), scores.end(), std::vector<int>{0, 0, 0, 0}.begin()));
     CHECK(std::equal(ids.begin(), ids.end(), std::vector<int>{0, 1, 2, 3}.begin()));
-    debug_vector(scores, "scores");
-    debug_vector(ids, "ids");
+    // debug_vector(scores, "scores");
+    // debug_vector(ids, "ids");
   }
 }
 
