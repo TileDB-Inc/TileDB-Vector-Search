@@ -20,6 +20,7 @@ def query_and_check(index, queries, k, expected_scores, expected_ids, **kwargs):
         print('scores', scores, 'expected_scores', expected_scores)
         print('ids', ids, 'expected_ids', expected_ids)
         assert np.array_equal(ids, expected_ids)
+        assert np.array_equal(scores, expected_scores)
         # assert ids == expected_ids
         # assert scores == expected_scores
         # assert expected_scores.issubset(set(scores[0]))
@@ -222,11 +223,16 @@ def test_vamana_index(tmp_path):
     index = index.consolidate_updates(workers=1, verbose = True)
 
     print('[test_index] index.query() ================================================================================================')
-    scores, ids = index.query(queries, k=1)
-    print('scores', scores, scores.shape)
-    print('ids', ids, ids.shape)
-
+    # scores, ids = index.query(queries, k=1)
+    # print('scores', scores, scores.shape)
+    # print('ids', ids, ids.shape)
+    # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]])
+    # query_and_check(index, np.array([[0, 0, 0]], dtype=np.float32), 1, [[0]], [[0]])
+    # TODO(paris): Does not work with k > 1 or with [0, 0, 0] as the query.
+    query_and_check(index, np.array([[1, 1, 1]], dtype=np.float32), 1, [[0]], [[1]])
     query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 1, [[0]], [[2]])
+    query_and_check(index, np.array([[3, 3, 3]], dtype=np.float32), 1, [[0]], [[3]])
+    query_and_check(index, np.array([[4, 4, 4]], dtype=np.float32), 1, [[0]], [[4]])
 
     # print('Done!!')
     # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, {0, 0, 0})
