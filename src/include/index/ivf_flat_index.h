@@ -748,16 +748,19 @@ class ivf_flat_index {
     tiledb::VFS vfs(ctx);
 
     // @todo Deal with this in right way vis a vis timestamping
+    // auto ingestion_timestamps = get_all_ingestion_timestamps();
+    // auto base_sizes = get_all_base_sizes();
+    // auto num_partitions = get_all_num_partitions();
     if (vfs.is_dir(group_uri)) {
       if (overwrite == false) {
         return false;
       }
-      vfs.remove_dir(group_uri);
+      // vfs.remove_dir(group_uri);
     }
 
     // Write the group
     auto write_group =
-        ivf_flat_index_group(*this, ctx, group_uri, TILEDB_WRITE);
+        ivf_flat_index_group(*this, ctx, group_uri, TILEDB_WRITE, timestamp_);
 
     write_group.set_dimension(dimension_);
 

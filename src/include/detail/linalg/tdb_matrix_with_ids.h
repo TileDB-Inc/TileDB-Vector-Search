@@ -189,18 +189,21 @@ class tdbBlockedMatrixWithIds
   // @todo Allow specification of how many columns to advance by
   bool load() {
     scoped_timer _{tdb_func__ + " " + this->ids_uri_};
-    std::cout << "[tdbBlockedMatrixWithIds::load] ids_uri_: " << ids_uri_
-              << std::endl;
+    // std::cout << "[tdbBlockedMatrixWithIds::load] ids_uri_: " << ids_uri_ << std::endl;
     if (!Base::load()) {
-      std::cout << "[tdbBlockedMatrixWithIds::load] return false 1"
-                << std::endl;
+      // std::cout << "[tdbBlockedMatrixWithIds::load] return false 1" << std::endl;
       return false;
     }
-    std::cout << "[tdbBlockedMatrixWithIds::load] a" << std::endl;
+
+    // std::cout << "[tdbBlockedMatrixWithIds::load] ids_schema_:" <<  std::endl;
+    // ids_schema_.dump();
+
+    // std::cout << "[tdbBlockedMatrixWithIds::load] a" << std::endl;
     const size_t attr_idx{0};
     auto attr = ids_schema_.attribute(attr_idx);
-    std::cout << "[tdbBlockedMatrixWithIds::load] b" << std::endl;
+    // std::cout << "[tdbBlockedMatrixWithIds::load] b" << std::endl;
     std::string attr_name = attr.name();
+    // std::cout << "[tdbBlockedMatrixWithIds::load] attr_name: " << attr_name << std::endl;
     tiledb_datatype_t attr_type = attr.type();
     if (attr_type != tiledb::impl::type_to_tiledb<ids_type>::tiledb_type) {
       throw std::runtime_error(
@@ -221,6 +224,7 @@ class tdbBlockedMatrixWithIds
           "Error computing IDs to load: " + std::to_string(elements_to_load));
     }
 
+
     // Create a subarray for the next block of columns
     tiledb::Subarray subarray(this->ctx_, *ids_array_);
     subarray.add_range(
@@ -236,6 +240,8 @@ class tdbBlockedMatrixWithIds
     tiledb_helpers::submit_query(tdb_func__, ids_uri_, query);
     _memory_data.insert_entry(
         tdb_func__, elements_to_load * dimension * sizeof(T));
+    // std::cout << "[tdbBlockedMatrixWithIds::load] query.has_results(): " << query.has_results() << std::endl;
+    // std::cout << "[tdbBlockedMatrixWithIds::load] query.query_status(): " << query.query_status() << std::endl;
     // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
       throw std::runtime_error("Query status for IDs is not complete");

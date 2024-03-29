@@ -5,8 +5,7 @@ from array_paths import *
 
 from tiledb.vector_search import _tiledbvspy as vspy
 
-# ctx = tiledb.Ctx()
-ctx = tiledb.Ctx({})
+ctx = vspy.Ctx({})
 
 
 # def test_construct_FeatureVector():
@@ -181,11 +180,84 @@ ctx = tiledb.Ctx({})
 #     assert a.id_type_string() == "int64"
 #     assert a.adjacency_row_index_type_string() == "uint64"
 #     assert a.dimension() == 0
+import enum
+from functools import partial
+from typing import Any, Mapping, Optional, Tuple
+import numpy as np
+from tiledb.cloud.dag import dag
+import enum
+import json
+import logging
+import math
+import multiprocessing
+import os
+import time
+from typing import Any, Mapping
 
-def test_foo():
-    parts_array_uri = "/private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-119/test_vamana_index0/array/shuffled_vectors"
-    ids_array_uri = "/private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-119/test_vamana_index0/array/shuffled_vector_ids"
-    data = vspy.FeatureVectorArray(ctx, parts_array_uri, ids_array_uri)
+import numpy as np
+
+import tiledb
+from tiledb.cloud import dag
+from tiledb.cloud.dag import Mode
+from tiledb.cloud.rest_api import models
+from tiledb.cloud.utilities import get_logger
+from tiledb.cloud.utilities import set_aws_context
+from tiledb.vector_search import flat_index
+from tiledb.vector_search import ivf_flat_index
+from tiledb.vector_search import vamana_index
+from tiledb.vector_search.storage_formats import storage_formats
+
+index_group_uri = "/private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-361/test_vamana_index0/array"
+parts_array_uri = "file:///private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-361/test_vamana_index0/array/shuffled_vectors"
+
+ctx = vspy.Ctx({})
+
+# def ingest_vamana(config):
+#     import numpy as np
+#     import tiledb.cloud
+#     from tiledb.vector_search import _tiledbvspy as vspy
+    
+#     index = vspy.IndexVamana(ctx, index_group_uri)
+#     data = vspy.FeatureVectorArray(ctx, parts_array_uri)
+#     print(data.feature_type_string())
+#     index.train(data)
+#     index.add(data)
+
+# def submit_local(d, func, *args, **kwargs):
+#     # Drop kwarg
+#     kwargs.pop("image_name", None)
+#     kwargs.pop("resources", None)
+#     return d.submit_local(func, *args, **kwargs)
+
+# def test_foo():
+#     config = None
+#     DEFAULT_IMG_NAME = "3.9-vectorsearch"
+    
+#     # data = vspy.FeatureVectorArray(ctx, parts_array_uri)
+#     # return
+
+#     d = dag.DAG(
+#         name="vector-ingestion",
+#         mode=Mode.REALTIME,
+#         max_workers=1,
+#         namespace="default",
+#     )
+#     threads = multiprocessing.cpu_count()
+
+#     submit = partial(submit_local, d)
+#     ingest_node = submit(
+#         ingest_vamana,
+#         config=config,
+#         name="ingest",
+#         resources={"cpu": str(threads), "memory": "16Gi"},
+#         image_name=DEFAULT_IMG_NAME,
+#     )
+#     d.compute()
+#     d.wait()
+
+    # parts_array_uri = "file:///private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-341/test_vamana_index0/array/shuffled_vectors"
+    # data = vspy.FeatureVectorArray(ctx, parts_array_uri)
+    # print('data', data)
 
 # def test_inplace_build_query_IndexVamana():
 #     opt_l = 100
@@ -273,28 +345,30 @@ def test_foo():
 #     assert a.adjacency_row_index_type_string() == "uint32"
 #     assert a.dimension() == 0
 
-# def test_inplace_build_query_IndexVamana():
-#     opt_l = 100
-#     k_nn = 10
+def test_inplace_build_query_IndexVamana():
+    opt_l = 100
+    k_nn = 10
 
-#     a = vspy.IndexVamana(id_type="uint32", adjacency_row_index_type="uint32", feature_type="float32")
+    a = vspy.IndexVamana(id_type="uint32", adjacency_row_index_type="uint32", feature_type="float32")
 
-#     training_set = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
-#     assert training_set.feature_type_string() == "float32"
-#     query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
-#     assert query_set.feature_type_string() == "float32"
-#     groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
-#     assert groundtruth_set.feature_type_string() == "uint64"
+    training_set = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
+    assert training_set.feature_type_string() == "float32"
+    query_set = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
+    assert query_set.feature_type_string() == "float32"
+    groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
+    assert groundtruth_set.feature_type_string() == "uint64"
 
-#     a.train(training_set)
-#     s, t = a.query(query_set, k_nn, opt_l)
+    a.train(training_set)
+    s, t = a.query(query_set, k_nn, opt_l)
+    print('[test_inplace_build_query_IndexVamana] s', s)
+    print('[test_inplace_build_query_IndexVamana] t', t)
 
-#     intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
+    intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
 
-#     nt = np.double(t.num_vectors()) * np.double(k_nn)
-#     recall = intersections / nt
+    nt = np.double(t.num_vectors()) * np.double(k_nn)
+    recall = intersections / nt
 
-#     assert recall == 1.0
+    assert recall == 1.0
 
 # def test_construct_IndexIVFFlat():
 #     a = vspy.IndexIVFFlat()

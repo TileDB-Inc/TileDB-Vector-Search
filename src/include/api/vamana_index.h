@@ -156,8 +156,7 @@ class IndexVamana {
         throw std::runtime_error("Unsupported datatype for metadata: " + name);
       }
     }
-    std::cout << "[vamana_index@IndexVamana] feature_type_string: "
-              << this->feature_type_string() << std::endl;
+    std::cout << "[vamana_index@IndexVamana] feature_type_string: " << this->feature_type_string() << std::endl;
     std::cout << "[vamana_index@IndexVamana] id_type_string: "
               << this->id_type_string() << std::endl;
     std::cout << "[vamana_index@IndexVamana] adjacency_row_index_type_string: "
@@ -168,14 +167,18 @@ class IndexVamana {
     if (uri_dispatch_table.find(type) == uri_dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
+    std::cout << "[vamana_index@IndexVamana] will create index" << std::endl;
     index_ = uri_dispatch_table.at(type)(ctx, group_uri);
+    std::cout << "[vamana_index@IndexVamana] done create index" << std::endl;
 
+    std::cout << "[vamana_index@IndexVamana] before dimension_: " << dimension_ << std::endl;
     if (dimension_ != 0 && dimension_ != index_->dimension()) {
       throw std::runtime_error(
           "Dimension mismatch: " + std::to_string(dimension_) +
           " != " + std::to_string(index_->dimension()));
     }
     dimension_ = index_->dimension();
+    std::cout << "[vamana_index@IndexVamana] after dimension_: " << dimension_ << std::endl;
   }
 
   /**

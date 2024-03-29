@@ -74,6 +74,7 @@ class Index:
         self.base_sizes = [
             int(x) for x in list(json.loads(self.group.meta.get("base_sizes", "[]")))
         ]
+        print('[index@__init__] self.base_sizes', self.base_sizes)
         if len(self.base_sizes) > 0:
             self.base_size = self.base_sizes[self.history_index]
         else:
@@ -131,7 +132,7 @@ class Index:
         self.has_updates = self.check_has_updates()
 
     def query(self, queries: np.ndarray, k, **kwargs):
-        print('[index@query]')
+        print('[index@query] k', k)
         if queries.ndim != 2:
             raise TypeError(
                 f"Expected queries to have 2 dimensions (i.e. [[...], etc.]), but it had {queries.ndim} dimensions"
@@ -175,7 +176,12 @@ class Index:
             internal_results_d = np.full((queries.shape[0], k), MAX_FLOAT_32)
             internal_results_i = np.full((queries.shape[0], k), MAX_UINT64)
         addition_results_d, addition_results_i, updated_ids = future.result()
-
+        print('[index@query] addition_results_d', addition_results_d)
+        print('[index@query] addition_results_i', addition_results_i)
+        print('[index@query] updated_ids', updated_ids)
+        
+        print('[index@query] internal_results_d', internal_results_d)
+        print('[index@query] internal_results_i', internal_results_i)
         # Filter updated vectors
         query_id = 0
         for query in internal_results_i:
@@ -195,6 +201,8 @@ class Index:
         sort_index = np.argsort(internal_results_d, axis=1)
         internal_results_d = np.take_along_axis(internal_results_d, sort_index, axis=1)
         internal_results_i = np.take_along_axis(internal_results_i, sort_index, axis=1)
+        print('[index@query] internal_results_d', internal_results_d)
+        print('[index@query] internal_results_i', internal_results_i)
 
         # Merge update results
         if addition_results_d is None:
@@ -215,6 +223,8 @@ class Index:
 
         results_d = np.hstack((internal_results_d, addition_results_d))
         results_i = np.hstack((internal_results_i, addition_results_i))
+        print('[index@query] results_d', results_d)
+        print('[index@query] results_i', results_i)
         sort_index = np.argsort(results_d, axis=1)
         results_d = np.take_along_axis(results_d, sort_index, axis=1)
         results_i = np.take_along_axis(results_i, sort_index, axis=1)
@@ -474,6 +484,7 @@ class Index:
         timestamp: int,
         config: Optional[Mapping[str, Any]] = None,
     ):
+        print('[index@clear_history]')
         with tiledb.scope_ctx(ctx_or_config=config):
             group = tiledb.Group(uri, "r")
             storage_version = group.meta.get("storage_version", "0.1")

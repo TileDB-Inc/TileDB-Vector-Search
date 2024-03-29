@@ -46,11 +46,14 @@ class VamanaIndex(index.Index):
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
+        debug=False,
         **kwargs,
     ):
-        print('[vamana_index@__init__]')
+        print('[vamana_index@__init__] uri', uri)
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
+        # if debug:
+        #     return
         self.index = vspy.IndexVamana(vspy.Ctx(config), uri)
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
@@ -68,7 +71,9 @@ class VamanaIndex(index.Index):
             self.dtype = np.dtype(schema.attr("values").dtype)
         else:
             self.dtype = np.dtype(self.dtype)
-
+        
+        print('[vamana_index@__init__] self.base_size', self.base_size)
+        print('[vamana_index@__init__] schema.domain', schema.domain)
         if self.base_size == -1:
             self.size = schema.domain.dim(1).domain[1] + 1
         else:
@@ -89,7 +94,8 @@ class VamanaIndex(index.Index):
         self,
         queries: np.ndarray,
         k: int = 10,
-        opt_l: Optional[int] = None,
+        opt_l: Optional[int] = 1,
+        nthreads: int = 8,
     ):
         """
         Query an VAMANA index
@@ -102,8 +108,10 @@ class VamanaIndex(index.Index):
             Number of top results to return per query
         opt_l: int
             How deep to search
+        nthreads: int
+            Number of threads to use for query
         """
-        print('[vamana_index@query_internal]')
+        print('[vamana_index@query_internal] self.size', self.size)
         if self.size == 0:
             return np.full((queries.shape[0], k), index.MAX_FLOAT_32), np.full(
                 (queries.shape[0], k), index.MAX_UINT64
@@ -115,11 +123,25 @@ class VamanaIndex(index.Index):
             queries = np.array([queries])
 
         # queries_m = array_to_matrix(np.transpose(queries))
-        queries = vspy.FeatureVectorArray(vspy.Ctx(self.config), queries)
-        scores, ids = self.index.query(queries, k, opt_l)
-        print('[vamana_index.py] scores', scores, 'ids', ids)
+        print('[vamana_index@query_internal] queries', queries)
+        queries_feature_vector_array = vspy.FeatureVectorArray(np.transpose(queries))
+        print('[vamana_index@query_internal] queries_feature_vector_array.dimension(): ', queries_feature_vector_array.dimension())
+        print('[vamana_index@query_internal] queries_feature_vector_array.num_vectors(): ', queries_feature_vector_array.num_vectors())
+        print('[vamana_index@query_internal] queries_feature_vector_array.feature_type_string(): ', queries_feature_vector_array.feature_type_string())
+        scores, ids = self.index.query(queries_feature_vector_array, k, opt_l)
+        print('[vamana_index@query_internal] scores', scores)
+        print('[vamana_index@query_internal] ids', ids)
+        
+        print('[vamana_index@query_internal] scores.dimension(): ', scores.dimension())
+        print('[vamana_index@query_internal] scores.num_vectors(): ', scores.num_vectors())
+        print('[vamana_index@query_internal] scores.feature_type_string(): ', scores.feature_type_string())
+
+        print('[vamana_index@query_internal] ids.dimension(): ', ids.dimension())
+        print('[vamana_index@query_internal] ids.num_vectors(): ', ids.num_vectors())
+        print('[vamana_index@query_internal] ids.feature_type_string(): ', ids.feature_type_string())
+        
         # return np.transpose(np.array(d)), np.transpose(np.array(i))
-        return scores, ids
+        return np.array(scores, copy=False), np.array(ids, copy=False)
 
 # TODO(paris): Pass more arguments to C++, i.e. storage_version.
 def create(
@@ -133,7 +155,7 @@ def create(
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> VamanaIndex:
-      print('[vamana_index@create]')
+      print('[vamana_index@create] dimension', dimensions)
       if not group_exists:
         ctx = vspy.Ctx(config)
         index = vspy.IndexVamana(

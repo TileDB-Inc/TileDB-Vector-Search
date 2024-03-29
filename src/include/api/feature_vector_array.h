@@ -67,6 +67,7 @@ class FeatureVectorArray {
   explicit FeatureVectorArray(T&& obj)
       : vector_array(
             std::make_unique<vector_array_impl<T>>(std::forward<T>(obj))) {
+    std::cout << "[feature_vector_array@FeatureVectorArray] ctor 1" << std::endl;
     feature_type_ = tiledb::impl::type_to_tiledb<
         typename std::remove_cvref_t<T>::value_type>::tiledb_type;
     feature_size_ = datatype_to_size(feature_type_);
@@ -84,11 +85,10 @@ class FeatureVectorArray {
       const std::string& uri,
       const std::string& ids_uri = "",
       size_t num_vectors = 0) {
-    std::cout << "[feature_vector_array@FeatureVectorArray]" << std::endl;
-    std::cout << "[feature_vector_array@FeatureVectorArray] uri: " << uri
-              << std::endl;
-    std::cout << "[feature_vector_array@FeatureVectorArray] ids_uri: "
-              << ids_uri << std::endl;
+    std::cout << "[feature_vector_array@FeatureVectorArray] ctor 2" << std::endl;
+    std::cout << "[feature_vector_array@FeatureVectorArray] uri: " << uri << std::endl;
+    std::cout << "[feature_vector_array@FeatureVectorArray] ids_uri: " << ids_uri << std::endl;
+    std::cout << "[feature_vector_array@FeatureVectorArray] (max) num_vectors: " << num_vectors << std::endl;
     auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ);
     feature_type_ = get_array_datatype(*array);
     array->close();  // @todo create Matrix constructor that takes opened array
@@ -105,6 +105,7 @@ class FeatureVectorArray {
     if (ids_uri.empty()) {
       if (tdb_col_major_matrix_dispatch_table.find(feature_type_) ==
           tdb_col_major_matrix_dispatch_table.end()) {
+            std::cout << "Unsupported features attribute type" << std::endl;
         throw std::runtime_error("Unsupported features attribute type");
       }
       vector_array = tdb_col_major_matrix_dispatch_table.at(feature_type_)(
@@ -134,6 +135,7 @@ class FeatureVectorArray {
       size_t cols,
       const std::string& type_string,
       const std::string& ids_type_string = "") {
+    std::cout << "[feature_vector_array@FeatureVectorArray] ctor 3" << std::endl;
     feature_type_ = string_to_datatype(type_string);
     feature_size_ = datatype_to_size(feature_type_);
 
