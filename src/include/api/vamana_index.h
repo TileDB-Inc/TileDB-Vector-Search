@@ -157,11 +157,11 @@ class IndexVamana {
         throw std::runtime_error("Unsupported datatype for metadata: " + name);
       }
     }
-    std::cout << "[vamana_index@IndexVamana] feature_type_string: " << this->feature_type_string() << std::endl;
-    std::cout << "[vamana_index@IndexVamana] id_type_string: "
-              << this->id_type_string() << std::endl;
-    std::cout << "[vamana_index@IndexVamana] adjacency_row_index_type_string: "
-              << this->adjacency_row_index_type_string() << std::endl;
+//    std::cout << "[vamana_index@IndexVamana] feature_type_string: " << this->feature_type_string() << std::endl;
+//    std::cout << "[vamana_index@IndexVamana] id_type_string: "
+//              << this->id_type_string() << std::endl;
+//    std::cout << "[vamana_index@IndexVamana] adjacency_row_index_type_string: "
+//              << this->adjacency_row_index_type_string() << std::endl;
 
     auto type = std::tuple{
         feature_datatype_, id_datatype_, adjacency_row_index_datatype_};

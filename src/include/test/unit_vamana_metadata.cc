@@ -96,6 +96,10 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
   std::string uri =
       (std::filesystem::temp_directory_path() / "tmp_vamana_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(uri)) {
+    vfs.remove_dir(uri);
+  }
   auto training_vectors =
       tdbColMajorPreLoadMatrix<float>(ctx, siftsmall_inputs_uri);
   auto idx =
