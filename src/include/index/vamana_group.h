@@ -142,17 +142,10 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     return metadata_.num_edges_history_.back();
   }
   auto get_num_edges() const {
-    std::cout << "[vamana_group@get_num_edges] this->timetravel_index_: " << this->timetravel_index_ << std::endl;
     return metadata_.num_edges_history_[this->timetravel_index_];
   }
   auto append_num_edges(size_t size) {
-    for (auto edge: metadata_.num_edges_history_) {
-      std::cout << "[vamana_group@append_num_edges] before edge: " << edge << std::endl;
-    }
     metadata_.num_edges_history_.push_back(size);
-    for (auto edge: metadata_.num_edges_history_) {
-      std::cout << "[vamana_group@append_num_edges] after edge: " << edge << std::endl;
-    }
   }
   auto get_all_num_edges() {
     return metadata_.num_edges_history_;
@@ -264,6 +257,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
 
     metadata_.feature_type_str_ =
         type_to_string_v<typename index_type::feature_type>;
+    std::cout << "[vamana_group@create_default_impl] metadata_.feature_type_str_: " << metadata_.feature_type_str_ << std::endl;
     metadata_.id_type_str_ = type_to_string_v<typename index_type::id_type>;
 
     /**************************************************************************
@@ -291,7 +285,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
      * (vector), adjacency_scores (vector), adjacency_ids (vector),
      * adjacency_row_index (vector).
      */
-    std::cout << "[vamana_group@create_default_impl] calling create_empty_for_matrix() for feature_vectors_uri" << std::endl;
+    std::cout << "[vamana_group@create_default_impl] calling create_empty_for_matrix() for feature_vectors_uri: " << feature_vectors_uri() << std::endl;
     create_empty_for_matrix<
         typename index_type::feature_type,
         stdx::layout_left>(
@@ -305,7 +299,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     write_group.add_member(
         feature_vectors_array_name(), true, feature_vectors_array_name());
 
-    std::cout << "[vamana_group@create_default_impl] calling create_empty_for_vector() for feature_vector_ids_uri" << std::endl;
+    std::cout << "[vamana_group@create_default_impl] calling create_empty_for_vector() for feature_vector_ids_uri: " << feature_vector_ids_uri() << std::endl;
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_,
         feature_vector_ids_uri(),
