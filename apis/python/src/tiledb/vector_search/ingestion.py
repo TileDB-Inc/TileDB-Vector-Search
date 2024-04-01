@@ -513,6 +513,7 @@ def ingest(
         logger: logging.Logger,
         storage_version: str,
     ) -> None:
+        print('[ingest@create_arrays] arrays_created', arrays_created)
         if index_type == "FLAT":
             if not arrays_created:
                 flat_index.create(
@@ -524,15 +525,15 @@ def ingest(
                     storage_version=storage_version,
                 )
         elif index_type == "VAMANA":
-            if not arrays_created:
-                vamana_index.create(
-                    uri=group.uri,
-                    dimensions=dimensions,
-                    vector_type=vector_type,
-                    group_exists=True,
-                    config=config,
-                    storage_version=storage_version
-                )
+            print('skipping vamana creation b/c we already did it')
+            # if not arrays_created:
+            #     vamana_index.create(
+            #         uri=group.uri,
+            #         dimensions=dimensions,
+            #         vector_type=vector_type,
+            #         config=config,
+            #         storage_version=storage_version
+            #     )
         elif index_type == "IVF_FLAT":
             if not arrays_created:
                 ivf_flat_index.create(
@@ -2480,17 +2481,39 @@ def ingest(
 
     with tiledb.scope_ctx(ctx_or_config=config):
         logger = setup(config, verbose)
+        
+        if input_vectors is not None:
+            in_size = input_vectors.shape[0]
+            dimensions = input_vectors.shape[1]
+            vector_type = input_vectors.dtype
+            source_type = "TILEDB_ARRAY"
+        else:
+            if source_type is None:
+                source_type = autodetect_source_type(source_uri=source_uri)
+            in_size, dimensions, vector_type = read_source_metadata(
+                source_uri=source_uri, source_type=source_type
+            )
+        
         logger.debug("Ingesting Vectors into %r", index_group_uri)
         arrays_created = False
-        try:
-            tiledb.group_create(index_group_uri)
-        except tiledb.TileDBError as err:
-            message = str(err)
-            if "already exists" in message:
-                arrays_created = True
-                logger.debug(f"Group '{index_group_uri}' already exists")
-            else:
-                raise err
+        if index_type == "VAMANA":
+            vamana_index.create(
+                uri=index_group_uri,
+                dimensions=dimensions,
+                vector_type=vector_type,
+                config=config,
+                storage_version=storage_version
+            )
+        else:
+            try:
+                tiledb.group_create(index_group_uri)
+            except tiledb.TileDBError as err:
+                message = str(err)
+                if "already exists" in message:
+                    arrays_created = True
+                    logger.debug(f"Group '{index_group_uri}' already exists")
+                else:
+                    raise err
         group = tiledb.Group(index_group_uri, "r")
         ingestion_timestamps = list(
             json.loads(group.meta.get("ingestion_timestamps", "[]"))

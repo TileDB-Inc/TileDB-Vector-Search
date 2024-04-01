@@ -583,7 +583,6 @@ class vamana_index {
     for (size_t i = 0; i < num_vectors_; ++i) {
       auto start = adj_index[i];
       auto end = adj_index[i + 1];
-      std::cout << "i: " << i << " start: " << start << " end: " << end << std::endl;
       for (size_t j = start; j < end; ++j) {
         graph_.add_edge(i, adj_ids[j], adj_scores[j]);
       }
@@ -638,8 +637,8 @@ class vamana_index {
     medoid_ = medoid(feature_vectors_);
 
     // debug_index();
-    // auto write_group = vamana_index_group(*this, ctx, group_uri, TILEDB_WRITE);
-    // write_group.set_temp_size(num_vectors_);
+    // auto write_group = vamana_index_group(*this, ctx, group_uri,
+    // TILEDB_WRITE); write_group.set_temp_size(num_vectors_);
 
     size_t counter{0};
     //    for (float alpha : {alpha_min_, alpha_max_}) {
@@ -749,12 +748,16 @@ class vamana_index {
     size_t L = opt_L ? *opt_L : L_build_;
     // L = std::min<size_t>(L, L_build_);
     std::cout << "[index@vamana_index@query] k " << k << std::endl;
-    std::cout << "[index@vamana_index@query] L_build_ " << L_build_ << std::endl;
+    std::cout << "[index@vamana_index@query] L_build_ " << L_build_
+              << std::endl;
     std::cout << "[index@vamana_index@query] L " << L << std::endl;
-    std::cout << "[index@vamana_index@query] ::num_vectors(query_set): " << ::num_vectors(query_set) << std::endl;
-    std::cout << "[index@vamana_index@query] ::dimension(query_set): " << ::dimension(query_set) << std::endl;
+    std::cout << "[index@vamana_index@query] ::num_vectors(query_set): "
+              << ::num_vectors(query_set) << std::endl;
+    std::cout << "[index@vamana_index@query] ::dimension(query_set): "
+              << ::dimension(query_set) << std::endl;
 
-    debug_with_ids(feature_vectors_, "[index@vamana_index@query] feature_vectors_");
+    debug_with_ids(
+        feature_vectors_, "[index@vamana_index@query] feature_vectors_");
     auto top_k = ColMajorMatrix<id_type>(k, ::num_vectors(query_set));
     auto top_k_scores = ColMajorMatrix<score_type>(k, ::num_vectors(query_set));
 
@@ -864,7 +867,8 @@ class vamana_index {
     }
     std::cout << "[index@write_index] 1" << std::endl;
 
-    auto write_group = vamana_index_group(*this, ctx, group_uri, TILEDB_WRITE, timestamp_);
+    auto write_group =
+        vamana_index_group(*this, ctx, group_uri, TILEDB_WRITE, timestamp_);
     std::cout << "[index@write_index] 2" << std::endl;
     // @todo Make this table-driven
     write_group.set_dimension(dimension_);

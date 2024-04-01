@@ -150,28 +150,30 @@ def create(
     vector_type: np.dtype,
     id_type: np.dtype = np.uint32,
     adjacency_row_index_type: np.dtype = np.uint32,
-    group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> VamanaIndex:
       print('[vamana_index@create] dimension', dimensions)
-      if not group_exists:
-        ctx = vspy.Ctx(config)
-        index = vspy.IndexVamana(
-            feature_type=np.dtype(vector_type).name, 
-            id_type=np.dtype(id_type).name, 
-            adjacency_row_index_type=np.dtype(adjacency_row_index_type).name, 
-            dimension=dimensions,
-        )
-        # TODO(paris): Run all of this with a single C++ call.
-        empty_vector = vspy.FeatureVectorArray(
-            dimensions, 
-            0, 
-            np.dtype(vector_type).name, 
-            np.dtype(id_type).name
-            )
-        index.train(empty_vector)
-        index.add(empty_vector)
-        index.write_index(ctx, uri)
+      print('np.dtype(vector_type).name', np.dtype(vector_type).name)
+      print('np.dtype(id_type).name', np.dtype(id_type).name)
+      print('np.dtype(adjacency_row_index_type).name', np.dtype(adjacency_row_index_type).name)
+      print('will create')
+      ctx = vspy.Ctx(config)
+      index = vspy.IndexVamana(
+          feature_type=np.dtype(vector_type).name, 
+          id_type=np.dtype(id_type).name, 
+          adjacency_row_index_type=np.dtype(adjacency_row_index_type).name, 
+          dimension=dimensions,
+      )
+      # TODO(paris): Run all of this with a single C++ call.
+      empty_vector = vspy.FeatureVectorArray(
+          dimensions, 
+          0, 
+          np.dtype(vector_type).name, 
+          np.dtype(id_type).name
+          )
+      index.train(empty_vector)
+      index.add(empty_vector)
+      index.write_index(ctx, uri)
       return VamanaIndex(uri=uri, config=config, memory_budget=1000000)

@@ -288,7 +288,7 @@ void init_type_erased_module(py::module_& m) {
              const tiledb::Context& ctx,
              const std::string& group_uri,
              bool overwrite) {
-            std::cout << "[type_erased_module@IndexVamana] write_index"
+            std::cout << "[type_erased_module@IndexVamana] write_index: "
                       << group_uri << " " << overwrite << std::endl;
             index.write_index(ctx, group_uri, overwrite);
           },

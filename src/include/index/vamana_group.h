@@ -37,46 +37,35 @@
 #include "index/vamana_metadata.h"
 
 /**
- * The vamana index group needs to store
- *   * vectors
- *   * graph (basically CSR)
- *     * neighbor lists
- *     * neighbor scores (distances)
- *     * "row" index
- *   * centroids (for the case of partitioned vamana)
+ * The vamana index group stores:
+ * - feature_vectors: the original set of vectors which we copy.
+ *   - Example: [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
+ * - feature_vectors_ids: the IDs of the vectors in feature_vectors_array_name.
+ *   - Example: [99, 100, 101]
+ * - The graph (basically a CSR)
+ *   - adjacency_ids: These are indexes into feature_vectors. Vertices go from 0
+ * -> n-1 and each of those vertices indexes into feature_vectors. Then those
+ * IDs correspond to the indexes. You can also think of it as holding the R
+ * nearest neighbhors in the graph for each vertex.
+ *      - Example: Here we have 100 and 101 connected, 99 and 101 connected, and
+ * 99 and 10 connected. Logically you can think of it like: [[1 2], [0, 2], [0,
+ * 1]], but it's stored as [1, 2, 0, 2, 0, 1]
+ *   - adjacency_scores: This holds the neighbor scores (i.e. the distances)
+ *      - Example: [[distance between 0 and 1, distance between 0 and 2], etc.]
+ *   -  adjacency_row_index: Each entry in the row index indicates where the
+ * neighbhors for that index start. 0 because that's where neighbors for vertex
+ * 0 start, then 2 b/c that's where niehbhors for vertex 1 start, then 4 b/c
+ * that's whre niehbhors for vertex 2 start, then 6 b/c that's the end.
+ *      - Example: [0, 2, 4, 6]
  */
 [[maybe_unused]] static StorageFormat vamana_storage_formats = {
     {"0.3",
      {
-         // this is the original set of vectors which we copy
-         {"feature_vectors_array_name",
-          "feature_vectors"},  // = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11,
-                               // 12]]
-         {"feature_vectors_array_ids_name",
-          "feature_vectors_ids"},  // = [99, 100, 101]
-
-         // This comprises the graph. We have a CSR representation of the graph.
-         // You store all the neighbor Don't necesarrily need the scores, could
-         // re-compute when we load the graph.
-         {"adjacency_scores_array_name",
-          "adjacency_scores"},  // = [[distance between 0 and 1, distance
-                                // between 0 and 2], etc.] These are indexes
-                                // into feature_vectors_array_name vertices are
-                                // 0 -> n-1 and each of those vertices indexes
-                                // into feature_vectors, then those IDs
-                                // correspond to the indexes. This holds the R
-                                // nearest neighbhors in the graph for each
-                                // vertex:
-         {"adjacency_ids_array_name",
-          "adjacency_ids"},  // = [[1 2], [0, 2], [0, 1]] = [1 2, 0, 2 0, 1]
-                             // Each entry in the row index indicates where the
-                             // neighbhors for that index start. 0 because
-                             // that's where neighbords for vertex 0 start, then
-                             // 2 b/c that's whre niehbhors for vertex 1 start,
-                             // then 4 b/c that's whre niehbhors for vertex 2
-                             // start, then 6 b/c that's the end.
-         {"adjacency_row_index_array_name",
-          "adjacency_row_index"},  // = [0, 2, 4, 6]
+         {"feature_vectors_array_name", "feature_vectors"},
+         {"feature_vectors_array_ids_name", "feature_vectors_ids"},
+         {"adjacency_scores_array_name", "adjacency_scores"},
+         {"adjacency_ids_array_name", "adjacency_ids"},
+         {"adjacency_row_index_array_name", "adjacency_row_index"},
 
          // @todo for ivf_vamana we would also want medoids
          // {"medoids_array_name", "medoids"},
