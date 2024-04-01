@@ -29,8 +29,8 @@
  *
  */
 
-#include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
+#include <tiledb/group_experimental.h>
 #include <type_traits>
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
