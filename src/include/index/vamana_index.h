@@ -503,16 +503,16 @@ class vamana_index {
     alpha_min_ = group_->get_alpha_min();
     alpha_max_ = group_->get_alpha_max();
     medoid_ = group_->get_medoid();
+
     feature_vectors_ =
         std::move(tdbColMajorPreLoadMatrixWithIds<feature_type, id_type>(
             group_->cached_ctx(),
             group_->feature_vectors_uri(),
             group_->feature_vector_ids_uri(),
-            dimension_,    // num_array_rows
-            num_vectors_,  // num_array_cols
-            0,             // upper_bound
+            dimension_,
+            num_vectors_,
+            0,
             timestamp_));
-    debug_with_ids(feature_vectors_, "[index@vamana_index] feature_vectors");
     /*
      * Read the feature vectors
      * Read the graph
@@ -538,21 +538,19 @@ class vamana_index {
         0,
         num_edges_,
         timestamp_);
-    // debug_vector(adj_scores, "adj_scores");
     auto adj_ids = read_vector<id_type>(
         group_->cached_ctx(),
         group_->adjacency_ids_uri(),
         0,
         num_edges_,
         timestamp_);
-    // debug_vector(adj_ids, "adj_ids");
     auto adj_index = read_vector<adjacency_row_index_type>(
         group_->cached_ctx(),
         group_->adjacency_row_index_uri(),
         0,
         num_vectors_ + 1,
         timestamp_);
-    // debug_vector(adj_index, "adj_index");
+
     // Here we build a graph using the graph data we read in.  We do it this
     // way for a dynamic graph, which is one that we can later add more edges
     // and vertices to (to index new vectors).
@@ -612,8 +610,6 @@ class vamana_index {
     medoid_ = medoid(feature_vectors_);
 
     // debug_index();
-    // auto write_group = vamana_index_group(*this, ctx, group_uri,
-    // TILEDB_WRITE); write_group.set_temp_size(num_vectors_);
 
     size_t counter{0};
     //    for (float alpha : {alpha_min_, alpha_max_}) {
@@ -723,8 +719,6 @@ class vamana_index {
     size_t L = opt_L ? *opt_L : L_build_;
     // L = std::min<size_t>(L, L_build_);
 
-    debug_with_ids(
-        feature_vectors_, "[index@vamana_index@query] feature_vectors_");
     auto top_k = ColMajorMatrix<id_type>(k, ::num_vectors(query_set));
     auto top_k_scores = ColMajorMatrix<score_type>(k, ::num_vectors(query_set));
 
@@ -849,8 +843,8 @@ class vamana_index {
         ctx,
         feature_vectors_,
         write_group.feature_vectors_uri(),
-        0,      // start_pos
-        false,  // create
+        0,
+        false,
         timestamp_);
 
     write_vector(
@@ -865,6 +859,7 @@ class vamana_index {
     auto adj_ids = Vector<id_type>(graph_.num_edges());
     auto adj_index =
         Vector<adjacency_row_index_type>(graph_.num_vertices() + 1);
+
     size_t edge_offset{0};
     for (size_t i = 0; i < num_vertices(graph_); ++i) {
       adj_index[i] = edge_offset;
@@ -892,6 +887,7 @@ class vamana_index {
         0,
         false,
         timestamp_);
+
     return true;
   }
 

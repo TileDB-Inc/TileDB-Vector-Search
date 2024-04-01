@@ -324,7 +324,6 @@ class tdbBlockedMatrix : public MatrixBase {
     }
 
     size_t dimension = last_row_ - first_row_;
-
     auto elements_to_load =
         std::min(load_blocksize_, last_col_ - last_resident_col_);
 

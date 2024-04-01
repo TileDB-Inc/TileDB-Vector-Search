@@ -29,8 +29,6 @@
  *
  */
 
-#include <tiledb/group_experimental.h>
-#include <tiledb/tiledb>
 #include <type_traits>
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
@@ -41,6 +39,9 @@
 #include "tdb_defs.h"
 #include "test/test_utils.h"
 #include "utils/utils.h"
+
+#include <tiledb/group_experimental.h>
+#include <tiledb/tiledb>
 
 TEST_CASE("api_feature_vector_array: test test", "[api_feature_vector_array]") {
   REQUIRE(true);

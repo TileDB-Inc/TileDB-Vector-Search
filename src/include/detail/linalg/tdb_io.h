@@ -227,6 +227,7 @@ void write_matrix(
 
   tiledb::Subarray subarray(ctx, *array);
   subarray.set_subarray(subarray_vals);
+
   tiledb::Query query(ctx, *array);
   auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
                    TILEDB_ROW_MAJOR :
@@ -236,6 +237,7 @@ void write_matrix(
           "values", &A(0, 0), (uint64_t)A.num_rows() * (uint64_t)A.num_cols())
       .set_subarray(subarray);
   tiledb_helpers::submit_query(tdb_func__, uri, query);
+
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
 
   array->close();

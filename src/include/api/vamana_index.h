@@ -138,7 +138,6 @@ class IndexVamana {
          TILEDB_UINT32}};
 
     tiledb::Config cfg;
-    auto obj = tiledb::Object::object(ctx, group_uri);
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
 
     for (auto& [name, value, datatype] : metadata) {

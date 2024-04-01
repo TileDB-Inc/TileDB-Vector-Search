@@ -266,13 +266,14 @@ class base_index_group {
   void open_for_write(const tiledb::Config& cfg) {
     tiledb::VFS vfs(cached_ctx_);
 
-    // check that metadata is not empty
+    // If the group exists, open it for read and check the metadata.
     bool loaded_metadata = false;
     if (vfs.is_dir(group_uri_)) {
       auto read_group =
           tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
+      // Before we read from metadata, check if it's empty, which it may be if
+      // created from Python.
       if (read_group.metadata_num() > 0) {
-        /** Load the current group metadata */
         loaded_metadata = true;
         init_for_open(cfg);
         if (index_timestamp_ < metadata_.ingestion_timestamps_.back()) {
@@ -285,7 +286,7 @@ class base_index_group {
       }
     }
     if (!loaded_metadata) {
-      /** Create a new group */
+      // Create a new group using the default configuration.
       create_default(cfg);
     }
   }

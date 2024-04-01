@@ -202,8 +202,6 @@ TEST_CASE(
         scores.begin(), scores.end(), std::vector<int>{0, 0, 0, 0}.begin()));
     CHECK(std::equal(
         ids.begin(), ids.end(), std::vector<int>{0, 1, 2, 3}.begin()));
-    // debug_vector(scores, "scores");
-    // debug_vector(ids, "ids");
   }
 }
 
