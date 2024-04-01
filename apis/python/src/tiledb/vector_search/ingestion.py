@@ -2496,14 +2496,10 @@ def ingest(
         
         logger.debug("Ingesting Vectors into %r", index_group_uri)
         arrays_created = False
-        vfs = tiledb.VFS()
-        print('tiledb.tiledb.VFS.is_dir', vfs.is_dir(index_group_uri))
-        # print('tiledb.tiledb.VFS.is_bucket', vfs.is_bucket(index_group_uri))
-        print('tiledb.array_exists(index_group_uri)', tiledb.array_exists(index_group_uri))
         if index_type == "VAMANA":
             try:
-                test_group = tiledb.Group(index_group_uri, "r")
-                test_group.close()
+                group = tiledb.Group(index_group_uri, "r")
+                group.close()
                 arrays_created = True
             except tiledb.TileDBError as err:
                 message = str(err)
