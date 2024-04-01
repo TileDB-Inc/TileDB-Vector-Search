@@ -252,7 +252,6 @@ class Index:
         with tiledb.scope_ctx(ctx_or_config=config):
             if updates_array_uri is None:
                 return None, None, np.array([], np.uint64)
-
             updates_array = tiledb.open(
                 updates_array_uri, mode="r", timestamp=timestamp
             )

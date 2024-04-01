@@ -2510,9 +2510,6 @@ def ingest(
             training_source_type = "TILEDB_ARRAY"
 
         if input_vectors is not None:
-            in_size = input_vectors.shape[0]
-            dimensions = input_vectors.shape[1]
-            vector_type = input_vectors.dtype
             source_uri = write_input_vectors(
                 group=group,
                 input_vectors=input_vectors,
@@ -2521,13 +2518,7 @@ def ingest(
                 vector_type=vector_type,
                 array_name=INPUT_VECTORS_ARRAY_NAME,
             )
-            source_type = "TILEDB_ARRAY"
-        else:
-            if source_type is None:
-                source_type = autodetect_source_type(source_uri=source_uri)
-            in_size, dimensions, vector_type = read_source_metadata(
-                source_uri=source_uri, source_type=source_type
-            )
+
         if size == -1:
             size = int(in_size)
         if size > in_size:

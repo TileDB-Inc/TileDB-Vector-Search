@@ -9,7 +9,7 @@ from tiledb.vector_search import Index
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
 from tiledb.vector_search import vamana_index
-from tiledb.vector_search.index import create_metadata	
+from tiledb.vector_search.index import create_metadata
 from tiledb.vector_search.index import DATASET_TYPE
 from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.ingestion import ingest
@@ -29,34 +29,34 @@ def query_and_check(index, queries, k, expected, **kwargs):
         result_d, result_i = index.query(queries, k=k, **kwargs)
         assert expected.issubset(set(result_i[0]))
 
-def check_default_metadata(uri, expected_vector_type, expected_storage_version, expected_index_type):	
-    group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))	
-    assert "dataset_type" in group.meta	
-    assert group.meta["dataset_type"] == DATASET_TYPE	
-    assert type(group.meta["dataset_type"]) == str	
+def check_default_metadata(uri, expected_vector_type, expected_storage_version, expected_index_type):
+    group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
+    assert "dataset_type" in group.meta
+    assert group.meta["dataset_type"] == DATASET_TYPE
+    assert type(group.meta["dataset_type"]) == str
 
-    assert "dtype" in group.meta	
-    assert group.meta["dtype"] == np.dtype(expected_vector_type).name	
-    assert type(group.meta["dtype"]) == str	
+    assert "dtype" in group.meta
+    assert group.meta["dtype"] == np.dtype(expected_vector_type).name
+    assert type(group.meta["dtype"]) == str
 
-    assert "storage_version" in group.meta	
-    assert group.meta["storage_version"] == expected_storage_version	
-    assert type(group.meta["storage_version"]) == str	
+    assert "storage_version" in group.meta
+    assert group.meta["storage_version"] == expected_storage_version
+    assert type(group.meta["storage_version"]) == str
 
-    assert "index_type" in group.meta	
-    assert group.meta["index_type"] == expected_index_type	
-    assert type(group.meta["index_type"]) == str	
+    assert "index_type" in group.meta
+    assert group.meta["index_type"] == expected_index_type
+    assert type(group.meta["index_type"]) == str
 
-    assert "base_sizes" in group.meta	
-    assert group.meta["base_sizes"] == json.dumps([0])	
-    assert type(group.meta["base_sizes"]) == str	
+    assert "base_sizes" in group.meta
+    assert group.meta["base_sizes"] == json.dumps([0])
+    assert type(group.meta["base_sizes"]) == str
 
-    assert "ingestion_timestamps" in group.meta	
-    assert group.meta["ingestion_timestamps"] == json.dumps([0])	
-    assert type(group.meta["ingestion_timestamps"]) == str	
+    assert "ingestion_timestamps" in group.meta
+    assert group.meta["ingestion_timestamps"] == json.dumps([0])
+    assert type(group.meta["ingestion_timestamps"]) == str
 
-    assert "has_updates" in group.meta	
-    assert group.meta["has_updates"] == False	
+    assert "has_updates" in group.meta
+    assert group.meta["has_updates"] == False
     assert type(group.meta["has_updates"]) == np.int64
 
 def test_flat_index(tmp_path):
@@ -98,6 +98,7 @@ def test_flat_index(tmp_path):
 
     index = index.consolidate_updates()
     query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4})
+
 
 def test_ivf_flat_index(tmp_path):
     partitions = 10

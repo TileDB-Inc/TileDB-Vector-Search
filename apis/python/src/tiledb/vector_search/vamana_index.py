@@ -1,4 +1,4 @@
-import json	
+import json
 import multiprocessing
 from typing import Any, Mapping
 
@@ -40,7 +40,7 @@ class VamanaIndex(index.Index):
         self.index = vspy.IndexVamana(vspy.Ctx(config), uri)
         self.db_uri = self.group[storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]].uri
         self.ids_uri = self.group[storage_formats[self.storage_version]["IDS_ARRAY_NAME"]].uri
-
+        
         schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
         self.dimensions = self.index.dimension()
         
