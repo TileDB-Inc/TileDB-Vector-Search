@@ -513,7 +513,8 @@ def ingest(
         logger: logging.Logger,
         storage_version: str,
     ) -> None:
-        # Note that we don't create type-erased indexes (i.e. Vamana) here as we create them at very start using C++.
+        # Note that we don't create type-erased indexes (i.e. Vamana) here. Instead we create them 
+        # at very start of ingest() in C++.
         if index_type == "FLAT":
             if not arrays_created:
                 flat_index.create(
@@ -1454,14 +1455,8 @@ def ingest(
                 logger.debug("Writing additions  data to array %s", ids_array_uri)
                 ids_array[write_offset:end] = additions_external_ids
 
-            group = tiledb.Group(index_group_uri, "r")
-            group.close()
-
             group = tiledb.Group(index_group_uri, "w")
             group.meta["temp_size"] = end
-            group.close()
-
-            group = tiledb.Group(index_group_uri, "r")
             group.close()
 
             parts_array.close()
@@ -1529,9 +1524,7 @@ def ingest(
                     trace_id=trace_id,
                 )
                 
-                # Now we check if the external id is in the updated ids.
-                # False where an element of `ar1` is in `ar2` and True otherwise
-                # updates_filter[i] = False if external_ids[i] is in updated_ids
+                # Then check if the external id is in the updated ids.
                 updates_filter = np.in1d(
                     external_ids, updated_ids, assume_unique=True, invert=True
                 )
@@ -1543,12 +1536,12 @@ def ingest(
                     end_offset = write_offset + vector_len
                     logger.debug("Vector read: %d", vector_len)
                     logger.debug("Writing input data to array %s", parts_array_uri)
-                    # We write the not-updated vectors to the parts array.
+                    # Write the not-updated vectors to the parts array.
                     parts_array[0:dimensions, write_offset:end_offset] = np.transpose(
                         in_vectors
                     )
                     logger.debug("Writing input data to array %s", ids_array_uri)
-                    # And also write the not-updated external ids to the ids array.
+                    # Write the not-updated external ids to the ids array.
                     ids_array[write_offset:end_offset] = external_ids
                     write_offset = end_offset
 
@@ -1572,10 +1565,11 @@ def ingest(
             group = tiledb.Group(index_group_uri, "w")
             group.meta["temp_size"] = end
             group.close()
-            
+
             parts_array.close()
             ids_array.close()
-            
+
+            # Now that we've ingested the vectors and their IDs, train the index with the data.
             from tiledb.vector_search import _tiledbvspy as vspy
             index = vspy.IndexVamana(ctx, index_group_uri)
             data = vspy.FeatureVectorArray(ctx, parts_array_uri, ids_array_uri)
@@ -2448,11 +2442,14 @@ def ingest(
         logger.debug("Ingesting Vectors into %r", index_group_uri)
         arrays_created = False
         if index_type == "VAMANA":
+            # If we're using a type-erased index (i.e. Vamana), we create the group in C++.
             try:
+                # Try opening the group to see if it exists.
                 group = tiledb.Group(index_group_uri, "r")
                 group.close()
                 arrays_created = True
             except tiledb.TileDBError as err:
+                # If it does not then we can create it in C++.
                 message = str(err)
                 if "not exist" in message:
                     vamana_index.create(
@@ -2465,6 +2462,7 @@ def ingest(
                 else:
                     raise err
         else:
+            # Otherwise, we create the group in Python.
             try:
                 tiledb.group_create(index_group_uri)
             except tiledb.TileDBError as err:
@@ -2496,6 +2494,7 @@ def ingest(
                     f"New ingestion timestamp: {index_timestamp} can't be smaller that the latest ingestion "
                     f"timestamp: {previous_ingestion_timestamp}"
                 )
+
         group.close()
         group = tiledb.Group(index_group_uri, "w")
 
@@ -2702,7 +2701,8 @@ def ingest(
         group.close()
         
         if index_type != "VAMANA":
-            # For type-erased indexes we update this metdata in the write_index() call during create_ingestion_dag().
+            # For type-erased indexes (i.e. Vamana), we update this metadata in the write_index() 
+            # call during create_ingestion_dag(), so don't do it here.
             group = tiledb.Group(index_group_uri, "w")
             if index_timestamp is None:
                 index_timestamp = int(time.time() * 1000)
@@ -2715,9 +2715,6 @@ def ingest(
             group.close()
         
         consolidate_and_vacuum(index_group_uri=index_group_uri, config=config)
-
-        group = tiledb.Group(index_group_uri, "r")
-        group.close()
 
         if index_type == "FLAT":
             return flat_index.FlatIndex(uri=index_group_uri, config=config)

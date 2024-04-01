@@ -213,7 +213,6 @@ class Index:
 
         results_d = np.hstack((internal_results_d, addition_results_d))
         results_i = np.hstack((internal_results_i, addition_results_i))
-
         sort_index = np.argsort(results_d, axis=1)
         results_d = np.take_along_axis(results_d, sort_index, axis=1)
         results_i = np.take_along_axis(results_i, sort_index, axis=1)
@@ -254,7 +253,6 @@ class Index:
             if updates_array_uri is None:
                 return None, None, np.array([], np.uint64)
 
-            schema = tiledb.ArraySchema.load(updates_array_uri)
             updates_array = tiledb.open(
                 updates_array_uri, mode="r", timestamp=timestamp
             )

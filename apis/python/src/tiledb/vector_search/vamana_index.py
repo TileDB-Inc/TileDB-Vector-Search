@@ -1,3 +1,5 @@
+import json	
+import multiprocessing
 from typing import Any, Mapping
 
 import numpy as np
@@ -36,14 +38,9 @@ class VamanaIndex(index.Index):
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
         self.index = vspy.IndexVamana(vspy.Ctx(config), uri)
-        self.db_uri = self.group[
-            storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
-            + self.index_version
-        ].uri
-        self.ids_uri = self.group[
-            storage_formats[self.storage_version]["IDS_ARRAY_NAME"] + self.index_version
-        ].uri
-        
+        self.db_uri = self.group[storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]].uri
+        self.ids_uri = self.group[storage_formats[self.storage_version]["IDS_ARRAY_NAME"]].uri
+
         schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
         self.dimensions = self.index.dimension()
         
@@ -52,7 +49,7 @@ class VamanaIndex(index.Index):
             self.dtype = np.dtype(schema.attr("values").dtype)
         else:
             self.dtype = np.dtype(self.dtype)
-        
+
         if self.base_size == -1:
             self.size = schema.domain.dim(1).domain[1] + 1
         else:
