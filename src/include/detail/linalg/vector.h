@@ -162,20 +162,20 @@ class Vector : public std::span<T> {
 
 template <feature_vector V>
 void debug_vector(const V& v, const std::string& msg = "") {
-  std::cout << msg;
+  std::cout << msg << ": [";
   for (size_t i = 0; i < dimension(v); ++i) {
     std::cout << v[i] << " ";
   }
-  std::cout << "\n";
+  std::cout << "]\n";
 }
 
 template <std::ranges::forward_range V>
 void debug_vector(const V& v, const std::string& msg = "") {
-  std::cout << msg;
+  std::cout << msg << ": [";
   for (auto&& i : v) {
     std::cout << i << " ";
   }
-  std::cout << "\n";
+  std::cout << "]\n";
 }
 
 template <feature_vector V>
