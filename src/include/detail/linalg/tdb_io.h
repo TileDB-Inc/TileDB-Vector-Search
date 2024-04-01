@@ -269,7 +269,7 @@ void create_empty_for_vector(
 
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
-  schema.set_domain(domain).set_order({{TILEDB_ROW_MAJOR, TILEDB_ROW_MAJOR}});
+  schema.set_domain(domain).set_order({{TILEDB_COL_MAJOR, TILEDB_COL_MAJOR}});
 
   schema.add_attribute(tiledb::Attribute::create<feature_type>(ctx, "values"));
 
@@ -347,7 +347,7 @@ void write_vector(
   // print_types(v, v.data(), v.size());
 
   tiledb::Query query(ctx, *array);
-  query.set_layout(TILEDB_ROW_MAJOR)
+  query.set_layout(TILEDB_COL_MAJOR)
       .set_data_buffer("values", const_cast<value_type*>(v.data()), size(v))
       .set_subarray(subarray);
 
