@@ -34,6 +34,7 @@
 
 #include <random>
 #include <ranges>
+#include <catch2/catch_all.hpp>
 
 #include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
