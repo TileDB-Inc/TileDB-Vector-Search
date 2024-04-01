@@ -35,6 +35,7 @@
 #include <random>
 #include <ranges>
 
+#include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 
 template <std::ranges::range R>
@@ -129,6 +130,75 @@ void fill_and_write_matrix(
 
   // Write the IDs to their URI.
   write_vector(ctx, X.ids(), ids_uri);
+}
+
+void validate_metadata(
+    tiledb::Group& read_group,
+    const std::vector<std::tuple<std::string, std::string>>& expected_str,
+    const std::vector<std::tuple<std::string, size_t>>& expected_arithmetic) {
+  for (auto& [name, value] : expected_str) {
+    tiledb_datatype_t v_type;
+    uint32_t v_num;
+    const void* v;
+    CHECK(read_group.has_metadata(name, &v_type));
+    if (!read_group.has_metadata(name, &v_type)) {
+      continue;
+    }
+
+    read_group.get_metadata(name, &v_type, &v_num, &v);
+    CHECK((v_type == TILEDB_STRING_ASCII || v_type == TILEDB_STRING_UTF8));
+    std::string tmp = std::string(static_cast<const char*>(v), v_num);
+    CHECK(!empty(value));
+    CHECK(tmp == value);
+  }
+  for (auto& [name, value] : expected_arithmetic) {
+    tiledb_datatype_t v_type;
+    uint32_t v_num;
+    const void* v;
+    CHECK(read_group.has_metadata(name, &v_type));
+    if (!read_group.has_metadata(name, &v_type)) {
+      continue;
+    }
+
+    read_group.get_metadata(name, &v_type, &v_num, &v);
+
+    if (name == "temp_size") {
+      CHECK((v_type == TILEDB_INT64 || v_type == TILEDB_FLOAT64));
+      if (v_type == TILEDB_INT64) {
+        CHECK(value == *static_cast<const int64_t*>(v));
+      } else if (v_type == TILEDB_FLOAT64) {
+        CHECK(value == (int64_t) * static_cast<const double*>(v));
+      }
+    }
+    CHECK(
+        (v_type == TILEDB_UINT32 || v_type == TILEDB_INT64 ||
+         v_type == TILEDB_UINT64 || v_type == TILEDB_FLOAT64 ||
+         v_type == TILEDB_FLOAT32));
+
+    switch (v_type) {
+      case TILEDB_FLOAT64:
+        CHECK(value == *static_cast<const double*>(v));
+        break;
+      case TILEDB_FLOAT32:
+        CHECK(value == *static_cast<const float*>(v));
+        break;
+      case TILEDB_INT64:
+        CHECK(value == *static_cast<const int64_t*>(v));
+        break;
+      case TILEDB_UINT64:
+        CHECK(value == *static_cast<const uint64_t*>(v));
+        break;
+      case TILEDB_UINT32:
+        CHECK(value == *static_cast<const uint32_t*>(v));
+        break;
+      case TILEDB_STRING_UTF8:
+        CHECK(false);
+        break;
+      default:
+        CHECK(false);
+        break;
+    }
+  }
 }
 
 #endif  // TILEDB_TEST_UTILS_H
