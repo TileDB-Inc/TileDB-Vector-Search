@@ -2496,14 +2496,39 @@ def ingest(
         
         logger.debug("Ingesting Vectors into %r", index_group_uri)
         arrays_created = False
+        vfs = tiledb.VFS()
+        print('tiledb.tiledb.VFS.is_dir', vfs.is_dir(index_group_uri))
+        # print('tiledb.tiledb.VFS.is_bucket', vfs.is_bucket(index_group_uri))
+        print('tiledb.array_exists(index_group_uri)', tiledb.array_exists(index_group_uri))
         if index_type == "VAMANA":
-            vamana_index.create(
-                uri=index_group_uri,
-                dimensions=dimensions,
-                vector_type=vector_type,
-                config=config,
-                storage_version=storage_version
-            )
+            try:
+                test_group = tiledb.Group(index_group_uri, "r")
+                test_group.close()
+                arrays_created = True
+            except tiledb.TileDBError as err:
+                message = str(err)
+                if "not exist" in message:
+                    vamana_index.create(
+                        uri=index_group_uri,
+                        dimensions=dimensions,
+                        vector_type=vector_type,
+                        config=config,
+                        storage_version=storage_version
+                    )
+                else:
+                    raise err
+
+            # if vfs.is_dir(index_group_uri):
+            #     arrays_created = True
+            #     logger.debug(f"Group '{index_group_uri}' already exists")
+            # else:
+            #     vamana_index.create(
+            #         uri=index_group_uri,
+            #         dimensions=dimensions,
+            #         vector_type=vector_type,
+            #         config=config,
+            #         storage_version=storage_version
+            #     )
         else:
             try:
                 tiledb.group_create(index_group_uri)
