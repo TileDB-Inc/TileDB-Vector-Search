@@ -32,9 +32,9 @@
 #ifndef TILEDB_TEST_UTILS_H
 #define TILEDB_TEST_UTILS_H
 
+#include <catch2/catch_all.hpp>
 #include <random>
 #include <ranges>
-#include <catch2/catch_all.hpp>
 
 #include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
