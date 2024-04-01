@@ -202,21 +202,17 @@ void write_matrix(
     size_t start_pos = 0,
     bool create = true,
     size_t timestamp = 0) {
-  std::cout << "[write_matrix] uri: " << uri << " start_pos: " << start_pos
-            << " create: " << create << " timestamp: " << timestamp << "\n";
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
-  
+
   tiledb::TemporalPolicy temporal_policy =
       (timestamp == 0) ? tiledb::TemporalPolicy() :
                          tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
-  
+
   if (create) {
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri);
   }
 
   if (A.num_rows() == 0 || A.num_cols() == 0) {
-    std::cout << "[write_matrix] return early b/c empty write; A.num_rows() "
-              << A.num_rows() << " A.num_cols() " << A.num_cols() << "\n";
     return;
   }
 
@@ -228,7 +224,7 @@ void write_matrix(
   // Open array for writing
   auto array = tiledb_helpers::open_array(
       tdb_func__, ctx, uri, TILEDB_WRITE, temporal_policy);
-  
+
   tiledb::Subarray subarray(ctx, *array);
   subarray.set_subarray(subarray_vals);
   tiledb::Query query(ctx, *array);
@@ -319,7 +315,7 @@ void write_vector(
     bool create = true,
     size_t timestamp = 0) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
-  
+
   tiledb::TemporalPolicy temporal_policy =
       (timestamp == 0) ? tiledb::TemporalPolicy() :
                          tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
@@ -331,8 +327,6 @@ void write_vector(
   }
 
   if (size(v) == 0) {
-    std::cout << "[write_vector] return early b/c empty write; size(v)) "
-              << size(v) << "\n";
     return;
   }
 

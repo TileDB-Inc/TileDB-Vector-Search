@@ -264,24 +264,14 @@ class base_index_group {
    * @param version
    */
   void open_for_write(const tiledb::Config& cfg) {
-    std::cout << "[index_group@open_for_write] group_uri_: " << group_uri_
-              << std::endl;
     tiledb::VFS vfs(cached_ctx_);
 
-    std::cout << "[index_group@open_for_write] vfs.is_dir(group_uri_): "
-              << vfs.is_dir(group_uri_) << std::endl;
     // check that metadata is not empty
     bool loaded_metadata = false;
     if (vfs.is_dir(group_uri_)) {
       auto read_group =
           tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
-      std::cout << "[index_group@open_for_write] read_group.metadata_num(): "
-                << read_group.metadata_num() << std::endl;
-      std::cout << "[index_group@open_for_write] read_group.member_count(): "
-                << read_group.member_count() << std::endl;
       if (read_group.metadata_num() > 0) {
-        std::cout << "[index_group@open_for_write] reading existing metadata"
-                  << std::endl;
         /** Load the current group metadata */
         loaded_metadata = true;
         init_for_open(cfg);
@@ -294,11 +284,7 @@ class base_index_group {
         }
       }
     }
-    std::cout << "[index_group@open_for_write] loaded_metadata: "
-              << loaded_metadata << std::endl;
     if (!loaded_metadata) {
-      std::cout << "[index_group@open_for_write] creating metadata from default"
-                << std::endl;
       /** Create a new group */
       create_default(cfg);
     }
@@ -366,7 +352,6 @@ class base_index_group {
       , index_timestamp_(timestamp)
       , version_(version)
       , opened_for_(rw) {
-      std::cout << "[index_group@base_index_group]" << std::endl;
     switch (opened_for_) {
       case TILEDB_READ:
         open_for_read(cfg);

@@ -136,11 +136,9 @@ class IndexVamana {
         {"adjacency_row_index_datatype",
          &adjacency_row_index_datatype_,
          TILEDB_UINT32}};
-    
+
     tiledb::Config cfg;
     auto obj = tiledb::Object::object(ctx, group_uri);
-    std::cout << "[vamana_index@IndexVamana] obj_type: " << obj.to_str()
-              << std::endl;
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
 
     for (auto& [name, value, datatype] : metadata) {
@@ -157,29 +155,20 @@ class IndexVamana {
         throw std::runtime_error("Unsupported datatype for metadata: " + name);
       }
     }
-//    std::cout << "[vamana_index@IndexVamana] feature_type_string: " << this->feature_type_string() << std::endl;
-//    std::cout << "[vamana_index@IndexVamana] id_type_string: "
-//              << this->id_type_string() << std::endl;
-//    std::cout << "[vamana_index@IndexVamana] adjacency_row_index_type_string: "
-//              << this->adjacency_row_index_type_string() << std::endl;
 
     auto type = std::tuple{
         feature_datatype_, id_datatype_, adjacency_row_index_datatype_};
     if (uri_dispatch_table.find(type) == uri_dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
-    std::cout << "[vamana_index@IndexVamana] will create index" << std::endl;
     index_ = uri_dispatch_table.at(type)(ctx, group_uri);
-    std::cout << "[vamana_index@IndexVamana] done create index" << std::endl;
 
-    std::cout << "[vamana_index@IndexVamana] before dimension_: " << dimension_ << std::endl;
     if (dimension_ != 0 && dimension_ != index_->dimension()) {
       throw std::runtime_error(
           "Dimension mismatch: " + std::to_string(dimension_) +
           " != " + std::to_string(index_->dimension()));
     }
     dimension_ = index_->dimension();
-    std::cout << "[vamana_index@IndexVamana] after dimension_: " << dimension_ << std::endl;
   }
 
   /**

@@ -283,7 +283,7 @@ TEST_CASE("tdb_matrix_with_ids: empty matrix", "[tdb_matrix_with_ids]") {
     CHECK(X.num_ids() == 0);
     CHECK(X.ids().size() == 0);
   }
-  
+
   {
     // No constraints.
     auto X = tdbColMajorMatrixWithIds<float>(ctx, tmp_matrix_uri, tmp_ids_uri);
@@ -360,4 +360,3 @@ TEMPLATE_TEST_CASE(
     CHECK(X.ids()[i] == Z.ids()[i]);
   }
 }
-

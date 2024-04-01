@@ -214,7 +214,6 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   }
 
   void create_default_impl(const tiledb::Config& cfg) {
-    std::cout << "[vamana_group@create_default_impl]" << std::endl;
     if (empty(this->version_)) {
       this->version_ = current_storage_version;
     }
@@ -246,7 +245,6 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
 
     metadata_.feature_type_str_ =
         type_to_string_v<typename index_type::feature_type>;
-    std::cout << "[vamana_group@create_default_impl] metadata_.feature_type_str_: " << metadata_.feature_type_str_ << std::endl;
     metadata_.id_type_str_ = type_to_string_v<typename index_type::id_type>;
 
     /**************************************************************************
@@ -274,7 +272,6 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
      * (vector), adjacency_scores (vector), adjacency_ids (vector),
      * adjacency_row_index (vector).
      */
-    std::cout << "[vamana_group@create_default_impl] calling create_empty_for_matrix() for feature_vectors_uri: " << feature_vectors_uri() << std::endl;
     create_empty_for_matrix<
         typename index_type::feature_type,
         stdx::layout_left>(
@@ -288,7 +285,6 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     write_group.add_member(
         feature_vectors_array_name(), true, feature_vectors_array_name());
 
-    std::cout << "[vamana_group@create_default_impl] calling create_empty_for_vector() for feature_vector_ids_uri: " << feature_vector_ids_uri() << std::endl;
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_,
         feature_vector_ids_uri(),

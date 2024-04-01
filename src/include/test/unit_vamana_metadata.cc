@@ -179,11 +179,11 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
           break;
       }
     }
- }
+  }
 
- {
-      vamana_index_metadata y;
-      y.load_metadata(read_group);
-      CHECK(x.compare_metadata(y));
+  {
+    vamana_index_metadata y;
+    y.load_metadata(read_group);
+    CHECK(x.compare_metadata(y));
   }
 }

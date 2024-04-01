@@ -154,11 +154,6 @@ def create(
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> VamanaIndex:
-      print('[vamana_index@create] dimension', dimensions)
-      print('np.dtype(vector_type).name', np.dtype(vector_type).name)
-      print('np.dtype(id_type).name', np.dtype(id_type).name)
-      print('np.dtype(adjacency_row_index_type).name', np.dtype(adjacency_row_index_type).name)
-      print('will create')
       ctx = vspy.Ctx(config)
       index = vspy.IndexVamana(
           feature_type=np.dtype(vector_type).name, 

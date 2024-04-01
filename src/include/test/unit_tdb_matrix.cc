@@ -316,7 +316,7 @@ TEST_CASE("tdb_matrix: empty matrix", "[tdb_matrix]") {
   }
 
   {
-      // No rows and all cols.
+    // No rows and all cols.
     auto X = tdbColMajorMatrix<float>(
         ctx, tmp_matrix_uri, 0, 0, 0, std::nullopt, 10000, 0);
     X.load();

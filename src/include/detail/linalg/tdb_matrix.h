@@ -247,26 +247,26 @@ class tdbBlockedMatrix : public MatrixBase {
     const size_t attr_idx = 0;
 
     auto domain_{schema_.domain()};
-    
+
     auto row_domain{domain_.dimension(0)};
     auto col_domain{domain_.dimension(1)};
 
     auto non_empty_domain = array_->non_empty_domain<int>();
     if (!last_row.has_value()) {
       if (non_empty_domain.empty()) {
-          last_row_ = 0;
+        last_row_ = 0;
       } else {
-          last_row_ = non_empty_domain[0].second.second + 1;
+        last_row_ = non_empty_domain[0].second.second + 1;
       }
     } else {
       last_row_ = *last_row;
     }
     if (!last_col.has_value()) {
-        if (non_empty_domain.empty()) {
-            last_col_ = 0;
-        } else {
-            last_col_ = non_empty_domain[1].second.second + 1;
-        }
+      if (non_empty_domain.empty()) {
+        last_col_ = 0;
+      } else {
+        last_col_ = non_empty_domain[1].second.second + 1;
+      }
     } else {
       last_col_ = *last_col;
     }
@@ -324,7 +324,7 @@ class tdbBlockedMatrix : public MatrixBase {
     }
 
     size_t dimension = last_row_ - first_row_;
-    
+
     auto elements_to_load =
         std::min(load_blocksize_, last_col_ - last_resident_col_);
 
@@ -338,7 +338,7 @@ class tdbBlockedMatrix : public MatrixBase {
     last_resident_col_ += elements_to_load;
 
     assert(last_resident_col_ != first_resident_col_);
-    
+
     // Create a subarray for the next block of columns
     tiledb::Subarray subarray(ctx_, *array_);
     subarray.add_range(0, 0, (int)dimension - 1);

@@ -151,8 +151,6 @@ TEST_CASE(
     vfs.remove_dir(index_uri);
   }
 
-  std::cout << "[unit_api_vamana_index] index_uri " << index_uri << std::endl;
-
   {
     auto index = IndexVamana(std::make_optional<IndexOptions>(
         {{"feature_type", feature_type},
@@ -168,11 +166,6 @@ TEST_CASE(
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
-    std::cout
-        << "[unit_apivamana_index] index.adjacency_row_index_type_string() "
-        << index.adjacency_row_index_type_string() << std::endl;
-    std::cout << "[unit_apivamana_index] adjacency_row_index_type "
-              << adjacency_row_index_type << std::endl;
     CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
   }
 
@@ -199,14 +192,6 @@ TEST_CASE(
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(query_vector_array, 1);
-    std::cout << "[unit_api_vamana_index] scores_vector_array.num_vectors() "
-              << scores_vector_array.num_vectors() << std::endl;
-    std::cout << "[unit_api_vamana_index] scores_vector_array.dimension() "
-              << scores_vector_array.dimension() << std::endl;
-    std::cout << "[unit_api_vamana_index] ids_vector_array.num_vectors() "
-              << ids_vector_array.num_vectors() << std::endl;
-    std::cout << "[unit_api_vamana_index] ids_vector_array.dimension() "
-              << ids_vector_array.dimension() << std::endl;
 
     auto scores = std::span<feature_type_type>(
         (feature_type_type*)scores_vector_array.data(),

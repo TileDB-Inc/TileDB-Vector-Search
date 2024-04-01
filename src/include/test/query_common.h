@@ -179,7 +179,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
         (std::filesystem::temp_directory_path() / "tmp_ivf_index").string();
     tiledb::VFS vfs(ctx_);
     if (vfs.is_dir(tmp_ivf_index_uri)) {
-        vfs.remove_dir(tmp_ivf_index_uri);
+      vfs.remove_dir(tmp_ivf_index_uri);
     }
     idx.write_index(ctx_, tmp_ivf_index_uri, true);
     auto idx0 =

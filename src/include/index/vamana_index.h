@@ -489,46 +489,29 @@ class vamana_index {
   vamana_index(tiledb::Context ctx, const std::string& uri)
       : group_{std::make_unique<vamana_index_group<vamana_index>>(
             *this, ctx, uri, TILEDB_READ, timestamp_)} {
-    std::cout << "[index@vamana_index]" << std::endl;
     if (timestamp_ == 0) {
       timestamp_ = group_->get_previous_ingestion_timestamp();
     }
 
-    // debug_vector(group_->get_all_ingestion_timestamps(), "ingestion_timestamps");
-    // [0,1711645583400,1711645583518]
-    // timestamp_ = 1711645583400;
-    // std::cout << "[index@vamana_index] group_->dump():" << std::endl;
-    // group_->dump();
-
     // @todo Make this table-driven
     dimension_ = group_->get_dimension();
-    std::cout << "[index@vamana_index] dimension_: " << dimension_ << std::endl;
     num_vectors_ = group_->get_base_size();
-    std::cout << "[index@vamana_index] num_vectors_: " << num_vectors_ << std::endl;
     num_edges_ = group_->get_num_edges();
-    std::cout << "[index@vamana_index] num_edges_: " << num_edges_ << std::endl;
     L_build_ = group_->get_L_build();
-    std::cout << "[index@vamana_index] L_build_: " << L_build_ << std::endl;
     R_max_degree_ = group_->get_R_max_degree();
-    std::cout << "[index@vamana_index] R_max_degree_: " << R_max_degree_ << std::endl;
     B_backtrack_ = group_->get_B_backtrack();
-    std::cout << "[index@vamana_index] B_backtrack_: " << B_backtrack_ << std::endl;
     alpha_min_ = group_->get_alpha_min();
-    std::cout << "[index@vamana_index] alpha_min_: " << alpha_min_ << std::endl;
     alpha_max_ = group_->get_alpha_max();
-    std::cout << "[index@vamana_index] alpha_max_: " << alpha_max_ << std::endl;
     medoid_ = group_->get_medoid();
-    std::cout << "[index@vamana_index] medoid_: " << medoid_ << std::endl;
     feature_vectors_ =
         std::move(tdbColMajorPreLoadMatrixWithIds<feature_type, id_type>(
             group_->cached_ctx(),
             group_->feature_vectors_uri(),
             group_->feature_vector_ids_uri(),
-            dimension_,   // num_array_rows
-            num_vectors_, // num_array_cols
-            0,            // upper_bound
+            dimension_,    // num_array_rows
+            num_vectors_,  // num_array_cols
+            0,             // upper_bound
             timestamp_));
-    std::cout << "[index@vamana_index] feature_vectors:" << std::endl;
     debug_with_ids(feature_vectors_, "[index@vamana_index] feature_vectors");
     /*
      * Read the feature vectors
@@ -548,17 +531,13 @@ class vamana_index {
      * @todo Encapsulate reading the graph?
      * @todo Instead of saving scores, recompute them on ingestion
      ****************************************************************************/
-      std::cout << "[index@vamana_index] 1" << std::endl;
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
-    std::cout << "[index@vamana_index] 2" << std::endl;
     auto adj_scores = read_vector<score_type>(
         group_->cached_ctx(),
         group_->adjacency_scores_uri(),
         0,
         num_edges_,
         timestamp_);
-      std::cout << "[index@vamana_index] timestamp_: " << timestamp_ << std::endl;
-    std::cout << "[index@vamana_index] group_->adjacency_scores_uri(): " << group_->adjacency_scores_uri() << std::endl;
     // debug_vector(adj_scores, "adj_scores");
     auto adj_ids = read_vector<id_type>(
         group_->cached_ctx(),
@@ -566,7 +545,6 @@ class vamana_index {
         0,
         num_edges_,
         timestamp_);
-      std::cout << "[index@vamana_index] 4" << std::endl;
     // debug_vector(adj_ids, "adj_ids");
     auto adj_index = read_vector<adjacency_row_index_type>(
         group_->cached_ctx(),
@@ -575,11 +553,9 @@ class vamana_index {
         num_vectors_ + 1,
         timestamp_);
     // debug_vector(adj_index, "adj_index");
-    std::cout << "[index@vamana_index] 5" << std::endl;
     // Here we build a graph using the graph data we read in.  We do it this
     // way for a dynamic graph, which is one that we can later add more edges
     // and vertices to (to index new vectors).
-    std::cout << "num_vectors_: " << num_vectors_ << std::endl;
     for (size_t i = 0; i < num_vectors_; ++i) {
       auto start = adj_index[i];
       auto end = adj_index[i + 1];
@@ -587,7 +563,6 @@ class vamana_index {
         graph_.add_edge(i, adj_ids[j], adj_scores[j]);
       }
     }
-    std::cout << "[index@vamana_index] done" << std::endl;
   }
 
   /**
@@ -747,14 +722,6 @@ class vamana_index {
 
     size_t L = opt_L ? *opt_L : L_build_;
     // L = std::min<size_t>(L, L_build_);
-    std::cout << "[index@vamana_index@query] k " << k << std::endl;
-    std::cout << "[index@vamana_index@query] L_build_ " << L_build_
-              << std::endl;
-    std::cout << "[index@vamana_index@query] L " << L << std::endl;
-    std::cout << "[index@vamana_index@query] ::num_vectors(query_set): "
-              << ::num_vectors(query_set) << std::endl;
-    std::cout << "[index@vamana_index@query] ::dimension(query_set): "
-              << ::dimension(query_set) << std::endl;
 
     debug_with_ids(
         feature_vectors_, "[index@vamana_index@query] feature_vectors_");
@@ -854,8 +821,6 @@ class vamana_index {
       const tiledb::Context& ctx,
       const std::string& group_uri,
       bool overwrite = false) const {
-    std::cout << "[index@vamana_index@write_index] " << group_uri
-              << " overwrite: " << overwrite << std::endl;
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
 
@@ -865,11 +830,9 @@ class vamana_index {
         return false;
       }
     }
-    std::cout << "[index@write_index] 1" << std::endl;
 
     auto write_group =
         vamana_index_group(*this, ctx, group_uri, TILEDB_WRITE, timestamp_);
-    std::cout << "[index@write_index] 2" << std::endl;
     // @todo Make this table-driven
     write_group.set_dimension(dimension_);
     write_group.set_L_build(L_build_);
@@ -882,7 +845,6 @@ class vamana_index {
     write_group.append_ingestion_timestamp(timestamp_);
     write_group.append_base_size(::num_vectors(feature_vectors_));
     write_group.append_num_edges(graph_.num_edges());
-    std::cout << "[index@write_index] calling write_matrix() for feature_vectors_uri" << std::endl;
     write_matrix(
         ctx,
         feature_vectors_,
@@ -891,9 +853,6 @@ class vamana_index {
         false,  // create
         timestamp_);
 
-    // std::cout << "[index@write_index] after updating group_->dump():" << std::endl;
-    // group_->dump();
-    std::cout << "[index@write_index] calling write_vector() for feature_vector_ids_uri" << std::endl;
     write_vector(
         ctx,
         feature_vectors_.ids(),
@@ -902,15 +861,10 @@ class vamana_index {
         false,
         timestamp_);
 
-    std::cout << "[index@write_index] 4" << std::endl;
     auto adj_scores = Vector<score_type>(graph_.num_edges());
-    // debug_vector(adj_scores, "adj_scores");
     auto adj_ids = Vector<id_type>(graph_.num_edges());
-    // debug_vector(adj_ids, "adj_ids");
     auto adj_index =
         Vector<adjacency_row_index_type>(graph_.num_vertices() + 1);
-    // debug_vector(adj_index, "adj_index");
-    std::cout << "[index@write_index] 5" << std::endl;
     size_t edge_offset{0};
     for (size_t i = 0; i < num_vertices(graph_); ++i) {
       adj_index[i] = edge_offset;
@@ -921,10 +875,7 @@ class vamana_index {
       }
     }
     adj_index.back() = edge_offset;
-    // debug_vector(adj_scores, "adj_scores");
-    // debug_vector(adj_ids, "adj_ids");
-    // debug_vector(adj_index, "adj_index");
-    std::cout << "[index@write_index] 6" << std::endl;
+
     write_vector(
         ctx,
         adj_scores,
@@ -932,10 +883,8 @@ class vamana_index {
         0,
         false,
         timestamp_);
-    std::cout << "[index@write_index] 6" << std::endl;
     write_vector(
         ctx, adj_ids, write_group.adjacency_ids_uri(), 0, false, timestamp_);
-    std::cout << "[index@write_index] 7" << std::endl;
     write_vector(
         ctx,
         adj_index,
@@ -943,7 +892,6 @@ class vamana_index {
         0,
         false,
         timestamp_);
-    std::cout << "[index@write_index] 8" << std::endl;
     return true;
   }
 

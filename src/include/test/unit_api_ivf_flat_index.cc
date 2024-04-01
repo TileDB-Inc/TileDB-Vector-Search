@@ -160,6 +160,7 @@ TEST_CASE(
   auto ctx = tiledb::Context{};
   std::string api_ivf_flat_index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_flat_index").string();
+
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
       {{"feature_type", "float32"},
        {"id_type", "uint32"},

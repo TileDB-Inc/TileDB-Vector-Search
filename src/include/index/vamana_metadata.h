@@ -124,14 +124,12 @@ class vamana_index_metadata
   };
 
   auto json_to_vector_impl() {
-    std::cout << "[index_metadata@json_to_vector_impl] num_edges_history_str_: " << num_edges_history_str_ << std::endl;
     num_edges_history_ =
         json_to_vector<num_edges_history_type>(num_edges_history_str_);
   }
 
   auto vector_to_json_impl() {
     num_edges_history_str_ = to_string(nlohmann::json(num_edges_history_));
-    std::cout << "[vamana_metadata@vector_to_json_impl] num_edges_history_str_: " << num_edges_history_str_ << std::endl;
   }
 
   auto dump_json_impl() {
