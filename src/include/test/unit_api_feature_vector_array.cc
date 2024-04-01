@@ -542,7 +542,7 @@ TEST_CASE("api: load empty matrix in group", "[api][index]") {
     vfs.remove_dir(group_uri);
   }
 
-  std::string feature_vectors_name = "shuffled_vectors";
+  std::string feature_vectors_name = "shuffled_vectors_test";
   std::string feature_vectors_uri = (group_uri / feature_vectors_name);
   if (vfs.is_dir(feature_vectors_uri)) {
     vfs.remove_dir(feature_vectors_uri);

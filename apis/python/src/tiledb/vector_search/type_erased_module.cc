@@ -166,8 +166,6 @@ void init_type_erased_module(py::module_& m) {
 
   py::class_<FeatureVectorArray>(m, "FeatureVectorArray", py::buffer_protocol())
       .def(py::init<const tiledb::Context&, const std::string&>())
-      //      .def(py::init<size_t, size_t, const std::string&>())
-      //      .def(py::init<size_t, size_t void*, const std::string&>())
       .def(py::init<
            const tiledb::Context&,
            const std::string&,

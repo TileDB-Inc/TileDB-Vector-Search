@@ -513,7 +513,7 @@ def ingest(
         logger: logging.Logger,
         storage_version: str,
     ) -> None:
-        print('[ingest@create_arrays] arrays_created', arrays_created)
+        # Note that we don't create type-erased indexes (i.e. Vamana) here as we create them at very start using C++.
         if index_type == "FLAT":
             if not arrays_created:
                 flat_index.create(
@@ -524,16 +524,6 @@ def ingest(
                     config=config,
                     storage_version=storage_version,
                 )
-        elif index_type == "VAMANA":
-            print('skipping vamana creation b/c we already did it')
-            # if not arrays_created:
-            #     vamana_index.create(
-            #         uri=group.uri,
-            #         dimensions=dimensions,
-            #         vector_type=vector_type,
-            #         config=config,
-            #         storage_version=storage_version
-            #     )
         elif index_type == "IVF_FLAT":
             if not arrays_created:
                 ivf_flat_index.create(
@@ -590,7 +580,6 @@ def ingest(
                 partial_write_array_index_uri, "w"
             )
 
-            # paris debug
             if not tiledb.array_exists(partial_write_array_ids_uri):
                 logger.debug("Creating temp ids array")
                 ids_array_rows_dim = tiledb.Dim(
@@ -718,7 +707,7 @@ def ingest(
             partial_write_array_group.close()
             partial_write_array_index_group.close()
 
-        else:
+        elif index_type != "VAMANA":
             raise ValueError(f"Not supported index_type {index_type}")
 
     def read_external_ids(
@@ -1466,7 +1455,6 @@ def ingest(
                 ids_array[write_offset:end] = additions_external_ids
 
             group = tiledb.Group(index_group_uri, "r")
-            print('[ingestion@ingest_flat] group.meta', group.meta)
             group.close()
 
             group = tiledb.Group(index_group_uri, "w")
@@ -1474,7 +1462,6 @@ def ingest(
             group.close()
 
             group = tiledb.Group(index_group_uri, "r")
-            print('[ingestion@ingest_flat] group.meta', group.meta)
             group.close()
 
             parts_array.close()
@@ -1499,7 +1486,6 @@ def ingest(
         import numpy as np
         import tiledb.cloud
 
-        print('[ingestion@ingest_vamana] size', size, 'batch', batch, 'dimensions', dimensions)
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
             updated_ids = read_updated_ids(
@@ -1510,13 +1496,10 @@ def ingest(
             )
             group = tiledb.Group(index_group_uri)
             parts_array_uri = group[PARTS_ARRAY_NAME].uri
-            print('[ingestion@ingest_vamana] parts_array_uri', parts_array_uri)
             ids_array_uri = group[IDS_ARRAY_NAME].uri
             parts_array = tiledb.open(
                 parts_array_uri, mode="w", timestamp=index_timestamp
             )
-            print('[ingestion@ingest_vamana] parts_array.schema', parts_array.schema)
-            print('[ingestion@ingest_vamana] parts_array.domain', parts_array.domain)
             ids_array = tiledb.open(ids_array_uri, mode="w", timestamp=index_timestamp)
             # Ingest base data
             write_offset = 0
@@ -1535,8 +1518,7 @@ def ingest(
                     config=config,
                     verbose=verbose,
                     trace_id=trace_id,
-                ) # [[1, 2, 3, 4], [5, 6, 7, 8]]
-                print('[ingestion@ingest_vamana] in_vectors', in_vectors)
+                )
                 external_ids = read_external_ids(
                     external_ids_uri=external_ids_uri,
                     external_ids_type=external_ids_type,
@@ -1545,8 +1527,8 @@ def ingest(
                     config=config,
                     verbose=verbose,
                     trace_id=trace_id,
-                ) # [99, 100]
-                print('[ingestion@ingest_vamana] external_ids', external_ids)
+                )
+                
                 # Now we check if the external id is in the updated ids.
                 # False where an element of `ar1` is in `ar2` and True otherwise
                 # updates_filter[i] = False if external_ids[i] is in updated_ids
@@ -1577,8 +1559,6 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             )
-            print('[ingestion@ingest_vamana] additions_vectors', additions_vectors)
-            print('[ingestion@ingest_vamana] additions_external_ids', additions_external_ids)
             end = write_offset
             if additions_vectors is not None:
                 end += len(additions_external_ids)
@@ -1588,41 +1568,16 @@ def ingest(
                 )
                 logger.debug("Writing additions  data to array %s", ids_array_uri)
                 ids_array[write_offset:end] = additions_external_ids
-            
 
-            print('[ingestion@ingest_vamana] end', end)
-
-            # group = tiledb.Group(index_group_uri, "r")
-            # print('[ingestion@ingest_vamana] group.meta', group.meta)
-            # group.close()
-            
             group = tiledb.Group(index_group_uri, "w")
             group.meta["temp_size"] = end
             group.close()
-
-            # group = tiledb.Group(index_group_uri, "r")
-            # print('[ingestion@ingest_vamana] group.meta', group.meta)
-            # group.close()
             
             parts_array.close()
             ids_array.close()
             
-            # parts_array = tiledb.open(parts_array_uri, mode="r", timestamp=index_timestamp)
-            # ids_array = tiledb.open(ids_array_uri, mode="r", timestamp=index_timestamp)
-            # print('[ingestion@ingest_vamana] parts_array_uri', parts_array_uri)
-            # print('[ingestion@ingest_vamana] parts_array.domain', parts_array.domain)
-            # print('[ingestion@ingest_vamana] parts_array', parts_array[0:dimensions, 0:end])
-            # print()
-            # print('[ingestion@ingest_vamana] ids_array_uri', ids_array_uri)
-            # print('[ingestion@ingest_vamana] ids_array.domain', ids_array.domain)
-            # print('[ingestion@ingest_vamana] ids_array', ids_array[0:end])
-            # parts_array.close()
-            # ids_array.close()
-            
             from tiledb.vector_search import _tiledbvspy as vspy
             index = vspy.IndexVamana(ctx, index_group_uri)
-            print('[ingestion@ingest_vamana] parts_array_uri', parts_array_uri)
-            print('[ingestion@ingest_vamana] ids_array_uri', ids_array_uri)
             data = vspy.FeatureVectorArray(ctx, parts_array_uri, ids_array_uri)
             index.train(data)
             index.add(data)
@@ -1666,7 +1621,6 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
-        print('[ingestion@ingest_vectors_udf] index_group_uri', index_group_uri)
         import tiledb.cloud
         from tiledb.vector_search.module import StdVector_u64
         from tiledb.vector_search.module import array_to_matrix
@@ -1805,7 +1759,6 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
-        print('[ingestion@ingest_additions_udf] index_group_uri', index_group_uri)
         import tiledb.cloud
         from tiledb.vector_search.module import StdVector_u64
         from tiledb.vector_search.module import array_to_matrix
@@ -1928,7 +1881,6 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
-        print('[ingestion@consolidate_partition_udf] index_group_uri', index_group_uri)
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
             logger.debug(
@@ -2436,7 +2388,6 @@ def ingest(
         index_group_uri: str,
         config: Optional[Mapping[str, Any]] = None,
     ):
-        print('[ingestion@consolidate_and_vacuum] index_group_uri', index_group_uri)
         group = tiledb.Group(index_group_uri)
         try:
             if INPUT_VECTORS_ARRAY_NAME in group:
@@ -2513,18 +2464,6 @@ def ingest(
                     )
                 else:
                     raise err
-
-            # if vfs.is_dir(index_group_uri):
-            #     arrays_created = True
-            #     logger.debug(f"Group '{index_group_uri}' already exists")
-            # else:
-            #     vamana_index.create(
-            #         uri=index_group_uri,
-            #         dimensions=dimensions,
-            #         vector_type=vector_type,
-            #         config=config,
-            #         storage_version=storage_version
-            #     )
         else:
             try:
                 tiledb.group_create(index_group_uri)
@@ -2539,11 +2478,8 @@ def ingest(
         ingestion_timestamps = list(
             json.loads(group.meta.get("ingestion_timestamps", "[]"))
         )
-        print('[ingestion@ingest_vectors] ingestion_timestamps', ingestion_timestamps)
         base_sizes = list(json.loads(group.meta.get("base_sizes", "[]")))
-        print('[ingestion@ingest_vectors] base_sizes', base_sizes)
         partition_history = list(json.loads(group.meta.get("partition_history", "[]")))
-        print('[ingestion@ingest_vectors] partition_history', partition_history)
         if partitions == -1:
             partitions = int(group.meta.get("partitions", "-1"))
 
@@ -2560,7 +2496,6 @@ def ingest(
                     f"New ingestion timestamp: {index_timestamp} can't be smaller that the latest ingestion "
                     f"timestamp: {previous_ingestion_timestamp}"
                 )
-        print('[ingestion@ingest_vectors] previous_ingestion_timestamp', previous_ingestion_timestamp)
         group.close()
         group = tiledb.Group(index_group_uri, "w")
 
@@ -2764,7 +2699,6 @@ def ingest(
 
         group = tiledb.Group(index_group_uri, "r")
         temp_size = int(group.meta.get("temp_size", "0"))
-        print('[ingestion@ingest] temp_size', temp_size)
         group.close()
         
         if index_type != "VAMANA":
@@ -2773,11 +2707,8 @@ def ingest(
             if index_timestamp is None:
                 index_timestamp = int(time.time() * 1000)
             ingestion_timestamps.append(index_timestamp)
-            print('[ingestion@ingest] ingestion_timestamps', ingestion_timestamps)
             base_sizes.append(temp_size)
-            print('[ingestion@ingest] base_sizes', base_sizes)
             partition_history.append(partitions)
-            print('[ingestion@ingest] partition_history', partition_history)
             group.meta["partition_history"] = json.dumps(partition_history)
             group.meta["base_sizes"] = json.dumps(base_sizes)
             group.meta["ingestion_timestamps"] = json.dumps(ingestion_timestamps)
@@ -2786,7 +2717,6 @@ def ingest(
         consolidate_and_vacuum(index_group_uri=index_group_uri, config=config)
 
         group = tiledb.Group(index_group_uri, "r")
-        print('[ingestion@ingest] group.meta', group.meta)
         group.close()
 
         if index_type == "FLAT":

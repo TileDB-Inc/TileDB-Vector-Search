@@ -266,27 +266,18 @@ class base_index_group {
   void open_for_write(const tiledb::Config& cfg) {
     tiledb::VFS vfs(cached_ctx_);
 
-    // If the group exists, open it for read and check the metadata.
-    bool loaded_metadata = false;
     if (vfs.is_dir(group_uri_)) {
-      auto read_group =
-          tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
-      // Before we read from metadata, check if it's empty, which it may be if
-      // created from Python.
-      if (read_group.metadata_num() > 0) {
-        loaded_metadata = true;
-        init_for_open(cfg);
-        if (index_timestamp_ < metadata_.ingestion_timestamps_.back()) {
-          throw std::runtime_error(
-              "Requested write timestamp " + std::to_string(index_timestamp_) +
-              " is not greater than " +
-              std::to_string(metadata_.ingestion_timestamps_.back()));
-          group_timestamp_ = index_timestamp_;
-        }
+      /** Load the current group metadata */
+      init_for_open(cfg);
+      if (index_timestamp_ < metadata_.ingestion_timestamps_.back()) {
+        throw std::runtime_error(
+            "Requested write timestamp " + std::to_string(index_timestamp_) +
+            " is not greater than " +
+            std::to_string(metadata_.ingestion_timestamps_.back()));
+        group_timestamp_ = index_timestamp_;
       }
-    }
-    if (!loaded_metadata) {
-      // Create a new group using the default configuration.
+    } else {
+      /** Create a new group */
       create_default(cfg);
     }
   }

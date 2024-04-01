@@ -15,190 +15,138 @@ from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.utils import load_fvecs
 
 
-def query_and_check(index, queries, k, expected_scores, expected_ids, **kwargs):
+def query_and_check_distances(index, queries, k, expected_distances, expected_ids, **kwargs):
     for _ in range(1):
-        scores, ids = index.query(queries, k=k, **kwargs)
-        print('scores', scores, 'expected_scores', expected_scores)
-        print('ids', ids, 'expected_ids', expected_ids)
+        distances, ids = index.query(queries, k=k, **kwargs)
         assert np.array_equal(ids, expected_ids)
-        assert np.array_equal(scores, expected_scores)
-        # assert ids == expected_ids
-        # assert scores == expected_scores
-        # assert expected_scores.issubset(set(scores[0]))
-        # assert expected_ids.issubset(set(ids[0]))
+        assert np.array_equal(distances, expected_distances)
 
-# def query_and_check(index, queries, k, expected, **kwargs):
-#     for _ in range(3):
-#         result_d, result_i = index.query(queries, k=k, **kwargs)
-#         assert expected.issubset(set(result_i[0]))
+def query_and_check(index, queries, k, expected, **kwargs):
+    for _ in range(3):
+        result_d, result_i = index.query(queries, k=k, **kwargs)
+        assert expected.issubset(set(result_i[0]))
 
-# def test_flat_index(tmp_path):
-#     uri = os.path.join(tmp_path, "array")
-#     index = flat_index.create(uri=uri, dimensions=3, vector_type=np.dtype(np.uint8))
-#     # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {ind.MAX_UINT64})
-#     print('========================================================================================================================================')
-#     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-#     group.meta.dump()
-#     print('========================================================================================================================================')
+def test_flat_index(tmp_path):
+    uri = os.path.join(tmp_path, "array")
+    index = flat_index.create(uri=uri, dimensions=3, vector_type=np.dtype(np.uint8))
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {ind.MAX_UINT64})
 
-#     update_vectors = np.empty([5], dtype=object)
-#     update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.uint8))
-#     update_vectors[1] = np.array([1, 1, 1], dtype=np.dtype(np.uint8))
-#     update_vectors[2] = np.array([2, 2, 2], dtype=np.dtype(np.uint8))
-#     update_vectors[3] = np.array([3, 3, 3], dtype=np.dtype(np.uint8))
-#     update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.uint8))
-#     index.update_batch(vectors=update_vectors, external_ids=np.array([0, 1, 2, 3, 4]))
-#     # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3})
+    update_vectors = np.empty([5], dtype=object)
+    update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.uint8))
+    update_vectors[1] = np.array([1, 1, 1], dtype=np.dtype(np.uint8))
+    update_vectors[2] = np.array([2, 2, 2], dtype=np.dtype(np.uint8))
+    update_vectors[3] = np.array([3, 3, 3], dtype=np.dtype(np.uint8))
+    update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.uint8))
+    index.update_batch(vectors=update_vectors, external_ids=np.array([0, 1, 2, 3, 4]))
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3})
 
-#     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-#     group.meta.dump()
+    index = index.consolidate_updates()
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3})
 
-#     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-#     group.meta.dump()
-#     print('========================================================================================================================================')
+    index.delete_batch(external_ids=np.array([1, 3]))
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4})
 
-#     index = index.consolidate_updates()
-#     # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3})
+    index = index.consolidate_updates()
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4})
 
-#     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-#     print('PARIS DEBUG 1', group.meta)
-#     print('========================================================================================================================================')
+    update_vectors = np.empty([2], dtype=object)
+    update_vectors[0] = np.array([1, 1, 1], dtype=np.dtype(np.uint8))
+    update_vectors[1] = np.array([3, 3, 3], dtype=np.dtype(np.uint8))
+    index.update_batch(vectors=update_vectors, external_ids=np.array([1, 3]))
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3})
 
-#     index.delete_batch(external_ids=np.array([1, 3]))
-#     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-#     print('PARIS DEBUG 1', group.meta)
-#     # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4})
+    index = index.consolidate_updates()
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3})
 
-#     index = index.consolidate_updates()
-#     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-#     print('PARIS DEBUG 1', group.meta)
-#     # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4})
+    index.delete_batch(external_ids=np.array([1, 3]))
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4})
 
-#     update_vectors = np.empty([2], dtype=object)
-#     update_vectors[0] = np.array([1, 1, 1], dtype=np.dtype(np.uint8))
-#     update_vectors[1] = np.array([3, 3, 3], dtype=np.dtype(np.uint8))
-#     index.update_batch(vectors=update_vectors, external_ids=np.array([1, 3]))
-#     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-#     print('PARIS DEBUG 1', group.meta)
-#     # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3})
+    index = index.consolidate_updates()
 
-#     index = index.consolidate_updates()
-#     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-#     print('PARIS DEBUG 1', group.meta)
-#     # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3})
-
-#     index.delete_batch(external_ids=np.array([1, 3]))
-#     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-#     print('PARIS DEBUG 1', group.meta)
-#     # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4})
-
-#     index = index.consolidate_updates()
-#     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-#     print('PARIS DEBUG 1', group.meta)
-
-#     # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4})
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4})
 
 
-# def test_ivf_flat_index(tmp_path):
-#     partitions = 10
-#     uri = os.path.join(tmp_path, "array")
+def test_ivf_flat_index(tmp_path):
+    partitions = 10
+    uri = os.path.join(tmp_path, "array")
 
-#     index = ivf_flat_index.create(
-#         uri=uri, dimensions=3, vector_type=np.dtype(np.uint8), partitions=partitions
-#     )
-#     query_and_check(
-#         index,
-#         np.array([[2, 2, 2]], dtype=np.float32),
-#         3,
-#         {ind.MAX_UINT64},
-#         nprobe=partitions,
-#     )
+    index = ivf_flat_index.create(
+        uri=uri, dimensions=3, vector_type=np.dtype(np.uint8), partitions=partitions
+    )
+    query_and_check(
+        index,
+        np.array([[2, 2, 2]], dtype=np.float32),
+        3,
+        {ind.MAX_UINT64},
+        nprobe=partitions,
+    )
 
-#     update_vectors = np.empty([5], dtype=object)
-#     update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.uint8))
-#     update_vectors[1] = np.array([1, 1, 1], dtype=np.dtype(np.uint8))
-#     update_vectors[2] = np.array([2, 2, 2], dtype=np.dtype(np.uint8))
-#     update_vectors[3] = np.array([3, 3, 3], dtype=np.dtype(np.uint8))
-#     update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.uint8))
-#     index.update_batch(vectors=update_vectors, external_ids=np.array([0, 1, 2, 3, 4]))
+    update_vectors = np.empty([5], dtype=object)
+    update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.uint8))
+    update_vectors[1] = np.array([1, 1, 1], dtype=np.dtype(np.uint8))
+    update_vectors[2] = np.array([2, 2, 2], dtype=np.dtype(np.uint8))
+    update_vectors[3] = np.array([3, 3, 3], dtype=np.dtype(np.uint8))
+    update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.uint8))
+    index.update_batch(vectors=update_vectors, external_ids=np.array([0, 1, 2, 3, 4]))
 
-#     query_and_check(
-#         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
-#     )
+    query_and_check(
+        index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
+    )
 
-#     index = index.consolidate_updates()
+    index = index.consolidate_updates()
 
-#     query_and_check(
-#         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
-#     )
+    query_and_check(
+        index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
+    )
 
-#     index.delete_batch(external_ids=np.array([1, 3]))
-#     query_and_check(
-#         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4}, nprobe=partitions
-#     )
+    index.delete_batch(external_ids=np.array([1, 3]))
+    query_and_check(
+        index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4}, nprobe=partitions
+    )
 
-#     index = index.consolidate_updates()
-#     query_and_check(
-#         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4}, nprobe=partitions
-#     )
+    index = index.consolidate_updates()
+    query_and_check(
+        index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4}, nprobe=partitions
+    )
 
-#     update_vectors = np.empty([2], dtype=object)
-#     update_vectors[0] = np.array([1, 1, 1], dtype=np.dtype(np.uint8))
-#     update_vectors[1] = np.array([3, 3, 3], dtype=np.dtype(np.uint8))
-#     index.update_batch(vectors=update_vectors, external_ids=np.array([1, 3]))
-#     query_and_check(
-#         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
-#     )
+    update_vectors = np.empty([2], dtype=object)
+    update_vectors[0] = np.array([1, 1, 1], dtype=np.dtype(np.uint8))
+    update_vectors[1] = np.array([3, 3, 3], dtype=np.dtype(np.uint8))
+    index.update_batch(vectors=update_vectors, external_ids=np.array([1, 3]))
+    query_and_check(
+        index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
+    )
 
-#     index = index.consolidate_updates()
-#     query_and_check(
-#         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
-#     )
+    index = index.consolidate_updates()
+    query_and_check(
+        index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
+    )
 
-#     index.delete_batch(external_ids=np.array([1, 3]))
-#     query_and_check(
-#         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4}, nprobe=partitions
-#     )
+    index.delete_batch(external_ids=np.array([1, 3]))
+    query_and_check(
+        index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4}, nprobe=partitions
+    )
 
-#     index = index.consolidate_updates()
-#     query_and_check(
-#         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4}, nprobe=partitions
-#     )
-
-# index_group_uri = "/private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-432/test_vamana_index0/array"
-# group = tiledb.Group(index_group_uri, "r")
-# print('[ingestion@ingest_vamana] group.meta', group.meta)
-# group.close()
-
-# group = tiledb.Group(index_group_uri, "w")
-# group.meta["temp_size"] = 10
-# group.close()
-
-# group = tiledb.Group(index_group_uri, "r")
-# print('[ingestion@ingest_vamana] group.meta', group.meta)
-# group.close()
+    index = index.consolidate_updates()
+    query_and_check(
+        index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4}, nprobe=partitions
+    )
 
 from tiledb.vector_search import _tiledbvspy as vspy
 def test_vamana_index(tmp_path):
     uri = os.path.join(tmp_path, "array")
-    # remove uri dir
     if os.path.exists(uri):
         os.rmdir(uri)
 
     dimensions = 9
-    print('[test_index] vamana_index.create() ================================================================================================')
     index = vamana_index.create(uri=uri, dimensions=3, vector_type=np.dtype(np.float32), id_type=np.dtype(np.uint32))
     queries = np.array([[2, 2, 2]], dtype=np.float32) # np.array([[0 for _ in range(3)]], dtype=np.float32)
-    print('[test_index] index.query() ================================================================================================')
-    scores, ids = index.query(queries, k=1)
-    print('scores', scores, scores.shape)
-    print('ids', ids, ids.shape)
-    assert scores.shape == (1, 1)
+    distances, ids = index.query(queries, k=1)
+    assert distances.shape == (1, 1)
     assert ids.shape == (1, 1)
-    assert scores[0][0] == ind.MAX_FLOAT_32
+    assert distances[0][0] == ind.MAX_FLOAT_32
     assert ids[0][0] == ind.MAX_UINT64
-    print('[test_index] query_and_check() ================================================================================================')
-    query_and_check(
+    query_and_check_distances(
         index,
         queries,
         1,
@@ -206,7 +154,6 @@ def test_vamana_index(tmp_path):
         [[ind.MAX_UINT64]]
     )
 
-    print('[test_index] index.update_batch() ================================================================================================')
     update_vectors = np.empty([5], dtype=object)
     update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.float32))
     update_vectors[1] = np.array([1, 1, 1], dtype=np.dtype(np.float32))
@@ -214,25 +161,15 @@ def test_vamana_index(tmp_path):
     update_vectors[3] = np.array([3, 3, 3], dtype=np.dtype(np.float32))
     update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.float32))
     index.update_batch(vectors=update_vectors, external_ids=np.array([0, 1, 2, 3, 4], dtype=np.dtype(np.uint32)))
-    print('[test_index] query_and_check() ================================================================================================')
-    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]])
-    # scores, ids = index.query(queries, k=1)
-    # print('scores', scores, scores.shape)
-    # print('ids', ids, ids.shape)
-    print('[test_index] index.consolidate_updates() ================================================================================================')
+    query_and_check_distances(index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]])
+    
     index = index.consolidate_updates()
 
-    print('[test_index] index.query() ================================================================================================')
-    # scores, ids = index.query(queries, k=1)
-    # print('scores', scores, scores.shape)
-    # print('ids', ids, ids.shape)
-    # query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]])
-    # query_and_check(index, np.array([[0, 0, 0]], dtype=np.float32), 1, [[0]], [[0]])
     # TODO(paris): Does not work with k > 1 or with [0, 0, 0] as the query.
-    query_and_check(index, np.array([[1, 1, 1]], dtype=np.float32), 1, [[0]], [[1]])
-    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 1, [[0]], [[2]])
-    query_and_check(index, np.array([[3, 3, 3]], dtype=np.float32), 1, [[0]], [[3]])
-    query_and_check(index, np.array([[4, 4, 4]], dtype=np.float32), 1, [[0]], [[4]])
+    query_and_check_distances(index, np.array([[1, 1, 1]], dtype=np.float32), 1, [[0]], [[1]])
+    query_and_check_distances(index, np.array([[2, 2, 2]], dtype=np.float32), 1, [[0]], [[2]])
+    query_and_check_distances(index, np.array([[3, 3, 3]], dtype=np.float32), 1, [[0]], [[3]])
+    query_and_check_distances(index, np.array([[4, 4, 4]], dtype=np.float32), 1, [[0]], [[4]])
 
 def test_delete_invalid_index(tmp_path):
     # We don't throw with an invalid uri.

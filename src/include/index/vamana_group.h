@@ -61,8 +61,6 @@
 [[maybe_unused]] static StorageFormat vamana_storage_formats = {
     {"0.3",
      {
-         {"feature_vectors_array_name", "feature_vectors"},
-         {"feature_vectors_array_ids_name", "feature_vectors_ids"},
          {"adjacency_scores_array_name", "adjacency_scores"},
          {"adjacency_ids_array_name", "adjacency_ids"},
          {"adjacency_row_index_array_name", "adjacency_row_index"},

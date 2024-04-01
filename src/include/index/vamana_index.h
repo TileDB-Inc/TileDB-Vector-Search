@@ -513,6 +513,7 @@ class vamana_index {
             num_vectors_,
             0,
             timestamp_));
+
     /*
      * Read the feature vectors
      * Read the graph
@@ -532,6 +533,7 @@ class vamana_index {
      * @todo Instead of saving scores, recompute them on ingestion
      ****************************************************************************/
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
+
     auto adj_scores = read_vector<score_type>(
         group_->cached_ctx(),
         group_->adjacency_scores_uri(),
@@ -839,6 +841,7 @@ class vamana_index {
     write_group.append_ingestion_timestamp(timestamp_);
     write_group.append_base_size(::num_vectors(feature_vectors_));
     write_group.append_num_edges(graph_.num_edges());
+
     write_matrix(
         ctx,
         feature_vectors_,
