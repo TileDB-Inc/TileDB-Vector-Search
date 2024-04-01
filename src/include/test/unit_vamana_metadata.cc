@@ -96,6 +96,10 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
   std::string uri =
       (std::filesystem::temp_directory_path() / "tmp_vamana_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(uri)) {
+    vfs.remove_dir(uri);
+  }
   auto training_vectors =
       tdbColMajorPreLoadMatrix<float>(ctx, siftsmall_inputs_uri);
   auto idx =
@@ -108,7 +112,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
   auto x = vamana_index_metadata();
   x.load_metadata(read_group);
 
-  SECTION("Validate metadata.") {
+  {
     auto x = vamana_index_metadata();
     x.load_metadata(read_group);
 
@@ -175,11 +179,11 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
           break;
       }
     }
+  }
 
-    SECTION("Compare with another load of the metadata.") {
-      vamana_index_metadata y;
-      y.load_metadata(read_group);
-      CHECK(x.compare_metadata(y));
-    }
+  {
+    vamana_index_metadata y;
+    y.load_metadata(read_group);
+    CHECK(x.compare_metadata(y));
   }
 }

@@ -825,10 +825,10 @@ class vamana_index {
       if (overwrite == false) {
         return false;
       }
-      vfs.remove_dir(group_uri);
     }
 
-    auto write_group = vamana_index_group(*this, ctx, group_uri, TILEDB_WRITE);
+    auto write_group =
+        vamana_index_group(*this, ctx, group_uri, TILEDB_WRITE, timestamp_);
 
     // @todo Make this table-driven
     write_group.set_dimension(dimension_);

@@ -752,12 +752,11 @@ class ivf_flat_index {
       if (overwrite == false) {
         return false;
       }
-      vfs.remove_dir(group_uri);
     }
 
     // Write the group
     auto write_group =
-        ivf_flat_index_group(*this, ctx, group_uri, TILEDB_WRITE);
+        ivf_flat_index_group(*this, ctx, group_uri, TILEDB_WRITE, timestamp_);
 
     write_group.set_dimension(dimension_);
 

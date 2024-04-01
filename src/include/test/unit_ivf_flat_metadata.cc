@@ -77,6 +77,10 @@ TEST_CASE(
 
   std::string uri =
       (std::filesystem::temp_directory_path() / "tmp_ivf_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(uri)) {
+    vfs.remove_dir(uri);
+  }
   auto training_vectors =
       tdbColMajorPreLoadMatrix<float>(ctx, siftsmall_inputs_uri);
   auto idx = ivf_flat_index<float, uint32_t, uint32_t>(100, 1);
