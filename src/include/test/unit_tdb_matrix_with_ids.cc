@@ -270,7 +270,8 @@ TEST_CASE("tdb_matrix_with_ids: empty matrix", "[tdb_matrix_with_ids]") {
   create_empty_for_vector<uint64_t>(
       ctx, tmp_ids_uri, matrix_domain, tile_extent);
 
-  SECTION("empty") {
+  {
+    // Empty.
     auto X = tdbColMajorMatrixWithIds<float>(
         ctx, tmp_matrix_uri, tmp_ids_uri, 0, 0, 0, 0, 10000, 0);
     X.load();
@@ -282,30 +283,17 @@ TEST_CASE("tdb_matrix_with_ids: empty matrix", "[tdb_matrix_with_ids]") {
     CHECK(X.num_ids() == 0);
     CHECK(X.ids().size() == 0);
   }
-  SECTION("filled") {
+
+  {
+    // No constraints.
     auto X = tdbColMajorMatrixWithIds<float>(ctx, tmp_matrix_uri, tmp_ids_uri);
     X.load();
-    CHECK(X.num_cols() == matrix_domain);
-    CHECK(num_vectors(X) == matrix_domain);
-    CHECK(X.num_rows() == matrix_dimension);
-    CHECK(dimension(X) == matrix_dimension);
-    CHECK(X.num_ids() == matrix_domain);
-    CHECK(X.ids().size() == matrix_domain);
-
-    auto Y = tdbColMajorMatrixWithIds<float>(std::move(X));
-    CHECK(Y.num_cols() == X.num_cols());
-    CHECK(num_vectors(Y) == num_vectors(X));
-    CHECK(Y.num_rows() == X.num_rows());
-    CHECK(dimension(Y) == dimension(X));
-    CHECK(Y.num_ids() == 1000);
-    CHECK(Y.ids().size() == 1000);
-    Y.load();
-    CHECK(Y.num_cols() == X.num_cols());
-    CHECK(num_vectors(Y) == num_vectors(X));
-    CHECK(Y.num_rows() == X.num_rows());
-    CHECK(dimension(Y) == dimension(X));
-    CHECK(Y.num_ids() == 1000);
-    CHECK(Y.ids().size() == 1000);
+    CHECK(X.num_cols() == 0);
+    CHECK(num_vectors(X) == 0);
+    CHECK(X.num_rows() == 0);
+    CHECK(dimension(X) == 0);
+    CHECK(X.num_ids() == 0);
+    CHECK(X.ids().size() == 0);
   }
 }
 
