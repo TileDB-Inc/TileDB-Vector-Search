@@ -33,49 +33,10 @@
 #define TILEDB_TEST_UTILS_H
 
 #include <catch2/catch_all.hpp>
-#include <random>
 #include <ranges>
 
 #include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
-
-template <std::ranges::range R>
-void randomize(R& r, std::tuple<int, int> range = {0, 128}) {
-  using element_type = std::ranges::range_value_t<R>;
-
-  std::random_device rd;
-  // std::mt19937 gen(rd());
-  std::mt19937 gen(2514908090);
-
-  if constexpr (std::is_floating_point_v<element_type>) {
-    std::uniform_real_distribution<element_type> dist(
-        std::get<0>(range), std::get<1>(range));
-    for (auto& x : r) {
-      x = dist(gen);
-    }
-  } else {
-    if constexpr (sizeof(element_type) == 1u) {
-      // For MSVC the std::uniform_int_distribution does not compile for char
-      // types e.g. char, uint8_t, int8_t, signed char...
-      std::uniform_int_distribution<uint16_t> dist(
-          std::get<0>(range), std::get<1>(range));
-      for (auto& x : r) {
-        x = static_cast<element_type>(dist(gen));
-      }
-    } else {
-      std::uniform_int_distribution<element_type> dist(
-          std::get<0>(range), std::get<1>(range));
-      for (auto& x : r) {
-        x = dist(gen);
-      }
-    }
-  }
-}
-
-template <std::ranges::range R>
-void randomize(R&& r, std::tuple<int, int> range = {0, 128}) {
-  randomize(r, range);
-}
 
 // Fill a matrix with sequentially increasing values. Will delete data from the
 // URI if it exists.
