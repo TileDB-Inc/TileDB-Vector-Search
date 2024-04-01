@@ -7,7 +7,7 @@ from tiledb.vector_search import _tiledbvspy as vspy
 
 ctx = vspy.Ctx({})
 
-ef test_construct_FeatureVector():
+def test_construct_FeatureVector():
     logging.info(f"siftsmall_ids_uri = {siftsmall_ids_uri}")
 
     a = vspy.FeatureVector(ctx, siftsmall_ids_uri)
@@ -207,6 +207,7 @@ def test_construct_IndexVamana_with_empty_vector(tmp_path):
     a.train(training_set)
     
     s, t = a.query(query_set, k_nn, opt_l)
+
     intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
     nt = np.double(t.num_vectors()) * np.double(k_nn)
     recall = intersections / nt
@@ -227,12 +228,14 @@ def test_inplace_build_query_IndexVamana():
 
     a.train(training_set)
     s, t = a.query(query_set, k_nn, opt_l)
+
     intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
 
     nt = np.double(t.num_vectors()) * np.double(k_nn)
     recall = intersections / nt
 
     assert recall == 1.0
+
 
 def test_construct_IndexIVFFlat():
     a = vspy.IndexIVFFlat()

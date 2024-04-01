@@ -233,7 +233,6 @@ def test_vamana_index(tmp_path):
     query_and_check_distances(index, np.array([[3, 3, 3]], dtype=np.float32), 1, [[0]], [[3]])
     query_and_check_distances(index, np.array([[4, 4, 4]], dtype=np.float32), 1, [[0]], [[4]])
 
-
 def test_delete_invalid_index(tmp_path):
     # We don't throw with an invalid uri.
     Index.delete_index(uri="invalid_uri", config=tiledb.cloud.Config())

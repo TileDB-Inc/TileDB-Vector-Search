@@ -1454,11 +1454,9 @@ def ingest(
                 )
                 logger.debug("Writing additions  data to array %s", ids_array_uri)
                 ids_array[write_offset:end] = additions_external_ids
-
             group = tiledb.Group(index_group_uri, "w")
             group.meta["temp_size"] = end
             group.close()
-
             parts_array.close()
             ids_array.close()
 
