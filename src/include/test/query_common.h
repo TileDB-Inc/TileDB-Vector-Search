@@ -177,6 +177,10 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
   auto get_write_read_idx() {
     std::string tmp_ivf_index_uri =
         (std::filesystem::temp_directory_path() / "tmp_ivf_index").string();
+    tiledb::VFS vfs(ctx_);
+    if (vfs.is_dir(tmp_ivf_index_uri)) {
+      vfs.remove_dir(tmp_ivf_index_uri);
+    }
     idx.write_index(ctx_, tmp_ivf_index_uri, true);
     auto idx0 =
         // ivf_flat_l2_index<feature_type, id_type, px_type>(ctx_,
