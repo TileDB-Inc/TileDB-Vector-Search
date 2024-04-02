@@ -51,7 +51,6 @@
 #include "detail/graph/adj_list.h"
 #include "detail/graph/best_first.h"
 #include "detail/graph/bfs.h"
-#include "detail/graph/dfs.h"
 #include "detail/graph/diskann.h"
 #include "detail/graph/graph_utils.h"
 #include "detail/graph/greedy_search.h"

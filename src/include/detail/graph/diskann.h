@@ -107,8 +107,15 @@ auto read_diskann_mem_index(const std::string& index) {
   return g;
 }
 
-// @todo Also a read_diskann_disk_index?
-// Note that that is much more complicated
+/**
+ * Simple reader for reading diskann test index with scores
+ * @param index File name for index
+ * @param data File name for scores
+ * @param num_nodes Number of nodes in the graph
+ * @return loaded graph
+ * @note A reader for read_diskann_disk_index would be nice but is much more
+ * complicated and probably not necessary to implement.
+ */
 auto read_diskann_mem_index_with_scores(
     const std::string& index, const std::string& data, size_t num_nodes = 0) {
   auto x = read_diskann_data(data);
@@ -148,8 +155,6 @@ auto read_diskann_mem_index_with_scores(
       assert(id < num_nodes);
       g.add_edge(node, id, l2_distance(x[node], x[id]));
     }
-    // @todo ??? Is this right ???
-    // binary_file.seekg(max_degree - num_neighbors, std::ios_base::cur);
     ++node;
   }
   binary_file.close();

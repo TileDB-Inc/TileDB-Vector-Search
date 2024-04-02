@@ -43,11 +43,19 @@
 #include "scoring.h"
 #include "utils/fixed_min_heap.h"
 
-static bool noisy = false;
-[[maybe_unused]] static void set_noisy(bool b) {
+static inline bool noisy = false;
+static inline bool noisy_robust_prune = false;
+[[maybe_unused]] static inline void set_noisy(bool b) {
   noisy = b;
 }
+[[maybe_unused]] static inline void set_noisy_robust_prune(bool b) {
+  noisy_robust_prune = b;
+}
 
+/**
+ * @brief Developmental code for performance analysis / optimization of
+ * greedy search. "O1" is the OG.
+ */
 template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
 auto greedy_search_O2(
     auto&& graph,
@@ -142,6 +150,19 @@ auto greedy_search_O2(
       std::move(top_k_scores), std::move(top_k), std::move(V));
 }
 
+/**
+ * @brief Naive implementation of greedy search, useful for debugging and
+ * testing.  "O1" is the OG.
+ * @tparam Distance distance functor
+ * @param graph graph to be searched
+ * @param db input vectors
+ * @param source vertex to begin search
+ * @param query destination vertex
+ * @param k_nn number of neighbors to return
+ * @param Lmax maximum size of frontier
+ * @param distance distance functor
+ * @return top_k_scores, top_k, visited vertices
+ */
 template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
 auto greedy_search_O0(
     auto&& graph,
@@ -229,9 +250,6 @@ auto greedy_search_O0(
   auto top_k_scores = std::vector<float>(k_nn);
 
   get_top_k_with_scores_from_heap(min_scores, top_k, top_k_scores);
-  return std::make_tuple(
-      std::move(top_k_scores), std::move(top_k), std::move(V));
-
   return std::make_tuple(
       std::move(top_k_scores), std::move(top_k), std::move(V));
 }
@@ -455,8 +473,6 @@ auto robust_prune(
     float alpha,
     size_t R,
     Distance&& distance = Distance{}) {
-  constexpr bool noisy = false;
-
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
   using score_type = typename std::decay_t<decltype(graph)>::score_type;
@@ -488,7 +504,7 @@ auto robust_prune(
     V.emplace_back(v.second, v.first);
   }
 
-  if (noisy) {
+  if (noisy_robust_prune) {
     debug_min_heap(V, "V: ", 1);
   }
 
@@ -498,7 +514,7 @@ auto robust_prune(
   size_t counter{0};
   // while V != 0
   while (!V.empty()) {
-    if (noisy) {
+    if (noisy_robust_prune) {
       std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
     }
 
@@ -509,7 +525,7 @@ auto robust_prune(
         }));
 
     assert(p_star != p);
-    if (noisy) {
+    if (noisy_robust_prune) {
       std::cout << "::::" << p_star << std::endl;
       debug_min_heap(V, "V: ", 1);
     }
@@ -517,7 +533,7 @@ auto robust_prune(
     // Nout(p) <- Nout(p) \cup p*
     graph.add_edge(p, p_star, s_star);
 
-    if (noisy) {
+    if (noisy_robust_prune) {
       debug_min_heap(graph.out_edges(p), "Nout(p): ", 1);
     }
 
@@ -538,7 +554,7 @@ auto robust_prune(
         }
       }
     }
-    if (noisy) {
+    if (noisy_robust_prune) {
       debug_min_heap(V, "after prune V: ", 1);
     }
 

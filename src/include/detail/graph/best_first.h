@@ -41,8 +41,6 @@
 
 #include <queue>
 
-#include "utils/minmax_and_dary_heap.h"
-
 template <class Node>
 struct compare_node {
   bool operator()(const Node& lhs, const Node& rhs) const {

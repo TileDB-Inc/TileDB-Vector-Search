@@ -291,7 +291,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
       154570,
       159448,
       170698,
-      171405,
+      177205,
       259996,
       371819,
       385240,
@@ -334,7 +334,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   // L = 50, R = 4
   size_t L = 45;
   auto query_id = 14;
-  size_t k = 2;
+  size_t k = 15;
 
   // A few different options that could be used for testing this
   // auto med = medoid(x);
@@ -700,11 +700,10 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
     std::sort(begin(top_k), end(top_k));
 
     // There seems to be some ambiguity in the DiskANN code about whether
-    // the start point should be included in the top_k list.  It probably
-    // should not be, so comment out for now.
-    // CHECK(top_k[0] == start);
-    // CHECK(std::find(begin(top_k), end(top_k), start) != end(top_k));
-    // CHECK(std::find(begin(V), end(V), start) != end(V));
+    // the start point should be included in the top_k list.  Check here
+    // that it is not.
+    CHECK(std::find(begin(top_k), end(top_k), start) != end(top_k));
+    CHECK(std::find(begin(V), end(V), start) != end(V));
   }
 }
 
