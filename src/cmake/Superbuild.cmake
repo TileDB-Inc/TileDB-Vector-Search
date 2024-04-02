@@ -156,5 +156,5 @@ add_custom_target(check
 )
 
 add_custom_target(check-ci
-  COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIG> --test-dir ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch --output-on-failure --extra-verbose -E \"unit_slicing|unit_ivf_index\"
+  COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIG> --test-dir ${CMAKE_CURRENT_BINARY_DIR}/libtiledbvectorsearch --output-on-failure --extra-verbose
 )
