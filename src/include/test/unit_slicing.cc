@@ -61,7 +61,7 @@ TEST_CASE("slice", "[linalg]") {
       .set_layout(TILEDB_COL_MAJOR)
       .set_data_buffer("cols", data2_.data(), 288)
       .set_data_buffer("rows", data_.data(), 288)
-      .set_data_buffer("values", value_.data(), 288);
+      .set_data_buffer("a", value_.data(), 288);
 
   tiledb_helpers::submit_query(tdb_func__, sift_inputs_uri, query);
 
