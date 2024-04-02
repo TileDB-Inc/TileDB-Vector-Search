@@ -1,5 +1,5 @@
 /**
- * @file   unit_ivf_index.cc
+ * @file   unit_ivf_flat_index.cc
  *
  * @section LICENSE
  *
