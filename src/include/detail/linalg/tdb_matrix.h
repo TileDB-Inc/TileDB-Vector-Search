@@ -122,9 +122,9 @@ class tdbBlockedMatrix : public MatrixBase {
 
   /**
    * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
-   * vectors. We read rows from 0 -> row domain length and cols from 0 -> col
-   * domain length. In this case, the `Matrix` is column-major, so the number of
-   * vectors is the number of columns.
+   * vectors. We read rows from 0 -> row non-empty domain length and cols from 0
+   * -> col non-empty domain length. In this case, the `Matrix` is column-major,
+   * so the number of vectors is the number of columns.
    *
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
@@ -136,9 +136,9 @@ class tdbBlockedMatrix : public MatrixBase {
 
   /**
    * @brief Construct a new tdbBlockedMatrix object, limited to `upper_bound`
-   * vectors. We read rows from 0 -> row domain length and cols from 0 -> col
-   * domain length. In this case, the `Matrix` is column-major, so the number of
-   * vectors is the number of columns.
+   * vectors. We read rows from 0 -> row non-empty domain length and cols from 0
+   * -> col non-empty domain length. In this case, the `Matrix` is column-major,
+   * so the number of vectors is the number of columns.
    *
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
@@ -199,11 +199,11 @@ class tdbBlockedMatrix : public MatrixBase {
   /** General constructor
    *
    * @param first_row The first row to read from.
-   * @param last_row The last row to read to. Read rows from 0 -> row domain
-   * length if nullopt is passed.
+   * @param last_row The last row to read to. Read rows from 0 -> row non-empty
+   * domain length if nullopt is passed.
    * @param first_col The first col to read from.
-   * @param last_col The last col to read to. Read rows from 0 -> col domain
-   * length if nullopt is passed.
+   * @param last_col The last col to read to. Read rows from 0 -> col non-empty
+   * domain length if nullopt is passed.
    */
   tdbBlockedMatrix(
       const tiledb::Context& ctx,
@@ -251,12 +251,16 @@ class tdbBlockedMatrix : public MatrixBase {
     auto row_domain{domain_.dimension(0)};
     auto col_domain{domain_.dimension(1)};
 
+    // If the user specifies a value then we use it, otherwise we use the
+    // non-empty domain. If non_empty_domain() is an empty vector it means that
+    // the array is empty.
     auto non_empty_domain = array_->non_empty_domain<int>();
     if (!last_row.has_value()) {
       if (non_empty_domain.empty()) {
         last_row_ = 0;
       } else {
-        last_row_ = non_empty_domain[0].second.second + 1;
+        last_row_ = non_empty_domain[0].second.second -
+                    non_empty_domain[0].second.first + 1;
       }
     } else {
       last_row_ = *last_row;
@@ -265,7 +269,8 @@ class tdbBlockedMatrix : public MatrixBase {
       if (non_empty_domain.empty()) {
         last_col_ = 0;
       } else {
-        last_col_ = non_empty_domain[1].second.second + 1;
+        last_col_ = non_empty_domain[1].second.second -
+                    non_empty_domain[1].second.first + 1;
       }
     } else {
       last_col_ = *last_col;

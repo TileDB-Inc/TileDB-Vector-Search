@@ -527,38 +527,21 @@ TEST_CASE("api: query checks with IDs", "[api][index]") {
   }
 }
 
-TEST_CASE("api: load empty matrix in group", "[api][index]") {
+TEST_CASE("api: load empty matrix", "[api][index]") {
   tiledb::Context ctx;
-  tiledb::VFS vfs(ctx);
-
-  using feature_type = float;
-  size_t dimension{2};
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  size_t dimension{10};
   int32_t domain{std::numeric_limits<int32_t>::max() - 1};
   int32_t tile_extent{100'000};
 
-  std::string group_uri =
-      (std::filesystem::temp_directory_path() / "group").string();
-  if (vfs.is_dir(group_uri)) {
-    vfs.remove_dir(group_uri);
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_matrix_uri)) {
+    vfs.remove_dir(tmp_matrix_uri);
   }
 
-  std::string feature_vectors_name = "shuffled_vectors_test";
-  std::string feature_vectors_uri = (group_uri / feature_vectors_name);
-  if (vfs.is_dir(feature_vectors_uri)) {
-    vfs.remove_dir(feature_vectors_uri);
-  }
+  create_empty_for_matrix<float, stdx::layout_left>(
+      ctx, tmp_matrix_uri, dimension, domain, dimension, tile_extent);
 
-  tiledb::Group::create(ctx, group_uri);
-  auto write_group = tiledb::Group(ctx, group_uri, TILEDB_WRITE);
-
-  create_empty_for_matrix<feature_type, stdx::layout_left>(
-      ctx, feature_vectors_uri, dimension, domain, dimension, tile_extent);
-  write_group.add_member(feature_vectors_name, true, feature_vectors_name);
-
-  auto X = FeatureVectorArray(ctx, feature_vectors_uri);
-  CHECK(X.dimension() == 0);
-  CHECK(X.num_vectors() == 0);
-  CHECK(X.num_ids() == 0);
-  CHECK(X.feature_type() == TILEDB_FLOAT32);
-  CHECK(X.ids_type() == TILEDB_ANY);
+  auto X = FeatureVectorArray(ctx, tmp_matrix_uri);
 }

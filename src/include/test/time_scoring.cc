@@ -32,7 +32,7 @@
 // #include "scoring.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/vector.h"
-#include "test_utils.h"
+#include "randomize.h"
 #include "utils/timer.h"
 
 #include "detail/scoring/inner_product.h"
