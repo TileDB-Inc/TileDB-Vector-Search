@@ -829,7 +829,7 @@ class vamana_index {
 
     auto write_group =
         vamana_index_group(*this, ctx, group_uri, TILEDB_WRITE, timestamp_);
-    
+
     // @todo Make this table-driven
     write_group.set_dimension(dimension_);
     write_group.set_L_build(L_build_);
