@@ -24,6 +24,6 @@ jobs:
       - name: Fix Windows dll inclusion with ctest
         if: ${{ runner.os == 'Windows' }}
         run: |
-            cp .\src\build\externals\install\bin\tiledb.dll D:/a/TileDB-Vector-Search/TileDB-Vector-Search/src/build/libtiledbvectorsearch/include/test
+          cp .\src\build\externals\install\bin\tiledb.dll D:/a/TileDB-Vector-Search/TileDB-Vector-Search/src/build/libtiledbvectorsearch/include/test
       - name: Run Tests
         run: cmake --build ./src/build --target check-ci
