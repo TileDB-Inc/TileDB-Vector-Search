@@ -286,10 +286,7 @@ class Index:
 
     def set_has_updates(self, has_updates: bool = True):
         self.has_updates = has_updates
-        if (
-            "has_updates" not in self.group.meta
-            or self.group.meta["has_updates"] != has_updates
-        ):
+        if "has_updates" not in self.group.meta or self.group.meta["has_updates"] != has_updates:
             self.group.close()
             self.group = tiledb.Group(self.uri, "w", ctx=tiledb.Ctx(self.config))
             self.group.meta["has_updates"] = has_updates
