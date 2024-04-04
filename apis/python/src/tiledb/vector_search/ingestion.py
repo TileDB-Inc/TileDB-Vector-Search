@@ -1891,6 +1891,7 @@ def ingest(
         trace_id: Optional[str] = None,
         use_sklearn: bool = True,
         mode: Mode = Mode.LOCAL,
+        namespace: Optional[str] = None
     ) -> dag.DAG:
         if mode == Mode.BATCH:
             d = dag.DAG(
@@ -1901,6 +1902,7 @@ def ingest(
                     limit=1,
                     retry_policy="Always",
                 ),
+                namespace=namespace
             )
             threads = 16
         else:
@@ -1908,7 +1910,7 @@ def ingest(
                 name="vector-ingestion",
                 mode=Mode.REALTIME,
                 max_workers=workers,
-                namespace="default",
+                namespace=namespace,
             )
             threads = multiprocessing.cpu_count()
 
@@ -2511,6 +2513,7 @@ def ingest(
             trace_id=trace_id,
             use_sklearn=use_sklearn,
             mode=mode,
+            namespace=namespace,
         )
         logger.debug("Submitting ingestion graph")
         d.compute()
