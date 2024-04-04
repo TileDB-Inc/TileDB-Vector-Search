@@ -1,7 +1,7 @@
 import json
 import multiprocessing
 from typing import Any, Mapping
-
+import warnings
 import numpy as np
 from tiledb.cloud.dag import Mode
 
@@ -77,6 +77,7 @@ class VamanaIndex(index.Index):
         opt_l: int
             How deep to search
         """
+        warnings.warn("The Vamana index is not yet supported, please use with caution.")
         if self.size == 0:
             return np.full((queries.shape[0], k), index.MAX_FLOAT_32), np.full(
                 (queries.shape[0], k), index.MAX_UINT64
@@ -103,6 +104,7 @@ def create(
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> VamanaIndex:
+      warnings.warn("The Vamana index is not yet supported, please use with caution.")
       ctx = vspy.Ctx(config)
       index = vspy.IndexVamana(
           feature_type=np.dtype(vector_type).name, 

@@ -258,6 +258,9 @@ def ingest(
     DEFAULT_IMG_NAME = "3.9-vectorsearch"
     MAX_INT32 = 2**31 - 1
 
+    def is_type_erased_index():
+        return index_type == "VAMANA"
+
     class SourceType(enum.Enum):
         """SourceType of input vectors"""
 
@@ -502,6 +505,124 @@ def ingest(
 
         return external_ids_array_uri
 
+    def create_partial_write_array_group(
+        index_group_uri: str,
+        vector_type: np.dtype,
+        dimensions: int,
+    ) -> (tiledb.Group, str):
+        group = tiledb.Group(index_group_uri, "w")
+        tile_size = int(
+            ivf_flat_index.TILE_SIZE_BYTES
+            / np.dtype(vector_type).itemsize
+            / dimensions
+        )
+        partial_write_array_dir_uri = f"{group.uri}/{PARTIAL_WRITE_ARRAY_DIR}"
+        partial_write_array_index_uri = (
+            f"{partial_write_array_dir_uri}/{INDEX_ARRAY_NAME}"
+        )
+        partial_write_array_ids_uri = (
+            f"{partial_write_array_dir_uri}/{IDS_ARRAY_NAME}"
+        )
+        partial_write_array_parts_uri = (
+            f"{partial_write_array_dir_uri}/{PARTS_ARRAY_NAME}"
+        )
+
+        try:
+            tiledb.group_create(partial_write_array_dir_uri)
+        except tiledb.TileDBError as err:
+            message = str(err)
+            if "already exists" in message:
+                logger.debug(
+                    f"Group '{partial_write_array_dir_uri}' already exists"
+                )
+            raise err
+        partial_write_array_group = tiledb.Group(partial_write_array_dir_uri, "w")
+        add_to_group(group, partial_write_array_dir_uri, PARTIAL_WRITE_ARRAY_DIR)
+
+        try:
+            tiledb.group_create(partial_write_array_index_uri)
+        except tiledb.TileDBError as err:
+            message = str(err)
+            if "already exists" in message:
+                logger.debug(
+                    f"Group '{partial_write_array_index_uri}' already exists"
+                )
+            raise err
+        add_to_group(
+            partial_write_array_group,
+            partial_write_array_index_uri,
+            INDEX_ARRAY_NAME,
+        )
+
+        if not tiledb.array_exists(partial_write_array_ids_uri):
+            logger.debug("Creating temp ids array")
+            ids_array_rows_dim = tiledb.Dim(
+                name="rows",
+                domain=(0, MAX_INT32),
+                tile=tile_size,
+                dtype=np.dtype(np.int32),
+            )
+            ids_array_dom = tiledb.Domain(ids_array_rows_dim)
+            ids_attr = tiledb.Attr(
+                name="values",
+                dtype=np.dtype(np.uint64),
+                filters=DEFAULT_ATTR_FILTERS,
+            )
+            ids_schema = tiledb.ArraySchema(
+                domain=ids_array_dom,
+                sparse=False,
+                attrs=[ids_attr],
+                capacity=tile_size,
+                cell_order="col-major",
+                tile_order="col-major",
+            )
+            logger.debug(ids_schema)
+            tiledb.Array.create(partial_write_array_ids_uri, ids_schema)
+            add_to_group(
+                partial_write_array_group,
+                partial_write_array_ids_uri,
+                IDS_ARRAY_NAME,
+            )
+
+        if not tiledb.array_exists(partial_write_array_parts_uri):
+            logger.debug("Creating temp parts array")
+            parts_array_rows_dim = tiledb.Dim(
+                name="rows",
+                domain=(0, dimensions - 1),
+                tile=dimensions,
+                dtype=np.dtype(np.int32),
+            )
+            parts_array_cols_dim = tiledb.Dim(
+                name="cols",
+                domain=(0, MAX_INT32),
+                tile=tile_size,
+                dtype=np.dtype(np.int32),
+            )
+            parts_array_dom = tiledb.Domain(
+                parts_array_rows_dim, parts_array_cols_dim
+            )
+            parts_attr = tiledb.Attr(
+                name="values", dtype=vector_type, filters=DEFAULT_ATTR_FILTERS
+            )
+            parts_schema = tiledb.ArraySchema(
+                domain=parts_array_dom,
+                sparse=False,
+                attrs=[parts_attr],
+                cell_order="col-major",
+                tile_order="col-major",
+            )
+            logger.debug(parts_schema)
+            logger.debug(partial_write_array_parts_uri)
+            tiledb.Array.create(partial_write_array_parts_uri, parts_schema)
+            add_to_group(
+                partial_write_array_group,
+                partial_write_array_parts_uri,
+                PARTS_ARRAY_NAME,
+            )
+        group.close()
+        return partial_write_array_group, partial_write_array_index_uri
+
+
     def create_arrays(
         group: tiledb.Group,
         arrays_created: bool,
@@ -513,8 +634,6 @@ def ingest(
         logger: logging.Logger,
         storage_version: str,
     ) -> None:
-        # Note that we don't create type-erased indexes (i.e. Vamana) here. Instead we create them 
-        # at very start of ingest() in C++.
         if index_type == "FLAT":
             if not arrays_created:
                 flat_index.create(
@@ -535,117 +654,8 @@ def ingest(
                     config=config,
                     storage_version=storage_version,
                 )
-            tile_size = int(
-                ivf_flat_index.TILE_SIZE_BYTES
-                / np.dtype(vector_type).itemsize
-                / dimensions
-            )
-            partial_write_array_dir_uri = f"{group.uri}/{PARTIAL_WRITE_ARRAY_DIR}"
-            partial_write_array_index_uri = (
-                f"{partial_write_array_dir_uri}/{INDEX_ARRAY_NAME}"
-            )
-            partial_write_array_ids_uri = (
-                f"{partial_write_array_dir_uri}/{IDS_ARRAY_NAME}"
-            )
-            partial_write_array_parts_uri = (
-                f"{partial_write_array_dir_uri}/{PARTS_ARRAY_NAME}"
-            )
-
-            try:
-                tiledb.group_create(partial_write_array_dir_uri)
-            except tiledb.TileDBError as err:
-                message = str(err)
-                if "already exists" in message:
-                    logger.debug(
-                        f"Group '{partial_write_array_dir_uri}' already exists"
-                    )
-                raise err
-            partial_write_array_group = tiledb.Group(partial_write_array_dir_uri, "w")
-            add_to_group(group, partial_write_array_dir_uri, PARTIAL_WRITE_ARRAY_DIR)
-
-            try:
-                tiledb.group_create(partial_write_array_index_uri)
-            except tiledb.TileDBError as err:
-                message = str(err)
-                if "already exists" in message:
-                    logger.debug(
-                        f"Group '{partial_write_array_index_uri}' already exists"
-                    )
-                raise err
-            add_to_group(
-                partial_write_array_group,
-                partial_write_array_index_uri,
-                INDEX_ARRAY_NAME,
-            )
-            partial_write_array_index_group = tiledb.Group(
-                partial_write_array_index_uri, "w"
-            )
-
-            if not tiledb.array_exists(partial_write_array_ids_uri):
-                logger.debug("Creating temp ids array")
-                ids_array_rows_dim = tiledb.Dim(
-                    name="rows",
-                    domain=(0, MAX_INT32),
-                    tile=tile_size,
-                    dtype=np.dtype(np.int32),
-                )
-                ids_array_dom = tiledb.Domain(ids_array_rows_dim)
-                ids_attr = tiledb.Attr(
-                    name="values",
-                    dtype=np.dtype(np.uint64),
-                    filters=DEFAULT_ATTR_FILTERS,
-                )
-                ids_schema = tiledb.ArraySchema(
-                    domain=ids_array_dom,
-                    sparse=False,
-                    attrs=[ids_attr],
-                    capacity=tile_size,
-                    cell_order="col-major",
-                    tile_order="col-major",
-                )
-                logger.debug(ids_schema)
-                tiledb.Array.create(partial_write_array_ids_uri, ids_schema)
-                add_to_group(
-                    partial_write_array_group,
-                    partial_write_array_ids_uri,
-                    IDS_ARRAY_NAME,
-                )
-
-            if not tiledb.array_exists(partial_write_array_parts_uri):
-                logger.debug("Creating temp parts array")
-                parts_array_rows_dim = tiledb.Dim(
-                    name="rows",
-                    domain=(0, dimensions - 1),
-                    tile=dimensions,
-                    dtype=np.dtype(np.int32),
-                )
-                parts_array_cols_dim = tiledb.Dim(
-                    name="cols",
-                    domain=(0, MAX_INT32),
-                    tile=tile_size,
-                    dtype=np.dtype(np.int32),
-                )
-                parts_array_dom = tiledb.Domain(
-                    parts_array_rows_dim, parts_array_cols_dim
-                )
-                parts_attr = tiledb.Attr(
-                    name="values", dtype=vector_type, filters=DEFAULT_ATTR_FILTERS
-                )
-                parts_schema = tiledb.ArraySchema(
-                    domain=parts_array_dom,
-                    sparse=False,
-                    attrs=[parts_attr],
-                    cell_order="col-major",
-                    tile_order="col-major",
-                )
-                logger.debug(parts_schema)
-                logger.debug(partial_write_array_parts_uri)
-                tiledb.Array.create(partial_write_array_parts_uri, parts_schema)
-                add_to_group(
-                    partial_write_array_group,
-                    partial_write_array_parts_uri,
-                    PARTS_ARRAY_NAME,
-                )
+            partial_write_array_group, partial_write_array_index_uri = create_partial_write_array_group(group.uri, vector_type, dimensions)
+            partial_write_array_index_group = tiledb.Group(partial_write_array_index_uri, "w")
 
             for part in range(input_vectors_work_items):
                 part_index_uri = partial_write_array_index_uri + "/" + str(part)
@@ -708,7 +718,9 @@ def ingest(
             partial_write_array_group.close()
             partial_write_array_index_group.close()
 
-        elif index_type != "VAMANA":
+        # Note that we don't create type-erased indexes (i.e. Vamana) here. Instead we create them 
+        # at very start of ingest() in C++.
+        elif not is_type_erased_index():
             raise ValueError(f"Not supported index_type {index_type}")
 
     def read_external_ids(
@@ -1471,6 +1483,7 @@ def ingest(
         external_ids_type: str,
         dimensions: int,
         size: int,
+        partitions: int,
         batch: int,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
@@ -1487,12 +1500,18 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             )
-            group = tiledb.Group(index_group_uri)
-            parts_array_uri = group[PARTS_ARRAY_NAME].uri
-            ids_array_uri = group[IDS_ARRAY_NAME].uri
-            parts_array = tiledb.open(
-                parts_array_uri, mode="w", timestamp=index_timestamp
-            )
+
+            partial_write_array_group, _ = create_partial_write_array_group(index_group_uri, vector_type, dimensions)
+            partial_write_array_group.close()
+
+            group = tiledb.Group(index_group_uri, mode="r")
+            partial_write_array_dir_uri = group[PARTIAL_WRITE_ARRAY_DIR].uri
+            partial_write_array_group = tiledb.Group(partial_write_array_dir_uri)
+            ids_array_uri = partial_write_array_group[IDS_ARRAY_NAME].uri
+            parts_array_uri = partial_write_array_group[PARTS_ARRAY_NAME].uri
+            group.close()
+
+            parts_array = tiledb.open(parts_array_uri, mode="w", timestamp=index_timestamp)
             ids_array = tiledb.open(ids_array_uri, mode="w", timestamp=index_timestamp)
             # Ingest base data
             write_offset = 0
@@ -2083,6 +2102,7 @@ def ingest(
                 external_ids_type=external_ids_type,
                 dimensions=dimensions,
                 size=size,
+                partitions=partitions,
                 batch=input_vectors_batch_size,
                 config=config,
                 verbose=verbose,
@@ -2689,7 +2709,7 @@ def ingest(
         temp_size = int(group.meta.get("temp_size", "0"))
         group.close()
         
-        if index_type != "VAMANA":
+        if not is_type_erased_index():
             # For type-erased indexes (i.e. Vamana), we update this metadata in the write_index() 
             # call during create_ingestion_dag(), so don't do it here.
             group = tiledb.Group(index_group_uri, "w")
