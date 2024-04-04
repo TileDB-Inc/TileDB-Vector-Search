@@ -5,12 +5,12 @@ on:
   push:
     branches:
       - release-*
-      - "*wheel*" # must quote since "*" is a YAML reserved character; we want a string
+      - '*wheel*'  # must quote since "*" is a YAML reserved character; we want a string
     tags:
-      - "*"
+      - '*'
   pull_request:
     branches:
-      - "*wheel*" # must quote since "*" is a YAML reserved character; we want a string
+      - '*wheel*'  # must quote since "*" is a YAML reserved character; we want a string
 
 jobs:
   generate_backwards_compatibility_data:
@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
+      
       # Based on https://github.com/TileDB-Inc/conda-forge-nightly-controller/blob/51519a0f8340b32cf737fcb59b76c6a91c42dc47/.github/workflows/activity.yml#L19C10-L19C10
       - name: Setup git
         run: |
@@ -49,14 +49,37 @@ jobs:
           # Generate data.
           python backwards-compatibility-data/generate_data.py $release_tag
 
-          # Push this data to a new branch and create a PR from it.
+          # Fetch.
+          echo "git fetch"
           git fetch
+
+          # Create a new branch for the changes.
           branch_name="update-backwards-compatibility-data-${release_tag}"
-          echo $branch_name
+          echo "git checkout -b $branch_name"
           git checkout -b "$branch_name"
+
+          # Stage all changes within backwards-compatibility-data/data/.
+          echo "git add backwards-compatibility-data/data/"
           git add backwards-compatibility-data/data/
+
+          # Commit the staged changes.
+          echo "git commit -m '[automated] Update backwards-compatibility-data for release $release_tag'"
           git commit -m "[automated] Update backwards-compatibility-data for release $release_tag"
+
+          # Reset other changes to match main branch - we do this in case the release branch had commits that were not in main.
+          echo "git reset --hard origin/main"
+          git reset --hard origin/main
+
+          # Re-apply the commit with the backwards-compatibility-data changes.
+          echo "git cherry-pick HEAD@{1}"
+          git cherry-pick HEAD@{1}
+
+          # Push to the branch.
+          echo "git push origin $branch_name"
           git push origin "$branch_name"
+
+          # Create a PR from this new branch to main.
+          echo "gh pr create"
           gh pr create --base main --head "$branch_name" --title "[automated] Update backwards-compatibility-data for release $release_tag" --body "This PR contains backwards compatibility indexes generated for release $release_tag."
         env:
           GH_TOKEN: ${{ github.token }}
@@ -69,21 +92,19 @@ jobs:
     strategy:
       matrix:
         buildplat:
-          - [ubuntu-22.04, manylinux_x86_64]
-          - [macos-13, macosx_x86_64]
-          - [macos-13, macosx_arm64]
-          # Windows build is currently disabled since the C++ build fails on multiple errors e.g. file manipulation
-          # and std::filesystem::path implicit to string conversion.
-          # Follow up task https://app.shortcut.com/tiledb-inc/story/41119/enable-windows-build-for-vector-search-repository
-        python: ["cp39", "cp310", "cp311", "cp312", "pp39"]
+          - [ ubuntu-22.04, manylinux_x86_64 ]
+          - [ macos-13, macosx_x86_64 ]
+          - [ macos-13, macosx_arm64 ]
+          - [ windows-2022, win_amd64 ]
+        python: [ "cp39", "cp310", "cp311", "cp312", "pp39" ]
         exclude:
-          - buildplat: [macos-13, macosx_arm64]
+          - buildplat: [ macos-13, macosx_arm64 ]
             python: "pp39"
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: "Brew setup on macOS" # x-ref c8e49ba8f8b9ce
+      - name: 'Brew setup on macOS' # x-ref c8e49ba8f8b9ce
         if: ${{ startsWith(matrix.os, 'macos-') == true }}
         run: |
           set -e pipefail
@@ -107,7 +128,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
-          path: "./wheelhouse/*.whl"
+          path: './wheelhouse/*.whl'
 
   build_sdist:
     name: Build source distribution
@@ -121,6 +142,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           path: dist/*.tar.gz
+
 
   upload_pypi:
     needs: [build_wheels, build_sdist]

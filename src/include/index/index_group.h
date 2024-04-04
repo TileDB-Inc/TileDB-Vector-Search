@@ -53,6 +53,24 @@
 #include "mdspan/mdspan.hpp"
 #include "tdb_defs.h"
 
+/** Lookup an array name given an array key */
+inline std::string array_key_to_array_name_from_map(
+    const std::unordered_map<std::string, std::string>& map,
+    const std::string& array_key) {
+  if (map.find(array_key) == map.end()) {
+    throw std::runtime_error("Invalid array key in map: " + array_key);
+  }
+  auto tmp = *map.find(array_key);
+  return tmp.second;
+};
+
+/** Convert an array name to a uri. */
+inline std::string array_name_to_uri(
+    const std::string& group_uri, const std::string& array_name) {
+  return (std::filesystem::path{group_uri} / std::filesystem::path{array_name})
+      .string();
+}
+
 template <class Index>
 class base_index_metadata;
 
@@ -76,7 +94,7 @@ class base_index_group {
 
  protected:
   std::reference_wrapper<const tiledb::Context> cached_ctx_;
-  std::filesystem::path group_uri_;
+  std::string group_uri_;
   size_t index_timestamp_{0};
   size_t group_timestamp_{0};
   size_t timetravel_index_{0};
@@ -119,8 +137,7 @@ class base_index_group {
     if (!is_valid_key_name(array_key)) {
       throw std::runtime_error("Invalid array key: " + array_key);
     }
-    auto tmp = *array_name_map_.find(array_key);
-    return tmp.second;
+    return array_key_to_array_name_from_map(array_name_map_, array_key);
   };
 
   /** Create the set of valid key names and array names */
@@ -279,12 +296,14 @@ class base_index_group {
   /** Convert an array name to a uri. */
   constexpr std::string array_name_to_uri(
       const std::string& array_name) const noexcept {
-    return group_uri_ / array_name;
+    return array_name_to_uri(group_uri_, array_name);
   }
 
   /** Convert an array key to a uri. */
   constexpr std::string array_key_to_uri(const std::string& array_key) const {
-    return group_uri_ / array_key_to_array_name(array_key);
+    return (std::filesystem::path{group_uri_} /
+            std::filesystem::path{array_key_to_array_name(array_key)})
+        .string();
   }
 
  public:
@@ -532,7 +551,7 @@ class base_index_group {
       std::cout << "# " + msg << std::endl;
     }
     std::cout << "-------------------------------------------------------\n";
-    std::cout << "Stored in " + group_uri_.string() + ":" << std::endl;
+    std::cout << "Stored in " + group_uri_ + ":" << std::endl;
     auto cfg = tiledb::Config();
     auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
     for (size_t i = 0; i < read_group.member_count(); ++i) {

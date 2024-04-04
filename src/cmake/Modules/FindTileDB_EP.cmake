@@ -49,71 +49,13 @@ else()
       message(STATUS "TileDB will be built WITHOUT S3 support")
     endif()
 
+    include(DownloadPrebuiltTileDB)
+
     # Try to download prebuilt artifacts unless the user specifies to build from source
     if(DOWNLOAD_TILEDB_PREBUILT)
-        if (WIN32) # Windows
-          SET(DOWNLOAD_URL "https://github.com/TileDB-Inc/TileDB/releases/download/2.20.0/tiledb-windows-x86_64-2.20.0-40552aa.zip")
-          SET(DOWNLOAD_SHA1 "cb7df1c80c7034d2d8d16cea5114fdca7306e87d")
-        elseif(APPLE) # OSX
-          if (DEFINED CMAKE_OSX_ARCHITECTURES)
-            set(ACTUAL_TARGET ${CMAKE_OSX_ARCHITECTURES})
-          else()
-            set(ACTUAL_TARGET ${CMAKE_SYSTEM_PROCESSOR})
-          endif()
-
-
-          if (ACTUAL_TARGET MATCHES "(x86_64)|(AMD64|amd64)|(^i.86$)")
-            SET(DOWNLOAD_URL "https://github.com/TileDB-Inc/TileDB/releases/download/2.20.0/tiledb-macos-x86_64-2.20.0-40552aa.tar.gz")
-            SET(DOWNLOAD_SHA1 "83af0a52e6756129472073393c28ec15d6265e0c")
-          elseif (ACTUAL_TARGET STREQUAL arm64 OR ACTUAL_TARGET MATCHES "^aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
-            SET(DOWNLOAD_URL "https://github.com/TileDB-Inc/TileDB/releases/download/2.20.0/tiledb-macos-arm64-2.20.0-40552aa.tar.gz")
-            SET(DOWNLOAD_SHA1 "78ea78b0d7ffe4edb5bc6f98a8b620cc6f7d0e85")
-          endif()
-        else() # Linux
-          SET(DOWNLOAD_URL "https://github.com/TileDB-Inc/TileDB/releases/download/2.20.0/tiledb-linux-x86_64-2.20.0-40552aa.tar.gz")
-          SET(DOWNLOAD_SHA1 "9104da8d6979c3b96e63b9e28fd41a403d412079")
-        endif()
-
-        ExternalProject_Add(ep_tiledb
-                PREFIX "externals"
-                URL ${DOWNLOAD_URL}
-                URL_HASH SHA1=${DOWNLOAD_SHA1}
-                CONFIGURE_COMMAND ""
-                BUILD_COMMAND ""
-                UPDATE_COMMAND ""
-                PATCH_COMMAND ""
-                TEST_COMMAND ""
-                INSTALL_COMMAND
-                    ${CMAKE_COMMAND} -E copy_directory ${EP_BASE}/src/ep_tiledb ${EP_INSTALL_PREFIX}
-                LOG_DOWNLOAD TRUE
-                LOG_CONFIGURE FALSE
-                LOG_BUILD FALSE
-                LOG_INSTALL FALSE
-                )
+        fetch_prebuilt_tiledb(VERSION 2.21.1)
     else() # Build from source
-        ExternalProject_Add(ep_tiledb
-          PREFIX "externals"
-          URL "https://github.com/TileDB-Inc/TileDB/archive/refs/tags/2.20.0.zip"
-          URL_HASH SHA1=78324232ed00bbb32a83699f561b7b5c10814d20
-          DOWNLOAD_NAME "tiledb.zip"
-          CMAKE_ARGS
-            -DCMAKE_INSTALL_PREFIX=${EP_INSTALL_PREFIX}
-            -DCMAKE_PREFIX_PATH=${EP_INSTALL_PREFIX}
-            -DTILEDB_S3=${TILEDB_S3}
-            -DTILEDB_SKIP_S3AWSSDK_DIR_LENGTH_CHECK=ON # for windows build
-            -DTILEDB_VERBOSE=ON
-            -DTILEDB_SERIALIZATION=ON
-            -DTILEDB_TESTS=OFF
-            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-            -DTILEDB_WERROR=OFF #avoid the pointer p use after free issue...
-          UPDATE_COMMAND ""
-          INSTALL_COMMAND
-            ${CMAKE_COMMAND} --build . --target install-tiledb
-          LOG_DOWNLOAD TRUE
-          LOG_CONFIGURE TRUE
-          LOG_BUILD TRUE
-          LOG_INSTALL TRUE
-        )
+        fetch_source_tiledb(VERSION 2.21.1)
     endif()
 
     list(APPEND FORWARD_EP_CMAKE_ARGS -DEP_TILEDB_BUILT=TRUE)

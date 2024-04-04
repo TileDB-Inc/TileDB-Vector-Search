@@ -35,6 +35,7 @@
 #define TILEDB_CPOS_H
 
 #include <concepts>
+#include <vector>
 
 template <class T>
 concept semi_integral = std::integral<T> && !std::same_as<T, bool>;
@@ -57,6 +58,16 @@ concept _member_num_rows = requires(T t) {
 template <class T>
 concept _member_num_cols = requires(T t) {
   { t.num_cols() } -> semi_integral;
+};
+
+template <class T>
+concept _member_num_ids = requires(T t) {
+  { t.num_ids() };
+};
+
+template <class T>
+concept _member_ids = requires(T t) {
+  { t.ids() };
 };
 
 template <class T>
@@ -233,6 +244,66 @@ struct _fn {
 }  // namespace _data
 inline namespace _cpo {
 inline constexpr auto data = _data::_fn{};
+}  // namespace _cpo
+
+// ----------------------------------------------------------------------------
+// num_ids CPO
+// ----------------------------------------------------------------------------
+namespace _num_ids {
+void num_ids(auto&) = delete;
+void num_ids(const auto&) = delete;
+
+struct _fn {
+  template <class T>
+    requires(_member_num_ids<T>)
+  constexpr auto operator()(T&& t) const noexcept {
+    return t.num_ids();
+  }
+
+  template <class T>
+    requires(!_member_num_ids<T>)
+  constexpr auto operator()(T&& t) const noexcept {
+    return 0;
+  }
+};
+}  // namespace _num_ids
+inline namespace _cpo {
+inline constexpr auto num_ids = _num_ids::_fn{};
+}  // namespace _cpo
+
+// ----------------------------------------------------------------------------
+// ids CPO
+// @todo Figure out what is wrong with const
+// ----------------------------------------------------------------------------
+namespace _ids {
+void ids(auto&) = delete;
+void ids(const auto&) = delete;
+
+struct _fn {
+  template <class T>
+    requires(_member_ids<T>)
+  constexpr const auto& operator()(T&& t) const noexcept {
+    return t.ids();
+  }
+
+  // @todo Warning: This returns a temporary object, which can cause
+  // Bad Things to happen because the caller can't count on being able
+  // to do anything with the result.  Recommend returning std::optional
+  // or defining something static (note that defining a static inside
+  // a constexpr is only in C++23.  Or maybe use a concept to
+  // remove ids() from the type-erased function altogether (that might
+  // be best).
+  //
+  // This also generates huge numbers of warnings.
+  template <class T>
+    requires(!_member_ids<T>)
+  constexpr const auto& operator()(T&& t) const noexcept {
+    return std::vector<typename std::remove_cvref_t<T>::value_type>{};
+  }
+};
+}  // namespace _ids
+inline namespace _cpo {
+inline constexpr auto ids = _ids::_fn{};
 }  // namespace _cpo
 
 // ----------------------------------------------------------------------------

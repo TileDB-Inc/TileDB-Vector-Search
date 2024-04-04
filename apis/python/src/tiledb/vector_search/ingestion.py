@@ -320,7 +320,12 @@ def ingest(
             schema = tiledb.ArraySchema.load(source_uri)
             size = schema.domain.dim(1).domain[1] + 1
             dimensions = schema.domain.dim(0).domain[1] + 1
-            return size, dimensions, schema.attr("values").dtype
+            return size, dimensions, schema.attr(0).dtype
+        if source_type == "TILEDB_SPARSE_ARRAY":
+            schema = tiledb.ArraySchema.load(source_uri)
+            size = schema.domain.dim(0).domain[1] + 1
+            dimensions = schema.domain.dim(1).domain[1] + 1
+            return size, dimensions, schema.attr(0).dtype
         if source_type == "TILEDB_PARTITIONED_ARRAY":
             with tiledb.open(source_uri, "r", config=config) as source_array:
                 q = source_array.query(attrs=("vectors_shape",), coords=True)
@@ -377,7 +382,7 @@ def ingest(
                 return size, dimensions, np.uint8
         else:
             raise ValueError(
-                f"Not supported source_type {source_type} - valid types are [TILEDB_ARRAY, U8BIN, F32BIN, FVEC, IVEC, BVEC]"
+                f"Not supported source_type {source_type} - valid types are [TILEDB_ARRAY, TILEDB_SPARSE_ARRAY, U8BIN, F32BIN, FVEC, IVEC, BVEC]"
             )
 
     def create_array(
@@ -838,9 +843,29 @@ def ingest(
             with tiledb.open(
                 source_uri, mode="r", timestamp=index_timestamp
             ) as src_array:
+                src_array_schema = src_array.schema
                 return np.transpose(
-                    src_array[0:dimensions, start_pos:end_pos]["values"]
+                    src_array[0:dimensions, start_pos:end_pos][
+                        src_array_schema.attr(0).name
+                    ]
                 ).copy(order="C")
+        if source_type == "TILEDB_SPARSE_ARRAY":
+            from scipy.sparse import coo_matrix
+
+            with tiledb.open(
+                source_uri, mode="r", timestamp=index_timestamp
+            ) as src_array:
+                src_array_schema = src_array.schema
+                data = src_array[start_pos:end_pos, 0:dimensions]
+                return coo_matrix(
+                    (
+                        data[src_array_schema.attr(0).name],
+                        (
+                            data[src_array_schema.domain.dim(0).name] - start_pos,
+                            data[src_array_schema.domain.dim(1).name],
+                        ),
+                    )
+                ).toarray()
         elif source_type == "TILEDB_PARTITIONED_ARRAY":
             with tiledb.open(
                 source_uri, "r", timestamp=index_timestamp, config=config
@@ -1958,7 +1983,7 @@ def ingest(
                     idx = 0
                     num_sampled = 0
                     for start in range(
-                        0, in_size, input_vectors_batch_size_during_sampling
+                        0, size, input_vectors_batch_size_during_sampling
                     ):
                         # What vectors to read from the source_uri.
                         end = start + input_vectors_batch_size_during_sampling
@@ -1966,7 +1991,7 @@ def ingest(
                             end = size
 
                         # How many vectors to sample from the vectors read.
-                        percent_of_data_to_read = (end - start) / in_size
+                        percent_of_data_to_read = (end - start) / size
                         num_to_sample = math.ceil(
                             training_sample_size * percent_of_data_to_read
                         )
@@ -1991,7 +2016,7 @@ def ingest(
                                 config=config,
                                 verbose=verbose,
                                 name="read-random-sample-" + str(idx),
-                                resources={"cpu": str(threads), "memory": "1Gi"},
+                                resources={"cpu": "2", "memory": "6Gi"},
                                 image_name=DEFAULT_IMG_NAME,
                             )
                         )
@@ -2331,9 +2356,9 @@ def ingest(
         logger.debug("Input dataset size %d", size)
         logger.debug("Input dataset dimensions %d", dimensions)
         logger.debug("Vector dimension type %s", vector_type)
-        if training_sample_size > in_size:
+        if training_sample_size > size:
             raise ValueError(
-                f"training_sample_size {training_sample_size} is larger than the input dataset size {in_size}"
+                f"training_sample_size {training_sample_size} is larger than the input dataset size {size}"
             )
 
         if partitions == -1:
@@ -2358,7 +2383,7 @@ def ingest(
             external_ids_uri = write_external_ids(
                 group=group,
                 external_ids=external_ids,
-                size=in_size,
+                size=size,
                 partitions=partitions,
             )
             external_ids_type = "TILEDB_ARRAY"

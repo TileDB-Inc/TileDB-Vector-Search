@@ -145,7 +145,9 @@ def test_object_index_ivf_flat(tmp_path):
     )
 
     index.update_index()
+    index = object_index.ObjectIndex(uri=index_uri)
 
+    index = object_index.ObjectIndex(uri=index_uri, load_metadata_in_memory=False)
     distances, objects, metadata = index.query(
         {"object": np.array([[12, 12, 12, 12]])},
         k=5,
@@ -158,6 +160,27 @@ def test_object_index_ivf_flat(tmp_path):
     distances, objects, metadata = index.query(
         {"object": np.array([[12, 12, 12, 12]])},
         metadata_array_cond="test_attr >= 12",
+        k=5,
+        nprobe=10,
+    )
+    assert np.array_equiv(objects["external_id"], np.array([12, 13, 14, 15, 16]))
+
+    index = object_index.ObjectIndex(uri=index_uri, load_metadata_in_memory=False)
+    distances, objects, metadata = index.query(
+        {"object": np.array([[12, 12, 12, 12]])},
+        k=5,
+        nprobe=10,
+    )
+    assert np.array_equiv(
+        np.unique(objects["external_id"]), np.array([10, 11, 12, 13, 14])
+    )
+
+    def df_filter(row):
+        return row["test_attr"] >= 12
+
+    distances, objects, metadata = index.query(
+        {"object": np.array([[12, 12, 12, 12]])},
+        metadata_df_filter_fn=df_filter,
         k=5,
         nprobe=10,
     )
@@ -178,7 +201,43 @@ def test_object_index_flat(tmp_path):
     )
 
     index.update_index()
+    index = object_index.ObjectIndex(uri=index_uri)
 
+    index = object_index.ObjectIndex(uri=index_uri)
+    distances, objects, metadata = index.query(
+        {"object": np.array([[12, 12, 12, 12]])}, k=5
+    )
+    assert np.array_equiv(
+        np.unique(objects["external_id"]), np.array([10, 11, 12, 13, 14])
+    )
+    distances, object_ids = index.query(
+        {"object": np.array([[12, 12, 12, 12]])},
+        k=5,
+        return_objects=False,
+        return_metadata=False,
+    )
+    assert np.array_equiv(np.unique(object_ids), np.array([10, 11, 12, 13, 14]))
+
+    def df_filter(row):
+        return row["test_attr"] >= 12
+
+    distances, objects, metadata = index.query(
+        {"object": np.array([[12, 12, 12, 12]])},
+        metadata_df_filter_fn=df_filter,
+        k=5,
+    )
+    assert np.array_equiv(objects["external_id"], np.array([12, 13, 14, 15, 16]))
+
+    distances, object_ids = index.query(
+        {"object": np.array([[12, 12, 12, 12]])},
+        metadata_df_filter_fn=df_filter,
+        k=5,
+        return_objects=False,
+        return_metadata=False,
+    )
+    assert np.array_equiv(object_ids, np.array([12, 13, 14, 15, 16]))
+
+    index = object_index.ObjectIndex(uri=index_uri, load_metadata_in_memory=False)
     distances, objects, metadata = index.query(
         {"object": np.array([[12, 12, 12, 12]])}, k=5
     )
