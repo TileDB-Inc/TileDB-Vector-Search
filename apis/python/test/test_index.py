@@ -54,7 +54,7 @@ def check_default_metadata(
     assert type(group.meta["ingestion_timestamps"]) == str
 
     assert "has_updates" in group.meta
-    assert group.meta["has_updates"] is False
+    assert group.meta["has_updates"] == 0
     assert type(group.meta["has_updates"]) == np.int64
 
 
