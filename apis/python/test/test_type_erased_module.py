@@ -170,13 +170,17 @@ def test_construct_IndexVamana():
     assert a.adjacency_row_index_type_string() == "uint32"
     assert a.dimension() == 0
 
-    a = vspy.IndexVamana(feature_type="uint8", id_type="uint64", adjacency_row_index_type="int64")
+    a = vspy.IndexVamana(
+        feature_type="uint8", id_type="uint64", adjacency_row_index_type="int64"
+    )
     assert a.feature_type_string() == "uint8"
     assert a.id_type_string() == "uint64"
     assert a.adjacency_row_index_type_string() == "int64"
     assert a.dimension() == 0
 
-    a = vspy.IndexVamana(feature_type="float32", id_type="int64", adjacency_row_index_type="uint64")
+    a = vspy.IndexVamana(
+        feature_type="float32", id_type="int64", adjacency_row_index_type="uint64"
+    )
     assert a.feature_type_string() == "float32"
     assert a.id_type_string() == "int64"
     assert a.adjacency_row_index_type_string() == "uint64"
@@ -187,7 +191,9 @@ def test_inplace_build_query_IndexVamana():
     opt_l = 100
     k_nn = 10
 
-    a = vspy.IndexVamana(id_type="uint32", adjacency_row_index_type="uint32", feature_type="float32")
+    a = vspy.IndexVamana(
+        id_type="uint32", adjacency_row_index_type="uint32", feature_type="float32"
+    )
 
     training_set = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
     assert training_set.feature_type_string() == "float32"
