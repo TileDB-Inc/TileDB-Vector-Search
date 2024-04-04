@@ -509,6 +509,7 @@ def ingest(
         index_group_uri: str,
         vector_type: np.dtype,
         dimensions: int,
+        create_index_array: bool,
     ) -> (tiledb.Group, str):
         group = tiledb.Group(index_group_uri, "w")
         tile_size = int(
@@ -539,20 +540,21 @@ def ingest(
         partial_write_array_group = tiledb.Group(partial_write_array_dir_uri, "w")
         add_to_group(group, partial_write_array_dir_uri, PARTIAL_WRITE_ARRAY_DIR)
 
-        try:
-            tiledb.group_create(partial_write_array_index_uri)
-        except tiledb.TileDBError as err:
-            message = str(err)
-            if "already exists" in message:
-                logger.debug(
-                    f"Group '{partial_write_array_index_uri}' already exists"
-                )
-            raise err
-        add_to_group(
-            partial_write_array_group,
-            partial_write_array_index_uri,
-            INDEX_ARRAY_NAME,
-        )
+        if create_index_array:
+            try:
+                tiledb.group_create(partial_write_array_index_uri)
+            except tiledb.TileDBError as err:
+                message = str(err)
+                if "already exists" in message:
+                    logger.debug(
+                        f"Group '{partial_write_array_index_uri}' already exists"
+                    )
+                raise err
+            add_to_group(
+                partial_write_array_group,
+                partial_write_array_index_uri,
+                INDEX_ARRAY_NAME,
+            )
 
         if not tiledb.array_exists(partial_write_array_ids_uri):
             logger.debug("Creating temp ids array")
@@ -654,7 +656,11 @@ def ingest(
                     config=config,
                     storage_version=storage_version,
                 )
-            partial_write_array_group, partial_write_array_index_uri = create_partial_write_array_group(group.uri, vector_type, dimensions)
+            partial_write_array_group, partial_write_array_index_uri = create_partial_write_array_group(
+                    index_group_uri=group.uri, 
+                    vector_type=vector_type, 
+                    dimensions=dimensions, 
+                    create_index_array=True)
             partial_write_array_index_group = tiledb.Group(partial_write_array_index_uri, "w")
 
             for part in range(input_vectors_work_items):
@@ -1483,7 +1489,6 @@ def ingest(
         external_ids_type: str,
         dimensions: int,
         size: int,
-        partitions: int,
         batch: int,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
@@ -1501,7 +1506,11 @@ def ingest(
                 trace_id=trace_id,
             )
 
-            partial_write_array_group, _ = create_partial_write_array_group(index_group_uri, vector_type, dimensions)
+            partial_write_array_group, _ = create_partial_write_array_group(
+                    index_group_uri=index_group_uri, 
+                    vector_type=vector_type, 
+                    dimensions=dimensions, 
+                    create_index_array=False)
             partial_write_array_group.close()
 
             group = tiledb.Group(index_group_uri, mode="r")
@@ -2102,7 +2111,6 @@ def ingest(
                 external_ids_type=external_ids_type,
                 dimensions=dimensions,
                 size=size,
-                partitions=partitions,
                 batch=input_vectors_batch_size,
                 config=config,
                 verbose=verbose,
