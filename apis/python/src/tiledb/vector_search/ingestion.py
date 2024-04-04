@@ -1895,6 +1895,7 @@ def ingest(
         use_sklearn: bool = True,
         mode: Mode = Mode.LOCAL,
         acn: Optional[str] = None,
+        namespace: Optional[str] = None
     ) -> dag.DAG:
 
         kwargs = {}
@@ -1907,6 +1908,7 @@ def ingest(
                     limit=1,
                     retry_policy="Always",
                 ),
+                namespace=namespace
             )
             threads = 16
             if acn:
@@ -1916,7 +1918,7 @@ def ingest(
                 name="vector-ingestion",
                 mode=Mode.REALTIME,
                 max_workers=workers,
-                namespace="default",
+                namespace=namespace,
             )
             threads = multiprocessing.cpu_count()
 
@@ -2533,6 +2535,7 @@ def ingest(
             use_sklearn=use_sklearn,
             mode=mode,
             acn=acn,
+            namespace=namespace,
         )
         logger.debug("Submitting ingestion graph")
         d.compute()
