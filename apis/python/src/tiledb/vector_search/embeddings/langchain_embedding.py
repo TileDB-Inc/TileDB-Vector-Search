@@ -6,7 +6,7 @@ import numpy as np
 
 
 # class LangChainEmbedding(ObjectEmbedding):
-class LangChainEmbedding():
+class LangChainEmbedding:
     """
     Embedding functions from `langchain.embeddings` package.
     """

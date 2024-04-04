@@ -1,21 +1,22 @@
+import json
+
 import numpy as np
 import pytest
 from array_paths import *
 from common import *
-import json
 
 import tiledb.vector_search.index as ind
 from tiledb.vector_search import Index
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
 from tiledb.vector_search import vamana_index
-from tiledb.vector_search.index import create_metadata
-from tiledb.vector_search.index import DATASET_TYPE
 from tiledb.vector_search.flat_index import FlatIndex
+from tiledb.vector_search.index import DATASET_TYPE
+from tiledb.vector_search.index import create_metadata
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
-from tiledb.vector_search.vamana_index import VamanaIndex
 from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.vamana_index import VamanaIndex
 
 
 def query_and_check(index, queries, k, expected, **kwargs):
@@ -23,7 +24,10 @@ def query_and_check(index, queries, k, expected, **kwargs):
         result_d, result_i = index.query(queries, k=k, **kwargs)
         assert expected.issubset(set(result_i[0]))
 
-def check_default_metadata(uri, expected_vector_type, expected_storage_version, expected_index_type):
+
+def check_default_metadata(
+    uri, expected_vector_type, expected_storage_version, expected_index_type
+):
     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
     assert "dataset_type" in group.meta
     assert group.meta["dataset_type"] == DATASET_TYPE
@@ -50,8 +54,9 @@ def check_default_metadata(uri, expected_vector_type, expected_storage_version, 
     assert type(group.meta["ingestion_timestamps"]) == str
 
     assert "has_updates" in group.meta
-    assert group.meta["has_updates"] == False
+    assert group.meta["has_updates"] is False
     assert type(group.meta["has_updates"]) == np.int64
+
 
 def test_flat_index(tmp_path):
     uri = os.path.join(tmp_path, "array")
@@ -161,30 +166,27 @@ def test_ivf_flat_index(tmp_path):
         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4}, nprobe=partitions
     )
 
+
 def test_vamana_index(tmp_path):
     uri = os.path.join(tmp_path, "array")
     dimensions = 3
     vector_type = np.dtype(np.uint8)
 
     # Create the index.
-    index = vamana_index.create(uri=uri, dimensions=dimensions, vector_type=vector_type, id_type=np.dtype(np.uint32))
-    assert index.get_dimensions() == dimensions
-    query_and_check(
-        index,
-        np.array([[2, 2, 2]], dtype=np.float32),
-        3,
-        {ind.MAX_UINT64}
+    index = vamana_index.create(
+        uri=uri,
+        dimensions=dimensions,
+        vector_type=vector_type,
+        id_type=np.dtype(np.uint32),
     )
+    assert index.get_dimensions() == dimensions
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {ind.MAX_UINT64})
 
     # Open the index.
     index = VamanaIndex(uri=uri)
     assert index.get_dimensions() == dimensions
-    query_and_check(
-        index,
-        np.array([[2, 2, 2]], dtype=np.float32),
-        3,
-        {ind.MAX_UINT64}
-    )
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {ind.MAX_UINT64})
+
 
 def test_delete_invalid_index(tmp_path):
     # We don't throw with an invalid uri.
@@ -313,6 +315,7 @@ def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_pa
         with pytest.raises(TypeError):
             index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
 
+
 def test_create_metadata(tmp_path):
     uri = os.path.join(tmp_path, "array")
 
@@ -322,7 +325,9 @@ def test_create_metadata(tmp_path):
     index_type: str = "IVF_FLAT"
     storage_version: str = STORAGE_VERSION
     group_exists: bool = False
-    create_metadata(uri, dimensions, vector_type, index_type, storage_version, group_exists)
-    
+    create_metadata(
+        uri, dimensions, vector_type, index_type, storage_version, group_exists
+    )
+
     # Check it contains the default metadata.
     check_default_metadata(uri, vector_type, storage_version, index_type)

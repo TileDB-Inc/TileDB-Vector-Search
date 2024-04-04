@@ -22,6 +22,7 @@ def test_load_matrix(tmpdir):
     assert np.array_equal(m, data)
     assert np.array_equal(orig_matrix[0, 0], data[0, 0])
 
+
 def test_load_matrix_specify_size(tmpdir):
     p = str(tmpdir.mkdir("test").join("test.tdb"))
     data = np.random.rand(12).astype(np.float32).reshape(3, 4)
@@ -40,6 +41,7 @@ def test_load_matrix_specify_size(tmpdir):
     # test specifying a size of 0
     m = vs.load_as_array(p, size=0)
     assert m.shape == (3, 0)
+
 
 def test_vector(tmpdir):
     v = vspy._create_vector_u64()

@@ -234,6 +234,7 @@ def test_construct_IndexIVFFlat():
     assert a.id_type_string() == "int64"
     assert a.px_type_string() == "uint64"
 
+
 def test_inplace_build_infinite_query_IndexIVFFlat():
     k_nn = 10
     nprobe = 32

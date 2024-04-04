@@ -1,8 +1,8 @@
 import os
 import unittest
 
-from common import *
 from array_paths import *
+from common import *
 
 import tiledb.vector_search as vs
 from tiledb.cloud import groups

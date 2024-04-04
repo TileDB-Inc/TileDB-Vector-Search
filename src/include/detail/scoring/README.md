@@ -1,5 +1,3 @@
-
-
 ## Scoring functions
 
 This directory contains implementations of distance computations: L2 (sum of squares), inner product, and cosine.
@@ -9,7 +7,8 @@ two vectors is also provided.
 
 ### Naive implementations
 
-The "naive" implementations are just simple loops over two vectors, e.g., 
+The "naive" implementations are just simple loops over two vectors, e.g.,
+
 ```
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
@@ -24,13 +23,15 @@ inline float naive_sum_of_squares(const V& a, const W& b) {
   return sum;
 }
 ```
+
 All of the distance functions are templated on the type of vector they compute over
 accept and the vectors are required to meet the requirements of `feature_vector`.
 Because of the need to case non-`float` elements, there are four concept-based
-overloads for each function, depending on the `value_type` of each vector.  The overloads
+overloads for each function, depending on the `value_type` of each vector. The overloads
 are for `float`-`float`, `float`-`uint8_t`, `uint8_t`-`float`, and `uint8_t`-`uint8_t`.
 
 An overload for `float`-`uint8_t`
+
 ```
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
@@ -48,8 +49,9 @@ inline float naive_sum_of_squares(const V& a, const W& b) {
 
 ### Unrolled
 
-There are unrolled versions of the distance functions, which use a very basic 
-unrolling to provide a moderate performance optimization.  
+There are unrolled versions of the distance functions, which use a very basic
+unrolling to provide a moderate performance optimization.
+
 ```c++
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
@@ -77,8 +79,9 @@ inline float unroll4_sum_of_squares(const V& a, const W& b) {
 
 ### Distance over a view
 
-Overloads of the distance functions are also provided to compute distance over 
+Overloads of the distance functions are also provided to compute distance over
 just a (contiguous) portion of two vectors.
+
 ```c++
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
@@ -98,7 +101,8 @@ inline float naive_sum_of_squares(
 
 The non-view L2 distance functions have been implemented with AVX2 instructions, which
 can provide a substantial performance improvement (8X to 10X) over plain C++.
-Using intrinsics, the basic body of the distance function is quite straightforward: 
+Using intrinsics, the basic body of the distance function is quite straightforward:
+
 ```c++
   for (size_t i = start; i < stop; i += 8) {
     // Load 8 floats
@@ -112,10 +116,12 @@ Using intrinsics, the basic body of the distance function is quite straightforwa
     vec_sum = _mm256_fmadd_ps(diff, diff, vec_sum);
   }
 ```
+
 This loads 8 `float`s from vectors `a` and `b` into 256-bit registers
 and computes the pairwise distance between 8 floats in (SIMD) parallel.
 
 The 8 `float`s need to be reduced to a single `float`:
+
 ```
 // 8 to 4
 __m128 lo = _mm256_castps256_ps128(vec_sum);
@@ -136,6 +142,7 @@ float sum = _mm_cvtss_f32(combined);
 To enable different distance functions to be passed as parameters to
 queries, the file `scoring.h` defines some function objects to wrap the
 raw functions:
+
 ```
 namespace _l2_distance {
 struct sum_of_squares_distance {
@@ -149,20 +156,23 @@ struct sum_of_squares_distance {
 using sum_of_squares_distance = _l2_distance::sum_of_squares_distance;
 inline constexpr auto l2_distance = _l2_distance::sum_of_squares_distance{};
 ```
+
 With these definitions, users can compute L2 distance by calling `l2_distance()`:
+
 ```
   auto dist = l2_distance(x, y);
 ```
-Users can pass the type `sum_of_squared_distance` where it is required as a template argument, for instance.
 
+Users can pass the type `sum_of_squared_distance` where it is required as a template argument, for instance.
 
 ### Functions parameterized by distance function
 
-All of the functions in the TileDB-Vector-Search library that use a distance function have been 
-parameterized by the type of the distance function.  Except for the pq related functions, they 
+All of the functions in the TileDB-Vector-Search library that use a distance function have been
+parameterized by the type of the distance function. Except for the pq related functions, they
 also take the distance function as an argument.
 
 For example
+
 ```c++
 template <
     feature_vector_array F,
@@ -177,33 +187,36 @@ auto query_finite_ram(
     size_t nthreads,
     Distance distance = Distance{});
 ```
+
 In the body of the code, distance is computed simply by invoking `distance`.
 
 Query functions are invoked simply by passing the distance function object as a parameter.
+
 ```c++
-nuv_query_heap_finite_ram(inputs, query, active_queries, 
+nuv_query_heap_finite_ram(inputs, query, active_queries,
                           k_nn, upper_bound, nthreads,
                           counting_l2_distance);
 ```
 
-*Comments:*  
-* We need to get rid of the `nthreads` parameter throughout the entire code.
-* We may need to add timestamping to the functions.
-* IMPORTANT: We need to absolutely and positively understand what is happening with the function
-objects vis-a-vis inlining and optimization.
+_Comments:_
+
+- We need to get rid of the `nthreads` parameter throughout the entire code.
+- We may need to add timestamping to the functions.
+- IMPORTANT: We need to absolutely and positively understand what is happening with the function
+  objects vis-a-vis inlining and optimization.
 
 ### Implementation status:
 
-| Metric        | Naive | 4x unrolled | AVX | BLAS   |
-|---------------|-------|-------------|-----|--------|
-| L2            | Y     | Y           | Y   | N      |
-| Dot           | Y     | Y           | Y   | N      |  
-| Cosine        | N     | N           | N   | N      |        
-| L2 w/view     | Y     | Y           | N   | N      |
-| Dot w/view    | N     | N           | N   | N      |            
-| Cosine w/view | N     | N           | N   | N      |        
+| Metric        | Naive | 4x unrolled | AVX | BLAS |
+| ------------- | ----- | ----------- | --- | ---- |
+| L2            | Y     | Y           | Y   | N    |
+| Dot           | Y     | Y           | Y   | N    |
+| Cosine        | N     | N           | N   | N    |
+| L2 w/view     | Y     | Y           | N   | N    |
+| Dot w/view    | N     | N           | N   | N    |
+| Cosine w/view | N     | N           | N   | N    |
 
 NOTE: Cosine is just dot using normalized vectors.
-One approach to computing cosine similarity is 
-to first normalize the vectors, rather than 
+One approach to computing cosine similarity is
+to first normalize the vectors, rather than
 normalizing them on the fly.
