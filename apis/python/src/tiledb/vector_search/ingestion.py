@@ -1479,7 +1479,6 @@ def ingest(
             ids_array.close()
 
     def ingest_vamana(
-        ctx,
         index_group_uri: str,
         source_uri: str,
         source_type: str,
@@ -1602,6 +1601,7 @@ def ingest(
             # Now that we've ingested the vectors and their IDs, train the index with the data.
             from tiledb.vector_search import _tiledbvspy as vspy
 
+            ctx = vspy.Ctx(config)
             index = vspy.IndexVamana(ctx, index_group_uri)
             data = vspy.FeatureVectorArray(ctx, parts_array_uri, ids_array_uri)
             index.train(data)
@@ -2111,10 +2111,8 @@ def ingest(
         elif index_type == "VAMANA":
             from tiledb.vector_search import _tiledbvspy as vspy
 
-            ctx = vspy.Ctx(config)
             ingest_node = submit(
                 ingest_vamana,
-                ctx=ctx,
                 index_group_uri=index_group_uri,
                 source_uri=source_uri,
                 source_type=source_type,
