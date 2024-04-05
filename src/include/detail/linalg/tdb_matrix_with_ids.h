@@ -224,19 +224,33 @@ class tdbBlockedMatrixWithIds
 
     auto layout_order = ids_schema_.cell_order();
     this->ids().resize(elements_to_load * dimension);
-    // Create a query
+
+    // Read TileDB data
+    size_t total_size = elements_to_load * dimension;
+    size_t offset = 0;
+    auto ptr = this->ids().data();
     tiledb::Query query(this->ctx_, *ids_array_);
-    query.set_subarray(subarray)
-        .set_layout(layout_order)
-        .set_data_buffer(attr_name, this->ids());
-    tiledb_helpers::submit_query(tdb_func__, ids_uri_, query);
+    query.set_subarray(subarray).set_layout(layout_order);
+    tiledb::Query::Status status;
+    do {
+      // Submit query and get status
+      size_t request_size = READ_BATCH_SIZE;
+      if (offset + READ_BATCH_SIZE > total_size) {
+        request_size = total_size - offset;
+      }
+      query.set_data_buffer(attr_name, ptr + offset, request_size);
+      tiledb_helpers::submit_query(tdb_func__, ids_uri_, query);
+      status = query.query_status();
+
+      auto num_results = query.result_buffer_elements()[attr_name].second;
+      offset += num_results;
+    } while (status == tiledb::Query::Status::INCOMPLETE);
+    // Handle error
+    if (status == tiledb::Query::Status::FAILED) {
+      throw std::runtime_error("Error in reading");
+    }
     _memory_data.insert_entry(
         tdb_func__, elements_to_load * dimension * sizeof(T));
-    // @todo Handle incomplete queries.
-    if (tiledb::Query::Status::COMPLETE != query.query_status()) {
-      throw std::runtime_error("Query status for IDs is not complete");
-    }
-
     return true;
   }
 };  // tdbBlockedMatrixWithIds

@@ -36,6 +36,8 @@
 #include <string>
 #include <tiledb/tiledb>
 
+constexpr size_t READ_BATCH_SIZE = 100000000;
+
 template <class... T>
 constexpr bool always_false = false;
 
