@@ -437,9 +437,9 @@ def ingest_embeddings_with_driver(
                     **kwargs,
                 )
             else:
-                embeddings_array_name = storage_formats[obj_index.index.storage_version][
-                    "INPUT_VECTORS_ARRAY_NAME"
-                ]
+                embeddings_array_name = storage_formats[
+                    obj_index.index.storage_version
+                ]["INPUT_VECTORS_ARRAY_NAME"]
                 embeddings_array_uri = f"{obj_index.uri}/{embeddings_array_name}"
                 obj_index.index = ingest(
                     index_type=obj_index.index_type,
