@@ -4,9 +4,9 @@ import os
 import time
 from typing import Any, Mapping, Optional
 
+from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
-from tiledb.vector_search import _tiledbvspy as vspy
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
@@ -286,7 +286,10 @@ class Index:
 
     def set_has_updates(self, has_updates: bool = True):
         self.has_updates = has_updates
-        if "has_updates" not in self.group.meta or self.group.meta["has_updates"] != has_updates:
+        if (
+            "has_updates" not in self.group.meta
+            or self.group.meta["has_updates"] != has_updates
+        ):
             self.group.close()
             self.group = tiledb.Group(self.uri, "w", ctx=tiledb.Ctx(self.config))
             self.group.meta["has_updates"] = has_updates
