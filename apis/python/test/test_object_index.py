@@ -1,5 +1,4 @@
-from collections import OrderedDict
-from typing import Dict, List, Tuple
+from typing import Dict, List, OrderedDict, Tuple
 
 import numpy as np
 
@@ -68,14 +67,20 @@ class TestPartition(ObjectPartition):
 class TestReader(ObjectReader):
     def __init__(
         self,
-        num_objects: int,
+        object_id_start: int,
+        object_id_end: int,
+        vector_dim_offset: int,
         **kwargs,
     ):
-        self.num_objects = num_objects
+        self.object_id_start = object_id_start
+        self.object_id_end = object_id_end
+        self.vector_dim_offset = vector_dim_offset
 
     def init_kwargs(self) -> Dict:
         return {
-            "num_objects": self.num_objects,
+            "object_id_start": self.object_id_start,
+            "object_id_end": self.object_id_end,
+            "vector_dim_offset": self.vector_dim_offset,
         }
 
     def partition_class_name(self) -> str:
@@ -91,15 +96,19 @@ class TestReader(ObjectReader):
         )
         return [test_attr]
 
-    def get_partitions(self, objects_per_partition: int = -1) -> List[TestPartition]:
+    def get_partitions(
+        self, objects_per_partition: int = -1, **kwargs
+    ) -> List[TestPartition]:
         if objects_per_partition == -1:
             objects_per_partition = 42
         partitions = []
         partition_id = 0
-        for start in range(0, self.num_objects, objects_per_partition):
+        for start in range(
+            self.object_id_start, self.object_id_end, objects_per_partition
+        ):
             end = start + objects_per_partition
-            if end > self.num_objects:
-                end = self.num_objects
+            if end > self.object_id_end:
+                end = self.object_id_end
             partitions.append(TestPartition(partition_id, start, end))
             partition_id += 1
 
@@ -112,8 +121,9 @@ class TestReader(ObjectReader):
         metadata = np.empty(num_vectors, dtype="O")
         i = 0
         for id in range(partition.start, partition.end):
-            objects[i] = np.array([id, id, id, id])
-            metadata[i] = id
+            vector_dim = self.vector_dim_offset + id
+            objects[i] = np.array([vector_dim, vector_dim, vector_dim, vector_dim])
+            metadata[i] = vector_dim
             i += 1
         return (
             {"object": objects, "external_id": external_ids},
@@ -125,14 +135,107 @@ class TestReader(ObjectReader):
         external_ids = np.zeros(len(ids))
         i = 0
         for id in ids:
-            objects[i] = np.array([id, id, id, id])
+            vector_dim = self.vector_dim_offset + id
+            objects[i] = np.array([vector_dim, vector_dim, vector_dim, vector_dim])
             external_ids[i] = id
             i += 1
         return {"object": objects, "external_id": external_ids}
 
 
+def evaluate_query(index_uri, query_kwargs, dim_id, vector_dim_offset):
+    v_id = dim_id - vector_dim_offset
+    index = object_index.ObjectIndex(uri=index_uri)
+    distances, objects, metadata = index.query(
+        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=5, **query_kwargs
+    )
+    assert np.array_equiv(
+        np.unique(objects["external_id"]),
+        np.array([v_id - 2, v_id - 1, v_id, v_id + 1, v_id + 2]),
+    )
+    distances, object_ids = index.query(
+        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
+        k=5,
+        return_objects=False,
+        return_metadata=False,
+        **query_kwargs,
+    )
+    assert np.array_equiv(
+        np.unique(object_ids), np.array([v_id - 2, v_id - 1, v_id, v_id + 1, v_id + 2])
+    )
+
+    def df_filter(row):
+        return row["test_attr"] >= dim_id
+
+    distances, objects, metadata = index.query(
+        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
+        metadata_df_filter_fn=df_filter,
+        k=5,
+        **query_kwargs,
+    )
+    assert np.array_equiv(
+        objects["external_id"], np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4])
+    )
+
+    distances, object_ids = index.query(
+        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
+        metadata_df_filter_fn=df_filter,
+        k=5,
+        return_objects=False,
+        return_metadata=False,
+        **query_kwargs,
+    )
+    assert np.array_equiv(
+        object_ids, np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4])
+    )
+
+    index = object_index.ObjectIndex(uri=index_uri, load_metadata_in_memory=False)
+    distances, objects, metadata = index.query(
+        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=5, **query_kwargs
+    )
+    assert np.array_equiv(
+        np.unique(objects["external_id"]),
+        np.array([v_id - 2, v_id - 1, v_id, v_id + 1, v_id + 2]),
+    )
+    distances, object_ids = index.query(
+        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
+        k=5,
+        return_objects=False,
+        return_metadata=False,
+        **query_kwargs,
+    )
+    assert np.array_equiv(
+        np.unique(object_ids), np.array([v_id - 2, v_id - 1, v_id, v_id + 1, v_id + 2])
+    )
+
+    distances, objects, metadata = index.query(
+        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
+        metadata_array_cond=f"test_attr >= {dim_id}",
+        k=5,
+        **query_kwargs,
+    )
+    assert np.array_equiv(
+        objects["external_id"], np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4])
+    )
+
+    distances, object_ids = index.query(
+        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
+        metadata_array_cond=f"test_attr >= {dim_id}",
+        k=5,
+        return_objects=False,
+        return_metadata=False,
+        **query_kwargs,
+    )
+    assert np.array_equiv(
+        object_ids, np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4])
+    )
+
+
 def test_object_index_ivf_flat(tmp_path):
-    reader = TestReader(num_objects=1000)
+    reader = TestReader(
+        object_id_start=0,
+        object_id_end=1000,
+        vector_dim_offset=0,
+    )
     embedding = TestEmbedding()
 
     index_uri = f"{tmp_path}/index"
@@ -144,51 +247,61 @@ def test_object_index_ivf_flat(tmp_path):
         embedding=embedding,
     )
 
-    index.update_index()
-    index = object_index.ObjectIndex(uri=index_uri)
-
-    index = object_index.ObjectIndex(uri=index_uri, load_metadata_in_memory=False)
-    distances, objects, metadata = index.query(
-        {"object": np.array([[12, 12, 12, 12]])},
-        k=5,
-        nprobe=10,
-    )
-    assert np.array_equiv(
-        np.unique(objects["external_id"]), np.array([10, 11, 12, 13, 14])
+    # Check initial ingestion
+    index.update_index(partitions=10)
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={"nprobe": 10},
+        dim_id=42,
+        vector_dim_offset=0,
     )
 
-    distances, objects, metadata = index.query(
-        {"object": np.array([[12, 12, 12, 12]])},
-        metadata_array_cond="test_attr >= 12",
-        k=5,
-        nprobe=10,
-    )
-    assert np.array_equiv(objects["external_id"], np.array([12, 13, 14, 15, 16]))
-
-    index = object_index.ObjectIndex(uri=index_uri, load_metadata_in_memory=False)
-    distances, objects, metadata = index.query(
-        {"object": np.array([[12, 12, 12, 12]])},
-        k=5,
-        nprobe=10,
-    )
-    assert np.array_equiv(
-        np.unique(objects["external_id"]), np.array([10, 11, 12, 13, 14])
+    # Check that updating the same data doesn't create duplicates
+    index.update_index(partitions=10)
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={"nprobe": 10},
+        dim_id=42,
+        vector_dim_offset=0,
     )
 
-    def df_filter(row):
-        return row["test_attr"] >= 12
-
-    distances, objects, metadata = index.query(
-        {"object": np.array([[12, 12, 12, 12]])},
-        metadata_df_filter_fn=df_filter,
-        k=5,
-        nprobe=10,
+    # Add new data with a new reader
+    reader = TestReader(
+        object_id_start=1000,
+        object_id_end=2000,
+        vector_dim_offset=0,
     )
-    assert np.array_equiv(objects["external_id"], np.array([12, 13, 14, 15, 16]))
+    index.update_object_reader(reader)
+    index.update_index(partitions=10)
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={"nprobe": 10},
+        dim_id=1042,
+        vector_dim_offset=0,
+    )
+
+    # Check overwritting existing data
+    reader = TestReader(
+        object_id_start=1000,
+        object_id_end=2000,
+        vector_dim_offset=1000,
+    )
+    index.update_object_reader(reader)
+    index.update_index(partitions=10)
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={"nprobe": 10},
+        dim_id=2042,
+        vector_dim_offset=1000,
+    )
 
 
 def test_object_index_flat(tmp_path):
-    reader = TestReader(num_objects=1000)
+    reader = TestReader(
+        object_id_start=0,
+        object_id_end=1000,
+        vector_dim_offset=0,
+    )
     embedding = TestEmbedding()
 
     index_uri = f"{tmp_path}/index"
@@ -199,71 +312,50 @@ def test_object_index_flat(tmp_path):
         object_reader=reader,
         embedding=embedding,
     )
-
+    # Check initial ingestion
     index.update_index()
-    index = object_index.ObjectIndex(uri=index_uri)
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={},
+        dim_id=42,
+        vector_dim_offset=0,
+    )
 
-    index = object_index.ObjectIndex(uri=index_uri)
-    distances, objects, metadata = index.query(
-        {"object": np.array([[12, 12, 12, 12]])}, k=5
+    # Check that updating the same data doesn't create duplicates
+    index.update_index()
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={},
+        dim_id=42,
+        vector_dim_offset=0,
     )
-    assert np.array_equiv(
-        np.unique(objects["external_id"]), np.array([10, 11, 12, 13, 14])
-    )
-    distances, object_ids = index.query(
-        {"object": np.array([[12, 12, 12, 12]])},
-        k=5,
-        return_objects=False,
-        return_metadata=False,
-    )
-    assert np.array_equiv(np.unique(object_ids), np.array([10, 11, 12, 13, 14]))
 
-    def df_filter(row):
-        return row["test_attr"] >= 12
+    # Add new data with a new reader
+    reader = TestReader(
+        object_id_start=1000,
+        object_id_end=2000,
+        vector_dim_offset=0,
+    )
+    index.update_object_reader(reader)
+    index.update_index()
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={},
+        dim_id=1042,
+        vector_dim_offset=0,
+    )
 
-    distances, objects, metadata = index.query(
-        {"object": np.array([[12, 12, 12, 12]])},
-        metadata_df_filter_fn=df_filter,
-        k=5,
+    # Check overwritting existing data
+    reader = TestReader(
+        object_id_start=1000,
+        object_id_end=2000,
+        vector_dim_offset=1000,
     )
-    assert np.array_equiv(objects["external_id"], np.array([12, 13, 14, 15, 16]))
-
-    distances, object_ids = index.query(
-        {"object": np.array([[12, 12, 12, 12]])},
-        metadata_df_filter_fn=df_filter,
-        k=5,
-        return_objects=False,
-        return_metadata=False,
+    index.update_object_reader(reader)
+    index.update_index()
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={},
+        dim_id=2042,
+        vector_dim_offset=1000,
     )
-    assert np.array_equiv(object_ids, np.array([12, 13, 14, 15, 16]))
-
-    index = object_index.ObjectIndex(uri=index_uri, load_metadata_in_memory=False)
-    distances, objects, metadata = index.query(
-        {"object": np.array([[12, 12, 12, 12]])}, k=5
-    )
-    assert np.array_equiv(
-        np.unique(objects["external_id"]), np.array([10, 11, 12, 13, 14])
-    )
-    distances, object_ids = index.query(
-        {"object": np.array([[12, 12, 12, 12]])},
-        k=5,
-        return_objects=False,
-        return_metadata=False,
-    )
-    assert np.array_equiv(np.unique(object_ids), np.array([10, 11, 12, 13, 14]))
-
-    distances, objects, metadata = index.query(
-        {"object": np.array([[12, 12, 12, 12]])},
-        metadata_array_cond="test_attr >= 12",
-        k=5,
-    )
-    assert np.array_equiv(objects["external_id"], np.array([12, 13, 14, 15, 16]))
-
-    distances, object_ids = index.query(
-        {"object": np.array([[12, 12, 12, 12]])},
-        metadata_array_cond="test_attr >= 12",
-        k=5,
-        return_objects=False,
-        return_metadata=False,
-    )
-    assert np.array_equiv(object_ids, np.array([12, 13, 14, 15, 16]))
