@@ -395,14 +395,14 @@ static void declareColMajorMatrixSubclass(
 
   cls.def(
       py::init<
-          const Ctx&,
-          std::string,
-          size_t,
-          size_t,
-          size_t,
-          size_t,
-          size_t,
-          uint64_t>(),
+          const Ctx&,             // ctx
+          std::string,            // uri
+          size_t,                 // first_row
+          std::optional<size_t>,  // last_row
+          size_t,                 // first_col
+          std::optional<size_t>,  // last_col
+          size_t,                 // upper_bound
+          uint64_t>(),            // timestamp
       py::keep_alive<1, 2>());
 
   if constexpr (std::is_same<P, tdbColMajorMatrix<T>>::value) {

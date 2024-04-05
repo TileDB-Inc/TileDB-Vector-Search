@@ -23,6 +23,26 @@ def test_load_matrix(tmpdir):
     assert np.array_equal(orig_matrix[0, 0], data[0, 0])
 
 
+def test_load_matrix_specify_size(tmpdir):
+    p = str(tmpdir.mkdir("test").join("test.tdb"))
+    data = np.random.rand(12).astype(np.float32).reshape(3, 4)
+
+    # write some test data with tiledb-py
+    create_array(p, data)
+
+    # test specifying a size
+    m = vs.load_as_array(p, size=data.shape[1])
+    assert np.array_equal(m, data)
+
+    # test specifying a smaller size
+    m = vs.load_as_array(p, size=2)
+    assert np.array_equal(m, data[:, :2])
+
+    # test specifying a size of 0
+    m = vs.load_as_array(p, size=0)
+    assert m.shape == (3, 0)
+
+
 def test_vector(tmpdir):
     v = vspy._create_vector_u64()
     assert np.array_equal(np.array(v), np.arange(10))

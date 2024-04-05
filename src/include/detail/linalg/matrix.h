@@ -61,6 +61,8 @@ class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
+  using span_type = std::span<T>;
+
  public:
   MatrixView(const Base& rhs)
       : Base(rhs) {
@@ -78,7 +80,7 @@ class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
     return this->data_handle();
   }
 
-  // @todo is this right???
+  // @todo Fully verify row and column major function correctly
   auto operator[](index_type i) {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
       return std::span(&Base::operator()(i, 0), this->extents().extent(1));
@@ -148,6 +150,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using reference = typename Base::reference;
 
   using view_type = Matrix;
+  using span_type = std::span<T>;
 
  protected:
   size_type num_rows_{0};
@@ -501,19 +504,29 @@ void debug_slice(
     const std::string& msg = "",
     size_t rows = 6,
     size_t cols = 18) {
-  if (matrix_printf || true) {
-    rows = std::min(rows, dimension(A));
-    cols = std::min(cols, num_vectors(A));
+  auto max_size = 10;
+  auto rowsEnd = std::min(dimension(A), static_cast<size_t>(max_size));
+  auto colsEnd = std::min(num_vectors(A), static_cast<size_t>(max_size));
 
-    std::cout << "# " << msg << std::endl;
-    for (size_t i = 0; i < rows; ++i) {
-      std::cout << "# ";
-      for (size_t j = 0; j < cols; ++j) {
-        std::cout << (float)A(i, j) << "\t";
-      }
-      std::cout << std::endl;
+  std::cout << "# " << msg << std::endl;
+  for (size_t i = 0; i < rowsEnd; ++i) {
+    std::cout << "# ";
+    for (size_t j = 0; j < colsEnd; ++j) {
+      std::cout << (float)A(i, j) << " ";
     }
+    if (A.num_cols() > max_size) {
+      std::cout << "...";
+    }
+    std::cout << std::endl;
   }
+  if (A.num_rows() > max_size) {
+    std::cout << "# ..." << std::endl;
+  }
+}
+
+template <feature_vector_array M>
+void debug(const M& A, const std::string& msg = "") {
+  debug_slice(A, msg, dimension(A), num_vectors(A));
 }
 
 template <class Matrix1, class Matrix2>

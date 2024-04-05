@@ -4,6 +4,7 @@ import os
 import time
 from typing import Any, Mapping, Optional
 
+from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
 
@@ -41,7 +42,7 @@ class Index:
 
         self.uri = uri
         self.config = config
-        self.ctx = Ctx(config)
+        self.ctx = vspy.Ctx(config)
         self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
         self.storage_version = self.group.meta.get("storage_version", "0.1")
         if (
@@ -127,6 +128,7 @@ class Index:
                     "Unexpected argument type for 'timestamp' keyword argument"
                 )
         self.thread_executor = futures.ThreadPoolExecutor()
+        self.has_updates = self.check_has_updates()
 
     def query(self, queries: np.ndarray, k, **kwargs):
         if queries.ndim != 2:
@@ -141,10 +143,7 @@ class Index:
             )
 
         with tiledb.scope_ctx(ctx_or_config=self.config):
-            if (
-                not tiledb.array_exists(self.updates_array_uri)
-                or not self.has_updates()
-            ):
+            if not self.has_updates:
                 if self.query_base_array:
                     return self.query_internal(queries, k, **kwargs)
                 else:
@@ -276,14 +275,21 @@ class Index:
     def query_internal(self, queries: np.ndarray, k, **kwargs):
         raise NotImplementedError
 
-    def has_updates(self):
+    def check_has_updates(self):
+        with tiledb.scope_ctx(ctx_or_config=self.config):
+            array_exists = tiledb.array_exists(self.updates_array_uri)
         if "has_updates" in self.group.meta:
-            return self.group.meta["has_updates"]
+            has_updates = self.group.meta["has_updates"]
         else:
-            return True
+            has_updates = True
+        return array_exists and has_updates
 
     def set_has_updates(self, has_updates: bool = True):
-        if not self.group.meta["has_updates"]:
+        self.has_updates = has_updates
+        if (
+            "has_updates" not in self.group.meta
+            or self.group.meta["has_updates"] != has_updates
+        ):
             self.group.close()
             self.group = tiledb.Group(self.uri, "w", ctx=tiledb.Ctx(self.config))
             self.group.meta["has_updates"] = has_updates

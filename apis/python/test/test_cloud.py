@@ -1,6 +1,7 @@
 import os
 import unittest
 
+from array_paths import *
 from common import *
 
 import tiledb.vector_search as vs
@@ -40,8 +41,8 @@ class CloudTests(unittest.TestCase):
 
     def test_cloud_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
-        queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-        gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+        queries_uri = siftsmall_query_file
+        gt_uri = siftsmall_groundtruth_file
         index_uri = CloudTests.flat_index_uri
         k = 100
         nqueries = 100
@@ -68,8 +69,8 @@ class CloudTests(unittest.TestCase):
 
     def test_cloud_ivf_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
-        queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-        gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+        queries_uri = siftsmall_query_file
+        gt_uri = siftsmall_groundtruth_file
         index_uri = CloudTests.ivf_flat_index_uri
         k = 100
         partitions = 100
@@ -162,8 +163,8 @@ class CloudTests(unittest.TestCase):
         # source_uri = "tiledb://TileDB-Inc/ann_sift1b_raw_vectors_col_major"
         # training_sample_size = 1000000
         source_uri = "tiledb://TileDB-Inc/sift_10k"
-        queries_uri = "test/data/siftsmall/siftsmall_query.fvecs"
-        gt_uri = "test/data/siftsmall/siftsmall_groundtruth.ivecs"
+        queries_uri = siftsmall_query_file
+        gt_uri = siftsmall_groundtruth_file
         index_uri = CloudTests.ivf_flat_random_sampling_index_uri
         k = 100
         nqueries = 100

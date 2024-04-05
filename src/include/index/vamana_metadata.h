@@ -69,7 +69,7 @@ class vamana_index_metadata
 
   // public for now in interest of time
  public:
-  std::string index_type_{"Vamana"};
+  std::string index_type_{"VAMANA"};
 
   /** Record number of partitions at each write at a given timestamp */
   std::vector<num_edges_history_type> num_edges_history_;

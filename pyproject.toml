@@ -19,13 +19,13 @@ classifiers = [
 
 dependencies = [
     "tiledb-cloud>=0.11",
-    "tiledb>=0.26.0",
+    "tiledb>=0.27.0",
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
     "scikit-learn",
 ]
 
 [project.optional-dependencies]
-test = ["nbmake", "pytest"]
+test = ["nbmake", "pytest<8.0.0"]
 formatting = ["pre-commit"]
 
 [project.urls]
@@ -33,7 +33,7 @@ homepage = "https://tiledb.com"
 repository = "https://github.com/TileDB-Inc/tiledb-vector-search"
 
 [build-system]
-requires = ["scikit-build-core", "pybind11"]
+requires = ["scikit-build-core[pyproject]", "pybind11", "setuptools-scm"]
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
@@ -41,14 +41,19 @@ wheel.expand-macos-universal-tags = true
 metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
 cmake.source-dir = "src"
 cmake.targets = ["skbuild-export"]
-# TODO: This should be removed, but currently can't bacause: 'src/src/CMakeLists.txt'
 sdist.include = [
-    ".git"
+    "apis/python/src/tiledb/vector_search/version.py",
+    "src/config.h"
+]
+sdist.exclude = [
+    ".github"
 ]
 wheel.packages = ["apis/python/src/tiledb"]
+# We need to run cmake during packaging step in order to generate src/config.h and
+# thus not including .git to generate it later
+sdist.cmake = true
 
 [tool.scikit-build.cmake.define]
-#GIT_REPO_NAME = "placeholder"
 TILEDB_VS_PYTHON = "ON"
 
 [tool.setuptools_scm]

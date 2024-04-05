@@ -4,6 +4,7 @@ from typing import Any, Dict, Mapping, Optional
 import numpy as np
 
 import tiledb
+from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search._tiledbvspy import *
 
 
@@ -11,40 +12,42 @@ def load_as_matrix(
     path: str,
     ctx: "Ctx" = None,
     config: Optional[Mapping[str, Any]] = None,
-    size: int = 0,
+    size: Optional[int] = None,
     timestamp: int = 0,
 ):
     """
-    Load array as Matrix class
+    Load array as Matrix class. We read in all rows (i.e. from 0 to the row domain length).
 
     Parameters
     ----------
     path: str
         Array path
-    ctx: Ctx
-        TileDB context
+    ctx: vspy.Ctx
+        The vspy Context
     size: int
-        Size of vectors to load
+        Size of vectors to load. If not set we will read from 0 to the column domain length.
     """
     # If the user passes a tiledb python Config object convert to a dictionary
     if isinstance(config, tiledb.Config):
         config = dict(config)
 
     if ctx is None:
-        ctx = Ctx(config)
+        ctx = vspy.Ctx(config)
 
     a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
+    # Read all rows from column 0 -> `size`. Set no upper_bound. Note that if `size` is None then
+    # we'll read to the column domain length.
     if dtype == np.float32:
-        m = tdbColMajorMatrix_f32(ctx, path, 0, 0, 0, size, 0, timestamp)
+        m = tdbColMajorMatrix_f32(ctx, path, 0, None, 0, size, 0, timestamp)
     elif dtype == np.float64:
-        m = tdbColMajorMatrix_f64(ctx, path, 0, 0, 0, size, 0, timestamp)
+        m = tdbColMajorMatrix_f64(ctx, path, 0, None, 0, size, 0, timestamp)
     elif dtype == np.int32:
-        m = tdbColMajorMatrix_i32(ctx, path, 0, 0, 0, size, 0, timestamp)
+        m = tdbColMajorMatrix_i32(ctx, path, 0, None, 0, size, 0, timestamp)
     elif dtype == np.int32:
-        m = tdbColMajorMatrix_i64(ctx, path, 0, 0, 0, size, 0, timestamp)
+        m = tdbColMajorMatrix_i64(ctx, path, 0, None, 0, size, 0, timestamp)
     elif dtype == np.uint8:
-        m = tdbColMajorMatrix_u8(ctx, path, 0, 0, 0, size, 0, timestamp)
+        m = tdbColMajorMatrix_u8(ctx, path, 0, None, 0, size, 0, timestamp)
     # elif dtype == np.uint64:
     #     return tdbColMajorMatrix_u64(ctx, path, size, timestamp)
     else:
@@ -58,6 +61,7 @@ def load_as_array(
     return_matrix: bool = False,
     ctx: "Ctx" = None,
     config: Optional[Mapping[str, Any]] = None,
+    size: Optional[int] = None,
 ):
     """
     Load array as array class
@@ -71,7 +75,7 @@ def load_as_array(
     config: Dict
         TileDB configuration parameters
     """
-    m = load_as_matrix(path, ctx=ctx, config=config)
+    m = load_as_matrix(path, size=size, ctx=ctx, config=config)
     r = np.array(m, copy=False)
 
     # hang on to a copy for testing purposes, for now
@@ -166,9 +170,9 @@ def ivf_index_tdb(
     config: Dict = None,
 ):
     if config is None:
-        ctx = Ctx({})
+        ctx = vspy.Ctx({})
     else:
-        ctx = Ctx(config)
+        ctx = vspy.Ctx(config)
 
     args = tuple(
         [
@@ -211,9 +215,9 @@ def ivf_index(
     config: Dict = None,
 ):
     if config is None:
-        ctx = Ctx({})
+        ctx = vspy.Ctx({})
     else:
-        ctx = Ctx(config)
+        ctx = vspy.Ctx(config)
 
     args = tuple(
         [
@@ -276,11 +280,11 @@ def ivf_query_ram(
         Number of nn
     nthreads: int
         Number of theads
-    ctx: Ctx
-        Tiledb Context
+    ctx: vspy.Ctx
+        The vspy Context
     """
     if ctx is None:
-        ctx = Ctx({})
+        ctx = vspy.Ctx({})
 
     args = tuple(
         [
@@ -352,13 +356,13 @@ def ivf_query(
         Main memory budget
     nthreads: int
         Number of theads
-    ctx: Ctx
-        Tiledb Context
+    ctx: vspy.Ctx
+        The vspy Context
     timestamp: int
         Read timestamp
     """
     if ctx is None:
-        ctx = Ctx({})
+        ctx = vspy.Ctx({})
 
     args = tuple(
         [
@@ -416,7 +420,7 @@ def dist_qv(
     timestamp: int = 0,
 ):
     if ctx is None:
-        ctx = Ctx({})
+        ctx = vspy.Ctx({})
     args = tuple(
         [
             ctx,  # 0

@@ -27,243 +27,235 @@
  *
  * @section DESCRIPTION
  *
- * Gemm-based scoring.
+ * Top-level include file for all scoring functions (l2, inner_product, cosine)
  *
  */
 
 #ifndef TDB_SCORING_H
 #define TDB_SCORING_H
 
-#include <algorithm>
-#include "algorithm.h"
-#include "concepts.h"
-#include "linalg.h"
-#include "utils/timer.h"
+#include "detail/scoring/inner_product.h"
+#include "detail/scoring/inner_product_avx.h"
+#include "detail/scoring/l2_distance.h"
+#include "detail/scoring/l2_distance_avx.h"
+
+// @todo Implement
+// #include "detail/scoring/cosine.h"
+// #include "detail/scoring/cosine_avx.h"
+
+#ifdef TILEDB_VS_ENABLE_BLAS
+
+// @todo Implement
+#include "detail/scoring/cosine_blas.h"
+#include "detail/scoring/inner_product_blas.h"
+#include "detail/scoring/l2_distance_blas.h"
+
+#endif  // TILEDB_VS_ENABLE_BLAS
+
+#include "detail/linalg/matrix.h"
+#include "utils/fixed_min_heap.h"
 #include "utils/utils.h"
 
-#include "detail/linalg/choose_blas.h"
-
-#include <algorithm>
-#include <cmath>
-#include <future>
-#include <iostream>
-#include <limits>
-#include <memory>
-#include <numeric>
-#include <queue>
-#include <ranges>
-#include <set>
-#include <span>
-// #include <execution>
-
-#include "detail/linalg/linalg_defs.h"
-#include "tdb_defs.h"
-#include "utils/fixed_min_heap.h"
-#include "utils/timer.h"
-
-#include "utils/print_types.h"
-
-// ----------------------------------------------------------------------------
-// Helper utilities
-//----------------------------------------------------------------------------
+// Helper utility
 namespace {
 class with_ids {};
 class without_ids {};
 }  // namespace
 
-// ----------------------------------------------------------------------------
-// Distance functions
-// ----------------------------------------------------------------------------
+/******************************************************************************
+ *
+ * Function objects.  We define these here since they are what is used by the
+ * index implementations.
+ *
+ ******************************************************************************/
 
 /**
- * @brief Compute sum of squares distance between two vectors.
- * @tparam V
- * @tparam U
- * @param a
- * @param b
- * @return
+ * @brief Function object for computing the sum of squared distance
+ * between two vectors.
+ * @tparam T
  */
-#if 0
-template <class V, class U>
-inline auto sum_of_squares(V const& a, U const& b) {
-  float sum{0.0};
-  size_t size_a = size(a);
-
-  if constexpr (std::is_same_v<decltype(a[0]),decltype(b[0])>) {
-    for (size_t i = 0; i < size_a; ++i) {
-      float diff = a[i]- b[i];
-      sum += diff * diff;
-    }
-  } else {
-    for (size_t i = 0; i < size_a; ++i) {
-      float diff = ((float)a[i]) - ((float)b[i]);
-      sum += diff * diff;
-    }
-  }
-  return sum;
-}
-#else
-template <class V, class U>
-inline auto sum_of_squares(V const& a, U const& b) {
-  float sum{0.0};
-  size_t size_a = size(a);
-
-  if constexpr (
-      std::unsigned_integral<std::remove_reference_t<decltype(a[0])>> ||
-      std::unsigned_integral<std::remove_reference_t<decltype(b[0])>>) {
-    for (size_t i = 0; i < size_a; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = (float)a[i] - (float)b[i];
-      sum += diff * diff;
-    }
-  } else {
-    for (size_t i = 0; i < size_a; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = a[i] - b[i];
-      sum += diff * diff;
-    }
-  }
-  return sum;
-}
-
-template <class V>
-inline auto sum_of_squares(V const& a) {
-  float sum{0.0};
-  size_t size_a = size(a);
-
-  if constexpr (std::unsigned_integral<
-                    std::remove_reference_t<decltype(a[0])>>) {
-    for (size_t i = 0; i < size_a; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = (float)a[i];
-      sum += diff * diff;
-    }
-  } else {
-    for (size_t i = 0; i < size_a; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = a[i];
-      sum += diff * diff;
-    }
-  }
-  return sum;
-}
-
-template <class V, class U>
-inline auto sub_sum_of_squares(
-    V const& a, U const& b, size_t start, size_t end) {
-  float sum{0.0};
-
-  if constexpr (
-      std::unsigned_integral<std::remove_reference_t<decltype(a[0])>> ||
-      std::unsigned_integral<std::remove_reference_t<decltype(b[0])>>) {
-    for (size_t i = start; i < end; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = (float)a[i] - (float)b[i];
-      sum += diff * diff;
-    }
-  } else {
-    for (size_t i = start; i < end; ++i) {
-      // float diff = (float)a[i] - (float)b[i];  // converting to float is slow
-      float diff = a[i] - b[i];
-      sum += diff * diff;
-    }
-  }
-  return sum;
-}
-
-#endif
-
-/**
- * @brief Compute L2 distance between two vectors.
- * @tparam V
- * @param a
- * @param b
- * @return L2 norm of the difference between a and b.
- */
-template <class V, class U>
-inline auto L2(V const& a, U const& b) {
-  // return std::sqrt(sum_of_squares(a, b)); // sqrt is really slow
-  return sum_of_squares(a, b);
-}
-
-/**
- * @brief Compute cosine similarity between two vectors.
- * @tparam V
- * @param a
- * @param b
- * @return
- */
-template <class V>
-auto cosine(V const& a, V const& b) {
-  float sum = 0.0;
-  float a2 = 0.0;
-  float b2 = 0.0;
-
-  auto size_a = size(a);
-  for (auto i = 0; i < size_a; ++i) {
-    sum += a[i] * b[i];
-    a2 += a[i] * a[i];
-    b2 += b[i] * b[i];
-  }
-  // return sum / std::sqrt(a2 * b2);  // sqrt is really slow
-  return (sum * sum) / (a2 * b2);
-}
-
-/**
- * @brief Compute cosine similarity between two vectors.
- * @tparam V
- * @param a
- * @param b
- * @return
- */
-template <class U, class V>
-inline auto dot(U const& a, V const& b) {
-  float sum = 0.0;
-
-  auto size_a = size(a);
-  for (auto i = 0; i < size_a; ++i) {
-    sum += a[i] * b[i];
-  }
-  return sum;
-}
-
-// ----------------------------------------------------------------------------
-// Function objects for computing distances
-// ----------------------------------------------------------------------------
+namespace _l2_distance {
 
 struct sum_of_squares_distance {
-  template <class V, class U>
-  constexpr auto operator()(const V& a, const U& b) const {
-    return sum_of_squares(a, b);
+#ifdef __AVX2__
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return avx2_sum_of_squares(a, b);
   }
 
-  template <class V>
-  constexpr auto operator()(const V& a) const {
-    return sum_of_squares(a);
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return avx2_sum_of_squares(a);
+  }
+#else
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return unroll4_sum_of_squares(a, b);
+  }
+
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return unroll4_sum_of_squares(a);
+  }
+#endif
+};
+
+/**
+ * @brief Function object for computing the sum of squared distance, augmented
+ * to count the number of comparisons.
+ */
+struct counting_sum_of_squares_distance {
+  static size_t num_comps_;
+
+  template <class V, class U>
+  constexpr auto operator()(const V& a, const U& b) {
+    ++num_comps_;
+    return unroll4_sum_of_squares(a, b);
+  }
+
+  void reset() {
+    num_comps_ = 0;
   }
 };
 
-using l2_distance = sum_of_squares_distance;
-using L2_distance = sum_of_squares_distance;
+inline size_t counting_sum_of_squares_distance::num_comps_ = 0;
 
-struct sub_sum_of_squares_distance {
+/**
+ * @brief Function object for computing the sum of squared distance, augmented
+ * to count the number of comparisons and to log the number of comparisons
+ * at destruction.
+ */
+struct logging_sum_of_squares_distance {
+  size_t num_comps_{0};
+  std::string msg_{""};
+
+  logging_sum_of_squares_distance() = default;
+  logging_sum_of_squares_distance(const std::string& msg)
+      : msg_(msg) {
+  }
+
+  template <class V, class U>
+  constexpr auto operator()(const V& a, const U& b) {
+    ++num_comps_;
+    return unroll4_sum_of_squares(a, b);
+  }
+
+  void reset() {
+    num_comps_ = 0;
+  }
+
+  ~logging_sum_of_squares_distance() {
+    _count_data.insert_entry(msg_ + " num_ss_comps", num_comps_);
+  }
+};
+
+}  // namespace _l2_distance
+
+using sum_of_squares_distance = _l2_distance::sum_of_squares_distance;
+inline constexpr auto l2_distance = _l2_distance::sum_of_squares_distance{};
+
+using counting_sum_of_squares_distance =
+    _l2_distance::counting_sum_of_squares_distance;
+inline auto counting_l2_distance =
+    _l2_distance::counting_sum_of_squares_distance{};
+
+using logging_sum_of_squares_distance =
+    _l2_distance::logging_sum_of_squares_distance;
+inline auto logging_l2_distance =
+    _l2_distance::logging_sum_of_squares_distance{};
+
+/******************************************************************************
+ *
+ * Functions for computing l2 distance over just a view of each vector.  There
+ *is a caching version, which keeps the start and stop indices in the
+ *constructor, and a non-caching version, which takes the start and stop indices
+ *as arguments.
+ *
+ * The "sub" distance functions are used by pq.
+ *
+ * @todo Investigate how to parameterize the "sub" functions by the distance
+ *function
+ ******************************************************************************/
+namespace _l2_sub_distance {
+
+struct cached_sub_sum_of_squares_distance {
  private:
   size_t start_{0};
   size_t stop_{0};
 
  public:
-  sub_sum_of_squares_distance(size_t start, size_t stop)
+  cached_sub_sum_of_squares_distance(size_t start, size_t stop)
       : start_(start)
       , stop_(stop) {
   }
-  template <class V, class U>
+
+  // @todo AVX implementation
+  template <feature_vector V, feature_vector U>
   constexpr auto operator()(const V& a, const U& b) const {
-    return sub_sum_of_squares(a, b, start_, stop_);
+    return unroll4_sum_of_squares(a, b, start_, stop_);
   }
 };
 
-using sub_l2_distance = sub_sum_of_squares_distance;
-using sub_L2_distance = sub_sum_of_squares_distance;
+struct uncached_sub_sum_of_squares_distance {
+  // @todo AVX implementation
+  template <feature_vector V, feature_vector U>
+  constexpr auto operator()(
+      const V& a, const U& b, size_t start, size_t stop) const {
+    return unroll4_sum_of_squares(a, b, start, stop);
+  }
+};
+}  // namespace _l2_sub_distance
+
+using cached_sub_sum_of_squares_distance =
+    _l2_sub_distance::cached_sub_sum_of_squares_distance;
+
+using uncached_sub_sum_of_squares_distance =
+    _l2_sub_distance::uncached_sub_sum_of_squares_distance;
+
+using sub_sum_of_squares_distance =
+    _l2_sub_distance::cached_sub_sum_of_squares_distance;
+
+template <feature_vector U, feature_vector V>
+auto sub_l2_distance(const U& u, const V& v, size_t i, size_t j) {
+  return unroll4_sum_of_squares(u, v, i, j);
+}
+
+/**
+ * @brief Function object for computing the sum of squared distance
+ * between two vectors.
+ * @tparam T
+ */
+namespace _inner_product_distance {
+
+struct inner_product_distance {
+#ifdef __AVX2__
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return avx2_inner_product(a, b);
+  }
+
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return avx2_inner_product(a);
+  }
+#else
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return unroll4_inner_product(a, b);
+  }
+
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return unroll4_inner_product(a);
+  }
+#endif
+};
+
+}  // namespace _inner_product_distance
+
+using inner_product_distance = _inner_product_distance::inner_product_distance;
+inline constexpr auto inner_product =
+    _inner_product_distance::inner_product_distance{};
 
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn
@@ -635,7 +627,7 @@ auto count_intersections(const U& I, const V& groundtruth, size_t k_nn) {
   return total_intersected;
 };
 
-#ifdef TILEDB_VS_ENABLE_BLAS
+#if defined(TILEDB_VS_ENABLE_BLAS) && 0
 
 /**
  * @brief Foreach input vector, apply a function to each element of the
