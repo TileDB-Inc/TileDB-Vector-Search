@@ -149,23 +149,23 @@ def ingest(
     acn: Optional[str]
         access credential name to be used when running in BATCH mode for object store access
     ingest_resources: Optional[Mapping[str, Any]]
-        resources to requst when performing vector ingestion, only applys to BATCH mode
+        resources to requst when performing vector ingestion, only applies to BATCH mode
     consolidate_partition_resources: Optional[Mapping[str, Any]]
-        resources to requst when performing consolidation of a partition, only applys to BATCH mode
+        resources to requst when performing consolidation of a partition, only applies to BATCH mode
     copy_centroids_resources: Optional[Mapping[str, Any]]
-        resources to requst when performing copy of centroids from input array to output array, only applys to BATCH mode
+        resources to requst when performing copy of centroids from input array to output array, only applies to BATCH mode
     random_sample_resources: Optional[Mapping[str, Any]]
-        resources to request when performing random sample selection, only applys to BATCH mode
+        resources to request when performing random sample selection, only applies to BATCH mode
     kmeans_resources: Optional[Mapping[str, Any]]
-        resources to request when performing kmeans task, only applys to BATCH mode
+        resources to request when performing kmeans task, only applies to BATCH mode
     compute_new_centroids_resources: Optional[Mapping[str, Any]]
-        resources to request when performing centroid computation, only applys to BATCH mode
+        resources to request when performing centroid computation, only applies to BATCH mode
     assign_points_and_partial_new_centroids_resources: Optional[Mapping[str, Any]]
-        resources to request when performing the computation of partial centroids, only applys to BATCH mode
+        resources to request when performing the computation of partial centroids, only applies to BATCH mode
     write_centroids_resources: Optional[Mapping[str, Any]]
-        resources to request when performing the write of centroids, only applys to BATCH mode
+        resources to request when performing the write of centroids, only applies to BATCH mode
     partial_index_resources: Optional[Mapping[str, Any]]
-        resources to request when performing the computation of partial indexing, only applys to BATCH mode
+        resources to request when performing the computation of partial indexing, only applies to BATCH mode
     """
     import enum
     import json
