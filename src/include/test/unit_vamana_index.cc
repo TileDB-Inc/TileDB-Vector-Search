@@ -1029,7 +1029,10 @@ TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
   auto x0 = std::vector<float>(ndim);
   std::copy(x.data(), x.data() + ndim, begin(x0));
 
-  index.train(x);
+  std::vector<siftsmall_ids_type> ids(num_vectors(x));
+  std::iota(begin(ids), end(ids), 0);
+
+  index.train(x, ids);
 
   // x, 5, 7, 7, 1.0, 1, 1);
   // 0
@@ -1132,7 +1135,9 @@ TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
 
   auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors(training_set), L_build, R_max_degree, 0);
-  idx.train(training_set);
+  std::vector<siftsmall_ids_type> ids(num_nodes);
+  std::iota(begin(ids), end(ids), 0);
+  idx.train(training_set, ids);
 
   auto query = training_set[17];
   auto&& [scores, top_k] = idx.query(query, k_nn);
@@ -1214,12 +1219,12 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   tiledb::Context ctx;
   std::string vamana_index_uri =
       (std::filesystem::temp_directory_path() / "tmp_vamana_index").string();
-  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
+  auto training_set = tdbColMajorMatrixWithIds<float>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 0);
   load(training_set);
 
   auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors(training_set), L_build, R_max_degree, Backtrack);
-  idx.train(training_set);
+  idx.train(training_set, training_set.ids());
 
   idx.write_index(ctx, vamana_index_uri, true);
   auto idx2 = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(ctx, vamana_index_uri);
