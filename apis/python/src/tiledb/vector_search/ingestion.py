@@ -52,6 +52,17 @@ def ingest(
     use_sklearn: bool = True,
     mode: Mode = Mode.LOCAL,
     acn: Optional[str] = None,
+    ingest_resources: Optional[Mapping[str, Any]] = None,
+    consolidate_partition_resources: Optional[Mapping[str, Any]] = None,
+    copy_centroids_resources: Optional[Mapping[str, Any]] = None,
+    random_sample_resources: Optional[Mapping[str, Any]] = None,
+    kmeans_resources: Optional[Mapping[str, Any]] = None,
+    compute_new_centroids_resources: Optional[Mapping[str, Any]] = None,
+    assign_points_and_partial_new_centroids_resources: Optional[
+        Mapping[str, Any]
+    ] = None,
+    write_centroids_resources: Optional[Mapping[str, Any]] = None,
+    partial_index_resources: Optional[Mapping[str, Any]] = None,
     **kwargs,
 ):
     """
@@ -137,6 +148,24 @@ def ingest(
         execution mode, defaults to LOCAL use BATCH for distributed execution
     acn: Optional[str]
         access credential name to be used when running in BATCH mode for object store access
+    ingest_resources: Optional[Mapping[str, Any]]
+        resources to requst when performing vector ingestion, only applies to BATCH mode
+    consolidate_partition_resources: Optional[Mapping[str, Any]]
+        resources to requst when performing consolidation of a partition, only applies to BATCH mode
+    copy_centroids_resources: Optional[Mapping[str, Any]]
+        resources to requst when performing copy of centroids from input array to output array, only applies to BATCH mode
+    random_sample_resources: Optional[Mapping[str, Any]]
+        resources to request when performing random sample selection, only applies to BATCH mode
+    kmeans_resources: Optional[Mapping[str, Any]]
+        resources to request when performing kmeans task, only applies to BATCH mode
+    compute_new_centroids_resources: Optional[Mapping[str, Any]]
+        resources to request when performing centroid computation, only applies to BATCH mode
+    assign_points_and_partial_new_centroids_resources: Optional[Mapping[str, Any]]
+        resources to request when performing the computation of partial centroids, only applies to BATCH mode
+    write_centroids_resources: Optional[Mapping[str, Any]]
+        resources to request when performing the write of centroids, only applies to BATCH mode
+    partial_index_resources: Optional[Mapping[str, Any]]
+        resources to request when performing the computation of partial indexing, only applies to BATCH mode
     """
     import enum
     import json
@@ -2044,6 +2073,17 @@ def ingest(
         mode: Mode = Mode.LOCAL,
         acn: Optional[str] = None,
         namespace: Optional[str] = None,
+        ingest_resources: Optional[Mapping[str, Any]] = None,
+        consolidate_partition_resources: Optional[Mapping[str, Any]] = None,
+        copy_centroids_resources: Optional[Mapping[str, Any]] = None,
+        random_sample_resources: Optional[Mapping[str, Any]] = None,
+        kmeans_resources: Optional[Mapping[str, Any]] = None,
+        compute_new_centroids_resources: Optional[Mapping[str, Any]] = None,
+        assign_points_and_partial_new_centroids_resources: Optional[
+            Mapping[str, Any]
+        ] = None,
+        write_centroids_resources: Optional[Mapping[str, Any]] = None,
+        partial_index_resources: Optional[Mapping[str, Any]] = None,
     ) -> dag.DAG:
         kwargs = {}
         if mode == Mode.BATCH:
@@ -2086,6 +2126,38 @@ def ingest(
             input_vectors_work_items_per_worker_during_sampling
         )
 
+        # We can't set as default in the function due to the use of `str(threads)`
+        # For consistency we then apply all defaults for resources here.
+        if ingest_resources is None:
+            ingest_resources = {"cpu": str(threads), "memory": "16Gi"}
+
+        if consolidate_partition_resources is None:
+            consolidate_partition_resources = {"cpu": str(threads), "memory": "16Gi"}
+
+        if copy_centroids_resources is None:
+            copy_centroids_resources = {"cpu": "1", "memory": "2Gi"}
+
+        if random_sample_resources is None:
+            random_sample_resources = {"cpu": "2", "memory": "6Gi"}
+
+        if kmeans_resources is None:
+            kmeans_resources = {"cpu": "8", "memory": "32Gi"}
+
+        if compute_new_centroids_resources is None:
+            compute_new_centroids_resources = {"cpu": "1", "memory": "8Gi"}
+
+        if assign_points_and_partial_new_centroids_resources is None:
+            assign_points_and_partial_new_centroids_resources = {
+                "cpu": str(threads),
+                "memory": "12Gi",
+            }
+
+        if write_centroids_resources is None:
+            write_centroids_resources = {"cpu": "1", "memory": "2Gi"}
+
+        if partial_index_resources is None:
+            partial_index_resources = {"cpu": "1", "memory": "2Gi"}
+
         if index_type == "FLAT":
             ingest_node = submit(
                 ingest_flat,
@@ -2103,7 +2175,7 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
                 name="ingest",
-                resources={"cpu": str(threads), "memory": "16Gi"},
+                resources=ingest_resources,
                 image_name=DEFAULT_IMG_NAME,
                 **kwargs,
             )
@@ -2129,7 +2201,7 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
                 name="ingest",
-                resources={"cpu": str(threads), "memory": "16Gi"},
+                resources=ingest_resources,
                 image_name=DEFAULT_IMG_NAME,
                 **kwargs,
             )
@@ -2146,7 +2218,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="copy-centroids",
-                    resources={"cpu": "1", "memory": "2Gi"},
+                    resources=copy_centroids_resources,
                     image_name=DEFAULT_IMG_NAME,
                     **kwargs,
                 )
@@ -2201,7 +2273,7 @@ def ingest(
                                 config=config,
                                 verbose=verbose,
                                 name="read-random-sample-" + str(idx),
-                                resources={"cpu": "2", "memory": "6Gi"},
+                                resources=random_sample_resources,
                                 image_name=DEFAULT_IMG_NAME,
                                 **kwargs,
                             )
@@ -2230,7 +2302,7 @@ def ingest(
                         trace_id=trace_id,
                         use_sklearn=use_sklearn,
                         name="kmeans",
-                        resources={"cpu": "8", "memory": "32Gi"},
+                        resources=kmeans_resources,
                         image_name=DEFAULT_IMG_NAME,
                         **kwargs,
                     )
@@ -2259,7 +2331,7 @@ def ingest(
                         verbose=verbose,
                         trace_id=trace_id,
                         name="init-centroids",
-                        resources={"cpu": "1", "memory": "1Gi"},
+                        resources=copy_centroids_resources,
                         image_name=DEFAULT_IMG_NAME,
                         **kwargs,
                     )
@@ -2294,7 +2366,7 @@ def ingest(
                                     trace_id=trace_id,
                                     use_sklearn=use_sklearn,
                                     name="k-means-part-" + str(task_id),
-                                    resources={"cpu": str(threads), "memory": "12Gi"},
+                                    resources=assign_points_and_partial_new_centroids_resources,
                                     image_name=DEFAULT_IMG_NAME,
                                     **kwargs,
                                 )
@@ -2307,7 +2379,7 @@ def ingest(
                                     compute_new_centroids,
                                     *kmeans_workers[i : i + 10],
                                     name="update-centroids-" + str(i),
-                                    resources={"cpu": "1", "memory": "8Gi"},
+                                    resources=compute_new_centroids_resources,
                                     image_name=DEFAULT_IMG_NAME,
                                     **kwargs,
                                 )
@@ -2316,7 +2388,7 @@ def ingest(
                             compute_new_centroids,
                             *reducers,
                             name="update-centroids",
-                            resources={"cpu": "1", "memory": "8Gi"},
+                            resources=compute_new_centroids_resources,
                             image_name=DEFAULT_IMG_NAME,
                             **kwargs,
                         )
@@ -2330,7 +2402,7 @@ def ingest(
                         verbose=verbose,
                         trace_id=trace_id,
                         name="write-centroids",
-                        resources={"cpu": "1", "memory": "2Gi"},
+                        resources=write_centroids_resources,
                         image_name=DEFAULT_IMG_NAME,
                         **kwargs,
                     )
@@ -2343,7 +2415,7 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
                 name="compute-indexes",
-                resources={"cpu": "1", "memory": "2Gi"},
+                resources=partial_index_resources,
                 image_name=DEFAULT_IMG_NAME,
                 **kwargs,
             )
@@ -2373,7 +2445,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="ingest-" + str(task_id),
-                    resources={"cpu": str(threads), "memory": "16Gi"},
+                    resources=ingest_resources,
                     image_name=DEFAULT_IMG_NAME,
                     **kwargs,
                 )
@@ -2393,7 +2465,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="ingest-" + str(task_id),
-                    resources={"cpu": str(threads), "memory": "16Gi"},
+                    resources=ingest_resources,
                     image_name=DEFAULT_IMG_NAME,
                     **kwargs,
                 )
@@ -2420,7 +2492,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="consolidate-partition-" + str(task_id),
-                    resources={"cpu": str(threads), "memory": "16Gi"},
+                    resources=consolidate_partition_resources,
                     image_name=DEFAULT_IMG_NAME,
                     **kwargs,
                 )
@@ -2735,6 +2807,15 @@ def ingest(
             mode=mode,
             acn=acn,
             namespace=namespace,
+            ingest_resources=ingest_resources,
+            consolidate_partition_resources=consolidate_partition_resources,
+            copy_centroids_resources=copy_centroids_resources,
+            random_sample_resources=random_sample_resources,
+            kmeans_resources=kmeans_resources,
+            compute_new_centroids_resources=compute_new_centroids_resources,
+            assign_points_and_partial_new_centroids_resources=assign_points_and_partial_new_centroids_resources,
+            write_centroids_resources=write_centroids_resources,
+            partial_index_resources=partial_index_resources,
         )
         logger.debug("Submitting ingestion graph")
         d.compute()
