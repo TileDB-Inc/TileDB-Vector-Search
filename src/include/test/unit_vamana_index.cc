@@ -898,7 +898,7 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
   tiledb::Context ctx;
   auto db = tdbColMajorMatrix<test_feature_type>(ctx, fmnist_inputs_uri, N);
   db.load();
-  auto g = detail::graph::init_random_nn_graph<float, uint64_t>(db, L);
+  auto g = detail::graph::init_random_nn_graph<siftsmall_feature_type, siftsmall_ids_type>(db, L);
 
   auto valid = validate_graph(g, db);
   REQUIRE(valid.size() == 0);
@@ -1024,7 +1024,7 @@ TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
   size_t L = 100;
   size_t R = 100;
   size_t B = 2;
-  auto index = vamana_index<float, uint64_t>(num_vectors(x), L, R, B);
+  auto index = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(num_vectors(x), L, R, B);
 
   auto x0 = std::vector<float>(ndim);
   std::copy(x.data(), x.data() + ndim, begin(x0));
@@ -1057,7 +1057,7 @@ TEST_CASE("vamana: vamana by hand random index", "[vamana]") {
 
   auto dimension_ = ::dimension(training_set_);
   auto num_vectors_ = ::num_vectors(training_set_);
-  auto graph_ = ::detail::graph::init_random_nn_graph<float, uint64_t>(
+  auto graph_ = ::detail::graph::init_random_nn_graph<siftsmall_feature_type, siftsmall_ids_type>(
       training_set_, R_max_degree_);
 
   auto medioid_ = medoid(training_set_);
@@ -1130,7 +1130,7 @@ TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
 
   auto training_set = random_geometric_2D(num_nodes);
 
-  auto idx = vamana_index<float, uint64_t>(
+  auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors(training_set), L_build, R_max_degree, 0);
   idx.train(training_set);
 
@@ -1177,15 +1177,15 @@ TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
 
   tiledb::Context ctx;
   auto training_set =
-      tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, num_nodes);
+      tdbColMajorMatrixWithIds<siftsmall_feature_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, num_nodes);
   training_set.load();
   auto queries =
-      tdbColMajorMatrix<float>(ctx, siftsmall_query_uri, num_queries);
+      tdbColMajorMatrix<siftsmall_feature_type>(ctx, siftsmall_query_uri, num_queries);
   queries.load();
 
-  auto idx = vamana_index<float, uint64_t>(
+  auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors(training_set), L_build, R_max_degree, 0);
-  idx.train(training_set);
+  idx.train(training_set, training_set.ids());
 
   auto&& [qv_scores, qv_top_k] =
       detail::flat::qv_query_heap(training_set, queries, k_nn, 4);
@@ -1217,12 +1217,12 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
 
-  auto idx = vamana_index<float, uint64_t>(
+  auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors(training_set), L_build, R_max_degree, Backtrack);
   idx.train(training_set);
 
   idx.write_index(ctx, vamana_index_uri, true);
-  auto idx2 = vamana_index<float, uint64_t>(ctx, vamana_index_uri);
+  auto idx2 = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(ctx, vamana_index_uri);
 
   // Can't compare groups because a write_index does not create a group
   // @todo Should it?

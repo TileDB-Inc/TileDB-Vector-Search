@@ -68,9 +68,9 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
     vfs.remove_dir(uri);
   }
   auto training_vectors =
-      tdbColMajorPreLoadMatrix<float>(ctx, siftsmall_inputs_uri);
+      tdbColMajorPreLoadMatrixWithIds<siftsmall_feature_type, siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri);
   auto idx =
-      vamana_index<float, uint64_t>(num_vectors(training_vectors), 20, 40, 30);
+      vamana_index<siftsmall_feature_type, siftsmall_ids_type>(num_vectors(training_vectors), 20, 40, 30);
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
@@ -83,7 +83,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
   {
     // Check the metadata after an initial write_index().
-    idx.train(training_vectors);
+    idx.train(training_vectors, training_vectors.ids());
     idx.add(training_vectors);
     idx.write_index(ctx, uri, true);
 
@@ -106,7 +106,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
   {
     // Check the metadata after a second write_index().
-    idx.train(training_vectors);
+    idx.train(training_vectors, training_vectors.ids());
     idx.add(training_vectors);
     idx.write_index(ctx, uri, true);
 
