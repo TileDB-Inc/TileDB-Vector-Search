@@ -1895,9 +1895,8 @@ def ingest(
         use_sklearn: bool = True,
         mode: Mode = Mode.LOCAL,
         acn: Optional[str] = None,
-        namespace: Optional[str] = None
+        namespace: Optional[str] = None,
     ) -> dag.DAG:
-
         kwargs = {}
         if mode == Mode.BATCH:
             d = dag.DAG(
@@ -1908,7 +1907,7 @@ def ingest(
                     limit=1,
                     retry_policy="Always",
                 ),
-                namespace=namespace
+                namespace=namespace,
             )
             threads = 16
             if acn:
@@ -1958,7 +1957,7 @@ def ingest(
                 name="ingest",
                 resources={"cpu": str(threads), "memory": "16Gi"},
                 image_name=DEFAULT_IMG_NAME,
-                **kwargs
+                **kwargs,
             )
             return d
         elif index_type == "IVF_FLAT":
@@ -1975,7 +1974,7 @@ def ingest(
                     name="copy-centroids",
                     resources={"cpu": "1", "memory": "2Gi"},
                     image_name=DEFAULT_IMG_NAME,
-                    **kwargs
+                    **kwargs,
                 )
             else:
                 random_sample_nodes = []
@@ -2030,7 +2029,7 @@ def ingest(
                                 name="read-random-sample-" + str(idx),
                                 resources={"cpu": "2", "memory": "6Gi"},
                                 image_name=DEFAULT_IMG_NAME,
-                                **kwargs
+                                **kwargs,
                             )
                         )
                         num_sampled += num_to_sample
@@ -2059,7 +2058,7 @@ def ingest(
                         name="kmeans",
                         resources={"cpu": "8", "memory": "32Gi"},
                         image_name=DEFAULT_IMG_NAME,
-                        **kwargs
+                        **kwargs,
                     )
 
                     for random_sample_node in random_sample_nodes:
@@ -2088,7 +2087,7 @@ def ingest(
                         name="init-centroids",
                         resources={"cpu": "1", "memory": "1Gi"},
                         image_name=DEFAULT_IMG_NAME,
-                        **kwargs
+                        **kwargs,
                     )
 
                     for random_sample_node in random_sample_nodes:
@@ -2123,7 +2122,7 @@ def ingest(
                                     name="k-means-part-" + str(task_id),
                                     resources={"cpu": str(threads), "memory": "12Gi"},
                                     image_name=DEFAULT_IMG_NAME,
-                                    **kwargs
+                                    **kwargs,
                                 )
                             )
                             task_id += 1
@@ -2136,7 +2135,7 @@ def ingest(
                                     name="update-centroids-" + str(i),
                                     resources={"cpu": "1", "memory": "8Gi"},
                                     image_name=DEFAULT_IMG_NAME,
-                                    **kwargs
+                                    **kwargs,
                                 )
                             )
                         internal_centroids_node = submit(
@@ -2145,7 +2144,7 @@ def ingest(
                             name="update-centroids",
                             resources={"cpu": "1", "memory": "8Gi"},
                             image_name=DEFAULT_IMG_NAME,
-                            **kwargs
+                            **kwargs,
                         )
                     centroids_node = submit(
                         write_centroids,
@@ -2159,7 +2158,7 @@ def ingest(
                         name="write-centroids",
                         resources={"cpu": "1", "memory": "2Gi"},
                         image_name=DEFAULT_IMG_NAME,
-                        **kwargs
+                        **kwargs,
                     )
 
             compute_indexes_node = submit(
@@ -2172,7 +2171,7 @@ def ingest(
                 name="compute-indexes",
                 resources={"cpu": "1", "memory": "2Gi"},
                 image_name=DEFAULT_IMG_NAME,
-                **kwargs
+                **kwargs,
             )
 
             task_id = 0
@@ -2202,7 +2201,7 @@ def ingest(
                     name="ingest-" + str(task_id),
                     resources={"cpu": str(threads), "memory": "16Gi"},
                     image_name=DEFAULT_IMG_NAME,
-                    **kwargs
+                    **kwargs,
                 )
                 ingest_node.depends_on(centroids_node)
                 compute_indexes_node.depends_on(ingest_node)
@@ -2222,7 +2221,7 @@ def ingest(
                     name="ingest-" + str(task_id),
                     resources={"cpu": str(threads), "memory": "16Gi"},
                     image_name=DEFAULT_IMG_NAME,
-                    **kwargs
+                    **kwargs,
                 )
                 ingest_additions_node.depends_on(centroids_node)
                 compute_indexes_node.depends_on(ingest_additions_node)
@@ -2249,7 +2248,7 @@ def ingest(
                     name="consolidate-partition-" + str(task_id),
                     resources={"cpu": str(threads), "memory": "16Gi"},
                     image_name=DEFAULT_IMG_NAME,
-                    **kwargs
+                    **kwargs,
                 )
                 consolidate_partition_node.depends_on(compute_indexes_node)
                 task_id += 1
