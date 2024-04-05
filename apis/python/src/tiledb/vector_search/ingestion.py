@@ -2131,6 +2131,7 @@ def ingest(
                 name="ingest",
                 resources={"cpu": str(threads), "memory": "16Gi"},
                 image_name=DEFAULT_IMG_NAME,
+                **kwargs,
             )
             return d
         elif index_type == "IVF_FLAT":
