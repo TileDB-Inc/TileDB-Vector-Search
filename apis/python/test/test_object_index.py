@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict, List, OrderedDict, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 

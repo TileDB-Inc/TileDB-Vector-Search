@@ -51,6 +51,7 @@ def ingest(
     trace_id: Optional[str] = None,
     use_sklearn: bool = True,
     mode: Mode = Mode.LOCAL,
+    acn: Optional[str] = None,
     **kwargs,
 ):
     """
@@ -134,6 +135,8 @@ def ingest(
         tiledb.vector_search's. Defaults to true.
     mode: Mode
         execution mode, defaults to LOCAL use BATCH for distributed execution
+    acn: Optional[str]
+        access credential name to be used when running in BATCH mode for object store access
     """
     import enum
     import json
@@ -2037,7 +2040,10 @@ def ingest(
         trace_id: Optional[str] = None,
         use_sklearn: bool = True,
         mode: Mode = Mode.LOCAL,
+        acn: Optional[str] = None,
+        namespace: Optional[str] = None,
     ) -> dag.DAG:
+        kwargs = {}
         if mode == Mode.BATCH:
             d = dag.DAG(
                 name="vector-ingestion",
@@ -2047,14 +2053,17 @@ def ingest(
                     limit=1,
                     retry_policy="Always",
                 ),
+                namespace=namespace,
             )
             threads = 16
+            if acn:
+                kwargs["access_credentials_name"] = acn
         else:
             d = dag.DAG(
                 name="vector-ingestion",
                 mode=Mode.REALTIME,
                 max_workers=workers,
-                namespace="default",
+                namespace=namespace,
             )
             threads = multiprocessing.cpu_count()
 
@@ -2094,6 +2103,7 @@ def ingest(
                 name="ingest",
                 resources={"cpu": str(threads), "memory": "16Gi"},
                 image_name=DEFAULT_IMG_NAME,
+                **kwargs,
             )
             return d
         elif index_type == "VAMANA":
@@ -2134,6 +2144,7 @@ def ingest(
                     name="copy-centroids",
                     resources={"cpu": "1", "memory": "2Gi"},
                     image_name=DEFAULT_IMG_NAME,
+                    **kwargs,
                 )
             else:
                 random_sample_nodes = []
@@ -2188,6 +2199,7 @@ def ingest(
                                 name="read-random-sample-" + str(idx),
                                 resources={"cpu": "2", "memory": "6Gi"},
                                 image_name=DEFAULT_IMG_NAME,
+                                **kwargs,
                             )
                         )
                         num_sampled += num_to_sample
@@ -2216,6 +2228,7 @@ def ingest(
                         name="kmeans",
                         resources={"cpu": "8", "memory": "32Gi"},
                         image_name=DEFAULT_IMG_NAME,
+                        **kwargs,
                     )
 
                     for random_sample_node in random_sample_nodes:
@@ -2244,6 +2257,7 @@ def ingest(
                         name="init-centroids",
                         resources={"cpu": "1", "memory": "1Gi"},
                         image_name=DEFAULT_IMG_NAME,
+                        **kwargs,
                     )
 
                     for random_sample_node in random_sample_nodes:
@@ -2278,6 +2292,7 @@ def ingest(
                                     name="k-means-part-" + str(task_id),
                                     resources={"cpu": str(threads), "memory": "12Gi"},
                                     image_name=DEFAULT_IMG_NAME,
+                                    **kwargs,
                                 )
                             )
                             task_id += 1
@@ -2290,6 +2305,7 @@ def ingest(
                                     name="update-centroids-" + str(i),
                                     resources={"cpu": "1", "memory": "8Gi"},
                                     image_name=DEFAULT_IMG_NAME,
+                                    **kwargs,
                                 )
                             )
                         internal_centroids_node = submit(
@@ -2298,6 +2314,7 @@ def ingest(
                             name="update-centroids",
                             resources={"cpu": "1", "memory": "8Gi"},
                             image_name=DEFAULT_IMG_NAME,
+                            **kwargs,
                         )
                     centroids_node = submit(
                         write_centroids,
@@ -2311,6 +2328,7 @@ def ingest(
                         name="write-centroids",
                         resources={"cpu": "1", "memory": "2Gi"},
                         image_name=DEFAULT_IMG_NAME,
+                        **kwargs,
                     )
 
             compute_indexes_node = submit(
@@ -2323,6 +2341,7 @@ def ingest(
                 name="compute-indexes",
                 resources={"cpu": "1", "memory": "2Gi"},
                 image_name=DEFAULT_IMG_NAME,
+                **kwargs,
             )
 
             task_id = 0
@@ -2352,6 +2371,7 @@ def ingest(
                     name="ingest-" + str(task_id),
                     resources={"cpu": str(threads), "memory": "16Gi"},
                     image_name=DEFAULT_IMG_NAME,
+                    **kwargs,
                 )
                 ingest_node.depends_on(centroids_node)
                 compute_indexes_node.depends_on(ingest_node)
@@ -2371,6 +2391,7 @@ def ingest(
                     name="ingest-" + str(task_id),
                     resources={"cpu": str(threads), "memory": "16Gi"},
                     image_name=DEFAULT_IMG_NAME,
+                    **kwargs,
                 )
                 ingest_additions_node.depends_on(centroids_node)
                 compute_indexes_node.depends_on(ingest_additions_node)
@@ -2397,6 +2418,7 @@ def ingest(
                     name="consolidate-partition-" + str(task_id),
                     resources={"cpu": str(threads), "memory": "16Gi"},
                     image_name=DEFAULT_IMG_NAME,
+                    **kwargs,
                 )
                 consolidate_partition_node.depends_on(compute_indexes_node)
                 task_id += 1
@@ -2707,6 +2729,8 @@ def ingest(
             trace_id=trace_id,
             use_sklearn=use_sklearn,
             mode=mode,
+            acn=acn,
+            namespace=namespace,
         )
         logger.debug("Submitting ingestion graph")
         d.compute()

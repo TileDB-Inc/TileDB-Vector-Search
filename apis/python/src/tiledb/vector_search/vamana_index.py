@@ -1,20 +1,17 @@
-import json
-import multiprocessing
-from typing import Any, Mapping
 import warnings
-import numpy as np
-from tiledb.cloud.dag import Mode
+from typing import Any, Mapping
 
+import numpy as np
+
+from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search import index
 from tiledb.vector_search.module import *
-from tiledb.vector_search.storage_formats import (STORAGE_VERSION,
-                                                  storage_formats,
-                                                  validate_storage_version)
-from tiledb.vector_search.utils import add_to_group
-from tiledb.vector_search import _tiledbvspy as vspy
+from tiledb.vector_search.storage_formats import STORAGE_VERSION
+from tiledb.vector_search.storage_formats import storage_formats
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 INDEX_TYPE = "VAMANA"
+
 
 class VamanaIndex(index.Index):
     """
@@ -38,12 +35,16 @@ class VamanaIndex(index.Index):
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
         self.index = vspy.IndexVamana(vspy.Ctx(config), uri)
-        self.db_uri = self.group[storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]].uri
-        self.ids_uri = self.group[storage_formats[self.storage_version]["IDS_ARRAY_NAME"]].uri
-        
+        self.db_uri = self.group[
+            storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
+        ].uri
+        self.ids_uri = self.group[
+            storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
+        ].uri
+
         schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
         self.dimensions = self.index.dimension()
-        
+
         self.dtype = np.dtype(self.group.meta.get("dtype", None))
         if self.dtype is None:
             self.dtype = np.dtype(schema.attr("values").dtype)
@@ -93,6 +94,7 @@ class VamanaIndex(index.Index):
 
         return np.array(distances, copy=False), np.array(ids, copy=False)
 
+
 # TODO(paris): Pass more arguments to C++, i.e. storage_version.
 def create(
     uri: str,
@@ -104,22 +106,19 @@ def create(
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> VamanaIndex:
-      warnings.warn("The Vamana index is not yet supported, please use with caution.")
-      ctx = vspy.Ctx(config)
-      index = vspy.IndexVamana(
-          feature_type=np.dtype(vector_type).name, 
-          id_type=np.dtype(id_type).name, 
-          adjacency_row_index_type=np.dtype(adjacency_row_index_type).name, 
-          dimension=dimensions,
-      )
-      # TODO(paris): Run all of this with a single C++ call.
-      empty_vector = vspy.FeatureVectorArray(
-          dimensions, 
-          0, 
-          np.dtype(vector_type).name, 
-          np.dtype(id_type).name
-          )
-      index.train(empty_vector)
-      index.add(empty_vector)
-      index.write_index(ctx, uri)
-      return VamanaIndex(uri=uri, config=config, memory_budget=1000000)
+    warnings.warn("The Vamana index is not yet supported, please use with caution.")
+    ctx = vspy.Ctx(config)
+    index = vspy.IndexVamana(
+        feature_type=np.dtype(vector_type).name,
+        id_type=np.dtype(id_type).name,
+        adjacency_row_index_type=np.dtype(adjacency_row_index_type).name,
+        dimension=dimensions,
+    )
+    # TODO(paris): Run all of this with a single C++ call.
+    empty_vector = vspy.FeatureVectorArray(
+        dimensions, 0, np.dtype(vector_type).name, np.dtype(id_type).name
+    )
+    index.train(empty_vector)
+    index.add(empty_vector)
+    index.write_index(ctx, uri)
+    return VamanaIndex(uri=uri, config=config, memory_budget=1000000)
