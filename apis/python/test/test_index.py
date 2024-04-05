@@ -19,6 +19,15 @@ from tiledb.vector_search.utils import load_fvecs
 from tiledb.vector_search.vamana_index import VamanaIndex
 
 
+def query_and_check_distances(
+    index, queries, k, expected_distances, expected_ids, **kwargs
+):
+    for _ in range(1):
+        distances, ids = index.query(queries, k=k, **kwargs)
+        assert np.array_equal(ids, expected_ids)
+        assert np.array_equal(distances, expected_distances)
+
+
 def query_and_check(index, queries, k, expected, **kwargs):
     for _ in range(3):
         result_d, result_i = index.query(queries, k=k, **kwargs)
@@ -167,7 +176,7 @@ def test_ivf_flat_index(tmp_path):
     )
 
 
-def test_vamana_index(tmp_path):
+def test_vamana_index_simple(tmp_path):
     uri = os.path.join(tmp_path, "array")
     dimensions = 3
     vector_type = np.dtype(np.uint8)
@@ -188,14 +197,68 @@ def test_vamana_index(tmp_path):
     query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {ind.MAX_UINT64})
 
 
+def test_vamana_index(tmp_path):
+    uri = os.path.join(tmp_path, "array")
+    if os.path.exists(uri):
+        os.rmdir(uri)
+    vector_type = np.float32
+
+    index = vamana_index.create(
+        uri=uri,
+        dimensions=3,
+        vector_type=np.dtype(vector_type),
+        id_type=np.dtype(np.uint32),
+    )
+
+    queries = np.array([[2, 2, 2]], dtype=np.float32)
+    distances, ids = index.query(queries, k=1)
+    assert distances.shape == (1, 1)
+    assert ids.shape == (1, 1)
+    assert distances[0][0] == ind.MAX_FLOAT_32
+    assert ids[0][0] == ind.MAX_UINT64
+    query_and_check_distances(
+        index, queries, 1, [[ind.MAX_FLOAT_32]], [[ind.MAX_UINT64]]
+    )
+
+    update_vectors = np.empty([5], dtype=object)
+    update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.float32))
+    update_vectors[1] = np.array([1, 1, 1], dtype=np.dtype(np.float32))
+    update_vectors[2] = np.array([2, 2, 2], dtype=np.dtype(np.float32))
+    update_vectors[3] = np.array([3, 3, 3], dtype=np.dtype(np.float32))
+    update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.float32))
+    index.update_batch(
+        vectors=update_vectors,
+        external_ids=np.array([0, 1, 2, 3, 4], dtype=np.dtype(np.uint32)),
+    )
+    query_and_check_distances(
+        index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]]
+    )
+
+    index = index.consolidate_updates()
+
+    # TODO(paris): Does not work with k > 1 or with [0, 0, 0] as the query.
+    query_and_check_distances(
+        index, np.array([[1, 1, 1]], dtype=np.float32), 1, [[0]], [[1]]
+    )
+    query_and_check_distances(
+        index, np.array([[2, 2, 2]], dtype=np.float32), 1, [[0]], [[2]]
+    )
+    query_and_check_distances(
+        index, np.array([[3, 3, 3]], dtype=np.float32), 1, [[0]], [[3]]
+    )
+    query_and_check_distances(
+        index, np.array([[4, 4, 4]], dtype=np.float32), 1, [[0]], [[4]]
+    )
+
+
 def test_delete_invalid_index(tmp_path):
     # We don't throw with an invalid uri.
     Index.delete_index(uri="invalid_uri", config=tiledb.cloud.Config())
 
 
 def test_delete_index(tmp_path):
-    indexes = ["FLAT", "IVF_FLAT"]
-    index_classes = [FlatIndex, IVFFlatIndex]
+    indexes = ["FLAT", "IVF_FLAT", "VAMANA"]
+    index_classes = [FlatIndex, IVFFlatIndex, VamanaIndex]
     data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3]], dtype=np.float32)
     for index_type, index_class in zip(indexes, index_classes):
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
@@ -229,7 +292,7 @@ def test_index_with_incorrect_dimensions(tmp_path):
 def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
     siftsmall_uri = siftsmall_inputs_file
     queries_uri = siftsmall_query_file
-    indexes = ["FLAT", "IVF_FLAT"]
+    indexes = ["FLAT", "IVF_FLAT", "VAMANA"]
     for index_type in indexes:
         index_uri = os.path.join(tmp_path, f"sift10k_flat_{index_type}")
         index = ingest(
@@ -253,7 +316,7 @@ def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
     # Tests that we raise a TypeError if the number of columns in the query is not the same as the
     # number of columns in the indexed data.
     size = 1000
-    indexes = ["FLAT", "IVF_FLAT"]
+    indexes = ["FLAT", "IVF_FLAT", "VAMANA"]
     num_columns_in_vector = [1, 2, 3, 4, 5, 10]
     for index_type in indexes:
         for num_columns in num_columns_in_vector:
@@ -298,7 +361,7 @@ def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_pa
     # Tests that we raise a TypeError if the number of columns in the query is not the same as the
     # number of columns in the indexed data, specifically for a single vector query.
     # i.e. queries = [1, 2, 3]  instead of queries = [[1, 2, 3], [4, 5, 6]].
-    indexes = [flat_index, ivf_flat_index]
+    indexes = [flat_index, ivf_flat_index, vamana_index]
     for index_type in indexes:
         uri = os.path.join(tmp_path, f"array_{index_type.__name__}")
         index = index_type.create(uri=uri, dimensions=3, vector_type=np.dtype(np.uint8))

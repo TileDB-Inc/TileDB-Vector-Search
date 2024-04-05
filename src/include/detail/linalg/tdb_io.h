@@ -94,7 +94,7 @@ std::vector<T> read_vector_helper(
 
   // Create a subarray that reads the array up to the specified subset.
   std::vector<int32_t> subarray_vals = {
-      (int32_t)start_pos, (int32_t)end_pos - 1};
+      (int32_t)start_pos, std::max(0, (int32_t)end_pos - 1)};
   tiledb::Subarray subarray(ctx, *array_);
   subarray.set_subarray(subarray_vals);
 
@@ -136,9 +136,9 @@ void create_empty_for_matrix(
   tiledb::Domain domain(ctx);
   domain
       .add_dimension(tiledb::Dimension::create<int>(
-          ctx, "rows", {{0, (int)rows - 1}}, row_extent))
+          ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent))
       .add_dimension(tiledb::Dimension::create<int>(
-          ctx, "cols", {{0, (int)cols - 1}}, col_extent));
+          ctx, "cols", {{0, std::max(0, (int)cols - 1)}}, col_extent));
 
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
 
@@ -218,10 +218,9 @@ void write_matrix(
 
   std::vector<int32_t> subarray_vals{
       0,
-      (int)A.num_rows() - 1,
-      (int)start_pos,
-      (int)start_pos + (int)A.num_cols() - 1};
-
+      std::max(0, (int)A.num_rows() - 1),
+      std::max(0, (int)start_pos),
+      std::max(0, (int)start_pos + (int)A.num_cols() - 1)};
   // Open array for writing
   auto array = tiledb_helpers::open_array(
       tdb_func__, ctx, uri, TILEDB_WRITE, temporal_policy);
@@ -265,7 +264,7 @@ void create_empty_for_vector(
     std::optional<tiledb_filter_type_t> filter = std::nullopt) {
   tiledb::Domain domain(ctx);
   domain.add_dimension(tiledb::Dimension::create<int>(
-      ctx, "rows", {{0, (int)rows - 1}}, row_extent));
+      ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent));
 
   // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
