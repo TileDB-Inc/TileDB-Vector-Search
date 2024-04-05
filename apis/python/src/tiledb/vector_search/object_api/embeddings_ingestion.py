@@ -6,7 +6,7 @@ from tiledb.cloud.dag import Mode
 
 def ingest_embeddings_with_driver(
     object_index_uri: str,
-    embeddings_uri: str,
+    use_updates_array: bool,
     metadata_array_uri: str = None,
     index_timestamp: int = None,
     workers: int = -1,
@@ -30,7 +30,7 @@ def ingest_embeddings_with_driver(
 ):
     def ingest_embeddings(
         object_index_uri: str,
-        embeddings_uri: str,
+        use_updates_array: bool,
         metadata_array_uri: str = None,
         index_timestamp: int = None,
         workers: int = -1,
@@ -81,6 +81,7 @@ def ingest_embeddings_with_driver(
         from tiledb.vector_search import ingest
         from tiledb.vector_search.object_api import ObjectIndex
         from tiledb.vector_search.object_readers import ObjectPartition
+        from tiledb.vector_search.storage_formats import storage_formats
 
         MAX_TASKS_PER_STAGE = 100
         DEFAULT_IMG_NAME = "3.9-vectorsearch"
@@ -121,14 +122,9 @@ def ingest_embeddings_with_driver(
         # UDFs
         # --------------------------------------------------------------------
         def compute_embeddings_udf(
-            object_reader_source_code: str,
-            object_reader_class_name: str,
-            object_reader_kwargs: Dict,
-            object_embedding_source_code: str,
-            object_embedding_class_name: str,
-            object_embedding_kwargs: Dict,
+            object_index_uri: str,
             partition_dicts: List[Dict],
-            embeddings_uri: str,
+            use_updates_array: bool,
             metadata_array_uri: str = None,
             index_timestamp: int = None,
             verbose: bool = False,
@@ -182,16 +178,15 @@ def ingest_embeddings_with_driver(
                 return class_(**kwargs)
 
             logger = setup(config, verbose)
-            object_reader = instantiate_object(
-                code=object_reader_source_code,
-                class_name=object_reader_class_name,
-                **object_reader_kwargs,
+            ob_index = object_index.ObjectIndex(
+                object_index_uri,
+                config=config,
+                environment_variables=environment_variables,
+                load_embedding=False,
+                load_metadata_in_memory=False,
             )
-            object_embedding = instantiate_object(
-                code=object_embedding_source_code,
-                class_name=object_embedding_class_name,
-                **object_embedding_kwargs,
-            )
+            object_reader = ob_index.object_reader
+            object_embedding = ob_index.embedding
             for var, val in environment_variables.items():
                 os.environ[var] = val
             with tiledb.scope_ctx(ctx_or_config=config):
@@ -201,17 +196,23 @@ def ingest_embeddings_with_driver(
                 object_embedding.dimensions()
                 vector_type = object_embedding.vector_type()
 
-                logger.debug("embeddings_uri %s", embeddings_uri)
-                embeddings_array = tiledb.open(
-                    embeddings_uri, "w", timestamp=index_timestamp
-                )
+                if not use_updates_array:
+                    embeddings_array_name = storage_formats[
+                        ob_index.index.storage_version
+                    ]["INPUT_VECTORS_ARRAY_NAME"]
+                    embeddings_array_uri = f"{ob_index.uri}/{embeddings_array_name}"
+                    logger.debug("embeddings_uri %s", embeddings_array_uri)
+                    embeddings_array = tiledb.open(
+                        embeddings_array_uri, "w", timestamp=index_timestamp
+                    )
+
                 if metadata_array_uri is not None:
                     metadata_array = tiledb.open(
                         metadata_array_uri, "w", timestamp=index_timestamp
                     )
                 for partition_dict in partition_dicts:
                     partition = instantiate_object(
-                        code=object_reader_source_code,
+                        code=ob_index.object_reader_source_code,
                         class_name=object_reader.partition_class_name(),
                         **partition_dict,
                     )
@@ -224,22 +225,36 @@ def ingest_embeddings_with_driver(
                     embeddings = object_embedding.embed(objects, metadata)
 
                     logger.debug("Write embeddings partition_id: %d", partition_id)
-                    embeddings_flattened = np.empty(1, dtype="O")
-                    embeddings_flattened[0] = embeddings.astype(vector_type).flatten()
-                    embeddings_shape = np.empty(1, dtype="O")
-                    embeddings_shape[0] = np.array(embeddings.shape, dtype=np.uint32)
-                    external_ids = np.empty(1, dtype="O")
-                    external_ids[0] = objects["external_id"].astype(np.uint64)
-                    embeddings_array[partition_id] = {
-                        "vectors": embeddings_flattened,
-                        "vectors_shape": embeddings_shape,
-                        "external_ids": external_ids,
-                    }
+                    if use_updates_array:
+                        vectors = np.empty(embeddings.shape[0], dtype="O")
+                        for i in range(embeddings.shape[0]):
+                            vectors[i] = embeddings[i].astype(vector_type)
+                        ob_index.index.update_batch(
+                            vectors=vectors,
+                            external_ids=objects["external_id"].astype(np.uint64),
+                        )
+                    else:
+                        embeddings_flattened = np.empty(1, dtype="O")
+                        embeddings_flattened[0] = embeddings.astype(
+                            vector_type
+                        ).flatten()
+                        embeddings_shape = np.empty(1, dtype="O")
+                        embeddings_shape[0] = np.array(
+                            embeddings.shape, dtype=np.uint32
+                        )
+                        external_ids = np.empty(1, dtype="O")
+                        external_ids[0] = objects["external_id"].astype(np.uint64)
+                        embeddings_array[partition_id] = {
+                            "vectors": embeddings_flattened,
+                            "vectors_shape": embeddings_shape,
+                            "external_ids": external_ids,
+                        }
                     if metadata_array_uri is not None:
                         external_ids = metadata.pop("external_id", None)
                         metadata_array[external_ids] = metadata
 
-                embeddings_array.close()
+                if not use_updates_array:
+                    embeddings_array.close()
                 if metadata_array_uri is not None:
                     metadata_array.close()
 
@@ -255,7 +270,7 @@ def ingest_embeddings_with_driver(
 
         def create_dag(
             ob_index: ObjectIndex,
-            embeddings_uri: str,
+            use_updates_array: bool,
             partitions: List[ObjectPartition],
             object_partitions_per_worker: int,
             object_work_tasks: int,
@@ -322,14 +337,9 @@ def ingest_embeddings_with_driver(
                     ] = worker_access_credentials_name
                 submit(
                     compute_embeddings_udf,
-                    object_reader_source_code=ob_index.object_reader_source_code,
-                    object_reader_class_name=ob_index.object_reader_class_name,
-                    object_reader_kwargs=ob_index.object_reader_kwargs,
-                    object_embedding_source_code=ob_index.embedding_source_code,
-                    object_embedding_class_name=ob_index.embedding_class_name,
-                    object_embedding_kwargs=ob_index.embedding_kwargs,
+                    object_index_uri=ob_index.uri,
                     partition_dicts=partition_dicts,
-                    embeddings_uri=embeddings_uri,
+                    use_updates_array=use_updates_array,
                     metadata_array_uri=metadata_array_uri,
                     index_timestamp=index_timestamp,
                     verbose=verbose,
@@ -365,6 +375,8 @@ def ingest_embeddings_with_driver(
                 object_index_uri,
                 config=config,
                 environment_variables=environment_variables,
+                load_embedding=False,
+                load_metadata_in_memory=False,
             )
             partitions = ob_index.object_reader.get_partitions(**kwargs)
             object_partitions = len(partitions)
@@ -396,7 +408,7 @@ def ingest_embeddings_with_driver(
             logger.debug("Creating ingestion graph")
             d = create_dag(
                 ob_index=ob_index,
-                embeddings_uri=embeddings_uri,
+                use_updates_array=use_updates_array,
                 partitions=partitions,
                 object_partitions_per_worker=object_partitions_per_worker,
                 object_work_tasks=object_work_tasks,
@@ -419,19 +431,29 @@ def ingest_embeddings_with_driver(
             logger.debug("Submitted ingestion graph")
             d.wait()
 
-            ob_index.index = ingest(
-                index_type=ob_index.index_type,
-                index_uri=ob_index.uri,
-                source_uri=embeddings_uri,
-                source_type="TILEDB_PARTITIONED_ARRAY",
-                external_ids_uri=embeddings_uri,
-                external_ids_type="TILEDB_PARTITIONED_ARRAY",
-                index_timestamp=index_timestamp,
-                storage_version=ob_index.index.storage_version,
-                config=config,
-                mode=vector_indexing_mode,
-                **kwargs,
-            )
+            if use_updates_array:
+                ob_index.index.consolidate_updates(
+                    mode=vector_indexing_mode,
+                    **kwargs,
+                )
+            else:
+                embeddings_array_name = storage_formats[ob_index.index.storage_version][
+                    "INPUT_VECTORS_ARRAY_NAME"
+                ]
+                embeddings_array_uri = f"{ob_index.uri}/{embeddings_array_name}"
+                ob_index.index = ingest(
+                    index_type=ob_index.index_type,
+                    index_uri=ob_index.uri,
+                    source_uri=embeddings_array_uri,
+                    source_type="TILEDB_PARTITIONED_ARRAY",
+                    external_ids_uri=embeddings_array_uri,
+                    external_ids_type="TILEDB_PARTITIONED_ARRAY",
+                    index_timestamp=index_timestamp,
+                    storage_version=ob_index.index.storage_version,
+                    config=config,
+                    mode=vector_indexing_mode,
+                    **kwargs,
+                )
 
     def submit_local(d, func, *args, **kwargs):
         # Drop kwarg
@@ -468,7 +490,7 @@ def ingest_embeddings_with_driver(
     submit(
         ingest_embeddings,
         object_index_uri=object_index_uri,
-        embeddings_uri=embeddings_uri,
+        use_updates_array=use_updates_array,
         metadata_array_uri=metadata_array_uri,
         index_timestamp=index_timestamp,
         max_tasks_per_stage=max_tasks_per_stage,
