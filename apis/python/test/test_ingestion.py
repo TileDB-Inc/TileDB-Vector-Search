@@ -11,11 +11,11 @@ from tiledb.vector_search.index import Index
 from tiledb.vector_search.ingestion import TrainingSamplingPolicy
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
-from tiledb.vector_search.vamana_index import VamanaIndex
 from tiledb.vector_search.module import array_to_matrix
 from tiledb.vector_search.module import kmeans_fit
 from tiledb.vector_search.module import kmeans_predict
 from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.vamana_index import VamanaIndex
 
 MINIMUM_ACCURACY = 0.85
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
@@ -29,6 +29,7 @@ def query_and_check_equals(index, queries, expected_result_d, expected_result_i)
         expected_result_d=expected_result_d,
         expected_result_i=expected_result_i,
     )
+
 
 def test_vamana_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
@@ -56,6 +57,7 @@ def test_vamana_ingestion_u8(tmp_path):
     _, result = index_ram.query(queries, k=k)
     # TODO(paris): Fix IDs and re-enable.
     # assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
 
 def test_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
