@@ -182,11 +182,7 @@ def test_vamana_index_simple(tmp_path):
     vector_type = np.dtype(np.uint8)
 
     # Create the index.
-    index = vamana_index.create(
-        uri=uri,
-        dimensions=dimensions,
-        vector_type=vector_type
-    )
+    index = vamana_index.create(uri=uri, dimensions=dimensions, vector_type=vector_type)
     assert index.get_dimensions() == dimensions
     query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {ind.MAX_UINT64})
 
