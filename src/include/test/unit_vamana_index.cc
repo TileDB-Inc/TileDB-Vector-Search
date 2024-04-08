@@ -681,15 +681,6 @@ TEST_CASE("vamana: fmnist", "[vamana]") {
   tiledb::VFS vfs(ctx);
 
   auto ids_uri = write_ids_to_uri<id_type>(ctx, vfs, N);
-  //  std::vector<id_type> ids(N);
-  //  std::iota(begin(ids), end(ids), 0);
-  //  std::string ids_uri = (std::filesystem::temp_directory_path() /
-  //  "tmp_ids_uri").string();
-  //    if (vfs.is_dir(ids_uri)) {
-  //        vfs.remove_dir(ids_uri);
-  //    }
-  //  write_vector(ctx, ids, ids_uri);
-
   auto db = tdbColMajorMatrixWithIds<test_feature_type, id_type>(
       ctx, fmnist_inputs_uri, ids_uri, N);
   db.load();
@@ -913,6 +904,7 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
+
   auto ids_uri = write_ids_to_uri<siftsmall_ids_type>(ctx, vfs, N);
   auto db = tdbColMajorMatrixWithIds<test_feature_type, siftsmall_ids_type>(
       ctx, fmnist_inputs_uri, ids_uri, N);
@@ -1190,7 +1182,7 @@ TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
 }
 
 TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
-  bool debug = true;
+  bool debug = false;
 
   size_t num_nodes = 10000;
   size_t num_queries = 200;

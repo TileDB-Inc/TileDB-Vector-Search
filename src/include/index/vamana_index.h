@@ -221,8 +221,8 @@ auto greedy_search(
 
   get_top_k_with_scores_from_heap(result, top_k, top_k_scores);
 
-  // Right now we have the indexes of the vectors. Convert these to the external
-  // IDs.
+  // Optionally convert from the vector indexes to the db IDs. Used during
+  // querying to map to external IDs.
   if (convert_to_db_ids) {
     for (int i = 0; i < k_nn; ++i) {
       if (top_k[i] != std::numeric_limits<id_type>::max()) {
@@ -734,8 +734,6 @@ class vamana_index {
       std::optional<size_t> opt_L = std::nullopt,
       Distance distance = Distance{}) {
     scoped_timer __{tdb_func__ + std::string{" (outer)"}};
-    std::cout << "[index@vamana_index@query] 1 num_vectors(query_set): "
-              << ::num_vectors(query_set) << std::endl;
 
     size_t L = opt_L ? *opt_L : L_build_;
     // L = std::min<size_t>(L, L_build_);
@@ -802,10 +800,7 @@ class vamana_index {
       size_t k,
       std::optional<size_t> opt_L = std::nullopt,
       Distance distance = Distance{}) {
-    std::cout << "[index@vamana_index@query] 2 num_vectors(query_vec): "
-              << ::num_vectors(query_vec) << std::endl;
     size_t L = opt_L ? *opt_L : L_build_;
-    debug_with_ids(feature_vectors_, "feature_vectors_");
     auto&& [top_k_scores, top_k, V] = greedy_search(
         graph_, feature_vectors_, medoid_, query_vec, k, L, distance, true);
 

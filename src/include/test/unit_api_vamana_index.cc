@@ -243,7 +243,6 @@ TEST_CASE(
   }
 
   {
-    std::cout << "SECOND PART ================================" << std::endl;
     auto index = IndexVamana(ctx, index_uri);
 
     CHECK(index.feature_type_string() == feature_type);
@@ -252,8 +251,6 @@ TEST_CASE(
 
     auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {10, 11, 12, 13}};
-    debug(training, "[unit_api_vamana_index] training");
-    debug_vector(training.ids(), "[unit_api_vamana_index] training.ids()");
 
     auto training_vector_array = FeatureVectorArray(training);
     index.train(training_vector_array);
@@ -275,14 +272,11 @@ TEST_CASE(
         scores_vector_array.num_vectors());
     auto ids = std::span<id_type_type>(
         (id_type_type*)ids_vector_array.data(), ids_vector_array.num_vectors());
-    debug_vector(scores, "[unit_api_vamana_index] scores");
-    debug_vector(ids, "[unit_api_vamana_index] ids");
     CHECK(std::equal(
         scores.begin(), scores.end(), std::vector<int>{0, 0, 0, 0}.begin()));
     CHECK(std::equal(
         ids.begin(), ids.end(), std::vector<int>{10, 11, 12, 13}.begin()));
   }
-  std::cout << "done!" << std::endl;
 }
 
 TEST_CASE(
