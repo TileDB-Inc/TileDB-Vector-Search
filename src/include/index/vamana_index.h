@@ -589,7 +589,10 @@ class vamana_index {
       feature_vector_array Array,
       feature_vector Vector,
       class Distance = sum_of_squares_distance>
-  void train(const Array& training_set, const Vector& training_set_ids, Distance distance = Distance{}) {
+  void train(
+      const Array& training_set,
+      const Vector& training_set_ids,
+      Distance distance = Distance{}) {
     feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
         ::dimension(training_set), ::num_vectors(training_set)));
     std::copy(
@@ -597,19 +600,25 @@ class vamana_index {
         training_set.data() +
             ::dimension(training_set) * ::num_vectors(training_set),
         feature_vectors_.data());
-    std::copy(training_set_ids.begin(), training_set_ids.end(), feature_vectors_.ids().begin());
+    std::copy(
+        training_set_ids.begin(),
+        training_set_ids.end(),
+        feature_vectors_.ids().begin());
 
-
-    // if constexpr (feature_vector_array_with_ids<std::remove_cvref_t<decltype(training_set)>>) {
+    // if constexpr
+    // (feature_vector_array_with_ids<std::remove_cvref_t<decltype(training_set)>>)
+    // {
     //   std::cout << "[vamana_index@train] Using ids from training set\n";
-    //   std::copy(training_set.ids(), training_set.ids() + ::num_vectors(training_set), feature_vectors_.ids());
+    //   std::copy(training_set.ids(), training_set.ids() +
+    //   ::num_vectors(training_set), feature_vectors_.ids());
     // } else {
     //   std::cout << "[vamana_index@train] No ids from training set\n";
     //   auto ids = std::vector<id_type>(::num_vectors(training_set));
     //   std::iota(ids.begin(), ids.end(), 0);
     //   std::copy(ids.begin(), ids.end(), feature_vectors_.ids().begin());
     // }
-    debug_with_ids(feature_vectors_, "[index@vamana_index@train] feature_vectors_");
+    debug_with_ids(
+        feature_vectors_, "[index@vamana_index@train] feature_vectors_");
 
     dimension_ = ::dimension(feature_vectors_);
     num_vectors_ = ::num_vectors(feature_vectors_);
@@ -752,8 +761,11 @@ class vamana_index {
           graph_, feature_vectors_, medoid_, query_set[i], k, L, distance);
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       for (int j = 0; j < k; ++j) {
-        // greedy_search() returns the indexes of the vectors. Convert these to the external IDs.
-        std::cout << "i: " << j << " tk[i]: " << tk[i] << " feature_vectors_.ids()[tk[i]]: " << feature_vectors_.ids()[tk[j]] << "\n";
+        // greedy_search() returns the indexes of the vectors. Convert these to
+        // the external IDs.
+        std::cout << "j: " << j << " tk[j]: " << tk[j]
+                  << " feature_vectors_.ids()[tk[j]]: "
+                  << feature_vectors_.ids()[tk[j]] << "\n";
         top_k[i].data()[j] = feature_vectors_.ids()[tk[j]];
       }
       // std::copy(tk.data(), tk.data() + k, top_k[i].data());
@@ -866,9 +878,11 @@ class vamana_index {
         false,
         timestamp_);
 
-    // debug(feature_vectors_, "[index@vamana_index@write_index] feature_vectors_");
-    debug_with_ids(feature_vectors_, "[index@vamana_index@write_index] feature_vectors_");
-    
+    // debug(feature_vectors_, "[index@vamana_index@write_index]
+    // feature_vectors_");
+    debug_with_ids(
+        feature_vectors_, "[index@vamana_index@write_index] feature_vectors_");
+
     write_vector(
         ctx,
         feature_vectors_.ids(),
@@ -876,7 +890,8 @@ class vamana_index {
         0,
         false,
         timestamp_);
-    // debug_vector(feature_vectors_.ids(), "[index@vamana_index@write_index] feature_vector_ids");
+    // debug_vector(feature_vectors_.ids(), "[index@vamana_index@write_index]
+    // feature_vector_ids");
 
     auto adj_scores = Vector<score_type>(graph_.num_edges());
     auto adj_ids = Vector<id_type>(graph_.num_edges());

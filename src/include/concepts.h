@@ -155,7 +155,7 @@ template <class D>
 concept feature_vector_array = requires(D d, size_t n) {
   { num_vectors(d) } -> semi_integral;
   { dimension(d) } -> semi_integral;
-//  { d[n] } -> feature_vector;  // Maybe redundant
+  { d[n] } -> feature_vector;
 };
 
 template <class D>

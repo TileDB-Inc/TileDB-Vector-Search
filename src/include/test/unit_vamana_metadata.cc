@@ -67,10 +67,11 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
   if (vfs.is_dir(uri)) {
     vfs.remove_dir(uri);
   }
-  auto training_vectors =
-      tdbColMajorPreLoadMatrixWithIds<siftsmall_feature_type, siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri);
-  auto idx =
-      vamana_index<siftsmall_feature_type, siftsmall_ids_type>(num_vectors(training_vectors), 20, 40, 30);
+  auto training_vectors = tdbColMajorPreLoadMatrixWithIds<
+      siftsmall_feature_type,
+      siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri);
+  auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
+      num_vectors(training_vectors), 20, 40, 30);
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},

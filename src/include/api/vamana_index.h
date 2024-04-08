@@ -179,7 +179,8 @@ class IndexVamana {
   void train(const FeatureVectorArray& training_set) {
     // debug_with_ids(training_set, "[api@vamana_index@train] training_set");
     // debug(training_set, "[api@vamana_index@train] training_set");
-    // debug_vector(training_set.ids(), "[api@vamana_index@train] training_set.ids()");
+    // debug_vector(training_set.ids(), "[api@vamana_index@train]
+    // training_set.ids()");
     if (feature_datatype_ == TILEDB_ANY) {
       feature_datatype_ = training_set.feature_type();
     } else if (feature_datatype_ != training_set.feature_type()) {
@@ -327,7 +328,8 @@ class IndexVamana {
       using id_type = typename T::id_type;
       if (num_ids(training_set) > 0) {
         std::cout << "[api@vamana_index@train] Using ids from training set\n";
-        auto ids = std::span<id_type>((id_type*)training_set.ids_data(), training_set.num_vectors());
+        auto ids = std::span<id_type>(
+            (id_type*)training_set.ids_data(), training_set.num_vectors());
         impl_index_.train(fspan, ids);
       } else {
         std::cout << "[api@vamana_index@train] No ids from training set\n";
