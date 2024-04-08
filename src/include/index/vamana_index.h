@@ -62,6 +62,7 @@ static bool noisy = false;
  * @brief Truncated best-first search
  * @tparam Distance The distance function used to compare vectors
  * @param graph Graph to be searched
+ * @param db Holds the original feature vectors and their IDs
  * @param source start node index
  * @param query query node index
  * @param k result size
@@ -95,7 +96,8 @@ auto greedy_search(
     auto&& query,
     size_t k_nn,
     size_t L,
-    Distance distance = Distance{}) {
+    Distance distance = Distance{},
+    bool convert_to_db_ids = false) {
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
   using score_type = typename std::decay_t<decltype(graph)>::score_type;
@@ -218,6 +220,17 @@ auto greedy_search(
   auto top_k_scores = std::vector<score_type>(k_nn);
 
   get_top_k_with_scores_from_heap(result, top_k, top_k_scores);
+
+  // Right now we have the indexes of the vectors. Convert these to the external
+  // IDs.
+  if (convert_to_db_ids) {
+    for (int i = 0; i < k_nn; ++i) {
+      if (top_k[i] != std::numeric_limits<id_type>::max()) {
+        top_k[i] = db.ids()[top_k[i]];
+      }
+    }
+  }
+
   return std::make_tuple(
       std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
 }
@@ -605,21 +618,6 @@ class vamana_index {
         training_set_ids.end(),
         feature_vectors_.ids().begin());
 
-    // if constexpr
-    // (feature_vector_array_with_ids<std::remove_cvref_t<decltype(training_set)>>)
-    // {
-    //   std::cout << "[vamana_index@train] Using ids from training set\n";
-    //   std::copy(training_set.ids(), training_set.ids() +
-    //   ::num_vectors(training_set), feature_vectors_.ids());
-    // } else {
-    //   std::cout << "[vamana_index@train] No ids from training set\n";
-    //   auto ids = std::vector<id_type>(::num_vectors(training_set));
-    //   std::iota(ids.begin(), ids.end(), 0);
-    //   std::copy(ids.begin(), ids.end(), feature_vectors_.ids().begin());
-    // }
-    debug_with_ids(
-        feature_vectors_, "[index@vamana_index@train] feature_vectors_");
-
     dimension_ = ::dimension(feature_vectors_);
     num_vectors_ = ::num_vectors(feature_vectors_);
     // graph_ = ::detail::graph::init_random_adj_list<feature_type, id_type>(
@@ -736,6 +734,8 @@ class vamana_index {
       std::optional<size_t> opt_L = std::nullopt,
       Distance distance = Distance{}) {
     scoped_timer __{tdb_func__ + std::string{" (outer)"}};
+    std::cout << "[index@vamana_index@query] 1 num_vectors(query_set): "
+              << ::num_vectors(query_set) << std::endl;
 
     size_t L = opt_L ? *opt_L : L_build_;
     // L = std::min<size_t>(L, L_build_);
@@ -751,24 +751,23 @@ class vamana_index {
 
     stdx::range_for_each(std::move(par), query_set, [&](auto&& query_vec, auto n, auto i) {
       auto&& [tk_scores, tk, V] = greedy_search(
-          graph_, feature_vectors_, medoid_, query_vec, k, L);
+          graph_, feature_vectors_, medoid_, query_vec, k, L, distance, true);
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
     });
 #else
     for (size_t i = 0; i < num_vectors(query_set); ++i) {
       auto&& [tk_scores, tk, V] = greedy_search(
-          graph_, feature_vectors_, medoid_, query_set[i], k, L, distance);
+          graph_,
+          feature_vectors_,
+          medoid_,
+          query_set[i],
+          k,
+          L,
+          distance,
+          true);
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
-      for (int j = 0; j < k; ++j) {
-        // greedy_search() returns the indexes of the vectors. Convert these to
-        // the external IDs.
-        std::cout << "j: " << j << " tk[j]: " << tk[j]
-                  << " feature_vectors_.ids()[tk[j]]: "
-                  << feature_vectors_.ids()[tk[j]] << "\n";
-        top_k[i].data()[j] = feature_vectors_.ids()[tk[j]];
-      }
-      // std::copy(tk.data(), tk.data() + k, top_k[i].data());
+      std::copy(tk.data(), tk.data() + k, top_k[i].data());
       num_visited_vertices_ += V.size();
     }
 #endif
@@ -776,7 +775,7 @@ class vamana_index {
 #if 0
     for (size_t i = 0; i < ::num_vectors(query_set); ++i) {
       auto&& [_top_k_scores, _top_k, V] = greedy_search(
-          graph_, feature_vectors_, medoid_, query_set[i], k, L_build_);
+          graph_, feature_vectors_, medoid_, query_set[i], k, L_build_, distance, true);
       std::copy(
           _top_k_scores.data(),
           _top_k_scores.data() + k,
@@ -803,10 +802,12 @@ class vamana_index {
       size_t k,
       std::optional<size_t> opt_L = std::nullopt,
       Distance distance = Distance{}) {
+    std::cout << "[index@vamana_index@query] 2 num_vectors(query_vec): "
+              << ::num_vectors(query_vec) << std::endl;
     size_t L = opt_L ? *opt_L : L_build_;
-
+    debug_with_ids(feature_vectors_, "feature_vectors_");
     auto&& [top_k_scores, top_k, V] = greedy_search(
-        graph_, feature_vectors_, medoid_, query_vec, k, L, distance);
+        graph_, feature_vectors_, medoid_, query_vec, k, L, distance, true);
 
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
@@ -878,11 +879,6 @@ class vamana_index {
         false,
         timestamp_);
 
-    // debug(feature_vectors_, "[index@vamana_index@write_index]
-    // feature_vectors_");
-    debug_with_ids(
-        feature_vectors_, "[index@vamana_index@write_index] feature_vectors_");
-
     write_vector(
         ctx,
         feature_vectors_.ids(),
@@ -890,8 +886,6 @@ class vamana_index {
         0,
         false,
         timestamp_);
-    // debug_vector(feature_vectors_.ids(), "[index@vamana_index@write_index]
-    // feature_vector_ids");
 
     auto adj_scores = Vector<score_type>(graph_.num_edges());
     auto adj_ids = Vector<id_type>(graph_.num_edges());

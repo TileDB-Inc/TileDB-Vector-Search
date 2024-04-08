@@ -177,10 +177,6 @@ class IndexVamana {
    */
   // @todo -- infer feature type from input
   void train(const FeatureVectorArray& training_set) {
-    // debug_with_ids(training_set, "[api@vamana_index@train] training_set");
-    // debug(training_set, "[api@vamana_index@train] training_set");
-    // debug_vector(training_set.ids(), "[api@vamana_index@train]
-    // training_set.ids()");
     if (feature_datatype_ == TILEDB_ANY) {
       feature_datatype_ = training_set.feature_type();
     } else if (feature_datatype_ != training_set.feature_type()) {
