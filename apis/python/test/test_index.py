@@ -24,11 +24,6 @@ def query_and_check_distances(
 ):
     for _ in range(1):
         distances, ids = index.query(queries, k=k, **kwargs)
-        print("------------------------------------")
-        print("queries:", queries)
-        print("distances:", distances, expected_distances)
-        print("ids:", ids, expected_ids)
-        print("------------------------------------")
         assert np.array_equal(ids, expected_ids)
         assert np.array_equal(distances, expected_distances)
 
@@ -241,8 +236,9 @@ def test_vamana_index(tmp_path):
 
     index = index.consolidate_updates()
 
-    queries = np.array([[0, 0, 0]], dtype=np.float32)
-    distances, ids = index.query(queries, k=1)
+    # Check that we throw if we query with an invalid opt_l.
+    with pytest.raises(ValueError):
+        index.query(queries, k=3, opt_l=2)
 
     # Test that we can query with multiple query vectors.
     for i in range(5):

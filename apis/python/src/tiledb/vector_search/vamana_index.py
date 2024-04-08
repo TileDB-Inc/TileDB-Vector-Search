@@ -85,7 +85,8 @@ class VamanaIndex(index.Index):
             )
 
         assert queries.dtype == np.float32
-        assert opt_l >= k
+        if opt_l < k:
+            raise ValueError(f"opt_l ({opt_l}) should be >= k ({k})")
 
         if queries.ndim == 1:
             queries = np.array([queries])
