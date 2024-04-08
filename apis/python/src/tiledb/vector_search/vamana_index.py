@@ -63,7 +63,7 @@ class VamanaIndex(index.Index):
         self,
         queries: np.ndarray,
         k: int = 10,
-        opt_l: Optional[int] = 1,
+        opt_l: Optional[int] = 100,
         **kwargs,
     ):
         """
@@ -76,7 +76,7 @@ class VamanaIndex(index.Index):
         k: int
             Number of top results to return per query
         opt_l: int
-            How deep to search
+            How deep to search. Should be >= k. Defaults to 100.
         """
         warnings.warn("The Vamana index is not yet supported, please use with caution.")
         if self.size == 0:
@@ -85,6 +85,7 @@ class VamanaIndex(index.Index):
             )
 
         assert queries.dtype == np.float32
+        assert opt_l >= k
 
         if queries.ndim == 1:
             queries = np.array([queries])
