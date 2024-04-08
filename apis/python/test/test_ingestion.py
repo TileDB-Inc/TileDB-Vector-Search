@@ -49,14 +49,12 @@ def test_vamana_ingestion_u8(tmp_path):
         source_uri=os.path.join(dataset_dir, "data.u8bin"),
     )
     _, result = index.query(queries, k=k)
-    # TODO(paris): Fix IDs and re-enable.
-    # assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_uri = move_local_index_to_new_location(index_uri)
     index_ram = VamanaIndex(uri=index_uri)
     _, result = index_ram.query(queries, k=k)
-    # TODO(paris): Fix IDs and re-enable.
-    # assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
 def test_flat_ingestion_u8(tmp_path):

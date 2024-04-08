@@ -190,7 +190,7 @@ class Index:
                     and internal_results_i[query_id, res_id] == 0
                     and not self.is_type_erased_index()
                 ):
-                    # NOTE(paris): This is skipped for type-erased modules because they will explicitly handle this case internally. It is valid to have an ID of 0 with a score of 0.
+                    # NOTE(paris): This is skipped for type-erased modules because is is valid to have an ID of 0 with a score of 0.
                     internal_results_d[query_id, res_id] = MAX_FLOAT_32
                     internal_results_i[query_id, res_id] = MAX_UINT64
                 res_id += 1
