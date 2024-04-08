@@ -176,9 +176,9 @@ TEST_CASE(
     CHECK(index.id_type_string() == id_type);
     CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
 
-    auto vectors = ColMajorMatrix<feature_type_type>{
+    auto training = ColMajorMatrix<feature_type_type>{
         {3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
-    auto training_vector_array = FeatureVectorArray(vectors);
+    auto training_vector_array = FeatureVectorArray(training);
     index.train(training_vector_array);
     index.add(training_vector_array);
     index.write_index(ctx, index_uri, true);
@@ -285,10 +285,9 @@ TEST_CASE(
   std::cout << "done!" << std::endl;
 }
 
-TEST_CASE("api_vamana_index: create empty index and then train and query with
-          sift
-          ",
-          "[api_vamana_index]") {
+TEST_CASE(
+    "api_vamana_index: create empty index and then train and query with sift",
+    "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
   auto feature_type = "float32";

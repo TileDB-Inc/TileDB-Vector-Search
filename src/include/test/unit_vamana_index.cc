@@ -1170,7 +1170,7 @@ TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
 }
 
 TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
-  bool verbose = true;
+  bool debug = true;
 
   size_t num_nodes = 10000;
   size_t num_queries = 200;
@@ -1187,38 +1187,28 @@ TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
   auto training_set = tdbColMajorMatrix<siftsmall_feature_type>(
       ctx, siftsmall_inputs_uri, num_nodes);
   training_set.load();
-  debug(training_set, "training_set");
   std::vector<siftsmall_ids_type> ids(num_nodes);
   std::iota(begin(ids), end(ids), 0);
 
   auto queries = tdbColMajorMatrix<siftsmall_feature_type>(
       ctx, siftsmall_query_uri, num_queries);
   queries.load();
-  debug(queries, "queries");
 
   auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors(training_set), L_build, R_max_degree, 0);
   idx.train(training_set, ids);
+
   auto&& [mat_scores, mat_top_k] = idx.query(queries, k_nn);
-  debug(mat_scores, "mat_scores");
-  debug(mat_top_k, "mat_top_k");
 
   auto gk = tdbColMajorMatrix<test_groundtruth_type>(ctx, sift_groundtruth_uri);
-  load(gk);
-  debug(gk, "gk");
-  // auto ok = validate_top_k(mat_top_k, gk);
-  // CHECK(ok);
-
-  // auto&& [qv_scores, qv_top_k] =
-  //     detail::flat::qv_query_heap(training_set, queries, k_nn, 4);
-
+  gk.load();
   size_t total_intersected = count_intersections(mat_top_k, gk, k_nn);
 
   auto recall =
       ((double)total_intersected) / ((double)k_nn * num_vectors(queries));
   CHECK(recall > 0.80);  // @todo -- had been 0.95?
 
-  if (verbose) {
+  if (debug) {
     std::cout << total_intersected << " / " << k_nn * num_vectors(queries)
               << " = "
               << ((double)total_intersected) /
