@@ -143,23 +143,23 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   auto set_last_num_edges(size_t size) {
     metadata_.num_edges_history_.back() = size;
   }
-  auto get_L_build() const {
-    return metadata_.L_build_;
+  auto get_l_build() const {
+    return metadata_.l_build_;
   }
-  auto set_L_build(size_t size) {
-    metadata_.L_build_ = size;
+  auto set_l_build(size_t size) {
+    metadata_.l_build_ = size;
   }
-  auto get_R_max_degree() const {
-    return metadata_.R_max_degree_;
+  auto get_r_max_degree() const {
+    return metadata_.r_max_degree_;
   }
-  auto set_R_max_degree(size_t size) {
-    metadata_.R_max_degree_ = size;
+  auto set_r_max_degree(size_t size) {
+    metadata_.r_max_degree_ = size;
   }
-  auto get_B_backtrack() const {
-    return metadata_.B_backtrack_;
+  auto get_b_backtrack() const {
+    return metadata_.b_backtrack_;
   }
-  auto set_B_backtrack(size_t size) {
-    metadata_.B_backtrack_ = size;
+  auto set_b_backtrack(size_t size) {
+    metadata_.b_backtrack_ = size;
   }
   auto get_alpha_min() const {
     return metadata_.alpha_min_;

@@ -593,7 +593,6 @@ def ingest(
             ids_array_dom = tiledb.Domain(ids_array_rows_dim)
             ids_attr = tiledb.Attr(
                 name="values",
-                # TODO(paris): Enable configuring this so Vamana will work with different ID types.
                 dtype=np.dtype(np.uint64),
                 filters=DEFAULT_ATTR_FILTERS,
             )

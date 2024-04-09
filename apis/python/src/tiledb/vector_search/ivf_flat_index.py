@@ -466,7 +466,6 @@ def create(
         group_exists=group_exists,
         config=config,
     )
-    # TODO(paris): Save training_source_uri as metadata so that we use it for re-ingestion's.
     with tiledb.scope_ctx(ctx_or_config=config):
         group = tiledb.Group(uri, "w")
         tile_size = int(TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions)

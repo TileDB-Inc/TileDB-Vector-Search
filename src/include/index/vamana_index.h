@@ -453,9 +453,9 @@ class vamana_index {
   /*
    * Training parameters
    */
-  uint64_t L_build_{0};       // diskANN paper says default = 100
-  uint64_t R_max_degree_{0};  // diskANN paper says default = 64
-  uint64_t B_backtrack_{0};   //
+  uint64_t l_build_{0};       // diskANN paper says default = 100
+  uint64_t r_max_degree_{0};  // diskANN paper says default = 64
+  uint64_t b_backtrack_{0};   //
   float alpha_min_{1.0};      // per diskANN paper
   float alpha_max_{1.2};      // per diskANN paper
 
@@ -489,9 +489,9 @@ class vamana_index {
               timestamp}
       , num_vectors_{num_nodes}
       , graph_{num_vectors_}
-      , L_build_{L}
-      , R_max_degree_{R}
-      , B_backtrack_{B == 0 ? L_build_ : B} {
+      , l_build_{L}
+      , r_max_degree_{R}
+      , b_backtrack_{B == 0 ? l_build_ : B} {
   }
 
   /**
@@ -510,9 +510,9 @@ class vamana_index {
     dimension_ = group_->get_dimension();
     num_vectors_ = group_->get_base_size();
     num_edges_ = group_->get_num_edges();
-    L_build_ = group_->get_L_build();
-    R_max_degree_ = group_->get_R_max_degree();
-    B_backtrack_ = group_->get_B_backtrack();
+    l_build_ = group_->get_l_build();
+    r_max_degree_ = group_->get_r_max_degree();
+    b_backtrack_ = group_->get_b_backtrack();
     alpha_min_ = group_->get_alpha_min();
     alpha_max_ = group_->get_alpha_max();
     medoid_ = group_->get_medoid();
@@ -621,7 +621,7 @@ class vamana_index {
     dimension_ = ::dimension(feature_vectors_);
     num_vectors_ = ::num_vectors(feature_vectors_);
     // graph_ = ::detail::graph::init_random_adj_list<feature_type, id_type>(
-    //     feature_vectors_, R_max_degree_);
+    //     feature_vectors_, r_max_degree_);
 
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
     // dump_edgelist("edges_" + std::to_string(0) + ".txt", graph_);
@@ -646,7 +646,7 @@ class vamana_index {
             medoid_,
             feature_vectors_[p],
             1,
-            L_build_,
+            l_build_,
             distance);
         total_visited += visited.size();
 
@@ -656,7 +656,7 @@ class vamana_index {
             p,
             visited,
             alpha,
-            R_max_degree_,
+            r_max_degree_,
             distance);
         {
           scoped_timer _{"post search prune"};
@@ -670,14 +670,14 @@ class vamana_index {
               tmp.push_back(k);
             }
 
-            if (size(tmp) > R_max_degree_) {
+            if (size(tmp) > r_max_degree_) {
               robust_prune(
                   graph_,
                   feature_vectors_,
                   j,
                   tmp,
                   alpha,
-                  R_max_degree_,
+                  r_max_degree_,
                   distance);
             } else {
               graph_.add_edge(
@@ -735,8 +735,8 @@ class vamana_index {
       Distance distance = Distance{}) {
     scoped_timer __{tdb_func__ + std::string{" (outer)"}};
 
-    size_t L = opt_L ? *opt_L : L_build_;
-    // L = std::min<size_t>(L, L_build_);
+    size_t L = opt_L ? *opt_L : l_build_;
+    // L = std::min<size_t>(L, l_build_);
 
     auto top_k = ColMajorMatrix<id_type>(k, ::num_vectors(query_set));
     auto top_k_scores = ColMajorMatrix<score_type>(k, ::num_vectors(query_set));
@@ -773,7 +773,7 @@ class vamana_index {
 #if 0
     for (size_t i = 0; i < ::num_vectors(query_set); ++i) {
       auto&& [_top_k_scores, _top_k, V] = greedy_search(
-          graph_, feature_vectors_, medoid_, query_set[i], k, L_build_, distance, true);
+          graph_, feature_vectors_, medoid_, query_set[i], k, l_build_, distance, true);
       std::copy(
           _top_k_scores.data(),
           _top_k_scores.data() + k,
@@ -800,7 +800,7 @@ class vamana_index {
       size_t k,
       std::optional<size_t> opt_L = std::nullopt,
       Distance distance = Distance{}) {
-    size_t L = opt_L ? *opt_L : L_build_;
+    size_t L = opt_L ? *opt_L : l_build_;
     auto&& [top_k_scores, top_k, V] = greedy_search(
         graph_, feature_vectors_, medoid_, query_vec, k, L, distance, true);
 
@@ -855,9 +855,9 @@ class vamana_index {
 
     // @todo Make this table-driven
     write_group.set_dimension(dimension_);
-    write_group.set_L_build(L_build_);
-    write_group.set_R_max_degree(R_max_degree_);
-    write_group.set_B_backtrack(B_backtrack_);
+    write_group.set_l_build(l_build_);
+    write_group.set_r_max_degree(r_max_degree_);
+    write_group.set_b_backtrack(b_backtrack_);
     write_group.set_alpha_min(alpha_min_);
     write_group.set_alpha_max(alpha_max_);
     write_group.set_medoid(medoid_);
@@ -924,8 +924,8 @@ class vamana_index {
   void log_index() {
     _count_data.insert_entry("dimension", dimension_);
     _count_data.insert_entry("num_vectors", num_vectors_);
-    _count_data.insert_entry("L_build", L_build_);
-    _count_data.insert_entry("R_max_degree", R_max_degree_);
+    _count_data.insert_entry("l_build", l_build_);
+    _count_data.insert_entry("r_max_degree", r_max_degree_);
     _count_data.insert_entry("num_edges", graph_.num_edges());
     _count_data.insert_entry("num_comps", num_comps());
     _count_data.insert_entry("num_visited_vertices", num_visited_vertices());
@@ -974,19 +974,19 @@ class vamana_index {
                 << " ! = " << rhs.num_vectors_ << std::endl;
       return false;
     }
-    if (L_build_ != rhs.L_build_) {
-      std::cout << "L_build_ != rhs.L_build_" << L_build_
-                << " ! = " << rhs.L_build_ << std::endl;
+    if (l_build_ != rhs.l_build_) {
+      std::cout << "l_build_ != rhs.l_build_" << l_build_
+                << " ! = " << rhs.l_build_ << std::endl;
       return false;
     }
-    if (R_max_degree_ != rhs.R_max_degree_) {
-      std::cout << "R_max_degree_ != rhs.R_max_degree_" << R_max_degree_
-                << " ! = " << rhs.R_max_degree_ << std::endl;
+    if (r_max_degree_ != rhs.r_max_degree_) {
+      std::cout << "r_max_degree_ != rhs.r_max_degree_" << r_max_degree_
+                << " ! = " << rhs.r_max_degree_ << std::endl;
       return false;
     }
-    if (B_backtrack_ != rhs.B_backtrack_) {
-      std::cout << "B_backtrack_ != rhs.B_backtrack_" << B_backtrack_
-                << " ! = " << rhs.B_backtrack_ << std::endl;
+    if (b_backtrack_ != rhs.b_backtrack_) {
+      std::cout << "b_backtrack_ != rhs.b_backtrack_" << b_backtrack_
+                << " ! = " << rhs.b_backtrack_ << std::endl;
       return false;
     }
     if (alpha_min_ != rhs.alpha_min_) {
