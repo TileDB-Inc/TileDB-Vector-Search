@@ -2532,8 +2532,8 @@ def ingest(
             tiledb.vacuum(parts_uri, config=conf)
             tiledb.consolidate(ids_uri, config=conf)
             tiledb.vacuum(ids_uri, config=conf)
-        group.close()
         if PARTIAL_WRITE_ARRAY_DIR in group:
+            group.close()
             group = tiledb.Group(index_group_uri, "w")
             group.remove(PARTIAL_WRITE_ARRAY_DIR)
             group.close()
@@ -2544,6 +2544,9 @@ def ingest(
                 partial_write_array_dir_uri, "m"
             ) as partial_write_array_group:
                 partial_write_array_group.delete(recursive=True)
+        else:
+            group.close()
+
 
     # --------------------------------------------------------------------
     # End internal function definitions
