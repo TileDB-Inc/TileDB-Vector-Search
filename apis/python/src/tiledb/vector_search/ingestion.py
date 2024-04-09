@@ -2533,21 +2533,17 @@ def ingest(
             tiledb.consolidate(ids_uri, config=conf)
             tiledb.vacuum(ids_uri, config=conf)
         group.close()
-
-        # TODO remove temp data for tiledb URIs
-        if not index_group_uri.startswith("tiledb://"):
-            group = tiledb.Group(index_group_uri, "r")
-            if PARTIAL_WRITE_ARRAY_DIR in group:
-                group.close()
-                group = tiledb.Group(index_group_uri, "w")
-                group.remove(PARTIAL_WRITE_ARRAY_DIR)
-                vfs = tiledb.VFS(config)
-                partial_write_array_dir_uri = (
-                    index_group_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
-                )
-                if vfs.is_dir(partial_write_array_dir_uri):
-                    vfs.remove_dir(partial_write_array_dir_uri)
+        if PARTIAL_WRITE_ARRAY_DIR in group:
+            group = tiledb.Group(index_group_uri, "w")
+            group.remove(PARTIAL_WRITE_ARRAY_DIR)
             group.close()
+            partial_write_array_dir_uri = (
+                index_group_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
+            )
+            with tiledb.Group(
+                partial_write_array_dir_uri, "m"
+            ) as partial_write_array_group:
+                partial_write_array_group.delete(recursive=True)
 
     # --------------------------------------------------------------------
     # End internal function definitions
