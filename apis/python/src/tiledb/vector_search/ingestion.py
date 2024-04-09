@@ -2101,6 +2101,10 @@ def ingest(
             if acn:
                 kwargs["access_credentials_name"] = acn
         else:
+            if mode == Mode.LOCAL:
+                # TODO: `default` is not an actual namespace. This is a temp fix to
+                # be able to run DAGs locally.
+                namespace = "default"
             d = dag.DAG(
                 name="vector-ingestion",
                 mode=Mode.REALTIME,
