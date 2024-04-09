@@ -202,8 +202,6 @@ def test_vamana_index(tmp_path):
         uri=uri,
         dimensions=3,
         vector_type=np.dtype(vector_type),
-        id_type=np.dtype(np.uint64),
-        adjacency_row_index_type=np.dtype(np.uint64),
     )
 
     queries = np.array([[2, 2, 2]], dtype=np.float32)
