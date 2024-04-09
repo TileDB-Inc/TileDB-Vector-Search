@@ -236,18 +236,32 @@ def test_vamana_index(tmp_path):
 
     index = index.consolidate_updates()
 
-    # TODO(paris): Does not work with k > 1 or with [0, 0, 0] as the query.
+    # Check that we throw if we query with an invalid opt_l.
+    with pytest.raises(ValueError):
+        index.query(queries, k=3, opt_l=2)
+
+    # Test that we can query with multiple query vectors.
+    for i in range(5):
+        query_and_check_distances(
+            index,
+            np.array([[i, i, i], [i, i, i]], dtype=np.float32),
+            1,
+            [[0], [0]],
+            [[i], [i]],
+        )
+
+    # Test that we can query with k > 1.
     query_and_check_distances(
-        index, np.array([[1, 1, 1]], dtype=np.float32), 1, [[0]], [[1]]
+        index, np.array([[0, 0, 0]], dtype=np.float32), 2, [[0, 3]], [[0, 1]]
     )
+
+    # Test that we can query with multiple query vectors and k > 1.
     query_and_check_distances(
-        index, np.array([[2, 2, 2]], dtype=np.float32), 1, [[0]], [[2]]
-    )
-    query_and_check_distances(
-        index, np.array([[3, 3, 3]], dtype=np.float32), 1, [[0]], [[3]]
-    )
-    query_and_check_distances(
-        index, np.array([[4, 4, 4]], dtype=np.float32), 1, [[0]], [[4]]
+        index,
+        np.array([[0, 0, 0], [4, 4, 4]], dtype=np.float32),
+        2,
+        [[0, 3], [0, 3]],
+        [[0, 1], [4, 3]],
     )
 
 
