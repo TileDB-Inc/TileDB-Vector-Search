@@ -102,8 +102,6 @@ def create(
     uri: str,
     dimensions: int,
     vector_type: np.dtype,
-    id_type: np.dtype = np.uint64,
-    adjacency_row_index_type: np.dtype = np.uint64,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
     **kwargs,
@@ -112,13 +110,13 @@ def create(
     ctx = vspy.Ctx(config)
     index = vspy.IndexVamana(
         feature_type=np.dtype(vector_type).name,
-        id_type=np.dtype(id_type).name,
-        adjacency_row_index_type=np.dtype(adjacency_row_index_type).name,
+        id_type=np.dtype(np.uint64).name,
+        adjacency_row_index_type=np.dtype(np.uint64).name,
         dimension=dimensions,
     )
     # TODO(paris): Run all of this with a single C++ call.
     empty_vector = vspy.FeatureVectorArray(
-        dimensions, 0, np.dtype(vector_type).name, np.dtype(id_type).name
+        dimensions, 0, np.dtype(vector_type).name, np.dtype(np.uint64).name
     )
     index.train(empty_vector)
     index.add(empty_vector)
