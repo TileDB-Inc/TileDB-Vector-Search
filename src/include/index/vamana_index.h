@@ -62,6 +62,7 @@ static bool noisy = false;
  * @brief Truncated best-first search
  * @tparam Distance The distance function used to compare vectors
  * @param graph Graph to be searched
+ * @param db Holds the original feature vectors and their IDs
  * @param source start node index
  * @param query query node index
  * @param k result size
@@ -95,7 +96,8 @@ auto greedy_search(
     auto&& query,
     size_t k_nn,
     size_t L,
-    Distance distance = Distance{}) {
+    Distance distance = Distance{},
+    bool convert_to_db_ids = false) {
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
   using score_type = typename std::decay_t<decltype(graph)>::score_type;
@@ -218,6 +220,17 @@ auto greedy_search(
   auto top_k_scores = std::vector<score_type>(k_nn);
 
   get_top_k_with_scores_from_heap(result, top_k, top_k_scores);
+
+  // Optionally convert from the vector indexes to the db IDs. Used during
+  // querying to map to external IDs.
+  if (convert_to_db_ids) {
+    for (int i = 0; i < k_nn; ++i) {
+      if (top_k[i] != std::numeric_limits<id_type>::max()) {
+        top_k[i] = db.ids()[top_k[i]];
+      }
+    }
+  }
+
   return std::make_tuple(
       std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
 }
@@ -587,8 +600,12 @@ class vamana_index {
    */
   template <
       feature_vector_array Array,
+      feature_vector Vector,
       class Distance = sum_of_squares_distance>
-  void train(const Array& training_set, Distance distance = Distance{}) {
+  void train(
+      const Array& training_set,
+      const Vector& training_set_ids,
+      Distance distance = Distance{}) {
     feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
         ::dimension(training_set), ::num_vectors(training_set)));
     std::copy(
@@ -596,10 +613,10 @@ class vamana_index {
         training_set.data() +
             ::dimension(training_set) * ::num_vectors(training_set),
         feature_vectors_.data());
-    // TODO(paris): Read IDs from training_set if they exist.
-    auto ids = std::vector<id_type>(::num_vectors(training_set));
-    std::iota(ids.begin(), ids.end(), 0);
-    std::copy(ids.begin(), ids.end(), feature_vectors_.ids().begin());
+    std::copy(
+        training_set_ids.begin(),
+        training_set_ids.end(),
+        feature_vectors_.ids().begin());
 
     dimension_ = ::dimension(feature_vectors_);
     num_vectors_ = ::num_vectors(feature_vectors_);
@@ -732,14 +749,21 @@ class vamana_index {
 
     stdx::range_for_each(std::move(par), query_set, [&](auto&& query_vec, auto n, auto i) {
       auto&& [tk_scores, tk, V] = greedy_search(
-          graph_, feature_vectors_, medoid_, query_vec, k, L);
+          graph_, feature_vectors_, medoid_, query_vec, k, L, distance, true);
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
     });
 #else
     for (size_t i = 0; i < num_vectors(query_set); ++i) {
       auto&& [tk_scores, tk, V] = greedy_search(
-          graph_, feature_vectors_, medoid_, query_set[i], k, L, distance);
+          graph_,
+          feature_vectors_,
+          medoid_,
+          query_set[i],
+          k,
+          L,
+          distance,
+          true);
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
       num_visited_vertices_ += V.size();
@@ -749,7 +773,7 @@ class vamana_index {
 #if 0
     for (size_t i = 0; i < ::num_vectors(query_set); ++i) {
       auto&& [_top_k_scores, _top_k, V] = greedy_search(
-          graph_, feature_vectors_, medoid_, query_set[i], k, L_build_);
+          graph_, feature_vectors_, medoid_, query_set[i], k, L_build_, distance, true);
       std::copy(
           _top_k_scores.data(),
           _top_k_scores.data() + k,
@@ -777,9 +801,8 @@ class vamana_index {
       std::optional<size_t> opt_L = std::nullopt,
       Distance distance = Distance{}) {
     size_t L = opt_L ? *opt_L : L_build_;
-
     auto&& [top_k_scores, top_k, V] = greedy_search(
-        graph_, feature_vectors_, medoid_, query_vec, k, L, distance);
+        graph_, feature_vectors_, medoid_, query_vec, k, L, distance, true);
 
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }

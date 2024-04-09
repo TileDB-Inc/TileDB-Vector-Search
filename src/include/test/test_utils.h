@@ -37,6 +37,21 @@
 
 #include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
+#include "detail/linalg/tdb_io.h"
+
+template <class id_type>
+std::string write_ids_to_uri(
+    const tiledb::Context& ctx, const tiledb::VFS vfs, size_t num_ids) {
+  std::vector<id_type> ids(num_ids);
+  std::iota(begin(ids), end(ids), 0);
+  std::string ids_uri =
+      (std::filesystem::temp_directory_path() / "tmp_ids_uri").string();
+  if (vfs.is_dir(ids_uri)) {
+    vfs.remove_dir(ids_uri);
+  }
+  write_vector(ctx, ids, ids_uri);
+  return ids_uri;
+}
 
 // Fill a matrix with sequentially increasing values. Will delete data from the
 // URI if it exists.

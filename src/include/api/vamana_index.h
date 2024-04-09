@@ -320,7 +320,17 @@ class IndexVamana {
           (feature_type*)training_set.data(),
           extents(training_set)[0],
           extents(training_set)[1]};
-      impl_index_.train(fspan);
+
+      using id_type = typename T::id_type;
+      if (num_ids(training_set) > 0) {
+        auto ids = std::span<id_type>(
+            (id_type*)training_set.ids_data(), training_set.num_vectors());
+        impl_index_.train(fspan, ids);
+      } else {
+        auto ids = std::vector<id_type>(::num_vectors(training_set));
+        std::iota(ids.begin(), ids.end(), 0);
+        impl_index_.train(fspan, ids);
+      }
     }
 
     void add(const FeatureVectorArray& data_set) override {
