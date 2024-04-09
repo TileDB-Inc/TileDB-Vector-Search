@@ -144,7 +144,7 @@ jobs:
           path: dist/*.tar.gz
 
   upload_pypi:
-    needs: [build_wheels, build_sdist]
+    needs: [build_wheels, build_sdist, generate_backwards_compatibility_data]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
