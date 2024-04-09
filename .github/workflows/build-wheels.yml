@@ -47,7 +47,8 @@ jobs:
           pip install .
 
           # Generate data.
-          python backwards-compatibility-data/generate_data.py $release_tag
+          result=$(python backwards-compatibility-data/generate_data.py $release_tag)
+          echo "Should we upload these generated indexes? $result"
 
           # Fetch.
           echo "git fetch"

@@ -5,6 +5,8 @@ from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.utils import load_fvecs
 from tiledb.vector_search.utils import write_fvecs
 
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
 
 def create_sift_micro():
     """
@@ -12,9 +14,8 @@ def create_sift_micro():
     don't need to run this again, but it's saved here just in case. To query an index built with
     this data just select vectors from this file as the query vectors.
     """
-    script_dir = os.path.dirname(os.path.abspath(__file__))
     base_uri = os.path.join(
-        script_dir,
+        base_dir,
         "..",
         "apis",
         "python",
@@ -24,20 +25,18 @@ def create_sift_micro():
         "siftsmall_base.fvecs",
     )
     write_fvecs(
-        os.path.join(script_dir, "siftmicro_base.fvecs"), load_fvecs(base_uri)[:100]
+        os.path.join(base_dir, "siftmicro_base.fvecs"), load_fvecs(base_uri)[:100]
     )
 
 
-def generate_release_data(version):
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-
+def generate_indexes(version):
     # Create the new release directory.
-    release_dir = os.path.join(script_dir, "data", version)
-    shutil.rmtree(release_dir, ignore_errors=True)
-    os.makedirs(release_dir, exist_ok=True)
+    index_dir = os.path.join(base_dir, "data", version)
+    shutil.rmtree(index_dir, ignore_errors=True)
+    os.makedirs(index_dir, exist_ok=True)
 
     # Get the data we'll use to generate the index.
-    base_uri = os.path.join(script_dir, "siftmicro_base.fvecs")
+    base_uri = os.path.join(base_dir, "siftmicro_base.fvecs")
     base = load_fvecs(base_uri)
     indices = [
         0,
@@ -72,8 +71,7 @@ def generate_release_data(version):
     data_types = ["float32", "uint8"]
     for index_type in index_types:
         for data_type in data_types:
-            index_uri = f"{release_dir}/{index_type.lower()}_{data_type}"
-            print(f"Creating index at {index_uri}")
+            index_uri = f"{index_dir}/{index_type.lower()}_{data_type}"
             index = ingest(
                 index_type=index_type,
                 index_uri=index_uri,
@@ -85,6 +83,28 @@ def generate_release_data(version):
             assert result_d.flatten().tolist() == [0 for _ in range(len(indices))]
 
 
+def check_should_upload_release_data(version) -> bool:
+    """
+    Returns True if the minor version of the version string is greater than the minor version of the last version uploaded. When we run on CI we only want to upload data when the minor version changes. Examples:
+    - We have 0.1.0, 0.1.1. We get version=0.1.2. In this case we return False.
+    - We have 0.1.0, 0.1.1. We get version=0.2.0. In this case we return True.
+    - We have 0.1.0, 0.1.1. We get version=0.2.9. In this case we return True.
+    """
+    split_version = args.version.split(".")
+    minor_version = split_version[1] if len(split_version) >= 2 else None
+    if minor_version is None:
+        return False
+
+    data_dir = os.path.join(base_dir, "data")
+    for folder in os.listdir(data_dir):
+        split_folder = folder.split(".")
+        folder_minor_version = split_folder[1] if len(split_folder) >= 2 else None
+        if folder_minor_version == minor_version:
+            return False
+
+    return True
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -94,5 +114,9 @@ if __name__ == "__main__":
         help="The name of the of the TileDB-Vector-Search version which we are creating indices for.",
     )
     args = p.parse_args()
-    print(f"Building indexes for version {args.version}")
-    generate_release_data(args.version)
+
+    should_upload_release_data = check_should_upload_release_data(args.version)
+
+    generate_indexes(args.version)
+
+    print("true" if should_upload_release_data else "false")
