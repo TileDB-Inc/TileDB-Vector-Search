@@ -130,9 +130,6 @@ class Index:
         self.thread_executor = futures.ThreadPoolExecutor()
         self.has_updates = self.check_has_updates()
 
-    def is_type_erased_index(self):
-        return self.index_type == "VAMANA"
-
     def query(self, queries: np.ndarray, k, **kwargs):
         if queries.ndim != 2:
             raise TypeError(
@@ -183,14 +180,6 @@ class Index:
             res_id = 0
             for res in query:
                 if res in updated_ids:
-                    internal_results_d[query_id, res_id] = MAX_FLOAT_32
-                    internal_results_i[query_id, res_id] = MAX_UINT64
-                if (
-                    internal_results_d[query_id, res_id] == 0
-                    and internal_results_i[query_id, res_id] == 0
-                    and not self.is_type_erased_index()
-                ):
-                    # NOTE(paris): This is skipped for type-erased modules because is is valid to have an ID of 0 with a score of 0.
                     internal_results_d[query_id, res_id] = MAX_FLOAT_32
                     internal_results_i[query_id, res_id] = MAX_UINT64
                 res_id += 1
