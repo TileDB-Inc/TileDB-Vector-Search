@@ -83,7 +83,7 @@ def generate_indexes(version):
             assert result_d.flatten().tolist() == [0 for _ in range(len(indices))]
 
 
-def check_should_upload_release_data(version) -> bool:
+def check_should_upload_indexes(version) -> bool:
     """
     Returns True if the minor version of the version string is greater than the minor version of the last version uploaded. When we run on CI we only want to upload data when the minor version changes. Examples:
     - We have 0.1.0, 0.1.1. We get version=0.1.2. In this case we return False.
@@ -115,8 +115,8 @@ if __name__ == "__main__":
     )
     args = p.parse_args()
 
-    should_upload_release_data = check_should_upload_release_data(args.version)
+    should_upload_indexes = check_should_upload_indexes(args.version)
 
     generate_indexes(args.version)
 
-    print("true" if should_upload_release_data else "false")
+    print("true" if should_upload_indexes else "false")
