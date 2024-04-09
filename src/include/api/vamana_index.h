@@ -98,10 +98,10 @@ class IndexVamana {
         auto value = c.second;
         if (key == "dimension") {
           dimension_ = std::stol(value);
-        } else if (key == "L_build") {
-          L_build_ = std::stol(value);
-        } else if (key == "R_max_degree") {
-          R_max_degree_ = std::stof(value);
+        } else if (key == "l_build") {
+          l_build_ = std::stol(value);
+        } else if (key == "r_max_degree") {
+          r_max_degree_ = std::stof(value);
         } else if (key == "feature_type") {
           feature_datatype_ = string_to_datatype(value);
         } else if (key == "id_type") {
@@ -192,7 +192,7 @@ class IndexVamana {
       throw std::runtime_error("Unsupported datatype combination");
     }
     index_ = dispatch_table.at(type)(
-        training_set.num_vectors(), L_build_, R_max_degree_);
+        training_set.num_vectors(), l_build_, r_max_degree_);
 
     index_->train(training_set);
 
@@ -306,8 +306,8 @@ class IndexVamana {
         : impl_index_(std::forward<T>(t)) {
     }
 
-    index_impl(size_t num_vectors, size_t L_build, size_t R_max_degree)
-        : impl_index_(num_vectors, L_build, R_max_degree) {
+    index_impl(size_t num_vectors, size_t l_build, size_t r_max_degree)
+        : impl_index_(num_vectors, l_build, r_max_degree) {
     }
 
     index_impl(const tiledb::Context& ctx, const URI& index_uri)
@@ -427,8 +427,8 @@ class IndexVamana {
   static const uri_table_type uri_dispatch_table;
 
   size_t dimension_ = 0;
-  size_t L_build_ = 100;
-  size_t R_max_degree_ = 64;
+  size_t l_build_ = 100;
+  size_t r_max_degree_ = 64;
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
   tiledb_datatype_t adjacency_row_index_datatype_{TILEDB_ANY};
@@ -437,52 +437,52 @@ class IndexVamana {
 
 const IndexVamana::table_type IndexVamana::dispatch_table = {
     {{TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT32},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t l_build, size_t r_max_degree) {
        return std::make_unique<
            index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, l_build, r_max_degree);
      }},
     {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t l_build, size_t r_max_degree) {
        return std::make_unique<
            index_impl<vamana_index<float, uint32_t, uint32_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, l_build, r_max_degree);
      }},
     {{TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT64},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t l_build, size_t r_max_degree) {
        return std::make_unique<
            index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, l_build, r_max_degree);
      }},
     {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t l_build, size_t r_max_degree) {
        return std::make_unique<
            index_impl<vamana_index<float, uint32_t, uint64_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, l_build, r_max_degree);
      }},
     {{TILEDB_UINT8, TILEDB_UINT64, TILEDB_UINT32},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t l_build, size_t r_max_degree) {
        return std::make_unique<
            index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, l_build, r_max_degree);
      }},
     {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t l_build, size_t r_max_degree) {
        return std::make_unique<
            index_impl<vamana_index<float, uint64_t, uint32_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, l_build, r_max_degree);
      }},
     {{TILEDB_UINT8, TILEDB_UINT64, TILEDB_UINT64},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t l_build, size_t r_max_degree) {
        return std::make_unique<
            index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, l_build, r_max_degree);
      }},
     {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64},
-     [](size_t num_vectors, size_t L_build, size_t R_max_degree) {
+     [](size_t num_vectors, size_t l_build, size_t r_max_degree) {
        return std::make_unique<
            index_impl<vamana_index<float, uint64_t, uint64_t>>>(
-           num_vectors, L_build, R_max_degree);
+           num_vectors, l_build, r_max_degree);
      }}};
 
 const IndexVamana::uri_table_type IndexVamana::uri_dispatch_table = {

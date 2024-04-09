@@ -269,7 +269,6 @@ void init_type_erased_module(py::module_& m) {
           py::arg("vectors"))
       .def(
           "query",
-          // TODO(paris): Update opt_l to be optional.
           [](IndexVamana& index,
              FeatureVectorArray& vectors,
              size_t top_k,

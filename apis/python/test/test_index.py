@@ -350,20 +350,6 @@ def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
                     with pytest.raises(TypeError):
                         index.query(query, k=1)
 
-                # TODO(paris): This will throw with the following error. Fix and re-enable, then remove
-                # test_index_with_incorrect_num_of_query_columns_in_single_vector_query:
-                #   def array_to_matrix(array: np.ndarray):
-                #           if array.dtype == np.float32:
-                #   >           return pyarray_copyto_matrix_f32(array)
-                #   E           RuntimeError: Number of dimensions must be two
-                # Here we test with a query which is just a vector, i.e. [1, 2, 3].
-                # query = query[0]
-                # if num_columns_for_query == num_columns:
-                #     index.query(query, k=1)
-                # else:
-                #     with pytest.raises(TypeError):
-                #         index.query(query, k=1)
-
 
 def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_path):
     # Tests that we raise a TypeError if the number of columns in the query is not the same as the
