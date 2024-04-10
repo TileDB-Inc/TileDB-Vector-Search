@@ -196,7 +196,7 @@ class base_index_group {
     metadata_.load_metadata(read_group);
     if (!empty(version_) && metadata_.storage_version_ != version_) {
       throw std::runtime_error(
-          "Version mismatch.  Requested " + version_ + " but found " +
+          "Version mismatch. Requested " + version_ + " but found " +
           metadata_.storage_version_);
     } else if (empty(version_)) {
       version_ = metadata_.storage_version_;

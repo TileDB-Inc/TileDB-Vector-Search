@@ -1247,7 +1247,7 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
       num_vectors(training_set), l_build, r_max_degree, Backtrack);
   idx.train(training_set, ids);
 
-  idx.write_index(ctx, vamana_index_uri, true);
+  idx.write_index(ctx, vamana_index_uri);
   auto idx2 = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       ctx, vamana_index_uri);
 

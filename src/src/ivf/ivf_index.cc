@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
         /* dim, */ num_clusters, max_iter, tolerance);
     idx.train(X, init_type);
     idx.add(X);
-    idx.write_index(ctx, index_uri, overwrite);
+    idx.write_index(ctx, index_uri);
 
     if (args["--log"]) {
       //     idx.log_index();

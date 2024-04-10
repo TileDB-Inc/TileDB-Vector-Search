@@ -235,12 +235,12 @@ class IndexVamana {
   void write_index(
       const tiledb::Context& ctx,
       const std::string& group_uri,
-      bool overwrite = false) const {
+      const std::string& storage_version = "") const {
     if (!index_) {
       throw std::runtime_error(
           "Cannot write_index() because there is no index.");
     }
-    index_->write_index(ctx, group_uri, overwrite);
+    index_->write_index(ctx, group_uri, storage_version);
   }
 
   constexpr auto dimension() const {
@@ -291,7 +291,7 @@ class IndexVamana {
     virtual void write_index(
         const tiledb::Context& ctx,
         const std::string& group_uri,
-        bool overwrite) const = 0;
+        const std::string& storage_version) const = 0;
 
     [[nodiscard]] virtual size_t dimension() const = 0;
   };
@@ -397,8 +397,8 @@ class IndexVamana {
     void write_index(
         const tiledb::Context& ctx,
         const std::string& group_uri,
-        bool overwrite) const override {
-      impl_index_.write_index(ctx, group_uri, overwrite);
+        const std::string& storage_version) const override {
+      impl_index_.write_index(ctx, group_uri, storage_version);
     }
 
     size_t dimension() const override {
