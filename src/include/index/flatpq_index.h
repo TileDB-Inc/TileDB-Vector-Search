@@ -640,15 +640,8 @@ class flatpq_index {
     return un_pq;
   }
 
-  auto write_index(const std::string& group_uri, bool overwrite) {
+  auto write_index(const std::string& group_uri) {
     tiledb::Context ctx;
-    tiledb::VFS vfs(ctx);
-    if (vfs.is_dir(group_uri)) {
-      if (overwrite == false) {
-        return false;
-      }
-      vfs.remove_dir(group_uri);
-    }
 
     tiledb::Config cfg;
     tiledb::Group::create(ctx, group_uri);

@@ -740,7 +740,6 @@ class ivf_flat_index {
    * @param group_uri The URI of the TileDB group where the index will be saved
    * @param storage_version The storage version to use. If empty, use the most
    * defult version.
-   * @param overwrite
    * @return Whether the write was successful
    */
   auto write_index(
@@ -792,8 +791,7 @@ class ivf_flat_index {
       const std::string& centroids_uri,
       const std::string& parts_uri,
       const std::string& ids_uri,
-      const std::string& indices_uri,
-      bool overwrite) const {
+      const std::string& indices_uri) const {
     tiledb::VFS vfs(ctx);
 
     write_matrix(ctx, centroids_, centroids_uri, 0, true);

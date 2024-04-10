@@ -437,10 +437,6 @@ class IndexIVFFlat {
     index_->write_index(ctx, group_uri, storage_version);
   }
 
-  constexpr auto dimension() const {
-    return dimension_;  //::dimension(*index_);
-  }
-
   constexpr auto num_partitions() const {
     return nlist_;  // ::num_partitions(*index_);
   }
