@@ -97,7 +97,6 @@ class VamanaIndex(index.Index):
         return np.array(distances, copy=False), np.array(ids, copy=False)
 
 
-# TODO(paris): Pass more arguments to C++, i.e. storage_version.
 def create(
     uri: str,
     dimensions: int,
