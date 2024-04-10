@@ -289,7 +289,7 @@ void init_type_erased_module(py::module_& m) {
           },
           py::arg("ctx"),
           py::arg("group_uri"),
-          py::arg("storage_version"))
+          py::arg("storage_version") = "")
       .def("feature_type_string", &IndexVamana::feature_type_string)
       .def("id_type_string", &IndexVamana::id_type_string)
       .def(

@@ -1635,7 +1635,7 @@ def ingest(
             data = vspy.FeatureVectorArray(ctx, parts_array_uri, ids_array_uri)
             index.train(data)
             index.add(data)
-            index.write_index(ctx, index_group_uri, storage_version)
+            index.write_index(ctx, index_group_uri)
 
     def write_centroids(
         centroids: np.ndarray,
