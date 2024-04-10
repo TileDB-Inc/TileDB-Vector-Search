@@ -172,7 +172,7 @@ TEST_CASE(
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
   a.train(training_set, kmeans_init::random);
   a.add(training_set);
-  a.write_index(ctx, api_ivf_flat_index_uri, true);
+  a.write_index(ctx, api_ivf_flat_index_uri);
 
   auto b = IndexIVFFlat(ctx, api_ivf_flat_index_uri);
 
@@ -244,7 +244,7 @@ TEST_CASE(
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
   a.train(training_set, kmeans_init::random);
   a.add(training_set);
-  a.write_index(ctx, api_ivf_flat_index_uri, true);
+  a.write_index(ctx, api_ivf_flat_index_uri);
   auto b = IndexIVFFlat(ctx, api_ivf_flat_index_uri);
 
   auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);

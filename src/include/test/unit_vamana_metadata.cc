@@ -86,7 +86,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
     // Check the metadata after an initial write_index().
     idx.train(training_vectors, training_vectors.ids());
     idx.add(training_vectors);
-    idx.write_index(ctx, uri, true);
+    idx.write_index(ctx, uri);
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     auto x = vamana_index_metadata();
@@ -109,7 +109,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
     // Check the metadata after a second write_index().
     idx.train(training_vectors, training_vectors.ids());
     idx.add(training_vectors);
-    idx.write_index(ctx, uri, true);
+    idx.write_index(ctx, uri);
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     auto x = vamana_index_metadata();

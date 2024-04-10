@@ -841,7 +841,7 @@ TEST_CASE("flatpq_index: flatpq_index write and read", "[flatpq_index]") {
   idx.train(training_set);
   idx.add(training_set);
 
-  idx.write_index(flatpq_index_uri, true);
+  idx.write_index(flatpq_index_uri);
   auto idx2 = flatpq_index<
       siftsmall_feature_type,
       siftsmall_ids_type,

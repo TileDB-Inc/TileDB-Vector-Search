@@ -78,7 +78,7 @@ TEST_CASE(
     // Check the metadata after an initial write_index().
     idx.train(training_vectors);
     idx.add(training_vectors);
-    idx.write_index(ctx, uri, true);
+    idx.write_index(ctx, uri);
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     auto x = ivf_flat_index_metadata();
@@ -103,7 +103,7 @@ TEST_CASE(
     // Check the metadata after a second write_index().
     idx.train(training_vectors);
     idx.add(training_vectors);
-    idx.write_index(ctx, uri, true);
+    idx.write_index(ctx, uri);
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     auto x = ivf_flat_index_metadata();

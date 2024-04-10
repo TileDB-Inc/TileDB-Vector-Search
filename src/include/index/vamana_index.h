@@ -824,7 +824,6 @@ class vamana_index {
   /**
    * @brief Write the index to a TileDB group
    * @param group_uri The URI of the TileDB group where the index will be saved
-   * @param overwrite Whether to overwrite an existing group
    * @return Whether the write was successful
    *
    * The group consists of the original feature vectors, and the graph index,
@@ -837,18 +836,9 @@ class vamana_index {
    * the group?
    */
   auto write_index(
-      const tiledb::Context& ctx,
-      const std::string& group_uri,
-      bool overwrite = false) const {
+      const tiledb::Context& ctx, const std::string& group_uri) const {
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
-
-    tiledb::VFS vfs(ctx);
-    if (vfs.is_dir(group_uri)) {
-      if (overwrite == false) {
-        return false;
-      }
-    }
 
     auto write_group =
         vamana_index_group(*this, ctx, group_uri, TILEDB_WRITE, timestamp_);
