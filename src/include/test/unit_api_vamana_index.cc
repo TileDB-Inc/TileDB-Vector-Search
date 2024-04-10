@@ -181,7 +181,7 @@ TEST_CASE(
     auto training_vector_array = FeatureVectorArray(training);
     index.train(training_vector_array);
     index.add(training_vector_array);
-    index.write_index(ctx, index_uri, true);
+    index.write_index(ctx, index_uri);
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
@@ -255,7 +255,7 @@ TEST_CASE(
     auto training_vector_array = FeatureVectorArray(training);
     index.train(training_vector_array);
     index.add(training_vector_array);
-    index.write_index(ctx, index_uri, true);
+    index.write_index(ctx, index_uri);
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
@@ -306,7 +306,7 @@ TEST_CASE(
         siftsmall_dimension, num_vectors, feature_type, id_type);
     index.train(empty_training_vector_array);
     index.add(empty_training_vector_array);
-    index.write_index(ctx, index_uri, true);
+    index.write_index(ctx, index_uri);
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
@@ -323,7 +323,7 @@ TEST_CASE(
     auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
     index.train(training_set);
     index.add(training_set);
-    index.write_index(ctx, index_uri, true);
+    index.write_index(ctx, index_uri);
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
@@ -376,7 +376,7 @@ TEST_CASE(
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
   a.train(training_set);
   a.add(training_set);
-  a.write_index(ctx, api_vamana_index_uri, true);
+  a.write_index(ctx, api_vamana_index_uri);
 
   auto b = IndexVamana(ctx, api_vamana_index_uri);
 
@@ -423,7 +423,7 @@ TEST_CASE("api_vamana_index: read index and query", "[api_vamana_index]") {
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
   a.train(training_set);
   a.add(training_set);
-  a.write_index(ctx, api_vamana_index_uri, true);
+  a.write_index(ctx, api_vamana_index_uri);
   auto b = IndexVamana(ctx, api_vamana_index_uri);
 
   auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);

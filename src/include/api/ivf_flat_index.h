@@ -427,14 +427,12 @@ class IndexIVFFlat {
   }
 
   void write_index(
-      const tiledb::Context& ctx,
-      const std::string& group_uri,
-      bool overwrite = false) const {
+      const tiledb::Context& ctx, const std::string& group_uri) const {
     if (!index_) {
       throw std::runtime_error(
           "Cannot write_index() because there is no index.");
     }
-    index_->write_index(ctx, group_uri, overwrite);
+    index_->write_index(ctx, group_uri);
   }
 
   constexpr auto dimension() const {
@@ -505,9 +503,7 @@ class IndexIVFFlat {
     virtual void remove(const IdVector& ids) const = 0;
 
     virtual void write_index(
-        const tiledb::Context& ctx,
-        const std::string& group_uri,
-        bool overwrite) const = 0;
+        const tiledb::Context& ctx, const std::string& group_uri) const = 0;
 
     [[nodiscard]] virtual size_t dimension() const = 0;
 
@@ -691,11 +687,9 @@ class IndexIVFFlat {
       //      index_.update(vectors_uri, ids, options);
     }
 
-    void write_index(
-        const tiledb::Context& ctx,
-        const std::string& group_uri,
-        bool overwrite) const override {
-      impl_index_.write_index(ctx, group_uri, overwrite);
+    void write_index(const tiledb::Context& ctx, const std::string& group_uri)
+        const override {
+      impl_index_.write_index(ctx, group_uri);
     }
 
     // WIP

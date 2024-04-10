@@ -738,22 +738,10 @@ class ivf_flat_index {
    * we write from the PartitionedMatrix base class.
    *
    * @param group_uri
-   * @param overwrite
    * @return bool indicating success or failure
    */
   auto write_index(
-      const tiledb::Context& ctx,
-      const std::string& group_uri,
-      bool overwrite) const {
-    tiledb::VFS vfs(ctx);
-
-    // @todo Deal with this in right way vis a vis timestamping
-    if (vfs.is_dir(group_uri)) {
-      if (overwrite == false) {
-        return false;
-      }
-    }
-
+      const tiledb::Context& ctx, const std::string& group_uri) const {
     // Write the group
     auto write_group =
         ivf_flat_index_group(*this, ctx, group_uri, TILEDB_WRITE, timestamp_);
@@ -799,8 +787,7 @@ class ivf_flat_index {
       const std::string& centroids_uri,
       const std::string& parts_uri,
       const std::string& ids_uri,
-      const std::string& indices_uri,
-      bool overwrite) const {
+      const std::string& indices_uri) const {
     tiledb::VFS vfs(ctx);
 
     write_matrix(ctx, centroids_, centroids_uri, 0, true);
