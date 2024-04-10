@@ -242,197 +242,198 @@ class IndexVamana {
     }
     index_->write_index(ctx, group_uri, storage_version);
   }
-}
 
-constexpr auto
-feature_type() const {
-  return feature_datatype_;
-}
-
-inline auto feature_type_string() const {
-  return datatype_to_string(feature_datatype_);
-}
-
-constexpr auto id_type() const {
-  return id_datatype_;
-}
-
-inline auto id_type_string() const {
-  return datatype_to_string(id_datatype_);
-}
-
-constexpr auto adjacency_row_index_type() const {
-  return adjacency_row_index_datatype_;
-}
-
-inline auto adjacency_row_index_type_string() const {
-  return datatype_to_string(adjacency_row_index_datatype_);
-}
-
-private:
-/**
- * Non-type parameterized base class (for type erasure).
- */
-struct index_base {
-  virtual ~index_base() = default;
-
-  virtual void train(const FeatureVectorArray& training_set) = 0;
-
-  virtual void add(const FeatureVectorArray& data_set) = 0;
-
-  [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
-  query(
-      const QueryVectorArray& vectors,
-      size_t top_k,
-      std::optional<size_t> opt_L) = 0;
-
-  virtual void write_index(
-      const tiledb::Context& ctx,
-      const std::string& group_uri,
-      const std::string& storage_version) const = 0;
-
-  [[nodiscard]] virtual size_t dimension() const = 0;
-};
-
-/**
- * @brief Type-parameterize implementation class.
- * @tparam T Type of the concrete class that is being type-erased.
- */
-template <typename T>
-struct index_impl : index_base {
-  explicit index_impl(T&& t)
-      : impl_index_(std::forward<T>(t)) {
+  constexpr auto dimension() const {
+    return dimension_;
   }
 
-  index_impl(size_t num_vectors, size_t l_build, size_t r_max_degree)
-      : impl_index_(num_vectors, l_build, r_max_degree) {
+  constexpr auto feature_type() const {
+    return feature_datatype_;
   }
 
-  index_impl(const tiledb::Context& ctx, const URI& index_uri)
-      : impl_index_(ctx, index_uri) {
+  inline auto feature_type_string() const {
+    return datatype_to_string(feature_datatype_);
   }
 
-  void train(const FeatureVectorArray& training_set) override {
-    using feature_type = typename T::feature_type;
-    auto fspan = MatrixView<feature_type, stdx::layout_left>{
-        (feature_type*)training_set.data(),
-        extents(training_set)[0],
-        extents(training_set)[1]};
-
-    using id_type = typename T::id_type;
-    if (num_ids(training_set) > 0) {
-      auto ids = std::span<id_type>(
-          (id_type*)training_set.ids_data(), training_set.num_vectors());
-      impl_index_.train(fspan, ids);
-    } else {
-      auto ids = std::vector<id_type>(::num_vectors(training_set));
-      std::iota(ids.begin(), ids.end(), 0);
-      impl_index_.train(fspan, ids);
-    }
+  constexpr auto id_type() const {
+    return id_datatype_;
   }
 
-  void add(const FeatureVectorArray& data_set) override {
-    using feature_type = typename T::feature_type;
-    auto fspan = MatrixView<feature_type, stdx::layout_left>{
-        (feature_type*)data_set.data(),
-        extents(data_set)[0],
-        extents(data_set)[1]};
-    impl_index_.add(fspan);
+  inline auto id_type_string() const {
+    return datatype_to_string(id_datatype_);
   }
 
-  [[nodiscard]] auto query(
-      const tiledb::Context& ctx,
-      const URI& uri,
-      size_t top_k,
-      std::optional<size_t> opt_L) {
-    return impl_index_.query(ctx, uri, top_k, opt_L);
+  constexpr auto adjacency_row_index_type() const {
+    return adjacency_row_index_datatype_;
   }
 
-  /**
-   * @brief Query the index with the given vectors.  The concrete query
-   * function returns a tuple of arrays, which are type erased and returned as
-   * a tuple of FeatureVectorArrays.
-   * @param vectors
-   * @param top_k
-   * @return
-   *
-   * @todo Make sure the extents of the returned arrays are used correctly.
-   */
-  [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
-      const QueryVectorArray& vectors,
-      size_t top_k,
-      std::optional<size_t> opt_L) override {
-    // @todo using index_type = size_t;
-    auto dtype = vectors.feature_type();
-
-    // @note We need to maintain same layout -> or swap extents
-    switch (dtype) {
-      case TILEDB_FLOAT32: {
-        auto qspan = MatrixView<float, stdx::layout_left>{
-            (float*)vectors.data(),
-            extents(vectors)[0],
-            extents(vectors)[1]};  // @todo ??
-        auto [s, t] = impl_index_.query(qspan, top_k, opt_L);
-        auto x = FeatureVectorArray{std::move(s)};
-        auto y = FeatureVectorArray{std::move(t)};
-        return {std::move(x), std::move(y)};
-      }
-      case TILEDB_UINT8: {
-        auto qspan = MatrixView<uint8_t, stdx::layout_left>{
-            (uint8_t*)vectors.data(),
-            extents(vectors)[0],
-            extents(vectors)[1]};  // @todo ??
-        auto [s, t] = impl_index_.query(qspan, top_k, opt_L);
-        auto x = FeatureVectorArray{std::move(s)};
-        auto y = FeatureVectorArray{std::move(t)};
-        return {std::move(x), std::move(y)};
-      }
-      default:
-        throw std::runtime_error("Unsupported attribute type");
-    }
-  }
-
-  void write_index(
-      const tiledb::Context& ctx,
-      const std::string& group_uri,
-      const std::string& storage_version) const override {
-    impl_index_.write_index(ctx, group_uri, storage_version);
-  }
-
-  size_t dimension() const override {
-    return ::dimension(impl_index_);
+  inline auto adjacency_row_index_type_string() const {
+    return datatype_to_string(adjacency_row_index_datatype_);
   }
 
  private:
   /**
-   * @brief Instance of the concrete class.
+   * Non-type parameterized base class (for type erasure).
    */
-  T impl_index_;
+  struct index_base {
+    virtual ~index_base() = default;
+
+    virtual void train(const FeatureVectorArray& training_set) = 0;
+
+    virtual void add(const FeatureVectorArray& data_set) = 0;
+
+    [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
+    query(
+        const QueryVectorArray& vectors,
+        size_t top_k,
+        std::optional<size_t> opt_L) = 0;
+
+    virtual void write_index(
+        const tiledb::Context& ctx,
+        const std::string& group_uri,
+        const std::string& storage_version) const = 0;
+
+    [[nodiscard]] virtual size_t dimension() const = 0;
+  };
+
+  /**
+   * @brief Type-parameterize implementation class.
+   * @tparam T Type of the concrete class that is being type-erased.
+   */
+  template <typename T>
+  struct index_impl : index_base {
+    explicit index_impl(T&& t)
+        : impl_index_(std::forward<T>(t)) {
+    }
+
+    index_impl(size_t num_vectors, size_t l_build, size_t r_max_degree)
+        : impl_index_(num_vectors, l_build, r_max_degree) {
+    }
+
+    index_impl(const tiledb::Context& ctx, const URI& index_uri)
+        : impl_index_(ctx, index_uri) {
+    }
+
+    void train(const FeatureVectorArray& training_set) override {
+      using feature_type = typename T::feature_type;
+      auto fspan = MatrixView<feature_type, stdx::layout_left>{
+          (feature_type*)training_set.data(),
+          extents(training_set)[0],
+          extents(training_set)[1]};
+
+      using id_type = typename T::id_type;
+      if (num_ids(training_set) > 0) {
+        auto ids = std::span<id_type>(
+            (id_type*)training_set.ids_data(), training_set.num_vectors());
+        impl_index_.train(fspan, ids);
+      } else {
+        auto ids = std::vector<id_type>(::num_vectors(training_set));
+        std::iota(ids.begin(), ids.end(), 0);
+        impl_index_.train(fspan, ids);
+      }
+    }
+
+    void add(const FeatureVectorArray& data_set) override {
+      using feature_type = typename T::feature_type;
+      auto fspan = MatrixView<feature_type, stdx::layout_left>{
+          (feature_type*)data_set.data(),
+          extents(data_set)[0],
+          extents(data_set)[1]};
+      impl_index_.add(fspan);
+    }
+
+    [[nodiscard]] auto query(
+        const tiledb::Context& ctx,
+        const URI& uri,
+        size_t top_k,
+        std::optional<size_t> opt_L) {
+      return impl_index_.query(ctx, uri, top_k, opt_L);
+    }
+
+    /**
+     * @brief Query the index with the given vectors.  The concrete query
+     * function returns a tuple of arrays, which are type erased and returned as
+     * a tuple of FeatureVectorArrays.
+     * @param vectors
+     * @param top_k
+     * @return
+     *
+     * @todo Make sure the extents of the returned arrays are used correctly.
+     */
+    [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
+        const QueryVectorArray& vectors,
+        size_t top_k,
+        std::optional<size_t> opt_L) override {
+      // @todo using index_type = size_t;
+      auto dtype = vectors.feature_type();
+
+      // @note We need to maintain same layout -> or swap extents
+      switch (dtype) {
+        case TILEDB_FLOAT32: {
+          auto qspan = MatrixView<float, stdx::layout_left>{
+              (float*)vectors.data(),
+              extents(vectors)[0],
+              extents(vectors)[1]};  // @todo ??
+          auto [s, t] = impl_index_.query(qspan, top_k, opt_L);
+          auto x = FeatureVectorArray{std::move(s)};
+          auto y = FeatureVectorArray{std::move(t)};
+          return {std::move(x), std::move(y)};
+        }
+        case TILEDB_UINT8: {
+          auto qspan = MatrixView<uint8_t, stdx::layout_left>{
+              (uint8_t*)vectors.data(),
+              extents(vectors)[0],
+              extents(vectors)[1]};  // @todo ??
+          auto [s, t] = impl_index_.query(qspan, top_k, opt_L);
+          auto x = FeatureVectorArray{std::move(s)};
+          auto y = FeatureVectorArray{std::move(t)};
+          return {std::move(x), std::move(y)};
+        }
+        default:
+          throw std::runtime_error("Unsupported attribute type");
+      }
+    }
+
+    void write_index(
+        const tiledb::Context& ctx,
+        const std::string& group_uri,
+        const std::string& storage_version) const override {
+      impl_index_.write_index(ctx, group_uri, storage_version);
+    }
+
+    size_t dimension() const override {
+      return ::dimension(impl_index_);
+    }
+
+   private:
+    /**
+     * @brief Instance of the concrete class.
+     */
+    T impl_index_;
+  };
+
+  using constructor_function =
+      std::function<std::unique_ptr<index_base>(size_t, size_t, size_t)>;
+  using table_type = std::map<
+      std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>,
+      constructor_function>;
+  static const table_type dispatch_table;
+
+  using uri_constructor_function = std::function<std::unique_ptr<index_base>(
+      const tiledb::Context&, const std::string&)>;
+  using uri_table_type = std::map<
+      std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>,
+      uri_constructor_function>;
+  static const uri_table_type uri_dispatch_table;
+
+  size_t dimension_ = 0;
+  size_t l_build_ = 100;
+  size_t r_max_degree_ = 64;
+  tiledb_datatype_t feature_datatype_{TILEDB_ANY};
+  tiledb_datatype_t id_datatype_{TILEDB_ANY};
+  tiledb_datatype_t adjacency_row_index_datatype_{TILEDB_ANY};
+  std::unique_ptr<index_base> index_;
 };
-
-using constructor_function =
-    std::function<std::unique_ptr<index_base>(size_t, size_t, size_t)>;
-using table_type = std::map<
-    std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>,
-    constructor_function>;
-static const table_type dispatch_table;
-
-using uri_constructor_function = std::function<std::unique_ptr<index_base>(
-    const tiledb::Context&, const std::string&)>;
-using uri_table_type = std::map<
-    std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>,
-    uri_constructor_function>;
-static const uri_table_type uri_dispatch_table;
-
-size_t dimension_ = 0;
-size_t l_build_ = 100;
-size_t r_max_degree_ = 64;
-tiledb_datatype_t feature_datatype_{TILEDB_ANY};
-tiledb_datatype_t id_datatype_{TILEDB_ANY};
-tiledb_datatype_t adjacency_row_index_datatype_{TILEDB_ANY};
-std::unique_ptr<index_base> index_;
-}
-;
 
 const IndexVamana::table_type IndexVamana::dispatch_table = {
     {{TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT32},
