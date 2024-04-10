@@ -578,11 +578,23 @@ class tdbPartitionedMatrix
         status = query.query_status();
 
         auto num_results = query.result_buffer_elements()[attr_name].second;
+        if (num_results == 0) {
+          throw std::runtime_error(
+              "Read error: Got empty results while expecting to retrieve more "
+              "values.");
+        }
         offset += num_results;
-      } while (status == tiledb::Query::Status::INCOMPLETE);
-      // Handle error
-      if (status == tiledb::Query::Status::FAILED) {
-        throw std::runtime_error("Error in reading");
+      } while (status == tiledb::Query::Status::INCOMPLETE &&
+               offset < total_size);
+      // Handle errors
+      if (status == tiledb::Query::Status::COMPLETE && offset != total_size) {
+        throw std::runtime_error(
+            "Read error: Read status COMPLETE but result size was different "
+            "than expected: " +
+            std::to_string(offset) + " != " + std::to_string(total_size));
+      }
+      if (status != tiledb::Query::Status::COMPLETE) {
+        throw std::runtime_error("Read error: Query status not COMPLETE");
       }
       _memory_data.insert_entry(tdb_func__, col_count * dimension * sizeof(T));
     }
