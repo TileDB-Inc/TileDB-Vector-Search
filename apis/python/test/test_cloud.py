@@ -196,6 +196,7 @@ class CloudTests(unittest.TestCase):
             index_uri=index_uri,
             expected_training_sample_size=training_sample_size,
             expected_dimensions=queries.shape[1],
+            config=tiledb.cloud.Config().dict(),
         )
 
         _, result_i = index.query(queries, k=k, nprobe=nprobe)
