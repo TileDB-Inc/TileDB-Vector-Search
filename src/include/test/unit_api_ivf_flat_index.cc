@@ -331,7 +331,8 @@ TEST_CASE(
 //   size_t dimensions = 3;
 
 //   std::string api_ivf_flat_index_uri =
-//       (std::filesystem::temp_directory_path() / "api_ivf_flat_index").string();
+//       (std::filesystem::temp_directory_path() /
+//       "api_ivf_flat_index").string();
 //   tiledb::VFS vfs(ctx);
 //   if (vfs.is_dir(api_ivf_flat_index_uri)) {
 //     vfs.remove_dir(api_ivf_flat_index_uri);
