@@ -180,6 +180,12 @@ TEST_CASE(
   CHECK(a.feature_type() == b.feature_type());
   CHECK(a.id_type() == b.id_type());
   CHECK(a.px_type() == b.px_type());
+
+  // Now make sure if we try to write it again with a different storage_version,
+  // we throw.
+  CHECK_THROWS_WITH(
+      b.write_index(ctx, api_ivf_flat_index_uri, "0.2"),
+      "Version mismatch. Requested 0.2 but found " + current_storage_version);
 }
 
 TEST_CASE(
@@ -319,62 +325,3 @@ TEST_CASE(
     }
   }
 }
-
-// TODO(paris): Fix timeout bug on Windows and re-enable.
-// TEST_CASE("api_ivf_flat_index: storage_version", "[api_ivf_flat_index]") {
-//   auto ctx = tiledb::Context{};
-//   using feature_type_type = uint8_t;
-//   using id_type_type = uint32_t;
-//   auto feature_type = "uint8";
-//   auto id_type = "uint32";
-//   auto px_type = "uint32";
-//   size_t dimensions = 3;
-
-//   std::string api_ivf_flat_index_uri =
-//       (std::filesystem::temp_directory_path() /
-//       "api_ivf_flat_index").string();
-//   tiledb::VFS vfs(ctx);
-//   if (vfs.is_dir(api_ivf_flat_index_uri)) {
-//     vfs.remove_dir(api_ivf_flat_index_uri);
-//   }
-
-//   {
-//     // First we create the index with a storage_version.
-//     auto index = IndexIVFFlat(std::make_optional<IndexOptions>(
-//         {{"feature_type", feature_type},
-//          {"id_type", id_type},
-//          {"px_type", px_type}}));
-
-//     size_t num_vectors = 0;
-//     auto empty_training_vector_array =
-//         FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
-//     index.train(empty_training_vector_array);
-//     index.add(empty_training_vector_array);
-//     index.write_index(ctx, api_ivf_flat_index_uri, "0.3");
-
-//     CHECK(index.feature_type_string() == feature_type);
-//     CHECK(index.id_type_string() == id_type);
-//     CHECK(index.px_type_string() == px_type);
-//   }
-
-//   {
-//     // Now make sure if we try to write it again with a different
-//     // storage_version, we throw.
-//     auto index = IndexIVFFlat(ctx, api_ivf_flat_index_uri);
-//     auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
-//         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {10, 11, 12, 13}};
-
-//     auto training_vector_array = FeatureVectorArray(training);
-//     index.train(training_vector_array);
-//     index.add(training_vector_array);
-
-//     // Throw with the wrong version.
-//     CHECK_THROWS_WITH(
-//         index.write_index(ctx, api_ivf_flat_index_uri, "0.4"),
-//         "Version mismatch. Requested 0.4 but found 0.3");
-//     // Succeed without a version.
-//     index.write_index(ctx, api_ivf_flat_index_uri);
-//     // Succeed with the same version.
-//     index.write_index(ctx, api_ivf_flat_index_uri, "0.3");
-//   }
-// }
