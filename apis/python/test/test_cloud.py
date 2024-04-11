@@ -59,7 +59,9 @@ class CloudTests(unittest.TestCase):
             mode=Mode.BATCH,
         )
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
-        index = vs.flat_index.FlatIndex(uri=tiledb_index_uri)
+        index = vs.flat_index.FlatIndex(
+            uri=tiledb_index_uri, config=tiledb.cloud.Config().dict()
+        )
 
         _, result_i = index.query(queries, k=k)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
@@ -92,7 +94,10 @@ class CloudTests(unittest.TestCase):
         )
 
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
-        index = vs.ivf_flat_index.IVFFlatIndex(uri=tiledb_index_uri)
+        index = vs.ivf_flat_index.IVFFlatIndex(
+            uri=tiledb_index_uri,
+            config=tiledb.cloud.Config().dict(),
+        )
 
         _, result_i = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
@@ -184,10 +189,7 @@ class CloudTests(unittest.TestCase):
             training_sample_size=training_sample_size,
             max_sampling_tasks=max_sampling_tasks,
             config=tiledb.cloud.Config().dict(),
-            # TODO Re-enable.
-            #  This is temporarily disabled due to an incompatibility of new ingestion code and previous
-            #  UDF library releases.
-            # mode=Mode.BATCH,
+            mode=Mode.BATCH,
         )
 
         check_training_input_vectors(
