@@ -348,7 +348,7 @@ TEST_CASE("api_ivf_flat_index: storage_version", "[api_ivf_flat_index]") {
         FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
     index.train(empty_training_vector_array);
     index.add(empty_training_vector_array);
-    index.write_index(ctx, index_uri, "0.3");
+    index.write_index(ctx, api_ivf_flat_index_uri, "0.3");
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
@@ -359,7 +359,7 @@ TEST_CASE("api_ivf_flat_index: storage_version", "[api_ivf_flat_index]") {
   // {
   //   // Now make sure if we try to write it again with a different
   //   // storage_version, we throw.
-  //   auto index = IndexIVFFlat(ctx, index_uri);
+  //   auto index = IndexIVFFlat(ctx, api_ivf_flat_index_uri);
   //   auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
   //       {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {10, 11, 12, 13}};
 
@@ -369,11 +369,11 @@ TEST_CASE("api_ivf_flat_index: storage_version", "[api_ivf_flat_index]") {
 
   //   // Throw with the wrong version.
   //   CHECK_THROWS_WITH(
-  //       index.write_index(ctx, index_uri, "0.4"),
+  //       index.write_index(ctx, api_ivf_flat_index_uri, "0.4"),
   //       "Version mismatch. Requested 0.4 but found 0.3");
   //   // Succeed without a version.
-  //   index.write_index(ctx, index_uri);
+  //   index.write_index(ctx, api_ivf_flat_index_uri);
   //   // Succeed with the same version.
-  //   index.write_index(ctx, index_uri, "0.3");
+  //   index.write_index(ctx, api_ivf_flat_index_uri, "0.3");
   // }
 }
