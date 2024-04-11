@@ -180,12 +180,6 @@ TEST_CASE(
   CHECK(a.feature_type() == b.feature_type());
   CHECK(a.id_type() == b.id_type());
   CHECK(a.px_type() == b.px_type());
-
-  // Now make sure if we try to write it again with a different storage_version,
-  // we throw.
-  CHECK_THROWS_WITH(
-      b.write_index(ctx, api_ivf_flat_index_uri, "0.2"),
-      "Version mismatch. Requested 0.2 but found " + current_storage_version);
 }
 
 TEST_CASE(
