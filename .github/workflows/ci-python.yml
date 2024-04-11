@@ -38,7 +38,7 @@ jobs:
           pip install -r test/ipynb/requirements.txt
           pytest --nbmake test/ipynb
         env:
-          TILEDB_REST_TOKEN: ${{ secrets.TILEDB_CLOUD_HELPER_VAR }}
+          TILEDB_CLOUD_HELPER_VAR: ${{ secrets.TILEDB_CLOUD_HELPER_VAR }}
         shell: bash -el {0}
       - name: Check tiledb-vector-search version
         run: |

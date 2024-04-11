@@ -18,9 +18,10 @@ class CloudTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        if not os.getenv("TILEDB_REST_TOKEN"):
-            raise ValueError("TILEDB_REST_TOKEN not set")
-        tiledb.cloud.login(token=os.getenv("TILEDB_REST_TOKEN"))
+        token = os.getenv("TILEDB_REST_TOKEN")
+        if os.getenv("TILEDB_CLOUD_HELPER_VAR"):
+            token = os.getenv("TILEDB_CLOUD_HELPER_VAR")
+        tiledb.cloud.login(token=token)
         namespace, storage_path, _ = groups._default_ns_path_cred()
         storage_path = storage_path.replace("//", "/").replace("/", "//", 1)
         rand_name = random_name("vector_search")
