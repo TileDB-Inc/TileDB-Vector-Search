@@ -1037,12 +1037,27 @@ class ivf_pq_index {
    * query also supports out of core operation, meaning that only a subset of
    * the necessary partitions are loaded into memory at any one time.  The
    * query is applied to each subset until all of the necessary partitions to
-   * satisfy the query have been read in . The number of partitions to be held
+   * satisfy the query have been read in. The number of partitions to be held
    * in memory is controlled by an upper bound parameter that the user can set.
    * The upper bound limits the total number of vectors that will he held in
    * memory as the partitions are loaded.  Only complete partitions are loaded,
    * so the actual number of vectors in memory at any one time will generally
    * be less than the upper bound.
+   *
+   * @note Currently we have implemented two queries, `query_infinite_ram` and
+   * `query_finite_ram`.  These both use the asymmetric distance function.
+   * Meaning they pass the uncompressed query vectors to the query function,
+   * along with the asymmetric distance functor.  With the asymmetric distance
+   * function, the query is kept uncompressed and the target is uncompressed
+   * on the fly as the distance is computed.  This is more expensive than
+   *computing a symmetric distance, which would only require looking up the
+   *distance in a lookup table.  However, with a query using symmetric distance,
+   *the query vectors would need to be compressed before the query is made,
+   *which can be potentially quite expensive.
+   *
+   * @todo Implement variants of the query functions that use symmetric distance
+   * (take care to evaluate performace / accuracy tradeoffs for `float` and
+   *`uint8_t` feature vectors -- and do so after adding SIMD support).
    *
    * @todo Add vq and dist queries (should dist be its own index?)
    * @todo Order queries so that partitions are queried in order
@@ -1060,7 +1075,7 @@ class ivf_pq_index {
    * query.
    *
    * @tparam Q Type of query vectors.
-   * @param query_vectors Array of vectors to query.
+   * @param query_vectors Array of (uncompressed) vectors to query.
    * @param k_nn Number of nearest neighbors to return.
    * @param nprobe Number of centroids to search.
    *
@@ -1102,18 +1117,14 @@ class ivf_pq_index {
    * See the documentation for that function in detail/ivf/qv.h
    * for more details.
    *
-   * @param query_vectors Array of vectors to query.
+   * @tparam Q Type of query vectors.  Must meet requirements of
+   * `feature_vector_array`
+   * @param query_vectors Array of (uncompressed) vectors to query.
    * @param k_nn Number of nearest neighbors to return.
    * @param nprobe Number of centroids to search.
    *
    * @return A tuple containing a matrix of nearest neighbors and a matrix
    * of the corresponding distances.
-   *
-   * @tparam Q
-   * @param query_vectors
-   * @param k_nn
-   * @param nprobe
-   * @return
    */
   template <feature_vector_array Q>
   auto query_finite_ram(
@@ -1141,11 +1152,8 @@ class ivf_pq_index {
   }
 
   /***************************************************************************
-   * Getters (copilot weirded me out again -- it suggested "Getters" based
-   * only on the two character "/ *" that I typed to begin a comment,
-   * and with the two functions below.)
-   * Note that we don't have a `num_vectors` because it isn't clear what
-   * that means for a partitioned (possibly out-of-core) index.
+   * Getters. Note that we don't have a `num_vectors` because it isn't clear
+   *what that means for a partitioned (possibly out-of-core) index.
    ***************************************************************************/
   auto dimension() const {
     return dimension_;

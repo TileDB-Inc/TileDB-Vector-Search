@@ -47,16 +47,16 @@
     {"0.3",
      {
          // @todo Should these be kept consistent with ivf_flat?
-         {"cluster_centroids_array_name", "cluster_centroids"},
-         {"flat_ivf_centroids_array_name", "flat_ivf_centroids"},
-         {"pq_ivf_centroids_array_name", "pq_ivf_centroids"},
+         {"cluster_centroids_array_name", "pq_cluster_centroids"},
+         {"flat_ivf_centroids_array_name", "uncompressed_centroids"},
+         {"pq_ivf_centroids_array_name", "partition_centroids"},
 
-         {"ivf_index_array_name", "ivf_index"},
-         {"ivf_ids_array_name", "ivf_vector_ids"},
+         {"ivf_index_array_name", "partition_indexes"},
+         {"ivf_ids_array_name", "shuffled_vector_ids"},
 
-         {"pq_ivf_vectors_array_name", "pq_ivf_vectors"},
+         {"pq_ivf_vectors_array_name", "shuffled_vectors"},
 
-         {"distance_tables_array_name", "distance_tables"},
+         {"distance_tables_array_name", "pq_symmetric_distance_tables"},
      }}};
 
 template <class Index>
