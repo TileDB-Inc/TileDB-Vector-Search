@@ -666,7 +666,8 @@ class flatpq_index {
 
       auto distance_table_uri = group_uri + "/distance_table_" + number;
       write_matrix(ctx, distance_tables_[subspace], distance_table_uri);
-      tiledb_helpers::add_to_group(write_group, distance_table_uri, "distance_table_" + number);
+      tiledb_helpers::add_to_group(
+          write_group, distance_table_uri, "distance_table_" + number);
     }
     write_group.close();
     return true;

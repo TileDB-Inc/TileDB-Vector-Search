@@ -90,7 +90,7 @@ constexpr auto type_to_tiledb_v = tiledb::impl::type_to_tiledb<T>::tiledb_type;
   if (str == "uint64") {
     return TILEDB_UINT64;
   }
-  throw std::runtime_error("Unsupported datatype: "  + str);
+  throw std::runtime_error("Unsupported datatype: " + str);
 }
 
 // cf type_to_str(tiledb_datatype_t type) in tiledb/type.h

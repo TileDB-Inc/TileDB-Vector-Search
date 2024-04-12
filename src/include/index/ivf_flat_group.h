@@ -197,7 +197,8 @@ class ivf_flat_index_group
         this->get_dimension(),
         default_tile_extent,
         default_compression);
-    tiledb_helpers::add_to_group(write_group, centroids_uri(), centroids_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, centroids_uri(), centroids_array_name());
 
     create_empty_for_matrix<
         typename index_type::feature_type,
@@ -221,7 +222,8 @@ class ivf_flat_index_group
         default_domain,
         default_tile_extent,
         default_compression);
-    tiledb_helpers::add_to_group(write_group, indices_uri(), indices_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, indices_uri(), indices_array_name());
 
     // Store the metadata if all of the arrays were created successfully
     metadata_.store_metadata(write_group);
