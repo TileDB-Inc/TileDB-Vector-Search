@@ -395,19 +395,23 @@ class Index:
         """
         from tiledb.vector_search.ingestion import ingest
 
-        fragments_info = tiledb.array_fragments(
-            self.updates_array_uri, ctx=tiledb.Ctx(self.config)
-        )
-        max_timestamp = self.base_array_timestamp
-        for fragment_info in fragments_info:
-            if fragment_info.timestamp_range[1] > max_timestamp:
-                max_timestamp = fragment_info.timestamp_range[1]
-        max_timestamp += 1
-        conf = tiledb.Config(self.config)
-        conf["sm.consolidation.timestamp_start"] = self.latest_ingestion_timestamp
-        conf["sm.consolidation.timestamp_end"] = max_timestamp
-        tiledb.consolidate(self.updates_array_uri, config=conf)
-        tiledb.vacuum(self.updates_array_uri, config=conf)
+        # Consolidate all updates since the previous ingestion_timestamp.
+        # This is a performance optimization. We skip this for remote arrays as consolidation
+        # of remote arrays currently only supports modes `fragment_meta, commits, metadata`.
+        if not self.updates_array_uri.startswith("tiledb://"):
+            fragments_info = tiledb.array_fragments(
+                self.updates_array_uri, ctx=tiledb.Ctx(self.config)
+            )
+            max_timestamp = self.base_array_timestamp
+            for fragment_info in fragments_info:
+                if fragment_info.timestamp_range[1] > max_timestamp:
+                    max_timestamp = fragment_info.timestamp_range[1]
+            max_timestamp += 1
+            conf = tiledb.Config(self.config)
+            conf["sm.consolidation.timestamp_start"] = self.latest_ingestion_timestamp
+            conf["sm.consolidation.timestamp_end"] = max_timestamp
+            tiledb.consolidate(self.updates_array_uri, config=conf)
+            tiledb.vacuum(self.updates_array_uri, config=conf)
 
         # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
         should_pass_copy_centroids_uri = (
