@@ -1,5 +1,5 @@
 /**
- * @file   vamana_group.h
+ * @file   vamana_index.h
  *
  * @section LICENSE
  *
