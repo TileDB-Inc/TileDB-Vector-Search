@@ -737,14 +737,18 @@ class ivf_flat_index {
    * all of it to a TileDB group.  Since we have all of it in memory,
    * we write from the PartitionedMatrix base class.
    *
-   * @param group_uri
-   * @return bool indicating success or failure
+   * @param group_uri The URI of the TileDB group where the index will be saved
+   * @param storage_version The storage version to use. If empty, use the most
+   * defult version.
+   * @return Whether the write was successful
    */
   auto write_index(
-      const tiledb::Context& ctx, const std::string& group_uri) const {
+      const tiledb::Context& ctx,
+      const std::string& group_uri,
+      const std::string& storage_version = "") const {
     // Write the group
-    auto write_group =
-        ivf_flat_index_group(*this, ctx, group_uri, TILEDB_WRITE, timestamp_);
+    auto write_group = ivf_flat_index_group(
+        *this, ctx, group_uri, TILEDB_WRITE, timestamp_, storage_version);
 
     write_group.set_dimension(dimension_);
 
