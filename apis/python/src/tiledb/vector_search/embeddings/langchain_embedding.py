@@ -8,7 +8,11 @@ import numpy as np
 # class LangChainEmbedding(ObjectEmbedding):
 class LangChainEmbedding:
     """
-    Embedding functions from `langchain.embeddings` package.
+    Embedding functions from Langchain.
+
+    This attempts to import the embedding_class from the following modules:
+    - langchain_openai
+    - langchain.embeddings
     """
 
     def __init__(
@@ -16,19 +20,16 @@ class LangChainEmbedding:
         dimensions: int,
         embedding_class: str = "OpenAIEmbeddings",
         embedding_kwargs: Optional[Dict] = None,
-        use_langchain_openai: bool = True,
     ):
         self.dim_num = dimensions
         self.embedding_class = embedding_class
         self.embedding_kwargs = embedding_kwargs
-        self.use_langchain_openai = use_langchain_openai
 
     def init_kwargs(self) -> Dict:
         return {
             "dimensions": self.dim_num,
             "embedding_class": self.embedding_class,
             "embedding_kwargs": self.embedding_kwargs,
-            "use_langchain_openai": self.use_langchain_openai,
         }
 
     def dimensions(self) -> int:
@@ -40,12 +41,14 @@ class LangChainEmbedding:
     def load(self) -> None:
         import importlib
 
-        if self.use_langchain_openai:
+        try:
             embeddings_module = importlib.import_module("langchain_openai")
-        else:
+            embedding_class_ = getattr(embeddings_module, self.embedding_class)
+            self.embedding = embedding_class_(**self.embedding_kwargs)
+        except ImportError:
             embeddings_module = importlib.import_module("langchain.embeddings")
-        embedding_class_ = getattr(embeddings_module, self.embedding_class)
-        self.embedding = embedding_class_(**self.embedding_kwargs)
+            embedding_class_ = getattr(embeddings_module, self.embedding_class)
+            self.embedding = embedding_class_(**self.embedding_kwargs)
 
     def embed(self, objects: OrderedDict, metadata: OrderedDict) -> np.ndarray:
         return np.array(
