@@ -26,6 +26,7 @@ class CloudTests(unittest.TestCase):
         rand_name = random_name("vector_search")
         test_path = f"tiledb://{namespace}/{storage_path}/{rand_name}"
         cls.flat_index_uri = f"{test_path}/test_flat_array"
+        cls.vamana_index_uri = f"{test_path}/vamana_array"
         cls.ivf_flat_index_uri = f"{test_path}/test_ivf_flat_array"
         cls.ivf_flat_random_sampling_index_uri = (
             f"{test_path}/test_ivf_flat_random_sampling_array"
@@ -34,6 +35,7 @@ class CloudTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         vs.Index.delete_index(uri=cls.flat_index_uri, config=tiledb.cloud.Config())
+        vs.Index.delete_index(uri=cls.vamana_index_uri, config=tiledb.cloud.Config())
         vs.Index.delete_index(uri=cls.ivf_flat_index_uri, config=tiledb.cloud.Config())
         vs.Index.delete_index(
             uri=cls.ivf_flat_random_sampling_index_uri, config=tiledb.cloud.Config()
@@ -62,6 +64,106 @@ class CloudTests(unittest.TestCase):
 
         _, result_i = index.query(queries, k=k)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        index.delete(external_id=42)
+        _, result_i = index.query(queries, k=k)
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+    
+    def test_cloud_vamana2(self):
+        ctx = tiledb.Ctx()
+        vfs = tiledb.VFS(ctx=ctx)
+
+        # Create and open readable handle 
+        source_uri = "tiledb://TileDB-Inc/sift_10k"
+        fh = vfs.open(source_uri, "rb")
+        print(vfs.read(fh, 10, 10))
+
+    def test_cloud_vamana(self):
+        source_uri = "tiledb://TileDB-Inc/sift_10k"
+        queries_uri = siftsmall_query_file
+        gt_uri = siftsmall_groundtruth_file
+        index_uri = CloudTests.vamana_index_uri
+        k = 100
+        nqueries = 100
+
+        queries = load_fvecs(queries_uri)
+        gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
+
+        index = vs.ingest(
+            index_type="VAMANA",
+            index_uri=index_uri,
+            source_uri=source_uri,
+            input_vectors_per_work_item=5000,
+            config=tiledb.cloud.Config().dict(),
+            # TODO(paris): Fix and then change to Mode.BATCH.
+            mode=Mode.LOCAL,
+        )
+
+        tiledb_index_uri = groups.info(index_uri).tiledb_uri
+        index = vs.vamana_index.VamanaIndex(uri=tiledb_index_uri)
+
+        _, result_i = index.query(queries, k=k)
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        _, result_i = index.query(
+            queries,
+            k=k,
+            # TODO(paris): Fix and then change to Mode.REALTIME.
+            mode=Mode.LOCAL,
+            num_partitions=2,
+            resource_class="standard",
+        )
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        _, result_i = index.query(
+            queries, k=k, mode=Mode.LOCAL, num_partitions=2
+        )
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        # We now will test for invalid scenarios when setting the query() resources.
+        resources = {"cpu": "9", "memory": "12Gi", "gpu": 0}
+
+        # Cannot pass resource_class or resources to LOCAL mode or to no mode.
+        with self.assertRaises(TypeError):
+            index.query(
+                queries, k=k, mode=Mode.LOCAL, resource_class="large"
+            )
+        with self.assertRaises(TypeError):
+            index.query(
+                queries, k=k, mode=Mode.LOCAL, resources=resources
+            )
+        with self.assertRaises(TypeError):
+            index.query(queries, k=k, resource_class="large")
+        with self.assertRaises(TypeError):
+            index.query(queries, k=k,  resources=resources)
+
+        # TODO(paris): Fix Mode.REALTIME and then re-enable.
+        # # Cannot pass resources to REALTIME.
+        # with self.assertRaises(TypeError):
+        #     index.query(
+        #         queries, k=k, mode=Mode.REALTIME, resources=resources
+        #     )
+
+        # TODO(paris): Fix Mode.REALTIME and then re-enable.
+        # # Cannot pass both resource_class and resources.
+        # with self.assertRaises(TypeError):
+        #     index.query(
+        #         queries,
+        #         k=k,
+        #         nprobe=nprobe,
+        #         mode=Mode.REALTIME,
+        #         resource_class="large",
+        #         resources=resources,
+        #     )
+        # with self.assertRaises(TypeError):
+        #     index.query(
+        #         queries,
+        #         k=k,
+        #         nprobe=nprobe,
+        #         mode=Mode.BATCH,
+        #         resource_class="large",
+        #         resources=resources,
+        #     )
 
         index.delete(external_id=42)
         _, result_i = index.query(queries, k=k)

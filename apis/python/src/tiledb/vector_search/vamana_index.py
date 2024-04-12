@@ -8,6 +8,7 @@ from tiledb.vector_search import index
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import storage_formats
+from tiledb.vector_search.storage_formats import validate_storage_version
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 INDEX_TYPE = "VAMANA"
@@ -107,6 +108,7 @@ def create(
     **kwargs,
 ) -> VamanaIndex:
     warnings.warn("The Vamana index is not yet supported, please use with caution.")
+    validate_storage_version(storage_version)
     ctx = vspy.Ctx(config)
     index = vspy.IndexVamana(
         feature_type=np.dtype(vector_type).name,

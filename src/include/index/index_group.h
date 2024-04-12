@@ -182,8 +182,7 @@ class base_index_group {
    * @param ctx
    */
   void init_for_open(const tiledb::Config& cfg) {
-    tiledb::VFS vfs(cached_ctx_);
-    if (!vfs.is_dir(group_uri_)) {
+    if (!exists(cached_ctx_)) {
       throw std::runtime_error(
           "Group uri " + std::string(group_uri_) + " does not exist.");
     }
@@ -264,9 +263,7 @@ class base_index_group {
    * @param version
    */
   void open_for_write(const tiledb::Config& cfg) {
-    tiledb::VFS vfs(cached_ctx_);
-
-    if (vfs.is_dir(group_uri_)) {
+    if (exists(cached_ctx_)) {
       /** Load the current group metadata */
       init_for_open(cfg);
       if (index_timestamp_ < metadata_.ingestion_timestamps_.back()) {

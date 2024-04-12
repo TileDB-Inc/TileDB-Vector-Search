@@ -36,6 +36,7 @@
 
 #include <tiledb/array.h>
 #include <tiledb/tiledb>
+#include "tiledb/group_experimental.h"
 #include "stats.h"
 
 namespace tiledb_helpers {
@@ -80,6 +81,87 @@ inline void submit_query(
   StatsCollectionScope stats_scope(uri, function_name, "submit_query");
   query.submit();
 }
+
+// bool delete_group(
+//     const tiledb::Config& cfg,
+//     const tiledb::Context& ctx,
+//     const std::string& uri) {
+////    tiledb::Object::remove(ctx, uri);
+//    try {
+//      tiledb::Group group(ctx, uri, TILEDB_MODIFY_EXCLUSIVE, cfg);
+//      group.delete_group(uri, true);
+//      group.close();
+//      return true;
+//    } catch (const std::exception& e) {
+//        std::cout << e.what() << std::endl;
+//      return false;
+//    }
+// }
+
+// Adds an object to a group. Automatically infers whether to use a relative path or absolute path.
+// NOTE(paris): We use absolute paths for tileDB URIs because of a bug tracked in SC39197, once
+// that is fixed everything can use relative paths.
+ inline void add_to_group(tiledb::Group &group, const std::string &uri, const std::string &name) {
+    if (uri.find("tiledb://") == 0) {
+      group.add_member(uri, false, name);
+    } else {
+      group.add_member(name, true, name);
+    }
+ }
+
+// bool uri_exists(
+//     const tiledb::Config& cfg,
+//     const tiledb::Context& ctx,
+//     const std::string& uri) {
+//   try {
+//     tiledb::Group group(ctx, uri, TILEDB_READ, cfg);
+//     return true;
+//   } catch (const std::exception& e) {
+//     return false;
+//   }
+// }
+
+// bool group_exists(const tiledb::Config& cfg, const tiledb::Context &ctx,
+// const std::string& uri) {
+////    tiledb::VFS vfs(ctx);
+////    if (vfs.is_dir(uri)) {
+////        return true;
+////    }
+////    return false;
+//
+//    // If it starts with tiledb://, then it is a TileDB array we we return
+//    false.
+////    std::cout << "[tdb_io@uri_exists] uri: " << uri << std::endl;
+//    bool is_tdb_array = true;
+//
+//    auto obj_type = tiledb::Object::object(ctx, uri).type();
+//    std::cout << (int)obj_type << std::endl;
+//    return false;
+//    if (obj_type == tiledb::Object::Type::Group) {
+//        is_tdb_array = false;
+//    }
+//
+//
+//    if (uri.find("tiledb://") == 0) {
+//      std::cout << "  this is a tiledb uri" << std::endl;
+//        try {
+//          std::cout << "  it exists" << std::endl;
+//            tiledb::Group group(ctx, uri, TILEDB_READ, cfg);
+//            return true;
+//        } catch (const std::exception& e) {
+//          std::cout << "  it does not exist" << std::endl;
+//            return false;
+////            std::cout << e.what() << std::endl;
+////            // This indicates that this is a tiledb URI and the group does
+///not exist at this URI. /            if (std::string(e.what()).find("does not
+///exist") != std::string::npos) { /                return false; /            }
+//        }
+//    }
+//    // At this point we know that it is not a TileDB array, so we can use VFS.
+//    tiledb::VFS vfs(ctx);
+//    std::cout << "  this is vfs uri does it exist?" << vfs.is_dir(uri) <<
+//    std::endl; return vfs.is_dir(uri);
+//}
 
 }  // namespace tiledb_helpers
 
