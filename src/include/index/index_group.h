@@ -107,37 +107,40 @@ class base_index_group {
 
   // Set of the names that are used in the group for this version
   std::unordered_set<std::string> valid_array_names_;
-  std::unordered_set<std::string> valid_key_names_;
+  std::unordered_set<std::string> valid_array_keys_;
 
-  // Set of names of arrays that are part of the group.  They either have
-  // been read from the group or written to the group.
-  std::unordered_set<std::string> active_array_names_;
+  // // Set of names of arrays that are part of the group.  They either have
+  // // been read from the group or written to the group.
+  // std::unordered_set<std::string> active_array_names_;
 
-  std::unordered_map<std::string, std::string> array_name_map_;
+  std::unordered_map<std::string, std::string> array_key_to_array_name_;
+
+  // Maps from the array name (not the key) to the URI of the array. Should be used to get array URI's because the group_uri_ may be of the form `tiledb://foo/edc4656a-3f45-43a1-8ee5-fa692a015c53` which cannot have the array name added as a suffix.
+  std::unordered_map<std::string, std::string> array_name_to_uri_;
 
   /** Check validity of key name */
-  constexpr bool is_valid_key_name(const std::string& key_name) const noexcept {
-    return valid_key_names_.contains(key_name);
-  }
+  // constexpr bool is_valid_key_name(const std::string& key_name) const noexcept {
+  //   return valid_array_keys_.contains(key_name);
+  // }
 
-  /** Check validity of array name */
-  constexpr bool is_valid_array_name(
-      const std::string& array_name) const noexcept {
-    return valid_array_names_.contains(array_name);
-  }
+  // /** Check validity of array name */
+  // constexpr bool is_valid_array_name(
+  //     const std::string& array_name) const noexcept {
+  //   return valid_array_names_.contains(array_name);
+  // }
 
-  /** Check whether the array has been put into this group */
-  constexpr bool is_active_array_name(
-      const std::string& array_name) const noexcept {
-    return active_array_names_.contains(array_name);
-  }
+  // /** Check whether the array has been put into this group */
+  // constexpr bool is_active_array_name(
+  //     const std::string& array_name) const noexcept {
+  //   return active_array_names_.contains(array_name);
+  // }
 
   /** Lookup an array name given an array key */
   constexpr auto array_key_to_array_name(const std::string& array_key) const {
-    if (!is_valid_key_name(array_key)) {
+    if (!valid_array_keys_.contains(array_key)) {
       throw std::runtime_error("Invalid array key: " + array_key);
     }
-    return array_key_to_array_name_from_map(array_name_map_, array_key);
+    return array_key_to_array_name_from_map(array_key_to_array_name_, array_key);
   };
 
   /** Create the set of valid key names and array names */
@@ -145,32 +148,21 @@ class base_index_group {
     if (empty(version_)) {
       throw std::runtime_error("Version not set.");
     }
+    std::cout << "[index_group@init_valid_array_names]" << std::endl;
     for (auto&& [array_key, array_name] : storage_formats[version_]) {
-      valid_key_names_.insert(array_key);
+      valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
-      array_name_map_[array_key] = array_name;
+      array_key_to_array_name_[array_key] = array_name;
+      array_name_to_uri_[array_name] = array_name_to_uri(group_uri_, array_name);
+      std::cout << "[index_group@init_valid_array_names] array_name: " << array_name << " uri: " << array_name_to_uri_[array_name] << std::endl;
+        // (std::filesystem::path{group_uri_} / std::filesystem::path{array_key_to_array_name(array_key)}).string();
     }
     static_cast<group_type*>(this)->append_valid_array_names_impl();
-  }
 
-  /**
-   * @brief Add an array to the group.
-   *
-   * @param array_name
-   *
-   * @todo Could have type of array set here instead of by Index.  Might be
-   * better to have it set in conjunction with array being set?
-   */
-  auto init_array_for_create(const std::string& array_name) {
-    if (!is_valid_array_name(array_name)) {
-      throw std::runtime_error(
-          "Invalid array name in add_array: " + array_name);
+    for (const auto &[key, val]: array_name_to_uri_) {
+      std::cout << "    " << key << " " << val << std::endl;
     }
-    active_array_names_.insert(array_name);
-
-    std::filesystem::path uri = array_name_to_uri(array_name);
-
-    return uri;
+    std::cout << "[index_group@init_valid_array_names] done" << std::endl;
   }
 
   /**
@@ -182,17 +174,21 @@ class base_index_group {
    * @param ctx
    */
   void init_for_open(const tiledb::Config& cfg) {
+    std::cout << "[index_group@init_for_open] group_uri_: " << group_uri_ << std::endl;
     if (!exists(cached_ctx_)) {
+      std::cout << "[index_group@init_for_open] does not exist" << std::endl;
       throw std::runtime_error(
           "Group uri " + std::string(group_uri_) + " does not exist.");
     }
+    std::cout << "[index_group@init_for_open] exists" << std::endl;
     auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
-
+    std::cout << "[index_group@init_for_open] read_group.dump()" << read_group.dump(false) << std::endl;
     // Load the metadata and check the version.  We need to do this before
     // we can check the array names.
-
+    std::cout << "[index_group@init_for_open] metadata_.load_metadata(read_group);"  << std::endl;
     // @todo FIXME This needs to be done in derived class
     metadata_.load_metadata(read_group);
+    std::cout << "[index_group@init_for_open] metadata_.load_metadata(read_group); done"  << std::endl;
     if (!empty(version_) && metadata_.storage_version_ != version_) {
       throw std::runtime_error(
           "Version mismatch.  Requested " + version_ + " but found " +
@@ -200,8 +196,9 @@ class base_index_group {
     } else if (empty(version_)) {
       version_ = metadata_.storage_version_;
     }
-
+    std::cout << "[index_group@init_for_open] init_valid_array_names();"  << std::endl;
     init_valid_array_names();
+    std::cout << "[index_group@init_for_open] init_valid_array_names(); done"  << std::endl;
 
     // Get the active array names
     auto count = read_group.member_count();
@@ -211,16 +208,24 @@ class base_index_group {
       if (!name || name->empty()) {
         throw std::runtime_error("Name is empty.");
       }
-      if (is_valid_array_name(*name)) {
-        active_array_names_.insert(*name);
-      } else {
+      auto uri = member.uri();
+      if (uri.empty()) {
+        throw std::runtime_error("Uri is empty.");
+      }
+      
+      std::cout << "[index_group@init_for_open] name: " << *name << " uri: " << member.uri() << " to_str(): " << member.to_str() << std::endl;
+      if (!valid_array_names_.contains(*name)) {
         throw std::runtime_error(
             "Invalid array name in group: " + std::string(*name));
       }
+
+      array_name_to_uri_[*name] = uri;
     }
+    std::cout << "[index_group@init_for_open] done"  << std::endl;
   }
 
   void open_for_read(const tiledb::Config& cfg) {
+    std::cout << "[index_group@open_for_read]" << std::endl;
     init_for_open(cfg);
 
     if (size(metadata_.ingestion_timestamps_) == 0) {
@@ -263,7 +268,11 @@ class base_index_group {
    * @param version
    */
   void open_for_write(const tiledb::Config& cfg) {
+    std::cout << "[index_group@open_for_write]" << std::endl;
     if (exists(cached_ctx_)) {
+      std::cout << "[index_group@open_for_write] group_uri exists, will load "
+                   "the current metadata"
+                << std::endl;
       /** Load the current group metadata */
       init_for_open(cfg);
       if (index_timestamp_ < metadata_.ingestion_timestamps_.back()) {
@@ -274,6 +283,9 @@ class base_index_group {
         group_timestamp_ = index_timestamp_;
       }
     } else {
+      std::cout << "[index_group@open_for_write] group_uri does not exist, "
+                   "will create a new group"
+                << std::endl;
       /** Create a new group */
       create_default(cfg);
     }
@@ -287,20 +299,34 @@ class base_index_group {
    * @todo Process the "base group" metadata here.
    */
   void create_default(const tiledb::Config& cfg) {
+    std::cout << "[index_group@create_default]" << std::endl;
     static_cast<group_type*>(this)->create_default_impl(cfg);
   }
 
   /** Convert an array name to a uri. */
-  constexpr std::string array_name_to_uri(
-      const std::string& array_name) const noexcept {
-    return array_name_to_uri(group_uri_, array_name);
-  }
+  // constexpr std::string array_name_to_uri(
+  //     const std::string& array_name) const noexcept {
+  //   return array_name_to_uri(group_uri_, array_name);
+  // }
 
   /** Convert an array key to a uri. */
   constexpr std::string array_key_to_uri(const std::string& array_key) const {
-    return (std::filesystem::path{group_uri_} /
-            std::filesystem::path{array_key_to_array_name(array_key)})
-        .string();
+    std::cout << "[index_group@array_key_to_uri] array_key: " << array_key << "=================================" << std::endl;
+    auto name = array_key_to_array_name(array_key);
+    std::cout << "[index_group@array_key_to_uri] name: " << name << std::endl;
+    if (array_name_to_uri_.find(name) == array_name_to_uri_.end()) {
+      throw std::runtime_error("Invalid key when getting the URI: " + array_key + ". Name does not exist: " + name);
+    }
+
+    for (const auto &[key, val]: array_name_to_uri_) {
+      std::cout << "    " << key << " " << val << std::endl;
+    }
+    std::cout << "=================================" << std::endl;
+    return array_name_to_uri_.at(name);
+
+    // return (std::filesystem::path{group_uri_} /
+    //         std::filesystem::path{array_key_to_array_name(array_key)})
+    //     .string();
   }
 
  public:
@@ -343,9 +369,11 @@ class base_index_group {
       , opened_for_(rw) {
     switch (opened_for_) {
       case TILEDB_READ:
+        std::cout << "[base_index_group@ctor] TILEDB_READ" << std::endl;
         open_for_read(cfg);
         break;
       case TILEDB_WRITE:
+        std::cout << "[base_index_group@ctor] TILEDB_WRITE" << std::endl;
         set_dimension(dimension);
         open_for_write(cfg);
         break;
@@ -366,7 +394,10 @@ class base_index_group {
    * @todo Don't use default Config
    */
   ~base_index_group() {
+    std::cout << "[index_group@~base_index_group]" << std::endl;
     if (opened_for_ == TILEDB_WRITE) {
+      std::cout << "[index_group@~base_index_group] will store metadata"
+                << std::endl;
       auto cfg = tiledb::Config();
       auto write_group =
           tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
@@ -427,17 +458,17 @@ class base_index_group {
     return metadata_.base_sizes_;
   }
 
-  auto get_all_active_array_names() {
-    return active_array_names_;
-  }
+  // auto get_all_active_array_names() {
+  //   return active_array_names_;
+  // }
 
-  auto get_all_active_uris() {
-    std::vector<std::string> uris;
-    for (auto&& array_name : active_array_names_) {
-      uris.push_back(array_name_to_uri(array_name));
-    }
-    return uris;
-  }
+  // auto get_all_active_uris() {
+  //   std::vector<std::string> uris;
+  //   for (auto&& array_name : active_array_names_) {
+  //     uris.push_back(array_name_to_uri(array_name));
+  //   }
+  //   return uris;
+  // }
 
   auto get_temp_size() const {
     return metadata_.temp_size_;
@@ -523,10 +554,10 @@ class base_index_group {
     if (valid_array_names_ != rhs.valid_array_names_) {
       return false;
     }
-    if (size(valid_key_names_) != size(rhs.valid_key_names_)) {
+    if (size(valid_array_keys_) != size(rhs.valid_array_keys_)) {
       return false;
     }
-    if (valid_key_names_ != rhs.valid_key_names_) {
+    if (valid_array_keys_ != rhs.valid_array_keys_) {
       return false;
     }
     if (!metadata_.compare_metadata(rhs.metadata_)) {
@@ -559,11 +590,11 @@ class base_index_group {
       }
       std::cout << *name << " " << member.uri() << std::endl;
     }
-    std::cout << "-------------------------------------------------------\n";
-    std::cout << "# Active arrays:" << std::endl;
-    for (auto&& array_name : active_array_names_) {
-      std::cout << array_name << std::endl;
-    }
+    // std::cout << "-------------------------------------------------------\n";
+    // std::cout << "# Active arrays:" << std::endl;
+    // for (auto&& array_name : active_array_names_) {
+    //   std::cout << array_name << std::endl;
+    // }
     std::cout << "-------------------------------------------------------\n";
     std::cout << "# Metadata:" << std::endl;
     std::cout << "-------------------------------------------------------\n";
