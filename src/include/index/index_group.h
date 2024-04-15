@@ -109,10 +109,6 @@ class base_index_group {
   std::unordered_set<std::string> valid_array_names_;
   std::unordered_set<std::string> valid_array_keys_;
 
-  // // Set of names of arrays that are part of the group.  They either have
-  // // been read from the group or written to the group.
-  // std::unordered_set<std::string> active_array_names_;
-
   std::unordered_map<std::string, std::string> array_key_to_array_name_;
 
   // Maps from the array name (not the key) to the URI of the array. Should be
@@ -120,24 +116,6 @@ class base_index_group {
   // `tiledb://foo/edc4656a-3f45-43a1-8ee5-fa692a015c53` which cannot have the
   // array name added as a suffix.
   std::unordered_map<std::string, std::string> array_name_to_uri_;
-
-  /** Check validity of key name */
-  // constexpr bool is_valid_key_name(const std::string& key_name) const
-  // noexcept {
-  //   return valid_array_keys_.contains(key_name);
-  // }
-
-  // /** Check validity of array name */
-  // constexpr bool is_valid_array_name(
-  //     const std::string& array_name) const noexcept {
-  //   return valid_array_names_.contains(array_name);
-  // }
-
-  // /** Check whether the array has been put into this group */
-  // constexpr bool is_active_array_name(
-  //     const std::string& array_name) const noexcept {
-  //   return active_array_names_.contains(array_name);
-  // }
 
   /** Lookup an array name given an array key */
   constexpr auto array_key_to_array_name(const std::string& array_key) const {
@@ -177,8 +155,10 @@ class base_index_group {
           "Group uri " + std::string(group_uri_) + " does not exist.");
     }
     auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
+
     // Load the metadata and check the version.  We need to do this before
     // we can check the array names.
+
     // @todo FIXME This needs to be done in derived class
     metadata_.load_metadata(read_group);
     if (!empty(version_) && metadata_.storage_version_ != version_) {
@@ -188,6 +168,7 @@ class base_index_group {
     } else if (empty(version_)) {
       version_ = metadata_.storage_version_;
     }
+
     init_valid_array_names();
 
     // Get the active array names
