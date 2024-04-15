@@ -174,9 +174,7 @@ class base_index_group {
    * @param ctx
    */
   void init_for_open(const tiledb::Config& cfg) {
-    std::cout << "[index_group@init_for_open] group_uri_: " << group_uri_ << std::endl;
     if (!exists(cached_ctx_)) {
-      std::cout << "[index_group@init_for_open] does not exist" << std::endl;
       throw std::runtime_error(
           "Group uri " + std::string(group_uri_) + " does not exist.");
     }
@@ -191,7 +189,7 @@ class base_index_group {
     std::cout << "[index_group@init_for_open] metadata_.load_metadata(read_group); done"  << std::endl;
     if (!empty(version_) && metadata_.storage_version_ != version_) {
       throw std::runtime_error(
-          "Version mismatch.  Requested " + version_ + " but found " +
+          "Version mismatch. Requested " + version_ + " but found " +
           metadata_.storage_version_);
     } else if (empty(version_)) {
       version_ = metadata_.storage_version_;
@@ -268,11 +266,7 @@ class base_index_group {
    * @param version
    */
   void open_for_write(const tiledb::Config& cfg) {
-    std::cout << "[index_group@open_for_write]" << std::endl;
     if (exists(cached_ctx_)) {
-      std::cout << "[index_group@open_for_write] group_uri exists, will load "
-                   "the current metadata"
-                << std::endl;
       /** Load the current group metadata */
       init_for_open(cfg);
       if (index_timestamp_ < metadata_.ingestion_timestamps_.back()) {
@@ -488,29 +482,11 @@ class base_index_group {
    * Getters for names and uris
    **************************************************************************/
 
-  [[nodiscard]] auto partial_write_array_dir() const {
-    return array_key_to_uri("partial_write_array_dir");
+  [[nodiscard]] auto ids_uri() const {
+    return array_key_to_uri("ids_array_name");
   }
-  [[nodiscard]] auto input_vectors_uri() const {
-    return array_key_to_uri("input_vectors_array_name");
-  }
-  [[nodiscard]] auto external_ids_uri() const {
-    return array_key_to_uri("external_ids_array_name");
-  }
-  [[nodiscard]] auto updates_array_uri() const {
-    return array_key_to_uri("updates_array_name");
-  }
-  [[nodiscard]] auto partial_write_array_name() const {
-    return array_key_to_array_name("partial_write_array_dir");
-  }
-  [[nodiscard]] auto input_vectors_array_name() const {
-    return array_key_to_array_name("input_vectors_array_name");
-  }
-  [[nodiscard]] auto external_ids_array_name() const {
-    return array_key_to_array_name("external_ids_array_name");
-  }
-  [[nodiscard]] auto updates_array_name() const {
-    return array_key_to_array_name("updates_array_name");
+  [[nodiscard]] auto ids_array_name() const {
+    return array_key_to_array_name("ids_array_name");
   }
   [[nodiscard]] const std::reference_wrapper<const tiledb::Context> cached_ctx()
       const {

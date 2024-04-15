@@ -329,10 +329,13 @@ def random_name(name: str) -> str:
 
 
 def check_training_input_vectors(
-    index_uri: str, expected_training_sample_size: int, expected_dimensions: int
+    index_uri: str,
+    expected_training_sample_size: int,
+    expected_dimensions: int,
+    config=None,
 ):
     training_input_vectors_uri = f"{index_uri}/{storage_formats[STORAGE_VERSION]['TRAINING_INPUT_VECTORS_ARRAY_NAME']}"
-    with tiledb.open(training_input_vectors_uri, mode="r") as src_array:
+    with tiledb.open(training_input_vectors_uri, mode="r", config=config) as src_array:
         training_input_vectors = np.transpose(src_array[:, :]["values"])
         assert training_input_vectors.shape[0] == expected_training_sample_size
         assert training_input_vectors.shape[1] == expected_dimensions
