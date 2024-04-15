@@ -160,6 +160,10 @@ class CloudTests(unittest.TestCase):
                 resources=resources,
             )
 
+        index = vs.ivf_flat_index.IVFFlatIndex(
+            uri=index_uri,
+            config=tiledb.cloud.Config().dict(),
+        )
         index.delete(external_id=42)
         _, result_i = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
