@@ -280,12 +280,12 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
 
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_,
-        ids_uri(),
+        this->ids_uri(),
         default_domain,
         tile_size,
         default_compression);
     tiledb_helpers::add_to_group(
-        write_group, ids_uri(), ids_array_name());
+        write_group, this->ids_uri(), this->ids_array_name());
 
     create_empty_for_vector<typename index_type::score_type>(
         cached_ctx_,

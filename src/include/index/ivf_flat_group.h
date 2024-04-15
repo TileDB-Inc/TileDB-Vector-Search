@@ -207,8 +207,13 @@ class ivf_flat_index_group
     tiledb_helpers::add_to_group(write_group, parts_uri(), parts_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
-        cached_ctx_, ids_uri(), default_domain, tile_size, default_compression);
-    tiledb_helpers::add_to_group(write_group, ids_uri(), ids_array_name());
+        cached_ctx_,
+        this->ids_uri(),
+        default_domain,
+        tile_size,
+        default_compression);
+    tiledb_helpers::add_to_group(
+        write_group, this->ids_uri(), this->ids_array_name());
 
     create_empty_for_vector<typename index_type::indices_type>(
         cached_ctx_,
