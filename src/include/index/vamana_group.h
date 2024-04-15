@@ -84,12 +84,12 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   // using Base::Base;
 
   using Base::array_key_to_array_name_;
+  using Base::array_name_to_uri_;
   using Base::cached_ctx_;
   using Base::group_uri_;
   using Base::metadata_;
-  using Base::valid_array_names_;
   using Base::valid_array_keys_;
-  using Base::array_name_to_uri_;
+  using Base::valid_array_names_;
   using Base::version_;
 
   using index_type = Index;
@@ -121,7 +121,8 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
       valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
       array_key_to_array_name_[array_key] = array_name;
-      array_name_to_uri_[array_name] =  array_name_to_uri(group_uri_, array_name);
+      array_name_to_uri_[array_name] =
+          array_name_to_uri(group_uri_, array_name);
     }
   }
 
