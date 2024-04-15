@@ -164,6 +164,10 @@ class CloudTests(unittest.TestCase):
         _, result_i = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
+        index = index.consolidate_updates()
+        _, result_i = index.query(queries, k=k, nprobe=nprobe)
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
     def test_cloud_ivf_flat_random_sampling(self):
         # NOTE(paris): This was also tested with the following (and also with mode=Mode.BATCH):
         # source_uri = "tiledb://TileDB-Inc/ann_sift1b_raw_vectors_col_major"
