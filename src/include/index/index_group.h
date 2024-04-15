@@ -458,10 +458,10 @@ class base_index_group {
    **************************************************************************/
 
   [[nodiscard]] auto ids_uri() const {
-    return this->array_key_to_uri("ids_array_name");
+    return array_key_to_uri("ids_array_name");
   }
   [[nodiscard]] auto ids_array_name() const {
-    return this->array_key_to_array_name("ids_array_name");
+    return array_key_to_array_name("ids_array_name");
   }
   [[nodiscard]] const std::reference_wrapper<const tiledb::Context> cached_ctx()
       const {
