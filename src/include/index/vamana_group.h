@@ -32,6 +32,7 @@
 #ifndef TILEDB_VAMANA_GROUP_H
 #define TILEDB_VAMANA_GROUP_H
 
+#include "detail/linalg/tdb_helpers.h"
 #include "index/index_defs.h"
 #include "index/index_group.h"
 #include "index/vamana_metadata.h"
@@ -274,12 +275,17 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
         this->get_dimension(),
         default_tile_extent,
         default_compression);
-    write_group.add_member(
-        feature_vectors_array_name(), true, feature_vectors_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, feature_vectors_uri(), feature_vectors_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
-        cached_ctx_, ids_uri(), default_domain, tile_size, default_compression);
-    write_group.add_member(ids_array_name(), true, ids_array_name());
+        cached_ctx_,
+        ids_uri(),
+        default_domain,
+        tile_size,
+        default_compression);
+    tiledb_helpers::add_to_group(
+        write_group, ids_uri(), ids_array_name());
 
     create_empty_for_vector<typename index_type::score_type>(
         cached_ctx_,
@@ -287,8 +293,8 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
         default_domain,
         tile_size,
         default_compression);
-    write_group.add_member(
-        adjacency_scores_array_name(), true, adjacency_scores_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, adjacency_scores_uri(), adjacency_scores_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_,
@@ -296,8 +302,8 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
         default_domain,
         tile_size,
         default_compression);
-    write_group.add_member(
-        adjacency_ids_array_name(), true, adjacency_ids_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, adjacency_ids_uri(), adjacency_ids_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_,
@@ -305,9 +311,9 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
         default_domain,
         tile_size,
         default_compression);
-    write_group.add_member(
-        adjacency_row_index_array_name(),
-        true,
+    tiledb_helpers::add_to_group(
+        write_group,
+        adjacency_row_index_uri(),
         adjacency_row_index_array_name());
 
     // Store the metadata if all of the arrays were created successfully

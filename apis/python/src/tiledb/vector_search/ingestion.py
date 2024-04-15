@@ -2510,43 +2510,38 @@ def ingest(
         index_group_uri: str,
         config: Optional[Mapping[str, Any]] = None,
     ):
-        group = tiledb.Group(index_group_uri)
-        try:
-            if INPUT_VECTORS_ARRAY_NAME in group:
-                tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
-            if EXTERNAL_IDS_ARRAY_NAME in group:
-                tiledb.Array.delete_array(group[EXTERNAL_IDS_ARRAY_NAME].uri)
-        except tiledb.TileDBError as err:
-            message = str(err)
-            if "does not exist" not in message:
-                raise err
-        modes = ["fragment_meta", "commits", "array_meta"]
-        for mode in modes:
-            conf = tiledb.Config(config)
-            conf["sm.consolidation.mode"] = mode
-            conf["sm.vacuum.mode"] = mode
-            ids_uri = group[IDS_ARRAY_NAME].uri
-            parts_uri = group[PARTS_ARRAY_NAME].uri
-            tiledb.consolidate(parts_uri, config=conf)
-            tiledb.vacuum(parts_uri, config=conf)
-            tiledb.consolidate(ids_uri, config=conf)
-            tiledb.vacuum(ids_uri, config=conf)
-        group.close()
-
-        # TODO remove temp data for tiledb URIs
-        if not index_group_uri.startswith("tiledb://"):
-            group = tiledb.Group(index_group_uri, "r")
-            if PARTIAL_WRITE_ARRAY_DIR in group:
-                group.close()
-                group = tiledb.Group(index_group_uri, "w")
-                group.remove(PARTIAL_WRITE_ARRAY_DIR)
-                vfs = tiledb.VFS(config)
-                partial_write_array_dir_uri = (
-                    index_group_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
-                )
-                if vfs.is_dir(partial_write_array_dir_uri):
-                    vfs.remove_dir(partial_write_array_dir_uri)
-            group.close()
+        with tiledb.Group(index_group_uri) as group:
+            try:
+                if INPUT_VECTORS_ARRAY_NAME in group:
+                    tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
+                if EXTERNAL_IDS_ARRAY_NAME in group:
+                    tiledb.Array.delete_array(group[EXTERNAL_IDS_ARRAY_NAME].uri)
+            except tiledb.TileDBError as err:
+                message = str(err)
+                if "does not exist" not in message:
+                    raise err
+            modes = ["fragment_meta", "commits", "array_meta"]
+            for mode in modes:
+                conf = tiledb.Config(config)
+                conf["sm.consolidation.mode"] = mode
+                conf["sm.vacuum.mode"] = mode
+                ids_uri = group[IDS_ARRAY_NAME].uri
+                parts_uri = group[PARTS_ARRAY_NAME].uri
+                tiledb.consolidate(parts_uri, config=conf)
+                tiledb.vacuum(parts_uri, config=conf)
+                tiledb.consolidate(ids_uri, config=conf)
+                tiledb.vacuum(ids_uri, config=conf)
+            partial_write_array_exists = PARTIAL_WRITE_ARRAY_DIR in group
+        if partial_write_array_exists:
+            with tiledb.Group(index_group_uri, "w") as partial_write_array_group:
+                partial_write_array_group.remove(PARTIAL_WRITE_ARRAY_DIR)
+            partial_write_array_dir_uri = (
+                index_group_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
+            )
+            with tiledb.Group(
+                partial_write_array_dir_uri, "m"
+            ) as partial_write_array_group:
+                partial_write_array_group.delete(recursive=True)
 
     # --------------------------------------------------------------------
     # End internal function definitions
