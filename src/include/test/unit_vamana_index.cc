@@ -1238,6 +1238,10 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   tiledb::Context ctx;
   std::string vamana_index_uri =
       (std::filesystem::temp_directory_path() / "tmp_vamana_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(vamana_index_uri)) {
+    vfs.remove_dir(vamana_index_uri);
+  }
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
   std::vector<siftsmall_ids_type> ids(num_vectors(training_set));
