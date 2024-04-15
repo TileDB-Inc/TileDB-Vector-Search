@@ -112,7 +112,7 @@ class ivf_flat_index_group
   auto append_num_partitions(size_t size) {
     metadata_.partition_history_.push_back(size);
   }
-  auto get_all_num_partitions() {
+  auto get_all_num_partitions() const {
     return metadata_.partition_history_;
   }
 
@@ -129,9 +129,6 @@ class ivf_flat_index_group
   [[nodiscard]] auto parts_uri() const {
     return this->array_key_to_uri("parts_array_name");
   }
-  [[nodiscard]] auto ids_uri() const {
-    return this->array_key_to_uri("ids_array_name");
-  }
   [[nodiscard]] auto indices_uri() const {
     return this->array_key_to_uri("index_array_name");
   }
@@ -140,9 +137,6 @@ class ivf_flat_index_group
   }
   [[nodiscard]] auto parts_array_name() const {
     return this->array_key_to_array_name("parts_array_name");
-  }
-  [[nodiscard]] auto ids_array_name() const {
-    return this->array_key_to_array_name("ids_array_name");
   }
   [[nodiscard]] auto indices_array_name() const {
     return this->array_key_to_array_name("index_array_name");
@@ -213,8 +207,13 @@ class ivf_flat_index_group
     tiledb_helpers::add_to_group(write_group, parts_uri(), parts_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
-        cached_ctx_, ids_uri(), default_domain, tile_size, default_compression);
-    tiledb_helpers::add_to_group(write_group, ids_uri(), ids_array_name());
+        cached_ctx_,
+        this->ids_uri(),
+        default_domain,
+        tile_size,
+        default_compression);
+    tiledb_helpers::add_to_group(
+        write_group, this->ids_uri(), this->ids_array_name());
 
     create_empty_for_vector<typename index_type::indices_type>(
         cached_ctx_,

@@ -457,29 +457,11 @@ class base_index_group {
    * Getters for names and uris
    **************************************************************************/
 
-  [[nodiscard]] auto partial_write_array_dir() const {
-    return array_key_to_uri("partial_write_array_dir");
+  [[nodiscard]] auto ids_uri() const {
+    return array_key_to_uri("ids_array_name");
   }
-  [[nodiscard]] auto input_vectors_uri() const {
-    return array_key_to_uri("input_vectors_array_name");
-  }
-  [[nodiscard]] auto external_ids_uri() const {
-    return array_key_to_uri("external_ids_array_name");
-  }
-  [[nodiscard]] auto updates_array_uri() const {
-    return array_key_to_uri("updates_array_name");
-  }
-  [[nodiscard]] auto partial_write_array_name() const {
-    return array_key_to_array_name("partial_write_array_dir");
-  }
-  [[nodiscard]] auto input_vectors_array_name() const {
-    return array_key_to_array_name("input_vectors_array_name");
-  }
-  [[nodiscard]] auto external_ids_array_name() const {
-    return array_key_to_array_name("external_ids_array_name");
-  }
-  [[nodiscard]] auto updates_array_name() const {
-    return array_key_to_array_name("updates_array_name");
+  [[nodiscard]] auto ids_array_name() const {
+    return array_key_to_array_name("ids_array_name");
   }
   [[nodiscard]] const std::reference_wrapper<const tiledb::Context> cached_ctx()
       const {

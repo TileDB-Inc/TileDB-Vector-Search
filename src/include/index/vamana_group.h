@@ -135,7 +135,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   auto append_num_edges(size_t size) {
     metadata_.num_edges_history_.push_back(size);
   }
-  auto get_all_num_edges() {
+  auto get_all_num_edges() const {
     return metadata_.num_edges_history_;
   }
   auto set_num_edges(size_t size) {
@@ -184,9 +184,6 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   [[nodiscard]] auto feature_vectors_uri() const {
     return this->array_key_to_uri("parts_array_name");
   }
-  [[nodiscard]] auto feature_vector_ids_uri() const {
-    return this->array_key_to_uri("ids_array_name");
-  }
   [[nodiscard]] auto adjacency_scores_uri() const {
     return this->array_key_to_uri("adjacency_scores_array_name");
   }
@@ -198,9 +195,6 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   }
   [[nodiscard]] auto feature_vectors_array_name() const {
     return this->array_key_to_array_name("parts_array_name");
-  }
-  [[nodiscard]] auto feature_vector_ids_name() const {
-    return this->array_key_to_array_name("ids_array_name");
   }
   [[nodiscard]] auto adjacency_scores_array_name() const {
     return this->array_key_to_array_name("adjacency_scores_array_name");
@@ -286,12 +280,12 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
 
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_,
-        feature_vector_ids_uri(),
+        this->ids_uri(),
         default_domain,
         tile_size,
         default_compression);
     tiledb_helpers::add_to_group(
-        write_group, feature_vector_ids_uri(), feature_vector_ids_name());
+        write_group, this->ids_uri(), this->ids_array_name());
 
     create_empty_for_vector<typename index_type::score_type>(
         cached_ctx_,

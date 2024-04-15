@@ -521,7 +521,7 @@ class vamana_index {
         std::move(tdbColMajorPreLoadMatrixWithIds<feature_type, id_type>(
             group_->cached_ctx(),
             group_->feature_vectors_uri(),
-            group_->feature_vector_ids_uri(),
+            group_->ids_uri(),
             dimension_,
             num_vectors_,
             0,
@@ -871,7 +871,7 @@ class vamana_index {
     write_vector(
         ctx,
         feature_vectors_.ids(),
-        write_group.feature_vector_ids_uri(),
+        write_group.ids_uri(),
         0,
         false,
         timestamp_);
