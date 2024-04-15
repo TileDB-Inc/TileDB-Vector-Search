@@ -197,9 +197,8 @@ class ivf_flat_index_group
         this->get_dimension(),
         default_tile_extent,
         default_compression);
-    // write_group.add_member(centroids_uri(), true, centroids_array_name());
-    write_group.add_member(
-        centroids_array_name(), true, centroids_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, centroids_uri(), centroids_array_name());
 
     create_empty_for_matrix<
         typename index_type::feature_type,
@@ -211,13 +210,11 @@ class ivf_flat_index_group
         this->get_dimension(),
         default_tile_extent,
         default_compression);
-    // write_group.add_member(parts_uri(), true, parts_array_name());
-    write_group.add_member(parts_array_name(), true, parts_array_name());
+    tiledb_helpers::add_to_group(write_group, parts_uri(), parts_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_, ids_uri(), default_domain, tile_size, default_compression);
-    // write_group.add_member(ids_uri(), true, ids_array_name());
-    write_group.add_member(ids_array_name(), true, ids_array_name());
+    tiledb_helpers::add_to_group(write_group, ids_uri(), ids_array_name());
 
     create_empty_for_vector<typename index_type::indices_type>(
         cached_ctx_,
@@ -225,8 +222,8 @@ class ivf_flat_index_group
         default_domain,
         default_tile_extent,
         default_compression);
-    // write_group.add_member(indices_uri(), true, indices_array_name());
-    write_group.add_member(indices_array_name(), true, indices_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, indices_uri(), indices_array_name());
 
     // Store the metadata if all of the arrays were created successfully
     metadata_.store_metadata(write_group);
