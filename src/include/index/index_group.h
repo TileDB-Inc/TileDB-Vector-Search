@@ -107,17 +107,13 @@ class base_index_group {
 
   // Set of the names that are used in the group for this version
   std::unordered_set<std::string> valid_array_names_;
-  std::unordered_set<std::string> valid_key_names_;
+  std::unordered_set<std::string> valid_array_keys_;
 
-  // Set of names of arrays that are part of the group.  They either have
-  // been read from the group or written to the group.
-  std::unordered_set<std::string> active_array_names_;
-
-  std::unordered_map<std::string, std::string> array_name_map_;
+  std::unordered_map<std::string, std::string> array_key_to_array_name_;
 
   /** Check validity of key name */
   constexpr bool is_valid_key_name(const std::string& key_name) const noexcept {
-    return valid_key_names_.contains(key_name);
+    return valid_array_keys_.contains(key_name);
   }
 
   /** Check validity of array name */
@@ -126,18 +122,13 @@ class base_index_group {
     return valid_array_names_.contains(array_name);
   }
 
-  /** Check whether the array has been put into this group */
-  constexpr bool is_active_array_name(
-      const std::string& array_name) const noexcept {
-    return active_array_names_.contains(array_name);
-  }
-
   /** Lookup an array name given an array key */
   constexpr auto array_key_to_array_name(const std::string& array_key) const {
     if (!is_valid_key_name(array_key)) {
       throw std::runtime_error("Invalid array key: " + array_key);
     }
-    return array_key_to_array_name_from_map(array_name_map_, array_key);
+    return array_key_to_array_name_from_map(
+        array_key_to_array_name_, array_key);
   };
 
   /** Create the set of valid key names and array names */
@@ -146,9 +137,9 @@ class base_index_group {
       throw std::runtime_error("Version not set.");
     }
     for (auto&& [array_key, array_name] : storage_formats[version_]) {
-      valid_key_names_.insert(array_key);
+      valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
-      array_name_map_[array_key] = array_name;
+      array_key_to_array_name_[array_key] = array_name;
     }
     static_cast<group_type*>(this)->append_valid_array_names_impl();
   }
@@ -166,7 +157,6 @@ class base_index_group {
       throw std::runtime_error(
           "Invalid array name in add_array: " + array_name);
     }
-    active_array_names_.insert(array_name);
 
     std::filesystem::path uri = array_name_to_uri(array_name);
 
@@ -211,9 +201,7 @@ class base_index_group {
       if (!name || name->empty()) {
         throw std::runtime_error("Name is empty.");
       }
-      if (is_valid_array_name(*name)) {
-        active_array_names_.insert(*name);
-      } else {
+      if (!is_valid_array_name(*name)) {
         throw std::runtime_error(
             "Invalid array name in group: " + std::string(*name));
       }
@@ -427,18 +415,6 @@ class base_index_group {
     return metadata_.base_sizes_;
   }
 
-  auto get_all_active_array_names() {
-    return active_array_names_;
-  }
-
-  auto get_all_active_uris() {
-    std::vector<std::string> uris;
-    for (auto&& array_name : active_array_names_) {
-      uris.push_back(array_name_to_uri(array_name));
-    }
-    return uris;
-  }
-
   auto get_temp_size() const {
     return metadata_.temp_size_;
   }
@@ -505,10 +481,10 @@ class base_index_group {
     if (valid_array_names_ != rhs.valid_array_names_) {
       return false;
     }
-    if (size(valid_key_names_) != size(rhs.valid_key_names_)) {
+    if (size(valid_array_keys_) != size(rhs.valid_array_keys_)) {
       return false;
     }
-    if (valid_key_names_ != rhs.valid_key_names_) {
+    if (valid_array_keys_ != rhs.valid_array_keys_) {
       return false;
     }
     if (!metadata_.compare_metadata(rhs.metadata_)) {
@@ -540,11 +516,6 @@ class base_index_group {
         throw std::runtime_error("Name is empty.");
       }
       std::cout << *name << " " << member.uri() << std::endl;
-    }
-    std::cout << "-------------------------------------------------------\n";
-    std::cout << "# Active arrays:" << std::endl;
-    for (auto&& array_name : active_array_names_) {
-      std::cout << array_name << std::endl;
     }
     std::cout << "-------------------------------------------------------\n";
     std::cout << "# Metadata:" << std::endl;
