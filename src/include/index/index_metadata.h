@@ -297,6 +297,7 @@ class base_index_metadata {
           "temp_size must be a int64_t or float64 not " +
           tiledb::impl::type_to_str(v_type));
     }
+
     base_sizes_ = json_to_vector<base_sizes_type>(base_sizes_str_);
     ingestion_timestamps_ =
         json_to_vector<ingestion_timestamps_type>(ingestion_timestamps_str_);
