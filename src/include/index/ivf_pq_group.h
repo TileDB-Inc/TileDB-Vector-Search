@@ -76,12 +76,12 @@ template <class Index>
 class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
   using Base = base_index_group<ivf_pq_group>;
 
-  using Base::array_name_map_;
+  using Base::array_key_to_array_name_;
   using Base::cached_ctx_;
   using Base::group_uri_;
   using Base::metadata_;
+  using Base::valid_array_keys_;
   using Base::valid_array_names_;
-  using Base::valid_key_names_;
   using Base::version_;
 
   // @todo These should be defined in some common place and passed as parameters
@@ -110,19 +110,19 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
     for (auto&& [array_key, array_name] : ivf_pq_storage_formats[version_]) {
       if (array_key == "distance_tables_array_name") {
         for (size_t i = 0; i < this->get_num_subspaces(); ++i) {
-          valid_key_names_.insert(array_key + "_" + std::to_string(i));
+          valid_array_keys_.insert(array_key + "_" + std::to_string(i));
           valid_array_names_.insert(array_name + "_" + std::to_string(i));
-          array_name_map_[array_key + "_" + std::to_string(i)] =
+          array_key_to_array_name_[array_key + "_" + std::to_string(i)] =
               array_name + "_" + std::to_string(i);
         }
       } else {
-        valid_key_names_.insert(array_key);
+        valid_array_keys_.insert(array_key);
         valid_array_names_.insert(array_name);
-        array_name_map_[array_key] = array_name;
+        array_key_to_array_name_[array_key] = array_name;
       }
-      valid_key_names_.insert(array_key);
+      valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
-      array_name_map_[array_key] = array_name;
+      array_key_to_array_name_[array_key] = array_name;
     }
   }
 

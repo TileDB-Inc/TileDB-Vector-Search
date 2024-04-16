@@ -308,7 +308,7 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   ivf_index_uri =
       (std::filesystem::temp_directory_path() / "second_tmp_ivf_index")
           .string();
-  idx.write_index(ctx, ivf_index_uri, true);
+  idx.write_index(ctx, ivf_index_uri);
   auto idx2 = ivf_pq_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
   idx2.read_index_infinite();
 

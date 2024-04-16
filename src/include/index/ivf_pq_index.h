@@ -911,30 +911,20 @@ class ivf_pq_index {
    * we write from the PartitionedMatrix base class.
    *
    * @param group_uri
-   * @param overwrite
    * @return bool indicating success or failure
    */
   auto write_index(
       const tiledb::Context& ctx,
       const std::string& group_uri,
-      bool overwrite) const {
-    tiledb::VFS vfs(ctx);
-
-    // @todo Deal with this in right way vis a vis timestamping
-    if (vfs.is_dir(group_uri)) {
-      if (overwrite == false) {
-        return false;
-      }
-      vfs.remove_dir(group_uri);
-    }
-
+      const std::string& storage_version = "") const {
     // if (this->group_ == nullptr) {
     //   throw std::runtime_error(
     //       "Group " + group_uri + " does not exist!  Has index been
     //       trained?");
     // }
 
-    auto write_group = ivf_pq_group(*this, ctx, group_uri, TILEDB_WRITE);
+    auto write_group = ivf_pq_group(
+        *this, ctx, group_uri, TILEDB_WRITE, timestamp_, storage_version);
 
     write_group.set_dimension(dimension_);
     write_group.set_num_subspaces(num_subspaces_);
