@@ -45,6 +45,7 @@ class VamanaIndex(index.Index):
 
         schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
         self.dimensions = self.index.dimension()
+
         self.dtype = np.dtype(self.group.meta.get("dtype", None))
         if self.dtype is None:
             self.dtype = np.dtype(schema.attr("values").dtype)

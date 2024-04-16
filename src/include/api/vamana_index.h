@@ -137,8 +137,8 @@ class IndexVamana {
          &adjacency_row_index_datatype_,
          TILEDB_UINT32}};
 
-    // tiledb::Config cfg;
-    tiledb::Group read_group(ctx, group_uri, TILEDB_READ, ctx.config());
+    tiledb::Config cfg;
+    tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
 
     for (auto& [name, value, datatype] : metadata) {
       if (!read_group.has_metadata(name, &datatype)) {

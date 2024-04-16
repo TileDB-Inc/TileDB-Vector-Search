@@ -501,7 +501,7 @@ class vamana_index {
    */
   vamana_index(tiledb::Context ctx, const std::string& uri)
       : group_{std::make_unique<vamana_index_group<vamana_index>>(
-            *this, ctx, uri, TILEDB_READ, timestamp_, "", ctx.config())} {
+            *this, ctx, uri, TILEDB_READ, timestamp_)} {
     if (timestamp_ == 0) {
       timestamp_ = group_->get_previous_ingestion_timestamp();
     }

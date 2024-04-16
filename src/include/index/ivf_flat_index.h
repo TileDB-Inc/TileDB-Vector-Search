@@ -216,7 +216,7 @@ class ivf_flat_index {
       const std::string& uri,
       uint64_t timestamp = 0)
       : group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
-            *this, ctx, uri, TILEDB_READ, timestamp_, "", ctx.config())} {
+            *this, ctx, uri, TILEDB_READ, timestamp_)} {
     if (timestamp_ == 0) {
       timestamp_ = group_->get_previous_ingestion_timestamp();
     }
