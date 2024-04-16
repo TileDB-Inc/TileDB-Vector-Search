@@ -33,25 +33,18 @@ class VamanaIndex(index.Index):
         timestamp=None,
         **kwargs,
     ):
-        print('[vamana_index@__init__] uri:', uri)
         super().__init__(uri=uri, config=config, timestamp=timestamp)
-        print('[vamana_index@__init__] 2')
         self.index_type = INDEX_TYPE
         self.index = vspy.IndexVamana(vspy.Ctx(config), uri)
-        print('[vamana_index@__init__] 3')
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
         ].uri
-        print('[vamana_index@__init__] 4')
         self.ids_uri = self.group[
             storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
         ].uri
-        print('[vamana_index@__init__] 5')
 
         schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
-        print('[vamana_index@__init__] 6')
         self.dimensions = self.index.dimension()
-        print('[vamana_index@__init__] 7')
         self.dtype = np.dtype(self.group.meta.get("dtype", None))
         if self.dtype is None:
             self.dtype = np.dtype(schema.attr("values").dtype)

@@ -36,24 +36,14 @@ class Index:
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
     ):
-        print('[index@__init__] uri:', uri)
-        print('[index@__init__] config:', config)
-        print('[index@__init__] timestamp:', timestamp)
         # If the user passes a tiledb python Config object convert to a dictionary
         if isinstance(config, tiledb.Config):
             config = dict(config)
-        print('[index@__init__] config:', config)
         self.uri = uri
-        print('[index@__init__] 1')
         self.config = config
-        print('[index@__init__] 2')
         self.ctx = vspy.Ctx(config)
-        print('[index@__init__] 3')
         self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
-        print('[index@__init__] self.group', self.group)
-        print('[index@__init__] 4')
         self.storage_version = self.group.meta.get("storage_version", "0.1")
-        print('[index@__init__] 5')
         if (
             not storage_formats[self.storage_version]["SUPPORT_TIMETRAVEL"]
             and timestamp is not None
@@ -61,7 +51,6 @@ class Index:
             raise ValueError(
                 f"Time traveling is not supported for index storage_version={self.storage_version}"
             )
-        print('[index@__init__] 6')
         updates_array_name = storage_formats[self.storage_version]["UPDATES_ARRAY_NAME"]
         if updates_array_name in self.group:
             self.updates_array_uri = self.group[
@@ -75,7 +64,6 @@ class Index:
             for x in list(json.loads(self.group.meta.get("ingestion_timestamps", "[]")))
         ]
         self.history_index = len(self.ingestion_timestamps) - 1
-        print('[index@__init__] 7')
         if self.history_index > -1:
             self.latest_ingestion_timestamp = self.ingestion_timestamps[
                 self.history_index
@@ -90,7 +78,6 @@ class Index:
         else:
             self.base_size = -1
         self.base_array_timestamp = self.latest_ingestion_timestamp
-        print('[index@__init__] 8')
         self.query_base_array = True
         self.update_array_timestamp = (self.base_array_timestamp + 1, None)
         if timestamp is None:
@@ -141,7 +128,6 @@ class Index:
                 )
         self.thread_executor = futures.ThreadPoolExecutor()
         self.has_updates = self.check_has_updates()
-        print('[index@__init__] done')
 
     def query(self, queries: np.ndarray, k, **kwargs):
         if queries.ndim != 2:
