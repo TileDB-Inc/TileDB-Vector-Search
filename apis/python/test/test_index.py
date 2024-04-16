@@ -1,4 +1,5 @@
 import json
+import time
 
 import numpy as np
 import pytest
@@ -15,6 +16,7 @@ from tiledb.vector_search.index import DATASET_TYPE
 from tiledb.vector_search.index import create_metadata
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
+from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import load_fvecs
 from tiledb.vector_search.vamana_index import VamanaIndex
 
@@ -55,16 +57,31 @@ def check_default_metadata(
     assert type(group.meta["index_type"]) == str
 
     assert "base_sizes" in group.meta
-    assert group.meta["base_sizes"] == json.dumps([0])
+    if is_type_erased_index(expected_index_type):
+        # NOTE(paris): Type-erased indexes have two values upon creation.
+        assert group.meta["base_sizes"] == "[0,0]"
+    else:
+        assert group.meta["base_sizes"] == json.dumps([0])
     assert type(group.meta["base_sizes"]) == str
 
     assert "ingestion_timestamps" in group.meta
-    assert group.meta["ingestion_timestamps"] == json.dumps([0])
+    if is_type_erased_index(expected_index_type):
+        # NOTE(paris): Type-erased indexes have two values upon creation.
+        ingestion_timestamps = json.loads(group.meta["ingestion_timestamps"])
+        assert len(ingestion_timestamps) == 2
+        assert ingestion_timestamps[0] == 0
+        current_time_ms = int(time.time() * 1000)
+        assert ingestion_timestamps[1] < current_time_ms
+        assert ingestion_timestamps[1] > current_time_ms - 1000 * 5
+    else:
+        assert group.meta["ingestion_timestamps"] == json.dumps([0])
     assert type(group.meta["ingestion_timestamps"]) == str
 
-    assert "has_updates" in group.meta
-    assert group.meta["has_updates"] == 0
-    assert type(group.meta["has_updates"]) == np.int64
+    if not is_type_erased_index(expected_index_type):
+        # NOTE(paris): Type-erased indexes do not write has_updates.
+        assert "has_updates" in group.meta
+        assert group.meta["has_updates"] == 0
+        assert type(group.meta["has_updates"]) == np.int64
 
 
 def test_flat_index(tmp_path):
@@ -213,6 +230,7 @@ def test_vamana_index(tmp_path):
     query_and_check_distances(
         index, queries, 1, [[ind.MAX_FLOAT_32]], [[ind.MAX_UINT64]]
     )
+    check_default_metadata(uri, vector_type, STORAGE_VERSION, "VAMANA")
 
     update_vectors = np.empty([5], dtype=object)
     update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.float32))

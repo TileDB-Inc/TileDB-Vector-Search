@@ -112,7 +112,7 @@ class base_index_metadata {
   using metadata_string_check_type =
       std::tuple<std::string, std::string&, bool>;
   std::vector<metadata_string_check_type> metadata_string_checks{
-      // name, member_variable, default, expected, required
+      // name, member_variable, required
       {"dataset_type", dataset_type_, true},
       {"storage_version", storage_version_, true},
       {"dtype", dtype_, false},
@@ -127,11 +127,8 @@ class base_index_metadata {
   using metadata_arithmetic_check_type =
       std::tuple<std::string, void*, tiledb_datatype_t, bool>;
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks{
+      // name, member_variable, type, required
       {"temp_size", &temp_size_, TILEDB_INT64, true},
-      //{"index_kind",
-      // nstatic_cast<IndexMetadata*>(this)->index_kind_,
-      // TILEDB_UINT64,
-      // false},
       {"dimension", &dimension_, TILEDB_UINT32, false},
       {"feature_datatype", &feature_datatype_, TILEDB_UINT32, false},
       {"id_datatype", &id_datatype_, TILEDB_UINT32, false},
@@ -268,6 +265,7 @@ class base_index_metadata {
    * @todo Dispatch on storage version
    */
   auto load_metadata(tiledb::Group& read_group) {
+    std::cout << "[index_metadata@load_metadata]\n";
     tiledb_datatype_t v_type;
     uint32_t v_num;
     const void* v;
@@ -300,7 +298,8 @@ class base_index_metadata {
           "temp_size must be a int64_t or float64 not " +
           tiledb::impl::type_to_str(v_type));
     }
-
+    std::cout << "[index_metadata@load_metadata] base_sizes_str_: "
+              << base_sizes_str_ << "\n";
     base_sizes_ = json_to_vector<base_sizes_type>(base_sizes_str_);
     ingestion_timestamps_ =
         json_to_vector<ingestion_timestamps_type>(ingestion_timestamps_str_);
@@ -315,9 +314,12 @@ class base_index_metadata {
    * @return
    */
   auto store_metadata(tiledb::Group& write_group) {
+    std::cout << "[index_metadata@store_metadata]\n";
     base_sizes_str_ = to_string(nlohmann::json(base_sizes_));
     ingestion_timestamps_str_ =
         to_string(nlohmann::json(ingestion_timestamps_));
+    std::cout << "[index_metadata@store_metadata] base_sizes_str_: "
+              << base_sizes_str_ << "\n";
 
     static_cast<IndexMetadata*>(this)->vector_to_json_impl();
 
@@ -338,54 +340,6 @@ class base_index_metadata {
       write_group.put_metadata(name, type, 1, static_cast<const void*>(value));
     }
   }
-
-#if 0
-  /**************************************************************************
-   * Getters and setters
-   **************************************************************************/
-  std::string base_sizes_str() const {
-    return base_sizes_str_;
-  }
-  auto& base_sizes() {
-    return base_sizes_;
-  }
-  auto& base_sizes() const {
-    return base_sizes_;
-  }
-  void set_base_sizes(const std::vector<base_sizes_type>& base_sizes) {
-    base_sizes_ = base_sizes;
-  }
-  auto storage_version() const {
-    return storage_version_;
-  }
-  auto& storage_version()  {
-    return storage_version_;
-  }
-  auto dtype() const {
-    return dtype_;
-  }
-  auto& dtype()  {
-    return dtype_;
-  }
-  auto feature_datatype() const {
-    return feature_datatype_;
-  }
-  auto& feature_datatype()  {
-    return feature_datatype_;
-  }
-  auto id_datatype() const {
-    return id_datatype_;
-  }
-  auto& id_datatype()  {
-    return id_datatype_;
-  }
-  auto px_datatype() const {
-    return px_datatype_;
-  }
-  auto& px_datatype()  {
-    return px_datatype_;
-  }
-#endif
 
   /**************************************************************************
    * Helpful functions for debugging, testing, etc
