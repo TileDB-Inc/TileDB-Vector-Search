@@ -856,7 +856,11 @@ TEST_CASE("vamana: fmnist compare greedy search", "[vamana]") {
   size_t N = 5000;
 
   tiledb::Context ctx;
-  auto db = tdbColMajorMatrix<test_feature_type>(ctx, fmnist_inputs_uri, N);
+  tiledb::VFS vfs(ctx);
+
+  auto ids_uri = write_ids_to_uri<siftsmall_ids_type>(ctx, vfs, N);
+  auto db = tdbColMajorMatrixWithIds<test_feature_type>(
+      ctx, fmnist_inputs_uri, ids_uri, N);
   db.load();
   auto g = detail::graph::init_random_nn_graph<score_type, id_type>(db, L);
 
@@ -1361,10 +1365,10 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
 
   set_noisy(noisy);
 
-  size_t L_build{37};
-  size_t R_max_degree{41};
+  size_t l_build{37};
+  size_t r_max_degree{41};
   size_t k_nn{10};
-  size_t Backtrack{3};
+  size_t backtrack{3};
 
   tiledb::Context ctx;
   std::string vamana_index_uri =
@@ -1379,7 +1383,7 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   std::iota(begin(ids), end(ids), 0);
 
   auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
-      num_vectors(training_set), l_build, r_max_degree, Backtrack);
+      num_vectors(training_set), l_build, r_max_degree, backtrack);
   idx.train(training_set, ids);
 
   idx.write_index(ctx, vamana_index_uri);

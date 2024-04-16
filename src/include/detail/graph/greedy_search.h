@@ -291,7 +291,8 @@ auto greedy_search_O1(
     auto&& query,
     size_t k_nn,
     size_t L,
-    Distance&& distance = Distance{}) {
+    Distance&& distance = Distance{},
+    bool convert_to_db_ids = false) {
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
   using score_type = typename std::decay_t<decltype(graph)>::score_type;
@@ -416,6 +417,17 @@ auto greedy_search_O1(
   auto top_k_scores = std::vector<score_type>(k_nn);
 
   get_top_k_with_scores_from_heap(result, top_k, top_k_scores);
+
+  // Optionally convert from the vector indexes to the db IDs. Used during
+  // querying to map to external IDs.
+  if (convert_to_db_ids) {
+    for (int i = 0; i < k_nn; ++i) {
+      if (top_k[i] != std::numeric_limits<id_type>::max()) {
+        top_k[i] = db.ids()[top_k[i]];
+      }
+    }
+  }
+
   return std::make_tuple(
       std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
 }
@@ -428,7 +440,8 @@ auto greedy_search(
     auto&& query,
     size_t k_nn,
     size_t L,
-    Distance&& distance = Distance{}) {
+    Distance&& distance = Distance{},
+    bool convert_to_db_ids = false) {
   return greedy_search_O1(
       std::forward<decltype(graph)>(graph),
       std::forward<decltype(db)>(db),
@@ -436,7 +449,8 @@ auto greedy_search(
       std::forward<decltype(query)>(query),
       k_nn,
       L,
-      std::forward<Distance>(distance));
+      std::forward<Distance>(distance),
+      convert_to_db_ids);
 }
 
 /**
