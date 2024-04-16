@@ -265,7 +265,6 @@ class base_index_metadata {
    * @todo Dispatch on storage version
    */
   auto load_metadata(tiledb::Group& read_group) {
-    std::cout << "[index_metadata@load_metadata]\n";
     tiledb_datatype_t v_type;
     uint32_t v_num;
     const void* v;
@@ -298,8 +297,6 @@ class base_index_metadata {
           "temp_size must be a int64_t or float64 not " +
           tiledb::impl::type_to_str(v_type));
     }
-    std::cout << "[index_metadata@load_metadata] base_sizes_str_: "
-              << base_sizes_str_ << "\n";
     base_sizes_ = json_to_vector<base_sizes_type>(base_sizes_str_);
     ingestion_timestamps_ =
         json_to_vector<ingestion_timestamps_type>(ingestion_timestamps_str_);
@@ -314,12 +311,9 @@ class base_index_metadata {
    * @return
    */
   auto store_metadata(tiledb::Group& write_group) {
-    std::cout << "[index_metadata@store_metadata]\n";
     base_sizes_str_ = to_string(nlohmann::json(base_sizes_));
     ingestion_timestamps_str_ =
         to_string(nlohmann::json(ingestion_timestamps_));
-    std::cout << "[index_metadata@store_metadata] base_sizes_str_: "
-              << base_sizes_str_ << "\n";
 
     static_cast<IndexMetadata*>(this)->vector_to_json_impl();
 
