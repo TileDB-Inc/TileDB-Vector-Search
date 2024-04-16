@@ -29,7 +29,6 @@
  *
  */
 
-#include <tiledb/tiledb>
 #include <type_traits>
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
@@ -40,6 +39,9 @@
 #include "tdb_defs.h"
 #include "test/test_utils.h"
 #include "utils/utils.h"
+
+#include <tiledb/group_experimental.h>
+#include <tiledb/tiledb>
 
 TEST_CASE("api_feature_vector_array: test test", "[api_feature_vector_array]") {
   REQUIRE(true);
@@ -523,4 +525,23 @@ TEST_CASE("api: query checks with IDs", "[api][index]") {
     auto ok = validate_top_k(ck_top_k, gk);
     CHECK(ok);
   }
+}
+
+TEST_CASE("api: load empty matrix", "[api][index]") {
+  tiledb::Context ctx;
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  size_t dimension{10};
+  int32_t domain{std::numeric_limits<int32_t>::max() - 1};
+  int32_t tile_extent{100'000};
+
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_matrix_uri)) {
+    vfs.remove_dir(tmp_matrix_uri);
+  }
+
+  create_empty_for_matrix<float, stdx::layout_left>(
+      ctx, tmp_matrix_uri, dimension, domain, dimension, tile_extent);
+
+  auto X = FeatureVectorArray(ctx, tmp_matrix_uri);
 }

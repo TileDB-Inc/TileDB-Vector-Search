@@ -68,8 +68,8 @@ class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       : Base(rhs) {
   }
 
-  MatrixView(T* p, I r, I c)
-      : Base{p, r, c} {
+  MatrixView(T* data_pointer, I rows, I cols)
+      : Base{data_pointer, rows, cols} {
   }
 
   auto data() {

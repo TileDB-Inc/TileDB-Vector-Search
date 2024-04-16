@@ -37,6 +37,7 @@
 #include <tiledb/array.h>
 #include <tiledb/tiledb>
 #include "stats.h"
+#include "tiledb/group_experimental.h"
 
 namespace tiledb_helpers {
 
@@ -79,6 +80,19 @@ inline void submit_query(
     tiledb::Query& query) {
   StatsCollectionScope stats_scope(uri, function_name, "submit_query");
   query.submit();
+}
+
+// Adds an object to a group. Automatically infers whether to use a relative
+// path or absolute path. NOTE(paris): We use absolute paths for tileDB URIs
+// because of a bug tracked in SC39197, once that is fixed everything can use
+// relative paths.
+inline void add_to_group(
+    tiledb::Group& group, const std::string& uri, const std::string& name) {
+  if (uri.find("tiledb://") == 0) {
+    group.add_member(uri, false, name);
+  } else {
+    group.add_member(name, true, name);
+  }
 }
 
 }  // namespace tiledb_helpers

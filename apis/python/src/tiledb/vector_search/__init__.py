@@ -20,12 +20,6 @@ from .module import validate_top_k
 from .storage_formats import STORAGE_VERSION
 from .storage_formats import storage_formats
 
-from  ._tiledbvspy import FeatureVector
-from  ._tiledbvspy import FeatureVectorArray
-from  ._tiledbvspy import IndexFlatL2
-from  ._tiledbvspy import IndexIVFFlat
-from  ._tiledbvspy import Ctx
-
 try:
     from tiledb.vector_search.version import version as __version__
 except ImportError:
@@ -35,6 +29,7 @@ __all__ = [
     "Index",
     "FlatIndex",
     "IVFFlatIndex",
+    "VamanaIndex",
     "Mode",
     "load_as_array",
     "load_as_matrix",

@@ -69,7 +69,7 @@ class vamana_index_metadata
 
   // public for now in interest of time
  public:
-  std::string index_type_{"Vamana"};
+  std::string index_type_{"VAMANA"};
 
   /** Record number of partitions at each write at a given timestamp */
   std::vector<num_edges_history_type> num_edges_history_;
@@ -84,9 +84,9 @@ class vamana_index_metadata
   std::string adjacency_scores_type_str_{""};
   std::string adjacency_row_index_type_str_{""};
 
-  uint64_t L_build_{0};
-  uint64_t R_max_degree_{0};
-  uint64_t B_backtrack_{0};
+  uint64_t l_build_{0};
+  uint64_t r_max_degree_{0};
+  uint64_t b_backtrack_{0};
   float alpha_min_{1.0};
   float alpha_max_{1.2};
   uint64_t medoid_{0};
@@ -111,9 +111,9 @@ class vamana_index_metadata
        &adjacency_row_index_datatype_,
        TILEDB_UINT32,
        false},
-      {"L", &L_build_, TILEDB_UINT64, false},
-      {"R", &R_max_degree_, TILEDB_UINT64, false},
-      {"B", &B_backtrack_, TILEDB_UINT64, false},
+      {"L", &l_build_, TILEDB_UINT64, false},
+      {"R", &r_max_degree_, TILEDB_UINT64, false},
+      {"B", &b_backtrack_, TILEDB_UINT64, false},
       {"alpha_min", &alpha_min_, TILEDB_FLOAT32, false},
       {"alpha_max", &alpha_max_, TILEDB_FLOAT32, false},
       {"medoid", &medoid_, TILEDB_UINT64, false},

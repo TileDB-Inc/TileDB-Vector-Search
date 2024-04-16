@@ -1,6 +1,7 @@
 # `VamanaIndex`
 
-The `VamanaIndex` class implements the approach to indexing and querying presented in a series of papers about Microsoft's DiskANN vector search library.  The papers are:
+The `VamanaIndex` class implements the approach to indexing and querying presented in a series of papers about Microsoft's DiskANN vector search library. The papers are:
+
 ```
   Subramanya, Suhas Jayaram, and Rohan Kadekodi. DiskANN: Fast Accurate Billion-Point Nearest Neighbor Search on a Single Node.
 
@@ -9,21 +10,19 @@ The `VamanaIndex` class implements the approach to indexing and querying present
   Gollapudi, Siddharth, et al. “Filtered-DiskANN: Graph Algorithms for Approximate Nearest Neighbor Search with Filters.” Proceedings of the ACM Web Conference 2023, ACM, 2023, pp. 3406–16, https://doi.org/10.1145/3543507.3583552.
 ```
 
-The three papers present an evolution of DiskANN.  The first is the original paper, the second adds searching with updates, and the last adds filtering.  
+The three papers present an evolution of DiskANN. The first is the original paper, the second adds searching with updates, and the last adds filtering.
 
-DiskANN uses a graph-based indexing scheme along with a highly efficient out-of-core process (assuming low-latency, high-bandwidth, SSD storage) for searching graphs that are larger than main memory.  The idea with a graph-based index is to create a graph where nodes in the graph represent the vectors to be searched.  The graph is constructed (during ingestion) to have bounded vertex degree and small network diameter (a "small world" graph as originally developed by Watts and Strogatz).  
+DiskANN uses a graph-based indexing scheme along with a highly efficient out-of-core process (assuming low-latency, high-bandwidth, SSD storage) for searching graphs that are larger than main memory. The idea with a graph-based index is to create a graph where nodes in the graph represent the vectors to be searched. The graph is constructed (during ingestion) to have bounded vertex degree and small network diameter (a "small world" graph as originally developed by Watts and Strogatz).
 
+There are two fundamental operations in a vector search system: creating the index ("ingestion"), and querying the index (search). The process for ingestion and for search both rely on a "greedy search" algorithm. Ingestion further relies on a "robust prune" algorithm.
 
-There are two fundamental operations in a vector search system: creating the index ("ingestion"), and querying the index (search).  The process for ingestion and for search both rely on a "greedy search" algorithm.  Ingestion further relies on a "robust prune" algorithm.
-
-We note that the description of the ingestion process changed between the second and the third paper.  It originally was based on construction a random nearest neighbor graph and then iterating over it with greedy search and robust prune to obtain, essentially, a "small worlds" graph.  The third paper implements ingestion by simply invoking node insertion for all of the input vectors.
-
+We note that the description of the ingestion process changed between the second and the third paper. It originally was based on construction a random nearest neighbor graph and then iterating over it with greedy search and robust prune to obtain, essentially, a "small worlds" graph. The third paper implements ingestion by simply invoking node insertion for all of the input vectors.
 
 ## Greedy Search
 
-Searching for the nearest neighbors of a given query is accomplished using a bounded best-first search.  A frontier with a given number (`L`) of nodes is advanced by exploring the unvisited neighbors of the node closest to the query.  Nodes are added to the frontier if they are closer to the query vector than the furthest node in the frontier.  When there are no nodes that are closer than the nodes in the frontier, the algorithm terminates.
+Searching for the nearest neighbors of a given query is accomplished using a bounded best-first search. A frontier with a given number (`L`) of nodes is advanced by exploring the unvisited neighbors of the node closest to the query. Nodes are added to the frontier if they are closer to the query vector than the furthest node in the frontier. When there are no nodes that are closer than the nodes in the frontier, the algorithm terminates.
 
-We experimented with several algorithms for implementing greedy search (aka best-first search):  The "greedy search" algorithm as presented in the DiskANN papers and a number of best-first implementations of our own design.
+We experimented with several algorithms for implementing greedy search (aka best-first search): The "greedy search" algorithm as presented in the DiskANN papers and a number of best-first implementations of our own design.
 
 ### DiskANN Vamana Greedy Search
 
@@ -39,12 +38,13 @@ GreedySearch(Graph G, node source, query q, result_size k, frontier_size L) {
 }
 ```
 
-In our initial implementation we used a a `k_min_heap` to represent 𝓛, an `std::unordered_set` to represent 𝓥, and a`k_min_heap` to represent 𝓛 \ 𝓥.  By setting the max size of the `k_min_heap` for 𝓛 to be the frontier size, we can maintain that on the fly without a separate "trim" operation.
+In our initial implementation we used a a `k_min_heap` to represent 𝓛, an `std::unordered_set` to represent 𝓥, and a`k_min_heap` to represent 𝓛 \ 𝓥. By setting the max size of the `k_min_heap` for 𝓛 to be the frontier size, we can maintain that on the fly without a separate "trim" operation.
+
 ```
 template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
 auto greedy_search(auto&& graph, auto&& db, id_type source, auto&& query, size_t k_nn, size_t L) {
   std::unordered_set<id_type> visited_vertices;      // 𝓥
-  auto result = k_min_heap<score_type, id_type>{L};  // 𝓛 
+  auto result = k_min_heap<score_type, id_type>{L};  // 𝓛
   auto q1 = k_min_heap<score_type, id_type>{L};      // 𝓛 \ 𝓥
   auto q2 = k_min_heap<score_type, id_type>{L};
 
@@ -59,7 +59,8 @@ auto greedy_search(auto&& graph, auto&& db, id_type source, auto&& query, size_t
 }
 ```
 
-We can observe a few things about this (somewhat naive) implementation.  First, there isn't any need to keep a queue of the active frontier.  Only a single node is pulled from active frontier (and moved from 𝓛 to 𝓥).  Subsequent smallest nodes can also be pulled from 𝓛 -- as long as they are not in the visited set.
+We can observe a few things about this (somewhat naive) implementation. First, there isn't any need to keep a queue of the active frontier. Only a single node is pulled from active frontier (and moved from 𝓛 to 𝓥). Subsequent smallest nodes can also be pulled from 𝓛 -- as long as they are not in the visited set.
+
 ```
 template <class Graph, feature_vector_array A, feature_vector V, class Distance = sum_of_squares_distance>
 auto best_first_O4(const Graph& graph, const A& db, id_type source, const V& query, size_t k_nn, size_t Lmax) {
@@ -79,4 +80,4 @@ auto best_first_O4(const Graph& graph, const A& db, id_type source, const V& que
 }
 ```
 
-In profiling previsou implementation, the lookups of node state in the bitmap consumed a substantial fraction of time.  This was improved by using a bitmap rather than a `std::unordered_set`.  However, there is a cost in terms of memory usage with that approach.
+In profiling previsou implementation, the lookups of node state in the bitmap consumed a substantial fraction of time. This was improved by using a bitmap rather than a `std::unordered_set`. However, there is a cost in terms of memory usage with that approach.

@@ -15,6 +15,7 @@ from tiledb.vector_search.module import array_to_matrix
 from tiledb.vector_search.module import kmeans_fit
 from tiledb.vector_search.module import kmeans_predict
 from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.vamana_index import VamanaIndex
 
 MINIMUM_ACCURACY = 0.85
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
@@ -28,6 +29,32 @@ def query_and_check_equals(index, queries, expected_result_d, expected_result_i)
         expected_result_d=expected_result_d,
         expected_result_i=expected_result_i,
     )
+
+
+def test_vamana_ingestion_u8(tmp_path):
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    index_uri = os.path.join(tmp_path, "array")
+    if os.path.exists(index_uri):
+        shutil.rmtree(index_uri)
+    create_random_dataset_u8(nb=10000, d=100, nq=100, k=10, path=dataset_dir)
+    dtype = np.dtype(np.uint8)
+    k = 10
+
+    queries = get_queries(dataset_dir, dtype=dtype)
+    gt_i, gt_d = get_groundtruth(dataset_dir, k)
+
+    index = ingest(
+        index_type="VAMANA",
+        index_uri=index_uri,
+        source_uri=os.path.join(dataset_dir, "data.u8bin"),
+    )
+    _, result = index.query(queries, k=k)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    index_uri = move_local_index_to_new_location(index_uri)
+    index_ram = VamanaIndex(uri=index_uri)
+    _, result = index_ram.query(queries, k=k)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
 def test_flat_ingestion_u8(tmp_path):

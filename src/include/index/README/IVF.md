@@ -1,5 +1,3 @@
-
-
 # `IVFFlatIndex`
 
 There are four primary classes in the `IVFFlatIndex` design:
@@ -211,5 +209,7 @@ In the non-cloud case, insertions into the `vamana` (graph-based) indexes is ext
 
 ### `ivf_flat_index_metadata`
 
-
-
+Product quantization is an approach to compressing the vectors in a vector database.
+The basic idea is to divide the vectors into `m` subvectors and to quantize each subvector
+into `k` centroids. The centroids are stored in a codebook. The original vectors are
+then replaced by the indices of the centroids in the codebook.

@@ -166,8 +166,11 @@ void init_type_erased_module(py::module_& m) {
 
   py::class_<FeatureVectorArray>(m, "FeatureVectorArray", py::buffer_protocol())
       .def(py::init<const tiledb::Context&, const std::string&>())
-      //      .def(py::init<size_t, size_t, const std::string&>())
-      //      .def(py::init<size_t, size_t void*, const std::string&>())
+      .def(py::init<
+           const tiledb::Context&,
+           const std::string&,
+           const std::string&>())
+      .def(py::init<size_t, size_t, const std::string&, const std::string&>())
       .def("dimension", &FeatureVectorArray::dimension)
       .def("num_vectors", &FeatureVectorArray::num_vectors)
       .def("feature_type", &FeatureVectorArray::feature_type)
@@ -266,7 +269,6 @@ void init_type_erased_module(py::module_& m) {
           py::arg("vectors"))
       .def(
           "query",
-          // TODO(paris): Update opt_l to be optional.
           [](IndexVamana& index,
              FeatureVectorArray& vectors,
              size_t top_k,
@@ -277,6 +279,17 @@ void init_type_erased_module(py::module_& m) {
           py::arg("vectors"),
           py::arg("top_k"),
           py::arg("opt_l"))
+      .def(
+          "write_index",
+          [](IndexVamana& index,
+             const tiledb::Context& ctx,
+             const std::string& group_uri,
+             const std::string& storage_version) {
+            index.write_index(ctx, group_uri, storage_version);
+          },
+          py::arg("ctx"),
+          py::arg("group_uri"),
+          py::arg("storage_version") = "")
       .def("feature_type_string", &IndexVamana::feature_type_string)
       .def("id_type_string", &IndexVamana::id_type_string)
       .def(

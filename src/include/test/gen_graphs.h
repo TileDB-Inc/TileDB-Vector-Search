@@ -41,14 +41,15 @@
 #include <tuple>
 #include <vector>
 #include "detail/linalg/matrix.h"
+#include "detail/linalg/matrix_with_ids.h"
 
 auto random_geometric_2D(size_t N) {
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<float> coord(-1.0, 1.0);
 
-  auto X = ColMajorMatrix<float>(2, N);
-
+  auto X = ColMajorMatrixWithIds<float>(2, N);
+  std::iota(X.ids().begin(), X.ids().end(), 0);
   for (size_t i = 0; i < N; ++i) {
     X(0, i) = coord(gen);
     X(1, i) = coord(gen);
@@ -85,7 +86,8 @@ auto gen_uni_grid(size_t M, size_t N) {
   std::vector<std::tuple<size_t, size_t>> edges;
   edges.reserve(nedges);
 
-  auto vec_array = ColMajorMatrix<float>(dim, nvectors);
+  auto vec_array = ColMajorMatrixWithIds<float>(dim, nvectors);
+  std::iota(vec_array.ids().begin(), vec_array.ids().end(), 0);
 
   for (size_t i = 0; i < M; ++i) {
     for (size_t j = 0; j < N; ++j) {
@@ -116,7 +118,8 @@ auto gen_bi_grid(size_t M, size_t N) {
   std::vector<std::tuple<size_t, size_t>> edges;
   edges.reserve(nedges);
 
-  auto vec_array = ColMajorMatrix<float>(dim, nvectors);
+  auto vec_array = ColMajorMatrixWithIds<float>(dim, nvectors);
+  std::iota(vec_array.ids().begin(), vec_array.ids().end(), 0);
 
   for (size_t i = 0; i < M; ++i) {
     for (size_t j = 0; j < N; ++j) {
@@ -197,13 +200,16 @@ auto gen_star_grid(size_t M, size_t N) {
 
 template <class F = float, class T = uint8_t>
 auto normalize_matrix(
-    const ColMajorMatrix<F>& from, size_t min_val = 0, size_t max_val = 127) {
+    const ColMajorMatrixWithIds<F>& from,
+    size_t min_val = 0,
+    size_t max_val = 127) {
   auto&& [min_loc, max_loc] = std::minmax_element(
       from.data(), from.data() + from.num_rows() * from.num_cols());
   auto min = *min_loc;
   auto max = *max_loc;
 
-  auto to = ColMajorMatrix<T>(from.num_rows(), from.num_cols());
+  auto to = ColMajorMatrixWithIds<T>(from.num_rows(), from.num_cols());
+  std::copy(from.ids().begin(), from.ids().end(), to.ids().begin());
   for (size_t i = 0; i < from.num_rows(); ++i) {
     for (size_t j = 0; j < from.num_cols(); ++j) {
       auto foo = from(i, j) - min;
@@ -229,7 +235,8 @@ auto build_hypercube(size_t k_near, size_t k_far, size_t seed = 0) {
   std::uniform_real_distribution<float> dist_far(0.2, 0.3);
   std::uniform_int_distribution<int> heads(0, 1);
 
-  ColMajorMatrix<float> nn_hypercube(3, N + 1);
+  ColMajorMatrixWithIds<float> nn_hypercube(3, N + 1);
+  std::iota(nn_hypercube.ids().begin(), nn_hypercube.ids().end(), 0);
   size_t n{0};
   nn_hypercube(0, n) = 0;
   nn_hypercube(1, n) = 0;

@@ -1,19 +1,33 @@
+import json
+import time
+
 import numpy as np
 import pytest
 from array_paths import *
 from common import *
-import json
 
 import tiledb.vector_search.index as ind
 from tiledb.vector_search import Index
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
-from tiledb.vector_search.index import create_metadata
-from tiledb.vector_search.index import DATASET_TYPE
+from tiledb.vector_search import vamana_index
 from tiledb.vector_search.flat_index import FlatIndex
+from tiledb.vector_search.index import DATASET_TYPE
+from tiledb.vector_search.index import create_metadata
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
+from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.vamana_index import VamanaIndex
+
+
+def query_and_check_distances(
+    index, queries, k, expected_distances, expected_ids, **kwargs
+):
+    for _ in range(1):
+        distances, ids = index.query(queries, k=k, **kwargs)
+        assert np.array_equal(ids, expected_ids)
+        assert np.array_equal(distances, expected_distances)
 
 
 def query_and_check(index, queries, k, expected, **kwargs):
@@ -21,7 +35,10 @@ def query_and_check(index, queries, k, expected, **kwargs):
         result_d, result_i = index.query(queries, k=k, **kwargs)
         assert expected.issubset(set(result_i[0]))
 
-def check_default_metadata(uri, expected_vector_type, expected_storage_version, expected_index_type):
+
+def check_default_metadata(
+    uri, expected_vector_type, expected_storage_version, expected_index_type
+):
     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
     assert "dataset_type" in group.meta
     assert group.meta["dataset_type"] == DATASET_TYPE
@@ -40,16 +57,32 @@ def check_default_metadata(uri, expected_vector_type, expected_storage_version, 
     assert type(group.meta["index_type"]) == str
 
     assert "base_sizes" in group.meta
-    assert group.meta["base_sizes"] == json.dumps([0])
+    if is_type_erased_index(expected_index_type):
+        # NOTE(paris): Type-erased indexes have two values upon creation.
+        assert group.meta["base_sizes"] == "[0,0]"
+    else:
+        assert group.meta["base_sizes"] == json.dumps([0])
     assert type(group.meta["base_sizes"]) == str
 
     assert "ingestion_timestamps" in group.meta
-    assert group.meta["ingestion_timestamps"] == json.dumps([0])
+    if is_type_erased_index(expected_index_type):
+        # NOTE(paris): Type-erased indexes have two values upon creation.
+        ingestion_timestamps = json.loads(group.meta["ingestion_timestamps"])
+        assert len(ingestion_timestamps) == 2
+        assert ingestion_timestamps[0] == 0
+        current_time_ms = int(time.time() * 1000)
+        assert ingestion_timestamps[1] < current_time_ms
+        assert ingestion_timestamps[1] > current_time_ms - 1000 * 5
+    else:
+        assert group.meta["ingestion_timestamps"] == json.dumps([0])
     assert type(group.meta["ingestion_timestamps"]) == str
 
-    assert "has_updates" in group.meta
-    assert group.meta["has_updates"] == False
-    assert type(group.meta["has_updates"]) == np.int64
+    if not is_type_erased_index(expected_index_type):
+        # NOTE(paris): Type-erased indexes do not write has_updates.
+        assert "has_updates" in group.meta
+        assert group.meta["has_updates"] == 0
+        assert type(group.meta["has_updates"]) == np.int64
+
 
 def test_flat_index(tmp_path):
     uri = os.path.join(tmp_path, "array")
@@ -160,14 +193,98 @@ def test_ivf_flat_index(tmp_path):
     )
 
 
+def test_vamana_index_simple(tmp_path):
+    uri = os.path.join(tmp_path, "array")
+    dimensions = 3
+    vector_type = np.dtype(np.uint8)
+
+    # Create the index.
+    index = vamana_index.create(uri=uri, dimensions=dimensions, vector_type=vector_type)
+    assert index.get_dimensions() == dimensions
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {ind.MAX_UINT64})
+
+    # Open the index.
+    index = VamanaIndex(uri=uri)
+    assert index.get_dimensions() == dimensions
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {ind.MAX_UINT64})
+
+
+def test_vamana_index(tmp_path):
+    uri = os.path.join(tmp_path, "array")
+    if os.path.exists(uri):
+        os.rmdir(uri)
+    vector_type = np.float32
+
+    index = vamana_index.create(
+        uri=uri,
+        dimensions=3,
+        vector_type=np.dtype(vector_type),
+    )
+
+    queries = np.array([[2, 2, 2]], dtype=np.float32)
+    distances, ids = index.query(queries, k=1)
+    assert distances.shape == (1, 1)
+    assert ids.shape == (1, 1)
+    assert distances[0][0] == ind.MAX_FLOAT_32
+    assert ids[0][0] == ind.MAX_UINT64
+    query_and_check_distances(
+        index, queries, 1, [[ind.MAX_FLOAT_32]], [[ind.MAX_UINT64]]
+    )
+    check_default_metadata(uri, vector_type, STORAGE_VERSION, "VAMANA")
+
+    update_vectors = np.empty([5], dtype=object)
+    update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.float32))
+    update_vectors[1] = np.array([1, 1, 1], dtype=np.dtype(np.float32))
+    update_vectors[2] = np.array([2, 2, 2], dtype=np.dtype(np.float32))
+    update_vectors[3] = np.array([3, 3, 3], dtype=np.dtype(np.float32))
+    update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.float32))
+    index.update_batch(
+        vectors=update_vectors,
+        external_ids=np.array([0, 1, 2, 3, 4], dtype=np.dtype(np.uint32)),
+    )
+    query_and_check_distances(
+        index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]]
+    )
+
+    index = index.consolidate_updates()
+
+    # Check that we throw if we query with an invalid opt_l.
+    with pytest.raises(ValueError):
+        index.query(queries, k=3, opt_l=2)
+
+    # Test that we can query with multiple query vectors.
+    for i in range(5):
+        query_and_check_distances(
+            index,
+            np.array([[i, i, i], [i, i, i]], dtype=np.float32),
+            1,
+            [[0], [0]],
+            [[i], [i]],
+        )
+
+    # Test that we can query with k > 1.
+    query_and_check_distances(
+        index, np.array([[0, 0, 0]], dtype=np.float32), 2, [[0, 3]], [[0, 1]]
+    )
+
+    # Test that we can query with multiple query vectors and k > 1.
+    query_and_check_distances(
+        index,
+        np.array([[0, 0, 0], [4, 4, 4]], dtype=np.float32),
+        2,
+        [[0, 3], [0, 3]],
+        [[0, 1], [4, 3]],
+    )
+
+
 def test_delete_invalid_index(tmp_path):
     # We don't throw with an invalid uri.
     Index.delete_index(uri="invalid_uri", config=tiledb.cloud.Config())
 
 
 def test_delete_index(tmp_path):
-    indexes = ["FLAT", "IVF_FLAT"]
-    index_classes = [FlatIndex, IVFFlatIndex]
+    indexes = ["FLAT", "IVF_FLAT", "VAMANA"]
+    index_classes = [FlatIndex, IVFFlatIndex, VamanaIndex]
     data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3]], dtype=np.float32)
     for index_type, index_class in zip(indexes, index_classes):
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
@@ -179,7 +296,7 @@ def test_delete_index(tmp_path):
 
 
 def test_index_with_incorrect_dimensions(tmp_path):
-    indexes = [flat_index, ivf_flat_index]
+    indexes = [flat_index, ivf_flat_index, vamana_index]
     for index_type in indexes:
         uri = os.path.join(tmp_path, f"array_{index_type.__name__}")
         index = index_type.create(uri=uri, dimensions=3, vector_type=np.dtype(np.uint8))
@@ -201,7 +318,7 @@ def test_index_with_incorrect_dimensions(tmp_path):
 def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
     siftsmall_uri = siftsmall_inputs_file
     queries_uri = siftsmall_query_file
-    indexes = ["FLAT", "IVF_FLAT"]
+    indexes = ["FLAT", "IVF_FLAT", "VAMANA"]
     for index_type in indexes:
         index_uri = os.path.join(tmp_path, f"sift10k_flat_{index_type}")
         index = ingest(
@@ -225,7 +342,7 @@ def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
     # Tests that we raise a TypeError if the number of columns in the query is not the same as the
     # number of columns in the indexed data.
     size = 1000
-    indexes = ["FLAT", "IVF_FLAT"]
+    indexes = ["FLAT", "IVF_FLAT", "VAMANA"]
     num_columns_in_vector = [1, 2, 3, 4, 5, 10]
     for index_type in indexes:
         for num_columns in num_columns_in_vector:
@@ -251,26 +368,12 @@ def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
                     with pytest.raises(TypeError):
                         index.query(query, k=1)
 
-                # TODO(paris): This will throw with the following error. Fix and re-enable, then remove
-                # test_index_with_incorrect_num_of_query_columns_in_single_vector_query:
-                #   def array_to_matrix(array: np.ndarray):
-                #           if array.dtype == np.float32:
-                #   >           return pyarray_copyto_matrix_f32(array)
-                #   E           RuntimeError: Number of dimensions must be two
-                # Here we test with a query which is just a vector, i.e. [1, 2, 3].
-                # query = query[0]
-                # if num_columns_for_query == num_columns:
-                #     index.query(query, k=1)
-                # else:
-                #     with pytest.raises(TypeError):
-                #         index.query(query, k=1)
-
 
 def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_path):
     # Tests that we raise a TypeError if the number of columns in the query is not the same as the
     # number of columns in the indexed data, specifically for a single vector query.
     # i.e. queries = [1, 2, 3]  instead of queries = [[1, 2, 3], [4, 5, 6]].
-    indexes = [flat_index, ivf_flat_index]
+    indexes = [flat_index, ivf_flat_index, vamana_index]
     for index_type in indexes:
         uri = os.path.join(tmp_path, f"array_{index_type.__name__}")
         index = index_type.create(uri=uri, dimensions=3, vector_type=np.dtype(np.uint8))
@@ -287,6 +390,7 @@ def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_pa
         with pytest.raises(TypeError):
             index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
 
+
 def test_create_metadata(tmp_path):
     uri = os.path.join(tmp_path, "array")
 
@@ -296,7 +400,9 @@ def test_create_metadata(tmp_path):
     index_type: str = "IVF_FLAT"
     storage_version: str = STORAGE_VERSION
     group_exists: bool = False
-    create_metadata(uri, dimensions, vector_type, index_type, storage_version, group_exists)
-    
+    create_metadata(
+        uri, dimensions, vector_type, index_type, storage_version, group_exists
+    )
+
     # Check it contains the default metadata.
     check_default_metadata(uri, vector_type, storage_version, index_type)
