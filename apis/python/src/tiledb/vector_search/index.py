@@ -39,6 +39,7 @@ class Index:
         # If the user passes a tiledb python Config object convert to a dictionary
         if isinstance(config, tiledb.Config):
             config = dict(config)
+
         self.uri = uri
         self.config = config
         self.ctx = vspy.Ctx(config)

@@ -339,9 +339,9 @@ class base_index_group {
    */
   ~base_index_group() {
     if (opened_for_ == TILEDB_WRITE) {
-      // auto cfg = tiledb::Config();
-      auto write_group = tiledb::Group(
-          cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.get().config());
+      auto cfg = tiledb::Config();
+      auto write_group =
+          tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
       metadata_.store_metadata(write_group);
     }
   }
