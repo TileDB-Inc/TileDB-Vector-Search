@@ -36,7 +36,27 @@
 #include <string>
 #include <tiledb/tiledb>
 
-constexpr size_t READ_BATCH_SIZE = 100000000;
+// Default batch size for all TileDB read operations.
+// This is expressed in number of array cells read per request.
+constexpr size_t DEFAULT_READ_BATCH_SIZE_CELLS = 100000000;
+constexpr char READ_BATCH_SIZE_CELLS_CONFIG_KEY[] =
+    "vectorsearch.read_batch_size_cells";
+static size_t get_read_batch_size_cells(const tiledb::Context& ctx) {
+  auto config = ctx.config();
+  if (config.contains(READ_BATCH_SIZE_CELLS_CONFIG_KEY)) {
+    auto tmp_str = config.get(READ_BATCH_SIZE_CELLS_CONFIG_KEY);
+    try {
+      size_t read_batch_size_cells = std::stoull(tmp_str);
+      return read_batch_size_cells;
+    } catch (const std::invalid_argument& e) {
+      throw std::invalid_argument(
+          "Failed to convert 'vectorsearch.read_batch_size_cells' to size_t "
+          "('" +
+          tmp_str + "')");
+    }
+  }
+  return DEFAULT_READ_BATCH_SIZE_CELLS;
+}
 
 template <class... T>
 constexpr bool always_false = false;

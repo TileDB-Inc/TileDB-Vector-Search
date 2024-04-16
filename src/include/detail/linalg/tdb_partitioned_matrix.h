@@ -562,6 +562,7 @@ class tdbPartitionedMatrix
       auto ptr = this->data();
 
       // Read TileDB data
+      size_t read_batch_size_cells = get_read_batch_size_cells(ctx_);
       size_t total_size = col_count * dimension;
       size_t offset = 0;
       tiledb::Query query(ctx_, *(this->partitioned_vectors_array_));
@@ -569,8 +570,8 @@ class tdbPartitionedMatrix
       tiledb::Query::Status status;
       do {
         // Submit query and get status
-        size_t request_size = READ_BATCH_SIZE;
-        if (offset + READ_BATCH_SIZE > total_size) {
+        size_t request_size = read_batch_size_cells;
+        if (offset + read_batch_size_cells > total_size) {
           request_size = total_size - offset;
         }
         query.set_data_buffer(attr_name, ptr + offset, request_size);

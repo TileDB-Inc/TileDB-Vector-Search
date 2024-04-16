@@ -352,6 +352,7 @@ class tdbBlockedMatrix : public MatrixBase {
     auto layout_order = schema_.cell_order();
 
     // Read TileDB data
+    size_t read_batch_size_cells = get_read_batch_size_cells(ctx_);
     size_t total_size = elements_to_load * dimension;
     size_t offset = 0;
     tiledb::Query query(ctx_, *array_);
@@ -359,8 +360,8 @@ class tdbBlockedMatrix : public MatrixBase {
     tiledb::Query::Status status;
     do {
       // Submit query and get status
-      size_t request_size = READ_BATCH_SIZE;
-      if (offset + READ_BATCH_SIZE > total_size) {
+      size_t request_size = read_batch_size_cells;
+      if (offset + read_batch_size_cells > total_size) {
         request_size = total_size - offset;
       }
       query.set_data_buffer(attr_name, this->data() + offset, request_size);
