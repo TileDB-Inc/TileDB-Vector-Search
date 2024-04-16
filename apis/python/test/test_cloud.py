@@ -73,6 +73,7 @@ class CloudTests(unittest.TestCase):
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
     def test_cloud_vamana(self):
+        print('[test_cloud@test_cloud_vamana] test_cloud_vamana ========================================================================')
         source_uri = "tiledb://TileDB-Inc/sift_10k"
         queries_uri = siftsmall_query_file
         gt_uri = siftsmall_groundtruth_file
@@ -83,6 +84,7 @@ class CloudTests(unittest.TestCase):
         load_fvecs(queries_uri)
         gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
+        print('[test_cloud@test_cloud_vamana] vs.ingest() ========================================================================')
         vs.ingest(
             index_type="VAMANA",
             index_uri=index_uri,
@@ -93,7 +95,9 @@ class CloudTests(unittest.TestCase):
             mode=Mode.LOCAL,
         )
 
+        print('[test_cloud@test_cloud_vamana] vs.vamana_index.VamanaIndex() ========================================================================')
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
+        print('[test_cloud@test_cloud_vamana] tiledb_index_uri:', tiledb_index_uri)
         vs.vamana_index.VamanaIndex(uri=tiledb_index_uri)
 
     def test_cloud_ivf_flat(self):
