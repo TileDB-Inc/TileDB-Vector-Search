@@ -4,8 +4,9 @@ from typing import Any, Dict, Mapping, Optional
 import numpy as np
 
 import tiledb
-from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search import _tiledbvspy as vspy
+from tiledb.vector_search._tiledbvspy import *
+
 
 def load_as_matrix(
     path: str,
@@ -35,7 +36,7 @@ def load_as_matrix(
 
     a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
-    # Read all rows from column 0 -> `size`. Set no upper_bound. Note that if `size` is None then 
+    # Read all rows from column 0 -> `size`. Set no upper_bound. Note that if `size` is None then
     # we'll read to the column domain length.
     if dtype == np.float32:
         m = tdbColMajorMatrix_f32(ctx, path, 0, None, 0, size, 0, timestamp)

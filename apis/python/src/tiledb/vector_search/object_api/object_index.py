@@ -220,6 +220,67 @@ class ObjectIndex:
         elif not return_objects and not return_metadata:
             return distances, object_ids
 
+    def update_object_reader(
+        self,
+        object_reader: ObjectReader,
+    ):
+        self.object_reader = object_reader
+        self.object_reader_source_code = get_source_code(object_reader)
+        self.object_reader_class_name = object_reader.__class__.__name__
+        self.object_reader_kwargs = json.dumps(object_reader.init_kwargs())
+        group = tiledb.Group(self.uri, "w")
+        group.meta["object_reader_source_code"] = self.object_reader_source_code
+        group.meta["object_reader_class_name"] = self.object_reader_class_name
+        group.meta["object_reader_kwargs"] = self.object_reader_kwargs
+        group.close()
+
+    def create_embeddings_partitioned_array(
+        self,
+        config: Optional[Mapping[str, Any]] = None,
+    ) -> str:
+        with tiledb.scope_ctx(ctx_or_config=config):
+            embeddings_array_name = storage_formats[self.index.storage_version][
+                "INPUT_VECTORS_ARRAY_NAME"
+            ]
+            filters = storage_formats[self.index.storage_version][
+                "DEFAULT_ATTR_FILTERS"
+            ]
+            embeddings_array_uri = f"{self.uri}/{embeddings_array_name}"
+            if tiledb.array_exists(embeddings_array_uri):
+                raise ValueError(f"Array exists {embeddings_array_uri}")
+            partition_id_dim = tiledb.Dim(
+                name="partition_id",
+                domain=(0, np.iinfo(np.dtype("uint32")).max - 1),
+                tile=1,
+                dtype=np.dtype(np.uint32),
+            )
+            domain = tiledb.Domain(partition_id_dim)
+            attrs = [
+                tiledb.Attr(
+                    name="vectors", dtype=self.index.dtype, var=True, filters=filters
+                ),
+                tiledb.Attr(
+                    name="vectors_shape", dtype=np.uint32, var=True, filters=filters
+                ),
+                tiledb.Attr(
+                    name="external_ids",
+                    dtype=np.dtype(np.uint64),
+                    var=True,
+                    filters=filters,
+                ),
+            ]
+            embeddings_array_schema = tiledb.ArraySchema(
+                domain=domain,
+                sparse=False,
+                attrs=attrs,
+            )
+            tiledb.Array.create(embeddings_array_uri, embeddings_array_schema)
+
+            group = tiledb.Group(self.uri, "w")
+            add_to_group(group, embeddings_array_uri, name=embeddings_array_name)
+            group.close()
+        return embeddings_array_uri
+
     def update_index(
         self,
         object_array_timestamp=None,
@@ -243,10 +304,11 @@ class ObjectIndex:
         environment_variables: Dict = {},
         **kwargs,
     ):
-        embeddings_array_name = storage_formats[self.index.storage_version][
-            "INPUT_VECTORS_ARRAY_NAME"
-        ]
-        embeddings_uri = f"{self.uri}/{embeddings_array_name}"
+        use_updates_array = True
+        if self.index.size == 0:
+            self.create_embeddings_partitioned_array(config=config)
+            use_updates_array = False
+
         storage_formats[self.index.storage_version]["EXTERNAL_IDS_ARRAY_NAME"]
         metadata_array_uri = None
         if self.materialize_object_metadata:
@@ -256,7 +318,7 @@ class ObjectIndex:
 
         object_api.ingest_embeddings_with_driver(
             object_index_uri=self.uri,
-            embeddings_uri=embeddings_uri,
+            use_updates_array=use_updates_array,
             metadata_array_uri=metadata_array_uri,
             index_timestamp=index_timestamp,
             max_tasks_per_stage=max_tasks_per_stage,
@@ -347,15 +409,6 @@ def create(
         group.meta["embedding_source_code"] = get_source_code(embedding)
         group.meta["embedding_class_name"] = embedding.__class__.__name__
         group.meta["embedding_kwargs"] = json.dumps(embedding.init_kwargs())
-
-        embeddings_array_name = storage_formats[index.storage_version][
-            "INPUT_VECTORS_ARRAY_NAME"
-        ]
-        filters = storage_formats[index.storage_version]["DEFAULT_ATTR_FILTERS"]
-
-        create_embeddings_partitioned_array(
-            uri, embeddings_array_name, group, vector_type, filters, config
-        )
         object_metadata_array_uri = object_reader.metadata_array_uri()
         materialize_object_metadata = False
         if (
@@ -394,44 +447,6 @@ def create(
 
         group.meta["materialize_object_metadata"] = materialize_object_metadata
         group.close()
-        return ObjectIndex(uri, config, load_embedding=False, **kwargs)
-
-
-def create_embeddings_partitioned_array(
-    group_uri: str,
-    array_name: str,
-    group: tiledb.Group,
-    vector_type: np.dtype,
-    filters,
-    config: Optional[Mapping[str, Any]] = None,
-):
-    with tiledb.scope_ctx(ctx_or_config=config):
-        embeddings_array_uri = f"{group_uri}/{array_name}"
-        if tiledb.array_exists(embeddings_array_uri):
-            raise ValueError(f"Array exists {embeddings_array_uri}")
-        partition_id_dim = tiledb.Dim(
-            name="partition_id",
-            domain=(0, np.iinfo(np.dtype("uint32")).max - 1),
-            tile=1,
-            dtype=np.dtype(np.uint32),
+        return ObjectIndex(
+            uri, config, load_embedding=False, load_metadata_in_memory=False, **kwargs
         )
-        domain = tiledb.Domain(partition_id_dim)
-        attrs = [
-            tiledb.Attr(name="vectors", dtype=vector_type, var=True, filters=filters),
-            tiledb.Attr(
-                name="vectors_shape", dtype=np.uint32, var=True, filters=filters
-            ),
-            tiledb.Attr(
-                name="external_ids",
-                dtype=np.dtype(np.uint64),
-                var=True,
-                filters=filters,
-            ),
-        ]
-        embeddings_array_schema = tiledb.ArraySchema(
-            domain=domain,
-            sparse=False,
-            attrs=attrs,
-        )
-        tiledb.Array.create(embeddings_array_uri, embeddings_array_schema)
-        add_to_group(group, embeddings_array_uri, name=array_name)

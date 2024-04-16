@@ -4,9 +4,9 @@ import os
 import time
 from typing import Any, Mapping, Optional
 
+from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
-from tiledb.vector_search import _tiledbvspy as vspy
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
@@ -182,12 +182,6 @@ class Index:
                 if res in updated_ids:
                     internal_results_d[query_id, res_id] = MAX_FLOAT_32
                     internal_results_i[query_id, res_id] = MAX_UINT64
-                if (
-                    internal_results_d[query_id, res_id] == 0
-                    and internal_results_i[query_id, res_id] == 0
-                ):
-                    internal_results_d[query_id, res_id] = MAX_FLOAT_32
-                    internal_results_i[query_id, res_id] = MAX_UINT64
                 res_id += 1
             query_id += 1
         sort_index = np.argsort(internal_results_d, axis=1)
@@ -285,8 +279,11 @@ class Index:
         return array_exists and has_updates
 
     def set_has_updates(self, has_updates: bool = True):
-        self.has_updates = True
-        if not self.group.meta["has_updates"]:
+        self.has_updates = has_updates
+        if (
+            "has_updates" not in self.group.meta
+            or self.group.meta["has_updates"] != has_updates
+        ):
             self.group.close()
             self.group = tiledb.Group(self.uri, "w", ctx=tiledb.Ctx(self.config))
             self.group.meta["has_updates"] = has_updates
@@ -406,11 +403,15 @@ class Index:
             if fragment_info.timestamp_range[1] > max_timestamp:
                 max_timestamp = fragment_info.timestamp_range[1]
         max_timestamp += 1
-        conf = tiledb.Config(self.config)
-        conf["sm.consolidation.timestamp_start"] = self.latest_ingestion_timestamp
-        conf["sm.consolidation.timestamp_end"] = max_timestamp
-        tiledb.consolidate(self.updates_array_uri, config=conf)
-        tiledb.vacuum(self.updates_array_uri, config=conf)
+        # Consolidate all updates since the previous ingestion_timestamp.
+        # This is a performance optimization. We skip this for remote arrays as consolidation
+        # of remote arrays currently only supports modes `fragment_meta, commits, metadata`.
+        if not self.updates_array_uri.startswith("tiledb://"):
+            conf = tiledb.Config(self.config)
+            conf["sm.consolidation.timestamp_start"] = self.latest_ingestion_timestamp
+            conf["sm.consolidation.timestamp_end"] = max_timestamp
+            tiledb.consolidate(self.updates_array_uri, config=conf)
+            tiledb.vacuum(self.updates_array_uri, config=conf)
 
         # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
         should_pass_copy_centroids_uri = (

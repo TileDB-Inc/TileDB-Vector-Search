@@ -19,7 +19,7 @@ classifiers = [
 
 dependencies = [
     "tiledb-cloud>=0.11",
-    "tiledb>=0.26.0",
+    "tiledb>=0.27.0",
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
     "scikit-learn",
 ]
@@ -33,7 +33,7 @@ homepage = "https://tiledb.com"
 repository = "https://github.com/TileDB-Inc/tiledb-vector-search"
 
 [build-system]
-requires = ["scikit-build-core", "pybind11"]
+requires = ["scikit-build-core[pyproject]", "pybind11", "setuptools-scm"]
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]

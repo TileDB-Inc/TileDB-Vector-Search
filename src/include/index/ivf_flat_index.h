@@ -450,26 +450,18 @@ class ivf_flat_index {
    * all of it to a TileDB group.  Since we have all of it in memory,
    * we write from the PartitionedMatrix base class.
    *
-   * @param group_uri
-   * @param overwrite
-   * @return bool indicating success or failure
+   * @param group_uri The URI of the TileDB group where the index will be saved
+   * @param storage_version The storage version to use. If empty, use the most
+   * defult version.
+   * @return Whether the write was successful
    */
   auto write_index(
       const tiledb::Context& ctx,
       const std::string& group_uri,
-      bool overwrite) const {
-    tiledb::VFS vfs(ctx);
-
-    // @todo Deal with this in right way vis a vis timestamping
-    if (vfs.is_dir(group_uri)) {
-      if (overwrite == false) {
-        return false;
-      }
-      vfs.remove_dir(group_uri);
-    }
-
+      const std::string& storage_version = "") const {
     // Write the group
-    auto write_group = ivf_flat_group(*this, ctx, group_uri, TILEDB_WRITE);
+    auto write_group = ivf_flat_group(
+        *this, ctx, group_uri, TILEDB_WRITE, timestamp_, storage_version);
 
     write_group.set_dimension(dimension_);
 
@@ -512,10 +504,7 @@ class ivf_flat_index {
       const std::string& centroids_uri,
       const std::string& parts_uri,
       const std::string& ids_uri,
-      const std::string& indices_uri,
-      bool overwrite) const {
-    tiledb::VFS vfs(ctx);
-
+      const std::string& indices_uri) const {
     write_matrix(ctx, centroids_, centroids_uri, 0, true);
     write_matrix(ctx, *partitioned_vectors_, parts_uri, 0, true);
     write_vector(ctx, partitioned_vectors_->ids(), ids_uri, 0, true);
