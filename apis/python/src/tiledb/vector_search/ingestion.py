@@ -9,6 +9,7 @@ from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import add_to_group
+from tiledb.vector_search.utils import is_type_erased_index
 
 
 class TrainingSamplingPolicy(enum.Enum):
@@ -289,9 +290,6 @@ def ingest(
     CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 1000000
     DEFAULT_IMG_NAME = "3.9-vectorsearch"
     MAX_INT32 = 2**31 - 1
-
-    def is_type_erased_index():
-        return index_type == "VAMANA"
 
     class SourceType(enum.Enum):
         """SourceType of input vectors"""
@@ -755,7 +753,7 @@ def ingest(
 
         # Note that we don't create type-erased indexes (i.e. Vamana) here. Instead we create them
         # at very start of ingest() in C++.
-        elif not is_type_erased_index():
+        elif not is_type_erased_index(index_type):
             raise ValueError(f"Not supported index_type {index_type}")
 
     def read_external_ids(
@@ -2825,7 +2823,7 @@ def ingest(
         temp_size = int(group.meta.get("temp_size", "0"))
         group.close()
 
-        if not is_type_erased_index():
+        if not is_type_erased_index(index_type):
             # For type-erased indexes (i.e. Vamana), we update this metadata in the write_index()
             # call during create_ingestion_dag(), so don't do it here.
             group = tiledb.Group(index_group_uri, "w")

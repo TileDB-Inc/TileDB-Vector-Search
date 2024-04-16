@@ -112,7 +112,7 @@ class base_index_metadata {
   using metadata_string_check_type =
       std::tuple<std::string, std::string&, bool>;
   std::vector<metadata_string_check_type> metadata_string_checks{
-      // name, member_variable, default, expected, required
+      // name, member_variable, required
       {"dataset_type", dataset_type_, true},
       {"storage_version", storage_version_, true},
       {"dtype", dtype_, false},
@@ -127,11 +127,8 @@ class base_index_metadata {
   using metadata_arithmetic_check_type =
       std::tuple<std::string, void*, tiledb_datatype_t, bool>;
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks{
+      // name, member_variable, type, required
       {"temp_size", &temp_size_, TILEDB_INT64, true},
-      //{"index_kind",
-      // nstatic_cast<IndexMetadata*>(this)->index_kind_,
-      // TILEDB_UINT64,
-      // false},
       {"dimension", &dimension_, TILEDB_UINT32, false},
       {"feature_datatype", &feature_datatype_, TILEDB_UINT32, false},
       {"id_datatype", &id_datatype_, TILEDB_UINT32, false},
@@ -338,54 +335,6 @@ class base_index_metadata {
       write_group.put_metadata(name, type, 1, static_cast<const void*>(value));
     }
   }
-
-#if 0
-  /**************************************************************************
-   * Getters and setters
-   **************************************************************************/
-  std::string base_sizes_str() const {
-    return base_sizes_str_;
-  }
-  auto& base_sizes() {
-    return base_sizes_;
-  }
-  auto& base_sizes() const {
-    return base_sizes_;
-  }
-  void set_base_sizes(const std::vector<base_sizes_type>& base_sizes) {
-    base_sizes_ = base_sizes;
-  }
-  auto storage_version() const {
-    return storage_version_;
-  }
-  auto& storage_version()  {
-    return storage_version_;
-  }
-  auto dtype() const {
-    return dtype_;
-  }
-  auto& dtype()  {
-    return dtype_;
-  }
-  auto feature_datatype() const {
-    return feature_datatype_;
-  }
-  auto& feature_datatype()  {
-    return feature_datatype_;
-  }
-  auto id_datatype() const {
-    return id_datatype_;
-  }
-  auto& id_datatype()  {
-    return id_datatype_;
-  }
-  auto px_datatype() const {
-    return px_datatype_;
-  }
-  auto& px_datatype()  {
-    return px_datatype_;
-  }
-#endif
 
   /**************************************************************************
    * Helpful functions for debugging, testing, etc
