@@ -95,7 +95,7 @@ class base_index_group {
  protected:
   std::reference_wrapper<const tiledb::Context> cached_ctx_;
   std::string group_uri_;
-  tiledb::Group *read_group_ = nullptr;
+  tiledb::Group* read_group_ = nullptr;
   size_t index_timestamp_{0};
   size_t group_timestamp_{0};
   size_t timetravel_index_{0};
