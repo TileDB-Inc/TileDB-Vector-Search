@@ -326,7 +326,6 @@ class base_index_group {
    * @todo Don't use default Config
    */
   ~base_index_group() {
-    std::cout << "~base_index_group()\n";
     if (opened_for_ == TILEDB_WRITE) {
       auto cfg = tiledb::Config();
       auto write_group =
