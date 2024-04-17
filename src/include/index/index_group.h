@@ -253,7 +253,7 @@ class base_index_group {
   /** Convert an array key to a uri. */
   constexpr std::string array_key_to_uri(const std::string& array_key) const {
     auto name = array_key_to_array_name(array_key);
-   if (read_group_ == nullptr) {
+    if (read_group_ == nullptr) {
       return array_name_to_uri(group_uri_, name);
     }
     // Maps from the array name (not the key) to the URI of the array. Should be
@@ -332,12 +332,6 @@ class base_index_group {
       auto write_group =
           tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
       metadata_.store_metadata(write_group);
-    }
-    if (read_group_ != nullptr) {
-      std::cout << "this: " << this << "\n";
-      std::cout << "read_group_: " << read_group_ << "\n";
-      delete read_group_;
-      read_group_ = nullptr;
     }
   }
 
