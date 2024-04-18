@@ -95,7 +95,6 @@ class base_index_group {
  protected:
   std::reference_wrapper<const tiledb::Context> cached_ctx_;
   std::string group_uri_;
-  tiledb::Group* read_group_ = nullptr;
   size_t index_timestamp_{0};
   size_t group_timestamp_{0};
   size_t timetravel_index_{0};
@@ -111,6 +110,12 @@ class base_index_group {
   std::unordered_set<std::string> valid_array_keys_;
 
   std::unordered_map<std::string, std::string> array_key_to_array_name_;
+
+  // Maps from the array name (not the key) to the URI of the array. Should be
+  // used to get array URI's because the group_uri_ may be of the form
+  // `tiledb://foo/edc4656a-3f45-43a1-8ee5-fa692a015c53` which cannot have the
+  // array name added as a suffix.
+  std::unordered_map<std::string, std::string> array_name_to_uri_;
 
   /** Lookup an array name given an array key */
   constexpr auto array_key_to_array_name(const std::string& array_key) const {
@@ -130,6 +135,8 @@ class base_index_group {
       valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
       array_key_to_array_name_[array_key] = array_name;
+      array_name_to_uri_[array_name] =
+          array_name_to_uri(group_uri_, array_name);
     }
     static_cast<group_type*>(this)->append_valid_array_names_impl();
   }
@@ -147,13 +154,13 @@ class base_index_group {
       throw std::runtime_error(
           "Group uri " + std::string(group_uri_) + " does not exist.");
     }
-    read_group_ = new tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ);
+    auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
 
     // Load the metadata and check the version.  We need to do this before
     // we can check the array names.
 
     // @todo FIXME This needs to be done in derived class
-    metadata_.load_metadata(*read_group_);
+    metadata_.load_metadata(read_group);
     if (!empty(version_) && metadata_.storage_version_ != version_) {
       throw std::runtime_error(
           "Version mismatch. Requested " + version_ + " but found " +
@@ -165,18 +172,24 @@ class base_index_group {
     init_valid_array_names();
 
     // Get the active array names
-    auto count = read_group_->member_count();
-    for (size_t i = 0; i < read_group_->member_count(); ++i) {
-      auto member = read_group_->member(i);
+    auto count = read_group.member_count();
+    for (size_t i = 0; i < read_group.member_count(); ++i) {
+      auto member = read_group.member(i);
       auto name = member.name();
       if (!name || name->empty()) {
         throw std::runtime_error("Name is empty.");
+      }
+      auto uri = member.uri();
+      if (uri.empty()) {
+        throw std::runtime_error("Uri is empty.");
       }
 
       if (!valid_array_names_.contains(*name)) {
         throw std::runtime_error(
             "Invalid array name in group: " + std::string(*name));
       }
+
+      array_name_to_uri_[*name] = uri;
     }
   }
 
@@ -253,14 +266,13 @@ class base_index_group {
   /** Convert an array key to a uri. */
   constexpr std::string array_key_to_uri(const std::string& array_key) const {
     auto name = array_key_to_array_name(array_key);
-    if (read_group_ == nullptr) {
-      return array_name_to_uri(group_uri_, name);
+    if (array_name_to_uri_.find(name) == array_name_to_uri_.end()) {
+      throw std::runtime_error(
+          "Invalid key when getting the URI: " + array_key +
+          ". Name does not exist: " + name);
     }
-    // Maps from the array name (not the key) to the URI of the array. Should be
-    // used to get array URI's because the group_uri_ may be of the form
-    // `tiledb://foo/edc4656a-3f45-43a1-8ee5-fa692a015c53` which cannot have the
-    // array name added as a suffix.
-    return read_group_->member(name).uri();
+
+    return array_name_to_uri_.at(name);
   }
 
  public:
@@ -332,6 +344,8 @@ class base_index_group {
           tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
       metadata_.store_metadata(write_group);
     }
+    std::cout << "foo: " << cached_ctx_.get().config().contains("foo")
+              << std::endl;
   }
 
   /**
