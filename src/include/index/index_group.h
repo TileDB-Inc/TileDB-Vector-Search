@@ -344,8 +344,6 @@ class base_index_group {
           tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
       metadata_.store_metadata(write_group);
     }
-    std::cout << "foo: " << cached_ctx_.get().config().contains("foo")
-              << std::endl;
   }
 
   /**
