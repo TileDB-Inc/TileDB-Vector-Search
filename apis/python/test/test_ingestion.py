@@ -803,16 +803,12 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
             index_type=index_type,
             index_uri=index_uri,
             source_uri=os.path.join(dataset_dir, "data.u8bin"),
-            **({"partitions": partitions} if index_type == "IVF_FLAT" else {}),
+            partitions=partitions,
             index_timestamp=1,
         )
         if index_type == "IVF_FLAT":
             assert index.partitions == partitions
-        _, result = index.query(
-            queries,
-            k=k,
-            **({"nprobe": partitions} if index_type == "IVF_FLAT" else {}),
-        )
+        _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i) == 1.0
 
         update_ids_offset = MAX_UINT64 - size
@@ -827,19 +823,11 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
 
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri)
-        _, result = index.query(
-            queries,
-            k=k,
-            **({"nprobe": partitions} if index_type == "IVF_FLAT" else {}),
-        )
+        _, result = index.query(queries, k=k, nprobe=partitions)
         assert 0.45 < accuracy(result, gt_i) < 0.55
 
         index = index.consolidate_updates()
-        _, result = index.query(
-            queries,
-            k=k,
-            **({"nprobe": partitions} if index_type == "IVF_FLAT" else {}),
-        )
+        _, result = index.query(queries, k=k, nprobe=partitions)
         assert 0.45 < accuracy(result, gt_i) < 0.55
 
 
@@ -1015,9 +1003,6 @@ def test_storage_versions(tmp_path):
             assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
-SKIP
-
-
 def test_ivf_flat_copy_centroids_uri(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     os.mkdir(dataset_dir)
@@ -1185,9 +1170,6 @@ def test_kmeans():
     assert tdb_score < 1.5 * sklearn_score
 
 
-SKIP
-
-
 def test_ivf_flat_ingestion_with_training_source_uri_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     data = np.array(
@@ -1233,9 +1215,6 @@ def test_ivf_flat_ingestion_with_training_source_uri_f32(tmp_path):
         training_source_uri=os.path.join(dataset_dir, "training_data.f32bin"),
         training_source_type="F32BIN",
     )
-
-
-SKIP
 
 
 def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
