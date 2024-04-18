@@ -1,6 +1,7 @@
 import time
 
 import numpy as np
+import pytest
 from array_paths import *
 from common import *
 
@@ -210,11 +211,6 @@ def test_ivf_flat_ingestion_f32(tmp_path):
     gt_i, gt_d = get_groundtruth(dataset_dir, k)
 
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
-        # TODO(paris): Fix Vamana bug and re-enable:
-        # RuntimeError: Invalid key when getting the URI: adjacency_scores_array_name. Name does not exist: adjacency_scores
-        if index_type == "VAMANA":
-            continue
-
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         index = ingest(
             index_type=index_type,
@@ -261,11 +257,6 @@ def test_ingestion_fvec(tmp_path):
     gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
-        # TODO(paris): Fix Vamana bug and re-enable:
-        # RuntimeError: Invalid key when getting the URI: adjacency_scores_array_name. Name does not exist: adjacency_scores
-        if index_type == "VAMANA":
-            continue
-
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         index = ingest(
             index_type=index_type,
@@ -309,11 +300,6 @@ def test_ivf_flat_ingestion_numpy(tmp_path):
     gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
-        # TODO(paris): Fix Vamana bug and re-enable:
-        # RuntimeError: Invalid key when getting the URI: adjacency_scores_array_name. Name does not exist: adjacency_scores
-        if index_type == "VAMANA":
-            continue
-
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         index = ingest(
             index_type=index_type,
