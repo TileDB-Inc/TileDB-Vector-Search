@@ -93,9 +93,10 @@ class CloudTests(unittest.TestCase):
             mode=Mode.LOCAL,
         )
 
-        # TODO(paris): Fix error from loading this URI and then re-enable, and add the rest of the test.
-        # tiledb_index_uri = groups.info(index_uri).tiledb_uri
-        # vs.vamana_index.VamanaIndex(uri=tiledb_index_uri)
+        tiledb_index_uri = groups.info(index_uri).tiledb_uri
+        vs.vamana_index.VamanaIndex(
+            uri=tiledb_index_uri, config=tiledb.cloud.Config().dict()
+        )
 
     def test_cloud_ivf_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"

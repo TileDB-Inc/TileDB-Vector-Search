@@ -111,20 +111,15 @@ class base_index_group {
 
   std::unordered_map<std::string, std::string> array_key_to_array_name_;
 
-  /** Check validity of key name */
-  constexpr bool is_valid_key_name(const std::string& key_name) const noexcept {
-    return valid_array_keys_.contains(key_name);
-  }
-
-  /** Check validity of array name */
-  constexpr bool is_valid_array_name(
-      const std::string& array_name) const noexcept {
-    return valid_array_names_.contains(array_name);
-  }
+  // Maps from the array name (not the key) to the URI of the array. Should be
+  // used to get array URI's because the group_uri_ may be of the form
+  // `tiledb://foo/edc4656a-3f45-43a1-8ee5-fa692a015c53` which cannot have the
+  // array name added as a suffix.
+  std::unordered_map<std::string, std::string> array_name_to_uri_;
 
   /** Lookup an array name given an array key */
   constexpr auto array_key_to_array_name(const std::string& array_key) const {
-    if (!is_valid_key_name(array_key)) {
+    if (!valid_array_keys_.contains(array_key)) {
       throw std::runtime_error("Invalid array key: " + array_key);
     }
     return array_key_to_array_name_from_map(
@@ -140,27 +135,10 @@ class base_index_group {
       valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
       array_key_to_array_name_[array_key] = array_name;
+      array_name_to_uri_[array_name] =
+          array_name_to_uri(group_uri_, array_name);
     }
     static_cast<group_type*>(this)->append_valid_array_names_impl();
-  }
-
-  /**
-   * @brief Add an array to the group.
-   *
-   * @param array_name
-   *
-   * @todo Could have type of array set here instead of by Index.  Might be
-   * better to have it set in conjunction with array being set?
-   */
-  auto init_array_for_create(const std::string& array_name) {
-    if (!is_valid_array_name(array_name)) {
-      throw std::runtime_error(
-          "Invalid array name in add_array: " + array_name);
-    }
-
-    std::filesystem::path uri = array_name_to_uri(array_name);
-
-    return uri;
   }
 
   /**
@@ -201,10 +179,17 @@ class base_index_group {
       if (!name || name->empty()) {
         throw std::runtime_error("Name is empty.");
       }
-      if (!is_valid_array_name(*name)) {
+      auto uri = member.uri();
+      if (uri.empty()) {
+        throw std::runtime_error("Uri is empty.");
+      }
+
+      if (!valid_array_names_.contains(*name)) {
         throw std::runtime_error(
             "Invalid array name in group: " + std::string(*name));
       }
+
+      array_name_to_uri_[*name] = uri;
     }
   }
 
@@ -278,17 +263,16 @@ class base_index_group {
     static_cast<group_type*>(this)->create_default_impl(cfg);
   }
 
-  /** Convert an array name to a uri. */
-  constexpr std::string array_name_to_uri(
-      const std::string& array_name) const noexcept {
-    return array_name_to_uri(group_uri_, array_name);
-  }
-
   /** Convert an array key to a uri. */
   constexpr std::string array_key_to_uri(const std::string& array_key) const {
-    return (std::filesystem::path{group_uri_} /
-            std::filesystem::path{array_key_to_array_name(array_key)})
-        .string();
+    auto name = array_key_to_array_name(array_key);
+    if (array_name_to_uri_.find(name) == array_name_to_uri_.end()) {
+      throw std::runtime_error(
+          "Invalid key when getting the URI: " + array_key +
+          ". Name does not exist: " + name);
+    }
+
+    return array_name_to_uri_.at(name);
   }
 
  public:
