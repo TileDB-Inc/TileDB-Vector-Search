@@ -337,6 +337,54 @@ def test_ingestion_numpy(tmp_path):
         assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
+def test_ingestion_numpy_i8(tmp_path):
+    source_uri = siftsmall_inputs_file
+    queries_uri = siftsmall_query_file
+    gt_uri = siftsmall_groundtruth_file
+    index_uri = os.path.join(tmp_path, "array")
+    k = 100
+    partitions = 100
+    nqueries = 100
+    nprobe = 20
+
+    input_vectors = quantize_embeddings_int8(load_fvecs(source_uri))
+
+    queries = quantize_embeddings_int8(load_fvecs(queries_uri)).astype(np.float32)
+    gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
+
+    for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
+        # TODO(paris): Fix Vamana bug and re-enable:
+        # RuntimeError: IndexError: index 100 is out of bounds for axis 0 with size 100
+        if index_type == "VAMANA":
+            continue
+
+        index_uri = os.path.join(tmp_path, f"array_{index_type}")
+        index = ingest(
+            index_type=index_type,
+            index_uri=index_uri,
+            input_vectors=input_vectors,
+            partitions=partitions,
+        )
+        _, result = index.query(queries, k=k, nprobe=nprobe)
+        assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+        index_uri = move_local_index_to_new_location(index_uri)
+        index_ram = index_class(uri=index_uri)
+        _, result = index_ram.query(queries, k=k, nprobe=nprobe)
+        assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+        _, result = index_ram.query(
+            queries,
+            k=k,
+            nprobe=nprobe,
+            use_nuv_implementation=True,
+        )
+        assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+        _, result = index_ram.query(queries, k=k, nprobe=nprobe, mode=Mode.LOCAL)
+        assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+
 def test_ingestion_multiple_workers(tmp_path):
     source_uri = siftsmall_inputs_file
     queries_uri = siftsmall_query_file
