@@ -263,7 +263,7 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   idx.train(training_set, kmeans_init::kmeanspp);
   idx.add(training_set);
 
-  idx.write_index(ctx, ivf_index_uri, true);
+  idx.write_index(ctx, ivf_index_uri);
   auto idx2 = ivf_flat_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
   idx2.read_index_infinite();
 
@@ -568,7 +568,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   if (vfs.is_dir(tmp_ivf_index_uri)) {
     vfs.remove_dir(tmp_ivf_index_uri);
   }
-  init.idx.write_index(ctx, tmp_ivf_index_uri, true);
+  init.idx.write_index(ctx, tmp_ivf_index_uri);
 
 // Just some sanity checking and for interactive debugging
 #if 0

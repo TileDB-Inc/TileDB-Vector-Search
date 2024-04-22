@@ -47,7 +47,8 @@ jobs:
           pip install .
 
           # Generate data.
-          python backwards-compatibility-data/generate_data.py $release_tag
+          result=$(python backwards-compatibility-data/generate_data.py $release_tag)
+          echo "Should we upload these generated indexes? $result"
 
           # Fetch.
           echo "git fetch"
@@ -86,8 +87,6 @@ jobs:
 
   build_wheels:
     name: Wheel ${{ matrix.buildplat[0] }}-${{ matrix.buildplat[1] }}-${{ matrix.python }}
-    # TODO(paris): Add this back once generate_backwards_compatibility_data is confirmed to work.
-    # needs: generate_backwards_compatibility_data
     runs-on: ${{ matrix.buildplat[0] }}
     strategy:
       matrix:
@@ -144,7 +143,7 @@ jobs:
           path: dist/*.tar.gz
 
   upload_pypi:
-    needs: [build_wheels, build_sdist]
+    needs: [build_wheels, build_sdist, generate_backwards_compatibility_data]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:

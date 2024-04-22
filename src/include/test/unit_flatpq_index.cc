@@ -829,6 +829,10 @@ TEST_CASE("flatpq_index: flatpq_index write and read", "[flatpq_index]") {
   tiledb::Context ctx;
   std::string flatpq_index_uri =
       (std::filesystem::temp_directory_path() / "tmp_flatpq_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(flatpq_index_uri)) {
+    vfs.remove_dir(flatpq_index_uri);
+  }
   auto training_set =
       tdbColMajorMatrix<siftsmall_feature_type>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
@@ -841,7 +845,7 @@ TEST_CASE("flatpq_index: flatpq_index write and read", "[flatpq_index]") {
   idx.train(training_set);
   idx.add(training_set);
 
-  idx.write_index(flatpq_index_uri, true);
+  idx.write_index(flatpq_index_uri);
   auto idx2 = flatpq_index<
       siftsmall_feature_type,
       siftsmall_ids_type,

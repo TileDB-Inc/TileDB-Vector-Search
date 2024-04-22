@@ -56,7 +56,7 @@ static constexpr const char USAGE[] =
 Usage:
     ivf_index (-h | --help)
     ivf_index --db_uri URI --index_uri URI [--ftype TYPE] [--idtype TYPE] [--pxtype TYPE]
-                 [--init TYPE] [--num_clusters NN] [--max_iter NN] [--tol NN] [--force]
+                 [--init TYPE] [--num_clusters NN] [--max_iter NN] [--tol NN]
                  [--nthreads NN] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
 Options:
@@ -66,7 +66,6 @@ Options:
     --ftype TYPE            data type of feature vectors [default: float]
     --idtype TYPE           data type of ids [default: uint64]
     --pxtype TYPE           data type of partition index [default: uint64]
-    -f, --force             overwrite index if it exists [default:false]
     -i, --init TYPE         initialization type, kmeans++ or random [default: random]
     --num_clusters NN       number of clusters/partitions, 0 = sqrt(N) [default: 0]
     --max_iter NN           max number of iterations for kmeans [default: 10]
@@ -87,7 +86,6 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  bool overwrite = args["--force"].asBool();
   debug = args["--debug"].asBool();
   verbose = args["--verbose"].asBool();
   enable_stats = args["--stats"].asBool();
@@ -115,7 +113,7 @@ int main(int argc, char* argv[]) {
         /* dim, */ num_clusters, max_iter, tolerance);
     idx.train(X, init_type);
     idx.add(X);
-    idx.write_index(ctx, index_uri, overwrite);
+    idx.write_index(ctx, index_uri);
 
     if (args["--log"]) {
       //     idx.log_index();

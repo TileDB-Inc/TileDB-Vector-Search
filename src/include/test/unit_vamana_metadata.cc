@@ -67,10 +67,11 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
   if (vfs.is_dir(uri)) {
     vfs.remove_dir(uri);
   }
-  auto training_vectors =
-      tdbColMajorPreLoadMatrix<float>(ctx, siftsmall_inputs_uri);
-  auto idx =
-      vamana_index<float, uint64_t>(num_vectors(training_vectors), 20, 40, 30);
+  auto training_vectors = tdbColMajorPreLoadMatrixWithIds<
+      siftsmall_feature_type,
+      siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri);
+  auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
+      num_vectors(training_vectors), 20, 40, 30);
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
@@ -83,9 +84,9 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
   {
     // Check the metadata after an initial write_index().
-    idx.train(training_vectors);
+    idx.train(training_vectors, training_vectors.ids());
     idx.add(training_vectors);
-    idx.write_index(ctx, uri, true);
+    idx.write_index(ctx, uri);
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     auto x = vamana_index_metadata();
@@ -106,9 +107,9 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
   {
     // Check the metadata after a second write_index().
-    idx.train(training_vectors);
+    idx.train(training_vectors, training_vectors.ids());
     idx.add(training_vectors);
-    idx.write_index(ctx, uri, true);
+    idx.write_index(ctx, uri);
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     auto x = vamana_index_metadata();

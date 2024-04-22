@@ -86,6 +86,7 @@ class FlatIndex(index.Index):
         queries: np.ndarray,
         k: int = 10,
         nthreads: int = 8,
+        **kwargs,
     ):
         """
         Query a flat index

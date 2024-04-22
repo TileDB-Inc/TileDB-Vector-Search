@@ -182,12 +182,6 @@ class Index:
                 if res in updated_ids:
                     internal_results_d[query_id, res_id] = MAX_FLOAT_32
                     internal_results_i[query_id, res_id] = MAX_UINT64
-                if (
-                    internal_results_d[query_id, res_id] == 0
-                    and internal_results_i[query_id, res_id] == 0
-                ):
-                    internal_results_d[query_id, res_id] = MAX_FLOAT_32
-                    internal_results_i[query_id, res_id] = MAX_UINT64
                 res_id += 1
             query_id += 1
         sort_index = np.argsort(internal_results_d, axis=1)
@@ -409,11 +403,15 @@ class Index:
             if fragment_info.timestamp_range[1] > max_timestamp:
                 max_timestamp = fragment_info.timestamp_range[1]
         max_timestamp += 1
-        conf = tiledb.Config(self.config)
-        conf["sm.consolidation.timestamp_start"] = self.latest_ingestion_timestamp
-        conf["sm.consolidation.timestamp_end"] = max_timestamp
-        tiledb.consolidate(self.updates_array_uri, config=conf)
-        tiledb.vacuum(self.updates_array_uri, config=conf)
+        # Consolidate all updates since the previous ingestion_timestamp.
+        # This is a performance optimization. We skip this for remote arrays as consolidation
+        # of remote arrays currently only supports modes `fragment_meta, commits, metadata`.
+        if not self.updates_array_uri.startswith("tiledb://"):
+            conf = tiledb.Config(self.config)
+            conf["sm.consolidation.timestamp_start"] = self.latest_ingestion_timestamp
+            conf["sm.consolidation.timestamp_end"] = max_timestamp
+            tiledb.consolidate(self.updates_array_uri, config=conf)
+            tiledb.vacuum(self.updates_array_uri, config=conf)
 
         # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
         should_pass_copy_centroids_uri = (

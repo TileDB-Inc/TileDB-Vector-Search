@@ -2,6 +2,8 @@
 
 This folder contains test indices built using different versions of TileDB-Vector-Search. It is used to test the ability of the latest version of TileDB-Vector-Search to load and query arrays built by previous versions.
 
+In CI we run `generate_data.py` on each release and on major and minor version bump releases create PR with the generated data into `main`. We do not check in the generated data for patch releases.
+
 ### Usage
 
 To generate new data, run:

@@ -5,6 +5,10 @@ import numpy as np
 import tiledb
 
 
+def is_type_erased_index(index_type: str) -> bool:
+    return index_type == "VAMANA"
+
+
 def add_to_group(group, uri, name):
     """
     Adds an object to a group. Automatically infers whether to use a relative path or absolute path.

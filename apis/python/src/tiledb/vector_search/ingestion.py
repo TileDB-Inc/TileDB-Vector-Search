@@ -9,6 +9,7 @@ from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import add_to_group
+from tiledb.vector_search.utils import is_type_erased_index
 
 
 class TrainingSamplingPolicy(enum.Enum):
@@ -52,6 +53,17 @@ def ingest(
     use_sklearn: bool = True,
     mode: Mode = Mode.LOCAL,
     acn: Optional[str] = None,
+    ingest_resources: Optional[Mapping[str, Any]] = None,
+    consolidate_partition_resources: Optional[Mapping[str, Any]] = None,
+    copy_centroids_resources: Optional[Mapping[str, Any]] = None,
+    random_sample_resources: Optional[Mapping[str, Any]] = None,
+    kmeans_resources: Optional[Mapping[str, Any]] = None,
+    compute_new_centroids_resources: Optional[Mapping[str, Any]] = None,
+    assign_points_and_partial_new_centroids_resources: Optional[
+        Mapping[str, Any]
+    ] = None,
+    write_centroids_resources: Optional[Mapping[str, Any]] = None,
+    partial_index_resources: Optional[Mapping[str, Any]] = None,
     **kwargs,
 ):
     """
@@ -137,6 +149,24 @@ def ingest(
         execution mode, defaults to LOCAL use BATCH for distributed execution
     acn: Optional[str]
         access credential name to be used when running in BATCH mode for object store access
+    ingest_resources: Optional[Mapping[str, Any]]
+        resources to requst when performing vector ingestion, only applies to BATCH mode
+    consolidate_partition_resources: Optional[Mapping[str, Any]]
+        resources to requst when performing consolidation of a partition, only applies to BATCH mode
+    copy_centroids_resources: Optional[Mapping[str, Any]]
+        resources to requst when performing copy of centroids from input array to output array, only applies to BATCH mode
+    random_sample_resources: Optional[Mapping[str, Any]]
+        resources to request when performing random sample selection, only applies to BATCH mode
+    kmeans_resources: Optional[Mapping[str, Any]]
+        resources to request when performing kmeans task, only applies to BATCH mode
+    compute_new_centroids_resources: Optional[Mapping[str, Any]]
+        resources to request when performing centroid computation, only applies to BATCH mode
+    assign_points_and_partial_new_centroids_resources: Optional[Mapping[str, Any]]
+        resources to request when performing the computation of partial centroids, only applies to BATCH mode
+    write_centroids_resources: Optional[Mapping[str, Any]]
+        resources to request when performing the write of centroids, only applies to BATCH mode
+    partial_index_resources: Optional[Mapping[str, Any]]
+        resources to request when performing the computation of partial indexing, only applies to BATCH mode
     """
     import enum
     import json
@@ -260,9 +290,6 @@ def ingest(
     CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 1000000
     DEFAULT_IMG_NAME = "3.9-vectorsearch"
     MAX_INT32 = 2**31 - 1
-
-    def is_type_erased_index():
-        return index_type == "VAMANA"
 
     class SourceType(enum.Enum):
         """SourceType of input vectors"""
@@ -726,7 +753,7 @@ def ingest(
 
         # Note that we don't create type-erased indexes (i.e. Vamana) here. Instead we create them
         # at very start of ingest() in C++.
-        elif not is_type_erased_index():
+        elif not is_type_erased_index(index_type):
             raise ValueError(f"Not supported index_type {index_type}")
 
     def read_external_ids(
@@ -2044,6 +2071,17 @@ def ingest(
         mode: Mode = Mode.LOCAL,
         acn: Optional[str] = None,
         namespace: Optional[str] = None,
+        ingest_resources: Optional[Mapping[str, Any]] = None,
+        consolidate_partition_resources: Optional[Mapping[str, Any]] = None,
+        copy_centroids_resources: Optional[Mapping[str, Any]] = None,
+        random_sample_resources: Optional[Mapping[str, Any]] = None,
+        kmeans_resources: Optional[Mapping[str, Any]] = None,
+        compute_new_centroids_resources: Optional[Mapping[str, Any]] = None,
+        assign_points_and_partial_new_centroids_resources: Optional[
+            Mapping[str, Any]
+        ] = None,
+        write_centroids_resources: Optional[Mapping[str, Any]] = None,
+        partial_index_resources: Optional[Mapping[str, Any]] = None,
     ) -> dag.DAG:
         kwargs = {}
         if mode == Mode.BATCH:
@@ -2061,6 +2099,10 @@ def ingest(
             if acn:
                 kwargs["access_credentials_name"] = acn
         else:
+            if mode == Mode.LOCAL:
+                # TODO: `default` is not an actual namespace. This is a temp fix to
+                # be able to run DAGs locally.
+                namespace = "default"
             d = dag.DAG(
                 name="vector-ingestion",
                 mode=Mode.REALTIME,
@@ -2086,6 +2128,38 @@ def ingest(
             input_vectors_work_items_per_worker_during_sampling
         )
 
+        # We can't set as default in the function due to the use of `str(threads)`
+        # For consistency we then apply all defaults for resources here.
+        if ingest_resources is None:
+            ingest_resources = {"cpu": str(threads), "memory": "16Gi"}
+
+        if consolidate_partition_resources is None:
+            consolidate_partition_resources = {"cpu": str(threads), "memory": "16Gi"}
+
+        if copy_centroids_resources is None:
+            copy_centroids_resources = {"cpu": "1", "memory": "2Gi"}
+
+        if random_sample_resources is None:
+            random_sample_resources = {"cpu": "2", "memory": "6Gi"}
+
+        if kmeans_resources is None:
+            kmeans_resources = {"cpu": "8", "memory": "32Gi"}
+
+        if compute_new_centroids_resources is None:
+            compute_new_centroids_resources = {"cpu": "1", "memory": "8Gi"}
+
+        if assign_points_and_partial_new_centroids_resources is None:
+            assign_points_and_partial_new_centroids_resources = {
+                "cpu": str(threads),
+                "memory": "12Gi",
+            }
+
+        if write_centroids_resources is None:
+            write_centroids_resources = {"cpu": "1", "memory": "2Gi"}
+
+        if partial_index_resources is None:
+            partial_index_resources = {"cpu": "1", "memory": "2Gi"}
+
         if index_type == "FLAT":
             ingest_node = submit(
                 ingest_flat,
@@ -2103,7 +2177,7 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
                 name="ingest",
-                resources={"cpu": str(threads), "memory": "16Gi"},
+                resources=ingest_resources,
                 image_name=DEFAULT_IMG_NAME,
                 **kwargs,
             )
@@ -2127,8 +2201,9 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
                 name="ingest",
-                resources={"cpu": str(threads), "memory": "16Gi"},
+                resources=ingest_resources,
                 image_name=DEFAULT_IMG_NAME,
+                **kwargs,
             )
             return d
         elif index_type == "IVF_FLAT":
@@ -2143,7 +2218,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="copy-centroids",
-                    resources={"cpu": "1", "memory": "2Gi"},
+                    resources=copy_centroids_resources,
                     image_name=DEFAULT_IMG_NAME,
                     **kwargs,
                 )
@@ -2198,7 +2273,7 @@ def ingest(
                                 config=config,
                                 verbose=verbose,
                                 name="read-random-sample-" + str(idx),
-                                resources={"cpu": "2", "memory": "6Gi"},
+                                resources=random_sample_resources,
                                 image_name=DEFAULT_IMG_NAME,
                                 **kwargs,
                             )
@@ -2227,7 +2302,7 @@ def ingest(
                         trace_id=trace_id,
                         use_sklearn=use_sklearn,
                         name="kmeans",
-                        resources={"cpu": "8", "memory": "32Gi"},
+                        resources=kmeans_resources,
                         image_name=DEFAULT_IMG_NAME,
                         **kwargs,
                     )
@@ -2256,7 +2331,7 @@ def ingest(
                         verbose=verbose,
                         trace_id=trace_id,
                         name="init-centroids",
-                        resources={"cpu": "1", "memory": "1Gi"},
+                        resources=copy_centroids_resources,
                         image_name=DEFAULT_IMG_NAME,
                         **kwargs,
                     )
@@ -2291,7 +2366,7 @@ def ingest(
                                     trace_id=trace_id,
                                     use_sklearn=use_sklearn,
                                     name="k-means-part-" + str(task_id),
-                                    resources={"cpu": str(threads), "memory": "12Gi"},
+                                    resources=assign_points_and_partial_new_centroids_resources,
                                     image_name=DEFAULT_IMG_NAME,
                                     **kwargs,
                                 )
@@ -2304,7 +2379,7 @@ def ingest(
                                     compute_new_centroids,
                                     *kmeans_workers[i : i + 10],
                                     name="update-centroids-" + str(i),
-                                    resources={"cpu": "1", "memory": "8Gi"},
+                                    resources=compute_new_centroids_resources,
                                     image_name=DEFAULT_IMG_NAME,
                                     **kwargs,
                                 )
@@ -2313,7 +2388,7 @@ def ingest(
                             compute_new_centroids,
                             *reducers,
                             name="update-centroids",
-                            resources={"cpu": "1", "memory": "8Gi"},
+                            resources=compute_new_centroids_resources,
                             image_name=DEFAULT_IMG_NAME,
                             **kwargs,
                         )
@@ -2327,7 +2402,7 @@ def ingest(
                         verbose=verbose,
                         trace_id=trace_id,
                         name="write-centroids",
-                        resources={"cpu": "1", "memory": "2Gi"},
+                        resources=write_centroids_resources,
                         image_name=DEFAULT_IMG_NAME,
                         **kwargs,
                     )
@@ -2340,7 +2415,7 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
                 name="compute-indexes",
-                resources={"cpu": "1", "memory": "2Gi"},
+                resources=partial_index_resources,
                 image_name=DEFAULT_IMG_NAME,
                 **kwargs,
             )
@@ -2370,7 +2445,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="ingest-" + str(task_id),
-                    resources={"cpu": str(threads), "memory": "16Gi"},
+                    resources=ingest_resources,
                     image_name=DEFAULT_IMG_NAME,
                     **kwargs,
                 )
@@ -2390,7 +2465,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="ingest-" + str(task_id),
-                    resources={"cpu": str(threads), "memory": "16Gi"},
+                    resources=ingest_resources,
                     image_name=DEFAULT_IMG_NAME,
                     **kwargs,
                 )
@@ -2417,7 +2492,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                     name="consolidate-partition-" + str(task_id),
-                    resources={"cpu": str(threads), "memory": "16Gi"},
+                    resources=consolidate_partition_resources,
                     image_name=DEFAULT_IMG_NAME,
                     **kwargs,
                 )
@@ -2431,43 +2506,38 @@ def ingest(
         index_group_uri: str,
         config: Optional[Mapping[str, Any]] = None,
     ):
-        group = tiledb.Group(index_group_uri)
-        try:
-            if INPUT_VECTORS_ARRAY_NAME in group:
-                tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
-            if EXTERNAL_IDS_ARRAY_NAME in group:
-                tiledb.Array.delete_array(group[EXTERNAL_IDS_ARRAY_NAME].uri)
-        except tiledb.TileDBError as err:
-            message = str(err)
-            if "does not exist" not in message:
-                raise err
-        modes = ["fragment_meta", "commits", "array_meta"]
-        for mode in modes:
-            conf = tiledb.Config(config)
-            conf["sm.consolidation.mode"] = mode
-            conf["sm.vacuum.mode"] = mode
-            ids_uri = group[IDS_ARRAY_NAME].uri
-            parts_uri = group[PARTS_ARRAY_NAME].uri
-            tiledb.consolidate(parts_uri, config=conf)
-            tiledb.vacuum(parts_uri, config=conf)
-            tiledb.consolidate(ids_uri, config=conf)
-            tiledb.vacuum(ids_uri, config=conf)
-        group.close()
-
-        # TODO remove temp data for tiledb URIs
-        if not index_group_uri.startswith("tiledb://"):
-            group = tiledb.Group(index_group_uri, "r")
-            if PARTIAL_WRITE_ARRAY_DIR in group:
-                group.close()
-                group = tiledb.Group(index_group_uri, "w")
-                group.remove(PARTIAL_WRITE_ARRAY_DIR)
-                vfs = tiledb.VFS(config)
-                partial_write_array_dir_uri = (
-                    index_group_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
-                )
-                if vfs.is_dir(partial_write_array_dir_uri):
-                    vfs.remove_dir(partial_write_array_dir_uri)
-            group.close()
+        with tiledb.Group(index_group_uri) as group:
+            try:
+                if INPUT_VECTORS_ARRAY_NAME in group:
+                    tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
+                if EXTERNAL_IDS_ARRAY_NAME in group:
+                    tiledb.Array.delete_array(group[EXTERNAL_IDS_ARRAY_NAME].uri)
+            except tiledb.TileDBError as err:
+                message = str(err)
+                if "does not exist" not in message:
+                    raise err
+            modes = ["fragment_meta", "commits", "array_meta"]
+            for mode in modes:
+                conf = tiledb.Config(config)
+                conf["sm.consolidation.mode"] = mode
+                conf["sm.vacuum.mode"] = mode
+                ids_uri = group[IDS_ARRAY_NAME].uri
+                parts_uri = group[PARTS_ARRAY_NAME].uri
+                tiledb.consolidate(parts_uri, config=conf)
+                tiledb.vacuum(parts_uri, config=conf)
+                tiledb.consolidate(ids_uri, config=conf)
+                tiledb.vacuum(ids_uri, config=conf)
+            partial_write_array_exists = PARTIAL_WRITE_ARRAY_DIR in group
+        if partial_write_array_exists:
+            with tiledb.Group(index_group_uri, "w") as partial_write_array_group:
+                partial_write_array_group.remove(PARTIAL_WRITE_ARRAY_DIR)
+            partial_write_array_dir_uri = (
+                index_group_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
+            )
+            with tiledb.Group(
+                partial_write_array_dir_uri, "m"
+            ) as partial_write_array_group:
+                partial_write_array_group.delete(recursive=True)
 
     # --------------------------------------------------------------------
     # End internal function definitions
@@ -2732,6 +2802,15 @@ def ingest(
             mode=mode,
             acn=acn,
             namespace=namespace,
+            ingest_resources=ingest_resources,
+            consolidate_partition_resources=consolidate_partition_resources,
+            copy_centroids_resources=copy_centroids_resources,
+            random_sample_resources=random_sample_resources,
+            kmeans_resources=kmeans_resources,
+            compute_new_centroids_resources=compute_new_centroids_resources,
+            assign_points_and_partial_new_centroids_resources=assign_points_and_partial_new_centroids_resources,
+            write_centroids_resources=write_centroids_resources,
+            partial_index_resources=partial_index_resources,
         )
         logger.debug("Submitting ingestion graph")
         d.compute()
@@ -2742,7 +2821,7 @@ def ingest(
         temp_size = int(group.meta.get("temp_size", "0"))
         group.close()
 
-        if not is_type_erased_index():
+        if not is_type_erased_index(index_type):
             # For type-erased indexes (i.e. Vamana), we update this metadata in the write_index()
             # call during create_ingestion_dag(), so don't do it here.
             group = tiledb.Group(index_group_uri, "w")

@@ -8,6 +8,7 @@ from tiledb.vector_search import index
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import storage_formats
+from tiledb.vector_search.storage_formats import validate_storage_version
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 INDEX_TYPE = "VAMANA"
@@ -63,7 +64,7 @@ class VamanaIndex(index.Index):
         self,
         queries: np.ndarray,
         k: int = 10,
-        opt_l: Optional[int] = 1,
+        opt_l: Optional[int] = 100,
         **kwargs,
     ):
         """
@@ -76,7 +77,7 @@ class VamanaIndex(index.Index):
         k: int
             Number of top results to return per query
         opt_l: int
-            How deep to search
+            How deep to search. Should be >= k. Defaults to 100.
         """
         warnings.warn("The Vamana index is not yet supported, please use with caution.")
         if self.size == 0:
@@ -85,6 +86,8 @@ class VamanaIndex(index.Index):
             )
 
         assert queries.dtype == np.float32
+        if opt_l < k:
+            raise ValueError(f"opt_l ({opt_l}) should be >= k ({k})")
 
         if queries.ndim == 1:
             queries = np.array([queries])
@@ -95,30 +98,28 @@ class VamanaIndex(index.Index):
         return np.array(distances, copy=False), np.array(ids, copy=False)
 
 
-# TODO(paris): Pass more arguments to C++, i.e. storage_version.
 def create(
     uri: str,
     dimensions: int,
     vector_type: np.dtype,
-    id_type: np.dtype = np.uint32,
-    adjacency_row_index_type: np.dtype = np.uint32,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> VamanaIndex:
     warnings.warn("The Vamana index is not yet supported, please use with caution.")
+    validate_storage_version(storage_version)
     ctx = vspy.Ctx(config)
     index = vspy.IndexVamana(
         feature_type=np.dtype(vector_type).name,
-        id_type=np.dtype(id_type).name,
-        adjacency_row_index_type=np.dtype(adjacency_row_index_type).name,
+        id_type=np.dtype(np.uint64).name,
+        adjacency_row_index_type=np.dtype(np.uint64).name,
         dimension=dimensions,
     )
     # TODO(paris): Run all of this with a single C++ call.
     empty_vector = vspy.FeatureVectorArray(
-        dimensions, 0, np.dtype(vector_type).name, np.dtype(id_type).name
+        dimensions, 0, np.dtype(vector_type).name, np.dtype(np.uint64).name
     )
     index.train(empty_vector)
     index.add(empty_vector)
-    index.write_index(ctx, uri)
+    index.write_index(ctx, uri, storage_version)
     return VamanaIndex(uri=uri, config=config, memory_budget=1000000)

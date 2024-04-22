@@ -181,7 +181,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     if (vfs.is_dir(tmp_ivf_index_uri)) {
       vfs.remove_dir(tmp_ivf_index_uri);
     }
-    idx.write_index(ctx_, tmp_ivf_index_uri, true);
+    idx.write_index(ctx_, tmp_ivf_index_uri);
     auto idx0 =
         // ivf_flat_l2_index<feature_type, id_type, px_type>(ctx_,
         // tmp_ivf_index_uri);

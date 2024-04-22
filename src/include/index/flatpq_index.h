@@ -640,15 +640,8 @@ class flatpq_index {
     return un_pq;
   }
 
-  auto write_index(const std::string& group_uri, bool overwrite) {
+  auto write_index(const std::string& group_uri) {
     tiledb::Context ctx;
-    tiledb::VFS vfs(ctx);
-    if (vfs.is_dir(group_uri)) {
-      if (overwrite == false) {
-        return false;
-      }
-      vfs.remove_dir(group_uri);
-    }
 
     tiledb::Config cfg;
     tiledb::Group::create(ctx, group_uri);
@@ -660,11 +653,11 @@ class flatpq_index {
 
     auto centroids_uri = group_uri + "/centroids";
     write_matrix(ctx, centroids_, centroids_uri);
-    write_group.add_member("centroids", true, "centroids");
+    tiledb_helpers::add_to_group(write_group, centroids_uri, "centroids");
 
     auto pq_vectors_uri = group_uri + "/pq_vectors";
     write_matrix(ctx, pq_vectors_, pq_vectors_uri);
-    write_group.add_member("pq_vectors", true, "pq_vectors");
+    tiledb_helpers::add_to_group(write_group, pq_vectors_uri, "pq_vectors");
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       std::ostringstream oss;
@@ -673,8 +666,8 @@ class flatpq_index {
 
       auto distance_table_uri = group_uri + "/distance_table_" + number;
       write_matrix(ctx, distance_tables_[subspace], distance_table_uri);
-      write_group.add_member(
-          "distance_table_" + number, true, "distance_table_" + number);
+      tiledb_helpers::add_to_group(
+          write_group, distance_table_uri, "distance_table_" + number);
     }
     write_group.close();
     return true;
