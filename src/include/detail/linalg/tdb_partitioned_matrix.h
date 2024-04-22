@@ -134,8 +134,7 @@ class tdbPartitionedMatrix
   // We don't actually use this
   // size_t num_array_cols_{0};
 
-  std::reference_wrapper<const tiledb::Context> ctx_;
-  // tiledb::Context ctx_;
+  tiledb::Context ctx_;
 
   std::string partitioned_vectors_uri_;
   std::unique_ptr<tiledb::Array> partitioned_vectors_array_;

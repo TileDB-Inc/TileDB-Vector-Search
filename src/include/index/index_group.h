@@ -93,7 +93,7 @@ class base_index_group {
   friend IndexGroup;
 
  protected:
-  std::reference_wrapper<const tiledb::Context> cached_ctx_;
+  tiledb::Context cached_ctx_;
   std::string group_uri_;
   size_t index_timestamp_{0};
   size_t group_timestamp_{0};
