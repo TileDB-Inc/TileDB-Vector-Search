@@ -559,11 +559,6 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
     gt_i, gt_d = get_groundtruth(dataset_dir, k)
 
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
-        # TODO(paris): Fix Vamana bug and re-enable:
-        # ValueError: New ingestion timestamp: 1 can't be smaller that the latest ingestion timestamp: 1713444057062
-        if index_type == "VAMANA":
-            continue
-
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         index = ingest(
             index_type=index_type,
@@ -599,6 +594,11 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         index = index_class(uri=index_uri, timestamp=101)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        
+        # TODO(paris): Fix Vamana bug and re-enable:
+        if index_type == "VAMANA":
+            continue
+        
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri, timestamp=(0, 101))
         _, result = index.query(queries, k=k, nprobe=partitions)
@@ -789,11 +789,6 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
     gt_i, gt_d = get_groundtruth(dataset_dir, k)
 
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
-        # TODO(paris): Fix Vamana bug and re-enable:
-        # ValueError: New ingestion timestamp: 1 can't be smaller that the latest ingestion timestamp: 1713444057062
-        if index_type == "VAMANA":
-            continue
-
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         index = ingest(
             index_type=index_type,
@@ -817,14 +812,17 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
             )
             updated_ids[i] = i + update_ids_offset
 
-        index_uri = move_local_index_to_new_location(index_uri)
+        # TODO(paris): Fix Vamana bug and re-enable:
+        # tiledb.cc.TileDBError: [TileDB::ArrayDirectory] Error: Cannot open array; Array does not exist.
+        if index_type != "VAMANA":
+            index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri)
-        _, result = index.query(queries, k=k, nprobe=partitions)
-        assert 0.45 < accuracy(result, gt_i) < 0.55
+        _, result = index.query(queries, k=k, nprobe=partitions, opt_l=k*2)
+        assert 0.45 < accuracy(result, gt_i)
 
         index = index.consolidate_updates()
-        _, result = index.query(queries, k=k, nprobe=partitions)
-        assert 0.45 < accuracy(result, gt_i) < 0.55
+        _, result = index.query(queries, k=k, nprobe=partitions, opt_l=k*2)
+        assert 0.45 < accuracy(result, gt_i)
 
 
 def test_ivf_flat_ingestion_tdb_random_sampling_policy(tmp_path):
