@@ -470,7 +470,7 @@ TEST_CASE("api_vamana_index: storage_version", "[api_vamana_index]") {
         FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
     index.train(empty_training_vector_array);
     index.add(empty_training_vector_array);
-    index.write_index(ctx, index_uri, "0.3");
+    index.write_index(ctx, index_uri, std::nullopt, "0.3");
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
@@ -490,11 +490,11 @@ TEST_CASE("api_vamana_index: storage_version", "[api_vamana_index]") {
 
     // Throw with the wrong version.
     CHECK_THROWS_WITH(
-        index.write_index(ctx, index_uri, "0.4"),
+        index.write_index(ctx, index_uri, std::nullopt, "0.4"),
         "Version mismatch. Requested 0.4 but found 0.3");
     // Succeed without a version.
     index.write_index(ctx, index_uri);
     // Succeed with the same version.
-    index.write_index(ctx, index_uri, "0.3");
+    index.write_index(ctx, index_uri, std::nullopt, "0.3");
   }
 }
