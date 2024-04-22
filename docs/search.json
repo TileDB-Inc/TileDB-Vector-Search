@@ -25,7 +25,7 @@
     "href": "documentation/reference/flat_index.FlatIndex.html",
     "title": "flat_index.FlatIndex",
     "section": "",
-    "text": "vector_search.flat_index.FlatIndex(self, uri, config=None, timestamp=None, **kwargs)\nOpen a flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nuri\nstr\nURI of the index\nrequired\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone\n\n\n\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nquery_internal\nQuery a flat index\n\n\n\n\n\nvector_search.flat_index.FlatIndex.query_internal(queries, k=10, nthreads=8)\nQuery a flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnthreads\nint\nNumber of threads to use for query\n8"
+    "text": "vector_search.flat_index.FlatIndex(self, uri, config=None, timestamp=None, **kwargs)\nOpen a flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nuri\nstr\nURI of the index\nrequired\n\n\nconfig\nOptional[Mapping[str, Any]]\nconfig dictionary, defaults to None\nNone\n\n\n\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nquery_internal\nQuery a flat index\n\n\n\n\n\nvector_search.flat_index.FlatIndex.query_internal(queries, k=10, nthreads=8, **kwargs)\nQuery a flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnthreads\nint\nNumber of threads to use for query\n8"
   },
   {
     "objectID": "documentation/reference/flat_index.FlatIndex.html#parameters",
@@ -39,7 +39,7 @@
     "href": "documentation/reference/flat_index.FlatIndex.html#methods",
     "title": "flat_index.FlatIndex",
     "section": "",
-    "text": "Name\nDescription\n\n\n\n\nquery_internal\nQuery a flat index\n\n\n\n\n\nvector_search.flat_index.FlatIndex.query_internal(queries, k=10, nthreads=8)\nQuery a flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnthreads\nint\nNumber of threads to use for query\n8"
+    "text": "Name\nDescription\n\n\n\n\nquery_internal\nQuery a flat index\n\n\n\n\n\nvector_search.flat_index.FlatIndex.query_internal(queries, k=10, nthreads=8, **kwargs)\nQuery a flat index\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nqueries\nnp.ndarray\nND Array of queries\nrequired\n\n\nk\nint\nNumber of top results to return per query\n10\n\n\nnthreads\nint\nNumber of threads to use for query\n8"
   },
   {
     "objectID": "documentation/reference/ingestion.html",
