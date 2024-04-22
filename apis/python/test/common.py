@@ -362,5 +362,4 @@ def quantize_embeddings_int8(
     ranges = np.vstack((np.min(embeddings, axis=0), np.max(embeddings, axis=0)))
     starts = ranges[0, :]
     steps = (ranges[1, :] - ranges[0, :]) / 255
-    ret = ((embeddings - starts) / steps - 128).astype(np.int8)
-    return ret
+    return ((embeddings - starts) / steps - 128).astype(np.int8)
