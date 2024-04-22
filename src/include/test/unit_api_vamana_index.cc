@@ -368,6 +368,10 @@ TEST_CASE(
   auto ctx = tiledb::Context{};
   std::string api_vamana_index_uri =
       (std::filesystem::temp_directory_path() / "api_vamana_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(api_vamana_index_uri)) {
+    vfs.remove_dir(api_vamana_index_uri);
+  }
 
   auto a = IndexVamana(std::make_optional<IndexOptions>(
       {{"feature_type", "float32"},

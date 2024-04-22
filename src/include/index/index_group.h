@@ -239,7 +239,8 @@ class base_index_group {
     if (exists(cached_ctx_)) {
       /** Load the current group metadata */
       init_for_open(cfg);
-      if (!metadata_.ingestion_timestamps_.empty() && index_timestamp_ < metadata_.ingestion_timestamps_.back()) {
+      if (!metadata_.ingestion_timestamps_.empty() &&
+          index_timestamp_ < metadata_.ingestion_timestamps_.back()) {
         throw std::runtime_error(
             "Requested write timestamp " + std::to_string(index_timestamp_) +
             " is not greater than " +
