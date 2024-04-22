@@ -351,3 +351,16 @@ def move_local_index_to_new_location(index_uri):
     shutil.copytree(index_uri, copied_index_uri)
     shutil.rmtree(index_uri)
     return copied_index_uri
+
+
+def quantize_embeddings_int8(
+    embeddings: np.ndarray,
+) -> np.ndarray:
+    """
+    Quantizes embeddings to a lower precision.
+    """
+    ranges = np.vstack((np.min(embeddings, axis=0), np.max(embeddings, axis=0)))
+    starts = ranges[0, :]
+    steps = (ranges[1, :] - ranges[0, :]) / 255
+    ret = ((embeddings - starts) / steps - 128).astype(np.int8)
+    return ret
