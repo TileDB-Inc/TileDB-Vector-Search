@@ -840,7 +840,11 @@ class vamana_index {
   auto write_index(
       const tiledb::Context& ctx,
       const std::string& group_uri,
-      const std::string& storage_version = "") const {
+      std::optional<size_t> timestamp = std::nullopt,
+      const std::string& storage_version = "") {
+    if (timestamp.has_value()) {
+      timestamp_ = timestamp.value();
+    }
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
 

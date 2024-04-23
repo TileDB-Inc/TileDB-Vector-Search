@@ -257,9 +257,9 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     metadata_.adjacency_row_index_type_str_ =
         type_to_string_v<typename index_type::adjacency_row_index_type>;
 
-    metadata_.ingestion_timestamps_ = {0};
-    metadata_.base_sizes_ = {0};
-    metadata_.num_edges_history_ = {0};
+    metadata_.ingestion_timestamps_ = {};
+    metadata_.base_sizes_ = {};
+    metadata_.num_edges_history_ = {};
     metadata_.temp_size_ = 0;
     metadata_.dimension_ = this->get_dimension();
 

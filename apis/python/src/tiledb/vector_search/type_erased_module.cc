@@ -284,11 +284,13 @@ void init_type_erased_module(py::module_& m) {
           [](IndexVamana& index,
              const tiledb::Context& ctx,
              const std::string& group_uri,
+             std::optional<size_t> timestamp,
              const std::string& storage_version) {
-            index.write_index(ctx, group_uri, storage_version);
+            index.write_index(ctx, group_uri, timestamp, storage_version);
           },
           py::arg("ctx"),
           py::arg("group_uri"),
+          py::arg("timestamp") = py::none(),
           py::arg("storage_version") = "")
       .def("feature_type_string", &IndexVamana::feature_type_string)
       .def("id_type_string", &IndexVamana::id_type_string)

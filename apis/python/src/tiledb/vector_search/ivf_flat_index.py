@@ -141,6 +141,7 @@ class IVFFlatIndex(index.Index):
         resources: Optional[Mapping[str, Any]] = None,
         num_partitions: int = -1,
         num_workers: int = -1,
+        **kwargs,
     ):
         """
         Query an IVF_FLAT index

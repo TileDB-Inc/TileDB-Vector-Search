@@ -90,7 +90,7 @@ def ingest(
     updates_uri: str
         Updates
     index_timestamp: int
-        Timestamp to use for writing and reading data. By default it sues the current unix ms timestamp.
+        Timestamp to use for writing and reading data. By default it uses the current unix ms timestamp.
     config: None
         config dictionary, defaults to None
     namespace: str
@@ -1633,7 +1633,7 @@ def ingest(
             data = vspy.FeatureVectorArray(ctx, parts_array_uri, ids_array_uri)
             index.train(data)
             index.add(data)
-            index.write_index(ctx, index_group_uri)
+            index.write_index(ctx, index_group_uri, index_timestamp)
 
     def write_centroids(
         centroids: np.ndarray,
