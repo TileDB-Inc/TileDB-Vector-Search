@@ -124,12 +124,12 @@ def test_numpy_to_feature_vector_array():
 
     a = np.array(np.arange(1, 16, dtype=np.float32).reshape(3, 5), dtype=np.float32)
     assert a.shape == (3, 5)
-    assert a.flags.f_contiguous == False
-    assert a.flags.c_contiguous == True
+    assert a.flags.f_contiguous is False
+    assert a.flags.c_contiguous is True
     a = np.transpose(a)
     assert a.shape == (5, 3)
-    assert a.flags.f_contiguous == True
-    assert a.flags.c_contiguous == False
+    assert a.flags.f_contiguous is True
+    assert a.flags.c_contiguous is False
     b = vspy.FeatureVectorArray(a)
     # NOTE(paris): It is strange that we have to transpose this output array to have it match the input array. Should investigate this and fix it.
     assert a.shape == np.transpose(np.array(b)).shape
@@ -138,12 +138,12 @@ def test_numpy_to_feature_vector_array():
     n = 99
     a = load_fvecs(siftsmall_query_file)[0:n]
     assert a.shape == (n, 128)
-    assert a.flags.f_contiguous == False
-    assert a.flags.c_contiguous == False
+    assert a.flags.f_contiguous is False
+    assert a.flags.c_contiguous is False
     a = np.transpose(a)
     assert a.shape == (128, n)
-    assert a.flags.f_contiguous == False
-    assert a.flags.c_contiguous == False
+    assert a.flags.f_contiguous is False
+    assert a.flags.c_contiguous is False
     # NOTE(paris): load_fvecs() returns a view of an array, which is not contiguous, so make it contiguous. Ideally we would handle this in FeatureVectorArray().
     a = np.asfortranarray(a)
     b = vspy.FeatureVectorArray(a)
@@ -151,7 +151,6 @@ def test_numpy_to_feature_vector_array():
     assert a.shape == np.transpose(np.array(b)).shape
     assert np.array_equal(a, np.transpose(np.array(b)))
 
-    c = np.array(b)
     logging.info(c.shape)
 
     assert a.shape == c.shape
