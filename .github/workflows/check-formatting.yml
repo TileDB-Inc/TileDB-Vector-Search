@@ -17,18 +17,6 @@ on:
       - "**/.md"
 
 jobs:
-  # TODO(paris): pre-commit also runs clang-format. Leaving for now to gain confidence that it
-  # is doing the same thing as running clang-format directly, but remove this job once that's been
-  # confirmed
-  check-formatting:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: "Check clang-format"
-        run: |
-          source $GITHUB_WORKSPACE/scripts/ci/check_clang_format.sh
-        shell: bash
-
   # Based on: https://github.com/TileDB-Inc/TileDB-Cloud-Py/blob/main/.github/workflows/tiledb-cloud-py.yaml#L15
   run-pre-format:
     runs-on: ubuntu-latest
