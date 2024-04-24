@@ -145,29 +145,6 @@ static std::string siftsmall_parts_uri{siftsmall_root / "shuffled_vectors"};
 static std::string siftsmall_query_uri{siftsmall_root / "queries"};
 static std::string siftsmall_groundtruth_uri{siftsmall_root / "groundtruth"};
 
-using siftsmall_uint8_feature_type = uint8_t;
-using siftsmall_uint8_groundtruth_type = uint64_t;
-using siftsmall_uint8_centroids_type = float;
-using siftsmall_uint8_ids_type = uint64_t;
-using siftsmall_uint8_indices_type = uint64_t;
-constexpr size_t num_siftsmall_uint8_vectors = 10'000;
-constexpr size_t siftsmall_uint8_dimension = 128;
-static std::string siftsmall_uint8_root{test_array_root / "siftsmall_uint8"};
-static std::string siftsmall_uint8_group_uri{siftsmall_uint8_root / "group"};
-static std::string siftsmall_uint8_inputs_uri{
-    siftsmall_uint8_root / "input_vectors"};
-static std::string siftsmall_uint8_centroids_uri{
-    siftsmall_uint8_root / "partition_centroids"};
-static std::string siftsmall_uint8_index_uri{
-    siftsmall_uint8_root / "partition_indexes"};
-static std::string siftsmall_uint8_ids_uri{
-    siftsmall_uint8_root / "shuffled_vector_ids"};
-static std::string siftsmall_uint8_parts_uri{
-    siftsmall_uint8_root / "shuffled_vectors"};
-static std::string siftsmall_uint8_query_uri{siftsmall_uint8_root / "queries"};
-static std::string siftsmall_uint8_groundtruth_uri{
-    siftsmall_uint8_root / "groundtruth"};
-
 using bigann1M_feature_type = uint8_t;
 using bigann1M_groundtruth_type = uint64_t;
 using bigann1M_centroids_type = float;
@@ -297,33 +274,6 @@ static std::string diskann_mem_index{
 
 static std::string diskann_truth_index_data =
     diskann_root / "truth_index_siftsmall_learn_256pts_R4_L50_A1.2.data";
-
-/*
- * Definitions for the "nano" reference group for vamana index
- */
-using vamana_nano_feature_type = float;
-using vamana_nano_groundtruth_type = uint64_t;
-using vamana_nano_ids_type = uint64_t;
-using vamana_nano_indices_type = uint64_t;
-constexpr size_t num_vamana_nano_vectors = 231;
-constexpr size_t vamana_nano_dimension = 128;
-static std::string vamana_nano_root{nano_root / "vamana"};
-static std::string vamana_nano_group_uri{
-    vamana_nano_root / "vamana_test_index"};
-
-static std::string vamana_nano_inputs_uri{vamana_nano_root / "feature_vectors"};
-static std::string vamana_nano_feature_vectors_uri{
-    vamana_nano_root / "feature_vectors"};
-static std::string vamana_nano_adjacency_scores_uri{
-    vamana_nano_root / "adjacency_scores"};
-static std::string vamana_nano_adjacency_ids_uri{
-    vamana_nano_root / "adjacency_ids"};
-static std::string vamana_nano_adjacency_row_index_uri{
-    vamana_nano_root / "adjacency_row_index"};
-
-static std::string vamana_nano_query_uri{vamana_nano_root / "queries"};
-static std::string vamana_nano_groundtruth_uri{
-    vamana_nano_root / "groundtruth"};
 
 #define TEMP_LEGACY_URIS
 #ifdef TEMP_LEGACY_URIS
