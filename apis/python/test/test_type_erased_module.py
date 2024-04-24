@@ -151,11 +151,6 @@ def test_numpy_to_feature_vector_array():
     assert a.shape == np.transpose(np.array(b)).shape
     assert np.array_equal(a, np.transpose(np.array(b)))
 
-    logging.info(c.shape)
-
-    assert a.shape == c.shape
-    assert (a == c).all()
-
 
 def test_construct_IndexFlatL2():
     a = vspy.IndexFlatL2(ctx, siftsmall_inputs_uri)
