@@ -642,14 +642,13 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         index = index_class(uri=index_uri, timestamp=101)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
-
-        # TODO(paris): Fix Vamana bug and re-enable:
-        if index_type == "VAMANA":
-            continue
-
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri, timestamp=(0, 101))
         _, result = index.query(queries, k=k, nprobe=partitions)
+        # TODO(paris): Fix Vamana accuracy bug and re-enable:
+        # assert 0.105 == 1.0
+        if index_type == "VAMANA":
+            continue
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
         index = index_class(uri=index_uri, timestamp=(0, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
@@ -860,10 +859,7 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
             )
             updated_ids[i] = i + update_ids_offset
 
-        # TODO(paris): Fix Vamana bug and re-enable:
-        # tiledb.cc.TileDBError: [TileDB::ArrayDirectory] Error: Cannot open array; Array does not exist.
-        if index_type != "VAMANA":
-            index_uri = move_local_index_to_new_location(index_uri)
+        index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions, opt_l=k * 2)
         assert 0.45 < accuracy(result, gt_i)

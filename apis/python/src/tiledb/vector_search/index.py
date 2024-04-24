@@ -7,6 +7,7 @@ from typing import Any, Mapping, Optional
 from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
+from tiledb.vector_search.utils import add_to_group
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
@@ -375,7 +376,7 @@ class Index:
                 tiledb.Array.create(self.updates_array_uri, updates_schema)
                 self.group.close()
                 self.group = tiledb.Group(self.uri, "w")
-                self.group.add(self.updates_array_uri, name=updates_array_name)
+                add_to_group(self.group, self.updates_array_uri, updates_array_name)
                 self.group.close()
                 self.group = tiledb.Group(self.uri, "r")
             if timestamp is None:
