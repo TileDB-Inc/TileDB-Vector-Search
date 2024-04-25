@@ -284,6 +284,8 @@ def test_ingestion_fvec(tmp_path):
         _, result = index_ram.query(queries, k=k, nprobe=nprobe, mode=Mode.LOCAL)
         assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+        Index.delete_index(uri=index_uri, config={})
+
 
 def test_ingestion_numpy(tmp_path):
     source_uri = siftsmall_inputs_file
@@ -325,6 +327,8 @@ def test_ingestion_numpy(tmp_path):
 
         _, result = index_ram.query(queries, k=k, nprobe=nprobe, mode=Mode.LOCAL)
         assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+        Index.delete_index(uri=index_uri, config={})
 
 
 def test_ingestion_multiple_workers(tmp_path):
@@ -369,6 +373,8 @@ def test_ingestion_multiple_workers(tmp_path):
         _, result = index_ram.query(queries, k=k, nprobe=nprobe, mode=Mode.LOCAL)
         assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+        Index.delete_index(uri=index_uri, config={})
+
 
 def test_ingestion_external_ids_numpy(tmp_path):
     source_uri = siftsmall_inputs_file
@@ -405,6 +411,8 @@ def test_ingestion_external_ids_numpy(tmp_path):
         index_ram = index_class(uri=index_uri)
         _, result = index_ram.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i, external_ids_offset) > MINIMUM_ACCURACY
+
+        Index.delete_index(uri=index_uri, config={})
 
 
 def test_ingestion_with_updates(tmp_path):
@@ -454,6 +462,8 @@ def test_ingestion_with_updates(tmp_path):
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=20)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+
+        Index.delete_index(uri=index_uri, config={})
 
 
 def test_ingestion_with_batch_updates(tmp_path):
