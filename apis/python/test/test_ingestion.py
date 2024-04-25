@@ -527,6 +527,8 @@ def test_ingestion_with_batch_updates(tmp_path):
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i, updated_ids=updated_ids) > 0.99
 
+        Index.delete_index(uri=index_uri, config={})
+
 
 def test_ingestion_with_updates_and_timetravel(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
