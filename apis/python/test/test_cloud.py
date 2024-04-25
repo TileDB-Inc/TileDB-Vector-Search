@@ -89,14 +89,15 @@ class CloudTests(unittest.TestCase):
             source_uri=source_uri,
             input_vectors_per_work_item=5000,
             config=tiledb.cloud.Config().dict(),
-            # TODO(paris): Fix and then change to Mode.BATCH.
-            mode=Mode.LOCAL,
+            mode=Mode.BATCH,
         )
 
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
         vs.vamana_index.VamanaIndex(
             uri=tiledb_index_uri, config=tiledb.cloud.Config().dict()
         )
+
+        # TODO(paris): Add the rest of the cloud tests for Vamana.
 
     def test_cloud_ivf_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
