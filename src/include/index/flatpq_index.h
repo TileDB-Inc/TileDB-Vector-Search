@@ -643,7 +643,8 @@ class flatpq_index {
     tiledb::Context ctx;
 
     tiledb::Group::create(ctx, group_uri);
-    auto write_group = tiledb::Group(ctx, group_uri, TILEDB_WRITE, ctx.config());
+    auto write_group =
+        tiledb::Group(ctx, group_uri, TILEDB_WRITE, ctx.config());
 
     for (auto&& [name, value, type] : metadata) {
       write_group.put_metadata(name, type, 1, value);

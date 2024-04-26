@@ -221,8 +221,8 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
         string_to_filter(storage_formats[version_]["default_attr_filters"])};
 
     tiledb::Group::create(cached_ctx_, group_uri_);
-    auto write_group =
-        tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
+    auto write_group = tiledb::Group(
+        cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
 
     /**************************************************************************
      * Base group metadata setup

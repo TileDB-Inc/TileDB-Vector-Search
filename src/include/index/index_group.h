@@ -154,7 +154,8 @@ class base_index_group {
       throw std::runtime_error(
           "Group uri " + std::string(group_uri_) + " does not exist.");
     }
-    auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cached_ctx_.config());
+    auto read_group = tiledb::Group(
+        cached_ctx_, group_uri_, TILEDB_READ, cached_ctx_.config());
 
     // Load the metadata and check the version.  We need to do this before
     // we can check the array names.
@@ -339,8 +340,8 @@ class base_index_group {
    */
   ~base_index_group() {
     if (opened_for_ == TILEDB_WRITE) {
-      auto write_group =
-          tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
+      auto write_group = tiledb::Group(
+          cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
       metadata_.store_metadata(write_group);
     }
   }
@@ -487,7 +488,8 @@ class base_index_group {
     }
     std::cout << "-------------------------------------------------------\n";
     std::cout << "Stored in " + group_uri_ + ":" << std::endl;
-    auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cached_ctx_.config());
+    auto read_group = tiledb::Group(
+        cached_ctx_, group_uri_, TILEDB_READ, cached_ctx_.config());
     for (size_t i = 0; i < read_group.member_count(); ++i) {
       auto member = read_group.member(i);
       auto name = member.name();
