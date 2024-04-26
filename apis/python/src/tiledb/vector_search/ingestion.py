@@ -2505,15 +2505,20 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
     ):
         with tiledb.Group(index_group_uri) as group:
+            write_group = tiledb.Group(index_group_uri, "w")
             try:
                 if INPUT_VECTORS_ARRAY_NAME in group:
                     tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
+                    write_group.remove(INPUT_VECTORS_ARRAY_NAME)
                 if EXTERNAL_IDS_ARRAY_NAME in group:
                     tiledb.Array.delete_array(group[EXTERNAL_IDS_ARRAY_NAME].uri)
+                    write_group.remove(EXTERNAL_IDS_ARRAY_NAME)
             except tiledb.TileDBError as err:
                 message = str(err)
                 if "does not exist" not in message:
                     raise err
+            write_group.close()
+
             modes = ["fragment_meta", "commits", "array_meta"]
             for mode in modes:
                 conf = tiledb.Config(config)
