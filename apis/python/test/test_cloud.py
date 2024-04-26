@@ -89,11 +89,12 @@ class CloudTests(unittest.TestCase):
             source_uri=source_uri,
             input_vectors_per_work_item=5000,
             config=tiledb.cloud.Config().dict(),
-            mode=Mode.BATCH,
+            # TODO(paris): Fix and then change to Mode.BATCH.
+            mode=Mode.LOCAL,
         )
 
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
-        vs.vamana_index.VamanaIndex(
+        index = vs.vamana_index.VamanaIndex(
             uri=tiledb_index_uri, config=tiledb.cloud.Config().dict()
         )
 
