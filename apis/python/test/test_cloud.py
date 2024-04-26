@@ -80,7 +80,7 @@ class CloudTests(unittest.TestCase):
         k = 100
         nqueries = 100
 
-        load_fvecs(queries_uri)
+        queries = load_fvecs(queries_uri)
         gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
         vs.ingest(
@@ -89,14 +89,75 @@ class CloudTests(unittest.TestCase):
             source_uri=source_uri,
             input_vectors_per_work_item=5000,
             config=tiledb.cloud.Config().dict(),
-            # TODO(paris): Fix and then change to Mode.BATCH.
-            mode=Mode.LOCAL,
+            mode=Mode.BATCH,
         )
 
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
         vs.vamana_index.VamanaIndex(
             uri=tiledb_index_uri, config=tiledb.cloud.Config().dict()
         )
+
+        _, result_i = index.query(queries, k=k)
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        _, result_i = index.query(
+            queries,
+            k=k,
+            mode=Mode.REALTIME,
+            num_partitions=2,
+            resource_class="standard",
+        )
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        _, result_i = index.query(queries, k=k, mode=Mode.LOCAL)
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        # We now will test for invalid scenarios when setting the query() resources.
+        resources = {"cpu": "9", "memory": "12Gi", "gpu": 0}
+
+        # Cannot pass resource_class or resources to LOCAL mode or to no mode.
+        with self.assertRaises(TypeError):
+            index.query(queries, k=k, mode=Mode.LOCAL, resource_class="large")
+        with self.assertRaises(TypeError):
+            index.query(queries, k=k, mode=Mode.LOCAL, resources=resources)
+        with self.assertRaises(TypeError):
+            index.query(queries, k=k, resource_class="large")
+        with self.assertRaises(TypeError):
+            index.query(queries, k=k, resources=resources)
+
+        # Cannot pass resources to REALTIME.
+        with self.assertRaises(TypeError):
+            index.query(queries, k=k, mode=Mode.REALTIME, resources=resources)
+
+        # Cannot pass both resource_class and resources.
+        with self.assertRaises(TypeError):
+            index.query(
+                queries,
+                k=k,
+                mode=Mode.REALTIME,
+                resource_class="large",
+                resources=resources,
+            )
+        with self.assertRaises(TypeError):
+            index.query(
+                queries,
+                k=k,
+                mode=Mode.BATCH,
+                resource_class="large",
+                resources=resources,
+            )
+
+        index = vs.vamana_index.VamanaIndex(
+            uri=index_uri,
+            config=tiledb.cloud.Config().dict(),
+        )
+        index.delete(external_id=42)
+        _, result_i = index.query(queries, k=k)
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        index = index.consolidate_updates()
+        _, result_i = index.query(queries, k=k)
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
     def test_cloud_ivf_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"

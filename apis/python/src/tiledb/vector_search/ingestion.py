@@ -1533,14 +1533,6 @@ def ingest(
                 trace_id=trace_id,
             )
 
-            partial_write_array_group, _ = create_partial_write_array_group(
-                index_group_uri=index_group_uri,
-                vector_type=vector_type,
-                dimensions=dimensions,
-                create_index_array=False,
-            )
-            partial_write_array_group.close()
-
             group = tiledb.Group(index_group_uri, mode="r")
             partial_write_array_dir_uri = group[PARTIAL_WRITE_ARRAY_DIR].uri
             partial_write_array_group = tiledb.Group(partial_write_array_dir_uri)
@@ -2183,6 +2175,15 @@ def ingest(
             )
             return d
         elif index_type == "VAMANA":
+            # We must create the partial write array group outside of the UDF b/c tiledb.FilterList cannot be pickled
+            partial_write_array_group, _ = create_partial_write_array_group(
+                index_group_uri=index_group_uri,
+                vector_type=vector_type,
+                dimensions=dimensions,
+                create_index_array=False,
+            )
+            partial_write_array_group.close()
+
             ingest_node = submit(
                 ingest_vamana,
                 index_group_uri=index_group_uri,
