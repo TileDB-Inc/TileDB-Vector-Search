@@ -2504,8 +2504,8 @@ def ingest(
         index_group_uri: str,
         config: Optional[Mapping[str, Any]] = None,
     ):
-        write_group = tiledb.Group(index_group_uri, "w")
         with tiledb.Group(index_group_uri) as group:
+            write_group = tiledb.Group(index_group_uri, "w")
             try:
                 if INPUT_VECTORS_ARRAY_NAME in group:
                     tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
@@ -2517,6 +2517,7 @@ def ingest(
                 message = str(err)
                 if "does not exist" not in message:
                     raise err
+            write_group.close()
 
             modes = ["fragment_meta", "commits", "array_meta"]
             for mode in modes:
@@ -2531,7 +2532,8 @@ def ingest(
                 tiledb.vacuum(ids_uri, config=conf)
             partial_write_array_exists = PARTIAL_WRITE_ARRAY_DIR in group
         if partial_write_array_exists:
-            write_group.remove(PARTIAL_WRITE_ARRAY_DIR)
+            with tiledb.Group(index_group_uri, "w") as partial_write_array_group:
+                partial_write_array_group.remove(PARTIAL_WRITE_ARRAY_DIR)
             partial_write_array_dir_uri = (
                 index_group_uri + "/" + PARTIAL_WRITE_ARRAY_DIR
             )
@@ -2539,7 +2541,6 @@ def ingest(
                 partial_write_array_dir_uri, "m"
             ) as partial_write_array_group:
                 partial_write_array_group.delete(recursive=True)
-        write_group.close()
 
     # --------------------------------------------------------------------
     # End internal function definitions
