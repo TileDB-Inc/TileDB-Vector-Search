@@ -304,6 +304,8 @@ def ingest_embeddings_with_driver(
                     name="embedding-generation",
                     mode=Mode.REALTIME,
                     max_workers=workers,
+                    # TODO: `default` is not an actual namespace. This is a temp fix to
+                    # be able to run DAGs locally.
                     namespace="default",
                 )
 
@@ -477,6 +479,8 @@ def ingest_embeddings_with_driver(
             mode=Mode.REALTIME,
             name="ingest-embeddings-driver",
             max_workers=1,
+            # TODO: `default` is not an actual namespace. This is a temp fix to
+            # be able to run DAGs locally.
             namespace="default",
         )
     submit = partial(submit_local, d)
