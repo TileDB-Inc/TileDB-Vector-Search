@@ -178,8 +178,8 @@ void debug_slice_with_ids(
   auto rowsEnd = std::min(dimension(A), static_cast<size_t>(max_size));
   auto colsEnd = std::min(num_vectors(A), static_cast<size_t>(max_size));
 
-  std::cout << "# " << msg << " (" << dimension(A) << " rows x "
-            << num_vectors(A) << " cols)" << std::endl;
+  std::cout << "# " << msg << " (" << num_vectors(A) << " vectors)"
+            << std::endl;
   for (size_t i = 0; i < rowsEnd; ++i) {
     std::cout << "# ";
     for (size_t j = 0; j < colsEnd; ++j) {
