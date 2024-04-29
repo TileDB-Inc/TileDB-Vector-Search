@@ -456,7 +456,7 @@ class Index:
                     return
                 else:
                     raise err
-            group.delete()
+            group.delete(recursive=True)
 
     @staticmethod
     def clear_history(
