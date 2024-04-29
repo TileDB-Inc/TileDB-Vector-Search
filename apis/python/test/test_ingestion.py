@@ -40,6 +40,8 @@ def query_and_check_equals(index, queries, expected_result_d, expected_result_i)
 
 
 def test_vamana_ingestion_u8(tmp_path):
+    vfs = tiledb.VFS()
+
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
     if os.path.exists(index_uri):
@@ -63,6 +65,10 @@ def test_vamana_ingestion_u8(tmp_path):
     index_ram = VamanaIndex(uri=index_uri)
     _, result = index_ram.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    assert vfs.dir_size(index_uri) > 0
+    Index.delete_index(uri=index_uri, config={})
+    assert vfs.dir_size(index_uri) == 0
 
 
 def test_flat_ingestion_u8(tmp_path):
@@ -245,6 +251,8 @@ def test_ivf_flat_ingestion_f32(tmp_path):
 
 
 def test_ingestion_fvec(tmp_path):
+    vfs = tiledb.VFS()
+
     source_uri = siftsmall_inputs_file
     queries_uri = siftsmall_query_file
     gt_uri = siftsmall_groundtruth_file
@@ -289,8 +297,14 @@ def test_ingestion_fvec(tmp_path):
         _, result = index_ram.query(queries, k=k, nprobe=nprobe, mode=Mode.LOCAL)
         assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+        assert vfs.dir_size(index_uri) > 0
+        Index.delete_index(uri=index_uri, config={})
+        assert vfs.dir_size(index_uri) == 0
+
 
 def test_ingestion_numpy(tmp_path):
+    vfs = tiledb.VFS()
+
     source_uri = siftsmall_inputs_file
     queries_uri = siftsmall_query_file
     gt_uri = siftsmall_groundtruth_file
@@ -336,8 +350,14 @@ def test_ingestion_numpy(tmp_path):
         _, result = index_ram.query(queries, k=k, nprobe=nprobe, mode=Mode.LOCAL)
         assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+        assert vfs.dir_size(index_uri) > 0
+        Index.delete_index(uri=index_uri, config={})
+        assert vfs.dir_size(index_uri) == 0
+
 
 def test_ingestion_numpy_i8(tmp_path):
+    vfs = tiledb.VFS()
+
     source_uri = siftsmall_inputs_file
     queries_uri = siftsmall_query_file
     gt_uri = siftsmall_groundtruth_file
@@ -384,8 +404,14 @@ def test_ingestion_numpy_i8(tmp_path):
         _, result = index_ram.query(queries, k=k, nprobe=nprobe, mode=Mode.LOCAL)
         assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+        assert vfs.dir_size(index_uri) > 0
+        Index.delete_index(uri=index_uri, config={})
+        assert vfs.dir_size(index_uri) == 0
+
 
 def test_ingestion_multiple_workers(tmp_path):
+    vfs = tiledb.VFS()
+
     source_uri = siftsmall_inputs_file
     queries_uri = siftsmall_query_file
     gt_uri = siftsmall_groundtruth_file
@@ -432,8 +458,14 @@ def test_ingestion_multiple_workers(tmp_path):
         _, result = index_ram.query(queries, k=k, nprobe=nprobe, mode=Mode.LOCAL)
         assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
+        assert vfs.dir_size(index_uri) > 0
+        Index.delete_index(uri=index_uri, config={})
+        assert vfs.dir_size(index_uri) == 0
+
 
 def test_ingestion_external_ids_numpy(tmp_path):
+    vfs = tiledb.VFS()
+
     source_uri = siftsmall_inputs_file
     queries_uri = siftsmall_query_file
     gt_uri = siftsmall_groundtruth_file
@@ -474,8 +506,14 @@ def test_ingestion_external_ids_numpy(tmp_path):
         _, result = index_ram.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i, external_ids_offset) > MINIMUM_ACCURACY
 
+        assert vfs.dir_size(index_uri) > 0
+        Index.delete_index(uri=index_uri, config={})
+        assert vfs.dir_size(index_uri) == 0
+
 
 def test_ingestion_with_updates(tmp_path):
+    vfs = tiledb.VFS()
+
     dataset_dir = os.path.join(tmp_path, "dataset")
     k = 10
     size = 1000
@@ -528,8 +566,14 @@ def test_ingestion_with_updates(tmp_path):
         _, result = index.query(queries, k=k, nprobe=20)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
+        assert vfs.dir_size(index_uri) > 0
+        Index.delete_index(uri=index_uri, config={})
+        assert vfs.dir_size(index_uri) == 0
+
 
 def test_ingestion_with_batch_updates(tmp_path):
+    vfs = tiledb.VFS()
+
     dataset_dir = os.path.join(tmp_path, "dataset")
     k = 10
     size = 100000
@@ -590,8 +634,14 @@ def test_ingestion_with_batch_updates(tmp_path):
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i, updated_ids=updated_ids) > 0.99
 
+        assert vfs.dir_size(index_uri) > 0
+        Index.delete_index(uri=index_uri, config={})
+        assert vfs.dir_size(index_uri) == 0
+
 
 def test_ingestion_with_updates_and_timetravel(tmp_path):
+    vfs = tiledb.VFS()
+
     dataset_dir = os.path.join(tmp_path, "dataset")
     k = 10
     size = 1000
@@ -819,8 +869,14 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
 
+        assert vfs.dir_size(index_uri) > 0
+        Index.delete_index(uri=index_uri, config={})
+        assert vfs.dir_size(index_uri) == 0
+
 
 def test_ingestion_with_additions_and_timetravel(tmp_path):
+    vfs = tiledb.VFS()
+
     dataset_dir = os.path.join(tmp_path, "dataset")
     k = 100
     size = 100
@@ -867,6 +923,10 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
         index = index.consolidate_updates()
         _, result = index.query(queries, k=k, nprobe=partitions, opt_l=k * 2)
         assert 0.45 < accuracy(result, gt_i)
+
+        assert vfs.dir_size(index_uri) > 0
+        Index.delete_index(uri=index_uri, config={})
+        assert vfs.dir_size(index_uri) == 0
 
 
 def test_ivf_flat_ingestion_tdb_random_sampling_policy(tmp_path):
