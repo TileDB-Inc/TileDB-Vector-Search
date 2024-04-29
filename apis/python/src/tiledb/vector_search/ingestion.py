@@ -539,6 +539,7 @@ def ingest(
         index_group_uri: str,
         vector_type: np.dtype,
         dimensions: int,
+        filters: Any,
         create_index_array: bool,
     ) -> (tiledb.Group, str):
         group = tiledb.Group(index_group_uri, "w")
@@ -592,7 +593,7 @@ def ingest(
             ids_attr = tiledb.Attr(
                 name="values",
                 dtype=np.dtype(np.uint64),
-                filters=DEFAULT_ATTR_FILTERS,
+                filters=filters,
             )
             ids_schema = tiledb.ArraySchema(
                 domain=ids_array_dom,
@@ -625,9 +626,7 @@ def ingest(
                 dtype=np.dtype(np.int32),
             )
             parts_array_dom = tiledb.Domain(parts_array_rows_dim, parts_array_cols_dim)
-            parts_attr = tiledb.Attr(
-                name="values", dtype=vector_type, filters=DEFAULT_ATTR_FILTERS
-            )
+            parts_attr = tiledb.Attr(name="values", dtype=vector_type, filters=filters)
             parts_schema = tiledb.ArraySchema(
                 domain=parts_array_dom,
                 sparse=False,
@@ -684,6 +683,7 @@ def ingest(
                 index_group_uri=group.uri,
                 vector_type=vector_type,
                 dimensions=dimensions,
+                filters=DEFAULT_ATTR_FILTERS,
                 create_index_array=True,
             )
             partial_write_array_index_group = tiledb.Group(
@@ -1523,6 +1523,7 @@ def ingest(
         import numpy as np
 
         import tiledb.cloud
+        from tiledb.vector_search.storage_formats import storage_formats
 
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
@@ -1537,6 +1538,7 @@ def ingest(
                 index_group_uri=index_group_uri,
                 vector_type=vector_type,
                 dimensions=dimensions,
+                filters=storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"],
                 create_index_array=False,
             )
             partial_write_array_group.close()
