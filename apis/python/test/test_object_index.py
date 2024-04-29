@@ -303,6 +303,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
     from common import setUpCloudToken
 
     setUpCloudToken()
+    config=tiledb.cloud.Config().dict()
     index_uri = create_cloud_uri("object_index_ivf_flat")
     worker_resources = {"cpu": "1", "memory": "2Gi"}
     reader = TestReader(
@@ -317,6 +318,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         index_type="IVF_FLAT",
         object_reader=reader,
         embedding=embedding,
+        config=config,
     )
 
     # Check initial ingestion
@@ -332,6 +334,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         consolidate_partition_resources=worker_resources,
         objects_per_partition=500,
         partitions=10,
+        config=config,
     )
     evaluate_query(
         index_uri=index_uri,
@@ -352,6 +355,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         consolidate_partition_resources=worker_resources,
         objects_per_partition=500,
         partitions=10,
+        config=config,
     )
     evaluate_query(
         index_uri=index_uri,
@@ -379,6 +383,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         consolidate_partition_resources=worker_resources,
         objects_per_partition=500,
         partitions=10,
+        config=config,
     )
     evaluate_query(
         index_uri=index_uri,
@@ -406,6 +411,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         consolidate_partition_resources=worker_resources,
         objects_per_partition=500,
         partitions=10,
+        config=config,
     )
     evaluate_query(
         index_uri=index_uri,
