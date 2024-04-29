@@ -93,7 +93,7 @@ class VamanaIndex(index.Index):
             queries = np.array([queries])
         queries = np.transpose(queries)
         if not queries.flags.f_contiguous:
-            queries = queries.copy(order="C")
+            queries = queries.copy(order="F")
         queries_feature_vector_array = vspy.FeatureVectorArray(queries)
 
         distances, ids = self.index.query(queries_feature_vector_array, k, opt_l)
