@@ -124,5 +124,5 @@ def create(
     )
     index.train(empty_vector)
     index.add(empty_vector)
-    index.write_index(ctx, uri, storage_version)
+    index.write_index(ctx, uri, 0, storage_version)
     return VamanaIndex(uri=uri, config=config, memory_budget=1000000)

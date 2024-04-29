@@ -90,7 +90,7 @@ def ingest(
     updates_uri: str
         Updates
     index_timestamp: int
-        Timestamp to use for writing and reading data. By default it sues the current unix ms timestamp.
+        Timestamp to use for writing and reading data. By default it uses the current unix ms timestamp.
     config: None
         config dictionary, defaults to None
     namespace: str
@@ -1506,7 +1506,6 @@ def ingest(
             ids_array.close()
 
     def ingest_vamana(
-        ctx,
         index_group_uri: str,
         source_uri: str,
         source_type: str,
@@ -1626,14 +1625,15 @@ def ingest(
             parts_array.close()
             ids_array.close()
 
-            # Now that we've ingested the vectors and their IDs, train the index with the data.
-            from tiledb.vector_search import _tiledbvspy as vspy
+        # Now that we've ingested the vectors and their IDs, train the index with the data.
+        from tiledb.vector_search import _tiledbvspy as vspy
 
-            index = vspy.IndexVamana(ctx, index_group_uri)
-            data = vspy.FeatureVectorArray(ctx, parts_array_uri, ids_array_uri)
-            index.train(data)
-            index.add(data)
-            index.write_index(ctx, index_group_uri)
+        ctx = vspy.Ctx(config)
+        index = vspy.IndexVamana(ctx, index_group_uri)
+        data = vspy.FeatureVectorArray(ctx, parts_array_uri, ids_array_uri)
+        index.train(data)
+        index.add(data)
+        index.write_index(ctx, index_group_uri, index_timestamp)
 
     def write_centroids(
         centroids: np.ndarray,
@@ -2183,12 +2183,8 @@ def ingest(
             )
             return d
         elif index_type == "VAMANA":
-            from tiledb.vector_search import _tiledbvspy as vspy
-
-            ctx = vspy.Ctx(config)
             ingest_node = submit(
                 ingest_vamana,
-                ctx=ctx,
                 index_group_uri=index_group_uri,
                 source_uri=source_uri,
                 source_type=source_type,
@@ -2509,15 +2505,20 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
     ):
         with tiledb.Group(index_group_uri) as group:
+            write_group = tiledb.Group(index_group_uri, "w")
             try:
                 if INPUT_VECTORS_ARRAY_NAME in group:
                     tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
+                    write_group.remove(INPUT_VECTORS_ARRAY_NAME)
                 if EXTERNAL_IDS_ARRAY_NAME in group:
                     tiledb.Array.delete_array(group[EXTERNAL_IDS_ARRAY_NAME].uri)
+                    write_group.remove(EXTERNAL_IDS_ARRAY_NAME)
             except tiledb.TileDBError as err:
                 message = str(err)
                 if "does not exist" not in message:
                     raise err
+            write_group.close()
+
             modes = ["fragment_meta", "commits", "array_meta"]
             for mode in modes:
                 conf = tiledb.Config(config)

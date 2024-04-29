@@ -122,7 +122,10 @@ void init_type_erased_module(py::module_& m) {
       ;
 #endif
   py::class_<FeatureVector>(m, "FeatureVector", py::buffer_protocol())
-      .def(py::init<const tiledb::Context&, const std::string&>())
+      .def(
+          py::init<const tiledb::Context&, const std::string&>(),
+          py::keep_alive<1, 2>()  // IndexIVFFlat should keep ctx alive.
+          )
       .def(py::init<size_t, const std::string&>())
       .def(py::init<size_t, void*, const std::string&>())
       .def("dimension", &FeatureVector::dimension)
@@ -165,11 +168,17 @@ void init_type_erased_module(py::module_& m) {
       }));
 
   py::class_<FeatureVectorArray>(m, "FeatureVectorArray", py::buffer_protocol())
-      .def(py::init<const tiledb::Context&, const std::string&>())
-      .def(py::init<
-           const tiledb::Context&,
-           const std::string&,
-           const std::string&>())
+      .def(
+          py::init<const tiledb::Context&, const std::string&>(),
+          py::keep_alive<1, 2>()  // FeatureVectorArray should keep ctx alive.
+          )
+      .def(
+          py::init<
+              const tiledb::Context&,
+              const std::string&,
+              const std::string&>(),
+          py::keep_alive<1, 2>()  // FeatureVectorArray should keep ctx alive.
+          )
       .def(py::init<size_t, size_t, const std::string&, const std::string&>())
       .def("dimension", &FeatureVectorArray::dimension)
       .def("num_vectors", &FeatureVectorArray::num_vectors)
@@ -222,7 +231,10 @@ void init_type_erased_module(py::module_& m) {
       }));
 
   py::class_<IndexFlatL2>(m, "IndexFlatL2")
-      .def(py::init<const tiledb::Context&, const std::string&>())
+      .def(
+          py::init<const tiledb::Context&, const std::string&>(),
+          py::keep_alive<1, 2>()  // IndexFlatL2 should keep ctx alive.
+          )
       .def("add", &IndexFlatL2::add)
       .def("add_with_ids", &IndexFlatL2::add_with_ids)
       .def("train", &IndexFlatL2::train)
@@ -248,7 +260,10 @@ void init_type_erased_module(py::module_& m) {
       }));
 
   py::class_<IndexVamana>(m, "IndexVamana")
-      .def(py::init<const tiledb::Context&, const std::string&>())
+      .def(
+          py::init<const tiledb::Context&, const std::string&>(),
+          py::keep_alive<1, 2>()  // IndexVamana should keep ctx alive.
+          )
       .def(
           "__init__",
           [](IndexVamana& instance, py::kwargs kwargs) {
@@ -284,11 +299,14 @@ void init_type_erased_module(py::module_& m) {
           [](IndexVamana& index,
              const tiledb::Context& ctx,
              const std::string& group_uri,
+             std::optional<size_t> timestamp,
              const std::string& storage_version) {
-            index.write_index(ctx, group_uri, storage_version);
+            index.write_index(ctx, group_uri, timestamp, storage_version);
           },
+          py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
           py::arg("ctx"),
           py::arg("group_uri"),
+          py::arg("timestamp") = py::none(),
           py::arg("storage_version") = "")
       .def("feature_type_string", &IndexVamana::feature_type_string)
       .def("id_type_string", &IndexVamana::id_type_string)
@@ -298,7 +316,10 @@ void init_type_erased_module(py::module_& m) {
       .def("dimension", &IndexVamana::dimension);
 
   py::class_<IndexIVFFlat>(m, "IndexIVFFlat")
-      .def(py::init<const tiledb::Context&, const std::string&>())
+      .def(
+          py::init<const tiledb::Context&, const std::string&>(),
+          py::keep_alive<1, 2>()  // IndexIVFFlat should keep ctx alive.
+          )
       .def(
           "__init__",
           [](IndexIVFFlat& instance, py::kwargs kwargs) {

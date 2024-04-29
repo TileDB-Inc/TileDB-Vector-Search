@@ -137,8 +137,7 @@ class IndexVamana {
          &adjacency_row_index_datatype_,
          TILEDB_UINT32}};
 
-    tiledb::Config cfg;
-    tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
+    tiledb::Group read_group(ctx, group_uri, TILEDB_READ, ctx.config());
 
     for (auto& [name, value, datatype] : metadata) {
       if (!read_group.has_metadata(name, &datatype)) {
@@ -235,12 +234,13 @@ class IndexVamana {
   void write_index(
       const tiledb::Context& ctx,
       const std::string& group_uri,
-      const std::string& storage_version = "") const {
+      std::optional<size_t> timestamp = std::nullopt,
+      const std::string& storage_version = "") {
     if (!index_) {
       throw std::runtime_error(
           "Cannot write_index() because there is no index.");
     }
-    index_->write_index(ctx, group_uri, storage_version);
+    index_->write_index(ctx, group_uri, timestamp, storage_version);
   }
 
   constexpr auto dimension() const {
@@ -291,7 +291,8 @@ class IndexVamana {
     virtual void write_index(
         const tiledb::Context& ctx,
         const std::string& group_uri,
-        const std::string& storage_version) const = 0;
+        std::optional<size_t> timestamp,
+        const std::string& storage_version) = 0;
 
     [[nodiscard]] virtual size_t dimension() const = 0;
   };
@@ -397,8 +398,9 @@ class IndexVamana {
     void write_index(
         const tiledb::Context& ctx,
         const std::string& group_uri,
-        const std::string& storage_version) const override {
-      impl_index_.write_index(ctx, group_uri, storage_version);
+        std::optional<size_t> timestamp,
+        const std::string& storage_version) override {
+      impl_index_.write_index(ctx, group_uri, timestamp, storage_version);
     }
 
     size_t dimension() const override {

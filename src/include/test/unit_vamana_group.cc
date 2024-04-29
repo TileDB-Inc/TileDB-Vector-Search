@@ -110,15 +110,26 @@ TEST_CASE(
     vfs.remove_dir(tmp_uri);
   }
 
-  vamana_index_group x =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+  {
+    vamana_index_group x =
+        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+    x.append_num_edges(0);
+    x.append_base_size(0);
+    x.append_ingestion_timestamp(0);
+
+    // We throw b/c the vamana_index_group hasn't actually been written (the
+    // write happens in the destructor).
+    CHECK_THROWS_WITH(
+        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ),
+        "No ingestion timestamps found.");
+  }
 
   vamana_index_group y =
       vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
 }
 
 TEST_CASE(
-    "vamana_group: write constructor - create, write, and read",
+    "vamana_group: write constructor - invalid create and read",
     "[vamana_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "vamana_group_test_write_constructor")
@@ -130,14 +141,21 @@ TEST_CASE(
     vfs.remove_dir(tmp_uri);
   }
 
-  vamana_index_group x =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+  {
+    vamana_index_group x =
+        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+    // We throw b/c the vamana_index_group hasn't actually been written (the
+    // write happens in the destructor).
+    CHECK_THROWS_WITH(
+        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ),
+        "No ingestion timestamps found.");
+  }
 
-  vamana_index_group y =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-
-  vamana_index_group z =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+  // If we don't append to the group, even if it's been written there will be no
+  // timestamps.
+  CHECK_THROWS_WITH(
+      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ),
+      "No ingestion timestamps found.");
 }
 
 TEST_CASE(
@@ -160,6 +178,14 @@ TEST_CASE(
   }
 
   size_t offset = 0;
+
+  {
+    vamana_index_group x =
+        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+    x.append_num_edges(0);
+    x.append_base_size(0);
+    x.append_ingestion_timestamp(0);
+  }
 
   vamana_index_group x =
       vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
@@ -333,11 +359,17 @@ TEST_CASE("vamana_group: storage version", "[vamana_group]") {
 
   SECTION("0.3") {
     x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, 0, "0.3");
+    x.append_num_edges(0);
+    x.append_base_size(0);
+    x.append_ingestion_timestamp(0);
   }
 
   SECTION("current_storage_version") {
     x = vamana_index_group(
         dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, 0, current_storage_version);
+    x.append_num_edges(0);
+    x.append_base_size(0);
+    x.append_ingestion_timestamp(0);
   }
 
   x.set_ingestion_timestamp(expected_ingestion + offset);

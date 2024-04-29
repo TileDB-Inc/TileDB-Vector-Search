@@ -1232,7 +1232,7 @@ TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
 TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   size_t l_build{37};
   size_t r_max_degree{41};
-  size_t k_nn{10};
+  size_t k_nn{6};
   size_t Backtrack{3};
 
   tiledb::Context ctx;

@@ -87,9 +87,8 @@ class ivf_flat_index_group
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
       size_t timestamp = 0,
-      const std::string& version = std::string{""},
-      const tiledb::Config& cfg = tiledb::Config{})
-      : Base(ctx, uri, index.dimension(), rw, timestamp, version, cfg) {
+      const std::string& version = std::string{""})
+      : Base(ctx, uri, index.dimension(), rw, timestamp, version) {
   }
 
  public:
@@ -145,7 +144,7 @@ class ivf_flat_index_group
     return this->array_key_to_array_name("index_array_name");
   }
 
-  void create_default_impl(const tiledb::Config& cfg) {
+  void create_default_impl() {
     if (empty(this->version_)) {
       this->version_ = current_storage_version;
     }
@@ -158,8 +157,8 @@ class ivf_flat_index_group
         string_to_filter(storage_formats[version_]["default_attr_filters"])};
 
     tiledb::Group::create(cached_ctx_, group_uri_);
-    auto write_group =
-        tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
+    auto write_group = tiledb::Group(
+        cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
 
     this->metadata_.storage_version_ = version_;
 
