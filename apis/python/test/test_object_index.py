@@ -374,7 +374,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         object_id_end=2000,
         vector_dim_offset=0,
     )
-    index.update_object_reader(reader)
+    index.update_object_reader(reader, config=config)
     index.update_index(
         embeddings_generation_driver_mode=Mode.BATCH,
         embeddings_generation_mode=Mode.BATCH,
@@ -403,7 +403,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         object_id_end=2000,
         vector_dim_offset=1000,
     )
-    index.update_object_reader(reader)
+    index.update_object_reader(reader, config=config)
     index.update_index(
         embeddings_generation_driver_mode=Mode.BATCH,
         embeddings_generation_mode=Mode.BATCH,
