@@ -363,11 +363,6 @@ def test_ingestion_numpy_i8(tmp_path):
     gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
-        # TODO(paris): Fix Vamana bug and re-enable:
-        # RuntimeError: IndexError: index 100 is out of bounds for axis 0 with size 100
-        if index_type == "VAMANA":
-            continue
-
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         index = ingest(
             index_type=index_type,
@@ -565,11 +560,6 @@ def test_ingestion_with_batch_updates(tmp_path):
     gt_i, gt_d = get_groundtruth(dataset_dir, k)
 
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
-        # TODO(paris): Fix Vamana bug and re-enable:
-        # tiledb.cc.TileDBError: [TileDB::ArrayDirectory] Error: Cannot open array; Array does not exist.
-        if index_type == "VAMANA":
-            continue
-
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         index = ingest(
             index_type=index_type,
@@ -670,10 +660,6 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri, timestamp=(0, 101))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        # TODO(paris): Fix Vamana accuracy bug and re-enable:
-        # assert 0.105 == 1.0
-        if index_type == "VAMANA":
-            continue
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
         index = index_class(uri=index_uri, timestamp=(0, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
