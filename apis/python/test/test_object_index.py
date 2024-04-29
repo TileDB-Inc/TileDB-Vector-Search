@@ -143,9 +143,9 @@ class TestReader(ObjectReader):
         return {"object": objects, "external_id": external_ids}
 
 
-def evaluate_query(index_uri, query_kwargs, dim_id, vector_dim_offset):
+def evaluate_query(index_uri, query_kwargs, dim_id, vector_dim_offset, config=None):
     v_id = dim_id - vector_dim_offset
-    index = object_index.ObjectIndex(uri=index_uri)
+    index = object_index.ObjectIndex(uri=index_uri, config=config)
     distances, objects, metadata = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=5, **query_kwargs
     )
@@ -189,7 +189,9 @@ def evaluate_query(index_uri, query_kwargs, dim_id, vector_dim_offset):
         object_ids, np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4])
     )
 
-    index = object_index.ObjectIndex(uri=index_uri, load_metadata_in_memory=False)
+    index = object_index.ObjectIndex(
+        uri=index_uri, load_metadata_in_memory=False, config=config
+    )
     distances, objects, metadata = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=5, **query_kwargs
     )
@@ -341,6 +343,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         query_kwargs={"nprobe": 10},
         dim_id=42,
         vector_dim_offset=0,
+        config=config,
     )
     # Check that updating the same data doesn't create duplicates
     index.update_index(
@@ -362,6 +365,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         query_kwargs={"nprobe": 10},
         dim_id=42,
         vector_dim_offset=0,
+        config=config,
     )
 
     # Add new data with a new reader
@@ -390,6 +394,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         query_kwargs={"nprobe": 10},
         dim_id=1042,
         vector_dim_offset=0,
+        config=config,
     )
 
     # Check overwritting existing data
@@ -418,8 +423,9 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         query_kwargs={"nprobe": 10},
         dim_id=2042,
         vector_dim_offset=1000,
+        config=config,
     )
-    delete_uri(index_uri, tiledb.cloud.Config())
+    delete_uri(index_uri, config)
 
 
 def test_object_index_flat(tmp_path):
