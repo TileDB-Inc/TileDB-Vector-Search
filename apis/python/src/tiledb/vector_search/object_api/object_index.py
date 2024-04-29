@@ -223,16 +223,18 @@ class ObjectIndex:
     def update_object_reader(
         self,
         object_reader: ObjectReader,
+        config: Optional[Mapping[str, Any]] = None,
     ):
-        self.object_reader = object_reader
-        self.object_reader_source_code = get_source_code(object_reader)
-        self.object_reader_class_name = object_reader.__class__.__name__
-        self.object_reader_kwargs = json.dumps(object_reader.init_kwargs())
-        group = tiledb.Group(self.uri, "w")
-        group.meta["object_reader_source_code"] = self.object_reader_source_code
-        group.meta["object_reader_class_name"] = self.object_reader_class_name
-        group.meta["object_reader_kwargs"] = self.object_reader_kwargs
-        group.close()
+        with tiledb.scope_ctx(ctx_or_config=config):
+            self.object_reader = object_reader
+            self.object_reader_source_code = get_source_code(object_reader)
+            self.object_reader_class_name = object_reader.__class__.__name__
+            self.object_reader_kwargs = json.dumps(object_reader.init_kwargs())
+            group = tiledb.Group(self.uri, "w")
+            group.meta["object_reader_source_code"] = self.object_reader_source_code
+            group.meta["object_reader_class_name"] = self.object_reader_class_name
+            group.meta["object_reader_kwargs"] = self.object_reader_kwargs
+            group.close()
 
     def create_embeddings_partitioned_array(
         self,

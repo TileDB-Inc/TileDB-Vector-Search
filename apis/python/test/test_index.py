@@ -353,6 +353,8 @@ def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
         queries = load_fvecs(queries_uri)
         index.query(queries, k=10)
 
+        Index.delete_index(uri=index_uri, config={})
+
 
 def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
     vfs = tiledb.VFS()

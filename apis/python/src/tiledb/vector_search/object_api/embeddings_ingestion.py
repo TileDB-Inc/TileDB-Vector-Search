@@ -154,6 +154,8 @@ def ingest_embeddings_with_driver(
             import numpy as np
 
             import tiledb
+            from tiledb.vector_search.object_api import ObjectIndex
+            from tiledb.vector_search.storage_formats import storage_formats
 
             def instantiate_object(code, class_name, **kwargs):
                 import importlib.util
@@ -178,7 +180,7 @@ def ingest_embeddings_with_driver(
                 return class_(**kwargs)
 
             logger = setup(config, verbose)
-            obj_index = object_index.ObjectIndex(
+            obj_index = ObjectIndex(
                 object_index_uri,
                 config=config,
                 environment_variables=environment_variables,
