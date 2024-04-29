@@ -303,7 +303,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
     from common import setUpCloudToken
 
     setUpCloudToken()
-    config=tiledb.cloud.Config().dict()
+    config = tiledb.cloud.Config().dict()
     index_uri = create_cloud_uri("object_index_ivf_flat")
     worker_resources = {"cpu": "1", "memory": "2Gi"}
     reader = TestReader(
