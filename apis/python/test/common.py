@@ -380,6 +380,7 @@ def create_cloud_uri(name):
     test_path = f"tiledb://{namespace}/{storage_path}/{rand_name}"
     return f"{test_path}/{name}"
 
+
 def delete_uri(uri, config):
     with tiledb.scope_ctx(ctx_or_config=config):
         try:

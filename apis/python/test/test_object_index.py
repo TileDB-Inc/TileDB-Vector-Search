@@ -296,8 +296,12 @@ def test_object_index_ivf_flat(tmp_path):
         vector_dim_offset=1000,
     )
 
+
 def test_object_index_ivf_flat_cloud(tmp_path):
-    from common import setUpCloudToken, create_cloud_uri, delete_uri
+    from common import create_cloud_uri
+    from common import delete_uri
+    from common import setUpCloudToken
+
     setUpCloudToken()
     index_uri = create_cloud_uri("object_index_ivf_flat")
     worker_resources = {"cpu": "1", "memory": "2Gi"}
@@ -328,7 +332,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         consolidate_partition_resources=worker_resources,
         objects_per_partition=500,
         partitions=10,
-        )
+    )
     evaluate_query(
         index_uri=index_uri,
         query_kwargs={"nprobe": 10},
@@ -348,7 +352,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         consolidate_partition_resources=worker_resources,
         objects_per_partition=500,
         partitions=10,
-        )
+    )
     evaluate_query(
         index_uri=index_uri,
         query_kwargs={"nprobe": 10},
@@ -375,7 +379,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         consolidate_partition_resources=worker_resources,
         objects_per_partition=500,
         partitions=10,
-        )
+    )
     evaluate_query(
         index_uri=index_uri,
         query_kwargs={"nprobe": 10},
@@ -402,7 +406,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         consolidate_partition_resources=worker_resources,
         objects_per_partition=500,
         partitions=10,
-        )
+    )
     evaluate_query(
         index_uri=index_uri,
         query_kwargs={"nprobe": 10},
@@ -410,6 +414,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         vector_dim_offset=1000,
     )
     delete_uri(index_uri, tiledb.cloud.Config())
+
 
 def test_object_index_flat(tmp_path):
     reader = TestReader(
