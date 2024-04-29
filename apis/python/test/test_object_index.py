@@ -3,6 +3,7 @@ from typing import Dict, List, OrderedDict, Tuple
 import numpy as np
 
 import tiledb
+from tiledb.cloud.dag import Mode
 from tiledb.vector_search.embeddings import ObjectEmbedding
 from tiledb.vector_search.object_api import object_index
 from tiledb.vector_search.object_readers import ObjectPartition
@@ -295,6 +296,120 @@ def test_object_index_ivf_flat(tmp_path):
         vector_dim_offset=1000,
     )
 
+def test_object_index_ivf_flat_cloud(tmp_path):
+    from common import setUpCloudToken, create_cloud_uri, delete_uri
+    setUpCloudToken()
+    index_uri = create_cloud_uri("object_index_ivf_flat")
+    worker_resources = {"cpu": "1", "memory": "2Gi"}
+    reader = TestReader(
+        object_id_start=0,
+        object_id_end=1000,
+        vector_dim_offset=0,
+    )
+    embedding = TestEmbedding()
+
+    index = object_index.create(
+        uri=index_uri,
+        index_type="IVF_FLAT",
+        object_reader=reader,
+        embedding=embedding,
+    )
+
+    # Check initial ingestion
+    index.update_index(
+        embeddings_generation_driver_mode=Mode.BATCH,
+        embeddings_generation_mode=Mode.BATCH,
+        vector_indexing_mode=Mode.BATCH,
+        workers=2,
+        worker_resources=worker_resources,
+        driver_resources=worker_resources,
+        kmeans_resources=worker_resources,
+        ingest_resources=worker_resources,
+        consolidate_partition_resources=worker_resources,
+        objects_per_partition=500,
+        partitions=10,
+        )
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={"nprobe": 10},
+        dim_id=42,
+        vector_dim_offset=0,
+    )
+    # Check that updating the same data doesn't create duplicates
+    index.update_index(
+        embeddings_generation_driver_mode=Mode.BATCH,
+        embeddings_generation_mode=Mode.BATCH,
+        vector_indexing_mode=Mode.BATCH,
+        workers=2,
+        worker_resources=worker_resources,
+        driver_resources=worker_resources,
+        kmeans_resources=worker_resources,
+        ingest_resources=worker_resources,
+        consolidate_partition_resources=worker_resources,
+        objects_per_partition=500,
+        partitions=10,
+        )
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={"nprobe": 10},
+        dim_id=42,
+        vector_dim_offset=0,
+    )
+
+    # Add new data with a new reader
+    reader = TestReader(
+        object_id_start=1000,
+        object_id_end=2000,
+        vector_dim_offset=0,
+    )
+    index.update_object_reader(reader)
+    index.update_index(
+        embeddings_generation_driver_mode=Mode.BATCH,
+        embeddings_generation_mode=Mode.BATCH,
+        vector_indexing_mode=Mode.BATCH,
+        workers=2,
+        worker_resources=worker_resources,
+        driver_resources=worker_resources,
+        kmeans_resources=worker_resources,
+        ingest_resources=worker_resources,
+        consolidate_partition_resources=worker_resources,
+        objects_per_partition=500,
+        partitions=10,
+        )
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={"nprobe": 10},
+        dim_id=1042,
+        vector_dim_offset=0,
+    )
+
+    # Check overwritting existing data
+    reader = TestReader(
+        object_id_start=1000,
+        object_id_end=2000,
+        vector_dim_offset=1000,
+    )
+    index.update_object_reader(reader)
+    index.update_index(
+        embeddings_generation_driver_mode=Mode.BATCH,
+        embeddings_generation_mode=Mode.BATCH,
+        vector_indexing_mode=Mode.BATCH,
+        workers=2,
+        worker_resources=worker_resources,
+        driver_resources=worker_resources,
+        kmeans_resources=worker_resources,
+        ingest_resources=worker_resources,
+        consolidate_partition_resources=worker_resources,
+        objects_per_partition=500,
+        partitions=10,
+        )
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={"nprobe": 10},
+        dim_id=2042,
+        vector_dim_offset=1000,
+    )
+    delete_uri(index_uri, tiledb.cloud.Config())
 
 def test_object_index_flat(tmp_path):
     reader = TestReader(
