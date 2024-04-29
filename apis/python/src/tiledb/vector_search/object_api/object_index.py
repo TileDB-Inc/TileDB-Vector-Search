@@ -336,6 +336,7 @@ class ObjectIndex:
             embeddings_generation_mode=embeddings_generation_mode,
             vector_indexing_mode=vector_indexing_mode,
             config=config,
+            namespace=namespace,
             environment_variables=environment_variables,
             **kwargs,
         )
