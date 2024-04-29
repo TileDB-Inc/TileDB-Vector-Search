@@ -297,6 +297,7 @@ def ingest_embeddings_with_driver(
                         limit=1,
                         retry_policy="Always",
                     ),
+                    namespace=namespace,
                 )
             else:
                 d = dag.DAG(
@@ -451,6 +452,7 @@ def ingest_embeddings_with_driver(
                     index_timestamp=index_timestamp,
                     storage_version=obj_index.index.storage_version,
                     config=config,
+                    namespace=namespace,
                     mode=vector_indexing_mode,
                     **kwargs,
                 )
@@ -468,6 +470,7 @@ def ingest_embeddings_with_driver(
             mode=Mode.BATCH,
             name="ingest-embeddings-driver",
             max_workers=1,
+            namespace=namespace,
         )
     else:
         d = dag.DAG(
