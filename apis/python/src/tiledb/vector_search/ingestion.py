@@ -539,6 +539,7 @@ def ingest(
         index_group_uri: str,
         vector_type: np.dtype,
         dimensions: int,
+        filters: Any,
         create_index_array: bool,
     ) -> (tiledb.Group, str):
         group = tiledb.Group(index_group_uri, "w")
@@ -592,7 +593,7 @@ def ingest(
             ids_attr = tiledb.Attr(
                 name="values",
                 dtype=np.dtype(np.uint64),
-                filters=DEFAULT_ATTR_FILTERS,
+                filters=filters,
             )
             ids_schema = tiledb.ArraySchema(
                 domain=ids_array_dom,
@@ -625,9 +626,7 @@ def ingest(
                 dtype=np.dtype(np.int32),
             )
             parts_array_dom = tiledb.Domain(parts_array_rows_dim, parts_array_cols_dim)
-            parts_attr = tiledb.Attr(
-                name="values", dtype=vector_type, filters=DEFAULT_ATTR_FILTERS
-            )
+            parts_attr = tiledb.Attr(name="values", dtype=vector_type, filters=filters)
             parts_schema = tiledb.ArraySchema(
                 domain=parts_array_dom,
                 sparse=False,
@@ -684,6 +683,7 @@ def ingest(
                 index_group_uri=group.uri,
                 vector_type=vector_type,
                 dimensions=dimensions,
+                filters=DEFAULT_ATTR_FILTERS,
                 create_index_array=True,
             )
             partial_write_array_index_group = tiledb.Group(
@@ -1506,7 +1506,6 @@ def ingest(
             ids_array.close()
 
     def ingest_vamana(
-        ctx,
         index_group_uri: str,
         source_uri: str,
         source_type: str,
@@ -1524,6 +1523,7 @@ def ingest(
         import numpy as np
 
         import tiledb.cloud
+        from tiledb.vector_search.storage_formats import storage_formats
 
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
@@ -1538,6 +1538,7 @@ def ingest(
                 index_group_uri=index_group_uri,
                 vector_type=vector_type,
                 dimensions=dimensions,
+                filters=storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"],
                 create_index_array=False,
             )
             partial_write_array_group.close()
@@ -1626,14 +1627,15 @@ def ingest(
             parts_array.close()
             ids_array.close()
 
-            # Now that we've ingested the vectors and their IDs, train the index with the data.
-            from tiledb.vector_search import _tiledbvspy as vspy
+        # Now that we've ingested the vectors and their IDs, train the index with the data.
+        from tiledb.vector_search import _tiledbvspy as vspy
 
-            index = vspy.IndexVamana(ctx, index_group_uri)
-            data = vspy.FeatureVectorArray(ctx, parts_array_uri, ids_array_uri)
-            index.train(data)
-            index.add(data)
-            index.write_index(ctx, index_group_uri, index_timestamp)
+        ctx = vspy.Ctx(config)
+        index = vspy.IndexVamana(ctx, index_group_uri)
+        data = vspy.FeatureVectorArray(ctx, parts_array_uri, ids_array_uri)
+        index.train(data)
+        index.add(data)
+        index.write_index(ctx, index_group_uri, index_timestamp)
 
     def write_centroids(
         centroids: np.ndarray,
@@ -2183,12 +2185,8 @@ def ingest(
             )
             return d
         elif index_type == "VAMANA":
-            from tiledb.vector_search import _tiledbvspy as vspy
-
-            ctx = vspy.Ctx(config)
             ingest_node = submit(
                 ingest_vamana,
-                ctx=ctx,
                 index_group_uri=index_group_uri,
                 source_uri=source_uri,
                 source_type=source_type,
@@ -2509,15 +2507,20 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
     ):
         with tiledb.Group(index_group_uri) as group:
+            write_group = tiledb.Group(index_group_uri, "w")
             try:
                 if INPUT_VECTORS_ARRAY_NAME in group:
                     tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
+                    write_group.remove(INPUT_VECTORS_ARRAY_NAME)
                 if EXTERNAL_IDS_ARRAY_NAME in group:
                     tiledb.Array.delete_array(group[EXTERNAL_IDS_ARRAY_NAME].uri)
+                    write_group.remove(EXTERNAL_IDS_ARRAY_NAME)
             except tiledb.TileDBError as err:
                 message = str(err)
                 if "does not exist" not in message:
                     raise err
+            write_group.close()
+
             modes = ["fragment_meta", "commits", "array_meta"]
             for mode in modes:
                 conf = tiledb.Config(config)

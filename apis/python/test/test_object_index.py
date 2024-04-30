@@ -3,6 +3,7 @@ from typing import Dict, List, OrderedDict, Tuple
 import numpy as np
 
 import tiledb
+from tiledb.cloud.dag import Mode
 from tiledb.vector_search.embeddings import ObjectEmbedding
 from tiledb.vector_search.object_api import object_index
 from tiledb.vector_search.object_readers import ObjectPartition
@@ -142,9 +143,9 @@ class TestReader(ObjectReader):
         return {"object": objects, "external_id": external_ids}
 
 
-def evaluate_query(index_uri, query_kwargs, dim_id, vector_dim_offset):
+def evaluate_query(index_uri, query_kwargs, dim_id, vector_dim_offset, config=None):
     v_id = dim_id - vector_dim_offset
-    index = object_index.ObjectIndex(uri=index_uri)
+    index = object_index.ObjectIndex(uri=index_uri, config=config)
     distances, objects, metadata = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=5, **query_kwargs
     )
@@ -188,7 +189,9 @@ def evaluate_query(index_uri, query_kwargs, dim_id, vector_dim_offset):
         object_ids, np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4])
     )
 
-    index = object_index.ObjectIndex(uri=index_uri, load_metadata_in_memory=False)
+    index = object_index.ObjectIndex(
+        uri=index_uri, load_metadata_in_memory=False, config=config
+    )
     distances, objects, metadata = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=5, **query_kwargs
     )
@@ -294,6 +297,135 @@ def test_object_index_ivf_flat(tmp_path):
         dim_id=2042,
         vector_dim_offset=1000,
     )
+
+
+def test_object_index_ivf_flat_cloud(tmp_path):
+    from common import create_cloud_uri
+    from common import delete_uri
+    from common import setUpCloudToken
+
+    setUpCloudToken()
+    config = tiledb.cloud.Config().dict()
+    index_uri = create_cloud_uri("object_index_ivf_flat")
+    worker_resources = {"cpu": "1", "memory": "2Gi"}
+    reader = TestReader(
+        object_id_start=0,
+        object_id_end=1000,
+        vector_dim_offset=0,
+    )
+    embedding = TestEmbedding()
+
+    index = object_index.create(
+        uri=index_uri,
+        index_type="IVF_FLAT",
+        object_reader=reader,
+        embedding=embedding,
+        config=config,
+    )
+
+    # Check initial ingestion
+    index.update_index(
+        embeddings_generation_driver_mode=Mode.BATCH,
+        embeddings_generation_mode=Mode.BATCH,
+        vector_indexing_mode=Mode.BATCH,
+        workers=2,
+        worker_resources=worker_resources,
+        driver_resources=worker_resources,
+        kmeans_resources=worker_resources,
+        ingest_resources=worker_resources,
+        consolidate_partition_resources=worker_resources,
+        objects_per_partition=500,
+        partitions=10,
+        config=config,
+    )
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={"nprobe": 10},
+        dim_id=42,
+        vector_dim_offset=0,
+        config=config,
+    )
+    # Check that updating the same data doesn't create duplicates
+    index.update_index(
+        embeddings_generation_driver_mode=Mode.BATCH,
+        embeddings_generation_mode=Mode.BATCH,
+        vector_indexing_mode=Mode.BATCH,
+        workers=2,
+        worker_resources=worker_resources,
+        driver_resources=worker_resources,
+        kmeans_resources=worker_resources,
+        ingest_resources=worker_resources,
+        consolidate_partition_resources=worker_resources,
+        objects_per_partition=500,
+        partitions=10,
+        config=config,
+    )
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={"nprobe": 10},
+        dim_id=42,
+        vector_dim_offset=0,
+        config=config,
+    )
+
+    # Add new data with a new reader
+    reader = TestReader(
+        object_id_start=1000,
+        object_id_end=2000,
+        vector_dim_offset=0,
+    )
+    index.update_object_reader(reader, config=config)
+    index.update_index(
+        embeddings_generation_driver_mode=Mode.BATCH,
+        embeddings_generation_mode=Mode.BATCH,
+        vector_indexing_mode=Mode.BATCH,
+        workers=2,
+        worker_resources=worker_resources,
+        driver_resources=worker_resources,
+        kmeans_resources=worker_resources,
+        ingest_resources=worker_resources,
+        consolidate_partition_resources=worker_resources,
+        objects_per_partition=500,
+        partitions=10,
+        config=config,
+    )
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={"nprobe": 10},
+        dim_id=1042,
+        vector_dim_offset=0,
+        config=config,
+    )
+
+    # Check overwritting existing data
+    reader = TestReader(
+        object_id_start=1000,
+        object_id_end=2000,
+        vector_dim_offset=1000,
+    )
+    index.update_object_reader(reader, config=config)
+    index.update_index(
+        embeddings_generation_driver_mode=Mode.BATCH,
+        embeddings_generation_mode=Mode.BATCH,
+        vector_indexing_mode=Mode.BATCH,
+        workers=2,
+        worker_resources=worker_resources,
+        driver_resources=worker_resources,
+        kmeans_resources=worker_resources,
+        ingest_resources=worker_resources,
+        consolidate_partition_resources=worker_resources,
+        objects_per_partition=500,
+        partitions=10,
+        config=config,
+    )
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={"nprobe": 10},
+        dim_id=2042,
+        vector_dim_offset=1000,
+        config=config,
+    )
+    delete_uri(index_uri, config)
 
 
 def test_object_index_flat(tmp_path):

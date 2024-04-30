@@ -149,12 +149,13 @@ class base_index_group {
    *
    * @param ctx
    */
-  void init_for_open(const tiledb::Config& cfg) {
+  void init_for_open() {
     if (!exists(cached_ctx_)) {
       throw std::runtime_error(
           "Group uri " + std::string(group_uri_) + " does not exist.");
     }
-    auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
+    auto read_group = tiledb::Group(
+        cached_ctx_, group_uri_, TILEDB_READ, cached_ctx_.config());
 
     // Load the metadata and check the version.  We need to do this before
     // we can check the array names.
@@ -193,8 +194,8 @@ class base_index_group {
     }
   }
 
-  void open_for_read(const tiledb::Config& cfg) {
-    init_for_open(cfg);
+  void open_for_read() {
+    init_for_open();
 
     if (size(metadata_.ingestion_timestamps_) == 0) {
       throw std::runtime_error("No ingestion timestamps found.");
@@ -235,10 +236,10 @@ class base_index_group {
    * @param uri
    * @param version
    */
-  void open_for_write(const tiledb::Config& cfg) {
+  void open_for_write() {
     if (exists(cached_ctx_)) {
       /** Load the current group metadata */
-      init_for_open(cfg);
+      init_for_open();
       if (!metadata_.ingestion_timestamps_.empty() &&
           index_timestamp_ < metadata_.ingestion_timestamps_.back()) {
         throw std::runtime_error(
@@ -249,7 +250,7 @@ class base_index_group {
       }
     } else {
       /** Create a new group */
-      create_default(cfg);
+      create_default();
     }
   }
 
@@ -260,8 +261,8 @@ class base_index_group {
    *
    * @todo Process the "base group" metadata here.
    */
-  void create_default(const tiledb::Config& cfg) {
-    static_cast<group_type*>(this)->create_default_impl(cfg);
+  void create_default() {
+    static_cast<group_type*>(this)->create_default_impl();
   }
 
   /** Convert an array key to a uri. */
@@ -307,8 +308,7 @@ class base_index_group {
       uint64_t dimension,
       tiledb_query_type_t rw = TILEDB_READ,
       size_t timestamp = 0,
-      const std::string& version = std::string{""},
-      const tiledb::Config& cfg = tiledb::Config{})
+      const std::string& version = std::string{""})
       : cached_ctx_(ctx)
       , group_uri_(uri)
       , index_timestamp_(timestamp)
@@ -316,11 +316,11 @@ class base_index_group {
       , opened_for_(rw) {
     switch (opened_for_) {
       case TILEDB_READ:
-        open_for_read(cfg);
+        open_for_read();
         break;
       case TILEDB_WRITE:
         set_dimension(dimension);
-        open_for_write(cfg);
+        open_for_write();
         break;
       case TILEDB_MODIFY_EXCLUSIVE:
         break;
@@ -340,9 +340,8 @@ class base_index_group {
    */
   ~base_index_group() {
     if (opened_for_ == TILEDB_WRITE) {
-      auto cfg = tiledb::Config();
-      auto write_group =
-          tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
+      auto write_group = tiledb::Group(
+          cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
       metadata_.store_metadata(write_group);
     }
   }
@@ -489,8 +488,8 @@ class base_index_group {
     }
     std::cout << "-------------------------------------------------------\n";
     std::cout << "Stored in " + group_uri_ + ":" << std::endl;
-    auto cfg = tiledb::Config();
-    auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
+    auto read_group = tiledb::Group(
+        cached_ctx_, group_uri_, TILEDB_READ, cached_ctx_.config());
     for (size_t i = 0; i < read_group.member_count(); ++i) {
       auto member = read_group.member(i);
       auto name = member.name();
