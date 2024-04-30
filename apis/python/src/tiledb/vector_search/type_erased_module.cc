@@ -60,6 +60,12 @@ std::map<std::string, std::string> kwargs_to_map(py::kwargs kwargs) {
   std::map<std::string, std::string> result;
 
   for (auto item : kwargs) {
+    if (item.first.is_none()) {
+      continue;
+    }
+    if (item.second.is_none()) {
+      continue;
+    }
     // Convert the Python objects to strings
     std::string key = py::str(item.first);
     std::string value = py::str(item.second);
@@ -173,12 +179,22 @@ void init_type_erased_module(py::module_& m) {
           py::keep_alive<1, 2>()  // FeatureVectorArray should keep ctx alive.
           )
       .def(
-          py::init<
-              const tiledb::Context&,
-              const std::string&,
-              const std::string&>(),
-          py::keep_alive<1, 2>()  // FeatureVectorArray should keep ctx alive.
-          )
+          "__init__",
+          [](FeatureVectorArray& instance,
+             const tiledb::Context& ctx,
+             const std::string& uri,
+             const std::string& ids_uri,
+             size_t num_vectors,
+             size_t timestamp) {
+            new (&instance)
+                FeatureVectorArray(ctx, uri, ids_uri, num_vectors, timestamp);
+          },
+          py::keep_alive<1, 2>(),  // FeatureVectorArray should keep ctx alive.
+          py::arg("ctx"),
+          py::arg("uri"),
+          py::arg("ids_uri") = "",
+          py::arg("num_vectors") = 0,
+          py::arg("timestamp") = 0)
       .def(py::init<size_t, size_t, const std::string&, const std::string&>())
       .def("dimension", &FeatureVectorArray::dimension)
       .def("num_vectors", &FeatureVectorArray::num_vectors)

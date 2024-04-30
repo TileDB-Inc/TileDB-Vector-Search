@@ -1631,9 +1631,9 @@ def ingest(
         from tiledb.vector_search import _tiledbvspy as vspy
 
         ctx = vspy.Ctx(config)
-        index = vspy.IndexVamana(ctx, index_group_uri, timestamp=index_timestamp)
+        index = vspy.IndexVamana(ctx, index_group_uri)
         data = vspy.FeatureVectorArray(
-            ctx, parts_array_uri, ids_array_uri, index_timestamp
+            ctx, parts_array_uri, ids_array_uri, 0, index_timestamp if index_timestamp else 0
         )
         index.train(data)
         index.add(data)
