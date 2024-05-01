@@ -246,7 +246,7 @@ class IndexVamana {
     index_->write_index(ctx, group_uri, timestamp, storage_version, overwrite_metadata_list);
   }
 
-  constexpr auto timestamp() const {
+  auto timestamp() const {
     if (!index_) {
       throw std::runtime_error(
           "Cannot get timestamp() because there is no index.");
