@@ -46,6 +46,7 @@ TEST_CASE("index_defs: tiledb_to_type", "[index_defs]") {
   CHECK(std::is_same_v<tiledb_to_type_t<TILEDB_UINT32>, uint32_t>);
   CHECK(std::is_same_v<tiledb_to_type_t<TILEDB_INT64>, int64_t>);
   CHECK(std::is_same_v<tiledb_to_type_t<TILEDB_INT32>, int32_t>);
+  CHECK(std::is_same_v<tiledb_to_type_t<TILEDB_INT8>, int8_t>);
   CHECK(std::is_same_v<tiledb_to_type_t<TILEDB_UINT8>, uint8_t>);
 }
 
@@ -55,11 +56,13 @@ TEST_CASE("index_defs: type_to_tiledb", "[index_defs]") {
   CHECK(type_to_tiledb_t<uint32_t> == TILEDB_UINT32);
   CHECK(type_to_tiledb_t<int64_t> == TILEDB_INT64);
   CHECK(type_to_tiledb_t<int32_t> == TILEDB_INT32);
+  CHECK(type_to_tiledb_t<int8_t> == TILEDB_INT8);
   CHECK(type_to_tiledb_t<uint8_t> == TILEDB_UINT8);
 }
 
 TEST_CASE("index_defs: string_to_datatype", "[index_defs]") {
   CHECK(string_to_datatype("float32") == TILEDB_FLOAT32);
+  CHECK(string_to_datatype("int8") == TILEDB_INT8);
   CHECK(string_to_datatype("uint8") == TILEDB_UINT8);
   CHECK(string_to_datatype("int32") == TILEDB_INT32);
   CHECK(string_to_datatype("uint32") == TILEDB_UINT32);
@@ -69,6 +72,7 @@ TEST_CASE("index_defs: string_to_datatype", "[index_defs]") {
 
 TEST_CASE("index_defs: datatype_to_string", "[index_defs]") {
   CHECK(datatype_to_string(TILEDB_FLOAT32) == "float32");
+  CHECK(datatype_to_string(TILEDB_INT8) == "int8");
   CHECK(datatype_to_string(TILEDB_UINT8) == "uint8");
   CHECK(datatype_to_string(TILEDB_INT32) == "int32");
   CHECK(datatype_to_string(TILEDB_UINT32) == "uint32");
