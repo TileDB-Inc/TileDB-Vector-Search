@@ -287,8 +287,7 @@ void init_type_erased_module(py::module_& m) {
           py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
           py::arg("ctx"),
           py::arg("group_uri"),
-          py::arg("timestamp") = 0
-          )
+          py::arg("timestamp") = 0)
       .def(
           "__init__",
           [](IndexVamana& instance, py::kwargs kwargs) {
@@ -327,15 +326,19 @@ void init_type_erased_module(py::module_& m) {
              std::optional<size_t> timestamp,
              const std::string& storage_version,
              bool overwrite_metadata_list) {
-            index.write_index(ctx, group_uri, timestamp, storage_version, overwrite_metadata_list);
+            index.write_index(
+                ctx,
+                group_uri,
+                timestamp,
+                storage_version,
+                overwrite_metadata_list);
           },
           py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
           py::arg("ctx"),
           py::arg("group_uri"),
           py::arg("timestamp") = py::none(),
           py::arg("storage_version") = "",
-          py::arg("overwrite_metadata_list") = false
-        )
+          py::arg("overwrite_metadata_list") = false)
       .def("feature_type_string", &IndexVamana::feature_type_string)
       .def("id_type_string", &IndexVamana::id_type_string)
       .def(

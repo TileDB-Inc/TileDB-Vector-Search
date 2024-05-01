@@ -584,7 +584,8 @@ TEST_CASE(
 
   // Train it at timestamp 99.
   {
-    // We then load this empty index and don't set a timestamp (which means we'll load it at timestamp 0).
+    // We then load this empty index and don't set a timestamp (which means
+    // we'll load it at timestamp 0).
     auto index = IndexVamana(ctx, index_uri);
 
     CHECK(index.timestamp() == 0);
@@ -593,7 +594,7 @@ TEST_CASE(
     CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
 
     auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
-          {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
+        {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
 
     auto training_vector_array = FeatureVectorArray(training);
     index.train(training_vector_array);
@@ -626,7 +627,8 @@ TEST_CASE(
 
   // Train it at timestamp 100.
   {
-    // We then load the trained index and don't set a timestamp (which means we'll load it at timestamp 99).
+    // We then load the trained index and don't set a timestamp (which means
+    // we'll load it at timestamp 99).
     auto index = IndexVamana(ctx, index_uri);
 
     CHECK(index.timestamp() == 99);
@@ -635,8 +637,8 @@ TEST_CASE(
     CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
 
     auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
-              {{11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}},
-          {11, 22, 33, 44}};
+        {{11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}},
+        {11, 22, 33, 44}};
 
     auto training_vector_array = FeatureVectorArray(training);
     index.train(training_vector_array);
@@ -644,14 +646,15 @@ TEST_CASE(
     // We then write the index at timestamp 100.
     index.write_index(ctx, index_uri, 100);
 
-    // This also updates the timestamp of the index - we're now at timestamp 100.
+    // This also updates the timestamp of the index - we're now at timestamp
+    // 100.
     CHECK(index.timestamp() == 100);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
 
     auto queries = ColMajorMatrix<feature_type_type>{
-          {11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}};
+        {11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}};
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(query_vector_array, 1);
@@ -677,7 +680,7 @@ TEST_CASE(
     CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
 
     auto queries = ColMajorMatrix<feature_type_type>{
-          {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(query_vector_array, 1);

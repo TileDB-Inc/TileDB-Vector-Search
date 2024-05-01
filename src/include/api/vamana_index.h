@@ -126,9 +126,7 @@ class IndexVamana {
    * index.
    */
   IndexVamana(
-      const tiledb::Context& ctx,
-      const URI& group_uri,
-      size_t timestamp = 0) {
+      const tiledb::Context& ctx, const URI& group_uri, size_t timestamp = 0) {
     using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
     std::vector<metadata_element> metadata{
         {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
@@ -243,7 +241,8 @@ class IndexVamana {
       throw std::runtime_error(
           "Cannot write_index() because there is no index.");
     }
-    index_->write_index(ctx, group_uri, timestamp, storage_version, overwrite_metadata_list);
+    index_->write_index(
+        ctx, group_uri, timestamp, storage_version, overwrite_metadata_list);
   }
 
   auto timestamp() const {
@@ -419,7 +418,8 @@ class IndexVamana {
         std::optional<size_t> timestamp,
         const std::string& storage_version,
         bool overwrite_metadata_list) override {
-      impl_index_.write_index(ctx, group_uri, timestamp, storage_version, overwrite_metadata_list);
+      impl_index_.write_index(
+          ctx, group_uri, timestamp, storage_version, overwrite_metadata_list);
     }
 
     size_t dimension() const override {
