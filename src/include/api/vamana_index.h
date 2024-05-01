@@ -458,25 +458,33 @@ class IndexVamana {
 
 // clang-format off
 const IndexVamana::table_type IndexVamana::dispatch_table = {
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t timestamp) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint32_t>>>(num_vectors, l_build, r_max_degree, timestamp); }},
   {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t timestamp) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(num_vectors, l_build, r_max_degree, timestamp); }},
   {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t timestamp) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint32_t>>>(num_vectors, l_build, r_max_degree, timestamp); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t timestamp) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint64_t>>>(num_vectors, l_build, r_max_degree, timestamp); }},
   {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t timestamp) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(num_vectors, l_build, r_max_degree, timestamp); }},
   {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t timestamp) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint64_t>>>(num_vectors, l_build, r_max_degree, timestamp); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t timestamp) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint32_t>>>(num_vectors, l_build, r_max_degree, timestamp); }},
   {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t timestamp) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(num_vectors, l_build, r_max_degree, timestamp); }},
   {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t timestamp) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint32_t>>>(num_vectors, l_build, r_max_degree, timestamp); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t timestamp) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint64_t>>>(num_vectors, l_build, r_max_degree, timestamp); }},
   {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t timestamp) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(num_vectors, l_build, r_max_degree, timestamp); }},
   {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t timestamp) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint64_t>>>(num_vectors, l_build, r_max_degree, timestamp); }},
 };
 
 const IndexVamana::uri_table_type IndexVamana::uri_dispatch_table = {
-  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(ctx, uri, timestamp); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint32_t>>>(ctx, uri, timestamp); }},
-  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(ctx, uri, timestamp); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint64_t>>>(ctx, uri, timestamp); }},
-  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(ctx, uri, timestamp); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint32_t>>>(ctx, uri, timestamp); }},
-  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(ctx, uri, timestamp); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint64_t>>>(ctx, uri, timestamp); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint32_t>>>(ctx, uri, timestamp); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(ctx, uri, timestamp); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint32_t>>>(ctx, uri, timestamp); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint64_t>>>(ctx, uri, timestamp); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(ctx, uri, timestamp); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint64_t>>>(ctx, uri, timestamp); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint32_t>>>(ctx, uri, timestamp); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(ctx, uri, timestamp); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint32_t>>>(ctx, uri, timestamp); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint64_t>>>(ctx, uri, timestamp); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(ctx, uri, timestamp); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, size_t timestamp) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint64_t>>>(ctx, uri, timestamp); }},
 };
 // clang-format on
 

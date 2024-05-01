@@ -62,6 +62,16 @@ TEST_CASE("api_vamana_index: init constructor", "[api_vamana_index]") {
     CHECK(dimension(a) == 0);
   }
 
+  SECTION("int8 uint32 uint32") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "int8"},
+         {"id_type", "uint32"},
+         {"adjacency_row_index_type", "uint32"}}));
+    CHECK(a.feature_type() == TILEDB_INT8);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
+  }
+
   SECTION("uint8 uint32 uint32") {
     auto a = IndexVamana(std::make_optional<IndexOptions>(
         {{"feature_type", "uint8"},
@@ -92,6 +102,16 @@ TEST_CASE("api_vamana_index: init constructor", "[api_vamana_index]") {
     CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
   }
 
+  SECTION("int8 uint64 uint32") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "int8"},
+         {"id_type", "uint64"},
+         {"adjacency_row_index_type", "uint32"}}));
+    CHECK(a.feature_type() == TILEDB_INT8);
+    CHECK(a.id_type() == TILEDB_UINT64);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
+  }
+
   SECTION("uint8 uint64 uint32") {
     auto a = IndexVamana(std::make_optional<IndexOptions>(
         {{"feature_type", "uint8"},
@@ -100,6 +120,16 @@ TEST_CASE("api_vamana_index: init constructor", "[api_vamana_index]") {
     CHECK(a.feature_type() == TILEDB_UINT8);
     CHECK(a.id_type() == TILEDB_UINT64);
     CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
+  }
+
+  SECTION("int8 uint32 uint64") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "int8"},
+         {"id_type", "uint32"},
+         {"adjacency_row_index_type", "uint64"}}));
+    CHECK(a.feature_type() == TILEDB_INT8);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
   }
 
   SECTION("uint8 uint32 uint64") {
@@ -118,6 +148,16 @@ TEST_CASE("api_vamana_index: init constructor", "[api_vamana_index]") {
          {"id_type", "uint64"},
          {"adjacency_row_index_type", "uint64"}}));
     CHECK(a.feature_type() == TILEDB_FLOAT32);
+    CHECK(a.id_type() == TILEDB_UINT64);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
+  }
+
+  SECTION("int8 uint64 uint64") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "int8"},
+         {"id_type", "uint64"},
+         {"adjacency_row_index_type", "uint64"}}));
+    CHECK(a.feature_type() == TILEDB_INT8);
     CHECK(a.id_type() == TILEDB_UINT64);
     CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
   }

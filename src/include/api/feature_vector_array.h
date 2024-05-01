@@ -313,6 +313,7 @@ class FeatureVectorArray {
 // clang-format off
 const FeatureVectorArray::col_major_matrix_table_type FeatureVectorArray::col_major_matrix_dispatch_table = {
   {TILEDB_FLOAT32, [](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrix<float   >>>(rows, cols);}},
+  {TILEDB_INT8,    [](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrix<int8_t  >>>(rows, cols);}},
   {TILEDB_UINT8,   [](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrix<uint8_t >>>(rows, cols);}},
   {TILEDB_INT32,   [](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrix<int32_t >>>(rows, cols);}},
   {TILEDB_UINT32,  [](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrix<uint32_t>>>(rows, cols);}},
@@ -322,6 +323,7 @@ const FeatureVectorArray::col_major_matrix_table_type FeatureVectorArray::col_ma
 
 const FeatureVectorArray::tdb_col_major_matrix_table_type FeatureVectorArray::tdb_col_major_matrix_dispatch_table = {
   {TILEDB_FLOAT32, [](const tiledb::Context& ctx, const std::string& uri, size_t num_vectors, size_t timestamp) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrix<float   >>>(ctx, uri, num_vectors, timestamp); }},
+  {TILEDB_INT8,    [](const tiledb::Context& ctx, const std::string& uri, size_t num_vectors, size_t timestamp) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrix<int8_t  >>>(ctx, uri, num_vectors, timestamp); }},
   {TILEDB_UINT8,   [](const tiledb::Context& ctx, const std::string& uri, size_t num_vectors, size_t timestamp) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrix<uint8_t >>>(ctx, uri, num_vectors, timestamp); }},
   {TILEDB_INT32,   [](const tiledb::Context& ctx, const std::string& uri, size_t num_vectors, size_t timestamp) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrix<int32_t >>>(ctx, uri, num_vectors, timestamp); }},
   {TILEDB_UINT32,  [](const tiledb::Context& ctx, const std::string& uri, size_t num_vectors, size_t timestamp) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrix<uint32_t>>>(ctx, uri, num_vectors, timestamp); }},
@@ -331,6 +333,7 @@ const FeatureVectorArray::tdb_col_major_matrix_table_type FeatureVectorArray::td
 
 const FeatureVectorArray::col_major_matrix_with_ids_table_type FeatureVectorArray::col_major_matrix_with_ids_dispatch_table = {
   {{TILEDB_FLOAT32, TILEDB_UINT32},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<float,    uint32_t>>>(rows, cols); }},
+  {{TILEDB_INT8,    TILEDB_UINT32},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<int8_t,   uint32_t>>>(rows, cols); }},
   {{TILEDB_UINT8,   TILEDB_UINT32},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<uint8_t,  uint32_t>>>(rows, cols); }},
   {{TILEDB_INT32,   TILEDB_UINT32},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<int32_t,  uint32_t>>>(rows, cols); }},
   {{TILEDB_UINT32,  TILEDB_UINT32},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<uint32_t, uint32_t>>>(rows, cols); }},
@@ -338,6 +341,7 @@ const FeatureVectorArray::col_major_matrix_with_ids_table_type FeatureVectorArra
   {{TILEDB_UINT64,  TILEDB_UINT32},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<uint64_t, uint32_t>>>(rows, cols); }},
 
   {{TILEDB_FLOAT32, TILEDB_UINT64},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<float,    uint64_t>>>(rows, cols); }},
+  {{TILEDB_INT8,    TILEDB_UINT64},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<int8_t,   uint64_t>>>(rows, cols); }},
   {{TILEDB_UINT8,   TILEDB_UINT64},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<uint8_t,  uint64_t>>>(rows, cols); }},
   {{TILEDB_INT32,   TILEDB_UINT64},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<int32_t,  uint64_t>>>(rows, cols); }},
   {{TILEDB_UINT32,  TILEDB_UINT64},[](size_t rows, size_t cols) { return std::make_unique<FeatureVectorArray::vector_array_impl<ColMajorMatrixWithIds<uint32_t, uint64_t>>>(rows, cols); }},
@@ -347,6 +351,7 @@ const FeatureVectorArray::col_major_matrix_with_ids_table_type FeatureVectorArra
 
 const FeatureVectorArray::tdb_col_major_matrix_with_ids_table_type FeatureVectorArray::tdb_col_major_matrix_with_ids_dispatch_table = {
   {{TILEDB_FLOAT32, TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors, size_t timestamp) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<float,    uint32_t>>>(ctx, uri, ids_uri, num_vectors, timestamp);}},
+  {{TILEDB_INT8,    TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors, size_t timestamp) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<int8_t,   uint32_t>>>(ctx, uri, ids_uri, num_vectors, timestamp);}},
   {{TILEDB_UINT8,   TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors, size_t timestamp) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<uint8_t,  uint32_t>>>(ctx, uri, ids_uri, num_vectors, timestamp);}},
   {{TILEDB_INT32,   TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors, size_t timestamp) {return  std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<int32_t,  uint32_t>>>(ctx, uri, ids_uri, num_vectors, timestamp);}},
   {{TILEDB_UINT32,  TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors, size_t timestamp) {return  std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<uint32_t, uint32_t>>>(ctx, uri, ids_uri, num_vectors, timestamp);}},
@@ -354,6 +359,7 @@ const FeatureVectorArray::tdb_col_major_matrix_with_ids_table_type FeatureVector
   {{TILEDB_UINT64,  TILEDB_UINT32},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors, size_t timestamp) {return  std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<uint64_t, uint32_t>>>(ctx, uri, ids_uri, num_vectors, timestamp);}},
 
   {{TILEDB_FLOAT32, TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors, size_t timestamp) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<float,    uint64_t>>>(ctx, uri, ids_uri, num_vectors, timestamp);}},
+  {{TILEDB_INT8,    TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors, size_t timestamp) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<int8_t,   uint64_t>>>(ctx, uri, ids_uri, num_vectors, timestamp);}},
   {{TILEDB_UINT8,   TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors, size_t timestamp) { return std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<uint8_t,  uint64_t>>>(ctx, uri, ids_uri, num_vectors, timestamp);}},
   {{TILEDB_INT32,   TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors, size_t timestamp) {return  std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<int32_t,  uint64_t>>>(ctx, uri, ids_uri, num_vectors, timestamp);}},
   {{TILEDB_UINT32,  TILEDB_UINT64},[](const tiledb::Context& ctx, const std::string& uri, const std::string& ids_uri, size_t num_vectors, size_t timestamp) {return  std::make_unique<FeatureVectorArray::vector_array_impl<tdbColMajorMatrixWithIds<uint32_t, uint64_t>>>(ctx, uri, ids_uri, num_vectors, timestamp);}},
@@ -369,6 +375,21 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
 
   auto proc_b = [&b](auto& aview) {
     switch (b.feature_type()) {
+      case TILEDB_FLOAT32: {
+        auto bview = MatrixView<float, stdx::layout_left>{
+            (float*)b.data(), extents(b)[0], extents(b)[1]};
+        return validate_top_k(aview, bview);
+      }
+      case TILEDB_INT8: {
+        auto bview = MatrixView<int8_t, stdx::layout_left>{
+            (int8_t*)b.data(), extents(b)[0], extents(b)[1]};
+        return validate_top_k(aview, bview);
+      }
+      case TILEDB_UINT8: {
+        auto bview = MatrixView<uint8_t, stdx::layout_left>{
+            (uint8_t*)b.data(), extents(b)[0], extents(b)[1]};
+        return validate_top_k(aview, bview);
+      }
       case TILEDB_INT32: {
         auto bview = MatrixView<int32_t, stdx::layout_left>{
             (int32_t*)b.data(), extents(b)[0], extents(b)[1]};
@@ -395,6 +416,21 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
   };
 
   switch (a.feature_type()) {
+    case TILEDB_FLOAT32: {
+      auto aview = MatrixView<float, stdx::layout_left>{
+          (float*)a.data(), extents(a)[0], extents(a)[1]};
+      return proc_b(aview);
+    }
+    case TILEDB_INT8: {
+      auto aview = MatrixView<int8_t, stdx::layout_left>{
+          (int8_t*)a.data(), extents(a)[0], extents(a)[1]};
+      return proc_b(aview);
+    }
+    case TILEDB_UINT8: {
+      auto aview = MatrixView<uint8_t, stdx::layout_left>{
+          (uint8_t*)a.data(), extents(a)[0], extents(a)[1]};
+      return proc_b(aview);
+    }
     case TILEDB_INT32: {
       auto aview = MatrixView<int32_t, stdx::layout_left>{
           (int32_t*)a.data(), extents(a)[0], extents(a)[1]};
@@ -432,6 +468,21 @@ auto count_intersections(
     const FeatureVectorArray& a, const FeatureVectorArray& b, size_t k_nn) {
   auto proc_b = [&b, k_nn](auto& aview) {
     switch (b.feature_type()) {
+      case TILEDB_FLOAT32: {
+        auto bview = MatrixView<float, stdx::layout_left>{
+            (float*)b.data(), extents(b)[0], extents(b)[1]};
+        return count_intersections(aview, bview, k_nn);
+      }
+      case TILEDB_INT8: {
+        auto bview = MatrixView<int8_t, stdx::layout_left>{
+            (int8_t*)b.data(), extents(b)[0], extents(b)[1]};
+        return count_intersections(aview, bview, k_nn);
+      }
+      case TILEDB_UINT8: {
+        auto bview = MatrixView<uint8_t, stdx::layout_left>{
+            (uint8_t*)b.data(), extents(b)[0], extents(b)[1]};
+        return count_intersections(aview, bview, k_nn);
+      }
       case TILEDB_INT32: {
         auto bview = MatrixView<int32_t, stdx::layout_left>{
             (int32_t*)b.data(), extents(b)[0], extents(b)[1]};
@@ -458,6 +509,21 @@ auto count_intersections(
   };
 
   switch (a.feature_type()) {
+    case TILEDB_FLOAT32: {
+      auto aview = MatrixView<float, stdx::layout_left>{
+          (float*)a.data(), extents(a)[0], extents(a)[1]};
+      return proc_b(aview);
+    }
+    case TILEDB_INT8: {
+      auto aview = MatrixView<int8_t, stdx::layout_left>{
+          (int8_t*)a.data(), extents(a)[0], extents(a)[1]};
+      return proc_b(aview);
+    }
+    case TILEDB_UINT8: {
+      auto aview = MatrixView<uint8_t, stdx::layout_left>{
+          (uint8_t*)a.data(), extents(a)[0], extents(a)[1]};
+      return proc_b(aview);
+    }
     case TILEDB_INT32: {
       auto aview = MatrixView<int32_t, stdx::layout_left>{
           (int32_t*)a.data(), extents(a)[0], extents(a)[1]};
