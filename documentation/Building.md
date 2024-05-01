@@ -30,6 +30,7 @@ Alternatively, you can setup CLion, which is the suggested way to develop C++ in
 ## Python
 
 Before building you may want to set up a virtual environment:
+
 ```bash
 conda create --name TileDB-Vector-Search python=3.9
 conda activate TileDB-Vector-Search
