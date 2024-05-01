@@ -28,7 +28,8 @@
  * @section DESCRIPTION
  *
  * Provides the same functionality as tiledb::TemporalPolicy, but:
- * - Does not break the copy assignment operator if it is a member variable of a class.
+ * - Does not break the copy assignment operator if it is a member variable of a
+ * class.
  * - Exposes timestamp_start and timestamp_end as public members.
  *
  */
@@ -51,8 +52,8 @@ class TemporalPolicy {
       , timestamp_end_(UINT64_MAX){};
 
   TemporalPolicy(const TimeTravelMarker&, uint64_t timestamp)
-        : timestamp_start_(0)
-        , timestamp_end_(timestamp){};
+      : timestamp_start_(0)
+      , timestamp_end_(timestamp){};
 
   TemporalPolicy(
       const TimestampStartEndMarker&,
@@ -70,7 +71,8 @@ class TemporalPolicy {
   }
 
   inline tiledb::TemporalPolicy to_tiledb_temporal_policy() const {
-    return tiledb::TemporalPolicy(tiledb::TimestampStartEnd, timestamp_start_, timestamp_end_);
+    return tiledb::TemporalPolicy(
+        tiledb::TimestampStartEnd, timestamp_start_, timestamp_end_);
   }
 
  private:

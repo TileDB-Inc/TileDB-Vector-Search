@@ -203,6 +203,7 @@ class base_index_group {
     }
     if (index_timestamp_ == 0) {
       index_timestamp_ = metadata_.ingestion_timestamps_.back();
+      temporal_policy_ = TemporalPolicy{TimeTravel, index_timestamp_};
     }
 
     auto timestamp_bound = std::lower_bound(
@@ -313,8 +314,7 @@ class base_index_group {
       : cached_ctx_(ctx)
       , group_uri_(uri)
       , temporal_policy_(temporal_policy)
-      // TODO FIX THIS
-      , index_timestamp_(0)
+      , index_timestamp_(temporal_policy.timestamp_end())
       , version_(version)
       , opened_for_(rw) {
     switch (opened_for_) {
