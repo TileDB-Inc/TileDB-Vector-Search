@@ -86,7 +86,7 @@ class ivf_flat_index_group
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
-      TemporalPolicy temporal_policy = {},
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""})
       : Base(ctx, uri, index.dimension(), rw, temporal_policy, version) {
   }

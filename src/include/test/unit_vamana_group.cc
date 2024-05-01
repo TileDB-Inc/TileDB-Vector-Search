@@ -359,7 +359,12 @@ TEST_CASE("vamana_group: storage version", "[vamana_group]") {
 
   SECTION("0.3") {
     x = vamana_index_group(
-        dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, {}, "0.3");
+        dummy_index{},
+        ctx,
+        tmp_uri,
+        TILEDB_WRITE,
+        TemporalPolicy{TimeTravel, 0},
+        "0.3");
     x.append_num_edges(0);
     x.append_base_size(0);
     x.append_ingestion_timestamp(0);
@@ -367,7 +372,12 @@ TEST_CASE("vamana_group: storage version", "[vamana_group]") {
 
   SECTION("current_storage_version") {
     x = vamana_index_group(
-        dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, {}, current_storage_version);
+        dummy_index{},
+        ctx,
+        tmp_uri,
+        TILEDB_WRITE,
+        TemporalPolicy{TimeTravel, 0},
+        current_storage_version);
     x.append_num_edges(0);
     x.append_base_size(0);
     x.append_ingestion_timestamp(0);
@@ -399,7 +409,12 @@ TEST_CASE("vamana_group: invalid storage version", "[vamana_group]") {
     vfs.remove_dir(tmp_uri);
   }
   CHECK_THROWS(vamana_index_group(
-      dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, {}, "invalid"));
+      dummy_index{},
+      ctx,
+      tmp_uri,
+      TILEDB_WRITE,
+      TemporalPolicy{TimeTravel, 0},
+      "invalid"));
 }
 
 TEST_CASE("vamana_group: mismatched storage version", "[vamana_group]") {
@@ -412,11 +427,21 @@ TEST_CASE("vamana_group: mismatched storage version", "[vamana_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  vamana_index_group x =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, {}, "0.3");
+  vamana_index_group x = vamana_index_group(
+      dummy_index{},
+      ctx,
+      tmp_uri,
+      TILEDB_WRITE,
+      TemporalPolicy{TimeTravel, 0},
+      "0.3");
 
   CHECK_THROWS_WITH(
       vamana_index_group(
-          dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, {}, "different_version"),
+          dummy_index{},
+          ctx,
+          tmp_uri,
+          TILEDB_WRITE,
+          TemporalPolicy{TimeTravel, 0},
+          "different_version"),
       "Version mismatch. Requested different_version but found 0.3");
 }

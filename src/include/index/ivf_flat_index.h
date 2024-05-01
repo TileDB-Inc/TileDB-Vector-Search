@@ -177,17 +177,18 @@ class ivf_flat_index {
       size_t nlist = 0,
       size_t max_iter = 2,
       float tol = 0.000025,
-      size_t timestamp = 0,
+      TemporalPolicy temporal_policy = {},
       uint64_t seed = std::random_device{}())
       :  // , dimension_(dim)
-      temporal_policy_{TemporalPolicy{
-          TimeTravel,
-          timestamp != 0 ?
-              timestamp :
-              static_cast<uint64_t>(
-                  std::chrono::duration_cast<std::chrono::milliseconds>(
-                      std::chrono::system_clock::now().time_since_epoch())
-                      .count())}}
+      temporal_policy_{
+          temporal_policy.timestamp_end() != 0 ?
+              temporal_policy :
+              TemporalPolicy{
+                  TimeTravel,
+                  static_cast<uint64_t>(
+                      std::chrono::duration_cast<std::chrono::milliseconds>(
+                          std::chrono::system_clock::now().time_since_epoch())
+                          .count())}}
       , num_partitions_(nlist)
       , max_iter_(max_iter)
       , tol_(tol)

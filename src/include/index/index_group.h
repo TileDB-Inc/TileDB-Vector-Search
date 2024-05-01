@@ -309,7 +309,7 @@ class base_index_group {
       const std::string& uri,
       uint64_t dimension,
       tiledb_query_type_t rw = TILEDB_READ,
-      TemporalPolicy temporal_policy = {},
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""})
       : cached_ctx_(ctx)
       , group_uri_(uri)
