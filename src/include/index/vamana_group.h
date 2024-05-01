@@ -109,9 +109,9 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
-      size_t timestamp = 0,
+      TemporalPolicy temporal_policy = {},
       const std::string& version = std::string{""})
-      : Base(ctx, uri, index.dimension(), rw, timestamp, version) {
+      : Base(ctx, uri, index.dimension(), rw, temporal_policy, version) {
   }
 
  public:

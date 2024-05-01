@@ -295,8 +295,8 @@ TEST_CASE("tdb_matrix: empty matrix", "[tdb_matrix]") {
 
   {
     // No rows and no cols.
-    auto X =
-        tdbColMajorMatrix<float>(ctx, tmp_matrix_uri, 0, 0, 0, 0, 10000, 0);
+    auto X = tdbColMajorMatrix<float>(
+        ctx, tmp_matrix_uri, 0, 0, 0, 0, 10000, TemporalPolicy{TimeTravel, 0});
     X.load();
     CHECK(X.num_cols() == 0);
     CHECK(num_vectors(X) == 0);
@@ -307,7 +307,14 @@ TEST_CASE("tdb_matrix: empty matrix", "[tdb_matrix]") {
   {
     // All rows and no cols.
     auto X = tdbColMajorMatrix<float>(
-        ctx, tmp_matrix_uri, 0, std::nullopt, 0, 0, 10000, 0);
+        ctx,
+        tmp_matrix_uri,
+        0,
+        std::nullopt,
+        0,
+        0,
+        10000,
+        TemporalPolicy{TimeTravel, 0});
     X.load();
     CHECK(X.num_cols() == 0);
     CHECK(num_vectors(X) == 0);
@@ -318,7 +325,14 @@ TEST_CASE("tdb_matrix: empty matrix", "[tdb_matrix]") {
   {
     // No rows and all cols.
     auto X = tdbColMajorMatrix<float>(
-        ctx, tmp_matrix_uri, 0, 0, 0, std::nullopt, 10000, 0);
+        ctx,
+        tmp_matrix_uri,
+        0,
+        0,
+        0,
+        std::nullopt,
+        10000,
+        TemporalPolicy{TimeTravel, 0});
     X.load();
     CHECK(X.num_cols() == 0);
     CHECK(num_vectors(X) == 0);

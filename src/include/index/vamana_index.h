@@ -39,17 +39,17 @@
 #include <queue>
 #include <unordered_set>
 
+#include <tiledb/tiledb>
 #include "detail/graph/adj_list.h"
 #include "detail/graph/graph_utils.h"
 #include "detail/linalg/tdb_matrix_with_ids.h"
 #include "detail/linalg/vector.h"
+#include "detail/time/temporal_policy.h"
 #include "index/vamana_group.h"
 #include "scoring.h"
 #include "stats.h"
 #include "utils/fixed_min_heap.h"
 #include "utils/print_types.h"
-
-#include <tiledb/tiledb>
 
 #include <tiledb/group_experimental.h>
 
@@ -419,7 +419,7 @@ class vamana_index {
    ****************************************************************************/
 
   /** The timestamp at which the index was created */
-  uint64_t timestamp_{0};
+  TemporalPolicy temporal_policy_;
 
   std::unique_ptr<vamana_index_group<vamana_index>> group_;
 
@@ -480,13 +480,10 @@ class vamana_index {
       size_t L,
       size_t R,
       size_t B = 0,
-      size_t timestamp = 0):
-      timestamp_{
-          (timestamp == 0) ?
-              std::chrono::duration_cast<std::chrono::milliseconds>(
-                  std::chrono::system_clock::now().time_since_epoch())
-                  .count() :
-              timestamp}
+      TemporalPolicy temporal_policy = {})
+      : temporal_policy_{
+        temporal_policy.timestamp_end() != 0  ? temporal_policy :
+        TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
       , num_vectors_{num_nodes}
       , graph_{num_vectors_}
       , l_build_{L}
@@ -501,9 +498,10 @@ class vamana_index {
    */
   vamana_index(tiledb::Context ctx, const std::string& uri)
       : group_{std::make_unique<vamana_index_group<vamana_index>>(
-            *this, ctx, uri, TILEDB_READ, timestamp_)} {
-    if (timestamp_ == 0) {
-      timestamp_ = group_->get_previous_ingestion_timestamp();
+            *this, ctx, uri, TILEDB_READ, temporal_policy_)} {
+    if (temporal_policy_.timestamp_end() == 0) {
+      temporal_policy_ = {
+          TimeTravel, group_->get_previous_ingestion_timestamp()};
     }
 
     // @todo Make this table-driven
@@ -525,7 +523,7 @@ class vamana_index {
             dimension_,
             num_vectors_,
             0,
-            timestamp_));
+            temporal_policy_));
 
     /*
      * Read the feature vectors
@@ -552,19 +550,19 @@ class vamana_index {
         group_->adjacency_scores_uri(),
         0,
         num_edges_,
-        timestamp_);
+        temporal_policy_);
     auto adj_ids = read_vector<id_type>(
         group_->cached_ctx(),
         group_->adjacency_ids_uri(),
         0,
         num_edges_,
-        timestamp_);
+        temporal_policy_);
     auto adj_index = read_vector<adjacency_row_index_type>(
         group_->cached_ctx(),
         group_->adjacency_row_index_uri(),
         0,
         num_vectors_ + 1,
-        timestamp_);
+        temporal_policy_);
 
     // Here we build a graph using the graph data we read in.  We do it this
     // way for a dynamic graph, which is one that we can later add more edges
@@ -843,13 +841,13 @@ class vamana_index {
       std::optional<size_t> timestamp = std::nullopt,
       const std::string& storage_version = "") {
     if (timestamp.has_value()) {
-      timestamp_ = timestamp.value();
+      temporal_policy_ = TemporalPolicy{TimeTravel, timestamp.value()};
     }
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
 
     auto write_group = vamana_index_group(
-        *this, ctx, group_uri, TILEDB_WRITE, timestamp_, storage_version);
+        *this, ctx, group_uri, TILEDB_WRITE, temporal_policy_, storage_version);
 
     // @todo Make this table-driven
     write_group.set_dimension(dimension_);
@@ -860,7 +858,7 @@ class vamana_index {
     write_group.set_alpha_max(alpha_max_);
     write_group.set_medoid(medoid_);
 
-    write_group.append_ingestion_timestamp(timestamp_);
+    write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
     write_group.append_base_size(::num_vectors(feature_vectors_));
     write_group.append_num_edges(graph_.num_edges());
 
@@ -870,7 +868,7 @@ class vamana_index {
         write_group.feature_vectors_uri(),
         0,
         false,
-        timestamp_);
+        temporal_policy_);
 
     write_vector(
         ctx,
@@ -878,7 +876,7 @@ class vamana_index {
         write_group.ids_uri(),
         0,
         false,
-        timestamp_);
+        temporal_policy_);
 
     auto adj_scores = Vector<score_type>(graph_.num_edges());
     auto adj_ids = Vector<id_type>(graph_.num_edges());
@@ -902,16 +900,21 @@ class vamana_index {
         write_group.adjacency_scores_uri(),
         0,
         false,
-        timestamp_);
+        temporal_policy_);
     write_vector(
-        ctx, adj_ids, write_group.adjacency_ids_uri(), 0, false, timestamp_);
+        ctx,
+        adj_ids,
+        write_group.adjacency_ids_uri(),
+        0,
+        false,
+        temporal_policy_);
     write_vector(
         ctx,
         adj_index,
         write_group.adjacency_row_index_uri(),
         0,
         false,
-        timestamp_);
+        temporal_policy_);
 
     return true;
   }

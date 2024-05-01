@@ -551,7 +551,7 @@ TEST_CASE("api: load empty matrix", "[api][index]") {
   auto X = FeatureVectorArray(ctx, tmp_matrix_uri);
 }
 
-TEST_CASE("api: read at timestamp", "[api]") {
+TEST_CASE("api: temporal_policy", "[api]") {
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
 
@@ -597,14 +597,15 @@ TEST_CASE("api: read at timestamp", "[api]") {
 
   // Write to them at timestamp 99.
   {
-    size_t timestamp = 99;
+    auto temporal_policy = TemporalPolicy(TimeTravel, 99);
     auto matrix_with_ids = ColMajorMatrixWithIds<FeatureType, IdsType>{
         {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
 
     write_matrix(
-        ctx, matrix_with_ids, feature_vectors_uri, 0, false, timestamp);
+        ctx, matrix_with_ids, feature_vectors_uri, 0, false, temporal_policy);
 
-    write_vector(ctx, matrix_with_ids.ids(), ids_uri, 0, false, timestamp);
+    write_vector(
+        ctx, matrix_with_ids.ids(), ids_uri, 0, false, temporal_policy);
   }
 
   // Read the data and validate our initial write worked.
@@ -630,18 +631,19 @@ TEST_CASE("api: read at timestamp", "[api]") {
 
   // Write to them at timestamp 100.
   {
-    size_t timestamp = 100;
+    auto temporal_policy = TemporalPolicy(TimeTravel, 100);
     auto matrix_with_ids = ColMajorMatrixWithIds<FeatureType, IdsType>{
         {{11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}},
         {11, 22, 33, 44}};
 
     write_matrix(
-        ctx, matrix_with_ids, feature_vectors_uri, 0, false, timestamp);
+        ctx, matrix_with_ids, feature_vectors_uri, 0, false, temporal_policy);
 
-    write_vector(ctx, matrix_with_ids.ids(), ids_uri, 0, false, timestamp);
+    write_vector(
+        ctx, matrix_with_ids.ids(), ids_uri, 0, false, temporal_policy);
   }
 
-  // Read the data and validate we read at timestamp 100 by default.
+  // Read the data and validate we read at temporal_policy 100 by default.
   {
     auto feature_vector_array =
         FeatureVectorArray(ctx, feature_vectors_uri, ids_uri);
@@ -664,8 +666,8 @@ TEST_CASE("api: read at timestamp", "[api]") {
 
   // Read the data at timestamp 99 explicitly.
   {
-    auto feature_vector_array =
-        FeatureVectorArray(ctx, feature_vectors_uri, ids_uri, 0, 99);
+    auto feature_vector_array = FeatureVectorArray(
+        ctx, feature_vectors_uri, ids_uri, 0, TemporalPolicy(TimeTravel, 99));
     auto data = MatrixView<FeatureType, stdx::layout_left>{
         (FeatureType*)feature_vector_array.data(),
         extents(feature_vector_array)[0],

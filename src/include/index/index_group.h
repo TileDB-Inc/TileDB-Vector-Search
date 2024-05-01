@@ -95,6 +95,7 @@ class base_index_group {
  protected:
   tiledb::Context cached_ctx_;
   std::string group_uri_;
+  TemporalPolicy temporal_policy_;
   size_t index_timestamp_{0};
   size_t group_timestamp_{0};
   size_t timetravel_index_{0};
@@ -307,11 +308,13 @@ class base_index_group {
       const std::string& uri,
       uint64_t dimension,
       tiledb_query_type_t rw = TILEDB_READ,
-      size_t timestamp = 0,
+      TemporalPolicy temporal_policy = {},
       const std::string& version = std::string{""})
       : cached_ctx_(ctx)
       , group_uri_(uri)
-      , index_timestamp_(timestamp)
+      , temporal_policy_(temporal_policy)
+      // TODO FIX THIS
+      , index_timestamp_(0)
       , version_(version)
       , opened_for_(rw) {
     switch (opened_for_) {
