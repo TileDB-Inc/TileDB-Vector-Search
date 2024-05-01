@@ -385,8 +385,8 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
                           false,
                           )
                           .unwrap();
-    let visited_nodes = index.search_for_point(&query, &mut
-    scratch).unwrap(); assert_eq!(visited_nodes.len(), 15);
+    let visited_nodes = index.search_for_point(&query, &mut scratch).unwrap();
+    assert_eq!(visited_nodes.len(), 15);
     assert_eq!(scratch.best_candidates.size(), 15);
     assert_eq!(scratch.best_candidates[0].id, 2);
     assert_eq!(scratch.best_candidates[0].distance, 120899.0_f32);
@@ -529,9 +529,7 @@ TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
       std::cout << "Nearest neighbors:" << std::endl;
       for (auto&& n : top_k) {
         std::cout << n << " (" << nn_hypercube(0, n) << ", "
-                  << nn_hypercube(1, n) << ", " << nn_hypercube(2, n)
-                  << "),
-                     "
+                  << nn_hypercube(1, n) << ", " << nn_hypercube(2, n) << "), "
                   << l2_distance(nn_hypercube[n], query) << std::endl;
       }
       std::cout << "-----\ntop_k\n";
@@ -613,9 +611,7 @@ TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
       std::cout << "Nearest neighbors:" << std::endl;
       for (auto&& n : top_k) {
         std::cout << n << " (" << nn_hypercube(0, n) << ", "
-                  << nn_hypercube(1, n) << ", " << nn_hypercube(2, n)
-                  << "),
-                     "
+                  << nn_hypercube(1, n) << ", " << nn_hypercube(2, n) << "), "
                   << sum_of_squares_distance{}(nn_hypercube[n], query)
                   << std::endl;
       }
@@ -710,9 +706,7 @@ TEST_CASE("vamana: fmnist", "[vamana]") {
     }
     std::cout << "\nDistances: ";
     for (size_t i = 0; i < k_nn; ++i) {
-      std::cout << sum_of_squares_distance{}(db[qv_top_k(i, 0)], query)
-                << "
-                   ";
+      std::cout << sum_of_squares_distance{}(db[qv_top_k(i, 0)], query) << " ";
     }
     std::cout << "\n-----\n";
   }
@@ -888,9 +882,7 @@ TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
       std::cout << std::endl;
       for (auto&& n : top_k) {
         std::cout << n << " (" << nn_hypercube(0, n) << ", "
-                  << nn_hypercube(1, n) << ", " << nn_hypercube(2, n)
-                  << "),
-                     "
+                  << nn_hypercube(1, n) << ", " << nn_hypercube(2, n) << "), "
                   << sum_of_squares_distance{}(nn_hypercube[n], query)
                   << std::endl;
       }
@@ -1007,16 +999,12 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
 #if 0
   std::cout << std::endl;
   for (auto&& n : top_k[0]) {
-    std::cout << n << " (" << db(0, n) << ", " << db(1, n) << ", " << db(2,
-    n)
-              << "), " << sum_of_squares_distance{}(db[n], query) <<
-              std::endl;
+    std::cout << n << " (" << db(0, n) << ", " << db(1, n) << ", " << db(2, n)
+              << "), " << sum_of_squares_distance{}(db[n], query) << std::endl;
   }
   auto num_intersected = count_intersections(top_k, top_k, k_nn);
-  std::cout << "num_intersected: " << num_intersected << " / " << k_nn << " =
-  "
-            << ((double)num_intersected) / ((double)query_mat.num_cols() *
-            k_nn)
+  std::cout << "num_intersected: " << num_intersected << " / " << k_nn << " = "
+            << ((double)num_intersected) / ((double)query_mat.num_cols() * k_nn)
             << std::endl;
 #endif
 }
@@ -1114,10 +1102,9 @@ TEST_CASE("vamana: vamana by hand random index", "[vamana]") {
           std::cout << ":::: Checking neighbor " << j << std::endl;
         }
 
-        // @todo Do this without copying -- prune should take vector of
-        tuples
-            // and p (it copies anyway)
-            auto tmp = std::vector<size_t>(graph_.out_degree(j) + 1);
+        // @todo Do this without copying -- prune should take vector of tuples
+        // and p (it copies anyway)
+        auto tmp = std::vector<size_t>(graph_.out_degree(j) + 1);
         tmp.push_back(p);
         for (auto&& [_, k] : graph_.out_edges(j)) {
           if (k != p) {
