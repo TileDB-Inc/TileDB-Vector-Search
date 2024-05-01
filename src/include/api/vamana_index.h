@@ -102,8 +102,6 @@ class IndexVamana {
           l_build_ = std::stol(value);
         } else if (key == "r_max_degree") {
           r_max_degree_ = std::stol(value);
-        } else if (key == "timestamp") {
-          timestamp_ = std::stol(value);
         } else if (key == "feature_type") {
           feature_datatype_ = string_to_datatype(value);
         } else if (key == "id_type") {
@@ -130,17 +128,7 @@ class IndexVamana {
   IndexVamana(
       const tiledb::Context& ctx,
       const URI& group_uri,
-      const std::optional<IndexOptions>& config = std::nullopt) {
-    if (config) {
-      for (auto&& c : *config) {
-        auto key = c.first;
-        auto value = c.second;
-        if (key == "timestamp") {
-          timestamp_ = std::stol(value);
-        }
-      }
-    }
-
+      size_t timestamp = 0) {
     using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
     std::vector<metadata_element> metadata{
         {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
@@ -171,7 +159,7 @@ class IndexVamana {
     if (uri_dispatch_table.find(type) == uri_dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
-    index_ = uri_dispatch_table.at(type)(ctx, group_uri, timestamp_);
+    index_ = uri_dispatch_table.at(type)(ctx, group_uri, timestamp);
 
     if (dimension_ != 0 && dimension_ != index_->dimension()) {
       throw std::runtime_error(
@@ -202,8 +190,10 @@ class IndexVamana {
     if (dispatch_table.find(type) == dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
+    // If we loaded an existing index, we should use the timestamp from it.
+    auto timestamp = index_ ? index_->timestamp() : 0;
     index_ = dispatch_table.at(type)(
-        training_set.num_vectors(), l_build_, r_max_degree_, timestamp_);
+        training_set.num_vectors(), l_build_, r_max_degree_, timestamp);
 
     index_->train(training_set);
 
@@ -247,16 +237,21 @@ class IndexVamana {
       const tiledb::Context& ctx,
       const std::string& group_uri,
       std::optional<size_t> timestamp = std::nullopt,
-      const std::string& storage_version = "") {
+      const std::string& storage_version = "",
+      bool overwrite_metadata_list = false) {
     if (!index_) {
       throw std::runtime_error(
           "Cannot write_index() because there is no index.");
     }
-    index_->write_index(ctx, group_uri, timestamp, storage_version);
+    index_->write_index(ctx, group_uri, timestamp, storage_version, overwrite_metadata_list);
   }
 
   constexpr auto timestamp() const {
-    return timestamp_;
+    if (!index_) {
+      throw std::runtime_error(
+          "Cannot get timestamp() because there is no index.");
+    }
+    return index_->timestamp();
   }
 
   constexpr auto dimension() const {
@@ -308,9 +303,11 @@ class IndexVamana {
         const tiledb::Context& ctx,
         const std::string& group_uri,
         std::optional<size_t> timestamp,
-        const std::string& storage_version) = 0;
+        const std::string& storage_version,
+        bool overwrite_metadata_list) = 0;
 
     [[nodiscard]] virtual size_t dimension() const = 0;
+    [[nodiscard]] virtual size_t timestamp() const = 0;
   };
 
   /**
@@ -420,12 +417,17 @@ class IndexVamana {
         const tiledb::Context& ctx,
         const std::string& group_uri,
         std::optional<size_t> timestamp,
-        const std::string& storage_version) override {
-      impl_index_.write_index(ctx, group_uri, timestamp, storage_version);
+        const std::string& storage_version,
+        bool overwrite_metadata_list) override {
+      impl_index_.write_index(ctx, group_uri, timestamp, storage_version, overwrite_metadata_list);
     }
 
     size_t dimension() const override {
       return ::dimension(impl_index_);
+    }
+
+    size_t timestamp() const override {
+      return impl_index_.timestamp();
     }
 
    private:
@@ -448,7 +450,6 @@ class IndexVamana {
   size_t dimension_ = 0;
   size_t l_build_ = 100;
   size_t r_max_degree_ = 64;
-  size_t timestamp_ = 0;
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
   tiledb_datatype_t adjacency_row_index_datatype_{TILEDB_ANY};

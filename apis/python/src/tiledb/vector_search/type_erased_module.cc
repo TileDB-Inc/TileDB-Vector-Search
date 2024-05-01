@@ -60,12 +60,12 @@ std::map<std::string, std::string> kwargs_to_map(py::kwargs kwargs) {
   std::map<std::string, std::string> result;
 
   for (auto item : kwargs) {
-    if (item.first.is_none()) {
-      continue;
-    }
-    if (item.second.is_none()) {
-      continue;
-    }
+    // if (item.first.is_none()) {
+    //   continue;
+    // }
+    // if (item.second.is_none()) {
+    //   continue;
+    // }
     // Convert the Python objects to strings
     std::string key = py::str(item.first);
     std::string value = py::str(item.second);
@@ -281,11 +281,13 @@ void init_type_erased_module(py::module_& m) {
           [](IndexVamana& instance,
              const tiledb::Context& ctx,
              const std::string& group_uri,
-             py::kwargs kwargs) {
-            auto args = kwargs_to_map(kwargs);
-            new (&instance) IndexVamana(ctx, group_uri, args);
+             size_t timestamp) {
+            new (&instance) IndexVamana(ctx, group_uri, timestamp);
           },
-          py::keep_alive<1, 2>()  // IndexVamana should keep ctx alive.
+          py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
+          py::arg("ctx"),
+          py::arg("group_uri"),
+          py::arg("timestamp") = 0
           )
       .def(
           "__init__",
@@ -323,14 +325,17 @@ void init_type_erased_module(py::module_& m) {
              const tiledb::Context& ctx,
              const std::string& group_uri,
              std::optional<size_t> timestamp,
-             const std::string& storage_version) {
-            index.write_index(ctx, group_uri, timestamp, storage_version);
+             const std::string& storage_version,
+             bool overwrite_metadata_list) {
+            index.write_index(ctx, group_uri, timestamp, storage_version, overwrite_metadata_list);
           },
           py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
           py::arg("ctx"),
           py::arg("group_uri"),
           py::arg("timestamp") = py::none(),
-          py::arg("storage_version") = "")
+          py::arg("storage_version") = "",
+          py::arg("overwrite_metadata_list") = false
+        )
       .def("feature_type_string", &IndexVamana::feature_type_string)
       .def("id_type_string", &IndexVamana::id_type_string)
       .def(

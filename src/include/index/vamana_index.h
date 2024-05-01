@@ -721,6 +721,10 @@ class vamana_index {
     return num_comps_;
   }
 
+  size_t timestamp() const {
+    return timestamp_;
+  }
+
   /**
    * @brief Query the index for the top k nearest neighbors of the query set
    * @tparam Q Type of query set
@@ -843,7 +847,8 @@ class vamana_index {
       const tiledb::Context& ctx,
       const std::string& group_uri,
       std::optional<size_t> timestamp = std::nullopt,
-      const std::string& storage_version = "") {
+      const std::string& storage_version = "",
+      bool overwrite_metadata_list = false) {
     if (timestamp.has_value()) {
       timestamp_ = timestamp.value();
     }
@@ -862,9 +867,15 @@ class vamana_index {
     write_group.set_alpha_max(alpha_max_);
     write_group.set_medoid(medoid_);
 
-    write_group.append_ingestion_timestamp(timestamp_);
-    write_group.append_base_size(::num_vectors(feature_vectors_));
-    write_group.append_num_edges(graph_.num_edges());
+    if (overwrite_metadata_list) {
+      write_group.set_ingestion_timestamp(timestamp_);
+      write_group.set_base_size(::num_vectors(feature_vectors_));
+      write_group.set_num_edges(graph_.num_edges());
+    } else {
+      write_group.append_ingestion_timestamp(timestamp_);
+      write_group.append_base_size(::num_vectors(feature_vectors_));
+      write_group.append_num_edges(graph_.num_edges());
+    }
 
     write_matrix(
         ctx,

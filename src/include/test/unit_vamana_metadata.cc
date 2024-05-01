@@ -55,8 +55,6 @@ TEST_CASE("vamana_metadata: default constructor compare", "[vamana_metadata]") {
   CHECK(y.compare_metadata(x));
 }
 
-// TODO(paris): Modify the index and then also check for ingestion_timestamps
-// and num_edges_history.
 TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
@@ -86,7 +84,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
     // Check the metadata after an initial write_index().
     idx.train(training_vectors, training_vectors.ids());
     idx.add(training_vectors);
-    idx.write_index(ctx, uri);
+    idx.write_index(ctx, uri, 1);
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     auto x = vamana_index_metadata();
@@ -98,7 +96,9 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
         {"dtype", "float32"},
         {"feature_type", "float32"},
         {"id_type", "uint64"},
+        {"ingestion_timestamps", "[1]"},
         {"base_sizes", "[10000]"},
+        {"num_edges_history", "[624657]"},
         {"adjacency_scores_type", "float32"},
         {"adjacency_row_index_type", "uint64"},
     };
@@ -106,10 +106,15 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
   }
 
   {
-    // Check the metadata after a second write_index().
-    idx.train(training_vectors, training_vectors.ids());
-    idx.add(training_vectors);
-    idx.write_index(ctx, uri);
+    // Check that we can overwrite the last ingestion_timestamps, base_sizes, and num_edges_history. 
+    // We use this from Python during the initial ingest() so that we end up with the same metadata 
+    // as when creating with Python.
+    auto new_training_vectors = tdbColMajorPreLoadMatrixWithIds<siftsmall_feature_type,
+      siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 222);
+    
+    idx.train(new_training_vectors, new_training_vectors.ids());
+    idx.add(new_training_vectors);
+    idx.write_index(ctx, uri, 2, "", true);
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     auto x = vamana_index_metadata();
@@ -121,7 +126,37 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
         {"dtype", "float32"},
         {"feature_type", "float32"},
         {"id_type", "uint64"},
-        {"base_sizes", "[10000,10000]"},
+        {"ingestion_timestamps", "[2]"},
+        {"base_sizes", "[222]"},
+        {"num_edges_history", "[2799]"},
+        {"adjacency_scores_type", "float32"},
+        {"adjacency_row_index_type", "uint64"},
+    };
+    validate_metadata(read_group, expected_str, expected_arithmetic);
+  }
+
+  {
+    // Check we appended to metadata after a second normal write_index().
+    auto new_training_vectors = tdbColMajorPreLoadMatrixWithIds<siftsmall_feature_type,
+      siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 333);
+    
+    idx.train(new_training_vectors, new_training_vectors.ids());
+    idx.add(new_training_vectors);
+    idx.write_index(ctx, uri, 3);
+
+    auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
+    auto x = vamana_index_metadata();
+    x.load_metadata(read_group);
+
+    std::vector<std::tuple<std::string, std::string>> expected_str{
+        {"dataset_type", "vector_search"},
+        {"storage_version", current_storage_version},
+        {"dtype", "float32"},
+        {"feature_type", "float32"},
+        {"id_type", "uint64"},
+        {"ingestion_timestamps", "[2,3]"},
+        {"base_sizes", "[222,333]"},
+        {"num_edges_history", "[2799,4584]"},
         {"adjacency_scores_type", "float32"},
         {"adjacency_row_index_type", "uint64"},
     };

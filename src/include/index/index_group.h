@@ -209,10 +209,9 @@ class base_index_group {
         end(metadata_.ingestion_timestamps_),
         index_timestamp_);
     if (timestamp_bound == end(metadata_.ingestion_timestamps_)) {
-      throw std::runtime_error(
-          "Requested read timestamp " + std::to_string(index_timestamp_) +
-          " is beyond " +
-          std::to_string(metadata_.ingestion_timestamps_.back()));
+      // We may try to load the index at a timestamp beyond the latest ingestion timestamp. In this 
+      // case, use the last timestamp.
+      timestamp_bound = end(metadata_.ingestion_timestamps_) - 1;
     }
     timetravel_index_ =
         std::distance(begin(metadata_.ingestion_timestamps_), timestamp_bound);
