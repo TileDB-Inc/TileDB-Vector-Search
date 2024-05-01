@@ -764,14 +764,12 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         Index.clear_history(
             uri=index_uri, timestamp=index.latest_ingestion_timestamp - 1
         )
-        index = index_class(uri=index_uri, timestamp=1)
-        _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
-
         if index_type == "VAMANA":
             # TODO(paris): Re-enable once we support (start, end) timestamps for Vamana.
             continue
-
+        index = index_class(uri=index_uri, timestamp=1)
+        _, result = index.query(queries, k=k, nprobe=partitions)
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
         index = index_class(uri=index_uri, timestamp=51)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0

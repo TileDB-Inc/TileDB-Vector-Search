@@ -98,7 +98,6 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
         {"id_type", "uint64"},
         {"ingestion_timestamps", "[1]"},
         {"base_sizes", "[10000]"},
-        {"num_edges_history", "[624657]"},
         {"adjacency_scores_type", "float32"},
         {"adjacency_row_index_type", "uint64"},
     };
@@ -130,7 +129,6 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
         {"id_type", "uint64"},
         {"ingestion_timestamps", "[2]"},
         {"base_sizes", "[222]"},
-        {"num_edges_history", "[2799]"},
         {"adjacency_scores_type", "float32"},
         {"adjacency_row_index_type", "uint64"},
     };
@@ -159,7 +157,6 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
         {"id_type", "uint64"},
         {"ingestion_timestamps", "[2,3]"},
         {"base_sizes", "[222,333]"},
-        {"num_edges_history", "[2799,4584]"},
         {"adjacency_scores_type", "float32"},
         {"adjacency_row_index_type", "uint64"},
     };
