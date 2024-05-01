@@ -213,8 +213,9 @@ TEST_CASE("vamana: small256 build index", "[vamana]") {
   // have that functionality for anything.  So here we just test that
   // the distance between 0 and 72 is 125678.0
 
-  auto x = read_diskann_data(diskann_test_data_file);  //
-  siftsmall_learn_256pts.fbin int med = 72;
+  auto x =
+      read_diskann_data(diskann_test_data_file);  // siftsmall_learn_256pts.fbin
+  int med = 72;
   int query = 0;
   CHECK(l2_distance(x[med], x[query]) == 125678);
 
