@@ -542,3 +542,157 @@ TEST_CASE("api_vamana_index: storage_version", "[api_vamana_index]") {
     index.write_index(ctx, index_uri, std::nullopt, "0.3");
   }
 }
+
+TEST_CASE(
+    "api_vamana_index: write and load index with timestamps",
+    "[api_vamana_index]") {
+  auto ctx = tiledb::Context{};
+  using feature_type_type = uint8_t;
+  using id_type_type = uint32_t;
+  auto feature_type = "uint8";
+  auto id_type = "uint32";
+  auto adjacency_row_index_type = "uint32";
+  size_t dimensions = 3;
+
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_vamana_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
+
+  // Create an empty index.
+  {
+    // We write the empty index at timestamp 0.
+    auto index = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", feature_type},
+         {"id_type", id_type},
+         {"adjacency_row_index_type", adjacency_row_index_type}}));
+
+    size_t num_vectors = 0;
+    auto empty_training_vector_array =
+        FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
+    index.train(empty_training_vector_array);
+    index.add(empty_training_vector_array);
+    index.write_index(ctx, index_uri, 0);
+
+    CHECK(index.timestamp() == 0);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
+  }
+
+  // Train it at timestamp 99.
+  {
+    // We then load this empty index and don't set a timestamp (which means
+    // we'll load it at timestamp 0).
+    auto index = IndexVamana(ctx, index_uri);
+
+    CHECK(index.timestamp() == 0);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
+
+    auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+        {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
+
+    auto training_vector_array = FeatureVectorArray(training);
+    index.train(training_vector_array);
+    index.add(training_vector_array);
+    // We then write the index at timestamp 99.
+    index.write_index(ctx, index_uri, 99);
+
+    // This also updates the timestamp of the index - we're now at timestamp 99.
+    CHECK(index.timestamp() == 99);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
+
+    auto queries = ColMajorMatrix<feature_type_type>{
+        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+    auto query_vector_array = FeatureVectorArray(queries);
+    auto&& [scores_vector_array, ids_vector_array] =
+        index.query(query_vector_array, 1);
+
+    auto scores = std::span<feature_type_type>(
+        (feature_type_type*)scores_vector_array.data(),
+        scores_vector_array.num_vectors());
+    auto ids = std::span<id_type_type>(
+        (id_type_type*)ids_vector_array.data(), ids_vector_array.num_vectors());
+    CHECK(std::equal(
+        scores.begin(), scores.end(), std::vector<int>{0, 0, 0, 0}.begin()));
+    CHECK(std::equal(
+        ids.begin(), ids.end(), std::vector<int>{1, 2, 3, 4}.begin()));
+  }
+
+  // Train it at timestamp 100.
+  {
+    // We then load the trained index and don't set a timestamp (which means
+    // we'll load it at timestamp 99).
+    auto index = IndexVamana(ctx, index_uri);
+
+    CHECK(index.timestamp() == 99);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
+
+    auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+        {{11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}},
+        {11, 22, 33, 44}};
+
+    auto training_vector_array = FeatureVectorArray(training);
+    index.train(training_vector_array);
+    index.add(training_vector_array);
+    // We then write the index at timestamp 100.
+    index.write_index(ctx, index_uri, 100);
+
+    // This also updates the timestamp of the index - we're now at timestamp
+    // 100.
+    CHECK(index.timestamp() == 100);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
+
+    auto queries = ColMajorMatrix<feature_type_type>{
+        {11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}};
+    auto query_vector_array = FeatureVectorArray(queries);
+    auto&& [scores_vector_array, ids_vector_array] =
+        index.query(query_vector_array, 1);
+
+    auto scores = std::span<feature_type_type>(
+        (feature_type_type*)scores_vector_array.data(),
+        scores_vector_array.num_vectors());
+    auto ids = std::span<id_type_type>(
+        (id_type_type*)ids_vector_array.data(), ids_vector_array.num_vectors());
+    CHECK(std::equal(
+        scores.begin(), scores.end(), std::vector<int>{0, 0, 0, 0}.begin()));
+    CHECK(std::equal(
+        ids.begin(), ids.end(), std::vector<int>{11, 22, 33, 44}.begin()));
+  }
+
+  // Load it at timestamp 99 and make sure we can query it correctly.
+  {
+    auto index = IndexVamana(ctx, index_uri, 99);
+
+    CHECK(index.timestamp() == 99);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
+
+    auto queries = ColMajorMatrix<feature_type_type>{
+        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+    auto query_vector_array = FeatureVectorArray(queries);
+    auto&& [scores_vector_array, ids_vector_array] =
+        index.query(query_vector_array, 1);
+
+    auto scores = std::span<feature_type_type>(
+        (feature_type_type*)scores_vector_array.data(),
+        scores_vector_array.num_vectors());
+    auto ids = std::span<id_type_type>(
+        (id_type_type*)ids_vector_array.data(), ids_vector_array.num_vectors());
+    CHECK(std::equal(
+        scores.begin(), scores.end(), std::vector<int>{0, 0, 0, 0}.begin()));
+    CHECK(std::equal(
+        ids.begin(), ids.end(), std::vector<int>{1, 2, 3, 4}.begin()));
+  }
+}

@@ -496,13 +496,17 @@ class vamana_index {
    * @param ctx TileDB context
    * @param group_uri URI of the group containing the index
    */
-  vamana_index(tiledb::Context ctx, const std::string& uri)
-      : group_{std::make_unique<vamana_index_group<vamana_index>>(
-            *this, ctx, uri, TILEDB_READ, temporal_policy_)} {
+  vamana_index(
+      tiledb::Context ctx,
+      const std::string& uri,
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0})
+      : temporal_policy_{temporal_policy} {
     if (temporal_policy_.timestamp_end() == 0) {
       temporal_policy_ = {
           TimeTravel, group_->get_previous_ingestion_timestamp()};
     }
+    group_ = {std::make_unique<vamana_index_group<vamana_index>>(
+        *this, ctx, uri, TILEDB_READ, temporal_policy_)};
 
     // @todo Make this table-driven
     dimension_ = group_->get_dimension();
@@ -717,6 +721,10 @@ class vamana_index {
     return num_comps_;
   }
 
+  TemporalPolicy temporal_policy() const {
+    return temporal_policy_;
+  }
+
   /**
    * @brief Query the index for the top k nearest neighbors of the query set
    * @tparam Q Type of query set
@@ -858,9 +866,29 @@ class vamana_index {
     write_group.set_alpha_max(alpha_max_);
     write_group.set_medoid(medoid_);
 
-    write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
-    write_group.append_base_size(::num_vectors(feature_vectors_));
-    write_group.append_num_edges(graph_.num_edges());
+    // When we create an index with Python, we will call write_index() twice,
+    // once with empty data and once with the actual data. Here we add custom
+    // logic so that during that second call to write_index(), we will overwrite
+    // the metadata lists. If we don't do this we will end up with
+    // ingestion_timestamps = [0, timestamp] and base_sizes = [0, initial size],
+    // whereas indexes created just in Python will end up with
+    // ingestion_timestamps = [timestamp] and base_sizes = [initial size]. If we
+    // have 2 item lists it causes crashes and subtle issues when we try to
+    // modify the index later (i.e. through index.update() / Index.clear()). So
+    // here we make sure we end up with the same metadata that Python indexes
+    // do.
+    if (write_group.get_all_ingestion_timestamps().size() == 1 &&
+        write_group.get_previous_ingestion_timestamp() == 0 &&
+        write_group.get_all_base_sizes().size() == 1 &&
+        write_group.get_previous_base_size() == 0) {
+      write_group.set_ingestion_timestamp(temporal_policy_.timestamp_end());
+      write_group.set_base_size(::num_vectors(feature_vectors_));
+      write_group.set_num_edges(graph_.num_edges());
+    } else {
+      write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
+      write_group.append_base_size(::num_vectors(feature_vectors_));
+      write_group.append_num_edges(graph_.num_edges());
+    }
 
     write_matrix(
         ctx,

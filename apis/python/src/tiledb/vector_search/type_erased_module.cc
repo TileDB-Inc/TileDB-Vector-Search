@@ -173,12 +173,22 @@ void init_type_erased_module(py::module_& m) {
           py::keep_alive<1, 2>()  // FeatureVectorArray should keep ctx alive.
           )
       .def(
-          py::init<
-              const tiledb::Context&,
-              const std::string&,
-              const std::string&>(),
-          py::keep_alive<1, 2>()  // FeatureVectorArray should keep ctx alive.
-          )
+          "__init__",
+          [](FeatureVectorArray& instance,
+             const tiledb::Context& ctx,
+             const std::string& uri,
+             const std::string& ids_uri,
+             size_t num_vectors,
+             size_t timestamp) {
+            new (&instance)
+                FeatureVectorArray(ctx, uri, ids_uri, num_vectors, timestamp);
+          },
+          py::keep_alive<1, 2>(),  // FeatureVectorArray should keep ctx alive.
+          py::arg("ctx"),
+          py::arg("uri"),
+          py::arg("ids_uri") = "",
+          py::arg("num_vectors") = 0,
+          py::arg("timestamp") = 0)
       .def(py::init<size_t, size_t, const std::string&, const std::string&>())
       .def("dimension", &FeatureVectorArray::dimension)
       .def("num_vectors", &FeatureVectorArray::num_vectors)
@@ -261,9 +271,17 @@ void init_type_erased_module(py::module_& m) {
 
   py::class_<IndexVamana>(m, "IndexVamana")
       .def(
-          py::init<const tiledb::Context&, const std::string&>(),
-          py::keep_alive<1, 2>()  // IndexVamana should keep ctx alive.
-          )
+          "__init__",
+          [](IndexVamana& instance,
+             const tiledb::Context& ctx,
+             const std::string& group_uri,
+             size_t timestamp) {
+            new (&instance) IndexVamana(ctx, group_uri, timestamp);
+          },
+          py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
+          py::arg("ctx"),
+          py::arg("group_uri"),
+          py::arg("timestamp") = 0)
       .def(
           "__init__",
           [](IndexVamana& instance, py::kwargs kwargs) {
