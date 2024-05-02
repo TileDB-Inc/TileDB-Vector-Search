@@ -177,7 +177,7 @@ class ivf_flat_index {
       size_t nlist = 0,
       size_t max_iter = 2,
       float tol = 0.000025,
-      TemporalPolicy temporal_policy = {},
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       uint64_t seed = std::random_device{}())
       :  // , dimension_(dim)
       temporal_policy_{

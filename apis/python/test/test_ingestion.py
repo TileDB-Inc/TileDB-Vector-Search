@@ -512,6 +512,18 @@ def test_ingestion_with_updates(tmp_path):
             source_uri=os.path.join(dataset_dir, "data.u8bin"),
             partitions=partitions,
         )
+
+        # TODO(paris): Fix Vamana to have same metadata as Python and re-enable.
+        # with tiledb.Group(index_uri, "r", ctx={}) as group:
+        #     ingestion_timestamps = [int(x) for x in list(json.loads(group.meta.get("ingestion_timestamps", "[]")))]
+        #     base_sizes = [int(x) for x in list(json.loads(group.meta.get("base_sizes", "[]")))]
+        #     assert len(ingestion_timestamps) == 1
+        #     assert len(base_sizes) == 1
+        #     assert base_sizes[0] == 1000
+        #     timestamp_2030 = 1903946089000
+        #     timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
+        #     assert ingestion_timestamps[0] > timestamp_5_minutes_ago and ingestion_timestamps[0] < timestamp_2030
+
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) == 1.0
 

@@ -480,7 +480,7 @@ class vamana_index {
       size_t L,
       size_t R,
       size_t B = 0,
-      TemporalPolicy temporal_policy = {})
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0})
       : temporal_policy_{
         temporal_policy.timestamp_end() != 0 ? temporal_policy :
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
