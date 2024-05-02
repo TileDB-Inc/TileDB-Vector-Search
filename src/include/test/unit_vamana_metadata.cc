@@ -110,12 +110,12 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
     // and num_edges_history. We rely on this when creating an index from Python
     // during the initial ingest() so that we end up with the same metadata as
     // when creating with Python.
-    auto new_training_vectors = tdbColMajorPreLoadMatrixWithIds<
+    auto training_vectors = tdbColMajorPreLoadMatrixWithIds<
         siftsmall_feature_type,
         siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 222);
 
-    idx.train(new_training_vectors, new_training_vectors.ids());
-    idx.add(new_training_vectors);
+    idx.train(training_vectors, training_vectors.ids());
+    idx.add(training_vectors);
     idx.write_index(ctx, uri, 2, "");
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
@@ -138,12 +138,12 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
   {
     // Check we appended to metadata after a second normal write_index().
-    auto new_training_vectors = tdbColMajorPreLoadMatrixWithIds<
+    auto training_vectors = tdbColMajorPreLoadMatrixWithIds<
         siftsmall_feature_type,
         siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 333);
 
-    idx.train(new_training_vectors, new_training_vectors.ids());
-    idx.add(new_training_vectors);
+    idx.train(training_vectors, training_vectors.ids());
+    idx.add(training_vectors);
     idx.write_index(ctx, uri, 3);
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
