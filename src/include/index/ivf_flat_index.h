@@ -114,7 +114,7 @@ class ivf_flat_index {
    ****************************************************************************/
 
   /** The timestamp at which the index was created */
-  TemporalPolicy temporal_policy_;
+  TemporalPolicy temporal_policy_{TimeTravel, 0};
 
   std::unique_ptr<ivf_flat_index_group<ivf_flat_index>> group_;
 

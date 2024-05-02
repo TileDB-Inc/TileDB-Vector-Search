@@ -190,7 +190,9 @@ int ivf_index(
     }
 
     // Write out the arrays
-    TemporalPolicy temporal_policy = (timestamp == 0) ? TemporalPolicy() : TemporalPolicy(TimeTravel, timestamp);
+    TemporalPolicy temporal_policy = (timestamp == 0) ?
+                                         TemporalPolicy() :
+                                         TemporalPolicy(TimeTravel, timestamp);
     if (parts_uri != "") {
       write_matrix<T, stdx::layout_left, size_t>(
           ctx, shuffled_db, parts_uri, start_pos, false, temporal_policy);
@@ -199,7 +201,8 @@ int ivf_index(
       write_vector(ctx, indices, index_uri, 0, false, temporal_policy);
     }
     if (id_uri != "") {
-      write_vector(ctx, shuffled_ids, id_uri, start_pos, false, temporal_policy);
+      write_vector(
+          ctx, shuffled_ids, id_uri, start_pos, false, temporal_policy);
     }
   }
   return 0;
@@ -224,7 +227,9 @@ int ivf_index(
     size_t end_pos = 0,
     size_t nthreads = 0,
     uint64_t timestamp = 0) {
-  TemporalPolicy temporal_policy = (timestamp == 0) ? TemporalPolicy() : TemporalPolicy(TimeTravel, timestamp);
+  TemporalPolicy temporal_policy = (timestamp == 0) ?
+                                       TemporalPolicy() :
+                                       TemporalPolicy(TimeTravel, timestamp);
   // Read all rows from column `start_pos` -> `end_pos`. Set no upper_bound.
   auto db = tdbColMajorMatrix<T>(
       ctx, db_uri, 0, std::nullopt, start_pos, end_pos, 0, temporal_policy);

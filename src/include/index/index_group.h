@@ -95,7 +95,7 @@ class base_index_group {
  protected:
   tiledb::Context cached_ctx_;
   std::string group_uri_;
-  TemporalPolicy temporal_policy_;
+  TemporalPolicy temporal_policy_{TimeTravel, 0};
   size_t index_timestamp_{0};
   size_t group_timestamp_{0};
   size_t timetravel_index_{0};

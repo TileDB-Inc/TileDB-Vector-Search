@@ -191,9 +191,8 @@ class tdbBlockedMatrix : public MatrixBase {
             first_col,
             last_col,
             upper_bound,
-            (timestamp == 0 ?
-                 TemporalPolicy() :
-                 TemporalPolicy(TimeTravel, timestamp))) {
+            (timestamp == 0 ? TemporalPolicy() :
+                              TemporalPolicy(TimeTravel, timestamp))) {
   }
 
   /** General constructor

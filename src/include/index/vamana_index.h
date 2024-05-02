@@ -419,7 +419,7 @@ class vamana_index {
    ****************************************************************************/
 
   /** The timestamp at which the index was created */
-  TemporalPolicy temporal_policy_;
+  TemporalPolicy temporal_policy_{TimeTravel, 0};
 
   std::unique_ptr<vamana_index_group<vamana_index>> group_;
 
