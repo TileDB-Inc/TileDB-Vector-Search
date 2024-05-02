@@ -154,6 +154,8 @@ def ingest_embeddings_with_driver(
             import numpy as np
 
             import tiledb
+            from tiledb.vector_search.object_api import ObjectIndex
+            from tiledb.vector_search.storage_formats import storage_formats
 
             def instantiate_object(code, class_name, **kwargs):
                 import importlib.util
@@ -178,7 +180,7 @@ def ingest_embeddings_with_driver(
                 return class_(**kwargs)
 
             logger = setup(config, verbose)
-            obj_index = object_index.ObjectIndex(
+            obj_index = ObjectIndex(
                 object_index_uri,
                 config=config,
                 environment_variables=environment_variables,
@@ -297,12 +299,15 @@ def ingest_embeddings_with_driver(
                         limit=1,
                         retry_policy="Always",
                     ),
+                    namespace=namespace,
                 )
             else:
                 d = dag.DAG(
                     name="embedding-generation",
                     mode=Mode.REALTIME,
                     max_workers=workers,
+                    # TODO: `default` is not an actual namespace. This is a temp fix to
+                    # be able to run DAGs locally.
                     namespace="default",
                 )
 
@@ -451,6 +456,7 @@ def ingest_embeddings_with_driver(
                     index_timestamp=index_timestamp,
                     storage_version=obj_index.index.storage_version,
                     config=config,
+                    namespace=namespace,
                     mode=vector_indexing_mode,
                     **kwargs,
                 )
@@ -468,12 +474,15 @@ def ingest_embeddings_with_driver(
             mode=Mode.BATCH,
             name="ingest-embeddings-driver",
             max_workers=1,
+            namespace=namespace,
         )
     else:
         d = dag.DAG(
             mode=Mode.REALTIME,
             name="ingest-embeddings-driver",
             max_workers=1,
+            # TODO: `default` is not an actual namespace. This is a temp fix to
+            # be able to run DAGs locally.
             namespace="default",
         )
     submit = partial(submit_local, d)

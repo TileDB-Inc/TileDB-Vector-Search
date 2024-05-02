@@ -6,6 +6,7 @@ import string
 import numpy as np
 
 import tiledb
+from tiledb.cloud import groups
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import storage_formats
 
@@ -351,3 +352,43 @@ def move_local_index_to_new_location(index_uri):
     shutil.copytree(index_uri, copied_index_uri)
     shutil.rmtree(index_uri)
     return copied_index_uri
+
+
+def quantize_embeddings_int8(
+    embeddings: np.ndarray,
+) -> np.ndarray:
+    """
+    Quantizes embeddings to a lower precision.
+    """
+    ranges = np.vstack((np.min(embeddings, axis=0), np.max(embeddings, axis=0)))
+    starts = ranges[0, :]
+    steps = (ranges[1, :] - ranges[0, :]) / 255
+    return ((embeddings - starts) / steps - 128).astype(np.int8)
+
+
+def setUpCloudToken():
+    token = os.getenv("TILEDB_REST_TOKEN")
+    if os.getenv("TILEDB_CLOUD_HELPER_VAR"):
+        token = os.getenv("TILEDB_CLOUD_HELPER_VAR")
+    tiledb.cloud.login(token=token)
+
+
+def create_cloud_uri(name):
+    namespace, storage_path, _ = groups._default_ns_path_cred()
+    storage_path = storage_path.replace("//", "/").replace("/", "//", 1)
+    rand_name = random_name("vector_search")
+    test_path = f"tiledb://{namespace}/{storage_path}/{rand_name}"
+    return f"{test_path}/{name}"
+
+
+def delete_uri(uri, config):
+    with tiledb.scope_ctx(ctx_or_config=config):
+        try:
+            group = tiledb.Group(uri, "m")
+        except tiledb.TileDBError as err:
+            message = str(err)
+            if "does not exist" in message:
+                return
+            else:
+                raise err
+        group.delete(recursive=True)

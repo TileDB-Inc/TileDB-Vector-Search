@@ -17,12 +17,11 @@ def create_sift_micro():
     base_uri = os.path.join(
         base_dir,
         "..",
-        "apis",
-        "python",
-        "test",
-        "data",
+        "external",
+        "test_data",
+        "files",
         "siftsmall",
-        "siftsmall_base.fvecs",
+        "input_vectors.fvecs",
     )
     write_fvecs(
         os.path.join(base_dir, "siftmicro_base.fvecs"), load_fvecs(base_uri)[:100]

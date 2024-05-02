@@ -25,16 +25,19 @@ bool enable_stats = false;
 std::vector<json> core_stats;
 
 PYBIND11_MAKE_OPAQUE(std::vector<uint8_t>);
+PYBIND11_MAKE_OPAQUE(std::vector<int8_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<uint32_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<uint64_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<float>);
 PYBIND11_MAKE_OPAQUE(std::vector<double>);
 PYBIND11_MAKE_OPAQUE(std::list<std::vector<uint8_t>>);
+PYBIND11_MAKE_OPAQUE(std::list<std::vector<int8_t>>);
 PYBIND11_MAKE_OPAQUE(std::list<std::vector<uint32_t>>);
 PYBIND11_MAKE_OPAQUE(std::list<std::vector<uint64_t>>);
 PYBIND11_MAKE_OPAQUE(std::list<std::vector<float>>);
 PYBIND11_MAKE_OPAQUE(std::list<std::vector<double>>);
 PYBIND11_MAKE_OPAQUE(std::vector<std::list<uint8_t>>);
+PYBIND11_MAKE_OPAQUE(std::vector<std::list<int8_t>>);
 PYBIND11_MAKE_OPAQUE(std::vector<std::list<uint32_t>>);
 PYBIND11_MAKE_OPAQUE(std::vector<std::list<uint64_t>>);
 PYBIND11_MAKE_OPAQUE(std::vector<std::list<float>>);
@@ -627,6 +630,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declareStdVector<float>(m, "f32");
   declareStdVector<double>(m, "f64");
   declareStdVector<uint8_t>(m, "u8");
+  declareStdVector<int8_t>(m, "i8");
   declareStdVector<uint32_t>(m, "u32");
   declareStdVector<uint64_t>(m, "u64");
   if constexpr (!std::is_same_v<uint64_t, size_t>) {
@@ -664,6 +668,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   /* === Matrix === */
 
   declareColMajorMatrix<uint8_t>(m, "_u8");
+  declareColMajorMatrix<int8_t>(m, "_i8");
   declareColMajorMatrix<float>(m, "_f32");
   declareColMajorMatrix<double>(m, "_f64");
   declareColMajorMatrix<int32_t>(m, "_i32");
@@ -677,6 +682,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   declareColMajorMatrixSubclass<tdbColMajorMatrix<uint8_t>>(
       m, "tdbColMajorMatrix", "_u8");
+  declareColMajorMatrixSubclass<tdbColMajorMatrix<int8_t>>(
+      m, "tdbColMajorMatrix", "_i8");
   declareColMajorMatrixSubclass<tdbColMajorMatrix<uint64_t>>(
       m, "tdbColMajorMatrix", "_u64");
   declareColMajorMatrixSubclass<tdbColMajorMatrix<float>>(
@@ -688,6 +695,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   // Converters from pyarray to matrix
   declare_pyarray_to_matrix<uint8_t>(m, "_u8");
+  declare_pyarray_to_matrix<int8_t>(m, "_i8");
   declare_pyarray_to_matrix<uint64_t>(m, "_u64");
   declare_pyarray_to_matrix<float>(m, "_f32");
   declare_pyarray_to_matrix<double>(m, "_f64");
@@ -717,6 +725,17 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       });
 
   m.def(
+      "query_vq_i8",
+      [](tdbColMajorMatrix<int8_t>& data,
+         ColMajorMatrix<float>& query_vectors,
+         int k,
+         size_t nthreads)
+          -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
+        auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
+        return r;
+      });
+
+  m.def(
       "validate_top_k_u64",
       [](const ColMajorMatrix<uint64_t>& top_k,
          const ColMajorMatrix<int32_t>& ground_truth) -> bool {
@@ -724,33 +743,45 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       });
 
   declare_vq_query_heap<uint8_t>(m, "u8");
+  declare_vq_query_heap<int8_t>(m, "i8");
   declare_vq_query_heap<float>(m, "f32");
   declare_vq_query_heap_pyarray<uint8_t>(m, "u8");
+  declare_vq_query_heap_pyarray<int8_t>(m, "i8");
   declare_vq_query_heap_pyarray<float>(m, "f32");
 
   declare_qv_query_heap_infinite_ram<uint8_t>(m, "u8");
+  declare_qv_query_heap_infinite_ram<int8_t>(m, "i8");
   declare_qv_query_heap_infinite_ram<float>(m, "f32");
   declare_qv_query_heap_finite_ram<uint8_t>(m, "u8");
+  declare_qv_query_heap_finite_ram<int8_t>(m, "i8");
   declare_qv_query_heap_finite_ram<float>(m, "f32");
   declare_nuv_query_heap_infinite_ram<uint8_t>(m, "u8");
+  declare_nuv_query_heap_infinite_ram<int8_t>(m, "i8");
   declare_nuv_query_heap_infinite_ram<float>(m, "f32");
   declare_nuv_query_heap_finite_ram<uint8_t>(m, "u8");
+  declare_nuv_query_heap_finite_ram<int8_t>(m, "i8");
   declare_nuv_query_heap_finite_ram<float>(m, "f32");
 
   declare_ivf_index<uint8_t>(m, "u8");
+  declare_ivf_index<int8_t>(m, "i8");
   declare_ivf_index<float>(m, "f32");
   declare_ivf_index_tdb<uint8_t>(m, "u8");
+  declare_ivf_index_tdb<int8_t>(m, "i8");
   declare_ivf_index_tdb<float>(m, "f32");
 
   declarePartitionIvfIndex<uint8_t>(m, "u8");
+  declarePartitionIvfIndex<int8_t>(m, "i8");
   declarePartitionIvfIndex<float>(m, "f32");
 
   declarePartitionedMatrix<uint8_t, uint64_t, uint64_t, uint64_t>(
       m, "tdbPartitionedMatrix", "u8");
+  declarePartitionedMatrix<int8_t, uint64_t, uint64_t, uint64_t>(
+      m, "tdbPartitionedMatrix", "i8");
   declarePartitionedMatrix<float, uint64_t, uint64_t, uint64_t>(
       m, "tdbPartitionedMatrix", "f32");
 
   declare_dist_qv<uint8_t>(m, "u8");
+  declare_dist_qv<int8_t>(m, "i8");
   declare_dist_qv<float>(m, "f32");
   declareFixedMinPairHeap(m);
 
@@ -770,6 +801,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   m.def("stats_dump", []() { return json{core_stats}.dump(); });
 
   declare_debug_slice<uint8_t>(m, "_u8");
+  declare_debug_slice<int8_t>(m, "_i8");
   declare_debug_slice<float>(m, "_f32");
   declare_debug_slice<uint64_t>(m, "_u64");
 

@@ -91,8 +91,11 @@ class VamanaIndex(index.Index):
 
         if queries.ndim == 1:
             queries = np.array([queries])
+        queries = np.transpose(queries)
+        if not queries.flags.f_contiguous:
+            queries = queries.copy(order="F")
+        queries_feature_vector_array = vspy.FeatureVectorArray(queries)
 
-        queries_feature_vector_array = vspy.FeatureVectorArray(np.transpose(queries))
         distances, ids = self.index.query(queries_feature_vector_array, k, opt_l)
 
         return np.array(distances, copy=False), np.array(ids, copy=False)
@@ -121,5 +124,5 @@ def create(
     )
     index.train(empty_vector)
     index.add(empty_vector)
-    index.write_index(ctx, uri, storage_version)
+    index.write_index(ctx, uri, 0, storage_version)
     return VamanaIndex(uri=uri, config=config, memory_budget=1000000)

@@ -35,6 +35,7 @@
 #include "array_defs.h"
 #include "catch2/catch_all.hpp"
 #include "detail/ivf/qv.h"
+#include "index/index_defs.h"
 #include "query_common.h"
 #include "tdb_defs.h"
 #include "test/test_utils.h"
@@ -95,6 +96,7 @@ TEMPLATE_TEST_CASE(
     "api: FeatureVectorArray feature_type",
     "[api]",
     int,
+    int8_t,
     uint8_t,
     uint32_t,
     float,
@@ -155,6 +157,7 @@ TEMPLATE_TEST_CASE(
     "api: tdb FeatureVectorArray feature_type",
     "[api]",
     int,
+    int8_t,
     uint8_t,
     uint32_t,
     float,
@@ -341,11 +344,13 @@ TEMPLATE_PRODUCT_TEST_CASE(
     "[api]",
     (ColMajorMatrixWithIds),
     ((int, uint32_t),
+     (int8_t, uint32_t),
      (uint8_t, uint32_t),
      (uint32_t, uint32_t),
      (float, uint32_t),
      (uint64_t, uint32_t),
      (int, uint64_t),
+     (int8_t, uint64_t),
      (uint8_t, uint64_t),
      (uint32_t, uint64_t),
      (float, uint64_t),
@@ -544,4 +549,137 @@ TEST_CASE("api: load empty matrix", "[api][index]") {
       ctx, tmp_matrix_uri, dimension, domain, dimension, tile_extent);
 
   auto X = FeatureVectorArray(ctx, tmp_matrix_uri);
+}
+
+TEST_CASE("api: read at timestamp", "[api]") {
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+
+  std::string feature_vectors_uri =
+      (std::filesystem::temp_directory_path() / "temp_feature_vectors_uri")
+          .string();
+  std::string ids_uri =
+      (std::filesystem::temp_directory_path() / "temp_ids_uri").string();
+  if (vfs.is_dir(feature_vectors_uri)) {
+    vfs.remove_dir(feature_vectors_uri);
+  }
+  if (vfs.is_dir(ids_uri)) {
+    vfs.remove_dir(ids_uri);
+  }
+
+  auto dimension = 3;
+
+  using FeatureType = float;
+  using IdsType = uint32_t;
+
+  int32_t default_domain{std::numeric_limits<int32_t>::max() - 1};
+  int32_t default_tile_extent{100'000};
+  int32_t tile_size_bytes{64 * 1024 * 1024};
+  tiledb_filter_type_t default_compression{string_to_filter(
+      storage_formats[current_storage_version]["default_attr_filters"])};
+  int32_t tile_size{
+      (int32_t)(tile_size_bytes / sizeof(FeatureType) / dimension)};
+
+  // First we create the empty vectors matrix and the ids vector.
+  {
+    create_empty_for_matrix<FeatureType, stdx::layout_left>(
+        ctx,
+        feature_vectors_uri,
+        dimension,
+        default_domain,
+        dimension,
+        default_tile_extent,
+        default_compression);
+
+    create_empty_for_vector<IdsType>(
+        ctx, ids_uri, default_domain, tile_size, default_compression);
+  }
+
+  // Write to them at timestamp 99.
+  {
+    size_t timestamp = 99;
+    auto matrix_with_ids = ColMajorMatrixWithIds<FeatureType, IdsType>{
+        {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
+
+    write_matrix(
+        ctx, matrix_with_ids, feature_vectors_uri, 0, false, timestamp);
+
+    write_vector(ctx, matrix_with_ids.ids(), ids_uri, 0, false, timestamp);
+  }
+
+  // Read the data and validate our initial write worked.
+  {
+    auto feature_vector_array =
+        FeatureVectorArray(ctx, feature_vectors_uri, ids_uri);
+    auto data = MatrixView<FeatureType, stdx::layout_left>{
+        (FeatureType*)feature_vector_array.data(),
+        extents(feature_vector_array)[0],
+        extents(feature_vector_array)[1]};
+    auto ids = std::span<IdsType>(
+        (IdsType*)feature_vector_array.ids_data(),
+        feature_vector_array.num_vectors());
+    auto expected_ids = {1, 2, 3, 4};
+    CHECK(std::equal(ids.begin(), ids.end(), expected_ids.begin()));
+    CHECK(ids.size() == 4);
+    for (size_t i = 0; i < ids.size(); ++i) {
+      for (size_t j = 0; j < dimension; ++j) {
+        CHECK(data(j, i) == i + 1);
+      }
+    }
+  }
+
+  // Write to them at timestamp 100.
+  {
+    size_t timestamp = 100;
+    auto matrix_with_ids = ColMajorMatrixWithIds<FeatureType, IdsType>{
+        {{11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}},
+        {11, 22, 33, 44}};
+
+    write_matrix(
+        ctx, matrix_with_ids, feature_vectors_uri, 0, false, timestamp);
+
+    write_vector(ctx, matrix_with_ids.ids(), ids_uri, 0, false, timestamp);
+  }
+
+  // Read the data and validate we read at timestamp 100 by default.
+  {
+    auto feature_vector_array =
+        FeatureVectorArray(ctx, feature_vectors_uri, ids_uri);
+    auto data = MatrixView<FeatureType, stdx::layout_left>{
+        (FeatureType*)feature_vector_array.data(),
+        extents(feature_vector_array)[0],
+        extents(feature_vector_array)[1]};
+    auto ids = std::span<IdsType>(
+        (IdsType*)feature_vector_array.ids_data(),
+        feature_vector_array.num_vectors());
+    auto expected_ids = {11, 22, 33, 44};
+    CHECK(std::equal(ids.begin(), ids.end(), expected_ids.begin()));
+    CHECK(ids.size() == 4);
+    for (size_t i = 0; i < ids.size(); ++i) {
+      for (size_t j = 0; j < dimension; ++j) {
+        CHECK(data(j, i) == (i + 1) * 11);
+      }
+    }
+  }
+
+  // Read the data at timestamp 99 explicitly.
+  {
+    auto feature_vector_array =
+        FeatureVectorArray(ctx, feature_vectors_uri, ids_uri, 0, 99);
+    auto data = MatrixView<FeatureType, stdx::layout_left>{
+        (FeatureType*)feature_vector_array.data(),
+        extents(feature_vector_array)[0],
+        extents(feature_vector_array)[1]};
+    auto ids = std::span<IdsType>(
+        (IdsType*)feature_vector_array.ids_data(),
+        feature_vector_array.num_vectors());
+    auto expected_ids = {1, 2, 3, 4};
+    CHECK(std::equal(ids.begin(), ids.end(), expected_ids.begin()));
+    CHECK(ids.size() == 4);
+    for (size_t i = 0; i < ids.size(); ++i) {
+      for (size_t j = 0; j < dimension; ++j) {
+        CHECK(data(j, i) == i + 1);
+      }
+    }
+  }
 }
