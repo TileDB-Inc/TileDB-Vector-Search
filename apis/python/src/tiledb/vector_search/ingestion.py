@@ -1641,7 +1641,7 @@ def ingest(
         )
         index.train(data)
         index.add(data)
-        index.write_index(ctx, index_group_uri, index_timestamp, storage_version)
+        index.write_index(ctx, index_group_uri, index_timestamp)
 
     def write_centroids(
         centroids: np.ndarray,

@@ -107,9 +107,9 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
   {
     // Check that we can overwrite the last ingestion_timestamps, base_sizes,
-    // and num_edges_history. We use this from Python during the initial
-    // ingest() so that we end up with the same metadata as when creating with
-    // Python.
+    // and num_edges_history. We rely on this when creating an index from Python
+    // during the initial ingest() so that we end up with the same metadata as
+    // when creating with Python.
     auto new_training_vectors = tdbColMajorPreLoadMatrixWithIds<
         siftsmall_feature_type,
         siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 222);
