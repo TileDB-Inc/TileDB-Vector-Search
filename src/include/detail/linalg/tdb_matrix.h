@@ -167,6 +167,38 @@ class tdbBlockedMatrix : public MatrixBase {
   /** General constructor
    *
    * @param first_row The first row to read from.
+   * @param last_row The last row to read to. Read rows from 0 -> row domain
+   * length if nullopt is passed.
+   * @param first_col The first col to read from.
+   * @param last_col The last col to read to. Read rows from 0 -> col domain
+   * length if nullopt is passed.
+   */
+  tdbBlockedMatrix(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t first_row,
+      std::optional<size_t> last_row,
+      size_t first_col,
+      std::optional<size_t> last_col,
+      size_t upper_bound,
+      size_t timestamp)
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : tdbBlockedMatrix(
+            ctx,
+            uri,
+            first_row,
+            last_row,
+            first_col,
+            last_col,
+            upper_bound,
+            (timestamp == 0 ?
+                 TemporalPolicy() :
+                 TemporalPolicy(TimeTravel, timestamp))) {
+  }
+
+  /** General constructor
+   *
+   * @param first_row The first row to read from.
    * @param last_row The last row to read to. Read rows from 0 -> row non-empty
    * domain length if nullopt is passed.
    * @param first_col The first col to read from.
