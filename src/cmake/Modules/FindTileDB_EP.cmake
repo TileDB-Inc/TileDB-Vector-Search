@@ -53,9 +53,9 @@ else()
 
     # Try to download prebuilt artifacts unless the user specifies to build from source
     if(DOWNLOAD_TILEDB_PREBUILT)
-        fetch_prebuilt_tiledb(VERSION 2.21.1)
+        fetch_prebuilt_tiledb(VERSION 2.22.0)
     else() # Build from source
-        fetch_source_tiledb(VERSION 2.21.1)
+        fetch_source_tiledb(VERSION 2.22.0)
     endif()
 
     list(APPEND FORWARD_EP_CMAKE_ARGS -DEP_TILEDB_BUILT=TRUE)

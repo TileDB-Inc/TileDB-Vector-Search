@@ -80,7 +80,7 @@ class tdbBlockedMatrix : public MatrixBase {
 
   log_timer constructor_timer{"tdbBlockedMatrix constructor"};
 
-  std::reference_wrapper<const tiledb::Context> ctx_;
+  tiledb::Context ctx_;
   std::string uri_;
   std::unique_ptr<tiledb::Array> array_;
   tiledb::ArraySchema schema_;

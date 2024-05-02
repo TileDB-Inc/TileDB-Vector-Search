@@ -4,6 +4,7 @@ import numpy as np
 from array_paths import *
 
 from tiledb.vector_search import _tiledbvspy as vspy
+from tiledb.vector_search.utils import load_fvecs
 
 ctx = vspy.Ctx({})
 
@@ -80,6 +81,8 @@ def test_numpy_to_feature_vector_array():
     assert a.shape == (10000, 128)
     assert b.dimension() == 128
     assert b.num_vectors() == 10000
+    assert a.shape == np.array(b).shape
+    assert np.array_equal(a, np.array(b))
 
     a = np.array(np.random.rand(128, 10000), dtype=np.float32, order="F")
     b = vspy.FeatureVectorArray(a)
@@ -88,6 +91,9 @@ def test_numpy_to_feature_vector_array():
     assert a.shape == (128, 10000)
     assert b.dimension() == 128
     assert b.num_vectors() == 10000
+    # TODO(paris): This should work, but it doesn't.
+    # assert a.shape == np.array(b).shape
+    # assert np.array_equal(a, np.array(b))
 
     a = np.array(np.random.rand(10000, 128), dtype=np.float32)
     b = vspy.FeatureVectorArray(a.T)
@@ -96,6 +102,8 @@ def test_numpy_to_feature_vector_array():
     assert a.shape == (10000, 128)
     assert b.dimension() == 128
     assert b.num_vectors() == 10000
+    assert a.shape == np.array(b).shape
+    assert np.array_equal(a, np.array(b))
 
     a = np.array(np.random.rand(1000000, 128), dtype=np.uint8)
     b = vspy.FeatureVectorArray(a)
@@ -104,17 +112,44 @@ def test_numpy_to_feature_vector_array():
     assert a.shape == (1000000, 128)
     assert b.dimension() == 128
     assert b.num_vectors() == 1000000
+    assert a.shape == np.array(b).shape
+    assert np.array_equal(a, np.array(b))
 
     a = np.array(np.random.rand(10000, 128), dtype=np.float32)
     b = vspy.FeatureVectorArray(a)
     logging.info(a.shape)
     logging.info((b.dimension(), b.num_vectors()))
+    assert a.shape == np.array(b).shape
+    assert np.array_equal(a, np.array(b))
 
-    c = np.array(b)
-    logging.info(c.shape)
+    a = np.array(np.arange(1, 16, dtype=np.float32).reshape(3, 5), dtype=np.float32)
+    assert a.shape == (3, 5)
+    assert a.flags.f_contiguous is False
+    assert a.flags.c_contiguous is True
+    a = np.transpose(a)
+    assert a.shape == (5, 3)
+    assert a.flags.f_contiguous is True
+    assert a.flags.c_contiguous is False
+    b = vspy.FeatureVectorArray(a)
+    # NOTE(paris): It is strange that we have to transpose this output array to have it match the input array. Should investigate this and fix it.
+    assert a.shape == np.transpose(np.array(b)).shape
+    assert np.array_equal(a, np.transpose(np.array(b)))
 
-    assert a.shape == c.shape
-    assert (a == c).all()
+    n = 99
+    a = load_fvecs(siftsmall_query_file)[0:n]
+    assert a.shape == (n, 128)
+    assert a.flags.f_contiguous is False
+    assert a.flags.c_contiguous is False
+    a = np.transpose(a)
+    assert a.shape == (128, n)
+    assert a.flags.f_contiguous is False
+    assert a.flags.c_contiguous is False
+    # NOTE(paris): load_fvecs() returns a view of an array, which is not contiguous, so make it contiguous. Ideally we would handle this in FeatureVectorArray().
+    a = np.asfortranarray(a)
+    b = vspy.FeatureVectorArray(a)
+    # NOTE(paris): It is strange that we have to transpose this output array to have it match the input array. Should investigate this and fix it.
+    assert a.shape == np.transpose(np.array(b)).shape
+    assert np.array_equal(a, np.transpose(np.array(b)))
 
 
 def test_construct_IndexFlatL2():

@@ -98,7 +98,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
         {"dtype", "float32"},
         {"feature_type", "float32"},
         {"id_type", "uint64"},
-        {"base_sizes", "[0,10000]"},
+        {"base_sizes", "[10000]"},
         {"adjacency_scores_type", "float32"},
         {"adjacency_row_index_type", "uint64"},
     };
@@ -121,7 +121,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
         {"dtype", "float32"},
         {"feature_type", "float32"},
         {"id_type", "uint64"},
-        {"base_sizes", "[0,10000,10000]"},
+        {"base_sizes", "[10000,10000]"},
         {"adjacency_scores_type", "float32"},
         {"adjacency_row_index_type", "uint64"},
     };

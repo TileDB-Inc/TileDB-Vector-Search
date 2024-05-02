@@ -85,18 +85,6 @@ std::vector<std::string> siftsmall_array_uris{
     siftsmall_groundtruth_uri,
 };
 
-// Note that we don't have a canonical IVF index for siftsmall_uint8 yet, so
-// some of these URIs are placeholders
-std::vector<std::string> siftsmall_uint8_array_uris{
-    siftsmall_uint8_inputs_uri,
-    siftsmall_uint8_centroids_uri,
-    siftsmall_uint8_index_uri,
-    siftsmall_uint8_ids_uri,
-    siftsmall_uint8_parts_uri,
-    siftsmall_uint8_query_uri,
-    siftsmall_uint8_groundtruth_uri,
-};
-
 // Note that we don't have a canonical IVF index for bigann10k yet, so some
 // of these URIs are placeholders
 std::vector<std::string> bigann10k_array_uris{

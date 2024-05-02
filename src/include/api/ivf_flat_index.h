@@ -150,8 +150,7 @@ class IndexIVFFlat {
         {"id_datatype", &id_datatype_, TILEDB_UINT32, "ids_array_name"},
         {"px_datatype", &px_datatype_, TILEDB_UINT32, "index_array_name"}};
 
-    tiledb::Config cfg;
-    tiledb::Group read_group(ctx, group_uri, TILEDB_READ, cfg);
+    tiledb::Group read_group(ctx, group_uri, TILEDB_READ, ctx.config());
 
     // Get the storage_version in case the metadata is not present on read_group
     // and we need to read the individual arrays.

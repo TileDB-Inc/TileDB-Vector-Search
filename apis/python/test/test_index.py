@@ -1,5 +1,4 @@
 import json
-import time
 
 import numpy as np
 import pytest
@@ -57,24 +56,11 @@ def check_default_metadata(
     assert type(group.meta["index_type"]) == str
 
     assert "base_sizes" in group.meta
-    if is_type_erased_index(expected_index_type):
-        # NOTE(paris): Type-erased indexes have two values upon creation.
-        assert group.meta["base_sizes"] == "[0,0]"
-    else:
-        assert group.meta["base_sizes"] == json.dumps([0])
+    assert group.meta["base_sizes"] == json.dumps([0])
     assert type(group.meta["base_sizes"]) == str
 
     assert "ingestion_timestamps" in group.meta
-    if is_type_erased_index(expected_index_type):
-        # NOTE(paris): Type-erased indexes have two values upon creation.
-        ingestion_timestamps = json.loads(group.meta["ingestion_timestamps"])
-        assert len(ingestion_timestamps) == 2
-        assert ingestion_timestamps[0] == 0
-        current_time_ms = int(time.time() * 1000)
-        assert ingestion_timestamps[1] < current_time_ms
-        assert ingestion_timestamps[1] > current_time_ms - 1000 * 5
-    else:
-        assert group.meta["ingestion_timestamps"] == json.dumps([0])
+    assert group.meta["ingestion_timestamps"] == json.dumps([0])
     assert type(group.meta["ingestion_timestamps"]) == str
 
     if not is_type_erased_index(expected_index_type):
@@ -82,6 +68,8 @@ def check_default_metadata(
         assert "has_updates" in group.meta
         assert group.meta["has_updates"] == 0
         assert type(group.meta["has_updates"]) == np.int64
+    else:
+        assert "has_updates" not in group.meta
 
 
 def test_flat_index(tmp_path):
@@ -123,6 +111,11 @@ def test_flat_index(tmp_path):
 
     index = index.consolidate_updates()
     query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4})
+
+    vfs = tiledb.VFS()
+    assert vfs.dir_size(uri) > 0
+    Index.delete_index(uri=uri, config={})
+    assert vfs.dir_size(uri) == 0
 
 
 def test_ivf_flat_index(tmp_path):
@@ -192,6 +185,11 @@ def test_ivf_flat_index(tmp_path):
         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {0, 2, 4}, nprobe=partitions
     )
 
+    vfs = tiledb.VFS()
+    assert vfs.dir_size(uri) > 0
+    Index.delete_index(uri=uri, config={})
+    assert vfs.dir_size(uri) == 0
+
 
 def test_vamana_index_simple(tmp_path):
     uri = os.path.join(tmp_path, "array")
@@ -207,6 +205,11 @@ def test_vamana_index_simple(tmp_path):
     index = VamanaIndex(uri=uri)
     assert index.get_dimensions() == dimensions
     query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {ind.MAX_UINT64})
+
+    vfs = tiledb.VFS()
+    assert vfs.dir_size(uri) > 0
+    Index.delete_index(uri=uri, config={})
+    assert vfs.dir_size(uri) == 0
 
 
 def test_vamana_index(tmp_path):
@@ -276,26 +279,35 @@ def test_vamana_index(tmp_path):
         [[0, 1], [4, 3]],
     )
 
+    vfs = tiledb.VFS()
+    assert vfs.dir_size(uri) > 0
+    Index.delete_index(uri=uri, config={})
+    assert vfs.dir_size(uri) == 0
+
 
 def test_delete_invalid_index(tmp_path):
     # We don't throw with an invalid uri.
-    Index.delete_index(uri="invalid_uri", config=tiledb.cloud.Config())
+    Index.delete_index(uri="invalid_uri", config={})
 
 
 def test_delete_index(tmp_path):
+    vfs = tiledb.VFS()
+
     indexes = ["FLAT", "IVF_FLAT", "VAMANA"]
     index_classes = [FlatIndex, IVFFlatIndex, VamanaIndex]
     data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3]], dtype=np.float32)
     for index_type, index_class in zip(indexes, index_classes):
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         ingest(index_type=index_type, index_uri=index_uri, input_vectors=data)
-        Index.delete_index(uri=index_uri, config=tiledb.cloud.Config())
+        Index.delete_index(uri=index_uri, config={})
+        assert vfs.dir_size(index_uri) == 0
         with pytest.raises(tiledb.TileDBError) as error:
             index_class(uri=index_uri)
         assert "does not exist" in str(error.value)
 
 
 def test_index_with_incorrect_dimensions(tmp_path):
+    vfs = tiledb.VFS()
     indexes = [flat_index, ivf_flat_index, vamana_index]
     for index_type in indexes:
         uri = os.path.join(tmp_path, f"array_{index_type.__name__}")
@@ -313,6 +325,10 @@ def test_index_with_incorrect_dimensions(tmp_path):
 
         # Okay otherwise.
         index.query(np.array([[1, 1, 1]], dtype=np.float32), k=3)
+
+        assert vfs.dir_size(uri) > 0
+        Index.delete_index(uri=uri, config={})
+        assert vfs.dir_size(uri) == 0
 
 
 def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
@@ -337,8 +353,12 @@ def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
         queries = load_fvecs(queries_uri)
         index.query(queries, k=10)
 
+        Index.delete_index(uri=index_uri, config={})
+
 
 def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
+    vfs = tiledb.VFS()
+
     # Tests that we raise a TypeError if the number of columns in the query is not the same as the
     # number of columns in the indexed data.
     size = 1000
@@ -367,6 +387,10 @@ def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
                 else:
                     with pytest.raises(TypeError):
                         index.query(query, k=1)
+
+            assert vfs.dir_size(index_uri) > 0
+            Index.delete_index(uri=index_uri, config={})
+            assert vfs.dir_size(index_uri) == 0
 
 
 def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_path):
