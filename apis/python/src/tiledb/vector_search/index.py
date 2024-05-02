@@ -492,6 +492,7 @@ class Index:
                 if ingestion_timestamp > timestamp:
                     new_ingestion_timestamps.append(ingestion_timestamp)
                     new_base_sizes.append(base_sizes[i])
+                    # Type erased indexes don't have partition_history, skip to avoid crash.
                     if not is_type_erased_index(index_type):
                         new_partition_history.append(partition_history[i])
                 i += 1
@@ -505,6 +506,7 @@ class Index:
             group = tiledb.Group(uri, "w")
             group.meta["ingestion_timestamps"] = json.dumps(new_ingestion_timestamps)
             group.meta["base_sizes"] = json.dumps(new_base_sizes)
+            # Type erased indexes don't have partition_history, skip to avoid crash.
             if not is_type_erased_index(index_type):
                 group.meta["partition_history"] = json.dumps(new_partition_history)
             group.close()

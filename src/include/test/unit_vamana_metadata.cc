@@ -32,6 +32,7 @@
 #include <catch2/catch_all.hpp>
 #include <tiledb/tiledb>
 #include <vector>
+#include "api/feature_vector_array.h"
 #include "array_defs.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "index/vamana_index.h"
@@ -65,11 +66,8 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
   if (vfs.is_dir(uri)) {
     vfs.remove_dir(uri);
   }
-  auto training_vectors = tdbColMajorPreLoadMatrixWithIds<
-      siftsmall_feature_type,
-      siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri);
-  auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
-      num_vectors(training_vectors), 20, 40, 30);
+  auto idx =
+      vamana_index<siftsmall_feature_type, siftsmall_ids_type>(0, 20, 40, 30);
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
@@ -82,9 +80,12 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
   {
     // Check the metadata after an initial write_index().
+    auto training_vectors =
+        ColMajorMatrixWithIds<siftsmall_feature_type, siftsmall_ids_type>(
+            128, 0);
     idx.train(training_vectors, training_vectors.ids());
     idx.add(training_vectors);
-    idx.write_index(ctx, uri, 1);
+    idx.write_index(ctx, uri, 0);
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     auto x = vamana_index_metadata();
@@ -96,8 +97,8 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
         {"dtype", "float32"},
         {"feature_type", "float32"},
         {"id_type", "uint64"},
-        {"ingestion_timestamps", "[1]"},
-        {"base_sizes", "[10000]"},
+        {"ingestion_timestamps", "[0]"},
+        {"base_sizes", "[0]"},
         {"adjacency_scores_type", "float32"},
         {"adjacency_row_index_type", "uint64"},
     };
@@ -115,7 +116,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
     idx.train(new_training_vectors, new_training_vectors.ids());
     idx.add(new_training_vectors);
-    idx.write_index(ctx, uri, 2, "", true);
+    idx.write_index(ctx, uri, 2, "");
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     auto x = vamana_index_metadata();

@@ -318,21 +318,14 @@ void init_type_erased_module(py::module_& m) {
              const tiledb::Context& ctx,
              const std::string& group_uri,
              std::optional<size_t> timestamp,
-             const std::string& storage_version,
-             bool overwrite_metadata_list) {
-            index.write_index(
-                ctx,
-                group_uri,
-                timestamp,
-                storage_version,
-                overwrite_metadata_list);
+             const std::string& storage_version) {
+            index.write_index(ctx, group_uri, timestamp, storage_version);
           },
           py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
           py::arg("ctx"),
           py::arg("group_uri"),
           py::arg("timestamp") = py::none(),
-          py::arg("storage_version") = "",
-          py::arg("overwrite_metadata_list") = false)
+          py::arg("storage_version") = "")
       .def("feature_type_string", &IndexVamana::feature_type_string)
       .def("id_type_string", &IndexVamana::id_type_string)
       .def(

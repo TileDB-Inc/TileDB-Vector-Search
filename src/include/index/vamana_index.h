@@ -847,8 +847,7 @@ class vamana_index {
       const tiledb::Context& ctx,
       const std::string& group_uri,
       std::optional<size_t> timestamp = std::nullopt,
-      const std::string& storage_version = "",
-      bool overwrite_metadata_list = false) {
+      const std::string& storage_version = "") {
     if (timestamp.has_value()) {
       timestamp_ = timestamp.value();
     }
@@ -867,7 +866,21 @@ class vamana_index {
     write_group.set_alpha_max(alpha_max_);
     write_group.set_medoid(medoid_);
 
-    if (overwrite_metadata_list) {
+    // When we create an index with Python, we will call write_index() twice,
+    // once with empty data and once with the actual data. Here we add custom
+    // logic so that during that second call to write_index(), we will overwrite
+    // the metadata lists. If we don't do this we will end up with
+    // ingestion_timestamps = [0, timestamp] and base_sizes = [0, initial size],
+    // whereas indexes created just in Python will end up with
+    // ingestion_timestamps = [timestamp] and base_sizes = [initial size]. If we
+    // have 2 item lists it causes crashes and subtle issues when we try to
+    // modify the index later (i.e. through index.update() / Index.clear()). So
+    // here we make sure we end up with the same metadata that Python indexes
+    // do.
+    if (write_group.get_all_ingestion_timestamps().size() == 1 &&
+        write_group.get_previous_ingestion_timestamp() == 0 &&
+        write_group.get_all_base_sizes().size() == 1 &&
+        write_group.get_previous_base_size() == 0) {
       write_group.set_ingestion_timestamp(timestamp_);
       write_group.set_base_size(::num_vectors(feature_vectors_));
       write_group.set_num_edges(graph_.num_edges());

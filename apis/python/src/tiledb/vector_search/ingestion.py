@@ -1641,21 +1641,7 @@ def ingest(
         )
         index.train(data)
         index.add(data)
-        # If we just created the index, we need to overwrite the index metadata. This is because if
-        # we are creating a new index during ingestion, we will call write_index() twice. In this
-        # case we should overwrite the previous ingestion_timestamps and other lists, otherwise we will
-        # end up with ingestion_timestamps = [0, timestamp] and base_sizes = [0, initial size],
-        # whereas other Python indexes will end up with ingestion_timestamps = [timestamp] and
-        # base_sizes = [initial size]. This becomes problematic when we try to modify the index
-        # later (i.e. through update / clear / etc).)
-        overwrite_metadata_list = not arrays_created
-        index.write_index(
-            ctx,
-            index_group_uri,
-            index_timestamp,
-            storage_version,
-            overwrite_metadata_list,
-        )
+        index.write_index(ctx, index_group_uri, index_timestamp, storage_version)
 
     def write_centroids(
         centroids: np.ndarray,
