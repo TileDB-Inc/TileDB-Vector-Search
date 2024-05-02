@@ -8,6 +8,7 @@ from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.utils import add_to_group
+from tiledb.vector_search.utils import is_type_erased_index
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
@@ -466,6 +467,7 @@ class Index:
     ):
         with tiledb.scope_ctx(ctx_or_config=config):
             group = tiledb.Group(uri, "r")
+            index_type = group.meta.get("index_type", "")
             storage_version = group.meta.get("storage_version", "0.1")
             if not storage_formats[storage_version]["SUPPORT_TIMETRAVEL"]:
                 raise ValueError(
@@ -490,7 +492,9 @@ class Index:
                 if ingestion_timestamp > timestamp:
                     new_ingestion_timestamps.append(ingestion_timestamp)
                     new_base_sizes.append(base_sizes[i])
-                    new_partition_history.append(partition_history[i])
+                    # Type erased indexes don't have partition_history, skip to avoid crash.
+                    if not is_type_erased_index(index_type):
+                        new_partition_history.append(partition_history[i])
                 i += 1
             if len(new_ingestion_timestamps) == 0:
                 new_ingestion_timestamps = [0]
@@ -502,7 +506,9 @@ class Index:
             group = tiledb.Group(uri, "w")
             group.meta["ingestion_timestamps"] = json.dumps(new_ingestion_timestamps)
             group.meta["base_sizes"] = json.dumps(new_base_sizes)
-            group.meta["partition_history"] = json.dumps(new_partition_history)
+            # Type erased indexes don't have partition_history, skip to avoid crash.
+            if not is_type_erased_index(index_type):
+                group.meta["partition_history"] = json.dumps(new_partition_history)
             group.close()
 
             group = tiledb.Group(uri, "r")

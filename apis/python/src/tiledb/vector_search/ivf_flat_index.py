@@ -48,8 +48,8 @@ class IVFFlatIndex(index.Index):
         memory_budget: int = -1,
         **kwargs,
     ):
-        super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
+        super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
             + self.index_version
