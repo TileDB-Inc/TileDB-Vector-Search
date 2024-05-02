@@ -7,6 +7,7 @@ from tiledb.cloud.dag import Mode
 def ingest_embeddings_with_driver(
     object_index_uri: str,
     use_updates_array: bool,
+    embeddings_array_uri: str = None,
     metadata_array_uri: str = None,
     index_timestamp: int = None,
     workers: int = -1,
@@ -31,6 +32,7 @@ def ingest_embeddings_with_driver(
     def ingest_embeddings(
         object_index_uri: str,
         use_updates_array: bool,
+        embeddings_array_uri: str = None,
         metadata_array_uri: str = None,
         index_timestamp: int = None,
         workers: int = -1,
@@ -81,7 +83,6 @@ def ingest_embeddings_with_driver(
         from tiledb.vector_search import ingest
         from tiledb.vector_search.object_api import ObjectIndex
         from tiledb.vector_search.object_readers import ObjectPartition
-        from tiledb.vector_search.storage_formats import storage_formats
 
         MAX_TASKS_PER_STAGE = 100
         DEFAULT_IMG_NAME = "3.9-vectorsearch"
@@ -125,6 +126,7 @@ def ingest_embeddings_with_driver(
             object_index_uri: str,
             partition_dicts: List[Dict],
             use_updates_array: bool,
+            embeddings_array_uri: str = None,
             metadata_array_uri: str = None,
             index_timestamp: int = None,
             verbose: bool = False,
@@ -155,7 +157,6 @@ def ingest_embeddings_with_driver(
 
             import tiledb
             from tiledb.vector_search.object_api import ObjectIndex
-            from tiledb.vector_search.storage_formats import storage_formats
 
             def instantiate_object(code, class_name, **kwargs):
                 import importlib.util
@@ -199,10 +200,6 @@ def ingest_embeddings_with_driver(
                 vector_type = object_embedding.vector_type()
 
                 if not use_updates_array:
-                    embeddings_array_name = storage_formats[
-                        obj_index.index.storage_version
-                    ]["INPUT_VECTORS_ARRAY_NAME"]
-                    embeddings_array_uri = f"{obj_index.uri}/{embeddings_array_name}"
                     logger.debug("embeddings_uri %s", embeddings_array_uri)
                     embeddings_array = tiledb.open(
                         embeddings_array_uri, "w", timestamp=index_timestamp
@@ -276,6 +273,7 @@ def ingest_embeddings_with_driver(
             partitions: List[ObjectPartition],
             object_partitions_per_worker: int,
             object_work_tasks: int,
+            embeddings_array_uri: str = None,
             metadata_array_uri: str = None,
             index_timestamp: int = None,
             workers: int = -1,
@@ -345,6 +343,7 @@ def ingest_embeddings_with_driver(
                     object_index_uri=obj_index.uri,
                     partition_dicts=partition_dicts,
                     use_updates_array=use_updates_array,
+                    embeddings_array_uri=embeddings_array_uri,
                     metadata_array_uri=metadata_array_uri,
                     index_timestamp=index_timestamp,
                     verbose=verbose,
@@ -417,6 +416,7 @@ def ingest_embeddings_with_driver(
                 partitions=partitions,
                 object_partitions_per_worker=object_partitions_per_worker,
                 object_work_tasks=object_work_tasks,
+                embeddings_array_uri=embeddings_array_uri,
                 metadata_array_uri=metadata_array_uri,
                 index_timestamp=index_timestamp,
                 workers=workers,
@@ -442,10 +442,6 @@ def ingest_embeddings_with_driver(
                     **kwargs,
                 )
             else:
-                embeddings_array_name = storage_formats[
-                    obj_index.index.storage_version
-                ]["INPUT_VECTORS_ARRAY_NAME"]
-                embeddings_array_uri = f"{obj_index.uri}/{embeddings_array_name}"
                 obj_index.index = ingest(
                     index_type=obj_index.index_type,
                     index_uri=obj_index.uri,
@@ -500,6 +496,7 @@ def ingest_embeddings_with_driver(
         ingest_embeddings,
         object_index_uri=object_index_uri,
         use_updates_array=use_updates_array,
+        embeddings_array_uri=embeddings_array_uri,
         metadata_array_uri=metadata_array_uri,
         index_timestamp=index_timestamp,
         max_tasks_per_stage=max_tasks_per_stage,

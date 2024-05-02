@@ -185,11 +185,6 @@ class base_index_group {
         throw std::runtime_error("Uri is empty.");
       }
 
-      if (!valid_array_names_.contains(*name)) {
-        throw std::runtime_error(
-            "Invalid array name in group: " + std::string(*name));
-      }
-
       array_name_to_uri_[*name] = uri;
     }
   }
