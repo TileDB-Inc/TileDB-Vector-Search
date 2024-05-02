@@ -45,8 +45,9 @@ TEST_CASE("ivf_pq_group: create tiledb::Group", "[ivf_pq_group]") {
           .string();
 
   tiledb::VFS vfs(ctx);
-  if (vfs.is_dir(tmp_uri))
+  if (vfs.is_dir(tmp_uri)) {
     vfs.remove_dir(tmp_uri);
+  }
   tiledb::Group::create(ctx, tmp_uri);
   std::unique_ptr<tiledb::Group> write_group_;
   write_group_ =
@@ -97,5 +98,5 @@ TEST_CASE(
   x.dump("Write constructor - create before open");
 
   ivf_pq_group y = ivf_pq_group(dummy_pq_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor - open");
+  y.dump("Write constructor - open");
 }

@@ -77,6 +77,7 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
   using Base = base_index_group<ivf_pq_group>;
 
   using Base::array_key_to_array_name_;
+  using Base::array_name_to_uri_;
   using Base::cached_ctx_;
   using Base::group_uri_;
   using Base::metadata_;
@@ -91,7 +92,6 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
 
  public:
   using index_group_metadata_type = ivf_pq_metadata;
-  // using index_type = Index;
   using index_type = index_type_selector<ivf_pq_group<Index>>::type;
 
   ivf_pq_group(
@@ -113,15 +113,21 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
           valid_array_names_.insert(array_name + "_" + std::to_string(i));
           array_key_to_array_name_[array_key + "_" + std::to_string(i)] =
               array_name + "_" + std::to_string(i);
+          array_name_to_uri_[array_name] =
+              array_name_to_uri(group_uri_, array_name);
         }
       } else {
         valid_array_keys_.insert(array_key);
         valid_array_names_.insert(array_name);
         array_key_to_array_name_[array_key] = array_name;
+        array_name_to_uri_[array_name] =
+            array_name_to_uri(group_uri_, array_name);
       }
       valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
       array_key_to_array_name_[array_key] = array_name;
+      array_name_to_uri_[array_name] =
+          array_name_to_uri(group_uri_, array_name);
     }
   }
 
