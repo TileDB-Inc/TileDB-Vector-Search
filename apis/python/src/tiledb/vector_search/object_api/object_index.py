@@ -1,4 +1,6 @@
 import json
+import random
+import string
 from collections import OrderedDict
 from typing import Any, Dict, List, Mapping, Optional
 
@@ -236,52 +238,61 @@ class ObjectIndex:
             group.meta["object_reader_kwargs"] = self.object_reader_kwargs
             group.close()
 
-    def create_embeddings_partitioned_array(
-        self,
-        config: Optional[Mapping[str, Any]] = None,
-    ) -> str:
-        with tiledb.scope_ctx(ctx_or_config=config):
-            embeddings_array_name = storage_formats[self.index.storage_version][
-                "INPUT_VECTORS_ARRAY_NAME"
-            ]
-            filters = storage_formats[self.index.storage_version][
-                "DEFAULT_ATTR_FILTERS"
-            ]
-            embeddings_array_uri = f"{self.uri}/{embeddings_array_name}"
-            if tiledb.array_exists(embeddings_array_uri):
-                raise ValueError(f"Array exists {embeddings_array_uri}")
-            partition_id_dim = tiledb.Dim(
-                name="partition_id",
-                domain=(0, np.iinfo(np.dtype("uint32")).max - 1),
-                tile=1,
-                dtype=np.dtype(np.uint32),
-            )
-            domain = tiledb.Domain(partition_id_dim)
-            attrs = [
-                tiledb.Attr(
-                    name="vectors", dtype=self.index.dtype, var=True, filters=filters
-                ),
-                tiledb.Attr(
-                    name="vectors_shape", dtype=np.uint32, var=True, filters=filters
-                ),
-                tiledb.Attr(
-                    name="external_ids",
-                    dtype=np.dtype(np.uint64),
-                    var=True,
-                    filters=filters,
-                ),
-            ]
-            embeddings_array_schema = tiledb.ArraySchema(
-                domain=domain,
-                sparse=False,
-                attrs=attrs,
-            )
-            tiledb.Array.create(embeddings_array_uri, embeddings_array_schema)
-
+    def create_embeddings_partitioned_array(self) -> (str, str):
+        temp_dir_name = (
+            storage_formats[self.index.storage_version]["PARTIAL_WRITE_ARRAY_DIR"]
+            + "_"
+            + "".join(random.choices(string.ascii_letters, k=10))
+        )
+        temp_dir_uri = f"{self.uri}/{temp_dir_name}"
+        try:
+            tiledb.group_create(temp_dir_uri)
             group = tiledb.Group(self.uri, "w")
-            add_to_group(group, embeddings_array_uri, name=embeddings_array_name)
+            add_to_group(group, temp_dir_uri, temp_dir_name)
             group.close()
-        return embeddings_array_uri
+        except tiledb.TileDBError as err:
+            message = str(err)
+            if "already exists" not in message:
+                raise err
+
+        embeddings_array_name = storage_formats[self.index.storage_version][
+            "INPUT_VECTORS_ARRAY_NAME"
+        ]
+        filters = storage_formats[self.index.storage_version]["DEFAULT_ATTR_FILTERS"]
+        embeddings_array_uri = f"{temp_dir_uri}/{embeddings_array_name}"
+        if tiledb.array_exists(embeddings_array_uri):
+            raise ValueError(f"Array exists {embeddings_array_uri}")
+        partition_id_dim = tiledb.Dim(
+            name="partition_id",
+            domain=(0, np.iinfo(np.dtype("uint32")).max - 1),
+            tile=1,
+            dtype=np.dtype(np.uint32),
+        )
+        domain = tiledb.Domain(partition_id_dim)
+        attrs = [
+            tiledb.Attr(
+                name="vectors", dtype=self.index.dtype, var=True, filters=filters
+            ),
+            tiledb.Attr(
+                name="vectors_shape", dtype=np.uint32, var=True, filters=filters
+            ),
+            tiledb.Attr(
+                name="external_ids",
+                dtype=np.dtype(np.uint64),
+                var=True,
+                filters=filters,
+            ),
+        ]
+        embeddings_array_schema = tiledb.ArraySchema(
+            domain=domain,
+            sparse=False,
+            attrs=attrs,
+        )
+        tiledb.Array.create(embeddings_array_uri, embeddings_array_schema)
+        temp_dir_group = tiledb.Group(temp_dir_uri, "w")
+        add_to_group(temp_dir_group, embeddings_array_uri, name=embeddings_array_name)
+        temp_dir_group.close()
+        return temp_dir_name, embeddings_array_uri
 
     def update_index(
         self,
@@ -306,42 +317,55 @@ class ObjectIndex:
         environment_variables: Dict = {},
         **kwargs,
     ):
-        use_updates_array = True
-        if self.index.size == 0:
-            self.create_embeddings_partitioned_array(config=config)
-            use_updates_array = False
+        with tiledb.scope_ctx(ctx_or_config=config):
+            use_updates_array = True
+            embeddings_array_uri = None
+            if self.index.size == 0:
+                (
+                    temp_dir_name,
+                    embeddings_array_uri,
+                ) = self.create_embeddings_partitioned_array()
+                use_updates_array = False
 
-        storage_formats[self.index.storage_version]["EXTERNAL_IDS_ARRAY_NAME"]
-        metadata_array_uri = None
-        if self.materialize_object_metadata:
-            metadata_array_uri = self.object_metadata_array_uri
-        if config is None:
-            config = self.config
+            storage_formats[self.index.storage_version]["EXTERNAL_IDS_ARRAY_NAME"]
+            metadata_array_uri = None
+            if self.materialize_object_metadata:
+                metadata_array_uri = self.object_metadata_array_uri
+            if config is None:
+                config = self.config
 
-        object_api.ingest_embeddings_with_driver(
-            object_index_uri=self.uri,
-            use_updates_array=use_updates_array,
-            metadata_array_uri=metadata_array_uri,
-            index_timestamp=index_timestamp,
-            max_tasks_per_stage=max_tasks_per_stage,
-            workers=workers,
-            worker_resources=worker_resources,
-            worker_image=worker_image,
-            extra_worker_modules=extra_worker_modules,
-            driver_resources=driver_resources,
-            driver_image=driver_image,
-            extra_driver_modules=extra_driver_modules,
-            worker_access_credentials_name=worker_access_credentials_name,
-            verbose=verbose,
-            trace_id=trace_id,
-            embeddings_generation_driver_mode=embeddings_generation_driver_mode,
-            embeddings_generation_mode=embeddings_generation_mode,
-            vector_indexing_mode=vector_indexing_mode,
-            config=config,
-            namespace=namespace,
-            environment_variables=environment_variables,
-            **kwargs,
-        )
+            object_api.ingest_embeddings_with_driver(
+                object_index_uri=self.uri,
+                use_updates_array=use_updates_array,
+                embeddings_array_uri=embeddings_array_uri,
+                metadata_array_uri=metadata_array_uri,
+                index_timestamp=index_timestamp,
+                max_tasks_per_stage=max_tasks_per_stage,
+                workers=workers,
+                worker_resources=worker_resources,
+                worker_image=worker_image,
+                extra_worker_modules=extra_worker_modules,
+                driver_resources=driver_resources,
+                driver_image=driver_image,
+                extra_driver_modules=extra_driver_modules,
+                worker_access_credentials_name=worker_access_credentials_name,
+                verbose=verbose,
+                trace_id=trace_id,
+                embeddings_generation_driver_mode=embeddings_generation_driver_mode,
+                embeddings_generation_mode=embeddings_generation_mode,
+                vector_indexing_mode=vector_indexing_mode,
+                config=config,
+                namespace=namespace,
+                environment_variables=environment_variables,
+                **kwargs,
+            )
+
+            if not use_updates_array:
+                with tiledb.Group(self.uri, "w") as group:
+                    group.remove(temp_dir_name)
+                temp_dir_uri = f"{self.uri}/{temp_dir_name}"
+                with tiledb.Group(temp_dir_uri, "m") as temp_dir_group:
+                    temp_dir_group.delete(recursive=True)
 
 
 def get_source_code(a):
