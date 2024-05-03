@@ -54,13 +54,13 @@ else()
     # Try to download prebuilt artifacts unless the user specifies to build from source
     if(DOWNLOAD_TILEDB_PREBUILT)
         fetch_prebuilt_tiledb(
-                VERSION 2.22.0
-                RELLIST_HASH SHA256=6ae0c1558f400cbee68b40810d29ad2cd0398e55378d158a9aafa3cd36b089b1
+                VERSION 2.23.0-rc0
+                RELLIST_HASH SHA256=a0bd2803cc47feccba4916fe8c44ec5544b363e1ce1c4456b6ea88aecd9b6144
         )
     else() # Build from source
         fetch_source_tiledb(
-                VERSION 2.22.0
-                RELLIST_HASH SHA256=6ae0c1558f400cbee68b40810d29ad2cd0398e55378d158a9aafa3cd36b089b1
+                VERSION 2.23.0-rc0
+                RELLIST_HASH SHA256=a0bd2803cc47feccba4916fe8c44ec5544b363e1ce1c4456b6ea88aecd9b6144
         )
     endif()
 
