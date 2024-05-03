@@ -184,7 +184,8 @@ void init_type_erased_module(py::module_& m) {
                 uri,
                 ids_uri,
                 num_vectors,
-                timestamp == 0 ? {} : TemporalPolicy(TimeTravel, timestamp));
+                timestamp == 0 ? TemporalPolicy() :
+                                 TemporalPolicy(TimeTravel, timestamp));
           },
           py::keep_alive<1, 2>(),  // FeatureVectorArray should keep ctx alive.
           py::arg("ctx"),
@@ -282,7 +283,8 @@ void init_type_erased_module(py::module_& m) {
             new (&instance) IndexVamana(
                 ctx,
                 group_uri,
-                timestamp == 0 ? {} : TemporalPolicy(TimeTravel, timestamp));
+                timestamp == 0 ? TemporalPolicy() :
+                                 TemporalPolicy(TimeTravel, timestamp));
           },
           py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
           py::arg("ctx"),
