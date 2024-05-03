@@ -500,13 +500,15 @@ class vamana_index {
       tiledb::Context ctx,
       const std::string& uri,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0})
-      : temporal_policy_{temporal_policy} {
+      : temporal_policy_{temporal_policy}
+      , group_{std::make_unique<vamana_index_group<vamana_index>>(
+            *this, ctx, uri, TILEDB_READ, temporal_policy_)} {
     if (temporal_policy_.timestamp_end() == 0) {
       temporal_policy_ = {
           TimeTravel, group_->get_previous_ingestion_timestamp()};
+      group_ = {std::make_unique<vamana_index_group<vamana_index>>(
+          *this, ctx, uri, TILEDB_READ, temporal_policy_)};
     }
-    group_ = {std::make_unique<vamana_index_group<vamana_index>>(
-        *this, ctx, uri, TILEDB_READ, temporal_policy_)};
 
     // @todo Make this table-driven
     dimension_ = group_->get_dimension();
