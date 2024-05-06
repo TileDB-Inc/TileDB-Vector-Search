@@ -9,6 +9,7 @@ from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.storage_formats import validate_storage_version
+from tiledb.vector_search.utils import to_temporal_policy
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 INDEX_TYPE = "VAMANA"
@@ -36,11 +37,11 @@ class VamanaIndex(index.Index):
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
         # TODO(paris): Support (start, end) timestamps and remove.
-        type_erased_timestamp = timestamp
-        if isinstance(timestamp, tuple):
-            type_erased_timestamp = timestamp[1]
-        type_erased_timestamp = type_erased_timestamp if type_erased_timestamp else 0
-        self.index = vspy.IndexVamana(self.ctx, uri, type_erased_timestamp)
+        # type_erased_timestamp = timestamp
+        # if isinstance(timestamp, tuple):
+        #     type_erased_timestamp = timestamp[1]
+        # type_erased_timestamp = type_erased_timestamp if type_erased_timestamp else 0
+        self.index = vspy.IndexVamana(self.ctx, uri, to_temporal_policy(timestamp))
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
         ].uri
@@ -129,5 +130,5 @@ def create(
     )
     index.train(empty_vector)
     index.add(empty_vector)
-    index.write_index(ctx, uri, 0, storage_version)
+    index.write_index(ctx, uri, vspy.TemporalPolicy(0), storage_version)
     return VamanaIndex(uri=uri, config=config, memory_budget=1000000)

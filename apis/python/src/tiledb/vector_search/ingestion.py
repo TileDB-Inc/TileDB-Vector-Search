@@ -10,6 +10,7 @@ from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import add_to_group
 from tiledb.vector_search.utils import is_type_erased_index
+from tiledb.vector_search.utils import to_temporal_policy
 
 
 class TrainingSamplingPolicy(enum.Enum):
@@ -1626,16 +1627,22 @@ def ingest(
 
         ctx = vspy.Ctx(config)
         index = vspy.IndexVamana(ctx, index_group_uri)
+        # temporal_policy = None
+        # if isinstance(index_timestamp, tuple):
+        #     temporal_policy = vspy.TemporalPolicy(index_timestamp[0], index_timestamp[1])
+        # elif not None:
+        #     temporal_policy = vspy.TemporalPolicy(index_timestamp)
         data = vspy.FeatureVectorArray(
             ctx,
             parts_array_uri,
             ids_array_uri,
             0,
-            index_timestamp if index_timestamp else 0,
+            to_temporal_policy(index_timestamp)
+            # index_timestamp if index_timestamp else 0,
         )
         index.train(data)
         index.add(data)
-        index.write_index(ctx, index_group_uri, index_timestamp)
+        index.write_index(ctx, index_group_uri, to_temporal_policy(index_timestamp))
 
     def write_centroids(
         centroids: np.ndarray,

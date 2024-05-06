@@ -417,10 +417,7 @@ class vamana_index {
   /****************************************************************************
    * Index group information
    ****************************************************************************/
-
-  /** The timestamp at which the index was created */
-  TemporalPolicy temporal_policy_{TimeTravel, 0};
-
+  TemporalPolicy temporal_policy_;
   std::unique_ptr<vamana_index_group<vamana_index>> group_;
 
   /*
@@ -480,9 +477,10 @@ class vamana_index {
       size_t L,
       size_t R,
       size_t B = 0,
-      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0})
+      // TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0})
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt)
       : temporal_policy_{
-        temporal_policy.timestamp_end() != 0 ? temporal_policy :
+        temporal_policy.has_value() ? *temporal_policy :
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
       , num_vectors_{num_nodes}
       , graph_{num_vectors_}
@@ -499,11 +497,16 @@ class vamana_index {
   vamana_index(
       tiledb::Context ctx,
       const std::string& uri,
-      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0})
-      : temporal_policy_{temporal_policy}
+      // TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0})
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt)
+      // : temporal_policy_{temporal_policy}
+      : temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
       , group_{std::make_unique<vamana_index_group<vamana_index>>(
             *this, ctx, uri, TILEDB_READ, temporal_policy_)} {
-    if (temporal_policy_.timestamp_end() == 0) {
+    if (!temporal_policy.has_value()) {
+      // Here we use the opened group to get the previous ingestion timestamp
+      // and then use that to open the group again with the correct timestamp
+      // end.
       temporal_policy_ = {
           TimeTravel, group_->get_previous_ingestion_timestamp()};
       group_ = {std::make_unique<vamana_index_group<vamana_index>>(
@@ -848,10 +851,14 @@ class vamana_index {
   auto write_index(
       const tiledb::Context& ctx,
       const std::string& group_uri,
-      std::optional<size_t> timestamp = std::nullopt,
+      // std::optional<size_t> timestamp = std::nullopt,
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       const std::string& storage_version = "") {
-    if (timestamp.has_value()) {
-      temporal_policy_ = TemporalPolicy{TimeTravel, timestamp.value()};
+    // if (timestamp.has_value()) {
+    //   temporal_policy_ = TemporalPolicy{TimeTravel, timestamp.value()};
+    // }
+    if (temporal_policy.has_value()) {
+      temporal_policy_ = *temporal_policy;
     }
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
     // Save as a group: metadata, feature_vectors, graph edges, offsets

@@ -575,7 +575,7 @@ TEST_CASE(
         FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
     index.train(empty_training_vector_array);
     index.add(empty_training_vector_array);
-    index.write_index(ctx, index_uri, 0);
+    index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 0));
 
     CHECK(index.temporal_policy().timestamp_end() == 0);
     CHECK(index.feature_type_string() == feature_type);
@@ -620,7 +620,7 @@ TEST_CASE(
     index.train(training_vector_array);
     index.add(training_vector_array);
     // We then write the index at timestamp 99.
-    index.write_index(ctx, index_uri, 99);
+    index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 99));
 
     // This also updates the timestamp of the index - we're now at timestamp 99.
     CHECK(index.temporal_policy().timestamp_end() == 99);
@@ -683,7 +683,7 @@ TEST_CASE(
     index.train(training_vector_array);
     index.add(training_vector_array);
     // We then write the index at timestamp 100.
-    index.write_index(ctx, index_uri, 100);
+    index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 100));
 
     // This also updates the timestamp of the index - we're now at timestamp
     // 100.
