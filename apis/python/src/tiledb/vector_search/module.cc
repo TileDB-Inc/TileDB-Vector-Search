@@ -17,6 +17,7 @@
 #include "detail/linalg/partitioned_matrix.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
+#include "detail/time/temporal_policy.h"
 
 namespace py = pybind11;
 using Ctx = tiledb::Context;
@@ -275,9 +276,8 @@ static void declare_nuv_query_heap_finite_ram(
                 centroids, query_vectors, nprobe, nthreads);
 
         auto temporal_policy{
-            (timestamp == 0) ?
-                tiledb::TemporalPolicy() :
-                tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)};
+            (timestamp == 0) ? TemporalPolicy() :
+                               TemporalPolicy(TimeTravel, timestamp)};
 
         auto mat = tdbColMajorPartitionedMatrix<T, Id_Type, Id_Type>(
             ctx,
@@ -528,9 +528,8 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
           size_t upper_bound{0};
           auto nthreads = std::thread::hardware_concurrency();
           auto temporal_policy{
-              (timestamp == 0) ?
-                  tiledb::TemporalPolicy() :
-                  tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp)};
+              (timestamp == 0) ? TemporalPolicy() :
+                                 TemporalPolicy(TimeTravel, timestamp)};
 
           py::buffer_info buf_info = active_queries_arr.request();
           auto shape = active_queries_arr.shape();
@@ -644,7 +643,11 @@ PYBIND11_MODULE(_tiledbvspy, m) {
          size_t start_pos,
          size_t end_pos,
          uint64_t timestamp) -> std::vector<uint32_t> {
-        auto r = read_vector<uint32_t>(ctx, uri, start_pos, end_pos, timestamp);
+        TemporalPolicy temporal_policy =
+            (timestamp == 0) ? TemporalPolicy() :
+                               TemporalPolicy(TimeTravel, timestamp);
+        auto r = read_vector<uint32_t>(
+            ctx, uri, start_pos, end_pos, temporal_policy);
         return r;
       });
   m.def(
@@ -654,7 +657,11 @@ PYBIND11_MODULE(_tiledbvspy, m) {
          size_t start_pos,
          size_t end_pos,
          uint64_t timestamp) -> std::vector<uint64_t> {
-        auto r = read_vector<uint64_t>(ctx, uri, start_pos, end_pos, timestamp);
+        TemporalPolicy temporal_policy =
+            (timestamp == 0) ? TemporalPolicy() :
+                               TemporalPolicy(TimeTravel, timestamp);
+        auto r = read_vector<uint64_t>(
+            ctx, uri, start_pos, end_pos, temporal_policy);
         return r;
       });
 
