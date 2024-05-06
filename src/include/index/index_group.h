@@ -95,6 +95,7 @@ class base_index_group {
  protected:
   tiledb::Context cached_ctx_;
   std::string group_uri_;
+  TemporalPolicy temporal_policy_{TimeTravel, 0};
   size_t index_timestamp_{0};
   size_t group_timestamp_{0};
   size_t timetravel_index_{0};
@@ -197,6 +198,7 @@ class base_index_group {
     }
     if (index_timestamp_ == 0) {
       index_timestamp_ = metadata_.ingestion_timestamps_.back();
+      temporal_policy_ = TemporalPolicy{TimeTravel, index_timestamp_};
     }
 
     auto timestamp_bound = std::lower_bound(
@@ -301,11 +303,12 @@ class base_index_group {
       const std::string& uri,
       uint64_t dimension,
       tiledb_query_type_t rw = TILEDB_READ,
-      size_t timestamp = 0,
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""})
       : cached_ctx_(ctx)
       , group_uri_(uri)
-      , index_timestamp_(timestamp)
+      , temporal_policy_(temporal_policy)
+      , index_timestamp_(temporal_policy.timestamp_end())
       , version_(version)
       , opened_for_(rw) {
     switch (opened_for_) {
@@ -367,10 +370,13 @@ class base_index_group {
   auto get_previous_ingestion_timestamp() const {
     return metadata_.ingestion_timestamps_.back();
   }
+  auto get_ingestion_timestamp() const {
+    return metadata_.ingestion_timestamps_[timetravel_index_];
+  }
   auto append_ingestion_timestamp(size_t timestamp) {
     metadata_.ingestion_timestamps_.push_back(timestamp);
   }
-  auto get_all_ingestion_timestamps() {
+  auto get_all_ingestion_timestamps() const {
     return metadata_.ingestion_timestamps_;
   }
 
@@ -386,7 +392,7 @@ class base_index_group {
   auto append_base_size(size_t size) {
     metadata_.base_sizes_.push_back(size);
   }
-  auto get_all_base_sizes() {
+  auto get_all_base_sizes() const {
     return metadata_.base_sizes_;
   }
 
@@ -402,6 +408,10 @@ class base_index_group {
   }
   auto set_dimension(size_t dim) {
     metadata_.dimension_ = dim;
+  }
+
+  auto get_timetravel_index() const {
+    return timetravel_index_;
   }
 
   /**************************************************************************

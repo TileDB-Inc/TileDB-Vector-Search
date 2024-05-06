@@ -1,9 +1,11 @@
 import json
+import time
 
 import numpy as np
 import pytest
 from array_paths import *
 from common import *
+from common import load_metadata
 
 import tiledb.vector_search.index as ind
 from tiledb.vector_search import Index
@@ -125,6 +127,11 @@ def test_ivf_flat_index(tmp_path):
     index = ivf_flat_index.create(
         uri=uri, dimensions=3, vector_type=vector_type, partitions=partitions
     )
+
+    ingestion_timestamps, base_sizes = load_metadata(uri)
+    assert base_sizes == [0]
+    assert ingestion_timestamps == [0]
+
     query_and_check(
         index,
         np.array([[2, 2, 2]], dtype=np.float32),
@@ -147,6 +154,14 @@ def test_ivf_flat_index(tmp_path):
     )
 
     index = index.consolidate_updates()
+
+    # TODO(paris): Investigate whether we should overwrite the existing metadata during the first
+    # ingestion of Python indexes. I believe as it's currently written we have a bug here.
+    # ingestion_timestamps, base_sizes = load_metadata(uri)
+    # assert base_sizes == [5]
+    # timestamp_5_minutes_from_now = int((time.time() + 5 * 60) * 1000)
+    # timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
+    # assert ingestion_timestamps[0] > timestamp_5_minutes_ago and ingestion_timestamps[0] < timestamp_5_minutes_from_now
 
     query_and_check(
         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
@@ -224,6 +239,10 @@ def test_vamana_index(tmp_path):
         vector_type=np.dtype(vector_type),
     )
 
+    ingestion_timestamps, base_sizes = load_metadata(uri)
+    assert base_sizes == [0]
+    assert ingestion_timestamps == [0]
+
     queries = np.array([[2, 2, 2]], dtype=np.float32)
     distances, ids = index.query(queries, k=1)
     assert distances.shape == (1, 1)
@@ -250,6 +269,16 @@ def test_vamana_index(tmp_path):
     )
 
     index = index.consolidate_updates()
+
+    # During the first ingestion we overwrite the metadata and end up with a single base size and ingestion timestamp.
+    ingestion_timestamps, base_sizes = load_metadata(uri)
+    assert base_sizes == [5]
+    timestamp_5_minutes_from_now = int((time.time() + 5 * 60) * 1000)
+    timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
+    assert (
+        ingestion_timestamps[0] > timestamp_5_minutes_ago
+        and ingestion_timestamps[0] < timestamp_5_minutes_from_now
+    )
 
     # Check that we throw if we query with an invalid opt_l.
     with pytest.raises(ValueError):

@@ -35,14 +35,13 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "api/api_defs.h"
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
-
 #include "api/flat_l2_index.h"
 #include "api/ivf_flat_index.h"
 #include "api/vamana_index.h"
-
-#include "api/api_defs.h"
+#include "detail/time/temporal_policy.h"
 
 namespace py = pybind11;
 
@@ -180,8 +179,13 @@ void init_type_erased_module(py::module_& m) {
              const std::string& ids_uri,
              size_t num_vectors,
              size_t timestamp) {
-            new (&instance)
-                FeatureVectorArray(ctx, uri, ids_uri, num_vectors, timestamp);
+            new (&instance) FeatureVectorArray(
+                ctx,
+                uri,
+                ids_uri,
+                num_vectors,
+                timestamp == 0 ? TemporalPolicy() :
+                                 TemporalPolicy(TimeTravel, timestamp));
           },
           py::keep_alive<1, 2>(),  // FeatureVectorArray should keep ctx alive.
           py::arg("ctx"),
@@ -276,7 +280,11 @@ void init_type_erased_module(py::module_& m) {
              const tiledb::Context& ctx,
              const std::string& group_uri,
              size_t timestamp) {
-            new (&instance) IndexVamana(ctx, group_uri, timestamp);
+            new (&instance) IndexVamana(
+                ctx,
+                group_uri,
+                timestamp == 0 ? TemporalPolicy(TimeTravel, 0) :
+                                 TemporalPolicy(TimeTravel, timestamp));
           },
           py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
           py::arg("ctx"),

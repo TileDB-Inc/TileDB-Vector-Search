@@ -36,6 +36,7 @@
 
 #include <tiledb/array.h>
 #include <tiledb/tiledb>
+#include "detail/time/temporal_policy.h"
 #include "stats.h"
 #include "tiledb/group_experimental.h"
 
@@ -59,9 +60,10 @@ inline std::unique_ptr<tiledb::Array> open_array(
     const tiledb::Context& ctx,
     const std::string& uri,
     tiledb_query_type_t query_type,
-    const tiledb::TemporalPolicy temporal_policy = {}) {
+    TemporalPolicy temporal_policy = {}) {
   StatsCollectionScope stats_scope(uri, function_name, "open_array");
-  return std::make_unique<tiledb::Array>(ctx, uri, query_type, temporal_policy);
+  return std::make_unique<tiledb::Array>(
+      ctx, uri, query_type, temporal_policy.to_tiledb_temporal_policy());
 }
 /**
  * @brief Submits a TileDB query and displays stats to stderr.

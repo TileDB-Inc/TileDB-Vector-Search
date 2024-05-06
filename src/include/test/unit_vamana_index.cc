@@ -1233,7 +1233,7 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   size_t l_build{37};
   size_t r_max_degree{41};
   size_t k_nn{10};
-  size_t Backtrack{3};
+  size_t b_backtrack{3};
 
   tiledb::Context ctx;
   std::string vamana_index_uri =
@@ -1248,12 +1248,38 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   std::iota(begin(ids), end(ids), 0);
 
   auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
-      num_vectors(training_set), l_build, r_max_degree, Backtrack);
+      num_vectors(training_set), l_build, r_max_degree, b_backtrack);
   idx.train(training_set, ids);
-
   idx.write_index(ctx, vamana_index_uri);
+
   auto idx2 = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       ctx, vamana_index_uri);
+
+  CHECK(idx2.group().get_l_build() == l_build);
+  CHECK(idx2.group().get_r_max_degree() == r_max_degree);
+  CHECK(idx2.group().get_b_backtrack() == b_backtrack);
+  CHECK(idx2.group().get_dimension() == sift_dimension);
+  CHECK(idx2.group().get_temp_size() == 0);
+
+  CHECK(idx2.group().get_all_num_edges().size() == 1);
+  CHECK(idx2.group().get_all_base_sizes().size() == 1);
+  CHECK(idx2.group().get_all_ingestion_timestamps().size() == 1);
+
+  CHECK(idx2.group().get_all_num_edges()[0] > 0);
+  CHECK(idx2.group().get_all_base_sizes()[0] == num_sift_vectors);
+
+  auto five_minutes_ago = static_cast<uint64_t>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          (std::chrono::system_clock::now() - std::chrono::minutes(5))
+              .time_since_epoch())
+          .count());
+  auto five_minutes_from_now = static_cast<uint64_t>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          (std::chrono::system_clock::now() + std::chrono::minutes(5))
+              .time_since_epoch())
+          .count());
+  CHECK(idx2.group().get_all_ingestion_timestamps()[0] > five_minutes_ago);
+  CHECK(idx2.group().get_all_ingestion_timestamps()[0] < five_minutes_from_now);
 
   // Can't compare groups because a write_index does not create a group
   // @todo Should it?
