@@ -120,6 +120,27 @@ void init_type_erased_module(py::module_& m) {
       }))
       ;
 #endif
+  py::class_<TemporalPolicy>(m, "TemporalPolicy", py::buffer_protocol())
+      // From 0 to UINT64_MAX.
+      .def(py::init<>())
+      // From 0 to timestamp_end.
+      .def(
+          "__init__",
+          [](TemporalPolicy& instance, uint64_t timestamp_end) {
+            new (&instance) TemporalPolicy(TimeTravel, timestamp_end);
+          })
+      // From timestamp_start to timestamp_end.
+      .def(
+          "__init__",
+          [](TemporalPolicy& instance,
+             uint64_t timestamp_start,
+             uint64_t timestamp_end) {
+            new (&instance) TemporalPolicy(
+                TimestampStartEnd, timestamp_start, timestamp_end);
+          })
+      .def("timestamp_start", &TemporalPolicy::timestamp_start)
+      .def("timestamp_end", &TemporalPolicy::timestamp_end);
+
   py::class_<FeatureVector>(m, "FeatureVector", py::buffer_protocol())
       .def(
           py::init<const tiledb::Context&, const std::string&>(),

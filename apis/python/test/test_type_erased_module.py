@@ -152,6 +152,20 @@ def test_numpy_to_feature_vector_array():
     assert np.array_equal(a, np.transpose(np.array(b)))
 
 
+def test_TemporalPolicy():
+    temporal_policy = vspy.TemporalPolicy()
+    assert temporal_policy.timestamp_start() == 0
+    assert temporal_policy.timestamp_end() == np.uint64.max()
+
+    temporal_policy = vspy.TemporalPolicy(99)
+    assert temporal_policy.timestamp_start() == 0
+    assert temporal_policy.timestamp_end() == 99
+
+    temporal_policy = vspy.TemporalPolicy(12, 99)
+    assert temporal_policy.timestamp_start() == 12
+    assert temporal_policy.timestamp_end() == 99
+
+
 def test_construct_IndexFlatL2():
     a = vspy.IndexFlatL2(ctx, siftsmall_inputs_uri)
     assert a.feature_type_string() == "float32"
