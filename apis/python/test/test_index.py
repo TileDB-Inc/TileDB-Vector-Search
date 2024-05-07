@@ -154,8 +154,7 @@ def test_ivf_flat_index(tmp_path):
     )
 
     index = index.consolidate_updates()
-
-    # TODO(paris): Investigate whether we should overwrite the existing metadata during the first
+    # TODO(SC-46771): Investigate whether we should overwrite the existing metadata during the first
     # ingestion of Python indexes. I believe as it's currently written we have a bug here.
     # ingestion_timestamps, base_sizes = load_metadata(uri)
     # assert base_sizes == [5]
