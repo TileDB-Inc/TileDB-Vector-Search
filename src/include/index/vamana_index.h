@@ -949,6 +949,13 @@ class vamana_index {
     return true;
   }
 
+  const vamana_index_group<vamana_index>& group() const {
+    if (!group_) {
+      throw std::runtime_error("No group available");
+    }
+    return *group_;
+  }
+
   /**
    * @brief Log statistics about the index
    */
