@@ -503,15 +503,22 @@ class vamana_index {
       : temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
       , group_{std::make_unique<vamana_index_group<vamana_index>>(
             *this, ctx, uri, TILEDB_READ, temporal_policy_)} {
-    if (!temporal_policy.has_value()) {
-      // Here we use the opened group to get the previous ingestion timestamp
-      // and then use that to open the group again with the correct timestamp
-      // end.
-      temporal_policy_ = {
-          TimeTravel, group_->get_previous_ingestion_timestamp()};
-      group_ = {std::make_unique<vamana_index_group<vamana_index>>(
-          *this, ctx, uri, TILEDB_READ, temporal_policy_)};
-    }
+    //    if (!temporal_policy.has_value()) {
+    //      // Here we use the opened group to get the previous ingestion
+    //      timestamp
+    //      // and then use that to open the group again with the correct
+    //      timestamp
+    //      // end.
+    //      temporal_policy_ = {
+    //          TimeTravel, group_->get_previous_ingestion_timestamp()};
+    //      group_ = {std::make_unique<vamana_index_group<vamana_index>>(
+    //          *this, ctx, uri, TILEDB_READ, temporal_policy_)};
+    //    }
+    std::cout << "[index/index_vamana@ctor] temporal_policy_.timestamp_start() "
+              << temporal_policy_.timestamp_start() << std::endl;
+    std::cout << "[index/index_vamana@ctor] temporal_policy_.timestamp_end() "
+              << temporal_policy_.timestamp_end() << std::endl;
+    group_->dump("Group");
 
     // @todo Make this table-driven
     dimension_ = group_->get_dimension();
@@ -524,6 +531,10 @@ class vamana_index {
     alpha_max_ = group_->get_alpha_max();
     medoid_ = group_->get_medoid();
 
+    if (group_->should_skip_query()) {
+      num_vectors_ = 0;
+    }
+
     feature_vectors_ =
         std::move(tdbColMajorPreLoadMatrixWithIds<feature_type, id_type>(
             group_->cached_ctx(),
@@ -533,6 +544,13 @@ class vamana_index {
             num_vectors_,
             0,
             temporal_policy_));
+
+    std::cout << "[index/index_vamana@ctor] dimension_ " << dimension_
+              << std::endl;
+    std::cout << "[index/index_vamana@ctor] num_vectors_ " << num_vectors_
+              << std::endl;
+    std::cout << "[index/index_vamana@ctor] feature_vectors_.size() "
+              << feature_vectors_.size() << std::endl;
 
     /*
      * Read the feature vectors
@@ -576,10 +594,17 @@ class vamana_index {
     // Here we build a graph using the graph data we read in.  We do it this
     // way for a dynamic graph, which is one that we can later add more edges
     // and vertices to (to index new vectors).
+    std::cout << "num_vectors_ " << num_vectors_ << std::endl;
+    std::cout << "adj_index.size() " << adj_index.size() << std::endl;
+    std::cout << "adj_scores.size() " << adj_scores.size() << std::endl;
     for (size_t i = 0; i < num_vectors_; ++i) {
       auto start = adj_index[i];
       auto end = adj_index[i + 1];
+      // std::cout << "[i=" << i << "] start " << start << " end " << end <<
+      // std::endl;
       for (size_t j = start; j < end; ++j) {
+        //  std::cout << "  [i=" << i << "][j=" << j << "] adj_ids[j] " <<
+        //  adj_ids[j] << " adj_scores[j] " << adj_scores[j] << std::endl;
         graph_.add_edge(i, adj_ids[j], adj_scores[j]);
       }
     }
@@ -857,9 +882,27 @@ class vamana_index {
     // if (timestamp.has_value()) {
     //   temporal_policy_ = TemporalPolicy{TimeTravel, timestamp.value()};
     // }
+    std::cout << "[index/vamana_index@write_index] before "
+                 "temporal_policy_.timestamp_start() "
+              << temporal_policy_.timestamp_start() << std::endl;
+    std::cout << "[index/vamana_index@write_index] before "
+                 "temporal_policy_.timestamp_end() "
+              << temporal_policy_.timestamp_end() << std::endl;
     if (temporal_policy.has_value()) {
+      std::cout << "[index/vamana_index@write_index] has value "
+                   "temporal_policy.timestamp_start() "
+                << temporal_policy->timestamp_start() << std::endl;
+      std::cout << "[index/vamana_index@write_index] has value "
+                   "temporal_policy.timestamp_end() "
+                << temporal_policy->timestamp_end() << std::endl;
       temporal_policy_ = *temporal_policy;
     }
+    std::cout << "[index/vamana_index@write_index] after "
+                 "temporal_policy_.timestamp_start() "
+              << temporal_policy_.timestamp_start() << std::endl;
+    std::cout << "[index/vamana_index@write_index] after "
+                 "temporal_policy_.timestamp_end() "
+              << temporal_policy_.timestamp_end() << std::endl;
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
 
@@ -1053,16 +1096,14 @@ class vamana_index {
         rhs.temporal_policy_.timestamp_start()) {
       std::cout << "temporal_policy_.timestamp_start() != "
                    "rhs.temporal_policy_.timestamp_start()"
-                << medoid_ << " ! = " << rhs.medoid_ << std::endl;
+                << temporal_policy_.timestamp_start()
+                << " ! = " << rhs.temporal_policy_.timestamp_start()
+                << std::endl;
       return false;
     }
-    if (temporal_policy_.timestamp_end() !=
-        rhs.temporal_policy_.timestamp_end()) {
-      std::cout << "temporal_policy_.timestamp_end() != "
-                   "rhs.temporal_policy_.timestamp_end()"
-                << medoid_ << " ! = " << rhs.medoid_ << std::endl;
-      return false;
-    }
+    // Do not compare temporal_policy_.timestamp_end() because if we create an
+    // index and then load it with the URI, these timestamps will differ. The
+    // first one will have the current timestamp, and the second uint64_t::max.
 
     return true;
   }

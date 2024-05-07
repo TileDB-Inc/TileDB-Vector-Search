@@ -217,13 +217,15 @@ class ivf_flat_index {
   ivf_flat_index(
       const tiledb::Context& ctx,
       const std::string& uri,
-      uint64_t timestamp = 0)
-      : group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
+      // uint64_t timestamp = 0
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt)
+      : temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
+      , group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
             *this, ctx, uri, TILEDB_READ, temporal_policy_)} {
-    if (temporal_policy_.timestamp_end() == 0) {
-      temporal_policy_ = {
-          TimeTravel, group_->get_previous_ingestion_timestamp()};
-    }
+    // if (temporal_policy_.timestamp_end() == 0) {
+    //   temporal_policy_ = {
+    //       TimeTravel, group_->get_previous_ingestion_timestamp()};
+    // }
 
     /**
      * Read the centroids.  How the partitioned_vectors_ are read in will be
