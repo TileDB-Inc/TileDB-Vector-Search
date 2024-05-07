@@ -5,6 +5,7 @@ from array_paths import *
 
 from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.utils import to_temporal_policy
 
 ctx = vspy.Ctx({})
 
@@ -155,7 +156,7 @@ def test_numpy_to_feature_vector_array():
 def test_TemporalPolicy():
     temporal_policy = vspy.TemporalPolicy()
     assert temporal_policy.timestamp_start() == 0
-    assert temporal_policy.timestamp_end() == np.uint64.max()
+    assert temporal_policy.timestamp_end() == np.iinfo(np.uint64).max
 
     temporal_policy = vspy.TemporalPolicy(99)
     assert temporal_policy.timestamp_start() == 0
@@ -164,6 +165,35 @@ def test_TemporalPolicy():
     temporal_policy = vspy.TemporalPolicy(12, 99)
     assert temporal_policy.timestamp_start() == 12
     assert temporal_policy.timestamp_end() == 99
+
+
+def test_TemporalPolicy_from_timestamp():
+    temporal_policy = to_temporal_policy(None)
+    assert temporal_policy is None
+
+    temporal_policy = to_temporal_policy(3)
+    assert temporal_policy.timestamp_start() == 0
+    assert temporal_policy.timestamp_end() == 3
+
+    temporal_policy = to_temporal_policy((0, 33))
+    assert temporal_policy.timestamp_start() == 0
+    assert temporal_policy.timestamp_end() == 33
+
+    temporal_policy = to_temporal_policy((1, 33))
+    assert temporal_policy.timestamp_start() == 1
+    assert temporal_policy.timestamp_end() == 33
+
+    temporal_policy = to_temporal_policy((None, 333))
+    assert temporal_policy.timestamp_start() == 0
+    assert temporal_policy.timestamp_end() == 333
+
+    temporal_policy = to_temporal_policy((3333, None))
+    assert temporal_policy.timestamp_start() == 3333
+    assert temporal_policy.timestamp_end() == np.iinfo(np.uint64).max
+
+    temporal_policy = to_temporal_policy((None, None))
+    assert temporal_policy.timestamp_start() == 0
+    assert temporal_policy.timestamp_end() == np.iinfo(np.uint64).max
 
 
 def test_construct_IndexFlatL2():

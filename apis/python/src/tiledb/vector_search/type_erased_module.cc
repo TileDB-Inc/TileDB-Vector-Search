@@ -126,15 +126,25 @@ void init_type_erased_module(py::module_& m) {
       // From 0 to timestamp_end.
       .def(
           "__init__",
-          [](TemporalPolicy& instance, uint64_t timestamp_end) {
+          [](TemporalPolicy& instance,
+             std::optional<uint64_t> timestamp_end_input) {
+            uint64_t timestamp_end = timestamp_end_input.has_value() ?
+                                         timestamp_end_input.value() :
+                                         UINT64_MAX;
             new (&instance) TemporalPolicy(TimeTravel, timestamp_end);
           })
       // From timestamp_start to timestamp_end.
       .def(
           "__init__",
           [](TemporalPolicy& instance,
-             uint64_t timestamp_start,
-             uint64_t timestamp_end) {
+             std::optional<uint64_t> timestamp_start_input,
+             std::optional<uint64_t> timestamp_end_input) {
+            uint64_t timestamp_start = timestamp_start_input.has_value() ?
+                                           timestamp_start_input.value() :
+                                           0;
+            uint64_t timestamp_end = timestamp_end_input.has_value() ?
+                                         timestamp_end_input.value() :
+                                         UINT64_MAX;
             new (&instance) TemporalPolicy(
                 TimestampStartEnd, timestamp_start, timestamp_end);
           })
