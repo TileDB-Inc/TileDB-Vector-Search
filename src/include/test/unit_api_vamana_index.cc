@@ -576,7 +576,7 @@ TEST_CASE(
     index.add(empty_training_vector_array);
     index.write_index(ctx, index_uri, 0);
 
-    CHECK(index.timestamp() == 0);
+    CHECK(index.temporal_policy().timestamp_end() == 0);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
@@ -588,7 +588,7 @@ TEST_CASE(
     // we'll load it at timestamp 0).
     auto index = IndexVamana(ctx, index_uri);
 
-    CHECK(index.timestamp() == 0);
+    CHECK(index.temporal_policy().timestamp_end() == 0);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
@@ -603,7 +603,7 @@ TEST_CASE(
     index.write_index(ctx, index_uri, 99);
 
     // This also updates the timestamp of the index - we're now at timestamp 99.
-    CHECK(index.timestamp() == 99);
+    CHECK(index.temporal_policy().timestamp_end() == 99);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
@@ -631,7 +631,7 @@ TEST_CASE(
     // we'll load it at timestamp 99).
     auto index = IndexVamana(ctx, index_uri);
 
-    CHECK(index.timestamp() == 99);
+    CHECK(index.temporal_policy().timestamp_end() == 99);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
@@ -648,7 +648,7 @@ TEST_CASE(
 
     // This also updates the timestamp of the index - we're now at timestamp
     // 100.
-    CHECK(index.timestamp() == 100);
+    CHECK(index.temporal_policy().timestamp_end() == 100);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
@@ -672,9 +672,9 @@ TEST_CASE(
 
   // Load it at timestamp 99 and make sure we can query it correctly.
   {
-    auto index = IndexVamana(ctx, index_uri, 99);
+    auto index = IndexVamana(ctx, index_uri, TemporalPolicy{TimeTravel, 99});
 
-    CHECK(index.timestamp() == 99);
+    CHECK(index.temporal_policy().timestamp_end() == 99);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);

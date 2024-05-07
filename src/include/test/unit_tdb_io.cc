@@ -160,9 +160,7 @@ TEST_CASE("tdb_io: write empty matrix", "[tdb_io]") {
   size_t dimension = 128;
   int32_t domain = std::numeric_limits<int32_t>::max() - 1;
   int32_t extent = 100'000;
-  int32_t tile_size_bytes = 64 * 1024 * 1024;
   tiledb_filter_type_t compression{string_to_filter("zstd")};
-  size_t timestamp = 0;
 
   tiledb::VFS vfs(ctx);
   if (vfs.is_dir(tmp_matrix_uri)) {
@@ -172,14 +170,14 @@ TEST_CASE("tdb_io: write empty matrix", "[tdb_io]") {
   create_empty_for_matrix<float, stdx::layout_left>(
       ctx, tmp_matrix_uri, dimension, domain, dimension, extent, compression);
   auto empty_matrix = tdbColMajorBlockedMatrix<float>(
-      ctx, tmp_matrix_uri, 0, dimension, 0, 0, 0, timestamp);
+      ctx, tmp_matrix_uri, 0, dimension, 0, 0, 0, {});
   empty_matrix.load();
   CHECK(num_vectors(empty_matrix) == 0);
   CHECK(empty_matrix.num_cols() == 0);
   CHECK(empty_matrix.num_rows() == dimension);
 
-  auto empty_preload_matrix = tdbColMajorPreLoadMatrix<float>(
-      ctx, tmp_matrix_uri, dimension, 0, 0, timestamp);
+  auto empty_preload_matrix =
+      tdbColMajorPreLoadMatrix<float>(ctx, tmp_matrix_uri, dimension, 0, 0, {});
   CHECK(num_vectors(empty_preload_matrix) == 0);
   CHECK(empty_preload_matrix.num_cols() == 0);
   CHECK(empty_preload_matrix.num_rows() == dimension);
@@ -197,7 +195,6 @@ TEST_CASE("tdb_io: write empty vector", "[tdb_io]") {
   static const tiledb_filter_type_t compression{string_to_filter("zstd")};
   static const int32_t tile_size{
       (int32_t)(tile_size_bytes / sizeof(float) / dimension)};
-  size_t timestamp = 0;
 
   tiledb::VFS vfs(ctx);
   if (vfs.is_dir(tmp_vector_uri)) {
@@ -207,7 +204,7 @@ TEST_CASE("tdb_io: write empty vector", "[tdb_io]") {
   create_empty_for_vector<float>(
       ctx, tmp_vector_uri, domain, tile_size, compression);
 
-  auto empty_vector = read_vector<float>(ctx, tmp_vector_uri, 0, 0, timestamp);
+  auto empty_vector = read_vector<float>(ctx, tmp_vector_uri, 0, 0, {});
   CHECK(empty_vector.size() == 0);
 
   auto filled_vector = read_vector<float>(ctx, tmp_vector_uri);
