@@ -51,7 +51,6 @@ option(TILEDB_VS_PYTHON "Build Python wrapping of C++ API" OFF)
 option(TILEDB_VS_ENABLE_BLAS "Build components and demos which require BLAS" OFF)
 option(BUILD_TESTS "Build the tests" ON)
 option(BUILD_CLI "Build the index and query command-line interface programs" OFF)
-option(INSTALL_LIB_TILEDB "During install step, also export \"libtiledb.so\"" ON)
 
 set(CMAKE_CXX_STANDARD 20)
 

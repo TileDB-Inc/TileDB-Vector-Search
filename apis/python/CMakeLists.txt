@@ -74,7 +74,7 @@ endif()
 install(TARGETS ${VSPY_TARGET_NAME} LIBRARY DESTINATION .)
 
 # Install libtiledb so that we can repackage it with the extension
-if (INSTALL_LIB_TILEDB)
+if (NOT TILEDB_PATH)
   message(STATUS "Adding libtiledb into install group")
   install(IMPORTED_RUNTIME_ARTIFACTS TileDB::tiledb_shared DESTINATION lib)
 endif()

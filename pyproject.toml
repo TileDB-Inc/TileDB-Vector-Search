@@ -55,8 +55,7 @@ sdist.cmake = true
 
 [tool.scikit-build.cmake.define]
 TILEDB_VS_PYTHON = "ON"
-INSTALL_LIB_TILEDB = {env="INSTALL_LIB_TILEDB"}
-TileDB_DIR = {env="TileDB_DIR"}
+TILEDB_PATH = {env="TILEDB_PATH"}
 
 [tool.setuptools_scm]
 version_file = "apis/python/src/tiledb/vector_search/version.py"
