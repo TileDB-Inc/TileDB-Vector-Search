@@ -486,7 +486,7 @@ class base_index_metadata {
           break;
         case TILEDB_UINT32:
           if (name == "feature_datatype" || name == "id_datatype" ||
-              name == "px_datatype") {
+              name == "px_datatype" || name == "adjacency_scores_datatype" || name == "adjacency_row_index_datatype") {
             std::cout << name << ": "
                       << tiledb::impl::type_to_str(
                              (tiledb_datatype_t) *
