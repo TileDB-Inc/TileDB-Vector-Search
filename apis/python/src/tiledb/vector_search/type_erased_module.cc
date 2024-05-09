@@ -120,6 +120,37 @@ void init_type_erased_module(py::module_& m) {
       }))
       ;
 #endif
+  py::class_<TemporalPolicy>(m, "TemporalPolicy", py::buffer_protocol())
+      // From 0 to UINT64_MAX.
+      .def(py::init<>())
+      // From 0 to timestamp_end.
+      .def(
+          "__init__",
+          [](TemporalPolicy& instance,
+             std::optional<uint64_t> timestamp_end_input) {
+            uint64_t timestamp_end = timestamp_end_input.has_value() ?
+                                         timestamp_end_input.value() :
+                                         UINT64_MAX;
+            new (&instance) TemporalPolicy(TimeTravel, timestamp_end);
+          })
+      // From timestamp_start to timestamp_end.
+      .def(
+          "__init__",
+          [](TemporalPolicy& instance,
+             std::optional<uint64_t> timestamp_start_input,
+             std::optional<uint64_t> timestamp_end_input) {
+            uint64_t timestamp_start = timestamp_start_input.has_value() ?
+                                           timestamp_start_input.value() :
+                                           0;
+            uint64_t timestamp_end = timestamp_end_input.has_value() ?
+                                         timestamp_end_input.value() :
+                                         UINT64_MAX;
+            new (&instance) TemporalPolicy(
+                TimestampStartEnd, timestamp_start, timestamp_end);
+          })
+      .def("timestamp_start", &TemporalPolicy::timestamp_start)
+      .def("timestamp_end", &TemporalPolicy::timestamp_end);
+
   py::class_<FeatureVector>(m, "FeatureVector", py::buffer_protocol())
       .def(
           py::init<const tiledb::Context&, const std::string&>(),
@@ -283,7 +314,7 @@ void init_type_erased_module(py::module_& m) {
             new (&instance) IndexVamana(
                 ctx,
                 group_uri,
-                timestamp == 0 ? TemporalPolicy() :
+                timestamp == 0 ? TemporalPolicy(TimeTravel, 0) :
                                  TemporalPolicy(TimeTravel, timestamp));
           },
           py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.

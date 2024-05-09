@@ -1,8 +1,10 @@
 import io
+from typing import Optional
 
 import numpy as np
 
 import tiledb
+from tiledb.vector_search import _tiledbvspy as vspy
 
 
 def is_type_erased_index(index_type: str) -> bool:
@@ -19,6 +21,19 @@ def add_to_group(group, uri, name):
         group.add(uri, name=name)
     else:
         group.add(name, name=name, relative=True)
+
+
+def to_temporal_policy(timestamp) -> Optional[vspy.TemporalPolicy]:
+    temporal_policy = None
+    if isinstance(timestamp, tuple):
+        if len(timestamp) != 2:
+            raise ValueError(
+                "'timestamp' argument expects either int or tuple(start: int, end: int)"
+            )
+        temporal_policy = vspy.TemporalPolicy(timestamp[0], timestamp[1])
+    elif timestamp is not None:
+        temporal_policy = vspy.TemporalPolicy(timestamp)
+    return temporal_policy
 
 
 def _load_vecs_t(uri, dtype, ctx_or_config=None):

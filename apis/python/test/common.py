@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import shutil
@@ -392,3 +393,13 @@ def delete_uri(uri, config):
             else:
                 raise err
         group.delete(recursive=True)
+
+
+def load_metadata(index_uri):
+    group = tiledb.Group(index_uri, "r")
+    ingestion_timestamps = [
+        int(x) for x in list(json.loads(group.meta.get("ingestion_timestamps", "[]")))
+    ]
+    base_sizes = [int(x) for x in list(json.loads(group.meta.get("base_sizes", "[]")))]
+    group.close()
+    return ingestion_timestamps, base_sizes

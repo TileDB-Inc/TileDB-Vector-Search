@@ -588,8 +588,10 @@ TEST_CASE(
         adjacency_row_index_type_type>(ctx, index_uri);
     CHECK(typed_index.group().get_dimension() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
+    CHECK(typed_index.group().get_history_index() == 0);
 
     CHECK(typed_index.group().get_base_size() == 0);
+    CHECK(typed_index.group().get_ingestion_timestamp() == 0);
 
     CHECK(typed_index.group().get_all_num_edges().size() == 1);
     CHECK(typed_index.group().get_all_base_sizes().size() == 1);
@@ -648,8 +650,10 @@ TEST_CASE(
         adjacency_row_index_type_type>(ctx, index_uri);
     CHECK(typed_index.group().get_dimension() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
+    CHECK(typed_index.group().get_history_index() == 0);
 
     CHECK(typed_index.group().get_base_size() == 4);
+    CHECK(typed_index.group().get_ingestion_timestamp() == 99);
 
     CHECK(typed_index.group().get_all_num_edges().size() == 1);
     CHECK(typed_index.group().get_all_base_sizes().size() == 1);
@@ -710,8 +714,10 @@ TEST_CASE(
         adjacency_row_index_type_type>(ctx, index_uri);
     CHECK(typed_index.group().get_dimension() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
+    CHECK(typed_index.group().get_history_index() == 1);
 
     CHECK(typed_index.group().get_base_size() == 5);
+    CHECK(typed_index.group().get_ingestion_timestamp() == 100);
 
     CHECK(typed_index.group().get_all_num_edges().size() == 2);
     CHECK(typed_index.group().get_all_base_sizes().size() == 2);
@@ -764,6 +770,8 @@ TEST_CASE(
         adjacency_row_index_type_type>(ctx, index_uri, temporal_policy);
     CHECK(typed_index.group().get_dimension() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
+    CHECK(typed_index.group().get_history_index() == 0);
+
 
     CHECK(typed_index.group().get_base_size() == 4);
     CHECK(typed_index.group().get_ingestion_timestamp() == 99);

@@ -1042,6 +1042,20 @@ class vamana_index {
                 << std::endl;
       return false;
     }
+    if (temporal_policy_.timestamp_start() !=
+        rhs.temporal_policy_.timestamp_start()) {
+      std::cout << "temporal_policy_.timestamp_start() != "
+                   "rhs.temporal_policy_.timestamp_start()"
+                << medoid_ << " ! = " << rhs.medoid_ << std::endl;
+      return false;
+    }
+    if (temporal_policy_.timestamp_end() !=
+        rhs.temporal_policy_.timestamp_end()) {
+      std::cout << "temporal_policy_.timestamp_end() != "
+                   "rhs.temporal_policy_.timestamp_end()"
+                << medoid_ << " ! = " << rhs.medoid_ << std::endl;
+      return false;
+    }
 
     return true;
   }

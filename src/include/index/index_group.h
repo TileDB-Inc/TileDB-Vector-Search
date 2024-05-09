@@ -398,6 +398,10 @@ class base_index_group {
     metadata_.dimension_ = dim;
   }
 
+  auto get_history_index() const {
+    return history_index_;
+  }
+
   [[nodiscard]] auto ids_uri() const {
     return array_key_to_uri("ids_array_name");
   }
