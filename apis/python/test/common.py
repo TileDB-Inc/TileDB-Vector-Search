@@ -315,10 +315,10 @@ def check_equals(result_d, result_i, expected_result_d, expected_result_i):
         The expected indices
     """
     assert (
-        result_i == expected_result_i
+        np.array_equal(result_i, expected_result_i)
     ), f"result_i: {result_i} != expected_result_i: {expected_result_i}"
     assert (
-        result_d == expected_result_d
+        np.array_equal(result_d, expected_result_d)
     ), f"result_d: {result_d} != expected_result_d: {expected_result_d}"
 
 

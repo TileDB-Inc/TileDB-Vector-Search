@@ -251,6 +251,228 @@ def test_ivf_flat_ingestion_f32(tmp_path):
         assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
+
+def test_ingestion_at_timestamp(tmp_path):
+    for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
+        index_uri = os.path.join(tmp_path, f"array_{index_type}")
+
+        data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3]], dtype=np.float32)
+        default_result_d = [[np.finfo(np.float32).max], [np.finfo(np.float32).max]]
+        default_result_i = [[np.iinfo(np.uint64).max], [np.iinfo(np.uint64).max]]
+
+        # We ingest at timestamp 10.
+        ingest(
+            index_type=index_type, 
+            index_uri=index_uri, 
+            input_vectors=data,
+            index_timestamp=10
+        )
+
+        # If we load the index with any timestamp < 10, then we have no data and so have no results.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=0),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=9),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(5, 9)),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(None, 9)),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i
+        )
+
+        # If we load the index with timestamp >= 10 then we get results.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=10),
+            queries=data,
+            expected_result_d=[[0], [0]],
+            expected_result_i=[[0], [1]]
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=1000),
+            queries=data,
+            expected_result_d=[[0], [0]],
+            expected_result_i=[[0], [1]]
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(5, 15)),
+            queries=data,
+            expected_result_d=[[0], [0]],
+            expected_result_i=[[0], [1]]
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(None, 20)),
+            queries=data,
+            expected_result_d=[[0], [0]],
+            expected_result_i=[[0], [1]]
+        )
+        
+        # We add a third vector at timestamp 20 and consolidate updates, meaning we'll re-ingest at timestamp = 20.
+        data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3]], dtype=np.float32)
+        default_result_d = [[np.finfo(np.float32).max], [np.finfo(np.float32).max], [np.finfo(np.float32).max]]
+        default_result_i = [[np.iinfo(np.uint64).max], [np.iinfo(np.uint64).max], [np.iinfo(np.uint64).max]]
+        index = index_class(uri=index_uri)
+        index.update(
+            vector=data[2],
+            external_id=2,
+            timestamp=20,
+        )
+        index = index.consolidate_updates()
+        
+        # We still have no results before timestamp 10.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=0),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=9),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(5, 9)),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(None, 9)),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i
+        )
+
+        # We have no results if we load in between 10 and 20.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(11, 19)),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i
+        )
+
+        # If we load the index from timestamp 0 -> 19, we only are returned the first two vectors.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=10),
+            queries=data,
+            expected_result_d=[[0], [0], [4]],
+            expected_result_i=[[0], [1], [1]]
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=19),
+            queries=data,
+            expected_result_d=[[0], [0], [4]],
+            expected_result_i=[[0], [1], [1]]
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(0, 19)),
+            queries=data,
+            expected_result_d=[[0], [0], [4]],
+            expected_result_i=[[0], [1], [1]]
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(None, 19)),
+            queries=data,
+            expected_result_d=[[0], [0], [4]],
+            expected_result_i=[[0], [1], [1]]
+        )
+
+        # But if we load with timestamp >= 20 then we get results for all three vectors.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=None),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]]
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=1000),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]]
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(0, 1000)),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]]
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(None, 20)),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]]
+        )
+
+        # Clear all history at timestamp 19.
+        Index.clear_history(uri=index_uri, timestamp=19)
+
+        # If we load the index from timestamp 0 -> < 19, we only are returned the first two vectors.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=10),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=19),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(0, 19)),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(None, 19)),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i
+        )
+
+        # But if we load with timestamp > 20 then we get results for all three vectors.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=None),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]]
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=1000),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]]
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(0, 1000)),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]]
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(None, 21)),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]]
+        )
+
 def test_ingestion_fvec(tmp_path):
     vfs = tiledb.VFS()
 
@@ -798,6 +1020,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         assert accuracy(result, gt_i) == 1.0
 
         # Clear history before the latest ingestion
+        assert index.latest_ingestion_timestamp == 102
         Index.clear_history(
             uri=index_uri, timestamp=index.latest_ingestion_timestamp - 1
         )
@@ -806,32 +1029,32 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
             continue
         index = index_class(uri=index_uri, timestamp=1)
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri, timestamp=51)
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri, timestamp=101)
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
         index = index_class(uri=index_uri, timestamp=(0, 51))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri, timestamp=(0, 101))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri, timestamp=(0, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
         index = index_class(uri=index_uri, timestamp=(2, 51))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri, timestamp=(2, 101))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri, timestamp=(2, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0

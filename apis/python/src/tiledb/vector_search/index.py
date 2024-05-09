@@ -91,39 +91,45 @@ class Index:
                     raise ValueError(
                         "'timestamp' argument expects either int or tuple(start: int, end: int)"
                     )
-                if timestamp[0] is not None:
-                    if timestamp[0] > self.ingestion_timestamps[0]:
-                        self.query_base_array = False
-                        self.update_array_timestamp = timestamp
-                    else:
+                if timestamp[0] is not None and timestamp[0] > self.ingestion_timestamps[0]:
+                    self.query_base_array = False
+                    self.update_array_timestamp = timestamp
+                else:
+                    if timestamp[1] is None or timestamp[1] >= self.ingestion_timestamps[0]:
                         self.history_index = 0
                         self.base_size = self.base_sizes[self.history_index]
-                        self.base_array_timestamp = self.ingestion_timestamps[
-                            self.history_index
-                        ]
-                        self.update_array_timestamp = (
-                            self.base_array_timestamp + 1,
-                            timestamp[1],
-                        )
-                else:
-                    self.history_index = 0
-                    self.base_size = self.base_sizes[self.history_index]
-                    self.base_array_timestamp = self.ingestion_timestamps[
-                        self.history_index
-                    ]
-                    self.update_array_timestamp = (
-                        self.base_array_timestamp + 1,
-                        timestamp[1],
-                    )
+                        self.base_array_timestamp = self.ingestion_timestamps[self.history_index]
+                    else:
+                        # If the timestamp is before the first ingestion, we'll have no vectors to return.
+                        self.history_index = 0
+                        self.base_size = 0
+                        self.base_array_timestamp = timestamp[1]
+                        self.query_base_array = False
+                    
+                    self.update_array_timestamp = (self.base_array_timestamp + 1, timestamp[1])
+
             elif isinstance(timestamp, int):
-                self.history_index = 0
-                i = 0
-                for ingestion_timestamp in self.ingestion_timestamps:
-                    if ingestion_timestamp <= timestamp:
-                        self.base_array_timestamp = ingestion_timestamp
-                        self.history_index = i
-                        self.base_size = self.base_sizes[self.history_index]
-                    i += 1
+                # NOTE(paris): We could instead use the same logic as in the else statement above, 
+                # but we do it like this as a performance improvment so that we read less from the 
+                # updates array and more from ingestions. Above we need to read just the first 
+                # ingestion and then from the updates array in case we get a timestamp in between an
+                # ingestion and an update.
+                if timestamp >= self.ingestion_timestamps[0]:
+                    self.history_index = 0
+                    i = 0
+                    for ingestion_timestamp in self.ingestion_timestamps:
+                        if ingestion_timestamp <= timestamp:
+                            self.base_array_timestamp = ingestion_timestamp
+                            self.history_index = i
+                            self.base_size = self.base_sizes[self.history_index]
+                        i += 1
+                else:
+                    # If the timestamp is before the first ingestion, we'll have no vectors to return.
+                    self.history_index = 0
+                    self.base_size = 0
+                    self.base_array_timestamp = timestamp
+                    self.query_base_array = False
+
                 self.update_array_timestamp = (self.base_array_timestamp + 1, timestamp)
             else:
                 raise TypeError(
