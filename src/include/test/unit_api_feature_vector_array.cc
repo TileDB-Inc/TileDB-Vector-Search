@@ -260,7 +260,7 @@ TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
 
     auto a = ColMajorMatrixWithIds<DataType, IdsType>(rows, cols);
     std::iota(a.data(), a.data() + rows * cols, 0);
-    std::iota(a.ids().begin(), a.ids().end(), 0);
+    std::iota(a.ids(), a.ids() + a.num_ids(), 0);
     auto b = FeatureVectorArray(a);
 
     CHECK(b.dimension() == rows);
@@ -298,17 +298,17 @@ TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
 
     auto a = ColMajorMatrixWithIds<DataType, IdsType>(rows, cols);
     std::iota(a.data(), a.data() + rows * cols, 0);
-    std::iota(a.ids().begin(), a.ids().end(), 0);
+    std::iota(a.ids(), a.ids() + a.num_ids(), 0);
 
     auto a_ptr = a.data();
-    auto a_ptr_ids = a.ids().data();
+    auto a_ptr_ids = a.ids();
 
     auto b = FeatureVectorArray(std::move(a));
 
     CHECK(a_ptr == b.data());
     CHECK(a_ptr_ids == b.ids_data());
     CHECK(a.data() == nullptr);
-    CHECK(a.ids().data() == nullptr);
+    CHECK(a.ids() == nullptr);
 
     CHECK(b.dimension() == rows);
     CHECK(dimension(b) == rows);
@@ -605,7 +605,7 @@ TEST_CASE("api: temporal_policy", "[api]") {
         ctx, matrix_with_ids, feature_vectors_uri, 0, false, temporal_policy);
 
     write_vector(
-        ctx, matrix_with_ids.ids(), ids_uri, 0, false, temporal_policy);
+        ctx, matrix_with_ids.raveled_ids(), ids_uri, 0, false, temporal_policy);
   }
 
   // Read the data and validate our initial write worked.
@@ -640,7 +640,7 @@ TEST_CASE("api: temporal_policy", "[api]") {
         ctx, matrix_with_ids, feature_vectors_uri, 0, false, temporal_policy);
 
     write_vector(
-        ctx, matrix_with_ids.ids(), ids_uri, 0, false, temporal_policy);
+        ctx, matrix_with_ids.raveled_ids(), ids_uri, 0, false, temporal_policy);
   }
 
   // Read the data and validate we read at temporal_policy 100 by default.

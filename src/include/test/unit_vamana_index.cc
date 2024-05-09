@@ -249,7 +249,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   REQUIRE(ndim == 128);
 
   auto x = ColMajorMatrixWithIds<float>(ndim, npoints);
-  std::iota(x.ids().begin(), x.ids().end(), 0);
+  std::iota(x.ids(), x.ids() + x.num_ids(), 0);
 
   binary_file.read((char*)x.data(), npoints * ndim * sizeof(float));
   binary_file.close();
@@ -641,7 +641,7 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
   REQUIRE(ndim == 128);
 
   auto x = ColMajorMatrixWithIds<float>(ndim, npoints);
-  std::iota(x.ids().begin(), x.ids().end(), 0);
+  std::iota(x.ids(), x.ids() + x.num_ids(), 0);
 
   binary_file.read((char*)x.data(), npoints * ndim);
   binary_file.close();

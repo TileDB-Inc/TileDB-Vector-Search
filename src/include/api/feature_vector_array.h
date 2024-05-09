@@ -259,7 +259,7 @@ class FeatureVectorArray {
       return _cpo::num_ids(impl_vector_array);
     }
     [[nodiscard]] const void* ids_data() const override {
-      return _cpo::ids(impl_vector_array).data();
+      return _cpo::ids(impl_vector_array);
     }
     [[nodiscard]] size_t dimension() const override {
       return _cpo::dimension(impl_vector_array);

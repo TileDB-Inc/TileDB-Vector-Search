@@ -302,7 +302,8 @@ class tdbBlockedMatrix : public MatrixBase {
             MatrixBase,
             MatrixWithIds<T, typename Base::ids_type, LayoutPolicy, I>>::
             value) {
-      auto ids = std::vector<typename MatrixBase::ids_type>(load_blocksize_);
+      auto ids = std::unique_ptr<typename MatrixBase::ids_type[]>(
+          new typename MatrixBase::ids_type[load_blocksize_]);
       Base::operator=(
           Base{std::move(data_), std::move(ids), dimension, load_blocksize_});
     } else {

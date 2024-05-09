@@ -55,13 +55,15 @@ template <
 class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
   using Base = Matrix<T, LayoutPolicy, I>;
 
- protected:
-  std::vector<IdsType> ids_;
-
  public:
   using ids_type = IdsType;
   using size_type = typename Base::size_type;
 
+ protected:
+  size_type num_ids_{0};
+  std::unique_ptr<IdsType[]> ids_storage_;
+
+ public:
   MatrixWithIds() noexcept = default;
 
   MatrixWithIds(const MatrixWithIds&) = delete;
@@ -80,7 +82,13 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       LayoutPolicy policy = LayoutPolicy()) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : Base(nrows, ncols, policy)
-      , ids_(this->num_rows_) {
+      , num_ids_(this->num_rows_)
+#ifdef __cpp_lib_smart_ptr_for_overwrite
+      , ids_storage_{std::make_unique_for_overwrite<IdsType[]>(this->num_rows_)}
+#else
+      , ids_storage_{new IdsType[this->num_rows_]}
+#endif
+  {
   }
 
   MatrixWithIds(
@@ -89,17 +97,27 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       LayoutPolicy policy = LayoutPolicy()) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(nrows, ncols, policy)
-      , ids_(this->num_cols_) {
+      , num_ids_(this->num_cols_)
+#ifdef __cpp_lib_smart_ptr_for_overwrite
+      , ids_storage_{std::make_unique_for_overwrite<IdsType[]>(this->num_cols_)}
+#else
+      , ids_storage_{new IdsType[this->num_cols_]}
+#endif
+  {
   }
 
   MatrixWithIds(
       std::unique_ptr<T[]>&& storage,
-      std::vector<IdsType>&& ids,
+      std::unique_ptr<IdsType[]>&& ids_storage,
       size_type nrows,
       size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
       : Base(std::move(storage), nrows, ncols, policy)
-      , ids_{std::move(ids)} {
+      , ids_storage_{std::move(ids_storage)}
+      , num_ids_{
+            std::is_same<LayoutPolicy, stdx::layout_right>::value ?
+                this->num_rows_ :
+                this->num_cols_} {
   }
 
   /**
@@ -111,7 +129,14 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       const std::vector<IdsType>& ids) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : Base(matrix)
-      , ids_{ids} {
+      , num_ids_(this->num_rows_)
+#ifdef __cpp_lib_smart_ptr_for_overwrite
+      , ids_storage_{std::make_unique_for_overwrite<IdsType[]>(this->num_rows_)}
+#else
+      , ids_storage_{new IdsType[this->num_rows_]}
+#endif
+  {
+    std::copy(ids.begin(), ids.end(), ids_storage_.get());
   }
 
   /**
@@ -123,24 +148,43 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       const std::vector<IdsType>& ids) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(matrix)
-      , ids_{ids} {
+      , num_ids_(this->num_cols_)
+#ifdef __cpp_lib_smart_ptr_for_overwrite
+      , ids_storage_{std::make_unique_for_overwrite<IdsType[]>(this->num_cols_)}
+#else
+      , ids_storage_{new IdsType[this->num_cols_]}
+#endif
+  {
+    std::copy(ids.begin(), ids.end(), ids_storage_.get());
   }
 
   [[nodiscard]] size_t num_ids() const {
-    return ids_.size();
+    return num_ids_;
   }
 
-  std::vector<IdsType>& ids() {
-    return ids_;
+  auto ids() {
+    return ids_storage_.get();
   }
 
-  const std::vector<IdsType>& ids() const {
-    return ids_;
+  auto ids() const {
+    return ids_storage_.get();
+  }
+
+  auto raveled_ids() {
+    return std::span(ids_storage_.get(), num_ids_);
+  }
+
+  auto raveled_ids() const {
+    return std::span(ids_storage_.get(), num_ids_);
+  }
+
+  auto id(Matrix<T, LayoutPolicy, I>::index_type i) const {
+    return ids_storage_[i];
   }
 
   auto swap(MatrixWithIds& rhs) noexcept {
     Base::swap(rhs);
-    std::swap(ids_, rhs.ids_);
+    std::swap(ids_storage_, rhs.ids_storage_);
   }
 
   template <
@@ -152,7 +196,10 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       const noexcept {
     return Matrix<T_, LayoutPolicy_, I_>::operator==(rhs) &&
            ((void*)this->ids() == (void*)rhs.ids() ||
-            std::equal(ids().begin(), ids().end(), rhs.ids().begin()));
+            std::equal(
+                raveled_ids().begin(),
+                raveled_ids().end(),
+                rhs.raveled_ids().begin()));
   }
 };
 

@@ -77,10 +77,10 @@ TEMPLATE_TEST_CASE(
       CHECK(X(i, j) == Y(i, j));
     }
   }
-  CHECK(size(Y.ids()) == Y.num_ids());
-  CHECK(size(X.ids()) == size(Y.ids()));
+  CHECK(size(Y.raveled_ids()) == Y.num_ids());
+  CHECK(size(X.raveled_ids()) == size(Y.raveled_ids()));
   CHECK(X.num_ids() == Y.num_ids());
-  CHECK(std::equal(X.ids().begin(), X.ids().end(), Y.ids().begin()));
+  CHECK(std::equal(X.ids(), X.ids() + X.num_ids(), Y.ids()));
   for (size_t i = 0; i < X.num_ids(); ++i) {
     CHECK(X.ids()[i] == Y.ids()[i]);
   }
@@ -96,10 +96,10 @@ TEMPLATE_TEST_CASE(
     }
   }
 
-  CHECK(size(Z.ids()) == Z.num_ids());
-  CHECK(size(X.ids()) == size(Z.ids()));
+  CHECK(size(Z.raveled_ids()) == Z.num_ids());
+  CHECK(size(X.raveled_ids()) == size(Z.raveled_ids()));
   CHECK(X.num_ids() == Z.num_ids());
-  CHECK(std::equal(X.ids().begin(), X.ids().end(), Z.ids().begin()));
+  CHECK(std::equal(X.ids(), X.ids() + X.num_ids(), Z.ids()));
   for (size_t i = 0; i < X.num_ids(); ++i) {
     CHECK(X.ids()[i] == Z.ids()[i]);
   }
@@ -136,10 +136,11 @@ TEST_CASE("tdb_matrix_with_ids: different types", "[tdb_matrix_with_ids]") {
       CHECK(X(i, j) == Y(i, j));
     }
   }
-  CHECK(size(Y.ids()) == Y.num_ids());
-  CHECK(size(X.ids()) == size(Y.ids()));
+  CHECK(Y.num_ids() == Y.num_ids());
+  CHECK(size(Y.raveled_ids()) == Y.num_ids());
+  CHECK(size(X.raveled_ids()) == size(Y.raveled_ids()));
   CHECK(X.num_ids() == Y.num_ids());
-  CHECK(std::equal(X.ids().begin(), X.ids().end(), Y.ids().begin()));
+  CHECK(std::equal(X.ids(), X.ids() + X.num_ids(), Y.ids()));
   for (size_t i = 0; i < X.num_ids(); ++i) {
     CHECK(X.ids()[i] == Y.ids()[i]);
   }
@@ -165,7 +166,7 @@ TEMPLATE_TEST_CASE(
   CHECK(X.ids()[0] == offset + 0);
   CHECK(X.ids()[1] == offset + 1);
   CHECK(X.ids()[10] == offset + 10);
-  CHECK(size(X.ids()) == Ncols);
+  CHECK(size(X.raveled_ids()) == Ncols);
 
   auto B = ColMajorMatrixWithIds<TestType, TestType, size_t>(0, 0);
   {
@@ -178,7 +179,7 @@ TEMPLATE_TEST_CASE(
   auto Y = tdbColMajorMatrixWithIds<TestType, TestType>(
       ctx, tmp_matrix_uri, tmp_ids_uri);
   Y.load();
-  CHECK(size(Y.ids()) == size(X.ids()));
+  CHECK(size(Y.raveled_ids()) == size(X.raveled_ids()));
   CHECK(num_vectors(Y) == num_vectors(X));
   CHECK(dimension(Y) == dimension(X));
   CHECK(
@@ -205,7 +206,7 @@ TEMPLATE_TEST_CASE(
 
   auto A = ColMajorMatrixWithIds<TestType, TestType, size_t>(0, 0);
   A = std::move(Z);
-  CHECK(size(A.ids()) == size(X.ids()));
+  CHECK(size(A.raveled_ids()) == size(X.raveled_ids()));
   CHECK(num_vectors(A) == num_vectors(X));
   CHECK(dimension(A) == dimension(X));
   CHECK(
@@ -216,7 +217,7 @@ TEMPLATE_TEST_CASE(
     }
   }
 
-  CHECK(size(B.ids()) == size(X.ids()));
+  CHECK(size(B.raveled_ids()) == size(X.raveled_ids()));
   CHECK(num_vectors(B) == num_vectors(X));
   CHECK(dimension(B) == dimension(X));
   CHECK(
@@ -289,7 +290,7 @@ TEST_CASE("tdb_matrix_with_ids: empty matrix", "[tdb_matrix_with_ids]") {
     CHECK(dimension(X) == 0);
 
     CHECK(X.num_ids() == 0);
-    CHECK(X.ids().size() == 0);
+    CHECK(X.raveled_ids().size() == 0);
   }
 
   {
@@ -301,7 +302,7 @@ TEST_CASE("tdb_matrix_with_ids: empty matrix", "[tdb_matrix_with_ids]") {
     CHECK(X.num_rows() == 0);
     CHECK(dimension(X) == 0);
     CHECK(X.num_ids() == 0);
-    CHECK(X.ids().size() == 0);
+    CHECK(X.raveled_ids().size() == 0);
   }
 }
 
@@ -340,10 +341,10 @@ TEMPLATE_TEST_CASE(
     }
   }
 
-  CHECK(size(Y.ids()) == Y.num_ids());
-  CHECK(size(X.ids()) == X.num_ids());
+  CHECK(size(Y.raveled_ids()) == Y.num_ids());
+  CHECK(size(X.raveled_ids()) == X.num_ids());
   CHECK(X.num_ids() == Y.num_ids());
-  CHECK(std::equal(X.ids().begin(), X.ids().end(), Y.ids().begin()));
+  CHECK(std::equal(X.ids(), X.ids() + X.num_ids(), Y.ids()));
   for (size_t i = 0; i < X.num_ids(); ++i) {
     CHECK(X.ids()[i] == Y.ids()[i]);
   }
@@ -361,9 +362,9 @@ TEMPLATE_TEST_CASE(
     }
   }
 
-  CHECK(size(Z.ids()) == Z.num_ids());
+  CHECK(size(Z.raveled_ids()) == Z.num_ids());
   CHECK(X.num_ids() == Z.num_ids());
-  CHECK(std::equal(X.ids().begin(), X.ids().end(), Z.ids().begin()));
+  CHECK(std::equal(X.ids(), X.ids() + X.num_ids(), Z.ids()));
   for (size_t i = 0; i < X.num_ids(); ++i) {
     CHECK(X.ids()[i] == Z.ids()[i]);
   }
