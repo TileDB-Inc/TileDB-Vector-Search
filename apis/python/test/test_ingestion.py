@@ -487,7 +487,7 @@ def test_ingestion_external_ids_numpy(tmp_path):
         assert vfs.dir_size(index_uri) == 0
 
 
-def test_ingestion_timestamps(tmp_path):
+def test_ingestion_timetravel(tmp_path):
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
 
