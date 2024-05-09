@@ -314,7 +314,7 @@ void init_type_erased_module(py::module_& m) {
             new (&instance) IndexVamana(
                 ctx,
                 group_uri,
-                timestamp == 0 ? TemporalPolicy() :
+                timestamp == 0 ? TemporalPolicy(TimeTravel, 0) :
                                  TemporalPolicy(TimeTravel, timestamp));
           },
           py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.

@@ -370,10 +370,13 @@ class base_index_group {
   auto get_previous_ingestion_timestamp() const {
     return metadata_.ingestion_timestamps_.back();
   }
+  auto get_ingestion_timestamp() const {
+    return metadata_.ingestion_timestamps_[timetravel_index_];
+  }
   auto append_ingestion_timestamp(size_t timestamp) {
     metadata_.ingestion_timestamps_.push_back(timestamp);
   }
-  auto get_all_ingestion_timestamps() {
+  auto get_all_ingestion_timestamps() const {
     return metadata_.ingestion_timestamps_;
   }
 
@@ -389,7 +392,7 @@ class base_index_group {
   auto append_base_size(size_t size) {
     metadata_.base_sizes_.push_back(size);
   }
-  auto get_all_base_sizes() {
+  auto get_all_base_sizes() const {
     return metadata_.base_sizes_;
   }
 
@@ -405,6 +408,10 @@ class base_index_group {
   }
   auto set_dimension(size_t dim) {
     metadata_.dimension_ = dim;
+  }
+
+  auto get_timetravel_index() const {
+    return timetravel_index_;
   }
 
   /**************************************************************************

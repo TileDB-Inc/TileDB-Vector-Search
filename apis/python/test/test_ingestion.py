@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from array_paths import *
 from common import *
+from common import load_metadata
 
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search.flat_index import FlatIndex
@@ -513,16 +514,16 @@ def test_ingestion_with_updates(tmp_path):
             partitions=partitions,
         )
 
-        # TODO(paris): Fix Vamana to have same metadata as Python and re-enable.
-        # with tiledb.Group(index_uri, "r", ctx={}) as group:
-        #     ingestion_timestamps = [int(x) for x in list(json.loads(group.meta.get("ingestion_timestamps", "[]")))]
-        #     base_sizes = [int(x) for x in list(json.loads(group.meta.get("base_sizes", "[]")))]
-        #     assert len(ingestion_timestamps) == 1
-        #     assert len(base_sizes) == 1
-        #     assert base_sizes[0] == 1000
-        #     timestamp_2030 = 1903946089000
-        #     timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
-        #     assert ingestion_timestamps[0] > timestamp_5_minutes_ago and ingestion_timestamps[0] < timestamp_2030
+        ingestion_timestamps, base_sizes = load_metadata(index_uri)
+        assert base_sizes == [1000]
+        assert len(ingestion_timestamps) == 1
+        timestamp_5_minutes_from_now = int((time.time() + 5 * 60) * 1000)
+        timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
+        assert (
+            ingestion_timestamps[0] > timestamp_5_minutes_ago
+            and ingestion_timestamps[0] < timestamp_5_minutes_from_now
+        )
+        ingestion_timestamp = ingestion_timestamps[0]
 
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) == 1.0
@@ -547,6 +548,16 @@ def test_ingestion_with_updates(tmp_path):
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=20)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+
+        ingestion_timestamps, base_sizes = load_metadata(index_uri)
+        assert base_sizes == [1000, 1000]
+        assert len(ingestion_timestamps) == 2
+        assert ingestion_timestamps[0] == ingestion_timestamp
+        assert (
+            ingestion_timestamps[1] != ingestion_timestamp
+            and ingestion_timestamps[1] > timestamp_5_minutes_ago
+            and ingestion_timestamps[1] < timestamp_5_minutes_from_now
+        )
 
         assert vfs.dir_size(index_uri) > 0
         Index.delete_index(uri=index_uri, config={})
@@ -643,6 +654,10 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
             index_timestamp=1,
         )
 
+        ingestion_timestamps, base_sizes = load_metadata(index_uri)
+        assert ingestion_timestamps == [1]
+        assert base_sizes == [1000]
+
         if index_type == "IVF_FLAT":
             assert index.partitions == partitions
 
@@ -651,7 +666,8 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
         update_ids_offset = MAX_UINT64 - size
         updated_ids = {}
-        for i in range(2, 102):
+        timestamp_end = 102
+        for i in range(2, timestamp_end):
             index.delete(external_id=i, timestamp=i)
             index.update(
                 vector=data[i].astype(dtype),
@@ -659,6 +675,10 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
                 timestamp=i,
             )
             updated_ids[i] = i + update_ids_offset
+
+        ingestion_timestamps, base_sizes = load_metadata(index_uri)
+        assert ingestion_timestamps == [1]
+        assert base_sizes == [1000]
 
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions)
@@ -717,6 +737,11 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
         # Consolidate updates
         index = index.consolidate_updates()
+
+        ingestion_timestamps, base_sizes = load_metadata(index_uri)
+        assert ingestion_timestamps == [1, timestamp_end]
+        assert base_sizes == [1000, 1000]
+
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0

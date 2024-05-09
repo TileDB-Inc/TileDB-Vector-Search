@@ -949,6 +949,13 @@ class vamana_index {
     return true;
   }
 
+  const vamana_index_group<vamana_index>& group() const {
+    if (!group_) {
+      throw std::runtime_error("No group available");
+    }
+    return *group_;
+  }
+
   /**
    * @brief Log statistics about the index
    */
@@ -1033,6 +1040,20 @@ class vamana_index {
     if (medoid_ != rhs.medoid_) {
       std::cout << "medoid_ != rhs.medoid_" << medoid_ << " ! = " << rhs.medoid_
                 << std::endl;
+      return false;
+    }
+    if (temporal_policy_.timestamp_start() !=
+        rhs.temporal_policy_.timestamp_start()) {
+      std::cout << "temporal_policy_.timestamp_start() != "
+                   "rhs.temporal_policy_.timestamp_start()"
+                << medoid_ << " ! = " << rhs.medoid_ << std::endl;
+      return false;
+    }
+    if (temporal_policy_.timestamp_end() !=
+        rhs.temporal_policy_.timestamp_end()) {
+      std::cout << "temporal_policy_.timestamp_end() != "
+                   "rhs.temporal_policy_.timestamp_end()"
+                << medoid_ << " ! = " << rhs.medoid_ << std::endl;
       return false;
     }
 
