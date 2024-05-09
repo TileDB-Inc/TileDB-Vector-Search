@@ -417,10 +417,6 @@ class base_index_group {
     return cached_ctx_;
   }
 
-  auto history_index() const {
-    return history_index_;
-  }
-
   /**************************************************************************
    * Helpful functions for debugging, testing, etc
    **************************************************************************/

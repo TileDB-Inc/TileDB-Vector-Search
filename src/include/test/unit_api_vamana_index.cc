@@ -772,7 +772,6 @@ TEST_CASE(
     CHECK(typed_index.group().get_temp_size() == 0);
     CHECK(typed_index.group().get_history_index() == 0);
 
-
     CHECK(typed_index.group().get_base_size() == 4);
     CHECK(typed_index.group().get_ingestion_timestamp() == 99);
 
