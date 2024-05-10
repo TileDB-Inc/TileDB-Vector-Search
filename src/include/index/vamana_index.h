@@ -103,10 +103,17 @@ auto greedy_search(
   using score_type = typename std::decay_t<decltype(graph)>::score_type;
 
   static_assert(std::integral<id_type>);
+  std::unordered_set<id_type> visited_vertices;
+  
+  if (graph.num_vertices() == 0) {
+    auto top_k = std::vector<id_type>(k_nn, std::numeric_limits<id_type>::max());
+    auto top_k_scores = std::vector<score_type>(k_nn, std::numeric_limits<score_type>::max());
+    return std::make_tuple(
+      std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
+  }
 
   assert(L >= k_nn);
 
-  std::unordered_set<id_type> visited_vertices;
   auto visited = [&visited_vertices](auto&& v) {
     return visited_vertices.contains(v);
   };
@@ -544,6 +551,11 @@ class vamana_index {
             num_vectors_,
             0,
             temporal_policy_));
+    // If we have time travelled to before any vectors were written to the
+    // arrays then we may have metadata which says we have N vectors, but in
+    // reality we have 0 vectors. So here we check how many vectors were
+    // actually read and update to that number.
+    num_vectors_ = _cpo::num_vectors(feature_vectors_);
 
     std::cout << "[index/index_vamana@ctor] dimension_ " << dimension_
               << std::endl;
@@ -594,17 +606,10 @@ class vamana_index {
     // Here we build a graph using the graph data we read in.  We do it this
     // way for a dynamic graph, which is one that we can later add more edges
     // and vertices to (to index new vectors).
-    std::cout << "num_vectors_ " << num_vectors_ << std::endl;
-    std::cout << "adj_index.size() " << adj_index.size() << std::endl;
-    std::cout << "adj_scores.size() " << adj_scores.size() << std::endl;
     for (size_t i = 0; i < num_vectors_; ++i) {
       auto start = adj_index[i];
       auto end = adj_index[i + 1];
-      // std::cout << "[i=" << i << "] start " << start << " end " << end <<
-      // std::endl;
       for (size_t j = start; j < end; ++j) {
-        //  std::cout << "  [i=" << i << "][j=" << j << "] adj_ids[j] " <<
-        //  adj_ids[j] << " adj_scores[j] " << adj_scores[j] << std::endl;
         graph_.add_edge(i, adj_ids[j], adj_scores[j]);
       }
     }

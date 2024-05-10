@@ -664,7 +664,7 @@ TEST_CASE("api: temporal_policy", "[api]") {
     }
   }
 
-  // Read the data at timestamp 99 explicitly.
+  // Read the data at timestamp 99.
   {
     auto feature_vector_array = FeatureVectorArray(
         ctx, feature_vectors_uri, ids_uri, 0, TemporalPolicy(TimeTravel, 99));
@@ -683,5 +683,82 @@ TEST_CASE("api: temporal_policy", "[api]") {
         CHECK(data(j, i) == i + 1);
       }
     }
+  }
+
+  // Read the data at timestamp 50.
+  {
+    auto feature_vector_array = FeatureVectorArray(
+        ctx, feature_vectors_uri, ids_uri, 0, TemporalPolicy(TimeTravel, 50));
+    CHECK(extents(feature_vector_array)[0] == 0);
+    CHECK(extents(feature_vector_array)[1] == 0);
+    CHECK(feature_vector_array.num_vectors() == 0);
+    CHECK(feature_vector_array.num_ids() == 0);
+    CHECK(feature_vector_array.dimension() == 0);
+    auto data = MatrixView<FeatureType, stdx::layout_left>{
+        (FeatureType*)feature_vector_array.data(),
+        extents(feature_vector_array)[0],
+        extents(feature_vector_array)[1]};
+    auto ids = std::span<IdsType>(
+        (IdsType*)feature_vector_array.ids_data(),
+        feature_vector_array.num_vectors());
+    CHECK(ids.size() == 0);
+    CHECK(data.size() == 0);
+  }
+}
+
+TEST_CASE("api: time travel", "[api][index]") {
+  tiledb::Context ctx;
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  int offset = 13;
+
+  size_t Mrows = 20;
+  size_t Ncols = 50;
+
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_matrix_uri)) {
+    vfs.remove_dir(tmp_matrix_uri);
+  }
+
+  auto X = ColMajorMatrix<int>(Mrows, Ncols);
+  std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
+  write_matrix(ctx, X, tmp_matrix_uri, 0, true, TemporalPolicy{TimeTravel, 50});
+
+  {
+    // We can load the matrix at the creation timestamp.
+    auto Y = tdbPreLoadMatrix<int, stdx::layout_left>(
+        ctx, tmp_matrix_uri, 0, TemporalPolicy{TimeTravel, 50});
+    CHECK(num_vectors(Y) == num_vectors(X));
+    CHECK(dimension(Y) == dimension(X));
+    CHECK(std::equal(
+        X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+    for (size_t i = 0; i < Mrows; ++i) {
+      for (size_t j = 0; j < Ncols; ++j) {
+        CHECK(X(i, j) == Y(i, j));
+      }
+    }
+  }
+
+  {
+    // We can load the matrix at a later timestamp.
+    auto Y = tdbPreLoadMatrix<int, stdx::layout_left>(
+        ctx, tmp_matrix_uri, 0, TemporalPolicy{TimeTravel, 100});
+    CHECK(num_vectors(Y) == num_vectors(X));
+    CHECK(dimension(Y) == dimension(X));
+    CHECK(std::equal(
+        X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+    for (size_t i = 0; i < Mrows; ++i) {
+      for (size_t j = 0; j < Ncols; ++j) {
+        CHECK(X(i, j) == Y(i, j));
+      }
+    }
+  }
+
+  {
+    // We get no data if we load the matrix at an earlier timestamp.
+    auto Y = tdbPreLoadMatrix<int, stdx::layout_left>(
+        ctx, tmp_matrix_uri, 0, TemporalPolicy{TimeTravel, 5});
+    CHECK(num_vectors(Y) == 0);
+    CHECK(dimension(Y) == 0);
   }
 }
