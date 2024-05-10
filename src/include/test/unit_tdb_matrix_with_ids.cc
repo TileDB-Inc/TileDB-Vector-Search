@@ -372,24 +372,24 @@ TEMPLATE_TEST_CASE(
 TEST_CASE("tdb_matrix_with_ids: time travel", "[tdb_matrix_with_ids]") {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
-  // "file:///private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-315/test_ingestion_timetravel0/array_VAMANA/shuffled_vectors";
-     (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+      // "file:///private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-315/test_ingestion_timetravel0/array_VAMANA/shuffled_vectors";
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
   std::string tmp_ids_uri =
-  // "file:///private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-315/test_ingestion_timetravel0/array_VAMANA/shuffled_vector_ids";
-     (std::filesystem::temp_directory_path() / "tmp_ids_vector").string();
+      // "file:///private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-315/test_ingestion_timetravel0/array_VAMANA/shuffled_vector_ids";
+      (std::filesystem::temp_directory_path() / "tmp_ids_vector").string();
 
   int offset = 13;
 
   size_t Mrows = 40;
   size_t Ncols = 20;
 
- tiledb::VFS vfs(ctx);
- if (vfs.is_dir(tmp_matrix_uri)) {
-   vfs.remove_dir(tmp_matrix_uri);
- }
- if (vfs.is_dir(tmp_ids_uri)) {
-   vfs.remove_dir(tmp_ids_uri);
- }
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_matrix_uri)) {
+    vfs.remove_dir(tmp_matrix_uri);
+  }
+  if (vfs.is_dir(tmp_ids_uri)) {
+    vfs.remove_dir(tmp_ids_uri);
+  }
 
   auto X = ColMajorMatrixWithIds<float, uint64_t, size_t>(Mrows, Ncols);
   fill_and_write_matrix(
@@ -414,7 +414,7 @@ TEST_CASE("tdb_matrix_with_ids: time travel", "[tdb_matrix_with_ids]") {
         X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
     for (size_t i = 0; i < Mrows; ++i) {
       for (size_t j = 0; j < Ncols; ++j) {
-       CHECK(X(i, j) == Y(i, j));
+        CHECK(X(i, j) == Y(i, j));
       }
     }
   }

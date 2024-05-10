@@ -104,12 +104,14 @@ auto greedy_search(
 
   static_assert(std::integral<id_type>);
   std::unordered_set<id_type> visited_vertices;
-  
+
   if (graph.num_vertices() == 0) {
-    auto top_k = std::vector<id_type>(k_nn, std::numeric_limits<id_type>::max());
-    auto top_k_scores = std::vector<score_type>(k_nn, std::numeric_limits<score_type>::max());
+    auto top_k =
+        std::vector<id_type>(k_nn, std::numeric_limits<id_type>::max());
+    auto top_k_scores =
+        std::vector<score_type>(k_nn, std::numeric_limits<score_type>::max());
     return std::make_tuple(
-      std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
+        std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
   }
 
   assert(L >= k_nn);
@@ -276,8 +278,6 @@ auto robust_prune(
     float alpha,
     size_t R,
     Distance distance = Distance{}) {
-  constexpr bool noisy = false;
-
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
   using score_type = typename std::decay_t<decltype(graph)>::score_type;

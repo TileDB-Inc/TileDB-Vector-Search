@@ -563,7 +563,7 @@ class Index:
                 adjacency_ids_uri = group["adjacency_ids"].uri
                 adjacency_row_index_uri = group["adjacency_row_index"].uri
                 with tiledb.open(db_uri, "m") as A:
-                    A.delete_fragments(0, timestamp) # 2
+                    A.delete_fragments(0, timestamp)  # 2
                 with tiledb.open(ids_uri, "m") as A:
                     A.delete_fragments(0, timestamp)
                 with tiledb.open(adjacency_scores_uri, "m") as A:
