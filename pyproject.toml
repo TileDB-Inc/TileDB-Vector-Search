@@ -25,7 +25,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["nbmake", "pytest<8.0.0"]
+test = ["nbmake", "pytest<8.0.0", "pytest-xdist"]
 formatting = ["pre-commit"]
 
 [project.urls]
