@@ -174,13 +174,13 @@ TEST_CASE("tdb_io: write empty matrix", "[tdb_io]") {
   empty_matrix.load();
   CHECK(num_vectors(empty_matrix) == 0);
   CHECK(empty_matrix.num_cols() == 0);
-  CHECK(empty_matrix.num_rows() == dimension);
+  CHECK(empty_matrix.num_rows() == 0);
 
   auto empty_preload_matrix =
       tdbColMajorPreLoadMatrix<float>(ctx, tmp_matrix_uri, dimension, 0, 0, {});
   CHECK(num_vectors(empty_preload_matrix) == 0);
   CHECK(empty_preload_matrix.num_cols() == 0);
-  CHECK(empty_preload_matrix.num_rows() == dimension);
+  CHECK(empty_preload_matrix.num_rows() == 0);
 }
 
 TEST_CASE("tdb_io: write empty vector", "[tdb_io]") {
