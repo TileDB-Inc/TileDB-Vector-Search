@@ -135,7 +135,7 @@ class base_index_metadata {
   };
 
   template <class T>
-  auto json_to_vector(const std::string& json_str) {
+  auto json_to_vector(const std::string& json_str) const {
     auto json = nlohmann::json::parse(json_str);
     std::vector<T> vec;
     for (auto& item : json) {
@@ -194,7 +194,8 @@ class base_index_metadata {
    * @return
    */
   auto check_arithmetic_metadata(
-      tiledb::Group& read_group, const metadata_arithmetic_check_type& check) {
+      tiledb::Group& read_group,
+      const metadata_arithmetic_check_type& check) const {
     tiledb_datatype_t v_type;
     uint32_t v_num;
     const void* v;
@@ -459,14 +460,14 @@ class base_index_metadata {
    * @todo Dispatch on storage version
    */
   auto dump_strings(
-      const std::vector<metadata_string_check_type>& string_checks) {
+      const std::vector<metadata_string_check_type>& string_checks) const {
     for (auto&& [name, value, required] : string_checks) {
       std::cout << name << ": " << value << std::endl;
     }
   }
 
-  auto dump_arithmetic(
-      const std::vector<metadata_arithmetic_check_type>& arithmetic_checks) {
+  auto dump_arithmetic(const std::vector<metadata_arithmetic_check_type>&
+                           arithmetic_checks) const {
     for (auto&& [name, value, type, required] : arithmetic_checks) {
       switch (type) {
         case TILEDB_FLOAT64:

@@ -1290,3 +1290,22 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   CHECK(idx.compare_adj_scores(idx2));
   CHECK(idx.compare_adj_ids(idx2));
 }
+
+TEST_CASE("vamana: query empty index", "[vamana]") {
+  size_t L = 100;
+  size_t R = 100;
+  size_t B = 2;
+  size_t num_vectors = 0;
+  size_t dimensions = 5;
+  auto index = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
+      num_vectors, L, R, B);
+  auto data =
+      ColMajorMatrixWithIds<siftsmall_feature_type>(dimensions, num_vectors);
+  index.train(data, data.ids());
+
+  auto queries = std::vector<std::vector<siftsmall_feature_type>>{
+      {1, 1, 1, 1, 1}, {2, 2, 2, 2, 2}};
+  auto&& [scores, ids] = index.query(data, 1);
+  CHECK(_cpo::num_vectors(scores) == 0);
+  CHECK(_cpo::num_vectors(ids) == 0);
+}

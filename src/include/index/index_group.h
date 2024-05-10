@@ -511,7 +511,7 @@ class base_index_group {
    *
    * @param msg Optional message to print before the dump.
    */
-  auto dump(const std::string& msg = "") const {
+  auto dump(const std::string& msg = "") {
     if (!empty(msg)) {
       std::cout << "-------------------------------------------------------\n";
       std::cout << "# " + msg << std::endl;
