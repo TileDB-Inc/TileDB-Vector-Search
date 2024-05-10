@@ -154,6 +154,13 @@ def test_ivf_flat_index(tmp_path):
     )
 
     index = index.consolidate_updates()
+    # TODO(SC-46771): Investigate whether we should overwrite the existing metadata during the first
+    # ingestion of Python indexes. I believe as it's currently written we have a bug here.
+    # ingestion_timestamps, base_sizes = load_metadata(uri)
+    # assert base_sizes == [5]
+    # timestamp_5_minutes_from_now = int((time.time() + 5 * 60) * 1000)
+    # timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
+    # assert ingestion_timestamps[0] > timestamp_5_minutes_ago and ingestion_timestamps[0] < timestamp_5_minutes_from_now
 
     # TODO(paris): Investigate whether we should overwrite the existing metadata during the first
     # ingestion of Python indexes. I believe as it's currently written we have a bug here.
@@ -279,10 +286,6 @@ def test_vamana_index(tmp_path):
         ingestion_timestamps[0] > timestamp_5_minutes_ago
         and ingestion_timestamps[0] < timestamp_5_minutes_from_now
     )
-
-    # Check that we throw if we query with an invalid opt_l.
-    with pytest.raises(ValueError):
-        index.query(queries, k=3, opt_l=2)
 
     # Test that we can query with multiple query vectors.
     for i in range(5):

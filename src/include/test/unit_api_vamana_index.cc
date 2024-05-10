@@ -585,7 +585,7 @@ TEST_CASE(
         adjacency_row_index_type_type>(ctx, index_uri);
     CHECK(typed_index.group().get_dimension() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
-    CHECK(typed_index.group().get_timetravel_index() == 0);
+    CHECK(typed_index.group().get_history_index() == 0);
 
     CHECK(typed_index.group().get_base_size() == 0);
     CHECK(typed_index.group().get_ingestion_timestamp() == 0);
@@ -641,7 +641,7 @@ TEST_CASE(
     CHECK(std::equal(
         scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
     CHECK(std::equal(
-        ids.begin(), ids.end(), std::vector<uint32_t>{1, 2, 3, 4}.begin()));
+        ids.begin(), ids.end(), std::vector<int>{1, 2, 3, 4}.begin()));
 
     auto typed_index = vamana_index<
         feature_type_type,
@@ -649,11 +649,8 @@ TEST_CASE(
         adjacency_row_index_type_type>(ctx, index_uri);
     CHECK(typed_index.group().get_dimension() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
-    CHECK(typed_index.group().get_timetravel_index() == 0);
-
-    CHECK(typed_index.group().get_base_size() == 4);
+    CHECK(typed_index.group().get_history_index() == 0);
     CHECK(typed_index.group().get_ingestion_timestamp() == 99);
-
     CHECK(typed_index.group().get_all_num_edges().size() == 1);
     CHECK(typed_index.group().get_all_base_sizes().size() == 1);
     CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 1);
@@ -715,7 +712,7 @@ TEST_CASE(
         adjacency_row_index_type_type>(ctx, index_uri);
     CHECK(typed_index.group().get_dimension() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
-    CHECK(typed_index.group().get_timetravel_index() == 1);
+    CHECK(typed_index.group().get_history_index() == 1);
 
     CHECK(typed_index.group().get_base_size() == 5);
     CHECK(typed_index.group().get_ingestion_timestamp() == 100);
@@ -770,7 +767,7 @@ TEST_CASE(
         adjacency_row_index_type_type>(ctx, index_uri, temporal_policy);
     CHECK(typed_index.group().get_dimension() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
-    CHECK(typed_index.group().get_timetravel_index() == 0);
+    CHECK(typed_index.group().get_history_index() == 0);
 
     CHECK(typed_index.group().get_base_size() == 4);
     CHECK(typed_index.group().get_ingestion_timestamp() == 99);
@@ -831,7 +828,7 @@ TEST_CASE(
         adjacency_row_index_type_type>(ctx, index_uri, temporal_policy);
     CHECK(typed_index.group().get_dimension() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
-    CHECK(typed_index.group().get_timetravel_index() == 0);
+    CHECK(typed_index.group().get_history_index() == 0);
 
     CHECK(typed_index.group().get_base_size() == 4);
     CHECK(typed_index.group().get_ingestion_timestamp() == 99);

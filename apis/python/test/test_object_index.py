@@ -1,3 +1,4 @@
+import os
 from typing import Dict, List, OrderedDict, Tuple
 
 import numpy as np
@@ -10,6 +11,7 @@ from tiledb.vector_search.object_readers import ObjectPartition
 from tiledb.vector_search.object_readers import ObjectReader
 
 EMBED_DIM = 4
+INDEXES = ["FLAT", "IVF_FLAT", "VAMANA"]
 
 
 # TestEmbedding with vectors of EMBED_DIM size with all values being the id of the object
@@ -233,73 +235,73 @@ def evaluate_query(index_uri, query_kwargs, dim_id, vector_dim_offset, config=No
     )
 
 
-def test_object_index_ivf_flat(tmp_path):
-    reader = TestReader(
-        object_id_start=0,
-        object_id_end=1000,
-        vector_dim_offset=0,
-    )
-    embedding = TestEmbedding()
+def test_object_index(tmp_path):
+    for index_type in INDEXES:
+        index_uri = os.path.join(tmp_path, f"object_index_{index_type}")
+        reader = TestReader(
+            object_id_start=0,
+            object_id_end=1000,
+            vector_dim_offset=0,
+        )
+        embedding = TestEmbedding()
 
-    index_uri = f"{tmp_path}/index"
+        index = object_index.create(
+            uri=index_uri,
+            index_type=index_type,
+            object_reader=reader,
+            embedding=embedding,
+        )
 
-    index = object_index.create(
-        uri=index_uri,
-        index_type="IVF_FLAT",
-        object_reader=reader,
-        embedding=embedding,
-    )
+        # Check initial ingestion
+        index.update_index(partitions=10)
+        evaluate_query(
+            index_uri=index_uri,
+            query_kwargs={"nprobe": 10, "opt_l": 250},
+            dim_id=42,
+            vector_dim_offset=0,
+        )
 
-    # Check initial ingestion
-    index.update_index(partitions=10)
-    evaluate_query(
-        index_uri=index_uri,
-        query_kwargs={"nprobe": 10},
-        dim_id=42,
-        vector_dim_offset=0,
-    )
+        # Check that updating the same data doesn't create duplicates
+        index = object_index.ObjectIndex(uri=index_uri)
+        index.update_index(partitions=10)
+        evaluate_query(
+            index_uri=index_uri,
+            query_kwargs={"nprobe": 10, "opt_l": 500},
+            dim_id=42,
+            vector_dim_offset=0,
+        )
 
-    # Check that updating the same data doesn't create duplicates
-    index = object_index.ObjectIndex(uri=index_uri)
-    index.update_index(partitions=10)
-    evaluate_query(
-        index_uri=index_uri,
-        query_kwargs={"nprobe": 10},
-        dim_id=42,
-        vector_dim_offset=0,
-    )
+        # Add new data with a new reader
+        reader = TestReader(
+            object_id_start=1000,
+            object_id_end=2000,
+            vector_dim_offset=0,
+        )
+        index = object_index.ObjectIndex(uri=index_uri)
+        index.update_object_reader(reader)
+        index.update_index(partitions=10)
+        evaluate_query(
+            index_uri=index_uri,
+            query_kwargs={"nprobe": 10, "opt_l": 500},
+            dim_id=1042,
+            vector_dim_offset=0,
+        )
 
-    # Add new data with a new reader
-    reader = TestReader(
-        object_id_start=1000,
-        object_id_end=2000,
-        vector_dim_offset=0,
-    )
-    index = object_index.ObjectIndex(uri=index_uri)
-    index.update_object_reader(reader)
-    index.update_index(partitions=10)
-    evaluate_query(
-        index_uri=index_uri,
-        query_kwargs={"nprobe": 10},
-        dim_id=1042,
-        vector_dim_offset=0,
-    )
-
-    # Check overwritting existing data
-    reader = TestReader(
-        object_id_start=1000,
-        object_id_end=2000,
-        vector_dim_offset=1000,
-    )
-    index = object_index.ObjectIndex(uri=index_uri)
-    index.update_object_reader(reader)
-    index.update_index(partitions=10)
-    evaluate_query(
-        index_uri=index_uri,
-        query_kwargs={"nprobe": 10},
-        dim_id=2042,
-        vector_dim_offset=1000,
-    )
+        # Check overwritting existing data
+        reader = TestReader(
+            object_id_start=1000,
+            object_id_end=2000,
+            vector_dim_offset=1000,
+        )
+        index = object_index.ObjectIndex(uri=index_uri)
+        index.update_object_reader(reader)
+        index.update_index(partitions=10)
+        evaluate_query(
+            index_uri=index_uri,
+            query_kwargs={"nprobe": 10, "opt_l": 500},
+            dim_id=2042,
+            vector_dim_offset=1000,
+        )
 
 
 def test_object_index_ivf_flat_cloud(tmp_path):

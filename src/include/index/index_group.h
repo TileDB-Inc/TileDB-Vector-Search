@@ -397,10 +397,6 @@ class base_index_group {
     return tiledb::Object::remove(ctx, group_uri_);
   }
 
-  /**************************************************************************
-   * Getters for read and write timestamps and sizes
-   **************************************************************************/
-
   /** Temporary until time traveling is implemented */
   auto get_previous_ingestion_timestamp() const {
     return metadata_.ingestion_timestamps_.back();
@@ -415,9 +411,6 @@ class base_index_group {
     return metadata_.ingestion_timestamps_;
   }
 
-  /*
-   * Base size information
-   */
   auto get_previous_base_size() const {
     return metadata_.base_sizes_.back();
   }
@@ -445,7 +438,7 @@ class base_index_group {
     metadata_.dimension_ = dim;
   }
 
-  auto get_timetravel_index() const {
+  auto get_history_index() const {
     return history_index_;
   }
 
@@ -453,16 +446,13 @@ class base_index_group {
     return should_skip_query_;
   }
 
-  /**************************************************************************
-   * Getters for names and uris
-   **************************************************************************/
-
   [[nodiscard]] auto ids_uri() const {
     return array_key_to_uri("ids_array_name");
   }
   [[nodiscard]] auto ids_array_name() const {
     return array_key_to_array_name("ids_array_name");
   }
+
   [[nodiscard]] const std::reference_wrapper<const tiledb::Context> cached_ctx()
       const {
     return cached_ctx_;
@@ -521,7 +511,7 @@ class base_index_group {
    *
    * @param msg Optional message to print before the dump.
    */
-  auto dump(const std::string& msg = "") {
+  auto dump(const std::string& msg = "") const {
     if (!empty(msg)) {
       std::cout << "-------------------------------------------------------\n";
       std::cout << "# " + msg << std::endl;
