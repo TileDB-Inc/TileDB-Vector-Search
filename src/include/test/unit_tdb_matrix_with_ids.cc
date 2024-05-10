@@ -372,10 +372,8 @@ TEMPLATE_TEST_CASE(
 TEST_CASE("tdb_matrix_with_ids: time travel", "[tdb_matrix_with_ids]") {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
-      // "file:///private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-315/test_ingestion_timetravel0/array_VAMANA/shuffled_vectors";
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
   std::string tmp_ids_uri =
-      // "file:///private/var/folders/jb/5gq49wh97wn0j7hj6zfn9pzh0000gn/T/pytest-of-parismorgan/pytest-315/test_ingestion_timetravel0/array_VAMANA/shuffled_vector_ids";
       (std::filesystem::temp_directory_path() / "tmp_ids_vector").string();
 
   int offset = 13;
@@ -401,8 +399,6 @@ TEST_CASE("tdb_matrix_with_ids: time travel", "[tdb_matrix_with_ids]") {
       Ncols,
       offset,
       TemporalPolicy{TimeTravel, 50});
-  // auto X = tdbColMajorPreLoadMatrixWithIds<float, uint64_t , size_t>(ctx,
-  // tmp_matrix_uri, tmp_ids_uri);
 
   {
     // We can load the matrix at the creation timestamp.
