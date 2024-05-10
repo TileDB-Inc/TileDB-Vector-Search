@@ -113,11 +113,8 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
       : Base(std::move(storage), nrows, ncols, policy)
-      , ids_storage_{std::move(ids_storage)}
-      , num_ids_{
-            std::is_same<LayoutPolicy, stdx::layout_right>::value ?
-                this->num_rows_ :
-                this->num_cols_} {
+      , num_ids_{std::is_same<LayoutPolicy, stdx::layout_right>::value ? this->num_rows_ : this->num_cols_}
+      , ids_storage_{std::move(ids_storage)} {
   }
 
   /**

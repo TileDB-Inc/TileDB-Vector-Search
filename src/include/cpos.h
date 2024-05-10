@@ -282,13 +282,13 @@ void ids(const auto&) = delete;
 struct _fn {
   template <class T>
     requires(_member_ids<T>)
-  constexpr const auto& operator()(T&& t) const noexcept {
+  constexpr const auto operator()(T&& t) const noexcept {
     return t.ids();
   }
 
   template <class T>
     requires(!_member_ids<T>)
-  constexpr const auto& operator()(T&& t) const noexcept {
+  constexpr const auto operator()(T&& t) const noexcept {
     return nullptr;
   }
 };
