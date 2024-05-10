@@ -11,8 +11,10 @@ import tiledb.vector_search.object_api as object_api
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search import FlatIndex
 from tiledb.vector_search import IVFFlatIndex
+from tiledb.vector_search import VamanaIndex
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
+from tiledb.vector_search import vamana_index
 from tiledb.vector_search.embeddings import ObjectEmbedding
 from tiledb.vector_search.object_readers import ObjectReader
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
@@ -53,6 +55,12 @@ class ObjectIndex:
                 self.index = IVFFlatIndex(
                     uri=uri, config=config, timestamp=timestamp, **kwargs
                 )
+            elif self.index_type == "VAMANA":
+                self.index = VamanaIndex(
+                    uri=uri, config=config, timestamp=timestamp, **kwargs
+                )
+            else:
+                raise ValueError(f"Unsupported index type {self.index_type}")
 
             self.object_reader_source_code = self.index.group.meta[
                 "object_reader_source_code"
@@ -428,6 +436,16 @@ def create(
                 config=config,
                 storage_version=storage_version,
             )
+        elif index_type == "VAMANA":
+            index = vamana_index.create(
+                uri=uri,
+                dimensions=dimensions,
+                vector_type=vector_type,
+                config=config,
+                storage_version=storage_version,
+            )
+        else:
+            raise ValueError(f"Unsupported index type {index_type}")
 
         group = tiledb.Group(uri, "w")
         group.meta["object_reader_source_code"] = get_source_code(object_reader)
