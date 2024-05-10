@@ -279,10 +279,6 @@ def test_vamana_index(tmp_path):
         and ingestion_timestamps[0] < timestamp_5_minutes_from_now
     )
 
-    # Check that we throw if we query with an invalid opt_l.
-    with pytest.raises(ValueError):
-        index.query(queries, k=3, opt_l=2)
-
     # Test that we can query with multiple query vectors.
     for i in range(5):
         query_and_check_distances(

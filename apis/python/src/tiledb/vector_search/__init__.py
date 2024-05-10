@@ -19,6 +19,7 @@ from .module import query_vq_nth
 from .module import validate_top_k
 from .storage_formats import STORAGE_VERSION
 from .storage_formats import storage_formats
+from .vamana_index import VamanaIndex
 
 try:
     from tiledb.vector_search.version import version as __version__
