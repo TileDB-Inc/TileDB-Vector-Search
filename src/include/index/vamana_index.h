@@ -962,7 +962,7 @@ class vamana_index {
       const std::string& group_uri,
       uint64_t timestamp) {
     auto write_group =
-        vamana_index_group<vamana_index>(ctx, group_uri, TILEDB_WRITE);
+        vamana_index_group<vamana_index>(ctx, group_uri, TILEDB_WRITE, {});
     write_group.clear_history(timestamp);
   }
 
