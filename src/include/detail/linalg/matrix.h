@@ -155,8 +155,6 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
  protected:
   size_type num_rows_{0};
   size_type num_cols_{0};
-
-  // private:
   std::unique_ptr<T[]> storage_;
 
  public:
