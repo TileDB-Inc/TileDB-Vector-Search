@@ -50,6 +50,18 @@ set(EXTERNAL_PROJECTS)
 # character other than a semicolon.
 list(JOIN CMAKE_PREFIX_PATH "|" CMAKE_PREFIX_PATH_STR)
 
+############################################################
+# Set up external projects for dependencies
+############################################################
+
+# These includes modify the EXTERNAL_PROJECTS variable.
+
+# need spdlog to set up any of its needed targets...
+# include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindSpdlog.cmake)
+#... before tiledb sets up only half of them...
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindTileDB_EP.cmake)
+
+message(STATUS "TILEDB_DOWNLOADED ${TILEDB_DOWNLOADED}")
 # Forward any additional CMake args to the non-superbuild.
 set(INHERITED_CMAKE_ARGS
   -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
@@ -82,19 +94,8 @@ set(INHERITED_CMAKE_ARGS
   -DPython3_FIND_REGISTRY=${Python3_FIND_REGISTRY}
   -DPython3_INCLUDE_DIR=${Python3_INCLUDE_DIR}
   -Dpybind11_DIR=${pybind11_DIR}
-  -DTILEDB_PATH=${TILEDB_PATH}
+  -DTILEDB_DOWNLOADED=${TILEDB_DOWNLOADED}
 )
-
-############################################################
-# Set up external projects for dependencies
-############################################################
-
-# These includes modify the EXTERNAL_PROJECTS variable.
-
-# need spdlog to set up any of its needed targets...
-# include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindSpdlog.cmake)
-#... before tiledb sets up only half of them...
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindTileDB_EP.cmake)
 
 ############################################################
 # 'make format' target

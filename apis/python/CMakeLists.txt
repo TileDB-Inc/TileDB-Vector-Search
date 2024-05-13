@@ -64,17 +64,17 @@ target_compile_definitions(
         VERSION_INFO=${PROJECT_VERSION}
 )
 
-if (APPLE)
-  set_target_properties(${VSPY_TARGET_NAME} PROPERTIES INSTALL_RPATH "@loader_path/lib")
-elseif(UNIX)
-  set_target_properties(${VSPY_TARGET_NAME} PROPERTIES INSTALL_RPATH "\$ORIGIN/lib")
-endif()
-
 # Install the extension module
 install(TARGETS ${VSPY_TARGET_NAME} LIBRARY DESTINATION .)
 
-if (DEFINED CACHE{TileDB_DIR})
+if (TILEDB_DOWNLOADED)
   message(STATUS "Adding libtiledb into install group")
   # Install libtiledb so that we can repackage it with the extension
   install(IMPORTED_RUNTIME_ARTIFACTS TileDB::tiledb_shared DESTINATION lib)
+
+  if (APPLE)
+    set_target_properties(${VSPY_TARGET_NAME} PROPERTIES INSTALL_RPATH "@loader_path/lib")
+  elseif(UNIX)
+    set_target_properties(${VSPY_TARGET_NAME} PROPERTIES INSTALL_RPATH "\$ORIGIN/lib")
+  endif()
 endif()

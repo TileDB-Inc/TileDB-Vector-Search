@@ -29,10 +29,6 @@
 # If TileDB was installed as an EP, need to search the EP install path also.
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "${EP_INSTALL_PREFIX}")
 
-if (TILEDB_PATH)
-    set(TileDB_DIR ${TILEDB_PATH})
-endif()
-
 if (FORCE_EXTERNAL_TILEDB)
   find_package(TileDB CONFIG PATHS ${EP_INSTALL_PREFIX} NO_DEFAULT_PATH)
 else()
@@ -70,6 +66,7 @@ else()
 
     list(APPEND FORWARD_EP_CMAKE_ARGS -DEP_TILEDB_BUILT=TRUE)
     list(APPEND EXTERNAL_PROJECTS ep_tiledb)
+    set(TILEDB_DOWNLOADED "True")
   else()
     message(FATAL_ERROR "Unable to find TileDB library.")
   endif()

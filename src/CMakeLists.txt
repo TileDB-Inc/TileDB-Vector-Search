@@ -54,6 +54,12 @@ option(BUILD_CLI "Build the index and query command-line interface programs" OFF
 
 set(CMAKE_CXX_STANDARD 20)
 
+if (TILEDB_PATH)
+    set(TileDB_DIR ${TILEDB_PATH})
+    message(STATUS "Setting TileDB_DIR to ${TILEDB_PATH}")
+endif()
+
+
 # -----------------------------------------------------------------------------
 # Extend the module path so we can find our custom modules
 # -----------------------------------------------------------------------------
