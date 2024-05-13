@@ -345,20 +345,44 @@ class tdbBlockedMatrix : public MatrixBase {
 
     auto layout_order = schema_.cell_order();
 
-    // Create a query
+    // Read TileDB data
+    size_t read_batch_size_cells = get_read_batch_size_cells(ctx_);
+    size_t total_size = elements_to_load * dimension;
+    size_t offset = 0;
     tiledb::Query query(ctx_, *array_);
-    query.set_subarray(subarray)
-        .set_layout(layout_order)
-        .set_data_buffer(attr_name, this->data(), elements_to_load * dimension);
-    tiledb_helpers::submit_query(tdb_func__, uri_, query);
+    query.set_subarray(subarray).set_layout(layout_order);
+    tiledb::Query::Status status;
+    do {
+      // Submit query and get status
+      size_t request_size = read_batch_size_cells;
+      if (offset + read_batch_size_cells > total_size) {
+        request_size = total_size - offset;
+      }
+      query.set_data_buffer(attr_name, this->data() + offset, request_size);
+      query.submit();
+      status = query.query_status();
+
+      auto num_results = query.result_buffer_elements()[attr_name].second;
+      if (num_results == 0) {
+        throw std::runtime_error(
+            "Read error: Got empty results while expecting to retrieve more "
+            "values.");
+      }
+      offset += num_results;
+    } while (status == tiledb::Query::Status::INCOMPLETE &&
+             offset < total_size);
+    // Handle errors
+    if (status == tiledb::Query::Status::COMPLETE && offset != total_size) {
+      throw std::runtime_error(
+          "Read error: Read status COMPLETE but result size was different "
+          "than expected: " +
+          std::to_string(offset) + " != " + std::to_string(total_size));
+    }
+    if (status != tiledb::Query::Status::COMPLETE) {
+      throw std::runtime_error("Read error: Query status not COMPLETE");
+    }
     _memory_data.insert_entry(
         tdb_func__, elements_to_load * dimension * sizeof(T));
-
-    // @todo Handle incomplete queries.
-    if (tiledb::Query::Status::COMPLETE != query.query_status()) {
-      throw std::runtime_error("Query status is not complete");
-    }
-
     num_loads_++;
     return true;
   }
