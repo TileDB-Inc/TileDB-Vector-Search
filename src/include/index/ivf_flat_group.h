@@ -157,24 +157,14 @@ class ivf_flat_index_group : public base_index_group<index_type> {
 
     metadata_.feature_type_str_ =
         type_to_string_v<typename index_type::feature_type>;
-    std::cout
-        << "[ivf_flat_group@create_default_impl] metadata_.feature_type_str_: "
-        << metadata_.feature_type_str_ << std::endl;
     metadata_.id_type_str_ = type_to_string_v<typename index_type::id_type>;
-    std::cout << "[ivf_flat_group@create_default_impl] metadata_.id_type_str_: "
-              << metadata_.id_type_str_ << std::endl;
     metadata_.indices_type_str_ =
         type_to_string_v<typename index_type::indices_type>;
-    std::cout
-        << "[ivf_flat_group@create_default_impl] metadata_.indices_type_str_: "
-        << metadata_.indices_type_str_ << std::endl;
 
     metadata_.ingestion_timestamps_ = {0};
     metadata_.base_sizes_ = {0};
     metadata_.partition_history_ = {0};
     metadata_.temp_size_ = 0;
-    std::cout << "[ivf_flat_group@create_default_impl] this->get_dimension(): "
-              << this->get_dimension() << std::endl;
     metadata_.dimension_ = this->get_dimension();
 
     create_empty_for_matrix<

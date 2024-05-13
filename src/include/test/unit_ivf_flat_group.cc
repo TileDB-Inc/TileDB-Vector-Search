@@ -44,6 +44,9 @@ TEST_CASE("ivf_flat_group: test test", "[ivf_flat_group]") {
   REQUIRE(true);
 }
 
+// This test is for debugging and checks whether a particular group can be
+// opened
+#if 0
 TEST_CASE("ivf_flat_group: read a tiledb::Group", "[ivf_flat_group]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
@@ -57,9 +60,10 @@ TEST_CASE("ivf_flat_group: read a tiledb::Group", "[ivf_flat_group]") {
     if (!name || empty(*name)) {
       throw std::runtime_error("Name is empty.");
     }
-    std::cout << i << ": " << *name << " " << member.uri() << std::endl;
+    std::cout << i <<  ": " << *name << " " << member.uri() << std::endl;
   }
 }
+#endif
 
 TEST_CASE("ivf_flat_group: create tiledb::Group", "[ivf_flat_group]") {
   tiledb::Context ctx;

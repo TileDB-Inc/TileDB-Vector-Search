@@ -234,11 +234,7 @@ class ivf_flat_index {
      * in at this same timestamp.
      */
     dimension_ = group_->get_dimension();
-    std::cout << "[ivf_flat_index@ctor 2] dimension_: " << dimension_
-              << std::endl;
     num_partitions_ = group_->get_num_partitions();
-    std::cout << "[ivf_flat_index@ctor 2] num_partitions_: " << num_partitions_
-              << std::endl;
     // Read all rows from column 0 -> `num_partitions_`. Set no upper_bound.
     centroids_ =
         std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
@@ -771,6 +767,7 @@ class ivf_flat_index {
     write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
     write_group.append_base_size(::num_vectors(*partitioned_vectors_));
     write_group.append_num_partitions(num_partitions_);
+
     write_matrix(
         ctx,
         centroids_,
