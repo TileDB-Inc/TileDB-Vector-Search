@@ -47,19 +47,9 @@
          {"index_array_name", "partition_indexes"},
      }}};
 
-template <class Index>
-class ivf_flat_index_group;
-
-template <class Index>
-struct metadata_type_selector<ivf_flat_index_group<Index>> {
-  using type = ivf_flat_index_metadata;
-};
-
-template <class Index>
-class ivf_flat_index_group
-    : public base_index_group<ivf_flat_index_group<Index>> {
-  using Base = base_index_group<ivf_flat_index_group>;
-  // using Base::Base;
+template <class index_type>
+class ivf_flat_index_group : public base_index_group<index_type> {
+  using Base = base_index_group<index_type>;
 
   using Base::array_key_to_array_name_;
   using Base::array_name_to_uri_;
@@ -70,25 +60,19 @@ class ivf_flat_index_group
   using Base::valid_array_names_;
   using Base::version_;
 
-  using index_type = Index;
-  // std::reference_wrapper<const index_type> index_;
-  // index_type index_;
-
   static const int32_t default_domain{std::numeric_limits<int32_t>::max() - 1};
   static const int32_t default_tile_extent{100'000};
   static const int32_t tile_size_bytes{64 * 1024 * 1024};
 
  public:
-  using index_group_metadata_type = ivf_flat_index_metadata;
-
   ivf_flat_index_group(
-      const index_type& index,
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
-      const std::string& version = std::string{""})
-      : Base(ctx, uri, index.dimension(), rw, temporal_policy, version) {
+      const std::string& version = std::string{""},
+      uint64_t dimension = 0)
+      : Base(ctx, uri, rw, temporal_policy, version, dimension) {
   }
 
  public:
@@ -173,14 +157,24 @@ class ivf_flat_index_group
 
     metadata_.feature_type_str_ =
         type_to_string_v<typename index_type::feature_type>;
+    std::cout
+        << "[ivf_flat_group@create_default_impl] metadata_.feature_type_str_: "
+        << metadata_.feature_type_str_ << std::endl;
     metadata_.id_type_str_ = type_to_string_v<typename index_type::id_type>;
+    std::cout << "[ivf_flat_group@create_default_impl] metadata_.id_type_str_: "
+              << metadata_.id_type_str_ << std::endl;
     metadata_.indices_type_str_ =
         type_to_string_v<typename index_type::indices_type>;
+    std::cout
+        << "[ivf_flat_group@create_default_impl] metadata_.indices_type_str_: "
+        << metadata_.indices_type_str_ << std::endl;
 
     metadata_.ingestion_timestamps_ = {0};
     metadata_.base_sizes_ = {0};
     metadata_.partition_history_ = {0};
     metadata_.temp_size_ = 0;
+    std::cout << "[ivf_flat_group@create_default_impl] this->get_dimension(): "
+              << this->get_dimension() << std::endl;
     metadata_.dimension_ = this->get_dimension();
 
     create_empty_for_matrix<

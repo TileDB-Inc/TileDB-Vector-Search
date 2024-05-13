@@ -71,26 +71,10 @@ inline std::string array_name_to_uri(
       .string();
 }
 
-template <class Index>
-class base_index_metadata;
-
-template <class DerivedClass>
-struct metadata_type_selector {
-  using type = typename DerivedClass::index_metadata_type;
-};
-
-template <class IndexGroup>
+template <class index_type>
 class base_index_group {
-  // using index_type = typename IndexGroup::index_type;
-  using group_type = IndexGroup;
-
-  // Can't do this ....
-  // using index_group_metadata_type = typename
-  // IndexGroup::index_group_metadata_type; Can do this
-  using index_group_metadata_type =
-      typename metadata_type_selector<IndexGroup>::type;
-
-  friend IndexGroup;
+  using group_type = index_type::group_type;
+  using metadata_type = index_type::metadata_type;
 
  protected:
   tiledb::Context cached_ctx_;
@@ -99,11 +83,10 @@ class base_index_group {
   size_t base_array_timestamp_{0};
   size_t history_index_{0};
 
-  // std::reference_wrapper<const index_type> index_;
   std::string version_;
   tiledb_query_type_t opened_for_{TILEDB_READ};
 
-  index_group_metadata_type metadata_;
+  metadata_type metadata_;
 
   // Set of the names that are used in the group for this version
   std::unordered_set<std::string> valid_array_names_;
@@ -268,6 +251,15 @@ class base_index_group {
     return array_name_to_uri_.at(name);
   }
 
+  /**
+   * @brief Test whether the group exists or not.
+   * @param ctx
+   */
+  bool exists() const {
+    return tiledb::Object::object(cached_ctx_, group_uri_).type() ==
+           tiledb::Object::Type::Group;
+  }
+
  public:
   /**************************************************************************
    * Constructors
@@ -284,22 +276,23 @@ class base_index_group {
    * with the current version.  If version is set, it will be opened with
    * the specified version.
    *
-   * @param ctx
-   * @param uri
-   * @param version
-   * @param index
-   * @param rw
-   * @param timestamp
+   * @param ctx The TileDB context.
+   * @param uri The group URI.
+   * @param rw Whether to open for TILEDB_READ or TILEDB_WRITE.
+   * @param temporal_policy The temporal policy to use.
+   * @param version The storage format version.
+   * @param dimension The dimension of the index. Only needs to be set for
+   * TILEDB_WRITE.
    *
    * @todo Chained parameters here too?
    */
   base_index_group(
       const tiledb::Context& ctx,
       const std::string& uri,
-      uint64_t dimension,
       tiledb_query_type_t rw = TILEDB_READ,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
-      const std::string& version = std::string{""})
+      const std::string& version = std::string{""},
+      uint64_t dimension = 0)
       : cached_ctx_(ctx)
       , group_uri_(uri)
       , temporal_policy_(temporal_policy)
@@ -311,6 +304,9 @@ class base_index_group {
         open_for_read();
         break;
       case TILEDB_WRITE:
+        if (dimension == 0) {
+          throw std::runtime_error("Dimension must be set for write mode.");
+        }
         set_dimension(dimension);
         open_for_write();
         break;
@@ -325,6 +321,13 @@ class base_index_group {
     }
   }
 
+  void clear_history(uint64_t timestamp) {
+    if (opened_for_ != TILEDB_WRITE) {
+      throw std::runtime_error("Cannot clear history in read mode.");
+    }
+    metadata_.clear_history(timestamp);
+  }
+
   /**
    * @brief Destructor.  If opened for write, update the metadata.
    *
@@ -336,15 +339,6 @@ class base_index_group {
           cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
       metadata_.store_metadata(write_group);
     }
-  }
-
-  /**
-   * @brief Test whether the group exists or not.
-   * @param ctx
-   */
-  bool exists() const {
-    return tiledb::Object::object(cached_ctx_, group_uri_).type() ==
-           tiledb::Object::Type::Group;
   }
 
   /**

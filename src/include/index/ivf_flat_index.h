@@ -92,6 +92,9 @@ class ivf_flat_index {
   using score_type = float;  // @todo -- this should be a parameter?
   using centroid_feature_type = score_type;
 
+  using group_type = ivf_flat_index_group<ivf_flat_index>;
+  using metadata_type = ivf_flat_index_metadata;
+
  private:
   using storage_type = ColMajorPartitionedMatrix<
       feature_type,
@@ -219,7 +222,7 @@ class ivf_flat_index {
       const std::string& uri,
       uint64_t timestamp = 0)
       : group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
-            *this, ctx, uri, TILEDB_READ, temporal_policy_)} {
+            ctx, uri, TILEDB_READ, temporal_policy_)} {
     if (temporal_policy_.timestamp_end() == 0) {
       temporal_policy_ = {
           TimeTravel, group_->get_previous_ingestion_timestamp()};
@@ -231,7 +234,11 @@ class ivf_flat_index {
      * in at this same timestamp.
      */
     dimension_ = group_->get_dimension();
+    std::cout << "[ivf_flat_index@ctor 2] dimension_: " << dimension_
+              << std::endl;
     num_partitions_ = group_->get_num_partitions();
+    std::cout << "[ivf_flat_index@ctor 2] num_partitions_: " << num_partitions_
+              << std::endl;
     // Read all rows from column 0 -> `num_partitions_`. Set no upper_bound.
     centroids_ =
         std::move(tdbPreLoadMatrix<centroid_feature_type, stdx::layout_left>(
@@ -751,15 +758,19 @@ class ivf_flat_index {
       const std::string& group_uri,
       const std::string& storage_version = "") const {
     // Write the group
-    auto write_group = ivf_flat_index_group(
-        *this, ctx, group_uri, TILEDB_WRITE, temporal_policy_, storage_version);
+    auto write_group = ivf_flat_index_group<ivf_flat_index>(
+        ctx,
+        group_uri,
+        TILEDB_WRITE,
+        temporal_policy_,
+        storage_version,
+        dimension_);
 
     write_group.set_dimension(dimension_);
 
     write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
     write_group.append_base_size(::num_vectors(*partitioned_vectors_));
     write_group.append_num_partitions(num_partitions_);
-
     write_matrix(
         ctx,
         centroids_,
