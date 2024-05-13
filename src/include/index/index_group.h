@@ -95,9 +95,9 @@ class base_index_group {
  protected:
   tiledb::Context cached_ctx_;
   std::string group_uri_;
-  size_t index_timestamp_{0};
-  size_t group_timestamp_{0};
-  size_t timetravel_index_{0};
+  TemporalPolicy temporal_policy_{TimeTravel, 0};
+  size_t base_array_timestamp_{0};
+  size_t history_index_{0};
 
   // std::reference_wrapper<const index_type> index_;
   std::string version_;
@@ -150,7 +150,7 @@ class base_index_group {
    * @param ctx
    */
   void init_for_open() {
-    if (!exists(cached_ctx_)) {
+    if (!exists()) {
       throw std::runtime_error(
           "Group uri " + std::string(group_uri_) + " does not exist.");
     }
@@ -185,11 +185,6 @@ class base_index_group {
         throw std::runtime_error("Uri is empty.");
       }
 
-      if (!valid_array_names_.contains(*name)) {
-        throw std::runtime_error(
-            "Invalid array name in group: " + std::string(*name));
-      }
-
       array_name_to_uri_[*name] = uri;
     }
   }
@@ -200,25 +195,22 @@ class base_index_group {
     if (size(metadata_.ingestion_timestamps_) == 0) {
       throw std::runtime_error("No ingestion timestamps found.");
     }
-    if (index_timestamp_ == 0) {
-      index_timestamp_ = metadata_.ingestion_timestamps_.back();
+    if (base_array_timestamp_ == 0) {
+      base_array_timestamp_ = metadata_.ingestion_timestamps_.back();
+      temporal_policy_ = TemporalPolicy{TimeTravel, base_array_timestamp_};
     }
 
     auto timestamp_bound = std::lower_bound(
         begin(metadata_.ingestion_timestamps_),
         end(metadata_.ingestion_timestamps_),
-        index_timestamp_);
+        base_array_timestamp_);
     if (timestamp_bound == end(metadata_.ingestion_timestamps_)) {
-      throw std::runtime_error(
-          "Requested read timestamp " + std::to_string(index_timestamp_) +
-          " is beyond " +
-          std::to_string(metadata_.ingestion_timestamps_.back()));
+      // We may try to load the index at a timestamp beyond the latest ingestion
+      // timestamp. In this case, use the last timestamp.
+      timestamp_bound = end(metadata_.ingestion_timestamps_) - 1;
     }
-    timetravel_index_ =
+    history_index_ =
         std::distance(begin(metadata_.ingestion_timestamps_), timestamp_bound);
-
-    // @todo Or index_timestamp_?
-    group_timestamp_ = metadata_.ingestion_timestamps_[timetravel_index_];
   }
 
   /**
@@ -237,16 +229,15 @@ class base_index_group {
    * @param version
    */
   void open_for_write() {
-    if (exists(cached_ctx_)) {
+    if (exists()) {
       /** Load the current group metadata */
       init_for_open();
       if (!metadata_.ingestion_timestamps_.empty() &&
-          index_timestamp_ < metadata_.ingestion_timestamps_.back()) {
+          base_array_timestamp_ < metadata_.ingestion_timestamps_.back()) {
         throw std::runtime_error(
-            "Requested write timestamp " + std::to_string(index_timestamp_) +
-            " is not greater than " +
+            "Requested write timestamp " +
+            std::to_string(base_array_timestamp_) + " is not greater than " +
             std::to_string(metadata_.ingestion_timestamps_.back()));
-        group_timestamp_ = index_timestamp_;
       }
     } else {
       /** Create a new group */
@@ -307,11 +298,12 @@ class base_index_group {
       const std::string& uri,
       uint64_t dimension,
       tiledb_query_type_t rw = TILEDB_READ,
-      size_t timestamp = 0,
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""})
       : cached_ctx_(ctx)
       , group_uri_(uri)
-      , index_timestamp_(timestamp)
+      , temporal_policy_(temporal_policy)
+      , base_array_timestamp_(temporal_policy.timestamp_end())
       , version_(version)
       , opened_for_(rw) {
     switch (opened_for_) {
@@ -350,8 +342,8 @@ class base_index_group {
    * @brief Test whether the group exists or not.
    * @param ctx
    */
-  bool exists(const tiledb::Context& ctx) const {
-    return tiledb::Object::object(ctx, group_uri_).type() ==
+  bool exists() const {
+    return tiledb::Object::object(cached_ctx_, group_uri_).type() ==
            tiledb::Object::Type::Group;
   }
 
@@ -365,34 +357,30 @@ class base_index_group {
     return tiledb::Object::remove(ctx, group_uri_);
   }
 
-  /**************************************************************************
-   * Getters for read and write timestamps and sizes
-   **************************************************************************/
-
   /** Temporary until time traveling is implemented */
   auto get_previous_ingestion_timestamp() const {
     return metadata_.ingestion_timestamps_.back();
   }
+  auto get_ingestion_timestamp() const {
+    return metadata_.ingestion_timestamps_[history_index_];
+  }
   auto append_ingestion_timestamp(size_t timestamp) {
     metadata_.ingestion_timestamps_.push_back(timestamp);
   }
-  auto get_all_ingestion_timestamps() {
+  auto get_all_ingestion_timestamps() const {
     return metadata_.ingestion_timestamps_;
   }
 
-  /*
-   * Base size information
-   */
   auto get_previous_base_size() const {
     return metadata_.base_sizes_.back();
   }
   auto get_base_size() const {
-    return metadata_.base_sizes_[timetravel_index_];
+    return metadata_.base_sizes_[history_index_];
   }
   auto append_base_size(size_t size) {
     metadata_.base_sizes_.push_back(size);
   }
-  auto get_all_base_sizes() {
+  auto get_all_base_sizes() const {
     return metadata_.base_sizes_;
   }
 
@@ -410,9 +398,9 @@ class base_index_group {
     metadata_.dimension_ = dim;
   }
 
-  /**************************************************************************
-   * Getters for names and uris
-   **************************************************************************/
+  auto get_history_index() const {
+    return history_index_;
+  }
 
   [[nodiscard]] auto ids_uri() const {
     return array_key_to_uri("ids_array_name");
@@ -420,6 +408,7 @@ class base_index_group {
   [[nodiscard]] auto ids_array_name() const {
     return array_key_to_array_name("ids_array_name");
   }
+
   [[nodiscard]] const std::reference_wrapper<const tiledb::Context> cached_ctx()
       const {
     return cached_ctx_;
@@ -427,19 +416,16 @@ class base_index_group {
   [[nodiscard]] std::reference_wrapper<const tiledb::Context> cached_ctx() {
     return cached_ctx_;
   }
-  [[nodiscard]] auto group_timestamp() const {
-    return group_timestamp_;
-  }
 
   /**************************************************************************
    * Helpful functions for debugging, testing, etc
    **************************************************************************/
 
   auto set_ingestion_timestamp(size_t timestamp) {
-    metadata_.ingestion_timestamps_[timetravel_index_] = timestamp;
+    metadata_.ingestion_timestamps_[history_index_] = timestamp;
   }
   auto set_base_size(size_t size) {
-    metadata_.base_sizes_[timetravel_index_] = size;
+    metadata_.base_sizes_[history_index_] = size;
   }
 
   auto set_last_ingestion_timestamp(size_t timestamp) {
@@ -481,7 +467,7 @@ class base_index_group {
    *
    * @param msg Optional message to print before the dump.
    */
-  auto dump(const std::string& msg = "") {
+  auto dump(const std::string& msg = "") const {
     if (!empty(msg)) {
       std::cout << "-------------------------------------------------------\n";
       std::cout << "# " + msg << std::endl;
@@ -498,6 +484,10 @@ class base_index_group {
       }
       std::cout << *name << " " << member.uri() << std::endl;
     }
+    std::cout << "version_: " << version_ << std::endl;
+    std::cout << "history_index_: " << history_index_ << std::endl;
+    std::cout << "base_array_timestamp_: " << base_array_timestamp_
+              << std::endl;
     std::cout << "-------------------------------------------------------\n";
     std::cout << "# Metadata:" << std::endl;
     std::cout << "-------------------------------------------------------\n";

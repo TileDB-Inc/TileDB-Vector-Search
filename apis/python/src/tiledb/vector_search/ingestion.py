@@ -174,6 +174,8 @@ def ingest(
     import math
     import multiprocessing
     import os
+    import random
+    import string
     import time
     from typing import Any, Mapping
 
@@ -280,9 +282,11 @@ def ingest(
     EXTERNAL_IDS_ARRAY_NAME = storage_formats[storage_version][
         "EXTERNAL_IDS_ARRAY_NAME"
     ]
-    PARTIAL_WRITE_ARRAY_DIR = storage_formats[storage_version][
-        "PARTIAL_WRITE_ARRAY_DIR"
-    ]
+    PARTIAL_WRITE_ARRAY_DIR = (
+        storage_formats[storage_version]["PARTIAL_WRITE_ARRAY_DIR"]
+        + "_"
+        + "".join(random.choices(string.ascii_letters, k=10))
+    )
     DEFAULT_ATTR_FILTERS = storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"]
     VECTORS_PER_WORK_ITEM = 20000000
     VECTORS_PER_SAMPLE_WORK_ITEM = 1000000
@@ -535,36 +539,32 @@ def ingest(
 
         return external_ids_array_uri
 
+    def create_temp_data_group(
+        group: tiledb.Group,
+    ) -> tiledb.Group:
+        partial_write_array_dir_uri = f"{group.uri}/{PARTIAL_WRITE_ARRAY_DIR}"
+        try:
+            tiledb.group_create(partial_write_array_dir_uri)
+            add_to_group(group, partial_write_array_dir_uri, PARTIAL_WRITE_ARRAY_DIR)
+        except tiledb.TileDBError as err:
+            message = str(err)
+            if "already exists" not in message:
+                raise err
+        return tiledb.Group(partial_write_array_dir_uri, "w")
+
     def create_partial_write_array_group(
-        index_group_uri: str,
+        temp_data_group: tiledb.Group,
         vector_type: np.dtype,
         dimensions: int,
         filters: Any,
         create_index_array: bool,
-    ) -> (tiledb.Group, str):
-        group = tiledb.Group(index_group_uri, "w")
+    ) -> str:
         tile_size = int(
             ivf_flat_index.TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions
         )
-        partial_write_array_dir_uri = f"{group.uri}/{PARTIAL_WRITE_ARRAY_DIR}"
-        partial_write_array_index_uri = (
-            f"{partial_write_array_dir_uri}/{INDEX_ARRAY_NAME}"
-        )
-        partial_write_array_ids_uri = f"{partial_write_array_dir_uri}/{IDS_ARRAY_NAME}"
-        partial_write_array_parts_uri = (
-            f"{partial_write_array_dir_uri}/{PARTS_ARRAY_NAME}"
-        )
-
-        try:
-            tiledb.group_create(partial_write_array_dir_uri)
-        except tiledb.TileDBError as err:
-            message = str(err)
-            if "already exists" in message:
-                logger.debug(f"Group '{partial_write_array_dir_uri}' already exists")
-            raise err
-        partial_write_array_group = tiledb.Group(partial_write_array_dir_uri, "w")
-        add_to_group(group, partial_write_array_dir_uri, PARTIAL_WRITE_ARRAY_DIR)
-
+        partial_write_array_index_uri = f"{temp_data_group.uri}/{INDEX_ARRAY_NAME}"
+        partial_write_array_ids_uri = f"{temp_data_group.uri}/{IDS_ARRAY_NAME}"
+        partial_write_array_parts_uri = f"{temp_data_group.uri}/{PARTS_ARRAY_NAME}"
         if create_index_array:
             try:
                 tiledb.group_create(partial_write_array_index_uri)
@@ -576,7 +576,7 @@ def ingest(
                     )
                 raise err
             add_to_group(
-                partial_write_array_group,
+                temp_data_group,
                 partial_write_array_index_uri,
                 INDEX_ARRAY_NAME,
             )
@@ -606,7 +606,7 @@ def ingest(
             logger.debug(ids_schema)
             tiledb.Array.create(partial_write_array_ids_uri, ids_schema)
             add_to_group(
-                partial_write_array_group,
+                temp_data_group,
                 partial_write_array_ids_uri,
                 IDS_ARRAY_NAME,
             )
@@ -638,18 +638,17 @@ def ingest(
             logger.debug(partial_write_array_parts_uri)
             tiledb.Array.create(partial_write_array_parts_uri, parts_schema)
             add_to_group(
-                partial_write_array_group,
+                temp_data_group,
                 partial_write_array_parts_uri,
                 PARTS_ARRAY_NAME,
             )
-        group.close()
-        return partial_write_array_group, partial_write_array_index_uri
+        return partial_write_array_index_uri
 
     def create_arrays(
         group: tiledb.Group,
+        temp_data_group: tiledb.Group,
         arrays_created: bool,
         index_type: str,
-        size: int,
         dimensions: int,
         input_vectors_work_items: int,
         vector_type: np.dtype,
@@ -676,11 +675,8 @@ def ingest(
                     config=config,
                     storage_version=storage_version,
                 )
-            (
-                partial_write_array_group,
-                partial_write_array_index_uri,
-            ) = create_partial_write_array_group(
-                index_group_uri=group.uri,
+            partial_write_array_index_uri = create_partial_write_array_group(
+                temp_data_group=temp_data_group,
                 vector_type=vector_type,
                 dimensions=dimensions,
                 filters=DEFAULT_ATTR_FILTERS,
@@ -748,7 +744,6 @@ def ingest(
                     add_to_group(
                         partial_write_array_index_group, part_index_uri, "additions"
                     )
-            partial_write_array_group.close()
             partial_write_array_index_group.close()
 
         # Note that we don't create type-erased indexes (i.e. Vamana) here. Instead we create them
@@ -1534,21 +1529,20 @@ def ingest(
                 trace_id=trace_id,
             )
 
-            partial_write_array_group, _ = create_partial_write_array_group(
-                index_group_uri=index_group_uri,
+            temp_data_group_uri = f"{index_group_uri}/{PARTIAL_WRITE_ARRAY_DIR}"
+            temp_data_group = tiledb.Group(temp_data_group_uri, "w")
+            create_partial_write_array_group(
+                temp_data_group=temp_data_group,
                 vector_type=vector_type,
                 dimensions=dimensions,
                 filters=storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"],
                 create_index_array=False,
             )
-            partial_write_array_group.close()
-
-            group = tiledb.Group(index_group_uri, mode="r")
-            partial_write_array_dir_uri = group[PARTIAL_WRITE_ARRAY_DIR].uri
-            partial_write_array_group = tiledb.Group(partial_write_array_dir_uri)
-            ids_array_uri = partial_write_array_group[IDS_ARRAY_NAME].uri
-            parts_array_uri = partial_write_array_group[PARTS_ARRAY_NAME].uri
-            group.close()
+            temp_data_group.close()
+            temp_data_group = tiledb.Group(temp_data_group_uri)
+            ids_array_uri = temp_data_group[IDS_ARRAY_NAME].uri
+            parts_array_uri = temp_data_group[PARTS_ARRAY_NAME].uri
+            temp_data_group.close()
 
             parts_array = tiledb.open(
                 parts_array_uri, mode="w", timestamp=index_timestamp
@@ -1632,7 +1626,13 @@ def ingest(
 
         ctx = vspy.Ctx(config)
         index = vspy.IndexVamana(ctx, index_group_uri)
-        data = vspy.FeatureVectorArray(ctx, parts_array_uri, ids_array_uri)
+        data = vspy.FeatureVectorArray(
+            ctx,
+            parts_array_uri,
+            ids_array_uri,
+            0,
+            index_timestamp if index_timestamp else 0,
+        )
         index.train(data)
         index.add(data)
         index.write_index(ctx, index_group_uri, index_timestamp)
@@ -2606,6 +2606,8 @@ def ingest(
             partitions = int(group.meta.get("partitions", "-1"))
 
         previous_ingestion_timestamp = 0
+        if index_timestamp is None:
+            index_timestamp = int(time.time() * 1000)
         if len(ingestion_timestamps) > 0:
             previous_ingestion_timestamp = ingestion_timestamps[
                 len(ingestion_timestamps) - 1
@@ -2620,28 +2622,6 @@ def ingest(
                 )
 
         group.close()
-        group = tiledb.Group(index_group_uri, "w")
-
-        if training_input_vectors is not None:
-            training_source_uri = write_input_vectors(
-                group=group,
-                input_vectors=training_input_vectors,
-                size=training_input_vectors.shape[0],
-                dimensions=training_input_vectors.shape[1],
-                vector_type=training_input_vectors.dtype,
-                array_name=TRAINING_INPUT_VECTORS_ARRAY_NAME,
-            )
-            training_source_type = "TILEDB_ARRAY"
-
-        if input_vectors is not None:
-            source_uri = write_input_vectors(
-                group=group,
-                input_vectors=input_vectors,
-                size=in_size,
-                dimensions=dimensions,
-                vector_type=vector_type,
-                array_name=INPUT_VECTORS_ARRAY_NAME,
-            )
 
         if size == -1:
             size = int(in_size)
@@ -2673,17 +2653,6 @@ def ingest(
         )
         logger.debug("Number of workers %d", workers)
 
-        if external_ids is not None:
-            external_ids_uri = write_external_ids(
-                group=group,
-                external_ids=external_ids,
-                size=size,
-                partitions=partitions,
-            )
-            external_ids_type = "TILEDB_ARRAY"
-        else:
-            if external_ids_type is None:
-                external_ids_type = "U64BIN"
         # Compute task parameters for main ingestion.
         if input_vectors_per_work_item == -1:
             input_vectors_per_work_item = VECTORS_PER_WORK_ITEM
@@ -2763,17 +2732,53 @@ def ingest(
         )
 
         logger.debug("Creating arrays")
+        group = tiledb.Group(index_group_uri, "w")
+        temp_data_group = create_temp_data_group(group=group)
         create_arrays(
             group=group,
+            temp_data_group=temp_data_group,
             arrays_created=arrays_created,
             index_type=index_type,
-            size=size,
             dimensions=dimensions,
             input_vectors_work_items=input_vectors_work_items,
             vector_type=vector_type,
             logger=logger,
             storage_version=storage_version,
         )
+
+        if training_input_vectors is not None:
+            training_source_uri = write_input_vectors(
+                group=temp_data_group,
+                input_vectors=training_input_vectors,
+                size=training_input_vectors.shape[0],
+                dimensions=training_input_vectors.shape[1],
+                vector_type=training_input_vectors.dtype,
+                array_name=TRAINING_INPUT_VECTORS_ARRAY_NAME,
+            )
+            training_source_type = "TILEDB_ARRAY"
+
+        if input_vectors is not None:
+            source_uri = write_input_vectors(
+                group=temp_data_group,
+                input_vectors=input_vectors,
+                size=in_size,
+                dimensions=dimensions,
+                vector_type=vector_type,
+                array_name=INPUT_VECTORS_ARRAY_NAME,
+            )
+
+        if external_ids is not None:
+            external_ids_uri = write_external_ids(
+                group=temp_data_group,
+                external_ids=external_ids,
+                size=size,
+                partitions=partitions,
+            )
+            external_ids_type = "TILEDB_ARRAY"
+        else:
+            if external_ids_type is None:
+                external_ids_type = "U64BIN"
+        temp_data_group.close()
         group.meta["temp_size"] = size
         group.close()
 
@@ -2830,8 +2835,6 @@ def ingest(
             # For type-erased indexes (i.e. Vamana), we update this metadata in the write_index()
             # call during create_ingestion_dag(), so don't do it here.
             group = tiledb.Group(index_group_uri, "w")
-            if index_timestamp is None:
-                index_timestamp = int(time.time() * 1000)
             ingestion_timestamps.append(index_timestamp)
             base_sizes.append(temp_size)
             partition_history.append(partitions)

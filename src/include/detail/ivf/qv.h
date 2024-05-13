@@ -801,9 +801,9 @@ auto qv_query_heap_finite_ram(
     uint64_t timestamp = 0,
     Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
-  auto temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+  auto temporal_policy = (timestamp == 0) ?
+                             TemporalPolicy() :
+                             TemporalPolicy(TimeTravel, timestamp);
 
   // using score_type = float;
   using indices_type =

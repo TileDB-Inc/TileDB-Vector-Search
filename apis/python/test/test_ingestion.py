@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from array_paths import *
 from common import *
+from common import load_metadata
 
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search.flat_index import FlatIndex
@@ -486,6 +487,242 @@ def test_ingestion_external_ids_numpy(tmp_path):
         assert vfs.dir_size(index_uri) == 0
 
 
+def test_ingestion_timetravel(tmp_path):
+    for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
+        index_uri = os.path.join(tmp_path, f"array_{index_type}")
+
+        data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3]], dtype=np.float32)
+        default_result_d = [[np.finfo(np.float32).max], [np.finfo(np.float32).max]]
+        default_result_i = [[np.iinfo(np.uint64).max], [np.iinfo(np.uint64).max]]
+
+        # We ingest at timestamp 10.
+        ingest(
+            index_type=index_type,
+            index_uri=index_uri,
+            input_vectors=data,
+            index_timestamp=10,
+        )
+
+        # If we load the index with any timestamp < 10, then we have no data and so have no results.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=0),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i,
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=9),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i,
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(5, 9)),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i,
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(None, 9)),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i,
+        )
+
+        # If we load the index with timestamp >= 10 then we get results.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=10),
+            queries=data,
+            expected_result_d=[[0], [0]],
+            expected_result_i=[[0], [1]],
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=1000),
+            queries=data,
+            expected_result_d=[[0], [0]],
+            expected_result_i=[[0], [1]],
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(5, 15)),
+            queries=data,
+            expected_result_d=[[0], [0]],
+            expected_result_i=[[0], [1]],
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(None, 20)),
+            queries=data,
+            expected_result_d=[[0], [0]],
+            expected_result_i=[[0], [1]],
+        )
+
+        # We add a third vector at timestamp 20 and consolidate updates, meaning we'll re-ingest at timestamp = 20.
+        data = np.array(
+            [[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3]],
+            dtype=np.float32,
+        )
+        default_result_d = [
+            [np.finfo(np.float32).max],
+            [np.finfo(np.float32).max],
+            [np.finfo(np.float32).max],
+        ]
+        default_result_i = [
+            [np.iinfo(np.uint64).max],
+            [np.iinfo(np.uint64).max],
+            [np.iinfo(np.uint64).max],
+        ]
+        index = index_class(uri=index_uri)
+        index.update(
+            vector=data[2],
+            external_id=2,
+            timestamp=20,
+        )
+        index = index.consolidate_updates()
+
+        # We still have no results before timestamp 10.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=0),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i,
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=9),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i,
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(5, 9)),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i,
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(None, 9)),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i,
+        )
+
+        # We have no results if we load in between 10 and 20.
+        if index_type == "VAMANA":
+            # TODO(paris): Fix Vamana and re-enable this test.
+            continue
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(11, 19)),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i,
+        )
+
+        # If we load the index from timestamp 0 -> 19, we only are returned the first two vectors.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=10),
+            queries=data,
+            expected_result_d=[[0], [0], [4]],
+            expected_result_i=[[0], [1], [1]],
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=19),
+            queries=data,
+            expected_result_d=[[0], [0], [4]],
+            expected_result_i=[[0], [1], [1]],
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(0, 19)),
+            queries=data,
+            expected_result_d=[[0], [0], [4]],
+            expected_result_i=[[0], [1], [1]],
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(None, 19)),
+            queries=data,
+            expected_result_d=[[0], [0], [4]],
+            expected_result_i=[[0], [1], [1]],
+        )
+
+        # But if we load with timestamp >= 20 then we get results for all three vectors.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=None),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]],
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=1000),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]],
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(0, 1000)),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]],
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(None, 20)),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]],
+        )
+
+        # Clear all history at timestamp 19.
+        Index.clear_history(uri=index_uri, timestamp=19)
+
+        # If we load the index from timestamp 0 -> < 19, we only are returned the first two vectors.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=10),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i,
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=19),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i,
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(0, 19)),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i,
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(None, 19)),
+            queries=data,
+            expected_result_d=default_result_d,
+            expected_result_i=default_result_i,
+        )
+
+        # But if we load with timestamp > 20 then we get results for all three vectors.
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=None),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]],
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=1000),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]],
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(0, 1000)),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]],
+        )
+        query_and_check_equals(
+            index=index_class(uri=index_uri, timestamp=(None, 21)),
+            queries=data,
+            expected_result_d=[[0], [0], [0]],
+            expected_result_i=[[0], [1], [2]],
+        )
+
+
 def test_ingestion_with_updates(tmp_path):
     vfs = tiledb.VFS()
 
@@ -512,6 +749,18 @@ def test_ingestion_with_updates(tmp_path):
             source_uri=os.path.join(dataset_dir, "data.u8bin"),
             partitions=partitions,
         )
+
+        ingestion_timestamps, base_sizes = load_metadata(index_uri)
+        assert base_sizes == [1000]
+        assert len(ingestion_timestamps) == 1
+        timestamp_5_minutes_from_now = int((time.time() + 5 * 60) * 1000)
+        timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
+        assert (
+            ingestion_timestamps[0] > timestamp_5_minutes_ago
+            and ingestion_timestamps[0] < timestamp_5_minutes_from_now
+        )
+        ingestion_timestamp = ingestion_timestamps[0]
+
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) == 1.0
 
@@ -535,6 +784,16 @@ def test_ingestion_with_updates(tmp_path):
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=20)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+
+        ingestion_timestamps, base_sizes = load_metadata(index_uri)
+        assert base_sizes == [1000, 1000]
+        assert len(ingestion_timestamps) == 2
+        assert ingestion_timestamps[0] == ingestion_timestamp
+        assert (
+            ingestion_timestamps[1] != ingestion_timestamp
+            and ingestion_timestamps[1] > timestamp_5_minutes_ago
+            and ingestion_timestamps[1] < timestamp_5_minutes_from_now
+        )
 
         assert vfs.dir_size(index_uri) > 0
         Index.delete_index(uri=index_uri, config={})
@@ -560,11 +819,6 @@ def test_ingestion_with_batch_updates(tmp_path):
     gt_i, gt_d = get_groundtruth(dataset_dir, k)
 
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
-        # TODO(paris): Fix Vamana bug and re-enable:
-        # tiledb.cc.TileDBError: [TileDB::ArrayDirectory] Error: Cannot open array; Array does not exist.
-        if index_type == "VAMANA":
-            continue
-
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         index = ingest(
             index_type=index_type,
@@ -636,6 +890,10 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
             index_timestamp=1,
         )
 
+        ingestion_timestamps, base_sizes = load_metadata(index_uri)
+        assert ingestion_timestamps == [1]
+        assert base_sizes == [1000]
+
         if index_type == "IVF_FLAT":
             assert index.partitions == partitions
 
@@ -644,7 +902,8 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
         update_ids_offset = MAX_UINT64 - size
         updated_ids = {}
-        for i in range(2, 102):
+        timestamp_end = 102
+        for i in range(2, timestamp_end):
             index.delete(external_id=i, timestamp=i)
             index.update(
                 vector=data[i].astype(dtype),
@@ -652,6 +911,10 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
                 timestamp=i,
             )
             updated_ids[i] = i + update_ids_offset
+
+        ingestion_timestamps, base_sizes = load_metadata(index_uri)
+        assert ingestion_timestamps == [1]
+        assert base_sizes == [1000]
 
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions)
@@ -665,10 +928,6 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri, timestamp=(0, 101))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        # TODO(paris): Fix Vamana accuracy bug and re-enable:
-        # assert 0.105 == 1.0
-        if index_type == "VAMANA":
-            continue
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
         index = index_class(uri=index_uri, timestamp=(0, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
@@ -714,6 +973,11 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
         # Consolidate updates
         index = index.consolidate_updates()
+
+        ingestion_timestamps, base_sizes = load_metadata(index_uri)
+        assert ingestion_timestamps == [1, timestamp_end]
+        assert base_sizes == [1000, 1000]
+
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
@@ -770,37 +1034,41 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         assert accuracy(result, gt_i) == 1.0
 
         # Clear history before the latest ingestion
+        assert index.latest_ingestion_timestamp == 102
         Index.clear_history(
             uri=index_uri, timestamp=index.latest_ingestion_timestamp - 1
         )
+        if index_type == "VAMANA":
+            # TODO(paris): Re-enable once we support (start, end) timestamps for Vamana.
+            continue
         index = index_class(uri=index_uri, timestamp=1)
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri, timestamp=51)
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri, timestamp=101)
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
         index = index_class(uri=index_uri, timestamp=(0, 51))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri, timestamp=(0, 101))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri, timestamp=(0, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
         index = index_class(uri=index_uri, timestamp=(2, 51))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri, timestamp=(2, 101))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri, timestamp=(2, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0

@@ -101,7 +101,9 @@ class IndexVamana {
         } else if (key == "l_build") {
           l_build_ = std::stol(value);
         } else if (key == "r_max_degree") {
-          r_max_degree_ = std::stof(value);
+          r_max_degree_ = std::stol(value);
+        } else if (key == "b_backtrack") {
+          b_backtrack_ = std::stol(value);
         } else if (key == "feature_type") {
           feature_datatype_ = string_to_datatype(value);
         } else if (key == "id_type") {
@@ -128,7 +130,7 @@ class IndexVamana {
   IndexVamana(
       const tiledb::Context& ctx,
       const URI& group_uri,
-      const std::optional<IndexOptions>& config = std::nullopt) {
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0}) {
     using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
     std::vector<metadata_element> metadata{
         {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
@@ -159,7 +161,7 @@ class IndexVamana {
     if (uri_dispatch_table.find(type) == uri_dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
-    index_ = uri_dispatch_table.at(type)(ctx, group_uri);
+    index_ = uri_dispatch_table.at(type)(ctx, group_uri, temporal_policy);
 
     if (dimension_ != 0 && dimension_ != index_->dimension()) {
       throw std::runtime_error(
@@ -190,8 +192,15 @@ class IndexVamana {
     if (dispatch_table.find(type) == dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
+    // If we loaded an existing index, we should use the timestamp from it.
+    auto temporal_policy =
+        index_ ? index_->temporal_policy() : TemporalPolicy{TimeTravel, 0};
     index_ = dispatch_table.at(type)(
-        training_set.num_vectors(), l_build_, r_max_degree_);
+        training_set.num_vectors(),
+        l_build_,
+        r_max_degree_,
+        b_backtrack_,
+        temporal_policy);
 
     index_->train(training_set);
 
@@ -241,6 +250,14 @@ class IndexVamana {
           "Cannot write_index() because there is no index.");
     }
     index_->write_index(ctx, group_uri, timestamp, storage_version);
+  }
+
+  auto temporal_policy() const {
+    if (!index_) {
+      throw std::runtime_error(
+          "Cannot get temporal_policy() because there is no index.");
+    }
+    return index_->temporal_policy();
   }
 
   constexpr auto dimension() const {
@@ -295,6 +312,7 @@ class IndexVamana {
         const std::string& storage_version) = 0;
 
     [[nodiscard]] virtual size_t dimension() const = 0;
+    [[nodiscard]] virtual TemporalPolicy temporal_policy() const = 0;
   };
 
   /**
@@ -307,12 +325,25 @@ class IndexVamana {
         : impl_index_(std::forward<T>(t)) {
     }
 
-    index_impl(size_t num_vectors, size_t l_build, size_t r_max_degree)
-        : impl_index_(num_vectors, l_build, r_max_degree) {
+    index_impl(
+        size_t num_vectors,
+        size_t l_build,
+        size_t r_max_degree,
+        size_t b_backtrack,
+        TemporalPolicy temporal_policy)
+        : impl_index_(
+              num_vectors,
+              l_build,
+              r_max_degree,
+              b_backtrack,
+              temporal_policy) {
     }
 
-    index_impl(const tiledb::Context& ctx, const URI& index_uri)
-        : impl_index_(ctx, index_uri) {
+    index_impl(
+        const tiledb::Context& ctx,
+        const URI& index_uri,
+        TemporalPolicy temporal_policy)
+        : impl_index_(ctx, index_uri, temporal_policy) {
     }
 
     void train(const FeatureVectorArray& training_set) override {
@@ -325,7 +356,7 @@ class IndexVamana {
       using id_type = typename T::id_type;
       if (num_ids(training_set) > 0) {
         auto ids = std::span<id_type>(
-            (id_type*)training_set.ids_data(), training_set.num_vectors());
+            (id_type*)training_set.ids(), training_set.num_vectors());
         impl_index_.train(fspan, ids);
       } else {
         auto ids = std::vector<id_type>(::num_vectors(training_set));
@@ -407,6 +438,10 @@ class IndexVamana {
       return ::dimension(impl_index_);
     }
 
+    TemporalPolicy temporal_policy() const override {
+      return impl_index_.temporal_policy();
+    }
+
    private:
     /**
      * @brief Instance of the concrete class.
@@ -414,23 +449,20 @@ class IndexVamana {
     T impl_index_;
   };
 
-  using constructor_function =
-      std::function<std::unique_ptr<index_base>(size_t, size_t, size_t)>;
-  using table_type = std::map<
-      std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>,
-      constructor_function>;
+  // clang-format off
+  using constructor_function = std::function<std::unique_ptr<index_base>(size_t, size_t, size_t, size_t, TemporalPolicy)>;
+  using table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, constructor_function>;
   static const table_type dispatch_table;
 
-  using uri_constructor_function = std::function<std::unique_ptr<index_base>(
-      const tiledb::Context&, const std::string&)>;
-  using uri_table_type = std::map<
-      std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>,
-      uri_constructor_function>;
+  using uri_constructor_function = std::function<std::unique_ptr<index_base>(const tiledb::Context&, const std::string&, TemporalPolicy)>;
+  using uri_table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, uri_constructor_function>;
   static const uri_table_type uri_dispatch_table;
+  // clang-format on
 
   size_t dimension_ = 0;
   size_t l_build_ = 100;
   size_t r_max_degree_ = 64;
+  size_t b_backtrack_ = 0;
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
   tiledb_datatype_t adjacency_row_index_datatype_{TILEDB_ANY};
@@ -439,33 +471,33 @@ class IndexVamana {
 
 // clang-format off
 const IndexVamana::table_type IndexVamana::dispatch_table = {
-  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint32_t>>>(num_vectors, l_build, r_max_degree); }},
-  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(num_vectors, l_build, r_max_degree); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint32_t>>>(num_vectors, l_build, r_max_degree); }},
-  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint64_t>>>(num_vectors, l_build, r_max_degree); }},
-  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(num_vectors, l_build, r_max_degree); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint64_t>>>(num_vectors, l_build, r_max_degree); }},
-  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint32_t>>>(num_vectors, l_build, r_max_degree); }},
-  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(num_vectors, l_build, r_max_degree); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint32_t>>>(num_vectors, l_build, r_max_degree); }},
-  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint64_t>>>(num_vectors, l_build, r_max_degree); }},
-  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(num_vectors, l_build, r_max_degree); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint64_t>>>(num_vectors, l_build, r_max_degree); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t b_backtrack, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint32_t>>>(num_vectors, l_build, r_max_degree, b_backtrack, temporal_policy); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t b_backtrack, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(num_vectors, l_build, r_max_degree, b_backtrack, temporal_policy); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t b_backtrack, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint32_t>>>(num_vectors, l_build, r_max_degree, b_backtrack, temporal_policy); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t b_backtrack, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint64_t>>>(num_vectors, l_build, r_max_degree, b_backtrack, temporal_policy); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t b_backtrack, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(num_vectors, l_build, r_max_degree, b_backtrack, temporal_policy); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t b_backtrack, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint64_t>>>(num_vectors, l_build, r_max_degree, b_backtrack, temporal_policy); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t b_backtrack, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint32_t>>>(num_vectors, l_build, r_max_degree, b_backtrack, temporal_policy); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t b_backtrack, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(num_vectors, l_build, r_max_degree, b_backtrack, temporal_policy); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t b_backtrack, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint32_t>>>(num_vectors, l_build, r_max_degree, b_backtrack, temporal_policy); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t b_backtrack, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint64_t>>>(num_vectors, l_build, r_max_degree, b_backtrack, temporal_policy); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t b_backtrack, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(num_vectors, l_build, r_max_degree, b_backtrack, temporal_policy); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, size_t b_backtrack, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint64_t>>>(num_vectors, l_build, r_max_degree, b_backtrack, temporal_policy); }},
 };
 
 const IndexVamana::uri_table_type IndexVamana::uri_dispatch_table = {
-  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint32_t>>>(ctx, uri); }},
-  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(ctx, uri); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint32_t>>>(ctx, uri); }},
-  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint64_t>>>(ctx, uri); }},
-  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(ctx, uri); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint64_t>>>(ctx, uri); }},
-  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint32_t>>>(ctx, uri); }},
-  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(ctx, uri); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint32_t>>>(ctx, uri); }},
-  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint64_t>>>(ctx, uri); }},
-  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(ctx, uri); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint64_t>>>(ctx, uri); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint32_t>>>(ctx, uri, temporal_policy); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint32_t>>>(ctx, uri, temporal_policy); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint32_t>>>(ctx, uri, temporal_policy); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint64_t>>>(ctx, uri, temporal_policy); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint64_t>>>(ctx, uri, temporal_policy); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint64_t>>>(ctx, uri, temporal_policy); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint32_t>>>(ctx, uri, temporal_policy); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint32_t>>>(ctx, uri, temporal_policy); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint32_t>>>(ctx, uri, temporal_policy); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint64_t>>>(ctx, uri, temporal_policy); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(ctx, uri, temporal_policy); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint64_t>>>(ctx, uri, temporal_policy); }},
 };
 // clang-format on
 

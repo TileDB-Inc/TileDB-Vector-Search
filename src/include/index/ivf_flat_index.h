@@ -114,7 +114,7 @@ class ivf_flat_index {
    ****************************************************************************/
 
   /** The timestamp at which the index was created */
-  uint64_t timestamp_{0};
+  TemporalPolicy temporal_policy_{TimeTravel, 0};
 
   std::unique_ptr<ivf_flat_index_group<ivf_flat_index>> group_;
 
@@ -177,15 +177,18 @@ class ivf_flat_index {
       size_t nlist = 0,
       size_t max_iter = 2,
       float tol = 0.000025,
-      size_t timestamp = 0,
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       uint64_t seed = std::random_device{}())
       :  // , dimension_(dim)
-      timestamp_{
-          (timestamp == 0) ?
-              std::chrono::duration_cast<std::chrono::milliseconds>(
-                  std::chrono::system_clock::now().time_since_epoch())
-                  .count() :
-              timestamp}
+      temporal_policy_{
+          temporal_policy.timestamp_end() != 0 ?
+              temporal_policy :
+              TemporalPolicy{
+                  TimeTravel,
+                  static_cast<uint64_t>(
+                      std::chrono::duration_cast<std::chrono::milliseconds>(
+                          std::chrono::system_clock::now().time_since_epoch())
+                          .count())}}
       , num_partitions_(nlist)
       , max_iter_(max_iter)
       , tol_(tol)
@@ -216,9 +219,10 @@ class ivf_flat_index {
       const std::string& uri,
       uint64_t timestamp = 0)
       : group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
-            *this, ctx, uri, TILEDB_READ, timestamp_)} {
-    if (timestamp_ == 0) {
-      timestamp_ = group_->get_previous_ingestion_timestamp();
+            *this, ctx, uri, TILEDB_READ, temporal_policy_)} {
+    if (temporal_policy_.timestamp_end() == 0) {
+      temporal_policy_ = {
+          TimeTravel, group_->get_previous_ingestion_timestamp()};
     }
 
     /**
@@ -236,7 +240,7 @@ class ivf_flat_index {
             std::nullopt,
             num_partitions_,
             0,
-            timestamp_));
+            temporal_policy_));
   }
 
   /****************************************************************************
@@ -677,7 +681,7 @@ class ivf_flat_index {
         group_->ids_uri(),
         infinite_parts,
         0,
-        timestamp_);
+        temporal_policy_);
 
     partitioned_vectors_->load();
 
@@ -720,7 +724,7 @@ class ivf_flat_index {
         group_->ids_uri(),
         active_partitions,
         upper_bound,
-        timestamp_);
+        temporal_policy_);
 
     // NB: We don't load the partitioned_vectors here.  We will load them
     // when we do the query.
@@ -748,16 +752,21 @@ class ivf_flat_index {
       const std::string& storage_version = "") const {
     // Write the group
     auto write_group = ivf_flat_index_group(
-        *this, ctx, group_uri, TILEDB_WRITE, timestamp_, storage_version);
+        *this, ctx, group_uri, TILEDB_WRITE, temporal_policy_, storage_version);
 
     write_group.set_dimension(dimension_);
 
-    write_group.append_ingestion_timestamp(timestamp_);
+    write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
     write_group.append_base_size(::num_vectors(*partitioned_vectors_));
     write_group.append_num_partitions(num_partitions_);
 
     write_matrix(
-        ctx, centroids_, write_group.centroids_uri(), 0, false, timestamp_);
+        ctx,
+        centroids_,
+        write_group.centroids_uri(),
+        0,
+        false,
+        temporal_policy_);
 
     write_matrix(
         ctx,
@@ -765,7 +774,7 @@ class ivf_flat_index {
         write_group.parts_uri(),
         0,
         false,
-        timestamp_);
+        temporal_policy_);
 
     write_vector(
         ctx,
@@ -773,7 +782,7 @@ class ivf_flat_index {
         write_group.ids_uri(),
         0,
         false,
-        timestamp_);
+        temporal_policy_);
 
     write_vector(
         ctx,
@@ -781,7 +790,7 @@ class ivf_flat_index {
         write_group.indices_uri(),
         0,
         false,
-        timestamp_);
+        temporal_policy_);
 
     return true;
   }

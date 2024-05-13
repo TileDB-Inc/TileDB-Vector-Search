@@ -42,11 +42,11 @@
 
 #include "detail/ivf/index.h"
 #include "detail/ivf/partition.h"
+#include "detail/ivf/qv.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
+#include "detail/time/temporal_policy.h"
 #include "stats.h"
 #include "utils/fixed_min_heap.h"
-
-#include "detail/ivf/qv.h"
 
 namespace detail::ivf {
 
@@ -83,9 +83,9 @@ auto dist_qv_finite_ram_part(
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
-  auto temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+  auto temporal_policy = (timestamp == 0) ?
+                             TemporalPolicy() :
+                             TemporalPolicy(TimeTravel, timestamp);
 
   using score_type = float;
   // using parts_type = typename
@@ -328,10 +328,9 @@ auto dist_qv_finite_ram(
               nthreads,
               distance);
 #else
-      auto temporal_policy =
-          (timestamp == 0) ?
-              tiledb::TemporalPolicy() :
-              tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
+      auto temporal_policy = (timestamp == 0) ?
+                                 TemporalPolicy() :
+                                 TemporalPolicy(TimeTravel, timestamp);
       auto partitioned_vectors = tdbColMajorPartitionedMatrix<
           feature_type,
           shuffled_ids_type,

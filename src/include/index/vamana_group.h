@@ -109,9 +109,9 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
-      size_t timestamp = 0,
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""})
-      : Base(ctx, uri, index.dimension(), rw, timestamp, version) {
+      : Base(ctx, uri, index.dimension(), rw, temporal_policy, version) {
   }
 
  public:
@@ -132,7 +132,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     return metadata_.num_edges_history_.back();
   }
   auto get_num_edges() const {
-    return metadata_.num_edges_history_[this->timetravel_index_];
+    return metadata_.num_edges_history_[this->history_index_];
   }
   auto append_num_edges(size_t size) {
     metadata_.num_edges_history_.push_back(size);
@@ -141,7 +141,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     return metadata_.num_edges_history_;
   }
   auto set_num_edges(size_t size) {
-    metadata_.num_edges_history_[this->timetravel_index_] = size;
+    metadata_.num_edges_history_[this->history_index_] = size;
   }
   auto set_last_num_edges(size_t size) {
     metadata_.num_edges_history_.back() = size;

@@ -51,13 +51,9 @@ std::vector<T> read_vector_helper(
     const std::string& uri,
     size_t start_pos,
     size_t end_pos,
-    size_t timestamp,
+    TemporalPolicy temporal_policy,
     bool read_full_vector) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
-
-  tiledb::TemporalPolicy temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   auto array_ = tiledb_helpers::open_array(
       tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
@@ -201,12 +197,8 @@ void write_matrix(
     const std::string& uri,
     size_t start_pos = 0,
     bool create = true,
-    size_t timestamp = 0) {
+    TemporalPolicy temporal_policy = {}) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
-
-  tiledb::TemporalPolicy temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   if (create) {
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri);
@@ -315,12 +307,8 @@ void write_vector(
     const std::string& uri,
     size_t start_pos = 0,
     bool create = true,
-    size_t timestamp = 0) {
+    TemporalPolicy temporal_policy = {}) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
-
-  tiledb::TemporalPolicy temporal_policy =
-      (timestamp == 0) ? tiledb::TemporalPolicy() :
-                         tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp);
 
   using value_type = std::remove_const_t<std::ranges::range_value_t<V>>;
 
@@ -368,8 +356,9 @@ std::vector<T> read_vector(
     const std::string& uri,
     size_t start_pos,
     size_t end_pos,
-    size_t timestamp = 0) {
-  return read_vector_helper<T>(ctx, uri, start_pos, end_pos, timestamp, false);
+    TemporalPolicy temporal_policy = {}) {
+  return read_vector_helper<T>(
+      ctx, uri, start_pos, end_pos, temporal_policy, false);
 }
 
 /**
@@ -377,8 +366,10 @@ std::vector<T> read_vector(
  */
 template <class T>
 std::vector<T> read_vector(
-    const tiledb::Context& ctx, const std::string& uri, size_t timestamp = 0) {
-  return read_vector_helper<T>(ctx, uri, 0, 0, timestamp, true);
+    const tiledb::Context& ctx,
+    const std::string& uri,
+    TemporalPolicy temporal_policy = {}) {
+  return read_vector_helper<T>(ctx, uri, 0, 0, temporal_policy, true);
 }
 
 template <class T>
