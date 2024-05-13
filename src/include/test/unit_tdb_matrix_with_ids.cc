@@ -369,3 +369,90 @@ TEMPLATE_TEST_CASE(
     CHECK(X.ids()[i] == Z.ids()[i]);
   }
 }
+
+TEST_CASE("tdb_matrix_with_ids: time travel", "[tdb_matrix_with_ids]") {
+  tiledb::Context ctx;
+  std::string tmp_matrix_uri =
+      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
+  std::string tmp_ids_uri =
+      (std::filesystem::temp_directory_path() / "tmp_ids_vector").string();
+
+  int offset = 13;
+
+  size_t Mrows = 40;
+  size_t Ncols = 20;
+
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_matrix_uri)) {
+    vfs.remove_dir(tmp_matrix_uri);
+  }
+  if (vfs.is_dir(tmp_ids_uri)) {
+    vfs.remove_dir(tmp_ids_uri);
+  }
+
+  auto X = ColMajorMatrixWithIds<float, uint64_t, size_t>(Mrows, Ncols);
+  fill_and_write_matrix(
+      ctx,
+      X,
+      tmp_matrix_uri,
+      tmp_ids_uri,
+      Mrows,
+      Ncols,
+      offset,
+      TemporalPolicy{TimeTravel, 50});
+
+  {
+    // We can load the matrix at the creation timestamp.
+    auto Y = tdbColMajorPreLoadMatrixWithIds<float, uint64_t, size_t>(
+        ctx, tmp_matrix_uri, tmp_ids_uri, 0, TemporalPolicy{TimeTravel, 50});
+    CHECK(num_vectors(Y) == num_vectors(X));
+    CHECK(dimension(Y) == dimension(X));
+    CHECK(std::equal(
+        X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+    for (size_t i = 0; i < Mrows; ++i) {
+      for (size_t j = 0; j < Ncols; ++j) {
+        CHECK(X(i, j) == Y(i, j));
+      }
+    }
+  }
+
+  {
+    // We can load the matrix at a later timestamp.
+    auto Y = tdbColMajorPreLoadMatrixWithIds<float, uint64_t, size_t>(
+        ctx, tmp_matrix_uri, tmp_ids_uri, 0, TemporalPolicy{TimeTravel, 100});
+    CHECK(num_vectors(Y) == num_vectors(X));
+    CHECK(dimension(Y) == dimension(X));
+    CHECK(std::equal(
+        X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+    for (size_t i = 0; i < Mrows; ++i) {
+      for (size_t j = 0; j < Ncols; ++j) {
+        CHECK(X(i, j) == Y(i, j));
+      }
+    }
+  }
+
+  {
+    // We get no data if we load the matrix at an earlier timestamp.
+    auto Y = tdbColMajorPreLoadMatrixWithIds<float, uint64_t, size_t>(
+        ctx, tmp_matrix_uri, tmp_ids_uri, 0, TemporalPolicy{TimeTravel, 5});
+    CHECK(num_vectors(Y) == 0);
+    CHECK(dimension(Y) == 0);
+    CHECK(Y.size() == 0);
+  }
+
+  {
+    // We get no data if we load the matrix at an earlier timestamp, even if we
+    // specify we want to read 4 rows and 2 cols.
+    auto Y = tdbColMajorPreLoadMatrixWithIds<float, uint64_t, size_t>(
+        ctx,
+        tmp_matrix_uri,
+        tmp_ids_uri,
+        4,
+        2,
+        0,
+        TemporalPolicy{TimeTravel, 5});
+    CHECK(num_vectors(Y) == 0);
+    CHECK(dimension(Y) == 0);
+    CHECK(Y.size() == 0);
+  }
+}

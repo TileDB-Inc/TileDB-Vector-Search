@@ -109,7 +109,7 @@ class ivf_flat_index_group
     return metadata_.partition_history_.back();
   }
   auto get_num_partitions() const {
-    return metadata_.partition_history_[this->timetravel_index_];
+    return metadata_.partition_history_[this->history_index_];
   }
   auto append_num_partitions(size_t size) {
     metadata_.partition_history_.push_back(size);
@@ -119,7 +119,7 @@ class ivf_flat_index_group
   }
 
   auto set_num_partitions(size_t size) {
-    metadata_.partition_history_[this->timetravel_index_] = size;
+    metadata_.partition_history_[this->history_index_] = size;
   }
   auto set_last_num_partitions(size_t size) {
     metadata_.partition_history_.back() = size;

@@ -664,7 +664,7 @@ TEST_CASE("api: temporal_policy", "[api]") {
     }
   }
 
-  // Read the data at timestamp 99 explicitly.
+  // Read the data at timestamp 99.
   {
     auto feature_vector_array = FeatureVectorArray(
         ctx, feature_vectors_uri, ids_uri, 0, TemporalPolicy(TimeTravel, 99));
@@ -683,5 +683,25 @@ TEST_CASE("api: temporal_policy", "[api]") {
         CHECK(data(j, i) == i + 1);
       }
     }
+  }
+
+  // Read the data at timestamp 50.
+  {
+    auto feature_vector_array = FeatureVectorArray(
+        ctx, feature_vectors_uri, ids_uri, 0, TemporalPolicy(TimeTravel, 50));
+    CHECK(extents(feature_vector_array)[0] == 0);
+    CHECK(extents(feature_vector_array)[1] == 0);
+    CHECK(feature_vector_array.num_vectors() == 0);
+    CHECK(feature_vector_array.num_ids() == 0);
+    CHECK(feature_vector_array.dimension() == 0);
+    auto data = MatrixView<FeatureType, stdx::layout_left>{
+        (FeatureType*)feature_vector_array.data(),
+        extents(feature_vector_array)[0],
+        extents(feature_vector_array)[1]};
+    auto ids = std::span<IdsType>(
+        (IdsType*)feature_vector_array.ids_data(),
+        feature_vector_array.num_vectors());
+    CHECK(ids.size() == 0);
+    CHECK(data.size() == 0);
   }
 }
