@@ -794,6 +794,61 @@ TEST_CASE(
         std::vector<uint64_t>{99, 100}.begin()));
   }
 
-  // Clear history.
-  { IndexVamana::clear_history(ctx, index_uri, 99); }
+  // Clear history for <= 99 and then load at 99, then make sure we cannot
+  // query.
+  {
+    IndexVamana::clear_history(ctx, index_uri, 99);
+
+    auto temporal_policy = TemporalPolicy{TimeTravel, 99};
+    auto index = IndexVamana(ctx, index_uri, temporal_policy);
+
+    CHECK(index.temporal_policy().timestamp_end() == 99);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
+
+    auto queries = ColMajorMatrix<feature_type_type>{
+        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+    auto query_vector_array = FeatureVectorArray(queries);
+    auto&& [scores_vector_array, ids_vector_array] =
+        index.query(query_vector_array, 1);
+
+    auto scores = std::span<feature_type_type>(
+        (feature_type_type*)scores_vector_array.data(),
+        scores_vector_array.num_vectors());
+    auto ids = std::span<id_type_type>(
+        (id_type_type*)ids_vector_array.data(), ids_vector_array.num_vectors());
+    CHECK(std::equal(
+        scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
+    CHECK(std::equal(
+        ids.begin(), ids.end(), std::vector<uint32_t>{0, 0, 0, 0}.begin()));
+
+    auto typed_index = vamana_index<
+        feature_type_type,
+        id_type_type,
+        adjacency_row_index_type_type>(ctx, index_uri, temporal_policy);
+    CHECK(typed_index.group().get_dimension() == dimensions);
+    CHECK(typed_index.group().get_temp_size() == 0);
+    CHECK(typed_index.group().get_history_index() == 0);
+
+    CHECK(typed_index.group().get_base_size() == 5);
+    CHECK(typed_index.group().get_ingestion_timestamp() == 100);
+
+    CHECK(typed_index.group().get_all_num_edges().size() == 1);
+    CHECK(typed_index.group().get_all_base_sizes().size() == 1);
+    CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 1);
+
+    CHECK(typed_index.group().get_all_num_edges()[0] > 0);
+    auto all_base_sizes = typed_index.group().get_all_base_sizes();
+    CHECK(std::equal(
+        all_base_sizes.begin(),
+        all_base_sizes.end(),
+        std::vector<uint64_t>{5}.begin()));
+    auto all_ingestion_timestamps =
+        typed_index.group().get_all_ingestion_timestamps();
+    CHECK(std::equal(
+        all_ingestion_timestamps.begin(),
+        all_ingestion_timestamps.end(),
+        std::vector<uint64_t>{100}.begin()));
+  }
 }
