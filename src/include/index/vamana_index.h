@@ -41,7 +41,11 @@
 
 #include <tiledb/tiledb>
 #include "detail/graph/adj_list.h"
+#include "detail/graph/best_first.h"
+#include "detail/graph/bfs.h"
+#include "detail/graph/diskann.h"
 #include "detail/graph/graph_utils.h"
+#include "detail/graph/greedy_search.h"
 #include "detail/linalg/tdb_matrix_with_ids.h"
 #include "detail/linalg/vector.h"
 #include "detail/time/temporal_policy.h"
@@ -50,16 +54,9 @@
 #include "stats.h"
 #include "utils/fixed_min_heap.h"
 #include "utils/print_types.h"
-#include "detail/graph/adj_list.h"
-#include "detail/graph/best_first.h"
-#include "detail/graph/bfs.h"
-#include "detail/graph/diskann.h"
-#include "detail/graph/graph_utils.h"
-#include "detail/graph/greedy_search.h"
-#include "index/vamana_group.h"
 
-#include <tiledb/tiledb>
 #include <tiledb/group_experimental.h>
+#include <tiledb/tiledb>
 
 /**
  * Find the vector that is closest to the centroid of the set of vectors P.
@@ -568,7 +565,6 @@ class vamana_index {
 
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
-  
 
   /**
    * @brief Query the index for the top k nearest neighbors of the query set
