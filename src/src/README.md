@@ -245,7 +245,6 @@ The options used by `index` are
 - The name of a partition sizes array to be written (`--sizes_uri`). The `--sizes_uri` option and the `index_uri` options are mutually exclusive.
 - The name of the ids array to be written (`ids_uri`)
 - The initialization algorithm to be used by kmeans (`--init`). Current options are `kmeanspp` and `random`. The default is `random`.
-- Whether to overwrite existing array (`--force`)
 
 Example:
 
@@ -258,9 +257,6 @@ Example:
              centroids_uri s3://tiledb-lums/kmeans/ivf_flat/centroids
 
 ```
-
-Note that if the `--force` option is not given,
-the program will **not** overwrite any existing arrays. In that case, it is the responsibility of the user to make sure that the arrays to be written do not exist when the program is executed. If the `--force` option is given, if any of the arrays specified as options to the program already exist, they will be overwritten.
 
 ## The `flat_l2` Search Driver
 

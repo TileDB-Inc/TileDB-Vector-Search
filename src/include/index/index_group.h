@@ -93,7 +93,7 @@ class base_index_group {
   friend IndexGroup;
 
  protected:
-  std::reference_wrapper<const tiledb::Context> cached_ctx_;
+  tiledb::Context cached_ctx_;
   std::string group_uri_;
   size_t index_timestamp_{0};
   size_t group_timestamp_{0};
@@ -107,37 +107,23 @@ class base_index_group {
 
   // Set of the names that are used in the group for this version
   std::unordered_set<std::string> valid_array_names_;
-  std::unordered_set<std::string> valid_key_names_;
+  std::unordered_set<std::string> valid_array_keys_;
 
-  // Set of names of arrays that are part of the group.  They either have
-  // been read from the group or written to the group.
-  std::unordered_set<std::string> active_array_names_;
+  std::unordered_map<std::string, std::string> array_key_to_array_name_;
 
-  std::unordered_map<std::string, std::string> array_name_map_;
-
-  /** Check validity of key name */
-  constexpr bool is_valid_key_name(const std::string& key_name) const noexcept {
-    return valid_key_names_.contains(key_name);
-  }
-
-  /** Check validity of array name */
-  constexpr bool is_valid_array_name(
-      const std::string& array_name) const noexcept {
-    return valid_array_names_.contains(array_name);
-  }
-
-  /** Check whether the array has been put into this group */
-  constexpr bool is_active_array_name(
-      const std::string& array_name) const noexcept {
-    return active_array_names_.contains(array_name);
-  }
+  // Maps from the array name (not the key) to the URI of the array. Should be
+  // used to get array URI's because the group_uri_ may be of the form
+  // `tiledb://foo/edc4656a-3f45-43a1-8ee5-fa692a015c53` which cannot have the
+  // array name added as a suffix.
+  std::unordered_map<std::string, std::string> array_name_to_uri_;
 
   /** Lookup an array name given an array key */
   constexpr auto array_key_to_array_name(const std::string& array_key) const {
-    if (!is_valid_key_name(array_key)) {
+    if (!valid_array_keys_.contains(array_key)) {
       throw std::runtime_error("Invalid array key: " + array_key);
     }
-    return array_key_to_array_name_from_map(array_name_map_, array_key);
+    return array_key_to_array_name_from_map(
+        array_key_to_array_name_, array_key);
   };
 
   /** Create the set of valid key names and array names */
@@ -146,31 +132,13 @@ class base_index_group {
       throw std::runtime_error("Version not set.");
     }
     for (auto&& [array_key, array_name] : storage_formats[version_]) {
-      valid_key_names_.insert(array_key);
+      valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
-      array_name_map_[array_key] = array_name;
+      array_key_to_array_name_[array_key] = array_name;
+      array_name_to_uri_[array_name] =
+          array_name_to_uri(group_uri_, array_name);
     }
     static_cast<group_type*>(this)->append_valid_array_names_impl();
-  }
-
-  /**
-   * @brief Add an array to the group.
-   *
-   * @param array_name
-   *
-   * @todo Could have type of array set here instead of by Index.  Might be
-   * better to have it set in conjunction with array being set?
-   */
-  auto init_array_for_create(const std::string& array_name) {
-    if (!is_valid_array_name(array_name)) {
-      throw std::runtime_error(
-          "Invalid array name in add_array: " + array_name);
-    }
-    active_array_names_.insert(array_name);
-
-    std::filesystem::path uri = array_name_to_uri(array_name);
-
-    return uri;
   }
 
   /**
@@ -181,13 +149,13 @@ class base_index_group {
    *
    * @param ctx
    */
-  void init_for_open(const tiledb::Config& cfg) {
-    tiledb::VFS vfs(cached_ctx_);
-    if (!vfs.is_dir(group_uri_)) {
+  void init_for_open() {
+    if (!exists(cached_ctx_)) {
       throw std::runtime_error(
           "Group uri " + std::string(group_uri_) + " does not exist.");
     }
-    auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
+    auto read_group = tiledb::Group(
+        cached_ctx_, group_uri_, TILEDB_READ, cached_ctx_.config());
 
     // Load the metadata and check the version.  We need to do this before
     // we can check the array names.
@@ -196,7 +164,7 @@ class base_index_group {
     metadata_.load_metadata(read_group);
     if (!empty(version_) && metadata_.storage_version_ != version_) {
       throw std::runtime_error(
-          "Version mismatch.  Requested " + version_ + " but found " +
+          "Version mismatch. Requested " + version_ + " but found " +
           metadata_.storage_version_);
     } else if (empty(version_)) {
       version_ = metadata_.storage_version_;
@@ -212,17 +180,17 @@ class base_index_group {
       if (!name || name->empty()) {
         throw std::runtime_error("Name is empty.");
       }
-      if (is_valid_array_name(*name)) {
-        active_array_names_.insert(*name);
-      } else {
-        throw std::runtime_error(
-            "Invalid array name in group: " + std::string(*name));
+      auto uri = member.uri();
+      if (uri.empty()) {
+        throw std::runtime_error("Uri is empty.");
       }
+
+      array_name_to_uri_[*name] = uri;
     }
   }
 
-  void open_for_read(const tiledb::Config& cfg) {
-    init_for_open(cfg);
+  void open_for_read() {
+    init_for_open();
 
     if (size(metadata_.ingestion_timestamps_) == 0) {
       throw std::runtime_error("No ingestion timestamps found.");
@@ -236,10 +204,9 @@ class base_index_group {
         end(metadata_.ingestion_timestamps_),
         index_timestamp_);
     if (timestamp_bound == end(metadata_.ingestion_timestamps_)) {
-      throw std::runtime_error(
-          "Requested read timestamp " + std::to_string(index_timestamp_) +
-          " is beyond " +
-          std::to_string(metadata_.ingestion_timestamps_.back()));
+      // We may try to load the index at a timestamp beyond the latest ingestion
+      // timestamp. In this case, use the last timestamp.
+      timestamp_bound = end(metadata_.ingestion_timestamps_) - 1;
     }
     timetravel_index_ =
         std::distance(begin(metadata_.ingestion_timestamps_), timestamp_bound);
@@ -263,13 +230,12 @@ class base_index_group {
    * @param uri
    * @param version
    */
-  void open_for_write(const tiledb::Config& cfg) {
-    tiledb::VFS vfs(cached_ctx_);
-
-    if (vfs.is_dir(group_uri_)) {
+  void open_for_write() {
+    if (exists(cached_ctx_)) {
       /** Load the current group metadata */
-      init_for_open(cfg);
-      if (index_timestamp_ < metadata_.ingestion_timestamps_.back()) {
+      init_for_open();
+      if (!metadata_.ingestion_timestamps_.empty() &&
+          index_timestamp_ < metadata_.ingestion_timestamps_.back()) {
         throw std::runtime_error(
             "Requested write timestamp " + std::to_string(index_timestamp_) +
             " is not greater than " +
@@ -278,7 +244,7 @@ class base_index_group {
       }
     } else {
       /** Create a new group */
-      create_default(cfg);
+      create_default();
     }
   }
 
@@ -289,21 +255,20 @@ class base_index_group {
    *
    * @todo Process the "base group" metadata here.
    */
-  void create_default(const tiledb::Config& cfg) {
-    static_cast<group_type*>(this)->create_default_impl(cfg);
-  }
-
-  /** Convert an array name to a uri. */
-  constexpr std::string array_name_to_uri(
-      const std::string& array_name) const noexcept {
-    return array_name_to_uri(group_uri_, array_name);
+  void create_default() {
+    static_cast<group_type*>(this)->create_default_impl();
   }
 
   /** Convert an array key to a uri. */
   constexpr std::string array_key_to_uri(const std::string& array_key) const {
-    return (std::filesystem::path{group_uri_} /
-            std::filesystem::path{array_key_to_array_name(array_key)})
-        .string();
+    auto name = array_key_to_array_name(array_key);
+    if (array_name_to_uri_.find(name) == array_name_to_uri_.end()) {
+      throw std::runtime_error(
+          "Invalid key when getting the URI: " + array_key +
+          ". Name does not exist: " + name);
+    }
+
+    return array_name_to_uri_.at(name);
   }
 
  public:
@@ -337,8 +302,7 @@ class base_index_group {
       uint64_t dimension,
       tiledb_query_type_t rw = TILEDB_READ,
       size_t timestamp = 0,
-      const std::string& version = std::string{""},
-      const tiledb::Config& cfg = tiledb::Config{})
+      const std::string& version = std::string{""})
       : cached_ctx_(ctx)
       , group_uri_(uri)
       , index_timestamp_(timestamp)
@@ -346,11 +310,11 @@ class base_index_group {
       , opened_for_(rw) {
     switch (opened_for_) {
       case TILEDB_READ:
-        open_for_read(cfg);
+        open_for_read();
         break;
       case TILEDB_WRITE:
         set_dimension(dimension);
-        open_for_write(cfg);
+        open_for_write();
         break;
       case TILEDB_MODIFY_EXCLUSIVE:
         break;
@@ -370,9 +334,8 @@ class base_index_group {
    */
   ~base_index_group() {
     if (opened_for_ == TILEDB_WRITE) {
-      auto cfg = tiledb::Config();
-      auto write_group =
-          tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
+      auto write_group = tiledb::Group(
+          cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
       metadata_.store_metadata(write_group);
     }
   }
@@ -404,9 +367,6 @@ class base_index_group {
   auto get_previous_ingestion_timestamp() const {
     return metadata_.ingestion_timestamps_.back();
   }
-  auto get_ingestion_timestamp() const {
-    return metadata_.ingestion_timestamps_[timetravel_index_];
-  }
   auto append_ingestion_timestamp(size_t timestamp) {
     metadata_.ingestion_timestamps_.push_back(timestamp);
   }
@@ -430,18 +390,6 @@ class base_index_group {
     return metadata_.base_sizes_;
   }
 
-  auto get_all_active_array_names() {
-    return active_array_names_;
-  }
-
-  auto get_all_active_uris() {
-    std::vector<std::string> uris;
-    for (auto&& array_name : active_array_names_) {
-      uris.push_back(array_name_to_uri(array_name));
-    }
-    return uris;
-  }
-
   auto get_temp_size() const {
     return metadata_.temp_size_;
   }
@@ -460,29 +408,11 @@ class base_index_group {
    * Getters for names and uris
    **************************************************************************/
 
-  [[nodiscard]] auto partial_write_array_dir() const {
-    return array_key_to_uri("partial_write_array_dir");
+  [[nodiscard]] auto ids_uri() const {
+    return array_key_to_uri("ids_array_name");
   }
-  [[nodiscard]] auto input_vectors_uri() const {
-    return array_key_to_uri("input_vectors_array_name");
-  }
-  [[nodiscard]] auto external_ids_uri() const {
-    return array_key_to_uri("external_ids_array_name");
-  }
-  [[nodiscard]] auto updates_array_uri() const {
-    return array_key_to_uri("updates_array_name");
-  }
-  [[nodiscard]] auto partial_write_array_name() const {
-    return array_key_to_array_name("partial_write_array_dir");
-  }
-  [[nodiscard]] auto input_vectors_array_name() const {
-    return array_key_to_array_name("input_vectors_array_name");
-  }
-  [[nodiscard]] auto external_ids_array_name() const {
-    return array_key_to_array_name("external_ids_array_name");
-  }
-  [[nodiscard]] auto updates_array_name() const {
-    return array_key_to_array_name("updates_array_name");
+  [[nodiscard]] auto ids_array_name() const {
+    return array_key_to_array_name("ids_array_name");
   }
   [[nodiscard]] const std::reference_wrapper<const tiledb::Context> cached_ctx()
       const {
@@ -526,10 +456,10 @@ class base_index_group {
     if (valid_array_names_ != rhs.valid_array_names_) {
       return false;
     }
-    if (size(valid_key_names_) != size(rhs.valid_key_names_)) {
+    if (size(valid_array_keys_) != size(rhs.valid_array_keys_)) {
       return false;
     }
-    if (valid_key_names_ != rhs.valid_key_names_) {
+    if (valid_array_keys_ != rhs.valid_array_keys_) {
       return false;
     }
     if (!metadata_.compare_metadata(rhs.metadata_)) {
@@ -552,8 +482,8 @@ class base_index_group {
     }
     std::cout << "-------------------------------------------------------\n";
     std::cout << "Stored in " + group_uri_ + ":" << std::endl;
-    auto cfg = tiledb::Config();
-    auto read_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_READ, cfg);
+    auto read_group = tiledb::Group(
+        cached_ctx_, group_uri_, TILEDB_READ, cached_ctx_.config());
     for (size_t i = 0; i < read_group.member_count(); ++i) {
       auto member = read_group.member(i);
       auto name = member.name();
@@ -561,11 +491,6 @@ class base_index_group {
         throw std::runtime_error("Name is empty.");
       }
       std::cout << *name << " " << member.uri() << std::endl;
-    }
-    std::cout << "-------------------------------------------------------\n";
-    std::cout << "# Active arrays:" << std::endl;
-    for (auto&& array_name : active_array_names_) {
-      std::cout << array_name << std::endl;
     }
     std::cout << "-------------------------------------------------------\n";
     std::cout << "# Metadata:" << std::endl;

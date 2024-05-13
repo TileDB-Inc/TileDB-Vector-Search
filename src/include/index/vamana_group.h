@@ -32,18 +32,32 @@
 #ifndef TILEDB_VAMANA_GROUP_H
 #define TILEDB_VAMANA_GROUP_H
 
+#include "detail/linalg/tdb_helpers.h"
 #include "index/index_defs.h"
 #include "index/index_group.h"
 #include "index/vamana_metadata.h"
 
 /**
- * The vamana index group needs to store
- *   * vectors
- *   * graph (basically CSR)
- *     * neighbor lists
- *     * neighbor scores (distances)
- *     * "row" index
- *   * centroids (for the case of partitioned vamana)
+ * The vamana index group stores:
+ * - feature_vectors: the original set of vectors which we copy.
+ *   - Example: [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
+ * - feature_vectors_ids: the IDs of the vectors in feature_vectors_array_name.
+ *   - Example: [99, 100, 101]
+ * - The graph (basically a CSR)
+ *   - adjacency_ids: These are indexes into feature_vectors. Vertices go from 0
+ * -> n-1 and each of those vertices indexes into feature_vectors. Then those
+ * IDs correspond to the indexes. You can also think of it as holding the R
+ * nearest neighbhors in the graph for each vertex.
+ *      - Example: Here we have 100 and 101 connected, 99 and 101 connected, and
+ * 99 and 10 connected. Logically you can think of it like: [[1 2], [0, 2], [0,
+ * 1]], but it's stored as [1, 2, 0, 2, 0, 1]
+ *   - adjacency_scores: This holds the neighbor scores (i.e. the distances)
+ *      - Example: [[distance between 0 and 1, distance between 0 and 2], etc.]
+ *   -  adjacency_row_index: Each entry in the row index indicates where the
+ * neighbhors for that index start. 0 because that's where neighbors for vertex
+ * 0 start, then 2 b/c that's where niehbhors for vertex 1 start, then 4 b/c
+ * that's whre niehbhors for vertex 2 start, then 6 b/c that's the end.
+ *      - Example: [0, 2, 4, 6]
  */
 [[maybe_unused]] static StorageFormat vamana_storage_formats = {
     {"0.3",
@@ -69,12 +83,13 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   using Base = base_index_group<vamana_index_group>;
   // using Base::Base;
 
-  using Base::array_name_map_;
+  using Base::array_key_to_array_name_;
+  using Base::array_name_to_uri_;
   using Base::cached_ctx_;
   using Base::group_uri_;
   using Base::metadata_;
+  using Base::valid_array_keys_;
   using Base::valid_array_names_;
-  using Base::valid_key_names_;
   using Base::version_;
 
   using index_type = Index;
@@ -95,17 +110,18 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
       size_t timestamp = 0,
-      const std::string& version = std::string{""},
-      const tiledb::Config& cfg = tiledb::Config{})
-      : Base(ctx, uri, index.dimension(), rw, timestamp, version, cfg) {
+      const std::string& version = std::string{""})
+      : Base(ctx, uri, index.dimension(), rw, timestamp, version) {
   }
 
  public:
   void append_valid_array_names_impl() {
     for (auto&& [array_key, array_name] : vamana_storage_formats[version_]) {
-      valid_key_names_.insert(array_key);
+      valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
-      array_name_map_[array_key] = array_name;
+      array_key_to_array_name_[array_key] = array_name;
+      array_name_to_uri_[array_name] =
+          array_name_to_uri(group_uri_, array_name);
     }
   }
 
@@ -121,7 +137,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   auto append_num_edges(size_t size) {
     metadata_.num_edges_history_.push_back(size);
   }
-  auto get_all_num_edges() {
+  auto get_all_num_edges() const {
     return metadata_.num_edges_history_;
   }
   auto set_num_edges(size_t size) {
@@ -130,23 +146,23 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   auto set_last_num_edges(size_t size) {
     metadata_.num_edges_history_.back() = size;
   }
-  auto get_L_build() const {
-    return metadata_.L_build_;
+  auto get_l_build() const {
+    return metadata_.l_build_;
   }
-  auto set_L_build(size_t size) {
-    metadata_.L_build_ = size;
+  auto set_l_build(size_t size) {
+    metadata_.l_build_ = size;
   }
-  auto get_R_max_degree() const {
-    return metadata_.R_max_degree_;
+  auto get_r_max_degree() const {
+    return metadata_.r_max_degree_;
   }
-  auto set_R_max_degree(size_t size) {
-    metadata_.R_max_degree_ = size;
+  auto set_r_max_degree(size_t size) {
+    metadata_.r_max_degree_ = size;
   }
-  auto get_B_backtrack() const {
-    return metadata_.B_backtrack_;
+  auto get_b_backtrack() const {
+    return metadata_.b_backtrack_;
   }
-  auto set_B_backtrack(size_t size) {
-    metadata_.B_backtrack_ = size;
+  auto set_b_backtrack(size_t size) {
+    metadata_.b_backtrack_ = size;
   }
   auto get_alpha_min() const {
     return metadata_.alpha_min_;
@@ -170,9 +186,6 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   [[nodiscard]] auto feature_vectors_uri() const {
     return this->array_key_to_uri("parts_array_name");
   }
-  [[nodiscard]] auto feature_vector_ids_uri() const {
-    return this->array_key_to_uri("ids_array_name");
-  }
   [[nodiscard]] auto adjacency_scores_uri() const {
     return this->array_key_to_uri("adjacency_scores_array_name");
   }
@@ -185,9 +198,6 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   [[nodiscard]] auto feature_vectors_array_name() const {
     return this->array_key_to_array_name("parts_array_name");
   }
-  [[nodiscard]] auto feature_vector_ids_name() const {
-    return this->array_key_to_array_name("ids_array_name");
-  }
   [[nodiscard]] auto adjacency_scores_array_name() const {
     return this->array_key_to_array_name("adjacency_scores_array_name");
   }
@@ -198,7 +208,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     return this->array_key_to_array_name("adjacency_row_index_array_name");
   }
 
-  void create_default_impl(const tiledb::Config& cfg) {
+  void create_default_impl() {
     if (empty(this->version_)) {
       this->version_ = current_storage_version;
     }
@@ -211,8 +221,8 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
         string_to_filter(storage_formats[version_]["default_attr_filters"])};
 
     tiledb::Group::create(cached_ctx_, group_uri_);
-    auto write_group =
-        tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
+    auto write_group = tiledb::Group(
+        cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
 
     /**************************************************************************
      * Base group metadata setup
@@ -246,9 +256,9 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     metadata_.adjacency_row_index_type_str_ =
         type_to_string_v<typename index_type::adjacency_row_index_type>;
 
-    metadata_.ingestion_timestamps_ = {0};
-    metadata_.base_sizes_ = {0};
-    metadata_.num_edges_history_ = {0};
+    metadata_.ingestion_timestamps_ = {};
+    metadata_.base_sizes_ = {};
+    metadata_.num_edges_history_ = {};
     metadata_.temp_size_ = 0;
     metadata_.dimension_ = this->get_dimension();
 
@@ -267,17 +277,17 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
         this->get_dimension(),
         default_tile_extent,
         default_compression);
-    write_group.add_member(
-        feature_vectors_array_name(), true, feature_vectors_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, feature_vectors_uri(), feature_vectors_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_,
-        feature_vector_ids_uri(),
+        this->ids_uri(),
         default_domain,
         tile_size,
         default_compression);
-    write_group.add_member(
-        feature_vector_ids_name(), true, feature_vector_ids_name());
+    tiledb_helpers::add_to_group(
+        write_group, this->ids_uri(), this->ids_array_name());
 
     create_empty_for_vector<typename index_type::score_type>(
         cached_ctx_,
@@ -285,8 +295,8 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
         default_domain,
         tile_size,
         default_compression);
-    write_group.add_member(
-        adjacency_scores_array_name(), true, adjacency_scores_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, adjacency_scores_uri(), adjacency_scores_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_,
@@ -294,8 +304,8 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
         default_domain,
         tile_size,
         default_compression);
-    write_group.add_member(
-        adjacency_ids_array_name(), true, adjacency_ids_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, adjacency_ids_uri(), adjacency_ids_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_,
@@ -303,9 +313,9 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
         default_domain,
         tile_size,
         default_compression);
-    write_group.add_member(
-        adjacency_row_index_array_name(),
-        true,
+    tiledb_helpers::add_to_group(
+        write_group,
+        adjacency_row_index_uri(),
         adjacency_row_index_array_name());
 
     // Store the metadata if all of the arrays were created successfully

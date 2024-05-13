@@ -45,8 +45,6 @@
      {
          {"centroids_array_name", "partition_centroids"},
          {"index_array_name", "partition_indexes"},
-         {"ids_array_name", "shuffled_vector_ids"},
-         {"parts_array_name", "shuffled_vectors"},
      }}};
 
 template <class Index>
@@ -63,12 +61,13 @@ class ivf_flat_index_group
   using Base = base_index_group<ivf_flat_index_group>;
   // using Base::Base;
 
-  using Base::array_name_map_;
+  using Base::array_key_to_array_name_;
+  using Base::array_name_to_uri_;
   using Base::cached_ctx_;
   using Base::group_uri_;
   using Base::metadata_;
+  using Base::valid_array_keys_;
   using Base::valid_array_names_;
-  using Base::valid_key_names_;
   using Base::version_;
 
   using index_type = Index;
@@ -88,17 +87,18 @@ class ivf_flat_index_group
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
       size_t timestamp = 0,
-      const std::string& version = std::string{""},
-      const tiledb::Config& cfg = tiledb::Config{})
-      : Base(ctx, uri, index.dimension(), rw, timestamp, version, cfg) {
+      const std::string& version = std::string{""})
+      : Base(ctx, uri, index.dimension(), rw, timestamp, version) {
   }
 
  public:
   void append_valid_array_names_impl() {
     for (auto&& [array_key, array_name] : ivf_flat_storage_formats[version_]) {
-      valid_key_names_.insert(array_key);
+      valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
-      array_name_map_[array_key] = array_name;
+      array_key_to_array_name_[array_key] = array_name;
+      array_name_to_uri_[array_name] =
+          array_name_to_uri(group_uri_, array_name);
     }
   }
 
@@ -114,7 +114,7 @@ class ivf_flat_index_group
   auto append_num_partitions(size_t size) {
     metadata_.partition_history_.push_back(size);
   }
-  auto get_all_num_partitions() {
+  auto get_all_num_partitions() const {
     return metadata_.partition_history_;
   }
 
@@ -131,9 +131,6 @@ class ivf_flat_index_group
   [[nodiscard]] auto parts_uri() const {
     return this->array_key_to_uri("parts_array_name");
   }
-  [[nodiscard]] auto ids_uri() const {
-    return this->array_key_to_uri("ids_array_name");
-  }
   [[nodiscard]] auto indices_uri() const {
     return this->array_key_to_uri("index_array_name");
   }
@@ -143,14 +140,11 @@ class ivf_flat_index_group
   [[nodiscard]] auto parts_array_name() const {
     return this->array_key_to_array_name("parts_array_name");
   }
-  [[nodiscard]] auto ids_array_name() const {
-    return this->array_key_to_array_name("ids_array_name");
-  }
   [[nodiscard]] auto indices_array_name() const {
     return this->array_key_to_array_name("index_array_name");
   }
 
-  void create_default_impl(const tiledb::Config& cfg) {
+  void create_default_impl() {
     if (empty(this->version_)) {
       this->version_ = current_storage_version;
     }
@@ -163,8 +157,8 @@ class ivf_flat_index_group
         string_to_filter(storage_formats[version_]["default_attr_filters"])};
 
     tiledb::Group::create(cached_ctx_, group_uri_);
-    auto write_group =
-        tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cfg);
+    auto write_group = tiledb::Group(
+        cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
 
     this->metadata_.storage_version_ = version_;
 
@@ -199,9 +193,8 @@ class ivf_flat_index_group
         this->get_dimension(),
         default_tile_extent,
         default_compression);
-    // write_group.add_member(centroids_uri(), true, centroids_array_name());
-    write_group.add_member(
-        centroids_array_name(), true, centroids_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, centroids_uri(), centroids_array_name());
 
     create_empty_for_matrix<
         typename index_type::feature_type,
@@ -213,13 +206,16 @@ class ivf_flat_index_group
         this->get_dimension(),
         default_tile_extent,
         default_compression);
-    // write_group.add_member(parts_uri(), true, parts_array_name());
-    write_group.add_member(parts_array_name(), true, parts_array_name());
+    tiledb_helpers::add_to_group(write_group, parts_uri(), parts_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
-        cached_ctx_, ids_uri(), default_domain, tile_size, default_compression);
-    // write_group.add_member(ids_uri(), true, ids_array_name());
-    write_group.add_member(ids_array_name(), true, ids_array_name());
+        cached_ctx_,
+        this->ids_uri(),
+        default_domain,
+        tile_size,
+        default_compression);
+    tiledb_helpers::add_to_group(
+        write_group, this->ids_uri(), this->ids_array_name());
 
     create_empty_for_vector<typename index_type::indices_type>(
         cached_ctx_,
@@ -227,8 +223,8 @@ class ivf_flat_index_group
         default_domain,
         default_tile_extent,
         default_compression);
-    // write_group.add_member(indices_uri(), true, indices_array_name());
-    write_group.add_member(indices_array_name(), true, indices_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, indices_uri(), indices_array_name());
 
     // Store the metadata if all of the arrays were created successfully
     metadata_.store_metadata(write_group);

@@ -1,8 +1,8 @@
 import os
 import unittest
 
-from common import *
 from array_paths import *
+from common import *
 
 import tiledb.vector_search as vs
 from tiledb.cloud import groups
@@ -18,14 +18,16 @@ class CloudTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        if not os.getenv("TILEDB_REST_TOKEN"):
-            raise ValueError("TILEDB_REST_TOKEN not set")
-        tiledb.cloud.login(token=os.getenv("TILEDB_REST_TOKEN"))
+        token = os.getenv("TILEDB_REST_TOKEN")
+        if os.getenv("TILEDB_CLOUD_HELPER_VAR"):
+            token = os.getenv("TILEDB_CLOUD_HELPER_VAR")
+        tiledb.cloud.login(token=token)
         namespace, storage_path, _ = groups._default_ns_path_cred()
         storage_path = storage_path.replace("//", "/").replace("/", "//", 1)
         rand_name = random_name("vector_search")
         test_path = f"tiledb://{namespace}/{storage_path}/{rand_name}"
         cls.flat_index_uri = f"{test_path}/test_flat_array"
+        cls.vamana_index_uri = f"{test_path}/vamana_array"
         cls.ivf_flat_index_uri = f"{test_path}/test_ivf_flat_array"
         cls.ivf_flat_random_sampling_index_uri = (
             f"{test_path}/test_ivf_flat_random_sampling_array"
@@ -34,6 +36,7 @@ class CloudTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         vs.Index.delete_index(uri=cls.flat_index_uri, config=tiledb.cloud.Config())
+        vs.Index.delete_index(uri=cls.vamana_index_uri, config=tiledb.cloud.Config())
         vs.Index.delete_index(uri=cls.ivf_flat_index_uri, config=tiledb.cloud.Config())
         vs.Index.delete_index(
             uri=cls.ivf_flat_random_sampling_index_uri, config=tiledb.cloud.Config()
@@ -58,7 +61,9 @@ class CloudTests(unittest.TestCase):
             mode=Mode.BATCH,
         )
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
-        index = vs.flat_index.FlatIndex(uri=tiledb_index_uri)
+        index = vs.flat_index.FlatIndex(
+            uri=tiledb_index_uri, config=tiledb.cloud.Config().dict()
+        )
 
         _, result_i = index.query(queries, k=k)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
@@ -66,6 +71,32 @@ class CloudTests(unittest.TestCase):
         index.delete(external_id=42)
         _, result_i = index.query(queries, k=k)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+    def test_cloud_vamana(self):
+        source_uri = "tiledb://TileDB-Inc/sift_10k"
+        queries_uri = siftsmall_query_file
+        gt_uri = siftsmall_groundtruth_file
+        index_uri = CloudTests.vamana_index_uri
+        k = 100
+        nqueries = 100
+
+        load_fvecs(queries_uri)
+        gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
+
+        vs.ingest(
+            index_type="VAMANA",
+            index_uri=index_uri,
+            source_uri=source_uri,
+            input_vectors_per_work_item=5000,
+            config=tiledb.cloud.Config().dict(),
+            # TODO(paris): Fix and then change to Mode.BATCH.
+            mode=Mode.LOCAL,
+        )
+
+        tiledb_index_uri = groups.info(index_uri).tiledb_uri
+        vs.vamana_index.VamanaIndex(
+            uri=tiledb_index_uri, config=tiledb.cloud.Config().dict()
+        )
 
     def test_cloud_ivf_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
@@ -91,7 +122,10 @@ class CloudTests(unittest.TestCase):
         )
 
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
-        index = vs.ivf_flat_index.IVFFlatIndex(uri=tiledb_index_uri)
+        index = vs.ivf_flat_index.IVFFlatIndex(
+            uri=tiledb_index_uri,
+            config=tiledb.cloud.Config().dict(),
+        )
 
         _, result_i = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
@@ -154,7 +188,15 @@ class CloudTests(unittest.TestCase):
                 resources=resources,
             )
 
+        index = vs.ivf_flat_index.IVFFlatIndex(
+            uri=index_uri,
+            config=tiledb.cloud.Config().dict(),
+        )
         index.delete(external_id=42)
+        _, result_i = index.query(queries, k=k, nprobe=nprobe)
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        index = index.consolidate_updates()
         _, result_i = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
@@ -183,16 +225,14 @@ class CloudTests(unittest.TestCase):
             training_sample_size=training_sample_size,
             max_sampling_tasks=max_sampling_tasks,
             config=tiledb.cloud.Config().dict(),
-            # TODO Re-enable.
-            #  This is temporarily disabled due to an incompatibility of new ingestion code and previous
-            #  UDF library releases.
-            # mode=Mode.BATCH,
+            mode=Mode.BATCH,
         )
 
         check_training_input_vectors(
             index_uri=index_uri,
             expected_training_sample_size=training_sample_size,
             expected_dimensions=queries.shape[1],
+            config=tiledb.cloud.Config().dict(),
         )
 
         _, result_i = index.query(queries, k=k, nprobe=nprobe)

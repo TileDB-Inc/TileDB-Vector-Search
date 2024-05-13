@@ -68,8 +68,8 @@ class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
       : Base(rhs) {
   }
 
-  MatrixView(T* p, I r, I c)
-      : Base{p, r, c} {
+  MatrixView(T* data_pointer, I rows, I cols)
+      : Base{data_pointer, rows, cols} {
   }
 
   auto data() {
@@ -508,7 +508,8 @@ void debug_slice(
   auto rowsEnd = std::min(dimension(A), static_cast<size_t>(max_size));
   auto colsEnd = std::min(num_vectors(A), static_cast<size_t>(max_size));
 
-  std::cout << "# " << msg << std::endl;
+  std::cout << "# " << msg << " (" << dimension(A) << " rows x "
+            << num_vectors(A) << " cols)" << std::endl;
   for (size_t i = 0; i < rowsEnd; ++i) {
     std::cout << "# ";
     for (size_t j = 0; j < colsEnd; ++j) {

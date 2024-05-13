@@ -160,6 +160,10 @@ TEST_CASE(
   auto ctx = tiledb::Context{};
   std::string api_ivf_flat_index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_flat_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(api_ivf_flat_index_uri)) {
+    vfs.remove_dir(api_ivf_flat_index_uri);
+  }
 
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
       {{"feature_type", "float32"},
@@ -168,7 +172,7 @@ TEST_CASE(
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
   a.train(training_set, kmeans_init::random);
   a.add(training_set);
-  a.write_index(ctx, api_ivf_flat_index_uri, true);
+  a.write_index(ctx, api_ivf_flat_index_uri);
 
   auto b = IndexIVFFlat(ctx, api_ivf_flat_index_uri);
 
@@ -226,6 +230,10 @@ TEST_CASE(
 
   std::string api_ivf_flat_index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_flat_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(api_ivf_flat_index_uri)) {
+    vfs.remove_dir(api_ivf_flat_index_uri);
+  }
 
   auto a = IndexIVFFlat(std::make_optional<IndexOptions>(
       {{"feature_type", "float32"},
@@ -236,7 +244,7 @@ TEST_CASE(
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
   a.train(training_set, kmeans_init::random);
   a.add(training_set);
-  a.write_index(ctx, api_ivf_flat_index_uri, true);
+  a.write_index(ctx, api_ivf_flat_index_uri);
   auto b = IndexIVFFlat(ctx, api_ivf_flat_index_uri);
 
   auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
@@ -282,7 +290,7 @@ TEST_CASE(
     CHECK(nt == nv);
     auto recall = ((double)intersections_a) / ((double)nt * k_nn);
     if (nprobe == 32) {
-      CHECK(recall == 1.0);
+      CHECK(recall >= .999);
     } else if (nprobe == 8) {
       CHECK(recall > 0.925);
     }

@@ -62,6 +62,7 @@ static bool noisy = false;
  * @brief Truncated best-first search
  * @tparam Distance The distance function used to compare vectors
  * @param graph Graph to be searched
+ * @param db Holds the original feature vectors and their IDs
  * @param source start node index
  * @param query query node index
  * @param k result size
@@ -95,7 +96,8 @@ auto greedy_search(
     auto&& query,
     size_t k_nn,
     size_t L,
-    Distance distance = Distance{}) {
+    Distance distance = Distance{},
+    bool convert_to_db_ids = false) {
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
   using score_type = typename std::decay_t<decltype(graph)>::score_type;
@@ -218,6 +220,17 @@ auto greedy_search(
   auto top_k_scores = std::vector<score_type>(k_nn);
 
   get_top_k_with_scores_from_heap(result, top_k, top_k_scores);
+
+  // Optionally convert from the vector indexes to the db IDs. Used during
+  // querying to map to external IDs.
+  if (convert_to_db_ids) {
+    for (int i = 0; i < k_nn; ++i) {
+      if (top_k[i] != std::numeric_limits<id_type>::max()) {
+        top_k[i] = db.ids()[top_k[i]];
+      }
+    }
+  }
+
   return std::make_tuple(
       std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
 }
@@ -440,9 +453,9 @@ class vamana_index {
   /*
    * Training parameters
    */
-  uint64_t L_build_{0};       // diskANN paper says default = 100
-  uint64_t R_max_degree_{0};  // diskANN paper says default = 64
-  uint64_t B_backtrack_{0};   //
+  uint64_t l_build_{0};       // diskANN paper says default = 100
+  uint64_t r_max_degree_{0};  // diskANN paper says default = 64
+  uint64_t b_backtrack_{0};   //
   float alpha_min_{1.0};      // per diskANN paper
   float alpha_max_{1.2};      // per diskANN paper
 
@@ -476,9 +489,9 @@ class vamana_index {
               timestamp}
       , num_vectors_{num_nodes}
       , graph_{num_vectors_}
-      , L_build_{L}
-      , R_max_degree_{R}
-      , B_backtrack_{B == 0 ? L_build_ : B} {
+      , l_build_{L}
+      , r_max_degree_{R}
+      , b_backtrack_{B == 0 ? l_build_ : B} {
   }
 
   /**
@@ -486,8 +499,10 @@ class vamana_index {
    * @param ctx TileDB context
    * @param group_uri URI of the group containing the index
    */
-  vamana_index(tiledb::Context ctx, const std::string& uri)
-      : group_{std::make_unique<vamana_index_group<vamana_index>>(
+  vamana_index(
+      tiledb::Context ctx, const std::string& uri, size_t timestamp = 0)
+      : timestamp_{timestamp}
+      , group_{std::make_unique<vamana_index_group<vamana_index>>(
             *this, ctx, uri, TILEDB_READ, timestamp_)} {
     if (timestamp_ == 0) {
       timestamp_ = group_->get_previous_ingestion_timestamp();
@@ -497,9 +512,9 @@ class vamana_index {
     dimension_ = group_->get_dimension();
     num_vectors_ = group_->get_base_size();
     num_edges_ = group_->get_num_edges();
-    L_build_ = group_->get_L_build();
-    R_max_degree_ = group_->get_R_max_degree();
-    B_backtrack_ = group_->get_B_backtrack();
+    l_build_ = group_->get_l_build();
+    r_max_degree_ = group_->get_r_max_degree();
+    b_backtrack_ = group_->get_b_backtrack();
     alpha_min_ = group_->get_alpha_min();
     alpha_max_ = group_->get_alpha_max();
     medoid_ = group_->get_medoid();
@@ -508,7 +523,7 @@ class vamana_index {
         std::move(tdbColMajorPreLoadMatrixWithIds<feature_type, id_type>(
             group_->cached_ctx(),
             group_->feature_vectors_uri(),
-            group_->feature_vector_ids_uri(),
+            group_->ids_uri(),
             dimension_,
             num_vectors_,
             0,
@@ -587,8 +602,12 @@ class vamana_index {
    */
   template <
       feature_vector_array Array,
+      feature_vector Vector,
       class Distance = sum_of_squares_distance>
-  void train(const Array& training_set, Distance distance = Distance{}) {
+  void train(
+      const Array& training_set,
+      const Vector& training_set_ids,
+      Distance distance = Distance{}) {
     feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
         ::dimension(training_set), ::num_vectors(training_set)));
     std::copy(
@@ -596,15 +615,15 @@ class vamana_index {
         training_set.data() +
             ::dimension(training_set) * ::num_vectors(training_set),
         feature_vectors_.data());
-    // TODO(paris): Read IDs from training_set if they exist.
-    auto ids = std::vector<id_type>(::num_vectors(training_set));
-    std::iota(ids.begin(), ids.end(), 0);
-    std::copy(ids.begin(), ids.end(), feature_vectors_.ids().begin());
+    std::copy(
+        training_set_ids.begin(),
+        training_set_ids.end(),
+        feature_vectors_.ids().begin());
 
     dimension_ = ::dimension(feature_vectors_);
     num_vectors_ = ::num_vectors(feature_vectors_);
     // graph_ = ::detail::graph::init_random_adj_list<feature_type, id_type>(
-    //     feature_vectors_, R_max_degree_);
+    //     feature_vectors_, r_max_degree_);
 
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
     // dump_edgelist("edges_" + std::to_string(0) + ".txt", graph_);
@@ -629,7 +648,7 @@ class vamana_index {
             medoid_,
             feature_vectors_[p],
             1,
-            L_build_,
+            l_build_,
             distance);
         total_visited += visited.size();
 
@@ -639,7 +658,7 @@ class vamana_index {
             p,
             visited,
             alpha,
-            R_max_degree_,
+            r_max_degree_,
             distance);
         {
           scoped_timer _{"post search prune"};
@@ -653,14 +672,14 @@ class vamana_index {
               tmp.push_back(k);
             }
 
-            if (size(tmp) > R_max_degree_) {
+            if (size(tmp) > r_max_degree_) {
               robust_prune(
                   graph_,
                   feature_vectors_,
                   j,
                   tmp,
                   alpha,
-                  R_max_degree_,
+                  r_max_degree_,
                   distance);
             } else {
               graph_.add_edge(
@@ -702,6 +721,10 @@ class vamana_index {
     return num_comps_;
   }
 
+  size_t timestamp() const {
+    return timestamp_;
+  }
+
   /**
    * @brief Query the index for the top k nearest neighbors of the query set
    * @tparam Q Type of query set
@@ -718,8 +741,8 @@ class vamana_index {
       Distance distance = Distance{}) {
     scoped_timer __{tdb_func__ + std::string{" (outer)"}};
 
-    size_t L = opt_L ? *opt_L : L_build_;
-    // L = std::min<size_t>(L, L_build_);
+    size_t L = opt_L ? *opt_L : l_build_;
+    // L = std::min<size_t>(L, l_build_);
 
     auto top_k = ColMajorMatrix<id_type>(k, ::num_vectors(query_set));
     auto top_k_scores = ColMajorMatrix<score_type>(k, ::num_vectors(query_set));
@@ -732,14 +755,21 @@ class vamana_index {
 
     stdx::range_for_each(std::move(par), query_set, [&](auto&& query_vec, auto n, auto i) {
       auto&& [tk_scores, tk, V] = greedy_search(
-          graph_, feature_vectors_, medoid_, query_vec, k, L);
+          graph_, feature_vectors_, medoid_, query_vec, k, L, distance, true);
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
     });
 #else
     for (size_t i = 0; i < num_vectors(query_set); ++i) {
       auto&& [tk_scores, tk, V] = greedy_search(
-          graph_, feature_vectors_, medoid_, query_set[i], k, L, distance);
+          graph_,
+          feature_vectors_,
+          medoid_,
+          query_set[i],
+          k,
+          L,
+          distance,
+          true);
       std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k, top_k[i].data());
       num_visited_vertices_ += V.size();
@@ -749,7 +779,7 @@ class vamana_index {
 #if 0
     for (size_t i = 0; i < ::num_vectors(query_set); ++i) {
       auto&& [_top_k_scores, _top_k, V] = greedy_search(
-          graph_, feature_vectors_, medoid_, query_set[i], k, L_build_);
+          graph_, feature_vectors_, medoid_, query_set[i], k, l_build_, distance, true);
       std::copy(
           _top_k_scores.data(),
           _top_k_scores.data() + k,
@@ -776,10 +806,9 @@ class vamana_index {
       size_t k,
       std::optional<size_t> opt_L = std::nullopt,
       Distance distance = Distance{}) {
-    size_t L = opt_L ? *opt_L : L_build_;
-
+    size_t L = opt_L ? *opt_L : l_build_;
     auto&& [top_k_scores, top_k, V] = greedy_search(
-        graph_, feature_vectors_, medoid_, query_vec, k, L, distance);
+        graph_, feature_vectors_, medoid_, query_vec, k, L, distance, true);
 
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
@@ -801,7 +830,8 @@ class vamana_index {
   /**
    * @brief Write the index to a TileDB group
    * @param group_uri The URI of the TileDB group where the index will be saved
-   * @param overwrite Whether to overwrite an existing group
+   * @param storage_version The storage version to use. If empty, use the most
+   * defult version.
    * @return Whether the write was successful
    *
    * The group consists of the original feature vectors, and the graph index,
@@ -816,32 +846,49 @@ class vamana_index {
   auto write_index(
       const tiledb::Context& ctx,
       const std::string& group_uri,
-      bool overwrite = false) const {
+      std::optional<size_t> timestamp = std::nullopt,
+      const std::string& storage_version = "") {
+    if (timestamp.has_value()) {
+      timestamp_ = timestamp.value();
+    }
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
 
-    tiledb::VFS vfs(ctx);
-    if (vfs.is_dir(group_uri)) {
-      if (overwrite == false) {
-        return false;
-      }
-      vfs.remove_dir(group_uri);
-    }
-
-    auto write_group = vamana_index_group(*this, ctx, group_uri, TILEDB_WRITE);
+    auto write_group = vamana_index_group(
+        *this, ctx, group_uri, TILEDB_WRITE, timestamp_, storage_version);
 
     // @todo Make this table-driven
     write_group.set_dimension(dimension_);
-    write_group.set_L_build(L_build_);
-    write_group.set_R_max_degree(R_max_degree_);
-    write_group.set_B_backtrack(B_backtrack_);
+    write_group.set_l_build(l_build_);
+    write_group.set_r_max_degree(r_max_degree_);
+    write_group.set_b_backtrack(b_backtrack_);
     write_group.set_alpha_min(alpha_min_);
     write_group.set_alpha_max(alpha_max_);
     write_group.set_medoid(medoid_);
 
-    write_group.append_ingestion_timestamp(timestamp_);
-    write_group.append_base_size(::num_vectors(feature_vectors_));
-    write_group.append_num_edges(graph_.num_edges());
+    // When we create an index with Python, we will call write_index() twice,
+    // once with empty data and once with the actual data. Here we add custom
+    // logic so that during that second call to write_index(), we will overwrite
+    // the metadata lists. If we don't do this we will end up with
+    // ingestion_timestamps = [0, timestamp] and base_sizes = [0, initial size],
+    // whereas indexes created just in Python will end up with
+    // ingestion_timestamps = [timestamp] and base_sizes = [initial size]. If we
+    // have 2 item lists it causes crashes and subtle issues when we try to
+    // modify the index later (i.e. through index.update() / Index.clear()). So
+    // here we make sure we end up with the same metadata that Python indexes
+    // do.
+    if (write_group.get_all_ingestion_timestamps().size() == 1 &&
+        write_group.get_previous_ingestion_timestamp() == 0 &&
+        write_group.get_all_base_sizes().size() == 1 &&
+        write_group.get_previous_base_size() == 0) {
+      write_group.set_ingestion_timestamp(timestamp_);
+      write_group.set_base_size(::num_vectors(feature_vectors_));
+      write_group.set_num_edges(graph_.num_edges());
+    } else {
+      write_group.append_ingestion_timestamp(timestamp_);
+      write_group.append_base_size(::num_vectors(feature_vectors_));
+      write_group.append_num_edges(graph_.num_edges());
+    }
 
     write_matrix(
         ctx,
@@ -854,7 +901,7 @@ class vamana_index {
     write_vector(
         ctx,
         feature_vectors_.ids(),
-        write_group.feature_vector_ids_uri(),
+        write_group.ids_uri(),
         0,
         false,
         timestamp_);
@@ -901,8 +948,8 @@ class vamana_index {
   void log_index() {
     _count_data.insert_entry("dimension", dimension_);
     _count_data.insert_entry("num_vectors", num_vectors_);
-    _count_data.insert_entry("L_build", L_build_);
-    _count_data.insert_entry("R_max_degree", R_max_degree_);
+    _count_data.insert_entry("l_build", l_build_);
+    _count_data.insert_entry("r_max_degree", r_max_degree_);
     _count_data.insert_entry("num_edges", graph_.num_edges());
     _count_data.insert_entry("num_comps", num_comps());
     _count_data.insert_entry("num_visited_vertices", num_visited_vertices());
@@ -951,19 +998,19 @@ class vamana_index {
                 << " ! = " << rhs.num_vectors_ << std::endl;
       return false;
     }
-    if (L_build_ != rhs.L_build_) {
-      std::cout << "L_build_ != rhs.L_build_" << L_build_
-                << " ! = " << rhs.L_build_ << std::endl;
+    if (l_build_ != rhs.l_build_) {
+      std::cout << "l_build_ != rhs.l_build_" << l_build_
+                << " ! = " << rhs.l_build_ << std::endl;
       return false;
     }
-    if (R_max_degree_ != rhs.R_max_degree_) {
-      std::cout << "R_max_degree_ != rhs.R_max_degree_" << R_max_degree_
-                << " ! = " << rhs.R_max_degree_ << std::endl;
+    if (r_max_degree_ != rhs.r_max_degree_) {
+      std::cout << "r_max_degree_ != rhs.r_max_degree_" << r_max_degree_
+                << " ! = " << rhs.r_max_degree_ << std::endl;
       return false;
     }
-    if (B_backtrack_ != rhs.B_backtrack_) {
-      std::cout << "B_backtrack_ != rhs.B_backtrack_" << B_backtrack_
-                << " ! = " << rhs.B_backtrack_ << std::endl;
+    if (b_backtrack_ != rhs.b_backtrack_) {
+      std::cout << "b_backtrack_ != rhs.b_backtrack_" << b_backtrack_
+                << " ! = " << rhs.b_backtrack_ << std::endl;
       return false;
     }
     if (alpha_min_ != rhs.alpha_min_) {

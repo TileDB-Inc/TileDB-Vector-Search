@@ -34,8 +34,8 @@ class FlatIndex(index.Index):
         timestamp=None,
         **kwargs,
     ):
-        super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
+        super().__init__(uri=uri, config=config, timestamp=timestamp)
         self._index = None
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
@@ -86,6 +86,7 @@ class FlatIndex(index.Index):
         queries: np.ndarray,
         k: int = 10,
         nthreads: int = 8,
+        **kwargs,
     ):
         """
         Query a flat index

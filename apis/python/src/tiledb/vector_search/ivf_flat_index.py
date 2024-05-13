@@ -48,8 +48,8 @@ class IVFFlatIndex(index.Index):
         memory_budget: int = -1,
         **kwargs,
     ):
-        super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
+        super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
             + self.index_version
@@ -141,6 +141,7 @@ class IVFFlatIndex(index.Index):
         resources: Optional[Mapping[str, Any]] = None,
         num_partitions: int = -1,
         num_workers: int = -1,
+        **kwargs,
     ):
         """
         Query an IVF_FLAT index
@@ -466,7 +467,6 @@ def create(
         group_exists=group_exists,
         config=config,
     )
-    # TODO(paris): Save training_source_uri as metadata so that we use it for re-ingestion's.
     with tiledb.scope_ctx(ctx_or_config=config):
         group = tiledb.Group(uri, "w")
         tile_size = int(TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions)

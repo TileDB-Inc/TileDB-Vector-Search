@@ -4,9 +4,11 @@ import os
 import time
 from typing import Any, Mapping, Optional
 
+from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
-from tiledb.vector_search import _tiledbvspy as vspy
+from tiledb.vector_search.utils import add_to_group
+from tiledb.vector_search.utils import is_type_erased_index
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
@@ -182,12 +184,6 @@ class Index:
                 if res in updated_ids:
                     internal_results_d[query_id, res_id] = MAX_FLOAT_32
                     internal_results_i[query_id, res_id] = MAX_UINT64
-                if (
-                    internal_results_d[query_id, res_id] == 0
-                    and internal_results_i[query_id, res_id] == 0
-                ):
-                    internal_results_d[query_id, res_id] = MAX_FLOAT_32
-                    internal_results_i[query_id, res_id] = MAX_UINT64
                 res_id += 1
             query_id += 1
         sort_index = np.argsort(internal_results_d, axis=1)
@@ -285,8 +281,11 @@ class Index:
         return array_exists and has_updates
 
     def set_has_updates(self, has_updates: bool = True):
-        self.has_updates = True
-        if not self.group.meta["has_updates"]:
+        self.has_updates = has_updates
+        if (
+            "has_updates" not in self.group.meta
+            or self.group.meta["has_updates"] != has_updates
+        ):
             self.group.close()
             self.group = tiledb.Group(self.uri, "w", ctx=tiledb.Ctx(self.config))
             self.group.meta["has_updates"] = has_updates
@@ -378,7 +377,7 @@ class Index:
                 tiledb.Array.create(self.updates_array_uri, updates_schema)
                 self.group.close()
                 self.group = tiledb.Group(self.uri, "w")
-                self.group.add(self.updates_array_uri, name=updates_array_name)
+                add_to_group(self.group, self.updates_array_uri, updates_array_name)
                 self.group.close()
                 self.group = tiledb.Group(self.uri, "r")
             if timestamp is None:
@@ -406,11 +405,15 @@ class Index:
             if fragment_info.timestamp_range[1] > max_timestamp:
                 max_timestamp = fragment_info.timestamp_range[1]
         max_timestamp += 1
-        conf = tiledb.Config(self.config)
-        conf["sm.consolidation.timestamp_start"] = self.latest_ingestion_timestamp
-        conf["sm.consolidation.timestamp_end"] = max_timestamp
-        tiledb.consolidate(self.updates_array_uri, config=conf)
-        tiledb.vacuum(self.updates_array_uri, config=conf)
+        # Consolidate all updates since the previous ingestion_timestamp.
+        # This is a performance optimization. We skip this for remote arrays as consolidation
+        # of remote arrays currently only supports modes `fragment_meta, commits, metadata`.
+        if not self.updates_array_uri.startswith("tiledb://"):
+            conf = tiledb.Config(self.config)
+            conf["sm.consolidation.timestamp_start"] = self.latest_ingestion_timestamp
+            conf["sm.consolidation.timestamp_end"] = max_timestamp
+            tiledb.consolidate(self.updates_array_uri, config=conf)
+            tiledb.vacuum(self.updates_array_uri, config=conf)
 
         # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
         should_pass_copy_centroids_uri = (
@@ -454,7 +457,7 @@ class Index:
                     return
                 else:
                     raise err
-            group.delete()
+            group.delete(recursive=True)
 
     @staticmethod
     def clear_history(
@@ -464,6 +467,7 @@ class Index:
     ):
         with tiledb.scope_ctx(ctx_or_config=config):
             group = tiledb.Group(uri, "r")
+            index_type = group.meta.get("index_type", "")
             storage_version = group.meta.get("storage_version", "0.1")
             if not storage_formats[storage_version]["SUPPORT_TIMETRAVEL"]:
                 raise ValueError(
@@ -488,7 +492,9 @@ class Index:
                 if ingestion_timestamp > timestamp:
                     new_ingestion_timestamps.append(ingestion_timestamp)
                     new_base_sizes.append(base_sizes[i])
-                    new_partition_history.append(partition_history[i])
+                    # Type erased indexes don't have partition_history, skip to avoid crash.
+                    if not is_type_erased_index(index_type):
+                        new_partition_history.append(partition_history[i])
                 i += 1
             if len(new_ingestion_timestamps) == 0:
                 new_ingestion_timestamps = [0]
@@ -500,7 +506,9 @@ class Index:
             group = tiledb.Group(uri, "w")
             group.meta["ingestion_timestamps"] = json.dumps(new_ingestion_timestamps)
             group.meta["base_sizes"] = json.dumps(new_base_sizes)
-            group.meta["partition_history"] = json.dumps(new_partition_history)
+            # Type erased indexes don't have partition_history, skip to avoid crash.
+            if not is_type_erased_index(index_type):
+                group.meta["partition_history"] = json.dumps(new_partition_history)
             group.close()
 
             group = tiledb.Group(uri, "r")

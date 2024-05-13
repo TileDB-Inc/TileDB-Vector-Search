@@ -4,8 +4,9 @@ from typing import Any, Dict, Mapping, Optional
 import numpy as np
 
 import tiledb
-from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search import _tiledbvspy as vspy
+from tiledb.vector_search._tiledbvspy import *
+
 
 def load_as_matrix(
     path: str,
@@ -35,7 +36,7 @@ def load_as_matrix(
 
     a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
-    # Read all rows from column 0 -> `size`. Set no upper_bound. Note that if `size` is None then 
+    # Read all rows from column 0 -> `size`. Set no upper_bound. Note that if `size` is None then
     # we'll read to the column domain length.
     if dtype == np.float32:
         m = tdbColMajorMatrix_f32(ctx, path, 0, None, 0, size, 0, timestamp)
@@ -47,6 +48,8 @@ def load_as_matrix(
         m = tdbColMajorMatrix_i64(ctx, path, 0, None, 0, size, 0, timestamp)
     elif dtype == np.uint8:
         m = tdbColMajorMatrix_u8(ctx, path, 0, None, 0, size, 0, timestamp)
+    elif dtype == np.int8:
+        m = tdbColMajorMatrix_i8(ctx, path, 0, None, 0, size, 0, timestamp)
     # elif dtype == np.uint64:
     #     return tdbColMajorMatrix_u64(ctx, path, size, timestamp)
     else:
@@ -90,6 +93,8 @@ def debug_slice(m: "colMajorMatrix", name: str):
         return debug_slice_f32(m, name)
     elif dtype == np.uint8:
         return debug_slice_u8(m, name)
+    elif dtype == np.int8:
+        return debug_slice_i8(m, name)
     elif dtype == np.uint64:
         return debug_slice_u64(m, name)
     else:
@@ -111,6 +116,8 @@ def query_vq_nth(db: "colMajorMatrix", *args):
         return query_vq_f32(db, *args)
     elif db.dtype == np.uint8:
         return query_vq_u8(db, *args)
+    elif db.dtype == np.int8:
+        return query_vq_i8(db, *args)
     else:
         raise TypeError("Unknown type!")
 
@@ -130,6 +137,8 @@ def query_vq_heap(db: "colMajorMatrix", *args):
         return vq_query_heap_f32(db, *args)
     elif db.dtype == np.uint8:
         return vq_query_heap_u8(db, *args)
+    elif db.dtype == np.int8:
+        return vq_query_heap_i8(db, *args)
     else:
         raise TypeError("Unknown type!")
 
@@ -149,6 +158,8 @@ def query_vq_heap_pyarray(db: "colMajorMatrix", *args):
         return vq_query_heap_pyarray_f32(db, *args)
     elif db.dtype == np.uint8:
         return vq_query_heap_pyarray_u8(db, *args)
+    elif db.dtype == np.int8:
+        return vq_query_heap_pyarray_i8(db, *args)
     else:
         raise TypeError("Unknown type!")
 
@@ -194,6 +205,8 @@ def ivf_index_tdb(
         return ivf_index_tdb_f32(*args)
     elif dtype == np.uint8:
         return ivf_index_tdb_u8(*args)
+    elif dtype == np.int8:
+        return ivf_index_tdb_i8(*args)
     else:
         raise TypeError("Unknown type!")
 
@@ -239,6 +252,8 @@ def ivf_index(
         return ivf_index_f32(*args)
     elif dtype == np.uint8:
         return ivf_index_u8(*args)
+    elif dtype == np.int8:
+        return ivf_index_i8(*args)
     else:
         raise TypeError("Unknown type!")
 
@@ -311,6 +326,11 @@ def ivf_query_ram(
             return nuv_query_heap_infinite_ram_reg_blocked_u8(*args)
         else:
             return qv_query_heap_infinite_ram_u8(*args)
+    elif dtype == np.int8:
+        if use_nuv_implementation:
+            return nuv_query_heap_infinite_ram_reg_blocked_i8(*args)
+        else:
+            return qv_query_heap_infinite_ram_i8(*args)
     else:
         raise TypeError("Unknown type!")
 
@@ -393,6 +413,11 @@ def ivf_query(
             return nuv_query_heap_finite_ram_reg_blocked_u8(*args)
         else:
             return qv_query_heap_finite_ram_u8(*args)
+    elif dtype == np.int8:
+        if use_nuv_implementation:
+            return nuv_query_heap_finite_ram_reg_blocked_i8(*args)
+        else:
+            return qv_query_heap_finite_ram_i8(*args)
     else:
         raise TypeError("Unknown type!")
 
@@ -402,6 +427,8 @@ def partition_ivf_index(centroids, query, nprobe=1, nthreads=0):
         return partition_ivf_index_f32(centroids, query, nprobe, nthreads)
     elif query.dtype == np.uint8:
         return partition_ivf_index_u8(centroids, query, nprobe, nthreads)
+    elif query.dtype == np.int8:
+        return partition_ivf_index_i8(centroids, query, nprobe, nthreads)
     else:
         raise TypeError("Unsupported type!")
 
@@ -441,6 +468,8 @@ def dist_qv(
         return dist_qv_f32(*args)
     elif dtype == np.uint8:
         return dist_qv_u8(*args)
+    elif dtype == np.int8:
+        return dist_qv_i8(*args)
     else:
         raise TypeError("Unsupported type!")
 
@@ -463,6 +492,8 @@ def array_to_matrix(array: np.ndarray):
         return pyarray_copyto_matrix_i32(array)
     elif array.dtype == np.uint64:
         return pyarray_copyto_matrix_u64(array)
+    elif array.dtype == np.int8:
+        return pyarray_copyto_matrix_i8(array)
     else:
         raise TypeError("Unsupported type!")
 

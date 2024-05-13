@@ -462,17 +462,15 @@ class DirectoryTextReader(DirectoryReader):
             try:
                 loader = TileDBLoader(uri=uri)
                 documents = loader.load_and_split(text_splitter=text_splitter)
+                text_chunk_id = 0
                 for d in documents:
                     file_paths[write_id] = str(uri)
                     if "page" in d.metadata:
                         pages[write_id] = int(d.metadata["page"])
                     texts[write_id] = d.page_content
-                    external_ids[write_id] = (
-                        partition.object_id_start
-                        * DirectoryTextReader.MAX_OBJECTS_PER_FILE
-                        + write_id
-                    )
+                    external_ids[write_id] = abs(hash(f"{uri}_{text_chunk_id}"))
                     write_id += 1
+                    text_chunk_id += 1
             except Exception:
                 traceback.print_exc()
         return (
@@ -563,8 +561,7 @@ class DirectoryImageReader(DirectoryReader):
 
         if self.paths is None:
             self.paths = []
-            vfs = tiledb.VFS()
-            self.list_paths(vfs=vfs, uri=self.uri)
+            self.list_paths()
         size = len(ids)
         images = np.empty(size, dtype="O")
         shapes = np.empty(size, dtype="O")

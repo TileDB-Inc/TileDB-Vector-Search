@@ -55,19 +55,14 @@ struct dummy_index {
   }
 };
 
-// The catch2 check for exception doesn't seem to be working correctly
-// @todo Fix this
-#if 0
 TEST_CASE(
-    "vamana_group: read constructor for non-existent group",
-    "[vamana_group]") {
+    "vamana_group: read constructor for non-existent group", "[vamana_group]") {
   tiledb::Context ctx;
 
   CHECK_THROWS_WITH(
       vamana_index_group(dummy_index{}, ctx, "I dont exist"),
       "Group uri I dont exist does not exist.");
 }
-#endif
 
 TEST_CASE("vamana_group: write constructor - create", "[vamana_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
@@ -82,7 +77,6 @@ TEST_CASE("vamana_group: write constructor - create", "[vamana_group]") {
 
   vamana_index_group x =
       vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor - create");
 }
 
 TEST_CASE(
@@ -99,11 +93,9 @@ TEST_CASE(
 
   vamana_index_group x =
       vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor - create before open");
 
   vamana_index_group y =
       vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor - open");
 }
 
 TEST_CASE(
@@ -118,17 +110,26 @@ TEST_CASE(
     vfs.remove_dir(tmp_uri);
   }
 
-  vamana_index_group x =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor - create before open");
+  {
+    vamana_index_group x =
+        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+    x.append_num_edges(0);
+    x.append_base_size(0);
+    x.append_ingestion_timestamp(0);
+
+    // We throw b/c the vamana_index_group hasn't actually been written (the
+    // write happens in the destructor).
+    CHECK_THROWS_WITH(
+        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ),
+        "No ingestion timestamps found.");
+  }
 
   vamana_index_group y =
       vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-  x.dump("Write constructor - open for read");
 }
 
 TEST_CASE(
-    "vamana_group: write constructor - create, write, and read",
+    "vamana_group: write constructor - invalid create and read",
     "[vamana_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "vamana_group_test_write_constructor")
@@ -140,17 +141,21 @@ TEST_CASE(
     vfs.remove_dir(tmp_uri);
   }
 
-  vamana_index_group x =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor - create before open");
+  {
+    vamana_index_group x =
+        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+    // We throw b/c the vamana_index_group hasn't actually been written (the
+    // write happens in the destructor).
+    CHECK_THROWS_WITH(
+        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ),
+        "No ingestion timestamps found.");
+  }
 
-  vamana_index_group y =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor - open for write");
-
-  vamana_index_group z =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-  x.dump("Write constructor - open for read");
+  // If we don't append to the group, even if it's been written there will be no
+  // timestamps.
+  CHECK_THROWS_WITH(
+      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ),
+      "No ingestion timestamps found.");
 }
 
 TEST_CASE(
@@ -173,6 +178,14 @@ TEST_CASE(
   }
 
   size_t offset = 0;
+
+  {
+    vamana_index_group x =
+        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+    x.append_num_edges(0);
+    x.append_base_size(0);
+    x.append_ingestion_timestamp(0);
+  }
 
   vamana_index_group x =
       vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
@@ -322,4 +335,87 @@ TEST_CASE(
   CHECK(x.get_previous_num_edges() == expected_partitions + offset);
   CHECK(x.get_temp_size() == expected_temp_size + offset);
   CHECK(x.get_dimension() == expected_dimension + offset);
+}
+
+TEST_CASE("vamana_group: storage version", "[vamana_group]") {
+  std::string tmp_uri =
+      (std::filesystem::temp_directory_path() / "vamana_group").string();
+
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri)) {
+    vfs.remove_dir(tmp_uri);
+  }
+
+  size_t expected_ingestion = 23094;
+  size_t expected_base = 9234;
+  size_t expected_partitions = 200;
+  size_t expected_temp_size = 11;
+  size_t expected_dimension = 19238;
+  auto offset = 2345;
+
+  vamana_index_group x =
+      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+
+  SECTION("0.3") {
+    x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, 0, "0.3");
+    x.append_num_edges(0);
+    x.append_base_size(0);
+    x.append_ingestion_timestamp(0);
+  }
+
+  SECTION("current_storage_version") {
+    x = vamana_index_group(
+        dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, 0, current_storage_version);
+    x.append_num_edges(0);
+    x.append_base_size(0);
+    x.append_ingestion_timestamp(0);
+  }
+
+  x.set_ingestion_timestamp(expected_ingestion + offset);
+  x.set_base_size(expected_base + offset);
+  x.set_num_edges(expected_partitions + offset);
+  x.set_temp_size(expected_temp_size + offset);
+  x.set_dimension(expected_dimension + offset);
+
+  CHECK(size(x.get_all_ingestion_timestamps()) == 1);
+  CHECK(size(x.get_all_base_sizes()) == 1);
+  CHECK(size(x.get_all_num_edges()) == 1);
+  CHECK(x.get_previous_ingestion_timestamp() == expected_ingestion + offset);
+  CHECK(x.get_previous_base_size() == expected_base + offset);
+  CHECK(x.get_previous_num_edges() == expected_partitions + offset);
+  CHECK(x.get_temp_size() == expected_temp_size + offset);
+  CHECK(x.get_dimension() == expected_dimension + offset);
+}
+
+TEST_CASE("vamana_group: invalid storage version", "[vamana_group]") {
+  std::string tmp_uri =
+      (std::filesystem::temp_directory_path() / "vamana_group").string();
+
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri)) {
+    vfs.remove_dir(tmp_uri);
+  }
+  CHECK_THROWS(vamana_index_group(
+      dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, 0, "invalid"));
+}
+
+TEST_CASE("vamana_group: mismatched storage version", "[vamana_group]") {
+  std::string tmp_uri =
+      (std::filesystem::temp_directory_path() / "vamana_group").string();
+
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri)) {
+    vfs.remove_dir(tmp_uri);
+  }
+
+  vamana_index_group x =
+      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, 0, "0.3");
+
+  CHECK_THROWS_WITH(
+      vamana_index_group(
+          dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, 0, "different_version"),
+      "Version mismatch. Requested different_version but found 0.3");
 }

@@ -6,9 +6,13 @@ import numpy as np
 
 
 # class LangChainEmbedding(ObjectEmbedding):
-class LangChainEmbedding():
+class LangChainEmbedding:
     """
-    Embedding functions from `langchain.embeddings` package.
+    Embedding functions from Langchain.
+
+    This attempts to import the embedding_class from the following modules:
+    - langchain_openai
+    - langchain.embeddings
     """
 
     def __init__(
@@ -37,9 +41,14 @@ class LangChainEmbedding():
     def load(self) -> None:
         import importlib
 
-        embeddings_module = importlib.import_module("langchain.embeddings")
-        embedding_class_ = getattr(embeddings_module, self.embedding_class)
-        self.embedding = embedding_class_(**self.embedding_kwargs)
+        try:
+            embeddings_module = importlib.import_module("langchain_openai")
+            embedding_class_ = getattr(embeddings_module, self.embedding_class)
+            self.embedding = embedding_class_(**self.embedding_kwargs)
+        except ImportError:
+            embeddings_module = importlib.import_module("langchain.embeddings")
+            embedding_class_ = getattr(embeddings_module, self.embedding_class)
+            self.embedding = embedding_class_(**self.embedding_kwargs)
 
     def embed(self, objects: OrderedDict, metadata: OrderedDict) -> np.ndarray:
         return np.array(
