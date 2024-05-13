@@ -335,8 +335,7 @@ class base_index_group {
     }
 
     metadata_.clear_history(timestamp);
-
-    tiledb::delete_fragments(ids_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(cached_ctx_, ids_uri(), 0, timestamp);
     static_cast<group_type*>(this)->clear_history_impl(timestamp);
   }
 
