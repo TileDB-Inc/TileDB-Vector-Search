@@ -61,7 +61,6 @@ list(JOIN CMAKE_PREFIX_PATH "|" CMAKE_PREFIX_PATH_STR)
 #... before tiledb sets up only half of them...
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindTileDB_EP.cmake)
 
-message(STATUS "TILEDB_DOWNLOADED ${TILEDB_DOWNLOADED}")
 # Forward any additional CMake args to the non-superbuild.
 set(INHERITED_CMAKE_ARGS
   -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
