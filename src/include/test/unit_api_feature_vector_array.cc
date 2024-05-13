@@ -699,7 +699,7 @@ TEST_CASE("api: temporal_policy", "[api]") {
         extents(feature_vector_array)[0],
         extents(feature_vector_array)[1]};
     auto ids = std::span<IdsType>(
-        (IdsType*)feature_vector_array.ids_data(),
+        (IdsType*)feature_vector_array.ids(),
         feature_vector_array.num_vectors());
     CHECK(ids.size() == 0);
     CHECK(data.size() == 0);
