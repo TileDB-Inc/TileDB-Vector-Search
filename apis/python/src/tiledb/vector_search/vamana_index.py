@@ -35,7 +35,12 @@ class VamanaIndex(index.Index):
     ):
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
-        self.index = vspy.IndexVamana(vspy.Ctx(config), uri)
+        # TODO(paris): Support (start, end) timestamps and remove.
+        type_erased_timestamp = timestamp
+        if isinstance(timestamp, tuple):
+            type_erased_timestamp = timestamp[1]
+        type_erased_timestamp = type_erased_timestamp if type_erased_timestamp else 0
+        self.index = vspy.IndexVamana(self.ctx, uri, type_erased_timestamp)
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
         ].uri
@@ -87,7 +92,8 @@ class VamanaIndex(index.Index):
 
         assert queries.dtype == np.float32
         if opt_l < k:
-            raise ValueError(f"opt_l ({opt_l}) should be >= k ({k})")
+            warnings.warn(f"opt_l ({opt_l}) should be >= k ({k}), setting to k")
+            opt_l = k
 
         if queries.ndim == 1:
             queries = np.array([queries])

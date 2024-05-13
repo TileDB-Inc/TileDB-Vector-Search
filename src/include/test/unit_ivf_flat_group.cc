@@ -395,7 +395,7 @@ TEST_CASE("ivf_flat_group: invalid storage version", "[ivf_flat_group]") {
     vfs.remove_dir(tmp_uri);
   }
   CHECK_THROWS(
-      ivf_flat_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, 0, "invalid"));
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, 0, "invalid"));
 }
 
 TEST_CASE("ivf_flat_group: mismatched storage version", "[ivf_flat_group]") {
@@ -409,10 +409,10 @@ TEST_CASE("ivf_flat_group: mismatched storage version", "[ivf_flat_group]") {
   }
 
   ivf_flat_group x =
-      ivf_flat_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, 0, "0.3");
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, 0, "0.3");
 
   CHECK_THROWS_WITH(
-      ivf_flat_group(
-          dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, 0, "different_version"),
+      ivf_flat_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, 0, "different_version"),
       "Version mismatch. Requested different_version but found 0.3");
 }

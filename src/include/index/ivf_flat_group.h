@@ -87,9 +87,9 @@ class ivf_flat_group : public base_index_group<ivf_flat_group<Index>> {
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
-      size_t timestamp = 0,
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""})
-      : Base(index, ctx, uri, rw, timestamp, version) {
+      : Base(ctx, uri, index.dimension(), rw, temporal_policy, version) {
   }
 
  public:
@@ -110,7 +110,7 @@ class ivf_flat_group : public base_index_group<ivf_flat_group<Index>> {
     return metadata_.partition_history_.back();
   }
   auto get_num_partitions() const {
-    return metadata_.partition_history_[this->timetravel_index_];
+    return metadata_.partition_history_[this->history_index_];
   }
   auto append_num_partitions(size_t size) {
     metadata_.partition_history_.push_back(size);
@@ -120,7 +120,7 @@ class ivf_flat_group : public base_index_group<ivf_flat_group<Index>> {
   }
 
   auto set_num_partitions(size_t size) {
-    metadata_.partition_history_[this->timetravel_index_] = size;
+    metadata_.partition_history_[this->history_index_] = size;
   }
   auto set_last_num_partitions(size_t size) {
     metadata_.partition_history_.back() = size;

@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import shutil
@@ -313,11 +314,11 @@ def check_equals(result_d, result_i, expected_result_d, expected_result_i):
     result_i_expected: int
         The expected indices
     """
-    assert (
-        result_i == expected_result_i
+    assert np.array_equal(
+        result_i, expected_result_i
     ), f"result_i: {result_i} != expected_result_i: {expected_result_i}"
-    assert (
-        result_d == expected_result_d
+    assert np.array_equal(
+        result_d, expected_result_d
     ), f"result_d: {result_d} != expected_result_d: {expected_result_d}"
 
 
@@ -392,3 +393,13 @@ def delete_uri(uri, config):
             else:
                 raise err
         group.delete(recursive=True)
+
+
+def load_metadata(index_uri):
+    group = tiledb.Group(index_uri, "r")
+    ingestion_timestamps = [
+        int(x) for x in list(json.loads(group.meta.get("ingestion_timestamps", "[]")))
+    ]
+    base_sizes = [int(x) for x in list(json.loads(group.meta.get("base_sizes", "[]")))]
+    group.close()
+    return ingestion_timestamps, base_sizes

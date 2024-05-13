@@ -49,7 +49,7 @@ auto random_geometric_2D(size_t N) {
   std::uniform_real_distribution<float> coord(-1.0, 1.0);
 
   auto X = ColMajorMatrixWithIds<float>(2, N);
-  std::iota(X.ids().begin(), X.ids().end(), 0);
+  std::iota(X.ids(), X.ids() + X.num_ids(), 0);
   for (size_t i = 0; i < N; ++i) {
     X(0, i) = coord(gen);
     X(1, i) = coord(gen);
@@ -87,7 +87,7 @@ auto gen_uni_grid(size_t M, size_t N) {
   edges.reserve(nedges);
 
   auto vec_array = ColMajorMatrixWithIds<float>(dim, nvectors);
-  std::iota(vec_array.ids().begin(), vec_array.ids().end(), 0);
+  std::iota(vec_array.ids(), vec_array.ids() + vec_array.num_ids(), 0);
 
   for (size_t i = 0; i < M; ++i) {
     for (size_t j = 0; j < N; ++j) {
@@ -119,7 +119,7 @@ auto gen_bi_grid(size_t M, size_t N) {
   edges.reserve(nedges);
 
   auto vec_array = ColMajorMatrixWithIds<float>(dim, nvectors);
-  std::iota(vec_array.ids().begin(), vec_array.ids().end(), 0);
+  std::iota(vec_array.ids(), vec_array.ids() + vec_array.num_ids(), 0);
 
   for (size_t i = 0; i < M; ++i) {
     for (size_t j = 0; j < N; ++j) {
@@ -209,7 +209,7 @@ auto normalize_matrix(
   auto max = *max_loc;
 
   auto to = ColMajorMatrixWithIds<T>(from.num_rows(), from.num_cols());
-  std::copy(from.ids().begin(), from.ids().end(), to.ids().begin());
+  std::copy(from.ids(), from.ids() + from.num_ids(), to.ids());
   for (size_t i = 0; i < from.num_rows(); ++i) {
     for (size_t j = 0; j < from.num_cols(); ++j) {
       auto foo = from(i, j) - min;
@@ -236,7 +236,7 @@ auto build_hypercube(size_t k_near, size_t k_far, size_t seed = 0) {
   std::uniform_int_distribution<int> heads(0, 1);
 
   ColMajorMatrixWithIds<float> nn_hypercube(3, N + 1);
-  std::iota(nn_hypercube.ids().begin(), nn_hypercube.ids().end(), 0);
+  std::iota(nn_hypercube.ids(), nn_hypercube.ids() + nn_hypercube.num_ids(), 0);
   size_t n{0};
   nn_hypercube(0, n) = 0;
   nn_hypercube(1, n) = 0;

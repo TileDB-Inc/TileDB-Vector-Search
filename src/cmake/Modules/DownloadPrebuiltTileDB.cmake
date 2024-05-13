@@ -26,15 +26,19 @@
 
 include(FetchContent)
 
-function(fetch_tiledb_release_list VERSION EXPECTED_HASH)
+function(fetch_tiledb_release_list VERSION)
         # Local constants
         set(UPSTREAM_URL "https://github.com/TileDB-Inc/TileDB/releases/download")
+        list(LENGTH ARGV COUNT)
+        if (${COUNT} GREATER 1)
+                list(GET ARGV 1 EXPECTED_HASH)
+        endif()
 
         if(NOT VERSION)
                 set(VERSION latest)
         endif()
 
-        if(${EXPECTED_HASH})
+        if(EXPECTED_HASH)
                 file(DOWNLOAD
                         ${UPSTREAM_URL}/${VERSION}/releases.csv
                         ${CMAKE_CURRENT_BINARY_DIR}/releases.csv
@@ -95,8 +99,7 @@ endfunction()
 
 function(fetch_prebuilt_tiledb)
         # Arguments
-        set(options RELLIST_HASH)
-        set(oneValueArgs VERSION ARTIFACT_NAME)
+        set(oneValueArgs VERSION ARTIFACT_NAME RELLIST_HASH)
         set(multiValueArgs)
         cmake_parse_arguments(
                 FETCH_PREBUILT_TILEDB
@@ -133,8 +136,7 @@ endfunction()
 
 function(fetch_source_tiledb)
         # Arguments
-        set(options RELLIST_HASH)
-        set(oneValueArgs VERSION ARTIFACT_NAME)
+        set(oneValueArgs VERSION ARTIFACT_NAME RELLIST_HASH)
         set(multiValueArgs)
         cmake_parse_arguments(
                 FETCH_PREBUILT_TILEDB

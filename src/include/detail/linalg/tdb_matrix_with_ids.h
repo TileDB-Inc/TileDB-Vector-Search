@@ -98,7 +98,7 @@ class tdbBlockedMatrixWithIds
       const std::string& ids_uri) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrixWithIds(
-            ctx, uri, ids_uri, 0, std::nullopt, 0, std::nullopt, 0, 0) {
+            ctx, uri, ids_uri, 0, std::nullopt, 0, std::nullopt, 0, {}) {
   }
 
   /**
@@ -118,7 +118,7 @@ class tdbBlockedMatrixWithIds
       const std::string& uri,
       const std::string& ids_uri,
       size_t upper_bound,
-      size_t timestamp = 0)
+      TemporalPolicy temporal_policy = {})
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : tdbBlockedMatrixWithIds(
             ctx,
@@ -129,7 +129,7 @@ class tdbBlockedMatrixWithIds
             0,
             std::nullopt,
             upper_bound,
-            timestamp) {
+            temporal_policy) {
   }
 
   /** General constructor */
@@ -142,33 +142,7 @@ class tdbBlockedMatrixWithIds
       size_t first_col,
       std::optional<size_t> last_col,
       size_t upper_bound,
-      size_t timestamp)
-    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : tdbBlockedMatrixWithIds(
-            ctx,
-            uri,
-            ids_uri,
-            first_row,
-            last_row,
-            first_col,
-            last_col,
-            upper_bound,
-            (timestamp == 0 ?
-                 tiledb::TemporalPolicy() :
-                 tiledb::TemporalPolicy(tiledb::TimeTravel, timestamp))) {
-  }
-
-  /** General constructor */
-  tdbBlockedMatrixWithIds(
-      const tiledb::Context& ctx,
-      const std::string& uri,
-      const std::string& ids_uri,
-      size_t first_row,
-      std::optional<size_t> last_row,
-      size_t first_col,
-      std::optional<size_t> last_col,
-      size_t upper_bound,
-      tiledb::TemporalPolicy temporal_policy)  // noexcept
+      TemporalPolicy temporal_policy)  // noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(
             ctx,
@@ -181,7 +155,10 @@ class tdbBlockedMatrixWithIds
             temporal_policy)
       , ids_uri_(ids_uri)
       , ids_array_(std::make_unique<tiledb::Array>(
-            ctx, ids_uri, TILEDB_READ, temporal_policy))
+            ctx,
+            ids_uri,
+            TILEDB_READ,
+            temporal_policy.to_tiledb_temporal_policy()))
       , ids_schema_{ids_array_->schema()} {
     constructor_timer.stop();
   }
@@ -223,12 +200,12 @@ class tdbBlockedMatrixWithIds
         0, (int)this->first_resident_col_, (int)this->last_resident_col_ - 1);
 
     auto layout_order = ids_schema_.cell_order();
-    this->ids().resize(elements_to_load * dimension);
+
     // Create a query
     tiledb::Query query(this->ctx_, *ids_array_);
     query.set_subarray(subarray)
         .set_layout(layout_order)
-        .set_data_buffer(attr_name, this->ids());
+        .set_data_buffer(attr_name, this->ids(), elements_to_load * dimension);
     tiledb_helpers::submit_query(tdb_func__, ids_uri_, query);
     _memory_data.insert_entry(
         tdb_func__, elements_to_load * dimension * sizeof(T));
@@ -265,7 +242,7 @@ class tdbPreLoadMatrixWithIds
       const std::string& uri,
       const std::string& ids_uri,
       size_t upper_bound = 0,
-      uint64_t timestamp = 0)
+      TemporalPolicy temporal_policy = {})
       : tdbPreLoadMatrixWithIds(
             ctx,
             uri,
@@ -273,7 +250,7 @@ class tdbPreLoadMatrixWithIds
             std::nullopt,
             std::nullopt,
             upper_bound,
-            timestamp) {
+            temporal_policy) {
   }
 
   tdbPreLoadMatrixWithIds(
@@ -283,7 +260,7 @@ class tdbPreLoadMatrixWithIds
       std::optional<size_t> num_array_rows,
       std::optional<size_t> num_array_cols,
       size_t upper_bound = 0,
-      uint64_t timestamp = 0)
+      TemporalPolicy temporal_policy = {})
       : Base(
             ctx,
             uri,
@@ -293,7 +270,7 @@ class tdbPreLoadMatrixWithIds
             0,
             num_array_cols,
             upper_bound,
-            timestamp) {
+            temporal_policy) {
     Base::load();
   }
 };
