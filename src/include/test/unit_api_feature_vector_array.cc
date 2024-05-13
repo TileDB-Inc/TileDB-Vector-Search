@@ -260,7 +260,7 @@ TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
 
     auto a = ColMajorMatrixWithIds<DataType, IdsType>(rows, cols);
     std::iota(a.data(), a.data() + rows * cols, 0);
-    std::iota(a.ids().begin(), a.ids().end(), 0);
+    std::iota(a.ids(), a.ids() + a.num_ids(), 0);
     auto b = FeatureVectorArray(a);
 
     CHECK(b.dimension() == rows);
@@ -286,8 +286,8 @@ TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
     CHECK(data(5, 0) == 5);
 
     CHECK(b.num_ids() == cols);
-    CHECK(b.ids_data() != nullptr);
-    auto ids = std::span<IdsType>((IdsType*)b.ids_data(), b.num_vectors());
+    CHECK(b.ids() != nullptr);
+    auto ids = std::span<IdsType>((IdsType*)b.ids(), b.num_vectors());
     CHECK(ids.size() == cols);
     CHECK(ids[0] == 0);
     CHECK(ids[5] == 5);
@@ -298,17 +298,17 @@ TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
 
     auto a = ColMajorMatrixWithIds<DataType, IdsType>(rows, cols);
     std::iota(a.data(), a.data() + rows * cols, 0);
-    std::iota(a.ids().begin(), a.ids().end(), 0);
+    std::iota(a.ids(), a.ids() + a.num_ids(), 0);
 
     auto a_ptr = a.data();
-    auto a_ptr_ids = a.ids().data();
+    auto a_ptr_ids = a.ids();
 
     auto b = FeatureVectorArray(std::move(a));
 
     CHECK(a_ptr == b.data());
-    CHECK(a_ptr_ids == b.ids_data());
+    CHECK(a_ptr_ids == b.ids());
     CHECK(a.data() == nullptr);
-    CHECK(a.ids().data() == nullptr);
+    CHECK(a.ids() == nullptr);
 
     CHECK(b.dimension() == rows);
     CHECK(dimension(b) == rows);
@@ -331,8 +331,8 @@ TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
     CHECK(data(0, 0) == 0);
     CHECK(data(5, 0) == 5);
 
-    CHECK(b.ids_data() != nullptr);
-    auto ids = std::span<IdsType>((IdsType*)b.ids_data(), b.num_vectors());
+    CHECK(b.ids() != nullptr);
+    auto ids = std::span<IdsType>((IdsType*)b.ids(), b.num_vectors());
     CHECK(ids.size() == cols);
     CHECK(ids[0] == 0);
     CHECK(ids[5] == 5);
@@ -605,7 +605,7 @@ TEST_CASE("api: temporal_policy", "[api]") {
         ctx, matrix_with_ids, feature_vectors_uri, 0, false, temporal_policy);
 
     write_vector(
-        ctx, matrix_with_ids.ids(), ids_uri, 0, false, temporal_policy);
+        ctx, matrix_with_ids.raveled_ids(), ids_uri, 0, false, temporal_policy);
   }
 
   // Read the data and validate our initial write worked.
@@ -617,7 +617,7 @@ TEST_CASE("api: temporal_policy", "[api]") {
         extents(feature_vector_array)[0],
         extents(feature_vector_array)[1]};
     auto ids = std::span<IdsType>(
-        (IdsType*)feature_vector_array.ids_data(),
+        (IdsType*)feature_vector_array.ids(),
         feature_vector_array.num_vectors());
     auto expected_ids = {1, 2, 3, 4};
     CHECK(std::equal(ids.begin(), ids.end(), expected_ids.begin()));
@@ -640,7 +640,7 @@ TEST_CASE("api: temporal_policy", "[api]") {
         ctx, matrix_with_ids, feature_vectors_uri, 0, false, temporal_policy);
 
     write_vector(
-        ctx, matrix_with_ids.ids(), ids_uri, 0, false, temporal_policy);
+        ctx, matrix_with_ids.raveled_ids(), ids_uri, 0, false, temporal_policy);
   }
 
   // Read the data and validate we read at temporal_policy 100 by default.
@@ -652,7 +652,7 @@ TEST_CASE("api: temporal_policy", "[api]") {
         extents(feature_vector_array)[0],
         extents(feature_vector_array)[1]};
     auto ids = std::span<IdsType>(
-        (IdsType*)feature_vector_array.ids_data(),
+        (IdsType*)feature_vector_array.ids(),
         feature_vector_array.num_vectors());
     auto expected_ids = {11, 22, 33, 44};
     CHECK(std::equal(ids.begin(), ids.end(), expected_ids.begin()));
@@ -673,7 +673,7 @@ TEST_CASE("api: temporal_policy", "[api]") {
         extents(feature_vector_array)[0],
         extents(feature_vector_array)[1]};
     auto ids = std::span<IdsType>(
-        (IdsType*)feature_vector_array.ids_data(),
+        (IdsType*)feature_vector_array.ids(),
         feature_vector_array.num_vectors());
     auto expected_ids = {1, 2, 3, 4};
     CHECK(std::equal(ids.begin(), ids.end(), expected_ids.begin()));
@@ -699,7 +699,7 @@ TEST_CASE("api: temporal_policy", "[api]") {
         extents(feature_vector_array)[0],
         extents(feature_vector_array)[1]};
     auto ids = std::span<IdsType>(
-        (IdsType*)feature_vector_array.ids_data(),
+        (IdsType*)feature_vector_array.ids(),
         feature_vector_array.num_vectors());
     CHECK(ids.size() == 0);
     CHECK(data.size() == 0);

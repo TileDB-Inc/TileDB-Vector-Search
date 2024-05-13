@@ -620,7 +620,7 @@ class vamana_index {
     std::copy(
         training_set_ids.begin(),
         training_set_ids.end(),
-        feature_vectors_.ids().begin());
+        feature_vectors_.ids());
 
     dimension_ = ::dimension(feature_vectors_);
     num_vectors_ = ::num_vectors(feature_vectors_);
@@ -902,7 +902,7 @@ class vamana_index {
 
     write_vector(
         ctx,
-        feature_vectors_.ids(),
+        feature_vectors_.raveled_ids(),
         write_group.ids_uri(),
         0,
         false,

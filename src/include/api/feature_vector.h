@@ -103,6 +103,9 @@ class FeatureVector {
       case TILEDB_FLOAT32:
         vector_ = std::make_unique<vector_impl<Vector<float>>>(N);
         break;
+      case TILEDB_INT8:
+        vector_ = std::make_unique<vector_impl<Vector<int8_t>>>(N);
+        break;
       case TILEDB_UINT8:
         vector_ = std::make_unique<vector_impl<Vector<uint8_t>>>(N);
         break;
@@ -127,6 +130,9 @@ class FeatureVector {
     switch (feature_type_) {
       case TILEDB_FLOAT32:
         vector_ = std::make_unique<vector_impl<tdbVector<float>>>(ctx, uri);
+        break;
+      case TILEDB_INT8:
+        vector_ = std::make_unique<vector_impl<tdbVector<int8_t>>>(ctx, uri);
         break;
       case TILEDB_UINT8:
         vector_ = std::make_unique<vector_impl<tdbVector<uint8_t>>>(ctx, uri);
