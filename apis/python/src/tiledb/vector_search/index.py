@@ -533,19 +533,16 @@ class Index:
                 updates_array_uri = group[
                     storage_formats[storage_version]["UPDATES_ARRAY_NAME"]
                 ].uri
-                with tiledb.open(updates_array_uri, "m") as A:
-                    A.delete_fragments(0, timestamp)
+                tiledb.Array.delete_fragments(updates_array_uri, 0, timestamp)
 
             if index_type == "FLAT":
                 db_uri = group[storage_formats[storage_version]["PARTS_ARRAY_NAME"]].uri
-                with tiledb.open(db_uri, "m") as A:
-                    A.delete_fragments(0, timestamp)
+                tiledb.Array.delete_fragments(db_uri, 0, timestamp)
                 if storage_formats[storage_version]["IDS_ARRAY_NAME"] in group:
                     ids_uri = group[
                         storage_formats[storage_version]["IDS_ARRAY_NAME"]
                     ].uri
-                    with tiledb.open(ids_uri, "m") as A:
-                        A.delete_fragments(0, timestamp)
+                    tiledb.Array.delete_fragments(ids_uri, 0, timestamp)
             elif index_type == "IVF_FLAT":
                 db_uri = group[storage_formats[storage_version]["PARTS_ARRAY_NAME"]].uri
                 centroids_uri = group[
@@ -555,14 +552,10 @@ class Index:
                     storage_formats[storage_version]["INDEX_ARRAY_NAME"]
                 ].uri
                 ids_uri = group[storage_formats[storage_version]["IDS_ARRAY_NAME"]].uri
-                with tiledb.open(db_uri, "m") as A:
-                    A.delete_fragments(0, timestamp)
-                with tiledb.open(centroids_uri, "m") as A:
-                    A.delete_fragments(0, timestamp)
-                with tiledb.open(index_array_uri, "m") as A:
-                    A.delete_fragments(0, timestamp)
-                with tiledb.open(ids_uri, "m") as A:
-                    A.delete_fragments(0, timestamp)
+                tiledb.Array.delete_fragments(db_uri, 0, timestamp)
+                tiledb.Array.delete_fragments(centroids_uri, 0, timestamp)
+                tiledb.Array.delete_fragments(index_array_uri, 0, timestamp)
+                tiledb.Array.delete_fragments(ids_uri, 0, timestamp)
             group.close()
 
 
