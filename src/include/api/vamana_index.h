@@ -348,11 +348,6 @@ class IndexVamana {
         std::optional<size_t> timestamp,
         const std::string& storage_version) = 0;
 
-    //    static virtual void write_index(
-    //        const tiledb::Context& ctx,
-    //        const std::string& group_uri,
-    //        uint64_t timestamp) = 0;
-
     [[nodiscard]] virtual size_t dimension() const = 0;
     [[nodiscard]] virtual TemporalPolicy temporal_policy() const = 0;
   };
@@ -475,13 +470,6 @@ class IndexVamana {
         const std::string& storage_version) override {
       impl_index_.write_index(ctx, group_uri, timestamp, storage_version);
     }
-
-    //    static void clear_history(
-    //        const tiledb::Context& ctx,
-    //        const std::string& group_uri,
-    //        uint64_t timestamp) override {
-    //      impl_index_::clear_history(ctx, group_uri, timestamp);
-    //    }
 
     size_t dimension() const override {
       return ::dimension(impl_index_);

@@ -236,6 +236,10 @@ class base_index_group {
    * @todo Process the "base group" metadata here.
    */
   void create_default() {
+    if (get_dimension() == 0) {
+      throw std::runtime_error(
+          "Dimension must be set when creating a new group.");
+    }
     static_cast<group_type*>(this)->create_default_impl();
   }
 
@@ -304,9 +308,6 @@ class base_index_group {
         open_for_read();
         break;
       case TILEDB_WRITE:
-        if (dimension == 0) {
-          throw std::runtime_error("Dimension must be set for write mode.");
-        }
         set_dimension(dimension);
         open_for_write();
         break;
@@ -321,11 +322,19 @@ class base_index_group {
     }
   }
 
+  /**
+   * @brief Clears all history that is <= timestamp.
+   */
   void clear_history(uint64_t timestamp) {
     if (opened_for_ != TILEDB_WRITE) {
       throw std::runtime_error("Cannot clear history in read mode.");
     }
-    metadata_.clear_history(timestamp);
+    if (!exists()) {
+      throw std::runtime_error(
+          "Cannot clear history because group does not exist.");
+    }
+
+    // TODO(paris): Implement the clear.
   }
 
   /**

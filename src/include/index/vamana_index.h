@@ -961,10 +961,9 @@ class vamana_index {
       const tiledb::Context& ctx,
       const std::string& group_uri,
       uint64_t timestamp) {
-    // todo: get dimension
-    //    auto write_group =
-    //        vamana_index_group<vamana_index>(ctx, group_uri, 0, TILEDB_WRITE);
-    //    write_group.clear_history(timestamp);
+    auto write_group =
+        vamana_index_group<vamana_index>(ctx, group_uri, TILEDB_WRITE);
+    write_group.clear_history(timestamp);
   }
 
   const vamana_index_group<vamana_index>& group() const {
