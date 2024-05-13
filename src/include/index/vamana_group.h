@@ -110,6 +110,13 @@ class vamana_index_group : public base_index_group<index_type> {
     }
   }
 
+  void clear_history_impl(uint64_t timestamp) {
+    tiledb::delete_fragments(feature_vectors_uri(), 0, timestamp);
+    tiledb::delete_fragments(adjacency_scores_uri(), 0, timestamp);
+    tiledb::delete_fragments(adjacency_ids_uri(), 0, timestamp);
+    tiledb::delete_fragments(adjacency_row_index_uri(), 0, timestamp);
+  }
+
   /*
    * Graph size information
    */
