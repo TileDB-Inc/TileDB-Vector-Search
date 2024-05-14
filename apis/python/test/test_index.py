@@ -249,10 +249,10 @@ def test_vamana_queries(tmp_path):
     print("distances:", distances)
     print("ids:", ids)
 
-    queries = np.array([[2, 2, 2]], dtype=np.float32)
+    np.array([[2, 2, 2]], dtype=np.float32)
+
 
 def test_vamana_index(tmp_path):
-    print()
     uri = os.path.join(tmp_path, "array")
     if os.path.exists(uri):
         os.rmdir(uri)
@@ -269,15 +269,15 @@ def test_vamana_index(tmp_path):
     assert ingestion_timestamps == [0]
 
     queries = np.array([[2, 2, 2]], dtype=np.float32)
-    # distances, ids = index.query(queries, k=1)
-    # assert distances.shape == (1, 1)
-    # assert ids.shape == (1, 1)
-    # assert distances[0][0] == ind.MAX_FLOAT_32
-    # assert ids[0][0] == ind.MAX_UINT64
-    # query_and_check_distances(
-    #     index, queries, 1, [[ind.MAX_FLOAT_32]], [[ind.MAX_UINT64]]
-    # )
-    # check_default_metadata(uri, vector_type, STORAGE_VERSION, "VAMANA")
+    distances, ids = index.query(queries, k=1)
+    assert distances.shape == (1, 1)
+    assert ids.shape == (1, 1)
+    assert distances[0][0] == ind.MAX_FLOAT_32
+    assert ids[0][0] == ind.MAX_UINT64
+    query_and_check_distances(
+        index, queries, 1, [[ind.MAX_FLOAT_32]], [[ind.MAX_UINT64]]
+    )
+    check_default_metadata(uri, vector_type, STORAGE_VERSION, "VAMANA")
 
     update_vectors = np.empty([5], dtype=object)
     update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.float32))
@@ -289,13 +289,6 @@ def test_vamana_index(tmp_path):
         vectors=update_vectors,
         external_ids=np.array([0, 1, 2, 3, 4], dtype=np.dtype(np.uint32)),
     )
-    index = index.consolidate_updates()
-    print("index.query() ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    distances, ids = index.query(queries, k=1, mode=Mode.REALTIME, verbose=True)
-    print("distances:", distances)
-    print("ids:", ids)
-
-    return
     query_and_check_distances(
         index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]]
     )
