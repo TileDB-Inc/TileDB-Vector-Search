@@ -1,5 +1,5 @@
 /**
- * @file   ivf/index.h
+ * @file   index.h
  *
  * @section LICENSE
  *

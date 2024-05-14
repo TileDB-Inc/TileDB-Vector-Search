@@ -1,5 +1,5 @@
 /**
- * @file   ivf/dist_qv.h
+ * @file   dist_qv.h
  *
  * @section LICENSE
  *

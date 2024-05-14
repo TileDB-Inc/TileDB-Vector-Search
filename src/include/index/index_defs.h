@@ -1,5 +1,5 @@
 /**
- * @file   index/index_defs.h
+ * @file   index_defs.h
  *
  * @section LICENSE
  *

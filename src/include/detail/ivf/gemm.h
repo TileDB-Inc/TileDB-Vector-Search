@@ -1,5 +1,5 @@
 /**
- * @file   ivf/gemm.h
+ * @file   gemm.h
  *
  * @section LICENSE
  *

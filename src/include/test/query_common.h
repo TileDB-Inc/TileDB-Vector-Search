@@ -256,13 +256,13 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     if constexpr (std::is_same_v<
                       IndexType,
                       ivf_flat_index<feature_type, id_type, px_type>>) {
-      CHECK(recall0 > .95);
+      CHECK(recall0 > 0.95);
       CHECK(recall1 > 0.95);
 
     } else if constexpr (std::is_same_v<
                              IndexType,
                              ivf_pq_index<feature_type, id_type, px_type>>) {
-      CHECK(recall0 > .7);
+      CHECK(recall0 > 0.7);
       CHECK(recall1 > 0.7);
 
     } else {

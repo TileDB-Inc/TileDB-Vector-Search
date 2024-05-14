@@ -1,5 +1,5 @@
 /**
- * @file   base_group.h
+ * @file   index_group.h
  *
  * @section LICENSE
  *
@@ -308,6 +308,12 @@ class base_index_group {
     }
   }
 
+  /**
+   * @brief Load the group - this should be called in the constructor of derived
+   * classes of index_group. Note that we don't have the index_group constructor
+   * call this because the derived class may need to do some setup before
+   * open_for_write() is called.
+   */
   void load() {
     switch (opened_for_) {
       case TILEDB_READ:
