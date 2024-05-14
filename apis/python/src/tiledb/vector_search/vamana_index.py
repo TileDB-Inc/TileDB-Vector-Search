@@ -3,6 +3,7 @@ from typing import Any, Mapping
 
 import numpy as np
 
+from tiledb.cloud.dag import Mode
 from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search import index
 from tiledb.vector_search.module import *
@@ -12,6 +13,14 @@ from tiledb.vector_search.storage_formats import validate_storage_version
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 INDEX_TYPE = "VAMANA"
+
+
+def submit_local(d, func, *args, **kwargs):
+    # Drop kwarg
+    kwargs.pop("image_name", None)
+    kwargs.pop("resource_class", None)
+    kwargs.pop("resources", None)
+    return d.submit_local(func, *args, **kwargs)
 
 
 class VamanaIndex(index.Index):
@@ -33,14 +42,15 @@ class VamanaIndex(index.Index):
         timestamp=None,
         **kwargs,
     ):
-        super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
+        super().__init__(uri=uri, config=config, timestamp=timestamp)
         # TODO(paris): Support (start, end) timestamps and remove.
         type_erased_timestamp = timestamp
         if isinstance(timestamp, tuple):
             type_erased_timestamp = timestamp[1]
         type_erased_timestamp = type_erased_timestamp if type_erased_timestamp else 0
         self.index = vspy.IndexVamana(self.ctx, uri, type_erased_timestamp)
+        self.uri = uri
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
         ].uri
@@ -70,6 +80,10 @@ class VamanaIndex(index.Index):
         queries: np.ndarray,
         k: int = 10,
         opt_l: Optional[int] = 100,
+        mode: Mode = None,
+        resource_class: Optional[str] = None,
+        resources: Optional[Mapping[str, Any]] = None,
+        num_workers: int = -1,
         **kwargs,
     ):
         """
@@ -83,12 +97,35 @@ class VamanaIndex(index.Index):
             Number of top results to return per query
         opt_l: int
             How deep to search. Should be >= k. Defaults to 100.
+        mode: Mode
+            If provided the query will be executed using TileDB cloud taskgraphs.
+            For distributed execution you can use REALTIME or BATCH mode.
+            For local execution you can use LOCAL mode.
+        resource_class:
+            The name of the resource class to use ("standard" or "large"). Resource classes define maximum
+            limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode.
+            Cannot be used alongside resources.
+            In REALTIME or BATCH mode if neither resource_class nor resources are provided,
+            we default to the "large" resource class.
+        resources:
+            A specification for the amount of resources to use when executing using TileDB cloud
+            taskgraphs, of the form: {"cpu": "6", "memory": "12Gi", "gpu": 1}. Can only be used
+            in BATCH mode. Cannot be used alongside resource_class.
+        num_workers: int
+            Only relevant for taskgraph based execution.
+            If provided, this is the number of workers to use for the query execution.
         """
+        print("[vamana_index@query_internal] mode", mode)
         warnings.warn("The Vamana index is not yet supported, please use with caution.")
         if self.size == 0:
             return np.full((queries.shape[0], k), index.MAX_FLOAT_32), np.full(
                 (queries.shape[0], k), index.MAX_UINT64
             )
+
+        if mode != Mode.BATCH and resources:
+            raise TypeError("Can only pass resources in BATCH mode")
+        if (mode != Mode.REALTIME and mode != Mode.BATCH) and resource_class:
+            raise TypeError("Can only pass resource_class in REALTIME or BATCH mode")
 
         assert queries.dtype == np.float32
         if opt_l < k:
@@ -100,11 +137,139 @@ class VamanaIndex(index.Index):
         queries = np.transpose(queries)
         if not queries.flags.f_contiguous:
             queries = queries.copy(order="F")
-        queries_feature_vector_array = vspy.FeatureVectorArray(queries)
+        if mode is None:
+            print("[vamana_index@query_internal] mode is None")
+            queries_feature_vector_array = vspy.FeatureVectorArray(queries)
+            distances, ids = self.index.query(queries_feature_vector_array, k, opt_l)
+            return np.array(distances, copy=False), np.array(ids, copy=False)
+        else:
+            print("[vamana_index@query_internal] use self.taskgraph_query()")
+            return self.taskgraph_query(
+                queries=queries,
+                k=k,
+                opt_l=opt_l,
+                mode=mode,
+                resource_class=resource_class,
+                resources=resources,
+                num_workers=num_workers,
+                config=self.config,
+            )
 
-        distances, ids = self.index.query(queries_feature_vector_array, k, opt_l)
+    def taskgraph_query(
+        self,
+        queries: np.ndarray,
+        k: int,
+        opt_l: int,
+        mode: Mode,
+        resource_class: Optional[str],
+        resources: Optional[Mapping[str, Any]],
+        num_workers: int,
+        config: Optional[Mapping[str, Any]],
+    ):
+        """
+        Query an VAMANA index using TileDB cloud taskgraphs
 
-        return np.array(distances, copy=False), np.array(ids, copy=False)
+        Parameters
+        ----------
+        queries: numpy.ndarray
+            ND Array of queries
+        k: int
+            Number of top results to return per query
+        opt_l: int
+            How deep to search. Should be >= k.
+        mode: Mode
+            If provided the query will be executed using TileDB cloud taskgraphs.
+            For distributed execution you can use REALTIME or BATCH mode.
+            For local execution you can use LOCAL mode.
+        resource_class:
+            The name of the resource class to use ("standard" or "large"). Resource classes define maximum
+            limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode.
+            Cannot be used alongside resources.
+            In REALTIME or BATCH mode if neither resource_class nor resources are provided,
+            we default to the "large" resource class.
+        resources:
+            A specification for the amount of resources to use when executing using TileDB cloud
+            taskgraphs, of the form: {"cpu": "6", "memory": "12Gi", "gpu": 1}. Can only be used
+            in BATCH mode. Cannot be used alongside resource_class.
+        num_workers: int
+            Only relevant for taskgraph based execution.
+            If provided, this is the number of workers to use for the query execution.
+        config: None
+            config dictionary, defaults to None
+        """
+        from functools import partial
+
+        import numpy as np
+
+        from tiledb.cloud import dag
+        from tiledb.cloud.dag import Mode
+
+        if resource_class and resources:
+            raise TypeError("Cannot provide both resource_class and resources")
+
+        def query_udf(
+            uri: str,
+            queries: np.ndarray,
+            opt_l: int,
+            k: int,
+            config: Optional[Mapping[str, Any]] = None,
+            timestamp: int = 0,
+        ):
+            print("[vamana_index@taskgraph_query@query_udf]")
+            from tiledb.vector_search import _tiledbvspy as vspy
+
+            ctx = vspy.Ctx(config)
+            index = vspy.IndexVamana(ctx, uri, timestamp)
+            queries_feature_vector_array = vspy.FeatureVectorArray(queries)
+            distances, ids = index.query(queries_feature_vector_array, k, opt_l)
+            return np.array(distances, copy=False), np.array(ids, copy=False)
+
+        assert queries.dtype == np.float32
+        if num_workers == -1:
+            num_workers = 5
+        if mode == Mode.BATCH:
+            d = dag.DAG(
+                name="vector-query",
+                mode=Mode.BATCH,
+                max_workers=num_workers,
+            )
+        elif mode == Mode.REALTIME:
+            d = dag.DAG(
+                name="vector-query",
+                mode=Mode.REALTIME,
+                max_workers=num_workers,
+            )
+        else:
+            d = dag.DAG(
+                name="vector-query",
+                mode=Mode.REALTIME,
+                max_workers=1,
+                namespace="default",
+            )
+        submit = partial(submit_local, d)
+        if mode == Mode.BATCH or mode == Mode.REALTIME:
+            submit = d.submit
+
+        node = submit(
+            query_udf,
+            uri=self.uri,
+            queries=queries,
+            opt_l=opt_l,
+            k=k,
+            config=config,
+            timestamp=self.base_array_timestamp,
+            resource_class="large"
+            if (not resources and not resource_class)
+            else resource_class,
+            resources=resources,
+            image_name="3.9-vectorsearch",
+        )
+
+        d.compute()
+        d.wait()
+        results = node.result()
+        print("[vamana_index@taskgraph_query] results", results)
+        return results
 
 
 def create(
