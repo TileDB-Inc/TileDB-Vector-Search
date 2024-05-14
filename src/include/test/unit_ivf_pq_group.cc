@@ -64,26 +64,12 @@ struct dummy_pq_index {
   using pq_vector_feature_type = pq_code_type;
   using score_type = float;
 
-  auto dimension() const {
-    return 128;
-  }
-  auto num_subspaces() const {
-    return 16;
-  }
-  auto num_clusters() const {
-    return 256;
-  }
-  auto sub_dimension() const {
-    return 8;
-  }
-  auto bits_per_subspace() const {
-    return 8;
-  }
+  using group_type = ivf_pq_group<dummy_pq_index>;
+  using metadata_type = ivf_pq_metadata;
 };
 
 TEST_CASE(
     "ivf_pq_group: write constructor - create and open", "[ivf_pq_group]") {
-  bool debug = false;
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "ivf_pq_group_test_write_constructor")
                             .string();
@@ -94,9 +80,8 @@ TEST_CASE(
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_pq_group x = ivf_pq_group(dummy_pq_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  x.dump("Write constructor - create before open");
-
-  ivf_pq_group y = ivf_pq_group(dummy_pq_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  y.dump("Write constructor - open");
+  ivf_pq_group x = ivf_pq_group<dummy_pq_index>(
+      ctx, tmp_uri, TILEDB_WRITE, {}, "", 10, 256, 16);
+  CHECK(x.get_dimension() == 10);
+  CHECK(x.get_num_clusters() == 256);
 }

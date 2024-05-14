@@ -456,7 +456,6 @@ TEMPLATE_TEST_CASE(
 }
 #endif
 
-// /Users/lums/TileDB/TileDB-Vector-Search-ivf-pq/external/test_data/arrays/siftsmall/pq_ivf_2
 TEST_CASE(
     "ivf_pq_index: Build index and query in place, infinite",
     "[ivf_pq_index]") {
@@ -483,16 +482,13 @@ TEST_CASE(
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
 
-#if 1
   SECTION("finite") {
     INFO("finite");
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_finite_ram(query_set, k_nn, nprobe);
   }
-#endif
 
-  // Very useful to keep on hand for debugging
-  // debug_slice(top_k_ivf, "top_k_ivf");
+  // NOTE: Can be used to debug the results.debug_slice(top_k_ivf, "top_k_ivf");
   // debug_slice(top_k_ivf_scores, "top_k_ivf_scores");
   // debug_slice(groundtruth_set, "groundtruth_set");
 

@@ -291,7 +291,6 @@ class base_index_group {
    * @todo Chained parameters here too?
    */
   base_index_group(
-      const index_type& index,
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
@@ -304,12 +303,15 @@ class base_index_group {
       , base_array_timestamp_(temporal_policy.timestamp_end())
       , version_(version)
       , opened_for_(rw) {
+    set_dimension(dimension);
+  }
+
+  void load() {
     switch (opened_for_) {
       case TILEDB_READ:
         open_for_read();
         break;
       case TILEDB_WRITE:
-        set_dimension(dimension);
         open_for_write();
         break;
       case TILEDB_MODIFY_EXCLUSIVE:
@@ -344,7 +346,7 @@ class base_index_group {
    * @todo Don't use default Config
    */
   ~base_index_group() {
-    if (opened_for_ == TILEDB_WRITE) {
+    if (opened_for_ == TILEDB_WRITE && exists()) {
       auto write_group = tiledb::Group(
           cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
       metadata_.store_metadata(write_group);

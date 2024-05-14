@@ -73,6 +73,7 @@ class ivf_flat_group : public base_index_group<index_type> {
       const std::string& version = std::string{""},
       uint64_t dimension = 0)
       : Base(ctx, uri, rw, temporal_policy, version, dimension) {
+    Base::load();
   }
 
  public:
@@ -133,7 +134,7 @@ class ivf_flat_group : public base_index_group<index_type> {
       this->version_ = current_storage_version;
     }
     this->init_valid_array_names();
-    this->set_dimension(this->cached_index_.get().dimension());
+    //    this->set_dimension(this->cached_index_.get().dimension());
 
     static const int32_t tile_size{
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /

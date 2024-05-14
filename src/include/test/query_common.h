@@ -168,12 +168,19 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
             ctx_, siftsmall_inputs_uri, num_vectors))
       , query_set(tdbColMajorMatrix<feature_type>(ctx_, siftsmall_query_uri))
       , groundtruth_set(tdbColMajorMatrix<siftsmall_groundtruth_type>(
-            ctx_, siftsmall_groundtruth_uri))
-      , idx{
-            (num_subspaces == 0 ?
-                 IndexType(/*128,*/ nlist, max_iter, tolerance) :
-                 IndexType(
-                     /*128,*/ nlist, num_subspaces, max_iter, tolerance))} {
+            ctx_, siftsmall_groundtruth_uri)) {
+    if constexpr (std::is_same_v<
+                      IndexType,
+                      ivf_flat_index<feature_type, id_type, px_type>>) {
+      idx = IndexType(nlist, max_iter, tolerance);
+    } else if constexpr (std::is_same_v<
+                             IndexType,
+                             ivf_pq_index<feature_type, id_type, px_type>>) {
+      idx = IndexType(nlist, num_subspaces, max_iter, tolerance);
+    } else {
+      std::cout << "Unsupported index type" << std::endl;
+    }
+
     training_set.load();
     query_set.load();
     groundtruth_set.load();

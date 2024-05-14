@@ -59,22 +59,9 @@
          {"distance_tables_array_name", "pq_symmetric_distance_tables"},
      }}};
 
-template <class Index>
-class ivf_pq_group;
-
-template <class Index>
-struct metadata_type_selector<ivf_pq_group<Index>> {
-  using type = ivf_pq_metadata;
-};
-
-template <class Index>
-struct index_type_selector<ivf_pq_group<Index>> {
-  using type = Index;
-};
-
-template <class Index>
-class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
-  using Base = base_index_group<ivf_pq_group>;
+template <class index_type>
+class ivf_pq_group : public base_index_group<index_type> {
+  using Base = base_index_group<index_type>;
 
   using Base::array_key_to_array_name_;
   using Base::array_name_to_uri_;
@@ -91,20 +78,31 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
   static const int32_t tile_size_bytes{64 * 1024 * 1024};
 
  public:
-  using index_group_metadata_type = ivf_pq_metadata;
-  using index_type = index_type_selector<ivf_pq_group<Index>>::type;
-
   ivf_pq_group(
-      const Index& index,
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
-      size_t timestamp = 0,
-      const std::string& version = std::string{""})
-      : Base(index, ctx, uri, rw, timestamp, version) {
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
+      const std::string& version = std::string{""},
+      uint64_t dimension = 0,
+      size_t num_clusters = 0,
+      size_t num_subspaces = 0)
+      : Base(ctx, uri, rw, temporal_policy, version, dimension) {
+    if (rw == TILEDB_WRITE && !this->exists()) {
+      if (num_clusters == 0) {
+        throw std::invalid_argument(
+            "num_clusters must be specified when creating a new group.");
+      }
+      if (num_subspaces == 0) {
+        throw std::invalid_argument(
+            "num_subspaces must be specified when creating a new group.");
+      }
+    }
+    set_num_clusters(num_clusters);
+    set_num_subspaces(num_subspaces);
+    Base::load();
   }
 
- public:
   void append_valid_array_names_impl() {
     for (auto&& [array_key, array_name] : ivf_pq_storage_formats[version_]) {
       if (array_key == "distance_tables_array_name") {
@@ -138,7 +136,7 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
     return metadata_.partition_history_.back();
   }
   auto get_num_partitions() const {
-    return metadata_.partition_history_[this->timetravel_index_];
+    return metadata_.partition_history_[this->history_index_];
   }
   auto append_num_partitions(size_t size) {
     metadata_.partition_history_.push_back(size);
@@ -147,7 +145,7 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
     return metadata_.partition_history_;
   }
   auto set_num_partitions(size_t size) {
-    metadata_.partition_history_[this->timetravel_index_] = size;
+    metadata_.partition_history_[this->history_index_] = size;
   }
   auto set_last_num_partitions(size_t size) {
     metadata_.partition_history_.back() = size;
@@ -247,19 +245,19 @@ class ivf_pq_group : public base_index_group<ivf_pq_group<Index>> {
 
     // Set the PQ related metadata: num_subspaces, sub_dimension,
     // bits_per_subspace, num_clusters
-    this->set_dimension(this->cached_index_.get().dimension());
-    this->set_num_subspaces(this->cached_index_.get().num_subspaces());  // m
-    this->set_sub_dimension(
-        this->cached_index_.get().sub_dimension());  // D* == D/m
-    this->set_bits_per_subspace(
-        this->cached_index_.get().bits_per_subspace());  // 8
-    this->set_num_clusters(
-        this->cached_index_.get().num_clusters());  // 2**nbits
+    // this->set_dimension(this->cached_index_.get().dimension());
+    // this->set_num_subspaces(this->cached_index_.get().num_subspaces());  // m
+    // this->set_sub_dimension(
+    //     this->cached_index_.get().sub_dimension());  // D* == D/m
+    // this->set_bits_per_subspace(
+    //     this->cached_index_.get().bits_per_subspace());  // 8
+    // this->set_num_clusters(
+    //     this->cached_index_.get().num_clusters());  // 2**nbits
 
-    assert(
-        this->get_num_subspaces() * this->get_sub_dimension() ==
-        this->get_dimension());
-    assert(this->get_num_clusters() == 1 << this->get_bits_per_subspace());
+    // assert(
+    //     this->get_num_subspaces() * this->get_sub_dimension() ==
+    //     this->get_dimension());
+    // assert(this->get_num_clusters() == 1 << this->get_bits_per_subspace());
 
     static const int32_t tile_size{
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /

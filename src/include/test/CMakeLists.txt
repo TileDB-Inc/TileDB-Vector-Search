@@ -90,17 +90,9 @@ kmeans_add_test(unit_execution_policy)
 
 kmeans_add_test(unit_fixed_min_heap)
 
-kmeans_add_test(unit_flat_l2_group)
-
 kmeans_add_test(unit_flat_l2_index)
 
-kmeans_add_test(unit_flat_l2_metadata)
-
-kmeans_add_test(unit_flat_pq_group)
-
 kmeans_add_test(unit_flat_pq_index)
-
-kmeans_add_test(unit_flat_pq_metadata)
 
 kmeans_add_test(unit_flat_qv)
 

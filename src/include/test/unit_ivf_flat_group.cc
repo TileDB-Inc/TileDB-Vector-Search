@@ -97,7 +97,7 @@ TEST_CASE(
   tiledb::Context ctx;
 
   CHECK_THROWS_WITH(
-      ivf_flat_group(dummy_index{}, ctx, "I dont exist"),
+      ivf_flat_group<dummy_index>(ctx, "I dont exist"),
       "Group uri I dont exist does not exist.");
 }
 
@@ -112,7 +112,9 @@ TEST_CASE("ivf_flat_group: write constructor - create", "[ivf_flat_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_group x = ivf_flat_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+  ivf_flat_group x =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimension() == 10);
 }
 
 TEST_CASE(
@@ -128,8 +130,10 @@ TEST_CASE(
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_group x = ivf_flat_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-  ivf_flat_group y = ivf_flat_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+  ivf_flat_group x =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  ivf_flat_group y =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
 }
 
 TEST_CASE(
@@ -166,13 +170,16 @@ TEST_CASE(
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_group x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE);
-  ivf_flat_group y = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE);
+  ivf_flat_group x =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  ivf_flat_group y =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
   ivf_flat_group z = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
 }
 
 TEST_CASE(
     "ivf_flat_group: group metadata - bases, ingestions, partitions",
+    "[ivf_flat_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "ivf_flat_group_test_write_constructor")
                             .string();
@@ -373,39 +380,42 @@ TEST_CASE("ivf_flat_group: storage version", "[ivf_flat_group]") {
   size_t expected_dimension = 19238;
   auto offset = 2345;
 
-  ivf_flat_group x = ivf_flat_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+  ivf_flat_group x =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "0.3", 10);
 
   SECTION("0.3") {
-    x = ivf_flat_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, 0, "0.3");
+    x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "0.3");
   }
 
   SECTION("current_storage_version") {
-    x = ivf_flat_group(
-        dummy_index{}, ctx, tmp_uri, TILEDB_WRITE, 0, current_storage_version);
-  ivf_flat_group x =
-      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-  CHECK(x.get_dimension() == 10);
-
-  SECTION("0.3") {
     x = ivf_flat_group<dummy_index>(
-        ctx, tmp_uri, TILEDB_WRITE, TemporalPolicy{TimeTravel, 0}, "0.3", 10);
+        ctx, tmp_uri, TILEDB_WRITE, {}, current_storage_version);
+    ivf_flat_group x =
+        ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+    CHECK(x.get_dimension() == 10);
+
+    SECTION("0.3") {
+      x = ivf_flat_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, TemporalPolicy{TimeTravel, 0}, "0.3", 10);
+    }
+
+    x.set_ingestion_timestamp(expected_ingestion + offset);
+    x.set_base_size(expected_base + offset);
+    x.set_num_partitions(expected_partitions + offset);
+    x.set_temp_size(expected_temp_size + offset);
+    x.set_dimension(expected_dimension + offset);
+
+    CHECK(size(x.get_all_ingestion_timestamps()) == 1);
+    CHECK(size(x.get_all_base_sizes()) == 1);
+    CHECK(size(x.get_all_num_partitions()) == 1);
+    CHECK(x.get_previous_ingestion_timestamp() == expected_ingestion + offset);
+    CHECK(x.get_previous_base_size() == expected_base + offset);
+    CHECK(x.get_previous_num_partitions() == expected_partitions + offset);
+    CHECK(x.get_temp_size() == expected_temp_size + offset);
+    CHECK(x.get_dimension() == expected_dimension + offset);
   }
-
-  x.set_ingestion_timestamp(expected_ingestion + offset);
-  x.set_base_size(expected_base + offset);
-  x.set_num_partitions(expected_partitions + offset);
-  x.set_temp_size(expected_temp_size + offset);
-  x.set_dimension(expected_dimension + offset);
-
-  CHECK(size(x.get_all_ingestion_timestamps()) == 1);
-  CHECK(size(x.get_all_base_sizes()) == 1);
-  CHECK(size(x.get_all_num_partitions()) == 1);
-  CHECK(x.get_previous_ingestion_timestamp() == expected_ingestion + offset);
-  CHECK(x.get_previous_base_size() == expected_base + offset);
-  CHECK(x.get_previous_num_partitions() == expected_partitions + offset);
-  CHECK(x.get_temp_size() == expected_temp_size + offset);
-  CHECK(x.get_dimension() == expected_dimension + offset);
 }
+
 TEST_CASE("ivf_flat_group: invalid storage version", "[ivf_flat_group]") {
   std::string tmp_uri =
       (std::filesystem::temp_directory_path() / "ivf_flat_group").string();

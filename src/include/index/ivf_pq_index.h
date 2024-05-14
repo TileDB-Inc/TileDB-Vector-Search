@@ -134,6 +134,9 @@ class ivf_pq_index {
   using indices_type = partitioning_index_type;
   using score_type = float;  // @todo -- this should be a parameter?
 
+  using group_type = ivf_pq_group<ivf_pq_index>;
+  using metadata_type = ivf_pq_metadata;
+
   // @todo IMPORTANT: Use a uint64_t to store 8 bytes together -- should make
   // loads and other operations faster and SIMD friendly
   using pq_code_type = uint8_t;
@@ -192,7 +195,7 @@ class ivf_pq_index {
    ****************************************************************************/
 
   /** The timestamp at which the index was created */
-  uint64_t timestamp_{0};
+  TemporalPolicy temporal_policy_{TimeTravel, 0};
 
   std::unique_ptr<ivf_pq_group<ivf_pq_index>> group_;
 
@@ -289,15 +292,11 @@ class ivf_pq_index {
       size_t num_subspaces = 16,  // new for pq
       size_t max_iter = 2,
       float tol = 0.000025,
-      size_t timestamp = 0,
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       uint64_t seed = std::random_device{}())
-      :  // , dimension_(dim)
-      timestamp_{
-          (timestamp == 0) ?
-              std::chrono::duration_cast<std::chrono::milliseconds>(
-                  std::chrono::system_clock::now().time_since_epoch())
-                  .count() :
-              timestamp}
+      : temporal_policy_{
+        temporal_policy.timestamp_end() != 0 ? temporal_policy :
+        TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
       , num_partitions_(nlist)
       , num_subspaces_{num_subspaces}  // new for pq
       , max_iter_(max_iter)
@@ -324,17 +323,21 @@ class ivf_pq_index {
    *
    * @param ctx
    * @param uri
-   * @param timestamp
+   * @param temporal_policy
    *
    */
   ivf_pq_index(
       const tiledb::Context& ctx,
       const std::string& uri,
-      uint64_t timestamp = 0)
-      : group_{std::make_unique<ivf_pq_group<ivf_pq_index>>(
-            *this, ctx, uri, TILEDB_READ, timestamp_)} {
-    if (timestamp_ == 0) {
-      timestamp_ = group_->get_previous_ingestion_timestamp();
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0})
+      : temporal_policy_{temporal_policy}
+      , group_{std::make_unique<ivf_pq_group<ivf_pq_index>>(
+            ctx, uri, TILEDB_READ, temporal_policy_)} {
+    if (temporal_policy_.timestamp_end() == 0) {
+      temporal_policy_ = {
+          TimeTravel, group_->get_previous_ingestion_timestamp()};
+      group_ = {std::make_unique<ivf_pq_group<ivf_pq_index>>(
+          ctx, uri, TILEDB_READ, temporal_policy_)};
     }
 
     /**
@@ -354,7 +357,7 @@ class ivf_pq_index {
             std::nullopt,
             num_partitions_,
             0,
-            timestamp_);
+            temporal_policy_);
 
     pq_ivf_centroids_ =
         tdbPreLoadMatrix<pq_vector_feature_type, stdx::layout_left>(
@@ -363,7 +366,7 @@ class ivf_pq_index {
             std::nullopt,
             num_partitions_,
             0,
-            timestamp_);
+            temporal_policy_);
 
     cluster_centroids_ =
         tdbPreLoadMatrix<flat_vector_feature_type, stdx::layout_left>(
@@ -372,7 +375,7 @@ class ivf_pq_index {
             std::nullopt,
             std::nullopt,
             num_clusters_,
-            timestamp_);
+            temporal_policy_);
 
     distance_tables_ = std::vector<ColMajorMatrix<score_type>>(num_subspaces_);
     for (size_t i = 0; i < num_subspaces_; ++i) {
@@ -384,7 +387,7 @@ class ivf_pq_index {
           std::nullopt,
           std::nullopt,
           num_clusters_,
-          timestamp_);
+          temporal_policy_);
     }
   }
 
@@ -436,9 +439,15 @@ class ivf_pq_index {
         typename ColMajorMatrix<flat_vector_feature_type>::span_type>
   auto train_pq(const V& training_set, kmeans_init init = kmeans_init::random) {
     dimension_ = ::dimension(training_set);
+    std::cout << "dimension: " << dimension_ << std::endl;
     assert(num_subspaces_ > 0);
+    std::cout << "num_subspaces: " << num_subspaces_ << std::endl;
     sub_dimension_ = dimension_ / num_subspaces_;
-    assert(dimension_ % num_subspaces_ == 0);
+    // assert(dimension_ % num_subspaces_ == 0);
+    if (dimension_ % num_subspaces_ != 0) {
+      throw std::runtime_error(
+          "Dimension must be divisible by the number of subspaces");
+    }
 
     cluster_centroids_ =
         ColMajorMatrix<flat_vector_feature_type>(dimension_, num_clusters_);
@@ -849,7 +858,7 @@ class ivf_pq_index {
         group_->ivf_ids_uri(),
         infinite_parts,
         0,
-        timestamp_);
+        temporal_policy_);
 
     partitioned_pq_vectors_->load();
 
@@ -893,7 +902,7 @@ class ivf_pq_index {
         group_->ivf_ids_uri(),
         active_partitions,
         upper_bound,
-        timestamp_);
+        temporal_policy_);
 
     // NB: We don't load the partitioned_pq_vectors here.  We will load them
     // when we do the query.
@@ -916,15 +925,21 @@ class ivf_pq_index {
   auto write_index(
       const tiledb::Context& ctx,
       const std::string& group_uri,
-      const std::string& storage_version = "") const {
-    // if (this->group_ == nullptr) {
-    //   throw std::runtime_error(
-    //       "Group " + group_uri + " does not exist!  Has index been
-    //       trained?");
-    // }
+      std::optional<size_t> timestamp = std::nullopt,
+      const std::string& storage_version = "") {
+    if (timestamp.has_value()) {
+      temporal_policy_ = TemporalPolicy{TimeTravel, timestamp.value()};
+    }
 
-    auto write_group = ivf_pq_group(
-        *this, ctx, group_uri, TILEDB_WRITE, timestamp_, storage_version);
+    auto write_group = ivf_pq_group<ivf_pq_index>(
+        ctx,
+        group_uri,
+        TILEDB_WRITE,
+        temporal_policy_,
+        storage_version,
+        dimension_,
+        num_clusters_,
+        num_subspaces_);
 
     write_group.set_dimension(dimension_);
     write_group.set_num_subspaces(num_subspaces_);
@@ -932,7 +947,10 @@ class ivf_pq_index {
     write_group.set_bits_per_subspace(bits_per_subspace_);
     write_group.set_num_clusters(num_clusters_);
 
-    write_group.append_ingestion_timestamp(timestamp_);
+    assert(num_subspaces_ * sub_dimension_ == dimension_);
+    assert(num_clusters_ == 1 << bits_per_subspace_);
+
+    write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
     write_group.append_base_size(::num_vectors(*partitioned_pq_vectors_));
     write_group.append_num_partitions(num_partitions_);
 
@@ -945,7 +963,7 @@ class ivf_pq_index {
         write_group.cluster_centroids_uri(),
         0,
         false,
-        timestamp_);
+        temporal_policy_);
 
     write_matrix(
         ctx,
@@ -953,7 +971,7 @@ class ivf_pq_index {
         write_group.flat_ivf_centroids_uri(),
         0,
         false,
-        timestamp_);
+        temporal_policy_);
 
     write_matrix(
         ctx,
@@ -961,7 +979,7 @@ class ivf_pq_index {
         write_group.pq_ivf_centroids_uri(),
         0,
         false,
-        timestamp_);
+        temporal_policy_);
 
     write_vector(
         ctx,
@@ -969,7 +987,7 @@ class ivf_pq_index {
         write_group.ivf_index_uri(),
         0,
         false,
-        timestamp_);
+        temporal_policy_);
 
     write_vector(
         ctx,
@@ -977,7 +995,7 @@ class ivf_pq_index {
         write_group.ivf_ids_uri(),
         0,
         false,
-        timestamp_);
+        temporal_policy_);
 
     write_matrix(
         ctx,
@@ -985,13 +1003,13 @@ class ivf_pq_index {
         write_group.pq_ivf_vectors_uri(),
         0,
         false,
-        timestamp_);
+        temporal_policy_);
 
     for (size_t i = 0; i < size(distance_tables_); ++i) {
       std::string this_table_uri =
           write_group.distance_tables_uri() + "_" + std::to_string(i);
       write_matrix(
-          ctx, distance_tables_[i], this_table_uri, 0, false, timestamp_);
+          ctx, distance_tables_[i], this_table_uri, 0, false, temporal_policy_);
     }
 
     return true;
