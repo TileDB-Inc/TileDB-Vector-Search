@@ -510,11 +510,13 @@ class vamana_index {
       : temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
       , group_{std::make_unique<vamana_index_group<vamana_index>>(
             ctx, uri, TILEDB_READ, temporal_policy_)} {
-    std::cout << "[index/index_vamana@ctor] temporal_policy_.timestamp_start() "
-              << temporal_policy_.timestamp_start() << std::endl;
-    std::cout << "[index/index_vamana@ctor] temporal_policy_.timestamp_end() "
-              << temporal_policy_.timestamp_end() << std::endl;
-    group_->dump("Group");
+    // std::cout << "[index/index_vamana@ctor]
+    // temporal_policy_.timestamp_start() "
+    //           << temporal_policy_.timestamp_start() << std::endl;
+    // std::cout << "[index/index_vamana@ctor] temporal_policy_.timestamp_end()
+    // "
+    //           << temporal_policy_.timestamp_end() << std::endl;
+    // group_->dump("Group");
 
     // @todo Make this table-driven
     dimension_ = group_->get_dimension();
@@ -546,12 +548,12 @@ class vamana_index {
     // actually read and update to that number.
     num_vectors_ = _cpo::num_vectors(feature_vectors_);
 
-    std::cout << "[index/index_vamana@ctor] dimension_ " << dimension_
-              << std::endl;
-    std::cout << "[index/index_vamana@ctor] num_vectors_ " << num_vectors_
-              << std::endl;
-    std::cout << "[index/index_vamana@ctor] feature_vectors_.size() "
-              << feature_vectors_.size() << std::endl;
+    // std::cout << "[index/index_vamana@ctor] dimension_ " << dimension_
+    //           << std::endl;
+    // std::cout << "[index/index_vamana@ctor] num_vectors_ " << num_vectors_
+    //           << std::endl;
+    // std::cout << "[index/index_vamana@ctor] feature_vectors_.size() "
+    //           << feature_vectors_.size() << std::endl;
 
     /*
      * Read the feature vectors
@@ -872,27 +874,27 @@ class vamana_index {
       const std::string& group_uri,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       const std::string& storage_version = "") {
-    std::cout << "[index/vamana_index@write_index] before "
-                 "temporal_policy_.timestamp_start() "
-              << temporal_policy_.timestamp_start() << std::endl;
-    std::cout << "[index/vamana_index@write_index] before "
-                 "temporal_policy_.timestamp_end() "
-              << temporal_policy_.timestamp_end() << std::endl;
+    // std::cout << "[index/vamana_index@write_index] before "
+    //              "temporal_policy_.timestamp_start() "
+    //           << temporal_policy_.timestamp_start() << std::endl;
+    // std::cout << "[index/vamana_index@write_index] before "
+    //              "temporal_policy_.timestamp_end() "
+    //           << temporal_policy_.timestamp_end() << std::endl;
     if (temporal_policy.has_value()) {
-      std::cout << "[index/vamana_index@write_index] has value "
-                   "temporal_policy.timestamp_start() "
-                << temporal_policy->timestamp_start() << std::endl;
-      std::cout << "[index/vamana_index@write_index] has value "
-                   "temporal_policy.timestamp_end() "
-                << temporal_policy->timestamp_end() << std::endl;
+      // std::cout << "[index/vamana_index@write_index] has value "
+      //              "temporal_policy.timestamp_start() "
+      //           << temporal_policy->timestamp_start() << std::endl;
+      // std::cout << "[index/vamana_index@write_index] has value "
+      //              "temporal_policy.timestamp_end() "
+      //           << temporal_policy->timestamp_end() << std::endl;
       temporal_policy_ = *temporal_policy;
     }
-    std::cout << "[index/vamana_index@write_index] after "
-                 "temporal_policy_.timestamp_start() "
-              << temporal_policy_.timestamp_start() << std::endl;
-    std::cout << "[index/vamana_index@write_index] after "
-                 "temporal_policy_.timestamp_end() "
-              << temporal_policy_.timestamp_end() << std::endl;
+    // std::cout << "[index/vamana_index@write_index] after "
+    //              "temporal_policy_.timestamp_start() "
+    //           << temporal_policy_.timestamp_start() << std::endl;
+    // std::cout << "[index/vamana_index@write_index] after "
+    //              "temporal_policy_.timestamp_end() "
+    //           << temporal_policy_.timestamp_end() << std::endl;
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
 
