@@ -334,7 +334,9 @@ class base_index_group {
           "Cannot clear history because group does not exist.");
     }
 
-    // TODO(paris): Implement the clear.
+    metadata_.clear_history(timestamp);
+    tiledb::Array::delete_fragments(cached_ctx_, ids_uri(), 0, timestamp);
+    static_cast<group_type*>(this)->clear_history_impl(timestamp);
   }
 
   /**

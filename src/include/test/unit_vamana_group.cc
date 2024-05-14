@@ -465,3 +465,75 @@ TEST_CASE("vamana_group: mismatched storage version", "[vamana_group]") {
           10),
       "Version mismatch. Requested different_version but found 0.3");
 }
+
+TEST_CASE("vamana_group: clear history", "[vamana_group]") {
+  std::string tmp_uri =
+      (std::filesystem::temp_directory_path() / "vamana_group").string();
+
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri)) {
+    vfs.remove_dir(tmp_uri);
+  }
+
+  vamana_index_group x =
+      vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+
+  x.append_ingestion_timestamp(1);
+  x.append_base_size(2);
+  x.append_num_edges(3);
+
+  x.append_ingestion_timestamp(11);
+  x.append_base_size(22);
+  x.append_num_edges(33);
+
+  x.append_ingestion_timestamp(111);
+  x.append_base_size(222);
+  x.append_num_edges(333);
+
+  CHECK(x.get_all_ingestion_timestamps().size() == 3);
+  CHECK(x.get_all_base_sizes().size() == 3);
+  CHECK(x.get_all_num_edges().size() == 3);
+  CHECK(x.get_all_ingestion_timestamps()[0] == 1);
+  CHECK(x.get_all_ingestion_timestamps()[1] == 11);
+  CHECK(x.get_all_ingestion_timestamps()[2] == 111);
+  CHECK(x.get_all_base_sizes()[0] == 2);
+  CHECK(x.get_all_base_sizes()[1] == 22);
+  CHECK(x.get_all_base_sizes()[2] == 222);
+  CHECK(x.get_all_num_edges()[0] == 3);
+  CHECK(x.get_all_num_edges()[1] == 33);
+  CHECK(x.get_all_num_edges()[2] == 333);
+
+  // No-op if we clear before the first ingestion timestamp.
+  x.clear_history(0);
+  CHECK(x.get_all_ingestion_timestamps().size() == 3);
+  CHECK(x.get_all_base_sizes().size() == 3);
+  CHECK(x.get_all_num_edges().size() == 3);
+  CHECK(x.get_all_ingestion_timestamps()[0] == 1);
+  CHECK(x.get_all_ingestion_timestamps()[1] == 11);
+  CHECK(x.get_all_ingestion_timestamps()[2] == 111);
+  CHECK(x.get_all_base_sizes()[0] == 2);
+  CHECK(x.get_all_base_sizes()[1] == 22);
+  CHECK(x.get_all_base_sizes()[2] == 222);
+  CHECK(x.get_all_num_edges()[0] == 3);
+  CHECK(x.get_all_num_edges()[1] == 33);
+  CHECK(x.get_all_num_edges()[2] == 333);
+
+  // Can clear the first two timestamps correctly.
+  x.clear_history(100);
+  CHECK(x.get_all_ingestion_timestamps().size() == 1);
+  CHECK(x.get_all_base_sizes().size() == 1);
+  CHECK(x.get_all_num_edges().size() == 1);
+  CHECK(x.get_all_ingestion_timestamps()[0] == 111);
+  CHECK(x.get_all_base_sizes()[0] == 222);
+  CHECK(x.get_all_num_edges()[0] == 333);
+
+  // If we clear after the last timestamp, we end up with zeroes.
+  x.clear_history(112);
+  CHECK(x.get_all_ingestion_timestamps().size() == 1);
+  CHECK(x.get_all_base_sizes().size() == 1);
+  CHECK(x.get_all_num_edges().size() == 1);
+  CHECK(x.get_all_ingestion_timestamps()[0] == 0);
+  CHECK(x.get_all_base_sizes()[0] == 0);
+  CHECK(x.get_all_num_edges()[0] == 0);
+}
