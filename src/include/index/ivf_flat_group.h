@@ -87,6 +87,12 @@ class ivf_flat_group : public base_index_group<index_type> {
     }
   }
 
+  void clear_history_impl(uint64_t timestamp) {
+    tiledb::Array::delete_fragments(cached_ctx_, parts_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(cached_ctx_, centroids_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(cached_ctx_, indices_uri(), 0, timestamp);
+  }
+
   /*
    * Partition information
    */

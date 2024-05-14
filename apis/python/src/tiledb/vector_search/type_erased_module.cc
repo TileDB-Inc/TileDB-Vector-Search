@@ -370,7 +370,18 @@ void init_type_erased_module(py::module_& m) {
       .def(
           "adjacency_row_index_type_string",
           &IndexVamana::adjacency_row_index_type_string)
-      .def("dimension", &IndexVamana::dimension);
+      .def("dimension", &IndexVamana::dimension)
+      .def_static(
+          "clear_history",
+          [](const tiledb::Context& ctx,
+             const std::string& group_uri,
+             uint64_t timestamp) {
+            IndexVamana::clear_history(ctx, group_uri, timestamp);
+          },
+          py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
+          py::arg("ctx"),
+          py::arg("group_uri"),
+          py::arg("timestamp"));
 
   py::class_<IndexIVFFlat>(m, "IndexIVFFlat")
       .def(
