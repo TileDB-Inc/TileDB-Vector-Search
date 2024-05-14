@@ -31,7 +31,7 @@
  * of `tdbVector` that allows for runtime polymorphism of the `tdbVector`
  * class template.
  *
- * See README.md for details on type erasure.
+ * See IVF.md for details on type erasure.
  *
  */
 

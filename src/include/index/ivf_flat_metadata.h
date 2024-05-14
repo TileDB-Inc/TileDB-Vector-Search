@@ -1,5 +1,5 @@
 /**
-* @file   ivf_flat_index_metadata.h
+* @file   ivf_flat_metadata.h
 *
 * @section LICENSE
 *

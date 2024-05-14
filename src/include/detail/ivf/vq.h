@@ -1,5 +1,5 @@
 /**
- * @file   ivf/vq.h
+ * @file   vq.h
  *
  * @section LICENSE
  *

@@ -1,5 +1,5 @@
 /**
- * @file   partitioned_matrix.h
+ * @file   compat.h
  *
  * @section LICENSE
  *
