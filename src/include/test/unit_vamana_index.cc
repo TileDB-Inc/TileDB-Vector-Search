@@ -1250,48 +1250,60 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors(training_set), l_build, r_max_degree, b_backtrack);
   idx.train(training_set, ids);
-  idx.write_index(ctx, vamana_index_uri);
+  uint64_t write_timestamp = 1000;
+  idx.write_index(ctx, vamana_index_uri, write_timestamp);
 
-  auto idx2 = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
-      ctx, vamana_index_uri);
+  {
+    // Load the index and check metadata.
+    auto idx2 = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
+        ctx, vamana_index_uri);
 
-  CHECK(idx2.group().get_l_build() == l_build);
-  CHECK(idx2.group().get_r_max_degree() == r_max_degree);
-  CHECK(idx2.group().get_b_backtrack() == b_backtrack);
-  CHECK(idx2.group().get_dimension() == sift_dimension);
-  CHECK(idx2.group().get_temp_size() == 0);
+    CHECK(idx2.group().get_l_build() == l_build);
+    CHECK(idx2.group().get_r_max_degree() == r_max_degree);
+    CHECK(idx2.group().get_b_backtrack() == b_backtrack);
+    CHECK(idx2.group().get_dimension() == sift_dimension);
+    CHECK(idx2.group().get_temp_size() == 0);
 
-  CHECK(idx2.group().get_all_num_edges().size() == 1);
-  CHECK(idx2.group().get_all_base_sizes().size() == 1);
-  CHECK(idx2.group().get_all_ingestion_timestamps().size() == 1);
+    CHECK(idx2.group().get_all_num_edges().size() == 1);
+    CHECK(idx2.group().get_all_base_sizes().size() == 1);
+    CHECK(idx2.group().get_all_ingestion_timestamps().size() == 1);
 
-  CHECK(idx2.group().get_all_num_edges()[0] > 0);
-  CHECK(idx2.group().get_all_base_sizes()[0] == num_sift_vectors);
+    CHECK(idx2.group().get_all_num_edges()[0] > 0);
+    CHECK(idx2.group().get_all_base_sizes()[0] == num_sift_vectors);
+    CHECK(idx2.group().get_all_ingestion_timestamps()[0] == write_timestamp);
 
-  auto five_minutes_ago = static_cast<uint64_t>(
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          (std::chrono::system_clock::now() - std::chrono::minutes(5))
-              .time_since_epoch())
-          .count());
-  auto five_minutes_from_now = static_cast<uint64_t>(
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          (std::chrono::system_clock::now() + std::chrono::minutes(5))
-              .time_since_epoch())
-          .count());
-  CHECK(idx2.group().get_all_ingestion_timestamps()[0] > five_minutes_ago);
-  CHECK(idx2.group().get_all_ingestion_timestamps()[0] < five_minutes_from_now);
+    // Can't compare groups because a write_index does not create a group
+    // @todo Should it?
+    // CHECK(idx.compare_group(idx2));
 
-  // Can't compare groups because a write_index does not create a group
-  // @todo Should it?
-  // CHECK(idx.compare_group(idx2));
+    CHECK(idx.compare_cached_metadata(idx2));
+    CHECK(idx.compare_feature_vectors(idx2));
+    CHECK(idx.compare_adj_scores(idx2));
+    CHECK(idx.compare_adj_ids(idx2));
+  }
 
-  CHECK(idx.compare_cached_metadata(idx2));
-  CHECK(idx.compare_feature_vectors(idx2));
-  CHECK(idx.compare_adj_scores(idx2));
-  CHECK(idx.compare_adj_ids(idx2));
+  {
+    // Clear history.
+    vamana_index<siftsmall_feature_type, siftsmall_ids_type>::clear_history(
+        ctx, vamana_index_uri, write_timestamp + 10);
 
-  vamana_index<siftsmall_feature_type, siftsmall_ids_type>::clear_history(
-      ctx, vamana_index_uri, five_minutes_from_now);
+    auto idx2 = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
+        ctx, vamana_index_uri);
+
+    CHECK(idx2.group().get_l_build() == l_build);
+    CHECK(idx2.group().get_r_max_degree() == r_max_degree);
+    CHECK(idx2.group().get_b_backtrack() == b_backtrack);
+    CHECK(idx2.group().get_dimension() == sift_dimension);
+    CHECK(idx2.group().get_temp_size() == 0);
+
+    CHECK(idx2.group().get_all_num_edges().size() == 1);
+    CHECK(idx2.group().get_all_base_sizes().size() == 1);
+    CHECK(idx2.group().get_all_ingestion_timestamps().size() == 1);
+
+    CHECK(idx2.group().get_all_num_edges()[0] == 0);
+    CHECK(idx2.group().get_all_base_sizes()[0] == 0);
+    CHECK(idx2.group().get_all_ingestion_timestamps()[0] == 0);
+  }
 }
 
 TEST_CASE("vamana: query empty index", "[vamana]") {

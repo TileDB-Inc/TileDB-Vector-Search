@@ -337,6 +337,33 @@ class base_index_metadata {
     }
   }
 
+  /**
+   * @brief Clears all history that is <= timestamp.
+   */
+  void clear_history(uint64_t timestamp) {
+    static_cast<IndexMetadata*>(this)->clear_history_impl(timestamp);
+
+    std::vector<ingestion_timestamps_type> new_ingestion_timestamps;
+    std::vector<base_sizes_type> new_base_sizes;
+    for (int i = 0; i < ingestion_timestamps_.size(); i++) {
+      auto ingestion_timestamp = ingestion_timestamps_[i];
+      if (ingestion_timestamp > timestamp) {
+        new_ingestion_timestamps.push_back(ingestion_timestamp);
+        new_base_sizes.push_back(base_sizes_[i]);
+      }
+    }
+    if (new_ingestion_timestamps.empty()) {
+      new_ingestion_timestamps = {0};
+      new_base_sizes = {0};
+    }
+    ingestion_timestamps_ = new_ingestion_timestamps;
+    ingestion_timestamps_str_ =
+        to_string(nlohmann::json(ingestion_timestamps_));
+
+    base_sizes_ = new_base_sizes;
+    base_sizes_str_ = to_string(nlohmann::json(base_sizes_));
+  }
+
   /**************************************************************************
    * Helpful functions for debugging, testing, etc
    **************************************************************************/

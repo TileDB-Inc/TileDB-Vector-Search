@@ -77,6 +77,22 @@ class ivf_flat_index_metadata
     partition_history_str_ = to_string(nlohmann::json(partition_history_));
   }
 
+  void clear_history_impl(uint64_t timestamp) {
+    std::vector<partition_history_type> new_partition_history;
+    for (int i = 0; i < ingestion_timestamps_.size(); i++) {
+      auto ingestion_timestamp = ingestion_timestamps_[i];
+      if (ingestion_timestamp > timestamp) {
+        new_partition_history.push_back(partition_history_[i]);
+      }
+    }
+    if (new_partition_history.empty()) {
+      new_partition_history = {0};
+    }
+
+    partition_history_ = new_partition_history;
+    partition_history_str_ = to_string(nlohmann::json(partition_history_));
+  }
+
   auto dump_json_impl() {
     if (!empty(indices_type_str_)) {
       if (px_datatype_ == TILEDB_ANY) {

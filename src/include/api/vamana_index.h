@@ -252,7 +252,8 @@ class IndexVamana {
 
     auto type =
         std::tuple{feature_datatype, id_datatype, adjacency_row_index_datatype};
-    if (uri_dispatch_table.find(type) == uri_dispatch_table.end()) {
+    if (clear_history_dispatch_table.find(type) ==
+        clear_history_dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
     clear_history_dispatch_table.at(type)(ctx, group_uri, timestamp);
@@ -497,7 +498,7 @@ class IndexVamana {
   using uri_table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, uri_constructor_function>;
   static const uri_table_type uri_dispatch_table;
 
-  using clear_history_constructor_function = std::function<void(const tiledb::Context&, const std::string&, int)>;
+  using clear_history_constructor_function = std::function<void(const tiledb::Context&, const std::string&, uint64_t)>;
   using clear_history_table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, clear_history_constructor_function>;
   static const clear_history_table_type clear_history_dispatch_table;
   // clang-format on
