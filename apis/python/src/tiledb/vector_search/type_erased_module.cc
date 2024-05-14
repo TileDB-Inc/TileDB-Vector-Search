@@ -309,16 +309,11 @@ void init_type_erased_module(py::module_& m) {
              const tiledb::Context& ctx,
              const std::string& group_uri,
              std::optional<TemporalPolicy> temporal_policy) {
-            new (&instance) IndexVamana(
-                ctx, group_uri, temporal_policy
-                // timestamp == 0 ? TemporalPolicy(TimeTravel, 0) :
-                //                  TemporalPolicy(TimeTravel, timestamp)
-            );
+            new (&instance) IndexVamana(ctx, group_uri, temporal_policy);
           },
           py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
           py::arg("ctx"),
           py::arg("group_uri"),
-          // py::arg("timestamp") = 0)
           py::arg("temporal_policy") = std::nullopt)
       .def(
           "__init__",
@@ -363,23 +358,6 @@ void init_type_erased_module(py::module_& m) {
           py::arg("ctx"),
           py::arg("group_uri"),
           py::arg("temporal_policy") = std::nullopt,
-          // py::arg("timestamp") = py::none(),
-          py::arg("storage_version") = "")
-      .def(
-          "clear_history",
-          [](IndexVamana& index,
-             const tiledb::Context& ctx,
-             const std::string& timestamp,
-             std::optional<TemporalPolicy> temporal_policy,
-             const std::string& storage_version) {
-            index.clear_history(
-                ctx, group_uri, temporal_policy, storage_version);
-          },
-          py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
-          py::arg("ctx"),
-          py::arg("group_uri"),
-          py::arg("temporal_policy") = std::nullopt,
-          // py::arg("timestamp") = py::none(),
           py::arg("storage_version") = "")
       .def("feature_type_string", &IndexVamana::feature_type_string)
       .def("id_type_string", &IndexVamana::id_type_string)

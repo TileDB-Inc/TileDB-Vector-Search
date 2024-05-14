@@ -214,26 +214,6 @@ class base_index_group {
     if (size(metadata_.ingestion_timestamps_) == 0) {
       throw std::runtime_error("No ingestion timestamps found.");
     }
-    // std::cout << "[index_group@open_for_read] before base_array_timestamp_: "
-    // << base_array_timestamp_ << std::endl; if (base_array_timestamp_ == 0) {
-    //   base_array_timestamp_ = metadata_.ingestion_timestamps_.back();
-    // }
-    // std::cout << "[index_group@open_for_read] after base_array_timestamp_: "
-    // << base_array_timestamp_ << std::endl;
-
-    // auto timestamp_bound = std::lower_bound(
-    //     begin(metadata_.ingestion_timestamps_),
-    //     end(metadata_.ingestion_timestamps_),
-    //     base_array_timestamp_);
-    // if (timestamp_bound == end(metadata_.ingestion_timestamps_)) {
-    //   // We may try to load the index at a timestamp beyond the latest
-    //   ingestion
-    //   // timestamp. In this case, use the last timestamp.
-    //   timestamp_bound = end(metadata_.ingestion_timestamps_) - 1;
-    // }
-    // history_index_ =
-    //     std::distance(begin(metadata_.ingestion_timestamps_),
-    //     timestamp_bound);
   }
 
   /**
@@ -334,13 +314,11 @@ class base_index_group {
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
-      // TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       const std::string& version = std::string{""},
       uint64_t dimension = 0)
       : cached_ctx_(ctx)
       , group_uri_(uri)
-      // , base_array_timestamp_(temporal_policy.timestamp_end())
       , version_(version)
       , opened_for_(rw) {
     switch (opened_for_) {
@@ -516,7 +494,7 @@ class base_index_group {
    *
    * @param msg Optional message to print before the dump.
    */
-  auto dump(const std::string& msg = "") {
+  auto dump(const std::string& msg = "") const {
     if (!empty(msg)) {
       std::cout << "-------------------------------------------------------\n";
       std::cout << "# " + msg << std::endl;

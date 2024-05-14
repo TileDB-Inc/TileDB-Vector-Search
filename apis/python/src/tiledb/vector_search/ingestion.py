@@ -1627,18 +1627,8 @@ def ingest(
 
         ctx = vspy.Ctx(config)
         index = vspy.IndexVamana(ctx, index_group_uri)
-        # temporal_policy = None
-        # if isinstance(index_timestamp, tuple):
-        #     temporal_policy = vspy.TemporalPolicy(index_timestamp[0], index_timestamp[1])
-        # elif not None:
-        #     temporal_policy = vspy.TemporalPolicy(index_timestamp)
         data = vspy.FeatureVectorArray(
-            ctx,
-            parts_array_uri,
-            ids_array_uri,
-            0,
-            to_temporal_policy(index_timestamp)
-            # index_timestamp if index_timestamp else 0,
+            ctx, parts_array_uri, ids_array_uri, 0, to_temporal_policy(index_timestamp)
         )
         index.train(data)
         index.add(data)

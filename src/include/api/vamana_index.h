@@ -130,7 +130,6 @@ class IndexVamana {
   IndexVamana(
       const tiledb::Context& ctx,
       const URI& group_uri,
-      // TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0}) {
       std::optional<TemporalPolicy> temporal_policy = std::nullopt) {
     read_types(
         ctx,

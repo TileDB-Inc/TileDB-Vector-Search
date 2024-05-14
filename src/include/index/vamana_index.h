@@ -487,7 +487,6 @@ class vamana_index {
       size_t L,
       size_t R,
       size_t B = 0,
-      // TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0})
       std::optional<TemporalPolicy> temporal_policy = std::nullopt)
       : temporal_policy_{
         temporal_policy.has_value() ? *temporal_policy :
@@ -507,23 +506,10 @@ class vamana_index {
   vamana_index(
       tiledb::Context ctx,
       const std::string& uri,
-      // TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0})
       std::optional<TemporalPolicy> temporal_policy = std::nullopt)
-      // : temporal_policy_{temporal_policy}
       : temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
       , group_{std::make_unique<vamana_index_group<vamana_index>>(
             ctx, uri, TILEDB_READ, temporal_policy_)} {
-    //    if (!temporal_policy.has_value()) {
-    //      // Here we use the opened group to get the previous ingestion
-    //      timestamp
-    //      // and then use that to open the group again with the correct
-    //      timestamp
-    //      // end.
-    //      temporal_policy_ = {
-    //          TimeTravel, group_->get_previous_ingestion_timestamp()};
-    //      group_ = {std::make_unique<vamana_index_group<vamana_index>>(
-    //          *this, ctx, uri, TILEDB_READ, temporal_policy_)};
-    //    }
     std::cout << "[index/index_vamana@ctor] temporal_policy_.timestamp_start() "
               << temporal_policy_.timestamp_start() << std::endl;
     std::cout << "[index/index_vamana@ctor] temporal_policy_.timestamp_end() "
@@ -884,12 +870,8 @@ class vamana_index {
   auto write_index(
       const tiledb::Context& ctx,
       const std::string& group_uri,
-      // std::optional<size_t> timestamp = std::nullopt,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       const std::string& storage_version = "") {
-    // if (timestamp.has_value()) {
-    //   temporal_policy_ = TemporalPolicy{TimeTravel, timestamp.value()};
-    // }
     std::cout << "[index/vamana_index@write_index] before "
                  "temporal_policy_.timestamp_start() "
               << temporal_policy_.timestamp_start() << std::endl;
