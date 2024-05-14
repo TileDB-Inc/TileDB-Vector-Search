@@ -793,4 +793,7 @@ TEST_CASE(
         all_ingestion_timestamps.end(),
         std::vector<uint64_t>{99, 100}.begin()));
   }
+
+  // Clear history.
+  { IndexVamana::clear_history(ctx, index_uri, 99); }
 }

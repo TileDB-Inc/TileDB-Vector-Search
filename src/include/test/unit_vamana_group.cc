@@ -43,16 +43,15 @@ struct dummy_index {
   using adjacency_row_index_type = int;
   using score_type = float;
 
+  using group_type = vamana_index_group<dummy_index>;
+  using metadata_type = vamana_index_metadata;
+
   constexpr static tiledb_datatype_t feature_datatype = TILEDB_FLOAT32;
   constexpr static tiledb_datatype_t id_datatype = TILEDB_UINT64;
   constexpr static tiledb_datatype_t adjacency_row_index_datatype =
       TILEDB_UINT64;
   constexpr static tiledb_datatype_t adjacency_scores_datatype = TILEDB_FLOAT32;
   constexpr static tiledb_datatype_t adjacency_ids_datatype = TILEDB_UINT64;
-
-  auto dimension() const {
-    return 10;
-  }
 };
 
 TEST_CASE(
@@ -60,7 +59,7 @@ TEST_CASE(
   tiledb::Context ctx;
 
   CHECK_THROWS_WITH(
-      vamana_index_group(dummy_index{}, ctx, "I dont exist"),
+      vamana_index_group<dummy_index>(ctx, "I dont exist"),
       "Group uri I dont exist does not exist.");
 }
 
@@ -76,7 +75,8 @@ TEST_CASE("vamana_group: write constructor - create", "[vamana_group]") {
   }
 
   vamana_index_group x =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimension() == 10);
 }
 
 TEST_CASE(
@@ -92,10 +92,12 @@ TEST_CASE(
   }
 
   vamana_index_group x =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimension() == 10);
 
   vamana_index_group y =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimension() == 10);
 }
 
 TEST_CASE(
@@ -112,7 +114,8 @@ TEST_CASE(
 
   {
     vamana_index_group x =
-        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+        vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+    CHECK(x.get_dimension() == 10);
     x.append_num_edges(0);
     x.append_base_size(0);
     x.append_ingestion_timestamp(0);
@@ -120,12 +123,12 @@ TEST_CASE(
     // We throw b/c the vamana_index_group hasn't actually been written (the
     // write happens in the destructor).
     CHECK_THROWS_WITH(
-        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ),
+        vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ),
         "No ingestion timestamps found.");
   }
 
   vamana_index_group y =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
 }
 
 TEST_CASE(
@@ -143,18 +146,19 @@ TEST_CASE(
 
   {
     vamana_index_group x =
-        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+        vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+    CHECK(x.get_dimension() == 10);
     // We throw b/c the vamana_index_group hasn't actually been written (the
     // write happens in the destructor).
     CHECK_THROWS_WITH(
-        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ),
+        vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ),
         "No ingestion timestamps found.");
   }
 
   // If we don't append to the group, even if it's been written there will be no
   // timestamps.
   CHECK_THROWS_WITH(
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ),
+      vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ),
       "No ingestion timestamps found.");
 }
 
@@ -181,35 +185,43 @@ TEST_CASE(
 
   {
     vamana_index_group x =
-        vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+        vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+    CHECK(x.get_dimension() == 10);
     x.append_num_edges(0);
     x.append_base_size(0);
     x.append_ingestion_timestamp(0);
   }
 
   vamana_index_group x =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimension() == 10);
 
   SECTION("Just set") {
     SECTION("After create") {
     }
 
     SECTION("After create and read") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = vamana_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = vamana_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
+      x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = vamana_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     x.set_ingestion_timestamp(expected_ingestion);
@@ -224,21 +236,27 @@ TEST_CASE(
     }
 
     SECTION("After create and read") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = vamana_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = vamana_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
+      x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = vamana_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     x.append_ingestion_timestamp(expected_ingestion);
@@ -253,21 +271,27 @@ TEST_CASE(
     }
 
     SECTION("After create and read") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = vamana_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = vamana_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
+      x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = vamana_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     x.set_ingestion_timestamp(expected_ingestion);
@@ -294,21 +318,27 @@ TEST_CASE(
     }
 
     SECTION("After create and read") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = vamana_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = vamana_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
+      x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-      x = vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = vamana_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     x.set_ingestion_timestamp(expected_ingestion);
@@ -355,24 +385,19 @@ TEST_CASE("vamana_group: storage version", "[vamana_group]") {
   auto offset = 2345;
 
   vamana_index_group x =
-      vamana_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimension() == 10);
 
   SECTION("0.3") {
-    x = vamana_index_group(
-        dummy_index{},
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        TemporalPolicy{TimeTravel, 0},
-        "0.3");
+    x = vamana_index_group<dummy_index>(
+        ctx, tmp_uri, TILEDB_WRITE, TemporalPolicy{TimeTravel, 0}, "0.3", 10);
     x.append_num_edges(0);
     x.append_base_size(0);
     x.append_ingestion_timestamp(0);
   }
 
   SECTION("current_storage_version") {
-    x = vamana_index_group(
-        dummy_index{},
+    x = vamana_index_group<dummy_index>(
         ctx,
         tmp_uri,
         TILEDB_WRITE,
@@ -408,13 +433,13 @@ TEST_CASE("vamana_group: invalid storage version", "[vamana_group]") {
   if (vfs.is_dir(tmp_uri)) {
     vfs.remove_dir(tmp_uri);
   }
-  CHECK_THROWS(vamana_index_group(
-      dummy_index{},
+  CHECK_THROWS(vamana_index_group<dummy_index>(
       ctx,
       tmp_uri,
       TILEDB_WRITE,
       TemporalPolicy{TimeTravel, 0},
-      "invalid"));
+      "invalid",
+      10));
 }
 
 TEST_CASE("vamana_group: mismatched storage version", "[vamana_group]") {
@@ -427,21 +452,16 @@ TEST_CASE("vamana_group: mismatched storage version", "[vamana_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  vamana_index_group x = vamana_index_group(
-      dummy_index{},
-      ctx,
-      tmp_uri,
-      TILEDB_WRITE,
-      TemporalPolicy{TimeTravel, 0},
-      "0.3");
+  vamana_index_group x = vamana_index_group<dummy_index>(
+      ctx, tmp_uri, TILEDB_WRITE, TemporalPolicy{TimeTravel, 0}, "0.3", 10);
 
   CHECK_THROWS_WITH(
-      vamana_index_group(
-          dummy_index{},
+      vamana_index_group<dummy_index>(
           ctx,
           tmp_uri,
           TILEDB_WRITE,
           TemporalPolicy{TimeTravel, 0},
-          "different_version"),
+          "different_version",
+          10),
       "Version mismatch. Requested different_version but found 0.3");
 }

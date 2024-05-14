@@ -87,9 +87,8 @@ struct dummy_index {
   using indices_type = int;
   using centroid_feature_type = float;
 
-  auto dimension() const {
-    return 10;
-  }
+  using group_type = ivf_flat_index_group<dummy_index>;
+  using metadata_type = ivf_flat_index_metadata;
 };
 
 TEST_CASE(
@@ -98,7 +97,7 @@ TEST_CASE(
   tiledb::Context ctx;
 
   CHECK_THROWS_WITH(
-      ivf_flat_index_group(dummy_index{}, ctx, "I dont exist"),
+      ivf_flat_index_group<dummy_index>(ctx, "I dont exist"),
       "Group uri I dont exist does not exist.");
 }
 
@@ -114,7 +113,8 @@ TEST_CASE("ivf_flat_group: write constructor - create", "[ivf_flat_group]") {
   }
 
   ivf_flat_index_group x =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimension() == 10);
 }
 
 TEST_CASE(
@@ -131,10 +131,12 @@ TEST_CASE(
   }
 
   ivf_flat_index_group x =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimension() == 10);
 
   ivf_flat_index_group y =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimension() == 10);
 }
 
 TEST_CASE(
@@ -151,10 +153,11 @@ TEST_CASE(
   }
 
   ivf_flat_index_group x =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimension() == 10);
 
   ivf_flat_index_group y =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
 }
 
 TEST_CASE(
@@ -172,13 +175,15 @@ TEST_CASE(
   }
 
   ivf_flat_index_group x =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimension() == 10);
 
   ivf_flat_index_group y =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimension() == 10);
 
   ivf_flat_index_group z =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
 }
 
 TEST_CASE(
@@ -203,28 +208,35 @@ TEST_CASE(
   size_t offset = 0;
 
   ivf_flat_index_group x =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimension() == 10);
 
   SECTION("Just set") {
     SECTION("After create") {
     }
 
     SECTION("After create and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     x.set_ingestion_timestamp(expected_ingestion);
@@ -239,21 +251,27 @@ TEST_CASE(
     }
 
     SECTION("After create and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     x.append_ingestion_timestamp(expected_ingestion);
@@ -268,21 +286,27 @@ TEST_CASE(
     }
 
     SECTION("After create and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     x.set_ingestion_timestamp(expected_ingestion);
@@ -311,21 +335,27 @@ TEST_CASE(
     }
 
     SECTION("After create and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimension() == 10);
     }
 
     x.set_ingestion_timestamp(expected_ingestion);
@@ -372,26 +402,22 @@ TEST_CASE("ivf_flat_group: storage version", "[ivf_flat_group]") {
   auto offset = 2345;
 
   ivf_flat_index_group x =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimension() == 10);
 
   SECTION("0.3") {
-    x = ivf_flat_index_group(
-        dummy_index{},
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        TemporalPolicy{TimeTravel, 0},
-        "0.3");
+    x = ivf_flat_index_group<dummy_index>(
+        ctx, tmp_uri, TILEDB_WRITE, TemporalPolicy{TimeTravel, 0}, "0.3", 10);
   }
 
   SECTION("current_storage_version") {
-    x = ivf_flat_index_group(
-        dummy_index{},
+    x = ivf_flat_index_group<dummy_index>(
         ctx,
         tmp_uri,
         TILEDB_WRITE,
         TemporalPolicy{TimeTravel, 0},
-        current_storage_version);
+        current_storage_version,
+        10);
   }
 
   x.set_ingestion_timestamp(expected_ingestion + offset);
@@ -419,13 +445,10 @@ TEST_CASE("ivf_flat_group: invalid storage version", "[ivf_flat_group]") {
   if (vfs.is_dir(tmp_uri)) {
     vfs.remove_dir(tmp_uri);
   }
-  CHECK_THROWS(ivf_flat_index_group(
-      dummy_index{},
-      ctx,
-      tmp_uri,
-      TILEDB_WRITE,
-      TemporalPolicy{TimeTravel, 0},
-      "invalid"));
+  CHECK_THROWS(
+      ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, TemporalPolicy{TimeTravel, 0}, "invalid"),
+      10);
 }
 
 TEST_CASE("ivf_flat_group: mismatched storage version", "[ivf_flat_group]") {
@@ -438,21 +461,16 @@ TEST_CASE("ivf_flat_group: mismatched storage version", "[ivf_flat_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_index_group x = ivf_flat_index_group(
-      dummy_index{},
-      ctx,
-      tmp_uri,
-      TILEDB_WRITE,
-      TemporalPolicy{TimeTravel, 0},
-      "0.3");
+  ivf_flat_index_group x = ivf_flat_index_group<dummy_index>(
+      ctx, tmp_uri, TILEDB_WRITE, TemporalPolicy{TimeTravel, 0}, "0.3", 10);
 
   CHECK_THROWS_WITH(
-      ivf_flat_index_group(
-          dummy_index{},
+      ivf_flat_index_group<dummy_index>(
           ctx,
           tmp_uri,
           TILEDB_WRITE,
           TemporalPolicy{TimeTravel, 0},
-          "different_version"),
+          "different_version",
+          10),
       "Version mismatch. Requested different_version but found 0.3");
 }
