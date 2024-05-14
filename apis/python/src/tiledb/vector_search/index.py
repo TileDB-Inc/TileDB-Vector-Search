@@ -8,7 +8,6 @@ from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.utils import add_to_group
-from tiledb.vector_search.utils import is_type_erased_index
 
 MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 MAX_INT32 = np.iinfo(np.dtype("int32")).max
@@ -490,6 +489,17 @@ class Index:
                 raise ValueError(
                     f"Time traveling is not supported for index storage_version={storage_version}"
                 )
+
+            if index_type == "VAMANA":
+                if storage_formats[storage_version]["UPDATES_ARRAY_NAME"] in group:
+                    updates_array_uri = group[
+                        storage_formats[storage_version]["UPDATES_ARRAY_NAME"]
+                    ].uri
+                    tiledb.Array.delete_fragments(updates_array_uri, 0, timestamp)
+                ctx = vspy.Ctx(config)
+                vspy.IndexVamana.clear_history(ctx, uri, timestamp)
+                return
+
             ingestion_timestamps = [
                 int(x)
                 for x in list(json.loads(group.meta.get("ingestion_timestamps", "[]")))
@@ -501,41 +511,27 @@ class Index:
                 int(x)
                 for x in list(json.loads(group.meta.get("partition_history", "[]")))
             ]
-            num_edges_history = [
-                int(x)
-                for x in list(json.loads(group.meta.get("num_edges_history", "[]")))
-            ]
             new_ingestion_timestamps = []
             new_base_sizes = []
             new_partition_history = []
-            new_num_edges_history = []
             i = 0
             for ingestion_timestamp in ingestion_timestamps:
                 if ingestion_timestamp > timestamp:
                     new_ingestion_timestamps.append(ingestion_timestamp)
                     new_base_sizes.append(base_sizes[i])
-                    # Type erased indexes don't have partition_history, skip to avoid crash.
-                    if not is_type_erased_index(index_type):
-                        new_partition_history.append(partition_history[i])
-                    if index_type == "VAMANA":
-                        new_num_edges_history.append(num_edges_history[i])
+                    new_partition_history.append(partition_history[i])
                 i += 1
             if len(new_ingestion_timestamps) == 0:
                 new_ingestion_timestamps = [0]
                 new_base_sizes = [0]
                 new_partition_history = [0]
-                new_num_edges_history = [0]
             index_type = group.meta.get("index_type", "")
             group.close()
 
             group = tiledb.Group(uri, "w")
             group.meta["ingestion_timestamps"] = json.dumps(new_ingestion_timestamps)
             group.meta["base_sizes"] = json.dumps(new_base_sizes)
-            # Type erased indexes don't have partition_history, skip to avoid crash.
-            if not is_type_erased_index(index_type):
-                group.meta["partition_history"] = json.dumps(new_partition_history)
-            if index_type == "VAMANA":
-                group.meta["num_edges_history"] = json.dumps(new_num_edges_history)
+            group.meta["partition_history"] = json.dumps(new_partition_history)
             group.close()
 
             group = tiledb.Group(uri, "r")
@@ -566,22 +562,6 @@ class Index:
                 tiledb.Array.delete_fragments(centroids_uri, 0, timestamp)
                 tiledb.Array.delete_fragments(index_array_uri, 0, timestamp)
                 tiledb.Array.delete_fragments(ids_uri, 0, timestamp)
-            elif index_type == "VAMANA":
-                db_uri = group[storage_formats[storage_version]["PARTS_ARRAY_NAME"]].uri
-                ids_uri = group[storage_formats[storage_version]["IDS_ARRAY_NAME"]].uri
-                adjacency_scores_uri = group["adjacency_scores"].uri
-                adjacency_ids_uri = group["adjacency_ids"].uri
-                adjacency_row_index_uri = group["adjacency_row_index"].uri
-                with tiledb.open(db_uri, "m") as A:
-                    A.delete_fragments(0, timestamp)  # 2
-                with tiledb.open(ids_uri, "m") as A:
-                    A.delete_fragments(0, timestamp)
-                with tiledb.open(adjacency_scores_uri, "m") as A:
-                    A.delete_fragments(0, timestamp)
-                with tiledb.open(adjacency_ids_uri, "m") as A:
-                    A.delete_fragments(0, timestamp)
-                with tiledb.open(adjacency_row_index_uri, "m") as A:
-                    A.delete_fragments(0, timestamp)
             else:
                 raise ValueError(f"Unsupported index_type: {index_type}")
             group.close()

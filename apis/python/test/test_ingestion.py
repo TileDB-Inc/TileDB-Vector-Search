@@ -15,7 +15,9 @@ from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.module import array_to_matrix
 from tiledb.vector_search.module import kmeans_fit
 from tiledb.vector_search.module import kmeans_predict
+from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.utils import metadata_to_list
 from tiledb.vector_search.vamana_index import VamanaIndex
 
 MINIMUM_ACCURACY = 0.85
@@ -605,9 +607,6 @@ def test_ingestion_timetravel(tmp_path):
         )
 
         # We have no results if we load in between 10 and 20.
-        if index_type == "VAMANA":
-            # TODO(paris): Fix Vamana and re-enable this test.
-            continue
         query_and_check_equals(
             index=index_class(uri=index_uri, timestamp=(11, 19)),
             queries=data,
@@ -667,8 +666,26 @@ def test_ingestion_timetravel(tmp_path):
             expected_result_i=[[0], [1], [2]],
         )
 
+        with tiledb.Group(index_uri, "r") as group:
+            assert metadata_to_list(group, "ingestion_timestamps") == [10, 21]
+            assert metadata_to_list(group, "base_sizes") == [2, 3]
+            assert group.meta["has_updates"] == 1
+            if not is_type_erased_index(index_type):
+                assert metadata_to_list(group, "partition_history") == [1, 1]
+            if index_type == "VAMANA":
+                assert metadata_to_list(group, "num_edges_history") == [2, 6]
+
         # Clear all history at timestamp 19.
         Index.clear_history(uri=index_uri, timestamp=19)
+
+        with tiledb.Group(index_uri, "r") as group:
+            assert metadata_to_list(group, "ingestion_timestamps") == [21]
+            assert metadata_to_list(group, "base_sizes") == [3]
+            assert group.meta["has_updates"] == 1
+            if not is_type_erased_index(index_type):
+                assert metadata_to_list(group, "partition_history") == [1]
+            if index_type == "VAMANA":
+                assert metadata_to_list(group, "num_edges_history") == [6]
 
         # If we load the index from timestamp 0 -> < 19, we only are returned the first two vectors.
         query_and_check_equals(
@@ -1033,14 +1050,24 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i) == 1.0
 
+        with tiledb.Group(index_uri, "r") as group:
+            assert metadata_to_list(group, "ingestion_timestamps") == [1, 102]
+            assert metadata_to_list(group, "base_sizes") == [1000, 1000]
+            if index_type == "VAMANA":
+                assert metadata_to_list(group, "num_edges_history") == [988003, 969484]
+
         # Clear history before the latest ingestion
         assert index.latest_ingestion_timestamp == 102
         Index.clear_history(
             uri=index_uri, timestamp=index.latest_ingestion_timestamp - 1
         )
-        if index_type == "VAMANA":
-            # TODO(paris): Re-enable once we support (start, end) timestamps for Vamana.
-            continue
+
+        with tiledb.Group(index_uri, "r") as group:
+            assert metadata_to_list(group, "ingestion_timestamps") == [102]
+            assert metadata_to_list(group, "base_sizes") == [1000]
+            if index_type == "VAMANA":
+                assert metadata_to_list(group, "num_edges_history") == [969484]
+
         index = index_class(uri=index_uri, timestamp=1)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
