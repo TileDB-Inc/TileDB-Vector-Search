@@ -70,7 +70,7 @@ install(TARGETS ${VSPY_TARGET_NAME} LIBRARY DESTINATION .)
 if (TILEDB_DOWNLOADED)
   message(STATUS "Adding libtiledb into install group")
   # Install libtiledb so that we can repackage it with the extension
-  install(IMPORTED_RUNTIME_ARTIFACTS TileDB::tiledb_shared DESTINATION lib)
+  install(IMPORTED_RUNTIME_ARTIFACTS TileDB::tiledb_shared DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
   if (APPLE)
     set_target_properties(${VSPY_TARGET_NAME} PROPERTIES INSTALL_RPATH "@loader_path/lib")
