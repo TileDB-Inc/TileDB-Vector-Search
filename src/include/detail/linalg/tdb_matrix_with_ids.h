@@ -200,12 +200,12 @@ class tdbBlockedMatrixWithIds
         0, (int)this->first_resident_col_, (int)this->last_resident_col_ - 1);
 
     auto layout_order = ids_schema_.cell_order();
-    this->ids().resize(elements_to_load * dimension);
+
     // Create a query
     tiledb::Query query(this->ctx_, *ids_array_);
     query.set_subarray(subarray)
         .set_layout(layout_order)
-        .set_data_buffer(attr_name, this->ids());
+        .set_data_buffer(attr_name, this->ids(), elements_to_load * dimension);
     tiledb_helpers::submit_query(tdb_func__, ids_uri_, query);
     _memory_data.insert_entry(
         tdb_func__, elements_to_load * dimension * sizeof(T));

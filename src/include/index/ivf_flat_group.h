@@ -47,19 +47,9 @@
          {"index_array_name", "partition_indexes"},
      }}};
 
-template <class Index>
-class ivf_flat_index_group;
-
-template <class Index>
-struct metadata_type_selector<ivf_flat_index_group<Index>> {
-  using type = ivf_flat_index_metadata;
-};
-
-template <class Index>
-class ivf_flat_index_group
-    : public base_index_group<ivf_flat_index_group<Index>> {
-  using Base = base_index_group<ivf_flat_index_group>;
-  // using Base::Base;
+template <class index_type>
+class ivf_flat_index_group : public base_index_group<index_type> {
+  using Base = base_index_group<index_type>;
 
   using Base::array_key_to_array_name_;
   using Base::array_name_to_uri_;
@@ -70,25 +60,19 @@ class ivf_flat_index_group
   using Base::valid_array_names_;
   using Base::version_;
 
-  using index_type = Index;
-  // std::reference_wrapper<const index_type> index_;
-  // index_type index_;
-
   static const int32_t default_domain{std::numeric_limits<int32_t>::max() - 1};
   static const int32_t default_tile_extent{100'000};
   static const int32_t tile_size_bytes{64 * 1024 * 1024};
 
  public:
-  using index_group_metadata_type = ivf_flat_index_metadata;
-
   ivf_flat_index_group(
-      const index_type& index,
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
-      const std::string& version = std::string{""})
-      : Base(ctx, uri, index.dimension(), rw, temporal_policy, version) {
+      const std::string& version = std::string{""},
+      uint64_t dimension = 0)
+      : Base(ctx, uri, rw, temporal_policy, version, dimension) {
   }
 
  public:

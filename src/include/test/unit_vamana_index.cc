@@ -249,7 +249,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   REQUIRE(ndim == 128);
 
   auto x = ColMajorMatrixWithIds<float>(ndim, npoints);
-  std::iota(x.ids().begin(), x.ids().end(), 0);
+  std::iota(x.ids(), x.ids() + x.num_ids(), 0);
 
   binary_file.read((char*)x.data(), npoints * ndim * sizeof(float));
   binary_file.close();
@@ -641,7 +641,7 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
   REQUIRE(ndim == 128);
 
   auto x = ColMajorMatrixWithIds<float>(ndim, npoints);
-  std::iota(x.ids().begin(), x.ids().end(), 0);
+  std::iota(x.ids(), x.ids() + x.num_ids(), 0);
 
   binary_file.read((char*)x.data(), npoints * ndim);
   binary_file.close();
@@ -1289,6 +1289,9 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   CHECK(idx.compare_feature_vectors(idx2));
   CHECK(idx.compare_adj_scores(idx2));
   CHECK(idx.compare_adj_ids(idx2));
+
+  vamana_index<siftsmall_feature_type, siftsmall_ids_type>::clear_history(
+      ctx, vamana_index_uri, five_minutes_from_now);
 }
 
 TEST_CASE("vamana: query empty index", "[vamana]") {

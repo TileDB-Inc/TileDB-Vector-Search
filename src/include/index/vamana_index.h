@@ -420,6 +420,9 @@ class vamana_index {
   using adjacency_row_index_type = IndexType;
   using score_type = float;
 
+  using group_type = vamana_index_group<vamana_index>;
+  using metadata_type = vamana_index_metadata;
+
  private:
   /****************************************************************************
    * Index group information
@@ -509,7 +512,7 @@ class vamana_index {
       // : temporal_policy_{temporal_policy}
       : temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
       , group_{std::make_unique<vamana_index_group<vamana_index>>(
-            *this, ctx, uri, TILEDB_READ, temporal_policy_)} {
+            ctx, uri, TILEDB_READ, temporal_policy_)} {
     //    if (!temporal_policy.has_value()) {
     //      // Here we use the opened group to get the previous ingestion
     //      timestamp
@@ -653,7 +656,7 @@ class vamana_index {
     std::copy(
         training_set_ids.begin(),
         training_set_ids.end(),
-        feature_vectors_.ids().begin());
+        feature_vectors_.ids());
 
     dimension_ = ::dimension(feature_vectors_);
     num_vectors_ = ::num_vectors(feature_vectors_);
@@ -911,8 +914,13 @@ class vamana_index {
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
 
-    auto write_group = vamana_index_group(
-        *this, ctx, group_uri, TILEDB_WRITE, temporal_policy_, storage_version);
+    auto write_group = vamana_index_group<vamana_index>(
+        ctx,
+        group_uri,
+        TILEDB_WRITE,
+        temporal_policy_,
+        storage_version,
+        dimension_);
 
     // @todo Make this table-driven
     write_group.set_dimension(dimension_);
@@ -957,7 +965,7 @@ class vamana_index {
 
     write_vector(
         ctx,
-        feature_vectors_.ids(),
+        feature_vectors_.raveled_ids(),
         write_group.ids_uri(),
         0,
         false,
@@ -1002,6 +1010,15 @@ class vamana_index {
         temporal_policy_);
 
     return true;
+  }
+
+  static void clear_history(
+      const tiledb::Context& ctx,
+      const std::string& group_uri,
+      uint64_t timestamp) {
+    auto write_group =
+        vamana_index_group<vamana_index>(ctx, group_uri, TILEDB_WRITE, {});
+    write_group.clear_history(timestamp);
   }
 
   const vamana_index_group<vamana_index>& group() const {

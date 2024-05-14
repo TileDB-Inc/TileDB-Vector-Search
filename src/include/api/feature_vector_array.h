@@ -155,22 +155,14 @@ class FeatureVectorArray {
     }
   }
 
-  // A FeatureVectorArray is always loaded
-#if 0
-  auto load() const {
-    // return _cpo::load(*vector_array);
-    return vector_array->load();
-  }
-#endif
-
   // @todo fix so niebloids work
   [[nodiscard]] auto data() const {
     // return _cpo::data(*vector_array);
     return vector_array->data();
   }
 
-  [[nodiscard]] auto ids_data() const {
-    return vector_array->ids_data();
+  [[nodiscard]] auto ids() const {
+    return vector_array->ids();
   }
 
   [[nodiscard]] auto extents() const {
@@ -222,7 +214,7 @@ class FeatureVectorArray {
     [[nodiscard]] virtual size_t num_vectors() const = 0;
     [[nodiscard]] virtual void* data() const = 0;
     [[nodiscard]] virtual size_t num_ids() const = 0;
-    [[nodiscard]] virtual const void* ids_data() const = 0;
+    [[nodiscard]] virtual void* ids() const = 0;
     [[nodiscard]] virtual std::vector<size_t> extents() const = 0;
     [[nodiscard]] virtual bool load() = 0;
   };
@@ -259,8 +251,8 @@ class FeatureVectorArray {
     [[nodiscard]] size_t num_ids() const override {
       return _cpo::num_ids(impl_vector_array);
     }
-    [[nodiscard]] const void* ids_data() const override {
-      return _cpo::ids(impl_vector_array).data();
+    [[nodiscard]] void* ids() const override {
+      return _cpo::ids(impl_vector_array);
     }
     [[nodiscard]] size_t dimension() const override {
       return _cpo::dimension(impl_vector_array);
