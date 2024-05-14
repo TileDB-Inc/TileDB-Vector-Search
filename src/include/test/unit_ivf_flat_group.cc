@@ -474,3 +474,64 @@ TEST_CASE("ivf_flat_group: mismatched storage version", "[ivf_flat_group]") {
           10),
       "Version mismatch. Requested different_version but found 0.3");
 }
+
+TEST_CASE("ivf_flat_group: clear history", "[ivf_flat_group]") {
+  std::string tmp_uri =
+      (std::filesystem::temp_directory_path() / "ivf_flat_group").string();
+
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri)) {
+    vfs.remove_dir(tmp_uri);
+  }
+
+  ivf_flat_index_group x =
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+
+  x.append_ingestion_timestamp(1);
+  x.append_base_size(2);
+  x.append_num_partitions(3);
+
+  x.append_ingestion_timestamp(11);
+  x.append_base_size(22);
+  x.append_num_partitions(33);
+
+  x.append_ingestion_timestamp(111);
+  x.append_base_size(222);
+  x.append_num_partitions(333);
+
+  CHECK(x.get_all_ingestion_timestamps().size() == 4);
+  CHECK(x.get_all_base_sizes().size() == 4);
+  CHECK(x.get_all_num_partitions().size() == 4);
+  CHECK(x.get_all_ingestion_timestamps()[0] == 0);
+  CHECK(x.get_all_ingestion_timestamps()[1] == 1);
+  CHECK(x.get_all_ingestion_timestamps()[2] == 11);
+  CHECK(x.get_all_ingestion_timestamps()[3] == 111);
+  CHECK(x.get_all_base_sizes()[0] == 0);
+  CHECK(x.get_all_base_sizes()[1] == 2);
+  CHECK(x.get_all_base_sizes()[2] == 22);
+  CHECK(x.get_all_base_sizes()[3] == 222);
+  CHECK(x.get_all_num_partitions()[0] == 0);
+  CHECK(x.get_all_num_partitions()[1] == 3);
+  CHECK(x.get_all_num_partitions()[2] == 33);
+  CHECK(x.get_all_num_partitions()[3] == 333);
+
+  // Can clear the first three timestamps correctly.
+  x.clear_history(100);
+  CHECK(x.get_all_ingestion_timestamps().size() == 1);
+  CHECK(x.get_all_base_sizes().size() == 1);
+  CHECK(x.get_all_num_partitions().size() == 1);
+  CHECK(x.get_all_ingestion_timestamps()[0] == 111);
+  CHECK(x.get_all_base_sizes()[0] == 222);
+  CHECK(x.get_all_num_partitions()[0] == 333);
+
+  // If we clear after the last timestamp, we end up with zeroes.
+  x.clear_history(112);
+  CHECK(x.get_all_ingestion_timestamps().size() == 1);
+  CHECK(x.get_all_base_sizes().size() == 1);
+  CHECK(x.get_all_num_partitions().size() == 1);
+  CHECK(x.get_all_ingestion_timestamps()[0] == 0);
+  CHECK(x.get_all_ingestion_timestamps()[0] == 0);
+  CHECK(x.get_all_base_sizes()[0] == 0);
+  CHECK(x.get_all_num_partitions()[0] == 0);
+}
