@@ -1,5 +1,5 @@
 /**
- * @file   base_group.h
+ * @file   index_group.h
  *
  * @section LICENSE
  *

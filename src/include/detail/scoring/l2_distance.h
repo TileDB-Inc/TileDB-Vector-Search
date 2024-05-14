@@ -1,5 +1,5 @@
 /**
- * @file   l2_distance.h
+ * @file   l2_distance_avx.h
  *
  * @section LICENSE
  *
