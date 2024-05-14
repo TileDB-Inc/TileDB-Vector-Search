@@ -171,8 +171,7 @@ class base_index_group {
       array_name_to_uri_[*name] = uri;
     }
 
-    // This is based off of __init__ in
-    // apis/python/src/tiledb/vector_search/index.py.
+    // This is based off of apis/python/src/tiledb/vector_search/index.py.
     if (temporal_policy.has_value()) {
       if (temporal_policy->timestamp_start() != 0) {
         // We have a (start, end) temporal_policy.
@@ -201,14 +200,9 @@ class base_index_group {
       history_index_ = metadata_.ingestion_timestamps_.size() - 1;
       base_array_timestamp_ = metadata_.ingestion_timestamps_[history_index_];
     }
-    // std::cout << "[index_group@init_for_open] history_index_: "
-    //           << history_index_ << std::endl;
-    // std::cout << "[index_group@init_for_open] base_array_timestamp_: "
-    //           << base_array_timestamp_ << std::endl;
   }
 
   void open_for_read(std::optional<TemporalPolicy> temporal_policy) {
-    // std::cout << "[index_group@open_for_read]" << std::endl;
     init_for_open(temporal_policy);
 
     if (size(metadata_.ingestion_timestamps_) == 0) {
