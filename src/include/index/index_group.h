@@ -303,7 +303,9 @@ class base_index_group {
       , base_array_timestamp_(temporal_policy.timestamp_end())
       , version_(version)
       , opened_for_(rw) {
-    set_dimension(dimension);
+    if (opened_for_ == TILEDB_WRITE) {
+      set_dimension(dimension);
+    }
   }
 
   void load() {

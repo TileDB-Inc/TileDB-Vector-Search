@@ -202,7 +202,6 @@ class ivf_pq_group : public base_index_group<index_type> {
    * Getters and setters for PQ related metadata: num_subspaces, sub_dimension,
    * bits_per_subspace, num_clusters
    ****************************************************************************/
-  // num_subspaces
   auto get_num_subspaces() const {
     return metadata_.num_subspaces_;
   }
@@ -210,7 +209,6 @@ class ivf_pq_group : public base_index_group<index_type> {
     metadata_.num_subspaces_ = num_subspaces;
   }
 
-  // sub_dimension
   auto get_sub_dimension() const {
     return metadata_.sub_dimension_;
   }
@@ -218,7 +216,6 @@ class ivf_pq_group : public base_index_group<index_type> {
     metadata_.sub_dimension_ = sub_dimension;
   }
 
-  // bits_per_subspace
   auto get_bits_per_subspace() const {
     return metadata_.bits_per_subspace_;
   }
@@ -226,7 +223,6 @@ class ivf_pq_group : public base_index_group<index_type> {
     metadata_.bits_per_subspace_ = bits_per_subspace;
   }
 
-  // num_clusters
   auto get_num_clusters() const {
     return metadata_.num_clusters_;
   }
@@ -242,22 +238,6 @@ class ivf_pq_group : public base_index_group<index_type> {
       this->version_ = current_storage_version;
     }
     this->init_valid_array_names();
-
-    // Set the PQ related metadata: num_subspaces, sub_dimension,
-    // bits_per_subspace, num_clusters
-    // this->set_dimension(this->cached_index_.get().dimension());
-    // this->set_num_subspaces(this->cached_index_.get().num_subspaces());  // m
-    // this->set_sub_dimension(
-    //     this->cached_index_.get().sub_dimension());  // D* == D/m
-    // this->set_bits_per_subspace(
-    //     this->cached_index_.get().bits_per_subspace());  // 8
-    // this->set_num_clusters(
-    //     this->cached_index_.get().num_clusters());  // 2**nbits
-
-    // assert(
-    //     this->get_num_subspaces() * this->get_sub_dimension() ==
-    //     this->get_dimension());
-    // assert(this->get_num_clusters() == 1 << this->get_bits_per_subspace());
 
     static const int32_t tile_size{
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
@@ -307,8 +287,8 @@ class ivf_pq_group : public base_index_group<index_type> {
         this->get_dimension(),
         this->get_num_clusters(),
         default_compression);
-    write_group.add_member(
-        cluster_centroids_array_name(), true, cluster_centroids_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, cluster_centroids_uri(), cluster_centroids_array_name());
 
     create_empty_for_matrix<
         typename index_type::flat_vector_feature_type,
@@ -320,8 +300,8 @@ class ivf_pq_group : public base_index_group<index_type> {
         this->get_dimension(),
         default_tile_extent,
         default_compression);
-    write_group.add_member(
-        flat_ivf_centroids_array_name(), true, flat_ivf_centroids_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, flat_ivf_centroids_uri(), flat_ivf_centroids_array_name());
 
     create_empty_for_matrix<
         typename index_type::pq_vector_feature_type,
@@ -333,8 +313,8 @@ class ivf_pq_group : public base_index_group<index_type> {
         this->get_num_subspaces(),
         default_tile_extent,
         default_compression);
-    write_group.add_member(
-        pq_ivf_centroids_array_name(), true, pq_ivf_centroids_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, pq_ivf_centroids_uri(), pq_ivf_centroids_array_name());
 
     create_empty_for_vector<typename index_type::indices_type>(
         cached_ctx_,
@@ -342,9 +322,8 @@ class ivf_pq_group : public base_index_group<index_type> {
         default_domain,
         default_tile_extent,
         default_compression);
-    // write_group.add_member(indices_uri(), true, indices_array_name());
-    write_group.add_member(
-        ivf_index_array_name(), true, ivf_index_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, ivf_index_uri(), ivf_index_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_,
@@ -352,7 +331,8 @@ class ivf_pq_group : public base_index_group<index_type> {
         default_domain,
         tile_size,
         default_compression);
-    write_group.add_member(ivf_ids_array_name(), true, ivf_ids_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, ivf_ids_uri(), ivf_ids_array_name());
 
     create_empty_for_matrix<
         typename index_type::pq_code_type,
@@ -364,8 +344,8 @@ class ivf_pq_group : public base_index_group<index_type> {
         this->get_num_subspaces(),
         default_tile_extent,
         default_compression);
-    write_group.add_member(
-        pq_ivf_vectors_array_name(), true, pq_ivf_vectors_array_name());
+    tiledb_helpers::add_to_group(
+        write_group, pq_ivf_vectors_uri(), pq_ivf_vectors_array_name());
 
     for (size_t i = 0; i < this->get_num_subspaces(); ++i) {
       std::string this_table_uri =
@@ -382,8 +362,8 @@ class ivf_pq_group : public base_index_group<index_type> {
           this->get_num_clusters(),
           this->get_num_clusters(),
           default_compression);
-      write_group.add_member(
-          this_table_array_name, true, this_table_array_name);
+      tiledb_helpers::add_to_group(
+          write_group, this_table_uri, this_table_array_name);
     }
 
     // Store the metadata if all of the arrays were created successfully

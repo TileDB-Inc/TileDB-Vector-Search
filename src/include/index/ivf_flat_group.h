@@ -134,7 +134,6 @@ class ivf_flat_group : public base_index_group<index_type> {
       this->version_ = current_storage_version;
     }
     this->init_valid_array_names();
-    //    this->set_dimension(this->cached_index_.get().dimension());
 
     static const int32_t tile_size{
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
@@ -167,6 +166,7 @@ class ivf_flat_group : public base_index_group<index_type> {
     metadata_.base_sizes_ = {0};
     metadata_.partition_history_ = {0};
     metadata_.temp_size_ = 0;
+    metadata_.dimension_ = this->get_dimension();
 
     create_empty_for_matrix<
         typename index_type::centroid_feature_type,
