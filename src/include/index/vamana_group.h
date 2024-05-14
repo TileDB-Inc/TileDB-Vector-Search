@@ -256,6 +256,7 @@ class vamana_index_group : public base_index_group<index_type> {
     metadata_.base_sizes_ = {};
     metadata_.num_edges_history_ = {};
     metadata_.temp_size_ = 0;
+    metadata_.dimension_ = this->get_dimension();
 
     /**
      * Create the arrays: feature_vectors (matrix), feature_vectors_ids

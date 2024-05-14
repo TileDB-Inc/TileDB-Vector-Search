@@ -465,8 +465,8 @@ TEST_CASE("ivf_flat_group: clear history", "[ivf_flat_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_index_group x =
-      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  ivf_flat_group x =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
 
   x.append_ingestion_timestamp(1);
   x.append_base_size(2);

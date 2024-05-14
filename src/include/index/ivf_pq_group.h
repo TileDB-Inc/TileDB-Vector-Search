@@ -273,6 +273,7 @@ class ivf_pq_group : public base_index_group<index_type> {
     metadata_.base_sizes_ = {0};
     metadata_.partition_history_ = {0};
     metadata_.temp_size_ = 0;
+    metadata_.dimension_ = this->get_dimension();
 
     // Create the arrays: cluster_centroids,
     // flat_ivf_centroids, pq_ivf_centroids, ivf_index,
