@@ -279,7 +279,7 @@ def test_construct_IndexVamana_with_empty_vector(tmp_path):
         feature_type=feature_type,
         id_type=id_type,
         adjacency_row_index_type=adjacency_row_index_type,
-        dimension=dimensions,
+        dimensions=dimensions,
     )
     empty_vector = vspy.FeatureVectorArray(dimensions, 0, feature_type, id_type)
     a.train(empty_vector)

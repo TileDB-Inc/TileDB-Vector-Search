@@ -343,7 +343,7 @@ TEST_CASE(
 
     size_t num_vectors = 0;
     auto empty_training_vector_array = FeatureVectorArray(
-        siftsmall_dimension, num_vectors, feature_type, id_type);
+        siftsmall_dimensions, num_vectors, feature_type, id_type);
     index.train(empty_training_vector_array);
     index.add(empty_training_vector_array);
     index.write_index(ctx, index_uri);

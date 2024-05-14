@@ -311,7 +311,7 @@ class flatpq_index {
  public:
   /**
    * @brief Construct a new flat index object
-   * @param dimension Dimensionality of the input vectors
+   * @param dimensions Dimensionality of the input vectors
    * @param num_subspaces Number of subspaces (number of sections of the
    *       vector to quantize)
    * @param bits_per_subspace Number of bits per section (per subspace)
@@ -319,11 +319,11 @@ class flatpq_index {
    * @todo We don't really need dimension as an argument for any of our indexes
    */
   flatpq_index(
-      size_t dimension,
+      size_t dimensions,
       size_t num_subspaces,
       size_t bits_per_subspace = 8,
       size_t num_clusters = 256)
-      : dimensions_(dimension)
+      : dimensions_(dimensions)
       , num_subspaces_(num_subspaces)
       , bits_per_subspace_(bits_per_subspace)
       , num_clusters_(num_clusters) {

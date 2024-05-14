@@ -188,7 +188,7 @@ class IndexVamana {
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
-          "Dimension mismatch: " + std::to_string(dimensions_) +
+          "Dimensions mismatch: " + std::to_string(dimensions_) +
           " != " + std::to_string(index_->dimensions()));
     }
     dimensions_ = index_->dimensions();

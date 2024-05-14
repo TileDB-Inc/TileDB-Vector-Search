@@ -161,7 +161,7 @@ class ivf_flat_index {
    * parameters to be used subsequently in training.  To fully create an index
    * we will need to call `train()` and `add()`.
    *
-   * @param dimension Dimension of the vectors comprising the training set and
+   * @param dimensions Dimensions of the vectors comprising the training set and
    * the data set.
    * @param nlist Number of centroids / partitions to compute.
    * @param max_iter Maximum number of iterations for kmans algorithm.

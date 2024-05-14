@@ -54,7 +54,7 @@ TEST_CASE(
 
   auto a = IndexFlatL2(ctx, sift_inputs_uri);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimensions(a) == sift_dimension);
+  CHECK(dimensions(a) == sift_dimensions);
   CHECK(num_vectors(a) == num_sift_vectors);
 
   auto b = IndexFlatL2(ctx, bigann1M_inputs_uri);
@@ -69,12 +69,12 @@ TEST_CASE(
 
   auto d = IndexFlatL2(ctx, sift_inputs_uri);
   CHECK(d.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimensions(d) == sift_dimension);
+  CHECK(dimensions(d) == sift_dimensions);
   CHECK(num_vectors(d) == num_sift_vectors);
 
   auto e = IndexFlatL2(ctx, siftsmall_inputs_uri);
   CHECK(d.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimensions(d) == siftsmall_dimension);
+  CHECK(dimensions(d) == siftsmall_dimensions);
   CHECK(num_vectors(d) == num_siftsmall_vectors);
 }
 
@@ -83,7 +83,7 @@ TEST_CASE(
   tiledb::Context ctx;
   auto a = IndexFlatL2(ctx, sift_inputs_uri);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimensions(a) == sift_dimension);
+  CHECK(dimensions(a) == sift_dimensions);
   CHECK(num_vectors(a) == num_sift_vectors);
 
   auto b = IndexFlatL2(ctx, bigann1M_inputs_uri);
@@ -98,12 +98,12 @@ TEST_CASE(
 
   auto d = IndexFlatL2(ctx, sift_inputs_uri);
   CHECK(d.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimensions(d) == sift_dimension);
+  CHECK(dimensions(d) == sift_dimensions);
   CHECK(num_vectors(d) == num_sift_vectors);
 
   auto e = IndexFlatL2(ctx, siftsmall_inputs_uri);
   CHECK(e.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimensions(e) == siftsmall_dimension);
+  CHECK(dimensions(e) == siftsmall_dimensions);
   CHECK(num_vectors(e) == num_siftsmall_vectors);
 }
 
@@ -117,7 +117,7 @@ TEST_CASE("api: queries", "[api][flat_l2_index]") {
       sift_groundtruth_uri,
       sift_query_uri,
       TILEDB_FLOAT32,
-      sift_dimension,
+      sift_dimensions,
       num_sift_vectors);
 
   auto bigann1M_tuple = std::make_tuple(

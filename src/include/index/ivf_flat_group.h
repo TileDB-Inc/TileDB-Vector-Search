@@ -71,8 +71,8 @@ class ivf_flat_index_group : public base_index_group<index_type> {
       tiledb_query_type_t rw = TILEDB_READ,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""},
-      uint64_t dimension = 0)
-      : Base(ctx, uri, rw, temporal_policy, version, dimension) {
+      uint64_t dimensions = 0)
+      : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
   }
 
  public:
