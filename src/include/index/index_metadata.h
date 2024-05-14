@@ -533,34 +533,28 @@ class base_index_metadata {
     }
   }
 
-  auto dump() {
+  auto dump() const {
     dump_strings(metadata_string_checks);
     dump_strings(
-        static_cast<IndexMetadata*>(this)->metadata_string_checks_impl);
+        static_cast<const IndexMetadata*>(this)->metadata_string_checks_impl);
 
     dump_arithmetic(metadata_arithmetic_checks);
-    dump_arithmetic(
-        static_cast<IndexMetadata*>(this)->metadata_arithmetic_checks_impl);
+    dump_arithmetic(static_cast<const IndexMetadata*>(this)
+                        ->metadata_arithmetic_checks_impl);
 
-    if (!empty(feature_type_str_)) {
-      if (feature_datatype_ == TILEDB_ANY) {
-        feature_datatype_ = string_to_datatype(feature_type_str_);
-      } else if (feature_datatype_ != string_to_datatype(feature_type_str_)) {
-        throw std::runtime_error(
-            "feature_datatype metadata disagree, must be " + feature_type_str_ +
-            " not " + tiledb::impl::type_to_str(feature_datatype_));
-      }
+    if (!empty(feature_type_str_) &&
+        feature_datatype_ != string_to_datatype(feature_type_str_)) {
+      throw std::runtime_error(
+          "feature_datatype metadata disagree, must be " + feature_type_str_ +
+          " not " + tiledb::impl::type_to_str(feature_datatype_));
     }
-    if (!empty(id_type_str_)) {
-      if (id_datatype_ == TILEDB_ANY) {
-        id_datatype_ = string_to_datatype(id_type_str_);
-      } else if (id_datatype_ != string_to_datatype(id_type_str_)) {
-        throw std::runtime_error(
-            "id_datatype metadata disagree, must be " + id_type_str_ + " not " +
-            tiledb::impl::type_to_str(id_datatype_));
-      }
+    if (!empty(id_type_str_) &&
+        id_datatype_ != string_to_datatype(id_type_str_)) {
+      throw std::runtime_error(
+          "id_datatype metadata disagree, must be " + id_type_str_ + " not " +
+          tiledb::impl::type_to_str(id_datatype_));
     }
-    static_cast<IndexMetadata*>(this)->dump_json_impl();
+    static_cast<const IndexMetadata*>(this)->dump_json_impl();
   }
 };
 
