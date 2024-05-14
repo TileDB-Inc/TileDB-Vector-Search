@@ -30,7 +30,7 @@ jobs:
         run: |
           pip install .[test]
           cd apis/python
-          pytest -n auto --durations=0
+          pytest -n 4 -d --durations=0
           # TODO: fix editable on linux
           #pip uninstall -y tiledb.vector_search
           #pip install -e .
