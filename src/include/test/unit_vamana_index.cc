@@ -1423,4 +1423,7 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   CHECK(idx.compare_feature_vectors(idx2));
   CHECK(idx.compare_adj_scores(idx2));
   CHECK(idx.compare_adj_ids(idx2));
+
+  vamana_index<siftsmall_feature_type, siftsmall_ids_type>::clear_history(
+      ctx, vamana_index_uri, five_minutes_from_now);
 }

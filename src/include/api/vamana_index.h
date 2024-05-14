@@ -131,30 +131,12 @@ class IndexVamana {
       const tiledb::Context& ctx,
       const URI& group_uri,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0}) {
-    using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
-    std::vector<metadata_element> metadata{
-        {"feature_datatype", &feature_datatype_, TILEDB_UINT32},
-        {"id_datatype", &id_datatype_, TILEDB_UINT32},
-        {"adjacency_row_index_datatype",
-         &adjacency_row_index_datatype_,
-         TILEDB_UINT32}};
-
-    tiledb::Group read_group(ctx, group_uri, TILEDB_READ, ctx.config());
-
-    for (auto& [name, value, datatype] : metadata) {
-      if (!read_group.has_metadata(name, &datatype)) {
-        throw std::runtime_error("Missing metadata: " + name);
-      }
-      uint32_t count;
-      void* addr;
-      read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
-      if (datatype == TILEDB_UINT32) {
-        *reinterpret_cast<uint32_t*>(value) =
-            *reinterpret_cast<uint32_t*>(addr);
-      } else {
-        throw std::runtime_error("Unsupported datatype for metadata: " + name);
-      }
-    }
+    read_types(
+        ctx,
+        group_uri,
+        &feature_datatype_,
+        &id_datatype_,
+        &adjacency_row_index_datatype_);
 
     auto type = std::tuple{
         feature_datatype_, id_datatype_, adjacency_row_index_datatype_};
@@ -252,6 +234,28 @@ class IndexVamana {
     index_->write_index(ctx, group_uri, timestamp, storage_version);
   }
 
+  static void clear_history(
+      const tiledb::Context& ctx,
+      const std::string& group_uri,
+      uint64_t timestamp) {
+    tiledb_datatype_t feature_datatype{TILEDB_ANY};
+    tiledb_datatype_t id_datatype{TILEDB_ANY};
+    tiledb_datatype_t adjacency_row_index_datatype{TILEDB_ANY};
+    read_types(
+        ctx,
+        group_uri,
+        &feature_datatype,
+        &id_datatype,
+        &adjacency_row_index_datatype);
+
+    auto type =
+        std::tuple{feature_datatype, id_datatype, adjacency_row_index_datatype};
+    if (uri_dispatch_table.find(type) == uri_dispatch_table.end()) {
+      throw std::runtime_error("Unsupported datatype combination");
+    }
+    clear_history_dispatch_table.at(type)(ctx, group_uri, timestamp);
+  }
+
   auto temporal_policy() const {
     if (!index_) {
       throw std::runtime_error(
@@ -289,6 +293,39 @@ class IndexVamana {
   }
 
  private:
+  static void read_types(
+      const tiledb::Context& ctx,
+      const std::string& group_uri,
+      tiledb_datatype_t* feature_datatype,
+      tiledb_datatype_t* id_datatype,
+      tiledb_datatype_t* adjacency_row_index_datatype) {
+    using metadata_element =
+        std::tuple<std::string, tiledb_datatype_t*, tiledb_datatype_t>;
+    std::vector<metadata_element> metadata{
+        {"feature_datatype", feature_datatype, TILEDB_UINT32},
+        {"id_datatype", id_datatype, TILEDB_UINT32},
+        {"adjacency_row_index_datatype",
+         adjacency_row_index_datatype,
+         TILEDB_UINT32}};
+
+    tiledb::Group read_group(ctx, group_uri, TILEDB_READ, ctx.config());
+
+    for (auto& [name, value, datatype] : metadata) {
+      if (!read_group.has_metadata(name, &datatype)) {
+        throw std::runtime_error("Missing metadata: " + name);
+      }
+      uint32_t count;
+      void* addr;
+      read_group.get_metadata(name, &datatype, &count, (const void**)&addr);
+      if (datatype == TILEDB_UINT32) {
+        *reinterpret_cast<uint32_t*>(value) =
+            *reinterpret_cast<uint32_t*>(addr);
+      } else {
+        throw std::runtime_error("Unsupported datatype for metadata: " + name);
+      }
+    }
+  }
+
   /**
    * Non-type parameterized base class (for type erasure).
    */
@@ -457,6 +494,10 @@ class IndexVamana {
   using uri_constructor_function = std::function<std::unique_ptr<index_base>(const tiledb::Context&, const std::string&, TemporalPolicy)>;
   using uri_table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, uri_constructor_function>;
   static const uri_table_type uri_dispatch_table;
+
+  using clear_history_constructor_function = std::function<void(const tiledb::Context&, const std::string&, int)>;
+  using clear_history_table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, clear_history_constructor_function>;
+  static const clear_history_table_type clear_history_dispatch_table;
   // clang-format on
 
   size_t dimension_ = 0;
@@ -498,6 +539,21 @@ const IndexVamana::uri_table_type IndexVamana::uri_dispatch_table = {
   {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint64_t>>>(ctx, uri, temporal_policy); }},
   {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint64_t>>>(ctx, uri, temporal_policy); }},
   {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, TemporalPolicy temporal_policy) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint64_t>>>(ctx, uri, temporal_policy); }},
+};
+
+const IndexVamana::clear_history_table_type IndexVamana::clear_history_dispatch_table = {
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return vamana_index<int8_t,  uint32_t, uint32_t>::clear_history(ctx, uri, timestamp); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return vamana_index<uint8_t, uint32_t, uint32_t>::clear_history(ctx, uri, timestamp); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return vamana_index<float,   uint32_t, uint32_t>::clear_history(ctx, uri, timestamp); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return vamana_index<int8_t,  uint32_t, uint64_t>::clear_history(ctx, uri, timestamp); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return vamana_index<uint8_t, uint32_t, uint64_t>::clear_history(ctx, uri, timestamp); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return vamana_index<float,   uint32_t, uint64_t>::clear_history(ctx, uri, timestamp); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return vamana_index<int8_t,  uint64_t, uint32_t>::clear_history(ctx, uri, timestamp); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return vamana_index<uint8_t, uint64_t, uint32_t>::clear_history(ctx, uri, timestamp); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return vamana_index<float,   uint64_t, uint32_t>::clear_history(ctx, uri, timestamp); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return vamana_index<int8_t,  uint64_t, uint64_t>::clear_history(ctx, uri, timestamp); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return vamana_index<uint8_t, uint64_t, uint64_t>::clear_history(ctx, uri, timestamp); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return vamana_index<float,   uint64_t, uint64_t>::clear_history(ctx, uri, timestamp); }},
 };
 // clang-format on
 
