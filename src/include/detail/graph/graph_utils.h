@@ -1,5 +1,5 @@
 /**
- * @file   vamana.h
+ * @file   graph_utils.h
  *
  * @section LICENSE
  *
