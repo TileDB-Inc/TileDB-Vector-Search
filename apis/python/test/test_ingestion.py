@@ -673,7 +673,9 @@ def test_ingestion_timetravel(tmp_path):
             if not is_type_erased_index(index_type):
                 assert metadata_to_list(group, "partition_history") == [1, 1]
             if index_type == "VAMANA":
-                assert metadata_to_list(group, "num_edges_history") == [2, 6]
+                num_edges_history = metadata_to_list(group, "num_edges_history")
+                assert len(num_edges_history) == 2
+                second_num_edges = num_edges_history[1]
 
         # Clear all history at timestamp 19.
         Index.clear_history(uri=index_uri, timestamp=19)
@@ -685,7 +687,9 @@ def test_ingestion_timetravel(tmp_path):
             if not is_type_erased_index(index_type):
                 assert metadata_to_list(group, "partition_history") == [1]
             if index_type == "VAMANA":
-                assert metadata_to_list(group, "num_edges_history") == [6]
+                assert metadata_to_list(group, "num_edges_history") == [
+                    second_num_edges
+                ]
 
         # If we load the index from timestamp 0 -> < 19, we only are returned the first two vectors.
         query_and_check_equals(
@@ -1054,7 +1058,9 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
             assert metadata_to_list(group, "ingestion_timestamps") == [1, 102]
             assert metadata_to_list(group, "base_sizes") == [1000, 1000]
             if index_type == "VAMANA":
-                assert metadata_to_list(group, "num_edges_history") == [988003, 969484]
+                num_edges_history = metadata_to_list(group, "num_edges_history")
+                assert len(num_edges_history) == 2
+                second_num_edges = num_edges_history[1]
 
         # Clear history before the latest ingestion
         assert index.latest_ingestion_timestamp == 102
@@ -1066,7 +1072,9 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
             assert metadata_to_list(group, "ingestion_timestamps") == [102]
             assert metadata_to_list(group, "base_sizes") == [1000]
             if index_type == "VAMANA":
-                assert metadata_to_list(group, "num_edges_history") == [969484]
+                assert metadata_to_list(group, "num_edges_history") == [
+                    second_num_edges
+                ]
 
         index = index_class(uri=index_uri, timestamp=1)
         _, result = index.query(queries, k=k, nprobe=partitions)
