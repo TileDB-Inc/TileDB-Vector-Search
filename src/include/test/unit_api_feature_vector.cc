@@ -92,23 +92,23 @@ TEST_CASE("api: FeatureVector dimension", "[api]") {
   auto y = FeatureVector{std::move(u)};
 
   SECTION("v, w, x, y") {
-    CHECK(dimension(v) == 3);
-    CHECK(dimension(w) == 3);
-    CHECK(dimension(x) == 3);
-    CHECK(dimension(y) == 3);
+    CHECK(dimensions(v) == 3);
+    CHECK(dimensions(w) == 3);
+    CHECK(dimensions(x) == 3);
+    CHECK(dimensions(y) == 3);
   }
 
   SECTION("move(v), move(w), move(x), move(y)") {
-    CHECK(dimension(FeatureVector(std::move(v))) == 3);
-    CHECK(dimension(FeatureVector(std::move(w))) == 3);
-    CHECK(dimension(FeatureVector(std::move(x))) == 3);
-    CHECK(dimension(FeatureVector(std::move(y))) == 3);
+    CHECK(dimensions(FeatureVector(std::move(v))) == 3);
+    CHECK(dimensions(FeatureVector(std::move(w))) == 3);
+    CHECK(dimensions(FeatureVector(std::move(x))) == 3);
+    CHECK(dimensions(FeatureVector(std::move(y))) == 3);
   }
 
-  CHECK(dimension(std::vector<int>{1, 2, 3}) == 3);
-  CHECK(dimension(Vector<int>{1, 2, 3}) == 3);
-  CHECK(dimension(FeatureVector(std::vector<int>{1, 2, 3})) == 3);
-  CHECK(dimension(FeatureVector(Vector<int>{1, 2, 3})) == 3);
+  CHECK(dimensions(std::vector<int>{1, 2, 3}) == 3);
+  CHECK(dimensions(Vector<int>{1, 2, 3}) == 3);
+  CHECK(dimensions(FeatureVector(std::vector<int>{1, 2, 3})) == 3);
+  CHECK(dimensions(FeatureVector(Vector<int>{1, 2, 3})) == 3);
 }
 
 using TestTypes = std::tuple<float, uint8_t, int32_t, uint32_t, uint64_t>;
@@ -130,21 +130,21 @@ TEMPLATE_LIST_TEST_CASE("api: FeatureVector read", "[api]", TestTypes) {
   write_vector(ctx, v, vname);
   auto x = read_vector<TestType>(ctx, vname);
 
-  CHECK(dimension(x) == N);
+  CHECK(dimensions(x) == N);
   CHECK(std::equal(begin(v), end(v), begin(x)));
 
   auto y = FeatureVector{std::move(v)};
-  CHECK(dimension(y) == N);
+  CHECK(dimensions(y) == N);
 
   auto by = (TestType*)y.data();
-  auto ey = by + dimension(y);
+  auto ey = by + dimensions(y);
   CHECK(std::equal(by, ey, begin(x)));
 
   auto z = FeatureVector{ctx, vname};
-  CHECK(dimension(z) == N);
+  CHECK(dimensions(z) == N);
 
   auto bz = (TestType*)y.data();
-  auto ez = by + dimension(y);
+  auto ez = by + dimensions(y);
   CHECK(std::equal(bz, ez, begin(x)));
 }
 

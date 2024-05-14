@@ -158,7 +158,7 @@ void init_type_erased_module(py::module_& m) {
           )
       .def(py::init<size_t, const std::string&>())
       .def(py::init<size_t, void*, const std::string&>())
-      .def("dimension", &FeatureVector::dimension)
+      .def("dimensions", &FeatureVector::dimension)
       .def("feature_type", &FeatureVector::feature_type)
       .def("feature_type_string", &FeatureVector::feature_type_string)
       .def_buffer([](FeatureVector& v) -> py::buffer_info {
@@ -168,7 +168,7 @@ void init_type_erased_module(py::module_& m) {
             datatype_to_format(
                 v.feature_type()), /* Python struct-style format descriptor */
             1,                     /* Number of dimensions */
-            {v.dimension()},       /* Buffer dimension */
+            {v.dimensions()},      /* Buffer dimension */
             {datatype_to_size(v.feature_type())}
             /* Strides (in bytes) for each index */
         );
@@ -225,7 +225,7 @@ void init_type_erased_module(py::module_& m) {
           py::arg("num_vectors") = 0,
           py::arg("timestamp") = 0)
       .def(py::init<size_t, size_t, const std::string&, const std::string&>())
-      .def("dimension", &FeatureVectorArray::dimension)
+      .def("dimensions", &FeatureVectorArray::dimension)
       .def("num_vectors", &FeatureVectorArray::num_vectors)
       .def("feature_type", &FeatureVectorArray::feature_type)
       .def("feature_type_string", &FeatureVectorArray::feature_type_string)
@@ -237,9 +237,9 @@ void init_type_erased_module(py::module_& m) {
                 v.feature_type()), /* Python struct-style format descriptor */
             2,                     /* Number of dimensions */
             {v.num_vectors(),
-             v.dimension()}, /* Buffer dimensions -- row major */
+             v.dimensions()}, /* Buffer dimensions -- row major */
             {datatype_to_size(v.feature_type()) *
-                 v.dimension(), /* Strides (in bytes) for each index */
+                 v.dimensions(), /* Strides (in bytes) for each index */
              datatype_to_size(v.feature_type())});
       })
       .def(py::init([](py::array b) {
@@ -285,7 +285,7 @@ void init_type_erased_module(py::module_& m) {
       .def("train", &IndexFlatL2::train)
       .def("save", &IndexFlatL2::save)
       .def("feature_type_string", &IndexFlatL2::feature_type_string)
-      .def("dimension", &IndexFlatL2::dimension)
+      .def("dimensions", &IndexFlatL2::dimension)
       .def(
           "query",
           [](IndexFlatL2& index, FeatureVectorArray& vectors, size_t top_k) {
@@ -370,7 +370,7 @@ void init_type_erased_module(py::module_& m) {
       .def(
           "adjacency_row_index_type_string",
           &IndexVamana::adjacency_row_index_type_string)
-      .def("dimension", &IndexVamana::dimension)
+      .def("dimensions", &IndexVamana::dimension)
       .def_static(
           "clear_history",
           [](const tiledb::Context& ctx,
@@ -445,5 +445,5 @@ void init_type_erased_module(py::module_& m) {
       .def("feature_type_string", &IndexIVFFlat::feature_type_string)
       .def("id_type_string", &IndexIVFFlat::id_type_string)
       .def("px_type_string", &IndexIVFFlat::px_type_string)
-      .def("dimension", &IndexIVFFlat::dimension);
+      .def("dimensions", &IndexIVFFlat::dimension);
 }

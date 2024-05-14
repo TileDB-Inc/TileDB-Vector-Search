@@ -236,7 +236,7 @@ class base_index_group {
    * @todo Process the "base group" metadata here.
    */
   void create_default() {
-    if (get_dimension() == 0) {
+    if (get_dimensions() == 0) {
       throw std::runtime_error(
           "Dimension must be set when creating a new group.");
     }
@@ -308,7 +308,7 @@ class base_index_group {
         open_for_read();
         break;
       case TILEDB_WRITE:
-        set_dimension(dimension);
+        set_dimensions(dimension);
         open_for_write();
         break;
       case TILEDB_MODIFY_EXCLUSIVE:
@@ -396,11 +396,11 @@ class base_index_group {
     metadata_.temp_size_ = size;
   }
 
-  auto get_dimension() const {
-    return metadata_.dimension_;
+  auto get_dimensions() const {
+    return metadata_.dimensions_;
   }
-  auto set_dimension(size_t dim) {
-    metadata_.dimension_ = dim;
+  auto set_dimensions(size_t dim) {
+    metadata_.dimensions_ = dim;
   }
 
   auto get_history_index() const {

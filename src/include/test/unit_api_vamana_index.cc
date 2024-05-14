@@ -48,7 +48,7 @@ TEST_CASE("api_vamana_index: init constructor", "[api_vamana_index]") {
     CHECK(
         a.adjacency_row_index_type_string() ==
         datatype_to_string(TILEDB_UINT32));
-    CHECK(dimension(a) == 0);
+    CHECK(dimensions(a) == 0);
   }
 
   SECTION("float uint32 uint32") {
@@ -59,7 +59,7 @@ TEST_CASE("api_vamana_index: init constructor", "[api_vamana_index]") {
     CHECK(a.feature_type() == TILEDB_FLOAT32);
     CHECK(a.id_type() == TILEDB_UINT32);
     CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
-    CHECK(dimension(a) == 0);
+    CHECK(dimensions(a) == 0);
   }
 
   SECTION("int8 uint32 uint32") {
@@ -395,12 +395,12 @@ TEST_CASE("api_vamana_index: infer dimension", "[api_vamana_index]") {
       {{"id_type", "uint32"}, {"adjacency_row_index_type", "uint32"}}));
   auto ctx = tiledb::Context{};
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-  CHECK(dimension(a) == 0);
+  CHECK(dimensions(a) == 0);
   a.train(training_set);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(a.id_type() == TILEDB_UINT32);
   CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
-  CHECK(dimension(a) == 128);
+  CHECK(dimensions(a) == 128);
 }
 
 TEST_CASE(
@@ -424,7 +424,7 @@ TEST_CASE(
 
   auto b = IndexVamana(ctx, api_vamana_index_uri);
 
-  CHECK(dimension(a) == dimension(b));
+  CHECK(dimensions(a) == dimensions(b));
   CHECK(a.feature_type() == b.feature_type());
   CHECK(a.id_type() == b.id_type());
   CHECK(a.adjacency_row_index_type() == b.adjacency_row_index_type());
@@ -586,7 +586,7 @@ TEST_CASE(
         feature_type_type,
         id_type_type,
         adjacency_row_index_type_type>(ctx, index_uri);
-    CHECK(typed_index.group().get_dimension() == dimensions);
+    CHECK(typed_index.group().get_dimensions() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
     CHECK(typed_index.group().get_history_index() == 0);
 
@@ -648,7 +648,7 @@ TEST_CASE(
         feature_type_type,
         id_type_type,
         adjacency_row_index_type_type>(ctx, index_uri);
-    CHECK(typed_index.group().get_dimension() == dimensions);
+    CHECK(typed_index.group().get_dimensions() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
     CHECK(typed_index.group().get_history_index() == 0);
 
@@ -712,7 +712,7 @@ TEST_CASE(
         feature_type_type,
         id_type_type,
         adjacency_row_index_type_type>(ctx, index_uri);
-    CHECK(typed_index.group().get_dimension() == dimensions);
+    CHECK(typed_index.group().get_dimensions() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
     CHECK(typed_index.group().get_history_index() == 1);
 
@@ -768,7 +768,7 @@ TEST_CASE(
         feature_type_type,
         id_type_type,
         adjacency_row_index_type_type>(ctx, index_uri, temporal_policy);
-    CHECK(typed_index.group().get_dimension() == dimensions);
+    CHECK(typed_index.group().get_dimensions() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
     CHECK(typed_index.group().get_history_index() == 0);
 
@@ -840,7 +840,7 @@ TEST_CASE(
         feature_type_type,
         id_type_type,
         adjacency_row_index_type_type>(ctx, index_uri, temporal_policy);
-    CHECK(typed_index.group().get_dimension() == dimensions);
+    CHECK(typed_index.group().get_dimensions() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
     CHECK(typed_index.group().get_history_index() == 0);
 

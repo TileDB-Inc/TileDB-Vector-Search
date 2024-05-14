@@ -96,8 +96,8 @@ class IndexVamana {
       for (auto&& c : *config) {
         auto key = c.first;
         auto value = c.second;
-        if (key == "dimension") {
-          dimension_ = std::stol(value);
+        if (key == "dimensions") {
+          dimensions_ = std::stol(value);
         } else if (key == "l_build") {
           l_build_ = std::stol(value);
         } else if (key == "r_max_degree") {
@@ -145,12 +145,12 @@ class IndexVamana {
     }
     index_ = uri_dispatch_table.at(type)(ctx, group_uri, temporal_policy);
 
-    if (dimension_ != 0 && dimension_ != index_->dimension()) {
+    if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
-          "Dimension mismatch: " + std::to_string(dimension_) +
-          " != " + std::to_string(index_->dimension()));
+          "Dimensions mismatch: " + std::to_string(dimensions_) +
+          " != " + std::to_string(index_->dimensions()));
     }
-    dimension_ = index_->dimension();
+    dimensions_ = index_->dimensions();
   }
 
   /**
@@ -186,12 +186,12 @@ class IndexVamana {
 
     index_->train(training_set);
 
-    if (dimension_ != 0 && dimension_ != index_->dimension()) {
+    if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
-          "Dimension mismatch: " + std::to_string(dimension_) +
-          " != " + std::to_string(index_->dimension()));
+          "Dimension mismatch: " + std::to_string(dimensions_) +
+          " != " + std::to_string(index_->dimensions()));
     }
-    dimension_ = index_->dimension();
+    dimensions_ = index_->dimensions();
   }
 
   /**
@@ -265,8 +265,8 @@ class IndexVamana {
     return index_->temporal_policy();
   }
 
-  constexpr auto dimension() const {
-    return dimension_;
+  constexpr auto dimensions() const {
+    return dimensions_;
   }
 
   constexpr auto feature_type() const {
@@ -349,7 +349,7 @@ class IndexVamana {
         std::optional<size_t> timestamp,
         const std::string& storage_version) = 0;
 
-    [[nodiscard]] virtual size_t dimension() const = 0;
+    [[nodiscard]] virtual size_t dimensions() const = 0;
     [[nodiscard]] virtual TemporalPolicy temporal_policy() const = 0;
   };
 
@@ -472,8 +472,8 @@ class IndexVamana {
       impl_index_.write_index(ctx, group_uri, timestamp, storage_version);
     }
 
-    size_t dimension() const override {
-      return ::dimension(impl_index_);
+    size_t dimensions() const override {
+      return ::dimensions(impl_index_);
     }
 
     TemporalPolicy temporal_policy() const override {
@@ -501,7 +501,7 @@ class IndexVamana {
   static const clear_history_table_type clear_history_dispatch_table;
   // clang-format on
 
-  size_t dimension_ = 0;
+  size_t dimensions_ = 0;
   size_t l_build_ = 100;
   size_t r_max_degree_ = 64;
   size_t b_backtrack_ = 0;

@@ -110,7 +110,7 @@ TEST_CASE("concepts_vs: Vector", "[concepts_vs]") {
 
 template <dimensionable D>
 auto _dimensionable(const D& d) {
-  return dimension(d);
+  return dimensions(d);
 }
 
 auto test_dimensionable(const Matrix<int>& d) {

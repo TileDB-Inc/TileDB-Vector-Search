@@ -128,7 +128,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
 
   auto f = read_diskann_data(diskann_test_data_file);
   CHECK(num_vectors(f) == 256);
-  CHECK(dimension(f) == 128);
+  CHECK(dimensions(f) == 128);
   CHECK(f.data() != nullptr);
   CHECK(!std::equal(
       f.data(), f.data() + 256 * 128, std::vector<float>(128 * 256, 0).data()));
@@ -142,7 +142,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
     CHECK(n != 0);
     CHECK(n == 256);
     CHECK(f[0].size() == 128);
-    CHECK(dimension(f) == 128);
+    CHECK(dimensions(f) == 128);
 
     auto centroid = Vector<float>(f[0].size());
     std::fill(begin(centroid), end(centroid), 0.0);
@@ -1071,7 +1071,7 @@ TEST_CASE("vamana: vamana by hand random index", "[vamana]") {
   auto g = ::detail::graph::init_random_adj_list<float, uint32_t>(
       training_set_, r_max_degree_);
 
-  auto dimension_ = ::dimension(training_set_);
+  auto dimensions_ = ::dimensions(training_set_);
   auto num_vectors_ = ::num_vectors(training_set_);
   auto graph_ = ::detail::graph::
       init_random_nn_graph<siftsmall_feature_type, siftsmall_ids_type>(
@@ -1158,12 +1158,12 @@ TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
   auto&& [scores, top_k] = idx.query(query, k_nn);
   CHECK(top_k[0] == 17 + ids_start);
 
-  auto query_mat = ColMajorMatrix<float>(dimension(training_set), 7);
+  auto query_mat = ColMajorMatrix<float>(dimensions(training_set), 7);
   size_t counter{0};
   for (size_t i : {17, 19, 23, 37, 49, 50, 195}) {
     std::copy(
         training_set[i].data(),
-        training_set[i].data() + dimension(training_set),
+        training_set[i].data() + dimensions(training_set),
         query_mat[counter++].data());
   }
 
@@ -1261,7 +1261,7 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
     CHECK(idx2.group().get_l_build() == l_build);
     CHECK(idx2.group().get_r_max_degree() == r_max_degree);
     CHECK(idx2.group().get_b_backtrack() == b_backtrack);
-    CHECK(idx2.group().get_dimension() == sift_dimension);
+    CHECK(idx2.group().get_dimensions() == sift_dimension);
     CHECK(idx2.group().get_temp_size() == 0);
 
     CHECK(idx2.group().get_all_num_edges().size() == 1);
@@ -1293,7 +1293,7 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
     CHECK(idx2.group().get_l_build() == l_build);
     CHECK(idx2.group().get_r_max_degree() == r_max_degree);
     CHECK(idx2.group().get_b_backtrack() == b_backtrack);
-    CHECK(idx2.group().get_dimension() == sift_dimension);
+    CHECK(idx2.group().get_dimensions() == sift_dimension);
     CHECK(idx2.group().get_temp_size() == 0);
 
     CHECK(idx2.group().get_all_num_edges().size() == 1);

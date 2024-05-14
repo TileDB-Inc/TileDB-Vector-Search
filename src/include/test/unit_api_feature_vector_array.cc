@@ -57,22 +57,22 @@ TEST_CASE("api: feature vector array open", "[api]") {
 
   auto a = FeatureVectorArray(ctx, sift_inputs_uri);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimension(a) == 128);
+  CHECK(dimensions(a) == 128);
   CHECK(num_vectors(a) == num_sift_vectors);
 
   auto b = FeatureVectorArray(ctx, bigann1M_inputs_uri);
   CHECK(b.feature_type() == TILEDB_UINT8);
-  CHECK(dimension(b) == 128);
+  CHECK(dimensions(b) == 128);
   CHECK(num_vectors(b) == num_bigann1M_vectors);
 
   auto c = FeatureVectorArray(ctx, fmnist_inputs_uri);
   CHECK(c.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimension(c) == 784);
+  CHECK(dimensions(c) == 784);
   CHECK(num_vectors(c) == num_fmnist_vectors);
 
   auto d = FeatureVectorArray(ctx, sift_inputs_uri);
   CHECK(d.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimension(d) == 128);
+  CHECK(dimensions(d) == 128);
   CHECK(num_vectors(d) == num_sift_vectors);
 }
 
@@ -207,9 +207,9 @@ TEST_CASE("api: query checks", "[api][index]") {
 
   SECTION("simple check") {
     auto z = FeatureVectorArray(ctx, sift_inputs_uri);
-    auto nn = dimension(z);
+    auto nn = dimensions(z);
     auto nnn = num_vectors(z);
-    CHECK(dimension(z) == 128);
+    CHECK(dimensions(z) == 128);
     CHECK(num_vectors(z) == num_sift_vectors);
   }
 
@@ -241,12 +241,12 @@ TEST_CASE("api: feature vector array with IDs open", "[api]") {
 
   auto a = FeatureVectorArray(ctx, sift_inputs_uri, sift_ids_uri);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimension(a) == 128);
+  CHECK(dimensions(a) == 128);
   CHECK(num_vectors(a) == num_sift_vectors);
 
   auto b = FeatureVectorArray(ctx, bigann1M_inputs_uri, bigann1M_ids_uri);
   CHECK(b.feature_type() == TILEDB_UINT8);
-  CHECK(dimension(b) == 128);
+  CHECK(dimensions(b) == 128);
   CHECK(num_vectors(b) == num_bigann1M_vectors);
 }
 
@@ -263,8 +263,8 @@ TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
     std::iota(a.ids(), a.ids() + a.num_ids(), 0);
     auto b = FeatureVectorArray(a);
 
-    CHECK(b.dimension() == rows);
-    CHECK(dimension(b) == rows);
+    CHECK(b.dimensions() == rows);
+    CHECK(dimensions(b) == rows);
     CHECK(b.num_vectors() == cols);
     CHECK(num_vectors(b) == cols);
     CHECK(b.num_ids() == cols);
@@ -310,8 +310,8 @@ TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
     CHECK(a.data() == nullptr);
     CHECK(a.ids() == nullptr);
 
-    CHECK(b.dimension() == rows);
-    CHECK(dimension(b) == rows);
+    CHECK(b.dimensions() == rows);
+    CHECK(dimensions(b) == rows);
     CHECK(b.num_vectors() == cols);
     CHECK(num_vectors(b) == cols);
     CHECK(b.num_ids() == cols);
@@ -497,10 +497,10 @@ TEST_CASE("api: query checks with IDs", "[api][index]") {
 
   SECTION("simple check") {
     auto z = FeatureVectorArray(ctx, sift_inputs_uri, sift_ids_uri);
-    auto nn = dimension(z);
+    auto nn = dimensions(z);
     auto nnn = num_vectors(z);
-    CHECK(dimension(z) == 128);
-    CHECK(z.dimension() == 128);
+    CHECK(dimensions(z) == 128);
+    CHECK(z.dimensions() == 128);
     CHECK(num_vectors(z) == num_sift_vectors);
     CHECK(z.num_vectors() == num_sift_vectors);
     CHECK(num_ids(z) == num_sift_vectors);
@@ -693,7 +693,7 @@ TEST_CASE("api: temporal_policy", "[api]") {
     CHECK(extents(feature_vector_array)[1] == 0);
     CHECK(feature_vector_array.num_vectors() == 0);
     CHECK(feature_vector_array.num_ids() == 0);
-    CHECK(feature_vector_array.dimension() == 0);
+    CHECK(feature_vector_array.dimensions() == 0);
     auto data = MatrixView<FeatureType, stdx::layout_left>{
         (FeatureType*)feature_vector_array.data(),
         extents(feature_vector_array)[0],

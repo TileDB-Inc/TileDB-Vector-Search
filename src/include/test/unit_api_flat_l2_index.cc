@@ -54,27 +54,27 @@ TEST_CASE(
 
   auto a = IndexFlatL2(ctx, sift_inputs_uri);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimension(a) == sift_dimension);
+  CHECK(dimensions(a) == sift_dimension);
   CHECK(num_vectors(a) == num_sift_vectors);
 
   auto b = IndexFlatL2(ctx, bigann1M_inputs_uri);
   CHECK(b.feature_type() == TILEDB_UINT8);
-  CHECK(dimension(b) == bigann1M_dimension);
+  CHECK(dimensions(b) == bigann1M_dimension);
   CHECK(num_vectors(b) == num_bigann1M_vectors);
 
   auto c = IndexFlatL2(ctx, fmnist_inputs_uri);
   CHECK(c.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimension(c) == fmnist_dimension);
+  CHECK(dimensions(c) == fmnist_dimension);
   CHECK(num_vectors(c) == num_fmnist_vectors);
 
   auto d = IndexFlatL2(ctx, sift_inputs_uri);
   CHECK(d.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimension(d) == sift_dimension);
+  CHECK(dimensions(d) == sift_dimension);
   CHECK(num_vectors(d) == num_sift_vectors);
 
   auto e = IndexFlatL2(ctx, siftsmall_inputs_uri);
   CHECK(d.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimension(d) == siftsmall_dimension);
+  CHECK(dimensions(d) == siftsmall_dimension);
   CHECK(num_vectors(d) == num_siftsmall_vectors);
 }
 
@@ -83,27 +83,27 @@ TEST_CASE(
   tiledb::Context ctx;
   auto a = IndexFlatL2(ctx, sift_inputs_uri);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimension(a) == sift_dimension);
+  CHECK(dimensions(a) == sift_dimension);
   CHECK(num_vectors(a) == num_sift_vectors);
 
   auto b = IndexFlatL2(ctx, bigann1M_inputs_uri);
   CHECK(b.feature_type() == TILEDB_UINT8);
-  CHECK(dimension(b) == bigann1M_dimension);
+  CHECK(dimensions(b) == bigann1M_dimension);
   CHECK(num_vectors(b) == num_bigann1M_vectors);
 
   auto c = IndexFlatL2(ctx, fmnist_inputs_uri);
   CHECK(c.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimension(c) == fmnist_dimension);
+  CHECK(dimensions(c) == fmnist_dimension);
   CHECK(num_vectors(c) == num_fmnist_vectors);
 
   auto d = IndexFlatL2(ctx, sift_inputs_uri);
   CHECK(d.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimension(d) == sift_dimension);
+  CHECK(dimensions(d) == sift_dimension);
   CHECK(num_vectors(d) == num_sift_vectors);
 
   auto e = IndexFlatL2(ctx, siftsmall_inputs_uri);
   CHECK(e.feature_type() == TILEDB_FLOAT32);
-  CHECK(dimension(e) == siftsmall_dimension);
+  CHECK(dimensions(e) == siftsmall_dimension);
   CHECK(num_vectors(e) == num_siftsmall_vectors);
 }
 
@@ -151,7 +151,7 @@ TEST_CASE("api: queries", "[api][flat_l2_index]") {
       auto a = IndexFlatL2(ctx, uri);
 
       CHECK(a.feature_type() == dtype);
-      CHECK(dimension(a) == dim);
+      CHECK(dimensions(a) == dim);
       CHECK(num_vectors(a) == numv);
 
       auto aq = QueryVectorArray(ctx, q_uri, "", num_queries);
@@ -159,9 +159,9 @@ TEST_CASE("api: queries", "[api][flat_l2_index]") {
 
       auto [aq_scores, aq_top_k] = a.query(aq, k_nn);
       CHECK(num_vectors(aq_top_k) == num_queries);
-      CHECK(dimension(aq_top_k) == k_nn);
+      CHECK(dimensions(aq_top_k) == k_nn);
       CHECK(num_vectors(aq_scores) == num_queries);
-      CHECK(dimension(aq_scores) == k_nn);
+      CHECK(dimensions(aq_scores) == k_nn);
 
       auto hk = tdbColMajorMatrix<test_groundtruth_type>(ctx, gt_uri);
       load(hk);

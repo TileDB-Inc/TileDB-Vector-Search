@@ -437,7 +437,7 @@ class vamana_index {
    ****************************************************************************/
 
   // Cached information about the index
-  uint64_t dimension_{0};
+  uint64_t dimensions_{0};
   uint64_t num_vectors_{0};
   uint64_t num_edges_{0};
 
@@ -514,7 +514,7 @@ class vamana_index {
     }
 
     // @todo Make this table-driven
-    dimension_ = group_->get_dimension();
+    dimensions_ = group_->get_dimensions();
     num_vectors_ = group_->get_base_size();
     num_edges_ = group_->get_num_edges();
     l_build_ = group_->get_l_build();
@@ -529,7 +529,7 @@ class vamana_index {
             group_->cached_ctx(),
             group_->feature_vectors_uri(),
             group_->ids_uri(),
-            dimension_,
+            dimensions_,
             num_vectors_,
             0,
             temporal_policy_));
@@ -614,18 +614,18 @@ class vamana_index {
       const Vector& training_set_ids,
       Distance distance = Distance{}) {
     feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
-        ::dimension(training_set), ::num_vectors(training_set)));
+        ::dimensions(training_set), ::num_vectors(training_set)));
     std::copy(
         training_set.data(),
         training_set.data() +
-            ::dimension(training_set) * ::num_vectors(training_set),
+            ::dimensions(training_set) * ::num_vectors(training_set),
         feature_vectors_.data());
     std::copy(
         training_set_ids.begin(),
         training_set_ids.end(),
         feature_vectors_.ids());
 
-    dimension_ = ::dimension(feature_vectors_);
+    dimensions_ = ::dimensions(feature_vectors_);
     num_vectors_ = ::num_vectors(feature_vectors_);
     // graph_ = ::detail::graph::init_random_adj_list<feature_type, id_type>(
     //     feature_vectors_, r_max_degree_);
@@ -824,8 +824,8 @@ class vamana_index {
   auto update() {
   }
 
-  constexpr auto dimension() const {
-    return dimension_;
+  constexpr auto dimensions() const {
+    return dimensions_;
   }
 
   constexpr auto ntotal() const {
@@ -865,10 +865,10 @@ class vamana_index {
         TILEDB_WRITE,
         temporal_policy_,
         storage_version,
-        dimension_);
+        dimensions_);
 
     // @todo Make this table-driven
-    write_group.set_dimension(dimension_);
+    write_group.set_dimensions(dimensions_);
     write_group.set_l_build(l_build_);
     write_group.set_r_max_degree(r_max_degree_);
     write_group.set_b_backtrack(b_backtrack_);
@@ -977,7 +977,7 @@ class vamana_index {
    * @brief Log statistics about the index
    */
   void log_index() {
-    _count_data.insert_entry("dimension", dimension_);
+    _count_data.insert_entry("dimensions", dimensions_);
     _count_data.insert_entry("num_vectors", num_vectors_);
     _count_data.insert_entry("l_build", l_build_);
     _count_data.insert_entry("r_max_degree", r_max_degree_);
@@ -1019,9 +1019,9 @@ class vamana_index {
   }
 
   bool compare_cached_metadata(const vamana_index& rhs) const {
-    if (dimension_ != rhs.dimension_) {
-      std::cout << "dimension_ != rhs.dimension_" << dimension_
-                << " ! = " << rhs.dimension_ << std::endl;
+    if (dimensions_ != rhs.dimensions_) {
+      std::cout << "dimensions_ != rhs.dimensions_" << dimensions_
+                << " ! = " << rhs.dimensions_ << std::endl;
       return false;
     }
     if (num_vectors_ != rhs.num_vectors_) {
@@ -1142,7 +1142,7 @@ class vamana_index {
    */
   bool compare_feature_vectors(const vamana_index& rhs) {
     for (size_t i = 0; i < ::num_vectors(feature_vectors_); ++i) {
-      for (size_t j = 0; j < ::dimension(feature_vectors_); ++j) {
+      for (size_t j = 0; j < ::dimensions(feature_vectors_); ++j) {
         auto lhs_val = feature_vectors_(j, i);
         auto rhs_val = rhs.feature_vectors_(j, i);
         if (lhs_val != rhs_val) {
@@ -1155,7 +1155,7 @@ class vamana_index {
     return std::equal(
         feature_vectors_.data(),
         feature_vectors_.data() +
-            ::dimension(feature_vectors_) * ::num_vectors(feature_vectors_),
+            ::dimensions(feature_vectors_) * ::num_vectors(feature_vectors_),
         rhs.feature_vectors_.data());
   }
 

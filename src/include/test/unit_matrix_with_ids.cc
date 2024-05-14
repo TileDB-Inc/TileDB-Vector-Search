@@ -73,7 +73,7 @@ TEMPLATE_TEST_CASE(
       std::move(vectors), std::move(ids), rows, cols};
   CHECK(matrix.num_rows() == rows);
   CHECK(matrix.num_cols() == cols);
-  CHECK(dimension(matrix) == expectedDimension);
+  CHECK(dimensions(matrix) == expectedDimension);
   CHECK(num_vectors(matrix) == expectedNumVectors);
   CHECK(size(matrix.raveled_ids()) == expectedNumVectors);
   CHECK(matrix.num_ids() == expectedNumVectors);
@@ -90,7 +90,7 @@ TEMPLATE_TEST_CASE(
       MatrixWithIds<TestType, TestType, stdx::layout_right, size_t>{2, 5};
   CHECK(row_matrix.num_rows() == 2);
   CHECK(row_matrix.num_cols() == 5);
-  CHECK(dimension(row_matrix) == 5);
+  CHECK(dimensions(row_matrix) == 5);
   CHECK(num_vectors(row_matrix) == 2);
   CHECK(row_matrix.num_ids() == 2);
   CHECK(size(row_matrix.raveled_ids()) == 2);
@@ -99,7 +99,7 @@ TEMPLATE_TEST_CASE(
       MatrixWithIds<TestType, TestType, stdx::layout_left, size_t>{2, 5};
   CHECK(col_matrix.num_rows() == 2);
   CHECK(col_matrix.num_cols() == 5);
-  CHECK(dimension(col_matrix) == 2);
+  CHECK(dimensions(col_matrix) == 2);
   CHECK(num_vectors(col_matrix) == 5);
   CHECK(col_matrix.num_ids() == 5);
   CHECK(size(col_matrix.raveled_ids()) == 5);
@@ -339,7 +339,7 @@ TEMPLATE_TEST_CASE(
   CHECK(c.num_rows() == major);
   CHECK(c.num_cols() == minor);
   CHECK(num_vectors(c) == major);
-  CHECK(dimension(c) == minor);
+  CHECK(dimensions(c) == minor);
   CHECK(typeid(decltype(c.ids()[2])) == typeid(TestType));
 
   CHECK(std::equal(c.ids(), c.ids() + c.num_ids(), ids.begin()));
@@ -355,7 +355,7 @@ TEMPLATE_TEST_CASE(
       1);  // j + extents(1) * i => j + minor * i => j + num_cols * i
   CHECK(mc(1, 0) == 13);  // 0 + 1 * 13
   CHECK(num_vectors(mc) == major);
-  CHECK(dimension(mc) == minor);
+  CHECK(dimensions(mc) == minor);
 
   auto x = c[1];
   CHECK(x[0] == 13);  // == mc(i, 0)  = data() + i * minor
@@ -370,7 +370,7 @@ TEMPLATE_TEST_CASE(
   CHECK(cv.num_rows() == major);
   CHECK(cv.num_cols() == minor);
   CHECK(num_vectors(cv) == major);
-  CHECK(dimension(cv) == minor);
+  CHECK(dimensions(cv) == minor);
 
   auto fv = MatrixView(mc);
   auto fz = fv[1];
@@ -379,7 +379,7 @@ TEMPLATE_TEST_CASE(
   CHECK(fv.num_rows() == major);
   CHECK(fv.num_cols() == minor);
   CHECK(num_vectors(cv) == major);
-  CHECK(dimension(cv) == minor);
+  CHECK(dimensions(cv) == minor);
 
   ids = std::vector<TestType>(minor);
   std::iota(ids.begin(), ids.end(), 0);
@@ -395,7 +395,7 @@ TEMPLATE_TEST_CASE(
   CHECK(d.num_rows() == major);
   CHECK(d.num_cols() == minor);
   CHECK(num_vectors(cv) == major);
-  CHECK(dimension(cv) == minor);
+  CHECK(dimensions(cv) == minor);
   CHECK(typeid(decltype(d.ids()[5])) == typeid(TestType));
 
   CHECK(std::equal(d.ids(), d.ids() + d.num_ids(), ids.begin()));
@@ -415,7 +415,7 @@ TEMPLATE_TEST_CASE(
   CHECK(d.num_cols() == minor);
   CHECK(d.num_ids() == minor);
   CHECK(num_vectors(cv) == major);
-  CHECK(dimension(cv) == minor);
+  CHECK(dimensions(cv) == minor);
 
   auto y = d[1];
   CHECK(y[0] == 7);  // == md(0, i)  = data() + i * major
