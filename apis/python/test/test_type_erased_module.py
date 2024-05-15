@@ -66,7 +66,7 @@ def test_construct_FeatureVectorArray_with_ids():
     assert a.num_vectors() == 10000
     assert a.ids_type_string() == "uint64"
     assert a.num_ids() == 10000
-    assert a.dimension() == 128
+    assert a.dimensions() == 128
 
 
 def test_feature_vector_array_to_numpy():

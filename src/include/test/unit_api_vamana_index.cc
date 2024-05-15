@@ -765,7 +765,7 @@ TEST_CASE(
         feature_type_type,
         id_type_type,
         adjacency_row_index_type_type>(ctx, index_uri, temporal_policy);
-    CHECK(typed_index.group().get_dimension() == dimensions);
+    CHECK(typed_index.group().get_dimensions() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
     CHECK(typed_index.group().get_history_index() == 0);
 
