@@ -60,6 +60,15 @@ def test_construct_FeatureVectorArray():
     assert a.dimensions() == 784
 
 
+def test_construct_FeatureVectorArray_with_ids():
+    a = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri, siftsmall_ids_uri)
+    assert a.feature_type_string() == "float32"
+    assert a.num_vectors() == 10000
+    assert a.ids_type_string() == "uint64"
+    assert a.num_ids() == 10000
+    assert a.dimension() == 128
+
+
 def test_feature_vector_array_to_numpy():
     a = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
     assert a.num_vectors() == 10000
@@ -166,6 +175,14 @@ def test_TemporalPolicy():
     assert temporal_policy.timestamp_start() == 12
     assert temporal_policy.timestamp_end() == 99
 
+    temporal_policy = vspy.TemporalPolicy(None, 99)
+    assert temporal_policy.timestamp_start() == 0
+    assert temporal_policy.timestamp_end() == 99
+
+    temporal_policy = vspy.TemporalPolicy(1, None)
+    assert temporal_policy.timestamp_start() == 1
+    assert temporal_policy.timestamp_end() == np.iinfo(np.uint64).max
+
 
 def test_TemporalPolicy_from_timestamp():
     temporal_policy = to_temporal_policy(None)
@@ -211,12 +228,18 @@ def test_query_IndexFlatL2():
     gt = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
     assert a.feature_type_string() == "float32"
     assert a.dimensions() == 128
-    assert q.feature_type_string() == "float32"
+
     assert q.dimensions() == 128
+    assert q.feature_type_string() == "float32"
     assert q.num_vectors() == num_queries
-    assert gt.feature_type_string() == "uint64"
+    assert q.ids_type_string() == "any"
+    assert q.num_ids() == 0
+
     assert gt.dimensions() == 100
+    assert gt.feature_type_string() == "uint64"
     assert gt.num_vectors() == num_queries
+    assert q.ids_type_string() == "any"
+    assert q.num_ids() == 0
 
     aq_scores, aq_top_k = a.query(q, k_nn)
     assert aq_top_k.dimensions() == k_nn
@@ -225,6 +248,10 @@ def test_query_IndexFlatL2():
     assert aq_scores.feature_type_string() == "float32"
     assert aq_top_k.num_vectors() == num_queries
     assert aq_scores.num_vectors() == num_queries
+    assert aq_top_k.ids_type_string() == "any"
+    assert aq_scores.ids_type_string() == "any"
+    assert aq_top_k.num_ids() == 0
+    assert aq_scores.num_ids() == 0
 
     logging.info(type(aq_top_k))
 

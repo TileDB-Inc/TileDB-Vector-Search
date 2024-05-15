@@ -148,32 +148,22 @@ class vamana_index_metadata
     num_edges_history_str_ = to_string(nlohmann::json(num_edges_history_));
   }
 
-  auto dump_json_impl() {
-    if (!empty(adjacency_scores_type_str_)) {
-      if (adjacency_scores_datatype_ == TILEDB_ANY) {
-        adjacency_scores_datatype_ =
-            string_to_datatype(adjacency_scores_type_str_);
-      } else if (
-          adjacency_scores_datatype_ !=
-          string_to_datatype(adjacency_scores_type_str_)) {
-        throw std::runtime_error(
-            "adjacency_scores_datatype metadata disagree, must be " +
-            adjacency_scores_type_str_ + " not " +
-            tiledb::impl::type_to_str(adjacency_scores_datatype_));
-      }
+  auto dump_json_impl() const {
+    if (!empty(adjacency_scores_type_str_) &&
+        adjacency_scores_datatype_ !=
+            string_to_datatype(adjacency_scores_type_str_)) {
+      throw std::runtime_error(
+          "adjacency_scores_datatype metadata disagree, must be " +
+          adjacency_scores_type_str_ + " not " +
+          tiledb::impl::type_to_str(adjacency_scores_datatype_));
     }
-    if (!empty(adjacency_row_index_type_str_)) {
-      if (adjacency_row_index_datatype_ == TILEDB_ANY) {
-        adjacency_row_index_datatype_ =
-            string_to_datatype(adjacency_row_index_type_str_);
-      } else if (
-          adjacency_row_index_datatype_ !=
-          string_to_datatype(adjacency_row_index_type_str_)) {
-        throw std::runtime_error(
-            "adjacency_row_index_datatype metadata disagree, must be " +
-            adjacency_row_index_type_str_ + " not " +
-            tiledb::impl::type_to_str(adjacency_row_index_datatype_));
-      }
+    if (!empty(adjacency_row_index_type_str_) &&
+        adjacency_row_index_datatype_ !=
+            string_to_datatype(adjacency_row_index_type_str_)) {
+      throw std::runtime_error(
+          "adjacency_row_index_datatype metadata disagree, must be " +
+          adjacency_row_index_type_str_ + " not " +
+          tiledb::impl::type_to_str(adjacency_row_index_datatype_));
     }
   }
 };

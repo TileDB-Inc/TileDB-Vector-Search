@@ -84,7 +84,8 @@ class FeatureVectorArray {
       const std::string& uri,
       const std::string& ids_uri = "",
       size_t num_vectors = 0,
-      TemporalPolicy temporal_policy = {}) {
+      std::optional<TemporalPolicy> temporal_policy_input = std::nullopt) {
+    auto temporal_policy = temporal_policy_input.value_or(TemporalPolicy{});
     auto array = tiledb_helpers::open_array(
         tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
     feature_type_ = get_array_datatype(*array);
