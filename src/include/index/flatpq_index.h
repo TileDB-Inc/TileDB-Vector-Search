@@ -713,7 +713,7 @@ class flatpq_index {
       total_distance += distance;
       total_normalizer += l2_distance(feature_vectors[i]);
     }
-    // debug_slice(debug_vectors, "verify pq encoding re");
+    // debug_matrix(debug_vectors, "verify pq encoding re");
 
     // Return the total accumulated distance between the encoded and original
     // vectors, divided by the total weight of the original feature vectors

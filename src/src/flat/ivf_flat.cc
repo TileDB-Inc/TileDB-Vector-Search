@@ -413,11 +413,11 @@ int main(int argc, char* argv[]) {
         std::cout << std::endl;
 
         debug_matrix(groundtruth, "groundtruth");
-        debug_slice(groundtruth, "groundtruth");
+        debug_matrix(groundtruth, "groundtruth");
 
         std::cout << std::endl;
         debug_matrix(top_k, "top_k");
-        debug_slice(top_k, "top_k");
+        debug_matrix(top_k, "top_k");
 
         std::cout << std::endl;
       }

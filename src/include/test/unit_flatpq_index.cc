@@ -306,8 +306,8 @@ TEST_CASE("normalize matrix", "[flatpq_index]") {
   auto normalized = normalize_matrix(hypercube);
 
   if (debug) {
-    debug_slice(hypercube);
-    debug_slice(normalized);
+    debug_matrix(hypercube);
+    debug_matrix(normalized);
   }
 }
 

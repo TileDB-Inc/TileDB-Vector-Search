@@ -349,29 +349,6 @@ constexpr bool is_col_oriented(const Matrix& A) {
 
 /**********************************************************************
  *
- * Some debugging utilities.
- *
- * *********************************************************************/
-
-/**
- * Print information about a Matrix.
- * @param A
- */
-template <class Matrix>
-std::string matrix_info(const Matrix& A, const std::string& msg = "") {
-  std::string str = "# " + msg;
-  if (!msg.empty()) {
-    str += ": ";
-  }
-  str += "Shape: ( " + std::to_string(::dimension(A)) + ", " +
-         std::to_string(::num_vectors(A)) + " )";
-  str += std::string(" Layout: ") +
-         (is_row_oriented(A) ? "row major" : "column major");
-  return str;
-}
-
-/**********************************************************************
- *
  * Submatrix view.
  *
  **********************************************************************/
@@ -459,73 +436,32 @@ constexpr auto SubMatrix(
  *
  **********************************************************************/
 
-/**
- * Print information about a std::vector -- overload.
- * @param A
- */
-template <class T>
-std::string matrix_info(const std::vector<T>& A, const std::string& msg = "") {
-  std::string str = "# " + msg;
-  if (!msg.empty()) {
-    str += ": ";
-  }
-  str += "Shape: (" + std::to_string(A.size()) + " )";
-  return str;
-}
-
-/**
- * Print information about a std::span -- overload.
- * @param A
- */
-template <class T>
-std::string matrix_info(const std::span<T>& A, const std::string& msg = "") {
-  std::string str = "# " + msg;
-  if (!msg.empty()) {
-    str += ": ";
-  }
-  str += "Shape: (" + std::to_string(A.size()) + " )";
-  return str;
-}
-
-static bool matrix_printf = true;
-
+// TODO(paris): This only works on col-major matrices, fix for row-major.
 template <class Matrix>
-void debug_matrix(const Matrix& A, const std::string& msg = "") {
-  if (matrix_printf) {
-    std::cout << matrix_info(A, msg) << std::endl;
-  }
-}
-
-template <feature_vector_array M>
-void debug_slice(
-    const M& A,
-    const std::string& msg = "",
-    size_t rows = 6,
-    size_t cols = 18) {
+void debug_matrix(const Matrix& matrix, const std::string& msg = "") {
   auto max_size = 10;
-  auto rowsEnd = std::min(dimension(A), static_cast<size_t>(max_size));
-  auto colsEnd = std::min(num_vectors(A), static_cast<size_t>(max_size));
+  auto rowsEnd = std::min(dimension(matrix), static_cast<size_t>(max_size));
+  auto colsEnd = std::min(num_vectors(matrix), static_cast<size_t>(max_size));
 
-  std::cout << "# " << msg << " (" << dimension(A) << " rows x "
-            << num_vectors(A) << " cols)" << std::endl;
+  std::cout << "# " << msg << " (" << dimension(matrix) << " rows x "
+            << num_vectors(matrix) << " cols) ("
+            << (is_row_oriented(matrix) ? "row major" : "column major")
+            << ", so " << _cpo::num_vectors(matrix) << " vectors with "
+            << _cpo::dimension(matrix) << " dimensions each)" << std::endl;
+
   for (size_t i = 0; i < rowsEnd; ++i) {
     std::cout << "# ";
     for (size_t j = 0; j < colsEnd; ++j) {
-      std::cout << (float)A(i, j) << " ";
+      std::cout << (float)matrix(i, j) << " ";
     }
-    if (A.num_cols() > max_size) {
+    if (num_vectors(matrix) > max_size) {
       std::cout << "...";
     }
     std::cout << std::endl;
   }
-  if (A.num_rows() > max_size) {
+  if (dimension(matrix) > max_size) {
     std::cout << "# ..." << std::endl;
   }
-}
-
-template <feature_vector_array M>
-void debug(const M& A, const std::string& msg = "") {
-  debug_slice(A, msg, dimension(A), num_vectors(A));
 }
 
 template <class Matrix1, class Matrix2>
@@ -535,26 +471,24 @@ void debug_slices_diff(
     const std::string& msg = "",
     size_t rows = 5,
     size_t cols = 15) {
-  if (matrix_printf) {
-    rows = std::min(rows, A.num_rows());
-    cols = std::min(cols, A.num_cols());
+  rows = std::min(rows, A.num_rows());
+  cols = std::min(cols, A.num_cols());
 
-    std::cout << "# " << msg << std::endl;
-    for (size_t i = 0; i < A.num_rows(); ++i) {
-      for (size_t j = 0; j < A.num_cols(); ++j) {
-        if (A(i, j) != B(i, j)) {
-          std::cout << "A(" << i << ", " << j << ") = " << A(i, j) << " != "
-                    << "B(" << i << ", " << j << ") = " << B(i, j) << std::endl;
-          if (--cols == 0) {
-            break;
-          }
+  std::cout << "# " << msg << std::endl;
+  for (size_t i = 0; i < A.num_rows(); ++i) {
+    for (size_t j = 0; j < A.num_cols(); ++j) {
+      if (A(i, j) != B(i, j)) {
+        std::cout << "A(" << i << ", " << j << ") = " << A(i, j) << " != "
+                  << "B(" << i << ", " << j << ") = " << B(i, j) << std::endl;
+        if (--cols == 0) {
+          break;
         }
       }
-      if (--rows == 0) {
-        break;
-      }
-      cols = std::min(cols, A.num_cols());
     }
+    if (--rows == 0) {
+      break;
+    }
+    cols = std::min(cols, A.num_cols());
   }
 }
 
