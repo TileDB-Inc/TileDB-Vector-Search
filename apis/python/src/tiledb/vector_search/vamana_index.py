@@ -36,11 +36,6 @@ class VamanaIndex(index.Index):
     ):
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
-        # TODO(paris): Support (start, end) timestamps and remove.
-        # type_erased_timestamp = timestamp
-        # if isinstance(timestamp, tuple):
-        #     type_erased_timestamp = timestamp[1]
-        # type_erased_timestamp = type_erased_timestamp if type_erased_timestamp else 0
         self.index = vspy.IndexVamana(self.ctx, uri, to_temporal_policy(timestamp))
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
