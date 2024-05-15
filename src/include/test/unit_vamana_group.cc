@@ -76,7 +76,7 @@ TEST_CASE("vamana_group: write constructor - create", "[vamana_group]") {
 
   vamana_index_group x =
       vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-  CHECK(x.get_dimension() == 10);
+  CHECK(x.get_dimensions() == 10);
 }
 
 TEST_CASE(
@@ -93,11 +93,11 @@ TEST_CASE(
 
   vamana_index_group x =
       vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-  CHECK(x.get_dimension() == 10);
+  CHECK(x.get_dimensions() == 10);
 
   vamana_index_group y =
       vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-  CHECK(x.get_dimension() == 10);
+  CHECK(x.get_dimensions() == 10);
 }
 
 TEST_CASE(
@@ -115,7 +115,7 @@ TEST_CASE(
   {
     vamana_index_group x =
         vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-    CHECK(x.get_dimension() == 10);
+    CHECK(x.get_dimensions() == 10);
     x.append_num_edges(0);
     x.append_base_size(0);
     x.append_ingestion_timestamp(0);
@@ -147,7 +147,7 @@ TEST_CASE(
   {
     vamana_index_group x =
         vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-    CHECK(x.get_dimension() == 10);
+    CHECK(x.get_dimensions() == 10);
     // We throw b/c the vamana_index_group hasn't actually been written (the
     // write happens in the destructor).
     CHECK_THROWS_WITH(
@@ -186,7 +186,7 @@ TEST_CASE(
   {
     vamana_index_group x =
         vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-    CHECK(x.get_dimension() == 10);
+    CHECK(x.get_dimensions() == 10);
     x.append_num_edges(0);
     x.append_base_size(0);
     x.append_ingestion_timestamp(0);
@@ -194,7 +194,7 @@ TEST_CASE(
 
   vamana_index_group x =
       vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-  CHECK(x.get_dimension() == 10);
+  CHECK(x.get_dimensions() == 10);
 
   SECTION("Just set") {
     SECTION("After create") {
@@ -207,13 +207,13 @@ TEST_CASE(
     SECTION("After create and write") {
       x = vamana_index_group<dummy_index>(
           ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimension() == 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     SECTION("After create and write and read") {
       x = vamana_index_group<dummy_index>(
           ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimension() == 10);
+      CHECK(x.get_dimensions() == 10);
       x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
@@ -221,14 +221,14 @@ TEST_CASE(
       x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
       x = vamana_index_group<dummy_index>(
           ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimension() == 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     x.set_ingestion_timestamp(expected_ingestion);
     x.set_base_size(expected_base);
     x.set_num_edges(expected_partitions);
     x.set_temp_size(expected_temp_size);
-    x.set_dimension(expected_dimension);
+    x.set_dimensions(expected_dimension);
   }
 
   SECTION("Just append") {
@@ -242,13 +242,13 @@ TEST_CASE(
     SECTION("After create and write") {
       x = vamana_index_group<dummy_index>(
           ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimension() == 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     SECTION("After create and write and read") {
       x = vamana_index_group<dummy_index>(
           ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimension() == 10);
+      CHECK(x.get_dimensions() == 10);
       x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
@@ -256,14 +256,14 @@ TEST_CASE(
       x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
       x = vamana_index_group<dummy_index>(
           ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimension() == 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     x.append_ingestion_timestamp(expected_ingestion);
     x.append_base_size(expected_base);
     x.append_num_edges(expected_partitions);
     x.set_temp_size(expected_temp_size);
-    x.set_dimension(expected_dimension);
+    x.set_dimensions(expected_dimension);
   }
 
   SECTION("Set then append") {
@@ -277,13 +277,13 @@ TEST_CASE(
     SECTION("After create and write") {
       x = vamana_index_group<dummy_index>(
           ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimension() == 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     SECTION("After create and write and read") {
       x = vamana_index_group<dummy_index>(
           ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimension() == 10);
+      CHECK(x.get_dimensions() == 10);
       x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
@@ -291,14 +291,14 @@ TEST_CASE(
       x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
       x = vamana_index_group<dummy_index>(
           ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimension() == 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     x.set_ingestion_timestamp(expected_ingestion);
     x.set_base_size(expected_base);
     x.set_num_edges(expected_partitions);
     x.set_temp_size(expected_temp_size);
-    x.set_dimension(expected_dimension);
+    x.set_dimensions(expected_dimension);
 
     offset = 13;
 
@@ -306,7 +306,7 @@ TEST_CASE(
     x.append_base_size(expected_base + offset);
     x.append_num_edges(expected_partitions + offset);
     x.set_temp_size(expected_temp_size + offset);
-    x.set_dimension(expected_dimension + offset);
+    x.set_dimensions(expected_dimension + offset);
 
     CHECK(size(x.get_all_ingestion_timestamps()) == 2);
     CHECK(size(x.get_all_base_sizes()) == 2);
@@ -324,13 +324,13 @@ TEST_CASE(
     SECTION("After create and write") {
       x = vamana_index_group<dummy_index>(
           ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimension() == 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     SECTION("After create and write and read") {
       x = vamana_index_group<dummy_index>(
           ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimension() == 10);
+      CHECK(x.get_dimensions() == 10);
       x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
@@ -338,14 +338,14 @@ TEST_CASE(
       x = vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
       x = vamana_index_group<dummy_index>(
           ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimension() == 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     x.set_ingestion_timestamp(expected_ingestion);
     x.set_base_size(expected_base);
     x.set_num_edges(expected_partitions);
     x.set_temp_size(expected_temp_size);
-    x.set_dimension(expected_dimension);
+    x.set_dimensions(expected_dimension);
 
     offset = 13;
 
@@ -353,7 +353,7 @@ TEST_CASE(
     x.set_base_size(expected_base + offset);
     x.set_num_edges(expected_partitions + offset);
     x.set_temp_size(expected_temp_size + offset);
-    x.set_dimension(expected_dimension + offset);
+    x.set_dimensions(expected_dimension + offset);
 
     CHECK(size(x.get_all_ingestion_timestamps()) == 1);
     CHECK(size(x.get_all_base_sizes()) == 1);
@@ -364,7 +364,7 @@ TEST_CASE(
   CHECK(x.get_previous_base_size() == expected_base + offset);
   CHECK(x.get_previous_num_edges() == expected_partitions + offset);
   CHECK(x.get_temp_size() == expected_temp_size + offset);
-  CHECK(x.get_dimension() == expected_dimension + offset);
+  CHECK(x.get_dimensions() == expected_dimension + offset);
 }
 
 TEST_CASE("vamana_group: storage version", "[vamana_group]") {
@@ -386,7 +386,7 @@ TEST_CASE("vamana_group: storage version", "[vamana_group]") {
 
   vamana_index_group x =
       vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-  CHECK(x.get_dimension() == 10);
+  CHECK(x.get_dimensions() == 10);
 
   SECTION("0.3") {
     x = vamana_index_group<dummy_index>(
@@ -412,7 +412,7 @@ TEST_CASE("vamana_group: storage version", "[vamana_group]") {
   x.set_base_size(expected_base + offset);
   x.set_num_edges(expected_partitions + offset);
   x.set_temp_size(expected_temp_size + offset);
-  x.set_dimension(expected_dimension + offset);
+  x.set_dimensions(expected_dimension + offset);
 
   CHECK(size(x.get_all_ingestion_timestamps()) == 1);
   CHECK(size(x.get_all_base_sizes()) == 1);
@@ -421,7 +421,7 @@ TEST_CASE("vamana_group: storage version", "[vamana_group]") {
   CHECK(x.get_previous_base_size() == expected_base + offset);
   CHECK(x.get_previous_num_edges() == expected_partitions + offset);
   CHECK(x.get_temp_size() == expected_temp_size + offset);
-  CHECK(x.get_dimension() == expected_dimension + offset);
+  CHECK(x.get_dimensions() == expected_dimension + offset);
 }
 
 TEST_CASE("vamana_group: invalid storage version", "[vamana_group]") {

@@ -591,13 +591,13 @@ auto verify_top_k(L const& top_k, I const& g, int k, int qno) {
  */
 template <feature_vector_array TK, feature_vector_array G>
 bool validate_top_k(TK& top_k, const G& g) {
-  size_t k = dimension(top_k);
+  size_t k = dimensions(top_k);
   size_t num_errors = 0;
 
   for (size_t qno = 0; qno < num_vectors(top_k); ++qno) {
     // @todo -- count intersections rather than testing for equality
     std::sort(begin(top_k[qno]), end(top_k[qno]));
-    std::sort(begin(g[qno]), begin(g[qno]) + dimension(top_k));
+    std::sort(begin(g[qno]), begin(g[qno]) + dimensions(top_k));
 
     if (!std::equal(begin(top_k[qno]), begin(top_k[qno]) + k, begin(g[qno]))) {
       if (num_errors++ > 10) {

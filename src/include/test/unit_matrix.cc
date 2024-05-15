@@ -196,7 +196,7 @@ TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(c.num_rows() == major);
   CHECK(c.num_cols() == minor);
   CHECK(num_vectors(c) == major);
-  CHECK(dimension(c) == minor);
+  CHECK(dimensions(c) == minor);
 
   auto mc =
       Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_right>(
@@ -209,7 +209,7 @@ TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
       1);  // j + extents(1) * i => j + minor * i => j + num_cols * i
   CHECK(mc(1, 0) == 13);  // 0 + 1 * 13
   CHECK(num_vectors(mc) == major);
-  CHECK(dimension(mc) == minor);
+  CHECK(dimensions(mc) == minor);
 
   auto x = c[1];
   CHECK(x[0] == 13);  // == mc(i, 0)  = data() + i * minor
@@ -224,7 +224,7 @@ TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(cv.num_rows() == major);
   CHECK(cv.num_cols() == minor);
   CHECK(num_vectors(cv) == major);
-  CHECK(dimension(cv) == minor);
+  CHECK(dimensions(cv) == minor);
 
   auto fv = MatrixView(mc);
   auto fz = fv[1];
@@ -233,7 +233,7 @@ TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(fv.num_rows() == major);
   CHECK(fv.num_cols() == minor);
   CHECK(num_vectors(cv) == major);
-  CHECK(dimension(cv) == minor);
+  CHECK(dimensions(cv) == minor);
 
   auto d = ColMajorMatrix<TestType>(major, minor);
   std::copy(v.begin(), v.end(), d.data());
@@ -243,7 +243,7 @@ TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(d.num_rows() == major);
   CHECK(d.num_cols() == minor);
   CHECK(num_vectors(cv) == major);
-  CHECK(dimension(cv) == minor);
+  CHECK(dimensions(cv) == minor);
 
   // Column major
   auto md =
@@ -259,7 +259,7 @@ TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(d.num_rows() == major);
   CHECK(d.num_cols() == minor);
   CHECK(num_vectors(cv) == major);
-  CHECK(dimension(cv) == minor);
+  CHECK(dimensions(cv) == minor);
 
   auto y = d[1];
   CHECK(y[0] == 7);  // == md(0, i)  = data() + i * major

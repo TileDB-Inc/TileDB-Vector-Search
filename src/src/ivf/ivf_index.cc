@@ -107,7 +107,7 @@ int main(int argc, char* argv[]) {
     auto X = tdbColMajorMatrix<feature_type>(ctx, db_uri);
     X.load();
 
-    auto dim = dimension(X);
+    auto dim = dimensions(X);
 
     auto idx = ivf_flat_index<feature_type, id_type, px_type>(
         /* dim, */ num_clusters, max_iter, tolerance);

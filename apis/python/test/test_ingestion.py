@@ -1056,7 +1056,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
         with tiledb.Group(index_uri, "r") as group:
             assert metadata_to_list(group, "ingestion_timestamps") == [1, 102]
-            assert metadata_to_list(group, "base_sizes") == [1000, 1000]
+            assert metadata_to_list(group, "base_sizes") == [size, size]
             if index_type == "VAMANA":
                 num_edges_history = metadata_to_list(group, "num_edges_history")
                 assert len(num_edges_history) == 2
@@ -1070,7 +1070,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
         with tiledb.Group(index_uri, "r") as group:
             assert metadata_to_list(group, "ingestion_timestamps") == [102]
-            assert metadata_to_list(group, "base_sizes") == [1000]
+            assert metadata_to_list(group, "base_sizes") == [size]
             if index_type == "VAMANA":
                 assert metadata_to_list(group, "num_edges_history") == [
                     second_num_edges

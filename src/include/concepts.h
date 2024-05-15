@@ -113,7 +113,7 @@ concept callable_range =
 
 template <class T>
 concept dimensionable = requires(const T& t) {
-  { dimension(t) } -> semi_integral;
+  { dimensions(t) } -> semi_integral;
 };
 
 template <class T>
@@ -154,7 +154,7 @@ concept query_vector = feature_vector<R>;
 template <class D>
 concept feature_vector_array = requires(D d, size_t n) {
   { num_vectors(d) } -> semi_integral;
-  { dimension(d) } -> semi_integral;
+  { dimensions(d) } -> semi_integral;
   { d[n] } -> feature_vector;
 };
 

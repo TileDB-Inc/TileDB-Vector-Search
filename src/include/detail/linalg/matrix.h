@@ -363,7 +363,7 @@ std::string matrix_info(const Matrix& A, const std::string& msg = "") {
   if (!msg.empty()) {
     str += ": ";
   }
-  str += "Shape: ( " + std::to_string(::dimension(A)) + ", " +
+  str += "Shape: ( " + std::to_string(::dimensions(A)) + ", " +
          std::to_string(::num_vectors(A)) + " )";
   str += std::string(" Layout: ") +
          (is_row_oriented(A) ? "row major" : "column major");
@@ -503,10 +503,10 @@ void debug_slice(
     size_t rows = 6,
     size_t cols = 18) {
   auto max_size = 10;
-  auto rowsEnd = std::min(dimension(A), static_cast<size_t>(max_size));
+  auto rowsEnd = std::min(dimensions(A), static_cast<size_t>(max_size));
   auto colsEnd = std::min(num_vectors(A), static_cast<size_t>(max_size));
 
-  std::cout << "# " << msg << " (" << dimension(A) << " rows x "
+  std::cout << "# " << msg << " (" << dimensions(A) << " rows x "
             << num_vectors(A) << " cols)" << std::endl;
   for (size_t i = 0; i < rowsEnd; ++i) {
     std::cout << "# ";
@@ -525,7 +525,7 @@ void debug_slice(
 
 template <feature_vector_array M>
 void debug(const M& A, const std::string& msg = "") {
-  debug_slice(A, msg, dimension(A), num_vectors(A));
+  debug_slice(A, msg, dimensions(A), num_vectors(A));
 }
 
 template <class Matrix1, class Matrix2>

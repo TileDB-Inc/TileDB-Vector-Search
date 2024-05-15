@@ -123,7 +123,7 @@ class ivf_flat_index {
    ****************************************************************************/
 
   // Cached information about the partitioned vectors in the index
-  uint64_t dimension_{0};
+  uint64_t dimensions_{0};
   uint64_t num_partitions_{0};
 
   // The PartitionedMatrix has indices and ids internally and is also
@@ -158,7 +158,7 @@ class ivf_flat_index {
    * parameters to be used subsequently in training.  To fully create an index
    * we will need to call `train()` and `add()`.
    *
-   * @param dimension Dimension of the vectors comprising the training set and
+   * @param dimensions Dimensions of the vectors comprising the training set and
    * the data set.
    * @param nlist Number of centroids / partitions to compute.
    * @param max_iter Maximum number of iterations for kmans algorithm.
@@ -179,7 +179,7 @@ class ivf_flat_index {
       float tol = 0.000025,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       uint64_t seed = std::random_device{}())
-      :  // , dimension_(dim)
+      :  // , dimensions_(dim)
       temporal_policy_{
           temporal_policy.timestamp_end() != 0 ?
               temporal_policy :
@@ -226,7 +226,7 @@ class ivf_flat_index {
      * determined by the type of query we are doing.  But they will be read
      * in at this same timestamp.
      */
-    dimension_ = group_->get_dimension();
+    dimensions_ = group_->get_dimensions();
     num_partitions_ = group_->get_num_partitions();
     // Read all rows from column 0 -> `num_partitions_`. Set no upper_bound.
     centroids_ =
@@ -273,14 +273,13 @@ class ivf_flat_index {
       //       ColMajorMatrix<feature_type>& training_set,
       const V& training_set,
       kmeans_init init = kmeans_init::random) {
-    dimension_ = ::dimension(training_set);
+    dimensions_ = ::dimensions(training_set);
     if (num_partitions_ == 0) {
       num_partitions_ = std::sqrt(num_vectors(training_set));
     }
 
     centroids_ =
-        ColMajorMatrix<centroid_feature_type>(dimension_, num_partitions_);
-
+        ColMajorMatrix<centroid_feature_type>(dimensions_, num_partitions_);
     switch (init) {
       case (kmeans_init::none):
         break;
@@ -297,7 +296,7 @@ class ivf_flat_index {
 #if 0
     std::cout << "\nCentroids Before:\n" << std::endl;
     for (size_t j = 0; j < centroids_.num_cols(); ++j) {
-      for (size_t i = 0; i < dimension_; ++i) {
+      for (size_t i = 0; i < dimensions_; ++i) {
         std::cout << centroids_[j][i] << " ";
       }
       std::cout << std::endl;
@@ -325,7 +324,7 @@ class ivf_flat_index {
 #if 0
     std::cout << "\nCentroids After:\n" << std::endl;
     for (size_t j = 0; j < centroids_.num_cols(); ++j) {
-      for (size_t i = 0; i < dimension_; ++i) {
+      for (size_t i = 0; i < dimensions_; ++i) {
         std::cout << centroids_[j][i] << " ";
       }
       std::cout << std::endl;
@@ -469,9 +468,9 @@ class ivf_flat_index {
         TILEDB_WRITE,
         temporal_policy_,
         storage_version,
-        dimension_);
+        dimensions_);
 
-    write_group.set_dimension(dimension_);
+    write_group.set_dimensions(dimensions_);
 
     write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
     write_group.append_base_size(::num_vectors(*partitioned_vectors_));
@@ -589,12 +588,8 @@ class ivf_flat_index {
         active_queries,
         k_nn,
         num_threads_,
-        distance);
   }
 
-  /**
-   * @brief Same as query_infinite_ram, but using the qv_query_heap_infinite_ram
-   * function.
    * See the documentation for that function in detail/ivf/qv.h
    * for more details.
    */
@@ -604,79 +599,79 @@ class ivf_flat_index {
       size_t k_nn,
       size_t nprobe,
       Distance distance = Distance{}) {
-    if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
-      read_index_infinite();
-    }
+     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
+       read_index_infinite();
+     }
 
-    auto top_centroids = detail::ivf::ivf_top_centroids(
-        centroids_, query_vectors, nprobe, num_threads_);
-    return detail::ivf::qv_query_heap_infinite_ram(
-        top_centroids,
-        *partitioned_vectors_,
-        query_vectors,
-        nprobe,
-        k_nn,
-        num_threads_,
-        distance);
-  }
+     auto top_centroids = detail::ivf::ivf_top_centroids(
+         centroids_, query_vectors, nprobe, num_threads_);
+     return detail::ivf::qv_query_heap_infinite_ram(
+         top_centroids,
+         *partitioned_vectors_,
+         query_vectors,
+         nprobe,
+         k_nn,
+         num_threads_,
+         distance);
+   }
 
-  /**
-   * @brief Same as query_infinite_ram, but using the
-   * nuv_query_heap_infinite_ram function.
-   * See the documentation for that function in detail/ivf/qv.h
-   * for more details.
-   */
-  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
-  auto nuv_query_heap_infinite_ram(
-      const Q& query_vectors,
-      size_t k_nn,
-      size_t nprobe,
-      Distance distance = Distance{}) {
-    if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
-      read_index_infinite();
-    }
-    auto&& [active_partitions, active_queries] =
-        detail::ivf::partition_ivf_flat_index<indices_type>(
-            centroids_, query_vectors, nprobe, num_threads_);
-    return detail::ivf::nuv_query_heap_infinite_ram(
-        *partitioned_vectors_,
-        active_partitions,
-        query_vectors,
-        active_queries,
-        k_nn,
-        num_threads_,
-        distance);
-  }
+   /**
+    * @brief Same as query_infinite_ram, but using the
+    * nuv_query_heap_infinite_ram function.
+    * See the documentation for that function in detail/ivf/qv.h
+    * for more details.
+    */
+   template <feature_vector_array Q, class Distance = sum_of_squares_distance>
+   auto nuv_query_heap_infinite_ram(
+       const Q& query_vectors,
+       size_t k_nn,
+       size_t nprobe,
+       Distance distance = Distance{}) {
+     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
+       read_index_infinite();
+     }
+     auto&& [active_partitions, active_queries] =
+         detail::ivf::partition_ivf_flat_index<indices_type>(
+             centroids_, query_vectors, nprobe, num_threads_);
+     return detail::ivf::nuv_query_heap_infinite_ram(
+         *partitioned_vectors_,
+         active_partitions,
+         query_vectors,
+         active_queries,
+         k_nn,
+         num_threads_,
+         distance);
+   }
 
-  /**
-   * @brief Same as query_infinite_ram, but using the
-   * nuv_query_heap_infinite_ram_reg_blocked function.
-   * See the documentation for that function in detail/ivf/qv.h
-   * for more details.
-   */
-  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
-  auto nuv_query_heap_infinite_ram_reg_blocked(
-      const Q& query_vectors,
-      size_t k_nn,
-      size_t nprobe,
-      Distance distance = Distance{}) {
-    if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
-      read_index_infinite();
-    }
-    auto&& [active_partitions, active_queries] =
-        detail::ivf::partition_ivf_flat_index<indices_type>(
-            centroids_, query_vectors, nprobe, num_threads_);
-    return detail::ivf::nuv_query_heap_infinite_ram_reg_blocked(
-        *partitioned_vectors_,
-        active_partitions,
-        query_vectors,
-        active_queries,
-        k_nn,
-        num_threads_,
-        distance);
-  }
+   /**
+    * @brief Same as query_infinite_ram, but using the
+    * nuv_query_heap_infinite_ram_reg_blocked function.
+    * See the documentation for that function in detail/ivf/qv.h
+    * for more details.
+    */
+   template <feature_vector_array Q, class Distance = sum_of_squares_distance>
+   auto nuv_query_heap_infinite_ram_reg_blocked(
+       const Q& query_vectors,
+       size_t k_nn,
+       size_t nprobe,
+       Distance distance = Distance{}) {
+     if (!partitioned_vectors_ || ::num_vectors(*partitioned_vectors_) == 0) {
+       read_index_infinite();
+     }
+     auto&& [active_partitions, active_queries] =
+         detail::ivf::partition_ivf_flat_index<indices_type>(
+             centroids_, query_vectors, nprobe, num_threads_);
+     return detail::ivf::nuv_query_heap_infinite_ram_reg_blocked(
+         *partitioned_vectors_,
+         active_partitions,
+         query_vectors,
+         active_queries,
+         k_nn,
+         num_threads_,
+         distance);
+   }
 
-  // WIP
+   // WIP
 #if 0
   template <feature_vector_array Q, class Distance = sum_of_squares_distance>
   auto qv_query_heap_finite_ram(
@@ -704,333 +699,334 @@ class ivf_flat_index {
   }
 #endif  // 0
 
-  /**
-   * @brief Perform a query on the index, returning the nearest neighbors
-   * and distances.  The function returns a matrix containing k_nn nearest
-   * neighbors for each given query and a matrix containing the distances
-   * corresponding to each returned neighbor.
-   *
-   * This function searches for the nearest neighbors using "finite RAM",
-   * that is, it only loads that portion of the IVF index into memory that
-   * is necessary for the given query.  In addition, it supports out of core
-   * operation, meaning that only a subset of the necessary partitions are
-   * loaded into memory at any one time.
-   *
-   * See the documentation for that function in detail/ivf/qv.h
-   * for more details.
-   *
-   * @param query_vectors Array of vectors to query.
-   * @param k_nn Number of nearest neighbors to return.
-   * @param nprobe Number of centroids to search.
-   *
-   * @return A tuple containing a matrix of nearest neighbors and a matrix
-   * of the corresponding distances.
-   *
-   * @tparam Q
-   * @param query_vectors
-   * @param k_nn
-   * @param nprobe
-   * @return
-   */
-  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
-  auto query_finite_ram(
-      const Q& query_vectors,
-      size_t k_nn,
-      size_t nprobe,
-      size_t upper_bound = 0,
-      Distance distance = Distance{}) {
-    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
-      throw std::runtime_error(
-          "Vectors are already loaded. Cannot load twice. "
-          "Cannot do finite query on in-memory index.");
-    }
-    auto&& [active_partitions, active_queries] =
-        read_index_finite(query_vectors, nprobe, upper_bound);
+   /**
+    * @brief Perform a query on the index, returning the nearest neighbors
+    * and distances.  The function returns a matrix containing k_nn nearest
+    * neighbors for each given query and a matrix containing the distances
+    * corresponding to each returned neighbor.
+    *
+    * This function searches for the nearest neighbors using "finite RAM",
+    * that is, it only loads that portion of the IVF index into memory that
+    * is necessary for the given query.  In addition, it supports out of core
+    * operation, meaning that only a subset of the necessary partitions are
+    * loaded into memory at any one time.
+    *
+    * See the documentation for that function in detail/ivf/qv.h
+    * for more details.
+    *
+    * @param query_vectors Array of vectors to query.
+    * @param k_nn Number of nearest neighbors to return.
+    * @param nprobe Number of centroids to search.
+    *
+    * @return A tuple containing a matrix of nearest neighbors and a matrix
+    * of the corresponding distances.
+    *
+    * @tparam Q
+    * @param query_vectors
+    * @param k_nn
+    * @param nprobe
+    * @return
+    */
+   template <feature_vector_array Q, class Distance = sum_of_squares_distance>
+   auto query_finite_ram(
+       const Q& query_vectors,
+       size_t k_nn,
+       size_t nprobe,
+       size_t upper_bound = 0,
+       Distance distance = Distance{}) {
+     if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
+       throw std::runtime_error(
+           "Vectors are already loaded. Cannot load twice. "
+           "Cannot do finite query on in-memory index.");
+     }
+     auto&& [active_partitions, active_queries] =
+         read_index_finite(query_vectors, nprobe, upper_bound);
 
-    return detail::ivf::query_finite_ram(
-        *partitioned_vectors_,
-        query_vectors,
-        active_queries,
-        k_nn,
-        upper_bound,
-        num_threads_,
-        distance);
-  }
+     return detail::ivf::query_finite_ram(
+         *partitioned_vectors_,
+         query_vectors,
+         active_queries,
+         k_nn,
+         upper_bound,
+         num_threads_,
+         distance);
+   }
 
-  /**
-   * @brief Same as query_finite_ram, but using the
-   * nuv_query_heap_infinite_ram function.
-   * See the documentation for that function in detail/ivf/qv.h
-   * for more details.
-   */
-  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
-  auto nuv_query_heap_finite_ram(
-      const Q& query_vectors,
-      size_t k_nn,
-      size_t nprobe,
-      size_t upper_bound = 0,
-      Distance distance = Distance{}) {
-    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
-      std::throw_with_nested(
-          std::runtime_error("Vectors are already loaded. Cannot load twice. "
-                             "Cannot do finite query on in-memory index."));
-    }
-    auto&& [active_partitions, active_queries] =
-        read_index_finite(query_vectors, nprobe, upper_bound);
+   /**
+    * @brief Same as query_finite_ram, but using the
+    * nuv_query_heap_infinite_ram function.
+    * See the documentation for that function in detail/ivf/qv.h
+    * for more details.
+    */
+   template <feature_vector_array Q, class Distance = sum_of_squares_distance>
+   auto nuv_query_heap_finite_ram(
+       const Q& query_vectors,
+       size_t k_nn,
+       size_t nprobe,
+       size_t upper_bound = 0,
+       Distance distance = Distance{}) {
+     if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
+       std::throw_with_nested(
+           std::runtime_error("Vectors are already loaded. Cannot load twice. "
+                              "Cannot do finite query on in-memory index."));
+     }
+     auto&& [active_partitions, active_queries] =
+         read_index_finite(query_vectors, nprobe, upper_bound);
 
-    return detail::ivf::nuv_query_heap_finite_ram(
-        *partitioned_vectors_,
-        query_vectors,
-        active_queries,
-        k_nn,
-        upper_bound,
-        num_threads_,
-        distance);
-  }
+     return detail::ivf::nuv_query_heap_finite_ram(
+         *partitioned_vectors_,
+         query_vectors,
+         active_queries,
+         k_nn,
+         upper_bound,
+         num_threads_,
+         distance);
+   }
 
-  /**
-   * @brief Same as query_finite_ram, but using the
-   * nuv_query_heap_infinite_ram_reg_blocked function.
-   * See the documentation for that function in detail/ivf/qv.h
-   * for more details.
-   */
-  template <feature_vector_array Q, class Distance = sum_of_squares_distance>
-  auto nuv_query_heap_finite_ram_reg_blocked(
-      const Q& query_vectors,
-      size_t k_nn,
-      size_t nprobe,
-      size_t upper_bound = 0,
-      Distance distance = Distance{}) {
-    if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
-      std::throw_with_nested(
-          std::runtime_error("Vectors are already loaded. Cannot load twice. "
-                             "Cannot do finite query on in-memory index."));
-    }
-    auto&& [active_partitions, active_queries] =
-        read_index_finite(query_vectors, nprobe, upper_bound);
+   /**
+    * @brief Same as query_finite_ram, but using the
+    * nuv_query_heap_infinite_ram_reg_blocked function.
+    * See the documentation for that function in detail/ivf/qv.h
+    * for more details.
+    */
+   template <feature_vector_array Q, class Distance = sum_of_squares_distance>
+   auto nuv_query_heap_finite_ram_reg_blocked(
+       const Q& query_vectors,
+       size_t k_nn,
+       size_t nprobe,
+       size_t upper_bound = 0,
+       Distance distance = Distance{}) {
+     if (partitioned_vectors_ && ::num_vectors(*partitioned_vectors_) != 0) {
+       std::throw_with_nested(
+           std::runtime_error("Vectors are already loaded. Cannot load twice. "
+                              "Cannot do finite query on in-memory index."));
+     }
+     auto&& [active_partitions, active_queries] =
+         read_index_finite(query_vectors, nprobe, upper_bound);
 
-    return detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
-        *partitioned_vectors_,
-        query_vectors,
-        active_queries,
-        k_nn,
-        upper_bound,
-        num_threads_,
-        distance);
-  }
+     return detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
+         *partitioned_vectors_,
+         query_vectors,
+         active_queries,
+         k_nn,
+         upper_bound,
+         num_threads_,
+         distance);
+   }
 
-  /***************************************************************************
-   * Getters (copilot weirded me out again -- it suggested "Getters" based
-   * only on the two character "/ *" that I typed to begin a comment,
-   * and with the two functions below.)
-   * Note that we don't have a `num_vectors` because it isn't clear what
-   * that means for a partitioned (possibly out-of-core) index.
-   ***************************************************************************/
-  auto dimension() const {
-    return dimension_;
-  }
+   /***************************************************************************
+    * Getters (copilot weirded me out again -- it suggested "Getters" based
+    * only on the two character "/ *" that I typed to begin a comment,
+    * and with the two functions below.)
+    * Note that we don't have a `num_vectors` because it isn't clear what
+    * that means for a partitioned (possibly out-of-core) index.
+    ***************************************************************************/
+   auto dimensions() const {
+     return dimensions_;
+   }
 
-  auto num_partitions() const {
-    return ::num_vectors(centroids_);
-  }
+   auto num_partitions() const {
+     return ::num_vectors(centroids_);
+   }
 
-  /***************************************************************************
-   * Methods to aid Testing and Debugging
-   *
-   * @todo -- As elsewhere in this class, there is huge code duplication here
-   *
-   **************************************************************************/
+   /***************************************************************************
+    * Methods to aid Testing and Debugging
+    *
+    * @todo -- As elsewhere in this class, there is huge code duplication here
+    *
+    **************************************************************************/
 
-  /**
-   * @brief Compare groups associated with two ivf_flat_index objects for
-   * equality.  Note that both indexes will have had to perform a read or
-   * a write.  An index created from partitioning will not yet have a group
-   * associated with it.
-   *
-   * Comparing groups will also compare metadata associated with each group.
-   *
-   * @param rhs the index against which to compare
-   * @return bool indicating equality of the groups
-   */
-  bool compare_group(const ivf_flat_index& rhs) const {
-    return group_->compare_group(*(rhs.group_));
-  }
+   /**
+    * @brief Compare groups associated with two ivf_flat_index objects for
+    * equality.  Note that both indexes will have had to perform a read or
+    * a write.  An index created from partitioning will not yet have a group
+    * associated with it.
+    *
+    * Comparing groups will also compare metadata associated with each group.
+    *
+    * @param rhs the index against which to compare
+    * @return bool indicating equality of the groups
+    */
+   bool compare_group(const ivf_flat_index& rhs) const {
+     return group_->compare_group(*(rhs.group_));
+   }
 
-  /**
-   * @brief Compare metadata associated with two ivf_flat_index objects for
-   * equality.  Thi is not the same as the metadata associated with the index
-   * group.  Rather, it is the metadata associated with the index itself and is
-   * only a small number of cached quantities.
-   *
-   * Note that `max_iter` et al are only relevant for partitioning an index
-   * and are not stored (and would not be meaningful to compare at any rate).
-   *
-   * @param rhs the index against which to compare
-   * @return bool indicating equality of the index metadata
-   */
-  bool compare_cached_metadata(const ivf_flat_index& rhs) {
-    if (dimension_ != rhs.dimension_) {
-      return false;
-    }
-    if (num_partitions_ != rhs.num_partitions_) {
-      return false;
-    }
+   /**
+    * @brief Compare metadata associated with two ivf_flat_index objects for
+    * equality.  Thi is not the same as the metadata associated with the index
+    * group.  Rather, it is the metadata associated with the index itself and is
+    * only a small number of cached quantities.
+    *
+    * Note that `max_iter` et al are only relevant for partitioning an index
+    * and are not stored (and would not be meaningful to compare at any rate).
+    *
+    * @param rhs the index against which to compare
+    * @return bool indicating equality of the index metadata
+    */
+   bool compare_cached_metadata(const ivf_flat_index& rhs) {
+     if (dimensions_ != rhs.dimensions_) {
+       return false;
+     }
+     if (num_partitions_ != rhs.num_partitions_) {
+       return false;
+     }
 
-    return true;
-  }
+     return true;
+   }
 
-  /**
-   * @brief Compare two `feature_vector_arrays` for equality
-   *
-   * @tparam L Type of the lhs `feature_vector_array`
-   * @tparam R Type of the rhs `feature_vector_array`
-   * @param rhs the index against which to compare
-   * @param lhs The lhs `feature_vector_array`
-   * @return bool indicating equality of the `feature_vector_arrays`
-   */
-  template <feature_vector_array L, feature_vector_array R>
-  auto compare_feature_vector_arrays(const L& lhs, const R& rhs) const {
-    if (::num_vectors(lhs) != ::num_vectors(rhs) ||
-        ::dimension(lhs) != ::dimension(rhs)) {
-      std::cout << "num_vectors(lhs) != num_vectors(rhs) || dimension(lhs) != "
-                   "dimension(rhs)n"
-                << std::endl;
-      std::cout << "num_vectors(lhs): " << ::num_vectors(lhs)
-                << " num_vectors(rhs): " << ::num_vectors(rhs) << std::endl;
-      std::cout << "dimension(lhs): " << ::dimension(lhs)
-                << " dimension(rhs): " << ::dimension(rhs) << std::endl;
-      return false;
-    }
-    for (size_t i = 0; i < ::num_vectors(lhs); ++i) {
-      if (!std::equal(begin(lhs[i]), end(lhs[i]), begin(rhs[i]))) {
-        std::cout << "lhs[" << i << "] != rhs[" << i << "]" << std::endl;
-        std::cout << "lhs[" << i << "]: ";
-        for (size_t j = 0; j < ::dimension(lhs); ++j) {
-          std::cout << lhs[i][j] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "rhs[" << i << "]: ";
-        for (size_t j = 0; j < ::dimension(rhs); ++j) {
-          std::cout << rhs[i][j] << " ";
-        }
-        return false;
-      }
-    }
-    return true;
-  }
+   /**
+    * @brief Compare two `feature_vector_arrays` for equality
+    *
+    * @tparam L Type of the lhs `feature_vector_array`
+    * @tparam R Type of the rhs `feature_vector_array`
+    * @param rhs the index against which to compare
+    * @param lhs The lhs `feature_vector_array`
+    * @return bool indicating equality of the `feature_vector_arrays`
+    */
+   template <feature_vector_array L, feature_vector_array R>
+   auto compare_feature_vector_arrays(const L& lhs, const R& rhs) const {
+     if (::num_vectors(lhs) != ::num_vectors(rhs) ||
+         ::dimensions(lhs) != ::dimensions(rhs)) {
+       std::cout
+           << "num_vectors(lhs) != num_vectors(rhs) || dimensions(lhs) != "
+              "dimensions(rhs)n"
+           << std::endl;
+       std::cout << "num_vectors(lhs): " << ::num_vectors(lhs)
+                 << " num_vectors(rhs): " << ::num_vectors(rhs) << std::endl;
+       std::cout << "dimensions(lhs): " << ::dimensions(lhs)
+                 << " dimensions(rhs): " << ::dimensions(rhs) << std::endl;
+       return false;
+     }
+     for (size_t i = 0; i < ::num_vectors(lhs); ++i) {
+       if (!std::equal(begin(lhs[i]), end(lhs[i]), begin(rhs[i]))) {
+         std::cout << "lhs[" << i << "] != rhs[" << i << "]" << std::endl;
+         std::cout << "lhs[" << i << "]: ";
+         for (size_t j = 0; j < ::dimensions(lhs); ++j) {
+           std::cout << lhs[i][j] << " ";
+         }
+         std::cout << std::endl;
+         std::cout << "rhs[" << i << "]: ";
+         for (size_t j = 0; j < ::dimensions(rhs); ++j) {
+           std::cout << rhs[i][j] << " ";
+         }
+         return false;
+       }
+     }
+     return true;
+   }
 
-  /**
-   * @brief Compare two `feature_vectors` for equality
-   * @tparam L Type of the lhs `feature_vector`
-   * @tparam R Type of the rhs `feature_vector`
-   * @param lhs The lhs `feature_vector`
-   * @param rhs The rhs `feature_vector`
-   * @return
-   */
-  template <feature_vector L, feature_vector R>
-  auto compare_vectors(const L& lhs, const R& rhs) const {
-    if (::dimension(lhs) != ::dimension(rhs)) {
-      std::cout << "dimension(lhs) != dimension(rhs) (" << ::dimension(lhs)
-                << " != " << ::dimension(rhs) << ")" << std::endl;
-      return false;
-    }
-    return std::equal(begin(lhs), end(lhs), begin(rhs));
-  }
+   /**
+    * @brief Compare two `feature_vectors` for equality
+    * @tparam L Type of the lhs `feature_vector`
+    * @tparam R Type of the rhs `feature_vector`
+    * @param lhs The lhs `feature_vector`
+    * @param rhs The rhs `feature_vector`
+    * @return
+    */
+   template <feature_vector L, feature_vector R>
+   auto compare_vectors(const L& lhs, const R& rhs) const {
+     if (::dimensions(lhs) != ::dimensions(rhs)) {
+       std::cout << "dimensions(lhs) != dimensions(rhs) (" << ::dimensions(lhs)
+                 << " != " << ::dimensions(rhs) << ")" << std::endl;
+       return false;
+     }
+     return std::equal(begin(lhs), end(lhs), begin(rhs));
+   }
 
-  /**
-   * @brief Compare `centroids_` against another index
-   * @param rhs The index against which to compare
-   * @return bool indicating equality of the centroids
-   */
-  auto compare_centroids(const ivf_flat_index& rhs) {
-    return compare_feature_vector_arrays(centroids_, rhs.centroids_);
-  }
+   /**
+    * @brief Compare `centroids_` against another index
+    * @param rhs The index against which to compare
+    * @return bool indicating equality of the centroids
+    */
+   auto compare_centroids(const ivf_flat_index& rhs) {
+     return compare_feature_vector_arrays(centroids_, rhs.centroids_);
+   }
 
-  /**
-   * @brief Compare all of the `feature_vector_arrays` against another index
-   * @param rhs The other index
-   * @return bool indicating equality of the `feature_vector_arrays`
-   */
-  auto compare_feature_vectors(const ivf_flat_index& rhs) {
-    if (partitioned_vectors_->num_vectors() !=
-        rhs.partitioned_vectors_->num_vectors()) {
-      std::cout << "partitioned_vectors_->num_vectors() != "
-                   "rhs.partitioned_vectors_->num_vectors() ("
-                << partitioned_vectors_->num_vectors()
-                << " != " << rhs.partitioned_vectors_->num_vectors() << ")"
-                << std::endl;
-      return false;
-    }
-    if (partitioned_vectors_->num_partitions() !=
-        rhs.partitioned_vectors_->num_partitions()) {
-      std::cout << "partitioned_vectors_->num_parts() != "
-                   "rhs.partitioned_vectors_->num_parts() ("
-                << partitioned_vectors_->num_partitions()
-                << " != " << rhs.partitioned_vectors_->num_partitions() << ")"
-                << std::endl;
-      return false;
-    }
+   /**
+    * @brief Compare all of the `feature_vector_arrays` against another index
+    * @param rhs The other index
+    * @return bool indicating equality of the `feature_vector_arrays`
+    */
+   auto compare_feature_vectors(const ivf_flat_index& rhs) {
+     if (partitioned_vectors_->num_vectors() !=
+         rhs.partitioned_vectors_->num_vectors()) {
+       std::cout << "partitioned_vectors_->num_vectors() != "
+                    "rhs.partitioned_vectors_->num_vectors() ("
+                 << partitioned_vectors_->num_vectors()
+                 << " != " << rhs.partitioned_vectors_->num_vectors() << ")"
+                 << std::endl;
+       return false;
+     }
+     if (partitioned_vectors_->num_partitions() !=
+         rhs.partitioned_vectors_->num_partitions()) {
+       std::cout << "partitioned_vectors_->num_parts() != "
+                    "rhs.partitioned_vectors_->num_parts() ("
+                 << partitioned_vectors_->num_partitions()
+                 << " != " << rhs.partitioned_vectors_->num_partitions() << ")"
+                 << std::endl;
+       return false;
+     }
 
-    return compare_feature_vector_arrays(
-        *partitioned_vectors_, *(rhs.partitioned_vectors_));
-  }
+     return compare_feature_vector_arrays(
+         *partitioned_vectors_, *(rhs.partitioned_vectors_));
+   }
 
-  /** Compare the stored `indices_` vector */
-  auto compare_indices(const ivf_flat_index& rhs) {
-    return compare_vectors(
-        partitioned_vectors_->indices(), rhs.partitioned_vectors_->indices());
-  }
+   /** Compare the stored `indices_` vector */
+   auto compare_indices(const ivf_flat_index& rhs) {
+     return compare_vectors(
+         partitioned_vectors_->indices(), rhs.partitioned_vectors_->indices());
+   }
 
-  /** Compare the stored `partitioned_ids_` vector */
-  auto compare_partitioned_ids(const ivf_flat_index& rhs) {
-    return compare_vectors(
-        partitioned_vectors_->ids(), rhs.partitioned_vectors_->ids());
-  }
+   /** Compare the stored `partitioned_ids_` vector */
+   auto compare_partitioned_ids(const ivf_flat_index& rhs) {
+     return compare_vectors(
+         partitioned_vectors_->ids(), rhs.partitioned_vectors_->ids());
+   }
 
-  auto set_centroids(const ColMajorMatrix<feature_type>& centroids) {
-    centroids_ = ColMajorMatrix<centroid_feature_type>(
-        ::dimension(centroids), ::num_vectors(centroids));
-    std::copy(
-        centroids.data(),
-        centroids.data() + centroids.num_rows() * centroids.num_cols(),
-        centroids_.data());
-  }
+   auto set_centroids(const ColMajorMatrix<feature_type>& centroids) {
+     centroids_ = ColMajorMatrix<centroid_feature_type>(
+         ::dimensions(centroids), ::num_vectors(centroids));
+     std::copy(
+         centroids.data(),
+         centroids.data() + centroids.num_rows() * centroids.num_cols(),
+         centroids_.data());
+   }
 
-  auto& get_centroids() {
-    return centroids_;
-  }
+   auto& get_centroids() {
+     return centroids_;
+   }
 
-  /**
-   * @brief Used for evaluating quality of partitioning
-   * @param centroids
-   * @param vectors
-   * @return
-   */
-  static std::vector<indices_type> predict(
-      const ColMajorMatrix<feature_type>& centroids,
-      const ColMajorMatrix<feature_type>& vectors) {
-    // Return a vector of indices of the nearest centroid for each vector in
-    // the matrix. Write the code below:
-    auto nClusters = centroids.num_cols();
-    std::vector<indices_type> indices(vectors.num_cols());
-    std::vector<score_type> distances(nClusters);
-    for (size_t i = 0; i < vectors.num_cols(); ++i) {
-      for (size_t j = 0; j < nClusters; ++j) {
-        distances[j] = l2_distance(vectors[i], centroids[j]);
-      }
-      indices[i] =
-          std::min_element(begin(distances), end(distances)) - begin(distances);
-    }
-    return indices;
-  }
+   /**
+    * @brief Used for evaluating quality of partitioning
+    * @param centroids
+    * @param vectors
+    * @return
+    */
+   static std::vector<indices_type> predict(
+       const ColMajorMatrix<feature_type>& centroids,
+       const ColMajorMatrix<feature_type>& vectors) {
+     // Return a vector of indices of the nearest centroid for each vector in
+     // the matrix. Write the code below:
+     auto nClusters = centroids.num_cols();
+     std::vector<indices_type> indices(vectors.num_cols());
+     std::vector<score_type> distances(nClusters);
+     for (size_t i = 0; i < vectors.num_cols(); ++i) {
+       for (size_t j = 0; j < nClusters; ++j) {
+         distances[j] = l2_distance(vectors[i], centroids[j]);
+       }
+       indices[i] = std::min_element(begin(distances), end(distances)) -
+                    begin(distances);
+     }
+     return indices;
+   }
 
-  void dump_group(const std::string& msg) {
-    group_->dump(msg);
-  }
+   void dump_group(const std::string& msg) {
+     group_->dump(msg);
+   }
 
-  void dump_metadata(const std::string& msg) {
-    group_->metadata.dump(msg);
-  }
+   void dump_metadata(const std::string& msg) {
+     group_->metadata.dump(msg);
+   }
 };
 
 #endif  // TILEDB_ivf_flat_index_H

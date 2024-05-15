@@ -163,7 +163,7 @@ class Vector : public std::span<T> {
 template <feature_vector V>
 void debug_vector(const V& v, const std::string& msg = "") {
   std::cout << msg << ": [";
-  for (size_t i = 0; i < dimension(v); ++i) {
+  for (size_t i = 0; i < dimensions(v); ++i) {
     std::cout << v[i] << " ";
   }
   std::cout << "]\n";
