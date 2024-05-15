@@ -177,7 +177,6 @@ int main(int argc, char* argv[]) {
         std::cout << std::endl;
 
         debug_matrix(groundtruth, "groundtruth");
-        debug_matrix(groundtruth, "groundtruth");
 
         std::cout << std::endl;
         debug_matrix(top_k, "top_k");
