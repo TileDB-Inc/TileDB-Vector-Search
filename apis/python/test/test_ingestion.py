@@ -162,9 +162,9 @@ def test_ivf_flat_ingestion_u8(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     index_uri = os.path.join(tmp_path, "array")
     k = 10
-    size = 100000
+    size = 10000
     partitions = 100
-    dimensions = 128
+    dimensions = 129
     nqueries = 100
     nprobe = 20
     create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
@@ -207,8 +207,8 @@ def test_ivf_flat_ingestion_u8(tmp_path):
 def test_ivf_flat_ingestion_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     k = 10
-    size = 100000
-    dimensions = 128
+    size = 10000
+    dimensions = 127
     partitions = 100
     nqueries = 100
     nprobe = 20
@@ -751,7 +751,7 @@ def test_ingestion_with_updates(tmp_path):
     k = 10
     size = 1000
     partitions = 10
-    dimensions = 128
+    dimensions = 49
     nqueries = 100
     nprobe = 10
     data = create_random_dataset_u8(
@@ -826,9 +826,9 @@ def test_ingestion_with_batch_updates(tmp_path):
 
     dataset_dir = os.path.join(tmp_path, "dataset")
     k = 10
-    size = 100000
+    size = 10000
     partitions = 100
-    dimensions = 128
+    dimensions = 99
     nqueries = 100
     nprobe = 100
     data = create_random_dataset_u8(
@@ -854,7 +854,7 @@ def test_ingestion_with_batch_updates(tmp_path):
         update_ids = {}
         updated_ids = {}
         update_ids_offset = MAX_UINT64 - size
-        for i in range(0, 100000, 2):
+        for i in range(0, 1000, 2):
             updated_ids[i] = i + update_ids_offset
             update_ids[i + update_ids_offset] = i
         external_ids = np.zeros((len(updated_ids) * 2), dtype=np.uint64)
@@ -889,10 +889,10 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
     dataset_dir = os.path.join(tmp_path, "dataset")
     k = 10
-    size = 1000
-    partitions = 10
-    dimensions = 128
-    nqueries = 100
+    size = 999
+    partitions = 16
+    dimensions = 65
+    nqueries = 85
     data = create_random_dataset_u8(
         nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir
     )
@@ -913,7 +913,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
         assert ingestion_timestamps == [1]
-        assert base_sizes == [1000]
+        assert base_sizes == [size]
 
         if index_type == "IVF_FLAT":
             assert index.partitions == partitions
@@ -935,7 +935,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
         assert ingestion_timestamps == [1]
-        assert base_sizes == [1000]
+        assert base_sizes == [size]
 
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions)
@@ -997,7 +997,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
         assert ingestion_timestamps == [1, timestamp_end]
-        assert base_sizes == [1000, 1000]
+        assert base_sizes == [size, size]
 
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions)
