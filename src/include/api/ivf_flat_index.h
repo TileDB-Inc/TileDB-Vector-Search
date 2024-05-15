@@ -30,7 +30,7 @@
  * wrapper of `index_ivf_flat` that allows for runtime polymorphism of the
  * `index_ivf_flat` class template.
  *
- * See README.md for details on type erasure.
+ * See IVF.md for details on type erasure.
  */
 
 #ifndef TILEDB_API_IVF_FLAT_INDEX_H
@@ -103,8 +103,8 @@ class IndexIVFFlat {
         auto value = c.second;
         if (key == "nlist") {
           nlist_ = std::stol(value);
-        } else if (key == "dimension") {
-          dimension_ = std::stol(value);
+        } else if (key == "dimensions") {
+          dimensions_ = std::stol(value);
         } else if (key == "max_iter") {
           max_iter_ = std::stol(value);
         } else if (key == "tolerance") {
@@ -250,12 +250,12 @@ class IndexIVFFlat {
     } else {
       throw std::runtime_error("Unsupported datatype combination");
     }
-    if (dimension_ != 0 && dimension_ != index_->dimension()) {
+    if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
-          "Dimension mismatch: " + std::to_string(dimension_) +
-          " != " + std::to_string(index_->dimension()));
+          "Dimensions mismatch: " + std::to_string(dimensions_) +
+          " != " + std::to_string(index_->dimensions()));
     }
-    dimension_ = index_->dimension();
+    dimensions_ = index_->dimensions();
     if (nlist_ != 0 && nlist_ != index_->num_partitions()) {
       throw std::runtime_error(
           "nlist mismatch: " + std::to_string(nlist_) +
@@ -340,12 +340,12 @@ class IndexIVFFlat {
 
     index_->train(training_set, init);
 
-    if (dimension_ != 0 && dimension_ != index_->dimension()) {
+    if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
-          "Dimension mismatch: " + std::to_string(dimension_) +
-          " != " + std::to_string(index_->dimension()));
+          "Dimensions mismatch: " + std::to_string(dimensions_) +
+          " != " + std::to_string(index_->dimensions()));
     }
-    dimension_ = index_->dimension();
+    dimensions_ = index_->dimensions();
 
     if (nlist_ != 0 && nlist_ != index_->num_partitions()) {
       throw std::runtime_error(
@@ -436,8 +436,8 @@ class IndexIVFFlat {
     index_->write_index(ctx, group_uri, storage_version);
   }
 
-  constexpr auto dimension() const {
-    return dimension_;  //::dimension(*index_);
+  constexpr auto dimensions() const {
+    return dimensions_;  //::dimensions(*index_);
   }
 
   constexpr auto num_partitions() const {
@@ -508,7 +508,7 @@ class IndexIVFFlat {
         const std::string& group_uri,
         const std::string& storage_version) const = 0;
 
-    [[nodiscard]] virtual size_t dimension() const = 0;
+    [[nodiscard]] virtual size_t dimensions() const = 0;
 
     [[nodiscard]] virtual size_t num_partitions() const = 0;
   };
@@ -702,8 +702,8 @@ class IndexIVFFlat {
       //      index_.remove(ids);
     }
 
-    size_t dimension() const override {
-      return ::dimension(impl_index_);
+    size_t dimensions() const override {
+      return ::dimensions(impl_index_);
     }
 
     size_t num_partitions() const override {
@@ -717,7 +717,7 @@ class IndexIVFFlat {
     T impl_index_;
   };
 
-  size_t dimension_ = 0;
+  size_t dimensions_ = 0;
   size_t nlist_ = 0;
   size_t max_iter_ = 2;
   float tolerance_ = 1e-4;

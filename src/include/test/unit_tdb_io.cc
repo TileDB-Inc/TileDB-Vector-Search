@@ -94,7 +94,7 @@ TEST_CASE("tdb_io: read matrix", "[tdb_io]") {
 
   auto X = tdbColMajorMatrix<uint8_t>(ctx, bigann1M_inputs_uri);
   CHECK(num_vectors(X) == num_bigann1M_vectors);
-  CHECK(dimension(X) == bigann1M_dimension);
+  CHECK(dimensions(X) == bigann1M_dimension);
 }
 
 TEST_CASE("tdb_io: load_file", "[tdb_io]") {
@@ -134,16 +134,16 @@ TEMPLATE_TEST_CASE("tdb_io: write matrix", "[tdb_io]", float, uint8_t) {
   }
 
   auto X = ColMajorMatrix<TestType>(Mrows, Ncols);
-  std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
+  std::iota(X.data(), X.data() + dimensions(X) * num_vectors(X), offset);
   write_matrix(ctx, X, tmp_matrix_uri);
 
   auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);
   Y.load();
 
   CHECK(num_vectors(Y) == num_vectors(X));
-  CHECK(dimension(Y) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+  CHECK(dimensions(Y) == dimensions(X));
+  CHECK(std::equal(
+      X.data(), X.data() + dimensions(X) * num_vectors(X), Y.data()));
   for (size_t i = 0; i < 5; ++i) {
     for (size_t j = 0; j < 5; ++j) {
       CHECK(X(i, j) == Y(i, j));

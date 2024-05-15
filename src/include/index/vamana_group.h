@@ -1,5 +1,5 @@
 /**
- * @file   vamana_group.h
+ * @file   vamana_index.h
  *
  * @section LICENSE
  *
@@ -55,8 +55,8 @@
  *      - Example: [[distance between 0 and 1, distance between 0 and 2], etc.]
  *   -  adjacency_row_index: Each entry in the row index indicates where the
  * neighbhors for that index start. 0 because that's where neighbors for vertex
- * 0 start, then 2 b/c that's where niehbhors for vertex 1 start, then 4 b/c
- * that's whre niehbhors for vertex 2 start, then 6 b/c that's the end.
+ * 0 start, then 2 b/c that's where neighbors for vertex 1 start, then 4 b/c
+ * that's whre neighbors for vertex 2 start, then 6 b/c that's the end.
  *      - Example: [0, 2, 4, 6]
  */
 [[maybe_unused]] static StorageFormat vamana_storage_formats = {
@@ -70,18 +70,9 @@
          // {"medoids_array_name", "medoids"},
      }}};
 
-template <class Index>
-class vamana_index_group;
-
-template <class Index>
-struct metadata_type_selector<vamana_index_group<Index>> {
-  using type = vamana_index_metadata;
-};
-
-template <class Index>
-class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
-  using Base = base_index_group<vamana_index_group>;
-  // using Base::Base;
+template <class index_type>
+class vamana_index_group : public base_index_group<index_type> {
+  using Base = base_index_group<index_type>;
 
   using Base::array_key_to_array_name_;
   using Base::array_name_to_uri_;
@@ -92,26 +83,20 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
   using Base::valid_array_names_;
   using Base::version_;
 
-  using index_type = Index;
-  // std::reference_wrapper<const index_type> index_;
-  // index_type index_;
-
   // @todo Make this controllable
   static const int32_t default_domain{std::numeric_limits<int32_t>::max() - 1};
   static const int32_t default_tile_extent{100'000};
   static const int32_t tile_size_bytes{64 * 1024 * 1024};
 
  public:
-  using index_group_metadata_type = vamana_index_metadata;
-
   vamana_index_group(
-      const index_type& index,
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
-      const std::string& version = std::string{""})
-      : Base(ctx, uri, index.dimension(), rw, temporal_policy, version) {
+      const std::string& version = std::string{""},
+      uint64_t dimensions = 0)
+      : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
   }
 
  public:
@@ -123,6 +108,17 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
       array_name_to_uri_[array_name] =
           array_name_to_uri(group_uri_, array_name);
     }
+  }
+
+  void clear_history_impl(uint64_t timestamp) {
+    tiledb::Array::delete_fragments(
+        cached_ctx_, feature_vectors_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(
+        cached_ctx_, adjacency_scores_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(
+        cached_ctx_, adjacency_ids_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(
+        cached_ctx_, adjacency_row_index_uri(), 0, timestamp);
   }
 
   /*
@@ -216,7 +212,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
 
     static const int32_t tile_size{
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
-                  this->get_dimension())};
+                  this->get_dimensions())};
     static const tiledb_filter_type_t default_compression{
         string_to_filter(storage_formats[version_]["default_attr_filters"])};
 
@@ -260,7 +256,7 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
     metadata_.base_sizes_ = {};
     metadata_.num_edges_history_ = {};
     metadata_.temp_size_ = 0;
-    metadata_.dimension_ = this->get_dimension();
+    metadata_.dimensions_ = this->get_dimensions();
 
     /**
      * Create the arrays: feature_vectors (matrix), feature_vectors_ids
@@ -272,9 +268,9 @@ class vamana_index_group : public base_index_group<vamana_index_group<Index>> {
         stdx::layout_left>(
         cached_ctx_,
         feature_vectors_uri(),
-        this->get_dimension(),
+        this->get_dimensions(),
         default_domain,
-        this->get_dimension(),
+        this->get_dimensions(),
         default_tile_extent,
         default_compression);
     tiledb_helpers::add_to_group(

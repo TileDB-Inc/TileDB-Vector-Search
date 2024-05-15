@@ -15,13 +15,13 @@ def test_construct_FeatureVector():
 
     a = vspy.FeatureVector(ctx, siftsmall_ids_uri)
     assert a.feature_type_string() == "uint64"
-    assert a.dimension() == 10000
+    assert a.dimensions() == 10000
 
 
 def test_feature_vector_to_numpy():
     a = vspy.FeatureVector(ctx, siftsmall_ids_uri)
     assert a.feature_type_string() == "uint64"
-    assert a.dimension() == 10000
+    assert a.dimensions() == 10000
     b = np.array(a)
     assert b.ndim == 1
     assert b.shape == (10000,)
@@ -34,7 +34,7 @@ def test_numpy_to_feature_vector_array_simple():
     assert a.ndim == 1
     logging.info(a.shape)
     assert a.shape[0] == (10000)
-    assert b.dimension() == 10000
+    assert b.dimensions() == 10000
     assert b.feature_type_string() == "float32"
 
     c = np.array(b)
@@ -47,29 +47,38 @@ def test_construct_FeatureVectorArray():
     a = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
     assert a.feature_type_string() == "float32"
     assert a.num_vectors() == 10000
-    assert a.dimension() == 128
+    assert a.dimensions() == 128
 
     a = vspy.FeatureVectorArray(ctx, bigann10k_inputs_uri)
     assert a.feature_type_string() == "uint8"
     assert a.num_vectors() == 10000
-    assert a.dimension() == 128
+    assert a.dimensions() == 128
 
     a = vspy.FeatureVectorArray(ctx, fmnistsmall_inputs_uri)
     assert a.feature_type_string() == "float32"
     assert a.num_vectors() == 1000
-    assert a.dimension() == 784
+    assert a.dimensions() == 784
+
+
+def test_construct_FeatureVectorArray_with_ids():
+    a = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri, siftsmall_ids_uri)
+    assert a.feature_type_string() == "float32"
+    assert a.num_vectors() == 10000
+    assert a.ids_type_string() == "uint64"
+    assert a.num_ids() == 10000
+    assert a.dimensions() == 128
 
 
 def test_feature_vector_array_to_numpy():
     a = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
     assert a.num_vectors() == 10000
-    assert a.dimension() == 128
+    assert a.dimensions() == 128
     b = np.array(a)
     assert b.shape == (10000, 128)
 
     a = vspy.FeatureVectorArray(ctx, bigann10k_inputs_uri)
     assert a.num_vectors() == 10000
-    assert a.dimension() == 128
+    assert a.dimensions() == 128
     b = np.array(a)
     assert b.shape == (10000, 128)
 
@@ -78,9 +87,9 @@ def test_numpy_to_feature_vector_array():
     a = np.array(np.random.rand(10000, 128), dtype=np.float32)
     b = vspy.FeatureVectorArray(a)
     logging.info(a.shape)
-    logging.info((b.dimension(), b.num_vectors()))
+    logging.info((b.dimensions(), b.num_vectors()))
     assert a.shape == (10000, 128)
-    assert b.dimension() == 128
+    assert b.dimensions() == 128
     assert b.num_vectors() == 10000
     assert a.shape == np.array(b).shape
     assert np.array_equal(a, np.array(b))
@@ -88,9 +97,9 @@ def test_numpy_to_feature_vector_array():
     a = np.array(np.random.rand(128, 10000), dtype=np.float32, order="F")
     b = vspy.FeatureVectorArray(a)
     logging.info(a.shape)
-    logging.info((b.dimension(), b.num_vectors()))
+    logging.info((b.dimensions(), b.num_vectors()))
     assert a.shape == (128, 10000)
-    assert b.dimension() == 128
+    assert b.dimensions() == 128
     assert b.num_vectors() == 10000
     # TODO(paris): This should work, but it doesn't.
     # assert a.shape == np.array(b).shape
@@ -99,9 +108,9 @@ def test_numpy_to_feature_vector_array():
     a = np.array(np.random.rand(10000, 128), dtype=np.float32)
     b = vspy.FeatureVectorArray(a.T)
     logging.info(a.shape)
-    logging.info((b.dimension(), b.num_vectors()))
+    logging.info((b.dimensions(), b.num_vectors()))
     assert a.shape == (10000, 128)
-    assert b.dimension() == 128
+    assert b.dimensions() == 128
     assert b.num_vectors() == 10000
     assert a.shape == np.array(b).shape
     assert np.array_equal(a, np.array(b))
@@ -109,9 +118,9 @@ def test_numpy_to_feature_vector_array():
     a = np.array(np.random.rand(1000000, 128), dtype=np.uint8)
     b = vspy.FeatureVectorArray(a)
     logging.info(a.shape)
-    logging.info((b.dimension(), b.num_vectors()))
+    logging.info((b.dimensions(), b.num_vectors()))
     assert a.shape == (1000000, 128)
-    assert b.dimension() == 128
+    assert b.dimensions() == 128
     assert b.num_vectors() == 1000000
     assert a.shape == np.array(b).shape
     assert np.array_equal(a, np.array(b))
@@ -119,7 +128,7 @@ def test_numpy_to_feature_vector_array():
     a = np.array(np.random.rand(10000, 128), dtype=np.float32)
     b = vspy.FeatureVectorArray(a)
     logging.info(a.shape)
-    logging.info((b.dimension(), b.num_vectors()))
+    logging.info((b.dimensions(), b.num_vectors()))
     assert a.shape == np.array(b).shape
     assert np.array_equal(a, np.array(b))
 
@@ -166,6 +175,14 @@ def test_TemporalPolicy():
     assert temporal_policy.timestamp_start() == 12
     assert temporal_policy.timestamp_end() == 99
 
+    temporal_policy = vspy.TemporalPolicy(None, 99)
+    assert temporal_policy.timestamp_start() == 0
+    assert temporal_policy.timestamp_end() == 99
+
+    temporal_policy = vspy.TemporalPolicy(1, None)
+    assert temporal_policy.timestamp_start() == 1
+    assert temporal_policy.timestamp_end() == np.iinfo(np.uint64).max
+
 
 def test_TemporalPolicy_from_timestamp():
     temporal_policy = to_temporal_policy(None)
@@ -199,7 +216,7 @@ def test_TemporalPolicy_from_timestamp():
 def test_construct_IndexFlatL2():
     a = vspy.IndexFlatL2(ctx, siftsmall_inputs_uri)
     assert a.feature_type_string() == "float32"
-    assert a.dimension() == 128
+    assert a.dimensions() == 128
 
 
 def test_query_IndexFlatL2():
@@ -210,21 +227,31 @@ def test_query_IndexFlatL2():
     q = vspy.FeatureVectorArray(ctx, siftsmall_query_uri)
     gt = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
     assert a.feature_type_string() == "float32"
-    assert a.dimension() == 128
+    assert a.dimensions() == 128
+
+    assert q.dimensions() == 128
     assert q.feature_type_string() == "float32"
-    assert q.dimension() == 128
     assert q.num_vectors() == num_queries
+    assert q.ids_type_string() == "any"
+    assert q.num_ids() == 0
+
+    assert gt.dimensions() == 100
     assert gt.feature_type_string() == "uint64"
-    assert gt.dimension() == 100
     assert gt.num_vectors() == num_queries
+    assert q.ids_type_string() == "any"
+    assert q.num_ids() == 0
 
     aq_scores, aq_top_k = a.query(q, k_nn)
-    assert aq_top_k.dimension() == k_nn
-    assert aq_scores.dimension() == k_nn
+    assert aq_top_k.dimensions() == k_nn
+    assert aq_scores.dimensions() == k_nn
     assert aq_top_k.feature_type_string() == "uint64"
     assert aq_scores.feature_type_string() == "float32"
     assert aq_top_k.num_vectors() == num_queries
     assert aq_scores.num_vectors() == num_queries
+    assert aq_top_k.ids_type_string() == "any"
+    assert aq_scores.ids_type_string() == "any"
+    assert aq_top_k.num_ids() == 0
+    assert aq_scores.num_ids() == 0
 
     logging.info(type(aq_top_k))
 
@@ -240,13 +267,13 @@ def test_construct_IndexVamana():
     assert a.feature_type_string() == "any"
     assert a.id_type_string() == "uint32"
     assert a.adjacency_row_index_type_string() == "uint32"
-    assert a.dimension() == 0
+    assert a.dimensions() == 0
 
     a = vspy.IndexVamana(feature_type="float32")
     assert a.feature_type_string() == "float32"
     assert a.id_type_string() == "uint32"
     assert a.adjacency_row_index_type_string() == "uint32"
-    assert a.dimension() == 0
+    assert a.dimensions() == 0
 
     a = vspy.IndexVamana(
         feature_type="uint8", id_type="uint64", adjacency_row_index_type="int64"
@@ -254,7 +281,7 @@ def test_construct_IndexVamana():
     assert a.feature_type_string() == "uint8"
     assert a.id_type_string() == "uint64"
     assert a.adjacency_row_index_type_string() == "int64"
-    assert a.dimension() == 0
+    assert a.dimensions() == 0
 
     a = vspy.IndexVamana(
         feature_type="float32", id_type="int64", adjacency_row_index_type="uint64"
@@ -262,7 +289,7 @@ def test_construct_IndexVamana():
     assert a.feature_type_string() == "float32"
     assert a.id_type_string() == "int64"
     assert a.adjacency_row_index_type_string() == "uint64"
-    assert a.dimension() == 0
+    assert a.dimensions() == 0
 
 
 def test_construct_IndexVamana_with_empty_vector(tmp_path):
@@ -279,7 +306,7 @@ def test_construct_IndexVamana_with_empty_vector(tmp_path):
         feature_type=feature_type,
         id_type=id_type,
         adjacency_row_index_type=adjacency_row_index_type,
-        dimension=dimensions,
+        dimensions=dimensions,
     )
     empty_vector = vspy.FeatureVectorArray(dimensions, 0, feature_type, id_type)
     a.train(empty_vector)

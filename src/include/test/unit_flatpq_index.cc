@@ -821,7 +821,7 @@ TEST_CASE("flatpq_index: query 1M", "[flatpq_index]") {
 TEST_CASE("flatpq_index: flatpq_index write and read", "[flatpq_index]") {
   const bool debug = false;
 
-  size_t dimension_{128};
+  size_t dimensions_{128};
   size_t num_subspaces_{16};
   size_t bits_per_subspace_{8};
   size_t num_clusters_{256};
@@ -841,7 +841,7 @@ TEST_CASE("flatpq_index: flatpq_index write and read", "[flatpq_index]") {
       siftsmall_feature_type,
       siftsmall_ids_type,
       siftsmall_indices_type>(
-      dimension_, num_subspaces_, bits_per_subspace_, num_clusters_);
+      dimensions_, num_subspaces_, bits_per_subspace_, num_clusters_);
   idx.train(training_set);
   idx.add(training_set);
 

@@ -31,7 +31,7 @@
  * wrapper of `tdbMatrix` that allows for runtime polymorphism of the
  * `tdbMatrix` class template.
  *
- * See README.md for details on type erasure.
+ * See IVF.md for details on type erasure.
  *
  */
 
@@ -84,7 +84,8 @@ class FeatureVectorArray {
       const std::string& uri,
       const std::string& ids_uri = "",
       size_t num_vectors = 0,
-      TemporalPolicy temporal_policy = {}) {
+      std::optional<TemporalPolicy> temporal_policy_input = std::nullopt) {
+    auto temporal_policy = temporal_policy_input.value_or(TemporalPolicy{});
     auto array = tiledb_helpers::open_array(
         tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
     feature_type_ = get_array_datatype(*array);
@@ -168,8 +169,8 @@ class FeatureVectorArray {
     return _cpo::extents(*vector_array);
   }
 
-  [[nodiscard]] auto dimension() const {
-    return _cpo::dimension(*vector_array);
+  [[nodiscard]] auto dimensions() const {
+    return _cpo::dimensions(*vector_array);
   }
 
   [[nodiscard]] auto num_vectors() const {
@@ -209,7 +210,7 @@ class FeatureVectorArray {
    */
   struct vector_array_base {
     virtual ~vector_array_base() = default;
-    [[nodiscard]] virtual size_t dimension() const = 0;
+    [[nodiscard]] virtual size_t dimensions() const = 0;
     [[nodiscard]] virtual size_t num_vectors() const = 0;
     [[nodiscard]] virtual void* data() const = 0;
     [[nodiscard]] virtual size_t num_ids() const = 0;
@@ -253,8 +254,8 @@ class FeatureVectorArray {
     [[nodiscard]] void* ids() const override {
       return _cpo::ids(impl_vector_array);
     }
-    [[nodiscard]] size_t dimension() const override {
-      return _cpo::dimension(impl_vector_array);
+    [[nodiscard]] size_t dimensions() const override {
+      return _cpo::dimensions(impl_vector_array);
     }
     [[nodiscard]] size_t num_vectors() const override {
       return _cpo::num_vectors(impl_vector_array);

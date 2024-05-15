@@ -30,14 +30,14 @@ jobs:
         run: |
           pip install .[test]
           cd apis/python
-          pytest
+          pytest -n logical --durations=0
           # TODO: fix editable on linux
           #pip uninstall -y tiledb.vector_search
           #pip install -e .
           #pytest
           pip install -r test/ipynb/requirements.txt
           export TILEDB_REST_TOKEN=$TILEDB_CLOUD_HELPER_VAR
-          pytest --nbmake test/ipynb
+          pytest -n logical --durations=0 --nbmake test/ipynb
         env:
           TILEDB_CLOUD_HELPER_VAR: ${{ secrets.TILEDB_CLOUD_HELPER_VAR }}
         shell: bash -el {0}

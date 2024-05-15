@@ -1,5 +1,5 @@
 /**
- * @file   ivf_flat_index_group.h
+ * @file   ivf_flat_group.h
  *
  * @section LICENSE
  *
@@ -47,19 +47,9 @@
          {"index_array_name", "partition_indexes"},
      }}};
 
-template <class Index>
-class ivf_flat_index_group;
-
-template <class Index>
-struct metadata_type_selector<ivf_flat_index_group<Index>> {
-  using type = ivf_flat_index_metadata;
-};
-
-template <class Index>
-class ivf_flat_index_group
-    : public base_index_group<ivf_flat_index_group<Index>> {
-  using Base = base_index_group<ivf_flat_index_group>;
-  // using Base::Base;
+template <class index_type>
+class ivf_flat_index_group : public base_index_group<index_type> {
+  using Base = base_index_group<index_type>;
 
   using Base::array_key_to_array_name_;
   using Base::array_name_to_uri_;
@@ -70,25 +60,19 @@ class ivf_flat_index_group
   using Base::valid_array_names_;
   using Base::version_;
 
-  using index_type = Index;
-  // std::reference_wrapper<const index_type> index_;
-  // index_type index_;
-
   static const int32_t default_domain{std::numeric_limits<int32_t>::max() - 1};
   static const int32_t default_tile_extent{100'000};
   static const int32_t tile_size_bytes{64 * 1024 * 1024};
 
  public:
-  using index_group_metadata_type = ivf_flat_index_metadata;
-
   ivf_flat_index_group(
-      const index_type& index,
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
-      const std::string& version = std::string{""})
-      : Base(ctx, uri, index.dimension(), rw, temporal_policy, version) {
+      const std::string& version = std::string{""},
+      uint64_t dimensions = 0)
+      : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
   }
 
  public:
@@ -100,6 +84,12 @@ class ivf_flat_index_group
       array_name_to_uri_[array_name] =
           array_name_to_uri(group_uri_, array_name);
     }
+  }
+
+  void clear_history_impl(uint64_t timestamp) {
+    tiledb::Array::delete_fragments(cached_ctx_, parts_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(cached_ctx_, centroids_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(cached_ctx_, indices_uri(), 0, timestamp);
   }
 
   /*
@@ -152,7 +142,7 @@ class ivf_flat_index_group
 
     static const int32_t tile_size{
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
-                  this->get_dimension())};
+                  this->get_dimensions())};
     static const tiledb_filter_type_t default_compression{
         string_to_filter(storage_formats[version_]["default_attr_filters"])};
 
@@ -181,16 +171,16 @@ class ivf_flat_index_group
     metadata_.base_sizes_ = {0};
     metadata_.partition_history_ = {0};
     metadata_.temp_size_ = 0;
-    metadata_.dimension_ = this->get_dimension();
+    metadata_.dimensions_ = this->get_dimensions();
 
     create_empty_for_matrix<
         typename index_type::centroid_feature_type,
         stdx::layout_left>(
         cached_ctx_,
         centroids_uri(),
-        this->get_dimension(),
+        this->get_dimensions(),
         default_domain,
-        this->get_dimension(),
+        this->get_dimensions(),
         default_tile_extent,
         default_compression);
     tiledb_helpers::add_to_group(
@@ -201,9 +191,9 @@ class ivf_flat_index_group
         stdx::layout_left>(
         cached_ctx_,
         parts_uri(),
-        this->get_dimension(),
+        this->get_dimensions(),
         default_domain,
-        this->get_dimension(),
+        this->get_dimensions(),
         default_tile_extent,
         default_compression);
     tiledb_helpers::add_to_group(write_group, parts_uri(), parts_array_name());

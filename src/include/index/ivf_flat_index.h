@@ -92,6 +92,9 @@ class ivf_flat_index {
   using score_type = float;  // @todo -- this should be a parameter?
   using centroid_feature_type = score_type;
 
+  using group_type = ivf_flat_index_group<ivf_flat_index>;
+  using metadata_type = ivf_flat_index_metadata;
+
  private:
   using storage_type = ColMajorPartitionedMatrix<
       feature_type,
@@ -123,7 +126,7 @@ class ivf_flat_index {
    ****************************************************************************/
 
   // Cached information about the partitioned vectors in the index
-  uint64_t dimension_{0};
+  uint64_t dimensions_{0};
   uint64_t num_partitions_{0};
 
   // The PartitionedMatrix has indices and ids internally and is also
@@ -158,7 +161,7 @@ class ivf_flat_index {
    * parameters to be used subsequently in training.  To fully create an index
    * we will need to call `train()` and `add()`.
    *
-   * @param dimension Dimension of the vectors comprising the training set and
+   * @param dimensions Dimensions of the vectors comprising the training set and
    * the data set.
    * @param nlist Number of centroids / partitions to compute.
    * @param max_iter Maximum number of iterations for kmans algorithm.
@@ -179,7 +182,7 @@ class ivf_flat_index {
       float tol = 0.000025,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       uint64_t seed = std::random_device{}())
-      :  // , dimension_(dim)
+      :  // , dimensions_(dim)
       temporal_policy_{
           temporal_policy.timestamp_end() != 0 ?
               temporal_policy :
@@ -217,20 +220,16 @@ class ivf_flat_index {
   ivf_flat_index(
       const tiledb::Context& ctx,
       const std::string& uri,
-      uint64_t timestamp = 0)
-      : group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
-            *this, ctx, uri, TILEDB_READ, temporal_policy_)} {
-    if (temporal_policy_.timestamp_end() == 0) {
-      temporal_policy_ = {
-          TimeTravel, group_->get_previous_ingestion_timestamp()};
-    }
-
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt)
+      : temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
+      , group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
+            ctx, uri, TILEDB_READ, temporal_policy_)} {
     /**
      * Read the centroids.  How the partitioned_vectors_ are read in will be
      * determined by the type of query we are doing.  But they will be read
      * in at this same timestamp.
      */
-    dimension_ = group_->get_dimension();
+    dimensions_ = group_->get_dimensions();
     num_partitions_ = group_->get_num_partitions();
     // Read all rows from column 0 -> `num_partitions_`. Set no upper_bound.
     centroids_ =
@@ -393,7 +392,7 @@ class ivf_flat_index {
 
     std::vector<size_t> degrees(num_partitions_, 0);
     auto new_centroids =
-        ColMajorMatrix<centroid_feature_type>(dimension_, num_partitions_);
+        ColMajorMatrix<centroid_feature_type>(dimensions_, num_partitions_);
 
     for (size_t iter = 0; iter < max_iter_; ++iter) {
       auto [scores, parts] = detail::flat::qv_partition_with_scores(
@@ -419,7 +418,7 @@ class ivf_flat_index {
         auto part = parts[i];
         auto centroid = new_centroids[part];
         auto vector = training_set[i];
-        for (size_t j = 0; j < dimension_; ++j) {
+        for (size_t j = 0; j < dimensions_; ++j) {
           centroid[j] += vector[j];
         }
         ++degrees[part];
@@ -446,7 +445,7 @@ class ivf_flat_index {
             auto rand_vector = training_set[index];
             auto low_centroid = new_centroids[zero_part];
             std::copy(begin(rand_vector), end(rand_vector), begin(low_centroid));
-            for (size_t i = 0; i < dimension_; ++i) {
+            for (size_t i = 0; i < dimensions_; ++i) {
               new_centroids[parts[index]][i] -= rand_vector[i];
             }
           }
@@ -472,7 +471,7 @@ class ivf_flat_index {
           auto low_centroid = new_centroids[zero_part];
           auto high_vector = training_set[high_vector_id];
           std::copy(begin(high_vector), end(high_vector), begin(low_centroid));
-          for (size_t i = 0; i < dimension_; ++i) {
+          for (size_t i = 0; i < dimensions_; ++i) {
             new_centroids[parts[high_vector_id]][i] -= high_vector[i];
           }
           ++degrees[zero_part];
@@ -488,7 +487,7 @@ class ivf_flat_index {
       for (size_t j = 0; j < num_partitions_; ++j) {
         if (degrees[j] != 0) {
           auto centroid = new_centroids[j];
-          for (size_t k = 0; k < dimension_; ++k) {
+          for (size_t k = 0; k < dimensions_; ++k) {
             centroid[k] /= degrees[j];
             total_weight += centroid[k] * centroid[k];
           }
@@ -577,13 +576,13 @@ class ivf_flat_index {
       //       ColMajorMatrix<feature_type>& training_set,
       const V& training_set,
       kmeans_init init = kmeans_init::random) {
-    dimension_ = ::dimension(training_set);
+    dimensions_ = ::dimensions(training_set);
     if (num_partitions_ == 0) {
       num_partitions_ = std::sqrt(num_vectors(training_set));
     }
 
     centroids_ =
-        ColMajorMatrix<centroid_feature_type>(dimension_, num_partitions_);
+        ColMajorMatrix<centroid_feature_type>(dimensions_, num_partitions_);
     switch (init) {
       case (kmeans_init::none):
         break;
@@ -599,7 +598,7 @@ class ivf_flat_index {
 #if 0
     std::cout << "\nCentroids Before:\n" << std::endl;
     for (size_t j = 0; j < centroids_.num_cols(); ++j) {
-      for (size_t i = 0; i < dimension_; ++i) {
+      for (size_t i = 0; i < dimensions_; ++i) {
         std::cout << centroids_[j][i] << " ";
       }
       std::cout << std::endl;
@@ -613,7 +612,7 @@ class ivf_flat_index {
 #if 0
     std::cout << "\nCentroids After:\n" << std::endl;
     for (size_t j = 0; j < centroids_.num_cols(); ++j) {
-      for (size_t i = 0; i < dimension_; ++i) {
+      for (size_t i = 0; i < dimensions_; ++i) {
         std::cout << centroids_[j][i] << " ";
       }
       std::cout << std::endl;
@@ -751,10 +750,15 @@ class ivf_flat_index {
       const std::string& group_uri,
       const std::string& storage_version = "") const {
     // Write the group
-    auto write_group = ivf_flat_index_group(
-        *this, ctx, group_uri, TILEDB_WRITE, temporal_policy_, storage_version);
+    auto write_group = ivf_flat_index_group<ivf_flat_index>(
+        ctx,
+        group_uri,
+        TILEDB_WRITE,
+        temporal_policy_,
+        storage_version,
+        dimensions_);
 
-    write_group.set_dimension(dimension_);
+    write_group.set_dimensions(dimensions_);
 
     write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
     write_group.append_base_size(::num_vectors(*partitioned_vectors_));
@@ -1109,8 +1113,8 @@ class ivf_flat_index {
    * Note that we don't have a `num_vectors` because it isn't clear what
    * that means for a partitioned (possibly out-of-core) index.
    ***************************************************************************/
-  auto dimension() const {
-    return dimension_;
+  auto dimensions() const {
+    return dimensions_;
   }
 
   auto num_partitions() const {
@@ -1152,7 +1156,7 @@ class ivf_flat_index {
    * @return bool indicating equality of the index metadata
    */
   bool compare_cached_metadata(const ivf_flat_index& rhs) {
-    if (dimension_ != rhs.dimension_) {
+    if (dimensions_ != rhs.dimensions_) {
       return false;
     }
     if (num_partitions_ != rhs.num_partitions_) {
@@ -1174,26 +1178,26 @@ class ivf_flat_index {
   template <feature_vector_array L, feature_vector_array R>
   auto compare_feature_vector_arrays(const L& lhs, const R& rhs) const {
     if (::num_vectors(lhs) != ::num_vectors(rhs) ||
-        ::dimension(lhs) != ::dimension(rhs)) {
-      std::cout << "num_vectors(lhs) != num_vectors(rhs) || dimension(lhs) != "
-                   "dimension(rhs)n"
+        ::dimensions(lhs) != ::dimensions(rhs)) {
+      std::cout << "num_vectors(lhs) != num_vectors(rhs) || dimensions(lhs) != "
+                   "dimensions(rhs)n"
                 << std::endl;
       std::cout << "num_vectors(lhs): " << ::num_vectors(lhs)
                 << " num_vectors(rhs): " << ::num_vectors(rhs) << std::endl;
-      std::cout << "dimension(lhs): " << ::dimension(lhs)
-                << " dimension(rhs): " << ::dimension(rhs) << std::endl;
+      std::cout << "dimensions(lhs): " << ::dimensions(lhs)
+                << " dimensions(rhs): " << ::dimensions(rhs) << std::endl;
       return false;
     }
     for (size_t i = 0; i < ::num_vectors(lhs); ++i) {
       if (!std::equal(begin(lhs[i]), end(lhs[i]), begin(rhs[i]))) {
         std::cout << "lhs[" << i << "] != rhs[" << i << "]" << std::endl;
         std::cout << "lhs[" << i << "]: ";
-        for (size_t j = 0; j < ::dimension(lhs); ++j) {
+        for (size_t j = 0; j < ::dimensions(lhs); ++j) {
           std::cout << lhs[i][j] << " ";
         }
         std::cout << std::endl;
         std::cout << "rhs[" << i << "]: ";
-        for (size_t j = 0; j < ::dimension(rhs); ++j) {
+        for (size_t j = 0; j < ::dimensions(rhs); ++j) {
           std::cout << rhs[i][j] << " ";
         }
         return false;
@@ -1212,9 +1216,9 @@ class ivf_flat_index {
    */
   template <feature_vector L, feature_vector R>
   auto compare_vectors(const L& lhs, const R& rhs) const {
-    if (::dimension(lhs) != ::dimension(rhs)) {
-      std::cout << "dimension(lhs) != dimension(rhs) (" << ::dimension(lhs)
-                << " != " << ::dimension(rhs) << ")" << std::endl;
+    if (::dimensions(lhs) != ::dimensions(rhs)) {
+      std::cout << "dimensions(lhs) != dimensions(rhs) (" << ::dimensions(lhs)
+                << " != " << ::dimensions(rhs) << ")" << std::endl;
       return false;
     }
     return std::equal(begin(lhs), end(lhs), begin(rhs));
@@ -1272,7 +1276,7 @@ class ivf_flat_index {
 
   auto set_centroids(const ColMajorMatrix<feature_type>& centroids) {
     centroids_ = ColMajorMatrix<centroid_feature_type>(
-        ::dimension(centroids), ::num_vectors(centroids));
+        ::dimensions(centroids), ::num_vectors(centroids));
     std::copy(
         centroids.data(),
         centroids.data() + centroids.num_rows() * centroids.num_cols(),

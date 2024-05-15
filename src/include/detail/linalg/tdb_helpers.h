@@ -1,5 +1,5 @@
 /**
- * @file   tiledb_helpers.h
+ * @file   tdb_helpers.h
  *
  * @section LICENSE
  *

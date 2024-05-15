@@ -162,6 +162,14 @@ def test_ivf_flat_index(tmp_path):
     # timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
     # assert ingestion_timestamps[0] > timestamp_5_minutes_ago and ingestion_timestamps[0] < timestamp_5_minutes_from_now
 
+    # TODO(paris): Investigate whether we should overwrite the existing metadata during the first
+    # ingestion of Python indexes. I believe as it's currently written we have a bug here.
+    # ingestion_timestamps, base_sizes = load_metadata(uri)
+    # assert base_sizes == [5]
+    # timestamp_5_minutes_from_now = int((time.time() + 5 * 60) * 1000)
+    # timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
+    # assert ingestion_timestamps[0] > timestamp_5_minutes_ago and ingestion_timestamps[0] < timestamp_5_minutes_from_now
+
     query_and_check(
         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
     )

@@ -1,5 +1,5 @@
 /**
-* @file   ivf_flat_index_metadata.h
+* @file   ivf_flat_metadata.h
 *
 * @section LICENSE
 *
@@ -77,15 +77,28 @@ class ivf_flat_index_metadata
     partition_history_str_ = to_string(nlohmann::json(partition_history_));
   }
 
-  auto dump_json_impl() {
-    if (!empty(indices_type_str_)) {
-      if (px_datatype_ == TILEDB_ANY) {
-        px_datatype_ = string_to_datatype(indices_type_str_);
-      } else if (px_datatype_ != string_to_datatype(indices_type_str_)) {
-        throw std::runtime_error(
-            "px_datatype metadata disagree, must be " + indices_type_str_ +
-            " not " + tiledb::impl::type_to_str(px_datatype_));
+  void clear_history_impl(uint64_t timestamp) {
+    std::vector<partition_history_type> new_partition_history;
+    for (int i = 0; i < ingestion_timestamps_.size(); i++) {
+      auto ingestion_timestamp = ingestion_timestamps_[i];
+      if (ingestion_timestamp > timestamp) {
+        new_partition_history.push_back(partition_history_[i]);
       }
+    }
+    if (new_partition_history.empty()) {
+      new_partition_history = {0};
+    }
+
+    partition_history_ = new_partition_history;
+    partition_history_str_ = to_string(nlohmann::json(partition_history_));
+  }
+
+  auto dump_json_impl() const {
+    if (!empty(indices_type_str_) &&
+        px_datatype_ != string_to_datatype(indices_type_str_)) {
+      throw std::runtime_error(
+          "px_datatype metadata disagree, must be " + indices_type_str_ +
+          " not " + tiledb::impl::type_to_str(px_datatype_));
     }
   }
 };

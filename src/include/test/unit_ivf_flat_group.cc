@@ -87,9 +87,8 @@ struct dummy_index {
   using indices_type = int;
   using centroid_feature_type = float;
 
-  auto dimension() const {
-    return 10;
-  }
+  using group_type = ivf_flat_index_group<dummy_index>;
+  using metadata_type = ivf_flat_index_metadata;
 };
 
 TEST_CASE(
@@ -98,7 +97,7 @@ TEST_CASE(
   tiledb::Context ctx;
 
   CHECK_THROWS_WITH(
-      ivf_flat_index_group(dummy_index{}, ctx, "I dont exist"),
+      ivf_flat_index_group<dummy_index>(ctx, "I dont exist"),
       "Group uri I dont exist does not exist.");
 }
 
@@ -114,7 +113,8 @@ TEST_CASE("ivf_flat_group: write constructor - create", "[ivf_flat_group]") {
   }
 
   ivf_flat_index_group x =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimensions() == 10);
 }
 
 TEST_CASE(
@@ -131,10 +131,12 @@ TEST_CASE(
   }
 
   ivf_flat_index_group x =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimensions() == 10);
 
   ivf_flat_index_group y =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimensions() == 10);
 }
 
 TEST_CASE(
@@ -151,10 +153,11 @@ TEST_CASE(
   }
 
   ivf_flat_index_group x =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimensions() == 10);
 
   ivf_flat_index_group y =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
 }
 
 TEST_CASE(
@@ -172,13 +175,15 @@ TEST_CASE(
   }
 
   ivf_flat_index_group x =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimensions() == 10);
 
   ivf_flat_index_group y =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimensions() == 10);
 
   ivf_flat_index_group z =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
 }
 
 TEST_CASE(
@@ -203,35 +208,42 @@ TEST_CASE(
   size_t offset = 0;
 
   ivf_flat_index_group x =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimensions() == 10);
 
   SECTION("Just set") {
     SECTION("After create") {
     }
 
     SECTION("After create and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimensions() == 10);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     x.set_ingestion_timestamp(expected_ingestion);
     x.set_base_size(expected_base);
     x.set_num_partitions(expected_partitions);
     x.set_temp_size(expected_temp_size);
-    x.set_dimension(expected_dimension);
+    x.set_dimensions(expected_dimension);
   }
 
   SECTION("Just append") {
@@ -239,28 +251,34 @@ TEST_CASE(
     }
 
     SECTION("After create and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimensions() == 10);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     x.append_ingestion_timestamp(expected_ingestion);
     x.append_base_size(expected_base);
     x.append_num_partitions(expected_partitions);
     x.set_temp_size(expected_temp_size);
-    x.set_dimension(expected_dimension);
+    x.set_dimensions(expected_dimension);
   }
 
   SECTION("Set then append") {
@@ -268,28 +286,34 @@ TEST_CASE(
     }
 
     SECTION("After create and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimensions() == 10);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     x.set_ingestion_timestamp(expected_ingestion);
     x.set_base_size(expected_base);
     x.set_num_partitions(expected_partitions);
     x.set_temp_size(expected_temp_size);
-    x.set_dimension(expected_dimension);
+    x.set_dimensions(expected_dimension);
 
     offset = 13;
 
@@ -297,7 +321,7 @@ TEST_CASE(
     x.append_base_size(expected_base + offset);
     x.append_num_partitions(expected_partitions + offset);
     x.set_temp_size(expected_temp_size + offset);
-    x.set_dimension(expected_dimension + offset);
+    x.set_dimensions(expected_dimension + offset);
 
     CHECK(
         size(x.get_all_ingestion_timestamps()) ==
@@ -311,28 +335,34 @@ TEST_CASE(
     }
 
     SECTION("After create and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimensions() == 10);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_READ);
-      x = ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      CHECK(x.get_dimensions() == 10);
     }
 
     x.set_ingestion_timestamp(expected_ingestion);
     x.set_base_size(expected_base);
     x.set_num_partitions(expected_partitions);
     x.set_temp_size(expected_temp_size);
-    x.set_dimension(expected_dimension);
+    x.set_dimensions(expected_dimension);
 
     offset = 13;
 
@@ -340,7 +370,7 @@ TEST_CASE(
     x.set_base_size(expected_base + offset);
     x.set_num_partitions(expected_partitions + offset);
     x.set_temp_size(expected_temp_size + offset);
-    x.set_dimension(expected_dimension + offset);
+    x.set_dimensions(expected_dimension + offset);
 
     CHECK(size(x.get_all_ingestion_timestamps()) == 1);
     CHECK(size(x.get_all_base_sizes()) == 1);
@@ -351,7 +381,7 @@ TEST_CASE(
   CHECK(x.get_previous_base_size() == expected_base + offset);
   CHECK(x.get_previous_num_partitions() == expected_partitions + offset);
   CHECK(x.get_temp_size() == expected_temp_size + offset);
-  CHECK(x.get_dimension() == expected_dimension + offset);
+  CHECK(x.get_dimensions() == expected_dimension + offset);
 }
 
 TEST_CASE("ivf_flat_group: storage version", "[ivf_flat_group]") {
@@ -372,33 +402,29 @@ TEST_CASE("ivf_flat_group: storage version", "[ivf_flat_group]") {
   auto offset = 2345;
 
   ivf_flat_index_group x =
-      ivf_flat_index_group(dummy_index{}, ctx, tmp_uri, TILEDB_WRITE);
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimensions() == 10);
 
   SECTION("0.3") {
-    x = ivf_flat_index_group(
-        dummy_index{},
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        TemporalPolicy{TimeTravel, 0},
-        "0.3");
+    x = ivf_flat_index_group<dummy_index>(
+        ctx, tmp_uri, TILEDB_WRITE, TemporalPolicy{TimeTravel, 0}, "0.3", 10);
   }
 
   SECTION("current_storage_version") {
-    x = ivf_flat_index_group(
-        dummy_index{},
+    x = ivf_flat_index_group<dummy_index>(
         ctx,
         tmp_uri,
         TILEDB_WRITE,
         TemporalPolicy{TimeTravel, 0},
-        current_storage_version);
+        current_storage_version,
+        10);
   }
 
   x.set_ingestion_timestamp(expected_ingestion + offset);
   x.set_base_size(expected_base + offset);
   x.set_num_partitions(expected_partitions + offset);
   x.set_temp_size(expected_temp_size + offset);
-  x.set_dimension(expected_dimension + offset);
+  x.set_dimensions(expected_dimension + offset);
 
   CHECK(size(x.get_all_ingestion_timestamps()) == 1);
   CHECK(size(x.get_all_base_sizes()) == 1);
@@ -407,7 +433,7 @@ TEST_CASE("ivf_flat_group: storage version", "[ivf_flat_group]") {
   CHECK(x.get_previous_base_size() == expected_base + offset);
   CHECK(x.get_previous_num_partitions() == expected_partitions + offset);
   CHECK(x.get_temp_size() == expected_temp_size + offset);
-  CHECK(x.get_dimension() == expected_dimension + offset);
+  CHECK(x.get_dimensions() == expected_dimension + offset);
 }
 
 TEST_CASE("ivf_flat_group: invalid storage version", "[ivf_flat_group]") {
@@ -419,13 +445,10 @@ TEST_CASE("ivf_flat_group: invalid storage version", "[ivf_flat_group]") {
   if (vfs.is_dir(tmp_uri)) {
     vfs.remove_dir(tmp_uri);
   }
-  CHECK_THROWS(ivf_flat_index_group(
-      dummy_index{},
-      ctx,
-      tmp_uri,
-      TILEDB_WRITE,
-      TemporalPolicy{TimeTravel, 0},
-      "invalid"));
+  CHECK_THROWS(
+      ivf_flat_index_group<dummy_index>(
+          ctx, tmp_uri, TILEDB_WRITE, TemporalPolicy{TimeTravel, 0}, "invalid"),
+      10);
 }
 
 TEST_CASE("ivf_flat_group: mismatched storage version", "[ivf_flat_group]") {
@@ -438,21 +461,77 @@ TEST_CASE("ivf_flat_group: mismatched storage version", "[ivf_flat_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_index_group x = ivf_flat_index_group(
-      dummy_index{},
-      ctx,
-      tmp_uri,
-      TILEDB_WRITE,
-      TemporalPolicy{TimeTravel, 0},
-      "0.3");
+  ivf_flat_index_group x = ivf_flat_index_group<dummy_index>(
+      ctx, tmp_uri, TILEDB_WRITE, TemporalPolicy{TimeTravel, 0}, "0.3", 10);
 
   CHECK_THROWS_WITH(
-      ivf_flat_index_group(
-          dummy_index{},
+      ivf_flat_index_group<dummy_index>(
           ctx,
           tmp_uri,
           TILEDB_WRITE,
           TemporalPolicy{TimeTravel, 0},
-          "different_version"),
+          "different_version",
+          10),
       "Version mismatch. Requested different_version but found 0.3");
+}
+
+TEST_CASE("ivf_flat_group: clear history", "[ivf_flat_group]") {
+  std::string tmp_uri =
+      (std::filesystem::temp_directory_path() / "ivf_flat_group").string();
+
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri)) {
+    vfs.remove_dir(tmp_uri);
+  }
+
+  ivf_flat_index_group x =
+      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+
+  x.append_ingestion_timestamp(1);
+  x.append_base_size(2);
+  x.append_num_partitions(3);
+
+  x.append_ingestion_timestamp(11);
+  x.append_base_size(22);
+  x.append_num_partitions(33);
+
+  x.append_ingestion_timestamp(111);
+  x.append_base_size(222);
+  x.append_num_partitions(333);
+
+  CHECK(x.get_all_ingestion_timestamps().size() == 4);
+  CHECK(x.get_all_base_sizes().size() == 4);
+  CHECK(x.get_all_num_partitions().size() == 4);
+  CHECK(x.get_all_ingestion_timestamps()[0] == 0);
+  CHECK(x.get_all_ingestion_timestamps()[1] == 1);
+  CHECK(x.get_all_ingestion_timestamps()[2] == 11);
+  CHECK(x.get_all_ingestion_timestamps()[3] == 111);
+  CHECK(x.get_all_base_sizes()[0] == 0);
+  CHECK(x.get_all_base_sizes()[1] == 2);
+  CHECK(x.get_all_base_sizes()[2] == 22);
+  CHECK(x.get_all_base_sizes()[3] == 222);
+  CHECK(x.get_all_num_partitions()[0] == 0);
+  CHECK(x.get_all_num_partitions()[1] == 3);
+  CHECK(x.get_all_num_partitions()[2] == 33);
+  CHECK(x.get_all_num_partitions()[3] == 333);
+
+  // Can clear the first three timestamps correctly.
+  x.clear_history(100);
+  CHECK(x.get_all_ingestion_timestamps().size() == 1);
+  CHECK(x.get_all_base_sizes().size() == 1);
+  CHECK(x.get_all_num_partitions().size() == 1);
+  CHECK(x.get_all_ingestion_timestamps()[0] == 111);
+  CHECK(x.get_all_base_sizes()[0] == 222);
+  CHECK(x.get_all_num_partitions()[0] == 333);
+
+  // If we clear after the last timestamp, we end up with zeroes.
+  x.clear_history(112);
+  CHECK(x.get_all_ingestion_timestamps().size() == 1);
+  CHECK(x.get_all_base_sizes().size() == 1);
+  CHECK(x.get_all_num_partitions().size() == 1);
+  CHECK(x.get_all_ingestion_timestamps()[0] == 0);
+  CHECK(x.get_all_ingestion_timestamps()[0] == 0);
+  CHECK(x.get_all_base_sizes()[0] == 0);
+  CHECK(x.get_all_num_partitions()[0] == 0);
 }

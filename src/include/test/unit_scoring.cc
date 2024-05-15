@@ -780,7 +780,7 @@ TEST_CASE("scoring: avx2", "[scoring]") {
 
   float sum_0 = 0;
   for (size_t i = 0; i < num_vectors(rand_a); ++i) {
-    for (size_t j = 0; j < dimension(rand_b); ++j) {
+    for (size_t j = 0; j < dimensions(rand_b); ++j) {
       float diff = rand_a[i][j] - rand_b[i][j];
       sum_0 += diff * diff;
     }
