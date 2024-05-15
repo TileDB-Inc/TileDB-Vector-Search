@@ -54,7 +54,7 @@ auto baseline_scoring(
 
   auto size_a = num_vectors(a);
   auto size_b = num_vectors(b);
-  auto size_d = dimension(a);
+  auto size_d = dimensions(a);
   const float* a_data = a.data();
   const float* b_data = b.data();
 
@@ -108,7 +108,7 @@ auto baseline_inner_product(
 
   auto size_a = num_vectors(a);
   auto size_b = num_vectors(b);
-  auto size_d = dimension(a);
+  auto size_d = dimensions(a);
   const float* a_data = a.data();
   const float* b_data = b.data();
 
@@ -153,10 +153,10 @@ int main() {
   auto b = ColMajorMatrix<float>(128, 100);
   auto c = ColMajorMatrix<uint8_t>(128, 100);
   auto d = ColMajorMatrix<uint8_t>(128, 10'000);
-  randomize(std::span<float>(a.data(), dimension(a) * num_vectors(a)));
-  randomize(std::span<float>(b.data(), dimension(b) * num_vectors(b)));
-  randomize(std::span<uint8_t>(c.data(), dimension(c) * num_vectors(c)));
-  randomize(std::span<uint8_t>(d.data(), dimension(d) * num_vectors(d)));
+  randomize(std::span<float>(a.data(), dimensions(a) * num_vectors(a)));
+  randomize(std::span<float>(b.data(), dimensions(b) * num_vectors(b)));
+  randomize(std::span<uint8_t>(c.data(), dimensions(c) * num_vectors(c)));
+  randomize(std::span<uint8_t>(d.data(), dimensions(d) * num_vectors(d)));
 
   std::cout << "***** Inner Product" << std::endl;
 

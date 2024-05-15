@@ -71,7 +71,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
-      {"dimension", 128},
+      {"dimensions", 128},
       {"feature_datatype", 2},
       {"id_datatype", 10},
       {"adjacency_scores_datatype", 2},

@@ -250,9 +250,9 @@ class base_index_group {
    * @todo Process the "base group" metadata here.
    */
   void create_default() {
-    if (get_dimension() == 0) {
+    if (get_dimensions() == 0) {
       throw std::runtime_error(
-          "Dimension must be set when creating a new group.");
+          "Dimensions must be set when creating a new group.");
     }
     static_cast<group_type*>(this)->create_default_impl();
   }
@@ -299,8 +299,8 @@ class base_index_group {
    * @param rw Whether to open for TILEDB_READ or TILEDB_WRITE.
    * @param temporal_policy The temporal policy to use.
    * @param version The storage format version.
-   * @param dimension The dimension of the index. Only needs to be set for
-   * TILEDB_WRITE.
+   * @param dimensions The dimensions of the vectors in the index. Only needs to
+   * be set for TILEDB_WRITE.
    *
    * @todo Chained parameters here too?
    */
@@ -310,7 +310,7 @@ class base_index_group {
       tiledb_query_type_t rw = TILEDB_READ,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       const std::string& version = std::string{""},
-      uint64_t dimension = 0)
+      uint64_t dimensions = 0)
       : cached_ctx_(ctx)
       , group_uri_(uri)
       , version_(version)
@@ -320,7 +320,7 @@ class base_index_group {
         open_for_read(temporal_policy);
         break;
       case TILEDB_WRITE:
-        set_dimension(dimension);
+        set_dimensions(dimensions);
         open_for_write(temporal_policy);
         break;
       case TILEDB_MODIFY_EXCLUSIVE:
@@ -408,11 +408,11 @@ class base_index_group {
     metadata_.temp_size_ = size;
   }
 
-  auto get_dimension() const {
-    return metadata_.dimension_;
+  auto get_dimensions() const {
+    return metadata_.dimensions_;
   }
-  auto set_dimension(size_t dim) {
-    metadata_.dimension_ = dim;
+  auto set_dimensions(size_t dim) {
+    metadata_.dimensions_ = dim;
   }
 
   auto get_history_index() const {
