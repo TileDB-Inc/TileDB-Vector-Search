@@ -1396,7 +1396,7 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
     CHECK(idx2.group().get_l_build() == l_build);
     CHECK(idx2.group().get_r_max_degree() == r_max_degree);
     CHECK(idx2.group().get_b_backtrack() == backtrack);
-    CHECK(idx2.group().get_dimension() == sift_dimensions);
+    CHECK(idx2.group().get_dimensions() == sift_dimensions);
     CHECK(idx2.group().get_temp_size() == 0);
 
     CHECK(idx2.group().get_all_num_edges().size() == 1);
@@ -1428,7 +1428,7 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
     CHECK(idx2.group().get_l_build() == l_build);
     CHECK(idx2.group().get_r_max_degree() == r_max_degree);
     CHECK(idx2.group().get_b_backtrack() == backtrack);
-    CHECK(idx2.group().get_dimension() == sift_dimensions);
+    CHECK(idx2.group().get_dimensions() == sift_dimensions);
     CHECK(idx2.group().get_temp_size() == 0);
 
     CHECK(idx2.group().get_all_num_edges().size() == 1);
