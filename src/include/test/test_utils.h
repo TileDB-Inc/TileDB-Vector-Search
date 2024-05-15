@@ -68,7 +68,7 @@ void fill_and_write_matrix(
   if (vfs.is_dir(uri)) {
     vfs.remove_dir(uri);
   }
-  std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
+  std::iota(X.data(), X.data() + dimensions(X) * num_vectors(X), offset);
   write_matrix(ctx, X, uri, 0, true, temporal_policy);
 }
 
@@ -101,7 +101,7 @@ void fill_and_write_matrix(
   if (vfs.is_dir(ids_uri)) {
     vfs.remove_dir(ids_uri);
   }
-  std::iota(X.data(), X.data() + dimension(X) * num_vectors(X), offset);
+  std::iota(X.data(), X.data() + dimensions(X) * num_vectors(X), offset);
   std::iota(X.ids(), X.ids() + X.num_ids(), offset);
 
   // Write the vectors to their URI.

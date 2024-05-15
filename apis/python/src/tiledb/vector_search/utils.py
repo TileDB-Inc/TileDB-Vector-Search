@@ -1,4 +1,5 @@
 import io
+import json
 from typing import Optional
 
 import numpy as np
@@ -34,6 +35,10 @@ def to_temporal_policy(timestamp) -> Optional[vspy.TemporalPolicy]:
     elif timestamp is not None:
         temporal_policy = vspy.TemporalPolicy(timestamp)
     return temporal_policy
+
+
+def metadata_to_list(group, key):
+    return [int(x) for x in list(json.loads(group.meta.get(key, "[]")))]
 
 
 def _load_vecs_t(uri, dtype, ctx_or_config=None):

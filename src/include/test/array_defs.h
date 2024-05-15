@@ -117,7 +117,7 @@ static std::string sift_root{test_array_root / "sift"};
 constexpr size_t num_sift_vectors = 10'000;
 static std::string sift_root{test_array_root / "siftsmall"};
 #endif
-constexpr size_t sift_dimension = 128;
+constexpr size_t sift_dimensions = 128;
 static std::string sift_group_uri{sift_root / "group"};
 static std::string sift_inputs_uri{sift_root / "input_vectors"};
 static std::string sift_centroids_uri{sift_root / "partition_centroids"};
@@ -133,7 +133,7 @@ using siftsmall_centroids_type = float;
 using siftsmall_ids_type = uint64_t;
 using siftsmall_indices_type = uint64_t;
 constexpr size_t num_siftsmall_vectors = 10'000;
-constexpr size_t siftsmall_dimension = 128;
+constexpr size_t siftsmall_dimensions = 128;
 static std::string siftsmall_root{test_array_root / "siftsmall"};
 static std::string siftsmall_group_uri{siftsmall_root / "group"};
 static std::string siftsmall_inputs_uri{siftsmall_root / "input_vectors"};

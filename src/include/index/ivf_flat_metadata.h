@@ -93,15 +93,12 @@ class ivf_flat_index_metadata
     partition_history_str_ = to_string(nlohmann::json(partition_history_));
   }
 
-  auto dump_json_impl() {
-    if (!empty(indices_type_str_)) {
-      if (px_datatype_ == TILEDB_ANY) {
-        px_datatype_ = string_to_datatype(indices_type_str_);
-      } else if (px_datatype_ != string_to_datatype(indices_type_str_)) {
-        throw std::runtime_error(
-            "px_datatype metadata disagree, must be " + indices_type_str_ +
-            " not " + tiledb::impl::type_to_str(px_datatype_));
-      }
+  auto dump_json_impl() const {
+    if (!empty(indices_type_str_) &&
+        px_datatype_ != string_to_datatype(indices_type_str_)) {
+      throw std::runtime_error(
+          "px_datatype metadata disagree, must be " + indices_type_str_ +
+          " not " + tiledb::impl::type_to_str(px_datatype_));
     }
   }
 };

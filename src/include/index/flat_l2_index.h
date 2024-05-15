@@ -105,8 +105,8 @@ class flat_l2_index {
     // @todo
   }
 
-  auto dimension() const {
-    return _cpo::dimension(*feature_vectors_);
+  auto dimensions() const {
+    return _cpo::dimensions(*feature_vectors_);
   }
 
   auto ntotal() const {
@@ -118,7 +118,7 @@ class flat_l2_index {
   }
 
   auto num_rows() const {
-    return _cpo::dimension(*feature_vectors_);
+    return _cpo::dimensions(*feature_vectors_);
   }
 };
 

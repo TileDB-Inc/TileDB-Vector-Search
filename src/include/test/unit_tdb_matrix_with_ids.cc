@@ -69,9 +69,9 @@ TEMPLATE_TEST_CASE(
       ctx, tmp_matrix_uri, tmp_ids_uri);
   Y.load();
   CHECK(num_vectors(Y) == num_vectors(X));
-  CHECK(dimension(Y) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+  CHECK(dimensions(Y) == dimensions(X));
+  CHECK(std::equal(
+      X.data(), X.data() + dimensions(X) * num_vectors(X), Y.data()));
   for (size_t i = 0; i < X.num_rows(); ++i) {
     for (size_t j = 0; j < X.num_cols(); ++j) {
       CHECK(X(i, j) == Y(i, j));
@@ -87,9 +87,9 @@ TEMPLATE_TEST_CASE(
 
   auto Z = tdbColMajorMatrixWithIds<TestType, TestType>(std::move(Y));
   CHECK(num_vectors(Z) == num_vectors(X));
-  CHECK(dimension(Z) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Z.data()));
+  CHECK(dimensions(Z) == dimensions(X));
+  CHECK(std::equal(
+      X.data(), X.data() + dimensions(X) * num_vectors(X), Z.data()));
   for (size_t i = 0; i < 5; ++i) {
     for (size_t j = 0; j < 5; ++j) {
       CHECK(X(i, j) == Z(i, j));
@@ -128,9 +128,9 @@ TEST_CASE("tdb_matrix_with_ids: different types", "[tdb_matrix_with_ids]") {
       ctx, tmp_matrix_uri, tmp_ids_uri);
   Y.load();
   CHECK(num_vectors(Y) == num_vectors(X));
-  CHECK(dimension(Y) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+  CHECK(dimensions(Y) == dimensions(X));
+  CHECK(std::equal(
+      X.data(), X.data() + dimensions(X) * num_vectors(X), Y.data()));
   for (size_t i = 0; i < X.num_rows(); ++i) {
     for (size_t j = 0; j < X.num_cols(); ++j) {
       CHECK(X(i, j) == Y(i, j));
@@ -181,9 +181,9 @@ TEMPLATE_TEST_CASE(
   Y.load();
   CHECK(size(Y.raveled_ids()) == size(X.raveled_ids()));
   CHECK(num_vectors(Y) == num_vectors(X));
-  CHECK(dimension(Y) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+  CHECK(dimensions(Y) == dimensions(X));
+  CHECK(std::equal(
+      X.data(), X.data() + dimensions(X) * num_vectors(X), Y.data()));
   for (size_t i = 0; i < 5; ++i) {
     for (size_t j = 0; j < 5; ++j) {
       CHECK(X(i, j) == Y(i, j));
@@ -195,9 +195,9 @@ TEMPLATE_TEST_CASE(
   Z = std::move(Y);
 
   CHECK(num_vectors(Z) == num_vectors(X));
-  CHECK(dimension(Z) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Z.data()));
+  CHECK(dimensions(Z) == dimensions(X));
+  CHECK(std::equal(
+      X.data(), X.data() + dimensions(X) * num_vectors(X), Z.data()));
   for (size_t i = 0; i < 5; ++i) {
     for (size_t j = 0; j < 5; ++j) {
       CHECK(X(i, j) == Z(i, j));
@@ -208,9 +208,9 @@ TEMPLATE_TEST_CASE(
   A = std::move(Z);
   CHECK(size(A.raveled_ids()) == size(X.raveled_ids()));
   CHECK(num_vectors(A) == num_vectors(X));
-  CHECK(dimension(A) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), A.data()));
+  CHECK(dimensions(A) == dimensions(X));
+  CHECK(std::equal(
+      X.data(), X.data() + dimensions(X) * num_vectors(X), A.data()));
   for (size_t i = 0; i < 5; ++i) {
     for (size_t j = 0; j < 5; ++j) {
       CHECK(X(i, j) == A(i, j));
@@ -219,9 +219,9 @@ TEMPLATE_TEST_CASE(
 
   CHECK(size(B.raveled_ids()) == size(X.raveled_ids()));
   CHECK(num_vectors(B) == num_vectors(X));
-  CHECK(dimension(B) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), B.data()));
+  CHECK(dimensions(B) == dimensions(X));
+  CHECK(std::equal(
+      X.data(), X.data() + dimensions(X) * num_vectors(X), B.data()));
   for (size_t i = 0; i < 5; ++i) {
     for (size_t j = 0; j < 5; ++j) {
       CHECK(X(i, j) == B(i, j));
@@ -287,7 +287,7 @@ TEST_CASE("tdb_matrix_with_ids: empty matrix", "[tdb_matrix_with_ids]") {
     CHECK(X.num_cols() == 0);
     CHECK(num_vectors(X) == 0);
     CHECK(X.num_rows() == 0);
-    CHECK(dimension(X) == 0);
+    CHECK(dimensions(X) == 0);
 
     CHECK(X.num_ids() == 0);
     CHECK(X.raveled_ids().size() == 0);
@@ -300,7 +300,7 @@ TEST_CASE("tdb_matrix_with_ids: empty matrix", "[tdb_matrix_with_ids]") {
     CHECK(X.num_cols() == 0);
     CHECK(num_vectors(X) == 0);
     CHECK(X.num_rows() == 0);
-    CHECK(dimension(X) == 0);
+    CHECK(dimensions(X) == 0);
     CHECK(X.num_ids() == 0);
     CHECK(X.raveled_ids().size() == 0);
   }
@@ -332,9 +332,9 @@ TEMPLATE_TEST_CASE(
   auto Y = tdbPreLoadMatrixWithIds<TestType, TestType, stdx::layout_left>(
       ctx, tmp_matrix_uri, tmp_ids_uri);
   CHECK(num_vectors(Y) == num_vectors(X));
-  CHECK(dimension(Y) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+  CHECK(dimensions(Y) == dimensions(X));
+  CHECK(std::equal(
+      X.data(), X.data() + dimensions(X) * num_vectors(X), Y.data()));
   for (size_t i = 0; i < 5; ++i) {
     for (size_t j = 0; j < 5; ++j) {
       CHECK(X(i, j) == Y(i, j));
@@ -353,9 +353,9 @@ TEMPLATE_TEST_CASE(
   Z = std::move(Y);
 
   CHECK(num_vectors(Z) == num_vectors(X));
-  CHECK(dimension(Z) == dimension(X));
-  CHECK(
-      std::equal(X.data(), X.data() + dimension(X) * num_vectors(X), Z.data()));
+  CHECK(dimensions(Z) == dimensions(X));
+  CHECK(std::equal(
+      X.data(), X.data() + dimensions(X) * num_vectors(X), Z.data()));
   for (size_t i = 0; i < 5; ++i) {
     for (size_t j = 0; j < 5; ++j) {
       CHECK(X(i, j) == Z(i, j));
@@ -406,9 +406,9 @@ TEST_CASE("tdb_matrix_with_ids: time travel", "[tdb_matrix_with_ids]") {
     auto Y = tdbColMajorPreLoadMatrixWithIds<float, uint64_t, size_t>(
         ctx, tmp_matrix_uri, tmp_ids_uri, 0, TemporalPolicy{TimeTravel, 50});
     CHECK(num_vectors(Y) == num_vectors(X));
-    CHECK(dimension(Y) == dimension(X));
+    CHECK(dimensions(Y) == dimensions(X));
     CHECK(std::equal(
-        X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+        X.data(), X.data() + dimensions(X) * num_vectors(X), Y.data()));
     for (size_t i = 0; i < Mrows; ++i) {
       for (size_t j = 0; j < Ncols; ++j) {
         CHECK(X(i, j) == Y(i, j));
@@ -421,9 +421,9 @@ TEST_CASE("tdb_matrix_with_ids: time travel", "[tdb_matrix_with_ids]") {
     auto Y = tdbColMajorPreLoadMatrixWithIds<float, uint64_t, size_t>(
         ctx, tmp_matrix_uri, tmp_ids_uri, 0, TemporalPolicy{TimeTravel, 100});
     CHECK(num_vectors(Y) == num_vectors(X));
-    CHECK(dimension(Y) == dimension(X));
+    CHECK(dimensions(Y) == dimensions(X));
     CHECK(std::equal(
-        X.data(), X.data() + dimension(X) * num_vectors(X), Y.data()));
+        X.data(), X.data() + dimensions(X) * num_vectors(X), Y.data()));
     for (size_t i = 0; i < Mrows; ++i) {
       for (size_t j = 0; j < Ncols; ++j) {
         CHECK(X(i, j) == Y(i, j));
@@ -436,7 +436,7 @@ TEST_CASE("tdb_matrix_with_ids: time travel", "[tdb_matrix_with_ids]") {
     auto Y = tdbColMajorPreLoadMatrixWithIds<float, uint64_t, size_t>(
         ctx, tmp_matrix_uri, tmp_ids_uri, 0, TemporalPolicy{TimeTravel, 5});
     CHECK(num_vectors(Y) == 0);
-    CHECK(dimension(Y) == 0);
+    CHECK(dimensions(Y) == 0);
     CHECK(Y.size() == 0);
   }
 
@@ -452,7 +452,7 @@ TEST_CASE("tdb_matrix_with_ids: time travel", "[tdb_matrix_with_ids]") {
         0,
         TemporalPolicy{TimeTravel, 5});
     CHECK(num_vectors(Y) == 0);
-    CHECK(dimension(Y) == 0);
+    CHECK(dimensions(Y) == 0);
     CHECK(Y.size() == 0);
   }
 }

@@ -129,16 +129,17 @@ auto sub_kmeans(
     size_t max_iter,
     size_t num_threads,
     float reassign_ratio = 0.05) {
-  size_t sub_dimension_ = sub_end - sub_begin;
+  size_t sub_dimensions_ = sub_end - sub_begin;
   auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
   std::vector<size_t> degrees(num_clusters, 0);
 
   // Copy centroids to new centroids -- note only one subspace will be changing
   // @todo Keep new_centroids outside function so we don't need to copy all
-  ColMajorMatrix<U> new_centroids(dimension(centroids), num_vectors(centroids));
+  ColMajorMatrix<U> new_centroids(
+      dimensions(centroids), num_vectors(centroids));
   for (size_t i = 0; i < num_vectors(new_centroids); ++i) {
-    for (size_t j = 0; j < dimension(new_centroids); ++j) {
+    for (size_t j = 0; j < dimensions(new_centroids); ++j) {
       new_centroids(j, i) = centroids(j, i);
     }
   }
@@ -281,9 +282,9 @@ class flatpq_index {
   // @todo Temporarily public to facilitate early testing
  public:
   // metadata
-  size_t dimension_{0};
+  size_t dimensions_{0};
   size_t num_subspaces_{0};
-  size_t sub_dimension_{0};
+  size_t sub_dimensions_{0};
   size_t bits_per_subspace_{8};
   size_t num_clusters_{256};
   float tol_ = 0.001;
@@ -292,9 +293,9 @@ class flatpq_index {
 
   using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
   std::vector<metadata_element> metadata{
-      {"dimension", &dimension_, TILEDB_UINT64},
+      {"dimensions", &dimensions_, TILEDB_UINT64},
       {"num_subspaces", &num_subspaces_, TILEDB_UINT64},
-      {"sub_dimension", &sub_dimension_, TILEDB_UINT64},
+      {"sub_dimension", &sub_dimensions_, TILEDB_UINT64},
       {"bits_per_subspace", &bits_per_subspace_, TILEDB_UINT64},
       {"num_clusters", &num_clusters_, TILEDB_UINT64},
       {"tol", &tol_, TILEDB_FLOAT32},
@@ -310,7 +311,7 @@ class flatpq_index {
  public:
   /**
    * @brief Construct a new flat index object
-   * @param dimension Dimensionality of the input vectors
+   * @param dimensions Dimensionality of the input vectors
    * @param num_subspaces Number of subspaces (number of sections of the
    *       vector to quantize)
    * @param bits_per_subspace Number of bits per section (per subspace)
@@ -318,25 +319,25 @@ class flatpq_index {
    * @todo We don't really need dimension as an argument for any of our indexes
    */
   flatpq_index(
-      size_t dimension,
+      size_t dimensions,
       size_t num_subspaces,
       size_t bits_per_subspace = 8,
       size_t num_clusters = 256)
-      : dimension_(dimension)
+      : dimensions_(dimensions)
       , num_subspaces_(num_subspaces)
       , bits_per_subspace_(bits_per_subspace)
       , num_clusters_(num_clusters) {
     // Number of subspaces must evenly divide dimension of vector
-    if (dimension_ == 0 || num_subspaces_ == 0 || bits_per_subspace_ == 0) {
+    if (dimensions_ == 0 || num_subspaces_ == 0 || bits_per_subspace_ == 0) {
       throw std::invalid_argument(
           "dimension, num_subspaces, and bits_per_subspace must be greater "
           "than zero");
     }
-    if ((dimension_ % num_subspaces_) != 0) {
+    if ((dimensions_ % num_subspaces_) != 0) {
       throw std::invalid_argument(
           "Number of subspaces must evenly divide dimension of vector");
     }
-    sub_dimension_ = dimension_ / num_subspaces_;
+    sub_dimensions_ = dimensions_ / num_subspaces_;
   }
 
   /**
@@ -390,7 +391,7 @@ class flatpq_index {
         typename ColMajorMatrix<centroid_feature_type>::span_type>
   auto train(const ColMajorMatrix<feature_type>& training_set) {
     centroids_ =
-        ColMajorMatrix<centroid_feature_type>(dimension_, num_clusters_);
+        ColMajorMatrix<centroid_feature_type>(dimensions_, num_clusters_);
     distance_tables_ = std::vector<ColMajorMatrix<score_type>>(num_subspaces_);
     for (size_t i = 0; i < num_subspaces_; ++i) {
       distance_tables_[i] =
@@ -398,8 +399,8 @@ class flatpq_index {
     }
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      auto sub_begin = subspace * dimension_ / num_subspaces_;
-      auto sub_end = (subspace + 1) * dimension_ / num_subspaces_;
+      auto sub_begin = subspace * dimensions_ / num_subspaces_;
+      auto sub_end = (subspace + 1) * dimensions_ / num_subspaces_;
 
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
@@ -423,8 +424,8 @@ class flatpq_index {
 
     // Create table
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      auto sub_begin = subspace * sub_dimension_;
-      auto sub_end = (subspace + 1) * sub_dimension_;
+      auto sub_begin = subspace * sub_dimensions_;
+      auto sub_end = (subspace + 1) * sub_dimensions_;
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
       for (size_t i = 0; i < num_clusters_; ++i) {
@@ -442,8 +443,8 @@ class flatpq_index {
         ColMajorMatrix<code_type>(num_subspaces_, num_vectors(feature_vectors));
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      auto sub_begin = sub_dimension_ * subspace;
-      auto sub_end = sub_dimension_ * (subspace + 1);
+      auto sub_begin = sub_dimensions_ * subspace;
+      auto sub_end = sub_dimensions_ * (subspace + 1);
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
       // For each vector, find the closest centroid
@@ -508,8 +509,8 @@ class flatpq_index {
     float pq_distance = 0.0;
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      auto sub_begin = subspace * sub_dimension_;
-      auto sub_end = (subspace + 1) * sub_dimension_;
+      auto sub_begin = subspace * sub_dimensions_;
+      auto sub_end = (subspace + 1) * sub_dimensions_;
       auto i = b[subspace];
 
       pq_distance += sub_l2_distance(a, centroids_[i], sub_begin, sub_end);
@@ -569,8 +570,8 @@ class flatpq_index {
         decltype(centroids_[0])>
   auto encode(const V& v, W& pq) const {
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      auto sub_begin = sub_dimension_ * subspace;
-      auto sub_end = sub_begin + sub_dimension_;
+      auto sub_begin = sub_dimensions_ * subspace;
+      auto sub_end = sub_begin + sub_dimensions_;
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
       auto min_score = std::numeric_limits<score_type>::max();
@@ -623,11 +624,11 @@ class flatpq_index {
   auto decode(const PQ& pq) {
     using local_feature_type = F;
     // @todo Use Vector instead of std::vector
-    auto un_pq = std::vector<local_feature_type>(dimension_);
+    auto un_pq = std::vector<local_feature_type>(dimensions_);
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      auto sub_begin = subspace * sub_dimension_;
-      auto sub_end = (subspace + 1) * sub_dimension_;
+      auto sub_begin = subspace * sub_dimensions_;
+      auto sub_end = (subspace + 1) * sub_dimensions_;
       auto i = pq[subspace];
 
       // Copy the centroid into the appropriate subspace portion of the
@@ -687,13 +688,13 @@ class flatpq_index {
     double total_normalizer = 0.0;
 
     auto debug_vectors =
-        ColMajorMatrix<float>(dimension_, num_vectors(feature_vectors));
+        ColMajorMatrix<float>(dimensions_, num_vectors(feature_vectors));
 
     for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
-      auto re = std::vector<float>(dimension_);
+      auto re = std::vector<float>(dimensions_);
       for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-        auto sub_begin = sub_dimension_ * subspace;
-        auto sub_end = sub_dimension_ * (subspace + 1);
+        auto sub_begin = sub_dimensions_ * subspace;
+        auto sub_end = sub_dimensions_ * (subspace + 1);
         auto centroid = centroids_[pq_vectors_(subspace, i)];
 
         std::vector<float> x(
@@ -788,7 +789,7 @@ class flatpq_index {
       const ColMajorMatrix<feature_type>& feature_vectors) {
     double total_diff = 0.0;
     double total_normalizer = 0.0;
-    auto local_sub_distance = SubDistance{0, dimension_};
+    auto local_sub_distance = SubDistance{0, dimensions_};
 
     score_type diff_max = 0.0;
     score_type vec_max = 0.0;
@@ -805,7 +806,7 @@ class flatpq_index {
         diff_max = std::max(diff_max, diff);
         total_diff += diff;
       }
-      auto zeros = std::vector<feature_type>(dimension_);
+      auto zeros = std::vector<feature_type>(dimensions_);
       vec_max =
           std::max(vec_max, local_sub_distance(feature_vectors[i], zeros));
     }
@@ -819,8 +820,8 @@ class flatpq_index {
    * @return
    */
   bool compare_metadata(const flatpq_index& rhs) {
-    if (dimension_ != rhs.dimension_) {
-      std::cout << "dimension_ " << dimension_ << " != " << rhs.dimension_
+    if (dimensions_ != rhs.dimensions_) {
+      std::cout << "dimensions_ " << dimensions_ << " != " << rhs.dimensions_
                 << std::endl;
       return false;
     }
@@ -829,9 +830,9 @@ class flatpq_index {
                 << " != " << rhs.num_subspaces_ << std::endl;
       return false;
     }
-    if (sub_dimension_ != rhs.sub_dimension_) {
-      std::cout << "sub_dimension_ " << sub_dimension_
-                << " != " << rhs.sub_dimension_ << std::endl;
+    if (sub_dimensions_ != rhs.sub_dimensions_) {
+      std::cout << "sub_dimensions_ " << sub_dimensions_
+                << " != " << rhs.sub_dimensions_ << std::endl;
       return false;
     }
     if (bits_per_subspace_ != rhs.bits_per_subspace_) {

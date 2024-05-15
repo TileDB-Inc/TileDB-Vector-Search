@@ -158,7 +158,7 @@ void init_type_erased_module(py::module_& m) {
           )
       .def(py::init<size_t, const std::string&>())
       .def(py::init<size_t, void*, const std::string&>())
-      .def("dimension", &FeatureVector::dimension)
+      .def("dimensions", &FeatureVector::dimensions)
       .def("feature_type", &FeatureVector::feature_type)
       .def("feature_type_string", &FeatureVector::feature_type_string)
       .def_buffer([](FeatureVector& v) -> py::buffer_info {
@@ -168,7 +168,7 @@ void init_type_erased_module(py::module_& m) {
             datatype_to_format(
                 v.feature_type()), /* Python struct-style format descriptor */
             1,                     /* Number of dimensions */
-            {v.dimension()},       /* Buffer dimension */
+            {v.dimensions()},      /* Buffer dimension */
             {datatype_to_size(v.feature_type())}
             /* Strides (in bytes) for each index */
         );
@@ -209,26 +209,24 @@ void init_type_erased_module(py::module_& m) {
              const std::string& uri,
              const std::string& ids_uri,
              size_t num_vectors,
-             size_t timestamp) {
+             std::optional<TemporalPolicy> temporal_policy) {
             new (&instance) FeatureVectorArray(
-                ctx,
-                uri,
-                ids_uri,
-                num_vectors,
-                timestamp == 0 ? TemporalPolicy() :
-                                 TemporalPolicy(TimeTravel, timestamp));
+                ctx, uri, ids_uri, num_vectors, temporal_policy);
           },
           py::keep_alive<1, 2>(),  // FeatureVectorArray should keep ctx alive.
           py::arg("ctx"),
           py::arg("uri"),
           py::arg("ids_uri") = "",
           py::arg("num_vectors") = 0,
-          py::arg("timestamp") = 0)
+          py::arg("temporal_policy") = std::nullopt)
       .def(py::init<size_t, size_t, const std::string&, const std::string&>())
-      .def("dimension", &FeatureVectorArray::dimension)
+      .def("dimensions", &FeatureVectorArray::dimensions)
       .def("num_vectors", &FeatureVectorArray::num_vectors)
       .def("feature_type", &FeatureVectorArray::feature_type)
       .def("feature_type_string", &FeatureVectorArray::feature_type_string)
+      .def("num_ids", &FeatureVectorArray::num_ids)
+      .def("ids_type", &FeatureVectorArray::ids_type)
+      .def("ids_type_string", &FeatureVectorArray::ids_type_string)
       .def_buffer([](FeatureVectorArray& v) -> py::buffer_info {
         return py::buffer_info(
             v.data(),                           /* Pointer to buffer */
@@ -237,9 +235,9 @@ void init_type_erased_module(py::module_& m) {
                 v.feature_type()), /* Python struct-style format descriptor */
             2,                     /* Number of dimensions */
             {v.num_vectors(),
-             v.dimension()}, /* Buffer dimensions -- row major */
+             v.dimensions()}, /* Buffer dimensions -- row major */
             {datatype_to_size(v.feature_type()) *
-                 v.dimension(), /* Strides (in bytes) for each index */
+                 v.dimensions(), /* Strides (in bytes) for each index */
              datatype_to_size(v.feature_type())});
       })
       .def(py::init([](py::array b) {
@@ -285,7 +283,7 @@ void init_type_erased_module(py::module_& m) {
       .def("train", &IndexFlatL2::train)
       .def("save", &IndexFlatL2::save)
       .def("feature_type_string", &IndexFlatL2::feature_type_string)
-      .def("dimension", &IndexFlatL2::dimension)
+      .def("dimensions", &IndexFlatL2::dimensions)
       .def(
           "query",
           [](IndexFlatL2& index, FeatureVectorArray& vectors, size_t top_k) {
@@ -310,17 +308,13 @@ void init_type_erased_module(py::module_& m) {
           [](IndexVamana& instance,
              const tiledb::Context& ctx,
              const std::string& group_uri,
-             size_t timestamp) {
-            new (&instance) IndexVamana(
-                ctx,
-                group_uri,
-                timestamp == 0 ? TemporalPolicy(TimeTravel, 0) :
-                                 TemporalPolicy(TimeTravel, timestamp));
+             std::optional<TemporalPolicy> temporal_policy) {
+            new (&instance) IndexVamana(ctx, group_uri, temporal_policy);
           },
           py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
           py::arg("ctx"),
           py::arg("group_uri"),
-          py::arg("timestamp") = 0)
+          py::arg("temporal_policy") = std::nullopt)
       .def(
           "__init__",
           [](IndexVamana& instance, py::kwargs kwargs) {
@@ -356,21 +350,21 @@ void init_type_erased_module(py::module_& m) {
           [](IndexVamana& index,
              const tiledb::Context& ctx,
              const std::string& group_uri,
-             std::optional<size_t> timestamp,
+             std::optional<TemporalPolicy> temporal_policy,
              const std::string& storage_version) {
-            index.write_index(ctx, group_uri, timestamp, storage_version);
+            index.write_index(ctx, group_uri, temporal_policy, storage_version);
           },
           py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
           py::arg("ctx"),
           py::arg("group_uri"),
-          py::arg("timestamp") = py::none(),
+          py::arg("temporal_policy") = std::nullopt,
           py::arg("storage_version") = "")
       .def("feature_type_string", &IndexVamana::feature_type_string)
       .def("id_type_string", &IndexVamana::id_type_string)
       .def(
           "adjacency_row_index_type_string",
           &IndexVamana::adjacency_row_index_type_string)
-      .def("dimension", &IndexVamana::dimension)
+      .def("dimensions", &IndexVamana::dimensions)
       .def_static(
           "clear_history",
           [](const tiledb::Context& ctx,
@@ -445,5 +439,5 @@ void init_type_erased_module(py::module_& m) {
       .def("feature_type_string", &IndexIVFFlat::feature_type_string)
       .def("id_type_string", &IndexIVFFlat::id_type_string)
       .def("px_type_string", &IndexIVFFlat::px_type_string)
-      .def("dimension", &IndexIVFFlat::dimension);
+      .def("dimensions", &IndexIVFFlat::dimensions);
 }
