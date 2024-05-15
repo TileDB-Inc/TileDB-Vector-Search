@@ -35,7 +35,7 @@
  * I. To compress, train, add, the steps would be:
  * - train_pq to get cluster_centroids_ and distance_tables_
  *   - uses sub_kmeans on uncompressed vectors
- *   - cluster_centroids_ is a feature_vector_array of feature_type, dimension_
+ *   - cluster_centroids_ is a feature_vector_array of feature_type, dimensions_
  * x num_clusters_
  * - encode training_set using cluster_centroids_ to get
  * unpartitioned_pq_vectors_, which are a feature_vector_array of pq_code_type,
@@ -50,7 +50,7 @@
  *
  * II. If we train, add, compress, the steps would be:
  * - train using training_set to get ivf_centroids_, which is a
- *   feature_vector_array of feature_type, dimension_ x num_partitions_
+ *   feature_vector_array of feature_type, dimensions_ x num_partitions_
  *   - uses ivf_flat::train
  *     - uses kmeans (just as it is used today)
  * - add
@@ -65,7 +65,7 @@
  *
  * III. OR, train , compress, add, the steps would be:
  * - train using training_set to get ivf_centroids_, which is a
- *   feature_vector_array of feature_type, dimension_ x num_partitions_
+ *   feature_vector_array of feature_type, dimensions_ x num_partitions_
  *   - uses ivf_flat::train
  *     - uses kmeans (just as it is used today)
  * - add
@@ -170,7 +170,7 @@ class ivf_pq_index {
    *     the compress / train / add pattern.
    *   - The cluster_centroids_ that partition each subspace of the training set
    *     into another set of partitions. There are num_clusters of these, with
-   *     each centroid being of size dimension_.  These are used to build the
+   *     each centroid being of size dimensions_.  These are used to build the
    *     distance_tables_ and compress the training set and ivf centroids
    */
   using flat_ivf_centroid_storage_type =
@@ -204,12 +204,12 @@ class ivf_pq_index {
    ****************************************************************************/
 
   // Cached information about the partitioned vectors in the index
-  uint64_t dimension_{0};
+  uint64_t dimensions_{0};
   uint64_t num_partitions_{0};
 
   // Cached information about the pq encoding
   uint64_t num_subspaces_{0};
-  uint64_t sub_dimension_{0};
+  uint64_t sub_dimensions_{0};
   constexpr static const uint64_t bits_per_subspace_{8};
   constexpr static const uint64_t num_clusters_{256};
 
@@ -345,10 +345,10 @@ class ivf_pq_index {
      * determined by the type of query we are doing.  But they will be read
      * in at this same timestamp.
      */
-    dimension_ = group_->get_dimension();
+    dimensions_ = group_->get_dimensions();
     num_partitions_ = group_->get_num_partitions();
     num_subspaces_ = group_->get_num_subspaces();
-    sub_dimension_ = dimension_ / num_subspaces_;
+    sub_dimensions_ = dimensions_ / num_subspaces_;
 
     flat_ivf_centroids_ =
         tdbPreLoadMatrix<flat_vector_feature_type, stdx::layout_left>(
@@ -438,19 +438,19 @@ class ivf_pq_index {
         typename ColMajorMatrix<feature_type>::span_type,
         typename ColMajorMatrix<flat_vector_feature_type>::span_type>
   auto train_pq(const V& training_set, kmeans_init init = kmeans_init::random) {
-    dimension_ = ::dimension(training_set);
-    std::cout << "dimension: " << dimension_ << std::endl;
+    dimensions_ = ::dimensions(training_set);
+    std::cout << "dimensions: " << dimensions_ << std::endl;
     assert(num_subspaces_ > 0);
     std::cout << "num_subspaces: " << num_subspaces_ << std::endl;
-    sub_dimension_ = dimension_ / num_subspaces_;
-    // assert(dimension_ % num_subspaces_ == 0);
-    if (dimension_ % num_subspaces_ != 0) {
+    sub_dimensions_ = dimensions_ / num_subspaces_;
+    // assert(dimensions_ % num_subspaces_ == 0);
+    if (dimensions_ % num_subspaces_ != 0) {
       throw std::runtime_error(
           "Dimension must be divisible by the number of subspaces");
     }
 
     cluster_centroids_ =
-        ColMajorMatrix<flat_vector_feature_type>(dimension_, num_clusters_);
+        ColMajorMatrix<flat_vector_feature_type>(dimensions_, num_clusters_);
 
     // Lookup table for the distance between centroids of each subspace
     distance_tables_ = std::vector<ColMajorMatrix<score_type>>(num_subspaces_);
@@ -468,8 +468,8 @@ class ivf_pq_index {
     // through the training set.  We need to move iteration over subspaces to
     // the inner loop -- and SIMDize it
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      auto sub_begin = subspace * dimension_ / num_subspaces_;
-      auto sub_end = (subspace + 1) * dimension_ / num_subspaces_;
+      auto sub_begin = subspace * dimensions_ / num_subspaces_;
+      auto sub_end = (subspace + 1) * dimensions_ / num_subspaces_;
 
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
@@ -509,8 +509,8 @@ class ivf_pq_index {
     // from each subspace).
     // @todo SIMDize with subspace iteration in inner loop
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      auto sub_begin = subspace * sub_dimension_;
-      auto sub_end = (subspace + 1) * sub_dimension_;
+      auto sub_begin = subspace * sub_dimensions_;
+      auto sub_end = (subspace + 1) * sub_dimensions_;
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
       for (size_t i = 0; i < num_clusters_; ++i) {
@@ -581,8 +581,8 @@ class ivf_pq_index {
     auto local_distance = Distance{};
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      auto sub_begin = subspace * sub_dimension_;
-      auto sub_end = (subspace + 1) * sub_dimension_;
+      auto sub_begin = subspace * sub_dimensions_;
+      auto sub_end = (subspace + 1) * sub_dimensions_;
       auto i = b[subspace];
 
       pq_distance +=
@@ -640,13 +640,13 @@ class ivf_pq_index {
   template <feature_vector_array V, class Distance = sum_of_squares_distance>
   void train_ivf(
       const V& training_set, kmeans_init init = kmeans_init::random) {
-    dimension_ = ::dimension(training_set);
+    dimensions_ = ::dimensions(training_set);
     if (num_partitions_ == 0) {
       num_partitions_ = std::sqrt(num_vectors(training_set));
     }
 
     flat_ivf_centroids_ =
-        flat_ivf_centroid_storage_type(dimension_, num_partitions_);
+        flat_ivf_centroid_storage_type(dimensions_, num_partitions_);
 
     switch (init) {
       case (kmeans_init::none):
@@ -666,7 +666,7 @@ class ivf_pq_index {
         Distance>(
         training_set,
         flat_ivf_centroids_,
-        dimension_,
+        dimensions_,
         num_partitions_,
         max_iter_,
         tol_,
@@ -719,8 +719,8 @@ class ivf_pq_index {
   auto pq_encode_one(
       const V& v, W&& pq, SubDistance sub_distance = SubDistance{}) const {
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      auto sub_begin = sub_dimension_ * subspace;
-      auto sub_end = sub_begin + sub_dimension_;
+      auto sub_begin = sub_dimensions_ * subspace;
+      auto sub_end = sub_begin + sub_dimensions_;
 
       auto min_score = std::numeric_limits<score_type>::max();
       pq_code_type idx{0};
@@ -772,8 +772,8 @@ class ivf_pq_index {
     auto local_sub_distance = SubDistance{};
 
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      auto sub_begin = sub_dimension_ * subspace;
-      auto sub_end = sub_begin + sub_dimension_;
+      auto sub_begin = sub_dimensions_ * subspace;
+      auto sub_end = sub_begin + sub_dimensions_;
 
       auto min_score = std::numeric_limits<score_type>::max();
       pq_code_type idx{0};
@@ -937,17 +937,17 @@ class ivf_pq_index {
         TILEDB_WRITE,
         temporal_policy_,
         storage_version,
-        dimension_,
+        dimensions_,
         num_clusters_,
         num_subspaces_);
 
-    write_group.set_dimension(dimension_);
+    write_group.set_dimensions(dimensions_);
     write_group.set_num_subspaces(num_subspaces_);
-    write_group.set_sub_dimension(sub_dimension_);
+    write_group.set_sub_dimensions(sub_dimensions_);
     write_group.set_bits_per_subspace(bits_per_subspace_);
     write_group.set_num_clusters(num_clusters_);
 
-    assert(num_subspaces_ * sub_dimension_ == dimension_);
+    assert(num_subspaces_ * sub_dimensions_ == dimensions_);
     assert(num_clusters_ == 1 << bits_per_subspace_);
 
     write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
@@ -1163,8 +1163,8 @@ class ivf_pq_index {
    * Getters. Note that we don't have a `num_vectors` because it isn't clear
    *what that means for a partitioned (possibly out-of-core) index.
    ***************************************************************************/
-  auto dimension() const {
-    return dimension_;
+  auto dimensions() const {
+    return dimensions_;
   }
 
   auto num_partitions() const {
@@ -1178,8 +1178,8 @@ class ivf_pq_index {
     return num_subspaces_;
   }
 
-  auto sub_dimension() const {
-    return sub_dimension_;
+  auto sub_dimensions() const {
+    return sub_dimensions_;
   }
 
   auto bits_per_subspace() const {
@@ -1208,13 +1208,13 @@ class ivf_pq_index {
     double total_normalizer = 0.0;
 
     auto debug_vectors =
-        ColMajorMatrix<float>(dimension_, num_vectors(feature_vectors));
+        ColMajorMatrix<float>(dimensions_, num_vectors(feature_vectors));
 
     for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
-      auto re = std::vector<float>(dimension_);
+      auto re = std::vector<float>(dimensions_);
       for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-        auto sub_begin = sub_dimension_ * subspace;
-        auto sub_end = sub_dimension_ * (subspace + 1);
+        auto sub_begin = sub_dimensions_ * subspace;
+        auto sub_end = sub_dimensions_ * (subspace + 1);
         auto centroid =
             cluster_centroids_[(*unpartitioned_pq_vectors_)(subspace, i)];
 
@@ -1311,7 +1311,7 @@ class ivf_pq_index {
       const ColMajorMatrix<feature_type>& feature_vectors) {
     double total_diff = 0.0;
     double total_normalizer = 0.0;
-    auto local_sub_distance = SubDistance{0, dimension_};
+    auto local_sub_distance = SubDistance{0, dimensions_};
 
     score_type diff_max = 0.0;
     score_type vec_max = 0.0;
@@ -1328,7 +1328,7 @@ class ivf_pq_index {
         diff_max = std::max(diff_max, diff);
         total_diff += diff;
       }
-      auto zeros = std::vector<feature_type>(dimension_);
+      auto zeros = std::vector<feature_type>(dimensions_);
       vec_max =
           std::max(vec_max, local_sub_distance(feature_vectors[i], zeros));
     }
@@ -1364,7 +1364,7 @@ class ivf_pq_index {
    * @return bool indicating equality of the index metadata
    */
   bool compare_cached_metadata(const ivf_pq_index& rhs) const {
-    if (dimension_ != rhs.dimension_) {
+    if (dimensions_ != rhs.dimensions_) {
       return false;
     }
     if (num_partitions_ != rhs.num_partitions_) {
@@ -1373,7 +1373,7 @@ class ivf_pq_index {
     if (num_subspaces_ != rhs.num_subspaces_) {
       return false;
     }
-    if (sub_dimension_ != rhs.sub_dimension_) {
+    if (sub_dimensions_ != rhs.sub_dimensions_) {
       return false;
     }
     if (bits_per_subspace_ != rhs.bits_per_subspace_) {
@@ -1398,26 +1398,26 @@ class ivf_pq_index {
   template <feature_vector_array L, feature_vector_array R>
   auto compare_feature_vector_arrays(const L& lhs, const R& rhs) const {
     if (::num_vectors(lhs) != ::num_vectors(rhs) ||
-        ::dimension(lhs) != ::dimension(rhs)) {
-      std::cout << "num_vectors(lhs) != num_vectors(rhs) || dimension(lhs) != "
-                   "dimension(rhs)n"
+        ::dimensions(lhs) != ::dimensions(rhs)) {
+      std::cout << "num_vectors(lhs) != num_vectors(rhs) || dimensions(lhs) != "
+                   "dimensions(rhs)n"
                 << std::endl;
       std::cout << "num_vectors(lhs): " << ::num_vectors(lhs)
                 << " num_vectors(rhs): " << ::num_vectors(rhs) << std::endl;
-      std::cout << "dimension(lhs): " << ::dimension(lhs)
-                << " dimension(rhs): " << ::dimension(rhs) << std::endl;
+      std::cout << "dimensions(lhs): " << ::dimensions(lhs)
+                << " dimensions(rhs): " << ::dimensions(rhs) << std::endl;
       return false;
     }
     for (size_t i = 0; i < ::num_vectors(lhs); ++i) {
       if (!std::equal(begin(lhs[i]), end(lhs[i]), begin(rhs[i]))) {
         std::cout << "lhs[" << i << "] != rhs[" << i << "]" << std::endl;
         std::cout << "lhs[" << i << "]: ";
-        for (size_t j = 0; j < ::dimension(lhs); ++j) {
+        for (size_t j = 0; j < ::dimensions(lhs); ++j) {
           std::cout << lhs[i][j] << " ";
         }
         std::cout << std::endl;
         std::cout << "rhs[" << i << "]: ";
-        for (size_t j = 0; j < ::dimension(rhs); ++j) {
+        for (size_t j = 0; j < ::dimensions(rhs); ++j) {
           std::cout << rhs[i][j] << " ";
         }
         return false;
@@ -1436,9 +1436,9 @@ class ivf_pq_index {
    */
   template <feature_vector L, feature_vector R>
   auto compare_feature_vectors(const L& lhs, const R& rhs) const {
-    if (::dimension(lhs) != ::dimension(rhs)) {
-      std::cout << "dimension(lhs) != dimension(rhs) (" << ::dimension(lhs)
-                << " != " << ::dimension(rhs) << ")" << std::endl;
+    if (::dimensions(lhs) != ::dimensions(rhs)) {
+      std::cout << "dimensions(lhs) != dimensions(rhs) (" << ::dimensions(lhs)
+                << " != " << ::dimensions(rhs) << ")" << std::endl;
       return false;
     }
     return std::equal(begin(lhs), end(lhs), begin(rhs));
@@ -1532,7 +1532,7 @@ class ivf_pq_index {
 
   auto set_flat_ivf_centroids(const ColMajorMatrix<feature_type>& centroids) {
     flat_ivf_centroids_ = flat_ivf_centroid_storage_type(
-        ::dimension(centroids), ::num_vectors(centroids));
+        ::dimensions(centroids), ::num_vectors(centroids));
     std::copy(
         centroids.data(),
         centroids.data() + centroids.num_rows() * centroids.num_cols(),
@@ -1545,7 +1545,7 @@ class ivf_pq_index {
 
   auto set_pq_ivf_centroids(const ColMajorMatrix<feature_type>& centroids) {
     flat_ivf_centroids_ = flat_ivf_centroid_storage_type(
-        ::dimension(centroids), ::num_vectors(centroids));
+        ::dimensions(centroids), ::num_vectors(centroids));
     std::copy(
         centroids.data(),
         centroids.data() + centroids.num_rows() * centroids.num_cols(),

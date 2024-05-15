@@ -209,11 +209,11 @@ class ivf_pq_group : public base_index_group<index_type> {
     metadata_.num_subspaces_ = num_subspaces;
   }
 
-  auto get_sub_dimension() const {
-    return metadata_.sub_dimension_;
+  auto get_sub_dimensions() const {
+    return metadata_.sub_dimensions_;
   }
-  auto set_sub_dimension(size_t sub_dimension) {
-    metadata_.sub_dimension_ = sub_dimension;
+  auto set_sub_dimensions(size_t sub_dimensions) {
+    metadata_.sub_dimensions_ = sub_dimensions;
   }
 
   auto get_bits_per_subspace() const {
@@ -241,7 +241,7 @@ class ivf_pq_group : public base_index_group<index_type> {
 
     static const int32_t tile_size{
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
-                  this->get_dimension())};
+                  this->get_dimensions())};
     static const tiledb_filter_type_t default_compression{
         string_to_filter(storage_formats[version_]["default_attr_filters"])};
 
@@ -273,7 +273,7 @@ class ivf_pq_group : public base_index_group<index_type> {
     metadata_.base_sizes_ = {0};
     metadata_.partition_history_ = {0};
     metadata_.temp_size_ = 0;
-    metadata_.dimension_ = this->get_dimension();
+    metadata_.dimensions_ = this->get_dimensions();
 
     // Create the arrays: cluster_centroids,
     // flat_ivf_centroids, pq_ivf_centroids, ivf_index,
@@ -283,9 +283,9 @@ class ivf_pq_group : public base_index_group<index_type> {
         stdx::layout_left>(
         cached_ctx_,
         cluster_centroids_uri(),
-        this->get_dimension(),
+        this->get_dimensions(),
         this->get_num_clusters(),
-        this->get_dimension(),
+        this->get_dimensions(),
         this->get_num_clusters(),
         default_compression);
     tiledb_helpers::add_to_group(
@@ -296,9 +296,9 @@ class ivf_pq_group : public base_index_group<index_type> {
         stdx::layout_left>(
         cached_ctx_,
         flat_ivf_centroids_uri(),
-        this->get_dimension(),
+        this->get_dimensions(),
         default_domain,
-        this->get_dimension(),
+        this->get_dimensions(),
         default_tile_extent,
         default_compression);
     tiledb_helpers::add_to_group(

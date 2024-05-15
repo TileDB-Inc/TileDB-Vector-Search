@@ -271,23 +271,17 @@ TEST_CASE(
       x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
       x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
-=======
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimensions() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
-      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
     }
 

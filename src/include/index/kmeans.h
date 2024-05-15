@@ -463,9 +463,9 @@ auto sub_kmeans(
 
   // Copy centroids to new centroids -- note only one subspace will be changing
   // @todo Keep new_centroids outside function so we don't need to copy all
-  C new_centroids(dimension(centroids), num_vectors(centroids));
+  C new_centroids(dimensions(centroids), num_vectors(centroids));
   for (size_t i = 0; i < num_vectors(new_centroids); ++i) {
-    for (size_t j = 0; j < dimension(new_centroids); ++j) {
+    for (size_t j = 0; j < dimensions(new_centroids); ++j) {
       new_centroids(j, i) = centroids(j, i);
     }
   }

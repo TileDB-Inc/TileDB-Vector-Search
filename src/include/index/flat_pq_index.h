@@ -836,8 +836,8 @@ class flat_pq_index {
    * @return
    */
   bool compare_metadata(const flat_pq_index& rhs) {
-    if (dimension_ != rhs.dimensions_) {
-      std::cout << "dimensions_ " << dimensions_ << " != " << rhs.dimension_
+    if (dimensions_ != rhs.dimensions_) {
+      std::cout << "dimensions_ " << dimensions_ << " != " << rhs.dimensions_
                 << std::endl;
       return false;
     }

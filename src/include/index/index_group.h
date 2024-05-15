@@ -318,7 +318,7 @@ class base_index_group {
       , opened_for_(rw)
       , temporal_policy_(temporal_policy) {
     if (opened_for_ == TILEDB_WRITE) {
-      set_dimension(dimension);
+      set_dimensions(dimensions);
     }
   }
 

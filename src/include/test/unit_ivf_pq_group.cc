@@ -82,6 +82,6 @@ TEST_CASE(
 
   ivf_pq_group x = ivf_pq_group<dummy_pq_index>(
       ctx, tmp_uri, TILEDB_WRITE, {}, "", 10, 256, 16);
-  CHECK(x.get_dimension() == 10);
+  CHECK(x.get_dimensions() == 10);
   CHECK(x.get_num_clusters() == 256);
 }
