@@ -1386,7 +1386,8 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
       num_vectors(training_set), l_build, r_max_degree, backtrack);
   idx.train(training_set, ids);
   uint64_t write_timestamp = 1000;
-  idx.write_index(ctx, vamana_index_uri, write_timestamp);
+  idx.write_index(
+      ctx, vamana_index_uri, TemporalPolicy(TimeTravel, write_timestamp));
 
   {
     // Load the index and check metadata.
@@ -1439,4 +1440,23 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
     CHECK(idx2.group().get_all_base_sizes()[0] == 0);
     CHECK(idx2.group().get_all_ingestion_timestamps()[0] == 0);
   }
+}
+
+TEST_CASE("vamana: query empty index", "[vamana]") {
+  size_t L = 100;
+  size_t R = 100;
+  size_t B = 2;
+  size_t num_vectors = 0;
+  size_t dimensions = 5;
+  auto index = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
+      num_vectors, L, R, B);
+  auto data =
+      ColMajorMatrixWithIds<siftsmall_feature_type>(dimensions, num_vectors);
+  index.train(data, data.raveled_ids());
+
+  auto queries = std::vector<std::vector<siftsmall_feature_type>>{
+      {1, 1, 1, 1, 1}, {2, 2, 2, 2, 2}};
+  auto&& [scores, ids] = index.query(data, 1);
+  CHECK(_cpo::num_vectors(scores) == 0);
+  CHECK(_cpo::num_vectors(ids) == 0);
 }

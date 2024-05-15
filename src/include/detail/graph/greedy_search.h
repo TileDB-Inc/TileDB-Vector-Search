@@ -442,6 +442,18 @@ auto greedy_search(
     size_t L,
     Distance&& distance = Distance{},
     bool convert_to_db_ids = false) {
+  if (graph.num_vertices() == 0) {
+    using id_type = typename std::decay_t<decltype(graph)>::id_type;
+    using score_type = typename std::decay_t<decltype(graph)>::score_type;
+    auto top_k =
+        std::vector<id_type>(k_nn, std::numeric_limits<id_type>::max());
+    auto top_k_scores =
+        std::vector<score_type>(k_nn, std::numeric_limits<score_type>::max());
+    std::unordered_set<id_type> visited_vertices;
+    return std::make_tuple(
+        std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
+  }
+
   return greedy_search_O1(
       std::forward<decltype(graph)>(graph),
       std::forward<decltype(db)>(db),
