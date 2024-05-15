@@ -169,8 +169,8 @@ class FeatureVectorArray {
     return _cpo::extents(*vector_array);
   }
 
-  [[nodiscard]] auto dimension() const {
-    return _cpo::dimension(*vector_array);
+  [[nodiscard]] auto dimensions() const {
+    return _cpo::dimensions(*vector_array);
   }
 
   [[nodiscard]] auto num_vectors() const {
@@ -210,7 +210,7 @@ class FeatureVectorArray {
    */
   struct vector_array_base {
     virtual ~vector_array_base() = default;
-    [[nodiscard]] virtual size_t dimension() const = 0;
+    [[nodiscard]] virtual size_t dimensions() const = 0;
     [[nodiscard]] virtual size_t num_vectors() const = 0;
     [[nodiscard]] virtual void* data() const = 0;
     [[nodiscard]] virtual size_t num_ids() const = 0;
@@ -254,8 +254,8 @@ class FeatureVectorArray {
     [[nodiscard]] void* ids() const override {
       return _cpo::ids(impl_vector_array);
     }
-    [[nodiscard]] size_t dimension() const override {
-      return _cpo::dimension(impl_vector_array);
+    [[nodiscard]] size_t dimensions() const override {
+      return _cpo::dimensions(impl_vector_array);
     }
     [[nodiscard]] size_t num_vectors() const override {
       return _cpo::num_vectors(impl_vector_array);

@@ -149,7 +149,7 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   template <feature_vector_array F, std::ranges::contiguous_range V>
   PartitionedMatrix(
       const F& training_set, const V& part_labels, size_t num_parts)
-      : Base(::dimension(training_set), ::num_vectors(training_set))
+      : Base(::dimensions(training_set), ::num_vectors(training_set))
       , ids_(::num_vectors(training_set))
       , part_index_(num_parts + 1)
       , num_vectors_{::num_vectors(training_set)}
@@ -170,7 +170,7 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       ids_[ibin] = i;
 
       assert(ibin < this->num_cols());
-      for (size_t j = 0; j < dimension(training_set); ++j) {
+      for (size_t j = 0; j < dimensions(training_set); ++j) {
         this->operator()(j, ibin) = training_set(j, i);
       }
       ++part_index_[bin];

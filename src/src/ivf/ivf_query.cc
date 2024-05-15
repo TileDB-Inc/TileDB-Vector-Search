@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
         std::cout << std::endl;
       }
 
-      size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
+      size_t total_groundtruth = num_vectors(top_k) * dimensions(top_k);
       size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
 
       float recall = ((float)total_intersected) / ((float)total_groundtruth);

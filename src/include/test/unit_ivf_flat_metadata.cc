@@ -66,7 +66,7 @@ TEST_CASE(
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
-      {"dimension", 128},
+      {"dimensions", 128},
       {"feature_datatype", 2},
       {"id_datatype", 9},
       {"px_datatype", 9},

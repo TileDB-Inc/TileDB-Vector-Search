@@ -326,12 +326,12 @@ class dummy_feature_vector : public std::vector<T> {
  public:
   using base = typename std::vector<T>;
 
-  // If both size and dimension are available, dimension() cpo is ambiguous
+  // If both size and dimension are available, dimensions() cpo is ambiguous
  private:
   using base::size;
 
  public:
-  auto dimension() const {
+  auto dimensions() const {
     return this->size();
   }
 };

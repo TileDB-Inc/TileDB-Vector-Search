@@ -45,7 +45,7 @@ class VamanaIndex(index.Index):
         ].uri
 
         schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
-        self.dimensions = self.index.dimension()
+        self.dimensions = self.index.dimensions()
 
         self.dtype = np.dtype(self.group.meta.get("dtype", None))
         if self.dtype is None:
@@ -118,7 +118,7 @@ def create(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,
         adjacency_row_index_type=np.dtype(np.uint64).name,
-        dimension=dimensions,
+        dimensions=dimensions,
     )
     # TODO(paris): Run all of this with a single C++ call.
     empty_vector = vspy.FeatureVectorArray(
