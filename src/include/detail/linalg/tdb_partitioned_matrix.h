@@ -298,9 +298,10 @@ class tdbPartitionedMatrix
       throw std::runtime_error(
           "Invalid partitioning, relevant_parts_ size (" +
           std::to_string(relevant_parts_.size()) +
-          ") must be less than indices size (" + std::to_string(indices.size()) + ")");
+          ") must be less than indices size (" +
+          std::to_string(indices.size()) + ")");
     }
-    
+
     total_num_parts_ = size(relevant_parts_);
 
     scoped_timer _{tdb_func__ + " " + partitioned_vectors_uri_};
