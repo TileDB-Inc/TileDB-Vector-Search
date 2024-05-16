@@ -73,7 +73,7 @@ enum class kmeans_init { none, kmeanspp, random };
  * Class representing an inverted file (IVF) index for flat (non-compressed)
  * feature vectors.  The class simply holds the index data itself, it is
  * unaware of where the data comes from -- reading and writing data is done
- * via an ivf_flat_index_group.  Thus, this class does not hold information
+ * via an ivf_flat_group.  Thus, this class does not hold information
  * about the group (neither the group members, nor the group metadata).
  *
  * @tparam partitioned_vectors_feature_type
@@ -92,7 +92,7 @@ class ivf_flat_index {
   using score_type = float;  // @todo -- this should be a parameter?
   using centroid_feature_type = score_type;
 
-  using group_type = ivf_flat_index_group<ivf_flat_index>;
+  using group_type = ivf_flat_group<ivf_flat_index>;
   using metadata_type = ivf_flat_index_metadata;
 
  private:
@@ -119,7 +119,7 @@ class ivf_flat_index {
   /** The timestamp at which the index was created */
   TemporalPolicy temporal_policy_{TimeTravel, 0};
 
-  std::unique_ptr<ivf_flat_index_group<ivf_flat_index>> group_;
+  std::unique_ptr<ivf_flat_group<ivf_flat_index>> group_;
 
   /****************************************************************************
    * Index representation
@@ -222,7 +222,7 @@ class ivf_flat_index {
       const std::string& uri,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt)
       : temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
-      , group_{std::make_unique<ivf_flat_index_group<ivf_flat_index>>(
+      , group_{std::make_unique<ivf_flat_group<ivf_flat_index>>(
             ctx, uri, TILEDB_READ, temporal_policy_)} {
     /**
      * Read the centroids.  How the partitioned_vectors_ are read in will be
@@ -750,7 +750,7 @@ class ivf_flat_index {
       const std::string& group_uri,
       const std::string& storage_version = "") const {
     // Write the group
-    auto write_group = ivf_flat_index_group<ivf_flat_index>(
+    auto write_group = ivf_flat_group<ivf_flat_index>(
         ctx,
         group_uri,
         TILEDB_WRITE,
