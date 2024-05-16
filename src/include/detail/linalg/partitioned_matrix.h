@@ -159,7 +159,9 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       throw std::invalid_argument("training_set cannot be empty.");
     }
     if (size(part_labels) != ::num_vectors(training_set)) {
-      throw std::invalid_argument("The number of part_labels must equal the number of vectors in the training_set.");
+      throw std::invalid_argument(
+          "The number of part_labels must equal the number of vectors in the "
+          "training_set.");
     }
     if (num_parts <= 0) {
       throw std::invalid_argument("num_parts should be greater than 0.");
