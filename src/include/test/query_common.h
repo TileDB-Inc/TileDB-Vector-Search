@@ -199,8 +199,8 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
 
   auto verify(auto&& top_k_ivf) {
     // These are helpful for debugging
-    // debug_slice(top_k_ivf, "top_k_ivf");
-    // debug_slice(top_k_ivf_scores, "top_k_ivf_scores");
+    // debug_matrix(top_k_ivf, "top_k_ivf");
+    // debug_matrix(top_k_ivf_scores, "top_k_ivf_scores");
 
     size_t intersectionsm1 = count_intersections(top_k, groundtruth_set, k_nn);
     double recallm1 = intersectionsm1 / ((double)top_k.num_cols() * k_nn);

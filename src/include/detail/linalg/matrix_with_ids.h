@@ -212,49 +212,28 @@ using RowMajorMatrixWithIds = MatrixWithIds<T, IdsType, stdx::layout_right, I>;
 template <class T, class IdsType = uint64_t, class I = size_t>
 using ColMajorMatrixWithIds = MatrixWithIds<T, IdsType, stdx::layout_left, I>;
 
+// TODO(paris): This only works on col-major matrices, fix for row-major.
 template <class MatrixWithIds>
-void debug_slice_with_ids(
-    const MatrixWithIds& A,
-    const std::string& msg = "",
-    size_t rows = 6,
-    size_t cols = 18) {
+void debug_matrix_with_ids(
+    const MatrixWithIds& matrix, const std::string& msg = "") {
   auto max_size = 10;
-  auto rowsEnd = std::min(dimensions(A), static_cast<size_t>(max_size));
-  auto colsEnd = std::min(num_vectors(A), static_cast<size_t>(max_size));
+  auto rowsEnd = std::min(dimensions(matrix), static_cast<size_t>(max_size));
+  auto colsEnd = std::min(num_vectors(matrix), static_cast<size_t>(max_size));
 
-  std::cout << "# " << msg << " (" << num_vectors(A) << " vectors)"
-            << std::endl;
-  for (size_t i = 0; i < rowsEnd; ++i) {
-    std::cout << "# ";
-    for (size_t j = 0; j < colsEnd; ++j) {
-      std::cout << (float)A(i, j) << " ";
-    }
-    if (A.num_cols() > max_size) {
-      std::cout << "...";
-    }
-    std::cout << std::endl;
-  }
-  if (A.num_rows() > max_size) {
-    std::cout << "# ..." << std::endl;
-  }
+  debug_matrix(matrix);
 
   std::cout << "# ids: [";
-  auto end = std::min(A.num_ids(), static_cast<size_t>(max_size));
+  auto end = std::min(matrix.num_ids(), static_cast<size_t>(max_size));
   for (size_t i = 0; i < end; ++i) {
-    std::cout << (float)A.ids()[i];
-    if (i != A.num_ids() - 1) {
+    std::cout << (float)matrix.ids()[i];
+    if (i != matrix.num_ids() - 1) {
       std::cout << ", ";
     }
   }
-  if (A.num_ids() > max_size) {
+  if (matrix.num_ids() > max_size) {
     std::cout << "...";
   }
   std::cout << "]" << std::endl;
-}
-
-template <class MatrixWithIds>
-void debug_with_ids(const MatrixWithIds& A, const std::string& msg = "") {
-  debug_slice_with_ids(A, msg, A.num_rows(), A.num_cols());
 }
 
 #endif  // TILEDB_MATRIX_WITH_IDS_H
