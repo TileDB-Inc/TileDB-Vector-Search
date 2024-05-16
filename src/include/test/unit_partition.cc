@@ -30,9 +30,9 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include "array_defs.h"
 #include "detail/ivf/partition.h"
-#include "query_common.h"
+#include "test/utils/array_defs.h"
+#include "test/utils/query_common.h"
 
 TEST_CASE("partition: test test", "[partition]") {
   REQUIRE(true);

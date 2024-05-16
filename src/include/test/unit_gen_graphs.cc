@@ -33,7 +33,7 @@
 
 #include <catch2/catch_all.hpp>
 
-#include "gen_graphs.h"
+#include "test/utils/gen_graphs.h"
 #include "utils/print_types.h"
 
 TEST_CASE("gen_graphs: test test", "[gen_graphs]") {

@@ -31,13 +31,13 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include "array_defs.h"
 #include "detail/flat/qv.h"
 #include "detail/graph/nn-descent.h"
 #include "detail/ivf/qv.h"
 #include "detail/linalg/compat.h"
 #include "detail/linalg/tdb_matrix.h"
-#include "query_common.h"
+#include "test/utils/array_defs.h"
+#include "test/utils/query_common.h"
 
 #include <tiledb/tiledb>
 
