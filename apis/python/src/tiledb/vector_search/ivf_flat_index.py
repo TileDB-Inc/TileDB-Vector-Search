@@ -1,3 +1,28 @@
+"""
+IVFFlat Index implementation.
+
+IVFFlatIndex is based on `k-means` clustering and shuffling of the dataset vectors.
+
+During ingestion, TileDB computes the `k-means` clusters and shuffles the vectors into partitions.
+The vectors are stored grouped by partition in a 2D TileDB array allowing for partitions to be read
+with minimal I/O overhead.
+
+To answer a query, the search focuses only on a small number of partitions, based on the query’s proximity
+to the `k-means` centroids. This is specified with a parameter called `nprobe` controlling how many partitions
+are checked for each query.
+
+IVFFlatIndex provides a vector search implementation that can trade-off accuracy for performance.
+
+Queries can be run in multiple modes:
+
+- Local main memory:
+  - Loads the entire index in memory during initialization and uses it to answer queries.
+- Local out of core:
+  - Avoids loading index data in memory by interleaving I/O and query execution, respecting the
+  memory budget defined by the user.
+- Distributed execution:
+  - Executes the queries using multiple workers in TileDB Cloud.
+"""
 import json
 import multiprocessing
 from typing import Any, Mapping
@@ -28,16 +53,22 @@ def submit_local(d, func, *args, **kwargs):
 
 class IVFFlatIndex(index.Index):
     """
-    Open a IVF Flat index
+    Opens an `IVFFlatIndex`.
 
     Parameters
     ----------
     uri: str
-        URI of the index
+        URI of the index.
     config: Optional[Mapping[str, Any]]
-        config dictionary, defaults to None
+        TileDB config dictionary.
+    timestamp: int or tuple(int)
+        If int, open the index at a given timestamp.
+        If tuple, open at the given start and end timestamps.
     memory_budget: int
-        Main memory budget. If not provided, no memory budget is applied.
+        Main memory budget, in number of vectors, for query execution.
+        If not provided, all index data are loaded in main memory.
+        Otherwise, no index data are loaded in main memory and this memory budget is
+        applied during queries.
     """
 
     def __init__(
@@ -127,6 +158,9 @@ class IVFFlatIndex(index.Index):
             )
 
     def get_dimensions(self):
+        """
+        Returns the dimension of the vectors in the index.
+        """
         return self.dimensions
 
     def query_internal(
@@ -144,20 +178,21 @@ class IVFFlatIndex(index.Index):
         **kwargs,
     ):
         """
-        Query an IVF_FLAT index
+        Queries an `IVFFlatIndex`.
 
         Parameters
         ----------
-        queries: numpy.ndarray
-            ND Array of queries
+        queries: np.ndarray
+            2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.
         k: int
-            Number of top results to return per query
+            Number of results to return per query vector.
         nprobe: int
-            number of probes
+            Number of partitions to check per query.
+            Use this parameter to trade-off accuracy for latency and cost.
         nthreads: int
-            Number of threads to use for query
+            Number of threads to use for local query execution.
         use_nuv_implementation: bool
-            wether to use the nuv query implementation. Default: False
+            Wether to use the nuv query implementation. Default: False
         mode: Mode
             If provided the query will be executed using TileDB cloud taskgraphs.
             For distributed execution you can use REALTIME or BATCH mode.
@@ -178,7 +213,6 @@ class IVFFlatIndex(index.Index):
         num_workers: int
             Only relevant for taskgraph based execution.
             If provided, this is the number of workers to use for the query execution.
-
         """
         if self.size == 0:
             return np.full((queries.shape[0], k), index.MAX_FLOAT_32), np.full(
@@ -234,7 +268,7 @@ class IVFFlatIndex(index.Index):
 
             return np.transpose(np.array(d)), np.transpose(np.array(i))
         else:
-            return self.taskgraph_query(
+            return self._taskgraph_query(
                 queries=queries,
                 k=k,
                 nthreads=nthreads,
@@ -247,7 +281,7 @@ class IVFFlatIndex(index.Index):
                 config=self.config,
             )
 
-    def taskgraph_query(
+    def _taskgraph_query(
         self,
         queries: np.ndarray,
         k: int = 10,
@@ -456,6 +490,27 @@ def create(
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> IVFFlatIndex:
+    """
+    Creates an empty IVFFlatIndex.
+
+    Parameters
+    ----------
+    uri: str
+        URI of the index.
+    dimensions: int
+        Number of dimensions for the vectors to be stored in the index.
+    vector_type: np.dtype
+        Datatype of vectors.
+        Supported values (uint8, int8, float32).
+    group_exists: bool
+        If False it creates the TileDB group for the index.
+        If True the method expects the TileDB group to be already created.
+    config: Optional[Mapping[str, Any]]
+        TileDB config dictionary.
+    storage_version: str
+        The TileDB vector search storage version to use.
+        If not provided, use hte latest stable storage version.
+    """
     validate_storage_version(storage_version)
 
     index.create_metadata(
