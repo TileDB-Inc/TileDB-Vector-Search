@@ -52,7 +52,7 @@ TEMPLATE_TEST_CASE("cpos: test num_rows", "[cpos]", float, uint8_t) {
   auto m0 = stdx::mdspan<TestType, matrix_extents<size_t>, stdx::layout_right>{
       v0.data(), 10, 20};
   CHECK(num_vectors(m0) == 10);
-  CHECK(dimension(m0) == 20);
+  CHECK(dimensions(m0) == 20);
   CHECK(data(m0) == v0.data());
 
   CHECK(extents(m0)[0] == 10);
@@ -61,7 +61,7 @@ TEMPLATE_TEST_CASE("cpos: test num_rows", "[cpos]", float, uint8_t) {
   auto m1 = stdx::mdspan<TestType, matrix_extents<size_t>, stdx::layout_left>{
       v1.data(), 10, 20};
   CHECK(num_vectors(m1) == 20);
-  CHECK(dimension(m1) == 10);
+  CHECK(dimensions(m1) == 10);
   CHECK(data(m1) == v1.data());
 
   CHECK(extents(m1)[0] == 10);

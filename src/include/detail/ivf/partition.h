@@ -1,5 +1,5 @@
 /**
- * @file   ivf/qv.h
+ * @file   partition.h
  *
  * @section LICENSE
  *

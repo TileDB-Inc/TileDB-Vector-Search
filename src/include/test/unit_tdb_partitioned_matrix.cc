@@ -133,7 +133,7 @@ TEST_CASE(
     CHECK(matrix.num_partitions() == 2);
     CHECK(std::equal(
         matrix.data(),
-        matrix.data() + matrix.num_vectors() * _cpo::dimension(matrix),
+        matrix.data() + matrix.num_vectors() * _cpo::dimensions(matrix),
         std::vector<feature_type>{1, 1, 2, 2, 3, 3, 4, 4, 5, 5}.begin()));
     CHECK(std::equal(
         matrix.ids().begin(),
@@ -157,7 +157,7 @@ TEST_CASE(
     CHECK(matrix.num_partitions() == 1);
     CHECK(std::equal(
         matrix.data(),
-        matrix.data() + matrix.num_vectors() * _cpo::dimension(matrix),
+        matrix.data() + matrix.num_vectors() * _cpo::dimensions(matrix),
         std::vector<feature_type>{1, 1, 2, 2, 3, 3}.begin()));
     CHECK(std::equal(
         matrix.ids().begin(),
@@ -181,7 +181,7 @@ TEST_CASE(
     CHECK(matrix.num_partitions() == 0);
     CHECK(std::equal(
         matrix.data(),
-        matrix.data() + matrix.num_vectors() * _cpo::dimension(matrix),
+        matrix.data() + matrix.num_vectors() * _cpo::dimensions(matrix),
         std::vector<feature_type>{}.begin()));
     CHECK(std::equal(
         matrix.ids().begin(),

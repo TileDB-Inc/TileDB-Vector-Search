@@ -1,5 +1,5 @@
 /**
- * @file   unit_concepts.cc
+ * @file   cpos.h
  *
  * @section LICENSE
  *
@@ -79,15 +79,15 @@ concept col_major = std::
     same_as<typename std::remove_cvref_t<T>::layout_policy, stdx::layout_left>;
 
 // ----------------------------------------------------------------------------
-// dimension CPO
+// dimensions CPO
 // ----------------------------------------------------------------------------
-namespace _dimension {
-void dimension(auto&) = delete;
-void dimension(const auto&) = delete;
+namespace _dimensions {
+void dimensions(auto&) = delete;
+void dimensions(const auto&) = delete;
 
 template <class T>
-concept _member_dimension = requires(T t) {
-  { t.dimension() } -> semi_integral;
+concept _member_dimensions = requires(T t) {
+  { t.dimensions() } -> semi_integral;
 };
 
 template <class T>
@@ -96,9 +96,9 @@ concept _member_size = requires(T t) {
 };
 
 struct _fn {
-  template <_member_dimension T>
+  template <_member_dimensions T>
   auto constexpr operator()(T&& t) const noexcept {
-    return t.dimension();
+    return t.dimensions();
   }
 
   template <class V>
@@ -141,10 +141,10 @@ struct _fn {
     return m.extent(1);
   }
 };
-}  // namespace _dimension
+}  // namespace _dimensions
 
 inline namespace _cpo {
-inline constexpr auto dimension = _dimension::_fn{};
+inline constexpr auto dimensions = _dimensions::_fn{};
 }  // namespace _cpo
 
 // ----------------------------------------------------------------------------

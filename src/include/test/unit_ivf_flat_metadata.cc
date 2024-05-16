@@ -31,9 +31,9 @@
 #include <catch2/catch_all.hpp>
 #include <tiledb/tiledb>
 
+#include <chrono>
 #include <filesystem>
 #include <string>
-
 #include "array_defs.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "index/ivf_flat_index.h"
@@ -49,8 +49,6 @@ TEST_CASE("ivf_flat_metadata: default constructor", "[ivf_flat_metadata]") {
   ivf_flat_index_metadata y;
 }
 
-// TODO(paris): Modify the index and then also check for ingestion_timestamps
-// and num_edges_history.
 TEST_CASE(
     "ivf_flat_metadata: load metadata from index", "[ivf_flat_metadata]") {
   tiledb::Context ctx;
@@ -68,7 +66,7 @@ TEST_CASE(
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
-      {"dimension", 128},
+      {"dimensions", 128},
       {"feature_datatype", 2},
       {"id_datatype", 9},
       {"px_datatype", 9},
@@ -81,9 +79,6 @@ TEST_CASE(
     idx.write_index(ctx, uri);
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
-    auto x = ivf_flat_index_metadata();
-    x.load_metadata(read_group);
-
     std::vector<std::tuple<std::string, std::string>> expected_str{
         {"dataset_type", "vector_search"},
         {"storage_version", current_storage_version},
@@ -95,8 +90,17 @@ TEST_CASE(
         {"base_sizes", "[0,10000]"},
         {"partition_history", "[0,100]"},
     };
-
     validate_metadata(read_group, expected_str, expected_arithmetic);
+
+    auto x = ivf_flat_index_metadata();
+    x.load_metadata(read_group);
+    CHECK(x.ingestion_timestamps_.size() == 2);
+    CHECK(x.base_sizes_.size() == 2);
+    CHECK(x.base_sizes_[0] == 0);
+    CHECK(x.base_sizes_[1] == 10000);
+    CHECK(x.partition_history_.size() == 2);
+    CHECK(x.partition_history_[0] == 0);
+    CHECK(x.partition_history_[1] == 100);
   }
 
   {
@@ -106,9 +110,6 @@ TEST_CASE(
     idx.write_index(ctx, uri);
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
-    auto x = ivf_flat_index_metadata();
-    x.load_metadata(read_group);
-
     std::vector<std::tuple<std::string, std::string>> expected_str{
         {"dataset_type", "vector_search"},
         {"storage_version", current_storage_version},
@@ -121,5 +122,36 @@ TEST_CASE(
         {"partition_history", "[0,100,100]"},
     };
     validate_metadata(read_group, expected_str, expected_arithmetic);
+
+    auto x = ivf_flat_index_metadata();
+    x.load_metadata(read_group);
+    CHECK(x.ingestion_timestamps_.size() == 3);
+    CHECK(x.base_sizes_.size() == 3);
+    CHECK(x.base_sizes_[0] == 0);
+    CHECK(x.base_sizes_[1] == 10000);
+    CHECK(x.base_sizes_[2] == 10000);
+    CHECK(x.partition_history_.size() == 3);
+    CHECK(x.partition_history_[0] == 0);
+    CHECK(x.partition_history_[1] == 100);
+    CHECK(x.partition_history_[2] == 100);
+  }
+
+  {
+    // Check we can clear history.
+    auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
+    auto x = ivf_flat_index_metadata();
+    x.load_metadata(read_group);
+    // We should clear everything and just have the defaults (i.e. all 0).
+    auto now = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count());
+    x.clear_history(now);
+    CHECK(x.ingestion_timestamps_.size() == 1);
+    CHECK(x.ingestion_timestamps_[0] == 0);
+    CHECK(x.base_sizes_.size() == 1);
+    CHECK(x.base_sizes_[0] == 0);
+    CHECK(x.partition_history_.size() == 1);
+    CHECK(x.partition_history_[0] == 0);
   }
 }

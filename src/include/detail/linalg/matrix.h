@@ -349,6 +349,29 @@ constexpr bool is_col_oriented(const Matrix& A) {
 
 /**********************************************************************
  *
+ * Some debugging utilities.
+ *
+ * *********************************************************************/
+
+/**
+ * Print information about a Matrix.
+ * @param A
+ */
+template <class Matrix>
+std::string matrix_info(const Matrix& A, const std::string& msg = "") {
+  std::string str = "# " + msg;
+  if (!msg.empty()) {
+    str += ": ";
+  }
+  str += "Shape: ( " + std::to_string(::dimensions(A)) + ", " +
+         std::to_string(::num_vectors(A)) + " )";
+  str += std::string(" Layout: ") +
+         (is_row_oriented(A) ? "row major" : "column major");
+  return str;
+}
+
+/**********************************************************************
+ *
  * Submatrix view.
  *
  **********************************************************************/
@@ -440,14 +463,14 @@ constexpr auto SubMatrix(
 template <class Matrix>
 void debug_matrix(const Matrix& matrix, const std::string& msg = "") {
   auto max_size = 10;
-  auto rowsEnd = std::min(dimension(matrix), static_cast<size_t>(max_size));
+  auto rowsEnd = std::min(dimensions(matrix), static_cast<size_t>(max_size));
   auto colsEnd = std::min(num_vectors(matrix), static_cast<size_t>(max_size));
 
-  std::cout << "# " << msg << " (" << dimension(matrix) << " rows x "
+  std::cout << "# " << msg << " (" << dimensions(matrix) << " rows x "
             << num_vectors(matrix) << " cols) ("
             << (is_row_oriented(matrix) ? "row major" : "column major")
             << ", so " << _cpo::num_vectors(matrix) << " vectors with "
-            << _cpo::dimension(matrix) << " dimensions each)" << std::endl;
+            << _cpo::dimensions(matrix) << " dimensions each)" << std::endl;
 
   for (size_t i = 0; i < rowsEnd; ++i) {
     std::cout << "# ";
@@ -459,7 +482,7 @@ void debug_matrix(const Matrix& matrix, const std::string& msg = "") {
     }
     std::cout << std::endl;
   }
-  if (dimension(matrix) > max_size) {
+  if (dimensions(matrix) > max_size) {
     std::cout << "# ..." << std::endl;
   }
 }

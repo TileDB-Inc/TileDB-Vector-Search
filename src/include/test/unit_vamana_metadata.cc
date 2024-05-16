@@ -71,7 +71,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
-      {"dimension", 128},
+      {"dimensions", 128},
       {"feature_datatype", 2},
       {"id_datatype", 10},
       {"adjacency_scores_datatype", 2},
@@ -85,12 +85,9 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
             128, 0);
     idx.train(training_vectors, training_vectors.raveled_ids());
     idx.add(training_vectors);
-    idx.write_index(ctx, uri, 0);
+    idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 0));
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
-    auto x = vamana_index_metadata();
-    x.load_metadata(read_group);
-
     std::vector<std::tuple<std::string, std::string>> expected_str{
         {"dataset_type", "vector_search"},
         {"storage_version", current_storage_version},
@@ -103,6 +100,14 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
         {"adjacency_row_index_type", "uint64"},
     };
     validate_metadata(read_group, expected_str, expected_arithmetic);
+
+    auto x = vamana_index_metadata();
+    x.load_metadata(read_group);
+    CHECK(x.ingestion_timestamps_.size() == 1);
+    CHECK(x.ingestion_timestamps_[0] == 0);
+    CHECK(x.base_sizes_.size() == 1);
+    CHECK(x.base_sizes_[0] == 0);
+    CHECK(x.num_edges_history_.size() == 1);
   }
 
   {
@@ -116,12 +121,9 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
     idx.train(training_vectors, training_vectors.raveled_ids());
     idx.add(training_vectors);
-    idx.write_index(ctx, uri, 2, "");
+    idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 2), "");
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
-    auto x = vamana_index_metadata();
-    x.load_metadata(read_group);
-
     std::vector<std::tuple<std::string, std::string>> expected_str{
         {"dataset_type", "vector_search"},
         {"storage_version", current_storage_version},
@@ -133,7 +135,14 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
         {"adjacency_scores_type", "float32"},
         {"adjacency_row_index_type", "uint64"},
     };
-    validate_metadata(read_group, expected_str, expected_arithmetic);
+
+    auto x = vamana_index_metadata();
+    x.load_metadata(read_group);
+    CHECK(x.ingestion_timestamps_.size() == 1);
+    CHECK(x.ingestion_timestamps_[0] == 2);
+    CHECK(x.base_sizes_.size() == 1);
+    CHECK(x.base_sizes_[0] == 222);
+    CHECK(x.num_edges_history_.size() == 1);
   }
 
   {
@@ -144,12 +153,9 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
     idx.train(training_vectors, training_vectors.raveled_ids());
     idx.add(training_vectors);
-    idx.write_index(ctx, uri, 3);
+    idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 3));
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
-    auto x = vamana_index_metadata();
-    x.load_metadata(read_group);
-
     std::vector<std::tuple<std::string, std::string>> expected_str{
         {"dataset_type", "vector_search"},
         {"storage_version", current_storage_version},
@@ -162,5 +168,46 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
         {"adjacency_row_index_type", "uint64"},
     };
     validate_metadata(read_group, expected_str, expected_arithmetic);
+
+    auto x = vamana_index_metadata();
+    x.load_metadata(read_group);
+    CHECK(x.ingestion_timestamps_.size() == 2);
+    CHECK(x.ingestion_timestamps_[0] == 2);
+    CHECK(x.ingestion_timestamps_[1] == 3);
+    CHECK(x.base_sizes_.size() == 2);
+    CHECK(x.base_sizes_[0] == 222);
+    CHECK(x.base_sizes_[1] == 333);
+    CHECK(x.num_edges_history_.size() == 2);
+  }
+
+  {
+    // Check we can clear history.
+    auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
+    auto x = vamana_index_metadata();
+    x.load_metadata(read_group);
+    // Will clear less than or equal to 2, so we should just have ingestion at
+    // timestamp 3.
+    x.clear_history(2);
+    CHECK(x.ingestion_timestamps_.size() == 1);
+    CHECK(x.ingestion_timestamps_[0] == 3);
+    CHECK(x.base_sizes_.size() == 1);
+    CHECK(x.base_sizes_[0] == 333);
+    CHECK(x.num_edges_history_.size() == 1);
+  }
+
+  {
+    // And we can still load correctly after clearing history.
+    auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
+    std::vector<std::tuple<std::string, std::string>> expected_str{
+        {"dataset_type", "vector_search"},
+        {"storage_version", current_storage_version},
+        {"dtype", "float32"},
+        {"feature_type", "float32"},
+        {"id_type", "uint64"},
+        {"ingestion_timestamps", "[3]"},
+        {"base_sizes", "[333]"},
+        {"adjacency_scores_type", "float32"},
+        {"adjacency_row_index_type", "uint64"},
+    };
   }
 }

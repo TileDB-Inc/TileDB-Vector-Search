@@ -1,5 +1,5 @@
 /**
- * @file   base_group.h
+ * @file   index_group.h
  *
  * @section LICENSE
  *
@@ -71,39 +71,22 @@ inline std::string array_name_to_uri(
       .string();
 }
 
-template <class Index>
-class base_index_metadata;
-
-template <class DerivedClass>
-struct metadata_type_selector {
-  using type = typename DerivedClass::index_metadata_type;
-};
-
-template <class IndexGroup>
+template <class index_type>
 class base_index_group {
-  // using index_type = typename IndexGroup::index_type;
-  using group_type = IndexGroup;
-
-  // Can't do this ....
-  // using index_group_metadata_type = typename
-  // IndexGroup::index_group_metadata_type; Can do this
-  using index_group_metadata_type =
-      typename metadata_type_selector<IndexGroup>::type;
-
-  friend IndexGroup;
+  using group_type = index_type::group_type;
+  using metadata_type = index_type::metadata_type;
 
  protected:
   tiledb::Context cached_ctx_;
   std::string group_uri_;
-  TemporalPolicy temporal_policy_{TimeTravel, 0};
   size_t base_array_timestamp_{0};
   size_t history_index_{0};
+  bool should_skip_query_{false};
 
-  // std::reference_wrapper<const index_type> index_;
   std::string version_;
   tiledb_query_type_t opened_for_{TILEDB_READ};
 
-  index_group_metadata_type metadata_;
+  metadata_type metadata_;
 
   // Set of the names that are used in the group for this version
   std::unordered_set<std::string> valid_array_names_;
@@ -149,7 +132,7 @@ class base_index_group {
    *
    * @param ctx
    */
-  void init_for_open() {
+  void init_for_open(std::optional<TemporalPolicy> temporal_policy) {
     if (!exists()) {
       throw std::runtime_error(
           "Group uri " + std::string(group_uri_) + " does not exist.");
@@ -187,30 +170,44 @@ class base_index_group {
 
       array_name_to_uri_[*name] = uri;
     }
+
+    // This is based off of apis/python/src/tiledb/vector_search/index.py.
+    if (temporal_policy.has_value()) {
+      if (temporal_policy->timestamp_start() != 0) {
+        // We have a (start, end) temporal_policy.
+        if (temporal_policy->timestamp_start() >
+            metadata_.ingestion_timestamps_[0]) {
+          should_skip_query_ = true;
+        } else {
+          history_index_ = 0;
+          base_array_timestamp_ =
+              metadata_.ingestion_timestamps_[history_index_];
+        }
+      } else {
+        // We have a (end) temporal_policy.
+        history_index_ = 0;
+        for (int i = 0; i < metadata_.ingestion_timestamps_.size(); i++) {
+          if (metadata_.ingestion_timestamps_[i] <=
+              temporal_policy->timestamp_end()) {
+            history_index_ = i;
+            base_array_timestamp_ =
+                metadata_.ingestion_timestamps_[history_index_];
+          }
+        }
+      }
+    } else {
+      // These are the defaults if no timestamp is set.
+      history_index_ = metadata_.ingestion_timestamps_.size() - 1;
+      base_array_timestamp_ = metadata_.ingestion_timestamps_[history_index_];
+    }
   }
 
-  void open_for_read() {
-    init_for_open();
+  void open_for_read(std::optional<TemporalPolicy> temporal_policy) {
+    init_for_open(temporal_policy);
 
     if (size(metadata_.ingestion_timestamps_) == 0) {
       throw std::runtime_error("No ingestion timestamps found.");
     }
-    if (base_array_timestamp_ == 0) {
-      base_array_timestamp_ = metadata_.ingestion_timestamps_.back();
-      temporal_policy_ = TemporalPolicy{TimeTravel, base_array_timestamp_};
-    }
-
-    auto timestamp_bound = std::lower_bound(
-        begin(metadata_.ingestion_timestamps_),
-        end(metadata_.ingestion_timestamps_),
-        base_array_timestamp_);
-    if (timestamp_bound == end(metadata_.ingestion_timestamps_)) {
-      // We may try to load the index at a timestamp beyond the latest ingestion
-      // timestamp. In this case, use the last timestamp.
-      timestamp_bound = end(metadata_.ingestion_timestamps_) - 1;
-    }
-    history_index_ =
-        std::distance(begin(metadata_.ingestion_timestamps_), timestamp_bound);
   }
 
   /**
@@ -228,10 +225,10 @@ class base_index_group {
    * @param uri
    * @param version
    */
-  void open_for_write() {
+  void open_for_write(std::optional<TemporalPolicy> temporal_policy) {
     if (exists()) {
       /** Load the current group metadata */
-      init_for_open();
+      init_for_open(temporal_policy);
       if (!metadata_.ingestion_timestamps_.empty() &&
           base_array_timestamp_ < metadata_.ingestion_timestamps_.back()) {
         throw std::runtime_error(
@@ -253,6 +250,10 @@ class base_index_group {
    * @todo Process the "base group" metadata here.
    */
   void create_default() {
+    if (get_dimensions() == 0) {
+      throw std::runtime_error(
+          "Dimensions must be set when creating a new group.");
+    }
     static_cast<group_type*>(this)->create_default_impl();
   }
 
@@ -266,6 +267,15 @@ class base_index_group {
     }
 
     return array_name_to_uri_.at(name);
+  }
+
+  /**
+   * @brief Test whether the group exists or not.
+   * @param ctx
+   */
+  bool exists() const {
+    return tiledb::Object::object(cached_ctx_, group_uri_).type() ==
+           tiledb::Object::Type::Group;
   }
 
  public:
@@ -284,35 +294,34 @@ class base_index_group {
    * with the current version.  If version is set, it will be opened with
    * the specified version.
    *
-   * @param ctx
-   * @param uri
-   * @param version
-   * @param index
-   * @param rw
-   * @param timestamp
+   * @param ctx The TileDB context.
+   * @param uri The group URI.
+   * @param rw Whether to open for TILEDB_READ or TILEDB_WRITE.
+   * @param temporal_policy The temporal policy to use.
+   * @param version The storage format version.
+   * @param dimensions The dimensions of the vectors in the index. Only needs to
+   * be set for TILEDB_WRITE.
    *
    * @todo Chained parameters here too?
    */
   base_index_group(
       const tiledb::Context& ctx,
       const std::string& uri,
-      uint64_t dimension,
       tiledb_query_type_t rw = TILEDB_READ,
-      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
-      const std::string& version = std::string{""})
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt,
+      const std::string& version = std::string{""},
+      uint64_t dimensions = 0)
       : cached_ctx_(ctx)
       , group_uri_(uri)
-      , temporal_policy_(temporal_policy)
-      , base_array_timestamp_(temporal_policy.timestamp_end())
       , version_(version)
       , opened_for_(rw) {
     switch (opened_for_) {
       case TILEDB_READ:
-        open_for_read();
+        open_for_read(temporal_policy);
         break;
       case TILEDB_WRITE:
-        set_dimension(dimension);
-        open_for_write();
+        set_dimensions(dimensions);
+        open_for_write(temporal_policy);
         break;
       case TILEDB_MODIFY_EXCLUSIVE:
         break;
@@ -326,6 +335,23 @@ class base_index_group {
   }
 
   /**
+   * @brief Clears all history that is <= timestamp.
+   */
+  void clear_history(uint64_t timestamp) {
+    if (opened_for_ != TILEDB_WRITE) {
+      throw std::runtime_error("Cannot clear history in read mode.");
+    }
+    if (!exists()) {
+      throw std::runtime_error(
+          "Cannot clear history because group does not exist.");
+    }
+
+    metadata_.clear_history(timestamp);
+    tiledb::Array::delete_fragments(cached_ctx_, ids_uri(), 0, timestamp);
+    static_cast<group_type*>(this)->clear_history_impl(timestamp);
+  }
+
+  /**
    * @brief Destructor.  If opened for write, update the metadata.
    *
    * @todo Don't use default Config
@@ -336,15 +362,6 @@ class base_index_group {
           cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
       metadata_.store_metadata(write_group);
     }
-  }
-
-  /**
-   * @brief Test whether the group exists or not.
-   * @param ctx
-   */
-  bool exists() const {
-    return tiledb::Object::object(cached_ctx_, group_uri_).type() ==
-           tiledb::Object::Type::Group;
   }
 
   /**
@@ -391,15 +408,19 @@ class base_index_group {
     metadata_.temp_size_ = size;
   }
 
-  auto get_dimension() const {
-    return metadata_.dimension_;
+  auto get_dimensions() const {
+    return metadata_.dimensions_;
   }
-  auto set_dimension(size_t dim) {
-    metadata_.dimension_ = dim;
+  auto set_dimensions(size_t dim) {
+    metadata_.dimensions_ = dim;
   }
 
   auto get_history_index() const {
     return history_index_;
+  }
+
+  auto should_skip_query() const {
+    return should_skip_query_;
   }
 
   [[nodiscard]] auto ids_uri() const {
@@ -488,6 +509,7 @@ class base_index_group {
     std::cout << "history_index_: " << history_index_ << std::endl;
     std::cout << "base_array_timestamp_: " << base_array_timestamp_
               << std::endl;
+    std::cout << "should_skip_query_: " << should_skip_query_ << std::endl;
     std::cout << "-------------------------------------------------------\n";
     std::cout << "# Metadata:" << std::endl;
     std::cout << "-------------------------------------------------------\n";

@@ -43,7 +43,7 @@ TEST_CASE("api_ivf_flat_index: init constructor", "[api_ivf_flat_index]") {
     CHECK(a.feature_type() == TILEDB_ANY);
     CHECK(a.id_type() == TILEDB_UINT32);
     CHECK(a.px_type() == TILEDB_UINT32);
-    CHECK(dimension(a) == 0);
+    CHECK(dimensions(a) == 0);
     CHECK(num_partitions(a) == 0);
   }
 
@@ -55,7 +55,7 @@ TEST_CASE("api_ivf_flat_index: init constructor", "[api_ivf_flat_index]") {
     CHECK(a.feature_type() == TILEDB_FLOAT32);
     CHECK(a.id_type() == TILEDB_UINT32);
     CHECK(a.px_type() == TILEDB_UINT32);
-    CHECK(dimension(a) == 0);
+    CHECK(dimensions(a) == 0);
     CHECK(num_partitions(a) == 0);
   }
 
@@ -146,12 +146,12 @@ TEST_CASE("api_ivf_flat_index: infer dimension", "[api_ivf_flat_index]") {
       {{"id_type", "uint32"}, {"px_type", "uint32"}}));
   auto ctx = tiledb::Context{};
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-  CHECK(dimension(a) == 0);
+  CHECK(dimensions(a) == 0);
   a.train(training_set, kmeans_init::random);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(a.id_type() == TILEDB_UINT32);
   CHECK(a.px_type() == TILEDB_UINT32);
-  CHECK(dimension(a) == 128);
+  CHECK(dimensions(a) == 128);
 }
 
 TEST_CASE(
@@ -176,7 +176,7 @@ TEST_CASE(
 
   auto b = IndexIVFFlat(ctx, api_ivf_flat_index_uri);
 
-  CHECK(dimension(a) == dimension(b));
+  CHECK(dimensions(a) == dimensions(b));
   CHECK(a.feature_type() == b.feature_type());
   CHECK(a.id_type() == b.id_type());
   CHECK(a.px_type() == b.px_type());
@@ -290,7 +290,7 @@ TEST_CASE(
     CHECK(nt == nv);
     auto recall = ((double)intersections_a) / ((double)nt * k_nn);
     if (nprobe == 32) {
-      CHECK(recall >= .999);
+      CHECK(recall >= 0.999);
     } else if (nprobe == 8) {
       CHECK(recall > 0.925);
     }

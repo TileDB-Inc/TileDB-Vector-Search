@@ -1,5 +1,5 @@
 /**
- * @file   ivf_flat_metadata.h
+ * @file   index_metadata.h
  *
  * @section LICENSE
  *
@@ -91,7 +91,7 @@ class base_index_metadata {
   /** Record size of temp data */
   int64_t temp_size_{0};
 
-  uint32_t dimension_{0};
+  uint32_t dimensions_{0};
 
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
@@ -129,13 +129,13 @@ class base_index_metadata {
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks{
       // name, member_variable, type, required
       {"temp_size", &temp_size_, TILEDB_INT64, true},
-      {"dimension", &dimension_, TILEDB_UINT32, false},
+      {"dimensions", &dimensions_, TILEDB_UINT32, false},
       {"feature_datatype", &feature_datatype_, TILEDB_UINT32, false},
       {"id_datatype", &id_datatype_, TILEDB_UINT32, false},
   };
 
   template <class T>
-  auto json_to_vector(const std::string& json_str) {
+  auto json_to_vector(const std::string& json_str) const {
     auto json = nlohmann::json::parse(json_str);
     std::vector<T> vec;
     for (auto& item : json) {
@@ -194,7 +194,8 @@ class base_index_metadata {
    * @return
    */
   auto check_arithmetic_metadata(
-      tiledb::Group& read_group, const metadata_arithmetic_check_type& check) {
+      tiledb::Group& read_group,
+      const metadata_arithmetic_check_type& check) const {
     tiledb_datatype_t v_type;
     uint32_t v_num;
     const void* v;
@@ -336,6 +337,33 @@ class base_index_metadata {
     }
   }
 
+  /**
+   * @brief Clears all history that is <= timestamp.
+   */
+  void clear_history(uint64_t timestamp) {
+    static_cast<IndexMetadata*>(this)->clear_history_impl(timestamp);
+
+    std::vector<ingestion_timestamps_type> new_ingestion_timestamps;
+    std::vector<base_sizes_type> new_base_sizes;
+    for (int i = 0; i < ingestion_timestamps_.size(); i++) {
+      auto ingestion_timestamp = ingestion_timestamps_[i];
+      if (ingestion_timestamp > timestamp) {
+        new_ingestion_timestamps.push_back(ingestion_timestamp);
+        new_base_sizes.push_back(base_sizes_[i]);
+      }
+    }
+    if (new_ingestion_timestamps.empty()) {
+      new_ingestion_timestamps = {0};
+      new_base_sizes = {0};
+    }
+    ingestion_timestamps_ = new_ingestion_timestamps;
+    ingestion_timestamps_str_ =
+        to_string(nlohmann::json(ingestion_timestamps_));
+
+    base_sizes_ = new_base_sizes;
+    base_sizes_str_ = to_string(nlohmann::json(base_sizes_));
+  }
+
   /**************************************************************************
    * Helpful functions for debugging, testing, etc
    **************************************************************************/
@@ -459,14 +487,14 @@ class base_index_metadata {
    * @todo Dispatch on storage version
    */
   auto dump_strings(
-      const std::vector<metadata_string_check_type>& string_checks) {
+      const std::vector<metadata_string_check_type>& string_checks) const {
     for (auto&& [name, value, required] : string_checks) {
       std::cout << name << ": " << value << std::endl;
     }
   }
 
-  auto dump_arithmetic(
-      const std::vector<metadata_arithmetic_check_type>& arithmetic_checks) {
+  auto dump_arithmetic(const std::vector<metadata_arithmetic_check_type>&
+                           arithmetic_checks) const {
     for (auto&& [name, value, type, required] : arithmetic_checks) {
       switch (type) {
         case TILEDB_FLOAT64:
@@ -486,7 +514,8 @@ class base_index_metadata {
           break;
         case TILEDB_UINT32:
           if (name == "feature_datatype" || name == "id_datatype" ||
-              name == "px_datatype") {
+              name == "px_datatype" || name == "adjacency_scores_datatype" ||
+              name == "adjacency_row_index_datatype") {
             std::cout << name << ": "
                       << tiledb::impl::type_to_str(
                              (tiledb_datatype_t) *
@@ -504,34 +533,28 @@ class base_index_metadata {
     }
   }
 
-  auto dump() {
+  auto dump() const {
     dump_strings(metadata_string_checks);
     dump_strings(
-        static_cast<IndexMetadata*>(this)->metadata_string_checks_impl);
+        static_cast<const IndexMetadata*>(this)->metadata_string_checks_impl);
 
     dump_arithmetic(metadata_arithmetic_checks);
-    dump_arithmetic(
-        static_cast<IndexMetadata*>(this)->metadata_arithmetic_checks_impl);
+    dump_arithmetic(static_cast<const IndexMetadata*>(this)
+                        ->metadata_arithmetic_checks_impl);
 
-    if (!empty(feature_type_str_)) {
-      if (feature_datatype_ == TILEDB_ANY) {
-        feature_datatype_ = string_to_datatype(feature_type_str_);
-      } else if (feature_datatype_ != string_to_datatype(feature_type_str_)) {
-        throw std::runtime_error(
-            "feature_datatype metadata disagree, must be " + feature_type_str_ +
-            " not " + tiledb::impl::type_to_str(feature_datatype_));
-      }
+    if (!empty(feature_type_str_) &&
+        feature_datatype_ != string_to_datatype(feature_type_str_)) {
+      throw std::runtime_error(
+          "feature_datatype metadata disagree, must be " + feature_type_str_ +
+          " not " + tiledb::impl::type_to_str(feature_datatype_));
     }
-    if (!empty(id_type_str_)) {
-      if (id_datatype_ == TILEDB_ANY) {
-        id_datatype_ = string_to_datatype(id_type_str_);
-      } else if (id_datatype_ != string_to_datatype(id_type_str_)) {
-        throw std::runtime_error(
-            "id_datatype metadata disagree, must be " + id_type_str_ + " not " +
-            tiledb::impl::type_to_str(id_datatype_));
-      }
+    if (!empty(id_type_str_) &&
+        id_datatype_ != string_to_datatype(id_type_str_)) {
+      throw std::runtime_error(
+          "id_datatype metadata disagree, must be " + id_type_str_ + " not " +
+          tiledb::impl::type_to_str(id_datatype_));
     }
-    static_cast<IndexMetadata*>(this)->dump_json_impl();
+    static_cast<const IndexMetadata*>(this)->dump_json_impl();
   }
 };
 
