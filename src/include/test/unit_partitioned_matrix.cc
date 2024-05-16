@@ -131,7 +131,7 @@ TEST_CASE("partitioned_matrix: training constructor", "[partitioned_matrix]") {
   CHECK(std::equal(
       partitioned_matrix.data(),
       partitioned_matrix.data() + partitioned_matrix.num_vectors() *
-                                      _cpo::dimension(partitioned_matrix),
+                                      _cpo::dimensions(partitioned_matrix),
       std::vector<feature_type>{2, 2, 4, 4, 1, 1, 3, 3, 5, 5}.begin()));
   CHECK(std::equal(
       partitioned_matrix.ids().begin(),
