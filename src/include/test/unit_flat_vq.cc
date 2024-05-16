@@ -31,7 +31,7 @@
 
 #include <catch2/catch_all.hpp>
 #include "detail/flat/vq.h"
-#include "query_common.h"
+#include "test/utils/query_common.h"
 
 TEST_CASE("flat vq: test test", "[flat vq]") {
   REQUIRE(true);

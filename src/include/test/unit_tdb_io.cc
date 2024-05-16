@@ -33,12 +33,12 @@
 
 #include <tiledb/group_experimental.h>
 #include <catch2/catch_all.hpp>
-#include "array_defs.h"
 #include "concepts.h"
 #include "cpos.h"
 #include "detail/linalg/tdb_io.h"
 #include "detail/linalg/tdb_matrix.h"
-#include "query_common.h"
+#include "test/utils/array_defs.h"
+#include "test/utils/query_common.h"
 
 TEST_CASE("tdb_io: test test", "[tdb_io]") {
   REQUIRE(true);

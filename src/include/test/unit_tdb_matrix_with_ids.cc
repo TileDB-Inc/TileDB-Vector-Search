@@ -33,8 +33,8 @@
 #include "detail/linalg/matrix_with_ids.h"
 #include "detail/linalg/tdb_io.h"
 #include "detail/linalg/tdb_matrix_with_ids.h"
-#include "test/array_defs.h"
-#include "test/test_utils.h"
+#include "test/utils/array_defs.h"
+#include "test/utils/test_utils.h"
 
 TEST_CASE("tdb_matrix_with_ids: test test", "[tdb_matrix_with_ids]") {
   REQUIRE(true);

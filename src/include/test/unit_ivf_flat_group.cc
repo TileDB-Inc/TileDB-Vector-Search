@@ -37,8 +37,8 @@
 #include <filesystem>
 #include <string>
 
-#include "array_defs.h"
 #include "index/ivf_flat_group.h"
+#include "test/utils/array_defs.h"
 
 TEST_CASE("ivf_flat_group: test test", "[ivf_flat_group]") {
   REQUIRE(true);

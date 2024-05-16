@@ -30,10 +30,10 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include "array_defs.h"
 #include "detail/flat/qv.h"
 #include "detail/linalg/tdb_matrix.h"
-#include "query_common.h"
+#include "test/utils/array_defs.h"
+#include "test/utils/query_common.h"
 
 bool global_debug = false;
 

@@ -32,13 +32,13 @@
 #include <type_traits>
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
-#include "array_defs.h"
 #include "catch2/catch_all.hpp"
 #include "detail/ivf/qv.h"
 #include "index/index_defs.h"
-#include "query_common.h"
 #include "tdb_defs.h"
-#include "test/test_utils.h"
+#include "test/utils/array_defs.h"
+#include "test/utils/query_common.h"
+#include "test/utils/test_utils.h"
 #include "utils/utils.h"
 
 #include <tiledb/group_experimental.h>

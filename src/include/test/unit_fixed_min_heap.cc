@@ -35,7 +35,10 @@
 #include <set>
 #include <span>
 #include <vector>
+#include "detail/linalg/vector.h"
 #include "utils/fixed_min_heap.h"
+
+bool debug = false;
 
 TEST_CASE("fixed_min_heap: test test", "[fixed_min_heap]") {
   REQUIRE(true);
@@ -44,63 +47,50 @@ TEST_CASE("fixed_min_heap: test test", "[fixed_min_heap]") {
 TEST_CASE("fixed_min_heap: std::heap", "[fixed_min_heap]") {
   std::vector<int> v{3, 1, 4, 1, 5, 9};
 
-  std::cout << "initial vector  : ";
-  for (auto a : v) {
-    std::cout << a << ' ';
+  if (debug) {
+    debug_vector(v, "initial vector");
   }
-  std::cout << '\n';
 
   std::make_heap(v.begin(), v.end());
   CHECK(std::is_heap(v.begin(), v.end(), std::less<>()));
 
-  std::cout << "initial max heap   : ";
-  for (auto a : v) {
-    std::cout << a << ' ';
+  if (debug) {
+    debug_vector(v, "initial max heap");
   }
-  std::cout << '\n';
 
   std::pop_heap(v.begin(), v.end());
-  std::cout << "max heap after pop heap: ";
-  for (auto a : v) {
-    std::cout << a << ' ';
+
+  if (debug) {
+    debug_vector(v, "max heap after pop heap");
   }
-  std::cout << '\n';
 
   v.pop_back();
   CHECK(std::is_heap(v.begin(), v.end(), std::less<>()));
 
-  std::cout << "max heap after pop back: ";
-  for (auto a : v) {
-    std::cout << a << ' ';
+  if (debug) {
+    debug_vector(v, "max heap after pop back");
   }
-  std::cout << '\n';
 
   std::make_heap(v.begin(), v.end(), std::greater<>());
   CHECK(std::is_heap(v.begin(), v.end(), std::greater<>()));
 
-  std::cout << "min heap after make heap: ";
-  for (auto a : v) {
-    std::cout << a << ' ';
+  if (debug) {
+    debug_vector(v, "min heap after make heap");
   }
-  std::cout << '\n';
 
   std::pop_heap(v.begin(), v.end(), std::greater<>());
 
-  std::cout << "min heap after pop heap: ";
-  for (auto a : v) {
-    std::cout << a << ' ';
+  if (debug) {
+    debug_vector(v, "min heap after pop heap");
   }
-  std::cout << '\n';
 
   v.pop_back();
 
   CHECK(std::is_heap(v.begin(), v.end(), std::greater<>()));
 
-  std::cout << "min heap after pop back: ";
-  for (auto a : v) {
-    std::cout << a << ' ';
+  if (debug) {
+    debug_vector(v, "min heap after pop back");
   }
-  std::cout << '\n';
 }
 
 TEST_CASE("fixed_min_heap: std::set", "[fixed_min_heap]") {

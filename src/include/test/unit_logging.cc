@@ -36,6 +36,8 @@
 #include <thread>
 #include "utils/logging.h"
 
+bool debug = false;
+
 using namespace std::literals::chrono_literals;
 
 auto duration = 500ms;
@@ -168,7 +170,9 @@ TEST_CASE("logging: ordering", "[logging]") {
   auto g_t = _timing_data.get_entries_summed("g");
   auto f_t = _timing_data.get_entries_summed("f");
 
-  std::cout << f_t << " " << g_t << " " << h_t << " " << i_t << std::endl;
+  if (debug) {
+    std::cout << f_t << " " << g_t << " " << h_t << " " << i_t << std::endl;
+  }
 
   CHECK((i_t > 799 && i_t < 890));
   CHECK((h_t > 499 && h_t < 560));
