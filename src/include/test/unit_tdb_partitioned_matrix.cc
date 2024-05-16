@@ -319,8 +319,7 @@ TEST_CASE(
           CHECK(tdb_partitioned_matrix.num_vectors() == expected_num_vectors);
           CHECK(
               tdb_partitioned_matrix.num_partitions() ==
-              expected_num_partitions);  // std::set<part_index_type>(relevant_parts.begin(),
-                                         // relevant_parts.end()).size());
+              expected_num_partitions);
         }
       }
     }
