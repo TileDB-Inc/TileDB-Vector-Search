@@ -442,7 +442,5 @@ void init_type_erased_module(py::module_& m) {
       .def("px_type_string", &IndexIVFFlat::px_type_string)
       .def("dimensions", &IndexIVFFlat::dimensions);
 
-  m.def("build_config", []() {
-    std::cout << build_config().dump() << std::endl;
-  });
+  m.def("build_config_string", []() { return build_config().dump(); });
 }
