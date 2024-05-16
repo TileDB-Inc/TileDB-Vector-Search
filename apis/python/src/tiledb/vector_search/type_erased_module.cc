@@ -42,6 +42,7 @@
 #include "api/ivf_flat_index.h"
 #include "api/vamana_index.h"
 #include "detail/time/temporal_policy.h"
+#include "stats.h"
 
 namespace py = pybind11;
 
@@ -440,4 +441,8 @@ void init_type_erased_module(py::module_& m) {
       .def("id_type_string", &IndexIVFFlat::id_type_string)
       .def("px_type_string", &IndexIVFFlat::px_type_string)
       .def("dimensions", &IndexIVFFlat::dimensions);
+
+  m.def("build_config", []() {
+    std::cout << build_config().dump() << std::endl;
+  });
 }

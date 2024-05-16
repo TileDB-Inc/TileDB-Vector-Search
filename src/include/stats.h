@@ -222,10 +222,8 @@ static auto dump_logs = [](std::string filename,
   }
 };
 
-#ifdef JSON_LOGGING
-static auto config_log(const std::string& program_name) {
+static auto build_config() {
   std::string uuid_;
-  char host_[16];
   std::string date_;
   std::size_t uuid_size_ = 24;
 
@@ -235,10 +233,12 @@ static auto config_log(const std::string& program_name) {
   uuid_.resize(uuid_size_);
   std::generate(uuid_.begin(), uuid_.end(), [&] { return dis(gen); });
 
-  if (int e = gethostname(host_, sizeof(host_))) {
-    std::cerr << "truncated host name\n";
-    strncpy(host_, "ghost", 15);
-  }
+  // This is failing today, but could perhaps be added back in the future.
+  // char host_[16];
+  // if (int e = gethostname(host_, sizeof(host_))) {
+  //   std::cerr << "truncated host name\n";
+  //   strncpy(host_, "ghost", 15);
+  // }
   {
     std::stringstream ss;
     std::time_t currentTime = std::time(nullptr);
@@ -252,8 +252,6 @@ static auto config_log(const std::string& program_name) {
 
   json config = {
       {"uuid", uuid_},
-      {"host", host_},
-      {"Program", program_name},
       {"Build_date", CURRENT_DATETIME},
       {"Run_date", date_},
       {"cmake_source_dir", CMAKE_SOURCE_DIR},
@@ -296,6 +294,5 @@ auto args_log(const Args& args) {
   }
   return arg_log;
 }
-#endif  // JSON_LOGGING
 
 #endif  // TDB_STATS_H
