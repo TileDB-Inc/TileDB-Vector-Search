@@ -192,7 +192,7 @@ class IVFFlatIndex(index.Index):
         nthreads: int
             Number of threads to use for local query execution.
         use_nuv_implementation: bool
-            Wether to use the nuv query implementation. Default: False
+            Whether to use the nuv query implementation. Default: False
         mode: Mode
             If provided the query will be executed using TileDB cloud taskgraphs.
             For distributed execution you can use REALTIME or BATCH mode.
@@ -509,7 +509,7 @@ def create(
         TileDB config dictionary.
     storage_version: str
         The TileDB vector search storage version to use.
-        If not provided, use hte latest stable storage version.
+        If not provided, use the latest stable storage version.
     """
     validate_storage_version(storage_version)
 
