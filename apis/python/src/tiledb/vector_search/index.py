@@ -544,7 +544,7 @@ class Index:
     def get_dimensions(self):
         """
         Abstract method implemented by all Vector Index implementations.
-        
+
         Returns the dimension of the vectors in the index.
         """
         raise NotImplementedError
