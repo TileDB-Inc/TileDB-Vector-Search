@@ -89,8 +89,7 @@ class CloudTests(unittest.TestCase):
             source_uri=source_uri,
             input_vectors_per_work_item=5000,
             config=tiledb.cloud.Config().dict(),
-            # TODO(paris): Fix and then change to Mode.BATCH.
-            mode=Mode.LOCAL,
+            mode=Mode.BATCH,
         )
 
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
