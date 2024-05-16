@@ -223,37 +223,28 @@ static auto dump_logs = [](std::string filename,
 };
 
 static auto build_config() {
-  std::string uuid_;
-  std::string date_;
-  std::size_t uuid_size_ = 24;
-
-  auto seed = std::random_device();
-  auto gen = std::mt19937(seed());
-  auto dis = std::uniform_int_distribution<int8_t>(97, 122);
-  uuid_.resize(uuid_size_);
-  std::generate(uuid_.begin(), uuid_.end(), [&] { return dis(gen); });
-
   // This is failing today, but could perhaps be added back in the future.
   // char host_[16];
   // if (int e = gethostname(host_, sizeof(host_))) {
   //   std::cerr << "truncated host name\n";
   //   strncpy(host_, "ghost", 15);
   // }
+
+  std::string date;
   {
     std::stringstream ss;
     std::time_t currentTime = std::time(nullptr);
     std::string dateString = std::ctime(&currentTime);
     dateString.erase(dateString.find('\n'));
     ss << dateString;
-    date_ = ss.str();
+    date = ss.str();
   }
 
   auto&& [major, minor, patch] = tiledb::version();
 
   json config = {
-      {"uuid", uuid_},
       {"Build_date", CURRENT_DATETIME},
-      {"Run_date", date_},
+      {"Run_date", date},
       {"cmake_source_dir", CMAKE_SOURCE_DIR},
       {"Build", BUILD_TYPE},
       {"Compiler",
