@@ -41,7 +41,7 @@
 
 #include <tiledb/tiledb>
 
-bool global_debug = false;
+bool debug = false;
 
 TEST_CASE("nn-descent: test test", "[nn-descent]") {
   REQUIRE(true);
@@ -66,10 +66,12 @@ TEMPLATE_TEST_CASE(
   auto&& [top_k_scores, top_k] =
       detail::flat::qv_query_heap(db, db, k_nn + 1, 3);
   auto num_intersected = count_intersections(top_k, top_k, k_nn + 1);
-  std::cout << "num_intersected: " << num_intersected << " / " << N * (k_nn + 1)
-            << " = "
-            << ((double)num_intersected) / ((double)N * (double)(k_nn + 1))
-            << std::endl;
+  if (debug) {
+    std::cout << "num_intersected: " << num_intersected << " / "
+              << N * (k_nn + 1) << " = "
+              << ((double)num_intersected) / ((double)N * (double)(k_nn + 1))
+              << std::endl;
+  }
 
   {
     scoped_timer _{"nn_descent"};
@@ -77,7 +79,9 @@ TEMPLATE_TEST_CASE(
         ::detail::graph::init_random_nn_graph<feature_type, uint32_t>(db, k_nn);
     for (size_t i = 0; i < 4; ++i) {
       auto num_updates = nn_descent_1_step_all(g, db);
-      std::cout << "num_updates: " << num_updates << std::endl;
+      if (debug) {
+        std::cout << "num_updates: " << num_updates << std::endl;
+      }
 
       auto h = ColMajorMatrix<size_t>(k_nn + 1, N);
       for (size_t j = 0; j < N; ++j) {
@@ -85,10 +89,13 @@ TEMPLATE_TEST_CASE(
         get_top_k_from_heap(g.out_edges(j), std::span(&h(1, j), k_nn));
       }
       auto num_intersected = count_intersections(h, top_k, k_nn + 1);
-      std::cout << "num_intersected: " << num_intersected << " / "
-                << N * (k_nn + 1) << " = "
-                << ((double)num_intersected) / ((double)N * (double)(k_nn + 1))
-                << std::endl;
+      if (debug) {
+        std::cout << "num_intersected: " << num_intersected << " / "
+                  << N * (k_nn + 1) << " = "
+                  << ((double)num_intersected) /
+                         ((double)N * (double)(k_nn + 1))
+                  << std::endl;
+      }
     }
     _.stop();
   }
@@ -174,11 +181,13 @@ TEST_CASE("nn-descent: nn_descent_1", "[nn-descent]") {
   }
 
   auto num_intersected = count_intersections(tt, top_k, k_nn + 1);
-  std::cout << "num_intersected: " << num_intersected << " / "
-            << num_queries * (k_nn + 1) << " = "
-            << ((double)num_intersected) /
-                   ((double)num_queries * (double)(k_nn + 1))
-            << std::endl;
+  if (debug) {
+    std::cout << "num_intersected: " << num_intersected << " / "
+              << num_queries * (k_nn + 1) << " = "
+              << ((double)num_intersected) /
+                     ((double)num_queries * (double)(k_nn + 1))
+              << std::endl;
+  }
 }
 
 TEST_CASE("nn-descent: nn_descent_1 vs ivf", "[nn-descent]") {
@@ -249,14 +258,16 @@ TEST_CASE("nn-descent: nn_descent_1 vs ivf", "[nn-descent]") {
 
   auto num_intersected = count_intersections(t, groundtruth, k_nn + 1);
   auto qv_intersected = count_intersections(I00, groundtruth, k_nn + 1);
-  std::cout << "qv_intersected: " << qv_intersected << " / "
-            << num_queries * (k_nn + 1) << " = "
-            << ((double)qv_intersected) /
-                   ((double)num_queries * (double)(k_nn + 1))
-            << std::endl;
-  std::cout << "num_intersected: " << num_intersected << " / "
-            << num_queries * (k_nn + 1) << " = "
-            << ((double)num_intersected) /
-                   ((double)num_queries * (double)(k_nn + 1))
-            << std::endl;
+  if (debug) {
+    std::cout << "qv_intersected: " << qv_intersected << " / "
+              << num_queries * (k_nn + 1) << " = "
+              << ((double)qv_intersected) /
+                     ((double)num_queries * (double)(k_nn + 1))
+              << std::endl;
+    std::cout << "num_intersected: " << num_intersected << " / "
+              << num_queries * (k_nn + 1) << " = "
+              << ((double)num_intersected) /
+                     ((double)num_queries * (double)(k_nn + 1))
+              << std::endl;
+  }
 }
