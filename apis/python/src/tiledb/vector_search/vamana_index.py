@@ -44,6 +44,7 @@ class VamanaIndex(index.Index):
         **kwargs,
     ):
         self.index_type = INDEX_TYPE
+        super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index = vspy.IndexVamana(self.ctx, uri, to_temporal_policy(timestamp))
         self.uri = uri
         self.db_uri = self.group[
@@ -214,7 +215,7 @@ class VamanaIndex(index.Index):
             from tiledb.vector_search import _tiledbvspy as vspy
 
             ctx = vspy.Ctx(config)
-            index = vspy.IndexVamana(ctx, uri, timestamp)
+            index = vspy.IndexVamana(ctx, uri, to_temporal_policy(timestamp))
             queries_feature_vector_array = vspy.FeatureVectorArray(queries)
             distances, ids = index.query(queries_feature_vector_array, k, opt_l)
             return np.array(distances, copy=False), np.array(ids, copy=False)

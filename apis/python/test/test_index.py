@@ -2,15 +2,25 @@ import json
 import time
 
 import numpy as np
+import pytest
 from array_paths import *
 from common import *
 from common import load_metadata
 
+import tiledb.vector_search.index as ind
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search import Index
+from tiledb.vector_search import flat_index
+from tiledb.vector_search import ivf_flat_index
 from tiledb.vector_search import vamana_index
+from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.index import DATASET_TYPE
+from tiledb.vector_search.index import create_metadata
+from tiledb.vector_search.ingestion import ingest
+from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.utils import is_type_erased_index
+from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.vamana_index import VamanaIndex
 
 
 def query_and_check_distances(
