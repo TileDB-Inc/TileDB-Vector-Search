@@ -163,7 +163,6 @@ class Vector : public std::span<T> {
 template <feature_vector V>
 void debug_vector(
     const V& v, const std::string& msg = "", size_t max_size = 10) {
-  size_t max_size = 10;
   size_t end = std::min(max_size, dimensions(v));
   std::cout << msg << ": [";
   for (size_t i = 0; i < end; ++i) {
