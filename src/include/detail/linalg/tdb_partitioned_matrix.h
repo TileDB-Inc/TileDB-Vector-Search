@@ -455,7 +455,7 @@ class tdbPartitionedMatrix
        * Fit as many partitions as we can into column_capacity
        */
 
-      first_resident_col_ = last_resident_col_;    // # columns
+      first_resident_col_ = last_resident_col_;  // # columns
       first_resident_part_ = last_resident_part_;  // # partitions
 
       last_resident_part_ = first_resident_part_;

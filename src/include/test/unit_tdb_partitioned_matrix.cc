@@ -37,7 +37,6 @@
 #include "detail/linalg/tdb_io.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "mdspan/mdspan.hpp"
-#include "test/test_utils.h"
 
 using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 

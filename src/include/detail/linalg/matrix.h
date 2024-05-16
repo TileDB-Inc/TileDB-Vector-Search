@@ -461,8 +461,8 @@ constexpr auto SubMatrix(
 
 // TODO(paris): This only works on col-major matrices, fix for row-major.
 template <class Matrix>
-void debug_matrix(const Matrix& matrix, const std::string& msg = "") {
-  auto max_size = 10;
+void debug_matrix(
+    const Matrix& matrix, const std::string& msg = "", size_t max_size = 10) {
   auto rowsEnd = std::min(dimensions(matrix), static_cast<size_t>(max_size));
   auto colsEnd = std::min(num_vectors(matrix), static_cast<size_t>(max_size));
 
