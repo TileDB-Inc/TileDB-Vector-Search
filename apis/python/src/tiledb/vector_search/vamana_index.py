@@ -1,3 +1,15 @@
+"""
+Vamana Index implementation.
+
+Vamana is based on Microsoft's DiskANN vector search library, as described in these papers:
+```
+  Subramanya, Suhas Jayaram, and Rohan Kadekodi. DiskANN: Fast Accurate Billion-Point Nearest Neighbor Search on a Single Node.
+
+  Singh, Aditi, et al. FreshDiskANN: A Fast and Accurate Graph-Based ANN Index for Streaming Similarity Search. arXiv:2105.09613, arXiv, 20 May 2021, http://arxiv.org/abs/2105.09613.
+
+  Gollapudi, Siddharth, et al. “Filtered-DiskANN: Graph Algorithms for Approximate Nearest Neighbor Search with Filters.” Proceedings of the ACM Web Conference 2023, ACM, 2023, pp. 3406-16, https://doi.org/10.1145/3543507.3583552.
+```
+"""
 import warnings
 from typing import Any, Mapping
 
@@ -17,14 +29,14 @@ INDEX_TYPE = "VAMANA"
 
 class VamanaIndex(index.Index):
     """
-    Open a Vamana index
+    Opens a `VamanaIndex`.
 
     Parameters
     ----------
     uri: str
-        URI of the index
+        URI of the index.
     config: Optional[Mapping[str, Any]]
-        config dictionary, defaults to None
+        TileDB config dictionary.
     """
 
     def __init__(
@@ -59,6 +71,9 @@ class VamanaIndex(index.Index):
             self.size = self.base_size
 
     def get_dimensions(self):
+        """
+        Returns the dimension of the vectors in the index.
+        """
         return self.dimensions
 
     def query_internal(
@@ -69,16 +84,16 @@ class VamanaIndex(index.Index):
         **kwargs,
     ):
         """
-        Query an VAMANA index
+        Queries a `VamanaIndex`.
 
         Parameters
         ----------
-        queries: numpy.ndarray
-            ND Array of queries
+        queries: np.ndarray
+            2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.
         k: int
-            Number of top results to return per query
+            Number of results to return per query vector.
         opt_l: int
-            How deep to search. Should be >= k. Defaults to 100.
+            How deep to search. Should be >= k, and if it's not, we will set it to k.
         """
         warnings.warn("The Vamana index is not yet supported, please use with caution.")
         if self.size == 0:
@@ -111,6 +126,23 @@ def create(
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> VamanaIndex:
+    """
+    Creates an empty VamanaIndex.
+    Parameters
+    ----------
+    uri: str
+        URI of the index.
+    dimensions: int
+        Number of dimensions for the vectors to be stored in the index.
+    vector_type: np.dtype
+        Datatype of vectors.
+        Supported values (uint8, int8, float32).
+    config: Optional[Mapping[str, Any]]
+        TileDB config dictionary.
+    storage_version: str
+        The TileDB vector search storage version to use.
+        If not provided, use the latest stable storage version.
+    """
     warnings.warn("The Vamana index is not yet supported, please use with caution.")
     validate_storage_version(storage_version)
     ctx = vspy.Ctx(config)
