@@ -49,8 +49,6 @@ TEST_CASE("ivf_flat_metadata: default constructor", "[ivf_flat_metadata]") {
   ivf_flat_index_metadata y;
 }
 
-// TODO(paris): Modify the index and then also check for ingestion_timestamps
-// and num_edges_history.
 TEST_CASE(
     "ivf_flat_metadata: load metadata from index", "[ivf_flat_metadata]") {
   tiledb::Context ctx;

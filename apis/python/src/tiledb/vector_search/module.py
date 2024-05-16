@@ -90,13 +90,13 @@ def load_as_array(
 def debug_slice(m: "colMajorMatrix", name: str):
     dtype = m.dtype
     if dtype == np.float32:
-        return debug_slice_f32(m, name)
+        return debug_matrix_f32(m, name)
     elif dtype == np.uint8:
-        return debug_slice_u8(m, name)
+        return debug_matrix_u8(m, name)
     elif dtype == np.int8:
-        return debug_slice_i8(m, name)
+        return debug_matrix_i8(m, name)
     elif dtype == np.uint64:
-        return debug_slice_u64(m, name)
+        return debug_matrix_u64(m, name)
     else:
         raise TypeError(f"Unsupported type: {dtype}!")
 

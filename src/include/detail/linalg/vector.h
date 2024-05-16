@@ -179,7 +179,7 @@ void debug_vector(const V& v, const std::string& msg = "") {
 }
 
 template <feature_vector V>
-void debug_slice(const V& v, const std::string& msg = "") {
+void debug_matrix(const V& v, const std::string& msg = "") {
   debug_vector(v, msg);
 }
 

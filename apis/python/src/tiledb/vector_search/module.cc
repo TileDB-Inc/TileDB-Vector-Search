@@ -111,11 +111,11 @@ static void declareColMajorMatrix(py::module& mod, std::string const& suffix) {
 }
 
 template <class T>
-static void declare_debug_slice(py::module& m, const std::string& suffix) {
+static void declare_debug_matrix(py::module& m, const std::string& suffix) {
   m.def(
-      ("debug_slice" + suffix).c_str(),
+      ("debug_matrix" + suffix).c_str(),
       [](ColMajorMatrix<T>& mat, const std::string& msg = "module.cc: ") {
-        debug_slice(mat, msg);
+        debug_matrix(mat, msg);
       });
   // py::keep_alive<1, 2>());
 }
@@ -807,10 +807,10 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   m.def("stats_reset", []() { core_stats.clear(); });
   m.def("stats_dump", []() { return json{core_stats}.dump(); });
 
-  declare_debug_slice<uint8_t>(m, "_u8");
-  declare_debug_slice<int8_t>(m, "_i8");
-  declare_debug_slice<float>(m, "_f32");
-  declare_debug_slice<uint64_t>(m, "_u64");
+  declare_debug_matrix<uint8_t>(m, "_u8");
+  declare_debug_matrix<int8_t>(m, "_i8");
+  declare_debug_matrix<float>(m, "_f32");
+  declare_debug_matrix<uint64_t>(m, "_u64");
 
   /* === Module inits === */
 

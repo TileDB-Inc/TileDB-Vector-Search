@@ -871,28 +871,25 @@ TEST_CASE(
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(query_vector_array, 1);
 
-    auto scores = std::span<feature_type_type>(
-        (feature_type_type*)scores_vector_array.data(),
-        scores_vector_array.num_vectors());
-    auto ids = std::span<id_type_type>(
-        (id_type_type*)ids_vector_array.data(), ids_vector_array.num_vectors());
+    auto scores = std::span<float>(
+        (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
+    auto ids = std::span<uint32_t>(
+        (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
     CHECK(scores.size() == 4);
     CHECK(ids.size() == 4);
-    // TODO(paris): We should return max float and max int, but do not
-    // currently. Fix and re-enable.
-    // auto default_score = std::numeric_limits<float>::max();
-    // auto default_id = std::numeric_limits<uint32_t>::max();
-    // CHECK(std::equal(
-    //     scores.begin(),
-    //     scores.end(),
-    //     std::vector<float>{
-    //         default_score, default_score, default_score, default_score}
-    //         .begin()));
-    // CHECK(std::equal(
-    //     ids.begin(),
-    //     ids.end(),
-    //     std::vector<uint32_t>{default_id, default_id, default_id, default_id}
-    //         .begin()));
+    auto default_score = std::numeric_limits<float>::max();
+    auto default_id = std::numeric_limits<uint32_t>::max();
+    CHECK(std::equal(
+        scores.begin(),
+        scores.end(),
+        std::vector<float>{
+            default_score, default_score, default_score, default_score}
+            .begin()));
+    CHECK(std::equal(
+        ids.begin(),
+        ids.end(),
+        std::vector<uint32_t>{default_id, default_id, default_id, default_id}
+            .begin()));
 
     auto typed_index = vamana_index<
         feature_type_type,
