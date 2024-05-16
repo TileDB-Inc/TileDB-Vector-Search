@@ -1,5 +1,5 @@
 /**
- * @file   partitioned_matrix.h
+ * @file   compat.h
  *
  * @section LICENSE
  *
@@ -129,7 +129,7 @@ class PartitionedMatrixWrapper {
     }
   }
 
-  auto dimension() const {
+  auto dimensions() const {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
       return parts_.get().num_cols();
     } else {
@@ -137,7 +137,7 @@ class PartitionedMatrixWrapper {
     }
   }
 
-  auto dimension() {
+  auto dimensions() {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
       return parts_.get().num_cols();
     } else {

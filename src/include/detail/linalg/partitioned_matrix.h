@@ -149,7 +149,7 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   template <feature_vector_array F, std::ranges::contiguous_range V>
   PartitionedMatrix(
       const F& training_set, const V& part_labels, size_t num_parts)
-      : Base(::dimension(training_set), ::num_vectors(training_set))
+      : Base(::dimensions(training_set), ::num_vectors(training_set))
       , ids_(::num_vectors(training_set))
       , part_index_(num_parts + 1)
       , num_vectors_{::num_vectors(training_set)}
@@ -170,7 +170,7 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       ids_[ibin] = i;
 
       assert(ibin < this->num_cols());
-      for (size_t j = 0; j < dimension(training_set); ++j) {
+      for (size_t j = 0; j < dimensions(training_set); ++j) {
         this->operator()(j, ibin) = training_set(j, i);
       }
       ++part_index_[bin];
@@ -241,5 +241,41 @@ using ColMajorPartitionedMatrix = PartitionedMatrix<
     part_index_type,
     stdx::layout_left,
     I>;
+
+template <class PartitionedMatrix>
+void debug_partitioned_matrix(
+    const PartitionedMatrix& matrix, const std::string& msg = "") {
+  auto max_size = 10;
+  auto rowsEnd = std::min(dimension(matrix), static_cast<size_t>(max_size));
+  auto colsEnd = std::min(num_vectors(matrix), static_cast<size_t>(max_size));
+
+  debug_matrix(matrix, msg);
+
+  std::cout << "# ids: [";
+  auto end = std::min(matrix.ids().size(), static_cast<size_t>(max_size));
+  for (size_t i = 0; i < end; ++i) {
+    std::cout << matrix.ids()[i];
+    if (i != matrix.ids().size() - 1) {
+      std::cout << ", ";
+    }
+  }
+  if (matrix.ids().size() > max_size) {
+    std::cout << "...";
+  }
+  std::cout << "]" << std::endl;
+
+  std::cout << "# indices: [";
+  end = std::min(matrix.indices().size(), static_cast<size_t>(max_size));
+  for (size_t i = 0; i < end; ++i) {
+    std::cout << matrix.indices()[i];
+    if (i != matrix.indices().size() - 1) {
+      std::cout << ", ";
+    }
+  }
+  if (matrix.indices().size() > max_size) {
+    std::cout << "...";
+  }
+  std::cout << "]" << std::endl;
+}
 
 #endif  // PARTITIONED_MATRIX_H

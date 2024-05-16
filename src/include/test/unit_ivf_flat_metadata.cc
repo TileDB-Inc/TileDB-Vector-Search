@@ -49,8 +49,6 @@ TEST_CASE("ivf_flat_metadata: default constructor", "[ivf_flat_metadata]") {
   ivf_flat_index_metadata y;
 }
 
-// TODO(paris): Modify the index and then also check for ingestion_timestamps
-// and num_edges_history.
 TEST_CASE(
     "ivf_flat_metadata: load metadata from index", "[ivf_flat_metadata]") {
   tiledb::Context ctx;
@@ -68,7 +66,7 @@ TEST_CASE(
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
-      {"dimension", 128},
+      {"dimensions", 128},
       {"feature_datatype", 2},
       {"id_datatype", 9},
       {"px_datatype", 9},

@@ -1,5 +1,5 @@
 /**
- * @file   graph.h
+ * @file   nn-graph.h
  *
  * @section LICENSE
  *

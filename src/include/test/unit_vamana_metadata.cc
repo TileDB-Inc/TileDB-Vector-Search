@@ -71,7 +71,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
-      {"dimension", 128},
+      {"dimensions", 128},
       {"feature_datatype", 2},
       {"id_datatype", 10},
       {"adjacency_scores_datatype", 2},
@@ -85,7 +85,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
             128, 0);
     idx.train(training_vectors, training_vectors.raveled_ids());
     idx.add(training_vectors);
-    idx.write_index(ctx, uri, 0);
+    idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 0));
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     std::vector<std::tuple<std::string, std::string>> expected_str{
@@ -121,7 +121,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
     idx.train(training_vectors, training_vectors.raveled_ids());
     idx.add(training_vectors);
-    idx.write_index(ctx, uri, 2, "");
+    idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 2), "");
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     std::vector<std::tuple<std::string, std::string>> expected_str{
@@ -153,7 +153,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
 
     idx.train(training_vectors, training_vectors.raveled_ids());
     idx.add(training_vectors);
-    idx.write_index(ctx, uri, 3);
+    idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 3));
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     std::vector<std::tuple<std::string, std::string>> expected_str{

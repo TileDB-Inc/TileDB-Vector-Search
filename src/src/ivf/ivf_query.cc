@@ -177,16 +177,15 @@ int main(int argc, char* argv[]) {
         std::cout << std::endl;
 
         debug_matrix(groundtruth, "groundtruth");
-        debug_slice(groundtruth, "groundtruth");
 
         std::cout << std::endl;
         debug_matrix(top_k, "top_k");
-        debug_slice(top_k, "top_k");
+        debug_matrix(top_k, "top_k");
 
         std::cout << std::endl;
       }
 
-      size_t total_groundtruth = num_vectors(top_k) * dimension(top_k);
+      size_t total_groundtruth = num_vectors(top_k) * dimensions(top_k);
       size_t total_intersected = count_intersections(top_k, groundtruth, k_nn);
 
       float recall = ((float)total_intersected) / ((float)total_groundtruth);

@@ -1,5 +1,5 @@
 /**
- * @file   ivf_flat_index_group.h
+ * @file   ivf_flat_group.h
  *
  * @section LICENSE
  *
@@ -71,8 +71,8 @@ class ivf_flat_index_group : public base_index_group<index_type> {
       tiledb_query_type_t rw = TILEDB_READ,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""},
-      uint64_t dimension = 0)
-      : Base(ctx, uri, rw, temporal_policy, version, dimension) {
+      uint64_t dimensions = 0)
+      : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
   }
 
  public:
@@ -142,7 +142,7 @@ class ivf_flat_index_group : public base_index_group<index_type> {
 
     static const int32_t tile_size{
         (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
-                  this->get_dimension())};
+                  this->get_dimensions())};
     static const tiledb_filter_type_t default_compression{
         string_to_filter(storage_formats[version_]["default_attr_filters"])};
 
@@ -171,16 +171,16 @@ class ivf_flat_index_group : public base_index_group<index_type> {
     metadata_.base_sizes_ = {0};
     metadata_.partition_history_ = {0};
     metadata_.temp_size_ = 0;
-    metadata_.dimension_ = this->get_dimension();
+    metadata_.dimensions_ = this->get_dimensions();
 
     create_empty_for_matrix<
         typename index_type::centroid_feature_type,
         stdx::layout_left>(
         cached_ctx_,
         centroids_uri(),
-        this->get_dimension(),
+        this->get_dimensions(),
         default_domain,
-        this->get_dimension(),
+        this->get_dimensions(),
         default_tile_extent,
         default_compression);
     tiledb_helpers::add_to_group(
@@ -191,9 +191,9 @@ class ivf_flat_index_group : public base_index_group<index_type> {
         stdx::layout_left>(
         cached_ctx_,
         parts_uri(),
-        this->get_dimension(),
+        this->get_dimensions(),
         default_domain,
-        this->get_dimension(),
+        this->get_dimensions(),
         default_tile_extent,
         default_compression);
     tiledb_helpers::add_to_group(write_group, parts_uri(), parts_array_name());

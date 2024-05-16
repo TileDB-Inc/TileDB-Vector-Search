@@ -109,7 +109,7 @@ template <
 
   // This shows uninitialized matrix when k_nn = 10 and num_vectors(db) = 1
   // std::cout << "======\n";
-  // debug_slice(top_k);
+  // debug_matrix(top_k);
   // std::cout << "======\n";
   return top_k;
 }
@@ -296,8 +296,8 @@ auto qv_query_heap_tiled(
     Distance distance = Distance{}) {
   load(db);
 
-  // debug_slice(db);
-  // debug_slice(query);
+  // debug_matrix(db);
+  // debug_matrix(query);
 
   scoped_timer _{tdb_func__};
 

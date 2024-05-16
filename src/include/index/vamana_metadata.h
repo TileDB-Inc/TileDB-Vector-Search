@@ -111,9 +111,9 @@ class vamana_index_metadata
        &adjacency_row_index_datatype_,
        TILEDB_UINT32,
        false},
-      {"L", &l_build_, TILEDB_UINT64, false},
-      {"R", &r_max_degree_, TILEDB_UINT64, false},
-      {"B", &b_backtrack_, TILEDB_UINT64, false},
+      {"l_build", &l_build_, TILEDB_UINT64, false},
+      {"r_max_degree", &r_max_degree_, TILEDB_UINT64, false},
+      {"b_backtrack", &b_backtrack_, TILEDB_UINT64, false},
       {"alpha_min", &alpha_min_, TILEDB_FLOAT32, false},
       {"alpha_max", &alpha_max_, TILEDB_FLOAT32, false},
       {"medoid", &medoid_, TILEDB_UINT64, false},
@@ -148,32 +148,22 @@ class vamana_index_metadata
     num_edges_history_str_ = to_string(nlohmann::json(num_edges_history_));
   }
 
-  auto dump_json_impl() {
-    if (!empty(adjacency_scores_type_str_)) {
-      if (adjacency_scores_datatype_ == TILEDB_ANY) {
-        adjacency_scores_datatype_ =
-            string_to_datatype(adjacency_scores_type_str_);
-      } else if (
-          adjacency_scores_datatype_ !=
-          string_to_datatype(adjacency_scores_type_str_)) {
-        throw std::runtime_error(
-            "adjacency_scores_datatype metadata disagree, must be " +
-            adjacency_scores_type_str_ + " not " +
-            tiledb::impl::type_to_str(adjacency_scores_datatype_));
-      }
+  auto dump_json_impl() const {
+    if (!empty(adjacency_scores_type_str_) &&
+        adjacency_scores_datatype_ !=
+            string_to_datatype(adjacency_scores_type_str_)) {
+      throw std::runtime_error(
+          "adjacency_scores_datatype metadata disagree, must be " +
+          adjacency_scores_type_str_ + " not " +
+          tiledb::impl::type_to_str(adjacency_scores_datatype_));
     }
-    if (!empty(adjacency_row_index_type_str_)) {
-      if (adjacency_row_index_datatype_ == TILEDB_ANY) {
-        adjacency_row_index_datatype_ =
-            string_to_datatype(adjacency_row_index_type_str_);
-      } else if (
-          adjacency_row_index_datatype_ !=
-          string_to_datatype(adjacency_row_index_type_str_)) {
-        throw std::runtime_error(
-            "adjacency_row_index_datatype metadata disagree, must be " +
-            adjacency_row_index_type_str_ + " not " +
-            tiledb::impl::type_to_str(adjacency_row_index_datatype_));
-      }
+    if (!empty(adjacency_row_index_type_str_) &&
+        adjacency_row_index_datatype_ !=
+            string_to_datatype(adjacency_row_index_type_str_)) {
+      throw std::runtime_error(
+          "adjacency_row_index_datatype metadata disagree, must be " +
+          adjacency_row_index_type_str_ + " not " +
+          tiledb::impl::type_to_str(adjacency_row_index_datatype_));
     }
   }
 };

@@ -41,7 +41,11 @@
 
 #include <tiledb/tiledb>
 #include "detail/graph/adj_list.h"
+#include "detail/graph/best_first.h"
+#include "detail/graph/bfs.h"
+#include "detail/graph/diskann.h"
 #include "detail/graph/graph_utils.h"
+#include "detail/graph/greedy_search.h"
 #include "detail/linalg/tdb_matrix_with_ids.h"
 #include "detail/linalg/vector.h"
 #include "detail/time/temporal_policy.h"
@@ -52,314 +56,7 @@
 #include "utils/print_types.h"
 
 #include <tiledb/group_experimental.h>
-
-static bool noisy = false;
-[[maybe_unused]] static void set_noisy(bool b) {
-  noisy = b;
-}
-
-/**
- * @brief Truncated best-first search
- * @tparam Distance The distance function used to compare vectors
- * @param graph Graph to be searched
- * @param db Holds the original feature vectors and their IDs
- * @param source start node index
- * @param query query node index
- * @param k result size
- * @param L search list size, L >= k
- * @return result set ell containing k-approximate nearest neighbors to query
- * and set vee containing all the visited nodes
- *
- * Per the DiskANN paper, the algorithm is as follows:
- * 1. Initialize the result list with the source node and visited list with
- *    empty
- * 2. While the result list \ visited list is not empty
- *    a. Find p* in the result list \ visited list with the smallest distance to
- *       the query
- *    b. update the result list with the out neighbors of p*
- *    c. Add p* to the visited list d. If size of the result list > L, trim
- *      the result list to keep L closest points to query
- * 3. Copy the result list to the output
- *
- * This is essentially a best-first search with a fixed size priority queue
- *
- * @todo -- add a `SearchPath `template parameter to determine whether to
- * return the top k results of the search or just the path taken.
- * @todo -- remove printf debugging code
- * @todo -- would it be more efficient somehow to process multiple queries?
- */
-template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
-auto greedy_search(
-    auto&& graph,
-    auto&& db,
-    typename std::decay_t<decltype(graph)>::id_type source,
-    auto&& query,
-    size_t k_nn,
-    size_t L,
-    Distance distance = Distance{},
-    bool convert_to_db_ids = false) {
-  // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
-  using id_type = typename std::decay_t<decltype(graph)>::id_type;
-  using score_type = typename std::decay_t<decltype(graph)>::score_type;
-
-  static_assert(std::integral<id_type>);
-
-  assert(L >= k_nn);
-
-  std::unordered_set<id_type> visited_vertices;
-  auto visited = [&visited_vertices](auto&& v) {
-    return visited_vertices.contains(v);
-  };
-
-  auto result = k_min_heap<score_type, id_type>{L};  // 𝓛: |𝓛| <= L
-  // auto result = std::set<id_type>{};
-  auto q1 = k_min_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
-  auto q2 = k_min_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
-
-  // 𝓛 <- {s} and 𝓥 <- ∅
-  result.insert(distance(db[source], query), source);
-
-  // q1 = 𝓛 \ 𝓥 = {s}
-  q1.insert(distance(db[source], query), source);
-
-  size_t counter{0};
-
-  // while 𝓛 \ 𝓥 ≠ ∅
-  while (!q1.empty()) {
-    if (noisy) {
-      std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
-      debug_min_heap(q1, "q1: ", 1);
-    }
-
-    // p* <- argmin_{p ∈ 𝓛 \ 𝓥} distance(p, q)
-
-    // Although we use the name `k_min_heap` -- it actually stores a finite
-    // number of elements in a max heap (we remove the max element
-    // every time we have a smaller element to insert).  Since we are using
-    // a `k_min_heap` for q1, to get and pop the min element, we have to
-    // change it to a min heap, get the min element, and then change it back
-    // to a max heap.
-    // @todo -- There must be a better way of doing this
-
-    // Change q1 into a min_heap
-    std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
-      return std::get<0>(a) > std::get<0>(b);
-    });
-
-    // Get and pop the min element
-    std::pop_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
-      return std::get<0>(a) > std::get<0>(b);
-    });
-
-    auto [s_star, p_star] = q1.back();
-    q1.pop_back();
-
-    if (noisy) {
-      std::cout << "p*: " << p_star
-                << " --  distance = " << distance(db[p_star], query)
-                << std::endl;
-    }
-
-    // Change back to max heap
-    std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
-      return std::get<0>(a) < std::get<0>(b);
-    });
-
-    if (visited(p_star)) {
-      continue;
-    }
-
-    // V <- V \cup {p*} ; L\V <- L\V \ p*
-    visited_vertices.insert(p_star);
-
-    if (noisy) {
-      debug_vector(visited_vertices, "visited_vertices: ");
-      debug_min_heap(graph.out_edges(p_star), "Nout(p*): ", 1);
-    }
-
-    // q2 <- L \ V
-    // @todo Is there a better way to do this?  By somehow removing
-    // elements from q1?  We can probably make the insertion into q2
-    // more efficient -- have a batch interface to insert into q2
-    for (auto&& [s, p] : result) {
-      if (!visited(p)) {
-        q2.insert(s, p);
-      }
-    }
-
-    // L <- L \cup Nout(p*)  ; L \ V <- L \ V \cup Nout(p*)
-
-    // In looking at profiling, a majority of time is spent in this loop,
-    // in visited() and in result.insert()
-    for (auto&& [_, p] : graph.out_edges(p_star)) {
-      // assert(p != p_star);
-      if (!visited(p)) {
-        auto score = distance(db[p], query);
-
-        // unique id or not does not seem to make a difference
-        // @todo (actually it does, but shouldn't need it -- need to
-        // investigate) if (result.template insert /*<unique_id>*/ (score, p)) {
-        if (result.template insert<unique_id>(score, p)) {
-          q2.insert(score, p);
-        }
-      }
-    }
-
-    if (noisy) {
-      debug_min_heap(result, "result, aka Ell: ", 1);
-      debug_min_heap(result, "result, aka Ell: ", 0);
-    }
-
-    q1.swap(q2);
-    q2.clear();
-  }
-
-  // auto top_k = Vector<id_type>(k_nn);
-  // auto top_k_scores = Vector<score_type>(k_nn);
-  auto top_k = std::vector<id_type>(k_nn);
-  auto top_k_scores = std::vector<score_type>(k_nn);
-
-  get_top_k_with_scores_from_heap(result, top_k, top_k_scores);
-
-  // Optionally convert from the vector indexes to the db IDs. Used during
-  // querying to map to external IDs.
-  if (convert_to_db_ids) {
-    for (int i = 0; i < k_nn; ++i) {
-      if (top_k[i] != std::numeric_limits<id_type>::max()) {
-        top_k[i] = db.ids()[top_k[i]];
-      }
-    }
-  }
-
-  return std::make_tuple(
-      std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
-}
-
-/**
- * @brief RobustPrune(p, vee, alpha, R)
- * @tparam I index type
- * @tparam Distance distance functor
- * @param graph Graph
- * @param p point \in P
- * @param V candidate set
- * @param alpha distance threshold >= 1
- * @param R Degree bound
- *
- * From the DiskANN paper:
- * V <- (V \cup Nout(p) \ p
- * Nout(p) < 0
- * while (!V.empty()) {
- *  Find p* \in V with smallest distance to p
- *  Nout(p) <- Nout(p) \cup p*
- *  if size(Nout(p)) == R {
- *    break
- *  }
- *  for pp \in V {
- *  if alpha * distance(p*, pp) <= distance(p, pp) {
- *    remove pp from V
- *  }
- * }
- */
-template <class I = size_t, class Distance = sum_of_squares_distance>
-auto robust_prune(
-    auto&& graph,
-    auto&& db,
-    I p,
-    auto&& V_in,
-    float alpha,
-    size_t R,
-    Distance distance = Distance{}) {
-  constexpr bool noisy = false;
-
-  // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
-  using id_type = typename std::decay_t<decltype(graph)>::id_type;
-  using score_type = typename std::decay_t<decltype(graph)>::score_type;
-
-  std::unordered_map<id_type, score_type> V_map;
-
-  for (auto&& v : V_in) {
-    if (v != p) {
-      auto score = distance(db[v], db[p]);
-      V_map.try_emplace(v, score);
-    }
-  }
-
-  // V <- (V \cup Nout(p) \ p
-  for (auto&& [ss, pp] : graph.out_edges(p)) {
-    // assert(pp != p);
-    if (pp != p) {
-      // assert(ss == distance(db[p], db[pp]));
-      V_map.try_emplace(pp, ss);
-    }
-  }
-
-  std::vector<std::tuple<score_type, id_type>> V;
-  V.reserve(V_map.size() + R);
-  std::vector<std::tuple<score_type, id_type>> new_V;
-  new_V.reserve(V_map.size() + R);
-
-  for (auto&& v : V_map) {
-    V.emplace_back(v.second, v.first);
-  }
-
-  if (noisy) {
-    debug_min_heap(V, "V: ", 1);
-  }
-
-  // Nout(p) <- 0
-  graph.out_edges(p).clear();
-
-  size_t counter{0};
-  // while V != 0
-  while (!V.empty()) {
-    if (noisy) {
-      std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
-    }
-
-    // p* <- argmin_{pp \in V} distance(p, pp)
-    auto&& [s_star, p_star] =
-        *(std::min_element(begin(V), end(V), [](auto&& a, auto&& b) {
-          return std::get<0>(a) < std::get<0>(b);
-        }));
-
-    assert(p_star != p);
-    if (noisy) {
-      std::cout << "::::" << p_star << std::endl;
-      debug_min_heap(V, "V: ", 1);
-    }
-
-    // Nout(p) <- Nout(p) \cup p*
-    graph.add_edge(p, p_star, s_star);
-
-    if (noisy) {
-      debug_min_heap(graph.out_edges(p), "Nout(p): ", 1);
-    }
-
-    if (graph.out_edges(p).size() == R) {
-      break;
-    }
-
-    // For p' in V
-    for (auto&& [ss, pp] : V) {
-      // if alpha * d(p*, p') <= d(p, p')
-      // assert(ss == distance(db[p], db[pp]));
-      if (alpha * distance(db[p_star], db[pp]) <= ss) {
-        // V.erase({ss, pp});
-        ;
-      } else {
-        if (pp != p) {
-          new_V.emplace_back(ss, pp);
-        }
-      }
-    }
-    if (noisy) {
-      debug_min_heap(V, "after prune V: ", 1);
-    }
-
-    std::swap(V, new_V);
-    new_V.clear();
-  }
-}
+#include <tiledb/tiledb>
 
 /**
  * Find the vector that is closest to the centroid of the set of vectors P.
@@ -420,10 +117,7 @@ class vamana_index {
   /****************************************************************************
    * Index group information
    ****************************************************************************/
-
-  /** The timestamp at which the index was created */
-  TemporalPolicy temporal_policy_{TimeTravel, 0};
-
+  TemporalPolicy temporal_policy_;
   std::unique_ptr<vamana_index_group<vamana_index>> group_;
 
   /*
@@ -437,7 +131,7 @@ class vamana_index {
    ****************************************************************************/
 
   // Cached information about the index
-  uint64_t dimension_{0};
+  uint64_t dimensions_{0};
   uint64_t num_vectors_{0};
   uint64_t num_edges_{0};
 
@@ -483,9 +177,9 @@ class vamana_index {
       size_t L,
       size_t R,
       size_t B = 0,
-      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0})
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt)
       : temporal_policy_{
-        temporal_policy.timestamp_end() != 0 ? temporal_policy :
+        temporal_policy.has_value() ? *temporal_policy :
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
       , num_vectors_{num_nodes}
       , graph_{num_vectors_}
@@ -502,19 +196,12 @@ class vamana_index {
   vamana_index(
       tiledb::Context ctx,
       const std::string& uri,
-      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0})
-      : temporal_policy_{temporal_policy}
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt)
+      : temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
       , group_{std::make_unique<vamana_index_group<vamana_index>>(
             ctx, uri, TILEDB_READ, temporal_policy_)} {
-    if (temporal_policy_.timestamp_end() == 0) {
-      temporal_policy_ = {
-          TimeTravel, group_->get_previous_ingestion_timestamp()};
-      group_ = {std::make_unique<vamana_index_group<vamana_index>>(
-          ctx, uri, TILEDB_READ, temporal_policy_)};
-    }
-
     // @todo Make this table-driven
-    dimension_ = group_->get_dimension();
+    dimensions_ = group_->get_dimensions();
     num_vectors_ = group_->get_base_size();
     num_edges_ = group_->get_num_edges();
     l_build_ = group_->get_l_build();
@@ -524,15 +211,24 @@ class vamana_index {
     alpha_max_ = group_->get_alpha_max();
     medoid_ = group_->get_medoid();
 
+    if (group_->should_skip_query()) {
+      num_vectors_ = 0;
+    }
+
     feature_vectors_ =
         std::move(tdbColMajorPreLoadMatrixWithIds<feature_type, id_type>(
             group_->cached_ctx(),
             group_->feature_vectors_uri(),
             group_->ids_uri(),
-            dimension_,
+            dimensions_,
             num_vectors_,
             0,
             temporal_policy_));
+    // If we have time travelled to before any vectors were written to the
+    // arrays then we may have metadata which says we have N vectors, but in
+    // reality we have 0 vectors. So here we check how many vectors were
+    // actually read and update to that number.
+    num_vectors_ = _cpo::num_vectors(feature_vectors_);
 
     /*
      * Read the feature vectors
@@ -585,6 +281,14 @@ class vamana_index {
     }
   }
 
+  vamana_index(const std::string& diskann_index) {
+    const std::string diskann_data = diskann_index + ".data";
+    feature_vectors_ = read_diskann_data(diskann_data);
+    size_t num_nodes = num_vectors(feature_vectors_);
+    graph_ = read_diskann_mem_index_with_scores(
+        diskann_index, diskann_data, num_nodes);
+  }
+
   /**
    * @brief Build a vamana graph index.  This is algorithm is from the Filtered
    * Fresh DiskAnn paper -- which is a different training process than the
@@ -614,18 +318,18 @@ class vamana_index {
       const Vector& training_set_ids,
       Distance distance = Distance{}) {
     feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
-        ::dimension(training_set), ::num_vectors(training_set)));
+        ::dimensions(training_set), ::num_vectors(training_set)));
     std::copy(
         training_set.data(),
         training_set.data() +
-            ::dimension(training_set) * ::num_vectors(training_set),
+            ::dimensions(training_set) * ::num_vectors(training_set),
         feature_vectors_.data());
     std::copy(
         training_set_ids.begin(),
         training_set_ids.end(),
         feature_vectors_.ids());
 
-    dimension_ = ::dimension(feature_vectors_);
+    dimensions_ = ::dimensions(feature_vectors_);
     num_vectors_ = ::num_vectors(feature_vectors_);
     // graph_ = ::detail::graph::init_random_adj_list<feature_type, id_type>(
     //     feature_vectors_, r_max_degree_);
@@ -647,14 +351,15 @@ class vamana_index {
         ++counter;
 
         // Do not need top_k or top_k scores here -- use path_only enum
-        auto&& [top_k_scores, top_k, visited] = greedy_search(
-            graph_,
-            feature_vectors_,
-            medoid_,
-            feature_vectors_[p],
-            1,
-            l_build_,
-            distance);
+        auto&& [top_k_scores, top_k, visited] =
+            ::best_first_O4 /*greedy_search*/ (
+                graph_,
+                feature_vectors_,
+                medoid_,
+                feature_vectors_[p],
+                1,
+                l_build_,
+                distance);
         total_visited += visited.size();
 
         robust_prune(
@@ -728,6 +433,139 @@ class vamana_index {
 
   TemporalPolicy temporal_policy() const {
     return temporal_policy_;
+  }
+
+  auto bfs_O0() {
+    return ::bfs_O0(graph_, medoid_);
+  }
+
+  template <query_vector_array Q>
+  auto bfs_O1(const Q& queries, size_t k_nn, size_t Lbuild) {
+    for (size_t i = 0; i < num_vectors(queries); ++i) {
+      ::bfs_O1(graph_, feature_vectors_, medoid_, queries[i], Lbuild);
+    }
+  }
+
+  template <query_vector_array Q>
+  auto best_first_O0(const Q& queries) {
+    for (size_t i = 0; i < num_vectors(queries); ++i) {
+      ::best_first_O0(graph_, feature_vectors_, medoid_, queries[i]);
+    }
+  }
+
+  template <query_vector_array Q>
+  auto best_first_O1(const Q& queries, size_t k_nn, size_t Lbuild) {
+    for (size_t i = 0; i < num_vectors(queries); ++i) {
+      ::best_first_O1(graph_, feature_vectors_, medoid_, queries[i], Lbuild);
+    }
+  }
+
+  template <query_vector_array Q>
+  auto best_first_O2(
+      const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
+    size_t Lbuild = opt_L ? *opt_L : l_build_;
+
+    auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
+    auto top_k_scores =
+        ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
+
+    for (size_t i = 0; i < num_vectors(queries); ++i) {
+      auto&& [tk_scores, tk, V] = ::best_first_O2(
+          graph_,
+          feature_vectors_,
+          medoid_,
+          queries[i],
+          k_nn,
+          Lbuild,
+          sum_of_squares_distance{});
+      std::copy(
+          tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
+      std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
+      num_visited_vertices_ += V.size();
+    }
+
+    return std::make_tuple(std::move(top_k_scores), std::move(top_k));
+  }
+
+  template <query_vector_array Q>
+  auto best_first_O3(
+      const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
+    size_t Lbuild = opt_L ? *opt_L : l_build_;
+
+    auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
+    auto top_k_scores =
+        ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
+
+    for (size_t i = 0; i < num_vectors(queries); ++i) {
+      auto&& [tk_scores, tk, V] = ::best_first_O3(
+          graph_,
+          feature_vectors_,
+          medoid_,
+          queries[i],
+          k_nn,
+          Lbuild,
+          sum_of_squares_distance{});
+      std::copy(
+          tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
+      std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
+      num_visited_vertices_ += V.size();
+    }
+
+    return std::make_tuple(std::move(top_k_scores), std::move(top_k));
+  }
+
+  template <query_vector_array Q>
+  auto best_first_O4(
+      const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
+    size_t Lbuild = opt_L ? *opt_L : l_build_;
+
+    auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
+    auto top_k_scores =
+        ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
+
+    for (size_t i = 0; i < num_vectors(queries); ++i) {
+      auto&& [tk_scores, tk, V] = ::best_first_O4(
+          graph_,
+          feature_vectors_,
+          medoid_,
+          queries[i],
+          k_nn,
+          Lbuild,
+          sum_of_squares_distance{});
+      std::copy(
+          tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
+      std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
+      num_visited_vertices_ += V.size();
+    }
+
+    return std::make_tuple(std::move(top_k_scores), std::move(top_k));
+  }
+
+  template <query_vector_array Q>
+  auto best_first_O5(
+      const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
+    size_t Lbuild = opt_L ? *opt_L : l_build_;
+
+    auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
+    auto top_k_scores =
+        ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
+
+    for (size_t i = 0; i < num_vectors(queries); ++i) {
+      auto&& [tk_scores, tk, V] = ::best_first_O5(
+          graph_,
+          feature_vectors_,
+          medoid_,
+          queries[i],
+          k_nn,
+          Lbuild,
+          sum_of_squares_distance{});
+      std::copy(
+          tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
+      std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
+      num_visited_vertices_ += V.size();
+    }
+
+    return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
 
   /**
@@ -824,8 +662,8 @@ class vamana_index {
   auto update() {
   }
 
-  constexpr auto dimension() const {
-    return dimension_;
+  constexpr auto dimensions() const {
+    return dimensions_;
   }
 
   constexpr auto ntotal() const {
@@ -851,10 +689,10 @@ class vamana_index {
   auto write_index(
       const tiledb::Context& ctx,
       const std::string& group_uri,
-      std::optional<size_t> timestamp = std::nullopt,
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       const std::string& storage_version = "") {
-    if (timestamp.has_value()) {
-      temporal_policy_ = TemporalPolicy{TimeTravel, timestamp.value()};
+    if (temporal_policy.has_value()) {
+      temporal_policy_ = *temporal_policy;
     }
     // metadata: dimension, ntotal, L, R, B, alpha_min, alpha_max, medoid
     // Save as a group: metadata, feature_vectors, graph edges, offsets
@@ -865,10 +703,10 @@ class vamana_index {
         TILEDB_WRITE,
         temporal_policy_,
         storage_version,
-        dimension_);
+        dimensions_);
 
     // @todo Make this table-driven
-    write_group.set_dimension(dimension_);
+    write_group.set_dimensions(dimensions_);
     write_group.set_l_build(l_build_);
     write_group.set_r_max_degree(r_max_degree_);
     write_group.set_b_backtrack(b_backtrack_);
@@ -977,7 +815,7 @@ class vamana_index {
    * @brief Log statistics about the index
    */
   void log_index() {
-    _count_data.insert_entry("dimension", dimension_);
+    _count_data.insert_entry("dimensions", dimensions_);
     _count_data.insert_entry("num_vectors", num_vectors_);
     _count_data.insert_entry("l_build", l_build_);
     _count_data.insert_entry("r_max_degree", r_max_degree_);
@@ -1019,9 +857,9 @@ class vamana_index {
   }
 
   bool compare_cached_metadata(const vamana_index& rhs) const {
-    if (dimension_ != rhs.dimension_) {
-      std::cout << "dimension_ != rhs.dimension_" << dimension_
-                << " ! = " << rhs.dimension_ << std::endl;
+    if (dimensions_ != rhs.dimensions_) {
+      std::cout << "dimensions_ != rhs.dimensions_" << dimensions_
+                << " ! = " << rhs.dimensions_ << std::endl;
       return false;
     }
     if (num_vectors_ != rhs.num_vectors_) {
@@ -1063,16 +901,14 @@ class vamana_index {
         rhs.temporal_policy_.timestamp_start()) {
       std::cout << "temporal_policy_.timestamp_start() != "
                    "rhs.temporal_policy_.timestamp_start()"
-                << medoid_ << " ! = " << rhs.medoid_ << std::endl;
+                << temporal_policy_.timestamp_start()
+                << " ! = " << rhs.temporal_policy_.timestamp_start()
+                << std::endl;
       return false;
     }
-    if (temporal_policy_.timestamp_end() !=
-        rhs.temporal_policy_.timestamp_end()) {
-      std::cout << "temporal_policy_.timestamp_end() != "
-                   "rhs.temporal_policy_.timestamp_end()"
-                << medoid_ << " ! = " << rhs.medoid_ << std::endl;
-      return false;
-    }
+    // Do not compare temporal_policy_.timestamp_end() because if we create an
+    // index and then load it with the URI, these timestamps will differ. The
+    // first one will have the current timestamp, and the second uint64_t::max.
 
     return true;
   }
@@ -1142,7 +978,7 @@ class vamana_index {
    */
   bool compare_feature_vectors(const vamana_index& rhs) {
     for (size_t i = 0; i < ::num_vectors(feature_vectors_); ++i) {
-      for (size_t j = 0; j < ::dimension(feature_vectors_); ++j) {
+      for (size_t j = 0; j < ::dimensions(feature_vectors_); ++j) {
         auto lhs_val = feature_vectors_(j, i);
         auto rhs_val = rhs.feature_vectors_(j, i);
         if (lhs_val != rhs_val) {
@@ -1155,7 +991,7 @@ class vamana_index {
     return std::equal(
         feature_vectors_.data(),
         feature_vectors_.data() +
-            ::dimension(feature_vectors_) * ::num_vectors(feature_vectors_),
+            ::dimensions(feature_vectors_) * ::num_vectors(feature_vectors_),
         rhs.feature_vectors_.data());
   }
 
