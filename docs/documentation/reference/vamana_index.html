@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>index</title>
+<title>vamana_index</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -30,7 +30,6 @@ ul.task-list li input[type="checkbox"] {
 <script src="../../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../../">
-<link href="../../documentation/Benchmarks.html" rel="prev">
 <link href="../../documentation/assets/tiledb.ico" rel="icon">
 <script src="../../site_libs/quarto-html/quarto.js"></script>
 <script src="../../site_libs/quarto-html/popper.min.js"></script>
@@ -117,7 +116,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../documentation/reference/index.html">API Reference</a></li><li class="breadcrumb-item"><a href="../../documentation/reference/index.html">Python</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"></ol></nav>
         <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -158,7 +157,7 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../documentation/reference/index.html" class="sidebar-item-text sidebar-link active">
+  <a href="../../documentation/reference/index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Python</span></a>
   </div>
 </li>
@@ -174,12 +173,19 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#python" id="toc-python" class="nav-link active" data-scroll-target="#python">Python</a>
+  <li><a href="#tiledb.vector_search.vamana_index" id="toc-tiledb.vector_search.vamana_index" class="nav-link active" data-scroll-target="#tiledb.vector_search.vamana_index">vamana_index</a>
   <ul class="collapse">
-  <li><a href="#tiledb.vector_search" id="toc-tiledb.vector_search" class="nav-link" data-scroll-target="#tiledb.vector_search">tiledb.vector_search</a></li>
+  <li><a href="#classes" id="toc-classes" class="nav-link" data-scroll-target="#classes">Classes</a>
+  <ul class="collapse">
+  <li><a href="#tiledb.vector_search.vamana_index.VamanaIndex" id="toc-tiledb.vector_search.vamana_index.VamanaIndex" class="nav-link" data-scroll-target="#tiledb.vector_search.vamana_index.VamanaIndex">VamanaIndex</a></li>
+  </ul></li>
+  <li><a href="#functions" id="toc-functions" class="nav-link" data-scroll-target="#functions">Functions</a>
+  <ul class="collapse">
+  <li><a href="#tiledb.vector_search.vamana_index.create" id="toc-tiledb.vector_search.vamana_index.create" class="nav-link" data-scroll-target="#tiledb.vector_search.vamana_index.create">create</a></li>
+  </ul></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/edit/main/documentation/reference/index.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/edit/main/documentation/reference/vamana_index.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -187,36 +193,215 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-<section id="python" class="level1">
-<h1>Python</h1>
-<section id="tiledb.vector_search" class="level2">
-<h2 class="anchored" data-anchor-id="tiledb.vector_search">tiledb.vector_search</h2>
+<section id="tiledb.vector_search.vamana_index" class="level1">
+<h1>vamana_index</h1>
+<p><code>vector_search.vamana_index</code></p>
+<p>Vamana Index implementation.</p>
+<p>Vamana is based on Microsoft’s DiskANN vector search library, as described in these papers:</p>
+<pre><code>  Subramanya, Suhas Jayaram, and Rohan Kadekodi. DiskANN: Fast Accurate Billion-Point Nearest Neighbor Search on a Single Node.
+
+  Singh, Aditi, et al. FreshDiskANN: A Fast and Accurate Graph-Based ANN Index for Streaming Similarity Search. arXiv:2105.09613, arXiv, 20 May 2021, http://arxiv.org/abs/2105.09613.
+
+  Gollapudi, Siddharth, et al. “Filtered-DiskANN: Graph Algorithms for Approximate Nearest Neighbor Search with Filters.” Proceedings of the ACM Web Conference 2023, ACM, 2023, pp. 3406-16, https://doi.org/10.1145/3543507.3583552.</code></pre>
+<section id="classes" class="level2">
+<h2 class="anchored" data-anchor-id="classes">Classes</h2>
 <table class="table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
 <tbody>
 <tr class="odd">
-<td><a href="../../documentation/reference/index.Index.html#tiledb.vector_search.index.Index">index.Index</a></td>
-<td>Abstract Vector Index class.</td>
+<td><a href="#tiledb.vector_search.vamana_index.VamanaIndex">VamanaIndex</a></td>
+<td>Opens a <code>VamanaIndex</code>.</td>
+</tr>
+</tbody>
+</table>
+<section id="tiledb.vector_search.vamana_index.VamanaIndex" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.vamana_index.VamanaIndex">VamanaIndex</h3>
+<p><code>vector_search.vamana_index.VamanaIndex(self, uri, config=None, timestamp=None, **kwargs)</code></p>
+<p>Opens a <code>VamanaIndex</code>.</p>
+<section id="parameters" class="level4">
+<h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 40%">
+<col style="width: 32%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>uri</code></td>
+<td>str</td>
+<td>URI of the index.</td>
+<td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><a href="../../documentation/reference/flat_index.html#tiledb.vector_search.flat_index">flat_index</a></td>
-<td>FlatIndex implementation.</td>
+<td><code>config</code></td>
+<td>Optional[Mapping[str, Any]]</td>
+<td>TileDB config dictionary.</td>
+<td><code>None</code></td>
 </tr>
+</tbody>
+</table>
+</section>
+<section id="methods" class="level4">
+<h4 class="anchored" data-anchor-id="methods">Methods</h4>
+<table class="table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
 <tr class="odd">
-<td><a href="../../documentation/reference/ivf_flat_index.html#tiledb.vector_search.ivf_flat_index">ivf_flat_index</a></td>
-<td>IVFFlat Index implementation.</td>
+<td><a href="#tiledb.vector_search.vamana_index.VamanaIndex.get_dimensions">get_dimensions</a></td>
+<td>Returns the dimension of the vectors in the index.</td>
 </tr>
 <tr class="even">
-<td><a href="../../documentation/reference/vamana_index.html#tiledb.vector_search.vamana_index">vamana_index</a></td>
-<td>Vamana Index implementation.</td>
+<td><a href="#tiledb.vector_search.vamana_index.VamanaIndex.query_internal">query_internal</a></td>
+<td>Queries a <code>VamanaIndex</code>.</td>
+</tr>
+</tbody>
+</table>
+<section id="tiledb.vector_search.vamana_index.VamanaIndex.get_dimensions" class="level5">
+<h5 class="anchored" data-anchor-id="tiledb.vector_search.vamana_index.VamanaIndex.get_dimensions">get_dimensions</h5>
+<p><code>vector_search.vamana_index.VamanaIndex.get_dimensions()</code></p>
+<p>Returns the dimension of the vectors in the index.</p>
+</section>
+<section id="tiledb.vector_search.vamana_index.VamanaIndex.query_internal" class="level5">
+<h5 class="anchored" data-anchor-id="tiledb.vector_search.vamana_index.VamanaIndex.query_internal">query_internal</h5>
+<p><code>vector_search.vamana_index.VamanaIndex.query_internal(queries, k=10, opt_l=100, **kwargs)</code></p>
+<p>Queries a <code>VamanaIndex</code>.</p>
+<section id="parameters-1" class="level6">
+<h6 class="anchored" data-anchor-id="parameters-1">Parameters</h6>
+<table class="table">
+<colgroup>
+<col style="width: 7%">
+<col style="width: 11%">
+<col style="width: 73%">
+<col style="width: 7%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>queries</code></td>
+<td>np.ndarray</td>
+<td>2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>k</code></td>
+<td>int</td>
+<td>Number of results to return per query vector.</td>
+<td><code>10</code></td>
 </tr>
 <tr class="odd">
-<td><a href="../../documentation/reference/ingestion.html#tiledb.vector_search.ingestion">ingestion</a></td>
-<td>Vector Search ingestion Utilities</td>
+<td><code>opt_l</code></td>
+<td>Optional[int]</td>
+<td>How deep to search. Should be &gt;= k, and if it’s not, we will set it to k.</td>
+<td><code>100</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+</section>
+</section>
+</section>
+<section id="functions" class="level2">
+<h2 class="anchored" data-anchor-id="functions">Functions</h2>
+<table class="table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#tiledb.vector_search.vamana_index.create">create</a></td>
+<td>Creates an empty VamanaIndex.</td>
+</tr>
+</tbody>
+</table>
+<section id="tiledb.vector_search.vamana_index.create" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.vamana_index.create">create</h3>
+<p><code>vector_search.vamana_index.create(uri, dimensions, vector_type, config=None, storage_version=STORAGE_VERSION, **kwargs)</code></p>
+<p>Creates an empty VamanaIndex.</p>
+<section id="parameters-2" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 18%">
+<col style="width: 59%">
+<col style="width: 10%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>uri</code></td>
+<td>str</td>
+<td>URI of the index.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>dimensions</code></td>
+<td>int</td>
+<td>Number of dimensions for the vectors to be stored in the index.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>vector_type</code></td>
+<td>np.dtype</td>
+<td>Datatype of vectors. Supported values (uint8, int8, float32).</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>config</code></td>
+<td>Optional[Mapping[str, Any]]</td>
+<td>TileDB config dictionary.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>storage_version</code></td>
+<td>str</td>
+<td>The TileDB vector search storage version to use. If not provided, use the latest stable storage version.</td>
+<td><code>STORAGE_VERSION</code></td>
 </tr>
 </tbody>
 </table>
 
 
+</section>
+</section>
 </section>
 </section>
 
@@ -630,18 +815,9 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   }
 });
 </script>
-<nav class="page-navigation">
-  <div class="nav-page nav-page-previous">
-      <a href="../../documentation/Benchmarks.html" class="pagination-link" aria-label="Benchmarks">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Benchmarks</span>
-      </a>          
-  </div>
-  <div class="nav-page nav-page-next">
-  </div>
-</nav>
 </div> <!-- /content -->
 
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/edit/main/documentation/reference/index.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/edit/main/documentation/reference/vamana_index.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
