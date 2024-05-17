@@ -33,8 +33,8 @@
  * version of the index.
  */
 
-#ifndef TILEDB_IVF_FLAT_INDEX_GROUP_H
-#define TILEDB_IVF_FLAT_INDEX_GROUP_H
+#ifndef TILEDB_IVF_FLAT_GROUP_H
+#define TILEDB_IVF_FLAT_GROUP_H
 
 #include "index/index_defs.h"
 #include "index/index_group.h"
@@ -48,7 +48,7 @@
      }}};
 
 template <class index_type>
-class ivf_flat_index_group : public base_index_group<index_type> {
+class ivf_flat_group : public base_index_group<index_type> {
   using Base = base_index_group<index_type>;
 
   using Base::array_key_to_array_name_;
@@ -65,7 +65,7 @@ class ivf_flat_index_group : public base_index_group<index_type> {
   static const int32_t tile_size_bytes{64 * 1024 * 1024};
 
  public:
-  ivf_flat_index_group(
+  ivf_flat_group(
       const tiledb::Context& ctx,
       const std::string& uri,
       tiledb_query_type_t rw = TILEDB_READ,
