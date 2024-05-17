@@ -1,5 +1,5 @@
 /**
- * @file   unit_l2_distance.cc
+ * @file   unit_inner_product_distance.cc
  *
  * @section LICENSE
  *

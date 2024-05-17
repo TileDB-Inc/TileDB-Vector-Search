@@ -33,11 +33,9 @@
 
 #include <catch2/catch_all.hpp>
 #include "index/ivf_pq_index.h"
-
-#include "array_defs.h"
-#include "gen_graphs.h"
-
-#include "query_common.h"
+#include "test/utils/array_defs.h"
+#include "test/utils/gen_graphs.h"
+#include "test/utils/query_common.h"
 
 TEST_CASE("ivf_pq_index: test test", "[ivf_pq_index]") {
   REQUIRE(true);
