@@ -34,9 +34,9 @@
 #define TILEDB_QUERY_COMMON_H
 
 #include <string>
-#include "array_defs.h"
 #include "detail/flat/qv.h"
 #include "linalg.h"
+#include "test/utils/array_defs.h"
 
 // clang-format off
 

@@ -37,9 +37,9 @@ quartodoc:
       desc: ""
       contents:
         - index.Index
-        - flat_index.FlatIndex
-        - ivf_flat_index.IVFFlatIndex
-        - vamana_index.VamanaIndex
+        - flat_index
+        - ivf_flat_index
+        - vamana_index
         - ingestion
 
 website:

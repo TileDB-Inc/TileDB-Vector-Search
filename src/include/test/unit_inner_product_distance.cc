@@ -34,9 +34,6 @@
 #include "detail/linalg/matrix.h"
 #include "detail/scoring/inner_product.h"
 
-TEST_CASE("inner_product_distance: null test", "[inner_product_distance]") {
-}
-
 TEST_CASE(
     "inner_product_distance: simple vectors", "[inner_product_distance]") {
   auto u = std::vector<uint8_t>{1, 2, 3, 4};

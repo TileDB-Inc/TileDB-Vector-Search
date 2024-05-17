@@ -31,7 +31,7 @@
 
 #include "api/vamana_index.h"
 #include "catch2/catch_all.hpp"
-#include "test/query_common.h"
+#include "test/utils/query_common.h"
 
 TEST_CASE("api_vamana_index: test test", "[api_vamana_index]") {
   REQUIRE(true);
