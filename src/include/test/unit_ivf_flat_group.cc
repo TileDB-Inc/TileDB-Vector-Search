@@ -37,8 +37,8 @@
 #include <filesystem>
 #include <string>
 
-#include "array_defs.h"
 #include "index/ivf_flat_group.h"
+#include "test/utils/array_defs.h"
 
 TEST_CASE("ivf_flat_group: test test", "[ivf_flat_group]") {
   REQUIRE(true);
@@ -132,8 +132,11 @@ TEST_CASE(
 
   ivf_flat_group x =
       ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimensions() == 10);
+
   ivf_flat_group y =
       ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimensions() == 10);
 }
 
 TEST_CASE(
@@ -172,8 +175,12 @@ TEST_CASE(
 
   ivf_flat_group x =
       ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimensions() == 10);
+
   ivf_flat_group y =
       ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  CHECK(x.get_dimensions() == 10);
+
   ivf_flat_group z = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
 }
 

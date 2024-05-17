@@ -30,8 +30,8 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include "array_defs.h"
 #include "index/vamana_group.h"
+#include "test/utils/array_defs.h"
 
 TEST_CASE("vamana_group: test test", "[vamana_group]") {
   REQUIRE(true);

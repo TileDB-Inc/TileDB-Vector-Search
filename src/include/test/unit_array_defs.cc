@@ -34,7 +34,7 @@
 #include <filesystem>
 #include <tiledb/tiledb>
 #include <vector>
-#include "array_defs.h"
+#include "test/utils/array_defs.h"
 
 #include "detail/flat/qv.h"
 #include "detail/linalg/tdb_matrix.h"

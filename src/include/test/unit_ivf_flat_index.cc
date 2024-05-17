@@ -36,10 +36,10 @@
 #include <vector>
 
 #include "../linalg.h"
-#include "array_defs.h"
-#include "gen_graphs.h"
 #include "index/ivf_flat_index.h"
-#include "query_common.h"
+#include "test/utils/array_defs.h"
+#include "test/utils/gen_graphs.h"
+#include "test/utils/query_common.h"
 
 TEST_CASE("ivf_index: test test", "[ivf_index]") {
   REQUIRE(true);

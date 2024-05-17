@@ -33,8 +33,8 @@
  * version of the index.
  */
 
-#ifndef TILEDB_ivf_flat_group_H
-#define TILEDB_ivf_flat_group_H
+#ifndef TILEDB_IVF_FLAT_GROUP_H
+#define TILEDB_IVF_FLAT_GROUP_H
 
 #include "index/index_defs.h"
 #include "index/index_group.h"

@@ -34,11 +34,11 @@
 #include <chrono>
 #include <filesystem>
 #include <string>
-#include "array_defs.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "index/ivf_flat_index.h"
 #include "index/ivf_flat_metadata.h"
-#include "test_utils.h"
+#include "test/utils/array_defs.h"
+#include "test/utils/test_utils.h"
 
 TEST_CASE("ivf_flat_metadata: test test", "[ivf_flat_metadata]") {
   REQUIRE(true);
