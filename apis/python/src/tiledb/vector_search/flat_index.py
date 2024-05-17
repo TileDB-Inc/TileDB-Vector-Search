@@ -1,3 +1,9 @@
+"""
+FlatIndex implementation.
+
+Stores all vectors in a 2D TileDB array performing exhaustive similarity
+search between the query vectors and all the dataset vectors.
+"""
 from typing import Any, Mapping
 
 import numpy as np
@@ -17,14 +23,17 @@ INDEX_TYPE = "FLAT"
 
 class FlatIndex(index.Index):
     """
-    Open a flat index
+    Opens a `FlatIndex` loading all dataset vectors in main memory.
 
     Parameters
     ----------
     uri: str
-        URI of the index
+        URI of the index.
     config: Optional[Mapping[str, Any]]
-        config dictionary, defaults to None
+        TileDB config dictionary.
+    timestamp: int or tuple(int)
+        If int, open the index at a given timestamp.
+        If tuple, open at the given start and end timestamps.
     """
 
     def __init__(
@@ -79,6 +88,9 @@ class FlatIndex(index.Index):
                 )
 
     def get_dimensions(self):
+        """
+        Returns the dimension of the vectors in the index.
+        """
         return self.dimensions
 
     def query_internal(
@@ -89,16 +101,16 @@ class FlatIndex(index.Index):
         **kwargs,
     ):
         """
-        Query a flat index
+        Queries a FlatIndex using the vectors already loaded in main memory.
 
         Parameters
         ----------
-        queries: numpy.ndarray
-            ND Array of queries
+        queries: np.ndarray
+            2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.
         k: int
-            Number of top results to return per query
+            Number of results to return per query vector.
         nthreads: int
-            Number of threads to use for query
+            Number of threads to use for query execution.
         """
         # TODO:
         # - typecheck queries
@@ -125,6 +137,27 @@ def create(
     storage_version: str = STORAGE_VERSION,
     **kwargs,
 ) -> FlatIndex:
+    """
+    Creates an empty FlatIndex.
+
+    Parameters
+    ----------
+    uri: str
+        URI of the index.
+    dimensions: int
+        Number of dimensions for the vectors to be stored in the index.
+    vector_type: np.dtype
+        Datatype of vectors.
+        Supported values (uint8, int8, float32).
+    group_exists: bool
+        If False it creates the TileDB group for the index.
+        If True the method expects the TileDB group to be already created.
+    config: Optional[Mapping[str, Any]]
+        TileDB config dictionary.
+    storage_version: str
+        The TileDB vector search storage version to use.
+        If not provided, use hte latest stable storage version.
+    """
     validate_storage_version(storage_version)
 
     index.create_metadata(
