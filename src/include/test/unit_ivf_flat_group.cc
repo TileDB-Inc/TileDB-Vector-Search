@@ -264,18 +264,24 @@ TEST_CASE(
       x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
       x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
-      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimensions() == 10);
     }
 
-    SECTION("After create and write and read") {
-      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
-      CHECK(x.get_dimensions() == 10);
+    x.append_ingestion_timestamp(expected_ingestion);
+    x.append_base_size(expected_base);
+    x.append_num_partitions(expected_partitions);
+    x.set_temp_size(expected_temp_size);
+    x.set_dimensions(expected_dimension);
+  }
+
+  SECTION("Set then append") {
+    SECTION("After create") {
+    }
+
+    SECTION("After create and read") {
       x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
-    SECTION("After create and read and write") {
-      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+    SECTION("After create and write") {
       x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
     }
@@ -367,11 +373,13 @@ TEST_CASE(
 TEST_CASE("ivf_flat_group: storage version", "[ivf_flat_group]") {
   std::string tmp_uri =
       (std::filesystem::temp_directory_path() / "ivf_flat_group").string();
+
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
   if (vfs.is_dir(tmp_uri)) {
     vfs.remove_dir(tmp_uri);
   }
+
   size_t expected_ingestion = 23094;
   size_t expected_base = 9234;
   size_t expected_partitions = 200;
