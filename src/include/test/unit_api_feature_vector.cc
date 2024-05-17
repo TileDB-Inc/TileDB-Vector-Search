@@ -31,8 +31,8 @@
 
 #include "api/feature_vector.h"
 #include "catch2/catch_all.hpp"
-#include "test/randomize.h"
-#include "test/test_utils.h"
+#include "test/utils/randomize.h"
+#include "test/utils/test_utils.h"
 #include "utils/utils.h"
 
 TEST_CASE("api_feature_vector: test test", "[api_feature_vector]") {

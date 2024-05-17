@@ -32,12 +32,12 @@
 #include <catch2/catch_all.hpp>
 #include <cmath>
 
-#include "array_defs.h"
 #include "detail/flat/qv.h"
-#include "gen_graphs.h"
 #include "index/flatpq_index.h"
-#include "query_common.h"
 #include "scoring.h"
+#include "test/utils/array_defs.h"
+#include "test/utils/gen_graphs.h"
+#include "test/utils/query_common.h"
 
 TEST_CASE("flatpq_index: test test", "[flatpq_index]") {
   REQUIRE(true);

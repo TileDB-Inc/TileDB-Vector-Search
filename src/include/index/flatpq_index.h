@@ -46,6 +46,7 @@
 #include "detail/flat/qv.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
+#include "test/utils/array_defs.h"
 
 #include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>

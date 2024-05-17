@@ -31,7 +31,7 @@
 
 #include "api/ivf_flat_index.h"
 #include "catch2/catch_all.hpp"
-#include "test/query_common.h"
+#include "test/utils/query_common.h"
 
 TEST_CASE("api_ivf_flat_index: test test", "[api_ivf_flat_index]") {
   REQUIRE(true);

@@ -37,8 +37,8 @@
 #include <filesystem>
 #include <string>
 
-#include "array_defs.h"
 #include "index/ivf_flat_group.h"
+#include "test/utils/array_defs.h"
 
 TEST_CASE("ivf_flat_group: test test", "[ivf_flat_group]") {
   REQUIRE(true);
@@ -87,7 +87,7 @@ struct dummy_index {
   using indices_type = int;
   using centroid_feature_type = float;
 
-  using group_type = ivf_flat_index_group<dummy_index>;
+  using group_type = ivf_flat_group<dummy_index>;
   using metadata_type = ivf_flat_index_metadata;
 };
 
@@ -97,7 +97,7 @@ TEST_CASE(
   tiledb::Context ctx;
 
   CHECK_THROWS_WITH(
-      ivf_flat_index_group<dummy_index>(ctx, "I dont exist"),
+      ivf_flat_group<dummy_index>(ctx, "I dont exist"),
       "Group uri I dont exist does not exist.");
 }
 
@@ -112,8 +112,8 @@ TEST_CASE("ivf_flat_group: write constructor - create", "[ivf_flat_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_index_group x =
-      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  ivf_flat_group x =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
   CHECK(x.get_dimensions() == 10);
 }
 
@@ -130,12 +130,12 @@ TEST_CASE(
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_index_group x =
-      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  ivf_flat_group x =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
   CHECK(x.get_dimensions() == 10);
 
-  ivf_flat_index_group y =
-      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  ivf_flat_group y =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
   CHECK(x.get_dimensions() == 10);
 }
 
@@ -152,12 +152,11 @@ TEST_CASE(
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_index_group x =
-      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  ivf_flat_group x =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
   CHECK(x.get_dimensions() == 10);
 
-  ivf_flat_index_group y =
-      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+  ivf_flat_group y = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
 }
 
 TEST_CASE(
@@ -174,16 +173,15 @@ TEST_CASE(
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_index_group x =
-      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  ivf_flat_group x =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
   CHECK(x.get_dimensions() == 10);
 
-  ivf_flat_index_group y =
-      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  ivf_flat_group y =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
   CHECK(x.get_dimensions() == 10);
 
-  ivf_flat_index_group z =
-      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+  ivf_flat_group z = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
 }
 
 TEST_CASE(
@@ -207,8 +205,8 @@ TEST_CASE(
 
   size_t offset = 0;
 
-  ivf_flat_index_group x =
-      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  ivf_flat_group x =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
   CHECK(x.get_dimensions() == 10);
 
   SECTION("Just set") {
@@ -216,26 +214,23 @@ TEST_CASE(
     }
 
     SECTION("After create and read") {
-      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
-      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
     }
 
@@ -251,26 +246,23 @@ TEST_CASE(
     }
 
     SECTION("After create and read") {
-      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
-      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
     }
 
@@ -286,26 +278,23 @@ TEST_CASE(
     }
 
     SECTION("After create and read") {
-      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
-      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
     }
 
@@ -335,26 +324,23 @@ TEST_CASE(
     }
 
     SECTION("After create and read") {
-      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and write") {
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
     }
 
     SECTION("After create and write and read") {
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
-      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
     }
 
     SECTION("After create and read and write") {
-      x = ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-      x = ivf_flat_index_group<dummy_index>(
-          ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
       CHECK(x.get_dimensions() == 10);
     }
 
@@ -401,17 +387,17 @@ TEST_CASE("ivf_flat_group: storage version", "[ivf_flat_group]") {
   size_t expected_dimension = 19238;
   auto offset = 2345;
 
-  ivf_flat_index_group x =
-      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  ivf_flat_group x =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
   CHECK(x.get_dimensions() == 10);
 
   SECTION("0.3") {
-    x = ivf_flat_index_group<dummy_index>(
+    x = ivf_flat_group<dummy_index>(
         ctx, tmp_uri, TILEDB_WRITE, TemporalPolicy{TimeTravel, 0}, "0.3", 10);
   }
 
   SECTION("current_storage_version") {
-    x = ivf_flat_index_group<dummy_index>(
+    x = ivf_flat_group<dummy_index>(
         ctx,
         tmp_uri,
         TILEDB_WRITE,
@@ -446,7 +432,7 @@ TEST_CASE("ivf_flat_group: invalid storage version", "[ivf_flat_group]") {
     vfs.remove_dir(tmp_uri);
   }
   CHECK_THROWS(
-      ivf_flat_index_group<dummy_index>(
+      ivf_flat_group<dummy_index>(
           ctx, tmp_uri, TILEDB_WRITE, TemporalPolicy{TimeTravel, 0}, "invalid"),
       10);
 }
@@ -461,11 +447,11 @@ TEST_CASE("ivf_flat_group: mismatched storage version", "[ivf_flat_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_index_group x = ivf_flat_index_group<dummy_index>(
+  ivf_flat_group x = ivf_flat_group<dummy_index>(
       ctx, tmp_uri, TILEDB_WRITE, TemporalPolicy{TimeTravel, 0}, "0.3", 10);
 
   CHECK_THROWS_WITH(
-      ivf_flat_index_group<dummy_index>(
+      ivf_flat_group<dummy_index>(
           ctx,
           tmp_uri,
           TILEDB_WRITE,
@@ -485,8 +471,8 @@ TEST_CASE("ivf_flat_group: clear history", "[ivf_flat_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  ivf_flat_index_group x =
-      ivf_flat_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
+  ivf_flat_group x =
+      ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
 
   x.append_ingestion_timestamp(1);
   x.append_base_size(2);

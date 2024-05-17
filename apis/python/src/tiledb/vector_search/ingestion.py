@@ -1,3 +1,17 @@
+"""
+Vector Search ingestion Utilities
+
+This contains the ingestion implementation for different TileDB Vector Search algorithms.
+
+It enables:
+
+- Local ingestion:
+  - Multi-threaded execution that can leverage all the available local computing resources.
+- Distributed ingestion:
+  - Distributed ingestion execution with multiple workers in TileDB Cloud. This can be used
+  to ingest large datasets and speedup ingestion latency.
+"""
+
 import enum
 from functools import partial
 from typing import Any, Mapping, Optional, Tuple
@@ -73,101 +87,97 @@ def ingest(
     Parameters
     ----------
     index_type: str
-        Type of vector index (FLAT, IVF_FLAT, VAMANA)
+        Type of vector index (FLAT, IVF_FLAT, VAMANA).
     index_uri: str
-        Vector index URI (stored as TileDB group)
-    input_vectors: numpy Array
-        Input vectors, if this is provided it takes precedence over source_uri and source_type.
+        Vector index URI (stored as TileDB group).
+    input_vectors: np.ndarray
+        Input vectors, if this is provided it takes precedence over `source_uri` and `source_type`.
     source_uri: str
-        Data source URI
+        Vectors source URI.
     source_type: str
-        Type of the source data. If left empty it is auto-detected from the suffix of source_uri
-    external_ids: numpy Array
-        Input vector external_ids, if this is provided it takes precedence over external_ids_uri and external_ids_type
+        Type of the source vectors. If left empty it is auto-detected.
+    external_ids: np.array
+        Input vector `external_ids`, if this is provided it takes precedence over `external_ids_uri` and `external_ids_type`.
     external_ids_uri: str
-        Source URI for external_ids
+        Source URI for `external_ids`.
     external_ids_type: str
-        File type of external_ids_uri. If left empty it is auto-detected from the suffix of external_ids_uri
+        File type of external_ids_uri. If left empty it is auto-detected.
     updates_uri: str
-        Updates
+        Updates array URI. Used for consolidation of updates.
     index_timestamp: int
         Timestamp to use for writing and reading data. By default it uses the current unix ms timestamp.
-    config: None
-        config dictionary, defaults to None
+    config: Optional[Mapping[str, Any]]
+        TileDB config dictionary.
     namespace: str
-        TileDB-Cloud namespace, defaults to None
-    size: int = 1
-        Number of input vectors,
-        if not provided use the full size of the input dataset
-    partitions: int = -1
-        Number of partitions to load the data with,
-        if not provided, is auto-configured based on the dataset size
+        TileDB-Cloud namespace to use for Cloud execution.
+    size: int
+        Number of input vectors, if not provided use the full size of the input dataset.
+        If provided, we filter the first vectors from the input source.
+    partitions: int
+        Number of partitions to load the data with, if not provided, is auto-configured based on the dataset size.
     copy_centroids_uri: str
-        TileDB array URI to copy centroids from,
-        if not provided, centroids are build running kmeans
-    training_sample_size: int = -1
-        vector sample size to train centroids with,
-        if not provided, is auto-configured based on the dataset sizes
-        should not be provided if training_source_uri is provided
-    training_input_vectors: numpy Array
-        Training input vectors, if this is provided it takes precedence over training_source_uri and training_source_type
-        should not be provided if training_sample_size or training_source_uri is provided
-    training_source_uri: str = None
-        The source URI to use for training centroids when building a IVF_FLAT vector index,
-        if not provided, the first training_sample_size vectors from source_uri are used
-        should not be provided if training_sample_size or training_input_vectors is provided
-    training_source_type: str = None
-        Type of the training source data in training_source_uri
-        if left empty, is auto-detected from the suffix of training_source_type
-        should only be provided when training_source_uri is provided
-    workers: int = -1
-        number of workers for vector ingestion,
-        if not provided, is auto-configured based on the dataset size
-    input_vectors_per_work_item: int = -1
-        number of vectors per ingestion work item,
-        if not provided, is auto-configured
-    max_tasks_per_stage: int = -1
-        Max number of tasks per execution stage of ingestion,
-        if not provided, is auto-configured
-    input_vectors_per_work_item_during_sampling: int = -1
-        number of vectors per sample ingestion work item,
-        if not provided, is auto-configured
-        only valid with training_sampling_policy=TrainingSamplingPolicy.RANDOM
-    max_sampling_tasks: int = -1
-        Max number of tasks per execution stage of sampling,
-        if not provided, is auto-configured
-        only valid with training_sampling_policy=TrainingSamplingPolicy.RANDOM
+        TileDB array URI to copy centroids from, if not provided, centroids are build running `k-means`.
+    training_sample_size: int
+        Sample size to use for computing `k-means`. If not provided, is auto-configured based on the dataset sizes.
+        Should not be provided if training_source_uri is provided.
+    training_input_vectors: np.ndarray
+        Training input vectors, if this is provided it takes precedence over `training_source_uri` and `training_source_type`.
+        Should not be provided if `training_sample_size` or `training_source_uri` are provided.
+    training_source_uri: str
+        The source URI to use for training centroids when building a `IVF_FLAT` vector index.
+        If not provided, the first `training_sample_size` vectors from `source_uri` are used.
+        Should not be provided if training_sample_size or training_input_vectors is provided.
+    training_source_type: str
+        Type of the training source data in `training_source_uri`.
+        If left empty, is auto-detected. Should only be provided when `training_source_uri` is provided.
+    workers: int
+        Number of distributed workers to use for vector ingestion.
+        If not provided, is auto-configured based on the dataset size.
+    input_vectors_per_work_item: int
+        Number of vectors per ingestion work item.
+        If not provided, is auto-configured.
+    max_tasks_per_stage: int
+        Max number of tasks per execution stage of ingestion.
+        If not provided, is auto-configured.
+    input_vectors_per_work_item_during_sampling: int
+        Number of vectors per sample ingestion work item.
+        iIf not provided, is auto-configured.
+        Only valid with `training_sampling_policy=TrainingSamplingPolicy.RANDOM`.
+    max_sampling_tasks: int
+        Max number of tasks per execution stage of sampling.
+        If not provided, is auto-configured
+        Only valid with `training_sampling_policy=TrainingSamplingPolicy.RANDOM`.
     storage_version: str
         Vector index storage format version. If not provided, defaults to the latest version.
     verbose: bool
-        verbose logging, defaults to False
+        Enables verbose logging.
     trace_id: Optional[str]
-        trace ID for logging, defaults to None
+        trace ID for logging.
     use_sklearn: bool
         Whether to use scikit-learn's implementation of k-means clustering instead of
-        tiledb.vector_search's. Defaults to true.
+        tiledb.vector_search's.
     mode: Mode
-        execution mode, defaults to LOCAL use BATCH for distributed execution
+        Execution mode, defaults to `LOCAL` use `BATCH` for distributed execution.
     acn: Optional[str]
-        access credential name to be used when running in BATCH mode for object store access
+        Access credential name to be used when running in BATCH mode for object store access
     ingest_resources: Optional[Mapping[str, Any]]
-        resources to requst when performing vector ingestion, only applies to BATCH mode
+        Resources to request when performing vector ingestion, only applies to BATCH mode
     consolidate_partition_resources: Optional[Mapping[str, Any]]
-        resources to requst when performing consolidation of a partition, only applies to BATCH mode
+        Resources to request when performing consolidation of a partition, only applies to BATCH mode
     copy_centroids_resources: Optional[Mapping[str, Any]]
-        resources to requst when performing copy of centroids from input array to output array, only applies to BATCH mode
+        Resources to request when performing copy of centroids from input array to output array, only applies to BATCH mode
     random_sample_resources: Optional[Mapping[str, Any]]
-        resources to request when performing random sample selection, only applies to BATCH mode
+        Resources to request when performing random sample selection, only applies to BATCH mode
     kmeans_resources: Optional[Mapping[str, Any]]
-        resources to request when performing kmeans task, only applies to BATCH mode
+        Resources to request when performing kmeans task, only applies to BATCH mode
     compute_new_centroids_resources: Optional[Mapping[str, Any]]
-        resources to request when performing centroid computation, only applies to BATCH mode
+        Resources to request when performing centroid computation, only applies to BATCH mode
     assign_points_and_partial_new_centroids_resources: Optional[Mapping[str, Any]]
-        resources to request when performing the computation of partial centroids, only applies to BATCH mode
+        Resources to request when performing the computation of partial centroids, only applies to BATCH mode
     write_centroids_resources: Optional[Mapping[str, Any]]
-        resources to request when performing the write of centroids, only applies to BATCH mode
+        Resources to request when performing the write of centroids, only applies to BATCH mode
     partial_index_resources: Optional[Mapping[str, Any]]
-        resources to request when performing the computation of partial indexing, only applies to BATCH mode
+        Resources to request when performing the computation of partial indexing, only applies to BATCH mode
     """
     import enum
     import json
