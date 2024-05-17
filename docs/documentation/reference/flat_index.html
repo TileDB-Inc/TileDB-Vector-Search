@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>ivf_flat_index.ivfflatindex</title>
+<title>flat_index</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -173,17 +173,19 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#tiledb.vector_search.ivf_flat_index.IVFFlatIndex" id="toc-tiledb.vector_search.ivf_flat_index.IVFFlatIndex" class="nav-link active" data-scroll-target="#tiledb.vector_search.ivf_flat_index.IVFFlatIndex">ivf_flat_index.IVFFlatIndex</a>
+  <li><a href="#tiledb.vector_search.flat_index" id="toc-tiledb.vector_search.flat_index" class="nav-link active" data-scroll-target="#tiledb.vector_search.flat_index">flat_index</a>
   <ul class="collapse">
-  <li><a href="#parameters" id="toc-parameters" class="nav-link" data-scroll-target="#parameters">Parameters</a></li>
-  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
+  <li><a href="#classes" id="toc-classes" class="nav-link" data-scroll-target="#classes">Classes</a>
   <ul class="collapse">
-  <li><a href="#tiledb.vector_search.ivf_flat_index.IVFFlatIndex.query_internal" id="toc-tiledb.vector_search.ivf_flat_index.IVFFlatIndex.query_internal" class="nav-link" data-scroll-target="#tiledb.vector_search.ivf_flat_index.IVFFlatIndex.query_internal">query_internal</a></li>
-  <li><a href="#tiledb.vector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query" id="toc-tiledb.vector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query" class="nav-link" data-scroll-target="#tiledb.vector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query">taskgraph_query</a></li>
+  <li><a href="#tiledb.vector_search.flat_index.FlatIndex" id="toc-tiledb.vector_search.flat_index.FlatIndex" class="nav-link" data-scroll-target="#tiledb.vector_search.flat_index.FlatIndex">FlatIndex</a></li>
+  </ul></li>
+  <li><a href="#functions" id="toc-functions" class="nav-link" data-scroll-target="#functions">Functions</a>
+  <ul class="collapse">
+  <li><a href="#tiledb.vector_search.flat_index.create" id="toc-tiledb.vector_search.flat_index.create" class="nav-link" data-scroll-target="#tiledb.vector_search.flat_index.create">create</a></li>
   </ul></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/edit/main/documentation/reference/ivf_flat_index.IVFFlatIndex.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/edit/main/documentation/reference/flat_index.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -191,17 +193,169 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-<section id="tiledb.vector_search.ivf_flat_index.IVFFlatIndex" class="level1">
-<h1>ivf_flat_index.IVFFlatIndex</h1>
-<p><code>vector_search.ivf_flat_index.IVFFlatIndex(self, uri, config=None, timestamp=None, memory_budget=-1, **kwargs)</code></p>
-<p>Open a IVF Flat index</p>
-<section id="parameters" class="level2">
-<h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
+<section id="tiledb.vector_search.flat_index" class="level1">
+<h1>flat_index</h1>
+<p><code>vector_search.flat_index</code></p>
+<p>FlatIndex implementation.</p>
+<p>Stores all vectors in a 2D TileDB array performing exhaustive similarity search between the query vectors and all the dataset vectors.</p>
+<section id="classes" class="level2">
+<h2 class="anchored" data-anchor-id="classes">Classes</h2>
+<table class="table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#tiledb.vector_search.flat_index.FlatIndex">FlatIndex</a></td>
+<td>Opens a <code>FlatIndex</code> loading all dataset vectors in main memory.</td>
+</tr>
+</tbody>
+</table>
+<section id="tiledb.vector_search.flat_index.FlatIndex" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.flat_index.FlatIndex">FlatIndex</h3>
+<p><code>vector_search.flat_index.FlatIndex(self, uri, config=None, timestamp=None, **kwargs)</code></p>
+<p>Opens a <code>FlatIndex</code> loading all dataset vectors in main memory.</p>
+<section id="parameters" class="level4">
+<h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
 <table class="table">
 <colgroup>
-<col style="width: 13%">
-<col style="width: 25%">
-<col style="width: 51%">
+<col style="width: 8%">
+<col style="width: 20%">
+<col style="width: 63%">
+<col style="width: 7%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>uri</code></td>
+<td>str</td>
+<td>URI of the index.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>config</code></td>
+<td>Optional[Mapping[str, Any]]</td>
+<td>TileDB config dictionary.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>timestamp</code></td>
+<td></td>
+<td>If int, open the index at a given timestamp. If tuple, open at the given start and end timestamps.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="methods" class="level4">
+<h4 class="anchored" data-anchor-id="methods">Methods</h4>
+<table class="table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#tiledb.vector_search.flat_index.FlatIndex.get_dimensions">get_dimensions</a></td>
+<td>Returns the dimension of the vectors in the index.</td>
+</tr>
+<tr class="even">
+<td><a href="#tiledb.vector_search.flat_index.FlatIndex.query_internal">query_internal</a></td>
+<td>Queries a FlatIndex using the vectors already loaded in main memory.</td>
+</tr>
+</tbody>
+</table>
+<section id="tiledb.vector_search.flat_index.FlatIndex.get_dimensions" class="level5">
+<h5 class="anchored" data-anchor-id="tiledb.vector_search.flat_index.FlatIndex.get_dimensions">get_dimensions</h5>
+<p><code>vector_search.flat_index.FlatIndex.get_dimensions()</code></p>
+<p>Returns the dimension of the vectors in the index.</p>
+</section>
+<section id="tiledb.vector_search.flat_index.FlatIndex.query_internal" class="level5">
+<h5 class="anchored" data-anchor-id="tiledb.vector_search.flat_index.FlatIndex.query_internal">query_internal</h5>
+<p><code>vector_search.flat_index.FlatIndex.query_internal(queries, k=10, nthreads=8, **kwargs)</code></p>
+<p>Queries a FlatIndex using the vectors already loaded in main memory.</p>
+<section id="parameters-1" class="level6">
+<h6 class="anchored" data-anchor-id="parameters-1">Parameters</h6>
+<table class="table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 8%">
+<col style="width: 75%">
+<col style="width: 8%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>queries</code></td>
+<td>np.ndarray</td>
+<td>2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>k</code></td>
+<td>int</td>
+<td>Number of results to return per query vector.</td>
+<td><code>10</code></td>
+</tr>
+<tr class="odd">
+<td><code>nthreads</code></td>
+<td>int</td>
+<td>Number of threads to use for query execution.</td>
+<td><code>8</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+</section>
+</section>
+</section>
+<section id="functions" class="level2">
+<h2 class="anchored" data-anchor-id="functions">Functions</h2>
+<table class="table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#tiledb.vector_search.flat_index.create">create</a></td>
+<td>Creates an empty FlatIndex.</td>
+</tr>
+</tbody>
+</table>
+<section id="tiledb.vector_search.flat_index.create" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.flat_index.create">create</h3>
+<p><code>vector_search.flat_index.create(uri, dimensions, vector_type, group_exists=False, config=None, storage_version=STORAGE_VERSION, **kwargs)</code></p>
+<p>Creates an empty FlatIndex.</p>
+<section id="parameters-2" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 9%">
+<col style="width: 17%">
+<col style="width: 62%">
 <col style="width: 9%">
 </colgroup>
 <thead>
@@ -216,211 +370,38 @@ ul.task-list li input[type="checkbox"] {
 <tr class="odd">
 <td><code>uri</code></td>
 <td>str</td>
-<td>URI of the index</td>
+<td>URI of the index.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>config</code></td>
-<td>Optional[Mapping[str, Any]]</td>
-<td>config dictionary, defaults to None</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td><code>memory_budget</code></td>
+<td><code>dimensions</code></td>
 <td>int</td>
-<td>Main memory budget. If not provided, no memory budget is applied.</td>
-<td><code>-1</code></td>
+<td>Number of dimensions for the vectors to be stored in the index.</td>
+<td><em>required</em></td>
 </tr>
-</tbody>
-</table>
-</section>
-<section id="methods" class="level2">
-<h2 class="anchored" data-anchor-id="methods">Methods</h2>
-<table class="table">
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
 <tr class="odd">
-<td><a href="#tiledb.vector_search.ivf_flat_index.IVFFlatIndex.query_internal">query_internal</a></td>
-<td>Query an IVF_FLAT index</td>
-</tr>
-<tr class="even">
-<td><a href="#tiledb.vector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query">taskgraph_query</a></td>
-<td>Query an IVF_FLAT index using TileDB cloud taskgraphs</td>
-</tr>
-</tbody>
-</table>
-<section id="tiledb.vector_search.ivf_flat_index.IVFFlatIndex.query_internal" class="level3">
-<h3 class="anchored" data-anchor-id="tiledb.vector_search.ivf_flat_index.IVFFlatIndex.query_internal">query_internal</h3>
-<p><code>vector_search.ivf_flat_index.IVFFlatIndex.query_internal(queries, k=10, nprobe=1, nthreads=-1, use_nuv_implementation=False, mode=None, resource_class=None, resources=None, num_partitions=-1, num_workers=-1, **kwargs)</code></p>
-<p>Query an IVF_FLAT index</p>
-<section id="parameters-1" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
-<table class="table">
-<colgroup>
-<col style="width: 6%">
-<col style="width: 8%">
-<col style="width: 82%">
-<col style="width: 2%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>queries</code></td>
-<td>np.ndarray</td>
-<td>ND Array of queries</td>
+<td><code>vector_type</code></td>
+<td>np.dtype</td>
+<td>Datatype of vectors. Supported values (uint8, int8, float32).</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>k</code></td>
-<td>int</td>
-<td>Number of top results to return per query</td>
-<td><code>10</code></td>
-</tr>
-<tr class="odd">
-<td><code>nprobe</code></td>
-<td>int</td>
-<td>number of probes</td>
-<td><code>1</code></td>
-</tr>
-<tr class="even">
-<td><code>nthreads</code></td>
-<td>int</td>
-<td>Number of threads to use for query</td>
-<td><code>-1</code></td>
-</tr>
-<tr class="odd">
-<td><code>use_nuv_implementation</code></td>
+<td><code>group_exists</code></td>
 <td>bool</td>
-<td>wether to use the nuv query implementation. Default: False</td>
+<td>If False it creates the TileDB group for the index. If True the method expects the TileDB group to be already created.</td>
 <td><code>False</code></td>
 </tr>
-<tr class="even">
-<td><code>mode</code></td>
-<td>Mode</td>
-<td>If provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode. For local execution you can use LOCAL mode.</td>
-<td><code>None</code></td>
-</tr>
 <tr class="odd">
-<td><code>resource_class</code></td>
-<td>Optional[str]</td>
-<td>The name of the resource class to use (“standard” or “large”). Resource classes define maximum limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode. Cannot be used alongside resources. In REALTIME or BATCH mode if neither resource_class nor resources are provided, we default to the “large” resource class.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td><code>resources</code></td>
-<td>Optional[Mapping[str, Any]]</td>
-<td>A specification for the amount of resources to use when executing using TileDB cloud taskgraphs, of the form: {“cpu”: “6”, “memory”: “12Gi”, “gpu”: 1}. Can only be used in BATCH mode. Cannot be used alongside resource_class.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td><code>num_partitions</code></td>
-<td>int</td>
-<td>Only relevant for taskgraph based execution. If provided, we split the query execution in that many partitions.</td>
-<td><code>-1</code></td>
-</tr>
-<tr class="even">
-<td><code>num_workers</code></td>
-<td>int</td>
-<td>Only relevant for taskgraph based execution. If provided, this is the number of workers to use for the query execution.</td>
-<td><code>-1</code></td>
-</tr>
-</tbody>
-</table>
-</section>
-</section>
-<section id="tiledb.vector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query" class="level3">
-<h3 class="anchored" data-anchor-id="tiledb.vector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query">taskgraph_query</h3>
-<p><code>vector_search.ivf_flat_index.IVFFlatIndex.taskgraph_query(queries, k=10, nprobe=10, nthreads=-1, mode=None, resource_class=None, resources=None, num_partitions=-1, num_workers=-1, config=None)</code></p>
-<p>Query an IVF_FLAT index using TileDB cloud taskgraphs</p>
-<section id="parameters-2" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
-<table class="table">
-<colgroup>
-<col style="width: 4%">
-<col style="width: 8%">
-<col style="width: 84%">
-<col style="width: 3%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>queries</code></td>
-<td>np.ndarray</td>
-<td>ND Array of queries</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>k</code></td>
-<td>int</td>
-<td>Number of top results to return per query</td>
-<td><code>10</code></td>
-</tr>
-<tr class="odd">
-<td><code>nprobe</code></td>
-<td>int</td>
-<td>number of probes</td>
-<td><code>10</code></td>
-</tr>
-<tr class="even">
-<td><code>nthreads</code></td>
-<td>int</td>
-<td>Number of threads to use for query</td>
-<td><code>-1</code></td>
-</tr>
-<tr class="odd">
-<td><code>mode</code></td>
-<td>Mode</td>
-<td>If provided the query will be executed using TileDB cloud taskgraphs. For distributed execution you can use REALTIME or BATCH mode. For local execution you can use LOCAL mode.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td><code>resource_class</code></td>
-<td>Optional[str]</td>
-<td>The name of the resource class to use (“standard” or “large”). Resource classes define maximum limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode. Cannot be used alongside resources. In REALTIME or BATCH mode if neither resource_class nor resources are provided, we default to the “large” resource class.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td><code>resources</code></td>
-<td>Optional[Mapping[str, Any]]</td>
-<td>A specification for the amount of resources to use when executing using TileDB cloud taskgraphs, of the form: {“cpu”: “6”, “memory”: “12Gi”, “gpu”: 1}. Can only be used in BATCH mode. Cannot be used alongside resource_class.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td><code>num_partitions</code></td>
-<td>int</td>
-<td>Only relevant for taskgraph based execution. If provided, we split the query execution in that many partitions.</td>
-<td><code>-1</code></td>
-</tr>
-<tr class="odd">
-<td><code>num_workers</code></td>
-<td>int</td>
-<td>Only relevant for taskgraph based execution. If provided, this is the number of workers to use for the query execution.</td>
-<td><code>-1</code></td>
-</tr>
-<tr class="even">
 <td><code>config</code></td>
 <td>Optional[Mapping[str, Any]]</td>
-<td>config dictionary, defaults to None</td>
+<td>TileDB config dictionary.</td>
 <td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>storage_version</code></td>
+<td>str</td>
+<td>The TileDB vector search storage version to use. If not provided, use hte latest stable storage version.</td>
+<td><code>STORAGE_VERSION</code></td>
 </tr>
 </tbody>
 </table>
@@ -846,4 +827,4 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/edit/main/documentation/reference/ivf_flat_index.IVFFlatIndex.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/edit/main/documentation/reference/flat_index.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

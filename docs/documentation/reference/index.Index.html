@@ -178,7 +178,16 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#parameters" id="toc-parameters" class="nav-link" data-scroll-target="#parameters">Parameters</a></li>
   <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
   <ul class="collapse">
+  <li><a href="#tiledb.vector_search.index.Index.clear_history" id="toc-tiledb.vector_search.index.Index.clear_history" class="nav-link" data-scroll-target="#tiledb.vector_search.index.Index.clear_history">clear_history</a></li>
   <li><a href="#tiledb.vector_search.index.Index.consolidate_updates" id="toc-tiledb.vector_search.index.Index.consolidate_updates" class="nav-link" data-scroll-target="#tiledb.vector_search.index.Index.consolidate_updates">consolidate_updates</a></li>
+  <li><a href="#tiledb.vector_search.index.Index.delete" id="toc-tiledb.vector_search.index.Index.delete" class="nav-link" data-scroll-target="#tiledb.vector_search.index.Index.delete">delete</a></li>
+  <li><a href="#tiledb.vector_search.index.Index.delete_batch" id="toc-tiledb.vector_search.index.Index.delete_batch" class="nav-link" data-scroll-target="#tiledb.vector_search.index.Index.delete_batch">delete_batch</a></li>
+  <li><a href="#tiledb.vector_search.index.Index.delete_index" id="toc-tiledb.vector_search.index.Index.delete_index" class="nav-link" data-scroll-target="#tiledb.vector_search.index.Index.delete_index">delete_index</a></li>
+  <li><a href="#tiledb.vector_search.index.Index.get_dimensions" id="toc-tiledb.vector_search.index.Index.get_dimensions" class="nav-link" data-scroll-target="#tiledb.vector_search.index.Index.get_dimensions">get_dimensions</a></li>
+  <li><a href="#tiledb.vector_search.index.Index.query" id="toc-tiledb.vector_search.index.Index.query" class="nav-link" data-scroll-target="#tiledb.vector_search.index.Index.query">query</a></li>
+  <li><a href="#tiledb.vector_search.index.Index.query_internal" id="toc-tiledb.vector_search.index.Index.query_internal" class="nav-link" data-scroll-target="#tiledb.vector_search.index.Index.query_internal">query_internal</a></li>
+  <li><a href="#tiledb.vector_search.index.Index.update" id="toc-tiledb.vector_search.index.Index.update" class="nav-link" data-scroll-target="#tiledb.vector_search.index.Index.update">update</a></li>
+  <li><a href="#tiledb.vector_search.index.Index.update_batch" id="toc-tiledb.vector_search.index.Index.update_batch" class="nav-link" data-scroll-target="#tiledb.vector_search.index.Index.update_batch">update_batch</a></li>
   </ul></li>
   </ul></li>
   </ul>
@@ -193,15 +202,18 @@ ul.task-list li input[type="checkbox"] {
 <section id="tiledb.vector_search.index.Index" class="level1">
 <h1>index.Index</h1>
 <p><code>vector_search.index.Index(self, uri, config=None, timestamp=None)</code></p>
-<p>Open a Vector index</p>
+<p>Abstract Vector Index class.</p>
+<p>All Vector Index algorithm implementations are instantiations of this class. Apart from the abstract method interfaces, <code>Index</code> provides implementations for common tasks i.e.&nbsp;supporting updates, time-traveling and metadata management.</p>
+<p>Opens an <code>Index</code> reading metadata and applying time-traveling options.</p>
+<p>Do not use this directly but rather instantiate the concrete Index classes.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
+<col style="width: 8%">
+<col style="width: 20%">
+<col style="width: 63%">
 <col style="width: 7%">
-<col style="width: 19%">
-<col style="width: 66%">
-<col style="width: 6%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -215,19 +227,19 @@ ul.task-list li input[type="checkbox"] {
 <tr class="odd">
 <td><code>uri</code></td>
 <td>str</td>
-<td>URI of the index</td>
+<td>URI of the index.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
 <td><code>config</code></td>
 <td>Optional[Mapping[str, Any]]</td>
-<td>config dictionary, defaults to None</td>
+<td>TileDB config dictionary.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td><code>timestamp</code></td>
 <td></td>
-<td>(default None) If int, open the index at a given timestamp. If tuple, open at the given start and end timestamps.</td>
+<td>If int, open the index at a given timestamp. If tuple, open at the given start and end timestamps.</td>
 <td><code>None</code></td>
 </tr>
 </tbody>
@@ -244,16 +256,94 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
+<td><a href="#tiledb.vector_search.index.Index.clear_history">clear_history</a></td>
+<td>Clears the history maintained in a Vector Index based on its URI.</td>
+</tr>
+<tr class="even">
 <td><a href="#tiledb.vector_search.index.Index.consolidate_updates">consolidate_updates</a></td>
-<td></td>
+<td>Consolidates updates by merging updates form the updates table into the base index.</td>
+</tr>
+<tr class="odd">
+<td><a href="#tiledb.vector_search.index.Index.delete">delete</a></td>
+<td>Deletes a vector by its <code>external_id</code>.</td>
+</tr>
+<tr class="even">
+<td><a href="#tiledb.vector_search.index.Index.delete_batch">delete_batch</a></td>
+<td>Deletes vectors by their <code>external_ids</code>.</td>
+</tr>
+<tr class="odd">
+<td><a href="#tiledb.vector_search.index.Index.delete_index">delete_index</a></td>
+<td>Deletes an index from storage based on its URI.</td>
+</tr>
+<tr class="even">
+<td><a href="#tiledb.vector_search.index.Index.get_dimensions">get_dimensions</a></td>
+<td>Abstract method implemented by all Vector Index implementations.</td>
+</tr>
+<tr class="odd">
+<td><a href="#tiledb.vector_search.index.Index.query">query</a></td>
+<td>Queries an index with a set of query vectors, retrieving the <code>k</code> most similar vectors for each query.</td>
+</tr>
+<tr class="even">
+<td><a href="#tiledb.vector_search.index.Index.query_internal">query_internal</a></td>
+<td>Abstract method implemented by all Vector Index implementations.</td>
+</tr>
+<tr class="odd">
+<td><a href="#tiledb.vector_search.index.Index.update">update</a></td>
+<td>Updates a <code>vector</code> by its <code>external_id</code>.</td>
+</tr>
+<tr class="even">
+<td><a href="#tiledb.vector_search.index.Index.update_batch">update_batch</a></td>
+<td>Updates a set <code>vectors</code> by their <code>external_ids</code>.</td>
 </tr>
 </tbody>
 </table>
+<section id="tiledb.vector_search.index.Index.clear_history" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.index.Index.clear_history">clear_history</h3>
+<p><code>vector_search.index.Index.clear_history(uri, timestamp, config=None)</code></p>
+<p>Clears the history maintained in a Vector Index based on its URI.</p>
+<p>This clears the update history before the provided <code>timestamp</code>.</p>
+<p>Use this in collaboration with <code>consolidate_updates</code> to periodically cleanup update history.</p>
+<section id="parameters-1" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 10%">
+<col style="width: 58%">
+<col style="width: 15%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>uri</code></td>
+<td>str</td>
+<td>URI of the index.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>timestamp</code></td>
+<td>int</td>
+<td>Clears update history before this timestamp.</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
 <section id="tiledb.vector_search.index.Index.consolidate_updates" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.index.Index.consolidate_updates">consolidate_updates</h3>
 <p><code>vector_search.index.Index.consolidate_updates(retrain_index=False, **kwargs)</code></p>
-<section id="parameters-1" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
+<p>Consolidates updates by merging updates form the updates table into the base index.</p>
+<p>The consolidation process is used to avoid query latency degradation as more updates are added to the index. It triggers a base index re-indexing, merging the non-consolidated updates and the rest of the base vectors.</p>
+<section id="parameters-2" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 4%">
@@ -275,6 +365,317 @@ ul.task-list li input[type="checkbox"] {
 <td>bool</td>
 <td>If true, retrain the index. If false, reuse data from the previous index. For IVF_FLAT retraining means we will recompute the centroids - when doing so you can pass any ingest() arguments used to configure computing centroids and we will use them when recomputing the centroids. Otherwise, if false, we will reuse the centroids from the previous index.</td>
 <td><code>False</code></td>
+</tr>
+<tr class="even">
+<td><code>**kwargs</code></td>
+<td></td>
+<td>Extra kwargs passed here are passed to <code>ingest</code> function.</td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="tiledb.vector_search.index.Index.delete" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.index.Index.delete">delete</h3>
+<p><code>vector_search.index.Index.delete(external_id, timestamp=None)</code></p>
+<p>Deletes a vector by its <code>external_id</code>.</p>
+<section id="parameters-3" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-3">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 12%">
+<col style="width: 57%">
+<col style="width: 13%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>external_id</code></td>
+<td>np.uint64</td>
+<td>External ID of the vector to be deleted.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>timestamp</code></td>
+<td>int</td>
+<td>Timestamp to use for the deletes to take place at.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="tiledb.vector_search.index.Index.delete_batch" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.index.Index.delete_batch">delete_batch</h3>
+<p><code>vector_search.index.Index.delete_batch(external_ids, timestamp=None)</code></p>
+<p>Deletes vectors by their <code>external_ids</code>.</p>
+<section id="parameters-4" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-4">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 11%">
+<col style="width: 57%">
+<col style="width: 13%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>external_ids</code></td>
+<td>np.array</td>
+<td>External IDs of the vectors to be deleted.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>timestamp</code></td>
+<td>int</td>
+<td>Timestamp to use for the deletes to take place at.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="tiledb.vector_search.index.Index.delete_index" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.index.Index.delete_index">delete_index</h3>
+<p><code>vector_search.index.Index.delete_index(uri, config=None)</code></p>
+<p>Deletes an index from storage based on its URI.</p>
+<section id="parameters-5" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-5">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 40%">
+<col style="width: 32%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>uri</code></td>
+<td>str</td>
+<td>URI of the index.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>config</code></td>
+<td>Optional[Mapping[str, Any]]</td>
+<td>TileDB config dictionary.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="tiledb.vector_search.index.Index.get_dimensions" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.index.Index.get_dimensions">get_dimensions</h3>
+<p><code>vector_search.index.Index.get_dimensions()</code></p>
+<p>Abstract method implemented by all Vector Index implementations.</p>
+<p>Returns the dimension of the vectors in the index.</p>
+</section>
+<section id="tiledb.vector_search.index.Index.query" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.index.Index.query">query</h3>
+<p><code>vector_search.index.Index.query(queries, k, **kwargs)</code></p>
+<p>Queries an index with a set of query vectors, retrieving the <code>k</code> most similar vectors for each query.</p>
+<p>This provides an algorithm-agnostic implementation for updates:</p>
+<ul>
+<li>Queries the non-consolidated updates table.</li>
+<li>Calls the algorithm specific implementation of <code>query_internal</code> to query the base data.</li>
+<li>Merges the results applying the updated data.</li>
+</ul>
+<section id="parameters-6" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-6">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 8%">
+<col style="width: 75%">
+<col style="width: 8%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>queries</code></td>
+<td>np.ndarray</td>
+<td>2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>k</code></td>
+<td>int</td>
+<td>Number of results to return per query vector.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>**kwargs</code></td>
+<td></td>
+<td>Extra kwargs passed here are passed to the <code>query_internal</code> implementation of the concrete index class.</td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="tiledb.vector_search.index.Index.query_internal" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.index.Index.query_internal">query_internal</h3>
+<p><code>vector_search.index.Index.query_internal(queries, k, **kwargs)</code></p>
+<p>Abstract method implemented by all Vector Index implementations.</p>
+<p>Queries the base index with a set of query vectors, retrieving the <code>k</code> most similar vectors for each query.</p>
+<section id="parameters-7" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-7">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 8%">
+<col style="width: 75%">
+<col style="width: 8%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>queries</code></td>
+<td>np.ndarray</td>
+<td>2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>k</code></td>
+<td>int</td>
+<td>Number of results to return per query vector.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>**kwargs</code></td>
+<td></td>
+<td>Extra kwargs passed here for each algorithm implementation.</td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="tiledb.vector_search.index.Index.update" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.index.Index.update">update</h3>
+<p><code>vector_search.index.Index.update(vector, external_id, timestamp=None)</code></p>
+<p>Updates a <code>vector</code> by its <code>external_id</code>.</p>
+<p>This can be used to add new vectors or update an existing vector with the same <code>external_id</code>.</p>
+<section id="parameters-8" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-8">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 12%">
+<col style="width: 57%">
+<col style="width: 13%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>vector</code></td>
+<td>np.array</td>
+<td>Vector data to be updated.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>external_id</code></td>
+<td>np.uint64</td>
+<td>External ID of the vector.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>timestamp</code></td>
+<td>int</td>
+<td>Timestamp to use for the update to take place at.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="tiledb.vector_search.index.Index.update_batch" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.index.Index.update_batch">update_batch</h3>
+<p><code>vector_search.index.Index.update_batch(vectors, external_ids, timestamp=None)</code></p>
+<p>Updates a set <code>vectors</code> by their <code>external_ids</code>.</p>
+<p>This can be used to add new vectors or update existing vectors with the same <code>external_id</code>.</p>
+<section id="parameters-9" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-9">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 13%">
+<col style="width: 56%">
+<col style="width: 13%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>vectors</code></td>
+<td>np.ndarray</td>
+<td>2D array containing the vectors to be updated.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>external_ids</code></td>
+<td>np.array</td>
+<td>External IDs of the vectors.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>timestamp</code></td>
+<td>int</td>
+<td>Timestamp to use for the updates to take place at.</td>
+<td><code>None</code></td>
 </tr>
 </tbody>
 </table>
