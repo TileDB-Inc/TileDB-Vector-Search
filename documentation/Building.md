@@ -71,6 +71,20 @@ Credentials:
 - Some tests run on TileDB Cloud using your current environment variable `TILEDB_REST_TOKEN` - you will need a valid API token for the tests to pass. See [Create API Tokens](https://docs.tiledb.com/cloud/how-to/account/create-api-tokens) for for instructions on getting one.
 - For continuous integration, the token is configured for the `unittest` user and all tests should pass.
 
+## Quarto
+
+First install quarto with [their instructions](https://quarto.org/docs/get-started) or [with Homebrew](https://formulae.brew.sh/cask/quarto).
+
+Then run:
+
+```bash
+pip install quartodoc
+quartodoc build
+quarto render --fail-if-warnings
+```
+
+You can them open up `docs/documentation/index.html` in a web browser to preview the results.
+
 # Dependencies
 
 ## Linux

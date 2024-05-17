@@ -39,6 +39,7 @@ quartodoc:
         - index.Index
         - flat_index
         - ivf_flat_index
+        - vamana_index
         - ingestion
 
 website:
