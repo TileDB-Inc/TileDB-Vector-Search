@@ -2,38 +2,38 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/Benchmarks.html</loc>
-    <lastmod>2024-05-17T20:56:44.191Z</lastmod>
+    <lastmod>2024-05-20T10:32:25.215Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/ingestion.html</loc>
-    <lastmod>2024-05-17T21:03:07.075Z</lastmod>
+    <lastmod>2024-05-20T10:38:46.549Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/index.html</loc>
-    <lastmod>2024-05-17T21:03:07.027Z</lastmod>
+    <lastmod>2024-05-20T10:38:46.501Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/ivf_flat_index.html</loc>
-    <lastmod>2024-05-17T21:03:07.059Z</lastmod>
+    <lastmod>2024-05-20T10:38:46.529Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/index.html</loc>
-    <lastmod>2024-05-17T20:56:44.191Z</lastmod>
+    <lastmod>2024-05-20T10:32:25.215Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/Building.html</loc>
-    <lastmod>2024-05-17T20:56:44.191Z</lastmod>
+    <lastmod>2024-05-20T10:32:25.215Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/vamana_index.html</loc>
-    <lastmod>2024-05-17T21:03:07.063Z</lastmod>
+    <lastmod>2024-05-20T10:38:46.537Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/index.Index.html</loc>
-    <lastmod>2024-05-17T21:03:07.047Z</lastmod>
+    <lastmod>2024-05-20T10:38:46.517Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/flat_index.html</loc>
-    <lastmod>2024-05-17T21:03:07.051Z</lastmod>
+    <lastmod>2024-05-20T10:38:46.525Z</lastmod>
   </url>
 </urlset>
