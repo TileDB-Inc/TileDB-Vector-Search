@@ -230,23 +230,12 @@ static auto build_config() {
   //   strncpy(host_, "ghost", 15);
   // }
 
-  std::string date;
-  {
-    std::stringstream ss;
-    std::time_t currentTime = std::time(nullptr);
-    std::string dateString = std::ctime(&currentTime);
-    dateString.erase(dateString.find('\n'));
-    ss << dateString;
-    date = ss.str();
-  }
-
   auto&& [major, minor, patch] = tiledb::version();
 
   json config = {
-      {"Build_date", CURRENT_DATETIME},
-      {"Run_date", date},
-      {"cmake_source_dir", CMAKE_SOURCE_DIR},
-      {"Build", BUILD_TYPE},
+      {"CURRENT_DATETIME", CURRENT_DATETIME},
+      {"CMAKE_SOURCE_DIR", CMAKE_SOURCE_DIR},
+      {"BUILD_TYPE", BUILD_TYPE},
       {"Compiler",
        {{"CXX_COMPILER", IVF_HACK_CXX_COMPILER},
         {"CXX_COMPILER_ID", CXX_COMPILER_ID},
