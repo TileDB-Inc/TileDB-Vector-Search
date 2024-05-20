@@ -1021,10 +1021,16 @@ class ivf_flat_index {
   }
 
   void dump_group(const std::string& msg) {
+    if (!group_) {
+      throw std::runtime_error("No group to dump");
+    }
     group_->dump(msg);
   }
 
   void dump_metadata(const std::string& msg) {
+    if (!group_) {
+      throw std::runtime_error("No group to dump metadata for");
+    }
     group_->metadata.dump(msg);
   }
 };

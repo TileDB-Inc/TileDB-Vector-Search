@@ -38,5 +38,6 @@ TEST_CASE("stats: test test", "[stats]") {
 }
 
 TEST_CASE("stats: test build_config", "[stats]") {
-  build_config();
+  auto config = build_config();
+  CHECK(config.size() > 0);
 }

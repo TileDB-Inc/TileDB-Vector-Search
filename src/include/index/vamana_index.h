@@ -671,16 +671,18 @@ class vamana_index {
   }
 
   /**
-   * @brief Write the index to a TileDB group
-   * @param group_uri The URI of the TileDB group where the index will be saved
-   * @param storage_version The storage version to use. If empty, use the most
-   * defult version.
-   * @return Whether the write was successful
-   *
-   * The group consists of the original feature vectors, and the graph index,
+   * @brief Write the index to a TileDB group. The group consists of the original feature vectors, and the graph index,
    * which comprises the adjacency scores and adjacency ids, written
    * contiguously, along with an offset (adj_index) to the start of each
    * adjacency list.
+   * 
+   * @param ctx TileDB context
+   * @param group_uri The URI of the TileDB group where the index will be saved
+   * @param group_uri The URI of the TileDB group where the index will be saved
+   * @param temporal_policy If set, we'll use the end timestamp of the policy as the write timestamp.
+   * @param storage_version The storage version to use. If empty, use the most
+   * defult version.
+   * @return Whether the write was successful
    *
    * @todo Do we need to copy and/or write out the original vectors since
    * those will presumably be in a known array that can be made part of

@@ -84,10 +84,10 @@ class ivf_pq_group : public base_index_group<index_type> {
       tiledb_query_type_t rw = TILEDB_READ,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""},
-      uint64_t dimension = 0,
+      uint64_t dimensions = 0,
       size_t num_clusters = 0,
       size_t num_subspaces = 0)
-      : Base(ctx, uri, rw, temporal_policy, version, dimension) {
+      : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
     if (rw == TILEDB_WRITE && !this->exists()) {
       if (num_clusters == 0) {
         throw std::invalid_argument(
@@ -127,6 +127,23 @@ class ivf_pq_group : public base_index_group<index_type> {
       array_name_to_uri_[array_name] =
           array_name_to_uri(group_uri_, array_name);
     }
+  }
+
+  void clear_history_impl(uint64_t timestamp) {
+    tiledb::Array::delete_fragments(
+        cached_ctx_, cluster_centroids_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(
+        cached_ctx_, flat_ivf_centroids_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(
+        cached_ctx_, pq_ivf_centroids_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(
+        cached_ctx_, ivf_index_uri(), 0, timestamp);
+      tiledb::Array::delete_fragments(
+        cached_ctx_, ivf_ids_uri(), 0, timestamp);
+      tiledb::Array::delete_fragments(
+        cached_ctx_, pq_ivf_vectors_uri(), 0, timestamp);
+      tiledb::Array::delete_fragments(
+        cached_ctx_, distance_tables_uri(), 0, timestamp);
   }
 
   /*****************************************************************************

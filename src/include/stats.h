@@ -222,7 +222,7 @@ static auto dump_logs = [](std::string filename,
   }
 };
 
-static auto build_config() {
+[[maybe_unused]] static auto build_config() {
   // This is failing today, but could perhaps be added back in the future.
   // char host_[16];
   // if (int e = gethostname(host_, sizeof(host_))) {

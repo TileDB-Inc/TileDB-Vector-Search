@@ -292,20 +292,31 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
   size_t nthreads = 1;
 
   tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
   std::string ivf_index_uri =
       (std::filesystem::temp_directory_path() / "tmp_ivf_index").string();
+  if (vfs.is_dir(ivf_index_uri)) {
+    vfs.remove_dir(ivf_index_uri);
+  }
+
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
+  std::vector<siftsmall_ids_type> ids(num_vectors(training_set));
+  std::iota(begin(ids), end(ids), 0);
 
   auto idx = ivf_pq_index<float, uint32_t, uint32_t>(
       /*dimension,*/ nlist, num_subspaces, max_iters, nthreads);
 
   idx.train_ivf(training_set, kmeans_init::kmeanspp);
-  idx.add(training_set);
+  idx.add(training_set, ids);
 
   ivf_index_uri =
       (std::filesystem::temp_directory_path() / "second_tmp_ivf_index")
           .string();
+  if (vfs.is_dir(ivf_index_uri)) {
+    vfs.remove_dir(ivf_index_uri);
+  }
+
   idx.write_index(ctx, ivf_index_uri);
   auto idx2 = ivf_pq_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
   idx2.read_index_infinite();
@@ -327,13 +338,15 @@ TEST_CASE(
   auto training_set = tdbColMajorMatrix<siftsmall_feature_type>(
       ctx, siftsmall_inputs_uri, 2500);
   training_set.load();
+  std::vector<siftsmall_ids_type> ids(num_vectors(training_set));
+  std::iota(begin(ids), end(ids), 0);
 
   auto pq_idx = ivf_pq_index<
       siftsmall_feature_type,
       siftsmall_ids_type,
       siftsmall_indices_type>(20, 16, 50);
   pq_idx.train_ivf(training_set);
-  pq_idx.add(training_set);
+  pq_idx.add(training_set, ids);
 
   SECTION("pq_encoding") {
     auto avg_error = pq_idx.verify_pq_encoding(training_set);
@@ -374,6 +387,9 @@ TEMPLATE_TEST_CASE(
   auto hypercube2 = ColMajorMatrix<TestType>(6, num_vectors(hypercube0));
   auto hypercube4 = ColMajorMatrix<TestType>(12, num_vectors(hypercube0));
 
+  std::vector<uint32_t> ids(num_vectors(hypercube0));
+  std::iota(begin(ids), end(ids), 0);
+
   for (size_t j = 0; j < 3; ++j) {
     for (size_t i = 0; i < num_vectors(hypercube4); ++i) {
       hypercube2(j, i) = hypercube0(j, i);
@@ -392,11 +408,11 @@ TEMPLATE_TEST_CASE(
     auto ivf_idx2 = ivf_pq_index<TestType, uint32_t, uint32_t>(
         /*128,*/ nlist, 2, 4, 1.e-4);  // dim nlist maxiter eps nthreads
     ivf_idx2.train_ivf(hypercube2);
-    ivf_idx2.add(hypercube2);
+    ivf_idx2.add(hypercube2, ids);
     auto ivf_idx4 = ivf_pq_index<TestType, uint32_t, uint32_t>(
         /*128,*/ nlist, 2, 4, 1.e-4);
     ivf_idx4.train_ivf(hypercube4);
-    ivf_idx4.add(hypercube4);
+    ivf_idx4.add(hypercube4, ids);
 
     auto top_k_ivf_scores = ColMajorMatrix<float>();
     auto top_k_ivf = ColMajorMatrix<unsigned>();
