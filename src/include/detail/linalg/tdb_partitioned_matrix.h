@@ -491,12 +491,15 @@ class tdbPartitionedMatrix
             std::to_string(max_resident_parts_));
       }
 
-      if ((num_resident_cols_ == 0 && num_resident_parts_ != 0) ||
-          (num_resident_cols_ != 0 && num_resident_parts_ == 0)) {
-        throw std::runtime_error("Invalid partitioning");
-      }
       if (num_resident_cols_ == 0) {
         return false;
+      }
+      if ((num_resident_cols_ == 0 && num_resident_parts_ != 0) ||
+          (num_resident_cols_ != 0 && num_resident_parts_ == 0)) {
+        throw std::runtime_error(
+            "Invalid partitioning, " + std::to_string(num_resident_cols_) +
+            " resident cols and " + std::to_string(num_resident_parts_) +
+            " resident parts");
       }
 
       if (this->part_index_.size() != max_resident_parts_ + 1) {
