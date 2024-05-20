@@ -462,11 +462,6 @@ class tdbPartitionedMatrix
       for (size_t i = first_resident_part_; i < total_num_parts_; ++i) {
         auto next_part_size = squashed_indices_[i + 1] - squashed_indices_[i];
 
-        // Continue if this partition is empty
-        if (next_part_size == 0) {
-          continue;
-        }
-
         if ((last_resident_col_ + next_part_size) >
             first_resident_col_ + column_capacity) {
           break;
@@ -621,9 +616,7 @@ class tdbPartitionedMatrix
     // this->num_vectors() =
     // this->num_partitions() =
     this->num_vectors_ = num_resident_cols_;
-    ;
     this->num_parts_ = num_resident_parts_;
-    ;
 
     num_loads_++;
     return true;
