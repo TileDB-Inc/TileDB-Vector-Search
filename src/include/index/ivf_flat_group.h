@@ -73,6 +73,7 @@ class ivf_flat_group : public base_index_group<index_type> {
       const std::string& version = std::string{""},
       uint64_t dimensions = 0)
       : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
+    Base::load();
   }
 
  public:

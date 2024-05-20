@@ -35,6 +35,8 @@
 
 #include <string>
 #include "detail/flat/qv.h"
+#include "index/ivf_flat_index.h"
+#include "index/ivf_pq_index.h"
 #include "linalg.h"
 #include "test/utils/array_defs.h"
 
@@ -154,23 +156,48 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
   size_t nlist;
   size_t nprobe;
 
-  siftsmall_test_init(tiledb::Context ctx, size_t nl)
+  siftsmall_test_init(
+      tiledb::Context ctx,
+      size_t nl,
+      size_t num_subspaces = 0,
+      size_t num_vectors = 0)
       : ctx_{ctx}
       , nlist(nl)
       , nprobe(std::min<size_t>(10, nlist))
-      , training_set(
-            tdbColMajorMatrix<feature_type>(ctx_, siftsmall_inputs_uri))
+      , training_set(tdbColMajorMatrix<feature_type>(
+            ctx_, siftsmall_inputs_uri, num_vectors))
       , query_set(tdbColMajorMatrix<feature_type>(ctx_, siftsmall_query_uri))
       , groundtruth_set(tdbColMajorMatrix<siftsmall_groundtruth_type>(
-            ctx_, siftsmall_groundtruth_uri))
-      , idx(/*128,*/ nlist, max_iter, tolerance) {
+            ctx_, siftsmall_groundtruth_uri)) {
+    if constexpr (std::is_same_v<
+                      IndexType,
+                      ivf_flat_index<feature_type, id_type, px_type>>) {
+      idx = IndexType(nlist, max_iter, tolerance);
+    } else if constexpr (std::is_same_v<
+                             IndexType,
+                             ivf_pq_index<feature_type, id_type, px_type>>) {
+      idx = IndexType(nlist, num_subspaces, max_iter, tolerance);
+    } else {
+      std::cout << "Unsupported index type" << std::endl;
+    }
+
     training_set.load();
     query_set.load();
     groundtruth_set.load();
     std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
         training_set, query_set, k_nn, 1, sum_of_squares_distance{});
 
-    idx.train(training_set);
+    if constexpr (std::is_same_v<
+                      IndexType,
+                      ivf_flat_index<feature_type, id_type, px_type>>) {
+      idx.train(training_set);
+    } else if constexpr (std::is_same_v<
+                             IndexType,
+                             ivf_pq_index<feature_type, id_type, px_type>>) {
+      idx.train_ivf(training_set);
+    } else {
+      std::cout << "Unsupported index type" << std::endl;
+    }
     idx.add(training_set);
   }
 
@@ -218,7 +245,6 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
       CHECK(intersections0 == (size_t)(num_vectors(top_k) * dimensions(top_k)));
       CHECK(recall0 == 1.0);
     }
-    CHECK(recall0 > .95);
 
     size_t intersections1 =
         (long)count_intersections(top_k_ivf, groundtruth_set, k_nn);
@@ -227,8 +253,22 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
       CHECK(intersections1 == (size_t)(num_vectors(top_k) * dimensions(top_k)));
       CHECK(recall1 == 1.0);
     }
-    CHECK(recall1 > 0.95);
 
+    if constexpr (std::is_same_v<
+                      IndexType,
+                      ivf_flat_index<feature_type, id_type, px_type>>) {
+      CHECK(recall0 > 0.95);
+      CHECK(recall1 > 0.95);
+
+    } else if constexpr (std::is_same_v<
+                             IndexType,
+                             ivf_pq_index<feature_type, id_type, px_type>>) {
+      CHECK(recall0 > 0.7);
+      CHECK(recall1 > 0.7);
+
+    } else {
+      std::cout << "Unsupported index type" << std::endl;
+    }
     // std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
   }
 };

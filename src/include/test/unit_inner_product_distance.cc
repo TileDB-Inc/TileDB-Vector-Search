@@ -29,9 +29,7 @@
  *
  * Test the inner product distance functions
  */
-
 #include <catch2/catch_all.hpp>
-#include "detail/linalg/matrix.h"
 #include "detail/scoring/inner_product.h"
 
 TEST_CASE(

@@ -192,7 +192,7 @@ TEST_CASE(
                             .string();
 
   size_t expected_ingestion = 867;
-  size_t expected_base = 5309;  // OMG, copilot filled in 5309 after I typed 867
+  size_t expected_base = 5309;
   size_t expected_partitions = 42;
   size_t expected_temp_size = 314159;
   size_t expected_dimension = 128;
