@@ -136,13 +136,11 @@ class ivf_pq_group : public base_index_group<index_type> {
         cached_ctx_, flat_ivf_centroids_uri(), 0, timestamp);
     tiledb::Array::delete_fragments(
         cached_ctx_, pq_ivf_centroids_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(cached_ctx_, ivf_index_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(cached_ctx_, ivf_ids_uri(), 0, timestamp);
     tiledb::Array::delete_fragments(
-        cached_ctx_, ivf_index_uri(), 0, timestamp);
-      tiledb::Array::delete_fragments(
-        cached_ctx_, ivf_ids_uri(), 0, timestamp);
-      tiledb::Array::delete_fragments(
         cached_ctx_, pq_ivf_vectors_uri(), 0, timestamp);
-      tiledb::Array::delete_fragments(
+    tiledb::Array::delete_fragments(
         cached_ctx_, distance_tables_uri(), 0, timestamp);
   }
 
@@ -158,7 +156,7 @@ class ivf_pq_group : public base_index_group<index_type> {
   auto append_num_partitions(size_t size) {
     metadata_.partition_history_.push_back(size);
   }
-  auto get_all_num_partitions() {
+  auto get_all_num_partitions() const {
     return metadata_.partition_history_;
   }
   auto set_num_partitions(size_t size) {

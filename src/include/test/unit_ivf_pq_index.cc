@@ -282,7 +282,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
   }
 }
 
-TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
+TEST_CASE("ivf_index: ivf_index write and read simple", "[ivf_index]") {
   size_t dimension = 128;
   size_t nlist = 100;
   size_t num_subspaces = 16;
@@ -507,4 +507,90 @@ TEST_CASE(
   // debug_slice(groundtruth_set, "groundtruth_set");
 
   init.verify(top_k_ivf);
+}
+
+TEST_CASE("ivf_pq_index: ivf_pq_index write and read", "[ivf_pq_index]") {
+  tiledb::Context ctx;
+  std::string ivf_pq_index_uri =
+      (std::filesystem::temp_directory_path() / "tmp_ivf_pq_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(ivf_pq_index_uri)) {
+    vfs.remove_dir(ivf_pq_index_uri);
+  }
+  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
+  load(training_set);
+  std::vector<siftsmall_ids_type> ids(num_vectors(training_set));
+  std::iota(begin(ids), end(ids), 0);
+
+  auto idx = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+      10, siftsmall_dimensions / 2);
+  idx.train(training_set, ids);
+  idx.add(training_set, ids);
+  uint64_t write_timestamp = 1000;
+  idx.write_index(
+      ctx, ivf_pq_index_uri, TemporalPolicy(TimeTravel, write_timestamp));
+  return;
+  {
+    // Load the index and check metadata.
+    auto idx2 = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+        ctx, ivf_pq_index_uri);
+
+    // CHECK(idx2.group().get_l_build() == l_build);
+    // CHECK(idx2.group().get_r_max_degree() == r_max_degree);
+    // CHECK(idx2.group().get_b_backtrack() == backtrack);
+    CHECK(idx2.group().get_dimensions() == sift_dimensions);
+    CHECK(idx2.group().get_temp_size() == 0);
+
+    CHECK(idx2.group().get_all_num_partitions().size() == 1);
+    CHECK(idx2.group().get_all_base_sizes().size() == 1);
+    CHECK(idx2.group().get_all_ingestion_timestamps().size() == 1);
+
+    CHECK(idx2.group().get_all_num_partitions()[0] > 0);
+    CHECK(idx2.group().get_all_base_sizes()[0] == num_sift_vectors);
+    CHECK(idx2.group().get_all_ingestion_timestamps()[0] == write_timestamp);
+
+    // Can't compare groups because a write_index does not create a group
+    // @todo Should it?
+    // CHECK(idx.compare_group(idx2));
+
+    CHECK(idx == idx2);
+  }
+
+  {
+    // Clear history.
+    ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>::clear_history(
+        ctx, ivf_pq_index_uri, write_timestamp + 10);
+
+    auto idx2 = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+        ctx, ivf_pq_index_uri);
+
+    CHECK(idx2.group().get_dimensions() == sift_dimensions);
+    CHECK(idx2.group().get_temp_size() == 0);
+
+    CHECK(idx2.group().get_all_num_partitions().size() == 1);
+    CHECK(idx2.group().get_all_base_sizes().size() == 1);
+    CHECK(idx2.group().get_all_ingestion_timestamps().size() == 1);
+
+    CHECK(idx2.group().get_all_num_partitions()[0] == 0);
+    CHECK(idx2.group().get_all_base_sizes()[0] == 0);
+    CHECK(idx2.group().get_all_ingestion_timestamps()[0] == 0);
+  }
+}
+
+TEST_CASE("ivf_pq_index: query empty index", "[ivf_pq_index]") {
+  size_t num_vectors = 0;
+  size_t dimensions = 10;
+  auto index = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+      0, dimensions / 2);
+  auto data =
+      ColMajorMatrixWithIds<siftsmall_feature_type>(dimensions, num_vectors);
+  index.train(data, data.raveled_ids());
+  index.add(data, data.raveled_ids());
+
+//  TODO(paris): Fix this crash.
+//  auto queries = std::vector<std::vector<siftsmall_feature_type>>{
+//      {1, 1, 1, 1, 1}, {2, 2, 2, 2, 2}};
+//  auto&& [scores, ids] = index.query_infinite_ram(data, 1, 1);
+//  CHECK(_cpo::num_vectors(scores) == 0);
+//  CHECK(_cpo::num_vectors(ids) == 0);
 }

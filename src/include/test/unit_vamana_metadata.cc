@@ -194,7 +194,7 @@ TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
     CHECK(x.base_sizes_.size() == 1);
     CHECK(x.base_sizes_[0] == 333);
     CHECK(x.num_edges_history_.size() == 1);
-    
+
     auto write_group = tiledb::Group(ctx, uri, TILEDB_WRITE, cfg);
     x.store_metadata(write_group);
   }

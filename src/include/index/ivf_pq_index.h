@@ -300,7 +300,9 @@ class ivf_pq_index {
       , tol_(tol)
       , seed_{seed} {
     if (num_subspaces_ <= 0) {
-      throw std::runtime_error("num_subspaces (" + std::to_string(num_subspaces_) + ") must be greater than zero");
+      throw std::runtime_error(
+          "num_subspaces (" + std::to_string(num_subspaces_) +
+          ") must be greater than zero");
     }
     gen_.seed(seed_);
   }
@@ -433,12 +435,17 @@ class ivf_pq_index {
   auto train_pq(const V& training_set, kmeans_init init = kmeans_init::random) {
     dimensions_ = ::dimensions(training_set);
     if (num_subspaces_ <= 0) {
-      throw std::runtime_error("num_subspaces (" + std::to_string(num_subspaces_) + ") must be greater than zero");
+      throw std::runtime_error(
+          "num_subspaces (" + std::to_string(num_subspaces_) +
+          ") must be greater than zero");
     }
     sub_dimensions_ = dimensions_ / num_subspaces_;
     if (dimensions_ % num_subspaces_ != 0) {
       throw std::runtime_error(
-          "Dimension must be divisible by the number of subspaces - dimensions: " + std::to_string(dimensions_) + ", num_subspaces: " + std::to_string(num_subspaces_));
+          "Dimension must be divisible by the number of subspaces - "
+          "dimensions: " +
+          std::to_string(dimensions_) +
+          ", num_subspaces: " + std::to_string(num_subspaces_));
     }
 
     cluster_centroids_ =
@@ -680,8 +687,8 @@ class ivf_pq_index {
       const Array& training_set,
       const Vector& training_set_ids,
       Distance distance = Distance{}) {
-      train_ivf(training_set);
-    }
+    train_ivf(training_set);
+  }
 
   /**
    * @brief Build the index from a training set, given the centroids.  This
@@ -701,7 +708,11 @@ class ivf_pq_index {
       feature_vector_array Array,
       feature_vector Vector,
       class Distance = sum_of_squares_distance>
-  void add(const Array& training_set, const Vector& training_set_ids, bool debug = false, Distance distance = Distance{}) {
+  void add(
+      const Array& training_set,
+      const Vector& training_set_ids,
+      bool debug = false,
+      Distance distance = Distance{}) {
     debug_matrix(flat_ivf_centroids_, "flat_ivf_centroids_");
     train_pq(training_set);   // cluster_centroids_, distance_tables_
     train_ivf(training_set);  // flat_ivf_centroids_
@@ -856,11 +867,12 @@ class ivf_pq_index {
    * @return bool indicating success or failure of read
    */
   auto read_index_infinite() {
-    if (partitioned_pq_vectors_ &&
-        (::num_vectors(*partitioned_pq_vectors_) != 0 ||
-         ::num_vectors(partitioned_pq_vectors_->ids()) != 0)) {
-      throw std::runtime_error("Index already loaded");
-    }
+    // NOTE(paris): I think we can remove this b/c otherwise you can't open an
+    // index and then query it. if (partitioned_pq_vectors_ &&
+    //     (::num_vectors(*partitioned_pq_vectors_) != 0 ||
+    //      ::num_vectors(partitioned_pq_vectors_->ids()) != 0)) {
+    //   throw std::runtime_error("Index already loaded");
+    // }
 
     // Load all partitions for infinite query
     // Note that the constructor will move the infinite_parts vector
@@ -939,7 +951,8 @@ class ivf_pq_index {
    * @param ctx TileDB context
    * @param group_uri The URI of the TileDB group where the index will be saved
    * @param group_uri The URI of the TileDB group where the index will be saved
-   * @param temporal_policy If set, we'll use the end timestamp of the policy as the write timestamp.
+   * @param temporal_policy If set, we'll use the end timestamp of the policy as
+   * the write timestamp.
    * @param storage_version The storage version to use. If empty, use the most
    * defult version.
    * @return Whether the write was successful
@@ -1074,6 +1087,15 @@ class ivf_pq_index {
     return true;
   }
 
+  static void clear_history(
+      const tiledb::Context& ctx,
+      const std::string& group_uri,
+      uint64_t timestamp) {
+    auto write_group =
+        ivf_pq_group<ivf_pq_index>(ctx, group_uri, TILEDB_WRITE, {});
+    write_group.clear_history(timestamp);
+  }
+
   /*****************************************************************************
    *
    * Queries, infinite and finite.
@@ -1205,6 +1227,13 @@ class ivf_pq_index {
    * Getters. Note that we don't have a `num_vectors` because it isn't clear
    *what that means for a partitioned (possibly out-of-core) index.
    ***************************************************************************/
+  const ivf_pq_group<ivf_pq_index>& group() const {
+    if (!group_) {
+      throw std::runtime_error("No group available");
+    }
+    return *group_;
+  }
+
   auto dimensions() const {
     return dimensions_;
   }

@@ -39,22 +39,23 @@
 #include "test/utils/array_defs.h"
 #include "test/utils/test_utils.h"
 
-//TEST_CASE("ivf_pq_metadata: test test", "[ivf_pq_metadata]") {
-//  REQUIRE(true);
-//}
+// TEST_CASE("ivf_pq_metadata: test test", "[ivf_pq_metadata]") {
+//   REQUIRE(true);
+// }
 //
-//TEST_CASE("ivf_pq_metadata: default constructor", "[ivf_pq_metadata]") {
-//  auto x = ivf_pq_metadata();
-//  ivf_pq_metadata y;
-//}
+// TEST_CASE("ivf_pq_metadata: default constructor", "[ivf_pq_metadata]") {
+//   auto x = ivf_pq_metadata();
+//   ivf_pq_metadata y;
+// }
 //
-//TEST_CASE("ivf_pq_metadata: default constructor compare", "[ivf_pq_metadata]") {
-//  auto x = ivf_pq_metadata();
-//  ivf_pq_metadata y;
+// TEST_CASE("ivf_pq_metadata: default constructor compare",
+// "[ivf_pq_metadata]") {
+//   auto x = ivf_pq_metadata();
+//   ivf_pq_metadata y;
 //
-//  CHECK(x.compare_metadata(y));
-//  CHECK(y.compare_metadata(x));
-//}
+//   CHECK(x.compare_metadata(y));
+//   CHECK(y.compare_metadata(x));
+// }
 
 TEST_CASE("ivf_pq_metadata: load metadata from index", "[ivf_pq_metadata]") {
   tiledb::Context ctx;
@@ -67,8 +68,7 @@ TEST_CASE("ivf_pq_metadata: load metadata from index", "[ivf_pq_metadata]") {
     vfs.remove_dir(uri);
   }
   std::cout << "idx() ~~~~~~~~~~~~~~~~" << std::endl;
-  auto idx =
-      ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(0, 16);
+  auto idx = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(0, 16);
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
@@ -87,27 +87,27 @@ TEST_CASE("ivf_pq_metadata: load metadata from index", "[ivf_pq_metadata]") {
     auto training_vectors =
         ColMajorMatrixWithIds<siftsmall_feature_type, siftsmall_ids_type>(
             128, 0);
-      std::cout << "idx.train() ~~~~~~~~~~~~~~~~" << std::endl;
+    std::cout << "idx.train() ~~~~~~~~~~~~~~~~" << std::endl;
     idx.train(training_vectors, training_vectors.raveled_ids());
     std::cout << "idx.add() ~~~~~~~~~~~~~~~~" << std::endl;
     idx.add(training_vectors, training_vectors.raveled_ids());
     std::cout << "idx.write_index() ~~~~~~~~~~~~~~~~" << std::endl;
     idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 0));
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
-   std::vector<std::tuple<std::string, std::string>> expected_str{
-       {"dataset_type", "vector_search"},
-       {"index_type", "IVF_PQ"},
-       {"storage_version", current_storage_version},
-       {"dtype", "float32"},
-       {"feature_type", "float32"},
-       {"id_type", "uint64"},
-       {"indices_type", "uint64"},
-       {"ingestion_timestamps", "[0]"},
-       {"base_sizes", "[0]"},
-       {"partition_history", "[0]"},
-   };
-   validate_metadata(read_group, expected_str, expected_arithmetic);
-    
+    std::vector<std::tuple<std::string, std::string>> expected_str{
+        {"dataset_type", "vector_search"},
+        {"index_type", "IVF_PQ"},
+        {"storage_version", current_storage_version},
+        {"dtype", "float32"},
+        {"feature_type", "float32"},
+        {"id_type", "uint64"},
+        {"indices_type", "uint64"},
+        {"ingestion_timestamps", "[0]"},
+        {"base_sizes", "[0]"},
+        {"partition_history", "[0]"},
+    };
+    validate_metadata(read_group, expected_str, expected_arithmetic);
+
     auto x = ivf_pq_metadata();
     x.load_metadata(read_group);
     CHECK(x.ingestion_timestamps_.size() == 1);
@@ -117,7 +117,8 @@ TEST_CASE("ivf_pq_metadata: load metadata from index", "[ivf_pq_metadata]") {
     CHECK(x.partition_history_.size() == 1);
     CHECK(x.partition_history_[0] == 0);
   }
-  std::cout << "------------------------------------------------------------" << std::endl;
+  std::cout << "------------------------------------------------------------"
+            << std::endl;
   {
     // Check that we can overwrite the last ingestion_timestamps, base_sizes,
     // and num_edges_history. We rely on this when creating an index from Python

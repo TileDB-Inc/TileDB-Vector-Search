@@ -185,8 +185,8 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     query_set.load();
     groundtruth_set.load();
 
-  std::vector<id_type> ids(_cpo::num_vectors(training_set));
-  std::iota(begin(ids), end(ids), 0);
+    std::vector<id_type> ids(_cpo::num_vectors(training_set));
+    std::iota(begin(ids), end(ids), 0);
 
     std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
         training_set, query_set, k_nn, 1, sum_of_squares_distance{});
