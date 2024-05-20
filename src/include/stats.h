@@ -222,42 +222,20 @@ static auto dump_logs = [](std::string filename,
   }
 };
 
-#ifdef JSON_LOGGING
-static auto config_log(const std::string& program_name) {
-  std::string uuid_;
-  char host_[16];
-  std::string date_;
-  std::size_t uuid_size_ = 24;
-
-  auto seed = std::random_device();
-  auto gen = std::mt19937(seed());
-  auto dis = std::uniform_int_distribution<int8_t>(97, 122);
-  uuid_.resize(uuid_size_);
-  std::generate(uuid_.begin(), uuid_.end(), [&] { return dis(gen); });
-
-  if (int e = gethostname(host_, sizeof(host_))) {
-    std::cerr << "truncated host name\n";
-    strncpy(host_, "ghost", 15);
-  }
-  {
-    std::stringstream ss;
-    std::time_t currentTime = std::time(nullptr);
-    std::string dateString = std::ctime(&currentTime);
-    dateString.erase(dateString.find('\n'));
-    ss << dateString;
-    date_ = ss.str();
-  }
+static auto build_config() {
+  // This is failing today, but could perhaps be added back in the future.
+  // char host_[16];
+  // if (int e = gethostname(host_, sizeof(host_))) {
+  //   std::cerr << "truncated host name\n";
+  //   strncpy(host_, "ghost", 15);
+  // }
 
   auto&& [major, minor, patch] = tiledb::version();
 
   json config = {
-      {"uuid", uuid_},
-      {"host", host_},
-      {"Program", program_name},
-      {"Build_date", CURRENT_DATETIME},
-      {"Run_date", date_},
-      {"cmake_source_dir", CMAKE_SOURCE_DIR},
-      {"Build", BUILD_TYPE},
+      {"CURRENT_DATETIME", CURRENT_DATETIME},
+      {"CMAKE_SOURCE_DIR", CMAKE_SOURCE_DIR},
+      {"BUILD_TYPE", BUILD_TYPE},
       {"Compiler",
        {{"CXX_COMPILER", IVF_HACK_CXX_COMPILER},
         {"CXX_COMPILER_ID", CXX_COMPILER_ID},
@@ -296,6 +274,5 @@ auto args_log(const Args& args) {
   }
   return arg_log;
 }
-#endif  // JSON_LOGGING
 
 #endif  // TDB_STATS_H
