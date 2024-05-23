@@ -74,6 +74,8 @@ kmeans_add_test(unit_api_flat_l2_index)
 
 kmeans_add_test(unit_api_ivf_flat_index)
 
+kmeans_add_test(unit_api_ivf_pq_index)
+
 kmeans_add_test(unit_api_vamana_index)
 
 kmeans_add_test(unit_array_defs)

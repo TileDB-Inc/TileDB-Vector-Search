@@ -107,8 +107,6 @@ class ivf_flat_index {
 
   using centroids_storage_type = ColMajorMatrix<centroid_feature_type>;
 
-  constexpr static const IndexKind index_kind_ = IndexKind::IVFFlat;
-
   /****************************************************************************
    * Index group information
    ****************************************************************************/
@@ -331,6 +329,11 @@ class ivf_flat_index {
     }
     std::cout << std::endl;
 #endif
+  }
+
+  template <feature_vector_array Array, feature_vector Vector>
+  void add(const Array& training_set, const Vector& training_set_ids) {
+    add(training_set);
   }
 
   /**

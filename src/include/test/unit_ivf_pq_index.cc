@@ -79,6 +79,21 @@ void debug_flat_ivf_centroids(auto& index) {
   std::cout << std::endl;
 }
 
+TEST_CASE("ivf_pq_index: construct different types", "[ivf_pq_index]") {
+  ivf_pq_index<int8_t,  uint32_t, uint32_t>index1{};
+  ivf_pq_index<uint8_t, uint32_t, uint32_t>index2{};
+  ivf_pq_index<float,   uint32_t, uint32_t>index3{};
+  ivf_pq_index<int8_t,  uint32_t, uint64_t>index4{};
+  ivf_pq_index<uint8_t, uint32_t, uint64_t>index5{};
+  ivf_pq_index<float,   uint32_t, uint64_t>index6{};
+  ivf_pq_index<int8_t,  uint64_t, uint32_t>index7{};
+  ivf_pq_index<uint8_t, uint64_t, uint32_t>index8{};
+  ivf_pq_index<float,   uint64_t, uint32_t>index9{};
+  ivf_pq_index<int8_t,  uint64_t, uint64_t>index10{};
+  ivf_pq_index<uint8_t, uint64_t, uint64_t>index11{};
+  ivf_pq_index<float,   uint64_t, uint64_t>index12{};
+}
+
 TEST_CASE("ivf_pq_index: default construct two", "[ivf_pq_index]") {
   ivf_pq_index<float, uint32_t, uint32_t> x;
   ivf_pq_index<float, uint32_t, uint32_t> y;

@@ -214,7 +214,7 @@ inline float unroll4_sum_of_squares(const V& a, const W& b) {
  * Unrolled l2 distance between vector of uint8_t and vector of float
  */
 template <feature_vector V, feature_vector W>
-  requires(std::same_as<typename V::value_type, uint8_t> ||
+  requires (std::same_as<typename V::value_type, uint8_t> ||
            std::same_as<typename V::value_type, int8_t>) &&
           std::same_as<typename W::value_type, float>
 inline float unroll4_sum_of_squares(const V& a, const W& b) {
@@ -241,7 +241,7 @@ inline float unroll4_sum_of_squares(const V& a, const W& b) {
  * Unrolled l2 distance between vector of uint8_t and vector of uint8_t
  */
 template <feature_vector V, feature_vector W>
-  requires(std::same_as<typename V::value_type, uint8_t> ||
+  requires (std::same_as<typename V::value_type, uint8_t> ||
            std::same_as<typename V::value_type, int8_t>) &&
           (std::same_as<typename W::value_type, uint8_t> ||
            std::same_as<typename W::value_type, int8_t>)
@@ -292,7 +292,8 @@ inline float naive_sum_of_squares(
  */
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
-           std::same_as<typename W::value_type, uint8_t>
+           (std::same_as<typename W::value_type, uint8_t> ||
+            std::same_as<typename W::value_type, int8_t>)
 inline float naive_sum_of_squares(
     const V& a, const W& b, size_t start, size_t stop) {
   float sum = 0.0;
@@ -307,7 +308,8 @@ inline float naive_sum_of_squares(
  * Compute l2 distance between vector of uint8_t and vector of float
  */
 template <feature_vector V, feature_vector W>
-  requires std::same_as<typename V::value_type, uint8_t> &&
+  requires (std::same_as<typename V::value_type, uint8_t> ||
+            std::same_as<typename V::value_type, int8_t>) &&
            std::same_as<typename W::value_type, float>
 inline float naive_sum_of_squares(
     const V& a, const W& b, size_t start, size_t stop) {
@@ -323,8 +325,10 @@ inline float naive_sum_of_squares(
  * Compute l2 distance between vector of uint8_t and vector of uint8_t
  */
 template <feature_vector V, feature_vector W>
-  requires std::same_as<typename V::value_type, uint8_t> &&
-           std::same_as<typename W::value_type, uint8_t>
+  requires (std::same_as<typename V::value_type, uint8_t> ||
+            std::same_as<typename V::value_type, int8_t>) &&
+           (std::same_as<typename W::value_type, uint8_t> ||
+            std::same_as<typename W::value_type, int8_t>)
 inline float naive_sum_of_squares(
     const V& a, const W& b, size_t start, size_t stop) {
   float sum = 0.0;
@@ -375,7 +379,8 @@ inline float unroll4_sum_of_squares(
  */
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
-           std::same_as<typename W::value_type, uint8_t>
+           (std::same_as<typename W::value_type, uint8_t> ||
+            std::same_as<typename W::value_type, int8_t>)
 inline float unroll4_sum_of_squares(
     const V& a, const W& b, size_t begin, size_t end) {
   size_t loops = 4 * ((end - begin) / 4);
@@ -401,7 +406,8 @@ inline float unroll4_sum_of_squares(
  * Unrolled l2 distance between vector of uint8_t and vector of float
  */
 template <feature_vector V, feature_vector W>
-  requires std::same_as<typename V::value_type, uint8_t> &&
+  requires (std::same_as<typename V::value_type, uint8_t> ||
+            std::same_as<typename V::value_type, int8_t>) &&
            std::same_as<typename W::value_type, float>
 inline float unroll4_sum_of_squares(
     const V& a, const W& b, size_t begin, size_t end) {
@@ -428,8 +434,10 @@ inline float unroll4_sum_of_squares(
  * Unrolled l2 distance between vector of uint8_t and vector of uint8_t
  */
 template <feature_vector V, feature_vector W>
-  requires std::same_as<typename V::value_type, uint8_t> &&
-           std::same_as<typename W::value_type, uint8_t>
+  requires (std::same_as<typename V::value_type, uint8_t> ||
+            std::same_as<typename V::value_type, int8_t>) &&
+           (std::same_as<typename W::value_type, uint8_t> ||
+            std::same_as<typename W::value_type, int8_t>)
 inline float unroll4_sum_of_squares(
     const V& a, const W& b, size_t begin, size_t end) {
   size_t loops = 4 * ((end - begin) / 4);

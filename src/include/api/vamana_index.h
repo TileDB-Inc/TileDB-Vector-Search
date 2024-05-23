@@ -413,14 +413,6 @@ class IndexVamana {
       impl_index_.add(fspan);
     }
 
-    [[nodiscard]] auto query(
-        const tiledb::Context& ctx,
-        const URI& uri,
-        size_t top_k,
-        std::optional<size_t> opt_L) {
-      return impl_index_.query(ctx, uri, top_k, opt_L);
-    }
-
     /**
      * @brief Query the index with the given vectors.  The concrete query
      * function returns a tuple of arrays, which are type erased and returned as

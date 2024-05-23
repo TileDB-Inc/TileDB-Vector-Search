@@ -382,10 +382,10 @@ void train_no_init(
 #endif
 }
 
-template <class T, class U>
+template <feature_vector_array V, feature_vector_array C>
 void sub_kmeans_random_init(
-    const ColMajorMatrix<T>& training_set,
-    ColMajorMatrix<U>& centroids,
+    const V& training_set,
+    C& centroids,
     size_t sub_begin,
     size_t sub_end,
     size_t seed = 0) {

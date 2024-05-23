@@ -139,7 +139,7 @@ class ivf_pq_index {
 
   // @todo IMPORTANT: Use a uint64_t to store 8 bytes together -- should make
   // loads and other operations faster and SIMD friendly
-  using pq_code_type = uint8_t;
+  using pq_code_type = feature_type; //uint8_t;
 
   using pq_vector_feature_type = pq_code_type;
 
@@ -187,9 +187,6 @@ class ivf_pq_index {
   using tdb_cluster_centroid_storage_type =
       tdbColMajorMatrix<flat_vector_feature_type>;
 
-  constexpr static const IndexKind index_kind_ =
-      IndexKind::IVFPQ;  // was: IVFFlat
-
   /****************************************************************************
    * Index group information
    ****************************************************************************/
@@ -232,10 +229,10 @@ class ivf_pq_index {
   float tol_{1.e-4};
   float reassign_ratio_{0.075};
 
-  // Some parameters for performing kmeans clustering for pq compression
-  uint64_t pq_max_iter_{1};         // new for pq
-  float pq_tol_{1.e-4};             // new for pq
-  float pq_reassign_ratio_{0.075};  // new for pq
+  // Some parameters for performing kmeans clustering for pq compression. Only used in IVF PQ, not in IVF Flat.
+  uint64_t pq_max_iter_{1};         
+  float pq_tol_{1.e-4};             
+  float pq_reassign_ratio_{0.075};  
 
   // Some parameters for execution
   uint64_t num_threads_{std::thread::hardware_concurrency()};
@@ -592,14 +589,22 @@ class ivf_pq_index {
   }
 
   // @todo Parameterize by Distance
-  auto make_pq_distance_asymmetric() {
-    using A = std::span<feature_type>;  // @todo: Don't hardcode span
-    using B = decltype(pq_storage_type{}[0]);
+  template <typename queries_feature_type, typename index_feature_type>
+  auto make_pq_distance_asymmetric() const {
+    // using A = std::span<feature_type>;  // @todo: Don't hardcode span
+    // using B = decltype(pq_storage_type{}[0]);
+    
+    using A = queries_feature_type;
+    using B = index_feature_type;
+
+    // This works:
+    // using A = std::span<float>;
+    // using B = std::span<uint8_t>;
 
     // @todo Do we need to worry about function call overhead here?
     struct pq_distance {
       const ivf_pq_index* outer_;
-      inline float operator()(const A& a, const B& b) {
+      inline float operator()(A& a, const B& b) {
         return outer_->sub_distance_asymmetric(a, b);
       }
     };
@@ -619,10 +624,7 @@ class ivf_pq_index {
    */
   template <feature_vector_array V, class Distance = sum_of_squares_distance>
   void kmeans_pp(const V& training_set) {
-    ::kmeans_pp<
-        std::remove_cvref_t<V>,
-        decltype(flat_ivf_centroids_),
-        Distance>(
+    ::kmeans_pp<std::remove_cvref_t<V>, decltype(flat_ivf_centroids_), Distance>(
         training_set, flat_ivf_centroids_, num_partitions_, num_threads_);
   }
 
@@ -651,8 +653,7 @@ class ivf_pq_index {
       case (kmeans_init::none):
         break;
       case (kmeans_init::kmeanspp):
-        kmeans_pp<std::remove_cvref_t<decltype(training_set)>, Distance>(
-            training_set);
+        kmeans_pp<std::remove_cvref_t<decltype(training_set)>, Distance>(training_set);
         break;
       case (kmeans_init::random):
         kmeans_random_init(training_set);
@@ -1136,6 +1137,18 @@ class ivf_pq_index {
    *
    ****************************************************************************/
 
+  template <feature_vector_array Q>
+  auto query(QueryType queryType, const Q& query_vectors, size_t k_nn, size_t nprobe) {
+    switch (queryType) {
+      case QueryType::InfiniteRAM:
+        return query_infinite_ram(query_vectors, k_nn, nprobe);
+      case QueryType::FiniteRAM:
+        return query_finite_ram(query_vectors, k_nn, nprobe);
+      default:
+        throw std::runtime_error("Invalid query type");
+    }  
+  }
+
   /**
    * @brief Perform a query on the index, returning the nearest neighbors
    * and distances.  The function returns a matrix containing k_nn nearest
@@ -1171,7 +1184,12 @@ class ivf_pq_index {
         active_queries,
         k_nn,
         num_threads_,
-        make_pq_distance_asymmetric());
+        make_pq_distance_asymmetric<
+        decltype(Q{}[0]), decltype(pq_storage_type{}[0])>());
+
+// using A = std::span<feature_type>;  // @todo: Don't hardcode span
+    // using B = decltype(pq_storage_type{}[0]);
+
   }
 
   /**
@@ -1220,7 +1238,12 @@ class ivf_pq_index {
         k_nn,
         upper_bound,
         num_threads_,
-        make_pq_distance_asymmetric());
+        make_pq_distance_asymmetric<
+          // std::span<float>, 
+          decltype(Q{}[0]),
+          decltype(pq_storage_type{}[0])
+        >()
+        );
   }
 
   /***************************************************************************
@@ -1259,6 +1282,10 @@ class ivf_pq_index {
 
   auto num_clusters() const {
     return num_clusters_;
+  }
+
+  TemporalPolicy temporal_policy() const {
+    return temporal_policy_;
   }
 
   /***************************************************************************
