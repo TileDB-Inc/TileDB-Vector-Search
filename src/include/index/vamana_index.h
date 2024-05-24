@@ -670,6 +670,18 @@ class vamana_index {
     return num_vectors_;
   }
 
+  constexpr auto l_build() const {
+    return l_build_;
+  }
+
+  constexpr auto r_max_degree() const {
+    return r_max_degree_;
+  }
+
+  constexpr auto b_backtrack() const {
+    return b_backtrack_;
+  }
+
   /**
    * @brief Write the index to a TileDB group. The group consists of the
    * original feature vectors, and the graph index, which comprises the

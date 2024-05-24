@@ -225,12 +225,12 @@ class ivf_pq_index {
   // flat_storage_type unpartitioned_pq_vectors_;
 
   // Some parameters for performing kmeans clustering for ivf index
-  uint64_t max_iter_{1};
+  uint64_t max_iterations_{1};
   float tol_{1.e-4};
   float reassign_ratio_{0.075};
 
   // Some parameters for performing kmeans clustering for pq compression. Only used in IVF PQ, not in IVF Flat.
-  uint64_t pq_max_iter_{1};         
+  uint64_t pq_max_iterations_{1};         
   float pq_tol_{1.e-4};             
   float pq_reassign_ratio_{0.075};  
 
@@ -293,7 +293,7 @@ class ivf_pq_index {
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
       , num_partitions_(nlist)
       , num_subspaces_{num_subspaces}  // new for pq
-      , max_iter_(max_iter)
+      , max_iterations_(max_iter)
       , tol_(tol)
       , seed_{seed} {
     if (num_subspaces_ <= 0) {
@@ -406,7 +406,7 @@ class ivf_pq_index {
    * create `distance_tables_`. We measure the maximum number of iterations and
    * minimum convergence over all of the subspaces and return a tuple of those
    * values. We compute all of the distance_tables_ regarless of the values of
-   * max_local_iters_taken or min_local_conv relative to max_iter_ and tol_.
+   * max_local_iters_taken or min_local_conv relative to max_iterations_ and tol_.
    *
    * @tparam V type of the training vectors
    * @tparam SubDistance type of the distance function to use for encoding.
@@ -490,7 +490,7 @@ class ivf_pq_index {
           sub_end,
           num_clusters_,
           tol_,
-          max_iter_,
+          max_iterations_,
           num_threads_);
 
       max_local_iters_taken = std::max(max_local_iters_taken, iters);
@@ -668,7 +668,7 @@ class ivf_pq_index {
         flat_ivf_centroids_,
         dimensions_,
         num_partitions_,
-        max_iter_,
+        max_iterations_,
         tol_,
         num_threads_,
         reassign_ratio_);
@@ -712,7 +712,6 @@ class ivf_pq_index {
   void add(
       const Array& training_set,
       const Vector& training_set_ids,
-      bool debug = false,
       Distance distance = Distance{}) {
     debug_matrix(flat_ivf_centroids_, "flat_ivf_centroids_");
     train_pq(training_set);   // cluster_centroids_, distance_tables_
@@ -1286,6 +1285,26 @@ class ivf_pq_index {
 
   TemporalPolicy temporal_policy() const {
     return temporal_policy_;
+  }
+
+  auto max_iterations() const {
+    return max_iterations_;
+  }
+
+  auto tol() const {
+    return tol_;
+  }
+
+  auto num_threads() const {
+    return num_threads_;
+  }
+
+  auto reassign_ratio() const {
+    return reassign_ratio_;
+  }
+
+  auto nlist() const {
+    return num_partitions_;
   }
 
   /***************************************************************************

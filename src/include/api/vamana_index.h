@@ -174,16 +174,12 @@ class IndexVamana {
     if (dispatch_table.find(type) == dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
-    // If we loaded an existing index, we should use the timestamp from it.
-    std::optional<TemporalPolicy> temporal_policy =
-        index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
-                 std::nullopt;
     index_ = dispatch_table.at(type)(
         training_set.num_vectors(),
-        l_build_,
-        r_max_degree_,
-        b_backtrack_,
-        temporal_policy);
+        index_ ? index_->l_build() : l_build_,
+        index_ ? index_->r_max_degree() : r_max_degree_,
+        index_ ? index_->b_backtrack() : b_backtrack_,
+        index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) : std::nullopt);
 
     index_->train(training_set);
 

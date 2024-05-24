@@ -177,16 +177,12 @@ class IndexIVFPQ {
     if (dispatch_table.find(type) == dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
-    // If we loaded an existing index, we should use the timestamp from it.
-    std::optional<TemporalPolicy> temporal_policy =
-        index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
-                 std::nullopt;
     index_ = dispatch_table.at(type)(
-        n_list_,
-        num_subspaces_,
-        max_iterations_,
-        tol_,
-        temporal_policy);
+        index_ ? index_->nlist() : n_list_,
+        index_ ? index_->num_subspaces() : num_subspaces_,
+        index_ ? index_->max_iterations() : max_iterations_,
+        index_ ? index_->tol() : tol_,
+        index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) : std::nullopt);
 
     index_->train(training_set);
 
@@ -306,7 +302,7 @@ class IndexIVFPQ {
     std::vector<metadata_element> metadata{
         {"feature_datatype", feature_datatype, TILEDB_UINT32},
         {"id_datatype", id_datatype, TILEDB_UINT32},
-        {"partitioning_index_datatype",
+        {"px_datatype",
          partitioning_index_datatype,
          TILEDB_UINT32}};
 
@@ -350,6 +346,10 @@ class IndexIVFPQ {
 
     [[nodiscard]] virtual size_t dimensions() const = 0;
     [[nodiscard]] virtual TemporalPolicy temporal_policy() const = 0;
+    [[nodiscard]] virtual uint64_t nlist() const = 0;
+    [[nodiscard]] virtual uint64_t num_subspaces() const = 0;
+    [[nodiscard]] virtual uint64_t max_iterations() const = 0;
+    [[nodiscard]] virtual uint64_t tol() const = 0;
   };
 
   /**
@@ -482,6 +482,19 @@ class IndexIVFPQ {
       return impl_index_.temporal_policy();
     }
 
+  uint64_t nlist() const override {
+    return impl_index_.nlist();
+  }
+  uint64_t num_subspaces() const override {
+    return impl_index_.num_subspaces();
+  }
+  uint64_t max_iterations() const override {
+    return impl_index_.max_iterations();
+  }
+  uint64_t tol() const override {
+    return impl_index_.tol();
+  }
+
    private:
     /**
      * @brief Instance of the concrete class.
@@ -503,11 +516,11 @@ class IndexIVFPQ {
   static const clear_history_table_type clear_history_dispatch_table;
   // clang-format on
 
-  size_t dimensions_ = 0;
-  size_t n_list_ = 0;
-  size_t num_subspaces_ = 0;
-  size_t max_iterations_ = 0;
-  float tol_ = 0.f;
+  size_t dimensions_{0};
+  size_t n_list_{0};
+  size_t num_subspaces_{16};
+  size_t max_iterations_{2};
+  float tol_{0.000025f};
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
   tiledb_datatype_t partitioning_index_datatype_{TILEDB_ANY};
