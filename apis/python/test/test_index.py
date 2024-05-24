@@ -263,6 +263,7 @@ def test_vamana_queries(tmp_path):
     )
     index = index.consolidate_updates()
     print("index.query() ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    queries = np.array([[2, 2, 2]], dtype=np.float32)
     distances, ids = index.query(queries, k=1, mode=Mode.REALTIME, verbose=True)
     print("distances:", distances)
     print("ids:", ids)
