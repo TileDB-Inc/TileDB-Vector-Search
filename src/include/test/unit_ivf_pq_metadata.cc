@@ -1,11 +1,11 @@
 /**
- * @file  unit_gen_graphs.cc
+ * @file   unit_ivf_pq_metadata.h
  *
  * @section LICENSE
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2023 TileDB, Inc.
+ * @copyright Copyright (c) 2024 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,29 +27,17 @@
  *
  * @section DESCRIPTION
  *
- * Program to test performance of different min-heap implementations.
- *
  */
 
 #include <catch2/catch_all.hpp>
+#include <tiledb/tiledb>
+#include "index/ivf_pq_metadata.h"
 
-#include "test/utils/gen_graphs.h"
-#include "utils/print_types.h"
-
-TEST_CASE("gen_graphs: test test", "[gen_graphs]") {
+TEST_CASE("ivf_pq_metadata: test test", "[ivf_pq_metadata]") {
   REQUIRE(true);
 }
 
-TEST_CASE("gen_graphs: unigrid", "[gen_graphs]") {
-  auto&& [vecs, edges] = gen_uni_grid(5, 7);
-
-  dump_coordinates("coords.txt", vecs);
-  dump_edgelist("edges.txt", edges);
-}
-
-TEST_CASE("gen_graphs: bigrid", "[gen_graphs]") {
-  auto&& [vecs, edges] = gen_bi_grid(5, 7);
-
-  dump_coordinates("coords.txt", vecs);
-  dump_edgelist("edges.txt", edges);
+TEST_CASE("ivf_pq_metadata: default constructor", "[ivf_pq_metadata]") {
+  auto x = ivf_pq_metadata();
+  ivf_pq_metadata y;
 }

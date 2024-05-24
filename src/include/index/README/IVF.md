@@ -4,7 +4,7 @@ There are four primary classes in the `IVFFlatIndex` design:
 
 1. `IVFFlatIndex`: The type-erased C++ class interface to an IVF index.
 2. `ivf_flat_index`: The typed C++ class that implements the IVF index.
-3. `ivf_flat_index_group`: The C++ class that represents the TileDB comprising the arrays that make up the IVF index (centroids, partititioned vectors, partitioned ids, index, etc.).
+3. `ivf_flat_group`: The C++ class that represents the TileDB comprising the arrays that make up the IVF index (centroids, partititioned vectors, partitioned ids, index, etc.).
 4. `ivf_flat_index_metadata`: The C++ class that represents the metadata for the group (types of the arrays, history of the group, etc.)
 
 ## Design Principles
@@ -22,14 +22,14 @@ on a partitioned feature vector array.
 
 The `ivf_flat_index` is simply an inverted index. It is not "aware" of anything
 having to do with TileDB arrays, including URIs, groups, arrays, metadata, and the
-like. That is all handled by the `ivf_flat_index_group` class.
+like. That is all handled by the `ivf_flat_group` class.
 
-The `ivf_flat_index_group` is the interface between the `ivf_flat_index` and the
+The `ivf_flat_group` is the interface between the `ivf_flat_index` and the
 TileDB index arrays. It contains all of the information necessary to fill the
 arrays in an `ivf_flat_index` at a given timestamp.
 
 The `ivf_flat_index_metadata` class encapsulates metadata in a class separate from
-`ivf_flat_index_group` for the sake of convenience.
+`ivf_flat_group` for the sake of convenience.
 
 ## Functionality
 
@@ -205,7 +205,7 @@ In the non-cloud case, insertions into the `vamana` (graph-based) indexes is ext
 
 ### `ivf_flat_index`
 
-### `ivf_flat_index_group`
+### `ivf_flat_group`
 
 ### `ivf_flat_index_metadata`
 

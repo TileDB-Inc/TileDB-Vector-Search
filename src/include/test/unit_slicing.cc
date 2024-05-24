@@ -33,7 +33,7 @@
 
 #include <catch2/catch_all.hpp>
 #include "../linalg.h"
-#include "array_defs.h"
+#include "test/utils/array_defs.h"
 
 std::string global_region = "us-east-1";
 

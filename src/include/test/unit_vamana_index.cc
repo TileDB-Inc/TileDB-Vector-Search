@@ -32,7 +32,6 @@
 
 #include <catch2/catch_all.hpp>
 
-#include "array_defs.h"
 #include "cpos.h"
 #include "detail/flat/qv.h"
 #include "detail/graph/adj_list.h"
@@ -41,11 +40,12 @@
 #include "detail/graph/nn-graph.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
-#include "gen_graphs.h"
-#include "graphs/tiny.h"
 #include "index/vamana_index.h"
-#include "query_common.h"
-#include "test_utils.h"
+#include "test/utils/array_defs.h"
+#include "test/utils/gen_graphs.h"
+#include "test/utils/query_common.h"
+#include "test/utils/test_utils.h"
+#include "test/utils/tiny_graphs.h"
 #include "utils/logging.h"
 #include "utils/utils.h"
 

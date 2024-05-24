@@ -27,17 +27,16 @@
  *
  * @section DESCRIPTION
  *
- * WIP.
  */
 
 #include <catch2/catch_all.hpp>
-#include <chrono>
-#include <iostream>
-#include <thread>
 
-#include "utils/logging.h"
-#include "utils/timer.h"
+#include "stats.h"
 
 TEST_CASE("stats: test test", "[stats]") {
   REQUIRE(true);
+}
+
+TEST_CASE("stats: test build_config", "[stats]") {
+  build_config();
 }

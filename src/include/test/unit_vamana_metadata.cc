@@ -33,11 +33,11 @@
 #include <tiledb/tiledb>
 #include <vector>
 #include "api/feature_vector_array.h"
-#include "array_defs.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "index/vamana_index.h"
 #include "index/vamana_metadata.h"
-#include "test_utils.h"
+#include "test/utils/array_defs.h"
+#include "test/utils/test_utils.h"
 
 TEST_CASE("vamana_metadata: test test", "[vamana_metadata]") {
   REQUIRE(true);
