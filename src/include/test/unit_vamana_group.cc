@@ -33,10 +33,6 @@
 #include "index/vamana_group.h"
 #include "test/utils/array_defs.h"
 
-TEST_CASE("vamana_group: test test", "[vamana_group]") {
-  REQUIRE(true);
-}
-
 struct dummy_index {
   using feature_type = float;
   using id_type = int;
@@ -54,8 +50,7 @@ struct dummy_index {
   constexpr static tiledb_datatype_t adjacency_ids_datatype = TILEDB_UINT64;
 };
 
-TEST_CASE(
-    "vamana_group: read constructor for non-existent group", "[vamana_group]") {
+TEST_CASE("read constructor for non-existent group", "[vamana_group]") {
   tiledb::Context ctx;
 
   CHECK_THROWS_WITH(
@@ -63,7 +58,7 @@ TEST_CASE(
       "Group uri I dont exist does not exist.");
 }
 
-TEST_CASE("vamana_group: write constructor - create", "[vamana_group]") {
+TEST_CASE("write constructor - create", "[vamana_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "vamana_group_test_write_constructor")
                             .string();
@@ -79,8 +74,7 @@ TEST_CASE("vamana_group: write constructor - create", "[vamana_group]") {
   CHECK(x.get_dimensions() == 10);
 }
 
-TEST_CASE(
-    "vamana_group: write constructor - create and open", "[vamana_group]") {
+TEST_CASE("write constructor - create and open", "[vamana_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "vamana_group_test_write_constructor")
                             .string();
@@ -100,8 +94,7 @@ TEST_CASE(
   CHECK(x.get_dimensions() == 10);
 }
 
-TEST_CASE(
-    "vamana_group: write constructor - create and read", "[vamana_group]") {
+TEST_CASE("write constructor - create and read", "[vamana_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "vamana_group_test_write_constructor")
                             .string();
@@ -131,9 +124,7 @@ TEST_CASE(
       vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
 }
 
-TEST_CASE(
-    "vamana_group: write constructor - invalid create and read",
-    "[vamana_group]") {
+TEST_CASE("write constructor - invalid create and read", "[vamana_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "vamana_group_test_write_constructor")
                             .string();
@@ -162,9 +153,7 @@ TEST_CASE(
       "No ingestion timestamps found.");
 }
 
-TEST_CASE(
-    "vamana_group: group metadata - bases, ingestions, partitions",
-    "[vamana_group]") {
+TEST_CASE("group metadata - bases, ingestions, partitions", "[vamana_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "vamana_group_test_write_constructor")
                             .string();
@@ -367,7 +356,7 @@ TEST_CASE(
   CHECK(x.get_dimensions() == expected_dimension + offset);
 }
 
-TEST_CASE("vamana_group: storage version", "[vamana_group]") {
+TEST_CASE("storage version", "[vamana_group]") {
   std::string tmp_uri =
       (std::filesystem::temp_directory_path() / "vamana_group").string();
 
@@ -424,7 +413,7 @@ TEST_CASE("vamana_group: storage version", "[vamana_group]") {
   CHECK(x.get_dimensions() == expected_dimension + offset);
 }
 
-TEST_CASE("vamana_group: invalid storage version", "[vamana_group]") {
+TEST_CASE("invalid storage version", "[vamana_group]") {
   std::string tmp_uri =
       (std::filesystem::temp_directory_path() / "vamana_group").string();
 
@@ -442,7 +431,7 @@ TEST_CASE("vamana_group: invalid storage version", "[vamana_group]") {
       10));
 }
 
-TEST_CASE("vamana_group: mismatched storage version", "[vamana_group]") {
+TEST_CASE("mismatched storage version", "[vamana_group]") {
   std::string tmp_uri =
       (std::filesystem::temp_directory_path() / "vamana_group").string();
 
@@ -466,7 +455,7 @@ TEST_CASE("vamana_group: mismatched storage version", "[vamana_group]") {
       "Version mismatch. Requested different_version but found 0.3");
 }
 
-TEST_CASE("vamana_group: clear history", "[vamana_group]") {
+TEST_CASE("clear history", "[vamana_group]") {
   std::string tmp_uri =
       (std::filesystem::temp_directory_path() / "vamana_group").string();
 

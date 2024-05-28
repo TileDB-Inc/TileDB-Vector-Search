@@ -32,8 +32,7 @@
 #include <catch2/catch_all.hpp>
 #include "detail/scoring/inner_product.h"
 
-TEST_CASE(
-    "inner_product_distance: simple vectors", "[inner_product_distance]") {
+TEST_CASE("simple vectors", "[inner_product_distance]") {
   auto u = std::vector<uint8_t>{1, 2, 3, 4};
   auto v = std::vector<uint8_t>{5, 6, 7, 8};
   auto x = std::vector<float>{1, 2, 3, 4};

@@ -39,16 +39,12 @@
 #include "test/utils/array_defs.h"
 #include "test/utils/test_utils.h"
 
-TEST_CASE("vamana_metadata: test test", "[vamana_metadata]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("vamana_metadata: default constructor", "[vamana_metadata]") {
+TEST_CASE("default constructor", "[vamana_metadata]") {
   auto x = vamana_index_metadata();
   vamana_index_metadata y;
 }
 
-TEST_CASE("vamana_metadata: default constructor compare", "[vamana_metadata]") {
+TEST_CASE("default constructor compare", "[vamana_metadata]") {
   auto x = vamana_index_metadata();
   vamana_index_metadata y;
 
@@ -56,7 +52,7 @@ TEST_CASE("vamana_metadata: default constructor compare", "[vamana_metadata]") {
   CHECK(y.compare_metadata(x));
 }
 
-TEST_CASE("vamana_metadata: load metadata from index", "[vamana_metadata]") {
+TEST_CASE("load metadata from index", "[vamana_metadata]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
 

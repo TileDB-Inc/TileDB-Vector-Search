@@ -137,8 +137,6 @@ int main(int argc, char* argv[]) {
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
-  // global_debug = args["--debug"].asBool();
-  // global_verbose = args["--verbose"].asBool();
   enable_stats = args["--stats"].asBool();
 
   auto part_uri = args["--parts_uri"].asString();

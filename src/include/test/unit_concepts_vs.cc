@@ -42,10 +42,6 @@
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "detail/linalg/vector.h"
 
-TEST_CASE("concepts_vs: test test", "[concepts_vs]") {
-  REQUIRE(true);
-}
-
 // Concepts:
 // 1. subscriptable_range
 // 2. callable
@@ -60,7 +56,7 @@ TEST_CASE("concepts_vs: test test", "[concepts_vs]") {
 // 11. contiguous_partitioned_feature_vector_array
 // 12. matrix_with_ids
 
-TEST_CASE("concepts_vs: Vector", "[concepts_vs]") {
+TEST_CASE("Vector", "[concepts_vs]") {
   CHECK(subscriptable_range<Vector<int>>);
   CHECK(subscriptable_range<Vector<double>>);
   CHECK(subscriptable_range<Vector<bool>>);
@@ -133,7 +129,7 @@ auto test_contiguous_feature_vector_array(const Matrix<int>& d) {
   return _contiguous_feature_vector_array(d);
 }
 
-TEST_CASE("concepts_vs: Matrix", "[concepts_vs]") {
+TEST_CASE("Matrix", "[concepts_vs]") {
   CHECK(!subscriptable_range<Matrix<int>>);
   CHECK(!subscriptable_range<Matrix<double>>);
   CHECK(!subscriptable_range<Matrix<bool>>);
@@ -179,7 +175,7 @@ TEST_CASE("concepts_vs: Matrix", "[concepts_vs]") {
   CHECK(!contiguous_partitioned_feature_vector_array<Matrix<bool>>);
 }
 
-TEST_CASE("concepts_vs: MatrixWithIds", "[concepts_vs]") {
+TEST_CASE("MatrixWithIds", "[concepts_vs]") {
   CHECK(!subscriptable_range<MatrixWithIds<int>>);
   CHECK(!subscriptable_range<MatrixWithIds<double>>);
   CHECK(!subscriptable_range<MatrixWithIds<bool>>);
@@ -225,7 +221,7 @@ TEST_CASE("concepts_vs: MatrixWithIds", "[concepts_vs]") {
   CHECK(!contiguous_partitioned_feature_vector_array<MatrixWithIds<bool>>);
 }
 
-TEST_CASE("concepts_vs: tdbMatrixWithIds", "[concepts_vs]") {
+TEST_CASE("tdbMatrixWithIds", "[concepts_vs]") {
   CHECK(!subscriptable_range<tdbMatrixWithIds<int>>);
   CHECK(!subscriptable_range<tdbMatrixWithIds<double>>);
   CHECK(!subscriptable_range<tdbMatrixWithIds<bool>>);
@@ -271,10 +267,10 @@ TEST_CASE("concepts_vs: tdbMatrixWithIds", "[concepts_vs]") {
   CHECK(!contiguous_partitioned_feature_vector_array<tdbMatrixWithIds<bool>>);
 }
 
-TEST_CASE("concepts_vs: tdbMatrix", "[concepts_vs]") {
+TEST_CASE("tdbMatrix", "[concepts_vs]") {
   REQUIRE(true);
 }
 
-TEST_CASE("concepts_vs: tdbPartitionedMatrix", "[concepts_vs]") {
+TEST_CASE("tdbPartitionedMatrix", "[concepts_vs]") {
   REQUIRE(true);
 }

@@ -45,13 +45,7 @@
 #include "test/utils/array_defs.h"
 #include "utils/print_types.h"
 
-TEST_CASE("backwards_compatibility: test test", "[backwards_compatibility]") {
-  REQUIRE(true);
-}
-
-TEST_CASE(
-    "backwards_compatibility: test_query_old_indices",
-    "[backwards_compatibility]") {
+TEST_CASE("test_query_old_indices", "[backwards_compatibility]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
 

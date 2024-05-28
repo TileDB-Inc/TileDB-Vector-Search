@@ -3,7 +3,7 @@
 #include <catch2/catch_all.hpp>
 #include <set>
 
-TEST_CASE("stl: basic set", "[set]") {
+TEST_CASE("basic set", "[set]") {
   std::set<int> s_a{1, 2, 3, 4, 5};
   CHECK(s_a.size() == 5);
   CHECK(*(s_a.begin()) == 1);
@@ -13,7 +13,7 @@ TEST_CASE("stl: basic set", "[set]") {
   CHECK(*(s_d.begin()) == 1);
 }
 
-TEST_CASE("stl: scalar set with less comparator", "[set]") {
+TEST_CASE("scalar set with less comparator", "[set]") {
   using set_type = std::set<size_t, std::less<size_t>>;
 
   set_type s_a{1, 2, 3, 4, 5};
@@ -25,7 +25,7 @@ TEST_CASE("stl: scalar set with less comparator", "[set]") {
   CHECK(*(s_d.begin()) == 1);
 }
 
-TEST_CASE("stl: scalar set with greater comparator", "[set]") {
+TEST_CASE("scalar set with greater comparator", "[set]") {
   using set_type = std::set<size_t, std::greater<size_t>>;
 
   set_type s_a{1, 2, 3, 4, 5};

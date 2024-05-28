@@ -33,11 +33,7 @@
 #include "catch2/catch_all.hpp"
 #include "test/utils/query_common.h"
 
-TEST_CASE("api_vamana_index: test test", "[api_vamana_index]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("api_vamana_index: init constructor", "[api_vamana_index]") {
+TEST_CASE("init constructor", "[api_vamana_index]") {
   SECTION("default") {
     auto a = IndexVamana();
     CHECK(a.feature_type() == TILEDB_ANY);
@@ -173,9 +169,7 @@ TEST_CASE("api_vamana_index: init constructor", "[api_vamana_index]") {
   }
 }
 
-TEST_CASE(
-    "api_vamana_index: create empty index and then train and query",
-    "[api_vamana_index]") {
+TEST_CASE("create empty index and then train and query", "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
   using id_type_type = uint32_t;
@@ -245,7 +239,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "api_vamana_index: create empty index and then train and query with "
+    "create empty index and then train and query with "
     "external IDs",
     "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
@@ -318,7 +312,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "api_vamana_index: create empty index and then train and query with sift",
+    "create empty index and then train and query with sift",
     "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
@@ -377,7 +371,7 @@ TEST_CASE(
   }
 }
 
-TEST_CASE("api_vamana_index: infer feature type", "[api_vamana_index]") {
+TEST_CASE("infer feature type", "[api_vamana_index]") {
   auto a = IndexVamana(std::make_optional<IndexOptions>(
       {{"id_type", "uint32"}, {"adjacency_row_index_type", "uint32"}}));
   auto ctx = tiledb::Context{};
@@ -388,7 +382,7 @@ TEST_CASE("api_vamana_index: infer feature type", "[api_vamana_index]") {
   CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
 }
 
-TEST_CASE("api_vamana_index: infer dimension", "[api_vamana_index]") {
+TEST_CASE("infer dimension", "[api_vamana_index]") {
   auto a = IndexVamana(std::make_optional<IndexOptions>(
       {{"id_type", "uint32"}, {"adjacency_row_index_type", "uint32"}}));
   auto ctx = tiledb::Context{};
@@ -401,8 +395,7 @@ TEST_CASE("api_vamana_index: infer dimension", "[api_vamana_index]") {
   CHECK(dimensions(a) == 128);
 }
 
-TEST_CASE(
-    "api_vamana_index: api_vamana_index write and read", "[api_vamana_index]") {
+TEST_CASE("api_vamana_index write and read", "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
   std::string api_vamana_index_uri =
       (std::filesystem::temp_directory_path() / "api_vamana_index").string();
@@ -428,7 +421,7 @@ TEST_CASE(
   CHECK(a.adjacency_row_index_type() == b.adjacency_row_index_type());
 }
 
-TEST_CASE("api_vamana_index: build index and query", "[api_vamana_index]") {
+TEST_CASE("build index and query", "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
   size_t nprobe = GENERATE(8, 32);
@@ -449,7 +442,7 @@ TEST_CASE("api_vamana_index: build index and query", "[api_vamana_index]") {
   CHECK(recall == 1.0);
 }
 
-TEST_CASE("api_vamana_index: read index and query", "[api_vamana_index]") {
+TEST_CASE("read index and query", "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
 
@@ -483,7 +476,7 @@ TEST_CASE("api_vamana_index: read index and query", "[api_vamana_index]") {
   CHECK(recall == 1.0);
 }
 
-TEST_CASE("api_vamana_index: storage_version", "[api_vamana_index]") {
+TEST_CASE("storage_version", "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
   using id_type_type = uint32_t;
@@ -540,9 +533,7 @@ TEST_CASE("api_vamana_index: storage_version", "[api_vamana_index]") {
   }
 }
 
-TEST_CASE(
-    "api_vamana_index: write and load index with timestamps",
-    "[api_vamana_index]") {
+TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
   using id_type_type = uint32_t;

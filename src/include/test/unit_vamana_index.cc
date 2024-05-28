@@ -54,13 +54,7 @@ namespace fs = std::filesystem;
 
 #include <tiledb/tiledb>
 
-bool global_debug = false;
-
-TEST_CASE("vamana: test test", "[vamana]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("vamana: diskann", "[vamana]") {
+TEST_CASE("diskann", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -191,7 +185,7 @@ TEST_CASE("vamana: diskann", "[vamana]") {
   //  }
 }
 
-TEST_CASE("vamana: small256 build index", "[vamana]") {
+TEST_CASE("small256 build index", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -234,7 +228,7 @@ TEST_CASE("vamana: small256 build index", "[vamana]") {
  * See DiskANN/rust//diskann/src/algorithm/search/search.rs
  * function search_for_point_works_with_edges()
  */
-TEST_CASE("vamana: small greedy search", "[vamana]") {
+TEST_CASE("small greedy search", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -455,7 +449,7 @@ TEST_CASE("vamana: small greedy search", "[vamana]") {
   */
 }
 
-TEST_CASE("vamana: greedy grid search", "[vamana]") {
+TEST_CASE("greedy grid search", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -545,7 +539,7 @@ TEST_CASE("vamana: greedy grid search", "[vamana]") {
   }
 }
 
-TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
+TEST_CASE("greedy search hypercube", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -600,7 +594,7 @@ TEST_CASE("vamana: greedy search hypercube", "[vamana]") {
   }
 }
 
-TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
+TEST_CASE("greedy search with nn descent", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -663,7 +657,7 @@ TEST_CASE("vamana: greedy search with nn descent", "[vamana]") {
   }
 }
 
-TEST_CASE("vamana: diskann fbin", "[vamana]") {
+TEST_CASE("diskann fbin", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -710,7 +704,7 @@ TEST_CASE("vamana: diskann fbin", "[vamana]") {
   }
 }
 
-TEST_CASE("vamana: fmnist", "[vamana]") {
+TEST_CASE("fmnist", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -839,7 +833,7 @@ TEST_CASE("vamana: fmnist", "[vamana]") {
   }
 }
 
-TEST_CASE("vamana: fmnist compare greedy search", "[vamana]") {
+TEST_CASE("fmnist compare greedy search", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -904,7 +898,7 @@ TEST_CASE("vamana: fmnist compare greedy search", "[vamana]") {
   }
 }
 
-TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
+TEST_CASE("robust prune hypercube", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -1007,7 +1001,7 @@ TEST_CASE("vamana: robust prune hypercube", "[vamana]") {
   }
 }
 
-TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
+TEST_CASE("robust prune fmnist", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -1129,7 +1123,7 @@ TEST_CASE("vamana: robust prune fmnist", "[vamana]") {
 #endif
 }
 
-TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
+TEST_CASE("vamana_index vector diskann_test_256bin", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -1175,7 +1169,7 @@ TEST_CASE("vamana: vamana_index vector diskann_test_256bin", "[vamana]") {
   CHECK(v0[0] == 0);
 }
 
-TEST_CASE("vamana: vamana by hand random index", "[vamana]") {
+TEST_CASE("vamana by hand random index", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -1256,7 +1250,7 @@ TEST_CASE("vamana: vamana by hand random index", "[vamana]") {
 /**
  * This test recapitulates the 200 node 2D graph in the DiskANN paper
  */
-TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
+TEST_CASE("vamana_index geometric 2D graph", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -1308,7 +1302,7 @@ TEST_CASE("vamana: vamana_index geometric 2D graph", "[vamana]") {
   }
 }
 
-TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
+TEST_CASE("vamana_index siftsmall", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -1359,7 +1353,7 @@ TEST_CASE("vamana: vamana_index siftsmall", "[vamana]") {
   }
 }
 
-TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
+TEST_CASE("vamana_index write and read", "[vamana]") {
   const bool debug = false;
   const bool noisy = false;
 
@@ -1442,7 +1436,7 @@ TEST_CASE("vamana: vamana_index write and read", "[vamana]") {
   }
 }
 
-TEST_CASE("vamana: query empty index", "[vamana]") {
+TEST_CASE("query empty index", "[vamana]") {
   size_t L = 100;
   size_t R = 100;
   size_t B = 2;

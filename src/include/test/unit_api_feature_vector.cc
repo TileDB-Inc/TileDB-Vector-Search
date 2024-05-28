@@ -35,10 +35,6 @@
 #include "test/utils/test_utils.h"
 #include "utils/utils.h"
 
-TEST_CASE("api_feature_vector: test test", "[api_feature_vector]") {
-  REQUIRE(true);
-}
-
 // ----------------------------------------------------------------------------
 // FeatureVector tests
 // ----------------------------------------------------------------------------

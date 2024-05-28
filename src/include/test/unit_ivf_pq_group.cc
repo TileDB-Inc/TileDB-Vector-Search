@@ -33,11 +33,7 @@
 
 #include "index/ivf_pq_group.h"
 
-TEST_CASE("ivf_pqt_group: test test", "[ivf_pq_group]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("ivf_pq_group: create tiledb::Group", "[ivf_pq_group]") {
+TEST_CASE("create tiledb::Group", "[ivf_pq_group]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
   std::string tmp_uri =
@@ -68,8 +64,7 @@ struct dummy_pq_index {
   using metadata_type = ivf_pq_metadata;
 };
 
-TEST_CASE(
-    "ivf_pq_group: write constructor - create and open", "[ivf_pq_group]") {
+TEST_CASE("write constructor - create and open", "[ivf_pq_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "ivf_pq_group_test_write_constructor")
                             .string();

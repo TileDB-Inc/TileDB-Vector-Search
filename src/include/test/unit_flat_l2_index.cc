@@ -34,11 +34,7 @@
 #include "index/flat_l2_index.h"
 #include "test/utils/array_defs.h"
 
-TEST_CASE("index: test test", "[index]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("index: uri constructor", "[index]") {
+TEST_CASE("uri constructor", "[index]") {
   tiledb::Context ctx;
   auto index = flat_l2_index<float>(ctx, sift_inputs_uri);
 }

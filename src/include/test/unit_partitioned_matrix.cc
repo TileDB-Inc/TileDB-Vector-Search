@@ -36,10 +36,6 @@
 #include "detail/linalg/partitioned_matrix.h"
 #include "mdspan/mdspan.hpp"
 
-TEST_CASE("partitioned_matrix: test test", "[partitioned_matrix]") {
-  REQUIRE(true);
-}
-
 TEST_CASE("partitioned_matrix: sizes constructor", "[partitioned_matrix]") {
   using feature_type = int;
   using id_type = int;

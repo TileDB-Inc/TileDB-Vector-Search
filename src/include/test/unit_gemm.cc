@@ -56,7 +56,7 @@
               )
 */
 
-TEST_CASE("gemm: test test", "[gemm]") {
+TEST_CASE("test cblas_sgemm", "[gemm]") {
   float a{0};
   cblas_sgemm(
       CblasRowMajor,
@@ -75,7 +75,7 @@ TEST_CASE("gemm: test test", "[gemm]") {
       1);
 }
 
-TEST_CASE("gemm: row major test", "[sgemm]") {
+TEST_CASE("row major test", "[sgemm]") {
   std::vector<float> A{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
   std::vector<float> B{7.0, 8.0, 9.0, 10.0, 11.0, 12.0};
 
