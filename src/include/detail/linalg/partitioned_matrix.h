@@ -180,7 +180,11 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t bin = part_labels[i];
       size_t ibin = part_index_[bin];
 
-      ids_[ibin] = i;
+      if constexpr (feature_vector_array_with_ids<F>) {
+        ids_[ibin] = training_set.id(i);
+      } else {
+        ids_[ibin] = i;
+      }
 
       assert(ibin < this->num_cols());
       for (size_t j = 0; j < dimensions(training_set); ++j) {

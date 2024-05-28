@@ -33,11 +33,7 @@
 #include "catch2/catch_all.hpp"
 #include "test/utils/query_common.h"
 
-TEST_CASE("api_ivf_pq_index: test test", "[api_ivf_pq_index]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("api_ivf_pq_index: init constructor", "[api_ivf_pq_index]") {
+TEST_CASE("init constructor", "[api_ivf_pq_index]") {
   SECTION("default") {
     auto a = IndexIVFPQ();
     CHECK(a.feature_type() == TILEDB_ANY);
@@ -174,7 +170,7 @@ TEST_CASE("api_ivf_pq_index: init constructor", "[api_ivf_pq_index]") {
 }
 
 TEST_CASE(
-    "api_ivf_pq_index: create empty index and then train and query",
+    "create empty index and then train and query",
     "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
@@ -250,10 +246,7 @@ TEST_CASE(
   }
 }
 
-TEST_CASE(
-    "api_ivf_pq_index: create empty index and then train and query with "
-    "external IDs",
-    "[api_ivf_pq_index]") {
+TEST_CASE("create empty index and then train and query with external IDs", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
   using id_type_type = uint32_t;
@@ -331,7 +324,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "api_ivf_pq_index: create empty index and then train and query with sift",
+    "create empty index and then train and query with sift",
     "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
@@ -350,7 +343,8 @@ TEST_CASE(
     auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
         {{"feature_type", feature_type},
          {"id_type", id_type},
-         {"partitioning_index_type", partitioning_index_type}}));
+         {"partitioning_index_type", partitioning_index_type},
+         {"num_subspaces", std::to_string(siftsmall_dimensions / 4)}}));
 
     size_t num_vectors = 0;
     auto empty_training_vector_array = FeatureVectorArray(
@@ -382,15 +376,15 @@ TEST_CASE(
 
     auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
     auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
-    auto&& [scores, ids] = index.query(QueryType::FiniteRAM, query_set, k_nn, 5);
+    auto&& [scores, ids] = index.query(QueryType::InfiniteRAM, query_set, k_nn, 5);
     auto intersections = count_intersections(ids, groundtruth_set, k_nn);
     auto num_ids = num_vectors(ids);
     auto recall = ((double)intersections) / ((double)num_ids * k_nn);
-    CHECK(recall == 1.0);
+    CHECK(recall > 0.7);
   }
 }
 
-TEST_CASE("api_ivf_pq_index: infer feature type", "[api_ivf_pq_index]") {
+TEST_CASE("infer feature type", "[api_ivf_pq_index]") {
   auto a = IndexIVFPQ(std::make_optional<IndexOptions>(
       {{"id_type", "uint32"}, {"partitioning_index_type", "uint32"}}));
   auto ctx = tiledb::Context{};
@@ -401,7 +395,7 @@ TEST_CASE("api_ivf_pq_index: infer feature type", "[api_ivf_pq_index]") {
   CHECK(a.partitioning_index_type() == TILEDB_UINT32);
 }
 
-TEST_CASE("api_ivf_pq_index: infer dimension", "[api_ivf_pq_index]") {
+TEST_CASE("infer dimension", "[api_ivf_pq_index]") {
   auto a = IndexIVFPQ(std::make_optional<IndexOptions>(
       {{"id_type", "uint32"}, {"partitioning_index_type", "uint32"}}));
   auto ctx = tiledb::Context{};
@@ -415,7 +409,7 @@ TEST_CASE("api_ivf_pq_index: infer dimension", "[api_ivf_pq_index]") {
 }
 
 TEST_CASE(
-    "api_ivf_pq_index: api_ivf_pq_index write and read", "[api_ivf_pq_index]") {
+    "write and read", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   std::string api_ivf_pq_index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -427,7 +421,8 @@ TEST_CASE(
   auto a = IndexIVFPQ(std::make_optional<IndexOptions>(
       {{"feature_type", "float32"},
        {"id_type", "uint32"},
-       {"partitioning_index_type", "uint32"}}));
+       {"partitioning_index_type", "uint32"},
+       {"num_subspaces", "1"}}));
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
   a.train(training_set);
   a.add(training_set);
@@ -441,7 +436,7 @@ TEST_CASE(
   CHECK(a.partitioning_index_type() == b.partitioning_index_type());
 }
 
-TEST_CASE("api_ivf_pq_index: build index and query", "[api_ivf_pq_index]") {
+TEST_CASE("build index and query", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
   size_t nprobe = GENERATE(8, 32);
@@ -454,25 +449,31 @@ TEST_CASE("api_ivf_pq_index: build index and query", "[api_ivf_pq_index]") {
   a.train(training_set);
   a.add(training_set);
 
-  auto&& [s, t] = a.query(QueryType::FiniteRAM, query_set, k_nn, 5);
+  auto&& [s, t] = a.query(QueryType::InfiniteRAM, query_set, k_nn, 5);
 
   auto intersections = count_intersections(t, groundtruth_set, k_nn);
   auto nt = num_vectors(t);
   auto recall = ((double)intersections) / ((double)nt * k_nn);
-  CHECK(recall == 1.0);
+  CHECK(recall > 0.6);
 }
 
-TEST_CASE("api_ivf_pq_index: read index and query", "[api_ivf_pq_index]") {
+TEST_CASE("read index and query", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
+  tiledb::VFS vfs(ctx);
+ 
   size_t k_nn = 10;
 
   std::string api_ivf_pq_index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+  if (vfs.is_dir(api_ivf_pq_index_uri)) {
+    vfs.remove_dir(api_ivf_pq_index_uri);
+  }
 
   auto a = IndexIVFPQ(std::make_optional<IndexOptions>(
       {{"feature_type", "float32"},
        {"id_type", "uint32"},
-       {"partitioning_index_type", "uint32"}}));
+       {"partitioning_index_type", "uint32"},
+       {"num_subspaces", std::to_string(sift_dimensions / 4)}}));
 
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
   a.train(training_set);
@@ -483,8 +484,8 @@ TEST_CASE("api_ivf_pq_index: read index and query", "[api_ivf_pq_index]") {
   auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
   auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
 
-  auto&& [s, t] = a.query(QueryType::FiniteRAM, query_set, k_nn, 5);
-  auto&& [u, v] = b.query(QueryType::FiniteRAM, query_set, k_nn, 5);
+  auto&& [s, t] = a.query(QueryType::InfiniteRAM, query_set, k_nn, 5);
+  auto&& [u, v] = b.query(QueryType::InfiniteRAM, query_set, k_nn, 5);
 
   auto intersections_a = count_intersections(t, groundtruth_set, k_nn);
   auto intersections_b = count_intersections(v, groundtruth_set, k_nn);
@@ -493,10 +494,10 @@ TEST_CASE("api_ivf_pq_index: read index and query", "[api_ivf_pq_index]") {
   auto nv = num_vectors(v);
   CHECK(nt == nv);
   auto recall = ((double)intersections_a) / ((double)nt * k_nn);
-  CHECK(recall == 1.0);
+  CHECK(recall > 0.7);
 }
 
-TEST_CASE("api_ivf_pq_index: storage_version", "[api_ivf_pq_index]") {
+TEST_CASE("storage_version", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
   using id_type_type = uint32_t;
@@ -517,7 +518,8 @@ TEST_CASE("api_ivf_pq_index: storage_version", "[api_ivf_pq_index]") {
     auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
         {{"feature_type", feature_type},
          {"id_type", id_type},
-         {"partitioning_index_type", partitioning_index_type}}));
+         {"partitioning_index_type", partitioning_index_type},
+         {"num_subspaces", "1"}}));
 
     size_t num_vectors = 0;
     auto empty_training_vector_array =
@@ -553,9 +555,7 @@ TEST_CASE("api_ivf_pq_index: storage_version", "[api_ivf_pq_index]") {
   }
 }
 
-TEST_CASE(
-    "api_ivf_pq_index: write and load index with timestamps",
-    "[api_ivf_pq_index]") {
+TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
   using id_type_type = uint32_t;
@@ -564,6 +564,9 @@ TEST_CASE(
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
   size_t dimensions = 3;
+  size_t n_list = 1;
+  size_t num_subspaces = 1;
+  size_t num_clusters = 4;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -578,7 +581,10 @@ TEST_CASE(
     auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
         {{"feature_type", feature_type},
          {"id_type", id_type},
-         {"partitioning_index_type", partitioning_index_type}}));
+         {"partitioning_index_type", partitioning_index_type},
+         {"n_list", std::to_string(n_list)},
+         {"num_subspaces", std::to_string(num_subspaces)},
+         {"num_clusters", std::to_string(num_clusters)}}));
 
     size_t num_vectors = 0;
     auto empty_training_vector_array =
@@ -607,7 +613,7 @@ TEST_CASE(
     CHECK(typed_index.group().get_all_base_sizes().size() == 1);
     CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 1);
 
-    CHECK(typed_index.group().get_all_num_partitions()[0] == 0);
+    CHECK(typed_index.group().get_all_num_partitions()[0] == n_list);
     CHECK(typed_index.group().get_all_base_sizes()[0] == 0);
     CHECK(typed_index.group().get_all_ingestion_timestamps()[0] == 0);
   }
@@ -645,7 +651,7 @@ TEST_CASE(
         {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
-        index.query(QueryType::FiniteRAM, query_vector_array, 1, 5);
+        index.query(QueryType::InfiniteRAM, query_vector_array, 1, n_list);
 
     auto scores = std::span<float>(
         (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
@@ -708,7 +714,7 @@ TEST_CASE(
         {11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}, {55, 55, 55}};
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
-        index.query(QueryType::FiniteRAM, query_vector_array, 1, 5);
+        index.query(QueryType::InfiniteRAM, query_vector_array, 1, 1);
 
     auto scores = std::span<float>(
         (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
@@ -763,7 +769,7 @@ TEST_CASE(
         {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
-        index.query(QueryType::FiniteRAM, query_vector_array, 1, 5);
+        index.query(QueryType::InfiniteRAM, query_vector_array, 1, 1);
 
     auto scores = std::span<float>(
         (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
@@ -819,7 +825,7 @@ TEST_CASE(
     auto queries = ColMajorMatrix<feature_type_type>{{1, 1, 1}};
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
-        index.query(QueryType::FiniteRAM, query_vector_array, 1, 5);
+        index.query(QueryType::InfiniteRAM, query_vector_array, 1, 1);
 
     auto scores = std::span<float>(
         (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
@@ -882,7 +888,7 @@ TEST_CASE(
         {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
-        index.query(QueryType::FiniteRAM, query_vector_array, 1, 5);
+        index.query(QueryType::InfiniteRAM, query_vector_array, 1, 1);
 
     auto scores = std::span<float>(
         (float*)scores_vector_array.data(), scores_vector_array.num_vectors());

@@ -103,10 +103,12 @@ class IndexIVFPQ {
           n_list_ = std::stol(value);
         } else if (key == "num_subspaces") {
           num_subspaces_ = std::stol(value);
-        } else if (key == "max_iterations_") {
+        } else if (key == "max_iterations") {
           max_iterations_ = std::stol(value);
-        } else if (key == "tol_") {
-          tol_ = std::stol(value);
+        } else if (key == "convergence_tolerance") {
+          convergence_tolerance_ = std::stof(value);
+        } else if (key == "num_clusters") {
+          num_clusters_ = std::stol(value);
         } else if (key == "feature_type") {
           feature_datatype_ = string_to_datatype(value);
         } else if (key == "id_type") {
@@ -181,8 +183,9 @@ class IndexIVFPQ {
         index_ ? index_->nlist() : n_list_,
         index_ ? index_->num_subspaces() : num_subspaces_,
         index_ ? index_->max_iterations() : max_iterations_,
-        index_ ? index_->tol() : tol_,
-        index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) : std::nullopt);
+        index_ ? index_->convergence_tolerance() : convergence_tolerance_,
+        index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) : std::nullopt,
+        index_ ? index_->num_clusters() : num_clusters_);
 
     index_->train(training_set);
 
@@ -349,7 +352,8 @@ class IndexIVFPQ {
     [[nodiscard]] virtual uint64_t nlist() const = 0;
     [[nodiscard]] virtual uint64_t num_subspaces() const = 0;
     [[nodiscard]] virtual uint64_t max_iterations() const = 0;
-    [[nodiscard]] virtual uint64_t tol() const = 0;
+    [[nodiscard]] virtual float convergence_tolerance() const = 0;
+    [[nodiscard]] virtual uint64_t num_clusters() const = 0;
   };
 
   /**
@@ -367,13 +371,15 @@ class IndexIVFPQ {
         size_t l_build,
         size_t r_max_degree,
         size_t b_backtrack,
-        std::optional<TemporalPolicy> temporal_policy)
+        std::optional<TemporalPolicy> temporal_policy,
+        size_t num_clusters)
         : impl_index_(
               num_vectors,
               l_build,
               r_max_degree,
               b_backtrack,
-              temporal_policy) {
+              temporal_policy,
+              num_clusters) {
     }
 
     index_impl(
@@ -491,8 +497,11 @@ class IndexIVFPQ {
   uint64_t max_iterations() const override {
     return impl_index_.max_iterations();
   }
-  uint64_t tol() const override {
-    return impl_index_.tol();
+  float convergence_tolerance() const override {
+    return impl_index_.convergence_tolerance();
+  }
+  uint64_t num_clusters() const override {
+    return impl_index_.num_clusters();
   }
 
    private:
@@ -503,7 +512,7 @@ class IndexIVFPQ {
   };
 
   // clang-format off
-  using constructor_function = std::function<std::unique_ptr<index_base>(size_t, size_t, size_t, float, std::optional<TemporalPolicy>)>;
+  using constructor_function = std::function<std::unique_ptr<index_base>(size_t, size_t, size_t, float, std::optional<TemporalPolicy>, size_t)>;
   using table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, constructor_function>;
   static const table_type dispatch_table;
 
@@ -520,7 +529,8 @@ class IndexIVFPQ {
   size_t n_list_{0};
   size_t num_subspaces_{16};
   size_t max_iterations_{2};
-  float tol_{0.000025f};
+  float convergence_tolerance_{0.000025f};
+  size_t num_clusters_{256};
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
   tiledb_datatype_t partitioning_index_datatype_{TILEDB_ANY};
@@ -529,24 +539,21 @@ class IndexIVFPQ {
 
 // clang-format off
 const IndexIVFPQ::table_type IndexIVFPQ::dispatch_table = {
-  // {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float tol, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float, float, float>>>(nlist, num_subspaces, max_iterations, tol, temporal_policy); }},
-  // {{TILEDB_UINT8,    TILEDB_UINT32, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float tol, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint8_t, uint8_t>>>(nlist, num_subspaces, max_iterations, tol, temporal_policy); }},
-  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float tol, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint32_t, uint32_t>>>(nlist, num_subspaces, max_iterations, tol, temporal_policy); }},
-  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float tol, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint32_t, uint32_t>>>(nlist, num_subspaces, max_iterations, tol, temporal_policy); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float tol, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint32_t, uint32_t>>>(nlist, num_subspaces, max_iterations, tol, temporal_policy); }},
-  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float tol, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint32_t, uint64_t>>>(nlist, num_subspaces, max_iterations, tol, temporal_policy); }},
-  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float tol, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint32_t, uint64_t>>>(nlist, num_subspaces, max_iterations, tol, temporal_policy); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float tol, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint32_t, uint64_t>>>(nlist, num_subspaces, max_iterations, tol, temporal_policy); }},
-  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float tol, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint64_t, uint32_t>>>(nlist, num_subspaces, max_iterations, tol, temporal_policy); }},
-  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float tol, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint64_t, uint32_t>>>(nlist, num_subspaces, max_iterations, tol, temporal_policy); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float tol, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint64_t, uint32_t>>>(nlist, num_subspaces, max_iterations, tol, temporal_policy); }},
-  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float tol, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint64_t, uint64_t>>>(nlist, num_subspaces, max_iterations, tol, temporal_policy); }},
-  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float tol, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint64_t, uint64_t>>>(nlist, num_subspaces, max_iterations, tol, temporal_policy); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float tol, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint64_t, uint64_t>>>(nlist, num_subspaces, max_iterations, tol, temporal_policy); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, size_t num_clusters) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint32_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy, num_clusters); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, size_t num_clusters) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint32_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy, num_clusters); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, size_t num_clusters) { return std::make_unique<index_impl<ivf_pq_index<float,   uint32_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy, num_clusters); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, size_t num_clusters) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint32_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy, num_clusters); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, size_t num_clusters) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint32_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy, num_clusters); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, size_t num_clusters) { return std::make_unique<index_impl<ivf_pq_index<float,   uint32_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy, num_clusters); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, size_t num_clusters) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint64_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy, num_clusters); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, size_t num_clusters) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint64_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy, num_clusters); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, size_t num_clusters) { return std::make_unique<index_impl<ivf_pq_index<float,   uint64_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy, num_clusters); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, size_t num_clusters) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint64_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy, num_clusters); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, size_t num_clusters) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint64_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy, num_clusters); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, size_t num_clusters) { return std::make_unique<index_impl<ivf_pq_index<float,   uint64_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy, num_clusters); }},
 };
 
 const IndexIVFPQ::uri_table_type IndexIVFPQ::uri_dispatch_table = {
-  // {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint8_t, uint8_t>>>(ctx, uri, temporal_policy); }},
   {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint32_t, uint32_t>>>(ctx, uri, temporal_policy); }},
   {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint32_t, uint32_t>>>(ctx, uri, temporal_policy); }},
   {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint32_t, uint32_t>>>(ctx, uri, temporal_policy); }},
@@ -562,7 +569,6 @@ const IndexIVFPQ::uri_table_type IndexIVFPQ::uri_dispatch_table = {
 };
 
 const IndexIVFPQ::clear_history_table_type IndexIVFPQ::clear_history_dispatch_table = {
-  // {{TILEDB_FLOAT32,    TILEDB_FLOAT32, TILEDB_FLOAT32}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return ivf_pq_index<uint8_t, uint8_t, uint8_t>::clear_history(ctx, uri, timestamp); }},
   {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return ivf_pq_index<int8_t,  uint32_t, uint32_t>::clear_history(ctx, uri, timestamp); }},
   {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return ivf_pq_index<uint8_t, uint32_t, uint32_t>::clear_history(ctx, uri, timestamp); }},
   {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, uint64_t timestamp) { return ivf_pq_index<float,   uint32_t, uint32_t>::clear_history(ctx, uri, timestamp); }},

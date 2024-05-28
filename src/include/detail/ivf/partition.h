@@ -89,7 +89,9 @@ auto partition_ivf_flat_index(
     Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
 
-  assert(::num_vectors(centroids) >= nprobe);
+  if (::num_vectors(centroids) < nprobe) {
+    throw std::invalid_argument("nprobe (" + std::to_string(nprobe) + ") must be less than the number of centroids (" + std::to_string(::num_vectors(centroids)) + ")");
+  }
 
   size_t num_queries = num_vectors(query);
 

@@ -75,6 +75,10 @@ class TemporalPolicy {
         tiledb::TimestampStartEnd, timestamp_start_, timestamp_end_);
   }
 
+  std::string dump() const {
+    return std::string("(timestamp_start: ") + std::to_string(timestamp_start_) + ", timestamp_end: " + std::to_string(timestamp_end_) + ")";
+  }
+
  private:
   uint64_t timestamp_start_;
   uint64_t timestamp_end_;

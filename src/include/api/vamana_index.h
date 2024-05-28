@@ -347,6 +347,9 @@ class IndexVamana {
         const std::string& storage_version) = 0;
 
     [[nodiscard]] virtual size_t dimensions() const = 0;
+    [[nodiscard]] virtual size_t l_build() const = 0;
+    [[nodiscard]] virtual size_t r_max_degree() const = 0;
+    [[nodiscard]] virtual size_t b_backtrack() const = 0;
     [[nodiscard]] virtual TemporalPolicy temporal_policy() const = 0;
   };
 
@@ -463,6 +466,18 @@ class IndexVamana {
 
     size_t dimensions() const override {
       return ::dimensions(impl_index_);
+    }
+
+    size_t l_build() const override {
+      return impl_index_.l_build();
+    }
+
+    size_t r_max_degree() const override {
+      return impl_index_.r_max_degree();
+    }
+
+    size_t b_backtrack() const override {
+      return impl_index_.b_backtrack();
     }
 
     TemporalPolicy temporal_policy() const override {

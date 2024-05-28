@@ -131,7 +131,7 @@ TEST_CASE("ivf_pq_metadata: load metadata from index", "[ivf_pq_metadata]") {
     std::cout << "idx.train() ~~~~~~~~~~~~~~~~" << std::endl;
     idx.train(training_vectors, training_vectors.raveled_ids());
     std::cout << "idx.add() ~~~~~~~~~~~~~~~~" << std::endl;
-    idx.add(training_vectors, training_vectors.raveled_ids(), true);
+    idx.add(training_vectors, training_vectors.raveled_ids());
     idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 2), "");
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
