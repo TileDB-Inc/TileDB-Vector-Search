@@ -33,294 +33,283 @@
 #include "catch2/catch_all.hpp"
 #include "test/utils/query_common.h"
 
-// TEST_CASE("init constructor", "[api_vamana_index]") {
-//   SECTION("default") {
-//     auto a = IndexVamana();
-//     CHECK(a.feature_type() == TILEDB_ANY);
-//     CHECK(a.feature_type_string() == datatype_to_string(TILEDB_ANY));
-//     CHECK(a.id_type() == TILEDB_UINT32);
-//     CHECK(a.id_type_string() == datatype_to_string(TILEDB_UINT32));
-//     CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
-//     CHECK(
-//         a.adjacency_row_index_type_string() ==
-//         datatype_to_string(TILEDB_UINT32));
-//     CHECK(dimensions(a) == 0);
-//   }
+TEST_CASE("init constructor", "[api_vamana_index]") {
+  SECTION("default") {
+    auto a = IndexVamana();
+    CHECK(a.feature_type() == TILEDB_ANY);
+    CHECK(a.feature_type_string() == datatype_to_string(TILEDB_ANY));
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.id_type_string() == datatype_to_string(TILEDB_UINT32));
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
+    CHECK(
+        a.adjacency_row_index_type_string() ==
+        datatype_to_string(TILEDB_UINT32));
+    CHECK(dimensions(a) == 0);
+  }
 
-//   SECTION("float uint32 uint32") {
-//     auto a = IndexVamana(std::make_optional<IndexOptions>(
-//         {{"feature_type", "float32"},
-//          {"id_type", "uint32"},
-//          {"adjacency_row_index_type", "uint32"}}));
-//     CHECK(a.feature_type() == TILEDB_FLOAT32);
-//     CHECK(a.id_type() == TILEDB_UINT32);
-//     CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
-//     CHECK(dimensions(a) == 0);
-//   }
+  SECTION("float uint32 uint32") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "float32"},
+         {"id_type", "uint32"},
+         {"adjacency_row_index_type", "uint32"}}));
+    CHECK(a.feature_type() == TILEDB_FLOAT32);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
+    CHECK(dimensions(a) == 0);
+  }
 
-//   SECTION("int8 uint32 uint32") {
-//     auto a = IndexVamana(std::make_optional<IndexOptions>(
-//         {{"feature_type", "int8"},
-//          {"id_type", "uint32"},
-//          {"adjacency_row_index_type", "uint32"}}));
-//     CHECK(a.feature_type() == TILEDB_INT8);
-//     CHECK(a.id_type() == TILEDB_UINT32);
-//     CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
-//   }
+  SECTION("int8 uint32 uint32") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "int8"},
+         {"id_type", "uint32"},
+         {"adjacency_row_index_type", "uint32"}}));
+    CHECK(a.feature_type() == TILEDB_INT8);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
+  }
 
-//   SECTION("uint8 uint32 uint32") {
-//     auto a = IndexVamana(std::make_optional<IndexOptions>(
-//         {{"feature_type", "uint8"},
-//          {"id_type", "uint32"},
-//          {"adjacency_row_index_type", "uint32"}}));
-//     CHECK(a.feature_type() == TILEDB_UINT8);
-//     CHECK(a.id_type() == TILEDB_UINT32);
-//     CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
-//   }
+  SECTION("uint8 uint32 uint32") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "uint8"},
+         {"id_type", "uint32"},
+         {"adjacency_row_index_type", "uint32"}}));
+    CHECK(a.feature_type() == TILEDB_UINT8);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
+  }
 
-//   SECTION("float uint64 uint32") {
-//     auto a = IndexVamana(std::make_optional<IndexOptions>(
-//         {{"feature_type", "float32"},
-//          {"id_type", "uint64"},
-//          {"adjacency_row_index_type", "uint32"}}));
-//     CHECK(a.feature_type() == TILEDB_FLOAT32);
-//     CHECK(a.id_type() == TILEDB_UINT64);
-//     CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
-//   }
+  SECTION("float uint64 uint32") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "float32"},
+         {"id_type", "uint64"},
+         {"adjacency_row_index_type", "uint32"}}));
+    CHECK(a.feature_type() == TILEDB_FLOAT32);
+    CHECK(a.id_type() == TILEDB_UINT64);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
+  }
 
-//   SECTION("float uint32 uint64") {
-//     auto a = IndexVamana(std::make_optional<IndexOptions>(
-//         {{"feature_type", "float32"},
-//          {"id_type", "uint32"},
-//          {"adjacency_row_index_type", "uint64"}}));
-//     CHECK(a.feature_type() == TILEDB_FLOAT32);
-//     CHECK(a.id_type() == TILEDB_UINT32);
-//     CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
-//   }
+  SECTION("float uint32 uint64") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "float32"},
+         {"id_type", "uint32"},
+         {"adjacency_row_index_type", "uint64"}}));
+    CHECK(a.feature_type() == TILEDB_FLOAT32);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
+  }
 
-//   SECTION("int8 uint64 uint32") {
-//     auto a = IndexVamana(std::make_optional<IndexOptions>(
-//         {{"feature_type", "int8"},
-//          {"id_type", "uint64"},
-//          {"adjacency_row_index_type", "uint32"}}));
-//     CHECK(a.feature_type() == TILEDB_INT8);
-//     CHECK(a.id_type() == TILEDB_UINT64);
-//     CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
-//   }
+  SECTION("int8 uint64 uint32") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "int8"},
+         {"id_type", "uint64"},
+         {"adjacency_row_index_type", "uint32"}}));
+    CHECK(a.feature_type() == TILEDB_INT8);
+    CHECK(a.id_type() == TILEDB_UINT64);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
+  }
 
-//   SECTION("uint8 uint64 uint32") {
-//     auto a = IndexVamana(std::make_optional<IndexOptions>(
-//         {{"feature_type", "uint8"},
-//          {"id_type", "uint64"},
-//          {"adjacency_row_index_type", "uint32"}}));
-//     CHECK(a.feature_type() == TILEDB_UINT8);
-//     CHECK(a.id_type() == TILEDB_UINT64);
-//     CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
-//   }
+  SECTION("uint8 uint64 uint32") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "uint8"},
+         {"id_type", "uint64"},
+         {"adjacency_row_index_type", "uint32"}}));
+    CHECK(a.feature_type() == TILEDB_UINT8);
+    CHECK(a.id_type() == TILEDB_UINT64);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
+  }
 
-//   SECTION("int8 uint32 uint64") {
-//     auto a = IndexVamana(std::make_optional<IndexOptions>(
-//         {{"feature_type", "int8"},
-//          {"id_type", "uint32"},
-//          {"adjacency_row_index_type", "uint64"}}));
-//     CHECK(a.feature_type() == TILEDB_INT8);
-//     CHECK(a.id_type() == TILEDB_UINT32);
-//     CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
-//   }
+  SECTION("int8 uint32 uint64") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "int8"},
+         {"id_type", "uint32"},
+         {"adjacency_row_index_type", "uint64"}}));
+    CHECK(a.feature_type() == TILEDB_INT8);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
+  }
 
-//   SECTION("uint8 uint32 uint64") {
-//     auto a = IndexVamana(std::make_optional<IndexOptions>(
-//         {{"feature_type", "uint8"},
-//          {"id_type", "uint32"},
-//          {"adjacency_row_index_type", "uint64"}}));
-//     CHECK(a.feature_type() == TILEDB_UINT8);
-//     CHECK(a.id_type() == TILEDB_UINT32);
-//     CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
-//   }
+  SECTION("uint8 uint32 uint64") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "uint8"},
+         {"id_type", "uint32"},
+         {"adjacency_row_index_type", "uint64"}}));
+    CHECK(a.feature_type() == TILEDB_UINT8);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
+  }
 
-//   SECTION("float uint64 uint64") {
-//     auto a = IndexVamana(std::make_optional<IndexOptions>(
-//         {{"feature_type", "float32"},
-//          {"id_type", "uint64"},
-//          {"adjacency_row_index_type", "uint64"}}));
-//     CHECK(a.feature_type() == TILEDB_FLOAT32);
-//     CHECK(a.id_type() == TILEDB_UINT64);
-//     CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
-//   }
+  SECTION("float uint64 uint64") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "float32"},
+         {"id_type", "uint64"},
+         {"adjacency_row_index_type", "uint64"}}));
+    CHECK(a.feature_type() == TILEDB_FLOAT32);
+    CHECK(a.id_type() == TILEDB_UINT64);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
+  }
 
-//   SECTION("int8 uint64 uint64") {
-//     auto a = IndexVamana(std::make_optional<IndexOptions>(
-//         {{"feature_type", "int8"},
-//          {"id_type", "uint64"},
-//          {"adjacency_row_index_type", "uint64"}}));
-//     CHECK(a.feature_type() == TILEDB_INT8);
-//     CHECK(a.id_type() == TILEDB_UINT64);
-//     CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
-//   }
+  SECTION("int8 uint64 uint64") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "int8"},
+         {"id_type", "uint64"},
+         {"adjacency_row_index_type", "uint64"}}));
+    CHECK(a.feature_type() == TILEDB_INT8);
+    CHECK(a.id_type() == TILEDB_UINT64);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
+  }
 
-//   SECTION("uint8 uint64 uint64") {
-//     auto a = IndexVamana(std::make_optional<IndexOptions>(
-//         {{"feature_type", "uint8"},
-//          {"id_type", "uint64"},
-//          {"adjacency_row_index_type", "uint64"}}));
-//     CHECK(a.feature_type() == TILEDB_UINT8);
-//     CHECK(a.id_type() == TILEDB_UINT64);
-//     CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
-//   }
-// }
+  SECTION("uint8 uint64 uint64") {
+    auto a = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", "uint8"},
+         {"id_type", "uint64"},
+         {"adjacency_row_index_type", "uint64"}}));
+    CHECK(a.feature_type() == TILEDB_UINT8);
+    CHECK(a.id_type() == TILEDB_UINT64);
+    CHECK(a.adjacency_row_index_type() == TILEDB_UINT64);
+  }
+}
 
-// TEST_CASE("create empty index and then train and query",
-// "[api_vamana_index]") {
-//   auto ctx = tiledb::Context{};
-//   using feature_type_type = uint8_t;
-//   using id_type_type = uint32_t;
-//   auto feature_type = "uint8";
-//   auto id_type = "uint32";
-//   auto adjacency_row_index_type = "uint32";
-//   size_t dimensions = 3;
+TEST_CASE("create empty index and then train and query", "[api_vamana_index]") {
+  auto ctx = tiledb::Context{};
+  using feature_type_type = uint8_t;
+  using id_type_type = uint32_t;
+  auto feature_type = "uint8";
+  auto id_type = "uint32";
+  auto adjacency_row_index_type = "uint32";
+  size_t dimensions = 3;
 
-//   std::string index_uri =
-//       (std::filesystem::temp_directory_path() / "api_vamana_index").string();
-//   tiledb::VFS vfs(ctx);
-//   if (vfs.is_dir(index_uri)) {
-//     vfs.remove_dir(index_uri);
-//   }
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_vamana_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
 
-//   {
-//     auto index = IndexVamana(std::make_optional<IndexOptions>(
-//         {{"feature_type", feature_type},
-//          {"id_type", id_type},
-//          {"adjacency_row_index_type", adjacency_row_index_type}}));
+  {
+    auto index = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", feature_type},
+         {"id_type", id_type},
+         {"adjacency_row_index_type", adjacency_row_index_type}}));
 
-//     size_t num_vectors = 0;
-//     auto empty_training_vector_array =
-//         FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
-//     index.train(empty_training_vector_array);
-//     index.add(empty_training_vector_array);
-//     index.write_index(ctx, index_uri);
+    size_t num_vectors = 0;
+    auto empty_training_vector_array =
+        FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
+    index.train(empty_training_vector_array);
+    index.add(empty_training_vector_array);
+    index.write_index(ctx, index_uri);
 
-//     CHECK(index.feature_type_string() == feature_type);
-//     CHECK(index.id_type_string() == id_type);
-//     CHECK(index.adjacency_row_index_type_string() ==
-//     adjacency_row_index_type);
-//   }
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
+  }
 
-//   {
-//     auto index = IndexVamana(ctx, index_uri);
+  {
+    auto index = IndexVamana(ctx, index_uri);
 
-//     CHECK(index.feature_type_string() == feature_type);
-//     CHECK(index.id_type_string() == id_type);
-//     CHECK(index.adjacency_row_index_type_string() ==
-//     adjacency_row_index_type);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
 
-//     auto training = ColMajorMatrix<feature_type_type>{
-//         {3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
-//     auto training_vector_array = FeatureVectorArray(training);
-//     index.train(training_vector_array);
-//     index.add(training_vector_array);
-//     index.write_index(ctx, index_uri);
+    auto training = ColMajorMatrix<feature_type_type>{
+        {3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
+    auto training_vector_array = FeatureVectorArray(training);
+    index.train(training_vector_array);
+    index.add(training_vector_array);
+    index.write_index(ctx, index_uri);
 
-//     CHECK(index.feature_type_string() == feature_type);
-//     CHECK(index.id_type_string() == id_type);
-//     CHECK(index.adjacency_row_index_type_string() ==
-//     adjacency_row_index_type);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
 
-//     auto queries = ColMajorMatrix<feature_type_type>{
-//         {3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
-//     auto query_vector_array = FeatureVectorArray(queries);
-//     auto&& [scores_vector_array, ids_vector_array] =
-//         index.query(query_vector_array, 1);
+    auto queries = ColMajorMatrix<feature_type_type>{
+        {3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
+    auto query_vector_array = FeatureVectorArray(queries);
+    auto&& [scores_vector_array, ids_vector_array] =
+        index.query(query_vector_array, 1);
 
-//     auto scores = std::span<float>(
-//         (float*)scores_vector_array.data(),
-//         scores_vector_array.num_vectors());
-//     auto ids = std::span<uint32_t>(
-//         (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
-//     CHECK(std::equal(
-//         scores.begin(), scores.end(), std::vector<float>{0, 0, 0,
-//         0}.begin()));
-//     CHECK(std::equal(
-//         ids.begin(), ids.end(), std::vector<int>{0, 1, 2, 3}.begin()));
-//   }
-// }
+    auto scores = std::span<float>(
+        (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
+    auto ids = std::span<uint32_t>(
+        (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+    CHECK(std::equal(
+        scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
+    CHECK(std::equal(
+        ids.begin(), ids.end(), std::vector<int>{0, 1, 2, 3}.begin()));
+  }
+}
 
-// TEST_CASE(
-//     "create empty index and then train and query with "
-//     "external IDs",
-//     "[api_vamana_index]") {
-//   auto ctx = tiledb::Context{};
-//   using feature_type_type = uint8_t;
-//   using id_type_type = uint32_t;
-//   auto feature_type = "uint8";
-//   auto id_type = "uint32";
-//   auto adjacency_row_index_type = "uint32";
-//   size_t dimensions = 3;
+TEST_CASE(
+    "create empty index and then train and query with "
+    "external IDs",
+    "[api_vamana_index]") {
+  auto ctx = tiledb::Context{};
+  using feature_type_type = uint8_t;
+  using id_type_type = uint32_t;
+  auto feature_type = "uint8";
+  auto id_type = "uint32";
+  auto adjacency_row_index_type = "uint32";
+  size_t dimensions = 3;
 
-//   std::string index_uri =
-//       (std::filesystem::temp_directory_path() / "api_vamana_index").string();
-//   tiledb::VFS vfs(ctx);
-//   if (vfs.is_dir(index_uri)) {
-//     vfs.remove_dir(index_uri);
-//   }
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_vamana_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
 
-//   {
-//     auto index = IndexVamana(std::make_optional<IndexOptions>(
-//         {{"feature_type", feature_type},
-//          {"id_type", id_type},
-//          {"adjacency_row_index_type", adjacency_row_index_type}}));
+  {
+    auto index = IndexVamana(std::make_optional<IndexOptions>(
+        {{"feature_type", feature_type},
+         {"id_type", id_type},
+         {"adjacency_row_index_type", adjacency_row_index_type}}));
 
-//     size_t num_vectors = 0;
-//     auto empty_training_vector_array =
-//         FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
-//     index.train(empty_training_vector_array);
-//     index.add(empty_training_vector_array);
-//     index.write_index(ctx, index_uri);
+    size_t num_vectors = 0;
+    auto empty_training_vector_array =
+        FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
+    index.train(empty_training_vector_array);
+    index.add(empty_training_vector_array);
+    index.write_index(ctx, index_uri);
 
-//     CHECK(index.feature_type_string() == feature_type);
-//     CHECK(index.id_type_string() == id_type);
-//     CHECK(index.adjacency_row_index_type_string() ==
-//     adjacency_row_index_type);
-//   }
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
+  }
 
-//   {
-//     auto index = IndexVamana(ctx, index_uri);
+  {
+    auto index = IndexVamana(ctx, index_uri);
 
-//     CHECK(index.feature_type_string() == feature_type);
-//     CHECK(index.id_type_string() == id_type);
-//     CHECK(index.adjacency_row_index_type_string() ==
-//     adjacency_row_index_type);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
 
-//     auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
-//         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {10, 11, 12, 13}};
+    auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+        {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {10, 11, 12, 13}};
 
-//     auto training_vector_array = FeatureVectorArray(training);
-//     index.train(training_vector_array);
-//     index.add(training_vector_array);
-//     index.write_index(ctx, index_uri);
+    auto training_vector_array = FeatureVectorArray(training);
+    index.train(training_vector_array);
+    index.add(training_vector_array);
+    index.write_index(ctx, index_uri);
 
-//     CHECK(index.feature_type_string() == feature_type);
-//     CHECK(index.id_type_string() == id_type);
-//     CHECK(index.adjacency_row_index_type_string() ==
-//     adjacency_row_index_type);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.adjacency_row_index_type_string() == adjacency_row_index_type);
 
-//     auto queries = ColMajorMatrix<feature_type_type>{
-//         {8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}};
-//     auto query_vector_array = FeatureVectorArray(queries);
-//     auto&& [scores_vector_array, ids_vector_array] =
-//         index.query(query_vector_array, 1);
+    auto queries = ColMajorMatrix<feature_type_type>{
+        {8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}};
+    auto query_vector_array = FeatureVectorArray(queries);
+    auto&& [scores_vector_array, ids_vector_array] =
+        index.query(query_vector_array, 1);
 
-//     auto scores = std::span<float>(
-//         (float*)scores_vector_array.data(),
-//         scores_vector_array.num_vectors());
-//     auto ids = std::span<uint32_t>(
-//         (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
-//     CHECK(std::equal(
-//         scores.begin(), scores.end(), std::vector<float>{0, 0, 0,
-//         0}.begin()));
-//     CHECK(std::equal(
-//         ids.begin(), ids.end(), std::vector<int>{10, 11, 12, 13}.begin()));
-//   }
-// }
+    auto scores = std::span<float>(
+        (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
+    auto ids = std::span<uint32_t>(
+        (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+    CHECK(std::equal(
+        scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
+    CHECK(std::equal(
+        ids.begin(), ids.end(), std::vector<int>{10, 11, 12, 13}.begin()));
+  }
+}
 
 TEST_CASE(
     "create empty index and then train and query with sift",

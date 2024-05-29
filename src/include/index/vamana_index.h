@@ -729,8 +729,6 @@ class vamana_index {
     write_group.set_alpha_max(alpha_max_);
     write_group.set_medoid(medoid_);
 
-    write_group.dump();
-
     // When we create an index with Python, we will call write_index() twice,
     // once with empty data and once with the actual data. Here we add custom
     // logic so that during that second call to write_index(), we will overwrite
