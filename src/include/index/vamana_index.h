@@ -690,7 +690,6 @@ class vamana_index {
    *
    * @param ctx TileDB context
    * @param group_uri The URI of the TileDB group where the index will be saved
-   * @param group_uri The URI of the TileDB group where the index will be saved
    * @param temporal_policy If set, we'll use the end timestamp of the policy as
    * the write timestamp.
    * @param storage_version The storage version to use. If empty, use the most
