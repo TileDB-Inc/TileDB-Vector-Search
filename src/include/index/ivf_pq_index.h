@@ -1186,8 +1186,13 @@ class ivf_pq_index {
    */
   template <feature_vector_array Q>
   auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
-    if (!partitioned_pq_vectors_ ||
-        ::num_vectors(*partitioned_pq_vectors_) == 0) {
+    if (::num_vectors(flat_ivf_centroids_) < nprobe) {
+      std::cout << "[ivf_pq_index@query_infinite_ram] nprobe (" + std::to_string(nprobe) + 
+      ") was greater than than the number of centroids (" + std::to_string(::num_vectors(flat_ivf_centroids_)) +
+       ") - setting nprobe to " + std::to_string(::num_vectors(flat_ivf_centroids_)) << std::endl;
+      nprobe = ::num_vectors(flat_ivf_centroids_);
+    }
+    if (!partitioned_pq_vectors_ || ::num_vectors(*partitioned_pq_vectors_) == 0) {
       read_index_infinite();
     }
     auto&& [active_partitions, active_queries] =
@@ -1242,6 +1247,12 @@ class ivf_pq_index {
       throw std::runtime_error(
           "Vectors are already loaded. Cannot load twice. "
           "Cannot do finite query on in-memory index.");
+    }
+    if (::num_vectors(flat_ivf_centroids_) < nprobe) {
+      std::cout << "[ivf_pq_index@query_infinite_ram] nprobe (" + std::to_string(nprobe) + 
+      ") was greater than than the number of centroids (" + std::to_string(::num_vectors(flat_ivf_centroids_)) +
+       ") - setting nprobe to " + std::to_string(::num_vectors(flat_ivf_centroids_)) << std::endl;
+      nprobe = ::num_vectors(flat_ivf_centroids_);
     }
     auto&& [active_partitions, active_queries] =
         read_index_finite(query_vectors, nprobe, upper_bound);

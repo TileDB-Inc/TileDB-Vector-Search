@@ -824,22 +824,46 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
     auto queries = ColMajorMatrix<feature_type_type>{{1, 1, 1}};
     auto query_vector_array = FeatureVectorArray(queries);
-    auto&& [scores_vector_array, ids_vector_array] =
-        index.query(QueryType::InfiniteRAM, query_vector_array, 1, 1);
+    {
+        auto&& [scores_vector_array, ids_vector_array] =
+            index.query(QueryType::FiniteRAM, query_vector_array, 1, 1);
 
-    auto scores = std::span<float>(
-        (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
-    auto ids = std::span<uint32_t>(
-        (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+        auto scores = std::span<float>(
+            (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
+        auto ids = std::span<uint32_t>(
+            (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+        debug_vector(scores, "scores");
+        debug_vector(ids, "ids");
 
-    CHECK(std::equal(
-        scores.begin(),
-        scores.end(),
-        std::vector<float>{std::numeric_limits<float>::max()}.begin()));
-    CHECK(std::equal(
-        ids.begin(),
-        ids.end(),
-        std::vector<uint32_t>{std::numeric_limits<uint32_t>::max()}.begin()));
+        CHECK(std::equal(
+            scores.begin(),
+            scores.end(),
+            std::vector<float>{std::numeric_limits<float>::max()}.begin()));
+        CHECK(std::equal(
+            ids.begin(),
+            ids.end(),
+            std::vector<uint32_t>{std::numeric_limits<uint32_t>::max()}.begin()));
+    }
+    {
+        auto&& [scores_vector_array, ids_vector_array] =
+            index.query(QueryType::InfiniteRAM, query_vector_array, 1, 1);
+
+        auto scores = std::span<float>(
+            (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
+        auto ids = std::span<uint32_t>(
+            (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+        debug_vector(scores, "scores");
+        debug_vector(ids, "ids");
+
+        CHECK(std::equal(
+            scores.begin(),
+            scores.end(),
+            std::vector<float>{std::numeric_limits<float>::max()}.begin()));
+        CHECK(std::equal(
+            ids.begin(),
+            ids.end(),
+            std::vector<uint32_t>{std::numeric_limits<uint32_t>::max()}.begin()));
+    }
 
     auto typed_index = ivf_pq_index<
         feature_type_type,
