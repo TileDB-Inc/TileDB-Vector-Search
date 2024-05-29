@@ -271,7 +271,7 @@ TEST_CASE("ivf_index write and read", "[ivf_index]") {
 }
 
 TEMPLATE_TEST_CASE(
-    "flatquery stacked hypercube", "[flativf_index]", float, uint8_t) {
+    "query stacked hypercube", "[flativf_index]", float, uint8_t) {
   size_t k_dist = GENERATE(0, 32);
   size_t k_near = k_dist;
   size_t k_far = k_dist;

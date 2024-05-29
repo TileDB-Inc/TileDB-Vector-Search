@@ -356,7 +356,7 @@ TEST_CASE(
 //
 #if 0
 TEMPLATE_TEST_CASE(
-    "flatquery stacked hypercube",
+    "query stacked hypercube",
     "[flativf_index]",
     float,
     uint8_t) {
