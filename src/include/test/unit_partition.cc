@@ -34,11 +34,7 @@
 #include "test/utils/array_defs.h"
 #include "test/utils/query_common.h"
 
-TEST_CASE("partition: test test", "[partition]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("partition: top_centroids", "[partition]") {
+TEST_CASE("top_centroids", "[partition]") {
   auto parts = ColMajorMatrix<float>{
       {
           1,
@@ -81,7 +77,7 @@ TEST_CASE("partition: top_centroids", "[partition]") {
   CHECK(top_centroids(0, 4) == 1);
 }
 
-TEST_CASE("partition: partition_ivf_index", "[partition]") {
+TEST_CASE("partition_ivf_index", "[partition]") {
   // auto partition_ivf_index(
   //      auto&& centroids, auto&& query, size_t nprobe, size_t nthreads)
 

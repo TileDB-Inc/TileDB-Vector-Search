@@ -40,14 +40,10 @@
 #include "index/ivf_flat_group.h"
 #include "test/utils/array_defs.h"
 
-TEST_CASE("ivf_flat_group: test test", "[ivf_flat_group]") {
-  REQUIRE(true);
-}
-
 // This test is for debugging and checks whether a particular group can be
 // opened
 #if 0
-TEST_CASE("ivf_flat_group: read a tiledb::Group", "[ivf_flat_group]") {
+TEST_CASE("read a tiledb::Group", "[ivf_flat_group]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
   std::string tmp_uri = siftsmall_group_uri;
@@ -65,7 +61,7 @@ TEST_CASE("ivf_flat_group: read a tiledb::Group", "[ivf_flat_group]") {
 }
 #endif
 
-TEST_CASE("ivf_flat_group: create tiledb::Group", "[ivf_flat_group]") {
+TEST_CASE("create tiledb::Group", "[ivf_flat_group]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
   std::string tmp_uri =
@@ -91,9 +87,7 @@ struct dummy_index {
   using metadata_type = ivf_flat_index_metadata;
 };
 
-TEST_CASE(
-    "ivf_flat_group: read constructor for non-existent group",
-    "[ivf_flat_group]") {
+TEST_CASE("read constructor for non-existent group", "[ivf_flat_group]") {
   tiledb::Context ctx;
 
   CHECK_THROWS_WITH(
@@ -101,7 +95,7 @@ TEST_CASE(
       "Group uri I dont exist does not exist.");
 }
 
-TEST_CASE("ivf_flat_group: write constructor - create", "[ivf_flat_group]") {
+TEST_CASE("write constructor - create", "[ivf_flat_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "ivf_flat_group_test_write_constructor")
                             .string();
@@ -117,8 +111,7 @@ TEST_CASE("ivf_flat_group: write constructor - create", "[ivf_flat_group]") {
   CHECK(x.get_dimensions() == 10);
 }
 
-TEST_CASE(
-    "ivf_flat_group: write constructor - create and open", "[ivf_flat_group]") {
+TEST_CASE("write constructor - create and open", "[ivf_flat_group]") {
   bool debug = false;
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "ivf_flat_group_test_write_constructor")
@@ -139,8 +132,7 @@ TEST_CASE(
   CHECK(x.get_dimensions() == 10);
 }
 
-TEST_CASE(
-    "ivf_flat_group: write constructor - create and read", "[ivf_flat_group]") {
+TEST_CASE("write constructor - create and read", "[ivf_flat_group]") {
   bool debug = false;
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "ivf_flat_group_test_write_constructor")
@@ -159,9 +151,7 @@ TEST_CASE(
   ivf_flat_group y = ivf_flat_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
 }
 
-TEST_CASE(
-    "ivf_flat_group: write constructor - create, write, and read",
-    "[ivf_flat_group]") {
+TEST_CASE("write constructor - create, write, and read", "[ivf_flat_group]") {
   bool debug = false;
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "ivf_flat_group_test_write_constructor")
@@ -185,8 +175,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "ivf_flat_group: group metadata - bases, ingestions, partitions",
-    "[ivf_flat_group]") {
+    "group metadata - bases, ingestions, partitions", "[ivf_flat_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "ivf_flat_group_test_write_constructor")
                             .string();
@@ -370,7 +359,7 @@ TEST_CASE(
   CHECK(x.get_dimensions() == expected_dimension + offset);
 }
 
-TEST_CASE("ivf_flat_group: storage version", "[ivf_flat_group]") {
+TEST_CASE("storage version", "[ivf_flat_group]") {
   std::string tmp_uri =
       (std::filesystem::temp_directory_path() / "ivf_flat_group").string();
 
@@ -422,7 +411,7 @@ TEST_CASE("ivf_flat_group: storage version", "[ivf_flat_group]") {
   CHECK(x.get_dimensions() == expected_dimension + offset);
 }
 
-TEST_CASE("ivf_flat_group: invalid storage version", "[ivf_flat_group]") {
+TEST_CASE("invalid storage version", "[ivf_flat_group]") {
   std::string tmp_uri =
       (std::filesystem::temp_directory_path() / "ivf_flat_group").string();
 
@@ -437,7 +426,7 @@ TEST_CASE("ivf_flat_group: invalid storage version", "[ivf_flat_group]") {
       10);
 }
 
-TEST_CASE("ivf_flat_group: mismatched storage version", "[ivf_flat_group]") {
+TEST_CASE("mismatched storage version", "[ivf_flat_group]") {
   std::string tmp_uri =
       (std::filesystem::temp_directory_path() / "ivf_flat_group").string();
 
@@ -461,7 +450,7 @@ TEST_CASE("ivf_flat_group: mismatched storage version", "[ivf_flat_group]") {
       "Version mismatch. Requested different_version but found 0.3");
 }
 
-TEST_CASE("ivf_flat_group: clear history", "[ivf_flat_group]") {
+TEST_CASE("clear history", "[ivf_flat_group]") {
   std::string tmp_uri =
       (std::filesystem::temp_directory_path() / "ivf_flat_group").string();
 

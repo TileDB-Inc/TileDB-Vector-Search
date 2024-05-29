@@ -33,11 +33,7 @@
 #include <tiledb/tiledb>
 #include "index/ivf_pq_metadata.h"
 
-TEST_CASE("ivf_pq_metadata: test test", "[ivf_pq_metadata]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("ivf_pq_metadata: default constructor", "[ivf_pq_metadata]") {
+TEST_CASE("default constructor", "[ivf_pq_metadata]") {
   auto x = ivf_pq_metadata();
   ivf_pq_metadata y;
 }

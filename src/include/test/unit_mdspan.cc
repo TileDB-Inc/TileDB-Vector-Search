@@ -37,11 +37,7 @@ namespace stdx {
 using namespace Kokkos;
 }  // namespace stdx
 
-TEST_CASE("mdspan: test test", "[mdspan]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("mdspan: basic construction", "[mdspan]") {
+TEST_CASE("basic construction", "[mdspan]") {
   // using a = stdx::mdspan<int, stdx::extents<>>;
   // using a = Kokkos::mdspan<int, Kokkos::extents<size_t,
   // stdx::dynamic_extent>>;
@@ -80,7 +76,7 @@ TEST_CASE("mdspan: basic construction", "[mdspan]") {
   }
 }
 
-TEST_CASE("mdspan: rectangular", "[mdspan]") {
+TEST_CASE("rectangular", "[mdspan]") {
   std::vector<int> v(187);
   std::iota(v.begin(), v.end(), 17);
 

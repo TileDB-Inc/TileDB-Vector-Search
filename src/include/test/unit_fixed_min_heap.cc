@@ -40,11 +40,7 @@
 
 bool debug = false;
 
-TEST_CASE("fixed_min_heap: test test", "[fixed_min_heap]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("fixed_min_heap: std::heap", "[fixed_min_heap]") {
+TEST_CASE("std::heap", "[fixed_min_heap]") {
   std::vector<int> v{3, 1, 4, 1, 5, 9};
 
   if (debug) {
@@ -93,7 +89,7 @@ TEST_CASE("fixed_min_heap: std::heap", "[fixed_min_heap]") {
   }
 }
 
-TEST_CASE("fixed_min_heap: std::set", "[fixed_min_heap]") {
+TEST_CASE("std::set", "[fixed_min_heap]") {
   std::set<int> a;
 
   SECTION("insert in ascending order") {
@@ -112,7 +108,7 @@ TEST_CASE("fixed_min_heap: std::set", "[fixed_min_heap]") {
   CHECK(*rbegin(a) == 9);
 }
 
-TEST_CASE("fixed_min_heap: std::set with pairs", "[fixed_min_heap]") {
+TEST_CASE("std::set with pairs", "[fixed_min_heap]") {
   using element = std::tuple<float, int>;
   std::set<element> a;
 
@@ -139,7 +135,7 @@ TEST_CASE("fixed_min_heap: std::set with pairs", "[fixed_min_heap]") {
   // CHECK(*rbegin(a) == element{9, 1});
 }
 
-TEST_CASE("fixed_min_heap: initializer constructor", "[fixed_min_heap]") {
+TEST_CASE("initializer constructor", "[fixed_min_heap]") {
   fixed_min_pair_heap<float, int> a(
       5,
       {
@@ -237,7 +233,7 @@ TEST_CASE("fixed_min_heap: initializer constructor", "[fixed_min_heap]") {
   }
 }
 
-TEST_CASE("fixed_min_heap: fixed_min_pair_heap", "[fixed_min_heap]") {
+TEST_CASE("fixed_min_pair_heap", "[fixed_min_heap]") {
   fixed_min_pair_heap<float, int> a(5);
 
   SECTION("insert in ascending order") {
@@ -268,8 +264,7 @@ TEST_CASE("fixed_min_heap: fixed_min_pair_heap", "[fixed_min_heap]") {
   CHECK(a.size() == 5);
 }
 
-TEST_CASE(
-    "fixed_min_heap: fixed_min_heap with a 5500 vector", "[fixed_min_heap]") {
+TEST_CASE("fixed_min_heap with a 5500 vector", "[fixed_min_heap]") {
   using element = std::tuple<float, int>;
   fixed_min_pair_heap<float, int> a(7);
   std::vector<element> v(5500);
@@ -302,12 +297,7 @@ TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "fixed_min_heap: first_less",
-    "[fixed_min_heap]",
-    float,
-    double,
-    int,
-    unsigned) {
+    "first_less", "[fixed_min_heap]", float, double, int, unsigned) {
   first_less<std::tuple<TestType, size_t>> a;
   auto v = std::vector<std::tuple<TestType, size_t>>{
       {0, 0},
@@ -409,7 +399,7 @@ TEST_CASE("threshold_heap: new threshold", "[threshold_heap]") {
 }
 
 TEST_CASE(
-    "fixed_min_heap: fixed_max_heap with a large vector and compare function",
+    "fixed_max_heap with a large vector and compare function",
     "[fixed_min_heap]") {
   using element = std::tuple<float, int>;
 
@@ -447,8 +437,7 @@ TEST_CASE(
   CHECK(a2 == v3);
 }
 
-TEST_CASE(
-    "fixed_min_heap: fixed_max_heap with a large vector", "[fixed_min_heap]") {
+TEST_CASE("fixed_max_heap with a large vector", "[fixed_min_heap]") {
   using element = std::tuple<float, int>;
 
   fixed_min_pair_heap<float, int, std::greater<float>> a(
@@ -488,7 +477,7 @@ TEST_CASE(
 // This seems to duplicate above
 #if 0
 TEST_CASE(
-    "fixed_min_heap: fixed_max_heap with a large vector", "[fixed_min_heap]") {
+    "fixed_max_heap with a large vector", "[fixed_min_heap]") {
   using element = std::tuple<float, int>;
 
   fixed_min_pair_heap<float, int, std::greater<float>> a(

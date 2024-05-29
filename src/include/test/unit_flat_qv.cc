@@ -35,12 +35,6 @@
 #include "test/utils/array_defs.h"
 #include "test/utils/query_common.h"
 
-bool global_debug = false;
-
-TEST_CASE("qv test test", "[flat qv]") {
-  REQUIRE(true);
-}
-
 TEST_CASE("flat qv simple case", "[flat qv]") {
   auto db = ColMajorMatrix<float>{
       {

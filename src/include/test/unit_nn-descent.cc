@@ -43,17 +43,8 @@
 
 bool debug = false;
 
-TEST_CASE("nn-descent: test test", "[nn-descent]") {
-  REQUIRE(true);
-}
-
 TEMPLATE_TEST_CASE(
-    "nn-descent: accuracy",
-    "[nn-descent]",
-    uint32_t,
-    int32_t,
-    uint64_t,
-    int64_t) {
+    "accuracy", "[nn-descent]", uint32_t, int32_t, uint64_t, int64_t) {
   size_t k_nn = 10;
 
   using feature_type = float;
@@ -102,12 +93,7 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "nn-descent: connectivity",
-    "[nn-descent]",
-    int32_t,
-    uint32_t,
-    int64_t,
-    uint64_t) {
+    "connectivity", "[nn-descent]", int32_t, uint32_t, int64_t, uint64_t) {
   size_t k_nn = 10;
 
   using feature_type = float;
@@ -123,7 +109,7 @@ TEMPLATE_TEST_CASE(
   bfs(g, TestType{0});
 }
 
-TEST_CASE("nn-descent: nn_descent_1", "[nn-descent]") {
+TEST_CASE("nn_descent_1", "[nn-descent]") {
   using feature_type = float;
   using id_type = uint32_t;
 
@@ -190,7 +176,7 @@ TEST_CASE("nn-descent: nn_descent_1", "[nn-descent]") {
   }
 }
 
-TEST_CASE("nn-descent: nn_descent_1 vs ivf", "[nn-descent]") {
+TEST_CASE("nn_descent_1 vs ivf", "[nn-descent]") {
   using feature_type = float;
   using id_type = uint64_t;
 

@@ -84,12 +84,7 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
   return all_subsets;
 }
 
-TEST_CASE("tdb_partitioned_matrix: test test", "[tdb_partitioned_matrix]") {
-  REQUIRE(true);
-}
-
-TEST_CASE(
-    "tdb_partitioned_matrix: can load correctly", "[tdb_partitioned_matrix]") {
+TEST_CASE("can load correctly", "[tdb_partitioned_matrix]") {
   return;
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -191,8 +186,7 @@ TEST_CASE(
   }
 }
 
-TEST_CASE(
-    "tdb_partitioned_matrix: generateSubsets", "[tdb_partitioned_matrix]") {
+TEST_CASE("generateSubsets", "[tdb_partitioned_matrix]") {
   SECTION("generateSubsets with num_parts = 0") {
     auto subsets = generateSubsets<int>(0);
     REQUIRE(subsets.empty());
@@ -239,9 +233,7 @@ TEST_CASE(
   }
 }
 
-TEST_CASE(
-    "tdb_partitioned_matrix: test different combinations",
-    "[tdb_partitioned_matrix]") {
+TEST_CASE("test different combinations", "[tdb_partitioned_matrix]") {
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
 

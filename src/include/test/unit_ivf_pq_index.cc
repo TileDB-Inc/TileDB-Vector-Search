@@ -37,10 +37,6 @@
 #include "test/utils/gen_graphs.h"
 #include "test/utils/query_common.h"
 
-TEST_CASE("ivf_pq_index: test test", "[ivf_pq_index]") {
-  REQUIRE(true);
-}
-
 struct dummy_pq_index {
   using feature_type = float;
   using flat_vector_feature_type = feature_type;
@@ -79,7 +75,7 @@ void debug_flat_ivf_centroids(auto& index) {
   std::cout << std::endl;
 }
 
-TEST_CASE("ivf_pq_index: default construct two", "[ivf_pq_index]") {
+TEST_CASE("default construct two", "[ivf_pq_index]") {
   ivf_pq_index<float, uint32_t, uint32_t> x;
   ivf_pq_index<float, uint32_t, uint32_t> y;
   CHECK(x.compare_cached_metadata(y));
@@ -454,9 +450,7 @@ TEMPLATE_TEST_CASE(
 }
 #endif
 
-TEST_CASE(
-    "ivf_pq_index: Build index and query in place, infinite",
-    "[ivf_pq_index]") {
+TEST_CASE("Build index and query in place, infinite", "[ivf_pq_index]") {
   tiledb::Context ctx;
   // size_t nlist = GENERATE(1, 100);
   size_t nlist = 20;

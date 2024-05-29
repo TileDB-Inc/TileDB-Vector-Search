@@ -42,7 +42,7 @@
 
 #if defined(TILEDB_VS_ENABLE_BLAS) && 0
 
-TEST_CASE("scoring: vector test", "[scoring]") {
+TEST_CASE("vector test", "[scoring]") {
   std::vector<std::vector<float>> a{
       {1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}};
   std::vector<float> b{0, 0, 0, 0};
@@ -92,9 +92,7 @@ using scoring_typelist = std::tuple<
     std::tuple<float, size_t, int>>;
 // get_top_k (heap) from scores array
 TEMPLATE_LIST_TEST_CASE(
-    "scoring: get_top_k_from_scores vector",
-    "[scoring][get_top_k]",
-    scoring_typelist) {
+    "get_top_k_from_scores vector", "[scoring][get_top_k]", scoring_typelist) {
   using score_type = std::tuple_element_t<0, TestType>;
   using index_type = std::tuple_element_t<1, TestType>;
   // using groundtruth_type = std::tuple_element_t<2, TestType>;
@@ -112,9 +110,7 @@ TEMPLATE_LIST_TEST_CASE(
 
 // get_top_k (heap) from scores matrix, parallel
 TEMPLATE_LIST_TEST_CASE(
-    "scoring: get_top_k_from_scores matrix",
-    "[scoring][get_top_k]",
-    scoring_typelist) {
+    "get_top_k_from_scores matrix", "[scoring][get_top_k]", scoring_typelist) {
   using score_type = std::tuple_element_t<0, TestType>;
   using index_type = std::tuple_element_t<1, TestType>;
   using groundtruth_type = std::tuple_element_t<2, TestType>;
@@ -168,8 +164,7 @@ TEMPLATE_LIST_TEST_CASE(
 }
 
 // consolidate scores
-TEMPLATE_LIST_TEST_CASE(
-    "scoring: consolidate scores", "[scoring]", scoring_typelist) {
+TEMPLATE_LIST_TEST_CASE("consolidate scores", "[scoring]", scoring_typelist) {
   using score_type = std::tuple_element_t<0, TestType>;
   using index_type = std::tuple_element_t<1, TestType>;
   // using groundtruth_type = std::tuple_element_t<2, TestType>;
@@ -293,9 +288,7 @@ TEMPLATE_LIST_TEST_CASE(
 }
 
 TEMPLATE_LIST_TEST_CASE(
-    "scoring: get_top_k_from_heap one min_heap",
-    "[scoring]",
-    scoring_typelist) {
+    "get_top_k_from_heap one min_heap", "[scoring]", scoring_typelist) {
   using score_type = std::tuple_element_t<0, TestType>;
   using index_type = std::tuple_element_t<1, TestType>;
   using groundtruth_type = std::tuple_element_t<2, TestType>;
@@ -374,7 +367,7 @@ TEMPLATE_LIST_TEST_CASE(
   }
 }
 
-TEMPLATE_LIST_TEST_CASE("scoring: get_top_k", "[scoring]", scoring_typelist) {
+TEMPLATE_LIST_TEST_CASE("get_top_k", "[scoring]", scoring_typelist) {
   using score_type = std::tuple_element_t<0, TestType>;
   using index_type = std::tuple_element_t<1, TestType>;
   using groundtruth_type = std::tuple_element_t<2, TestType>;
@@ -524,9 +517,7 @@ TEMPLATE_LIST_TEST_CASE("scoring: get_top_k", "[scoring]", scoring_typelist) {
 }
 
 TEMPLATE_LIST_TEST_CASE(
-    "scoring: get_top_k_from_heap vector of min_heap",
-    "[scoring]",
-    scoring_typelist) {
+    "get_top_k_from_heap vector of min_heap", "[scoring]", scoring_typelist) {
   using score_type = std::tuple_element_t<0, TestType>;
   using index_type = std::tuple_element_t<1, TestType>;
   using groundtruth_type = std::tuple_element_t<2, TestType>;
@@ -629,8 +620,7 @@ TEMPLATE_LIST_TEST_CASE(
 }
 
 // test pad with sentinel
-TEMPLATE_LIST_TEST_CASE(
-    "scoring: pad_with_sentinels", "[scoring]", scoring_typelist) {
+TEMPLATE_LIST_TEST_CASE("pad_with_sentinels", "[scoring]", scoring_typelist) {
   using score_type = std::tuple_element_t<0, TestType>;
   using index_type = std::tuple_element_t<1, TestType>;
   using groundtruth_type = std::tuple_element_t<2, TestType>;
@@ -729,7 +719,7 @@ inline float sum_of_squares_avx2(const V& a, const W& b) {
   return sum;
 }
 
-TEST_CASE("scoring: avx2", "[scoring]") {
+TEST_CASE("avx2", "[scoring]") {
   ColMajorMatrix<float> rand_a{
       {0, 1, 2, 3, 4, 5, 6, 7, 3, 1, 4},
       {8, 9, 10, 11, 12, 13, 14, 15, 1, 5, 9},

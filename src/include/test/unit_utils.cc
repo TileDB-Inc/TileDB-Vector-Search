@@ -41,7 +41,7 @@ std::string operator/(const std::string& lhs, const std::string& rhs) {
 
 }  // namespace
 
-TEST_CASE("utils: test", "[utils]") {
+TEST_CASE("test", "[utils]") {
   CHECK(is_http_address("http://www.tiledb.com"));
   CHECK(is_http_address("http://www.tiledb.com/index.html"));
   CHECK(is_http_address("https://www.tiledb.com"));

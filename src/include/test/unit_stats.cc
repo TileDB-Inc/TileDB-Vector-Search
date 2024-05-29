@@ -33,10 +33,6 @@
 
 #include "stats.h"
 
-TEST_CASE("stats: test test", "[stats]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("stats: test build_config", "[stats]") {
+TEST_CASE("test build_config", "[stats]") {
   build_config();
 }

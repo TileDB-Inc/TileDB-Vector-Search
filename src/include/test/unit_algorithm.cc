@@ -32,11 +32,7 @@
 #include <catch2/catch_all.hpp>
 #include "algorithm.h"
 
-TEST_CASE("algorithm: test test", "[algorithm]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("algorithm: for_each", "[algorithm]") {
+TEST_CASE("for_each", "[algorithm]") {
   size_t length = GENERATE(
       0,
       1,
