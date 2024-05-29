@@ -181,6 +181,11 @@ class IndexVamana {
     if (dispatch_table.find(type) == dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
+
+    // Create a new index. Note that we may have already loaded an existing
+    // index by URI. In that case, we have updated our local state (i.e.
+    // l_build_, r_max_degree_, b_backtrack_), but we should also use the
+    // timestamp from that already loaded index..
     index_ = dispatch_table.at(type)(
         training_set.num_vectors(),
         l_build_,

@@ -373,76 +373,76 @@ TEST_CASE(
   }
 }
 
-// TEST_CASE("infer feature type", "[api_vamana_index]") {
-//   auto a = IndexVamana(std::make_optional<IndexOptions>(
-//       {{"id_type", "uint32"}, {"adjacency_row_index_type", "uint32"}}));
-//   auto ctx = tiledb::Context{};
-//   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-//   a.train(training_set);
-//   CHECK(a.feature_type() == TILEDB_FLOAT32);
-//   CHECK(a.id_type() == TILEDB_UINT32);
-//   CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
-// }
+TEST_CASE("infer feature type", "[api_vamana_index]") {
+  auto a = IndexVamana(std::make_optional<IndexOptions>(
+      {{"id_type", "uint32"}, {"adjacency_row_index_type", "uint32"}}));
+  auto ctx = tiledb::Context{};
+  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
+  a.train(training_set);
+  CHECK(a.feature_type() == TILEDB_FLOAT32);
+  CHECK(a.id_type() == TILEDB_UINT32);
+  CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
+}
 
-// TEST_CASE("infer dimension", "[api_vamana_index]") {
-//   auto a = IndexVamana(std::make_optional<IndexOptions>(
-//       {{"id_type", "uint32"}, {"adjacency_row_index_type", "uint32"}}));
-//   auto ctx = tiledb::Context{};
-//   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-//   CHECK(dimensions(a) == 0);
-//   a.train(training_set);
-//   CHECK(a.feature_type() == TILEDB_FLOAT32);
-//   CHECK(a.id_type() == TILEDB_UINT32);
-//   CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
-//   CHECK(dimensions(a) == 128);
-// }
+TEST_CASE("infer dimension", "[api_vamana_index]") {
+  auto a = IndexVamana(std::make_optional<IndexOptions>(
+      {{"id_type", "uint32"}, {"adjacency_row_index_type", "uint32"}}));
+  auto ctx = tiledb::Context{};
+  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
+  CHECK(dimensions(a) == 0);
+  a.train(training_set);
+  CHECK(a.feature_type() == TILEDB_FLOAT32);
+  CHECK(a.id_type() == TILEDB_UINT32);
+  CHECK(a.adjacency_row_index_type() == TILEDB_UINT32);
+  CHECK(dimensions(a) == 128);
+}
 
-// TEST_CASE("api_vamana_index write and read", "[api_vamana_index]") {
-//   auto ctx = tiledb::Context{};
-//   std::string api_vamana_index_uri =
-//       (std::filesystem::temp_directory_path() / "api_vamana_index").string();
-//   tiledb::VFS vfs(ctx);
-//   if (vfs.is_dir(api_vamana_index_uri)) {
-//     vfs.remove_dir(api_vamana_index_uri);
-//   }
+TEST_CASE("api_vamana_index write and read", "[api_vamana_index]") {
+  auto ctx = tiledb::Context{};
+  std::string api_vamana_index_uri =
+      (std::filesystem::temp_directory_path() / "api_vamana_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(api_vamana_index_uri)) {
+    vfs.remove_dir(api_vamana_index_uri);
+  }
 
-//   auto a = IndexVamana(std::make_optional<IndexOptions>(
-//       {{"feature_type", "float32"},
-//        {"id_type", "uint32"},
-//        {"adjacency_row_index_type", "uint32"}}));
-//   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-//   a.train(training_set);
-//   a.add(training_set);
-//   a.write_index(ctx, api_vamana_index_uri);
+  auto a = IndexVamana(std::make_optional<IndexOptions>(
+      {{"feature_type", "float32"},
+       {"id_type", "uint32"},
+       {"adjacency_row_index_type", "uint32"}}));
+  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
+  a.train(training_set);
+  a.add(training_set);
+  a.write_index(ctx, api_vamana_index_uri);
 
-//   auto b = IndexVamana(ctx, api_vamana_index_uri);
+  auto b = IndexVamana(ctx, api_vamana_index_uri);
 
-//   CHECK(dimensions(a) == dimensions(b));
-//   CHECK(a.feature_type() == b.feature_type());
-//   CHECK(a.id_type() == b.id_type());
-//   CHECK(a.adjacency_row_index_type() == b.adjacency_row_index_type());
-// }
+  CHECK(dimensions(a) == dimensions(b));
+  CHECK(a.feature_type() == b.feature_type());
+  CHECK(a.id_type() == b.id_type());
+  CHECK(a.adjacency_row_index_type() == b.adjacency_row_index_type());
+}
 
-// TEST_CASE("build index and query", "[api_vamana_index]") {
-//   auto ctx = tiledb::Context{};
-//   size_t k_nn = 10;
-//   size_t nprobe = GENERATE(8, 32);
+TEST_CASE("build index and query", "[api_vamana_index]") {
+  auto ctx = tiledb::Context{};
+  size_t k_nn = 10;
+  size_t nprobe = GENERATE(8, 32);
 
-//   auto a = IndexVamana(std::make_optional<IndexOptions>(
-//       {{"id_type", "uint32"}, {"adjacency_row_index_type", "uint32"}}));
-//   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-//   auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
-//   auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
-//   a.train(training_set);
-//   a.add(training_set);
+  auto a = IndexVamana(std::make_optional<IndexOptions>(
+      {{"id_type", "uint32"}, {"adjacency_row_index_type", "uint32"}}));
+  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
+  auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
+  auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
+  a.train(training_set);
+  a.add(training_set);
 
-//   auto&& [s, t] = a.query(query_set, k_nn);
+  auto&& [s, t] = a.query(query_set, k_nn);
 
-//   auto intersections = count_intersections(t, groundtruth_set, k_nn);
-//   auto nt = num_vectors(t);
-//   auto recall = ((double)intersections) / ((double)nt * k_nn);
-//   CHECK(recall == 1.0);
-// }
+  auto intersections = count_intersections(t, groundtruth_set, k_nn);
+  auto nt = num_vectors(t);
+  auto recall = ((double)intersections) / ((double)nt * k_nn);
+  CHECK(recall == 1.0);
+}
 
 TEST_CASE("read index and query", "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
