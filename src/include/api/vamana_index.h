@@ -115,6 +115,10 @@ class IndexVamana {
         }
       }
     }
+
+    if (b_backtrack_ == 0) {
+      b_backtrack_ = l_build_;
+    }
   }
 
   /**
@@ -144,6 +148,9 @@ class IndexVamana {
       throw std::runtime_error("Unsupported datatype combination");
     }
     index_ = uri_dispatch_table.at(type)(ctx, group_uri, temporal_policy);
+    l_build_ = index_->l_build();
+    r_max_degree_ = index_->r_max_degree();
+    b_backtrack_ = index_->b_backtrack();
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
@@ -174,16 +181,13 @@ class IndexVamana {
     if (dispatch_table.find(type) == dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
-    // If we loaded an existing index, we should use the timestamp from it.
-    std::optional<TemporalPolicy> temporal_policy =
-        index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
-                 std::nullopt;
     index_ = dispatch_table.at(type)(
         training_set.num_vectors(),
         l_build_,
         r_max_degree_,
         b_backtrack_,
-        temporal_policy);
+        index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
+                 std::nullopt);
 
     index_->train(training_set);
 
@@ -270,6 +274,18 @@ class IndexVamana {
     return dimensions_;
   }
 
+  constexpr auto l_build() const {
+    return l_build_;
+  }
+
+  constexpr auto r_max_degree() const {
+    return r_max_degree_;
+  }
+
+  constexpr auto b_backtrack() const {
+    return b_backtrack_;
+  }
+
   constexpr auto feature_type() const {
     return feature_datatype_;
   }
@@ -351,6 +367,9 @@ class IndexVamana {
         const std::string& storage_version) = 0;
 
     [[nodiscard]] virtual size_t dimensions() const = 0;
+    [[nodiscard]] virtual size_t l_build() const = 0;
+    [[nodiscard]] virtual size_t r_max_degree() const = 0;
+    [[nodiscard]] virtual size_t b_backtrack() const = 0;
     [[nodiscard]] virtual TemporalPolicy temporal_policy() const = 0;
   };
 
@@ -413,14 +432,6 @@ class IndexVamana {
       impl_index_.add(fspan);
     }
 
-    [[nodiscard]] auto query(
-        const tiledb::Context& ctx,
-        const URI& uri,
-        size_t top_k,
-        std::optional<size_t> opt_L) {
-      return impl_index_.query(ctx, uri, top_k, opt_L);
-    }
-
     /**
      * @brief Query the index with the given vectors.  The concrete query
      * function returns a tuple of arrays, which are type erased and returned as
@@ -475,6 +486,18 @@ class IndexVamana {
 
     size_t dimensions() const override {
       return ::dimensions(impl_index_);
+    }
+
+    size_t l_build() const override {
+      return impl_index_.l_build();
+    }
+
+    size_t r_max_degree() const override {
+      return impl_index_.r_max_degree();
+    }
+
+    size_t b_backtrack() const override {
+      return impl_index_.b_backtrack();
     }
 
     TemporalPolicy temporal_policy() const override {

@@ -174,18 +174,18 @@ class vamana_index {
    */
   vamana_index(
       size_t num_nodes,
-      size_t L,
-      size_t R,
-      size_t B = 0,
+      size_t l_build,
+      size_t r_max_degree,
+      size_t b_backtrack,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt)
       : temporal_policy_{
         temporal_policy.has_value() ? *temporal_policy :
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
       , num_vectors_{num_nodes}
       , graph_{num_vectors_}
-      , l_build_{L}
-      , r_max_degree_{R}
-      , b_backtrack_{B == 0 ? l_build_ : B} {
+      , l_build_{l_build}
+      , r_max_degree_{r_max_degree}
+      , b_backtrack_{b_backtrack} {
   }
 
   /**
@@ -670,17 +670,32 @@ class vamana_index {
     return num_vectors_;
   }
 
+  constexpr auto l_build() const {
+    return l_build_;
+  }
+
+  constexpr auto r_max_degree() const {
+    return r_max_degree_;
+  }
+
+  constexpr auto b_backtrack() const {
+    return b_backtrack_;
+  }
+
   /**
-   * @brief Write the index to a TileDB group
+   * @brief Write the index to a TileDB group. The group consists of the
+   * original feature vectors, and the graph index, which comprises the
+   * adjacency scores and adjacency ids, written contiguously, along with an
+   * offset (adj_index) to the start of each adjacency list.
+   *
+   * @param ctx TileDB context
    * @param group_uri The URI of the TileDB group where the index will be saved
+   * @param group_uri The URI of the TileDB group where the index will be saved
+   * @param temporal_policy If set, we'll use the end timestamp of the policy as
+   * the write timestamp.
    * @param storage_version The storage version to use. If empty, use the most
    * defult version.
    * @return Whether the write was successful
-   *
-   * The group consists of the original feature vectors, and the graph index,
-   * which comprises the adjacency scores and adjacency ids, written
-   * contiguously, along with an offset (adj_index) to the start of each
-   * adjacency list.
    *
    * @todo Do we need to copy and/or write out the original vectors since
    * those will presumably be in a known array that can be made part of
@@ -713,6 +728,8 @@ class vamana_index {
     write_group.set_alpha_min(alpha_min_);
     write_group.set_alpha_max(alpha_max_);
     write_group.set_medoid(medoid_);
+
+    write_group.dump();
 
     // When we create an index with Python, we will call write_index() twice,
     // once with empty data and once with the actual data. Here we add custom
