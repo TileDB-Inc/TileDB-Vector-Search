@@ -1,5 +1,5 @@
 /**
- * @file   unit_ivf_pq_metadata.h
+ * @file   unit_ivf_pq_metadata.cc
  *
  * @section LICENSE
  *
